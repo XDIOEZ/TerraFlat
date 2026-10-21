@@ -8,7 +8,7 @@ namespace FlatWorld.GameplayMCP
     [McpForUnityTool(
         "gameplay_control",
         Description = "Acquire, release, or inspect the exclusive FlatWorld gameplay control lease used by the AI agent.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplayControlTool
     {
         #region 统一输入输出

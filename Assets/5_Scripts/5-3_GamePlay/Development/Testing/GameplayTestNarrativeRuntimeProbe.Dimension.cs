@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Gameplay.Progress;
@@ -29,8 +29,10 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         public readonly Vector3 Position;
         public readonly int OriginalPlayerGuid;
         public readonly int OriginalPlayerInstance;
+        public readonly int OriginalNetworkIdentity;
         public DimensionPortalAnchor Anchor;
         private readonly JToken originalNamespace;
+        private readonly string originalWorldDimensionState;
         private int entranceGuid;
         private bool disposed;
         private readonly List<Mod_GameController> migrationControllers = new();
@@ -48,7 +50,9 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             Position = WorldLocalPresentation.ToLogical(player.transform.position);
             OriginalPlayerGuid = player.itemData.Guid;
             OriginalPlayerInstance = player.GetInstanceID();
+            OriginalNetworkIdentity = player.GetComponent("NetworkIdentity")?.GetInstanceID() ?? 0;
             originalNamespace = ItemSpecialDataJsonStore.ReadRoot(Data.ItemSpecialData)["flatworld.dimensions"]?.DeepClone();
+            originalWorldDimensionState = SaveDataMgr.Instance.SaveData.DimensionStateJson;
         }
 
         public void ProtectActorControl(Player actor)
@@ -90,10 +94,11 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             Item entrance = ItemMgr.Instance.InstantiateItem("MineEntrance", player.transform.position + Vector3.right * 2f);
             if (entrance == null) throw new InvalidOperationException("正式入口资源无法创建。");
             entranceGuid = entrance.itemData.Guid;
+            Mod_Building.SetInstalledDataState(entrance.itemData);
             entrance.Load();
             if (entrance.GetComponentInChildren<Mod_DimensionPortal>(true) == null)
                 throw new InvalidOperationException("正式矿洞入口没有维度入口模块。");
-            Anchor = DimensionTravelProgressStore.GetOrCreateCaveAnchor(Data, Surface, entrance, Cave, definition);
+            Anchor = DimensionTravelProgressStore.GetOrCreateCaveAnchor(SaveDataMgr.Instance.SaveData, Surface, entrance, Cave, definition);
             if (Anchor == null) throw new InvalidOperationException("正式入口配对未建立。");
             return entrance;
         }
@@ -151,6 +156,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             if (originalNamespace == null) root.Remove("flatworld.dimensions");
             else root["flatworld.dimensions"] = originalNamespace.DeepClone();
             Data.ItemSpecialData = root.ToString(Formatting.None);
+            SaveDataMgr.Instance.SaveData.DimensionStateJson = originalWorldDimensionState;
         }
     }
     #endregion
@@ -206,7 +212,10 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             ["testControlOwned"] = controls != null ? controls.OwnsActorControl(controller) :
                 controller?.HasExternalGameplayControl == true && controller.ExternalGameplayControlOwnerName == typeof(GameplayTestLuaRunner).FullName,
             ["suppressWeather"] = manager.ActiveDefinition != null && manager.ActiveDefinition.SuppressWeather,
-            ["guid"] = player.itemData.Guid, ["instance"] = player.GetInstanceID()
+            ["guid"] = player.itemData.Guid, ["instance"] = player.GetInstanceID(),
+            ["networkIdentity"] = player.GetComponent("NetworkIdentity")?.GetInstanceID() ?? 0,
+            ["sourceWorldRetained"] = controls == null || GameplayWorldRegistry.TryGet(controls.Surface.WorldKey, out _),
+            ["targetRuntimePresent"] = GameplayWorldRegistry.TryGet(expected.WorldKey, out _)
         };
     }
 
@@ -225,6 +234,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         {
             ["profile"] = scope.Profile, ["originalGuid"] = scope.OriginalPlayerGuid,
             ["originalInstance"] = scope.OriginalPlayerInstance,
+            ["originalNetworkIdentity"] = scope.OriginalNetworkIdentity,
             ["sameDimensionRejected"] = !DimensionManager.ExistingInstance.TryBeginTransition(player, WorldAddress.SurfaceDimensionId)
         };
         Exception failure = null;
@@ -245,7 +255,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["sameDataInCave"] = ReferenceEquals(cavePlayer.Data, scope.Data);
             Item exit = ItemMgr.Instance.GetItemByGuid(scope.Anchor.CaveExitGuid);
             result["exitCreated"] = exit != null && exit.IsInitialized && exit.itemData.IDName == "CaveExit";
-            result["anchorFound"] = DimensionTravelProgressStore.TryGetAnchorByCaveExit(scope.Data, scope.Cave, exit, out var paired);
+            result["anchorFound"] = DimensionTravelProgressStore.TryGetAnchorByCaveExit(SaveDataMgr.Instance.SaveData, scope.Cave, exit, out var paired);
             result["anchorSurface"] = paired?.SurfaceWorldKey;
             result["exitModulePresent"] = exit?.GetComponentInChildren<Mod_DimensionPortal>(true) != null;
             using (GameplayTestSpaceScenario.BeginExpectedMigration(cavePlayer))

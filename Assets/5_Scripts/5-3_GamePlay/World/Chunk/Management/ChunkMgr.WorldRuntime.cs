@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,7 +49,7 @@ public partial class ChunkMgr
     private static string GetActiveStreamingSceneName()
     {
         DayTimeSystem timeSystem = DayTimeSystem.GetInstance();
-        return timeSystem != null ? timeSystem.GetCurrentActiveSceneName() : SceneManager.GetActiveScene().name;
+        return timeSystem != null ? timeSystem.GetCurrentActiveSceneName() : GameplayWorldRegistry.CurrentScene.name;
     }
 
     #endregion
@@ -112,7 +112,12 @@ public partial class ChunkMgr
         WorldStreamingPreferences.Changed -= ApplyWorldStreamingPreferences;
         try
         {
-            ShutdownWorldRuntime();
+            if (!IsWorldRuntimeShuttingDown)
+            {
+                using var scope = !string.IsNullOrEmpty(OwnedWorldKey) && GameplayWorldRegistry.TryGet(OwnedWorldKey, out _)
+                    ? GameplayWorldRegistry.UseWorld(OwnedWorldKey) : null;
+                ShutdownWorldRuntime();
+            }
         }
         finally
         {
@@ -296,7 +301,7 @@ public partial class ChunkMgr
         defaultGenerationSnapshot = ApplyWorldChunkSize(defaultGenerationSnapshot);
         runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
         activeGenerationSnapshot = defaultGenerationSnapshot;
-        string worldId = SceneManager.GetActiveScene().name;
+        string worldId = GameplayWorldRegistry.CurrentScene.name;
         if (string.IsNullOrWhiteSpace(worldId))
             worldId = "world";
         var world = new WorldRuntime(worldId, runtimeEpoch);

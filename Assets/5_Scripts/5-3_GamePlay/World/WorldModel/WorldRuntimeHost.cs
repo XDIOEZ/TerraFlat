@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Unity lifecycle boundary for the engine-free world. It forwards frame time and main-thread
@@ -32,7 +32,12 @@ public sealed class WorldRuntimeHost : MonoBehaviour
         LastUpdateFrame = Time.frameCount;
         LastUpdateTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 #endif
-        owner?.AdvanceWorldRuntime(Time.deltaTime);
+        if (owner == null) return;
+        if (!string.IsNullOrEmpty(owner.OwnedWorldKey))
+        {
+            using (GameplayWorldRegistry.UseWorld(owner.OwnedWorldKey)) owner.AdvanceWorldRuntime(Time.deltaTime);
+        }
+        else owner.AdvanceWorldRuntime(Time.deltaTime);
     }
 
     private void OnDestroy()

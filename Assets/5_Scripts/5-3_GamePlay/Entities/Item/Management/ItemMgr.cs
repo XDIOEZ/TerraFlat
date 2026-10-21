@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using Unity.Profiling;
@@ -50,8 +50,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         RuntimeItemMoved = null;
     }
 
-    private const string GROUP_MAP_CORE = "MapCore";
-
     [Header("玩家创建配置")]
     [SerializeField] private string defaultPlayerCreationTemplateId;
 
@@ -65,7 +63,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     [ShowInInspector]
     public IReadOnlyDictionary<string, IReadOnlyList<Item>> RuntimeItemsGroup => _runtimeRegistry.Groups;
 
-    private Map _cachedMap;
     private Transform _externalPlayerTransform;
     // 记录实际订阅者，销毁时不再查询可能已经卸载的 GameManager。
     private GameManager _lifecycleGameManager;
@@ -74,7 +71,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     #region 分级更新调度
 
-    private readonly ItemTickScheduler _tickScheduler = new();
+    private readonly WorldItemTickScheduler _tickScheduler = new();
     private Action<Item> _refreshRuntimeItemIndexesCallback;
     private readonly List<Transform> _simulationPlayers = new(4);
     private bool _itemTickSuspended;
@@ -109,7 +106,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
                 return playerData.CurrentSceneName;
             }
 
-            return SceneManager.GetActiveScene().name;
+            return GameplayWorldRegistry.CurrentScene.name;
         }
     }
 
@@ -150,21 +147,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     {
         if (_externalPlayerTransform == playerTransform)
             _externalPlayerTransform = null;
-    }
-
-    public Map Map
-    {
-        get
-        {
-            if (_cachedMap == null)
-            {
-                if (RuntimeItemsGroup.TryGetValue(GROUP_MAP_CORE, out var list) && list.Count > 0)
-                {
-                    _cachedMap = (Map)list[0];
-                }
-            }
-            return _cachedMap;
-        }
     }
 
     #endregion
@@ -217,8 +199,9 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         RuntimeItemUnregistered -= ReleaseWorldItemMatter;
         ClearWorldItemMatter();
         MachineWorld.ReleaseWorld(capture: false);
-        WorldEntityRuntime.ReleaseWorld();
-        DroppedItemService.ReleaseWorld(capture: false);
+        WorldEntityRuntime.ReleaseAll();
+        FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();
+        DroppedItemService.ReleaseAll(capture: false);
         Item.RuntimeStructureChanged -= OnPerceptionStructureChanged;
         CompletePerceptionBatch(false);
         DisposePerceptionJobData();
@@ -334,9 +317,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         CleanupRuntimeAiIndex();
         RebuildSpatialIndex();
         _tickScheduler.Rebuild(RuntimeItems);
-
-        // 分组变化后，缓存需要重新计算
-        _cachedMap = null;
     }
 
     public void NotifyItemScheduleChanged(Item item)

@@ -5,6 +5,10 @@ test.runtime("crafting", "handcraft_clicks", {}, function(data)
         data.buttonInteractable and data.recipeId == "core:藤蔓=绳子", "正式手工面板、材料或生产配方未就绪")
     assert(data.requiredClicks >= 1 and data.inputBefore == 3 and data.outputBefore == 0,
         "自有制作前置材料错误")
+    assert(data.viewBound and data.recipeButtonBound and data.selectedRecipeId == data.recipeId,
+        "制作只读视图没有绑定当前库存、业务选择或正式候选按钮")
+    assert(data.previewSucceeded and data.previewUnchanged and data.observedWork == data.requiredClicks - 1
+        and data.observedRequiredWork == data.requiredClicks, "制作预检改变库存或只读进度与实际点击不同步")
     assert(data.inputBeforeFinalClick == 3 and data.outputBeforeFinalClick == 0,
         "最后一次制作点击前提前扣料或生成产物")
     assert(data.inputAfterCraft == 0 and data.outputAfterCraft == data.expectedOutput,

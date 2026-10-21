@@ -55,9 +55,9 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
         bool isSave = !string.IsNullOrEmpty(SelectInfo.Path);
         if (isSave)
         {
-            if (!renameSystem.TryRenameSave(oldName, newName, out string renamedSaveName))
+            if (!renameSystem.TryRenameSave(oldName, newName, out string renamedSaveName, out string reason))
             {
-                Debug.LogWarning("存档改名失败：名称无效、已被占用或写盘失败。");
+                Debug.LogWarning(reason);
                 return;
             }
             CloseUI();
@@ -65,9 +65,9 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
         }
         else
         {
-            if (!renameSystem.TryRenamePlayer(oldName, newName))
+            if (!renameSystem.TryRenamePlayer(oldName, newName, out string reason))
             {
-                Debug.LogWarning("角色改名失败：名称无效、已有同名角色或写盘失败。");
+                Debug.LogWarning(reason);
                 return;
             }
             CloseUI();

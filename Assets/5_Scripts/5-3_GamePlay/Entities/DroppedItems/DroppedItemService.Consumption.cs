@@ -36,6 +36,13 @@ public static partial class DroppedItemService
 {
     #region 世界实物查询与原子消耗
 
+    /// <summary>为已存在的轻量掉落物取得带世界纪元的观察句柄，不生成或拾取物品。</summary>
+    public static bool TryGetObservationHandle(int id, out DroppedItemHandle handle)
+    {
+        handle = runtime != null && runtime.Contains(id) ? new DroppedItemHandle(id, Epoch) : default;
+        return handle.IsValid;
+    }
+
     private static readonly List<Item> forageLegacyCandidates = new();
     private static readonly HashSet<Item> forageLegacyDedupe = new();
 
@@ -102,7 +109,7 @@ public static partial class DroppedItemService
         position = default;
         if (handle.Legacy != null)
         {
-            if (!IsLoosePickable(handle.Legacy)) return false;
+            if (!handle.IsValid || !IsLoosePickable(handle.Legacy)) return false;
             position = handle.Legacy.transform.position;
             return true;
         }

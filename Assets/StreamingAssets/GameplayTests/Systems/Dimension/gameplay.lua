@@ -1,4 +1,4 @@
--- 真实迁移会卸载世界并重建同档案主角，等待完整活动窗口和正式加载锁解除。
+﻿-- 真实迁移保留同一个主角和网络身份，等待完整活动窗口与正式呈现完成。
 test.check("world_ready", "地表隔离世界就绪")
 test.check("player_ready", "地表主角就绪")
 test.runtime("dimension", "cave_roundtrip", {}, function(data)
@@ -8,17 +8,23 @@ test.runtime("dimension", "cave_roundtrip", {}, function(data)
     assert(data.enterMigrationReleased and data.returnMigrationReleased and data.migrationReleased, "维度事务完成后仍遗留迁移租约")
     assert(data.cave.address == data.cave.expected and data.cave.scene == data.cave.address and data.cave.savedScene == data.cave.address, "洞穴运行地址、Scene 与玩家存档不一致")
     assert(data.cave.profile == data.profile and data.cave.guid == data.originalGuid and data.sameDataInCave, "洞穴主角没有保持同档案、GUID 与数据归属")
+    assert(data.cave.instance == data.originalInstance and data.surface.instance == data.originalInstance,
+        "维度迁移销毁或重建了真实玩家实例")
+    assert(data.cave.networkIdentity == data.originalNetworkIdentity and data.surface.networkIdentity == data.originalNetworkIdentity,
+        "维度迁移替换了本机网络身份")
+    assert(data.cave.sourceWorldRetained and data.cave.targetRuntimePresent and data.surface.targetRuntimePresent,
+        "迁移卸载了其他玩家仍可使用的源世界，或目标缺少正式世界运行时")
     assert(data.cave.initialized and data.cave.windowReady and not data.cave.transitioning, "洞穴只创建了场景却没有完成主角和区块窗口准备")
     assert(data.cave.controllerPresent and data.cave.gameplayReady and not data.cave.inputExplicitlyLocked and not data.cave.loadingGateLocked, "洞穴迁移没有解除显式加载锁或恢复可玩状态：" .. tostring(data.cave.inputLockState))
     assert(data.cave.suppressWeather, "洞穴没有应用维度天气覆盖")
-    assert(data.cave.externalControlPresent and data.cave.testControlOwned, "洞穴新角色没有保留测试控制隔离")
+    assert(data.cave.externalControlPresent and data.cave.testControlOwned, "洞穴角色没有保留测试控制隔离")
     assert(data.exitCreated and data.exitModulePresent and data.anchorFound, "正式迁移没有产生可使用的配对矿洞出口")
     assert(data.anchorSurface == data.originalSurface, "矿洞出口配到了另一个地表")
     assert(data.surface.address == data.originalSurface and data.surface.scene == data.originalSurface and data.surface.savedScene == data.originalSurface, "返回地表地址或玩家存档错误")
     assert(data.surface.profile == data.profile and data.surface.guid == data.originalGuid and data.sameDataAfterReturn, "回程主角数据归属发生变化")
     assert(data.surface.initialized and data.surface.windowReady and not data.surface.transitioning and data.surface.gameplayReady, "地表回程未完成完整窗口与可玩态恢复")
     assert(not data.surface.inputExplicitlyLocked and not data.surface.loadingGateLocked, "地表回程仍遗留加载输入门禁：" .. tostring(data.surface.inputLockState))
-    assert(data.surface.externalControlPresent and data.surface.testControlOwned, "地表新角色没有保留测试控制隔离")
+    assert(data.surface.externalControlPresent and data.surface.testControlOwned, "地表角色没有保留测试控制隔离")
     for _, state in ipairs({data.cave, data.surface}) do
         assert(state.inputLocked == (state.inputExplicitlyLocked or state.inputLockOwnerCount > 0 or not state.gameplayReady), "总输入锁与原始锁来源不一致")
     end
@@ -26,7 +32,7 @@ test.runtime("dimension", "cave_roundtrip", {}, function(data)
     assert(data.restored, "维度测试没有恢复原地表和主角位置")
 end, "真实矿洞往返与完整恢复")
 test.check("world_ready", "矿洞往返恢复后世界仍就绪")
-test.check("player_ready", "维度重建后宿主重新绑定主角")
+test.check("player_ready", "维度往返后宿主保留同一主角")
 test.runtime("dimension", "restored_control", {}, function(data)
     assert(data.controllerPresent and data.gameplayReady and not data.inputExplicitlyLocked and not data.loadingGateLocked, "回程后真实加载门禁没有解除：" .. tostring(data.inputLockState))
     assert(data.externalControlPresent and data.testControlOwned and data.externalControlOwner == "GameplayTestLuaRunner", "回程后控制没有交回本轮 Lua 租约")

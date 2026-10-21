@@ -77,6 +77,7 @@
         "Assets/Settings/FlatWorldInputSystemSettings.inputsettings.asset",
         "Assets/StreamingAssets/GameplayTests/Systems/Player/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Tent.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInputLifecycleRuntimeProbe.cs",
         "Assets/5_Scripts/5-3_GamePlay/Physics2D/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/ItemActionFeedback.cs",
         "Assets/5_Scripts/Shared/Utilities/Geometry/AttackShape2D.cs",
@@ -302,6 +303,7 @@
         "Assets/StreamingAssets/GameConfig/Items/shells/crops.json",
         "Assets/StreamingAssets/GameConfig/Items/shells/cactus.json",
         "Assets/StreamingAssets/GameConfig/Items/shells/resource_nodes.json",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestCropVisualRuntimeProbe.cs",
         "Assets/StreamingAssets/GameplayTests/Systems/Agriculture/*"
       ],
       "dependsOn": [
@@ -471,7 +473,10 @@
         "Assets/StreamingAssets/GameplayTests/Systems/Environment/*",
         "Assets/5_Scripts/5-1_Data/CoreData/EnvironmentLayers.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EnvironmentConditionRange.cs",
-        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/RegionalWeatherRecord.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/RegionalWeatherRecord.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInputLifecycleRuntimeProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_TileEffectReceiver.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_TileEffectReceiver.Liquid.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -479,7 +484,8 @@
       ],
       "rulesSuite": "GameplayTests/Systems/Environment/rules-suite.json",
       "integrationSuites": [
-        "GameplayTests/fluid-suite.json"
+        "GameplayTests/fluid-suite.json",
+        "GameplayTests/Systems/Player/gameplay-suite.json"
       ],
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Environment/README.md",
@@ -492,7 +498,8 @@
         "fluid_tanks",
         "fluid_pumps_compressors",
         "fluid_reactions",
-        "fluid_environment"
+        "fluid_environment",
+        "player_gameplay"
       ],
       "rulesCoverage": "partial"
     },
@@ -1014,7 +1021,8 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-4_Networking/*",
         "Assets/Resources/Networking/*",
-        "Assets/StreamingAssets/GameplayTests/Systems/Networking/*"
+        "Assets/StreamingAssets/GameplayTests/Systems/Networking/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldScopeRuntimeProbe.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1033,6 +1041,8 @@
         "networking_bots_pickup",
         "networking_bots_actions",
         "networking_bots_roll",
+        "networking_world_scope",
+        "networking_bots_ships",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"
@@ -1068,6 +1078,7 @@
       "name": "UI与设置",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestGamepadInputLifecycleProbe.cs",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/WaterVisualSettings.cs",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInventoryFlickSettingsProbe.cs",

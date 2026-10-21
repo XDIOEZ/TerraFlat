@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 public partial class ChunkMgr
@@ -13,20 +13,16 @@ public partial class ChunkMgr
     private bool unlimitedChunkLoadSpeed;
 
     /// <summary>
-    /// 当前区块加载吞吐倍率。无限制时返回正无穷，影响旧管线分帧预算和后台并发上限；
+    /// 当前区块加载吞吐倍率。无限制时返回正无穷，影响生成工作预算和后台并发上限；
     /// 新 WorldModel 的主线程表现队列仍保留独立的逐帧安全上限。
     /// </summary>
     public float ChunkLoadSpeedMultiplier => unlimitedChunkLoadSpeed
         ? float.PositiveInfinity
         : ResolveFiniteChunkLoadSpeedMultiplier();
 
-    /// <summary>是否取消旧加载管线与后台生成的人工限制，不取消 Unity 主线程表现安全上限。</summary>
+    /// <summary>是否取消后台生成的人工限制，不取消 Unity 主线程表现安全上限。</summary>
     public bool IsChunkLoadSpeedUnlimited => unlimitedChunkLoadSpeed;
 
-    public int EffectiveMaxChunkLoadPerFrame => Mathf.Min(
-        ScalePositiveBudget(maxChunkLoadPerFrame), 4);
-    public int EffectiveMaxConcurrentChunkLoads => Mathf.Min(
-        ScalePositiveBudget(maxConcurrentChunkLoads), SafeBackgroundGenerationCeiling);
     /// <summary>新 WorldModel 调度器实际使用的后台生成并发上限。</summary>
     public int EffectiveBackgroundGenerationConcurrency => Mathf.Min(
         ScalePositiveBudget(WorldStreamingPreferences.ResolveBaseGenerationConcurrency(
@@ -87,7 +83,7 @@ public partial class ChunkMgr
         instance != null && instance.IsChunkLoadSpeedUnlimited;
 
     /// <summary>返回已存在的区块管理器，不在菜单场景自动创建空对象。</summary>
-    public static ChunkMgr ExistingInstance => instance;
+    public static ChunkMgr ExistingInstance => GameplayWorldRegistry.ExecutionChunks ?? instance;
 
     /// <summary>缩放整数工作量；无限制仍保留四倍分帧安全上限，避免堵死主线程。</summary>
     public static int ScaleCurrentChunkLoadItemBudget(int baseBudget, int minimum)

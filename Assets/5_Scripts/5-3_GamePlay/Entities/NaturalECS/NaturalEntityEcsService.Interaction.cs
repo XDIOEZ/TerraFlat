@@ -4,6 +4,7 @@ using FlatWorld.AIECS;
 using FlatWorld.Combat;
 using FlatWorld.Geometry;
 using FlatWorld.Networking;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using Unity.Profiling;
@@ -11,6 +12,20 @@ using UnityEngine;
 
 namespace FlatWorld.NaturalEntities
 {
+    /// <summary>只读自然实体目标投影，保留正式交互身份与实体代际，不创建 Item 外壳。</summary>
+    public readonly struct NaturalEntityTargetObservation
+    {
+        public readonly NaturalEntityHandle Handle;
+        public readonly IWorldInteractionTarget Target;
+        public readonly string ItemId;
+        public readonly Bounds AimBounds;
+        public readonly bool HasHealth;
+        public readonly Vector2 Health;
+        public NaturalEntityTargetObservation(NaturalEntityHandle handle, IWorldInteractionTarget target,
+            string itemId, Bounds aimBounds, bool hasHealth, Vector2 health)
+        { Handle = handle; Target = target; ItemId = itemId; AimBounds = aimBounds; HasHealth = hasHealth; Health = health; }
+    }
+
     public static partial class NaturalEntityEcsService
     {
         #region 空间索引与无外壳目标
@@ -23,10 +38,17 @@ namespace FlatWorld.NaturalEntities
             public Bounds HitBounds, BodyBounds, VisualBounds;
             public bool BlocksMovement;
             public bool HitColliderEnabled;
-            public Vector3 WorldPosition => WorldLocalPresentation.ProjectPosition(Snapshot.transform.position);
+            public Vector3 WorldPosition
+            {
+                get { using var scope = UseHandle(Handle); return WorldLocalPresentation.ProjectPosition(Snapshot.transform.position); }
+            }
             public int TargetGuid => Snapshot.Guid;
-            public bool IsValid => Contains(Handle) && simulation.GetBody(Handle.Id).Dead == 0;
-            public bool CanInteract(Item actor) => actor != null && IsValid && CanHarvest(Handle);
+            public bool IsValid
+            {
+                get { using var scope = UseHandle(Handle); return Contains(Handle) && simulation.GetBody(Handle.Id).Dead == 0; }
+            }
+            public bool CanInteract(Item actor) => actor != null &&
+                TryGetActorPosition(actor, WorldKey, out _) && IsValid && CanHarvest(Handle);
             // 资源采集保留鼠标点选，不经过设备面板入口。
             public bool CanPointerInteract(Item actor) => true;
             public bool ContainsInteractionPoint(Vector2 point) => ContainsPoint(this, point);
@@ -37,11 +59,11 @@ namespace FlatWorld.NaturalEntities
                 => ApplyWeaponHit(this, weapon, context);
         }
 
-        private static readonly Dictionary<Vector2Int, HashSet<int>> spatialCells = new();
-        private static readonly HashSet<Record> habitatTreeRecords = new();
+        private static Dictionary<Vector2Int, HashSet<int>> spatialCells => State.spatialCells;
+        private static HashSet<Record> habitatTreeRecords => State.habitatTreeRecords;
         private static readonly ProfilerMarker TreeHabitatMarker = new("NaturalEntityRuntime.TreeHabitat");
         private static readonly Stack<List<Record>> queryLists = new();
-        private static ulong spatialQuerySequence;
+        private static ulong spatialQuerySequence { get => State.spatialQuerySequence; set => State.spatialQuerySequence = value; }
         public enum PhysicsBodyChangeReason : byte { Registered, Removed, VisualRevision, SnapshotRefresh }
         public static event Action<Bounds> PhysicsBodyChanged;
         public static event Action<Bounds, PhysicsBodyChangeReason, int, string> PhysicsBodyChangedWithReason;
@@ -53,13 +75,14 @@ namespace FlatWorld.NaturalEntities
         {
             public readonly int RuntimeId, Guid;
             public readonly string DefinitionId;
+            public readonly string WorldKey;
             public readonly Bounds Bounds;
-            public BlockingBodySnapshot(int runtimeId, int guid, string definitionId, Bounds bounds)
-            { RuntimeId = runtimeId; Guid = guid; DefinitionId = definitionId; Bounds = bounds; }
+            public BlockingBodySnapshot(int runtimeId, int guid, string definitionId, Bounds bounds, string worldKey = null)
+            { RuntimeId = runtimeId; Guid = guid; DefinitionId = definitionId; Bounds = bounds; WorldKey = worldKey; }
         }
 
         private static BlockingBodySnapshot CaptureBlockingBody(Record record)
-            => new(record.Handle.Id, record.Snapshot.Guid, record.Profile.Definition.Id, record.BodyBounds);
+            => new(record.Handle.Id, record.Snapshot.Guid, record.Profile.Definition.Id, record.BodyBounds, record.WorldKey);
 
         /// <summary>树木受击已覆盖树干阻挡，复用现有区块 Collider 转接；其它资源仍用独立受击形状。</summary>
         internal static IGameplayPhysicsDamageTarget GetBlockingDamageTarget(int runtimeId)
@@ -110,6 +133,35 @@ namespace FlatWorld.NaturalEntities
                     simulation.TryGet(record.Handle.Id, out AiecsVital vital))
                 { health = new Vector2(vital.Hp, vital.MaxHp); return true; }
             return false;
+        }
+
+        /// <summary>按实际空间桶观察当前世界存活实体，未激活生成点不会成为可操作目标。</summary>
+        public static void QueryTargetObservations(Item actor, float radius, List<NaturalEntityTargetObservation> result)
+        {
+            if (result == null) throw new ArgumentNullException(nameof(result));
+            result.Clear();
+            if (actor == null || !float.IsFinite(radius) || radius <= 0f || simulation == null) return;
+            using ResourceQuery query = QueryBounds(actor.transform.position, Vector2.one * radius);
+            foreach (Record record in query)
+            {
+                if (!record.IsValid || record.DimensionId != WorldEntityRuntime.DimensionId ||
+                    WorldTopologyRuntime.Distance(actor.transform.position, record.WorldPosition) > radius) continue;
+                bool hasHealth = simulation.TryGet(record.Handle.Id, out AiecsVital vital);
+                result.Add(new NaturalEntityTargetObservation(record.Handle, record, record.Profile.Definition.Id,
+                    record.HitBounds, hasHealth, hasHealth ? new Vector2(vital.Hp, vital.MaxHp) : default));
+            }
+        }
+
+        /// <summary>动作前按带代际句柄重新读取目标，删除、卸载或换代后立即拒绝。</summary>
+        public static bool TryGetTargetObservation(NaturalEntityHandle handle, out NaturalEntityTargetObservation observation)
+        {
+            using var scope = UseHandle(handle);
+            observation = default;
+            if (!Contains(handle) || !records.TryGetValue(handle.Id, out Record record) || !record.IsValid) return false;
+            bool hasHealth = simulation.TryGet(handle.Id, out AiecsVital vital);
+            observation = new NaturalEntityTargetObservation(handle, record, record.Profile.Definition.Id,
+                record.HitBounds, hasHealth, hasHealth ? new Vector2(vital.Hp, vital.MaxHp) : default);
+            return true;
         }
 
         #region 树木栖息地查询
@@ -453,6 +505,7 @@ namespace FlatWorld.NaturalEntities
         private static float ApplyDamageInternal(NaturalEntityHandle handle, in CombatDamageContext context, bool environmentalDamage,
             Mod_Damage sender = null)
         {
+            using var handleScope = UseHandle(handle);
             if (!GameNetwork.HasStateAuthority || !Contains(handle) || !context.Attack.Source.IsValid ||
                 !math.all(math.isfinite(context.Damage)) || !math.isfinite(context.Clock.Time)) return -1f;
             Record record = records[handle.Id];
@@ -484,6 +537,7 @@ namespace FlatWorld.NaturalEntities
             record.FlashUntil = Time.time + 0.15f;
             RefreshPresentation(handle);
             float actualDamage = previous - vital.Hp;
+            if (actualDamage > 0f) PublishNetworkStateCommitted(record);
             // 显式声明的声音跟随有效命中发声，零伤按配置处理，致命命中也在移除前播放一次。
             if (!environmentalDamage && context.Attack.Source.Backend != CombatBackend.Environment &&
                 !string.IsNullOrWhiteSpace(record.Profile.HurtAudioCueId))
@@ -495,6 +549,7 @@ namespace FlatWorld.NaturalEntities
 
         public static bool CanHarvest(NaturalEntityHandle handle)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle)) return false;
             Record record = records[handle.Id];
             if (record.Busy || simulation.GetBody(handle.Id).Dead != 0) return false;
@@ -511,16 +566,92 @@ namespace FlatWorld.NaturalEntities
                 (record.Profile.AllowCultivatedHarvest && !string.IsNullOrWhiteSpace(record.Profile.TreeFoodId));
         }
 
+        // 网络请求只定位服务端本世界的真实实体，采集规则和掉落仍复用同一入口。
+        public static event Action<string, int, Vector2> NetworkStateCommitted;
+        private static void PublishNetworkStateCommitted(Record record)
+        {
+            if (NetworkStateCommitted == null) return;
+            foreach (Action<string, int, Vector2> callback in NetworkStateCommitted.GetInvocationList())
+                try { callback(record.WorldKey, record.Snapshot.Guid, record.Snapshot.transform.position); }
+                catch (Exception exception) { Debug.LogException(exception); }
+        }
+        public static bool TryCaptureNetworkState(string worldKey, int guid, Vector2 position, out ItemData snapshot)
+        {
+            snapshot = null;
+            if (!GameNetwork.HasStateAuthority || !GameplayWorldRegistry.TryGet(worldKey, out _) ||
+                !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
+            using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
+            Record record = FindNetworkRecord(guid, position);
+            return record != null && TryCapture(record.Handle, out snapshot);
+        }
+
+        // 客户端同步正式生态差量，卸载后再次生成仍沿用同一删除和库存状态。
+        public static void ApplyNetworkState(string worldKey, int guid, Vector2 position, ItemData snapshot)
+        {
+            if (GameNetwork.HasStateAuthority || guid == 0 || !GameplayWorldRegistry.TryGet(worldKey, out _) ||
+                !float.IsFinite(position.x) || !float.IsFinite(position.y) ||
+                snapshot != null && (snapshot.Guid != guid || snapshot.transform == null)) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
+            ChunkMgr chunks = ChunkMgr.ExistingInstance;
+            PlanetData planet = SaveDataMgr.Instance?.Active_PlanetData;
+            if (chunks == null || planet == null) return;
+            var address = chunks.ResolveWorldAddress(position);
+            planet.Ecology ??= new EcologyWorldSaveData();
+            Record record = FindNetworkRecord(guid, position);
+            if (snapshot == null)
+            {
+                planet.Ecology.MarkRemoved(address.ChunkOrigin.X, address.ChunkOrigin.Y, guid);
+                if (record != null) Remove(record.Handle);
+                return;
+            }
+            if (WorldTopologyRuntime.Distance(position, snapshot.transform.position) >= .01f) return;
+            planet.Ecology.CaptureChangedItem(address.ChunkOrigin.X, address.ChunkOrigin.Y, snapshot);
+            if (record == null) return;
+            float baseline = simulation.TryGet(record.Handle.Id, out EntityClimate climate) ? climate.BaselineCelsius : 0f;
+            ApplySnapshot(record.Handle, snapshot, baseline);
+        }
+
+        private static Record FindNetworkRecord(int guid, Vector2 position)
+        {
+            if (simulation == null) return null;
+            // 客户端挂起实体也要接收状态，不能借只包含活跃对象的交互空间索引。
+            foreach (Record record in records.Values)
+                if (record.Snapshot.Guid == guid &&
+                    WorldTopologyRuntime.Distance(position, record.Snapshot.transform.position) < .01f) return record;
+            return null;
+        }
+
+        public static bool TryHarvestNetwork(Player actor, string worldKey, int guid, Vector2 position)
+        {
+            if (!GameNetwork.HasStateAuthority || actor == null ||
+                !float.IsFinite(position.x) || !float.IsFinite(position.y) ||
+                !GameplayWorldRegistry.TryGet(worldKey, out _)) return false;
+            using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
+            if (!TryGetActorPosition(actor, worldKey, out _) || simulation == null) return false;
+            using ResourceQuery query = QueryBounds(position, Vector2.one);
+            foreach (Record record in query)
+                if (record.Snapshot.Guid == guid && record.IsValid && record.WorldKey == worldKey &&
+                    WorldTopologyRuntime.Distance(position, record.Snapshot.transform.position) < .01f)
+                    return TryHarvest(record.Handle, actor);
+            return false;
+        }
+
         /// <summary>产出先成功生成再提交库存或收获状态，失败时回滚本次生成，避免丢物或重复扣库存。</summary>
         public static bool TryHarvest(NaturalEntityHandle handle, Item actor)
         {
-            if (!GameNetwork.HasStateAuthority || actor == null || !CanHarvest(handle)) return false;
+            using var handleScope = UseHandle(handle);
+            if (actor == null || !Contains(handle)) return false;
             Record record = records[handle.Id];
+            if (!GameNetwork.HasStateAuthority)
+                return actor is Player player && NaturalInteractionNetworkBridge.RequestHarvest(player,
+                    record.WorldKey, record.Snapshot.Guid, record.Snapshot.transform.position);
+            if (!CanHarvest(handle)) return false;
+            if (!TryGetActorPosition(actor, record.WorldKey, out Vector2 actorPosition)) return false;
             ChunkMgr chunks = ChunkMgr.ExistingInstance;
             Mod_InteractSender sender = actor.GetComponentInChildren<Mod_InteractSender>(true);
             float reach = sender != null ? sender.maxInteractDistance : Mod_InteractSender.DefaultMaxInteractDistance;
-            if (chunks == null || chunks.ResolveWorldAddress(actor.transform.position).DimensionId != record.DimensionId ||
-                WorldTopologyRuntime.Distance(actor.transform.position, record.Snapshot.transform.position) > reach) return false;
+            if (chunks == null || chunks.ResolveWorldAddress(actorPosition).DimensionId != record.DimensionId ||
+                WorldTopologyRuntime.Distance(actorPosition, record.Snapshot.transform.position) > reach) return false;
             record.Busy = true;
             var spawned = new List<DroppedItemHandle>();
             try
@@ -533,6 +664,7 @@ namespace FlatWorld.NaturalEntities
                     simulation.TryGet(handle.Id, out EntityResourceStock stock);
                     stock.Count--; simulation.Set(handle.Id, stock);
                     RefreshPresentation(handle);
+                    PublishNetworkStateCommitted(record);
                     return true;
                 }
                 if (record.Profile.HarvestOutputs != null)
@@ -601,7 +733,7 @@ namespace FlatWorld.NaturalEntities
         private static void CompleteRemoval(Record record)
         {
             try { record.Removed?.Invoke(record.Handle); }
-            finally { Remove(record.Handle); }
+            finally { Remove(record.Handle); PublishNetworkStateCommitted(record); }
         }
 
         #endregion

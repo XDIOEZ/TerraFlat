@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
 using FlatWorld.Gameplay.Progress;
@@ -57,7 +57,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private static void SendClientPickupRequest(int guid, ClientPickupRequest request)
             => NetworkClient.Send(new NetworkItemPickupRequest
-                { ItemGuid = guid, RequestToken = request.RequestToken });
+                { RealmRevision = NetworkGameplayWorldScope.LocalRevision, ItemGuid = guid, RequestToken = request.RequestToken });
 
         private void OnServerPickupRequest(NetworkConnectionToClient connection, NetworkItemPickupRequest request)
         {
@@ -145,7 +145,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private static void SendClientPickupCommit(int guid, ClientPickupRequest request)
             => NetworkClient.Send(new NetworkItemPickupCommit
-            {
+            { RealmRevision = NetworkGameplayWorldScope.LocalRevision,
                 ItemGuid = guid, RequestToken = request.RequestToken,
                 ReservationToken = request.ReservationToken, RequestedSourceAmount = request.RequestedSourceAmount
             });
@@ -271,7 +271,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkWorldPlayer actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (actor?.ApplyPickupInventoryState(receipt.InventoryPayload) != true) return;
             NetworkItemPickupApplied applied = new()
-            {
+            { RealmRevision = NetworkGameplayWorldScope.LocalRevision,
                 ItemGuid = receipt.ItemGuid, RequestToken = receipt.RequestToken, ReservationToken = receipt.ReservationToken
             };
             if (appliedClientPickupReceipts.Count >= 256) appliedClientPickupReceipts.Clear();
@@ -360,7 +360,7 @@ namespace FlatWorld.Networking.Gameplay
                 return true;
             }
             item = ItemMgr.Instance.GetItemByGuid(itemGuid);
-            if (!CanSynchronizeWorldItem(item) || item.itemData.Stack?.CanBePickedUp != true ||
+            if (!CanSynchronizeWorldItem(item) || !NetworkGameplayWorldScope.OwnsItem(connection, item) || item.itemData.Stack?.CanBePickedUp != true ||
                 WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), GetLogicalItemPosition(item)) > MaxPickupDistance)
             { item = null; return false; }
             return true;

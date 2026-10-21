@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -54,6 +54,16 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     protected override void OnSave()
     {
         ModSaveData.WriteData(RawData);
+    }
+
+    protected override void OnUnload()
+    {
+        // 正式卸载也必须归还输入和交互会话，不能只依赖 Unity 停用回调。
+        UnbindInput();
+        EndEnvironmentActionHold();
+        CancelCurrentInteraction();
+        gameController = null;
+        hotBar = null;
     }
 
     public override void ModUpdate(float deltaTime)
@@ -239,7 +249,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         using var queryScope = PointerQueryMarker.Auto();
         Physics2D.SyncTransforms();
-        int count = Physics2D.OverlapPointNonAlloc(pointerWorld, interactionOverlapBuffer, InteractionQueryLayerMask);
+        int count = GameplayPhysics2D.OverlapPointNonAlloc(pointerWorld, interactionOverlapBuffer, InteractionQueryLayerMask);
         Vector3 origin = item.transform.position;
         spatialCandidates.Clear();
         for (int i = 0; i < count; i++)
@@ -372,7 +382,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         // 光标命中查询已经同步过本帧物理变换，半径兜底直接复用。
         if (!syncedByPointerQuery)
             Physics2D.SyncTransforms();
-        int count = Physics2D.OverlapCircleNonAlloc(
+        int count = GameplayPhysics2D.OverlapCircleNonAlloc(
             item.transform.position,
             Mathf.Max(0.01f, maxInteractDistance),
             interactionOverlapBuffer,
@@ -616,6 +626,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             entityPreview.SetInteractionHighlighted(false);
         if (clearedOutline != null)
             clearedOutline.SetHighlighted(false);
+    }
+
+    private void OnEnable()
+    {
+        // 场景迁移或临时停用不会重新加载模块，恢复时须重新接上交互按键。
+        if (IsRuntimeLoaded)
+            BindInput();
     }
 
     private void OnDisable()

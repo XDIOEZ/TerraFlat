@@ -11,32 +11,37 @@ using UnityEngine.SceneManagement;
 public static class LightningStrikeSystem
 {
     #region 会话与命中去重
-    private static readonly Dictionary<Int2, int> LastSequences = new();
-    private static GameSaveData activeSave;
-    private static object activeTerrain;
-    private static int activeSceneHandle;
-    private static string activeWorld;
+    private sealed class LightningWorld
+    {
+        public GameSaveData Save;
+        public object Terrain;
+        public readonly Dictionary<Int2, int> Sequences = new();
+    }
+    private static readonly Dictionary<string, LightningWorld> worlds = new(StringComparer.Ordinal);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void Reset()
     {
-        LastSequences.Clear();
-        activeSave = null; activeTerrain = null; activeWorld = null; activeSceneHandle = 0;
+        worlds.Clear();
+    }
+
+    public static void Reset(string worldKey)
+    {
+        if (worldKey != null) worlds.Remove(worldKey);
     }
 
     private static bool Reserve(in RegionalLightningEvent strike)
     {
         GameSaveData save = SaveDataMgr.Instance?.SaveData;
         object terrain = ChunkMgr.ExistingInstance?.WorldRuntime;
-        int sceneHandle = SceneManager.GetActiveScene().handle;
-        if (!ReferenceEquals(activeSave, save) || !ReferenceEquals(activeTerrain, terrain) ||
-            activeSceneHandle != sceneHandle || !string.Equals(activeWorld, strike.WorldKey, StringComparison.Ordinal))
+        if (!worlds.TryGetValue(strike.WorldKey, out LightningWorld state))
+            worlds[strike.WorldKey] = state = new LightningWorld();
+        if (!ReferenceEquals(state.Save, save) || !ReferenceEquals(state.Terrain, terrain))
         {
-            Reset();
-            activeSave = save; activeTerrain = terrain; activeSceneHandle = sceneHandle; activeWorld = strike.WorldKey;
+            state.Sequences.Clear(); state.Save = save; state.Terrain = terrain;
         }
-        if (LastSequences.TryGetValue(strike.Region, out int previous) && strike.Sequence == previous) return false;
-        LastSequences[strike.Region] = strike.Sequence;
+        if (state.Sequences.TryGetValue(strike.Region, out int previous) && strike.Sequence <= previous) return false;
+        state.Sequences[strike.Region] = strike.Sequence;
         return true;
     }
 
@@ -54,8 +59,11 @@ public static class LightningStrikeSystem
     #region 权威落点伤害
     public static void Apply(RegionalLightningEvent strike, float radius, float peakDamage)
     {
+        if (string.IsNullOrWhiteSpace(strike.WorldKey)) return;
+        bool registered = GameplayWorldRegistry.TryGet(strike.WorldKey, out _);
+        if (!registered && GameplayWorldRegistry.CurrentScene.name != strike.WorldKey) return;
+        using var worldScope = registered ? GameplayWorldRegistry.UseWorld(strike.WorldKey) : null;
         if (!GameNetwork.HasStateAuthority || string.IsNullOrWhiteSpace(strike.WorldKey) || strike.Sequence <= 0 ||
-            !string.Equals(SceneManager.GetActiveScene().name, strike.WorldKey, StringComparison.Ordinal) ||
             !WorldAddress.FromWorldKey(strike.WorldKey).IsSurface ||
             SaveDataMgr.Instance?.SaveData?.PlanetData_Dict?.ContainsKey(strike.WorldKey) != true ||
             WeatherMgr.IsWeatherSuppressedInDimension(DimensionManager.ExistingInstance?.ActiveDefinition) ||

@@ -1,3 +1,45 @@
+test.system("ui_settings", "gamepad_input_reenable", {}, function(data)
+    local function check_binding(sample)
+        assert(sample.assetMatches and sample.cancelMatches and sample.submitMatches,
+            "手柄 UI 恢复后没有使用最新玩家输入资产的返回与确认动作")
+    end
+    assert(data.deferredInitialBinding, "停用的手柄 UI 控制器不应提前订阅输入")
+    check_binding(data.initial)
+    assert(data.initial.reboundRecognized, "首次配置没有识别实际重绑确认键")
+    assert(#data.rounds == 3, "缺少手柄 UI 连续停用恢复采样")
+    for _, sample in ipairs(data.rounds) do
+        check_binding(sample)
+        assert(sample.disabledUnbound and sample.reboundRecognized and sample.defaultRejected,
+            "手柄 UI 停用没有解绑，或恢复后改回默认确认键")
+    end
+    check_binding(data.replaced)
+    assert(data.replacedWhileDisabledUnbound and data.replaced.newRecognized and data.replaced.oldRejected,
+        "停用期间替换输入资产没有延后生效，或恢复时仍接受旧确认键")
+    assert(data.withdrawn and data.destroyedWithdrawn, "输入资产撤销或销毁后被恢复流程重新接入")
+end, "手柄 UI 停用恢复保留重绑，并遵从停用期间的替换、撤销与销毁")
+
+test.system("ui_settings", "cancel_dispatch", {}, function(data)
+    assert(data.consumed and not data.afterRemoval,
+        "返回分发没有尊重消费结果或注销")
+    assert(data.first == 2 and data.consumer == 1 and data.tail == 1,
+        "已经消费的返回继续传给了后续处理者，或注销后仍收到返回")
+end, "统一返回分发与注销")
+
+for _, mode in ipairs({"default", "rebound", "cleared"}) do
+    test.system("ui_settings", "cancel_bindings", {mode = mode}, function(data)
+        local keyboard = mode == "cleared" and "" or (mode == "rebound" and "<Keyboard>/f10" or "<Keyboard>/escape")
+        assert(data.keyboard == keyboard, "UI 返回没有同步键盘重绑或清空")
+        assert(data.gamepadSettings == (mode == "cleared" and "" or "<Gamepad>/start"),
+            "手柄设置返回没有同步清空")
+        assert(data.gamepadBack == "<Gamepad>/buttonEast" and data.mobile == "<FlatWorldMobileDevice>/settings",
+            "手柄取消或手机返回未接入统一入口")
+        assert(data.count == 4 and data.initialCount == data.count, "重复同步新增了重复返回绑定")
+        for _, path in ipairs(data.submitGamepadPaths) do
+            assert(mode ~= "cleared" or path == "", "清空手柄确认后 UI 又恢复了默认键")
+        end
+    end, "统一返回绑定 " .. mode)
+end
+
 -- 只采样整体画质元数据和纯映射，不读取当前选项或应用画质。
 test.system("ui_settings", "graphics_quality_provider", {}, function(data)
     assert(data.providerId == "graphics" and data.switchCount == 0 and #data.dropdowns == 1,
@@ -621,11 +663,12 @@ test.system("ui_settings", "virtualized_inventory", {}, function(data)
             assert(slot == want.first + offset - 1, "虚拟库存显示索引缺失或重复")
         end
         assert(sample.mappingValid and sample.routed, "虚拟槽位位置、库存映射或点击数据索引错误")
+        assert(sample.bindingValid, "虚拟槽位重绑后库存身份错误，或隐藏槽仍持有旧库存")
         assert(sample.callbacksStable, "滚动或末尾重新显示时重复创建数据、点击或拖拽回调")
     end
     assert(data.clearedIndex == 12 and data.invalidUnchanged,
         "复用后的清空回调仍指向旧格，或无效索引破坏了绑定")
-    assert(data.forcedRefreshStable and data.mapCleared and data.layoutRestored,
+    assert(data.forcedRefreshStable and data.mapCleared and data.bindingsCleared and data.layoutRestored,
         "强制刷新重建了回调，或解绑没有清理映射并恢复布局")
     assert(data.expandedPoolCount == 18 and data.expandedMappingValid,
         "更大视口重新绑定后没有扩充槽位池或丢失数据映射")

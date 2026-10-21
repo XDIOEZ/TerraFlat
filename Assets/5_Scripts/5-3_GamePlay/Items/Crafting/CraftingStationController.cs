@@ -53,6 +53,40 @@ public sealed class CraftingStationController : IDisposable
 
     #endregion
 
+    #region 只读交互状态
+
+    public BasePanel Panel => panel;
+    public Inventory InputInventory => inputInventory;
+    public Inventory OutputInventory => outputInventory;
+    public IReadOnlyList<CraftingRecipeMatch> Candidates => matches;
+    public RuntimeRecipe SelectedRecipe => selectedRecipe;
+    public string AuthoritativeRecipeId => authoritativeProcessor?.State.RecipeId;
+    public bool UsesAuthoritativeProcessor => authoritativeProcessor != null;
+    public float RequiredWork => authoritativeProcessor?.RequiredWork ?? Mathf.Max(1, requiredClickCount());
+    public float CompletedWork => authoritativeProcessor?.State.Progress ?? currentClickProgress;
+    public bool IsDisposed => disposed;
+
+    public CraftingResult Preview(RuntimeRecipe recipe)
+        => CraftingService.PreviewRecipe(inputInventory, outputInventory, capabilities, recipe);
+
+    /// <summary>只提供候选按钮身份，外部输入仍须走按钮的正式事件链。</summary>
+    public Button FindRecipeButton(string recipeId)
+    {
+        foreach (CandidateEntry entry in candidateEntries)
+            if (entry.Recipe != null && string.Equals(entry.Recipe.Id, recipeId, StringComparison.Ordinal))
+                return entry.Button;
+        return null;
+    }
+
+    public RuntimeRecipe FindButtonRecipe(Button button)
+    {
+        foreach (CandidateEntry entry in candidateEntries)
+            if (entry.Button == button) return entry.Recipe;
+        return null;
+    }
+
+    #endregion
+
     #region 初始化与清理
 
     public CraftingStationController(
@@ -99,6 +133,9 @@ public sealed class CraftingStationController : IDisposable
         if (authoritativeProcessor != null) authoritativeProcessor.Changed += RefreshAuthoritativeState;
 
         RefreshCandidates();
+        CraftingStationView view = panel.GetComponent<CraftingStationView>();
+        if (view == null) view = panel.gameObject.AddComponent<CraftingStationView>();
+        view.Bind(this);
     }
 
     public void Dispose()
@@ -107,6 +144,7 @@ public sealed class CraftingStationController : IDisposable
             return;
 
         disposed = true;
+        if (panel != null) panel.GetComponent<CraftingStationView>()?.Unbind(this);
         if (authoritativeProcessor != null) authoritativeProcessor.Changed -= RefreshAuthoritativeState;
         FlatWorldLocalizationService.LanguageChanged -= OnLanguageChanged;
         craftButton.onClick.RemoveListener(OnCraftButtonClick);
@@ -489,6 +527,7 @@ public sealed class CraftingStationController : IDisposable
         }
 
         public RuntimeRecipe Recipe { get; private set; }
+        public Button Button => button;
 
         public void Bind(UnityAction action)
         {

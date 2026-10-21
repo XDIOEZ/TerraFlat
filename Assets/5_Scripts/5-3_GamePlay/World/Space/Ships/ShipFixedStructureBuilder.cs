@@ -24,17 +24,51 @@ namespace FlatWorld.Spaceflight
             public bool IsFloor;
         }
 
+        public static Func<Player, string, bool, Action<bool, string>, bool> RemoteRequest;
+
+        // 单人与多人都调用相同权威事务，客户端只提交模板身份。
+        public static bool RequestBuild(Player player, FixedStructureDefinition template, Action<bool, string> completed)
+        {
+            if (!GameNetwork.HasStateAuthority)
+                return RequestRemote(player, template?.Id, false, completed);
+            bool accepted; string reason;
+            try { accepted = TryBuild(player, template, out _, out reason); }
+            catch (Exception error) { accepted = false; reason = "飞船操作失败：" + error.Message; }
+            completed?.Invoke(accepted, reason);
+            return accepted;
+        }
+
+        public static bool RequestRefill(Player player, IReadOnlyList<FixedStructureDefinition> templates, Action<bool, string> completed)
+        {
+            if (!GameNetwork.HasStateAuthority) return RequestRemote(player, null, true, completed);
+            bool accepted; string reason;
+            try { accepted = TryRefill(player, templates, out reason); }
+            catch (Exception error) { accepted = false; reason = "飞船操作失败：" + error.Message; }
+            completed?.Invoke(accepted, reason);
+            return accepted;
+        }
+
+        private static bool RequestRemote(Player player, string template, bool refill, Action<bool, string> completed)
+        {
+            if (GameNetwork.IsOnline && RemoteRequest?.Invoke(player, template, refill, completed) == true) return true;
+            completed?.Invoke(false, "联机连接尚未就绪，请稍后重试。");
+            return false;
+        }
+
         public static bool TryBuild(Player player, FixedStructureDefinition template,
             out IReadOnlyList<ShipGroundBuildingStore.Entry> buildings, out string reason)
         {
             buildings = null;
             reason = null;
             SpaceSession session = SpaceSession.Current;
+            if (!GameNetwork.HasStateAuthority || !(GameManager.Instance?.IsInGameWorld == true && (GameManager.Instance.IsGameplayReady || GameNetwork.IsOnline && GameNetwork.HasStateAuthority)) || player == null ||
+                session?.State == null || !TryGetActorFrame(player, session, out SpaceNetworkObserver actor) || actor.InSpace)
+            { reason = "请在权威地表世界就绪后生成飞船。"; return false; }
+            using var worldScope = GameplayWorldRegistry.UseWorld(actor.WorldKey);
             ChunkMgr chunks = ChunkMgr.ExistingInstance;
-            if (GameNetwork.IsOnline || GameManager.Instance?.IsGameplayReady != true || player == null ||
-                session?.State == null || session.IsSpaceView || chunks == null || !chunks.IsAuthoritativeSimulation ||
+            if (chunks == null || !chunks.IsAuthoritativeSimulation ||
                 !chunks.IsWorldModelRuntimeActive || chunks.ActiveGenerationProfile?.Settings.Mode != ChunkGenerationMode.Surface)
-            { reason = "请在单机地表世界就绪后生成飞船。"; return false; }
+            { reason = "请在权威地表世界就绪后生成飞船。"; return false; }
 
             var added = new List<ShipGroundBuildingStore.Entry>();
             try
@@ -46,12 +80,12 @@ namespace FlatWorld.Spaceflight
                     FixedStructureResourceInitializer.CreateFluidState(template.CabinGas, null, 1d,
                         ShipAtmosphereService.MinimumCabinGasSpaceLiters, double.MaxValue);
                 Vector2Int origin;
-                using (MachineWorld.UseScope(SceneManager.GetActiveScene().name))
-                    if (!TryFindSite(player, template, chunks, session, out origin))
+                using (MachineWorld.UseScope(actor.WorldKey))
+                    if (!TryFindSite(actor.Position.LocalMeters.ToVector2(), template, chunks, session, out origin))
                     { reason = "附近没有已加载、干燥且无障碍的完整空地，请移到更开阔的位置。"; return false; }
 
                 string instanceId = Guid.NewGuid().ToString("N");
-                string world = SceneManager.GetActiveScene().name;
+                string world = actor.WorldKey;
                 foreach (PreparedMember entry in members)
                 {
                     JObject special = ItemSpecialDataJsonStore.ReadRoot(entry.Data.ItemSpecialData);
@@ -68,6 +102,7 @@ namespace FlatWorld.Spaceflight
                         }
                     }
                 }
+                ShipGroundBuildingStore.PublishCreated(added);
                 buildings = added;
                 reason = "已逐件生成“" + template.DisplayName + "”的普通地面建筑，操作控制台点火后才装配起飞。";
                 return true;
@@ -167,10 +202,9 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 地表空地选址
-        private static bool TryFindSite(Player player, FixedStructureDefinition template, ChunkMgr chunks,
+        private static bool TryFindSite(Vector2 logical, FixedStructureDefinition template, ChunkMgr chunks,
             SpaceSession session, out Vector2Int origin)
         {
-            Vector2 logical = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             Vector2Int center = new(Mathf.FloorToInt(logical.x), Mathf.FloorToInt(logical.y));
             int radius = template.SearchRadius;
             int clearance = Math.Max(1, template.Clearance);
@@ -200,7 +234,7 @@ namespace FlatWorld.Spaceflight
                     if (footprint.Intersects(canonical)) { blocked = true; break; }
                 }
                 if (blocked) continue;
-                int count = Physics2D.OverlapBox(WorldLocalPresentation.ProjectPosition(logicalCenter),
+                int count = GameplayWorldRegistry.CurrentScene.GetPhysicsScene2D().OverlapBox(WorldLocalPresentation.ProjectPosition(logicalCenter),
                     new Vector2(area.size.x - .02f, area.size.y - .02f), 0f, filter, colliders);
                 if (count == colliders.Length) continue;
                 for (int i = 0; i < count; i++)
@@ -235,27 +269,41 @@ namespace FlatWorld.Spaceflight
                     sample.Cell.NavigationCost > 1000 || sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y) > 0f ||
                     TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0 ||
                     BuildingOccupancyRegistry.IsOccupied(cell) ||
-                    session.TryGetSupport(WorldLocalPresentation.ProjectPosition(new Vector2(x + .5f, y + .5f)), out _, out _, out _)) return false;
+                    HasSurfaceShipAt(session, new Vector2(x + .5f, y + .5f))) return false;
                 for (int layer = 0; layer <= 5; layer++) if (MachineWorld.IsOccupied(cell, layer)) return false;
             }
             return true;
+        }
+
+        private static bool HasSurfaceShipAt(SpaceSession session, Vector2 position)
+        {
+            foreach (ShipState ship in session.State.Ships)
+            {
+                ShipFlightState flight = session.GetFlight(ship.ShipId);
+                if (ship.IsWreck || flight == null || flight.Phase == ShipFlightPhase.Cruising ||
+                    flight.SurfaceWorldKey != GameplayWorldRegistry.ExecutionWorldKey) continue;
+                ShipGeometry.WorldToLocal(ship, position.x, position.y, out double x, out double y);
+                if (ShipAtmosphereService.HasFloor(ship, (int)Math.Floor(x / ship.CellSizeMeters),
+                    (int)Math.Floor(y / ship.CellSizeMeters))) return true;
+            }
+            return false;
         }
         #endregion
 
         #region 模板资源补充
         public static bool TryRefill(Player player, IReadOnlyList<FixedStructureDefinition> templates, out string reason)
         {
-            if (player != null && !SpaceMgr.IsSpaceScene(player.gameObject.scene.name))
-                return TryRefillGround(player, templates, out reason);
             reason = null;
             SpaceSession session = SpaceSession.Current;
-            if (GameNetwork.IsOnline || GameManager.Instance?.IsGameplayReady != true || player == null || session?.State == null)
-            { reason = "请在单机世界就绪后补充资源。"; return false; }
+            if (!GameNetwork.HasStateAuthority || !(GameManager.Instance?.IsInGameWorld == true && (GameManager.Instance.IsGameplayReady || GameNetwork.IsOnline && GameNetwork.HasStateAuthority)) || player == null || session?.State == null ||
+                templates == null || !TryGetActorFrame(player, session, out SpaceNetworkObserver actor))
+            { reason = "请在权威世界就绪后补充资源。"; return false; }
+            if (!actor.InSpace) return TryRefillGround(actor, templates, out reason);
             ShipState nearest = null;
             double distance = 24d * 24d;
             foreach (ShipState candidate in session.State.Ships)
             {
-                if (!session.IsVisible(candidate)) continue;
+                if (session.GetFlight(candidate.ShipId)?.Phase != ShipFlightPhase.Cruising) continue;
                 bool generated = false;
                 foreach (ShipPieceState piece in candidate.Pieces)
                     if (piece.IsAlive && ReadMarker(session.GetPieceData(piece)) != null) { generated = true; break; }
@@ -263,9 +311,10 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipPieceState piece in candidate.Pieces)
                 {
                     if (!piece.IsAlive || piece.Kind != ShipPieceKind.Floor) continue;
-                    Vector2 point = session.DisplayPoint(candidate, (piece.CellX + .5d) * candidate.CellSizeMeters,
-                        (piece.CellY + .5d) * candidate.CellSizeMeters);
-                    double sqr = (point - (Vector2)player.transform.position).sqrMagnitude;
+                    ShipGeometry.LocalToWorld(candidate, (piece.CellX + .5d) * candidate.CellSizeMeters,
+                        (piece.CellY + .5d) * candidate.CellSizeMeters, out double x, out double y);
+                    double sqr = SpaceSectorCoordinates.Difference(actor.Position,
+                        new SpaceSectorPosition(candidate.Sector, new SpaceVector2(x, y))).SqrMagnitude;
                     if (sqr <= distance) { distance = sqr; nearest = candidate; }
                 }
             }
@@ -313,25 +362,26 @@ namespace FlatWorld.Spaceflight
             => data == null ? null : ItemSpecialDataJsonStore.ReadRoot(data.ItemSpecialData)[TemplateMarker] as JObject;
 
         // 停泊补给和普通设施共用地表作用域，旁边管道也会按同一张真实网络供料。
-        private static bool TryRefillGround(Player player, IReadOnlyList<FixedStructureDefinition> templates, out string reason)
+        private static bool TryRefillGround(SpaceNetworkObserver actor, IReadOnlyList<FixedStructureDefinition> templates, out string reason)
         {
             reason = "24 米内没有由固定模板生成的地面建筑。";
-            if (GameNetwork.IsOnline || !GameNetwork.HasStateAuthority || templates == null) return false;
+            if (!GameNetwork.HasStateAuthority || templates == null) return false;
+            using var worldScope = GameplayWorldRegistry.UseWorld(actor.WorldKey);
             try
             {
-                List<ShipGroundBuildingStore.Entry> all = ShipGroundBuildingStore.Collect(player.gameObject.scene.name);
+                List<ShipGroundBuildingStore.Entry> all = ShipGroundBuildingStore.Collect(actor.WorldKey);
                 ShipGroundBuildingStore.Entry nearest = null;
                 double distance = 24d * 24d;
                 foreach (ShipGroundBuildingStore.Entry entry in all)
                 {
                     if (ReadMarker(entry.Data) == null) continue;
-                    Vector2 position = WorldLocalPresentation.ProjectPosition(new Vector2(entry.Cell.x + .5f, entry.Cell.y + .5f));
-                    double sqr = ((Vector2)player.transform.position - position).sqrMagnitude;
+                    Vector2 position = new(entry.Cell.x + .5f, entry.Cell.y + .5f);
+                    double sqr = WorldTopologyRuntime.SqrDistance(actor.Position.LocalMeters.ToVector2(), position);
                     if (sqr < distance) { distance = sqr; nearest = entry; }
                 }
                 if (nearest == null) return false;
                 string instance = (string)ReadMarker(nearest.Data)["instanceId"];
-                using var scope = MachineWorld.UseScope(player.gameObject.scene.name);
+                using var scope = MachineWorld.UseScope(actor.WorldKey);
                 var resources = new Dictionary<int, FixedStructureResources>();
                 var entries = new List<(MachineEntity Node, FixedStructureResources Resources)>();
                 foreach (ShipGroundBuildingStore.Entry entry in all)
@@ -350,10 +400,31 @@ namespace FlatWorld.Spaceflight
                 MachineWorld.CollectFluidTankGroups(groups);
                 FixedStructureResourceInitializer.ValidateSharedResources(groups, resources);
                 var filled = new HashSet<FluidInventory>();
-                foreach (var entry in entries) FixedStructureResourceInitializer.Refill(entry.Node, entry.Resources, filled);
+                var changed = new List<ShipGroundBuildingStore.Entry>();
+                foreach (var entry in entries)
+                {
+                    FixedStructureResourceInitializer.Refill(entry.Node, entry.Resources, filled);
+                    changed.Add(new ShipGroundBuildingStore.Entry { Machine = entry.Node, Data = entry.Node.Snapshot,
+                        Cell = entry.Node.Cell, QuarterTurns = entry.Node.RotationQuarterTurns });
+                }
+                ShipGroundBuildingStore.PublishCreated(changed);
                 reason = "已补充附近普通地面设施的电量、流体和测试库存。"; return true;
             }
             catch (Exception error) { reason = "补充未完成：" + error.Message; return false; }
+        }
+
+        private static bool TryGetActorFrame(Player player, SpaceSession session, out SpaceNetworkObserver actor)
+        {
+            actor = default;
+            if (player?.Data == null || session == null) return false;
+            if (GameNetwork.IsOnline) return session.TryGetNetworkObserver(player.ProfileName, out actor) &&
+                (actor.InSpace || !string.IsNullOrWhiteSpace(actor.WorldKey));
+            actor.WorldKey = player.Data.CurrentSceneName;
+            actor.InSpace = SpaceMgr.IsSpaceScene(actor.WorldKey);
+            actor.Position = actor.InSpace && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver space)
+                ? space.Position : new SpaceSectorPosition(default,
+                    SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical((Vector2)player.transform.position)));
+            return true;
         }
         #endregion
     }

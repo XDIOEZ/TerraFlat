@@ -5,6 +5,7 @@ using System.Linq;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>真实流程采样仅在正式 Lua 场景的隔离存档世界内执行。</summary>
 public static partial class GameplayTestRuntimeProbe
@@ -15,6 +16,7 @@ public static partial class GameplayTestRuntimeProbe
     {
         ["testing/resource_cache"] = (_, _) => GameplayTestResourceCache.Sample(),
         ["core_lifecycle/live_entry"] = CaptureLiveEntry,
+        ["player/interaction_input_reenable"] = CaptureInteractionInputReenable,
         ["inventory/creative_snapshot"] = CaptureCreativeInventory,
         ["inventory/slot_bounds"] = CaptureInventorySlotBounds,
         ["inventory/creative_begin"] = BeginCreativeInventoryScope,
@@ -33,6 +35,7 @@ public static partial class GameplayTestRuntimeProbe
         ["industrial_fluids/tank_ownership"] = GameplayTestFluidNetworks.CaptureTankOwnership,
         ["industrial_fluids/ground_scope_roundtrip"] = GameplayTestFluidNetworks.CaptureGroundScopeRoundtrip,
         ["industrial_fluids/reaction_capacity"] = GameplayTestFluidDevices.CaptureReactionCapacity,
+        ["industrial_fluids/device_status_feedback"] = GameplayTestFluidDevices.CaptureStatusFeedback,
         ["industrial_fluids/residue_transfer"] = GameplayTestFluidDevices.CaptureResidueTransfer,
         ["industrial_fluids/liquid_pump_flow"] = GameplayTestFluidDevices.CaptureLiquidPump,
         ["industrial_fluids/surface_pump_flow"] = GameplayTestFluidSurface.CapturePumpFlow,
@@ -79,6 +82,80 @@ public static partial class GameplayTestRuntimeProbe
                     throw new ArgumentException("测试操作 ID 含非法字符。");
         }
         return system + "/" + operation;
+    }
+
+    #endregion
+
+    #region 交互按键停用恢复采样
+
+    // 用独立虚拟键盘走真实 F 回调，检查临时停用后的恢复与重复订阅。
+    private static JObject CaptureInteractionInputReenable(Player player, JObject args)
+    {
+        Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
+        Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
+        if (sender == null || !sender.isActiveAndEnabled || !sender.IsRuntimeLoaded ||
+            controller == null || controller.IsGameplayInputLocked)
+            throw new InvalidOperationException("交互按键回归需要已加载且未锁定的正式交互模块。");
+        var action = controller._inputActions.Win10.E;
+        var host = new GameObject("[InteractionInputReenable]") { hideFlags = HideFlags.HideAndDontSave };
+        GameplayTestSpatialInteractionTarget target = host.AddComponent<GameplayTestSpatialInteractionTarget>();
+        UnityEngine.InputSystem.Keyboard keyboard = null;
+        int bindingIndex = action.bindings.Count;
+        bool bindingAdded = false;
+        try
+        {
+            host.transform.position = player.transform.position;
+            target.Allowed = true;
+            SpatialInteractionRegistry.Register(target, float.MaxValue);
+            keyboard = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
+            UnityEngine.InputSystem.InputSystem.AddDeviceUsage(keyboard, Mod_GameController.ExternalGameplayInputDeviceUsage);
+            UnityEngine.InputSystem.InputSystem.AddDeviceUsage(keyboard, "FlatWorldInteractionRegression");
+            action.AddBinding("<Keyboard>{FlatWorldInteractionRegression}/f");
+            bindingAdded = true;
+
+            void PressAndRelease()
+            {
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(keyboard,
+                    new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F));
+                UnityEngine.InputSystem.InputSystem.Update();
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(keyboard,
+                    default(UnityEngine.InputSystem.LowLevel.KeyboardState));
+                UnityEngine.InputSystem.InputSystem.Update();
+            }
+
+            PressAndRelease();
+            int initialStarts = target.StartCount, initialEnds = target.EndCount;
+            sender.enabled = false;
+            PressAndRelease();
+            int disabledStarts = target.StartCount;
+            var rounds = new JArray();
+            for (int i = 0; i < 3; i++)
+            {
+                sender.enabled = true;
+                int beforeStart = target.StartCount, beforeEnd = target.EndCount;
+                PressAndRelease();
+                rounds.Add(new JObject
+                {
+                    ["starts"] = target.StartCount - beforeStart, ["ends"] = target.EndCount - beforeEnd,
+                    ["held"] = sender.HasHeldInteraction
+                });
+                sender.enabled = false;
+            }
+            return new JObject
+            {
+                ["initialStarts"] = initialStarts, ["initialEnds"] = initialEnds,
+                ["disabledStarts"] = disabledStarts, ["rounds"] = rounds
+            };
+        }
+        finally
+        {
+            if (keyboard != null) UnityEngine.InputSystem.InputSystem.RemoveDevice(keyboard);
+            if (bindingAdded) action.ChangeBinding(bindingIndex).Erase();
+            sender.CancelCurrentInteraction();
+            sender.enabled = true;
+            SpatialInteractionRegistry.Unregister(target);
+            UnityEngine.Object.DestroyImmediate(host);
+        }
     }
 
     #endregion

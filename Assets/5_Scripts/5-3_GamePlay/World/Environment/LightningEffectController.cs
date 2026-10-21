@@ -107,7 +107,7 @@ public sealed class LightningEffectController : MonoBehaviour
     private bool TryGetPresentationPlayer(out Player player)
     {
         player = null;
-        if (weather == null || !weather.isActiveAndEnabled ||
+        if (weather == null || !weather.IsLocalWeatherWorld || !weather.isActiveAndEnabled ||
             WeatherMgr.IsWeatherSuppressedInDimension(DimensionManager.ExistingInstance?.ActiveDefinition))
             return false;
 
@@ -120,7 +120,7 @@ public sealed class LightningEffectController : MonoBehaviour
     {
         if (!float.IsFinite(lightning.Position.x) || !float.IsFinite(lightning.Position.y) ||
             !float.IsFinite(lightning.Strength) || !TryGetPresentationPlayer(out Player player) ||
-            !string.Equals(lightning.WorldKey, weather.GetActivePlanetData()?.Name, StringComparison.Ordinal))
+            !string.Equals(lightning.WorldKey, weather.WorldKey, StringComparison.Ordinal))
             return;
 
         float strength = Mathf.Clamp01(lightning.Strength) * GetDistanceAttenuation(player, lightning.Position);
@@ -150,7 +150,7 @@ public sealed class LightningEffectController : MonoBehaviour
     {
         if (!TryGetPresentationPlayer(out Player player) ||
             (effectsRoot != null && (effectsRoot.scene != player.gameObject.scene ||
-             !string.Equals(presentationWorldKey, weather.GetActivePlanetData()?.Name, StringComparison.Ordinal))))
+             !string.Equals(presentationWorldKey, weather.WorldKey, StringComparison.Ordinal))))
         {
             ReleaseOwnedResources();
             return;

@@ -38,7 +38,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -52,7 +52,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -66,7 +66,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -80,7 +80,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -94,7 +94,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -108,7 +108,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -122,7 +122,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -136,7 +136,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
 - Active game object:
@@ -150,7 +150,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -164,7 +164,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -178,7 +178,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -192,7 +192,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -206,7 +206,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -220,7 +220,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -234,7 +234,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -248,7 +248,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -262,7 +262,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -276,7 +276,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -290,7 +290,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -304,7 +304,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -318,7 +318,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -332,7 +332,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -346,7 +346,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -360,7 +360,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -374,7 +374,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -388,7 +388,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -402,7 +402,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -416,7 +416,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -430,7 +430,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -444,7 +444,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -458,7 +458,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -472,7 +472,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -486,7 +486,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -500,7 +500,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -514,7 +514,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -528,7 +528,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -542,7 +542,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -556,7 +556,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -570,7 +570,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -584,7 +584,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -598,7 +598,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -612,7 +612,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -626,7 +626,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -640,7 +640,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -654,7 +654,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -668,7 +668,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -682,7 +682,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -696,7 +696,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -710,7 +710,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -724,7 +724,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -738,7 +738,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -752,7 +752,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -766,7 +766,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -780,7 +780,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -794,7 +794,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -808,7 +808,7 @@
 - Active scene:
   - Name: DontDestroyOnLoad
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -822,7 +822,7 @@
 - Active scene:
   - Name: DontDestroyOnLoad
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -836,7 +836,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -850,7 +850,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:
@@ -864,7 +864,7 @@
 - Active scene:
   - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
 - Active game object:

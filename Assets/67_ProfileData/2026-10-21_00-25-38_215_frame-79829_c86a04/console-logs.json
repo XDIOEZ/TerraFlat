@@ -1,0 +1,35 @@
+{
+    "schemaVersion": 1,
+    "snapshotId": "2026-10-21_00-25-38_215_frame-79829_c86a04",
+    "capturedAtLocal": "2026-10-21T00:25:38.2153253+08:00",
+    "capturedAtUtc": "2026-10-20T16:25:38.2153253Z",
+    "profilerFile": "profiler-analysis.json",
+    "selectedDisplayFrame": 79829,
+    "entryCount": 2,
+    "originalConsoleFlags": 6019,
+    "originalSearchFilter": "",
+    "entries": [
+        {
+            "index": 0,
+            "mode": 8406016,
+            "line": 244,
+            "severity": "Log",
+            "rawText": "[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 创造背包完成：新增 0 种，补充 273 种，每种增加 100 个，不可创建 0 种，排除 Actor 12 种、落地建筑状态 76 种、世界专用实体 32 种，清理旧建筑状态 0 格、旧世界实体 0 格，共扫描 393 种物品（额外检测 MOD 道具 0 种）；已解除重量、体积与放置距离上限，并开启创造背包动态扩容。\nUnityEngine.Debug:Log (object)\nMod_PlayerTraits:InitializeCreativeInventoryForAdmin () (at Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_PlayerTraits.cs:244)\nMod_PlayerAdminController:OpenCreativeInventoryShortcut () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:277)\nMod_PlayerAdminController:Update () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:158)\n",
+            "message": "[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 创造背包完成：新增 0 种，补充 273 种，每种增加 100 个，不可创建 0 种，排除 Actor 12 种、落地建筑状态 76 种、世界专用实体 32 种，清理旧建筑状态 0 格、旧世界实体 0 格，共扫描 393 种物品（额外检测 MOD 道具 0 种）；已解除重量、体积与放置距离上限，并开启创造背包动态扩容。",
+            "stackTrace": "\nUnityEngine.Debug:Log (object)\nMod_PlayerTraits:InitializeCreativeInventoryForAdmin () (at Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_PlayerTraits.cs:244)\nMod_PlayerAdminController:OpenCreativeInventoryShortcut () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:277)\nMod_PlayerAdminController:Update () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:158)\n",
+            "file": "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_PlayerTraits.cs"
+        },
+        {
+            "index": 1,
+            "mode": 8406016,
+            "line": 244,
+            "severity": "Log",
+            "rawText": "[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 创造背包完成：新增 0 种，补充 273 种，每种增加 100 个，不可创建 0 种，排除 Actor 12 种、落地建筑状态 76 种、世界专用实体 32 种，清理旧建筑状态 0 格、旧世界实体 0 格，共扫描 393 种物品（额外检测 MOD 道具 0 种）；已解除重量、体积与放置距离上限，并开启创造背包动态扩容。\nUnityEngine.Debug:Log (object)\nMod_PlayerTraits:InitializeCreativeInventoryForAdmin () (at Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_PlayerTraits.cs:244)\nMod_PlayerAdminController:OpenCreativeInventoryShortcut () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:277)\nMod_PlayerAdminController:Update () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:158)\n",
+            "message": "[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 创造背包完成：新增 0 种，补充 273 种，每种增加 100 个，不可创建 0 种，排除 Actor 12 种、落地建筑状态 76 种、世界专用实体 32 种，清理旧建筑状态 0 格、旧世界实体 0 格，共扫描 393 种物品（额外检测 MOD 道具 0 种）；已解除重量、体积与放置距离上限，并开启创造背包动态扩容。",
+            "stackTrace": "\nUnityEngine.Debug:Log (object)\nMod_PlayerTraits:InitializeCreativeInventoryForAdmin () (at Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_PlayerTraits.cs:244)\nMod_PlayerAdminController:OpenCreativeInventoryShortcut () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:277)\nMod_PlayerAdminController:Update () (at Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_PlayerAdminController.cs:158)\n",
+            "file": "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_PlayerTraits.cs"
+        }
+    ],
+    "scope": "All entries currently retained by Unity Console, including hidden levels and search-filtered entries; duplicates are expanded.",
+    "timeCorrelation": "Export-time snapshot. Unity 2022.3 LogEntry exposes no per-entry timestamp or Profiler frame id; entries must not be attributed to the selected frame automatically. Original text is preserved, including any timestamps written by the logger."
+}

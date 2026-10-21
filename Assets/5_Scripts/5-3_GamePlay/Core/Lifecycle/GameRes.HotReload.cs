@@ -109,6 +109,7 @@ public partial class GameRes
         try
         {
             Exception error = null;
+            string failureStage = null;
             try
             {
                 if (mods == null) throw new InvalidOperationException("当前资源会话缺少 MOD 管理器。");
@@ -148,8 +149,8 @@ public partial class GameRes
                     });
                     Action previousModRelease = mods.CaptureResourceRelease();
                     context.Commit();
-                    mods.PublishContainerPortFactories();
                     committed = true;
+                    mods.PublishContainerPortFactories();
                     UpdateRetiredWorldItemDefinitions(retainedItemIds);
                     LoadState = ResourceLoadState.Ready;
                     IsStartupReady = true;
@@ -167,25 +168,38 @@ public partial class GameRes
                 catch (Exception exception) { error = exception; }
             }
 
+            IEnumerator playerReload = null;
+            if (error == null)
+            {
+                try
+                {
+                    failureStage = "refresh-live-resources";
+                    PublishInPlaceReload(previousItems, mods);
+                    ItemMgr itemManager = ItemMgr.GetInstance();
+                    failureStage = "reload-local-player";
+                    playerReload = itemManager?.ReloadLocalPlayerAfterResourceReload();
+                }
+                catch (Exception exception) { error = exception; }
+            }
+            // 玩家重建包含跨帧步骤，嵌套协程同样收集异常后统一报告发布后的失败。
+            if (error == null && playerReload != null)
+                yield return GameManager.RunWorldTransitionSteps(playerReload, exception => error = exception);
+
             if (error != null)
             {
-                LastResourceReloadError = $"阶段 {plan?.CurrentStage ?? "prepare"}：{error.Message}";
+                LastResourceReloadError = $"阶段 {failureStage ?? (committed ? "publish" : plan?.CurrentStage ?? "prepare")}：{error.Message}";
                 if (manager != null)
                 {
                     if (error is OperationCanceledException)
                         manager.CancelResourceReloadStatus();
                     else
-                        manager.EndResourceReloadStatus(false);
+                        manager.EndResourceReloadStatus(false, committed, LastResourceReloadError);
                 }
                 terminalFeedbackReported = true;
-                Debug.LogWarning($"[GameRes] F5 原位更新未发布，当前世界与旧资源保持运行。{LastResourceReloadError}", this);
+                Debug.LogWarning(committed ? $"[GameRes] F5 新资源已发布，但后续更新未完成。{LastResourceReloadError}" :
+                    $"[GameRes] F5 原位更新未发布，当前世界与旧资源保持运行。{LastResourceReloadError}", this);
                 yield break;
             }
-
-            PublishInPlaceReload(previousItems, mods);
-            ItemMgr itemManager = ItemMgr.GetInstance();
-            if (itemManager != null)
-                yield return itemManager.ReloadLocalPlayerAfterResourceReload();
 
             if (retainedItemIds.Length > 0 || retainedMechanicalEntries.Length > 0)
                 Debug.Log($"[GameRes] F5 已发布；当前世界暂时保留旧定义：物品 [{string.Join("、", retainedItemIds)}]，机械 [{string.Join("、", retainedMechanicalEntries)}]（退出世界后释放）。", this);

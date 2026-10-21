@@ -2,7 +2,9 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
+快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
+
+2026-10-20 清理旧地图物品入口：新增 `observer_windows`，通过联机使用的正式 `CreateRuntimeObserverWindows` 计划再进入纯模型 `RefreshWindows`，覆盖矩形区块/负坐标、多观察者重叠与重复去重、模拟与表现预加载圈、观察者移除后的休眠保留、外部导航租约保护、所有观察者退出和环绕同址合并。夹具预提交独立空地形，不加载玩家资源、不访问当前世界，不代表真实 Host/Client 区块画面、雾边、导航、后台生成或存档验收。本轮按用户要求只静态修改，未编译、未执行。
 
 2026-10-17 雾边交接：加载目标仍立即提交，ChunkMgr 单独缓动表现窗口，已有地面的旧 View 在离开平滑窗口后才解绑；重新进入目标窗口直接复用，未呈现地面的过期任务仍取消，清空窗口或换维度立即清理。共享几何断言见 Rendering 的 `zoom_cloud_transition`；该规则不替代真实 View、租约回收、环绕与连续移动现场，本轮未编译、未运行，由用户验收。
 

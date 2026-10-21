@@ -201,17 +201,15 @@ public abstract class Item : MonoBehaviour
     #region 初始动画延迟播放
 
     [NonSerialized] private Animator pendingInitialAnimator;
-    [NonSerialized] private int pendingInitialAnimatorStateHash;
-    [NonSerialized] private int pendingInitialAnimatorLayer;
+    [NonSerialized] private string pendingInitialAnimatorStateName;
 
     internal bool HasPendingInitialAnimatorState => pendingInitialAnimator != null;
 
     /// <summary>停用外壳只登记待播状态，激活后才向正式 Animator 提交。</summary>
-    internal void QueueInitialAnimatorState(Animator animator, int stateHash, int layer)
+    internal void QueueInitialAnimatorState(Animator animator, string stateName)
     {
         pendingInitialAnimator = animator;
-        pendingInitialAnimatorStateHash = stateHash;
-        pendingInitialAnimatorLayer = layer;
+        pendingInitialAnimatorStateName = stateName;
         FlushPendingInitialAnimatorState();
     }
 
@@ -232,9 +230,19 @@ public abstract class Item : MonoBehaviour
         if (!animator.isActiveAndEnabled || !animator.isInitialized)
             return;
 
-        int hash = pendingInitialAnimatorStateHash;
-        int layer = pendingInitialAnimatorLayer;
+        string stateName = pendingInitialAnimatorStateName;
         ClearPendingInitialAnimatorState();
+        // 只查询已初始化的正式状态表，避免把冷外壳暂时的零层误判为配置损坏。
+        const int layer = 0;
+        if (animator.layerCount <= layer)
+            throw new InvalidOperationException($"物品 {itemData?.IDName} 的 Animator 没有可用状态层");
+        int hash = Animator.StringToHash(stateName);
+        if (!animator.HasState(layer, hash))
+        {
+            hash = Animator.StringToHash($"{animator.GetLayerName(layer)}.{stateName}");
+            if (!animator.HasState(layer, hash))
+                throw new System.IO.InvalidDataException($"物品 {itemData?.IDName} 的 Animator 找不到状态：{stateName}");
+        }
         animator.Play(hash, layer, 0f);
         animator.Update(0f);
     }
@@ -242,8 +250,7 @@ public abstract class Item : MonoBehaviour
     internal void ClearPendingInitialAnimatorState()
     {
         pendingInitialAnimator = null;
-        pendingInitialAnimatorStateHash = 0;
-        pendingInitialAnimatorLayer = 0;
+        pendingInitialAnimatorStateName = null;
     }
 
     private void OnEnable() => FlushPendingInitialAnimatorState();

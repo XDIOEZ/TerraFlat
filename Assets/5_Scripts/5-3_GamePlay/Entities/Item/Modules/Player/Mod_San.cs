@@ -1,8 +1,8 @@
-using MemoryPack;
+﻿using MemoryPack;
 using UltEvents;
 using UnityEngine;
 
-public partial class Mod_San : Module
+public partial class Mod_San : Module, IPlayerStateAuthorityModule
 {
 #region 嵌套类型
 

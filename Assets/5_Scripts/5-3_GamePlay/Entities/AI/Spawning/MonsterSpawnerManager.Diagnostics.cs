@@ -9,7 +9,7 @@ public partial class MonsterSpawnerManager
     #region 性能边界
 
     /// <summary>只读取得已存在的生成器，诊断与退出回调不得隐式创建单例。</summary>
-    public static MonsterSpawnerManager ExistingInstance => instance;
+    public static MonsterSpawnerManager ExistingInstance => GetForWorld(GameplayWorldRegistry.ExecutionWorldKey, create: false);
 
     // 固定名称标记不构造逐帧字符串；创建与管理 Tick 分开，避免把实例初始化当成稳定态。
     private static readonly ProfilerMarker TickMarker = new("FlatWorld.MonsterSpawner.Tick");
@@ -23,6 +23,10 @@ public partial class MonsterSpawnerManager
 
     private void Update()
     {
+        if (string.IsNullOrEmpty(_ownedWorld)) return;
+        using var worldScope = EnterOwnedWorld();
+        EnsureWorldInitialized();
+        if (!_worldInitialized || !enabled || _settings == null) return;
         if (_naturalCreatureBirth != null)
         {
             AdvanceNaturalCreatureBirth();

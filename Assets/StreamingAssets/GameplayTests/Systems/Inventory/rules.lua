@@ -153,19 +153,26 @@ end, "丢弃按需悬停：空闲零扫描、遮挡与重复动作实时目标")
 local cases = {
     {name = "扣除后整堆移交", args = {}, source = 0, target = 3, transferred = true},
     {name = "部分堆叠转移", args = {transfer = 1}, source = 2, target = 1, transferred = true},
+    {name = "不可堆叠只搬单件", args = {stackable = false}, source = 2, target = 1, transferred = true},
     {name = "关闭入库门禁", args = {blocked = true}, source = 3, target = 0, transferred = false},
     {name = "目标槽容量限量", args = {slotCapacity = 1}, source = 2, target = 1, transferred = true},
     {name = "目标无容量", args = {slotCapacity = 0}, source = 3, target = 0, transferred = false}
 }
 for _, case in ipairs(cases) do
-    test.system("inventory", "transactions", case.args, function(data)
+    for _, publicQuantity in ipairs({false, true}) do
+    local args = {}
+    for key, value in pairs(case.args) do args[key] = value end
+    args.publicQuantity = publicQuantity
+    test.system("inventory", "transactions", args, function(data)
         assert(data.consumed and data.afterConsume == 3, "没有通过真实库存扣数量")
         assert(not data.excessiveAccepted and not data.foreignAccepted, "超额或外来槽扣料被接受")
         assert(data.transferred == case.transferred and data.sourceAmount == case.source and data.targetAmount == case.target, "转移结果错误")
         assert(data.sourceAmount + data.targetAmount == 3 and data.totalWeight == 3, "跨库存数量或质量不守恒")
         assert(data.preflightUnchanged and data.preflight == case.target and data.foreignPreflight == 0,
             "只读预检改变数量/发布事件，或容量结果与正式转移不一致/接受外来槽")
-    end, "库存事务：" .. case.name)
+        assert(data.publicGuards, "公开数量搬运入口接受了同槽、非正数量或无效索引")
+    end, "库存事务：" .. case.name .. (publicQuantity and "（公开数量入口）" or ""))
+    end
 end
 local directions = {
     {name = "向右选右侧输入", origin = {0, 0}, direction = {1, 0}, targets = {{100, 0}, {0, -100}}, selected = 0},

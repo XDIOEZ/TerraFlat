@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
@@ -40,7 +40,7 @@ public static partial class MachineWorld
             float distance = move.magnitude;
             // Physics2D 只给出墙体和实体的阻挡反馈，掉落物位置仍由数据系统持有。
             bool localPresentation = worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if (localPresentation && distance > .00001f && Physics2D.CircleCast(current, .06f, move / distance,
+            if (localPresentation && distance > .00001f && GameplayPhysics2D.CircleCast(current, .06f, move / distance,
                 filter, transportHits, distance) > 0)
             {
                 float allowed = Mathf.Max(0f, transportHits[0].distance - .01f);

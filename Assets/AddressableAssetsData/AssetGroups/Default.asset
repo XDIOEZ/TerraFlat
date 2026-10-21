@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 2ad4bd3d0b13453784dc26917d54e759
+    m_Address: Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fed2b12358df4c1e9a40562af9548bde
     m_Address: Assets/6_Art/Generated/Environment/TwineCrop/TwineCrop_Idle.png
     m_ReadOnly: 0
@@ -838,12 +844,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ActorVisual
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 277576181c69cb04bae7907eee0e7bb0
-    m_Address: Assets/2_Prefabs/World/Map/MapCore.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2867b73ca70b9c04cac4f3aa8fe446b9
     m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear.prefab

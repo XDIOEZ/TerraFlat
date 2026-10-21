@@ -1,6 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Networking.Gameplay
 {
@@ -15,6 +16,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private readonly List<Transform> observers = new List<Transform>();
         private readonly List<Vector3> observerPositions = new List<Vector3>();
+        private readonly Dictionary<string, List<Vector3>> worldObservers = new(System.StringComparer.Ordinal);
+        private readonly Dictionary<string, int> worldSignatures = new(System.StringComparer.Ordinal);
         private int lastObserverSignature;
         private Vector2Int lastNavigationAnchorChunk = new Vector2Int(int.MinValue, int.MinValue);
         private int lastNavigationLoadDistance = -1;
@@ -45,6 +48,9 @@ namespace FlatWorld.Networking.Gameplay
 
             instance.observers.Remove(observer);
             instance.lastObserverSignature = int.MinValue;
+            instance.nextRefreshTime = 0f;
+            if (instance.observers.Count == 0)
+                instance.ReleaseObserverWindows();
         }
 
         public static void RequestImmediateRefresh()
@@ -58,12 +64,15 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnEnable()
         {
+            FlatWorld.Spaceflight.SpaceNetworkBridge.GroundStreamingRefreshRequested += RequestImmediateRefresh;
             WorldTopologyRuntime.LocalPlayerWrapped += RequestImmediateRefresh;
         }
 
         private void OnDisable()
         {
+            FlatWorld.Spaceflight.SpaceNetworkBridge.GroundStreamingRefreshRequested -= RequestImmediateRefresh;
             WorldTopologyRuntime.LocalPlayerWrapped -= RequestImmediateRefresh;
+            ReleaseObserverWindows();
         }
 
         private static void EnsureInstance()
@@ -78,108 +87,93 @@ namespace FlatWorld.Networking.Gameplay
 
         private void Update()
         {
-            if (!NetworkClient.active || Time.unscaledTime < nextRefreshTime)
-                return;
-
+            if (!NetworkClient.active && !NetworkServer.active)
+            { ReleaseObserverWindows(); return; }
+            if (Time.unscaledTime < nextRefreshTime) return;
             nextRefreshTime = Time.unscaledTime + refreshInterval;
             observers.RemoveAll(observer => observer == null);
-            if (observers.Count == 0 || GameManager.Instance == null || !GameManager.Instance.IsInGameWorld)
-                return;
-
-            if (ChunkMgr.Instance == null || SaveDataMgr.Instance?.Active_PlanetData == null)
-                return;
-
-            int signature = 17;
-            observerPositions.Clear();
+            if (GameManager.Instance?.IsInGameWorld != true || SaveDataMgr.Instance?.SaveData?.PlanetData_Dict == null) return;
+            foreach (List<Vector3> positions in worldObservers.Values) positions.Clear();
+            Transform localAnchor = ResolveLocalObserver();
+            Mod_ChunkLoader loader = localAnchor?.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
+            int active = loader != null ? loader.CurrentLoadChunkDistance : loadDistance;
+            int prefetch = loader != null ? loader.CurrentUnActiveChunkDistance : active + Mathf.Max(1, inactiveDistance - loadDistance);
+            int retained = loader != null ? loader.CurrentDestroyChunkDistance : prefetch + Mathf.Max(1, destroyDistance - inactiveDistance);
             for (int i = 0; i < observers.Count; i++)
             {
-                NetworkWorldPlayer realmPlayer = observers[i].GetComponent<NetworkWorldPlayer>();
-                if (realmPlayer != null && (realmPlayer.IsInSpace || !realmPlayer.SharesLocalRealm())) continue;
-                Vector3 position = ResolveLogicalObserverPosition(observers[i]);
-                if (!IsValidObserverPosition(position))
-                    continue;
-
-                Vector2Int chunkPosition = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(position));
-                observerPositions.Add(position);
-                unchecked
+                NetworkWorldPlayer player = observers[i].GetComponent<NetworkWorldPlayer>();
+                if (player == null || player.IsInSpace || !NetworkServer.active && !player.SharesLocalRealm() ||
+                    !player.TryGetSpaceObserver(out FlatWorld.Spaceflight.SpaceNetworkObserver realm) || string.IsNullOrWhiteSpace(realm.WorldKey)) continue;
+                Vector3 point = realm.Position.LocalMeters.ToVector2();
+                if (!IsValidObserverPosition(point)) continue;
+                if (!worldObservers.TryGetValue(realm.WorldKey, out List<Vector3> positions)) worldObservers.Add(realm.WorldKey, positions = new List<Vector3>());
+                positions.Add(point);
+            }
+            // 每个世界只合并属于自己的观察者，主机换维度不会撤销其它世界的需求。
+            foreach (var pair in worldObservers)
+            {
+                if (pair.Value.Count == 0)
                 {
-                    signature = signature * 31 + observers[i].GetInstanceID();
-                    signature = signature * 31 + chunkPosition.GetHashCode();
+                    if (GameplayWorldRegistry.TryGet(pair.Key, out GameplayWorldRuntime oldWorld) && oldWorld.PreparationCount == 0)
+                        using (GameplayWorldRegistry.UseWorld(pair.Key)) oldWorld.Chunks.ClearRuntimeObserverWindows();
+                    worldSignatures.Remove(pair.Key); continue;
+                }
+                GameplayWorldRuntime world = GameplayWorldRegistry.GetOrCreate(pair.Key);
+                using (GameplayWorldRegistry.UseWorld(pair.Key))
+                {
+                    Vector3 anchor = localAnchor != null && localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.Data?.CurrentSceneName == pair.Key
+                        ? ResolveLogicalObserverPosition(localAnchor) : pair.Value[0];
+                    int signature = active * 31 + prefetch * 17 + retained;
+                    foreach (Vector3 point in pair.Value) unchecked { signature = signature * 31 + world.Chunks.ResolveRuntimeChunkOrigin(point).GetHashCode(); }
+                    world.Chunks.UpdateRuntimePresentationPriority(anchor);
+                    if (!worldSignatures.TryGetValue(pair.Key, out int previous) || previous != signature)
+                    {
+                        worldSignatures[pair.Key] = signature;
+                        world.Chunks.RefreshChunksAroundObservers(pair.Value, anchor, active, prefetch, retained);
+                    }
                 }
             }
-
-            if (observerPositions.Count == 0)
-                return;
-
-            int activeDistance = ResolveLocalLoadDistance();
-            int prefetchDistance = activeDistance + Mathf.Max(1, inactiveDistance - loadDistance);
-            int retainedDistance = prefetchDistance + Mathf.Max(1, destroyDistance - inactiveDistance);
-            unchecked
+            if (localAnchor != null)
             {
-                signature = signature * 31 + activeDistance;
+                string key = localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.Data?.CurrentSceneName;
+                if (GameplayWorldRegistry.TryGet(key, out _))
+                    using (GameplayWorldRegistry.UseWorld(key)) RefreshLocalNavigationAnchor(ResolveLogicalObserverPosition(localAnchor), active);
             }
-
-            if (signature == lastObserverSignature)
-                return;
-
-            lastObserverSignature = signature;
-            ChunkMgr.Instance.RefreshChunksAroundObservers(
-                observerPositions,
-                activeDistance,
-                prefetchDistance,
-                retainedDistance);
-
-            RefreshLocalNavigationAnchor(activeDistance);
-
-            Debug.Log($"[联机区块] 已按 {observerPositions.Count} 个玩家刷新区块窗口");
         }
 
-        /// <summary>联机流送窗口读取本机玩家的区块距离，其他观察者复用该客户端的配置。</summary>
-        private int ResolveLocalLoadDistance()
+        /// <summary>退出联机或失去本机观察者时释放本协调器的需求。</summary>
+        private void ReleaseObserverWindows()
+        {
+            foreach (string key in worldSignatures.Keys)
+                if (GameplayWorldRegistry.TryGet(key, out GameplayWorldRuntime world) && world.PreparationCount == 0)
+                    using (GameplayWorldRegistry.UseWorld(key)) world.Chunks.ClearRuntimeObserverWindows();
+            worldSignatures.Clear();
+            lastObserverSignature = int.MinValue;
+            lastNavigationAnchorChunk = new Vector2Int(int.MinValue, int.MinValue);
+            lastNavigationLoadDistance = -1;
+        }
+
+        #region 本机观察者
+
+        /// <summary>只有本机拥有的地表角色可以决定本机加载蒙版和导航锚点。</summary>
+        private Transform ResolveLocalObserver()
         {
             for (int i = 0; i < observers.Count; i++)
             {
                 Transform observer = observers[i];
                 NetworkIdentity identity = observer != null ? observer.GetComponent<NetworkIdentity>() : null;
-                if (identity == null || !identity.isOwned)
-                    continue;
-
-                NetworkWorldPlayer networkPlayer = observer.GetComponent<NetworkWorldPlayer>();
-                if (networkPlayer?.IsInSpace == true) continue;
-                Mod_ChunkLoader loader = networkPlayer?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
-                if (loader != null)
-                    return loader.CurrentLoadChunkDistance;
+                NetworkWorldPlayer player = observer != null ? observer.GetComponent<NetworkWorldPlayer>() : null;
+                if (identity != null && identity.isOwned && player != null &&
+                    !player.IsInSpace && player.SharesLocalRealm())
+                    return observer;
             }
-
-            return loadDistance;
+            return null;
         }
 
-        /// <summary>本地导航窗口与联机区块加载距离保持一致。</summary>
-        private void RefreshLocalNavigationAnchor(int activeDistance)
+        /// <summary>本地导航窗口仅跟随本机角色。</summary>
+        private void RefreshLocalNavigationAnchor(Vector3 logicalPosition, int activeDistance)
         {
-            Transform anchor = null;
-            for (int i = 0; i < observers.Count; i++)
-            {
-                Transform observer = observers[i];
-                NetworkIdentity identity = observer != null ? observer.GetComponent<NetworkIdentity>() : null;
-                if (identity != null && identity.isOwned)
-                {
-                    anchor = observer;
-                    break;
-                }
-            }
-
-            anchor ??= observers.Count > 0 ? observers[0] : null;
-            if (anchor == null)
-                return;
-
-            if (anchor.GetComponent<NetworkWorldPlayer>()?.IsInSpace == true) return;
-
-            Vector3 logicalPosition = ResolveLogicalObserverPosition(anchor);
-            if (!IsValidObserverPosition(logicalPosition))
-                return;
-
-            Vector2Int anchorChunk = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(logicalPosition));
+            Vector2Int anchorChunk = ChunkMgr.Instance.ResolveRuntimeChunkOrigin(logicalPosition);
             if (anchorChunk == lastNavigationAnchorChunk && activeDistance == lastNavigationLoadDistance)
                 return;
 
@@ -187,6 +181,8 @@ namespace FlatWorld.Networking.Gameplay
             lastNavigationLoadDistance = activeDistance;
             WorldNavigationManager.Instance?.RefreshLoadedRegion(anchorChunk, activeDistance);
         }
+
+        #endregion
 
         private static bool IsValidObserverPosition(Vector3 position)
         {

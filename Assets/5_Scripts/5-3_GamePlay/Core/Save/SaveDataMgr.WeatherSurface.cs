@@ -75,7 +75,7 @@ public partial class SaveDataMgr
             {
                 WeatherSurfaceDelta payload = BuildWeatherSurfaceDelta();
                 AuthoritativeWeatherSurfaceChanged?.Invoke(new WeatherSurfaceChunkSnapshot(
-                    ResolveRuntimePlanetName(), chunk.Address, terrain.Revision, payload, false));
+                    GameplayWorldRegistry.ExecutionWorldKey, chunk.Address, terrain.Revision, payload, false));
             }
         }
         finally
@@ -114,7 +114,7 @@ public partial class SaveDataMgr
                     CaptureWeatherSnow(GetWeatherSurfaceDelta(index, cell.LocalPosition),
                         WorldSnowInteraction.Capture(terrain, cell.LocalPosition));
                 }
-            return new WeatherSurfaceChunkSnapshot(ResolveRuntimePlanetName(), chunk.Address,
+            return new WeatherSurfaceChunkSnapshot(GameplayWorldRegistry.ExecutionWorldKey, chunk.Address,
                 terrain.Revision, BuildWeatherSurfaceDelta(), true);
         }
         finally

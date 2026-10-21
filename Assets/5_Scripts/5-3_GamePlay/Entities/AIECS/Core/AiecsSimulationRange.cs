@@ -1,4 +1,5 @@
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
@@ -34,6 +35,7 @@ namespace FlatWorld.AIECS
     internal partial struct AiecsSelectSimulationPulseJob : IJobEntity
     {
         public AiecsSimulationRange Range;
+        [ReadOnly] public NativeArray<float2> Observers;
         public WorldTopologyDomain Domain;
         public double Time;
         public float BaseDeltaTime;
@@ -84,6 +86,12 @@ namespace FlatWorld.AIECS
                 return 1;
 
             float distance = Domain.SqrDistance(position, Range.PlayerPosition);
+            if (Observers.Length > 0)
+            {
+                distance = float.PositiveInfinity;
+                for (int i = 0; i < Observers.Length; i++)
+                    distance = math.min(distance, Domain.SqrDistance(position, Observers[i]));
+            }
             if (distance <= Range.NearSquared) return 1;
             if (distance <= Range.MiddleSquared) return 2;
             if (distance <= Range.FarSquared) return 3;

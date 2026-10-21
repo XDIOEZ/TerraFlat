@@ -6,7 +6,7 @@ using UnityEngine;
 using UltEvents;
 
 /// <summary>维护食物运行时与营养规则；本地玩家的参数 HUD 随模块加载创建、随卸载释放，不提供显隐开关。</summary>
-public partial class Mod_Food : Module, IItemPoolLifecycle
+public partial class Mod_Food : Module, IItemPoolLifecycle, IPlayerStateAuthorityModule
 {
     public override string CanonicalModuleId => ModText.Food;
 

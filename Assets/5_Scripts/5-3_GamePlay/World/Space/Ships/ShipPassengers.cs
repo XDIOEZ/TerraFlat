@@ -173,16 +173,23 @@ namespace FlatWorld.Spaceflight
         }
         private void SetTerrainSuppression(Player player, bool value)
             => player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver)?.SetEffectsSuppressed(this, value);
-        public bool EnterConsole(Player player, string pieceId)
+        public bool EnterConsole(Player player, string pieceId) => EnterConsole(player, pieceId, out _);
+        public bool EnterConsole(Player player, string pieceId, out string reason)
         {
+            reason = null;
+            if (player == null) return RejectShipOperation("玩家尚未就绪。", out reason);
             if (SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.EnterConsole, PieceId = pieceId }))
             {
                 NotifyLocalManualConsoleEntry(player, pieceId);
                 return true;
             }
-            if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState piece) || piece.Kind != ShipPieceKind.Console ||
-                !IsPowered(ship, piece) || GetFlight(ship.ShipId).Phase == ShipFlightPhase.Floating) return false;
-            if (Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(player), DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f) return false;
+            if (!TryGetPoweredConsole(pieceId, out ShipState ship, out ShipPieceState piece, out reason)) return false;
+            if (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Floating)
+                return RejectShipOperation("海面浮船无法驾驶。", out reason);
+            if (Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(player), DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f)
+                return RejectShipOperation("距离控制台太远，请靠近后再驾驶。", out reason);
+            if (State.Passengers.Exists(value => value.ProfileId != player.ProfileName && value.ConsolePieceId == pieceId))
+                return RejectShipOperation("控制台正由其他玩家驾驶。", out reason);
             SpacePassengerState passenger = GetPassenger(player);
             bool alreadyDriving = !string.IsNullOrWhiteSpace(passenger.ConsolePieceId);
             SpaceSectorPosition position = IsSpaceView ? GetPassengerPosition(passenger)

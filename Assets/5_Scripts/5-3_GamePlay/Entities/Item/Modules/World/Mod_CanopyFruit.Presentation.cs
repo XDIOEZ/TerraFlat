@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -24,7 +24,7 @@ public sealed partial class Mod_CanopyFruit
         ContactFilter2D filter = new() { useTriggers = true, useLayerMask = true, layerMask = receiverMask, useDepth = false };
         sweepHits.Clear();
         hitReceivers.Clear();
-        Physics2D.CircleCast(start, CollisionRadius, displacement.normalized, filter, sweepHits, displacement.magnitude);
+        GameplayPhysics2D.CircleCast(start, CollisionRadius, displacement.normalized, filter, sweepHits, displacement.magnitude);
         sweepHits.Sort(CompareHits);
         hitSource = new FallingFruitDamage(BluntDamage);
         try

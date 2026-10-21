@@ -129,6 +129,8 @@ public class Mod_Cam : Module
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         CameraUserSettings.Changed += HandleCameraSettingsChanged;
         BindWorldAudioListener();
+        // 停用期间可能错过设置通知，恢复时只刷新现有镜头，不重建驾驶跟随租约。
+        if (IsRuntimeLoaded && Vcam != null) ApplyCameraFollowSettings();
     }
 
     private void OnDisable()

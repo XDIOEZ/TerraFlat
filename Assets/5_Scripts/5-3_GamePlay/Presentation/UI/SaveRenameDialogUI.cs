@@ -147,9 +147,9 @@ public sealed class SaveRenameDialogUI : MonoBehaviour
     /// <summary>文件名与存档内部名称一起持久化。</summary>
     private void SaveCurrentSave(string requestedName)
     {
-        if (!renameSystem.TryRenameSave(targetId, requestedName, out string renamedSaveName))
+        if (!renameSystem.TryRenameSave(targetId, requestedName, out string renamedSaveName, out string reason))
         {
-            SetStatus("存档改名失败，请检查名称或磁盘状态");
+            SetStatus(reason);
             return;
         }
 
@@ -161,9 +161,9 @@ public sealed class SaveRenameDialogUI : MonoBehaviour
     private void SaveCurrentPlayer(string requestedName)
     {
         string profileId = targetId;
-        if (!renameSystem.TryRenamePlayer(profileId, requestedName))
+        if (!renameSystem.TryRenamePlayer(profileId, requestedName, out string reason))
         {
-            SetStatus("角色改名失败，请检查名称或磁盘状态");
+            SetStatus(reason);
             return;
         }
 

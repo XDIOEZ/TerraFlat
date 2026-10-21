@@ -5,6 +5,8 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 
 # 建造
 
+- 放置拒绝通过 `PlacementRejectedDetailed` 携带真实校验/权威回执原因给气泡，`PlacementRejected` 继续服务音效语义；不得把数量、支撑或事务失败统一覆盖为位置错误。
+
 ## 代码与内容
 
 - 玩法根：`Assets/5_Scripts/5-3_GamePlay/`。
@@ -20,6 +22,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - BuildingPlacementService.TryPlace 为单机/服务端统一事务；后端提供撤销动作，地形写入前建立撤销位置，机器用 DiscardPlacementCandidate。失败先确认权威候选已撤销再退料；成功发布后的通知异常不撤销结果。
 - BuildingShadow 只显示反馈，不提供安装资格/坐标。范围为交互半径两倍，创造模式无限；预览与提交按目标格最近边缘校验。失败反馈由实际 Install 的语义事件发布，逐帧预览不发提示。
 - Summoner 来自快捷栏真实 InHand/Owner/CurrentSelectItemSlot；成功扣减经 Inventory_Data 事务，并按实际槽索引 RefreshUI。放置模式拥有使用动作和普通世界交互的优先权。
+- Host 成功回执复用服务端已经提交的共享库存，只收尾预览和同步手持；仅普通客户端按回执写入剩余数量，避免最后一份扣空后重复解析源槽。
 - BuildingRole 区分载体/落地实体，并与当前 SummonerPrefabId/BuildingPrefabId 对齐。无快照从 CreateItemData(BuildingPrefabId) 创建当前本体；有快照先恢复，再用当前载体共享状态覆盖。
 - 召唤器与本体的基础建筑模块必须 enabled=true，让 OnLoad 读取正式配对与快照；迁移不能沿用源 Prefab 的禁用旗标，目录检查拒绝禁用配置。
 - SharedModuleIds 以唯一能力 ID 深拷贝单件载体的连续状态；返还载体在 Load 前注入。耐久品质 CraftedDurabilityMultiplier 双向转移，实际最大生命按当前定义重算；两端状态贴图各自声明。

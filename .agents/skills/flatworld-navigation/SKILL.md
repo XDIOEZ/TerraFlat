@@ -22,6 +22,9 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 
 ## 网格与路径契约
 
+- `WorldNavigationManager.Worlds` 按 WorldKey 独占网格、目标场和请求；执行上下文缺少对应实例时不能回落到主机当前世界。切本机 Scene 不清其他世界；Item 足迹和局部避让按真实 Scene 归属，跨世界迁移先取消旧请求再绑定新导航。
+
+
 - 权威链：Tile 栈顶/有效支撑面的可走性与代价 + 离散动态占地 → 脏格/区 → `WorldNavigationGrid`。Collider/Physics2D 不是网格真源，建筑不修改 TileData。
 - `worldGridOccupancy.cells` 是物品占格真源，纯 `WorldGridOccupancyData/GridCellOffset` 可供非 Unity 消费；生命周期桥只读格锚点并登记增删移动。实心资源的碰撞与占格分别配置，矿点继承一格占地，可拾取小石头不继承。
 - 机器数据 Box 属于 `ChunkCollisionRenderer` 的物理表现，不改导航权威；初绑全量收集，普通 `MachineWorld.CellChanged` 按锚点增量更新、去除失效 Box，跨锚点占地回退全量扫描。校验 `navigation/machine_obstacle_dirty`。

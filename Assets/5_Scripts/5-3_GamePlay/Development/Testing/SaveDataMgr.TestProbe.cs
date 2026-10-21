@@ -11,6 +11,41 @@ public partial class SaveDataMgr
 
     internal static SaveDataMgr TestExistingInstance => instance;
 
+    internal JObject CaptureTestRenameFeedback()
+    {
+        if (ReferenceEquals(this, instance) || gameObject.activeInHierarchy || !string.IsNullOrEmpty(UserSavePath))
+            throw new InvalidOperationException("改名拒绝测试必须使用停用独立 SaveDataMgr。");
+        // 只调用内存校验拒绝与名称未变分支，不写入测试或正式存档。
+        var results = new JObject();
+        CapturePlayer("noSave", "player-a", "新角色");
+        TryRenameSave("probe_save", "new_save", out _, out string noSaveReason);
+        results["saveNoSave"] = noSaveReason;
+        SaveData = new GameSaveData { saveName = "probe_save" };
+        SaveData.PlayerData_Dict["player-a"] = new Data_Player { Name_User = "原角色" };
+        SaveData.PlayerData_Dict["player-b"] = new Data_Player { Name_User = "已占用" };
+        CapturePlayer("missingPlayer", "missing", "新角色");
+        CapturePlayer("empty", "player-a", " ");
+        CapturePlayer("tooLong", "player-a", new string('字', 49));
+        CapturePlayer("duplicate", "player-a", "已占用");
+        results["unchangedAccepted"] = TryRenamePlayerDisplayName("player-a", "原角色", out string unchangedReason);
+        results["unchangedReason"] = unchangedReason;
+        TryRenameSave("wrong_save", "new_save", out _, out string staleReason);
+        TryRenameSave("probe_save", "new_save.", out _, out string invalidReason);
+        results["staleSave"] = staleReason;
+        results["invalidSave"] = invalidReason;
+        results["saveUnchangedAccepted"] = TryRenameSave("probe_save", "probe_save", out string name, out string sameReason);
+        results["saveName"] = name;
+        results["saveUnchangedReason"] = sameReason;
+        results["playerPreserved"] = SaveData.PlayerData_Dict["player-a"].Name_User == "原角色";
+        return results;
+
+        void CapturePlayer(string key, string id, string requested)
+        {
+            bool success = TryRenamePlayerDisplayName(id, requested, out string reason);
+            results[key] = new JObject { ["success"] = success, ["reason"] = reason };
+        }
+    }
+
     internal GameSaveData ReadTestArchiveWithoutPublishing(byte[] payload)
     {
         // 仅停用测试外壳可使用，正式管理器的差量和 MOD 状态不得被恢复测试替换。

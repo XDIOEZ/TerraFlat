@@ -16,7 +16,7 @@ public partial class MonsterSpawnerManager
     // 每帧只推进一个出生任务，阶段边界必须让帧，单个模块仍保持原子加载。
     private void AdvanceNaturalCreatureBirth()
     {
-        if (_gameManager == null || !_gameManager.IsGameplayReady || !GameNetwork.HasStateAuthority)
+        if (!IsOwnedWorldReady || !GameNetwork.HasStateAuthority)
         {
             CancelNaturalCreatureBirth();
             return;
@@ -72,8 +72,29 @@ public partial class MonsterSpawnerManager
     public IEnumerator<int> SpawnCreatureInSteps(string speciesId, Vector3 position, Action<Item> completed,
         SpawnerConfig.SpawnEntry initialization = null, Func<bool> canCommit = null)
     {
+        IEnumerator<int> creation = SpawnCreatureInOwnedWorldSteps(speciesId, position, completed, initialization, canCommit);
+        try
+        {
+            while (true)
+            {
+                int step;
+                // 同步世界作用域不能跨让帧，每一次推进和取消分别进入所属世界。
+                using (EnterOwnedWorld())
+                {
+                    if (!creation.MoveNext()) yield break;
+                    step = creation.Current;
+                }
+                yield return step;
+            }
+        }
+        finally { using (EnterOwnedWorld()) creation.Dispose(); }
+    }
+
+    private IEnumerator<int> SpawnCreatureInOwnedWorldSteps(string speciesId, Vector3 position, Action<Item> completed,
+        SpawnerConfig.SpawnEntry initialization, Func<bool> canCommit)
+    {
         if (!PrepareCreatureFactory() || !IsValidCreatureRequest(speciesId, position, GameNetwork.HasStateAuthority,
-                _gameManager != null && _gameManager.IsGameplayReady) || completed == null ||
+                IsOwnedWorldReady) || completed == null ||
             GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetActorDefinition(speciesId, out _) ||
             AiRuntimeBackendService.UsesEntities(speciesId)) yield break;
         ItemData data = GameRes.ExistingInstance.CreateItemData(speciesId);
@@ -93,10 +114,10 @@ public partial class MonsterSpawnerManager
             }, candidate =>
             {
                 ApplySpawnInitialization(candidate, initialization);
-            }, () => GameNetwork.HasStateAuthority && _gameManager?.IsGameplayReady == true && canCommit?.Invoke() != false);
+            }, () => GameNetwork.HasStateAuthority && IsOwnedWorldReady && canCommit?.Invoke() != false);
             while (true)
             {
-                if (_gameManager?.IsGameplayReady != true || !GameNetwork.HasStateAuthority) yield break;
+                if (!IsOwnedWorldReady || !GameNetwork.HasStateAuthority) yield break;
                 if (!creation.MoveNext()) break;
                 yield return creation.Current;
             }

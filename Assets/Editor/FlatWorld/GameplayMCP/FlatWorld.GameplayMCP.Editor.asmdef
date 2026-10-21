@@ -5,6 +5,7 @@
         "MCPForUnity.Editor",
         "UnityEditor.TestRunner",
         "GamePlay",
+        "FlatWorld.Networking.Core",
         "FlatWorld.AIECS.Gameplay",
         "Unity.Burst",
         "Data",

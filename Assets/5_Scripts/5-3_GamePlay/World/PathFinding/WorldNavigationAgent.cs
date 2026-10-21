@@ -32,11 +32,12 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     private const float LocalAvoidancePredictionTime = 0.7f;
     private const float LocalAvoidanceBucketSize = 2f;
     private const int MaxLocalAvoidanceNeighbors = 12;
-    private static readonly System.Collections.Generic.Dictionary<Vector2Int, System.Collections.Generic.List<WorldNavigationAgent>>
+    private static readonly System.Collections.Generic.Dictionary<(int Scene, Vector2Int Cell), System.Collections.Generic.List<WorldNavigationAgent>>
         LocalAvoidanceBuckets = new();
 
     private Vector2 preferredVelocity;
     private Vector2Int localAvoidanceBucket;
+    private int localAvoidanceScene;
     private bool hasLocalAvoidanceBucket;
 
     #endregion
@@ -306,6 +307,13 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
     public void Tick(float deltaTime)
     {
+        if (navigationManager != null && navigationManager.ActiveWorldKey != gameObject.scene.name)
+        {
+            CancelPendingRequest();
+            navigationManager = null;
+            InvalidateCurrentPath();
+            destinationDirty = hasDestination;
+        }
         Vector2 current = CurrentPosition;
         // 单次冻结局部避让拓扑，避免九宫格和邻居查询反复解析活动世界。
         WorldTopologyDomain avoidanceTopology = IsLocalAvoidanceParticipant
@@ -673,18 +681,20 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         }
 
         Vector2Int nextBucket = GetLocalAvoidanceBucket(position, topology);
-        if (hasLocalAvoidanceBucket && nextBucket == localAvoidanceBucket)
+        int nextScene = gameObject.scene.handle;
+        if (hasLocalAvoidanceBucket && nextBucket == localAvoidanceBucket && localAvoidanceScene == nextScene)
             return;
 
         RemoveFromLocalAvoidanceBucket();
-        if (!LocalAvoidanceBuckets.TryGetValue(nextBucket, out System.Collections.Generic.List<WorldNavigationAgent> agents))
+        if (!LocalAvoidanceBuckets.TryGetValue((nextScene, nextBucket), out System.Collections.Generic.List<WorldNavigationAgent> agents))
         {
             agents = new System.Collections.Generic.List<WorldNavigationAgent>(4);
-            LocalAvoidanceBuckets.Add(nextBucket, agents);
+            LocalAvoidanceBuckets.Add((nextScene, nextBucket), agents);
         }
 
         agents.Add(this);
         localAvoidanceBucket = nextBucket;
+        localAvoidanceScene = nextScene;
         hasLocalAvoidanceBucket = true;
     }
 
@@ -693,12 +703,12 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         if (!hasLocalAvoidanceBucket)
             return;
 
-        if (LocalAvoidanceBuckets.TryGetValue(localAvoidanceBucket,
+        if (LocalAvoidanceBuckets.TryGetValue((localAvoidanceScene, localAvoidanceBucket),
                 out System.Collections.Generic.List<WorldNavigationAgent> agents))
         {
             agents.Remove(this);
             if (agents.Count == 0)
-                LocalAvoidanceBuckets.Remove(localAvoidanceBucket);
+                LocalAvoidanceBuckets.Remove((localAvoidanceScene, localAvoidanceBucket));
         }
 
         hasLocalAvoidanceBucket = false;
@@ -766,14 +776,15 @@ public sealed class WorldNavigationAgent : MonoBehaviour
                     ? CombineLocalAvoidanceNeighbourBucket(negativeBucket, centerBucket, positiveBucket, x, y)
                     : GetLocalAvoidanceBucket(current + new Vector2(
                         x * LocalAvoidanceBucketSize, y * LocalAvoidanceBucketSize), topology);
-                if (!LocalAvoidanceBuckets.TryGetValue(bucketKey,
+                if (!LocalAvoidanceBuckets.TryGetValue((gameObject.scene.handle, bucketKey),
                         out System.Collections.Generic.List<WorldNavigationAgent> neighbors))
                     continue;
 
                 for (int i = 0; i < neighbors.Count && acceptedNeighbors < MaxLocalAvoidanceNeighbors; i++)
                 {
                     WorldNavigationAgent other = neighbors[i];
-                    if (other == null || other == this || !other.IsLocalAvoidanceParticipant || other.body == body)
+                    if (other == null || other == this || !other.IsLocalAvoidanceParticipant || other.body == body ||
+                        other.gameObject.scene != gameObject.scene)
                         continue;
 
                     Vector2 otherPosition = other.CurrentPosition;

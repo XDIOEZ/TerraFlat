@@ -428,7 +428,20 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         result["closedForCarrySample"] = !table.IsPanelOpen;
         table.I_ShowPanel();
         int required = table.GetRequiredClickCount();
+        CraftingStationController observed = table.basePanel.GetComponent<CraftingStationView>()?.Controller;
+        result["viewBound"] = observed != null && ReferenceEquals(observed.Panel, table.basePanel) &&
+            ReferenceEquals(observed.InputInventory, table.inputInventory) &&
+            ReferenceEquals(observed.OutputInventory, table.outputInventory);
+        result["selectedRecipeId"] = observed?.SelectedRecipe?.Id;
+        result["recipeButtonBound"] = observed?.FindRecipeButton(recipe.Id) != null &&
+            ReferenceEquals(observed.FindButtonRecipe(observed.FindRecipeButton(recipe.Id)), observed.SelectedRecipe);
+        float beforePreview = Count(table.inputInventory, "Twine");
+        result["previewSucceeded"] = observed?.Preview(recipe).Success == true;
+        result["previewUnchanged"] = Count(table.inputInventory, "Twine") == beforePreview &&
+            Count(table.outputInventory, "Rope") == 0;
         for (int click = 1; click < required; click++) table.workButton.onClick.Invoke();
+        result["observedWork"] = observed?.CompletedWork;
+        result["observedRequiredWork"] = observed?.RequiredWork;
         result["requiredClicks"] = required;
         result["inputBeforeFinalClick"] = Count(table.inputInventory, "Twine");
         result["outputBeforeFinalClick"] = Count(table.outputInventory, "Rope");

@@ -70,17 +70,28 @@ namespace FlatWorld.Spaceflight
         }
 
         public static bool Confirm(IReadOnlyList<ShipState> ships, List<ShipDockingPairState> pairs,
-            string pairId, string confirmingShipId)
+            string pairId, string confirmingShipId) => Confirm(ships, pairs, pairId, confirmingShipId, out _);
+
+        // 领域返回真正拒绝的分支，表现层只负责翻译并显示。
+        public static bool Confirm(IReadOnlyList<ShipState> ships, List<ShipDockingPairState> pairs,
+            string pairId, string confirmingShipId, out string reason)
         {
+            reason = null;
             ShipDockingPairState pair = FindPair(pairs, pairId);
-            if (pair == null || pair.Connected) return pair != null && pair.Connected &&
-                (confirmingShipId == pair.ShipAId || confirmingShipId == pair.ShipBId);
+            if (pair == null) { reason = "对接记录已失效。"; return false; }
+            if (confirmingShipId != pair.ShipAId && confirmingShipId != pair.ShipBId)
+            { reason = "当前飞船不属于这组对接接口。"; return false; }
+            if (pair.Connected) return true;
             ShipState a = FindShip(ships, pair.ShipAId), b = FindShip(ships, pair.ShipBId);
-            if (a == null || b == null || !ShipStructureService.HasConsole(a) || !ShipStructureService.HasConsole(b)) return false;
+            if (a == null || b == null) { reason = "对接飞船已失效。"; return false; }
+            if (!ShipStructureService.HasConsole(a) || !ShipStructureService.HasConsole(b))
+            { reason = "对接双方都需要有效控制台。"; return false; }
             SynchronizePorts(a); SynchronizePorts(b);
             ShipDockingPortState portA = FindPort(a, pair.PortAId), portB = FindPort(b, pair.PortBId);
-            if (portA == null || portB == null || !CanCapture(a, portA, b, portB, pair.PositionToleranceMeters,
-                pair.AngleToleranceRadians, pair.MaximumRelativeSpeedMetersPerSecond))
+            if (portA == null || portB == null)
+            { reason = "对接接口已失效。"; ResetPair(ships, pair); return false; }
+            if (!CanCapture(a, portA, b, portB, pair.PositionToleranceMeters,
+                pair.AngleToleranceRadians, pair.MaximumRelativeSpeedMetersPerSecond, out reason))
             { ResetPair(ships, pair); return false; }
             if (confirmingShipId == pair.ShipAId) pair.ConfirmedA = true;
             else if (confirmingShipId == pair.ShipBId) pair.ConfirmedB = true;
@@ -123,20 +134,29 @@ namespace FlatWorld.Spaceflight
 
         private static bool CanCapture(ShipState a, ShipDockingPortState portA, ShipState b, ShipDockingPortState portB,
             double positionTolerance, double angleTolerance, double speedTolerance)
+            => CanCapture(a, portA, b, portB, positionTolerance, angleTolerance, speedTolerance, out _);
+
+        private static bool CanCapture(ShipState a, ShipDockingPortState portA, ShipState b, ShipDockingPortState portB,
+            double positionTolerance, double angleTolerance, double speedTolerance, out string reason)
         {
-            if (a.PlatformKind != b.PlatformKind || a.PlatformKind != ShipPlatformKind.Space && a.WorldAddress != b.WorldAddress) return false;
+            reason = null;
+            if (a.PlatformKind != b.PlatformKind || a.PlatformKind != ShipPlatformKind.Space && a.WorldAddress != b.WorldAddress)
+            { reason = "对接双方不在同一世界。"; return false; }
             PortWorldPose(a, portA, out double ax, out double ay, out double anx, out double any);
             PortWorldPose(b, portB, out double bx, out double by, out double bnx, out double bny);
             SpaceVector2 relativeB = a.PlatformKind == ShipPlatformKind.Space ?
                 SpaceSectorCoordinates.Relative(b.Sector, new SpaceVector2(bx, by), a.Sector) : new SpaceVector2(bx, by);
             double dx = ax - relativeB.X, dy = ay - relativeB.Y;
-            if (dx * dx + dy * dy > positionTolerance * positionTolerance) return false;
+            if (dx * dx + dy * dy > positionTolerance * positionTolerance)
+            { reason = "对接接口尚未贴合。"; return false; }
             double dot = Math.Max(-1d, Math.Min(1d, -(anx * bnx + any * bny)));
-            if (Math.Acos(dot) > angleTolerance) return false;
+            if (Math.Acos(dot) > angleTolerance)
+            { reason = "对接接口朝向未对齐。"; return false; }
             ShipGeometry.PointVelocity(a, ax, ay, out double avx, out double avy);
             ShipGeometry.PointVelocity(b, bx, by, out double bvx, out double bvy);
             double vx = avx - bvx, vy = avy - bvy;
-            return vx * vx + vy * vy <= speedTolerance * speedTolerance;
+            if (vx * vx + vy * vy <= speedTolerance * speedTolerance) return true;
+            reason = "对接双方的相对速度过大。"; return false;
         }
         #endregion
 

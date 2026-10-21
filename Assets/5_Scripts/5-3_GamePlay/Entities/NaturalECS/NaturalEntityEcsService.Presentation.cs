@@ -21,17 +21,18 @@ namespace FlatWorld.NaturalEntities
             public Vector3 RenderOffset;
         }
 
-        private static ContactShadowBatchRenderer contactShadows;
-        private static readonly Queue<int> presentationDirtyQueue = new();
-        private static readonly HashSet<int> flashPresentationWatch = new();
+        private static ContactShadowBatchRenderer contactShadows { get => State.contactShadows; set => State.contactShadows = value; }
+        private static Queue<int> presentationDirtyQueue => State.presentationDirtyQueue;
+        private static HashSet<int> flashPresentationWatch => State.flashPresentationWatch;
         private static readonly List<int> flashPresentationScratch = new();
-        private static bool contactShadowListDirty = true;
+        private static bool contactShadowListDirty { get => State.contactShadowListDirty; set => State.contactShadowListDirty = value; }
         private static bool presentationEventsHooked;
-        private static Scene contactShadowScene;
+        private static Scene contactShadowScene { get => State.contactShadowScene; set => State.contactShadowScene = value; }
 
         /// <summary>绑定区块表现；资源主体按脚点 Y 合行网格，阴影继续提交 BRG。</summary>
         public static void BindPresentation(NaturalEntityHandle handle, ChunkTilemapRenderer owner)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle)) return;
             EnsurePresentationEvents();
             Record record = records[handle.Id];
@@ -54,6 +55,7 @@ namespace FlatWorld.NaturalEntities
 
         private static void RefreshPresentation(NaturalEntityHandle handle)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle)) return;
             Record record = records[handle.Id];
             MarkPresentationDirty(record);
@@ -79,6 +81,13 @@ namespace FlatWorld.NaturalEntities
         /// <summary>静态主体只在版本变化时重提；太阳方向在 Shader 更新，短期坠果单独逐帧更新。</summary>
         public static void Present()
         {
+            string localWorld = GameplayWorldRegistry.ExecutionWorldKey;
+            foreach (var pair in worlds)
+                if (pair.Key != localWorld && pair.Value.contactShadows != null)
+                {
+                    pair.Value.contactShadows.Hide();
+                    pair.Value.contactShadowListDirty = true;
+                }
             if (simulation == null || records.Count == 0)
             {
                 contactShadows?.Hide();
@@ -190,9 +199,6 @@ namespace FlatWorld.NaturalEntities
 
         private static void ReleasePresentationRuntime()
         {
-            if (presentationEventsHooked)
-                WorldTopologyRuntime.LocalPlayerWrapped -= HandleLocalPresentationWrap;
-            presentationEventsHooked = false;
             presentationDirtyQueue.Clear();
             flashPresentationWatch.Clear();
             flashPresentationScratch.Clear();

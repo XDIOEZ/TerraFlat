@@ -1,4 +1,4 @@
-using FlatWorld.Networking;
+﻿using FlatWorld.Networking;
 using UnityEngine;
 using static WorldItemWaterRules;
 
@@ -386,7 +386,7 @@ internal static class WorldItemWaterEntrySplashEffect
     /// <summary>在当前世界根节点下创建一个共享世界空间粒子系统。</summary>
     private static void EnsureEmitter()
     {
-        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        var scene = GameplayWorldRegistry.CurrentScene;
         if (splashParticles != null && splashParticles.gameObject.scene == scene)
             return;
         if (splashParticles != null) UnityEngine.Object.Destroy(splashParticles.gameObject);

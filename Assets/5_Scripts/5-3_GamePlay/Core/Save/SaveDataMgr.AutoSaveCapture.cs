@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -24,14 +24,14 @@ public partial class SaveDataMgr
         {
             this.manager = manager;
             save = manager.SaveData;
-            sceneHandle = SceneManager.GetActiveScene().handle;
+            sceneHandle = GameplayWorldRegistry.CurrentScene.handle;
             world = ChunkMgr.ExistingInstance?.WorldRuntime;
             worldEpoch = world?.Epoch ?? long.MinValue;
         }
 
         internal bool IsCurrent => manager != null &&
             ReferenceEquals(manager.SaveData, save) &&
-            SceneManager.GetActiveScene().handle == sceneHandle &&
+            GameplayWorldRegistry.CurrentScene.handle == sceneHandle &&
             ReferenceEquals(ChunkMgr.ExistingInstance?.WorldRuntime, world) &&
             (world?.Epoch ?? long.MinValue) == worldEpoch;
     }

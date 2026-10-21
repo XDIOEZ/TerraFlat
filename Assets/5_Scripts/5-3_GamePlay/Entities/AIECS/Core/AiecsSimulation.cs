@@ -340,6 +340,7 @@ namespace FlatWorld.AIECS
         private NativeList<AiecsHitEvent> pendingInputs, inputs, hits, externalHits;
         private NativeList<AiecsDamageResult> results;
         private NativeList<AiecsDeathEvent> deaths;
+        private NativeList<float2> rangeObservers;
         private NativeParallelHashMap<Entity, int2> hitRanges;
         private NativeQueue<AiecsHitEvent> abilityHits;
         private NativeQueue<AiecsFeedRequest> feedRequests;
@@ -372,7 +373,7 @@ namespace FlatWorld.AIECS
             FixedString128Bytes[] factionIds, byte[] factionRelations, int groupCount, float bodyExtent, double startTime,
             World sharedWorld = null)
         {
-            if (groupCount < 1 || groupCount > 32) throw new ArgumentOutOfRangeException(nameof(groupCount));
+            if (groupCount < 1) throw new ArgumentOutOfRangeException(nameof(groupCount));
             if (factionRelations.Length != factionIds.Length * factionIds.Length) throw new ArgumentException("阵营矩阵尺寸不匹配");
             ownsWorld = sharedWorld == null;
             world = sharedWorld ?? new World("AIECS 隔离诊断");
@@ -441,6 +442,7 @@ namespace FlatWorld.AIECS
             externalHits = new NativeList<AiecsHitEvent>(16, Allocator.Persistent);
             results = new NativeList<AiecsDamageResult>(16, Allocator.Persistent);
             deaths = new NativeList<AiecsDeathEvent>(16, Allocator.Persistent);
+            rangeObservers = new NativeList<float2>(4, Allocator.Persistent);
             hitRanges = new NativeParallelHashMap<Entity, int2>(16, Allocator.Persistent);
             abilityHits = new NativeQueue<AiecsHitEvent>(Allocator.Persistent);
             feedRequests = new NativeQueue<AiecsFeedRequest>(Allocator.Persistent);
@@ -526,7 +528,37 @@ namespace FlatWorld.AIECS
         public void DespawnBatch(NativeArray<Entity> entities) { Complete(); if (entities.Length > 0) Entities.DestroyEntity(entities); }
 
         /// <summary>少量共享目标由玩家或编队中心更新，调用方不得为每个单位设置独立槽位。</summary>
-        public void SetGroupGoal(int group, FlowGoalHandle handle) { Complete(); goals[group] = handle; }
+        public void SetGroupGoal(int group, FlowGoalHandle handle)
+        {
+            if (group < 0) throw new ArgumentOutOfRangeException(nameof(group));
+            Complete();
+            if (group >= goals.Length)
+            {
+                int count = math.max(group + 1, goals.Length * 2);
+                GrowGroupArray(ref goals, count);
+                GrowGroupArray(ref groups, count);
+                GrowGroupArray(ref groupAnchors, count);
+                GrowGroupArray(ref groupNearest, count);
+            }
+            goals[group] = handle;
+        }
+
+        // 玩家独立使用少量目标槽，扩容前完成读写依赖并保留全部已有目标。
+        private static void GrowGroupArray<T>(ref NativeArray<T> source, int count) where T : struct
+        {
+            var next = new NativeArray<T>(count, Allocator.Persistent);
+            NativeArray<T>.Copy(source, next, source.Length);
+            source.Dispose();
+            source = next;
+        }
+
+        public void SetRangeObservers(ReadOnlySpan<float2> observers)
+        {
+            Complete();
+            rangeObservers.Clear();
+            for (int i = 0; i < observers.Length; i++)
+                if (math.all(math.isfinite(observers[i]))) rangeObservers.Add(observers[i]);
+        }
 
         /// <summary>阵营规则改变时更新冻结矩阵，正常 Tick 不重建关系。</summary>
         public void SetRelations(byte[] matrix) { Complete(); if (matrix.Length != relations.Length) throw new ArgumentException("阵营矩阵尺寸不匹配"); relations.CopyFrom(matrix); }
@@ -576,6 +608,7 @@ namespace FlatWorld.AIECS
             scheduler.ScheduleParallel(new AiecsSelectSimulationPulseJob
             {
                 Range = range,
+                Observers = rangeObservers.AsArray(),
                 Domain = view.Domain,
                 Time = time,
                 BaseDeltaTime = deltaTime,
@@ -723,6 +756,7 @@ namespace FlatWorld.AIECS
             if (attacks.IsCreated) attacks.Dispose(); if (periodicCounts.IsCreated) periodicCounts.Dispose();
             if (display.IsCreated) display.Dispose(); if (work.IsCreated) work.Dispose();
             pendingInputs.Dispose(); inputs.Dispose(); hits.Dispose(); externalHits.Dispose(); results.Dispose(); deaths.Dispose();
+            rangeObservers.Dispose();
             hitRanges.Dispose(); abilityHits.Dispose(); feedRequests.Dispose(); productionRequests.Dispose(); density.Dispose();
             if (disposeWorld && ownsWorld) world.Dispose();
         }

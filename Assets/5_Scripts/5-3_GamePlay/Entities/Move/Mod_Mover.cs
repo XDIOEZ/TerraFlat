@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UltEvents;
@@ -105,9 +105,13 @@ public partial class Mod_Mover : Module
     public event System.Action<bool> RunStateChanged;
     /// <summary>实体实际进入新的 1×1 世界单位格时通知依赖位置变化的系统。</summary>
     public event System.Action<Vector2Int> WorldUnitChanged;
+    /// <summary>运动状态被强制重置时，动作模块通过此通知释放自己的效果。</summary>
+    public event System.Action MotionReset;
 
     private Vector2Int _lastWorldUnit;
     private bool _hasTrackedWorldUnit;
+    private bool resettingMotion;
+    private uint motionResetVersion;
 
     #endregion
 
@@ -194,6 +198,7 @@ public partial class Mod_Mover : Module
 
     protected override void OnLoad()
     {
+        networkAuthorityMovement = networkMoving = networkRunning = false;
         ClearDrivenMotion();
         ModDataMemoryPack.ReadData(ref Data);
         bool persistedRunState = Data.isRunning;
@@ -237,6 +242,7 @@ public partial class Mod_Mover : Module
         {
             OnMoveStart += OnMoveAnimationStarted;
             OnMoveEnd += OnMoveAnimationEnded;
+            animationController.SetBool(AnimationText.Move, false);
             animationController.SetBool(AnimationText.Run, false);
         }
 
@@ -314,6 +320,8 @@ public partial class Mod_Mover : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (!Enabled || !isActiveAndEnabled || resettingMotion || !float.IsFinite(deltaTime) || deltaTime <= 0f) return;
+        if (networkAuthorityMovement) { TickNetworkMovementCosts(deltaTime); return; }
         if (HasDrivenMotion)
         {
             if (IsSurfaceMotionAvailable && inputController?.IsGameplayInputLocked != true) { ApplyDrivenMotion(); return; }
@@ -334,7 +342,7 @@ public partial class Mod_Mover : Module
 
         if (inputController != null)
         {
-            if (inputController.IsGameplayInputLocked)
+            if (inputController.IsGameplayInputLocked || IsLock)
             {
                 StopImmediately();
                 // 输入锁定只停止位移，奔跑开关作为存档状态保留，解锁后继续沿用。
@@ -349,13 +357,21 @@ public partial class Mod_Mover : Module
         if (item is Player && inputController?._mainCamera != null)
             input = inputController._mainCamera.transform.TransformDirection(input);
         input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
+        if (!FiniteVelocity(input))
+        {
+            StopImmediately();
+            hungerActionInstance?.SetMovementState(false, false);
+            return;
+        }
         bool isCurrentlyMoving = input.sqrMagnitude > InputMoveThresholdSqr;
+        uint version = motionResetVersion;
 
         if (isCurrentlyMoving)
         {
             MoveByInput(input, deltaTime);
+            if (version != motionResetVersion) return;
 
-            if (stamina != null)
+            if (stamina != null && FlatWorld.Networking.GameNetwork.HasStateAuthority)
             {
                 float consumePerSecond = IsRunning ? RunStaminaConsume : MoveStaminaConsume;
                 string sourceId = IsRunning
@@ -377,7 +393,41 @@ public partial class Mod_Mover : Module
         }
 
         // 每帧只更新动作实例状态；实际营养扣除仍由 Mod_Food 的统一 Tick 完成。
+        if (version != motionResetVersion) return;
         hungerActionInstance?.SetMovementState(isCurrentlyMoving, IsRunning);
+    }
+
+    #endregion
+
+    #region 运动状态重置
+    /// <summary>落点应用后统一清理瞬时运动，保留奔跑偏好与外部运动归属。</summary>
+    public void ResetMotion()
+    {
+        if (resettingMotion) return;
+        resettingMotion = true;
+        try
+        {
+            unchecked { motionResetVersion++; }
+            // 先撤销旧租约和速度，再通知动作收尾，防止回调把旧运动写回来。
+            InvalidateDrivenMotion();
+            DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
+            networkMoving = networkRunning = false;
+            if (rb != null)
+            {
+                rb.velocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+                TargetPosition = rb.position;
+            }
+            ResetWorldUnitTracking();
+            footstepPreviousPosition = rb != null ? WorldTopologyRuntime.NormalizePosition(rb.position) : Vector2.zero;
+            footstepDistance = 0f;
+            ResetSwimmingAudio();
+            hungerActionInstance?.SetMovementState(false, false);
+            if (animationController != null) animationController.ResetLocomotion();
+            UpdateMovementState();
+            MotionReset?.Invoke();
+        }
+        finally { resettingMotion = false; }
     }
 
     #endregion
@@ -433,7 +483,9 @@ public partial class Mod_Mover : Module
 
     public virtual void Move(Vector2 targetPosition, float deltaTime)
     {
-        if (CarrierSource != null) return;
+        if (resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
+        if (IsLock || !FiniteVelocity(targetPosition) || !float.IsFinite(deltaTime))
+        { StopImmediately(); return; }
         if (rb == null)
         {
             Debug.LogError($"{name}: Rigidbody2D 为空，无法执行 Move！");
@@ -456,7 +508,9 @@ public partial class Mod_Mover : Module
     /// <summary>按二维输入幅度驱动移动；水流是额外的表层漂移，不计作主动奔跑或体力消耗。</summary>
     public void MoveByInput(Vector2 input, float deltaTime)
     {
-        if (CarrierSource != null) return;
+        if (resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
+        if (IsLock || !FiniteVelocity(input) || !float.IsFinite(deltaTime))
+        { StopImmediately(); return; }
         if (rb == null)
         {
             Debug.LogError($"{name}: Rigidbody2D 为空，无法执行输入移动！");
@@ -481,7 +535,9 @@ public partial class Mod_Mover : Module
     /// <summary>导航移动与水流分别结算，动物静止时也会被推动而不会播放行走动画。</summary>
     public void ApplyNavigationVelocity(Vector2 targetVelocity, float deltaTime)
     {
-        if (CarrierSource != null) return;
+        if (resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
+        if (IsLock || !FiniteVelocity(targetVelocity) || !float.IsFinite(deltaTime))
+        { StopImmediately(); return; }
         if (rb == null)
             throw new System.InvalidOperationException($"{name}: 导航移动缺少 Rigidbody2D。");
         if (deltaTime <= 0f)
@@ -525,6 +581,9 @@ public partial class Mod_Mover : Module
     public Vector2 SmoothSurfaceVelocity(Vector2 currentVelocity, Vector2 targetVelocity, float deltaTime,
         double gravity)
     {
+        if (!FiniteVelocity(currentVelocity)) currentVelocity = Vector2.zero;
+        if (!FiniteVelocity(targetVelocity)) targetVelocity = Vector2.zero;
+        if (!float.IsFinite(deltaTime) || deltaTime <= 0f) return currentVelocity;
         bool isStopping = targetVelocity.sqrMagnitude <= InputMoveThresholdSqr;
         float transitionDuration = isStopping
             ? stopTransitionDuration
@@ -549,7 +608,8 @@ public partial class Mod_Mover : Module
             speedChangeRate * surfaceMultiplier * gravityMultiplier * actorAccelerationMultiplier * Mathf.Max(0f, deltaTime));
 
         float stopThreshold = Mathf.Max(0.001f, endSpeed);
-        return isStopping && nextVelocity.sqrMagnitude <= stopThreshold * stopThreshold
+        return !FiniteVelocity(nextVelocity) ||
+            isStopping && nextVelocity.sqrMagnitude <= stopThreshold * stopThreshold
             ? Vector2.zero
             : nextVelocity;
     }
@@ -557,12 +617,9 @@ public partial class Mod_Mover : Module
     /// <summary>输入锁定时停止主动走路，站在运行带面上仍由传送带推动。</summary>
     private void StopImmediately()
     {
-        if (rb == null)
-            return;
-
         DrivenVelocity = RequestedMoveInput = Vector2.zero;
-        ExternalVelocity = ResolveExternalVelocity();
-        rb.velocity = ExternalVelocity;
+        ExternalVelocity = rb != null ? ResolveExternalVelocity() : Vector2.zero;
+        if (rb != null) rb.velocity = ExternalVelocity;
         UpdateMovementState();
     }
 
@@ -573,27 +630,26 @@ public partial class Mod_Mover : Module
         bool isActuallyMoving = !HasDrivenMotion && CarrierSource == null && rb != null &&
                                 DrivenVelocity.sqrMagnitude > stopThreshold * stopThreshold;
         IsMoving = isActuallyMoving;
-
-        if (_wasMoving != isActuallyMoving)
-            RefreshWetClothesAudio();
-
-        if (!_wasMoving && isActuallyMoving)
-            OnMoveStart?.Invoke();
-        else if (_wasMoving && !isActuallyMoving)
-            OnMoveEnd?.Invoke();
-
+        bool changed = _wasMoving != isActuallyMoving;
         _wasMoving = isActuallyMoving;
+        if (!changed) return;
+        // 发布前提交状态，回调中的停止或重置不会重复触发同一次状态变化。
+        RefreshWetClothesAudio();
+        if (isActuallyMoving)
+            OnMoveStart?.Invoke();
+        else
+            OnMoveEnd?.Invoke();
     }
 
     // 对象池重复加载不会累积动画事件订阅，旧加载周期结束后立即解绑。
     private void OnMoveAnimationStarted()
     {
-        if (animationController != null) animationController.SetBool(AnimationText.Move, true);
+        if (animationController != null) animationController.SetBool(AnimationText.Move, IsMoving);
     }
 
     private void OnMoveAnimationEnded()
     {
-        if (animationController != null) animationController.SetBool(AnimationText.Move, false);
+        if (animationController != null) animationController.SetBool(AnimationText.Move, IsMoving);
     }
 
     private void UnbindMoveAnimationCallbacks()
@@ -673,8 +729,8 @@ public partial class Mod_Mover : Module
     }
     public void OnDestroy()
     {
-        ClearDrivenMotion();
         ReleaseCarrierLease();
+        ResetMotion();
         UnbindRunActions();
         UnbindMoveAnimationCallbacks();
         DisposeWetClothesAudio();
@@ -682,6 +738,7 @@ public partial class Mod_Mover : Module
         OnMoveStart?.Clear();
         OnMoveEnd?.Clear();
         RunStateChanged = null;
+        MotionReset = null;
 
         hungerActionInstance?.Dispose();
         hungerActionInstance = null;

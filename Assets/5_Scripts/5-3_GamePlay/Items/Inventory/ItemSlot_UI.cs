@@ -40,6 +40,11 @@ public class ItemSlot_UI : MonoBehaviour,
     /// </summary>
     public int slotIndex = -1;
 
+    public Inventory BoundInventory { get; private set; }
+
+    public void ClearInventoryBinding(Inventory inventory)
+    { if (ReferenceEquals(BoundInventory, inventory)) BoundInventory = null; }
+
     [Tooltip("显示当前物体的图标")]
     public Image image;
 
@@ -228,6 +233,7 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>销毁槽位时收束未完成拖拽并解除所有运行时回调。</summary>
     public void OnDestroy()
     {
+        BoundInventory = null;
         InventoryItemTooltip.Hide(this);
         CompleteActiveDrag(true, false);
         OnLeftClick.Clear();
@@ -289,7 +295,8 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>
     /// 初始化槽位（替代 Data = ... 的直接赋值）
     /// </summary>
-    public void InitializeSlot(int index, System.Func<int, ItemSlot> getSlotFunc, System.Action<int> clearAction)
+    public void InitializeSlot(int index, System.Func<int, ItemSlot> getSlotFunc, System.Action<int> clearAction,
+        Inventory inventory = null)
     {
         SetProcessingProgress(0f);
         CancelTouchTooltipHold();
@@ -297,6 +304,7 @@ public class ItemSlot_UI : MonoBehaviour,
         slotIndex = index;
         GetSlotDataFunc = getSlotFunc;
         ClearSlotDataAction = clearAction;
+        BoundInventory = inventory;
     }
 
     /// <summary>获取这个 UI 当前实际绑定的槽位，外部逻辑不要直接调用槽位委托。</summary>

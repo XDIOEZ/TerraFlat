@@ -63,6 +63,7 @@ public partial class Mod_TileEffectReceiver : Module
     private bool hasActiveTileEffects;
     private bool activeTileIsEdgeInteractionOnly;
     private bool isPreparedForWorldTransition;
+    private bool resumeTileEffectsOnEnable;
     private EnvironmentInteractionRunner environmentInteractions;
     private EnvironmentInteractionRunner snowEnvironmentInteractions;
     private SnowCoverConfig snowCoverConfig;
@@ -141,6 +142,21 @@ public partial class Mod_TileEffectReceiver : Module
         RefreshCurrentTileEffects();
     }
 
+    private void OnEnable()
+    {
+        if (!IsRuntimeLoaded || !resumeTileEffectsOnEnable) return;
+        resumeTileEffectsOnEnable = false;
+        RefreshCurrentTileEffects();
+    }
+
+    private void OnDisable()
+    {
+        // 临时启停重读真实接触；已有的正式迁移屏障必须等世界就绪后显式解除。
+        bool shouldResume = IsRuntimeLoaded && !isPreparedForWorldTransition;
+        PrepareForWorldTransition();
+        resumeTileEffectsOnEnable = shouldResume;
+    }
+
     private void OnValidate()
     {
         if (_Data != null)
@@ -191,6 +207,10 @@ public partial class Mod_TileEffectReceiver : Module
     protected override void OnLoad()
     {
         ModSaveData?.ReadData(ref lastGridPos);
+        isPreparedForWorldTransition = false;
+        resumeTileEffectsOnEnable = false;
+        nextSnowRefresh = 0f;
+        lastSnowGridPos = new Vector2Int(int.MinValue, int.MinValue);
         UpdateLegacyMapReference();
     }
 
@@ -257,6 +277,7 @@ public partial class Mod_TileEffectReceiver : Module
     /// <summary>世界切换保存前撤销脚下地块效果，防止环境 Buff 带到下一维度。</summary>
     public void PrepareForWorldTransition()
     {
+        resumeTileEffectsOnEnable = false;
         if (isPreparedForWorldTransition)
             return;
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using FlatWorld.Diagnostics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public partial class ItemMgr
 {
@@ -129,6 +130,14 @@ public partial class ItemMgr
             itemObj.transform.localScale = scale;
             itemObj.SetActive(true);
             item.FlushPendingInitialAnimatorState();
+
+            // 注册通知必须已经具有最终世界归属，不能让池中旧场景污染生态索引。
+            Scene targetScene = parent != null ? parent.scene : GameplayWorldRegistry.CurrentScene;
+            if (targetScene.IsValid() && targetScene.isLoaded && itemObj.scene != targetScene)
+            {
+                itemObj.transform.SetParent(null, true);
+                SceneManager.MoveGameObjectToScene(itemObj, targetScene);
+            }
 
             using (SpawnRegisterDebug.Measure(1, itemData.IDName))
                 RegisterRuntimeItem(item, itemData.IDName, out registrationToken);
@@ -360,8 +369,6 @@ public partial class ItemMgr
 
             // 实体注册完成后创建独立阴影；阴影不进入 Item 或 RuntimeEntities 层级。
             ActorShadowManager.GetInstance()?.RegisterActor(item);
-            if (item is Map mapItem)
-                _cachedMap = mapItem;
             RuntimeItemRegistered?.Invoke(item);
             EnsureSpawnRegistrationCurrent(item, registeredData, registrationToken);
             return registrationToken;
@@ -425,8 +432,6 @@ public partial class ItemMgr
         }
         finally
         {
-            if (item is Map)
-                _cachedMap = null;
             RemoveItemFromSpatialIndex(item);
             _perceptionTargets.Remove(item);
             RuntimeItemUnregistered?.Invoke(item);

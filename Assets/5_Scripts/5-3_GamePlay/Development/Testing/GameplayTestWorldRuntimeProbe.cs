@@ -22,6 +22,7 @@ public static partial class GameplayTestWorldRuntimeProbe
         GameplayTestRuntimeProbe.Register("agriculture", "planting_target", CapturePlantingTarget);
         GameplayTestRuntimeProbe.Register("agriculture", "pour_absorption", CapturePourAbsorption);
         GameplayTestRuntimeProbe.Register("building", "placement", CapturePlacement);
+        GameplayTestRuntimeProbe.Register("building", "host_placement_receipt", CaptureHostPlacementReceipt);
         GameplayTestRuntimeProbe.Register("fishing", "rig_roundtrip", CaptureFishingRig);
     }
     #endregion
@@ -326,6 +327,88 @@ public static partial class GameplayTestWorldRuntimeProbe
             if (ownPlacement.HasValue && current == ownPlacement.Value.RuntimeTileId && current != 0 &&
                 !TileBuildingSystem.TryRemove(ownPlacement.Value, false, out string removeReason))
                 throw new InvalidOperationException("自有格子建筑清理失败：" + removeReason);
+            site.Dispose();
+            result["restored"] = site.IsRestored();
+        }
+    }
+    #endregion
+
+    #region Host 共享库存建造回执
+    // 独立载体走正式安装入口和放置事务，只替换传输桥来控制成功回执到达时机。
+    private static JObject CaptureHostPlacementReceipt(Player player, JObject args)
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
+            throw new InvalidOperationException("Host 建造回执采样需要世界权威。");
+        ItemData source = GameRes.ExistingInstance.CreateItemData("Wall_Wood_Summoner");
+        source.Stack.Amount = (float)GameplayTestSystemProbe.Number(args, "amount", 1);
+        if (!Mod_Building.TryReadBuildingData(source, out Ex_ModData stored, out Mod_Building.Building_Data state))
+            throw new InvalidOperationException("Host 建造回执采样缺少建筑模块。");
+        Site site = FindSite(player, sample => Mod_Building.ValidateTileDataPlacement(source,
+            new Vector3(sample.WorldCell.x + .5f, sample.WorldCell.y + .5f), out _));
+        var root = new GameObject("[HostPlacementReceipt]");
+        root.SetActive(false);
+        var slot = new ItemSlot(0) { itemData = source };
+        var inventory = new Inventory_Data(new List<ItemSlot> { slot }, "独立Host建造材料");
+        var previousBridge = ItemNetworkStateSerialization.TryBeginNetworkBuilding;
+        TileBuildingCell? ownPlacement = null;
+        BuildingPlacementResult placement = null;
+        var errors = new JArray();
+        var result = new JObject();
+        void CaptureCell(TileBuildingCell cell) { if (cell.Position == site.Sample.WorldCell) ownPlacement = cell; }
+        void CaptureLog(string message, string stack, LogType type)
+        { if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert) errors.Add(message); }
+        TileBuildingSystem.CellPlaced += CaptureCell;
+        Application.logMessageReceived += CaptureLog;
+        try
+        {
+            root.transform.position = WorldLocalPresentation.ProjectPosition(site.Center);
+            GameItem owner = root.AddComponent<GameItem>();
+            owner.BindData(new Data_GeneralItem { IDName = "test:host-placement-owner" });
+            var carrierRoot = new GameObject("carrier");
+            carrierRoot.transform.SetParent(root.transform, false);
+            GameItem carrier = carrierRoot.AddComponent<GameItem>();
+            carrier.BindData(source);
+            carrier.Owner = owner;
+            carrier.SetInHand(true);
+            Mod_Building building = carrierRoot.AddComponent<Mod_Building>();
+            building.ModuleInit(carrier, stored);
+            building.Data = state;
+            ItemNetworkStateSerialization.TryBeginNetworkBuilding = (pending, position) =>
+            {
+                if (!ReferenceEquals(pending, building)) throw new InvalidOperationException("回执采样收到其他建筑请求。");
+                var request = new BuildingPlacementRequest
+                {
+                    SourceData = source, SourceInventory = inventory, SourceSlot = slot,
+                    Position = position, AuthorityPosition = site.Center, MaximumDistance = 16f
+                };
+                if (!BuildingPlacementService.TryPlace(request, out placement, out string reason))
+                    throw new InvalidOperationException(reason);
+                return true;
+            };
+            building.Install();
+            if (placement == null || !building.IsPlacementPending)
+                throw new InvalidOperationException("正式安装入口没有形成待确认的建造事务。");
+            result["afterServer"] = slot.itemData?.Stack?.Amount ?? 0f;
+            int receiptWrites = 0;
+            inventory.Event_OnDataChanged += _ => receiptWrites++;
+            building.CompleteNetworkPlacement(placement.RemainingAmount);
+            building.CompleteNetworkPlacement(placement.RemainingAmount);
+            result["afterReceipt"] = slot.itemData?.Stack?.Amount ?? 0f;
+            result["remainingAmount"] = placement.RemainingAmount;
+            result["pending"] = building.IsPlacementPending;
+            result["receiptWrites"] = receiptWrites;
+            result["installed"] = ownPlacement.HasValue;
+            result["errors"] = errors;
+            return result;
+        }
+        finally
+        {
+            ItemNetworkStateSerialization.TryBeginNetworkBuilding = previousBridge;
+            Application.logMessageReceived -= CaptureLog;
+            TileBuildingSystem.CellPlaced -= CaptureCell;
+            UnityEngine.Object.DestroyImmediate(root);
+            if (ownPlacement.HasValue && !TileBuildingSystem.TryRemove(ownPlacement.Value, false, out string reason))
+                throw new InvalidOperationException("Host 回执采样撤墙失败：" + reason);
             site.Dispose();
             result["restored"] = site.IsRestored();
         }

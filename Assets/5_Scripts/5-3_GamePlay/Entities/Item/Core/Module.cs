@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using UltEvents;
@@ -560,6 +560,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
     internal void TickWithProfiler(float deltaTime)
     {
+        if (!PlayerSimulationAuthority.CanTick(this)) return;
         // 标记名仅首次创建，让性能分析器直接定位模块的耗时和分配。
         if (!tickProfilerMarkerInitialized)
         {

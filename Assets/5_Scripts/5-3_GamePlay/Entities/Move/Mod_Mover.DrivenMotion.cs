@@ -6,7 +6,7 @@ public partial class Mod_Mover
     #region 临时主动移动租约
     private DrivenMotionLease drivenMotionLease;
     public bool HasDrivenMotion => drivenMotionLease != null;
-    public bool IsSurfaceMotionContextAvailable => Enabled && isActiveAndEnabled &&
+    public bool IsSurfaceMotionContextAvailable => !resettingMotion && Enabled && isActiveAndEnabled &&
         item != null && !item.DestructionHandled && CarrierSource == null && !spaceMotionOwned &&
         !SpaceMgr.IsSpaceScene(item.gameObject.scene.name);
     public bool IsSurfaceMotionAvailable => IsSurfaceMotionContextAvailable && !IsLock;
@@ -54,13 +54,18 @@ public partial class Mod_Mover
     private void ClearDrivenMotion()
     {
         if (drivenMotionLease == null) return;
-        drivenMotionLease.Invalidate();
-        drivenMotionLease = null;
+        InvalidateDrivenMotion();
         DrivenVelocity = RequestedMoveInput = Vector2.zero;
         ExternalVelocity = rb != null ? ResolveExternalVelocity() : Vector2.zero;
         if (rb != null && rb.simulated && rb.bodyType == RigidbodyType2D.Dynamic)
             rb.velocity = ExternalVelocity;
         UpdateMovementState();
+    }
+
+    private void InvalidateDrivenMotion()
+    {
+        drivenMotionLease?.Invalidate();
+        drivenMotionLease = null;
     }
 
     public sealed class DrivenMotionLease : IDisposable

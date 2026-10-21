@@ -1,4 +1,4 @@
-// AI-Context: 游戏世界总生命周期与出生点服务；出生点必须按新版纯生成 Profile 计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时注册运行时 Chunk 或默认投放到水面。
+﻿// AI-Context: 游戏世界总生命周期与出生点服务；出生点必须按新版纯生成 Profile 计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时注册运行时 Chunk 或默认投放到水面。
 // ===== AI 函数导航（按函数名搜索，不依赖行号） =====
 // 创建世界：CreateNewWorld() / CreateNewWorldCoroutine() / RunWorld()
 // 继续游戏：ContinueGame() / ContinueGameInternal() / LoadPlayer()
@@ -231,7 +231,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         ////////////////////////////////////////////////////////////////////////////////////
 
         // 掉落物必须在退出快照写入以后释放，不能在更早的世界退出通知里清空。
-        DroppedItemService.ReleaseWorld();
+        DroppedItemService.ReleaseAll();
         FlatWorld.Spaceflight.SpaceSession.EndSession();
         MachineWorld.ReleaseWorld(capture: false);
 
@@ -761,9 +761,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         string OldSceneName = SceneManager.GetActiveScene().name;
         // 2. 立刻创建并激活空场景
-        Scene newScene = SceneManager.CreateScene(NewScenename);
+        Scene newScene = SceneManager.CreateScene(NewScenename, new CreateSceneParameters(LocalPhysicsMode.Physics2D));
         SceneManager.SetActiveScene(newScene);
         DimensionManager.Instance.ActivateWorld(worldAddress);
+        _ = GameplayWorldRegistry.GetOrCreate(worldAddress.WorldKey);
 
         // 通知所有订阅者：游戏世界已进入
         Event_GameWorldEnter?.Invoke();
@@ -897,7 +898,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         ///////////////////////////上面都是对旧场景的处理////////////////////
         // 创建新场景
-        Scene newScene = SceneManager.CreateScene(NextSceneName);
+        Scene newScene = SceneManager.CreateScene(NextSceneName, new CreateSceneParameters(LocalPhysicsMode.Physics2D));
 
         // 卸载旧场景
         Scene startScene = SceneManager.GetActiveScene();
@@ -1111,7 +1112,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         int worldSeed = GetActiveWorldGenerationSeed();
         ReportWorldEntryProgress("正在进入存档", "正在根据世界种子定位安全出生点…", 0.7f);
 
-        // 读取已加载的 MapCore Prefab 配置做纯采样，不实例化 Map 或 Chunk。
+        // 按正式 WorldModel 生成配置查找陆地，不创建区块表现。
         // 玩家位置设置完成后才触发 Event_PlayerEnterWorld，由 Mod_ChunkLoader 正常流送周围区块。
         bool landFound;
         Vector2Int landPosition;

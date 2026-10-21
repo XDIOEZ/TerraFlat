@@ -121,7 +121,7 @@ public partial class WeatherMgr
 
     private void OnEnable()
     {
-        if (_weatherRuntimeAllowed)
+        if (_weatherRuntimeAllowed && IsLocalWeatherWorld)
             ActivateWeatherAudio();
     }
 
@@ -224,14 +224,14 @@ public partial class WeatherMgr
     private bool TryGetWeatherAudioPlayer(out Player player)
     {
         player = ItemMgr.GetInstance()?.User_Player;
-        return _weatherRuntimeAllowed && isActiveAndEnabled &&
+        return IsLocalWeatherWorld && _weatherRuntimeAllowed && isActiveAndEnabled &&
                player != null && player.IsLocalProfile && player.gameObject.activeInHierarchy;
     }
 
     private void HandleWeatherLightningAudio(RegionalLightningEvent lightning)
     {
         if (!weatherAudioBaselineReady || pendingWeatherThunder.Count >= MaximumPendingThunder ||
-            !string.Equals(lightning.WorldKey, regionalPlanet?.Name, StringComparison.Ordinal) ||
+            !string.Equals(lightning.WorldKey, ownedWorld, StringComparison.Ordinal) ||
             !TryGetWeatherAudioPlayer(out Player player))
             return;
 
@@ -252,7 +252,7 @@ public partial class WeatherMgr
             if (Time.unscaledTime < pending.PlayTime)
                 continue;
             pendingWeatherThunder.RemoveAt(i);
-            if (!string.Equals(pending.Lightning.WorldKey, regionalPlanet?.Name, StringComparison.Ordinal) ||
+            if (!string.Equals(pending.Lightning.WorldKey, ownedWorld, StringComparison.Ordinal) ||
                 !TryGetWeatherAudioPlayer(out Player player))
                 continue;
 

@@ -15,7 +15,7 @@ namespace FlatWorld.GameplayMCP
 {
     /// <summary>正式刷怪链的只读计数审计与 1～20 秒采样；不生成、清理实体或修改配置。</summary>
     [McpForUnityTool("gameplay_spawner_debug", Description =
-        "Read the real monster registry and ecology limits, sample CPU for 1-20 seconds, or inspect recorded Unity Profiler frames including descendant GC.Alloc metadata. Actions: status, sample, profile_frames. Read-only; does not mutate gameplay.", Group = "core")]
+        "Read the real monster registry and ecology limits, sample CPU for 1-20 seconds, or inspect recorded Unity Profiler frames including descendant GC.Alloc metadata. Actions: status, sample, profile_frames. Read-only; does not mutate gameplay.", Group = "core", Discoverable = false)]
     public static class GameplaySpawnerDebugTool
     {
         #region 统一输入输出

@@ -2,7 +2,6 @@ using System;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 /// <summary>
 /// 旧版 TileBlock 的通用 Item 兼容壳。它仍被 Dirt、Sand、Stone 等旧 TileBlock Prefab 共用，
@@ -241,36 +240,6 @@ public class Item_Tile_Grass : Item
 
         Destroy(placementShadow.gameObject);
         placementShadow = null;
-    }
-
-    #endregion
-
-    #region 旧 Map 兼容接口
-
-    public void Set_TileBase_ToWorld(TileData tileData)
-    {
-        // 获取鼠标在屏幕上的位置
-        Vector3 mouseScreenPos = Input.mousePosition;
-        Vector3 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
-        worldPos = WorldTopologyRuntime.NormalizePosition(worldPos);
-
-        // 获取 MapCore 对象和 Map 脚本
-        GameObject mapCore = GameObject.FindGameObjectWithTag("MapCore");
-        Map mapCoreScript = mapCore.GetComponent<Map>();
-
-        // 使用 Map 脚本中的 tileMap
-        Tilemap tileMap = mapCoreScript.tileMap;
-
-        // 把世界坐标转换为格子坐标
-        Vector3Int cellPos3D = tileMap.WorldToCell(worldPos);
-        Vector2Int cellPos2D = new Vector2Int(cellPos3D.x, cellPos3D.y);
-
-        // 设置 TileData 的坐标
-        tileData.position = cellPos3D;
-
-        // 添加并刷新 Tile
-        mapCoreScript.PushTile(cellPos2D, tileData);
-        mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
 
     #endregion

@@ -6,14 +6,14 @@ using UnityEngine.Tilemaps;
 public partial class Map
 {
     #region 生成期液体层
-    // MapCore 生成链的临时液体数据；Ground 与 Liquid 从这里开始就保持独立。
+    // 旧 Map 生成链的临时液体数据；Ground 与 Liquid 从这里开始就保持独立。
     // 正式世界、抽水和差量存档始终走 ChunkMgr 权威 Terrain。
     private ChunkTerrainData generatedLiquidTerrain;
     private readonly List<Tile> generatedLiquidTiles = new();
     private GameObject generatedLiquidVisual;
     public ChunkTerrainData GeneratedLiquidTerrain => generatedLiquidTerrain;
 
-    /// <summary>重建 MapCore 生成期独立液体格，不向 Ground 栈写入任何液体地块。</summary>
+    /// <summary>重建 旧 Map 生成期独立液体格，不向 Ground 栈写入任何液体地块。</summary>
     public void ResetGeneratedLiquids()
     {
         LiquidTypeCatalog liquidTypes = GameRes.RequireWorldLiquidTypes();
@@ -41,7 +41,7 @@ public partial class Map
         return generatedLiquidTerrain.GetLiquidId(local.x, local.y);
     }
 
-    /// <summary>MapCore 调试 Tilemap 分开画 Ground 与 Liquid；BRG 正式表现不经过这里。</summary>
+    /// <summary>旧 Map 调试 Tilemap 分开画 Ground 与 Liquid；BRG 正式表现不经过这里。</summary>
     private void RebuildGeneratedLiquidVisuals()
     {
         ClearGeneratedLiquidVisuals();

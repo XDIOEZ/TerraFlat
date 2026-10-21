@@ -15,7 +15,7 @@ namespace FlatWorld.GameplayMCP
     [McpForUnityTool(
         "gameplay_hydrology_debug",
         Description = "Read-only hydrology shape audit for loaded chunks: river cell count, connectivity, and longest identical quantized flow-direction streak.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplayHydrologyDebugTool
     {
         #region 统一输入输出

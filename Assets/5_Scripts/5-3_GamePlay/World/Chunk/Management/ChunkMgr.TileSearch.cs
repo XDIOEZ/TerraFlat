@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FlatWorld.WorldModel;
@@ -54,7 +54,7 @@ public partial class ChunkMgr
         DeterministicChunkGenerator generator = runtimeGenerator;
         var rejected = new HashSet<Int2>();
         WorldRuntime world = WorldRuntime;
-        string scene = SceneManager.GetActiveScene().name;
+        string scene = GameplayWorldRegistry.CurrentScene.name;
         long sampled = 0;
         while (true)
         {
@@ -62,7 +62,7 @@ public partial class ChunkMgr
                 anchor, tileId, cancellationToken, epoch, progress, excluded, rejected), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (this == null || !ReferenceEquals(WorldRuntime, world) || world.Epoch != epoch ||
-                ResolveCurrentDimensionId() != dimension || SceneManager.GetActiveScene().name != scene)
+                ResolveCurrentDimensionId() != dimension || GameplayWorldRegistry.CurrentScene.name != scene)
                 throw new System.OperationCanceledException(cancellationToken);
             sampled += result.SampledCount;
             if (!result.Found) return new DeterministicChunkGenerator.BiomeSearchResult(false, anchor, sampled);

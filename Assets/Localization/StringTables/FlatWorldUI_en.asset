@@ -5128,6 +5128,494 @@ MonoBehaviour:
     m_Localized: "Presets adjust water, shadows, and post-processing together. You can still adjust each setting afterward."
     m_Metadata:
       m_Items: []
+  - m_Id: 17923500000000005
+    m_Localized: "Ignition failed: the ship console is no longer valid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000006
+    m_Localized: "Ignition failed: the console has no power or is disabled."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000007
+    m_Localized: "Ignition failed: the ship is not ready."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000008
+    m_Localized: "Ignition failed: no engines are available. Check engine power, mounting direction, and device condition."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000009
+    m_Localized: "Ignition failed: the engines have no usable fuel. Check the fuel mixture, pipes, and valves."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000010
+    m_Localized: "Ignition failed: the ship is overweight. Total mass: {0:0.##} kg. Available thrust can support at most {1:0.##} kg under the current gravity. Reduce cargo or increase available thrust."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000011
+    m_Localized: "Ignition command completed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000012
+    m_Localized: "This action belongs to another world and cannot be performed here."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000013
+    m_Localized: "Both ships have confirmed. The docking connection is established."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000014
+    m_Localized: "Only a ship flying in space can request landing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000015
+    m_Localized: "The ground launch request has an invalid console ID or operation parameters."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000016
+    m_Localized: "Ground launch requires the player and console to be on the same surface."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000017
+    m_Localized: "The ships are not in the same world."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000018
+    m_Localized: "The ships' relative speed is too high to dock."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000019
+    m_Localized: "Both ships need a valid console to dock."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000020
+    m_Localized: "The docking ports have not made contact."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000021
+    m_Localized: "A docking port is no longer valid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000022
+    m_Localized: "The docking ports are not facing each other."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000023
+    m_Localized: "The docking record is no longer valid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000024
+    m_Localized: "A ship involved in docking is no longer valid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000025
+    m_Localized: "Navigation coordinates must be finite numbers."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000026
+    m_Localized: "The pending docking confirmation has been withdrawn."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000027
+    m_Localized: "The docking connection has been released."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000028
+    m_Localized: "The current hotbar or selected slot is invalid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000029
+    m_Localized: "This operation is not supported."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000030
+    m_Localized: "There is no active navigation task."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000031
+    m_Localized: "This endpoint does not have authority to change the world."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000032
+    m_Localized: "This component has no connected or pending docking port. Operate the corresponding port."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000033
+    m_Localized: "This ship does not belong to this pair of docking ports."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000034
+    m_Localized: "No optical fiber path connects the console to a powered navigation device."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000035
+    m_Localized: "The console is disabled. Enable it first."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000036
+    m_Localized: "The console is disabled by damage, or the ship is a wreck."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000037
+    m_Localized: "The console is not receiving enough power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000038
+    m_Localized: "Another player is using this console."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000039
+    m_Localized: "The operation failed without a specific reason."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000040
+    m_Localized: "The target is not a ship door."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000041
+    m_Localized: "The target is no longer valid or does not belong to this ship."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000042
+    m_Localized: "This ship has confirmed docking and is waiting for the other ship."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000043
+    m_Localized: "This ship has no available docking ports."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000044
+    m_Localized: "A ship floating at sea cannot be driven."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000045
+    m_Localized: "The player and target are not in the same world."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000046
+    m_Localized: "The player is not ready."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000047
+    m_Localized: "The player or space session is not ready."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000048
+    m_Localized: "The player's current world is not ready."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000049
+    m_Localized: "The network connection is not ready. Try again later."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000050
+    m_Localized: "Autopilot can only start during spaceflight."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000052
+    m_Localized: "The ship door is no longer valid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000053
+    m_Localized: "The doorway is occupied and cannot be closed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000054
+    m_Localized: "Move closer to the console before taking control."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000055
+    m_Localized: "The target is too far away. Move closer and try again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000056
+    m_Localized: "The harvesting target is not in the player's current surface world."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000057
+    m_Localized: "The harvesting target is no longer valid or cannot currently be harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000058
+    m_Localized: "The harvesting target ID is invalid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000059
+    m_Localized: "No ship console is within reach. Move closer to a console and try again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000060
+    m_Localized: "There are no nearby unoccupied ports that meet the docking conditions."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000061
+    m_Localized: "No nearby body is within landing range."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000062
+    m_Localized: "The ship console is no longer valid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000063
+    m_Localized: "The ship has no navigation device installed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000064
+    m_Localized: "The ship is not ready. Try again later."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000065
+    m_Localized: "Liquid buffer is full; waiting for output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000066
+    m_Localized: "The gas state or compression parameters are invalid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000067
+    m_Localized: "No usable reaction ingredients."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000068
+    m_Localized: "Insufficient product space; waiting for output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000069
+    m_Localized: "No usable filter material."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000070
+    m_Localized: "The reaction was rejected; ingredients were preserved."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000071
+    m_Localized: "Available power is insufficient for this reaction step."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000072
+    m_Localized: "Insufficient space to receive the liquid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000073
+    m_Localized: "The container port does not accept this liquid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000074
+    m_Localized: "The container is outside extraction range."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000075
+    m_Localized: "The container port does not allow machine extraction."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000076
+    m_Localized: "This peer has no authority to operate containers."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000077
+    m_Localized: "The container port is no longer valid; waiting to reconnect."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000078
+    m_Localized: "The container state changed; waiting to retry."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000079
+    m_Localized: "The container is processing another transfer."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000080
+    m_Localized: "Cannot transfer within the same liquid storage."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000081
+    m_Localized: "The container port does not support atomic transfers."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000082
+    m_Localized: "The liquid transfer failed to commit and was rolled back."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000083
+    m_Localized: "The liquid transfer parameters are invalid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000084
+    m_Localized: "The liquid transfer did not complete."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000085
+    m_Localized: "This liquid does not support industrial transport."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000086
+    m_Localized: "Name cannot exceed 48 characters."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000087
+    m_Localized: "No save is loaded. The character name cannot be changed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000088
+    m_Localized: "The selected character no longer exists. Select a character again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000089
+    m_Localized: "A character with this name already exists in this save."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000090
+    m_Localized: "Failed to write the character name to disk. The original name has been kept."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000091
+    m_Localized: "No save is loaded. The save cannot be renamed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000092
+    m_Localized: "The selected save has changed. Select a save again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000093
+    m_Localized: "The save name contains characters that cannot be used in a filename, or ends with a period."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000094
+    m_Localized: "The original save file no longer exists. Refresh the save list."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000095
+    m_Localized: "This name is already used by a save or recovery file."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000096
+    m_Localized: "Failed to write the new save file. The original name has been kept."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000097
+    m_Localized: "Failed to update the original save or exit record. Renaming did not complete."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000098
+    m_Localized: "The save service is not ready."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000099
+    m_Localized: "The building material is no longer in the selected hotbar slot. Select it again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000100
+    m_Localized: "New resources were published, but the remaining update did not complete: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000101
+    m_Localized: "Resource update failed. Previous resources are still in use: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000102
+    m_Localized: "No failure reason was provided. Check the log."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000103
+    m_Localized: "The destination area did not finish preparing. Check the log."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000104
+    m_Localized: "Tile located. Waiting for the teleport result\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000105
+    m_Localized: "Tile teleport did not complete. The destination has not been applied."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000106
+    m_Localized: "Timed out waiting for the teleport result. The destination has not been confirmed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000107
+    m_Localized: "Tile ({0},{1}) has not loaded"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000108
+    m_Localized: "Tile ({0},{1}) does not allow building"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000109
+    m_Localized: "Tile ({0},{1}) is impassable"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000110
+    m_Localized: "The liquid definition for tile ({0},{1}) is missing"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000111
+    m_Localized: "The load capacity definition for tile ({0},{1}) is missing"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000112
+    m_Localized: "Tile ({0},{1}) is occupied by a building"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000113
+    m_Localized: "Tile ({0},{1}) supports {2}; the building requires {3}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000114
+    m_Localized: "Invalid coordinates"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000115
+    m_Localized: "Not enough building summoners"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000116
+    m_Localized: "The destination is out of building range"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000117
+    m_Localized: "The material has no grid building definition"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000118
+    m_Localized: "The chunk manager is not ready"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000119
+    m_Localized: "This peer has no building authority"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000120
+    m_Localized: "The building material is not in the authoritative inventory slot"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000121
+    m_Localized: "The building coordinates are invalid or out of range"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000122
+    m_Localized: "The building backend returned no placement result"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000123
+    m_Localized: "Failed to commit the building material inventory transaction"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000124
+    m_Localized: "Failed to publish the building placement result"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000125
+    m_Localized: "The navigation device is disabled by damage."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000126
+    m_Localized: "The navigation device is disabled. Enable it first."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000127
+    m_Localized: "The navigation device is not receiving enough power."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

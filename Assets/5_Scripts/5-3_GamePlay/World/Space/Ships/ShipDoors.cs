@@ -10,13 +10,18 @@ namespace FlatWorld.Spaceflight
         #region 舱门开关与通道占位
         private readonly List<Collider2D> doorwayOverlaps = new();
 
-        public bool TryToggleDoor(string pieceId)
+        public bool TryToggleDoor(string pieceId) => TryToggleDoor(pieceId, out _);
+        public bool TryToggleDoor(string pieceId, out string reason)
         {
+            reason = null;
             if (SubmitLocalIntent(SpaceNetworkIntentKind.ToggleDoor, pieceId)) return true;
-            if (!GameNetwork.HasStateAuthority || !FindPiece(pieceId, out ShipState ship, out ShipPieceState door) ||
-                !door.IsAlive || door.Kind != ShipPieceKind.Door) return false;
+            if (!GameNetwork.HasStateAuthority) return RejectShipOperation("当前端没有世界操作权限。", out reason);
+            if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState door) || !door.IsAlive)
+                return RejectShipOperation("舱门已失效。", out reason);
+            if (door.Kind != ShipPieceKind.Door) return RejectShipOperation("操作目标不是舱门。", out reason);
             // 通道有人时保持打开，不通过挪动乘员来强行关门。
-            if (door.DoorOpen && IsDoorwayOccupied(ship, door)) return false;
+            if (door.DoorOpen && IsDoorwayOccupied(ship, door))
+                return RejectShipOperation("舱门通道被占用，无法关闭。", out reason);
             door.DoorOpen = !door.DoorOpen;
             RefreshShipPassageGeometry(ship);
             return true;
@@ -46,7 +51,7 @@ namespace FlatWorld.Spaceflight
             Vector2 center = DisplayPoint(ship, (minX + maxX) * .5d, (minY + maxY) * .5d);
             Vector2 size = new((float)(maxX - minX - .05d), (float)(maxY - minY - .05d));
             doorwayOverlaps.Clear();
-            Physics2D.OverlapBox(center, size, (float)(ship.AngleRadians * Mathf.Rad2Deg),
+            GameplayPhysics2D.OverlapBox(center, size, (float)(ship.AngleRadians * Mathf.Rad2Deg),
                 new ContactFilter2D { useTriggers = false }, doorwayOverlaps);
             foreach (Collider2D collider in doorwayOverlaps)
                 if (collider != null && collider.attachedRigidbody != null &&

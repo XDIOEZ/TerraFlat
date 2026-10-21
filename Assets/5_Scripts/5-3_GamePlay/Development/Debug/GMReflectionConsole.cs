@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -319,7 +319,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         target = null;
         item = null;
 
-        int hitCount = Physics2D.OverlapPointNonAlloc(worldPosition, hoverInspectorHits);
+        int hitCount = GameplayPhysics2D.OverlapPointNonAlloc(worldPosition, hoverInspectorHits);
         int bestScore = int.MinValue;
         for (int i = 0; i < hitCount; i++)
         {
@@ -2048,29 +2048,21 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             playerTransform.position.z);
         float distance = Vector2.Distance(playerTransform.position, destination);
 
-        Rigidbody2D body = playerTransform.GetComponent<Rigidbody2D>();
-        if (body != null)
-        {
-            body.velocity = Vector2.zero;
-            body.angularVelocity = 0f;
-            body.position = destination;
-        }
-
-        playerTransform.position = destination;
         Player player = playerTransform.GetComponent<Player>() ??
                         playerTransform.GetComponentInParent<Player>();
-        if (player?.Data != null)
-            player.Data.transform.position = destination;
-
-        ChunkMgr.Instance?.ResetChunkLoadQueue();
-        Mod_ChunkLoader chunkLoader = playerTransform.GetComponentInChildren<Mod_ChunkLoader>(true) ??
-                                      playerTransform.GetComponentInParent<Mod_ChunkLoader>();
-        chunkLoader?.RefreshChunksAroundPlayer();
-
-        Debug.Log(
-            $"[GM] 已按种子传送到遗迹 {location.DisplayName} ({location.StructureId})，" +
-            $"入口={location.EntrancePosition}，距离={distance:F1}，扫描区域={scannedRegionCount}");
-        SetWindowVisible(false);
+        if (!PlayerTeleportService.TryTeleportToSurface(player, destination, succeeded =>
+        {
+            if (!succeeded)
+            {
+                SetStatus("遗迹传送未完成，请检查联机状态或稍后重试。", Color.yellow);
+                return;
+            }
+            Debug.Log(
+                $"[GM] 已按种子传送到遗迹 {location.DisplayName} ({location.StructureId})，" +
+                $"入口={location.EntrancePosition}，距离={distance:F1}，扫描区域={scannedRegionCount}");
+            SetWindowVisible(false);
+        }))
+            SetStatus("当前无法传送，请等待世界就绪或上一笔传送结束。", Color.yellow);
     }
 
     private static bool TryGetCurrentWorldSeed(out int worldSeed)

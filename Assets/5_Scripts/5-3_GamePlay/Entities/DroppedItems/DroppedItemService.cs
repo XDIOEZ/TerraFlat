@@ -13,7 +13,7 @@ public readonly struct DroppedItemHandle
     internal readonly uint Epoch;
     internal readonly Item Legacy;
     internal DroppedItemHandle(int id, uint epoch, Item legacy = null) { Id = id; Epoch = epoch; Legacy = legacy; }
-    public bool IsValid => Legacy != null || (Id != 0 && Epoch == DroppedItemService.Epoch && DroppedItemService.Contains(Id));
+    public bool IsValid => DroppedItemService.IsHandleValid(this);
 }
 
 /// <summary>掉落生成原因只描述通用来源，不承载具体物品业务。</summary>
@@ -76,14 +76,48 @@ public static partial class DroppedItemService
         public float Duration, Bezier, Arc, Spin;
     }
 
-    private static DroppedItemRuntime runtime;
-    private static GameSaveData ownerSave;
-    private static string ownerWorld;
+    #region 掉落物的世界所有权
+    private sealed class DropWorld
+    {
+        public readonly string Key;
+        public DroppedItemRuntime Runtime;
+        public GameSaveData Save;
+        public uint Epoch;
+        public DropWorld(string key) { Key = key; Epoch = ++nextEpoch; }
+    }
+    private static readonly Dictionary<string, DropWorld> worlds = new(StringComparer.Ordinal);
+    private static readonly Dictionary<uint, DropWorld> epochOwners = new();
+    private static readonly List<string> tickWorldKeys = new();
+    private static uint nextEpoch;
+    private static string cachedWorld;
+    private static DropWorld cachedState;
+    private static DropWorld State
+    {
+        get
+        {
+            string key = GameplayWorldRegistry.ExecutionWorldKey ?? string.Empty;
+            if (cachedState != null && cachedWorld == key) return cachedState;
+            if (!worlds.TryGetValue(key, out DropWorld state)) worlds[key] = state = new DropWorld(key);
+            cachedWorld = key; return cachedState = state;
+        }
+    }
+    private static DroppedItemRuntime runtime { get => State.Runtime; set => State.Runtime = value; }
+    private static GameSaveData ownerSave { get => State.Save; set => State.Save = value; }
+    private static string ownerWorld => State.Key;
+    internal static uint Epoch { get => State.Epoch; private set => State.Epoch = value; }
+
+    internal static bool HasLiveWorld(string key)
+        => key != null && worlds.TryGetValue(key, out DropWorld state) && state.Runtime?.IsCreated == true;
+
+    internal static bool IsHandleValid(DroppedItemHandle handle)
+        => handle.Legacy != null ? !handle.Legacy.DestructionHandled &&
+            handle.Legacy.gameObject.scene.name == GameplayWorldRegistry.ExecutionWorldKey
+            : handle.Id != 0 && handle.Epoch == Epoch && Contains(handle.Id);
+    #endregion
     private static readonly HashSet<Mod_ItemPicker> pickers = new();
     private static readonly Dictionary<Item, LegacyDropPlan> legacyPlans = new();
     private static readonly List<KeyValuePair<Item, LegacyDropPlan>> legacyScratch = new();
     private static readonly List<DropSpawnRegistration> spawnProviders = new();
-    internal static uint Epoch { get; private set; } = 1;
     public static int Count => runtime?.Count ?? 0;
     public static int VisibleViewCount => runtime?.VisibleViewCount ?? 0;
 
@@ -175,8 +209,8 @@ public static partial class DroppedItemService
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        runtime?.Dispose(); runtime = null; ownerSave = null; ownerWorld = null;
-        pickers.Clear(); legacyPlans.Clear(); legacyScratch.Clear(); Epoch++;
+        ReleaseAll(capture: false);
+        pickers.Clear(); legacyPlans.Clear(); legacyScratch.Clear();
         spawnProviders.Clear();
         forageLegacyCandidates.Clear(); forageLegacyDedupe.Clear();
         transportCandidates.Clear(); transportDedupe.Clear(); transportedItems.Clear(); transportStep = uint.MaxValue;
@@ -297,10 +331,12 @@ public static partial class DroppedItemService
     {
         if (handle.Legacy != null)
         {
+            using var scope = GameplayWorldRegistry.TryGet(handle.Legacy.gameObject.scene.name, out _)
+                ? GameplayWorldRegistry.UseWorld(handle.Legacy.gameObject.scene.name) : null;
             ItemMgr.Instance?.DespawnItem(handle.Legacy, saveData: false);
             return;
         }
-        if (handle.Epoch == Epoch) runtime?.Remove(handle.Id);
+        if (epochOwners.TryGetValue(handle.Epoch, out DropWorld owner)) owner.Runtime?.Remove(handle.Id);
     }
 
     /// <summary>只删除旧抛掷模块数据；容器、耐久、建筑快照等库存状态保持原样。</summary>
@@ -337,6 +373,8 @@ public static partial class DroppedItemService
     {
         if (item == null || item.PersistenceOwner != null || item.Owner != null || item.InHand || item.DestructionHandled || item.itemData == null ||
             legacyPlans.ContainsKey(item)) return false;
+        using var worldScope = GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _)
+            ? GameplayWorldRegistry.UseWorld(item.gameObject.scene.name) : null;
         if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) || definition.IsActor) return false;
         var context = new DroppedItemSpawnContext(DroppedItemSpawnReason.Generic, item, item.transform.position, item.transform.position, 0f);
         if (FindSpawnProvider(context) == null && !ShouldUseLightweightDrop(item.itemData)) return false;
@@ -365,6 +403,8 @@ public static partial class DroppedItemService
         {
             Item item = pair.Key; LegacyDropPlan plan = pair.Value;
             if (item == null || item.DestructionHandled) continue;
+            using var worldScope = GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _)
+                ? GameplayWorldRegistry.UseWorld(item.gameObject.scene.name) : null;
             DroppedItemHandle spawned = default;
             try
             {
@@ -429,28 +469,39 @@ public static partial class DroppedItemService
     private static void EnsureContext()
     {
         GameSaveData save = SaveDataMgr.Instance.SaveData;
-        Scene scene = SceneManager.GetActiveScene();
+        Scene scene = GameplayWorldRegistry.CurrentScene;
         if (save == null || !scene.IsValid() || !scene.isLoaded)
             throw new InvalidOperationException("掉落物世界尚未准备好。");
         // 维度使用各自的世界场景名，与 PlanetData/自然物持久化的地址约定一致。
         if (runtime != null && ReferenceEquals(ownerSave, save) && ownerWorld == scene.name) return;
         // 初次绑定时不能清掉本帧旧生产者刚登记的轨迹；只有明确退出才取消待转换请求。
-        ReleaseWorld(clearPending: false); ownerSave = save; ownerWorld = scene.name;
+        ReleaseWorld(clearPending: false); ownerSave = save;
         save.DroppedItems ??= new DroppedItemArchive();
         save.DroppedItems.Worlds.TryGetValue(ownerWorld, out List<DroppedItemSaveRecord> records);
         runtime = new DroppedItemRuntime(scene, records);
+        epochOwners[Epoch] = State;
     }
 
     public static void RegisterPicker(Mod_ItemPicker picker) { if (picker != null) pickers.Add(picker); }
-    public static void UnregisterPicker(Mod_ItemPicker picker) { pickers.Remove(picker); runtime?.ForgetPicker(picker); }
+    public static void UnregisterPicker(Mod_ItemPicker picker)
+    {
+        pickers.Remove(picker);
+        foreach (DropWorld world in worlds.Values) world.Runtime?.ForgetPicker(picker);
+    }
 
     /// <summary>由 ItemMgr 在正式世界门禁内集中驱动一次，而非为每个掉落物创建 MonoBehaviour。</summary>
     public static void Tick(float deltaTime)
     {
         ProcessLegacyPlans();
         if (!UsesLightweightDrops) return;
-        EnsureContext();
-        runtime.Tick(deltaTime, pickers);
+        if (!SpaceMgr.IsSpaceScene(GameplayWorldRegistry.ExecutionWorldKey)) EnsureContext();
+        tickWorldKeys.Clear();
+        foreach (var pair in worlds) if (pair.Value.Runtime?.IsCreated == true) tickWorldKeys.Add(pair.Key);
+        foreach (string key in tickWorldKeys)
+        {
+            using var scope = GameplayWorldRegistry.TryGet(key, out _) ? GameplayWorldRegistry.UseWorld(key) : null;
+            if (GameplayWorldRegistry.ExecutionWorldKey == key) worlds[key].Runtime.Tick(deltaTime, pickers);
+        }
     }
 
     /// <summary>在区块快照开始前结清本帧旧生产者，避免同一物品同时写入旧区块与轻量掉落物快照。</summary>
@@ -467,7 +518,9 @@ public static partial class DroppedItemService
 
     public static void Present()
     {
-        if (UsesLightweightDrops) runtime?.Present(Camera.main);
+        string local = GameplayWorldRegistry.ExecutionWorldKey;
+        foreach (DropWorld world in worlds.Values)
+            world.Runtime?.Present(UsesLightweightDrops && world.Key == local ? Camera.main : null);
     }
 
     /// <summary>必须在退出保存之后释放；GameWorldExit 通知发生在保存之前，不能提前回收掉落物。</summary>
@@ -482,15 +535,18 @@ public static partial class DroppedItemService
             }
             runtime.Dispose(); runtime = null;
         }
-        ownerSave = null; ownerWorld = null; Epoch++;
+        epochOwners.Remove(Epoch);
+        ownerSave = null; Epoch = ++nextEpoch;
         if (clearPending) { legacyPlans.Clear(); legacyScratch.Clear(); }
     }
 
     /// <summary>保存指定对象时只采集它自己的运行态；菜单预览、复制其他存档不会误写当前世界。</summary>
     public static byte[] CaptureArchive(GameSaveData save)
     {
-        if (runtime != null && runtime.IsCreated && ReferenceEquals(ownerSave, save))
-            save.DroppedItems.Worlds[ownerWorld] = runtime.Capture();
+        save.DroppedItems ??= new DroppedItemArchive();
+        foreach (DropWorld world in worlds.Values)
+            if (world.Runtime?.IsCreated == true && ReferenceEquals(world.Save, save))
+                save.DroppedItems.Worlds[world.Key] = world.Runtime.Capture();
         return MemoryPackSerializer.Serialize(save.DroppedItems ?? new DroppedItemArchive());
     }
 
@@ -501,6 +557,22 @@ public static partial class DroppedItemService
         if (archive == null || archive.Version != 1 || archive.Worlds == null)
             throw new InvalidOperationException("掉落物快照版本不兼容或数据损坏。");
         save.DroppedItems = archive;
+    }
+
+    public static void ReleaseAll(bool capture = true)
+    {
+        // 总退出按各自归属保存后释放，不会因为当前镜头只在一个世界而漏掉后台实物。
+        foreach (DropWorld world in worlds.Values)
+        {
+            if (capture && world.Runtime?.IsCreated == true && world.Save != null)
+            {
+                world.Save.DroppedItems ??= new DroppedItemArchive();
+                world.Save.DroppedItems.Worlds[world.Key] = world.Runtime.Capture();
+            }
+            world.Runtime?.Dispose(); world.Runtime = null;
+        }
+        worlds.Clear(); epochOwners.Clear(); tickWorldKeys.Clear(); cachedState = null; cachedWorld = null;
+        legacyPlans.Clear(); legacyScratch.Clear(); pickers.Clear();
     }
 
     #endregion

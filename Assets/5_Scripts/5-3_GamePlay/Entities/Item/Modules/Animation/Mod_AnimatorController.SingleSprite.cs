@@ -542,6 +542,13 @@ public partial class Mod_AnimatorController
     #endregion
 
     #region 动作信号与采样
+    /// <summary>位置突变时只清行走过渡，不撤销攻击、受击或死亡表现。</summary>
+    public void ResetLocomotion()
+    {
+        _walkPhase = _walkBlend = 0f;
+        SetBool(AnimationText.Move, false);
+    }
+
     private void RestoreSingleSprite()
     {
         if (_overriddenSpriteRenderer != null)

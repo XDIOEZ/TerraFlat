@@ -1,4 +1,4 @@
-# AI 生物测试
+﻿# AI 生物测试
 
 2026-10-21 GO AI 运行时组件查询优化：`AiRuntimeBackendService` 采用临时 `ListPool<MonoBehaviour>` 代替 `GetComponentsInChildren<MonoBehaviour>(true)` 的数组分配；前进/取消命令与 Actor 身份检查共用本次子组件快照，免去重复的层级扫描，保留首个符合身份的 Actor、首个命令接收器、死亡拒绝及 ECS 后备路由。现有 `advance_navigation` 实际世界 Lua 检查出生、指令/取消和导航，但本轮未执行 Unity 编译或 PlayMode、未量化实际 GC 降幅。
 
@@ -44,3 +44,5 @@
 - [导航目录](../Navigation/README.md) 共用这份清单，不再复制案例或重复计数。
 - 缺口：水生/飞行导航、地形障碍绕行、门户长路、觅食消费、完整物种行为选择/目标 LOS、攻击实际伤害、蜂巢居民、远距休眠及 GO/ECS 交接。
 - 当前状态：新增现场案例只完成静态编写；按用户要求本轮不编译、不运行、不作验收，也不停止正在运行的 PlayMode。
+
+2026-10-20 新增但未执行：`ai/network_snapshot_buffer` 驱动正式生态分片缓冲，覆盖乱序/重复分片、完整才提交、缺片后新序号恢复、旧序号拒绝、world/realm混包拒绝、空包清居民、重复GUID/非有限坐标拒绝以及切realm重置。真实远端动物移动插值、伤害/死亡/掉落、多world观察者和GO/ECS表现需 Host/Client 现场验收。

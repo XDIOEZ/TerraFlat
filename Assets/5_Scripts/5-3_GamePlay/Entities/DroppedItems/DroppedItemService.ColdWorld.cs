@@ -69,7 +69,7 @@ public static partial class DroppedItemService
     public static void TickColdWorld(string world, float seconds)
     {
         List<DroppedItemSaveRecord> records = WorldRecords(world);
-        if (records == null || records.Count == 0 || ownerWorld == world && runtime != null) return;
+        if (records == null || records.Count == 0 || HasLiveWorld(world)) return;
         bool hasMoving = false;
         foreach (DroppedItemSaveRecord record in records) hasMoving |= record != null && (record.HasFlight || record.HasWaterTransition || record.WaterKind != 0);
         if (!hasMoving) return;
@@ -146,7 +146,7 @@ public static partial class DroppedItemService
                 if (item != null && item.gameObject.scene.name == world && IsLoosePickable(item) && worldDropIdentities.Add(item.itemData.Guid))
                     worldDrops.Add(new WorldDrop(world, null, item));
         // 活动轻量世界由原运行体持有，档案只是上次捕获，不能双读双扣。
-        if (ownerWorld == world && runtime != null) return;
+        if (HasLiveWorld(world)) return;
         List<DroppedItemSaveRecord> records = WorldRecords(world);
         if (records == null) return;
         for (int index = 0; index < records.Count; index++)
@@ -199,7 +199,7 @@ public static partial class DroppedItemService
                     coldFuelCandidates.Add(new ColdFuelCandidate(new WorldDrop(world, null, item),
                         topology.SqrDistance(center, new float2(position.x, position.y))));
             }
-        if (ownerWorld == world && runtime != null) return;
+        if (HasLiveWorld(world)) return;
         int firstCold = coldFuelCandidates.Count;
         CollectColdFuelCandidates(WorldRecords(world), world, cell, topology, worldDropIdentities, coldFuelCandidates);
         for (int index = firstCold; index < coldFuelCandidates.Count; index++)

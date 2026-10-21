@@ -241,7 +241,7 @@ public static class ItemDefinitionRuntime
     }
 
     /// <summary>绑定 AnimatorController，并按 JSON 指定状态初始化动画机。</summary>
-    private static void ApplyAnimator(
+    internal static void ApplyAnimator(
         Item item,
         string animatorPath,
         RuntimeAnimatorController controller,
@@ -262,31 +262,10 @@ public static class ItemDefinitionRuntime
 
         animator.runtimeAnimatorController = controller;
         if (!string.IsNullOrWhiteSpace(animationState))
-            PlayInitialAnimatorState(item, animator, animationState);
-    }
-
-    /// <summary>直接按状态机状态名播放初始动画，不依赖 Sprite 子资源切片。</summary>
-    private static void PlayInitialAnimatorState(Item item, Animator animator, string animationState)
-    {
-        string stateName = animationState.Trim();
-        if (animator.layerCount <= 0)
-            throw new InvalidOperationException($"物品 {item.itemData?.IDName} 的 Animator 没有可用状态层");
-
-        int layer = 0;
-        int stateHash = Animator.StringToHash(stateName);
-        if (!animator.HasState(layer, stateHash))
         {
-            string fullPath = $"{animator.GetLayerName(layer)}.{stateName}";
-            stateHash = Animator.StringToHash(fullPath);
-            if (!animator.HasState(layer, stateHash))
-            {
-                throw new InvalidDataException(
-                    $"物品 {item.itemData?.IDName} 的 Animator 找不到状态：{stateName}");
-            }
+            // 冷候选连状态表都尚未建立，校验与播放必须一起等到正式激活。
+            item.QueueInitialAnimatorState(animator, animationState.Trim());
         }
-
-        // 候选外壳停用时 Animator 尚未运行，等激活且状态机就绪后再播。
-        item.QueueInitialAnimatorState(animator, stateHash, layer);
     }
 
     private static void ApplyCollider(Item item, ItemColliderDefinitionDto definition)

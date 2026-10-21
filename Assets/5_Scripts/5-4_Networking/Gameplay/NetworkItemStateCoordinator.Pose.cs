@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Mirror;
 using UnityEngine;
 
@@ -25,14 +25,15 @@ namespace FlatWorld.Networking.Gameplay
             if (!NetworkServer.active) return;
             SendToGroundObservers(new NetworkItemPoseMessage
             {
-                ItemGuid = guid, ItemId = state.ItemId,
+                ItemGuid = guid, ItemId = state.ItemId, WorldKey = state.WorldKey,
                 StateRevision = state.Revision, PoseRevision = state.PoseRevision,
                 Position = state.Position, Rotation = state.Rotation, Scale = state.Scale
-            });
+            }, state.WorldKey);
         }
 
         private void OnClientPoseMessage(NetworkItemPoseMessage message)
         {
+            if (!AcceptLocalWorld(message.WorldKey)) return;
             if (NetworkServer.active || !clientStates.TryGetValue(message.ItemGuid, out StateRecord state) ||
                 !string.Equals(state.ItemId, message.ItemId, StringComparison.Ordinal) ||
                 message.StateRevision != state.Revision || message.PoseRevision <= state.PoseRevision ||

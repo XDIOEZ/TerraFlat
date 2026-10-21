@@ -58,24 +58,18 @@ namespace FlatWorld.Spaceflight
         public bool StartNavigation(string consoleId, Vector2 displayPoint)
         {
             SpaceSectorPosition target = UnprojectSectorPosition(displayPoint);
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.StartNavigation, consoleId, position: target)) return true;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.StartNavigation, consoleId, position: target);
             return StartNavigation(consoleId, target);
         }
         public bool StartNavigation(string consoleId, SpaceSectorPosition position)
+            => StartNavigation(consoleId, position, out _);
+        public bool StartNavigation(string consoleId, SpaceSectorPosition position, out string reason)
         {
-            if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
-            ShipFlightState flight = GetFlight(ship.ShipId);
-            if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising)) return false;
+            if (!TryGetNavigationDevice(consoleId, out ShipState ship, out _, out ShipPieceState device, out reason)) return false;
             SpaceVector2 absolute = position.LocalMeters;
-            if (!absolute.IsFinite) return false;
-            ShipPieceState device = null;
-            foreach (ShipPieceState candidate in ship.Pieces)
-                if (candidate.IsAlive && candidate.Kind == ShipPieceKind.Navigation && IsPowered(ship, candidate) &&
-                    ShipOpticalGraph.Connected(ship, console, candidate, opticalWorkspace))
-                { device = candidate; break; }
-            if (device == null) return false;
+            if (!absolute.IsFinite) return RejectShipOperation("导航坐标必须是有限数值。", out reason);
             ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
-            if (assembly == null) return false;
+            if (assembly == null) return RejectShipOperation("飞船状态尚未就绪，请稍后重试。", out reason);
             // 同一运动整体只保留最新任务，重新选点复用任务而不是积累历史快照。
             ShipNavigationState task = null;
             for (int i = State.Navigation.Count - 1; i >= 0; i--)
@@ -95,7 +89,8 @@ namespace FlatWorld.Spaceflight
         }
         public void CancelNavigation(string shipId)
         {
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.CancelNavigation, ResolveConsole(shipId), shipId)) return;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
+            { SubmitLocalIntent(SpaceNetworkIntentKind.CancelNavigation, ResolveConsole(shipId), shipId); return; }
             foreach (ShipNavigationState task in State.Navigation)
                 if (SameAssembly(shipId, task.ShipId)) { task.Active = false; task.Status = "已取消"; }
         }

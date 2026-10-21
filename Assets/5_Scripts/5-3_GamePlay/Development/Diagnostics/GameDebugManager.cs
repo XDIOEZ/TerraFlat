@@ -71,21 +71,25 @@ public class GameDebugManager : MonoBehaviour
 
     public void SetClearWeather()
     {
-        WeatherMgr.Instance.ClearWeather();
+        WeatherMgr weather = WeatherMgr.Instance;
+        if (weather == null) { Debug.LogWarning("[天气调试] 当前世界没有地表天气。"); return; }
+        weather.ClearWeather();
 
-        if (WeatherMgr.Instance.EnableDebugLog)
+        if (weather.EnableDebugLog)
         {
-            Debug.Log($"[GameDebugManager] 已切换天气为晴天，当前天气={WeatherMgr.Instance.CurrentWeather}，天气修正={WeatherMgr.Instance.CurrentWeatherTemperatureOffset:F2}℃");
+            Debug.Log($"[GameDebugManager] 已切换天气为晴天，当前天气={weather.CurrentWeather}，天气修正={weather.CurrentWeatherTemperatureOffset:F2}℃");
         }
     }
 
     public void SetRainWeather()
     {
-        WeatherMgr.Instance.SetRain();
+        WeatherMgr weather = WeatherMgr.Instance;
+        if (weather == null) { Debug.LogWarning("[天气调试] 当前世界没有地表天气。"); return; }
+        weather.SetRain();
 
-        if (WeatherMgr.Instance.EnableDebugLog)
+        if (weather.EnableDebugLog)
         {
-            Debug.Log($"[GameDebugManager] 已切换天气为雨天，当前天气={WeatherMgr.Instance.CurrentWeather}，天气修正={WeatherMgr.Instance.CurrentWeatherTemperatureOffset:F2}℃");
+            Debug.Log($"[GameDebugManager] 已切换天气为雨天，当前天气={weather.CurrentWeather}，天气修正={weather.CurrentWeatherTemperatureOffset:F2}℃");
         }
     }
 

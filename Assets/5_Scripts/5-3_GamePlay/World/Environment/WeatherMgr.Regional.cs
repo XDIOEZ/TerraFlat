@@ -155,15 +155,13 @@ public partial class WeatherMgr
 
     private float GetLocalRainIntensity()
     {
-        Camera camera = Camera.main;
-        return TryGetPrecipitationAt(camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position,
+        return TryGetPrecipitationAt(ObservationPosition(),
             out float rain, out _) ? rain : 0f;
     }
 
     private bool TryGetLocalWeather(out RegionalWeatherSnapshot sample)
     {
-        Camera camera = Camera.main;
-        return TryGetWeatherAt(camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position, out sample);
+        return TryGetWeatherAt(ObservationPosition(), out sample);
     }
 
     public static WeatherType DescribeWeather(in RegionalWeatherSnapshot sample)
@@ -210,7 +208,7 @@ public partial class WeatherMgr
         ResetWeatherAudioBaseline();
         regionalSaveIndices.Clear();
         lightningSeen.Clear();
-        LightningStrikeSystem.Reset();
+        LightningStrikeSystem.Reset(ownedWorld);
         surfaceChunksLastStep.Clear();
         surfaceChunksThisStep.Clear();
         regionalPlanet.RegionalWeatherStates ??= new List<RegionalWeatherRecord>();
@@ -231,8 +229,11 @@ public partial class WeatherMgr
         if (!GameNetwork.HasStateAuthority)
             foreach (var sample in restoredSnapshots) regionalEngine.ApplyReplicatedSnapshot(sample);
         lastRegionalAdvance = double.NegativeInfinity;
-        if (lightningEffect == null) lightningEffect = gameObject.AddComponent<LightningEffectController>();
-        lightningEffect.Initialize(this);
+        if (IsLocalWeatherWorld)
+        {
+            if (lightningEffect == null) lightningEffect = gameObject.AddComponent<LightningEffectController>();
+            lightningEffect.Initialize(this);
+        }
         return true;
     }
 
@@ -289,7 +290,7 @@ public partial class WeatherMgr
             RegionalWeatherAdvanceResult result = regionalEngine.Advance(region, now);
             regionalExposure[region] = result;
             ObserveLightning(result.Snapshot, false);
-            AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(regionalPlanet.Name, result.Snapshot));
+            AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(ownedWorld, result.Snapshot));
         }
 
         // 未加载期间只补天气状态，地块只接收本次已实际加载时间内的降水。
@@ -435,14 +436,14 @@ public partial class WeatherMgr
         if (regionalEngine == null || regionalPlanet == null) return result;
         foreach (var state in regionalEngine.EnumerateStates())
             if (regionalEngine.TryGetRegionSnapshot(state.Region, out var sample))
-                result.Add(new RegionalWeatherStateSnapshot(regionalPlanet.Name, sample));
+                result.Add(new RegionalWeatherStateSnapshot(ownedWorld, sample));
         return result;
     }
 
     public void ApplyReplicatedRegionalWeatherState(RegionalWeatherStateSnapshot state, bool initialState = false)
     {
         if (GameNetwork.HasStateAuthority || !PrepareRegionalContext() ||
-            !string.Equals(state.WorldKey, regionalPlanet.Name, StringComparison.Ordinal)) return;
+            !string.Equals(state.WorldKey, ownedWorld, StringComparison.Ordinal)) return;
         if (regionalEngine.TryGetRegionSnapshot(state.Region, out var old) &&
             (state.Revision < old.Revision || state.Revision == old.Revision && state.SampleTime < old.SampleTime)) return;
         RegionalWeatherSnapshot sample = state.ToSnapshot();
@@ -458,7 +459,7 @@ public partial class WeatherMgr
         bool hadBaseline = lightningSeen.TryGetValue(sample.Region, out int previous);
         lightningSeen[sample.Region] = sample.LightningSequence;
         if (initialState || !hadBaseline || sample.LightningSequence == previous || sample.LightningSequence <= 0) return;
-        var strike = new RegionalLightningEvent(regionalPlanet.Name, sample.Region,
+        var strike = new RegionalLightningEvent(ownedWorld, sample.Region,
             new Vector2(sample.LightningCell.X + 0.5f, sample.LightningCell.Y + 0.5f),
             sample.LightningStrength, sample.LightningSequence);
         if (GameNetwork.HasStateAuthority)
@@ -484,7 +485,7 @@ public partial class WeatherMgr
         RegionalWeatherSnapshot sample = regionalEngine.StrikeLightning(cell, now, Mathf.Clamp01(strength));
         ObserveLightning(sample, false);
         if (regionalEngine.TryGetState(region, out var state)) PersistRegionalState(state);
-        AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(regionalPlanet.Name, sample));
+        AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(ownedWorld, sample));
         return true;
     }
 
@@ -503,6 +504,7 @@ public partial class WeatherMgr
 
     private void UpdateLocalWeatherProjection()
     {
+        if (!IsLocalWeatherWorld) return;
         if (regionalPlanet == null || !TryGetLocalWeather(out var sample)) return;
         regionalPlanet.CurrentWeather = DescribeWeather(sample);
         regionalPlanet.WeatherPhase = DescribeWeatherPhase(sample);
@@ -516,8 +518,7 @@ public partial class WeatherMgr
         if (surfaceWork.IsAdvanceBlocked || !GameNetwork.HasStateAuthority ||
             !PrepareRegionalContext() || !TryGetCurrentTimeData(out var clock)) return false;
         AdvanceRegionalWeather();
-        Camera camera = Camera.main;
-        Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
+        Vector2 position = ObservationPosition();
         Int2 region = regionalEngine.ResolveRegion(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
         double now = GetRegionalStepTime(clock);
         regionalEngine.Advance(region, now);
@@ -535,7 +536,7 @@ public partial class WeatherMgr
         PersistRegionalStates();
         UpdateLocalWeatherProjection();
         if (regionalEngine.TryGetRegionSnapshot(region, out var sample))
-            AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(regionalPlanet.Name, sample));
+            AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(ownedWorld, sample));
         PublishAuthoritativeWeatherState();
         return true;
     }

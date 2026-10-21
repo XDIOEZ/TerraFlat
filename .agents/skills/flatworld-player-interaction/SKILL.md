@@ -32,10 +32,13 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 世界指针统一经 `GetPointerScreenPosition/GetMouseWorldPosition(screenPosition)`；准线距离来自普通交互 `maxInteractDistance` 或建筑 `maxVisibleDistance`。`Move_Player` 保留 0～1 模拟幅度。
 - 外部控制持有唯一 External Gameplay Control 租约，期间真实设备退出玩法仲裁，移动/瞄准/攻击注入现有生产链；打包运行时 `Mod_GameMCP_LLM` 复用该租约与移动输入。
 - 丢弃组合态让 Ctrl+滚轮缩放让位，普通滚轮仍可换槽。返回顺序为顶层可取消面板 → 手机抽屉 → 设置；返回处理先于玩法锁拦截。聊天 Enter 打开当帧抑制提交。
+- 返回由 `FlatWorldUI/Cancel` 唯一分发，经 `EventSystemGuard.CancelRequested` 交给设置模块；不可再额外订阅 `Win10/ESC.performed` 开关设置。UI 同步重绑时保留空字符串禁用态，不把清空绑定恢复为默认键。
 
 ## 交互
 
 - `IInteractable` 的交互键通道为 Start→按住 Update→松开 End，取消/目标失效为 Cancel；鼠标与外部单次调用为 Start→End。`CanPointerInteract=false` 仅禁鼠标点选。
+- 发送器 `OnDisable` 解绑输入并取消交互；已加载模块的 `OnEnable` 必须幂等重绑，场景迁移或临时停用不会重新执行 `OnLoad`。回归 `player/interaction_input_reenable` 检查真实按下/松开及多次恢复不重复订阅。
+- 交互发送器正式 `OnUnload` 同样解绑输入并取消目标/环境会话，不依赖 GameObject 随后停用；`player/interaction_input_unload` 检查对象保持激活时的卸载拒绝输入与三轮重载。
 - 目标主动完成时调用 `Mod_InteractSender.CompleteInteraction(receiver)`，只清理仍匹配的当前/按住/候选/描边引用，不再发送取消回调；重复或旧会话完成不得清除新目标。帐篷所有睡眠结束分支共用此收尾。
 - 接口持有 Unity 组件时先按 UnityEngine.Object 原生存活状态检查；目标销毁后清除交互与描边缓存，不再向销毁对象发送回调，纯 C# 世界目标保持普通引用生命周期。
 - 右键只使用当前快捷栏中由本玩家持有的 `Item`，经 `Item.Act/OnAct` 分发；F 只交互世界建筑、工作台、设备、门、入口和载具。`CanPointerInteract` 默认 false，仅采集等左键动作显式允许；F 的指针选目标和描边不受点选权限影响。
@@ -51,6 +54,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 移动、承载与镜头
 
 - `Mod_Mover` 向 Dynamic Rigidbody2D 提交 `DrivenVelocity + ExternalVelocity`，Physics2D 求解接触；主动速度决定步行动画，水流/输送带/承载不计步行或体力。`WorldUnitChanged` 按刚体实际到达的拓扑规范 1×1 格发布。
+- 位置突变后调用 `Mod_Mover.ResetMotion()`，统一撤销临时主动租约、清速度/输入/动画和位移音效基线，保留奔跑偏好；外部承载归属由调用方先释放。动作订阅 `MotionReset` 自行收尾，重置期间禁止重新驱动或取租约。回归 `player/motion_reset` 与 `roll_action`。
 - 地表速度沿用 `SpaceGameplaySettings.WalkingMultiplier`（低重力最高2倍）；起步/转向/刹停共用 `WalkingResponseMultiplier`，按当地重力/地球重力降低响应，月球级约慢6倍，最低重力沿用0.25，普通及高重力响应不变。玩家、GO动物导航和无人工重力的地表船内复用；人工重力按地球值，太空自由漂浮沿用独立规则。回归 `player/surface_gravity_movement`。
 - `Mod_Roll`（`Roll`）由中央 `Roll` Action 默认空格发动，方向取发动时移动输入，无输入时朝光标/准星，指针重合或无效时回退朝向；0.4秒、步行2倍、身体碰撞尺寸50%、全程临时无敌、冷却0秒（上一轮结束即可再次发动）、基础体力10点。动作持有 `Mod_Mover.DrivenMotionLease`，不重复计步行消耗；`RollVisual` 专用父层转一圈，不旋转物理根或镜头。死亡、输入锁、卸载、换场景还原尺寸和租约；载具/太空不发动。网络远端权威只推进体力和生命动作态，本地获服务器许可后复用移动租约；远端表现按序号与绝对进度幂等应用，不加载本地输入/UI。
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
@@ -70,4 +74,6 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 手动缩放统一经策略 `ClampInputSize` 约束；地表宇宙淡入完成前最多拉到过渡终点，多余输入丢弃，拉近随时可用。完成后新输入恢复拉远；直接设置镜头、实际太空与驾驶不受该过渡约束。
 - `Mod_Cam.SetFollowOverride/ClearFollowOverride` 供临时驾驶覆盖跟随目标并同步环绕副本，释放回玩家，不改变听音主体；可随跟随租约传入最大视野与缩放倍率，`EffectiveMaxPovValue/UsesProportionalZoom` 供 UI 同步。太空驾驶上限为 120000、滚轮乘/除 1.25，双指共用比例缩放、手机滑条使用对数映射；退出租约清除临时范围，普通地表在宇宙观察起点前按原尺寸增减，缩放不改变区块加载距离。飞船驾驶目标由 SpaceSession 投影整船中心，镜头固定朝上，下降触地/退出恢复原视野。相机根实例进入持久场景，由 Mod_Cam 卸载/销毁时释放并清订阅与引用，普通星区卸载不销毁或重建相机。
 - 已插值目标可传 `FollowMode.PresentationLocked`：XY 阻尼、前探与预判平滑归零，Brain 固定 LateUpdate 跟随；缩放/设置变更不解除锁定，释放或目标销毁后恢复最新玩家设置和进入前的 Brain 更新方式。太空驾驶使用此模式，地表驾驶沿用普通设置。
+- 相机模块临时停用会退订设置事件；重新启用已加载相机时补应用当前设置，仍通过原 `PresentationLocked` 规则保留驾驶租约。回归 `player/camera_settings_reenable`。
 - 开发快捷键：Ctrl+F1 管理员，F1 录制 UI 隐藏，F2 创造背包（主背包打开不拦截，其它模态/加载锁拦截），T 与 GM 点选共用 `Mod_PlayerTraits.TryTeleportToScreenPosition`；太空先经 `SpaceSession.UnprojectPosition` 还原宇宙坐标，再调用 `TryTeleportPlayerToSpace`，地表传送先复用中立乘员重置解除乘船/下降，再写拓扑规范坐标并刷新区块。
+- 地表传送统一经 `PlayerTeleportService` 应用落点；联机先由 `NetworkRequest` 桥请求服务器确认，不能只修改本机 Transform 或放宽普通移动限幅。

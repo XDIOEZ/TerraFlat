@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -14,41 +14,7 @@ namespace FlatWorld.Spaceflight
         public bool TryBeginRespawnTransition(Player player, WorldAddress targetAddress,
             Vector3 targetPosition, Action preparePlayerForSave)
         {
-            if (GameNetwork.IsOnline)
-                return TryBeginNetworkRespawn(player, targetAddress, targetPosition, preparePlayerForSave);
-            if (State == null || transitionRunning || player == null || preparePlayerForSave == null ||
-                DimensionManager.Instance.IsTransitioning)
-                return false;
-
-            SpaceSessionState sessionState = State;
-            SpacePassengerState previous = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
-            ShipControlRequest previousControl = null;
-            if (!string.IsNullOrWhiteSpace(previous?.ConsolePieceId))
-                controlRequests.TryGetValue(previous.ConsolePieceId, out previousControl);
-            string previousPickingConsole = pickingNavigationConsole;
-            bool began = false;
-            transitionRunning = true;
-            try
-            {
-                began = DimensionManager.Instance.TryBeginRespawnTransition(player, targetAddress, targetPosition, () =>
-                {
-                    ResetPassengerForRespawn(player);
-                    preparePlayerForSave();
-                });
-            }
-            finally
-            {
-                if (!began)
-                {
-                    RestoreRespawnPassenger(sessionState, player.ProfileName, previous,
-                        previousControl, previousPickingConsole);
-                    transitionRunning = false;
-                }
-            }
-            if (began)
-                StartCoroutine(FinishRespawnTransition(sessionState, player.ProfileName, targetAddress,
-                    previous, previousControl, previousPickingConsole));
-            return began;
+            return NetworkDimensionBridge.RequestRespawn(player, targetAddress, targetPosition, preparePlayerForSave);
         }
 
         public void ResetPassengerForRespawn(Player player)

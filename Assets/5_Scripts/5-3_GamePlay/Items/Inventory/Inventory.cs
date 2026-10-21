@@ -358,6 +358,8 @@ public class Inventory
     /// <summary>库存退出运行时由拥有者销毁自己的面板，防止旧玩家 UI 留在跨场景根节点。</summary>
     public void ReleaseRuntimePanel()
     {
+        foreach (ItemSlot_UI slot in itemSlot_UI)
+            if (slot != null) slot.ClearInventoryBinding(this);
         if (_flickTargets != null) _flickTargets.Unbind(this);
         _flickTargets = null;
         BasePanel panel = basePanel;
@@ -745,7 +747,8 @@ public class Inventory
                     {
                         Data.itemSlots[index].ClearData();
                     }
-                }  // ClearSlotDataAction
+                }, // ClearSlotDataAction
+                this
             );
 
             itemSlotUI.OnLeftClick.Clear();
@@ -797,7 +800,10 @@ public class Inventory
         for (int i = bindCount; i < itemSlot_UI.Count; i++)
         {
             if (itemSlot_UI[i] != null)
+            {
+                itemSlot_UI[i].ClearInventoryBinding(this);
                 itemSlot_UI[i].gameObject.SetActive(false);
+            }
         }
     }
 
@@ -832,7 +838,7 @@ public class Inventory
                 // 虚拟化槽位的旧回调不得误删第0格，也不能对无效槽执行扣除。
                 if (targetSlot == null) return;
                 Data.RemoveItemAll(targetSlot, targetIndex);
-            });
+            }, this);
 
         slotUI.OnLeftClick.Clear();
         slotUI.OnGamepadSubmit.Clear();
@@ -878,7 +884,7 @@ public class Inventory
             return;
 
         RegisterSlotUI(slotUI, bindIndex);
-        slotUI.InitializeSlot(bindIndex, slotUI.GetSlotDataFunc, slotUI.ClearSlotDataAction);
+        slotUI.InitializeSlot(bindIndex, slotUI.GetSlotDataFunc, slotUI.ClearSlotDataAction, this);
         slotUI.RefreshUI();
     }
 
@@ -912,7 +918,10 @@ public class Inventory
             return;
 
         if (ReferenceEquals(itemSlot_UI[bindIndex], slotUI))
+        {
             itemSlot_UI[bindIndex] = null;
+            slotUI.ClearInventoryBinding(this);
+        }
     }
 
     private void RegisterSlotUI(ItemSlot_UI slotUI, int bindIndex)
@@ -1682,6 +1691,35 @@ public class Inventory
         ItemSlot sourceSlot = Data.itemSlots[sourceIndex];
         return sourceSlot?.itemData != null &&
                TryDropSlotTo(sourceSlot, sourceSlot.itemData, targetInventory, targetIndex);
+    }
+
+    /// <summary>指定数量搬运复用正式接收、容量和机器网络事务，输入适配层不直接修改库存数据。</summary>
+    public bool TryTransferQuantityTo(int sourceIndex, Inventory targetInventory, int targetIndex, int amount)
+    {
+        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation() ||
+            ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() || amount <= 0 ||
+            Data?.itemSlots == null || (uint)sourceIndex >= (uint)Data.itemSlots.Count ||
+            !IsValidQuickTransferTarget(targetInventory) ||
+            (uint)targetIndex >= (uint)targetInventory.Data.itemSlots.Count ||
+            IsSlotBeingDragged(sourceIndex) || targetInventory.IsSlotBeingDragged(targetIndex))
+            return false;
+
+        ItemSlot source = Data.itemSlots[sourceIndex];
+        ItemSlot target = targetInventory.Data.itemSlots[targetIndex];
+        ItemData original = source?.itemData;
+        float before = original?.Stack?.Amount ?? 0f;
+        if (ReferenceEquals(source, target) || before <= 0f ||
+            !TryTransferQuickQuantity(source, targetInventory, target, amount)) return false;
+        float moved = GetCommittedTransferAmount(source, original, before);
+        if (moved > 0f)
+        {
+            RefreshUI(sourceIndex);
+            targetInventory.RefreshUI(targetIndex);
+            SyncHotBarAfterDrag(this);
+            if (!ReferenceEquals(this, targetInventory)) SyncHotBarAfterDrag(targetInventory);
+            PublishInventoryAudio(this, targetInventory, original, moved);
+        }
+        return true;
     }
 
     /// <summary>未命中槽位时才把拖拽物转入玩家手部槽，并返回新的携带来源。</summary>

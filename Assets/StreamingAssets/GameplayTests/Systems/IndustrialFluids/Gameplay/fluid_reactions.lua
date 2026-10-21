@@ -44,12 +44,14 @@ end
 local transfer_cases = {
     {name = "小于一份的液碱尾量真实转移", args = {}, success = true},
     {name = "部分份数转移保持两端守恒", args = {requested = .00001}, success = true},
-    {name = "满接收腔拒绝且两端回滚", args = {full = true}, success = false}
+    {name = "满接收腔拒绝且两端回滚", args = {full = true}, success = false},
+    {name = "异种液体拒收保留真实原因", args = {mismatched = true}, success = false}
 }
 for _, case in ipairs(transfer_cases) do
     test.runtime("industrial_fluids", "residue_transfer", case.args, function(data)
         assert(data.sourceBefore > 0 and data.visibleServings > 0, "真实电解未产生可见液碱")
         assert(data.machineDenied and not data.machineAccess, "机器访问绕过副产物取液权限")
+        assert(data.machineFailureStatus == "容器端口不允许机器抽取", "权限拒绝被误报成液体入口堵塞")
         assert(data.success == case.success, "正式液碱事务结果错误：" .. data.failure)
         assert(math.abs(data.sourceBefore + data.targetBefore - data.sourceAfter - data.targetAfter) < .00000001,
             "源和目标的真实液碱摩尔量不守恒")
@@ -61,6 +63,8 @@ for _, case in ipairs(transfer_cases) do
             assert(data.visibleRoundtripMoles <= data.sourceBefore, "端口可见份数回转后超过真实预留量")
         else
             assert(data.failure == "Full" and not data.previewSuccess, "满腔没有在预检拒绝")
+            local expected = case.args.mismatched and "液相槽里还有其他物质" or "液体接收空间不足"
+            assert(data.transferFailureStatus == expected, "容器拒收没有保留真实原因：" .. data.transferFailureStatus)
             assert(data.sourceUnchanged and data.targetUnchanged, "失败事务修改了真实库存或预留")
         end
     end, "真实液碱端口：" .. case.name)

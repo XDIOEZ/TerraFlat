@@ -93,7 +93,7 @@ namespace MCPForUnity.Editor.Services
         public List<ToolMetadata> GetEnabledTools()
         {
             return DiscoverAllTools()
-                .Where(tool => IsToolEnabled(tool.Name))
+                .Where(tool => tool.Discoverable && IsToolEnabled(tool.Name))
                 .ToList();
         }
 
@@ -153,6 +153,7 @@ namespace MCPForUnity.Editor.Services
                     Namespace = type.Namespace ?? "",
                     AssemblyName = type.Assembly.GetName().Name,
                     AutoRegister = toolAttr.AutoRegister,
+                    Discoverable = toolAttr.Discoverable,
                     RequiresPolling = toolAttr.RequiresPolling,
                     PollAction = string.IsNullOrEmpty(toolAttr.PollAction) ? "status" : toolAttr.PollAction,
                     MaxPollSeconds = toolAttr.MaxPollSeconds,

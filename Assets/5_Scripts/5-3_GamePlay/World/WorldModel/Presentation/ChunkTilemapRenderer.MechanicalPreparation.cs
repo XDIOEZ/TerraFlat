@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public sealed partial class ChunkTilemapRenderer
 {
@@ -64,6 +65,7 @@ public sealed partial class ChunkTilemapRenderer
                 this.machines.Add(machine);
             }
             root = new GameObject("LandingMechanicalPreparation") { hideFlags = HideFlags.DontSave };
+            SceneManager.MoveGameObjectToScene(root, GameplayWorldRegistry.CurrentScene);
             root.SetActive(false);
         }
 

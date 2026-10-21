@@ -68,14 +68,16 @@ public sealed class LocalTemperatureSource : MonoBehaviour
             return;
         }
 
-        // 只发布当前世界场景的设备，预加载或尚未卸载的旧维度设备不能影响新世界。
+        // 热源向自身所属世界发布，主机切换画面后后台设备仍只加热本世界。
+        bool registeredWorld = GameplayWorldRegistry.TryGet(gameObject.scene.name, out _);
         if (GameManager.Instance == null || !GameManager.Instance.IsInGameWorld ||
-            gameObject.scene != SceneManager.GetActiveScene())
+            !registeredWorld && gameObject.scene != GameplayWorldRegistry.CurrentScene)
         {
             if (registeredManager != null)
                 registeredManager.RemoveLocalTemperatureSource(this);
             return;
         }
+        using var worldScope = registeredWorld ? GameplayWorldRegistry.UseWorld(gameObject.scene.name) : null;
         registeredManager = TemperatureMgr.Instance;
         if (registeredManager != null)
             registeredManager.SetLocalTemperatureSource(this, transform.position, radius, targetTemperature, cooling);

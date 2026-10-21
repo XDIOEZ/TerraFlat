@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 统一处理运行时 Item 的显式父级或 Chunk 归属。
@@ -7,6 +8,13 @@ internal static class ItemWorldPlacement
 {
     public static void Attach(Item item, GameObject itemObject, Vector3 position, GameObject parent)
     {
+        // 物品在登记运行回调之前进入所属世界，后台地表不能借用本机活动场景。
+        Scene target = parent != null ? parent.scene : GameplayWorldRegistry.CurrentScene;
+        if (target.IsValid() && target.isLoaded && itemObject.scene != target)
+        {
+            itemObject.transform.SetParent(null, true);
+            SceneManager.MoveGameObjectToScene(itemObject, target);
+        }
         if (RuntimeAiEntityUtility.IsAiEntity(item))
         {
             AttachRuntimeAi(item, itemObject);

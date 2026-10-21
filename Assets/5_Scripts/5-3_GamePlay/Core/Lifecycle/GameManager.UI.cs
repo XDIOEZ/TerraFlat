@@ -280,10 +280,10 @@ public partial class GameManager
     }
 
     /// <summary>显示 F5 热更新结果。</summary>
-    internal void EndResourceReloadStatus(bool succeeded)
+    internal void EndResourceReloadStatus(bool succeeded, bool published = false, string failureReason = null)
     {
         saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
-        saveStatusHUD?.EndResourceReload(succeeded);
+        saveStatusHUD?.EndResourceReload(succeeded, published, failureReason);
     }
 
     /// <summary>世界退出或热更新取消时收起进度提示。</summary>

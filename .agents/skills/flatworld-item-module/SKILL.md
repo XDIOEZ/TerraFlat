@@ -64,7 +64,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - `ModuleJsonConfigurator` 对 Item/Actor 参数采用严格契约；向量 JSON 显式写 x/y/z，Unity Vector 的计算属性不能交给 `JToken.FromObject`。显示名 gameName 属于具体定义；业务 id、翻译键和 `formerIds` 别名各自独立。
 - `GameRes.ResourceAssets` 持有 Sprite/材质/动画/外壳句柄。Shell 使用 Sprite Pivot 排序，子装饰以根 SortingGroup 保持整体深度；材质池复用恢复配置值或外壳默认值。通用占位图为 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，标签 ItemSprite。
 - 生物动画共用 `Entities/Item/Modules/Animation/Mod_AnimatorController`：`visualMode` 选择 Animator 或 SingleSprite，单图只驱动显式视觉子节点。移动优先级为远端显式状态→已加载且启用的 `IActorAnimationMotionSource`→Mover；来源报告主动移动及外观 `WorldOffset/RollDegrees`，被动位移不算迈步。攻击、跳跃调用 `PlayAttack(worldDirection)`、`PlayJump()`，动画不负责伤害或物理。
-- `ItemDefinitionRuntime` 的初始 Animator 状态先验证再由 Item 持有待播记录；停用外壳不执行 `Play/Update`，激活且 Animator 初始化后提交，单图模式正式禁用的 Animator 丢弃旧待播状态，回池与重新装配也清空引用。规则 `item_runtime/initial_animator_activation`。
+- `ItemDefinitionRuntime` 的初始 Animator 状态名由 Item 持有待播记录；停用冷外壳不查询 `layerCount/HasState` 或执行 `Play/Update`，激活且 Animator 初始化后才校验并播放，单图模式正式禁用的 Animator 丢弃旧待播状态，回池与重新装配也清空引用。规则 `item_runtime/initial_animator_activation` 使用真实 SmallFish/Bird 控制器覆盖冷壳与非法状态。
 - 单图 `singleSpriteStates` 在具体外壳配置状态名与 Sprite，复用 `PlayAnimation/TryPlayAnimation` 切图；`TrySetSprite(Sprite)` 支持直接换图及跨图集 Sprite，不启动身体 Animator。空图/未知状态拒绝，复位、停用、卸载及切模式还原换图前的图片，回池不残留状态图。
 - 单图动作通过独立父层组合，不改原视觉 localPose、Item 根或刚体；只暂停身体 Animator，附加视觉拒绝刚体/碰撞体，手持武器沿正式命中姿态链。切模式/卸载恢复父级与同级顺序并保留最新翻面；停用组件拒绝新动作，停用 GO 先归零表现层，正式卸载再解除。宿主 `OnDestroy` 通过非持久化 `IsBeingDestroyed` 标记只释放表现层引用，不向正在销毁的宿主重新挂节点；仅移除动画组件或正常回池仍恢复存活层级。回归归属 `item_runtime/single_sprite_animation`，独立规则不代表动作观感已验收。
 - F5 `RefreshLiveConfiguration` 原位更新改变的显式参数和仍受定义控制的视觉，不替换 ItemData/模块集合或重新 Load；结构与删除参数后的默认值应用于新实例。`ApplyResourceConfiguration/OnResourcesReloaded` 保留进度并更新缓存/订阅。发布时清闲置池并禁用活跃旧实例回池。

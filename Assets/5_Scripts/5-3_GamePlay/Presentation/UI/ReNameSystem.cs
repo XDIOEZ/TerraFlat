@@ -6,16 +6,28 @@ public class ReNameSystem
     /// <summary>只修改角色显示名，profileId 保持不变。</summary>
     public bool TryRenamePlayer(string profileId, string displayName)
     {
-        return SaveDataMgr.Instance != null &&
-               SaveDataMgr.Instance.TryRenamePlayerDisplayName(profileId, displayName);
+        return TryRenamePlayer(profileId, displayName, out _);
     }
 
     /// <summary>同步存档内部名称与磁盘文件名。</summary>
     public bool TryRenameSave(string oldName, string newName, out string renamedSaveName)
     {
-        renamedSaveName = oldName;
+        return TryRenameSave(oldName, newName, out renamedSaveName, out _);
+    }
+
+    public bool TryRenamePlayer(string profileId, string displayName, out string reason)
+    {
+        reason = "存档服务尚未就绪。";
         return SaveDataMgr.Instance != null &&
-               SaveDataMgr.Instance.TryRenameSave(oldName, newName, out renamedSaveName);
+               SaveDataMgr.Instance.TryRenamePlayerDisplayName(profileId, displayName, out reason);
+    }
+
+    public bool TryRenameSave(string oldName, string newName, out string renamedSaveName, out string reason)
+    {
+        renamedSaveName = oldName;
+        reason = "存档服务尚未就绪。";
+        return SaveDataMgr.Instance != null &&
+               SaveDataMgr.Instance.TryRenameSave(oldName, newName, out renamedSaveName, out reason);
     }
 
     /// <summary>保留旧调用入口；oldName 现在表示稳定角色 ID。</summary>

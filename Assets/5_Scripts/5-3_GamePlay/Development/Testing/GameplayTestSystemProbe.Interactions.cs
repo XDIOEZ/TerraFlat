@@ -527,6 +527,7 @@ internal sealed class GameplayTestSpatialInteractionTarget : MonoBehaviour, IInt
 {
     internal bool Allowed;
     internal int EligibilityChecks;
+    internal int StartCount, EndCount;
 
     public bool CanInteract(Item actor)
     {
@@ -534,6 +535,7 @@ internal sealed class GameplayTestSpatialInteractionTarget : MonoBehaviour, IInt
         return Allowed;
     }
 
-    public void OnInteractStart(Item actor) { }
+    public void OnInteractStart(Item actor) => StartCount++;
+    public void OnInteractEnd(Item actor) => EndCount++;
     public void OnInteractCancel(Item actor) { }
 }

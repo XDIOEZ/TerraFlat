@@ -86,6 +86,11 @@ public sealed class Mod_CropVisual : Module
 
     protected override void OnLoad()
     {
+        BindGrowthVisual();
+    }
+
+    private void BindGrowthVisual()
+    {
         item ??= GetComponentInParent<Item>();
         if (item == null)
             throw new MissingComponentException("[Mod_CropVisual] 未找到所属 Item。");
@@ -109,6 +114,13 @@ public sealed class Mod_CropVisual : Module
         ApplyBuriedMaterial();
         cropModule.GrowthChanged += HandleGrowthChanged;
         ApplyGrowthVisual(cropModule.NormalizedGrowth);
+    }
+
+    private void OnEnable()
+    {
+        // 临时停用会还原外壳，恢复时重新捕获基线并显示最新成长状态。
+        if (IsRuntimeLoaded && cropModule == null)
+            BindGrowthVisual();
     }
 
     protected override void OnSave()

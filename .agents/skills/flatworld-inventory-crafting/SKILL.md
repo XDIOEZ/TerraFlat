@@ -25,6 +25,9 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 库存与手持
 
+- 普通地表与飞船内的快捷栏使用/攻击共用服务器正式 Act/武器入口；客户端只发选中槽位、aim 与 realm，服务器从真实槽位取物。UsePlayerItem 复用库存 pending/应用 ack，不能客户端先扣料或旧全量包覆写服务器消耗；纯本机使用界面通过 ILocalItemUsePresentation 展示。
+
+
 - 联机客户端在同地表船体攻击的 `ClientGroundCombatPending` 期间暂缓槽位拖拽、快捷转移与制作事务；等待 Host 消耗结果成功应用后恢复，不能让旧库存包覆盖箭数或静默丢失本地事务。
 - 联机本机库存事务待确认时，原生丢弃、快捷栏使用、进食和本地弓弹药消耗在副作用前查询 `ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction`；桥只由联机业务登记，单机/Host 默认放行，不停止移动、环境与 AI。测试接入保持在 Development/Testing，不在业务代码注册工具或增加测试分支。
 
@@ -55,6 +58,8 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 制作与加工
 
+- 通用输入适配层用 `Inventory.TryTransferQuantityTo` 复用数量、容量、接收与机器联网事务；槽位身份读 `ItemSlot_UI.BoundInventory`，虚拟槽释放时清空。制作状态读 `CraftingStationView.Controller` 的当前候选/业务选择/进度，选择仍走正式候选按钮事件，不从 EventSystem 焦点推断选中配方。
+
 `配方目录/物品 processing → Matcher 全部候选 → Controller 选择与进度 → CraftingService → CraftingTransaction → 成功动作/进度信号`
 
 - `Recipes/crafting/handmade_equipment.json` 与 `handmade_utilities.json` 补齐手工制品；审查缺配方须同时检查 Recipes、物品 processing、Mechanical Processes、matter 温度/湿度转化及便携载体映射，天然物、温变产物和内部/GM 变体不机械补普通配方。
@@ -84,6 +89,8 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 饮水只取 Drinkable 和余量，满水分仍可主动饮用；drinkEffects 由 LiquidDrinkEffectProcessor 统一结算。容器图标经 ItemDataPresentationResolverRegistry/GameRes.TryGetItemPresentation 状态重绘，Sprite 保留物理轮廓；手持内部状态改变同时通知真实库存与 Item.OnUIRefresh。
 
 ## 农业
+
+- 作物 `Mod_CropVisual` 临时停用会还原外壳并解除成长监听；已加载模块重新启用时须重新捕获原始材质/图片/缩放并显示最新成长，正式卸载后不恢复。回归 `agriculture/crop_visual_reenable`。
 
 - `ChunkAgricultureRenderer` 初绑只收集未完成锄地格及非零伤害格；没有锄地覆盖层/渐变时停用自身 Update，地形与施工事件负责唤醒。静态格更新仍由 Terrain.Changed 即时通知。
 - `Mod_Plantable → CreateEntityCrop → 扣真实种子`，失败 RollbackEntityCrop；resource 作物不临时物化 Item。空耕地播种不检查水肥，水肥只影响后续成长；范围内的种植基质保留播种意图，作物占格或播种失败不回退食用，离开基质才让食用接管。

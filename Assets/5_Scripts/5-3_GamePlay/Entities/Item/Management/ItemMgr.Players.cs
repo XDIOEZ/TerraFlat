@@ -1,4 +1,4 @@
-using Force.DeepCloner;
+﻿using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;
@@ -128,7 +128,7 @@ public partial class ItemMgr
             throw new MissingReferenceException($"[ItemMgr] F5 重载玩家失败：最新资源目录中的 {prefabId} Prefab 缺少 Player。");
 
         previousPlayer.Save();
-        playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
+        playerData.CurrentSceneName = GameplayWorldRegistry.CurrentScene.name;
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = playerData;
 
         ReleasePlayerForWorldTransition(previousPlayer);
@@ -145,7 +145,7 @@ public partial class ItemMgr
         Player_DIC[profileName] = reloadedPlayer;
         reloadedPlayer.Load();
 
-        reloadedPlayer.Data.CurrentSceneName = SceneManager.GetActiveScene().name;
+        reloadedPlayer.Data.CurrentSceneName = GameplayWorldRegistry.CurrentScene.name;
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = reloadedPlayer.Data;
 
         GameManager.NotifyLocalPlayerRuntimeReloaded(reloadedPlayer);
@@ -209,7 +209,7 @@ public partial class ItemMgr
         if (!hasSavedData)
             playerData.Name_User = playerName;
         if (!hasSavedData || string.IsNullOrEmpty(playerData.CurrentSceneName))
-            playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
+            playerData.CurrentSceneName = GameplayWorldRegistry.CurrentScene.name;
         if (!SpaceMgr.IsSpaceScene(playerData.CurrentSceneName))
             playerData.transform.position = WorldLocalPresentation.ToLogical(spawnPosition);
         playerData.transform.rotation = Quaternion.identity;
@@ -320,12 +320,11 @@ public partial class ItemMgr
             if (module?._Data != null)
             {
                 enabledStates[module] = module._Data.Enabled;
-                module._Data.Enabled = module is Mod_GameController or Mod_DamageReceiver or Mod_Stamina or
-                    Mod_FocusPoint or Mod_TurnBack or Mod_AnimatorController or Mod_HotBar or Mod_Inventory or Mod_PlayerDeathState ||
-                    !surfaceCombat && (module is Mod_BuffManager or Mod_Oxygen);
+                module._Data.Enabled = enabledStates[module] && module is not (Mod_Cam or Mod_ChunkLoader or Mod_InteractSender);
             }
         try { player.ResumeRuntimeAfterReplacement(); }
         finally { foreach (var state in enabledStates) if (state.Key?._Data != null) state.Key._Data.Enabled = state.Value; }
+        player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.EnableNetworkAuthorityMovement();
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         if (controller != null)
         {
@@ -333,7 +332,7 @@ public partial class ItemMgr
             controller.SetGameplayInputLocked(false);
         }
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-        if (body != null) { body.bodyType = RigidbodyType2D.Kinematic; body.simulated = false; }
+        if (body != null) { body.bodyType = RigidbodyType2D.Kinematic; body.simulated = true; body.velocity = Vector2.zero; }
         Mod_ItemPicker picker = player.GetComponentInChildren<Mod_ItemPicker>(true);
         if (picker != null)
         {

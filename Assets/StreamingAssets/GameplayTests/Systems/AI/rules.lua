@@ -1,4 +1,4 @@
--- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
+﻿-- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
 test.system("ai", "wolf_formation_topology", {}, function(data)
     assert(data.cases == 7 and data.wrappedDeltas and data.infiniteDeltas,
         "狼群站位共用拓扑后改变了环绕接缝、负方向或半周期最短位移")
@@ -408,3 +408,13 @@ test.system("ai", "stale_perception_batch", {}, function(data)
         data.nextFirst == 32 and data.nextSecond == 54 and data.emptyCount == 0,
         "丢弃过期感知候选后未正确消费 NativeStream 或破坏下一组结果")
 end, "过期感知批次跳过无效视线与碰撞计算，完整消费结果流")
+
+
+test.system("ai", "network_snapshot_buffer", {}, function(data)
+    assert(data.incomplete and data.duplicatePart and data.assembled,
+        "生态快照没有等待完整分片，或重复/乱序分片破坏了正式结果")
+    assert(data.mixedRealm and data.mixedWorld and data.oldRejected and data.resetAcceptsNewRealm,
+        "旧世界、旧代际或过期序号污染了新世界生态呈现")
+    assert(data.newerReplacesIncomplete and data.emptyClears and data.duplicateGuid and data.invalidRejected,
+        "缺片后的新快照不能恢复，或空快照/身份去重/非法坐标边界失效")
+end, "联机生态完整快照：乱序、缺片恢复、代际与身份边界")

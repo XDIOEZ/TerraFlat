@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using Unity.Burst;
@@ -113,6 +113,7 @@ public partial class ItemMgr
         public long CellKey;
         public int Guid;
         public int InstanceId;
+        public int WorldId;
         public int LayerBit;
         public float PerceptionRadiusMultiplier;
         public float2 BoundsCenter;
@@ -129,6 +130,7 @@ public partial class ItemMgr
         public float BroadphaseRadius;
         public int LayerMask;
         public int ExcludedInstanceId;
+        public int WorldId;
         public WorldTopologyDomain Topology;
     }
 
@@ -172,7 +174,7 @@ public partial class ItemMgr
                             do
                             {
                                 PerceptionItemSnapshot candidate = Items[itemIndex];
-                                if (candidate.InstanceId == query.ExcludedInstanceId ||
+                                if (candidate.WorldId != query.WorldId || candidate.InstanceId == query.ExcludedInstanceId ||
                                     (candidate.LayerBit & query.LayerMask) == 0)
                                 {
                                     continue;
@@ -367,6 +369,9 @@ public partial class ItemMgr
             Mod_ItemDetector detector = _inFlightDetectors[i];
             Item excludedItem = detector.item;
             Vector3 detectorPosition = detector.transform.position;
+            if (GameplayWorldRegistry.TryGet(detector.gameObject.scene.name, out _))
+                using (GameplayWorldRegistry.UseWorld(detector.gameObject.scene.name)) topology = WorldTopologyRuntime.GetActiveDomain();
+            else topology = WorldTopologyRuntime.GetActiveDomain();
             float detectionRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
                 detector.DetectionRadius,
                 1f);
@@ -377,6 +382,7 @@ public partial class ItemMgr
                 BroadphaseRadius = detectionRadius * maximumTargetPerceptionMultiplier + maximumShapeReach,
                 LayerMask = detector.itemLayer.value,
                 ExcludedInstanceId = excludedItem != null ? excludedItem.GetInstanceID() : 0,
+                WorldId = detector.gameObject.scene.handle,
                 Topology = topology
             });
         }
@@ -464,6 +470,7 @@ public partial class ItemMgr
             CellKey = GetPerceptionCellKey(position),
             Guid = candidate.itemData.Guid,
             InstanceId = candidate.GetInstanceID(),
+            WorldId = candidate.gameObject.scene.handle,
             LayerBit = 1 << candidate.gameObject.layer,
             PerceptionRadiusMultiplier = candidate.GetPerceptionRadiusMultiplier(),
             BoundsCenter = new float2(boundsCenter.x, boundsCenter.y),
@@ -588,7 +595,8 @@ public partial class ItemMgr
                 _detectorApplyBuffer.Clear();
                 _perceptionResultItemSet.Clear();
 
-                if (IsPerceptionDetectorRequestStale(detector, _inFlightDetectorVersions[queryIndex]))
+                if (IsPerceptionDetectorRequestStale(detector, _inFlightDetectorVersions[queryIndex]) ||
+                    detector != null && detector.gameObject.scene.handle != _inFlightQueries[queryIndex].WorldId)
                 {
                     // 过期结果不能回写，但 NativeStream 必须读完本组后才能继续下一组。
                     DiscardPerceptionCandidateIndices(ref reader, candidateCount);
@@ -598,6 +606,8 @@ public partial class ItemMgr
                 }
 
                 DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
+                using IDisposable worldScope = detector != null && GameplayWorldRegistry.TryGet(detector.gameObject.scene.name, out _)
+                    ? GameplayWorldRegistry.UseWorld(detector.gameObject.scene.name) : null;
                 using (PerceptionFilterCandidatesMarker.Measure(candidateCount))
                 {
                     using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
@@ -696,7 +706,7 @@ public partial class ItemMgr
     {
         if (candidate == null || candidate.itemData == null || candidate.DestructionHandled ||
             !candidate.gameObject.activeInHierarchy || candidate.itemData.Guid != snapshot.Guid ||
-            candidate.GetInstanceID() != snapshot.InstanceId ||
+            candidate.GetInstanceID() != snapshot.InstanceId || candidate.gameObject.scene.handle != snapshot.WorldId ||
             !_perceptionTargets.TryGetValue(candidate, out PerceptionTarget target) || target.Revision != snapshot.Revision ||
             ((1 << candidate.gameObject.layer) & snapshot.LayerBit) == 0)
         {
@@ -785,6 +795,9 @@ public partial class ItemMgr
             throw new ArgumentNullException(nameof(results));
         if (dedupe == null)
             throw new ArgumentNullException(nameof(dedupe));
+        string world = excludedItem != null ? excludedItem.gameObject.scene.name : GameplayWorldRegistry.ExecutionWorldKey;
+        using var worldScope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+        int worldId = excludedItem != null ? excludedItem.gameObject.scene.handle : GameplayWorldRegistry.CurrentScene.handle;
 
         results.Clear();
         dedupe.Clear();
@@ -819,6 +832,7 @@ public partial class ItemMgr
 
                         foreach (Item candidate in cell.Items)
                         {
+                            if (candidate == null || candidate.gameObject.scene.handle != worldId) continue;
                             if (useTargetGeometry)
                                 TryAddSpatialCandidate(candidate, imageCenter, radius, layerMask, excludedItem, results, dedupe);
                             else

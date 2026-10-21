@@ -16,7 +16,7 @@ namespace FlatWorld.GameplayMCP
     [McpForUnityTool(
         "gameplay_chunk_render_debug",
         Description = "Read-only chunk loading diagnosis. status: queues, driver heartbeat, per-stage timings, oldest requests and BRG registration. sample: observe 1-20 real seconds without moving/resuming the game; report throughput, budget hits and save JSON.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplayChunkRenderDebugTool
     {
         #region 统一输入输出

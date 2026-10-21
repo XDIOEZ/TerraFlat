@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -45,7 +45,7 @@ namespace FlatWorld.Networking.Gameplay
             public NetworkConnectionToClient Connection;
             public uint InputSequence, IntentSequence;
             public float NextRequest, InputTime;
-            public string Profile;
+            public string Profile, MetadataWorldKey;
         }
         private sealed class Incoming
         {
@@ -57,22 +57,31 @@ namespace FlatWorld.Networking.Gameplay
         public void StartServerSide()
         {
             if (serverStarted) return;
+            StartFixedShipServerBridge();
             NetworkServer.RegisterHandler<NetworkSpaceSnapshotRequest>(OnSnapshotRequest, true);
             NetworkServer.RegisterHandler<NetworkSpaceInput>(OnInput, true);
             NetworkServer.RegisterHandler<NetworkSpaceIntentRequest>(OnIntent, true);
+            FlatWorld.NaturalEntities.NaturalEntityEcsService.NetworkStateCommitted += OnNaturalHarvestCommitted;
+            StartDimensionServerBridge();
             serverStarted = true;
             nextServerSnapshot = 0f;
         }
         public void StartClientSide()
         {
             if (clientStarted) return;
+            StartFixedShipClientBridge();
             NetworkClient.RegisterHandler<NetworkSpaceSnapshotBegin>(OnSnapshotBegin, true);
             NetworkClient.RegisterHandler<NetworkSpaceSnapshotChunk>(OnSnapshotChunk, true);
             NetworkClient.RegisterHandler<NetworkSpaceIntentResponse>(OnIntentResponse, true);
             NetworkClient.RegisterHandler<NetworkSpaceProjectilePoses>(OnProjectilePoses, true);
+            NetworkClient.RegisterHandler<NetworkEcologySnapshotPart>(OnEcologySnapshot, true);
+            NetworkClient.RegisterHandler<NetworkNaturalHarvestState>(OnNaturalHarvestState, true);
             SpaceNetworkBridge.InputSender = SendInput;
             SpaceNetworkBridge.IntentSender = SendIntent;
+            SpaceNetworkBridge.IntentWithReplySender = SendIntentWithReply;
             SpaceNetworkBridge.CombatPreparationSender = PrepareLocalCombat;
+            StartDimensionClientBridge();
+            StartWorldSnapshotClientBridge();
             clientStarted = true;
             needsSnapshot = true;
             nextClientRequest = 0f; lastAppliedSequence = 0; inputSequence = intentSequence = 0;
@@ -80,6 +89,7 @@ namespace FlatWorld.Networking.Gameplay
         public void StopServerSide()
         {
             if (!serverStarted) return;
+            StopFixedShipServerBridge();
             foreach (ConnectionState state in connections.Values)
             {
                 SpaceSession.Current?.RemoveNetworkPassengerInput(state.Profile);
@@ -89,24 +99,35 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.UnregisterHandler<NetworkSpaceSnapshotRequest>();
             NetworkServer.UnregisterHandler<NetworkSpaceInput>();
             NetworkServer.UnregisterHandler<NetworkSpaceIntentRequest>();
+            FlatWorld.NaturalEntities.NaturalEntityEcsService.NetworkStateCommitted -= OnNaturalHarvestCommitted;
+            StopDimensionServerBridge();
             serverStarted = false;
         }
         public void StopClientSide()
         {
             if (!clientStarted) return;
+            StopFixedShipClientBridge();
             NetworkClient.UnregisterHandler<NetworkSpaceSnapshotBegin>();
             NetworkClient.UnregisterHandler<NetworkSpaceSnapshotChunk>();
             NetworkClient.UnregisterHandler<NetworkSpaceIntentResponse>();
             NetworkClient.UnregisterHandler<NetworkSpaceProjectilePoses>();
+            NetworkClient.UnregisterHandler<NetworkEcologySnapshotPart>();
+            NetworkClient.UnregisterHandler<NetworkNaturalHarvestState>();
+            ClearEcologySnapshots();
             ClearProjectileViews();
             SpaceSession.ClearClientNetworkCombat();
             if (SpaceNetworkBridge.InputSender == SendInput) SpaceNetworkBridge.InputSender = null;
             if (SpaceNetworkBridge.IntentSender == SendIntent) SpaceNetworkBridge.IntentSender = null;
+            if (SpaceNetworkBridge.IntentWithReplySender == SendIntentWithReply) SpaceNetworkBridge.IntentWithReplySender = null;
+            ClearIntentReplies();
             if (SpaceNetworkBridge.CombatPreparationSender == PrepareLocalCombat) SpaceNetworkBridge.CombatPreparationSender = null;
+            StopDimensionClientBridge();
+            StopWorldSnapshotClientBridge();
             incoming = null; clientStarted = false;
         }
         public void RemoveConnection(NetworkConnectionToClient connection)
         {
+            RemoveFixedShipConnection(connection);
             // 只清理由原连接持有的输入与攻击状态，防止过期断线回调误删新连接。
             if (connection == null || !connections.TryGetValue(connection.connectionId, out ConnectionState state) ||
                 !ReferenceEquals(state.Connection, connection)) return;
@@ -136,17 +157,18 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active || !NetworkClient.ready || !OwnsProfile(profile)) return false;
             if (Time.unscaledTime < nextInputSend) return true;
             nextInputSend = Time.unscaledTime + .033f;
-            NetworkClient.Send(new NetworkSpaceInput { Sequence = NextToken(ref inputSequence), Input = input }, Channels.Unreliable);
+            NetworkClient.Send(new NetworkSpaceInput { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Sequence = NextToken(ref inputSequence), Input = input }, Channels.Unreliable);
             return true;
         }
         private bool SendIntent(string profile, SpaceNetworkIntent intent)
         {
             if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() &&
-                intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill) return false;
+                intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem) return false;
             if (NetworkServer.active || !NetworkClient.ready || !OwnsProfile(profile)) return false;
+            intent.RealmRevision = NetworkClient.localPlayer.GetComponent<NetworkWorldPlayer>().RealmRevision;
             uint sequence = NextToken(ref intentSequence);
             if (intent.StartsGroundCombat || !SpaceSession.ClientGroundCombatPending &&
-                (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill))
+                (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem))
                 latestCombatIntentSequence = sequence;
             NetworkClient.Send(new NetworkSpaceIntentRequest { Sequence = sequence, Intent = intent });
             return true;
@@ -155,7 +177,8 @@ namespace FlatWorld.Networking.Gameplay
             => OwnsProfile(profile) && NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.SubmitGroundCombatBaseline() == true;
         private void OnInput(NetworkConnectionToClient connection, NetworkSpaceInput message)
         {
-            if (!ResolveConnection(connection, out ConnectionState state, out _) ||
+            if (!ResolveConnection(connection, out ConnectionState state, out NetworkWorldPlayer player) ||
+                player.IsWorldTransferPending || player.RealmRevision != message.RealmRevision ||
                 !IsNewer(message.Sequence, state.InputSequence) || !ValidInput(message.Input)) return;
             state.InputSequence = message.Sequence; state.InputTime = Time.unscaledTime;
             SpaceSession.Current?.SubmitPassengerInput(state.Profile, message.Input);
@@ -164,8 +187,21 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (!ResolveConnection(connection, out ConnectionState state, out NetworkWorldPlayer player) || !IsNewer(message.Sequence, state.IntentSequence)) return;
             state.IntentSequence = message.Sequence;
+            if (player.IsWorldTransferPending)
+            {
+                connection.Send(new NetworkSpaceIntentResponse { Sequence = message.Sequence, Accepted = false, Reason = "正在切换维度，请等待目标世界准备完成。" });
+                return;
+            }
+            using var worldScope = NetworkGameplayWorldScope.Use(player);
             SpaceNetworkIntent intent = message.Intent;
-            if (player.HasServerPickupTransaction && intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill)
+            if (intent.RealmRevision != player.RealmRevision || player.IsWorldTransferPending)
+            {
+                connection.Send(new NetworkSpaceIntentResponse { Sequence = message.Sequence, Accepted = false, Reason = "玩家正在切换世界或操作来自旧世界" });
+                return;
+            }
+            if (intent.Kind == SpaceNetworkIntentKind.Respawn)
+            { StartCoroutine(ExecuteDimensionRespawn(connection, player.CorePlayer, message.Sequence, null)); return; }
+            if (player.HasServerPickupTransaction && intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem)
             {
                 connection.Send(new NetworkSpaceIntentResponse { Sequence = message.Sequence, Accepted = false,
                     Reason = "正在等待服务器确认拾取库存" });
@@ -174,7 +210,7 @@ namespace FlatWorld.Networking.Gameplay
             if (intent.Kind == SpaceNetworkIntentKind.CombatStateApplied)
             { player.AcknowledgeGroundCombat(unchecked((uint)intent.Action)); return; }
             bool wasGroundCombatPending = player.GroundCombatPending;
-            if (ValidIntent(intent) && (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill))
+            if (ValidIntent(intent) && (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem))
                 player.PrepareGroundCombat(intent.Kind);
             string reason = "太空操作请求无效";
             bool accepted = ValidIntent(intent) && SpaceSession.Current != null &&
@@ -195,6 +231,7 @@ namespace FlatWorld.Networking.Gameplay
         private static bool IsNewer(uint value, uint previous) => value != 0 && unchecked((int)(value - previous)) > 0;
         private void OnIntentResponse(NetworkSpaceIntentResponse response)
         {
+            CompleteIntentReply(response);
             if (response.Accepted) return;
             if (response.Sequence == latestCombatIntentSequence)
             { SpaceSession.ClearClientNetworkCombat(); latestCombatIntentSequence = 0; }
@@ -205,11 +242,14 @@ namespace FlatWorld.Networking.Gameplay
         #region 快照发送与有限分片接收
         private void Update()
         {
+            UpdateWorldSnapshotTimeout();
+            UpdateEcologyRealm();
+            UpdateFixedShipRequests();
             UpdateProjectileViews();
             NetworkWorldPlayer local = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (clientStarted && !NetworkServer.active && NetworkClient.ready && local != null)
             {
-                if (observedLocalRealm && previousLocalInSpace && !local.IsInSpace) NetworkClient.Send(new NetworkItemStateRequest());
+                if (observedLocalRealm && previousLocalInSpace && !local.IsInSpace) NetworkClient.Send(new NetworkItemStateRequest { RealmRevision = NetworkGameplayWorldScope.LocalRevision });
                 previousLocalInSpace = local.IsInSpace; observedLocalRealm = true;
             }
             if (serverStarted && NetworkServer.active && Time.unscaledTime >= nextServerSnapshot)
@@ -237,13 +277,21 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (!ResolveConnection(connection, out ConnectionState state, out _) || Time.unscaledTime < state.NextRequest) return;
             state.NextRequest = Time.unscaledTime + .5f;
+            state.MetadataWorldKey = null;
             SendSnapshot(connection, state.Profile);
         }
         private void SendSnapshot(NetworkConnectionToClient connection, string profile)
         {
             if (SpaceSession.Current?.State == null || connection is LocalConnectionToClient) return;
             using var sendSample = SnapshotSendPoint.Measure(1);
+            if (SpaceSession.Current.TryGetNetworkObserver(profile, out SpaceNetworkObserver realm) && !realm.InSpace &&
+                ResolveConnection(connection, out ConnectionState state, out _) && state.MetadataWorldKey != realm.WorldKey)
+            {
+                SendWorldSnapshot(connection, realm.WorldKey);
+                state.MetadataWorldKey = realm.WorldKey;
+            }
             SendProjectilePoses(connection, profile);
+            SendEcologySnapshot(connection, profile);
             string json = SpaceSession.Current.CaptureNetworkSnapshot(profile, ObserverRangeMeters);
             if (string.IsNullOrEmpty(json)) return;
             byte[] expanded;
@@ -332,6 +380,7 @@ namespace FlatWorld.Networking.Gameplay
                     if (offset != expanded.Length || gzip.ReadByte() != -1)
                     { RejectSnapshot("太空快照解压长度不一致"); return; }
                 }
+                if (worldSnapshotInvalid || worldIncoming != null) { RejectSnapshot("正在重新准备目标世界资料"); return; }
                 using (SnapshotApplyPoint.Measure(expanded.LongLength))
                     SpaceSession.EnsureLoaded().ApplyNetworkSnapshot(new UTF8Encoding(false, true).GetString(expanded));
                 lastAppliedSequence = value.Header.Sequence;

@@ -278,11 +278,11 @@ namespace FlatWorld.Networking.Gameplay
             result["aAfterB"] = InputSample(world.Session, a);
 
             world.Transport.Receive(61, new NetworkSpaceIntentRequest { Sequence = 1,
-                Intent = new SpaceNetworkIntent { Kind = (SpaceNetworkIntentKind)999 } });
+                Intent = new SpaceNetworkIntent { RealmRevision = BotRealm(61), Kind = (SpaceNetworkIntentKind)999 } });
             world.Transport.Receive(61, new NetworkSpaceIntentRequest { Sequence = 1,
-                Intent = new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ToggleDoor, PieceId = "missing" } });
+                Intent = new SpaceNetworkIntent { RealmRevision = BotRealm(61), Kind = SpaceNetworkIntentKind.ToggleDoor, PieceId = "missing" } });
             world.Transport.Receive(62, new NetworkSpaceIntentRequest { Sequence = 1,
-                Intent = new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ToggleDoor, PieceId = "missing" } });
+                Intent = new SpaceNetworkIntent { RealmRevision = BotRealm(62), Kind = SpaceNetworkIntentKind.ToggleDoor, PieceId = "missing" } });
             yield return Wait(() => world.Transport.Count<NetworkSpaceIntentResponse>(61) > 0 &&
                 world.Transport.Count<NetworkSpaceIntentResponse>(62) > 0, "各连接独立意图回复");
             result["intentA"] = new JArray(world.Transport.Read<NetworkSpaceIntentResponse>(61).Select(IntentSample));

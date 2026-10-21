@@ -1,4 +1,4 @@
-using MemoryPack;
+﻿using MemoryPack;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using UltEvents;
 using UnityEngine;
 using UnityEngine.UI;
 
-public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
+public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerStateAuthorityModule, IClientPlayerPresentationTick
 {
     #region 模块身份
     // 模板读取早于 Awake，能力 ID 必须在装配前确定。

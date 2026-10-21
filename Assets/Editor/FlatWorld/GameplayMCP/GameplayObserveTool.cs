@@ -8,7 +8,7 @@ namespace FlatWorld.GameplayMCP
     [McpForUnityTool(
         "gameplay_observe",
         Description = "Observe the live FlatWorld player and nearby world as compact structured data. Prefer this over screenshots for gameplay iteration.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplayObserveTool
     {
         #region 统一输入输出

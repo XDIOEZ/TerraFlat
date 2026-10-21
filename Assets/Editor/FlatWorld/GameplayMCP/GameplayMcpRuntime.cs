@@ -1202,6 +1202,9 @@ namespace FlatWorld.GameplayMCP
             Vector2 target = WorldTopologyRuntime.NormalizePosition(new Vector2(
                 GetFloat(parameters, "x", player.transform.position.x),
                 GetFloat(parameters, "y", player.transform.position.y)));
+            if ((parameters?["target"] != null || GetInt(parameters, "targetGuid", 0) != 0) &&
+                !TryResolveTargetPosition(parameters, player, out target, out string targetError))
+                return BuildActionError("target_not_found", targetError, false);
             float maxSeconds = Mathf.Clamp(GetFloat(parameters, "seconds", 5f), 0.05f, 20f);
             float tolerance = Mathf.Clamp(GetFloat(parameters, "tolerance", 0.25f), 0.05f, 2f);
             bool run = GetBool(parameters, "run", false);
@@ -1358,7 +1361,16 @@ namespace FlatWorld.GameplayMCP
 
             int targetGuid = GetInt(parameters, "targetGuid", 0);
             bool interacted;
-            if (targetGuid == 0)
+            if (parameters?["target"] != null)
+            {
+                if (!TryResolveWorldTarget(parameters, player, out GameplayWorldTargets.Target target, out string error))
+                    return BuildActionError("target_not_found", error, false);
+                Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
+                if (controller == null || !controller.TrySetExternalAimWorldPosition(ControlOwner, target.Aim))
+                    return BuildActionError("aim_rejected", "当前外部控制租约无法设置交互目标。", false);
+                interacted = target.Interaction != null && sender.TryInteractTarget(target.Interaction);
+            }
+            else if (targetGuid == 0)
             {
                 interacted = sender.TryInteractAtCurrentPosition();
             }
@@ -1393,7 +1405,16 @@ namespace FlatWorld.GameplayMCP
 
             int targetGuid = GetInt(parameters, "targetGuid", 0);
             bool interacted = false;
-            if (targetGuid == 0)
+            if (parameters?["target"] != null)
+            {
+                if (!TryResolveWorldTarget(parameters, player, out GameplayWorldTargets.Target target, out string error))
+                    return BuildActionError("target_not_found", error, false);
+                Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
+                if (controller == null || !controller.TrySetExternalAimWorldPosition(ControlOwner, target.Aim))
+                    return BuildActionError("aim_rejected", "当前外部控制租约无法设置交互目标。", false);
+                interacted = target.Interaction != null && sender.TryBeginHeldInteraction(target.Interaction);
+            }
+            else if (targetGuid == 0)
             {
                 interacted = sender.TryBeginHeldInteraction();
             }
@@ -1447,7 +1468,17 @@ namespace FlatWorld.GameplayMCP
         {
             int targetGuid = GetInt(parameters, "targetGuid", 0);
             Vector3? aimedPosition = null;
-            if (targetGuid != 0)
+            if (parameters?["target"] != null)
+            {
+                if (!TryResolveWorldTarget(parameters, player, out GameplayWorldTargets.Target target, out string error))
+                    return BuildActionError("target_not_found", error, false);
+                if (!controller.TrySetExternalAimWorldPosition(ControlOwner, target.Aim))
+                    return BuildActionError("aim_rejected", "当前外部控制租约无法设置攻击目标。", false);
+                aimedPosition = target.Aim;
+                if (!await WaitEditorSecondsAsync(.02f))
+                    return BuildActionError("play_mode_ended", "设置攻击目标期间 Play Mode 已结束。", false);
+            }
+            else if (targetGuid != 0)
             {
                 Item target = FindRuntimeItem(targetGuid);
                 if (target == null)
@@ -1486,7 +1517,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>瞄准可受击的真实 Collider，缺失时才退回实体根坐标；不绕过正常命中与防御。</summary>
-        private static Vector3 ResolveActorAimPoint(Item target)
+        internal static Vector3 ResolveActorAimPoint(Item target)
         {
             Mod_DamageReceiver receiver = target.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             if (receiver != null)
@@ -1659,6 +1690,12 @@ namespace FlatWorld.GameplayMCP
         /// <summary>根据 targetGuid 或 x/y 解析世界目标位置。</summary>
         private static bool TryResolveTargetPosition(JObject parameters, Player player, out Vector2 target, out string error)
         {
+            if (parameters?["target"] != null)
+            {
+                bool resolved = TryResolveWorldTarget(parameters, player, out GameplayWorldTargets.Target worldTarget, out error);
+                target = resolved ? (Vector2)worldTarget.Position : default;
+                return resolved;
+            }
             int targetGuid = GetInt(parameters, "targetGuid", 0);
             if (targetGuid != 0)
             {
@@ -1687,6 +1724,17 @@ namespace FlatWorld.GameplayMCP
                 GetFloat(parameters, "y", 0f)));
             error = string.Empty;
             return true;
+        }
+
+        /// <summary>统一目标只解析已观察对象，避免混用坐标或旧 Guid 时静默操作另一目标。</summary>
+        private static bool TryResolveWorldTarget(JObject parameters, Player player,
+            out GameplayWorldTargets.Target target, out string error)
+        {
+            target = null;
+            if (GetInt(parameters, "targetGuid", 0) != 0 || parameters?["x"] != null || parameters?["y"] != null ||
+                parameters?["target"]?.Type != JTokenType.String)
+            { error = "target 必须为查询返回的字符串，且不能同时传 targetGuid 或 x/y。"; return false; }
+            return GameplayWorldTargets.TryResolve(parameters.Value<string>("target"), player, out target, out error);
         }
 
         /// <summary>按 Guid 获取当前世界仍注册的真实 Item。</summary>

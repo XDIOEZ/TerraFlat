@@ -1,0 +1,25 @@
+{
+    "schemaVersion": 1,
+    "snapshotId": "2026-10-18_20-38-06_464_frame-4103_2a9e79",
+    "capturedAtLocal": "2026-10-18T20:38:06.4641188+08:00",
+    "capturedAtUtc": "2026-10-18T12:38:06.4641188Z",
+    "profilerFile": "profiler-analysis.json",
+    "selectedDisplayFrame": 4103,
+    "entryCount": 1,
+    "originalConsoleFlags": 6019,
+    "originalSearchFilter": "",
+    "entries": [
+        {
+            "index": 0,
+            "mode": 8406016,
+            "line": 449,
+            "severity": "Log",
+            "rawText": "滚轮向上：执行你定义的行为（如增加选择数量）\nUnityEngine.Debug:Log (object)\nItemSlot_UI:HandleScrollUp () (at Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs:449)\nItemSlot_UI:OnScroll (UnityEngine.EventSystems.PointerEventData) (at Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs:438)\nUnityEngine.EventSystems.EventSystem:Update () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/EventSystem/EventSystem.cs:530)\n",
+            "message": "滚轮向上：执行你定义的行为（如增加选择数量）",
+            "stackTrace": "\nUnityEngine.Debug:Log (object)\nItemSlot_UI:HandleScrollUp () (at Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs:449)\nItemSlot_UI:OnScroll (UnityEngine.EventSystems.PointerEventData) (at Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs:438)\nUnityEngine.EventSystems.EventSystem:Update () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/EventSystem/EventSystem.cs:530)\n",
+            "file": "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs"
+        }
+    ],
+    "scope": "All entries currently retained by Unity Console, including hidden levels and search-filtered entries; duplicates are expanded.",
+    "timeCorrelation": "Export-time snapshot. Unity 2022.3 LogEntry exposes no per-entry timestamp or Profiler frame id; entries must not be attributed to the selected frame automatically. Original text is preserved, including any timestamps written by the logger."
+}

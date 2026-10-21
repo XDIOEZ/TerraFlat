@@ -1,4 +1,4 @@
-// AI-Context: Mirror 联机协议 DTO；字段变更必须同步升级协议版本，并同时更新发送端和接收端。
+﻿// AI-Context: Mirror 联机协议 DTO；字段变更必须同步升级协议版本，并同时更新发送端和接收端。
 using Mirror;
 using UnityEngine;
 
@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 20;
+        public const int CurrentVersion = 22;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -110,7 +110,6 @@ namespace FlatWorld.Networking.Gameplay
                 hash = Add(hash, chunkSizeX);
                 hash = Add(hash, chunkSizeY);
                 hash = Add(hash, (int)topologyMode);
-                hash = Add(hash, TerrainGenerationSignature.CalculateDefault());
                 hash = Add(hash, unchecked((uint)generationFingerprint));
                 hash = Add(hash, unchecked((uint)(generationFingerprint >> 32)));
                 return hash;
@@ -146,6 +145,7 @@ namespace FlatWorld.Networking.Gameplay
     /// <summary>服务器广播的权威天气事件状态；客户端只应用，不参与阶段调度。</summary>
     public struct NetworkWeatherStateMessage : NetworkMessage
     {
+        public string WorldKey;
         public string PlanetName;
         public WeatherType Weather;
         public WeatherPhase Phase;
@@ -212,21 +212,27 @@ namespace FlatWorld.Networking.Gameplay
         public byte[] Payload;
     }
 
-    public struct NetworkItemStateRequest : NetworkMessage
+    public struct NetworkItemStateRequest : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
     }
 
     /// <summary>客户端提交自己交互后产生的 Item/Module 状态。</summary>
-    public struct NetworkItemStateSubmit : NetworkMessage
+    public struct NetworkItemStateSubmit : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public int ItemGuid;
         public uint BaseRevision;
         public byte[] Payload;
     }
 
     /// <summary>客户端预测生成的世界掉落物，请求服务端确认并创建同 GUID 权威实例。</summary>
-    public struct NetworkItemSpawnRequest : NetworkMessage
+    public struct NetworkItemSpawnRequest : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public int ItemGuid;
         public string ItemId;
         public byte[] Payload;
@@ -239,6 +245,7 @@ namespace FlatWorld.Networking.Gameplay
     /// <summary>服务端确认的世界掉落物生命周期消息，客户端缺少实例时必须创建。</summary>
     public struct NetworkItemSpawnMessage : NetworkMessage
     {
+        public string WorldKey;
         public int ItemGuid;
         public string ItemId;
         public uint Revision;
@@ -255,8 +262,10 @@ namespace FlatWorld.Networking.Gameplay
     }
 
     /// <summary>客户端请求放置建筑；服务端必须重新校验距离、地块、碰撞和建筑模块。</summary>
-    public struct NetworkBuildingPlaceRequest : NetworkMessage
+    public struct NetworkBuildingPlaceRequest : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public uint RequestToken;
         public int SourceItemGuid;
         public string ItemId;
@@ -289,8 +298,10 @@ namespace FlatWorld.Networking.Gameplay
         public string Reason;
     }
 
-    public struct NetworkBuildingDismantleRequest : NetworkMessage
+    public struct NetworkBuildingDismantleRequest : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public uint RequestToken;
         public int BuildingGuid;
     }
@@ -303,8 +314,10 @@ namespace FlatWorld.Networking.Gameplay
         public string Reason;
     }
 
-    public struct NetworkItemPickupRequest : NetworkMessage
+    public struct NetworkItemPickupRequest : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public int ItemGuid;
         public uint RequestToken;
     }
@@ -319,8 +332,10 @@ namespace FlatWorld.Networking.Gameplay
         public byte[] Payload;
     }
 
-    public struct NetworkItemPickupCommit : NetworkMessage
+    public struct NetworkItemPickupCommit : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public int ItemGuid;
         public uint RequestToken;
         public uint ReservationToken;
@@ -340,8 +355,10 @@ namespace FlatWorld.Networking.Gameplay
         public byte[] InventoryPayload;
     }
 
-    public struct NetworkItemPickupApplied : NetworkMessage
+    public struct NetworkItemPickupApplied : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public int ItemGuid;
         public uint RequestToken;
         public uint ReservationToken;
@@ -350,6 +367,7 @@ namespace FlatWorld.Networking.Gameplay
     /// <summary>服务器确认并广播的权威 Item/Module 状态。</summary>
     public struct NetworkItemStateMessage : NetworkMessage
     {
+        public string WorldKey;
         public int ItemGuid;
         public string ItemId;
         public uint Revision;
@@ -365,6 +383,7 @@ namespace FlatWorld.Networking.Gameplay
     /// <summary>位姿独立于模块状态版本，移动实体无需重复发送库存和模块快照。</summary>
     public struct NetworkItemPoseMessage : NetworkMessage
     {
+        public string WorldKey;
         public int ItemGuid;
         public string ItemId;
         public uint StateRevision;
@@ -376,6 +395,7 @@ namespace FlatWorld.Networking.Gameplay
 
     public struct NetworkItemDespawnMessage : NetworkMessage
     {
+        public string WorldKey;
         public int ItemGuid;
         public string ItemId;
     }

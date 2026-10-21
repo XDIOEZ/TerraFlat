@@ -67,8 +67,12 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
 
     private void OnEnable()
     {
+        GamepadVirtualKeyboardController.Closed -= OnVirtualKeyboardClosed;
         GamepadVirtualKeyboardController.Closed += OnVirtualKeyboardClosed;
-        BindCancelAction(null);
+        // 停用只释放订阅，恢复最新输入与重绑前先清理已销毁资产的托管引用。
+        if (inputAsset == null) inputAsset = null;
+        BindCancelAction(inputAsset);
+        BindSubmitAction(inputAsset);
         observedUIManager = null;
         observedInteractionSurfaceRevision = -1;
         cursorPositionDirty = true;
@@ -81,7 +85,6 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     {
         GamepadVirtualKeyboardController.Closed -= OnVirtualKeyboardClosed;
         UnbindCancelAction();
-        inputAsset = null;
         submitAction = null;
         suppressedInputField = null;
         suppressedInputFieldFrame = -1;
@@ -226,6 +229,8 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
             return;
 
         inputAsset = asset;
+        if (!isActiveAndEnabled)
+            return;
         BindCancelAction(asset);
         BindSubmitAction(asset);
         RefreshInteractionSurfaceState();
@@ -470,6 +475,12 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         UIManager manager = UIManager.ExistingInstance;
         if (manager == null || manager.WasCancelHandledThisFrame())
             return;
+
+        if (EventSystemGuard.TryHandleCancelRequest(context.control))
+        {
+            manager.NotifyCancelHandled();
+            return;
+        }
 
         manager.TryCloseTopmostCancelPanel();
     }

@@ -117,7 +117,6 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     private float scheduledGoalFieldLifetime = float.NaN;
 
     public bool Init { get; private set; }
-    public static WorldNavigationManager ExistingInstance { get; private set; }
     public bool IsNavigationReady => Init && grid.CellCount > 0;
     public int GridRevision => grid.Revision;
     public int PathInvalidationRevision => grid.PathInvalidationRevision;
@@ -133,16 +132,17 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     protected override void Awake()
     {
         base.Awake();
-        if (Instance != this)
+        if (instance != this)
             return;
 
-        ExistingInstance = this;
+        localManager = this;
         observedGridRevision = grid.Revision;
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
     private void Start()
     {
+        using var worldScope = UseWorldContext();
         GameManager gameManager = GameManager.Instance;
         if (gameManager != null)
         {
@@ -165,8 +165,9 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     {
         itemFootprintBridge.Unbind();
         DisposeSharedNavigation();
-        if (ExistingInstance == this)
-            ExistingInstance = null;
+        if (localManager == this) localManager = null;
+        if (!string.IsNullOrEmpty(ownedWorldKey) && worldManagers.TryGetValue(ownedWorldKey, out WorldNavigationManager owner) && owner == this)
+            worldManagers.Remove(ownedWorldKey);
 
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         GameManager gameManager = FindObjectOfType<GameManager>();
@@ -183,6 +184,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     private void Update()
     {
+        using var worldScope = UseWorldContext();
         pathStopwatch.Restart();
         SynchronizeGridRevision();
         CollectPortalPathResults();
@@ -210,6 +212,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     private void OnGameWorldEnter()
     {
+        using var worldScope = UseWorldContext();
         Init = true;
         enabled = true;
         CaptureActiveWorldKey();
@@ -605,6 +608,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     private void CaptureActiveWorldKey()
     {
+        if (!string.IsNullOrEmpty(ownedWorldKey)) { ApplyActiveWorldKey(ownedWorldKey); return; }
         Scene activeScene = SceneManager.GetActiveScene();
         string nextWorldKey = activeScene.IsValid() ? activeScene.name : string.Empty;
         ApplyActiveWorldKey(nextWorldKey);
@@ -612,6 +616,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     private void OnActiveSceneChanged(Scene previousScene, Scene nextScene)
     {
+        if (!string.IsNullOrEmpty(ownedWorldKey)) return;
         if (nextScene.IsValid())
             ApplyActiveWorldKey(nextScene.name);
     }

@@ -9,7 +9,7 @@ using UnityEngine;
 /// 只负责“当前有哪些怪物”，不承载生成时间、生态预算、位置选择或回收策略。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class MonsterManager : SingletonMono<MonsterManager>
+public sealed class MonsterManager : MonoBehaviour
 {
     #region 类型
 
@@ -56,7 +56,29 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
 
     #region 运行时状态
 
-    private static readonly HashSet<string> RegisteredSpeciesIds = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, MonsterManager> worldManagers = new(StringComparer.Ordinal);
+    private readonly HashSet<string> RegisteredSpeciesIds = new(StringComparer.Ordinal);
+    private string _ownedWorld;
+    public static MonsterManager Instance => GetForWorld(GameplayWorldRegistry.ExecutionWorldKey);
+    public static MonsterManager GetInstance() => Instance;
+    public static MonsterManager GetExistingInstance() => GetForWorld(GameplayWorldRegistry.ExecutionWorldKey, false);
+    public static MonsterManager GetForWorld(string world, bool create = true)
+    {
+        if (!string.IsNullOrEmpty(world) && worldManagers.TryGetValue(world, out MonsterManager manager) && manager != null) return manager;
+        return create ? MonsterSpawnerManager.GetForWorld(world)?.GetComponent<MonsterManager>() : null;
+    }
+
+    internal void BindWorld(string world)
+    {
+        _ownedWorld = world; worldManagers[world] = this;
+    }
+
+    internal void UnbindWorld()
+    {
+        if (_ownedWorld != null && worldManagers.TryGetValue(_ownedWorld, out MonsterManager owner) && owner == this)
+            worldManagers.Remove(_ownedWorld);
+        _ownedWorld = null;
+    }
     private readonly Dictionary<string, SpawnerConfig> _configBySpecies = new(StringComparer.Ordinal);
     private readonly Dictionary<Item, Registration> _registrations = new();
     private readonly Dictionary<SpawnerConfig, int> _activeGroupCounts = new();
@@ -103,18 +125,14 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
 
     #region Unity 生命周期
 
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
-        _ownsSingleton = GetInstance() == this;
-        if (!_ownsSingleton)
-            return;
-
+        _ownsSingleton = true;
         ItemMgr.RuntimeItemRegistered += Register;
         ItemMgr.RuntimeItemUnregistered += Unregister;
     }
 
-    protected override void OnDestroy()
+    private void OnDestroy()
     {
         if (_ownsSingleton)
         {
@@ -126,7 +144,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             MonsterDeathStarted = null;
         }
 
-        base.OnDestroy();
+        UnbindWorld();
     }
 
     #endregion
@@ -186,7 +204,8 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
     /// <summary>无需创建单例即可判断当前目录是否包含该生态物种。</summary>
     public static bool IsRegisteredSpeciesId(string itemId)
     {
-        return !string.IsNullOrWhiteSpace(itemId) && RegisteredSpeciesIds.Contains(itemId);
+        return !string.IsNullOrWhiteSpace(itemId) &&
+            GetExistingInstance()?.RegisteredSpeciesIds.Contains(itemId) == true;
     }
 
     /// <summary>判断物品 ID 是否属于当前生态物种目录。</summary>
@@ -210,7 +229,8 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
     /// <summary>注册一个已进入 ItemMgr 生命周期的怪物；重复注册不产生副作用。</summary>
     public void Register(Item item)
     {
-        if (item == null || item.DestructionHandled || _registrations.ContainsKey(item))
+        if (item == null || item.DestructionHandled || _registrations.ContainsKey(item) ||
+            string.IsNullOrEmpty(_ownedWorld) || item.gameObject.scene.name != _ownedWorld)
             return;
 
         string speciesId = item.itemData?.IDName;

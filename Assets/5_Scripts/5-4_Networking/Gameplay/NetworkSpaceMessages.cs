@@ -1,4 +1,4 @@
-using FlatWorld.Spaceflight;
+﻿using FlatWorld.Spaceflight;
 using Mirror;
 
 namespace FlatWorld.Networking.Gameplay
@@ -20,6 +20,7 @@ namespace FlatWorld.Networking.Gameplay
     }
     public struct NetworkSpaceInput : NetworkMessage
     {
+        public uint RealmRevision;
         public uint Sequence;
         public SpacePassengerInput Input;
     }

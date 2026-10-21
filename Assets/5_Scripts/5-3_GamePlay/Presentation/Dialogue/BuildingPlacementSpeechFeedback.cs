@@ -19,12 +19,12 @@ namespace FlatWorld.Dialogue
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Register()
         {
-            BuildingPlacementFeedbackEvents.PlacementRejected -= HandlePlacementRejected;
-            BuildingPlacementFeedbackEvents.PlacementRejected += HandlePlacementRejected;
+            BuildingPlacementFeedbackEvents.PlacementRejectedDetailed -= HandlePlacementRejected;
+            BuildingPlacementFeedbackEvents.PlacementRejectedDetailed += HandlePlacementRejected;
         }
 
         /// <summary>只为触发事件的本地玩家显示非法放置气泡。</summary>
-        private static void HandlePlacementRejected(Player actor, BuildingPlacementFailureReason reason)
+        private static void HandlePlacementRejected(Player actor, BuildingPlacementFailureReason reason, string detail)
         {
             if (actor == null || !actor.IsLocalProfile)
                 return;
@@ -35,8 +35,8 @@ namespace FlatWorld.Dialogue
                 return;
 
             speechController.Say(
-                FlatWorldLocalizationService.GetUiText(reason == BuildingPlacementFailureReason.OutOfRange
-                    ? OutOfRangeSpeechText : InvalidPlacementSpeechText),
+                FlatWorldLocalizationService.GetUiText(!string.IsNullOrWhiteSpace(detail) ? detail :
+                    reason == BuildingPlacementFailureReason.OutOfRange ? OutOfRangeSpeechText : InvalidPlacementSpeechText),
                 CharacterSpeechPriority.Player,
                 topic: InvalidPlacementSpeechTopic);
         }

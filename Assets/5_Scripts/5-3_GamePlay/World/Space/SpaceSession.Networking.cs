@@ -89,75 +89,137 @@ namespace FlatWorld.Spaceflight
         }
         public bool ExecuteNetworkIntent(string profile, SpaceNetworkIntent intent, out string reason)
         {
-            reason = "操作距离或权限不满足";
-            if (!GameNetwork.HasStateAuthority || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return false;
+            reason = null;
+            if (!GameNetwork.HasStateAuthority) return RejectShipOperation("当前端没有世界操作权限。", out reason);
+            if (!TryGetNetworkObserver(profile, out SpaceNetworkObserver observer))
+                return RejectShipOperation("玩家所在世界尚未就绪。", out reason);
             SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == profile);
             if (intent.Kind == SpaceNetworkIntentKind.Respawn) return ExecuteNetworkRespawn(profile, out reason);
-            if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill)
+            if (intent.Kind == SpaceNetworkIntentKind.LaunchGroundShip)
             {
-                if (!observer.InSpace && intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.TargetId != observer.WorldKey) return false;
+                if (observer.InSpace) return RejectShipOperation("地面点火需要玩家和控制台位于同一地表。", out reason);
+                if ((intent.Action != 0 && intent.Action != 1) ||
+                    !int.TryParse(intent.PieceId, System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out int consoleGuid))
+                    return RejectShipOperation("地面点火请求的控制台身份或操作参数无效。", out reason);
+                Player actor = FindNetworkPlayer(profile);
+                if (!ShipGroundAssembly.TryLaunch(actor, consoleGuid, out ShipState launched, out reason)) return false;
+                if (intent.Action == 1 && FindPiece(intent.PieceId, out _, out ShipPieceState console))
+                    BindConsoleControl(passenger, launched, console, observer.Position, false);
+                return true;
+            }
+
+            if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem)
+            {
+                if (!observer.InSpace && intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.TargetId != observer.WorldKey)
+                    return RejectShipOperation("动作来自其他世界，当前玩家无法执行。", out reason);
                 Mod_HotBar combatHotbar = FindNetworkPlayer(profile)?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
                 if (intent.Kind != SpaceNetworkIntentKind.AttackEnd)
                 {
-                    if (combatHotbar == null || intent.SelectedSlot < 0 || intent.SelectedSlot >= combatHotbar.MaxIndex) return false;
+                    if (combatHotbar == null || intent.SelectedSlot < 0 || intent.SelectedSlot >= combatHotbar.MaxIndex)
+                        return RejectShipOperation("当前快捷栏或所选槽位无效。", out reason);
                     combatHotbar.ApplyNetworkSelectedIndex(intent.SelectedSlot);
                 }
                 return ExecuteNetworkAttack(profile, intent.Kind == SpaceNetworkIntentKind.Attack ? 0 : intent.Kind == SpaceNetworkIntentKind.AttackEnd ? 1 : 2,
                     new SpaceSectorPosition(intent.Sector, new SpaceVector2(intent.X, intent.Y)), out reason);
             }
+            if (intent.Kind == SpaceNetworkIntentKind.HarvestNatural)
+            {
+                if (observer.InSpace || intent.TargetId != observer.WorldKey)
+                    return RejectShipOperation("采集目标不在玩家当前地表世界。", out reason);
+                if (!int.TryParse(intent.PieceId, System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out int guid))
+                    return RejectShipOperation("采集目标身份无效。", out reason);
+                bool harvested = FlatWorld.NaturalEntities.NaturalEntityEcsService.TryHarvestNetwork(
+                    FindNetworkPlayer(profile), observer.WorldKey, guid, new Vector2((float)intent.X, (float)intent.Y));
+                if (!harvested) return RejectShipOperation("采集目标已失效或当前无法采集。", out reason);
+                reason = null;
+                return true;
+            }
             if (intent.Kind == SpaceNetworkIntentKind.ExitConsole)
             {
-                if (passenger.ConsolePieceId != null) ClearControl(passenger.ConsolePieceId);
+                if (string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
+                    return RejectShipOperation("当前未处于驾驶状态。", out reason);
+                ClearControl(passenger.ConsolePieceId);
                 passenger.ConsolePieceId = null; passenger.DescentDriving = false; reason = null; return true;
             }
             if (!FindPiece(intent.PieceId, out ShipState ship, out ShipPieceState piece) ||
-                !string.IsNullOrEmpty(intent.ShipId) && ship.ShipId != intent.ShipId) return false;
+                !string.IsNullOrEmpty(intent.ShipId) && ship.ShipId != intent.ShipId)
+                return RejectShipOperation("操作目标已失效或不属于这艘飞船。", out reason);
             ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
                 (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
             double distance = observer.InSpace
                 ? SpaceSectorCoordinates.Difference(observer.Position, new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y))).Magnitude
                 : WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), new Vector2((float)x, (float)y));
-            if (distance > ConsoleInteractionDistance || observer.InSpace != (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising)) return false;
+            ShipFlightState targetFlight = GetFlight(ship.ShipId);
+            if (observer.InSpace != (targetFlight?.Phase == ShipFlightPhase.Cruising) ||
+                !observer.InSpace && !string.Equals(observer.WorldKey, targetFlight?.SurfaceWorldKey, StringComparison.Ordinal))
+                return RejectShipOperation("玩家与操作目标不在同一世界。", out reason);
+            if (distance > ConsoleInteractionDistance)
+                return RejectShipOperation("距离操作目标太远，请靠近后重试。", out reason);
             bool result;
             switch (intent.Kind)
             {
                 case SpaceNetworkIntentKind.EnterConsole:
-                    result = piece.Kind == ShipPieceKind.Console && IsPowered(ship, piece) &&
-                        !State.Passengers.Exists(value => value.ProfileId != profile && value.ConsolePieceId == piece.PieceId);
-                    if (result)
-                    {
-                        BindConsoleControl(passenger, ship, piece, observer.Position, observer.InSpace);
-                    }
+                    if (!TryGetPoweredConsole(piece.PieceId, out _, out _, out reason)) return false;
+                    if (targetFlight?.Phase == ShipFlightPhase.Floating)
+                        return RejectShipOperation("海面浮船无法驾驶。", out reason);
+                    if (State.Passengers.Exists(value => value.ProfileId != profile && value.ConsolePieceId == piece.PieceId))
+                        return RejectShipOperation("控制台正由其他玩家驾驶。", out reason);
+                    BindConsoleControl(passenger, ship, piece, observer.Position, observer.InSpace);
+                    result = true;
                     break;
-                case SpaceNetworkIntentKind.ToggleDoor: result = TryToggleDoor(piece.PieceId); break;
-                case SpaceNetworkIntentKind.ToggleIgnition: result = ToggleIgnition(piece.PieceId); break;
-                case SpaceNetworkIntentKind.RequestLanding:
-                    BodyState body = GetLandingCandidate(ship.ShipId);
-                    if (body != null && !CanTransferToNetworkSurface(body.SurfaceAddress.WorldKey, out reason)) return false;
-                    result = RequestLanding(piece.PieceId); break;
+                case SpaceNetworkIntentKind.ToggleDoor: return TryToggleDoor(piece.PieceId, out reason);
+                case SpaceNetworkIntentKind.ToggleIgnition: return ToggleIgnition(piece.PieceId, out reason);
+                case SpaceNetworkIntentKind.RequestLanding: return RequestLanding(piece.PieceId, out reason);
                 case SpaceNetworkIntentKind.StartNavigation:
-                    result = StartNavigation(piece.PieceId, new SpaceSectorPosition(intent.Sector, new SpaceVector2(intent.X, intent.Y))); break;
-                case SpaceNetworkIntentKind.CancelNavigation: CancelNavigation(ship.ShipId); result = true; break;
-                case SpaceNetworkIntentKind.ConfirmDock: result = ConfirmDockForShip(ship); break;
-                case SpaceNetworkIntentKind.DisconnectDock: result = DisconnectDock(ship.ShipId, intent.TargetId ?? piece.PieceId); break;
-                default: result = false; break;
+                    return StartNavigation(piece.PieceId, new SpaceSectorPosition(intent.Sector, new SpaceVector2(intent.X, intent.Y)), out reason);
+                case SpaceNetworkIntentKind.CancelNavigation:
+                    if (GetNavigation(GetConnectedAssembly(ship.ShipId)) == null)
+                        return RejectShipOperation("当前没有正在执行的导航任务。", out reason);
+                    CancelNavigation(ship.ShipId); result = true; break;
+                case SpaceNetworkIntentKind.ConfirmDock:
+                    return ConfirmDockForShip(ship, out reason);
+                case SpaceNetworkIntentKind.DisconnectDock:
+                    return DisconnectDock(ship.ShipId, intent.TargetId ?? piece.PieceId, out reason);
+                case SpaceNetworkIntentKind.SetTargetPressure:
+                    ShipDeviceState device = GetDevice(piece.PieceId);
+                    if (device == null || device.Configuration.SupplyMolesPerSecond <= 0f)
+                        return RejectShipOperation("请在供气器上设置目标气压。", out reason);
+                    if (!IsValidTargetPressure(intent.X))
+                        return RejectShipOperation("请输入 0 至 200000 范围内的有效气压（kPa）。", out reason);
+                    device.TargetPressureKPa = intent.X;
+                    result = true;
+                    break;
+                default: return RejectShipOperation("当前操作不受支持。", out reason);
             }
             if (result) reason = null;
             return result;
         }
-        private bool ConfirmDockForShip(ShipState ship)
+        private bool ConfirmDockForShip(ShipState ship) => ConfirmDockForShip(ship, out _);
+        private bool ConfirmDockForShip(ShipState ship, out string reason)
         {
+            reason = null;
             ShipDockingService.SynchronizePorts(ship);
+            if (ship.DockingPorts.Count == 0) return RejectShipOperation("本船没有可用的对接接口。", out reason);
             foreach (ShipDockingPortState own in ship.DockingPorts)
                 foreach (ShipState other in State.Ships)
                 {
-                    if (other == ship || GetFlight(other.ShipId)?.Phase != GetFlight(ship.ShipId)?.Phase) continue;
+                    ShipFlightState ownFlight = GetFlight(ship.ShipId), otherFlight = GetFlight(other.ShipId);
+                    if (other == ship || ownFlight == null || otherFlight?.Phase != ownFlight.Phase ||
+                        ownFlight.Phase != ShipFlightPhase.Cruising &&
+                        (ownFlight.SurfaceWorldKey != otherFlight.SurfaceWorldKey || Math.Abs(ownFlight.HeightMeters - otherFlight.HeightMeters) > 1d)) continue;
                     ShipDockingService.SynchronizePorts(other);
                     foreach (ShipDockingPortState target in other.DockingPorts)
                         if (ShipDockingService.TryCreateCandidate(State.Ships, State.Docking, ship.ShipId, own.PortId, other.ShipId, target.PortId, out ShipDockingPairState pair))
-                            return ShipDockingService.Confirm(State.Ships, State.Docking, pair.PairId, ship.ShipId);
+                        {
+                            if (!ShipDockingService.Confirm(State.Ships, State.Docking, pair.PairId, ship.ShipId, out string dockReason))
+                                return RejectShipOperation(dockReason, out reason);
+                            reason = FlatWorld.Localization.FlatWorldLocalizationService.GetUiText(GetDockConfirmationFeedback(pair.Connected));
+                            return true;
+                        }
                 }
-            return false;
+            return RejectShipOperation("附近没有符合对接条件且未被占用的接口。", out reason);
         }
         private bool SubmitLocalIntent(SpaceNetworkIntentKind kind, string piece = null, string ship = null, string target = null, SpaceSectorPosition position = default)
         {

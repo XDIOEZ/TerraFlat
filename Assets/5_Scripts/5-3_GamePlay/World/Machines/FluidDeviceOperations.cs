@@ -144,9 +144,12 @@ public static class FluidDeviceOperations
     public static void AdvanceLiquidPump(MachineEntity node, float seconds)
     {
         FluidMachineState state = GetFluidState(node); FluidMachineDefinition definition = node.Definition.Fluid;
+        FluidInventory buffer = GetFluidInventory(node);
+        // 主动停用电力需求时先说明库存条件，避免把满缓冲误报成断电。
+        if (buffer.GetLiquidLiters() >= definition.VolumeLiters - definition.MinimumGasSpaceLiters)
+        { state.Status = "液体缓冲已满，等待输出"; return; }
         double work = AvailableDeviceWork(node, seconds);
         if (work <= 0) { state.Status = "没有电"; return; }
-        FluidInventory buffer = GetFluidInventory(node);
         int rotation = node.RotationQuarterTurns;
         bool industrialInput = false;
         if (node.Logic is FluidMachineLogic logic && TryFindAdjacentLiquidPort(node, (rotation + 2) & 3,
@@ -160,7 +163,7 @@ public static class FluidDeviceOperations
             var result = ContainerTransferService.TransferLiquid(vessel, new IndustrialLiquidTransferPort(logic, intakePort),
                 new ContainerTransferContext(node.Position, UnityEngine.SceneManagement.SceneManager.GetSceneByName(WorldKey).handle,
                     ContainerAccessKind.Machine, "液体泵抽取容器"), vesselServings);
-            state.Status = result.Success ? "正在从容器抽液体" : "液体入口被堵住了";
+            state.Status = result.Success ? "正在从容器抽液体" : GetLiquidPumpTransferFailureStatus(result.Failure, buffer, fluid, definition.SingleLiquid);
             if (result.Success) state.DissipatedHeatJoules += (double)FluidUnits.MolToLiquidLiters(fluid,
                 FluidUnits.ServingsToMol(fluid, (decimal)result.LiquidServings)) * definition.WorkJoulesPerStandardLiter;
             return;
@@ -197,22 +200,53 @@ public static class FluidDeviceOperations
         state.DissipatedHeatJoules += consumedLiters * definition.WorkJoulesPerStandardLiter;
     }
 
+    // 容器事务已经给出拒绝原因，设备不能把所有失败都说成入口堵塞。
+    internal static string GetLiquidPumpTransferFailureStatus(ContainerTransferFailure failure, FluidInventory receiver = null,
+        FluidDefinition incoming = null, bool singleLiquid = false)
+    {
+        if (failure == ContainerTransferFailure.Full && incoming != null)
+        {
+            if (!incoming.AllowIndustrialTransport) return "这种液体不支持工业输送";
+            if (singleLiquid && receiver != null)
+                foreach (FluidComponentState component in receiver.State.Components)
+                    if (component.LiquidMoles > 0 && component.FluidId != incoming.Id) return "液相槽里还有其他物质";
+        }
+        return failure switch
+        {
+            ContainerTransferFailure.Empty => "容器没有可抽取的液体",
+            ContainerTransferFailure.Full => "液体接收空间不足",
+            ContainerTransferFailure.FilterRejected => "容器端口不接受这种液体",
+            ContainerTransferFailure.OutOfRange => "容器不在抽取范围内",
+            ContainerTransferFailure.AccessDenied => "容器端口不允许机器抽取",
+            ContainerTransferFailure.NoAuthority => "当前端没有容器操作权限",
+            ContainerTransferFailure.StaleReference => "容器端口已失效，等待重新连接",
+            ContainerTransferFailure.Changed => "容器状态已变化，等待重试",
+            ContainerTransferFailure.Busy => "容器正在处理另一笔转移",
+            ContainerTransferFailure.SameStorage => "不能在同一液体库存内转移",
+            ContainerTransferFailure.UnsupportedAtomicity => "容器端口不支持原子转移",
+            ContainerTransferFailure.CommitFailed => "液体转移提交失败，已回滚",
+            ContainerTransferFailure.InvalidRequest => "液体转移参数无效",
+            _ => "液体转移未完成"
+        };
+    }
+
     public static void AdvanceCompressor(MachineEntity node, float seconds)
     {
         FluidMachineState state = GetFluidState(node); FluidMachineDefinition definition = node.Definition.Fluid;
         FluidInventory input = GetFluidInventory(node), output = GetFluidInventory(node, "output");
         if (node.Logic is FluidMachineLogic portable && portable.PortableTank != null) FillPortableFluidTank(node, portable.PortableTank);
-        double work = AvailableDeviceWork(node, seconds);
-        if (work <= 0) { state.Status = node.Definition.Electrical != null ? "没有电" : "没有动力"; return; }
         double pressure = input.GetPressureKPa(definition.VolumeLiters, definition.MinimumGasSpaceLiters);
         if (pressure <= 0 || input.GasMoles <= 0) { state.Status = "入口没有气体"; return; }
+        double work = AvailableDeviceWork(node, seconds);
+        if (work <= 0) { state.Status = node.Definition.Electrical != null ? "没有电" : "没有动力"; return; }
         CompressorWorkspace workspace = compressorWorkspaces.GetValue(node, value => new CompressorWorkspace(value));
         if (!input.TryReserve(workspace.CompressionPort, FluidPhase.Gas,
             FluidUnits.StandardLitersToMol((decimal)Math.Min(definition.ThroughputLitersPerSecond * seconds, definition.BatchStandardLiters)), out FluidBatch batch)) return;
         double targetPressure = Math.Min(definition.MaximumPumpPressureKPa, Math.Max(state.CompressionTargetKPa,
             output.GetPressureKPa(definition.VolumeLiters, definition.MinimumGasSpaceLiters)));
         FluidCompressionResult compressed = FluidThermodynamics.Compress(batch, pressure, targetPressure, work, definition.CompressionEfficiency);
-        if (!compressed.Success || output.GasMoles + compressed.Batch.GasMoles > FluidUnits.StandardLitersToMol((decimal)definition.GasBufferStandardLiters) ||
+        if (!compressed.Success) { state.Status = "气体状态或压缩参数无效"; return; }
+        if (output.GasMoles + compressed.Batch.GasMoles > FluidUnits.StandardLitersToMol((decimal)definition.GasBufferStandardLiters) ||
             !output.CanAdd(compressed.Batch, definition.VolumeLiters, definition.MinimumGasSpaceLiters, false, false))
         { state.Status = "压缩机出口被堵住了"; return; }
         workspace.Before.CopyFrom(input.State);
@@ -288,7 +322,8 @@ public static class FluidDeviceOperations
     {
         double available = AvailableDeviceWork(node, seconds);
         FluidMachineState state = GetFluidState(node);
-        if (available <= 0) { state.Status = "没有电或供热"; return; }
+        if (available <= 0) { state.Status = GetReactionBlockedStatus(node, seconds, available, false); return; }
+        bool commitRejected = false;
         foreach (FluidMachineReactionDefinition reaction in node.Definition.Fluid.Reactions)
         {
             double extent = Math.Min(GetReactionInputExtent(node, reaction, seconds), GetReactionOutputExtent(node, reaction));
@@ -299,8 +334,29 @@ public static class FluidDeviceOperations
             {
                 state.Status = "正在加工"; return;
             }
+            commitRejected = true;
         }
-        state.Status = "原料不适配或产物出口被堵住了";
+        state.Status = GetReactionBlockedStatus(node, seconds, available, commitRejected);
+    }
+
+    // 缺原料和满产物会令设备主动停止要电，状态仍由同一组真实反应条件判断。
+    private static string GetReactionBlockedStatus(MachineEntity node, double seconds, double available, bool commitRejected)
+    {
+        bool hasInput = false, hasOutputSpace = false, hasFilter = false;
+        foreach (FluidMachineReactionDefinition reaction in node.Definition.Fluid.Reactions)
+        {
+            if (GetReactionInputExtent(node, reaction, seconds) <= .000000001) continue;
+            hasInput = true;
+            if (GetReactionOutputExtent(node, reaction) <= .000000001) continue;
+            hasOutputSpace = true;
+            if (reaction.RequiresFilter && GetAvailableFilterWork(node) <= .000000001) continue;
+            hasFilter = true;
+        }
+        if (!hasInput) return "缺少可用反应原料";
+        if (!hasOutputSpace) return "产物空间不足，等待输出";
+        if (!hasFilter) return "缺少可用滤材";
+        if (available <= 0) return node.Definition.Electrical?.IsConsumer == true ? "没有电" : "没有动力";
+        return commitRejected ? "反应提交被拒绝，原料已保留" : "可用动力不足以完成本轮反应";
     }
     public static float GetReactionDemand(MachineEntity node)
     {

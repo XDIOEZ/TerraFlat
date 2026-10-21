@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Diagnostics;
 using UnityEngine;
@@ -126,7 +126,7 @@ public partial class ItemMgr
             latestData.transform.rotation = rotation;
             latestData.transform.scale = scale;
             candidate.transform.SetParent(null, false);
-            Scene targetScene = parent != null ? parent.scene : SceneManager.GetActiveScene();
+            Scene targetScene = parent != null ? parent.scene : GameplayWorldRegistry.CurrentScene;
             if (targetScene.IsValid() && targetScene.isLoaded && candidateObject.scene != targetScene)
                 SceneManager.MoveGameObjectToScene(candidateObject, targetScene);
             candidate.transform.SetPositionAndRotation(latestData.inHand
@@ -266,7 +266,7 @@ public partial class ItemMgr
             beforeCommit?.Invoke(candidate);
             // 准备阶段不进世界索引，自动保存和玩家感知只会看到完整生物。
             candidate.transform.SetParent(null, true);
-            Scene targetScene = SceneManager.GetActiveScene();
+            Scene targetScene = GameplayWorldRegistry.CurrentScene;
             if (candidateObject.scene != targetScene) SceneManager.MoveGameObjectToScene(candidateObject, targetScene);
             RegisterRuntimeItem(candidate, data.IDName, out token);
             ItemWorldPlacement.Attach(candidate, candidateObject, data.transform.position, null);

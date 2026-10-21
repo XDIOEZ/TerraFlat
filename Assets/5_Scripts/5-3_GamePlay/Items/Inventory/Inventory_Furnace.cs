@@ -284,7 +284,7 @@ public class Inventory_Furnace : Inventory
         // 如果已经在熔炼中，不允许主动停止
         if (_Data.IsSmelting)
         {
-            Debug.Log("熔炼已经开始，无法主动停止。只有燃料耗尽时才会停止。");
+            Debug.Log("熔炼已经开始，无法主动停止；燃料耗尽或氧气不足时会停止燃烧。");
             return;
         }
 

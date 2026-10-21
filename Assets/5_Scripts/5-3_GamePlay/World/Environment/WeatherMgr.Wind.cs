@@ -96,8 +96,7 @@ public partial class WeatherMgr
 
         if (!PrepareRegionalContext() || !TryGetCurrentTimeData(out var clock)) return;
         AdvanceRegionalWeather();
-        Camera camera = Camera.main;
-        Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
+        Vector2 position = ObservationPosition();
         FlatWorld.WorldModel.Int2 region = regionalEngine.ResolveRegion(new FlatWorld.WorldModel.Int2(
             Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
         double now = GetRegionalStepTime(clock);
@@ -106,7 +105,7 @@ public partial class WeatherMgr
         PersistRegionalStates();
         UpdateLocalWeatherProjection();
         if (regionalEngine.TryGetRegionSnapshot(region, out var sample))
-            AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(planetData.Name, sample));
+            AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(ownedWorld, sample));
         PublishAuthoritativeWeatherState();
     }
 
@@ -133,6 +132,7 @@ public partial class WeatherMgr
     /// <summary>把过渡后的观察区域风力和吹去方向写入 Shader 全局参数。</summary>
     private void RefreshWindFeedback()
     {
+        if (!IsLocalWeatherWorld || !presentationActive) return;
         Shader.SetGlobalFloat(GlobalWindStrengthShaderId, _presentedWindStrength);
         Shader.SetGlobalVector(GlobalWindDirectionShaderId,
             new Vector4(presentedWindDirection.x, presentedWindDirection.y, 0f, 0f));

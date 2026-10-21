@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Localization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -40,7 +41,7 @@ public enum BuildingPlacementLayer
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule, IBuildingPreviewRotation
+public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule, IBuildingPreviewRotation, ILocalItemUseRequestHandler
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -204,6 +205,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         return true;
     }
     /// <summary>进入放置模式即拥有右键；非法或隐藏的预览也必须进入安装校验以给出拒绝反馈。</summary>
+    public int LocalUsePriority => 100;
+    public bool CanHandleLocalUse => IsPlacementActionAvailable;
+    public void HandleLocalUse() => Install();
+
     public bool IsPlacementActionAvailable
     {
         get
@@ -373,7 +378,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
                 out BuildingPlacementFailureReason failureReason))
         {
             BuildingPlacementFeedbackEvents.PublishPlacementRejected(
-                ResolvePlacementActor(), failureReason);
+                ResolvePlacementActor(), failureReason, reason);
             Debug.LogWarning($"[建筑安装] {reason}", item);
             return;
         }
@@ -397,6 +402,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         item.Save();
         if (!TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot))
         {
+            BuildingPlacementFeedbackEvents.PublishPlacementRejected(actor, detail: "建造材料已不在当前快捷栏槽位，请重新选择。");
             Debug.LogWarning("[建筑安装] 无法解析召唤器所属真实快捷栏槽位", item);
             return;
         }
@@ -418,6 +424,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (!BuildingPlacementService.TryPlace(request, out BuildingPlacementResult result, out reason))
         {
             RefreshSourceHotBarSlot(hotBar, sourceSlot);
+            BuildingPlacementFeedbackEvents.PublishPlacementRejected(actor, detail: reason);
             Debug.LogWarning($"[建筑安装] {reason}", item);
             return;
         }
@@ -480,9 +487,16 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         _placementActor = null;
         CurrentState = BuildingState.NotInstalled;
         Save();
+        // Host 与服务端共用已扣料的库存，成功回执只同步表现，不能再次查找已清空的材料槽。
+        if (GameNetwork.HasStateAuthority)
+        {
+            CleanupGhost();
+            actor?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.RuntimeInventory.SyncHeldItemImmediately();
+            return;
+        }
+
         ApplySourceAmount(authoritativeRemainingAmount);
-        if (!GameNetwork.HasStateAuthority)
-            GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
+        GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
     }
 
     public void RejectNetworkPlacement(string reason)
@@ -490,10 +504,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (!_placementPending)
             return;
 
+        Player actor = _placementActor ?? ResolvePlacementActor();
         _placementPending = false;
         _placementActor = null;
         CurrentState = BuildingState.NotInstalled;
         Save();
+        BuildingPlacementFeedbackEvents.PublishPlacementRejected(actor, detail: reason);
         if (!string.IsNullOrWhiteSpace(reason))
             Debug.LogWarning($"[联机建造] 放置被拒绝：{reason}", item);
     }
@@ -1269,7 +1285,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         TileData topTile = chunk?.Map?.Data?.GetTopTile(worldCell);
         if (topTile != null)
             return CheckLegacyTileLoadCapacity(chunk.Map, worldCell, topTile, requiredGroundSupport, out reason);
-        reason = $"地块 ({worldCell.x},{worldCell.y}) 尚未加载";
+        reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 尚未加载", worldCell.x, worldCell.y);
         return false;
     }
 
@@ -1291,7 +1307,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         {
             if (runtimeTile.TopTileId == 0)
             {
-                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可建造";
+                reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 不可建造", worldCell.x, worldCell.y);
                 return false;
             }
 
@@ -1302,7 +1318,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
                     runtimeTile.LocalCell.x, runtimeTile.LocalCell.y) ||
                 runtimeTile.Cell.NavigationCost > BlockedTilePenalty)
             {
-                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可通行";
+                reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 不可通行", worldCell.x, worldCell.y);
                 return false;
             }
         }
@@ -1312,14 +1328,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             chunkManager.GetChunkBy_ItemPosition(tileCenter, out Chunk chunk);
             if (chunk?.Map?.Data == null)
             {
-                reason = $"地块 ({worldCell.x},{worldCell.y}) 尚未加载";
+                reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 尚未加载", worldCell.x, worldCell.y);
                 return false;
             }
 
             TileData topTile = chunk.Map.Data.GetTopTile(worldCell);
             if (topTile == null)
             {
-                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可建造";
+                reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 不可建造", worldCell.x, worldCell.y);
                 return false;
             }
 
@@ -1328,7 +1344,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
             if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
             {
-                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可通行";
+                reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 不可通行", worldCell.x, worldCell.y);
                 return false;
             }
         }
@@ -1344,7 +1360,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         {
             if (!WorldLiquidSystem.TryGetDefinition(tile, out LiquidDefinition liquid))
             {
-                reason = $"地块 ({tile.WorldCell.x},{tile.WorldCell.y}) 的液体定义缺失";
+                reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 的液体定义缺失", tile.WorldCell.x, tile.WorldCell.y);
                 return false;
             }
             return CheckLoadCapacity(tile.WorldCell, liquid.WorldWater.LoadCapacity, requiredGroundSupport, out reason);
@@ -1353,7 +1369,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (GameRes.ExistingInstance == null ||
             !GameRes.ExistingInstance.TryGetTileDefinition(tile.TopTileId, out RuntimeTileDefinition definition))
         {
-            reason = $"地块 ({tile.WorldCell.x},{tile.WorldCell.y}) 的承重定义缺失";
+            reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 的承重定义缺失", tile.WorldCell.x, tile.WorldCell.y);
             return false;
         }
         return CheckLoadCapacity(tile.WorldCell, definition.LoadCapacity, requiredGroundSupport, out reason);
@@ -1370,7 +1386,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
                 !GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out LiquidDefinition liquid) ||
                 liquid.WorldWater == null)
             {
-                reason = $"地块 ({worldCell.x},{worldCell.y}) 的液体定义缺失";
+                reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 的液体定义缺失", worldCell.x, worldCell.y);
                 return false;
             }
             return CheckLoadCapacity(worldCell, liquid.WorldWater.LoadCapacity, requiredGroundSupport, out reason);
@@ -1379,7 +1395,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (GameRes.ExistingInstance == null ||
             !GameRes.ExistingInstance.TryGetTileDefinition(tile.ID, out RuntimeTileDefinition definition))
         {
-            reason = $"地块 ({worldCell.x},{worldCell.y}) 的承重定义缺失";
+            reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 的承重定义缺失", worldCell.x, worldCell.y);
             return false;
         }
         return CheckLoadCapacity(worldCell, definition.LoadCapacity, requiredGroundSupport, out reason);
@@ -1390,7 +1406,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     {
         reason = available >= required
             ? null
-            : $"地块 ({worldCell.x},{worldCell.y}) 承重 {available}，建筑需要 {required}";
+            : FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 承重 {2}，建筑需要 {3}", worldCell.x, worldCell.y, available, required);
         return reason == null;
     }
 

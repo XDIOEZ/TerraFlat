@@ -27,6 +27,7 @@ namespace FlatWorld.NaturalEntities
     {
         private sealed partial class Record
         {
+            public string WorldKey;
             public NaturalEntityHandle Handle;
             public NaturalEntityEcsProfile Profile;
             public ItemData Snapshot;
@@ -44,12 +45,12 @@ namespace FlatWorld.NaturalEntities
             public bool Supported => Profile != null;
         }
 
-        private static NaturalEntitySimulation simulation;
-        private static readonly Dictionary<int, Record> records = new();
+        private static NaturalEntitySimulation simulation { get => State.simulation; set => State.simulation = value; }
+        private static Dictionary<int, Record> records => State.records;
         // 运行时增量维护不同输入需求，避免每次生态 Tick 扫描全部静态资源。
-        private static readonly HashSet<Record> environmentInputRecords = new();
-        private static readonly HashSet<Record> soilInputRecords = new();
-        private static readonly HashSet<Record> navigationInputRecords = new();
+        private static HashSet<Record> environmentInputRecords => State.environmentInputRecords;
+        private static HashSet<Record> soilInputRecords => State.soilInputRecords;
+        private static HashSet<Record> navigationInputRecords => State.navigationInputRecords;
         private static readonly Dictionary<RuntimeItemDefinition, CompileCacheEntry> profiles = new();
         private static readonly List<Vector2Int> navigationCells = new(8);
         private const float SimulationInterval = 0.25f;
@@ -84,23 +85,33 @@ namespace FlatWorld.NaturalEntities
         private static readonly ProfilerMarker PublishMarker = new("NaturalEntityRuntime.Publish");
         private static readonly ProfilerMarker ContactDamageMarker = new("NaturalEntityRuntime.ContactDamage");
         private static int nextRuntimeId = 1;
-        private static float pendingSimulationSeconds;
+        private static float pendingSimulationSeconds { get => State.pendingSimulationSeconds; set => State.pendingSimulationSeconds = value; }
         private sealed class RuntimeModule : IWorldEntityRuntimeModule, IWorldEntityPostSimulationModule, IGameplayCombatBridge
         {
+            private readonly string worldKey;
+            public RuntimeModule(string worldKey) => this.worldKey = worldKey;
             public string RuntimeModuleId => "entity.resource-inputs";
             public void TickEntities(float deltaTime) => Tick(deltaTime);
             // 输入准备只使用同步 EntityManager API，没有独立 Job 需要等待。
             public void CompleteEntityJobs() { }
-            public void ReleaseEntities() => ReleaseWorld();
+            public void ReleaseEntities() => ReleaseOwnedWorld(worldKey);
             public void AfterEntitySimulation(float deltaTime)
             {
                 using (PublishMarker.Auto()) PublishEntities(deltaTime);
                 using (ContactDamageMarker.Auto()) TickContactDamage(deltaTime);
             }
             public bool TryGetIdentity(Item item, out CombatIdentity identity) { identity = default; return false; }
-            public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context) => QueryWeapon(weapon, shape, context);
+            public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
+            {
+                if (weapon?.item == null) return;
+                string sourceWorld = FlatWorld.Spaceflight.SpaceSession.TryGetCombatWorldKey(weapon.item, out string world)
+                    ? world : weapon.item.gameObject.scene.name;
+                if (sourceWorld != worldKey) return;
+                using var scope = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+                QueryWeapon(weapon, shape, context);
+            }
         }
-        private static readonly RuntimeModule runtimeModule = new();
+        private static RuntimeModule runtimeModule => State.Module;
 
         public static int Count => simulation?.Count ?? 0;
 
@@ -109,7 +120,7 @@ namespace FlatWorld.NaturalEntities
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
-            ReleaseWorld();
+            ReleaseAll();
             profiles.Clear();
             nextRuntimeId = 1;
         }
@@ -224,10 +235,6 @@ namespace FlatWorld.NaturalEntities
             lastCapabilityVersion = ulong.MaxValue;
             simulation?.Dispose();
             simulation = null;
-            if (profileResourceOwner != null) profileResourceOwner.ResourcesReloaded -= InvalidateResourceProfiles;
-            profileResourceOwner = null;
-            profiles.Clear();
-            nextRuntimeId = 1;
             pendingSimulationSeconds = 0f;
             ClearResourceQueries();
             PhysicsBodiesReset?.Invoke();
@@ -273,6 +280,7 @@ namespace FlatWorld.NaturalEntities
             if (simulation == null)
             {
                 var world = WorldEntityRuntime.GetOrCreate(dimensionId);
+                generations[WorldEntityRuntime.Generation] = State.WorldKey;
                 simulation = new NaturalEntitySimulation(world);
                 simulation.Changed += QueuePublication;
                 WorldEntityRuntime.Register(world, runtimeModule);
@@ -283,6 +291,7 @@ namespace FlatWorld.NaturalEntities
             var record = new Record
             {
                 Handle = handle,
+                WorldKey = State.WorldKey,
                 Profile = profile,
                 Snapshot = snapshot,
                 Precipitation = precipitation,
@@ -323,11 +332,15 @@ namespace FlatWorld.NaturalEntities
         }
 
         public static bool Contains(NaturalEntityHandle handle)
-            => handle.IsValid && handle.Generation == WorldEntityRuntime.Generation && records.ContainsKey(handle.Id) &&
-               simulation?.Contains(handle.Id) == true;
+        {
+            using var handleScope = UseHandle(handle);
+            return handle.IsValid && handle.Generation == WorldEntityRuntime.Generation && records.ContainsKey(handle.Id) &&
+                simulation?.Contains(handle.Id) == true;
+        }
 
         public static void Remove(NaturalEntityHandle handle)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle) || !records.TryGetValue(handle.Id, out Record record))
                 return;
             ReleaseExtensionModules(record);
@@ -352,6 +365,7 @@ namespace FlatWorld.NaturalEntities
         public static void ApplySnapshot(NaturalEntityHandle handle, ItemData snapshot,
             float baselineCelsius, bool rebaseCurrentDefinition = true)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle) || snapshot == null)
                 return;
             Record record = records[handle.Id];
@@ -417,6 +431,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>F5 只替换配置并保留原 Entity，未知能力保留原状态并报告错误。</summary>
         public static bool TryRefreshDefinition(NaturalEntityHandle handle, RuntimeItemDefinition definition)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle)) return false;
             Record record = records[handle.Id];
             if (ReferenceEquals(record.Profile.Definition, definition) &&
@@ -450,6 +465,7 @@ namespace FlatWorld.NaturalEntities
 
         public static bool TryGetDefinition(NaturalEntityHandle handle, out RuntimeItemDefinition definition)
         {
+            using var handleScope = UseHandle(handle);
             definition = Contains(handle) ? records[handle.Id].Profile.Definition : null;
             return definition != null;
         }
@@ -457,6 +473,7 @@ namespace FlatWorld.NaturalEntities
         public static bool TryGetPresentation(NaturalEntityHandle handle,
             out NaturalEntityPresentationState state)
         {
+            using var handleScope = UseHandle(handle);
             state = default;
             if (!Contains(handle))
                 return false;
@@ -473,6 +490,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>生成一份可交给 Item/生态差量存档的完整快照，并把 ECS 热数据回写到对应模块。</summary>
         public static bool TryCapture(NaturalEntityHandle handle, out ItemData snapshot)
         {
+            using var handleScope = UseHandle(handle);
             snapshot = null;
             if (!Contains(handle))
                 return false;
@@ -505,6 +523,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>终端解绑直接移交内部快照所有权，避免卸载区块时再深拷贝一份 ItemData。</summary>
         public static bool TryTakeSnapshotAndRemove(NaturalEntityHandle handle, out ItemData snapshot)
         {
+            using var handleScope = UseHandle(handle);
             snapshot = null;
             if (!Contains(handle))
                 return false;
@@ -524,6 +543,7 @@ namespace FlatWorld.NaturalEntities
 
         public static bool TryCanHostCompanion(NaturalEntityHandle handle, out bool canHost)
         {
+            using var handleScope = UseHandle(handle);
             canHost = false;
             if (!Contains(handle))
                 return false;
@@ -542,6 +562,7 @@ namespace FlatWorld.NaturalEntities
 
         public static bool TryGetRenewalYear(NaturalEntityHandle handle, out int year)
         {
+            using var handleScope = UseHandle(handle);
             year = 0;
             if (!Contains(handle) || !records[handle.Id].Profile.HasGrowth ||
                 !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season))

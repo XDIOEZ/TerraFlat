@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -510,7 +510,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         var filter = new ContactFilter2D { useTriggers = false };
         filter.SetLayerMask(Physics2D.GetLayerCollisionMask(_solidCollider.gameObject.layer));
         _physicalSweepHits.Clear();
-        Physics2D.BoxCast(origin, size, _solidCollider.transform.eulerAngles.z,
+        GameplayPhysics2D.BoxCast(origin, size, _solidCollider.transform.eulerAngles.z,
             displacement / distance, filter, _physicalSweepHits, distance);
         _physicalSweepHits.Sort((left, right) => left.distance.CompareTo(right.distance));
 
@@ -582,7 +582,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             damageBox.size.y * Mathf.Abs(lossyScale.y));
         float castAngle = damageBox.transform.eulerAngles.z;
 
-        int hitCount = Physics2D.BoxCastNonAlloc(
+        int hitCount = GameplayPhysics2D.BoxCastNonAlloc(
             castOrigin,
             castSize,
             castAngle,

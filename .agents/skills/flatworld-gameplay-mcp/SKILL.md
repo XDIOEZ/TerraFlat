@@ -12,7 +12,15 @@ description: "FlatWorld GamePlayMCP 的隔离会话、控制租约、玩法动�
 - `Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_GameMCP_LLM.cs`：导航跟随。
 - `Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_HotBar.cs`：快捷栏。
 
-GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树是操作入口，截图补充视觉信息。当前可用动作与参数由 `gameplay_capabilities` 提供。
+GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树是操作入口，截图补充视觉信息。
+
+## 按需接口入口
+
+- 默认只公开短工具 `gameplay(operation?, arguments?)`，空调用返回能力域名，不展开详细 schema。先 `operation=discover, arguments={domain:"ui"}` 或 `{operation:"act"}` 查询相关操作契约，再 `operation=ui, arguments={action:"tree"}` 执行。操作参数来自原工具元数据，调用默认 `output=compact`，细节主动请求 `output=full`。
+- 目录按 session、observation、action、ui、gm、diagnostics、testing、protocol 分域；多操作域先返回短操作名，按操作名读取一个契约。`act` 的动作和 `gm` 命令说明只在对应契约中展开。
+- 现有 `gameplay_*` 使用 `Discoverable=false` 从 WebSocket 注册与 stdio `get_tool_states` 隐藏，仍保留原启用校验与直接 socket 命令；网关也遵守原操作禁用状态。Editor 工具设置保留执行开关并标记 `Internal / on demand`，重新启用也不会展开到默认工具清单。
+- 旧 socket JSON 仍可直接发 `{"type":"gameplay_ui","params":{"action":"tree"}}`；同一 socket 也可发 `{"type":"gameplay","params":{"operation":"ui","arguments":{"action":"tree"}}}`。socket 外层结果和内层玩法结果须分别检查。
+- 新代码需要 Unity 正式编译后生效。当前 Python 服务的自定义工具注册只增加/更新，不可靠移除旧缓存；首次切换须重启 MCPForUnity Python 服务并让客户端刷新/重新连接工具清单，仅重连 Unity 或 sync 不保证收起旧工具。不得为此打断用户 PlayMode。
 
 ## 会话与控制
 
@@ -34,6 +42,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 - `gameplay_ui(tree)` 为当前激活 Canvas 返回分页语义树，默认 64、最多 128 节点。`click/text/scroll/drag` 使用当前可见可交互节点 ID，经 EventSystem 射线和指针事件；文本进入 TMP/UGUI 输入链。UI 变化后旧节点可能失效。
 - `gameplay_ui(click)` 对手机 HUD 的按下与松开跨真实游戏帧（普通面板允许暂停时点击）；MCP 持有控制租约时，仅对手机 HUD 节点短时授权其虚拟设备并及时撤销，确保背包/制作/设置按钮仍走正式输入链。`handled/clicked` 代表事件发送，不代替读取后续 UI 状态。
 - UI 不依赖玩家控制租约。`treeAfter=true` 操作后附新树于 `data.tree.data.semantic_tree`；内层 success/error 表示树是否可用。
+- `ui(transfer)` 只接受当前可见槽位的 `sourceId/targetId`，可选正整数 `amount`；走正式库存事务，读取 `moved/completed/pending/status` 判断实际搬运。`ui(recipes)` 分页读当前已打开制作面板的候选/进度，full 才展开材料；`ui(select_recipe, recipeId)` 滚动并点击真实候选按钮，机器异步结果以 authoritativeRecipeId 为准。
 - `gameplay_gm` 使用能力接口中的白名单，要求世界就绪与租约；`apply_self_buff:<buffId>` 校验目录后调用 `Mod_BuffManager.AddBuff`。未提供的生成行为可走正式 GM UI。
 
 ## 观察与查询
@@ -41,6 +50,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 - `gameplay_observe` 返回玩家、附近实体、ECS 掉落物与脚下 3×3 权威地块。`player.hand` 为鼠标搬运槽，`player.hotbar.held/equippedWeapon` 才是装备；温度看 `player.temperature/environment`。
 - 液体深度/身份/浮力来自 `Mod_TileEffectReceiver`，附近水格来自独立液体层及支撑面；`currentTileData` 只代表 Ground。水格可带河流/海洋表层流向及流量。
 - `gameplay_query` 只读来源：`runtime` 实例/空间索引、`ecology` 已加载自然物放置、`terrain` 环境阈值、`tile` 地块身份、`drops` 离线 ECS 掉落物桶。名称可用稳定 ID 或完整本地化名称，不触发生成、传送和拾取。
+- `query(source=world)` 统一查询已加载 Item/自然 ECS/机器/掉落物，默认 radius=16、3 条分页，返回不透明 `target`；`act` 可用 target 替代旧坐标/GUID，执行前重新校验玩家、世界和实体身份，过期则重新查询。不会加载远处目标。
 - runtime 按距离分页，默认 3、最多 32 条，radius 最大 64，`total_count/truncated/next_offset` 表示分页；tile 默认最近 1 格。runtime 机械详情为 RPM/扭矩/加工快照，drops 为实时位置、数量和拾取状态。
 
 ## 输出与结果语义

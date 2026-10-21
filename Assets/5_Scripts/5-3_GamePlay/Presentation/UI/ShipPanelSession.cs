@@ -29,6 +29,8 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private Coroutine scrollRoutine;
     private bool outputDirty, observed, followCommand;
     private bool driveAfterLaunch, transferringGroundConsole;
+    private bool groundLaunchPending, groundLaunchAccepted;
+    private float groundLaunchDeadline;
     private float nextRefreshTime;
     private ShipFlightPhase observedPhase;
     private bool observedIgnited, observedDriving, observedPowered;
@@ -151,7 +153,13 @@ public sealed class ShipPanelSession : IMachinePanelSession
         if (string.IsNullOrWhiteSpace(input)) return;
         commandField.SetTextWithoutNotify(string.Empty);
         Execute(input);
-        if (IsOpen && !Application.isMobilePlatform && !EventSystemGuard.IsGamepadMode)
+        // 是否继续键盘输入由玩家控制方案决定，手机外接键盘也能连续输入命令。
+        Mod_GameController controller = actor != null
+            ? actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller)
+            : null;
+        if (IsOpen && controller != null &&
+            controller.PreferredInputDevice == Mod_GameController.InputDeviceType.KeyboardMouse &&
+            !EventSystemGuard.IsGamepadMode)
             panel.StartCoroutine(RestoreCommandFocus());
     }
 
@@ -186,7 +194,14 @@ public sealed class ShipPanelSession : IMachinePanelSession
             Refresh();
             return;
         }
-        string console = session.ResolveConsole(shipId, pieceId);
+        string console = session.TryGetNearbyConsole(actor, shipId, out string nearbyConsole,
+            session.FindPiece(pieceId, out _, out ShipPieceState boundPiece) && boundPiece.Kind == ShipPieceKind.Console ? pieceId : null)
+            ? nearbyConsole : null;
+        if (console == null && command is "drive" or "ignite" or "land" or "navigate" or "pick" or "cancel")
+        {
+            Append("拒绝", "附近没有可操作的飞船控制台，请靠近控制台后重试。");
+            RenderOutput(); return;
+        }
         switch (command)
         {
             case "help":
@@ -200,61 +215,46 @@ public sealed class ShipPanelSession : IMachinePanelSession
                 Append("系统", "反馈记录已清空。");
                 break;
             case "drive":
-                if (actor != null && session.EnterConsole(actor, console))
-                {
-                    Append("完成", "已进入驾驶位，WASD 平移需要可用引擎与燃料，飞船始终朝上，Esc 离开；下落时由实际船体位置决定落点。");
-                    RenderOutput();
-                    Close();
-                    return;
-                }
-                Append("拒绝", "驾驶失败：请靠近已供电的有效控制台；海面浮船无法驾驶。");
+                RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.EnterConsole, PieceId = console },
+                    "已进入驾驶位，WASD 平移需要可用引擎与燃料，飞船始终朝上，Esc 离开；下落时由实际船体位置决定落点。", closeOnSuccess: true);
                 break;
             case "exit":
-                Report(session.RequestConsoleExit(actor), "已退出驾驶。", "当前未处于驾驶状态。");
+                RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ExitConsole }, "已退出驾驶。");
                 break;
             case "ignite":
-                if (!session.ToggleIgnition(console))
-                    Append("拒绝", "点火失败：需要供电、有效航空燃料及足够升空推力。");
-                else
-                    Append("完成", session.GetFlight(shipId).Ignited ? "点火已开启。" : "引擎已停机，飞船继续按惯性运动。");
+                RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ToggleIgnition, PieceId = console }, "点火操作已完成。");
                 break;
             case "land":
-                if (session.RequestLanding(console))
-                {
-                    Append("完成", "已接受降落：有可用燃料时平稳着陆；无燃料时进入下落并结算冲击。");
-                    RenderOutput();
-                    Close();
-                    return;
-                }
-                Append("拒绝", "降落失败：请在太空中靠近目标星体，并使用已供电的控制台。");
+                RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.RequestLanding, PieceId = console },
+                    "已接受降落：有可用燃料时平稳着陆；无燃料时进入下落并结算冲击。", closeOnSuccess: true);
                 break;
             case "navigate":
                 if (TryCoordinates(parts, out Vector2 target))
-                    Report(session.StartNavigation(console, target),
-                        "导航目标已设置，执行进度将在反馈屏更新。",
-                        "导航失败：需处于太空飞行阶段，并有已供电的控制台和光纤连接的自动导航工作方块。");
+                {
+                    SpaceSectorPosition position = session.UnprojectSectorPosition(target);
+                    RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.StartNavigation, PieceId = console,
+                        Sector = position.Sector, X = position.LocalMeters.X, Y = position.LocalMeters.Y },
+                        "导航目标已设置，执行进度将在反馈屏更新。");
+                }
                 break;
             case "pick":
-                if (session.BeginPickingNavigation(console))
+                if (session.BeginPickingNavigation(console, out string pickingReason))
                 {
                     Append("完成", "点击画面选择导航坐标，右键取消选点；再次打开控制台可查看导航反馈。");
-                    RenderOutput();
-                    Close();
-                    return;
+                    RenderOutput(); Close(); return;
                 }
-                Append("拒绝", "选点失败：需要太空中有效的控制台。");
+                Append("拒绝", pickingReason, literal: true);
                 break;
             case "cancel":
-                session.CancelNavigation(shipId);
-                Append("完成", "导航已取消。");
+                RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.CancelNavigation, PieceId = console }, "导航已取消。");
                 break;
             case "dock":
-                Report(session.ConfirmNearbyDock(shipId), "本船已确认对接接口，双方均确认后建立连接。",
-                    "对接失败：附近没有方向、位置和速度符合要求的对接接口。");
+                RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ConfirmDock, PieceId = pieceId },
+                    "本船已确认对接接口，双方均确认后建立连接。");
                 break;
             case "undock":
-                Report(session.DisconnectDock(shipId, pieceId), "已解除接口，重新连接需要双方确认。",
-                    "解除失败：请在已经连接的对接接口上操作。");
+                RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.DisconnectDock, PieceId = pieceId,
+                    TargetId = pieceId }, "已解除接口，重新连接需要双方确认。");
                 break;
             case "pressure":
                 SetPressure(parts[1]);
@@ -268,6 +268,11 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     private void ExecuteGround(string command)
     {
+        if (groundLaunchPending && command is not ("help" or "status" or "clear"))
+        {
+            Append("系统", "正在等待点火结果与船体同步。");
+            return;
+        }
         switch (command)
         {
             case "help":
@@ -299,26 +304,49 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     private void LaunchFromGround()
     {
-        bool launched;
-        ShipState ship;
-        string reason;
-        // 移交普通机器会同步释放旧交互代理，此时让当前面板随控制台一起转交给飞船会话。
+        if (groundLaunchPending) { Append("系统", "正在等待点火结果与船体同步。"); return; }
+        // 网络删除普通控制台可能早于船体快照，整个移交期间保留当前面板。
+        groundLaunchPending = true;
+        groundLaunchAccepted = false;
+        groundLaunchDeadline = Time.unscaledTime + 15f;
         transferringGroundConsole = true;
-        try { launched = ShipGroundAssembly.TryLaunch(actor, groundConsoleGuid, out ship, out reason); }
-        finally { transferringGroundConsole = false; }
-        if (!launched)
+        bool submitted = ShipGroundAssembly.RequestLaunch(actor, groundConsoleGuid, driveAfterLaunch, (success, reason) =>
         {
-            Append("拒绝", string.IsNullOrWhiteSpace(reason) ? "点火失败：请检查地板、供电、航空燃料和升空推力。" : reason, literal: true);
-            return;
+            if (!IsAlive || !groundLaunchPending) return;
+            if (!success)
+            {
+                groundLaunchPending = false;
+                transferringGroundConsole = false;
+                Append("拒绝", string.IsNullOrWhiteSpace(reason) ? "点火失败：请检查地板、供电、航空燃料和升空推力。" : reason, literal: true);
+                RenderOutput();
+                return;
+            }
+            groundLaunchAccepted = true;
+            CompleteGroundLaunch();
+        });
+        if (!submitted && groundLaunchPending)
+        {
+            groundLaunchPending = false;
+            transferringGroundConsole = false;
+            Append("拒绝", "联机连接尚未就绪，请稍后重试。");
         }
+        if (groundLaunchPending) Append("系统", "正在等待点火结果与船体同步。");
+    }
+
+    private bool CompleteGroundLaunch()
+    {
         session = SpaceSession.Current;
+        if (!groundLaunchAccepted || session == null || !session.FindPiece(pieceId, out ShipState ship, out _)) return false;
         shipId = ship.ShipId;
         groundConsoleGuid = 0;
+        groundLaunchPending = false;
+        transferringGroundConsole = false;
         observed = false;
         Append("完成", "地面建筑已装配成船，点火升空。");
-        if (!driveAfterLaunch) return;
+        if (!driveAfterLaunch) return true;
         driveAfterLaunch = false;
-        if (session != null && session.EnterConsole(actor, pieceId))
+        // 驾驶预约在服务端随点火原子接管，客户端只等待同一次权威乘员快照。
+        if (session.State.Passengers.Any(value => value.ProfileId == actor.ProfileName && value.ConsolePieceId == pieceId))
         {
             Append("完成", "已进入驾驶位，Esc 离开驾驶。");
             RenderOutput();
@@ -326,6 +354,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         }
         else
             Append("拒绝", "已点火起飞，进入驾驶失败；请靠近已供电的控制台重新进入。");
+        return true;
     }
 
     private bool TryCoordinates(string[] parts, out Vector2 point)
@@ -347,7 +376,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private void SetPressure(string input)
     {
         if (!double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double pressure) ||
-            !double.IsFinite(pressure) || pressure < 0d || pressure > 200000d)
+            !SpaceSession.IsValidTargetPressure(pressure))
         {
             Append("拒绝", "请输入 0 至 200000 范围内的有效气压（kPa）。");
             return;
@@ -358,13 +387,36 @@ public sealed class ShipPanelSession : IMachinePanelSession
             Append("拒绝", "请在供气器上设置目标气压。");
             return;
         }
-        device.TargetPressureKPa = pressure;
-        pressureField.SetTextWithoutNotify(pressure.ToString(CultureInfo.InvariantCulture));
-        Append("完成", "供气目标已设为 {0:0.###} kPa，达到目标后停止补气。", arguments: new object[] { pressure });
+        RequestOperation(new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.SetTargetPressure, PieceId = pieceId, X = pressure },
+            "供气目标已设为 {0:0.###} kPa，达到目标后停止补气。", arguments: new object[] { pressure });
     }
 
-    private void Report(bool success, string accepted, string rejected)
-        => Append(success ? "完成" : "拒绝", success ? accepted : rejected);
+    private void RequestOperation(SpaceNetworkIntent intent, string successSource, bool closeOnSuccess = false, object[] arguments = null)
+    {
+        session.RequestShipOperation(actor, intent, (success, reason) =>
+        {
+            if (!IsAlive) return;
+            if (success && intent.Kind == SpaceNetworkIntentKind.SetTargetPressure)
+                pressureField.SetTextWithoutNotify(intent.X.ToString(CultureInfo.InvariantCulture));
+            bool hasReason = !string.IsNullOrWhiteSpace(reason);
+            Append(success ? "完成" : "拒绝", hasReason ? reason : success ? successSource : "操作失败，未返回具体原因。",
+                literal: hasReason, arguments: hasReason ? null : arguments);
+            RenderOutput();
+            if (success && closeOnSuccess) Close();
+            else Refresh();
+        });
+    }
+
+    // 选点后的导航同样等待正式结果，拒绝时重新显示控制台里的真实原因。
+    public static void ReportNavigationSelection(SpaceSession owner, Player player, string console, bool success, string reason)
+    {
+        ShipPanelSession existing = sessions.Find(value => value.IsAlive && value.session == owner && value.actor == player);
+        if (existing == null) return;
+        existing.Append(success ? "完成" : "拒绝", success ? "导航目标已设置，执行进度将在反馈屏更新。" :
+            string.IsNullOrWhiteSpace(reason) ? "操作失败，未返回具体原因。" : reason, literal: !success && !string.IsNullOrWhiteSpace(reason));
+        if (!success && !existing.IsOpen) existing.Toggle(player);
+        existing.Refresh();
+    }
     #endregion
 
     #region 双屏实时状态与反馈记录
@@ -544,6 +596,19 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     private void RefreshGroundConsole()
     {
+        if (groundLaunchPending)
+        {
+            if (CompleteGroundLaunch()) { if (IsOpen) RefreshScreens(true); return; }
+            if (Time.unscaledTime < groundLaunchDeadline)
+            {
+                status.text = Text("正在等待点火结果与船体同步。");
+                RenderOutput();
+                return;
+            }
+            groundLaunchPending = false;
+            transferringGroundConsole = false;
+            Append("拒绝", "点火结果等待超时，请检查连接后重新打开控制台。");
+        }
         if (!ShipGroundAssembly.TryGetGroundConsole(actor, groundConsoleGuid, out MachineEntity console))
         { Close(); return; }
         landingButton.interactable = false;

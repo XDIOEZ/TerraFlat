@@ -31,12 +31,21 @@ test.system("item_runtime", "simulation_membership_cache", {}, function(data)
         "环绕世界接缝或等价镜像坐标移动时错误复用了旧的模拟区域")
 end, "物品模拟区域身份缓存、移动/玩家/手持失效与零分配")
 
-test.system("item_runtime", "initial_animator_activation", {}, function(data)
-    assert(data.queuedWhileInactive and data.stillQueued and data.disabledNotPlayed,
-        "停用候选或禁用 Animator 的初始播放未延迟，可能重复输出 Unity 动画错误")
-    assert(data.cancelClears and data.poolClears,
-        "初始动画的过期待播状态没有在取消或对象池复用时清理")
-end, "物品初始化动画延迟到正式激活，取消与对象池复用安全")
+for _, actorId in ipairs({"SmallFish", "Bird"}) do
+    local expectedActorId = actorId
+    test.system("item_runtime", "initial_animator_activation", {actorId = actorId}, function(data)
+        assert(data.queuedWhileInactive and data.stillQueued and data.disabledNotPlayed,
+            "停用候选或禁用 Animator 的初始播放未延迟，可能重复输出 Unity 动画错误")
+        assert(data.cancelClears and data.poolClears,
+            "初始动画的过期待播状态没有在取消或对象池复用时清理")
+        assert(data.actorId == expectedActorId and data.coldUninitialized and data.coldQueued and data.coldStillQueued,
+            "正式控制器的冷外壳仍提前查询状态层，或没有保留初始状态名")
+        assert(data.activePlayed and data.fullPathPlayed and data.invalidStateRejected,
+            "激活后的初始动画短名/完整路径播放或非法状态拒绝失败")
+        assert(data.singleSpriteDiscarded,
+            "单图表现禁用身体 Animator 后仍残留初始动画")
+    end, actorId .. "冷外壳延迟状态校验，激活播放、单图接管及回池清理")
+end
 
 test.system("item_runtime", "matter_transition_scan", {}, function(data)
     assert(data.firstMatch and data.secondMatch,

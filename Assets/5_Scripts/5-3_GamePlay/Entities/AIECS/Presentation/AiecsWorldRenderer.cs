@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Unity.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
@@ -125,8 +126,13 @@ namespace FlatWorld.AIECS
         /// <summary>读取真实 ECS 位置/行为/生命，循环世界只绘制相机最近镜像。</summary>
         public void Draw(AiecsSimulation simulation, Camera camera, WorldTopologyDomain domain,
             Func<Vector2, bool> presentationReady = null)
+            => DrawRecords(simulation.Display, camera, domain, presentationReady);
+
+        /// <summary>联机呈现直接读取服务器表现快照，不运行第二套动物模拟。</summary>
+        public void DrawRecords(NativeArray<AiecsDisplayRecord> records, Camera camera, WorldTopologyDomain domain,
+            Func<Vector2, bool> presentationReady = null)
         {
-            if (camera == null || !simulation.Display.IsCreated)
+            if (camera == null || !records.IsCreated)
             {
                 visible.Clear(); BatchCount = 0; shadows.Hide(); sunShadows.Hide();
                 batch.Hide();
@@ -137,7 +143,6 @@ namespace FlatWorld.AIECS
             visible.Clear();
             float2 center = (Vector2)camera.transform.position;
             float halfHeight = camera.orthographicSize, halfWidth = halfHeight * camera.aspect;
-            var records = simulation.Display;
             for (int i = 0; i < records.Length; i++)
             {
                 var record = records[i]; if (record.External != 0) continue;

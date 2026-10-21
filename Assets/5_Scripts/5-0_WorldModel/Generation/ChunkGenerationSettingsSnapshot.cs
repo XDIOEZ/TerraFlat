@@ -34,7 +34,7 @@ namespace FlatWorld.WorldModel
     }
 
     /// <summary>
-    /// 地表群系的稳定编号。0—5 与旧版 MapCore 的有序 BiomeData 保持一致，
+    /// 地表群系的稳定编号；已分配的编号不随群系规则排序变化，
     /// 河流、雪地和二维石地山体使用新版扩展编号。
     /// </summary>
     public enum SurfaceBiomeKind

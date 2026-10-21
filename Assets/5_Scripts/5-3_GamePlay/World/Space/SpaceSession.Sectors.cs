@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -151,6 +151,7 @@ namespace FlatWorld.Spaceflight
             foreach (SpaceSectorId sector in sectorStreaming.Required) GetUniverse(sector);
             if (SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.UpdateSectorLeases(this, sectorStreaming.Required);
         }
+        private readonly Dictionary<string, (string World, bool InSpace, uint Revision)> observedNetworkRealms = new(StringComparer.Ordinal);
         public bool TryGetNetworkObserver(string profileId, out SpaceNetworkObserver observer)
         {
             observer = default;
@@ -167,6 +168,14 @@ namespace FlatWorld.Spaceflight
             observer.ShipId = ship?.ShipId;
             observer.WorldKey = observer.InSpace ? SpaceSectorCoordinates.SceneKey(observer.Position.Sector)
                 : flight?.SurfaceWorldKey ?? passenger.LandingWorldKey;
+            if (GameNetwork.HasStateAuthority)
+            {
+                if (observedNetworkRealms.TryGetValue(profileId, out var previous) &&
+                    (previous.World != observer.WorldKey || previous.InSpace != observer.InSpace) && previous.Revision == passenger.RealmRevision)
+                    unchecked { ++passenger.RealmRevision; }
+                observer.RealmRevision = passenger.RealmRevision;
+                observedNetworkRealms[profileId] = (observer.WorldKey, observer.InSpace, observer.RealmRevision);
+            }
             return true;
         }
         #endregion

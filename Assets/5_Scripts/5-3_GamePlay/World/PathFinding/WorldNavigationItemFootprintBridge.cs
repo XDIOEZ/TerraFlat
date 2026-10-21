@@ -95,6 +95,9 @@ internal sealed class WorldNavigationItemFootprintBridge
     {
         if (navigationManager == null || item == null || item.itemData == null)
             return;
+        if (item.gameObject.scene.name != navigationManager.ActiveWorldKey)
+        { Unregister(item); return; }
+        using var worldScope = navigationManager.UseWorldContext();
 
         GameRes gameRes = GameRes.ExistingInstance;
         if (gameRes == null ||
@@ -123,8 +126,12 @@ internal sealed class WorldNavigationItemFootprintBridge
     /// <summary>移动事件只处理已占格物品，并跳过仍在同一根格内的连续位移。</summary>
     private void OnRuntimeItemMoved(Item item)
     {
-        if (navigationManager == null || item == null || !registeredItemIds.Contains(item.GetInstanceID()))
+        if (navigationManager == null || item == null)
             return;
+        if (item.gameObject.scene.name != navigationManager.ActiveWorldKey)
+        { Unregister(item); return; }
+        if (!registeredItemIds.Contains(item.GetInstanceID())) { RegisterOrUpdate(item); return; }
+        using var worldScope = navigationManager.UseWorldContext();
 
         GameRes gameRes = GameRes.ExistingInstance;
         if (item.itemData == null ||
@@ -151,6 +158,7 @@ internal sealed class WorldNavigationItemFootprintBridge
     {
         if (navigationManager == null || item == null)
             return;
+        using var worldScope = navigationManager.UseWorldContext();
 
         int itemId = item.GetInstanceID();
         if (registeredItemIds.Remove(itemId))

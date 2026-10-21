@@ -15,10 +15,12 @@ public sealed class RuntimeTreeHabitatIndex : IDisposable
     private readonly List<Vector2> activePositions = new();
     private float nextRefresh;
     private string snapshotScene;
+    private string ownedWorld;
 
     public void Bind(IEnumerable<Item> items)
     {
         Dispose();
+        ownedWorld = GameplayWorldRegistry.ExecutionWorldKey;
         ItemMgr.RuntimeItemRegistered += Register;
         ItemMgr.RuntimeItemUnregistered += Unregister;
         foreach (Item candidate in items) Register(candidate);
@@ -26,7 +28,8 @@ public sealed class RuntimeTreeHabitatIndex : IDisposable
 
     private void Register(Item candidate)
     {
-        if (candidate != null && candidate.itemData?.Tags != null && candidate.itemData.Tags.ContainsTag(Tag.Tree))
+        if (candidate != null && candidate.gameObject.scene.name == ownedWorld &&
+            candidate.itemData?.Tags != null && candidate.itemData.Tags.ContainsTag(Tag.Tree))
         {
             trees.Add(candidate);
             nextRefresh = 0f;
@@ -66,7 +69,7 @@ public sealed class RuntimeTreeHabitatIndex : IDisposable
             activePositions.Add(tree.transform.position);
         }
         // 资源实体只属于当前活动世界，不能把它们算进其他场景的鸟类容量。
-        if (ItemMgr.Instance?.PlayerInSceneName == sceneName)
+        if (GameplayWorldRegistry.ExecutionWorldKey == sceneName)
             NaturalEntityEcsService.AppendTreeHabitatPositions(activePositions);
         return activePositions;
     }

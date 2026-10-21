@@ -15,9 +15,10 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 ## 地址与切换
 
 - `WorldAddress` 生成键：地表为 `PlanetId`，其他为 `PlanetId__dimension__DimensionId`；各键独享 Planet/Map/Chunk 差量。新维度继承地表拓扑、半径、ChunkSize，运行态独立。
-- 切换顺序：保存 → 退出 Ground/Liquid 接触 → 释放玩家/世界 → 动态 Scene → 目标世界/锚点 → 完整活动窗口、出口/地块效果、物理同步 → 刷新接触 → 解锁输入/恢复奔跑。失败恢复原状态。
-- `Event_PlayerEnterWorld` 只表示玩家已创建；完成信号由 `DimensionManager` 在 `AreRuntimeWindowPresentationsReady` 及收尾后发布。位置/锚点存入 `ItemSpecialData.flatworld.dimensions`。
-- DimensionManager 的完整维度切换仍仅支持离线。联机太空返回仍保留的地表与复活走 SpaceSession.Realm 的服务器状态事务、本机观察呈现；客户端只发重生意图，服务器选出生点并恢复生存状态。未绑定的另一星球地表明确拒绝，不能创建空 Scene 冒充就绪。
+- 单人和联机复用 `DimensionTransitionService` 的权威解析/准备/提交；网络桥只负责远端请求、身份与回执。玩家可独立进出维度，`GameplayWorldRegistry` 按 WorldKey 保留 Scene、ChunkMgr、独立物理和运行态，同步 `UseWorld` 租约不能跨 yield。
+- 个人最后位置保存在 `ItemSpecialData.flatworld.dimensions`；手工锚点、入口状态和天然出口索引属于 `GameSaveData.DimensionStateJson`，多人共享，不扫描其他玩家存档建立配对。权威解析只读预览，准备成功才提交锚点。
+- `ApplyNetworkPresentation` 保留同一个 Player/NetworkIdentity，只锁本机输入；目标完整窗口、出口/地块效果、物理同步就绪后发送 presentation-ready，服务器再放行新 realm 的移动/库存。不能全局 WorldExit、ReleasePlayer、暂停全服或创建空 Scene 冒充就绪；失败不发送 ready，允许后续快照重试呈现。
+- `TryBeginPlanetLanding` 在线仅允许权威本机的内部精确恢复，走 `ExecuteExact` 的世界准备、源 realm 复核和正式归属提交；客户端不能指定任意恢复目标，不能回落旧全局卸载事务。离线太空迁移包装仍走原入口。
 - 矿洞默认抑制天气/怪物，`FixedLighting` 是光照上限。环绕补绘相机的局部 Light2D 使用轻量镜像代理，代理不进入玩法查询。
 
 ## 洞穴与入口

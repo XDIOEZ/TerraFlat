@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -75,9 +75,9 @@ public static partial class MachineWorld
     private static bool KeepSimulatingWithoutPlayers => IsShipScope || scope.BackgroundSimulation;
 
     private static void NotifySurfaceMechanicalChanged(Vector2Int cell)
-    { if (!IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) PublishSurfaceMechanicalChange(cell); }
+    { if (!IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey) PublishSurfaceMechanicalChange(cell); }
     private static void NotifySurfaceCellChanged(Vector2Int cell)
-    { if (!IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) PublishSurfaceCellChange(cell); }
+    { if (!IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey) PublishSurfaceCellChange(cell); }
 
     public static void ReleaseShipScope(string shipId, bool capture = false)
     {
@@ -169,7 +169,7 @@ public static partial class MachineWorld
         using (UseScope(GetShipScopeKey(shipId))) return Remove(id);
     }
     public static ScopeLease UseNodeScope(MachineEntity node)
-        => UseScope(node?.ScopeKey ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        => UseScope(node?.ScopeKey ?? GameplayWorldRegistry.ExecutionWorldKey);
 
     public static void TransferShipNode(string fromShip, string toShip, int id)
         => TransferShipNodes(fromShip, toShip, new[] { id });
@@ -248,7 +248,7 @@ public static partial class MachineWorld
                 MachineEntity occupant = graph.At(cell, node.Definition.Layer);
                 if (occupant != null && !(sameScope && identities.Contains(occupant.Id)))
                     throw new InvalidOperationException("机器转移落点的机械层已经占用：" + cell);
-                if (!sameScope && !IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name &&
+                if (!sameScope && !IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey &&
                     BuildingOccupancyRegistry.IsOccupiedNormalized(cell, layer: node.Definition.Layer))
                     throw new InvalidOperationException("机器转移落点的建筑层已经占用：" + cell);
             }

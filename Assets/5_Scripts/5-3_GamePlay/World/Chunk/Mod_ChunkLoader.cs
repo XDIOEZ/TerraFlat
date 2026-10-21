@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
@@ -186,17 +186,8 @@ public class Mod_ChunkLoader : Module
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (!CanStreamSurface || chunkManager == null)
             return false;
-        if (!_externalStreamingManaged)
-            return chunkManager.TryGetRuntimeWindowBounds(transform.position, out activeBounds, out presentationBounds,
-                usePresentedBounds: true);
-
-        // 旧联机流送只保证活动窗的画面，不把数据预取圈误当成可见地形。
-        Vector2Int chunkSize = Vector2Int.RoundToInt(ChunkMgr.GetChunkSize());
-        Vector2 logicalPosition = WorldLocalPresentation.ToLogical((Vector2)transform.position);
-        Vector2Int origin = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(logicalPosition, chunkSize));
-        Rect logicalBounds = ChunkMgr.CalculateRuntimeWindowBounds(origin, chunkSize, CurrentLoadChunkDistanceXY);
-        activeBounds = presentationBounds = ChunkMgr.ProjectRuntimeWindowBounds(logicalBounds, transform.position);
-        return true;
+        return chunkManager.TryGetRuntimeWindowBounds(transform.position,
+            out activeBounds, out presentationBounds, usePresentedBounds: true);
     }
 
     /// <summary>
@@ -326,6 +317,11 @@ public class Mod_ChunkLoader : Module
     private void UpdateChunks(Vector2? eventCenter = null)
     {
         if (!CanStreamSurface) return;
+        if (_externalStreamingManaged)
+        {
+            FlatWorld.Spaceflight.SpaceNetworkBridge.RequestGroundStreamingRefresh();
+            return;
+        }
         ChunkMgr chunkManager = ChunkMgr.Instance;
         if (chunkManager == null) return;
         Vector2 center = eventCenter ?? transform.position;
@@ -365,6 +361,8 @@ public class Mod_ChunkLoader : Module
         DestroyChunkDistance = UnActiveDistance + destroyMargin;
         ResetEffectiveDistancesFromConfig();
         needsChunkUpdate = true;
+        if (_externalStreamingManaged)
+            FlatWorld.Spaceflight.SpaceNetworkBridge.RequestGroundStreamingRefresh();
     }
 
     /// <summary>从持久化配置初始化对称流送窗口。</summary>

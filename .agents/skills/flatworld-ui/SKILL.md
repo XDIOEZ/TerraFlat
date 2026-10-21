@@ -30,6 +30,8 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 背包、手工制作、普通库存与机器窗口统一调用 `BasePanel.PrepareForGameplayWindow`：可并行，参与置顶/导航/取消链、允许窗口外手持丢弃，不持玩法锁；按键开关统一经 `Mod_GameController.CanToggleGameplayWindow`，打开时服从硬锁与模态阻断，不按背包类型或手机抽屉放行。库存/加工/容器背景输入透明，只有槽位、按钮与拖放/手势区命中，`UIWindowDragSurface` 命中标题/窄边框。快捷栏随 PanelRoot 排序；手机模态拖放由独立 Canvas 临时提升。
 - `BasePanel.SetHeldItemWorldDropAllowed` 声明窗口外手持丢弃能力；普通玩法窗口不登记锁 Owner，确有输入锁的专用面板才传入自身 Owner。`UIManager` 同轮面板缓存汇总所有阻断窗口、兼容锁与实际窗口矩形（优先 `UIWindowDragSurface.WindowRect`）。任一未授权阻断窗口/未知锁继续阻断，实际窗口内部透明空白也不能作为世界落点。
 - 手机菜单/返回位于独立常驻层，返回顺序为顶层可取消面板→抽屉→设置。主菜单 CancelShortcutOverride 打开退出确认；嵌套危险确认先消费取消。存档删除统一由 `SaveDataManager_UI` 确认层提交并锁定目标身份。
+- `FlatWorldUI/Cancel` 为唯一返回输入入口，`EventSystemGuard.CancelRequested` 提供玩法处理；设置模块不额外订阅 Win10/ESC。`BasePanel.OnCancel` 必须检查同帧消费，关闭设置本身也走 CancelShortcutOverride，避免跳过未保存确认或一次返回连关两层。
+- 手柄 UI 临时停用只解绑活动动作，保留最新玩家输入资产；`OnEnable` 恢复返回与确认，停用期间 `Configure` 的替换/撤销延后到恢复生效，已销毁资产不得重新接入。回归 `ui_settings/gamepad_input_reenable`。
 - 文本通过 FlatWorldUI 表与 GetUiText/GetUiFormat，节点名不翻译；手柄焦点限定顶层面板，TMP 输入确认后进入虚拟键盘。鼠标按下焦点与列表业务选中状态分离，完整点击才提交选择。
 - 面板可能先于模块销毁，Unity `!= null` 判断存活；即使面板已销毁仍释放锁/快捷转移引用。场景卸载清理失效注册并刷新交互缓存；输入查询覆盖当前场景与常驻根。资源重载清空两类根下的运行时 UI 与注册缓存，保留 UIRoot/SafeAreaRoot，再由当前 GameRes/Player 重建。
 - 库存、快捷栏与手部面板随所属模块卸载调用 `Inventory.ReleaseRuntimePanel`，同时注销 `UIManager` 注册；仅解除输入与数据绑定不会自动销毁跨场景面板。
@@ -79,6 +81,8 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 普通合成使用 `Gameplay/Crafting/UI_HandCraftTable/UI_MakerTable.prefab`，参考尺寸 1344×756；安全区适配后的表现比例为手工制作 0.6、制作台 0.8，Prefab、GameUIPrefabRebuilder 和 TodoCraftingLayoutPreview 同步维护；正式输入/输出/配方模板按真实容量复用。工业流体/宇航服/气罐使用 MechanicalPanelView 与 PreservePrefabLayout，宇航服入口共用 SpacesuitPanelSession 的真实供氧槽。
 - 装备页只保留 `FWUI_ConfigureEquipment` 通用入口，由 `EquipmentConfigurationButton` 收集可配置装备；一件直接打开，多件用公共下拉选择，没有则禁用。`Mod_Equipment` 只通过 `IEquipmentConfiguration` 分发并复核当前装备身份，具体装备效果拥有配置页面；不在装备 UI 或工业面板重建中添加具体装备分支。
 - 飞船 ShipPanelSession 的命令行/按钮共用执行入口，反馈历史有上限，查看历史不被消息置底。FuelInteraction 仅绑定通用模块，标题来自定义。任务/教程阅读入口为书籍/UI_ReadableBook。
+- 飞船命令提交后的键盘焦点恢复按玩家 `PreferredInputDevice.KeyboardMouse` 判断，不按移动平台排除手机外接键盘。
+- 地面飞船点火经 `ShipGroundAssembly.RequestLaunch` 统一请求权威事务；普通机器删除到船体快照到达期间保留控制台面板，收到服务端成功与同次船体/乘员状态后才切换船控和驾驶反馈。GM 生成/补给经 `ShipFixedStructureBuilder.RequestBuild/RequestRefill`，发包成功不表示生成成功。
 - 飞船起降高度尺由 PlayerShipFlightHUD 读取 SpaceSession 的只读快照和正式落地凭证，独立 UI_ShipFlightHUD 与构建器同步；纯展示 Tracker 处理驾驶/退出/重进/完成短提示，正高度不舍入为零，SafeAreaRoot 中避开坐标、Buff 与实际手机摇杆。
 - PlayerWorldCoordinateHUD 地表读取 WorldLocalPresentation 逻辑坐标，太空读取乘员双精度宇宙位置（支撑船姿态 + 本地位置 / FreeMotion），显示千米与米级精度，不随 ViewOrigin 改变；坐标行宽 560、下方温度/气压与季节行独立。环境温度采样独立于移动、显示按最终精度去重；FoodUIModule 仅为 IsLocalProfile 玩家持有角色 HUD。PlayerBuffStatusHUD 重建容器时清旧行缓存，玩家卸载期间撤绑定，不由 Buff 清理回调重建视图；Buff 列表使用 SafeAreaRoot，最多显示六行，溢出时仅视口可滚动；`状态图标` 同步读取目录预载 Sprite，缺图显示名称首字，与底板和层数徽标独立。
 - MOD 条目拖拽由共同父节点接收，来源为文件夹身份；跨页行复用保留来源，预览/落点线输入透明，关闭取消。

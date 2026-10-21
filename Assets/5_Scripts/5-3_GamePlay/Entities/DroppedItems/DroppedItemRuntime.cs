@@ -217,6 +217,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     /// <summary>放置、拆除或转速改变时只检查这个格附近的空间桶，静止地面物不逐帧查带。</summary>
     private void RefreshTransportCell(Vector2Int cell)
     {
+        if (MachineWorld.WorldKey != matterWorldKey) return;
         Vector2 center = (Vector2)cell + Vector2.one * .5f;
         if (!spatial.TryGetValue(SpatialCell(center), out HashSet<int> bucket)) return;
         foreach (int id in bucket)

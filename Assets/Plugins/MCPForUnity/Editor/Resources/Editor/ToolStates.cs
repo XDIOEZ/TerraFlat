@@ -18,7 +18,7 @@ namespace MCPForUnity.Editor.Resources.Editor
             try
             {
                 var discovery = MCPServiceLocator.ToolDiscovery;
-                var allTools = discovery.DiscoverAllTools();
+                var allTools = discovery.DiscoverAllTools().Where(tool => tool.Discoverable).ToList();
 
                 var toolsArray = new JArray();
                 foreach (var tool in allTools)

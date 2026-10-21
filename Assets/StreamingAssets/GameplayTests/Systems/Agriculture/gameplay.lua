@@ -1,5 +1,28 @@
 -- 采样使用附近合格空格执行正式耕作与灌溉，返回前恢复现场，因此只做数据断言。
 test.check("player_ready", "农业现场测试玩家就绪")
+test.runtime("agriculture", "crop_visual_reenable", {}, function(data)
+    local function same(a, b, label)
+        assert(math.abs(a.scaleX - b.scaleX) < .00001 and math.abs(a.scaleY - b.scaleY) < .00001
+            and a.sprite == b.sprite and a.material == b.material and a.clip == b.clip, label)
+    end
+    assert(#data.samples == 2, "缺少连续缩放或阶段图作物样本")
+    for _, row in ipairs(data.samples) do
+        local expectedScale = row.discrete and 1 or .25
+        assert(math.abs(row.initial.scaleX - expectedScale) < .00001 and row.initial.clip == .5,
+            row.id .. "首次激活时重复捕获了已修改的外壳基线")
+        same(row.disabled, row.whileDisabled, row.id .. "停用后仍响应成长事件")
+        assert(row.restored.sprite == row.matureSprite and row.restored.clip == .5
+            and row.restored.material == row.initial.material
+            and math.abs(row.restored.scaleX - 1) < .00001,
+            row.id .. "恢复后未显示停用期间更新的成熟状态")
+        same(row.initial, row.afterGrowthEvent, row.id .. "恢复后未重新监听成长事件")
+        same(row.initial, row.repeated, row.id .. "多次启停累计改变了缩放或原始图片")
+        assert(row.generation == row.restoredGeneration, "临时恢复不应重新加载模块")
+        same(row.disabled, row.unloaded, row.id .. "卸载未恢复原始外壳")
+        same(row.unloaded, row.afterUnloadEnable, row.id .. "正式卸载后被重新启用偷偷恢复表现")
+        assert(not row.loadedAfterUnloadEnable, "正式卸载后改变了模块加载状态")
+    end
+end, "农作物表现停用恢复：当前成长、事件恢复、基线与正式卸载")
 test.runtime("agriculture", "tillage_irrigation", {}, function(data)
     assert(data.scope == "live-isolated-world", "农业测试没有进入隔离世界")
     assert(data.partialAccepted and not data.partialCompleted and data.partialGroundPreserved,

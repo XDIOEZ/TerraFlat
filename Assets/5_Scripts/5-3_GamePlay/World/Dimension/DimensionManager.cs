@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using FastCloner;
@@ -9,7 +9,7 @@ using RuntimeChunk = FlatWorld.WorldModel.ChunkRuntime;
 using TerrainCell = FlatWorld.WorldModel.TerrainCell;
 using TerrainCellFlags = FlatWorld.WorldModel.TerrainCellFlags;
 
-public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
+public sealed partial class DimensionManager : SingletonAutoMono<DimensionManager>
 {
     private const string DefaultCatalogResourcePath = "Config/DimensionCatalog_Default";
     private const string CaveExitPrefabId = "CaveExit";
@@ -17,10 +17,21 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     [SerializeField] private DimensionCatalogSO catalog;
 
     private bool isTransitioning;
+    private bool networkTransitionPending;
 
-    public WorldAddress ActiveAddress { get; private set; }
-    public DimensionDefinition ActiveDefinition { get; private set; }
-    public bool IsTransitioning => isTransitioning;
+    private WorldAddress localAddress;
+    private DimensionDefinition localDefinition;
+    public WorldAddress ActiveAddress
+    {
+        get => GameplayWorldRegistry.HasExecutionContext ? WorldAddress.FromWorldKey(GameplayWorldRegistry.ExecutionWorldKey) : localAddress;
+        private set => localAddress = value;
+    }
+    public DimensionDefinition ActiveDefinition
+    {
+        get => GameplayWorldRegistry.HasExecutionContext && TryGetDefinition(ActiveAddress.DimensionId, out DimensionDefinition definition) ? definition : localDefinition;
+        private set => localDefinition = value;
+    }
+    public bool IsTransitioning => isTransitioning || networkTransitionPending;
     public static DimensionManager ExistingInstance => instance;
 
     protected override void Awake()
@@ -67,15 +78,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         LoadCatalog();
         definition = catalog?.Find(dimensionId);
         return definition != null;
-    }
-
-    public string GetActiveMapCorePrefabId()
-    {
-#pragma warning disable 0618 // 旧 ChunkMgr 兼容路径仍需读取旧 MapCore 配置；新版 WorldModel 不使用该入口。
-        return string.IsNullOrWhiteSpace(ActiveDefinition?.MapCorePrefabId)
-            ? "MapCore"
-            : ActiveDefinition.MapCorePrefabId;
-#pragma warning restore 0618
     }
 
     public ChunkGenerationProfileSO GetActiveGenerationProfile()
@@ -157,76 +159,36 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         Vector3 targetPosition,
         Action preparePlayerForSave)
     {
-        if (isTransitioning || player == null || player != ItemMgr.Instance?.User_Player ||
-            preparePlayerForSave == null)
-        {
-            return false;
-        }
-
-        if (GameNetwork.IsOnline)
-        {
-            Debug.LogWarning("[DimensionManager] 当前联机版本暂不支持跨维度重生。");
-            return false;
-        }
-
-        // 太空场景保留最近地表地址，重生必须以实际场景判断是否需要跨世界。
-        WorldAddress sourceAddress = !SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name) && ActiveAddress.IsValid
-            ? ActiveAddress
-            : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
-        if (!targetAddress.IsValid || !targetAddress.IsSurface || targetAddress == sourceAddress ||
-            !IsFinitePosition(targetPosition))
-        {
-            return false;
-        }
-
-        LoadCatalog();
-        DimensionDefinition targetDefinition = catalog.Find(targetAddress.DimensionId);
-        if (targetDefinition == null)
-        {
-            Debug.LogError($"[DimensionManager] 未注册重生目标维度：{targetAddress.DimensionId}");
-            return false;
-        }
-
-        if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition))
-            return false;
-
-        try
-        {
-            // StartCoroutine 会同步运行到首个 yield；必须先恢复生命等权威数据，
-            // 否则 ExecuteTransitionCoroutine 的首次 SavePlayer 会把死亡状态写回存档。
-            preparePlayerForSave();
-        }
-        catch (Exception exception)
-        {
-            GameManager.Instance.FailDimensionTransitionLoading(
-                "跨维度重生前恢复玩家状态失败。",
-                exception);
-            return false;
-        }
-
-        PortalTransitionContext respawnContext = new PortalTransitionContext
-        {
-            TargetPortalPosition = new Vector3(targetPosition.x, targetPosition.y, 0f),
-            UseExactTargetPosition = true
-        };
-        StartCoroutine(TransitionCoroutine(
-            player,
-            sourceAddress,
-            targetAddress,
-            targetDefinition,
-            respawnContext));
-        return true;
+        if (player == null || player != ItemMgr.Instance?.User_Player || preparePlayerForSave == null) return false;
+        return NetworkDimensionBridge.RequestRespawn(player, targetAddress, targetPosition, preparePlayerForSave);
     }
 
     #region 星球落地事务
     public bool TryBeginPlanetLanding(Player player, WorldAddress targetAddress, Vector2 position)
     {
-        if (isTransitioning || player == null || player != ItemMgr.Instance?.User_Player ||
-            !targetAddress.IsValid || !targetAddress.IsSurface || !IsFinitePosition(position)) return false;
+        if (IsTransitioning || player == null || player != ItemMgr.Instance?.User_Player ||
+            !targetAddress.IsValid || !IsFinitePosition(position)) return false;
         LoadCatalog();
-        DimensionDefinition definition = catalog.Find(targetAddress.DimensionId);
         bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
-        if (definition == null || !(toSpace ? GameManager.Instance.BeginSpaceTransitionLoading() : GameManager.Instance.BeginDimensionTransitionLoading(definition))) return false;
+        DimensionDefinition definition = catalog.Find(targetAddress.DimensionId);
+        if (definition == null) return false;
+        if (GameNetwork.IsOnline)
+        {
+            // 联机恢复只迁移本机权威角色，禁止落入旧的全世界退出和重建事务。
+            if (toSpace || !GameNetwork.HasStateAuthority) return false;
+            networkTransitionPending = true;
+            bool replied = false, acceptedReply = false;
+            bool sent = NetworkDimensionBridge.RequestExactLocal(player, targetAddress, position, (accepted, reason) =>
+            {
+                replied = true; acceptedReply = accepted;
+                if (!accepted || !isTransitioning && localAddress == targetAddress) networkTransitionPending = false;
+                if (!accepted && !string.IsNullOrWhiteSpace(reason)) Debug.LogWarning("[维度恢复] " + reason, this);
+            });
+            if (!sent) networkTransitionPending = false;
+            return sent && (!replied || acceptedReply);
+        }
+        if (!targetAddress.IsSurface ||
+            !(toSpace ? GameManager.Instance.BeginSpaceTransitionLoading() : GameManager.Instance.BeginDimensionTransitionLoading(definition))) return false;
         var context = new PortalTransitionContext { TargetPortalPosition = position, UseExactTargetPosition = true };
         StartCoroutine(TransitionCoroutine(player, WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name),
             targetAddress, definition, context));
@@ -237,52 +199,28 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     private bool TryBeginTransitionInternal(Player player, string targetDimensionId,
         Item sourcePortalItem, bool generatedWorldPortal)
     {
-        if (isTransitioning || player == null || player != ItemMgr.Instance?.User_Player)
-            return false;
+        if (IsTransitioning || player == null || player != ItemMgr.Instance?.User_Player || sourcePortalItem?.itemData == null ||
+            !TryGetDefinition(targetDimensionId, out _)) return false;
+        WorldAddress source = WorldAddress.FromWorldKey(player.gameObject.scene.name);
+        if (!source.IsValid || source.DimensionId == targetDimensionId) return false;
+        Mod_DimensionPortal portal = sourcePortalItem.GetComponentInChildren<Mod_DimensionPortal>(true);
+        if (portal == null || !portal.ValidateNetworkTransition(player, source, targetDimensionId, generatedWorldPortal)) return false;
 
-        if (GameNetwork.IsOnline)
-        {
-            Debug.LogWarning("[DimensionManager] 当前联机版本暂不支持维度切换。");
-            return false;
-        }
-
-        WorldAddress sourceAddress = ActiveAddress.IsValid
-            ? ActiveAddress
-            : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
-        WorldAddress targetAddress = sourceAddress.WithDimension(targetDimensionId);
-        if (!targetAddress.IsValid || targetAddress == sourceAddress)
-            return false;
-
-        LoadCatalog();
-        DimensionDefinition targetDefinition = catalog.Find(targetAddress.DimensionId);
-        if (targetDefinition == null)
-        {
-            Debug.LogError($"[DimensionManager] 未注册目标维度：{targetAddress.DimensionId}");
-            return false;
-        }
-
-        if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition))
-            return false;
-
-        PortalTransitionContext portalContext = generatedWorldPortal
-            ? ResolveGeneratedPortalTransition(sourcePortalItem)
-            : ResolvePortalTransition(
-                player.Data,
-                sourceAddress,
-                targetAddress,
-                targetDefinition,
-                sourcePortalItem);
-        if (portalContext == null &&
-            (generatedWorldPortal || IsMinePortalTransition(sourceAddress, targetAddress)))
-        {
-            GameManager.Instance.FailDimensionTransitionLoading(
-                generatedWorldPortal ? "天然矿洞入口位置无效，无法切换维度。" :
-                "矿坑入口锚点无效，无法切换维度。", null);
-            return false;
-        }
-
-        StartCoroutine(TransitionCoroutine(player, sourceAddress, targetAddress, targetDefinition, portalContext));
-        return true;
+        // 请求等待也是迁移的一部分，不能在服务器准备目标期间再启动第二次请求。
+        networkTransitionPending = true;
+        bool replied = false, acceptedReply = false;
+        bool sent = NetworkDimensionBridge.RequestTransition(player, targetDimensionId,
+            sourcePortalItem.itemData.Guid, generatedWorldPortal,
+            (accepted, reason) =>
+            {
+                replied = true; acceptedReply = accepted;
+                portal?.CancelNetworkTransitionRequest();
+                if (accepted) return;
+                networkTransitionPending = false;
+                if (!string.IsNullOrWhiteSpace(reason)) Debug.LogWarning("[维度切换] " + reason, this);
+            });
+        if (!sent) networkTransitionPending = false;
+        return sent && (!replied || acceptedReply);
     }
 
     public void EnsureWorldData(WorldAddress address)
@@ -592,16 +530,17 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
         DimensionDefinition targetDefinition,
-        Item sourcePortalItem)
+        Item sourcePortalItem,
+        bool commitAnchor = true)
     {
         if (sourceAddress.IsSurface && targetAddress.DimensionId == WorldAddress.CaveDimensionId)
         {
             DimensionPortalAnchor anchor = DimensionTravelProgressStore.GetOrCreateCaveAnchor(
-                playerData,
+                SaveDataMgr.Instance.SaveData,
                 sourceAddress,
                 sourcePortalItem,
                 targetAddress,
-                targetDefinition);
+                targetDefinition, commitAnchor);
             return anchor == null
                 ? null
                 : new PortalTransitionContext
@@ -615,7 +554,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (sourceAddress.DimensionId == WorldAddress.CaveDimensionId && targetAddress.IsSurface)
         {
             if (!DimensionTravelProgressStore.TryGetAnchorByCaveExit(
-                    playerData,
+                    SaveDataMgr.Instance.SaveData,
                     sourceAddress,
                     sourcePortalItem,
                     out DimensionPortalAnchor anchor))
@@ -638,7 +577,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     {
         if (sourcePortalItem == null)
             return null;
-        Vector3 position = sourcePortalItem.transform.position;
+        Vector3 position = WorldLocalPresentation.ToLogical(sourcePortalItem.transform.position);
         if (float.IsNaN(position.x) || float.IsInfinity(position.x) ||
             float.IsNaN(position.y) || float.IsInfinity(position.y) ||
             float.IsNaN(position.z) || float.IsInfinity(position.z))
@@ -743,62 +682,49 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     }
 
     private static IEnumerator EnsureCaveExitCoroutine(
-        Data_Player playerData,
-        Player targetPlayer,
-        DimensionDefinition targetDefinition,
+        Data_Player playerData, Player targetPlayer, DimensionDefinition targetDefinition,
         PortalTransitionContext portalContext)
     {
-        Vector3 desiredPosition = portalContext.TargetPortalPosition;
-        EnsureCaveExitArea(desiredPosition);
-
-        ItemMgr itemManager = ItemMgr.Instance;
-        Item caveExit = itemManager.GetItemByGuid(portalContext.Anchor.CaveExitGuid);
-        if (caveExit != null && caveExit.itemData?.IDName != CaveExitPrefabId)
-        {
-            throw new InvalidOperationException(
-                $"矿洞出口 GUID 冲突：{portalContext.Anchor.CaveExitGuid} 已被 {caveExit.itemData?.IDName} 占用。");
-        }
-
-        if (caveExit == null)
-        {
-            caveExit = itemManager.InstantiateItemDeterministic(
-                CaveExitPrefabId,
-                portalContext.Anchor.CaveExitGuid,
-                desiredPosition,
-                Quaternion.identity,
-                Vector3.one,
-                parent: null);
-            if (caveExit == null)
-                throw new InvalidOperationException("无法在目标维度创建 CaveExit。");
-
-            caveExit.Load();
-        }
-        else if (!caveExit.IsInitialized)
-        {
-            caveExit.Load();
-        }
-
-        // 手工矿洞入口对应的出口属于本次洞穴场景运行态，不再挂到旧 Chunk/MapCore。
-        caveExit.transform.SetParent(null, true);
-        Scene activeScene = SceneManager.GetActiveScene();
-        if (caveExit.gameObject.scene != activeScene)
-            SceneManager.MoveGameObjectToScene(caveExit.gameObject, activeScene);
-        caveExit.transform.SetPositionAndRotation(desiredPosition, Quaternion.identity);
-        caveExit.transform.localScale = Vector3.one;
-        caveExit.itemData.transform.position = desiredPosition;
-        caveExit.itemData.transform.rotation = Quaternion.identity;
-        caveExit.itemData.transform.scale = Vector3.one;
-        caveExit.itemData.Stack.CanBePickedUp = false;
-        itemManager.NotifyRuntimeItemMoved(caveExit);
-
-        portalContext.TargetPortalPosition = caveExit.transform.position;
-        DimensionTravelProgressStore.UpdateCaveExit(playerData, portalContext.Anchor, caveExit);
-        Vector3 safePosition = portalContext.TargetPortalPosition + targetDefinition.PortalOffset;
-        targetPlayer.transform.position = safePosition;
+        Vector3 safePosition = EnsureCaveExitForWorld(portalContext, targetDefinition, SceneManager.GetActiveScene());
+        targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(safePosition);
         targetPlayer.Data.transform.position = safePosition;
         playerData.transform.position = safePosition;
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[targetPlayer.ProfileName] = playerData;
         yield break;
+    }
+
+    // 出口归目标世界所有，准备出口不会移动任何玩家或改变主机活动场景。
+    private static Vector3 EnsureCaveExitForWorld(PortalTransitionContext context,
+        DimensionDefinition definition, Scene targetScene)
+    {
+        if (context?.Anchor == null || !targetScene.IsValid() || !targetScene.isLoaded ||
+            targetScene.name != context.Anchor.CaveWorldKey)
+            throw new InvalidOperationException("矿洞出口的目标世界不匹配。");
+        Vector3 desiredPosition = context.TargetPortalPosition;
+        EnsureCaveExitArea(desiredPosition);
+        ItemMgr manager = ItemMgr.Instance;
+        Item exit = manager.GetItemByGuid(context.Anchor.CaveExitGuid);
+        if (exit != null && (exit.itemData?.IDName != CaveExitPrefabId || exit.gameObject.scene != targetScene))
+            throw new InvalidOperationException($"矿洞出口 GUID 冲突：{context.Anchor.CaveExitGuid}。");
+        if (exit == null)
+        {
+            exit = manager.InstantiateItemDeterministic(CaveExitPrefabId, context.Anchor.CaveExitGuid,
+                WorldLocalPresentation.ProjectPosition(desiredPosition), Quaternion.identity, Vector3.one);
+            if (exit == null) throw new InvalidOperationException("无法在目标维度创建 CaveExit。");
+        }
+        exit.transform.SetParent(null, true);
+        if (exit.gameObject.scene != targetScene) SceneManager.MoveGameObjectToScene(exit.gameObject, targetScene);
+        exit.transform.SetPositionAndRotation(WorldLocalPresentation.ProjectPosition(desiredPosition), Quaternion.identity);
+        exit.transform.localScale = Vector3.one;
+        exit.itemData.transform.position = desiredPosition;
+        exit.itemData.transform.rotation = Quaternion.identity;
+        exit.itemData.transform.scale = Vector3.one;
+        exit.itemData.Stack.CanBePickedUp = false;
+        if (!exit.IsInitialized) exit.Load();
+        manager.NotifyRuntimeItemMoved(exit);
+        context.TargetPortalPosition = desiredPosition;
+        DimensionTravelProgressStore.UpdateCaveExit(SaveDataMgr.Instance.SaveData, context.Anchor, exit);
+        return desiredPosition + definition.PortalOffset;
     }
 
     /// <summary>

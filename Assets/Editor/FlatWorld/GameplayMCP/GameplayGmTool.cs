@@ -17,7 +17,7 @@ namespace FlatWorld.GameplayMCP
     [McpForUnityTool(
         "gameplay_gm",
         Description = "Execute one explicitly whitelisted FlatWorld GM command for the current local player. Call gameplay_capabilities first for the command list. To enable invincibility directly without opening the GM UI, use command=enable_invincibility; it enables administrator mode if needed and then enables runtime invincibility. Requires an active game world and the GamePlayMCP control lease. This is not arbitrary reflection or console execution.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplayGmTool
     {
         #region 统一输入输出

@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 
 public readonly struct WeatherStateSnapshot
 {
+    public readonly string WorldKey;
     public readonly string PlanetName;
     public readonly WeatherType Weather;
     public readonly WeatherPhase Phase;
@@ -17,8 +18,9 @@ public readonly struct WeatherStateSnapshot
     public readonly int EventSequence;
     public readonly int DataVersion;
 
-    public WeatherStateSnapshot(string planetName, PlanetData planetData)
+    public WeatherStateSnapshot(string planetName, PlanetData planetData, string worldKey = null)
     {
+        WorldKey = worldKey ?? GameplayWorldRegistry.ExecutionWorldKey;
         PlanetName = planetName ?? string.Empty;
         Weather = planetData != null ? planetData.CurrentWeather : WeatherType.Clear;
         Phase = planetData != null ? planetData.WeatherPhase : WeatherPhase.Clear;
@@ -71,7 +73,7 @@ public partial class WeatherMgr
     public WeatherStateSnapshot CaptureWeatherState()
     {
         PlanetData planetData = GetActivePlanetData();
-        return new WeatherStateSnapshot(planetData?.Name, planetData);
+        return new WeatherStateSnapshot(planetData?.Name, planetData, ownedWorld);
     }
 
 #endregion
@@ -81,13 +83,13 @@ public partial class WeatherMgr
     private void ActivateWeatherEventSystem()
     {
         SubscribeTimeSystem();
-        ActivateWeatherAudio();
+        if (IsLocalWeatherWorld) ActivateWeatherAudio();
         PlanetData planetData = GetActivePlanetData();
         if (planetData == null)
             return;
 
         PrepareRegionalContext();
-        lightningEffect?.Initialize(this);
+        if (IsLocalWeatherWorld) lightningEffect?.Initialize(this);
         AdvanceRegionalWeather();
         NormalizeData(planetData);
     }
@@ -98,6 +100,7 @@ public partial class WeatherMgr
         AdvanceRegionalWeather();
         MaintainWindPushField();
         MaintainSurfaceWork();
+        if (!IsLocalWeatherWorld) return;
         UpdateLocalWeatherProjection();
         MaintainWeatherPresentation(Time.deltaTime);
         RefreshWeatherFeedbackIfChanged();
@@ -110,8 +113,8 @@ public partial class WeatherMgr
         FlushSurfaceWork();
         PersistRegionalStates();
         lightningEffect?.Shutdown();
-        LightningStrikeSystem.Reset();
-        DeactivateWeatherFeedback();
+        LightningStrikeSystem.Reset(ownedWorld);
+        if (presentationActive) DeactivateWeatherFeedback();
     }
 
     private void SubscribeTimeSystem()
@@ -135,7 +138,8 @@ public partial class WeatherMgr
 
     private void HandleTimeAdvanced(string sceneName, float oldTotalTime, float newTotalTime)
     {
-        if (!GameNetwork.HasStateAuthority || !IsRelevantTimeSource(sceneName))
+        using var worldScope = EnterOwnedWorld();
+        if (!_weatherRuntimeAllowed || !GameNetwork.HasStateAuthority || !IsRelevantTimeSource(sceneName))
             return;
 
         AdvanceRegionalWeather();
@@ -144,8 +148,7 @@ public partial class WeatherMgr
     private bool IsRelevantTimeSource(string sceneName)
     {
         DayTimeSystem timeSystem = DayTimeSystem.Instance;
-        string activeSceneName = timeSystem != null
-            ? timeSystem.GetCurrentActiveSceneName() : SceneManager.GetActiveScene().name;
+        string activeSceneName = ownedWorld;
         if (string.Equals(sceneName, activeSceneName, StringComparison.Ordinal))
             return true;
 
@@ -177,12 +180,12 @@ public partial class WeatherMgr
             : 1440f;
     }
 
-    private static bool TryGetCurrentTimeData(out TimeData timeData)
+    private bool TryGetCurrentTimeData(out TimeData timeData)
     {
         timeData = null;
         DayTimeSystem timeSystem = DayTimeSystem.Instance;
         return timeSystem != null &&
-               timeSystem.TryGetResolvedTimeData(timeSystem.GetCurrentActiveSceneName(), out _, out timeData) &&
+               timeSystem.TryGetResolvedTimeData(ownedWorld, out _, out timeData) &&
                timeData != null;
     }
 
@@ -296,6 +299,7 @@ public partial class WeatherMgr
 
     private void RefreshWeatherFeedback()
     {
+        if (!presentationActive || !IsLocalWeatherWorld) return;
         RefreshRainEffect();
         RefreshWindFeedback();
         _lastFeedbackWeather = GetCurrentWeather();
