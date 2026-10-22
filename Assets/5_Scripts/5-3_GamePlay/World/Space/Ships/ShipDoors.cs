@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
+using FlatWorld.Audio;
 using UnityEngine;
 
 namespace FlatWorld.Spaceflight
@@ -84,6 +85,8 @@ namespace FlatWorld.Spaceflight
             {
                 doorOpen = boundPiece.DoorOpen;
                 doorVisual.SetOpen(boundPiece.DoorOpen);
+                AudioService.Instance?.PlayAt(boundPiece.DoorOpen ? AudioEventIds.DoorOpen : AudioEventIds.DoorClose,
+                    visual.transform.position);
             }
             doorVisual.Advance(Time.deltaTime);
         }

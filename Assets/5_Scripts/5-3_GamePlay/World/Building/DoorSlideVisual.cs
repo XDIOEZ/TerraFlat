@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>地面门和船上门共用双扇滑动表现，通行状态仍由各自业务控制。</summary>
 public sealed class DoorSlideVisual : IDisposable
@@ -12,11 +13,20 @@ public sealed class DoorSlideVisual : IDisposable
     private readonly bool sourceEnabled;
     private float target, progress;
     private bool dirty = true;
+    private readonly SortingGroup group;
+    private readonly bool ownsGroup;
+    private readonly int originalGroupLayer, originalGroupOrder;
+    private readonly bool originalGroupEnabled;
     public float Progress => progress;
 
     public DoorSlideVisual(SpriteRenderer renderer, bool open)
     {
         source = renderer;
+        group = renderer.GetComponent<SortingGroup>();
+        if (group == null) { group = renderer.gameObject.AddComponent<SortingGroup>(); ownsGroup = true; }
+        originalGroupLayer = group.sortingLayerID;
+        originalGroupOrder = group.sortingOrder;
+        originalGroupEnabled = group.enabled;
         sourceEnabled = renderer.enabled;
         Sprite sprite = renderer.sprite;
         Rect rect = sprite.rect;
@@ -50,6 +60,11 @@ public sealed class DoorSlideVisual : IDisposable
     public bool Advance(float deltaTime)
     {
         if (source == null) return false;
+        // 两扇门用同一脚点排序，滑向两侧时都盖在相邻墙面上。
+        if (!group.enabled) group.enabled = true;
+        if (group.sortingLayerID != source.sortingLayerID) group.sortingLayerID = source.sortingLayerID;
+        int order = Mathf.Min(short.MaxValue, source.sortingOrder + 1);
+        if (group.sortingOrder != order) group.sortingOrder = order;
         bool moving = progress != target;
         if (!dirty && !moving && !source.enabled && leaves[0].sharedMaterial == source.sharedMaterial &&
             leaves[0].color == source.color && leaves[0].sortingLayerID == source.sortingLayerID &&
@@ -81,6 +96,16 @@ public sealed class DoorSlideVisual : IDisposable
                 Release(leaf.gameObject);
             }
         if (source != null) source.enabled = sourceEnabled;
+        if (group != null)
+        {
+            if (ownsGroup) { group.enabled = false; Release(group); }
+            else
+            {
+                group.sortingLayerID = originalGroupLayer;
+                group.sortingOrder = originalGroupOrder;
+                group.enabled = originalGroupEnabled;
+            }
+        }
     }
 
     private static void Release(UnityEngine.Object value)
