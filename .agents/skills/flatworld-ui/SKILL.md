@@ -81,7 +81,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 气罐在 `UI_IndustrialFluid/UI_FluidTank.prefab` 持有 `GasCapacity/GasPercentage`，按实际气压/安全上限自下而上填充；超压填充封顶、百分比保留真实值并标红。工业页仅储罐显示，组合罐在节点作用域读取整组库存与容积；便携罐通过 `MechanicalPanelSession` 注入读数。布局同步 `RuntimeUIPrefabBuilder.EnsureGasCapacityGauge`。
 - 热栏外观由 `Common/Controls/UI_SelectBox.prefab` 与 Inventory_HotBar.SelectBoxPrefab 持有；选中框归属当前槽位。附属提示 ignoreLayout 且输入透明，Inventory.InitUI 按真实 ItemSlot_UI 计槽；手持名称读取装备热栏物品。
 - `ItemSlot_UI.SetProcessingProgress` 只更新正式 Prefab 中的槽内灰白进度层，底部 Pivot 配合纵向缩放，纯色无 Sprite 时不使用 Filled；燃料面板读取炉体真实吸收进度，熔炉/篝火资源与 `GameUIPrefabRebuilder` 同步维护。
-- `InventoryItemTooltip` 由鼠标悬浮与触屏空手长按共用；触屏显示后固定位置并在松手后保留，窗外按下只收起、不截断原点击。固定期间逐帧核验槽位/物品身份、手部为空与父面板可见，面板关闭、槽位重绑/禁用或失焦清理；父级 CanvasGroup 仅隐藏时也不能残留。
+- `InventoryItemTooltip` 由鼠标悬浮与触屏空手长按共用；鼠标连续悬停满 0.5 非缩放秒显示，等待中同样核验来源，离开或重绑后重新计时。触屏显示后固定位置并在松手后保留，窗外按下只收起、不截断原点击。固定期间逐帧核验槽位/物品身份、手部为空与父面板可见，面板关闭、槽位重绑/禁用或失焦清理；父级 CanvasGroup 仅隐藏时也不能残留。
 - 物品介绍的正式 Prefab 自带无射线独立 Canvas，统一使用 `UIManager.ItemTooltipSortingOrder`，覆盖场景机器和常驻库存窗口；鼠标悬浮与长按都核验来源面板、槽位和物品身份，不能只靠兄弟排序置顶。
 - 普通合成使用 `Gameplay/Crafting/UI_HandCraftTable/UI_MakerTable.prefab`，参考尺寸 1344×756；安全区适配后的表现比例为手工制作 0.6、制作台 0.8，Prefab、GameUIPrefabRebuilder 和 TodoCraftingLayoutPreview 同步维护；正式输入/输出/配方模板按真实容量复用。工业流体/宇航服/气罐使用 MechanicalPanelView 与 PreservePrefabLayout，宇航服入口共用 SpacesuitPanelSession 的真实供氧槽。
 - 装备页只保留 `FWUI_ConfigureEquipment` 通用入口，由 `EquipmentConfigurationButton` 收集可配置装备；一件直接打开，多件用公共下拉选择，没有则禁用。`Mod_Equipment` 只通过 `IEquipmentConfiguration` 分发并复核当前装备身份，具体装备效果拥有配置页面；不在装备 UI 或工业面板重建中添加具体装备分支。

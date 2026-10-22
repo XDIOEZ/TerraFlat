@@ -15,6 +15,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     #region 配置
 
     private const float ScreenEdgeMargin = 8f;
+    public const double MouseHoverDelaySeconds = 0.5d;
     private static readonly WaitForSeconds RefreshInterval = new WaitForSeconds(1f);
 
     [SerializeField] private RectTransform panelRect;
@@ -39,6 +40,8 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     private Vector2 pointerScreenPosition;
     private Coroutine refreshRoutine;
     private bool visible;
+    private bool hoverPending;
+    private double hoverStartedAt;
     private Vector2 lastContainerSize;
     private bool touchPinned;
     private int touchShownFrame;
@@ -79,19 +82,37 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         tooltip.ownerPanel = slot.GetComponentInParent<BasePanel>();
         tooltip.ownerGroups = slot.GetComponentsInParent<CanvasGroup>();
         tooltip.pointerScreenPosition = screenPosition;
-        tooltip.visible = true;
-        tooltip.canvasGroup.alpha = 1f;
-        tooltip.canvasGroup.interactable = false;
-        tooltip.canvasGroup.blocksRaycasts = false;
-        tooltip.transform.SetAsLastSibling();
-        tooltip.RefreshContent();
-        tooltip.PositionPanel();
-        tooltip.RestartRefreshRoutine();
+        tooltip.hoverPending = !pinTouch;
+        tooltip.hoverStartedAt = Time.unscaledTimeAsDouble;
+        if (!pinTouch)
+        {
+            // 等待期间也保留真实槽位身份，离开、重绑或面板隐藏都会取消。
+            tooltip.visible = false;
+            tooltip.canvasGroup.alpha = 0f;
+            return;
+        }
+        tooltip.Reveal();
+    }
+
+    public static bool HasCompletedMouseHover(double startedAt, double now)
+        => now - startedAt >= MouseHoverDelaySeconds;
+
+    private void Reveal()
+    {
+        hoverPending = false;
+        visible = true;
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+        transform.SetAsLastSibling();
+        RefreshContent();
+        PositionPanel();
+        RestartRefreshRoutine();
     }
 
     public static void Move(ItemSlot_UI slot, Vector2 screenPosition)
     {
-        if (current == null || !current.visible || current.owner != slot || current.touchPinned)
+        if (current == null || (!current.visible && !current.hoverPending) || current.owner != slot || current.touchPinned)
             return;
 
         current.pointerScreenPosition = screenPosition;
@@ -134,6 +155,11 @@ public sealed class InventoryItemTooltip : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (hoverPending)
+        {
+            if (!HasValidOwner()) { HideInternal(); return; }
+            if (HasCompletedMouseHover(hoverStartedAt, Time.unscaledTimeAsDouble)) Reveal();
+        }
         if (!visible) return;
         if (!HasValidOwner()) { HideInternal(); return; }
         if (!touchPinned) return;
@@ -258,6 +284,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     private void HideInternal()
     {
         visible = false;
+        hoverPending = false;
         touchPinned = false;
         ownerPanel = null;
         ownerGroups = null;
