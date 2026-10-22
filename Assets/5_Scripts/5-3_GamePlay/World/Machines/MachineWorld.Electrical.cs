@@ -192,6 +192,7 @@ public static partial class MachineWorld
     {
         ElectricalDefinition electrical = node?.Definition?.Electrical;
         if (electrical == null) return 0f;
+        if (node.Logic is ShipDeviceLogic device && !device.IsDeviceRunning) return 0f;
         if (electrical.IsConverter)
             return node.ConversionMode == ElectricalConversionMode.Generator && node.LoadSatisfied
                 ? Mathf.Clamp01(MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.SpeedRpm *

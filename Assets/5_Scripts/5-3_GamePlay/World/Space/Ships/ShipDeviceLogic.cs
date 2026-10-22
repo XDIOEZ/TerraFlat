@@ -6,17 +6,41 @@ public sealed class ShipDeviceLogic : MachineLogic
     private ShipPartConfiguration groundConfiguration;
     private GameRes configurationResources;
     private ulong configurationRevision;
-    public ShipDeviceLogic(MachineEntity entity) : base(entity) { }
+    private readonly string pieceId;
+    public ShipDeviceLogic(MachineEntity entity) : base(entity)
+        => pieceId = entity.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    public float RatedPowerWatts => Entity.Definition.Electrical?.PowerWatts ?? 0f;
+    public float CurrentPowerWatts => IsDeviceRunning && Entity.ElectricalPowerRatio > 0f
+        ? UnityEngine.Mathf.Clamp(UnityEngine.Mathf.Min(Entity.ElectricalSuppliedWatts, Entity.ElectricalRequestedWatts), 0f, RatedPowerWatts) : 0f;
+    public bool IsDeviceRunning
+    {
+        get
+        {
+            if (!(Entity.State?.Engaged ?? Entity.Engaged)) return false;
+            SpaceSession session = SpaceSession.Current;
+            return session == null || !session.FindPiece(pieceId, out _, out ShipPieceState piece) ||
+                piece.IsOperational && session.GetDevice(pieceId)?.Enabled != false;
+        }
+    }
     public override string Status
     {
         get
         {
             SpaceSession session = SpaceSession.Current;
-            string pieceId = Entity.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (session != null && session.FindPiece(pieceId, out _, out ShipPieceState piece) && !piece.IsOperational)
-                return "已瘫痪";
-            return Entity.ElectricalPowerRatio >= .999f ? "已供电" : "缺少电力";
+                return DescribePower("已瘫痪", false);
+            bool running = IsDeviceRunning;
+            return DescribePower(!running ? "已停机" : Entity.ElectricalPowerRatio >= .999f ? "已供电" : "缺少电力", running);
         }
+    }
+    private string DescribePower(string state, bool operational)
+    {
+        // 面板读取电网本轮的实际供电，停机或瘫痪不显示虚假的耗电。
+        float rated = RatedPowerWatts;
+        float actual = operational ? CurrentPowerWatts : 0f;
+        return FlatWorld.Localization.FlatWorldLocalizationService.GetUiFormat(
+            "{0}\n额定功率 {1:0.##} W\n当前功率 {2:0.##} W",
+            FlatWorld.Localization.FlatWorldLocalizationService.GetUiText(state), rated, actual);
     }
     public override void Capture() { }
     public override void Tick(float seconds)
@@ -39,7 +63,6 @@ public sealed class ShipDeviceLogic : MachineLogic
             return operation == "ignite" && ShipGroundAssembly.TryLaunch(actor, Entity.Id, out _, out _);
         SpaceSession session = SpaceSession.Current;
         if (session == null) return false;
-        string pieceId = Entity.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (operation == "drive") return session.EnterConsole(actor, pieceId);
         if (operation == "ignite") return session.ToggleIgnition(pieceId);
         return false;

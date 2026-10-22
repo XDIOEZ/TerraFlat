@@ -536,6 +536,13 @@ public sealed class ShipPanelSession : IMachinePanelSession
         text.AppendLine(Format("飞行阶段  {0}", PhaseText(flight.Phase)));
         text.AppendLine(Format("引擎  {0}", Text(flight.Ignited ? "已点火" : "已停机")));
         text.AppendLine(Format("有效部件  {0}", ship.Pieces.Count(value => value.IsAlive)));
+        using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(shipId)))
+        {
+            // 船上设备与地面面板共用真实机器供电读数。
+            MachineEntity device = int.TryParse(pieceId, NumberStyles.Integer, CultureInfo.InvariantCulture, out int deviceId)
+                ? MachineWorld.GetById(deviceId) : null;
+            if (device?.Logic is ShipDeviceLogic) text.AppendLine(device.Logic.Status);
+        }
         text.AppendLine();
         text.AppendLine(Format("质量  {0:0.##} kg\n转动惯量  {1:0.##} kg·m²", ship.MassKg, ship.InertiaKgM2));
         text.AppendLine(session.DescribePropulsion(shipId));
