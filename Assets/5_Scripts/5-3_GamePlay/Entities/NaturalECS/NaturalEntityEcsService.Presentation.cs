@@ -19,6 +19,7 @@ namespace FlatWorld.NaturalEntities
             public Vector2 ShadowFoot;
             public float ShadowWidth;
             public Vector3 RenderOffset;
+            public float HarvestShakeStartedAt = float.NegativeInfinity;
         }
 
         private static ContactShadowBatchRenderer contactShadows { get => State.contactShadows; set => State.contactShadows = value; }
@@ -113,6 +114,11 @@ namespace FlatWorld.NaturalEntities
                 if (!records.TryGetValue(id, out Record record) || !Contains(record.Handle))
                 {
                     flashPresentationScratch.Add(id);
+                    continue;
+                }
+                if (Time.time - record.HarvestShakeStartedAt < .24f)
+                {
+                    MarkPresentationDirty(record);
                     continue;
                 }
                 if (record.FlashUntil > Time.time) continue;
@@ -253,7 +259,8 @@ namespace FlatWorld.NaturalEntities
             if (visual?.FlipY == true) scale.y = -scale.y;
             rendererScale = scale;
             matrix = BodyMatrix(body) * Matrix4x4.TRS(visual?.RendererLocalPosition ?? Vector3.zero,
-                Quaternion.Euler(visual?.RendererLocalEulerAngles ?? Vector3.zero), scale);
+                Quaternion.Euler((visual?.RendererLocalEulerAngles ?? Vector3.zero) +
+                    Vector3.forward * ManualHarvestWork.ShakeAngle(Time.time - record.HarvestShakeStartedAt)), scale);
             if (record.Highlighted) tint = Color.Lerp(tint, Color.white, 0.6f);
             if (record.FlashUntil > Time.time) tint = new Color(1f, 0.08f, 0.08f, tint.a);
         }

@@ -212,6 +212,9 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         if (cropModule != null || !CanHarvest)
             return;
 
+        if (!ManualHarvestWork.TryPayStamina(playerItem)) return;
+        ManualHarvestShake.Play(item);
+
         // 独立采集物与作物使用同样的有效点击计数，不提前扣库存。
         if (!ManualHarvestWork.Advance(ref manualHarvestProgress, manualHarvestWorkSteps)) return;
 

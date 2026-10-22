@@ -654,6 +654,10 @@ namespace FlatWorld.NaturalEntities
             if (chunks == null || chunks.ResolveWorldAddress(actorPosition).DimensionId != record.DimensionId ||
                 WorldTopologyRuntime.Distance(actorPosition, record.Snapshot.transform.position) > reach) return false;
             // 仅权威有效点击推进；未完成时不生成产物、不扣采集库存。
+            if (!ManualHarvestWork.TryPayStamina(actor)) return false;
+            record.HarvestShakeStartedAt = Time.time;
+            flashPresentationWatch.Add(handle.Id);
+            RefreshPresentation(handle);
             if (!ManualHarvestWork.Advance(ref record.ManualHarvestProgress, record.Profile.ManualHarvestWorkSteps)) return true;
             record.Busy = true;
             var spawned = new List<DroppedItemHandle>();
@@ -710,10 +714,37 @@ namespace FlatWorld.NaturalEntities
             vital.DeathPublished = 1; simulation.Set(record.Handle.Id, vital);
             try
             {
+                // 被击杀的成熟作物沿用一次收获产物表，徒手进度不影响死亡产量。
+                if (record.DeathByDamage && record.Profile.HasCrop && record.Profile.HarvestOutputs != null &&
+                    simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle crop) && crop.Harvested == 0 &&
+                    simulation.TryGet(record.Handle.Id, out EntityGrowth growth) && growth.Progress >= growth.MaxProgress)
+                {
+                    float multiplier = Mathf.Max(0f, GameDifficultyService.Current.World.LootAmountMultiplier);
+                    foreach (CropYieldEntry output in record.Profile.HarvestOutputs)
+                    {
+                        if (UnityEngine.Random.value > Mathf.Clamp01(output.probability * multiplier)) continue;
+                        int amount = GameDifficultyService.ScaleRandomizedAmount(
+                            UnityEngine.Random.Range(output.minAmount, output.maxAmount + 1), multiplier);
+                        if (amount > 0) DroppedItemService.SpawnLoot(output.itemId, record.Snapshot.transform.position, amount);
+                    }
+                    if (record.Profile.Collection is { } collection &&
+                        simulation.TryGet(record.Handle.Id, out EntityResourceStock stock) && stock.Count > 0)
+                    {
+                        DroppedItemService.SpawnLoot(collection.CollectItemId, record.Snapshot.transform.position, 1f,
+                            collection.SpawnRadius, collection.ThrowDuration, bezierOffset: collection.ThrowBezierOffset, arcHeight: collection.ThrowArcHeight);
+                        stock.Count--;
+                        simulation.Set(record.Handle.Id, stock);
+                    }
+                    crop.Harvested = 1;
+                    simulation.Set(record.Handle.Id, crop);
+                }
                 if (record.DeathByDamage && !string.IsNullOrWhiteSpace(record.Profile.Definition.LootTableId) &&
                     GameRes.ExistingInstance.TryGetLootTable(record.Profile.Definition.LootTableId, out RuntimeLootTable table))
                     foreach (RuntimeLootTableEntry entry in table.Entries)
                     {
+                        if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle harvested) && harvested.Harvested != 0 &&
+                            (record.Profile.HarvestOutputs?.Exists(output => string.Equals(output.itemId, entry.ItemId, StringComparison.OrdinalIgnoreCase)) == true ||
+                             string.Equals(record.Profile.Collection?.CollectItemId, entry.ItemId, StringComparison.OrdinalIgnoreCase))) continue;
                         float multiplier = GameDifficultyService.Current.World.LootAmountMultiplier * YieldMultiplier(record, entry.ItemId);
                         if (UnityEngine.Random.value > Mathf.Clamp01(entry.Probability * GameDifficultyService.Current.World.LootAmountMultiplier)) continue;
                         int count = GameDifficultyService.ScaleRandomizedAmount(entry.RollAmount(), multiplier);

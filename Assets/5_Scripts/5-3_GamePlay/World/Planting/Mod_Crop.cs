@@ -178,6 +178,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
         harvestActions = activeActions.ToArray();
         harvestPolicy = resolvedPolicy;
+        Mod_DamageReceiver health = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (health != null) { health.DeathStarted -= HarvestAfterDamage; health.DeathStarted += HarvestAfterDamage; }
         if (harvestActions.Length == 0)
             throw new MissingComponentException($"[Mod_Crop] 作物 {item.itemData?.IDName} 缺少 ICropHarvestAction。");
 
@@ -193,6 +195,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
     protected override void OnUnload()
     {
+        Mod_DamageReceiver health = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (health != null) health.DeathStarted -= HarvestAfterDamage;
         environmentConditions.Clear();
         ClimateStress = 0f;
         harvestActions = Array.Empty<ICropHarvestAction>();
@@ -433,6 +437,9 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         if (!CanInteract(playerItem))
             return;
 
+        if (!ManualHarvestWork.TryPayStamina(playerItem)) return;
+        ManualHarvestShake.Play(item);
+
         // 徒手采收累计有效点击，工具攻击仍沿原伤害和掉落规则完成采收。
         if (!ManualHarvestWork.Advance(ref manualHarvestProgress, manualHarvestWorkSteps)) return;
 
@@ -469,6 +476,33 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
     public void OnInteractCancel(Item playerItem)
     {
+    }
+
+    // 成熟作物被工具击杀时复用一次正式收获动作，不把徒手次数乘进产量。
+    private void HarvestAfterDamage(Mod_DamageReceiver health)
+    {
+        if (!GameNetwork.HasStateAuthority || Data == null || Data.stage != CropStage.Mature ||
+            Data.isHarvested || harvestInProgress || !(harvestPolicy?.CanHarvest ?? true)) return;
+        Data.isHarvested = true;
+        harvestInProgress = true;
+        try
+        {
+            health.Data.LootTable?.RemoveAll(entry => IsHarvestOutput(entry.LootPrefabName));
+            var context = new CropHarvestContext(item, null, item.transform.position);
+            foreach (ICropHarvestAction action in harvestActions) action.Execute(context);
+            Harvested?.Invoke(context);
+        }
+        finally { harvestInProgress = false; }
+    }
+
+    private bool IsHarvestOutput(string itemId)
+    {
+        foreach (ICropHarvestAction action in harvestActions)
+        {
+            if (action is Mod_Collectable collectable && string.Equals(collectable.CollectItemId, itemId, StringComparison.OrdinalIgnoreCase)) return true;
+            if (action is Mod_CropYield cropYield && cropYield.outputs.Exists(output => string.Equals(output.itemId, itemId, StringComparison.OrdinalIgnoreCase))) return true;
+        }
+        return false;
     }
 
     [Min(1)] public int manualHarvestWorkSteps = ManualHarvestWork.DefaultSteps;
