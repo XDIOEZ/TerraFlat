@@ -26,6 +26,7 @@ public static partial class GameplayTestRuntimeProbe
         ["inventory/directional_flick"] = CaptureInventoryDirectionalFlick,
         ["inventory/quick_transfer_feedback"] = CaptureInventoryQuickTransferFeedback,
         ["inventory/equipment_drag"] = CaptureInventoryEquipmentDrag,
+        ["inventory/equipment_quick_transfer"] = CaptureInventoryEquipmentQuickTransfer,
         ["inventory/equipment_configuration"] = CaptureEquipmentConfiguration,
         ["containers/whole_pour"] = CaptureVesselWholePour,
         ["world_streaming/live_window"] = CaptureLiveWindow,

@@ -204,7 +204,15 @@ public class Inventory_Equipment : Inventory
         base.InitUI();
         ApplyEquipmentPanelLayout();
         BindEquipmentConfiguration();
+        // 装备窗口的所有打开入口统一登记快捷转移，避免直接 Open/Toggle 绕过 SwitchUI。
+        basePanel.Opened -= SyncEquipmentQuickTransferTarget;
+        basePanel.Closed -= SyncEquipmentQuickTransferTarget;
+        basePanel.Opened += SyncEquipmentQuickTransferTarget;
+        basePanel.Closed += SyncEquipmentQuickTransferTarget;
+        SyncEquipmentQuickTransferTarget();
     }
+
+    private void SyncEquipmentQuickTransferTarget() => SyncQuickTransferTarget(basePanel);
 
     private void BindEquipmentConfiguration()
     {

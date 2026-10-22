@@ -384,6 +384,25 @@ test.runtime("inventory", "equipment_drag", {}, function(data)
         "装备拖拽完成或失败后没有释放来源占用")
 end, "装备槽标签拒绝、合法装卸、双向交换与拖拽收尾")
 
+for _, mode in ipairs({"shift", "flick", "closed", "full", "invalid"}) do
+    test.runtime("inventory", "equipment_quick_transfer", {mode = mode}, function(data)
+        assert(data.registeredOnOpen and data.releasedOnClose,
+            "装备窗口直接打开未登记目标，或关闭后仍残留快捷转移目标")
+        local accepted = mode == "shift" or mode == "flick"
+        assert(data.flickSelected == accepted, "装备甩动目标没有复用可见性、槽位标签和容量规则")
+        if accepted then
+            assert(data.sourceAfter.id == "" and data.targetAfter.id == "Spacesuit_Head"
+                and data.targetAfter.guid == data.sourceBefore.guid,
+                "快捷操作未把头盔送入头部槽，或装备身份丢失")
+        else
+            assert(data.sourceAfter.guid == data.sourceBefore.guid
+                and data.sourceAfter.amount == data.sourceBefore.amount
+                and data.targetAfter.guid == data.targetBefore.guid,
+                "窗口关闭、装备槽已满或物品不匹配时仍转移或替换装备")
+        end
+    end, "装备窗口快捷转移与生命周期：" .. mode)
+end
+
 test.runtime("inventory", "equipment_configuration", {}, function(data)
     assert(data.genericConfigurationButtons == 1 and data.specializedConfigurationButtons == 0,
         "正式装备页应只有统一装备配置入口，不应含宇航服专用按钮")

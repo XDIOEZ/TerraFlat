@@ -11,6 +11,58 @@ using Object = UnityEngine.Object;
 
 public static partial class GameplayTestRuntimeProbe
 {
+    #region 装备窗口快捷转移现场
+    // 使用正式装备窗口生命周期，不由夹具手动登记目标，防止漏接打开入口却让测试通过。
+    private static JObject CaptureInventoryEquipmentQuickTransfer(Player player, JObject args)
+    {
+        string mode = GameplayTestSystemProbe.Text(args, "mode", "shift");
+        Inventory previousLast = Inventory.LastOpenedContainer;
+        InventoryFlickTargets[] previousPanels = InventoryFlickTargets.GetActivePanels();
+        Inventory source = CreateDragInventory(ModText.Hotbar,
+            CreateDragItem(mode == "invalid" ? "Twine" : "Spacesuit_Head"));
+        var equipment = new Inventory_Equipment
+        {
+            InventoryPanel_Prefab = GameRes.ExistingInstance.GetPrefab("UI_Equipment")
+        };
+        equipment.EnsureSlotSchema();
+        int head = equipment.GetSlotIndex(EquipmentSlotCatalog.Head);
+        var result = new JObject();
+        try
+        {
+            foreach (InventoryFlickTargets registered in previousPanels)
+                if (registered != null) registered.enabled = false;
+            equipment.EnsurePanelCreated();
+            equipment.basePanel.Open();
+            result["registeredOnOpen"] = ReferenceEquals(Inventory.LastOpenedContainer, equipment);
+            equipment.basePanel.Close();
+            result["releasedOnClose"] = !ReferenceEquals(Inventory.LastOpenedContainer, equipment) &&
+                !source.HasVisibleFlickTarget();
+            if (mode != "closed") equipment.basePanel.Open();
+            if (mode == "full") equipment.Data.SetOne_ItemData(head, CreateDragItem("Spacesuit_Head"));
+            result["sourceBefore"] = CaptureDragSlot(source, 0);
+            result["targetBefore"] = CaptureDragSlot(equipment, head);
+            Canvas.ForceUpdateCanvases();
+            Vector2 target = RectTransformUtility.WorldToScreenPoint(null, equipment.itemSlot_UI[head].transform.position);
+            Vector2 origin = target + Vector2.down * 200f;
+            Vector2 direction = target - origin;
+            result["flickSelected"] = ReferenceEquals(
+                InventoryFlickTargets.Resolve(source, 0, origin, direction), equipment);
+            if (mode == "flick") source.OnFlickTransfer(0, origin, direction);
+            else source.OnShiftQuickTransfer(0);
+            result["sourceAfter"] = CaptureDragSlot(source, 0);
+            result["targetAfter"] = CaptureDragSlot(equipment, head);
+            return result;
+        }
+        finally
+        {
+            equipment.ReleaseRuntimePanel();
+            Inventory.LastOpenedContainer = previousLast;
+            foreach (InventoryFlickTargets registered in previousPanels)
+                if (registered != null) registered.enabled = true;
+        }
+    }
+    #endregion
+
     #region 方向甩动独立库存现场
     // 临时正式面板只提供真实屏幕坐标，选择和提交均调用生产接口，业务期望由 Lua 持有。
     private static JObject CaptureInventoryDirectionalFlick(Player player, JObject args)

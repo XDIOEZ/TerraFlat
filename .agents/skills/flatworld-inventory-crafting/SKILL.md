@@ -57,6 +57,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - `InstantiateHeldItem` 在注册前绑定真实 ItemData、Owner/inHand；库存事件标脏，在安全边界同步，同 GUID 跨槽保留实例。保存先 ModuleSave 手持物再存库存；卸载释放输入、事件、PlayerHand 与所属 Item 引用。退出场景时 ItemMgr 可能先销毁，清理通过 GetInstance 获取仍存在的管理器，缺失时销毁自有手持物，不调用会报缺失错误的 Instance。RuntimeInventory 在 Player Prefab 中以 `[SerializeReference]` 保存。
 - 排序依次循环 ID/分类/数量/重量/体积；分类读 InventoryGroup 标签。整理稳定合堆压空槽；搜索只变槽 Alpha，以当前定义及 Tag 别名匹配，排序/整理将命中项稳定置顶。创造库存可扩缩、豁免重量体积，目录只含可持有定义；虚拟化槽映射可为 null，拖拽期间不重绑。
 - Inventory.basePanel 只拥有通用 UI_Content 槽位面板；自管组合面板通过 SyncQuickTransferTarget 判断状态。槽位皮肤由 InventorySlotVisualProfile 应用；Tooltip 经 IItemTooltipInfoProvider 扩展。模态库存获取输入锁，快捷栏/手部和机器面板不锁。
+- 装备窗口在 InitUI 绑定 Opened/Closed 同步快捷转移目标，覆盖直接 Open/Toggle、交互与恢复面板入口；Shift 和甩动复用 CanAcceptQuickTransfer 的装备标签/容量限制，规则覆盖见 inventory/equipment_quick_transfer。
 
 ## 制作与加工
 
