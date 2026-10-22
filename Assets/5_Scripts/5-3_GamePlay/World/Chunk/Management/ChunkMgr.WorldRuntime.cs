@@ -351,6 +351,7 @@ public partial class ChunkMgr
         if (IsWorldRuntimeShuttingDown)
             return;
 
+        using var scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
         IsWorldRuntimeShuttingDown = true;
         ReleaseAirHumidityField();
         StopLiquidFlowExperiment();

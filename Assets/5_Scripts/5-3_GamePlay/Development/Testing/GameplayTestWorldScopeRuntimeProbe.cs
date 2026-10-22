@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public static class GameplayTestWorldScopeRuntimeProbe
+public static partial class GameplayTestWorldScopeRuntimeProbe
 {
     #region 多世界正式索引与物理采样
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -17,7 +17,11 @@ public static class GameplayTestWorldScopeRuntimeProbe
     [UnityEditor.InitializeOnLoadMethod]
     private static void RegisterEditor() => Register();
 #endif
-    private static void Register() => GameplayTestRuntimeProbe.RegisterAsync("networking", "world_scope", Capture);
+    private static void Register()
+    {
+        GameplayTestRuntimeProbe.RegisterAsync("networking", "world_scope", Capture);
+        GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "incremental_world_scope", CaptureIncrementalWorldScope);
+    }
 
     private sealed class Fixture : IDisposable
     {

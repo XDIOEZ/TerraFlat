@@ -4,6 +4,8 @@
 
 快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
 
+2026-10-23 新增但未执行：`world_streaming/incremental_world_scope` 在活动场景仍为地表时调用正式洞穴准备，等待完整窗口和真实 ChunkView 绑定；随后把自有续步租约交给同一 ChunkMgr 正式协程，实际跨两帧注册自然实体，并由 Lua 核对每步的世界、Scene、管理器、独立 ECS、yield 后上下文恢复及正常/取消的唯一 Dispose。同步失效夹具临时给自有续步指定未登记世界或其他管理器拥有的世界，检查拒绝推进和解绑且不补建世界。夹具只回收自己的资源/占位 View，不切换活动场景；不代表洞穴画面、真实入口交互或联机迁移已验收。外部 `GamePlay.csproj` 定向编译检查通过（0 错误、39 警告），Unity 控制台结果由本轮主代理最终确认；未运行 Lua 或 PlayMode 测试。
+
 2026-10-20 清理旧地图物品入口：新增 `observer_windows`，通过联机使用的正式 `CreateRuntimeObserverWindows` 计划再进入纯模型 `RefreshWindows`，覆盖矩形区块/负坐标、多观察者重叠与重复去重、模拟与表现预加载圈、观察者移除后的休眠保留、外部导航租约保护、所有观察者退出和环绕同址合并。夹具预提交独立空地形，不加载玩家资源、不访问当前世界，不代表真实 Host/Client 区块画面、雾边、导航、后台生成或存档验收。本轮按用户要求只静态修改，未编译、未执行。
 
 2026-10-17 雾边交接：加载目标仍立即提交，ChunkMgr 单独缓动表现窗口，已有地面的旧 View 在离开平滑窗口后才解绑；重新进入目标窗口直接复用，未呈现地面的过期任务仍取消，清空窗口或换维度立即清理。共享几何断言见 Rendering 的 `zoom_cloud_transition`；该规则不替代真实 View、租约回收、环绕与连续移动现场，本轮未编译、未运行，由用户验收。

@@ -826,8 +826,24 @@ public partial class ChunkMgr
     {
         // 先等一帧收集同批后台结果，才能真正按玩家距离排序，而不是按任务回调顺序抢画。
         yield return null;
-        while (!IsWorldRuntimeShuttingDown && !SharedSpriteMeshCache.IsSessionEnding &&
-               (runtimePresentationQueue.Count > 0 || runtimePresentationContinuationQueue.Count > 0))
+        try
+        {
+            while (!IsWorldRuntimeShuttingDown && !SharedSpriteMeshCache.IsSessionEnding &&
+                   (runtimePresentationQueue.Count > 0 || runtimePresentationContinuationQueue.Count > 0))
+            {
+                if (!ProcessRuntimePresentationFrame()) break;
+                // 同步世界作用域在本帧工作返回时结束，不能挂到下一次协程恢复。
+                yield return null;
+            }
+        }
+        finally { runtimePresentationCoroutine = null; }
+    }
+
+    /// <summary>每帧按管理器归属恢复查询上下文，启动、续步和取消共用同一同步边界。</summary>
+    private bool ProcessRuntimePresentationFrame()
+    {
+        if (!TryUseRuntimeWorldContext(out IDisposable scope)) return false;
+        using (scope)
         {
             int startBudget = RuntimeChunkPresentationStartBudget;
             long startDeadline = Stopwatch.GetTimestamp() + (long)(
@@ -886,10 +902,8 @@ public partial class ChunkMgr
                 if (continuationBudget <= 0) WorldRuntime.StreamingDiagnostics.Count("view.step_count_limit_hits");
                 if (Stopwatch.GetTimestamp() >= continuationDeadline) WorldRuntime.StreamingDiagnostics.Count("view.step_time_limit_hits");
             }
-            yield return null;
         }
-
-        runtimePresentationCoroutine = null;
+        return true;
     }
 
     /// <summary>取出仍然有效且距离玩家最近的待绘制区块。</summary>
@@ -1085,6 +1099,7 @@ public partial class ChunkMgr
         if (binding == null)
             return;
 
+        using var scope = binding.PresentationRoutine != null ? RequireRuntimeWorldContext() : null;
         if (binding.PresentationRoutine is IDisposable disposable)
             disposable.Dispose();
         binding.PresentationRoutine = null;
@@ -1339,6 +1354,7 @@ public partial class ChunkMgr
             return;
 
         ChunkView view = binding.View;
+        using var scope = view.Model != null ? RequireRuntimeWorldContext() : null;
         binding.View = null;
         bool completed = view.IsBound;
         view.Unbind();
@@ -1349,11 +1365,12 @@ public partial class ChunkMgr
     }
 
     /// <summary>销毁 View 前再次确保表现、导航等全部租约已经释放。</summary>
-    private static void DestroyRuntimeChunkView(ChunkView view)
+    private void DestroyRuntimeChunkView(ChunkView view)
     {
         if (view == null)
             return;
 
+        using var scope = view.Model != null ? RequireRuntimeWorldContext() : null;
         view.Unbind();
         if (view.gameObject.activeSelf)
             view.gameObject.SetActive(false);
@@ -1382,6 +1399,8 @@ public partial class ChunkMgr
         retiringRuntimeBindings.Remove(address);
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
             return;
+        using var scope = binding.RestoredTerrainChunk != null || binding.PresentationRoutine != null ||
+                          binding.View?.Model != null ? RequireRuntimeWorldContext() : null;
         if (binding.RestoredTerrainChunk != null)
             WeatherMgr.ExistingInstance?.FlushSurfaceWork(binding.RestoredTerrainChunk);
         FinishRuntimeChunkPresentation(binding);
