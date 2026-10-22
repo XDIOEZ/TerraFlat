@@ -18,14 +18,20 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 389a4f87a1f94301be838fa24beff512, type: 3}
   - {fileID: 8300000, guid: 7b4f7e3940f24729b7bb9d3892cae6dd, type: 3}
   - {fileID: 8300000, guid: 37be851728a64a3fb784295b6b75a2f9, type: 3}
+  - {fileID: 8300000, guid: 0a79fd1d7a9249f99437ab9c398a97b4, type: 3}
+  - {fileID: 8300000, guid: cbf1f432fb234fbda03bc6f210a1ae75, type: 3}
+  - {fileID: 8300000, guid: 1f533d8da35d434ebe0f6d88e66321f2, type: 3}
+  - {fileID: 8300000, guid: 2489b9f35484415caf60aace32fff5b5, type: 3}
+  - {fileID: 8300000, guid: cfff46e5bd8d466685348b957591c381, type: 3}
   selection: 0
+  noRepeatHistory: 3
   loop: 0
   volume:
     Min: 0.85
     Max: 0.98
   pitch:
-    Min: 0.98
-    Max: 1.02
+    Min: 0.94
+    Max: 1.06
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14

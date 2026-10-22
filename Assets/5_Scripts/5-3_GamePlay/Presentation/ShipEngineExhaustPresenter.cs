@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Audio;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -21,6 +22,8 @@ namespace FlatWorld.Spaceflight
         private Sprite syncedNozzleSprite;
         private bool emitting;
         private float appliedOutput = -1f;
+        private AudioHandle engineAudio;
+        private float appliedAudioVolume = -1f;
 
         public void Bind(SpaceSession owner, ShipPieceState engine, SpriteRenderer renderer)
         {
@@ -40,6 +43,7 @@ namespace FlatWorld.Spaceflight
         {
             float output = session != null && piece?.IsAlive == true && source != null && source.enabled
                 ? Mathf.Clamp01(session.GetEngineOutput(piece.PieceId)) : 0f;
+            UpdateEngineAudio(output);
             if (output <= 0f)
             {
                 if (particles != null && source != null) SynchronizeNozzle();
@@ -69,10 +73,35 @@ namespace FlatWorld.Spaceflight
 
         private void OnDisable()
         {
+            engineAudio.Stop(.15f); engineAudio = AudioHandle.Invalid; appliedAudioVolume = -1f;
             if (particles != null) particles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
             emitting = false;
             appliedOutput = -1f;
             syncedNozzleSprite = null;
+        }
+        private void UpdateEngineAudio(float output)
+        {
+            if (output <= 0f || source == null || !AudioService.HasInstance)
+            {
+                engineAudio.Stop(.2f); engineAudio = AudioHandle.Invalid; appliedAudioVolume = -1f;
+                return;
+            }
+            // 声音跟随实际耗油出力，真空仅保留地表十分之一的反馈音量。
+            bool space = session.FindPiece(piece.PieceId, out ShipState ship, out _) &&
+                session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising;
+            float volume = Mathf.Sqrt(output) * (space ? .1f : 1f);
+            if (!engineAudio.IsPlaying)
+            {
+                var options = AudioPlayOptions.Attached(source.transform, volume);
+                options.FadeIn = .15f;
+                engineAudio = AudioService.Instance.Play("ship.engine.loop", options);
+                appliedAudioVolume = volume;
+            }
+            else if (!Mathf.Approximately(appliedAudioVolume, volume))
+            {
+                AudioService.Instance.SetVolumeScale(engineAudio, volume);
+                appliedAudioVolume = volume;
+            }
         }
         #endregion
 
@@ -161,7 +190,7 @@ namespace FlatWorld.Spaceflight
                 out int layerId, out int order);
             if (particleRenderer.sortingLayerID != layerId)
                 particleRenderer.sortingLayerID = layerId;
-            int exhaustOrder = checked(order - 3);
+            int exhaustOrder = checked(order - 5);
             if (particleRenderer.sortingOrder != exhaustOrder)
                 particleRenderer.sortingOrder = exhaustOrder;
             int gameObjectLayer = source.gameObject.layer;

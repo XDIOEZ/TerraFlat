@@ -23,6 +23,8 @@ public sealed partial class Mod_Roll
     private void BeginPresentation()
     {
         if (presentationApplied) return;
+        if (FlatWorld.Audio.AudioService.HasInstance)
+            FlatWorld.Audio.AudioService.Instance.PlayAttached("player.roll", item.transform);
         originalVisualRotation = visualRoot.localRotation;
         colliderShapes.Clear();
         var captured = new HashSet<Collider2D>();

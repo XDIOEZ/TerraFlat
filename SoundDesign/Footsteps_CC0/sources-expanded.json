@@ -1,0 +1,386 @@
+{
+  "verifiedOn": "2026-10-22",
+  "recordings": {
+    "kenney": {
+      "title": "Impact Sounds (1.0)",
+      "author": "Kenney",
+      "sourcePage": "https://kenney.nl/assets/impact-sounds",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "fantozzi": {
+      "title": "Fantozzi's Footsteps (Grass/Sand & Stone)",
+      "author": "Fantozzi; cut and distributed by qubodup",
+      "sourcePage": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
+      "downloadUrl": "https://opengameart.org/sites/default/files/Fantozzi-footsteps.7z",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "dirt": {
+      "title": "Different steps on wood, stone, leaves, gravel and mud",
+      "author": "TinyWorlds; edited from pdsounds.org recordings",
+      "sourcePage": "https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud",
+      "downloadUrl": "https://opengameart.org/sites/default/files/%5Bkdd%5DDifferentSteps_0.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "water": {
+      "title": "Water Splash",
+      "author": "Sara Lana; uploaded by felix.blume",
+      "sourcePage": "https://freesound.org/people/felix.blume/sounds/434978/",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "preparedSource": "SoundDesign/Swimming_SFX_LMMS/sources.json",
+      "use": "Reuse existing recorded close-pool splash segments as shallow-water footstep splashes"
+    }
+  },
+  "processing": "Existing first 3 preserved; 5 extra recorded or tempo-varied footsteps each; last 3 clips excluded from next random choice",
+  "segments": [
+    {
+      "cue": "player.footstep.grass",
+      "variant": 4,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_grass_003.ogg",
+      "sourceSha256": "0546e1d8ab2def714425701a18bd34c5ee2794b12e858e5b595aabcf38a34137",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.grass__04.wav"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 5,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_grass_004.ogg",
+      "sourceSha256": "086fd4ab3546a507ea5f5c759a9a10e535c95ade13705c238bc0eeffd7d4e8ba",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.grass__05.wav"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 6,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_leaves01.ogg",
+      "sourceSha256": "93b3bbcd06380eec54335d1869924db6ff2cc6c1cb103502133d78484c5ca836",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.grass__06.wav"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 7,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_leaves02.ogg",
+      "sourceSha256": "477c35bfd3f740915b24f93cb66364523217692d2749057f9b8be162eb8209f4",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.grass__07.wav"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 8,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/grass_01.ogg",
+      "sourceSha256": "9d49497777405d78d7cf7f2888e28277f3a23192300cfd1d79d54876b20f479f",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.grass__08.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 4,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_concrete_003.ogg",
+      "sourceSha256": "8b513c2f0316324060b9174b8f28df6c2147418c506e6a53b77f18e149a5547b",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.stone__04.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 5,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_concrete_004.ogg",
+      "sourceSha256": "24dd8db2413e5b81ad181e1205c12a1c7801da5f85715d471b92a4b2f632e45e",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.stone__05.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 6,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_stone01.ogg",
+      "sourceSha256": "99b04d784eb6b531777a64fb0e319f104eb7cdd6b625c1fac68f511605930a2c",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.stone__06.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 7,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/stone_01.ogg",
+      "sourceSha256": "d7267e183067757c92c169de2a379abea592cfca6b39bb2e8feea15221ad79fe",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.stone__07.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 8,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/stone_02.ogg",
+      "sourceSha256": "507a75eb19b897087855a3be3cf11a12d7fa37d143ad535eeebe0b8031c7325d",
+      "speed": 1.09,
+      "file": "Assets/Audio/Generated/player.footstep.stone__08.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 4,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_wood_003.ogg",
+      "sourceSha256": "2a68a083daa9eda08fed0ea5da5280dfbe0de226196c576be02f95259dd139d9",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.wood__04.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 5,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_wood_004.ogg",
+      "sourceSha256": "b33e0854e2b3f6b6492e25c25ef8f90447a332f7c6bb25dd02edced9581d3441",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.wood__05.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 6,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_wood01.ogg",
+      "sourceSha256": "482d97c5e1e6eb7b239be46f25d093ebebb94cefb56eedb04807b6a5dc68e972",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.wood__06.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 7,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_wood02.ogg",
+      "sourceSha256": "588bb121bd3db005b4c2a5b55c1cf39b8ec620f820c2123ac1f62748d132dac2",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.wood__07.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 8,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_wood03.ogg",
+      "sourceSha256": "9b677c284389163f132b94e1323ea713a4c7ac9d5fba849cf7cbf8b53a1627e2",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.wood__08.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 4,
+      "recording": "fantozzi",
+      "source": "SoundDesign/Footsteps_CC0/Sources/sand_01.flac",
+      "sourceSha256": "93a2630579a82507e3c6ceab9b012f71a50cf8922f4beadb14057dcc0636b099",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.sand__04.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 5,
+      "recording": "fantozzi",
+      "source": "SoundDesign/Footsteps_CC0/Sources/sand_02.flac",
+      "sourceSha256": "9bb57478cc96e1410cae27d926aa8d77d5f2d368d9776822f63cf0b37c6d2faf",
+      "speed": 1.09,
+      "file": "Assets/Audio/Generated/player.footstep.sand__05.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 6,
+      "recording": "fantozzi",
+      "source": "SoundDesign/Footsteps_CC0/Sources/sand_03.flac",
+      "sourceSha256": "3514d12f3369297233e915814364ed02902003d4103b010371c2ac15c2aa48fe",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.sand__06.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 7,
+      "recording": "fantozzi",
+      "source": "SoundDesign/Footsteps_CC0/Sources/sand_01.flac",
+      "sourceSha256": "93a2630579a82507e3c6ceab9b012f71a50cf8922f4beadb14057dcc0636b099",
+      "speed": 1.09,
+      "file": "Assets/Audio/Generated/player.footstep.sand__07.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 8,
+      "recording": "fantozzi",
+      "source": "SoundDesign/Footsteps_CC0/Sources/sand_02.flac",
+      "sourceSha256": "9bb57478cc96e1410cae27d926aa8d77d5f2d368d9776822f63cf0b37c6d2faf",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.sand__08.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 4,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_leaves02.ogg",
+      "sourceSha256": "477c35bfd3f740915b24f93cb66364523217692d2749057f9b8be162eb8209f4",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__04.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 5,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_01.ogg",
+      "sourceSha256": "354682c2cb340cd787d892d31beb87c45dda94ca6e8363b16828ab2f1d129b82",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__05.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 6,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_02.ogg",
+      "sourceSha256": "34e6057ec1581b5cb8802e4942952b00b1dac235bfcb0ed8cff0ceb15a3ebbbf",
+      "speed": 1.09,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__06.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 7,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_03.ogg",
+      "sourceSha256": "93b3bbcd06380eec54335d1869924db6ff2cc6c1cb103502133d78484c5ca836",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__07.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 8,
+      "recording": "dirt",
+      "source": "SoundDesign/Footsteps_CC0/Sources/dirt_01.ogg",
+      "sourceSha256": "354682c2cb340cd787d892d31beb87c45dda94ca6e8363b16828ab2f1d129b82",
+      "speed": 1.09,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__08.wav"
+    },
+    {
+      "cue": "player.footstep.snow",
+      "variant": 4,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_snow_000.ogg",
+      "sourceSha256": "c05fa4a9dc9a7aabc04996466fb589537e49af76de9998d8f9e6270ec92dcef7",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.snow__04.wav"
+    },
+    {
+      "cue": "player.footstep.snow",
+      "variant": 5,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_snow_001.ogg",
+      "sourceSha256": "980fb9a1c9227aed7995067b0357f373053337f2416316db8ea0438418542fb4",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.snow__05.wav"
+    },
+    {
+      "cue": "player.footstep.snow",
+      "variant": 6,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_snow_002.ogg",
+      "sourceSha256": "db52bafdc66304f3b999f2c29227826c65993916e630ac2ffbca17d07b263178",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.snow__06.wav"
+    },
+    {
+      "cue": "player.footstep.snow",
+      "variant": 7,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_snow_003.ogg",
+      "sourceSha256": "68272e3f1cabcabd02d328fd344454d7c04cb58b5a86972fcdd858f845e3d007",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.snow__07.wav"
+    },
+    {
+      "cue": "player.footstep.snow",
+      "variant": 8,
+      "recording": "kenney",
+      "source": "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_snow_004.ogg",
+      "sourceSha256": "7fe9ce5f5732aaa0a50ef02bb1ac162c27f6bd85214e86aaea6e13e7a41dbc00",
+      "speed": 1,
+      "file": "Assets/Audio/Generated/player.footstep.snow__08.wav"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 4,
+      "recording": "water",
+      "source": "SoundDesign/Footsteps_CC0/Sources/water_01.wav",
+      "sourceSha256": "c689494d3ce1ec1272740b1bfd1d5e50032b30c5495fd4a547296a5b673caf18",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.water__04.wav"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 5,
+      "recording": "water",
+      "source": "SoundDesign/Footsteps_CC0/Sources/water_02.wav",
+      "sourceSha256": "a51694dc9a4cbdf0e3e2d5d4fe4234f21d2a158e658c0ecbb3ff1d40b7b1be2e",
+      "speed": 1.09,
+      "file": "Assets/Audio/Generated/player.footstep.water__05.wav"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 6,
+      "recording": "water",
+      "source": "SoundDesign/Footsteps_CC0/Sources/water_03.wav",
+      "sourceSha256": "29e70059501ab4755cfbc76e5fd210313c340c4ee268c920d88b77cd6c0aed54",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.water__06.wav"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 7,
+      "recording": "water",
+      "source": "SoundDesign/Footsteps_CC0/Sources/water_01.wav",
+      "sourceSha256": "c689494d3ce1ec1272740b1bfd1d5e50032b30c5495fd4a547296a5b673caf18",
+      "speed": 1.09,
+      "file": "Assets/Audio/Generated/player.footstep.water__07.wav"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 8,
+      "recording": "water",
+      "source": "SoundDesign/Footsteps_CC0/Sources/water_02.wav",
+      "sourceSha256": "a51694dc9a4cbdf0e3e2d5d4fe4234f21d2a158e658c0ecbb3ff1d40b7b1be2e",
+      "speed": 0.91,
+      "file": "Assets/Audio/Generated/player.footstep.water__08.wav"
+    },
+    {
+      "cue": "player.roll",
+      "variant": 1,
+      "recording": "kenney",
+      "sources": [
+        "SoundDesign/Footsteps_CC0/Sources/kenney_impactSoft_medium_000.ogg",
+        "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_carpet_000.ogg"
+      ],
+      "processing": "Soft body impact + recorded carpet friction delayed 90ms; gain, mono, peak -12dB"
+    },
+    {
+      "cue": "player.roll",
+      "variant": 2,
+      "recording": "kenney",
+      "sources": [
+        "SoundDesign/Footsteps_CC0/Sources/kenney_impactSoft_medium_001.ogg",
+        "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_carpet_001.ogg"
+      ],
+      "processing": "Soft body impact + recorded carpet friction delayed 90ms; gain, mono, peak -12dB"
+    },
+    {
+      "cue": "player.roll",
+      "variant": 3,
+      "recording": "kenney",
+      "sources": [
+        "SoundDesign/Footsteps_CC0/Sources/kenney_impactSoft_medium_002.ogg",
+        "SoundDesign/Footsteps_CC0/Sources/kenney_footstep_carpet_002.ogg"
+      ],
+      "processing": "Soft body impact + recorded carpet friction delayed 90ms; gain, mono, peak -12dB"
+    }
+  ]
+}

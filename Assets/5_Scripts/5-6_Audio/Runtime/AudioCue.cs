@@ -16,6 +16,8 @@ namespace FlatWorld.Audio
         [SerializeField] private AudioBus bus = AudioBus.Sfx;
         [SerializeField] private List<AudioClip> clips = new List<AudioClip>();
         [SerializeField] private AudioClipSelection selection = AudioClipSelection.RandomNoRepeat;
+        [SerializeField, Min(1)] private int noRepeatHistory = 1;
+        private readonly List<int> recentClipIndices = new();
         [SerializeField] private bool loop;
         [SerializeField] private AudioFloatRange volume = new AudioFloatRange(1f);
         [SerializeField] private AudioFloatRange pitch = new AudioFloatRange(1f);
@@ -30,7 +32,6 @@ namespace FlatWorld.Audio
         [SerializeField] private AudioRolloffMode rolloffMode = AudioRolloffMode.Linear;
         [SerializeField] private AudioMixerGroup outputOverride;
 
-        private int lastClipIndex = -1;
         private int sequentialIndex;
 
         public string Id => id;
@@ -73,14 +74,22 @@ namespace FlatWorld.Audio
                     }
                     else
                     {
-                        index = UnityEngine.Random.Range(0, clips.Count - 1);
-                        if (index >= lastClipIndex)
-                            index++;
+                        int excluded = Mathf.Min(Mathf.Max(1, noRepeatHistory), clips.Count - 1);
+                        while (recentClipIndices.Count > excluded) recentClipIndices.RemoveAt(0);
+                        int choice = UnityEngine.Random.Range(0, clips.Count - recentClipIndices.Count);
+                        index = 0;
+                        for (; index < clips.Count; index++)
+                        {
+                            if (recentClipIndices.Contains(index)) continue;
+                            if (choice-- == 0) break;
+                        }
                     }
                     break;
             }
 
-            lastClipIndex = index;
+            recentClipIndices.Add(index);
+            int retained = Mathf.Min(Mathf.Max(1, noRepeatHistory), clips.Count - 1);
+            while (recentClipIndices.Count > retained) recentClipIndices.RemoveAt(0);
             return clips[index];
         }
 
