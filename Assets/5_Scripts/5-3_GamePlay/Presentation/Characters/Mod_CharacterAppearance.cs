@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>穿脱时按部位拼合角色外观，复用原身体渲染器与摇摆动作。</summary>
+/// <summary>穿脱时在人物底图上叠加共用装备，复用原身体渲染器与摇摆动作。</summary>
 public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinder
 {
     #region 模块与配置
@@ -20,10 +20,15 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
     public CharacterAppearanceProfile profile;
     public CharacterBodyStyle bodyStyle = CharacterBodyStyle.Female;
 
-    private static readonly string[] PartSlots =
+    public const string WearableState = "wearable";
+    public const string HairMaskState = "wearableHairMask";
+    public const string BodyMaskState = "wearableBodyMask";
+
+    private static readonly string[] LayerSlots =
     {
-        EquipmentSlotCatalog.Head, EquipmentSlotCatalog.TorsoOuter, EquipmentSlotCatalog.Hands,
-        EquipmentSlotCatalog.Legs, EquipmentSlotCatalog.FeetOuter
+        EquipmentSlotCatalog.TorsoInner, EquipmentSlotCatalog.Legs, EquipmentSlotCatalog.FeetInner,
+        EquipmentSlotCatalog.TorsoOuter, EquipmentSlotCatalog.Hands, EquipmentSlotCatalog.FeetOuter,
+        EquipmentSlotCatalog.Head
     };
 
     #endregion
@@ -31,12 +36,13 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
     #region 运行时缓存
 
     private Mod_Equipment equipment;
+    private GameRes resourceOwner;
     private SpriteRenderer targetRenderer;
     private Sprite originalSprite;
     private Texture2D outputTexture;
     private Sprite outputSprite;
     private Color32[] outputPixels;
-    private readonly Color32[][] partPixels = new Color32[5][];
+    private readonly CharacterAppearanceLayer[] layers = new CharacterAppearanceLayer[LayerSlots.Length];
     private readonly Dictionary<Sprite, Color32[]> sourcePixels = new();
     private readonly HashSet<Sprite> invalidSources = new();
     private bool bound;
@@ -107,6 +113,8 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
         equipment = item.itemMods?.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module);
         if (equipment != null) equipment.EquipmentChanged += HandleEquipmentChanged;
         Item.RuntimeStructureChanged += HandleOwnerStructureChanged;
+        resourceOwner = GameRes.ExistingInstance;
+        if (resourceOwner != null) resourceOwner.ResourcesReloaded += OnResourcesReloaded;
         bound = true;
         RefreshAppearance();
     }
@@ -115,6 +123,8 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
     {
         if (equipment != null) equipment.EquipmentChanged -= HandleEquipmentChanged;
         Item.RuntimeStructureChanged -= HandleOwnerStructureChanged;
+        if (resourceOwner != null) resourceOwner.ResourcesReloaded -= OnResourcesReloaded;
+        resourceOwner = null;
         equipment = null;
         if (targetRenderer != null && targetRenderer.sprite == outputSprite)
             targetRenderer.sprite = originalSprite;
@@ -123,7 +133,7 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
         bound = false;
         sourcePixels.Clear();
         invalidSources.Clear();
-        Array.Clear(partPixels, 0, partPixels.Length);
+        Array.Clear(layers, 0, layers.Length);
         outputPixels = null;
         DestroyGeneratedObject(outputSprite);
         DestroyGeneratedObject(outputTexture);
@@ -163,37 +173,37 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
     public void RefreshAppearance()
     {
         if (!bound || !isActiveAndEnabled || targetRenderer == null || profile == null) return;
-        Color32[] baseline = ReadSourcePixels(profile.GetBaseSprite(bodyStyle));
-        if (baseline == null)
-            throw new InvalidOperationException("[角色外观] 身体母版必须是与画布尺寸一致、启用读写的 Sprite。");
+        Color32[] body = ReadSourcePixels(profile.GetBaseSprite(bodyStyle));
+        if (body == null)
+            throw new InvalidOperationException("[角色外观] 身体母版必须满足统一画布、PPU、底中心锚点与可读写契约。");
+        Color32[] hair = ReadSourcePixels(profile.GetHairSprite(bodyStyle));
 
-        for (int i = 0; i < PartSlots.Length; i++)
-            partPixels[i] = ReadSourcePixels(ResolveEquippedSprite(PartSlots[i])) ?? baseline;
+        for (int i = 0; i < LayerSlots.Length; i++)
+            layers[i] = ResolveEquippedLayer(LayerSlots[i]);
 
         EnsureOutput();
-        for (int y = 0, index = 0; y < profile.Height; y++)
-            for (int x = 0; x < profile.Width; x++, index++)
-            {
-                // 先按母版坐标选取装备部位，再统一输出朝右的角色，保持鼠标转身规则一致。
-                int outputX = profile.SourceFacesLeft ? profile.Width - 1 - x : x;
-                outputPixels[y * profile.Width + outputX] = partPixels[profile.GetPartIndex(x, y)][index];
-            }
+        CharacterAppearanceCompositor.Compose(body, hair, layers, outputPixels,
+            profile.Width, profile.Height, profile.SourceFacesLeft);
         outputTexture.SetPixels32(outputPixels);
         outputTexture.Apply(false, false);
         targetRenderer.sprite = outputSprite;
     }
 
-    private Sprite ResolveEquippedSprite(string slotId)
+    private CharacterAppearanceLayer ResolveEquippedLayer(string slotId)
     {
         ItemData equippedItem = equipment?.GetEquippedItem(slotId);
         GameRes resources = GameRes.ExistingInstance;
         if (equippedItem == null || resources == null ||
             !resources.TryGetItemDefinition(equippedItem.IDName, out RuntimeItemDefinition definition))
-            return null;
-        string preferred = bodyStyle == CharacterBodyStyle.Female ? "wearableFemale" : "wearableMale";
-        string alternate = bodyStyle == CharacterBodyStyle.Female ? "wearableMale" : "wearableFemale";
-        if (definition.TryGetVisualStateSprite(preferred, out Sprite sprite)) return sprite;
-        return definition.TryGetVisualStateSprite(alternate, out sprite) ? sprite : null;
+            return default;
+        if (!definition.TryGetVisualStateSprite(WearableState, out Sprite sprite)) return default;
+        Color32[] wearable = ReadSourcePixels(sprite);
+        if (wearable == null) return default;
+
+        // 遮挡规则归具体装备声明，缺失或损坏的穿戴图不能让角色秃头或缺身。
+        definition.TryGetVisualStateSprite(HairMaskState, out Sprite hairMask);
+        definition.TryGetVisualStateSprite(BodyMaskState, out Sprite bodyMask);
+        return new CharacterAppearanceLayer(wearable, ReadSourcePixels(hairMask), ReadSourcePixels(bodyMask));
     }
 
     private void EnsureOutput()
@@ -222,10 +232,12 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
         if (sourcePixels.TryGetValue(source, out Color32[] cached)) return cached;
         Rect rect = source.rect;
         Texture2D texture = source.texture;
-        if (texture == null || !texture.isReadable || rect.width != profile.Width || rect.height != profile.Height || source.packed)
+        if (texture == null || !texture.isReadable || rect.width != profile.Width || rect.height != profile.Height ||
+            source.packed || !Mathf.Approximately(source.pixelsPerUnit, profile.PixelsPerUnit) ||
+            !Mathf.Approximately(source.pivot.x, profile.Width * 0.5f) || !Mathf.Approximately(source.pivot.y, 0f))
         {
             invalidSources.Add(source);
-            Debug.LogWarning($"[角色外观] 贴图 {source.name} 必须保持 {profile.Width}×{profile.Height}、可读写且不打入图集，已使用基础外观。", this);
+            Debug.LogWarning($"[角色外观] 贴图 {source.name} 必须保持 {profile.Width}×{profile.Height}、{profile.PixelsPerUnit} PPU、底中心锚点、可读写且不打入图集，此图层已忽略。", this);
             return null;
         }
 

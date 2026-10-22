@@ -1,4 +1,112 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+do
+    local clear = { 0, 0, 0, 0 }
+    local metal = { 90, 110, 140, 255 }
+    local hairColor = { 70, 35, 15, 255 }
+    local hide = { 0, 0, 0, 255 }
+    local helmet = { metal, clear, clear, metal, clear, clear }
+    local allHair = { clear, clear, clear, hide, hide, hide }
+    local partialHair = { clear, clear, clear, hide, clear, clear }
+
+    local function checkPixels(actual, expected, label, tolerance)
+        assert(#actual == #expected, label .. "：输出画布尺寸错误")
+        for index, pixel in ipairs(expected) do
+            for channel = 1, 4 do
+                if channel == 4 or pixel[4] ~= 0 then
+                    assert(math.abs(actual[index][channel] - pixel[channel]) <= (tolerance or 0),
+                        label .. "：第 " .. index .. " 像素第 " .. channel .. " 通道错误")
+                end
+            end
+        end
+    end
+
+    -- 两套底图使用同一份头盔与遮发素材，半包围头盔的开口始终露出自己的脸。
+    for _, skin in ipairs({ { 220, 165, 125, 255 }, { 135, 90, 60, 255 } }) do
+        local body = { clear, skin, skin, skin, skin, clear }
+        local hair = { clear, clear, clear, hairColor, hairColor, hairColor }
+        local original = { clear, skin, skin, hairColor, hairColor, hairColor }
+        local expected = {
+            original,
+            { metal, skin, skin, metal, skin, clear },
+            { metal, skin, skin, metal, hairColor, hairColor },
+            original,
+            original,
+            { metal, skin, clear, metal, hairColor, hairColor }
+        }
+        test.system("rendering", "character_layers", { body = body, hair = hair, steps = {
+            {},
+            { layers = { { wearable = helmet, hairMask = allHair } } },
+            { layers = { { wearable = helmet, hairMask = partialHair } } },
+            { layers = { { hairMask = allHair, bodyMask = allHair } } },
+            {},
+            { layers = { { wearable = helmet, bodyMask = { clear, clear, hide, clear, clear, clear } } } }
+        } }, function(data)
+            assert(#data.samples == 6, "穿脱装备没有返回全部步骤")
+            for index, sample in ipairs(data.samples) do
+                assert(not sample.rejection, "合法人物图层被拒绝")
+                assert(sample.sourcesUnchanged, "穿戴合成修改了人物或装备原图，摘下后无法恢复")
+                checkPixels(sample.pixels, expected[index], "共享头盔穿脱步骤 " .. index)
+            end
+            assert(data.samples[2].pixels[1][4] == 255, "装备不能扩展到原身体轮廓以外")
+        end, "共享半包围头盔：保留自己的脸、整体/局部遮发、缺穿戴图不遮发、摘掉恢复")
+    end
+
+    for _, row in ipairs({
+        { body = { { 200, 100, 50, 255 } }, hair = { { 0, 200, 0, 128 } },
+            layers = { { wearable = { { 0, 0, 255, 128 } } } }, expected = { { 50, 75, 140, 255 } },
+            label = "半透明头发和装备按先后叠加" },
+        { body = { { 255, 0, 255, 0 } },
+            layers = { { wearable = { { 80, 120, 200, 128 } } } }, expected = { { 80, 120, 200, 128 } },
+            label = "透明底图不污染装备颜色和透明度" },
+        { body = { clear }, layers = {
+                { wearable = { { 255, 0, 0, 128 } } }, { wearable = { { 0, 0, 255, 128 } } }
+            }, expected = { { 85, 0, 170, 192 } }, label = "两层半透明装备按正确透明度混合" },
+        { body = { { 200, 100, 50, 255 } }, layers = {
+                { wearable = { clear }, bodyMask = { { 0, 0, 0, 128 } } }
+            }, expected = { { 200, 100, 50, 127 } }, label = "身体遮罩只减少覆盖部位的透明度" },
+        { body = { clear }, hair = { { 70, 35, 15, 255 } }, layers = {
+                { wearable = { clear }, hairMask = { { 0, 0, 0, 128 } } },
+                { wearable = { clear }, hairMask = { { 0, 0, 0, 128 } } }
+            }, expected = { { 70, 35, 15, 63 } }, label = "多件装备的半透明遮发遮罩叠乘" },
+        { body = { { 200, 100, 50, 255 } }, layers = {
+                { wearable = { { 255, 0, 0, 255 } } }, { wearable = { { 0, 0, 255, 255 } } }
+            }, expected = { { 0, 0, 255, 255 } }, label = "外层装备盖住内层且不受身体分区裁切" }
+    }) do
+        test.system("rendering", "character_layers", {
+            width = 1, height = 1, body = row.body, hair = row.hair, steps = { { layers = row.layers } }
+        }, function(data)
+            local sample = data.samples[1]
+            assert(not sample.rejection and sample.sourcesUnchanged, "合法 Alpha 合成失败或修改原图")
+            checkPixels(sample.pixels, row.expected, row.label, 1)
+        end, "人物分层 Alpha：" .. row.label)
+    end
+
+    test.system("rendering", "character_layers", { width = 3, height = 1, sourceFacesLeft = true,
+        body = { { 255, 0, 0, 255 }, { 0, 255, 0, 255 }, clear },
+        steps = { { layers = { { wearable = { clear, clear, { 0, 0, 255, 255 } } } } } }
+    }, function(data)
+        assert(not data.samples[1].rejection and data.samples[1].sourcesUnchanged, "镜像合成失败或改写原图")
+        checkPixels(data.samples[1].pixels,
+            { { 0, 0, 255, 255 }, { 0, 255, 0, 255 }, { 255, 0, 0, 255 } }, "身体和装备一同镜像")
+    end, "人物分层只在最终输出统一镜像，不错开装备与身体")
+
+    for _, row in ipairs({
+        { body = { clear }, label = "身体图尺寸不匹配" },
+        { hair = { clear }, label = "头发图尺寸不匹配" },
+        { layers = { { wearable = { clear } } }, label = "穿戴图尺寸不匹配" },
+        { layers = { { wearable = helmet, hairMask = { clear } } }, label = "遮发图尺寸不匹配" },
+        { layers = { { wearable = helmet, bodyMask = { clear } } }, label = "身体遮罩尺寸不匹配" }
+    }) do
+        test.system("rendering", "character_layers", {
+            body = row.body or { clear, clear, clear, clear, clear, clear }, hair = row.hair,
+            steps = { { layers = row.layers } }
+        }, function(data)
+            assert(data.samples[1].rejection == "ArgumentException", "未拒绝" .. row.label)
+            assert(data.samples[1].sourcesUnchanged, "拒绝错误尺寸时修改了原图")
+        end, "人物分层拒绝无效素材：" .. row.label)
+    end
+end
+
 test.system("rendering", "terrain_shadow_dirty_queue", {}, function(data)
     assert(data.fullCount == 4096 and data.sparseVisits == 384 and data.fullScanVisits == 524288,
         "地形阴影小范围改动仍按全区块扫描，或重建时漏掉完整格子")

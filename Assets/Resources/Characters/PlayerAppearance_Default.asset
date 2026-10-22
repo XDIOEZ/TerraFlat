@@ -12,17 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3d4bb3d183e30f4a93f9ad65b5dfbac, type: 3}
   m_Name: PlayerAppearance_Default
   m_EditorClassIdentifier: 
-  BaseMale: {fileID: 21300000, guid: ec7a204f4ed90d24a8f9828b6ff1fc64, type: 3}
-  BaseFemale: {fileID: 21300000, guid: 88460563eb9c3ea46b6964df0dcd0733, type: 3}
+  BaseMale: {fileID: 21300000, guid: 469bb83b9d08b804ab2c8846e5a3815c, type: 3}
+  BaseFemale: {fileID: 21300000, guid: e4cbf0c66d81843498d89bdad5479ca5, type: 3}
   DefaultBodyStyle: 1
   SourceFacesLeft: 1
   Width: 32
   Height: 48
   PixelsPerUnit: 32
-  HeadBottom: 25
-  FeetTop: 10
-  LegsTop: 17
-  HandsBottom: 13
-  HandsTop: 19
-  HandsInnerLeft: 10
-  HandsInnerRight: 22
+  HairMale: {fileID: 21300000, guid: d2b15a012b42ab44ea5e59b9d598493f, type: 3}
+  HairFemale: {fileID: 21300000, guid: 0b80d74f52643704f807a8dd564605c7, type: 3}

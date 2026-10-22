@@ -1,31 +1,43 @@
-# 玩家母角色与装备外观
+# 玩家底图、发型与共用装备层
 
-本目录是当前玩家低像素换装的正式美术参考。新人物、服装和护甲沿用这里的比例、像素密度、视角、脚底基线与灰阶，不再参考早期大头候选图。
+人物的脸和身体属于人物；装备只画装备。穿上半包围头盔或兜帽时隐藏头发，在装备的透明开口中露出人物本来的脸，脱下后恢复所选发型。
 
-## 素材
+## 正式素材
 
-- `Base_Male.png`、`Base_Female.png`：男女母角色。
-- `Traveler_Male.png`、`Traveler_Female.png`：旅人兜帽皮甲套装。
-- `IronGuard_Male.png`、`IronGuard_Female.png`：铁卫金属护甲套装。
-- `Icons/`：两套装备的十件库存图标。
-- `Source/ApprovedOutfits.png`：内置 imagegen 按本轮选定男女预览制作的透明源母版。三列依次为基础、旅人、铁卫，上男下女。
+- `Bodies/Base_Male.png`、`Bodies/Base_Female.png`：无头发的人物底图，保留脸、头皮、身体和基础衣裤；肩、腰、四肢使用同一组像素，只有脸可以不同。
+- `Hair/Male.png`、`Hair/Female.png`：独立发型，不包含脸、眼睛、耳朵或皮肤。
+- `Wearables/<物品id>.png`：旅人、铁卫各五件空装备，只含装备自身；男女共用同一件穿戴图，不再提供男女装备图。
+- `Masks/Headgear_Hair.png`：头部装备的头发隐藏遮罩，目前隐藏整个发型；遮罩只作用于头发，不作用于脸。Alpha为255的位置隐藏，0的位置保留，中间值按比例裁剪。
+- `Icons/<物品id>.png`：十件独立物品图标，来自干净装备层，不包含人物的脸或身体。
+- `Source/LayeredOutfits.png`：内置imagegen生成并清理过的分层源图，1448×1086；源区与公共锚点标定见`PlayerAppearanceLayerRaster.cs`。
+- `Source/LayerPreview.png`：同一采样器导出的静态放大预览；上男下女，依次为底图加发型、旅人套装、铁卫套装、只穿胸甲、只穿靴、无发底图。此图说明像素组合，不代表游戏内验收。
 
-正式人物贴图统一为32×48像素、32 PPU、Point、无压缩、无Mipmap、FullRect、底部中心Pivot。主体约42像素高，脚底保留2像素。人物源图需要开启Read/Write，不打入SpriteAtlas；部位像素会在穿脱时合成到同一张运行时贴图，继续复用原来的材质、排序、翻面和整体摇摆。
+目录根部原`Base_Male.png`、`Base_Female.png`暂留作Player Prefab初始Sprite和画风参考；正式运行组合由Profile指向新的`Bodies/`、`Hair/`。原旅人、铁卫男女四张整身装备图和`Source/ApprovedOutfits.png`保留作历史画风参考。旧整身图不再注册Addressables或用于穿戴。宇航服已有物品图没有重画，本次没有增加宇航服穿戴层。
 
-## 穿戴与手动体验
+## 共同画布与配置契约
 
-默认玩家为女生。进入世界后按F2，在创造背包搜索“旅人”或“铁卫”；按H打开装备面板，将对应物品放入头部、外衬/护甲、手部、腿部、鞋子五槽。可以逐件穿脱、混搭，移除后恢复母角色对应部位。
+人物、头发、穿戴层、遮罩一律**32×48像素、32 PPU、底中心Pivot（16,0）**；开启Read/Write，Point、FullRect、无压缩、无Mipmap、不进SpriteAtlas。各层使用同一朝左的源坐标；由`CharacterAppearanceProfile.SourceFacesLeft`统一朝向，不能逐件反转。物品图标使用32×32画布和中心Pivot，不承担穿戴位置。
 
-如需看男生，可在运行中的玩家`Mod_CharacterAppearance`组件上使用“应用人物外观”，选择Male；体型会随角色模块保存。普通Inspector字段只表示配置，运行时切换使用该方法。
+画布坐标标定从左上开始：人物底图约从y=4到45，脚底保留2像素；头发在上部，肩约y=22，腰约y=33，手约y=29..37，鞋约y=40..45。新增素材对齐这些身体锚点，不能把每个部位单独放大铺满人物画布。源母版中的空装备经过一次明确标定归位，运行时直接按全画布Alpha叠加，不再按头、胸、手、腿的矩形分区替换人物。
 
-装备定义位于`GameConfig/Items/shells/character_outfits.json`，通过已有`visual.spriteStates.wearableMale/wearableFemale`引用整身源图。每件装备只替换其实际槽位对应的像素区域，不接管防御、保温或其他装备效果。
+装备配置位于`GameConfig/Items/shells/character_outfits.json`：
 
-部位分界由`Assets/Resources/Characters/PlayerAppearance_Default.asset`统一管理，坐标从左下角开始；当前头部为y≥25，鞋为y<10，腿为其余y<17，手为13≤y<19且x<10或x≥22，其余为胸衣。后续新增装备应对齐同一模板，而不是逐件加入特例。
+```json
+"spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png",
+"spriteStates": {
+  "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
+  "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"
+}
+```
 
-## 重建与边界
+`spriteAddress`负责背包、装备栏与物品展示；`wearable`负责穿戴外观。可选`wearableHairMask`裁剪头发，可选`wearableBodyMask`裁剪身体底图。遮挡要求由装备声明，合成系统统一执行，不按具体头盔名增加分支。身体遮罩不能误覆盖需要露出的脸。所有运行时层和图标注册到`PlayerAppearance` Addressables组，标签`ItemSprite`。
 
-使用菜单`FlatWorld/其他工具/角色换装/从透明母版导入角色与装备`选择项目内源母版，或调用`PlayerAppearanceAssetBuilder.Build(sourceAtlas)`。构建器只在编辑模式执行，写入六张正式源图、十张图标、Profile、玩家Prefab及独立PlayerAppearance Addressables组，不停止游戏。
+## 重建
 
-源图生成提示要点：保持已选男女角色身份、低像素块与克制的小脸；透明三列两行等高人物；基础灰衣棕裤、棕色旅人皮甲、灰蓝铁卫护甲；统一站姿、肩腰手腕膝踝位置，无武器、投影、背景、文字或额外细碎装饰。源母版由导入器按Alpha取人物边界、最近邻归一化并二值化Alpha，不能把预览图直接当正式贴图。
+编辑模式下使用菜单`FlatWorld/其他工具/角色换装/从分层母版重建人物与装备`，或调用`PlayerAppearanceAssetBuilder.Build(sourceAtlas)`。构建器读取正式源母版和确定的标定参数，最近邻采样并二值化Alpha，重建2张底图、2张发型、10张共用装备、1张头发遮罩、10张物品图标，更新Profile、Player Prefab和Addressables。构建器在PlayMode拒绝执行，不会停止或暂停游戏。
 
-本轮范围为本机/Host正式装备槽的外观组合；网络远端的装备快照表现尚未接入。未自动发放装备、改写玩家存档或添加配方，玩法观感由用户手动体验。
+当前提交已包含全部正式PNG、meta、Profile和目录引用，不需要手动运行构建器才能获得素材。本轮通过在Unity外执行同一个`PlayerAppearanceLayerRaster`采样器静态导出，未调用Unity导入、刷新或游戏控制；一次性导出程序不纳入项目。新增不同布局的源母版时先标定素材区域和目标锚点，再修改采样器；不能仅因图片尺寸相同就认定可直接替换。生成提示和清理记录见`Source/Generation.md`。
+
+## 人工体验入口
+
+默认人物为女生。进入世界后按F2，在创造背包搜索“旅人”或“铁卫”；按H打开装备面板，可以逐件穿脱、混搭。头部装备应隐藏头发并保留原脸；其他装备不应改变脸、肤色或发型。运行时切换性别使用玩家`Mod_CharacterAppearance`的“应用人物外观”，两种人物应共用相同装备，不切换到另一张带人物的装备整身图。实际游戏内观感由用户自行验收。

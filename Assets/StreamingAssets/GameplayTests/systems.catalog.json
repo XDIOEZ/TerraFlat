@@ -1181,6 +1181,8 @@
       "sourcePaths": [
         "Assets/URP/DefualtURP2D_Renderer.asset",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Characters/*",
+        "Assets/Editor/FlatWorld/CharacterAppearance/*",
         "Assets/9_Shaders/*",
         "Assets/5_Scripts/Shader/*",
         "Assets/6_Art/*",

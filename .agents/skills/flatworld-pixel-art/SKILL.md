@@ -31,8 +31,8 @@ description: "FlatWorld 运行时像素 Sprite、动画表、物品与建筑美�
 
 ## 按需资料与工具
 
-- 玩家换装母版位于 `Assets/6_Art/Generated/Characters/PlayerTemplate/`：先参考正式男女母角色和旅人/铁卫套装，沿用32×48、32 PPU、底中心Pivot及Profile部位分界；`README.md`说明重建入口。外观源图必须可读写且不进SpriteAtlas，`visual.spriteStates.wearableMale/wearableFemale`供装备槽按部位拼合；不再沿用早期大头候选图。
-  母版朝向由 `CharacterAppearanceProfile.SourceFacesLeft` 声明，先按源坐标选装备部位，再统一输出朝右；不反转鼠标转身逻辑。
+- 玩家换装正式素材位于 `Assets/6_Art/Generated/Characters/PlayerTemplate/`：`Bodies` 无发人物底图、`Hair` 独立发型、`Wearables` 男女共用空装备、`Icons` 独立物品图标；装备不含脸、皮肤、头发。人物/发型/装备/遮罩统一32×48、32 PPU、底中心Pivot、Read/Write、FullRect且不进SpriteAtlas。旧整身图只作参考；`README.md`说明标定与重建入口。
+  `visual.spriteStates.wearable`按公共画布Alpha叠加；可选`wearableHairMask`/`wearableBodyMask`用Alpha255隐藏、0保留对应层。半包围头盔开口透明露原脸，只裁头发；不按装备名或性别写特例，也不再分区替换头部。`spriteAddress`仍是独立图标。母版朝向由`CharacterAppearanceProfile.SourceFacesLeft`统一转换，不反转鼠标转身逻辑。
 
 - [style-guide.md](references/style-guide.md)：分类画风及参考图。
 - [prompt-recipes.md](references/prompt-recipes.md)：生成与动画提示词。

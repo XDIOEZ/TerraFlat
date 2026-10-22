@@ -22,8 +22,8 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Hood.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png",
+          "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"
         },
         "color": {
           "r": 1,
@@ -79,8 +79,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Vest.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png"
         },
         "color": {
           "r": 1,
@@ -137,8 +136,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Gloves.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png"
         },
         "color": {
           "r": 1,
@@ -195,8 +193,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Trousers.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png"
         },
         "color": {
           "r": 1,
@@ -254,8 +251,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Boots.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png"
         },
         "color": {
           "r": 1,
@@ -313,8 +309,8 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
+          "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"
         },
         "color": {
           "r": 1,
@@ -371,8 +367,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Cuirass.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png"
         },
         "color": {
           "r": 1,
@@ -430,8 +425,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Gauntlets.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png"
         },
         "color": {
           "r": 1,
@@ -489,8 +483,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Greaves.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png"
         },
         "color": {
           "r": 1,
@@ -549,8 +542,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Boots.png",
         "spriteStates": {
-          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
-          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png"
         },
         "color": {
           "r": 1,

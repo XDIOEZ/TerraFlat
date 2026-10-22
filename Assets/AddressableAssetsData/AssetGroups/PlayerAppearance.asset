@@ -17,32 +17,92 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: bedf7b75014d9de41b6ee1923957e469
   m_SerializeEntries:
-  - m_GUID: 17a80fce6c882f54398a17169ed46f4f
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Vest.png
+  - m_GUID: e4cbf0c66d81843498d89bdad5479ca5
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Female.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 1918da890f7096f4d83df03f4b9153aa
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png
+  - m_GUID: 469bb83b9d08b804ab2c8846e5a3815c
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 242d581b4297bcc40a9e5f5159e4db1b
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png
+  - m_GUID: 0b80d74f52643704f807a8dd564605c7
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Hair/Female.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 2f9d630f1c4787f4fa78f818c6269940
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Gauntlets.png
+  - m_GUID: d2b15a012b42ab44ea5e59b9d598493f
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Hair/Male.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 37915fa332c06ad40b8388b8985b85b7
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Hood.png
+  - m_GUID: e8f9e71b7f08f2c4e81f1d0d105179d4
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 80177cfcb20705540bba44ee0eae1707
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 25f68045dd4059e4d891365ae77626d4
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 31a05397f1d78f342a888503866c68b3
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 788b48ec48ab94242ae2dd25f98cfa05
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fd8fbecfa3a04b54b855dae6e66dab1e
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 364888932f748504e93bc6624a340b26
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6ce187a6f9f97534ba34b362082b785d
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8273be03d4d073943971dc9c34f4f700
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4a2acdb7f2494e04496966fc28aaa2f4
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f02c1d362887ad749896ec5546a49f7c
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -53,38 +113,14 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 88460563eb9c3ea46b6964df0dcd0733
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Base_Female.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a78d0e9cdbb69f64f91c030198c04473
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b0f5693bb39c9104e88ce553eb5b6025
     m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Cuirass.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c0747691021ed264e82bf8a58174ca79
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c696331303ec5d240a17b095dc634f27
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Gloves.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c9d49ff443d67504f95809f4365097ae
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Trousers.png
+  - m_GUID: 2f9d630f1c4787f4fa78f818c6269940
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Gauntlets.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -95,20 +131,38 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a78d0e9cdbb69f64f91c030198c04473
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ec700f9862070e34f8eab9c0c94f05d0
     m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Boots.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ec7a204f4ed90d24a8f9828b6ff1fc64
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Base_Male.png
+  - m_GUID: c696331303ec5d240a17b095dc634f27
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Gloves.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: f8ec1bd229b95324e994b6f10302bff2
-    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png
+  - m_GUID: 37915fa332c06ad40b8388b8985b85b7
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Hood.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c9d49ff443d67504f95809f4365097ae
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Trousers.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 17a80fce6c882f54398a17169ed46f4f
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Vest.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
