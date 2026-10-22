@@ -108,6 +108,8 @@ for _, row in ipairs({
 end
 test.system("agriculture", "manual_harvest_work", {}, function(data)
     assert(data.defaultSteps == 5, "徒手默认采集次数不是五次")
+    assert(data.staminaCost == 1 and data.shakeDuring ~= 0 and data.shakeBefore == 0 and data.shakeAfter == 0,
+        "采摘基础体力或抖动时限错误")
     for i = 1, 10 do
         assert(data.completed[i] == (i == 5 or i == 10), "未完成五次就采出物品，或完成后未重置")
         assert(data.progress[i] == i % 5, "徒手进度没有按有效交互累积")

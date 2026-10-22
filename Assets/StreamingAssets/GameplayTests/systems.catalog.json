@@ -625,6 +625,8 @@
       "group": "工业与能源",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Electrical*",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/EngineeringVision.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkTilemapRenderer.EngineeringVision.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Battery*",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
         "Assets/StreamingAssets/GameplayTests/Systems/Electrical/*",

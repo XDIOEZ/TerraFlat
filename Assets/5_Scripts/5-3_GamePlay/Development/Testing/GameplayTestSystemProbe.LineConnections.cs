@@ -7,6 +7,85 @@ public static partial class GameplayTestSystemProbe
 {
     #region 独立线路连接表现规则采样
 
+    private static JObject WorldLooseDropRules(JObject args)
+    {
+        var state = new SpaceLooseItemState { PickupAfterSimulationSeconds = 12.5d,
+            SupportShipId = "cargo-support", SupportLocalX = 2.25d, SupportLocalY = -3.5d,
+            DropRemainingSeconds = .2d, DropVelocityX = 1.5d, DropVelocityY = -.25d };
+        SpaceLooseItemState restored = Newtonsoft.Json.JsonConvert.DeserializeObject<SpaceLooseItemState>(
+            Newtonsoft.Json.JsonConvert.SerializeObject(state));
+        return new JObject
+        {
+            ["earlyPickup"] = state.CanBePickedUpAt(12.49d), ["readyPickup"] = state.CanBePickedUpAt(12.5d),
+            ["invalidClock"] = state.CanBePickedUpAt(double.NaN),
+            ["ship"] = restored.SupportShipId, ["x"] = restored.SupportLocalX, ["y"] = restored.SupportLocalY,
+            ["remaining"] = restored.DropRemainingSeconds, ["pickupAfter"] = restored.PickupAfterSimulationSeconds
+        };
+    }
+
+    private static JObject WorldShipDevicePower(JObject args)
+    {
+        var node = new MachineEntity
+        {
+            Id = -314159, Definition = new MachineDefinition { Electrical = new ElectricalDefinition { Role = "consumer", PowerWatts = 400f } },
+            State = new MachineState { Engaged = true }, ElectricalRequestedWatts = 250f,
+            ElectricalSuppliedWatts = 125f, ElectricalPowerRatio = .5f
+        };
+        var logic = new ShipDeviceLogic(node);
+        var result = new JObject { ["rated"] = logic.RatedPowerWatts, ["partial"] = logic.CurrentPowerWatts };
+        node.State.Engaged = false; result["stopped"] = logic.CurrentPowerWatts;
+        node.State.Engaged = true; node.ElectricalPowerRatio = 0f; result["unpowered"] = logic.CurrentPowerWatts;
+        node.ElectricalPowerRatio = 1f; node.ElectricalRequestedWatts = 0f; result["idle"] = logic.CurrentPowerWatts;
+        node.ElectricalRequestedWatts = node.ElectricalSuppliedWatts = 800f; result["clamped"] = logic.CurrentPowerWatts;
+        return result;
+    }
+
+    private static JObject WorldPipeGeometry(JObject args)
+    {
+        Sprite arm = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f), 2f);
+        try
+        {
+            var poses = new JArray();
+            for (int direction = 0; direction < 4; direction++)
+            {
+                FluidPipeConnectionVisual.GetArmPose(arm, direction, out Quaternion rotation, out Vector3 offset, out Vector3 scale);
+                Vector3 root = offset + rotation * Vector3.Scale(new Vector3(0f, -.5f), scale);
+                Vector3 end = offset + rotation * Vector3.Scale(new Vector3(0f, .5f), scale);
+                poses.Add(new JObject { ["rootX"] = root.x, ["rootY"] = root.y, ["endX"] = end.x, ["endY"] = end.y });
+            }
+            return new JObject { ["poses"] = poses };
+        }
+        finally { Object.DestroyImmediate(arm); }
+    }
+
+    private static JObject WorldEngineeringVision(JObject args)
+    {
+        var goggles = new Data_GeneralItem
+        {
+            Stack = new ItemStack { Amount = 1f }, Durability = 300f,
+            Tags = new List<string> { EngineeringVision.CapabilityTag, EquipmentSlotCatalog.HeadTag }
+        };
+        var ordinary = new Data_GeneralItem { Stack = new ItemStack { Amount = 1f }, Durability = 300f };
+        var sample = new JObject
+        {
+            ["empty"] = EngineeringVision.HasCapability(null, null),
+            ["held"] = EngineeringVision.HasCapability(goggles, null),
+            ["head"] = EngineeringVision.HasCapability(null, goggles),
+            ["carried"] = EngineeringVision.HasCapability(null, null, goggles),
+            ["ordinary"] = EngineeringVision.HasCapability(ordinary, ordinary)
+        };
+        goggles.Durability = 0f;
+        sample["broken"] = EngineeringVision.HasCapability(goggles, goggles, goggles);
+        goggles.Durability = 300f; goggles.Stack.Amount = 0f;
+        sample["removed"] = EngineeringVision.HasCapability(goggles, goggles, goggles);
+        sample["hiddenPlacementAllowedWithoutActor"] = FlatWorld.Gameplay.Building.BuildingPlacementService
+            .ValidateActorEligibility("Wire_Hidden", null, out string placementReason);
+        sample["hiddenPlacementReason"] = placementReason;
+        sample["ordinaryPlacementAllowedWithoutActor"] = FlatWorld.Gameplay.Building.BuildingPlacementService
+            .ValidateActorEligibility("Wire_Copper", null, out _);
+        return sample;
+    }
+
     // 只准备独立格子与端口，连接结果交正式图计算，Lua 保留期望与断言。
     private static JObject WorldElectricalLineConnections(JObject args)
     {
@@ -41,6 +120,10 @@ public static partial class GameplayTestSystemProbe
         int afterRemoval = graph.GetWireConnectionMask(center.Cell);
         nodes.Add(neighbor); graph.Rebuild(nodes);
         int afterRepair = graph.GetWireConnectionMask(center.Cell);
+        center.Definition.Electrical.Hidden = true;
+        neighbor.Definition.Electrical.Hidden = true;
+        graph.Rebuild(nodes);
+        int hiddenMask = graph.GetWireConnectionMask(center.Cell);
         var isolated = new ElectricalNetworkGraph(default);
         isolated.Rebuild(new[] { Wire(100, center.Cell), Wire(101, center.Cell + Vector2Int.up) });
 
@@ -63,7 +146,7 @@ public static partial class GameplayTestSystemProbe
         colocated.Definition.Electrical = new ElectricalDefinition { Role = "consumer", Connection = "cell" };
         graph.Rebuild(new[] { center, colocated });
         return new JObject { ["masks"] = masks, ["beforeRemoval"] = beforeRemoval,
-            ["afterRemoval"] = afterRemoval, ["afterRepair"] = afterRepair,
+            ["afterRemoval"] = afterRemoval, ["afterRepair"] = afterRepair, ["hiddenMask"] = hiddenMask,
             ["independentGraphMask"] = isolated.GetWireConnectionMask(center.Cell),
             ["endpoints"] = endpoints, ["colocatedMask"] = graph.GetWireConnectionMask(center.Cell) };
     }

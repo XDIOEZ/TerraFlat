@@ -17,6 +17,39 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "log_filters", CaptureLogFilters);
         Register("ui_settings", "world_settings_pages", CaptureWorldSettingsPages);
         Register("ui_settings", "bag_hotbar_layout", CaptureBagHotbarLayout);
+        Register("ui_settings", "hover_and_mod_selection", CaptureHoverAndModSelection);
+    }
+
+    private static JObject CaptureHoverAndModSelection(JObject args)
+    {
+        var original = new ModProfile
+        {
+            EnabledMods = new System.Collections.Generic.List<string> { "mod.a", "mod.b" },
+            LoadOrder = new System.Collections.Generic.List<string> { "mod.a", "mod.b" }
+        };
+        var equivalent = new ModProfile
+        {
+            EnabledMods = new System.Collections.Generic.List<string> { "MOD.B", "MOD.A" },
+            LoadOrder = new System.Collections.Generic.List<string> { "MOD.A", "MOD.B" }
+        };
+        bool equivalentSelection = original.HasSameSelection(equivalent);
+        equivalent.LoadOrder.Reverse();
+        bool reorderedChanged = !original.HasSameSelection(equivalent);
+        equivalent.LoadOrder.Reverse();
+        equivalent.DisabledMods.Add("mod.c");
+        bool disabledChanged = !original.HasSameSelection(equivalent);
+        equivalent.DisabledMods.Clear();
+        equivalent.AutoEnableNewMods = true;
+        return new JObject
+        {
+            ["earlyHidden"] = !InventoryItemTooltip.HasCompletedMouseHover(10d, 10.499d),
+            ["halfSecondVisible"] = InventoryItemTooltip.HasCompletedMouseHover(10d, 10.5d),
+            ["reenteredHidden"] = !InventoryItemTooltip.HasCompletedMouseHover(10.4d, 10.6d),
+            ["equivalentSelection"] = equivalentSelection,
+            ["reorderedChanged"] = reorderedChanged,
+            ["disabledChanged"] = disabledChanged,
+            ["autoEnableChanged"] = !original.HasSameSelection(equivalent)
+        };
     }
 
     private static JObject CaptureLogFilters(JObject args)

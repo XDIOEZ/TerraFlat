@@ -1,4 +1,13 @@
 -- 阵营查询沿用正式服务，额外 GC 断言仅在计数器可用时执行。
+test.system("combat", "equipment_durability", {}, function(data)
+    assert(data.wood == 30 and data.stone == 300 and data.bronze == 1000 and data.iron > data.bronze
+        and data.obsidian == 50, "装备材质耐久档位错误")
+    assert(data.positiveWear == 49 and data.blockedWear == 50 and data.rejectedWear == 50 and data.lastPoint == 0,
+        "只有成功伤害扣一点耐久，或末点磨损没有归零")
+    assert(data.knifeCropMultiplier == 1.5 and data.knifeWrongTarget == 1 and data.postDefense == 9
+        and data.blockedAffinity == 0, "小刀作物专精不是扣防后50%加成，或扩大到其他目标")
+end, "材质耐久、成功伤害磨损与小刀作物弱点")
+
 test.system("combat", "bite_attack", {}, function(data)
     assert(data.equalHalfUsesA and data.lighterUsesB and data.heavierUsesA, "撕咬身体质量分界错误")
     assert(data.bodyWeight == 40 and data.rangeUsesAttackRange, "撕咬没有使用身体重量或普通攻击范围")

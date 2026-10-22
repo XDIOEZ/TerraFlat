@@ -1,5 +1,12 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
+test.system("space", "loose_drop_rules", {}, function(data)
+    assert(not data.earlyPickup and data.readyPickup and not data.invalidClock,
+        "太空投掷尚未结束就被自动拾回，或拾取时钟边界错误")
+    assert(data.ship == "cargo-support" and data.x == 2.25 and data.y == -3.5 and data.remaining == .2 and data.pickupAfter == 12.5,
+        "太空落地货物的承载坐标、投掷进度或拾取时刻没有随保存恢复")
+end, "太空丢弃可见时间与人工重力货物状态保存")
+
 test.system("space", "fiber_connections", {}, function(data)
     assert(#data.masks == 16, "光纤连接的16种四邻样本不完整")
     for index, mask in ipairs(data.masks) do
@@ -15,10 +22,26 @@ test.system("space", "fiber_connections", {}, function(data)
         "同坐标不同船的光纤连接串到一起")
     assert(data.nonOpticalNeighbors == 0, "光纤错误连向相邻电线或管道")
     assert(#data.sortingOrders == 4, "缺少船上线层采样")
-    for index, expected in ipairs({-2, -1, 0, 1}) do
+    for index, expected in ipairs({-4, -3, -2, -1}) do
         assert(data.sortingOrders[index] == expected, "船上地板/管道/电线/光纤层级错误：" .. index)
     end
 end, "光纤16种连接、设备端点、拆建重算与同坐标船体隔离")
+
+test.system("space", "device_power", {}, function(data)
+    assert(data.rated == 400 and data.partial == 125, "设备功率没有读取真实电网额定及供电数据")
+    assert(data.stopped == 0 and data.unpowered == 0 and data.idle == 0, "停机、断电或无需求时仍显示耗电")
+    assert(data.clamped == 400, "实际功率超过设备额定值")
+end, "供气重力导航设备真实功率与停机断电边界")
+
+test.system("space", "pipe_geometry", {}, function(data)
+    local expected = {{0, .5}, {.5, 0}, {0, -.5}, {-.5, 0}}
+    assert(#data.poses == 4, "管臂缺少四个方向")
+    for index, pose in ipairs(data.poses) do
+        assert(math.abs(pose.rootX) < .00001 and math.abs(pose.rootY) < .00001, "管臂没有从同一中枢对齐")
+        assert(math.abs(pose.endX - expected[index][1]) < .00001 and math.abs(pose.endY - expected[index][2]) < .00001,
+            "管臂端点未精确接到相邻格公共边界")
+    end
+end, "水管直线转角分叉共用像素管臂与格边连接")
 
 do
     -- 只采样正式表现插值，不创建世界或操作当前船体与镜头。

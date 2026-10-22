@@ -18,12 +18,68 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/natural_recovery_manual", WorldNaturalRecoveryManual);
         operations.Add("environment/natural_recovery_validation", WorldNaturalRecoveryValidation);
         operations.Add("environment/natural_draw_all", WorldNaturalDrawAll);
+        operations.Add("environment/weather_associations", WorldWeatherAssociations);
+    }
+
+    private static JObject WorldWeatherAssociations(JObject args)
+    {
+        RegionalWeatherSettings settings = WeatherRecoverySettings(WeatherElementIds.Rain);
+        foreach (WeatherElementRule rule in settings.Elements) rule.RecoveryProbabilityMultiplier = 1f;
+        settings.Associations = new[]
+        {
+            new WeatherAssociationRule { SourceId = WeatherElementIds.Rain, TargetId = WeatherElementIds.Wind, ProbabilityBonus = 1f },
+            new WeatherAssociationRule { SourceId = WeatherElementIds.Wind, TargetId = WeatherElementIds.Thunder, ProbabilityBonus = 1f }
+        };
+        var engine = WeatherRecoveryEngine(settings, 17413);
+        engine.RegisterChunk(new Int2(128, 0), settings.CreateProfile(new ChunkWeatherClimate(1f, 1f, 0f, 1f, 20f, 1f)), 0d);
+        JObject Sample(RegionalWeatherState state)
+        {
+            var sample = new JObject();
+            foreach (string id in WeatherRecoveryIds)
+            {
+                var element = WeatherRecoveryElement(state, id);
+                sample[id] = new JObject { ["intensity"] = element.Intensity, ["bonus"] = element.PendingProbabilityBonus };
+            }
+            return sample;
+        }
+        engine.Advance(default, 30d);
+        RegionalWeatherState first = WeatherRecoveryState(engine);
+        JObject saved = Sample(WeatherElementRecordRoundTrip(first));
+        engine.Advance(default, 60d);
+        JObject second = Sample(WeatherRecoveryState(engine));
+        RegionalWeatherState isolatedThird = WeatherRecoveryWithProbability(WeatherRecoveryState(engine), WeatherElementIds.Rain, 0f);
+        isolatedThird = WeatherRecoveryWithProbability(isolatedThird, WeatherElementIds.Wind, 0f);
+        WeatherRecoveryElement(isolatedThird, WeatherElementIds.Wind).PendingProbabilityBonus = 0f;
+        engine.RestoreState(isolatedThird);
+        engine.Advance(default, 90d);
+        var config = ChunkWeatherConfiguration.Load();
+        var profile = new WeatherElementProfile(WeatherElementIds.Wind, .2f, .5f, 3f);
+        config.NaturalEventProbabilityMultiplier = 1f;
+        return new JObject
+        {
+            ["first"] = Sample(first), ["saved"] = saved, ["second"] = second,
+            ["third"] = Sample(WeatherRecoveryState(engine)),
+            ["neighbor"] = Sample(WeatherRecoveryState(engine, new Int2(128, 0))),
+            ["probability"] = config.ResolveActivationProbability(profile, 0d, 0d, .1f),
+            ["clamped"] = config.ResolveActivationProbability(profile, 0d, 0d, 1f),
+            ["configuredRainBonus"] = config.Associations[0].ProbabilityBonus,
+            ["configuredWindBonus"] = config.Associations[1].ProbabilityBonus
+        };
+    }
+
+    private static RegionalWeatherState WeatherElementRecordRoundTrip(RegionalWeatherState source)
+    {
+        RegionalWeatherState result = source.Clone();
+        for (int i = 0; i < result.Elements.Length; i++)
+            result.Elements[i] = WeatherElementStateRecord.FromState(source.Elements[i]).ToState();
+        return result;
     }
 
     private static JObject WorldNaturalDrawAll(JObject args)
     {
         RegionalWeatherSettings settings = ChunkWeatherConfiguration.Load();
         settings.NaturalEventProbabilityMultiplier = 1f;
+        settings.Associations = Array.Empty<WeatherAssociationRule>();
         // 只把夹具概率固定为零或一，时钟和逐项抽签沿用正式引擎。
         foreach (WeatherElementRule rule in settings.Elements)
         {
@@ -284,6 +340,7 @@ public static partial class GameplayTestSystemProbe
     private static RegionalWeatherSettings WeatherRecoverySettings(string activeId, float duration = 3f)
     {
         RegionalWeatherSettings settings = ChunkWeatherConfiguration.Load();
+        settings.Associations = Array.Empty<WeatherAssociationRule>();
         settings.NaturalEventProbabilityMultiplier = 1f;
         settings.StepSeconds = 2f;
         settings.CheckIntervalSeconds = 30f;

@@ -16,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         Register("crafting", "tool_reinforcement", EntityToolReinforcement);
         Register("crafting", "tool_reinforcement_catalog", EntityReinforcementCatalog);
         Register("agriculture", "manual_harvest_work", EntityManualHarvestWork);
+        Register("combat", "equipment_durability", EntityEquipmentDurability);
         Register("building", "placement_distance", EntityPlacementDistance);
     }
 
@@ -30,7 +31,28 @@ public static partial class GameplayTestSystemProbe
             completed.Add(ManualHarvestWork.Advance(ref progress, steps));
             progressValues.Add(progress);
         }
-        return new JObject { ["defaultSteps"] = ManualHarvestWork.DefaultSteps, ["completed"] = completed, ["progress"] = progressValues };
+        return new JObject { ["defaultSteps"] = ManualHarvestWork.DefaultSteps, ["completed"] = completed, ["progress"] = progressValues,
+            ["staminaCost"] = ManualHarvestWork.StaminaCost, ["shakeDuring"] = ManualHarvestWork.ShakeAngle(.02f),
+            ["shakeBefore"] = ManualHarvestWork.ShakeAngle(-1f), ["shakeAfter"] = ManualHarvestWork.ShakeAngle(.3f) };
+    }
+
+    private static JObject EntityEquipmentDurability(JObject args)
+    {
+        float knife = Mod_ResourceHarvest.ResolveAffinityMultiplier(ResourceToolKind.Knife, 1, ResourceToolKind.Knife, 1, 1f);
+        return new JObject {
+            ["wood"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Wood"),
+            ["stone"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Stone"),
+            ["bronze"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Bronze"),
+            ["iron"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Iron"),
+            ["obsidian"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Dagger_Obsidian Stone"),
+            ["positiveWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, 2f),
+            ["blockedWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, 0f),
+            ["rejectedWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, -1f),
+            ["lastPoint"] = EquipmentDurabilityRules.ResolveRemaining(1f, 100f),
+            ["knifeCropMultiplier"] = knife,
+            ["knifeWrongTarget"] = Mod_ResourceHarvest.ResolveAffinityMultiplier(ResourceToolKind.Axe, 1, ResourceToolKind.Knife, 1, 1f),
+            ["postDefense"] = FlatWorld.Combat.CombatRules.ResolvePhysical(10f, 4f, 1f, knife),
+            ["blockedAffinity"] = FlatWorld.Combat.CombatRules.ResolvePhysical(4f, 10f, 1f, knife) };
     }
 
     private static JObject EntityPlacementDistance(JObject args) => EntityWithQuestPlayer(player =>

@@ -15,6 +15,16 @@ local function finite_sample(sample)
     for _, energy in ipairs(sample.sourceJoules) do near(energy, 0, "无限电源开始储存或消耗电量") end
 end
 
+test.system("electrical", "engineering_vision", {}, function(data)
+    assert(not data.empty and not data.ordinary, "未提供护目镜也获得工程视野")
+    assert(data.held and data.head and data.carried, "手持、鼠标携带或头戴护目镜未获得工程视野")
+    assert(not data.broken and not data.removed, "损坏或移除护目镜仍保留工程视野")
+    assert(not data.hiddenPlacementAllowedWithoutActor and data.ordinaryPlacementAllowedWithoutActor,
+        "隐藏电线放置绕过操作资格，或普通电线受到工程护目镜限制")
+    assert(type(data.hiddenPlacementReason) == "string" and data.hiddenPlacementReason:find("工程护目镜", 1, true),
+        "隐藏电线放置拒绝没有给玩家说明需要工程护目镜")
+end, "工程护目镜手持、头戴与失效资格")
+
 test.system("electrical", "line_connections", {}, function(data)
     assert(#data.masks == 16, "电线连接的16种四邻样本不完整")
     for index, mask in ipairs(data.masks) do
@@ -22,6 +32,7 @@ test.system("electrical", "line_connections", {}, function(data)
     end
     assert(data.beforeRemoval == 2 and data.afterRemoval == 0 and data.afterRepair == 2,
         "拆线或重新铺线后连接掩码没有重建")
+    assert(data.hiddenMask == data.afterRepair, "隐藏线路改变了真实电网连接")
     assert(data.independentGraphMask == 1, "独立电网混入了另一张图的同坐标电线")
     assert(#data.endpoints == 4, "缺少四向设备端口样本")
     for index, expected in ipairs({2, 1, 8, 4}) do
