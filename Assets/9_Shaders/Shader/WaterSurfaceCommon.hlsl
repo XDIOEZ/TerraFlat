@@ -138,10 +138,10 @@ half QuantizeWaterVisualDepth(half liquidDepth)
     return min(1.0h, ceil(depth * 10.0h - 0.001h) * 0.1h);
 }
 
-/// <summary>按连续水深将不透明度从 0.60 渐变到 0.80，深水仍保持半透明。</summary>
+/// <summary>所有水面按连续深度使用 0.30～0.50 不透明度，始终露出水底资源。</summary>
 half ResolveWaterSurfaceAlpha(half textureAlpha, half liquidDepth)
 {
-    return textureAlpha * lerp(0.60h, 0.80h, saturate(liquidDepth));
+    return min(0.50h, saturate(textureAlpha) * lerp(0.30h, 0.50h, saturate(liquidDepth)));
 }
 
 /// <summary>通过显式世界坐标映射采样连续水深，供写实水色与透明度使用。</summary>
