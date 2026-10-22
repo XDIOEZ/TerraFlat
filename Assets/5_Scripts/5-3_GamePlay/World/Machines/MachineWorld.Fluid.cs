@@ -128,6 +128,14 @@ public static partial class MachineWorld
     public static bool IsFluidTankBlock(MachineEntity node)
         => node?.Definition.Fluid?.CombineAdjacent == true && GetFluidDeviceBehavior(node)?.IsSharedStorage == true;
 
+    public static IReadOnlyList<MachineEntity> GetFluidTankMembers(MachineEntity node)
+    {
+        if (!IsFluidTankBlock(node)) return Array.Empty<MachineEntity>();
+        using var nodeScope = UseNodeScope(node);
+        RebuildGraphsIfDirty();
+        return fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) ? group.Members : Array.Empty<MachineEntity>();
+    }
+
     // 外观只连接同一权威储罐组的四邻格，位序为北1、东2、南4、西8。
     public static int GetFluidTankConnectionMask(MachineEntity node)
     {

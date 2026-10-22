@@ -393,8 +393,16 @@ public sealed partial class ChunkTilemapRenderer
         if (pipe)
         {
             int mask = MachineWorld.GetFluidPipeConnectionMask(node);
-            Part(node, x, y, 0, State(def, pipeSpriteStates[mask]), material, origin,
-                Quaternion.identity, Vector3.zero, Vector3.one, 0, 0);
+            Part(node, x, y, 0, State(def, pipeSpriteStates[0]), material, origin,
+                Quaternion.identity, Vector3.zero, Vector3.one, 0, 0, partOrder: 12);
+            Sprite arm = FluidPipeConnectionVisual.GetArm(State(def, pipeSpriteStates[1]));
+            for (int pipeDirection = 0; pipeDirection < 4; pipeDirection++)
+            {
+                if ((mask & (1 << pipeDirection)) == 0) continue;
+                FluidPipeConnectionVisual.GetArmPose(arm, pipeDirection, out Quaternion turn, out Vector3 offset, out Vector3 scale);
+                Part(node, x, y, 8 + pipeDirection, arm, material, origin, turn,
+                    Quaternion.Inverse(turn) * offset, scale, 0, 0, partOrder: 0);
+            }
             submittedPipeMasks[new Vector3Int(x, y, node.Definition.Layer)] = mask;
         }
         else if (tankBlock)
@@ -520,6 +528,7 @@ public sealed partial class ChunkTilemapRenderer
                 visual = MechanicalDepthVisual.Create(this, origin, id, visualLayer);
             mechanicalDepthVisuals[key] = visual;
         }
+        visual.BindSelectionEntity(node);
         visual.BeginUpdate(origin);
         visual.BindInteraction(MachineWorld.GetOrCreateInteractionTarget(node));
     }

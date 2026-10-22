@@ -39,6 +39,9 @@ public sealed partial class ChunkTilemapRenderer
     internal Vector3 DepthPresentationOffset => boundChunk == null ? Vector3.zero : transform.position -
         new Vector3(boundChunk.Address.ChunkOrigin.X, boundChunk.Address.ChunkOrigin.Y, 0f);
 
+    internal void RemoveBuildingConnectionDepthPart(int entityId, int part)
+        => mechanicalConnectorDepthMesh?.Remove(ChunkDepthMeshRenderer.BuildingDomain, entityId, part);
+
     private void ReleaseDepthPresentation()
     {
         depthMesh?.Dispose();

@@ -16,6 +16,13 @@ public sealed partial class MechanicalDepthVisual
     /// <summary>灯光保留 Unity 专用代理，晾架内容与主体一起合入脚点行。</summary>
     internal void UpdateFacility(MachineEntity entity)
     {
+        BindSelectionEntity(entity);
+        if (tankEntity != null && highlighted)
+        {
+            tankOutline ??= new FluidTankSelectionOutline(transform);
+            tankOutline.Show(tankEntity, true);
+        }
+        else tankOutline?.Hide();
         UpdateCultivatorSprites(entity);
         UpdateBatterySprites(entity);
         UpdatePoweredLight(entity);

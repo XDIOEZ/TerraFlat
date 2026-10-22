@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace FlatWorld.Spaceflight
 {
@@ -18,12 +19,15 @@ namespace FlatWorld.Spaceflight
         private Rect interactionBounds;
         private Vector3 interactionLift;
         private SpriteRenderer[] tankParts;
+        private FluidTankSelectionOutline tankOutline;
         private Sprite tankSource;
         private int tankMask = -1;
         private double tankCellSize;
         private int connectionMask = -1;
         private Sprite connectionSource;
         private SpriteRenderer[] fiberParts;
+        private SpriteRenderer[] pipeParts;
+        private SortingGroup pipeSortingGroup;
         private ulong boundStructureRevision;
         private ShipState boundShip;
         private ShipPieceState boundPiece;
@@ -79,6 +83,16 @@ namespace FlatWorld.Spaceflight
         public void SetInteractionHighlighted(bool highlighted)
         {
             IsInteractionHighlighted = highlighted; InteractionHighlightChanged?.Invoke(highlighted);
+            RefreshTankOutline();
+        }
+        private void RefreshTankOutline()
+        {
+            if (machineScopeKey == null) { tankOutline?.Hide(); return; }
+            using var scope = MachineWorld.UseScope(machineScopeKey);
+            MachineEntity node = MachineWorld.GetById(TargetGuid);
+            if (!MachineWorld.IsFluidTankBlock(node)) { tankOutline?.Hide(); return; }
+            tankOutline ??= new FluidTankSelectionOutline(transform);
+            tankOutline.Show(node, IsInteractionHighlighted, (float)boundCellSize, interactionLift);
         }
         public void Initialize(SpaceSession owner, ShipState ship, ShipPieceState piece, Item instance)
         {
@@ -128,6 +142,7 @@ namespace FlatWorld.Spaceflight
         {
             if (visual == null) return;
             MachineDefinition machine = MachineCatalog.Get(piece.ItemId);
+            if (machine?.Fluid?.Kind != "pipe" && pipeSortingGroup != null) pipeSortingGroup.enabled = false;
             bool connectionLine = machine?.IsConnectionLine == true || piece.Kind == ShipPieceKind.Fiber;
             WorldSortingManager.GetInstance().ApplyRenderer(visual,
                 piece.Kind == ShipPieceKind.Floor || connectionLine
@@ -151,8 +166,8 @@ namespace FlatWorld.Spaceflight
         }
         // 创建和恢复共用线路层级，保持尾焰、地板、管线、电线、光纤的先后顺序。
         internal static int ResolveSortingOrder(ShipPieceState piece, MachineDefinition machine)
-            => piece.Kind == ShipPieceKind.Floor ? -2 : machine?.IsConnectionLine == true
-                ? machine.VisualLayer + 1 : piece.Kind == ShipPieceKind.Fiber ? 1 : 0;
+            => piece.Kind == ShipPieceKind.Floor ? -4 : machine?.Fluid?.Kind == "pipe" ? -3
+                : machine?.Electrical?.IsWire == true ? -2 : piece.Kind == ShipPieceKind.Fiber ? -1 : 0;
 
         public void Rebind(ShipState ship, ShipPieceState piece, bool force = false)
         {
@@ -294,8 +309,28 @@ namespace FlatWorld.Spaceflight
             visual.transform.localScale = new Vector3((float)boundShip.CellSizeMeters, (float)boundShip.CellSizeMeters, 1f);
             if (!definition.TryGetVisualStateSprite(state, out Sprite connected))
                 throw new InvalidOperationException("船上线路连接贴图缺失：" + node.Definition.Id + "/" + state);
-            if (connectionMask == mask && connectionSource == definition.Sprite && visual.sprite == connected) return;
-            visual.sprite = connected;
+            Sprite body = connected, northArm = null;
+            if (pipe)
+            {
+                if (!definition.TryGetVisualStateSprite("pipe0", out Sprite hub) ||
+                    !definition.TryGetVisualStateSprite("pipe1", out Sprite north))
+                    throw new InvalidOperationException("管道缺少标准中枢或北向管臂。");
+                body = hub; northArm = north;
+                // 管臂在本管中枢后面，整根管仍作为一组排在地板上方。
+                if (pipeSortingGroup == null)
+                    pipeSortingGroup = visual.GetComponent<SortingGroup>() ?? visual.gameObject.AddComponent<SortingGroup>();
+                pipeSortingGroup.enabled = true;
+                pipeSortingGroup.sortingLayerID = visual.sortingLayerID;
+                pipeSortingGroup.sortingOrder = visual.sortingOrder;
+            }
+            else
+            {
+                if (pipeSortingGroup != null) pipeSortingGroup.enabled = false;
+                if (pipeParts != null) foreach (SpriteRenderer part in pipeParts) if (part != null) part.enabled = false;
+            }
+            if (connectionMask == mask && connectionSource == definition.Sprite && visual.sprite == body) return;
+            visual.sprite = body;
+            if (pipe) FluidPipeConnectionVisual.Apply(visual, northArm, ref pipeParts, mask);
             connectionMask = mask;
             connectionSource = definition.Sprite;
         }
@@ -307,6 +342,7 @@ namespace FlatWorld.Spaceflight
                 if (visual.enabled != visible) visual.enabled = visible;
             }
             interactionLift = visualLiftOffset;
+            if (IsInteractionHighlighted) RefreshTankOutline();
             if (visual != null)
             {
                 Vector3 local = baseVisualPosition + visualLiftOffset;
@@ -347,6 +383,7 @@ namespace FlatWorld.Spaceflight
         public void OnInteractCancel(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope(machineScopeKey)) machineTarget.OnInteractCancel(actor); }
         private void OnDestroy()
         {
+            tankOutline?.Dispose(); tankOutline = null;
             SpatialInteractionRegistry.Unregister(this); InteractionHighlightChanged = null;
             ReleaseDoorVisual();
             ReleaseCultivatorVisual();

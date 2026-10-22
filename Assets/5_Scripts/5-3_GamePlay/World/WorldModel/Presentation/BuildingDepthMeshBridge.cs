@@ -102,12 +102,14 @@ internal static class BuildingDepthMeshBridge
         private readonly List<Source> sources = new();
         private readonly MaterialPropertyBlock properties = new();
         private readonly int entityId;
+        private readonly bool connectionLine;
         private ChunkView view;
         private ChunkTilemapRenderer owner;
 
         internal Binding(Item item, Mod_Building building)
         {
             Item = item; this.building = building; entityId = item.GetInstanceID();
+            connectionLine = item.GetComponentInChildren<Mod_ShipPart>(true)?.Configuration.Kind == FlatWorld.Spaceflight.ShipPieceKind.Fiber;
             var renderers = new List<SpriteRenderer>();
             item.GetComponentsInChildren(true, renderers);
             foreach (SpriteRenderer renderer in renderers)
@@ -181,7 +183,8 @@ internal static class BuildingDepthMeshBridge
                 Vector4 state = new(Float(material, HitFlashId, 0f), Float(material, SnowId, 0f),
                     Float(material, DissolveId, 0f), 1f);
                 Vector3 flip = new(renderer.flipX ? -1f : 1f, renderer.flipY ? -1f : 1f, 1f);
-                owner.DepthMesh.Set(ChunkDepthMeshRenderer.BuildingDomain, entityId, source.Part,
+                ChunkDepthMeshRenderer rendererBackend = connectionLine ? owner.MechanicalConnectorDepthMesh : owner.DepthMesh;
+                rendererBackend.Set(ChunkDepthMeshRenderer.BuildingDomain, entityId, source.Part,
                     sprite, material, source.Transform.localToWorldMatrix * Matrix4x4.Scale(flip),
                     anchor, renderer.sortingOrder - baseOrder, renderer.color, crop,
                     occluder: Float(material, OccluderId, 0f) > .5f, highlighted: source.Highlighted, state: state);
@@ -204,6 +207,7 @@ internal static class BuildingDepthMeshBridge
         {
             if (!source.Submitted) return;
             owner?.RemoveBuildingDepthPart(entityId, source.Part);
+            if (connectionLine) owner?.RemoveBuildingConnectionDepthPart(entityId, source.Part);
             projected.Remove(source.Renderer);
             if (source.Renderer != null) source.Renderer.forceRenderingOff = source.OriginalForceOff;
             source.Submitted = false;

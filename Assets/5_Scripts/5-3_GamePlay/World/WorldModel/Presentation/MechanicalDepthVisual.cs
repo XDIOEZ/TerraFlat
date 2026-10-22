@@ -20,6 +20,8 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     private ChunkTilemapRenderer owner;
     private int entityId, occupancy;
     private bool highlighted, disposed;
+    private MachineEntity tankEntity;
+    private FluidTankSelectionOutline tankOutline;
 
     internal static MechanicalDepthVisual Create(ChunkTilemapRenderer owner, Vector3 position, int id, int occupancy)
     {
@@ -80,7 +82,8 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         renderer.Set(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id,
             part.Sprite, part.Material,
             Matrix4x4.TRS(transform.position + part.Offset, part.Rotation, part.Scale),
-            transform.position, part.Order, part.Tint, animation: part.Animation, highlighted: highlighted, conveyor: part.Conveyor);
+            transform.position, part.Order, part.Tint, animation: part.Animation,
+            highlighted: highlighted && tankEntity == null, conveyor: part.Conveyor);
     }
 
     private void RemoveUntouched(PartVisual part)
@@ -94,6 +97,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     {
         if (disposed) return;
         disposed = true;
+        tankOutline?.Dispose(); tankOutline = null;
         ReleaseFacilityCombustion();
         ReleaseLighting();
         UnsubscribeCultivator();
@@ -121,6 +125,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnDisable()
     {
+        tankOutline?.Hide();
         StopFacilityAudio();
         if (facilityCombustion != null) facilityCombustion.gameObject.SetActive(false);
         if (poweredEmission != null) poweredEmission.enabled = false;
@@ -133,6 +138,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnDestroy()
     {
+        tankOutline?.Dispose(); tankOutline = null;
         ReleaseFacilityCombustion();
         ReleaseLighting();
         UnsubscribeCultivator();
@@ -145,6 +151,12 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
 
     #region 权威交互与网格描边
     private MachineInteractionTarget interactionTarget;
+    internal void BindSelectionEntity(MachineEntity entity)
+    {
+        // 先确定整罐描边资格，再提交切片，避免选中时重建又出现内部白框。
+        tankEntity = MachineWorld.IsFluidTankBlock(entity) ? entity : null;
+        if (tankEntity == null) tankOutline?.Hide();
+    }
     internal void BindInteraction(MachineInteractionTarget target)
     {
         if (ReferenceEquals(interactionTarget, target)) return;
@@ -169,6 +181,11 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     {
         if (highlighted == value) return;
         highlighted = value;
+        if (tankEntity != null)
+        {
+            tankOutline ??= new FluidTankSelectionOutline(transform);
+            tankOutline.Show(tankEntity, value);
+        }
         foreach (PartVisual part in parts) if (part != null) Submit(part);
         foreach (PartVisual part in facilityParts) if (part != null) Submit(part);
     }
