@@ -327,6 +327,7 @@ namespace FlatWorld.Spaceflight
             if (player != null && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !string.IsNullOrEmpty(observer.WorldKey))
                 GameManager.Instance.ApplyNetworkLocalSpaceObserver(player, observer);
             running = true;
+            PrimeInitialNetworkFlightAudio();
             if (presentationSeconds > 0d) CompletePresentationSample(presentationSeconds, Time.timeAsDouble);
             else ResetPresentationHistory();
         }

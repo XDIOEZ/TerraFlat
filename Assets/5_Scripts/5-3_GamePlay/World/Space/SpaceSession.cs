@@ -94,6 +94,7 @@ namespace FlatWorld.Spaceflight
         private void Load(GameSaveData save)
         {
             if (save == null || ReferenceEquals(owner, save)) return;
+            ResetFlightAudio();
             ClearGroundPreparations();
             ResetPresentationHistory();
             ResetSpacePhysics();
@@ -116,6 +117,7 @@ namespace FlatWorld.Spaceflight
                 : SaveDataMgr.DeserializeSpaceState(save.SpaceStateJson);
             if (State == null || State.Version != 2 || State.Sectors == null || State.Sectors.Count == 0)
                 throw new InvalidOperationException("太空存档格式无效。");
+            SynchronizeFlightAudio();
             RebuildSectorDirectory();
             var earth = Universe.GetBody("earth");
             PlanetData template = GameManager.Instance?.ReadyPlanetData;
@@ -273,6 +275,7 @@ namespace FlatWorld.Spaceflight
             // 星球、船体和玩家在同一 LateUpdate 使用同一个浮动原点。
             if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
             TickGroundPreparations();
+            SynchronizeFlightAudio();
             RestoreLandedBuildings();
             using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();

@@ -85,7 +85,7 @@ namespace FlatWorld.Spaceflight
             {
                 doorOpen = boundPiece.DoorOpen;
                 doorVisual.SetOpen(boundPiece.DoorOpen);
-                AudioService.Instance?.PlayAt(boundPiece.DoorOpen ? AudioEventIds.DoorOpen : AudioEventIds.DoorClose,
+                AudioService.Instance?.PlayAt(boundPiece.DoorOpen ? "ship.door.open" : "ship.door.close",
                     visual.transform.position);
             }
             doorVisual.Advance(Time.deltaTime);

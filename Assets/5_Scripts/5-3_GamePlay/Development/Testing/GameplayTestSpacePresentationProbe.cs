@@ -64,6 +64,15 @@ public static class GameplayTestSpacePresentationProbe
         return new JObject
         {
             ["operation"] = "presentation_interpolation", ["scope"] = "production-domain",
+            ["flightAudio"] = new JObject
+            {
+                ["loaded"] = SpaceSession.ResolveFlightAudioCue(false, false, null, true, "saved-event"),
+                ["ignition"] = SpaceSession.ResolveFlightAudioCue(true, false, null, true, null),
+                ["repeated"] = SpaceSession.ResolveFlightAudioCue(true, true, null, true, null),
+                ["stopped"] = SpaceSession.ResolveFlightAudioCue(true, true, null, false, null),
+                ["landing"] = SpaceSession.ResolveFlightAudioCue(true, true, null, false, "new-event"),
+                ["replayed"] = SpaceSession.ResolveFlightAudioCue(true, false, "new-event", false, "new-event")
+            },
             ["interpolation"] = interpolation,
             ["wrappedRotation"] = new JObject
             {
@@ -82,6 +91,7 @@ public static class GameplayTestSpacePresentationProbe
             {
                 ["pose"] = Sample("shared", shared), ["piece"] = Position(shared.TransformPoint(6d, 7d)),
                 ["passenger"] = Position(shared.TransformPoint(2d, 4d)),
+                ["cargo"] = Position(shared.TransformPoint(2.25d, -3.5d)),
                 ["cameraCenter"] = Position(shared.TransformPoint(3d, 5d))
             },
             ["track"] = new JObject

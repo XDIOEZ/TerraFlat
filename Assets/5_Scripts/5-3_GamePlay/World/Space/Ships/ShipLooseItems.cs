@@ -134,6 +134,9 @@ namespace FlatWorld.Spaceflight
                     looseViews.Remove(state.Id); continue;
                 }
                 Vector2 position = state.InSpace ? ProjectPosition(new SpaceSectorPosition(state.Motion.Sector, state.Motion.PositionMeters)) : WorldLocalPresentation.ProjectPosition(state.Motion.PositionMeters.ToVector2());
+                // 舱内货物共用承载船的本帧插值姿态，避免相对平滑船板按固定步跳动。
+                if (state.InSpace && !string.IsNullOrEmpty(state.SupportShipId) && GetShip(state.SupportShipId) is ShipState carrier)
+                    position = DisplayPresentationPoint(carrier, state.SupportLocalX, state.SupportLocalY);
                 if (existing == null)
                 {
                     ItemData data = Decode(state.Snapshot);

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
+  m_Name: ship.door.open
+  m_EditorClassIdentifier:
+  id: ship.door.open
+  bus: 1
+  clips:
+  - {fileID: 8300000, guid: e77ce6ddc012562e860ecd885a1f94bf, type: 3}
+  - {fileID: 8300000, guid: d0b6f4462d5c5c3083b26688b310c1b1, type: 3}
+  - {fileID: 8300000, guid: b708c0ba77ea5c32a5473f7ebf8a7719, type: 3}
+  selection: 0
+  loop: 0
+  volume:
+    Min: 1
+    Max: 1
+  pitch:
+    Min: 1
+    Max: 1
+  spatialBlend: 1
+  minDistance: 1.5
+  maxDistance: 14
+  priority: 128
+  cooldown: 0.04
+  maxInstances: 5
+  concurrencyPolicy: 1
+  rolloffMode: 1
+  outputOverride: {fileID: 0}

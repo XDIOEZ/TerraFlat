@@ -84,6 +84,9 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 ## 表现与交互
 
+- `SpaceSession.Audio` 在落地建筑还原前按点火与 `LandingEventId` 的真实边沿播一次 `ship.ignition/landing`，首次读档仅记基线；主客端重复状态不重播。喷焰仍由真实出力驱动循环，太空音量为地表十分之一。舱门使用独立 `ship.door.open/close`，CC0 来源及重建入口在 `SoundDesign/Space_SFX/`；普通木门 Cue 保留。
+- 人工重力下的散落货物显示使用承载船本帧 `DisplayPresentationPoint`，不能直接投影权威固定步位置，否则货物会相对插值船板跳动。
+
 - 太空丢弃复用正式冷载荷，但 `SpaceLooseItemState.PickupAfterSimulationSeconds` 必须阻止投掷中原地拾回；画面按 world-item+2 高于船板。人工重力内落地货物保存 SupportShipId 与船内坐标，计入承载船重并随起降切换归属；重力/地板失效后继承船点速度，重新交给独立物理，不与船体重复计重。
 - 管道方向统一由 `FluidPipeConnectionVisual` 的标准管臂拼接到格边，不再依赖16张原图各自的端点；地表光纤和管电线路共用 MechanicalShaft 层，船体排序依次为地板、管道、电线、光纤、设备。`ShipDeviceLogic` 的额定/当前功率读取真实电网，关闭、无请求或断电显示0 W。
 

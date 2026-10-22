@@ -1,0 +1,68 @@
+{
+  "verifiedOn": "2026-10-22",
+  "title": "Sci-fi Sounds 1.0",
+  "author": "Kenney",
+  "sourcePage": "https://kenney.nl/assets/sci-fi-sounds",
+  "mirrorPage": "https://opengameart.org/content/sci-fi-sounds",
+  "downloadUrl": "https://opengameart.org/sites/default/files/sci-fi_sounds.zip",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "entries": [
+    {
+      "source": "Sources\\Kenney\\Audio\\doorOpen_000.ogg",
+      "sourceSha256": "5b7e07eccd4413ad9ef3720c2d14f9cc699f4c50111e9b2f48bd60e6f1a164c3",
+      "output": "Assets\\Audio\\Space\\ship.door.open__01.ogg",
+      "cue": "ship.door.open",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    },
+    {
+      "source": "Sources\\Kenney\\Audio\\doorOpen_001.ogg",
+      "sourceSha256": "8c204ca94eb722d3af95f29221f4551938ca3c217fda32c14dabe2cf6a9c782b",
+      "output": "Assets\\Audio\\Space\\ship.door.open__02.ogg",
+      "cue": "ship.door.open",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    },
+    {
+      "source": "Sources\\Kenney\\Audio\\doorOpen_002.ogg",
+      "sourceSha256": "84473b70b0b2f69bd325fffee5790f030ff6597d178efddc7e4c201933a6c6c1",
+      "output": "Assets\\Audio\\Space\\ship.door.open__03.ogg",
+      "cue": "ship.door.open",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    },
+    {
+      "source": "Sources\\Kenney\\Audio\\doorClose_000.ogg",
+      "sourceSha256": "c9134651ebbd7c016f90393aee495ff8120bd343bb7569b689a7506987ebd6c2",
+      "output": "Assets\\Audio\\Space\\ship.door.close__01.ogg",
+      "cue": "ship.door.close",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    },
+    {
+      "source": "Sources\\Kenney\\Audio\\doorClose_001.ogg",
+      "sourceSha256": "2153e83ff9880c78f9539aa5dcce80fc9e3b39c6fa0f8dec9325ec6d7ea2c9d5",
+      "output": "Assets\\Audio\\Space\\ship.door.close__02.ogg",
+      "cue": "ship.door.close",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    },
+    {
+      "source": "Sources\\Kenney\\Audio\\doorClose_002.ogg",
+      "sourceSha256": "01c7d15e90ae1b218812597d04c20e3df872367ebf22cd99d66dddd5fdb542a4",
+      "output": "Assets\\Audio\\Space\\ship.door.close__03.ogg",
+      "cue": "ship.door.close",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    },
+    {
+      "source": "Sources\\Kenney\\Audio\\thrusterFire_000.ogg",
+      "sourceSha256": "0fdc474d93f209debf1fc4ea77765a669dcb7676db31b4d8a0a509685bccf374",
+      "output": "Assets\\Audio\\Space\\ship.ignition__01.ogg",
+      "cue": "ship.ignition",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    },
+    {
+      "source": "Sources\\Kenney\\Audio\\impactMetal_000.ogg",
+      "sourceSha256": "956c6612a256aa1a67a2327fffe2454f6b1d82e4c1c2be28fd66916335d5b1d6",
+      "output": "Assets\\Audio\\Space\\ship.landing__01.ogg",
+      "cue": "ship.landing",
+      "modifications": "Original OGG; Unity imports mono 48 kHz PCM, no normalization."
+    }
+  ]
+}

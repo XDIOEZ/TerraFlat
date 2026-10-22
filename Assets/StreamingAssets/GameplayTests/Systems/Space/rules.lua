@@ -61,6 +61,11 @@ do
         end
         assert(data.operation == "presentation_interpolation" and data.scope == "production-domain",
             "缺少正式飞船表现插值结果")
+        position(data.sharedTransform.cargo, "0", "0", 15.5, 26.25, "人工重力货物共用船体插值")
+        local audio = data.flightAudio
+        assert(audio.ignition == "ship.ignition" and audio.landing == "ship.landing", "点火和实际触地必须使用各自音效")
+        assert(audio.loaded == nil and audio.repeated == nil and audio.stopped == nil and audio.replayed == nil,
+            "读档、重复快照或停机不得重播点火和落地音")
         local expected = {
             previous = {10, 20, 0}, current = {14, 28, math.pi / 2}, middle = {12, 24, math.pi / 4},
             ["clamp-low"] = {10, 20, 0}, ["clamp-high"] = {14, 28, math.pi / 2},
