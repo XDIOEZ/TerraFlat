@@ -81,6 +81,8 @@ namespace FlatWorld.Spaceflight
                     foreach (ShipPieceState piece in ship.Pieces)
                     {
                         if (!piece.IsAlive) continue;
+                        if (piece.Kind == ShipPieceKind.Wire && MachineCatalog.Get(piece.ItemId)?.Electrical?.Hidden == true &&
+                            !EngineeringVision.CanSee(weapon.item?.Owner)) continue;
                         ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
                             (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
                         Vector2 anchor;
@@ -147,7 +149,11 @@ namespace FlatWorld.Spaceflight
                     (target.Piece.CellX + .5d) * target.Ship.CellSizeMeters + dx,
                     (target.Piece.CellY + .5d) * target.Ship.CellSizeMeters + dy);
                 if (piece != null && GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
+                {
+                    if (piece.Kind == ShipPieceKind.Wire && MachineCatalog.Get(piece.ItemId)?.Electrical?.Hidden == true &&
+                        !EngineeringVision.CanSee(weapon.item?.Owner)) continue;
                     resolvedHits.Add((target.Ship, piece, definition, null, contact));
+                }
             }
             // 命中名单在扣血前固定，先摧毁设备也不能让同一发补打刚露出的地板。
             foreach (var target in resolvedHits)

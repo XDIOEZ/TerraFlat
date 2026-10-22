@@ -1195,6 +1195,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             return false;
         }
 
+        if (!BuildingPlacementService.ValidateActorEligibility(Data?.BuildingPrefabId,
+                placementActor != null ? placementActor : item?.Owner, out reason))
+            return false;
+
         float maximumPlacementDistance = GetMaxPlacementDistance(placementActor);
         if (!IsWithinPlacementDistance(authorityPosition, position, maximumPlacementDistance))
         {

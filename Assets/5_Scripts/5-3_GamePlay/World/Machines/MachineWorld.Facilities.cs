@@ -73,6 +73,7 @@ public static partial class MachineWorld
     {
         using var nodeScope = UseNodeScope(entity);
         if (!Contains(entity)) return false;
+        if (entity.Definition.Electrical?.Hidden == true && !EngineeringVision.CanSee(actor)) return false;
         return GameNetwork.HasStateAuthority ? Execute(entity, operation, argument, actor)
             : RemoteOperationRequested?.Invoke(entity.Id, operation, argument) == true;
     }
@@ -143,6 +144,7 @@ public static partial class MachineWorld
     public static bool Execute(MachineEntity entity, string operation, string argument, Player actor)
     {
         if (!GameNetwork.HasStateAuthority || !Contains(entity)) return false;
+        if (entity.Definition.Electrical?.Hidden == true && !EngineeringVision.CanSee(actor)) return false;
         WakeForInteraction(entity);
         if (operation == "inventory.layout") return MachineInventoryCommands.ExecuteLayout(entity, argument);
         if (operation == "inventory.private-layout")

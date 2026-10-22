@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:engineering_hidden_wire",
+      "displayName": "隐藏电线",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "match": "exact_item", "itemId": "Wire_Copper_Summoner", "amount": 1 },
+        { "match": "exact_item", "itemId": "Rubber", "amount": 1 }
+      ],
+      "outputs": [ { "itemId": "Wire_Hidden_Summoner", "amount": 1 } ],
+      "actions": []
+    },
+    {
+      "id": "core:engineering_goggles",
+      "displayName": "工程护目镜",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "match": "exact_item", "itemId": "Glass", "amount": 2 },
+        { "match": "exact_item", "itemId": "CopperPlate", "amount": 1 },
+        { "match": "exact_item", "itemId": "Rope", "amount": 1 }
+      ],
+      "outputs": [ { "itemId": "Engineering_Goggles", "amount": 1 } ],
+      "actions": []
+    }
+  ]
+}

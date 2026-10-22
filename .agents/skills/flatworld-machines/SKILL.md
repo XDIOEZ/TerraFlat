@@ -51,6 +51,8 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 ## 机械与电力
 
+- 隐藏线路用 `ElectricalDefinition.Hidden`，正常参加同一电网；`EngineeringVision` 只读手持、鼠标携带与头部装备的 `EngineeringVision` Tag。地表仅资格变化时重提隐藏线，船上同步可见性；交互、命令及工具命中同时检查实际操作者，不能把显示开关写回供电数据。
+
 - 机械拓扑重建时记录 `HasBellows`；若当前机械世界没有风箱，设施 Tick 直接跳过四邻风箱格查询，`RegisterAirflow` 扩展来源仍正常叠加。拆装风箱按原拓扑变更立即刷新，回归 `mechanical/bellows_effects`。
 - `MechanicalNetworkGraph.Rebuild` 复用节点排序、BFS 队列和 X/Y 区块边界工作区，`finally` 清理对象引用；机械连接、环绕最短区块范围保持原算法。离线 `Tools/Tests/MachineNetworks` 断言预热后纯设施重复重建零 GC。
 - 机械动力专项 Lua 入口为 `GameplayTests/mechanical-suite.json`，在独立真实世界组装全目录 20 种机械端口组件并核验动力、加工、发电、输送、测压及手推；编写、截图和执行转 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，清单与 GM 参数见 `Assets/StreamingAssets/GameplayTests/README.md`。

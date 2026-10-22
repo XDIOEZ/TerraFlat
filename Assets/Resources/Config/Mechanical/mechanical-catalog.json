@@ -197,6 +197,22 @@
       }
     },
     {
+      "Id": "Wire_Hidden",
+      "Kind": "electrical_wire",
+      "Ports": "none",
+      "PlacementLayer": 3,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Electrical": {
+        "Role": "wire",
+        "Hidden": true,
+        "NominalVoltage": 120,
+        "MaximumVoltage": 600,
+        "MaxCurrentAmps": 10,
+        "ResistanceOhms": 0.02
+      }
+    },
+    {
       "Id": "Battery_Basic",
       "Kind": "electrical_battery",
       "Ports": "none",

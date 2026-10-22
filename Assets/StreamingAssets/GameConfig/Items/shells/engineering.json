@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Wire_Hidden",
+      "parent": "Wire_Copper",
+      "gameName": "隐藏电线-建筑",
+      "description": "正常传输电力；手持或佩戴工程护目镜时才能查看和操作。",
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wire_Hidden\",\"SummonerPrefabId\":\"Wire_Hidden_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "parameters": { "DefinitionId": "Wire_Hidden" }
+        }
+      }
+    },
+    {
+      "id": "Wire_Hidden_Summoner",
+      "parent": "Wire_Copper_Summoner",
+      "gameName": "隐藏电线",
+      "description": "带隐蔽护套的铜电线。放置后正常供电，手持或佩戴工程护目镜时才能查看和操作。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Hidden/Wire_Hidden_Icon.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wire_Hidden\",\"SummonerPrefabId\":\"Wire_Hidden_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "parameters": { "DefinitionId": "Wire_Hidden" }
+        }
+      }
+    },
+    {
+      "id": "Engineering_Goggles",
+      "parent": "Equipment_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "工程护目镜",
+      "description": "手持或佩戴在头部时，显露隐藏电线并允许操作。",
+      "durability": 1000,
+      "maxDurability": 1000,
+      "amount": 1,
+      "weight": 0.4,
+      "volume": 0.6,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["Equipment", "EngineeringVision", "EquipmentSlot.Head", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Engineering_Goggles/Engineering_Goggles_Icon.png",
+        "rendererLocalPosition": { "x": 0, "y": 0, "z": 0 },
+        "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore", "id": "装备存储模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "equipmentInstances": [] }
+        }
+      }
+    }
+  ]
+}

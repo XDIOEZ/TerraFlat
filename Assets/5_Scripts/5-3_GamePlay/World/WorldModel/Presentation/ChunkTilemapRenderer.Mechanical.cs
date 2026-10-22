@@ -195,6 +195,15 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>按机械类型组合 Sprite，视觉状态来自物品定义而不是运行时 Item。</summary>
     private void SubmitMechanicalNode(MachineEntity node, int x, int y)
     {
+        if (node.Definition.Electrical?.Hidden == true && !EngineeringVision.LocalCanSee)
+        {
+            var hiddenKey = new Vector3Int(x, y, node.Definition.Layer);
+            RemoveMechanicalDepthVisual(x, y, node.Definition.Layer);
+            MechanicalShadowRegistry.Remove(this, hiddenKey);
+            submittedMechanicalCells.Remove(hiddenKey);
+            submittedWireMasks.Remove(hiddenKey);
+            return;
+        }
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition def) ||
             def.Sprite == null) throw new InvalidOperationException("机械本体 Sprite 缺失：" + node.Definition.Id);

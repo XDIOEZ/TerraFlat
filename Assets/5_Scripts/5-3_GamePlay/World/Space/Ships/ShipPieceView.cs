@@ -47,6 +47,7 @@ namespace FlatWorld.Spaceflight
         public bool CanInteract(Item actor)
         {
             if (actor == null || !HasInteractionAction || !IsValid) return false;
+            if (machineDefinition?.Electrical?.Hidden == true && !EngineeringVision.CanSee(actor)) return false;
             float distance = session.IsSpaceView
                 ? Vector2.Distance(actor.transform.position, WorldPosition)
                 : WorldTopologyRuntime.Distance(actor.transform.position, WorldPosition);
@@ -62,6 +63,7 @@ namespace FlatWorld.Spaceflight
         {
             hit = default;
             if (boundPiece == null || boundCellSize <= 0d) return false;
+            if (machineDefinition?.Electrical?.Hidden == true && !EngineeringVision.LocalCanSee) return false;
             Vector2 position = transform.position;
             Vector2 projected = session.IsSpaceView ? pointer :
                 position + (Vector2)topology.ShortestDelta(position, pointer);
@@ -299,6 +301,11 @@ namespace FlatWorld.Spaceflight
         }
         public void SetVisualLift(Vector3 visualLiftOffset)
         {
+            if (visual != null && machineDefinition?.Electrical?.Hidden == true)
+            {
+                bool visible = EngineeringVision.LocalCanSee;
+                if (visual.enabled != visible) visual.enabled = visible;
+            }
             interactionLift = visualLiftOffset;
             if (visual != null)
             {

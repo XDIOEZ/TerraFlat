@@ -395,6 +395,7 @@ public sealed class ElectricalDefinition
 {
     #region 电气参数
     public string Role = "wire"; // wire/generator/consumer/battery
+    public bool Hidden; // 隐藏线路仍参与供电，显示与操作由工程视野决定。
     public string Connection = "cell"; // cell 接同格电线，其余方向表示随设备旋转的邻格端口。
     public float ConversionEfficiency = 1f; // 双向电机的转换效率不允许超过百分之百。
     public float NominalVoltage = 120f;

@@ -876,6 +876,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return;
 
         FlushPendingLiquidVisuals();
+        RefreshEngineeringWireVisibility();
 
         if (liquidGlowDirty)
         {

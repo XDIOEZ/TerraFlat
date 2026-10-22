@@ -42,6 +42,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
             {
                 MachineEntity node = MachineWorld.GetAtCurrentWorld(new Vector2Int(x, y), layer);
                 if (node == null || !seen.Add(node.Id)) continue;
+                if (node.Definition.Electrical?.Hidden == true && !EngineeringVision.CanSee(weapon.item?.Owner)) continue;
                 if (GameRes.ExistingInstance == null ||
                     !GameRes.ExistingInstance.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition) ||
                     definition.Health?.HasHp != true)

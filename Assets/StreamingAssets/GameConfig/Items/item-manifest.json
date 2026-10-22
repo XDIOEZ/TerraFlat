@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "packages": [
+    { "id": "engineering", "path": "shells/engineering.json", "enabled": true },
     {
       "id": "induction_stove",
       "path": "shells/induction_stove.json",

@@ -129,6 +129,18 @@ namespace FlatWorld.Gameplay.Building
         #endregion
 
         #region 统一放置事务
+        /// <summary>预览与权威事务共用操作资格，隐藏线路必须由工程视野持有者放置。</summary>
+        public static bool ValidateActorEligibility(string buildingId, Item actor, out string reason)
+        {
+            if (MachineCatalog.Get(buildingId)?.Electrical?.Hidden == true && !EngineeringVision.CanSee(actor))
+            {
+                reason = "放置隐藏电线需要手持或佩戴工程护目镜";
+                return false;
+            }
+            reason = null;
+            return true;
+        }
+
         public static bool TryPlace(BuildingPlacementRequest request, out BuildingPlacementResult result,
             out string reason)
         {
@@ -145,6 +157,8 @@ namespace FlatWorld.Gameplay.Building
                     !ReferenceEquals(request.SourceSlot.itemData, request.SourceData) || originalAmount < 1f)
                     throw new InvalidOperationException("建造材料不属于当前真实库存槽位");
                 if (!Mod_Building.IsValidSummonerData(request.SourceData, out reason))
+                    throw new InvalidOperationException(reason);
+                if (!ValidateActorEligibility(request.BuildingId, request.Actor, out reason))
                     throw new InvalidOperationException(reason);
                 if (!IsFinite(request.Position) || !IsFinite(request.AuthorityPosition) ||
                     float.IsNaN(request.MaximumDistance) || request.MaximumDistance < 0f ||

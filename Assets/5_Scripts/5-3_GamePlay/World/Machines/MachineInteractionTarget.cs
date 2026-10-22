@@ -21,7 +21,8 @@ public sealed class MachineInteractionTarget : IGridInteractionTarget, IWorldInt
     public Vector3 WorldPosition => node.Snapshot.transform.position;
     public int TargetGuid => node.Id;
     public bool IsValid => !disposed && MachineWorld.Contains(node);
-    public bool CanInteract(Item actor) => IsValid;
+    public bool CanInteract(Item actor) => IsValid &&
+        (node.Definition.Electrical?.Hidden != true || EngineeringVision.CanSee(actor));
     public bool CanPointerInteract(Item actor) => false;
 
     // 分区覆盖完整逻辑格，不再受电线贴图窄条或圆形命中半径影响。
@@ -30,7 +31,8 @@ public sealed class MachineInteractionTarget : IGridInteractionTarget, IWorldInt
         int x = Mathf.FloorToInt(pointer.x), y = Mathf.FloorToInt(pointer.y);
         var cell = new Vector2Int(topology.NormalizeX(x), topology.NormalizeY(y));
         hit = new GridInteractionHit(node.ScopeKey, cell, node.Definition.VisualLayer, pointer.y - y);
-        return cell == node.Cell;
+        return cell == node.Cell &&
+            (node.Definition.Electrical?.Hidden != true || EngineeringVision.LocalCanSee);
     }
 
     // 描边属于本地表现状态，不进入机器存档和网络同步。

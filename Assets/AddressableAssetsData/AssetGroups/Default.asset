@@ -17,6 +17,18 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: fa771df6567c4a93b0e2d71616c3eca1
+    m_Address: Assets/6_Art/Generated/Electrical/Engineering_Goggles/Engineering_Goggles_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 15e1683941ef43739b33f146ec517ce6
+    m_Address: Assets/6_Art/Generated/Electrical/Wire_Hidden/Wire_Hidden_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2ad4bd3d0b13453784dc26917d54e759
     m_Address: Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png
     m_ReadOnly: 0
