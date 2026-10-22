@@ -157,7 +157,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     public IEnumerator BackToHelloScene_Coroutine(
         Item playerItem,
         System.Action onComplete = null,
-        bool saveCurrentGame = true)
+        bool saveCurrentGame = true,
+        bool requireSuccessfulSave = false)
     {
         Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
         LastExitSaveSucceeded = null;
@@ -167,13 +168,39 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (ItemMgr.Instance == null || ChunkMgr.Instance == null || SaveDataMgr.Instance == null)
         {
             Debug.LogError("[ExitGame] 核心管理器未初始化，退出失败！");
-            onComplete?.Invoke();
+            if (!requireSuccessfulSave) onComplete?.Invoke();
             yield break;
         }
         if (saveCurrentGame)
         {
             ItemMgr.Instance.CleanupNullItems();
             ItemMgr.Instance.SavePlayer();
+        }
+
+        if (requireSuccessfulSave)
+        {
+            if (!saveCurrentGame)
+            {
+                Debug.LogError("[ExitGame] 当前客户端没有世界存档权限，已取消保存重启。");
+                yield break;
+            }
+            // 重启先在同一帧完成快照与写盘，失败时尚未拆除世界或网络会话。
+            try
+            {
+                CaptureSaveGameState();
+                LastExitSaveSucceeded = SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
+            }
+            catch (Exception exception)
+            {
+                LastExitSaveSucceeded = false;
+                Debug.LogException(exception);
+            }
+            if (LastExitSaveSucceeded != true)
+            {
+                Debug.LogError("[ExitGame] 保存失败，已取消重启并保留当前世界。");
+                yield break;
+            }
+            saveCurrentGame = false;
         }
 
         // 记录退出前的动态世界场景；LoadSceneMode.Single 理论上会卸载它，
@@ -223,7 +250,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
         else
         {
-            Debug.Log("[ExitGame] 已选择不保存，跳过玩家、区块与退出时间写盘。");
+            Debug.Log(requireSuccessfulSave
+                ? "[ExitGame] 重启存档已成功写入，继续清理当前会话。"
+                : "[ExitGame] 已选择不保存，跳过玩家、区块与退出时间写盘。");
         }
 
         ////////////////////////////////////////////////////////////////////////////////////

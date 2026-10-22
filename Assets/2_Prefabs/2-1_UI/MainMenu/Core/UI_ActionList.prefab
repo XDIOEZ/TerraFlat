@@ -12024,7 +12024,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6230221144704590992, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
       propertyPath: m_text
-      value: "\u4E0D\u4FDD\u5B58"
+      value: "\u4E0D\u4FDD\u5B58\u76F4\u63A5\u9000\u51FA"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -12858,7 +12858,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6230221144704590992, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
       propertyPath: m_text
-      value: "\u4FDD\u5B58"
+      value: "\u4FDD\u5B58\u5E76\u9000\u51FA"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -1222,6 +1222,11 @@ public static class GameUIPrefabRebuilder
 
     private static void BuildFurnace(GameObject root, bool bonfire)
     {
+        // 篝火旧版方向装饰已由三列布局替代，仅移除已知的无交互箭头。
+        Transform legacyArrow = root.transform.Find("Image_1");
+        if (legacyArrow != null && legacyArrow.TryGetComponent(out Image arrowImage) &&
+            !arrowImage.raycastTarget && arrowImage.sprite != null && arrowImage.sprite.name == "cursor-direction-15")
+            UnityEngine.Object.DestroyImmediate(legacyArrow.gameObject);
         float width = bonfire ? 740f : 856f;
         const float height = 592f;
         string title = bonfire ? "篝火" : "熔炉";

@@ -22,7 +22,6 @@ public class Mod_SettingCanvas : Module, IInstanceUI
     // 输入InputAction组件
     private PlayerInputActions playerInputActions;
     Mod_GameController gameController;
-    private Mod_PlayerDeathState playerDeathState;
     private SettingsExitConfirmationController exitConfirmation;
     private Button returnToMainMenuButton;
     private Button returnToDesktopButton;
@@ -45,8 +44,6 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         gameController = item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<Mod_GameController>();
         // 初始化输入系统
         playerInputActions = gameController._inputActions;
-        playerDeathState = item.itemMods.GetMod_ByID<Mod_PlayerDeathState>(
-            Mod_PlayerDeathState.ModuleId);
 
         // 返回只接入统一 UI 分发，避免同一次按键先打开设置又被 UI Cancel 关闭。
         EventSystemGuard.CancelRequested += OnCancelRequested;
@@ -168,7 +165,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             pagination?.GetPageRoot(SettingsActionListPagination.InputBindingPageName),
             basePanel,
             gameController);
-        PlayerSuicideButton.Ensure(basePanel.transform, playerDeathState);
+        PlayerRestartButton.Ensure(basePanel.transform, item);
         BindButton("恢复所有设置", ResetAllSettings);
         basePanel.RefreshUIComponents();
         pagination?.RefreshPageLifecycles();
@@ -359,7 +356,6 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         returnToDesktopButton = null;
         playerInputActions = null;
         gameController = null;
-        playerDeathState = null;
     }
 
     private void OnDestroy() => Unload();

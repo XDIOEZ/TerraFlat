@@ -4,15 +4,15 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 设置面板的玩家自杀按钮适配器：复用会话页危险按钮的视觉样式，
-/// 运行时插入“自杀”入口，并把点击事件交给 Mod_PlayerDeathState 统一处理。
+/// 设置面板的保存重启按钮适配器：复用会话页危险按钮的视觉样式，
+/// 运行时插入“重启”入口，并交给 GameManager 保存后重启整个游戏。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class PlayerSuicideButton : MonoBehaviour
+public sealed class PlayerRestartButton : MonoBehaviour
 {
     #region 节点命名契约
 
-    public const string ButtonName = "自杀按钮";
+    public const string ButtonName = "重启按钮";
     private const string SourceButtonName = UIText.ReturnToDesktopButton;
 
     #endregion
@@ -20,30 +20,30 @@ public sealed class PlayerSuicideButton : MonoBehaviour
     #region 运行时状态
 
     private Button button;
-    private Mod_PlayerDeathState playerDeathState;
+    private Item playerItem;
 
     #endregion
 
     #region 初始化
 
-    /// <summary>确保设置面板存在自杀按钮，并绑定当前玩家死亡模块。</summary>
-    public static PlayerSuicideButton Ensure(
+    /// <summary>确保设置面板存在重启按钮，并绑定当前玩家。</summary>
+    public static PlayerRestartButton Ensure(
         Transform settingsRoot,
-        Mod_PlayerDeathState deathState)
+        Item player)
     {
         if (settingsRoot == null)
         {
             return null;
         }
 
-        Button suicideButton = FindButton(settingsRoot, ButtonName);
-        if (suicideButton == null)
+        Button restartButton = FindButton(settingsRoot, ButtonName);
+        if (restartButton == null)
         {
             Button sourceButton = FindButton(settingsRoot, SourceButtonName);
             if (sourceButton == null)
             {
                 Debug.LogError(
-                    $"[PlayerSuicideButton] 设置面板缺少样式源按钮“{SourceButtonName}”。",
+                    $"[PlayerRestartButton] 设置面板缺少样式源按钮“{SourceButtonName}”。",
                     settingsRoot);
                 return null;
             }
@@ -56,46 +56,47 @@ public sealed class PlayerSuicideButton : MonoBehaviour
                 parent,
                 false);
             buttonObject.name = ButtonName;
-            suicideButton = buttonObject.GetComponent<Button>();
+            restartButton = buttonObject.GetComponent<Button>();
         }
 
-        if (suicideButton == null)
+        if (restartButton == null)
         {
-            Debug.LogError("[PlayerSuicideButton] 自杀按钮对象缺少 Button 组件。", settingsRoot);
+            Debug.LogError("[PlayerRestartButton] 重启按钮对象缺少 Button 组件。", settingsRoot);
             return null;
         }
 
-        SetButtonLabel(suicideButton);
-        PlayerSuicideButton adapter = suicideButton.GetComponent<PlayerSuicideButton>();
+        SetButtonLabel(restartButton);
+        PlayerRestartButton adapter = restartButton.GetComponent<PlayerRestartButton>();
         if (adapter == null)
         {
-            adapter = suicideButton.gameObject.AddComponent<PlayerSuicideButton>();
+            adapter = restartButton.gameObject.AddComponent<PlayerRestartButton>();
         }
 
-        adapter.Bind(deathState);
+        adapter.Bind(player);
         return adapter;
     }
 
-    private void Bind(Mod_PlayerDeathState deathState)
+    private void Bind(Item player)
     {
         if (button == null)
         {
             button = GetComponent<Button>();
         }
 
-        playerDeathState = deathState;
+        playerItem = player;
         if (button == null)
         {
             return;
         }
 
-        button.onClick.RemoveListener(OnClicked);
+        // 清除从桌面按钮克隆的事件，重启入口只执行自己的保存流程。
+        button.onClick = new Button.ButtonClickedEvent();
         button.onClick.AddListener(OnClicked);
-        button.interactable = playerDeathState != null;
+        button.interactable = playerItem != null && GameManager.SupportsProcessRestart;
 
-        if (playerDeathState == null)
+        if (playerItem == null)
         {
-            Debug.LogWarning("[PlayerSuicideButton] 未找到玩家死亡模块，自杀按钮已禁用。", this);
+            Debug.LogWarning("[PlayerRestartButton] 未找到当前玩家，重启按钮已禁用。", this);
         }
     }
 
@@ -103,10 +104,10 @@ public sealed class PlayerSuicideButton : MonoBehaviour
 
     #region 点击处理
 
-    /// <summary>把按钮点击转交给玩家死亡状态模块。</summary>
+    /// <summary>把按钮点击转交给保存重启流程。</summary>
     private void OnClicked()
     {
-        playerDeathState?.ForceSuicide();
+        GameManager.Instance.SaveAndRestart(playerItem);
     }
 
     private void OnDestroy()
@@ -121,9 +122,10 @@ public sealed class PlayerSuicideButton : MonoBehaviour
 
     #region 辅助方法
 
-    private static void SetButtonLabel(Button suicideButton)
+    private static void SetButtonLabel(Button restartButton)
     {
-        TMP_Text[] labels = suicideButton.GetComponentsInChildren<TMP_Text>(true);
+        string text = GameManager.SupportsProcessRestart ? "重启" : "重启（不支持）";
+        TMP_Text[] labels = restartButton.GetComponentsInChildren<TMP_Text>(true);
         if (labels.Length > 0 && labels[0] != null)
         {
             TMP_Text label = labels[0];
@@ -133,12 +135,12 @@ public sealed class PlayerSuicideButton : MonoBehaviour
                 binder = label.gameObject.AddComponent<LocalizedTextBinder>();
             }
 
-            // 自杀按钮由“返回桌面”按钮克隆而来，必须同步改写继承的本地化绑定，
+            // 重启按钮由“返回桌面”按钮克隆而来，必须同步改写继承的本地化绑定，
             // 否则刷新语言或 UI 组件时会再次被旧 key 覆盖成“返回桌面”。
             binder.Configure(
                 FlatWorldLocalizationService.UiTable,
-                FlatWorldLocalizationService.GetUiTextKey("自杀"),
-                "自杀");
+                FlatWorldLocalizationService.GetUiTextKey(text),
+                text);
         }
     }
 

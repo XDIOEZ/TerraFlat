@@ -1,4 +1,6 @@
 using System;
+using FlatWorld.Localization;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -78,6 +80,8 @@ public sealed class SettingsExitConfirmationController : MonoBehaviour, IPointer
         }
 
         ConfigureNavigation();
+        SetDecisionLabel(cancelButton, "不保存直接退出");
+        SetDecisionLabel(confirmButton, "保存并退出");
         cancelButton.onClick.RemoveListener(ExitWithoutSaving);
         cancelButton.onClick.AddListener(ExitWithoutSaving);
         confirmButton.onClick.RemoveListener(SaveAndExit);
@@ -87,6 +91,16 @@ public sealed class SettingsExitConfirmationController : MonoBehaviour, IPointer
         basePanel.Closed -= HandlePanelClosed;
         basePanel.Closed += HandlePanelClosed;
         Hide(false);
+    }
+
+    private static void SetDecisionLabel(Button button, string text)
+    {
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label == null) return;
+        LocalizedTextBinder binder = label.GetComponent<LocalizedTextBinder>();
+        if (binder == null) binder = label.gameObject.AddComponent<LocalizedTextBinder>();
+        // 同步本地化绑定，切换语言后仍保留两条退出路径的准确文案。
+        binder.Configure(FlatWorldLocalizationService.UiTable, FlatWorldLocalizationService.GetUiTextKey(text), text);
     }
 
     #endregion

@@ -30,6 +30,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 背包、手工制作、普通库存与机器窗口统一调用 `BasePanel.PrepareForGameplayWindow`：可并行，参与置顶/导航/取消链、允许窗口外手持丢弃，不持玩法锁；按键开关统一经 `Mod_GameController.CanToggleGameplayWindow`，打开时服从硬锁与模态阻断，不按背包类型或手机抽屉放行。库存/加工/容器背景输入透明，只有槽位、按钮与拖放/手势区命中，`UIWindowDragSurface` 命中标题/窄边框。快捷栏随 PanelRoot 排序；手机模态拖放由独立 Canvas 临时提升。
 - `BasePanel.SetHeldItemWorldDropAllowed` 声明窗口外手持丢弃能力；普通玩法窗口不登记锁 Owner，确有输入锁的专用面板才传入自身 Owner。`UIManager` 同轮面板缓存汇总所有阻断窗口、兼容锁与实际窗口矩形（优先 `UIWindowDragSurface.WindowRect`）。任一未授权阻断窗口/未知锁继续阻断，实际窗口内部透明空白也不能作为世界落点。
 - 手机菜单/返回位于独立常驻层，返回顺序为顶层可取消面板→抽屉→设置。主菜单 CancelShortcutOverride 打开退出确认；嵌套危险确认先消费取消。存档删除统一由 `SaveDataManager_UI` 确认层提交并锁定目标身份。
+- 设置会话页 `PlayerRestartButton` 只绑定保存后重启整游戏，清除克隆按钮事件；不支持自动重启的平台禁用并标注。保存退出确认左右文案固定为“不保存直接退出”/“保存并退出”，Prefab、构建器和本地化绑定同时维护。
 - `FlatWorldUI/Cancel` 为唯一返回输入入口，`EventSystemGuard.CancelRequested` 提供玩法处理；设置模块不额外订阅 Win10/ESC。`BasePanel.OnCancel` 必须检查同帧消费，关闭设置本身也走 CancelShortcutOverride，避免跳过未保存确认或一次返回连关两层。
 - 手柄 UI 临时停用只解绑活动动作，保留最新玩家输入资产；`OnEnable` 恢复返回与确认，停用期间 `Configure` 的替换/撤销延后到恢复生效，已销毁资产不得重新接入。回归 `ui_settings/gamepad_input_reenable`。
 - 文本通过 FlatWorldUI 表与 GetUiText/GetUiFormat，节点名不翻译；手柄焦点限定顶层面板，TMP 输入确认后进入虚拟键盘。鼠标按下焦点与列表业务选中状态分离，完整点击才提交选择。

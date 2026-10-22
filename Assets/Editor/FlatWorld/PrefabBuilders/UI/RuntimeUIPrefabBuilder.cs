@@ -2931,7 +2931,7 @@ public static partial class RuntimeUIPrefabBuilder
         Button cancelButton = CreateButton(
             SettingsExitConfirmationController.CancelButtonName,
             actions.transform,
-            "不保存",
+            "不保存直接退出",
             180f,
             64f,
             false);
@@ -2941,7 +2941,7 @@ public static partial class RuntimeUIPrefabBuilder
         Button confirmButton = CreateButton(
             SettingsExitConfirmationController.ConfirmButtonName,
             actions.transform,
-            "保存",
+            "保存并退出",
             180f,
             64f,
             true);

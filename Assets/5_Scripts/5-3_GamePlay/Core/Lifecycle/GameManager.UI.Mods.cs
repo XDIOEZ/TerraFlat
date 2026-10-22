@@ -216,26 +216,12 @@ public partial class GameManager
     /// <summary>仅运行包启动当前可执行文件；编辑器不停止玩家正在运行的会话。</summary>
     private static void RestartForModSelection(ModMenuState state, BasePanel confirmation)
     {
-#if !UNITY_EDITOR && (UNITY_STANDALONE_WIN || UNITY_STANDALONE_LINUX)
-        try
+        if (TryRestartApplication(out string error))
         {
-            string executable = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(executable)
-            {
-                UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(executable)
-            });
             confirmation.Close();
-            Application.Quit();
             return;
         }
-        catch (Exception error)
-        {
-            state.Notice = "重启失败，请手动关闭并重新打开游戏：" + error.Message;
-        }
-#else
-        state.Notice = "MOD 设置已保存，请手动重新启动游戏后生效。";
-#endif
+        state.Notice = error;
         confirmation.Close();
         RenderModMenu(state);
     }
