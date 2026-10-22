@@ -474,8 +474,6 @@ public partial class EcologyRuleSaveData
     public int ItemCount = 1;
     public EcologyItemCountDistribution ItemCountDistribution;
     public int ItemCountMin = 1;
-    public int ItemCountPeak = 1;
-    public double ItemCountQuadraticRadius = 1d;
     public double SpawnChance;
     public double SpawnChanceMultiplier = 1d;
     public EcologyDistributionMode DistributionMode;
@@ -523,8 +521,6 @@ public partial class EcologyRuleSaveData
             ItemCount = snapshot.ItemCount,
             ItemCountDistribution = snapshot.ItemCountDistribution,
             ItemCountMin = snapshot.ItemCountMin,
-            ItemCountPeak = snapshot.ItemCountPeak,
-            ItemCountQuadraticRadius = snapshot.ItemCountQuadraticRadius,
             SpawnChance = snapshot.SpawnChance,
             SpawnChanceMultiplier = snapshot.SpawnChanceMultiplier,
             DistributionMode = snapshot.DistributionMode,
@@ -596,8 +592,6 @@ public partial class EcologyRuleSaveData
             MinimumEnvironmentValue,
             ItemCountDistribution,
             ItemCountMin,
-            ItemCountPeak,
-            ItemCountQuadraticRadius,
             MaximumEnvironmentValue ?? double.MaxValue,
             RequireNaturalPlantableGround);
     }

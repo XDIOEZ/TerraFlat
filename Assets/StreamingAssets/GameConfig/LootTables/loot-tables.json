@@ -21,8 +21,8 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 20,
-          "amountDistribution": "QuadraticPeak",
-          "peakAmount": 10
+          "amountDistribution": "DiscreteTable",
+          "amountProbabilityTableId": "loot.tree.leaf.amount"
         },
         {
           "itemId": "Log",
@@ -415,8 +415,8 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 20,
-          "amountDistribution": "QuadraticPeak",
-          "peakAmount": 10
+          "amountDistribution": "DiscreteTable",
+          "amountProbabilityTableId": "loot.tree.leaf.amount"
         },
         {
           "itemId": "WillowBranch",
@@ -458,8 +458,8 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 20,
-          "amountDistribution": "QuadraticPeak",
-          "peakAmount": 10
+          "amountDistribution": "DiscreteTable",
+          "amountProbabilityTableId": "loot.tree.leaf.amount"
         },
         {
           "itemId": "Log",
@@ -489,8 +489,8 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 20,
-          "amountDistribution": "QuadraticPeak",
-          "peakAmount": 10
+          "amountDistribution": "DiscreteTable",
+          "amountProbabilityTableId": "loot.tree.leaf.amount"
         },
         {
           "itemId": "Log",
@@ -520,8 +520,8 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 20,
-          "amountDistribution": "QuadraticPeak",
-          "peakAmount": 10
+          "amountDistribution": "DiscreteTable",
+          "amountProbabilityTableId": "loot.tree.leaf.amount"
         },
         {
           "itemId": "Log",
@@ -551,8 +551,8 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 20,
-          "amountDistribution": "QuadraticPeak",
-          "peakAmount": 10
+          "amountDistribution": "DiscreteTable",
+          "amountProbabilityTableId": "loot.tree.leaf.amount"
         },
         {
           "itemId": "Log",

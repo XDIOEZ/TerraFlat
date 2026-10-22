@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "combat_probability_rules",
+      "name": "统一离散概率与掉落数量",
+      "luaPath": "GameplayTests/Systems/Combat/probability.lua",
+      "enabled": true
+    },
+    {
       "id": "combat_rules",
       "name": "战斗与技能规则与边界",
       "luaPath": "GameplayTests/Systems/Combat/rules.lua",

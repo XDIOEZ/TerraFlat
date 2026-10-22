@@ -153,6 +153,7 @@ public static partial class GameplayTestSystemProbe
             ["terrain.mode"] = cave ? "cave" : "surface", ["climate.algorithm"] = "legacy"
         };
         int size = cave ? 64 : 32;
+        DiscreteProbabilityConfiguration.Capture().WriteGenerationParameters(numbers);
         var profile = new ChunkGenerationProfileSnapshot("probe:natural-waterbed", 1, size, size, numbers, texts);
         using var world = new WorldRuntime("probe:natural-waterbed", 1);
         var address = new FlatWorld.WorldModel.WorldAddress(cave ? "cave" : "surface",

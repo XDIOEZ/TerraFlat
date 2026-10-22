@@ -27,7 +27,8 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - Heal 查询 IHealingCostPolicy 可恢复额度，按实际恢复量支付，无策略免费；普通回血不复活，启用部位生命时只分配给存活部位，重生/满血赋值才恢复耗尽部位。
 - 掉落以稳定物品 ID 定义，实体顶层 lootTableId 展开到唯一接收器；LootPrefabName 实为 Item.itemData.IDName，非外壳名。引用在目录加载时校验。
 - LootEntry.OnValidate 只在引用数据就绪时同步 ID；导入/构建中的 Prefab 未就绪时保留原值，不在此抛缺失 ID 异常。
-- 掉落数量共用 `LootAmountRules`；条目的 `amountDistribution: QuadraticPeak` 与 `peakAmount` 声明二次峰值，未声明则均匀。GO/自然 ECS/动物 ECS 都调用 `RollAmount`，再应用一次既有产出倍率；树叶统一 1～20、峰值 10，回归见 `combat/loot_amount` 与 `combat/tree_leaf_configuration`。
+- 掉落数量共用 `LootAmountRules`，具体范围和分布以掉落表配置为准；GO/自然 ECS/动物 ECS 都调用 `RollAmount`，再应用一次既有产出倍率。回归见 `combat/loot_amount` 与 `combat/tree_leaf_configuration`。
+- 非均匀数量通过 `DiscreteTable/amountProbabilityTableId` 引用公共离散概率表；树叶引用 `loot.tree.leaf.amount`，GO 参数展开须保留表 ID，难度只在 `DiscreteProbabilityConfiguration.Modifying` 修正独立状态。`combat/discrete_probability` 覆盖原表/结构体复制隔离、最终百分比、抽样边界及冻结指纹。
 - Actor JSON modules 是生命/防御/攻击/窗口静态真源，当前 HP/攻击者由运行模块保存；管理员无敌监听伤害回满及死亡兜底。
 - 临时无敌由调用方持有 `AcquireTemporaryInvulnerability()` 的 `IDisposable` 租约，多来源独立释放；普通/上下文/环境/生存/结构损伤均拦截且不耗受击冷却，卸载、停用、死亡和回池作废旧租约，直接权威设置生命仍生效。
 - Physical 是统一物理攻击/防御，ImpactKind 决定表现与刃伤资格；ResolvePhysical 合计攻击、只扣一次防御。工具弱点防御后乘 2，小刀对低矮作物为 1.5；未破防仍 0，Mod_ResourceHarvest 或生命 weakTool 单处声明。装备材质耐久由 `EquipmentDurabilityRules` 读取 `Resources/Config/Equipment/durability-materials.json` 在最终定义模板建立；未知材质保留定义值，黑曜石50仅适用武器，旧冷兵器不得再额外监听扣耐久，实际正伤害回执每目标扣一点，零伤/拒绝不扣；投射物冻结发射武器数据，先磨损再发布可回收回调。非攻击装备只定义上限，不新增磨损来源。

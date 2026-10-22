@@ -9,8 +9,6 @@ namespace FlatWorld.WorldModel
     public sealed partial class DeterministicChunkGenerator
     {
         private const double LavaBasinMaxReachFactor = 2.2d;
-        private const double LavaRadiusTailWeight = 0.003d;
-        private const double LavaRadiusBucketSize = 1d;
 
         #region 山顶小湖候选
 
@@ -124,7 +122,7 @@ namespace FlatWorld.WorldModel
                 settings.LavaLakeShoreWidth, Hash01(request.WorldSeed, region.X, region.Y, 0x1a7ab453u) * Math.PI * 2d);
         }
 
-        /// <summary>普通半径占绝大多数，超过常规上限后只保留二次曲线的极低概率长尾。</summary>
+        /// <summary>岩浆湖尺寸从冻结概率表抽取，地理边界只限制允许的半径档位。</summary>
         private static double ResolveLavaRadius(int worldSeed, Int2 region,
             ChunkGenerationSettingsSnapshot settings, double regionalRareMaxRadius)
         {
@@ -134,36 +132,9 @@ namespace FlatWorld.WorldModel
             if (rareMaximum <= minimum + 0.0001d)
                 return minimum;
 
-            double peak = (minimum + commonMaximum) * 0.5d;
-            double quadraticRadius = Math.Max(LavaRadiusBucketSize,
-                (commonMaximum - minimum) * 0.75d);
-            int bucketCount = Math.Max(1,
-                (int)Math.Ceiling((rareMaximum - minimum) / LavaRadiusBucketSize) + 1);
-
-            double totalWeight = 0d;
-            for (int i = 0; i < bucketCount; i++)
-            {
-                double candidate = Math.Min(rareMaximum, minimum + i * LavaRadiusBucketSize);
-                totalWeight += ResolveLavaRadiusWeight(candidate, peak, quadraticRadius);
-            }
-
-            double target = Hash01(worldSeed, region.X, region.Y, 0x1a7ab452u) * totalWeight;
-            double accumulated = 0d;
-            for (int i = 0; i < bucketCount; i++)
-            {
-                double candidate = Math.Min(rareMaximum, minimum + i * LavaRadiusBucketSize);
-                accumulated += ResolveLavaRadiusWeight(candidate, peak, quadraticRadius);
-                if (target <= accumulated)
-                    return candidate;
-            }
-
-            return rareMaximum;
-        }
-
-        private static double ResolveLavaRadiusWeight(double radius, double peak, double quadraticRadius)
-        {
-            double normalized = (radius - peak) / quadraticRadius;
-            return Math.Max(LavaRadiusTailWeight, 1d - normalized * normalized);
+            double scale = settings.WorldSpatialDistanceScale;
+            return DiscreteProbability.SampleWithin(settings.ProbabilityTables.Require("generation.lava.radius"),
+                Hash01(worldSeed, region.X, region.Y, 0x1a7ab452u), minimum / scale, rareMaximum / scale) * scale;
         }
 
         private static bool TrySampleLavaMountain(ChunkGenerationRequest request, double2 position, out double height)

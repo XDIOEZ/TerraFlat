@@ -62,7 +62,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - Profile 首次使用时默认冻结；关闭冻结只丢 Profile，保留删除 GUID、覆盖与 `RenewalYears`，重开后下次进入世界冻结当前配置。快照/生态指纹包含数量、环境边界与依赖标签。
 - 洞穴散矿读取基础生态阶段实际矿山：距离任意矿山至少 5 格、来源最多 12 格（固定地图格数）；`cave.resource.looseDensity/looseStoneDensity` 默认互斥 2% 对应矿石、5% 石头，石头矿山不贡献额外矿石概率。邻块基础生态通过有界缓存共享，来源坐标保存在散矿 RuleId，不能用只支持同块宿主显示的 `HostGuid`。
 - 洞穴河湖岸泥土由 `cave.dirtGround.enabled/tileId/chance` 控制，只替换开放干格的 Ground（默认 Profile 为 `Tile_Dirt` 29），不写 Blocking、不提高导航代价；普通岩壁仍独立生成。
-- `itemCountDistribution=1` 使用 `itemCountMin..itemCount` 的二次峰值数量；`itemCountPeak/itemCountQuadraticRadius` 控制分布。`distributionMode=2` 聚落按 `(1-d/r)^2` 衰减，中心来自全局种子网格。
+- 自然物数量和聚落分布以规则配置与正式生成器为准；聚落中心来自全局种子网格。
+- 自然物数量、岩浆湖半径、河床边缘沉积及聚落距离档位共用 `DiscreteProbability` 与 `generation.*` 概率表；Profile 创建时冻结最终概率到数字参数，保存/派生窗口继续沿用，生成与生态指纹均覆盖概率。聚落用11个归一化距离档的二项概率表读取生成倍率；原有地形、范围和总生成率规则仍由各系统负责。
 - `CompanionHostTag` 要求同格实际宿主；`RequiredChunkTag/RequiredTagChunkRadius` 查确定性邻区标签，不依赖加载顺序。洞穴占格顺序为入口 → 配置植物 → 藤蔓/矿物，安全区不生植物。
 - 草与可采植被分别由 `ChunkGrassRenderer/ChunkGroundCoverRenderer` 绘制；`groundCover:true` 保留确定性点，采集才创建 Item，持久化用生态删除 GUID。`GroundCoverSystem` 管理选格/图层，解绑不是采集。
 - `Mod_GroundCoverHarvest` 组合使用能力：`requiredUses` 只累计同一地形实例/格子/植被身份上真正开始的挥动，换目标或卸载清零，完成后才出货/移除来源。剪刀 1 次得 2 份纤维，打制石器 4 次得 1 份；花朵均保留原物品。草资格须等于 `ChunkTerrainData.GrassPresent`，清草复用 `TryConsumeGrass`，不能将非零空格状态当作草。

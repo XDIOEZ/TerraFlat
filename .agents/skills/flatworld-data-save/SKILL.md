@@ -61,6 +61,8 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 ## 内容与资源
 
+- 离散概率原表位于 `Resources/Config/Probability/discrete-probability-tables.json`，每档 `value/percent`，原表合计100%。`DiscreteProbabilityConfiguration.Modifying` 只调整写时复制的 `DiscreteProbabilityState`，统一归一化后得到不可变快照；抽样共用 `DiscreteProbability.Sample`。生成概率写入 Profile 数字参数，随既有冻结配置保存并参与生成/生态指纹，后台不得读全局实时难度或 JSON。
+
 - Item/Recipe/Tile/Actor 都由显式 Manifest 发现。Tile 保存稳定字符串 ID 与 runtimeTileId，数字编号不重排/复用，行为工厂与 MemoryPack Union 是不同注册边界；Actor 资源地址随 GUID，sourcePrefab 仅编辑器。
 - 玩家创建模板只在新角色模块加载前注入，不入存档。
 - Addressables 条目变更保存所属 Group；外部目录/源资源导入经 BatchModification 使 Fast Mode Locator 失效，AssetDatabase.Refresh 本身不够。Sprite 单图用主地址，Multiple 才加子资源名。

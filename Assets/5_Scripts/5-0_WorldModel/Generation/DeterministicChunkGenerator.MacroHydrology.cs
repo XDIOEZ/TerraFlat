@@ -195,76 +195,51 @@ namespace FlatWorld.WorldModel
             if (downstreamFlow < settings.RiverBedEdgeDepositMinimumFlow)
                 return false;
 
-            double propensity = SampleQuadraticRiverValue(
+            double propensity = SampleRiverProbabilityValue(
+                settings,
                 request.WorldSeed,
                 source,
                 target,
                 0x51ed270bu,
                 0d,
-                0.12d,
                 1d,
-                0.9d);
+                "generation.river.deposit.activation");
             if (propensity < settings.RiverBedEdgeDepositActivation)
                 return false;
 
-            double lengthRadius = Math.Max(
-                0.02d,
-                (settings.RiverBedEdgeDepositPeakFraction -
-                 settings.RiverBedEdgeDepositMinFraction) * 1.5d);
-            double fraction = SampleQuadraticRiverValue(
+            double fraction = SampleRiverProbabilityValue(
+                settings,
                 request.WorldSeed,
                 source,
                 target,
                 0x94d049bdu,
                 settings.RiverBedEdgeDepositMinFraction,
-                settings.RiverBedEdgeDepositPeakFraction,
                 settings.RiverBedEdgeDepositMaxFraction,
-                lengthRadius);
+                "generation.river.deposit.length");
             startT = Clamp01(1d - fraction);
             return true;
         }
 
-        /// <summary>按抛物线权重抽样，峰值最常见，远端只保留很小长尾。</summary>
-        private static double SampleQuadraticRiverValue(
+        /// <summary>河床沉积参数只消费冻结离散概率表和原有确定性随机数。</summary>
+        private static double SampleRiverProbabilityValue(
+            ChunkGenerationSettingsSnapshot probabilitySettings,
             int worldSeed,
             Int2 source,
             Int2 target,
             uint salt,
             double minimum,
-            double peak,
             double maximum,
-            double quadraticRadius)
+            string tableId)
         {
-            const int bucketCount = 32;
-            const double tailWeight = 0.02d;
             if (maximum <= minimum + 0.000001d)
                 return minimum;
-
-            double radius = Math.Max(0.0001d, quadraticRadius);
-            double totalWeight = 0d;
-            for (int bucket = 0; bucket <= bucketCount; bucket++)
-            {
-                double candidate = Lerp(minimum, maximum, bucket / (double)bucketCount);
-                double normalized = (candidate - peak) / radius;
-                totalWeight += Math.Max(tailWeight, 1d - normalized * normalized);
-            }
 
             uint segmentSalt = unchecked(
                 salt ^
                 (uint)target.X * 0x9e3779b9u ^
                 (uint)target.Y * 0x85ebca6bu);
-            double targetWeight =
-                Hash01(worldSeed, source.X, source.Y, segmentSalt) * totalWeight;
-            double accumulated = 0d;
-            for (int bucket = 0; bucket <= bucketCount; bucket++)
-            {
-                double candidate = Lerp(minimum, maximum, bucket / (double)bucketCount);
-                double normalized = (candidate - peak) / radius;
-                accumulated += Math.Max(tailWeight, 1d - normalized * normalized);
-                if (targetWeight <= accumulated)
-                    return candidate;
-            }
-            return maximum;
+            return DiscreteProbability.SampleWithin(probabilitySettings.ProbabilityTables.Require(tableId),
+                Hash01(worldSeed, source.X, source.Y, segmentSalt), minimum, maximum);
         }
 
         /// <summary>用汇水最多的上游支流确定主河槽在汇合点的切线。</summary>

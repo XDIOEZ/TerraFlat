@@ -107,6 +107,10 @@
       "name": "战斗与技能",
       "group": "实体与控制",
       "sourcePaths": [
+        "Assets/5_Scripts/5-0_WorldModel/DiscreteProbability.cs",
+        "Assets/Resources/Config/Probability/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Configuration/DiscreteProbabilityConfiguration.cs",
+        "Assets/StreamingAssets/GameConfig/LootTables/*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Combat/*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Skill/*",
         "Assets/5_Scripts/Shared/Combat/*",
@@ -122,6 +126,7 @@
         "inventory"
       ],
       "ruleCaseIds": [
+        "combat_probability_rules",
         "combat_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Combat/rules-suite.json",
@@ -360,6 +365,9 @@
       "name": "地形生成与地表采挖",
       "group": "世界与环境",
       "sourcePaths": [
+        "Assets/5_Scripts/5-0_WorldModel/DiscreteProbability.cs",
+        "Assets/Resources/Config/Probability/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Configuration/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/*Generator*",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/*Terrain*",
         "Assets/5_Scripts/5-0_WorldModel/Generation/*",

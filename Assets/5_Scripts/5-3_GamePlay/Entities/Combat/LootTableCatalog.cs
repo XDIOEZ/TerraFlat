@@ -51,8 +51,8 @@ public sealed class LootTableEntryDefinitionDto
     [JsonProperty("amountDistribution")]
     public LootAmountDistribution AmountDistribution;
 
-    [JsonProperty("peakAmount")]
-    public int PeakAmount;
+    [JsonProperty("amountProbabilityTableId")]
+    public string AmountProbabilityTableId;
 }
 
 #endregion
@@ -67,21 +67,22 @@ public sealed class RuntimeLootTableEntry
     public int MinAmount { get; }
     public int MaxAmount { get; }
     public LootAmountDistribution AmountDistribution { get; }
-    public int PeakAmount { get; }
+    public string AmountProbabilityTableId { get; }
 
     public RuntimeLootTableEntry(string itemId, float probability, int minAmount, int maxAmount,
-        LootAmountDistribution amountDistribution = LootAmountDistribution.Uniform, int peakAmount = 0)
+        LootAmountDistribution amountDistribution = LootAmountDistribution.Uniform,
+        string amountProbabilityTableId = null)
     {
         ItemId = itemId;
         Probability = probability;
         MinAmount = minAmount;
         MaxAmount = maxAmount;
-        LootAmountRules.Validate(minAmount, maxAmount, amountDistribution, peakAmount);
+        LootAmountRules.Validate(minAmount, maxAmount, amountDistribution, amountProbabilityTableId);
         AmountDistribution = amountDistribution;
-        PeakAmount = peakAmount;
+        AmountProbabilityTableId = amountProbabilityTableId;
     }
 
-    public int SampleAmount(double random) => LootAmountRules.Sample(MinAmount, MaxAmount, AmountDistribution, PeakAmount, random);
+    public int SampleAmount(double random) => LootAmountRules.Sample(MinAmount, MaxAmount, AmountDistribution, random, AmountProbabilityTableId);
     public int RollAmount() => SampleAmount(UnityEngine.Random.value);
 }
 
@@ -114,7 +115,7 @@ public sealed class RuntimeLootTable
                 ["MinAmount"] = entry.MinAmount,
                 ["MaxAmount"] = entry.MaxAmount,
                 ["AmountDistribution"] = (int)entry.AmountDistribution,
-                ["PeakAmount"] = entry.PeakAmount
+                ["AmountProbabilityTableId"] = entry.AmountProbabilityTableId
             });
         }
 
@@ -146,6 +147,7 @@ public static class LootTableCatalogLoader
     /// <summary>同步加载本体战利品库。</summary>
     public static IReadOnlyList<RuntimeLootTable> LoadBuiltIn()
     {
+        DiscreteProbabilityConfiguration.Reload();
         return DeserializeCatalog(StreamingAssetsTextLoader.ReadAllText(BuiltInCatalogPath));
     }
 
@@ -154,6 +156,7 @@ public static class LootTableCatalogLoader
         Action<IReadOnlyList<RuntimeLootTable>> completed,
         Action<Exception> failed)
     {
+        DiscreteProbabilityConfiguration.Reload();
         string json = null;
         Exception readError = null;
         yield return StreamingAssetsTextLoader.ReadAllTextAsync(
@@ -235,7 +238,7 @@ public static class LootTableCatalogLoader
                     entry.MinAmount,
                     entry.MaxAmount,
                     entry.AmountDistribution,
-                    entry.PeakAmount);
+                    entry.AmountProbabilityTableId);
             }
 
             result.Add(new RuntimeLootTable(tableId, entries));

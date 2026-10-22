@@ -415,15 +415,14 @@ public partial class ChunkMgr
     private static ChunkGenerationProfileSnapshot CreateFallbackGenerationSnapshot()
     {
         Vector2 size = GetChunkSize();
+        var numbers = new Dictionary<string, double>(StringComparer.Ordinal) { ["entity.spawnCount"] = 1d };
+        DiscreteProbabilityConfiguration.Capture().WriteGenerationParameters(numbers);
         return new ChunkGenerationProfileSnapshot(
             "surface.fallback",
             DeterministicChunkGenerator.CurrentGenerationSignature,
             Mathf.Max(1, Mathf.RoundToInt(size.x)),
             Mathf.Max(1, Mathf.RoundToInt(size.y)),
-            new Dictionary<string, double>(StringComparer.Ordinal)
-            {
-                ["entity.spawnCount"] = 1d
-            });
+            numbers);
     }
 
     /// <summary>把存档中的空间距离倍率写入纯生成快照，后台线程不再读取 Unity 单例。</summary>

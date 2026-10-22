@@ -46,6 +46,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
         operations.Add("combat/loot_amount", EntityLootAmount);
+        operations.Add("combat/discrete_probability", EntityDiscreteProbability);
         operations.Add("combat/tree_leaf_configuration", EntityTreeLeafConfiguration);
         RegisterCombatAudioOperations(operations);
         operations.Add("buff/lifecycle", EntityBuffLifecycle);
@@ -918,19 +919,26 @@ public static partial class GameplayTestSystemProbe
         var entryJson = new JObject
         {
             ["itemId"] = "Leaf", ["probability"] = 1,
-            ["minAmount"] = Number(args, "minimum", 1), ["maxAmount"] = Number(args, "maximum", 20),
-            ["amountDistribution"] = Text(args, "distribution", "QuadraticPeak"),
-            ["peakAmount"] = Number(args, "peak", 10)
+            ["minAmount"] = (int)Number(args, "minimum", 1), ["maxAmount"] = (int)Number(args, "maximum", 20),
+            ["amountDistribution"] = Text(args, "distribution", "DiscreteTable"),
+            ["amountProbabilityTableId"] = Text(args, "tableId", "loot.tree.leaf.amount")
         };
         var catalogJson = new JObject { ["schemaVersion"] = 1,
             ["lootTables"] = new JArray(new JObject { ["id"] = "probe", ["entries"] = new JArray(entryJson) }) };
         RuntimeLootTable table;
         try { table = LootTableCatalogLoader.DeserializeCatalog(catalogJson.ToString())[0]; }
         catch (Exception error) when (error is ArgumentException || error is System.IO.InvalidDataException)
-        { return new JObject { ["rejected"] = true }; }
+        { return new JObject { ["rejected"] = true, ["reason"] = error.ToString() }; }
         RuntimeLootTableEntry native = table.Entries[0];
         LootEntry go = table.CreateDamageReceiverEntries()[0].ToObject<LootEntry>();
         var counts = new int[native.MaxAmount - native.MinAmount + 1];
+        var percentages = new double[counts.Length];
+        if (native.AmountDistribution == LootAmountDistribution.DiscreteTable)
+        {
+            var probabilityTable = DiscreteProbabilityConfiguration.Capture().Require(native.AmountProbabilityTableId);
+            for (int i = 0; i < probabilityTable.Count; i++)
+                percentages[(int)probabilityTable.GetValue(i) - native.MinAmount] = probabilityTable.GetPercent(i);
+        }
         bool equivalent = true;
         for (int i = 0; i < 10000; i++)
         {
@@ -939,7 +947,7 @@ public static partial class GameplayTestSystemProbe
             counts[amount - native.MinAmount]++;
             equivalent &= amount == go.SampleAmount(random);
         }
-        return new JObject { ["rejected"] = false, ["counts"] = new JArray(counts),
+        return new JObject { ["rejected"] = false, ["counts"] = new JArray(counts), ["percentages"] = new JArray(percentages),
             ["minimum"] = native.SampleAmount(0d), ["maximum"] = native.SampleAmount(1d),
             ["goMinimum"] = go.SampleAmount(0d), ["goMaximum"] = go.SampleAmount(1d),
             ["backendEquivalent"] = equivalent };
@@ -958,7 +966,7 @@ public static partial class GameplayTestSystemProbe
                 foreach (RuntimeLootTableEntry entry in table.Entries)
                     if (entry.ItemId == "Leaf") leaves.Add(new JObject { ["probability"] = entry.Probability,
                         ["minimum"] = entry.MinAmount, ["maximum"] = entry.MaxAmount,
-                        ["distribution"] = entry.AmountDistribution.ToString(), ["peak"] = entry.PeakAmount });
+                        ["distribution"] = entry.AmountDistribution.ToString(), ["tableId"] = entry.AmountProbabilityTableId });
             trees.Add(new JObject { ["id"] = definition.Id, ["leaves"] = leaves });
         }
         return new JObject { ["trees"] = trees };

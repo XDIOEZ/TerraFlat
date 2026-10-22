@@ -2,27 +2,38 @@
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using FlatWorld.WorldModel;
 
 #region 掉落数量分布
 
-public enum LootAmountDistribution { Uniform, QuadraticPeak }
+public enum LootAmountDistribution { Uniform, DiscreteTable }
 
-/// <summary>所有掉落后端共用数量抽样，二次曲线在峰值最高且两端仍可出现。</summary>
+/// <summary>所有掉落后端共用显式概率表或均匀数量抽样。</summary>
 public static class LootAmountRules
 {
-    public static void Validate(int minimum, int maximum, LootAmountDistribution distribution, int peak)
+    public static void Validate(int minimum, int maximum, LootAmountDistribution distribution,
+        string probabilityTableId = null)
     {
         if (minimum < 0 || maximum < minimum)
             throw new System.ArgumentException("掉落数量范围无效。");
-        if (distribution != LootAmountDistribution.Uniform && distribution != LootAmountDistribution.QuadraticPeak)
+        if (distribution != LootAmountDistribution.Uniform && distribution != LootAmountDistribution.DiscreteTable)
             throw new System.ArgumentException("未知的掉落数量分布。");
-        if (distribution == LootAmountDistribution.QuadraticPeak && (peak < minimum || peak > maximum))
-            throw new System.ArgumentException("掉落数量峰值必须在数量范围内。");
+        if (distribution == LootAmountDistribution.DiscreteTable)
+        {
+            var table = DiscreteProbabilityConfiguration.Capture().Require(probabilityTableId ?? string.Empty);
+            for (int i = 0; i < table.Count; i++)
+                if (table.GetValue(i) != System.Math.Floor(table.GetValue(i)) ||
+                    table.GetValue(i) < minimum || table.GetValue(i) > maximum)
+                    throw new System.ArgumentException("掉落概率表结果须为数量范围内的整数。");
+        }
     }
 
-    public static int Sample(int minimum, int maximum, LootAmountDistribution distribution, int peak, double random)
+    public static int Sample(int minimum, int maximum, LootAmountDistribution distribution, double random,
+        string probabilityTableId = null)
     {
-        Validate(minimum, maximum, distribution, peak);
+        if (distribution == LootAmountDistribution.DiscreteTable)
+            return (int)DiscreteProbability.Sample(DiscreteProbabilityConfiguration.Capture().Require(probabilityTableId ?? string.Empty), random);
+        Validate(minimum, maximum, distribution, probabilityTableId);
         if (double.IsNaN(random) || random < 0d || random > 1d)
             throw new System.ArgumentOutOfRangeException(nameof(random));
         if (minimum == maximum || random == 0d) return minimum;
@@ -30,18 +41,7 @@ public static class LootAmountRules
         if (distribution == LootAmountDistribution.Uniform)
             return (int)(minimum + (long)(random * ((long)maximum - minimum + 1L)));
 
-        // 半径比最远数量多一格，避免端点权重为零而永远抽不到。
-        double radius = System.Math.Max((long)peak - minimum, (long)maximum - peak) + 1d;
-        double Weight(long amount) { double distance = (amount - peak) / radius; return 1d - distance * distance; }
-        double total = 0d;
-        for (long amount = minimum; amount <= maximum; amount++) total += Weight(amount);
-        double remaining = random * total;
-        for (long amount = minimum; amount <= maximum; amount++)
-        {
-            remaining -= Weight(amount);
-            if (remaining < 0d) return (int)amount;
-        }
-        return maximum;
+        throw new System.ArgumentException("未知的掉落数量分布。");
     }
 }
 
@@ -72,9 +72,9 @@ public class LootEntry
     public int MaxAmount = 1;
 
     public LootAmountDistribution AmountDistribution;
-    public int PeakAmount;
+    public string AmountProbabilityTableId;
 
-    public int SampleAmount(double random) => LootAmountRules.Sample(MinAmount, MaxAmount, AmountDistribution, PeakAmount, random);
+    public int SampleAmount(double random) => LootAmountRules.Sample(MinAmount, MaxAmount, AmountDistribution, random, AmountProbabilityTableId);
     public int RollAmount() => SampleAmount(Random.value);
 
     // 编辑器验证方法，确保数值有效性
@@ -100,8 +100,6 @@ public class LootEntry
         {
             MaxAmount = MinAmount; // 调整最大数量为最小数量
         }
-        if (AmountDistribution == LootAmountDistribution.QuadraticPeak)
-            PeakAmount = Mathf.Clamp(PeakAmount, MinAmount, MaxAmount);
 #endif
     }
 

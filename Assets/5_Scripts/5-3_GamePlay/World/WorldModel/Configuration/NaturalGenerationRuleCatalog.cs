@@ -68,10 +68,8 @@ public sealed class NaturalGenerationRuleCatalog
         if (rule == null || string.IsNullOrWhiteSpace(rule.RuleId) || string.IsNullOrWhiteSpace(rule.ItemId) ||
             rule.ItemCount < 1 || rule.BiomeMask < 0 || rule.ProvidedTags == null ||
             !Enum.IsDefined(typeof(EcologyItemCountDistribution), rule.ItemCountDistribution) ||
-            (rule.ItemCountDistribution == EcologyItemCountDistribution.QuadraticPeak &&
-             (rule.ItemCountMin < 1 || rule.ItemCountMin > rule.ItemCount ||
-              rule.ItemCountPeak < rule.ItemCountMin || rule.ItemCountPeak > rule.ItemCount ||
-              !AtLeast(rule.ItemCountQuadraticRadius, 0.0001d))) ||
+            (rule.ItemCountDistribution == EcologyItemCountDistribution.DiscreteTable &&
+             (rule.ItemCountMin < 1 || rule.ItemCountMin > rule.ItemCount)) ||
             !Enum.IsDefined(typeof(EcologyDistributionMode), rule.DistributionMode) ||
             rule.PatchSpacing < 2 || !InRange(rule.PatchRadius, 0.5d, rule.PatchSpacing * 0.5d) ||
             !InRange(rule.SpawnChance, 0d, 1d) || !AtLeast(rule.SpawnChanceMultiplier, 0d) ||
@@ -158,10 +156,6 @@ internal sealed class NaturalEcologyRuleDefinition
     public EcologyItemCountDistribution ItemCountDistribution = EcologyItemCountDistribution.Fixed;
     [JsonProperty(Required = Required.DisallowNull)]
     public int ItemCountMin = 1;
-    [JsonProperty(Required = Required.DisallowNull)]
-    public int ItemCountPeak = 1;
-    [JsonProperty(Required = Required.DisallowNull)]
-    public float ItemCountQuadraticRadius = 1f;
     public float SpawnChance;
     public float SpawnChanceMultiplier;
     public EcologyDistributionMode DistributionMode;
@@ -207,7 +201,7 @@ internal sealed class NaturalEcologyRuleDefinition
         CompanionMinRadius, CompanionMaxRadius, MinRiverFloodplainStrength,
         DistributionMode, PatchSpacing, PatchRadius, PatchChance, RequiredTagChunkRadius,
         MaxRiverFloodplainStrength, RequiredEnvironmentLayer, MinimumEnvironmentValue,
-        ItemCountDistribution, ItemCountMin, ItemCountPeak, ItemCountQuadraticRadius,
+        ItemCountDistribution, ItemCountMin,
         MaximumEnvironmentValue, RequireNaturalPlantableGround);
 }
 

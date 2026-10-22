@@ -243,7 +243,7 @@ namespace FlatWorld.WorldModel
             CaveResourceRules = new ReadOnlyCollection<CaveResourceRuleSnapshot>(caveResourceList);
             PortalPairing = portalPairing;
             EcologyFingerprint = CalculateEcologyFingerprint(EcologyGlobalMultiplier,
-                EcologyRules);
+                EcologyRules, this.numericParameters);
             GenerationFingerprint = CalculateGenerationFingerprint(
                 ProfileId, Signature, Width, Height,
                 this.numericParameters, this.textParameters,
@@ -450,10 +450,19 @@ namespace FlatWorld.WorldModel
         }
 
         private static ulong CalculateEcologyFingerprint(double ecologyGlobalMultiplier,
-            IReadOnlyList<EcologySpawnRuleSnapshot> ecologyRules)
+            IReadOnlyList<EcologySpawnRuleSnapshot> ecologyRules, IReadOnlyDictionary<string, double> numbers)
         {
             ulong hash = 14695981039346656037UL;
             AddEcologyFingerprintFields(ref hash, ecologyGlobalMultiplier, ecologyRules);
+            var probabilityKeys = new List<string>();
+            foreach (string key in numbers.Keys)
+                if (key.StartsWith("probability.generation.", StringComparison.Ordinal)) probabilityKeys.Add(key);
+            probabilityKeys.Sort(StringComparer.Ordinal);
+            foreach (string key in probabilityKeys)
+            {
+                AddString(ref hash, key);
+                AddLong(ref hash, BitConverter.DoubleToInt64Bits(numbers[key]));
+            }
             return hash;
         }
 
@@ -475,9 +484,6 @@ namespace FlatWorld.WorldModel
                     AddString(ref hash, "itemCountDistribution");
                     AddLong(ref hash, (int)rule.ItemCountDistribution);
                     AddLong(ref hash, rule.ItemCountMin);
-                    AddLong(ref hash, rule.ItemCountPeak);
-                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(
-                        rule.ItemCountQuadraticRadius));
                 }
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChance));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChanceMultiplier));

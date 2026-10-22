@@ -79,6 +79,7 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
 
         Dictionary<string, string> texts = CreateTextParametersSnapshot();
         riverConfigs.ApplyTo(profileId, numbers, texts);
+        DiscreteProbabilityConfiguration.Capture().WriteGenerationParameters(numbers);
         AppendNaturalPlantableGroundTileIds(texts);
 
         var ecologySnapshots = new List<EcologySpawnRuleSnapshot>(ecologyRuleIds.Count);

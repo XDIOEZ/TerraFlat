@@ -5,19 +5,19 @@ using System.Threading;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>逐格均匀、固定密度聚落、二次衰减聚落共用同一确定性空间生成器。</summary>
+    /// <summary>逐格均匀、固定密度聚落、离散密度聚落共用同一确定性空间生成器。</summary>
     public enum EcologyDistributionMode : byte
     {
         Uniform = 0,
         Patch = 1,
-        QuadraticPatch = 2
+        ProbabilityPatch = 2
     }
 
     /// <summary>自然物单次生成数量的分布方式。</summary>
     public enum EcologyItemCountDistribution : byte
     {
         Fixed = 0,
-        QuadraticPeak = 1
+        DiscreteTable = 1
     }
 
     /// <summary>
@@ -61,8 +61,6 @@ namespace FlatWorld.WorldModel
             double minimumEnvironmentValue = 0d,
             EcologyItemCountDistribution itemCountDistribution = EcologyItemCountDistribution.Fixed,
             int itemCountMin = 1,
-            int itemCountPeak = 1,
-            double itemCountQuadraticRadius = 1d,
             double maximumEnvironmentValue = double.MaxValue,
             bool requireNaturalPlantableGround = false)
         {
@@ -88,21 +86,12 @@ namespace FlatWorld.WorldModel
             if (itemCountDistribution == EcologyItemCountDistribution.Fixed)
             {
                 ItemCountMin = ItemCount;
-                ItemCountPeak = ItemCount;
-                ItemCountQuadraticRadius = 1d;
             }
             else
             {
                 if (itemCountMin < 1 || itemCountMin > ItemCount)
                     throw new ArgumentOutOfRangeException(nameof(itemCountMin));
-                if (itemCountPeak < itemCountMin || itemCountPeak > ItemCount)
-                    throw new ArgumentOutOfRangeException(nameof(itemCountPeak));
-                if (double.IsNaN(itemCountQuadraticRadius) ||
-                    double.IsInfinity(itemCountQuadraticRadius) || itemCountQuadraticRadius <= 0d)
-                    throw new ArgumentOutOfRangeException(nameof(itemCountQuadraticRadius));
                 ItemCountMin = itemCountMin;
-                ItemCountPeak = itemCountPeak;
-                ItemCountQuadraticRadius = itemCountQuadraticRadius;
             }
             SpawnChance = Clamp01(spawnChance);
             SpawnChanceMultiplier = Math.Max(0d, Finite(spawnChanceMultiplier, 1d));
@@ -147,8 +136,6 @@ namespace FlatWorld.WorldModel
         public int ItemCount { get; }
         public EcologyItemCountDistribution ItemCountDistribution { get; }
         public int ItemCountMin { get; }
-        public int ItemCountPeak { get; }
-        public double ItemCountQuadraticRadius { get; }
         public double SpawnChance { get; }
         public double SpawnChanceMultiplier { get; }
         /// <summary>0 表示不限制群系；其他值按 SurfaceBiomeKind 的位编号匹配。</summary>
@@ -364,7 +351,6 @@ namespace FlatWorld.WorldModel
         private const uint OffsetSalt = 0x6f666673U;
         private const uint CountSalt = 0x636f756eU;
         private const uint PatchSalt = 0x70617463U;
-        private const double QuadraticCountTailWeight = 0.02d;
         private const string TreeTag = "Tree";
 
         #endregion
@@ -743,34 +729,18 @@ namespace FlatWorld.WorldModel
             }
         }
 
-        /// <summary>按规则确定本次生成数量；二次分布以峰值数量为最高概率并保留极低概率长尾。</summary>
+        /// <summary>本次生成数量只消费冻结概率表，不在生态行为里计算权重曲线。</summary>
         private static int ResolveItemCount(ChunkGenerationRequest request,
             EcologySpawnRuleSnapshot rule, int worldX, int worldY, int hostGuid)
         {
             if (rule.ItemCountDistribution == EcologyItemCountDistribution.Fixed)
                 return rule.ItemCount;
 
-            double totalWeight = 0d;
-            for (int count = rule.ItemCountMin; count <= rule.ItemCount; count++)
-                totalWeight += ResolveQuadraticCountWeight(rule, count);
-
             ulong seed = CreateSeed(request, rule.RuleId, CountSalt) ^ (uint)hostGuid;
-            double target = Hash01(seed, worldX, worldY) * totalWeight;
-            double accumulated = 0d;
-            for (int count = rule.ItemCountMin; count <= rule.ItemCount; count++)
-            {
-                accumulated += ResolveQuadraticCountWeight(rule, count);
-                if (target <= accumulated)
-                    return count;
-            }
-
-            return rule.ItemCount;
-        }
-
-        private static double ResolveQuadraticCountWeight(EcologySpawnRuleSnapshot rule, int count)
-        {
-            double normalized = (count - rule.ItemCountPeak) / rule.ItemCountQuadraticRadius;
-            return Math.Max(QuadraticCountTailWeight, 1d - normalized * normalized);
+            var table = request.Profile.Settings.ProbabilityTables.Require("generation.count." + rule.RuleId);
+            double amount = DiscreteProbability.SampleWithin(table, Hash01(seed, worldX, worldY), rule.ItemCountMin, rule.ItemCount);
+            if (amount != Math.Floor(amount)) throw new InvalidOperationException("自然物数量概率表包含非整数结果。");
+            return (int)amount;
         }
 
         private static bool IsValidNaturalCell(TerrainCell cell, ChunkTerrainBuffer terrain,
@@ -799,7 +769,7 @@ namespace FlatWorld.WorldModel
             return terrain.TryGetEnvironmentValue(layerId, x, y, out float value) ? value : 0d;
         }
 
-        /// <summary>按规则返回逐格概率权重，二次聚落从中心向边缘平滑递减。</summary>
+        /// <summary>按规则返回逐格概率权重，聚落密度由距离档位的显式概率表控制。</summary>
         private static double GetDistributionWeight(ChunkGenerationRequest request,
             int worldX, int worldY, EcologySpawnRuleSnapshot rule)
         {
@@ -808,7 +778,7 @@ namespace FlatWorld.WorldModel
                 case EcologyDistributionMode.Uniform:
                     return 1d;
                 case EcologyDistributionMode.Patch:
-                case EcologyDistributionMode.QuadraticPatch:
+                case EcologyDistributionMode.ProbabilityPatch:
                     return GetActivePatchWeight(request, worldX, worldY, rule);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(rule.DistributionMode));
@@ -838,7 +808,7 @@ namespace FlatWorld.WorldModel
                     long originX = (long)patchX * spacing;
                     long originY = (long)patchY * spacing;
                     double weight = GetPatchCellWeight(seed, patchX, patchY, originX, originY,
-                        spacing, spacing, worldX, worldY, 0, 0, rule);
+                        spacing, spacing, worldX, worldY, 0, 0, rule, request.Profile.Settings.ProbabilityTables);
                     if (weight >= 1d) return 1d;
                     strongestWeight = Math.Max(strongestWeight, weight);
                 }
@@ -866,18 +836,18 @@ namespace FlatWorld.WorldModel
                 long originY = (long)topology.Min.Y + relativeOriginY;
                 double weight = GetPatchCellWeight(seed, patchX, patchY, originX, originY,
                     patchWidth, patchHeight, normalizedX, normalizedY,
-                    topology.Span.X, topology.Span.Y, rule);
+                    topology.Span.X, topology.Span.Y, rule, request.Profile.Settings.ProbabilityTables);
                 if (weight >= 1d) return 1d;
                 strongestWeight = Math.Max(strongestWeight, weight);
             }
             return strongestWeight;
         }
 
-        /// <summary>普通聚落保持恒定权重，二次聚落按归一化距离的平方衰减。</summary>
+        /// <summary>普通聚落保持恒定权重，离散聚落从冻结目录读取当前距离档的生成率。</summary>
         private static double GetPatchCellWeight(ulong seed, int patchX, int patchY,
             long originX, long originY, int patchWidth, int patchHeight,
             int worldX, int worldY, int wrapSpanX, int wrapSpanY,
-            EcologySpawnRuleSnapshot rule)
+            EcologySpawnRuleSnapshot rule, DiscreteProbabilityCatalog probabilities)
         {
             if (rule.PatchChance <= 0d)
                 return 0d;
@@ -900,9 +870,18 @@ namespace FlatWorld.WorldModel
             double distanceSquared = deltaX * deltaX + deltaY * deltaY;
             if (distanceSquared > rule.PatchRadius * rule.PatchRadius) return 0d;
             if (rule.DistributionMode == EcologyDistributionMode.Patch) return 1d;
-            double falloff = 1d - Math.Sqrt(distanceSquared) / rule.PatchRadius;
-            return falloff * falloff;
+            int band = Math.Min(10, (int)Math.Round(Math.Sqrt(distanceSquared) / rule.PatchRadius * 10d,
+                MidpointRounding.AwayFromZero));
+            return probabilities.Require(PatchProbabilityIds[band]).ProbabilityOf(1d);
         }
+
+        private static readonly string[] PatchProbabilityIds =
+        {
+            "generation.patch.distance.0", "generation.patch.distance.1", "generation.patch.distance.2",
+            "generation.patch.distance.3", "generation.patch.distance.4", "generation.patch.distance.5",
+            "generation.patch.distance.6", "generation.patch.distance.7", "generation.patch.distance.8",
+            "generation.patch.distance.9", "generation.patch.distance.10"
+        };
 
         private static int FloorDiv(int value, int divisor)
         {

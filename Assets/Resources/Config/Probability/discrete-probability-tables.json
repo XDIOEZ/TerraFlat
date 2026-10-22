@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "tables": [
+    {
+      "id": "loot.tree.leaf.amount",
+      "entries": [
+        {"value": 1, "percent": 2.2857},
+        {"value": 2, "percent": 3.2571},
+        {"value": 3, "percent": 4.1143},
+        {"value": 4, "percent": 4.8571},
+        {"value": 5, "percent": 5.4857},
+        {"value": 6, "percent": 6},
+        {"value": 7, "percent": 6.4},
+        {"value": 8, "percent": 6.6857},
+        {"value": 9, "percent": 6.8571},
+        {"value": 10, "percent": 6.9146},
+        {"value": 11, "percent": 6.8571},
+        {"value": 12, "percent": 6.6857},
+        {"value": 13, "percent": 6.4},
+        {"value": 14, "percent": 6},
+        {"value": 15, "percent": 5.4857},
+        {"value": 16, "percent": 4.8571},
+        {"value": 17, "percent": 4.1143},
+        {"value": 18, "percent": 3.2571},
+        {"value": 19, "percent": 2.2857},
+        {"value": 20, "percent": 1.2}
+      ]
+    },
+    {
+      "id": "generation.count.surface.forest.leaf",
+      "entries": [
+        {"value": 1, "percent": 25.74},
+        {"value": 2, "percent": 28.9573},
+        {"value": 3, "percent": 25.74},
+        {"value": 4, "percent": 16.0875},
+        {"value": 5, "percent": 0.5792},
+        {"value": 6, "percent": 0.5792},
+        {"value": 7, "percent": 0.5792},
+        {"value": 8, "percent": 0.5792},
+        {"value": 9, "percent": 0.5792},
+        {"value": 10, "percent": 0.5792}
+      ]
+    },
+    {
+      "id": "generation.lava.radius",
+      "entries": [
+        {"value": 3, "percent": 17.5678},
+        {"value": 4, "percent": 30.0589},
+        {"value": 5, "percent": 30.0605},
+        {"value": 6, "percent": 17.5678},
+        {"value": 7, "percent": 0.0949},
+        {"value": 8, "percent": 0.0949},
+        {"value": 9, "percent": 0.0949},
+        {"value": 10, "percent": 0.0949},
+        {"value": 11, "percent": 0.0949},
+        {"value": 12, "percent": 0.0949},
+        {"value": 13, "percent": 0.0949},
+        {"value": 14, "percent": 0.0949},
+        {"value": 15, "percent": 0.0949},
+        {"value": 16, "percent": 0.0949},
+        {"value": 17, "percent": 0.0949},
+        {"value": 18, "percent": 0.0949},
+        {"value": 19, "percent": 0.0949},
+        {"value": 20, "percent": 0.0949},
+        {"value": 21, "percent": 0.0949},
+        {"value": 22, "percent": 0.0949},
+        {"value": 23, "percent": 0.0949},
+        {"value": 24, "percent": 0.0949},
+        {"value": 25, "percent": 0.0949},
+        {"value": 26, "percent": 0.0949},
+        {"value": 27, "percent": 0.0949},
+        {"value": 28, "percent": 0.0949},
+        {"value": 29, "percent": 0.0949},
+        {"value": 30, "percent": 0.0949},
+        {"value": 31, "percent": 0.0949},
+        {"value": 32, "percent": 0.0949},
+        {"value": 33, "percent": 0.0949},
+        {"value": 34, "percent": 0.0949},
+        {"value": 35, "percent": 0.0949},
+        {"value": 36, "percent": 0.0949},
+        {"value": 37, "percent": 0.0949},
+        {"value": 38, "percent": 0.0949},
+        {"value": 39, "percent": 0.0949},
+        {"value": 40, "percent": 0.0949},
+        {"value": 41, "percent": 0.0949},
+        {"value": 42, "percent": 0.0949},
+        {"value": 43, "percent": 0.0949},
+        {"value": 44, "percent": 0.0949},
+        {"value": 45, "percent": 0.0949},
+        {"value": 46, "percent": 0.0949},
+        {"value": 47, "percent": 0.0949},
+        {"value": 48, "percent": 0.0949},
+        {"value": 49, "percent": 0.0949},
+        {"value": 50, "percent": 0.0949},
+        {"value": 51, "percent": 0.0949},
+        {"value": 52, "percent": 0.0949},
+        {"value": 53, "percent": 0.0949},
+        {"value": 54, "percent": 0.0949},
+        {"value": 55, "percent": 0.0949},
+        {"value": 56, "percent": 0.0949}
+      ]
+    },
+    {
+      "id": "generation.river.deposit.activation",
+      "entries": [
+        {"value": 0, "percent": 4.1779},
+        {"value": 0.03125, "percent": 4.2122},
+        {"value": 0.0625, "percent": 4.2362},
+        {"value": 0.09375, "percent": 4.2499},
+        {"value": 0.125, "percent": 4.2534},
+        {"value": 0.15625, "percent": 4.2466},
+        {"value": 0.1875, "percent": 4.2296},
+        {"value": 0.21875, "percent": 4.2023},
+        {"value": 0.25, "percent": 4.1648},
+        {"value": 0.28125, "percent": 4.117},
+        {"value": 0.3125, "percent": 4.059},
+        {"value": 0.34375, "percent": 3.9906},
+        {"value": 0.375, "percent": 3.9121},
+        {"value": 0.40625, "percent": 3.8233},
+        {"value": 0.4375, "percent": 3.7242},
+        {"value": 0.46875, "percent": 3.6149},
+        {"value": 0.5, "percent": 3.4953},
+        {"value": 0.53125, "percent": 3.3654},
+        {"value": 0.5625, "percent": 3.2253},
+        {"value": 0.59375, "percent": 3.075},
+        {"value": 0.625, "percent": 2.9143},
+        {"value": 0.65625, "percent": 2.7435},
+        {"value": 0.6875, "percent": 2.5623},
+        {"value": 0.71875, "percent": 2.371},
+        {"value": 0.75, "percent": 2.1693},
+        {"value": 0.78125, "percent": 1.9574},
+        {"value": 0.8125, "percent": 1.7353},
+        {"value": 0.84375, "percent": 1.5028},
+        {"value": 0.875, "percent": 1.2602},
+        {"value": 0.90625, "percent": 1.0073},
+        {"value": 0.9375, "percent": 0.7441},
+        {"value": 0.96875, "percent": 0.4706},
+        {"value": 1, "percent": 0.1869}
+      ]
+    },
+    {
+      "id": "generation.river.deposit.length",
+      "entries": [
+        {"value": 0.18, "percent": 3.3368},
+        {"value": 0.19375, "percent": 3.9135},
+        {"value": 0.2075, "percent": 4.4201},
+        {"value": 0.22125, "percent": 4.8566},
+        {"value": 0.235, "percent": 5.223},
+        {"value": 0.24875, "percent": 5.5193},
+        {"value": 0.2625, "percent": 5.7455},
+        {"value": 0.27625, "percent": 5.9016},
+        {"value": 0.29, "percent": 5.9877},
+        {"value": 0.30375, "percent": 6.0038},
+        {"value": 0.3175, "percent": 5.9494},
+        {"value": 0.33125, "percent": 5.8252},
+        {"value": 0.345, "percent": 5.6308},
+        {"value": 0.35875, "percent": 5.3664},
+        {"value": 0.3725, "percent": 5.0318},
+        {"value": 0.38625, "percent": 4.6272},
+        {"value": 0.4, "percent": 4.1524},
+        {"value": 0.41375, "percent": 3.6076},
+        {"value": 0.4275, "percent": 2.9927},
+        {"value": 0.44125, "percent": 2.3077},
+        {"value": 0.455, "percent": 1.5525},
+        {"value": 0.46875, "percent": 0.7273},
+        {"value": 0.4825, "percent": 0.1201},
+        {"value": 0.49625, "percent": 0.1201},
+        {"value": 0.51, "percent": 0.1201},
+        {"value": 0.52375, "percent": 0.1201},
+        {"value": 0.5375, "percent": 0.1201},
+        {"value": 0.55125, "percent": 0.1201},
+        {"value": 0.565, "percent": 0.1201},
+        {"value": 0.57875, "percent": 0.1201},
+        {"value": 0.5925, "percent": 0.1201},
+        {"value": 0.60625, "percent": 0.1201},
+        {"value": 0.62, "percent": 0.1201}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.0",
+      "entries": [
+        {"value": 0, "percent": 0},
+        {"value": 1, "percent": 100}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.1",
+      "entries": [
+        {"value": 0, "percent": 19},
+        {"value": 1, "percent": 81}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.2",
+      "entries": [
+        {"value": 0, "percent": 36},
+        {"value": 1, "percent": 64}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.3",
+      "entries": [
+        {"value": 0, "percent": 51},
+        {"value": 1, "percent": 49}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.4",
+      "entries": [
+        {"value": 0, "percent": 64},
+        {"value": 1, "percent": 36}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.5",
+      "entries": [
+        {"value": 0, "percent": 75},
+        {"value": 1, "percent": 25}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.6",
+      "entries": [
+        {"value": 0, "percent": 84},
+        {"value": 1, "percent": 16}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.7",
+      "entries": [
+        {"value": 0, "percent": 91},
+        {"value": 1, "percent": 9}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.8",
+      "entries": [
+        {"value": 0, "percent": 96},
+        {"value": 1, "percent": 4}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.9",
+      "entries": [
+        {"value": 0, "percent": 99},
+        {"value": 1, "percent": 1}
+      ]
+    },
+    {
+      "id": "generation.patch.distance.10",
+      "entries": [
+        {"value": 0, "percent": 100},
+        {"value": 1, "percent": 0}
+      ]
+    }
+  ]
+}

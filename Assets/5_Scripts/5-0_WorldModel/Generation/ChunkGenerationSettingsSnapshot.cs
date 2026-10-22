@@ -238,6 +238,7 @@ namespace FlatWorld.WorldModel
     /// </summary>
     public sealed class ChunkGenerationSettingsSnapshot
     {
+        public DiscreteProbabilityCatalog ProbabilityTables { get; }
         private const double DefaultWorldCoordinateScale = 0.01d;
         private const double DefaultWorldSpatialDistanceScale = 1d;
         private const double MinimumWorldSpatialDistanceScale = 0.25d;
@@ -248,6 +249,7 @@ namespace FlatWorld.WorldModel
         internal ChunkGenerationSettingsSnapshot(IReadOnlyDictionary<string, double> numbers,
             IReadOnlyDictionary<string, string> texts)
         {
+            ProbabilityTables = DiscreteProbabilityCatalog.FromGenerationParameters(numbers);
             // 所有默认值和数字范围都在这里一次处理好，后面生成每个格子时就不用反复检查。
             Mode = GetText(texts, "terrain.mode", "surface").Equals("cave",
                 StringComparison.OrdinalIgnoreCase) ? ChunkGenerationMode.Cave : ChunkGenerationMode.Surface;
