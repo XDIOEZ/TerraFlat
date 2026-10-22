@@ -93,6 +93,11 @@
       "enabled": true
     },
     {
+      "id": "character_outfits",
+      "path": "shells/character_outfits.json",
+      "enabled": true
+    },
+    {
       "id": "tools",
       "path": "shells/tools.json",
       "enabled": true

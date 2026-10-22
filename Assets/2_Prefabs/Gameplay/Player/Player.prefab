@@ -660,6 +660,7 @@ Transform:
   - {fileID: 4469299423806421341}
   - {fileID: 7800387507517919720}
   - {fileID: 9100000000000000101}
+  - {fileID: 617171558031673506}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &8862278864143937418
@@ -790,7 +791,7 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
-  Sprite: {fileID: 0}
+  Sprite: {fileID: 5714023100881721936}
   poolKey:
   isInPool: 0
   poolingDisabled: 0
@@ -2216,6 +2217,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 9100000000000000403}
     m_Modifications:
+    - target: {fileID: 1086107019792522300, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 88460563eb9c3ea46b6964df0dcd0733, type: 3}
     - target: {fileID: 2411235646888064391, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
       propertyPath: m_Name
       value: Module_Animator
@@ -3583,3 +3588,56 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9dbeb48fdb44ce8980d46d196fb0bb5, type: 3}
   m_Name:
   m_EditorClassIdentifier:
+--- !u!1 &3954612198311680111
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 617171558031673506}
+  - component: {fileID: 2593754982010647129}
+  m_Layer: 0
+  m_Name: Mod_CharacterAppearance
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &617171558031673506
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3954612198311680111}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343432311901774332}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2593754982010647129
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3954612198311680111}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3612a01df80c0946b35ba492c451e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  AppearanceData:
+    StableName: characterAppearance
+    ModuleId: CharacterAppearance
+    enabled: 1
+    Type: 0
+    bitData: 
+  profile: {fileID: 11400000, guid: c94abc51fc6a3a94390ca7a899df3f12, type: 2}
+  bodyStyle: 1

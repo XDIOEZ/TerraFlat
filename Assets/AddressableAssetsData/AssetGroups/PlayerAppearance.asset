@@ -1,0 +1,121 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: PlayerAppearance
+  m_EditorClassIdentifier: 
+  m_GroupName: PlayerAppearance
+  m_Data:
+    m_SerializedData: []
+  m_GUID: bedf7b75014d9de41b6ee1923957e469
+  m_SerializeEntries:
+  - m_GUID: 17a80fce6c882f54398a17169ed46f4f
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Vest.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1918da890f7096f4d83df03f4b9153aa
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 242d581b4297bcc40a9e5f5159e4db1b
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2f9d630f1c4787f4fa78f818c6269940
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Gauntlets.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 37915fa332c06ad40b8388b8985b85b7
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Hood.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4ee2c91d9120a62418f8ceff0a7117a5
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Boots.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 88460563eb9c3ea46b6964df0dcd0733
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Base_Female.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a78d0e9cdbb69f64f91c030198c04473
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b0f5693bb39c9104e88ce553eb5b6025
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Cuirass.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c0747691021ed264e82bf8a58174ca79
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c696331303ec5d240a17b095dc634f27
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Gloves.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c9d49ff443d67504f95809f4365097ae
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Trousers.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d70a2b31d036aec45bbbcb03d8889916
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Greaves.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ec700f9862070e34f8eab9c0c94f05d0
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Boots.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ec7a204f4ed90d24a8f9828b6ff1fc64
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Base_Male.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f8ec1bd229b95324e994b6f10302bff2
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 6fd149b830f58f74c9d315fdfe7bfb18, type: 2}
+    - {fileID: 11400000, guid: 8f02eb08fb853d8469326aea3478b7db, type: 2}

@@ -1,0 +1,591 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Traveler_Hood",
+      "parent": "Equipment_Base",
+      "gameName": "旅人兜帽",
+      "description": "旅人套装的棕色布兜帽，轻便耐用，可与其他头部装备替换。",
+      "durability": 90,
+      "maxDurability": 90,
+      "amount": 1,
+      "weight": 0.4,
+      "volume": 2,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.Head"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Hood.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "旅人兜帽防护",
+                "DefenseBonus": {
+                  "Physical": 1
+                },
+                "CoveredParts": [
+                  "Head"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Traveler_Vest",
+      "parent": "Equipment_Base",
+      "gameName": "旅人皮甲",
+      "description": "旅人套装的皮革外甲，保护胸腹，可与其他套装混搭。",
+      "durability": 140,
+      "maxDurability": 140,
+      "amount": 1,
+      "weight": 2.2,
+      "volume": 7,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.TorsoOuter"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Vest.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "旅人皮甲防护",
+                "DefenseBonus": {
+                  "Physical": 3
+                },
+                "CoveredParts": [
+                  "Chest",
+                  "Abdomen"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Traveler_Gloves",
+      "parent": "Equipment_Base",
+      "gameName": "旅人手套",
+      "description": "旅人套装的皮革手套，保护双手。",
+      "durability": 80,
+      "maxDurability": 80,
+      "amount": 1,
+      "weight": 0.3,
+      "volume": 1.2,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.Hands"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Gloves.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "旅人手套防护",
+                "DefenseBonus": {
+                  "Physical": 1
+                },
+                "CoveredParts": [
+                  "LeftHand",
+                  "RightHand"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Traveler_Trousers",
+      "parent": "Equipment_Base",
+      "gameName": "旅人长裤",
+      "description": "旅人套装的耐磨长裤，保护腰腿。",
+      "durability": 100,
+      "maxDurability": 100,
+      "amount": 1,
+      "weight": 0.7,
+      "volume": 3,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.Legs"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Trousers.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "旅人长裤防护",
+                "DefenseBonus": {
+                  "Physical": 1
+                },
+                "CoveredParts": [
+                  "Pelvis",
+                  "LeftLeg",
+                  "RightLeg"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Traveler_Boots",
+      "parent": "Equipment_Base",
+      "gameName": "旅人皮靴",
+      "description": "旅人套装的厚底皮靴，可独立替换鞋子槽位。",
+      "durability": 100,
+      "maxDurability": 100,
+      "amount": 1,
+      "weight": 0.8,
+      "volume": 2.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.FeetOuter"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Boots.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/Traveler_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "旅人皮靴防护",
+                "DefenseBonus": {
+                  "Physical": 1
+                },
+                "CoveredParts": [
+                  "LeftLeg",
+                  "RightLeg"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "IronGuard_Helmet",
+      "parent": "Equipment_Base",
+      "gameName": "铁卫头盔",
+      "description": "铁卫套装的灰蓝铁盔，为头部提供防护。",
+      "durability": 180,
+      "maxDurability": 180,
+      "amount": 1,
+      "weight": 1.6,
+      "volume": 3.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.Head",
+        "Material.Iron"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "铁卫头盔防护",
+                "DefenseBonus": {
+                  "Physical": 4
+                },
+                "CoveredParts": [
+                  "Head"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "IronGuard_Cuirass",
+      "parent": "Equipment_Base",
+      "gameName": "铁卫胸甲",
+      "description": "铁卫套装的灰蓝铁胸甲，重点保护胸腹。",
+      "durability": 240,
+      "maxDurability": 240,
+      "amount": 1,
+      "weight": 5.5,
+      "volume": 8,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.TorsoOuter",
+        "Material.Iron"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Cuirass.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "铁卫胸甲防护",
+                "DefenseBonus": {
+                  "Physical": 6
+                },
+                "CoveredParts": [
+                  "Chest",
+                  "Abdomen"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "IronGuard_Gauntlets",
+      "parent": "Equipment_Base",
+      "gameName": "铁卫护手",
+      "description": "铁卫套装的铁制护手，保护双手。",
+      "durability": 150,
+      "maxDurability": 150,
+      "amount": 1,
+      "weight": 0.9,
+      "volume": 1.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.Hands",
+        "Material.Iron"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Gauntlets.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "铁卫护手防护",
+                "DefenseBonus": {
+                  "Physical": 3
+                },
+                "CoveredParts": [
+                  "LeftHand",
+                  "RightHand"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "IronGuard_Greaves",
+      "parent": "Equipment_Base",
+      "gameName": "铁卫腿甲",
+      "description": "铁卫套装的铁制腿甲，保护腰腿。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2.8,
+      "volume": 4.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.Legs",
+        "Material.Iron"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Greaves.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "铁卫腿甲防护",
+                "DefenseBonus": {
+                  "Physical": 4
+                },
+                "CoveredParts": [
+                  "Pelvis",
+                  "LeftLeg",
+                  "RightLeg"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "IronGuard_Boots",
+      "parent": "Equipment_Base",
+      "gameName": "铁卫战靴",
+      "description": "铁卫套装的加固战靴，可独立替换鞋子槽位。",
+      "durability": 180,
+      "maxDurability": 180,
+      "amount": 1,
+      "weight": 1.8,
+      "volume": 3,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.FeetOuter",
+        "Material.Iron"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Boots.png",
+        "spriteStates": {
+          "wearableMale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Male.png",
+          "wearableFemale": "Assets/6_Art/Generated/Characters/PlayerTemplate/IronGuard_Female.png"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "铁卫战靴防护",
+                "DefenseBonus": {
+                  "Physical": 2
+                },
+                "CoveredParts": [
+                  "LeftLeg",
+                  "RightLeg"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
+

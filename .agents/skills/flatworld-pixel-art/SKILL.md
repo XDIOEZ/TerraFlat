@@ -31,6 +31,8 @@ description: "FlatWorld 运行时像素 Sprite、动画表、物品与建筑美�
 
 ## 按需资料与工具
 
+- 玩家换装母版位于 `Assets/6_Art/Generated/Characters/PlayerTemplate/`：先参考正式男女母角色和旅人/铁卫套装，沿用32×48、32 PPU、底中心Pivot及Profile部位分界；`README.md`说明重建入口。外观源图必须可读写且不进SpriteAtlas，`visual.spriteStates.wearableMale/wearableFemale`供装备槽按部位拼合；不再沿用早期大头候选图。
+
 - [style-guide.md](references/style-guide.md)：分类画风及参考图。
 - [prompt-recipes.md](references/prompt-recipes.md)：生成与动画提示词。
 - [validate_pixel_asset.py](scripts/validate_pixel_asset.py)：PNG 透明度、尺寸、颜色统计。独立轮廓可用 `--require-alpha --require-transparent-corners`；硬 Alpha、颜色数和 `--exact-size` 仅对应真实规格，满格 Tile 不用透明四角规则。
