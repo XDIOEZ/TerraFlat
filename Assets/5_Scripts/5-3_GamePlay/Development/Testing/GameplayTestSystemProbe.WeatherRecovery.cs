@@ -62,8 +62,8 @@ public static partial class GameplayTestSystemProbe
             ["neighbor"] = Sample(WeatherRecoveryState(engine, new Int2(128, 0))),
             ["probability"] = config.ResolveActivationProbability(profile, 0d, 0d, .1f),
             ["clamped"] = config.ResolveActivationProbability(profile, 0d, 0d, 1f),
-            ["configuredRainBonus"] = config.Associations[0].ProbabilityBonus,
-            ["configuredWindBonus"] = config.Associations[1].ProbabilityBonus
+            ["configuredRainBonus"] = config.Associations.Length == 0 ? 0f : config.Associations[0].ProbabilityBonus,
+            ["configuredWindBonus"] = config.Associations.Length < 2 ? 0f : config.Associations[1].ProbabilityBonus
         };
     }
 
@@ -83,11 +83,11 @@ public static partial class GameplayTestSystemProbe
         // 只把夹具概率固定为零或一，时钟和逐项抽签沿用正式引擎。
         foreach (WeatherElementRule rule in settings.Elements)
         {
-            rule.MinimumProbability = rule.MaximumProbability = (bool?)args[rule.Id] == true ? 1f : 0f;
+            rule.ActivationProbability = (bool?)args[rule.Id] == true ? 1f : 0f;
             rule.MinimumIntensity = rule.MaximumIntensity = .5f;
             rule.MinimumDurationSeconds = rule.MaximumDurationSeconds = 45f;
             rule.RecoveryProbabilityMultiplier = 1f;
-            rule.ParabolicEventVariation = false;
+            rule.IntensityDistribution = rule.DurationDistribution = null;
         }
         RegionalWeatherEngine engine = WeatherRecoveryEngine(settings, 17413);
         JObject Sample()
@@ -119,6 +119,9 @@ public static partial class GameplayTestSystemProbe
         RegionalWeatherSettings settings = ChunkWeatherConfiguration.Load();
         WeatherElementRule rule = Array.Find(settings.Elements, value => value.Id == id);
         WeatherElementRule defaults = Array.Find(new RegionalWeatherSettings().Elements, value => value.Id == id);
+        settings.NaturalEventProbabilityMultiplier = .3f;
+        rule.RecoveryProbabilityMultiplier = .2f;
+        rule.RecoverySeconds = 300f;
         var profile = new WeatherElementProfile(id, .4f, .5f, 60f);
         double recoveryEnd = settings.ResolveNaturalRecoveryEndTime(id, 1000d);
         var maximum = new WeatherElementProfile(id, .4f, 1f, 60f);
@@ -346,11 +349,13 @@ public static partial class GameplayTestSystemProbe
         settings.CheckIntervalSeconds = 30f;
         foreach (WeatherElementRule rule in settings.Elements)
         {
-            rule.MinimumProbability = rule.MaximumProbability = rule.Id == activeId ? 1f : 0f;
+            rule.ActivationProbability = rule.Id == activeId ? 1f : 0f;
             rule.MinimumIntensity = rule.MaximumIntensity = .5f;
             rule.MinimumDurationSeconds = rule.MaximumDurationSeconds = duration;
+            rule.RecoveryProbabilityMultiplier = .2f;
+            rule.RecoverySeconds = 300f;
             rule.ProbabilityBands = Array.Empty<WeatherProbabilityBand>();
-            rule.ParabolicEventVariation = false;
+            rule.IntensityDistribution = rule.DurationDistribution = null;
         }
         return settings;
     }

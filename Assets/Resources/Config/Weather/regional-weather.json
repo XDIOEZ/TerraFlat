@@ -3,62 +3,210 @@
   "WindTransitionWidth": 32.0,
   "StepSeconds": 2.0,
   "CheckIntervalSeconds": 300.0,
-  "NaturalEventProbabilityMultiplier": 0.3,
+  "NaturalEventProbabilityMultiplier": 1.0,
   "MaximumCatchUpSteps": 120,
   "FreezingTemperature": 0.0,
   "MinimumLightningIntervalSeconds": 20.0,
   "LightningSeparationRadius": 384.0,
-  "Associations": [
-    { "SourceId": "rain", "TargetId": "wind", "ProbabilityBonus": 0.1 },
-    { "SourceId": "wind", "TargetId": "thunder", "ProbabilityBonus": 0.1 }
-  ],
+  "Associations": [],
   "Elements": [
     {
       "Id": "rain",
       "HumidityWeight": 0,
       "WindWeight": 0.0,
-      "MinimumProbability": 0.0,
-      "MaximumProbability": 0.16,
       "MinimumIntensity": 0.1,
-      "MaximumIntensity": 0.85,
-      "MinimumDurationSeconds": 45.0,
-      "MaximumDurationSeconds": 180.0,
-      "RecoveryProbabilityMultiplier": 0.2,
-      "RecoverySeconds": 300.0,
-      "PrecipitationWeight": 1.0
+      "MaximumIntensity": 1.0,
+      "MinimumDurationSeconds": 300.0,
+      "MaximumDurationSeconds": 1440.0,
+      "RecoveryProbabilityMultiplier": 1.0,
+      "RecoverySeconds": 0.0,
+      "PrecipitationWeight": 1.0,
+      "ProbabilityBands": [],
+      "IntensityDistribution": {
+        "Values": [
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5,
+          0.6,
+          0.7,
+          0.8,
+          0.9,
+          1.0
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "DurationDistribution": {
+        "Values": [
+          300,
+          427,
+          553,
+          680,
+          807,
+          933,
+          1060,
+          1187,
+          1313,
+          1440
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "ActivationProbability": 0.1
     },
     {
       "Id": "wind",
       "HumidityWeight": 0,
       "WindWeight": 1.0,
-      "MinimumProbability": 0.0,
-      "MaximumProbability": 0.25,
       "MinimumIntensity": 0.1,
       "MaximumIntensity": 1.0,
-      "ProbabilityBands": [
-        { "MinimumIntensity": 0.8, "Multiplier": 0.45 },
-        { "MinimumIntensity": 0.9, "Multiplier": 0.25 },
-        { "MinimumIntensity": 1.0, "Multiplier": 0.1 }
-      ],
-      "MinimumDurationSeconds": 45.0,
-      "MaximumDurationSeconds": 180.0,
-      "RecoveryProbabilityMultiplier": 0.2,
-      "RecoverySeconds": 300.0,
-      "PrecipitationWeight": 0.0
+      "IntensityDistribution": {
+        "Values": [
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5,
+          0.6,
+          0.7,
+          0.8,
+          0.9,
+          1.0
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "DurationDistribution": {
+        "Values": [
+          300,
+          427,
+          553,
+          680,
+          807,
+          933,
+          1060,
+          1187,
+          1313,
+          1440
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "MinimumDurationSeconds": 300.0,
+      "MaximumDurationSeconds": 1440.0,
+      "RecoveryProbabilityMultiplier": 1.0,
+      "RecoverySeconds": 0.0,
+      "PrecipitationWeight": 0.0,
+      "ProbabilityBands": [],
+      "ActivationProbability": 0.1
     },
     {
       "Id": "thunder",
       "HumidityWeight": 0,
       "WindWeight": 0.3,
-      "MinimumProbability": 0.0,
-      "MaximumProbability": 0.015,
-      "MinimumIntensity": 0.15,
-      "MaximumIntensity": 0.8,
-      "MinimumDurationSeconds": 15.0,
-      "MaximumDurationSeconds": 60.0,
-      "RecoveryProbabilityMultiplier": 0.2,
-      "RecoverySeconds": 300.0,
-      "PrecipitationWeight": 0.7
+      "MinimumIntensity": 0.1,
+      "MaximumIntensity": 1.0,
+      "MinimumDurationSeconds": 300.0,
+      "MaximumDurationSeconds": 1440.0,
+      "RecoveryProbabilityMultiplier": 1.0,
+      "RecoverySeconds": 0.0,
+      "PrecipitationWeight": 0.7,
+      "ProbabilityBands": [],
+      "IntensityDistribution": {
+        "Values": [
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5,
+          0.6,
+          0.7,
+          0.8,
+          0.9,
+          1.0
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "DurationDistribution": {
+        "Values": [
+          300,
+          427,
+          553,
+          680,
+          807,
+          933,
+          1060,
+          1187,
+          1313,
+          1440
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "ActivationProbability": 0.1
     },
     {
       "Id": "fog",
@@ -66,17 +214,68 @@
       "TemperatureWeight": 1.0,
       "MinimumTemperatureCelsius": 0.0,
       "MaximumTemperatureCelsius": 40.0,
-      "ParabolicEventVariation": true,
-      "MinimumProbability": 0.0,
-      "MaximumProbability": 0.3,
       "MinimumIntensity": 0.1,
       "MaximumIntensity": 1.0,
-      "MinimumDurationSeconds": 60.0,
-      "MaximumDurationSeconds": 240.0,
-      "RecoveryProbabilityMultiplier": 0.2,
-      "RecoverySeconds": 300.0,
+      "MinimumDurationSeconds": 300.0,
+      "MaximumDurationSeconds": 1440.0,
+      "RecoveryProbabilityMultiplier": 1.0,
+      "RecoverySeconds": 0.0,
       "WindWeight": 0.0,
-      "PrecipitationWeight": 0.0
+      "PrecipitationWeight": 0.0,
+      "ProbabilityBands": [],
+      "IntensityDistribution": {
+        "Values": [
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5,
+          0.6,
+          0.7,
+          0.8,
+          0.9,
+          1.0
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "DurationDistribution": {
+        "Values": [
+          300,
+          427,
+          553,
+          680,
+          807,
+          933,
+          1060,
+          1187,
+          1313,
+          1440
+        ],
+        "Probabilities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "ActivationProbability": 0.1
     }
   ]
 }

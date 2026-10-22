@@ -188,9 +188,9 @@ namespace FlatWorld.WorldModel
                     Random01(state.Region, state.CheckIndex, profile.Id) >= probability)
                     continue;
                 WeatherElementProfile sampled = settings.SampleNaturalEvent(profile,
-                    Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.1"),
-                    Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.2"),
-                    Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.3"));
+                    RandomEvent01(state.Region, state.CheckIndex, profile.Id + ".intensity.1"),
+                    RandomEvent01(state.Region, state.CheckIndex, profile.Id + ".intensity.2"),
+                    RandomEvent01(state.Region, state.CheckIndex, profile.Id + ".intensity.3"));
                 BeginElement(state, element, state.LastStepTime, sampled.Intensity, sampled.DurationSeconds);
                 element.NaturalRecoveryEndTime = settings.ResolveNaturalRecoveryEndTime(profile.Id, element.EndTime);
             }
@@ -346,6 +346,13 @@ namespace FlatWorld.WorldModel
             => Math.Max(0d, Math.Min(1e15d, time + delta));
 
         private float Random01(Int2 region, long checkIndex, string id)
+            => (RandomBits(region, checkIndex, id) >> 40) / 16777216f;
+
+        // 事件按配置表独立抽取强度和时长，随机序列由种子、区域和检查序号确定。
+        private double RandomEvent01(Int2 region, long checkIndex, string id)
+            => (RandomBits(region, checkIndex, id) >> 11) / 9007199254740992d;
+
+        private ulong RandomBits(Int2 region, long checkIndex, string id)
         {
             unchecked
             {
@@ -361,7 +368,7 @@ namespace FlatWorld.WorldModel
                 value ^= value >> 27;
                 value *= 0x94d049bb133111ebUL;
                 value ^= value >> 31;
-                return (value >> 40) / 16777216f;
+                return value;
             }
         }
         #endregion

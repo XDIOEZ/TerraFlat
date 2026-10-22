@@ -2,6 +2,49 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
+    test.system("environment", "discrete_weather", {id = id}, function(data)
+        near(data.checkSeconds, 300, "天气检查间隔不是300游戏秒")
+        near(data.probability, 0.1, "天气触发率不是10%")
+        near(data.dryProbability, 0.1, "气候仍改写统一触发率")
+        near(data.defaultProbability, 0.1, "默认配置与JSON不同")
+        near(data.afterEventProbability, 0.1, "结束后仍额外压低触发率")
+        near(data.recoveryDelay, 0, "统一天气仍启用概率恢复期")
+        assert(data.associations == 0, "旧天气关联仍额外增加触发率")
+        local durations = {300, 427, 553, 680, 807, 933, 1060, 1187, 1313, 1440}
+        local counts, pairs = {}, {}
+        for _, sample in ipairs(data.samples) do
+            local level = math.floor(sample.intensity * 10 + 0.0001)
+            assert(level >= 1 and level <= 10, "天气强度越界")
+            near(sample.intensity, level / 10, "天气强度落在档位之间")
+            local duration_index = nil
+            for index, duration in ipairs(durations) do
+                if sample.duration == duration then duration_index = index end
+            end
+            assert(duration_index ~= nil, "天气时长不在JSON的十档之中")
+            counts[level] = (counts[level] or 0) + 1
+            local key = level * 100 + duration_index
+            pairs[key] = (pairs[key] or 0) + 1
+        end
+        assert(#data.samples == 10000, "离散抽样不完整")
+        for level = 1, 10 do
+            assert(counts[level] == 1000, "强度每档不是10%")
+            for duration = 1, 10 do
+                assert(pairs[level * 100 + duration] == 100, "强度和时长没有独立等概率抽取")
+            end
+        end
+        near(data.frozenProbability, 0.1, "冻结概率表仍共享可变数组")
+        near(data.frozenDuration, 300, "冻结时长表仍共享可变数组")
+        near(data.customValue, 0.5, "修改概率表后没有采用表内的新概率，或仍抽到零概率档位")
+        near(data.minimumIntensity, 0.1, "随机数零没有抽到最低强度")
+        near(data.maximumIntensity, 1, "随机数一没有抽到最高强度")
+        near(data.minimumDuration, 300, "最低时长边界改变")
+        near(data.maximumDuration, 1440, "最高时长边界改变")
+        assert(data.invalidTotal == "ArgumentOutOfRangeException", "概率总和错误没有被拒绝")
+        assert(data.invalidSample == "ArgumentOutOfRangeException", "非法随机输入没有被拒绝")
+    end, "所有天气读取JSON独立十档概率表：" .. id)
+end
+
 test.system("environment", "rain_visual_batch", {}, function(data)
     assert(data.emissionWrites == 4 and data.steadySkipped and data.reactivationRefreshes and data.newRateRefreshes,
         "稳态雨雪重复写入粒子发射倍率，或重新启用后没有刷新")
@@ -113,29 +156,13 @@ for _, sample in ipairs({
     local input = sample
     test.system("environment", "natural_fog_profile", input, function(data)
         assert(data.found, "正式天气配置缺少自然雾要素")
-        near(data.probability, 0.3 * input.factor, "自然雾触发概率没有随温湿条件提高")
-        near(data.activationProbability, 0.09 * input.factor, "自然雾没有沿用统一自然天气概率倍率")
-        near(data.intensityLimit, 0.1 + 0.9 * input.factor, "自然雾强度上限没有随温湿条件提高")
-        near(data.durationLimit, 60 + 180 * input.factor, "自然雾持续时间上限没有随温湿条件增长")
+        near(data.probability, 0.1, "自然雾触发概率不是统一10%")
+        near(data.activationProbability, 0.1, "自然雾最终触发概率不是10%")
+        near(data.intensityLimit, 1, "自然雾没有使用十档强度上限")
+        near(data.durationLimit, 1440, "自然雾没有使用统一时长上限")
         near(data.defaultProbability, data.probability, "代码默认值和正式资源配置不一致")
     end, "自然雾温湿度、起雾机会和强度时长上限：" .. input.temperature .. "/" .. input.humidity)
 end
-
-test.system("environment", "natural_fog_distribution", {}, function(data)
-    local expected = {832, 1984, 2368, 1984, 832}
-    assert(#data.bins == 5 and data.sampleCount == 8000, "自然雾抛物线分布采样不完整")
-    for index, count in ipairs(expected) do
-        assert(data.bins[index] == count, "自然雾强度不是中间高两端低的抛物线分布：" .. index)
-    end
-    near(data.minimumIntensity, 0.1, "自然雾抽样越过最小强度")
-    near(data.maximumIntensity, 1, "自然雾抽样越过最大强度")
-    near(data.minimumDuration, 60, "自然雾抽样越过最小时长")
-    near(data.maximumDuration, 240, "自然雾抽样越过最大时长")
-    near(data.middleIntensity, 0.55, "最常见的中间雾强度错误")
-    near(data.middleDuration, 150, "中间雾没有使用相应持续时间")
-    near(data.coolIntensity, 0.2125, "较低温湿条件没有降低同一次抽样的强度")
-    near(data.coolDuration, 82.5, "较低温湿条件没有缩短同一次抽样的时长")
-end, "自然雾小雾和大雾少、中雾多的抛物线分布")
 
 test.system("environment", "natural_fog_lifecycle", {}, function(data)
     near(data.beforeCheck, 0, "自然雾在首次天气检查前提前出现")
@@ -167,8 +194,8 @@ for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
     test.system("environment", "natural_recovery_probability", {id = element_id}, function(data)
         near(data.floor, 0.2, "自然天气刚结束的概率倍率改变")
         near(data.seconds, 300, "自然天气恢复时长不是300游戏秒")
-        near(data.defaultFloor, data.floor, "代码默认恢复倍率和正式配置不同")
-        near(data.defaultSeconds, data.seconds, "代码默认恢复时长和正式配置不同")
+        near(data.defaultFloor, 1, "默认配置应关闭概率抑制")
+        near(data.defaultSeconds, 0, "默认配置应关闭恢复期")
         near(data.checkSeconds, 300, "自然天气没有按五个游戏分钟检查")
         near(data.recoveryEnd, 1300, "恢复完成时刻没有从事件结束后计时")
         near(data.basis, 0.12, "自我调节改写了冻结基础概率或统一倍率")
@@ -182,11 +209,11 @@ for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
         assert(data.high > data.low, "相同恢复进度时高概率没有保持更高")
         near(data.maximumAtEnd, data.maximumBasis * 0.2, "强度概率分段与恢复倍率没有叠加")
         if element_id == "wind" then
-            near(data.maximumAtEnd, 0.0024, "十级风分段概率被自我调节覆盖", 0.000001)
-            near(data.belowGaleMultiplier, 1, "降低大风概率影响了八级以下普通风")
-            near(data.galeMultiplier, 0.45, "八级风没有降低到约每周一次的概率")
-            near(data.strongGaleMultiplier, 0.25, "九级风概率倍率错误")
-            near(data.stormMultiplier, 0.1, "十级风概率倍率错误")
+            near(data.maximumAtEnd, 0.024, "自然风仍叠加旧的满级概率压制", 0.000001)
+            near(data.belowGaleMultiplier, 1, "普通风仍叠加旧的概率压制")
+            near(data.galeMultiplier, 1, "八级风仍叠加旧的概率压制")
+            near(data.strongGaleMultiplier, 1, "九级风仍叠加旧的概率压制")
+            near(data.stormMultiplier, 1, "十级风仍叠加旧的概率压制")
             near(data.defaultGaleMultiplier, data.galeMultiplier, "八级风默认值和正式配置不同")
             near(data.defaultStrongGaleMultiplier, data.strongGaleMultiplier, "九级风默认值和正式配置不同")
             near(data.defaultStormMultiplier, data.stormMultiplier, "十级风默认值和正式配置不同")
@@ -413,8 +440,8 @@ end, "风推动时间渐入渐出、改档续接、反向、空间边界与副�
 test.system("environment", "weather_associations", {}, function(data)
     near(data.probability, .3, "关联天气应增加十个百分点")
     near(data.clamped, 1, "关联概率应限制在百分之百")
-    near(data.configuredRainBonus, .1, "雨对风的正式配置")
-    near(data.configuredWindBonus, .1, "风对雷暴的正式配置")
+    near(data.configuredRainBonus, 0, "雨对风的正式配置")
+    near(data.configuredWindBonus, 0, "风对雷暴的正式配置")
     assert(data.first.rain.intensity > 0 and data.first.wind.intensity == 0 and data.first.thunder.intensity == 0,
         "同轮关联不应连锁触发")
     near(data.first.wind.bonus, 1, "雨未登记后续风加成")
@@ -437,10 +464,10 @@ test.system("environment", "weather", {}, function(data)
     assert(data.frozenReady and data.frozenTemperature == 10, "后登记区块改写了区域冻结气候")
     near(data.endedPrecipitation, 0, "持续时间结束后降水事件没有停止")
     assert(data.negativeRegionX == -128 and data.negativeRegionY == -128, "负坐标天气区域没有向下归整")
-    near(data.rainProbability, 0.12, "自然天气统一概率倍率错误")
-    near(data.wind8Probability, 0.054, "八级风附加概率倍率错误", 0.000001)
-    near(data.wind9Probability, 0.03, "九级风附加概率倍率错误", 0.000001)
-    near(data.wind10Probability, 0.012, "十级风附加概率倍率错误", 0.000001)
+    near(data.rainProbability, 0.4, "自然天气统一概率倍率错误")
+    near(data.wind8Probability, 0.4, "八级风仍叠加旧的概率压制", 0.000001)
+    near(data.wind9Probability, 0.4, "九级风仍叠加旧的概率压制", 0.000001)
+    near(data.wind10Probability, 0.4, "十级风仍叠加旧的概率压制", 0.000001)
 end, "区域天气共享、冻结气候、事件到期与强风概率")
 
 test.system("environment", "wind_read_path", {}, function(data)

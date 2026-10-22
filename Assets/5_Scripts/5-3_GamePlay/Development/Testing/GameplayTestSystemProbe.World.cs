@@ -33,7 +33,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/weather", WorldWeather);
         operations.Add("environment/rain_visual_batch", WorldRainVisualBatch);
         operations.Add("environment/natural_fog_profile", WorldNaturalFogProfile);
-        operations.Add("environment/natural_fog_distribution", WorldNaturalFogDistribution);
+        operations.Add("environment/discrete_weather", WorldDiscreteWeather);
         operations.Add("environment/natural_fog_lifecycle", WorldNaturalFogLifecycle);
         operations.Add("environment/natural_fog_validation", WorldNaturalFogValidation);
         RegisterWeatherRecoveryOperations(operations);
@@ -761,35 +761,48 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
-    private static JObject WorldNaturalFogDistribution(JObject args)
+    private static JObject WorldDiscreteWeather(JObject args)
     {
+        string id = (string)args["id"] ?? WeatherElementIds.Wind;
         var settings = ChunkWeatherConfiguration.Load();
-        settings.CreateProfile(new ChunkWeatherClimate(1f, 0f, 0f, 0f, 40f))
-            .TryGetElement(WeatherElementIds.Fog, out WeatherElementProfile fog);
-        int[] bins = new int[5];
-        // 穷举等距均匀输入网格，只采正式抽样结果，分布断言仍由 Lua 持有。
-        for (int a = 0; a < 20; a++)
-        for (int b = 0; b < 20; b++)
-        for (int c = 0; c < 20; c++)
+        settings.CreateProfile(new ChunkWeatherClimate(1f, 1f, 0f, 1f, 40f, 1f)).TryGetElement(id, out var profile);
+        settings.CreateProfile(new ChunkWeatherClimate(0f, 1f, 0f, 0f, -100f, 0f)).TryGetElement(id, out var dry);
+        var defaults = new RegionalWeatherSettings();
+        defaults.CreateProfile(new ChunkWeatherClimate(1f, 1f, 0f, 1f, 40f, 1f)).TryGetElement(id, out var defaultProfile);
+        var samples = new JArray();
+        // 穷举等距随机样本的组合，Lua核对每档及每对组合的频次。
+        for (int i = 0; i < 100; i++)
+        for (int j = 0; j < 100; j++)
         {
-            WeatherElementProfile sampled = settings.SampleNaturalEvent(fog, (a + 0.5f) / 20f,
-                (b + 0.5f) / 20f, (c + 0.5f) / 20f);
-            int bin = Math.Min(4, (int)((sampled.Intensity - 0.1f) / 0.9f * 5f));
-            bins[bin]++;
+            var value = settings.SampleNaturalEvent(profile, (i + .5d) / 100d, (j + .5d) / 100d, .5d);
+            samples.Add(new JObject { ["intensity"] = value.Intensity, ["duration"] = value.DurationSeconds });
         }
-        WeatherElementProfile minimum = settings.SampleNaturalEvent(fog, 0f, 0f, 0f);
-        WeatherElementProfile maximum = settings.SampleNaturalEvent(fog, 1f, 1f, 1f);
-        WeatherElementProfile middle = settings.SampleNaturalEvent(fog, 0.2f, 0.8f, 0.5f);
-        settings.CreateProfile(new ChunkWeatherClimate(0.25f, 0f, 0f, 0f, 10f))
-            .TryGetElement(WeatherElementIds.Fog, out WeatherElementProfile cool);
-        cool = settings.SampleNaturalEvent(cool, 0.2f, 0.8f, 0.5f);
+        var rule = Array.Find(settings.Elements, value => value.Id == id);
+        var frozen = settings.Snapshot();
+        var custom = rule.IntensityDistribution.Clone();
+        Array.Clear(custom.Probabilities, 0, custom.Probabilities.Length);
+        custom.Probabilities[4] = 1f;
+        var zero = frozen.SampleNaturalEvent(profile, 0d, 0d, 0d);
+        var one = frozen.SampleNaturalEvent(profile, 1d, 1d, 1d);
+        rule.IntensityDistribution.Probabilities[0] = 0f;
+        rule.DurationDistribution.Values[0] = 301f;
+        var frozenRule = Array.Find(frozen.Elements, value => value.Id == id);
         return new JObject
         {
-            ["bins"] = new JArray(bins), ["sampleCount"] = 8000,
-            ["minimumIntensity"] = minimum.Intensity, ["maximumIntensity"] = maximum.Intensity,
-            ["minimumDuration"] = minimum.DurationSeconds, ["maximumDuration"] = maximum.DurationSeconds,
-            ["middleIntensity"] = middle.Intensity, ["middleDuration"] = middle.DurationSeconds,
-            ["coolIntensity"] = cool.Intensity, ["coolDuration"] = cool.DurationSeconds
+            ["samples"] = samples, ["checkSeconds"] = settings.CheckIntervalSeconds,
+            ["probability"] = frozen.ResolveActivationProbability(profile),
+            ["dryProbability"] = frozen.ResolveActivationProbability(dry),
+            ["defaultProbability"] = defaults.ResolveActivationProbability(defaultProfile),
+            ["afterEventProbability"] = frozen.ResolveActivationProbability(profile, 1000d, 1300d),
+            ["recoveryDelay"] = frozen.ResolveNaturalRecoveryEndTime(id, 1000d) - 1000d,
+            ["associations"] = frozen.Associations.Length,
+            ["frozenProbability"] = frozenRule.IntensityDistribution.Probabilities[0],
+            ["frozenDuration"] = frozenRule.DurationDistribution.Values[0],
+            ["customValue"] = custom.Sample(.1f, 1f, .99d),
+            ["minimumIntensity"] = zero.Intensity, ["maximumIntensity"] = one.Intensity,
+            ["minimumDuration"] = zero.DurationSeconds, ["maximumDuration"] = one.DurationSeconds,
+            ["invalidTotal"] = WorldException(settings.Validate),
+            ["invalidSample"] = WorldException(() => frozen.SampleNaturalEvent(profile, double.NaN, .5d, .5d))
         };
     }
 
@@ -800,7 +813,8 @@ public static partial class GameplayTestSystemProbe
         settings.Elements = new[] { fog };
         settings.NaturalEventProbabilityMultiplier = 1f;
         settings.CheckIntervalSeconds = settings.StepSeconds = 2f;
-        fog.MinimumProbability = fog.MaximumProbability = 1f;
+        fog.IntensityDistribution = fog.DurationDistribution = null;
+        fog.ActivationProbability = 1f;
         fog.MinimumIntensity = fog.MaximumIntensity = 0.8f;
         fog.MinimumDurationSeconds = fog.MaximumDurationSeconds = 12f;
         var engine = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
