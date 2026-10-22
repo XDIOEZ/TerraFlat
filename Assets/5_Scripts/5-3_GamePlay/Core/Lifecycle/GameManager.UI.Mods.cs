@@ -30,6 +30,9 @@ public partial class GameManager
         public string PreviewPath;
         public Texture2D PreviewTexture;
         public Sprite PreviewSprite;
+        public ModProfile SelectionAtOpen;
+        public string[] DisabledFoldersAtOpen;
+        public UnityEngine.Events.UnityAction CloseRequest;
     }
 
     private ModMenuState modMenuState;
@@ -47,7 +50,9 @@ public partial class GameManager
         {
             modMenuState ??= new ModMenuState { Panel = existing };
             modMenuState.Panel = existing;
+            BindModMenuClose(modMenuState);
             RefreshModMenu(modMenuState);
+            CaptureModMenuSelection(modMenuState);
             existing.Open();
             return;
         }
@@ -68,6 +73,7 @@ public partial class GameManager
 
         var state = new ModMenuState { Panel = panel };
         modMenuState = state;
+        BindModMenuClose(state);
         panel.SetButtonOnClick("刷新", () =>
         {
             state.Notice = string.Empty;
@@ -109,8 +115,129 @@ public partial class GameManager
         panel.Closed += () => ReleaseModPreview(state);
 
         RefreshModMenu(state);
+        CaptureModMenuSelection(state);
         panel.PrepareForGamepadNavigation(state.Mods.Count > 0 ? "MOD条目_1" : "刷新");
         panel.Open();
+    }
+
+    private static string[] DisabledModFolders(IEnumerable<InstalledModInfo> mods)
+        => mods.Where(value => value.DisabledByFile).Select(value => value.FolderPath)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase).ToArray();
+
+    private void BindModMenuClose(ModMenuState state)
+    {
+        BasePanel panel = state.Panel;
+        Button button = panel.GetButton("关闭");
+        if (button != null)
+        {
+            // 默认关闭回调只移除本页这一颗按钮，重复打开时不累积确认监听。
+            button.onClick.RemoveListener(panel.Close);
+            if (state.CloseRequest != null) button.onClick.RemoveListener(state.CloseRequest);
+            state.CloseRequest = () => { RequestCloseModMenu(state); };
+            button.onClick.AddListener(state.CloseRequest);
+        }
+        panel.CancelShortcutOverride = () => RequestCloseModMenu(state);
+        panel.CancelOverride = _ => RequestCloseModMenu(state);
+    }
+
+    private static void CaptureModMenuSelection(ModMenuState state)
+    {
+        try
+        {
+            state.SelectionAtOpen = ModProfileStore.LoadActiveProfile();
+        }
+        catch (Exception error)
+        {
+            state.SelectionAtOpen = null;
+            state.Notice = "无法读取 MOD 配置：" + error.Message;
+            RenderModMenu(state);
+        }
+        state.DisabledFoldersAtOpen = DisabledModFolders(state.Mods);
+    }
+
+    /// <summary>关闭时重新读取磁盘配置，排序、开关和外部编辑都走同一重启询问。</summary>
+    private bool RequestCloseModMenu(ModMenuState state)
+    {
+        state.DragController?.CancelDrag();
+        try
+        {
+            ModProfile selection = ModProfileStore.LoadActiveProfile();
+            string[] disabledFolders = DisabledModFolders(GetModManager().DiscoverInstalledMods());
+            if (selection.HasSameSelection(state.SelectionAtOpen) &&
+                disabledFolders.SequenceEqual(state.DisabledFoldersAtOpen ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase))
+            {
+                state.Panel.Close();
+                return true;
+            }
+
+            const string key = "UI_ModRestartConfirmation";
+            UIManager manager = UIManager.Instance;
+            if (!manager.TryGetPanel(key, out BasePanel confirmation))
+            {
+                GameObject prefab = GameRes.Instance?.GetPrefab(MainMenuExitConfirmationPanelKey, false);
+                if (prefab == null) throw new MissingReferenceException("缺少重启确认窗口资源。");
+                confirmation = manager.CreatePanelFromGameObject(prefab, key);
+            }
+            foreach (var text in confirmation.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                var binder = text.GetComponent<FlatWorld.Localization.LocalizedTextBinder>();
+                if (binder != null) binder.enabled = false;
+                if (text.name == "标题文本") text.text = FlatWorldLocalizationService.GetUiText("MOD 设置已更改");
+            }
+            confirmation.SetText("退出确认提示", FlatWorldLocalizationService.GetUiText("是否重启游戏以应用 MOD 设置？"));
+            BindModRestartButton(confirmation, MainMenuExitConfirmationCloseButtonKey, null, confirmation.Close);
+            BindModRestartButton(confirmation, MainMenuExitConfirmationCancelButtonKey, "不重启", () =>
+            {
+                confirmation.Close();
+                state.Panel.Close();
+            });
+            BindModRestartButton(confirmation, MainMenuExitConfirmationConfirmButtonKey, "重启", () => RestartForModSelection(state, confirmation));
+            confirmation.PrepareForGamepadNavigation(MainMenuExitConfirmationCancelButtonKey);
+            confirmation.Open();
+        }
+        catch (Exception error)
+        {
+            state.Notice = "无法读取 MOD 配置：" + error.Message;
+            RenderModMenu(state);
+        }
+        return true;
+    }
+
+    private static void BindModRestartButton(BasePanel panel, string key, string label, UnityEngine.Events.UnityAction callback)
+    {
+        Button button = panel.GetButton(key);
+        if (button == null) return;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(callback);
+        if (label != null && button.GetComponentInChildren<TextMeshProUGUI>(true) is { } text)
+            text.text = FlatWorldLocalizationService.GetUiText(label);
+    }
+
+    /// <summary>仅运行包启动当前可执行文件；编辑器不停止玩家正在运行的会话。</summary>
+    private static void RestartForModSelection(ModMenuState state, BasePanel confirmation)
+    {
+#if !UNITY_EDITOR && (UNITY_STANDALONE_WIN || UNITY_STANDALONE_LINUX)
+        try
+        {
+            string executable = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(executable)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(executable)
+            });
+            confirmation.Close();
+            Application.Quit();
+            return;
+        }
+        catch (Exception error)
+        {
+            state.Notice = "重启失败，请手动关闭并重新打开游戏：" + error.Message;
+        }
+#else
+        state.Notice = "MOD 设置已保存，请手动重新启动游戏后生效。";
+#endif
+        confirmation.Close();
+        RenderModMenu(state);
     }
 
     private static ModRuntimeManager GetModManager()

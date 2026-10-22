@@ -47,6 +47,16 @@ public sealed class ModProfile
 
         return int.MaxValue;
     }
+
+    /// <summary>比较启停和顺序的真实配置，忽略启停集合的排列及 ID 大小写。</summary>
+    public bool HasSameSelection(ModProfile other)
+    {
+        if (other == null || AutoEnableNewMods != other.AutoEnableNewMods) return false;
+        var comparer = StringComparer.OrdinalIgnoreCase;
+        return new HashSet<string>(EnabledMods, comparer).SetEquals(other.EnabledMods) &&
+               new HashSet<string>(DisabledMods, comparer).SetEquals(other.DisabledMods) &&
+               LoadOrder.SequenceEqual(other.LoadOrder, comparer);
+    }
 }
 
 /// <summary>
