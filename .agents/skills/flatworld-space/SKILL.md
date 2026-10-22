@@ -84,6 +84,9 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 ## 表现与交互
 
+- 太空丢弃复用正式冷载荷，但 `SpaceLooseItemState.PickupAfterSimulationSeconds` 必须阻止投掷中原地拾回；画面按 world-item+2 高于船板。人工重力内落地货物保存 SupportShipId 与船内坐标，计入承载船重并随起降切换归属；重力/地板失效后继承船点速度，重新交给独立物理，不与船体重复计重。
+- 管道方向统一由 `FluidPipeConnectionVisual` 的标准管臂拼接到格边，不再依赖16张原图各自的端点；地表光纤和管电线路共用 MechanicalShaft 层，船体排序依次为地板、管道、电线、光纤、设备。`ShipDeviceLogic` 的额定/当前功率读取真实电网，关闭、无请求或断电显示0 W。
+
 - `ShipSurfaceState` 共用空地规则：点火提高排序，贴图 `SurfaceVisualRise` 达到1单位切空中；`ShipSurfacePresentation` 对独立船件或整船 Collider 叠加同一局部升高偏移并切 Trigger，乘员/散物同步高层级。`ShipCombatBridge` 按攻击实际世界归属和升高后的形状查询，空中船体要求 `Projectile | AirborneTargets`，不依赖 Host 当前可见场景。
 
 - 地表升高共用 ShipLandingGuidance.SurfaceVisualRise，不限制最高显示距离；船体、玩家、散落物与驾驶镜头保持一致。迁移前捕获船体外观，ShipTakeoffLoadingPresentation 在维度加载页按非缩放时间持续滚动起飞气流，场景准备完成/失败后随加载页释放。

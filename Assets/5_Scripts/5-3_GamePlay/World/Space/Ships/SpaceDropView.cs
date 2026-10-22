@@ -5,6 +5,13 @@ namespace FlatWorld.Spaceflight
     public sealed class SpaceDropView : GameItem
     {
         #region 只显示冷载荷的掉落外壳
+        private bool? spaceSorting;
+        public void SynchronizeSpaceSorting(bool inSpace)
+        {
+            if (spaceSorting == inSpace || Sprite == null) return;
+            spaceSorting = inSpace;
+            WorldSortingManager.GetInstance().ApplyRenderer(Sprite, WorldSortingManager.WorldItemCategory, inSpace ? 2 : 0);
+        }
         public void Initialize(ItemData payload, object owner)
         {
             BindData(payload);

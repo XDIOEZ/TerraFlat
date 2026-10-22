@@ -50,7 +50,7 @@ namespace FlatWorld.Spaceflight
             }
             foreach (SpaceLooseItemState item in State.LooseItems)
             {
-                if (!item.InSpace || string.IsNullOrWhiteSpace(item.Snapshot)) continue;
+                if (!item.InSpace || !string.IsNullOrEmpty(item.SupportShipId) || string.IsNullOrWhiteSpace(item.Snapshot)) continue;
                 looseViews.TryGetValue(item.Id, out Item live);
                 if (live != null && (live.Owner != null || live.InHand || live.itemData.Stack.Amount <= 0f)) continue;
                 SpacePhysicsBody body = spacePhysics.Acquire("item:" + item.Id);

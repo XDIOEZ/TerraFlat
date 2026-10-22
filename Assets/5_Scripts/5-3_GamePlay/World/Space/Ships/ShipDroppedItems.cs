@@ -53,6 +53,8 @@ namespace FlatWorld.Spaceflight
             payload.inHand = false; payload.Stack.CanBePickedUp = true;
             DroppedItemService.RemoveLegacyDropData(payload);
             SpaceLooseItemState state = CreateSessionDropMotion(context, rotation, scale);
+            // 与普通掉落一样，投掷未完成时不能立刻被原地自动捡回。
+            state.PickupAfterSimulationSeconds = State.SimulationSeconds + Math.Max(.5d, context.Duration);
             state.Snapshot = Encode(payload);
             Item live = null;
             try
@@ -180,6 +182,21 @@ namespace FlatWorld.Spaceflight
                 throw new InvalidOperationException("太空掉落的初始运动状态无效。");
             if (state.InSpace)
             {
+                if (carrier != null)
+                {
+                    SpaceVector2 localPoint = SpaceSectorCoordinates.Relative(state.Motion.Sector, state.Motion.PositionMeters, carrier.Sector);
+                    ShipGeometry.WorldToLocal(carrier, localPoint.X, localPoint.Y, out double lx, out double ly);
+                    if (HasArtificialGravity(carrier, lx, ly))
+                    {
+                        Vector2 displacement = context.End - context.Start;
+                        ShipGeometry.Rotate(displacement.x, displacement.y, -carrier.AngleRadians, out double dx, out double dy);
+                        state.SupportShipId = carrier.ShipId;
+                        state.SupportLocalX = lx; state.SupportLocalY = ly;
+                        state.DropRemainingSeconds = Math.Max(.01d, context.Duration);
+                        state.DropVelocityX = dx / state.DropRemainingSeconds;
+                        state.DropVelocityY = dy / state.DropRemainingSeconds;
+                    }
+                }
                 SpaceSectorCoordinates.Normalize(ref state.Motion.Sector, ref state.Motion.PositionMeters);
                 state.WorldKey = SpaceSectorCoordinates.SceneKey(state.Motion.Sector);
             }

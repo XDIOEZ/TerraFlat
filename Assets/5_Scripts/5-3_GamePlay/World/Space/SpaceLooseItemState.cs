@@ -15,6 +15,11 @@ namespace FlatWorld.Spaceflight
         public double RotationDegrees;
         public double AngularVelocityDegreesPerSecond;
         public double SurfaceHeight, SurfaceVerticalSpeed;
+        public string SupportShipId;
+        public double SupportLocalX, SupportLocalY, DropRemainingSeconds;
+        public double DropVelocityX, DropVelocityY;
+        public double PickupAfterSimulationSeconds;
+        public bool CanBePickedUpAt(double seconds) => double.IsFinite(seconds) && seconds >= PickupAfterSimulationSeconds;
         [JsonConverter(typeof(ScaleJsonConverter))]
         public Vector3 Scale = Vector3.one;
 

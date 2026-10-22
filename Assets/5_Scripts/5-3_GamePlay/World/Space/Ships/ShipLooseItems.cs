@@ -42,6 +42,7 @@ namespace FlatWorld.Spaceflight
             var drop = new SpaceLooseItemState
             {
                 Snapshot = Encode(data), WorldKey = flight.SurfaceWorldKey,
+                PickupAfterSimulationSeconds = State.SimulationSeconds + .5d,
                 InSpace = inSpace,
                 Motion = new SpaceMotionState { Sector = ship.Sector, PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
                     RadiusMeters = .15d },
@@ -64,6 +65,38 @@ namespace FlatWorld.Spaceflight
         {
             foreach (SpaceLooseItemState state in State.LooseItems)
             {
+                if (!string.IsNullOrEmpty(state.SupportShipId))
+                {
+                    ShipState support = GetShip(state.SupportShipId);
+                    ShipFlightState supportFlight = support != null ? GetFlight(support.ShipId) : null;
+                    if (support != null && !support.IsWreck && supportFlight != null &&
+                        HasArtificialGravity(support, state.SupportLocalX, state.SupportLocalY))
+                    {
+                        double step = Math.Min(seconds, state.DropRemainingSeconds);
+                        double x = state.SupportLocalX + state.DropVelocityX * step;
+                        double y = state.SupportLocalY + state.DropVelocityY * step;
+                        // 有人工重力时在鼠标投掷方向落地，落地后随承载地板移动。
+                        state.SupportLocalX = x; state.SupportLocalY = y;
+                        state.DropRemainingSeconds = Math.Max(0d, state.DropRemainingSeconds - step);
+                        ShipGeometry.LocalToWorld(support, state.SupportLocalX, state.SupportLocalY, out x, out y);
+                        ShipGeometry.PointVelocity(support, x, y, out double vx, out double vy);
+                        state.Motion.Sector = support.Sector; state.Motion.PositionMeters = new SpaceVector2(x, y);
+                        state.Motion.VelocityMetersPerSecond = new SpaceVector2(vx, vy);
+                        state.InSpace = supportFlight.Phase == ShipFlightPhase.Cruising;
+                        state.WorldKey = state.InSpace ? SpaceSectorCoordinates.SceneKey(support.Sector) : supportFlight.SurfaceWorldKey;
+                        state.SurfaceHeight = state.InSpace ? 0d : Math.Max(0d, supportFlight.HeightMeters);
+                        state.SurfaceVerticalSpeed = state.InSpace ? 0d : supportFlight.VerticalSpeed;
+                        if (supportFlight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating)
+                            state.SupportShipId = null;
+                        continue;
+                    }
+                    if (state.DropRemainingSeconds > 0d && support != null)
+                    {
+                        ShipGeometry.Rotate(state.DropVelocityX, state.DropVelocityY, support.AngleRadians, out double vx, out double vy);
+                        state.Motion.VelocityMetersPerSecond += new SpaceVector2(vx, vy);
+                    }
+                    state.SupportShipId = null;
+                }
                 if (!state.InSpace)
                 {
                     if (state.SurfaceHeight > 0d && FindSurfaceBody(state.WorldKey) is BodyState body)
@@ -125,7 +158,8 @@ namespace FlatWorld.Spaceflight
                     existing.transform.position = position;
                 }
                 ApplyLooseItemHeightVisual(existing, state.InSpace ? 0d : state.SurfaceHeight);
-                if (tryPickup && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
+                if (existing is SpaceDropView dropView) dropView.SynchronizeSpaceSorting(state.InSpace);
+                if (tryPickup && state.CanBePickedUpAt(State.SimulationSeconds) && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
                     DroppedItemService.TryPickupExternal(existing.itemData, position, out float remaining))
                 {
                     existing.itemData.Stack.Amount = remaining;
@@ -182,13 +216,13 @@ namespace FlatWorld.Spaceflight
         }
         private void AddLooseCargoMass(ShipState ship, ShipMassReader reader)
         {
-            // 太空自由物已拥有独立刚体，不能再把同一份质量加入船体。
-            if (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising) return;
+            // 失重自由物由独立刚体计重，人工重力下的落地货物归承载船体。
             ShipFlightState flight = GetFlight(ship.ShipId);
             bool inSpace = flight.Phase is ShipFlightPhase.Cruising;
             double radius = CalculateShipContactRadius(ship);
             foreach (SpaceLooseItemState cargo in State.LooseItems)
             {
+                if (inSpace && cargo.SupportShipId != ship.ShipId) continue;
                 if (cargo.InSpace != inSpace || !inSpace && cargo.WorldKey != ship.WorldAddress ||
                     !inSpace && Math.Abs(cargo.SurfaceHeight - flight.HeightMeters) > 1d) continue;
                 SpaceVector2 point = inSpace ? SpaceSectorCoordinates.Relative(cargo.Motion.Sector, cargo.Motion.PositionMeters, ship.Sector) : cargo.Motion.PositionMeters;
