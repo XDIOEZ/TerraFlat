@@ -4,8 +4,6 @@
 
 ## 选对报告
 
-- 默认只分析根目录电脑本地当日的新报告；旧报告放在 `过时/批次` 中，除非用户指定，不递归选取归档。正在导出的 `.pending-*` 始终跳过。
-
 - 用户指定文件夹时只分析该目录；只说“最新”时，在 `Assets/67_ProfileData/` 中选时间最新且同时有两个 JSON 的正式目录，忽略 `.pending-*`。不要混用不同目录的文件；缺少截图时说明缺口，不擅自换成另一帧。
 - `profiler-analysis.json` 是性能证据，`console-logs.json` 是日志，`screen.png` 是导出时的整个桌面；FlatWorld 顶栏/菜单还导出 `world-scene.json`（已加载世界物品现场），文件名登记在性能文件的 `additionalFiles`。本文件是阅读说明。
 - 两个 JSON 的 `snapshotId`、`selectedDisplayFrame` 应相同。`schemaVersion` 分别描述各自格式，不要求两个版本号相等。先检查性能文件 `warnings`、`selectedFrameAnalysis.success/frameCount/skippedFrameCount`，缺数据时明确说明。

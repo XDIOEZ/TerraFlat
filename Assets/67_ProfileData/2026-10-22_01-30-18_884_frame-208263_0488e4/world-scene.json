@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "2026-10-22_01-30-18_884_frame-208263_0488e4",
+  "selectedDisplayFrame": 208263,
+  "capturedAtUtc": "2026-10-21T17:30:19.8553479+00:00",
+  "captureCompletedAtUtc": "2026-10-21T17:30:19.8741059+00:00",
+  "source": "local-editor-loaded-world-at-export",
+  "status": "not-in-play-mode",
+  "editorPlayingAtExport": false,
+  "editorPausedAtExport": false,
+  "unityFrameAtExport": 6,
+  "activeScene": "GameStartScene",
+  "worldSeed": 0,
+  "loadedScenes": [
+    {
+      "name": "GameStartScene",
+      "path": "Assets/3_Scenes/GameStartScene.unity",
+      "loaded": true
+    }
+  ],
+  "environment": {
+    "timeScale": 1.0,
+    "gameTimeSeconds": null,
+    "weather": null,
+    "weatherIntensity": null
+  },
+  "camera": {
+    "position": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": -10.0
+    },
+    "orthographic": true,
+    "orthographicSize": 5.0,
+    "pixelWidth": 2560,
+    "pixelHeight": 1214
+  },
+  "summary": {
+    "worldItemCount": 0,
+    "itemDataCountIncludingContents": 0,
+    "loadedChunkCount": 0,
+    "bySource": [],
+    "byDefinition": []
+  },
+  "chunks": [],
+  "items": [],
+  "itemData": [],
+  "notes": [
+    "这是导出时本地 Editor 的已加载现场，不是 Profiler 所选历史帧的回放，也不代表远程 Player。",
+    "只采集已存在的运行态和已加载区块，不加载其它区块，不触发保存、暂停、录制或资源刷新。",
+    "items 是世界实体，itemData 还包含容器内物品；dataRef 指向 itemData[].ref，内容不重复计入世界实体数量。",
+    "同一 GUID 的机器、自然物或表现外壳合并为一条，sources 保留数据来源；生成点仅作为补充基线，不等于正在模拟或显示。",
+    "模块 JSON 状态直接展开，未通用解码的二进制模块保留 Base64；普通 Item 的模块持久状态可能尚未同步，runtimeScalars 和 liveInventories 记录当前运行值。",
+    "自然物内置热状态写入独立副本；扩展模块不执行保存回调，保留其最近已有状态。这份诊断 JSON 不提供直接加载还原存档的功能。"
+  ]
+}
