@@ -24,18 +24,26 @@ public sealed class CombatMissFeedbackPresenter : MonoBehaviour
     {
         CombatFeedbackEvents.LogicalMissed -= HandleLogicalMissed;
         CombatFeedbackEvents.LogicalMissed += HandleLogicalMissed;
+        CombatFeedbackEvents.EquipmentBroken -= HandleEquipmentBroken;
+        CombatFeedbackEvents.EquipmentBroken += HandleEquipmentBroken;
     }
 
     private void OnDisable()
     {
         CombatFeedbackEvents.LogicalMissed -= HandleLogicalMissed;
+        CombatFeedbackEvents.EquipmentBroken -= HandleEquipmentBroken;
     }
 
     #endregion
 
     #region 未命中飘字
 
-    private void HandleLogicalMissed(Vector2 attackPosition)
+    private void HandleLogicalMissed(Vector2 attackPosition) => ShowFeedback(attackPosition, "未命中");
+
+    // 损坏拒绝复用同一飘字池，不让装备规则依赖 UI。
+    private void HandleEquipmentBroken(Vector2 position) => ShowFeedback(position, "耐久耗尽，无法使用");
+
+    private void ShowFeedback(Vector2 attackPosition, string text)
     {
         if (damageTextPrefab == null)
             return;
@@ -44,7 +52,7 @@ public sealed class CombatMissFeedbackPresenter : MonoBehaviour
         var data = new DamageTextEffectData(0f)
         {
             UseTextOverride = true,
-            TextOverride = FlatWorldLocalizationService.GetUiText("未命中"),
+            TextOverride = FlatWorldLocalizationService.GetUiText(text),
             UseColorOverride = true,
             ColorOverride = Color.white,
             ScaleMultiplier = textScale,

@@ -541,8 +541,8 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 60.0,
-              "MaxHp": 60.0,
+              "Hp": 20.0,
+              "MaxHp": 20.0,
               "UseBodyPartHealth": false,
               "DefenseValues": {
                 "Physical": 0.0

@@ -248,6 +248,7 @@ public partial class GameRes
         Clear(TimeSystemConfigService.Reset);
         Clear(WaterCurrentPushConfigService.Reset);
         Clear(MachineCatalog.Clear);
+        Clear(EquipmentDurabilityRules.Clear);
         Clear(() => resourceAssets.Dispose());
         LoadedCount = 0;
         IsStartupReady = false;

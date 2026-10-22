@@ -1,0 +1,18 @@
+{
+  "materials": [
+    { "identity": "Obsidian", "maximum": 50, "attackOnly": true },
+    { "identity": "Steel", "maximum": 2500 },
+    { "identity": "Iron", "maximum": 1800 },
+    { "identity": "Bronze", "maximum": 1000 },
+    { "identity": "Copper", "maximum": 700 },
+    { "identity": "Gold", "maximum": 500 },
+    { "identity": "Diamond", "maximum": 3000 },
+    { "identity": "Flint", "maximum": 200 },
+    { "identity": "Stone", "maximum": 300 },
+    { "identity": "Bone", "maximum": 150 },
+    { "identity": "Wood", "maximum": 30 },
+    { "identity": "Cloth", "maximum": 80 },
+    { "identity": "Leather", "maximum": 80 },
+    { "identity": "Straw", "maximum": 80 }
+  ]
+}

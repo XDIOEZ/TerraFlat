@@ -16,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         Register("crafting", "tool_reinforcement", EntityToolReinforcement);
         Register("crafting", "tool_reinforcement_catalog", EntityReinforcementCatalog);
         Register("agriculture", "manual_harvest_work", EntityManualHarvestWork);
+        Register("agriculture", "crop_health_catalog", EntityCropHealthCatalog);
         Register("combat", "equipment_durability", EntityEquipmentDurability);
         Register("building", "placement_distance", EntityPlacementDistance);
     }
@@ -36,15 +37,45 @@ public static partial class GameplayTestSystemProbe
             ["shakeBefore"] = ManualHarvestWork.ShakeAngle(-1f), ["shakeAfter"] = ManualHarvestWork.ShakeAngle(.3f) };
     }
 
+    private static JObject EntityCropHealthCatalog(JObject args)
+    {
+        var crops = new JArray();
+        foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
+        {
+            if (definition.Abstract || definition.Modules == null || !definition.Modules.Values.Any(module =>
+                module?.Enabled != false && module?.Prefab == "Module_Crop")) continue;
+            ItemModuleDefinitionDto health = definition.Modules.Values.FirstOrDefault(module =>
+                module?.Enabled != false && module?.Prefab == "Module_DamageReciver");
+            crops.Add(new JObject { ["id"] = definition.Id,
+                ["hp"] = health?.Parameters?["Data"]?["Hp"]?.Value<float>() ?? -1f,
+                ["maximum"] = health?.Parameters?["Data"]?["MaxHp"]?.Value<float>() ?? -1f });
+        }
+        return new JObject { ["crops"] = crops };
+    }
+
     private static JObject EntityEquipmentDurability(JObject args)
     {
         float knife = Mod_ResourceHarvest.ResolveAffinityMultiplier(ResourceToolKind.Knife, 1, ResourceToolKind.Knife, 1, 1f);
+        ItemData ResolveTemplate(string prefab)
+        {
+            var template = new Data_GeneralItem { MaxDurability = 777f, Durability = 777f, Tags = new List<string> { "Tool" } };
+            EquipmentDurabilityRules.ApplyDefaults(new ItemDefinitionDto { Id = "probe_Obsidian", Modules =
+                new Dictionary<string, ItemModuleDefinitionDto> { ["action"] = new() { Prefab = prefab, Enabled = true } } }, template);
+            return template;
+        }
+        ItemData coldWeapon = ResolveTemplate("Mod_ColdWeapon");
+        ItemData shovel = ResolveTemplate("Module_Shovel");
         return new JObject {
             ["wood"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Wood"),
             ["stone"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Stone"),
             ["bronze"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Bronze"),
             ["iron"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Iron"),
             ["obsidian"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Dagger_Obsidian Stone"),
+            ["obsidianNonWeapon"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Obsidian Stone", 777f, false),
+            ["unclassified"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Unclassified", 60f),
+            ["coldWeaponMaximum"] = coldWeapon.MaxDurability,
+            ["coldWeaponTagged"] = coldWeapon.Tags.Contains(EquipmentDurabilityRules.AttackEquipmentTag),
+            ["obsidianToolMaximum"] = shovel.MaxDurability,
             ["positiveWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, 2f),
             ["blockedWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, 0f),
             ["rejectedWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, -1f),

@@ -235,7 +235,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>按下攻击时只在同库存存在弹药的情况下开始蓄力并搭箭。</summary>
     private void BeginCharge()
     {
-        if (EquipmentDurabilityRules.IsBroken(item?.itemData)) return;
+        if (EquipmentDurabilityRules.RejectBrokenAttack(item)) return;
         if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) return;
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (item?.Owner is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())

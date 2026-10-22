@@ -252,6 +252,7 @@ public partial class GameRes
         AtmosphereCatalog.ConfigureResourceReload(context);
         QuestCatalog.ConfigureResourceReload(context);
         MachineCatalog.ConfigureResourceReload(context);
+        EquipmentDurabilityRules.ConfigureResourceReload(context);
         mods.ConfigureResourceReload(context);
         return context;
     }

@@ -2,6 +2,10 @@
 test.system("combat", "equipment_durability", {}, function(data)
     assert(data.wood == 30 and data.stone == 300 and data.bronze == 1000 and data.iron > data.bronze
         and data.obsidian == 50, "装备材质耐久档位错误")
+    assert(data.obsidianNonWeapon == 777 and data.unclassified == 60,
+        "黑曜石武器特例误改非武器装备，或未知材质覆盖原定义耐久")
+    assert(data.coldWeaponMaximum == 50 and data.coldWeaponTagged and data.obsidianToolMaximum == 777,
+        "旧冷兵器漏接统一磨损，或黑曜石武器特例影响非武器工具")
     assert(data.positiveWear == 49 and data.blockedWear == 50 and data.rejectedWear == 50 and data.lastPoint == 0,
         "只有成功伤害扣一点耐久，或末点磨损没有归零")
     assert(data.knifeCropMultiplier == 1.5 and data.knifeWrongTarget == 1 and data.postDefense == 9

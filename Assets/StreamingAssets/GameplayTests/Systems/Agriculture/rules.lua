@@ -1,4 +1,11 @@
 -- 正式植物 Job 同时覆盖栽培和野生植物，耗水不依赖生长状态。
+test.system("agriculture", "crop_health_catalog", {}, function(data)
+    assert(#data.crops > 0, "未读取到正式作物定义")
+    for _, crop in ipairs(data.crops) do
+        assert(crop.hp == 20 and crop.maximum == 20, "作物基础生命未统一为20：" .. crop.id)
+    end
+end, "作物最终继承定义统一20点生命")
+
 test.system("agriculture", "tilling_visual_schedule", {}, function(data)
     assert(data.noEarlyRefresh and data.idleFramesSkipped == 600 and data.startsOnTime,
         "锄地完成后的十秒保持阶段仍逐帧读取，或退回开始时间被推迟")

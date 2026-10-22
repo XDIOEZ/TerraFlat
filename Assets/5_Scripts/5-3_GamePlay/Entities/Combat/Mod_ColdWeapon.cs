@@ -154,9 +154,6 @@ public partial class Mod_ColdWeapon : Module
         // 初始化时将伤害模块设置为失活状态
         SetInitialDamageState();
 
-        // 订阅伤害事件，用于在造成伤害后扣减武器耐久
-        SubscribeDamageEvents();
-
         EnsureObservers();
         ApplyObserverState();
     }
@@ -176,7 +173,6 @@ public partial class Mod_ColdWeapon : Module
             cachedController = null;
         }
 
-        UnsubscribeDamageEvents();
     }
 
     private void OnDestroy()
@@ -240,6 +236,7 @@ public partial class Mod_ColdWeapon : Module
     [Button("开始攻击")]
     public virtual void StartAttack()
     {
+        if (EquipmentDurabilityRules.RejectBrokenAttack(item)) return;
         if (CanAttack == false) return;
         if (CurrentState != AttackState.Idle) return;
         CurrentState = AttackState.Attacking;
@@ -356,44 +353,6 @@ public partial class Mod_ColdWeapon : Module
         }
     }
 
-    /// <summary>
-    /// 订阅伤害模块的伤害完成事件
-    /// </summary>
-    private void SubscribeDamageEvents()
-    {
-        if (!isDamageModuleCached)
-        {
-            CacheDamageModule();
-        }
-
-        if (cachedDamageModule != null)
-        {
-            // 先移除一次，避免重复订阅
-            cachedDamageModule.OnDamageApplied -= OnDamageApplied;
-            cachedDamageModule.OnDamageApplied += OnDamageApplied;
-        }
-    }
-
-    /// <summary>
-    /// 取消订阅伤害模块的伤害完成事件
-    /// </summary>
-    private void UnsubscribeDamageEvents()
-    {
-        if (cachedDamageModule != null)
-        {
-            cachedDamageModule.OnDamageApplied -= OnDamageApplied;
-        }
-    }
-
-    /// <summary>
-    /// 伤害完成回调：根据造成的伤害值扣减武器耐久
-    /// </summary>
-    /// <param name="damage">本次造成的伤害（可能小于等于 0）</param>
-    private void OnDamageApplied(float damage)
-    {
-        // 默认每次攻击命中消耗 1 点耐久，复用 Item 内置接口
-        item.DecreaseDurability(1);
-    }
     #endregion
 
     #region 攻击实现（移动与轨迹）
