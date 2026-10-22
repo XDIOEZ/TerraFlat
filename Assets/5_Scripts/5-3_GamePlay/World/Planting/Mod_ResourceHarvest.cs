@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>资源工具类别；只表达擅长的采集方式，不再作为伤害资格门槛。</summary>
-public enum ResourceToolKind { None, Pickaxe, Shovel, Axe, Hammer }
+public enum ResourceToolKind { None, Pickaxe, Shovel, Axe, Hammer, Knife }
 
 /// <summary>工具声明的采集身份；旧等级和效率字段保留配置兼容。</summary>
 public interface IResourceHarvestTool
@@ -92,7 +92,7 @@ public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncoming
     {
         if (preferredTool == ResourceToolKind.None || toolKind != preferredTool)
             return 1f;
-        return 2f;
+        return preferredTool == ResourceToolKind.Knife ? 1.5f : 2f;
     }
 
     #endregion

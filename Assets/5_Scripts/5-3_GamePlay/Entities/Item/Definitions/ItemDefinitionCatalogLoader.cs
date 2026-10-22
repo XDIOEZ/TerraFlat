@@ -1018,6 +1018,8 @@ public static class ItemDefinitionCatalogLoader
             modulePrefabIds.Add(moduleName, moduleId);
         }
 
+        if (!isActor) EquipmentDurabilityRules.ApplyDefaults(dto, template);
+
         AddAutomaticHealthModule(
             gameRes,
             shell,

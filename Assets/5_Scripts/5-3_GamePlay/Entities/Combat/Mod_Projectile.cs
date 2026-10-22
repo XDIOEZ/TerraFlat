@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -367,6 +367,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         Vector2 normalizedDirection = direction.normalized;
 
         item.Owner = shooter;
+        _damage.LaunchedWeaponDurabilityOwner = sourceWeapon;
+        _damage.LaunchedWeaponDurabilityData = sourceWeapon?.itemData;
+        _damage.LaunchedWeaponInventoryOwner = shooter;
         // 发射时记住真实射手和武器，之后切换手持物也不会改变这支箭的来源。
         launchDeathCause = DeathCauseRecord.CaptureAttack(sourceWeapon != null ? sourceWeapon : item, shooter);
         item.SetInHand(false);

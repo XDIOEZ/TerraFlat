@@ -132,6 +132,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     protected override void OnUnload()
     {
+        LaunchedWeaponDurabilityData = null;
+        LaunchedWeaponDurabilityOwner = null;
+        LaunchedWeaponInventoryOwner = null;
         if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
         sourceHealth = null;
         SetIdleTickSuppressed(false);
@@ -157,6 +160,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// 造成伤害后回调事件，参数为本次造成的伤害值（可能小于等于 0）
     /// </summary>
     public event System.Action<float> OnDamageApplied;
+    public ItemData LaunchedWeaponDurabilityData { get; set; }
+    public Item LaunchedWeaponDurabilityOwner { get; set; }
+    public Item LaunchedWeaponInventoryOwner { get; set; }
 
     /// <summary>实体伤害完成后发布目标与结算结果；0 表示有效命中，负数表示本次结算无效。</summary>
     public event System.Action<Mod_DamageReceiver, float> OnReceiverDamageResolved;
@@ -266,6 +272,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     {
         if (GameplayCombatBridge.Identity(item) != context.Attack.Source || context.Attack.Sequence != attackSequence) return;
         if (damage >= 0f) SpawnEffect(context.HitPoint, damage);
+        ConsumeWeaponDurability(damage);
         OnExternalDamageResolved?.Invoke(context, damage);
         OnDamageApplied?.Invoke(damage);
     }
@@ -595,6 +602,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         }
 
         // 触发伤害完成事件（无论伤害是否大于 0 都会触发）
+        ConsumeWeaponDurability(acDamage);
         OnReceiverDamageResolved?.Invoke(receiver, acDamage);
         OnDamageApplied?.Invoke(acDamage);
 
@@ -744,6 +752,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         tileDamageAppliedThisWindow = true;
         if (result.AppliedDamage >= 0f)
             SpawnEffect(result.HitPoint, result.AppliedDamage);
+        ConsumeWeaponDurability(result.AppliedDamage);
         OnDamageApplied?.Invoke(result.AppliedDamage);
         lastDamageTime = Time.time;
     }
@@ -797,10 +806,14 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     private bool CanDealDamageNow()
     {
+        if (EquipmentDurabilityRules.IsBroken(item?.itemData)) return false;
         if (sourceHealth != null && sourceHealth.Hp <= 0f) return false;
         if (!OnlyDealDamageWhenInHand) return true;
         return item.InHand;
     }
+
+    private void ConsumeWeaponDurability(float damage) => EquipmentDurabilityRules.ConsumeSuccessfulDamage(
+        LaunchedWeaponDurabilityOwner != null ? LaunchedWeaponDurabilityOwner : item, LaunchedWeaponDurabilityData, damage, LaunchedWeaponInventoryOwner);
 
     private void HandleSourceDeath(Mod_DamageReceiver health)
     {

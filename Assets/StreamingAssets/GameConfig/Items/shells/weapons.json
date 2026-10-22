@@ -20,6 +20,12 @@
         "rendererPath": "Render/Render_1"
       },
       "modules": {
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": { "toolKind": 5, "harvestTier": 1, "harvestEfficiency": 1.5 }
+        },
         "animation": {
           "prefab": "Module_Weapon_AnimationAction",
           "enabled": true,

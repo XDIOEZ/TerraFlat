@@ -268,6 +268,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     [InfoBox("开始播放指定索引的攻击动画")]
     private bool StartAttack(int index)
     {
+        if (EquipmentDurabilityRules.IsBroken(item?.itemData)) { ResetToIdle(); return false; }
         if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) return false;
         if (!TryConsumeAttackStamina())
         {

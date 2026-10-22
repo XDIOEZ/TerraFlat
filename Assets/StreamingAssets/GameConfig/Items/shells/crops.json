@@ -15,6 +15,18 @@
         "rendererPath": "Render"
       },
       "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": { "BitData": "", "Type": 0 },
+          "parameters": {
+            "Data": { "Hp": 20.0, "MaxHp": 20.0, "UseBodyPartHealth": false, "DefenseValues": { "Physical": 0.0 }, "DamageInterval": 0.12, "DestroyDelay": 0.0, "CombatBalanceVersion": 1 },
+            "weakTool": 5,
+            "impactAudioMaterial": 2,
+            "$collider2D": { "type": "BoxCollider2D", "enabled": true, "isTrigger": true, "size": { "x": 0.7, "y": 0.65 } }
+          }
+        },
         "crop": {
           "prefab": "Module_Crop",
           "id": "Mod_Crop",
@@ -237,8 +249,8 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 30.0,
-              "MaxHp": 30.0,
+              "Hp": 20.0,
+              "MaxHp": 20.0,
               "UseBodyPartHealth": false,
               "DefenseValues": {
                 "Physical": 0.0

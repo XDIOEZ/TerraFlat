@@ -29,7 +29,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 掉落数量共用 `LootAmountRules`；条目的 `amountDistribution: QuadraticPeak` 与 `peakAmount` 声明二次峰值，未声明则均匀。GO/自然 ECS/动物 ECS 都调用 `RollAmount`，再应用一次既有产出倍率；树叶统一 1～20、峰值 10，回归见 `combat/loot_amount` 与 `combat/tree_leaf_configuration`。
 - Actor JSON modules 是生命/防御/攻击/窗口静态真源，当前 HP/攻击者由运行模块保存；管理员无敌监听伤害回满及死亡兜底。
 - 临时无敌由调用方持有 `AcquireTemporaryInvulnerability()` 的 `IDisposable` 租约，多来源独立释放；普通/上下文/环境/生存/结构损伤均拦截且不耗受击冷却，卸载、停用、死亡和回池作废旧租约，直接权威设置生命仍生效。
-- Physical 是统一物理攻击/防御，ImpactKind 决定表现与刃伤资格；ResolvePhysical 合计攻击、只扣一次防御，旧比例只用于表现。工具弱点防御后乘 2、未破防仍 0，Mod_ResourceHarvest 或生命 weakTool 单处声明；Tile RequiredTool 同规则。
+- Physical 是统一物理攻击/防御，ImpactKind 决定表现与刃伤资格；ResolvePhysical 合计攻击、只扣一次防御。工具弱点防御后乘 2，小刀对低矮作物为 1.5；未破防仍 0，Mod_ResourceHarvest 或生命 weakTool 单处声明。装备材质耐久由 `EquipmentDurabilityRules` 在最终定义模板建立，实际正伤害回执每目标扣一点，零伤/拒绝不扣；投射物冻结发射武器数据，先磨损再发布可回收回调。非攻击装备只定义上限，不新增磨损来源。
 - 难度 0 的怪物攻击玩家在防御后乘 0.5，由 `CreatureCombatDifficultyRules.ResolveReceivedDamageMultiplier` 接入 GO 接收器（含 ECS 转交的玩家命中）；环境伤害、玩家攻击和非玩家目标不应用该减伤，其余难度不变。
 - 中立环境物理伤害由 HurtEnvironmentalDamage 与 IGameplayEnvironmentalDamageBridge 接入正式结算，忽略阵营和普通攻击间隔，也不消费普通受击冷却，仍保留防御/部位/死亡掉落；雷击服务按世界、区块和序号去重，GO、原生动物/资源及建筑分别走自身生命权威。
 - 返回 0 是有效但全防御命中，可显示数字/附加状态；负值 -1 是死亡/冷却等拒绝，不触发表现或状态。ResolvedDamageValues 已应用难度、防御/倍率，按 DamageValue 裁过量。
