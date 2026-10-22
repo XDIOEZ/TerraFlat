@@ -32,6 +32,7 @@ description: "FlatWorld 运行时像素 Sprite、动画表、物品与建筑美�
 ## 按需资料与工具
 
 - 玩家换装母版位于 `Assets/6_Art/Generated/Characters/PlayerTemplate/`：先参考正式男女母角色和旅人/铁卫套装，沿用32×48、32 PPU、底中心Pivot及Profile部位分界；`README.md`说明重建入口。外观源图必须可读写且不进SpriteAtlas，`visual.spriteStates.wearableMale/wearableFemale`供装备槽按部位拼合；不再沿用早期大头候选图。
+  母版朝向由 `CharacterAppearanceProfile.SourceFacesLeft` 声明，先按源坐标选装备部位，再统一输出朝右；不反转鼠标转身逻辑。
 
 - [style-guide.md](references/style-guide.md)：分类画风及参考图。
 - [prompt-recipes.md](references/prompt-recipes.md)：生成与动画提示词。

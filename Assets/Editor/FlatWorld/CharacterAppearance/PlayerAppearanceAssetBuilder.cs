@@ -244,6 +244,7 @@ public static class PlayerAppearanceAssetBuilder
         profile.BaseMale = male;
         profile.BaseFemale = female;
         profile.DefaultBodyStyle = CharacterBodyStyle.Female;
+        profile.SourceFacesLeft = true;
         profile.Width = Width;
         profile.Height = Height;
         profile.PixelsPerUnit = PixelsPerUnit;

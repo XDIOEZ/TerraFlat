@@ -15,6 +15,8 @@ public sealed class CharacterAppearanceProfile : ScriptableObject
     public Sprite BaseMale;
     public Sprite BaseFemale;
     public CharacterBodyStyle DefaultBodyStyle = CharacterBodyStyle.Female;
+    [Tooltip("母版人物是否朝左；组合完成后统一转为默认朝右。")]
+    public bool SourceFacesLeft = true;
     [Min(1)] public int Width = 32;
     [Min(1)] public int Height = 48;
     [Min(0.01f)] public float PixelsPerUnit = 32f;

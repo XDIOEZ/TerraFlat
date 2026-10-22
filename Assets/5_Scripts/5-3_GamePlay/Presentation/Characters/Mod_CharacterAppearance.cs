@@ -173,7 +173,11 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
         EnsureOutput();
         for (int y = 0, index = 0; y < profile.Height; y++)
             for (int x = 0; x < profile.Width; x++, index++)
-                outputPixels[index] = partPixels[profile.GetPartIndex(x, y)][index];
+            {
+                // 先按母版坐标选取装备部位，再统一输出朝右的角色，保持鼠标转身规则一致。
+                int outputX = profile.SourceFacesLeft ? profile.Width - 1 - x : x;
+                outputPixels[y * profile.Width + outputX] = partPixels[profile.GetPartIndex(x, y)][index];
+            }
         outputTexture.SetPixels32(outputPixels);
         outputTexture.Apply(false, false);
         targetRenderer.sprite = outputSprite;
