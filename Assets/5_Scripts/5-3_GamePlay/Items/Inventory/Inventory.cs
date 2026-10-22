@@ -1664,54 +1664,18 @@ public class Inventory
         Inventory targetInventory,
         int targetIndex)
     {
-        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
         ItemData sourceItem = ResolveCurrentDragSource(sourceSlot, draggedItem);
         if (sourceItem == null ||
             !IsValidQuickTransferTarget(targetInventory) ||
             targetIndex < 0 || targetIndex >= targetInventory.Data.itemSlots.Count)
             return false;
 
-        if (!ReferenceEquals(this, targetInventory) && targetInventory.Data.IsDepositBlocked)
-            return false;
-
         targetIndex = targetInventory.ResolveIncomingSlotIndex(sourceSlot, targetIndex);
         if (targetIndex < 0 || targetIndex >= targetInventory.Data.itemSlots.Count)
             return false;
 
-        ItemSlot targetSlot = targetInventory.Data.itemSlots[targetIndex];
-        if (targetSlot == null)
-            return false;
-
-        if (ReferenceEquals(sourceSlot, targetSlot))
-            return true;
-
-        if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
-            return false;
-
-        ItemData targetItem = targetSlot.itemData;
-        bool swapsDifferentItems = targetItem != null && !targetItem.CanStackWith(sourceItem);
-        if (swapsDifferentItems &&
-            (!CanAcceptQuickTransfer(targetSlot, sourceSlot) ||
-             !targetInventory.CanHoldWholeStack(targetSlot, sourceItem) ||
-             !CanHoldWholeStack(sourceSlot, targetItem)))
-            return false;
-
-        if (MachineInventoryCommands.TryRoute(this, Data.itemSlots.IndexOf(sourceSlot), targetInventory,
-                targetIndex, "move", 0, out bool routed)) return routed;
-        if (!Data.DropItemSlotTo(sourceSlot, targetInventory.Data, targetSlot))
-            return false;
-
-        int sourceIndex = Data.itemSlots.IndexOf(sourceSlot);
-        if (sourceIndex >= 0)
-            RefreshUI(sourceIndex);
-        targetInventory.RefreshUI(targetIndex);
-        SyncHotBarAfterDrag(this);
-        if (!ReferenceEquals(this, targetInventory))
-            SyncHotBarAfterDrag(targetInventory);
-
-        _touchTapFlow = TouchTapFlow.None;
-        targetInventory._touchTapFlow = TouchTapFlow.None;
-        return true;
+        return TryCommitSlotTransfer(sourceSlot, targetInventory,
+            targetInventory.Data.itemSlots[targetIndex], int.MaxValue, allowSwap: true);
     }
 
     /// <summary>
@@ -1748,10 +1712,6 @@ public class Inventory
         float moved = GetCommittedTransferAmount(source, original, before);
         if (moved > 0f)
         {
-            RefreshUI(sourceIndex);
-            targetInventory.RefreshUI(targetIndex);
-            SyncHotBarAfterDrag(this);
-            if (!ReferenceEquals(this, targetInventory)) SyncHotBarAfterDrag(targetInventory);
             PublishInventoryAudio(this, targetInventory, original, moved);
         }
         return true;
@@ -1811,13 +1771,6 @@ public class Inventory
         if (!itemData.Stack.Stackable)
             return itemData.Stack.Amount <= 1.0001f;
         return Data != null && itemData.Stack.Amount <= slot.SlotMaxVolume + 0.0001f;
-    }
-
-    /// <summary>拖拽改变快捷栏槽位后立即刷新玩家手持实例。</summary>
-    private static void SyncHotBarAfterDrag(Inventory inventory)
-    {
-        if (inventory is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
-            hotBarInventory.SyncHeldItemImmediately();
     }
 
     /// <summary>
@@ -2077,9 +2030,7 @@ public class Inventory
             ReferenceEquals(Data, target.Data) || target.Data.IsDepositBlocked) return false;
         foreach (ItemSlot destination in target.Data.itemSlots)
         {
-            if (destination == null || !target.CanAcceptQuickTransfer(source, destination) ||
-                destination.itemData != null && !destination.itemData.CanStackWith(source.itemData)) continue;
-            if (Data.GetTransferableQuantityTo(source, target.Data, destination, int.MaxValue) > 0) return true;
+            if (CanTransferToSlot(source, target, destination, int.MaxValue, allowSwap: false)) return true;
         }
         return false;
     }
@@ -2107,68 +2058,20 @@ public class Inventory
 
         if (MachineInventoryCommands.TryRoute(this, sourceIndex, targetInventory, -1, "quick", 0, out bool routed)) return routed;
         bool moved = false;
-        moved |= TryTransferToMatchedSlots(sourceSlot, targetInventory);
-        moved |= TryTransferToEmptySlots(sourceSlot, targetInventory);
-
-        if (moved)
-        {
-            RefreshUI(sourceIndex);
-            targetInventory.RefreshUI();
-        }
-
-        return moved;
-    }
-
-    private bool TryTransferToMatchedSlots(ItemSlot sourceSlot, Inventory targetInventory)
-    {
-        bool moved = false;
         List<ItemSlot> targetSlots = targetInventory.Data.itemSlots;
-
-        for (int i = 0; i < targetSlots.Count; i++)
+        // 两轮只负责选槽：先已有同类堆，再空槽，每次提交都复用统一事务。
+        for (int pass = 0; pass < 2 && sourceSlot.itemData != null; pass++)
         {
-            if (sourceSlot.itemData == null)
-                break;
-
-            ItemSlot targetSlot = targetSlots[i];
-            if (targetSlot == null || targetSlot.itemData == null)
-                continue;
-
-            if (!targetSlot.itemData.CanStackWith(sourceSlot.itemData))
-                continue;
-
-            int transferCount = Mathf.CeilToInt(sourceSlot.itemData.Stack.Amount);
-            if (transferCount <= 0)
-                break;
-
-            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount, true))
-                moved = true;
+            for (int i = 0; i < targetSlots.Count && sourceSlot.itemData != null; i++)
+            {
+                ItemSlot targetSlot = targetSlots[i];
+                if (targetSlot == null || (pass == 0 ? targetSlot.itemData == null : targetSlot.itemData != null))
+                    continue;
+                int transferCount = Mathf.CeilToInt(sourceSlot.itemData.Stack.Amount);
+                if (transferCount <= 0) break;
+                moved |= TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount, true);
+            }
         }
-
-        return moved;
-    }
-
-    private bool TryTransferToEmptySlots(ItemSlot sourceSlot, Inventory targetInventory)
-    {
-        bool moved = false;
-        List<ItemSlot> targetSlots = targetInventory.Data.itemSlots;
-
-        for (int i = 0; i < targetSlots.Count; i++)
-        {
-            if (sourceSlot.itemData == null)
-                break;
-
-            ItemSlot targetSlot = targetSlots[i];
-            if (targetSlot == null || targetSlot.itemData != null)
-                continue;
-
-            int transferCount = Mathf.CeilToInt(sourceSlot.itemData.Stack.Amount);
-            if (transferCount <= 0)
-                break;
-
-            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount, true))
-                moved = true;
-        }
-
         return moved;
     }
 
@@ -2179,28 +2082,65 @@ public class Inventory
         int transferCount,
         bool quickTransferFeedback = false)
     {
-        if (!ReferenceEquals(this, targetInventory) && targetInventory?.Data?.IsDepositBlocked == true)
-            return false;
+        return TryCommitSlotTransfer(sourceSlot, targetInventory, targetSlot, transferCount,
+            allowSwap: false, quickTransferFeedback: quickTransferFeedback);
+    }
 
-        if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
-            return false;
+    #region 统一槽位转移事务
 
-        if (MachineInventoryCommands.TryRoute(this, Data.itemSlots.IndexOf(sourceSlot), targetInventory,
-                targetInventory.Data.itemSlots.IndexOf(targetSlot), "quantity", transferCount, out bool routed)) return routed;
+    // 输入只决定目标与操作方式，接收规则、容量和交换资格在预检与提交间共用。
+    private bool CanTransferToSlot(ItemSlot sourceSlot, Inventory targetInventory, ItemSlot targetSlot,
+        int amount, bool allowSwap)
+    {
+        ItemData source = sourceSlot?.itemData;
+        if (source?.Stack == null || targetSlot == null || amount <= 0 ||
+            Data?.itemSlots == null || targetInventory?.Data?.itemSlots == null ||
+            !Data.itemSlots.Contains(sourceSlot) || !targetInventory.Data.itemSlots.Contains(targetSlot) ||
+            !ReferenceEquals(Data, targetInventory.Data) && targetInventory.Data.IsDepositBlocked)
+            return false;
+        if (ReferenceEquals(sourceSlot, targetSlot)) return allowSwap;
+        if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot)) return false;
+        ItemData target = targetSlot.itemData;
+        if (target != null && !target.CanStackWith(source))
+            return allowSwap && CanAcceptQuickTransfer(targetSlot, sourceSlot) &&
+                targetInventory.CanHoldWholeStack(targetSlot, source) && CanHoldWholeStack(sourceSlot, target);
+        return Data.GetTransferableQuantityTo(sourceSlot, targetInventory.Data, targetSlot, amount) > 0;
+    }
+
+    private bool TryCommitSlotTransfer(ItemSlot sourceSlot, Inventory targetInventory, ItemSlot targetSlot,
+        int amount, bool allowSwap, bool quickTransferFeedback = false)
+    {
+        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation() ||
+            !CanTransferToSlot(sourceSlot, targetInventory, targetSlot, amount, allowSwap)) return false;
+        if (ReferenceEquals(sourceSlot, targetSlot)) return true;
+        int sourceIndex = Data.itemSlots.IndexOf(sourceSlot);
+        int targetIndex = targetInventory.Data.itemSlots.IndexOf(targetSlot);
+        if (MachineInventoryCommands.TryRoute(this, sourceIndex, targetInventory, targetIndex,
+                allowSwap ? "move" : "quantity", allowSwap ? 0 : amount, out bool routed)) return routed;
         ItemData movedItem = sourceSlot.itemData;
         float targetBefore = targetSlot.itemData?.Stack?.Amount ?? 0f;
-        bool moved = Data.TransferItemQuantityTo(
-            sourceSlot,
-            targetInventory.Data,
-            targetSlot,
-            transferCount);
+        bool moved = allowSwap
+            ? Data.DropItemSlotTo(sourceSlot, targetInventory.Data, targetSlot)
+            : Data.TransferItemQuantityTo(sourceSlot, targetInventory.Data, targetSlot, amount);
+        if (!moved) return false;
+        RefreshUI(sourceIndex);
+        targetInventory.RefreshUI(targetIndex);
+        OnSlotTransferCommitted();
+        if (!ReferenceEquals(this, targetInventory)) targetInventory.OnSlotTransferCommitted();
+        _touchTapFlow = TouchTapFlow.None;
+        targetInventory._touchTapFlow = TouchTapFlow.None;
         // 仅在真实事务成功后按实际接收槽发布表现，网络请求已发送不算成功。
-        if (moved && quickTransferFeedback)
-            InventoryQuickTransferFeedbackEvents.Publish(this, Data.itemSlots.IndexOf(sourceSlot),
-                targetInventory, targetInventory.Data.itemSlots.IndexOf(targetSlot), movedItem,
+        if (quickTransferFeedback)
+            InventoryQuickTransferFeedbackEvents.Publish(this, sourceIndex,
+                targetInventory, targetIndex, movedItem,
                 (targetSlot.itemData?.Stack?.Amount ?? 0f) - targetBefore);
-        return moved;
+        return true;
     }
+
+    /// <summary>实际转移后由库存自身同步附属状态，输入设备不再各自补通知。</summary>
+    protected virtual void OnSlotTransferCommitted() { }
+
+    #endregion
 
     /// <summary>服务端的已校验请求复用完整拖拽与数量转移规则。</summary>
     public bool ExecuteMachineTransfer(int sourceIndex, Inventory target, int targetIndex, string operation, int amount)

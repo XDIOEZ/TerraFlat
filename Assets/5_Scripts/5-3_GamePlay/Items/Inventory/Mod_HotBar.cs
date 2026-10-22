@@ -143,17 +143,11 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             Owner?.OnInventoryLeftClick(index);
         }
 
-        public override void OnShiftQuickTransfer(int index)
+        protected override void OnSlotTransferCommitted()
         {
-            if (TryShiftQuickTransfer(index))
-                Owner?.OnInventoryShiftQuickTransfer(index);
-        }
-
-        /// <summary>甩出快捷栏物品后立即同步当前手持物和网络状态。</summary>
-        public override void OnFlickTransfer(int index, Vector2 origin, Vector2 direction)
-        {
-            if (TryFlickTransfer(index, origin, direction))
-                Owner?.OnInventoryShiftQuickTransfer(index);
+            // 拖动、数量搬运与快捷转移共用一次提交通知。
+            Owner?.SyncCurrentHeldItemWithSlot();
+            Owner?.NotifyOwnerNetworkStateChanged();
         }
 
         public override void ModUpdate(float deltaTime)
@@ -543,12 +537,6 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     private void OnInventoryLeftClick(int index)
     {
         SwitchItem(index);
-    }
-
-    private void OnInventoryShiftQuickTransfer(int index)
-    {
-        SyncCurrentHeldItemWithSlot();
-        NotifyOwnerNetworkStateChanged();
     }
 
     private void OnInventoryModUpdate(float deltaTime)

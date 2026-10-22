@@ -60,6 +60,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/food_observer_index", EntityFoodObserverIndex);
         operations.Add("survival/thermal", EntityTemperature);
         operations.Add("inventory/transactions", EntityInventoryTransactions);
+        operations.Add("inventory/transfer_entrypoints", EntityInventoryTransferEntrypoints);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
         operations.Add("inventory/carry_usage_single_pass", EntityCarryUsageSinglePass);
         operations.Add("inventory/dynamic_slot_maintenance", EntityDynamicSlotMaintenance);
@@ -1453,6 +1454,51 @@ public static partial class GameplayTestSystemProbe
             ["minimumSpeed"] = InventoryFlickGesture.DefaultMinimumSpeed
         };
     }
+
+    #region 库存转移入口一致性
+
+    private sealed class TransferCommitProbeInventory : Inventory
+    {
+        public int Commits;
+        protected override void OnSlotTransferCommitted() => Commits++;
+    }
+
+    // 对相同数据分别调用正式拖放、数量和快捷入口，只采样结果及双方通知。
+    private static JObject EntityInventoryTransferEntrypoints(JObject args)
+    {
+        string mode = Text(args, "mode", "move"), scenario = Text(args, "scenario", "partial");
+        var from = new ItemSlot(0) { itemData = EntityProbeData("test:transfer", 5f) };
+        var to = new ItemSlot(0) { SlotMaxVolume = 4f,
+            itemData = EntityProbeData(scenario == "swap" ? "test:other" : "test:transfer", 2f) };
+        if (scenario == "empty") to.itemData = null;
+        if (scenario == "full") to.SlotMaxVolume = 2f;
+        if (scenario == "tag") to.CanAcceptTags.Add("test:rejected");
+        var source = new TransferCommitProbeInventory
+            { Data = new Inventory_Data(new List<ItemSlot> { from }, "probe:source") };
+        var target = new TransferCommitProbeInventory
+            { Data = new Inventory_Data(new List<ItemSlot> { to }, "probe:target")
+                { IsDepositBlocked = scenario == "blocked" } };
+        if (scenario == "swap") to.SlotMaxVolume = 100f;
+        int sourceEvents = 0, targetEvents = 0;
+        source.Data.Event_OnDataChanged_TwoSlots += (_, _) => sourceEvents++;
+        target.Data.Event_OnDataChanged_TwoSlots += (_, _) => targetEvents++;
+        bool preflight = source.CanQuickTransferTo(0, target);
+        bool preflightUnchanged = source.Commits == 0 && target.Commits == 0 &&
+            sourceEvents == 0 && targetEvents == 0 && from.itemData.Stack.Amount == 5f;
+        bool accepted = mode == "move" ? source.TryMoveSlotTo(0, target, 0) :
+            mode == "quantity" ? source.TryTransferQuantityTo(0, target, 0, int.MaxValue) :
+            source.ExecuteMachineTransfer(0, target, -1, "quick", 0);
+        return new JObject
+        {
+            ["accepted"] = accepted, ["preflight"] = preflight, ["preflightUnchanged"] = preflightUnchanged,
+            ["sourceId"] = from.itemData?.IDName ?? "", ["targetId"] = to.itemData?.IDName ?? "",
+            ["sourceAmount"] = from.itemData?.Stack?.Amount ?? 0f, ["targetAmount"] = to.itemData?.Stack?.Amount ?? 0f,
+            ["sourceCommits"] = source.Commits, ["targetCommits"] = target.Commits,
+            ["sourceEvents"] = sourceEvents, ["targetEvents"] = targetEvents
+        };
+    }
+
+    #endregion
 
     private static JObject EntityInventoryTransactions(JObject args)
     {

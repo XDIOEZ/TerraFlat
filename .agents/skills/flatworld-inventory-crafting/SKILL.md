@@ -44,6 +44,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 带初始内容的读物经 `Items/Readable/ReadableBookGrantService` 创建真实物品数据；可选 `writingMaterialDefinitionId` 经启用书写与材料标签校验后向书内槽0附送一份材料。独立书页和材料保存为 `ReadableBookInstanceSnapshot` 的 `AddedPageCount/PageContents/InputInventory`，发放复用完整随身容量、槽接收策略与待确认库存事务门禁，不生成世界 Item 或改共享静态页。
 - 服务器远端玩家的 Hotbar/Bag 加载真实数据和手持物，不创建 UI 或绑定本机输入；视觉副本用 `ApplyRemoteNetworkData`，权威手持用 `ApplyNetworkAuthorityData`，不能混用。太空拾取 commit 同时走服务器真实库存事务，Host 共享库存只入包一次；客户端选择请求不能改库存数量。
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。
+- 拖放、指定数量、Shift 和双端甩动选定目标后均经 `TryCommitSlotTransfer`；预检与提交共用 `CanTransferToSlot`。交换仅由 `allowSwap` 开启，快捷转移保持先合堆再填空槽；成功后统一刷新并调用双方 `OnSlotTransferCommitted`，快捷栏在此同步手持和网络，输入层不重复补通知。回归 `inventory/transfer_entrypoints`。
 - 仅有源库存界面时通过 `HasVisibleFlickTarget/HasFlickTarget` 关闭判定，快速拖出仍按普通拖拽拿到手部。目标可见性复用 `InventoryFlickTargets.HasVisibleTarget`，排除自己、相同数据、手部、输出、关闭/隐藏/禁用或无有效槽映射的界面；不按容量关闭开关，已满但打开的目标仍走拒绝留源。
 - 甩动默认在消费来源前通过带起点/方向的 `HasFlickTarget` 检查真实目标范围，`Resolve` 使用相同角度资格。优先用已登记的 `UIWindowDragSurface.WindowRect`，无正式窗口时退到真实可见槽区；按屏幕/遮罩裁剪，每个分离窗口独立判定，边缘放宽 10°，范围外走普通拿到手部。起点在目标边界内允许任意有效方向；方向内候选仍按槽区中心夹角排序，容量失败只跳过同方向范围内的目标。
 - `InventoryFlickUserSettings` 集中持有鼠标/触屏共用的速度、距离门槛百分比（25%～200%、整数步进、默认100%）和默认开启的角度限制；值越低越易触发，正式默认阈值仍为现有手感。关闭角度仅绕过几何资格，仍要求其他可见库存并保留容量预检、方向排序、满格留源与直接槽位拖放优先，不影响 Shift；设置通过 `inventory_flick` Provider 复用保存/放弃/恢复默认。

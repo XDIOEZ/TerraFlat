@@ -174,6 +174,32 @@ for _, case in ipairs(cases) do
     end, "库存事务：" .. case.name .. (publicQuantity and "（公开数量入口）" or ""))
     end
 end
+for _, mode in ipairs({"move", "quantity", "quick"}) do
+    for _, scenario in ipairs({"partial", "empty", "full", "tag", "blocked", "swap"}) do
+        test.system("inventory", "transfer_entrypoints", {mode = mode, scenario = scenario}, function(data)
+            local accepted = scenario == "partial" or scenario == "empty" or scenario == "swap" and mode == "move"
+            assert(data.accepted == accepted and data.preflightUnchanged,
+                "转移入口接收结果不一致或只读预检发布了通知")
+            assert(data.preflight == (scenario == "partial" or scenario == "empty"),
+                "快捷转移预检没有复用提交端的接收规则和容量限制")
+            local commits = accepted and 1 or 0
+            assert(data.sourceCommits == commits and data.targetCommits == commits
+                and data.sourceEvents == commits and data.targetEvents == commits,
+                "转移成功漏通知、重复通知，或拒绝时仍通知")
+            if scenario == "swap" and accepted then
+                assert(data.sourceId == "test:other" and data.sourceAmount == 2
+                    and data.targetId == "test:transfer" and data.targetAmount == 5,
+                    "指定槽拖放失去异类交换语义")
+            else
+                local moved = accepted and (scenario == "empty" and 4 or 2) or 0
+                assert(data.sourceAmount == 5 - moved
+                    and data.targetAmount == (scenario == "empty" and 0 or 2) + moved,
+                    "部分接收、满槽拒绝或快捷转移禁止交换的数量不守恒")
+            end
+        end, "统一槽位事务：" .. mode .. "/" .. scenario)
+    end
+end
+
 local directions = {
     {name = "向右选右侧输入", origin = {0, 0}, direction = {1, 0}, targets = {{100, 0}, {0, -100}}, selected = 0},
     {name = "向下选快捷栏", origin = {0, 0}, direction = {0, -1}, targets = {{100, 0}, {0, -100}}, selected = 1},

@@ -1,5 +1,7 @@
 # 库存与装备测试
 
+2026-10-22：`rules.lua` 新增 `inventory/transfer_entrypoints`，相同数据分别走指定槽移动、指定数量和快捷转移，覆盖部分接收、空槽、满槽、标签拒绝、入库门禁，以及仅指定槽移动允许异类交换；检查双方数据事件和统一提交回调成功各一次、拒绝零次。按用户要求本轮不运行验收测试。
+
 2026-10-22：`gameplay.lua` 新增 `inventory/equipment_quick_transfer`，通过正式装备 Prefab 的 InitUI、Open/Close 和重新打开检查目标登记，再调用 Shift/甩动正式入口；覆盖头盔进入头部槽、GUID 保留，以及关窗、满槽、非装备物品拒绝且来源不变。本轮 Unity 正在 PlayMode，仅静态修改，未编译、未运行；PC 和手机实际输入由用户验收。
 
 2026-10-21：现有 `transactions` 同时覆盖 `Inventory_Data` 与公开 `Inventory.TryTransferQuantityTo`，检查限量、部分容量、拒收入库、同槽/非正数量/无效索引拒绝。仅静态补充，未编译或运行；真实 UI 射线、联机机器待确认及交换反馈由用户验收。
