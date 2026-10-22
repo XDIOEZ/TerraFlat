@@ -26,6 +26,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 致命扣血在回调前把 `DeathCauseRecord` 锁存到生命 Data，随血量保存/同步，重生清除；`ForceHurt` 的来源方传稳定原因 ID，特殊发送端用 `IDeathCauseSource`，投射物用 `IDeathCauseSnapshotSource` 冻结射手和发射武器。Shared Context 只携固定容量定义 ID，不让叙事字段溢出阻断伤害。
 - Heal 查询 IHealingCostPolicy 可恢复额度，按实际恢复量支付，无策略免费；普通回血不复活，启用部位生命时只分配给存活部位，重生/满血赋值才恢复耗尽部位。
 - 掉落以稳定物品 ID 定义，实体顶层 lootTableId 展开到唯一接收器；LootPrefabName 实为 Item.itemData.IDName，非外壳名。引用在目录加载时校验。
+- LootEntry.OnValidate 只在引用数据就绪时同步 ID；导入/构建中的 Prefab 未就绪时保留原值，不在此抛缺失 ID 异常。
 - 掉落数量共用 `LootAmountRules`；条目的 `amountDistribution: QuadraticPeak` 与 `peakAmount` 声明二次峰值，未声明则均匀。GO/自然 ECS/动物 ECS 都调用 `RollAmount`，再应用一次既有产出倍率；树叶统一 1～20、峰值 10，回归见 `combat/loot_amount` 与 `combat/tree_leaf_configuration`。
 - Actor JSON modules 是生命/防御/攻击/窗口静态真源，当前 HP/攻击者由运行模块保存；管理员无敌监听伤害回满及死亡兜底。
 - 临时无敌由调用方持有 `AcquireTemporaryInvulnerability()` 的 `IDisposable` 租约，多来源独立释放；普通/上下文/环境/生存/结构损伤均拦截且不耗受击冷却，卸载、停用、死亡和回池作废旧租约，直接权威设置生命仍生效。

@@ -86,11 +86,9 @@ public class LootEntry
         {
             Item lootItem = LootPrefab.GetComponent<Item>();
             string prefabItemId = lootItem?.itemData?.IDName;
-            // 编辑器中的动态外壳尚未装载 Item 数据时，保留显式配置的稳定 ID。
+            // 导入或构建时引用的 Prefab 可能尚未反序列化完成，保留已有 ID，引用有效性交给内容目录加载时校验。
             if (!string.IsNullOrWhiteSpace(prefabItemId))
                 LootPrefabName = prefabItemId;
-            else if (string.IsNullOrWhiteSpace(LootPrefabName))
-                throw new System.InvalidOperationException($"战利品 Prefab {LootPrefab.name} 缺少物品 ID。");
         }
         
         // 确保掉落数量范围有效
