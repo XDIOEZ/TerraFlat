@@ -8,6 +8,10 @@
   "FreezingTemperature": 0.0,
   "MinimumLightningIntervalSeconds": 20.0,
   "LightningSeparationRadius": 384.0,
+  "Associations": [
+    { "SourceId": "rain", "TargetId": "wind", "ProbabilityBonus": 0.1 },
+    { "SourceId": "wind", "TargetId": "thunder", "ProbabilityBonus": 0.1 }
+  ],
   "Elements": [
     {
       "Id": "rain",

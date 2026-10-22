@@ -32,6 +32,8 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 
 ## 时间、天气与湿度
 
+- 自然天气关联由 `RegionalWeatherSettings.Associations` 配置，默认雨→风、风→雷暴各增加最终抽签概率 10 个百分点并钳制；所有要素抽签结束后登记，仅影响本区域下一次有效抽签，同目标取最大值且消费后清除，不在同轮连锁。`PendingProbabilityBonus` 随天气记录保存；手动天气不登记关联。
+
 - 明火统一由 `AtmosphereService.CanSustainCombustion` 检查真实氧气占比至少5%，真空/未知环境拒绝；`ItemEnvironmentSources` 的燃烧点采样允许局部密闭舱气覆盖星球大气，按实时组分读取。回归 `environment/combustion_oxygen`。
 
 - 星球大气在创建/进入世界时完整校验；`TryGetForWorld` 只读已有真实状态，逐个生物采样不重复分配全量校验集合。显式 `GetOrCreate/Validate` 仍保留校验入口。

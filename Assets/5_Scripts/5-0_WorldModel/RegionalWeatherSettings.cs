@@ -103,6 +103,16 @@ namespace FlatWorld.WorldModel
         #endregion
     }
 
+    [Serializable]
+    public struct WeatherAssociationRule
+    {
+        #region 天气关联
+        public string SourceId;
+        public string TargetId;
+        public float ProbabilityBonus;
+        #endregion
+    }
+
     /// <summary>共享天气区的覆盖范围、固定时钟与可扩展要素配置，速率统一使用游戏秒。</summary>
     [Serializable]
     public sealed class RegionalWeatherSettings
@@ -118,6 +128,11 @@ namespace FlatWorld.WorldModel
         public float FreezingTemperature = 0f;
         public float MinimumLightningIntervalSeconds = 20f;
         public float LightningSeparationRadius = 384f; // 可被同一玩家听见的邻近雷击共用最短间隔。
+        public WeatherAssociationRule[] Associations =
+        {
+            new WeatherAssociationRule { SourceId = WeatherElementIds.Rain, TargetId = WeatherElementIds.Wind, ProbabilityBonus = .1f },
+            new WeatherAssociationRule { SourceId = WeatherElementIds.Wind, TargetId = WeatherElementIds.Thunder, ProbabilityBonus = .1f }
+        };
         public WeatherElementRule[] Elements =
         {
             new WeatherElementRule
@@ -164,6 +179,7 @@ namespace FlatWorld.WorldModel
         {
             Validate();
             var copy = (RegionalWeatherSettings)MemberwiseClone();
+            copy.Associations = (WeatherAssociationRule[])Associations.Clone();
             copy.Elements = new WeatherElementRule[Elements.Length];
             for (int i = 0; i < Elements.Length; i++)
                 copy.Elements[i] = Elements[i].Clone();
@@ -184,12 +200,15 @@ namespace FlatWorld.WorldModel
             => ResolveActivationProbability(profile, 0d, 0d);
 
         /// <summary>各区域要素按自己的恢复完成时刻调节概率，近期历史不改变基础气候。</summary>
-        public float ResolveActivationProbability(WeatherElementProfile profile, double now, double naturalRecoveryEndTime)
+        public float ResolveActivationProbability(WeatherElementProfile profile, double now, double naturalRecoveryEndTime,
+            float associationBonus = 0f)
         {
             if (!Finite(now) || now < 0d)
                 throw new ArgumentOutOfRangeException(nameof(now), "天气概率采样时刻须为非负有限游戏秒。");
             if (!Finite(naturalRecoveryEndTime) || naturalRecoveryEndTime < 0d)
                 throw new ArgumentOutOfRangeException(nameof(naturalRecoveryEndTime), "天气恢复完成时刻须为非负有限游戏秒。");
+            if (!Finite(associationBonus) || associationBonus < 0f || associationBonus > 1f)
+                throw new ArgumentOutOfRangeException(nameof(associationBonus));
             float probability = profile.Probability * NaturalEventProbabilityMultiplier;
             foreach (WeatherElementRule rule in Elements)
             {
@@ -199,10 +218,10 @@ namespace FlatWorld.WorldModel
                     float recovering = rule.RecoverySeconds > 0f
                         ? (float)Math.Min(1d, remaining / rule.RecoverySeconds) : 0f;
                     float recoveryMultiplier = 1f - (1f - rule.RecoveryProbabilityMultiplier) * recovering;
-                    return probability * rule.ResolveProbabilityMultiplier(profile.Intensity) * recoveryMultiplier;
+                    return Math.Min(1f, probability * rule.ResolveProbabilityMultiplier(profile.Intensity) * recoveryMultiplier + associationBonus);
                 }
             }
-            return probability;
+            return Math.Min(1f, probability + associationBonus);
         }
 
         /// <summary>恢复从自然事件计划结束后开始，记录完成时刻可保留回拨后的剩余恢复量。</summary>
@@ -259,6 +278,13 @@ namespace FlatWorld.WorldModel
                 if (!ids.Add(element.Id))
                     throw new ArgumentException("区块天气要素标识不能重复。", nameof(Elements));
             }
+            if (Associations == null)
+                throw new ArgumentNullException(nameof(Associations));
+            foreach (WeatherAssociationRule association in Associations)
+                if (!ids.Contains(association.SourceId ?? "") || !ids.Contains(association.TargetId ?? "") ||
+                    association.SourceId == association.TargetId || !Finite(association.ProbabilityBonus) ||
+                    association.ProbabilityBonus < 0f || association.ProbabilityBonus > 1f)
+                    throw new ArgumentException("天气关联须引用不同的已有要素，概率增量须在零到一之间。", nameof(Associations));
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);

@@ -188,6 +188,7 @@ public partial class WeatherElementStateRecord
     public double EndTime;
     public float Intensity;
     public double NaturalRecoveryEndTime;
+    public float PendingProbabilityBonus;
 
     public static WeatherElementStateRecord FromState(WeatherElementState state)
     {
@@ -200,7 +201,8 @@ public partial class WeatherElementStateRecord
             StartedTime = state.StartedTime,
             EndTime = state.EndTime,
             Intensity = state.Intensity,
-            NaturalRecoveryEndTime = state.NaturalRecoveryEndTime
+            NaturalRecoveryEndTime = state.NaturalRecoveryEndTime,
+            PendingProbabilityBonus = state.PendingProbabilityBonus
         };
     }
 
@@ -212,7 +214,8 @@ public partial class WeatherElementStateRecord
             StartedTime = StartedTime,
             EndTime = EndTime,
             Intensity = Intensity,
-            NaturalRecoveryEndTime = NaturalRecoveryEndTime
+            NaturalRecoveryEndTime = NaturalRecoveryEndTime,
+            PendingProbabilityBonus = PendingProbabilityBonus
         };
     }
 

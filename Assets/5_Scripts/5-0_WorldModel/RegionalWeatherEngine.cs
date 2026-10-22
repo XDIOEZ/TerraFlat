@@ -179,9 +179,12 @@ namespace FlatWorld.WorldModel
             foreach (WeatherElementProfile profile in state.Profile.Elements)
             {
                 WeatherElementState element = GetOrCreateElement(state, profile.Id);
+                if (element.Intensity > 0f || profile.Intensity <= 0f)
+                    continue;
                 float probability = settings.ResolveActivationProbability(profile, state.LastStepTime,
-                    element.NaturalRecoveryEndTime);
-                if (element.Intensity > 0f || profile.Intensity <= 0f || probability <= 0f ||
+                    element.NaturalRecoveryEndTime, element.PendingProbabilityBonus);
+                element.PendingProbabilityBonus = 0f;
+                if (probability <= 0f ||
                     Random01(state.Region, state.CheckIndex, profile.Id) >= probability)
                     continue;
                 WeatherElementProfile sampled = settings.SampleNaturalEvent(profile,
@@ -190,6 +193,15 @@ namespace FlatWorld.WorldModel
                     Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.3"));
                 BeginElement(state, element, state.LastStepTime, sampled.Intensity, sampled.DurationSeconds);
                 element.NaturalRecoveryEndTime = settings.ResolveNaturalRecoveryEndTime(profile.Id, element.EndTime);
+            }
+            // 全部抽签结束后才登记关联，避免数组顺序引发同轮连锁。
+            foreach (WeatherAssociationRule association in settings.Associations)
+            {
+                WeatherElementState source = FindElement(state, association.SourceId);
+                if (source == null || source.Intensity <= 0f || source.StartedTime != state.LastStepTime)
+                    continue;
+                WeatherElementState target = GetOrCreateElement(state, association.TargetId);
+                target.PendingProbabilityBonus = Math.Max(target.PendingProbabilityBonus, association.ProbabilityBonus);
             }
         }
 
@@ -729,7 +741,8 @@ namespace FlatWorld.WorldModel
                 if (element == null || string.IsNullOrWhiteSpace(element.Id) || !ids.Add(element.Id) ||
                     !Finite(element.StartedTime) || element.StartedTime < 0d ||
                     !Finite(element.EndTime) || element.EndTime < element.StartedTime || !Unit(element.Intensity) ||
-                    !Finite(element.NaturalRecoveryEndTime) || element.NaturalRecoveryEndTime < 0d)
+                    !Finite(element.NaturalRecoveryEndTime) || element.NaturalRecoveryEndTime < 0d ||
+                    !Unit(element.PendingProbabilityBonus))
                     throw new ArgumentException("区块天气事件包含非法标识、时段或强度。", nameof(state));
             }
         }
