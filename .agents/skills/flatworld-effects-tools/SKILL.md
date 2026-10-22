@@ -11,6 +11,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - `Assets/5_Scripts/5-3_GamePlay/Presentation/`：`Effects/Management/VisualEffectManager.cs` 管池；`Effects/Runtime/` 为独立 Effect.asmdef；`ActorRenderEffectController/ActorRenderColorEffect/WaterImmersionRenderEffect` 管角色 MPB；`WorldSortingManager/WorldSortingMember` 管排序；`ActorShadowManager/WorldShadowProjectionManager` 管接触/太阳阴影。
 - 默认配置：`Assets/Resources/GameConfig/Rendering/default-rendering.json`；Prefab 保存资源/逐物体外观，PlayerPrefs 保存本机偏好。
 - 编辑器：`Assets/Editor/FlatWorld/`，内容工坊为 `ContentTools/ContentWorkshop/`。
+- 本地 Android 打包由 `Automation/CodexAndroidBuildRunner` 消费 `Library/CodexRunAndroidBuild.request`；结果与分层步骤写入 Library 和 APK 同名 `.build.json`。`wallDurationSeconds` 包含 Addressables，Player 的 `durationSeconds` 不包含其前置构建；APK 大小取 `apkSizeBytes`。自动打包临时关闭 Addressables 1.22.3 报告弹窗并在 finally 恢复，仍生成报告并严格拦截资源失败。
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/{Debug,Diagnostics}/`；AIECS 表现：`Entities/AIECS/Presentation/`。
 - 程序集单向依赖：Effect 不反向引用 GamePlay 的管理器，生产程序集不引用 FlatWorld.Gameplay.Debug；Debug 使用 GameNetwork 时显式引用 Networking.Core。
 - 完整 GameRes 目录的 `combat-prewarm` 阶段按正式武器引用去重，每个命中 GameEffect 分帧准备三个空闲实例；`PrepareForPool` 只准备缓存，不播放、不消费随机数。完整资源会话释放、退出世界释放热更新旧代之前先清表现池；原位更新候选跳过预热。

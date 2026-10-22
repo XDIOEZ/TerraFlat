@@ -8,7 +8,8 @@
         "FlatWorld.AIECS.Gameplay",
         "Data",
         "FlatWorld.WorldModel",
-        "FlatWorld.Utilities"
+        "FlatWorld.Utilities",
+        "Unity.Addressables.Editor"
     ],
     "includePlatforms": [
         "Editor"

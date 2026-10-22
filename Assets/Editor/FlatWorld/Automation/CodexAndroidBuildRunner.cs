@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json;
 using UnityEditor;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
@@ -10,9 +12,11 @@ using UnityEngine;
 [InitializeOnLoad]
 internal static class CodexAndroidBuildRunner
 {
+    #region 构建请求与执行
+
     private const string RequestPath = "Library/CodexRunAndroidBuild.request";
     private const string ResultPath = "Library/CodexAndroidBuild.result.json";
-    private const int RunnerRevision = 6;
+    private const int RunnerRevision = 7;
     private static bool _scheduled;
 
     /// <summary>脚本加载后检查是否存在待处理的本地构建请求。</summary>
@@ -45,11 +49,16 @@ internal static class CodexAndroidBuildRunner
         }
 
         File.Delete(RequestPath);
+        string runId = Guid.NewGuid().ToString("N");
+        DateTimeOffset startedAt = DateTimeOffset.Now;
+        var buildClock = System.Diagnostics.Stopwatch.StartNew();
         WriteResult(new
         {
+            runId,
+            runnerRevision = RunnerRevision,
             success = false,
             result = "Running",
-            startedAt = DateTime.Now.ToString("O")
+            startedAt = startedAt.ToString("O")
         });
         try
         {
@@ -73,7 +82,7 @@ internal static class CodexAndroidBuildRunner
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? projectRoot);
             EditorUserBuildSettings.buildAppBundle = false;
 
-            BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            BuildReport report = BuildWithoutReportPopup(new BuildPlayerOptions
             {
                 scenes = scenes,
                 locationPathName = outputPath,
@@ -82,7 +91,8 @@ internal static class CodexAndroidBuildRunner
             });
 
             BuildSummary summary = report.summary;
-            object[] messages = report.steps
+            BuildStep[] buildSteps = report.steps;
+            object[] messages = buildSteps
                 .SelectMany(step => step.messages)
                 .Where(message => message.type == LogType.Error || message.type == LogType.Warning)
                 .Select(message => (object)new
@@ -93,21 +103,40 @@ internal static class CodexAndroidBuildRunner
                 .ToArray();
             WriteResult(new
             {
+                runId,
+                runnerRevision = RunnerRevision,
+                startedAt = startedAt.ToString("O"),
+                completedAt = DateTimeOffset.Now.ToString("O"),
                 success = summary.result == BuildResult.Succeeded,
                 result = summary.result.ToString(),
                 outputPath,
                 totalErrors = summary.totalErrors,
                 totalWarnings = summary.totalWarnings,
                 totalSize = summary.totalSize,
+                apkSizeBytes = File.Exists(outputPath) ? new FileInfo(outputPath).Length : 0L,
                 durationSeconds = summary.totalTime.TotalSeconds,
-                messages
-            });
+                wallDurationSeconds = buildClock.Elapsed.TotalSeconds,
+                messages,
+                // 保留步骤层级，分析时只对同层耗时求和，避免父子步骤重复计时。
+                steps = buildSteps.Select((step, index) => new
+                {
+                    index,
+                    step.name,
+                    step.depth,
+                    durationSeconds = step.duration.TotalSeconds
+                }).ToArray()
+            }, Path.ChangeExtension(outputPath, ".build.json"));
         }
         catch (Exception exception)
         {
             Debug.LogException(exception);
             WriteResult(new
             {
+                runId,
+                runnerRevision = RunnerRevision,
+                startedAt = startedAt.ToString("O"),
+                completedAt = DateTimeOffset.Now.ToString("O"),
+                wallDurationSeconds = buildClock.Elapsed.TotalSeconds,
                 success = false,
                 result = "Exception",
                 exception = exception.ToString()
@@ -115,9 +144,40 @@ internal static class CodexAndroidBuildRunner
         }
     }
 
-    /// <summary>以 UTF-8 JSON 保存本地构建结果。</summary>
-    private static void WriteResult(object value)
+    #endregion
+
+    #region Addressables 报告窗口
+
+    private static BuildReport BuildWithoutReportPopup(BuildPlayerOptions options)
     {
-        File.WriteAllText(ResultPath, JsonConvert.SerializeObject(value, Formatting.Indented));
+        // 1.22.3 自动报告窗口会对未关联文件的内存报告调用 ReadFull，自动打包仅暂时跳过弹窗。
+        PropertyInfo autoOpenReport = typeof(ProjectConfigData).GetProperty(
+            "AutoOpenAddressablesReport", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("无法读取 Addressables 自动报告窗口设置。");
+        bool previousAutoOpen = (bool)autoOpenReport.GetValue(null);
+        try
+        {
+            autoOpenReport.SetValue(null, false);
+            return BuildPipeline.BuildPlayer(options);
+        }
+        finally
+        {
+            autoOpenReport.SetValue(null, previousAutoOpen);
+        }
     }
+
+    #endregion
+
+    #region 构建结果保存
+
+    /// <summary>以 UTF-8 JSON 保存本地构建结果。</summary>
+    private static void WriteResult(object value, string archivePath = null)
+    {
+        string json = JsonConvert.SerializeObject(value, Formatting.Indented);
+        File.WriteAllText(ResultPath, json);
+        if (archivePath != null)
+            File.WriteAllText(archivePath, json);
+    }
+
+    #endregion
 }
