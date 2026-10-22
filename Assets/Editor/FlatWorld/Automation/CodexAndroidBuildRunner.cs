@@ -12,12 +12,14 @@ internal static class CodexAndroidBuildRunner
 {
     private const string RequestPath = "Library/CodexRunAndroidBuild.request";
     private const string ResultPath = "Library/CodexAndroidBuild.result.json";
-    private const int RunnerRevision = 5;
+    private const int RunnerRevision = 6;
     private static bool _scheduled;
 
     /// <summary>脚本加载后检查是否存在待处理的本地构建请求。</summary>
     static CodexAndroidBuildRunner()
     {
+        // 编辑器运行期间也要响应后来提交的构建请求。
+        EditorApplication.update += ScheduleIfRequested;
         ScheduleIfRequested();
     }
 
