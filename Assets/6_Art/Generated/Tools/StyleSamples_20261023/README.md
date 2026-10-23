@@ -4,7 +4,19 @@
 
 本轮只交付风格样例与清单；样例尚未接入游戏。PNG 为生成原图，保留画布和透明通道。现有物品的贴图引用、玩法参数和 Addressables 配置均未修改。
 
-## 首批三例
+## 第二轮：粗像素与原始手作感
+
+用户确认首轮铁铲的像素颗粒合适，斧、镐需要进一步降低像素密度；工具整体应体现原始时代的手作感。新增以下 v2 样例，保留首轮文件用于对照与粗像素锚点引用。
+
+| 样例 | 第二轮文件 | 修订方向 |
+| --- | --- | --- |
+| 燧石斧 | [Axe_Flint_StyleSample_v2.png](Axe_Flint_StyleSample_v2.png) | 减少石面与绑扎细节，使用粗像素簇和简朴木柄 |
+| 青铜镐 | [Pickaxe_Bronze_StyleSample_v2.png](Pickaxe_Bronze_StyleSample_v2.png) | 压缩金属高光与木纹细节，保留青铜与采矿工具身份 |
+| 铁铲 | [Shovel_Iron_StyleSample_v2.png](Shovel_Iron_StyleSample_v2.png) | 保留已认可的粗像素，简化锻铁片状结构与连接 |
+
+绘图规则已同步至 `.agents/skills/flatworld-art/SKILL.md` 和 `references/art-direction.md`；像素锚点只限定颗粒粗细，不套用铁铲结构。第二轮使用内置 `image_gen`，完整提示词见 [Prompts_v2.md](Prompts_v2.md)。本轮仍为独立风格样例，未接入物品引用或手持表现。
+
+## 首轮三例
 
 | 样例 | 文件 | 选择理由 |
 | --- | --- | --- |
