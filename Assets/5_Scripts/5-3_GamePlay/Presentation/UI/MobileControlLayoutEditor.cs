@@ -33,6 +33,9 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
     private Button decreaseSizeButton;
     private Button increaseSizeButton;
     private TextMeshProUGUI sizeText;
+    private Slider opacitySlider;
+    private TextMeshProUGUI opacityText;
+    private CanvasGroup previewOpacityGroup;
 
     #endregion
 
@@ -117,6 +120,8 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         decreaseSizeButton = FindComponent<Button>(transform, "缩小按钮", missingNodes);
         increaseSizeButton = FindComponent<Button>(transform, "放大按钮", missingNodes);
         sizeText = FindComponent<TextMeshProUGUI>(transform, "尺寸文本", missingNodes);
+        opacitySlider = FindComponent<Slider>(transform, "触屏控件透明度", missingNodes);
+        opacityText = FindComponent<TextMeshProUGUI>(transform, "触屏控件透明度数值", missingNodes);
         if (missingNodes.Count > 0)
         {
             Debug.LogError(
@@ -135,6 +140,14 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         LocalizedTextBinder sizeBinder = sizeText.GetComponent<LocalizedTextBinder>();
         if (sizeBinder != null)
             sizeBinder.enabled = false;
+        LocalizedTextBinder opacityBinder = opacityText.GetComponent<LocalizedTextBinder>();
+        if (opacityBinder != null)
+            opacityBinder.enabled = false;
+        opacitySlider.minValue = UIUserSettings.MinimumTouchControlsOpacityPercent;
+        opacitySlider.maxValue = UIUserSettings.MaximumTouchControlsOpacityPercent;
+        opacitySlider.wholeNumbers = true;
+        opacitySlider.SetValueWithoutNotify(UIUserSettings.TouchControlsOpacityPercent);
+        opacitySlider.onValueChanged.AddListener(RefreshOpacityPreview);
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
 
         previewObject = Instantiate(controlsPrefab, previewRoot, false);
@@ -142,6 +155,7 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         FlatWorldUIAutoLocalizer.BindStaticTexts(previewObject.transform);
         PreparePreviewHierarchy();
         RefreshSizeControls();
+        RefreshOpacityPreview(opacitySlider.value);
 
         editorPanel.SetGameplayInputBlocking(true);
         editorPanel.PrepareForGamepadNavigation("保存按钮", true, true);
@@ -160,9 +174,16 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         SetNamedObjectActive(previewObject.transform, "快捷栏锚点", false);
         SetNamedObjectActive(previewObject.transform, "菜单抽屉", false);
         SetNamedObjectActive(previewObject.transform, "手机准线", false);
-        SetNamedObjectActive(previewObject.transform, "普通指向区", false);
+        SetNamedObjectActive(previewObject.transform, "普通指向区", true);
         SetNamedObjectActive(previewObject.transform, "手持物丢弃区", false);
         SetNamedObjectActive(previewObject.transform, "玩法控制层", true);
+        Transform gameplayLayer = FindTransform(previewObject.transform, "玩法控制层");
+        if (gameplayLayer != null)
+        {
+            previewOpacityGroup = gameplayLayer.GetComponent<CanvasGroup>();
+            if (previewOpacityGroup == null)
+                previewOpacityGroup = gameplayLayer.gameObject.AddComponent<CanvasGroup>();
+        }
 
         Button[] previewButtons = previewObject.GetComponentsInChildren<Button>(true);
         for (int index = 0; index < previewButtons.Length; index++)
@@ -215,8 +236,27 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
             selectedNode.SizeMultiplier < UIUserSettings.MaximumMobileControlSize;
         sizeText.text = canResize
             ? FlatWorldLocalizationService.GetUiFormat("{0} 大小：{1:0}%",
-                FlatWorldLocalizationService.GetUiText(selectedNode.name), selectedNode.SizeMultiplier * 100f)
-            : FlatWorldLocalizationService.GetUiText("点选按钮调整大小");
+                FlatWorldLocalizationService.GetUiText(GetControlDisplayName(selectedNode)), selectedNode.SizeMultiplier * 100f)
+            : FlatWorldLocalizationService.GetUiText("点选控件调整大小");
+    }
+
+    private static string GetControlDisplayName(MobileControlLayoutNode node)
+    {
+        switch (node.ControlId)
+        {
+            case UIUserSettings.MobileMoveControlId: return "移动摇杆";
+            case UIUserSettings.MobileAimControlId: return "朝向摇杆";
+            case UIUserSettings.MobileAttackControlId: return "攻击摇杆";
+            default: return node.name;
+        }
+    }
+
+    /// <summary>透明度只更新当前预览，玩家点击保存后才写入正式设置。</summary>
+    private void RefreshOpacityPreview(float percent)
+    {
+        if (previewOpacityGroup != null)
+            previewOpacityGroup.alpha = percent / 100f;
+        opacityText.text = $"{Mathf.RoundToInt(percent)}%";
     }
 
     #endregion
@@ -236,13 +276,15 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
                 if (node == null || string.IsNullOrEmpty(node.ControlId))
                     continue;
 
-                positions[node.ControlId] = node.CaptureNormalizedPosition(previewRoot);
+                if (node.SupportsPosition)
+                    positions[node.ControlId] = node.CaptureNormalizedPosition(previewRoot);
                 if (node.SupportsSize)
                     sizes[node.ControlId] = node.SizeMultiplier;
             }
         }
 
         UIUserSettings.SetMobileControlLayout(positions, sizes);
+        UIUserSettings.SetTouchControlsOpacityPercent(opacitySlider.value);
         CloseEditor();
     }
 
@@ -263,6 +305,8 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         }
 
         RefreshSizeControls();
+        opacitySlider.SetValueWithoutNotify(UIUserSettings.DefaultTouchControlsOpacityPercent);
+        RefreshOpacityPreview(opacitySlider.value);
         SetStatus("已恢复默认预览；点击保存后生效。", false);
     }
 
@@ -355,6 +399,7 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         decreaseSizeButton?.onClick.RemoveListener(DecreaseSize);
         increaseSizeButton?.onClick.RemoveListener(IncreaseSize);
+        opacitySlider?.onValueChanged.RemoveListener(RefreshOpacityPreview);
         if (layoutNodes != null)
         {
             foreach (MobileControlLayoutNode node in layoutNodes)

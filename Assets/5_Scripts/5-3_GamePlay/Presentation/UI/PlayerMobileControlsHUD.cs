@@ -824,8 +824,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     }
 
     /// <summary>
-    /// 把保存的安全区归一化位置应用到正式手机 HUD。浮动移动摇杆继续按触点出现，
-    /// 只有切换到固定移动摇杆时才消费玩家保存的移动摇杆位置。
+    /// 应用全部控件的独立尺寸，由节点决定固定位置或仅缩放浮动摇杆视觉。
     /// </summary>
     private void ApplyMobileControlLayout()
     {
@@ -838,11 +837,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         for (int index = 0; index < layoutNodes.Length; index++)
         {
             MobileControlLayoutNode node = layoutNodes[index];
-            if (node == null ||
-                (node.FixedMoveJoystickOnly && UIUserSettings.FloatingMoveJoystick))
-            {
+            if (node == null)
                 continue;
-            }
 
             node.ApplySavedPosition(root);
         }
@@ -1341,6 +1337,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         {
             ResetAllTouchState();
             AndroidSystemGestureInsets.RequestRefresh();
+            ApplyMoveJoystickMode();
+            ApplyAimJoystickRegion();
             ApplyMobileControlLayout();
         }
 

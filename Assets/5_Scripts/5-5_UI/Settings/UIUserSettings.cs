@@ -28,6 +28,7 @@ public static class UIUserSettings
     public const float MaximumMobileControlSize = 2f;
 
     public const string MobileMoveControlId = "move";
+    public const string MobileAimControlId = "aim";
     public const string MobileAttackControlId = "attack";
     public const string MobileInteractControlId = "interact";
     public const string MobileUseControlId = "use";
@@ -36,6 +37,7 @@ public static class UIUserSettings
     private static readonly string[] BuiltInMobileControlIds =
     {
         MobileMoveControlId,
+        MobileAimControlId,
         MobileAttackControlId,
         MobileInteractControlId,
         MobileUseControlId,

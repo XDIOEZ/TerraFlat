@@ -5794,6 +5794,18 @@ MonoBehaviour:
       making it easier to learn the world and its systems.
     m_Metadata:
       m_Items: []
+  - m_Id: 10228915849170944
+    m_Localized: Select a control to resize
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10228915849170945
+    m_Localized: Facing Joystick
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10228915849170946
+    m_Localized: Move Joystick
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

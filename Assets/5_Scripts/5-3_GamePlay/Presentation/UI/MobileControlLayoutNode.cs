@@ -18,6 +18,8 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     [SerializeField] private string controlId;
     [SerializeField] private RectTransform layoutTarget;
     [SerializeField] private bool fixedMoveJoystickOnly;
+    [SerializeField] private RectTransform joystickVisualTarget;
+    [SerializeField] private MobileVirtualJoystick.JoystickRole joystickRole;
     [SerializeField] private bool overrideGeometryForEditor;
     [SerializeField] private Vector2 editorAnchorMin;
     [SerializeField] private Vector2 editorAnchorMax;
@@ -38,12 +40,15 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     private float originalCanvasAlpha;
     private bool originalCanvasBlocksRaycasts;
     private Vector3 baseLocalScale;
+    private Vector3 baseJoystickVisualScale;
     private Vector2 baseAnchoredPosition;
     private bool scaleCaptured;
+    private bool editingPreview;
     private int dragPointerId = int.MinValue;
 
     public event System.Action<MobileControlLayoutNode> Selected;
-    public bool SupportsSize => !fixedMoveJoystickOnly;
+    public bool SupportsSize => true;
+    public bool SupportsPosition => !IsFloatingJoystick;
     public float SizeMultiplier { get; private set; } = 1f;
 
     public string ControlId => controlId;
@@ -51,6 +56,10 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     public RectTransform LayoutTarget => layoutTarget != null
         ? layoutTarget
         : transform as RectTransform;
+    private bool IsFloatingJoystick => joystickVisualTarget != null &&
+        (joystickRole == MobileVirtualJoystick.JoystickRole.Aim ||
+         (joystickRole == MobileVirtualJoystick.JoystickRole.Move && UIUserSettings.FloatingMoveJoystick));
+    private RectTransform SizeTarget => IsFloatingJoystick ? joystickVisualTarget : LayoutTarget;
 
     #endregion
 
@@ -62,6 +71,18 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         controlId = id;
         layoutTarget = target;
         fixedMoveJoystickOnly = fixedMoveOnly;
+    }
+
+    /// <summary>配置摇杆的触控区与视觉底座，浮动模式只缩放底座而不改变捕获范围。</summary>
+    public void ConfigureJoystick(
+        string id,
+        RectTransform target,
+        RectTransform visualTarget,
+        MobileVirtualJoystick.JoystickRole role)
+    {
+        Configure(id, target, role == MobileVirtualJoystick.JoystickRole.Move);
+        joystickVisualTarget = visualTarget;
+        joystickRole = role;
     }
 
     /// <summary>为浮动移动摇杆声明编辑器中的固定预览几何，不改变正常游戏的浮动捕获区。</summary>
@@ -83,6 +104,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     /// <summary>把特殊控件切到可拖动的编辑预览几何。</summary>
     public void PrepareForEditingPreview()
     {
+        editingPreview = true;
         RectTransform target = LayoutTarget;
         if (!overrideGeometryForEditor || target == null)
             return;
@@ -97,31 +119,37 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     /// <summary>读取并应用玩家保存的位置覆盖；没有覆盖时保持 Prefab 当前布局。</summary>
     public bool ApplySavedPosition(RectTransform root)
     {
-        if (SupportsSize)
-        {
-            CaptureBaseGeometry();
-            LayoutTarget.localScale = baseLocalScale;
+        if (root == null || LayoutTarget == null)
+            return false;
+
+        CaptureBaseGeometry();
+        LayoutTarget.localScale = baseLocalScale;
+        if (!fixedMoveJoystickOnly && !IsFloatingJoystick)
             LayoutTarget.anchoredPosition = baseAnchoredPosition;
-            ApplySize(root, UIUserSettings.GetMobileControlSize(controlId));
-        }
-        if (!UIUserSettings.TryGetMobileControlLayoutPosition(controlId, out Vector2 position))
+        ApplySize(root, UIUserSettings.GetMobileControlSize(controlId));
+        if (!SupportsPosition ||
+            !UIUserSettings.TryGetMobileControlLayoutPosition(controlId, out Vector2 position))
             return false;
 
         ApplyNormalizedPosition(root, position);
         return true;
     }
 
-    /// <summary>每次从原始比例计算尺寸；视觉、射线矩形共同缩放，超小安全区只缩不溢出。</summary>
+    /// <summary>按基准缩放固定控件或浮动底座，浮动摇杆始终保留原触控区与出现方式。</summary>
     public void ApplySize(RectTransform root, float multiplier)
     {
-        RectTransform target = LayoutTarget;
+        RectTransform target = SizeTarget;
         if (!SupportsSize || target == null || root == null)
             return;
         Vector2 center = CaptureNormalizedPosition(root);
         CaptureBaseGeometry();
+        LayoutTarget.localScale = baseLocalScale;
+        if (joystickVisualTarget != null)
+            joystickVisualTarget.localScale = baseJoystickVisualScale;
+        Vector3 originalScale = IsFloatingJoystick ? baseJoystickVisualScale : baseLocalScale;
         SizeMultiplier = UIUserSettings.SanitizeMobileControlSize(multiplier);
-        target.localScale = new Vector3(baseLocalScale.x * SizeMultiplier,
-            baseLocalScale.y * SizeMultiplier, baseLocalScale.z);
+        target.localScale = new Vector3(originalScale.x * SizeMultiplier,
+            originalScale.y * SizeMultiplier, originalScale.z);
         Vector3[] corners = new Vector3[4];
         target.GetWorldCorners(corners);
         Vector3 minimum = root.InverseTransformPoint(corners[0]);
@@ -135,9 +163,10 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         Vector3 extent = maximum - minimum;
         float fit = Mathf.Min(1f, root.rect.width / Mathf.Max(0.001f, extent.x),
             root.rect.height / Mathf.Max(0.001f, extent.y));
-        target.localScale = new Vector3(baseLocalScale.x * SizeMultiplier * fit,
-            baseLocalScale.y * SizeMultiplier * fit, baseLocalScale.z);
-        ApplyNormalizedPosition(root, center);
+        target.localScale = new Vector3(originalScale.x * SizeMultiplier * fit,
+            originalScale.y * SizeMultiplier * fit, originalScale.z);
+        if (SupportsPosition || editingPreview)
+            ApplyNormalizedPosition(root, center);
     }
 
     /// <summary>只捕获一次 Prefab 基准；删除偏好后恢复锚点位置，不保留上次用户覆盖。</summary>
@@ -146,6 +175,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         if (scaleCaptured)
             return;
         baseLocalScale = LayoutTarget.localScale;
+        baseJoystickVisualScale = joystickVisualTarget != null ? joystickVisualTarget.localScale : Vector3.one;
         baseAnchoredPosition = LayoutTarget.anchoredPosition;
         scaleCaptured = true;
     }
@@ -154,7 +184,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     public void ApplyNormalizedPosition(RectTransform root, Vector2 normalizedPosition)
     {
         RectTransform target = LayoutTarget;
-        if (root == null || target == null)
+        if (root == null || target == null || (!SupportsPosition && !editingPreview))
             return;
 
         Vector2 clamped = new Vector2(
@@ -167,7 +197,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
             0f));
         Vector3 currentWorldCenter = GetWorldCenter(target);
         target.position += desiredWorldCenter - currentWorldCenter;
-        ClampInsideRoot(root, target);
+        ClampInsideRoot(root, target, SizeTarget);
     }
 
     /// <summary>把目标当前中心换算成根节点内的归一化位置。</summary>
@@ -229,7 +259,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (!editing || editingRoot == null || LayoutTarget == null ||
+        if (!editing || !SupportsPosition || editingRoot == null || LayoutTarget == null ||
             eventData == null || dragPointerId != int.MinValue)
             return;
 
@@ -245,7 +275,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (!editing || editingRoot == null || LayoutTarget == null ||
+        if (!editing || !SupportsPosition || editingRoot == null || LayoutTarget == null ||
             eventData == null || eventData.pointerId != dragPointerId)
             return;
 
@@ -320,10 +350,10 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     }
 
     /// <summary>在根坐标中计算越界修正，确保按钮与摇杆整体留在安全区。</summary>
-    private static void ClampInsideRoot(RectTransform root, RectTransform target)
+    private static void ClampInsideRoot(RectTransform root, RectTransform target, RectTransform boundsTarget)
     {
         Vector3[] corners = new Vector3[4];
-        target.GetWorldCorners(corners);
+        boundsTarget.GetWorldCorners(corners);
 
         float minX = float.PositiveInfinity;
         float maxX = float.NegativeInfinity;

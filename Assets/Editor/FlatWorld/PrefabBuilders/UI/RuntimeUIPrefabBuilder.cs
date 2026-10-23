@@ -3476,6 +3476,20 @@ public static partial class RuntimeUIPrefabBuilder
         aimZone.GetComponent<MobileHeldItemDropSurface>()
             .Configure(onlyRaycastWhileHoldingItem: false);
         CreateJoystickVisual(aimZone.transform, Vector2.zero, 188f, floating: true);
+        RectTransform aimHandle = aimZone.transform.Find("底座") as RectTransform;
+        if (aimHandle != null)
+        {
+            MobileControlLayoutNode aimLayout =
+                aimHandle.gameObject.AddComponent<MobileControlLayoutNode>();
+            aimLayout.ConfigureJoystick(UIUserSettings.MobileAimControlId, aimRect, aimHandle,
+                MobileVirtualJoystick.JoystickRole.Aim);
+            aimLayout.ConfigureEditorGeometry(
+                Vector2.one,
+                Vector2.one,
+                Vector2.one,
+                new Vector2(-MobileActionRightMargin, -180f),
+                new Vector2(MobileAttackZoneSize, MobileAttackZoneSize));
+        }
 
         GameObject moveZone = CreateUIObject(
             "移动摇杆",
@@ -3498,7 +3512,8 @@ public static partial class RuntimeUIPrefabBuilder
         {
             MobileControlLayoutNode moveLayout =
                 moveHandle.gameObject.AddComponent<MobileControlLayoutNode>();
-            moveLayout.Configure(UIUserSettings.MobileMoveControlId, moveRect, fixedMoveOnly: true);
+            moveLayout.ConfigureJoystick(UIUserSettings.MobileMoveControlId, moveRect,
+                moveHandle as RectTransform, MobileVirtualJoystick.JoystickRole.Move);
             moveLayout.ConfigureEditorGeometry(
                 Vector2.zero,
                 Vector2.zero,
@@ -3535,9 +3550,11 @@ public static partial class RuntimeUIPrefabBuilder
             .Configure(onlyRaycastWhileHoldingItem: false);
         CreateJoystickVisual(attackZone.transform, Vector2.zero, 188f, floating: false);
         attackZone.AddComponent<MobileControlLayoutNode>()
-            .Configure(
+            .ConfigureJoystick(
                 UIUserSettings.MobileAttackControlId,
-                attackZone.GetComponent<RectTransform>());
+                attackZone.GetComponent<RectTransform>(),
+                attackZone.transform.Find("底座") as RectTransform,
+                MobileVirtualJoystick.JoystickRole.Attack);
 
         Button interactButton = CreateMobileButton(
             "交互",
@@ -3647,7 +3664,7 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI hint = CreateText(
             "尺寸文本",
             header.transform,
-            "点选按钮调整大小",
+            "点选控件调整大小",
             18f,
             Muted);
         hint.alignment = TextAlignmentOptions.MidlineRight;
@@ -3667,6 +3684,35 @@ public static partial class RuntimeUIPrefabBuilder
         decreaseRect.anchoredPosition = new Vector2(-146f, 0f);
         increaseRect.anchoredPosition = new Vector2(-62f, 0f);
         decreaseRect.sizeDelta = increaseRect.sizeDelta = new Vector2(76f, 60f);
+
+        GameObject opacityRow = CreateUIObject("透明度设置栏", root.transform, typeof(Image));
+        RectTransform opacityRowRect = opacityRow.GetComponent<RectTransform>();
+        opacityRowRect.anchorMin = new Vector2(0.25f, 1f);
+        opacityRowRect.anchorMax = new Vector2(0.75f, 1f);
+        opacityRowRect.pivot = new Vector2(0.5f, 1f);
+        opacityRowRect.anchoredPosition = new Vector2(0f, -94f);
+        opacityRowRect.sizeDelta = new Vector2(0f, 62f);
+        opacityRow.GetComponent<Image>().color = Canvas;
+        HorizontalLayoutGroup opacityLayout = opacityRow.AddComponent<HorizontalLayoutGroup>();
+        opacityLayout.padding = new RectOffset(16, 16, 10, 10);
+        opacityLayout.spacing = 12f;
+        opacityLayout.childAlignment = TextAnchor.MiddleLeft;
+        opacityLayout.childControlWidth = true;
+        opacityLayout.childControlHeight = true;
+        opacityLayout.childForceExpandWidth = false;
+        opacityLayout.childForceExpandHeight = false;
+        CreateRowLabel(opacityRow.transform, "触屏控件透明度", 128f);
+        Slider opacitySlider = CreateSlider("触屏控件透明度", opacityRow.transform);
+        opacitySlider.minValue = UIUserSettings.MinimumTouchControlsOpacityPercent;
+        opacitySlider.maxValue = UIUserSettings.MaximumTouchControlsOpacityPercent;
+        opacitySlider.wholeNumbers = true;
+        opacitySlider.value = UIUserSettings.DefaultTouchControlsOpacityPercent;
+        TextMeshProUGUI opacityValue = CreateText(
+            "触屏控件透明度数值", opacityRow.transform,
+            $"{Mathf.RoundToInt(UIUserSettings.DefaultTouchControlsOpacityPercent)}%", 16f, Amber);
+        opacityValue.alignment = TextAlignmentOptions.MidlineRight;
+        opacityValue.raycastTarget = false;
+        opacityValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
 
         GameObject footer = CreateUIObject("布局编辑底部栏", root.transform, typeof(Image));
         RectTransform footerRect = footer.GetComponent<RectTransform>();

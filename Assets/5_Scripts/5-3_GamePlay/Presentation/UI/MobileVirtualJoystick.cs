@@ -35,7 +35,6 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     private CanvasGroup baseCanvasGroup;
     private int pointerId = int.MinValue;
     private Camera pointerEventCamera;
-    private Vector2 originLocal;
     private Vector2 fixedBasePosition;
 
     public bool HasPointerOwnership => pointerId != int.MinValue;
@@ -118,7 +117,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
             return;
 
         Camera inputCamera = eventData.pressEventCamera != null ? eventData.pressEventCamera : eventCamera;
-        if (!TryGetLocalPosition(eventData.position, inputCamera, out Vector2 pointerLocal))
+        RectTransform coordinateSpace = floatingOrigin ? interactionRect : baseRect;
+        if (!TryGetLocalPosition(coordinateSpace, eventData.position, inputCamera, out Vector2 pointerLocal))
             return;
         if (baseRect == null)
             return;
@@ -128,14 +128,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
 
         if (floatingOrigin)
         {
-            // 浮动摇杆只移动视觉底座；输入原点仍锁定在命中区坐标系，避免移动底座后重复换算。
-            originLocal = pointerLocal;
-            baseRect.anchoredPosition = originLocal;
-        }
-        else
-        {
-            // 固定摇杆的触点直接换算到底座自身坐标，原点永远是摇杆底座中心，消除父节点锚点带来的固定偏移。
-            originLocal = Vector2.zero;
+            baseRect.position = interactionRect.TransformPoint(pointerLocal);
         }
 
         SetOwnershipVisualVisible(true);
@@ -171,13 +164,12 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         eventData.Use();
     }
 
-    /// <summary>在当前摇杆坐标中计算方向，固定摇杆不混用父节点偏移。</summary>
+    /// <summary>统一在底座局部坐标计算方向，让缩放后的有效半径与摇杆视觉一致。</summary>
     private void UpdateDirection(Vector2 screenPosition)
     {
-        if (!TryGetLocalPosition(screenPosition, pointerEventCamera, out Vector2 localPosition))
+        if (!TryGetLocalPosition(baseRect, screenPosition, pointerEventCamera, out Vector2 delta))
             return;
 
-        Vector2 delta = localPosition - originLocal;
         Vector2 normalized = Vector2.ClampMagnitude(delta / radius, 1f);
         Vector2 output = normalized.sqrMagnitude >= deadZone * deadZone ? normalized : Vector2.zero;
         if (knobRect != null)
@@ -198,10 +190,12 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     }
 
     /// <summary>把屏幕触点转换到当前摇杆的稳定输入坐标系。</summary>
-    private bool TryGetLocalPosition(Vector2 screenPosition, Camera inputCamera, out Vector2 localPosition)
+    private static bool TryGetLocalPosition(
+        RectTransform coordinateSpace,
+        Vector2 screenPosition,
+        Camera inputCamera,
+        out Vector2 localPosition)
     {
-        // 浮动摇杆在命中区内移动底座；固定摇杆直接使用底座坐标，确保摇杆头与手指处于同一坐标系。
-        RectTransform coordinateSpace = floatingOrigin ? interactionRect : baseRect;
         if (coordinateSpace == null)
         {
             localPosition = default;
@@ -225,7 +219,6 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         bool owned = HasPointerOwnership;
         pointerId = int.MinValue;
         pointerEventCamera = null;
-        originLocal = floatingOrigin ? fixedBasePosition : Vector2.zero;
         if (returnKnobToCenter && knobRect != null)
             knobRect.anchoredPosition = Vector2.zero;
         if (floatingOrigin && baseRect != null)

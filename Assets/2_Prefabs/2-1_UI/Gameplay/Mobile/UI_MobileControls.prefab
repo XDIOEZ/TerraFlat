@@ -828,11 +828,36 @@ MonoBehaviour:
   controlId: move
   layoutTarget: {fileID: 7585468743421126053}
   fixedMoveJoystickOnly: 1
+  joystickVisualTarget: {fileID: 5876394618650125514}
+  joystickRole: 0
   overrideGeometryForEditor: 1
   editorAnchorMin: {x: 0, y: 0}
   editorAnchorMax: {x: 0, y: 0}
   editorPivot: {x: 0, y: 0}
   editorAnchoredPosition: {x: 76, y: 54}
+  editorSizeDelta: {x: 230, y: 230}
+--- !u!114 &7215400020000003001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8648931508365244342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6652e01dc072f6a41992d51201a9e75e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  controlId: aim
+  layoutTarget: {fileID: 1538609499115277758}
+  fixedMoveJoystickOnly: 0
+  joystickVisualTarget: {fileID: 318137057177650854}
+  joystickRole: 1
+  overrideGeometryForEditor: 1
+  editorAnchorMin: {x: 1, y: 1}
+  editorAnchorMax: {x: 1, y: 1}
+  editorPivot: {x: 1, y: 1}
+  editorAnchoredPosition: {x: -76, y: -180}
   editorSizeDelta: {x: 230, y: 230}
 --- !u!1 &4498317511076010901
 GameObject:
@@ -1390,6 +1415,8 @@ MonoBehaviour:
   controlId: attack
   layoutTarget: {fileID: 424583690147111033}
   fixedMoveJoystickOnly: 0
+  joystickVisualTarget: {fileID: 845185855408095615}
+  joystickRole: 2
   overrideGeometryForEditor: 0
   editorAnchorMin: {x: 0, y: 0}
   editorAnchorMax: {x: 0, y: 0}
@@ -1888,6 +1915,7 @@ GameObject:
   - component: {fileID: 375741073501012981}
   - component: {fileID: 2968451632713628800}
   - component: {fileID: 3346390945625462384}
+  - component: {fileID: 7215400020000003001}
   m_Layer: 5
   m_Name: "\u5E95\u5EA7"
   m_TagString: Untagged
