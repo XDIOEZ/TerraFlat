@@ -33,6 +33,6 @@
 
 | 测试 | [Lua与场景切换缓存](测试/Lua与场景切换缓存.svg) | Lua 专用 GameRes 跨编译输入缓存，以及地面区块、星体和飞船表现的有界复用与释放边界。 |
 
-创建说明：[flatworld-mechanics-svg](../.agents/skills/flatworld-mechanics-svg/SKILL.md)。
+创建说明：[FlatWorld 绘图与美术](../.agents/skills/flatworld-art/SKILL.md)，机制图细节见 [SVG 参考](../.agents/skills/flatworld-art/references/mechanics-svg.md)。
 
 风力规则来源：[WindEnvironmentRules.cs](../Assets/5_Scripts/5-3_GamePlay/World/Environment/WindEnvironmentRules.cs)。图示用于解释规则，玩法效果由用户验收。

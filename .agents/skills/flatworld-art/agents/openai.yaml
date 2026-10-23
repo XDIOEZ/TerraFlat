@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 绘图与美术"
+  short_description: "统一 FlatWorld 游戏素材、人物立绘与机制图示的画风和制作约定"
+  default_prompt: "使用 $flatworld-art，按低饱和、偏写实的复古像素风制作 FlatWorld 素材，像素数量稍低，并满足实际用途与接入规格。"

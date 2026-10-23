@@ -11,4 +11,4 @@ description: "FlatWorld 功能规划与系统设计文档的结构和表达约�
 - 重点是设计结论、规则、职责、数据/表现/交互/存档边界；一条规则表达一个重点。
 - 当前方案、首批实现和待定问题分别标明。未确定的参数保留待规划，首批任务可用复选清单。
 - 现有文档的补充归入对应章节，沿用编号；连接与流程可用简短图示。
-- 游戏机制 SVG 图片或动画使用 [flatworld-mechanics-svg](../flatworld-mechanics-svg/SKILL.md)，成品统一保存到项目根的 `游戏机制SVG文件夹/`。
+- 游戏机制 SVG 图片或动画统一使用 [flatworld-art](../flatworld-art/SKILL.md)，按其机制图参考保存到项目根的 `游戏机制SVG文件夹/`；不另建绘图 Skill。
