@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>植物作物 · 粗像素素材总览</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: #26382f;
+      background: #e6eae3;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { width: min(1240px, 100%); margin: auto; padding: 40px 24px 48px; }
+    header { margin-bottom: 24px; }
+    h1 { margin: 0 0 12px; font-size: clamp(24px, 4vw, 34px); font-weight: 650; }
+    p { margin: 7px 0; line-height: 1.7; }
+    .intro { color: #4d6054; }
+    .hint { color: #647367; font-size: 13px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 22px 0 0; }
+    .toolbar-label { font-size: 13px; }
+    .button-group { display: flex; gap: 5px; }
+    button {
+      border: 1px solid #bac5b9;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font: inherit;
+      font-size: 12px;
+      color: #4d6054;
+      background: #f3f5f0;
+      cursor: pointer;
+    }
+    button:hover { background: #e1e7dc; }
+    button[aria-pressed="true"] { color: #f5f7f1; background: #506a55; border-color: #506a55; }
+    button:focus-visible, a:focus-visible { outline: 3px solid #849b68; outline-offset: 3px; }
+    .plant-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+    .plant-card { overflow: hidden; border: 1px solid #c8d1c3; border-radius: 12px; background: #f2f4ee; }
+    .sprite-viewport {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 252px;
+      padding: 18px;
+      background-color: #dce1d8;
+      background-image:
+        linear-gradient(45deg, #c6cec1 25%, transparent 25%),
+        linear-gradient(-45deg, #c6cec1 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #c6cec1 75%),
+        linear-gradient(-45deg, transparent 75%, #c6cec1 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    }
+    body[data-backdrop="light"] .sprite-viewport { background: #e9ece7; }
+    body[data-backdrop="dark"] .sprite-viewport { background: #303a34; }
+    .sprite-viewport img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
+    .card-info { padding: 15px 16px 16px; }
+    h2 { margin: 0 0 11px; font-size: 17px; font-weight: 650; }
+    .stage-label { display: inline-block; min-height: 31px; color: #788675; font-size: 12px; line-height: 31px; }
+    .growth-switch { display: flex; gap: 5px; min-height: 31px; }
+    .growth-switch button { padding: 6px 11px; }
+    @media (max-width: 590px) {
+      main { padding: 28px 14px 32px; }
+      .plant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .sprite-viewport { height: 190px; padding: 10px; }
+      .card-info { padding: 12px 10px; }
+      .growth-switch { gap: 3px; }
+      .growth-switch button { padding: 6px; font-size: 11px; }
+    }
+  </style>
+</head>
+<body data-backdrop="checker">
+  <main>
+    <header>
+      <h1>植物作物 · 粗像素素材总览</h1>
+      <p class="intro">12 类植物、20 张源图；野草图集含 32 个变体。本页仅预览，未切换游戏内引用。</p>
+      <p class="hint">点击图片，在新页面查看原图。水稻、棉花、辣椒、狗尾草可切换三个生长阶段。</p>
+      <div class="toolbar">
+        <span class="toolbar-label" id="backdrop-label">预览背景</span>
+        <div class="button-group" id="backdrop-switch" role="group" aria-labelledby="backdrop-label">
+          <button type="button" data-backdrop="light" aria-pressed="false">浅灰</button>
+          <button type="button" data-backdrop="dark" aria-pressed="false">深灰</button>
+          <button type="button" data-backdrop="checker" aria-pressed="true">透明棋盘</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="plant-grid" aria-label="十二类植物素材">
+      <article class="plant-card">
+        <a class="sprite-viewport" href="RadishCrop/RadishCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看萝卜原图">
+          <img src="RadishCrop/RadishCrop_Mature.png" alt="萝卜 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>萝卜</h2><span class="stage-label">成熟植株</span></div>
+      </article>
+
+      <article class="plant-card">
+        <a class="sprite-viewport" href="MushroomCrop/MushroomCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看蘑菇原图">
+          <img src="MushroomCrop/MushroomCrop_Mature.png" alt="蘑菇 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>蘑菇</h2><span class="stage-label">成熟植株</span></div>
+      </article>
+
+      <article class="plant-card">
+        <a class="sprite-viewport" href="TwineCrop/TwineCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看藤蔓原图">
+          <img src="TwineCrop/TwineCrop_Mature.png" alt="藤蔓 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>藤蔓</h2><span class="stage-label">成熟植株</span></div>
+      </article>
+
+      <article class="plant-card">
+        <a class="sprite-viewport" href="BerryCrop/BerryCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看浆果丛原图">
+          <img src="BerryCrop/BerryCrop_Mature.png" alt="浆果丛 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>浆果丛</h2><span class="stage-label">成熟植株</span></div>
+      </article>
+
+      <article class="plant-card" data-asset="RiceCrop" data-label="水稻">
+        <a class="sprite-viewport" href="RiceCrop/RiceCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看水稻原图">
+          <img src="RiceCrop/RiceCrop_Mature.png" alt="水稻 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info">
+          <h2>水稻</h2>
+          <div class="growth-switch" role="group" aria-label="水稻生长阶段">
+            <button type="button" data-stage="Seedling" aria-pressed="false">幼苗</button>
+            <button type="button" data-stage="Growing" aria-pressed="false">生长</button>
+            <button type="button" data-stage="Mature" aria-pressed="true">成熟</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="plant-card" data-asset="CottonCrop" data-label="棉花">
+        <a class="sprite-viewport" href="CottonCrop/CottonCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看棉花原图">
+          <img src="CottonCrop/CottonCrop_Mature.png" alt="棉花 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info">
+          <h2>棉花</h2>
+          <div class="growth-switch" role="group" aria-label="棉花生长阶段">
+            <button type="button" data-stage="Seedling" aria-pressed="false">幼苗</button>
+            <button type="button" data-stage="Growing" aria-pressed="false">生长</button>
+            <button type="button" data-stage="Mature" aria-pressed="true">成熟</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="plant-card" data-asset="ChiliTree" data-label="辣椒">
+        <a class="sprite-viewport" href="ChiliTree/ChiliTree_Mature.png" target="_blank" rel="noopener" aria-label="查看辣椒原图">
+          <img src="ChiliTree/ChiliTree_Mature.png" alt="辣椒 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info">
+          <h2>辣椒</h2>
+          <div class="growth-switch" role="group" aria-label="辣椒生长阶段">
+            <button type="button" data-stage="Seedling" aria-pressed="false">幼苗</button>
+            <button type="button" data-stage="Growing" aria-pressed="false">生长</button>
+            <button type="button" data-stage="Mature" aria-pressed="true">成熟</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="plant-card">
+        <a class="sprite-viewport" href="Cactus/Cactus_Mature.png" target="_blank" rel="noopener" aria-label="查看仙人掌原图">
+          <img src="Cactus/Cactus_Mature.png" alt="仙人掌 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>仙人掌</h2><span class="stage-label">成熟植株</span></div>
+      </article>
+
+      <article class="plant-card">
+        <a class="sprite-viewport" href="HerbCrop/HerbCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看药草原图">
+          <img src="HerbCrop/HerbCrop_Mature.png" alt="药草 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>药草</h2><span class="stage-label">成熟植株</span></div>
+      </article>
+
+      <article class="plant-card" data-asset="FoxtailCrop" data-label="狗尾草">
+        <a class="sprite-viewport" href="FoxtailCrop/FoxtailCrop_Mature.png" target="_blank" rel="noopener" aria-label="查看狗尾草原图">
+          <img src="FoxtailCrop/FoxtailCrop_Mature.png" alt="狗尾草 · 成熟" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info">
+          <h2>狗尾草</h2>
+          <div class="growth-switch" role="group" aria-label="狗尾草生长阶段">
+            <button type="button" data-stage="Seedling" aria-pressed="false">幼苗</button>
+            <button type="button" data-stage="Growing" aria-pressed="false">生长</button>
+            <button type="button" data-stage="Mature" aria-pressed="true">成熟</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="plant-card">
+        <a class="sprite-viewport" href="Flower/Flower_Mature.png" target="_blank" rel="noopener" aria-label="查看花朵原图">
+          <img src="Flower/Flower_Mature.png" alt="花朵" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>花朵</h2><span class="stage-label">地表植被</span></div>
+      </article>
+
+      <article class="plant-card">
+        <a class="sprite-viewport" href="GroundGrass/GroundGrass_Atlas.png" target="_blank" rel="noopener" aria-label="查看野草图集原图">
+          <img src="GroundGrass/GroundGrass_Atlas.png" alt="野草图集 · 32 个变体" loading="lazy" decoding="async">
+        </a>
+        <div class="card-info"><h2>野草</h2><span class="stage-label">32 个变体图集</span></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    // 背景仅用于观察透明素材，不修改图片。
+    document.querySelector('#backdrop-switch').addEventListener('click', function (event) {
+      const button = event.target.closest('button[data-backdrop]');
+      if (!button) return;
+      document.body.dataset.backdrop = button.dataset.backdrop;
+      this.querySelectorAll('button').forEach(function (item) {
+        item.setAttribute('aria-pressed', String(item === button));
+      });
+    });
+
+    // 生长阶段与原图链接同步切换。
+    document.querySelectorAll('.growth-switch').forEach(function (switcher) {
+      switcher.addEventListener('click', function (event) {
+        const button = event.target.closest('button[data-stage]');
+        if (!button) return;
+        const card = switcher.closest('.plant-card');
+        const asset = card.dataset.asset;
+        const source = asset + '/' + asset + '_' + button.dataset.stage + '.png';
+        const image = card.querySelector('img');
+        image.src = source;
+        image.alt = card.dataset.label + ' · ' + button.textContent.trim();
+        card.querySelector('.sprite-viewport').href = source;
+        switcher.querySelectorAll('button').forEach(function (item) {
+          item.setAttribute('aria-pressed', String(item === button));
+        });
+      });
+    });
+  </script>
+</body>
+</html>
