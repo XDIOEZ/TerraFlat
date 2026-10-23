@@ -1,5 +1,7 @@
 # 植物作物重绘样例（2026-10-23）
 
+最新一轮已按“像素密度再降低一些”的反馈绘制三个低像素版本：[图片和编辑提示词](LowPixelSamples.md)。文件名为 `*_Mature_LowPixelSample.png`，下方原版样例保留用于比较。
+
 本轮为画风评审样例，采用当前 `.agents/skills/flatworld-art/SKILL.md` 的低饱和、偏写实复古像素风。使用内置 image_gen 生成，保留原始 PNG 画布和透明通道；当前游戏引用未切换到样例。
 
 ## 当前清单
