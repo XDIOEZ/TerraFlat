@@ -1,0 +1,1195 @@
+{
+  "schemaVersion": 1,
+  "project": "FlatWorld",
+  "updatedAt": "2026-10-23",
+  "purpose": "第三方素材、软件与算法引用的鸣谢索引。status 为待确认的项目不要直接当作已核实的游戏内署名。",
+  "notes": [
+    "本文件是摘要索引，不替代各素材或软件随附的完整许可与 ThirdPartyNotices。",
+    "“asset_present_usage_unconfirmed”表示资源目录中存在该内容，但尚未核对它是否进入最终游戏构建。",
+    "项目现有来源总账说明历史美术与第三方插件尚未完成全面审计；缺失信息集中列在 reviewNeeded。"
+  ],
+  "credits": [
+    {
+      "id": "audio-kenney",
+      "category": "audio",
+      "authors": [
+        "Kenney"
+      ],
+      "works": [
+        {
+          "title": "Impact Sounds 1.0",
+          "sourceUrl": "https://kenney.nl/assets/impact-sounds",
+          "usedFor": "草地、石地、木地与雪地脚步及翻滚音效"
+        },
+        {
+          "title": "Sci-fi Sounds",
+          "sourceUrl": "https://kenney.nl/assets/sci-fi-sounds",
+          "usedFor": "飞船舱门、启动与着陆音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/Footsteps-CREDITS.md",
+        "Assets/StreamingAssets/ThirdPartyNotices/Space-SFX-CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-fantozzi-qubodup",
+      "category": "audio",
+      "authors": [
+        "Fantozzi",
+        "qubodup"
+      ],
+      "works": [
+        {
+          "title": "Fantozzi's Footsteps: grass/sand/stone",
+          "sourceUrl": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
+          "usedFor": "沙地脚步音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/Footsteps-CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-tinyworlds",
+      "category": "audio",
+      "authors": [
+        "TinyWorlds"
+      ],
+      "works": [
+        {
+          "title": "Different steps on wood, stone, leaves, gravel and mud",
+          "sourceUrl": "https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud",
+          "usedFor": "泥地、碎石与落叶脚步音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/Footsteps-CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-qubodup-snow",
+      "category": "audio",
+      "authors": [
+        "Iwan “qubodup” Gabovitch"
+      ],
+      "works": [
+        {
+          "title": "4 dry snow steps",
+          "sourceUrl": "https://opengameart.org/content/4-dry-snow-steps",
+          "usedFor": "雪地脚步音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/Footsteps-CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-sara-lana",
+      "category": "audio",
+      "authors": [
+        "Sara Lana",
+        "felix.blume"
+      ],
+      "works": [
+        {
+          "title": "Water Splash",
+          "sourceUrl": "https://freesound.org/people/felix.blume/sounds/434978/",
+          "usedFor": "游泳入水/出水、浅水脚步与小鱼水中动作"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md",
+        "SoundDesign/Footsteps_CC0/CREDITS.md",
+        "开发文档文件夹/09_美术素材/第三方素材引用与鸣谢记录.md"
+      ]
+    },
+    {
+      "id": "audio-defaultv",
+      "category": "audio",
+      "authors": [
+        "Defaultv"
+      ],
+      "works": [
+        {
+          "title": "Campfire.wav",
+          "sourceUrl": "https://freesound.org/people/Defaultv/sounds/536935/",
+          "usedFor": "篝火循环与飞船推进循环音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/Space-SFX-CREDITS.md",
+        "SoundDesign/Fire_LMMS/"
+      ]
+    },
+    {
+      "id": "audio-xkeril",
+      "category": "audio",
+      "authors": [
+        "xkeril"
+      ],
+      "works": [
+        {
+          "title": "Axe chopping wood",
+          "sourceUrl": "https://freesound.org/people/xkeril/sounds/753925/",
+          "usedFor": "树木受击与砍伐音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Tree_Chopping/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-fission9",
+      "category": "audio",
+      "authors": [
+        "Fission9"
+      ],
+      "works": [
+        {
+          "title": "Hiking Boot Footsteps on Grass",
+          "sourceUrl": "https://freesound.org/people/Fission9/sounds/521587/",
+          "usedFor": "草地脚步与钓鱼音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "开发文档文件夹/09_美术素材/第三方素材引用与鸣谢记录.md"
+      ]
+    },
+    {
+      "id": "audio-tbsounddesigns",
+      "category": "audio",
+      "authors": [
+        "tbsounddesigns"
+      ],
+      "works": [
+        {
+          "title": "POOL SWIMMING L-R",
+          "sourceUrl": "https://freesound.org/people/tbsounddesigns/sounds/530154/",
+          "usedFor": "游泳划水音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "开发文档文件夹/09_美术素材/第三方素材引用与鸣谢记录.md"
+      ]
+    },
+    {
+      "id": "audio-yurkobb",
+      "category": "audio",
+      "authors": [
+        "yurkobb"
+      ],
+      "works": [
+        {
+          "title": "jump-into-water.flac",
+          "sourceUrl": "https://freesound.org/people/yurkobb/sounds/280219/",
+          "usedFor": "游泳入水音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "开发文档文件夹/09_美术素材/第三方素材引用与鸣谢记录.md"
+      ]
+    },
+    {
+      "id": "audio-juryduty",
+      "category": "audio",
+      "authors": [
+        "juryduty"
+      ],
+      "works": [
+        {
+          "title": "howling_wind.wav",
+          "sourceUrl": "https://freesound.org/people/juryduty/sounds/185070/",
+          "usedFor": "大风循环音效"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Weather_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-bastipictures",
+      "category": "audio",
+      "authors": [
+        "bastipictures"
+      ],
+      "works": [
+        {
+          "title": "peal of thunder close",
+          "sourceUrl": "https://freesound.org/people/bastipictures/sounds/243778/",
+          "usedFor": "近距离雷声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Weather_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-unfa",
+      "category": "audio",
+      "authors": [
+        "unfa"
+      ],
+      "works": [
+        {
+          "title": "Close Thunder 1",
+          "sourceUrl": "https://freesound.org/people/unfa/sounds/124548/",
+          "usedFor": "近距离雷声"
+        },
+        {
+          "title": "Close Thunder 2",
+          "sourceUrl": "https://freesound.org/people/unfa/sounds/126005/",
+          "usedFor": "近距离雷声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Weather_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-moxobna",
+      "category": "audio",
+      "authors": [
+        "moxobna"
+      ],
+      "works": [
+        {
+          "title": "102610_distant_thunder_01.wav",
+          "sourceUrl": "https://freesound.org/people/moxobna/sounds/107518/",
+          "usedFor": "远距离雷声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Weather_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-breviceps",
+      "category": "audio",
+      "authors": [
+        "Breviceps"
+      ],
+      "works": [
+        {
+          "title": "Chicken clucking",
+          "sourceUrl": "https://freesound.org/people/Breviceps/sounds/456803/",
+          "usedFor": "鸡叫声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-wwstudioswastaken",
+      "category": "audio",
+      "authors": [
+        "wwstudioswastaken"
+      ],
+      "works": [
+        {
+          "title": "Pig_Grunt_04",
+          "sourceUrl": "https://freesound.org/people/wwstudioswastaken/sounds/612686/",
+          "usedFor": "猪叫声"
+        },
+        {
+          "title": "Pig_Grunt_07",
+          "sourceUrl": "https://freesound.org/people/wwstudioswastaken/sounds/620083/",
+          "usedFor": "猪叫声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-johnsonbrandedition",
+      "category": "audio",
+      "authors": [
+        "JohnsonBrandEditing"
+      ],
+      "works": [
+        {
+          "title": "Bird, Robin Isolated",
+          "sourceUrl": "https://freesound.org/people/JohnsonBrandEditing/sounds/434024/",
+          "usedFor": "知更鸟叫声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-snapper4298",
+      "category": "audio",
+      "authors": [
+        "Snapper4298"
+      ],
+      "works": [
+        {
+          "title": "sea gulls.wav",
+          "sourceUrl": "https://freesound.org/people/Snapper4298/sounds/166703/",
+          "usedFor": "海鸥叫声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-bajko",
+      "category": "audio",
+      "authors": [
+        "bajko"
+      ],
+      "works": [
+        {
+          "title": "insect_bee_fly_buzz.wav",
+          "sourceUrl": "https://freesound.org/people/bajko/sounds/328398/",
+          "usedFor": "蜜蜂/飞虫嗡鸣"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-garuda1982",
+      "category": "audio",
+      "authors": [
+        "Garuda1982"
+      ],
+      "works": [
+        {
+          "title": "sheep bleat sound",
+          "sourceUrl": "https://freesound.org/people/Garuda1982/sounds/428103/",
+          "usedFor": "绵羊叫声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-kessir",
+      "category": "audio",
+      "authors": [
+        "kessir"
+      ],
+      "works": [
+        {
+          "title": "Rabbit oinks and squeaks",
+          "sourceUrl": "https://freesound.org/people/kessir/sounds/372075/",
+          "usedFor": "兔子叫声"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-usfws-wolf",
+      "category": "audio",
+      "authors": [
+        "U.S. Fish and Wildlife Service"
+      ],
+      "works": [
+        {
+          "title": "Wolf howls.ogg",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Wolf_howls.ogg",
+          "usedFor": "狼嚎声"
+        }
+      ],
+      "license": {
+        "name": "Public domain (PD-USGov-FWS)",
+        "url": "https://commons.wikimedia.org/wiki/Template:PD-USGov-FWS",
+        "attribution": "not required; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-cheetah-study",
+      "category": "audio",
+      "authors": [
+        "Darya S. Smirnova",
+        "Ilya A. Volodin",
+        "Tatyana S. Demina",
+        "Elena V. Volodina"
+      ],
+      "works": [
+        {
+          "title": "Cheetah S1 Audio",
+          "sourceUrl": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0158546",
+          "assetUrl": "https://commons.wikimedia.org/wiki/File:Acoustic-Structure-and-Contextual-Use-of-Calls-by-Captive-Male-and-Female-Cheetahs-(Acinonyx-pone.0158546.s001.oga)",
+          "usedFor": "临时猫科动物 Foley；该录音为猎豹，不是雪豹录音"
+        }
+      ],
+      "license": {
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "attribution": "required",
+        "creditText": "Cheetah audio by Smirnova et al., CC BY 4.0; used as temporary feline Foley, not recorded from a snow leopard."
+      },
+      "status": "used",
+      "evidence": [
+        "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "art-otterisk",
+      "category": "art",
+      "authors": [
+        "Otterisk"
+      ],
+      "works": [
+        {
+          "title": "Hana Caraka - Base Character [sample]",
+          "sourceUrl": "https://otterisk.itch.io/hana-caraka-base-character",
+          "usedFor": "角色动画样例素材",
+          "projectPath": "Assets/6_Art/Characters/Hana Caraka - Base Character sample/"
+        },
+        {
+          "title": "Hana Caraka - Livestock & Fish [Sample]",
+          "sourceUrl": "https://otterisk.itch.io/hana-caraka-livestock-fish",
+          "usedFor": "畜牧与鱼类样例素材",
+          "projectPath": "Assets/6_Art/Characters/Hana Caraka - Livestock & Fish [Sample]/"
+        }
+      ],
+      "license": {
+        "name": "作者自定义许可",
+        "attribution": "optional; appreciated",
+        "details": "允许游戏商用及修改；禁止单独转售、重新打包或再分发素材。"
+      },
+      "status": "asset_present_usage_unconfirmed",
+      "evidence": [
+        "Assets/6_Art/Characters/Hana Caraka - Livestock & Fish [Sample]/Read Me.txt"
+      ]
+    },
+    {
+      "id": "art-electric-lemon",
+      "category": "art",
+      "authors": [
+        "Electric Lemon Games"
+      ],
+      "works": [
+        {
+          "title": "Animal Wildlife for RPG: Free Pack / Retro RPG Series - Animal Wildlife",
+          "sourceUrl": "https://electriclemon.itch.io/animal-wildlife-free-pack-retro-rpg-series",
+          "usedFor": "动物角色贴图",
+          "projectPath": "Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/"
+        }
+      ],
+      "license": {
+        "name": "作者自定义许可",
+        "attribution": "optional",
+        "details": "允许作为游戏或应用的一部分商用；禁止单独再分发素材。"
+      },
+      "status": "asset_present_usage_unconfirmed",
+      "evidence": [
+        "Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/License - No Attribution Required.txt"
+      ]
+    },
+    {
+      "id": "art-chierit",
+      "category": "art",
+      "authors": [
+        "chierit"
+      ],
+      "works": [
+        {
+          "title": "Elementals: Ground Monk",
+          "sourceUrl": "https://chierit.itch.io/elementals-ground-monk",
+          "usedFor": "Ground Monk 角色动画",
+          "projectPath": "Assets/6_Art/Characters/Elementals_ground_monk_FREE_v1.3/"
+        }
+      ],
+      "license": {
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "attribution": "required",
+        "creditText": "Elementals: Ground Monk by chierit, CC BY 4.0."
+      },
+      "status": "asset_present_usage_unconfirmed",
+      "evidence": [
+        "Assets/6_Art/Characters/Elementals_ground_monk_FREE_v1.3/"
+      ]
+    },
+    {
+      "id": "art-monopixelart",
+      "category": "art",
+      "authors": [
+        "MonoPixelArt"
+      ],
+      "works": [
+        {
+          "title": "Forest Monsters 2D Pixel Art (free version)",
+          "sourceUrl": "https://monopixelart.itch.io/forest-monsters-pixel-art",
+          "usedFor": "蘑菇怪物动画",
+          "projectPath": "Assets/6_Art/Characters/Forest_Monsters_FREE/"
+        }
+      ],
+      "license": {
+        "name": "作者页面自定义许可",
+        "attribution": "not specified",
+        "details": "作者页面允许商用与非商用项目使用，并禁止转售、再分发或修改素材。"
+      },
+      "status": "asset_present_usage_unconfirmed",
+      "evidence": [
+        "Assets/6_Art/Characters/Forest_Monsters_FREE/"
+      ]
+    },
+    {
+      "id": "art-lyaseek",
+      "category": "art",
+      "authors": [
+        "LYASeeK"
+      ],
+      "works": [
+        {
+          "title": "MiniFolks - Forest animals",
+          "sourceUrl": "https://lyaseek.itch.io/miniffanimals",
+          "usedFor": "森林动物角色",
+          "projectPath": "Assets/6_Art/Characters/MinifolksForestAnimals/"
+        }
+      ],
+      "license": {
+        "name": "作者页面许可",
+        "attribution": "optional; appreciated",
+        "details": "允许使用，不允许转售素材。"
+      },
+      "status": "asset_present_usage_unconfirmed",
+      "evidence": [
+        "Assets/6_Art/Characters/MinifolksForestAnimals/"
+      ]
+    },
+    {
+      "id": "font-fusion-pixel",
+      "category": "font",
+      "authors": [
+        "TakWolf",
+        "Lee Minseo (quiple)",
+        "M+ FONTS PROJECT",
+        "COZ"
+      ],
+      "works": [
+        {
+          "title": "Fusion Pixel 12px Monospaced",
+          "sourceUrl": "https://github.com/TakWolf/fusion-pixel-font",
+          "usedFor": "TMP 字体资源及公共 UI 控件",
+          "projectPath": "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-font-12px-monospaced-ttf-v2025.03.14/"
+        }
+      ],
+      "license": {
+        "name": "SIL Open Font License 1.1",
+        "url": "https://openfontlicense.org",
+        "attribution": "retain font copyright/license notices"
+      },
+      "status": "used",
+      "evidence": [
+        "开发文档文件夹/09_美术素材/第三方素材引用与鸣谢记录.md",
+        "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-font-12px-monospaced-ttf-v2025.03.14/OFL.txt",
+        "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-font-12px-monospaced-ttf-v2025.03.14/License/"
+      ],
+      "note": "随字体包含 Ark Pixel、Cubic 11、Galmuri 等字源许可；Cubic 11 的作者未在随附说明中明确，实际进入构建的字形范围仍需核对。"
+    },
+    {
+      "id": "shader-mochiescode",
+      "category": "shader_reference",
+      "authors": [
+        "MochiesCode"
+      ],
+      "works": [
+        {
+          "title": "Mochies-Unity-Shaders: water sampling",
+          "sourceUrl": "https://github.com/MochiesCode/Mochies-Unity-Shaders/tree/1ee6231f5af6f2266ec69277d21bc620b7170642",
+          "usedFor": "河流水面 FlowUV、流向法线与泡沫采样的改编"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/MochiesCode/Mochies-Unity-Shaders/blob/1ee6231f5af6f2266ec69277d21bc620b7170642/LICENSE",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "code_reference",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/RiverSurface-LICENSE.txt",
+        "Assets/9_Shaders/Shader/RiverSurface.hlsl"
+      ]
+    },
+    {
+      "id": "shader-daniel-shervheim",
+      "category": "shader_reference",
+      "authors": [
+        "Daniel Shervheim"
+      ],
+      "works": [
+        {
+          "title": "Unity Stylized Water",
+          "sourceUrl": "https://github.com/danielshervheim/unity-stylized-water/tree/d209d15bd8af8404b55c149ea3e9d8e1b7d453b3",
+          "usedFor": "四向水面运动、闪光及深度透射算法改编"
+        }
+      ],
+      "license": {
+        "name": "BSD 3-Clause",
+        "url": "https://github.com/danielshervheim/unity-stylized-water/blob/d209d15bd8af8404b55c149ea3e9d8e1b7d453b3/LICENSE",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "code_reference",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/UnityStylizedWater-LICENSE.txt",
+        "Assets/9_Shaders/Shader/UnityStylizedWaterSurface.hlsl"
+      ]
+    },
+    {
+      "id": "shader-cass-bunting",
+      "category": "shader_reference",
+      "authors": [
+        "Cass Bunting"
+      ],
+      "works": [
+        {
+          "title": "unity-voronoi-water",
+          "sourceUrl": "https://github.com/cbunt/unity-voronoi-water/tree/de93169d97ec25f4b2e72eff5834f2360ffe4b99",
+          "usedFor": "水面世界坐标流动采样及交叉淡化改编"
+        }
+      ],
+      "license": {
+        "name": "MIT-0",
+        "url": "https://github.com/cbunt/unity-voronoi-water/blob/de93169d97ec25f4b2e72eff5834f2360ffe4b99/LICENSE",
+        "attribution": "optional"
+      },
+      "status": "code_reference",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/UnityVoronoiWater-LICENSE.txt",
+        "Assets/9_Shaders/Shader/WaterSurfaceFlow.hlsl"
+      ]
+    },
+    {
+      "id": "shader-directional-flow",
+      "category": "shader_reference",
+      "authors": [
+        "Justin (Scrawk)",
+        "Frans van Hoesel"
+      ],
+      "works": [
+        {
+          "title": "Tiled Directional Flow",
+          "sourceUrl": "https://github.com/Scrawk/Tiled-Directional-Flow/tree/386892cc3f6e21b4694b2777a9e7e66d47a3dd67",
+          "usedFor": "水面方向流动采样改编"
+        }
+      ],
+      "license": {
+        "name": "MIT plus original Creditware notice",
+        "attribution": "retain MIT notice and credit Frans van Hoesel"
+      },
+      "status": "code_reference",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/RiverSurface-LICENSE.txt"
+      ]
+    },
+    {
+      "id": "shader-cloud-references",
+      "category": "shader_reference",
+      "authors": [
+        "Josh Britain (jbritain)",
+        "Alin (tuxalin)"
+      ],
+      "works": [
+        {
+          "title": "glimmer-shaders",
+          "sourceUrl": "https://github.com/jbritain/glimmer-shaders/tree/6a591097b6348155a4ba5a1aab92b79a2c9896d3",
+          "usedFor": "云层密度、坐标扭曲、光学厚度与透射的算法参考；没有采用上游贴图或代码文件。"
+        },
+        {
+          "title": "procedural-tileable-shaders",
+          "sourceUrl": "https://github.com/tuxalin/procedural-tileable-shaders/tree/3b867954908418427683f705671b236db0454235",
+          "usedFor": "周期噪声与域扭曲的算法参考；没有采用上游图片素材。"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "attribution": "retain copyright and license notice when distributing adapted portions"
+      },
+      "status": "algorithm_reference_only",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/CloudLayer-LICENSE.txt"
+      ]
+    },
+    {
+      "id": "software-unity",
+      "category": "software",
+      "authors": [
+        "Unity Technologies"
+      ],
+      "works": [
+        {
+          "title": "Unity Engine and Unity packages",
+          "sourceUrl": "https://unity.com/",
+          "usedFor": "游戏引擎及官方运行时包"
+        }
+      ],
+      "packages": [
+        "com.unity.2d.pixel-perfect@5.1.0",
+        "com.unity.addressables@1.22.3",
+        "com.unity.ai.navigation@1.1.6",
+        "com.unity.cinemachine@2.10.3",
+        "com.unity.entities@1.3.8",
+        "com.unity.entities.graphics@1.4.5",
+        "com.unity.inputsystem@1.14.0",
+        "com.unity.localization@1.4.5",
+        "com.unity.nuget.newtonsoft-json@3.2.1",
+        "com.unity.render-pipelines.universal@14.0.12",
+        "com.unity.textmeshpro@3.0.9"
+      ],
+      "license": {
+        "name": "Unity package-specific terms",
+        "attribution": "see each package license and notice"
+      },
+      "status": "dependencies_declared",
+      "evidence": [
+        "Packages/manifest.json"
+      ]
+    },
+    {
+      "id": "software-mirror",
+      "category": "software",
+      "authors": [
+        "Mirror Networking contributors",
+        "Unity Technologies"
+      ],
+      "works": [
+        {
+          "title": "Mirror Networking",
+          "sourceUrl": "https://github.com/MirrorNetworking/Mirror",
+          "usedFor": "多人网络与传输组件"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "code_present",
+      "evidence": [
+        "Assets/Mirror/LICENSE"
+      ]
+    },
+    {
+      "id": "software-puerts",
+      "category": "software",
+      "authors": [
+        "Tencent Puerts Group"
+      ],
+      "works": [
+        {
+          "title": "PuerTS Unity Core and V8",
+          "sourceUrl": "https://github.com/Tencent/puerts",
+          "usedFor": "Unity JavaScript 运行时"
+        }
+      ],
+      "license": {
+        "name": "BSD 3-Clause",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "dependencies_declared",
+      "evidence": [
+        "Packages/manifest.json",
+        "puerts-unity-mcp/third_party/puerts/LICENSE"
+      ]
+    },
+    {
+      "id": "software-xlua",
+      "category": "software",
+      "authors": [
+        "THL A29 Limited (Tencent)"
+      ],
+      "works": [
+        {
+          "title": "xLua",
+          "sourceUrl": "https://github.com/Tencent/xLua",
+          "usedFor": "Lua 与 C# 互操作"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "code_present",
+      "evidence": [
+        "Assets/Plugins/XLua/Src/StaticLuaCallbacks.cs"
+      ]
+    },
+    {
+      "id": "software-fungus",
+      "category": "software",
+      "authors": [
+        "Chris Gregan",
+        "Fungus contributors"
+      ],
+      "works": [
+        {
+          "title": "Fungus",
+          "sourceUrl": "https://github.com/snozbot/fungus",
+          "usedFor": "Unity 交互叙事工具包"
+        }
+      ],
+      "license": {
+        "name": "MIT and Unity Asset Store EULA; bundled components have separate notices",
+        "attribution": "see bundled notices"
+      },
+      "status": "code_present_usage_to_confirm",
+      "evidence": [
+        "Assets/Plugins/Fungus/Docs/README.txt",
+        "Assets/Plugins/Fungus/Docs/LICENSE.txt",
+        "Assets/Plugins/Fungus/Thirdparty/ThirdPartyNotices.txt"
+      ]
+    },
+    {
+      "id": "software-fastcloner",
+      "category": "software",
+      "authors": [
+        "Matěj Štágl",
+        "Adrian Mos",
+        "DeepCloner Collaborators"
+      ],
+      "works": [
+        {
+          "title": "FastCloner",
+          "sourceUrl": "https://github.com/lofcz/FastCloner",
+          "usedFor": "运行时数据深拷贝"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "used",
+      "evidence": [
+        "Assets/Packages/FastCloner.3.3.10/FastCloner.nuspec",
+        "Assets/5_Scripts/5-1_Data/ModData/ModuleDataCollection.cs"
+      ]
+    },
+    {
+      "id": "software-harmony",
+      "category": "software",
+      "authors": [
+        "Andreas Pardeike"
+      ],
+      "works": [
+        {
+          "title": "Harmony",
+          "sourceUrl": "https://github.com/pardeike/Harmony",
+          "usedFor": "运行时 .NET 方法补丁库"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "code_present_usage_to_confirm",
+      "evidence": [
+        "Assets/Plugins/Harmony/LICENSE.txt"
+      ]
+    },
+    {
+      "id": "software-navmeshplus",
+      "category": "software",
+      "authors": [
+        "h8man",
+        "Unity Technologies"
+      ],
+      "works": [
+        {
+          "title": "NavMeshPlus",
+          "sourceUrl": "https://github.com/h8man/NavMeshPlus",
+          "usedFor": "Unity 2D NavMesh 扩展"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "dependencies_declared",
+      "evidence": [
+        "Packages/manifest.json",
+        "Packages/com.h8man.2d.navmeshplus/LICENSE",
+        "Packages/com.h8man.2d.navmeshplus/Unity/LICENSE"
+      ]
+    },
+    {
+      "id": "software-ultevents",
+      "category": "software",
+      "authors": [
+        "Kailas Dierk"
+      ],
+      "works": [
+        {
+          "title": "UltEvents",
+          "sourceUrl": "https://kybernetik.com.au/ultevents",
+          "usedFor": "Inspector 配置事件回调"
+        }
+      ],
+      "license": {
+        "name": "Unity Asset Store EULA",
+        "attribution": "follow included license terms"
+      },
+      "status": "dependencies_declared_usage_to_confirm",
+      "evidence": [
+        "Packages/com.kybernetik.ultevents/package.json",
+        "Packages/com.kybernetik.ultevents/License.txt"
+      ]
+    },
+    {
+      "id": "software-memorypack",
+      "category": "software",
+      "authors": [
+        "Cysharp"
+      ],
+      "works": [
+        {
+          "title": "MemoryPack",
+          "sourceUrl": "https://github.com/Cysharp/MemoryPack",
+          "usedFor": "高性能对象序列化"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "attribution": "retain copyright and license notice"
+      },
+      "status": "dependencies_declared",
+      "evidence": [
+        "Packages/manifest.json"
+      ]
+    }
+  ],
+  "developmentTools": [
+    {
+      "id": "tool-nugetforunity",
+      "name": "NuGetForUnity",
+      "authors": [
+        "GlitchEnzo"
+      ],
+      "sourceUrl": "https://github.com/GlitchEnzo/NuGetForUnity",
+      "status": "editor_only",
+      "evidence": [
+        "Packages/manifest.json"
+      ],
+      "note": "Unity Editor 内的 NuGet 管理工具，不列入玩家游戏鸣谢。"
+    },
+    {
+      "id": "tool-parrelsync",
+      "name": "ParrelSync",
+      "authors": [
+        "VeriorPies"
+      ],
+      "sourceUrl": "https://github.com/VeriorPies/ParrelSync",
+      "license": "MIT",
+      "status": "editor_only",
+      "evidence": [
+        "Packages/com.veriorpies.parrelsync/package.json",
+        "Packages/com.veriorpies.parrelsync/License.txt"
+      ],
+      "note": "多开 Unity Editor 进行联机测试。"
+    },
+    {
+      "id": "tool-code-assist",
+      "name": "Code Assist",
+      "authors": [
+        "Merry Yellow"
+      ],
+      "sourceUrl": "https://code-assist.netlify.app/",
+      "status": "editor_only",
+      "evidence": [
+        "Packages/com.merry-yellow.code-assist/package.json",
+        "Packages/com.merry-yellow.code-assist/Third Party Notices.md"
+      ],
+      "note": "IDE/代码辅助工具；不列入玩家游戏鸣谢。"
+    },
+    {
+      "id": "tool-puerts-unity-mcp",
+      "name": "PuerTS Unity MCP",
+      "authors": [
+        "PuerTS Unity MCP contributors"
+      ],
+      "sourceUrl": "puerts-unity-mcp/",
+      "license": "MIT",
+      "status": "editor_and_test_tool",
+      "evidence": [
+        "puerts-unity-mcp/LICENSE",
+        "puerts-unity-mcp/Packages/puerts-unity-mcp/package.json"
+      ],
+      "note": "Unity 编辑器与测试调试工具；与腾讯 PuerTS 运行时分开登记。"
+    }
+  ],
+  "reviewNeeded": [
+    {
+      "area": "historical_art",
+      "paths": [
+        "Assets/6_Art/** (excluding the specifically listed art/font entries)",
+        "Assets/6_Art/Characters/Flying eye/",
+        "Assets/6_Art/Characters/Goblin/",
+        "Assets/6_Art/Characters/Mushroom/",
+        "Assets/6_Art/Characters/Orc/",
+        "Assets/6_Art/Characters/Soldier/",
+        "Assets/6_Art/Characters/Mouse/",
+        "Assets/6_Art/Characters/Entity/",
+        "Assets/6_Art/Characters/weapon PNG/"
+      ],
+      "reason": "这些历史素材缺少完整的作者、原始下载页、许可版本或实际进入游戏的引用链；确认前不要将其标成原创或已核实鸣谢。"
+    },
+    {
+      "area": "plugin_bundled_art_and_fonts",
+      "paths": [
+        "Assets/Mirror/Examples/**",
+        "Assets/Plugins/Fungus/Textures/",
+        "Assets/Plugins/Fungus/Fonts/",
+        "Assets/Plugins/TextMesh Pro/Sprites/",
+        "Assets/Plugins/TextMesh Pro/Fonts/LiberationSans.ttf"
+      ],
+      "reason": "项目带有插件示例图、表情贴图和字体许可文件，但本轮没有核对它们是否会进入玩家构建。"
+    },
+    {
+      "area": "plugin_and_library_audit",
+      "paths": [
+        "Packages/com.bshsf.loom",
+        "Assets/Plugins/Demigiant/DOTween/",
+        "Assets/Plugins/Packages/NaughtyAttributes/",
+        "Assets/Plugins/EPPlus/",
+        "Assets/Plugins/NPOI.2.5.6/",
+        "Assets/Plugins/Portable.BouncyCastle.1.8.9/",
+        "Assets/Plugins/ColorThief/",
+        "Assets/TheKiwiCoder/BehaviourTree/",
+        "Assets/Gaskellgames/"
+      ],
+      "reason": "需要继续核对各插件的作者、版本、许可和玩家构建使用范围；此清单不表示它们都会随游戏发布。"
+    }
+  ]
+}
