@@ -1091,7 +1091,7 @@
         "DrillDurability:140"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ingots/Item_ingot_003.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/BronzeIngot_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1215,7 +1215,7 @@
         }
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_402.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/CopperIngot_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1341,7 +1341,7 @@
         }
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/ores.png[ores_10]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/RawIronIngot_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1426,7 +1426,7 @@
         "DrillDurability:300"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ingots/Item_ingot_001.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/SteelIngot_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1527,7 +1527,7 @@
         }
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_394.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/TinIngot_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1613,7 +1613,7 @@
         "DrillDurability:220"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ingots/Item_ingot_004.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/WroughtIronIngot_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
