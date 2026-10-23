@@ -171,7 +171,7 @@
       "volume": 1.5,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Farming/Herb/HerbCrop_Mature.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/HerbCrop/HerbCrop_Mature.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -220,11 +220,11 @@
       "volume": 2.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Seedling.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Seedling.png",
         "spriteStates": {
-          "seedling": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Seedling.png",
-          "growing": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Growing.png",
-          "mature": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Mature.png"
+          "seedling": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Mature.png"
         },
         "color": {
           "r": 1,

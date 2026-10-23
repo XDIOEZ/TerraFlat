@@ -108,7 +108,7 @@
       "canBePickedUp": false,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Plant_Radish.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RadishCrop/RadishCrop_Mature.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -163,6 +163,11 @@
               "isHarvested": false,
               "growthStatus": 4
             }
+          }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.36
           }
         },
         "cropYield": {
@@ -322,7 +327,7 @@
       "volume": 1.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Farming/Mushroom/Plant_Mushroom.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/MushroomCrop/MushroomCrop_Mature.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -410,7 +415,7 @@
       "canBePickedUp": false,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Environment/TwineCrop/TwineCrop_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/TwineCrop/TwineCrop_Mature.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -511,7 +516,7 @@
       "stackable": true,
       "lootTableId": "BerryCrop_Default",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/BerryCrop/BerryCrop_Mature.png",
         "shadows": {
           "contactWidth": 0.85,
           "footLocalPosition": {
@@ -632,18 +637,18 @@
             "ThrowArcHeight": 0.6,
             "IndicatorLocalPositions": [
               {
-                "x": 0.25600004,
-                "y": 0.549,
+                "x": 0.21427,
+                "y": 0.34298,
                 "z": 0.0
               },
               {
-                "x": -0.11899996,
-                "y": 0.7,
+                "x": -0.08981,
+                "y": 0.48794,
                 "z": 0.0
               },
               {
-                "x": -0.28900003,
-                "y": 0.389,
+                "x": -0.22771,
+                "y": 0.27579,
                 "z": 0.0
               }
             ],
@@ -709,11 +714,11 @@
       "canBePickedUp": false,
       "tags": ["BeeForage.Crop"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Seedling.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Seedling.png",
         "spriteStates": {
-          "seedling": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Seedling.png",
-          "growing": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Growing.png",
-          "mature": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png"
+          "seedling": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Mature.png"
         },
         "rendererLocalPosition": {
           "x": 0.0,
@@ -799,11 +804,11 @@
       "stackable": true,
       "canBePickedUp": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Seedling.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Seedling.png",
         "spriteStates": {
-          "seedling": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Seedling.png",
-          "growing": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Growing.png",
-          "mature": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Mature.png"
+          "seedling": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Mature.png"
         },
         "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
       },

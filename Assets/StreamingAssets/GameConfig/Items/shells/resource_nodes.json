@@ -150,7 +150,7 @@
         "BeeForage.Flower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/Flower.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Flower/Flower_Mature.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,

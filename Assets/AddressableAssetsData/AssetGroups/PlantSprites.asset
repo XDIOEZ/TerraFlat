@@ -1,0 +1,139 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: PlantSprites
+  m_EditorClassIdentifier:
+  m_GroupName: PlantSprites
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 0a73f5d6333148c08eb4628f8fff98ab
+  m_SerializeEntries:
+  - m_GUID: 0276c79283df40df978bea60ae26aebb
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/BerryCrop/BerryCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fa4410d6e9fa47aeb756517ba039b821
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Cactus/Cactus_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cf20dd731e9e443a978422a270b85c66
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/ChiliTree/ChiliTree_Growing.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 00366648216944f7a76669c8083fa5bc
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/ChiliTree/ChiliTree_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fe62380985f64c0a996daccbb3826548
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/ChiliTree/ChiliTree_Seedling.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f9bb476464b241d49b75ca46af896266
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Growing.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d7fa2a321eab43f89cd34a9469f01514
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a36fae5e67d445ac8df6868dce1b298d
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Seedling.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1f3dac6330e148f886784644d4b875d3
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Flower/Flower_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6843721f44e84efabcc6f9fc372f34ef
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Growing.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5c497c239573419aa17c6c85753fa5cb
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 62d2f6a046e6461f92c3535a3b9e05aa
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Seedling.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f473de569ea04f35bb749fbceb1d4726
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/HerbCrop/HerbCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 478e9e99fa2848e59be2a16f5d4e14eb
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/MushroomCrop/MushroomCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 076268a1de5247ad8002f380c90c18db
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RadishCrop/RadishCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b3b54273dca74172b2797bae23af1d30
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Growing.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8a1724f981f54fb2b35013cf2e1bd0f3
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 997a4f5f4fc9402cbd106af57ecb1ea3
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Seedling.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: deca732e181f492085d09c08984314b1
+    m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/TwineCrop/TwineCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 4ee4872cdcc34f0880d35a58731f6139, type: 2}
+    - {fileID: 11400000, guid: c1543c3aa1b142feab478df54a9c1b49, type: 2}

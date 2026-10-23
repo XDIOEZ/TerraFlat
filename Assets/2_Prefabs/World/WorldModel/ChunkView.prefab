@@ -125,11 +125,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4b67b1d1bc74d0484778a0d2d0ad6e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sourceTexture: {fileID: 2800000, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  sourceTexture: {fileID: 2800000, guid: 1b5b62469456441890ca2ae80b398c87, type: 3}
   variantCount: 32
   textureColumns: 6
-  spriteSizePixels: 16
-  pixelsPerUnit: 32
+  spriteSizePixels: 209
+  pixelsPerUnit: 418
   grassMaterial: {fileID: 2100000, guid: 14e44684465b403baf074b99152e2ff3, type: 2}
 --- !u!114 &2009
 MonoBehaviour:
