@@ -1,0 +1,28 @@
+# 掉落、水态与自然实体后端
+
+## 掉落与物质推进
+
+- 单机 DroppedItemService.Spawn/SpawnLoot：passive 为纯C#载荷+近镜头池Sprite，interactive 为完整 Item，需飞行模块效果用后者+IDroppedItemSpawnContextReceiver。两者复制独立载荷/新GUID，完整Item注册前清载荷GUID，不改来源身份。普通掉落缩放0.5、destination定精确点；联机仍Item权威链。
+- 太空 SpaceSession 接管，SpaceDropView 仅冷载荷/Sprite，不 Load/ModuleInit 或实例化原建筑设备。ShipWreck 一个无设备模块Item存组成，回收后才释载荷；拾取走正式库存事务。
+- 两后端共 WorldItemMatterRules/ThermalRuntime.AdvanceAmbient，完整Item注册/加载建立基线、逐件累计间隔分帧。高温液体接触读物质 temperature/contactHeatingPerSecond，到 matter.ignitionTemperature 才点燃，设备可显式速率；airExposure 仅普通干燥。已有 Mod_Combustion 复用且不再扣材料堆，两后端共火焰粒子。
+- 完整散物结构/燃烧引用依结构事件、模块版本、载荷引用、运行代际失效；同件末尾可用已验结构更新火焰，帧表现再验。启停/燃烧/登记/飞行/附着实时读。轻量单Tick共地形寻址，世界/代际变重建，每样本权威，入水/浮力/接触共液体定义，不跨燃烧回调存温度源。
+- Matter.Environment/Combustion/Transition 分段记时，约1ms批预算只在件间检查，单件环境用温度场单格入口。
+
+## 水与风
+
+- 完整Item由 WorldItemWaterSystem 按最终位置推水态，轻量共 WorldItemWaterRules；水态不进库存，轨迹完先移 Mod_Droping 再准拾。河流加速按总重，浮沉按单件kg/L：普通水阈1，乘 buoyancyThresholdMultiplier（海水1.5/岩浆6），达阈沉，倍率不改液体重量。IWaterEntryTransformEffect 回收前脱源。
+- 轻量水态/流查询同Tick共 RuntimeTerrainTileSample，仅省寻址，水深/流向/实验流实时。完整散物登记缓存建筑/水态引用，ActivateExistingItem 更新水态、注销回收；两后端 WindSamplingContext 每批共质量范围/星球重力。
+- 轻量/稳定浮Item保留0.5s逻辑漂流；DriftInterpolation 仅显示匀速追已确认位置。轻量只可见视图存插值；完整仅偏 Sprite并保局部基准，水线逐帧跟。环绕最短位移，离水/拾取/回池清偏移，不改索引/存档。
+
+## 自然实体
+
+- 原生AI用完整Item；entityRuntime: resource 的树/矿/作物冷编译进共享 WorldEntityRuntime，无资源Item/Module Tick。通用配置集合 Replace，ResourceEntityCapabilityRegistry 扩能力，DLL用 context.SetState/GetState。
+- 产物目录首次注册校验，同配置复用，失败不缓存；资源重载清编译缓存，新配置/能力版本重编后重验。
+- 独立导航/空间交互/接触几何，命中 GameplayCombatBridge；植物仅 EntityPlantModuleSystem 推。区块解绑保存释放、死亡/一次收获才删来源；终端解绑移快照所有权，仍运行才克隆，句柄带World代际。客户端不推进权威植物Job，采集/增量独立接入；旧 DroppedItems/Core ECS 仅Editor参考。
+- NaturalEntityEcsService 的天气/耐候、已种土壤、导航占地索引随注册/卸载/恢复/刷新增量维护。FreezeEnvironment 同批只冻服务引用/PointSamplingContext，邻热源每目标块一次，天气/温度逐件实时、缺样本沿正式回退，同步结束释放，保原0.25秒/距离规则。
+- FreezeEnvironment 摘要 work 是输入数、gauge最近批规模；Profiler .Weather/.Temperature/.WriteInputs 分段；Environment.WeatherSamples/TemperatureSamples/MissingWeather/MissingTemperature/InputWrites 区分尝试/缺失/写入，计数仅GM“性能DEBUG”开时，慢摘要独立，Profiler始终可见。
+- 土壤九宫格顺序/水量事务不变，先筛真实表层水，干格/遮水不建完整Tile；SoilSamplingBatch 只复用本轮寻址/容器，TrySample/TryReadSampled 共采样，光/灌溉/水肥逐件实时算/同步提交。
+- 发布 BodyReadBatch 拷只读值，组件写/NotifyChanged/移除使对应值失效、不跨批；目标≤32且少于世界1/4时 BeginBodyReadBatch(requestedIds) 仅冻所需，否则ECS Chunk整批。几何冷编 NaturalEntitySpatialGeometry，真Bounds变才重建空间桶。
+- 表现按Dirty/Event，几何/外观版本独立；TreeSortingVisual 用根镜像SortingGroup与玩家混排，主体不重复BRG。
+
+回归：`item_runtime/world_matter_structure`、`environment/water_current_reuse`、`ecology/{output_validation_cache,soil_liquid_prefilter,selective_body_read_batch}`。Profiler入口：NaturalEntityRuntime.FreezeNavigation/FreezeEnvironment/FreezeSoil。

@@ -1,0 +1,22 @@
+# 装备、食物与液体容器
+
+## 装备与生存
+
+- Mod_Equipment按EquipmentSlot标签组合能力、世界主交互优先。ThermalInsulation只改安全温度上下界，耐寒/耐热独立，不改传热/当前温度。
+- 配置效果实现 IEquipmentConfiguration，由CollectConfigurationTargets/TryOpenConfiguration收集/校验、同件去重，卸下/更换拒旧目标。宇航服生命支持/配置挂持罐衣服，头盔仅套装资格/自身防护；独立单槽InventoryInstanceSnapshot只收单只纯氧罐，两相变化停供，扣真实罐量后SupplyOxygen，来源不归氧气模块。
+- FoodRulePipeline初始化后复用Tick/观察者列表，不定时全扫；RequiresFoodTick实时判，新扩展保持插入顺序。世界静态Food可休眠，腐败/融化走冷数据。蛋白质管回血门槛，IHealingCostPolicy一次结算成本；濒死/HP≤0停被动回血与生存伤害，体力按有效MaxValue恢复。
+- BodyPartTreatmentSession管医疗等待/提交，UI仅发意图；食物效果由目录与IFoodMechanic组合，咬痕从EatingProgress/GUID重建。
+
+## 容器与热量
+
+- 液体仅存在容器/机器组分和世界Liquid层，无独立库存原料。LiquidContainerState.Composition保存稳定LiquidId真实份数，MixedLiquidContents派生总量/比例；共享容量，尾量/随机态/各口PendingOutputs持久化。
+- InventoryVesselHeating.ProcessWorldHeat供落地容器/已加载坩埚按当地环境每游戏秒消除剩余温差1%；坩埚仅自身Tick一次并继续凝固，炉内ProcessHeat主动10℃/秒独立。冷库存/轻掉落不额外模拟液体内容物。
+- CollectsRainwater声明朝上接雨，仅权威落地实例按当地雨量累积：强度0.5每60秒一份、限制30～120秒，跟游戏倍速/暂停。VesselRainwaterCollection只管时钟/水质，ContaminationSystem.TryGetNormalizedLoad汇总本格全部指标，零污染纯水、正值脏水、无地格不产。满桶不积债，RainwaterProgress随共享模块装拆/保存；铁/木桶用正式建筑配对。
+- 转液走ILiquidTransferPort原子事务，ingredientReactions扣真实槽；Mod_VesselContents独立存木桶6格固体，关面板只解绑。IInventoryHeatTreatment按LiquidDefinition.HeatProcess先提交产物再耗液。
+
+## 世界装液与倾倒
+
+- WorldLiquidSourceResolver/WorldLiquidSystem.TryPump读稳定身份，地表0～10整数级、1份=1级；空位向下取整，先世界提交再写容器。worldWater液体倒到干地/同类液面写独立Liquid层，成功只通知本格、农业自行吸水。
+- PourToGround按开口/倾角连续计时，每批严格1份、不足整份不扣；90°可倒尽完整份，混液尾量留桶，整份出口跳尾量并尊重其他口预约。先扣源再写地表，拒收恢复快照，容量不决定流速。
+- UI按独立pointerId/未旋转父坐标解释，右负Z、左正Z；WaterVesselPourGraphic连续显示、不反扣数据。
+- 饮水只看Drinkable/余量，满水分也可主动喝，drinkEffects经LiquidDrinkEffectProcessor结算。图标由ItemDataPresentationResolverRegistry/GameRes.TryGetItemPresentation按状态重绘并保留物理轮廓；手持内部变化同时通知真实库存与Item.OnUIRefresh。
