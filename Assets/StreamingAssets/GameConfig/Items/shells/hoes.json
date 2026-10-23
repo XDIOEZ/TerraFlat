@@ -98,7 +98,20 @@
       "volume": 3.5,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_362.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Wood/Hoe_Wood_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "hoe": {
@@ -118,7 +131,20 @@
       "volume": 3.5,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_367.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Stone/Hoe_Stone_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "hoe": {
@@ -137,7 +163,20 @@
       "volume": 3.5,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_377.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Copper/Hoe_Copper_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "hoe": {
@@ -156,7 +195,20 @@
       "volume": 3.5,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_372.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Iron/Hoe_Iron_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "hoe": {

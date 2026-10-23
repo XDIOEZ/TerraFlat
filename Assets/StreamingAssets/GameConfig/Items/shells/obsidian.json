@@ -90,11 +90,16 @@
       "stackable": false,
       "tags": ["Knife", "Obsidian", "Modern", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Combat/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
-        "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
         "flipX": true,
         "rendererLocalScale": { "x": 0.6, "y": 0.6, "z": 1 },
-        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "flipY": false
       },
       "modules": {
         "damage": {

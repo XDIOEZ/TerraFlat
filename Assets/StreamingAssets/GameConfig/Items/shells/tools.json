@@ -15,7 +15,20 @@
       "canBePickedUp": true,
       "tags": ["Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Scissors/Scissors_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Scissors/Scissors_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "damage": {
@@ -752,7 +765,7 @@
       "canBePickedUp": true,
       "tags": ["Axe", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_031.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Stone/Axe_Stone_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -930,7 +943,7 @@
       "canBePickedUp": true,
       "tags": ["Axe", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_366.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Flint/Axe_Flint_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1108,16 +1121,16 @@
       "canBePickedUp": true,
       "tags": ["Axe", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_376.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Copper/Axe_Copper_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 224.999985
+          "x": 0,
+          "y": 0,
+          "z": 225
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -1286,16 +1299,16 @@
       "canBePickedUp": true,
       "tags": ["Axe", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_032.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Bronze/Axe_Bronze_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 224.999985
+          "x": 0,
+          "y": 0,
+          "z": 225
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -1465,7 +1478,7 @@
       "canBePickedUp": true,
       "tags": ["Axe", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_371.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1643,7 +1656,7 @@
       "canBePickedUp": true,
       "tags": ["Axe", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_033.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1844,7 +1857,7 @@
       "canBePickedUp": true,
       "tags": ["Modern", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_363.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Stone/Pickaxe_Stone_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2018,7 +2031,7 @@
       "canBePickedUp": true,
       "tags": ["Pickaxe", "Copper", "Modern", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_373.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Copper/Pickaxe_Copper_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2198,7 +2211,7 @@
       "canBePickedUp": true,
       "tags": ["36", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_020.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Bronze/Pickaxe_Bronze_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2378,7 +2391,7 @@
       "canBePickedUp": true,
       "tags": ["Pickaxe", "RawIron", "Modern", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_368.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_RawIron/Pickaxe_RawIron_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2558,7 +2571,7 @@
       "canBePickedUp": true,
       "tags": ["Pickaxe", "Iron", "Modern", "Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_021.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Iron/Pickaxe_Iron_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2733,7 +2746,20 @@
       "volume": 0.2,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Flint.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FlintStrike/FlintStrike_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "flipX": false,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       }
     },
     {
@@ -2750,7 +2776,20 @@
       "canBePickedUp": true,
       "tags": ["Tool"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodHammer/WoodHammer_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "damage": {
@@ -2786,13 +2825,20 @@
       "weight": 2.8,
       "volume": 2.8,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneHammer/StoneHammer_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/StoneHammer/StoneHammer_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
           "b": 1.0,
           "a": 1.0
-        }
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "damage": {

@@ -18,7 +18,20 @@
         "HandDrill"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/HandDrill/HandDrill_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "flipX": false,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "health": {
         "hasHp": true,
@@ -89,7 +102,20 @@
         "HandDrill"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/HandDrill/HandDrill_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "flipX": false,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "health": {
         "hasHp": true,

@@ -21,7 +21,7 @@ public static class FishingAssetBuilder
     public const string BoneHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png";
     public const string IronHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Iron.png";
     public const string GoldHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Gold.png";
-    public const string RodSpritePath = "Assets/6_Art/Items/Tools/Item_Tool_389.png";
+    public const string RodSpritePath = "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Icon.png";
     private static AddressableAssetSettings settings;
 
     /// <summary>读取本功能的静态装配结果，不启动游戏、不创建存档或模拟生物。</summary>
@@ -388,7 +388,9 @@ public static class FishingAssetBuilder
     #region 资源登记
     private static void Register(string path, string address, string label)
     {
-        AddressableAssetEntry entry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(path), settings.DefaultGroup);
+        string guid = AssetDatabase.AssetPathToGUID(path);
+        // 已登记的资源保留所属分组，避免重建钓鱼界面时移走工具美术。
+        AddressableAssetEntry entry = settings.FindAssetEntry(guid) ?? settings.CreateOrMoveEntry(guid, settings.DefaultGroup);
         entry.address = address;
         entry.SetLabel(label, true, true);
         settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entry, true);

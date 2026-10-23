@@ -1,0 +1,1453 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-23",
+  "generation": "built-in image_gen; raw PNG copied without pixel edits",
+  "scope": "35 tools plus 3 placed counterparts",
+  "addressablesGroup": "PrimitiveTools",
+  "torchRendererFlameAnchor": {"x":0.375135,"y":0.378489,"z":0},
+  "torchModuleLightPosition": {"x":-0.002372,"y":0.532893,"z":0},
+  "import": {
+    "filter": "Point",
+    "mipmaps": false,
+    "compression": "None",
+    "maxTextureSize": 128,
+    "fishingRodMaxTextureSize": 256
+  },
+  "items": [
+    {
+      "id": "Axe_Stone",
+      "name": "石斧",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_031.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Stone/Axe_Stone_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.123333305,
+        0.12222226
+      ],
+      "sourceAlpha": [
+        0,
+        0,
+        14,
+        15
+      ],
+      "sourceWorldExtent": 1.29994,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        322,
+        318,
+        995,
+        990
+      ],
+      "ppu": 628.493003,
+      "pivotX": 0.3320255,
+      "pivotY": 0.2848644,
+      "guid": "e05381bd999547baa41296237fcbc192",
+      "spriteId": "c8067b55d81541b4be8cf1830288eee7"
+    },
+    {
+      "id": "Axe_Flint",
+      "name": "燧石斧",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_366.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Flint/Axe_Flint_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.2,
+        0.2
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        361,
+        363,
+        945,
+        934
+      ],
+      "ppu": 639.27327,
+      "pivotX": 0.3531898,
+      "pivotY": 0.3182456,
+      "guid": "edc659420ef24d43bb24961e1b504d98",
+      "spriteId": "e2774543c39244f39cd20b35099ec39c"
+    },
+    {
+      "id": "Axe_Copper",
+      "name": "铜斧",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_376.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Copper/Axe_Copper_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.2,
+        0.2
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        327,
+        240,
+        1145,
+        1032
+      ],
+      "ppu": 871.584217,
+      "pivotX": 0.352201,
+      "pivotY": 0.2647687,
+      "guid": "7446ac90b6da4963b91c11aef7342fd4",
+      "spriteId": "d42ebdb2510d4d0db35e5767f8865a99"
+    },
+    {
+      "id": "Axe_Bronze",
+      "name": "青铜斧",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_032.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Bronze/Axe_Bronze_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 12,
+      "sourcePivot": [
+        0.2,
+        0.2
+      ],
+      "sourceAlpha": [
+        1,
+        0,
+        14,
+        15
+      ],
+      "sourceWorldExtent": 1.6154,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        288,
+        280,
+        1147,
+        1063
+      ],
+      "ppu": 621.756686,
+      "pivotX": 0.3256778,
+      "pivotY": 0.2390431,
+      "guid": "3485ad47803a4404a2fe2ebad5aff372",
+      "spriteId": "aa4e77ad774f4e4080673c89aa14f332"
+    },
+    {
+      "id": "Axe_RawIron",
+      "name": "生铁斧",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_371.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.12,
+        0.12
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        320,
+        258,
+        1096,
+        1020
+      ],
+      "ppu": 840.735338,
+      "pivotX": 0.3419298,
+      "pivotY": 0.2709888,
+      "guid": "4dacbcb013e64e0ba3688f3c470576f3",
+      "spriteId": "efaeab7dcbc54bc1aa27196aef80b8d5"
+    },
+    {
+      "id": "Axe_Iron",
+      "name": "铁斧",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_033.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 12,
+      "sourcePivot": [
+        0.2,
+        0.2
+      ],
+      "sourceAlpha": [
+        1,
+        0,
+        14,
+        15
+      ],
+      "sourceWorldExtent": 1.6154,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        313,
+        250,
+        1112,
+        1049
+      ],
+      "ppu": 583.674251,
+      "pivotX": 0.3389155,
+      "pivotY": 0.2519936,
+      "guid": "0d8c9a15b055461ea56f2b61a42e50fd",
+      "spriteId": "e95822559fed4159bd944b4bcbb12eb1"
+    },
+    {
+      "id": "Pickaxe_Stone",
+      "name": "石镐",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_363.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Stone/Pickaxe_Stone_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22154638,
+        0.22019465
+      ],
+      "sourceAlpha": [
+        1,
+        2,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        267,
+        199,
+        1102,
+        1097
+      ],
+      "ppu": 886.064303,
+      "pivotX": 0.306252,
+      "pivotY": 0.2247687,
+      "guid": "29ce80f9e71d4d62a1a5e2e76b160654",
+      "spriteId": "108a93657a0140ea94dd9f0848cf9eee"
+    },
+    {
+      "id": "Pickaxe_Copper",
+      "name": "铜镐",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_373.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Copper/Pickaxe_Copper_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22019461,
+        0.21749125
+      ],
+      "sourceAlpha": [
+        1,
+        2,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        284,
+        257,
+        1049,
+        1033
+      ],
+      "ppu": 775.889735,
+      "pivotX": 0.3119936,
+      "pivotY": 0.262185,
+      "guid": "aac1182fe8e947cdae3f59f963e649de",
+      "spriteId": "a0806539bb6b4b32b72efc9578d6de0e"
+    },
+    {
+      "id": "Pickaxe_RawIron",
+      "name": "粗铁铁镐",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_368.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_RawIron/Pickaxe_RawIron_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.2228981,
+        0.22019465
+      ],
+      "sourceAlpha": [
+        1,
+        2,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        283,
+        232,
+        1128,
+        1111
+      ],
+      "ppu": 886.693872,
+      "pivotX": 0.3201276,
+      "pivotY": 0.2114833,
+      "guid": "728d6cf3ebe945a8bdb60777b7ae9095",
+      "spriteId": "c44497471c2c48b88136ce2502ad1f74"
+    },
+    {
+      "id": "Pickaxe_Bronze",
+      "name": "青铜镐",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_020.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Bronze/Pickaxe_Bronze_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.15666392,
+        0.1553122
+      ],
+      "sourceAlpha": [
+        0,
+        0,
+        15,
+        15
+      ],
+      "sourceWorldExtent": 1.38833,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        298,
+        247,
+        1052,
+        1046
+      ],
+      "ppu": 658.766369,
+      "pivotX": 0.3219298,
+      "pivotY": 0.254386,
+      "guid": "7d4cc2706c324f8aae77f3fa811fe186",
+      "spriteId": "bc351011ee1c46c29323d4e1c5d9b68a"
+    },
+    {
+      "id": "Pickaxe_Iron",
+      "name": "熟铁铁镐",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_021.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Iron/Pickaxe_Iron_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.15666397,
+        0.15260881
+      ],
+      "sourceAlpha": [
+        0,
+        0,
+        15,
+        15
+      ],
+      "sourceWorldExtent": 1.38833,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        278,
+        279,
+        1077,
+        1092
+      ],
+      "ppu": 679.648637,
+      "pivotX": 0.3110048,
+      "pivotY": 0.2192663,
+      "guid": "531f6438e34d49cdaff5edcef67cc5e3",
+      "spriteId": "4c99d3ce6e994f0fad7aa8673aeaf244"
+    },
+    {
+      "id": "Shovel_Wood",
+      "name": "木铲",
+      "definition": "shells/ancient_stage.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/WoodShovel/WoodShovel_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Wood/Shovel_Wood_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        28,
+        29
+      ],
+      "sourceWorldExtent": 1.1803,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        153,
+        81,
+        1227,
+        1205
+      ],
+      "ppu": 1255.344792,
+      "pivotX": 0.2420255,
+      "pivotY": 0.1638756,
+      "guid": "4ae7b460a7ae499e9e47062f5f90659d",
+      "spriteId": "f8c2a5ca10744614b15ba238ed5337c8"
+    },
+    {
+      "id": "Shovel_Stone",
+      "name": "石铲",
+      "definition": "shells/ancient_stage.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Stone/Shovel_Stone_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        28,
+        29
+      ],
+      "sourceWorldExtent": 1.1803,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        148,
+        103,
+        1208,
+        1182
+      ],
+      "ppu": 1224.791127,
+      "pivotX": 0.2364753,
+      "pivotY": 0.177193,
+      "guid": "8f6d7ad2162c4b7aad8a6cddd5c111a0",
+      "spriteId": "31d2290bcefd4b1ca4b509c7db417fbe"
+    },
+    {
+      "id": "Shovel_Copper",
+      "name": "铜铲",
+      "definition": "shells/ancient_stage.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/CopperShovel/CopperShovel_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        28,
+        29
+      ],
+      "sourceWorldExtent": 1.1803,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        176,
+        84,
+        1225,
+        1188
+      ],
+      "ppu": 1250.552061,
+      "pivotX": 0.2575758,
+      "pivotY": 0.1751994,
+      "guid": "ea3ecc24900e417f99f9d6a5edaca108",
+      "spriteId": "7caf58290e3c4ab19dd4003f8349f633"
+    },
+    {
+      "id": "Shovel_RawIron",
+      "name": "粗铁铲",
+      "definition": "shells/ancient_stage.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/RawIronShovel/RawIronShovel_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_RawIron/Shovel_RawIron_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        28,
+        29
+      ],
+      "sourceWorldExtent": 1.1803,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        159,
+        86,
+        1216,
+        1194
+      ],
+      "ppu": 1242.763871,
+      "pivotX": 0.2449123,
+      "pivotY": 0.1708612,
+      "guid": "2abf93390def4fbdaa92c759bcb45230",
+      "spriteId": "4889ebe1ac4b4861beb3c221e9019261"
+    },
+    {
+      "id": "Shovel_Bronze",
+      "name": "青铜铲",
+      "definition": "shells/ancient_stage.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/BronzeShovel/BronzeShovel_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Bronze/Shovel_Bronze_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        28,
+        29
+      ],
+      "sourceWorldExtent": 1.1803,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        159,
+        107,
+        1202,
+        1201
+      ],
+      "ppu": 1225.390219,
+      "pivotX": 0.2433493,
+      "pivotY": 0.1637161,
+      "guid": "4433633a11a14807bb218131d803dd36",
+      "spriteId": "1dfbb65ea3664e57aac30da27128ed4f"
+    },
+    {
+      "id": "Shovel_Iron",
+      "name": "铁铲",
+      "definition": "shells/ancient_stage.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/IronShovel/IronShovel_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Iron/Shovel_Iron_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        28,
+        29
+      ],
+      "sourceWorldExtent": 1.1803,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        157,
+        97,
+        1223,
+        1211
+      ],
+      "ppu": 1255.943884,
+      "pivotX": 0.2443222,
+      "pivotY": 0.1579745,
+      "guid": "5d3ae22d259a471faa23c4752de35a3f",
+      "spriteId": "1799edbc440443209e62c2ca022aacf2"
+    },
+    {
+      "id": "Hoe_Wood",
+      "name": "木锄头",
+      "definition": "shells/hoes.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_362.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Wood/Hoe_Wood_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22154638,
+        0.22019465
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        166,
+        117,
+        1214,
+        1158
+      ],
+      "ppu": 1134.744042,
+      "pivotX": 0.2494896,
+      "pivotY": 0.1920893,
+      "guid": "a38aedaf57f64c5eaafa6c2e4ad1bbaf",
+      "spriteId": "7e890d5b8d45447190d83a12ff85136e"
+    },
+    {
+      "id": "Hoe_Stone",
+      "name": "石锄头",
+      "definition": "shells/hoes.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_367.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Stone/Hoe_Stone_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22154638,
+        0.22019465
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        126,
+        111,
+        1239,
+        1175
+      ],
+      "ppu": 1185.739128,
+      "pivotX": 0.2248485,
+      "pivotY": 0.1811005,
+      "guid": "6206c140b31a484d9998520f17b95319",
+      "spriteId": "cd3a7cb4e53f40f6af5de3799039298c"
+    },
+    {
+      "id": "Hoe_Copper",
+      "name": "铜锄头",
+      "definition": "shells/hoes.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_377.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Copper/Hoe_Copper_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22154638,
+        0.22019465
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        131,
+        137,
+        1237,
+        1193
+      ],
+      "ppu": 1156.149386,
+      "pivotX": 0.2280542,
+      "pivotY": 0.1658533,
+      "guid": "5e83b806712a43b9add0a442fc135831",
+      "spriteId": "100262aed17f48e0822bc04cafe7af3a"
+    },
+    {
+      "id": "Hoe_Iron",
+      "name": "铁锄头",
+      "definition": "shells/hoes.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_372.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Iron/Hoe_Iron_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22154638,
+        0.22019465
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        142,
+        162,
+        1238,
+        1175
+      ],
+      "ppu": 1131.596197,
+      "pivotX": 0.2357097,
+      "pivotY": 0.1754067,
+      "guid": "154f70c7dd9048118817e17aaea6d6b8",
+      "spriteId": "c82a3fdb45e94e6095dfbe42f8b4376f"
+    },
+    {
+      "id": "Dagger_Stone",
+      "name": "石制小刀",
+      "definition": "shells/weapons.json",
+      "sourceSprite": "Assets/6_Art/Items/Tool_Weapon.png[石制小刀]",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Stone/Dagger_Stone_Icon.png",
+      "sourceRect": [
+        16,
+        49,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22,
+        0.22
+      ],
+      "sourceAlpha": [
+        1,
+        4,
+        10,
+        13
+      ],
+      "sourceWorldExtent": 0.858,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        185,
+        137,
+        1207,
+        1160
+      ],
+      "ppu": 1623.06999,
+      "pivotX": 0.2617384,
+      "pivotY": 0.1884848,
+      "guid": "89971d84329940b4876b720bb65f95e4",
+      "spriteId": "174222088a024ed3a432fdd8149ac55d"
+    },
+    {
+      "id": "Dagger_Copper",
+      "name": "铜制小刀",
+      "definition": "shells/weapons.json",
+      "sourceSprite": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_19]",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Copper/Dagger_Copper_Icon.png",
+      "sourceRect": [
+        64,
+        48,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.22,
+        0.22
+      ],
+      "sourceAlpha": [
+        1,
+        5,
+        10,
+        14
+      ],
+      "sourceWorldExtent": 0.858,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        141,
+        69,
+        1205,
+        1208
+      ],
+      "ppu": 1759.052836,
+      "pivotX": 0.2313397,
+      "pivotY": 0.1631579,
+      "guid": "5e6401ff15d64760b3f6368b2fb2b76c",
+      "spriteId": "ad77e8b6eb904afa9501c42e0667859c"
+    },
+    {
+      "id": "Dagger_Bone",
+      "name": "骨制小刀",
+      "definition": "shells/weapons.json",
+      "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_006.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Bone/Dagger_Bone_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.15,
+        0.15
+      ],
+      "sourceAlpha": [
+        0,
+        0,
+        15,
+        15
+      ],
+      "sourceWorldExtent": 1.38833,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        179,
+        114,
+        1194,
+        1184
+      ],
+      "ppu": 1029.044619,
+      "pivotX": 0.2561722,
+      "pivotY": 0.1745933,
+      "guid": "ba94a0e98d5745f1b7a4a4dc86d5de61",
+      "spriteId": "7decc14acc2745a284e92dada13cdce5"
+    },
+    {
+      "id": "Knife_Flint",
+      "name": "燧石小刀",
+      "definition": "shells/weapons.json",
+      "sourceSprite": "Assets/6_Art/Items/Weapons/Guns/iron-weapons.png[iron-weapons_248]",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Knife_Flint/Knife_Flint_Icon.png",
+      "sourceRect": [
+        128,
+        160,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.8,
+        0.2
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        14,
+        14
+      ],
+      "sourceWorldExtent": 1.12316,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        159,
+        116,
+        1177,
+        1177
+      ],
+      "ppu": 1256.88042,
+      "pivotX": 0.2405582,
+      "pivotY": 0.1791707,
+      "guid": "4798f08ab11448988f76b3584dbc3be2",
+      "spriteId": "d2cfcc6e32854936b3de98b9ea2d8bbf"
+    },
+    {
+      "id": "Dagger_Obsidian",
+      "name": "黑曜石小刀",
+      "definition": "shells/obsidian.json",
+      "sourceSprite": "Assets/6_Art/Generated/Combat/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "sourcePPU": 1254,
+      "sourcePivot": [
+        0.8,
+        0.48
+      ],
+      "sourceAlpha": [
+        88,
+        470,
+        1169,
+        834
+      ],
+      "sourceWorldExtent": 0.86284,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        136,
+        120,
+        1207,
+        1185
+      ],
+      "ppu": 1692.63158,
+      "pivotX": 0.228134,
+      "pivotY": 0.1732376,
+      "guid": "7b2457c921e8466ca8d8072f25527a6b",
+      "spriteId": "e683390b18cd494399a70c1a12d59cf5"
+    },
+    {
+      "id": "WoodHammer",
+      "name": "木锤",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/WoodHammer/WoodHammer_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        1,
+        1,
+        14,
+        14
+      ],
+      "sourceWorldExtent": 0.875,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        116,
+        96,
+        1243,
+        1202
+      ],
+      "ppu": 1572.132094,
+      "pivotX": 0.218437,
+      "pivotY": 0.1642584,
+      "guid": "33ab12d649e2468890f0dcc2365436b6",
+      "spriteId": "8d5989c5e3494b12a690a1d27e0ecd91"
+    },
+    {
+      "id": "StoneHammer",
+      "name": "石锤",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/StoneHammer/StoneHammer_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/StoneHammer/StoneHammer_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.21875,
+        0.21875
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        29,
+        28
+      ],
+      "sourceWorldExtent": 0.875,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        157,
+        95,
+        1214,
+        1191
+      ],
+      "ppu": 1511.522942,
+      "pivotX": 0.2433174,
+      "pivotY": 0.1719139,
+      "guid": "6b22ce5196da4ff7a5b3aa5f603331af",
+      "spriteId": "5cc77bc327dd458b8100a68a1cdd6e47"
+    },
+    {
+      "id": "Scissors",
+      "name": "剪刀",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/Scissors/Scissors_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Scissors/Scissors_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.5,
+        0.5
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        29,
+        29
+      ],
+      "sourceWorldExtent": 0.875,
+      "rotation": 225,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        186,
+        108,
+        1224,
+        1189
+      ],
+      "ppu": 1537.382847,
+      "pivotX": 0.2643222,
+      "pivotY": 0.1718341,
+      "guid": "88bf6aa13b874598b7701a3873320337",
+      "spriteId": "f4240a3eb04b4326816587d6a3cfd465"
+    },
+    {
+      "id": "ChippedTool",
+      "name": "打制石器",
+      "definition": "shells/weapons.json",
+      "sourceSprite": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_98]",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/ChippedTool/ChippedTool_Icon.png",
+      "sourceRect": [
+        224,
+        112,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0,
+        0
+      ],
+      "sourceAlpha": [
+        2,
+        4,
+        13,
+        12
+      ],
+      "sourceWorldExtent": 0.75,
+      "rotation": 0,
+      "flipX": true,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        158,
+        119,
+        1149,
+        1156
+      ],
+      "ppu": 1384,
+      "pivotX": 0.5215311,
+      "pivotY": 0.4912281,
+      "guid": "61c575b8d9b44679abec20c63c1832a0",
+      "spriteId": "a4d44d8e09af4da19df0334401409f90"
+    },
+    {
+      "id": "FishingRod",
+      "name": "钓鱼竿",
+      "definition": "shells/fishing.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_389.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.2,
+        0.2
+      ],
+      "sourceAlpha": [
+        1,
+        2,
+        13,
+        14
+      ],
+      "sourceWorldExtent": 0.8125,
+      "rotation": 0,
+      "flipX": false,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        128,
+        75,
+        1195,
+        1191
+      ],
+      "ppu": 1374.769231,
+      "pivotX": 0.2213078,
+      "pivotY": 0.1741467,
+      "guid": "15078ada487542ca8f0e57a1a451a6f9",
+      "spriteId": "73ff90ec003d474797f4a1a3d461ea88"
+    },
+    {
+      "id": "FlintStrike",
+      "name": "打火石",
+      "definition": "shells/tools.json",
+      "sourceSprite": "Assets/6_Art/Items/Tools/Flint.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FlintStrike/FlintStrike_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.5,
+        0.5
+      ],
+      "sourceAlpha": [
+        2,
+        2,
+        28,
+        29
+      ],
+      "sourceWorldExtent": 0.875,
+      "rotation": 0,
+      "flipX": false,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        226,
+        283,
+        1040,
+        1018
+      ],
+      "ppu": 931.428571,
+      "pivotX": 0.5051834,
+      "pivotY": 0.4808612,
+      "guid": "a26921880a4a40208ed9afe977554ab4",
+      "spriteId": "39a34a7af9ff4b1faa9ea239e88c639a"
+    },
+    {
+      "id": "SparkMaker_Summoner",
+      "name": "钻木取火工具",
+      "definition": "shells/building_summoners.json",
+      "sourceSprite": "Assets/6_Art/Items/ADDSparkMaker.png[ADDSparkMaker_11]",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
+      "sourceRect": [
+        136,
+        192,
+        42,
+        50
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0,
+        0
+      ],
+      "sourceAlpha": [
+        0,
+        0,
+        41,
+        49
+      ],
+      "sourceWorldExtent": 1.5625,
+      "rotation": 0,
+      "flipX": false,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        175,
+        206,
+        1201,
+        1165
+      ],
+      "ppu": 657.28,
+      "pivotX": 0.1395534,
+      "pivotY": 0.0701754,
+      "guid": "d70505a32b2b45ff92af679100ba433c",
+      "spriteId": "d9e7f455e84c49b3a7fb00b06ff9a5d6"
+    },
+    {
+      "id": "Torch_Summoner",
+      "name": "火把",
+      "definition": "shells/building_summoners.json",
+      "sourceSprite": "Assets/6_Art/Generated/Tools/Torch/Torch_Spent.png[Torch_Spent]",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "sourcePPU": 16,
+      "sourcePivot": [
+        0.475,
+        0.15
+      ],
+      "sourceAlpha": [
+        29,
+        44,
+        32,
+        54
+      ],
+      "sourceWorldExtent": 0.6875,
+      "rotation": 45,
+      "flipX": false,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        167,
+        101,
+        1221,
+        1194
+      ],
+      "ppu": 2081.119871,
+      "pivotX": 0.2509569,
+      "pivotY": 0.1691866,
+      "guid": "1239a55e1ad5428093df3599f2294c73",
+      "spriteId": "8b09adcc6a7b4958a121960fd168640d"
+    },
+    {
+      "id": "HandDrill_Summoner",
+      "name": "手钻",
+      "definition": "shells/hand_drill.json",
+      "sourceSprite": "Assets/6_Art/Generated/Mechanical/Items/HandDrill/HandDrill_Icon.png",
+      "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+      "sourceRect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sourcePPU": 32,
+      "sourcePivot": [
+        0.5,
+        0.5
+      ],
+      "sourceAlpha": [
+        4,
+        5,
+        26,
+        27
+      ],
+      "sourceWorldExtent": 0.71875,
+      "rotation": 0,
+      "flipX": false,
+      "flipY": false,
+      "width": 1254,
+      "height": 1254,
+      "alphaBounds": [
+        129,
+        82,
+        1124,
+        1182
+      ],
+      "ppu": 1531.826087,
+      "pivotX": 0.5172665,
+      "pivotY": 0.5147008,
+      "guid": "bf652f961d274c748370c8bd5438c938",
+      "spriteId": "eac8988be2bc4c189be870ddf12237b4"
+    }
+  ]
+}

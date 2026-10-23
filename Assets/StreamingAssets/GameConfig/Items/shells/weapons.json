@@ -88,13 +88,20 @@
       "volume": 0.8,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[石制小刀]",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Stone/Dagger_Stone_Icon.png",
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
           "z": 225.0
         },
-        "flipX": true
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "damage": {
@@ -126,13 +133,20 @@
       "volume": 0.8,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_19]",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Copper/Dagger_Copper_Icon.png",
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
           "z": 225.0
         },
-        "flipX": true
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "damage": {
@@ -164,13 +178,20 @@
       "volume": 0.8,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_006.png",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Bone/Dagger_Bone_Icon.png",
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 315.0
+          "x": 0,
+          "y": 0,
+          "z": 225
         },
-        "flipX": false
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "damage": {
@@ -195,13 +216,20 @@
       "volume": 0.8,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Weapons/Guns/iron-weapons.png[iron-weapons_248]",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Knife_Flint/Knife_Flint_Icon.png",
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 315.0
+          "x": 0,
+          "y": 0,
+          "z": 225
         },
-        "flipX": true
+        "flipX": true,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab"
     },
@@ -950,8 +978,20 @@
       "volume": 0.25,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_98]",
-        "flipX": true
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/ChippedTool/ChippedTool_Icon.png",
+        "flipX": true,
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "damage": {
@@ -1135,9 +1175,9 @@
             "ignore2DShadowsOnSourceSprite": false,
             "$transform": {
               "localPosition": {
-                "x": 0.0,
-                "y": 0.5,
-                "z": 0.0
+                "x": -0.002372,
+                "y": 0.532893,
+                "z": 0
               }
             }
           }
@@ -1157,9 +1197,9 @@
             "attachFlameToAnchor": true,
             "followSourceRenderer": true,
             "sourceRendererAnchorOffset": {
-              "x": 0.0,
-              "y": 0.625,
-              "z": 0.0
+              "x": 0.375135,
+              "y": 0.378489,
+              "z": 0
             },
             "$transform": {
               "localPosition": {

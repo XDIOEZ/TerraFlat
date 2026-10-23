@@ -1718,7 +1718,7 @@
         "Combustion.Fuel"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/ADDSparkMaker.png[ADDSparkMaker_11]",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1868,7 +1868,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Tools/Torch/Torch_Spent.png[Torch_Spent]",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
         "rendererLocalPosition": {
           "x": 0,
           "y": 0,
@@ -1877,7 +1877,7 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 0
+          "z": 45
         },
         "rendererLocalScale": {
           "x": 1,

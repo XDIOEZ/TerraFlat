@@ -21,7 +21,20 @@
       ],
       "worldDropBehavior": "interactive",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_389.png"
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "flipX": false,
+        "flipY": false,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "fishing": {

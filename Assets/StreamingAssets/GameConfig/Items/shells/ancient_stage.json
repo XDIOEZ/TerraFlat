@@ -603,8 +603,15 @@
       "weight": 1.7,
       "volume": 3.0,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodShovel/WoodShovel_Icon.png",
-        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Wood/Shovel_Wood_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "shovel": {
@@ -639,7 +646,15 @@
           "g": 1.0,
           "b": 1.0,
           "a": 1.0
-        }
+        },
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Stone/Shovel_Stone_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "shovel": {
@@ -663,8 +678,15 @@
       "weight": 3.0,
       "volume": 3.4,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CopperShovel/CopperShovel_Icon.png",
-        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "shovel": {
@@ -693,8 +715,15 @@
       "weight": 3.3,
       "volume": 3.5,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/RawIronShovel/RawIronShovel_Icon.png",
-        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_RawIron/Shovel_RawIron_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "shovel": {
@@ -723,8 +752,15 @@
       "weight": 3.2,
       "volume": 3.4,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/BronzeShovel/BronzeShovel_Icon.png",
-        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Bronze/Shovel_Bronze_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "shovel": {
@@ -753,8 +789,15 @@
       "weight": 3.4,
       "volume": 3.4,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/IronShovel/IronShovel_Icon.png",
-        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+        "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Iron/Shovel_Iron_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "shovel": {
