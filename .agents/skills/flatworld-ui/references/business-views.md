@@ -5,7 +5,7 @@
 - `MachinePanelFactoryRegistry` 按LogicId租约注册；通用会话管生命周期/库存/权威请求，具体会话管专属控件。槽位按真实容量显隐、不按炉型ID分支，电磁炉复用面板隐藏燃料/点火并读实供功率、真实升温系数与容量；IInstanceUI.IsPanelOpen读真实面板，模块列表按创建/展开/操作刷新。
 - 电池 `UI_Mechanical` 的 BatteryCharge/BatteryPercentage 由 MechanicalPanelSession读比例，竖Slider禁交互、下向上填、仅电池显示；布局同步 MechanicalContentBuilder.EnsureBatteryGauge。气罐 `UI_IndustrialFluid/UI_FluidTank` 的 GasCapacity/GasPercentage 按实压/安全上限填，超压填充封顶但百分比真实且红；组合罐读节点整组库存/容积、便携罐由MechanicalPanelSession注入，构建器 EnsureGasCapacityGauge同步。
 - 热栏选中框归当前槽，用Common/Controls/UI_SelectBox与Inventory_HotBar.SelectBoxPrefab；附属提示ignoreLayout/无射线，Inventory.InitUI按真实ItemSlot_UI计槽，手持名读装备热栏。ItemSlot_UI.SetProcessingProgress仅写正式灰白层，燃料进度读真实吸收，Prefab与GameUIPrefabRebuilder同步。
-- `InventoryItemTooltip` 鼠标悬停0.5非缩放秒，等待/显示均验来源面板/槽/物品，离开或重绑重计时；触屏空手长按后固定并松手保留，窗外按下仅收起不截点击。固定期间持续验身份/手空/父面板可见，关闭/重绑/禁用/失焦清理，CanvasGroup隐藏也清。正式Prefab自带无射线独立Canvas，统一UIManager.ItemTooltipSortingOrder覆盖场景/常驻窗口。
+- `InventoryItemTooltip` 鼠标悬停0.3非缩放秒，等待/显示均验来源面板/槽/物品，离开或重绑重计时；触屏空手长按0.5秒后固定并松手保留，窗外按下仅收起不截点击。固定期间持续验身份/手空/父面板可见，关闭/重绑/禁用/失焦清理，CanvasGroup隐藏也清。正式Prefab自带无射线独立Canvas，统一UIManager.ItemTooltipSortingOrder覆盖场景/常驻窗口。
 - 手工/制作台用Gameplay/Crafting/UI_HandCraftTable/UI_MakerTable，1344×756、安全区后比例0.6/0.8，真实输入/输出/配方容量复用；Prefab、GameUIPrefabRebuilder、TodoCraftingLayoutPreview同步。工业流体/宇航服/气罐用MechanicalPanelView/PreservePrefabLayout，宇航服用SpacesuitPanelSession真实供氧槽。
 - 装备只有 `FWUI_ConfigureEquipment` 通用入口；EquipmentConfigurationButton收集配置能力，一件直开、多件公共下拉、无则禁用。Mod_Equipment通过IEquipmentConfiguration分发并验当前装备身份，具体装备持页面，通用UI不识别具体装备。
 

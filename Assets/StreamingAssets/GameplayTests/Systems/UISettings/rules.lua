@@ -1,9 +1,9 @@
 test.system("ui_settings", "hover_and_mod_selection", {}, function(data)
-    assert(data.earlyHidden and data.halfSecondVisible and data.reenteredHidden,
-        "物品介绍没有等满半秒，或离开后重新悬停沿用了上次等待")
+    assert(data.earlyHidden and data.delayCompletedVisible and data.reenteredHidden,
+        "物品介绍没有等满0.3秒，或离开后重新悬停沿用了上次等待")
     assert(data.equivalentSelection and data.reorderedChanged and data.disabledChanged and data.autoEnableChanged,
         "MOD 关闭比较没有识别排序、禁用或默认启用变化，或把无意义的集合排列当作变化")
-end, "半秒连续悬停边界与 MOD 启停排序差异")
+end, "0.3秒连续悬停边界与 MOD 启停排序差异")
 
 test.system("ui_settings", "gamepad_input_reenable", {}, function(data)
     local function check_binding(sample)

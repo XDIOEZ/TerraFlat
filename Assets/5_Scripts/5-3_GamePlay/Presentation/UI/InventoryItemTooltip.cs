@@ -15,7 +15,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     #region 配置
 
     private const float ScreenEdgeMargin = 8f;
-    public const double MouseHoverDelaySeconds = 0.5d;
+    public const double MouseHoverDelaySeconds = 0.3d;
     private static readonly WaitForSeconds RefreshInterval = new WaitForSeconds(1f);
 
     [SerializeField] private RectTransform panelRect;

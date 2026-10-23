@@ -208,7 +208,7 @@ public class ItemSlot_UI : MonoBehaviour,
     private readonly InventoryFlickGesture mouseFlickGesture = new();
 
     [Header("手机长按物品介绍")]
-    [SerializeField, Min(0.1f)] private float touchTooltipSeconds = 1f;
+    [SerializeField, Min(0.1f)] private float touchTooltipSeconds = 0.5f;
     private Coroutine touchTooltipCoroutine;
     private bool touchTooltipTriggered;
 

@@ -42,8 +42,8 @@ public static partial class GameplayTestSystemProbe
         equivalent.AutoEnableNewMods = true;
         return new JObject
         {
-            ["earlyHidden"] = !InventoryItemTooltip.HasCompletedMouseHover(10d, 10.499d),
-            ["halfSecondVisible"] = InventoryItemTooltip.HasCompletedMouseHover(10d, 10.5d),
+            ["earlyHidden"] = !InventoryItemTooltip.HasCompletedMouseHover(10d, 10.299d),
+            ["delayCompletedVisible"] = InventoryItemTooltip.HasCompletedMouseHover(10d, 10.3d),
             ["reenteredHidden"] = !InventoryItemTooltip.HasCompletedMouseHover(10.4d, 10.6d),
             ["equivalentSelection"] = equivalentSelection,
             ["reorderedChanged"] = reorderedChanged,
