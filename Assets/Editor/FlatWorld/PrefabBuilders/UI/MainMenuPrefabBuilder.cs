@@ -14,7 +14,7 @@ public static class MainMenuPrefabBuilder
 
     #region 主菜单专属配色
 
-    // 参考图的中性灰按钮、近白文字与淡金点缀，不修改游戏内通用主题。
+    // 主菜单使用中性灰按钮、近白文字与灰白点缀，强调色跟随通用主题。
     private static readonly Color ButtonFace = new Color32(88, 88, 88, 255);
     private static readonly Color ButtonBorder = new Color32(55, 55, 55, 255);
     private static readonly Color Label = new Color32(236, 238, 239, 255);
@@ -78,7 +78,7 @@ public static class MainMenuPrefabBuilder
 
         // 只保存目标资源，避免写入当前项目中无关的脏资源。
         AssetDatabase.SaveAssetIfDirty(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath));
-        Debug.Log("[MainMenu] 参考图风格已应用：灰色按钮、白字淡金、柔焦蓝绿背景；布局与功能保持不变。");
+        Debug.Log("[MainMenu] 参考图风格已应用：灰色按钮、灰白文字与点缀、柔焦蓝绿背景；布局与功能保持不变。");
     }
 
     /// <summary>路径失配时直接停止，避免对错误节点或半套结构静默换肤。</summary>
@@ -142,7 +142,7 @@ public static class MainMenuPrefabBuilder
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[MainMenu] 主界面美术已重建：蓝绿柔焦远景、白字淡金、灰色菜单与联机入口。");
+        Debug.Log("[MainMenu] 主界面美术已重建：蓝绿柔焦远景、灰白文字与点缀、灰色菜单与联机入口。");
     }
 
     private static void ConfigureBackgroundImporter()

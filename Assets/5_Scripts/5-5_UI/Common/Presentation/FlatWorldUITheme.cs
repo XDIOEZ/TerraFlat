@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 从主界面参考图提炼出的全局视觉系统。
-/// 设计目标是中性灰低对比界面、近白文字、少量暖黄焦点色，并保留游戏物品像素美术本身。
+/// 设计目标是中性灰低对比界面、近白文字、灰白焦点色，并保留游戏物品像素美术本身。
 /// </summary>
 public static class FlatWorldUITheme
 {
@@ -25,7 +25,7 @@ public static class FlatWorldUITheme
     public static Color TextSecondary => ThemeColor("textSecondary");
     public static Color Accent => ThemeColor("accent");
     public static Color AccentHover => ThemeColor("accentHover");
-    // 手柄/键盘导航选中态保持灰阶，只用细暖黄描边区分焦点，避免整块控件变成彩色。
+    // 手柄/键盘导航通过细灰白描边区分焦点，保持控件底色的灰阶层次。
     public static Color Selection => ThemeColor("selection");
     public static Color SelectionOutline => ThemeColor("selectionOutline");
     public static readonly Vector2 SelectionOutlineDistance = new Vector2(3f, -3f);
@@ -33,7 +33,7 @@ public static class FlatWorldUITheme
     public static readonly Vector2 BorderOutlineDistance = new Vector2(2f, -2f);
     // 文字描边保持 1 个参考像素，避免像素字体被加粗成糊边。
     public static readonly Vector2 TextOutlineDistance = new Vector2(1f, -1f);
-    // 手机玩法准线固定为纯白，不与暖黄的导航焦点视觉混用。
+    // 手机玩法准线固定为纯白，独立于导航焦点配色。
     public static Color AimCursor => ThemeColor("aimCursor");
     public static Color Teal => ThemeColor("teal");
     public static Color Danger => ThemeColor("danger");
