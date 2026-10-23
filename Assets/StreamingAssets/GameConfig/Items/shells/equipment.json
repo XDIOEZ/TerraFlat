@@ -32,7 +32,7 @@
         "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_077.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -166,7 +166,7 @@
         "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Equipment/Jade Equipment/Jade Chestplate.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -295,7 +295,7 @@
         "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Equipment/Wood Equipment/Wood Chestplate.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

@@ -1,0 +1,502 @@
+{
+  "date": "2026-10-23",
+  "method": "built-in image_gen.imagegen",
+  "scope": "19 wearable equipment inventory icons only",
+  "references": [
+    ".agents/skills/flatworld-art/SKILL.md",
+    ".agents/skills/flatworld-art/references/art-direction.md"
+  ],
+  "assets": [
+    {
+      "id": "Engineering_Goggles",
+      "name": "工程护目镜",
+      "output": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
+      "generation": {
+        "id": "Engineering_Goggles",
+        "name": "工程护目镜",
+        "output": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. Reference 3 is the previous item's identity/color/functional reference only; update its craftsmanship and simplify the rendering.\nSubject: Handmade engineering protective GOGGLES, ONE assembled pair with two small round-to-octagonal thick pale desaturated teal lenses held in a dull gray-brass frame, short sturdy central bridge, a broad brown leather strap forming a visible loop behind the lenses. Preserve the two-lens engineering identity from the old icon, not a visor or helmet. Plain leather padding behind the rims, two or three big fastener marks, one simple hand-cut buckle at the side, broad muted glass reflections. Purposeful workshop optical gear for seeing hidden electrical wires, no glowing HUD or electronics. No goggles worn by anyone. Four or five chunky blocks express each lens; no fine steampunk gears.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Electrical/Engineering_Goggles/Engineering_Goggles_Icon.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-481c6011-855c-4241-8df8-81cff6467d79.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Refined clean hard pixel outline, no peripheral glow; square composition and two-lens engineering identity retained.",
+        "observed_corner_alpha": 0,
+        "refinement_prompt": "Use case: precise-object-edit / style-transfer. Image 1 is the engineering goggles edit target. Image 2 is ONLY the approved coarse-pixel density anchor, do not copy the shovel. KEEP the two large teal lenses, simple gray-brass riveted rims, brown leather strap, buckle, same handmade optical gear identity, upper-left lighting and coarse hard-edged pixel artwork. Remove ALL soft translucent haze, glow, peripheral shadow, edge blur and gradient effects around the object. Empty outside pixels must have EXACTLY ZERO alpha, hard square-pixel silhouette with 0/255 alpha except inside glass lenses. DO NOT paint a black background: the background must be genuinely transparent, no floor, shadow, checkerboard, display card or text. Reframe the unchanged complete goggles at 3/4 view in the CENTER of a SQUARE 1:1 canvas with generous completely transparent margins on every side; the complete strap and buckle stay inside the canvas. Keep big pixel clusters, sparse subdued colors and broad flat material planes, no added detail or glossy 3D.",
+        "refinement_references": [
+          "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-e8633c34-fde0-4cc7-a434-7e8064c1393e.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "discarded_source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-e8633c34-fde0-4cc7-a434-7e8064c1393e.png",
+        "refinement_input_note": "Tool referenced the project copy of this immutable discarded_source at refinement time; project target now contains the selected final image."
+      }
+    },
+    {
+      "id": "Chestplate_Iron",
+      "name": "铁甲",
+      "output": "Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png",
+      "generation": {
+        "id": "Chestplate_Iron",
+        "name": "铁甲",
+        "output": "Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: BASIC HEAVY FORGED STEEL BREASTPLATE, distinct from the iron guard cuirass sample. This item's configuration calls it iron armor but specifies forged steel ingots and heavy reliable protection. A broad dark neutral gunmetal simple sleeveless chest-and-belly cuirass, thick slightly irregular hand-forged front plate, a plain low neck opening and two wide brown leather shoulder straps with simple dull peened rivets. Two broad overlapping lower belly plates; NO shoulder pauldrons and no ornate waist skirt. A couple of large hand-forged plane changes, simple folded plate edge, clear leather side straps/lashings support it. It is a sturdy heavy torso item, not a full suit or modern ballistic vest. Color slightly more neutral charcoal gray than the gray-blue IronGuard reference, matte with restrained highlights.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-f1a886e0-d869-4d7c-b1a5-15792c287f48.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Handmade heavy iron/steel cuirass without shoulder pauldrons, slate metal, broad leather ties and rivets.",
+        "observed_corner_alpha": 0
+      }
+    },
+    {
+      "id": "Chestplate_Twine",
+      "name": "藤甲",
+      "output": "Assets/6_Art/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png",
+      "generation": {
+        "id": "Chestplate_Twine",
+        "name": "藤甲",
+        "output": "Assets/6_Art/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: EARLY WOVEN RATTAN TORSO ARMOR, light vest-shaped chest-and-abdomen protection woven from flexible woody vines and coarse plant fiber cord. Clearly recognizable woven tan-brown RATTAN, not jade, green stone, metal, or leather. Use only a handful of very broad interlaced flat ochre/tan strips forming bold over-under bands over two or three large solid basket-weave panels; do NOT make fine repeating wicker texture. Stout fiber cord binds the slightly uneven outer edge and secures two shoulder loops and one plain side knot. Hollow neck and armholes, short sturdy waist, natural hand-woven asymmetry. Olive-brown shadow, muted warm straw-brown base. Keep the number of crossing strands very low and large pixel clusters, comparable to the coarse approved hood.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-dd66811c-b6e6-4038-bf43-0e8da061daca.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Restored rattan/vine weave material, broad interwoven strips and functional rope binding.",
+        "observed_corner_alpha": 0
+      }
+    },
+    {
+      "id": "Chestplate_Wood",
+      "name": "木甲",
+      "output": "Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png",
+      "generation": {
+        "id": "Chestplate_Wood",
+        "name": "木甲",
+        "output": "Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: EARLY WOODEN TORSO ARMOR, chest and abdomen protection made from FIVE or SIX roughly hand-split flat WOODEN SLATS tied side-by-side. Thick short umber wood panels with subtly uneven hand-cut ends, a simple chest silhouette, broad tan plant-fiber/ leather shoulder straps. Two horizontal rows of visible rope binding genuinely hold the slats together and have a chunky knot near one side. Plain short waist, hollow neck and armholes. Wood grain is at most TWO long broad shade changes, no fine repeated lines. Brown wood clearly distinct from rattan woven armor and leather vest; no stone, no metal pauldrons, no ornate carving.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-a42317ea-6302-4bfc-96ce-dbe809770846.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Five broad wood slats held by two functional rope bindings, rough hand-split ends.",
+        "observed_corner_alpha": 0
+      }
+    },
+    {
+      "id": "Traveler_Hood",
+      "name": "旅人兜帽",
+      "output": "Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Icon.png",
+      "generation": {
+        "id": "Traveler_Hood",
+        "name": "旅人兜帽",
+        "output": "Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Icon.png",
+        "status": "completed_reused_approved_sample",
+        "source": "Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "prompt_source": "Assets/6_Art/Generated/Equipment/GenerationPrompts_Handcrafted.json",
+        "prompt_note": "Approved handcrafted sample copied unchanged; exact generation and refinement prompts remain in prompt_source.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "prompt": "Use case: style-transfer / precise-object-edit.\nAsset type: FlatWorld inventory equipment art direction sample, handcrafted technology progression revision.\nInput image 1 is the edit target and item-identity/composition reference. Input image 2 is ONLY the approved coarse-pixel and humble handmade material reference (an iron shovel); do not copy its shape or add a shovel.\nArt direction: this game starts with nothing and develops technology through player crafting. Make construction readable: cut, sewn, lashed, hammered, riveted and assembled by a person using the tools of this item's technological era. Modest functional craftsmanship with subtle asymmetry; structure is sound and complete. Do not simply add dirt, tears, rust or random repair patches. Advanced items still require believable engineering and their actual advanced materials.\nKeep low-saturation semi-realistic RETRO PIXEL ART, natural proportions, large hard-edged square pixel clusters at the SAME coarse density as image 2, around 32-48 logical pixels across the complete square icon. Consistent large pixel grid; sparse 12-20 color palette. Upper-left light, a midtone, one main shadow and very small muted highlights per material. Construction details must be a few bold chunky marks rather than fine texture. No gradients, micro-pixels, photographic grain, noise, dithering, smooth brushwork, glossy 3D, decorative polish or thick pure-black outline.\nPreserve one centered isolated item, mild left-facing 3/4 view, original square canvas and generous transparent margins. Genuine transparent RGBA background; no checkerboard, floor, cast shadow, display card, text, labels, watermark, person, mannequin, face, skin, hair or extra objects. Empty garment openings remain empty.\nSubject changes: hand-sewn traveler hood, muted umber-brown coarse linen/flax or hemp cloth. Keep the open face aperture, short shoulder cowl and recognizable hood silhouette. Replace the perfectly regular folded rim with a slightly uneven simple folded cloth edge. Show ONE broad seam joining two cut cloth panels across the crown, with only THREE or FOUR thick, widely spaced ochre fiber stitches visible on the near side; one chunky overstitch at the cowl. The panels differ subtly in shade, not a patchwork of many colors. Tie the throat with a simple irregular hemp cord knot and two short ends instead of a neat manufactured closure. Two or three broad fabric folds show a believable drape. Soft matte fabric expressed with flat pixel planes, not a woven noise texture. Sturdy handmade clothing in good working condition, no ornate embroidery, huge patches, holes, jewelry or leather helmet. Keep the face area genuinely hollow and transparent, no human inside."
+      }
+    },
+    {
+      "id": "Traveler_Vest",
+      "name": "旅人皮甲",
+      "output": "Assets/6_Art/Generated/Equipment/Traveler_Vest/Traveler_Vest_Icon.png",
+      "generation": {
+        "id": "Traveler_Vest",
+        "name": "旅人皮甲",
+        "output": "Assets/6_Art/Generated/Equipment/Traveler_Vest/Traveler_Vest_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: TRAVELER'S HAND-SEWN LEATHER VEST, empty sleeveless utilitarian brown leather torso armor for chest and abdomen. Match the approved brown hood's humble durable handmade world and palette, but correctly depict matte chestnut LEATHER rather than a cloth hoodie. Two or three broad irregularly cut panels with four widely spaced thick ochre stitches along the near side seam; a simple thick leather tie and knot closes a short front overlap. Low open neck, distinct armholes, broad waist band, two large flat leather folds, slight cut-edge asymmetry. No metal armor, fancy tailoring, zippers, pockets full of items, cloak, sleeves or body.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-59f3e716-8a62-4ef3-98e8-0e5f70796017.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Empty brown sleeveless leather vest; broad coarse stitches, simple front tie and natural utilitarian proportions.",
+        "observed_corner_alpha": 0
+      }
+    },
+    {
+      "id": "Traveler_Gloves",
+      "name": "旅人手套",
+      "output": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
+      "generation": {
+        "id": "Traveler_Gloves",
+        "name": "旅人手套",
+        "output": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: TRAVELER'S HAND-SEWN LEATHER GLOVES, one MATCHED PAIR of empty muted brown durable five-finger work gloves shown next to each other with slight overlap, clear natural adult hand proportions. Full enclosed fingers, slightly bent at rest, wide short cuffs with a simple leather thong knot. The near glove shows only THREE chunky spaced ochre stitches on one broad seam and a broad reinforced palm panel; the other is the same design. Finger separation expressed with a few broad pixels, not many thin outlines. Soft matte leather with one light plane, no skin, no hands inside, no fingerless cut, metal or ornament.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-d33a90c1-1318-4f15-bb38-a66983b3591f.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Matched pair of empty full leather gloves, bold coarse seams and cuff ties.",
+        "observed_corner_alpha": 0
+      }
+    },
+    {
+      "id": "Traveler_Trousers",
+      "name": "旅人长裤",
+      "output": "Assets/6_Art/Generated/Equipment/Traveler_Trousers/Traveler_Trousers_Icon.png",
+      "generation": {
+        "id": "Traveler_Trousers",
+        "name": "旅人长裤",
+        "output": "Assets/6_Art/Generated/Equipment/Traveler_Trousers/Traveler_Trousers_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: TRAVELER'S DURABLE HAND-SEWN TROUSERS, one empty complete pair of full-length muted earthy brown/umber coarse-cloth pants, visibly two connected legs, simple loose practical straight cut. Waist tied with a thick hemp cord and one simple off-center knot. One broad seam with three or four big widely spaced ochre stitches, a single broad reinforced knee panel on each leg slightly different in shape, only a few large flat folds, cuffs end above where shoes would begin. Durable handmade clothing in working condition, not torn patchwork. No boots, belt tools, legs or mannequin, leggings or metal plates.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-2ec60530-145c-4357-8bef-f705c60dbfa6.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Empty full-length pants, coarse waist tie and seams, broad reinforced knees; no footwear or body.",
+        "observed_corner_alpha": 0
+      }
+    },
+    {
+      "id": "Traveler_Boots",
+      "name": "旅人皮靴",
+      "output": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
+      "generation": {
+        "id": "Traveler_Boots",
+        "name": "旅人皮靴",
+        "output": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
+        "status": "completed_generated",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: TRAVELER'S HAND-SEWN THICK-SOLED LEATHER BOOTS, one matched PAIR of empty mid-ankle-to-lower-calf brown leather boots, side by side with slight overlap, both facing mildly left, normal utilitarian human foot proportions. Rounded sturdy toes, layered dark brown leather soles, slightly irregular hand-cut shaft tops. Two or three broad coarse tie/lacing turns around shaft that functionally close the boot, one visible simple knot; a few very widely spaced big stitches joining the upper to sole. Broad matte leather planes, complete good-condition footwear, not long fashionable boots, no metal, skin, feet, shaggy fur or dense lace texture.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16867-7c37-7490-8553-ffff43b56335/exec-64629800-feba-4fb3-9cf7-1ba6586272d3.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "visual_note": "Matched handmade leather boots, broad binding turns, chunky stitches and layered leather soles.",
+        "observed_corner_alpha": 0
+      }
+    },
+    {
+      "id": "IronGuard_Helmet",
+      "name": "铁卫头盔",
+      "output": "Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png",
+      "generation": {
+        "id": "IronGuard_Helmet",
+        "name": "铁卫头盔",
+        "output": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png",
+        "status": "completed",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: IRON GUARD HELMET, empty practical open-face gray-blue iron helmet matching the approved IronGuard cuirass palette, dark matte forged slate-blue steel and brown leather. Hand-hammered plain rounded/faceted cap built from TWO broad sections with one shallow ridge and only THREE large dull peened rivets. Short simple brow guard, modest cheek guards, slightly unequal hand-cut lower edges and dark brown leather liner, short attached leather chin tie. Large open face area is HOLLOW and TRANSPARENT, no human head. Robust early blacksmith equipment, no knightly visor, crown, horn, plume, decorative crest, polished rolled trim or spikes. Big flat coarse pixels, hand-forged facets only, no pockmark noise.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16868-144f-70e0-b84f-a0af2f7b6cdd/exec-62afa2df-a256-4b20-8507-9fd7133edbe0.png",
+        "review": "Subject, large pixel clusters, matte gray-blue iron and leather bindings visually inspected; helmet face opening remains empty.",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "IronGuard_Cuirass",
+      "name": "铁卫胸甲",
+      "output": "Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png",
+      "generation": {
+        "id": "IronGuard_Cuirass",
+        "name": "铁卫胸甲",
+        "output": "Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png",
+        "status": "completed_reused_approved_sample",
+        "source": "Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "prompt_source": "Assets/6_Art/Generated/Equipment/GenerationPrompts_Handcrafted.json",
+        "prompt_note": "Approved handcrafted sample copied unchanged; exact generation and refinement prompts remain in prompt_source.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "prompt": "Use case: style-transfer / precise-object-edit.\nAsset type: FlatWorld inventory equipment art direction sample, handcrafted technology progression revision.\nInput image 1 is the edit target and item-identity/composition reference. Input image 2 is ONLY the approved coarse-pixel and humble handmade material reference (an iron shovel); do not copy its shape or add a shovel.\nArt direction: this game starts with nothing and develops technology through player crafting. Make construction readable: cut, sewn, lashed, hammered, riveted and assembled by a person using the tools of this item's technological era. Modest functional craftsmanship with subtle asymmetry; structure is sound and complete. Do not simply add dirt, tears, rust or random repair patches. Advanced items still require believable engineering and their actual advanced materials.\nKeep low-saturation semi-realistic RETRO PIXEL ART, natural proportions, large hard-edged square pixel clusters at the SAME coarse density as image 2, around 32-48 logical pixels across the complete square icon. Consistent large pixel grid; sparse 12-20 color palette. Upper-left light, a midtone, one main shadow and very small muted highlights per material. Construction details must be a few bold chunky marks rather than fine texture. No gradients, micro-pixels, photographic grain, noise, dithering, smooth brushwork, glossy 3D, decorative polish or thick pure-black outline.\nPreserve one centered isolated item, mild left-facing 3/4 view, original square canvas and generous transparent margins. Genuine transparent RGBA background; no checkerboard, floor, cast shadow, display card, text, labels, watermark, person, mannequin, face, skin, hair or extra objects. Empty garment openings remain empty.\nSubject changes: early iron-smith workshop cuirass, forged and assembled by hand. Preserve iron torso armor, dark desaturated slate-blue/gray iron and dull brown leather. Substantially replace the polished uniform knight armor construction: a broad hand-hammered chest plate with slightly irregular edges over a dark leather backing, a simple lower overlap plate and two modest uneven shoulder plates, attached with THREE or FOUR large dull peened rivets and obvious brown leather thongs/knots at the sides. The two shoulders are subtly different in shape, but robust and usable. Remove the high rolled polished collar, shiny central Y-ridge, continuous bright silver border, identical stamped plate segments and luxurious sculpted waist skirt. Instead use a low plain neck cutout with leather edging, one shallow hand-forged ridge and a short, simply joined waist overlap. Suggest hammer-forming with at most TWO broad irregular midtone facets, never dozens of hammer dents or scratches. Restrained tiny steel highlights, mostly dark matte forged iron. This is still iron armor, not wood, stone, bronze, scrap trash or a full body suit. No person or arms inside. One object with complete coherent fastening.",
+        "additional_refinement_prompt": "Use case: precise-object-edit / style-transfer.\nImage 1 is the edit target: handmade iron guard cuirass. Image 2 is ONLY the approved coarse-pixel and humble handcrafted material style reference, do not copy the shovel's subject.\nThe target still looks too shiny, finely manufactured and elegant. Repaint the armor itself to look visibly made by an early iron-working craftsperson. KEEP one isolated empty iron torso cuirass and shoulder guards, same composition, transparent background, desaturated dark iron plus brown leather, no person. Preserve canvas and margins.\nMake the breastplate TWO or THREE simple flat hand-forged iron sections with clear plain overlaps, slightly irregular hand-cut plate edges, modest shoulder pieces of subtly unequal shape, thick brown leather side lashings/knots, a low leather-trimmed neck and only three or four dull hand-peened rivets. A plain short waist overlap, no decorative skirt.\nMake metal approximately 60 percent dark charcoal/slate gray base, 30 percent broad flat medium gray-blue plane, and only a FEW small dull gray highlight pixels. Remove the continuous bright white edge and large shiny central highlight, remove the smooth sculpted curved V-shaped central ridge. Make the surface matte and broad hammered facets, do not add dozens of dents or scratches. Do not simulate craftsmanship with rust, tears, patchwork junk or noise. This is serviceable homemade iron equipment.\nLOW logical resolution about 32x32 or 40x40 for the entire icon, displayed at large nearest-neighbor magnification. ONE UNIFORM large square pixel grid matching image 2. Sparse 12-16 solid colors, large flat pixel clusters, very sparse material detail, two tones per major surface. No tiny detailed lacing, tiny metal flecks, dithering, fine texture, gradients, smooth brushwork, blur, glossy 3D or luxurious bevels. Upper-left light. Genuine transparent RGBA background, no checkerboard, floor, cast shadow, text, frame or watermark."
+      }
+    },
+    {
+      "id": "IronGuard_Gauntlets",
+      "name": "铁卫护手",
+      "output": "Assets/6_Art/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png",
+      "generation": {
+        "id": "IronGuard_Gauntlets",
+        "name": "铁卫护手",
+        "output": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png",
+        "status": "completed",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: IRON GUARD GAUNTLETS, ONE matched pair of empty gray-blue iron protective gloves, natural hand proportions and correctly readable enclosed hands. Dark brown hand-sewn leather gloves under two or three broad hand-forged slate-blue metal plates over the back of each hand and wrists; ONE simple knuckle band, a few coarse finger divisions, only three or four big dull rivet marks. Thick leather straps visibly secure metal wrist plates, one chunky tie on near cuff. Match IronGuard cuirass's matte dark iron and leather, no elaborate tiny segmented knight fingers, spikes, gold trim, skin or hands inside, no disconnected armor pieces.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16868-144f-70e0-b84f-a0af2f7b6cdd/exec-17560251-0461-40e4-9169-6f8accd33cd0.png",
+        "review": "Subject, large pixel clusters, matte gray-blue iron and leather bindings visually inspected; helmet face opening remains empty.",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "IronGuard_Greaves",
+      "name": "铁卫腿甲",
+      "output": "Assets/6_Art/Generated/Equipment/IronGuard_Greaves/IronGuard_Greaves_Icon.png",
+      "generation": {
+        "id": "IronGuard_Greaves",
+        "name": "铁卫腿甲",
+        "output": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Greaves/IronGuard_Greaves_Icon.png",
+        "status": "completed",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: IRON GUARD LEG ARMOR for the WAIST AND LEGS, ONE coherent empty full-length lower-body equipment icon, two legs linked at a plain dark brown leather waist band. Broad slate-blue hand-forged thigh and shin plates over a dark leather trouser backing, two large simple knee caps, small plain overlap at the knees so movement is believable. Several thick brown leather ties and only a few big dull rivets fasten the slightly asymmetrical hand-cut iron panels. Match IronGuard cuirass palette and coarse density. It must read as a whole pair of armored trousers, NOT just two loose shin guards; lower ends have openings, NO BOOTS, person, body, skin or ornamental layered skirt. No dense plate segmentation.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16868-144f-70e0-b84f-a0af2f7b6cdd/exec-9bc8b1c0-d892-46e3-a512-1feb10f84f17.png",
+        "review": "Subject, large pixel clusters, matte gray-blue iron and leather bindings visually inspected; helmet face opening remains empty.",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "IronGuard_Boots",
+      "name": "铁卫战靴",
+      "output": "Assets/6_Art/Generated/Equipment/IronGuard_Boots/IronGuard_Boots_Icon.png",
+      "generation": {
+        "id": "IronGuard_Boots",
+        "name": "铁卫战靴",
+        "output": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Boots/IronGuard_Boots_Icon.png",
+        "status": "completed",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: IRON GUARD REINFORCED COMBAT BOOTS, ONE matched pair of empty stout boots facing mildly left with slight overlap. Brown thick-soled leather boots with broad plain slate-blue hand-forged iron toe caps and simple ankle/shin protection, held by two broad brown leather straps with chunky simple ties and a few dull peened rivets. Wide practical toes, low broad heels and short lower-calf shafts; handmade subtly unequal plates, matte broad surfaces. Match approved IronGuard cuirass's dark gray-blue iron and brown leather, no entire pointed polished knight sabatons, tiny segments, fur, spikes, skin or feet.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "source": "C:/Users/CatStudio/.codex/generated_images/01a16868-144f-70e0-b84f-a0af2f7b6cdd/exec-34b12d24-26e3-4b77-979c-d8fa7a9d4750.png",
+        "review": "Matched pair, complete silhouette, gray-blue hand-forged iron plates, practical brown leather straps, coarse pixel blocks and no body visually inspected.",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "Spacesuit_Head",
+      "name": "宇航服头盔",
+      "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png",
+      "generation": {
+        "id": "Spacesuit_Head",
+        "name": "宇航服头盔",
+        "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png",
+        "status": "completed_reused_approved_sample",
+        "source": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+        "raster_size": [
+          1254,
+          1254
+        ],
+        "prompt_source": "Assets/6_Art/Generated/Equipment/GenerationPrompts_Handcrafted.json",
+        "prompt_note": "Approved handcrafted sample copied unchanged; exact generation and refinement prompts remain in prompt_source.",
+        "references": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "prompt": "Use case: style-transfer / precise-object-edit.\nAsset type: FlatWorld inventory equipment art direction sample, handcrafted technology progression revision.\nInput image 1 is the edit target and item-identity/composition reference. Input image 2 is ONLY the approved coarse-pixel and humble handmade material reference (an iron shovel); do not copy its shape or add a shovel.\nArt direction: this game starts with nothing and develops technology through player crafting. Make construction readable: cut, sewn, lashed, hammered, riveted and assembled by a person using the tools of this item's technological era. Modest functional craftsmanship with subtle asymmetry; structure is sound and complete. Do not simply add dirt, tears, rust or random repair patches. Advanced items still require believable engineering and their actual advanced materials.\nKeep low-saturation semi-realistic RETRO PIXEL ART, natural proportions, large hard-edged square pixel clusters at the SAME coarse density as image 2, around 32-48 logical pixels across the complete square icon. Consistent large pixel grid; sparse 12-20 color palette. Upper-left light, a midtone, one main shadow and very small muted highlights per material. Construction details must be a few bold chunky marks rather than fine texture. No gradients, micro-pixels, photographic grain, noise, dithering, smooth brushwork, glossy 3D, decorative polish or thick pure-black outline.\nPreserve one centered isolated item, mild left-facing 3/4 view, original square canvas and generous transparent margins. Genuine transparent RGBA background; no checkerboard, floor, cast shadow, display card, text, labels, watermark, person, mannequin, face, skin, hair or extra objects. Empty garment openings remain empty.\nSubject changes: first-generation pressure helmet built in a small workshop during technological development, practical and visibly assembled, closer to a handmade early engineering/diving helmet than factory aerospace equipment. It is still a FUNCTIONAL ADVANCED PRESSURE HELMET, not primitive headwear. Preserve recognizable off-white metal shell, dark muted teal glass faceplate, charcoal seals and tiny burnt-orange fasteners. Replace the seamless mass-produced round plastic dome with TWO or THREE broad hand-formed metal shell panels and one clearly readable restrained riveted joining seam. A slightly faceted flat oval/octagonal glass window is held by a simple dark metal bolted frame with FOUR broad clamp/bolt marks, dark continuous gasket and a solid closed neck-seal ring. The shell panels are not perfectly identical, edges hand-finished, robust joined construction. One small side handwheel/locking catch may be suggested as a single attached coarse shape, no extra detached object. Use modest ivory paint, small dull steel edge and one subdued glass highlight. NO smooth seamless polished bubble, uniform molded plastic, neon, electronics, antenna, decorative gears, spiky steampunk ornament, exposed external pipe or hoses. No leather stitching through the pressure shell, rope around the glass, gaps in the seal, cracked glass, random patches or excessive rust. No face inside the glass. Engineering progression must remain believable."
+      }
+    },
+    {
+      "id": "Spacesuit_Torso",
+      "name": "宇航服衣服",
+      "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
+      "generation": {
+        "id": "Spacesuit_Torso",
+        "name": "宇航服衣服",
+        "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
+        "status": "completed",
+        "method": "built-in image_gen",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. Reference 3 is the previous item's identity/color/functional reference only; update its craftsmanship and simplify the rendering.\nSubject: FIRST-GENERATION WORKSHOP SPACE PRESSURE SUIT TORSO, one EMPTY waist-length padded pressure jacket with sleeves and open dark round sealed collar, no helmet, gloves, pants or body. Must match approved ivory riveted pressure helmet's technology: off-white insulated pressure-fabric outer coat reinforced with TWO or THREE broad hand-formed dull steel/off-white painted chest plates, restrained large rivets and a dark continuous front pressure seal, small manual closing clamps. Broad charcoal cuff and waist gasket rings, plain elbow articulation folds, a single small muted teal chest control plate with two large burnt-orange clamp/switch shapes. A compact attached rear tank housing may be partly visible at one side to suggest replaceable oxygen/propulsion canisters; no floating tanks, dangling pipes or hoses. Reliable airtight engineering built in an early workshop, not primitive medieval armor or factory seamless plastic. Coarse pixels, no tiny screws, circuit detail, display text or fancy logos.",
+        "reference_paths": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Chemistry/Spacesuit_Torso/Spacesuit_Torso_Icon.png"
+        ],
+        "generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-c10951ba-ebac-4d95-9100-f0b0db3bc955.png",
+        "final_path": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
+        "width": 1254,
+        "height": 1254,
+        "initial_generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-0a4b4014-644a-4898-930f-6bfc34debf5e.png",
+        "refinement_prompt": "Use case: style-transfer.\nInput 1 is the EDIT TARGET, one spacesuit inventory item. Preserve exactly this item's identity, off-white/charcoal palette, empty equipment shape, complete components, proportions, airtight seal rings and small orange mechanical latches. Input 2 is the APPROVED HELMET style and PIXEL-SIZE reference. Input 3 is only the approved coarse pixel-density reference, not the shovel's subject.\nONE MANDATORY CORRECTION: the target is too finely pixelated. RECONSTRUCT it on an extremely coarse UNIFORM 40 x 40 logical square pixel canvas, enlarged without smoothing. At the same displayed image size each visible square pixel must be at least as LARGE as the helmet reference; use visibly HUGE block pixels. Large stepped edges, 2-3 flat colors per material, about 14 muted colors total. Delete 70 percent of small detail. Remove thin seams, tiny highlights, minute folds, tiny screw/rivet centers, multiple segmented edges and subtle shading. Do not merely blur or add a pixel overlay: actually simplify the silhouette and shapes onto the coarse grid. All shading made from LARGE connected pixel clusters; no small interior pixels. Only a FEW large charcoal seam lines, 3 or 4 BIG utilitarian rivet blocks, simple gasket rings and thick ivory hand-formed panels. Left-upper light. Early workshop engineered space protection, robust handmade pressure-sealed assembly. Keep advanced pressure suit function and credible joined shells.\nComposition: one item centered with complete silhouette and generous transparent margins. If gloves or boots, preserve exactly one MATCHED PAIR; if trousers preserve the complete linked two-leg garment; if jacket preserve sleeves, empty open neck/cuffs, no helmet/pants/gloves. No body, skin, person, mannequin, floor, shadow, background, checkerboard, label, lettering, extra equipment, glossy 3D, fine pixel noise, antialiasing or gradients. Genuinely transparent alpha background. Output only the revised item.",
+        "refinement_reference_paths": [
+          "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-0a4b4014-644a-4898-930f-6bfc34debf5e.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "framing_prompt": "Use case: precise-object-edit. The input image is an already approved VERY COARSE pixel-art ivory workshop SPACE PRESSURE JACKET, hollow open round collar and cuffs, dark charcoal airtight gasket rings, a few large rivet blocks, a teal chest control with orange latches. Preserve its SAME visibly HUGE square pixels, broad flat planes and low detail.\nONLY correct framing: the LEFT WRIST is touching the canvas and partly cropped. Show the ENTIRE complete jacket including both cuff outer edges, and fit the whole object within the CENTRAL 72% of a square transparent canvas, with at least 12% generous EMPTY TRANSPARENT MARGINS on EVERY side. Complete any missing tiny piece of left cuff. Re-center and make the entire object modestly smaller to fit; keep same overall proportions, clothing structure and pixel coarseness. No new design or texture details, smaller pixels, smoother shading, blur, anti-aliasing, text, background, checkerboard, floor or shadow. Empty garment only, no body or hands.",
+        "framing_reference_paths": [
+          "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-d2e0580a-e873-4e0f-8706-01a8397a9705.png"
+        ]
+      }
+    },
+    {
+      "id": "Spacesuit_Hands",
+      "name": "宇航服手套",
+      "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
+      "generation": {
+        "id": "Spacesuit_Hands",
+        "name": "宇航服手套",
+        "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
+        "status": "completed",
+        "method": "built-in image_gen",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: FIRST-GENERATION WORKSHOP PRESSURE SUIT GLOVES, ONE matched pair of empty thick ivory pressure gloves, natural hand proportions, all fingers fully sealed and enclosed. Broad simple off-white insulated pressure-fabric shells with two visible broad panel joins, a few charcoal-gray reinforcement areas at knuckles/palm, large charcoal sealed cuff rings with TWO large dull metal locking clamp marks and a tiny burnt-orange latch. Thick dark gasket seam at each wrist, minimal reliable articulation folds, three or four large dull rivet marks only where metal meets the locking ring, no stitching holes through seals. Match approved ivory pressure helmet palette and humble precision-assembly style. No hand/skin inside, not modern pristine factory gloves, no medieval steel gauntlets, exposed hoses or floating hardware.",
+        "reference_paths": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-fab7750c-825d-454f-9c7f-bb169dda4b2d.png",
+        "final_path": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
+        "width": 1254,
+        "height": 1254,
+        "initial_generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-00f62d67-e6b8-4542-9815-8cd547057bdf.png",
+        "refinement_prompt": "Use case: style-transfer.\nInput 1 is the EDIT TARGET, one spacesuit inventory item. Preserve exactly this item's identity, off-white/charcoal palette, empty equipment shape, complete components, proportions, airtight seal rings and small orange mechanical latches. Input 2 is the APPROVED HELMET style and PIXEL-SIZE reference. Input 3 is only the approved coarse pixel-density reference, not the shovel's subject.\nONE MANDATORY CORRECTION: the target is too finely pixelated. RECONSTRUCT it on an extremely coarse UNIFORM 40 x 40 logical square pixel canvas, enlarged without smoothing. At the same displayed image size each visible square pixel must be at least as LARGE as the helmet reference; use visibly HUGE block pixels. Large stepped edges, 2-3 flat colors per material, about 14 muted colors total. Delete 70 percent of small detail. Remove thin seams, tiny highlights, minute folds, tiny screw/rivet centers, multiple segmented edges and subtle shading. Do not merely blur or add a pixel overlay: actually simplify the silhouette and shapes onto the coarse grid. All shading made from LARGE connected pixel clusters; no small interior pixels. Only a FEW large charcoal seam lines, 3 or 4 BIG utilitarian rivet blocks, simple gasket rings and thick ivory hand-formed panels. Left-upper light. Early workshop engineered space protection, robust handmade pressure-sealed assembly. Keep advanced pressure suit function and credible joined shells.\nComposition: one item centered with complete silhouette and generous transparent margins. If gloves or boots, preserve exactly one MATCHED PAIR; if trousers preserve the complete linked two-leg garment; if jacket preserve sleeves, empty open neck/cuffs, no helmet/pants/gloves. No body, skin, person, mannequin, floor, shadow, background, checkerboard, label, lettering, extra equipment, glossy 3D, fine pixel noise, antialiasing or gradients. Genuinely transparent alpha background. Output only the revised item.",
+        "refinement_reference_paths": [
+          "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-00f62d67-e6b8-4542-9815-8cd547057bdf.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ]
+      }
+    },
+    {
+      "id": "Spacesuit_Legs",
+      "name": "宇航服裤子",
+      "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
+      "generation": {
+        "id": "Spacesuit_Legs",
+        "name": "宇航服裤子",
+        "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
+        "status": "completed",
+        "method": "built-in image_gen",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: FIRST-GENERATION WORKSHOP PRESSURE SUIT TROUSERS, one EMPTY complete pair of connected full-length insulated pressure pants, two legs joined by a broad sealed waist coupling. Off-white padded fabric panels and a few simple hand-formed ivory/steel protective panels at thighs and knees, two or three broad dark joining/seal lines, large charcoal waist and ankle gasket rings, only a few large dull locking clamp marks and tiny burnt-orange waist latch. Broad practical joints and knees articulated with just a few coarse folds, robust airtight appearance matching the approved riveted ivory pressure helmet. No boots, torso, helmet or person, not medieval armor and not a seamless mass-produced plastic spacesuit. No dense sewing or texture, no pressure leaks, exposed cords or dangling hoses.",
+        "reference_paths": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-a4827e1c-0e92-415a-b525-a5fdf30b49a6.png",
+        "final_path": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
+        "width": 1254,
+        "height": 1254,
+        "initial_generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-485e6b33-4ca6-4175-96ce-64246e460ea7.png",
+        "refinement_prompt": "Use case: style-transfer.\nInput 1 is the EDIT TARGET, one spacesuit inventory item. Preserve exactly this item's identity, off-white/charcoal palette, empty equipment shape, complete components, proportions, airtight seal rings and small orange mechanical latches. Input 2 is the APPROVED HELMET style and PIXEL-SIZE reference. Input 3 is only the approved coarse pixel-density reference, not the shovel's subject.\nONE MANDATORY CORRECTION: the target is too finely pixelated. RECONSTRUCT it on an extremely coarse UNIFORM 40 x 40 logical square pixel canvas, enlarged without smoothing. At the same displayed image size each visible square pixel must be at least as LARGE as the helmet reference; use visibly HUGE block pixels. Large stepped edges, 2-3 flat colors per material, about 14 muted colors total. Delete 70 percent of small detail. Remove thin seams, tiny highlights, minute folds, tiny screw/rivet centers, multiple segmented edges and subtle shading. Do not merely blur or add a pixel overlay: actually simplify the silhouette and shapes onto the coarse grid. All shading made from LARGE connected pixel clusters; no small interior pixels. Only a FEW large charcoal seam lines, 3 or 4 BIG utilitarian rivet blocks, simple gasket rings and thick ivory hand-formed panels. Left-upper light. Early workshop engineered space protection, robust handmade pressure-sealed assembly. Keep advanced pressure suit function and credible joined shells.\nComposition: one item centered with complete silhouette and generous transparent margins. If gloves or boots, preserve exactly one MATCHED PAIR; if trousers preserve the complete linked two-leg garment; if jacket preserve sleeves, empty open neck/cuffs, no helmet/pants/gloves. No body, skin, person, mannequin, floor, shadow, background, checkerboard, label, lettering, extra equipment, glossy 3D, fine pixel noise, antialiasing or gradients. Genuinely transparent alpha background. Output only the revised item.",
+        "refinement_reference_paths": [
+          "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-485e6b33-4ca6-4175-96ce-64246e460ea7.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ]
+      }
+    },
+    {
+      "id": "Spacesuit_Feet",
+      "name": "宇航服鞋子",
+      "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png",
+      "generation": {
+        "id": "Spacesuit_Feet",
+        "name": "宇航服鞋子",
+        "output": "Assets/6_Art/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png",
+        "status": "completed",
+        "method": "built-in image_gen",
+        "prompt": "Use case: stylized-concept.\nAsset type: FlatWorld sandbox game inventory equipment ICON, one isolated empty piece of equipment.\nPrimary request: redraw this item in the approved handcrafted technology-progression style. The game begins from nothing and gradually develops technology. The item must clearly show how somebody cut, stitched, lashed, forged, riveted or sealed it using the tools of its era, robust and usable, with restrained handmade asymmetry rather than damage.\nStyle/medium: low-saturation semi-realistic RETRO PIXEL ART, natural utilitarian proportions. One consistent coarse square-pixel grid, approx 32-48 logical pixels across the full icon, enlarged with nearest-neighbor. Match the approved references' big hard-edged flat pixel clusters and SPARSE detail, not their raster resolution. About 12-20 subdued colors, broad flat midtone, one main shadow, a few muted highlight blocks. Upper-left light. Remove tiny weave, scratches, dotted noise, fine stitches, dithering, tiny rivets, soft painted shading, gradients, smooth vector outlines, glossy 3D and ornamental fantasy polish.\nComposition/framing: exactly one centered item (a matched pair counts as one item for gloves or boots), mild left-facing 3/4 view or clear front 3/4 clothing view; complete silhouette and generous transparent margins on a square canvas. Empty openings remain hollow. NO person, mannequin, body, limbs, face, skin or hair inside.\nScene/backdrop: genuinely transparent RGBA background. NO checkerboard, colored backdrop, floor, cast shadow, frame, UI panel, labels, text, numbers, logos or watermark.\nInput images: reference 1 is the approved material/handmade style sample for this technological stage, reference 2 is ONLY the coarse pixel-density anchor (iron shovel). Never copy the shovel shape or add tools. \nSubject: FIRST-GENERATION WORKSHOP PRESSURE SUIT BOOTS, one matched PAIR of empty thick ivory space boots, mild left-facing 3/4 view with slight overlap, sturdy natural adult footwear proportions. Broad short insulated shafts, rounded toes protected by simple hand-formed off-white metal caps, two broad shell panels with a restrained joined seam, dark charcoal thick tread soles and sealed dark upper gasket rings. TWO large dull manually closed clamp marks per ankle and a tiny burnt-orange latch, a few large rivet marks, no fine screws. Clear reliable airtight practical seals. Match the approved ivory pressure helmet palette and early workshop assembly. Do not turn into medieval iron boots or leather boots; no person, feet, dangling hoses, rocket flames or external machinery.",
+        "reference_paths": [
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ],
+        "generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-68f21467-da85-404a-9d63-718dd894edec.png",
+        "final_path": "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png",
+        "width": 1254,
+        "height": 1254,
+        "initial_generated_path": "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-9e76eda0-2ea6-471c-8c23-c52f85f342de.png",
+        "refinement_prompt": "Use case: style-transfer.\nInput 1 is the EDIT TARGET, one spacesuit inventory item. Preserve exactly this item's identity, off-white/charcoal palette, empty equipment shape, complete components, proportions, airtight seal rings and small orange mechanical latches. Input 2 is the APPROVED HELMET style and PIXEL-SIZE reference. Input 3 is only the approved coarse pixel-density reference, not the shovel's subject.\nONE MANDATORY CORRECTION: the target is too finely pixelated. RECONSTRUCT it on an extremely coarse UNIFORM 40 x 40 logical square pixel canvas, enlarged without smoothing. At the same displayed image size each visible square pixel must be at least as LARGE as the helmet reference; use visibly HUGE block pixels. Large stepped edges, 2-3 flat colors per material, about 14 muted colors total. Delete 70 percent of small detail. Remove thin seams, tiny highlights, minute folds, tiny screw/rivet centers, multiple segmented edges and subtle shading. Do not merely blur or add a pixel overlay: actually simplify the silhouette and shapes onto the coarse grid. All shading made from LARGE connected pixel clusters; no small interior pixels. Only a FEW large charcoal seam lines, 3 or 4 BIG utilitarian rivet blocks, simple gasket rings and thick ivory hand-formed panels. Left-upper light. Early workshop engineered space protection, robust handmade pressure-sealed assembly. Keep advanced pressure suit function and credible joined shells.\nComposition: one item centered with complete silhouette and generous transparent margins. If gloves or boots, preserve exactly one MATCHED PAIR; if trousers preserve the complete linked two-leg garment; if jacket preserve sleeves, empty open neck/cuffs, no helmet/pants/gloves. No body, skin, person, mannequin, floor, shadow, background, checkerboard, label, lettering, extra equipment, glossy 3D, fine pixel noise, antialiasing or gradients. Genuinely transparent alpha background. Output only the revised item.",
+        "refinement_reference_paths": [
+          "C:/Users/CatStudio/.codex/generated_images/01a16868-7bab-7f82-bcc2-88ae90053fdd/exec-9e76eda0-2ea6-471c-8c23-c52f85f342de.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png",
+          "C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+        ]
+      }
+    }
+  ]
+}

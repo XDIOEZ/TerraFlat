@@ -1,0 +1,561 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-23",
+  "scope": "19 wearable equipment inventory icons",
+  "count": 19,
+  "newlyDrawn": 16,
+  "reusedApprovedSamples": 3,
+  "method": "built-in image_gen.imagegen",
+  "style": "低饱和、偏写实、粗像素；制作工艺随科技阶段演进。",
+  "integration": {
+    "group": "PlayerAppearance",
+    "label": "ItemSprite",
+    "changedFields": [
+      "visual.spriteAddress"
+    ],
+    "alignedCharacterWearables": "outside this delivery",
+    "sourceRgbaPreserved": true,
+    "importedMaxTextureSize": 128
+  },
+  "groups": [
+    {
+      "id": "base",
+      "name": "基础装备",
+      "ids": [
+        "Chestplate_Twine",
+        "Chestplate_Wood",
+        "Chestplate_Iron",
+        "Engineering_Goggles"
+      ]
+    },
+    {
+      "id": "traveler",
+      "name": "旅人套装",
+      "ids": [
+        "Traveler_Hood",
+        "Traveler_Vest",
+        "Traveler_Gloves",
+        "Traveler_Trousers",
+        "Traveler_Boots"
+      ]
+    },
+    {
+      "id": "ironguard",
+      "name": "铁卫套装",
+      "ids": [
+        "IronGuard_Helmet",
+        "IronGuard_Cuirass",
+        "IronGuard_Gauntlets",
+        "IronGuard_Greaves",
+        "IronGuard_Boots"
+      ]
+    },
+    {
+      "id": "spacesuit",
+      "name": "宇航服套装",
+      "ids": [
+        "Spacesuit_Head",
+        "Spacesuit_Torso",
+        "Spacesuit_Hands",
+        "Spacesuit_Legs",
+        "Spacesuit_Feet"
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "Engineering_Goggles",
+      "name": "工程护目镜",
+      "slot": "头部",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/engineering.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Electrical/Engineering_Goggles/Engineering_Goggles_Icon.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
+      "guid": "d76af03ac022435ab15766f6331cacc3",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Chestplate_Iron",
+      "name": "铁甲",
+      "slot": "外甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_077.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png",
+      "guid": "0e502953979f4c6484bd152425877500",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Chestplate_Twine",
+      "name": "藤甲",
+      "slot": "外甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Items/Equipment/Jade Equipment/Jade Chestplate.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png",
+      "guid": "52bb2cdd99dd4fbfa6399a59b79d94c0",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Chestplate_Wood",
+      "name": "木甲",
+      "slot": "外甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Items/Equipment/Wood Equipment/Wood Chestplate.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png",
+      "guid": "cae40f2d99874d32bdc33fcc7a8d8709",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Traveler_Hood",
+      "name": "旅人兜帽",
+      "slot": "头部",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Hood.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Icon.png",
+      "guid": "8af964e7faac4d4ba5af348f9b8c1a89",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png"
+    },
+    {
+      "id": "Traveler_Vest",
+      "name": "旅人皮甲",
+      "slot": "外甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Vest.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Vest/Traveler_Vest_Icon.png",
+      "guid": "2ccf1cd75e3f43ed8d9024c41bd8c1f2",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png"
+    },
+    {
+      "id": "Traveler_Gloves",
+      "name": "旅人手套",
+      "slot": "手套",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Gloves.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
+      "guid": "c57f373bcb764811b0a14591a86aba2c",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png"
+    },
+    {
+      "id": "Traveler_Trousers",
+      "name": "旅人长裤",
+      "slot": "裤装",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Trousers.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Trousers/Traveler_Trousers_Icon.png",
+      "guid": "62edfca03de24fcbb5ea32b8d6f5e8b0",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png"
+    },
+    {
+      "id": "Traveler_Boots",
+      "name": "旅人皮靴",
+      "slot": "鞋靴",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Boots.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
+      "guid": "4ee99636fb56424d91612618223508e5",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png"
+    },
+    {
+      "id": "IronGuard_Helmet",
+      "name": "铁卫头盔",
+      "slot": "头部",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png",
+      "guid": "44e82b7f4f7f414ea5fa55dd9018c53b",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png"
+    },
+    {
+      "id": "IronGuard_Cuirass",
+      "name": "铁卫胸甲",
+      "slot": "外甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Cuirass.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png",
+      "guid": "8988248f152845d4bcc8f1f58aa5d632",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png"
+    },
+    {
+      "id": "IronGuard_Gauntlets",
+      "name": "铁卫护手",
+      "slot": "手套",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Gauntlets.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png",
+      "guid": "8e370944c06a4adba713924b11fcf203",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png"
+    },
+    {
+      "id": "IronGuard_Greaves",
+      "name": "铁卫腿甲",
+      "slot": "裤装",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Greaves.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Greaves/IronGuard_Greaves_Icon.png",
+      "guid": "5eab4652cee34b0e85cbf7400f5ac78c",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png"
+    },
+    {
+      "id": "IronGuard_Boots",
+      "name": "铁卫战靴",
+      "slot": "鞋靴",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/character_outfits.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Boots.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Boots/IronGuard_Boots_Icon.png",
+      "guid": "977da3b0842b4b8d90ab5ad6f8ad9bdd",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png"
+    },
+    {
+      "id": "Spacesuit_Head",
+      "name": "宇航服头盔",
+      "slot": "头部",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Head/Spacesuit_Head_Icon.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png",
+      "guid": "4d7a9024128d4f70811e6c1edbb10318",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Spacesuit_Torso",
+      "name": "宇航服衣服",
+      "slot": "外甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
+      "guid": "79ec41bd6ee64c7f88ac6bb1d2562c71",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Spacesuit_Hands",
+      "name": "宇航服手套",
+      "slot": "手套",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
+      "guid": "521d8d2a09ed4fbe895fc1afbc3da874",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Spacesuit_Legs",
+      "name": "宇航服裤子",
+      "slot": "裤装",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
+      "guid": "b0a6d4159f38462da26d8e5a6046c98f",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    },
+    {
+      "id": "Spacesuit_Feet",
+      "name": "宇航服鞋子",
+      "slot": "鞋靴",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Feet/Spacesuit_Feet_Icon.png",
+      "spriteAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png",
+      "guid": "d5cad94b5cfb4469934746903e66a35c",
+      "sourceCanvas": [
+        1254,
+        1254
+      ],
+      "import": {
+        "maxTextureSize": 128,
+        "pixelsPerUnit": 1254,
+        "filterMode": "Point",
+        "mipmaps": false,
+        "compression": "Uncompressed",
+        "pivot": [
+          0.5,
+          0.5
+        ]
+      },
+      "canvasWorldLongestSide": 1,
+      "wearableLayer": null
+    }
+  ]
+}

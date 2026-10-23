@@ -57,7 +57,7 @@
       "canBePickedUp": true,
       "tags": ["Equipment", "EngineeringVision", "EquipmentSlot.Head", "InventoryGroup.ElectricalPower"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Electrical/Engineering_Goggles/Engineering_Goggles_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
         "rendererLocalPosition": { "x": 0, "y": 0, "z": 0 },
         "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
         "rendererLocalScale": { "x": 1, "y": 1, "z": 1 },

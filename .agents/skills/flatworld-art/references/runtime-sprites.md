@@ -23,7 +23,8 @@
 
 ## 玩家换装
 
-- `Assets/6_Art/Generated/Characters/PlayerTemplate/`：`Bodies` 无发底图、`Hair` 发型、`Wearables` 男女共用空装备、`Icons` 图标；装备不含脸/皮肤/头发。人物/发型/装备/遮罩均为 32×48、32 PPU、底中 Pivot、Read/Write、FullRect、不进 SpriteAtlas；重建与标定见目录 `README.md`。
+- `Assets/6_Art/Generated/Characters/PlayerTemplate/`：`Bodies` 无发底图、`Hair` 发型、`Wearables` 男女共用空装备、`Icons` 保留分层构建器导出的旧图标；装备不含脸/皮肤/头发。人物/发型/装备/遮罩均为 32×48、32 PPU、底中 Pivot、Read/Write、FullRect、不进 SpriteAtlas；重建与标定见目录 `README.md`。
+- 当前装备物品图标位于 `Assets/6_Art/Generated/Equipment/<id>/<id>_Icon.png`，与人物穿戴层独立；清单和导入规格见该目录 `README.md`，不能将图标直接用作穿戴层。
 - `visual.spriteStates.wearable` 按公共画布 Alpha 叠加；`wearableHairMask`/`wearableBodyMask`：255 隐藏、0 保留。半包头盔开口透明露原脸、只裁头发；不按装备名/性别写特例，不分区替头；`spriteAddress` 仍是图标。
 - `CharacterAppearanceProfile.SourceFacesLeft` 统一母版朝向，不反转鼠标转身逻辑。
 

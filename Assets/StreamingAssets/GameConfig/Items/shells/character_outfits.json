@@ -20,7 +20,7 @@
         "EquipmentSlot.Head"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Hood.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png",
           "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"
@@ -77,7 +77,7 @@
         "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Vest.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Vest/Traveler_Vest_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png"
         },
@@ -134,7 +134,7 @@
         "EquipmentSlot.Hands"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Gloves.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png"
         },
@@ -191,7 +191,7 @@
         "EquipmentSlot.Legs"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Trousers.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Trousers/Traveler_Trousers_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png"
         },
@@ -249,7 +249,7 @@
         "EquipmentSlot.FeetOuter"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/Traveler_Boots.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png"
         },
@@ -307,7 +307,7 @@
         "Material.Iron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
           "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"
@@ -365,7 +365,7 @@
         "Material.Iron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Cuirass.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png"
         },
@@ -423,7 +423,7 @@
         "Material.Iron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Gauntlets.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png"
         },
@@ -481,7 +481,7 @@
         "Material.Iron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Greaves.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Greaves/IronGuard_Greaves_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png"
         },
@@ -540,7 +540,7 @@
         "Material.Iron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Boots.png",
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Boots/IronGuard_Boots_Icon.png",
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png"
         },

@@ -167,6 +167,120 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d76af03ac022435ab15766f6331cacc3
+    m_Address: Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0e502953979f4c6484bd152425877500
+    m_Address: Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 52bb2cdd99dd4fbfa6399a59b79d94c0
+    m_Address: Assets/6_Art/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cae40f2d99874d32bdc33fcc7a8d8709
+    m_Address: Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8af964e7faac4d4ba5af348f9b8c1a89
+    m_Address: Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2ccf1cd75e3f43ed8d9024c41bd8c1f2
+    m_Address: Assets/6_Art/Generated/Equipment/Traveler_Vest/Traveler_Vest_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c57f373bcb764811b0a14591a86aba2c
+    m_Address: Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 62edfca03de24fcbb5ea32b8d6f5e8b0
+    m_Address: Assets/6_Art/Generated/Equipment/Traveler_Trousers/Traveler_Trousers_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4ee99636fb56424d91612618223508e5
+    m_Address: Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 44e82b7f4f7f414ea5fa55dd9018c53b
+    m_Address: Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8988248f152845d4bcc8f1f58aa5d632
+    m_Address: Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8e370944c06a4adba713924b11fcf203
+    m_Address: Assets/6_Art/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5eab4652cee34b0e85cbf7400f5ac78c
+    m_Address: Assets/6_Art/Generated/Equipment/IronGuard_Greaves/IronGuard_Greaves_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 977da3b0842b4b8d90ab5ad6f8ad9bdd
+    m_Address: Assets/6_Art/Generated/Equipment/IronGuard_Boots/IronGuard_Boots_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4d7a9024128d4f70811e6c1edbb10318
+    m_Address: Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 79ec41bd6ee64c7f88ac6bb1d2562c71
+    m_Address: Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 521d8d2a09ed4fbe895fc1afbc3da874
+    m_Address: Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b0a6d4159f38462da26d8e5a6046c98f
+    m_Address: Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d5cad94b5cfb4469934746903e66a35c
+    m_Address: Assets/6_Art/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

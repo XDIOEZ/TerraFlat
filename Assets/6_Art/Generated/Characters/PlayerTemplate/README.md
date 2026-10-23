@@ -8,7 +8,7 @@
 - `Hair/Male.png`、`Hair/Female.png`：独立发型，不包含脸、眼睛、耳朵或皮肤。
 - `Wearables/<物品id>.png`：旅人、铁卫各五件空装备，只含装备自身；男女共用同一件穿戴图，不再提供男女装备图。
 - `Masks/Headgear_Hair.png`：头部装备的头发隐藏遮罩，目前隐藏整个发型；遮罩只作用于头发，不作用于脸。Alpha为255的位置隐藏，0的位置保留，中间值按比例裁剪。
-- `Icons/<物品id>.png`：十件独立物品图标，来自干净装备层，不包含人物的脸或身体。
+- `Icons/<物品id>.png`：分层构建器从装备层导出的十件旧图标，保留作重建参考。当前物品定义已改用 `Assets/6_Art/Generated/Equipment/<id>/<id>_Icon.png` 中独立重绘的装备图标；完整清单和图鉴见该目录 README。
 - `Source/LayeredOutfits.png`：内置imagegen生成并清理过的分层源图，1448×1086；源区与公共锚点标定见`PlayerAppearanceLayerRaster.cs`。
 - `Source/LayerPreview.png`：同一采样器导出的静态放大预览；上男下女，依次为底图加发型、旅人套装、铁卫套装、只穿胸甲、只穿靴、无发底图。此图说明像素组合，不代表游戏内验收。
 
@@ -16,14 +16,14 @@
 
 ## 共同画布与配置契约
 
-人物、头发、穿戴层、遮罩一律**32×48像素、32 PPU、底中心Pivot（16,0）**；开启Read/Write，Point、FullRect、无压缩、无Mipmap、不进SpriteAtlas。各层使用同一朝左的源坐标；由`CharacterAppearanceProfile.SourceFacesLeft`统一朝向，不能逐件反转。物品图标使用32×32画布和中心Pivot，不承担穿戴位置。
+人物、头发、穿戴层、遮罩一律**32×48像素、32 PPU、底中心Pivot（16,0）**；开启Read/Write，Point、FullRect、无压缩、无Mipmap、不进SpriteAtlas。各层使用同一朝左的源坐标；由`CharacterAppearanceProfile.SourceFacesLeft`统一朝向，不能逐件反转。分层构建器的旧图标使用32×32画布；当前独立重绘图标的源图和导入规格见 Equipment/README.md，均使用中心Pivot，不承担穿戴位置。
 
 画布坐标标定从左上开始：人物底图约从y=4到45，脚底保留2像素；头发在上部，肩约y=22，腰约y=33，手约y=29..37，鞋约y=40..45。新增素材对齐这些身体锚点，不能把每个部位单独放大铺满人物画布。源母版中的空装备经过一次明确标定归位，运行时直接按全画布Alpha叠加，不再按头、胸、手、腿的矩形分区替换人物。
 
 装备配置位于`GameConfig/Items/shells/character_outfits.json`：
 
 ```json
-"spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Icons/IronGuard_Helmet.png",
+"spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png",
 "spriteStates": {
   "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
   "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"

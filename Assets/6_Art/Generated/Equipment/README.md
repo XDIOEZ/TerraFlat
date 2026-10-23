@@ -1,6 +1,8 @@
-# 装备统计与重绘样例
+# 装备清单、样例与整套图标
 
-统计日期：2026-10-23。依据当前启用的物品目录和真实素材引用，先统计全部候选，再交付三张新画风样例供确认。
+统计日期：2026-10-23。依据启用的物品目录和真实素材引用建立清单，先确认三张样例，再完成本轮指定的 19 件穿戴装备图标。
+
+**当前交付：19 张图标已齐，并接入游戏物品配置。** [打开整套图鉴](EquipmentIcons_20261023.html) · [交付清单](ProductionManifest.json) · [完整绘图提示词](GenerationPrompts_Production.json)。武器、工具和箭支由其他聊天处理，下面的广义统计仅作原始清单参考。
 
 ## 统计口径
 
@@ -23,29 +25,29 @@
 
 | 名称 | 物品 ID | 槽位 | 现用图标 | 现用穿戴层 |
 | --- | --- | --- | --- | --- |
-| 工程护目镜 | `Engineering_Goggles` | 头部 | `ART/Generated/Electrical/Engineering_Goggles/Engineering_Goggles_Icon.png` | — |
-| 铁甲 | `Chestplate_Iron` | 外甲 | `ART/Items/Tools/Item_Tool_077.png` | — |
-| 藤甲 | `Chestplate_Twine` | 外甲 | `ART/Items/Equipment/Jade Equipment/Jade Chestplate.png` | — |
-| 木甲 | `Chestplate_Wood` | 外甲 | `ART/Items/Equipment/Wood Equipment/Wood Chestplate.png` | — |
-| 旅人兜帽 | `Traveler_Hood` | 头部 | `PT/Icons/Traveler_Hood.png` | `PT/Wearables/Traveler_Hood.png` |
-| 旅人皮甲 | `Traveler_Vest` | 外甲 | `PT/Icons/Traveler_Vest.png` | `PT/Wearables/Traveler_Vest.png` |
-| 旅人手套 | `Traveler_Gloves` | 手套 | `PT/Icons/Traveler_Gloves.png` | `PT/Wearables/Traveler_Gloves.png` |
-| 旅人长裤 | `Traveler_Trousers` | 裤装 | `PT/Icons/Traveler_Trousers.png` | `PT/Wearables/Traveler_Trousers.png` |
-| 旅人皮靴 | `Traveler_Boots` | 鞋靴 | `PT/Icons/Traveler_Boots.png` | `PT/Wearables/Traveler_Boots.png` |
-| 铁卫头盔 | `IronGuard_Helmet` | 头部 | `PT/Icons/IronGuard_Helmet.png` | `PT/Wearables/IronGuard_Helmet.png` |
-| 铁卫胸甲 | `IronGuard_Cuirass` | 外甲 | `PT/Icons/IronGuard_Cuirass.png` | `PT/Wearables/IronGuard_Cuirass.png` |
-| 铁卫护手 | `IronGuard_Gauntlets` | 手套 | `PT/Icons/IronGuard_Gauntlets.png` | `PT/Wearables/IronGuard_Gauntlets.png` |
-| 铁卫腿甲 | `IronGuard_Greaves` | 裤装 | `PT/Icons/IronGuard_Greaves.png` | `PT/Wearables/IronGuard_Greaves.png` |
-| 铁卫战靴 | `IronGuard_Boots` | 鞋靴 | `PT/Icons/IronGuard_Boots.png` | `PT/Wearables/IronGuard_Boots.png` |
-| 宇航服头盔 | `Spacesuit_Head` | 头部 | `CHEM/Spacesuit_Head/Spacesuit_Head_Icon.png` | — |
-| 宇航服衣服 | `Spacesuit_Torso` | 外甲 | `CHEM/Spacesuit_Torso/Spacesuit_Torso_Icon.png` | — |
-| 宇航服手套 | `Spacesuit_Hands` | 手套 | `CHEM/Spacesuit_Hands/Spacesuit_Hands_Icon.png` | — |
-| 宇航服裤子 | `Spacesuit_Legs` | 裤装 | `CHEM/Spacesuit_Legs/Spacesuit_Legs_Icon.png` | — |
-| 宇航服鞋子 | `Spacesuit_Feet` | 鞋靴 | `CHEM/Spacesuit_Feet/Spacesuit_Feet_Icon.png` | — |
+| 工程护目镜 | `Engineering_Goggles` | 头部 | `ART/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png` | — |
+| 铁甲 | `Chestplate_Iron` | 外甲 | `ART/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png` | — |
+| 藤甲 | `Chestplate_Twine` | 外甲 | `ART/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png` | — |
+| 木甲 | `Chestplate_Wood` | 外甲 | `ART/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png` | — |
+| 旅人兜帽 | `Traveler_Hood` | 头部 | `ART/Generated/Equipment/Traveler_Hood/Traveler_Hood_Icon.png` | `PT/Wearables/Traveler_Hood.png` |
+| 旅人皮甲 | `Traveler_Vest` | 外甲 | `ART/Generated/Equipment/Traveler_Vest/Traveler_Vest_Icon.png` | `PT/Wearables/Traveler_Vest.png` |
+| 旅人手套 | `Traveler_Gloves` | 手套 | `ART/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png` | `PT/Wearables/Traveler_Gloves.png` |
+| 旅人长裤 | `Traveler_Trousers` | 裤装 | `ART/Generated/Equipment/Traveler_Trousers/Traveler_Trousers_Icon.png` | `PT/Wearables/Traveler_Trousers.png` |
+| 旅人皮靴 | `Traveler_Boots` | 鞋靴 | `ART/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png` | `PT/Wearables/Traveler_Boots.png` |
+| 铁卫头盔 | `IronGuard_Helmet` | 头部 | `ART/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png` | `PT/Wearables/IronGuard_Helmet.png` |
+| 铁卫胸甲 | `IronGuard_Cuirass` | 外甲 | `ART/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png` | `PT/Wearables/IronGuard_Cuirass.png` |
+| 铁卫护手 | `IronGuard_Gauntlets` | 手套 | `ART/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png` | `PT/Wearables/IronGuard_Gauntlets.png` |
+| 铁卫腿甲 | `IronGuard_Greaves` | 裤装 | `ART/Generated/Equipment/IronGuard_Greaves/IronGuard_Greaves_Icon.png` | `PT/Wearables/IronGuard_Greaves.png` |
+| 铁卫战靴 | `IronGuard_Boots` | 鞋靴 | `ART/Generated/Equipment/IronGuard_Boots/IronGuard_Boots_Icon.png` | `PT/Wearables/IronGuard_Boots.png` |
+| 宇航服头盔 | `Spacesuit_Head` | 头部 | `ART/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png` | — |
+| 宇航服衣服 | `Spacesuit_Torso` | 外甲 | `ART/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png` | — |
+| 宇航服手套 | `Spacesuit_Hands` | 手套 | `ART/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png` | — |
+| 宇航服裤子 | `Spacesuit_Legs` | 裤装 | `ART/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png` | — |
+| 宇航服鞋子 | `Spacesuit_Feet` | 鞋靴 | `ART/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png` | — |
 
 配置来源：[engineering.json](../../../StreamingAssets/GameConfig/Items/shells/engineering.json)、[equipment.json](../../../StreamingAssets/GameConfig/Items/shells/equipment.json)、[character_outfits.json](../../../StreamingAssets/GameConfig/Items/shells/character_outfits.json)、[chemistry_equipment.json](../../../StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json)。旅人兜帽与铁卫头盔还声明了 `PT/Masks/Headgear_Hair.png` 头发遮罩。
 
-## 手持武器与工具完整清单
+## 手持武器与工具原始清单（参考，本轮不绘制）
 
 | 分组 | 物品 ID 数 | 独立图标数 |
 | --- | ---: | ---: |
@@ -122,9 +124,9 @@
 
 原木、木棍、柳枝、火种、黑曜石虽然能使用攻击动画，仍按材料单列。`HandDrill` 与 `HandDrill_Summoner` 是建筑及放置物，本轮不归入手持工具。
 
-## 重绘时需要处理的现状
+## 统计时发现的情况
 
-- 藤甲 `Chestplate_Twine` 的名称与描述是藤条结构，现用图却是 `Jade Chestplate.png`；正式重绘应恢复藤编/纤维材质。
+- 藤甲 `Chestplate_Twine` 原来借用 `Jade Chestplate.png`。本轮已重绘为藤编纤维结构并替换图标引用。
 - 目前 10 件旅人/铁卫装备有独立穿戴层，另 9 件（基础甲 3、宇航服 5、工程护目镜 1）未配置穿戴层。只更换图标不会自动补齐人物穿戴外观。
 - 基础铁甲 `Chestplate_Iron` 与铁卫胸甲 `IronGuard_Cuirass` 是两个独立物品，需要分别设计。
 - 人物穿戴层必须单独遵守现有 32×48、32 PPU、底中 Pivot 和公共身体锚点；装备开口露出原人物，不画脸、皮肤或头发。图标使用独立构图，不能直接当人物穿戴层。
@@ -164,3 +166,15 @@
 第二轮使用内置 `image_gen` 编辑三件样例，其中胸甲另做一次高光与表面简化。完整提示词见 [GenerationPrompts_Handcrafted.json](GenerationPrompts_Handcrafted.json)。上一版样例保留用于对比。
 
 三张仍为 1254×1254 RGBA 风格预览，尚未制作成精确像素规格的成品图标或人物穿戴层；没有修改物品配置、旧图、Addressables 或玩法。相关装备制作工艺已补充到 `.agents/skills/flatworld-art/references/art-direction.md`。本轮未运行玩法验证；读取控制台接口仍返回 HTTP 503。
+
+## 整套装备图标交付（2026-10-23）
+
+用户最终确认本轮只重绘穿戴装备的物品图标，并同时替换游戏内引用。武器、工具和箭支不属于本轮；人物穿戴层沿用现有资源。
+
+- 共 19 张透明 PNG：基础胸甲 3、旅人 5、铁卫 5、宇航服 5、工程护目镜 1。16 张新绘，3 张复用已经认可的手作样例设计。
+- 三个同级子智能体按基础甲/旅人、铁卫、宇航服分组，统一使用内置 image_gen。完整原始与修订提示词已汇总到 GenerationPrompts_Production.json。
+- 四个物品分包中共替换 19 处 visual.spriteAddress；新图均注册到现有 PlayerAppearance Addressables 组，并使用 ItemSprite 标签。未修改装备属性、玩法、人物底图、穿戴层或工具资源。
+- 图标源图保留 1254×1254 RGBA；Unity 导入为中心 Pivot、Point、无 Mipmap、无压缩、maxTextureSize 128、PPU 1254。PPU 按原图和新图的世界比例换算，Sprite 画布最长边继续为 1 世界单位；透明留白与可见主体比例以新设计为准。
+- [交互图鉴](EquipmentIcons_20261023.html)可按套装查看全部原图，并切换深色、浅色和透明格底色。
+
+本轮按用户要求未运行玩法验证，也未进入、退出或暂停 Unity PlayMode。游戏内实际观感由用户验收；已尝试读取 Unity 控制台，接口返回 HTTP 503，未取得日志。
