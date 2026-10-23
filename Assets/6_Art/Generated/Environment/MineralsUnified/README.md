@@ -19,7 +19,29 @@
 
 按用户要求未运行游戏内验收。已进入世界的实例需要通过现有资源配置刷新流程或重新进入世界，才能观察当前定义的贴图。
 
-## 绘图提示词
+## 本轮矿山光泽统一（2026-10-23）
+
+保留既有轮廓、矿脉结构、粗像素尺度、左上光源与哑光岩石基质，按实际矿物及氧化状态区分反光。下表同时作为本轮提示词的材质差异要求。
+
+| 材质 | 本轮处理 |
+| --- | --- |
+| Gold（金矿） | 采用已认可样例较连续的暖金反光，保留原矿结构。 |
+| Iron（铁矿） | 采用已认可的红褐哑光矿面，搭配少量暗灰有光泽矿面；不称天然钢或裸铁。 |
+| Copper（铜矿） | 绿色氧化／孔雀石粗糙面保持哑光，仅小块红铜暴露面出现断续金属反光。 |
+| Tin（锡矿） | 保留银灰识别配色，仅局部非金属晶面反光，不把锡矿等同抛光锡块。 |
+| Diamond（钻石矿） | 少量锋利晶面反光，保持硬边与明确转折。 |
+| Obsidian（黑曜石矿） | 黑紫玻璃质，以大块断口反光表现材质。 |
+| Coal / Stone / Sulfur / Niter（煤／石／硫磺／硝石） | 保留原图，不增加金属高光。 |
+
+### 本轮统一提示词原则
+
+Edit only the material highlights of the existing approved mine sprite. Preserve its silhouette, vein structure, coarse hard-edged pixel clusters, upper-left light, canvas and transparency. Follow the material-specific requirements in the table above: distinguish metallic, crystalline and glassy reflections by the actual mineral and oxidation state; metal-bearing ore must not automatically look metallic. Keep the host rock matte. Use fixed hard-pixel highlight patches painted into the texture; no glow, bloom, sparkle stars, soft gradients or dynamic shader effects.
+
+本轮光泽为贴图内固定高光，不是动态 Shader 反光。已原位替换金、铁、铜、锡、钻石和黑曜石六张 PNG，保持 GUID、PPU、Addressables 与配置不变；其余四张保留。尚未进行游戏内验收。
+
+## 绘图提示词（历史记录）
+
+以下保留初版提示词原文；本轮光泽调整遵循上方统一原则与材质表。
 
 铁、铜、煤的提示词见 [已认可样稿](../MineralStyleSamples_20261023/README.md)。
 
