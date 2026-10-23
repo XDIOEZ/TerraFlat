@@ -88,6 +88,11 @@
       "enabled": true
     },
     {
+      "id": "dead_tree",
+      "path": "shells/dead_tree.json",
+      "enabled": true
+    },
+    {
       "id": "equipment",
       "path": "shells/equipment.json",
       "enabled": true

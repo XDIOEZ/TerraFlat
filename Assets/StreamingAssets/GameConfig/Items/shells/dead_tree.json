@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Tree_Dead",
+      "parent": "Tree_Pine",
+      "gameName": "枯树",
+      "description": "已经枯死的树木，砍伐可获得原木和木棍。",
+      "weight": 160.0,
+      "volume": 600.0,
+      "lootTableId": "Tree_Dead",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/DeadTree/DeadTree_Idle.png",
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": { "x": 0.0, "y": 0.0 },
+          "size": { "x": 0.92, "y": 0.33333334 },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": { "Hp": 80.0, "MaxHp": 80.0 }
+          }
+        },
+        "生长模块": { "enabled": false },
+        "温度产量模块": { "enabled": false }
+      }
+    }
+  ]
+}

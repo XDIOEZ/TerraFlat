@@ -507,6 +507,23 @@
       ]
     },
     {
+      "id": "Tree_Dead",
+      "entries": [
+        {
+          "itemId": "Stick_Wood",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Log",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
       "id": "Tree_Pine",
       "entries": [
         {
