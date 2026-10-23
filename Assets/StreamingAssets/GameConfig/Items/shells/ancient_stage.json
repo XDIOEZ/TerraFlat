@@ -544,7 +544,11 @@
       "volume": 1200.0,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Farming/WillowTree/WillowTree_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/WillowTree/WillowTree_Idle.png",
+        "collider": {
+          "offset": { "x": 0.0, "y": 0.0 },
+          "size": { "x": 0.46, "y": 0.25 }
+        },
         "color": {
           "r": 1.0,
           "g": 1.0,

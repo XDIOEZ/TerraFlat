@@ -17,6 +17,48 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: c24271c412414530bfbbc09d3df2e217
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/CopperIngot_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c9e2e0ba13e34ad08be00285bda18389
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/BronzeIngot_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 41611a135117451f9ebae836a11219e0
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/RawIronIngot_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 082beb131c97483a9debaf376e7c1fc4
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/WroughtIronIngot_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8a02efee7fc244f2b707c2c0a11cb14b
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/SteelIngot_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4ca2e219c43448cc9cc811760f290c10
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/TinIngot_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 262a170b82494c9b9afb2d47951c48b7
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/GoldIngot_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fa771df6567c4a93b0e2d71616c3eca1
     m_Address: Assets/6_Art/Generated/Electrical/Engineering_Goggles/Engineering_Goggles_Icon.png
     m_ReadOnly: 0
@@ -4344,6 +4386,36 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f07d2c9005a74eb4b7061461558bc4de
     m_Address: Assets/6_Art/Generated/Environment/DeadTree/DeadTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2180143bc73decf4e9e7480138e99684
+    m_Address: Assets/6_Art/Generated/Environment/AppleTree/AppleTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6fde0dd353728d74c818759104432689
+    m_Address: Assets/6_Art/Generated/Environment/PeachTree/PeachTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6852d82cd7939994eb2e90669e76c2e9
+    m_Address: Assets/6_Art/Generated/Environment/OrangeTree/OrangeTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 94496fe31dcc57847acaeb6c773e9d3f
+    m_Address: Assets/6_Art/Generated/Environment/CoconutTree/CoconutTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dcacde60204fd4846babbcc76a856e94
+    m_Address: Assets/6_Art/Generated/Environment/WillowTree/WillowTree_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
