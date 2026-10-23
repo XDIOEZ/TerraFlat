@@ -102,7 +102,7 @@
       "description": "含金矿脉的岩体，需要镐开采，开采后掉落金矿石。",
       "lootTableId": "Mine_Gold_Default",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Gold/Mine_Gold_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Gold/Mine_Gold_Idle.png",
         "color": {
           "r": 1,
           "g": 1,

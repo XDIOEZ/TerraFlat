@@ -28,7 +28,7 @@
       "tags": ["35", "Mineral", "Sulfur"],
       "lootTableId": "Mine_Sulfur_Default",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Sulfur/Mine_Sulfur_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Sulfur/Mine_Sulfur_Idle.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {

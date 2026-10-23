@@ -824,7 +824,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_104]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Coal/Mine_Coal_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1000,7 +1000,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_88]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Copper/Mine_Copper_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1176,7 +1176,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_69]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Iron/Mine_Iron_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1352,7 +1352,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_90]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Stone/Mine_Stone_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1515,7 +1515,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_87]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Tin/Mine_Tin_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

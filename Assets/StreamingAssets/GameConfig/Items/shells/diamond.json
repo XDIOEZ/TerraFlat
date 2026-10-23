@@ -37,7 +37,7 @@
       "canBePickedUp": false,
       "lootTableId": "Mine_Diamond_Default",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Diamond/Mine_Diamond_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Diamond/Mine_Diamond_Idle.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {

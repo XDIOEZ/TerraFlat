@@ -17,6 +17,66 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 048749d43a4439245a979fb84e2e734b
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Coal/Mine_Coal_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4eb0d49d5b2296447903ab597f4132f8
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Copper/Mine_Copper_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c35caf37656659c49a238a369ede4c76
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Iron/Mine_Iron_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 48cda18db78979542b7345d55452f6a3
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Stone/Mine_Stone_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: af5d29dd818cebb4b9f7f1fa82c248c7
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Tin/Mine_Tin_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 21aab80062fb82c4e828fb682dfb526a
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Gold/Mine_Gold_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 67b7875a7ca0fad4498a562cba224ea9
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Diamond/Mine_Diamond_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f25e172e56c6df2449977618d4c5233c
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Sulfur/Mine_Sulfur_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3564871a403b9e44abe756cfa1ff6a1d
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Niter/Mine_Niter_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1c22007cb321dd94aa8d928bda2c05b4
+    m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Obsidian/Mine_Obsidian_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c24271c412414530bfbbc09d3df2e217
     m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalIngots/CopperIngot_Icon.png
     m_ReadOnly: 0
