@@ -1,6 +1,9 @@
+using FlatWorld.Mobile;
 using FlatWorld.Spaceflight;
+using InputSystem;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -14,6 +17,9 @@ public static partial class GameplayTestSystemProbe
     {
         Register("player", "surface_gravity_movement", PlayerSurfaceGravityMovement);
         Register("player", "motion_reset", PlayerMotionReset);
+        Register("player", "mobile_movement_curve", PlayerMobileMovementCurve);
+        Register("player", "mobile_movement_state", PlayerMobileMovementState);
+        Register("player", "mobile_movement_bindings", PlayerMobileMovementBindings);
     }
 
     // 独立角色只调用正式速度过渡，不切换当前世界、不启动物理模拟。
@@ -67,6 +73,103 @@ public static partial class GameplayTestSystemProbe
             return result;
         }
         finally { Object.DestroyImmediate(root); }
+    }
+
+    #endregion
+
+    #region 手机分段移动采样
+
+    // 只采样正式曲线，端点、单调性和提速形状由 Lua 断言。
+    private static JObject PlayerMobileMovementCurve(JObject args)
+    {
+        float rate = (float)Number(args, "runRate", 1.5d);
+        float deadZone = PlayerAimCursorSystem.DefaultDeadZone;
+        float Sample(float distance) => MobileMovementRules.EvaluateSpeedFactor(distance, deadZone, rate);
+        var samples = new JArray();
+        for (int i = 0; i <= 100; i++) samples.Add(Sample(i / 100f));
+        return new JObject
+        {
+            ["samples"] = samples, ["deadZone"] = deadZone, ["atDeadZone"] = Sample(deadZone),
+            ["lowMidpoint"] = Sample((deadZone + .2f) * .5f),
+            ["walkMidpoint"] = Sample(.35f), ["runMidpoint"] = Sample(.85f),
+            ["negative"] = Sample(-1f), ["beyondFull"] = Sample(2f),
+            ["nan"] = Sample(float.NaN), ["infinity"] = Sample(float.PositiveInfinity)
+        };
+    }
+
+    // 独立模块调用正式手机移动入口，不接管用户设备或启动世界物理。
+    private static JObject PlayerMobileMovementState(JObject args)
+    {
+        if (args["steps"] is not JArray steps || steps.Count == 0 || steps.Count > 64)
+            throw new System.ArgumentException("手机移动采样需要 1 至 64 个步骤。");
+        var root = new GameObject("[LuaMobileMovement]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            GameItem actor = root.AddComponent<GameItem>();
+            actor.BindData(new Data_GeneralItem { IDName = "test:mobile_movement" });
+            Rigidbody2D body = root.AddComponent<Rigidbody2D>();
+            body.simulated = false;
+            Mod_Mover mover = root.AddComponent<Mod_Mover>();
+            mover.ModuleInit(actor, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
+            mover.rb = body;
+            mover.Speed = new GameValue_float(10f) { FinalAdditive = (float)Number(args, "finalAdditive", 0d) };
+            Mod_Stamina stamina = root.AddComponent<Mod_Stamina>();
+            stamina.ModuleInit(actor, new Ex_ModData_MemoryPackable { ID = ModText.Stamina, Enabled = true });
+            stamina.Data = new Mod_Stamina.StaminaData { CurrentStamina = 100f, MaxStamina = 100f };
+            mover.stamina = stamina;
+            mover.SetRunState(Flag(args, "running", false));
+            var samples = new JArray();
+            foreach (JObject step in steps)
+            {
+                if (step["stamina"] != null) stamina.CurrentValue = (float)Number(step, "stamina", 100d);
+                if (step["manualRun"] != null) mover.SetRunState(Flag(step, "manualRun", false));
+                Vector2 input = Vector2.zero;
+                switch (Text(step, "action", "input"))
+                {
+                    case "input":
+                        input = mover.ResolveMobileMoveInput(new Vector2(
+                            (float)Number(step, "x", 1d), (float)Number(step, "y", 0d)), Flag(step, "mobile", true));
+                        break;
+                    case "reset": mover.ResetMotion(); break;
+                    case "hold": mover.HandleHoldRunInputPressed(); break;
+                    case "release": mover.HandleHoldRunInputReleased(); break;
+                    case "toggle": mover.HandleToggleRunInputPressed(); break;
+                    default: throw new System.ArgumentException("手机移动采样操作未登记。");
+                }
+                samples.Add(new JObject
+                {
+                    ["x"] = input.x, ["y"] = input.y, ["targetSpeed"] = input.magnitude * mover.Speed.Value,
+                    ["speed"] = mover.Speed.Value, ["running"] = mover.IsRunning, ["runPreference"] = mover.RunPreference,
+                    ["stamina"] = stamina.CurrentValue,
+                    ["movingNutrition"] = mover.hungerAction.ResolveMultiplier(true, mover.IsRunning),
+                    ["movingWater"] = mover.hungerAction.ResolveWaterMultiplier(true, mover.IsRunning),
+                    ["bodySimulated"] = body.simulated
+                });
+            }
+            return new JObject { ["samples"] = samples };
+        }
+        finally { Object.DestroyImmediate(root); }
+    }
+
+    private static JObject PlayerMobileMovementBindings(JObject args)
+    {
+        var actions = new PlayerInputActions();
+        try
+        {
+            JArray Paths(InputAction action)
+            {
+                var paths = new JArray();
+                foreach (InputBinding binding in action.bindings) paths.Add(binding.path);
+                return paths;
+            }
+            return new JObject
+            {
+                ["roll"] = Paths(actions.Win10.Roll), ["holdRun"] = Paths(actions.Win10.Shift),
+                ["toggleRun"] = Paths(actions.Win10.ToggleRun)
+            };
+        }
+        finally { Object.DestroyImmediate(actions.asset); }
     }
 
     #endregion

@@ -34,6 +34,7 @@ public partial class Mod_Mover
 
     private bool UpdateSpaceMotion(float seconds)
     {
+        if (IsSpaceRunningDisabled) ReleaseMobileMovementInput();
         if (item is Player replica && !replica.IsLocalProfile && SpaceSession.Current != null &&
             SpaceSession.Current.TryGetNetworkObserver(replica.ProfileName, out SpaceNetworkObserver observer) && observer.InSpace)
         {

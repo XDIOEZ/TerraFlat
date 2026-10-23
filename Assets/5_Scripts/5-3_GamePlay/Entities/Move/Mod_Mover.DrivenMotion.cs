@@ -20,8 +20,7 @@ public partial class Mod_Mover
         rb = body;
     }
 
-    public float WalkingSpeed => Mathf.Max(0f, Speed.Value /
-        (IsRunning ? Mathf.Max(.0001f, RunSpeedRate) : 1f)) *
+    public float WalkingSpeed => GetWalkingSpeedValue() *
         ResolveBuildingMoveSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
 
     /// <summary>临时动作复用正式刚体与环境速度，只替换当前主动速度。</summary>

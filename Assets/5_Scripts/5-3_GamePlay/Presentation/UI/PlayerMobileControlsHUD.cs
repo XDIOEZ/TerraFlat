@@ -39,15 +39,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float PreviewRotationTapTolerance = 16f;
     private const float PreviewRotationTapMaxSeconds = 0.45f;
 
-    // 奔跑是状态按钮，运行时两态必须继续使用统一灰阶主题；仅开启态用暖黄细节表达状态。
-    // 不在 MonoBehaviour 类型初始化阶段访问 Resources；颜色在真正刷新按钮时再从主题目录读取。
-    private static Color RunOffColor => FlatWorldUITheme.SurfaceRaised;
-    private static Color RunOnColor => FlatWorldUITheme.Selection;
-    private static Color RunOffBorderColor => FlatWorldUITheme.Border;
-    private static Color RunOnBorderColor => FlatWorldUITheme.SelectionOutline;
-    private static Color RunOffIndicatorColor => FlatWorldUITheme.Border;
-    private static Color RunOnIndicatorColor => FlatWorldUITheme.Accent;
-
     private static PlayerMobileControlsHUD activeLocalHud;
     private static readonly System.Func<object, bool> HeldItemDropLockFilter =
         owner => UIManager.ExistingInstance?.IsHeldItemDropCompatibleLockOwner(owner) == true;
@@ -72,10 +63,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Transform hotbarCraftingHome;
     private RectTransform hotbarBackpackButton;
     private Transform hotbarBackpackHome;
-    private Mod_Mover mover;
-    private Image runButtonImage;
-    private Outline runButtonOutline;
-    private Image runStateIndicator;
     private Slider cameraZoomSlider;
     private bool refreshingCameraZoomSlider;
     private Coroutine hotbarSetupCoroutine;
@@ -85,7 +72,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private int lastScreenWidth;
     private int lastScreenHeight;
     private bool missingPrefabLogged;
-    private bool runStateBound;
     private bool changingViewState;
     private bool hotbarOriginalLayoutCached;
     private RectTransform hotbarOriginalRect;
@@ -130,7 +116,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     {
         player = GetComponent<Player>();
         controller = GetComponentInChildren<Mod_GameController>(true);
-        mover = GetComponentInChildren<Mod_Mover>(true);
     }
 
     /// <summary>绑定本地玩家、设置与系统手势边距变化，并刷新手机 HUD 可见性。</summary>
@@ -168,7 +153,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIUserSettings.MobileControlLayoutChanged -= HandleMobileControlLayoutChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
-        UnbindRunStateVisual();
         UnsubscribeInteractionSurface();
         if (activeLocalHud == this)
             activeLocalHud = null;
@@ -247,7 +231,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         activeLocalHud = this;
         AndroidSystemGestureInsets.RequestRefresh();
         EnsureView();
-        BindRunStateVisual();
         SubscribeInteractionSurface();
         RefreshInteractionSurface();
     }
@@ -289,7 +272,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         ApplyMobileControlLayout();
         ConfigureHeldItemDropSurface();
         ConfigureVirtualButtons();
-        CacheRunButtonVisual();
         ConfigureCameraZoomSlider();
         ConfigureCommands();
         ApplyTouchControlsOpacity();
@@ -878,7 +860,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     {
         ConfigureVirtualButton("交互", MobileVirtualButton.Interact);
         ConfigureVirtualButton("使用", MobileVirtualButton.Use);
-        ConfigureVirtualButton("奔跑", MobileVirtualButton.Run);
+        ConfigureVirtualButton("翻滚", MobileVirtualButton.Roll);
         ConfigureVirtualButton(BackpackButtonName, MobileVirtualButton.Inventory);
         inputButtons = viewObject.GetComponentsInChildren<MobileInputButton>(true);
     }
@@ -893,50 +875,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (inputButton == null)
             inputButton = node.gameObject.AddComponent<MobileInputButton>();
         inputButton.Configure(virtualButton);
-    }
-
-    /// <summary>缓存奔跑开关的两态视觉节点，状态由真实 Mod_Mover 统一驱动。</summary>
-    private void CacheRunButtonVisual()
-    {
-        Transform runButton = FindRequired("奔跑");
-        runButtonImage = runButton != null ? runButton.GetComponent<Image>() : null;
-        runButtonOutline = runButton != null ? runButton.GetComponent<Outline>() : null;
-        Transform indicator = runButton != null ? runButton.Find("状态标记") : null;
-        runStateIndicator = indicator != null ? indicator.GetComponent<Image>() : null;
-    }
-
-    private void BindRunStateVisual()
-    {
-        if (mover == null)
-            mover = GetComponentInChildren<Mod_Mover>(true);
-        if (mover == null || viewObject == null)
-            return;
-
-        if (!runStateBound)
-        {
-            mover.RunStateChanged += RefreshRunButtonVisual;
-            runStateBound = true;
-        }
-
-        RefreshRunButtonVisual(mover.IsRunning);
-    }
-
-    private void UnbindRunStateVisual()
-    {
-        if (mover != null && runStateBound)
-            mover.RunStateChanged -= RefreshRunButtonVisual;
-        runStateBound = false;
-    }
-
-    /// <summary>关闭时保持深灰弱提示；开启时只提高灰阶明度并用暖黄细节表示状态。</summary>
-    private void RefreshRunButtonVisual(bool isRunning)
-    {
-        if (runButtonImage != null)
-            runButtonImage.color = isRunning ? RunOnColor : RunOffColor;
-        if (runButtonOutline != null)
-            runButtonOutline.effectColor = isRunning ? RunOnBorderColor : RunOffBorderColor;
-        if (runStateIndicator != null)
-            runStateIndicator.color = isRunning ? RunOnIndicatorColor : RunOffIndicatorColor;
     }
 
     private void ConfigureCommands()

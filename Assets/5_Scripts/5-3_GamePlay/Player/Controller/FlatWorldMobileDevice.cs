@@ -34,7 +34,7 @@ namespace FlatWorld.Mobile
         [InputControl(name = "attack", layout = "Button", bit = 0, displayName = "攻击")]
         [InputControl(name = "interact", layout = "Button", bit = 1, displayName = "交互")]
         [InputControl(name = "use", layout = "Button", bit = 2, displayName = "使用")]
-        [InputControl(name = "run", layout = "Button", bit = 3, displayName = "奔跑")]
+        [InputControl(name = "roll", layout = "Button", bit = 3, displayName = "翻滚")]
         [InputControl(name = "inventory", layout = "Button", bit = 4, displayName = "背包")]
         [InputControl(name = "equipment", layout = "Button", bit = 5, displayName = "装备")]
         [InputControl(name = "crafting", layout = "Button", bit = 6, displayName = "制作")]
@@ -62,7 +62,7 @@ namespace FlatWorld.Mobile
         public ButtonControl attack { get; private set; }
         public ButtonControl interact { get; private set; }
         public ButtonControl use { get; private set; }
-        public ButtonControl run { get; private set; }
+        public ButtonControl roll { get; private set; }
         public ButtonControl inventory { get; private set; }
         public ButtonControl equipment { get; private set; }
         public ButtonControl crafting { get; private set; }
@@ -94,7 +94,7 @@ namespace FlatWorld.Mobile
             attack = GetChildControl<ButtonControl>(nameof(attack));
             interact = GetChildControl<ButtonControl>(nameof(interact));
             use = GetChildControl<ButtonControl>(nameof(use));
-            run = GetChildControl<ButtonControl>(nameof(run));
+            roll = GetChildControl<ButtonControl>(nameof(roll));
             inventory = GetChildControl<ButtonControl>(nameof(inventory));
             equipment = GetChildControl<ButtonControl>(nameof(equipment));
             crafting = GetChildControl<ButtonControl>(nameof(crafting));
@@ -123,7 +123,7 @@ namespace FlatWorld.Mobile
         Attack = 0,
         Interact = 1,
         Use = 2,
-        Run = 3,
+        Roll = 3,
         Inventory = 4,
         Equipment = 5,
         Crafting = 6,

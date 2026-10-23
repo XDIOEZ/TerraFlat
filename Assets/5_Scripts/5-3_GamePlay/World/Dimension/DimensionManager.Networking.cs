@@ -91,7 +91,7 @@ public sealed partial class DimensionManager
         Mod_Mover mover = actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         Rigidbody2D body = actor.GetComponent<Rigidbody2D>();
         bool wasSimulated = body != null && body.simulated;
-        bool wasRunning = mover != null && mover.IsRunning;
+        bool wasRunning = mover != null && mover.RunPreference;
         bool completed = false;
         Exception failure = null;
         controller?.SetGameplayInputLocked(true);

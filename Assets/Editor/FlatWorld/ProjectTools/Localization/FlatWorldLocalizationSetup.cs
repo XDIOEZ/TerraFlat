@@ -1173,6 +1173,7 @@ namespace FlatWorld.Localization.Editor
                 { "背包", "Inventory" },
                 { "装备面板", "Equipment Panel" },
                 { "奔跑", "Run" },
+                { "翻滚", "Roll" },
                 { "切换奔跑", "Toggle Run" },
                 { "长按奔跑", "Hold to Run" },
                 { "镜头缩放修饰键", "Camera Zoom Modifier" },

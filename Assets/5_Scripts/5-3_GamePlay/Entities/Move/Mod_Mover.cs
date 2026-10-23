@@ -198,6 +198,7 @@ public partial class Mod_Mover : Module
 
     protected override void OnLoad()
     {
+        ReleaseMobileMovementInput();
         networkAuthorityMovement = networkMoving = networkRunning = false;
         ClearDrivenMotion();
         ModDataMemoryPack.ReadData(ref Data);
@@ -344,6 +345,7 @@ public partial class Mod_Mover : Module
         {
             if (inputController.IsGameplayInputLocked || IsLock)
             {
+                ReleaseMobileMovementInput();
                 StopImmediately();
                 // 输入锁定只停止位移，奔跑开关作为存档状态保留，解锁后继续沿用。
                 hungerActionInstance?.SetMovementState(false, false);
@@ -351,9 +353,11 @@ public partial class Mod_Mover : Module
             }
         }
 
+        bool isMobileMoveInput = false;
         Vector2 input = inputController != null
-            ? inputController.ReadMoveInput(moveAction)
+            ? inputController.ReadMoveInput(moveAction, out isMobileMoveInput)
             : moveAction.ReadValue<Vector2>();
+        input = ResolveMobileMoveInput(input, isMobileMoveInput);
         if (item is Player && inputController?._mainCamera != null)
             input = inputController._mainCamera.transform.TransformDirection(input);
         input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
@@ -382,7 +386,8 @@ public partial class Mod_Mover : Module
                 // 自动中断奔跑
                 if (IsRunning && stamina.CurrentValue < RunStaminaThreshold)
                 {
-                    SetRunState(false);
+                    if (mobileMovementInputActive) mobileRunExhausted = true;
+                    ApplyRunState(false);
                     Debug.Log("体力不足，自动停止奔跑");
                 }
             }
@@ -407,6 +412,7 @@ public partial class Mod_Mover : Module
         resettingMotion = true;
         try
         {
+            ReleaseMobileMovementInput();
             unchecked { motionResetVersion++; }
             // 先撤销旧租约和速度，再通知动作收尾，防止回调把旧运动写回来。
             InvalidateDrivenMotion();
@@ -436,23 +442,35 @@ public partial class Mod_Mover : Module
     public void HandleHoldRunInputPressed()
     {
         // 长按奔跑键按下后进入奔跑，保持输入期间持续奔跑。
-        SetRunState(true);
+        SetManualRunPreference(true);
     }
 
     public void HandleHoldRunInputReleased()
     {
         // 长按奔跑键松开后恢复普通移动。
-        SetRunState(false);
+        SetManualRunPreference(false);
     }
 
     public void HandleToggleRunInputPressed()
     {
         // 每次按下切换键，都在奔跑与普通移动之间切换。
-        SetRunState(!IsRunning);
+        SetManualRunPreference(!RunPreference);
+    }
+
+    private void SetManualRunPreference(bool isRun)
+    {
+        if (mobileMovementInputActive) manualRunBeforeMobile = isRun;
+        else ApplyRunState(isRun);
     }
 
     /// <summary>设置可持久化的奔跑模式；输入锁只限制玩家输入，不阻止读档或跨维度恢复该状态。</summary>
     public void SetRunState(bool isRun)
+    {
+        if (mobileMovementInputActive) manualRunBeforeMobile = isRun;
+        ApplyRunState(isRun);
+    }
+
+    private void ApplyRunState(bool isRun)
     {
         if (isRun && IsSpaceRunningDisabled) return;
 
@@ -720,7 +738,7 @@ public partial class Mod_Mover : Module
             moveStaminaConsume = Data.moveStaminaConsume,
             runStaminaConsume = Data.runStaminaConsume,
             runSpeedRate = Data.runSpeedRate,
-            isRunning = Data.isRunning,
+            isRunning = RunPreference,
             RunStaminaThreshold = Data.RunStaminaThreshold
         };
 

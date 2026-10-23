@@ -265,7 +265,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Mod_Mover sourceMover = sourcePlayer.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         TransitionState state = new TransitionState
         {
-            PreserveRunState = sourceMover != null && sourceMover.IsRunning
+            PreserveRunState = sourceMover != null && sourceMover.RunPreference
         };
         sourceController?.SetGameplayInputLocked(true);
 

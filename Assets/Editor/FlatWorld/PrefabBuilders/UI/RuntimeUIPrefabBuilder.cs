@@ -849,7 +849,7 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建屏幕左侧中部上方的透明 Buff 条目容器，避开手机奔跑按钮，超出高度时由 ScrollRect 裁剪。</summary>
+    /// <summary>构建屏幕左侧中部上方的透明 Buff 条目容器，避开手机翻滚按钮，超出高度时由 ScrollRect 裁剪。</summary>
     private static GameObject BuildBuffStatusHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.BuffStatus, null, typeof(CanvasGroup));
@@ -3578,17 +3578,17 @@ public static partial class RuntimeUIPrefabBuilder
             .Configure(
                 UIUserSettings.MobileUseControlId,
                 useButton.GetComponent<RectTransform>());
-        Button runButton = CreateMobileButton(
-            "奔跑",
+        Button rollButton = CreateMobileButton(
+            "翻滚",
             gameplay.transform,
-            "奔跑",
+            "翻滚",
             new Vector2(0f, 0.5f),
             new Vector2(76f, 0f),
             104f);
-        runButton.gameObject.AddComponent<MobileControlLayoutNode>()
+        rollButton.gameObject.AddComponent<MobileControlLayoutNode>()
             .Configure(
-                UIUserSettings.MobileRunControlId,
-                runButton.GetComponent<RectTransform>());
+                UIUserSettings.MobileRollControlId,
+                rollButton.GetComponent<RectTransform>());
 
         // 设置与右侧菜单开关独立于玩法层，打开模态面板时仍能切换菜单。
         GameObject persistent = CreateUIObject("常驻控制层", root.transform);
@@ -3930,19 +3930,6 @@ public static partial class RuntimeUIPrefabBuilder
         rect.pivot = anchor;
         rect.anchoredPosition = position;
         rect.sizeDelta = new Vector2(size, size);
-
-        if (name == "奔跑")
-        {
-            GameObject indicator = CreateUIObject("状态标记", button.transform, typeof(Image));
-            RectTransform indicatorRect = indicator.GetComponent<RectTransform>();
-            indicatorRect.anchorMin = indicatorRect.anchorMax = Vector2.one;
-            indicatorRect.pivot = Vector2.one;
-            indicatorRect.anchoredPosition = new Vector2(-10f, -10f);
-            indicatorRect.sizeDelta = new Vector2(20f, 20f);
-            Image indicatorImage = indicator.GetComponent<Image>();
-            indicatorImage.color = Border;
-            indicatorImage.raycastTarget = false;
-        }
 
         return button;
     }

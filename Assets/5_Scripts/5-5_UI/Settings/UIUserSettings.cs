@@ -32,7 +32,7 @@ public static class UIUserSettings
     public const string MobileAttackControlId = "attack";
     public const string MobileInteractControlId = "interact";
     public const string MobileUseControlId = "use";
-    public const string MobileRunControlId = "run";
+    public const string MobileRollControlId = "roll";
 
     private static readonly string[] BuiltInMobileControlIds =
     {
@@ -41,7 +41,7 @@ public static class UIUserSettings
         MobileAttackControlId,
         MobileInteractControlId,
         MobileUseControlId,
-        MobileRunControlId
+        MobileRollControlId
     };
 
     /// <summary>新配置与恢复默认时采用的界面缩放倍率。</summary>

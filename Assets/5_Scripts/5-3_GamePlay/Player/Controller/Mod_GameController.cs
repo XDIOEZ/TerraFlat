@@ -79,7 +79,12 @@ public partial class Mod_GameController : Module
 
     /// <summary>读取经过输入源仲裁的玩家移动值，避免手机摇杆被手柄左摇杆抢占。</summary>
     public Vector2 ReadMoveInput(InputAction fallbackAction)
+        => ReadMoveInput(fallbackAction, out _);
+
+    /// <summary>同时返回实际移动来源，手机曲线不影响键盘回退和外部控制。</summary>
+    public Vector2 ReadMoveInput(InputAction fallbackAction, out bool isMobileMoveInput)
     {
+        isMobileMoveInput = false;
         if (TryReadExternalMoveInput(out Vector2 externalInput))
             return externalInput;
 
@@ -89,13 +94,15 @@ public partial class Mod_GameController : Module
         if (_preferredInputDevice == InputDeviceType.Mobile)
         {
             Vector2 mobileInput = MobileInputRuntime.State.move;
-            if (mobileInput.sqrMagnitude <= MoveInputEpsilonSqr)
-                mobileInput = _mobileMoveInput;
-
             if (mobileInput.sqrMagnitude > MoveInputEpsilonSqr)
+            {
+                isMobileMoveInput = true;
                 return mobileInput;
+            }
 
-            return textInputFocused ? Vector2.zero : _keyboardMoveInput;
+            Vector2 keyboardInput = textInputFocused ? Vector2.zero : _keyboardMoveInput;
+            isMobileMoveInput = keyboardInput.sqrMagnitude <= MoveInputEpsilonSqr;
+            return keyboardInput;
         }
 
         if (_preferredInputDevice == InputDeviceType.Gamepad)
@@ -151,7 +158,6 @@ public partial class Mod_GameController : Module
     private bool _mobileAttackInputHeld;
     private Vector2 _keyboardMoveInput;
     private Vector2 _gamepadMoveInput;
-    private Vector2 _mobileMoveInput;
     private float _mobileAimStrength;
     private float _mobileAttackAimStrength;
     private Vector2 _mobileAimDirection = Vector2.right;
@@ -1308,14 +1314,12 @@ public partial class Mod_GameController : Module
             EventSystemGuard.NotifyGamepadFocusInput();
     }
 
-    /// <summary>保存各输入源最近一次移动值，让手机方案可以忽略手柄而保留键盘移动。</summary>
+    /// <summary>缓存键鼠与手柄移动，手机始终读取唯一触控快照，防止松手后旧回调让角色继续移动。</summary>
     private void CacheMoveInput(InputAction.CallbackContext context)
     {
         InputDevice device = context.control?.device;
         Vector2 value = context.canceled ? Vector2.zero : context.ReadValue<Vector2>();
-        if (device is FlatWorldMobileDevice)
-            _mobileMoveInput = value;
-        else if (device is Gamepad)
+        if (device is Gamepad)
             _gamepadMoveInput = value;
         else if (device is Keyboard || device is Mouse)
             _keyboardMoveInput = value;

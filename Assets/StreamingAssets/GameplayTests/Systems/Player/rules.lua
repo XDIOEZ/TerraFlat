@@ -65,6 +65,118 @@ for _, player in ipairs({true, false}) do
     end, player and "低重力玩家移动：提速、起步、刹停、转向及表面组合" or "低重力动物移动：共用惯性、有限下限及最终刹停")
 end
 
+-- 手机曲线调用正式规则，保留低速区、正常走速平台和前快后缓的跑步提速。
+local function mobile_near(actual, expected, label)
+    assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label)
+end
+for _, runRate in ipairs({1.5, 2}) do
+    test.system("player", "mobile_movement_curve", {runRate = runRate}, function(data)
+        local samples = data.samples
+        assert(#samples == 101, "手机曲线没有覆盖完整摇杆行程")
+        mobile_near(data.deadZone, .08, "手机默认死区改变")
+        mobile_near(data.atDeadZone, 0, "死区边界仍输出移动")
+        mobile_near(samples[21], .5, "推到0.2没有达到最大走速的50%")
+        mobile_near(samples[51], 1, "推到0.5没有达到最大走速")
+        mobile_near(samples[101], runRate, "推满没有达到配置的最大跑速")
+        local previous = 0
+        for i, value in ipairs(samples) do
+            assert(value >= previous - .000001 and value >= 0 and value <= runRate, "手机曲线倒退或越界")
+            if i <= 9 then mobile_near(value, 0, "摇杆死区内仍缓慢移动") end
+            if i >= 51 and i <= 71 then mobile_near(value, 1, "0.5到0.7没有保持最大走速") end
+            previous = value
+        end
+        assert(data.lowMidpoint > .25 and data.lowMidpoint < .5, "低速区仍是线性或提前跳到端点")
+        assert(data.walkMidpoint > .75 and data.walkMidpoint < 1, "低速到走速没有前快后缓")
+        assert(data.runMidpoint > (1 + runRate) / 2 and data.runMidpoint < runRate, "走速到跑速没有前快后缓")
+        assert(data.negative == 0 and data.nan == 0 and data.infinity == 0, "异常摇杆力度没有安全归零")
+        mobile_near(data.beyondFull, runRate, "越过摇杆外圈后继续加速")
+    end, "手机移动曲线：0.2半走速、0.5到0.7走路平台、非线性提速与" .. runRate .. "倍满跑")
+end
+
+local function mobile_walking(sample, speed)
+    assert(not sample.running and not sample.bodySimulated, "手机步行误入奔跑或启动夹具物理")
+    mobile_near(sample.targetSpeed, speed, "手机步行没有达到对应目标速度")
+    mobile_near(sample.movingNutrition, 1.6, "走路平台仍使用奔跑营养消耗")
+    mobile_near(sample.movingWater, 1, "走路平台仍使用奔跑水分倍率")
+end
+test.system("player", "mobile_movement_state", {finalAdditive = 3, steps = {
+    {x = .2}, {x = .5}, {x = .6}, {x = .7}, {x = .70001}, {x = 1}, {x = .7}, {x = 0},
+    {x = .4, y = -.3, mobile = false}
+}}, function(data)
+    local s = data.samples
+    mobile_walking(s[1], 6.5)
+    for _, i in ipairs({2, 3, 4, 7}) do mobile_walking(s[i], 13) end
+    assert(s[5].running and s[5].targetSpeed >= s[4].targetSpeed and s[5].targetSpeed - s[4].targetSpeed < .001,
+        "走跑边界在存在最终加算移速时发生速度跳变")
+    assert(s[6].running, "摇杆推满没有进入实际奔跑")
+    mobile_near(s[6].targetSpeed, 18, "满跑错误放大最终加算移速或没有达到实际跑速")
+    mobile_near(s[6].movingNutrition, 3.2, "手机奔跑没有接入原营养规则")
+    mobile_near(s[6].movingWater, .25, "手机奔跑没有接入原水分规则")
+    mobile_walking(s[8], 0)
+    mobile_near(s[9].x, .4, "退出手机输入后仍改写普通横向输入")
+    mobile_near(s[9].y, -.3, "退出手机输入后仍改写普通纵向输入")
+    for _, sample in ipairs(s) do assert(not sample.runPreference, "手机自动跑污染了手动奔跑偏好") end
+end, "手机走跑接管：分段速度、实际消耗状态、最终加算连续与普通输入隔离")
+
+test.system("player", "mobile_movement_state", {running = true, finalAdditive = 3, steps = {
+    {x = .6}, {x = 1}, {x = 0}, {x = 1, mobile = false}, {x = .6},
+    {manualRun = false, action = "reset"}
+}}, function(data)
+    local s = data.samples
+    mobile_walking(s[1], 13)
+    mobile_walking(s[3], 0)
+    assert(s[2].running and s[4].running, "手机满推或退出接管没有恢复原手动奔跑")
+    mobile_near(s[4].targetSpeed, 18, "退出接管后的手动奔跑倍率丢失或叠加")
+    for i = 1, 5 do assert(s[i].runPreference, "手机走路或松杆提前清掉了原奔跑偏好") end
+    assert(not s[6].running and not s[6].runPreference and s[6].speed == 13,
+        "明确停止奔跑后的运动重置又恢复了过期奔跑偏好")
+end, "手机手动偏好：接管时保留、退出恢复、明确停跑后重置不复活")
+
+test.system("player", "mobile_movement_state", {finalAdditive = 3, steps = {
+    {x = .6}, {action = "hold"}, {x = 1}, {action = "release"}, {action = "toggle"},
+    {x = 1, mobile = false}, {action = "release"}
+}}, function(data)
+    local s = data.samples
+    mobile_walking(s[1], 13)
+    assert(not s[2].running and s[2].runPreference and s[2].speed == 13,
+        "手机走路平台按住Shift改变了实际跑步或没有保存手动偏好")
+    assert(s[3].running and s[4].running and not s[4].runPreference and s[4].speed == 18,
+        "手机外圈奔跑时松开Shift打断了实际跑步或没有清除手动偏好")
+    assert(s[5].running and s[5].runPreference, "手机接管时切换键没有依据手动偏好切换")
+    assert(s[6].running and s[6].runPreference, "退出手机接管没有恢复最新手动偏好")
+    mobile_near(s[6].targetSpeed, 18, "恢复手动奔跑后跑速改变")
+    assert(not s[7].running and not s[7].runPreference and s[7].speed == 13,
+        "退出手机接管后松开Shift不再立即停止手动奔跑")
+end, "手机接管键鼠并用：走路按Shift、跑步松Shift、切换偏好与退出后恢复")
+
+test.system("player", "mobile_movement_state", {finalAdditive = 3, steps = {
+    {x = 1}, {x = 1, stamina = 1}, {x = 1, stamina = 100}, {x = .7}, {x = 1},
+    {x = 1, stamina = 1}, {x = 0, mobile = false}, {x = 1, stamina = 100}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].running and s[5].running and s[8].running, "正常、回杆解锁或新手机会话不能发动奔跑")
+    for _, i in ipairs({2, 3, 4, 6}) do mobile_walking(s[i], 13) end
+    assert(s[2].stamina == 1 and s[3].stamina == 100, "夹具没有使用正式体力模块切换低体力与恢复")
+    assert(not s[7].running and not s[7].runPreference, "退出手机接管仍遗留实际奔跑或手动偏好")
+end, "手机体力中断：退回全速走、恢复体力不反复起跑、回到0.7后重推解锁")
+
+test.system("player", "mobile_movement_bindings", {}, function(data)
+    local function count(paths, expected)
+        local total = 0
+        for _, path in ipairs(paths) do if path == expected then total = total + 1 end end
+        return total
+    end
+    assert(count(data.roll, "<FlatWorldMobileDevice>/roll") == 1, "手机翻滚按钮没有独立绑定正式翻滚动作")
+    assert(count(data.roll, "<Keyboard>/space") == 1 and count(data.holdRun, "<Keyboard>/shift") == 1,
+        "手机改动覆盖了原键鼠翻滚或按住奔跑")
+    assert(count(data.toggleRun, "<Gamepad>/leftStickPress") == 1, "手机改动覆盖了手柄切换奔跑")
+    for _, paths in ipairs({data.holdRun, data.toggleRun}) do
+        for _, path in ipairs(paths) do
+            assert(not string.find(path, "<FlatWorldMobileDevice>/", 1, true), "手机按钮仍接入旧奔跑动作")
+        end
+    end
+end, "手机翻滚绑定：单独翻滚、移除按钮跑步、保留键鼠和手柄动作")
+
 -- 移动、奔跑与营养水分的职责沿用正式移动动作配置。
 local cases = {
     {name = "静止", args = {moving = false, running = false}, nutrition = 1, water = 1},

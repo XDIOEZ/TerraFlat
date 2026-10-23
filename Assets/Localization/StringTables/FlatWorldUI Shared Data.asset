@@ -5571,6 +5571,10 @@ MonoBehaviour:
     m_Key: ui.text.C3A4D73F
     m_Metadata:
       m_Items: []
+  - m_Id: 10228915849170947
+    m_Key: ui.text.575B4FC0
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

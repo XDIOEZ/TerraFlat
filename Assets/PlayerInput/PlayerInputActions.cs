@@ -939,11 +939,11 @@ namespace InputSystem
                 {
                     ""name"": """",
                     ""id"": ""2b1ae203-38d8-4bb2-9291-7fba61453203"",
-                    ""path"": ""<FlatWorldMobileDevice>/run"",
+                    ""path"": ""<FlatWorldMobileDevice>/roll"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Mobile"",
-                    ""action"": ""ToggleRun"",
+                    ""action"": ""Roll"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },

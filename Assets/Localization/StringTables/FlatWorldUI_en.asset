@@ -5806,6 +5806,10 @@ MonoBehaviour:
     m_Localized: Move Joystick
     m_Metadata:
       m_Items: []
+  - m_Id: 10228915849170947
+    m_Localized: Roll
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
