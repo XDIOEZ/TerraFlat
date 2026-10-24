@@ -133,9 +133,12 @@ public static class FluidDeviceOperations
         foreach (FluidNetworkGraph.Edge edge in FluidGraph.Edges)
         {
             if (!ReferenceEquals(edge.Source, node) || edge.Target == null || !IsFluidActive(edge.Target)) continue;
-            FluidInventory target = GetFluidInventory(edge.Target, edge.TargetPort.Chamber);
-            if (target.LiquidMoles > 0 || target.GetPressureKPa(GetFluidVolumeLiters(edge.Target), GetFluidMinimumGasSpaceLiters(edge.Target)) >= node.Definition.Fluid.MaximumPumpPressureKPa) continue;
-            if (edge.Target.Definition.Fluid.SingleGas && target.GasMoles >= FluidUnits.StandardLitersToMol((decimal)edge.Target.Definition.Fluid.GasBufferStandardLiters)) continue;
+            FluidInventory target = GetPhaseFluidInventory(edge.Target, edge.TargetPort.Chamber, FluidPhase.Gas);
+            if (GetFluidInventory(edge.Target, edge.TargetPort.Chamber).LiquidMoles > 0 ||
+                target.GetPressureKPa(GetPhaseFluidVolumeLiters(edge.Target, FluidPhase.Gas),
+                    GetPhaseFluidMinimumGasSpaceLiters(edge.Target, FluidPhase.Gas)) >= node.Definition.Fluid.MaximumPumpPressureKPa) continue;
+            if (edge.Target.Definition.Fluid.SingleGas && !IsSharedGasNetworkMember(edge.Target) &&
+                target.GasMoles >= FluidUnits.StandardLitersToMol((decimal)edge.Target.Definition.Fluid.GasBufferStandardLiters)) continue;
             return true;
         }
         return false;
@@ -261,7 +264,7 @@ public static class FluidDeviceOperations
         ItemData item = inventory.Data.itemSlots[0].itemData;
         if (item == null || !FluidTankStorage.TryGet(item, out FluidInventory target, out FluidTankConfiguration configuration)) return;
         FluidInventory source = GetFluidInventory(node, "output");
-        if (!TryGetFluidTransferBudget(source, out FluidInventoryState beginning, out double budget) || budget <= 0) return;
+        if (!TryGetGasTransferBudget(source, out FluidInventoryState beginning, out double budget) || budget <= 0) return;
         string port = compressorWorkspaces.GetValue(node, value => new CompressorWorkspace(value)).PortablePort;
         if (!source.TryReserve(port, FluidPhase.Gas, FluidUnits.StandardLitersToMol((decimal)node.Definition.Fluid.BatchStandardLiters), out FluidBatch batch)) return;
         FluidComponentState stock = beginning.Components.Find(component => component.FluidId == batch.FluidId);
@@ -274,7 +277,7 @@ public static class FluidDeviceOperations
         if (maximum <= 0) return;
         if (!source.TryTransfer(port, target, maximum, configuration.VolumeLiters, configuration.MinimumGasSpaceLiters, out FluidBatch moved)) return;
         stock.GasMoles -= moved.GasMoles;
-        SetFluidTransferBudget(source, Math.Max(0, budget - (double)FluidUnits.MolToStandardLiters(moved.GasMoles)));
+        SetGasTransferBudget(source, Math.Max(0, budget - (double)FluidUnits.MolToStandardLiters(moved.GasMoles)));
         FluidTankStorage.Write(item, target); inventory.Data.NotifyItemStateChanged(item);
     }
     private static decimal LimitPortableFillByPressure(FluidInventory target, FluidBatch batch, decimal maximum, double pressure,

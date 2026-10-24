@@ -6,6 +6,9 @@ using MemoryPack;
 [Serializable, MemoryPackable]
 public partial class FluidMachineState
 {
+    // 只有组主保存气网载荷，成员本地 Chambers 仍只拥有自己的物质。
+    public long GasNetworkEpoch;
+    public FluidGasNetworkSnapshot GasNetwork;
     #region 权威持久状态
     public Dictionary<string, FluidInventoryState> Chambers = new(StringComparer.Ordinal);
     public Dictionary<string, string> BlockedPorts = new(StringComparer.Ordinal);

@@ -34,7 +34,9 @@ internal static class GameplayTestFluidNetworks
         ["environment_atmosphere"] = Atmosphere,
         ["environment_outlet_vent"] = OutletVent,
         ["container_liquid_transfer"] = LiquidTransfer,
-        ["network_tick_scheduler"] = TickScheduler
+        ["network_tick_scheduler"] = TickScheduler,
+        ["gas_network_lifecycle"] = GameplayGasNetworkLifecycle,
+        ["gas_network_restore_order"] = GameplayGasNetworkRestore
     };
 
     private static void Check(Action<string, bool, string> report, string label, bool passed, string message = null)
@@ -47,9 +49,19 @@ internal static class GameplayTestFluidNetworks
     private static string Payload(FluidInventory inventory) => JsonConvert.SerializeObject(inventory.State);
     private static FluidInventory Fill(MachineEntity node, string id, decimal gas, decimal liquid = 0m, string chamber = "main")
     {
+        FluidDefinition substance = FluidCatalog.Default.Find(id);
         FluidInventory inventory = GetFluidInventory(node, chamber);
-        Require(inventory.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(id), gas, liquid, 293.15),
-            GetFluidVolumeLiters(node), GetFluidMinimumGasSpaceLiters(node)), node.Definition.Id + " 装料");
+        if (gas > 0m)
+        {
+            FluidInventory gasInventory = GetPhaseFluidInventory(node, chamber, FluidPhase.Gas);
+            Require(gasInventory.TryAdd(FluidInventory.CreateBatch(substance, gas, 0m, 293.15),
+                GetPhaseFluidVolumeLiters(node, FluidPhase.Gas), GetPhaseFluidMinimumGasSpaceLiters(node, FluidPhase.Gas)),
+                node.Definition.Id + " 气相装料");
+            if (liquid == 0m) return gasInventory;
+        }
+        if (liquid > 0m)
+            Require(inventory.TryAdd(FluidInventory.CreateBatch(substance, 0m, liquid, 293.15),
+                GetFluidVolumeLiters(node), GetFluidMinimumGasSpaceLiters(node)), node.Definition.Id + " 液相装料");
         return inventory;
     }
     private static void FillLiters(MachineEntity node, string id, decimal liters, string chamber = "main")
@@ -62,8 +74,11 @@ internal static class GameplayTestFluidNetworks
         {
             using var lease = UseNodeScope(node);
             FluidInventory inventory = GetFluidInventory(node);
-            if (!seen.Add(inventory)) continue;
-            gas += inventory.GasMoles; liquid += inventory.LiquidMoles; energy += inventory.State.TotalInternalEnergyJoules;
+            if (seen.Add(inventory))
+            { gas += inventory.GasMoles; liquid += inventory.LiquidMoles; energy += inventory.State.TotalInternalEnergyJoules; }
+            FluidInventory sharedGas = GetPhaseFluidInventory(node, "main", FluidPhase.Gas);
+            if (seen.Add(sharedGas))
+            { gas += sharedGas.GasMoles; liquid += sharedGas.LiquidMoles; energy += sharedGas.State.TotalInternalEnergyJoules; }
         }
         return (gas, liquid, energy);
     }
@@ -142,12 +157,13 @@ internal static class GameplayTestFluidNetworks
         MachineEntity a = f.Add("FluidPipe"), b = f.Add("FluidPipe", 1), outlet = f.Add("FluidOutlet", 2), tank = f.Add("LiquidStorageTank", 3);
         f.Rebuild(); Fill(a, FluidIds.Oxygen, .1m);
         var initial = Total(a, b, outlet, tank);
+        Check(report, "气体整网共享单份库存、液体仍独立管段",
+            ReferenceEquals(GetPhaseFluidInventory(a, "main", FluidPhase.Gas), GetPhaseFluidInventory(b, "main", FluidPhase.Gas)) &&
+            !ReferenceEquals(GetFluidInventory(a), GetFluidInventory(b)) && GetFluidInventory(a).GasMoles == 0m);
         f.Step();
-        Check(report, "第一轮只进入下一管段", GetFluidInventory(b).GasMoles > 0 && GetFluidInventory(outlet).IsEmpty && GetFluidInventory(tank).IsEmpty);
+        Check(report, "首轮直接从整网供给出口、不逐格搬运", GetFluidInventory(outlet).GasMoles > 0 && GetFluidInventory(tank).IsEmpty);
         f.Step();
-        Check(report, "第二轮到出口仍不穿透目标罐", GetFluidInventory(outlet).GasMoles > 0 && GetFluidInventory(tank).IsEmpty);
-        f.Step();
-        Check(report, "第三轮真实进入目标罐", GetFluidInventory(tank).GasMoles > 0);
+        Check(report, "下一轮出口真实送入储罐", GetFluidInventory(tank).GasMoles > 0);
         var end = Total(a, b, outlet, tank);
         Check(report, "整链物质量和内能守恒", Near(end.Gas, initial.Gas) && end.Liquid == initial.Liquid && Near(end.Energy, initial.Energy));
     }
@@ -158,12 +174,14 @@ internal static class GameplayTestFluidNetworks
         MachineEntity a = f.Add("FluidPipe"), b = f.Add("FluidPipe", 1);
         f.Rebuild(); Fill(a, FluidIds.Oxygen, .2m);
         for (int i = 0; i < 8; i++) f.Step();
-        Check(report, "封闭裸管有压差也不自然流动", GetFluidInventory(a).GasMoles == .2m && GetFluidInventory(b).IsEmpty);
+        Check(report, "封闭裸管共享气网且不排放", GetPhaseFluidInventory(a, "main", FluidPhase.Gas).GasMoles == .2m &&
+            ReferenceEquals(GetPhaseFluidInventory(a, "main", FluidPhase.Gas), GetPhaseFluidInventory(b, "main", FluidPhase.Gas)));
         Check(report, "裸管不擅自排向环境", !f.Graph.Edges.Exists(edge => edge.Environment));
         MachineEntity outlet = f.Add("FluidOutlet", 2), tank = f.Add("LiquidStorageTank", 3);
         f.Rebuild(); Fill(tank, FluidIds.Oxygen, 60m);
         for (int i = 0; i < 3; i++) f.Step();
-        Check(report, "有向端口可以向更高压力储罐供料", GetFluidInventory(tank).GasMoles > 60m && GetFluidInventory(a).GasMoles < .2m);
+        Check(report, "被动有向端口不能无功向更高压力储罐泵气", GetFluidInventory(tank).GasMoles == 60m &&
+            Near(Total(a, b, outlet, tank).Gas, 60.2m));
     }
 
     private static void Throughput(Action<string, bool, string> report)
@@ -175,9 +193,12 @@ internal static class GameplayTestFluidNetworks
         TopologyChanged(a); f.Rebuild(); FluidInventory source = Fill(a, FluidIds.Oxygen, 1m);
         f.Step();
         decimal moved = GetFluidInventory(east).GasMoles + GetFluidInventory(north).GasMoles;
-        Check(report, "多出口共用源库存吞吐", moved > 0m && (double)FluidUnits.MolToStandardLiters(moved) <= f.Seconds + 1e-8);
-        Require(f.Budget(source, out FluidInventoryState stock, out double remaining), "源预算存在");
-        Check(report, "预算和冻结库存按实际搬运扣一次", Near(remaining, f.Seconds - (double)FluidUnits.MolToStandardLiters(moved)) && Near(stock.Components[0].GasMoles, 1m - moved));
+        double totalBoundaryBudget = 2d * f.Seconds;
+        Check(report, "每个真实边界口独立限流、共用唯一库存", moved > 0m && (double)FluidUnits.MolToStandardLiters(moved) <= totalBoundaryBudget + 1e-8 &&
+            (double)FluidUnits.MolToStandardLiters(GetFluidInventory(east).GasMoles) <= f.Seconds + 1e-8 &&
+            (double)FluidUnits.MolToStandardLiters(GetFluidInventory(north).GasMoles) <= f.Seconds + 1e-8);
+        Require(f.GasBudget(source, out FluidInventoryState stock, out double remaining), "独立气相源预算存在");
+        Check(report, "预算和冻结库存按实际搬运扣一次", Near(remaining, totalBoundaryBudget - (double)FluidUnits.MolToStandardLiters(moved)) && Near(stock.Components[0].GasMoles, 1m - moved));
     }
 
     private static void BlockedRetry(Action<string, bool, string> report)
@@ -206,10 +227,16 @@ internal static class GameplayTestFluidNetworks
         f.Add("LiquidStorageTank", 3); f.Rebuild(); Fill(source, FluidIds.Oxygen, .1m);
         Require(GetFluidDeviceBehavior(valve).Execute(valve, "fluid.valve", null), "关闭阀门");
         Check(report, "关闭阀门切断正式边", !HasEdge(f.Graph, source, valve) && !HasEdge(f.Graph, valve, outlet));
+        decimal expectedSourceShare = .1m * (decimal)(source.Definition.Fluid.VolumeLiters /
+            (source.Definition.Fluid.VolumeLiters + valve.Definition.Fluid.VolumeLiters));
         for (int i = 0; i < 3; i++) f.Step();
-        Check(report, "关阀期间库存保留", GetFluidInventory(source).GasMoles == .1m && GetFluidInventory(valve).IsEmpty);
+        Check(report, "关阀期间各段保留真实份额，总量守恒", Near(GetPhaseFluidInventory(source, "main", FluidPhase.Gas).GasMoles, expectedSourceShare) &&
+            Near(Total(source, valve).Gas, .1m) &&
+            !ReferenceEquals(GetPhaseFluidInventory(source, "main", FluidPhase.Gas), GetPhaseFluidInventory(valve, "main", FluidPhase.Gas)));
         Require(GetFluidDeviceBehavior(valve).Execute(valve, "fluid.valve", null), "打开阀门"); f.Step();
-        Check(report, "开阀重建连接并恢复输送", HasEdge(f.Graph, source, valve) && GetFluidInventory(valve).GasMoles > 0);
+        Check(report, "开阀合网并向出口供气", HasEdge(f.Graph, source, valve) &&
+            ReferenceEquals(GetPhaseFluidInventory(source, "main", FluidPhase.Gas), GetPhaseFluidInventory(valve, "main", FluidPhase.Gas)) &&
+            GetFluidInventory(outlet).GasMoles > 0);
     }
 
     private static void Selector(Action<string, bool, string> report)
@@ -241,11 +268,12 @@ internal static class GameplayTestFluidNetworks
             f.Rebuild(); bool vertical = (direction & 1) == 1;
             if (mixed || vertical) Fill(source, FluidIds.Oxygen, .05m);
             if (mixed || !vertical) Fill(source, FluidIds.PureWater, 0, 1m);
-            f.Step(); FluidInventory result = GetFluidInventory(target);
-            bool expectLiquid = mixed ? vertical : !vertical;
-            Check(report, $"方向 {direction} {(mixed ? "双相首选" : "单相回退")}", expectLiquid
-                ? GetFluidState(source).LastFlowPhase == "liquid" && result.GetLiquidMoles(FluidIds.PureWater) + result.GetGasMoles(FluidIds.PureWater) > 0 && result.GetGasMoles(FluidIds.Oxygen) == 0
-                : GetFluidState(source).LastFlowPhase == "gas" && result.GetGasMoles(FluidIds.Oxygen) > 0 && result.GetLiquidMoles(FluidIds.PureWater) + result.GetGasMoles(FluidIds.PureWater) == 0);
+            for (int step = 0; step < 12; step++) f.Step();
+            FluidInventory result = GetFluidInventory(target);
+            Check(report, $"方向 {direction} {(mixed ? "气液分别结算" : "单相输送")}",
+                (mixed || vertical ? result.GetGasMoles(FluidIds.Oxygen) > 0m : result.GetGasMoles(FluidIds.Oxygen) == 0m) &&
+                (mixed || !vertical ? result.GetLiquidMoles(FluidIds.PureWater) + result.GetGasMoles(FluidIds.PureWater) > 0m :
+                    result.GetLiquidMoles(FluidIds.PureWater) + result.GetGasMoles(FluidIds.PureWater) == 0m));
         }
     }
 
@@ -345,7 +373,7 @@ internal static class GameplayTestFluidNetworks
         string initial = Payload(inventory); ItemData saved = CaptureSnapshot(pipe);
         Require(Remove(pipe.Id) != null, "移除管段"); f.ForgetDetached(pipe);
         MachineEntity restored = RestoreMachine(saved); f.Rebuild();
-        Check(report, "快照恢复气量、内能、预留和随机态", Payload(GetFluidInventory(restored)) == initial);
+        Check(report, "快照恢复整网气量、内能、预留和随机态", Payload(GetPhaseFluidInventory(restored, "main", FluidPhase.Gas)) == initial);
         Check(report, "恢复后连接可重新建立", GetById(restored.Id) == restored && GetFluidPipeAt(restored.Cell) == restored);
     }
 
@@ -451,7 +479,8 @@ internal static class GameplayTestFluidNetworks
         Check(report, "正式环境出口扣量并登记排放", source.GasMoles < .1m && f.Atmosphere.CurrentMoles > before && state.LastEmittedStandardLiters > 0);
         Fill(pipe, FluidIds.Oxygen, .1m); Fill(pipe, FluidIds.PureWater, 0, 1m);
         Require(VentFluidPipe(pipe), "显式排空管段气体");
-        Check(report, "排气只清气相保留真实液体", GetFluidInventory(pipe).GasMoles == 0 && GetFluidInventory(pipe).LiquidMoles == 1m);
+        Check(report, "排气只清气相保留真实液体", GetPhaseFluidInventory(pipe, "main", FluidPhase.Gas).GasMoles == 0 &&
+            GetFluidInventory(pipe).LiquidMoles == 1m);
     }
 
     private static void LiquidTransfer(Action<string, bool, string> report)
@@ -611,7 +640,7 @@ internal static class GameplayTestFluidNetworks
         if (mixed || vertical) Fill(source, FluidIds.Oxygen, .05m);
         if (mixed || !vertical) Fill(source, FluidIds.PureWater, 0, 1m);
         var initial = Total(source, target);
-        f.Step();
+        for (int step = 0; step < 12; step++) f.Step();
         FluidInventory result = GetFluidInventory(target), remaining = GetFluidInventory(source);
         var final = Total(source, target);
         return new JObject

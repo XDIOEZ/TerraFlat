@@ -153,7 +153,10 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         if (operation == "fluid.phase")
         {
             if (argument != "gas" && argument != "liquid" && argument != "both") return false;
+            if (State.OutletPhase == argument) return true;
             State.OutletPhase = argument;
+            MachineWorld.TopologyChanged(Entity);
+            return true;
         }
         else if (operation == "fluid.rotate")
         {
@@ -195,6 +198,32 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     private void DescribeInventory(StringBuilder text, string chamber)
     {
         FluidInventory inventory = MachineWorld.GetFluidInventory(Entity, chamber);
+        FluidInventory gasInventory = MachineWorld.GetPhaseFluidInventory(Entity, chamber, FluidPhase.Gas);
+        if (!ReferenceEquals(inventory, gasInventory))
+        {
+            // 连通气网的读数取共享组，液体信息只取当前管段，不把两相混为同一份库存。
+            double gasVolume = MachineWorld.GetPhaseFluidVolumeLiters(Entity, FluidPhase.Gas);
+            double gasMinimum = MachineWorld.GetPhaseFluidMinimumGasSpaceLiters(Entity, FluidPhase.Gas);
+            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat(
+                "{0}气网：{1:0.##}℃ · {2:0.##} kPa · {3:0.###} 标准 L · 连通容积 {4:0.###} L",
+                chamber, gasInventory.GetTemperatureKelvin() - 273.15, gasInventory.GetPressureKPa(gasVolume, gasMinimum),
+                FluidUnits.MolToStandardLiters(gasInventory.GasMoles), gasVolume));
+            foreach (FluidComponentState component in gasInventory.State.Components)
+            {
+                if (component.GasMoles <= 0m) continue;
+                decimal ratio = gasInventory.GasMoles == 0m ? 0m : component.GasMoles / gasInventory.GasMoles * 100m;
+                text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.###} 标准 L ({2:0.#}%)",
+                    FlatWorldLocalizationService.GetUiText(gasInventory.Catalog.Find(component.FluidId).DisplayName),
+                    FluidUnits.MolToStandardLiters(component.GasMoles), ratio));
+            }
+            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("本段液体 {0:0.###} L", inventory.GetLiquidLiters()));
+            foreach (FluidComponentState component in inventory.State.Components)
+                if (component.LiquidMoles > 0m)
+                    text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("{0}：液体 {1:0.###} L",
+                        FlatWorldLocalizationService.GetUiText(inventory.Catalog.Find(component.FluidId).DisplayName),
+                        FluidUnits.MolToLiquidLiters(inventory.Catalog.Find(component.FluidId), component.LiquidMoles)));
+            return;
+        }
         double volume = MachineWorld.GetFluidVolumeLiters(Entity), minimum = MachineWorld.GetFluidMinimumGasSpaceLiters(Entity);
         text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.##}℃ · {2:0.##}/{3:0.##} kPa\n气体 {4:0.###} 标准 L · 液体 {5:0.###} L · 气相空间 {6:0.###} L",
             chamber, inventory.GetTemperatureKelvin() - 273.15, inventory.GetPressureKPa(volume, minimum), Definition.MaxSafePressureKPa,

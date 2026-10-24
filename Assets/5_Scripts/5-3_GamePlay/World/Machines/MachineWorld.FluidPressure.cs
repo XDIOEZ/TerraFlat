@@ -12,7 +12,8 @@ public static partial class MachineWorld
     public static double GetPressureProbeReading(MachineEntity probe)
     {
         MachineEntity pipe = fluidGraph?.PipeAt(probe.Cell);
-        return pipe == null ? 0 : GetFluidInventory(pipe).GetPressureKPa(GetFluidVolumeLiters(pipe), GetFluidMinimumGasSpaceLiters(pipe));
+        return pipe == null ? 0 : GetPhaseFluidInventory(pipe, "main", FluidPhase.Gas).GetPressureKPa(
+            GetPhaseFluidVolumeLiters(pipe, FluidPhase.Gas), GetPhaseFluidMinimumGasSpaceLiters(pipe, FluidPhase.Gas));
     }
     public static string DescribeAtmosphere(MachineEntity node = null)
     {
@@ -121,11 +122,14 @@ public static partial class MachineWorld
         reason = null;
         if (node?.Definition.Fluid == null) return true;
         RebuildGraphsIfDirty();
+        if (scope.PendingGasRestore) { reason = "气网成员尚未恢复完整"; return false; }
         FluidMachineState state = GetFluidState(node);
         if (!string.IsNullOrEmpty(state.RuptureBudgetId)) { reason = "正在结算罐体破裂，请等待爆炸结束"; return false; }
         if (IsFluidTankBlock(node)) return true;
         if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && !group.Inventory.IsEmpty)
         { reason = "请先排空整个组合储罐的气体和液体"; return false; }
+        if (IsSharedGasNetworkMember(node) && GetPhaseFluidInventory(node, "main", FluidPhase.Gas).GasMoles > 0m)
+        { reason = "请先排空连通管网的气体"; return false; }
         foreach (string chamber in state.Chambers.Keys)
             if (!GetFluidInventory(node, chamber).IsEmpty) { reason = "请先排空这台设备或管段的气体和液体"; return false; }
         return true;

@@ -85,22 +85,20 @@ for direction = 0, 3 do
     for _, mixed in ipairs({true, false}) do
         test.runtime("industrial_fluids", "phase_preference", {direction = direction, mixed = mixed}, function(data)
             local vertical = data.direction % 2 == 1
-            local expect_liquid = data.mixed and vertical or (not data.mixed and not vertical)
+            local expect_gas = data.mixed or vertical
+            local expect_liquid = data.mixed or not vertical
             local target_water = data.targetWaterGas + data.targetWaterLiquid
             assert(data.scope == "live-isolated-world", "相态测试没有使用真实隔离世界")
-            if expect_liquid then
-                assert(data.flowPhase == "liquid" and target_water > 0, "首选或回退液相没有发生真实搬运")
-                near(data.targetOxygenGas, 0, "选液相时错误搬运了氧气")
-            else
-                assert(data.flowPhase == "gas" and data.targetOxygenGas > 0, "首选或回退气相没有发生真实搬运")
-                near(target_water, 0, "选气相时错误搬运了水")
-            end
+            assert(expect_gas and data.targetOxygenGas > 0 or not expect_gas and data.targetOxygenGas == 0,
+                "气相未独立输送，或制造了不存在的氧气")
+            assert(expect_liquid and target_water > 0 or not expect_liquid and target_water == 0,
+                "液相未独立输送，或制造了不存在的水")
             near(data.targetOxygenGas + data.remainingOxygenGas, (data.mixed or vertical) and 0.05 or 0,
                 "相态选择或正常相变破坏氧气物质量")
             near(target_water + data.remainingWaterGas + data.remainingWaterLiquid,
                 (data.mixed or not vertical) and 1 or 0, "相态选择或正常相变破坏水的两相总物质量")
             near(data.finalGas + data.finalLiquid, data.initialGas + data.initialLiquid, "相态变化破坏全部组分总量")
             near(data.finalEnergy, data.initialEnergy, "输送和正常相变破坏总内能")
-        end, "方向 " .. direction .. (mixed and "，双相首选" or "，单相回退"))
+        end, "方向 " .. direction .. (mixed and "，两相独立结算" or "，单相输送"))
     end
 end

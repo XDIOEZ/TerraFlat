@@ -1,0 +1,48 @@
+<Project>
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)../../../</RepoRoot>
+    <BaseIntermediateOutputPath>$(RepoRoot)Temp/Tests/IndustrialGasNetworks/obj/</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DisableImplicitFrameworkDefines>true</DisableImplicitFrameworkDefines>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputPath>$(RepoRoot)Temp/Tests/IndustrialGasNetworks/bin/$(Configuration)/</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="TestDoubles.cs" />
+    <Compile Include="GasTransportHarness.cs" />
+    <!-- 库存和气液拓扑直接编译正式源码，不在测试中重写被测算法。 -->
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/FluidNetworkGraph.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/IndustrialGasTransferPort.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.GasTransport.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.FluidPortRules.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidState.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidInventory.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidGasPartition.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidGasLiquidPhaseBridge.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidGasNetworkSnapshot.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidUnits.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidRequirement.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidThermodynamics.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Catalog/FluidDefinition.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Environment/ThermalRuntime.cs" />
+    <Reference Include="MemoryPack.Core">
+      <HintPath>$(RepoRoot)Assets/Packages/MemoryPack.Core.1.21.3/lib/netstandard2.1/MemoryPack.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(RepoRoot)Library/PackageCache/com.unity.nuget.newtonsoft-json@3.2.1/Runtime/Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="FastCloner">
+      <HintPath>$(RepoRoot)Assets/Packages/FastCloner.3.3.10/lib/netstandard2.0/FastCloner.dll</HintPath>
+    </Reference>
+    <Analyzer Include="$(RepoRoot)Assets/Packages/MemoryPack.Generator.1.21.3/analyzers/dotnet/cs/MemoryPack.Generator.dll" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

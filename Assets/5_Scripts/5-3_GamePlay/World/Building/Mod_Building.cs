@@ -814,6 +814,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (FlatWorld.Spaceflight.SpaceSession.Current?.Owns(node.Id) == true)
         { FlatWorld.Spaceflight.SpaceSession.Current.ApplyPieceDamage(node.Id, float.MaxValue, "结构摧毁"); return; }
         if (MachineWorld.HandleFluidTankZeroHp(node)) return;
+        MachineWorld.ReleaseDestroyedFluidContents(node);
         if (TryReadBuildingData(node.Snapshot, out _, out Building_Data building))
         {
             string summonerId = ResolveSummonerPrefabId(node.Definition.Id, building);

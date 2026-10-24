@@ -135,6 +135,8 @@ public static partial class MachineWorld
         public void Tick() => MachineWorld.Tick(Seconds);
         public bool Budget(FluidInventory inventory, out FluidInventoryState stock, out double liters)
             => TryGetFluidTransferBudget(inventory, out stock, out liters);
+        public bool GasBudget(FluidInventory inventory, out FluidInventoryState stock, out double liters)
+            => TryGetGasTransferBudget(inventory, out stock, out liters);
         public void SetEngineWork(MachineEntity node, double watts) => SetFluidMechanicalPower(node, watts);
         public void ForgetDetached(MachineEntity node) => ForgetDetachedFluidNode(node);
         public Vector2 SurfacePoint(int x = 0, int y = 0) => new(origin.x + x + .5f, origin.y + y + .5f);

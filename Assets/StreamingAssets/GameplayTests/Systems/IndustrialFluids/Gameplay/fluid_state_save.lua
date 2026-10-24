@@ -7,6 +7,8 @@ local scenarios = {
     {"core_observation", "质量事件与缓存失效"},
     {"core_serialization", "JSON 与 MemoryPack 保存隔离"},
     {"tank_snapshot_restore", "机器气液快照恢复"},
+    {"gas_network_lifecycle", "气网唯一所有权、非拓扑刷新和组主回收"},
+    {"gas_network_restore_order", "气网组主先加载与完整接管"},
 }
 
 for _, scenario in ipairs(scenarios) do

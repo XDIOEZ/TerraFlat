@@ -199,6 +199,7 @@ public static partial class MachineWorld
         EnsureScope();
         if (!GameNetwork.HasStateAuthority) return false;
         if (!nodes.TryGetValue(id, out MachineEntity node)) return true;
+        if (node.Definition.Fluid != null && IsSharedGasNetworkMember(node)) DetachGasNetworksToLocal();
         nodes.Remove(id);
         dirty = true;
         try
@@ -226,6 +227,12 @@ public static partial class MachineWorld
         EnsureScope();
         if (!GameNetwork.HasStateAuthority || !nodes.TryGetValue(id, out MachineEntity node))
             return null;
+        if (node.Definition.Fluid != null)
+        {
+            RebuildGraphsIfDirty();
+            if (scope.PendingGasRestore) throw new InvalidOperationException("气网成员尚未恢复完整，不能提前拆走共享库存。");
+            if (IsSharedGasNetworkMember(node)) DetachGasNetworksToLocal();
+        }
         List<MachineEntity> remainingTanks = ReleaseDismantledFluidTank(node);
         CaptureNode(node);
         ItemData snapshot = ItemInstanceDataFactory.CloneRuntime(node.Snapshot);
@@ -355,7 +362,10 @@ public static partial class MachineWorld
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
         DisposeProcessor(node);
         nodes.Remove(id);
+        if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         fluidStates.Remove(id);
+        scope.GasReplica.RemoveMember(id);
+        ForgetFluidNodeInventoryCaches(id);
         dirty = true;
         NotifySurfaceMechanicalChanged(node.Cell);
         NotifySurfaceCellChanged(node.Cell);
@@ -376,6 +386,12 @@ public static partial class MachineWorld
     {
         if (!Contains(node)) return;
         NodeStateChanged?.Invoke(node);
+        if (gasGraph != null && gasGraph.TryGetGroup(node, out var gasGroup))
+        {
+            gasGroup.UpdateLiquid(node, GetFluidInventory(node));
+            if (gasGroup.OwnerId != node.Id && nodes.TryGetValue(gasGroup.OwnerId, out MachineEntity gasOwner))
+                NodeStateChanged?.Invoke(gasOwner);
+        }
         if (node.Definition.Fluid != null && fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && group.OwnerId != node.Id &&
             nodes.TryGetValue(group.OwnerId, out MachineEntity sharedOwner)) NodeStateChanged?.Invoke(sharedOwner);
     }
@@ -572,9 +588,16 @@ public static partial class MachineWorld
     {
         if (suppressRemoval || item?.itemData == null || !nodes.TryGetValue(item.itemData.Guid, out var node)) return;
         if (node.View == null || node.View.item != item) return;
+        if (GameNetwork.HasStateAuthority && node.Definition.Fluid != null)
+        {
+            if (IsSharedGasNetworkMember(node)) DetachGasNetworksToLocal();
+            CaptureFluidState(node);
+            MachinePersistence.Write(item.itemData, "fluid", MachinePersistence.Read<FluidMachineState>(node.Snapshot, "fluid"));
+        }
         node.View = null;
         DisposeProcessor(node);
         nodes.Remove(node.Id); dirty = true;
+        if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         NotifySurfaceCellChanged(node.Cell);
     }
     public static void Detach(Mod_MechanicalNode view)

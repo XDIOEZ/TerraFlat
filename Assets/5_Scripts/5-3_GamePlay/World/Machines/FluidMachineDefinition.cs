@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-/// <summary>工业流体设备只声明能力和预算，气液共用同一库存与运输入口。</summary>
+/// <summary>工业设备声明端口、物质与动力能力；气液各自结算，设备腔体负责两相事务边界。</summary>
 [MemoryPack.MemoryPackable]
 [Serializable]
 public sealed partial class FluidMachineDefinition

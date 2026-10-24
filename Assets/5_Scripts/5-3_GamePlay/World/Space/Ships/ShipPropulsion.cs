@@ -292,7 +292,7 @@ namespace FlatWorld.Spaceflight
             for (int index = 0; index < fuelSupplyWorkspace.Nodes.Count; index++)
             {
                 FluidNetworkGraph.SupplyNode source = fuelSupplyWorkspace.Nodes[index];
-                FluidInventory inventory = MachineWorld.GetFluidInventory(source.Node, source.Chamber);
+                FluidInventory inventory = MachineWorld.GetPhaseFluidInventory(source.Node, source.Chamber, FluidPhase.Gas);
                 if (!visitedFuelInventories.Add(inventory) || !ShipFuel.IsEligible(inventory, engine.Device.Configuration)) continue;
                 if (!projectedFuelStock.TryGetValue(inventory, out decimal remaining))
                     projectedFuelStock[inventory] = remaining = ShipFuel.AvailableReactionMoles(inventory, engine.Device.Configuration);
@@ -321,7 +321,7 @@ namespace FlatWorld.Spaceflight
             for (int index = 0; index < fuelSupplyWorkspace.Nodes.Count; index++)
             {
                 FluidNetworkGraph.SupplyNode source = fuelSupplyWorkspace.Nodes[index];
-                FluidInventory tank = MachineWorld.GetFluidInventory(source.Node, source.Chamber);
+                FluidInventory tank = MachineWorld.GetPhaseFluidInventory(source.Node, source.Chamber, FluidPhase.Gas);
                 if (!visitedFuelInventories.Add(tank)) continue;
                 decimal amount = Math.Min(request - consumed, ShipFuel.AvailableReactionMoles(tank, configuration));
                 double liters = MachineWorld.GetFluidSupplyStandardLiters(fuelSupplyWorkspace, index, seconds, true);

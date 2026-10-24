@@ -118,27 +118,7 @@ namespace FlatWorld.Spaceflight
         }
         private void DrainDestroyedFluidChambers(ShipState ship, ShipPieceState piece, MachineEntity node)
         {
-            FluidMachineState state = MachineWorld.GetFluidState(node);
-            if (state == null || state.Ruptured) return;
-            state.Ruptured = true;
-            var materials = new List<FluidBatch>();
-            var drained = new HashSet<FluidInventoryState>();
-            double pressureEnergy = 0d;
-            foreach (string chamber in new List<string>(state.Chambers.Keys))
-            {
-                FluidInventory inventory = MachineWorld.GetFluidInventory(node, chamber);
-                if (inventory == null || !drained.Add(inventory.State)) continue;
-                double volume = MachineWorld.GetFluidVolumeLiters(node), minimum = MachineWorld.GetFluidMinimumGasSpaceLiters(node);
-                if (inventory.GasMoles > 0m)
-                    pressureEnergy += Math.Max(0d, inventory.GetPressureKPa(volume, minimum) - MachineWorld.GetFluidAmbientPressureKPa(node)) *
-                        Math.Max(minimum, volume - inventory.GetLiquidLiters());
-                materials.AddRange(inventory.Drain());
-            }
-            if (materials.Count > 0)
-                PressureExplosionQueue.Enqueue("ship:" + ship.ShipId,
-                    node.Snapshot.transform.position, pressureEnergy,
-                    ship.ShipId + ":" + piece.PieceId + ":rupture:" + Guid.NewGuid().ToString("N"), materials, null);
-            MachineWorld.CaptureFluidState(node);
+            MachineWorld.ReleaseDestroyedFluidContents(node);
         }
         private void QueueMaterialSalvage(ShipState ship, ShipPieceState piece, ItemData snapshot)
         {

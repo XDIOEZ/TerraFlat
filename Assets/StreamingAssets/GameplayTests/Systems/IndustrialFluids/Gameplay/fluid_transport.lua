@@ -3,7 +3,7 @@ test.check("world_ready")
 test.check("player_ready")
 
 local scenarios = {
-    {"network_frozen_chain", "多管段冻结输送"},
+    {"network_frozen_chain", "气相整网统一供给、液相保持逐段"},
     {"network_shared_throughput", "多出口共享吞吐预算"},
     {"network_blocked_retry", "堵塞保料与原批次重试"},
     {"network_tick_scheduler", "完整机器固定步长调度"},
