@@ -18,9 +18,9 @@ public sealed class ItemModulePrototypeCache
     {
         if (!prefabComponents.TryGetValue(prefab, out var snapshot))
         {
-            bool containsItem = prefab.GetComponentInChildren<Item>(true) != null;
-            snapshot = (containsItem ? Array.Empty<Module>() : prefab.GetComponentsInChildren<Module>(true),
-                containsItem);
+            bool prefabContainsItem = prefab.GetComponentInChildren<Item>(true) != null;
+            snapshot = (prefabContainsItem ? Array.Empty<Module>() : prefab.GetComponentsInChildren<Module>(true),
+                prefabContainsItem);
             prefabComponents.Add(prefab, snapshot);
         }
         modules = snapshot.Modules;

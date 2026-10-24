@@ -70,11 +70,11 @@ public static partial class GameplayTestSystemProbe
 
             results.Clear();
             SpatialInteractionRegistry.QueryRegisteredTargets(actor, 1f, new Vector2(-15.5f, .5f), results, wrapped);
-            bool pointerMatched = results.Count == 1 && results[0] == seam;
+            bool pointerMatched = results.Count == 1 && ReferenceEquals(results[0], seam);
 
             results.Clear();
             SpatialInteractionRegistry.QueryRegisteredTargets(actor, 1f, null, results, default);
-            bool infiniteRange = results.Count == 1 && results[0] == near;
+            bool infiniteRange = results.Count == 1 && ReferenceEquals(results[0], near);
 
             far.transform.position = new Vector3(15.75f, .5f);
             results.Clear();

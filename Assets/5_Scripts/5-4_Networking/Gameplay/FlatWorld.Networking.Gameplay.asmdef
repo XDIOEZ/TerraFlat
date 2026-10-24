@@ -8,6 +8,7 @@
         "GamePlay",
         "FlatWorld.WorldModel",
         "UI",
+        "Kybernetik.UltEvents",
         "FlatWorld.Utilities",
         "FlatWorld.Localization",
         "Mirror",
