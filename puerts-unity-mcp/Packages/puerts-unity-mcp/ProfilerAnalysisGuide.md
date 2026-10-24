@@ -1,10 +1,10 @@
 # AI 性能分析前置说明
 
-本说明统一放在 `Assets/67_ProfileData/` 根目录，供所有报告共用；各时间文件夹只保存 JSON 和截图，性能 JSON 的 `instructionsFile` 指向 `../00-READ-ME-FIRST.md`。先按下面顺序读取，只展开相关数据；用户导出后可以继续游戏，不需要保持 Unity 暂停。
+本说明统一放在 `Logs/ProfileData/` 根目录，供所有报告共用；各时间文件夹只保存 JSON 和截图，性能 JSON 的 `instructionsFile` 指向 `../00-READ-ME-FIRST.md`。先按下面顺序读取，只展开相关数据；用户导出后可以继续游戏，不需要保持 Unity 暂停。
 
 ## 选对报告
 
-- 用户指定文件夹时只分析该目录；只说“最新”时，在 `Assets/67_ProfileData/` 中选时间最新且同时有两个 JSON 的正式目录，忽略 `.pending-*`。不要混用不同目录的文件；缺少截图时说明缺口，不擅自换成另一帧。
+- 用户指定文件夹时只分析该目录；只说“最新”时，在 `Logs/ProfileData/` 中选时间最新且同时有两个 JSON 的正式目录，忽略 `.pending-*`。不要混用不同目录的文件；缺少截图时说明缺口，不擅自换成另一帧。
 - `profiler-analysis.json` 是性能证据，`console-logs.json` 是日志，`screen.png` 是导出时的整个桌面；FlatWorld 顶栏/菜单还导出 `world-scene.json`（已加载世界物品现场），文件名登记在性能文件的 `additionalFiles`。本文件是阅读说明。
 - 两个 JSON 的 `snapshotId`、`selectedDisplayFrame` 应相同。`schemaVersion` 分别描述各自格式，不要求两个版本号相等。先检查性能文件 `warnings`、`selectedFrameAnalysis.success/frameCount/skippedFrameCount`，缺数据时明确说明。
 

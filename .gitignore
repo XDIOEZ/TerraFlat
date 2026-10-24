@@ -9,6 +9,10 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
+*.log
+*.log.*
+*.log
+*.log.*
 
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
@@ -86,6 +90,10 @@ crashlytics-build.properties
 # Codex temporary files
 /.codex-tmp/
 
+# Local Profiler snapshots and Console exports
+/Assets/67_ProfileData/
+/Assets/67_ProfileData.meta
+
 # PuerTS Unity MCP runtime state and generated project-local files
 /.puerts-unity-mcp/
 /Assets/puerts-unity-mcp/Runtime/Generated/
@@ -94,6 +102,8 @@ crashlytics-build.properties
 # Local task outputs
 /outputs/
 /output/
+/Tools/Tests/*/bin/
+/Tools/Tests/*/obj/
 
 # MOD 示例的本地编译产物
 /ModSDK/Examples/HarmonyMachines/bin/

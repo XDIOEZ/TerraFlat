@@ -23,7 +23,7 @@ namespace FlatWorld.Automation
         private static ToolbarToggle autoToggle;
         private static ToolbarButton autoSettings;
 
-        public static string ReportsRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "67_ProfileData"));
+        public static string ReportsRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "ProfileData"));
         internal static bool IsExporting => exporting;
 
         static ProfilerSnapshotToolbar()
@@ -56,7 +56,7 @@ namespace FlatWorld.Automation
                     {
                         name = ButtonName,
                         text = "性能 JSON",
-                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和整屏截图到 67_ProfileData；右键打开目录。"
+                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和整屏截图到 Logs/ProfileData；右键打开目录。"
                     };
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
@@ -126,7 +126,7 @@ namespace FlatWorld.Automation
                 EditorGUIUtility.systemCopyBuffer = directory;
                 if (profiler != null)
                     profiler.ShowNotification(new GUIContent("性能、日志、世界现场与整屏截图已导出，文件夹路径已复制"), 5d);
-                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 67_ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
+                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 Logs/ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
             }
             catch (Exception exception)
             {
