@@ -15,24 +15,20 @@ public sealed partial class Mod_HiveColony
         hiveDamageReceiver = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (hiveDamageReceiver == null)
             throw new System.InvalidOperationException("蜂巢必须组合生命值系统模块才能响应攻击。");
-        hiveDamageReceiver.OnAttacked += HandleHiveAttacked;
         hiveDamageReceiver.OnDamageReceived += HandleHiveDamageReceived;
     }
 
     private void UnbindHiveDamageEvents()
     {
         if (hiveDamageReceiver != null)
-        {
-            hiveDamageReceiver.OnAttacked -= HandleHiveAttacked;
             hiveDamageReceiver.OnDamageReceived -= HandleHiveDamageReceived;
-        }
         hiveDamageReceiver = null;
     }
 
-    /// <summary>蜂巢受到有效攻击就唤醒居民并锁定攻击者，不要求实际扣血。</summary>
-    private void HandleHiveAttacked(DamageReceiverDamageInfo damageInfo)
+    /// <summary>任何有效伤害都唤醒全巢并锁定攻击者；致命伤害额外把成员释放为独立复仇者。</summary>
+    private void HandleHiveDamageReceived(DamageReceiverDamageInfo damageInfo)
     {
-        if (damageInfo == null)
+        if (damageInfo == null || damageInfo.DamageValue <= 0f)
             return;
 
         Item attacker = ResolveHiveAggressor(damageInfo.Attacker);
@@ -41,20 +37,14 @@ public sealed partial class Mod_HiveColony
             WakeSleepingResidentsForDefense(attacker);
             AlertAllResidentsToAttacker(attacker);
         }
-    }
-
-    /// <summary>致命扣血确认后释放蜂巢成员，避免零伤攻击误触发死亡流程。</summary>
-    private void HandleHiveDamageReceived(DamageReceiverDamageInfo damageInfo)
-    {
-        if (damageInfo == null || !damageInfo.IsFatal)
-            return;
-
-        Item attacker = ResolveHiveAggressor(damageInfo.Attacker);
-        if (attacker == null)
+        else if (damageInfo.IsFatal)
         {
             // 环境等无实体来源摧毁蜂巢时也要让巢内成员实体化，避免随蜂巢一起消失。
             WakeSleepingResidentsForDefense(null);
         }
+
+        if (!damageInfo.IsFatal)
+            return;
 
         hiveDestroyed = true;
         ReleaseResidentsAfterHiveDestroyed(attacker);

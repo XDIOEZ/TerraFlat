@@ -199,8 +199,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         ResetFishHunting(releaseCaptured: false);
         ResetFatigueLanding();
         ClearTemperatureSafetyDestination();
-        health.OnAttacked -= HandleBirdAttacked;
-        health.OnAttacked += HandleBirdAttacked;
+        health.OnDamageReceived -= HandleBirdDamage;
+        health.OnDamageReceived += HandleBirdDamage;
         health.DeathStarted -= HandleBirdDeath;
         health.DeathStarted += HandleBirdDeath;
         BindFlightHitbox();
@@ -225,7 +225,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         animationFlightSeconds = 0f;
         if (health != null)
         {
-            health.OnAttacked -= HandleBirdAttacked;
+            health.OnDamageReceived -= HandleBirdDamage;
             health.DeathStarted -= HandleBirdDeath;
         }
         ReleaseFlightHitbox();

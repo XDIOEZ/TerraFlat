@@ -216,9 +216,9 @@ public sealed partial class Mod_AI_Bird
         return false;
     }
 
-    private void HandleBirdAttacked(DamageReceiverDamageInfo info)
+    private void HandleBirdDamage(DamageReceiverDamageInfo info)
     {
-        if (!loaded || !GameNetwork.HasStateAuthority || !IsAlive || info == null) return;
+        if (!loaded || !GameNetwork.HasStateAuthority || !IsAlive || info == null || info.DamageValue <= 0f) return;
         if (!DamageThreatOrigin.TryResolve(info, out Vector2 origin)) return;
         StartEscape(origin);
     }

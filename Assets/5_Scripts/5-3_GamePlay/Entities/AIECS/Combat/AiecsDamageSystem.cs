@@ -120,6 +120,11 @@ namespace FlatWorld.AIECS
                     {
                         if (loss > 0f || random.NextFloat() < 0.1f)
                         { vital.LastAttacker = context.Attack.Source; vital.LastCredit = context.Credit; }
+                        if (loss > 0f)
+                        {
+                            brain.ThreatPosition = context.Origin; brain.Threat = 1f;
+                            brain.MemoryUntil = math.max(brain.MemoryUntil, context.Clock.Time + Definitions[identity.Definition].MemorySeconds);
+                        }
                         if (loss > 0f && vital.Hp > 0f && context.SlowEnabled != 0)
                         { status.MoveMultiplier = math.clamp(context.SlowMultiplier, 0.01f, 1f); status.SlowUntil = context.Clock.Time + context.SlowDuration; }
                         int tier = CombatRules.BleedingTier(typed, identity.HasBlood != 0, vital.Hp > 0f, random.NextFloat());
@@ -132,11 +137,6 @@ namespace FlatWorld.AIECS
                                     if (BuffDefinitions[buff].Id.Equals(effect.Id))
                                     { AiecsBuffOperations.Add(ref buffs, BuffDefinitions, buff, context.Clock.Time, context.Credit, math.max(1, effect.Stacks)); break; }
                             }
-                    }
-                    if (loss > 0f || (!environmental && loss >= 0f))
-                    {
-                        brain.ThreatPosition = context.Origin; brain.Threat = 1f;
-                        brain.MemoryUntil = math.max(brain.MemoryUntil, context.Clock.Time + Definitions[identity.Definition].MemorySeconds);
                     }
                     if (vital.Hp <= 0f)
                     {

@@ -275,10 +275,13 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	/// <summary>平静发声与移动动画语义独立，追击也使用移动动画的物种可单独覆写。</summary>
 	protected virtual bool IsAmbientAudioState(TState state) => IsIdleState(state) || IsMoveState(state);
 
-	/// <summary>当前睡眠是否已被有效攻击或伤害打断，睡眠状态条件应优先消费此标记。</summary>
+	/// <summary>当前睡眠是否已被有效伤害打断，睡眠状态条件应优先消费此标记。</summary>
 	protected bool SleepInterruptedByDamage => _sleepInterruptedByDamage;
 
-	/// <summary>攻击后保留攻击者记忆的时长；零表示不保存威胁记忆。</summary>
+	/// <summary>
+	/// How long this animal remembers the source that hurt it.
+	/// A value of zero disables the reusable damage-threat reaction.
+	/// </summary>
 	protected virtual float DamageThreatMemoryDuration => 0f;
 
 	/// <summary>仅用于抑制 Idle/Move 在边界条件下的逐帧抖动，高优先级状态不受限制。</summary>
@@ -304,13 +307,10 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	/// <summary>评估前的数据刷新（如刷新威胁目标、群体状态等）</summary>
 	protected virtual void OnPreEvaluate() { }
 
-	/// <summary>攻击来源被确认后立即调用，零伤命中也会触发。</summary>
+	/// <summary>Called immediately after a valid damage source is remembered.</summary>
 	protected virtual void OnDamageThreatUpdated(DamageReceiverDamageInfo damageInfo) { }
 
-	/// <summary>收到有效攻击后调用，供动物按自身规则反击或逃离。</summary>
-	protected virtual void OnAttacked(DamageReceiverDamageInfo damageInfo) { }
-
-	/// <summary>实际生命损失大于零后调用，供动物施加受伤效果。</summary>
+	/// <summary>收到有效伤害后调用，供动物扩展受伤触发而不依赖攻击者类型。</summary>
 	protected virtual void OnDamageReceived(DamageReceiverDamageInfo damageInfo) { }
 
 	/// <summary>重置运行时状态（Load 时调用，子类初始化自己的运行时字段）</summary>
@@ -786,15 +786,6 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 		return true;
 	}
 
-	/// <summary>沿攻击者的 Owner 链找到真正的生物实体。</summary>
-	protected static Item ResolveAttackOwner(Item source)
-	{
-		Item current = source;
-		for (int depth = 0; depth < 8 && current?.Owner != null && current.Owner != current; depth++)
-			current = current.Owner;
-		return current;
-	}
-
 	/// <summary>Calculates a stable escape direction, including the overlapping-source case.</summary>
 	protected Vector2 GetDirectionAwayFrom(Vector3 sourcePosition)
 	{
@@ -1214,7 +1205,6 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 			return;
 
 		_damageEventSource = _hp;
-		_damageEventSource.OnAttacked += HandleAttacked;
 		_damageEventSource.OnDamageReceived += HandleDamageReceived;
 		_damageEventSource.DeathStarted += HandleActorDeath;
 	}
@@ -1223,7 +1213,6 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	{
 		if (_damageEventSource != null)
 		{
-			_damageEventSource.OnAttacked -= HandleAttacked;
 			_damageEventSource.OnDamageReceived -= HandleDamageReceived;
 			_damageEventSource.DeathStarted -= HandleActorDeath;
 		}
@@ -1243,39 +1232,14 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 		_stateMachine?.Reset();
 	}
 
-	private void HandleAttacked(DamageReceiverDamageInfo damageInfo)
-	{
-		if (damageInfo == null ||
-			damageInfo.Attacker == item ||
-			!DamageThreatOrigin.TryResolve(damageInfo, out Vector2 origin))
-		{
-			return;
-		}
-
-		_stateDecisionTimer = 0f;
-		OnAttacked(damageInfo);
-		if (IsSleepState(_currentState))
-		{
-			_sleepInterruptedByDamage = true;
-			_stateDecisionTimer = 0f;
-		}
-
-		if (DamageThreatMemoryDuration <= 0f)
-			return;
-
-		_recentDamageThreat = ResolveAttackOwner(damageInfo.Attacker);
-		_lastDamageThreatPosition = origin;
-		_freezeDamageThreatOrigin = damageInfo.Attacker == null ||
-			(damageInfo.Context.DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.Projectile) != 0;
-		_damageThreatRemain = Mathf.Max(0.1f, DamageThreatMemoryDuration);
-		_stateDecisionTimer = 0f;
-		OnDamageThreatUpdated(damageInfo);
-	}
-
 	private void HandleDamageReceived(DamageReceiverDamageInfo damageInfo)
 	{
-		if (damageInfo == null || damageInfo.DamageValue <= 0f || damageInfo.Attacker == item)
+		if (damageInfo == null ||
+			damageInfo.DamageValue <= 0f ||
+			damageInfo.Attacker == item)
+		{
 			return;
+		}
 
 		if (IsSleepState(_currentState))
 		{
@@ -1284,6 +1248,16 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 		}
 
 		OnDamageReceived(damageInfo);
+		if (DamageThreatMemoryDuration <= 0f || !DamageThreatOrigin.TryResolve(damageInfo, out Vector2 origin))
+			return;
+
+		_recentDamageThreat = damageInfo.Attacker != null ? damageInfo.Attacker.Owner ?? damageInfo.Attacker : null;
+		_lastDamageThreatPosition = origin;
+		_freezeDamageThreatOrigin = damageInfo.Attacker == null ||
+			(damageInfo.Context.DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.Projectile) != 0;
+		_damageThreatRemain = Mathf.Max(0.1f, DamageThreatMemoryDuration);
+		_stateDecisionTimer = 0f;
+		OnDamageThreatUpdated(damageInfo);
 	}
 
 	private void OnDestroy()

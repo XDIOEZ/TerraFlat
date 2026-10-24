@@ -182,8 +182,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         }
         machine.Initialize(Behaviour.Swim);
         loaded = true;
-        health.OnAttacked -= HandleFishAttacked;
-        health.OnAttacked += HandleFishAttacked;
+        health.OnDamageReceived -= HandleFishDamage;
+        health.OnDamageReceived += HandleFishDamage;
         UpdatePresentation(0f);
     }
 
@@ -192,7 +192,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     protected override void OnUnload()
     {
         loaded = false;
-        if (health != null) health.OnAttacked -= HandleFishAttacked;
+        if (health != null) health.OnDamageReceived -= HandleFishDamage;
         fishingRod = null;
         predatorCarrier = null;
         sensedPredator = null;
@@ -613,11 +613,11 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         return false;
     }
 
-    private void HandleFishAttacked(DamageReceiverDamageInfo info)
+    private void HandleFishDamage(DamageReceiverDamageInfo info)
     {
-        if (!loaded || !GameNetwork.HasStateAuthority || !IsAlive || info == null) return;
+        if (!loaded || !GameNetwork.HasStateAuthority || !IsAlive || info == null || info.DamageValue <= 0f) return;
         Item attacker = info.Attacker != null ? info.Attacker.Owner ?? info.Attacker : null;
-        if (attacker == item || !DamageThreatOrigin.TryResolve(info, out Vector2 origin)) return;
+        if (attacker == null || attacker == item || !DamageThreatOrigin.TryResolve(info, out Vector2 origin)) return;
 
         damageThreat = attacker;
         damageThreatOrigin = origin;
