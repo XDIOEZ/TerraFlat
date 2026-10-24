@@ -53,8 +53,9 @@ public sealed class FluidCatalog
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidContentCatalogDto
+public sealed partial class FluidContentCatalogDto
 {
     [JsonProperty("schemaVersion", Required = Required.Always)] public int SchemaVersion;
     [JsonProperty("fluids", Required = Required.Always)] public List<FluidDefinitionDto> Fluids;
@@ -68,7 +69,7 @@ public static class FluidCatalogLoader
     public const string RelativePath = "GameConfig/Fluids/fluids.json";
     public static FluidContentCatalogDto Deserialize(string json)
     {
-        var result = JsonConvert.DeserializeObject<FluidContentCatalogDto>(json, Settings);
+        var result = JsonConfigurationCache.Deserialize<FluidContentCatalogDto>(json, Settings);
         if (result == null || result.SchemaVersion != 1 || result.Fluids == null)
             throw new InvalidDataException("流体目录 schemaVersion 必须为 1 且具有 fluids 数组");
         return result;

@@ -62,7 +62,7 @@ namespace FlatWorld.Spaceflight
                     string carrier = Mod_Building.GetSummonerPrefabId(piece.ItemId);
                     QueueDrop(string.IsNullOrWhiteSpace(carrier) ? snapshot : Mod_Building.CreateRecoveredCarrier(snapshot, carrier), ship, piece);
                 }
-                else QueueMaterialSalvage(ship, piece);
+                else QueueMaterialSalvage(ship, piece, snapshot);
                 contents.Remove(piece.PieceId);
                 State.Devices.RemoveAll(value => value.PieceId == piece.PieceId);
                 return;
@@ -93,7 +93,7 @@ namespace FlatWorld.Spaceflight
             if (snapshot != null) CaptureRecoveredPieceHealth(snapshot, piece);
             if (snapshot != null && !string.IsNullOrWhiteSpace(device?.Configuration.RecoveryItemId))
                 QueueDrop(Mod_Building.CreateRecoveredCarrier(snapshot, device.Configuration.RecoveryItemId), ship, piece);
-            else QueueMaterialSalvage(ship, piece);
+            else QueueMaterialSalvage(ship, piece, snapshot);
             contents.Remove(piece.PieceId);
             State.Devices.RemoveAll(value => value.PieceId == piece.PieceId);
         }
@@ -140,26 +140,14 @@ namespace FlatWorld.Spaceflight
                     ship.ShipId + ":" + piece.PieceId + ":rupture:" + Guid.NewGuid().ToString("N"), materials, null);
             MachineWorld.CaptureFluidState(node);
         }
-        private void QueueMaterialSalvage(ShipState ship, ShipPieceState piece)
+        private void QueueMaterialSalvage(ShipState ship, ShipPieceState piece, ItemData snapshot)
         {
             string carrier = Mod_Building.GetSummonerPrefabId(piece.ItemId);
             if (string.IsNullOrWhiteSpace(carrier)) carrier = piece.ItemId;
-            foreach (RuntimeRecipe recipe in GameRes.ExistingInstance.recipeById.Values)
-            {
-                if (recipe?.inputs?.recipeType != RecipeType.Crafting || recipe.outputs?.results == null) continue;
-                bool found = recipe.outputs.results.Exists(value => value.ItemName == carrier && value.amount == 1);
-                if (!found) continue;
-                foreach (var ingredient in recipe.inputs.RowItems_List)
-                {
-                    if (ingredient.matchMode != MatchMode.ExactItem) continue;
-                    int amount = 0;
-                    for (int i = 0; i < ingredient.amount; i++) if (UnityEngine.Random.value < BuildingMaterialSalvage.DefaultRecoveryChance) amount++;
-                    if (amount <= 0) continue;
-                    ItemData data = GameRes.ExistingInstance.CreateItemData(ingredient.ItemName); data.Stack.Amount = amount;
-                    QueueDrop(data, ship, piece);
-                }
-                return;
-            }
+            if (!BuildingMaterialSalvage.TryCreateRandomMaterialSalvage(carrier, out var materials, out string reason,
+                    buildingData: snapshot))
+            { Debug.LogWarning("[船体摧毁] " + reason); return; }
+            foreach (ItemData data in materials) QueueDrop(data, ship, piece);
         }
         // 爆炸保留生成时的世界位置和姿态，源船移走或分裂后仍能独立结算。
         private void CaptureShipExplosionContext(PressureExplosionEvent entry)

@@ -7,7 +7,7 @@ using UnityEngine;
 
 /// <summary>
 /// 按权威草格提交全局 BatchRendererGroup 实例；每格只保存确定性变体、局部矩阵与色调。
-/// 32×32 区块按 128 格分步绑定，运行时 Sprite 变体按贴图配置跨区块共享，避免重复对象和逐 Chunk Tilemap。
+/// 32×32 区块按 128 格分步绑定，运行时 Sprite 变体按切片配置跨区块共享，避免重复对象和逐 Chunk Tilemap。
 /// </summary>
 public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRenderer, IRecoverableChunkViewRenderer
 {
@@ -18,10 +18,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
     private const int CommonVariantCount = 24;
     private const int CellsPerStep = 128;
 
-    [SerializeField] private Texture2D sourceTexture;
-    [SerializeField, Min(1)] private int variantCount = 32;
-    [SerializeField, Min(1)] private int textureColumns = 6;
-    [SerializeField, Min(1)] private int spriteSizePixels = 16;
+    [SerializeField] private Sprite[] spriteVariants = Array.Empty<Sprite>(); // 前 24 项为小草，后续切片只作为少量点缀。
     [SerializeField, Min(1f)] private float pixelsPerUnit = 32f;
     [SerializeField, Range(0f, 0.45f)] private float positionJitter = 0.22f;
     [SerializeField] private Vector2 scaleRange = new(0.85f, 1.15f);
@@ -34,7 +31,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
     private ChunkTilemapRenderer ownerRenderer; // 共享区块边界裁剪与 BRG 生命周期。
     private Sprite[] sharedSprites; // 同配置区块共用同一组 Sprite 身份。
 
-    public bool IsConfigured => sourceTexture != null && grassMaterial != null;
+    public bool IsConfigured => spriteVariants != null && spriteVariants.Length > 0 && grassMaterial != null;
     public Material GrassMaterial => grassMaterial;
 
     #endregion
@@ -82,7 +79,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
         }
     }
 
-    /// <summary>确认基础 Owner 已就绪后订阅地形脏格并取得共享草纹理变体。</summary>
+    /// <summary>确认基础 Owner 已就绪后订阅地形脏格并取得共享草切片变体。</summary>
     private bool PrepareBinding(ChunkRuntime chunk)
     {
         if (chunk == null)
@@ -94,13 +91,12 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
 
         Unbind();
         if (!IsConfigured)
-            throw new InvalidOperationException("ChunkGrassRenderer 缺少草地贴图或 BRG 材质。");
+            throw new InvalidOperationException("ChunkGrassRenderer 缺少草地切片或 BRG 材质。");
         ownerRenderer = GetComponent<ChunkTilemapRenderer>();
         if (ownerRenderer == null || !ownerRenderer.IsBatchPresentationComplete)
             throw new InvalidOperationException("草地表现必须在基础地形 BRG Owner 注册后绑定。");
 
-        sharedSprites = GrassSpriteVariantCache.Get(
-            sourceTexture, variantCount, textureColumns, spriteSizePixels, pixelsPerUnit);
+        sharedSprites = GrassSpriteVariantCache.Get(spriteVariants, pixelsPerUnit);
         if (sharedSprites.Length == 0)
             throw new InvalidOperationException("草地贴图未包含可用的变体 Sprite。");
 
@@ -191,8 +187,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
         ChunkBatchRendererGroupService.ClearOwnerLayer(ownerRenderer,
             ChunkBatchRendererGroupService.VisualLayer.Grass);
         visibleCells.Clear();
-        sharedSprites = GrassSpriteVariantCache.Get(
-            sourceTexture, variantCount, textureColumns, spriteSizePixels, pixelsPerUnit);
+        sharedSprites = GrassSpriteVariantCache.Get(spriteVariants, pixelsPerUnit);
         RenderRange(boundChunk.Terrain, 0, boundChunk.Terrain.CellCount);
     }
 
@@ -300,7 +295,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
 
     #region 跨区块 Sprite 共享
 
-    /// <summary>同一草地纹理配置只创建一组变体 Sprite，保持 BRG 网格和批次跨区块复用。</summary>
+    /// <summary>不同源图的切片统一大小与中心锚点，并跨区块共用同一组 Sprite。</summary>
     private static class GrassSpriteVariantCache
     {
         private static readonly Dictionary<SpriteSetKey, Sprite[]> spriteSets = new();
@@ -310,30 +305,24 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
             SharedSpriteMeshCache.Clearing += Clear;
         }
 
-        /// <summary>命中配置缓存；首次使用时按纹理网格切片创建共享 Sprite。</summary>
-        public static Sprite[] Get(Texture2D texture, int count, int maxColumns, int sizePixels, float ppu)
+        /// <summary>首次使用时从已选切片创建共享 Sprite，不受源图 PPU 与 Pivot 差异影响。</summary>
+        public static Sprite[] Get(Sprite[] sources, float ppu)
         {
-            var key = new SpriteSetKey(texture, count, maxColumns, sizePixels, ppu);
+            var key = new SpriteSetKey(sources, ppu);
             if (spriteSets.TryGetValue(key, out Sprite[] existing))
                 return existing;
 
-            int rows = texture.height / sizePixels;
-            int columns = Mathf.Min(maxColumns, texture.width / sizePixels);
-            int availableCount = Mathf.Min(count, rows * columns);
-            if (availableCount == 0)
-                throw new InvalidOperationException("草地源贴图尺寸不足以切出任何变体。");
-
-            var sprites = new Sprite[availableCount];
+            var sprites = new Sprite[sources.Length];
             try
             {
-                for (int index = 0; index < availableCount; index++)
+                for (int index = 0; index < sources.Length; index++)
                 {
-                    int column = index % columns;
-                    int rowFromTop = index / columns;
-                    int y = texture.height - (rowFromTop + 1) * sizePixels;
+                    Sprite source = sources[index];
+                    if (source == null)
+                        throw new InvalidOperationException($"草地第 {index + 1} 个变体未绑定切片。");
                     Sprite sprite = Sprite.Create(
-                        texture,
-                        new Rect(column * sizePixels, y, sizePixels, sizePixels),
+                        source.texture,
+                        source.rect,
                         new Vector2(0.5f, 0.5f),
                         ppu,
                         0,
@@ -349,7 +338,8 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
                 throw;
             }
 
-            spriteSets.Add(key, sprites);
+            // 缓存键保留切片快照，避免 Inspector 改动数组后破坏已有字典键。
+            spriteSets.Add(new SpriteSetKey((Sprite[])sources.Clone(), ppu), sprites);
             return sprites;
         }
 
@@ -376,41 +366,39 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
         }
     }
 
-    /// <summary>区分纹理身份和切片配置，允许 MOD 注册不同草纹理与尺寸。</summary>
+    /// <summary>按切片顺序与目标 PPU 共享变体，允许组合多张源图。</summary>
     private readonly struct SpriteSetKey : IEquatable<SpriteSetKey>
     {
-        private readonly Texture2D texture;
-        private readonly int count;
-        private readonly int columns;
-        private readonly int sizePixels;
+        private readonly Sprite[] sources;
         private readonly float pixelsPerUnit;
+        private readonly int hashCode;
 
-        public SpriteSetKey(Texture2D texture, int count, int columns, int sizePixels, float pixelsPerUnit)
+        public SpriteSetKey(Sprite[] sources, float pixelsPerUnit)
         {
-            this.texture = texture;
-            this.count = count;
-            this.columns = columns;
-            this.sizePixels = sizePixels;
+            this.sources = sources;
             this.pixelsPerUnit = pixelsPerUnit;
+            unchecked
+            {
+                int hash = pixelsPerUnit.GetHashCode();
+                for (int index = 0; index < sources.Length; index++)
+                    hash = (hash * 397) ^ (sources[index] != null ? sources[index].GetInstanceID() : 0);
+                hashCode = hash;
+            }
         }
 
-        public bool Equals(SpriteSetKey other) =>
-            ReferenceEquals(texture, other.texture) && count == other.count && columns == other.columns &&
-            sizePixels == other.sizePixels && pixelsPerUnit.Equals(other.pixelsPerUnit);
+        public bool Equals(SpriteSetKey other)
+        {
+            if (!pixelsPerUnit.Equals(other.pixelsPerUnit) || sources.Length != other.sources.Length)
+                return false;
+            for (int index = 0; index < sources.Length; index++)
+                if (!ReferenceEquals(sources[index], other.sources[index]))
+                    return false;
+            return true;
+        }
 
         public override bool Equals(object obj) => obj is SpriteSetKey other && Equals(other);
 
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hash = texture != null ? texture.GetInstanceID() : 0;
-                hash = (hash * 397) ^ count;
-                hash = (hash * 397) ^ columns;
-                hash = (hash * 397) ^ sizePixels;
-                return (hash * 397) ^ pixelsPerUnit.GetHashCode();
-            }
-        }
+        public override int GetHashCode() => hashCode;
     }
 
     #endregion

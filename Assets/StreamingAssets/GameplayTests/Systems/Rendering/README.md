@@ -1,5 +1,17 @@
 # 渲染、光照与特效
 
+2026-10-24 火把朝向与像素火焰：手持定义顺时针校正 90° 并同步灯光挂点，手持/放置火把的火焰均保持世界向上；共享 Shader 改为按世界尺寸计算的 32 PPU 方形像素、四色硬边火舌、单像素火星和 12 FPS 的 GPU 动画。`rendering/dropped_combustion_material` 补充默认像素密度/帧率、跟随倾斜、直立与左右翻面方向断言。用户保留 PlayMode 且自行验收，本轮仅静态修改，未编译或执行 Lua；实际鼠标跟随、动态挂点、像素画面与 Android GPU 仍需现场验收。
+
+2026-10-24 物件雪线保持水平：`Sprite-Lit-Master` 的光照/回退 Pass 与 `ChunkDepthSpriteLit` 共用 `SpriteSnowCommon.hlsl`，按世界 Y 和单个精灵的仿射包围盒合成雪顶，旋转、翻面、非等比缩放与机械动画不再倾斜雪线。`sprite_snow_bounds` 新增正式控制器 MPB 的偏心原点、连续翻面、换图、旋转/缩放下原图尺寸和静态免重传断言；该规则只覆盖元数据提交，不覆盖 GPU 最终画面、行网格顶点上传或机械动画。本轮保留用户 PlayMode，只做静态修改，未运行 Unity 编译、Lua 或画面验收。
+
+2026-10-24 世界方块太阳投影柔化补齐：机械投影曾把 `_SunShadowTexelSize.z` 写成 0，Shader 回退为 1，导致化学引擎等高 PPU 贴图的阴影近似硬边。`ShadowProxy.UpdateProperties` 现在从共享阴影网格自行读取倍率，不再要求普通 Item 与机械调用方传入，保持主体 Point 过滤、外沿包围盒与静态免重传。`shadow_proxy_blur_scale` 增加 PPU 8/16/32/64/1254 的实际 MPB、图集步长、网格外沿、换帧与归池断言；既有 `shadow_proxy_changes` 同步新接口。静态审查确认 BRG 自然物投影已提交倍率、整船地面占地投影已读取全局柔化，未改其表现。实际生产代理、完整共享网格缓存与两个规则采样方法通过独立 Roslyn/Unity 引用编译，补丁检查通过；保留用户 PlayMode，未主动刷新或编译运行中的 Editor，未执行 Lua 或最终 GPU 画面验收。
+
+2026-10-24 地形阴影转角补缝：正式 `TryGetShadowMasks` 在四向直边之外提交四向斜角，Shader 使用同宽同衰减的四分之一圆并取最大值合并；增量更新覆盖3×3邻域和八邻区订阅。`terrain_shadow_masks` 新增全部256种邻格组合及四角的同高/较低/多层高差/墙脚/空格接收条件断言；`terrain_height_neighbours` 扩为八方向加载、采挖、卸载、重载的实际边角掩码采样；`terrain_shadow_dirty_queue` 增加15组局部、跨边、跨角和无关远格的精确更新范围与去重断言。本轮保留用户 PlayMode，未主动刷新或重编译运行中的 Editor，未执行 Lua 与最终 GPU 画面验收；这些规则也不等同于真实 BRG 提交、订阅回调和环绕接缝的视觉验收。
+
+本轮静态校验：补丁格式检查通过；复用现有 Bee 清单进行隔离 C# 编译，被工作区其他功能的新类型/旧引用阻塞（包括 `IHeldItemPositionControl`、`ShaderFlameEffect`、`CreatureHitChanceRules`、`UIMultiSelectDropdown`、`SpaceElevatorState`），不记为编译通过。实际 URP 14.0.12 头文件下普通顶点/片元的独立 D3D 编译通过；DOTS 组合受独立旧预处理器处理 Unity 宏失败阻塞，不能据此报告 BRG Shader 或 Unity 导入通过。诊断留在 `Temp/TerrainShadowCorners/`，不进入提交。
+
+2026-10-23 常驻燃烧改为可复用 Shader 火焰：`rendering/dropped_combustion_material` 已扩充为正式工厂与适配器的共享材质/四顶点网格、零常驻粒子、独立相位、尺寸与 CPU 包围盒、显式排序、点燃/熄灭、组件启停、回池后保持熄灭、零火势及非有限配置保护断言。入口为 `Assets/2_Prefabs/Effects/VFX_ShaderFlame.prefab`，普通/轻量掉落物与燃烧设施共用；入水烟汽仍是独立一次性粒子。用户处于 PlayMode，本轮不刷新、不编译运行中的 Unity、不执行 Lua；四个核心/采样 C# 文件通过独立 Roslyn 编译，实际 URP 14.0.12 头文件下的顶点/片元及实例化四个 HLSL 编译组合通过 Windows D3D 编译；不替代 Unity 导入与上述断言执行。尚未验证真实 GPU 画面、所有缩放/挥动姿态、Android 后端和帧率收益。
+
 2026-10-22 人物分层穿戴补充但未执行：`rendering/character_layers` 直接调用正式 `CharacterAppearanceCompositor.Compose`，由 Lua 断言同一份半包围头盔叠加不同肤色底图时保留自己的脸、透明开口保留底图、装备可超出身体轮廓、头发整体/局部遮挡、身体遮罩与头发独立、缺穿戴图不应用遮罩、摘下恢复原发，以及 Alpha 叠加、遮罩叠乘、装备前后顺序、最终统一镜像、尺寸拒绝和输入不变。采样只使用独立小像素数组，不加载正式人物、装备资产或世界；未覆盖资源实际分层质量、正式槽位通知、换装后的动画/阴影/特效及最终 GPU 画面。本轮只做静态修改，未主动控制 Unity 或运行 Lua，最终画面由用户验收。
 
 2026-10-20 接触阴影 BRG 稳定帧上传优化：ContactShadowBatchRenderer 每帧仍按 ActorShadowManager 原顺序收集/裁剪全部 Item 与机械阴影，逐槽精确比较位置、大小和透明度，数量或数据不变时不重复调用 GPU GraphicsBuffer.SetData；扩容重建 GPU 缓冲或前帧收集未完成时保证完整上传。空帧保持原有 count=0 隐藏，能在保留有效缓冲时复用旧数据。尚未添加 Unity GPU 现场用例，本轮未执行编译、PlayMode 和 Profiler 前后对比；需验证动态角色、静态植物、排序批次、昼夜光照及空帧恢复。

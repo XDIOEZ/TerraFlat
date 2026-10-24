@@ -7,6 +7,12 @@ test.system("dimension", "address", {planet = " 火星 ", dimension = " CAVE "},
     assert(data.sanitizedPlanet == "A_B", "星球名中的保留分隔符没有转义")
 end, "维度地址规范化、独立身份与键往返")
 
+test.system("dimension", "destroyed_portal_callback", {}, function(data)
+    assert(data.aliveBeforeDestroy and data.unityNullAfterDestroy and data.managedReferenceRemains,
+        "测试未模拟到Unity对象已销毁但托管引用仍存在的场景")
+    assert(data.cancelAfterDestroySafe, "异步维度回执访问已销毁入口时抛出异常")
+end, "旧场景入口销毁后迟到的网络回执不会访问失效组件")
+
 local function assert_cave_rebuild(previous, current, label)
     assert(current.revision > previous.revision, label .. "没有更新真实出口进度版本")
     assert(current.positionsRefreshes == previous.positionsRefreshes + 1, label .. "没有恰好重建一次出口集合")
@@ -100,3 +106,11 @@ test.system("dimension", "cave_exit_cache_distance", {}, function(data)
     assert(data.cleared.factor == 1 and data.cleared.positionsRefreshes == data.changedSpan.positionsRefreshes + 1, "清理后没有重新取得出口集合")
     assert(data.cleared.distanceEvaluations == data.changedSpan.distanceEvaluations + 1, "清理后没有重新计算采光")
 end, "站立采光复用、玩家移动及环绕拓扑开关原点跨度失效")
+
+test.system("dimension", "cave_runtime_time_registration", {}, function(data)
+    assert(data.clockCount == 2 and data.sourceClockAlive, "联机创建洞穴后没有保留继续推进的地表时钟")
+    assert(data.caveReferencesSurface and data.caveHasLightCurve, "洞穴运行时时钟没有恢复地表昼夜引用与光照曲线")
+    assert(math.abs(data.surfaceRate - 0.9) < 0.0001 and math.abs(data.caveRate - 0.4) < 0.0001,
+        "联机补登运行时时钟时丢失场景采光率")
+    assert(data.repeatKeepsClock and data.repeatKeepsRate, "重复进入洞穴重建了已有时钟或重置采光率")
+end, "联机洞穴补登运行时时钟、日照引用与幂等性")

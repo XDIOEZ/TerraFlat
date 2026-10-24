@@ -182,6 +182,13 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             destinationThreshold);
     }
 
+    /// <summary>为本次目标独立设置末端停止距离。</summary>
+    public void SetStoppingDistance(float distance)
+    {
+        // 每个目标可独立收紧末端停止距离，不重建路径或改变中间路点阈值。
+        stopDistance = float.IsFinite(distance) ? Mathf.Max(0f, distance) : 0f;
+    }
+
     /// <summary>提交不限制总代价的普通移动目标。</summary>
     public void SetDestination(Vector2 target, bool forceRepath = false)
     {

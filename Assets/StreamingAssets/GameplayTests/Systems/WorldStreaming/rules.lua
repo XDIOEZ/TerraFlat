@@ -1,4 +1,15 @@
 -- 独立 WorldRuntime 不生成地形，只测运行、表现和寻路租约的所有权。
+test.system("world_streaming", "collision_dirty_queue", {}, function(data)
+    assert(data.emptyInitially and data.bothPending and data.deduplicated and data.isolated,
+        "碰撞空世界仍有工作，或同一块重复入队/首个世界消费了另一世界的脏批次")
+    assert(data.requeued and data.nextBatch and data.rebound,
+        "碰撞回调中新通知丢失，或解绑重绑把新世界的障碍交给旧世界处理")
+    assert(data.destroyedReleased and data.cleared,
+        "已销毁碰撞对象或世界重置后仍残留脏队列")
+    assert(data.stable and data.iterations == 1024 and data.allocatedBytes == 0,
+        "预热后的空队列查询/脏批次循环仍产生GC或漏掉实际待处理项")
+end, "碰撞脏队列空转零分配、多世界隔离与回调重入")
+
 for _, row in ipairs({ { x = -64, y = 64 }, { x = 0, y = 0 } }) do
     test.system("world_streaming", "chunk_leases", row, function(data)
         assert(data.simulationCount == 2 and data.active == "Active", "模拟租约没有激活区块")

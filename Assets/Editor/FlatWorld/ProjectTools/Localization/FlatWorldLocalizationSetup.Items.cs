@@ -46,12 +46,44 @@ namespace FlatWorld.Localization.Editor
             Debug.Log($"[FlatWorld Localization] 已同步 {count} 种物品名称及物品 Tag 多语言条目，业务 ID 与显示文本独立。");
         }
 
+        /// <summary>只补当前启用物品表中缺失的名称、说明和 Tag 条目。</summary>
+        [MenuItem("FlatWorld/其他工具/Localization/Sync Item Names And Descriptions")]
+        public static void SyncItemNamesAndDescriptions()
+        {
+            StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(
+                FlatWorldLocalizationService.DefaultTable);
+            if (collection == null)
+                throw new InvalidOperationException("缺少 FlatWorld 内容表，请先完成 Localization 设置。");
+
+            StringTable chinese = collection.GetTable(new LocaleIdentifier("zh-CN")) as StringTable;
+            StringTable english = collection.GetTable(new LocaleIdentifier("en")) as StringTable;
+            if (chinese == null || english == null)
+                throw new InvalidOperationException("物品表同步需要 zh-CN 和 en 两张内容表。");
+
+            int count = SyncItemEntries(
+                collection,
+                chinese,
+                english,
+                includeDescriptions: true,
+                removeStaleEntries: false,
+                onlyMissingEntries: true);
+            EditorUtility.SetDirty(chinese);
+            EditorUtility.SetDirty(english);
+            EditorUtility.SetDirty(collection.SharedData);
+            AssetDatabase.SaveAssetIfDirty(chinese);
+            AssetDatabase.SaveAssetIfDirty(english);
+            AssetDatabase.SaveAssetIfDirty(collection.SharedData);
+            Debug.Log($"[FlatWorld Localization] 已增量补齐 {count} 条中英文物品名称、说明与 Tag 表项。");
+        }
+
         /// <summary>按正式 Manifest 解析后的物品定义同步名称，说明仍沿用独立同步规则。</summary>
         private static int SyncItemEntries(
             StringTableCollection collection,
             StringTable chineseTable,
             StringTable englishTable,
-            bool includeDescriptions = true)
+            bool includeDescriptions = true,
+            bool removeStaleEntries = true,
+            bool onlyMissingEntries = false)
         {
             if (collection == null)
                 throw new ArgumentNullException(nameof(collection));
@@ -88,20 +120,32 @@ namespace FlatWorld.Localization.Editor
                 expectedItemKeys.Add(descriptionKey);
             }
 
-            RemoveStaleGeneratedItemEntries(collection, expectedItemKeys);
-
-            foreach (var pair in namesByKey)
-            {
-                chineseTable.AddEntry(pair.Key, pair.Value.Chinese);
-                englishTable.AddEntry(pair.Key, pair.Value.English);
-            }
+            if (removeStaleEntries)
+                RemoveStaleGeneratedItemEntries(collection, expectedItemKeys);
 
             int count = 0;
+            foreach (var pair in namesByKey)
+            {
+                if (!onlyMissingEntries || chineseTable.GetEntry(pair.Key) == null)
+                {
+                    chineseTable.AddEntry(pair.Key, pair.Value.Chinese);
+                    if (onlyMissingEntries)
+                        count++;
+                }
+                if (!onlyMissingEntries || englishTable.GetEntry(pair.Key) == null)
+                {
+                    englishTable.AddEntry(pair.Key, pair.Value.English);
+                    if (onlyMissingEntries)
+                        count++;
+                }
+            }
+
             foreach (ItemDefinitionDto definition in definitions)
             {
                 if (definition.Abstract)
                     continue;
-                count++;
+                if (!onlyMissingEntries)
+                    count++;
                 if (!includeDescriptions)
                     continue;
 
@@ -109,13 +153,25 @@ namespace FlatWorld.Localization.Editor
                     ? FlatWorldLocalizationService.GetItemDescriptionKey(definition.Id)
                     : definition.DescriptionKey.Trim();
                 string sourceDescription = definition.Description ?? string.Empty;
-                SetChineseValue(chineseTable, descriptionKey, sourceDescription);
-                SetEnglishValue(englishTable, descriptionKey,
-                    GetEnglishDescription(definition.Id, englishNames[definition.Id]),
-                    sourceDescription, definition.Id);
+                if (!onlyMissingEntries || chineseTable.GetEntry(descriptionKey) == null)
+                {
+                    SetChineseValue(chineseTable, descriptionKey, sourceDescription);
+                    if (onlyMissingEntries)
+                        count++;
+                }
+                if (!onlyMissingEntries || englishTable.GetEntry(descriptionKey) == null)
+                {
+                    SetEnglishValue(englishTable, descriptionKey,
+                        GetEnglishDescription(definition.Id, englishNames[definition.Id]),
+                        sourceDescription, definition.Id);
+                    if (onlyMissingEntries)
+                        count++;
+                }
             }
 
-            SyncItemTagEntries(collection, chineseTable, englishTable);
+            int tagEntryCount = SyncItemTagEntries(collection, chineseTable, englishTable, removeStaleEntries, onlyMissingEntries);
+            if (onlyMissingEntries)
+                count += tagEntryCount;
 
             return count;
         }
@@ -124,7 +180,9 @@ namespace FlatWorld.Localization.Editor
         private static int SyncItemTagEntries(
             StringTableCollection collection,
             StringTable chineseTable,
-            StringTable englishTable)
+            StringTable englishTable,
+            bool removeStaleEntries = true,
+            bool onlyMissingEntries = false)
         {
             TextAsset source = AssetDatabase.LoadAssetAtPath<TextAsset>(ItemTagLocalizationCatalog.EditorAssetPath);
             if (source == null)
@@ -155,12 +213,24 @@ namespace FlatWorld.Localization.Editor
 
                 string key = FlatWorldLocalizationService.GetItemTagLabelKey(tagId);
                 expectedKeys.Add(key);
-                chineseTable.AddEntry(key, chinese);
-                englishTable.AddEntry(key, english);
-                count++;
+                if (!onlyMissingEntries || chineseTable.GetEntry(key) == null)
+                {
+                    chineseTable.AddEntry(key, chinese);
+                    if (onlyMissingEntries)
+                        count++;
+                }
+                if (!onlyMissingEntries || englishTable.GetEntry(key) == null)
+                {
+                    englishTable.AddEntry(key, english);
+                    if (onlyMissingEntries)
+                        count++;
+                }
+                if (!onlyMissingEntries)
+                    count++;
             }
 
-            RemoveStaleGeneratedItemTagEntries(collection, expectedKeys);
+            if (removeStaleEntries)
+                RemoveStaleGeneratedItemTagEntries(collection, expectedKeys);
             return count;
         }
 

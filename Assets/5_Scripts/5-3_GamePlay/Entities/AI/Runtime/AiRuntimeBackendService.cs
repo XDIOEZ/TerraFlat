@@ -105,6 +105,17 @@ public static class AiRuntimeBackendService
     }
 
     public static bool UseEntities { get; set; } = false;
+    /// <summary>监控只读取已登记后端，不因打开信息页创建生态宿主。</summary>
+    public static IAiEcologyBackend ExistingEcology
+    {
+        get
+        {
+            if (ecologyByWorld.TryGetValue(GameplayWorldRegistry.ExecutionWorldKey, out IAiEcologyBackend backend))
+                return backend is UnityEngine.Object owner && owner == null ? null : backend;
+            return GameplayWorldRegistry.HasExecutionContext ? null : _ecology;
+        }
+    }
+
     public static IAiEcologyBackend Ecology
     {
         get

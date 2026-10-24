@@ -9,6 +9,8 @@
 
 ## 材质与运动
 
+- 耕地干湿由 `ChunkTilemapRenderer.SoilMoisture` 只读农业水量（无农业差量时回退生成湿润度/定义默认），写入既有 Ground `Contact.xy`（含水比例/启用标记）。`Chunk-Mesh-Contact-Lit` 两个 Pass、单 Quad Cell Buffer 与逐格顶点路径共用干湿着色；UsePass 包装同步暴露干土颜色/强度、湿土 Tint。水分事件只上传本格参数，重复值不上传，不刷新邻格/水层，不调用带灌溉的农业查询。
+
 - `WaterSurfaceCommon.hlsl` 共用深度/岸线/月光；UsePass 包装同步暴露新增属性。月光在 Light2D 后合成，月亮出现与月相亮度分开；写实连续水色、风格化十档，所有风格 `ResolveWaterSurfaceAlpha` 随深度 0.30→0.50且封顶0.50。岩浆使用 `LavaSurfaceCommon/LavaMode/LavaPatternTex` 独立分支。
 - `WaterSurfaceFlow.hlsl` 共用完整输入：河流/实验 FlowX/Y 为四角实际速度，海洋为风向；只有 kind=2 标 ocean，kind=1/3 走河流。双相平流用世界坐标/二维噪声交接，保留速度大小；unity-voronoi-water 的 MIT-0 许可在 ThirdPartyNotices。
 - `RiverSurface.hlsl`：Mochie FlowUV 与 Scrawk 格角局部方向混合，独立纹理法线/稀疏泡沫，不恢复噪声中值闭环描边；未量化世界坐标显式梯度避免格边 Mipmap 错采，泡沫先阈值后混透明。`RiverPattern_RGBA` 为线性 Repeat/Mipmap、不压缩数据图（RG斜率/B碎光/A泡沫），生成器 `Tools/Rendering/generate_river_surface_pattern.py`，许可 `RiverSurface-LICENSE.txt`。
@@ -22,3 +24,4 @@
 
 - `ActorWaterCommon.hlsl` 共用 Sprite-Lit-Master/AIECS，旋转附属物用角色世界水线；读取 `Mod_TileEffectReceiver` 有效淹没，浮动不改权威 LiquidDepth。接触独立于 Ground，液体身份变化才 Exit/Enter，邻格容错只用于交互。
 - 掉落沉没先浸没再远离，SubmergedProgress 只缩表现矩阵，不改质量/体积/原 Scale；WaterElapsed 延续进度，权威层销毁，离水/拾取/回池恢复。
+- 物件覆雪共用 `SpriteSnowCommon.hlsl`，按原图仿射包围盒的世界 Y 合成水平雪线；Sprite 的中心/半尺寸经控制器 MPB、行网格经 Tangent 传入，翻面和机械动画同步，不能退回本地 Y 随物件旋转。

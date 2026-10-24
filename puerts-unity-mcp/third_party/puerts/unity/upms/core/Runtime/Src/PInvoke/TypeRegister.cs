@@ -428,6 +428,7 @@ namespace Puerts
             
             int baseTypeId = type.BaseType == null ? 0 : Register(type.BaseType);
             
+            #region ConstructorRegistration
             pesapi_constructor ctorWrap = null;
 
             try
@@ -436,7 +437,8 @@ namespace Puerts
                 {
                     ctorWrap = ExpressionsWrap.BuildDelegateConstructorWrap(type, type.GetConstructors(), false);
                 }
-                else
+                // 抽象类保留成员注册，但不能生成实例构造器。
+                else if (!type.IsAbstract)
                 {
                     var ctors = type.GetConstructors()
                         .Where(ctorInfo => !ctorInfo.GetParameters().Any(pi => parameterTypeNotAcceptable(pi.ParameterType)))
@@ -465,6 +467,7 @@ namespace Puerts
                 };
             }
             callbacksCache.Add(ctorWrap);
+            #endregion
             reg_api.define_class(registry, new IntPtr(typeId), new IntPtr(baseTypeId), type.Namespace, type.Name, ctorWrap, null, IntPtr.Zero, true, true);
             ++staticMethodCount; // for __p_innerType
             reg_api.set_property_info_size(registry, new IntPtr(typeId), instanceMethodCount, staticMethodCount, instancePropertyCount, staticPropertyCount);

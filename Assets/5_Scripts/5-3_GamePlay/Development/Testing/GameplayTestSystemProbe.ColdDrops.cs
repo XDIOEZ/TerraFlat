@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.DroppedItems;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEngine;
@@ -13,6 +14,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("processing/cold_fuel_transfer", ColdFuelTransfer);
         operations.Add("processing/cold_motion_workspace", ColdMotionWorkspace);
         operations.Add("item_runtime/drop_visibility_broadphase", DropVisibilityBroadphase);
+        operations.Add("surface_fluids/bottom_recovery", BottomRecovery);
     }
 
     #region 轻量掉落物视野筛选性能与接缝回归
@@ -198,6 +200,9 @@ public static partial class GameplayTestSystemProbe
         sinking[0].WaterDuration = .1f; sinking[0].WaterTarget = 1f;
         sinking[0].WaterElapsed = .1f + WorldItemWaterRules.SubmergedRecedeDuration - .01f;
         DroppedItemService.StepColdDropMotion(sinking, .02f, default);
+        bool sinkingRetained = sinking.Count == 1 && !sinking[0].HasWaterTransition &&
+            sinking[0].WaterKind == LightweightDroppedBody.BottomWaterKind && sinking[0].Data.Stack.CanBePickedUp;
+        DroppedItemService.StepColdDropMotion(sinking, 60f, default);
         string duplicateError = "";
         try
         {
@@ -220,9 +225,69 @@ public static partial class GameplayTestSystemProbe
             ["secondPosition"] = secondPosition, ["firstAfterSecond"] = firstAfterSecond,
             ["landed"] = landed, ["landedPosition"] = first[0].Position.x,
             ["middleDepth"] = middleDepth, ["finalDepth"] = finalDepth, ["floatingTransition"] = floatingTransition,
-            ["sinkingCount"] = sinking.Count, ["duplicateError"] = duplicateError,
+            ["sinkingCount"] = sinking.Count, ["sinkingRetained"] = sinkingRetained,
+            ["sinkingDepth"] = sinking.Count > 0 ? sinking[0].LiquidDepth : -1f,
+            ["sinkingAmount"] = sinking.Count > 0 ? sinking[0].Data.Stack.Amount : 0f,
+            ["duplicateError"] = duplicateError,
             ["recoveredPosition"] = recovered[0].Position.x, ["repeatedMotionBytes"] = allocated
         };
     }
+    #endregion
+
+    #region 河底物品状态与拾取采样
+
+    private static JObject BottomRecovery(JObject args)
+    {
+        using var simulation = new LightweightDroppedItemSimulation();
+        var changes = new List<LightweightDroppedChange>();
+        simulation.Create(new LightweightDroppedBody
+        {
+            Id = 101, Position = new float2(-.9f, -.9f), Scale = new float2(.5f, .5f),
+            Amount = 7f, WaterKind = 2, Pickable = 1
+        }, water: new LightweightDroppedWaterTransition
+        { StartDepth = 0f, TargetDepth = 1f, Duration = 1f, RecedeDuration = .5f });
+        simulation.Step(1f, default, changes);
+        bool stillSinking = !simulation.Get(101).IsOnBottom && simulation.TryGetWater(101, out _);
+        simulation.Step(.5f, default, changes);
+        LightweightDroppedBody bottom = simulation.Get(101);
+        bool completed = changes.Count == 1 && changes[0].Kind == 3 && !simulation.TryGetWater(101, out _);
+        Data_GeneralItem payload = EntityProbeData("test:bottom-water", 7f);
+        payload.Guid = 101;
+        DroppedItemSaveRecord captured = DroppedItemSaveRecord.Capture(payload, simulation, 101);
+        byte[] bytes = MemoryPack.MemoryPackSerializer.Serialize(captured);
+        DroppedItemSaveRecord restored = MemoryPack.MemoryPackSerializer.Deserialize<DroppedItemSaveRecord>(bytes);
+        using var restoredSimulation = new LightweightDroppedItemSimulation();
+        restoredSimulation.Create(restored.RestoreBody(restored.Data, default));
+        restoredSimulation.Step(120f, default, changes);
+        LightweightDroppedBody retained = restoredSimulation.Get(101);
+
+        // 完整 Item 走同一存档扩展，不允许把河底标记带进背包或覆盖别的模块。
+        payload.ItemSpecialData = "{\"other\":{\"keep\":42}}";
+        WorldItemWaterSystem.SetSavedBottomState(payload, true);
+        ItemData itemRestored = ItemInstanceSnapshot.Capture(payload).CreateColdData();
+        bool itemStateSaved = WorldItemWaterSystem.GetSavedBottomState(itemRestored);
+        WorldItemWaterSystem.SetSavedBottomState(itemRestored, false);
+        bool itemStateCleared = !WorldItemWaterSystem.GetSavedBottomState(itemRestored);
+        int otherState = JObject.Parse(itemRestored.ItemSpecialData)["other"]["keep"].Value<int>();
+        payload.ItemSpecialData = "ordinary-special-data";
+        WorldItemWaterSystem.SetSavedBottomState(payload, true);
+        WorldItemWaterSystem.SetSavedBottomState(payload, false);
+
+        return new JObject
+        {
+            ["stillSinking"] = stillSinking, ["completed"] = completed,
+            ["retainedCount"] = restoredSimulation.Count, ["onBottom"] = retained.IsOnBottom,
+            ["amount"] = retained.Amount, ["scale"] = retained.Scale.x,
+            ["x"] = retained.Position.x, ["y"] = retained.Position.y,
+            ["visualScale"] = WorldItemWaterRules.ResolveSubmergedScale(retained.SubmergedProgress),
+            ["sameCell"] = WorldItemWaterRules.CanPickUp(true, new Vector2(-.01f, -.01f), bottom.Position),
+            ["shoreCell"] = WorldItemWaterRules.CanPickUp(true, new Vector2(.01f, -.9f), bottom.Position),
+            ["adjacentWaterCell"] = WorldItemWaterRules.CanPickUp(true, new Vector2(-.9f, -1.01f), bottom.Position),
+            ["floatingReach"] = WorldItemWaterRules.CanPickUp(false, new Vector2(.01f, -.9f), bottom.Position),
+            ["itemStateSaved"] = itemStateSaved, ["itemStateCleared"] = itemStateCleared,
+            ["otherState"] = otherState, ["rawStateRestored"] = payload.ItemSpecialData == "ordinary-special-data"
+        };
+    }
+
     #endregion
 }

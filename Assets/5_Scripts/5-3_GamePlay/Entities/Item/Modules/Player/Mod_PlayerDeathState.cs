@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using Sirenix.OdinInspector;
 using MemoryPack;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -17,6 +18,8 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 #region 基础参数
 
     public const string ModuleId = "PlayerDeathState";
+    private static readonly ProfilerMarker DeathSettlementMarker = new("FlatWorld.Player.Death.Settlement");
+    private static readonly ProfilerMarker DeathPanelMarker = new("FlatWorld.Player.Death.Panel");
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => .1f;
 
@@ -28,6 +31,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         public float SleepRespawnX = 0f;
         public float SleepRespawnY = 0f;
         public float SleepRespawnZ = 0f;
+        public bool? DropAllCarriedItemsOverride;
 
         public Vector3 SleepRespawnPoint
         {
@@ -41,7 +45,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         }
     }
 
-    public Ex_ModData_MemoryPackable ModData;
+    public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
     public override ModuleData _Data { get => ModData; set => ModData = value as Ex_ModData_MemoryPackable; }
 
 #endregion
@@ -72,6 +76,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     private bool _isInDyingState; // 是否已进入濒死
     private bool _forceSuicideRequested; // 设置页强制自杀请求，绕过管理员无敌
+    private bool _worldDropAllCarriedItems; // 世界默认与角色自己的覆盖分别保存。
 
     /// <summary>供管理员无敌恢复与自动化验证读取当前濒死状态。</summary>
     public bool IsInDyingState => _isInDyingState;
@@ -99,7 +104,8 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     protected override void OnLoad()
     {
-        ModData.ReadData(ref Data);
+        RestoreSavedDeathState();
+        ApplyWorldRules(GameRuleConfiguration.Current);
 
         _player = item as Player;
         if (_player == null)
@@ -139,6 +145,8 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         GameManager.Event_PlayerEnterWorld += RestoreDyingStateOnWorldEnter;
         GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
         GameManager.Event_LocalPlayerRuntimeReloaded += RestoreDyingStateOnWorldEnter;
+        GameRuleConfiguration.Changed -= ApplyWorldRules;
+        GameRuleConfiguration.Changed += ApplyWorldRules;
     }
 
     protected override void OnSave()
@@ -149,6 +157,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     protected override void OnUnload()
     {
+        GameRuleConfiguration.Changed -= ApplyWorldRules;
         UnsubscribeDeathMessageLocalization();
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
         GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
@@ -156,6 +165,8 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         {
             _damageReceiver.OnDead -= OnPlayerDead;
         }
+        Data = new SaveData();
+        _worldDropAllCarriedItems = false;
     }
 
     private void OnDestroy()
@@ -173,6 +184,49 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 #endregion
 
 #region 对外接口
+
+    /// <summary>死亡结算只读取当前开关，外部道具、规则或管理员都通过同一入口设置。</summary>
+    public bool DropAllCarriedItems
+    {
+        get => Data?.DropAllCarriedItemsOverride ?? _worldDropAllCarriedItems;
+        set => SetDropAllCarriedItems(value);
+    }
+
+    public bool HasDropAllCarriedItemsOverride => Data?.DropAllCarriedItemsOverride.HasValue == true;
+
+    /// <summary>给当前角色设置持久覆盖，不随世界默认规则的重新发布而丢失。</summary>
+    public void SetDropAllCarriedItems(bool enabled)
+    {
+        Data ??= new SaveData();
+        Data.DropAllCarriedItemsOverride = enabled;
+        if (IsRuntimeLoaded && item != null)
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+    }
+
+    /// <summary>撤销角色覆盖后恢复使用当前世界默认。</summary>
+    public void ClearDropAllCarriedItemsOverride()
+    {
+        if (Data?.DropAllCarriedItemsOverride.HasValue != true)
+            return;
+
+        Data.DropAllCarriedItemsOverride = null;
+        if (IsRuntimeLoaded && item != null)
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+    }
+
+    /// <summary>发布配置时只更新世界默认，不覆盖角色通过公开接口设置的状态。</summary>
+    internal void ApplyWorldRules(GameRuleSnapshot rules)
+    {
+        _worldDropAllCarriedItems = rules.PlayerDeath.DropAllCarriedItems;
+    }
+
+    /// <summary>池化外壳从本次载荷重建状态，不能沿用上一角色的机制开关。</summary>
+    internal void RestoreSavedDeathState()
+    {
+        Data = new SaveData();
+        ModData.ReadData(ref Data);
+        Data ??= new SaveData();
+    }
 
     public void SetSleepRespawnPoint(Vector3 sleepPoint)
     {
@@ -647,6 +701,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     private void OnPlayerDead()
     {
+        using var marker = DeathSettlementMarker.Auto();
         if (!_forceSuicideRequested && HasAdminInvincibility())
         {
             _damageReceiver.ConsumeCurrentDeath();
@@ -675,10 +730,10 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         _damageReceiver.Data.AttackersUIDs.Clear();
         EnterDyingState();
 
-        if (GameNetwork.HasStateAuthority && GameDifficultyService.Current.PlayerDeath.DropAllCarriedItems)
+        if (GameNetwork.HasStateAuthority && DropAllCarriedItems)
         {
             int droppedStackCount = PlayerDeathInventoryDropper.DropAll(_player);
-            Debug.Log($"[Mod_PlayerDeathState] 困难难度死亡掉落完成，共掉落 {droppedStackCount} 组物品");
+            Debug.Log($"[Mod_PlayerDeathState] 死亡掉落完成，共掉落 {droppedStackCount} 组物品");
         }
 
         Debug.Log($"[Mod_PlayerDeathState] 玩家进入濒死状态，场景={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
@@ -731,6 +786,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     private void ShowDyingPanel()
     {
+        using var marker = DeathPanelMarker.Auto();
         if (!_isInDyingState || _player?.IsLocalProfile != true)
         {
             return;
@@ -747,7 +803,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
             // 玩家死亡界面跨场景保留，由玩家模块持有生命周期。
             _dyingPanel = UIManager.Instance.CreatePersistentPanelFromGameObject(dyingPanelPrefab, dyingPanelPrefabName);
             UIManager.Instance.ConfigureGlobalOverlayPanel(_dyingPanel);
-            _dyingPanel.CollectUIComponents();
+            // BasePanel.Init 已建立层级快照，GetButton 会按需刷新，避免死亡时强制二次全树扫描。
             BindDyingPanelButtons();
         }
 

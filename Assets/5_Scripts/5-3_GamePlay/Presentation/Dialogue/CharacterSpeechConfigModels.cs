@@ -17,8 +17,9 @@ namespace FlatWorld.Dialogue
         public List<CharacterSpeechConfigEntry> Entries = new();
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class CharacterSpeechConfigEntry
+    public sealed partial class CharacterSpeechConfigEntry
     {
         [JsonProperty("id")]
         public string Id;
@@ -66,12 +67,14 @@ namespace FlatWorld.Dialogue
         [JsonProperty("enabled")]
         public bool Enabled = true;
 
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore]
         public string SourceName;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class CharacterSpeechCondition
+    public sealed partial class CharacterSpeechCondition
     {
         [JsonProperty("fact")]
         public string Fact;

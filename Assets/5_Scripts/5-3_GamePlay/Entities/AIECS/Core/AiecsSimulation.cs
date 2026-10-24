@@ -360,7 +360,7 @@ namespace FlatWorld.AIECS
         public NativeArray<AiecsDeathEvent> DeathEvents => deaths.AsArray();
         public NativeArray<AiecsHitEvent> ExternalHits => externalHits.AsArray();
         public AiecsSpatialView Spatial { get { Complete(); return combatSpatial.View; } }
-        public CombatDifficulty Difficulty { get; set; }
+        public CombatTuning Tuning { get; set; }
         public float DayRatio { get; set; } = 0.5f;
         public double GameDays { get; set; }
         /// <summary>开发对照开关；正式默认启用连续邻居 Steering 与密度分流，不再存在单格容量。</summary>
@@ -691,7 +691,7 @@ namespace FlatWorld.AIECS
             if (results.Capacity < totalHitCount[0]) results.Capacity = totalHitCount[0];
             if (externalHits.Capacity < hits.Length) externalHits.Capacity = hits.Length;
             pending = scheduler.ScheduleParallel(new AiecsDamageSettlementSystem { Hits = hits.AsArray(), Ranges = hitRanges,
-                Factions = factions, Definitions = definitions, BuffDefinitions = buffs, Spatial = frame.Spatial, Difficulty = Difficulty,
+                Factions = factions, Definitions = definitions, BuffDefinitions = buffs, Spatial = frame.Spatial, Tuning = Tuning,
                 Results = results.AsParallelWriter(), ExternalHits = externalHits.AsParallelWriter() }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.AfterDamage, frame, pending);
             pending = scheduler.ScheduleParallel(new AiecsDeathSystem { Clock = Clock, Events = deaths.AsParallelWriter() }, activeQuery, pending);

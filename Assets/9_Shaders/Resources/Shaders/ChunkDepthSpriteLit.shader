@@ -71,6 +71,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         #include "../../Shader/VegetationSway.hlsl"
         #include "../../Shader/InteractionOutlineCommon.hlsl"
         #include "../../Shader/ConveyorSurface.hlsl"
+        #include "../../Shader/SpriteSnowCommon.hlsl"
         float _PlayerOcclusionEnabled, _PlayerOcclusionRadius, _PlayerOcclusionFeather;
         float _PlayerOcclusionAlpha, _PlayerOcclusionVerticalPadding;
         float4 _PlayerOcclusionCenter;
@@ -78,6 +79,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         struct Attributes
         {
             float3 positionOS : POSITION;
+            float4 spriteBounds : TANGENT;
             half4 tint : COLOR;
             float2 uv : TEXCOORD0;
             float4 localClip : TEXCOORD1;
@@ -98,7 +100,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             float4 animation : TEXCOORD3;
             float4 region : TEXCOORD4;
             float4 effects : TEXCOORD5;
-            float3 worldRoot : TEXCOORD6;
+            float4 worldRoot : TEXCOORD6;
             float4 state : TEXCOORD7;
         };
 
@@ -108,17 +110,28 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             Varyings output = (Varyings)0;
             float2 local = input.localClip.xy;
             float2 tangent = input.basis.xy;
+            float2 snowBasisY = input.basis.zw;
+            float2 snowOrigin = input.origin.xy;
             float phase = input.animation.z + _Time.y * input.animation.y;
             if (input.animation.x > .5 && input.animation.x < 1.5)
             {
                 float s, c; sincos(phase, s, c);
                 local = float2(local.x * c - local.y * s, local.x * s + local.y * c);
                 tangent = input.basis.xy * c + input.basis.zw * s;
+                snowBasisY = -input.basis.xy * s + input.basis.zw * c;
             }
             else if (input.animation.x > 2.5 && input.animation.x < 3.5)
-                local.y -= (1 - cos(phase)) * .5 * input.animation.w;
+            {
+                float travel = (1 - cos(phase)) * .5 * input.animation.w;
+                local.y -= travel;
+                snowOrigin -= input.basis.zw * travel;
+            }
             else if (input.animation.x > 3.5 && input.animation.x < 4.5)
-                local.y *= 1 - (1 - cos(phase)) * .5 * saturate(input.animation.w);
+            {
+                float compression = 1 - (1 - cos(phase)) * .5 * saturate(input.animation.w);
+                local.y *= compression;
+                snowBasisY *= compression;
+            }
             float3 positionOS = float3(input.origin.xy + input.basis.xy * local.x + input.basis.zw * local.y, input.origin.z);
             float3 positionWS = TransformObjectToWorld(positionOS);
             if (_GrassSwayEnabled > .5 && _GrassSwayAmplitude > .0001)
@@ -130,7 +143,16 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
                     GrassBendWeight(float3(input.localClip.xy, 0)), basisX, basisY, swayRootWS);
             }
             output.positionCS = TransformWorldToHClip(positionWS);
-            output.worldRoot = float3(positionWS.xy, TransformObjectToWorld(float3(0,0,0)).y);
+            output.worldRoot = float4(positionWS.xy, TransformObjectToWorld(float3(0,0,0)).y, 0);
+            // 单株/单设备自带原图范围，整行合批和机械动画仍共用世界水平雪线。
+            if ((input.state.w > .5 ? input.state.y : _SnowCoverage) > 0.0)
+            {
+                float2 snowWorldYBasis = float2(
+                    TransformObjectToWorldDir(float3(tangent, 0), false).y,
+                    TransformObjectToWorldDir(float3(snowBasisY, 0), false).y);
+                output.worldRoot.w = FlatWorldSpriteSnowHeight(positionWS.y, input.spriteBounds,
+                    snowWorldYBasis, TransformObjectToWorld(float3(snowOrigin, input.origin.z)).y);
+            }
             output.tint = input.tint * _Color * _RendererColor;
             tangent = TransformObjectToWorldDir(float3(tangent, 0)).xy;
             output.uv = float4(input.uv, tangent / max(.00001, length(tangent)));
@@ -186,10 +208,8 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
             if (_EnableExternalAlpha > .5) main.a = SAMPLE_TEXTURE2D(_AlphaTex, sampler_AlphaTex, uv).r;
             main *= input.tint;
-            float bodyV = saturate((input.localClip.y - input.effects.x) / max(.00001, input.effects.y - input.effects.x));
             float snowAmount = input.state.w > .5 ? input.state.y : _SnowCoverage;
-            float snow = smoothstep(.8 - snowAmount * .3, .9 - snowAmount * .3, bodyV) * saturate(snowAmount);
-            main.rgb = lerp(main.rgb, half3(.88,.94,1), snow);
+            main.rgb = FlatWorldApplySpriteSnow(main.rgb, input.worldRoot.w, snowAmount);
             float pulse = 1 + sin(_Time.y * max(0, _ActorTintPulseSpeed)) * saturate(_ActorTintPulseAmplitude);
             main.rgb = lerp(main.rgb, _ActorTint.rgb, saturate(_ActorTintStrength * pulse));
             main.rgb = lerp(main.rgb, _HitFlashColor.rgb, saturate(input.state.w > .5 ? input.state.x : _HitFlash));

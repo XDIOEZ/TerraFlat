@@ -182,7 +182,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
                 continue;
             }
 
-            float rate = Mathf.Max(0f, burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
+            float rate = Mathf.Max(0f, burnSpeed * GameRuleConfiguration.Current.Production.FuelConsumptionMultiplier);
             float step = remaining;
             if (source != null) step = Mathf.Min(step, State.Absorption.RemainingSeconds(fuelAbsorptionSeconds));
             if (IsBurning && rate > 0f)
@@ -228,7 +228,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual void ConsumeFuel(float seconds)
     {
-        float consumed = Mathf.Max(0f, seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
+        float consumed = Mathf.Max(0f, seconds * burnSpeed * GameRuleConfiguration.Current.Production.FuelConsumptionMultiplier);
         Fuel.Fuel.x = Mathf.Max(0f, Fuel.Fuel.x - consumed);
     }
 
@@ -314,6 +314,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
                 if (missing > .0001f)
                 {
                     dropped.Stack.Amount = missing;
+                    if (addedAmount > 0f) ItemDurabilityRules.AdvanceAfterRemoval(dropped);
                     DroppedItemService.Spawn(dropped, center, randomizeRotation: true);
                 }
                 break;
@@ -429,7 +430,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public virtual void HeatMaterials(float seconds)
     {
         combustionHeatBonus = 0;
-        float fuelUnits = Mathf.Min(Fuel.Fuel.x, Mathf.Max(0f, seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier));
+        float fuelUnits = Mathf.Min(Fuel.Fuel.x, Mathf.Max(0f, seconds * burnSpeed * GameRuleConfiguration.Current.Production.FuelConsumptionMultiplier));
         MachineWorld.SupplyCombustionSupport(this, fuelUnits, seconds);
         bool hasMaterials = HasMaterials(Input) || HasMaterials(Output);
         float airflow = AcceptsAirflow ? Entity.Airflow.Strength : 0f;
@@ -495,21 +496,116 @@ public static class FurnaceMaterialHeating
             !float.IsFinite(heatingRateMultiplier) || heatingRateMultiplier < 0f ||
             !float.IsFinite(initialMaterialTemperature) ||
             MachineInventory.IsBeingDragged(input) || MachineInventory.IsBeingDragged(output)) return false;
-        // 输出先受热，确保这一轮新生成的产物不重复领到相同时间段的热量。
-        bool changed = Advance(output, output);
-        if (!ReferenceEquals(input, output)) changed |= Advance(input, output);
+        bool sameInventory = ReferenceEquals(input, output);
+        using var inputRejectedLease = UnityEngine.Pool.HashSetPool<int>.Get(out var inputRejected);
+        using var outputRejectedLease = UnityEngine.Pool.HashSetPool<int>.Get(out var separateOutputRejected);
+        HashSet<int> outputRejected = sameInventory ? inputRejected : separateOutputRejected;
+        bool changed = Initialize(output);
+        if (!sameInventory) changed |= Initialize(input);
+        if (LeavesCurrentWindow(output))
+            changed |= MaterialThermalProcessor.Process(output, output, actor, rejectedMaterialSlots: outputRejected);
+        if (!sameInventory && LeavesCurrentWindow(input))
+            changed |= MaterialThermalProcessor.Process(input, output, actor, rejectedMaterialSlots: inputRejected);
+        double remaining = seconds;
+        ItemData boundaryItem = null;
+        float boundaryTemperature = 0f;
+        while (remaining > 0d)
+        {
+            boundaryItem = null;
+            boundaryTemperature = 0f;
+            double boundarySeconds = remaining;
+            FindBoundary(output, outputRejected);
+            if (!sameInventory) FindBoundary(input, inputRejected);
+            float step = (float)boundarySeconds;
+            // 输出先结算本段，新产物只在下一段领取相变后剩余的热量。
+            changed |= Advance(output, output, step, outputRejected);
+            if (!sameInventory) changed |= Advance(input, output, step, inputRejected);
+            remaining -= boundarySeconds;
+
+            void FindBoundary(Inventory inventory, ISet<int> rejected)
+            {
+                GameRes resources = GameRes.ExistingInstance;
+                if (resources == null) return;
+                foreach (ItemSlot slot in inventory.Data.itemSlots)
+                {
+                    ItemData material = slot?.itemData;
+                    if (material?.MatterState?.Initialized != true || rejected.Contains(slot.Index) ||
+                        !resources.TryGetItemDefinition(material.IDName, out RuntimeItemDefinition definition)) continue;
+                    if (definition.Reactions.Count == 0 && (definition.Matter == null || definition.Matter.Transitions.Count == 0)) continue;
+                    float current = material.MatterState.TemperatureCelsius;
+                    float next = ThermalRuntime.AdvanceAmbient(current, sourceTemperature,
+                        ThermalRuntime.ResolveHeatingSeconds(current, sourceTemperature, (float)boundarySeconds, heatingRateMultiplier));
+                    foreach (RuntimeItemReactionDefinition reaction in definition.Reactions)
+                    {
+                        if (reaction.LiquidOutput != null) continue;
+                        foreach (RuntimeRecipeIngredient ingredient in reaction.Recipe.inputs.RowItems_List)
+                            if (CraftingIngredientMatcher.MatchesIdentity(ingredient, material))
+                            { Consider(sourceTemperature > current ? reaction.MinTemperature : reaction.MaxTemperature); break; }
+                    }
+                    if (definition.Matter != null)
+                        foreach (RuntimeItemMatterTransition transition in definition.Matter.Transitions)
+                            if (transition.LiquidOutput == null)
+                                Consider(sourceTemperature > current ? transition.MinTemperature : transition.MaxTemperature);
+
+                    void Consider(float? boundary)
+                    {
+                        if (!boundary.HasValue || boundary.Value == current ||
+                            boundary.Value < Math.Min(current, next) || boundary.Value > Math.Max(current, next)) return;
+                        double time = ThermalRuntime.GetAmbientTransferSeconds(current, sourceTemperature,
+                            boundary.Value, heatingRateMultiplier);
+                        if (time <= 0d || time > boundarySeconds) return;
+                        boundarySeconds = time;
+                        boundaryItem = material;
+                        boundaryTemperature = boundary.Value;
+                    }
+                }
+            }
+        }
         return changed;
 
-        bool Advance(Inventory materials, Inventory destination)
+        bool LeavesCurrentWindow(Inventory materials)
+        {
+            GameRes resources = GameRes.ExistingInstance;
+            if (resources == null) return false;
+            foreach (ItemSlot slot in materials.Data.itemSlots)
+            {
+                ItemData material = slot?.itemData;
+                if (material?.MatterState?.Initialized != true ||
+                    !resources.TryGetItemDefinition(material.IDName, out RuntimeItemDefinition definition)) continue;
+                if (definition.Reactions.Count == 0 && (definition.Matter == null || definition.Matter.Transitions.Count == 0)) continue;
+                float current = material.MatterState.TemperatureCelsius;
+                float next = ThermalRuntime.AdvanceAmbient(current, sourceTemperature,
+                    ThermalRuntime.ResolveHeatingSeconds(current, sourceTemperature, seconds, heatingRateMultiplier));
+                foreach (RuntimeItemReactionDefinition reaction in definition.Reactions)
+                    if (reaction.LiquidOutput == null && reaction.TemperatureMatches(current) &&
+                        !reaction.TemperatureMatches(next)) return true;
+                if (definition.Matter != null)
+                    foreach (RuntimeItemMatterTransition transition in definition.Matter.Transitions)
+                        if (transition.LiquidOutput == null && transition.Matches(material.MatterState) &&
+                            (transition.MinTemperature.HasValue && next < transition.MinTemperature.Value ||
+                             transition.MaxTemperature.HasValue && next > transition.MaxTemperature.Value)) return true;
+            }
+            return false;
+        }
+
+        bool Initialize(Inventory materials)
+        {
+            bool initialized = false;
+            foreach (ItemSlot slot in materials.Data.itemSlots)
+                if (ItemMatterRuntime.EnsureInitialized(slot?.itemData, initialMaterialTemperature))
+                { materials.Data.NotifyItemStateChanged(slot.itemData); initialized = true; }
+            return initialized;
+        }
+
+        bool Advance(Inventory materials, Inventory destination, float step, ISet<int> rejected)
         {
             bool inventoryChanged = false;
-            var originalGuids = new HashSet<int>();
+            using var originalGuidsLease = UnityEngine.Pool.HashSetPool<int>.Get(out var originalGuids);
             foreach (ItemSlot slot in materials.Data.itemSlots)
             {
                 ItemData material = slot?.itemData;
                 if (material == null) continue;
                 originalGuids.Add(material.Guid);
-                // 新冷载荷先建立真实环境初温，不能直接初始化为炉内热源目标温度。
                 if (ItemMatterRuntime.EnsureInitialized(material, initialMaterialTemperature))
                 {
                     materials.Data.NotifyItemStateChanged(material);
@@ -517,18 +613,26 @@ public static class FurnaceMaterialHeating
                 }
             }
             // 内容先读取容器本轮受热前的温度，避免给新装入材料重复加热。
-            inventoryChanged |= InventoryVesselHeating.ProcessHeat(materials, destination, sourceTemperature, seconds,
+            inventoryChanged |= InventoryVesselHeating.ProcessHeat(materials, destination, sourceTemperature, step,
                 heatingRateMultiplier, initialMaterialTemperature);
             foreach (ItemSlot slot in materials.Data.itemSlots)
             {
                 ItemData material = slot?.itemData;
-                if (material == null || !originalGuids.Contains(material.Guid) ||
-                    !ItemMatterRuntime.Advance(material, sourceTemperature, 1f, seconds,
-                        heatingRateMultiplier: heatingRateMultiplier)) continue;
+                if (material == null || !originalGuids.Contains(material.Guid)) continue;
+                bool advanced = ItemMatterRuntime.Advance(material,
+                    rejected.Contains(slot.Index) ? material.MatterState.TemperatureCelsius : sourceTemperature,
+                    1f, step, heatingRateMultiplier: heatingRateMultiplier);
+                if (ReferenceEquals(material, boundaryItem))
+                {
+                    material.MatterState.TemperatureCelsius = boundaryTemperature;
+                    advanced = true;
+                }
+                if (!advanced) continue;
                 materials.Data.NotifyItemStateChanged(material);
                 inventoryChanged = true;
             }
-            inventoryChanged |= MaterialThermalProcessor.Process(materials, destination, actor);
+            rejected.Clear();
+            inventoryChanged |= MaterialThermalProcessor.Process(materials, destination, actor, rejectedMaterialSlots: rejected);
             return inventoryChanged;
         }
     }

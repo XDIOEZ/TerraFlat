@@ -58,14 +58,14 @@ public sealed class ChangeDurabilityRecipeActionHandler : IRecipeActionHandler
 
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
-            if (TryApply(inventory.Data.itemSlots[i], action, recipe))
+            if (TryApply(inventory.Data, inventory.Data.itemSlots[i], action, recipe))
                 return;
         }
 
         Debug.LogWarning($"[CraftingAction] 配方 {recipe.Id} 找不到工具角色：{action.TargetRole}");
     }
 
-    private static bool TryApply(ItemSlot slot, RuntimeRecipeAction action, RuntimeRecipe recipe)
+    private static bool TryApply(Inventory_Data inventory, ItemSlot slot, RuntimeRecipeAction action, RuntimeRecipe recipe)
     {
         ItemData itemData = slot?.itemData;
         if (itemData?.Tags == null || !itemData.Tags.Contains(action.TargetRole))
@@ -77,17 +77,14 @@ public sealed class ChangeDurabilityRecipeActionHandler : IRecipeActionHandler
         }
 
         string itemId = itemData.IDName;
-        itemData.AddDurability(-action.Value);
-        if (itemData.Durability <= 0f)
-        {
-            itemData.Durability = 0f;
-            slot.ClearData();
-            Debug.Log($"[CraftingAction] {itemId} 耐久耗尽并已移除");
-        }
+        if (action.Value > 0f)
+            inventory.TryConsumeDurability(itemData, action.Value, out _);
         else
         {
-            Debug.Log($"[CraftingAction] {itemId} 消耗耐久 {action.Value}，剩余 {itemData.Durability}/{itemData.MaxDurability}");
+            itemData.AddDurability(-action.Value);
+            inventory.NotifyItemStateChanged(itemData);
         }
+        Debug.Log($"[CraftingAction] {itemId} 消耗耐久 {action.Value}，剩余 {itemData.Durability}/{itemData.MaxDurability}");
         return true;
     }
 }

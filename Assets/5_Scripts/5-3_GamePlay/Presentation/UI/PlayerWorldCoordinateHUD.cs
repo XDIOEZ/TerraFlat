@@ -27,6 +27,8 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     public const string AmbientTemperatureTextNodeName = "环境温度文本";
     public const string AmbientTemperatureFormat = "环境温度  {0:0.0}℃";
     public const string AmbientTemperatureUnavailableText = "环境温度  --℃";
+    private const string PressureFormat =
+        "气压 {0:0.#} kPa · {1}\n安全 {2:0.#}～{3:0.#} kPa · 低压 +{4:0.#} / 高压 +{5:0.#}\n呼吸 {6} · 缓冲 {7:0.#}秒";
     public const string SeasonTextNodeName = "季节文本";
     public const string SeasonFormat = "第 {0} 年 · {1} · 第 {2} 天 · {3:00}时";
     private static readonly string[] SeasonNames = { "春季", "夏季", "秋季", "冬季" };
@@ -54,9 +56,15 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private int lastSeasonHour = -1;
     private string localizedTemperatureFormat;
     private string localizedTemperatureUnavailableText;
+    private string localizedGeographicFormat;
+    private string localizedPressureFormat;
+    private string localizedPressureSafe, localizedPressureLowDanger, localizedPressureHighDanger;
+    private string localizedPressureTank, localizedPressureAtmosphere;
     private int lastTemperatureTenths = int.MinValue;
     private bool temperatureDisplayInitialized;
     private string lastPressurePresentation;
+    private PressureDisplayKey lastPressureKey;
+    private bool hasPressureKey;
     private int lastCoordinateX = int.MinValue;
     private int lastCoordinateY = int.MinValue;
     private bool lastCoordinatesAreSpace;
@@ -254,15 +262,68 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private string BuildPressurePresentation()
     {
         using var pressureScope = PressureFormatMarker.Measure(1);
-        if (player == null || player.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId) is not Mod_Pressure pressure) return "";
+        if (player == null || player.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId) is not Mod_Pressure pressure)
+        {
+            hasPressureKey = false;
+            return string.Empty;
+        }
         pressure.GetSafePressureRange(out float min, out float max);
         double current = AtmosphereService.TryGetForWorld(player.gameObject.scene.name, out var atmosphere) ? AtmosphereService.PressureKPa(atmosphere) : 0d;
-        string danger = FlatWorldLocalizationService.GetUiText(current < min ? "低压危险" : current > max ? "高压危险" : "安全");
-        string source = FlatWorldLocalizationService.GetUiText(SpacesuitSystem.TryGetEquipped(player, out var suit) && suit.IsHelmetSealed ? "罐内供氧" : "星球大气");
-        return "\n" + FlatWorldLocalizationService.GetUiFormat(
-            "气压 {0:0.#} kPa · {1}\n安全 {2:0.#}～{3:0.#} kPa · 低压 +{4:0.#} / 高压 +{5:0.#}\n呼吸 {6} · 缓冲 {7:0.#}秒",
-            current, danger, min, max, pressure.SafePressureMinKPa - min, max - pressure.SafePressureMaxKPa,
-            source, pressure.State.RemainingBufferSeconds);
+        bool sealedHelmet = SpacesuitSystem.TryGetEquipped(player, out var suit) && suit.IsHelmetSealed;
+        var key = new PressureDisplayKey(current, min, max, pressure.SafePressureMinKPa - min,
+            max - pressure.SafePressureMaxKPa, pressure.State.RemainingBufferSeconds, sealedHelmet);
+        if (hasPressureKey && lastPressureKey.Equals(key))
+            return lastPressurePresentation;
+
+        hasPressureKey = true;
+        lastPressureKey = key;
+        string danger = key.Danger < 0 ? localizedPressureLowDanger :
+            key.Danger > 0 ? localizedPressureHighDanger : localizedPressureSafe;
+        string source = sealedHelmet ? localizedPressureTank : localizedPressureAtmosphere;
+        try
+        {
+            return "\n" + string.Format(localizedPressureFormat, key.Pressure, danger, key.Minimum,
+                key.Maximum, key.LowExtension, key.HighExtension, source, key.Buffer);
+        }
+        catch (FormatException)
+        {
+            // 译文占位符不合法时沿用 UI 本地化服务的原文回退约定。
+            try
+            {
+                return "\n" + string.Format(PressureFormat, key.Pressure, danger, key.Minimum,
+                    key.Maximum, key.LowExtension, key.HighExtension, source, key.Buffer);
+            }
+            catch (FormatException) { return "\n" + PressureFormat; }
+        }
+    }
+
+    /// <summary>按 HUD 的一位小数精度比较，数值和安全等级均未变化就不分配字符串。</summary>
+    internal readonly struct PressureDisplayKey : IEquatable<PressureDisplayKey>
+    {
+        public readonly double Pressure, Minimum, Maximum, LowExtension, HighExtension, Buffer;
+        public readonly int Danger;
+        public readonly bool SealedHelmet;
+
+        public PressureDisplayKey(double pressure, float minimum, float maximum, float lowExtension,
+            float highExtension, double buffer, bool sealedHelmet)
+        {
+            Pressure = Round(pressure);
+            Minimum = Round(minimum);
+            Maximum = Round(maximum);
+            LowExtension = Round(lowExtension);
+            HighExtension = Round(highExtension);
+            Buffer = Round(buffer);
+            Danger = pressure < minimum ? -1 : pressure > maximum ? 1 : 0;
+            SealedHelmet = sealedHelmet;
+        }
+
+        private static double Round(double value) =>
+            double.IsFinite(value) ? Math.Round(value, 1, MidpointRounding.AwayFromZero) : value;
+
+        public bool Equals(PressureDisplayKey other) =>
+            Pressure.Equals(other.Pressure) && Minimum.Equals(other.Minimum) && Maximum.Equals(other.Maximum) &&
+            LowExtension.Equals(other.LowExtension) && HighExtension.Equals(other.HighExtension) &&
+            Buffer.Equals(other.Buffer) && Danger == other.Danger && SealedHelmet == other.SealedHelmet;
     }
 
     /// <summary>只在语言变化时查询 HUD 文案，低频采样循环只负责数值。</summary>
@@ -270,9 +331,19 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     {
         localizedTemperatureFormat = FlatWorldLocalizationService.GetUiText(AmbientTemperatureFormat);
         localizedTemperatureUnavailableText = FlatWorldLocalizationService.GetUiText(AmbientTemperatureUnavailableText);
+        localizedGeographicFormat = FlatWorldLocalizationService.GetUiText(GeographicFormat);
+        localizedPressureFormat = FlatWorldLocalizationService.GetUiText(PressureFormat);
+        localizedPressureSafe = FlatWorldLocalizationService.GetUiText("安全");
+        localizedPressureLowDanger = FlatWorldLocalizationService.GetUiText("低压危险");
+        localizedPressureHighDanger = FlatWorldLocalizationService.GetUiText("高压危险");
+        localizedPressureTank = FlatWorldLocalizationService.GetUiText("罐内供氧");
+        localizedPressureAtmosphere = FlatWorldLocalizationService.GetUiText("星球大气");
+        hasPressureKey = false;
         localizedUniverseCoordinateFormat = FlatWorldLocalizationService.GetUiText(UniverseCoordinateFormat);
         localizedUniverseCoordinateUnavailableText = FlatWorldLocalizationService.GetUiText(UniverseCoordinateUnavailableText);
         InvalidateUniverseCoordinates();
+        lastCoordinateX = lastCoordinateY = int.MinValue;
+        lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
         temperatureDisplayInitialized = false;
     }
 
@@ -316,7 +387,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         if (displayMode == PlayerWorldCoordinateDisplayMode.LatitudeLongitude)
         {
             GetLatitudeLongitude(position, out float longitude, out float latitude);
-            coordinateText.SetText(GeographicFormat, longitude, latitude);
+            coordinateText.SetText(localizedGeographicFormat, longitude, latitude);
             return;
         }
 

@@ -184,7 +184,7 @@ public sealed partial class ChunkTilemapRenderer
             int x = Mathf.RoundToInt(delta.x), y = Mathf.RoundToInt(delta.y);
             if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) continue;
             MachineEntity node = MachineWorld.GetFluidPipeAt(cell);
-            if (node?.Definition.Fluid?.Kind != "pipe") continue;
+            if (node?.Definition.IsFluidPipeSegment != true) continue;
             var key = new Vector3Int(x, y, node.Definition.Layer);
             int mask = MachineWorld.GetFluidPipeConnectionMask(node);
             if (!submittedPipeMasks.TryGetValue(key, out int previous) || previous != mask)
@@ -389,7 +389,7 @@ public sealed partial class ChunkTilemapRenderer
         FluidMachineState state = MachineWorld.GetFluidState(node);
         FluidInventory inventory = MachineWorld.GetFluidInventory(node);
         bool probe = node.Definition.Fluid.Kind is "mechanical-probe" or "electronic-probe";
-        bool pipe = node.Definition.Fluid.Kind == "pipe";
+        bool pipe = node.Definition.IsFluidPipeSegment;
         if (pipe)
         {
             int mask = MachineWorld.GetFluidPipeConnectionMask(node);
@@ -403,6 +403,10 @@ public sealed partial class ChunkTilemapRenderer
                 Part(node, x, y, 8 + pipeDirection, arm, material, origin, turn,
                     Quaternion.Inverse(turn) * offset, scale, 0, 0, partOrder: 0);
             }
+            // 可选设备图层覆盖在通用管道中枢上，管臂仍按拓扑自动连接。
+            if (def.TryGetVisualStateSprite("pipeOverlay", out Sprite pipeOverlay))
+                Part(node, x, y, 12, pipeOverlay, material, origin, Quaternion.identity,
+                    Vector3.zero, Vector3.one, 0, 0, partOrder: 13);
             submittedPipeMasks[new Vector3Int(x, y, node.Definition.Layer)] = mask;
         }
         else if (tankBlock)

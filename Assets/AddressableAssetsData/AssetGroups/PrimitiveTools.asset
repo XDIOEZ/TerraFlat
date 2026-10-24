@@ -234,6 +234,13 @@ MonoBehaviour:
     - ItemSprite
     - Sprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6cdab99f627a4000a238769bf2a911d0
+    m_Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Cast_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    - Sprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a26921880a4a40208ed9afe977554ab4
     m_Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FlintStrike/FlintStrike_Icon.png
     m_ReadOnly: 0

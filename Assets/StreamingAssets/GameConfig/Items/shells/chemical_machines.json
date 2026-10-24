@@ -15,7 +15,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
@@ -105,7 +106,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
@@ -194,7 +196,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
@@ -266,7 +269,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
@@ -337,7 +341,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
@@ -409,7 +414,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
@@ -480,10 +486,30 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
+        "spriteStates": {
+          "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",
+          "pipe1": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]",
+          "pipe2": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]",
+          "pipe3": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]",
+          "pipe4": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]",
+          "pipe5": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]",
+          "pipe6": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]",
+          "pipe7": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]",
+          "pipe8": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]",
+          "pipe9": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]",
+          "pipe10": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+          "pipe11": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]",
+          "pipe12": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]",
+          "pipe13": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]",
+          "pipe14": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]",
+          "pipe15": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]",
+          "pipeOverlay": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -552,10 +578,30 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
+        "spriteStates": {
+          "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",
+          "pipe1": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]",
+          "pipe2": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]",
+          "pipe3": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]",
+          "pipe4": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]",
+          "pipe5": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]",
+          "pipe6": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]",
+          "pipe7": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]",
+          "pipe8": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]",
+          "pipe9": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]",
+          "pipe10": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+          "pipe11": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]",
+          "pipe12": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]",
+          "pipe13": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]",
+          "pipe14": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]",
+          "pipe15": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]",
+          "pipeOverlay": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -2053,7 +2099,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidFilter/FluidFilter_Idle.png"
@@ -2125,7 +2172,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidFilter/FluidFilter_Idle.png"
@@ -2257,7 +2305,7 @@
       "id": "WaterElectrolyzer_Summoner",
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
-      "gameName": "水电解器",
+      "gameName": "电解器",
       "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液保留在副产物液腔，可装入手持液体容器；固体杂质从残渣槽取出。",
       "durability": 1,
       "maxDurability": 1,

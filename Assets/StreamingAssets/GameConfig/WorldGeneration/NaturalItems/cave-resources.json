@@ -10,6 +10,13 @@
       "noiseOffset": 8819
     },
     {
+      "ruleId": "cave.resource.tungsten",
+      "itemId": "Mine_Tungsten",
+      "veinThreshold": 0.94,
+      "veinScale": 0.03,
+      "noiseOffset": 9923
+    },
+    {
       "ruleId": "cave.resource.gold",
       "itemId": "Mine_Gold",
       "veinThreshold": 0.92,

@@ -27,7 +27,7 @@
       "inputs": [
         { "match": "exact_item", "itemId": "Glass", "amount": 2 },
         { "match": "exact_item", "itemId": "CopperPlate", "amount": 1 },
-        { "match": "exact_item", "itemId": "Rope", "amount": 1 }
+        { "match": "tag", "tag": "Rope", "amount": 1 }
       ],
       "outputs": [ { "itemId": "Engineering_Goggles", "amount": 1 } ],
       "actions": []

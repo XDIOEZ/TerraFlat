@@ -1,10 +1,10 @@
 # FlatWorld 玩法音效 LMMS 工程
 
-本目录重做了游戏仍在使用的 30 类旧代码合成音效。素材由本机 LMMS 1.2.2 经 MCP 保存、加载与渲染，使用 TripleOscillator 的噪声、非整数谐波组合、滤波和短包络，全部为本轮原创合成，不使用外部采样。
+本目录含 30 类旧代码合成音效，以及弩完成上膛时的卡扣提示音。素材由本机 LMMS 1.2.2 经 MCP 保存、加载与渲染，使用 TripleOscillator 的噪声、非整数谐波组合、滤波和短包络，全部为本轮原创合成，不使用外部采样。
 
 ## 游戏接入
 
-- 29 类一次性音效各三个变体，加一条湿衣服摩擦循环，共 88 个 WAV。
+- 30 类一次性音效各三个变体，加一条湿衣服摩擦循环，共 91 个 WAV。
 - 成品在 `Assets/Audio/Generated/`；原 `__01` 和 AudioCue 的 GUID 均保留，新增 `__02/__03` 已写入同一 Cue 的 `clips` 数组。
 - 世界短音为 48 kHz、PCM 16-bit、单声道，Unity 使用 PCM 预加载并关闭归一化。声音左右方向继续由现有空间 AudioSource 决定。
 - `combat.weapon.*.attack` 仍只在动作开始播放；`combat.impact.*` 在确认造成伤害后播放。没有把命中声塞进挥动声。
@@ -15,7 +15,7 @@
 
 | 工程 | 第一遍试听串 | 顺序 |
 | --- | --- | --- |
-| `Gameplay_Attacks.mmp` | `Preview_Attacks.wav` | 通用、刀、斧、镐、矛、钝器 |
+| `Gameplay_Attacks.mmp` | `Preview_Attacks.wav` | 通用、刀、斧、镐、矛、钝器、弩上膛卡扣 |
 | `Gameplay_Impacts.mmp` | `Preview_Impacts.wav` | 通用伤害、默认、草叶、木头、石头、金属、肉体、刀割草、刀碰石、斧砍木、镐凿石 |
 | `Gameplay_Interactions.mmp` | `Preview_Interactions.wav` | 拿起、放下、锄土、开门、关门、吃、脆食、喝水、悬停、点击、确认、返回 |
 
@@ -34,6 +34,8 @@
 
 3. 执行 `python SoundDesign/Gameplay_SFX_LMMS/build_sfx.py finalize`。脚本只裁切真实 LMMS 母带、转单声道、去直流、收尾/循环接缝和调整增益，不自行合成声音。先写完整临时文件再替换 WAV；`.meta` 原位更新保留 GUID；绑定已有 Cue 并生成试听串。
 4. `manifest.json` 保存逐条文件、Cue、工程、裁切时间、时长、峰值、RMS、GUID、SHA-256 和循环接缝差。`renders/` 是忽略的临时母带目录，不提交。
+
+湿衣服循环只保留间歇的短衣料摩擦，去掉会产生持续底噪的长白噪声层。重新渲染 `Gameplay_Interactions.mmp` 后，执行 `python SoundDesign/Gameplay_SFX_LMMS/build_sfx.py finalize --only-cue player.wet_clothes.move.loop`，可只替换这一条成品，保留其他声音和试听串。
 
 LMMS 工程可直接在 LMMS 打开编辑。如果手工移动了片段位置或改变长度，应同步调整 `layout.json` 后再裁切；再次执行 `build` 会按脚本参数覆盖手工工程修改。
 

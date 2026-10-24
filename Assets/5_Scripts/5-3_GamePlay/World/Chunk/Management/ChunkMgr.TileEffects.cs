@@ -412,7 +412,7 @@ public partial class ChunkMgr
 
     /// <summary>
     /// 读取当前水格的表层流向。河流使用生成阶段保存的真实下游方向；
-    /// 海洋没有独立洋流数据时使用地形风场方向，湖泊保持静止。
+    /// 海洋在入海口延续扇形下游流场，其余使用地形风场方向，湖泊保持静止。
     /// </summary>
     public bool TryGetRuntimeWaterCurrent(Vector2 worldPosition,
         out RuntimeWaterCurrentSample current)
@@ -467,9 +467,7 @@ public partial class ChunkMgr
         if (kind != RuntimeWaterCurrentKind.Ocean)
             return false;
 
-        terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);
-        terrain.TryGetEnvironmentValue("windY", local.x, local.y, out float windY);
-        Vector2 oceanDirection = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+        Vector2 oceanDirection = WaterEnvironmentRules.ResolveOceanCurrentDirection(terrain, local.x, local.y);
         if (oceanDirection == Vector2.zero)
             return false;
 

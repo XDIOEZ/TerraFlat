@@ -317,6 +317,15 @@ namespace InputSystem
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Parry"",
+                    ""type"": ""Button"",
+                    ""id"": ""b899feef-9263-45fd-a69e-0341ac06f7c8"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -544,6 +553,17 @@ namespace InputSystem
                     ""name"": """",
                     ""id"": ""f6dbbcf5-fa3f-41f7-b381-dd4da61ccf6e"",
                     ""path"": ""<Keyboard>/9"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""SwitchHotBar_Player"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f4bed931-feb9-489f-a638-5635e431cf42"",
+                    ""path"": ""<Keyboard>/0"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
@@ -990,6 +1010,17 @@ namespace InputSystem
                     ""action"": ""ESC"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""847d2dd8-9e39-4102-956d-641e7d295bbc"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": ""Press"",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Parry"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -1062,6 +1093,7 @@ namespace InputSystem
             m_Win10_LeftClick = m_Win10.FindAction("LeftClick", throwIfNotFound: true);
             m_Win10_P = m_Win10.FindAction("P", throwIfNotFound: true);
             m_Win10_H = m_Win10.FindAction("H", throwIfNotFound: true);
+            m_Win10_Parry = m_Win10.FindAction("Parry", throwIfNotFound: true);
         }
 
         ~@PlayerInputActions()
@@ -1167,6 +1199,7 @@ namespace InputSystem
         private readonly InputAction m_Win10_LeftClick;
         private readonly InputAction m_Win10_P;
         private readonly InputAction m_Win10_H;
+        private readonly InputAction m_Win10_Parry;
         /// <summary>
         /// Provides access to input actions defined in input action map "Win10".
         /// </summary>
@@ -1279,6 +1312,10 @@ namespace InputSystem
             /// </summary>
             public InputAction @H => m_Wrapper.m_Win10_H;
             /// <summary>
+            /// Provides access to the underlying input action "Win10/Parry".
+            /// </summary>
+            public InputAction @Parry => m_Wrapper.m_Win10_Parry;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Win10; }
@@ -1379,6 +1416,9 @@ namespace InputSystem
                 @H.started += instance.OnH;
                 @H.performed += instance.OnH;
                 @H.canceled += instance.OnH;
+                @Parry.started += instance.OnParry;
+                @Parry.performed += instance.OnParry;
+                @Parry.canceled += instance.OnParry;
             }
 
             /// <summary>
@@ -1465,6 +1505,9 @@ namespace InputSystem
                 @H.started -= instance.OnH;
                 @H.performed -= instance.OnH;
                 @H.canceled -= instance.OnH;
+                @Parry.started -= instance.OnParry;
+                @Parry.performed -= instance.OnParry;
+                @Parry.canceled -= instance.OnParry;
             }
 
             /// <summary>
@@ -1719,6 +1762,13 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnH(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Parry" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnParry(InputAction.CallbackContext context);
         }
     }
 }

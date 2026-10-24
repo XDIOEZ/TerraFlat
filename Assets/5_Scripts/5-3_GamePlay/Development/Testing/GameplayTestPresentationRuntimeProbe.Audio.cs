@@ -29,7 +29,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
 
         public AudioCue CloneCue(string id)
         {
-            if (!Service.TryGetCue(id, out AudioCue original) || original.Clips.Count == 0 || original.Clips.Any(value => value == null))
+            if (!Service.TryGetCue(id, out AudioCue original) || !original.PlaybackEnabled ||
+                original.Clips.Count == 0 || original.Clips.Any(value => value == null))
                 throw new InvalidOperationException("正式音频目录缺少可播放的测试 Cue：" + id);
             AudioCue cue = UnityEngine.Object.Instantiate(original);
             cue.hideFlags = HideFlags.HideAndDontSave;
@@ -97,6 +98,64 @@ public static partial class GameplayTestPresentationRuntimeProbe
         };
     }
 
+    #region 正式点击事件停用采样
+
+    // 直接调用正式点击事件与循环覆盖入口，检查主动静音不报警、不选片也不占声源。
+    private static JObject CaptureDisabledUiClick(AudioFixture fixture)
+    {
+        AudioService service = fixture.Service;
+        bool loaded = service.TryGetCue(AudioEventIds.UiClick, out AudioCue cue);
+        AudioCue loopProbe = null;
+        if (loaded)
+        {
+            loopProbe = UnityEngine.Object.Instantiate(cue);
+            loopProbe.hideFlags = HideFlags.HideAndDontSave;
+            // 独立诊断身份防止先前点击已经记录过警告，导致本轮错误被去重掩盖。
+            JsonUtility.FromJsonOverwrite("{\"id\":\"lua.presentation.disabled." + Guid.NewGuid().ToString("N") + "\"}", loopProbe);
+            fixture.Cues.Add(loopProbe);
+        }
+        var messages = new JArray();
+        Application.LogCallback capture = (message, stack, type) =>
+        {
+            if (type is LogType.Warning or LogType.Error or LogType.Exception or LogType.Assert)
+                messages.Add(message);
+        };
+        int beforeVoices = service.ActiveVoiceCount;
+        int beforeSources = service.GetComponentsInChildren<AudioSource>(true).Length;
+        UnityEngine.Random.State beforeRandom = UnityEngine.Random.state;
+        AudioHandle direct = AudioHandle.Invalid;
+        AudioHandle loop = AudioHandle.Invalid;
+        Application.logMessageReceived += capture;
+        try
+        {
+            if (loaded)
+            {
+                direct = service.Play(AudioEventIds.UiClick);
+                fixture.Handles.Add(direct);
+                AudioPlayOptions options = AudioPlayOptions.Global();
+                options.OverrideLoop = true;
+                options.Loop = true;
+                loop = service.Play(loopProbe, options);
+                fixture.Handles.Add(loop);
+            }
+        }
+        finally { Application.logMessageReceived -= capture; }
+        return new JObject
+        {
+            ["id"] = loaded ? cue.Id : string.Empty,
+            ["loaded"] = loaded, ["playbackEnabled"] = loaded && cue.PlaybackEnabled,
+            ["clips"] = loaded ? cue.Clips.Count : -1,
+            ["directAccepted"] = direct.IsValid, ["loopAccepted"] = loop.IsValid,
+            ["voicesBefore"] = beforeVoices, ["voicesAfter"] = service.ActiveVoiceCount,
+            ["sourcesBefore"] = beforeSources,
+            ["sourcesAfter"] = service.GetComponentsInChildren<AudioSource>(true).Length,
+            ["randomUnchanged"] = beforeRandom.Equals(UnityEngine.Random.state),
+            ["messages"] = messages
+        };
+    }
+
+    #endregion
+
     private static IEnumerator CaptureAudio(Player player, JObject args, Action<JObject> complete)
     {
         var fixture = new AudioFixture(player);
@@ -113,9 +172,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool startupServiceStable = ReferenceEquals(service, AudioService.Instance);
             bool startupCatalogStable = ReferenceEquals(startupCatalog, service.Catalog);
             bool startupSettingsStable = startupSettings == JsonUtility.ToJson(service.UserSettings);
-            // 点击音效暂时留空，使用确认音效采样 UI 预热能力。
-            bool startupUiCueReady = service.TryGetCue(AudioEventIds.UiConfirm, out AudioCue click) &&
-                click.Clips.Count > 0 && click.Clips.All(clip => clip != null &&
+            JObject disabledUiClick = CaptureDisabledUiClick(fixture);
+            // 确认事件单独检查正常 UI 录音预热，点击事件的主动静音由上面的真实调用检查。
+            bool startupUiConfirmReady = service.TryGetCue(AudioEventIds.UiConfirm, out AudioCue confirm) &&
+                confirm.PlaybackEnabled && confirm.Clips.Count > 0 && confirm.Clips.All(clip => clip != null &&
                     clip.loadState == AudioDataLoadState.Loaded);
             AudioCue loop = fixture.CloneCue(AudioEventIds.PlayerWetClothesMoveLoop);
             AudioCue shortCue = fixture.CloneCue(AudioEventIds.DoorOpen);
@@ -275,7 +335,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
             result = new JObject
             {
                 ["startupServiceStable"] = startupServiceStable, ["startupCatalogStable"] = startupCatalogStable,
-                ["startupSettingsStable"] = startupSettingsStable, ["startupUiCueReady"] = startupUiCueReady,
+                ["startupSettingsStable"] = startupSettingsStable, ["startupUiConfirmReady"] = startupUiConfirmReady,
+                ["disabledUiClick"] = disabledUiClick,
                 ["feedbackCues"] = feedbackCues,
                 ["movementCues"] = movementCues,
                 ["swimmingCues"] = swimmingCues,
@@ -405,10 +466,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
         AudioSource stopSource = PlayPauseVoice(fixture, stopCue, AudioPlayOptions.Global(), out AudioHandle stopHandle);
         fixture.Service.Stop(stopHandle);
         pause["immediateStop"] = CapturePauseVoice(stopHandle, stopSource);
-        AudioCue clickCue = fixture.CloneCue(AudioEventIds.UiConfirm);
-        AudioSource clickSource = PlayPauseVoice(fixture, clickCue, AudioPlayOptions.Global(), out AudioHandle clickHandle);
-        pause["uiClick"] = CapturePauseVoice(clickHandle, clickSource);
-        pause["uiReusedStoppedSource"] = clickSource == stopSource;
+        AudioCue confirmCue = fixture.CloneCue(AudioEventIds.UiConfirm);
+        AudioSource confirmSource = PlayPauseVoice(fixture, confirmCue, AudioPlayOptions.Global(), out AudioHandle confirmHandle);
+        pause["uiConfirm"] = CapturePauseVoice(confirmHandle, confirmSource);
+        pause["uiReusedStoppedSource"] = confirmSource == stopSource;
 
         var fadingVoice = voices.Single(value => value.bus == AudioBus.Voice);
         fixture.Service.Stop(fadingVoice.handle, .1f);

@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Collections;
+using System.Reflection;
 using FlatWorld.Spaceflight;
 using Mirror;
 using Newtonsoft.Json.Linq;
@@ -106,10 +107,121 @@ namespace FlatWorld.Networking.Gameplay
             result["nextX"] = next.x;
             result["nextY"] = next.y;
             result["afterMove"] = TeleportSample(actor);
+            result["visualOwnership"] = CaptureTeleportVisualOwnership(actor);
+            result["respawnReady"] = CaptureRespawnReady(world, actor, next);
+            Vector3 afterRespawn = WorldTopologyRuntime.NormalizePosition(next + Vector3.up * .5f);
+            SendBotTeleport(world, 92, actor, 3, afterRespawn);
+            yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, afterRespawn).sqrMagnitude < .00001f,
+                "重生就绪确认后的 GM 传送");
+            result["respawnTeleportX"] = afterRespawn.x;
+            result["respawnTeleportY"] = afterRespawn.y;
+            result["afterRespawnTeleport"] = TeleportSample(actor);
             world.Dispose();
             yield return null;
             result["cleanup"] = world.CleanupSample();
             completed(result);
+        }
+
+        #endregion
+
+        #region 重生就绪与动画归属采样
+
+        private static JObject CaptureTeleportVisualOwnership(NetworkWorldPlayer actor)
+        {
+            Mod_Mover mover = actor.CorePlayer.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            Mod_AnimatorController animation = actor.CorePlayer.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+            PropertyInfo ownership = typeof(NetworkIdentity).GetProperty(nameof(NetworkIdentity.isOwned));
+            MethodInfo apply = typeof(NetworkWorldPlayer).GetMethod("ApplyRemoteVisualState", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (mover == null || animation == null || !animation.IsSingleSpriteMode || ownership == null || apply == null)
+                throw new InvalidOperationException("动画归属夹具缺少正式单图动画、移动或网络入口。");
+            bool wasOwned = actor.isOwned, wasMoving = mover.IsMoving;
+            float Sample(bool owned, bool moving, bool replicatedMoving)
+            {
+                // 同步采样内只切换自有假人的归属，观察正式动画入口实际产生的身体转角。
+                ownership.SetValue(actor.netIdentity, owned);
+                mover.IsMoving = moving;
+                animation.SetNetworkPresentation(false, false);
+                animation.ResetPresentation();
+                apply.Invoke(actor, new object[] { new NetworkPlayerVisualState { IsMoving = replicatedMoving } });
+                animation.AdvancePresentation(.05f);
+                return Mathf.Abs(Mathf.DeltaAngle(0f, animation.spriteVisualRoot.parent.localEulerAngles.z));
+            }
+            try
+            {
+                return new JObject
+                {
+                    ["ownedMoving"] = Sample(true, true, false),
+                    ["ownedIdle"] = Sample(true, false, true),
+                    ["remoteMoving"] = Sample(false, false, true),
+                    ["remoteIdle"] = Sample(false, true, false)
+                };
+            }
+            finally
+            {
+                ownership.SetValue(actor.netIdentity, wasOwned);
+                mover.IsMoving = wasMoving;
+                animation.SetNetworkPresentation(true, false);
+                animation.ResetPresentation();
+            }
+        }
+
+        private static JObject CaptureRespawnReady(BotWorld world, NetworkWorldPlayer actor, Vector3 position)
+        {
+            Player player = actor.CorePlayer;
+            Mod_PlayerDeathState death = player.itemMods.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
+            Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            Mod_GameController controller = player.GetComponent<Mod_GameController>();
+            if (death?.IsRuntimeLoaded != true || health == null || mover == null || controller == null)
+                throw new InvalidOperationException("重生就绪夹具缺少正式玩家模块。");
+            death.SetDropAllCarriedItems(false);
+            health.Hp = 0f;
+            health.ResolveNetworkAuthoritativeDeath("test:respawn_ready");
+            var result = new JObject
+            {
+                ["deadLocked"] = death.IsInDyingState && controller.IsGameplayInputLocked && !mover.enabled,
+                ["began"] = actor.TryBeginWorldTransfer()
+            };
+            uint previousRealm = actor.RealmRevision;
+            string worldKey = player.Data.CurrentSceneName;
+            world.Session.ResetPassengerForRespawn(player);
+            death.CompleteNetworkRespawn();
+            result["committed"] = world.Session.CompleteNetworkWorldTransfer(player, worldKey, position);
+            world.Session.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver observer);
+            result["authorityWasStale"] = actor.RealmRevision != observer.RealmRevision;
+            // 重放主机同帧就绪早于下一轮 Update 的正式调用顺序。
+            actor.AcknowledgeWorldTransfer(worldKey, observer.RealmRevision);
+            result["pendingAfterReady"] = actor.IsWorldTransferPending;
+            result["revisionAfterReady"] = actor.RealmRevision;
+            result["expectedRevision"] = observer.RealmRevision;
+            result["aliveUnlocked"] = health.Hp > 0f && !death.IsInDyingState && mover.enabled && !controller.IsGameplayInputLocked;
+
+            actor.RefreshSpaceAuthority();
+            actor.AcknowledgeWorldTransfer(worldKey, observer.RealmRevision);
+            result["beganAgain"] = actor.TryBeginWorldTransfer();
+            result["committedAgain"] = world.Session.CompleteNetworkWorldTransfer(player, worldKey, position);
+            world.Session.TryGetNetworkObserver(actor.DisplayName, out observer);
+            actor.AcknowledgeWorldTransfer(worldKey + ":wrong", observer.RealmRevision);
+            result["wrongWorldHeld"] = actor.IsWorldTransferPending;
+            SpacePassengerState passenger = world.Session.State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            world.Session.State.Passengers.Remove(passenger);
+            try
+            {
+                actor.AcknowledgeWorldTransfer(worldKey, observer.RealmRevision);
+                result["missingObserverHeld"] = actor.IsWorldTransferPending;
+            }
+            finally { world.Session.State.Passengers.Add(passenger); }
+            actor.AcknowledgeWorldTransfer(worldKey, previousRealm);
+            result["staleRealmHeld"] = actor.IsWorldTransferPending;
+            actor.AcknowledgeWorldTransfer(worldKey, unchecked(observer.RealmRevision + 1));
+            result["futureRealmHeld"] = actor.IsWorldTransferPending;
+            actor.AcknowledgeWorldTransfer(worldKey, observer.RealmRevision);
+            actor.AcknowledgeWorldTransfer(worldKey, observer.RealmRevision);
+            result["pendingAfterRepeatedReady"] = actor.IsWorldTransferPending;
+            result["rollbackBegan"] = actor.TryBeginWorldTransfer();
+            actor.FinishWorldTransfer(false);
+            result["pendingAfterRollback"] = actor.IsWorldTransferPending;
+            return result;
         }
 
         #endregion

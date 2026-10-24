@@ -1,14 +1,24 @@
 # 物品模块运行时
 
+2026-10-24 新增 `item_runtime/compiled_module_parameters`：对正式 PreparedParameters 检查首次严格编译拒绝未知/保留字段、错误类型和未知特殊块，复查保留模块自有校验及当前碰撞体要求，反复应用后实例列表互不共享、特殊参数仍正确写入。目录复查复用当前装配计划，不重复解析普通字段。Unity 正在 PlayMode，按用户要求未编译、未运行；实际启动耗时与 MOD 资源重载由用户验收。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation、single_sprite_shell_assembly、module_assembly_identity`。
 
-`initial_animator_activation` 使用真实 SmallFish/Bird 控制器经过正式 `ApplyAnimator`：停用冷外壳只登记状态名，激活并初始化后再检查状态层和短名/完整路径；非法状态仍拒绝，单图接管、取消和回池清除待播。本轮仅静态修改，未编译、未执行；真实自然出生和画面由用户验收。
+矿物参考入口：`mineral-properties.lua`，操作 `item_runtime/mineral_properties`。读取正式 `GameConfig/Items/mineral-properties.json`，检查12类矿物的硬度/韧性初值、矿脉与掉落物共享、1～10边界、未知ID与非法配置拒绝；只覆盖独立参考目录，尚未接入采矿、伤害、耐久、存档或UI。2026-10-24 专项快速规则通过，报告 `Library/FlatWorldGameplayTests/Runs/20261023T194429966Z_f77d3850/report.json`；未进入 PlayMode，未验证手机端读取。
+
+2026-10-24 巨型矿山补充同一 Lua 的 `item_runtime/giant_mines`：采样正式继承目录与掉落选择接口，检查现有11类小矿山各有巨型版、20万生命、底边固定的三分之一碰撞、26格偏移占地、防种植不额外占根格、完整受击范围、原矿物参考和开采/防御/产物继承；石矿保留原巨型最终产量，其他巨矿复用小矿完整掉落表。用户正在 PlayMode 且自行验收，本轮未触发 Unity 重新编译或执行新增断言；未验证真实命中、掉落与寻路。
+
+2026-10-24 火种寿命：新增 `tinder_material/timed_despawn`，读取正式棉花/火种配置，检查打火石材料资格、100℃受热转火种且保留纺织、1440 游戏秒边界、暂停、同一时间重复调度、跳时、跨世界时钟、模块快照续计和库存无副产物清空。独立编译使用实际 Unity 项目程序集与 MemoryPack，生产时钟和真实序列化往返的 124 项检查已通过（`Library/FireSeedLifetimeTask`）；Unity 正处于 PlayMode，未打断，新增 Lua 规则、Unity 重新编译、真实掉落/库存与远程客户端联机尚未执行。计时状态属于整堆批次，合并沿用库存既有的目标堆叠状态；没有逐份追踪不同批次的寿命。
+
+`initial_animator_activation` 使用真实 SmallFish/Bird 控制器经过正式 `ApplyAnimator`：停用冷外壳只登记状态名，激活并初始化后再检查状态层和短名/完整路径；非法状态仍拒绝，单图接管、取消和回池清除待播。另使用真实控制器运行停用外壳的 `Mod_AnimatorController.Load`，捕捉原生未播放控制器警告，并检查冷态 Move 参数在激活后的恢复。未运行的真实自然出生和画面仍需单独验证。
 
 `cleanup_lookup` 检查批量回收时的单例只读路径稳定且零分配；不模拟完整场景卸载与 Unity GC 回收。
 
 2026-10-18 平均帧优化补充 `world_matter_structure/world_matter_contact`：正式层级资格缓存检查模块增删、载荷替换、加载换代、自定义 AI 排除与稳态零分配；正式物质入口检查复用液体定义后的岩浆加热、遇水接触、零时长拒绝与数量不变。掉落物同步驱动复用 `ChunkMgr.RuntimeTerrainPresenceQuery`，其地形实时变化、环绕、卸载和世界代际边界复用 `terrain/contact_query_context` 规则。Unity 正在 PlayMode，本轮只静态修改，未编译或运行；真实平均帧和玩法由用户验收。
+
+2026-10-24：`world_matter_structure` 增加掉落模块缓存实时动态字段验证（轨迹中、漂浮、下沉、完结、移除）。世界物质条目的火焰表现改为只处理活动火焰集合，避免每帧遍历全部散落物；单次刷新使用租借列表隔离注册/销毁回调，`ItemMgr.LateUpdate.WorldMatterFlames` Marker 便于复测。本规则不替代游戏中的真实火焰生命周期、联机、性能对比验收。
 
 `module_assembly_identity` 新增真实 `AI_Chicken`、`Mod_TurnBack` 的两种调用顺序：先 Awake 后绑定必须保留编译来源身份并成功装配，先绑定后 Awake 必须保留定义身份。2026-10-18 仅补充，Unity 在 PlayMode，本轮未编译或执行；实际自然生成由用户验收。
 
@@ -45,5 +55,7 @@
 中心查询回归：用正式创建、移动通知、卸载的小刀查真实 ItemMgr 空间桶，检查零半径、圆周边界、范围外、排除对象、图层、停用、非法半径及循环接缝去重；同轮采样 256 次正式大气只读查询的状态身份与分配预算。此新增回归尚未执行，不代表已通过。
 
 覆盖边界：没有强制保证拿回同一个池对象，检查的是卸载与再次加载契约；调度频率、轻量掉落转换、运行时换定义仍未覆盖。
+
+2026-10-23 手持跟随：`single_sprite_animation` 补充身体参考点与正式 Hotbar 跟随的对照，覆盖走跑、攻击、跳跃、镜像缩放、远端身体状态及复位/卸载/切模式/停用；光标用正式 FocusPoint 核对更新位置后的方向。当前 PlayMode 未打断，本轮未编译、未运行；真实鼠标/手机输入、刺击位置接管和联机完整流程仍由用户验收。
 
 2026-10-18 单图层销毁边界补充：`single_sprite_animation` 通过正式 `Item.OnDestroy`、单独删除动画组件和 `PrepareForDespawn` 三种收尾检查身体与附加视觉。宿主销毁时视觉与临时表现层一同销毁且不产生 Unity 错误；普通回收或删除组件时恢复各自真实原父级、同级顺序、原局部位置/缩放和外部最新翻面，夹具同时覆盖嵌套视觉父级。**本轮仅静态修改，未编译、未运行规则或 PlayMode**；未覆盖存活 Item 内部的视觉父容器被单独销毁，也不代表真实对象池重取或玩法观感已验收。

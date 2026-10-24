@@ -22,7 +22,8 @@ public sealed class InventoryItemTransferPort : ContainerPortBase, IItemTransfer
         {
             long version = inventory.Data.ContentStructureRevision;
             foreach (ItemSlot slot in inventory.Data.itemSlots)
-                version = unchecked(version * 397 ^ (slot?.itemData?.Guid ?? 0) ^ (slot?.itemData?.Stack?.Amount.GetHashCode() ?? 0));
+                version = unchecked(version * 397 ^ (slot?.itemData?.Guid ?? 0) ^
+                    (slot?.itemData?.Stack?.Amount.GetHashCode() ?? 0) ^ (slot?.itemData?.Durability.GetHashCode() ?? 0));
             return version;
         }
     }

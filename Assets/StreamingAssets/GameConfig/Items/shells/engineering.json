@@ -47,7 +47,7 @@
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
       "gameName": "工程护目镜",
-      "description": "手持或佩戴在头部时，显露隐藏电线并允许操作。",
+      "description": "手持或佩戴在眼部时，显露隐藏电线并允许操作，可与头盔同时穿戴。",
       "durability": 1000,
       "maxDurability": 1000,
       "amount": 1,
@@ -55,8 +55,11 @@
       "volume": 0.6,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Equipment", "EngineeringVision", "EquipmentSlot.Head", "InventoryGroup.ElectricalPower"],
+      "tags": ["Equipment", "EngineeringVision", "EquipmentSlot.Eyes", "InventoryGroup.ElectricalPower"],
       "visual": {
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png"
+        },
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
         "rendererLocalPosition": { "x": 0, "y": 0, "z": 0 },
         "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },

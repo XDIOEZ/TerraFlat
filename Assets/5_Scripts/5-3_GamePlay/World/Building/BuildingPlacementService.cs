@@ -11,6 +11,7 @@ namespace FlatWorld.Gameplay.Building
     {
         #region 放置输入
         public ItemData SourceData;
+        public Item SourceItem;
         public Inventory_Data SourceInventory;
         public ItemSlot SourceSlot;
         public Player Actor;
@@ -42,13 +43,16 @@ namespace FlatWorld.Gameplay.Building
         public Item Item { get; }
         public MachineEntity Machine { get; }
         public ItemData PlacedData { get; }
+        public TileBuildingCell? TileCell { get; }
+        public string ShipId { get; }
         public float RemainingAmount { get; internal set; }
         internal Func<bool> Rollback { get; }
         internal Action NotifyCommitted { get; }
 
         // 每种后端只声明自身的撤销和提交动作，事务不识别具体建筑。
         public BuildingPlacementResult(string buildingId, Func<bool> rollback, Action notifyCommitted,
-            Item item = null, MachineEntity machine = null, ItemData placedData = null)
+            Item item = null, MachineEntity machine = null, ItemData placedData = null,
+            TileBuildingCell? tileCell = null, string shipId = null)
         {
             BuildingId = buildingId;
             Rollback = rollback ?? throw new ArgumentNullException(nameof(rollback));
@@ -56,6 +60,8 @@ namespace FlatWorld.Gameplay.Building
             Item = item;
             Machine = machine;
             PlacedData = placedData;
+            TileCell = tileCell;
+            ShipId = shipId;
         }
         #endregion
     }
@@ -159,6 +165,11 @@ namespace FlatWorld.Gameplay.Building
                 if (!Mod_Building.IsValidSummonerData(request.SourceData, out reason))
                     throw new InvalidOperationException(reason);
                 if (!ValidateActorEligibility(request.BuildingId, request.Actor, out reason))
+                    throw new InvalidOperationException(reason);
+                if (request.SourceItem != null && !ReferenceEquals(request.SourceItem.itemData, request.SourceData))
+                    throw new InvalidOperationException("建造规则来源与真实材料不一致");
+                if (!BuildingPlacementLifecycle.ValidatePlacementRules(request.SourceItem,
+                        request.Actor, request.Position, out reason))
                     throw new InvalidOperationException(reason);
                 if (!IsFinite(request.Position) || !IsFinite(request.AuthorityPosition) ||
                     float.IsNaN(request.MaximumDistance) || request.MaximumDistance < 0f ||

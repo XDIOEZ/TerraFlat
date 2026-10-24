@@ -14,6 +14,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/terrain_height", ServiceTerrainHeight);
         operations.Add("rendering/terrain_height_save", ServiceTerrainHeightSave);
         operations.Add("rendering/terrain_height_neighbours", ServiceTerrainHeightNeighbours);
+        operations.Add("rendering/terrain_shadow_masks", ServiceTerrainShadowMasks);
         operations.Add("rendering/terrain_shadow_dirty_queue", ServiceTerrainShadowDirtyQueue);
         operations.Add("terrain/natural_waterbed", ServiceNaturalWaterbed);
     }
@@ -62,6 +63,20 @@ public static partial class GameplayTestSystemProbe
         queue.Reset(16);
         queue.Mark(-1); queue.Mark(16); queue.Mark(4); queue.Mark(4);
         bool reset = queue.PendingCount == 1;
+        var neighbourhoods = new JArray();
+        foreach (Int2 cell in new[] { new Int2(2, 2), new Int2(0, 0), new Int2(4, 4),
+            new Int2(-1, 2), new Int2(5, 2), new Int2(2, -1), new Int2(2, 5),
+            new Int2(-1, -1), new Int2(5, -1), new Int2(-1, 5), new Int2(5, 5),
+            new Int2(-2, 2), new Int2(6, 2), new Int2(2, -2), new Int2(2, 6) })
+        {
+            queue.Reset(25);
+            queue.MarkArea(cell.X, cell.Y, 5, 5);
+            queue.MarkArea(cell.X, cell.Y, 5, 5);
+            List<int> area = queue.BeginDrain();
+            neighbourhoods.Add(new JObject { ["x"] = cell.X, ["y"] = cell.Y,
+                ["indices"] = new JArray(area) });
+            queue.CompleteDrain(area.Count);
+        }
         return new JObject
         {
             ["fullCount"] = fullCount, ["sparseVisits"] = sparseVisits,
@@ -69,8 +84,47 @@ public static partial class GameplayTestSystemProbe
             ["drained"] = drained, ["retried"] = retried,
             ["retryContents"] = retryContents, ["fullReentrant"] = fullReentrant,
             ["rebuilding"] = rebuilding, ["empty"] = empty,
-            ["cleared"] = cleared, ["reset"] = reset
+            ["cleared"] = cleared, ["reset"] = reset, ["neighbourhoods"] = neighbourhoods
         };
+    }
+
+    // 只构造八邻格高度，实际边与角的筛选直接调用正式提交入口。
+    private static JObject ServiceTerrainShadowMasks(JObject args)
+    {
+        using var buffer = new ChunkTerrainBuffer(3, 3);
+        using ChunkTerrainData terrain = buffer.Seal();
+        var ground = new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable);
+        for (int y = 0; y < 3; y++)
+        for (int x = 0; x < 3; x++) terrain.SetCell(x, y, ground);
+        int mask = (int)Number(args, "mask", 16);
+        int difference = (int)Number(args, "difference", 1);
+        Int2[] offsets = { new(-1, 0), new(1, 0), new(0, -1), new(0, 1),
+            new(-1, -1), new(1, -1), new(-1, 1), new(1, 1) };
+        for (int index = 0; index < offsets.Length; index++)
+        {
+            if ((mask & (1 << index)) == 0) continue;
+            int x = 1 + offsets[index].X, y = 1 + offsets[index].Y;
+            TerrainSurfaceHeightLayer.SetCoverLevels(terrain, x, y, Math.Max(0, difference));
+            TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, x, y, Math.Max(0, -difference));
+            if (Flag(args, "wallCaster", false))
+                terrain.SetCell(x, y, new TerrainCell(1, 0, 2, 0, 1, TerrainCellFlags.Blocking));
+            if (Flag(args, "missingCaster", false)) terrain.SetCell(x, y, default);
+        }
+        if (Flag(args, "wallReceiver", false))
+            terrain.SetCell(1, 1, new TerrainCell(1, 0, 2, 0, 1, TerrainCellFlags.Blocking));
+        if (Flag(args, "missingReceiver", false)) terrain.SetCell(1, 1, default);
+        return SampleTerrainShadowMasks(null,
+            new FlatWorld.WorldModel.WorldAddress("probe:terrain_height", default), terrain, 1, 1);
+    }
+
+    private static JObject SampleTerrainShadowMasks(WorldRuntime world,
+        FlatWorld.WorldModel.WorldAddress address, ChunkTerrainData terrain, int x, int y)
+    {
+        bool visible = TerrainHeightShadowManager.TryGetShadowMasks(world, address, terrain, x, y, false,
+            out Vector4 edges, out Vector4 corners);
+        return new JObject { ["visible"] = visible,
+            ["edges"] = new JArray(edges.x, edges.y, edges.z, edges.w),
+            ["corners"] = new JArray(corners.x, corners.y, corners.z, corners.w) };
     }
 
     // 夹具只构造权威地形并采样正式高度规则，所有预期由 Lua 判断。
@@ -227,7 +281,14 @@ public static partial class GameplayTestSystemProbe
         using var world = new WorldRuntime("probe:terrain_height", 1);
         var profile = new ChunkGenerationProfileSnapshot("probe:terrain_height", 1, 16, 16);
         Vector2Int origin = WorldTopologyRuntime.NormalizeCell(new Vector2Int(1000000, -1000000));
-        Vector2Int right = WorldTopologyRuntime.NormalizeCell(origin + new Vector2Int(16, 0));
+        int dx = (int)Number(args, "dx", 1), dy = (int)Number(args, "dy", 0);
+        if (Math.Abs(dx) > 1 || Math.Abs(dy) > 1 || (dx == 0 && dy == 0))
+            throw new ArgumentOutOfRangeException(nameof(args));
+        int receiverX = dx < 0 ? 0 : dx > 0 ? 15 : 8;
+        int receiverY = dy < 0 ? 0 : dy > 0 ? 15 : 8;
+        var sample = new Int2(receiverX + dx, receiverY + dy);
+        int neighbourX = sample.X - dx * 16, neighbourY = sample.Y - dy * 16;
+        Vector2Int right = WorldTopologyRuntime.NormalizeCell(origin + new Vector2Int(dx * 16, dy * 16));
         var address = new FlatWorld.WorldModel.WorldAddress("probe:terrain_height", new Int2(origin.x, origin.y));
         var neighbourAddress = new FlatWorld.WorldModel.WorldAddress("probe:terrain_height", new Int2(right.x, right.y));
         ChunkTerrainData Commit(FlatWorld.WorldModel.WorldAddress target)
@@ -237,24 +298,40 @@ public static partial class GameplayTestSystemProbe
             using var result = new ChunkGenerationResult(request, buffer);
             if (!world.TryCommit(result, out string reason)) throw new InvalidOperationException(reason);
             world.TryGetChunkTerrain(target, out ChunkTerrainData terrain);
-            terrain.SetCell(0, 0, new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable));
+            for (int y = 0; y < 16; y++)
+            for (int x = 0; x < 16; x++)
+            {
+                terrain.SetCell(x, y, new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable));
+                TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, x, y, 1);
+            }
+            if (target == neighbourAddress)
+                TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, neighbourX, neighbourY, 0);
             return terrain;
         }
-        Commit(address);
-        bool missing = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, new Int2(16, 0), out _);
+        ChunkTerrainData current = Commit(address);
+        JObject Masks() => SampleTerrainShadowMasks(world, address, current, receiverX, receiverY);
+        bool missing = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, sample, out _);
+        JObject missingMasks = Masks();
         ChunkTerrainData neighbour = Commit(neighbourAddress);
-        bool available = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, new Int2(16, 0), out var first);
-        TerrainSurfaceHeightLayer.SetExcavatedLevels(neighbour, 0, 0, 3);
-        bool changed = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, new Int2(16, 0), out var lowered);
+        bool available = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, sample, out var first);
+        JObject loadedMasks = Masks();
+        TerrainSurfaceHeightLayer.SetExcavatedLevels(neighbour, neighbourX, neighbourY, 3);
+        bool changed = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, sample, out var lowered);
+        JObject changedMasks = Masks();
         bool evicted = world.EvictChunk(neighbourAddress);
-        bool afterEviction = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, new Int2(16, 0), out _);
+        bool afterEviction = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, sample, out _);
+        JObject evictedMasks = Masks();
         Commit(neighbourAddress);
-        bool reloaded = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, new Int2(16, 0), out var restored);
+        bool reloaded = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, sample, out var restored);
+        JObject reloadedMasks = Masks();
         return new JObject
         {
             ["missing"] = missing, ["available"] = available, ["initial"] = first.Level,
             ["changed"] = changed, ["lowered"] = lowered.Level, ["evicted"] = evicted,
             ["afterEviction"] = afterEviction, ["reloaded"] = reloaded, ["restored"] = restored.Level,
+            ["missingMasks"] = missingMasks, ["loadedMasks"] = loadedMasks,
+            ["changedMasks"] = changedMasks, ["evictedMasks"] = evictedMasks,
+            ["reloadedMasks"] = reloadedMasks,
             ["dimensionServicePreserved"] = ReferenceEquals(originalDimensions, DimensionManager.ExistingInstance)
         };
     }

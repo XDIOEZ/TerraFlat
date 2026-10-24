@@ -164,6 +164,7 @@ namespace FlatWorld.Spaceflight
                 {
                     if (!weapon.TryReserveExternalTarget(GameplayCombatBridge.Identity(target.Receiver.item))) continue;
                     CombatDamageContext playerHit = context; playerHit.HitPoint = contact.Point;
+                    weapon.ConsumeWeaponDurabilityForHit();
                     weapon.PublishExternalDamage(playerHit, target.Receiver.Hurt(playerHit));
                     continue;
                 }
@@ -172,12 +173,13 @@ namespace FlatWorld.Spaceflight
                     World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
                 if (!weapon.TryReserveExternalTarget(identity)) continue;
                 CombatDamageContext hit = context; hit.HitPoint = contact.Point;
-                float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false);
+                weapon.ConsumeWeaponDurabilityForHit();
+                float attackMultiplier = GameplayCombatBridge.Tuning().Resolve(context.SourceIsPlayer != 0, false);
                 float weakness = hit.IsTrueDamage != 0 || target.Definition.Health == null ? 1f :
                     Mod_ResourceHarvest.ResolveAffinityMultiplier(target.Definition.Health.WeakTool, 1,
                         (ResourceToolKind)hit.ResourceToolKind, hit.ResourceToolTier, hit.ResourceToolEfficiency);
                 float damage = CombatRules.ResolvePhysical(math.csum(hit.Damage),
-                    hit.IsTrueDamage != 0 ? 0f : (float)target.Piece.PhysicalDefense, difficulty, weakness);
+                    hit.IsTrueDamage != 0 ? 0f : (float)target.Piece.PhysicalDefense, attackMultiplier, weakness);
                 weapon.PublishExternalDamage(hit, (float)session.ApplyResolvedPieceDamage(target.Ship, target.Piece, damage, "攻击"));
             }
         }

@@ -1064,7 +1064,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarOriginalLayoutCached = hotbarOriginalParent != null;
     }
 
-    /// <summary>将制作、背包入口挂入真实快捷栏 Canvas，分别固定在九格快捷栏左右两侧。</summary>
+    /// <summary>将制作、背包入口挂入真实快捷栏 Canvas，分别固定在十格快捷栏左右两侧。</summary>
     private void AttachHotbarSideButtons(RectTransform hotbarRect)
     {
         if (hotbarRect == null)
@@ -1074,7 +1074,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         AttachHotbarSideButton(hotbarBackpackButton, hotbarRect, true);
     }
 
-    /// <summary>把单个快捷入口排除九格布局后固定到快捷栏指定侧。</summary>
+    /// <summary>把单个快捷入口排除十格布局后固定到快捷栏指定侧。</summary>
     private static void AttachHotbarSideButton(RectTransform button, RectTransform hotbarRect, bool rightSide)
     {
         if (button == null || hotbarRect == null)

@@ -195,7 +195,7 @@ public static partial class MachineWorld
         if (node.Logic is ShipDeviceLogic device && !device.IsDeviceRunning) return 0f;
         if (electrical.IsConverter)
             return node.ConversionMode == ElectricalConversionMode.Generator && node.LoadSatisfied
-                ? Mathf.Clamp01(MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.SpeedRpm *
+                ? Mathf.Clamp01(node.RequiredTorque * node.SpeedRpm *
                     MachineCatalog.Settings.WattsPerTorqueRpm * electrical.ConversionEfficiency / electrical.PowerWatts)
                     * (node.Network?.ConversionGenerationFactor ?? 0f)
                 : 0f;
@@ -210,6 +210,9 @@ public static partial class MachineWorld
     }
 
     private static float GetElectricalDemandFactor(MachineEntity node)
+        => Mathf.Clamp01(GetConfiguredElectricalDemandFactor(node) * (node?.Logic?.ElectricalDemandFactor ?? 1f));
+
+    private static float GetConfiguredElectricalDemandFactor(MachineEntity node)
     {
         ElectricalDefinition electrical = node?.Definition?.Electrical;
         if (electrical == null) return 0f;
@@ -261,7 +264,7 @@ public static partial class MachineWorld
                 inputs += torque * Mathf.Abs(node.SourceRpm) * wattsScale;
             }
             if (node.LoadTorque <= 0f || !node.LoadSatisfied || node.SpeedRpm <= 0f) continue;
-            float work = MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.SpeedRpm * wattsScale;
+            float work = node.RequiredTorque * node.SpeedRpm * wattsScale;
             if (node.Definition.IsConverter)
                 generation += Mathf.Min(node.Definition.Electrical.PowerWatts,
                     work * node.Definition.Electrical.ConversionEfficiency);

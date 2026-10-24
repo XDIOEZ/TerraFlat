@@ -59,6 +59,16 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
     end
     assert(data.independentData and data.independentInventories, "多个假人共享了同一份实际玩家数据或库存容器")
     assert(data.authorityInitialized, "未实际加载假人的服务端权威背包模块")
+    local publishing = data.hostStatePublishing
+    assert(publishing and publishing.ownedSubmissionCaptures == 0 and publishing.clientQueueUntouched,
+        "Host 仍重复捕获客户端提交快照，或提前消费了客户端提交队列")
+    assert(publishing.dirtyImmediateCaptures == 1 and publishing.validPublishedIdentity,
+        "Host 的脏状态没有立即经过唯一服务器发布流，或发布身份错误")
+    assert(publishing.idleCaptures == 0 and publishing.forcedCaptures == 1 and publishing.newDirtyCaptures == 1,
+        "无新变化重复捕获，或强制发布及后续脏变化被错误合并")
+    assert(publishing.pendingInventoryCaptures == 0 and publishing.pendingInventoryForceCaptures == 1,
+        "未确认库存事务破坏了普通提交门禁或服务器强制发布")
+    assert(publishing.retainedPayloadUnchanged, "后续捕获修改了已经交给网络的旧快照缓冲")
     local replay = data.replayedHandshake
     assert(replay and replay.snapshotsBefore == 1 and replay.snapshotsAfter == 1
         and replay.notSpawnedBeforeReady and replay.originalProfilePreserved,

@@ -152,6 +152,7 @@ namespace FlatWorld.Spaceflight
             for (int i = 0; i < groups.Count; i++)
             {
                 ShipState part = CopyKinematics(ship, i == retainedIndex ? ship.ShipId : Guid.NewGuid().ToString("N"));
+                if (i == retainedIndex) part.Anchor = ship.Anchor;
                 // 保留缺失地板的历史资格，补回原格也不能再次免费生成舱气。
                 part.EverEnclosedCells.AddRange(oldKnown);
                 results.Add(part);
@@ -183,7 +184,7 @@ namespace FlatWorld.Spaceflight
             {
                 results[i].IdentityAnchorPieceId = SelectAnchor(results[i], results[i].Pieces);
                 // 建造中的整船不因暂缺动力变成残骸，真正分裂后才判断各块能否继续驾驶。
-                results[i].IsWreck = ship.IsWreck || groups.Count > 1 &&
+                results[i].IsWreck = ship.IsWreck || results[i].Anchor == null && groups.Count > 1 &&
                     (!HasOperationalConsole(results[i]) || !HasOperationalEngine(results[i]));
                 ShipAtmosphereService.RebuildCompartments(results[i], outside);
                 RecalculateMass(results[i]);
@@ -270,6 +271,7 @@ namespace FlatWorld.Spaceflight
             target.NotifyStructureChanged();
             target.Sector = source.Sector;
             target.IdentityAnchorPieceId = source.IdentityAnchorPieceId; target.IsWreck = source.IsWreck;
+            target.Anchor = source.Anchor;
             target.Pieces = source.Pieces; target.MassContributions = source.MassContributions;
             target.Compartments = source.Compartments; target.EverEnclosedCells = source.EverEnclosedCells;
             target.DockingPorts = source.DockingPorts; target.PositionX = source.PositionX; target.PositionY = source.PositionY;
@@ -309,7 +311,7 @@ namespace FlatWorld.Spaceflight
             if (ship == null || !FluidUnits.IsFinite(damage) || damage <= 0d) return false;
             foreach (ShipPieceState piece in ship.Pieces)
             {
-                if (piece == null || piece.PieceId != pieceId || !piece.IsAlive) continue;
+                if (piece == null || piece.PieceId != pieceId || !piece.IsAlive || piece.ProtectedAnchor) continue;
                 double previousHealth = piece.Health;
                 if (piece.MaxDisableHealth > 0d) piece.DisableHealth -= damage;
                 piece.Health = Math.Max(0d, piece.Health - damage);

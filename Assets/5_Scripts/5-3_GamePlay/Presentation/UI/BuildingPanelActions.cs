@@ -1,3 +1,5 @@
+using FlatWorld.Localization;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,8 +9,10 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class BuildingPanelActions : MonoBehaviour
 {
+    #region 建筑面板绑定与操作
     public Button PlaceButton; // 手持设施的放置入口。
     public Button DismantleButton; // 世界建筑的拆回入口。
+    public TMP_Text Title; // 可选标题读取当前建筑对应的物品名称。
     private BasePanel panel;
     private Mod_Building building;
     private MachineEntity mechanical; // 已安装机械的无物体拆除目标。
@@ -16,7 +20,7 @@ public sealed class BuildingPanelActions : MonoBehaviour
     private void Awake()
     {
         panel = GetComponent<BasePanel>();
-        PlaceButton.onClick.AddListener(Place);
+        if (PlaceButton != null) PlaceButton.onClick.AddListener(Place);
         DismantleButton.onClick.AddListener(Dismantle);
         panel.Closed += ClearTarget;
     }
@@ -27,10 +31,14 @@ public sealed class BuildingPanelActions : MonoBehaviour
         mechanical = null;
         building = target?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
         building?.ReconcileCarrierRoleWithItemIdentity();
-        PlaceButton.gameObject.SetActive(building != null && building.IsSummoner);
-        PlaceButton.interactable = building != null && building.IsItemInInventory;
+        if (PlaceButton != null)
+        {
+            PlaceButton.gameObject.SetActive(building != null && building.IsSummoner);
+            PlaceButton.interactable = building != null && building.IsItemInInventory;
+        }
         DismantleButton.gameObject.SetActive(building != null && building.CanCommitDismantle);
         DismantleButton.interactable = building != null && !building.IsDismantlePending;
+        BindTitle(target?.itemData);
     }
 
     /// <summary>纯数据机械直接绑定权威节点，面板拆除按钮沿用正式外观。</summary>
@@ -38,9 +46,22 @@ public sealed class BuildingPanelActions : MonoBehaviour
     {
         building = null;
         mechanical = target;
-        PlaceButton.gameObject.SetActive(false);
+        if (PlaceButton != null) PlaceButton.gameObject.SetActive(false);
         DismantleButton.gameObject.SetActive(target != null);
         DismantleButton.interactable = target != null;
+        BindTitle(target?.Snapshot);
+    }
+
+    private void BindTitle(ItemData data)
+    {
+        if (Title == null || data == null) return;
+        string id = data.IDName;
+        if (Mod_Building.TryReadBuildingData(data, out _, out var state) &&
+            !string.IsNullOrWhiteSpace(state.SummonerPrefabId)) id = state.SummonerPrefabId;
+        if (GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetItemDefinition(id, out RuntimeItemDefinition definition)) return;
+        Title.text = definition.DisplayName;
+        Title.GetComponent<LocalizedTextBinder>()?.ConfigureRuntime(() => definition.DisplayName);
     }
 
     /// <summary>先进入放置模式，再关闭模态界面释放输入，由下一次使用提交建筑。</summary>
@@ -78,4 +99,5 @@ public sealed class BuildingPanelActions : MonoBehaviour
         if (PlaceButton != null) PlaceButton.onClick.RemoveListener(Place);
         if (DismantleButton != null) DismantleButton.onClick.RemoveListener(Dismantle);
     }
+    #endregion
 }

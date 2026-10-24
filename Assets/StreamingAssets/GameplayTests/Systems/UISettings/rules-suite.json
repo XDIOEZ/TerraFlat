@@ -9,6 +9,12 @@
       "name": "UI与设置规则与边界",
       "luaPath": "GameplayTests/Systems/UISettings/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "anvil_ui_rules",
+      "name": "砧工具与制作布局规则",
+      "luaPath": "GameplayTests/Systems/UISettings/anvil.lua",
+      "enabled": true
     }
   ]
 }

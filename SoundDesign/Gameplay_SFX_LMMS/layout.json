@@ -234,6 +234,45 @@
     "file": "Assets/Audio/Generated/combat.weapon.blunt.attack__03.wav"
   },
   {
+    "cue": "combat.weapon.crossbow.loaded",
+    "name": "弩箭上膛卡扣",
+    "group": "Attacks",
+    "seconds": 0.12,
+    "peakDb": -9,
+    "rmsDb": -29,
+    "loop": false,
+    "variant": 1,
+    "project": "Gameplay_Attacks.mmp",
+    "startSeconds": 36.125,
+    "file": "Assets/Audio/Generated/combat.weapon.crossbow.loaded__01.wav"
+  },
+  {
+    "cue": "combat.weapon.crossbow.loaded",
+    "name": "弩箭上膛卡扣",
+    "group": "Attacks",
+    "seconds": 0.12,
+    "peakDb": -9,
+    "rmsDb": -29,
+    "loop": false,
+    "variant": 2,
+    "project": "Gameplay_Attacks.mmp",
+    "startSeconds": 38.125,
+    "file": "Assets/Audio/Generated/combat.weapon.crossbow.loaded__02.wav"
+  },
+  {
+    "cue": "combat.weapon.crossbow.loaded",
+    "name": "弩箭上膛卡扣",
+    "group": "Attacks",
+    "seconds": 0.12,
+    "peakDb": -9,
+    "rmsDb": -29,
+    "loop": false,
+    "variant": 3,
+    "project": "Gameplay_Attacks.mmp",
+    "startSeconds": 40.125,
+    "file": "Assets/Audio/Generated/combat.weapon.crossbow.loaded__03.wav"
+  },
+  {
     "cue": "combat.hit",
     "name": "通用伤害反馈",
     "group": "Impacts",

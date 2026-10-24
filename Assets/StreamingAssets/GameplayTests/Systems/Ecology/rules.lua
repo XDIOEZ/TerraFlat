@@ -1,4 +1,56 @@
 -- 独立四乘四草稿调用正式生态生成器。
+test.system("ecology", "shared_resources", {}, function(data)
+    assert(data.stable and data.sameIdentity and data.sharedCopies > 0,
+        "跨区块资源因加载顺序或观察区块变化而重复生成或改变身份")
+    assert(data.worldSeam and data.fourWay and data.negativeOwner,
+        "环世界接缝、四区块交界或负坐标归属丢失代理")
+    assert(data.uniqueLease and data.handoff and data.finalRelease,
+        "区块重复引用、宿主交接或最后引用释放不满足唯一实体约束")
+    assert(data.rejected and data.tinyWorld and data.cancelled,
+        "无效落点、小世界或取消请求仍然生成大型资源")
+    assert(data.savedGeometry and data.fingerprint and data.edgeLoot,
+        "共享占地未冻结到存档指纹，或采掘奖励落入实体中心")
+end, "大矿山跨区块确定性代理、引用交接、保存字段及外沿掉落")
+
+test.system("ecology", "shared_resources", {scenario = "giant_generation"}, function(data)
+    assert(data.stableOrder and data.exclusive and data.separated,
+        "巨型矿山因规则顺序改变身份、在同候选重复或相邻矿体互叠")
+    assert(data.fullCoverage and data.fullCount > 0 and data.mixedCount == data.fullCount and
+        data.saturatedCount == data.fullCount and data.zeroCount == 0 and data.disabledCount == 0,
+        "巨矿的零概率、百分之百概率或全局倍率饱和破坏互斥候选边界")
+    local count, total, previous = 0, 0, 0
+    for _, value in pairs(data.counts) do
+        count = count + 1
+        assert(value > 0, "已有矿种不能被选为巨型矿山")
+    end
+    assert(count == 11 and #data.configured == 17 and data.mixedSpacingRejected,
+        "巨矿矿种/生境规则漏登，或不同间距的共享网格仍被放行")
+    for _, chance in ipairs(data.saturatedChances) do
+        assert(chance > previous, "全局倍率饱和时前排巨矿吃光后排矿种的概率")
+        previous = chance
+    end
+    assert(math.abs(previous - 1) < 0.000000001, "饱和后的总概率不是百分之百")
+    for _, rule in ipairs(data.configured) do
+        total = total + rule.chance
+        if rule.itemId == "Mine_Obsidian_Large" then
+            assert(rule.biomeMask == 128 and rule.environment == "lava.shore",
+                "巨型黑曜石离开对应小矿山的石地岩浆岸带条件")
+        end
+    end
+    assert(math.abs(total - 0.65 * 0.2) < 0.000000001,
+        "所有矿种合计概率未降低百分之八十，或新增矿种放大巨矿总生成机会")
+end, "十一种巨矿共用候选、预算降低八成、互斥抽取及概率边界")
+
+test.system("ecology", "shared_resources", {scenario = "giant_clearance"}, function(data)
+    assert(data.samples.shore == 1 and data.samples.missing_shore == 0,
+        "巨型黑曜石要求整个净空都是狭窄岸带，或锚点缺少岸带仍然生成")
+    for _, name in ipairs({"liquid", "blocking", "occupied", "unwalkable", "structure", "caveSafe"}) do
+        assert(data.samples[name] == 0, "巨矿没有保护整片净空或洞穴出生安全区：" .. name)
+    end
+    assert(data.contained and data.holeRejected and data.outsideCellRejected and data.outsideBodyRejected,
+        "底部三分之一阻挡被拒绝，或越界碰撞体、越界导航格、漏挡格未被拒绝")
+end, "巨矿锚点适生与完整净空分开检查，底部阻挡仍被严格包围")
+
 test.system("ecology", "companion_bind_candidates", {}, function(data)
     assert(data.ordered and data.repeated and data.hostIgnored and data.companionAccepted,
         "宿主首次扫描后的伴生物候选丢失、重排或再次绑定残留上一轮结果")

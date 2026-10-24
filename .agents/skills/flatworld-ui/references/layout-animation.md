@@ -6,6 +6,7 @@
 - 主菜单模态共用 SharedModalCardSize；MainMenuResponsiveLayout 按原位置/安全区限幅，移动交互高≥60、正文≥17逻辑像素，增长内容进ScrollRect。设置不拖动；背包无保存位置时等首个可见动画布局结束，按真实快捷栏上沿定位一次，人工拖动后让位。
 - 列表 `ItemStepScrollRect` 按 scrollDeltaPerTick 还原刻度，再按条目/网格行滚动；长文本用 fixedWheelStep。显式迁移只换 MonoScript GUID，保 fileID/引用。
 - `InventoryVirtualizedSlotGrid` 用数据索引/环形池，仅重绑新进入格；回调读取当前 slotIndex，同库存走 RebindVirtualSlotUI，搜索只改变化格，拖动时延迟重绑，重建池重建回调归属。
+- `InventoryBagSearch.Bind` 在同一 `Inventory_Data` 扩缩槽重绑时保留滚动；切换数据或更改搜索/分类才回顶，未提交的筛选回顶请求继续保留，列表缩短时由虚拟网格夹紧到有效范围。
 - `SaveSelectionFileCatalog` 每档案一次退出时间采样后内存排序；打开刷新、Start仅兜底，首行同步，其余每帧≤4行/约2ms，关闭停补建。完整身份列表不裁剪，批选/改名不依赖已建行；删除由 SaveDataManager_UI 确认层锁定目标。
 - 新游戏由 `UI_NewGame`、`UI_NewGameWorldContent/UI_NewGameDifficultyContent` 三Prefab与 NewGamePrefabBuilder 共持；隐藏页按需建一次，创建请求直接读未开页默认值。世界参数分页仅改显隐，难度覆盖层透明，加载存档失败弹正式确认并停止角色选择。
 - `DropdownListLayout` 展开前用真实行高，≤5项全显、更多最多5行；BasePanel/公共构建器同步接入。条目/Content归原生Dropdown，模板禁竞争LayoutGroup/ContentSizeFitter，Viewport无垂直内缩。交互滑块与只读进度条分资产；纯色无Sprite进度用纵缩放，不能Filled。

@@ -1,4 +1,4 @@
-﻿// AI-Context: Mirror 联机协议 DTO；字段变更必须同步升级协议版本，并同时更新发送端和接收端。
+// AI-Context: Mirror 联机协议 DTO；字段变更必须同步升级协议版本，并同时更新发送端和接收端。
 using Mirror;
 using UnityEngine;
 
@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 23;
+        public const int CurrentVersion = 26;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 

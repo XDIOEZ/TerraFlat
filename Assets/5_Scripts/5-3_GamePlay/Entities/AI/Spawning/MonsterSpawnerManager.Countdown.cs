@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public partial class MonsterSpawnerManager
 {
-    #region 自然动物持续倒计时
+    #region 世界统一自然刷新倒计时
 
     private static readonly Func<float> CountdownChanceRoll = () => UnityEngine.Random.value;
+    private SpawnerCountdownProgress _naturalCountdown = new();
 
     public static int NextLifecycleWork(ref int cursor)
     {
@@ -14,86 +16,98 @@ public partial class MonsterSpawnerManager
         return first;
     }
 
-    private void ProcessCountdowns(SpawnerConfig config, SpawnerProgressSaveData state, TimeData timeData)
+    // 频率只调整世界时钟，物种数量、权重和所在区块都不改变倒计时。
+    public static double GetCountdownInterval(SpawnerRuntimeSettings settings, float frequencyMultiplier)
     {
-        AdvanceCountdownSchedule(config, state, timeData.GetTotalGameTimeSeconds(), timeData.DayLength,
-            GameDifficultyService.Current.World.SpawnFrequencyMultiplier, CountdownChanceRoll);
+        double interval = settings?.NaturalSpawnIntervalGameSeconds ?? 0d;
+        if (double.IsNaN(interval) || double.IsInfinity(interval) || interval <= 0d ||
+            float.IsNaN(frequencyMultiplier) || float.IsInfinity(frequencyMultiplier) || frequencyMultiplier < 0f)
+            throw new ArgumentOutOfRangeException(nameof(frequencyMultiplier), "自然刷新间隔和频率必须是有效数值。");
+        return frequencyMultiplier > 0f ? interval / frequencyMultiplier : interval;
     }
 
-    // 保留原权重对应的稀有程度，各物种独立计时并共用原规则预算和人数上限。
-    public static double GetCountdownInterval(SpawnerConfig config, SpawnerConfig.SpawnEntry entry,
-        double dayLength, float frequencyMultiplier)
+    public static bool AdvanceCountdownSchedule(SpawnerCountdownProgress countdown, double totalGameSeconds,
+        SpawnerRuntimeSettings settings, float frequencyMultiplier)
     {
-        double totalWeight = 0d;
-        foreach (SpawnerConfig.SpawnEntry candidate in config.SpawnEntries)
-            totalWeight += candidate.Probability;
-        int spawnsPerDay = GameDifficultyService.ScaleCount(config.SpawnsPerDay, frequencyMultiplier, 1);
-        return Math.Max(1d, dayLength) * Math.Max(1, config.DaysBetweenSpawns) / spawnsPerDay *
-               totalWeight / entry.Probability;
-    }
-
-    public static void AdvanceCountdownSchedule(SpawnerConfig config, SpawnerProgressSaveData state,
-        double totalGameSeconds, double dayLength, float frequencyMultiplier, Func<float> chanceRoll)
-    {
-        state.SpeciesCountdowns ??= new();
-        foreach (SpawnerConfig.SpawnEntry entry in config.SpawnEntries)
+        double interval = GetCountdownInterval(settings, frequencyMultiplier);
+        if (frequencyMultiplier <= 0f)
         {
-            if (!state.SpeciesCountdowns.TryGetValue(entry.PrefabName, out SpawnerCountdownProgress countdown))
-                state.SpeciesCountdowns.Add(entry.PrefabName, countdown = new SpawnerCountdownProgress());
-            double interval = GetCountdownInterval(config, entry, dayLength, frequencyMultiplier);
-            if (frequencyMultiplier <= 0f)
-            {
-                countdown.LastObservedGameSeconds = totalGameSeconds;
-                continue;
-            }
-            if (!countdown.Advance(totalGameSeconds, interval)) continue;
-            if (config.SpawnChance <= 0f || (config.SpawnChance < 1f && chanceRoll() >= config.SpawnChance))
-                countdown.Restart(interval);
-            else
-                countdown.BeginBatch(DetermineCountdownBatchCount(config, frequencyMultiplier, chanceRoll));
+            countdown.LastObservedGameSeconds = -1d;
+            return false;
         }
-        RefreshCountdownPendingCount(state);
+        return countdown.Advance(totalGameSeconds, interval);
     }
 
     public static int DetermineCountdownBatchCount(SpawnerConfig config, float frequencyMultiplier, Func<float> chanceRoll)
     {
         return config.SpawnCountWeights != null && config.SpawnCountWeights.Count > 0
             ? config.DetermineSpawnCount(chanceRoll())
-            : GameDifficultyService.ScaleCount(config.SpawnCount, frequencyMultiplier, 1);
+            : GameRuleMath.ScaleCount(config.SpawnCount, frequencyMultiplier, 1);
     }
 
-    // 每次只挑一个已到期物种，地点或预算受阻也轮到其它物种尝试自己的机会。
-    public static SpawnerConfig.SpawnEntry SelectPendingCountdownEntry(SpawnerConfig config, SpawnerProgressSaveData state)
+    // 候选已经通过真实落点筛选，再消费一次规则概率，不能失败后重抽到成功。
+    internal static bool TryBeginCountdownBatch(SpawnerCountdownProgress countdown, SpawnerConfig config,
+        SpawnerConfig.SpawnEntry entry, SpawnerProgressSaveData state, float frequencyMultiplier, Func<float> chanceRoll)
     {
-        int count = config.SpawnEntries.Count;
-        for (int visited = 0; visited < count; visited++)
+        if (countdown.RemainingGameSeconds != 0d || countdown.PendingCount > 0 || frequencyMultiplier <= 0f)
+            return false;
+        if (config.SpawnChance <= 0f || (config.SpawnChance < 1f && chanceRoll() >= config.SpawnChance))
         {
-            int index = (int)((uint)state.CountdownEntryCursor % (uint)count);
-            state.CountdownEntryCursor = (index + 1) % count;
-            SpawnerConfig.SpawnEntry entry = config.SpawnEntries[index];
-            if (state.SpeciesCountdowns.TryGetValue(entry.PrefabName, out SpawnerCountdownProgress countdown) &&
-                countdown.PendingCount > 0)
-                return entry;
+            countdown.Restart(countdown.IntervalGameSeconds);
+            return false;
         }
-        return null;
-    }
-
-    public static void RefreshCountdownPendingCount(SpawnerProgressSaveData state)
-    {
-        long pending = 0;
-        foreach (SpawnerCountdownProgress countdown in state.SpeciesCountdowns.Values)
-            pending += Math.Max(0, countdown.PendingCount);
-        state.PendingSpawnCount = (int)Math.Min(int.MaxValue, pending);
+        countdown.BeginBatch(DetermineCountdownBatchCount(config, frequencyMultiplier, chanceRoll));
+        countdown.SelectedConfigId = config.PersistentId;
+        countdown.SelectedSpeciesId = entry.PrefabName;
+        state.PendingSpawnCount = countdown.PendingCount;
         state.PendingReplacementCount = 0;
+        return true;
     }
 
-    public static void CompleteCountdownSpawnAttempt(SpawnerProgressSaveData state,
-        SpawnerConfig.SpawnEntry entry, bool spawned, int currentDay)
+    internal static bool IsCountdownBatchFor(SpawnerCountdownProgress countdown, string configId, string speciesId) =>
+        countdown != null && countdown.PendingCount > 0 &&
+        string.Equals(countdown.SelectedConfigId, configId, StringComparison.Ordinal) &&
+        string.Equals(countdown.SelectedSpeciesId, speciesId, StringComparison.Ordinal);
+
+    public static void CompleteCountdownSpawnAttempt(SpawnerCountdownProgress countdown,
+        SpawnerProgressSaveData state, bool spawned, int currentDay, double totalGameSeconds)
     {
+        if (countdown.PendingCount <= 0) return;
         state.CompleteSpawnAttempt(spawned, currentDay);
-        SpawnerCountdownProgress countdown = state.SpeciesCountdowns[entry.PrefabName];
+        countdown.LastObservedGameSeconds = totalGameSeconds;
         countdown.CompleteAttempt(countdown.IntervalGameSeconds);
-        RefreshCountdownPendingCount(state);
+        state.PendingSpawnCount = countdown.PendingCount;
+    }
+
+    internal readonly struct NaturalSpawnCandidate
+    {
+        public readonly SpawnerConfig Config;
+        public readonly SpawnerConfig.SpawnEntry Entry;
+        public readonly Vector3 Position;
+
+        public NaturalSpawnCandidate(SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 position)
+        {
+            Config = config;
+            Entry = entry;
+            Position = position;
+        }
+    }
+
+    // 所有规则的合格物种放在同一奖池，权重只决定本轮抽中谁。
+    internal static int SelectCountdownCandidate(IReadOnlyList<NaturalSpawnCandidate> candidates, float sample)
+    {
+        if (float.IsNaN(sample) || float.IsInfinity(sample) || sample < 0f || sample > 1f)
+            throw new ArgumentOutOfRangeException(nameof(sample));
+        double total = 0d;
+        for (int i = 0; i < candidates.Count; i++) total += candidates[i].Entry.Probability;
+        if (total <= 0d) return -1;
+        double target = sample * total;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            target -= candidates[i].Entry.Probability;
+            if (target < 0d) return i;
+        }
+        return candidates.Count - 1;
     }
 
     #endregion

@@ -15,8 +15,10 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("terrain/noise", WorldNoise);
         operations.Add("terrain/biome", WorldBiome);
+        operations.Add("terrain/grass_temperature_density", WorldGrassTemperatureDensity);
         operations.Add("terrain/environment_pointer", WorldEnvironmentPointer);
         operations.Add("ecology/generation", WorldEcology);
+        operations.Add("ecology/shared_resources", WorldSharedNaturalResources);
         operations.Add("ecology/companion_bind_candidates", WorldEcologyCompanionBindCandidates);
         operations.Add("ecology/neighborhood_cache", WorldEcologyNeighborhoodCache);
         operations.Add("terrain/cached_generation", WorldCachedTerrainGeneration);
@@ -32,6 +34,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/wind", WorldWind);
         operations.Add("environment/weather", WorldWeather);
         operations.Add("environment/rain_visual_batch", WorldRainVisualBatch);
+        operations.Add("environment/shader_snow", WorldShaderSnow);
         operations.Add("environment/natural_fog_profile", WorldNaturalFogProfile);
         operations.Add("environment/discrete_weather", WorldDiscreteWeather);
         operations.Add("environment/natural_fog_lifecycle", WorldNaturalFogLifecycle);
@@ -41,6 +44,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("surface_fluids/notification_dispatch", WorldLiquidNotificationDispatch);
         operations.Add("surface_fluids/buoyancy", WorldLiquidBuoyancy);
         operations.Add("dimension/address", WorldDimensionAddress);
+        operations.Add("dimension/destroyed_portal_callback", WorldDestroyedPortalCallback);
         RegisterCavePerformanceOperations(operations);
         RegisterColdDropProbes(operations);
         operations.Add("building/support_layer", WorldSupportLayer);
@@ -48,11 +52,15 @@ public static partial class GameplayTestSystemProbe
         operations.Add("agriculture/soil", WorldSoil);
         operations.Add("agriculture/plant_growth", WorldPlantGrowth);
         operations.Add("agriculture/tilling_visual_schedule", WorldTillingVisualSchedule);
+        operations.Add("agriculture/soil_moisture_visual", WorldSoilMoistureVisual);
+        operations.Add("agriculture/soil_commit_unchanged", WorldSoilCommitUnchanged);
         operations.Add("fishing/rig", WorldFishingRig);
+        operations.Add("fishing/cast_supplies", WorldFishingCastSupplies);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
         operations.Add("mechanical/ship_scope_identity", WorldMechanicalShipScopeIdentity);
         operations.Add("mechanical/bellows_effects", WorldBellowsEffects);
+        operations.Add("mechanical/conveyor_side_ports", WorldConveyorSidePorts);
         operations.Add("electrical/battery_commit", WorldElectricalBattery);
         operations.Add("electrical/supply_limits", WorldElectricalLimits);
         operations.Add("electrical/unlimited_supply", WorldElectricalUnlimitedSupply);
@@ -87,6 +95,35 @@ public static partial class GameplayTestSystemProbe
                      "ship_damage_lines", "ship_damage_fragmentation" })
             operations.Add("space/" + operation, _ => GameplayTestShipDamageProbe.Capture(operation));
     }
+
+    #region 维度入口异步回执生命周期回归
+    private static JObject WorldDestroyedPortalCallback(JObject args)
+    {
+        GameObject holder = new GameObject("DimensionPortalCallbackProbe");
+        try
+        {
+            // 在独立非激活对象上构建已销毁模块句柄，模拟切换后迟到的回执。
+            holder.SetActive(false);
+            Mod_DimensionPortal portal = holder.AddComponent<Mod_DimensionPortal>();
+            bool aliveBeforeDestroy = portal != null;
+            UnityEngine.Object.DestroyImmediate(holder);
+            bool unityNull = portal == null;
+            bool managedReferenceRemains = !ReferenceEquals(portal, null);
+            portal.CancelNetworkTransitionRequest();
+            return new JObject
+            {
+                ["aliveBeforeDestroy"] = aliveBeforeDestroy,
+                ["unityNullAfterDestroy"] = unityNull,
+                ["managedReferenceRemains"] = managedReferenceRemains,
+                ["cancelAfterDestroySafe"] = true
+            };
+        }
+        finally
+        {
+            if (holder != null) UnityEngine.Object.DestroyImmediate(holder);
+        }
+    }
+    #endregion
 
     /// <summary>复用真实区块初绑的伴生物挑选入口，核验候选顺序及多次 Bind 的缓冲复用。</summary>
     private static JObject WorldEcologyCompanionBindCandidates(JObject args)
@@ -144,6 +181,106 @@ public static partial class GameplayTestSystemProbe
             ["totalPlacements"] = count, ["companionCount"] = expected.Count,
             ["secondPassInspections"] = selected.Count,
             ["oldSecondPassInspections"] = count, ["allocatedBytes"] = allocated
+        };
+    }
+
+    /// <summary>采样正式地块 Shader 的水分输入，读取期间不允许灌溉或写回土壤。</summary>
+    private static JObject WorldSoilCommitUnchanged(JObject args)
+    {
+        using ChunkTerrainData terrain = EnvironmentBatchFixture(2, 1);
+        RuntimeTerrainTileSample sample = new(default, terrain, Vector2Int.zero, Vector2Int.zero,
+            terrain.GetCell(0, 0), terrain.GetTopTileId(0, 0));
+        var soil = new TileData_Farmland
+        {
+            waterValue = 4, waterSupplyRemainder = .25f, waterConsumptionRemainder = .125f
+        };
+        soil.fertilityValue.BaseValue = .6f;
+        soil.NormalizeValues();
+        bool uninitialized = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        void Set(string layer, float value) => terrain.SetEnvironmentValue(layer, 0, 0, value);
+        Set(FarmlandSystem.SourceLayer, 1f);
+        Set(FarmlandSystem.WaterLayer, soil.waterValue);
+        Set(FarmlandSystem.WaterSupplyRemainderLayer, soil.waterSupplyRemainder);
+        Set(FarmlandSystem.WaterConsumptionRemainderLayer, soil.waterConsumptionRemainder);
+        Set(FarmlandSystem.FertilityLayer, soil.Fertility);
+        bool needsMoistureProjection = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        Set("moisture", .4f);
+        Set("fertility", soil.Fertility);
+        bool equal = FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        Set(FarmlandSystem.WaterConsumptionRemainderLayer, .2f);
+        bool changedRemainder = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        Set(FarmlandSystem.WaterConsumptionRemainderLayer, soil.waterConsumptionRemainder);
+        Set("fertility", .5f);
+        bool changedProjection = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        Set("fertility", soil.Fertility);
+        // 即使植物本次耗水不能继续扣到负数，干土/缺肥仍可以判为真正的无变化。
+        soil.waterValue = 0;
+        soil.waterSupplyRemainder = soil.waterConsumptionRemainder = 0f;
+        soil.fertilityValue.BaseValue = 0f;
+        soil.NormalizeValues();
+        Set(FarmlandSystem.WaterLayer, 0f);
+        Set(FarmlandSystem.WaterSupplyRemainderLayer, 0f);
+        Set(FarmlandSystem.WaterConsumptionRemainderLayer, 0f);
+        Set(FarmlandSystem.FertilityLayer, 0f);
+        Set("moisture", 0f);
+        Set("fertility", 0f);
+        bool dryEqual = FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        soil.AccumulateWaterConsumption(.5f);
+        soil.ConsumeFertility(.25f);
+        bool dryStillEqual = FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        soil.AccumulateWaterSupply(1f);
+        bool wateringChanges = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        soil.waterValue = 0;
+        soil.NormalizeValues();
+        for (int i = 0; i < 64; i++) FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 2048; i++) FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        long allocation = GC.GetAllocatedBytesForCurrentThread() - before;
+        return new JObject
+        {
+            ["uninitialized"] = uninitialized,
+            ["needsMoistureProjection"] = needsMoistureProjection,
+            ["equal"] = equal,
+            ["changedRemainder"] = changedRemainder,
+            ["changedProjection"] = changedProjection,
+            ["dryEqual"] = dryEqual,
+            ["dryStillEqual"] = dryStillEqual,
+            ["wateringChanges"] = wateringChanges,
+            ["allocation"] = allocation
+        };
+    }
+
+    private static JObject WorldSoilMoistureVisual(JObject args)
+    {
+        using ChunkTerrainData terrain = EnvironmentBatchFixture(1, 1);
+        var template = new TileData_Farmland { waterValue = (int)Number(args, "defaultWater", 4) };
+        if (args["source"] != null)
+            terrain.SetEnvironmentValue(FarmlandSystem.SourceLayer, 0, 0, (float)Number(args, "source", 0f));
+        if (args["water"] != null)
+            terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, 0, 0, (float)Number(args, "water", 0f));
+        if (args["moisture"] != null)
+            terrain.SetEnvironmentValue("moisture", 0, 0, (float)Number(args, "moisture", 0f));
+        long revision = terrain.Revision;
+        Vector4 data = ChunkTilemapRenderer.BuildFarmlandMoistureData(terrain, 0, 0, template);
+        int notifications = 0;
+        terrain.Changed += _ => notifications++;
+        for (int i = 0; i < 32; i++)
+            ChunkTilemapRenderer.BuildFarmlandMoistureData(terrain, 0, 0, template);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1024; i++)
+            ChunkTilemapRenderer.BuildFarmlandMoistureData(terrain, 0, 0, template);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        return new JObject
+        {
+            ["ratio"] = data.x, ["enabled"] = data.y, ["reserved"] = data.z == 0f && data.w == 0f,
+            ["readOnly"] = terrain.Revision == revision && notifications == 0,
+            ["allocatedBytes"] = allocated,
+            ["waterLayer"] = ChunkTilemapRenderer.IsSoilMoistureVisualLayer(FarmlandSystem.WaterLayer),
+            ["sourceLayer"] = ChunkTilemapRenderer.IsSoilMoistureVisualLayer(FarmlandSystem.SourceLayer),
+            ["generatedMoistureLayer"] = ChunkTilemapRenderer.IsSoilMoistureVisualLayer("moisture"),
+            ["fertilityIgnored"] = !ChunkTilemapRenderer.IsSoilMoistureVisualLayer(FarmlandSystem.FertilityLayer),
+            ["progressIgnored"] = !ChunkTilemapRenderer.IsSoilMoistureVisualLayer(FarmlandSystem.WaterConsumptionRemainderLayer),
+            ["genericChangeIgnored"] = !ChunkTilemapRenderer.IsSoilMoistureVisualLayer(null)
         };
     }
 
@@ -596,6 +733,28 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
+    /// <summary>读取正式低温密度规则的原始采样，温度边界与倍率由 Lua 断言。</summary>
+    private static JObject WorldGrassTemperatureDensity(JObject args)
+    {
+        var numbers = new Dictionary<string, double>();
+        if (args["threshold"] != null)
+            numbers["grass.coldThresholdCelsius"] = Number(args, "threshold", 15d);
+        if (args["multiplier"] != null)
+            numbers["grass.coldDensityMultiplier"] = Number(args, "multiplier", 0.5d);
+        var profile = new ChunkGenerationProfileSnapshot("system-probe:grass-temperature", 1, 4, 4, numbers);
+        ChunkGenerationSettingsSnapshot settings = profile.Settings;
+        double threshold = settings.GrassColdThresholdCelsius;
+        return new JObject
+        {
+            ["threshold"] = threshold,
+            ["multiplier"] = settings.GrassColdDensityMultiplier,
+            ["below"] = settings.ResolveGrassTemperatureMultiplier(threshold - 0.001d),
+            ["at"] = settings.ResolveGrassTemperatureMultiplier(threshold),
+            ["above"] = settings.ResolveGrassTemperatureMultiplier(threshold + 0.001d),
+            ["repeated"] = settings.ResolveGrassTemperatureMultiplier(threshold - 0.001d)
+        };
+    }
+
     private static JObject WorldEcology(JObject args)
     {
         var rule = new EcologySpawnRuleSnapshot("system-probe:plant", "probe-plant", 1, 1d, 1d, 1 << 1,
@@ -893,6 +1052,14 @@ public static partial class GameplayTestSystemProbe
         bool frozenReady = engine.TryGetProfile(origin, out ChunkWeatherProfile frozen);
         RegionalWeatherAdvanceResult ended = engine.Advance(origin, 10d, false);
         Int2 negative = engine.ResolveRegion(new Int2(-1, -1));
+        float heldRainTarget = .8f;
+        float heldSnowTarget = .2f;
+        bool unavailableTargetChanged = WeatherMgr.TryUpdatePrecipitationTargets(false, 0f, 0f,
+            ref heldRainTarget, ref heldSnowTarget);
+        float retainedRainTarget = heldRainTarget;
+        float retainedSnowTarget = heldSnowTarget;
+        bool availableTargetChanged = WeatherMgr.TryUpdatePrecipitationTargets(true, .3f, .1f,
+            ref heldRainTarget, ref heldSnowTarget);
         return new JObject
         {
             ["firstReady"] = firstReady, ["secondReady"] = secondReady,
@@ -901,6 +1068,10 @@ public static partial class GameplayTestSystemProbe
             ["firstRegionX"] = first.Region.X, ["secondRegionX"] = second.Region.X,
             ["frozenReady"] = frozenReady, ["frozenTemperature"] = frozen?.Climate.TemperatureCelsius,
             ["endedPrecipitation"] = ended.Snapshot.PrecipitationIntensity,
+            ["unavailableTargetChanged"] = unavailableTargetChanged,
+            ["retainedRainTarget"] = retainedRainTarget, ["retainedSnowTarget"] = retainedSnowTarget,
+            ["availableTargetChanged"] = availableTargetChanged,
+            ["updatedRainTarget"] = heldRainTarget, ["updatedSnowTarget"] = heldSnowTarget,
             ["negativeRegionX"] = negative.X, ["negativeRegionY"] = negative.Y,
             ["rainProbability"] = settings.ResolveActivationProbability(new WeatherElementProfile("rain", .4f, .5f, 60f)),
             ["wind8Probability"] = settings.ResolveActivationProbability(new WeatherElementProfile("wind", .4f, .8f, 60f)),
@@ -909,32 +1080,38 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
-    /// <summary>取正式雨雪速率缓存和水花视口计算的纯结果，核验停雨/复启与排空旧粒子。</summary>
+    /// <summary>只读正式雨效资源和覆盖计算，水花仍检查独立视口采样边界。</summary>
     private static JObject WorldRainVisualBatch(JObject args)
     {
-        float appliedIntensity = -1f;
-        int emissionWrites = 0;
-        foreach (float intensity in new[] { 0f, .25f, .25f, 1f, 1f, 0f, 0f })
-        {
-            if (!RainEffectController.ShouldRefreshEmissionRates(appliedIntensity, intensity)) continue;
-            appliedIntensity = intensity;
-            emissionWrites++;
-        }
-
+        GameObject prefab = Resources.Load<GameObject>("Weather/RainEffect");
+        MeshRenderer renderer = prefab != null ? prefab.GetComponent<MeshRenderer>() : null;
+        Vector4 field = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, 1f, .5f);
+        Vector4 half = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, .5f, .5f);
+        Vector4 clear = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, 0f, .5f);
+        Vector4 large = RainEffectController.ResolveFieldSettings(new Vector2(2000f, 1000f), 1.1f, 1.5f, 1f, .5f);
+        Vector4 invalid = RainEffectController.ResolveFieldSettings(new Vector2(-10f, 0f), 0f, -1f, 2f, 0f);
+        Vector4 negative = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, -1f, .5f);
+        Vector4 clamped = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, 2f, .5f);
+        Vector4 drift = RainEffectController.ResolveDrift(1000000007.25d, -1000000002.5d, new Vector2(20f, 10f));
+        Vector4 wrapped = RainEffectController.ResolveDrift(1000000027.25d, -1000000012.5d, new Vector2(20f, 10f));
         Rect window = RainGroundSplashController.GetSamplingBounds(
             new Vector3(10f, -4f, 0f), 20f, 1.5f, new Vector2(.2f, .4f));
         Rect narrow = RainGroundSplashController.GetSamplingBounds(
             new Vector3(-40f, 17f, 0f), 5f, 0f, Vector2.zero);
         return new JObject
         {
-            ["emissionWrites"] = emissionWrites,
-            ["steadySkipped"] = !RainEffectController.ShouldRefreshEmissionRates(.25f, .25f),
-            ["reactivationRefreshes"] = RainEffectController.ShouldRefreshEmissionRates(-1f, .25f),
-            ["newRateRefreshes"] = RainEffectController.ShouldRefreshEmissionRates(.25f, 1f),
-            ["capWhileDraining"] = RainEffectController.ResolveParticleCapacity(80, 100, .1f),
-            ["capAfterDraining"] = RainEffectController.ResolveParticleCapacity(12, 100, .1f),
-            ["capMinimum"] = RainEffectController.ResolveParticleCapacity(0, 100, 0f),
-            ["capAtFullIntensity"] = RainEffectController.ResolveParticleCapacity(12, 100, 1f),
+            ["prefabPresent"] = prefab != null,
+            ["shaderController"] = prefab != null && prefab.GetComponent<RainEffectController>() != null,
+            ["particleSystems"] = prefab != null ? prefab.GetComponentsInChildren<ParticleSystem>(true).Length : -1,
+            ["meshFilters"] = prefab != null ? prefab.GetComponentsInChildren<MeshFilter>(true).Length : -1,
+            ["meshRenderers"] = prefab != null ? prefab.GetComponentsInChildren<MeshRenderer>(true).Length : -1,
+            ["shader"] = renderer != null && renderer.sharedMaterial != null ? renderer.sharedMaterial.shader.name : "",
+            ["width"] = field.x, ["height"] = field.y, ["density"] = field.z,
+            ["halfDensity"] = half.z, ["clearDensity"] = clear.z, ["largeDensity"] = large.z,
+            ["invalidWidth"] = invalid.x, ["invalidHeight"] = invalid.y, ["invalidDensity"] = invalid.z,
+            ["negativeDensity"] = negative.z, ["clampedDensity"] = clamped.z,
+            ["maximumDrops"] = RainEffectController.MaximumDrops, ["shaderBudget"] = field.w,
+            ["driftX"] = drift.x, ["driftY"] = drift.y, ["wrappedX"] = wrapped.x, ["wrappedY"] = wrapped.y,
             ["minX"] = window.xMin, ["maxX"] = window.xMax,
             ["minY"] = window.yMin, ["maxY"] = window.yMax,
             ["narrowMinX"] = narrow.xMin, ["narrowMaxX"] = narrow.xMax,
@@ -1042,7 +1219,13 @@ public static partial class GameplayTestSystemProbe
             return new JObject { ["left"] = solver.ResultLevel[0], ["right"] = solver.ResultLevel[1],
                 ["leftType"] = solver.ResultType[0], ["rightType"] = solver.ResultType[1], ["transfers"] = solver.TransferCount };
         }
-        return new JObject { ["samples"] = samples, ["blocked"] = Pair(10, 0, true, 1),
+        var canalPairs = new JArray();
+        for (int source = 0; source <= LiquidCellValue.MaximumLevel; source++)
+        for (int target = 0; target <= LiquidCellValue.MaximumLevel; target++)
+            canalPairs.Add(new JArray(source, target,
+                WorldLiquidReplenishment.GetConnectedTransferLevel(source, target)));
+        return new JObject { ["samples"] = samples, ["canalPairs"] = canalPairs,
+            ["blocked"] = Pair(10, 0, true, 1),
             ["foreign"] = Pair(10, 2, false, 2), ["full"] = Pair(10, 10, false, 1, 1f),
             ["single"] = Pair(1, 0, false, 1), ["edge"] = Pair(6, 0, false, 1) };
     }
@@ -1167,7 +1350,7 @@ public static partial class GameplayTestSystemProbe
                 AmbientCelsius = -1f, BaselineCelsius = -1f, FatalExposureHours = 48f
             });
         system.DayLength = dayLength; system.GameTime = seconds; system.StepSeconds = seconds;
-        system.GrowthDifficulty = 1f;
+        system.GrowthMultiplier = args.Value<float?>("growthMultiplier") ?? 1f;
         system.Update(); system.Complete();
         var growth = manager.GetComponentData<FlatWorld.AIECS.EntityGrowth>(entity);
         var soil = manager.GetComponentData<FlatWorld.AIECS.EntityPlantSoil>(entity);
@@ -1243,6 +1426,69 @@ public static partial class GameplayTestSystemProbe
             ["negativeAddFertility"] = WorldException(() => soil.AddFertility(-1f)),
             ["negativeConsumeFertility"] = WorldException(() => soil.ConsumeFertility(-1f))
         };
+    }
+
+    private static JObject WorldFishingCastSupplies(JObject args)
+    {
+        float maximum = (float)Number(args, "maximum", 10);
+        var hook = new Data_GeneralItem
+        {
+            IDName = "fishing-hook-probe", Guid = 701,
+            Tags = new List<string> { Flag(args, "wrongHook", false) ? "Stone" : Mod_FishingRod.HookTag },
+            Stack = new ItemStack { Amount = (float)Number(args, "hookAmount", 1), Stackable = true },
+            MaxDurability = maximum, Durability = (float)Number(args, "durability", maximum)
+        };
+        var hookSlot = new ItemSlot(0) { itemData = Flag(args, "missingHook", false) ? null : hook };
+        var baitSlot = new ItemSlot(1);
+        var rig = new Mod_FishingRod.RigInventory
+        {
+            Data = new Inventory_Data(new List<ItemSlot> { hookSlot, baitSlot }, "抛竿耗材样本")
+        };
+        ItemData replacement = null, lastBait = null;
+        int accepted = 0, broken = 0;
+        float firstRemaining = hook.Durability, beforeLastRemaining = hook.Durability;
+        try
+        {
+            rig.InitData();
+            if (Flag(args, "replaceHookDuringCommit", false))
+            {
+                replacement = ItemInstanceDataFactory.CloneRuntime(hook);
+                rig.Data.Event_OnBeforeDataChanged += slot =>
+                {
+                    if (ReferenceEquals(slot, hookSlot)) slot.itemData = replacement;
+                };
+            }
+            int attempts = Mathf.Clamp((int)Number(args, "attempts", 1), 1, 1001);
+            for (int index = 0; index < attempts; index++)
+            {
+                lastBait = new Data_GeneralItem
+                {
+                    IDName = "fishing-bait-probe", Guid = 800 + index,
+                    Tags = new List<string> { "Food" },
+                    Stack = new ItemStack { Amount = (float)Number(args, "baitAmount", 1), Stackable = true }
+                };
+                if (!Flag(args, "wrongBait", false))
+                    lastBait.ModuleDataDic.Add("food", new ModData_FoodData { ID = "Mod_Food" });
+                baitSlot.itemData = Flag(args, "missingBait", false) ? null : lastBait;
+                ItemData expectedHook = Flag(args, "staleHook", false) ? ItemInstanceDataFactory.CloneRuntime(hook) : hook;
+                ItemData expectedBait = Flag(args, "staleBait", false) ? ItemInstanceDataFactory.CloneRuntime(lastBait) : lastBait;
+                if (rig.TryConsumeCastSupplies(expectedHook, expectedBait, out bool hookBroke)) accepted++;
+                if (hookBroke) broken++;
+                if (index == 0) firstRemaining = hook.Durability;
+                if (index + 1 == maximum - 1) beforeLastRemaining = hook.Durability;
+            }
+            return new JObject
+            {
+                ["accepted"] = accepted, ["broken"] = broken, ["firstRemaining"] = firstRemaining,
+                ["beforeLastRemaining"] = beforeLastRemaining, ["remaining"] = hook.Durability,
+                ["hookAmount"] = hook.Stack.Amount, ["hookEmpty"] = hookSlot.itemData == null,
+                ["baitAmount"] = lastBait?.Stack?.Amount ?? 0f, ["baitEmpty"] = baitSlot.itemData == null,
+                ["baitRestored"] = ReferenceEquals(baitSlot.itemData, lastBait),
+                ["replacementPreserved"] = replacement != null && ReferenceEquals(hookSlot.itemData, replacement),
+                ["stillMaterial"] = !hook.Tags.Contains("Tool")
+            };
+        }
+        finally { rig.UnbindRuntimeDataEvents(); }
     }
 
     private static JObject WorldFishingRig(JObject args)

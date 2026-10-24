@@ -115,6 +115,7 @@ public static class WorldMotionSystem
     {
         public Mod_Building Building;
         public WorldItemWaterRuntime WaterRuntime;
+        public int LastMotionFrame;
     }
 
     private static readonly Dictionary<Item, LooseWindRegistration> looseWindItems = new();
@@ -134,11 +135,19 @@ public static class WorldMotionSystem
         looseWindItems.Add(item, new LooseWindRegistration
         {
             Building = building,
-            WaterRuntime = item.GetComponent<WorldItemWaterRuntime>()
+            WaterRuntime = item.GetComponent<WorldItemWaterRuntime>(),
+            LastMotionFrame = -1
         });
     }
 
     public static void UnregisterLooseWindItem(Item item) => looseWindItems.Remove(item);
+
+    internal static void MarkLooseItemMoved(Item item)
+    {
+        if (!looseWindItems.TryGetValue(item, out LooseWindRegistration registration)) return;
+        registration.LastMotionFrame = Time.frameCount;
+        looseWindItems[item] = registration;
+    }
 
     /// <summary>入水运行态按需创建时更新引用，避免复用物品持有旧水态。</summary>
     public static void BindLooseWindWaterRuntime(Item item, WorldItemWaterRuntime runtime)
@@ -154,13 +163,12 @@ public static class WorldMotionSystem
     /// <summary>沿风移动散落物并更新区块归属，完全沉没或仍在抛掷轨迹中时不受风。</summary>
     public static void TickLooseItemWind(float seconds)
     {
-        if (!GameNetwork.HasStateAuthority || seconds <= 0f || looseWindItems.Count == 0 || !HasWindPush ||
-            !TryCreateWindSamplingContext(out WindSamplingContext context))
-            return;
+        if (!GameNetwork.HasStateAuthority || seconds <= 0f || looseWindItems.Count == 0) return;
+        WindSamplingContext context = default;
+        bool hasWind = HasWindPush && TryCreateWindSamplingContext(out context);
+        if (!hasWind && !LooseItemMotion.HasVelocitySources) return;
         looseWindScratch.Clear();
         looseWindScratch.AddRange(looseWindItems.Keys);
-        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
-        ChunkMgr chunks = ChunkMgr.ExistingInstance;
         foreach (Item item in looseWindScratch)
         {
             if (!looseWindItems.TryGetValue(item, out LooseWindRegistration registration))
@@ -171,20 +179,16 @@ public static class WorldMotionSystem
                 looseWindItems.Remove(item);
                 continue;
             }
-            if (!item.isActiveAndEnabled || Mod_Droping.IsDropInProgress(item) ||
-                registration.WaterRuntime?.IsSubmerged == true)
+            if (!item.isActiveAndEnabled || item.gameObject.scene.name != GameplayWorldRegistry.ExecutionWorldKey ||
+                Mod_Droping.IsDropInProgress(item) || registration.WaterRuntime?.IsActive == true ||
+                registration.LastMotionFrame == Time.frameCount || LooseItemMotion.IsDrivenByConveyor(item.transform.position))
                 continue;
             Vector2 position = item.transform.position;
-            Vector2 velocity = context.Sample(position, item.itemData.Stack.CurrentWeight);
-            if (velocity.sqrMagnitude <= 0f) continue;
-            Vector2 destination = ResolveLooseWindPosition(position, velocity * seconds, topology, chunks);
-            if (((Vector2)topology.ShortestDelta(position, destination)).sqrMagnitude <= 0.00000001f) continue;
-            Rigidbody2D body = item.GetComponent<Rigidbody2D>();
-            if (body != null) body.position = destination;
-            else item.transform.position = new Vector3(destination.x, destination.y, item.transform.position.z);
-            ItemWorldPlacement.TryAttachWorldModelTransientItem(item, destination);
-            ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
-            WorldItemWaterSystem.ScheduleSpawnCheck(item);
+            Vector2 velocity = hasWind ? context.Sample(position, item.itemData.Stack.CurrentWeight) : Vector2.zero;
+            if (velocity.sqrMagnitude <= 0f && !LooseItemMotion.HasVelocitySources) continue;
+            Vector2 destination = LooseItemMotion.AdvanceExternal(item.gameObject.scene.name, item.itemData,
+                position, seconds, velocity);
+            if (LooseItemMotion.CommitItemPosition(item, destination)) WorldItemWaterSystem.ScheduleSpawnCheck(item);
         }
         looseWindScratch.Clear();
     }

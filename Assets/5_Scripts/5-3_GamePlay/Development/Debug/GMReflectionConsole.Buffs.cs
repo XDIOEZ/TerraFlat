@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -347,28 +348,41 @@ public sealed partial class GMReflectionConsole
         BuffDefinition definition = GameRes.ExistingInstance?.GetBuffDefinition(buffId);
         if (definition == null)
         {
-            buffDefinitionHintText.text = availableBuffDefinitions.Count == 0
-                ? "尚未加载 Buff 目录。请进入游戏世界后点击“刷新目录”。"
-                : "未找到该 Buff ID。可直接输入已注册的 MOD Buff ID，或用左右按钮浏览目录。";
+            SetLocalizedText(
+                buffDefinitionHintText,
+                availableBuffDefinitions.Count == 0
+                    ? "尚未加载 Buff 目录。请进入游戏世界后点击“刷新目录”。"
+                    : "未找到该 Buff ID。可直接输入已注册的 MOD Buff ID，或用左右按钮浏览目录。");
             buffDefinitionHintText.color = GmAccent;
             return;
         }
 
+        SetLocalizedProvider(buffDefinitionHintText, () => FormatBuffDefinitionPreview(definition));
+        buffDefinitionHintText.color = GmTextSecondary;
+    }
+
+    private static string FormatBuffDefinitionPreview(BuffDefinition definition)
+    {
         string duration = definition.IsPermanent
-            ? "永久"
-            : $"{definition.DurationSeconds.GetValueOrDefault():0.##} 秒";
-        string stackMode = definition.StackMode switch
+            ? FlatWorldLocalizationService.GetUiText("永久")
+            : FlatWorldLocalizationService.GetUiFormat("{0:0.##} 秒", definition.DurationSeconds.GetValueOrDefault());
+        string stackModeSource = definition.StackMode switch
         {
             BuffStackMode.ExtendDuration => "延长持续时间",
             BuffStackMode.RefreshDuration => "刷新持续时间",
             _ => "忽略重复施加"
         };
         string description = string.IsNullOrWhiteSpace(definition.Description)
-            ? "无 Buff 说明。"
-            : definition.Description;
-        buffDefinitionHintText.text =
-            $"<b>{definition.DisplayName}</b>  ({definition.Id}) · 持续 {duration} · {stackMode} · 效果 {definition.Effects.Count} 个\n{description}";
-        buffDefinitionHintText.color = GmTextSecondary;
+            ? FlatWorldLocalizationService.GetUiText("无 Buff 说明。")
+            : FlatWorldLocalizationService.GetUiText(definition.Description);
+        return FlatWorldLocalizationService.GetUiFormat(
+            "<b>{0}</b>  ({1}) · 持续 {2} · {3} · 效果 {4} 个\n{5}",
+            FlatWorldLocalizationService.GetUiText(definition.DisplayName),
+            definition.Id,
+            duration,
+            FlatWorldLocalizationService.GetUiText(stackModeSource),
+            definition.Effects.Count,
+            description);
     }
 
     /// <summary>窗口打开期间定时同步当前加载场景中的 Buff 接收对象。</summary>
@@ -454,9 +468,7 @@ public sealed partial class GMReflectionConsole
 
         if (buffTargetListSummaryText != null)
         {
-            buffTargetListSummaryText.text = availableBuffTargets.Count > 0
-                ? $"当前目标：{availableBuffTargets.Count} 个"
-                : "当前目标：0 个";
+            SetLocalizedFormat(buffTargetListSummaryText, "当前目标：{0} 个", availableBuffTargets.Count);
         }
 
         nextBuffTargetRefreshTime = Time.unscaledTime + BuffTargetRefreshInterval;
@@ -502,7 +514,11 @@ public sealed partial class GMReflectionConsole
             ? button.GetComponentInChildren<TextMeshProUGUI>(true)
             : null;
         if (text != null)
-            text.text = FormatBuffTargetLabel(index, manager);
+            SetLocalizedProvider(text, () => FlatWorldLocalizationService.GetUiFormat(
+                "[{0}] {1}  ·  当前 Buff {2} 个",
+                index,
+                FlatWorldLocalizationService.GetUiText(GetBuffTargetName(manager)),
+                manager?.ActiveBuffs?.Count ?? 0));
     }
 
     /// <summary>点击目标索引后按当前模式施加或清除 Buff。</summary>
@@ -660,12 +676,15 @@ public sealed partial class GMReflectionConsole
         RefreshBuffTargetingControls();
         if (mode == BuffTargetingMode.Apply)
         {
-            string durationText = pendingBuffDurationSeconds.HasValue
-                ? $"，持续 {pendingBuffDurationSeconds.Value:0.##} 秒"
-                : string.Empty;
-            SetStatus(
-                $"已进入 Buff 分发模式：{pendingBuffId} ×{pendingBuffApplicationCount}{durationText}。请点击下方目标索引；点击“取消”可关闭。",
-                new Color(0.35f, 0.95f, 0.85f));
+            SetStatusProvider(() =>
+            {
+                string durationText = pendingBuffDurationSeconds.HasValue
+                    ? FlatWorldLocalizationService.GetUiFormat("，持续 {0:0.##} 秒", pendingBuffDurationSeconds.Value)
+                    : string.Empty;
+                return FlatWorldLocalizationService.GetUiFormat(
+                    "已进入 Buff 分发模式：{0} ×{1}{2}。请点击下方目标索引；点击“取消”可关闭。",
+                    pendingBuffId, pendingBuffApplicationCount, durationText);
+            }, new Color(0.35f, 0.95f, 0.85f));
         }
         else
         {
@@ -709,10 +728,11 @@ public sealed partial class GMReflectionConsole
         string targetName = GetBuffTargetName(target);
         int clearedCount = target.ActiveBuffs?.Count ?? 0;
         target.ClearAllBuffs();
-        SetStatus(
-            clearedCount > 0
-                ? $"已清除 {targetName} 身上的 {clearedCount} 个 Buff。"
-                : $"{targetName} 当前没有可清除的 Buff。",
+        SetStatusProvider(() => clearedCount > 0
+            ? FlatWorldLocalizationService.GetUiFormat(
+                "已清除 {0} 身上的 {1} 个 Buff。", FlatWorldLocalizationService.GetUiText(targetName), clearedCount)
+            : FlatWorldLocalizationService.GetUiFormat(
+                "{0} 当前没有可清除的 Buff。", FlatWorldLocalizationService.GetUiText(targetName)),
             new Color(1f, 0.71f, 0.30f));
     }
 
@@ -734,25 +754,31 @@ public sealed partial class GMReflectionConsole
 
         if (appliedCount == 0)
         {
-            SetStatus($"未能向 {targetName} 施加 Buff：{pendingBuffId}。", Color.yellow);
+            SetStatusProvider(() => FlatWorldLocalizationService.GetUiFormat(
+                "未能向 {0} 施加 Buff：{1}。", FlatWorldLocalizationService.GetUiText(targetName), pendingBuffId),
+                Color.yellow);
             return;
         }
 
         if (pendingBuffDurationSeconds.HasValue &&
             !target.TrySetBuffDuration(pendingBuffId, pendingBuffDurationSeconds.Value))
         {
-            SetStatus(
-                $"已向 {targetName} 施加 {pendingBuffId}，但无法覆盖持续时间。",
+            SetStatusProvider(() => FlatWorldLocalizationService.GetUiFormat(
+                "已向 {0} 施加 {1}，但无法覆盖持续时间。",
+                FlatWorldLocalizationService.GetUiText(targetName), pendingBuffId),
                 Color.yellow);
             return;
         }
 
-        string durationText = pendingBuffDurationSeconds.HasValue
-            ? $"，持续 {pendingBuffDurationSeconds.Value:0.##} 秒"
-            : string.Empty;
-        SetStatus(
-            $"已向 {targetName} 施加 {pendingBuffId} ×{appliedCount}{durationText}。",
-            new Color(0.35f, 0.95f, 0.85f));
+        SetStatusProvider(() =>
+        {
+            string durationText = pendingBuffDurationSeconds.HasValue
+                ? FlatWorldLocalizationService.GetUiFormat("，持续 {0:0.##} 秒", pendingBuffDurationSeconds.Value)
+                : string.Empty;
+            return FlatWorldLocalizationService.GetUiFormat(
+                "已向 {0} 施加 {1} ×{2}{3}。",
+                FlatWorldLocalizationService.GetUiText(targetName), pendingBuffId, appliedCount, durationText);
+        }, new Color(0.35f, 0.95f, 0.85f));
     }
 
     private static string GetBuffTargetName(Mod_BuffManager manager)
@@ -793,20 +819,24 @@ public sealed partial class GMReflectionConsole
 
         if (applying)
         {
-            buffTargetingHintText.text =
-                $"分发模式已开启：{pendingBuffId} ×{pendingBuffApplicationCount}。点击下方目标索引可连续施加。";
+            SetLocalizedFormat(
+                buffTargetingHintText,
+                "分发模式已开启：{0} ×{1}。点击下方目标索引可连续施加。",
+                pendingBuffId, pendingBuffApplicationCount);
             buffTargetingHintText.color = GmAccentHover;
         }
         else if (clearing)
         {
-            buffTargetingHintText.text =
-                "清除模式已开启：点击下方目标索引会清除其全部 Buff；再次点击“清除 Buff”即可退出。";
+            SetLocalizedText(
+                buffTargetingHintText,
+                "清除模式已开启：点击下方目标索引会清除其全部 Buff；再次点击“清除 Buff”即可退出。");
             buffTargetingHintText.color = GmAccent;
         }
         else
         {
-            buffTargetingHintText.text =
-                "选择 Buff 后可直接点击下方目标索引；需要连续施加时点击“批量分发”。";
+            SetLocalizedText(
+                buffTargetingHintText,
+                "选择 Buff 后可直接点击下方目标索引；需要连续施加时点击“批量分发”。");
             buffTargetingHintText.color = GmTextSecondary;
         }
     }
@@ -818,7 +848,7 @@ public sealed partial class GMReflectionConsole
 
         TextMeshProUGUI text = button.GetComponentInChildren<TextMeshProUGUI>(true);
         if (text != null)
-            text.text = label;
+            SetLocalizedText(text, label);
 
         SetGmButtonVisual(button, color, emphasized);
     }

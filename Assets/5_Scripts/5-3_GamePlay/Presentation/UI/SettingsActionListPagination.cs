@@ -259,8 +259,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         BindPageButton(pages[12], "打开视觉特效", VisualEffectsPageName);
         BindPageButton(pages[12], "打开显示设置", DisplayPageName);
         BindPageButton(pages[2], "打开镜头控制", CameraPageName);
-        if (panelContext == SettingsPanelContext.MainMenu)
-            BindPageButton(pages[1], "打开语言设置", LanguagePageName);
+        BindPageButton(pages[1], "打开语言设置", LanguagePageName);
         if (panelContext == SettingsPanelContext.InGame)
             BindWorldDetailButtons();
         BindPanelLifecycle();
@@ -533,7 +532,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             return true;
 
         if (panelContext == SettingsPanelContext.InGame)
-            return (pageIndex >= 0 && pageIndex <= 12) || pageIndex == 14;
+            return pageIndex >= 0 && pageIndex <= 14;
 
         return (pageIndex >= 1 && pageIndex <= 6) ||
                pageIndex == 12 || pageIndex == 13 || pageIndex == 14;

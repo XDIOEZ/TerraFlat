@@ -28,6 +28,12 @@ public static partial class GameplayTestSystemProbe
         public override void OnTouchTap(int index) => LastTouchIndex = index;
     }
 
+    [Serializable]
+    private sealed class InventorySearchProbeBindings
+    {
+        public TMP_InputField searchInput;
+    }
+
     private static JObject CaptureVirtualizedInventory(JObject args)
     {
         // 停用的独立层级只驱动正式滚动回调，不注册玩家、输入或 UIManager。
@@ -169,6 +175,87 @@ public static partial class GameplayTestSystemProbe
                 if (slot.gameObject.activeSelf)
                     expandedMappingValid &= ReferenceEquals(inventory.itemSlot_UI[slot.slotIndex], slot)
                         && ReferenceEquals(slot.GetBoundSlotData(), slots[slot.slotIndex]);
+
+            // 同一份自有数据重走扩缩槽后的正式网格、搜索绑定，观察滚动与真实索引。
+            content.gameObject.AddComponent<UI_Content>();
+            TMP_InputField searchInput = Rect("Search", root.transform, Vector2.one).gameObject.AddComponent<TMP_InputField>();
+            InventoryBagSearch search = root.AddComponent<InventoryBagSearch>();
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(new InventorySearchProbeBindings { searchInput = searchInput }), search);
+            viewport.sizeDelta = new Vector2(72f, 48f);
+            var rebindSamples = new JArray();
+            ItemSlot ProbeSlot(int index) => new(index)
+            {
+                itemData = index % 2 == 0 ? new Data_GeneralItem
+                {
+                    IDName = string.Empty, Tags = new List<string> { "Tool" }, Stack = new ItemStack { Amount = 1 }
+                } : null
+            };
+            void FillSlots(int count)
+            {
+                slots.Clear();
+                for (int i = 0; i < count; i++) slots.Add(ProbeSlot(i));
+            }
+            void RebindSearch(string name)
+            {
+                for (int i = 0; i < slots.Count; i++) slots[i].Index = i;
+                grid.Bind(inventory, content, template.gameObject, null);
+                search.Bind(inventory);
+                bool mappingValid = inventory.itemSlot_UI.Count == slots.Count;
+                var indices = new HashSet<int>();
+                foreach (ItemSlot_UI slot in grid.PooledSlots)
+                    if (slot.gameObject.activeSelf)
+                        mappingValid &= indices.Add(slot.slotIndex)
+                            && ReferenceEquals(slot.BoundInventory, inventory)
+                            && ReferenceEquals(inventory.itemSlot_UI[slot.slotIndex], slot)
+                            && ReferenceEquals(slot.GetBoundSlotData(), slots[slot.slotIndex]);
+                rebindSamples.Add(new JObject
+                {
+                    ["name"] = name, ["scrollY"] = content.anchoredPosition.y,
+                    ["visibleCount"] = grid.VisibleSlotCount, ["filtered"] = search.HasActiveFilter,
+                    ["mappingValid"] = mappingValid
+                });
+            }
+            void SetScroll(float y) => content.anchoredPosition = new Vector2(0f, y);
+
+            FillSlots(41);
+            RebindSearch("initial");
+            SetScroll(96f);
+            RebindSearch("sameData");
+            slots.RemoveAt(6);
+            RebindSearch("shrink");
+            for (int i = slots.Count; i < 43; i++) slots.Add(ProbeSlot(i));
+            RebindSearch("grow");
+            SetScroll(500f);
+            slots.RemoveRange(18, slots.Count - 18);
+            RebindSearch("clamped");
+
+            FillSlots(41);
+            searchInput.SetTextWithoutNotify("Tool");
+            RebindSearch("queryChanged");
+            SetScroll(72f);
+            RebindSearch("filteredSameData");
+            slots.RemoveAt(40);
+            RebindSearch("filteredShrink");
+            for (int i = slots.Count; i < 43; i++) slots.Add(ProbeSlot(i));
+            RebindSearch("filteredGrow");
+            SetScroll(500f);
+            slots.RemoveRange(19, slots.Count - 19);
+            RebindSearch("filteredClamped");
+            slots.Clear();
+            RebindSearch("empty");
+
+            FillSlots(41);
+            SetScroll(72f);
+            inventory.Data = new Inventory_Data(slots, "replacement-probe");
+            RebindSearch("dataChanged");
+            SetScroll(72f);
+            inventory = new VirtualizedInventoryProbe { Data = inventory.Data };
+            RebindSearch("sameDataNewWrapper");
+            searchInput.SetTextWithoutNotify("Too");
+            RebindSearch("queryChangedAgain");
+            SetScroll(72f);
+            searchInput.SetTextWithoutNotify(string.Empty);
+            RebindSearch("queryCleared");
             grid.Unbind();
             return new JObject
             {
@@ -176,6 +263,7 @@ public static partial class GameplayTestSystemProbe
                 ["invalidUnchanged"] = invalidUnchanged, ["forcedRefreshStable"] = forcedRefreshStable,
                 ["mapCleared"] = mapCleared, ["bindingsCleared"] = bindingsCleared, ["expandedPoolCount"] = expandedPoolCount,
                 ["expandedMappingValid"] = expandedMappingValid,
+                ["rebindSamples"] = rebindSamples,
                 ["layoutRestored"] = layout.enabled && content.GetComponent<ContentSizeFitter>().enabled
             };
         }

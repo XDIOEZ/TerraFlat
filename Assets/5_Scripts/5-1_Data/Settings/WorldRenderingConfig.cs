@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>世界共用的渲染默认值。资源引用与逐物体外观仍由各自资源持有。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class WorldRenderingConfig
+public sealed partial class WorldRenderingConfig
 {
     public int schemaVersion;
     public RenderingPreferences preferences;
@@ -18,8 +19,9 @@ public sealed class WorldRenderingConfig
     public RenderingGrass grass;
     public RenderingSorting sorting;
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingPreferences
+    public sealed partial class RenderingPreferences
     {
         public int graphicsPreset;
         public int postProcessQuality;
@@ -27,8 +29,9 @@ public sealed class WorldRenderingConfig
         public bool playerOcclusion;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingShadows
+    public sealed partial class RenderingShadows
     {
         public bool sunEnabled;
         public bool blurEnabled;
@@ -46,8 +49,9 @@ public sealed class WorldRenderingConfig
         public GroundElevationShadow groundElevation;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class ContactShadow
+    public sealed partial class ContactShadow
     {
         public float widthRatio;
         public float heightToWidthRatio;
@@ -61,8 +65,9 @@ public sealed class WorldRenderingConfig
         public float rootedPlantVisualWidthLimit;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class EcsContactShadow
+    public sealed partial class EcsContactShadow
     {
         public float widthRatio;
         public float heightToWidthRatio;
@@ -72,8 +77,9 @@ public sealed class WorldRenderingConfig
         public float heightRatio;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class GroundElevationShadow
+    public sealed partial class GroundElevationShadow
     {
         public bool enabled;
         public float width;
@@ -81,8 +87,9 @@ public sealed class WorldRenderingConfig
         public float maximumWidth;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingOcclusion
+    public sealed partial class RenderingOcclusion
     {
         public float maskRadius;
         public float maskFeather;
@@ -93,8 +100,9 @@ public sealed class WorldRenderingConfig
 
     #region 交互描边配置
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingInteractionOutline
+    public sealed partial class RenderingInteractionOutline
     {
         public bool enabled;
         // 所有交互目标共用屏幕像素宽度，不跟随素材分辨率变化。
@@ -107,8 +115,9 @@ public sealed class WorldRenderingConfig
 
     #region 大雾视野配置
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingDenseFog
+    public sealed partial class RenderingDenseFog
     {
         public float clearRadius;
         public float opaqueRadius;
@@ -119,6 +128,7 @@ public sealed class WorldRenderingConfig
         public float noiseStrength;
 
         // 大雾半径使用世界格距离，透明度不能被画质偏好或颜色 Alpha 降低。
+        [MemoryPack.MemoryPackIgnore]
         public bool IsValid =>
             IsFinite(clearRadius) && clearRadius > 0f &&
             IsFinite(opaqueRadius) && opaqueRadius > clearRadius &&
@@ -149,8 +159,9 @@ public sealed class WorldRenderingConfig
 
     #region 高视野云雾配置
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingZoomClouds
+    public sealed partial class RenderingZoomClouds
     {
         public float windowTransitionSeconds;
         public float driftTransitionSeconds;
@@ -162,6 +173,7 @@ public sealed class WorldRenderingConfig
         public float shadowStrength;
 
         // 窗口交接与云纹漂移分别缓动，加载范围仍由区块系统决定。
+        [MemoryPack.MemoryPackIgnore]
         public bool IsValid =>
             IsFinite(windowTransitionSeconds) && windowTransitionSeconds >= 0f &&
             IsFinite(driftTransitionSeconds) && driftTransitionSeconds >= 0f &&
@@ -182,8 +194,9 @@ public sealed class WorldRenderingConfig
 
     #region 宇宙观察视野配置
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingUniverseView
+    public sealed partial class RenderingUniverseView
     {
         public float startOrthographicSize;
         public float opaqueOrthographicSize;
@@ -194,6 +207,7 @@ public sealed class WorldRenderingConfig
         public float minimumBodyPixels;
 
         // 入场允许贴近星球局部，实际地表镜头仍停在过渡起点。
+        [MemoryPack.MemoryPackIgnore]
         public bool IsValid =>
             IsFinite(startOrthographicSize) && startOrthographicSize > 0f &&
             IsFinite(opaqueOrthographicSize) && opaqueOrthographicSize > startOrthographicSize &&
@@ -208,8 +222,9 @@ public sealed class WorldRenderingConfig
 
     #endregion
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingPostProcess
+    public sealed partial class RenderingPostProcess
     {
         public WorldVolume worldVolume;
         public float transitionSeconds;
@@ -225,8 +240,9 @@ public sealed class WorldRenderingConfig
         public float lowPulseScale;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class WorldVolume
+    public sealed partial class WorldVolume
     {
         public Bloom bloom;
         public ColorGrading colorGrading;
@@ -238,8 +254,9 @@ public sealed class WorldRenderingConfig
         public int mediumBloomMaxIterations;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class Bloom
+    public sealed partial class Bloom
     {
         public bool enabled;
         public float threshold;
@@ -251,31 +268,35 @@ public sealed class WorldRenderingConfig
         public int maxIterations;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class ColorGrading
+    public sealed partial class ColorGrading
     {
         public float postExposure;
         public float contrast;
         public float saturation;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class WhiteBalance
+    public sealed partial class WhiteBalance
     {
         public float temperature;
         public float tint;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class SplitToning
+    public sealed partial class SplitToning
     {
         public Color shadows;
         public Color highlights;
         public float balance;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class Vignette
+    public sealed partial class Vignette
     {
         public Color color;
         public Vector2 center;
@@ -284,8 +305,9 @@ public sealed class WorldRenderingConfig
         public bool rounded;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingGrass
+    public sealed partial class RenderingGrass
     {
         public float positionJitter;
         public Vector2 scaleRange;
@@ -294,8 +316,9 @@ public sealed class WorldRenderingConfig
         public Vector2 tintRange;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RenderingSorting
+    public sealed partial class RenderingSorting
     {
         public string terrainSortingLayer;
         public string[] dynamicCategories;
@@ -305,16 +328,18 @@ public sealed class WorldRenderingConfig
         public BatchSortingProfile[] batchProfiles;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class WorldSortingProfile
+    public sealed partial class WorldSortingProfile
     {
         public string category;
         public string sortingLayer;
         public int order;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class BatchSortingProfile
+    public sealed partial class BatchSortingProfile
     {
         public string visualLayer;
         public int batchOrder;
@@ -337,7 +362,7 @@ public static class WorldRenderingConfigCatalog
         if (asset == null)
             throw new InvalidOperationException($"缺少世界渲染配置：Resources/{ResourcePath}.json");
 
-        WorldRenderingConfig config = JsonUtility.FromJson<WorldRenderingConfig>(asset.text);
+        WorldRenderingConfig config = JsonConfigurationCache.FromUnityJson<WorldRenderingConfig>(asset.text);
         if (config == null || config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||

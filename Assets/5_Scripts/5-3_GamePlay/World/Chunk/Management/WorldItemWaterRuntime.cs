@@ -1,6 +1,8 @@
-﻿using FlatWorld.Networking;
+using System.Collections.Generic;
+using FlatWorld.Networking;
 using UnityEngine;
 using static WorldItemWaterRules;
+using static WorldItemWaterSystem;
 
 /// <summary>
 /// 单个散落物的水中临时运行态。状态由当前位置、物品重量/体积与液体浮力推导，
@@ -8,6 +10,8 @@ using static WorldItemWaterRules;
 /// </summary>
 public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
 {
+    #region 水态运行与生命周期
+
     private const string WaterEffectMaterialAddress = "Assets/9_Shaders/Material/Sprite-Lit-Master.mat";
 
     private Item waterItem;
@@ -15,6 +19,9 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     private WaterImmersionRenderEffect waterImmersionEffect;
     private bool isSinking;
     private bool isFloating;
+    private bool isOnBottom;
+    private string observedSpecialData;
+    private readonly List<SpriteRenderer> bottomHiddenRenderers = new();
     private bool floatSettled;
     private float sinkElapsed;
     private float resolvedSinkDuration;
@@ -27,9 +34,11 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     private Transform driftVisual;
     private Vector3 originalDriftVisualPosition;
     private DriftInterpolation driftInterpolation;
+    private int activatedFrame;
 
-    public bool IsActive => waterItem != null && (isSinking || isFloating);
-    public bool IsSubmerged => IsActive && waterImmersionEffect != null && waterImmersionEffect.CurrentDepth >= 0.995f;
+    public bool IsActive => waterItem != null && (isSinking || isFloating || isOnBottom);
+    public bool IsOnBottom => IsActive && isOnBottom;
+    public bool IsSubmerged => IsOnBottom || IsActive && waterImmersionEffect != null && waterImmersionEffect.CurrentDepth >= 0.995f;
 
     /// <summary>从当前位置建立浮沉状态；重复调用同一活动实例不会重置进度。</summary>
     public void Activate(Item targetItem)
@@ -41,7 +50,16 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
 
         ResetRuntimeState(resetVisual: true);
         waterItem = targetItem;
+        observedSpecialData = targetItem.itemData.ItemSpecialData;
+        activatedFrame = Time.frameCount;
         enabled = true;
+
+        if (GetSavedBottomState(targetItem.itemData))
+        {
+            EnsureWaterVisual(targetItem);
+            SettleOnBottom();
+            return;
+        }
 
         float ratio = ResolveWeightVolumeRatio(targetItem.itemData.Stack);
         float effectiveThreshold = ResolveSinkRatioThreshold(targetItem.transform.position);
@@ -56,12 +74,36 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         if (!IsActive)
             return;
 
+        using var worldScope = GameplayWorldRegistry.TryGet(gameObject.scene.name, out _)
+            ? GameplayWorldRegistry.UseWorld(gameObject.scene.name) : null;
         UpdateWaterState(Mathf.Max(0f, Time.deltaTime));
         ApplyDriftVisualPosition();
     }
 
     private void UpdateWaterState(float deltaTime)
     {
+        if (!isOnBottom && observedSpecialData != waterItem.itemData.ItemSpecialData)
+        {
+            observedSpecialData = waterItem.itemData.ItemSpecialData;
+            if (GetSavedBottomState(waterItem.itemData)) SettleOnBottom();
+        }
+
+        if (isOnBottom)
+        {
+            settledTickElapsed += deltaTime;
+            if (settledTickElapsed >= SettledTickInterval)
+            {
+                settledTickElapsed = 0f;
+                if (WorldItemWaterSystem.TryResolveWaterAt(waterItem.transform.position, out bool isWater) && !isWater)
+                {
+                    Deactivate(clearBottomState: true);
+                    return;
+                }
+                DroppedItemService.TryPickupBottomItem(waterItem);
+            }
+            return;
+        }
+
         if (isSinking)
         {
             UpdateSink(deltaTime);
@@ -85,8 +127,13 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     }
 
     /// <summary>显式退出水体状态并恢复原始水线表现。</summary>
-    public void Deactivate()
+    public void Deactivate(bool clearBottomState = false)
     {
+        if (clearBottomState && waterItem != null && GameNetwork.HasStateAuthority && GetSavedBottomState(waterItem.itemData))
+        {
+            SetSavedBottomState(waterItem.itemData, false);
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(waterItem);
+        }
         ResetRuntimeState(resetVisual: true);
         enabled = false;
     }
@@ -98,7 +145,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         resolvedSinkDuration = ResolveSinkDuration(ratio);
         sinkElapsed = 0f;
         submergedElapsed = 0f;
-        if (targetItem.Sprite != null)
+        if (targetItem.Sprite != null && targetItem.Sprite.transform != targetItem.transform)
         {
             submergedVisual = targetItem.Sprite.transform;
             originalVisualScale = submergedVisual.localScale;
@@ -138,7 +185,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
 
         if (WorldItemWaterSystem.TryResolveWaterAt(waterItem.transform.position, out bool isWater) && !isWater)
         {
-            Deactivate();
+            Deactivate(clearBottomState: true);
             return;
         }
 
@@ -161,14 +208,41 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         float recedeProgress = Mathf.Clamp01(submergedElapsed / SubmergedRecedeDuration);
         if (submergedVisual != null)
             submergedVisual.localScale = originalVisualScale * ResolveSubmergedScale(recedeProgress);
-        if (recedeProgress < 1f || !GameNetwork.HasStateAuthority)
+        if (recedeProgress < 1f)
             return;
 
-        Item completedItem = waterItem;
-        ResetRuntimeState(resetVisual: false);
-        if (ItemMgr.Instance != null && completedItem != null && !completedItem.DestructionHandled)
-            ItemMgr.Instance.DespawnItem(completedItem, saveData: false);
+        SettleOnBottom();
     }
+
+    #region 河底静止与隐藏
+
+    private void SettleOnBottom()
+    {
+        if (isOnBottom || waterItem == null) return;
+        isSinking = false;
+        isFloating = false;
+        isOnBottom = true;
+        settledTickElapsed = 0f;
+        driftInterpolation = default;
+        if (driftVisual != null) driftVisual.localPosition = originalDriftVisualPosition;
+        if (submergedVisual != null) submergedVisual.localScale = originalVisualScale;
+        waterImmersionEffect.SetWaterState(1f, true);
+        // 只关闭渲染，物品根节点、碰撞、世界登记与真实尺寸都保留。
+        foreach (SpriteRenderer renderer in waterItem.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (renderer.forceRenderingOff) continue;
+            renderer.forceRenderingOff = true;
+            bottomHiddenRenderers.Add(renderer);
+        }
+        if (GameNetwork.HasStateAuthority)
+        {
+            SetSavedBottomState(waterItem.itemData, true);
+            observedSpecialData = waterItem.itemData.ItemSpecialData;
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(waterItem);
+        }
+    }
+
+    #endregion
 
     private void UpdateFloat(float deltaTime)
     {
@@ -211,38 +285,22 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(waterItem);
     }
 
-    /// <summary>按河流/海洋权威水流推进漂浮物；下一位置不是水时停在岸边。</summary>
+    /// <summary>水流与外力共用散物运动内核；岸线只限制水流，独立外力可把物品推上岸。</summary>
     private void UpdateWaterDrift(float deltaTime)
     {
-        if (waterItem == null || deltaTime <= 0f)
+        if (waterItem == null || deltaTime <= 0f || activatedFrame == Time.frameCount)
             return;
 
         ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
-        if (chunkMgr == null ||
-            !chunkMgr.TryGetRuntimeWaterCurrent(waterItem.transform.position, out RuntimeWaterCurrentSample current))
-        {
-            return;
-        }
-
-        float speed = ResolveDriftSpeed(current.Kind, current.Flow, waterItem.itemData.Stack);
-        if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f)
-            return;
-
+        Vector2 velocity = Vector2.zero;
+        if (chunkMgr != null && chunkMgr.TryGetRuntimeWaterCurrent(waterItem.transform.position, out RuntimeWaterCurrentSample current))
+            velocity = current.Direction * ResolveDriftSpeed(current.Kind, current.Flow, waterItem.itemData.Stack);
         Vector2 currentPosition = waterItem.transform.position;
-        Vector2 targetPosition = WorldTopologyRuntime.NormalizePosition(
-            currentPosition + current.Direction * (speed * deltaTime));
-        if (!WorldItemWaterSystem.TryResolveWaterAt(targetPosition, out bool targetIsWater) || !targetIsWater)
-            return;
-
+        Vector2 targetPosition = LooseItemMotion.AdvanceWater(gameObject.scene.name, waterItem.itemData,
+            currentPosition, velocity, deltaTime, !IsSubmerged);
+        if (!LooseItemMotion.CommitItemPosition(waterItem, targetPosition)) return;
         driftInterpolation.RecordMovement(
             WorldTopologyRuntime.ShortestDelta(currentPosition, targetPosition), deltaTime, Time.timeAsDouble);
-        Vector2 displayPosition = WorldTopologyRuntime.NearestImagePosition(currentPosition, targetPosition);
-        Vector3 worldPosition = waterItem.transform.position;
-        worldPosition.x = displayPosition.x;
-        worldPosition.y = displayPosition.y;
-        waterItem.transform.position = worldPosition;
-        ItemWorldPlacement.TryAttachWorldModelTransientItem(waterItem, targetPosition);
-        ItemMgr.Instance?.NotifyRuntimeItemMoved(waterItem);
     }
 
     private void EnsureWaterVisual(Item targetItem)
@@ -293,6 +351,9 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
 
     private void ResetRuntimeState(bool resetVisual)
     {
+        foreach (SpriteRenderer renderer in bottomHiddenRenderers)
+            if (renderer != null) renderer.forceRenderingOff = false;
+        bottomHiddenRenderers.Clear();
         if (driftVisual != null)
             driftVisual.localPosition = originalDriftVisualPosition;
         driftVisual = null;
@@ -313,6 +374,8 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
             waterImmersionEffect.enabled = false;
 
         waterItem = null;
+        isOnBottom = false;
+        observedSpecialData = null;
         isSinking = false;
         isFloating = false;
         floatSettled = false;
@@ -346,6 +409,8 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         ResetRuntimeState(resetVisual: true);
         enabled = false;
     }
+
+    #endregion
 }
 
 /// <summary>

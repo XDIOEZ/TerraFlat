@@ -37,3 +37,9 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - [表现、面板与 C# MOD](references/presentation-and-mods.md)
 
 机械/气液案例入口分别为 `GameplayTests/mechanical-suite.json`、`GameplayTests/fluid-suite.json`；执行与报告按 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，细目见 GameplayTests 的 README 与 IndustrialFluids 覆盖矩阵。
+
+## 铁路与库存引擎
+
+- `World/Railways/` 的铁路仅复用 `ConveyorPath`/静态曲面，不接机械输送业务；`RailTrackNetwork` 按所属世界场景登记、双端口互认并按真实弧长推进。
+- `EnginePowerService` 只识别注册的 `IEnginePowerProvider`，引擎位按能力收物；供给方自己管理冷 `ItemData` 的状态和资源，接收方不识别具体引擎。地面蒸汽机是 `FluidMachine`/机械动力源：管道从左侧输入纯水蒸汽，右侧机械轴输出动力，冷凝水留在设备内供容器取出。
+- 矿车可放在地面或铁路，推动复用载具接触链；地面高阻、轨道约束和进出轨由矿车运动策略管理。`Mod_MinecartPlacement` 只检查实际吸轨位置的车辆净空，基础地形、支撑与占地资格仍归建造事务；两端定义以 `requiredGroundSupport=3` 拒绝承重2的液面。

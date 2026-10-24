@@ -22,7 +22,10 @@ namespace FlatWorld.Networking.Gameplay
         { if (isServer && !accepted) authoritativeWorldTransferPending = false; }
         public void AcknowledgeWorldTransfer(string worldKey, uint realm)
         {
-            if (!isServer || realm != authoritativeRealmRevision || worldKey != authoritativeWorldKey) return;
+            if (!isServer || !TryGetSpaceObserver(out _)) return;
+            // 本机重生可能同步发出就绪通知，先同步正式观察者再校验新世界代际。
+            RefreshSpaceAuthority();
+            if (realm != authoritativeRealmRevision || worldKey != authoritativeWorldKey) return;
             authoritativeWorldTransferPending = false;
         }
         private void MaintainPlayerAuthority()

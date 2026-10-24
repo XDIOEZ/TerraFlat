@@ -43,6 +43,11 @@ namespace FlatWorld.Networking.Gameplay
         public uint Token;
         public bool Accepted;
         public bool OperationUpdate;
+        public bool OperationReceipt;
+        public int OperationEntityId;
+        public string Operation;
+        public string Argument;
+        public string Reason;
         public MachineInventoryAddress Source;
         public MachineInventoryAddress Target;
         public byte[] SourceInventory;
@@ -67,12 +72,17 @@ namespace FlatWorld.Networking.Gameplay
         private uint lastMachineOperationInventory;
         private uint pendingMachineInventoryOperation;
         private readonly Dictionary<int, (NetworkConnectionToClient Connection, uint Token)> machineTokens = new();
+        private readonly Dictionary<uint, (NetworkMachineOperationRequest Request, float Deadline)> pendingMachineOperations = new();
+        private readonly List<uint> expiredMachineOperations = new();
+        private const float MachineOperationTimeoutSeconds = 8f;
+        private bool machineOperationsEnabled;
 
         private void StartMachineServerBridge()
         {
             StartContainerServerBridge();
             StartFluidServerBridge();
-            NetworkServer.RegisterHandler<NetworkMachineOperationRequest>(NetworkGameplayWorldScope.Wrap<NetworkMachineOperationRequest>(OnMachineOperation), true);
+            NetworkServer.RegisterHandler<NetworkMachineOperationRequest>(NetworkGameplayWorldScope.Wrap<NetworkMachineOperationRequest>(
+                OnMachineOperation, (connection, request, reason) => SendMachineOperationReceipt(connection, request, false, reason)), true);
             NetworkServer.RegisterHandler<NetworkMachineTransferRequest>(NetworkGameplayWorldScope.Wrap<NetworkMachineTransferRequest>(OnMachineTransfer), true);
         }
 
@@ -87,6 +97,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void StartMachineClientBridge()
         {
+            machineOperationsEnabled = true;
             StartContainerClientBridge();
             StartFluidClientBridge();
             MachineWorld.RemoteOperationRequested += SendMachineOperation;
@@ -96,6 +107,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void StopMachineClientBridge()
         {
+            machineOperationsEnabled = false;
+            CompletePendingMachineOperations("联机连接已关闭，操作未确认");
             StopContainerClientBridge();
             StopFluidClientBridge();
             MachineWorld.RemoteOperationRequested -= SendMachineOperation;
@@ -108,16 +121,19 @@ namespace FlatWorld.Networking.Gameplay
             machineTransferDeadline = 0f;
         }
 
-        private bool SendMachineOperation(int id, string operation, string argument)
+        private bool SendMachineOperation(int id, string operation, string argument, out uint token)
         {
+            token = 0;
             if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() ||
                 IsInventoryMachineOperation(operation) && pendingMachineInventoryOperation != 0) return false;
-            if (!NetworkClient.ready || NetworkServer.active || string.IsNullOrWhiteSpace(operation) ||
+            if (!machineOperationsEnabled || !NetworkClient.ready || NetworkServer.active || string.IsNullOrWhiteSpace(operation) ||
                 operation.Length > 64 || (argument?.Length ?? 0) > 2048) return false;
-            uint token = NextMachineToken();
+            token = NextMachineToken();
             if (IsInventoryMachineOperation(operation)) pendingMachineInventoryOperation = token;
-            NetworkClient.Send(new NetworkMachineOperationRequest
-            { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = token, EntityId = id, Operation = operation, Argument = argument ?? "", ShipId = CurrentRequestShipId() });
+            var request = new NetworkMachineOperationRequest
+            { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = token, EntityId = id, Operation = operation, Argument = argument ?? "", ShipId = CurrentRequestShipId() };
+            pendingMachineOperations[token] = (request, Time.unscaledTime + MachineOperationTimeoutSeconds);
+            NetworkClient.Send(request);
             return true;
         }
 
@@ -131,6 +147,15 @@ namespace FlatWorld.Networking.Gameplay
                 ReferenceEquals(previous.Connection, connection) && unchecked((int)(token - previous.Token)) <= 0) return false;
             machineTokens[connection.connectionId] = (connection, token);
             return true;
+        }
+
+        private bool CanOperateInventoryMachine(NetworkConnectionToClient connection, Player actor, int id)
+        {
+            if (CanOperateMachine(connection, actor, id)) return true;
+            // 共享槽按当前真正连接的工作台校验距离，仍只操作工具柜自身库存。
+            MachineEntity source = MachineWorld.GetById(id);
+            return source != null && MachineWorld.CanReachSharedCraftingInput(source,
+                workbench => CanOperateMachine(connection, actor, workbench.Id));
         }
 
         private bool CanOperateMachine(NetworkConnectionToClient connection, Player actor, int id)
@@ -159,29 +184,64 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnMachineOperation(NetworkConnectionToClient connection, NetworkMachineOperationRequest request)
         {
+            bool accepted = false;
+            string reason = "机器操作参数无效";
             try
             {
-                if (!AcceptMachineToken(connection, request.Token) || string.IsNullOrWhiteSpace(request.Operation) ||
-                    request.Operation.Length > 64 || (request.Argument?.Length ?? 0) > 2048) return;
-                if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true) return;
-                if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope)) return;
-                using (scope) ExecuteMachineOperation(connection, request);
+                if (string.IsNullOrWhiteSpace(request.Operation) || request.Operation.Length > 64 ||
+                    (request.Argument?.Length ?? 0) > 2048) return;
+                if (!AcceptMachineToken(connection, request.Token))
+                { reason = "操作请求已过期，请重试"; return; }
+                if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true)
+                { reason = "正在等待服务器确认拾取库存"; return; }
+                if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope))
+                { reason = "设备所在世界已变化，请重新打开面板"; return; }
+                using (scope) accepted = ExecuteMachineOperation(connection, request, out reason);
+            }
+            catch (Exception exception)
+            {
+                reason = LimitMachineOperationReason(exception.Message);
+                Debug.LogWarning("[联机机器] 操作失败：" + reason);
             }
             finally
             {
-                if (IsInventoryMachineOperation(request.Operation))
-                    connection?.Send(new NetworkMachineTransferResponse { Token = request.Token, OperationUpdate = true });
+                SendMachineOperationReceipt(connection, request, accepted, reason);
             }
         }
 
+        private static void SendMachineOperationReceipt(NetworkConnectionToClient connection,
+            NetworkMachineOperationRequest request, bool accepted, string reason)
+        {
+            if (connection == null) return;
+            // 保留库存完成包及其排序语义，普通操作结果走同一响应类型的独立支路。
+            if (IsInventoryMachineOperation(request.Operation))
+                connection.Send(new NetworkMachineTransferResponse { Token = request.Token, OperationUpdate = true });
+            connection.Send(new NetworkMachineTransferResponse
+            {
+                Token = request.Token, Accepted = accepted, OperationUpdate = true, OperationReceipt = true,
+                OperationEntityId = request.EntityId,
+                Operation = LimitMachineReceiptText(request.Operation, 64),
+                Argument = LimitMachineReceiptText(request.Argument, 2048),
+                Reason = accepted ? string.Empty : LimitMachineOperationReason(reason)
+            });
+        }
+
+        private static string LimitMachineReceiptText(string text, int maximum)
+            => string.IsNullOrEmpty(text) ? string.Empty : text.Length <= maximum ? text : text.Substring(0, maximum);
+
+        private static string LimitMachineOperationReason(string reason)
+            => LimitMachineReceiptText(string.IsNullOrWhiteSpace(reason) ? "设备未接受此操作" : reason, 160);
+
         private static bool IsInventoryMachineOperation(string operation)
             => operation is "vessel.fill" or "inventory.private-open" or "inventory.private-layout";
-        private void ExecuteMachineOperation(NetworkConnectionToClient connection, NetworkMachineOperationRequest request)
+        private bool ExecuteMachineOperation(NetworkConnectionToClient connection, NetworkMachineOperationRequest request, out string reason)
         {
+            reason = "设备不可操作或距离过远";
             Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
-            if (!CanOperateMachine(connection, actor, request.EntityId)) return;
+            if (!CanOperateMachine(connection, actor, request.EntityId)) return false;
             MachineEntity entity = MachineWorld.GetById(request.EntityId);
             bool accepted = MachineWorld.Execute(entity, request.Operation, request.Argument, actor);
+            reason = accepted ? string.Empty : "设备未接受此操作";
             if (MachineWorld.Contains(entity)) SendMechanicalSnapshot(connection, entity);
             if (accepted && (request.Operation == "inventory.private-open" ||
                              request.Operation == "inventory.private-layout"))
@@ -211,6 +271,7 @@ namespace FlatWorld.Networking.Gameplay
                 else if (source?.MachineOwner != null) SendMechanicalSnapshot(connection, source.MachineOwner);
             }
             if (accepted) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
+            return accepted;
         }
 
         private bool SendMachineTransfer(Inventory source, int sourceIndex, Inventory target, int targetIndex, string operation, int amount)
@@ -251,8 +312,8 @@ namespace FlatWorld.Networking.Gameplay
             if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true ||
                 request.Source.MachineId == 0 && request.Target.MachineId == 0 &&
                 !MachineInventoryCommands.IsSpacesuitAddress(request.Source) && !MachineInventoryCommands.IsSpacesuitAddress(request.Target) || actor == null ||
-                request.Source.MachineId != 0 && !CanOperateMachine(connection, actor, request.Source.MachineId) ||
-                request.Target.MachineId != 0 && !CanOperateMachine(connection, actor, request.Target.MachineId) ||
+                request.Source.MachineId != 0 && !CanOperateInventoryMachine(connection, actor, request.Source.MachineId) ||
+                request.Target.MachineId != 0 && !CanOperateInventoryMachine(connection, actor, request.Target.MachineId) ||
                 (request.Source.PlayerInventory?.Length ?? 0) > 128 || (request.Target.PlayerInventory?.Length ?? 0) > 128 ||
                 (request.ExpectedSourceId?.Length ?? 0) > 128 || (request.ExpectedTargetId?.Length ?? 0) > 128)
             { connection.Send(response); return; }
@@ -306,6 +367,17 @@ namespace FlatWorld.Networking.Gameplay
         private void ApplyMachineTransfer(NetworkMachineTransferResponse response)
         {
             if (NetworkServer.active) return;
+            if (response.OperationReceipt)
+            {
+                if (!pendingMachineOperations.TryGetValue(response.Token, out var pending) ||
+                    pending.Request.EntityId != response.OperationEntityId ||
+                    !string.Equals(pending.Request.Operation, response.Operation, StringComparison.Ordinal) ||
+                    !string.Equals(pending.Request.Argument, response.Argument, StringComparison.Ordinal)) return;
+                pendingMachineOperations.Remove(response.Token);
+                MachineWorld.ReportOperationReceipt(new MachineOperationReceipt(response.Token,
+                    response.OperationEntityId, response.Operation, response.Argument, true, response.Accepted, response.Reason));
+                return;
+            }
             InventoryQuickTransferSignal? quick = null;
             if (response.OperationUpdate)
             {
@@ -330,6 +402,34 @@ namespace FlatWorld.Networking.Gameplay
                 PublishQuickTransferReceipts(quick.Value, response.QuickTransfers);
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
         }
+
+        private void TickMachineOperationReceipts()
+        {
+            if (pendingMachineOperations.Count == 0) return;
+            expiredMachineOperations.Clear();
+            foreach (var pending in pendingMachineOperations)
+                if (Time.unscaledTime >= pending.Value.Deadline) expiredMachineOperations.Add(pending.Key);
+            foreach (uint token in expiredMachineOperations)
+            {
+                if (!pendingMachineOperations.Remove(token, out var pending)) continue;
+                if (pendingMachineInventoryOperation == token) pendingMachineInventoryOperation = 0;
+                ReportUnconfirmedMachineOperation(pending.Request, "机器操作尚未确认，请重试");
+            }
+            expiredMachineOperations.Clear();
+        }
+
+        private void CompletePendingMachineOperations(string reason)
+        {
+            if (pendingMachineOperations.Count == 0) return;
+            var requests = new List<NetworkMachineOperationRequest>(pendingMachineOperations.Count);
+            foreach (var pending in pendingMachineOperations.Values) requests.Add(pending.Request);
+            pendingMachineOperations.Clear();
+            foreach (NetworkMachineOperationRequest request in requests) ReportUnconfirmedMachineOperation(request, reason);
+        }
+
+        private static void ReportUnconfirmedMachineOperation(NetworkMachineOperationRequest request, string reason)
+            => MachineWorld.ReportOperationReceipt(new MachineOperationReceipt(request.Token, request.EntityId,
+                request.Operation, request.Argument, false, false, reason));
 
         // 船上机器依旧使用原命令和库存事务，只显式选中所属船的数据作用域。
         private static string CurrentRequestShipId()

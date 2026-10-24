@@ -2,11 +2,8 @@
   "schemaVersion": 1,
   "config": {
     "id": "snow_leopard_daily",
-    "scheduleMode": "countdown",
     "ecologyGroup": "commonEnemies",
     "requireGlobalDarkness": false,
-    "spawnTriggerTime": 1200.0,
-    "spawnsPerDay": 1,
     "minSpawnDistance": 24.0,
     "maxSpawnDistance": 55.0,
     "playerVisibilityExclusionDistance": 24.0,
@@ -15,16 +12,10 @@
     "spawnSearchRetryCount": 10,
     "spawnCount": 1,
     "spawnChance": 1.0,
-    "daysBetweenSpawns": 1,
     "groupAliveLimit": 1,
     "maxEcologyBudget": 2,
     "dailyBudgetRecovery": 1,
-    "recoveryTargetPopulation": 1,
-    "recoveryCheckInterval": 10.0,
-    "growthIntervalDays": 1,
-    "maxLifetimeSpawnCount": 64,
     "asyncSpawnInterval": 0.0,
-    "unboundedDailyGrowth": false,
     "ignorePopulationLimits": false,
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 1.0,
@@ -46,6 +37,7 @@
       "enabled": false,
       "treesPerActor": 4,
       "spawnRadius": 3.0
-    }
+    },
+    "ignoreEcologyBudget": false
   }
 }

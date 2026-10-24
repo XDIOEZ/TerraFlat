@@ -134,6 +134,12 @@ public sealed class Mod_Hand : Module { public Inventory HandInventory; }
 public sealed class Mod_HotBar : Module { public Inventory RuntimeInventory; }
 public sealed class Mod_HandCraftTable : Module { public Inventory inputInventory, outputInventory; }
 public sealed class Mod_HandMade : Module { public Dictionary<string, Inventory> InventoryRefDic = new(); }
+public sealed class Mod_ManualProcessor : Module
+{
+    public const string ModuleId = "manual-processing";
+    public MachineProcessor Processor;
+    public Inventory ToolInventory;
+}
 public sealed class Mod_Equipment : Module
 {
     public Inventory EquipmentInventory;
@@ -254,9 +260,11 @@ public static class MachineWorld
 public class MachineLogic { public List<Inventory> Inventories = new(); }
 public sealed class VesselLogic : MachineLogic { public LiquidContainerState Data; }
 public sealed class CultivatorLogic : MachineLogic { }
+public sealed class ManualProcessingLogic : MachineLogic { }
 public sealed class MachineProcessor { public Inventory Input, Output; }
 public sealed class MachineStorageState { public List<Inventory_Data> Inventories; }
 public sealed class RecipeProcessingState { public Inventory_Data Input, Output; }
+public sealed class ManualProcessingState { public RecipeProcessingState Processing; public Inventory_Data Tool; }
 public sealed class FurnaceRuntimeState { public SmeltingState Smelting; public RecipeProcessingState Processing; }
 public sealed class SmeltingState { public Dictionary<string, Inventory_Data> InvData; }
 public sealed class SlotProcessingState { public Inventory_Data Inventory; }

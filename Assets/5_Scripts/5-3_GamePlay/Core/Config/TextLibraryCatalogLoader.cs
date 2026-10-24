@@ -63,7 +63,7 @@ public static class TextLibraryCatalogLoader
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("文字库 JSON 为空");
 
-        TextLibraryCatalogDto catalog = JsonConvert.DeserializeObject<TextLibraryCatalogDto>(
+        TextLibraryCatalogDto catalog = JsonConfigurationCache.Deserialize<TextLibraryCatalogDto>(
             json,
             StrictJsonSettings);
         Validate(catalog);

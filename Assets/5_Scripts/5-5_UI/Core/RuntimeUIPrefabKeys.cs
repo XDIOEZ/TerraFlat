@@ -41,6 +41,7 @@ public static class RuntimeUIPrefabKeys
     public const string DimensionLoading = "UI_DimensionLoading";
     public const string PlayerWorldCoordinate = "UI_PlayerWorldCoordinate";
     public const string ShipFlightHud = "UI_ShipFlightHUD";
+    public const string SpaceElevator = "UI_SpaceElevator";
     public const string SaveStatus = "UI_SaveStatus";
     public const string BuffStatus = "UI_BuffStatus";
     public const string BuffStatusItem = "UI_BuffStatusItem";

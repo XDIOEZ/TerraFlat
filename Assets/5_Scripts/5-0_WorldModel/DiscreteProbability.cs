@@ -4,8 +4,9 @@ using System.Globalization;
 
 namespace FlatWorld.WorldModel
 {
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class DiscreteProbabilityEntryDefinition
+    public sealed partial class DiscreteProbabilityEntryDefinition
     {
         #region JSON 档位
         public double Value;
@@ -13,8 +14,9 @@ namespace FlatWorld.WorldModel
         #endregion
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class DiscreteProbabilityTableDefinition
+    public sealed partial class DiscreteProbabilityTableDefinition
     {
         #region JSON 原始表
         public string Id;

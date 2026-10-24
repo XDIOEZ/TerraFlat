@@ -39,7 +39,7 @@ namespace FlatWorld.Spaceflight
             ShipPieceState piece = session.AddPiece(data, request.Position, request.RotationQuarterTurns ?? 0, out ShipState ship);
             return new BuildingPlacementResult(data.IDName,
                 () => session.RollbackPiece(ship, piece),
-                () => session.CommitPiece(ship, piece), placedData: data);
+                () => session.CommitPiece(ship, piece), placedData: data, shipId: ship.ShipId);
         }
         #endregion
     }
@@ -67,7 +67,7 @@ namespace FlatWorld.Spaceflight
         }
 
         public ShipPieceState AddPiece(ItemData data, Vector2 displayPosition, int quarterTurns, out ShipState ship,
-            bool registerMachine = true, string surfaceWorldKey = null)
+            bool registerMachine = true, string surfaceWorldKey = null, ShipState targetShip = null)
         {
             ShipPartConfiguration config = ResolvePartConfiguration(data);
             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building);
@@ -76,7 +76,8 @@ namespace FlatWorld.Spaceflight
             int width = Math.Max(1, Math.Max(config.FootprintWidth, building?.FootprintWidth ?? 1));
             int height = Math.Max(1, Math.Max(config.FootprintHeight, building?.FootprintHeight ?? 1));
             Vector2 local;
-            if (surfaceWorldKey == null) TryGetSupport(displayPosition, out ship, out _, out local);
+            if (targetShip != null) { ship = targetShip; local = displayPosition; }
+            else if (surfaceWorldKey == null) TryGetSupport(displayPosition, out ship, out _, out local);
             else TryGetGroundAssemblySupport(surfaceWorldKey, displayPosition, out ship, out local);
             bool created = false;
             if (ship == null && config.Kind == ShipPieceKind.Floor)
@@ -87,7 +88,7 @@ namespace FlatWorld.Spaceflight
             if (ship == null) throw new InvalidOperationException("设备需要完整的飞船地板支撑。");
             int cellX = Mathf.FloorToInt(local.x / (float)ship.CellSizeMeters), cellY = Mathf.FloorToInt(local.y / (float)ship.CellSizeMeters);
             bool blocksMovement = config.BlocksMovement ?? (config.Kind is ShipPieceKind.Wall or ShipPieceKind.Door or ShipPieceKind.DockingPort ||
-                machine?.BlocksMovement == true);
+                machine?.BlocksTraversal == true);
             var piece = new ShipPieceState
             {
                 PieceId = data.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture), ItemId = data.IDName,
@@ -280,10 +281,10 @@ namespace FlatWorld.Spaceflight
                 // 线路按真实能力归类，避免管道和电线被当成阻挡喷口的设备。
                 Kind = door ? ShipPieceKind.Door : wall ? ShipPieceKind.Wall :
                     machine?.Electrical?.IsWire == true ? ShipPieceKind.Wire :
-                    machine?.Fluid?.Kind == "pipe" ? ShipPieceKind.Pipe : ShipPieceKind.Equipment,
+                    machine?.IsFluidPipeSegment == true ? ShipPieceKind.Pipe : ShipPieceKind.Equipment,
                 Layer = layer,
                 SealsAtmosphere = door || wall, StructuralMassKg = data.Stack?.CurrentWeight ?? 20f,
-                BlocksMovement = door || wall || (machine?.BlocksMovement ?? (layer == (int)BuildingPlacementLayer.Structure && tile == null)),
+                BlocksMovement = door || wall || (machine?.BlocksTraversal ?? (layer == (int)BuildingPlacementLayer.Structure && tile == null)),
                 FootprintWidth = Math.Max(1, building?.FootprintWidth ?? 1), FootprintHeight = Math.Max(1, building?.FootprintHeight ?? 1),
                 Health = (float)Math.Max(1d, health * data.CraftedDurabilityMultiplier), PowerWatts = 0f,
                 PhysicalDefense = wall || door ? 10f : Math.Max(0f, definition?.Health?.Defense?.Physical ?? 0f),
@@ -381,6 +382,7 @@ namespace FlatWorld.Spaceflight
         #region 部件摧毁与船体分裂事务
         public void DestroyPiece(ShipState ship, ShipPieceState piece, string reason)
         {
+            if (piece.ProtectedAnchor) return;
             if (destroyed.Contains(piece.PieceId)) return;
             ship.NotifyStructureChanged();
             destroyed.Add(piece.PieceId);

@@ -83,7 +83,7 @@ public static class FluidDeviceOperations
     {
         if (node.Definition.Electrical?.IsConsumer == true) return Math.Max(0, node.ElectricalSuppliedWatts) * seconds;
         if (!node.Definition.HasMechanicalPorts || !node.LoadSatisfied || node.SpeedRpm <= 0) return 0;
-        return MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.SpeedRpm *
+        return node.RequiredTorque * node.SpeedRpm *
             MachineCatalog.Settings.WattsPerTorqueRpm * seconds;
     }
     private static double AmbientTemperatureKelvin(MachineEntity node)

@@ -1,7 +1,7 @@
 using System.Linq;
 using UnityEngine;
 
-/// <summary>实例加工保留被消耗工具的身份和状态，预览与提交使用同一份独立产物。</summary>
+/// <summary>实例加工保留被消耗物品的身份和状态，预览与提交使用同一份独立产物。</summary>
 public static class CraftingInstanceOutput
 {
     #region 实例产物
@@ -11,9 +11,11 @@ public static class CraftingInstanceOutput
         RuntimeRecipeResult output, out ItemData result, out string error)
     {
         result = null;
-        error = "找不到可加工的工具实例";
+        error = "找不到可加工的物品实例";
         RuntimeRecipeIngredient ingredient = recipe.inputs.RowItems_List.FirstOrDefault(value =>
-            value.matchMode == MatchMode.ByTag && value.Tag == output.CopyInputTag && value.amount == 1);
+            value.amount == 1 && (!string.IsNullOrWhiteSpace(output.CopyInputItemId)
+                ? value.matchMode == MatchMode.ExactItem && value.ItemName == output.CopyInputItemId
+                : value.matchMode == MatchMode.ByTag && value.Tag == output.CopyInputTag));
         if (ingredient == null || input?.Data?.itemSlots == null) return false;
         for (int i = 0; i < input.Data.itemSlots.Count; i++)
         {
@@ -22,8 +24,15 @@ public static class CraftingInstanceOutput
                 source.Stack.Stackable || source.Stack.Amount != 1f ||
                 (match != null && !match.Consumptions.Any(value => value.SlotIndex == i && value.Amount >= 1f))) continue;
             if (output.ReinforceWithAdhesive && (source.Tags.Contains(ReinforcedTag) || source.MaxDurability <= 0f)) continue;
+            if (!string.IsNullOrWhiteSpace(output.AddTag) && source.Tags.Contains(output.AddTag)) continue;
+            if (output.durabilityMultiplier != 1f && source.MaxDurability <= 0f) continue;
             result = ItemInstanceDataFactory.CloneRuntime(source);
             if (output.ReinforceWithAdhesive) ApplyAdhesive(result);
+            // 实例品质累乘并保持破损比例，材料与加固次数由配方控制。
+            result.CraftedDurabilityMultiplier *= output.durabilityMultiplier;
+            result.MaxDurability *= output.durabilityMultiplier;
+            result.Durability *= output.durabilityMultiplier;
+            if (!string.IsNullOrWhiteSpace(output.AddTag)) result.Tags.Add(output.AddTag);
             result.Stack.Amount = 1f;
             error = null;
             return true;

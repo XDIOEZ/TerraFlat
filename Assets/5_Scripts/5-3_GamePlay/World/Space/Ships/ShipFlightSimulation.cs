@@ -120,6 +120,7 @@ namespace FlatWorld.Spaceflight
             ShipState primary = GetShip(assembly.MemberShipIds[0]);
             ShipFlightState flight = GetFlight(primary.ShipId);
             if (flight == null) return;
+            if (primary.Anchor != null) return;
             if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating) return;
             if (flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
             {

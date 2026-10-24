@@ -18,6 +18,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         _BodyClip ("Body Bottom Clip (0-1)", Range(0,1)) = 0
         _BodyMinV ("Body UV Bottom", Range(0,1)) = 0
         _BodyMaxV ("Body UV Top", Range(0,1)) = 1
+        [HideInInspector] _SpriteLocalBounds("Sprite Local Center And Half Size", Vector) = (0,0,0.5,0.5)
 
         // 通用角色水体表现：水下染色、透明度和水线
         _WaterEnabled ("Water Immersion Blend", Range(0,1)) = 0
@@ -39,6 +40,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         _ActorTintPulseAmplitude ("Actor Status Tint Pulse Amount", Range(0,0.3)) = 0.08
         _HitFlash ("Hit Flash", Range(0,1)) = 0
         _HitFlashColor ("Hit Flash Color", Color) = (1,0.08,0.08,1)
+        [HideInInspector] _CombatHitOffset ("Combat Hit World Offset", Vector) = (0,0,0,0)
 
         _Dissolve ("Dissolve", Range(0,1)) = 0
         _DissolveTex ("Dissolve Noise", 2D) = "white" {}
@@ -85,8 +87,11 @@ Shader "Game/2D/Sprite-Lit-Master"
 
         HLSLINCLUDE
         #include "ConveyorSurface.hlsl"
+        #include "SpriteSnowCommon.hlsl"
+        float4 _SpriteLocalBounds;
         float4 _ConveyorAnimation, _ConveyorSurface, _ConveyorRegion;
         float4 _DeviceIndicatorRect, _DeviceIndicatorTint;
+        float4 _CombatHitOffset;
 
         // 指示灯只在指定本地矩形内重染，透明度为零时保留原图绿蓝色。
         float4 ApplyDeviceIndicatorTint(float4 source, float2 localPosition)
@@ -165,7 +170,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float4  uv          : TEXCOORD0; // xy is uv, z is localY, w is localX
                 half2   lightingUV  : TEXCOORD1;
                 float3  positionWS  : TEXCOORD2;
-                float   objectRootY : TEXCOORD3;
+                float2  objectRootAndSnow : TEXCOORD3;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -239,9 +244,12 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(v.positionOS);
                 #endif
-                o.positionCS = TransformObjectToHClip(swayedPositionOS);
-                o.positionWS = TransformObjectToWorld(swayedPositionOS);
-                o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
+                o.positionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
+                o.positionCS = TransformWorldToHClip(o.positionWS);
+                o.objectRootAndSnow.x = TransformObjectToWorld(float3(0, 0, 0)).y;
+                if (_SnowCoverage > 0.0)
+                    o.objectRootAndSnow.y = FlatWorldSpriteSnowHeight(o.positionWS.y, _SpriteLocalBounds,
+                        float2(UNITY_MATRIX_M[1][0], UNITY_MATRIX_M[1][1]), o.objectRootAndSnow.x + _CombatHitOffset.y);
                 o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
                 o.uv.z = v.positionOS.y;
                 o.uv.w = v.positionOS.x;
@@ -272,8 +280,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                     discard;
 
                 // 雪顶沿原图轮廓合成，后续受击、水体和溶解继续生效。
-                float snowMask = smoothstep(0.8 - _SnowCoverage * 0.3, 0.9 - _SnowCoverage * 0.3, bodyV);
-                main.rgb = lerp(main.rgb, half3(0.88, 0.94, 1.0), snowMask * saturate(_SnowCoverage));
+                main.rgb = FlatWorldApplySpriteSnow(main.rgb, i.objectRootAndSnow.y, _SnowCoverage);
 
                 // === 水下表现：保留身体轮廓，用染色和透明度表达浸没程度 ===
                 main = FlatWorldApplyActorWater(main, bodyV, i.uv.w, i.positionWS.xy,
@@ -290,7 +297,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 main.rgb = lerp(main.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
 
                 // 玩家位于树后方时，在玩家周围形成柔边圆形透明窗口。
-                float playerOcclusion = ComputePlayerOcclusionMask(i.positionWS.xy, i.objectRootY);
+                float playerOcclusion = ComputePlayerOcclusionMask(i.positionWS.xy, i.objectRootAndSnow.x);
                 main.a *= lerp(1.0, saturate(_PlayerOcclusionAlpha), playerOcclusion);
 
                 // === 溶解效果（可选） ===
@@ -391,7 +398,8 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(attributes.positionOS);
                 #endif
-                o.positionCS = TransformObjectToHClip(swayedPositionOS);
+                float3 hitPositionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
+                o.positionCS = TransformWorldToHClip(hitPositionWS);
                 o.uv = TRANSFORM_TEX(attributes.uv, _NormalMap);
                 o.color = attributes.color;
                 o.normalWS = -GetViewForwardDir();
@@ -399,7 +407,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 o.bitangentWS = cross(o.normalWS, o.tangentWS) * attributes.tangent.w;
                 o.localY = attributes.positionOS.y;
                 o.localX = attributes.positionOS.x;
-                o.positionWS = TransformObjectToWorld(swayedPositionOS).xy;
+                o.positionWS = hitPositionWS.xy;
                 o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
 #ifdef UNITY_INSTANCING_ENABLED
                 o.color *= unity_SpriteColor;
@@ -479,7 +487,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float   localY          : TEXCOORD1;
                 float   localX          : TEXCOORD3;
                 float3  positionWS  : TEXCOORD2;
-                float   objectRootY : TEXCOORD4;
+                float2  objectRootAndSnow : TEXCOORD4;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -527,9 +535,12 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(attributes.positionOS);
                 #endif
-                o.positionCS = TransformObjectToHClip(swayedPositionOS);
-                o.positionWS = TransformObjectToWorld(swayedPositionOS);
-                o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
+                o.positionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
+                o.positionCS = TransformWorldToHClip(o.positionWS);
+                o.objectRootAndSnow.x = TransformObjectToWorld(float3(0, 0, 0)).y;
+                if (_SnowCoverage > 0.0)
+                    o.objectRootAndSnow.y = FlatWorldSpriteSnowHeight(o.positionWS.y, _SpriteLocalBounds,
+                        float2(UNITY_MATRIX_M[1][0], UNITY_MATRIX_M[1][1]), o.objectRootAndSnow.x + _CombatHitOffset.y);
                 o.uv = TRANSFORM_TEX(attributes.uv, _MainTex);
                 o.localY = attributes.positionOS.y;
                 o.localX = attributes.positionOS.x;
@@ -549,8 +560,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.localY - _BodyMinV) / bodyRange);
                 clip(bodyV - _BodyClip);
-                float snowMask = smoothstep(0.8 - _SnowCoverage * 0.3, 0.9 - _SnowCoverage * 0.3, bodyV);
-                mainTex.rgb = lerp(mainTex.rgb, half3(0.88, 0.94, 1.0), snowMask * saturate(_SnowCoverage));
+                mainTex.rgb = FlatWorldApplySpriteSnow(mainTex.rgb, i.objectRootAndSnow.y, _SnowCoverage);
                 float waterBlend = saturate(_WaterEnabled);
                 if (waterBlend > 0.0001)
                 {
@@ -598,7 +608,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 mainTex.rgb = lerp(mainTex.rgb, _ActorTint.rgb, statusBlend);
                 mainTex.rgb = lerp(mainTex.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
 
-                float playerOcclusion = ComputePlayerOcclusionMask(i.positionWS.xy, i.objectRootY);
+                float playerOcclusion = ComputePlayerOcclusionMask(i.positionWS.xy, i.objectRootAndSnow.x);
                 mainTex.a *= lerp(1.0, saturate(_PlayerOcclusionAlpha), playerOcclusion);
 
                 #if defined(DEBUG_DISPLAY)

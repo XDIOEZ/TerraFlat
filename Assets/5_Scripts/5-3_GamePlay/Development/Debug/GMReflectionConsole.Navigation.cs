@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Localization;
 using FlatWorld.AIECS.Gameplay;
 using FlatWorld.Gameplay.Events;
 using FlatWorld.Networking;
@@ -29,7 +30,8 @@ public sealed partial class GMReflectionConsole
         Quests,
         Layers,
         Aiecs,
-        Device
+        Device,
+        WorldCreatures
     }
 
     private sealed class GmPageView
@@ -180,6 +182,7 @@ public sealed partial class GMReflectionConsole
         BuildLayersPage();
         BuildTeleportPage();
         BuildSpawnPage();
+        BuildWorldCreaturesPage();
         BuildAiecsPage();
         BuildDevicePage();
         gameEventPageContent = CreatePage(GmPageId.GameEvents).Content;
@@ -372,7 +375,7 @@ public sealed partial class GMReflectionConsole
     {
         CreateGroupPage(GmPageId.Player, GmPageId.Player, GmPageId.Buff, GmPageId.Quests);
         CreateGroupPage(GmPageId.World, GmPageId.World, GmPageId.Layers, GmPageId.Structures);
-        CreateGroupPage(GmPageId.Spawn, GmPageId.Spawn, GmPageId.Aiecs);
+        CreateGroupPage(GmPageId.Spawn, GmPageId.Spawn, GmPageId.WorldCreatures, GmPageId.Aiecs);
         CreateGroupPage(GmPageId.GameEvents, GmPageId.GameEvents, GmPageId.Commands);
         CreateGroupPage(GmPageId.Device, GmPageId.Device);
     }
@@ -441,7 +444,7 @@ public sealed partial class GMReflectionConsole
         {
             GmPageId.Player or GmPageId.Buff or GmPageId.Quests => GmPageId.Player,
             GmPageId.World or GmPageId.Layers or GmPageId.Structures => GmPageId.World,
-            GmPageId.Spawn or GmPageId.Aiecs => GmPageId.Spawn,
+            GmPageId.Spawn or GmPageId.WorldCreatures or GmPageId.Aiecs => GmPageId.Spawn,
             GmPageId.GameEvents or GmPageId.Commands => GmPageId.GameEvents,
             GmPageId.Device => GmPageId.Device,
             _ => throw new ArgumentOutOfRangeException(nameof(pageId), pageId, "GM 功能未分类")
@@ -737,7 +740,7 @@ public sealed partial class GMReflectionConsole
     private void SetDayTimeFromSlider(float value)
     {
         pendingDayTimeMinute = Mathf.Clamp(Mathf.RoundToInt(value), 0, MinutesPerGameDay - 1);
-        dayTimeValueText.text = FormatDayTime(pendingDayTimeMinute);
+        SetLocalizedText(dayTimeValueText, FormatDayTime(pendingDayTimeMinute));
         if (!IsDayTimePointerPressed())
             CommitPendingDayTime();
     }
@@ -833,7 +836,7 @@ public sealed partial class GMReflectionConsole
         if (!ready)
         {
             dayTimeSlider.SetValueWithoutNotify(0f);
-            dayTimeValueText.text = "--:--";
+            SetLocalizedText(dayTimeValueText, "--:--");
             return;
         }
 
@@ -841,7 +844,7 @@ public sealed partial class GMReflectionConsole
         int minute = Mathf.Clamp(
             Mathf.FloorToInt(progress * MinutesPerGameDay), 0, MinutesPerGameDay - 1);
         dayTimeSlider.SetValueWithoutNotify(minute);
-        dayTimeValueText.text = FormatDayTime(minute);
+        SetLocalizedText(dayTimeValueText, FormatDayTime(minute));
     }
 
     /// <summary>最右档解锁无限缩放并立即拉远；离开最右档恢复普通视野上限。</summary>
@@ -900,11 +903,11 @@ public sealed partial class GMReflectionConsole
             timeScaleSlider.minValue = controller.minTimeScale;
             timeScaleSlider.maxValue = controller.maxTimeScale;
             timeScaleSlider.SetValueWithoutNotify(controller.timeScale);
-            timeScaleValueText.text = $"{controller.timeScale:0.0}x";
+            SetLocalizedFormat(timeScaleValueText, "{0:0.0}x", controller.timeScale);
         }
         else
         {
-            timeScaleValueText.text = "--";
+            SetLocalizedText(timeScaleValueText, "--");
         }
         timeScaleSlider.onValueChanged.AddListener(SetTimeScaleFromSlider);
 
@@ -921,13 +924,14 @@ public sealed partial class GMReflectionConsole
             cameraViewSlider.SetValueWithoutNotify(cameraModule.IsUnlimitedViewEnabled
                 ? cameraViewSlider.maxValue
                 : Mathf.Min(MaxGmFiniteCameraView, Mathf.Round(cameraModule.CurrentOrthographicSize)));
-            cameraViewValueText.text = cameraModule.IsUnlimitedViewEnabled
-                ? "无限"
-                : $"{cameraModule.CurrentOrthographicSize:0}";
+            if (cameraModule.IsUnlimitedViewEnabled)
+                SetLocalizedText(cameraViewValueText, "无限");
+            else
+                SetLocalizedFormat(cameraViewValueText, "{0:0}", cameraModule.CurrentOrthographicSize);
         }
         else
         {
-            cameraViewValueText.text = "--";
+            SetLocalizedText(cameraViewValueText, "--");
         }
         cameraViewSlider.onValueChanged.AddListener(SetCameraViewFromSlider);
 
@@ -941,11 +945,11 @@ public sealed partial class GMReflectionConsole
             chunkLoadDistanceSlider.maxValue = Mathf.Max(
                 MaxGmChunkLoadDistance, loader.CurrentLoadChunkDistance);
             chunkLoadDistanceSlider.SetValueWithoutNotify(loader.CurrentLoadChunkDistance);
-            chunkLoadDistanceValueText.text = $"{loader.CurrentLoadChunkDistance} 区块";
+            SetLocalizedFormat(chunkLoadDistanceValueText, "{0} 区块", loader.CurrentLoadChunkDistance);
         }
         else
         {
-            chunkLoadDistanceValueText.text = "--";
+            SetLocalizedText(chunkLoadDistanceValueText, "--");
         }
         chunkLoadDistanceSlider.onValueChanged.AddListener(SetChunkLoadDistanceFromSlider);
     }
@@ -1051,7 +1055,7 @@ public sealed partial class GMReflectionConsole
             slider.interactable = chunkManager != null;
             if (chunkManager == null)
             {
-                chunkStreamingBudgetValues[i].text = "--";
+                SetLocalizedText(chunkStreamingBudgetValues[i], "--");
                 continue;
             }
 
@@ -1066,9 +1070,10 @@ public sealed partial class GMReflectionConsole
             };
             bool isCount = i % 2 == 0;
             slider.SetValueWithoutNotify(isCount ? Mathf.Log(budget, 2f) : budget);
-            chunkStreamingBudgetValues[i].text = isCount
-                ? $"{budget:0}"
-                : $"{budget:0.0} ms";
+            if (isCount)
+                SetLocalizedFormat(chunkStreamingBudgetValues[i], "{0:0}", budget);
+            else
+                SetLocalizedFormat(chunkStreamingBudgetValues[i], "{0:0.0} ms", budget);
         }
         RefreshChunkStreamingStatus();
     }
@@ -1092,15 +1097,17 @@ public sealed partial class GMReflectionConsole
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager?.RuntimeChunks == null)
         {
-            chunkStreamingStatusText.text = "生成排队 -- | 生成中 -- | 待提交 -- | 待显示 --";
+            SetLocalizedText(chunkStreamingStatusText, "生成排队 -- | 生成中 -- | 待提交 -- | 待显示 --");
             return;
         }
 
-        chunkStreamingStatusText.text =
-            $"生成排队 {chunkManager.RuntimeChunks.QueuedGenerationCount} | " +
-            $"生成中 {chunkManager.RuntimeChunks.ActiveGenerationCount} | " +
-            $"待提交 {chunkManager.RuntimeChunks.PendingCommitCount} | " +
-            $"待显示 {chunkManager.PendingRuntimeChunkPresentationCount}";
+        SetLocalizedFormat(
+            chunkStreamingStatusText,
+            "生成排队 {0} | 生成中 {1} | 待提交 {2} | 待显示 {3}",
+            chunkManager.RuntimeChunks.QueuedGenerationCount,
+            chunkManager.RuntimeChunks.ActiveGenerationCount,
+            chunkManager.RuntimeChunks.PendingCommitCount,
+            chunkManager.PendingRuntimeChunkPresentationCount);
     }
 
     #endregion
@@ -1318,15 +1325,19 @@ public sealed partial class GMReflectionConsole
         if (aiecsPopulationButton != null)
         {
             aiecsPopulationButton.interactable = exists;
-            SetButtonLabel(aiecsPopulationButton,
-                exists ? $"每军 {playground.UnitsPerArmy}（点击切换）" : "每军数量");
+            if (exists)
+                SetLocalizedFormat(aiecsPopulationButton.GetComponentInChildren<TextMeshProUGUI>(true),
+                    "每军 {0}（点击切换）", playground.UnitsPerArmy);
+            else
+                SetButtonLabel(aiecsPopulationButton, "每军数量");
         }
         if (aiecsPlayerParticipatesButton != null)
         {
             aiecsPlayerParticipatesButton.interactable = activeScenario;
-            SetButtonLabel(
-                aiecsPlayerParticipatesButton,
-                $"玩家参与感知与战斗：{(playerParticipates ? "开" : "关")}");
+            TextMeshProUGUI label = aiecsPlayerParticipatesButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            SetLocalizedProvider(label, () => FlatWorldLocalizationService.GetUiFormat(
+                "玩家参与感知与战斗：{0}",
+                FlatWorldLocalizationService.GetUiText(playerParticipates ? "开" : "关")));
             SetGmButtonVisual(
                 aiecsPlayerParticipatesButton,
                 playerParticipates ? GmSelection : GmSurfaceRaised,
@@ -1335,9 +1346,10 @@ public sealed partial class GMReflectionConsole
         if (aiecsLocalAvoidanceButton != null)
         {
             aiecsLocalAvoidanceButton.interactable = exists;
-            SetButtonLabel(
-                aiecsLocalAvoidanceButton,
-                $"局部避让：{(localAvoidanceEnabled ? "开" : "关")}");
+            TextMeshProUGUI label = aiecsLocalAvoidanceButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            SetLocalizedProvider(label, () => FlatWorldLocalizationService.GetUiFormat(
+                "局部避让：{0}",
+                FlatWorldLocalizationService.GetUiText(localAvoidanceEnabled ? "开" : "关")));
             SetGmButtonVisual(
                 aiecsLocalAvoidanceButton,
                 localAvoidanceEnabled ? GmSelection : GmSurfaceRaised,
@@ -1345,27 +1357,86 @@ public sealed partial class GMReflectionConsole
         }
 
         if (aiecsArmiesButton != null)
-            SetButtonLabel(
-                aiecsArmiesButton,
-                exists ? $"两军交战（每次 +{playground.ReinforcementUnitCount}）" : "两军交战");
+        {
+            if (exists)
+                SetLocalizedFormat(aiecsArmiesButton.GetComponentInChildren<TextMeshProUGUI>(true),
+                    "两军交战（每次 +{0}）", playground.ReinforcementUnitCount);
+            else
+                SetButtonLabel(aiecsArmiesButton, "两军交战");
+        }
 
         if (!exists)
         {
-            aiecsStatusText.text = "当前尚未进入可用的正式 AIECS 世界；进入世界后本页会自动连接调试入口。";
-            aiecsStatisticsText.text = "存活 0 / 目标 0 / 游荡 0 / 追击 0 / 逃跑 0 / 攻击 0";
-            aiecsTickText.text = "本 Tick：感知请求 0，候选 0，LOS 0，热点格 0";
-            aiecsCumulativeText.text = "累计：玩家受击 0（-0.0 HP），武器→ECS 命中 0，死亡 0，掉落 0";
-            aiecsNavigationText.text = "共享目标 0 / Chunk 0 / 出口图 0 / 目标图 0 / 区块路线 0";
+            SetLocalizedText(aiecsStatusText, "当前尚未进入可用的正式 AIECS 世界；进入世界后本页会自动连接调试入口。");
+            SetLocalizedFormat(aiecsStatisticsText,
+                "存活 {0} / 目标 {1} / 游荡 {2} / 追击 {3} / 逃跑 {4} / 攻击 {5}", 0, 0, 0, 0, 0, 0);
+            SetLocalizedFormat(aiecsTickText,
+                "本 Tick：感知请求 {0}，候选 {1}，LOS {2}，热点格 {3}", 0, 0, 0, 0);
+            SetLocalizedFormat(aiecsCumulativeText,
+                "累计：玩家受击 {0}（-{1:0.0} HP），武器→ECS 命中 {2}，死亡 {3}，掉落 {4}",
+                0, 0f, 0, 0, 0);
+            SetLocalizedFormat(aiecsNavigationText,
+                "共享目标 {0} / Chunk {1} / 出口图 {2} / 目标图 {3} / 区块路线 {4}", 0, 0, 0, 0, 0);
             return;
         }
 
-        aiecsStatusText.text = playground.Status;
-        aiecsStatisticsText.text = playground.StatisticsSummary;
-        aiecsTickText.text = playground.TickSummary;
-        aiecsCumulativeText.text = playground.CumulativeSummary;
-        aiecsNavigationText.text = playground.NavigationSummary;
+        SetLocalizedProvider(aiecsStatusText, () => LocalizeAiecsStatus(playground.Status));
+        AiecsDebugSnapshot snapshot = playground.CaptureDebugSnapshot();
+        SetLocalizedFormat(aiecsStatisticsText,
+            "存活 {0} / 目标 {1} / 游荡 {2} / 追击 {3} / 逃跑 {4} / 攻击 {5}",
+            snapshot.Alive, snapshot.Targets, snapshot.Wander, snapshot.Chase, snapshot.Flee, snapshot.Attack);
+        SetLocalizedFormat(aiecsTickText,
+            "本 Tick：感知请求 {0}，候选 {1}，LOS {2}，热点格 {3}",
+            snapshot.PerceptionRequests, snapshot.Candidates, snapshot.Los, snapshot.HotBucket);
+        SetLocalizedFormat(aiecsCumulativeText,
+            "累计：玩家受击 {0}（-{1:0.0} HP），武器→ECS 命中 {2}，死亡 {3}，掉落 {4}",
+            snapshot.PlayerHits, snapshot.PlayerDamage, snapshot.WeaponHits, snapshot.Deaths, snapshot.Drops);
+        SetLocalizedFormat(aiecsNavigationText,
+            "共享目标 {0} / Chunk {1} / 出口图 {2} / 目标图 {3} / 区块路线 {4}",
+            snapshot.SharedGoalCount, snapshot.CachedChunkCount, snapshot.ExitFieldBuilds,
+            snapshot.TargetFieldBuilds, snapshot.HighLevelRouteBuilds);
     }
 
+    // 已知状态模板按当前语言显示，异常正文和稳定 ID 保留原值。
+    private static string LocalizeAiecsStatus(string status)
+    {
+        if (string.IsNullOrEmpty(status)) return string.Empty;
+        if (status.StartsWith("模拟已停止：", StringComparison.Ordinal))
+            return FlatWorldLocalizationService.GetUiFormat("模拟已停止：{0}", status.Substring("模拟已停止：".Length));
+        if (status.StartsWith("创建失败：", StringComparison.Ordinal))
+            return FlatWorldLocalizationService.GetUiFormat("创建失败：{0}", status.Substring("创建失败：".Length));
+        if (TryReadStatusNumber(status, "本场累计生成 ", " 个 ECS 单位", out int spawned))
+            return FlatWorldLocalizationService.GetUiFormat(
+                "本场累计生成 {0} 个 ECS 单位；当前存活与行为见下方实时统计。", spawned);
+        if (TryReadStatusNumber(status, "两军交战：累计生成 ", "；本次增援 ", out int total) &&
+            TryReadStatusNumber(status, "；本次增援 ", " / 目标 ", out int added) &&
+            TryReadStatusNumber(status, " / 目标 ", "。当前存活见下方统计。", out int target))
+        {
+            return FlatWorldLocalizationService.GetUiFormat(
+                "两军交战：累计生成 {0}；本次增援 {1} / 目标 {2}。当前存活见下方统计。",
+                total, added, target);
+        }
+        const string lootPrefix = "已提交 1 个生物产出验收请求：";
+        if (status.StartsWith(lootPrefix, StringComparison.Ordinal))
+        {
+            int end = status.IndexOf('；', lootPrefix.Length);
+            if (end >= lootPrefix.Length)
+                return FlatWorldLocalizationService.GetUiFormat(
+                    "已提交 1 个生物产出验收请求：{0}；等待真实占格与生成。未修改死亡数量或掉落概率。",
+                    status.Substring(lootPrefix.Length, end - lootPrefix.Length));
+        }
+        return FlatWorldLocalizationService.GetUiText(status);
+    }
+
+    private static bool TryReadStatusNumber(string source, string prefix, string suffix, out int value)
+    {
+        value = 0;
+        int start = source.IndexOf(prefix, StringComparison.Ordinal);
+        if (start < 0) return false;
+        start += prefix.Length;
+        int end = source.IndexOf(suffix, start, StringComparison.Ordinal);
+        return end > start && int.TryParse(source.Substring(start, end - start), out value);
+    }
     /// <summary>正常 GameStart 世界按需创建空闲调试入口；只有场景按钮真正触发后才暂停正式生态并创建开发模拟。</summary>
     private static AiecsPlayground ResolveAiecsPlayground()
     {
@@ -1386,7 +1457,7 @@ public sealed partial class GMReflectionConsole
 
         TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = value;
+            SetLocalizedText(label, value);
     }
 
     #endregion
@@ -1674,7 +1745,7 @@ public sealed partial class GMReflectionConsole
         if (query.Length == 0)
         {
             gmSearchResultsRoot.SetActive(false);
-            gmSearchSummaryText.text = "输入名称后跳转";
+            SetLocalizedText(gmSearchSummaryText, "输入名称后跳转");
             return;
         }
 
@@ -1693,7 +1764,10 @@ public sealed partial class GMReflectionConsole
         gmSearchResultsRoot.transform.SetAsLastSibling();
         float resultsHeight = Mathf.Clamp(matches.Count * 36f + 18f, 56f, 158f);
         ConfigureSearchResultsOverlay(gmSearchResultsRect, resultsHeight);
-        gmSearchSummaryText.text = matches.Count > 0 ? $"找到 {matches.Count} 项" : "没有匹配项";
+        if (matches.Count > 0)
+            SetLocalizedFormat(gmSearchSummaryText, "找到 {0} 项", matches.Count);
+        else
+            SetLocalizedText(gmSearchSummaryText, "没有匹配项");
 
         if (matches.Count == 0)
         {
@@ -1704,12 +1778,17 @@ public sealed partial class GMReflectionConsole
         for (int i = 0; i < matches.Count; i++)
         {
             GmSearchEntry entry = matches[i];
-            CreateButton(
+            Button resultButton = CreateButton(
                 gmSearchResultsContent,
                 $"{GetPageLabel(entry.PageId)}  ›  {entry.Label}",
                 () => NavigateToSearchEntry(entry),
                 0f,
                 32f);
+            TextMeshProUGUI resultLabel = resultButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            SetLocalizedProvider(resultLabel, () => FlatWorldLocalizationService.GetUiFormat(
+                "{0}  ›  {1}",
+                FlatWorldLocalizationService.GetUiText(GetPageLabel(entry.PageId)),
+                FlatWorldLocalizationService.GetUiText(entry.Label)));
         }
 
         Canvas.ForceUpdateCanvases();
@@ -1726,7 +1805,7 @@ public sealed partial class GMReflectionConsole
 
         gmSearchInput.SetTextWithoutNotify(string.Empty);
         gmSearchResultsRoot.SetActive(false);
-        gmSearchSummaryText.text = "输入名称后跳转";
+        SetLocalizedText(gmSearchSummaryText, "输入名称后跳转");
         SetActivePage(entry.PageId);
 
         // 切页可能重建事件、任务或命令条目，改用最新结果对应的目标。
@@ -1795,9 +1874,10 @@ public sealed partial class GMReflectionConsole
 
         commandCountText = CreateText(
             header.transform,
-            $"反射调试命令（{commands.Count}）",
+            "反射调试命令（{0}）",
             14f,
             GmTextPrimary);
+        SetLocalizedFormat(commandCountText, "反射调试命令（{0}）", commands.Count);
         commandCountText.fontStyle = FontStyles.Bold;
         commandCountText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         CreateButton(header.transform, "重新扫描", RebuildReflectedCommands, 96f, 30f);
@@ -1808,6 +1888,10 @@ public sealed partial class GMReflectionConsole
             ReflectedCommand command = commands[i];
             string label = $"{command.Category} · {command.Label}";
             Button button = CreateButton(commandGrid, label, () => InvokeCommand(command), 0f, 34f);
+            SetLocalizedProvider(button.GetComponentInChildren<TextMeshProUGUI>(true), () =>
+                FlatWorldLocalizationService.GetUiFormat("{0} · {1}",
+                    FlatWorldLocalizationService.GetUiText(command.Category),
+                    FlatWorldLocalizationService.GetUiText(command.Label)));
             RegisterSearchEntry(
                 GmPageId.Commands,
                 label,
@@ -1889,9 +1973,10 @@ public sealed partial class GMReflectionConsole
 
         TextMeshProUGUI countText = CreateText(
             toolbar.transform,
-            $"已加载 {definitionCount} 个事件 · 正在进行 {activeCount} 个",
+            "已加载 {0} 个事件 · 正在进行 {1} 个",
             13f,
             GmTextPrimary);
+        SetLocalizedFormat(countText, "已加载 {0} 个事件 · 正在进行 {1} 个", definitionCount, activeCount);
         countText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         CreateButton(toolbar.transform, "重载 JSON", ReloadGameEventConfiguration, 112f, 32f);
 
@@ -1940,9 +2025,12 @@ public sealed partial class GMReflectionConsole
 
         TextMeshProUGUI title = CreateText(
             info.transform,
-            $"{definition.DisplayName}  <color=#80969B>({definition.Id})</color>",
+            string.Empty,
             14f,
             active ? GmAccentHover : GmTextPrimary);
+        SetLocalizedProvider(title, () => FlatWorldLocalizationService.GetUiFormat(
+            "{0}  <color=#80969B>({1})</color>",
+            FlatWorldLocalizationService.GetUiText(definition.DisplayName), definition.Id));
         title.fontStyle = FontStyles.Bold;
         title.enableWordWrapping = false;
         title.overflowMode = TextOverflowModes.Ellipsis;
@@ -1950,20 +2038,31 @@ public sealed partial class GMReflectionConsole
 
         TextMeshProUGUI description = CreateText(
             info.transform,
-            string.IsNullOrWhiteSpace(definition.Description) ? "无事件说明。" : definition.Description,
+            string.Empty,
             12f,
             GmTextSecondary);
+        SetLocalizedProvider(description, () => FlatWorldLocalizationService.GetUiText(
+            string.IsNullOrWhiteSpace(definition.Description) ? "无事件说明。" : definition.Description));
         description.enableWordWrapping = false;
         description.overflowMode = TextOverflowModes.Ellipsis;
         description.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
-        string duration = definition.DurationDays > 0f ? $"{definition.DurationDays:0.##} 天" : "动作完成即结束";
         string triggerType = definition.Trigger?.Type ?? "unknown";
         TextMeshProUGUI metadata = CreateText(
             info.transform,
-            $"触发器 {triggerType} · 持续 {duration} · 动作 {definition.Actions.Count} 个 · {(active ? "进行中" : "未运行")}",
+            string.Empty,
             11f,
             GmTextSecondary);
+        SetLocalizedProvider(metadata, () =>
+        {
+            string duration = definition.DurationDays > 0f
+                ? FlatWorldLocalizationService.GetUiFormat("{0:0.##} 天", definition.DurationDays)
+                : FlatWorldLocalizationService.GetUiText("动作完成即结束");
+            return FlatWorldLocalizationService.GetUiFormat(
+                "触发器 {0} · 持续 {1} · 动作 {2} 个 · {3}",
+                triggerType, duration, definition.Actions.Count,
+                FlatWorldLocalizationService.GetUiText(active ? "进行中" : "未运行"));
+        });
         metadata.enableWordWrapping = false;
         metadata.overflowMode = TextOverflowModes.Ellipsis;
         metadata.gameObject.AddComponent<LayoutElement>().preferredHeight = 19f;
@@ -2000,9 +2099,10 @@ public sealed partial class GMReflectionConsole
 
         if (success)
         {
-            SetStatus(
-                wasActive ? $"已结束事件：{eventId}" : $"已触发事件：{eventId}",
-                new Color(0.35f, 0.95f, 0.85f));
+            SetStatusFormat(
+                wasActive ? "已结束事件：{0}" : "已触发事件：{0}",
+                new Color(0.35f, 0.95f, 0.85f),
+                eventId);
         }
         else
         {
@@ -2025,11 +2125,12 @@ public sealed partial class GMReflectionConsole
 
         GameEventConfigLoadResult result = boundGameEventManager.ReloadConfiguration();
         RebuildGameEventPage();
-        SetStatus(
+        SetStatusFormat(
             result.HasErrors
-                ? $"事件配置已重载，但发现 {result.Issues.Count} 个配置问题，请查看 Console。"
-                : $"事件配置已重载，共 {boundGameEventManager.Definitions.Count} 个事件。",
-            result.HasErrors ? Color.yellow : new Color(0.35f, 0.95f, 0.85f));
+                ? "事件配置已重载，但发现 {0} 个配置问题，请查看 Console。"
+                : "事件配置已重载，共 {0} 个事件。",
+            result.HasErrors ? Color.yellow : new Color(0.35f, 0.95f, 0.85f),
+            result.HasErrors ? result.Issues.Count : boundGameEventManager.Definitions.Count);
     }
 
     private void RefreshSearchResultsIfVisible()
@@ -2183,6 +2284,7 @@ public sealed partial class GMReflectionConsole
             GmPageId.Layers => "层级显示",
             GmPageId.Aiecs => "AIECS",
             GmPageId.Device => "设备数据",
+            GmPageId.WorldCreatures => "世界生物信息",
             _ => pageId.ToString()
         };
     }

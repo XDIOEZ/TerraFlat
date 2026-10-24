@@ -78,8 +78,9 @@ public sealed class ElectricHeaterLogic : MachineLogic
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ElectricHeaterDefinition
+public sealed partial class ElectricHeaterDefinition
 {
     #region 加热配置
     public float Radius = 3;

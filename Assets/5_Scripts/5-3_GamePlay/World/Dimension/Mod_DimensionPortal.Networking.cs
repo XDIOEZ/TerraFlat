@@ -23,6 +23,8 @@ public sealed partial class Mod_DimensionPortal
     // 源入口会继续服务其他玩家，成功或失败后都释放门禁，并覆盖同步回调早于赋值的情况。
     public void CancelNetworkTransitionRequest()
     {
+        // 异步网络回执可能晚于入口销毁，避免访问已释放的 Unity 组件。
+        if (this == null) return;
         transitionRequested = false;
         if (isActiveAndEnabled) StartCoroutine(ReleaseNetworkRequestNextFrame());
     }

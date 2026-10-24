@@ -125,7 +125,7 @@ footer p { margin: 5px 0; }
   <p class="eyebrow">FLATWORLD / 2026.10.23</p>
   <h1>从零开始，手作工具</h1>
   <p class="lead">35 款工具，以粗像素、大色块和简朴装配重绘。木柄保留削切与弯曲，绳索和皮条在连接处承担固定作用；石、骨、铜、青铜与铁保留各自的材质。</p>
-  <p class="status">35 款新图已完成并替换物品、放置态与钓鱼界面引用；游戏内观感待用户确认。</p>
+  <p class="status">35 款工具已用 GIMP 原生像素整理：24 款保持 32×32，11 款斧/镐收紧透明留白；游戏内观感由用户确认。</p>
 </header>
 <section class="controls" aria-label="浏览设置">
   <div class="control-top">
@@ -150,9 +150,11 @@ footer p { margin: 5px 0; }
 <section id="gallery" class="gallery" aria-label="工具图片"></section>
 <noscript><p>此浏览页需要启用浏览器 JavaScript；也可直接打开旁边的 README.md 查看全部图片链接。</p></noscript>
 <footer>
-  <p>所有图片来自内置 image_gen。页面直接读取同目录下的 PNG，不依赖网络，也不修改图片像素。</p>
-  <p>原始输出、参考图和完整提示词见各组记录。游戏引用与导入状态以 <a href="README.md">交付说明</a> 为准。</p>
+  <p>初版由内置 image_gen 制作，本轮用 GIMP MCP 原生一像素铅笔沿原图整理。页面直接读取同目录下的 PNG，不依赖网络，也不修改图片像素。</p>
+  <p>当前成品保持原生像素与硬透明：24 款画布为 32×32，11 款斧/镐裁到可见轮廓外 1 像素；没有缩放可见像素，也未进行游戏验收。游戏引用与导入状态以 <a href="README.md">交付说明</a> 为准；记录保留旧版设计来源。</p>
   <div class="record-links">
+    <a href="PixelRedrawRecords.json">当前像素整理记录</a>
+    <a href="../../../../../Tools/Art/ToolGimpRetouch_20261024/README.md">GIMP 源稿与逐点计划</a>
     <a href="records-axes-pickaxes.json">斧 / 镐生成记录</a>
     <a href="records-shovels-hoes.json">铲 / 锄生成记录</a>
     <a href="records-knives-hammers.json">小刀 / 锤 / 采集工具记录</a>
@@ -448,8 +450,8 @@ for (const item of tools) {
   original.rel = "noopener";
   original.textContent = "原图";
   const record = document.createElement("a");
-  record.href = item.record;
-  record.textContent = "提示词与记录";
+  record.href = "PixelRedrawRecords.json";
+  record.textContent = "像素重绘记录";
   links.append(original, record);
   details.append(category, title, id, links);
   card.append(preview, details);

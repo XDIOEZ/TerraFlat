@@ -15,8 +15,9 @@ public sealed class SpawnerConfigCatalog
 }
 
 /// <summary>单个生成规则文件的版本和内容；新物种复制一份 JSON 后修改参数与条目即可接入。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class SpawnerConfigFile
+public sealed partial class SpawnerConfigFile
 {
     [JsonProperty("schemaVersion", Required = Required.Always)]
     public int SchemaVersion;
@@ -26,8 +27,9 @@ public sealed class SpawnerConfigFile
 }
 
 /// <summary>启动时加载的全局生态预算；所有帧限流和后端容量均由同一 JSON 提供。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class SpawnerRuntimeSettings
+public sealed partial class SpawnerRuntimeSettings
 {
     [JsonProperty("schemaVersion", Required = Required.Always)]
     public int SchemaVersion;
@@ -44,6 +46,9 @@ public sealed class SpawnerRuntimeSettings
     [JsonProperty("ecologyTickInterval", Required = Required.Always)]
     public float EcologyTickInterval;
 
+    [JsonProperty("naturalSpawnIntervalGameSeconds", Required = Required.Always)]
+    public float NaturalSpawnIntervalGameSeconds;
+
     [JsonProperty("maxLoadedGameObjectActors", Required = Required.Always)]
     public int MaxLoadedGameObjectActors;
 
@@ -55,19 +60,17 @@ public sealed class SpawnerRuntimeSettings
 }
 
 /// <summary>可复用的生成规则参数；数字均由规则 JSON 显式声明并在加载时校验。</summary>
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
 [Serializable]
-public sealed class SpawnerConfigDefinition
+public sealed partial class SpawnerConfigDefinition
 {
     [JsonProperty(Required = Required.Default)]
     public bool WaterOnly;
     public SpawnerTreeHabitat TreeHabitat = new();
     public string Id;
-    public string ScheduleMode = "timedWindows";
     public string EcologyGroup = "animals";
     public bool RequireGlobalDarkness;
-    public float SpawnTriggerTime = 720f;
-    public int SpawnsPerDay = 1;
     public float MinSpawnDistance = 15f;
     public float MaxSpawnDistance = 50f;
     public float PlayerVisibilityExclusionDistance = 18f;
@@ -80,16 +83,11 @@ public sealed class SpawnerConfigDefinition
     [JsonProperty(Required = Required.Default)]
     public float BatchSpawnRadius;
     public float SpawnChance = 1f;
-    public int DaysBetweenSpawns = 1;
     public int GroupAliveLimit = 12;
     public int MaxEcologyBudget = 12;
     public int DailyBudgetRecovery = 4;
-    public int RecoveryTargetPopulation;
-    public float RecoveryCheckInterval = 8f;
-    public int GrowthIntervalDays = 3;
-    public int MaxLifetimeSpawnCount = 64;
     public float AsyncSpawnInterval;
-    public bool UnboundedDailyGrowth;
+    public bool IgnoreEcologyBudget;
     public bool IgnorePopulationLimits;
     public bool RequireCompletelyDarkTile = true;
     public float MaxAllowedTileLight = 1f;
@@ -112,11 +110,8 @@ public sealed class SpawnerConfigDefinition
             TreesPerActor = TreeHabitat.TreesPerActor,
             SpawnRadius = TreeHabitat.SpawnRadius
         };
-        config.ScheduleMode = ParseScheduleMode(ScheduleMode);
         config.EcologyGroup = ParseEcologyGroup(EcologyGroup);
         config.RequireGlobalDarkness = RequireGlobalDarkness;
-        config.SpawnTriggerTime = SpawnTriggerTime;
-        config.SpawnsPerDay = SpawnsPerDay;
         config.MinSpawnDistance = MinSpawnDistance;
         config.MaxSpawnDistance = MaxSpawnDistance;
         config.PlayerVisibilityExclusionDistance = PlayerVisibilityExclusionDistance;
@@ -129,16 +124,11 @@ public sealed class SpawnerConfigDefinition
             config.SpawnCountWeights.Add(new SpawnerBatchSizeWeight { Count = option.Count, Weight = option.Weight });
         config.BatchSpawnRadius = BatchSpawnRadius;
         config.SpawnChance = SpawnChance;
-        config.DaysBetweenSpawns = DaysBetweenSpawns;
         config.GroupAliveLimit = GroupAliveLimit;
         config.MaxEcologyBudget = MaxEcologyBudget;
         config.DailyBudgetRecovery = DailyBudgetRecovery;
-        config.RecoveryTargetPopulation = RecoveryTargetPopulation;
-        config.RecoveryCheckInterval = RecoveryCheckInterval;
-        config.GrowthIntervalDays = GrowthIntervalDays;
-        config.MaxLifetimeSpawnCount = MaxLifetimeSpawnCount;
         config.AsyncSpawnInterval = AsyncSpawnInterval;
-        config.UnboundedDailyGrowth = UnboundedDailyGrowth;
+        config.IgnoreEcologyBudget = IgnoreEcologyBudget;
         config.IgnorePopulationLimits = IgnorePopulationLimits;
         config.RequireCompletelyDarkTile = RequireCompletelyDarkTile;
         config.MaxAllowedTileLight = MaxAllowedTileLight;
@@ -155,20 +145,6 @@ public sealed class SpawnerConfigDefinition
         }
 
         return config;
-    }
-
-    private static SpawnerScheduleMode ParseScheduleMode(string value)
-    {
-        if (string.Equals(value, nameof(SpawnerScheduleMode.Countdown), StringComparison.OrdinalIgnoreCase))
-            return SpawnerScheduleMode.Countdown;
-
-        if (string.Equals(value, "dayMilestoneGrowth", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(value, nameof(SpawnerScheduleMode.DayMilestoneGrowth), StringComparison.OrdinalIgnoreCase))
-        {
-            return SpawnerScheduleMode.DayMilestoneGrowth;
-        }
-
-        return SpawnerScheduleMode.TimedWindows;
     }
 
     private static SpawnerEcologyGroup ParseEcologyGroup(string value)
@@ -189,8 +165,9 @@ public sealed class SpawnerConfigDefinition
     }
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class SpawnerSpawnEntryDefinition
+public sealed partial class SpawnerSpawnEntryDefinition
 {
     [JsonProperty(Required = Required.Always)]
     public string PrefabName;

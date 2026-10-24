@@ -3,7 +3,7 @@ using FlatWorld.Spaceflight;
 using Newtonsoft.Json;
 using UnityEngine;
 
-public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildingTraversalPolicy, IBuildingPlacementCommitted
+public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildingTraversalPolicy, IBuildingPlacementCommitted, IBuildingDismantlePolicy
 {
     #region 显式船体能力
     public const string ModuleId = "船体部件模块";
@@ -21,6 +21,12 @@ public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildin
     protected override void OnSave() { }
     protected override void OnUnload() => ShipGroundOpticalPresentation.Unregister(this);
     public void OnBuildingPlacementCommitted() => ShipGroundOpticalPresentation.Refresh(this);
+    public bool CanDismantle(out string reason)
+    {
+        reason = null;
+        return SpaceSession.Current == null || item?.itemData == null ||
+            SpaceSession.Current.CanDismantleShipPiece(item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out reason);
+    }
     public override void OnResourcesReloaded() => ShipGroundOpticalPresentation.Refresh(this);
 
     // 地面地板使用独立占地层，普通设备和管电线路仍归各自的正式建筑层。

@@ -126,7 +126,9 @@
         "inventory"
       ],
       "ruleCaseIds": [
+        "combat_shield_rules",
         "combat_probability_rules",
+        "combat_external_rules",
         "combat_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Combat/rules-suite.json",
@@ -208,6 +210,8 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInventoryFlickSettingsProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.QuickEquip.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestRuntimeProbe.QuickEquip.cs",
         "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/*",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/EquipmentConfigurationButton.cs",
         "Assets/5_Scripts/5-3_GamePlay/Items/Readable/*",
@@ -242,13 +246,19 @@
         "Assets/5_Scripts/5-3_GamePlay/Items/Crafting/*",
         "Assets/StreamingAssets/GameConfig/Crafting/*",
         "Assets/StreamingAssets/GameConfig/Recipes/*",
-        "Assets/StreamingAssets/GameplayTests/Systems/Crafting/*"
+        "Assets/StreamingAssets/GameplayTests/Systems/Crafting/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/RecipeProcessor.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/ManualProcessing*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Tool/Mod_ManualProcessor.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MetalCrafting.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Anvil.cs"
       ],
       "dependsOn": [
         "inventory"
       ],
       "ruleCaseIds": [
-        "crafting_rules"
+        "crafting_rules",
+        "anvil_ui_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Crafting/rules-suite.json",
       "integrationSuites": [
@@ -318,7 +328,8 @@
         "inventory"
       ],
       "ruleCaseIds": [
-        "agriculture_rules"
+        "agriculture_rules",
+        "agriculture_external_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Agriculture/rules-suite.json",
       "integrationSuites": [
@@ -478,6 +489,12 @@
         "Assets/5_Scripts/5-0_WorldModel/*Weather*",
         "Assets/5_Scripts/5-0_WorldModel/*Humidity*",
         "Assets/Resources/Config/Weather/*",
+        "Assets/Resources/Weather/RainEffect.prefab",
+        "Assets/9_Shaders/Shader/RainStreak.shader",
+        "Assets/9_Shaders/Material/RainStreak.mat",
+        "Assets/Resources/Weather/SnowEffect.prefab",
+        "Assets/9_Shaders/Shader/Snowflake.shader",
+        "Assets/9_Shaders/Material/Snowflake.mat",
         "Assets/StreamingAssets/GameplayTests/Systems/Environment/*",
         "Assets/5_Scripts/5-1_Data/CoreData/EnvironmentLayers.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EnvironmentConditionRange.cs",
@@ -602,13 +619,24 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Mechanical*",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.Facilities.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/ConveyorPath.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Railways/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/LooseItemMotion*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/WorldMotionSystem.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemRuntime.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemRuntime.Water.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.ColdWorld.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/WorldItemWaterRuntime.cs",
         "Assets/Resources/Config/Mechanical/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Mechanical/*",
         "Assets/StreamingAssets/GameplayTests/mechanical-suite.json"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "mechanical_rules"
+        "mechanical_rules",
+        "railway_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Mechanical/rules-suite.json",
       "integrationSuites": [
@@ -722,7 +750,9 @@
         "Assets/5_Scripts/5-3_GamePlay/Items/Tool/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*",
         "Assets/StreamingAssets/GameplayTests/mechanical-suite.json",
-        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.ColdWorld.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.ColdWorld.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MineralContent.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestRuntimeProbe.MaterialThermal.cs"
       ],
       "dependsOn": [
         "item_runtime",
@@ -772,7 +802,8 @@
       ],
       "ruleCaseIds": [
         "space_rules",
-        "space_ship_damage_rules"
+        "space_ship_damage_rules",
+        "space_elevator_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Space/rules-suite.json",
       "integrationSuites": [
@@ -912,7 +943,9 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/Config/*",
+        "Assets/5_Scripts/Shared/ContentCache/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/Difficulty/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Rules/*",
         "Assets/StreamingAssets/GameplayTests/Systems/CoreLifecycle/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/MobilePlatformBootstrap.cs",
         "Assets/5_Scripts/Shared/Utilities/ProjectBase/Base/*",
@@ -957,7 +990,8 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "item_runtime_rules"
+        "item_runtime_rules",
+        "mineral_property_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/ItemRuntime/rules-suite.json",
       "integrationSuites": [
@@ -1088,6 +1122,16 @@
       "name": "UI与设置",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SaveSelectionUI.cs",
+        "Assets/Editor/FlatWorld/PrefabBuilders/UI/GameSavePrefabBuilder.cs",
+        "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestMobileControlLayoutProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.BuildingPanelLayout.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.UITextLayout.cs",
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_CompostBin.prefab",
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_MeatRack.prefab",
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Furnace.prefab",
+        "Assets/Editor/FlatWorld/PrefabBuilders/UI/GameUIPrefabRebuilder.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestGamepadInputLifecycleProbe.cs",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/WaterVisualSettings.cs",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/*",
@@ -1107,14 +1151,18 @@
         "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.Device.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.PerformanceDebug.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ShipFlightHud.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.VirtualizedInventory.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.VirtualizedInventory.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Anvil.cs",
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Anvil.prefab",
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_MakerTable.prefab"
       ],
       "dependsOn": [
         "localization",
         "space"
       ],
       "ruleCaseIds": [
-        "ui_settings_rules"
+        "ui_settings_rules",
+        "anvil_ui_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/UISettings/rules-suite.json",
       "integrationSuites": [

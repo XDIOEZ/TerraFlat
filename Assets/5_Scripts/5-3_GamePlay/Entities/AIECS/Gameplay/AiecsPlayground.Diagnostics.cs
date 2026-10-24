@@ -19,6 +19,10 @@ namespace FlatWorld.AIECS.Gameplay
         public string Mode, Status;
         public int RequestedPerWave, Spawned, Alive, Visible, Batches;
         public int Targets, Chase, Wander, Flee, Attack, Deaths, Drops, PlayerHits, WeaponHits;
+        public int PerceptionRequests, Candidates, Los, HotBucket;
+        public int SharedGoalCount, CachedChunkCount;
+        public long ExitFieldBuilds, TargetFieldBuilds, HighLevelRouteBuilds;
+        public float PlayerDamage;
         public ulong Tick;
         public double BacklogSeconds;
         public int InvalidPositions, DenseCells, MaximumCellDensity;
@@ -56,6 +60,21 @@ namespace FlatWorld.AIECS.Gameplay
             snapshot.Deaths = bridge.Deaths; snapshot.Drops = bridge.Drops;
             snapshot.ActorLootSpawns = bridge.ActorLootSpawns; snapshot.PendingDropRecords = bridge.PendingDropRecords;
             snapshot.PlayerHits = bridge.PlayerHits; snapshot.WeaponHits = bridge.PlayerToEcsHits;
+            snapshot.PlayerDamage = bridge.PlayerDamage;
+            snapshot.PerceptionRequests = stats[(int)AiecsStatistic.PerceptionRequests];
+            snapshot.Candidates = stats[(int)AiecsStatistic.Candidates];
+            snapshot.Los = stats[(int)AiecsStatistic.Los];
+            snapshot.HotBucket = stats[(int)AiecsStatistic.HotBucket];
+            snapshot.SharedGoalCount = bridge.SharedGoalCount;
+            // 缓存可选导航实例，避免切世界期间重复解引用。
+            var navigation = bridge.Navigation;
+            if (navigation != null)
+            {
+                snapshot.CachedChunkCount = navigation.CachedChunkCount;
+                snapshot.ExitFieldBuilds = navigation.ExitFieldBuilds;
+                snapshot.TargetFieldBuilds = navigation.TargetFieldBuilds;
+                snapshot.HighLevelRouteBuilds = navigation.HighLevelRouteBuilds;
+            }
             if (!checkPositions) return snapshot;
 
             snapshot.PositionsChecked = true;

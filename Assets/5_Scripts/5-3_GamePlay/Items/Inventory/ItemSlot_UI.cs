@@ -69,6 +69,9 @@ public class ItemSlot_UI : MonoBehaviour,
 
     public UltEvent<int, float> _OnScroll = new UltEvent<int, float>();
 
+    /// <summary>Shift+滚轮事件，用于按来源堆叠的一半数量转移物品。</summary>
+    public UltEvent<int, float> _OnShiftScroll = new UltEvent<int, float>();
+
     [Tooltip("Shift+左键快速转移事件")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
@@ -253,6 +256,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnTouchHalfDragBegin = null;
         OnDesktopTap = null;
         _OnScroll.Clear();
+        _OnShiftScroll.Clear();
         if (selectionOutlineCreated && selectionOutline != null)
             Destroy(selectionOutline);
         EndMouseDragVisual();
@@ -443,26 +447,23 @@ public class ItemSlot_UI : MonoBehaviour,
         float scrollY = eventData.scrollDelta.y;
 
         if (scrollY > 0)
-            HandleScrollUp();
+            HandleScrollUp(IsShiftPressed());
         else if (scrollY < 0)
-            HandleScrollDown();
+            HandleScrollDown(IsShiftPressed());
 
         // 指针命中槽位时滚轮专用于逐件取放，只有槽位外区域才交给父级页面滚动。
         if (!Mathf.Approximately(scrollY, 0f))
             eventData.Use();
     }
 
-    private void HandleScrollUp()
+    private void HandleScrollUp(bool shiftPressed)
     {
-        Debug.Log("滚轮向上：执行你定义的行为（如增加选择数量）");
-        _OnScroll.Invoke(slotIndex, 1);
+        (shiftPressed ? _OnShiftScroll : _OnScroll).Invoke(slotIndex, 1);
     }
 
-    private void HandleScrollDown()
+    private void HandleScrollDown(bool shiftPressed)
     {
-        Debug.Log("滚轮向下：执行你定义的行为（如减少选择数量）");
-
-        _OnScroll.Invoke(slotIndex, -1);
+        (shiftPressed ? _OnShiftScroll : _OnScroll).Invoke(slotIndex, -1);
     }
     #endregion
 

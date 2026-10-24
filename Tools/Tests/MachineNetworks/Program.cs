@@ -20,6 +20,9 @@ MechanicalNetworkGraph Graph(params MachineEntity[] nodes)
 void Solve(MechanicalNetwork network) => MechanicalNetworkGraph.Solve(network,
     node => node.TestSourceFactor, node => node.Definition.Rpm * node.Definition.SourceRotationDirection, 60);
 
+ConveyorTests.Run(Check);
+ConveyorLoadTests.Run(Check);
+
 #region 风箱拓扑索引
 // 新建、清空和增删风箱只按拓扑重建更新存在标志。
 var bellowsGraph = Graph();

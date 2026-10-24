@@ -1,5 +1,6 @@
 using System;
 using FlatWorld.Combat;
+using FlatWorld.Navigation;
 using FlatWorld.Networking;
 using MemoryPack;
 using Unity.Profiling;
@@ -26,7 +27,7 @@ public interface IAquaticPredatorThreat
 
 /// <summary>逐条鱼使用现有状态机、营养、Buff、受伤与 Item 生命周期；不建立鱼群模拟器。</summary>
 public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder, ITemperatureSafetyMovement,
-    IAquaticPredatorCarryTarget
+    IAquaticPredatorCarryTarget, IFishingLineCatchTarget
 {
     #region 配置与持久化
     public const string ModuleId = "Mod_AI_Fish";
@@ -37,8 +38,10 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     [Min(0.01f)] public float swimSpeed = 1.1f;
     [Min(0.1f)] public float wanderRadius = 3f;
     [Min(0.1f)] public float forageRadius = 8f;
-    // 留出水流漂移余量，避免食物稍微移动就打断进食。
+    // 动作距离不再兼作游动停止距离。
     [Min(0.05f)] public float eatRange = 0.9f;
+    [Tooltip("追食停止距离，运行时不超过进食范围的一半；靠近时仍可进食。"), Min(0f)]
+    public float forageStopDistance = 0.3f;
     [Min(0.1f)] public float eatSeconds = 0.8f;
     [Min(0.1f)] public float scanInterval = 0.5f;
     [Min(0.1f)] public float fleeTriggerDistance = 6f;
@@ -73,6 +76,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     }
 
     public Item ActorItem => item;
+    public bool CanBeHookedByCast => false;
+    public string HookedFeedback => "小鱼咬钩了！左键将它拉近。";
     public bool IsAlive => loaded && item != null && !item.DestructionHandled && health != null && health.Hp > 0f;
     public bool IsHooked => fishingRod != null;
     public float HealthRatio => health == null || health.MaxHp <= 0f ? 0f : Mathf.Clamp01(health.Hp / health.MaxHp);
@@ -325,16 +330,23 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             !AquaticHabitat.CanSwimAt(position) ||
             WorldTopologyRuntime.SqrDistance(item.transform.position, position) > allowedRadius * allowedRadius)
         { target = default; eatElapsed = 0f; return; }
-        if (WorldTopologyRuntime.SqrDistance(item.transform.position, position) > eatRange * eatRange)
+        float distanceSqr = WorldTopologyRuntime.SqrDistance(item.transform.position, position);
+        if (!ShouldActivelyForage && !AIApproachRange.IsInActionRange(distanceSqr, eatRange))
         {
+            // 70% 以上只接近嘴边现有食物，不扩大主动觅食范围。
+            target = default;
             eatElapsed = 0f;
-            // 70% 以上只吃嘴边已有食物，不会主动追过去。
-            if (!ShouldActivelyForage) { target = default; return; }
-            if (!SwimTowards(position, deltaTime)) target = default;
             return;
         }
-        eatElapsed += deltaTime;
-        if (eatElapsed < eatSeconds) return;
+        float stop = AIApproachRange.ResolveStopDistance(forageStopDistance, eatRange);
+        if (distanceSqr > stop * stop)
+        {
+            if (!SwimTowards(position, deltaTime, stopDistance: stop))
+            { target = default; eatElapsed = 0f; return; }
+            distanceSqr = WorldTopologyRuntime.SqrDistance(item.transform.position, position);
+        }
+        eatElapsed = AIApproachRange.AdvanceActionTimer(eatElapsed, deltaTime, distanceSqr, eatRange);
+        if (!AIApproachRange.IsInActionRange(distanceSqr, eatRange) || eatElapsed < eatSeconds) return;
         eatElapsed = 0f;
         DroppedItemHandle eaten = target;
         int legacyGuid = eaten.Legacy != null ? eaten.Legacy.itemData.Guid : 0;
@@ -367,11 +379,13 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         }
     }
 
-    private bool SwimTowards(Vector2 position, float deltaTime, float speedMultiplier = 1f)
+    private bool SwimTowards(Vector2 position, float deltaTime, float speedMultiplier = 1f, float stopDistance = 0f)
     {
         Vector2 origin = item.transform.position;
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(origin, position);
-        Vector2 step = Vector2.ClampMagnitude(delta, swimSpeed * Mathf.Max(0f, speedMultiplier) * deltaTime);
+        float stepLength = AIApproachRange.ClampMovementStep(delta.magnitude,
+            swimSpeed * Mathf.Max(0f, speedMultiplier) * deltaTime, stopDistance);
+        Vector2 step = Vector2.ClampMagnitude(delta, stepLength);
         Vector2 next = WorldTopologyRuntime.NormalizePosition(origin + step);
         if (!AquaticHabitat.CanTraverse(origin, next)) return false;
         MovePosition(next);

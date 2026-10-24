@@ -4,8 +4,9 @@ using UnityEngine;
 
 namespace FlatWorld.Spaceflight
 {
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class SpaceGameplaySettings
+    public sealed partial class SpaceGameplaySettings
     {
         #region 可调整的飞行与地表移动参数
         public double EarthGravity = 9.81d;
@@ -35,6 +36,12 @@ namespace FlatWorld.Spaceflight
         public float DrivingCameraMaxSize = 120000f;
         public float DrivingCameraZoomMultiplier = 1.25f;
         public double ImpactJoulesPerDurability = 1000d;
+        #region 太空电梯原型参数
+        public double ElevatorTravelSeconds = 12d;
+        public int ElevatorCargoSlots = 24;
+        public float ElevatorCargoMaxWeightKg = 2000f;
+        public float ElevatorCargoMaxVolumeLiters = 4000f;
+        #endregion
         #region 引力捕获与大气参数
         // 参考圈取地球尺寸加余量，中心速度是物体从圈边静止释放的基准。
         public double GravityReferenceRadiusMeters = 2000d;
@@ -54,7 +61,7 @@ namespace FlatWorld.Spaceflight
             {
                 if (current != null) return current;
                 TextAsset source = Resources.Load<TextAsset>("Config/Space/space-gameplay");
-                current = source == null ? new SpaceGameplaySettings() : JsonConvert.DeserializeObject<SpaceGameplaySettings>(source.text);
+                current = source == null ? new SpaceGameplaySettings() : JsonConfigurationCache.Deserialize<SpaceGameplaySettings>(source.text);
                 if (current == null || current.EarthGravity <= 0d || current.MinimumGravityForWalking <= 0d ||
                     current.MinimumWalkSpeedMultiplier <= 0d || current.MaximumWalkSpeedMultiplier < current.MinimumWalkSpeedMultiplier ||
                     current.ImpactJoulesPerDurability <= 0d || current.LandingChoiceRadiusMeters <= 0d ||
@@ -83,7 +90,11 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(current.GravityRestDistanceMeters) || current.GravityRestDistanceMeters <= 0d ||
                     !SpaceVector2.Finite(current.GravityRestSpeedMetersPerSecond) || current.GravityRestSpeedMetersPerSecond <= 0d ||
                     current.SpacePhysicsSubsteps < 1 || current.SpacePhysicsSubsteps > 32 ||
-                    !SpaceVector2.Finite(current.SpacePhysicsIslandDistanceMeters) || current.SpacePhysicsIslandDistanceMeters <= 0d)
+                    !SpaceVector2.Finite(current.SpacePhysicsIslandDistanceMeters) || current.SpacePhysicsIslandDistanceMeters <= 0d ||
+                    !double.IsFinite(current.ElevatorTravelSeconds) || current.ElevatorTravelSeconds <= 0d ||
+                    current.ElevatorCargoSlots < 1 || current.ElevatorCargoSlots > 256 ||
+                    !float.IsFinite(current.ElevatorCargoMaxWeightKg) || current.ElevatorCargoMaxWeightKg <= 0f ||
+                    !float.IsFinite(current.ElevatorCargoMaxVolumeLiters) || current.ElevatorCargoMaxVolumeLiters <= 0f)
                     throw new InvalidOperationException("太空移动与冲击配置无效。");
                 return current;
             }

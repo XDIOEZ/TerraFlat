@@ -65,7 +65,7 @@ public sealed class FoodRuntimeContext : IFoodRuntimeContext
         ? readConsumeKind()
         : FoodConsumeKind.Solid;
 
-    public bool IsPlayer => GameDifficultyService.IsPlayer(Item);
+    public bool IsPlayer => ActorIdentity.IsPlayer(Item);
 
     internal void NotifyStateChanged()
     {
@@ -202,7 +202,7 @@ public sealed class FoodNutritionService
                      BuffNutritionConsumeMultiplier;
 
         if (context.IsPlayer)
-            timeDelta *= GameDifficultyService.Current.PlayerSurvival.HungerDrainMultiplier;
+            timeDelta *= GameRuleConfiguration.Current.PlayerSurvival.HungerDrainMultiplier;
 
         GameValue_float nutritionConsumeSpeed = food.nutritionConsumeSpeed;
         float foodDelta = timeDelta * (nutritionConsumeSpeed?.Value ?? 0f);

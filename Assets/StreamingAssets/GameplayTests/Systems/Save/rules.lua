@@ -92,7 +92,7 @@ end, "自动保存工作单元上限与重启计数隔离")
 
 test.system("save", "autosave_chunk_payload", { amount = 3, guid = 143 }, function(data)
     assert(data.bytes > 0 and data.outerMagic == "FWD6" and data.outerVersion == 15, "自动保存外层封装格式错误")
-    assert(data.compactVersion == 32, "自动保存独立区块字节格式错误")
+    assert(data.compactVersion == 33, "自动保存独立区块字节格式错误")
     assert(data.coreName == "probe:autosave_core" and data.coreSeed == 2468, "核心数据冻结后被源对象变化污染")
     assert(data.recordCount == 2 and data.firstChunk == "1_0" and data.secondChunk == "0_0", "封装没有保留捕获顺序或区块身份")
     assert(data.planet == "probe:autosave" and data.chunkX == 1 and data.itemCount == 1, "区块身份、位置或物品列表丢失")
@@ -120,7 +120,7 @@ test.system("save", "autosave_ecology_payload", { amount = 3, guid = 143 }, func
 end, "生态逐物品冻结、跨帧采收对齐、维度隔离与正式恢复往返")
 
 test.system("save", "load_failure_state", {}, function(data)
-    assert(data.currentVersion == 32 and data.currentName == "probe:current" and data.currentSeed == 2468, "当前核心格式不能正常恢复")
+    assert(data.currentVersion == 33 and data.currentName == "probe:current" and data.currentSeed == 2468, "当前核心格式不能正常恢复")
     assert(data.oldFailure == "SaveVersionIncompatibleException" and data.oldPreserved, "旧核心结构没有先被版本拒绝，或拒绝时清空了既有差量")
     assert(data.corruptFailure == "InvalidDataException" and data.corruptPreserved, "区块解析失败留下半份新差量或丢掉旧差量")
     assert(not data.missingLoaded and data.saveCleared and data.playerCleared, "载入失败仍允许使用上一份存档或角色")

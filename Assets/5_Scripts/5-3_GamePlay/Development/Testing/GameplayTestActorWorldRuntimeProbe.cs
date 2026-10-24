@@ -457,8 +457,8 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         result["inputAfterCraft"] = Count(table.inputInventory, "Twine");
         result["outputAfterCraft"] = Count(table.outputInventory, "Rope");
         result["carryAfterCraft"] = CaptureHandcraftCarry(player, table);
-        result["expectedOutput"] = GameDifficultyService.ScaleCount(1,
-            GameDifficultyService.Current.Production.CraftingOutputMultiplier, 1);
+        result["expectedOutput"] = GameRuleMath.ScaleCount(1,
+            GameRuleConfiguration.Current.Production.CraftingOutputMultiplier, 1);
 
         // 首次合成可能剩余材料，满槽拒绝场景必须使用全新的自有三份材料。
         ClearInventory(table.inputInventory);

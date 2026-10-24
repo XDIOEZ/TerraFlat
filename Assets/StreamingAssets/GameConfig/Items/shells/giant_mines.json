@@ -1,0 +1,1007 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Mine_Stone_Large",
+      "parent": "Mine_Stone",
+      "gameName": "巨型石料矿山",
+      "description": "巨大的天然石料矿山，保留普通石料矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "lootTableId": "Mine_Stone_Large_Default"
+    },
+    {
+      "id": "Mine_Coal_Large",
+      "parent": "Mine_Coal",
+      "gameName": "巨型煤矿山",
+      "description": "巨大的天然煤矿山，保留普通煤矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Copper_Large",
+      "parent": "Mine_Copper",
+      "gameName": "巨型铜矿山",
+      "description": "巨大的天然铜矿山，保留普通铜矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Iron_Large",
+      "parent": "Mine_Iron",
+      "gameName": "巨型铁矿山",
+      "description": "巨大的天然铁矿山，保留普通铁矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Tin_Large",
+      "parent": "Mine_Tin",
+      "gameName": "巨型锡矿山",
+      "description": "巨大的天然锡矿山，保留普通锡矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Niter_Large",
+      "parent": "Mine_Niter",
+      "gameName": "巨型硝石矿山",
+      "description": "巨大的天然硝石矿山，保留普通硝石矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Diamond_Large",
+      "parent": "Mine_Diamond",
+      "gameName": "巨型钻石矿山",
+      "description": "巨大的天然钻石矿山，保留普通钻石矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Gold_Large",
+      "parent": "Mine_Gold",
+      "gameName": "巨型金矿山",
+      "description": "巨大的天然金矿山，保留普通金矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Obsidian_Large",
+      "parent": "Mine_Obsidian",
+      "gameName": "巨型黑曜石矿山",
+      "description": "巨大的天然黑曜石矿山，保留普通黑曜石矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Sulfur_Large",
+      "parent": "Mine_Sulfur",
+      "gameName": "巨型硫磺矿山",
+      "description": "巨大的天然硫磺矿山，保留普通硫磺矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Mine_Tungsten_Large",
+      "parent": "Mine_Tungsten",
+      "gameName": "巨型钨矿山",
+      "description": "巨大的天然钨矿山，保留普通钨矿山的开采特性与对应产物，可从岩体边缘持续采掘。",
+      "weight": 200000.0,
+      "volume": 80000.0,
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": -6, "y": -2 },
+          { "x": -5, "y": -2 },
+          { "x": -4, "y": -2 },
+          { "x": -3, "y": -2 },
+          { "x": -2, "y": -2 },
+          { "x": -1, "y": -2 },
+          { "x": 0, "y": -2 },
+          { "x": 1, "y": -2 },
+          { "x": 2, "y": -2 },
+          { "x": 3, "y": -2 },
+          { "x": 4, "y": -2 },
+          { "x": 5, "y": -2 },
+          { "x": 6, "y": -2 },
+          { "x": -6, "y": -1 },
+          { "x": -5, "y": -1 },
+          { "x": -4, "y": -1 },
+          { "x": -3, "y": -1 },
+          { "x": -2, "y": -1 },
+          { "x": -1, "y": -1 },
+          { "x": 0, "y": -1 },
+          { "x": 1, "y": -1 },
+          { "x": 2, "y": -1 },
+          { "x": 3, "y": -1 },
+          { "x": 4, "y": -1 },
+          { "x": 5, "y": -1 },
+          { "x": 6, "y": -1 }
+        ]
+      },
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 1.72,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 14.02,
+          "y": 14.02,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": -1.6666666666666667
+          },
+          "path": "",
+          "size": {
+            "x": 13.0,
+            "y": 1.6666666666666667
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 200000,
+              "MaxHp": 200000
+            },
+            "shakeMagnitude": 0.025,
+            "healthBarWorldScale": 1.1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 2.0
+              },
+              "size": {
+                "x": 13.8,
+                "y": 9.6
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      }
+    }
+  ]
+}

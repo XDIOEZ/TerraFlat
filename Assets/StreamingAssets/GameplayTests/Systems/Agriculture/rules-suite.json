@@ -9,6 +9,12 @@
       "name": "农业种植规则与边界",
       "luaPath": "GameplayTests/Systems/Agriculture/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "agriculture_external_rules",
+      "name": "外部成长规则配置输入",
+      "luaPath": "GameplayTests/Systems/Agriculture/external-rules.lua",
+      "enabled": true
     }
   ]
 }

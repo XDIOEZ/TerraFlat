@@ -7,8 +7,8 @@
 - 源图：`GroundGrass_Atlas.png`，1254×1254，六列六行。
 - 前五行每行六个草簇，第六行前两格有草，后四格透明，共 32 个变体；前 24 个普通草簇、后 8 个强调变体。
 - 每格源尺寸 209×209；整张源图设置 PPU=418、Point、无 Mipmap/压缩、Read/Write、透明背景。
-- 当前正式源是 `Assets/6_Art/Items/Plants/GrassAndFlower.png`（96×96），由 `Assets/2_Prefabs/World/WorldModel/ChunkView.prefab` 按 6 列、32 变体、16 像素格、32 PPU 消费。本轮只绘图另存，不修改这些引用。
-- 若后续直接用本源图接入，应同步按源格尺寸配置 `spriteSizePixels=209`、`pixelsPerUnit=418`，或由后续导入流程统一处理图集；不能只覆盖旧 96×96 的图而继续按 16 像素格读取。此参数为按目标格宽 0.5 单位换算，运行表现交用户验收。
+- 当前正式源已接入本图集，由 `Assets/2_Prefabs/World/WorldModel/ChunkView.prefab` 按 6 列、32 变体、`spriteSizePixels=209`、`pixelsPerUnit=418` 消费；对应每格宽 0.5 世界单位。
+- 2026-10-23 配色协调：草层独立使用 `Assets/9_Shaders/Material/Grass-Detail-Sway-Lit.mat`，Tint 为 `(1.25, 1.22, 1.30, 1)`，小幅提亮并减弱饱和感；野花保持原共用材质。源 PNG、Alpha 和切片参数不变，运行表现交用户验收。
 - 最终源：`C:\Users\CatStudio\.codex\generated_images\01a16839-f982-7652-9f1b-d767112709d1\exec-ec542f96-384c-4c7d-a883-1c89d4f8f1d2.png`。
 
 ## 初次生成提示词

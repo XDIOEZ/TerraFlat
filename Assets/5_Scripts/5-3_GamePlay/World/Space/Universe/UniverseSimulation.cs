@@ -32,7 +32,8 @@ namespace FlatWorld.Spaceflight
                     !NonNegative(body.PlacementDistanceMeters) || !SpaceVector2.Finite(body.PlacementAngleRadians) ||
                     !NonNegative(body.OrbitalPeriodSeconds) || !NonNegative(body.OrbitalEccentricity) || body.OrbitalEccentricity >= 1d ||
                     !SpaceVector2.Finite(body.OrbitalPeriapsisRadians) ||
-                    !SpaceVector2.Finite(body.RotationPeriodSeconds) || !SpaceVector2.Finite(body.RotationInitialRadians))
+                    !SpaceVector2.Finite(body.RotationPeriodSeconds) || !SpaceVector2.Finite(body.RotationInitialRadians) ||
+                    !SpaceVector2.Finite(body.EquatorTiltRadians))
                     throw new InvalidDataException("星体身份、地址或轨道参数无效");
                 body.Sector = state.Sector;
                 if (!string.IsNullOrWhiteSpace(body.TemplateBodyId) && !templateBodies.TryAdd(body.TemplateBodyId, body))

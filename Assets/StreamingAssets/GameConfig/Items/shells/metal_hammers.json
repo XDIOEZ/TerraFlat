@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "CopperHammer",
+      "parent": "WoodHammer",
+      "gameName": "铜锤",
+      "description": "铜制锤头配木柄的金属锤，可在金属砧上锻打。耐久100，每次有效敲打消耗1点。",
+      "durability": 100,
+      "maxDurability": 100,
+      "amount": 1,
+      "weight": 3.1,
+      "volume": 2.8,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["Tool", "Metal", "Copper"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Tools/MetalHammers/CopperHammer_Icon.png",
+        "rendererLocalPosition": {"x": 0, "y": 0, "z": 0},
+        "rendererLocalScale": {"x": 1, "y": 1, "z": 1},
+        "rendererLocalEulerAngles": {"x": 0, "y": 0, "z": 315},
+        "color": {"r": 1, "g": 1, "b": 1, "a": 1}
+      },
+      "modules": {
+        "damage": {
+          "parameters": {"DamageValues": {"Physical": 18, "ImpactKind": 4}}
+        },
+        "animation": {
+          "prefab": "Module_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "parameters": {
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": ["Attack_2"],
+            "staminaCostPerAttack": 2.7
+          }
+        },
+        "resourceTool": {
+          "parameters": {"toolKind": 4, "harvestTier": 2, "harvestEfficiency": 2}
+        }
+      }
+    },
+    {
+      "id": "IronHammer",
+      "parent": "CopperHammer",
+      "gameName": "铁锤",
+      "description": "熟铁制成的金属锤，适合在金属砧上反复锻打。耐久200，每次有效敲打消耗1点。",
+      "durability": 200,
+      "maxDurability": 200,
+      "weight": 3.4,
+      "tags": ["Tool", "Metal", "Iron"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png"
+      },
+      "modules": {
+        "damage": {
+          "parameters": {"DamageValues": {"Physical": 28, "ImpactKind": 4}}
+        },
+        "animation": {"parameters": {"staminaCostPerAttack": 3}},
+        "resourceTool": {"parameters": {"harvestTier": 4}}
+      }
+    },
+    {
+      "id": "SteelHammer",
+      "parent": "IronHammer",
+      "gameName": "钢锤",
+      "description": "钢制锤头更耐用的金属锤，可在金属砧上锻打。耐久400，每次有效敲打消耗1点。",
+      "durability": 400,
+      "maxDurability": 400,
+      "weight": 3.2,
+      "tags": ["Tool", "Metal", "Steel"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Tools/MetalHammers/SteelHammer_Icon.png"
+      },
+      "modules": {
+        "damage": {
+          "parameters": {"DamageValues": {"Physical": 32, "ImpactKind": 4}}
+        },
+        "resourceTool": {"parameters": {"harvestTier": 5}}
+      }
+    }
+  ]
+}

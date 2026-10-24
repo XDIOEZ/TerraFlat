@@ -1,3 +1,76 @@
+local durability_cases = {
+    {name = "碎掉当前木棍并换下一根", args = {}, accepted = true, broke = true, amount = 4, durability = 20},
+    {name = "普通磨损不减数量", args = {durability = 7}, accepted = true, broke = false, amount = 5, durability = 6},
+    {name = "最后一件清槽且不重复扣减", args = {amount = 1, stackable = false, ["repeat"] = true}, accepted = true, broke = true, amount = 0, durability = 0},
+    {name = "溢出磨损不击穿下一件", args = {wear = 100}, accepted = true, broke = true, amount = 4, durability = 20},
+    {name = "无限耐久不磨损", args = {maximum = 0, durability = 0}, accepted = false, broke = false, amount = 5, durability = 0},
+    {name = "零消耗不发事件", args = {wear = 0}, accepted = false, broke = false, amount = 5, durability = 1},
+    {name = "负消耗不能刷耐久", args = {wear = -1}, accepted = false, broke = false, amount = 5, durability = 1},
+    {name = "同GUID旧引用不能代扣", args = {stale = true}, accepted = false, broke = false, amount = 5, durability = 1}
+}
+for _, case in ipairs(durability_cases) do
+    test.system("inventory", "durability_consume", case.args, function(data)
+        assert(data.accepted == case.accepted and data.broke == case.broke and data.amount == case.amount
+            and data.durability == case.durability, "基类耐久磨损、减件或下一件恢复错误")
+        assert(data.empty == (case.amount == 0) and not data.repeated and data.stillMaterial,
+            "末件未清槽、旧回调重复消费，或材料被改成工具")
+        local events = case.accepted and 1 or 0
+        assert(data.changed == events and data.refreshed == events, "库存状态事件不是成功一次、拒绝零次")
+    end, "基类耐久：" .. case.name)
+end
+
+local durability_transfers = {
+    {args = {}, moved = true, count = 1, source = 4, sourceDurability = 20, target = 1, targetDurability = 7},
+    {args = {hand = true}, moved = true, count = 1, source = 4, sourceDurability = 20, target = 1, targetDurability = 7},
+    {args = {target = true}, moved = true, count = 1, source = 4, sourceDurability = 20, target = 3, targetDurability = 7},
+    {args = {target = true, targetDurability = 8}, moved = false, count = 0, source = 5, sourceDurability = 7, target = 2, targetDurability = 8},
+    {args = {capacity = 0}, moved = false, count = 0, source = 5, sourceDurability = 7, target = 0, targetDurability = 0},
+    {args = {count = 5}, moved = true, count = 5, source = 0, sourceDurability = 0, target = 5, targetDurability = 7}
+}
+for index, case in ipairs(durability_transfers) do
+    test.system("inventory", "durability_transfer", case.args, function(data)
+        assert(data.accepted == case.moved and data.preview == case.count and data.previewUnchanged,
+            "耐久转移预检与提交不一致，或预检有副作用")
+        assert(data.sourceAmount == case.source and data.sourceDurability == case.sourceDurability
+            and data.targetAmount == case.target and data.targetDurability == case.targetDurability,
+            "拆分或合堆丢失/复制了当前件的磨损")
+        if case.moved then assert(data.separateGuid, "拆分复制了原实例身份") end
+        if case.args.count == 5 then assert(data.sameReference, "整堆移动不应替换原实例") end
+    end, "耐久堆叠守恒：" .. index)
+end
+
+test.system("inventory", "durability_add_sort_save", {}, function(data)
+    assert(data.preview == 5 and data.previewUnchanged and data.added == 5, "入包预检或接收数量错误")
+    assert(#data.portions == 3 and data.portions[1].amount == 2 and data.portions[1].durability == 7
+        and data.portions[2].amount == 2 and data.portions[2].durability == 20
+        and data.portions[3].amount == 1 and data.portions[3].durability == 20, "分配多槽复制了受损件")
+    assert(data.savedAmount == 5 and math.abs(data.savedDurability - 7) < 0.001, "存档往返丢失堆叠耐久")
+    assert(data.sorted and #data.organized == 2 and data.organized[1].amount == 5
+        and data.organized[1].durability == 6 and data.organized[2].amount == 4
+        and data.organized[2].durability == 9, "整理背包丢失磨损或强行合并两件受损材料")
+end, "耐久：多槽接收、整理合堆与真实二进制存档")
+
+local worn_pickups = {
+    {name = "部分拾取带走唯一受损件", firstCapacity = 2, secondCapacity = 1, first = 2, second = 1, remaining = 2},
+    {name = "跨库存整堆拾取不复制磨损", firstCapacity = 2, secondCapacity = 3, first = 2, second = 3, remaining = 0},
+    {name = "第一库存满时由第二库存接收受损件", firstCapacity = 0, secondCapacity = 2, first = 0, second = 2, remaining = 3},
+    {name = "满包拒绝不修复原件", firstCapacity = 0, secondCapacity = 0, first = 0, second = 0, remaining = 5}
+}
+for _, case in ipairs(worn_pickups) do
+    test.system("inventory", "pickup_multiplier", {enabled = false, amount = 5, durability = 7, maximum = 20,
+        firstCapacity = case.firstCapacity, secondCapacity = case.secondCapacity}, function(data)
+        assert(data.preflightUnchanged and data.firstAmount == case.first and data.secondAmount == case.second
+            and data.remaining == case.remaining, "受损材料的拾取数量或预检边界错误")
+        local accepted = case.remaining < 5
+        assert(data.accepted == accepted and data.firstDurability == (case.first > 0 and 7 or 0)
+            and data.secondDurability == (case.second == 0 and 0 or case.first > 0 and 20 or 7),
+            "跨库存拾取丢失或复制了受损件")
+        if case.remaining > 0 then
+            assert(data.remainingDurability == (accepted and 20 or 7), "地面余物未正确换下一件或拒绝时被修复")
+        end
+    end, "耐久拾取：" .. case.name)
+end
+
 test.system("inventory", "dynamic_slot_maintenance", {}, function(data)
     assert(data.initialScan and data.stableSkipped and data.initialCount == 195,
         "创造背包初次整理错误，或256次稳定Tick仍扫描全部槽位")
@@ -345,4 +418,41 @@ for _, case in ipairs(capacities) do
         assert(data.wholeLarge == 2147483647 and data.wholeNegative == 0, "数量转整数边界错误")
         if case.args.playerBag then assert(data.slots == 18, "生存背包基础格数错误") end
     end, "库存容量与身份：" .. case.name)
+end
+
+-- 独立眼部槽和手持快捷装备使用同一套正式接收与交换规则。
+test.system("inventory", "equipment_eye_slots", {}, function(data)
+    assert(data.count == 9 and data.head == 0 and data.offhand == 7 and data.eyes == 8,
+        "眼部槽没有独立追加，或改变了既有装备槽索引")
+    assert(data.glassesWithHelmet and data.helmetWithGlasses and not data.glassesAtHead and not data.helmetAtEyes,
+        "眼镜与头盔不能同时穿戴，或仍共用同一个槽位")
+    assert(not data.eyesUnderBlockingHelmet and not data.blockingHelmetOverEyes and not data.headUnderBlockingGlasses,
+        "装备声明的槽位互斥没有双向生效")
+    assert(data.sameSlotReplacement and data.blockingGlassesWithoutHead,
+        "更换同槽旧装备或没有冲突对象时被错误拒绝")
+    assert(not data.conflictingInternalSwap and data.internalSwapUnchanged,
+        "装备栏内交换绕过了两件装备的最终槽位互斥")
+    assert(data.moveToEmptySlot and data.emptyMoveSameInstance,
+        "同一件装备移动到空槽时与自身冲突，或丢失了原实例")
+    assert(data.engineeringEyesVisible and not data.engineeringWithoutEyes,
+        "工程视野未读取正式眼部装备，或卸下护目镜后仍然生效")
+end, "独立眼部槽、头盔共存、双向互斥和装备栏内交换")
+
+for _, mode in ipairs({"empty", "swap", "blocked", "wrong_tag", "return_tag", "source_drag", "target_drag", "foreign_owner", "invalid_index"}) do
+    test.system("inventory", "equipment_quick_equip", {mode = mode}, function(data)
+        local accepted = mode == "empty" or mode == "swap"
+        assert(data.accepted == accepted, "快捷穿戴的合法、互斥、占用或来源准入错误")
+        assert(data.incomingAmount == 1 and data.previousAmount == (mode == "empty" and 0 or 1),
+            "快捷穿戴或拒绝改变了装备数量")
+        if accepted then
+            assert(data.sourceIsPrevious and data.targetIsIncoming and data.sourceEvents > 0 and data.targetEvents > 0,
+                "穿戴没有把换下的原实例放回来源槽，或没有发布正式库存变更")
+        else
+            assert(data.sourceIsIncoming and data.targetIsPrevious and data.sourceEvents == 0 and data.targetEvents == 0,
+                "拒绝后装备/来源发生部分修改，或发出了成功变更")
+        end
+        if mode == "source_drag" or mode == "target_drag" then
+            assert(data.dragStarted, "拖拽拒绝夹具没有锁住真实来源")
+        end
+    end, "快捷穿戴空槽、交换与拒绝原子性：" .. mode)
 end

@@ -15,8 +15,9 @@ namespace FlatWorld.Gameplay.Events
         public List<GameEventDefinition> Events = new();
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class GameEventDefinition
+    public sealed partial class GameEventDefinition
     {
         [JsonProperty("id")]
         public string Id;
@@ -54,22 +55,26 @@ namespace FlatWorld.Gameplay.Events
         [JsonProperty("actions")]
         public List<GameEventActionDefinition> Actions = new();
 
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore]
         public string SourceName;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public class GameEventExtensionDefinition
+    public partial class GameEventExtensionDefinition
     {
         [JsonProperty("type")]
         public string Type;
 
+        [MemoryPack.MemoryPackAllowSerialize]
         [JsonProperty("parameters")]
         public JObject Parameters = new();
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class GameEventActionDefinition : GameEventExtensionDefinition
+    public sealed partial class GameEventActionDefinition : GameEventExtensionDefinition
     {
         [JsonProperty("id")]
         public string Id;

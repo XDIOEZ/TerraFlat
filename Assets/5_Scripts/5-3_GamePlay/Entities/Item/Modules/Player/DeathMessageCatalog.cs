@@ -3,16 +3,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>死亡描述只消费已锁存的死因，用数据目录组合文案，不参与伤害或死亡结算。</summary>
-public sealed class DeathMessageCatalog
+public sealed partial class DeathMessageCatalog
 {
     #region 目录加载与校验
 
     public const string ResourcePath = "GameConfig/Combat/death-messages";
     private static DeathMessageCatalog current;
-    private static readonly Regex PlaceholderPattern = new(@"\{([^{}]+)\}", RegexOptions.Compiled);
+    // 死因模板只在加载和展示时匹配，避免首次死亡触发编译正则的 JIT 冷启动。
+    private static readonly Regex PlaceholderPattern = new(@"\{([^{}]+)\}", RegexOptions.CultureInvariant);
+    private static readonly ProfilerMarker CatalogLoadMarker = new("FlatWorld.Player.Death.CatalogLoad");
     private readonly CatalogData data;
 
     public static DeathMessageCatalog Current => current ??= LoadBuiltIn();
@@ -28,6 +31,7 @@ public sealed class DeathMessageCatalog
 
     private static DeathMessageCatalog LoadBuiltIn()
     {
+        using var marker = CatalogLoadMarker.Auto();
         TextAsset asset = Resources.Load<TextAsset>(ResourcePath);
         if (asset == null)
             throw new InvalidDataException($"死亡描述目录缺失：{ResourcePath}.json");
@@ -37,7 +41,7 @@ public sealed class DeathMessageCatalog
     /// <summary>显式解析入口方便静态诊断，非法模板在加载时报告。</summary>
     public static DeathMessageCatalog Parse(string json)
     {
-        CatalogData loaded = JsonConvert.DeserializeObject<CatalogData>(json,
+        CatalogData loaded = JsonConfigurationCache.Deserialize<CatalogData>(json,
             new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error });
         if (loaded == null)
             throw new InvalidDataException("死亡描述目录为空。");
@@ -179,7 +183,8 @@ public sealed class DeathMessageCatalog
 
     #region JSON 数据
 
-    private sealed class CatalogData
+    [MemoryPack.MemoryPackable]
+    private sealed partial class CatalogData
     {
         public LocalizedText Victim;
         public LocalizedText Subtitle;
@@ -187,15 +192,18 @@ public sealed class DeathMessageCatalog
         public Dictionary<string, LocalizedText> EffectNames = new(StringComparer.Ordinal);
     }
 
-    private sealed class MessageEntry
+    [MemoryPack.MemoryPackable]
+    private sealed partial class MessageEntry
     {
         public string CauseId;
         public List<string> Requires;
         public List<LocalizedText> Variants;
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public int RequirementMask;
     }
 
-    private sealed class LocalizedText
+    [MemoryPack.MemoryPackable]
+    private sealed partial class LocalizedText
     {
         public string ZhCN;
         public string En;

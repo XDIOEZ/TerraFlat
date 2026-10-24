@@ -71,9 +71,11 @@ public sealed partial class GMReflectionConsole
         GMConsolePreferences.SetPickupMultiplier(enabled, GMConsolePreferences.PickupAmountMultiplier);
         GMConsolePreferences.SavePendingChanges();
         RefreshPickupMultiplierControl();
-        SetStatus(enabled
-            ? $"拾取倍增已开启：可堆叠物品 ×{GMConsolePreferences.PickupAmountMultiplier}。"
-            : "拾取倍增已关闭，恢复正常拾取数量。", GmTextSecondary);
+        if (enabled)
+            SetStatusFormat("拾取倍增已开启：可堆叠物品 ×{0}。", GmTextSecondary,
+                GMConsolePreferences.PickupAmountMultiplier);
+        else
+            SetStatus("拾取倍增已关闭，恢复正常拾取数量。", GmTextSecondary);
     }
 
     private void SetPickupMultiplierFromSlider(float value)
@@ -94,12 +96,13 @@ public sealed partial class GMReflectionConsole
             ApplyPickupMultiplierPreference(picker);
         bool canEdit = picker != null && GameNetwork.HasStateAuthority;
         bool enabled = canEdit && GMConsolePreferences.PickupMultiplierEnabled;
-        pickupMultiplierButton.GetComponentInChildren<TextMeshProUGUI>().text = enabled ? "拾取倍增：开" : "拾取倍增：关";
+        SetLocalizedText(pickupMultiplierButton.GetComponentInChildren<TextMeshProUGUI>(),
+            enabled ? "拾取倍增：开" : "拾取倍增：关");
         pickupMultiplierButton.interactable = canEdit;
         SetGmButtonVisual(pickupMultiplierButton, enabled ? GmSelection : GmSurfaceRaised, enabled);
         pickupMultiplierSlider.interactable = canEdit;
         pickupMultiplierSlider.SetValueWithoutNotify(GMConsolePreferences.PickupAmountMultiplier);
-        pickupMultiplierValueText.text = $"{GMConsolePreferences.PickupAmountMultiplier} 倍";
+        SetLocalizedFormat(pickupMultiplierValueText, "{0} 倍", GMConsolePreferences.PickupAmountMultiplier);
     }
 
     private static void ApplyPickupMultiplierPreference(Mod_ItemPicker picker)

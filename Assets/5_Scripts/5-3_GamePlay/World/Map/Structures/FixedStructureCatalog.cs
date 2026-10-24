@@ -11,7 +11,8 @@ namespace FlatWorld.Structures
 {
     #region 固定结构配置模型
 
-    public sealed class FixedStructureDefinition
+    [MemoryPack.MemoryPackable]
+    public sealed partial class FixedStructureDefinition
     {
         [JsonProperty(Required = Required.Always)] public string Id { get; set; }
         [JsonProperty(Required = Required.Always)] public string DisplayName { get; set; }
@@ -22,10 +23,12 @@ namespace FlatWorld.Structures
         public int SearchRadius { get; set; } = 24;
         public FixedStructureGas CabinGas { get; set; }
         [JsonProperty(Required = Required.Always)] public List<FixedStructureStamp> Items { get; set; }
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public List<FixedStructureMember> Members { get; } = new();
     }
 
-    public sealed class FixedStructureStamp
+    [MemoryPack.MemoryPackable]
+    public sealed partial class FixedStructureStamp
     {
         [JsonProperty(Required = Required.Always)] public string MemberId { get; set; }
         [JsonProperty(Required = Required.Always)] public string ItemId { get; set; }
@@ -47,7 +50,8 @@ namespace FlatWorld.Structures
         public FixedStructureResources Resources { get; set; }
     }
 
-    public sealed class FixedStructureResources
+    [MemoryPack.MemoryPackable]
+    public sealed partial class FixedStructureResources
     {
         public double? BatteryChargeRatio { get; set; }
         public FixedStructureGas Gas { get; set; }
@@ -55,20 +59,23 @@ namespace FlatWorld.Structures
         public List<FixedStructureInventory> Inventories { get; set; }
     }
 
-    public sealed class FixedStructureGas
+    [MemoryPack.MemoryPackable]
+    public sealed partial class FixedStructureGas
     {
         [JsonProperty(Required = Required.Always)] public double PressureKPa { get; set; }
         public double TemperatureCelsius { get; set; } = 20d;
         [JsonProperty(Required = Required.Always)] public Dictionary<string, double> Components { get; set; }
     }
 
-    public sealed class FixedStructureInventory
+    [MemoryPack.MemoryPackable]
+    public sealed partial class FixedStructureInventory
     {
         [JsonProperty(Required = Required.Always)] public string Name { get; set; }
         [JsonProperty(Required = Required.Always)] public List<FixedStructureInventoryItem> Items { get; set; }
     }
 
-    public sealed class FixedStructureInventoryItem
+    [MemoryPack.MemoryPackable]
+    public sealed partial class FixedStructureInventoryItem
     {
         [JsonProperty(Required = Required.Always)] public string ItemId { get; set; }
         [JsonProperty(Required = Required.Always)] public decimal Amount { get; set; }
@@ -76,7 +83,7 @@ namespace FlatWorld.Structures
 
     #endregion
 
-    public static class FixedStructureCatalog
+    public static partial class FixedStructureCatalog
     {
         #region 跨平台读取与严格解析
 
@@ -85,7 +92,8 @@ namespace FlatWorld.Structures
         public const int MaximumSearchRadius = 64;
         public const int MaximumExpandedMembers = 4096;
 
-        private sealed class Document
+        [MemoryPack.MemoryPackable]
+        private sealed partial class Document
         {
             [JsonProperty(Required = Required.Always)] public int Version { get; set; }
             [JsonProperty(Required = Required.Always)] public List<FixedStructureDefinition> Structures { get; set; }
@@ -114,24 +122,10 @@ namespace FlatWorld.Structures
                 MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
                 MaxDepth = 32
             };
-            using var input = new StringReader(json);
-            using var reader = new JsonTextReader(input) { MaxDepth = 32 };
-            JObject root = JObject.Load(reader, new JsonLoadSettings
-            {
-                DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error
-            });
-            if (reader.Read()) throw new InvalidDataException("固定结构目录包含多段 JSON。");
-            Document document = root.ToObject<Document>(JsonSerializer.Create(settings));
+            Document document = JsonConfigurationCache.Parse(json, () => ReadDocument(json, settings));
             if (document == null || document.Version != 1 || document.Structures == null || document.Structures.Count == 0)
                 throw new InvalidDataException("固定结构目录版本或结构列表无效。");
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (JToken value in root["structures"] ?? throw new InvalidDataException("固定结构列表缺失。"))
-            {
-                if (value is not JObject definitionJson) throw new InvalidDataException("固定结构必须是 JSON 对象。");
-                foreach (JProperty property in definitionJson.Properties())
-                    if (string.Equals(property.Name, "members", StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidDataException("members 是展开结果，请通过 items 定义结构。");
-            }
             foreach (FixedStructureDefinition definition in document.Structures)
             {
                 if (definition == null || !ValidId(definition.Id) || !ids.Add(definition.Id) ||
@@ -146,6 +140,25 @@ namespace FlatWorld.Structures
                 Expand(definition);
             }
             return document.Structures.AsReadOnly();
+        }
+
+        /// <summary>只在缓存缺失时解析原文，重复键、多段内容和禁止字段仍由原规则拒绝。</summary>
+        private static Document ReadDocument(string json, JsonSerializerSettings settings)
+        {
+            using var input = new StringReader(json);
+            using var reader = new JsonTextReader(input) { MaxDepth = 32 };
+            JObject root = JObject.Load(reader, new JsonLoadSettings
+            { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
+            if (reader.Read()) throw new InvalidDataException("固定结构目录包含多段 JSON。");
+            Document document = root.ToObject<Document>(JsonSerializer.Create(settings));
+            foreach (JToken value in root["structures"] ?? throw new InvalidDataException("固定结构列表缺失。"))
+            {
+                if (value is not JObject definitionJson) throw new InvalidDataException("固定结构必须是 JSON 对象。");
+                foreach (JProperty property in definitionJson.Properties())
+                    if (string.Equals(property.Name, "members", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("members 是展开结果，请通过 items 定义结构。");
+            }
+            return document;
         }
 
         #endregion

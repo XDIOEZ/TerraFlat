@@ -18,6 +18,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("industrial_fluids", "portable_tank_cache", WorldPortableTankCache);
         Register("industrial_fluids", "portable_tank_payload", WorldPortableTankPayload);
+        Register("industrial_fluids", "portable_tank_air_fill", WorldPortableTankAirFill);
         Register("industrial_fluids", "cold_temperature_path", WorldColdTemperaturePath);
         Register("industrial_fluids", "cold_wind_cache", WorldColdWindCache);
     }
@@ -145,6 +146,112 @@ public static partial class GameplayTestSystemProbe
         FluidTankStorage.Flush(item);
         result["unchangedContentFlushReusesBytes"] = ReferenceEquals(changedBytes, binary.BitData);
         return result;
+    }
+
+    // 使用真实星球大气库存适配，分别验证混合气、有限来源、已有库存和回滚。
+    private static JObject WorldPortableTankAirFill(JObject args)
+    {
+        static AtmosphereState Air(double pressure) => new()
+        {
+            DefinitionId = "system-probe:air",
+            CapacityMoles = 20m,
+            ReferenceMoles = 10m,
+            ReferencePressureKPa = pressure,
+            TemperatureKelvin = 293.15d,
+            Gases = new List<AtmosphereGasAmount>
+            {
+                new() { FluidId = FluidIds.Oxygen, Moles = 2.1m },
+                new() { FluidId = FluidIds.Nitrogen, Moles = 7.9m }
+            }
+        };
+        const double volume = 4d, minimum = .04d;
+        var air = Air(PortableGasTankAirFilling.TargetPressureKPa);
+        var target = new FluidInventory();
+        decimal gasBefore = air.CurrentMoles;
+        bool filled = PortableGasTankAirFilling.TryFillFromSource(
+            new PlanetShipAtmosphereSource(air, 20d), target, volume, minimum);
+        decimal airAfter = air.CurrentMoles;
+        double pressure = target.GetPressureKPa(volume, minimum);
+        decimal oxygen = target.GetGasMoles(FluidIds.Oxygen);
+        decimal nitrogen = target.GetGasMoles(FluidIds.Nitrogen);
+        bool filledAgain = PortableGasTankAirFilling.TryFillFromSource(
+            new PlanetShipAtmosphereSource(air, 20d), target, volume, minimum);
+
+        var vacuum = Air(0d);
+        foreach (AtmosphereGasAmount component in vacuum.Gases) component.Moles = 0m;
+        var empty = new FluidInventory();
+        bool vacuumFilled = PortableGasTankAirFilling.TryFillFromSource(
+            new PlanetShipAtmosphereSource(vacuum, 20d), empty, volume, minimum);
+        var thinAir = Air(60d);
+        var thinTarget = new FluidInventory();
+        decimal thinBefore = thinAir.CurrentMoles;
+        bool thinFilled = PortableGasTankAirFilling.TryFillFromSource(
+            new PlanetShipAtmosphereSource(thinAir, 20d), thinTarget, volume, minimum);
+
+        var occupied = new FluidInventory();
+        FluidCatalog catalog = FluidCatalog.Default;
+        bool seededGas = occupied.TryAdd(FluidInventory.CreateBatch(
+            catalog.Find(FluidIds.CarbonDioxide), .012m, 0m, 283.15d), volume, minimum);
+        bool seededLiquid = occupied.TryAdd(FluidInventory.CreateBatch(
+            catalog.Find(FluidIds.PureWater), 0m, 10m, 283.15d), volume, minimum);
+        decimal originalCarbon = occupied.GetGasMoles(FluidIds.CarbonDioxide);
+        decimal originalWater = occupied.GetLiquidMoles(FluidIds.PureWater);
+        double originalEnergy = occupied.State.TotalInternalEnergyJoules;
+        double liquidSpace = occupied.GetLiquidLiters();
+        var occupiedAir = Air(PortableGasTankAirFilling.TargetPressureKPa);
+        decimal occupiedBefore = occupiedAir.CurrentMoles;
+        bool mixedFilled = PortableGasTankAirFilling.TryFillFromSource(
+            new PlanetShipAtmosphereSource(occupiedAir, 20d), occupied, volume, minimum);
+        var room = new FluidInventory();
+        bool roomOxygen = room.TryAdd(FluidInventory.CreateBatch(
+            catalog.Find(FluidIds.Oxygen), .21m, 0m, 310d), 20d, .001d);
+        bool roomNitrogen = room.TryAdd(FluidInventory.CreateBatch(
+            catalog.Find(FluidIds.Nitrogen), .79m, 0m, 310d), 20d, .001d);
+        double roomEnergyBefore = room.State.TotalInternalEnergyJoules;
+        decimal roomMolesBefore = room.GasMoles;
+        var cabinTank = new FluidInventory();
+        bool roomFilled = PortableGasTankAirFilling.TryFillFromSource(
+            new TankShipAtmosphereSource(room, 20d, .001d), cabinTank, volume, minimum);
+        var tinyRoom = new FluidInventory();
+        tinyRoom.TryAdd(FluidInventory.CreateBatch(
+            catalog.Find(FluidIds.Oxygen), .01m, 0m, 310d), .1d, .001d);
+        decimal tinyBefore = tinyRoom.GasMoles;
+        var partialTank = new FluidInventory();
+        bool partialFilled = PortableGasTankAirFilling.TryFillFromSource(
+            new TankShipAtmosphereSource(tinyRoom, .1d, .001d), partialTank, volume, minimum);
+        return new JObject
+        {
+            ["filled"] = filled, ["pressure"] = pressure,
+            ["oxygen"] = (double)oxygen, ["nitrogen"] = (double)nitrogen,
+            ["sourceConserved"] = airAfter + target.GasMoles == gasBefore,
+            ["filledAgain"] = filledAgain,
+            ["againSourceUnchanged"] = air.CurrentMoles == airAfter,
+            ["temperature"] = target.GetTemperatureKelvin(),
+            ["vacuumFilled"] = vacuumFilled, ["vacuumTargetEmpty"] = empty.IsEmpty,
+            ["thinFilled"] = thinFilled, ["thinSourceUnchanged"] = thinAir.CurrentMoles == thinBefore,
+            ["thinTargetEmpty"] = thinTarget.IsEmpty,
+            ["seededGas"] = seededGas, ["seededLiquid"] = seededLiquid, ["mixedFilled"] = mixedFilled,
+            ["carbonPreserved"] = occupied.GetGasMoles(FluidIds.CarbonDioxide) == originalCarbon,
+            ["liquidPreserved"] = occupied.GetLiquidMoles(FluidIds.PureWater) == originalWater,
+            ["liquidSpacePreserved"] = Math.Abs(occupied.GetLiquidLiters() - liquidSpace) < .0000001d,
+            ["mixedPressure"] = occupied.GetPressureKPa(volume, minimum),
+            ["mixedGasAdded"] = occupied.GetGasMoles(FluidIds.Oxygen) > 0m &&
+                                occupied.GetGasMoles(FluidIds.Nitrogen) > 0m,
+            ["mixedConserved"] = occupiedBefore - occupiedAir.CurrentMoles ==
+                                occupied.GetGasMoles(FluidIds.Oxygen) + occupied.GetGasMoles(FluidIds.Nitrogen),
+            ["existingEnergyPreserved"] = occupied.State.TotalInternalEnergyJoules > originalEnergy,
+            ["roomSeeded"] = roomOxygen && roomNitrogen, ["roomFilled"] = roomFilled,
+            ["roomMolesConserved"] = room.GasMoles + cabinTank.GasMoles == roomMolesBefore,
+            ["roomEnergyConserved"] = Math.Abs(room.State.TotalInternalEnergyJoules +
+                cabinTank.State.TotalInternalEnergyJoules - roomEnergyBefore) < .00001d,
+            ["roomMixedTemperature"] = cabinTank.GetTemperatureKelvin(),
+            ["partialFilled"] = partialFilled,
+            ["partialConserved"] = tinyRoom.GasMoles + partialTank.GasMoles == tinyBefore,
+            ["partialPressure"] = partialTank.GetPressureKPa(volume, minimum),
+            ["ironCarrier"] = PortableGasTankAirFilling.IsIronTank(new Data_GeneralItem { IDName = PortableGasTankAirFilling.CarrierId }),
+            ["ironBuilding"] = PortableGasTankAirFilling.IsIronTank(new Data_GeneralItem { IDName = PortableGasTankAirFilling.BuildingId }),
+            ["steelExcluded"] = !PortableGasTankAirFilling.IsIronTank(new Data_GeneralItem { IDName = "PortableGasTank_Steel" })
+        };
     }
 
     #endregion

@@ -472,10 +472,15 @@ public static partial class TileBuildingSystem
             }
         }
 
-        return found && TryDamage(best, sender, out result);
+        if (!found)
+            return false;
+
+        // 已确认攻击盒接触到建筑，先磨损攻击装备，再计算建筑实际损伤。
+        sender.ConsumeWeaponDurabilityForHit();
+        return TryDamage(best, sender, out result);
     }
 
-    /// <summary>按难度倍率、物理防御和工具弱点计算最终数值。</summary>
+    /// <summary>按攻击参数、物理防御和工具弱点计算最终数值。</summary>
     public static float CalculateDamage(
         TileBuildingDamageProfile profile,
         IDamageSender sender,
@@ -485,7 +490,7 @@ public static partial class TileBuildingSystem
         if (profile?.Damageable != true || sender?.DamageValues == null)
             return 0f;
 
-        float multiplier = GameDifficultyService.ResolveDirectDamageMultiplier(sender.attacker, null);
+        float multiplier = GameplayCombatBridge.Tuning().Resolve(ActorIdentity.IsPlayer(sender.attacker), false);
         CombatDamage scaledDamage = sender.DamageValues.Scaled(multiplier);
         float calculatedDamage = scaledDamage.CalculateAgainst(profile.ResolveDefense());
 

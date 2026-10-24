@@ -63,7 +63,7 @@ public static partial class GameplayTestSystemProbe
         var goggles = new Data_GeneralItem
         {
             Stack = new ItemStack { Amount = 1f }, Durability = 300f,
-            Tags = new List<string> { EngineeringVision.CapabilityTag, EquipmentSlotCatalog.HeadTag }
+            Tags = new List<string> { EngineeringVision.CapabilityTag, EquipmentSlotCatalog.EyesTag }
         };
         var ordinary = new Data_GeneralItem { Stack = new ItemStack { Amount = 1f }, Durability = 300f };
         var sample = new JObject
@@ -71,13 +71,14 @@ public static partial class GameplayTestSystemProbe
             ["empty"] = EngineeringVision.HasCapability(null, null),
             ["held"] = EngineeringVision.HasCapability(goggles, null),
             ["head"] = EngineeringVision.HasCapability(null, goggles),
+            ["eyes"] = EngineeringVision.HasCapability(null, ordinary, null, goggles),
             ["carried"] = EngineeringVision.HasCapability(null, null, goggles),
             ["ordinary"] = EngineeringVision.HasCapability(ordinary, ordinary)
         };
         goggles.Durability = 0f;
-        sample["broken"] = EngineeringVision.HasCapability(goggles, goggles, goggles);
+        sample["broken"] = EngineeringVision.HasCapability(goggles, goggles, goggles, goggles);
         goggles.Durability = 300f; goggles.Stack.Amount = 0f;
-        sample["removed"] = EngineeringVision.HasCapability(goggles, goggles, goggles);
+        sample["removed"] = EngineeringVision.HasCapability(goggles, goggles, goggles, goggles);
         sample["hiddenPlacementAllowedWithoutActor"] = FlatWorld.Gameplay.Building.BuildingPlacementService
             .ValidateActorEligibility("Wire_Hidden", null, out string placementReason);
         sample["hiddenPlacementReason"] = placementReason;

@@ -23,7 +23,7 @@ public partial class MonsterSpawnerManager
                 _entryOwners[entry] = config;
                 if (!AiRuntimeBackendService.UsesEntities(entry)) continue;
                 _entityConfigs.Add(config);
-                if (!config.UnboundedDailyGrowth && !config.IgnorePopulationLimits)
+                if (!config.IgnorePopulationLimits)
                     _hasLimitedEntities = true;
             }
         }
@@ -40,7 +40,7 @@ public partial class MonsterSpawnerManager
     private void PrepareNearbyGroupCounts(SpawnerConfig config)
     {
         _nearbyGroupCounts.Clear();
-        if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth || config.PerPlayerAliveLimit <= 0)
+        if (config.IgnorePopulationLimits || config.PerPlayerAliveLimit <= 0)
             return;
         float radius = Mathf.Max(1f, config.PlayerPopulationRadius);
         for (int i = 0; i < _playerPositions.Count; i++)

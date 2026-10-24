@@ -131,7 +131,7 @@ public static class GamepadVirtualKeyboardController
         titleRect.anchoredPosition = new Vector2(0f, -12f);
         titleRect.sizeDelta = new Vector2(-36f, 28f);
         title.alignment = TMPro.TextAlignmentOptions.Center;
-        title.fontSize = 18f;
+        FlatWorldUITextLayout.Configure(title, 18f);
 
         GameObject rowsObject = new GameObject("KeyboardRows", typeof(RectTransform), typeof(VerticalLayoutGroup));
         rowsObject.transform.SetParent(root, false);
@@ -232,7 +232,7 @@ public static class GamepadVirtualKeyboardController
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         text.alignment = TMPro.TextAlignmentOptions.Center;
-        text.fontSize = 15f;
+        FlatWorldUITextLayout.Configure(text, 15f);
         return button;
     }
 

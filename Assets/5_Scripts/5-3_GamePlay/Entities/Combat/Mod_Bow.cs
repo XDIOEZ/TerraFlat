@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.Audio;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -24,6 +25,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     [Min(0.05f), Tooltip("达到满蓄力所需秒数；超过后保持满蓄力。")]
     public float FullChargeSeconds = 1f;
+
+    [Tooltip("松开直接发射，或满蓄力松开后上膛、再次按下并松开发射；上膛模式满蓄力后不耗体力。")]
+    public ProjectileChargeReleaseMode ReleaseMode;
 
     [Min(0f), Tooltip("弓身对箭矢最终伤害的倍率；1 表示保持箭矢原始伤害。")]
     public float ProjectileDamageMultiplier = 1f;
@@ -55,7 +59,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     [Tooltip("发射方向是否直接使用手持武器当前实际旋转，而不是在松手瞬间重新读取瞄准光标。")]
     public bool UseHeldRotationForLaunchDirection;
 
-    [Min(0f), Tooltip("持续拉弓时每秒消耗的体力；最终消耗仍经过游戏难度倍率。")]
+    [Min(0f), Tooltip("持续拉弓时每秒消耗的基础体力；最终消耗由角色体力参数修正。")]
     public float StaminaConsumePerSecond = 5f;
 
     [Tooltip("蓄力期间显示真实投射公式生成的抛物线预判与落点圆环。")]
@@ -105,8 +109,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     private GameObject _nockedArrowObject;
     private SpriteRenderer _nockedArrowRenderer;
     private ActorRenderEffectController _nockedArrowRenderEffects;
-    private float _chargeSeconds;
-    private bool _charging;
+    private ProjectileChargeCycle _chargeCycle;
     private bool _inventoryResolveWarningLogged;
     private readonly List<IProjectileChargeModifier> _chargeModifiers = new List<IProjectileChargeModifier>();
     private Mod_Projectile _previewProjectile;
@@ -164,7 +167,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>逐帧累计蓄力并更新搭箭回拉表现。</summary>
     public override void ModUpdate(float deltaTime)
     {
-        if (!_charging)
+        if (!_chargeCycle.IsActive)
             return;
 
         if (item == null || !item.InHand || item.Owner == null)
@@ -173,24 +176,20 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             return;
         }
 
-        float safeDeltaTime = Mathf.Max(0f, deltaTime);
-        if (_ownerStamina != null && StaminaConsumePerSecond > 0f)
+        float consumptionSeconds = _chargeCycle.Advance(deltaTime, FullChargeSeconds, ReleaseMode);
+        if (_ownerStamina != null && StaminaConsumePerSecond > 0f && consumptionSeconds > 0f)
             _ownerStamina.ConsumeStaminaPerSecond(
                 StaminaConsumptionSources.BowCharge,
                 StaminaConsumePerSecond,
-                safeDeltaTime);
+                consumptionSeconds);
 
-        // 满蓄力只锁定蓄力值，发射仍然只由攻击键松开触发。
-        if (FullChargeSeconds > 0f)
-            _chargeSeconds = Mathf.Min(FullChargeSeconds, _chargeSeconds + safeDeltaTime);
-        else
-            _chargeSeconds = 0f;
-        foreach (IProjectileChargeModifier modifier in _chargeModifiers)
-            modifier.UpdateCharge(safeDeltaTime);
+        if (_chargeCycle.IsCharging)
+            foreach (IProjectileChargeModifier modifier in _chargeModifiers)
+                modifier.UpdateCharge(consumptionSeconds);
         float charge01 = GetCharge01();
         UpdateNockedArrowVisual(charge01);
         UpdateTrajectoryPreview(charge01);
-        UpdateHeldChargeSpin(charge01, safeDeltaTime);
+        UpdateHeldChargeSpin(charge01, Mathf.Max(0f, deltaTime));
     }
 
     /// <summary>解除统一攻击事件并清理临时搭箭表现。</summary>
@@ -240,8 +239,14 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (item?.Owner is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
             return;
-        if (_charging || item == null || !item.InHand || item.Owner == null)
+        if (item == null || !item.InHand || item.Owner == null)
             return;
+
+        if (_chargeCycle.IsActive)
+        {
+            _chargeCycle.TryPress();
+            return;
+        }
 
         if (!InventoryContextResolver.TryResolveContainingInventory(item.Owner, item.itemData, out _sourceInventory))
         {
@@ -258,8 +263,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             return;
 
         _ownerStamina = item.Owner.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
-        _charging = true;
-        _chargeSeconds = 0f;
+        _chargeCycle.TryPress();
         foreach (IProjectileChargeModifier modifier in _chargeModifiers)
             modifier.StartCharge();
         BeginHeldChargeSpin();
@@ -268,12 +272,12 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         UpdateTrajectoryPreview(0f);
     }
 
-    /// <summary>松开攻击时消费同库存的一支箭并按当前蓄力发射。</summary>
+    /// <summary>松开攻击时按配置完成上膛或消费同库存的一支箭发射。</summary>
     private void ReleaseCharge()
     {
         if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) { CancelCharge(); return; }
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 1, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
-        if (!_charging)
+        if (!_chargeCycle.IsActive)
             return;
 
         // 已经蓄力的本地弓也在生成箭和扣弹药前取消，不覆盖尚未确认的库存。
@@ -292,6 +296,23 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         }
 
         float charge01 = GetCharge01();
+        ProjectileChargeReleaseResult release = _chargeCycle.Release(FullChargeSeconds, ReleaseMode);
+        if (release == ProjectileChargeReleaseResult.Cancelled)
+        {
+            CancelCharge();
+            return;
+        }
+        if (release == ProjectileChargeReleaseResult.Loaded)
+        {
+            _ownerStamina = null;
+            StopHeldChargeSpin();
+            // 只在完整上膛状态真正建立时播放一次就绪卡扣声。
+            if (item != null)
+                AudioService.Instance.PlayAttached(AudioEventIds.CombatWeaponCrossbowLoaded, item.transform);
+            return;
+        }
+        if (release != ProjectileChargeReleaseResult.Fire) return;
+
         float sourceDamageMultiplier = ProjectileDamageMultiplier;
         float sourceSpeedMultiplier = Mathf.Max(0f, ProjectileSpeedMultiplier);
         foreach (IProjectileChargeModifier modifier in _chargeModifiers)
@@ -300,7 +321,6 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             sourceDamageMultiplier *= Mathf.Max(0f, multipliers.DamageMultiplier);
             sourceSpeedMultiplier *= Mathf.Max(0f, multipliers.SpeedMultiplier);
         }
-        _charging = false;
         _ownerStamina = null;
         StopHeldChargeSpin();
         DestroyNockedArrowVisual();
@@ -396,11 +416,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>取消蓄力但不消费弹药。</summary>
     private void CancelCharge()
     {
-        if (_charging)
-            foreach (IProjectileChargeModifier modifier in _chargeModifiers)
-                modifier.CancelCharge();
-        _charging = false;
-        _chargeSeconds = 0f;
+        foreach (IProjectileChargeModifier modifier in _chargeModifiers)
+            modifier.CancelCharge();
+        _chargeCycle.Cancel();
         _ownerStamina = null;
         _sourceInventory = null;
         StopHeldChargeSpin();
@@ -411,7 +429,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>返回 0-1 蓄力比例。</summary>
     private float GetCharge01()
     {
-        return FullChargeSeconds <= 0f ? 1f : Mathf.Clamp01(_chargeSeconds / FullChargeSeconds);
+        return _chargeCycle.GetCharge01(FullChargeSeconds);
     }
 
     #endregion
@@ -461,7 +479,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>蓄力期间按真实投射公式绘制逐渐延长的抛物线，并用圆环标出预计落点。</summary>
     private void UpdateTrajectoryPreview(float charge01)
     {
-        if (!ShowTrajectoryPreview || !_charging || item?.Owner == null ||
+        if (!ShowTrajectoryPreview || !_chargeCycle.IsActive || item?.Owner == null ||
             !TryResolvePreviewTrajectory(out Mod_Projectile.TrajectorySettings trajectory) || !trajectory.UseVisibleArc)
         {
             HideTrajectoryPreview();
@@ -636,7 +654,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         return projectileItem;
     }
 
-    /// <summary>优先使用武器自身的真实管口坐标，未配置时保持旧的射手中心前移逻辑。</summary>
+    /// <summary>优先使用武器自身的真实管口坐标，未配置时从手持武器根位置向前发射。</summary>
     private Vector2 ResolveLaunchPosition(Vector2 direction)
     {
         if (item == null)
@@ -652,12 +670,21 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
                 ? (Vector2)muzzleWorld : WorldTopologyRuntime.NormalizePosition((Vector2)muzzleWorld);
         }
 
-        Vector2 shooterPosition = item.Owner != null
-            ? (Vector2)item.Owner.transform.position
-            : (Vector2)item.transform.position;
-        Vector2 point = shooterPosition + direction * Mathf.Max(0f, SpawnForwardOffset);
+        Vector2 point = ResolveWeaponForwardLaunchPosition(
+            item.transform.position,
+            direction,
+            SpawnForwardOffset);
         return FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
             ? point : WorldTopologyRuntime.NormalizePosition(point);
+    }
+
+    /// <summary>从手持武器位置沿瞄准方向计算默认发射点。</summary>
+    internal static Vector2 ResolveWeaponForwardLaunchPosition(
+        Vector2 weaponPosition,
+        Vector2 direction,
+        float forwardOffset)
+    {
+        return weaponPosition + direction * Mathf.Max(0f, forwardOffset);
     }
 
     #endregion

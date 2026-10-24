@@ -137,8 +137,9 @@ public static class NaturalGenerationRuleCatalogService
 
 /// <summary>每个 JSON 分包可定义多条生态规则和矿脉规则。</summary>
 #pragma warning disable CS0649 // 以下字段由 JSON 反序列化赋值。
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class NaturalGenerationRulePackage
+internal sealed partial class NaturalGenerationRulePackage
 {
     public int SchemaVersion;
     public List<NaturalEcologyRuleDefinition> EcologyRules;
@@ -146,8 +147,9 @@ internal sealed class NaturalGenerationRulePackage
 }
 
 /// <summary>一条生态自然物规则的 JSON 数据，字段对应纯数据快照。</summary>
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class NaturalEcologyRuleDefinition
+internal sealed partial class NaturalEcologyRuleDefinition
 {
     public string RuleId;
     public string ItemId;
@@ -181,6 +183,12 @@ internal sealed class NaturalEcologyRuleDefinition
     public float MaximumEnvironmentValue = float.MaxValue;
     [JsonProperty(Required = Required.DisallowNull)]
     public bool RequireNaturalPlantableGround;
+    [JsonProperty(Required = Required.DisallowNull)]
+    public int SharedRadius;
+    [JsonProperty(Required = Required.DisallowNull)]
+    public int FootprintWidth = 1;
+    [JsonProperty(Required = Required.DisallowNull)]
+    public int FootprintHeight = 1;
     public List<string> ProvidedTags;
     public bool CompanionOnly;
     public string CompanionHostTag;
@@ -202,12 +210,14 @@ internal sealed class NaturalEcologyRuleDefinition
         DistributionMode, PatchSpacing, PatchRadius, PatchChance, RequiredTagChunkRadius,
         MaxRiverFloodplainStrength, RequiredEnvironmentLayer, MinimumEnvironmentValue,
         ItemCountDistribution, ItemCountMin,
-        MaximumEnvironmentValue, RequireNaturalPlantableGround);
+        MaximumEnvironmentValue, RequireNaturalPlantableGround,
+        SharedRadius, FootprintWidth, FootprintHeight);
 }
 
 /// <summary>一条洞穴矿脉规则的 JSON 数据；优先级由 SO 引用顺序决定。</summary>
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class NaturalCaveResourceRuleDefinition
+internal sealed partial class NaturalCaveResourceRuleDefinition
 {
     public string RuleId;
     public string ItemId;

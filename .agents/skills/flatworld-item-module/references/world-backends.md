@@ -6,6 +6,7 @@
 - 太空 SpaceSession 接管，SpaceDropView 仅冷载荷/Sprite，不 Load/ModuleInit 或实例化原建筑设备。ShipWreck 一个无设备模块Item存组成，回收后才释载荷；拾取走正式库存事务。
 - 两后端共 WorldItemMatterRules/ThermalRuntime.AdvanceAmbient，完整Item注册/加载建立基线、逐件累计间隔分帧。高温液体接触读物质 temperature/contactHeatingPerSecond，到 matter.ignitionTemperature 才点燃，设备可显式速率；airExposure 仅普通干燥。已有 Mod_Combustion 复用且不再扣材料堆，两后端共火焰粒子。
 - 完整散物结构/燃烧引用依结构事件、模块版本、载荷引用、运行代际失效；同件末尾可用已验结构更新火焰，帧表现再验。启停/燃烧/登记/飞行/附着实时读。轻量单Tick共地形寻址，世界/代际变重建，每样本权威，入水/浮力/接触共液体定义，不跨燃烧回调存温度源。
+- 完整散物的每帧火焰表现只遍历实际拥有火焰的条目（`ItemMgr.LateUpdate.WorldMatterFlames`），火焰创建入索引、停燃/销毁/卸载移除、退出世界清空；回调中集合可变，表现用池化独立快照避免嵌套遍历损坏。抛物线模块身份随结构版本缓存，但 `DropInProgress` 仍即时读取 drop/waterFloating/waterSinking；规则 `item_runtime/world_matter_structure` 保留掉落轨迹及模块移除边界。
 - Matter.Environment/Combustion/Transition 分段记时，约1ms批预算只在件间检查，单件环境用温度场单格入口。
 
 ## 水与风
@@ -13,6 +14,7 @@
 - 完整Item由 WorldItemWaterSystem 按最终位置推水态，轻量共 WorldItemWaterRules；水态不进库存，轨迹完先移 Mod_Droping 再准拾。河流加速按总重，浮沉按单件kg/L：普通水阈1，乘 buoyancyThresholdMultiplier（海水1.5/岩浆6），达阈沉，倍率不改液体重量。IWaterEntryTransformEffect 回收前脱源。
 - 轻量水态/流查询同Tick共 RuntimeTerrainTileSample，仅省寻址，水深/流向/实验流实时。完整散物登记缓存建筑/水态引用，ActivateExistingItem 更新水态、注销回收；两后端 WindSamplingContext 每批共质量范围/星球重力。
 - 轻量/稳定浮Item保留0.5s逻辑漂流；DriftInterpolation 仅显示匀速追已确认位置。轻量只可见视图存插值；完整仅偏 Sprite并保局部基准，水线逐帧跟。环绕最短位移，离水/拾取/回池清偏移，不改索引/存档。
+- 完全下沉后转河底静止态，只隐藏表现、停水流/风推动，保留实物和拾取索引；必须走到同格才可摸回。轻量 WaterKind=3 并释放视图、退出漂流批次，地形事件负责干格恢复；完整 Item 用 forceRenderingOff 保留碰撞，以 `flatworld.worldItemWater` 保存沉底状态，入包候选清除此标记。活动/后台/存档共用轻量水态恢复，禁止沉底完成时删除载荷。回归 `surface_fluids/bottom_recovery`、`processing/cold_motion_workspace`。
 
 ## 自然实体
 

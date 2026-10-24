@@ -214,7 +214,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             (accepted, reason) =>
             {
                 replied = true; acceptedReply = accepted;
-                portal?.CancelNetworkTransitionRequest();
+                // 旧入口可能已随场景卸载销毁，必须使用 Unity 的存活判定而非 C# 空条件调用。
+                if (portal != null) portal.CancelNetworkTransitionRequest();
                 if (accepted) return;
                 networkTransitionPending = false;
                 if (!string.IsNullOrWhiteSpace(reason)) Debug.LogWarning("[维度切换] " + reason, this);
@@ -244,7 +245,17 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             saveData.PlanetData_Dict[worldKey] = worldData;
         }
 
+        if (!address.IsSurface)
+            EnsureWorldTimeData(saveData, address.WithDimension(WorldAddress.SurfaceDimensionId));
         EnsureWorldTimeData(saveData, address);
+
+        // 联机切维度不触发 GameWorldEnter，须将新维度的存档时间同步到正在显示的昼夜系统。
+        if (GameManager.Instance?.IsInGameWorld == true && DayTimeSystem.Instance is { } dayTime)
+        {
+            if (!address.IsSurface)
+                dayTime.EnsureRuntimeSceneTimeData(address.PlanetId, saveData.DayTimeData);
+            dayTime.EnsureRuntimeSceneTimeData(worldKey, saveData.DayTimeData);
+        }
     }
 
     private IEnumerator TransitionCoroutine(

@@ -18,6 +18,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 身份与生命周期
 
 - `IsLocalProfile/ProfileContext` 区分本地档案；远程副本无本地保存、教程或语音。`ProfileName/ProfileId` 是角色槽位身份，`Name_User` 仅为显示名。
+- 来源无关的玩家身份共用 `ActorIdentity.IsPlayer`，角色数值修正共用 `ActorRuleModifiers` 与 `GameRuleConfiguration`；业务不引用难度服务或借难度工具识别玩家。
 - 创建模板在新档案 `Player.Load()` 前解析注入；MOD 使用 `playerCreationTemplates` 或 `playerTemplate:ID` Patch。管理员控制器唯一位于 `Module_Player`。
 - 单机 F5 资源发布保存本地 Data、注销旧 Player、清理运行时 UI、从最新 Prefab 重建同一档案；世界/区块/存档会话保留，引用重绑事件为 `Event_LocalPlayerRuntimeReloaded`。
 - Wrapped 世界的本地刚体/Transform 在局部平面连续移动，`PlayerWorldWrapController` 规范化 Data 并发布跨周重投影；存档权威坐标与表现坐标分离。实体非 Trigger 碰撞体为 Player 层，模块 Trigger 保留专用层。
@@ -42,6 +43,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 目标主动完成时调用 `Mod_InteractSender.CompleteInteraction(receiver)`，只清理仍匹配的当前/按住/候选/描边引用，不再发送取消回调；重复或旧会话完成不得清除新目标。帐篷所有睡眠结束分支共用此收尾。
 - 接口持有 Unity 组件时先按 UnityEngine.Object 原生存活状态检查；目标销毁后清除交互与描边缓存，不再向销毁对象发送回调，纯 C# 世界目标保持普通引用生命周期。
 - 右键只使用当前快捷栏中由本玩家持有的 `Item`，经 `Item.Act/OnAct` 分发；F 只交互世界建筑、工作台、设备、门、入口和载具。`CanPointerInteract` 默认 false，仅采集等左键动作显式允许；F 的指针选目标和描边不受点选权限影响。
+- 鼠标右键按下时由控制器冻结左右 Shift 汇总态；手持装备经 `Mod_HotBar → Mod_Equipment.TryEquipFromSlot` 穿戴或替换，旧件回当前快捷栏槽。该组合键独占按下、持续和松开，拒绝也不再执行普通 `Act`；非装备、普通右键和其他设备沿用现有使用链。
 - `PreciseInteraction` 默认关闭：光标命中优先，空命中按朝向/距离回退；开启后仅认落点。全部选择受距离约束，鼠标始终精确；手持 `Item.InHand` 排除于候选，包括同时实现世界目标接口的组件。手持建筑放置由右键使用提交，不阻断 F 交互和世界描边；放置态只暂停左键采集。
 - 发送器使用 Physics2D 查询，无交互 Trigger，`Module_Hand` 无 Collider2D，查询跳过伤害专用 Collider。无 Collider 目标及机器由 `SpatialInteractionRegistry.Query` 提供；逐帧描边只用 `QueryPreview` 的注册视觉，机械视觉以同一目标接入 `IWorldInteractionPreview`。
 - 同格叠层通过 `IGridInteractionTarget` 声明网格/格坐标/显示层级，`GridInteractionSelector` 只统计有资格且在距离内的目标，按光标由上到下平均分给底层到高层；正式按键与描边共用选择，重复视觉不增加份数，地板/墙不占份数。
@@ -54,6 +56,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 移动、承载与镜头
 
 - `Mod_Mover` 向 Dynamic Rigidbody2D 提交 `DrivenVelocity + ExternalVelocity`，Physics2D 求解接触；主动速度决定步行动画，水流/输送带/承载不计步行或体力。`WorldUnitChanged` 按刚体实际到达的拓扑规范 1×1 格发布。
+- 载具推动的阻力反馈只裁剪实际提交速度中的主动法向分量，保留原始 `DrivenVelocity` 推动意图、切向与环境速度，避免高阻倍率逐帧回乘。
 - 位置突变后调用 `Mod_Mover.ResetMotion()`，统一撤销临时主动租约、清速度/输入/动画和位移音效基线，保留奔跑偏好；外部承载归属由调用方先释放。动作订阅 `MotionReset` 自行收尾，重置期间禁止重新驱动或取租约。回归 `player/motion_reset` 与 `roll_action`。
 - 地表速度沿用 `SpaceGameplaySettings.WalkingMultiplier`（低重力最高2倍）；起步/转向/刹停共用 `WalkingResponseMultiplier`，按当地重力/地球重力降低响应，月球级约慢6倍，最低重力沿用0.25，普通及高重力响应不变。玩家、GO动物导航和无人工重力的地表船内复用；人工重力按地球值，太空自由漂浮沿用独立规则。回归 `player/surface_gravity_movement`。
 - `Mod_Roll`（`Roll`）由中央 `Roll` Action 默认空格发动，方向取发动时移动输入，无输入时朝光标/准星，指针重合或无效时回退朝向；0.4秒、步行2倍、身体碰撞尺寸50%、全程临时无敌、冷却0秒（上一轮结束即可再次发动）、基础体力10点。动作持有 `Mod_Mover.DrivenMotionLease`，不重复计步行消耗；`RollVisual` 专用父层转一圈，不旋转物理根或镜头。死亡、输入锁、卸载、换场景还原尺寸和租约；载具/太空不发动。网络远端权威只推进体力和生命动作态，本地获服务器许可后复用移动租约；远端表现按序号与绝对进度幂等应用，不加载本地输入/UI。
@@ -63,6 +66,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - `Mod_Mover` 的逐帧水流推动先查询当前格真实流向，有有效水流后才解析 Actor 推动配置；`WorldMotionSystem.CalculateWaterCurrentVelocity` 与数值速度入口共用原流量曲线，不跨帧缓存水态。回归 `environment/water_current_reuse`。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：等效质量=当前堆叠总质量×星球重力/9.81；目录最轻 B 到轻重中点 C=(A+B)/2 均分三档，分别需 8/9/10 级风，达到 C 不推动。达到起吹级/高一级/高两级分别为 0.06/0.2/0.5 单位/s，同风级内不随风强连续变化，邻风区保留空间过渡。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具含乘员质量，乘员不重复受风；太空与禁用天气维度返回零。
 - `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。
+- 载具可组合唯一 `ICarrierMotionDriver` 替换运动与交互，单座上下车仍用 `Mod_Carrier.ToggleRider`；`ICarrierBoostPolicy` 声明是否消费玩家加速体力。矿车在 `World/Railways/` 沿正式轨长编组和移动，只调用通用 `EnginePowerService`，不会识别具体引擎或燃料；按下选择沿轨方向，长按保持方向并以输入幅度控制油门，松键/锁定/换乘/重新编组清理，不能逐帧用切线投影衰减过弯油门。
 - `Mover_SaveData.isRunning` 保存手动奔跑偏好；手机摇杆临时自动奔跑与之分离，保存/跨维度读取 `RunPreference`，动画/消耗/网络表现读取实际 `IsRunning`。输入锁停止位移但保留手动偏好。Run 与 Move 分离，静止动画为 Idle，跑步播放不改全局 Animator.speed。体力统一经带来源的 `Mod_Stamina` API；管理员无限体力也在该权威模块处理。普通划船不耗体力，按住奔跑且移动时的载具加速记为 `flatworld.carrier.boost`。
 - 太空场景禁止玩家奔跑；失重 WASD 输入由 `SpaceSession.StepFreePassengers` 在固定步调用 `Mod_Mover.SmoothSpaceVelocity`，按屏幕方向给 FreeWalkVelocity 累加推力，松键无摩擦并保持速度，反向输入逐渐制动。离船继承船体点速度，继承/碰撞速度不受主动移动限速影响。Shift 不参与冲刺、借力或抓墙，普通地表奔跑保留。
 - 地表飞船起降和玩家单独下落整体移动根节点/刚体，手持物自然跟随；`ShipSurfacePresentation` 暂存离地碰撞与高度，落地/释放恢复。玩家保存、环绕坐标、世界格事件与联机地面状态通过 `GroundPosition` 去掉临时高度，不能把高度写入地面位置。

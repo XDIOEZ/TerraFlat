@@ -287,7 +287,7 @@
         ]
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/plants.png[plants_57]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Leaf/Leaf_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -460,8 +460,8 @@
       "id": "Leather",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Leather.prefab",
-      "gameName": "皮革",
-      "description": "处理后的皮革，可用于制作耐用装备。",
+      "gameName": "鞣制皮革",
+      "description": "处理后的鞣制皮革，可缝制皮装，也可用切割能力将每份皮革切成4根皮革皮带。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -470,8 +470,15 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": ["Combustion.Fuel"],
+      "processing": {
+        "cut": {
+          "inputAmount": 1,
+          "work": 2,
+          "outputs": [{ "itemId": "LeatherStrap", "amount": 4 }]
+        }
+      },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_69]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -678,7 +685,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/RawHide.prefab",
       "gameName": "生皮",
-      "description": "尚未鞣制的生皮，可进一步加工为皮革。",
+      "description": "尚未鞣制的生皮，可进一步加工为鞣制皮革。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1302,6 +1309,29 @@
       ],
       "reactions": [
         {
+          "id": "core:生铁锭+碳=钢",
+          "minTemperature": 1489.0,
+          "maxTemperature": 9999.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ingot_RawIron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Coal"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Steel",
+              "amount": 1
+            }
+          ]
+        },
+        {
           "id": "core:粗铁锭=铁锭",
           "minTemperature": 1489.0,
           "maxTemperature": 2000.0,
@@ -1612,6 +1642,31 @@
         "WroughtIron",
         "DrillDurability:220"
       ],
+      "reactions": [
+        {
+          "id": "core:熟铁锭+碳=钢",
+          "minTemperature": 1489.0,
+          "maxTemperature": 9999.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ingot_WroughtIron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Coal"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Steel",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/WroughtIronIngot_Icon.png",
         "rendererLocalPosition": {
@@ -1818,7 +1873,7 @@
           "enabled": true,
           "parameters": {
             "DamageValues": {
-              "Physical": 12.0,
+              "Physical": 6.0,
               "ImpactKind": 4
             },
             "DamageInterval": -1.0,
@@ -2020,7 +2075,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_239.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Flint/Flint_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -3636,7 +3691,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Shell.prefab",
       "gameName": "椰壳",
-      "description": "坚硬的椰壳，可像陶罐一样装水、饮水、倒空与转水，也可作为制作材料。",
+      "description": "坚硬的椰壳，可像陶罐一样装水、饮水、倒空与转水，也可作为制作材料。可在容器面板中放到地上，放下后可交互使用或拆回，水量保留。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -3689,6 +3744,18 @@
         }
       },
       "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Coconut_Shell_Building\",\"SummonerPrefabId\":\"Coconut_Shell\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
+        },
         "vessel": {
           "prefab": "Module_WaterVessel",
           "id": "Mod_WaterVessel",
@@ -4368,7 +4435,7 @@
         "Combustion.Fuel"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_10]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Fat/Fat_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -4583,34 +4650,20 @@
         "waterAbsorptionRatePerSecond": 0.02,
         "transitions": [
           {
+            "id": "cook:meat",
+            "minTemperature": 200.0,
+            "outputItemId": "Meat_Cooked"
+          },
+          {
             "id": "dry:meat",
+            "maxTemperature": 199.99,
             "maxMoisture": 0.2,
             "outputItemId": "Meat_Dehydrate"
           }
         ]
       },
-      "reactions": [
-        {
-          "id": "core:生肉=熟肉",
-          "minTemperature": 200.0,
-          "maxTemperature": 400.0,
-          "inputs": [
-            {
-              "match": "exact_item",
-              "amount": 1,
-              "itemId": "Meat"
-            }
-          ],
-          "outputs": [
-            {
-              "itemId": "Meat_Cooked",
-              "amount": 1
-            }
-          ]
-        }
-      ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_107]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -6137,7 +6190,7 @@
     },
     {
       "id": "Ore_Stone",
-      "parent": "BasicItem_Base",
+      "parent": "SlingAmmo_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone.prefab",
       "shellPrefab": "Prop",
       "gameName": "石头",
@@ -6205,7 +6258,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/resources_basic.png[resources_basic_38]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -6458,11 +6511,20 @@
       "id": "Cotton",
       "parent": "BasicItem_Base",
       "gameName": "棉花",
-      "description": "柔软的天然纤维，可通过纺织加工制成布。",
+      "description": "易于引燃的天然纤维，可作为取火材料，也可捻成线或通过纺织加工制成布。",
       "weight": 0.1,
       "volume": 0.2,
       "stackable": true,
-      "tags": ["Material", "Fiber"],
+      "tags": ["Material", "Fiber", "Material.Tinder"],
+      "matter": {
+        "transitions": [
+          {
+            "id": "heat:cotton-ember",
+            "minTemperature": 100,
+            "outputItemId": "FireSeed"
+          }
+        ]
+      },
       "processing": {
         "weave": {
           "inputAmount": 2,
@@ -6507,13 +6569,19 @@
     {
       "id": "Nail",
       "parent": "BasicItem_Base",
-      "gameName": "钉子",
-      "description": "用于固定木料和结构连接的金属紧固件，可作为建造与机械制作材料。",
+      "gameName": "熟铁钉",
+      "description": "由熟铁锭锻打制成的金属钉，用于固定木料和机械结构。",
       "weight": 0.02,
       "volume": 0.02,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material"],
+      "tags": [
+        "Material",
+        "Metal",
+        "Iron",
+        "WroughtIron",
+        "Nail"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png"
       },
@@ -6738,6 +6806,18 @@
           }
         }
       }
+    },
+    {
+      "id": "SteelNail",
+      "parent": "Nail",
+      "gameName": "钢钉",
+      "description": "由钢锭锻打制成的金属钉。和钢板一起制作机械锻锤或锯木机时，成品工作效率提高20%。",
+      "tags": [
+        "Material",
+        "Metal",
+        "Steel",
+        "Nail"
+      ]
     }
   ]
 }

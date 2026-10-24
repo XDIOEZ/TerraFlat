@@ -10,6 +10,7 @@
         "FlatWorld.WorldTopology",
         "FlatWorld.WorldModel",
         "FlatWorld.Utilities",
+        "FlatWorld.Localization",
         "UI",
         "Kybernetik.UltEvents",
         "Unity.Burst",

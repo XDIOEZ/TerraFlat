@@ -132,7 +132,7 @@ public sealed class InventorySortButton : MonoBehaviour
             return;
 
         InventorySortMode mode = SortModes[nextSortModeIndex];
-        Predicate<ItemData> priority = bagSearch != null && bagSearch.HasActiveQuery ? bagSearch.MatchesCurrentQuery : null;
+        Predicate<ItemData> priority = bagSearch != null && bagSearch.HasActiveFilter ? bagSearch.MatchesCurrentQuery : null;
         if (MachineInventoryCommands.TryRequestLayout(inventory, mode, priority, out bool accepted))
         {
             if (!accepted) return;
@@ -144,7 +144,7 @@ public sealed class InventorySortButton : MonoBehaviour
         currentSortModeIndex = nextSortModeIndex;
         nextSortModeIndex = (nextSortModeIndex + 1) % SortModes.Length;
 
-        bool changed = bagSearch != null && bagSearch.HasActiveQuery
+        bool changed = bagSearch != null && bagSearch.HasActiveFilter
             ? inventory.Data.Sort(mode, bagSearch.MatchesCurrentQuery)
             : inventory.Data.Sort(mode);
         if (changed)
@@ -181,7 +181,7 @@ public sealed class InventorySortButton : MonoBehaviour
     /// <summary>只合并可堆叠物品并压紧空槽，不选择新的排序规则。</summary>
     private void HandleOrganize()
     {
-        Predicate<ItemData> priority = bagSearch != null && bagSearch.HasActiveQuery
+        Predicate<ItemData> priority = bagSearch != null && bagSearch.HasActiveFilter
             ? bagSearch.MatchesCurrentQuery
             : null;
         if (MachineInventoryCommands.TryRequestLayout(inventory, null, priority, out _)) return;

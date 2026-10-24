@@ -87,6 +87,13 @@ def specs():
         add(f"combat.weapon.{weapon}.attack", name, "Attacks",
             swing(cutoff, attack, decay, weight), .36, peak_db=-9, rms_db=-25)
 
+    # 弩确认上膛时用木质卡扣和短促弦振提示就绪。
+    add("combat.weapon.crossbow.loaded", "弩箭上膛卡扣", "Attacks",
+        [layer(key=70, waves=(0, 2, 0), levels=(63, 15, 8), coarse=(0, 11, 19),
+               decay=.035, cutoff=4800, volume=48),
+         noise(6200, .0007, .014, volume=55, repeats=((.022, .23),))],
+        .12, peak_db=-9, rms_db=-29)
+
     add("combat.hit", "通用伤害反馈", "Impacts", impact("flesh"), .25)
     for material, name, seconds in [("default", "通用碰撞", .2), ("foliage", "草叶割裂", .3),
                                     ("wood", "木头敲裂", .24), ("stone", "石头碎屑", .25),
@@ -139,8 +146,8 @@ def specs():
         for delay, interval in delays:
             patches.append(dict(patches[0], key=key + interval, delay=delay, volume=42))
         add(f"ui.{action}", name, "Interactions", patches, .29 if delays else .15, -13, -28)
-    patches = [noise(850, .18, .2, volume=30, hold=.2, sustain=.6, length=5.5),
-               noise(1900, .026, .1, volume=21, repeats=tuple((i * .43, .5 + (i % 3) * .15)
+    # 只保留短促衣料摩擦，持续噪声层会在移动时形成明显底噪。
+    patches = [noise(1900, .026, .1, volume=21, repeats=tuple((i * .43, .5 + (i % 3) * .15)
                                                            for i in range(1, 12)))]
     add("player.wet_clothes.move.loop", "湿衣服轻柔摩擦循环", "Interactions", patches,
         4.4, -16, -31, loop=True)
@@ -282,8 +289,14 @@ AudioImporter:
     return guid
 
 
-def finalize():
+def finalize(only_cue=None):
     layout = json.loads((ROOT / "layout.json").read_text(encoding="utf-8"))
+    previous_manifest = None
+    if only_cue:
+        layout = [entry for entry in layout if entry["cue"] == only_cue]
+        if not layout:
+            raise ValueError(f"Unknown cue: {only_cue}")
+        previous_manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     raw = {}
     # 所有母带齐全且有效后才改游戏资源，避免漏渲一组时只更新半套素材。
     for project in dict.fromkeys(entry["project"] for entry in layout):
@@ -326,7 +339,7 @@ def finalize():
                              rmsDb=round(20 * math.log10(np.sqrt(np.mean(data ** 2))), 2),
                              sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
                              seamStep=float(abs(data[0] - data[-1])) if entry["loop"] else None))
-        if entry["variant"] == 1 and not entry["loop"]:
+        if not only_cue and entry["variant"] == 1 and not entry["loop"]:
             groups.setdefault(entry["group"], []).extend((data, np.zeros(round(.28 * RATE))))
     for cue, guids in bindings.items():
         path = PROJECT / "Assets/Resources/Audio/Cues" / (cue + ".asset")
@@ -339,15 +352,26 @@ def finalize():
             writer.truncate()
     for group, parts in groups.items():
         write_wave(ROOT / f"Preview_{group}.wav", np.concatenate(parts))
+    count = len(manifest)
+    if previous_manifest is not None:
+        # 单独重做一个 Cue 时保留其他成品的制作记录和试听串。
+        replacements = {entry["file"]: entry for entry in manifest}
+        manifest = [replacements.pop(entry["file"], entry)
+                    for entry in previous_manifest["sounds"]
+                    if entry["cue"] != only_cue or entry["file"] in replacements]
+        manifest.extend(replacements.values())
     (ROOT / "manifest.json").write_text(json.dumps(dict(engine="LMMS 1.2.2 via MCP",
                                                          sampleRate=RATE, channels=1, sounds=manifest),
                                                    ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Finalized {len(manifest)} mono clips; bound {len(bindings)} existing cues")
+    print(f"Finalized {count} mono clips across {len(bindings)} existing cues")
 # endregion
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=("build", "finalize"))
+    parser.add_argument("--only-cue", help="Only finalize this existing cue; preserve other clips")
     args = parser.parse_args()
-    build() if args.command == "build" else finalize()
+    if args.only_cue and args.command != "finalize":
+        parser.error("--only-cue requires finalize")
+    build() if args.command == "build" else finalize(args.only_cue)

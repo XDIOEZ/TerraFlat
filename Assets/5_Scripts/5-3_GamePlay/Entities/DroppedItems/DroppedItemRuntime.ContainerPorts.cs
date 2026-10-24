@@ -17,7 +17,7 @@ internal sealed partial class DroppedItemRuntime
                 sceneHandle: SceneManager.GetSceneByName(MachineWorld.WorldKey).handle)
         { this.runtime = runtime; this.id = id; }
         public override object StorageIdentity => runtime.payloads[id];
-        public override long StateVersion => runtime.simulation.Get(id).Amount.GetHashCode();
+        public override long StateVersion => runtime.simulation.Get(id).Amount.GetHashCode() ^ runtime.payloads[id].Durability.GetHashCode();
         public ItemData PeekItem(string itemId = null, string tag = null)
         {
             if (!IsValid) return null;
@@ -36,10 +36,22 @@ internal sealed partial class DroppedItemRuntime
             if (body.Pickable == 0 || body.Amount < amount || amount <= 0 || expected.IDName != runtime.payloads[id].IDName || expected.Guid != runtime.payloads[id].Guid) return false;
             runtime.pickupReservations.Add(id); extracted = ItemInstanceDataFactory.CloneRuntime(runtime.payloads[id]); extracted.Stack.Amount = amount;
             if (body.Amount > amount) { int guid; do guid = Guid.NewGuid().GetHashCode(); while (guid == 0 || guid == extracted.Guid); extracted.Guid = guid; }
-            body.Amount -= amount; runtime.simulation.Set(body); return true;
+            body.Amount -= amount;
+            runtime.payloads[id].Stack.Amount = body.Amount;
+            ItemDurabilityRules.AdvanceAfterRemoval(runtime.payloads[id]);
+            runtime.simulation.Set(body);
+            return true;
         }
-        public override object CaptureState() => runtime.simulation.Get(id);
-        public override void RestoreState(object snapshot) { runtime.simulation.Set((LightweightDroppedBody)snapshot); runtime.pickupReservations.Remove(id); runtime.UpdatePlacement(id); }
+        public override object CaptureState() => (runtime.simulation.Get(id), runtime.payloads[id].Durability);
+        public override void RestoreState(object snapshot)
+        {
+            var state = ((LightweightDroppedBody Body, float Durability))snapshot;
+            runtime.simulation.Set(state.Body);
+            runtime.payloads[id].Durability = state.Durability;
+            runtime.payloads[id].Stack.Amount = state.Body.Amount;
+            runtime.pickupReservations.Remove(id);
+            runtime.UpdatePlacement(id);
+        }
         public override void PublishState()
         {
             if (runtime.simulation.Get(id).Amount <= 0f) runtime.Remove(id); else runtime.UpdatePlacement(id);

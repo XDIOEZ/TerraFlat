@@ -3,8 +3,9 @@ using System;
 namespace FlatWorld.WorldModel
 {
     /// <summary>从配置表读取离散取值和概率，运行时只负责按表抽签。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class WeatherEventDistribution
+    public sealed partial class WeatherEventDistribution
     {
         #region 离散概率表
         public float[] Values = Array.Empty<float>();

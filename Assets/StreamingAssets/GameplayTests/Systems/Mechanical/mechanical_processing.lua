@@ -62,6 +62,21 @@ test.runtime("processing", "material_transition_atomic", {}, function(data)
     end
 end, "木头多产物空间不足整笔拒绝、恢复及重复提交拒绝")
 
+test.runtime("processing", "meat_heat_and_dry", {}, function(data)
+    assert(data.heatedOutput == "Meat_Cooked" and data.heatedAmount == 2
+        and data.heatedSeconds > 0 and data.heatedSeconds <= 180 and data.heatedTemperature >= 200,
+        "地面生肉受篝火炉心热量后未转成等量熟肉")
+    assert(data.driedOutput == "Meat_Dehydrate" and data.driedAmount == 2
+        and data.driedSeconds > 0 and data.driedSeconds <= 240 and data.driedTemperature == 20,
+        "低温晾架没有把等量生肉变为肉干")
+    assert(data.lowTemperature == "Meat_Dehydrate" and data.cookingBoundary == "Meat_Cooked"
+        and data.veryHot == "Meat_Cooked" and data.freshUnchanged,
+        "200℃临界值、过热保护或低温干燥优先级不正确")
+    assert(#data.furnaceInput == 0 and #data.furnaceOutput == 1
+        and data.furnaceOutput[1].id == "Meat_Cooked" and data.furnaceOutput[1].amount == 1,
+        "生肉改为物质热转化后炉内烤肉生产链断开")
+end, "生肉篝火烤制优先、晾架风干、200℃分界及炉内兼容")
+
 for _, input in ipairs({ { temperature = 999.99, ingots = 0 }, { temperature = 1000, ingots = 1 }, { temperature = 1000, amount = 8, ingots = 4 } }) do
     test.runtime("processing", "material_reaction", input, function(data)
         assert(total(data.output, "Ingot_Copper") == input.ingots,
@@ -80,6 +95,35 @@ test.runtime("processing", "material_reaction", { temperature = 1000, mixed = tr
     assert(total(data.output, "Ingot_Copper") == 1 and data.output[1].temperature == 1000,
         "混合冷热同类材料没有只消费达温的一堆并保留产物温度")
 end, "不同堆同种矿石逐堆核验自身温度")
+
+for _, sourceId in ipairs({ "Ore_Iron", "Ingot_RawIron", "Ingot_WroughtIron" }) do
+    for _, sample in ipairs({
+        { amount = 2, coal = 2, temperature = 1489, steel = 1 },
+        { amount = 4, coal = 4, temperature = 1489, steel = 2 },
+        { amount = 2, coal = 2, temperature = 1488.99, steel = 0 },
+        { amount = 2, coal = 2, temperature = 1489, coalTemperature = 1488.99, steel = 0 },
+        { amount = 2, coal = 1, temperature = 1489, steel = 0 },
+    }) do
+        test.runtime("processing", "material_reaction", {
+            materials = {
+                { id = sourceId, amount = sample.amount, temperature = sample.temperature },
+                { id = "Ore_Coal", amount = sample.coal, temperature = sample.coalTemperature or sample.temperature },
+            },
+        }, function(data)
+            assert(total(data.output, "Ingot_Steel") == sample.steel,
+                "炼钢路线、二铁二煤比例或材料自身1489℃门槛错误：" .. sourceId)
+            assert(total(data.input, "Ore_Coal") == sample.coal - sample.steel * 2,
+                "炼钢没有按实际产出消费煤矿石：" .. sourceId)
+            if sample.steel > 0 then
+                assert(#data.input == 0 and #data.output == 1,
+                    "炼钢未优先于单料炼铁，或材料没有完整消费：" .. sourceId)
+                assert(data.output[1].initialized and data.output[1].temperature == sample.temperature,
+                    "钢锭没有继承参与反应材料的温度")
+            end
+        end, string.format("%s炼钢：%d铁+%d煤，铁%g℃/煤%g℃", sourceId, sample.amount,
+            sample.coal, sample.temperature, sample.coalTemperature or sample.temperature))
+    end
+end
 
 test.runtime("processing", "material_alloy_atomic", {}, function(data)
     assert(total(data.blockedInput, "Ore_Copper") == 9 and total(data.blockedInput, "Ore_Tin") == 1,
@@ -138,31 +182,117 @@ for _, multiplier in ipairs({ 0, .5, 1, 1.5 }) do
 end
 
 for _, input in ipairs({ { watts = 0, expected = 20 }, { watts = 600, expected = 25 },
-    { watts = 1200, expected = 30 }, { watts = 2400, expected = 30 } }) do
+    { watts = 1200, expected = 30 }, { watts = 2400, expected = 30 },
+    { target = 1000, watts = 600, expected = 30 }, { target = 3500, watts = 1050, expected = 25 },
+    { target = 3500, watts = 2100, expected = 30 } }) do
     test.runtime("processing", "induction_power", input, function(data)
         assert(data.inputSlots == 3 and data.outputSlots == 2 and data.inventoryCount == 2 and data.processorAbsent,
             "电磁炉不是3输入2输出、仍有燃料库存或配方加工器")
-        assert(data.voltage == 120 and data.ratedWatts == 1200 and data.maximum == 2000
+        local target = input.target or 2000
+        local requested = target * .6
+        assert(data.voltage == 120 and data.ratedWatts == 2100 and data.maximum == 3500
+            and data.target == target and math.abs(data.requestedWatts - requested) < .001
             and data.temperatureUpSpeed == 10 and data.heatingRatePercent == 150,
             "电磁炉额定电力、炉温上限、10℃/秒炉体升温或150%材料换热配置错误")
         assert(data.zero == data.before and math.abs(data.after - input.expected) < .0001
-            and data.supplied == math.min(input.watts, 1200), "电磁炉供电比例/零时间/功率上限错误")
+            and math.abs(data.supplied - math.min(input.watts, requested)) < .001, "电磁炉供电比例/零时间/功率上限错误")
         assert(math.abs(data.material - .75) < .0001,
             "电磁炉材料150%被供电比例再次降额，或停电后没有利用炉体余热")
-        assert(data.longStepMaximum == 2000 and data.coasting < 2000 and data.coasting > 20,
-            "电磁炉超过2000℃，或断电后继续主动升温/丢失余热")
+        assert(data.longStepMaximum == target and data.coasting < target and data.coasting > 20,
+            "电磁炉超过设定目标温度，或断电后继续主动升温/丢失余热")
         assert(data.panel.inputBound and data.panel.outputBound and data.panel.visibleInputs == 3
             and data.panel.visibleOutputs == 2 and data.panel.visibleFuelSlots == 0 and not data.panel.ignitionVisible,
             "电磁炉正式面板槽位数量与真实绑定错误，或残留燃料/点火控件")
     end, string.format("电磁炉供电边界与余热：%dW", input.watts))
 end
 
-test.runtime("processing", "induction_grid", {}, function(data)
-    assert(data.sameNetwork and data.poweredWatts == 1200 and data.batteryConsumedJoules == 1200,
-        "真实电池和电线没有经正式电网向电磁炉交付并扣除1200J")
-    assert(data.poweredTemperature == 30 and data.emptyWatts == 0 and data.coastingTemperature < 30,
-        "电池耗尽后电磁炉仍主动升温，或满供电未按10℃/秒升温")
-end, "真实双电池电网供热与断电自然冷却")
+for _, sample in ipairs({{target = 1000, watts = 600}, {target = 2000, watts = 1200},
+    {target = 3500, watts = 2100}}) do
+    test.runtime("processing", "induction_grid", sample, function(data)
+        assert(data.sameNetwork and math.abs(data.poweredWatts - sample.watts) < .01
+            and math.abs(data.batteryConsumedJoules - sample.watts) < .05,
+            "真实电池和电线没有经正式电网按目标温度交付和扣除真实电量")
+        assert(data.poweredTemperature == 30 and data.emptyWatts == 0 and data.coastingTemperature < 30,
+            "电池耗尽后电磁炉仍主动升温，或低目标满供电没有保持10℃/秒")
+    end, string.format("真实电网随目标%g℃请求%gW并准确扣电", sample.target, sample.watts))
+end
+
+test.runtime("processing", "induction_target", {}, function(data)
+    assert(data.default == 2000 and data.minimumAccepted and data.maximumAccepted,
+        "电磁炉默认目标或20~3500℃边界命令错误")
+    assert(#data.invalid == 6, "没有检查全部非法温度输入")
+    for _, sample in ipairs(data.invalid) do
+        assert(not sample.accepted and sample.target == 3500,
+            "非法温度命令被接受或篡改了原目标：" .. sample.value)
+    end
+    assert(#data.receipts == 2 and data.acceptedToken > 0 and data.rejectedToken > 0
+        and data.acceptedToken ~= data.rejectedToken, "真实机器命令缺少独立token回执")
+    for index, receipt in ipairs(data.receipts) do
+        assert(receipt.entityId == data.entityId and receipt.operation == "set-target-temperature"
+            and receipt.confirmed and receipt.accepted == (index == 1)
+            and receipt.token == (index == 1 and data.acceptedToken or data.rejectedToken)
+            and receipt.argument == (index == 1 and "1500" or "NaN"),
+            "机器目标温度回执的token、设备、参数或接受结果不属于本次真实命令")
+        if index == 2 then assert(#receipt.reason > 0, "真实拒绝回执丢失原因") end
+    end
+    assert(data.lowered and data.hot == 3500 and data.afterCommand == data.hot
+        and data.cooling < data.hot and data.cooling > 1000,
+        "调低目标温度瞬间抹除余热，或继续主动升温")
+    assert(data.savedTarget == 1000 and data.remoteApplied and data.remoteTarget == 1000
+        and math.abs(data.requestedWatts - 600) < .001,
+        "目标温度未进入正式机器存档或远程快照恢复")
+    assert(data.disconnected < data.cooling and data.disconnected > 20,
+        "断电后丢失余热或没有自然冷却")
+end, "电磁炉目标范围、非法值拒绝、降低目标余热与正式存档恢复")
+
+for _, material in ipairs({{id = "Ore_Tungsten", output = "Ingot_Tungsten"},
+    {id = "Ore_Copper", output = "Ingot_Copper"}, {id = "Ore_Gold", output = "Ingot_Gold"}}) do
+    for _, segments in ipairs({1, 4000}) do
+        test.runtime("processing", "material_heating_window", {
+            materials = {{id = material.id, amount = 2, temperature = 20}}, segments = segments
+        }, function(data)
+            assert(#data.input == 0 and total(data.output, material.output) == 1,
+                "3500℃热源长步或小步跳过了矿物原有反应温窗：" .. material.id)
+        end, string.format("%s在3500℃炉内分%d段经过自身熔炼温区", material.id, segments))
+    end
+end
+
+test.runtime("processing", "material_heating_window", {full = true, materials = {
+    {id = "Ore_Gold", amount = 2, temperature = 20},
+    {id = "Ore_Stone", amount = 1, temperature = 20}
+}}, function(data)
+    assert(total(data.input, "Ore_Gold") == 2 and total(data.output, "StoneSlab") == 1,
+        "金锭输出受阻时扣除了跨温窗的原料")
+    for _, item in ipairs(data.input) do
+        if item.id == "Ore_Gold" then
+            assert(item.temperature >= 1064 and item.temperature <= 2000,
+                "金矿跨过有效温窗后仍继续升温，永久跳过熔炼")
+        end
+    end
+    assert(total(data.resumedInput, "Ore_Gold") == 0 and total(data.resumedOutput, "Ingot_Gold") == 1,
+        "跨温窗等待的金矿保存恢复后没有在释放空间时继续熔炼")
+end, "金矿升温到原温窗后满输出等待与保存恢复，不丢失反应资格")
+
+test.runtime("processing", "material_heating_window", {full = true, materials = {
+    {id = "Ingot_RawIron", amount = 2, temperature = 1489},
+    {id = "Ore_Coal", amount = 2, temperature = 1489},
+    {id = "Ore_Stone", amount = 1, temperature = 20}
+}}, function(data)
+    assert(total(data.input, "Ingot_RawIron") == 2 and total(data.input, "Ore_Coal") == 2
+        and total(data.output, "StoneSlab") == 1,
+        "钢锭输出被占满时扣掉原料或降级成其它金属")
+    for _, item in ipairs(data.input) do
+        if item.id == "Ore_Stone" then
+            assert(item.temperature > 3000, "输出拒绝错误冻结了无关材料")
+        else
+            assert(item.temperature >= 1489 and item.temperature <= 2000,
+                "输出拒绝后参与反应材料越过原有效温区")
+        end
+    end
+    assert(total(data.resumedInput, "Ingot_RawIron") == 0 and total(data.resumedInput, "Ore_Coal") == 0
+        and total(data.resumedInput, "Ore_Stone") == 1 and total(data.resumedOutput, "Ingot_Steel") == 1,
+        "满槽等待的材料经过真实快照恢复后无法按二铁二煤原子产钢")
+end, "高目标满输出只等待相关原料、无关料继续升温，保存后释放空间恢复")
 
 for _, furnace in ipairs({ { id = "Smelter", capacity = 50 }, { id = "BlastFurnace", capacity = 150 },
     { id = "InductionStove", capacity = 300 } }) do

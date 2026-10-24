@@ -20,10 +20,12 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 ## 核心边界
 
 - 所有扣量、转移、制作经正式事务；预检与提交共用容量/接收策略，多产物全部可交付才扣料。UI 槽只绑定真实库存，不拥有数据。
+- 专用容器通过 `Inventory_Data.SetItemAcceptancePolicy` 装配非序列化接收规则，数量转移、拖拽交换和整仓入库共用；临时面板用 `Inventory.RuntimeAccessGuard` 核对提交时的会话资格，过期拖拽拒绝，内部资源消费不受界面开关影响。
 - InventoryContextResolver 按 ItemData 引用/Guid 找所属库存；快捷栏按真实槽索引刷新。联机消费由服务器取真实槽，客户端 pending/ack 期间不得用旧库存覆写结果。
 - 重量kg、库存体积L、Stackable 独立；配置m³需换算。携带量对实际主背包/快捷栏/手工输入输出按引用去重，关闭面板不减载荷。
 - 制作经 Matcher→Controller→CraftingService→CraftingTransaction；Save 不解绑，Unload 才清监听。显示、输入与数据生命周期分别管理。
 - 液体保留真实组分/尾量/预约，世界液层用整数级；播种、收获、装备供氧等通过各自公开接口提交，不把来源特例塞进通用模块。
+- 成长、燃料和制作只读取 `GameRuleConfiguration` 已发布的业务配置；`CraftingCapabilities.ApplyOutputMultiplier` 控制是否接受通用增产，业务不识别难度或其他修正来源。
 
 ## 按需资料
 

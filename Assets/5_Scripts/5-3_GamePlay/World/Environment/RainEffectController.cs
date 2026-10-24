@@ -1,358 +1,224 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Rendering;
 
-/// <summary>
-/// 相机跟随式雨效控制器。
-/// 雨层固定在正交相机上缘，并按雨滴初速度、相机高度和 1.12 倍安全余量动态计算生命周期，
-/// 使雨滴刚好持续到画面下缘外侧，避免寿命过长散落到地图外或寿命过短导致下半屏断雨。
-/// </summary>
-public class RainEffectController : MonoBehaviour
+/// <summary>固定雨丝网格交给 Shader 推进下落，CPU 只同步镜头、雨量和整层风偏移。</summary>
+[DefaultExecutionOrder(10001), DisallowMultipleComponent]
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+public sealed class RainEffectController : MonoBehaviour
 {
-#region 字段
+    #region 配置与资源
 
-    [SerializeField] private bool _followMainCamera = true; // 是否跟随主摄像机
-    [SerializeField] private Vector3 _positionOffset = Vector3.zero; // 相机跟随基础偏移
-    [SerializeField] private bool _adaptOffsetByCameraSize = true; // 是否根据相机尺寸动态修正偏移
-    [SerializeField] private float _offsetHeightFactor = 1f; // 相机高度偏移系数（正交相机按orthographicSize）
-    [SerializeField] private bool _lockRotation = true; // 是否锁定旋转
-    [SerializeField] private bool _syncScaleByOrthographicSize = true; // 是否按正交尺寸同步缩放
-    [SerializeField] private float _referenceOrthographicSize = 5f; // 正交相机参考尺寸
-    [SerializeField] private float _coveragePadding = 1.1f; // 覆盖冗余倍率，避免缩放露边
-    [SerializeField] private bool _fitLifetimeToCamera = true; // 是否根据相机高度补足雨滴生命周期
-    [SerializeField, Min(0.01f)] private float _minimumParticleLifetime = 0.35f; // 生命周期下限
-    [SerializeField, Min(1f)] private float _lifetimeCoverageMultiplier = 1.12f; // 下边缘安全覆盖倍率
-    [SerializeField] private ParticleSystem[] _targetParticleSystems; // 受控粒子系统列表（为空则自动查找子节点）
-    [SerializeField] private float _minMaxParticlesFactor = 0.1f; // 最小粒子上限倍率（0~1）
+    internal const int MaximumDrops = 2048;
+    private static readonly int FieldId = Shader.PropertyToID("_RainField");
+    private static readonly int DriftId = Shader.PropertyToID("_RainDrift");
+    private static readonly int WindId = Shader.PropertyToID("_RainWind");
+    private static readonly int LengthId = Shader.PropertyToID("_RainLength");
+    private static readonly int WidthId = Shader.PropertyToID("_RainWidth");
 
-    private float _currentIntensity; // 当前雨雪表现强度。
-    private ParticleSystem[] _runtimeParticleSystems; // 运行时粒子系统缓存
-    private float[] _baseRateOverTimeMultipliers; // 初始每秒发射倍率
-    private float[] _baseRateOverDistanceMultipliers; // 初始按距离发射倍率
-    private int[] _baseMaxParticles; // 初始最大粒子数
-    private float[] _lastAppliedLifetimes; // 最近写入的生命周期，避免每帧重复设置
-    private float _lastAppliedEmissionIntensity = -1f; // 发射倍率只在雨雪强度变化时写入。
-    private Camera _cachedMainCamera; // 世界相机生命周期内复用，避免 LateUpdate 每帧 Camera.main 查询。
+    [SerializeField, Min(1f)] private float coveragePadding = 1.1f;
+    [SerializeField, Min(0f)] private float dropsPerSquareUnit = 1.5f;
+    [SerializeField, Min(0f)] private float windDriftSpeed = 7f;
 
-#endregion
-
-#region 生命周期
+    private Mesh mesh;
+    private MeshRenderer meshRenderer;
+    private Transform effectTransform;
+    private MaterialPropertyBlock properties;
+    private Camera targetCamera;
+    private float intensity;
+    private float streakMargin;
+    private Vector2 wind;
+    private double driftX;
+    private double driftY;
+    private Vector3 previousCameraPosition;
+    private bool hasCameraPosition;
+    private bool hasSubmitted;
+    private Vector4 submittedField;
+    private Vector4 submittedDrift;
+    private Vector4 submittedWind;
 
     private void Awake()
     {
-        EnsureParticleSystemCache();
-        ApplyWorldSorting();
-        ApplyParticleByIntensity();
-        SyncToMainCamera();
-    }
-
-    private void Reset()
-    {
-        _positionOffset = Vector3.zero;
+        effectTransform = transform;
+        meshRenderer = GetComponent<MeshRenderer>();
+        if (meshRenderer.sharedMaterial == null)
+            throw new MissingReferenceException("Shader 降雨缺少 RainStreak 材质。");
+        meshRenderer.enabled = false;
+        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        meshRenderer.receiveShadows = false;
+        meshRenderer.lightProbeUsage = LightProbeUsage.Off;
+        meshRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+        WorldSortingManager.GetInstance().ApplyRenderer(meshRenderer, WorldSortingManager.WorldEffectCategory);
+        properties = new MaterialPropertyBlock();
+        RefreshStreakMargin();
+        mesh = BuildMesh();
+        GetComponent<MeshFilter>().sharedMesh = mesh;
     }
 
     private void OnValidate()
     {
-        _referenceOrthographicSize = Mathf.Max(0.01f, _referenceOrthographicSize);
-        _coveragePadding = Mathf.Max(1f, _coveragePadding);
-        _minimumParticleLifetime = Mathf.Max(0.01f, _minimumParticleLifetime);
-        _lifetimeCoverageMultiplier = Mathf.Max(1f, _lifetimeCoverageMultiplier);
-        _minMaxParticlesFactor = Mathf.Clamp01(_minMaxParticlesFactor);
-        _lastAppliedEmissionIntensity = -1f;
+        coveragePadding = Mathf.Max(1f, coveragePadding);
+        dropsPerSquareUnit = Mathf.Max(0f, dropsPerSquareUnit);
+        windDriftSpeed = Mathf.Max(0f, windDriftSpeed);
+        hasSubmitted = false;
+        if (meshRenderer != null && meshRenderer.sharedMaterial != null)
+            RefreshStreakMargin();
     }
+
+    private void RefreshStreakMargin()
+    {
+        Vector4 length = meshRenderer.sharedMaterial.GetVector(LengthId);
+        Vector4 width = meshRenderer.sharedMaterial.GetVector(WidthId);
+        // 额外留出最长近景雨丝的空间，倾斜和视口外环绕都不会露出边界。
+        streakMargin = (Mathf.Max(Mathf.Abs(length.x), Mathf.Abs(length.y)) +
+            Mathf.Max(Mathf.Abs(width.x), Mathf.Abs(width.y))) * 1.25f;
+    }
+
+    private static Mesh BuildMesh()
+    {
+        var vertices = new Vector3[MaximumDrops * 4];
+        var uvs = new Vector2[vertices.Length];
+        var seeds = new List<Vector4>(vertices.Length);
+        var thresholds = new Vector2[vertices.Length];
+        var triangles = new int[MaximumDrops * 6];
+        var random = new System.Random(78041);
+        for (int i = 0; i < MaximumDrops; i++)
+        {
+            int v = i * 4, t = i * 6;
+            vertices[v] = new Vector3(-0.5f, -0.5f);
+            vertices[v + 1] = new Vector3(0.5f, -0.5f);
+            vertices[v + 2] = new Vector3(0.5f, 0.5f);
+            vertices[v + 3] = new Vector3(-0.5f, 0.5f);
+            uvs[v] = Vector2.zero;
+            uvs[v + 1] = Vector2.right;
+            uvs[v + 2] = Vector2.one;
+            uvs[v + 3] = Vector2.up;
+            var seed = new Vector4((float)random.NextDouble(), (float)random.NextDouble(),
+                (float)random.NextDouble(), (float)random.NextDouble());
+            for (int corner = 0; corner < 4; corner++)
+            {
+                seeds.Add(seed);
+                thresholds[v + corner] = new Vector2((i + 0.5f) / MaximumDrops, 0f);
+            }
+            triangles[t] = v;
+            triangles[t + 1] = v + 1;
+            triangles[t + 2] = v + 2;
+            triangles[t + 3] = v;
+            triangles[t + 4] = v + 2;
+            triangles[t + 5] = v + 3;
+        }
+        var result = new Mesh { name = "Shader 降雨固定网格", hideFlags = HideFlags.DontSave };
+        result.vertices = vertices;
+        result.uv = uvs;
+        result.SetUVs(1, seeds);
+        result.uv3 = thresholds;
+        result.triangles = triangles;
+        result.UploadMeshData(true);
+        return result;
+    }
+
+    #endregion
+
+    #region 天气输入与相机同步
+
+    public void SyncToCamera(Camera camera, float strength)
+    {
+        if (targetCamera != camera) hasCameraPosition = false;
+        targetCamera = camera;
+        intensity = Mathf.Clamp01(strength);
+    }
+
+    public void SetWind(Vector2 velocity) => wind = velocity * windDriftSpeed;
 
     private void LateUpdate()
     {
-        SyncToMainCamera();
+        if (targetCamera == null || !targetCamera.isActiveAndEnabled)
+        {
+            targetCamera = Camera.main;
+            hasCameraPosition = false;
+        }
+        if (targetCamera == null || intensity <= 0.001f)
+        {
+            if (meshRenderer.enabled) meshRenderer.enabled = false;
+            return;
+        }
+
+        Transform cameraTransform = targetCamera.transform;
+        Vector3 cameraPosition = cameraTransform.position;
+        Vector3 right = cameraTransform.right, up = cameraTransform.up;
+        Vector3 movement = hasCameraPosition ? cameraPosition - previousCameraPosition : Vector3.zero;
+        Vector3 worldWind = new Vector3(wind.x, wind.y, 0f);
+        // 积分风偏移并抵消镜头移动，转风不会跳轨，雨丝也不会粘在屏幕上。
+        Vector3 displacement = worldWind * Time.deltaTime - movement;
+        driftX += Vector3.Dot(displacement, right);
+        driftY += Vector3.Dot(displacement, up);
+        previousCameraPosition = cameraPosition;
+        hasCameraPosition = true;
+
+        float distance = Mathf.Clamp(1f, targetCamera.nearClipPlane + 0.01f,
+            Mathf.Max(targetCamera.nearClipPlane + 0.01f, targetCamera.farClipPlane - 0.01f));
+        float height = targetCamera.orthographic ? targetCamera.orthographicSize * 2f :
+            Mathf.Tan(targetCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance * 2f;
+        Vector4 field = ResolveFieldSettings(new Vector2(height * targetCamera.aspect, height),
+            coveragePadding, dropsPerSquareUnit, intensity, streakMargin);
+        Vector4 drift = ResolveDrift(driftX, driftY, new Vector2(field.x, field.y));
+        var localWind = new Vector4(Vector3.Dot(worldWind, right), Vector3.Dot(worldWind, up), 0f, 0f);
+        Vector3 position = cameraPosition + cameraTransform.forward * distance;
+        if (effectTransform.position != position || effectTransform.rotation != cameraTransform.rotation)
+            effectTransform.SetPositionAndRotation(position, cameraTransform.rotation);
+
+        if (!hasSubmitted || submittedField != field || submittedDrift != drift || submittedWind != localWind)
+        {
+            properties.SetVector(FieldId, field);
+            properties.SetVector(DriftId, drift);
+            properties.SetVector(WindId, localWind);
+            meshRenderer.SetPropertyBlock(properties);
+            if (!hasSubmitted || submittedField.x != field.x || submittedField.y != field.y)
+                meshRenderer.localBounds = new Bounds(Vector3.zero,
+                    new Vector3(field.x + streakMargin * 2f, field.y + streakMargin * 2f, 0.5f));
+            submittedField = field;
+            submittedDrift = drift;
+            submittedWind = localWind;
+            hasSubmitted = true;
+        }
+        bool visible = field.z > 0f;
+        if (meshRenderer.enabled != visible) meshRenderer.enabled = visible;
     }
+
+    internal static Vector4 ResolveFieldSettings(Vector2 viewSize, float padding, float density,
+        float strength, float margin)
+    {
+        float edge = Mathf.Max(0.01f, margin) * 2f;
+        float width = Mathf.Max(0.01f, viewSize.x) * Mathf.Max(1f, padding) + edge;
+        float height = Mathf.Max(0.01f, viewSize.y) * Mathf.Max(1f, padding) + edge;
+        float fraction = Mathf.Clamp01(width * height * Mathf.Max(0f, density) / MaximumDrops);
+        return new Vector4(width, height, fraction * Mathf.Clamp01(strength), MaximumDrops);
+    }
+
+    internal static Vector4 ResolveDrift(double x, double y, Vector2 fieldSize) =>
+        new((float)(x % fieldSize.x), (float)(y % fieldSize.y), 0f, 0f);
+
+    #endregion
+
+    #region 停用与释放
+
+    private void OnEnable() => hasSubmitted = false;
 
     private void OnDisable()
     {
-        _currentIntensity = 0f;
-        _lastAppliedEmissionIntensity = -1f;
-        if (_runtimeParticleSystems == null)
-            return;
-        foreach (ParticleSystem particles in _runtimeParticleSystems)
-            if (particles != null)
-                particles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+        if (meshRenderer != null) meshRenderer.enabled = false;
+        intensity = 0f;
+        wind = Vector2.zero;
+        driftX = driftY = 0d;
+        hasCameraPosition = false;
     }
 
-#endregion
-
-#region 公共方法
-
-    public bool HasAliveParticles
+    private void OnDestroy()
     {
-        get
-        {
-            if (_runtimeParticleSystems == null)
-                return false;
-            foreach (ParticleSystem particles in _runtimeParticleSystems)
-                if (particles != null && particles.IsAlive(false))
-                    return true;
-            return false;
-        }
+        if (mesh == null) return;
+        GetComponent<MeshFilter>().sharedMesh = null;
+        Destroy(mesh);
     }
 
-    public void ApplySettings(float intensity)
-    {
-        _currentIntensity = Mathf.Clamp01(intensity);
-        ApplyParticleByIntensity();
-        SyncToMainCamera();
-    }
-
-    public void SetEmissionArea(Vector2 areaSize)
-    {
-        // 已废弃：粒子发射区域由粒子系统自身配置。
-    }
-
-    public void SyncToCamera(Camera targetCamera, float intensity)
-    {
-        _currentIntensity = Mathf.Clamp01(intensity);
-        ApplyParticleByIntensity();
-        SyncTransformToCamera(targetCamera);
-    }
-
-#endregion
-
-#region 私有方法
-
-    private void SyncToMainCamera()
-    {
-        if (!_followMainCamera)
-        {
-            return;
-        }
-
-        if (_cachedMainCamera == null || !_cachedMainCamera.isActiveAndEnabled)
-            _cachedMainCamera = Camera.main;
-        SyncTransformToCamera(_cachedMainCamera);
-    }
-
-    private void SyncTransformToCamera(Camera targetCamera)
-    {
-        if (targetCamera == null)
-        {
-            return;
-        }
-
-        Vector3 runtimeOffset = GetRuntimeOffset(targetCamera);
-        Transform effectTransform = transform;
-        Vector3 position = targetCamera.transform.position + runtimeOffset;
-        Quaternion rotation = _lockRotation ? Quaternion.identity : targetCamera.transform.rotation;
-        // 静止相机不重复使粒子父级 Transform 变脏；移动时合并位置与旋转提交。
-        if (effectTransform.position != position || effectTransform.rotation != rotation)
-            effectTransform.SetPositionAndRotation(position, rotation);
-
-        SyncParticleLifetimeToCamera(targetCamera, runtimeOffset);
-
-        if (!_syncScaleByOrthographicSize || !targetCamera.orthographic)
-        {
-            return;
-        }
-
-        // 根据相机正交尺寸和宽高比计算缩放，确保完全覆盖整个屏幕
-        float orthographicHeight = targetCamera.orthographicSize * 2f * _coveragePadding; // 加冗余后的正交高度
-        float aspectRatio = targetCamera.aspect; // 相机宽高比
-
-        // 相对于参考尺寸的缩放
-        float referenceHeight = _referenceOrthographicSize * 2f;
-        float yScale = Mathf.Max(0.25f, orthographicHeight / referenceHeight);
-        float xScale = yScale * aspectRatio; // X轴乘以宽高比以覆盖整个宽度
-
-        Vector3 scale = new Vector3(xScale, yScale, 1f);
-        if (effectTransform.localScale != scale)
-            effectTransform.localScale = scale;
-    }
-
-    private Vector3 GetRuntimeOffset(Camera targetCamera)
-    {
-        Vector3 runtimeOffset = _positionOffset;
-        runtimeOffset.z = 1f;
-
-        if (!_adaptOffsetByCameraSize || !targetCamera.orthographic)
-        {
-            return runtimeOffset;
-        }
-
-        float adaptiveYOffset = targetCamera.orthographicSize * _offsetHeightFactor;
-        runtimeOffset.y += adaptiveYOffset;
-        return runtimeOffset;
-    }
-
-    /// <summary>按从发射边缘到相机下缘的实际距离调整生命周期。</summary>
-    private void SyncParticleLifetimeToCamera(Camera targetCamera, Vector3 runtimeOffset)
-    {
-        if (!_fitLifetimeToCamera || !targetCamera.orthographic)
-        {
-            return;
-        }
-
-        EnsureParticleSystemCache();
-        if (_runtimeParticleSystems == null || _runtimeParticleSystems.Length == 0)
-        {
-            return;
-        }
-
-        // 发射边缘位于相机上方，目标距离为发射高度到下边缘，并额外越过少量边界防止露缝。
-        float fallDistance = Mathf.Max(0.01f, runtimeOffset.y + targetCamera.orthographicSize);
-        for (int i = 0; i < _runtimeParticleSystems.Length; i++)
-        {
-            ParticleSystem particleSystem = _runtimeParticleSystems[i];
-            if (particleSystem == null)
-            {
-                continue;
-            }
-
-            ParticleSystem.MainModule main = particleSystem.main;
-            float fallSpeed = GetMaximumStartSpeed(main.startSpeed);
-            if (fallSpeed <= 0.01f)
-            {
-                continue;
-            }
-
-            float targetLifetime = Mathf.Max(
-                _minimumParticleLifetime,
-                fallDistance / fallSpeed * _lifetimeCoverageMultiplier);
-            if (_lastAppliedLifetimes != null && i < _lastAppliedLifetimes.Length &&
-                Mathf.Approximately(_lastAppliedLifetimes[i], targetLifetime))
-            {
-                continue;
-            }
-
-            main.startLifetime = targetLifetime;
-            if (_lastAppliedLifetimes != null && i < _lastAppliedLifetimes.Length)
-            {
-                _lastAppliedLifetimes[i] = targetLifetime;
-            }
-        }
-    }
-
-    /// <summary>取得当前粒子系统的最大初始下落速度。</summary>
-    private static float GetMaximumStartSpeed(ParticleSystem.MinMaxCurve startSpeed)
-    {
-        return Mathf.Max(
-            Mathf.Abs(startSpeed.constantMin),
-            Mathf.Abs(startSpeed.constantMax),
-            Mathf.Abs(startSpeed.curveMultiplier));
-    }
-
-    private void EnsureParticleSystemCache()
-    {
-        if (_runtimeParticleSystems != null && _runtimeParticleSystems.Length > 0)
-        {
-            return;
-        }
-
-        if (_targetParticleSystems != null && _targetParticleSystems.Length > 0)
-        {
-            List<ParticleSystem> validParticles = new List<ParticleSystem>();
-            for (int i = 0; i < _targetParticleSystems.Length; i++)
-            {
-                if (_targetParticleSystems[i] != null)
-                {
-                    validParticles.Add(_targetParticleSystems[i]);
-                }
-            }
-
-            _runtimeParticleSystems = validParticles.ToArray();
-        }
-        else
-        {
-            _runtimeParticleSystems = GetComponentsInChildren<ParticleSystem>(true);
-        }
-
-        if (_runtimeParticleSystems == null || _runtimeParticleSystems.Length == 0)
-        {
-            Debug.LogError($"[RainEffectController] 未找到可控制的粒子系统，物体={name}");
-            _runtimeParticleSystems = new ParticleSystem[0];
-            _baseRateOverTimeMultipliers = new float[0];
-            _baseRateOverDistanceMultipliers = new float[0];
-            _baseMaxParticles = new int[0];
-            _lastAppliedLifetimes = new float[0];
-            return;
-        }
-
-        int count = _runtimeParticleSystems.Length;
-        _baseRateOverTimeMultipliers = new float[count];
-        _baseRateOverDistanceMultipliers = new float[count];
-        _baseMaxParticles = new int[count];
-        _lastAppliedLifetimes = new float[count];
-
-        for (int i = 0; i < count; i++)
-        {
-            ParticleSystem particleSystem = _runtimeParticleSystems[i];
-            ParticleSystem.EmissionModule emission = particleSystem.emission;
-            ParticleSystem.MainModule main = particleSystem.main;
-            _baseRateOverTimeMultipliers[i] = emission.rateOverTimeMultiplier;
-            _baseRateOverDistanceMultipliers[i] = emission.rateOverDistanceMultiplier;
-            _baseMaxParticles[i] = Mathf.Max(1, main.maxParticles);
-            _lastAppliedLifetimes[i] = -1f;
-        }
-    }
-
-    /// <summary>雨雪粒子统一使用世界特效类别，覆盖 Prefab 中遗留的地形层排序。</summary>
-    private void ApplyWorldSorting()
-    {
-        if (_runtimeParticleSystems == null)
-            return;
-
-        WorldSortingManager sorting = WorldSortingManager.GetInstance();
-        foreach (ParticleSystem particles in _runtimeParticleSystems)
-        {
-            if (particles == null)
-                continue;
-            ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
-            if (renderer != null)
-                sorting.ApplyRenderer(renderer, WorldSortingManager.WorldEffectCategory);
-        }
-    }
-
-    private void ApplyParticleByIntensity()
-    {
-        EnsureParticleSystemCache();
-        if (_runtimeParticleSystems == null || _runtimeParticleSystems.Length == 0)
-        {
-            return;
-        }
-
-        // 发射量从零按雨量成比例增加，已有粒子在停雨时继续落完。
-        float emissionFactor = _currentIntensity;
-        float maxParticlesFactor = Mathf.Lerp(_minMaxParticlesFactor, 1f, _currentIntensity);
-        bool emissionChanged = ShouldRefreshEmissionRates(_lastAppliedEmissionIntensity, _currentIntensity);
-
-        for (int i = 0; i < _runtimeParticleSystems.Length; i++)
-        {
-            ParticleSystem particleSystem = _runtimeParticleSystems[i];
-            if (emissionChanged)
-            {
-                ParticleSystem.EmissionModule emission = particleSystem.emission;
-                emission.rateOverTimeMultiplier = _baseRateOverTimeMultipliers[i] * emissionFactor;
-                emission.rateOverDistanceMultiplier = _baseRateOverDistanceMultipliers[i] * emissionFactor;
-            }
-            ParticleSystem.MainModule main = particleSystem.main;
-
-            // 强度不变时仍允许旧雨滴逐渐消亡并收缩粒子上限，但不重复提交相同容量。
-            int maxParticles = ResolveParticleCapacity(particleSystem.particleCount,
-                _baseMaxParticles[i], maxParticlesFactor);
-            if (main.maxParticles != maxParticles)
-                main.maxParticles = maxParticles;
-            if (_currentIntensity > 0.001f)
-            {
-                if (!particleSystem.isEmitting)
-                    particleSystem.Play(false);
-            }
-            else if (particleSystem.isEmitting)
-                particleSystem.Stop(false, ParticleSystemStopBehavior.StopEmitting);
-        }
-        _lastAppliedEmissionIntensity = _currentIntensity;
-    }
-
-    /// <summary>停用或运行时配置更新会将已写强度置为负值，从下一次调用重新提交。</summary>
-    internal static bool ShouldRefreshEmissionRates(float applied, float intensity) => applied != intensity;
-
-    /// <summary>低雨量时必须给已有粒子留容量，直到它们自然落完才逐步收缩。</summary>
-    internal static int ResolveParticleCapacity(int alive, int baseCapacity, float capacityFactor) =>
-        Mathf.Max(alive, Mathf.Max(1, Mathf.RoundToInt(baseCapacity * capacityFactor)));
-
-#endregion
+    #endregion
 }

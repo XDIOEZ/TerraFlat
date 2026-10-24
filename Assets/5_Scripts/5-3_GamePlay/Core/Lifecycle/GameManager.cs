@@ -336,7 +336,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 重置存档数据，准备下次游戏
         SaveDataMgr.Instance.ResetChunkDifferenceState();
-        SaveDataMgr.Instance.SaveData = new GameSaveData();
+        SaveDataMgr.Instance.SaveData = null;
 
         // 触发退出结束事件
         BackToHelloScene_Event_End?.Invoke();
@@ -510,6 +510,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         saveData.Difficulty = request.Difficulty;
         GameDifficultyCatalog.WriteCustomRules(saveData, request.CustomDifficultyRules);
+        GameDifficultyService.PublishRules(saveData);
     }
 
     private static string GenerateCreationTimeSeedString()

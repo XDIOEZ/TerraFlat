@@ -35,7 +35,8 @@ public static class PlayerAppearanceLayerRaster
         for (int y = 23; y < Height; y++)
         for (int x = 0; x < Width; x++)
             result["Bodies/Base_Female"][y * Width + x] = result["Bodies/Base_Male"][y * Width + x];
-        Add(result, source, "Hair/Male", new Area(805, 40, 205, 165), new Area(5, 0, 24, 16));
+        // 男角色头发下移一个原始像素，减少额头留白。
+        Add(result, source, "Hair/Male", new Area(805, 40, 205, 165), new Area(5, 1, 24, 16));
         Add(result, source, "Hair/Female", new Area(1140, 40, 220, 185), new Area(5, 0, 26, 19));
         Add(result, source, "Wearables/Traveler_Hood", new Area(95, 405, 210, 220), new Area(4, 0, 26, 27));
         Add(result, source, "Wearables/Traveler_Vest", new Area(440, 440, 215, 160), new Area(3, 22, 27, 13));

@@ -4,7 +4,7 @@ using FlatWorld.WorldModel;
 using Unity.Mathematics;
 using UnityEngine;
 
-/// <summary>本地玩家以真实位移计步，按脚下地表材质播放短音。</summary>
+/// <summary>本地玩家与生物以真实位移计步，按脚下地表材质播放短音。</summary>
 public partial class Mod_Mover
 {
     #region 位移音效共用空间快照
@@ -52,7 +52,8 @@ public partial class Mod_Mover
 
     private void InitializeFootstepAudio()
     {
-        footstepAudioEnabled = item is Player player && player.IsLocalProfile && rb != null;
+        // 生物使用自身位移发声，玩家仍只由本地实例播放。
+        footstepAudioEnabled = rb != null && (item is not Player player || player.IsLocalProfile);
         footstepPreviousPosition = rb != null ? WorldTopologyRuntime.NormalizePosition(rb.position) : Vector2.zero;
         footstepDistance = 0f;
     }

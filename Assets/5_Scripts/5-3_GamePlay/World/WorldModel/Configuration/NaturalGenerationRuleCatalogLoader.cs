@@ -53,13 +53,13 @@ public static class NaturalGenerationRuleCatalogLoader
     }
 
     /// <summary>严格解析 JSON；未知或缺失字段会指出具体文件。</summary>
-    private static T Deserialize<T>(string json, string source)
+    private static T Deserialize<T>(string json, string source) where T : class
     {
         if (string.IsNullOrWhiteSpace(json) || json.Length > MaximumConfigCharacters)
             throw new InvalidDataException($"自然物规则 JSON 为空或超过大小限制：{source}");
         try
         {
-            return JsonConvert.DeserializeObject<T>(json, StrictJsonSettings)
+            return JsonConfigurationCache.Deserialize<T>(json, StrictJsonSettings)
                 ?? throw new InvalidDataException($"自然物规则 JSON 根对象为空：{source}");
         }
         catch (JsonException exception)
@@ -136,16 +136,18 @@ public static class NaturalGenerationRuleCatalogLoader
 
 /// <summary>显式选择可读取的自然物 JSON 分包。</summary>
 #pragma warning disable CS0649 // 以下字段由 JSON 反序列化赋值。
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class NaturalGenerationManifest
+internal sealed partial class NaturalGenerationManifest
 {
     public int SchemaVersion;
     public List<NaturalGenerationPackageReference> Packages;
 }
 
 /// <summary>单个自然物分包的标识、相对路径和开关。</summary>
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class NaturalGenerationPackageReference
+internal sealed partial class NaturalGenerationPackageReference
 {
     public string Id;
     public string Path;

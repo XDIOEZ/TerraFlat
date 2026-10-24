@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -16,7 +15,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
 
     private const float ScreenEdgeMargin = 8f;
     public const double MouseHoverDelaySeconds = 0.3d;
-    private static readonly WaitForSeconds RefreshInterval = new WaitForSeconds(1f);
+    private readonly WaitForSecondsRealtime refreshInterval = new WaitForSecondsRealtime(1f);
 
     [SerializeField] private RectTransform panelRect;
     [SerializeField] private TMP_Text titleText;
@@ -49,6 +48,9 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     private ItemData ownerItem;
     private BasePanel ownerPanel;
     private CanvasGroup[] ownerGroups;
+    private readonly ItemInfoBuffer information = new();
+    private readonly List<string> parameterLines = new(12);
+    private readonly IItemTooltipInfoProvider infoProvider = ItemMoistureTooltipInfoProvider.Default;
 
     public static void Show(ItemSlot_UI slot, GameObject prefab, Vector2 screenPosition)
     {
@@ -264,6 +266,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     {
         if (refreshRoutine != null)
             StopCoroutine(refreshRoutine);
+        refreshInterval.Reset();
         refreshRoutine = StartCoroutine(RefreshWhileVisible());
     }
 
@@ -271,7 +274,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     {
         while (visible)
         {
-            yield return RefreshInterval;
+            yield return refreshInterval;
             if (!visible)
                 break;
             RefreshContent();
@@ -322,12 +325,16 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         string title = definition?.DisplayName ??
             (!string.IsNullOrWhiteSpace(itemData.GameName) ? itemData.GameName : itemData.IDName);
 
-        var parameters = new List<string>(8);
-        AppendBaseParameters(itemData, parameters);
-        AppendModuleParameters(resources, itemData, definition, parameters);
+        information.Clear();
+        parameterLines.Clear();
+        Inventory inventory = owner.BoundInventory;
+        string worldKey = inventory?.item != null ? inventory.item.gameObject.scene.name : inventory?.MachineOwner?.ScopeKey;
+        ItemInfoQuery.Collect(itemData, definition?.ModuleDefinitions, information,
+            ItemInfoQuery.ReadClock(worldKey));
+        infoProvider.AppendItemTooltipInfo(new ItemTooltipInfoContext(itemData, definition, information), parameterLines);
 
         string description = definition?.Description?.Trim() ?? string.Empty;
-        string parameterText = string.Join("\n", parameters);
+        string parameterText = string.Join("\n", parameterLines);
         string body = string.IsNullOrEmpty(description)
             ? parameterText
             : string.IsNullOrEmpty(parameterText)
@@ -342,89 +349,6 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         titleText.text = title;
         bodyText.text = body;
         RebuildLayout();
-    }
-
-    private static void AppendBaseParameters(ItemData itemData, ICollection<string> lines)
-    {
-        ItemStack stack = itemData.Stack;
-        if (stack != null)
-        {
-            lines.Add(FlatWorldLocalizationService.GetUiFormat("数量：{0}", FormatNumber(stack.Amount)));
-            lines.Add(FlatWorldLocalizationService.GetUiFormat("重量：{0} kg", FormatNumber(stack.CurrentWeight)));
-            lines.Add(FlatWorldLocalizationService.GetUiFormat("体积：{0} L", FormatNumber(stack.CurrentVolume)));
-        }
-
-        if (itemData.MaxDurability > 0f &&
-            (itemData.MaxDurability > 1.001f || itemData.Durability < itemData.MaxDurability - 0.001f))
-        {
-            lines.Add(FlatWorldLocalizationService.GetUiFormat(
-                "耐久：{0} / {1}",
-                FormatNumber(itemData.Durability),
-                FormatNumber(itemData.MaxDurability)));
-        }
-
-        if (itemData.MatterState?.Initialized == true)
-        {
-            lines.Add(FlatWorldLocalizationService.GetUiFormat(
-                "温度：{0}℃",
-                itemData.MatterState.TemperatureCelsius.ToString("0.#")));
-        }
-    }
-
-    private static void AppendModuleParameters(
-        GameRes resources,
-        ItemData itemData,
-        RuntimeItemDefinition definition,
-        ICollection<string> lines)
-    {
-        if (resources == null || definition?.ModuleDefinitions == null)
-            return;
-
-        foreach (RuntimeItemModuleDefinition moduleDefinition in definition.ModuleDefinitions)
-        {
-            if (moduleDefinition == null || !moduleDefinition.Enabled)
-                continue;
-
-            string prefabId = !string.IsNullOrWhiteSpace(moduleDefinition.PrefabId)
-                ? moduleDefinition.PrefabId
-                : moduleDefinition.ModuleId;
-            if (string.IsNullOrWhiteSpace(prefabId))
-                continue;
-
-            GameObject modulePrefab = resources.GetPrefab(prefabId, false);
-            if (modulePrefab == null)
-                continue;
-
-            ModuleData moduleData = null;
-            itemData.ModuleDataDic?.TryGetValue(moduleDefinition.StableName, out moduleData);
-            if (moduleData != null && !moduleData.Enabled)
-                continue;
-
-            MonoBehaviour[] behaviours = modulePrefab.GetComponentsInChildren<MonoBehaviour>(true);
-            foreach (MonoBehaviour behaviour in behaviours)
-            {
-                if (!(behaviour is IItemTooltipInfoProvider provider))
-                    continue;
-
-                var context = new ItemTooltipInfoContext(
-                    itemData,
-                    definition,
-                    moduleDefinition,
-                    moduleData);
-                if (provider.TryGetItemTooltipInfo(context, out string info) &&
-                    !string.IsNullOrWhiteSpace(info))
-                {
-                    lines.Add(info.Trim());
-                }
-            }
-        }
-    }
-
-    private static string FormatNumber(float value)
-    {
-        return Mathf.Approximately(value, Mathf.Round(value))
-            ? Mathf.RoundToInt(value).ToString()
-            : value.ToString("0.###");
     }
 
     private void RebuildLayout()

@@ -43,6 +43,14 @@ public partial class SaveDataMgr
 
     public int ParkedRuntimeAiCount => parkedRuntimeAiAddressByGuid.Count;
 
+    /// <summary>只读现有世界的休眠索引，监控不能初始化仓库或触发居民恢复。</summary>
+    public int GetExistingParkedRuntimeAiCount(string world, string speciesId = null)
+    {
+        if (string.IsNullOrWhiteSpace(world) || !parkedWorldStates.TryGetValue(world, out ParkedWorldState state))
+            return 0;
+        return speciesId == null ? state.ByGuid.Count : state.Species.TryGetValue(speciesId, out int count) ? count : 0;
+    }
+
     // 休眠居民仍占用身份，新出生必须拒绝复用该 GUID。
     public bool ContainsParkedRuntimeAi(int guid)
     {

@@ -10,8 +10,9 @@ public enum TileDamageToolKind
     Hammer
 }
 
+[MemoryPack.MemoryPackable]
 [System.Serializable]
-public sealed class TileBuildingDamageProfile
+public sealed partial class TileBuildingDamageProfile
 {
     [Tooltip("开启后，此 Tile 可由格子建筑伤害系统扣血和摧毁。")]
     public bool Damageable;

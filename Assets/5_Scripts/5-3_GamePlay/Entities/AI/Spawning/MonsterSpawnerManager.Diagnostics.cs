@@ -13,6 +13,7 @@ public partial class MonsterSpawnerManager
 
     // 固定名称标记不构造逐帧字符串；创建与管理 Tick 分开，避免把实例初始化当成稳定态。
     private static readonly ProfilerMarker TickMarker = new("FlatWorld.MonsterSpawner.Tick");
+    private static readonly ProfilerMarker AdvanceMarker = new("FlatWorld.MonsterSpawner.Advance");
     private static readonly ProfilerMarker CreationMarker = new("FlatWorld.MonsterSpawner.Create");
     // 创建分段区分后端、实例装配、模块加载与初始状态，便于追查出生当帧的耗时。
     private static readonly ProfilerMarker EntityCreationMarker = new("FlatWorld.MonsterSpawner.Create.Entities");
@@ -24,6 +25,10 @@ public partial class MonsterSpawnerManager
     private void Update()
     {
         if (string.IsNullOrEmpty(_ownedWorld)) return;
+        // 已初始化且本帧无工作时不创建世界作用域，出生任务仍逐帧推进。
+        if (!RequiresUpdateWorldContext(_worldInitialized, enabled, _settings != null,
+                _naturalCreatureBirth != null, Time.unscaledTime, _nextEcologyTickTime)) return;
+        using var advanceSample = AdvanceMarker.Auto();
         using var worldScope = EnterOwnedWorld();
         EnsureWorldInitialized();
         if (!_worldInitialized || !enabled || _settings == null) return;
@@ -58,6 +63,12 @@ public partial class MonsterSpawnerManager
             TickSpawner();
 #endif
         }
+    }
+
+    internal static bool RequiresUpdateWorldContext(bool initialized, bool schedulerEnabled,
+        bool settingsReady, bool birthPending, float now, float nextTick)
+    {
+        return !initialized || schedulerEnabled && settingsReady && (birthPending || !(now < nextTick));
     }
 
     /// <summary>保留具名生成入口；实际资源与实体初始化单独计量。</summary>
@@ -170,7 +181,7 @@ public partial class MonsterSpawnerManager
             groups[registration.Config] = groupCount + 1;
             species.TryGetValue(registration.SpeciesId, out int speciesCount);
             species[registration.SpeciesId] = speciesCount + 1;
-            if (!registration.Config.UnboundedDailyGrowth && !registration.Config.IgnorePopulationLimits)
+            if (!registration.Config.IgnorePopulationLimits)
                 expectedLimited++;
         }
 
@@ -192,7 +203,7 @@ public partial class MonsterSpawnerManager
             {
                 id = GetConfigKey(config), active = cachedGroup, expectedActive = expectedGroup,
                 effectiveLimit = GetEffectiveGroupLimit(config),
-                ignoreLimits = config.IgnorePopulationLimits, unbounded = config.UnboundedDailyGrowth,
+                ignoreLimits = config.IgnorePopulationLimits, ignoreBudget = config.IgnoreEcologyBudget,
                 pending = state?.PendingSpawnCount ?? 0, replacements = state?.PendingReplacementCount ?? 0,
                 budget = state?.AvailableBudget ?? -1, lifetimeSpawns = state?.LifetimeSpawnCount ?? 0
             });
@@ -206,7 +217,7 @@ public partial class MonsterSpawnerManager
             parked = SaveDataMgr.Instance?.ParkedRuntimeAiCount ?? 0,
             maxLoaded = _settings.MaxLoadedGameObjectActors,
             farAwayTimers = _farAwaySince.Count,
-            retryTimers = _nextSpawnRetryTime.Count, recoveryTimers = _nextRecoveryCheckTime.Count,
+            retryTimers = _nextSpawnRetryTime.Count, sharedCountdown = _naturalCountdown.RemainingGameSeconds,
             runtimeStates = _runtimeStates.Count, configs
         };
     }

@@ -30,13 +30,16 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - RequiresPlacementRequest 由正式入口 BeginPlacement 开启，TryHandlePlacementAction 仲裁；普通无显式入口召唤器直接 Install。世界根旋转初始化 identity，手持旋转不迁移；世界朝向/镜像是已放置状态，拆回清零。
 - 拆回先捕获快照、成功生成返还物再删除原建筑。堆叠身份取规范化快照（去放置重写的 GUID/Transform）；IBuildingSnapshotRepackPolicy 可省默认快照，损伤/共享状态继续保留。
 - SnapshotBase64 统一由 ItemNetworkStateSerialization.TrySerializeItemData 写入带 FWI1 包头的实例封包；船部件回收也复用此入口，不能直接写裸 MemoryPack。放置与 ShipMassReader 使用同一恢复契约，Tools/Tests/ShipMass 覆盖回收载体库存。
-- 主动完整拆回与受伤摧毁分开：锤类致命伤返 Summoner，其它破坏按唯一精确配方随机返材料。拆平台先检查上下层、设施和对象占用，返还装配成功才撤支撑。
+- 主动完整拆回与受伤摧毁分开：锤类致命伤返 Summoner，其它破坏优先按实际制作材料记录随机返料，无记录才查唯一精确配方。拆平台先检查上下层、设施和对象占用，返还装配成功才撤支撑。
+- Item/机器建筑的制作材料由 `BuildingMaterialCraftingRule` 接入正式产物规则，读取真实扣料并按实际产量分摊到 `Building_Data.CraftingMaterials`；绳子/皮带等替代料保留实际 ID，零扣量工具和额外料不计。材料随 `BuildingModuleStateTransfer.Copy`、实例快照及回收载体深拷贝，不同材料用独立堆叠身份。战斗随机回收、磨损固定返料、船体/地表冲击共用记录；无制作历史及格子建筑才回退唯一精确配方，不猜替代料。规则 `building/material_provenance`。
 
 ## 占地、碰撞与支撑
 
 - 占地来自 FootprintWidth/Height，吸附格为左下锚点；逐格按拓扑归一化并登记/注销。visual.collider 是实体物理范围，health.collider 是独立受击范围，均不决定建造/导航格。
 - BuildingOccupancyRegistry 是放置、通行、移速和动态 LOS 来源；Revision/CellChanged 驱动脏区，视线刷新不只看最终可走值。相邻格 Collider 接触不互斥，同格按层拒绝。
-- 普通建筑通行由 IBuildingTraversalPolicy，机器读目录 BlocksMovement/PlayerMoveSpeedMultiplier；机器接触几何由区块合并静态 Collider 投影。机械通过 IBuildingPlacementExtension 声明层/候选/快照，IBuildingPlacementCommitted 后才登记世界副作用。
+- `BuildingTraversalRules` 统一普通建筑与数据机器的通行声明，地面/船地板层保持非实体；普通建筑优先读 `IBuildingTraversalPolicy`，无扩展时读 `BlocksMovementWhenPlaced`，数据化必须投影该配置及 PlacementLayer。机器运行期统一读 `BlocksTraversal`，原 `BlocksMovement` 仅作目录声明；碰撞表现、导航和动态LOS不再各自按0/1层特判。
+- `BuildingOccupancyRegistry` 的导航和动态LOS共用建筑阻挡查询；机械图按全部已用层合并实体格，开门 `SetPassable` 只撤自身阻挡，不撤放置占格。同格可通行设施不能抹掉另一实体或地形墙；GO/ECS读同一遮挡位。`ai/passable_building_sight/unified_building_obstruction` 覆盖全目录、0～15层、数据投影和增删；机器表现/交互/受击扫描使用实际最高已用层，空世界不扫描。
+- 机器接触几何由区块静态 Collider 投影，移速仍读 PlayerMoveSpeedMultiplier；机械通过 IBuildingPlacementExtension 声明层/候选/快照，IBuildingPlacementCommitted 后才登记世界副作用。
 - 普通船地板由 Mod_ShipPart 声明独立占地层6和通行规则，可与管线/设备共格；船门复用正式 Door 模块。安装朝向来自候选数据，预览/占地按同一四向尺寸计算；Mod_Building.Orientation 补偿多格贴图和碰撞，卸载恢复，不继承手持旋转。
 - 门绑定所属主 Sprite/根碰撞体，开门保留交互与占格，经 SetPassable 改通行；安装后再同步状态。模块碰撞体引用运行时绑定 Item 根，不额外叠加模块 Collider。
 - PlacementLayer=Ground 占 Layer2，允许与 Layer0 共格；Trigger、不阻导航/LOS、无三类阴影。排序为 ground-building，Queue2991 位于地表覆盖后、Blocking2992 前。
@@ -51,3 +54,4 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - 机器扩展在预览子图层应用安装朝向，BuildingShadow.ResolvePlacementRootRotation 让根只叠船角；无扩展船件由根应用完整朝向，移出船体也必须刷新根旋转。
 - LightOcclusion 配置在 Mod_Building.LightOcclusion：Automatic 随真实 Light2D 裁自身光源以上轮廓，熄灯恢复；FullSilhouette/None 为完整/无轮廓。OwnLightClearance 默认0.0625，配置不入快照，更新接收层经 RefreshLightOcclusion。
 - 动态建筑完整 ItemData 进入区块 ChangedItems，数据就绪后恢复；格墙 ID/损伤进入 RuntimeTileDeltas，平台进入 SupportCells。地块生成可冻结，玩家建造映射读取当前内容目录，建筑关系权威配置在模块 data.BitData。
+- 动态建筑保存/恢复时登记 `ChunkMgr.RuntimeBuildings` 锚点索引，不依赖 Transform 父级。窗口解绑先由 `SaveDataMgr.RuntimeBuildingStreaming` 整块捕获，再回收实体并重置恢复标记；快照失败保留现场，冷建筑快照不能被后续自动保存清空。飞行船件/独立 PersistenceOwner 不接管；GM 船体和落地建筑共用普通链路。规则 `building/chunk_residency`，编辑器外事务回归 `Tools/Tests/BuildingStreaming`。

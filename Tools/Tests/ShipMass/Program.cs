@@ -16,6 +16,7 @@ internal static partial class Program
         Run("建筑 JSON 和打包快照变化失效", BuildingChanges);
         Run("船部件回收快照遵守封包契约且保留库存", RecoveredBuilding);
         Run("二进制变化失效且冷库存只还原一次", BinarySnapshots);
+        Run("手动砧工具与材料分存且冷热库存不重复计重", ManualToolMass);
         Run("冷机器只解析一次根文档和已有载荷", ColdMachine);
         Run("运行库存、堆叠和流体每步读取真实状态", LiveChanges);
         Run("运行机器库存和容器优先于冷载荷", LiveMachine);
@@ -147,6 +148,26 @@ internal static partial class Program
         DecodeCounters.Reset();
         reader.Reset(); Near(12d, reader.ReadContents(machine), "special data change updates inventory mass");
         Check(DecodeCounters.RootJson == 1 && DecodeCounters.Binary == 2, "changed special data is decoded once");
+    }
+
+    private static void ManualToolMass()
+    {
+        var reader = new Reader();
+        ItemData anvil = Cargo(501, 2d);
+        var state = new ManualProcessingState
+        {
+            Processing = new RecipeProcessingState { Input = Inventory(Cargo(502, 3d)), Output = Inventory(Cargo(503, 5d)) },
+            Tool = Inventory(Cargo(504, 6d))
+        };
+        Binary(anvil, Mod_ManualProcessor.ModuleId, state);
+        reader.Reset(); Near(16d, reader.ReadItem(anvil), "cold anvil includes tool and materials");
+        var live = new Item();
+        live.Mods[Mod_ManualProcessor.ModuleId] = new Mod_ManualProcessor
+        {
+            Processor = new MachineProcessor { Input = new Inventory { Data = state.Processing.Input }, Output = new Inventory { Data = state.Processing.Output } },
+            ToolInventory = new Inventory { Data = state.Tool }
+        };
+        reader.Reset(); Near(16d, reader.ReadItem(anvil, live), "live inventory replaces the same module's cold payload");
     }
     private static void ResourceChanges()
     {

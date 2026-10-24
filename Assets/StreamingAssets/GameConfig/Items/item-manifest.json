@@ -1,6 +1,10 @@
 {
   "schemaVersion": 1,
   "packages": [
+    { "id": "railway", "path": "shells/railway.json", "enabled": true },
+    { "id": "metal_hammers", "path": "shells/metal_hammers.json", "enabled": true },
+    { "id": "metal_crafting", "path": "shells/metal_crafting.json", "enabled": true },
+    {"id": "shields", "path": "shells/shields.json", "enabled": true},
     { "id": "engineering", "path": "shells/engineering.json", "enabled": true },
     {
       "id": "induction_stove",
@@ -58,8 +62,18 @@
       "enabled": true
     },
     {
+      "id": "advanced_materials",
+      "path": "shells/advanced_materials.json",
+      "enabled": true
+    },
+    {
       "id": "gold",
       "path": "shells/gold.json",
+      "enabled": true
+    },
+    {
+      "id": "tungsten",
+      "path": "shells/tungsten.json",
       "enabled": true
     },
     {
@@ -88,6 +102,11 @@
       "enabled": true
     },
     {
+      "id": "giant_mines",
+      "path": "shells/giant_mines.json",
+      "enabled": true
+    },
+    {
       "id": "dead_tree",
       "path": "shells/dead_tree.json",
       "enabled": true
@@ -100,6 +119,11 @@
     {
       "id": "character_outfits",
       "path": "shells/character_outfits.json",
+      "enabled": true
+    },
+    {
+      "id": "steel_equipment",
+      "path": "shells/steel_equipment.json",
       "enabled": true
     },
     {
@@ -230,6 +254,11 @@
     {
       "id": "space_devices",
       "path": "shells/space_devices.json",
+      "enabled": true
+    },
+    {
+      "id": "space_elevator",
+      "path": "shells/space_elevator.json",
       "enabled": true
     }
   ]

@@ -267,8 +267,13 @@ public static partial class GameplayTestWorldRuntimeProbe
         source.Stack.Amount = 2f;
         if (!Mod_Building.TryReadBuildingData(source, out _, out Mod_Building.Building_Data state) || string.IsNullOrEmpty(state.TileBlockId))
             throw new InvalidOperationException("测试召唤器没有正式格子建筑入口：" + id);
-        Site site = FindSite(player, sample => Mod_Building.ValidateTileDataPlacement(source,
+        bool support = TileBuildingSystem.IsGroundPlacement(state.TileBlockId);
+        bool water = resources.GetTileBlock(state.TileBlockId).groundPlacement?.LiquidRequirement == GroundPlacementLiquidRequirement.Present;
+        Site site = FindSite(player, sample => water || Mod_Building.ValidateTileDataPlacement(source,
             new Vector3(sample.WorldCell.x + .5f, sample.WorldCell.y + .5f), out _));
+        int ReadPlacedTile() => support
+            ? TerrainSupportLayer.GetTileId(site.Sample.Terrain, site.Sample.LocalCell.x, site.Sample.LocalCell.y)
+            : site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).BlockingTileId;
         var slot = new ItemSlot(0) { itemData = source };
         var inventory = new Inventory_Data(new List<ItemSlot> { slot }, "独立建筑材料样本");
         TileBuildingCell? ownPlacement = null;
@@ -285,12 +290,13 @@ public static partial class GameplayTestWorldRuntimeProbe
         {
             SourceData = slot.itemData, SourceInventory = inventory, SourceSlot = slot,
             Position = site.Center, AuthorityPosition = site.Authority, MaximumDistance = 16f,
-            Publish = _ =>
+            Publish = candidate =>
             {
+                result["publishHasTile"] = candidate.TileCell.HasValue;
                 if (!publish)
                 {
                     amountAtRejectedPublish = slot.itemData?.Stack?.Amount ?? 0f;
-                    tileAtRejectedPublish = site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).BlockingTileId;
+                    tileAtRejectedPublish = ReadPlacedTile();
                 }
                 return publish;
             }
@@ -299,12 +305,15 @@ public static partial class GameplayTestWorldRuntimeProbe
         TileBuildingSystem.CellPlaced += capture;
         try
         {
+            if (water && !WorldLiquidSystem.TrySet(site.Sample, "core:pure_water", 8))
+                throw new InvalidOperationException("隔离平台测试无法准备真实水格。");
             bool rejected = BuildingPlacementService.TryPlace(Request(false), out _, out string rejection);
             float amountAfterRejection = slot.itemData?.Stack?.Amount ?? 0f;
             int writesAfterRejection = placementWrites;
-            bool terrainAfterRejection = site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).Equals(site.Original);
+            bool terrainAfterRejection = site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).Equals(site.Original) &&
+                TerrainSupportLayer.GetTileId(site.Sample.Terrain, site.Sample.LocalCell.x, site.Sample.LocalCell.y) == 0;
             bool placed = BuildingPlacementService.TryPlace(Request(true), out BuildingPlacementResult placement, out string reason);
-            int installedTile = site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).BlockingTileId;
+            int installedTile = ReadPlacedTile();
             float amountAfterPlacement = slot.itemData?.Stack?.Amount ?? 0f;
             bool overlap = BuildingPlacementService.TryPlace(Request(true), out _, out string overlapReason);
             result["rejectedAccepted"] = rejected; result["rejectionReason"] = rejection;
@@ -318,12 +327,17 @@ public static partial class GameplayTestWorldRuntimeProbe
             result["overlapAccepted"] = overlap; result["overlapReason"] = overlapReason;
             result["amountAfterOverlap"] = slot.itemData?.Stack?.Amount ?? 0f;
             result["placementWrites"] = placementWrites;
+            result["liquidAfterPlacement"] = site.Sample.Terrain.GetLiquidLevel(site.Sample.LocalCell.x, site.Sample.LocalCell.y);
+            result["expectedLiquid"] = water ? 8 : 0;
+            result["returnedTile"] = placement?.TileCell?.RuntimeTileId ?? 0;
+            result["returnedSupport"] = placement?.TileCell?.ReplacedGroundCell.HasValue ?? false;
+            result["expectedSupport"] = support;
             return result;
         }
         finally
         {
             TileBuildingSystem.CellPlaced -= capture;
-            int current = site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).BlockingTileId;
+            int current = ReadPlacedTile();
             if (ownPlacement.HasValue && current == ownPlacement.Value.RuntimeTileId && current != 0 &&
                 !TileBuildingSystem.TryRemove(ownPlacement.Value, false, out string removeReason))
                 throw new InvalidOperationException("自有格子建筑清理失败：" + removeReason);
@@ -447,6 +461,9 @@ public static partial class GameplayTestWorldRuntimeProbe
             if (!rod.RigData.TrySetSlotItemAmount(rod.RigData.itemSlots[0], hook, 1f) ||
                 !rod.RigData.TrySetSlotItemAmount(rod.RigData.itemSlots[1], bait, 1f))
                 throw new InvalidOperationException("钓具真实库存事务没有写入鱼钩/鱼饵。");
+            float initialHookDurability = hook.Durability;
+            if (!rod.RigData.TryConsumeDurability(hook, 1f, out bool hookBroke) || hookBroke)
+                throw new InvalidOperationException("正式鱼钩无法提交一次耐久消耗。");
             first.Save();
             uint beforeGeneration = first.RuntimeGeneration;
             bool saved = ItemNetworkStateSerialization.TrySerializeItemData(first.itemData, out byte[] payload);
@@ -465,6 +482,9 @@ public static partial class GameplayTestWorldRuntimeProbe
             result["hookId"] = loadedHook?.IDName; result["expectedHookId"] = hook.IDName;
             result["baitId"] = loadedBait?.IDName; result["expectedBaitId"] = bait.IDName;
             result["hookAmount"] = loadedHook?.Stack?.Amount; result["baitAmount"] = loadedBait?.Stack?.Amount;
+            result["initialHookDurability"] = initialHookDurability;
+            result["hookDurability"] = loadedHook?.Durability;
+            result["hookMaxDurability"] = loadedHook?.MaxDurability;
             result["hookGuidPreserved"] = loadedHook != null && loadedHook.Guid == hook.Guid;
             result["baitGuidPreserved"] = loadedBait != null && loadedBait.Guid == bait.Guid;
             result["hookCapacity"] = loaded.RigData.itemSlots[0].SlotMaxVolume;

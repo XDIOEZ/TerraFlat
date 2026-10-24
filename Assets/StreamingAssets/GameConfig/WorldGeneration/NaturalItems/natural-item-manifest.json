@@ -60,6 +60,11 @@
       "id": "cave.resources",
       "path": "cave-resources.json",
       "enabled": true
+    },
+    {
+      "id": "giant.mines",
+      "path": "giant-mines.json",
+      "enabled": true
     }
   ]
 }

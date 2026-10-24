@@ -213,7 +213,7 @@ internal static class AIBehaviorGraphBuiltins
             },
             () => context.Position,
             () => arrivalDistance,
-            destination => context.Mod_Mover.SetDestination(destination),
+            destination => context.Mod_Mover.SetInteractionDestination(destination, arrivalDistance),
             context.Mod_Mover.StopMovement);
     }
 
@@ -282,7 +282,7 @@ internal static class AIBehaviorGraphBuiltins
             node.Tick,
             node.Enter,
             node.Exit,
-            AIStateAnimationRole.Stopped);
+            AIStateAnimationRole.Action);
     }
 
     private static Func<bool> CreateHealthBelowCondition(AIBehaviorGraphContext context, JObject parameters)
@@ -890,12 +890,12 @@ internal sealed class AIBehaviorForageNode
 
         _context.ForageAvailable = true;
         Vector2 targetPosition = new(_grassWorld.x + 0.5f, _grassWorld.y + 0.5f);
+        _context.Mod_Mover.SetInteractionDestination(targetPosition, _config.ArrivalDistance);
         float distance = WorldTopologyRuntime.Distance(_context.Position, targetPosition);
         if (distance > _config.ArrivalDistance)
         {
             Play(_config.MoveAnimation);
             _eatElapsed = 0f;
-            _context.Mod_Mover.SetDestination(targetPosition);
             if (_context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
             {
                 _context.ForageAvailable = false;
@@ -906,7 +906,6 @@ internal sealed class AIBehaviorForageNode
             return;
         }
 
-        _context.Mod_Mover.StopMovement();
         Play(_config.EatAnimation);
         _eatElapsed += Mathf.Max(0f, deltaTime);
         if (_eatElapsed < _config.GrassEatDuration)
@@ -925,6 +924,7 @@ internal sealed class AIBehaviorForageNode
         }
 
         ClearGrassTarget();
+        _context.Mod_Mover.StopMovement();
     }
 
     private void TickItemFood(float deltaTime)
@@ -952,12 +952,12 @@ internal sealed class AIBehaviorForageNode
         }
 
         _context.ForageAvailable = true;
+        _context.Mod_Mover.SetInteractionDestination(_itemTarget.transform.position, _config.ArrivalDistance);
         float distance = WorldTopologyRuntime.Distance(_context.Position, _itemTarget.transform.position);
         if (distance > _config.ArrivalDistance)
         {
             Play(_config.MoveAnimation);
             _eatElapsed = 0f;
-            _context.Mod_Mover.SetDestination(_itemTarget.transform.position);
             if (_context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
             {
                 _itemTarget = null;
@@ -968,7 +968,6 @@ internal sealed class AIBehaviorForageNode
             return;
         }
 
-        _context.Mod_Mover.StopMovement();
         Play(_config.EatAnimation);
         _eatElapsed += Mathf.Max(0f, deltaTime);
         if (_eatElapsed < _config.ItemEatInterval)
@@ -979,6 +978,7 @@ internal sealed class AIBehaviorForageNode
         {
             _itemTarget = null;
             _context.ForageAvailable = false;
+            _context.Mod_Mover.StopMovement();
             return;
         }
 
@@ -987,7 +987,10 @@ internal sealed class AIBehaviorForageNode
             _context.ForageSatisfied = true;
 
         if (!IsValidItemTarget(_itemTarget))
+        {
             _itemTarget = null;
+            _context.Mod_Mover.StopMovement();
+        }
     }
 
     private bool HasValidGrassTarget()
@@ -1074,7 +1077,6 @@ internal sealed class AIBehaviorAttackNode
     {
         _target = null;
         _attack.OnEnterAttackState();
-        _context.Mod_Mover.StopMovement();
     }
 
     public void Tick(float _)
@@ -1104,10 +1106,10 @@ internal sealed class AIBehaviorAttackNode
         }
 
         float distance = WorldTopologyRuntime.Distance(_context.Position, _target.transform.position);
-        if (distance > _config.TriggerDistance && !_attack.IsAttackLocked)
+        if (!_attack.IsAttackLocked && (distance > _config.TriggerDistance || !_attack.IsCooldownDone))
         {
-            _attack.StopWindow();
-            _context.Mod_Mover.StopMovement();
+            _context.Mod_Mover.SetInteractionDestination(_target.transform.position, _config.TriggerDistance);
+            _context.FaceTarget(_target.transform.position, false);
             return;
         }
 

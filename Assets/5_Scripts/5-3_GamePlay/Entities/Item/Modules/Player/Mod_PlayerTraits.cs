@@ -87,12 +87,12 @@ public class Mod_PlayerTraits : Module
     #region 创造背包
 
     /// <summary>
-    /// 管理员每次为每种可持有的非 Actor 物品增加 100 个；世界专用实体和落地建筑本体不进入背包。
+    /// 管理员每次为可持有的非 Actor 物品补充数量：可堆叠 100 个，不可堆叠 1 个。
     /// 已有物品原位累加，缺少物品新增槽位，不受普通堆叠容量限制。
     /// </summary>
     public string InitializeCreativeInventoryForAdmin()
     {
-        const float amountPerItem = 100f;
+        const float stackableAmountPerItem = 100f;
 
         if (!TryGetPlayer(out var target))
         {
@@ -201,6 +201,8 @@ public class Mod_PlayerTraits : Module
                 continue;
             }
 
+            // 新增与重复补充共用定义的堆叠规则，不可堆叠物品每次只加一件。
+            float amountPerItem = data.Stack.Stackable ? stackableAmountPerItem : 1f;
             if (existingSlotIndices.TryGetValue(itemId, out int existingSlotIndex))
             {
                 // 走库存数量变更事件，保留原物品状态并允许创造模式超量堆叠。
@@ -235,7 +237,7 @@ public class Mod_PlayerTraits : Module
         bagData.MaintainDynamicSlotCount();
         bagMod.inventory.RefreshUI();
 
-        string summary = $"创造背包完成：新增 {creativeItems.Count} 种，补充 {replenishedCount} 种，每种增加 {amountPerItem} 个，" +
+        string summary = $"创造背包完成：新增 {creativeItems.Count} 种，补充 {replenishedCount} 种，可堆叠物品每种增加 {stackableAmountPerItem} 个，不可堆叠物品每种增加 1 个，" +
                          $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种、落地建筑状态 {placedBuildingCount} 种、世界专用实体 {worldOnlyCount} 种，" +
                          $"清理旧建筑状态 {removedPlacedBuildingCount} 格、旧世界实体 {removedWorldOnlyCount} 格，共扫描 {itemIds.Count} 种物品（额外检测 MOD 道具 {detectedModItemCount} 种）；" +
                          "已解除重量、体积与放置距离上限，并开启创造背包动态扩容。";

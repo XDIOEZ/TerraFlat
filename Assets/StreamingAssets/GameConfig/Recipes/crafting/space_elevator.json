@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:space_elevator",
+      "displayName": "太空电梯",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 20
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 5
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "SpaceElevatorTerminal_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

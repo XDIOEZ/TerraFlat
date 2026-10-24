@@ -236,7 +236,7 @@ public static class StoneMortarAssetBuilder
         TextMeshProUGUI text = Rect(name, parent, size, position).gameObject.AddComponent<TextMeshProUGUI>();
         text.font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset");
         text.text = value;
-        text.fontSize = fontSize;
+        FlatWorldUITextLayout.Configure(text, fontSize);
         text.alignment = TextAlignmentOptions.Center;
         text.color = FlatWorldUITheme.TextPrimary;
         text.raycastTarget = false;

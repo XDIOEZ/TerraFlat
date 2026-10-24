@@ -25,25 +25,13 @@ public class DurabilityModifier : CraftingAction
 
             // 检查物品是否包含指定的Tag
             if (itemSlot.itemData.Tags != null && 
-                itemSlot.itemData.Tags != null && 
-                itemSlot.itemData.Tags != null && 
                 itemSlot.itemData.Tags.Contains(lostDurabilityItemTag))
             {
                 // 检查是否有耐久度数据
                 if (itemSlot.itemData.Durability > 0 && itemSlot.itemData.MaxDurability > 0)
                 {
-                    // 使用物品自身的耐久接口减少耐久度（传入负值）
-                    itemSlot.itemData.AddDurability(-durabilityCost);
-                    
-                    Debug.Log($"物品 {itemSlot.itemData.IDName} 消耗耐久度: {durabilityCost}, 剩余耐久度: {itemSlot.itemData.Durability}/{itemSlot.itemData.MaxDurability}");
-                    
-                    // 确保耐久度不低于0
-                    if (itemSlot.itemData.Durability <= 0)
-                    {
-                        itemSlot.itemData.Durability = 0;
-                        itemSlot.ClearData();
-                        Debug.Log($"物品 {itemSlot.itemData?.IDName ?? "Unknown"} 耐久度归零，已清除数据");
-                    }
+                    // 共用基类耐久事务，损毁只消耗一件，不清掉整个材料堆。
+                    targetInventory.Data.TryConsumeDurability(itemSlot.itemData, durabilityCost, out _);
                     
                     // 找到并处理了目标物品后退出循环
                     break;

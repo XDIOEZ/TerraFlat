@@ -3,7 +3,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 /// <summary>地块 JSON 清单；仅加载显式列出的分包，不扫描目录，schemaVersion 固定为 1。</summary>
-public sealed class TileDefinitionManifestDto
+[MemoryPack.MemoryPackable]
+public sealed partial class TileDefinitionManifestDto
 {
     #region 清单
     [JsonProperty("schemaVersion", Required = Required.Always)] public int SchemaVersion;
@@ -12,7 +13,8 @@ public sealed class TileDefinitionManifestDto
 }
 
 /// <summary>一个本体地块分包的稳定身份和相对路径。</summary>
-public sealed class TileDefinitionPackageDto
+[MemoryPack.MemoryPackable]
+public sealed partial class TileDefinitionPackageDto
 {
     #region 分包
     [JsonProperty("id", Required = Required.Always)] public string Id;
@@ -22,7 +24,8 @@ public sealed class TileDefinitionPackageDto
 }
 
 /// <summary>本体地块分包；MOD definitionFiles 中的 tiles 数组复用同一 TileDefinitionDto。</summary>
-public sealed class TileDefinitionCatalogDto
+[MemoryPack.MemoryPackable]
+public sealed partial class TileDefinitionCatalogDto
 {
     #region 目录
     [JsonProperty("schemaVersion", Required = Required.Always)] public int SchemaVersion;
@@ -35,7 +38,8 @@ public sealed class TileDefinitionCatalogDto
 /// MOD 新地块使用不小于 1000000 的显式编号，不允许按加载顺序或运行时哈希分配。
 /// tileAsset 是已注册 TileBase 的资源键，不是 Unity 对象、文件路径或程序集类型名。
 /// </summary>
-public sealed class TileDefinitionDto
+[MemoryPack.MemoryPackable]
+public sealed partial class TileDefinitionDto
 {
     #region 配置
     [JsonProperty("id", Required = Required.Always)] public string Id;
@@ -58,10 +62,12 @@ public sealed class TileDefinitionDto
 }
 
 /// <summary>稳定类型 ID 加参数；type 仅在显式注册表中解析，绝不解释为 CLR 类型名。</summary>
-public sealed class TileComponentDefinitionDto
+[MemoryPack.MemoryPackable]
+public sealed partial class TileComponentDefinitionDto
 {
     #region 组件
     [JsonProperty("type", Required = Required.Always)] public string Type;
+    [MemoryPack.MemoryPackAllowSerialize]
     [JsonProperty("parameters")] public JObject Parameters = new();
     #endregion
 }

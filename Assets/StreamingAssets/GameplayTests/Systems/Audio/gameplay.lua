@@ -41,7 +41,14 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
         and fire.clips[1].samples == 960000, "篝火素材不是 20 秒 48kHz 单声道循环")
     assert(data.startupServiceStable and data.startupCatalogStable and data.startupSettingsStable,
         "重复预热替换了音频服务、目录或覆盖用户设置")
-    assert(data.startupUiCueReady, "正式点击音没有完成音频数据预加载")
+    assert(data.startupUiConfirmReady, "正式确认音没有完成音频数据预加载")
+    local click = data.disabledUiClick
+    assert(click.loaded and click.id == "ui.click" and not click.playbackEnabled,
+        "正式点击事件没有保留明确停用配置")
+    assert(not click.directAccepted and not click.loopAccepted, "停用点击事件仍然取得了单次或循环播放句柄")
+    assert(click.voicesBefore == click.voicesAfter and click.sourcesBefore == click.sourcesAfter,
+        "停用点击事件分配或抢占了声源")
+    assert(click.randomUnchanged and #click.messages == 0, "主动静音仍然选片或产生缺失录音警告")
     assert(#data.feedbackCues == 6, "未读取全部玩法反馈音效")
     for _, cue in ipairs(data.feedbackCues) do
         assert(cue.loaded and cue.variants == 2 and cue.validClips and cue.spatial,
@@ -150,8 +157,8 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
         assert(not stopped.retained and not stopped.playing and stopped.clipId == 0,
             "暂停中的即时停止或淡出没有回收音源")
     end
-    assert(pause.uiClick.retained and pause.uiClick.playing and pause.uiReusedStoppedSource,
-        "暂停世界音源复用给 UI 点击声时仍带着暂停状态")
+    assert(pause.uiConfirm.retained and pause.uiConfirm.playing and pause.uiReusedStoppedSource,
+        "暂停世界音源复用给 UI 确认声时仍带着暂停状态")
     assert(data.handlesReleased and data.settingsRestored and data.timeScaleRestored,
         "测试声音或临时音量、静音、游戏时间倍率没有释放还原")
 end, "正式录音播放、音量/静音、暂停续播与声源池完整往返")

@@ -58,6 +58,7 @@ public partial class Mod_AnimatorController
     public bool IsDeadPresentation => IsSingleSpriteMode && _deathElapsed >= 0f;
     public bool IsDeathPlaying => IsDeadPresentation && _deathElapsed < Mathf.Max(0.05f, deathDuration);
     protected bool CanAdvancePresentation => IsRuntimeLoaded || _networkPresentationActive;
+    public event Action PresentationUpdated;
     #endregion
 
     #region 单图运行态
@@ -252,6 +253,7 @@ public partial class Mod_AnimatorController
         for (int i = 0; i < _additionalLayers.Count; i++)
             _additionalLayers[i].Apply(worldOffset, 0f, Vector3.one, Vector3.zero);
         _presentedWorldOffset = worldOffset;
+        PresentationUpdated?.Invoke();
     }
 
     [Button("复位单图动作")]
@@ -270,6 +272,7 @@ public partial class Mod_AnimatorController
         _bodyLayer?.ResetPose();
         for (int i = 0; i < _additionalLayers.Count; i++)
             _additionalLayers[i].ResetPose();
+        PresentationUpdated?.Invoke();
     }
     #endregion
 
@@ -278,12 +281,19 @@ public partial class Mod_AnimatorController
     {
         if (IsSingleSpriteMode && CanAdvancePresentation)
             PreparePresentation();
+        else if (!IsSingleSpriteMode)
+            FlushReadyAnimatorParameters();
     }
 
     protected virtual void LateUpdate()
     {
+        // 激活首帧 Animator 仍未初始化时，继续履行 Item 已登记的初始状态播放。
+        if (CanAdvancePresentation && item?.HasPendingInitialAnimatorState == true)
+            item.FlushPendingInitialAnimatorState();
         if (IsSingleSpriteMode || _bodyLayer != null)
             AdvancePresentation(Time.deltaTime);
+        else
+            FlushReadyAnimatorParameters();
     }
 
     protected virtual void OnDisable()
@@ -356,6 +366,8 @@ public partial class Mod_AnimatorController
     private bool PreparePresentation()
     {
         if (!isActiveAndEnabled || !IsSingleSpriteMode) return false;
+        // 单图接管后不再消费旧 Animator 状态，切回时由当前运动源重建。
+        _pendingBoolValues.Clear();
         if (!_sourcesCached || _presentationOwner != item) CachePresentationSources();
         if (_bodyLayer != null && (!_bodyLayer.IsBound || _bodyLayer.Root != spriteVisualRoot))
             ReleasePresentation();
@@ -381,9 +393,9 @@ public partial class Mod_AnimatorController
         if (_suppressedAnimator != null)
         {
             _animatorWasEnabled = _suppressedAnimator.enabled;
-            SampleInitialSingleSpriteFrame();
             _suppressedAnimator.enabled = false;
         }
+        ApplyInitialSingleSpriteFrame();
         _bodyLayer = new SingleSpriteVisualLayer(spriteVisualRoot);
         if (additionalVisualRoots != null)
         {
@@ -404,42 +416,18 @@ public partial class Mod_AnimatorController
         return true;
     }
 
-    private void SampleInitialSingleSpriteFrame()
+    private void ApplyInitialSingleSpriteFrame()
     {
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || item?.itemData == null ||
             !resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) ||
-            !definition.IsActor || string.IsNullOrWhiteSpace(definition.Visual?.AnimationState) ||
-            !_suppressedAnimator.gameObject.activeInHierarchy || _suppressedAnimator.runtimeAnimatorController == null)
+            !definition.IsActor)
             return;
 
-        // 外壳可被多物种共用，激活后只采正式初态图片一次，再保留 JSON 与朝向模块的姿态。
-        Transform visual = targetSpriteRenderer.transform;
-        Vector3 position = visual.localPosition;
-        Quaternion rotation = visual.localRotation;
-        Vector3 scale = visual.localScale;
-        Color color = targetSpriteRenderer.color;
-        bool flipX = targetSpriteRenderer.flipX, flipY = targetSpriteRenderer.flipY;
-        _suppressedAnimator.enabled = true;
-        try
-        {
-            if (!_suppressedAnimator.isInitialized) _suppressedAnimator.Rebind();
-            RefreshControllerCache();
-            if (!TryResolveState(definition.Visual.AnimationState, 0, out int layer, out int stateHash))
-                throw new InvalidOperationException($"生物 {definition.Id} 无法采样初始动画 {definition.Visual.AnimationState}。");
-            _suppressedAnimator.Play(stateHash, layer, 0f);
-            _suppressedAnimator.Update(0f);
-        }
-        finally
-        {
-            visual.localPosition = position;
-            visual.localRotation = rotation;
-            visual.localScale = scale;
-            targetSpriteRenderer.color = color;
-            targetSpriteRenderer.flipX = flipX;
-            targetSpriteRenderer.flipY = flipY;
-            _suppressedAnimator.enabled = _animatorWasEnabled;
-        }
+        // 单图从正式定义取得静态首帧，不启动旧 Animator，也不借用共享外壳的其他物种图片。
+        if (definition.Sprite == null)
+            throw new InvalidOperationException($"生物 {definition.Id} 的摇摆动画缺少初始图片，请配置 visual.spriteAddress。");
+        targetSpriteRenderer.sprite = definition.Sprite;
     }
 
     private bool IsVisualOnlyRoot(Transform root)
@@ -472,12 +460,11 @@ public partial class Mod_AnimatorController
             if (_suppressedAnimator != null)
             {
                 _suppressedAnimator.enabled = _animatorWasEnabled;
-                if (!IsSingleSpriteMode && _suppressedAnimator == animator && animator.runtimeAnimatorController != null)
+                if (!IsSingleSpriteMode && _suppressedAnimator == animator)
                 {
                     // 切回序列帧时同步当前迈步状态，不等待下一次移动起止事件。
-                    RefreshControllerCache();
-                    if (_boolParameterHashes.TryGetValue(AnimationText.Move, out int moveHash)) animator.SetBool(moveHash, moving);
-                    if (_boolParameterHashes.TryGetValue(AnimationText.Run, out int runHash)) animator.SetBool(runHash, running);
+                    SetBool(AnimationText.Move, moving);
+                    SetBool(AnimationText.Run, running);
                 }
             }
             _suppressedAnimator = null;
@@ -513,6 +500,18 @@ public partial class Mod_AnimatorController
             }
         }
         return false;
+    }
+
+    /// <summary>把基础挂点映射到当前身体姿态，只提供位置，不接管附属物的旋转和缩放。</summary>
+    public Vector3 GetPresentedAttachmentPosition(Transform attachment)
+    {
+        Vector3 position = attachment.position;
+        if (!isActiveAndEnabled || !IsSingleSpriteMode || _bodyLayer == null || !_bodyLayer.IsBound)
+            return position;
+        Transform pose = _bodyLayer.PoseRoot;
+        if (attachment == pose || attachment.IsChildOf(pose)) return position;
+        Vector3 localPoint = pose.parent != null ? pose.parent.InverseTransformPoint(position) : position;
+        return pose.TransformPoint(localPoint);
     }
 
     public bool TryGetBaseVisualMatrix(Transform visual, out Matrix4x4 localToWorld)
@@ -747,6 +746,7 @@ public partial class Mod_AnimatorController
         for (int i = 0; i < _additionalLayers.Count; i++)
             _additionalLayers[i].Apply(groundOffset, 0f, Vector3.one, Vector3.zero);
         _presentedWorldOffset = groundOffset;
+        PresentationUpdated?.Invoke();
     }
     #endregion
 

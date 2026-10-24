@@ -19,6 +19,14 @@
   },
   "Nodes": [
     {
+      "Id": "ToolCabinet",
+      "Kind": "storage",
+      "Ports": "none",
+      "LogicId": "storage",
+      "ProvidesWorkbenchInput": true,
+      "CastVisualShadows": true
+    },
+    {
       "Id": "HandCrank",
       "Kind": "source",
       "Ports": "axis",
@@ -252,6 +260,7 @@
       "CastVisualShadows": false,
       "RequiredRpm": 20,
       "TorqueLoad": 2,
+      "TorqueLoadStep": 1,
       "Transport": {
         "Speed": 0.8,
         "HalfWidth": 0.5
@@ -266,6 +275,7 @@
       "CastVisualShadows": false,
       "RequiredRpm": 20,
       "TorqueLoad": 2,
+      "TorqueLoadStep": 1,
       "Transport": {
         "Speed": 0.8,
         "HalfWidth": 0.5
@@ -412,10 +422,13 @@
       "Ports": "none",
       "LogicId": "fluid",
       "PlacementLayer": 2,
+      "PlacementRotationSteps": 4,
       "BlocksMovement": false,
       "CastVisualShadows": false,
       "Fluid": {
         "Kind": "selector",
+        "PipeSegment": true,
+        "SingleGas": false,
         "Ports": [
           {
             "Id": "in",
@@ -444,7 +457,8 @@
             "Outlet": false,
             "FluidId": ""
           }
-        ]
+        ],
+        "ThroughputLitersPerSecond": 1000
       }
     },
     {
@@ -873,12 +887,14 @@
         "Role": "consumer",
         "Connection": "cell",
         "NominalVoltage": 120,
-        "PowerWatts": 1200
+        "PowerWatts": 2100
       },
       "Induction": {
         "InputSlots": 3,
         "OutputSlots": 2,
-        "MaxTemperature": 2000,
+        "MaxTemperature": 3500,
+        "MinimumTargetTemperature": 20,
+        "DefaultTargetTemperature": 2000,
         "TemperatureUpSpeed": 10,
         "HeatingRatePercent": 150,
         "InputMaxWeightKg": 300,
@@ -1323,6 +1339,74 @@
       }
     },
     {
+      "Id": "SteamEngine_Body",
+      "Kind": "source",
+      "Ports": "axis",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "engine",
+        "Ports": [
+          {
+            "Id": "steam-in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": "core:pure_water"
+          }
+        ],
+        "VolumeLiters": 10,
+        "GasBufferStandardLiters": 100,
+        "LiquidResidueFluidId": "core:pure_water",
+        "LiquidResidueChamber": "condensate",
+        "Reactions": [
+          {
+            "Id": "core:steam_engine",
+            "Inputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "main",
+                "Phase": "gas",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "condensate",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 0,
+            "ChemicalJoulesPerReaction": 40660,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          }
+        ]
+      },
+      "Source": "fluid-engine",
+      "Torque": 40,
+      "Rpm": 20,
+      "AxlePorts": [
+        "right"
+      ],
+      "AxisPortVisual": {
+        "Count": 1,
+        "StartX": 0.25,
+        "Y": 0
+      }
+    },
+    {
       "Id": "ShipConsole",
       "Kind": "consumer",
       "Ports": "none",
@@ -1611,72 +1695,6 @@
         }
       ],
       "WorkSeconds": 8
-    },
-    {
-      "Station": "hand_forge",
-      "Input": "Ingot_RawIron",
-      "Outputs": [
-        {
-          "ItemName": "RawIronPlate",
-          "amount": 1
-        }
-      ],
-      "WorkSeconds": 12
-    },
-    {
-      "Station": "hand_forge",
-      "Input": "Ingot_WroughtIron",
-      "Outputs": [
-        {
-          "ItemName": "IronPlate",
-          "amount": 1
-        }
-      ],
-      "WorkSeconds": 12
-    },
-    {
-      "Station": "hand_forge",
-      "Input": "Ingot_Copper",
-      "Outputs": [
-        {
-          "ItemName": "CopperPlate",
-          "amount": 1
-        }
-      ],
-      "WorkSeconds": 12
-    },
-    {
-      "Station": "hand_forge",
-      "Input": "Ingot_Bronze",
-      "Outputs": [
-        {
-          "ItemName": "BronzePlate",
-          "amount": 1
-        }
-      ],
-      "WorkSeconds": 12
-    },
-    {
-      "Station": "hand_forge",
-      "Input": "Ingot_Tin",
-      "Outputs": [
-        {
-          "ItemName": "TinPlate",
-          "amount": 1
-        }
-      ],
-      "WorkSeconds": 12
-    },
-    {
-      "Station": "hand_forge",
-      "Input": "Ingot_Steel",
-      "Outputs": [
-        {
-          "ItemName": "SteelPlate",
-          "amount": 1
-        }
-      ],
-      "WorkSeconds": 12
     }
   ]
 }

@@ -9,7 +9,7 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 /// 一次资源目录的具体 Addressables 资源所有者。请求发出时立即记录句柄，成功资源保留到目录卸载，
 /// 失败、取消和退出都按相反顺序释放；同类型同地址只持有一次请求。
 /// </summary>
-internal sealed class ResourceAssetScope : IDisposable
+internal sealed partial class ResourceAssetScope : IDisposable
 {
     #region 资源所有权
 
@@ -48,7 +48,7 @@ internal sealed class ResourceAssetScope : IDisposable
         var key = (typeof(T), address.Trim());
         if (assets.TryGetValue(key, out AsyncOperationHandle existing)) return existing.Convert<T>();
         AsyncOperationHandle<T> handle = LoadSource<T>("address|" + typeof(T).FullName + "|" + key.Item2,
-            () => Addressables.LoadAssetAsync<T>(key.Item2));
+            () => LoadAddress<T>(key.Item2));
         assets.Add(key, handle);
         return handle;
     }
@@ -58,7 +58,32 @@ internal sealed class ResourceAssetScope : IDisposable
         if (disposed) throw new ObjectDisposedException(nameof(ResourceAssetScope));
         if (location == null) throw new ArgumentNullException(nameof(location));
         return LoadSource<T>("location|" + typeof(T).FullName + "|" + location.ProviderId + "|" + location.InternalId + "|" + location.PrimaryKey,
-            () => Addressables.LoadAssetAsync<T>(location));
+            () => LoadLocation<T>(location));
+    }
+
+    private AsyncOperationHandle<T> LoadAddress<T>(string address) where T : UnityEngine.Object
+    {
+#if UNITY_EDITOR
+        // 只接管 Fast Mode 的默认文件加载，其他播放模式与自定义 Provider 继续走原入口。
+        foreach (var locator in Addressables.ResourceLocators)
+            if (locator.Locate(address, typeof(T), out IList<IResourceLocation> locations))
+                foreach (IResourceLocation location in locations)
+                {
+                    var provider = Addressables.ResourceManager.GetResourceProvider(typeof(T), location);
+                    if (provider == null) continue;
+                    return provider.GetType() == typeof(UnityEngine.ResourceManagement.ResourceProviders.AssetDatabaseProvider)
+                        ? LoadLocation<T>(location) : Addressables.LoadAssetAsync<T>(address);
+                }
+#endif
+        return Addressables.LoadAssetAsync<T>(address);
+    }
+
+    private AsyncOperationHandle<T> LoadLocation<T>(IResourceLocation location) where T : UnityEngine.Object
+    {
+#if UNITY_EDITOR
+        location = GetEditorLoadLocation(location, typeof(T));
+#endif
+        return Addressables.LoadAssetAsync<T>(location);
     }
 
     private AsyncOperationHandle<T> LoadSource<T>(string key, Func<AsyncOperationHandle<T>> load) where T : UnityEngine.Object
@@ -103,6 +128,9 @@ internal sealed class ResourceAssetScope : IDisposable
         }
         handles.Clear();
         assets.Clear();
+#if UNITY_EDITOR
+        editorLoadLocations.Clear();
+#endif
         if (errors.Count > 0) throw new AggregateException("资源句柄释放失败。", errors);
     }
 

@@ -17,7 +17,7 @@ end
 
 test.system("electrical", "engineering_vision", {}, function(data)
     assert(not data.empty and not data.ordinary, "未提供护目镜也获得工程视野")
-    assert(data.held and data.head and data.carried, "手持、鼠标携带或头戴护目镜未获得工程视野")
+    assert(data.held and data.head and data.carried and data.eyes, "手持、鼠标携带、眼部护目镜或能力头盔未获得工程视野")
     assert(not data.broken and not data.removed, "损坏或移除护目镜仍保留工程视野")
     assert(not data.hiddenPlacementAllowedWithoutActor and data.ordinaryPlacementAllowedWithoutActor,
         "隐藏电线放置绕过操作资格，或普通电线受到工程护目镜限制")

@@ -36,6 +36,21 @@ public partial class DroppedItemSaveRecord
     public float WaterDuration;
     public float WaterElapsed;
 
+    #region 水态恢复
+
+    // 活动世界与后台共用恢复入口，沉底物重载后继续隐藏，不重新下沉或漂流。
+    internal LightweightDroppedBody RestoreBody(ItemData data, WorldTopologyDomain domain) => new()
+    {
+        Id = data.Guid, Amount = data.Stack.Amount, Position = domain.Normalize(Position),
+        Scale = Scale, Rotation = Rotation, VisualHeight = VisualHeight,
+        LiquidDepth = LiquidDepth, WaterKind = WaterKind, Pickable = 0,
+        SubmergedProgress = WaterKind == LightweightDroppedBody.BottomWaterKind ? 1f :
+            WaterKind == 2 && HasWaterTransition
+                ? Mathf.Clamp01((WaterElapsed - WaterDuration) / WorldItemWaterRules.SubmergedRecedeDuration) : 0f
+    };
+
+    #endregion
+
     /// <summary>主线程复制库存数据；冷载荷中的数量不作为运行时第二份权威数量。</summary>
     internal static DroppedItemSaveRecord Capture(ItemData payload, LightweightDroppedItemSimulation simulation, int id)
     {

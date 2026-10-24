@@ -71,11 +71,19 @@ public static class RecipeRuntimeFactory
             if (output == null)
                 continue;
             string copyInputTag = output.CopyInputTag?.Trim();
-            string itemId = string.IsNullOrWhiteSpace(copyInputTag)
+            string copyInputItemId = output.CopyInputItemId?.Trim();
+            string addTag = output.AddTag?.Trim();
+            bool copiesTag = !string.IsNullOrWhiteSpace(copyInputTag);
+            bool copiesItem = !string.IsNullOrWhiteSpace(copyInputItemId);
+            bool copiesInstance = copiesTag || copiesItem;
+            string itemId = !copiesInstance
                 ? NormalizeRequired(output.ItemId, $"配方 {id} 输出 itemId") : output.ItemId?.Trim() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(copyInputTag) && (output.Amount != 1 ||
-                !inputs.RowItems_List.Any(value => value.matchMode == MatchMode.ByTag && value.Tag == copyInputTag && value.amount == 1)))
-                throw new InvalidDataException($"配方 {id} 的实例产物必须复制消耗一件的标签材料。");
+            // 实例来源必须唯一，并对应配方中真正消耗的一件材料。
+            if (copiesInstance && (copiesTag && copiesItem || output.Amount != 1 ||
+                !inputs.RowItems_List.Any(value => value.amount == 1 && (copiesTag
+                    ? value.matchMode == MatchMode.ByTag && value.Tag == copyInputTag
+                    : value.matchMode == MatchMode.ExactItem && value.ItemName == copyInputItemId))))
+                throw new InvalidDataException($"配方 {id} 的实例产物必须指定一种来源，并复制消耗一件的材料。");
             if (output.Amount <= 0)
                 throw new InvalidDataException($"配方 {id} 的输出 {itemId} 数量必须大于 0");
             float durabilityMultiplier = output.DurabilityMultiplier ?? CraftedDurabilityQuality.DefaultMultiplier;
@@ -86,6 +94,8 @@ public static class RecipeRuntimeFactory
             {
                 ItemName = itemId,
                 CopyInputTag = copyInputTag,
+                CopyInputItemId = copyInputItemId,
+                AddTag = addTag,
                 ReinforceWithAdhesive = output.ReinforceWithAdhesive,
                 amount = output.Amount,
                 durabilityMultiplier = durabilityMultiplier
@@ -263,7 +273,7 @@ public static class RecipeRuntimeFactory
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("配方 JSON 为空");
-        return JsonConvert.DeserializeObject<RecipeCatalogDto>(json)
+        return JsonConfigurationCache.Deserialize<RecipeCatalogDto>(json)
             ?? throw new InvalidDataException("配方 JSON 无法反序列化");
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -38,7 +39,8 @@ public sealed class ModManagerOverlay : MonoBehaviour
     private Vector2 scrollPosition;
     private Rect windowRect = new(80f, 60f, 720f, 620f);
     private bool visible;
-    private string notice = string.Empty;
+    private string noticeSource = string.Empty;
+    private object[] noticeArguments;
 
     #endregion
 
@@ -69,7 +71,8 @@ public sealed class ModManagerOverlay : MonoBehaviour
         if (!visible)
             return;
 
-        windowRect = GUILayout.Window(GetInstanceID(), windowRect, DrawWindow, "FlatWorld MOD 管理器（F10 关闭）");
+        windowRect = GUILayout.Window(GetInstanceID(), windowRect, DrawWindow,
+            UiFormat("FlatWorld MOD 管理器（{0} 关闭）", "F10"));
     }
 
     #endregion
@@ -78,34 +81,35 @@ public sealed class ModManagerOverlay : MonoBehaviour
 
     private void DrawWindow(int windowId)
     {
-        GUILayout.Label("启停和顺序修改会在下次资源重载时生效；单机世界内会自动保存、重载并返回当前存档。");
-        GUILayout.Label($"状态：{manager.State} | 已加载：{manager.LoadedManifests.Count} | 指纹：{ShortHash(manager.ModSetHash)}");
+        GUILayout.Label(Ui("启停和顺序修改会在下次资源重载时生效；单机世界内会自动保存、重载并返回当前存档。"));
+        GUILayout.Label(UiFormat("状态：{0} | 已加载：{1} | 指纹：{2}",
+            GetLoadStateName(manager.State), manager.LoadedManifests.Count, ShortHash(manager.ModSetHash)));
         if (manager.IsSafeModeActive)
-            GUILayout.Label("当前处于安全模式，所有外部 MOD 均被跳过。");
+            GUILayout.Label(Ui("当前处于安全模式，所有外部 MOD 均被跳过。"));
         if (!string.IsNullOrWhiteSpace(manager.FailureReason))
-            GUILayout.Label($"最近错误：{manager.FailureReason}");
-        if (!string.IsNullOrWhiteSpace(notice))
-            GUILayout.Label(notice);
+            GUILayout.Label(UiFormat("最近错误：{0}", manager.FailureReason));
+        if (!string.IsNullOrWhiteSpace(noticeSource))
+            GUILayout.Label(GetNoticeText());
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("刷新列表", GUILayout.Width(110f)))
+        if (GUILayout.Button(Ui("刷新列表"), GUILayout.Width(110f)))
             RefreshList();
-        if (GUILayout.Button("复制 MOD 目录", GUILayout.Width(130f)))
+        if (GUILayout.Button(Ui("复制 MOD 目录"), GUILayout.Width(130f)))
         {
             GUIUtility.systemCopyBuffer = manager.ModsRootPath;
-            notice = "已复制 MOD 目录路径。";
+            SetNotice("已复制 MOD 目录路径。");
         }
-        if (GUILayout.Button("下次安全模式", GUILayout.Width(130f)))
+        if (GUILayout.Button(Ui("下次安全模式"), GUILayout.Width(130f)))
         {
             ModProfileStore.RequestSafeModeNextLaunch();
-            notice = "已请求下次使用安全模式。";
+            SetNotice("已请求下次使用安全模式。");
         }
         bool canReload = !GameNetwork.IsOnline;
         GUI.enabled = canReload;
-        if (GUILayout.Button("立即重载内容", GUILayout.Width(130f)))
+        if (GUILayout.Button(Ui("立即重载内容"), GUILayout.Width(130f)))
         {
             GameRes.Instance?.HotReloadAllResources();
-            notice = "已开始重载本体资源与 MOD。";
+            SetNotice("已开始重载本体资源与 MOD。");
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
@@ -114,7 +118,7 @@ public sealed class ModManagerOverlay : MonoBehaviour
         for (int i = 0; i < installedMods.Count; i++)
             DrawModRow(installedMods[i], i);
         if (installedMods.Count == 0)
-            GUILayout.Label("未发现 MOD。把包含 manifest.json 的目录放入 Mods 后刷新。");
+            GUILayout.Label(Ui("未发现 MOD。把包含 manifest.json 的目录放入 Mods 后刷新。"));
         GUILayout.EndScrollView();
 
         GUI.DragWindow(new Rect(0f, 0f, windowRect.width, 28f));
@@ -132,7 +136,9 @@ public sealed class ModManagerOverlay : MonoBehaviour
             {
                 ModProfileStore.SetEnabled(info.Id, enabled);
                 info.Enabled = enabled;
-                notice = $"{info.Id} 已{(enabled ? "启用" : "禁用")}，重载后生效。";
+                SetNoticeFormat(enabled
+                    ? "MOD {0} 已启用，重载后生效。"
+                    : "MOD {0} 已禁用，重载后生效。", info.Id);
             }
         }
         else
@@ -141,15 +147,15 @@ public sealed class ModManagerOverlay : MonoBehaviour
         }
 
         string title = info.Valid
-            ? $"{info.Name ?? info.Id}  {info.Version}  [{info.Id}]"
-            : $"无效包：{info.FolderName}";
+            ? UiFormat("{0}  版本 {1}  [{2}]", info.Name ?? info.Id, info.Version, info.Id)
+            : UiFormat("无效包：{0}", info.FolderName);
         GUILayout.Label(title, GUILayout.ExpandWidth(true));
-        GUILayout.Label(info.Loaded ? "已加载" : "未加载", GUILayout.Width(58f));
+        GUILayout.Label(Ui(info.Loaded ? "已加载" : "未加载"), GUILayout.Width(82f));
 
         IReadOnlyList<ModSettingDefinition> settings = info.Valid
             ? ModSettingsRegistry.GetDefinitions(info.Id)
             : Array.Empty<ModSettingDefinition>();
-        if (settings.Count > 0 && GUILayout.Button("设置", GUILayout.Width(48f)))
+        if (settings.Count > 0 && GUILayout.Button(Ui("设置"), GUILayout.Width(48f)))
         {
             if (!expandedSettings.Add(info.Id))
                 expandedSettings.Remove(info.Id);
@@ -166,11 +172,11 @@ public sealed class ModManagerOverlay : MonoBehaviour
 
         if (!info.Valid)
         {
-            GUILayout.Label(info.Error ?? "未知错误");
-            if (GUILayout.Button("禁用此目录", GUILayout.Width(110f)))
+            GUILayout.Label(info.Error ?? Ui("未知错误"));
+            if (GUILayout.Button(Ui("禁用此目录"), GUILayout.Width(110f)))
             {
                 manager.SetPackageFolderDisabled(info.FolderPath, true);
-                notice = $"已禁用目录 {info.FolderName}。";
+                SetNoticeFormat("已禁用目录 {0}。", info.FolderName);
                 RefreshList();
             }
         }
@@ -190,13 +196,13 @@ public sealed class ModManagerOverlay : MonoBehaviour
         bool editable = string.Equals(setting.Scope, "client", StringComparison.OrdinalIgnoreCase);
 
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"{label} [{setting.Scope}]", GUILayout.Width(260f));
+        GUILayout.Label(UiFormat("{0} [{1}]", label, GetScopeName(setting.Scope)), GUILayout.Width(260f));
         GUI.enabled = editable;
 
         if (setting.Type == "bool")
         {
             bool value = string.Equals(current, "true", StringComparison.OrdinalIgnoreCase);
-            bool next = GUILayout.Toggle(value, value ? "开启" : "关闭", GUILayout.Width(80f));
+            bool next = GUILayout.Toggle(value, Ui(value ? "已启用" : "已禁用"), GUILayout.Width(80f));
             if (next != value)
                 ApplySetting(modId, setting, next ? "true" : "false");
         }
@@ -212,7 +218,7 @@ public sealed class ModManagerOverlay : MonoBehaviour
             if (!settingEdits.TryGetValue(setting.Id, out string edit))
                 settingEdits[setting.Id] = edit = current;
             settingEdits[setting.Id] = GUILayout.TextField(edit, GUILayout.MinWidth(180f));
-            if (GUILayout.Button("应用", GUILayout.Width(52f)))
+            if (GUILayout.Button(Ui("应用"), GUILayout.Width(52f)))
             {
                 string json = setting.Type is "string" or "color" or "content"
                     ? JsonConvert.SerializeObject(settingEdits[setting.Id])
@@ -233,11 +239,13 @@ public sealed class ModManagerOverlay : MonoBehaviour
         {
             ModSettingsRegistry.SetClientValue(modId, setting.Id, json);
             settingEdits[setting.Id] = ModSettingsRegistry.GetDisplayValue(setting.Id);
-            notice = setting.RestartRequired ? "设置已保存，需重载内容后生效。" : "设置已保存。";
+            SetNotice(setting.RestartRequired
+                ? "设置已保存，需重载内容后生效。"
+                : "设置已保存。");
         }
         catch (Exception ex)
         {
-            notice = $"设置保存失败：{ex.Message}";
+            SetNoticeFormat("设置保存失败：{0}", ex.Message);
         }
     }
 
@@ -266,8 +274,46 @@ public sealed class ModManagerOverlay : MonoBehaviour
         installedMods.RemoveAt(from);
         installedMods.Insert(to, item);
         ModProfileStore.SetLoadOrder(installedMods.Where(info => info.Valid).Select(info => info.Id));
-        notice = "已保存软加载顺序；依赖关系仍具有更高优先级。";
+        SetNotice("已保存软加载顺序；依赖关系仍具有更高优先级。");
     }
+
+    private static string Ui(string sourceText) => FlatWorldLocalizationService.GetUiText(sourceText);
+
+    private static string UiFormat(string sourceTemplate, params object[] arguments) =>
+        FlatWorldLocalizationService.GetUiFormat(sourceTemplate, arguments);
+
+    private static string GetLoadStateName(ModLoadState state) => Ui(state switch
+    {
+        ModLoadState.NotStarted => "尚未启动",
+        ModLoadState.Loading => "加载中",
+        ModLoadState.Ready => "就绪",
+        ModLoadState.Failed => "失败",
+        _ => "未知状态"
+    });
+
+    private static string GetScopeName(string scope) => scope?.ToLowerInvariant() switch
+    {
+        "client" => Ui("客户端"),
+        "world" => Ui("世界"),
+        "server" => Ui("服务器"),
+        _ => scope ?? string.Empty
+    };
+
+    private void SetNotice(string sourceText)
+    {
+        noticeSource = sourceText;
+        noticeArguments = null;
+    }
+
+    private void SetNoticeFormat(string sourceTemplate, params object[] arguments)
+    {
+        noticeSource = sourceTemplate;
+        noticeArguments = arguments;
+    }
+
+    private string GetNoticeText() => noticeArguments == null
+        ? Ui(noticeSource)
+        : UiFormat(noticeSource, noticeArguments);
 
     private static string ShortHash(string value)
     {

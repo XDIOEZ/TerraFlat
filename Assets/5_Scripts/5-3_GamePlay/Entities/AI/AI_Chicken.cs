@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using FlatWorld.WorldModel;
 using MemoryPack;
 using Sirenix.OdinInspector;
@@ -356,11 +357,11 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			? Mathf.Max(0f, Data.GrassSustenanceRemaining)
 			: 0f;
 		string grassText = !enableGrassForaging
-			? "关闭"
+			? FlatWorldLocalizationService.GetUiText("关闭")
 			: Data != null && Data.GrassSustenanceInitialized
 				? $"{grassRemaining:F0}s"
-				: "未初始化";
-		return $" | 饱食度: {hungerRate:P0} | 草食剩余: {grassText}";
+				: FlatWorldLocalizationService.GetUiText("未初始化");
+		return FlatWorldLocalizationService.GetUiFormat(" | 饱食度: {0:P0} | 草食剩余: {1}", hungerRate, grassText);
 	}
 	#endregion
 
@@ -389,7 +390,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		RegisterLocomotionStateNodes(stateMachine, ChickenState.Idle, ChickenState.Move);
 		stateMachine.Register(CreateMovingStateNode(ChickenState.Forage, _ => TickForage()));
-		stateMachine.Register(CreateStoppedStateNode(ChickenState.Eat, TickEat));
+		stateMachine.Register(CreateStateNode(ChickenState.Eat, TickEat));
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.Sleep, TickSleep));
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.Mate, _ => TickMate()));
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.LayEgg, _ => TickLayEgg()));
@@ -405,7 +406,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		if (IsGrassMealDue() && TryAcquireGrassTarget())
 		{
-			MoveTo(GetGrassTargetWorldPosition());
+			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
 			return;
 		}
 
@@ -415,13 +416,14 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			_currentFoodTarget = FindClosestEdibleItem();
 			if (_currentFoodTarget == null) { StopMove(); return; }
 		}
-		MoveTo(_currentFoodTarget.transform.position);
+		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
 	}
 
 	private void TickEat(float deltaTime)
 	{
 		if (IsGrassMealDue() && TryAcquireGrassTarget())
 		{
+			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
 			if (GetGrassTargetDistance() > eatDistance || _stateElapsed < grassEatDuration)
 				return;
 
@@ -434,24 +436,27 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 			if (consumed)
 				ConsumeGrass(grassPosition);
+			StopMove();
 			return;
 		}
 
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) return;
+			if (_currentFoodTarget == null) { StopMove(); return; }
 		}
 
+		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
 		if (DistanceTo(_currentFoodTarget.transform) > eatDistance) return;
 
 		Mod_Food targetFood = _currentFoodTarget.GetComponentInChildren<Mod_Food>();
-		if (targetFood == null) { _currentFoodTarget = null; return; }
+		if (targetFood == null) { _currentFoodTarget = null; StopMove(); return; }
 
 		_food.Eat(targetFood);
 		if (_currentFoodTarget == null || _currentFoodTarget.itemData == null || _currentFoodTarget.itemData.Stack.Amount <= 0)
 		{
 			_currentFoodTarget = null;
+			StopMove();
 		}
 	}
 

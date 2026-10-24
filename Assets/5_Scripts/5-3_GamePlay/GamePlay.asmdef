@@ -2,6 +2,7 @@
     "name": "GamePlay",
     "rootNamespace": "",
     "references": [
+        "FlatWorld.ContentCache",
         "GUID:b428d770df5b16d49a9a8fa3176ef68a",
         "GUID:57a6d82589ae03c4cabdc058f719f231",
         "GUID:6b2403a08572f7c49b7802a26e472b30",

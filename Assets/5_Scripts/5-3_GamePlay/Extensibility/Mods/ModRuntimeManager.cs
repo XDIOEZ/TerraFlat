@@ -282,7 +282,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
             ValidateNoReparsePoints(ModsRootPath, manifestPath);
             string manifestJson = ReadLimitedText(manifestPath, MaximumJsonCharacters);
-            ModManifest manifest = JsonConvert.DeserializeObject<ModManifest>(manifestJson)
+            ModManifest manifest = JsonConfigurationCache.Deserialize<ModManifest>(manifestJson)
                 ?? throw new InvalidDataException($"MOD 清单为空：{manifestPath}");
 
             if (!string.IsNullOrWhiteSpace(manifest.Id) && !profile.IsEnabled(manifest.Id))
@@ -416,7 +416,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         {
             string fullPath = ModPathUtility.ResolvePackagePath(package.RootPath, definitionFile, true);
             string json = ReadLimitedText(fullPath, MaximumJsonCharacters);
-            JObject document = JObject.Parse(json);
+            JObject document = JsonConfigurationCache.ParseObject(json);
             foreach (JToken token in document["assets"] as JArray ?? new JArray())
             {
                 ModAssetDefinition definition = token.ToObject<ModAssetDefinition>()
@@ -571,7 +571,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         foreach (string patchFile in package.Manifest.PatchFiles ?? Enumerable.Empty<string>())
         {
             string fullPath = ModPathUtility.ResolvePackagePath(package.RootPath, patchFile, true);
-            ModPatchDocument document = JsonConvert.DeserializeObject<ModPatchDocument>(ReadLimitedText(fullPath, MaximumJsonCharacters))
+            ModPatchDocument document = JsonConfigurationCache.Deserialize<ModPatchDocument>(ReadLimitedText(fullPath, MaximumJsonCharacters))
                 ?? throw new InvalidDataException($"MOD {package.Manifest.Id} Patch 文件为空：{patchFile}");
             pendingPatchDocuments.Add(new PendingPatchDocument(package, patchFile, document));
         }
@@ -579,7 +579,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         foreach (string localizationFile in package.Manifest.LocalizationFiles ?? Enumerable.Empty<string>())
         {
             string fullPath = ModPathUtility.ResolvePackagePath(package.RootPath, localizationFile, true);
-            ModLocalizationDocument document = JsonConvert.DeserializeObject<ModLocalizationDocument>(ReadLimitedText(fullPath, MaximumJsonCharacters))
+            ModLocalizationDocument document = JsonConfigurationCache.Deserialize<ModLocalizationDocument>(ReadLimitedText(fullPath, MaximumJsonCharacters))
                 ?? throw new InvalidDataException($"MOD {package.Manifest.Id} 本地化文件为空：{localizationFile}");
             ModLocalizationRegistry.Register(package.Manifest.Id, document);
         }
@@ -587,7 +587,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(package.Manifest.SettingsFile))
         {
             string fullPath = ModPathUtility.ResolvePackagePath(package.RootPath, package.Manifest.SettingsFile, true);
-            ModSettingsDocument document = JsonConvert.DeserializeObject<ModSettingsDocument>(ReadLimitedText(fullPath, MaximumJsonCharacters))
+            ModSettingsDocument document = JsonConfigurationCache.Deserialize<ModSettingsDocument>(ReadLimitedText(fullPath, MaximumJsonCharacters))
                 ?? throw new InvalidDataException($"MOD {package.Manifest.Id} 设置文件为空：{package.Manifest.SettingsFile}");
             ModSettingsRegistry.Register(package.Manifest.Id, document);
         }
@@ -1712,7 +1712,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
                     throw new FileNotFoundException("缺少 manifest.json");
                 ValidateNoReparsePoints(ModsRootPath, manifestPath);
                 string manifestJson = ReadLimitedText(manifestPath, MaximumJsonCharacters);
-                ModManifest manifest = JsonConvert.DeserializeObject<ModManifest>(manifestJson)
+                ModManifest manifest = JsonConfigurationCache.Deserialize<ModManifest>(manifestJson)
                     ?? throw new InvalidDataException("manifest.json 为空");
                 ValidateManifest(manifest, directory);
                 string actualHash = ComputePackageHash(directory, manifestJson);
@@ -2059,7 +2059,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     private static string ComputePackageHash(string packageRoot, string manifestJson)
     {
-        JObject canonicalManifest = JObject.Parse(manifestJson);
+        JObject canonicalManifest = JsonConfigurationCache.ParseObject(manifestJson);
         ModManagedDefinition managed = canonicalManifest["managed"]?.ToObject<ModManagedDefinition>();
         ModManagedAssemblyStore.ValidateDefinition(packageRoot, managed);
         var allowedAssemblies = new HashSet<string>(ModManagedAssemblyStore.Paths(managed)

@@ -5,10 +5,10 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// 新版区块的静态光照遮挡表现层。
+/// 地表区块的静态光照遮挡表现层；洞穴不再生成墙体视野阴影。
 ///
-/// 洞穴岩壁和其它静态阻挡地块仍由 ChunkTerrainData 负责，
-/// 本组件只在主线程把 BlockingTileId 合并成少量矩形 ShadowCaster2D。
+/// 静态阻挡地块仍由 ChunkTerrainData 负责，
+/// 地表由本组件在主线程把 BlockingTileId 合并成少量矩形 ShadowCaster2D。
 /// 阴影体使用固定的单位方形网格，再通过 Transform 缩放到墙体矩形，
 /// 这样区块重绑和墙体编辑时可以复用组件，避免每个墙格创建一个对象。
 /// </summary>
@@ -35,6 +35,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     private int pendingTrimTarget = -1;
     private float pendingTrimAt = float.PositiveInfinity;
     private bool rebuildRequested;
+    private bool caveOcclusionSuppressed;
     private bool warningLogged;
     private bool shadowVisibilityDirty = true;
     private bool worldBoundsValid;
@@ -73,15 +74,10 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
 
     #region Unity 生命周期与绑定
 
-    private void Awake()
-    {
-        EnsureCompositeShadowGroup();
-    }
-
     private void OnEnable()
     {
         shadowVisibilityDirty = true;
-        if (boundChunk != null)
+        if (boundChunk != null && !caveOcclusionSuppressed)
             ChunkLightOccluderVisibilityScheduler.Register(this);
     }
 
@@ -140,6 +136,16 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         rebuildRequested = false;
         CancelPendingTrim();
         boundChunk = chunk;
+        caveOcclusionSuppressed = IsCaveDimension(chunk.Address.DimensionId);
+        if (caveOcclusionSuppressed)
+        {
+            // 洞穴不再使用墙体阴影充当视野遮罩，保留地形、碰撞和正常光照。
+            activeOccluderCount = 0;
+            enabledOccluderCount = 0;
+            mergedRectangles.Clear();
+            RefreshTrimSchedule(0);
+            return;
+        }
         boundChunk.Terrain.Changed += HandleTerrainChanged;
         Rebuild(boundChunk.Terrain);
         if (isActiveAndEnabled)
@@ -166,6 +172,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         shadowVisibilityDirty = true;
         warningLogged = false;
         boundChunk = null;
+        caveOcclusionSuppressed = false;
         RefreshTrimSchedule(activeOccluderCount);
     }
 
@@ -180,6 +187,15 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         }
 
         rebuildRequested = true;
+    }
+
+    private static bool IsCaveDimension(string dimensionId)
+    {
+        if (string.Equals(dimensionId, global::WorldAddress.CaveDimensionId, StringComparison.OrdinalIgnoreCase))
+            return true;
+        DimensionManager manager = DimensionManager.ExistingInstance;
+        return manager != null && manager.TryGetDefinition(dimensionId, out DimensionDefinition definition) &&
+               definition.GenerationMode == DimensionGenerationMode.Cave;
     }
 
     /// <summary>View 从对象池取出时取消旧裁剪计划，避免绑定途中误删可复用槽。</summary>
@@ -329,7 +345,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     /// <summary>灯、墙和区块变换都未改变时，保留上次筛选结果。</summary>
     public void RefreshShadowVisibility(IReadOnlyList<BoundingSphere> lights, bool keepAll, bool lightsChanged)
     {
-        if (boundChunk == null || !isActiveAndEnabled)
+        if (boundChunk == null || caveOcclusionSuppressed || !isActiveAndEnabled)
             return;
 
         Matrix4x4 currentMatrix = transform.localToWorldMatrix;

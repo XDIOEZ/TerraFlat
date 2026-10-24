@@ -79,9 +79,25 @@ test.runtime("networking", "bots_teleport", {}, function(data)
     assert(near(data.witnessBefore.x, data.witnessAfter.x) and near(data.witnessBefore.y, data.witnessAfter.y),
         "传送影响了另一名玩家")
     assert_position(data.afterMove, data.nextX, data.nextY, "传送后的普通移动")
+    local visual = data.visualOwnership
+    assert(visual.ownedMoving > .1 and visual.ownedIdle < .001,
+        "传送的远端快照接管了本机动画，导致走路不摇摆或站立仍摇摆")
+    assert(visual.remoteMoving > .1 and visual.remoteIdle < .001,
+        "远端角色没有按正式网络快照播放或停止摇摆")
+    local respawn = data.respawnReady
+    assert(respawn.deadLocked and respawn.began and respawn.committed and respawn.authorityWasStale,
+        "重生夹具没有经过死亡锁定、新世界提交和权威刷新前的就绪通知")
+    assert(not respawn.pendingAfterReady and respawn.revisionAfterReady == respawn.expectedRevision and respawn.aliveUnlocked,
+        "同帧重生就绪被旧代际吞掉，或生命、移动与输入没有恢复")
+    assert(respawn.beganAgain and respawn.committedAgain and respawn.wrongWorldHeld and respawn.missingObserverHeld
+        and respawn.staleRealmHeld and respawn.futureRealmHeld,
+        "错误世界、缺失观察者、旧代际或未来代际的就绪通知解除了迁移限制")
+    assert(not respawn.pendingAfterRepeatedReady and respawn.rollbackBegan and not respawn.pendingAfterRollback,
+        "重复就绪或迁移回滚后残留操作限制")
+    assert_position(data.afterRespawnTeleport, data.respawnTeleportX, data.respawnTeleportY, "重生后的 GM 传送")
     local cleanup = data.cleanup
     assert(not cleanup.serverActive and not cleanup.clientActive and cleanup.connections == 0 and cleanup.spawned == 0,
         "传送夹具遗留联机对象")
     assert(cleanup.localUnchanged and cleanup.sceneUnchanged and cleanup.transportRestored and cleanup.profilesRestored,
         "传送夹具没有恢复原现场")
-end, "GM 地表传送：正式请求、拒绝、独立玩家和新落点续走")
+end, "GM 地表传送：正式请求、动画归属、重生就绪和新落点续走")

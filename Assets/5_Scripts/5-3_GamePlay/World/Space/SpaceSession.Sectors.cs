@@ -155,7 +155,8 @@ namespace FlatWorld.Spaceflight
         public bool TryGetNetworkObserver(string profileId, out SpaceNetworkObserver observer)
         {
             observer = default;
-            SpacePassengerState passenger = State?.Passengers.Find(value => value.ProfileId == profileId);
+            // 观察者热查询复用乘员无分配查找，不为每次查询创建 Predicate。
+            SpacePassengerState passenger = FindPassenger(profileId);
             if (passenger == null) return false;
             observer.RealmRevision = passenger.RealmRevision;
             ShipState ship = passenger.Supported ? GetShip(passenger.ShipId) : null;

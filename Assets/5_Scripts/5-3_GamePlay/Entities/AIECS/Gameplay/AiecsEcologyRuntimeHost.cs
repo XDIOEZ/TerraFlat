@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Navigation;
@@ -915,7 +915,7 @@ namespace FlatWorld.AIECS.Gameplay
             }
             _aliveBySpecies.TryGetValue(speciesId, out int speciesCount);
             _aliveBySpecies[speciesId] = speciesCount + delta;
-            if (config != null && !config.UnboundedDailyGrowth && !config.IgnorePopulationLimits)
+            if (config != null && !config.IgnorePopulationLimits)
                 _populationLimitedCount += delta;
         }
 

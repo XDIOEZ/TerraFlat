@@ -34,6 +34,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     private static readonly PerformanceDebugPoint HeldReferenceChangedDebug = new("FlatWorld.Hotbar.Decision.ReplaceDataReference");
     private static readonly PerformanceDebugPoint HeldSameReferenceDebug = new("FlatWorld.Hotbar.Decision.ReuseDataReference");
     private static readonly PerformanceDebugPoint HeldEmptySlotDebug = new("FlatWorld.Hotbar.Decision.EmptySlot");
+    private static readonly PerformanceDebugPoint SavedInventoryEncodeDebug = new("FlatWorld.Hotbar.SaveInventory.Encode");
 #endregion
 
 #region 基础参数
@@ -41,6 +42,64 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
+#endregion
+
+#region 快捷栏保存缓存
+    private readonly HashSet<ItemData> saveFingerprintVisiting = new();
+    private Inventory_Data savedInventorySource;
+    private Ex_ModData_MemoryPackable savedModuleSource;
+    private ulong savedInventorySignature, savedPayloadSignature;
+    private uint savedOwnerGeneration, savedModuleGeneration;
+    private int savedStateVersion;
+    private bool hasSavedInventorySignature;
+
+    private void ResetSavedInventoryCache()
+    {
+        hasSavedInventorySignature = false;
+        savedInventorySource = null;
+        savedModuleSource = null;
+        saveFingerprintVisiting.Clear();
+    }
+
+    private void SaveInventoryState()
+    {
+        Inventory_Data source = RuntimeInventory?.Data;
+        Ex_ModData_MemoryPackable module = ModSaveData;
+        uint ownerGeneration = item?.RuntimeGeneration ?? 0;
+        uint moduleGeneration = RuntimeGeneration;
+        ulong codecRevision = ModuleInstanceStateCodecs.Revision;
+        saveFingerprintVisiting.Clear();
+        bool tracked = ItemRuntimeStateFingerprint.TryCalculateInventory(source, saveFingerprintVisiting, out ulong signature);
+        if (tracked && hasSavedInventorySignature && ReferenceEquals(source, savedInventorySource) &&
+            ReferenceEquals(module, savedModuleSource) && savedStateVersion == InventoryHotBarSaveState.CurrentVersion &&
+            savedOwnerGeneration == ownerGeneration && savedModuleGeneration == moduleGeneration &&
+            signature == savedInventorySignature && ItemRuntimeStateFingerprint.CalculateBinaryPayload(module.BitData) == savedPayloadSignature)
+            return;
+
+        // 每次先保存手持模块；这里只复用完全未变化且未被外部改写的库存载荷。
+        ResetSavedInventoryCache();
+        using var encodeDebug = SavedInventoryEncodeDebug.Measure();
+        byte[] payload = MemoryPackSerializer.Serialize(new InventoryHotBarSaveState
+        {
+            Version = InventoryHotBarSaveState.CurrentVersion,
+            Inventory = InventoryInstanceSnapshot.Capture(source)
+        });
+        ulong payloadSignature = ItemRuntimeStateFingerprint.CalculateBinaryPayload(payload);
+        module.BitData = payload;
+        if (!tracked || !ReferenceEquals(source, RuntimeInventory?.Data) || !ReferenceEquals(module, ModSaveData) ||
+            ownerGeneration != (item?.RuntimeGeneration ?? 0) ||
+            moduleGeneration != RuntimeGeneration || codecRevision != ModuleInstanceStateCodecs.Revision ||
+            ItemRuntimeStateFingerprint.CalculateBinaryPayload(module.BitData) != payloadSignature)
+            return;
+        savedInventorySource = source;
+        savedModuleSource = module;
+        savedInventorySignature = signature;
+        savedPayloadSignature = payloadSignature;
+        savedOwnerGeneration = ownerGeneration;
+        savedModuleGeneration = moduleGeneration;
+        savedStateVersion = InventoryHotBarSaveState.CurrentVersion;
+        hasSavedInventorySignature = true;
+    }
 #endregion
 
 #region 模组参数
@@ -172,7 +231,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     [Header("快捷栏设置")]
     [SerializeField]
     public Transform spawnLocation;
-    public int HotBarMaxVolume = 9;
+    public int HotBarMaxVolume = 10;
 
     [Header("UI")]
     public GameObject SelectBoxPrefab;
@@ -188,6 +247,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private Mod_FocusPoint faceMouse;
     private Mod_TurnBack turnBody;
+    private Mod_AnimatorController heldPresentationSource;
     private ActorRenderEffectController actorRenderEffects;
     private Inventory_Data observedHeldInventory;
     private bool heldItemSyncPending;
@@ -229,6 +289,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     protected override void OnLoad()
     {
+        ResetSavedInventoryCache();
         runtimeUnloading = false;
         heldItemSyncPending = true;
         HeldDirtyLoadDebug.AddWork(1);
@@ -268,11 +329,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         // 手持模块先提交实时进度，玩家快照不能早于食用、容器和武器状态的保存。
         if (CurentSelectItem != null && !CurentSelectItem.DestructionHandled)
             CurentSelectItem.ModuleSave();
-        ModSaveData.WriteData(new InventoryHotBarSaveState
-        {
-            Version = InventoryHotBarSaveState.CurrentVersion,
-            Inventory = InventoryInstanceSnapshot.Capture(RuntimeInventory?.Data)
-        });
+        SaveInventoryState();
 
         if (item?.itemData != null && !string.IsNullOrEmpty(_Data.Name))
             item.itemData.ModuleDataDic[_Data.Name] = ModSaveData;
@@ -281,6 +338,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     /// <summary>卸载和对象回池共用完整清理，不能等到 OnDestroy 才解除手持物与输入。</summary>
     protected override void OnUnload()
     {
+        ResetSavedInventoryCache();
         if (runtimeUnloading) return;
         runtimeUnloading = true;
         heldItemSyncPending = false;
@@ -301,6 +359,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         }
         if (turnBody != null && spawnLocation != null)
             turnBody.controlledTransforms_Position.Remove(spawnLocation);
+        BindHeldItemPresentation(null);
         faceMouse = null;
         turnBody = null;
         actorRenderEffects = null;
@@ -437,6 +496,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnDestroy()
     {
+        BindHeldItemPresentation(null);
         Unload();
     }
 
@@ -791,6 +851,16 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
         }
 
+        // 快捷装备独占这次按下，拒绝穿戴时也不再触发物品普通使用。
+        if (heldItem.itemMods.GetMod_ByID<Mod_EquipmentStore>(ModText.Equipment_Store) != null &&
+            _inputController?.TryConsumeShiftRightClick() == true)
+        {
+            Mod_Equipment equipment = item.itemMods.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module);
+            if (equipment?.TryEquipFromSlot(RuntimeInventory, CurrentIndex) == true)
+                SyncCurrentHeldItemWithSlot();
+            return;
+        }
+
         // 已有独立事务的建造和容器界面优先拥有这次输入，避免再发 Act 双重消费。
         ILocalItemUseRequestHandler useHandler = null;
         foreach (Module module in heldItem.itemMods.Mods.Values)
@@ -1069,11 +1139,38 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         // 手持物位于快捷栏节点而非角色动画节点，需要显式加入角色水体/受击等渲染效果。
         actorRenderEffects?.RegisterExternalRenderers(itemInstance.transform);
 
-        faceMouse?.AddRotationTarget(tf);
+        faceMouse?.AddRotationTarget(tf, updateAfterPresentation: true);
+        UpdateHeldItemPosition();
 
         HeldItemChanged?.Invoke(data);
 
         // 手持物的 Y 转身与 Z 瞄准统一由 FocusPoint 合成，不能再交给 TurnBody 重复写旋转。
+    }
+
+#endregion
+
+#region 手持位置表现
+
+    internal void BindHeldItemPresentation(Mod_AnimatorController source)
+    {
+        if (heldPresentationSource == source) return;
+        if (heldPresentationSource != null)
+            heldPresentationSource.PresentationUpdated -= UpdateHeldItemPosition;
+        heldPresentationSource = source;
+        if (heldPresentationSource != null)
+            heldPresentationSource.PresentationUpdated += UpdateHeldItemPosition;
+        UpdateHeldItemPosition();
+    }
+
+    private void UpdateHeldItemPosition()
+    {
+        if (runtimeUnloading || CurentSelectItem == null || spawnLocation == null) return;
+        var positionControls = CurentSelectItem.itemMods.GetCapabilities<IHeldItemPositionControl>();
+        for (int i = 0; i < positionControls.Count; i++)
+            if (positionControls[i].ControlsHeldItemPosition) return;
+        // 每次从未抖动的挂点重新取位置，避免偏移累积，也不改武器动画与瞄准旋转。
+        CurentSelectItem.transform.position = heldPresentationSource != null
+            ? heldPresentationSource.GetPresentedAttachmentPosition(spawnLocation) : spawnLocation.position;
     }
 
 #endregion
@@ -1170,6 +1267,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
         item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
+        BindHeldItemPresentation(item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver));
         actorRenderEffects = item.GetComponentInChildren<ActorRenderEffectController>(true);
 
         Transform positionTransform = spawnLocation != null ? spawnLocation : item.transform;

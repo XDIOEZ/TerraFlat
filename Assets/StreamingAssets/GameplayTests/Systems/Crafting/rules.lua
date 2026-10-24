@@ -1,3 +1,89 @@
+-- 灯泡两条正式配方各自完成事务，逐种缺料和输出满时保留库存。
+test.system("crafting", "handmade_catalog", {
+    package = "crafting/electrical.json", definitionIds = {"Thread", "CarbonFilament", "Ingot_Tungsten"}
+}, function(data)
+    local enabled = false
+    for _, path in ipairs(data.enabledPackages) do if path == "crafting/electrical.json" then enabled = true end end
+    assert(enabled, "电气配方包未启用")
+    local expected = { ["core:electrical_ElectricLightBulb"] = "CarbonFilament",
+        ["core:electrical_ElectricLightBulb_Tungsten"] = "Ingot_Tungsten" }
+    local count = 0
+    local function sameSlots(before, after)
+        assert(#before == #after, "灯泡拒绝制作改变了槽数")
+        for i, slot in ipairs(before) do
+            local other = after[i]
+            assert(slot.id == other.id and slot.guid == other.guid and slot.amount == other.amount
+                and slot.durability == other.durability and slot.maxDurability == other.maxDurability,
+                "灯泡拒绝制作仍改变库存")
+        end
+    end
+    for _, recipe in ipairs(data.recipes) do
+        if recipe.expectedOutputs[1].id == "ElectricLightBulb_Summoner" then
+            count = count + 1
+            local filament = expected[recipe.id]
+            assert(filament and recipe.station == "workbench" and #recipe.warnings == 0, "灯泡配方身份、工作台或物品引用错误")
+            assert(#recipe.ingredients == 4 and #recipe.expectedOutputs == 1 and recipe.expectedOutputs[1].amount == 1,
+                "灯泡应保留三种基础材料并额外消耗一种灯丝，产出一个灯泡")
+            local materials = {}
+            for _, input in ipairs(recipe.ingredients) do materials[input.id] = input.amount end
+            assert(materials.Glass == 1 and materials.CopperPlate == 1 and materials.Ingot_WroughtIron == 1
+                and materials[filament] == 1, "灯泡共同材料或灯丝扣量错误")
+            assert(not (materials.CarbonFilament and materials.Ingot_Tungsten), "灯泡错误同时要求碳丝和钨")
+            local normal = recipe.normal
+            assert(normal.matched and normal.prepared and normal.committed, "灯泡替代配方不能独立制作")
+            for _, slot in ipairs(normal.inputAfter) do assert(slot.amount == 0, "灯泡没有精确扣除材料") end
+            assert(normal.outputAfter[1].id == "ElectricLightBulb_Summoner" and normal.outputAfter[1].amount == 1
+                and normal.outputAfter[2].amount == 0, "灯泡产物或数量错误")
+            assert(#recipe.missingMaterials == 4, "未逐种检查灯泡缺料")
+            for _, rejected in ipairs(recipe.missingMaterials) do
+                assert(rejected.removedOne and not rejected.matched and not rejected.prepared and not rejected.committed,
+                    "缺少灯丝或共同材料仍能制作灯泡")
+                sameSlots(rejected.inputBefore, rejected.inputAfter)
+                sameSlots(rejected.outputBefore, rejected.outputAfter)
+            end
+            assert(recipe.full.matched and not recipe.full.prepared and not recipe.full.committed, "输出满仍提交灯泡制作")
+            sameSlots(recipe.full.inputBefore, recipe.full.inputAfter)
+            sameSlots(recipe.full.outputBefore, recipe.full.outputAfter)
+            expected[recipe.id] = nil
+        end
+    end
+    assert(count == 2 and next(expected) == nil, "灯泡必须恰好有碳丝、钨两种配方，不能保留无灯丝配方")
+    local thread = data.definitions.Thread
+    local carbon = data.definitions.CarbonFilament
+    assert(carbon.id == "CarbonFilament" and carbon.gameName == "碳丝" and carbon.weight > 0
+        and carbon.volume > 0 and carbon.stackable, "碳丝未作为可堆叠材料正式注册")
+    local transition = thread.matter.transitions[1]
+    assert(transition.minTemperature == 500 and transition.outputItemId == "CarbonFilament"
+        and transition.outputAmountMultiplier == 1, "细线炭化获取碳丝的定义错误")
+    assert(data.definitions.Ingot_Tungsten.id == "Ingot_Tungsten", "钨配方未复用正式钨锭")
+end, "灯泡：碳丝与钨替代配方、逐种缺料、满输出和碳丝来源")
+
+-- 机械材料走正式匹配、原子事务、实例封包和建筑品质转移。
+test.system("crafting", "mechanical_materials", {}, function(data)
+    assert(#data.recipes == 8, "锻锤与锯木机的四种板材/钉子组合不完整")
+    local counts = {}
+    for _, recipe in ipairs(data.recipes) do
+        counts[recipe.output] = (counts[recipe.output] or 0) + 1
+        local materials = {}
+        for _, input in ipairs(recipe.inputs) do materials[input.id] = input.amount end
+        assert(#recipe.inputs == 6 and (materials.IronPlate == 3 or materials.SteelPlate == 3)
+            and (materials.Nail == 4 or materials.SteelNail == 4), "机械板材或钉子数量错误")
+        local efficiency = materials.SteelPlate == 3 and materials.SteelNail == 4 and 1.2 or 1
+        assert(recipe.matched and not recipe.withoutCabinet and not recipe.missing,
+            "真实第六格未参加匹配，或缺工具柜/缺一枚钉子仍能制作")
+        assert(not recipe.fullPrepared and recipe.afterFull == 4, "输出满仍扣除了柜内钉子")
+        assert(recipe.prepared and recipe.committed and recipe.afterCraft == 0 and recipe.sameSlot,
+            "共享库存没有真实扣量，或两个工作台看见的是物品副本")
+        assert(recipe.afterRollback == 4 and recipe.detachedSlots == 5, "回滚或断开连接丢失柜内物品")
+        assert(recipe.staleRejected and recipe.replacementAmount == 4, "换成同槽数的新工具柜后仍提交旧计划")
+        assert(math.abs(recipe.efficiency - efficiency) < .00001
+            and math.abs(recipe.halfReverse - efficiency / 2) < .00001 and recipe.stopped == 0,
+            "全钢效率加成、反转半速或停转规则错误")
+        assert(recipe.durabilityMultiplier == 1, "加工效率错误改变了机器耐久")
+    end
+    assert(counts.MechanicalHammer_Summoner == 4 and counts.Sawmill_Summoner == 4, "配方组合归属错误")
+end, "机械材质：全钢加速20%、真实共享扣料、缺料/满输出/回滚与品质持久化")
+
 local cases = {
     {name = "Tag先列不抢Exact材料", args = {}, matched = true, total = 2},
     {name = "Exact先列同样可行", args = {reverse = true}, matched = true, total = 2},
@@ -175,3 +261,283 @@ test.system("crafting", "reinforcement_editor_roundtrip", {}, function(data)
     assert(data.temperature == 200 and data.excludeTag == "AdhesiveReinforced", "编辑保存丢失温度或重复强化限制")
     assert(data.copyInputTag == "Tool" and data.reinforce and data.outputAmount == 1, "编辑保存破坏实例强化输出")
 end, "内容工坊：强化配方字段往返")
+
+-- 木盾读取正式配方，固定检查木板、绳子与三钉一次加固。
+for _, row in ipairs({
+    {name = "五木板五绳子", args = {}, success = true, planks = 0, ropes = 0},
+    {name = "只扣配方所需材料", args = {planks = 6, ropes = 7}, success = true, planks = 1, ropes = 2},
+    {name = "少一块木板拒绝", args = {planks = 4}, success = false, planks = 4, ropes = 5},
+    {name = "少一根绳子拒绝", args = {ropes = 4}, success = false, planks = 5, ropes = 4},
+    {name = "木条不能代替木板", args = {plankId = "Stick_Wood"}, success = false, planks = 5, ropes = 5},
+    {name = "藤蔓不能代替绳子", args = {ropeId = "Twine"}, success = false, planks = 5, ropes = 5},
+    {name = "满输出保留全部材料", args = {full = true}, success = false, planks = 5, ropes = 5}
+}) do
+    test.system("crafting", "wood_shield_recipe", row.args, function(data)
+        assert(#data.warnings == 0 and data.success == row.success, "木盾正式配方产出或材料条件错误")
+        assert(data.planks == row.planks and data.ropes == row.ropes, "木盾没有恰好扣除五木板五绳子，或失败仍扣料")
+        if row.success then
+            assert(data.outputId == "Shield_Wood" and data.outputAmount == 1, "木盾配方产物身份或数量错误")
+        elseif row.args.full then
+            assert(data.outputStillBlocked, "木盾制作失败覆盖输出阻塞物")
+        else
+            assert(not data.matched and data.outputAmount == 0, "木盾材料不足或错误仍出现候选或产物")
+        end
+    end, "木盾合成：" .. row.name)
+end
+
+for _, row in ipairs({
+    {name = "满耐久同步提高", args = {durability = 100}, maximum = 150, durability = 150, quality = 1.5},
+    {name = "破损比例保持", args = {}, maximum = 150, durability = 60, quality = 1.5},
+    {name = "工作台加固", args = {workbench = true}, maximum = 150, durability = 60, quality = 1.5},
+    {name = "保留已有胶黏品质和标记", args = {quality = 1.3, durability = 75, adhesive = true}, maximum = 195, durability = 112.5, quality = 1.95}
+}) do
+    test.system("crafting", "wood_shield_reinforcement", row.args, function(data)
+        assert(#data.warnings == 0 and data.matched and data.preview and data.success, "木盾合法钉子加固失败")
+        assert(data.previewUnchanged, "加固预览提前修改盾牌、标签或钉子")
+        assert(data.shieldRemaining == 0 and data.nailsRemaining == 3 and data.outputAmount == 1 and data.outputId == "Shield_Wood",
+            "钉子加固未恰好消耗三钉和一盾，或复制出额外盾牌")
+        assert(math.abs(data.maximum - row.maximum) < 0.001 and math.abs(data.durability - row.durability) < 0.001
+            and math.abs(data.quality - row.quality) < 0.001, "木盾加固没有同步增加50%耐久或覆盖已有品质")
+        assert(data.identityPreserved and data.tagsPreserved and data.repeatRejected, "加固丢失原盾状态、标签或允许重复加固")
+        assert(math.abs(data.restoredMaximum - row.maximum) < 0.001 and math.abs(data.restoredDurability - row.durability) < 0.001,
+            "连续恢复快照后木盾加固倍率叠乘或耐久改变")
+    end, "木盾加固：" .. row.name)
+end
+
+for _, row in ipairs({
+    {name = "两钉不足", args = {nails = 2}},
+    {name = "已有钉子加固标记", args = {reinforced = true}},
+    {name = "其他盾牌不能套用", args = {otherShield = true}},
+    {name = "异常多件盾牌不复制", args = {stacked = true}},
+    {name = "满输出不扣材料", args = {full = true}}
+}) do
+    test.system("crafting", "wood_shield_reinforcement", row.args, function(data)
+        assert(not data.success and data.previewUnchanged and data.outputAmount == 0, "非法木盾加固成功或预览修改原物")
+        assert(data.shieldRemaining == (row.args.stacked and 2 or 1) and data.nailsRemaining == (row.args.nails or 6),
+            "木盾加固拒绝仍消耗盾牌或钉子")
+        if row.args.full then assert(data.outputStillBlocked, "满输出加固失败覆盖原物") end
+    end, "木盾加固边界：" .. row.name)
+end
+
+test.system("crafting", "reinforcement_editor_roundtrip", {shield = true}, function(data)
+    assert(data.excludeTag == "NailReinforced" and data.copyInputItemId == "Shield_Wood" and data.addTag == "NailReinforced",
+        "内容工坊保存丢失木盾来源或一次加固标记")
+    assert(data.durabilityMultiplier == 1.5 and data.outputAmount == 1 and not data.reinforce,
+        "内容工坊保存改变钉子加固倍率或误用胶黏规则")
+end, "内容工坊：木盾三钉加固字段往返")
+
+test.system("crafting", "metal_tools_catalog", {}, function(data)
+    local expected = {Needle_Bone = 10, Needle_Copper = 100, Needle_Iron = 200,
+        CopperAnvil = 500, CopperAnvil_Summoner = 500, IronAnvil = 1000, IronAnvil_Summoner = 1000,
+        CopperHammer = 100, IronHammer = 200, SteelHammer = 400}
+    for _, item in ipairs(data.items) do
+        assert(item.durability == expected[item.id] and item.maxDurability == expected[item.id], "针、锤子或砧耐久配置错误")
+        if item.id:find("Anvil") then
+            local config = item.modules["手动加工模块"].parameters
+            assert(config.DurabilityPerProduct == 1 and config.BreakRecoveryFraction == .5, "砧未配置逐件磨损及一半返料")
+        elseif item.id:find("Hammer") then
+            local tags = {}
+            for _, tag in ipairs(item.tags) do tags[tag] = true end
+            local tool = item.modules.resourceTool.parameters
+            assert(tags.Tool and tags.Metal and tool.toolKind == 4,
+                "金属锤未组合金属标签和通用锤子能力")
+            assert(not item.stackable and item.weight > 0 and item.volume > 0
+                and item.visual.spriteAddress:find("Tools/MetalHammers/", 1, true), "金属锤物品或正式素材定义缺失")
+        else
+            local sewing = false
+            for _, tag in ipairs(item.tags) do if tag == "SewingNeedle" then sewing = true end end
+            assert(sewing, "缝纫针缺少通用能力标签")
+        end
+    end
+    assert(#data.forging == 8, "锻造丢失原有六种金属板或新增两种针")
+    local needles = 0
+    for _, recipe in ipairs(data.forging) do
+        assert(recipe.station == "hand_forge" and recipe.seconds == 12 and recipe.inputAmount == 1, "锻造站点或工作量改变")
+        if recipe.output == "Needle_Copper" or recipe.output == "Needle_Iron" then
+            needles = needles + 1
+            assert(recipe.outputAmount == 10, "一锭应制作十根针")
+            assert(recipe.input == (recipe.output == "Needle_Copper" and "Ingot_Copper" or "Ingot_WroughtIron"), "针使用了错误金属锭")
+        else assert(recipe.outputAmount == 1, "金属板产量改变") end
+    end
+    assert(needles == 2 and #data.salvage == 2, "针或砧配方缺失")
+    for _, row in ipairs(data.salvage) do
+        local metal = row.output == "CopperAnvil_Summoner" and "Ingot_Copper" or "Ingot_WroughtIron"
+        assert(row.materials[metal] == 5, "砧用坏应固定返五锭")
+    end
+end, "铜铁针、金属锤与砧：正式目录和固定一半返料")
+-- 首把金属锤由普通材料制成，配方不得要求先有金属锤或铁砧。
+test.system("crafting", "handmade_catalog", {package = "crafting/metal_hammers.json"}, function(data)
+    local expected = {CopperHammer = {metal = "Ingot_Copper", durability = 100},
+        IronHammer = {metal = "Ingot_WroughtIron", durability = 200},
+        SteelHammer = {metal = "Ingot_Steel", durability = 400}}
+    local enabled = false
+    for _, path in ipairs(data.enabledPackages) do
+        if path == "crafting/metal_hammers.json" then enabled = true end
+    end
+    assert(enabled and #data.recipes == 3, "三种金属锤配方包未完整启用")
+    local function unchanged(before, after)
+        assert(#before == #after, "金属锤制作拒绝改变了槽数")
+        for i, slot in ipairs(before) do
+            local other = after[i]
+            assert(slot.id == other.id and slot.guid == other.guid and slot.amount == other.amount
+                and slot.durability == other.durability and slot.maxDurability == other.maxDurability,
+                "金属锤拒绝制作后仍改变库存")
+        end
+    end
+    for _, recipe in ipairs(data.recipes) do
+        assert(#recipe.expectedOutputs == 1 and recipe.expectedOutputs[1].amount == 1, "金属锤产量错误")
+        local output = recipe.expectedOutputs[1].id
+        local wanted = expected[output]
+        assert(wanted and #recipe.warnings == 0 and recipe.station == "" and #recipe.missingTools == 0,
+            "金属锤存在未知物品引用或要求先有工作站、锤子")
+        assert(#recipe.ingredients == 3 and recipe.ingredients[1].id == wanted.metal
+            and recipe.ingredients[1].amount == 3 and recipe.ingredients[2].id == "Stick_Wood"
+            and recipe.ingredients[2].amount == 1 and recipe.ingredients[3].amount == 2,
+            "金属锤未使用三锭、一木棍和两份绳类")
+        local normal = recipe.normal
+        assert(normal.matched and normal.prepared and normal.committed, "金属锤不能由普通材料制作")
+        for _, slot in ipairs(normal.inputAfter) do assert(slot.amount == 0, "金属锤未精准扣料") end
+        local product = normal.outputAfter[1]
+        assert(product.id == output and product.amount == 1 and product.durability == wanted.durability
+            and product.maxDurability == wanted.durability and normal.outputAfter[2].amount == 0,
+            "金属锤产物或初始耐久错误")
+        assert(#recipe.missingMaterials == 3, "金属锤没有逐种检查缺料")
+        for _, rejected in ipairs(recipe.missingMaterials) do
+            assert(rejected.removedOne and not rejected.matched and not rejected.prepared and not rejected.committed,
+                "金属锤缺料仍完成制作")
+            unchanged(rejected.inputBefore, rejected.inputAfter)
+            unchanged(rejected.outputBefore, rejected.outputAfter)
+        end
+        assert(recipe.full.matched and not recipe.full.prepared and not recipe.full.committed, "金属锤满输出仍提交")
+        unchanged(recipe.full.inputBefore, recipe.full.inputAfter)
+        unchanged(recipe.full.outputBefore, recipe.full.outputAfter)
+        expected[output] = nil
+    end
+    assert(next(expected) == nil, "金属锤配方重复或缺少一种材质")
+end, "铜铁钢锤：正常制作、逐种缺料、满输出、初始耐久和无工具自锁")
+
+for _, id in ipairs({"Needle_Bone", "Needle_Copper", "Needle_Iron"}) do
+    test.system("crafting", "needle_sewing", {needle = id, durability = 2}, function(data)
+        assert(data.matched and data.success and data.count == 1 and data.durability == 1 and data.guid == 9471,
+            "缝纫未使用通用针标签或每件没有只扣一点耐久")
+        assert(data.thread == 0 and data.leather == 0 and data.output == "Traveler_Gloves", "缝纫扣料或成品错误")
+    end, "通用针缝纫磨损：" .. id)
+    test.system("crafting", "needle_sewing", {needle = id}, function(data)
+        assert(data.success and data.count == 0 and data.durability == 0, "针归零没有损毁当前一根")
+    end, "针归零损毁：" .. id)
+    test.system("crafting", "needle_sewing", {needle = id, full = true}, function(data)
+        assert(not data.success and data.unchanged, "满输出仍扣材料或针耐久")
+    end, "缝纫失败不磨损：" .. id)
+end
+for _, id in ipairs({"Needle_Copper", "Needle_Iron"}) do
+    test.system("crafting", "needle_sewing", {needle = id, count = 10}, function(data)
+        assert(data.success and data.count == 9 and data.durability == data.maximum,
+            "一根针用坏后吞掉整堆或没有换成下一根满耐久")
+    end, "针逐根消耗堆叠：" .. id)
+end
+
+for _, row in ipairs({
+    {args = {durability = 500, products = 1}, accepted = true, after = 499},
+    {args = {durability = 1000, maximum = 1000, products = 10}, accepted = true, after = 990},
+    {args = {durability = 10, products = 10}, accepted = true, after = 0},
+    {args = {durability = 9, products = 10}, accepted = false, after = 9},
+    {args = {durability = 0, products = 1}, accepted = false, after = 0},
+    {args = {durability = 10, products = 10, success = false}, accepted = true, after = 10}
+}) do
+    test.system("crafting", "manual_station_wear", row.args, function(data)
+        assert(data.accepted == row.accepted and data.previewUnchanged and data.durability == row.after,
+            "工作站逐件磨损、余量边界或失败不磨损错误")
+        assert(data.stack == 1 and data.maximum == (row.args.maximum or 500), "加工磨损错误修改建筑数量或最大耐久")
+        assert(math.abs(data.carrierDurability - row.after) < .001 and math.abs(data.replacedDurability - row.after) < .001,
+            "拆回或重新放置将砧的剩余耐久补满")
+        assert(data.genericRejected and data.workbenchRejected and data.forgeAccepted, "砧混入其他站点或普通手工配方")
+    end, "工作站按成功产物数量磨损")
+end
+
+
+-- 手工切皮配方实际消耗皮革并保留刀具，缺刀与满输出均不扣材料。
+for _, row in ipairs({
+    {name = "刀具切皮", args = {}, success = true},
+    {name = "缺皮革", args = {missing = true}},
+    {name = "缺刀具", args = {missingKnife = true}},
+    {name = "输出满", args = {full = true}}
+}) do
+    test.system("crafting", "leather_cutting", row.args, function(data)
+        assert(data.committed == (row.success or false), "切皮成功或拒绝条件错误")
+        if row.success then
+            assert(data.outputAfter[1].id == "LeatherStrap" and data.outputAfter[1].amount == 4,
+                "一份皮革未产出四根皮带")
+            assert(data.inputAfter[2].amount == 0 and data.inputAfter[1].id == data.inputBefore[1].id
+                and data.inputAfter[1].amount == data.inputBefore[1].amount
+                and data.inputAfter[1].durability == data.inputBefore[1].durability, "切皮未精准扣料或改变刀具")
+        else
+            for i, before in ipairs(data.inputBefore) do
+                local after = data.inputAfter[i]
+                assert(after.id == before.id and after.guid == before.guid and after.amount == before.amount
+                    and after.durability == before.durability, "拒绝切皮仍改变材料或刀具")
+            end
+        end
+    end, "切割鞣制皮革：" .. row.name)
+end
+
+-- 正式配方按真实扣料结算品质，未消耗的绳子不影响整批皮带。
+for _, row in ipairs({
+    {name = "全皮带", args = {}, maximum = 130, quality = 1.3, reinforced = true},
+    {name = "皮带跨堆叠", args = {straps = 2, secondStack = 3}, maximum = 130, quality = 1.3, reinforced = true},
+    {name = "额外未用绳子不降品质", args = {ropes = 5}, maximum = 130, quality = 1.3, reinforced = true, ropes = 5},
+    {name = "普通绳子", args = {straps = 0, ropes = 5}, maximum = 100, quality = 1, reinforced = false},
+    {name = "皮带与绳子混用", args = {straps = 3, ropes = 2}, maximum = 100, quality = 1, reinforced = false},
+    {name = "已有配方品质继续累乘", args = {quality = 1.5}, maximum = 195, quality = 1.95, reinforced = true}
+}) do
+    test.system("crafting", "binding_materials", row.args, function(data)
+        assert(data.matched and data.ruleAccepted and data.success and data.previewUnchanged, "合法绳料配方失败或预检扣料")
+        assert(math.abs(data.maximum - row.maximum) < .001 and math.abs(data.durability - row.maximum) < .001
+            and math.abs(data.quality - row.quality) < .001 and data.reinforced == row.reinforced, "绳料品质、混料条件或一次标记错误")
+        assert(data.remainingStraps == 0 and data.remainingRopes == (row.ropes or 0), "绳料未精准扣量")
+        assert(math.abs(data.transferredMaximum - row.maximum) < .001 and data.transferredMarker == row.reinforced,
+            "放置与拆回迁移品质时丢失耐久或一次标记")
+    end, "绳料制作品质：" .. row.name)
+end
+
+for _, row in ipairs({
+    {name = "缺少绳料", args = {straps = 4}},
+    {name = "书本不能当绳料", args = {straps = 0, ropes = 5, ropeId = "MinersNote"}},
+    {name = "命令手册不能当绳料", args = {straps = 0, ropes = 5, ropeId = "CommandManual"}},
+    {name = "非法材质品质", args = {invalidQuality = true}},
+    {name = "输出满保留材料", args = {full = true}}
+}) do
+    test.system("crafting", "binding_materials", row.args, function(data)
+        assert(not data.success and data.previewUnchanged and data.inputsUnchanged, "拒绝绳料制作仍改动库存")
+        if row.args.full then assert(data.outputStillBlocked, "满输出覆盖原物") end
+    end, "绳料制作边界：" .. row.name)
+end
+
+for _, row in ipairs({
+    {name = "保持破损比例", args = {}, maximum = 130, durability = 52, quality = 1.3},
+    {name = "满耐久同步提高", args = {durability = 100}, maximum = 130, durability = 130, quality = 1.3},
+    {name = "胶水钉子皮带独立叠加", args = {quality = 1.95, adhesive = true, nails = true}, maximum = 253.5, durability = 52, quality = 2.535}
+}) do
+    test.system("crafting", "binding_reinforcement", row.args, function(data)
+        assert(data.preview and data.success and data.previewUnchanged and data.toolRemaining == 0 and data.strapsRemaining == 1,
+            "皮带加固未原子消耗一件工具和一根皮带")
+        assert(math.abs(data.maximum - row.maximum) < .001 and math.abs(data.durability - row.durability) < .001
+            and math.abs(data.quality - row.quality) < .001, "皮带加固未保持破损比例或覆盖其他品质")
+        assert(data.identityPreserved and data.tagsPreserved and data.repeatRejected and data.restoredMarker,
+            "皮带加固丢失身份、实例标记或允许重复加固")
+        assert(math.abs(data.restoredMaximum - row.maximum) < .001 and math.abs(data.restoredDurability - row.durability) < .001,
+            "连续快照恢复叠乘皮带品质")
+    end, "皮带后手加固：" .. row.name)
+end
+
+for _, row in ipairs({
+    {name = "无皮带", args = {straps = 0}},
+    {name = "已在合成或加固时使用皮带", args = {reinforced = true}},
+    {name = "非工具", args = {notTool = true}},
+    {name = "异常多件工具", args = {stacked = true}},
+    {name = "输出满", args = {full = true}}
+}) do
+    test.system("crafting", "binding_reinforcement", row.args, function(data)
+        assert(not data.success and data.previewUnchanged and data.inputsUnchanged, "非法皮带加固成功或扣除材料")
+        if row.args.full then assert(data.outputStillBlocked, "皮带加固覆盖输出原物") end
+    end, "皮带后手加固边界：" .. row.name)
+end

@@ -13,12 +13,66 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterShadowPerformanceOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("rendering/shadow_proxy_changes", ShadowProxyChanges);
+        operations.Add("rendering/shadow_proxy_blur_scale", ShadowProxyBlurScale);
         operations.Add("rendering/shadow_footprint_matrix", ShadowFootprintMatrix);
         operations.Add("rendering/building_capability_cache", BuildingCapabilityCache);
         operations.Add("rendering/ship_part_placement_state", ServiceShipPartPlacementState);
         operations.Add("rendering/ship_block_visual", ServiceShipBlockVisual);
         operations.Add("rendering/effect_composition", RenderEffectComposition);
         operations.Add("rendering/snow_sparse_refresh", SnowSparseRefresh);
+        operations.Add("rendering/sprite_snow_bounds", SpriteSnowBounds);
+    }
+
+    // 读取正式控制器的 MPB，覆盖偏心原点、连续翻面、换图和静态免重传。
+    private static JObject SpriteSnowBounds(JObject args)
+    {
+        var root = new GameObject("[LuaSpriteSnowBounds]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        var texture = new Texture2D(8, 12);
+        Sprite first = Sprite.Create(texture, new Rect(0, 0, 8, 12), new Vector2(.25f, .25f), 2f,
+            0, SpriteMeshType.FullRect);
+        Sprite second = Sprite.Create(texture, new Rect(0, 0, 8, 12), new Vector2(.25f, .75f), 2f,
+            0, SpriteMeshType.FullRect);
+        try
+        {
+            var renderer = root.AddComponent<SpriteRenderer>();
+            root.AddComponent<WaterImmersionRenderEffect>();
+            var controller = root.AddComponent<ActorRenderEffectController>();
+            root.SetActive(true);
+            int boundsId = Shader.PropertyToID("_SpriteLocalBounds");
+            var block = new MaterialPropertyBlock();
+            var samples = new JArray();
+            for (int index = 0; index < 8; index++)
+            {
+                renderer.sprite = index < 4 ? first : second;
+                renderer.flipX = (index & 1) != 0;
+                renderer.flipY = (index & 2) != 0;
+                root.transform.SetPositionAndRotation(new Vector3(15f, -21f, 0f),
+                    Quaternion.Euler(0f, 0f, index * 47f));
+                root.transform.localScale = new Vector3(index % 2 == 0 ? 2f : -2f, .5f, 1f);
+                controller.RenderFrame(0f);
+                renderer.GetPropertyBlock(block);
+                Vector4 bounds = block.GetVector(boundsId);
+                block.SetVector(boundsId, new Vector4(37f, 0f, 0f, 0f));
+                renderer.SetPropertyBlock(block);
+                controller.RenderFrame(0f);
+                renderer.GetPropertyBlock(block);
+                samples.Add(new JObject
+                {
+                    ["centerX"] = bounds.x, ["centerY"] = bounds.y,
+                    ["halfWidth"] = bounds.z, ["halfHeight"] = bounds.w,
+                    ["unchangedMarker"] = block.GetVector(boundsId).x
+                });
+            }
+            return new JObject { ["samples"] = samples };
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+            UnityEngine.Object.DestroyImmediate(first);
+            UnityEngine.Object.DestroyImmediate(second);
+            UnityEngine.Object.DestroyImmediate(texture);
+        }
     }
 
     /// <summary>对照正式雪厚采样，覆盖无雪跳过、有效覆盖面与玩家编辑的边界。</summary>
@@ -290,24 +344,24 @@ public static partial class GameplayTestSystemProbe
             var block = new MaterialPropertyBlock();
             Vector4 caster = new(2f, 1f, 3f, 1f), uv = new(0f, 0f, 1f, 1f);
             bool initialSource = proxy.SetSource(sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
-            bool initialProperties = proxy.UpdateProperties(block, caster, uv, 1f);
+            bool initialProperties = proxy.UpdateProperties(block, caster, uv);
             bool repeatedSource = proxy.SetSource(sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
-            bool repeatedProperties = proxy.UpdateProperties(block, caster, uv, 1f);
+            bool repeatedProperties = proxy.UpdateProperties(block, caster, uv);
             bool frameChanged = proxy.SetSource(nextFrame, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
-            bool frameProperties = proxy.UpdateProperties(block, caster, new Vector4(0f, 0f, 0.5f, 1f), 1f);
+            bool frameProperties = proxy.UpdateProperties(block, caster, new Vector4(0f, 0f, 0.5f, 1f));
             bool frameSprite = proxy.SpriteRenderer.sprite == nextFrame;
             bool frameMesh = proxy.gameObject.GetComponent<MeshFilter>().sharedMesh ==
                 SharedSpriteMeshCache.GetSunShadowGeometry(nextFrame).Mesh;
             proxy.SetSource(sprite, SpriteDrawMode.Simple, Vector2.one, true, false, 0.25f);
             proxy.SetPose(Vector3.one, Quaternion.identity, new Vector3(2f, 3f, 1f));
-            bool alphaUpdated = proxy.UpdateProperties(block, caster, uv, 1f);
+            bool alphaUpdated = proxy.UpdateProperties(block, caster, uv);
             proxy.MeshRenderer.GetPropertyBlock(block);
             float alpha = block.GetColor(Shader.PropertyToID("_RendererColor")).a;
             float mirroredScale = proxy.transform.localScale.x;
             proxy.SetPose(Vector3.one, Quaternion.identity, new Vector3(2f, 3f, 1f));
             float repeatedScale = proxy.transform.localScale.x;
             caster.x = 7f;
-            bool movedFootUpdated = proxy.UpdateProperties(block, caster, uv, 1f);
+            bool movedFootUpdated = proxy.UpdateProperties(block, caster, uv);
             proxy.MeshRenderer.GetPropertyBlock(block);
             float foot = block.GetVector(Shader.PropertyToID("_SunShadowCaster")).x;
             proxy.enabled = true;
@@ -319,7 +373,7 @@ public static partial class GameplayTestSystemProbe
             proxy.ResetSource();
             proxy.ResetBounds();
             bool recycledSource = proxy.SetSource(sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
-            bool recycledProperties = proxy.UpdateProperties(block, caster, uv, 1f);
+            bool recycledProperties = proxy.UpdateProperties(block, caster, uv);
             return new JObject
             {
                 ["initialSource"] = initialSource, ["initialProperties"] = initialProperties,
@@ -330,6 +384,64 @@ public static partial class GameplayTestSystemProbe
                 ["repeatedScale"] = repeatedScale, ["movedFootUpdated"] = movedFootUpdated, ["foot"] = foot,
                 ["slicedVisible"] = slicedVisible, ["meshVisible"] = meshVisible,
                 ["recycledSource"] = recycledSource, ["recycledProperties"] = recycledProperties
+            };
+        }
+        finally
+        {
+            if (proxy != null) UnityEngine.Object.DestroyImmediate(proxy.gameObject);
+            UnityEngine.Object.DestroyImmediate(sprite);
+            UnityEngine.Object.DestroyImmediate(nextFrame);
+            UnityEngine.Object.DestroyImmediate(texture);
+        }
+    }
+
+    // 采样正式代理的源分辨率、图集换帧、静态复用与归池，不复制柔化计算。
+    private static JObject ShadowProxyBlurScale(JObject args)
+    {
+        float pixelsPerUnit = (float?)args["pixelsPerUnit"] ?? 1254f;
+        var texture = new Texture2D(16, 8) { filterMode = FilterMode.Point };
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 8f, 8f), Vector2.one * 0.5f,
+            pixelsPerUnit, 0, SpriteMeshType.FullRect);
+        Sprite nextFrame = Sprite.Create(texture, new Rect(8f, 0f, 8f, 8f), Vector2.one * 0.5f,
+            16f, 0, SpriteMeshType.FullRect);
+        WorldShadowProjectionManager.ShadowProxy proxy = null;
+        try
+        {
+            proxy = new WorldShadowProjectionManager.ShadowProxy();
+            proxy.gameObject.hideFlags = HideFlags.HideAndDontSave;
+            proxy.gameObject.SetActive(false);
+            var block = new MaterialPropertyBlock();
+            Vector4 caster = new(0f, 1f, 1f, 1f), uv = new(0f, 0f, 0.5f, 1f);
+            int texelId = Shader.PropertyToID("_SunShadowTexelSize");
+            proxy.SetSource(sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
+            bool initialUpdated = proxy.UpdateProperties(block, caster, uv);
+            proxy.MeshRenderer.GetPropertyBlock(block);
+            Vector4 texel = block.GetVector(texelId);
+            bool textureBound = block.GetTexture(Shader.PropertyToID("_MainTex")) == texture;
+            Bounds meshBounds = proxy.gameObject.GetComponent<MeshFilter>().sharedMesh.bounds;
+            float paddingX = meshBounds.max.x - sprite.bounds.max.x;
+            float paddingY = meshBounds.max.y - sprite.bounds.max.y;
+            bool repeatedSource = proxy.SetSource(sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
+            bool repeatedProperties = proxy.UpdateProperties(block, caster, uv);
+
+            proxy.SetSource(nextFrame, SpriteDrawMode.Simple, Vector2.one, true, false, 1f);
+            bool frameUpdated = proxy.UpdateProperties(block, caster, new Vector4(0.5f, 0f, 1f, 1f));
+            proxy.MeshRenderer.GetPropertyBlock(block);
+            float nextScale = block.GetVector(texelId).z;
+            Vector4 nextUv = block.GetVector(Shader.PropertyToID("_SunShadowUvBounds"));
+            proxy.ResetSource();
+            proxy.SetSource(sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
+            bool recycledUpdated = proxy.UpdateProperties(block, caster, uv);
+            proxy.MeshRenderer.GetPropertyBlock(block);
+            return new JObject
+            {
+                ["initialUpdated"] = initialUpdated, ["texelX"] = texel.x, ["texelY"] = texel.y,
+                ["scale"] = texel.z, ["paddingX"] = paddingX, ["paddingY"] = paddingY,
+                ["textureBound"] = textureBound, ["pointFilterPreserved"] = texture.filterMode == FilterMode.Point,
+                ["repeatedSource"] = repeatedSource, ["repeatedProperties"] = repeatedProperties,
+                ["frameUpdated"] = frameUpdated, ["nextScale"] = nextScale,
+                ["nextUvMinX"] = nextUv.x, ["nextUvMaxX"] = nextUv.z,
+                ["recycledUpdated"] = recycledUpdated, ["recycledScale"] = block.GetVector(texelId).z
             };
         }
         finally

@@ -5,11 +5,13 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
+using MemoryPack;
 
 #region 配置数据
 
 [Serializable]
-public sealed class ItemMatterDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemMatterDefinitionDto
 {
     [JsonProperty("ignitionTemperature", NullValueHandling = NullValueHandling.Ignore)]
     public float? IgnitionTemperature;
@@ -34,7 +36,8 @@ public sealed class ItemMatterDefinitionDto
 }
 
 [Serializable]
-public sealed class ItemMatterTransitionDto
+[MemoryPackable]
+public sealed partial class ItemMatterTransitionDto
 {
     [JsonProperty("id")]
     public string Id;
@@ -68,7 +71,8 @@ public sealed class ItemMatterTransitionDto
 }
 
 [Serializable]
-public sealed class ItemReactionDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemReactionDefinitionDto
 {
     [JsonProperty("id")]
     public string Id;
@@ -90,7 +94,8 @@ public sealed class ItemReactionDefinitionDto
 }
 
 [Serializable]
-public sealed class ItemReactionIngredientDto
+[MemoryPackable]
+public sealed partial class ItemReactionIngredientDto
 {
     [JsonProperty("match")]
     public string Match = "exact_item";
@@ -106,7 +111,8 @@ public sealed class ItemReactionIngredientDto
 }
 
 [Serializable]
-public sealed class ItemReactionOutputDto
+[MemoryPackable]
+public sealed partial class ItemReactionOutputDto
 {
     [JsonProperty("itemId")]
     public string ItemId;
@@ -119,7 +125,8 @@ public sealed class ItemReactionOutputDto
 }
 
 [Serializable]
-public sealed class ItemReactionLiquidOutputDto
+[MemoryPackable]
+public sealed partial class ItemReactionLiquidOutputDto
 {
     [JsonProperty("liquidId")]
     public string LiquidId;
@@ -784,12 +791,14 @@ public static class MaterialThermalProcessor
 {
     #region 材料热反应
 
-    public static bool Process(Inventory input, Inventory output, Player actor = null, ISet<int> blockedMaterialSlots = null)
+    public static bool Process(Inventory input, Inventory output, Player actor = null,
+        ISet<int> blockedMaterialSlots = null, ISet<int> rejectedMaterialSlots = null)
     {
         if (input?.Data?.itemSlots == null || output?.Data?.itemSlots == null ||
             MachineInventory.IsBeingDragged(input) || MachineInventory.IsBeingDragged(output)) return false;
         bool changed = false;
-        var blockedSlots = blockedMaterialSlots == null ? new HashSet<int>() : new HashSet<int>(blockedMaterialSlots);
+        using var blockedLease = UnityEngine.Pool.HashSetPool<int>.Get(out var blockedSlots);
+        if (blockedMaterialSlots != null) blockedSlots.UnionWith(blockedMaterialSlots);
         // 多材料反应先于单材料变化，防止铜锡和铁碳被提前拆开处理。
         foreach (RuntimeItemReactionDefinition reaction in ItemReactionResolver.GetCandidates(input, liquid: false))
         {
@@ -815,7 +824,11 @@ public static class MaterialThermalProcessor
             CraftingResult committed = CraftingService.CommitMaterialOutputs(input, output, match, outputs);
             if (!committed.Success)
             {
-                foreach (CraftingConsumption consumption in match.Consumptions) blockedSlots.Add(consumption.SlotIndex);
+                foreach (CraftingConsumption consumption in match.Consumptions)
+                {
+                    blockedSlots.Add(consumption.SlotIndex);
+                    rejectedMaterialSlots?.Add(consumption.SlotIndex);
+                }
                 continue;
             }
             changed = true;
@@ -826,7 +839,7 @@ public static class MaterialThermalProcessor
             if (blockedSlots.Contains(index) ||
                 ItemMatterRuntime.GetMatchedTransition(input.Data.itemSlots[index]?.itemData, liquid: false) == null) continue;
             CraftingResult result = ItemMatterRuntime.TransformSolidSlot(input, output, index, "matter.thermal");
-            if (!result.Success) continue;
+            if (!result.Success) { rejectedMaterialSlots?.Add(index); continue; }
             changed = true;
             Publish(actor, result);
         }

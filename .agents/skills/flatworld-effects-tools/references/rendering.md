@@ -16,7 +16,8 @@
 - 接触/太阳共用 `IVisualGroundOffset`、晨昏透明度、`_WorldSunShadowColor/_WorldSunShadowBlur`，关闭太阳不关接触。脚点/宽度来自 `visual.shadows.contactWidth/footLocalPosition/footOverlap`；`ShadowFootprintResolver` 限于可见底边，AIECS 用待机帧固定 VisibleRect，不随攻击/跑步帧伸缩。
 - 接触阴影仍逐帧采样/裁剪，只与最近 GPU 提交的槽位/数量相同才跳过 SetData；空帧 count=0，可复用旧数据，收集中断/扩容强制上传。太阳代理按源帧/姿态/脚点差异提交，全局参数/裁剪盒仍逐帧更新，回池清缓存；能力查询复用 ItemMods.GetCapabilities，结构变化失效、属性实时读取。
 - 轮廓阴影用仿射中心/半轴算世界包围盒，保留翻面/负缩放/旋转/偏心脚点。`SunShadowSampling.hlsl` 共用当前帧 UV、世界 PPU、半埋裁剪；图集外沿透明，CPU 边界覆盖几何；太阳高度先 Clamp01 再幂运算，拒绝非有限投影。
-- `TerrainHeightShadowManager` 只读有效表面/邻格顶部，高投低、同高无边；层差只判 0/1，宽度深浅固定、角上取最大值。地形/墙脚/地板/平台共用 BRG 层和 `GroundElevationShadowSettings`。脏格双缓冲去重，仅整块重绑全扫，提交中新通知留下一轮，失败保留未完成格。
+- `WorldShadowProjectionManager.ShadowProxy` 自行从 `SharedSpriteMeshCache` 读取源 Sprite 的柔化倍率，普通 Item 与机械方块不再各自传参；高 PPU 船件、机器共用同一网格外沿和柔化宽度，不修改主体纹理的 Point 过滤。
+- `TerrainHeightShadowManager.TryGetShadowMasks` 只读有效表面/八邻格顶部，高投低、同高无边；BRG data0 为左/右/下/上直边，data1 为左下/右下/左上/右上圆角。只在相邻直边未覆盖时采样斜角，纯斜角也提交；Shader 用同宽同衰减的四分之一圆取最大值，不叠黑，层差只判有无。地形/墙脚/地板/平台共用图层和 `GroundElevationShadowSettings`。脏格双缓冲去重，变化裁剪到3×3邻域并订阅八邻区加载/卸载；仅整块重绑全扫，提交中新通知留下一轮，失败保留未完成格。
 - 静态墙 `ChunkLightOccluderRenderer` 初绑只合并矩形；`ChunkLightOccluderVisibilityScheduler` 渲染前按 URP 局部光保守球惰性创建/启用，失光禁用、重绑复用，灯/墙/变换未变复用结果。Point 球含 Z，未知类型/适配失败保留全遮挡，恢复当帧补 ShadowCaster2D.Update；候选数与 EnabledOccluderCount 分开。
 - 墙共用 selfShadows、体积光用有效 volumetricShadows；发光区域独立 Unlit/Emissive Max 混合保颜色下限。PlacedBuilding 由 Sprite fallback physics shape 投影，手持/召唤器态关闭；内嵌发光用裁剪网格并关 useRendererSilhouette。
 - `Light2DSortingLayerUtility`：光源空列表保留 Prefab，建筑空列表接收全部，镜像同步；接收层不表示物理高度/逐灯 Owner 排除。`Mod_LightSource` 仅检测四元数 X/Y 倾斜后做欧拉 0.01° 修正；无自发光且无覆盖层时跳过 Sprite 检查。洞口采光由 DimensionTravelProgressStore.ReadCache/CaveExitAmbientLightCache 按入口/位置/拓扑变化更新，不轮询解析角色 JSON。

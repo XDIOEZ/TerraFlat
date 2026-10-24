@@ -117,7 +117,7 @@ public static partial class MachineWorld
     { EnsureScope(); RebuildGraphsIfDirty(); return fluidGraph?.PipeAt(cell); }
     public static int GetFluidPipeConnectionMask(MachineEntity node)
     {
-        if (node?.Definition.Fluid?.Kind != "pipe") return 0;
+        if (node?.Definition.IsFluidPipeSegment != true) return 0;
         using var nodeScope = UseNodeScope(node);
         RebuildGraphsIfDirty();
         return fluidGraph?.GetConnectionMask(node) ?? 0;

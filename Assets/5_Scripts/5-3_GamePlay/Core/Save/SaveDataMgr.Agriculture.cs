@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using MemoryPack;
 using UnityEngine;
+using Unity.Profiling;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>农业独立差量：同一格只保存水肥及作物；未完成耕作属于临时视觉，不进入存档。</summary>
@@ -11,16 +12,25 @@ public partial class SaveDataMgr
 {
     #region 农业差量
 
+    private static readonly ProfilerMarker AgricultureRecordMarker = new("NaturalEntityRuntime.Soil.Commit.Persist");
+
     private ChunkSaveRecord GetRuntimeChunkRecord(RuntimeWorldAddress address, bool create)
     {
-        string planet = ResolveRuntimePlanetName();
-        string key = BuildChunkKey(planet, ToChunkName(address));
-        if (chunkDeltas.TryGetValue(key, out var record))
+        // 世界上下文已缓存名称；热查询复用坐标键，只在首次创建差量时格式化存档键。
+        string planet = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrWhiteSpace(planet)) planet = ResolveRuntimePlanetName();
+        return GetRuntimeChunkRecord(planet, address, create);
+    }
+
+    private ChunkSaveRecord GetRuntimeChunkRecord(string planet, RuntimeWorldAddress address, bool create)
+    {
+        var origin = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y);
+        if (TryGetChunkDelta(planet, origin, out var record))
             return record;
         if (!create)
             return null;
         record = CreateRuntimeChunkDelta(planet, address);
-        chunkDeltas.Add(key, record);
+        chunkDeltas.Add(BuildChunkKey(planet, ToChunkName(address)), record);
         return record;
     }
 
@@ -29,6 +39,7 @@ public partial class SaveDataMgr
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null)
             return;
+        using var sampleMarker = AgricultureRecordMarker.Auto();
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
         AgricultureCellSaveData cell = record.GetOrAddAgricultureCell(sample.LocalCell);
         cell.SourceTileId = (int)FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer);

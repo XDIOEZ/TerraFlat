@@ -8,7 +8,7 @@
       "inputRule": "unordered",
       "inputs": [
         { "match": "exact_item", "itemId": "Plank", "amount": 12 },
-        { "match": "exact_item", "itemId": "Rope", "amount": 4 },
+        { "match": "tag", "tag": "Rope", "amount": 4 },
         { "match": "exact_item", "itemId": "Resin", "amount": 4 }
       ],
       "outputs": [ { "itemId": "WaterTrough", "amount": 1 } ],
@@ -21,7 +21,7 @@
       "inputRule": "unordered",
       "inputs": [
         { "match": "exact_item", "itemId": "Plank", "amount": 12 },
-        { "match": "exact_item", "itemId": "Rope", "amount": 4 },
+        { "match": "tag", "tag": "Rope", "amount": 4 },
         { "match": "exact_item", "itemId": "Glue", "amount": 4 }
       ],
       "outputs": [ { "itemId": "WaterTrough", "amount": 1, "durabilityMultiplier": 1.5 } ],

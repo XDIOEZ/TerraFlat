@@ -98,6 +98,8 @@ public partial class GameRes
             PrewarmTerrainSpriteMeshes, "world-liquids");
         plan.Add("combat-prewarm", "预备命中特效与战斗缓存", 2,
             PrewarmCombatResources, "brg-sprite-mesh-prewarm");
+        plan.Add("machine-prewarm", "预备机器快照与炉体缓存", 2,
+            PrewarmMachineResources, "combat-prewarm");
         return plan;
     }
 

@@ -14,7 +14,10 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/environment_batch_lifecycle", EnvironmentBatchLifecycle);
         operations.Add("environment/environment_batch_revision", EnvironmentBatchRevision);
         operations.Add("environment/water_current_reuse", EnvironmentWaterCurrentReuse);
+        operations.Add("environment/estuary_current", EnvironmentEstuaryCurrent);
         operations.Add("environment/surface_work_queue", EnvironmentSurfaceWorkQueue);
+        operations.Add("environment/surface_broadcast_gate", EnvironmentSurfaceBroadcastGate);
+        operations.Add("environment/surface_snow_batch", EnvironmentSurfaceSnowBatch);
         operations.Add("environment/surface_temperature_snapshot", EnvironmentSurfaceTemperatureSnapshot);
         operations.Add("agriculture/surface_water_rule", AgricultureSurfaceWaterRule);
     }
@@ -352,6 +355,80 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 天气地表分帧队列采样
+
+    private static JObject EnvironmentSurfaceSnowBatch(JObject args)
+    {
+        using ChunkTerrainData terrain = EnvironmentBatchFixture(4, 1);
+        int callbacks = 0, updatedCells = 0;
+        terrain.Changed += change =>
+        {
+            if (change.Kind != TerrainChangeKind.Environment) return;
+            callbacks++;
+            foreach (int index in change.GetCellIndices(terrain.Width))
+                updatedCells++;
+        };
+        var weather = new[] { new EnvironmentCellUpdate(0, .5f), new EnvironmentCellUpdate(2, .25f) };
+        var player = new[] { new EnvironmentCellUpdate(1, .75f) };
+        long before = terrain.Revision;
+        WorldWeatherSurfaceSystem.CommitSnowChanges(terrain, weather, player);
+        long committed = terrain.Revision;
+        terrain.TryGetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 0, 0, out float weatherFirst);
+        terrain.TryGetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 2, 0, out float weatherThird);
+        terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, 1, 0, out float editedDepth);
+        WorldWeatherSurfaceSystem.CommitSnowChanges(terrain, weather, player);
+        return new JObject
+        {
+            ["callbacks"] = callbacks,
+            ["updatedCells"] = updatedCells,
+            ["batchedRevision"] = committed == before + 2,
+            ["unchangedRevision"] = terrain.Revision == committed,
+            ["weatherFirst"] = weatherFirst,
+            ["weatherThird"] = weatherThird,
+            ["editedDepth"] = editedDepth
+        };
+    }
+
+    private static JObject EnvironmentSurfaceBroadcastGate(JObject args)
+    {
+        Func<string, bool> previous = SaveDataMgr.HasWeatherSurfaceReplicationAudience;
+        Action<WeatherSurfaceChunkSnapshot> previousPublisher = SaveDataMgr.ReplicateWeatherSurfaceToRemote;
+        Action<WeatherSurfaceChunkSnapshot> listener = _ => { };
+        try
+        {
+            SaveDataMgr.ReplicateWeatherSurfaceToRemote = _ => { };
+            SaveDataMgr.HasWeatherSurfaceReplicationAudience = _ => false;
+            bool noRemote = !SaveDataMgr.ShouldBuildWeatherSurfaceDelta("surface:earth", out bool noRemoteReplication) &&
+                !noRemoteReplication;
+            SaveDataMgr.HasWeatherSurfaceReplicationAudience = world => world == "surface:earth";
+            bool matchingWorld = SaveDataMgr.ShouldBuildWeatherSurfaceDelta("surface:earth", out bool worldReplication) &&
+                worldReplication;
+            bool otherWorld = !SaveDataMgr.ShouldBuildWeatherSurfaceDelta("surface:moon", out bool moonReplication) &&
+                !moonReplication;
+            SaveDataMgr.HasWeatherSurfaceReplicationAudience = null;
+            bool unfilteredPublisher = SaveDataMgr.ShouldBuildWeatherSurfaceDelta("surface:earth", out bool allReplication) &&
+                allReplication;
+            SaveDataMgr.ReplicateWeatherSurfaceToRemote = null;
+            SaveDataMgr.AuthoritativeWeatherSurfaceChanged += listener;
+            SaveDataMgr.HasWeatherSurfaceReplicationAudience = _ => false;
+            bool otherSubscribersUnaffected =
+                SaveDataMgr.ShouldBuildWeatherSurfaceDelta("surface:earth", out bool subscriberReplication) &&
+                !subscriberReplication;
+            return new JObject
+            {
+                ["noRemote"] = noRemote,
+                ["matchingWorld"] = matchingWorld,
+                ["otherWorld"] = otherWorld,
+                ["unfilteredPublisher"] = unfilteredPublisher,
+                ["otherSubscribersUnaffected"] = otherSubscribersUnaffected
+            };
+        }
+        finally
+        {
+            SaveDataMgr.HasWeatherSurfaceReplicationAudience = previous;
+            SaveDataMgr.ReplicateWeatherSurfaceToRemote = previousPublisher;
+            SaveDataMgr.AuthoritativeWeatherSurfaceChanged -= listener;
+        }
+    }
 
     private static ChunkRuntime EnvironmentSurfaceQueueChunk(WorldRuntime world, int x)
     {

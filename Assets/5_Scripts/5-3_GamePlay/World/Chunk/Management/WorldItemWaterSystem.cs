@@ -1,6 +1,10 @@
+using System;
 using System.Collections.Generic;
+using FlatWorld.Gameplay.Progress;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -83,8 +87,17 @@ public static class WorldItemWaterSystem
         if (!CanUseWorldWaterRuntime(item, requirePickable))
             return EntryResult.None;
 
-        if (!TryResolveWaterAt(item.transform.position, out bool isWater) || !isWater)
+        if (!TryResolveWaterAt(item.transform.position, out bool isWater))
             return EntryResult.None;
+        if (!isWater)
+        {
+            if (GameNetwork.HasStateAuthority && GetSavedBottomState(item.itemData))
+            {
+                SetSavedBottomState(item.itemData, false);
+                ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            }
+            return EntryResult.None;
+        }
 
         if (DroppedItemService.UsesLightweightDrops && DroppedItemService.TryConvertLooseItem(item))
             return EntryResult.Transformed;
@@ -114,6 +127,49 @@ public static class WorldItemWaterSystem
         isWater = sample.LiquidDepth > 0f;
         return true;
     }
+
+    #region 沉底物品拾取
+
+    public static bool CanPickUpAt(Item item, Vector2 pickerPosition)
+    {
+        if (item == null) return false;
+        WorldItemWaterRuntime runtime = item.GetComponent<WorldItemWaterRuntime>();
+        bool onBottom = runtime?.IsOnBottom == true || GetSavedBottomState(item.itemData);
+        if (!onBottom) return true;
+        return WorldItemWaterRules.CanPickUp(true,
+            WorldTopologyRuntime.NormalizePosition(pickerPosition),
+            WorldLocalPresentation.ToLogical(item.transform.position));
+    }
+
+    #endregion
+
+    #region 完整物品沉底状态保存
+
+    private const string BottomStateKey = "flatworld.worldItemWater";
+
+    public static bool GetSavedBottomState(ItemData data)
+    {
+        string raw = data?.ItemSpecialData;
+        if (raw == null || raw.IndexOf(BottomStateKey, StringComparison.Ordinal) < 0) return false;
+        return ItemSpecialDataJsonStore.ReadRoot(raw)[BottomStateKey] is JObject state &&
+               state["onBottom"]?.Type == JTokenType.Boolean && state["onBottom"].Value<bool>();
+    }
+
+    public static void SetSavedBottomState(ItemData data, bool onBottom)
+    {
+        if (data == null) return;
+        string raw = data.ItemSpecialData;
+        if (!onBottom && (raw == null || raw.IndexOf(BottomStateKey, StringComparison.Ordinal) < 0)) return;
+        JObject root = ItemSpecialDataJsonStore.ReadRoot(raw);
+        if (onBottom) root[BottomStateKey] = new JObject { ["onBottom"] = true };
+        else root.Remove(BottomStateKey);
+        // 拾取载荷清掉世界状态，同时保留其它模块及原本的非 JSON 数据。
+        data.ItemSpecialData = root.Count == 0 ? null :
+            root.Count == 1 && root[ItemSpecialDataJsonStore.LegacyProperty]?.Type == JTokenType.String
+                ? root[ItemSpecialDataJsonStore.LegacyProperty].Value<string>() : root.ToString(Formatting.None);
+    }
+
+    #endregion
 
     /// <summary>显式结束世界水体运行态；库存 ItemData 不保存这类临时表现。</summary>
     public static void ClearRuntimeState(Item item)

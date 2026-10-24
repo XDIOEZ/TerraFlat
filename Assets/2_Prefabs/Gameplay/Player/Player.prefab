@@ -104,7 +104,9 @@ MonoBehaviour:
     CombatBalanceVersion: 1
     UseBodyPartHealth: 1
     TwoPartHitChance: 0.25
-    HitSizeCoefficientOverride: 0
+    AccuracyLevel: 7
+    SizeLevel: 5
+    DodgeChance: 0
     BodyPartDataVersion: 2
     BodyParts:
     - Part: 0
@@ -356,37 +358,47 @@ MonoBehaviour:
       DisplayName: "\u5934\u90E8 / \u5E3D\xB7\u76D4"
       RequiredTag: EquipmentSlot.Head
       LabelObjectName: FWUI_SlotLabel_Head
-      UiPosition: {x: -225, y: 155}
+      UiPosition: {x: -225, y: 180}
     - Id: TorsoOuter
       DisplayName: "\u5916\u886C / \u62A4\u7532"
       RequiredTag: EquipmentSlot.TorsoOuter
       LabelObjectName: FWUI_SlotLabel_Chest
-      UiPosition: {x: -225, y: 20}
+      UiPosition: {x: -225, y: 55}
     - Id: Hands
       DisplayName: "\u624B\u90E8"
       RequiredTag: EquipmentSlot.Hands
       LabelObjectName: FWUI_SlotLabel_Hand
-      UiPosition: {x: 225, y: 155}
+      UiPosition: {x: 225, y: 180}
     - Id: FeetOuter
       DisplayName: "\u978B\u5B50"
       RequiredTag: EquipmentSlot.FeetOuter
       LabelObjectName: FWUI_SlotLabel_Feet
-      UiPosition: {x: 225, y: -170}
+      UiPosition: {x: 225, y: -185}
     - Id: TorsoInner
       DisplayName: "\u5185\u886C / \u8863\u7269"
       RequiredTag: EquipmentSlot.TorsoInner
       LabelObjectName: FWUI_SlotLabel_TorsoInner
-      UiPosition: {x: -225, y: -115}
+      UiPosition: {x: -225, y: -70}
     - Id: Legs
       DisplayName: "\u817F\u90E8 / \u88E4\u88C5"
       RequiredTag: EquipmentSlot.Legs
       LabelObjectName: FWUI_SlotLabel_Legs
-      UiPosition: {x: 225, y: 50}
+      UiPosition: {x: 225, y: 55}
     - Id: FeetInner
       DisplayName: "\u889C\u5B50"
       RequiredTag: EquipmentSlot.FeetInner
       LabelObjectName: FWUI_SlotLabel_FeetInner
-      UiPosition: {x: 225, y: -60}
+      UiPosition: {x: 225, y: -70}
+    - Id: OffHand
+      DisplayName: "\u526F\u624B"
+      RequiredTag: EquipmentSlot.OffHand
+      LabelObjectName: FWUI_SlotLabel_OffHand
+      UiPosition: {x: -225, y: -185}
+    - Id: Eyes
+      DisplayName: "\u773C\u90E8 / \u773C\u955C"
+      RequiredTag: EquipmentSlot.Eyes
+      LabelObjectName: FWUI_SlotLabel_Eyes
+      UiPosition: {x: 0, y: 180}
   equipment_ModuleData: []
   OpenPanelActionName: P
   references:
@@ -481,7 +493,7 @@ Transform:
   m_GameObject: {fileID: 4411885219965820198}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.328125, y: 0.186125, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -560,7 +572,7 @@ MonoBehaviour:
     StorageMaxVolumeCubicMeters: 0
     itemSlot_UI: []
   spawnLocation: {fileID: 6639265349670268636}
-  HotBarMaxVolume: 9
+  HotBarMaxVolume: 10
   SelectBoxPrefab: {fileID: 3351078594653121284, guid: 5fd8b428d015c7044aee5e5491698e72, type: 3}
   SelectBoxChangeDuration: 0.1
   SelectBox: {fileID: 0}
@@ -616,6 +628,7 @@ GameObject:
   - component: {fileID: 9100000000000000301}
   - component: {fileID: 2945427715212089224}
   - component: {fileID: 9100000000000000401}
+  - component: {fileID: 9100000000000000501}
   - component: {fileID: 9100000000000011001}
   m_Layer: 10
   m_Name: Player
@@ -2423,6 +2436,14 @@ PrefabInstance:
     m_TransformParent: {fileID: 7343432311901774332}
     m_Modifications:
     - target: {fileID: 3264581480783965184, guid: f1d7b5a1e3e07cc499990b3552108139, type: 3}
+      propertyPath: DefaultPosition.x
+      value: 0.328125
+      objectReference: {fileID: 0}
+    - target: {fileID: 3264581480783965184, guid: f1d7b5a1e3e07cc499990b3552108139, type: 3}
+      propertyPath: DefaultPosition.y
+      value: 0.186125
+      objectReference: {fileID: 0}
+    - target: {fileID: 3264581480783965184, guid: f1d7b5a1e3e07cc499990b3552108139, type: 3}
       propertyPath: controlledTransforms_Direction.Array.size
       value: 1
       objectReference: {fileID: 0}
@@ -3641,3 +3662,21 @@ MonoBehaviour:
     bitData: 
   profile: {fileID: 11400000, guid: c94abc51fc6a3a94390ca7a899df3f12, type: 2}
   bodyStyle: 1
+--- !u!114 &9100000000000000501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 561c4f79c3374b96bda18e72ecb4a902, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  modData:
+    StableName: shieldCombat
+    ModuleId: ShieldCombat
+    enabled: 1
+    Type: 0

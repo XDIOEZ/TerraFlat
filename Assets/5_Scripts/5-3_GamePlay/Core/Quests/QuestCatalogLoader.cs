@@ -191,7 +191,7 @@ namespace FlatWorld.Gameplay.Quests
         {
             if (string.IsNullOrWhiteSpace(json))
                 throw new InvalidDataException("任务分包清单为空");
-            return JsonConvert.DeserializeObject<QuestManifestDto>(json)
+            return JsonConfigurationCache.Deserialize<QuestManifestDto>(json)
                    ?? throw new InvalidDataException("任务分包清单根对象为空");
         }
 
@@ -199,7 +199,7 @@ namespace FlatWorld.Gameplay.Quests
         {
             if (string.IsNullOrWhiteSpace(json))
                 throw new InvalidDataException("任务分包内容为空");
-            return JsonConvert.DeserializeObject<QuestCatalogDto>(json)
+            return JsonConfigurationCache.Deserialize<QuestCatalogDto>(json)
                    ?? throw new InvalidDataException("任务分包根对象为空");
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using Unity.Mathematics;
@@ -18,12 +19,13 @@ public enum WolfState
     Attack,
     Avoid,
     Flee,
-    Advance
+    Advance,
+    Search
 }
 
 /// <summary>
 /// 狼 AI：支持群体协作（呼叫同伴、集火）、攻击伤害窗口、逃跑/避让等行为。
-/// 状态优先级：逃跑 > 攻击 > 追击 > 避让 > 警觉 > 移动 > 待机
+/// 状态优先级：逃跑 > 攻击 > 追击 > 搜索最后位置 > 避让 > 警觉 > 移动 > 待机
 /// </summary>
 public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IAIAdvanceCommandCancellationReceiver, IAnimalAttackRangeSource
 {
@@ -254,7 +256,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		Data ??= new AI_WolfSaveData();
 		NormalizeAdvanceData();
 		_currentState = Data.State;
-		if (_currentState == WolfState.Advance && !Data.HasAdvanceCommand)
+		if (_currentState == WolfState.Search ||
+			_currentState == WolfState.Advance && !Data.HasAdvanceCommand)
 			_currentState = WolfState.Idle;
 		_idleRemainTimer = GetIdleDuration();
 		InitializeAI();
@@ -268,6 +271,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 	protected override void OnUnload()
 	{
+		ForgetThreat();
 		_packAllies.Clear();
 		_chaseFormationMembers.Clear();
 		base.OnUnload();
@@ -286,8 +290,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		_isAlphaWolf = true;
 		_alphaWolf = this;
 		_packCenter = transform.position;
-		_currentThreat = null;
-		ClearChaseFormation();
+		ForgetThreat();
 		_attack.Reset();
 		_attack.Cooldown = attackCooldown;
 		_attack.DamageWindow = attackDamageWindow;
@@ -320,6 +323,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		_alertTimer = DecrementTimer(_alertTimer, deltaTime);
 		_packAssistTimer = DecrementTimer(_packAssistTimer, deltaTime);
 		_packCallCooldownTimer = DecrementTimer(_packCallCooldownTimer, deltaTime);
+		TickThreatMemory(deltaTime);
 		_attack.Tick(deltaTime);
 	}
 
@@ -327,6 +331,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	{
 		RefreshPackStatus();
 		RefreshThreatTarget();
+		UpdateSearchArrival();
 		RefreshChaseFormationTarget();
 	}
 
@@ -334,11 +339,12 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	{
 		// 离开战斗相关状态时，若支援计时器已过期则清除威胁目标
 		if (next != WolfState.Alert && next != WolfState.Chase
-		    && next != WolfState.Attack && next != WolfState.Avoid && next != WolfState.Flee)
+		    && next != WolfState.Attack && next != WolfState.Avoid && next != WolfState.Flee
+		    && next != WolfState.Search)
 		{
 			if (_packAssistTimer <= 0f)
 			{
-				_currentThreat = null;
+				ForgetThreat();
 			}
 		}
 
@@ -356,13 +362,17 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		// 进入攻击状态：重置窗口触发标记
 		if (next == WolfState.Attack)
 		{
+			_canSearchForThreat = true;
 			_attack.OnEnterAttackState();
 		}
 
 		if (next == WolfState.Chase)
 		{
+			_canSearchForThreat = true;
 			RefreshChaseFormationTarget();
 		}
+		if (next == WolfState.Avoid || next == WolfState.Flee)
+			_canSearchForThreat = false;
 	}
 
 	/// <summary>狼群聚拢修正：非头狼向头狼/群中心偏移</summary>
@@ -383,12 +393,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 	protected override string GetDebugExtraInfo()
 	{
-		string roleText = _isAlphaWolf ? "头狼" : "跟随";
-		string advanceText = HasAdvanceCommand ? " | 推进: 是" : string.Empty;
+		string roleText = FlatWorldLocalizationService.GetUiText(_isAlphaWolf ? "头狼" : "跟随");
+		string advanceText = HasAdvanceCommand ? FlatWorldLocalizationService.GetUiText(" | 推进: 是") : string.Empty;
 		string formationText = _hasChaseFormationTarget
-			? $" | 追击位: {GetChaseFormationSlotLabel(_chaseFormationSlot)}/{_chaseFormationMemberCount}"
+			? FlatWorldLocalizationService.GetUiFormat(
+				" | 追击位: {0}/{1}", GetChaseFormationSlotLabel(_chaseFormationSlot), _chaseFormationMemberCount)
 			: string.Empty;
-		return $" | 狼群数: {_packCount} | 角色: {roleText}{formationText}{advanceText}";
+		return FlatWorldLocalizationService.GetUiFormat(
+			" | 狼群数: {0} | 角色: {1}{2}{3}", _packCount, roleText, formationText, advanceText);
 	}
 #endregion
 
@@ -416,8 +428,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		Data.AdvanceTargetPosition = command.TargetPosition;
 		Data.AdvanceArrivalDistance = Mathf.Max(0.05f, command.ArrivalDistance);
 		Data.AttackActorsOnRoute = command.AttackActorsOnRoute;
-		_currentThreat = null;
-		ClearChaseFormation();
+		ForgetThreat();
 		_alertTimer = 0f;
 		_packAssistTimer = 0f;
 
@@ -446,11 +457,12 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			throw new ArgumentNullException(nameof(threatSource));
 		}
 
-		if (!FactionRelationService.CanAttack(item, threatSource))
+		if (!IsUsableThreat(threatSource) ||
+			!IsWithinEffectivePerceptionRange(threatSource, chaseLossDistance))
 			return;
 
-		_currentThreat = threatSource;
-		ClearChaseFormation();
+		// 集火确认立即允许搜索，避免目标在首次状态评估前躲回遮挡后被遗忘。
+		RememberThreat(threatSource, threatSource.transform.position, true, pursue: true);
 		_alertTimer = alertKeepDuration;
 		_packAssistTimer = packAssistDuration;
 		CallNearbyWolves(threatSource);
@@ -475,12 +487,17 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 		if ((caller != null &&
 			FactionRelationService.GetRelation(caller.item, item) != FactionRelation.Friendly) ||
-			!FactionRelationService.CanAttack(item, threatSource))
+			!IsUsableThreat(threatSource))
 		{
 			return;
 		}
 
-		_currentThreat = threatSource;
+		if (IsWithinEffectivePerceptionRange(threatSource, chaseLossDistance))
+			RememberThreat(threatSource, threatSource.transform.position, true, pursue: true);
+		else if (caller != null && caller._threatVisible && caller.MatchesRememberedThreat(threatSource))
+			RememberThreat(threatSource, caller._lastKnownThreatPosition, false, pursue: true);
+		else
+			return;
 		ClearChaseFormation();
 		_alertTimer = Mathf.Max(_alertTimer, alertKeepDuration);
 		_packAssistTimer = Mathf.Max(_packAssistTimer, packAssistDuration);
@@ -523,6 +540,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		if (ShouldFlee())     return WolfState.Flee;
 		if (ShouldAttack())   return WolfState.Attack;
 		if (ShouldChase())    return WolfState.Chase;
+		if (ShouldSearch())   return WolfState.Search;
 		if (ShouldAvoid())    return WolfState.Avoid;
 		if (ShouldAlert())    return WolfState.Alert;
 		if (ShouldAdvance())  return WolfState.Advance;
@@ -535,7 +553,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		RegisterLocomotionStateNodes(stateMachine, WolfState.Idle, WolfState.Move);
 		stateMachine.Register(CreateStoppedStateNode(WolfState.Alert, _ => TickAlert()));
 		stateMachine.Register(CreateMovingStateNode(WolfState.Chase, _ => TickChase()));
-		stateMachine.Register(CreateStoppedActionStateNode(WolfState.Attack, _ => TickAttack()));
+		stateMachine.Register(CreateMovingStateNode(WolfState.Search, _ => TickSearch()));
+		stateMachine.Register(CreateStateNode(WolfState.Attack, _ => TickAttack()));
 		stateMachine.Register(CreateFleeStateNode(
 			WolfState.Avoid,
 			ResolveFleeSourcePosition,
@@ -556,19 +575,22 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	private void TickAlert()
 	{
 		if (_currentThreat == null) return;
-		FaceTarget(_currentThreat.transform.position);
+		FaceTarget(_lastKnownThreatPosition);
 	}
 
 	private void TickChase()
 	{
-		if (_currentThreat == null) { StopMove(); return; }
+		if (_currentThreat == null || !_threatVisible) { StopMove(); return; }
 
 		// 编队追击时以实际编队目标为准，保证狼的头朝向真实行进方向。
 		Vector3 chaseTarget = _hasChaseFormationTarget
 			? _chaseFormationTarget
-			: _currentThreat.transform.position;
+			: _lastKnownThreatPosition;
+		// 编队点本身已占用一部分攻击距离，导航内圈只能使用剩余余量。
+		float approachRange = Mathf.Max(0.01f, attackTriggerDistance -
+			WorldTopologyRuntime.Distance(chaseTarget, _lastKnownThreatPosition));
 		WorldNavigationDestinationResult moveResult =
-			MoveToChaseTarget(chaseTarget, chasePathCostLimit);
+			MoveToChaseTarget(chaseTarget, chasePathCostLimit, approachRange);
 		if (TryHandleRejectedChasePath(moveResult, _currentThreat, chasePathRetryDelay))
 			return;
 
@@ -579,8 +601,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	private void TickAttack()
 	{
 		// 持续技能独占攻击动作，普通攻击窗口不能在技能期间重新打开。
-		if (_animalSkills.IsAnyActive) { _attack.StopWindow(); return; }
-		if (!_attack.IsAttackLocked && _animalSkills.TryStart(_currentThreat)) { _attack.StopWindow(); return; }
+		if (_animalSkills.IsAnyActive) { _attack.StopWindow(); StopMove(); return; }
+		if (!_threatVisible) { _attack.StopWindow(); StopMove(); return; }
 		if (_currentThreat == null)
 		{
 			_attack.StopWindow();
@@ -588,34 +610,37 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			return;
 		}
 
-		if (!FactionRelationService.CanAttack(item, _currentThreat))
+		if (!IsUsableThreat(_currentThreat) || !MatchesRememberedThreat(_currentThreat))
 		{
-			_currentThreat = null;
+			ForgetThreat();
 			_attack.StopWindow();
 			StopMove();
 			return;
 		}
 
-		Vector3 targetPosition = _currentThreat.transform.position;
+		if (!_attack.IsAttackLocked && _animalSkills.TryStart(_currentThreat))
+		{ _attack.StopWindow(); StopMove(); return; }
+		Vector3 targetPosition = _lastKnownThreatPosition;
 		FaceTarget(targetPosition, true);
 
-		float distance = DistanceTo(_currentThreat.transform);
-		if (distance <= attackTriggerDistance || _attack.IsAttackLocked)
+		float distance = WorldTopologyRuntime.Distance(transform.position, targetPosition);
+		if (_attack.IsAttackLocked)
 		{
 			StopMove();
-			// 前摇、伤害窗口和后摇期间保持本次攻击，不因目标短暂离开范围而重置。
-			if (!_attack.IsAttackLocked && _attack.IsCooldownDone)
-			{
-				_attack.StartWindow(
-					_animator,
-					animAttack,
-					WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
-			}
+		}
+		else if (distance <= attackTriggerDistance && _attack.IsCooldownDone)
+		{
+			StopMove();
+			_attack.StartWindow(
+				_animator,
+				animAttack,
+				WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
 		}
 		else
 		{
-			_attack.StopWindow();
-			StopMove();
+			// 动作尚未起手或已结束时继续贴近，不能等下一次状态评估才恢复追击。
+			TickChase();
+			return;
 		}
 
 		TryCallNearbyWolves();
@@ -623,7 +648,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 	private Vector3? ResolveFleeSourcePosition()
 	{
-		return _currentThreat != null ? _currentThreat.transform.position : (Vector3?)null;
+		return _hasThreatMemory ? _lastKnownThreatPosition : (Vector3?)null;
 	}
 
 	private AIAdvanceTarget ResolveAdvanceTarget()
@@ -651,7 +676,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		Data.HasAdvanceCommand = false;
 		Data.AdvanceTargetItemGuid = 0;
 		Data.AttackActorsOnRoute = false;
-		_currentThreat = null;
+		ForgetThreat();
 		_alertTimer = 0f;
 		_packAssistTimer = 0f;
 
@@ -676,7 +701,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	/// <summary>攻击条件：有威胁目标且距离/群体数满足要求</summary>
 	private bool ShouldAttack()
 	{
-		if (_currentThreat == null) return false;
+		if (_currentThreat == null || !_threatVisible) return false;
 		float distance = DistanceTo(_currentThreat.transform);
 		if (_currentState == WolfState.Attack && _attack.IsAttackLocked)
 			return true;
@@ -691,9 +716,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	/// <summary>追击条件：双狼以上且在追击范围内</summary>
 	private bool ShouldChase()
 	{
-		if (_currentThreat == null) return false;
+		if (_currentThreat == null || !_threatVisible) return false;
 		if (IsChaseTargetBlockedByPathCost(_currentThreat)) return false;
-		bool alreadyEngaged = _currentState == WolfState.Chase || _currentState == WolfState.Attack;
+		bool alreadyEngaged = _currentState == WolfState.Chase || _currentState == WolfState.Attack ||
+			_currentState == WolfState.Search;
 		float chaseDistance = alreadyEngaged ? chaseLossDistance : chaseTriggerDistance;
 
 		if (IsAggressiveAdvanceActive())
@@ -799,45 +825,27 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 	private void RefreshThreatTarget()
 	{
-		if (_currentThreat != null && !FactionRelationService.CanAttack(item, _currentThreat))
+		if (!IsUsableThreat(_currentThreat) || !MatchesRememberedThreat(_currentThreat))
+			ForgetThreat();
+		_threatVisible = false;
+		Item detected = IsAggressiveAdvanceActive()
+			? FindClosestAdvanceAggressionTarget() : FindClosestPlayerThreat();
+		if (detected != null)
 		{
-			_currentThreat = null;
-			ClearChaseFormation();
-		}
-
-		if (IsAggressiveAdvanceActive())
-		{
-			Item nearestActor = FindClosestAdvanceAggressionTarget();
-			if (nearestActor != null)
-			{
-				_currentThreat = nearestActor;
-				return;
-			}
-
-			if (IsLivingActorTarget(_currentThreat) &&
-			    IsWithinEffectivePerceptionRange(_currentThreat, chaseLossDistance))
-			{
-				return;
-			}
-
-			_currentThreat = null;
+			RememberThreat(detected, detected.transform.position, true);
 			return;
 		}
 
-		Item nearestPlayer = FindClosestPlayerThreat();
-
-		if (nearestPlayer != null)
-		{
-			_currentThreat = nearestPlayer;
-			return;
-		}
-
-		if (_currentThreat == null) return;
 		float threatRetentionDistance = _currentState == WolfState.Avoid
 			? Mathf.Max(chaseLossDistance, avoidSafeDistance)
 			: chaseLossDistance;
-		if (!IsWithinEffectivePerceptionRange(_currentThreat, threatRetentionDistance))
-			_currentThreat = null;
+		if (_currentThreat != null && IsWithinEffectivePerceptionRange(_currentThreat, threatRetentionDistance))
+		{
+			RememberThreat(_currentThreat, _currentThreat.transform.position, true);
+			return;
+		}
+		if (!_canSearchForThreat || !_hasThreatMemory)
+			ForgetThreat();
 	}
 
 	private Item FindClosestAdvanceAggressionTarget()
@@ -854,7 +862,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		float2 origin = new(position.x, position.y);
 		foreach (Item candidate in allItems)
 		{
-			if (!IsLivingActorTarget(candidate)) continue;
+			if (!IsUsableThreat(candidate) || !IsLivingActorTarget(candidate)) continue;
 
 			if (!topologyResolved)
 			{
@@ -863,7 +871,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			}
 			Vector3 target = candidate.transform.position;
 			float distanceSqr = topology.SqrDistance(origin, new float2(target.x, target.y));
-			if (distanceSqr < closestDistanceSqr)
+			if (distanceSqr < closestDistanceSqr &&
+				IsWithinEffectivePerceptionRange(candidate, _detector.DetectionRadius))
 			{
 				closest = candidate;
 				closestDistanceSqr = distanceSqr;
@@ -919,8 +928,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		for (int i = 0; i < detectedItems.Count; i++)
 		{
 			Item candidate = detectedItems[i];
-			if (candidate == null || !IsPlayerChaseTarget(candidate) ||
-				!FactionRelationService.CanAttack(item, candidate))
+			if (!IsUsableThreat(candidate) || !IsPlayerChaseTarget(candidate))
 			{
 				continue;
 			}
@@ -932,7 +940,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			}
 			Vector3 target = candidate.transform.position;
 			float distanceSqr = topology.SqrDistance(origin, new float2(target.x, target.y));
-			if (distanceSqr >= closestDistanceSqr)
+			if (distanceSqr >= closestDistanceSqr ||
+				!IsWithinEffectivePerceptionRange(candidate, _detector.DetectionRadius))
 				continue;
 
 			closest = candidate;
@@ -963,7 +972,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	{
 		ClearChaseFormation();
 
-		if (!enableChaseFormation || _currentThreat == null || !IsPlayerChaseTarget(_currentThreat))
+		if (!enableChaseFormation || !_threatVisible || _currentThreat == null || !IsPlayerChaseTarget(_currentThreat))
 			return;
 
 		_chaseFormationMembers.Add(this);
@@ -1069,7 +1078,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	private static bool IsEligibleChaseFormationMember(AI_Wolf wolf, Item threat)
 	{
 		return wolf != null && wolf.isActiveAndEnabled && wolf._isReady &&
-			wolf._currentThreat == threat &&
+			wolf._currentThreat == threat && wolf._threatVisible &&
 			wolf._currentState != WolfState.Avoid && wolf._currentState != WolfState.Flee;
 	}
 
@@ -1193,21 +1202,21 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		if (slotIndex < 0)
 			return "-";
 
-		string lane = (slotIndex & 1) == 0 ? "左翼" : "右翼";
+		string lane = FlatWorldLocalizationService.GetUiText((slotIndex & 1) == 0 ? "左翼" : "右翼");
 		return $"{lane}{slotIndex / 2 + 1}";
 	}
 
 	/// <summary>呼叫附近狼群同伴支援</summary>
 	private void TryCallNearbyWolves()
 	{
-		if (_packCount < 2 || _packCallCooldownTimer > 0f) return;
+		if (!_threatVisible || _packCount < 2 || _packCallCooldownTimer > 0f) return;
 		CallNearbyWolves(_currentThreat);
 		_packCallCooldownTimer = packCallCooldown;
 	}
 
 	private void CallNearbyWolves(Item threatSource)
 	{
-		if (threatSource == null) return;
+		if (!_threatVisible || !MatchesRememberedThreat(threatSource)) return;
 
 		List<Item> allItems = _detector.CurrentItemsInArea;
 		if (allItems == null || allItems.Count == 0) return;
@@ -1260,6 +1269,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			case WolfState.Move:   return animMove;
 			case WolfState.Alert:  return animAlert;
 			case WolfState.Chase:  return animChase;
+			case WolfState.Search: return animChase;
 			case WolfState.Attack: return animAttack;
 			case WolfState.Avoid:  return animAvoid;
 			case WolfState.Flee:   return animFlee;
@@ -1276,6 +1286,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			case WolfState.Move:   return "闲逛";
 			case WolfState.Alert:  return "警觉";
 			case WolfState.Chase:  return "追击";
+			case WolfState.Search:return "搜索最后位置";
 			case WolfState.Attack: return "攻击";
 			case WolfState.Avoid:  return "避让";
 			case WolfState.Flee:   return "逃跑";

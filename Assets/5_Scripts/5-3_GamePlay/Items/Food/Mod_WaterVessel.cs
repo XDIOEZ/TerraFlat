@@ -53,8 +53,12 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
     {
         get
         {
-            var contents = item.itemMods?.GetMod_ByID<Mod_VesselContents>(Mod_VesselContents.ModuleId);
-            return contents != null && contents.Enabled && contents.IsRuntimeLoaded ? contents : null;
+            IReadOnlyList<IVesselContents> contents = item?.itemMods?.GetCapabilities<IVesselContents>();
+            if (contents == null) return null;
+            foreach (IVesselContents source in contents)
+                if (source is Module module && module.Enabled && module.IsRuntimeLoaded)
+                    return source;
+            return null;
         }
     }
     public void CommitVessel() => Commit();

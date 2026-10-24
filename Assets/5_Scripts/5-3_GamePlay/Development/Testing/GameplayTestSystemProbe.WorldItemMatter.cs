@@ -12,6 +12,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/world_matter_structure", WorldMatterStructure);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
         operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
+        operations.Add("item_runtime/matter_moisture_info", MatterMoistureInfo);
         operations.Add("environment/combustion_oxygen", CombustionOxygen);
     }
 
@@ -82,6 +83,32 @@ public static partial class GameplayTestSystemProbe
         result["combustionVisualRemoved"] = new ItemMgr.WorldMatterStructure(item).CachedCombustionVisual == null;
         item.itemMods.RemoveMod(combustion);
         UnityEngine.Object.DestroyImmediate(combustionHost);
+
+        // 运动状态是模块内可变字段；缓存模块引用，但每次资格检查必须读取当前 Drop。
+        var dropHost = new GameObject("DroppingCapability");
+        dropHost.transform.SetParent(item.transform, false);
+        var dropping = dropHost.AddComponent<Mod_Droping>();
+        dropping._Data = new Ex_ModData { StableName = "probe_dropping" };
+        item.itemMods.AddMod(dropping);
+        var dropStructure = new ItemMgr.WorldMatterStructure(item);
+        result["dropInitiallyAllowed"] = !dropStructure.BlocksWorldMatter &&
+            !Mod_Droping.IsDropInProgress(item);
+        dropping.drop = new Mod_BaseDroper.Drop();
+        result["dropMovingBlocked"] = dropStructure.BlocksWorldMatter &&
+            Mod_Droping.IsDropInProgress(item);
+        dropping.drop.waterFloating = true;
+        result["dropFloatingAllowed"] = !dropStructure.BlocksWorldMatter &&
+            !Mod_Droping.IsDropInProgress(item);
+        dropping.drop.waterFloating = false;
+        dropping.drop.waterSinking = true;
+        result["dropSinkingAllowed"] = !dropStructure.BlocksWorldMatter &&
+            !Mod_Droping.IsDropInProgress(item);
+        dropping.drop = null;
+        result["dropFinishedAllowed"] = !dropStructure.BlocksWorldMatter;
+        item.itemMods.RemoveMod(dropping);
+        result["dropRemovalInvalidated"] = !dropStructure.IsCurrent(item) &&
+            !new ItemMgr.WorldMatterStructure(item).BlocksWorldMatter;
+        UnityEngine.Object.DestroyImmediate(dropHost);
         return result;
     });
 
@@ -140,6 +167,65 @@ public static partial class GameplayTestSystemProbe
             ["dryBoundary"] = dryBoundary, ["dryRejected"] = dryRejected,
             ["uninitializedRejected"] = uninitializedRejected, ["noLiquidMatch"] = noLiquidMatch,
             ["emptyRejected"] = emptyRejected, ["nullRejected"] = nullRejected
+        };
+    }
+
+    // 结构化含水数据与 UI 文案分别调用正式入口，确认查看物品不推进业务状态。
+    private static JObject MatterMoistureInfo(JObject args)
+    {
+        var meatMatter = new RuntimeItemMatterDefinition(null, .8f, .00085f, 0f, .25f, .02f,
+            Array.Empty<RuntimeItemMatterTransition>());
+        var state = new ItemMatterState { Initialized = false };
+        bool initialFound = ItemMatterInfoQuery.TryGetMoisture(state, meatMatter, out float initial);
+        var initialLines = new List<string>();
+        bool initialDisplayed = ItemMoistureTooltipInfoProvider.AppendMoisture(state, meatMatter, initialLines);
+        bool uninitializedUnchanged = !state.Initialized && state.Moisture == 0f;
+
+        state.Initialized = true;
+        state.Moisture = .412f;
+        bool liveFound = ItemMatterInfoQuery.TryGetMoisture(state, meatMatter, out float live);
+        var liveLines = new List<string>();
+        bool liveDisplayed = ItemMoistureTooltipInfoProvider.AppendMoisture(state, meatMatter, liveLines);
+        bool liveUnchanged = state.Initialized && Mathf.Approximately(state.Moisture, .412f);
+
+        state.Moisture = .2f;
+        bool boundaryFound = ItemMatterInfoQuery.TryGetMoisture(state, meatMatter, out float boundary);
+        var boundaryLines = new List<string>();
+        bool boundaryDisplayed = ItemMoistureTooltipInfoProvider.AppendMoisture(state, meatMatter, boundaryLines);
+
+        state.Moisture = float.NaN;
+        bool invalidRejected = !ItemMatterInfoQuery.TryGetMoisture(state, meatMatter, out _) &&
+            !ItemMoistureTooltipInfoProvider.AppendMoisture(state, meatMatter, new List<string>());
+        state.Moisture = 0f;
+        bool emptyMoistureVisible = ItemMatterInfoQuery.TryGetMoisture(state, meatMatter, out float emptyMoisture) &&
+            emptyMoisture == 0f;
+
+        var inertMatter = new RuntimeItemMatterDefinition(300f, 0f, 0f, 0f, 0f, 0f,
+            Array.Empty<RuntimeItemMatterTransition>());
+        var inertLines = new List<string>();
+        bool inertHidden = !ItemMatterInfoQuery.TryGetMoisture(state, inertMatter, out _) &&
+            !ItemMoistureTooltipInfoProvider.AppendMoisture(state, inertMatter, inertLines) &&
+            !ItemMatterInfoQuery.TryGetMoisture(state, null, out _);
+        var moistureTransitionMatter = new RuntimeItemMatterDefinition(null, 0f, 0f, 0f, 0f, 0f,
+            new[] { new RuntimeItemMatterTransition("dry", null, null, null, .2f, "dry", 1f, null) });
+        bool moistureTransitionVisible = ItemMatterInfoQuery.TryGetMoisture(state,
+            moistureTransitionMatter, out _);
+        return new JObject
+        {
+            ["initialFound"] = initialFound, ["initial"] = initial,
+            ["initialDisplayed"] = initialDisplayed, ["initialText"] = initialLines.Count > 0 ? initialLines[0] : "",
+            ["expectedInitialText"] = FlatWorld.Localization.FlatWorldLocalizationService.GetUiFormat("含水量：{0}%", "80"),
+            ["uninitializedUnchanged"] = uninitializedUnchanged,
+            ["liveFound"] = liveFound, ["live"] = live,
+            ["liveDisplayed"] = liveDisplayed, ["liveText"] = liveLines.Count > 0 ? liveLines[0] : "",
+            ["expectedLiveText"] = FlatWorld.Localization.FlatWorldLocalizationService.GetUiFormat("含水量：{0}%", "41.2"),
+            ["liveUnchanged"] = liveUnchanged,
+            ["boundaryFound"] = boundaryFound, ["boundary"] = boundary,
+            ["boundaryDisplayed"] = boundaryDisplayed, ["boundaryText"] = boundaryLines.Count > 0 ? boundaryLines[0] : "",
+            ["expectedBoundaryText"] = FlatWorld.Localization.FlatWorldLocalizationService.GetUiFormat("含水量：{0}%", "20"),
+            ["invalidRejected"] = invalidRejected, ["emptyMoistureVisible"] = emptyMoistureVisible,
+            ["inertHidden"] = inertHidden && inertLines.Count == 0,
+            ["moistureTransitionVisible"] = moistureTransitionVisible
         };
     }
 

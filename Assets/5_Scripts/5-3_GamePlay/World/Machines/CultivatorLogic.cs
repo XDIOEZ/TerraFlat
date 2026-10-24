@@ -226,11 +226,11 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         lastSuppliedWatts = Entity.ElectricalSuppliedWatts;
         lastIrrigationLiters = currentWater;
         float ratio = Mathf.Clamp01(Entity.ElectricalSuppliedWatts / Entity.Definition.Electrical.PowerWatts);
-        float difficulty = Mathf.Max(0f, GameDifficultyService.Current.Production.CropGrowthMultiplier);
+        float growthMultiplier = Mathf.Max(0f, GameRuleConfiguration.Current.Production.CropGrowthMultiplier);
         // 每个培育器复用工作列表，保留生长前冻结的植株集合与原顺序。
         growingPlots.Clear();
         foreach (CultivatorPlotState plot in State.Plots)
-            if (plot.CropId != null && plot.Growth < 1f && CanAdvance(plot, difficulty))
+            if (plot.CropId != null && plot.Growth < 1f && CanAdvance(plot, growthMultiplier))
                 growingPlots.Add(plot);
         if (ratio <= 0f || growingPlots.Count == 0 || MachineWorld.GetFluidState(Entity).Ruptured)
         { if (changed) NotifyChanged(); return; }
@@ -253,35 +253,35 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         foreach (CultivatorPlotState plot in growingPlots)
         {
             CropProfile profile = Profile(plot.CropId);
-            AdvanceGrowth(plot, profile, growthSeconds, difficulty);
+            AdvanceGrowth(plot, profile, growthSeconds, growthMultiplier);
             if (plot.Growth >= 1f && plot.PendingHarvest == null) plot.PendingHarvest = RollHarvest(plot, profile);
         }
         NotifyChanged();
     }
-    private bool CanAdvance(CultivatorPlotState plot, float difficulty)
+    private bool CanAdvance(CultivatorPlotState plot, float growthMultiplier)
     {
         CropProfile profile = Profile(plot.CropId);
-        if (profile.Production == null) return difficulty > 0f;
+        if (profile.Production == null) return growthMultiplier > 0f;
         float duration = plot.HasCompletedFirstGrowth ? profile.RepeatSeconds : profile.GrowthSeconds;
         float elapsed = plot.Growth * duration;
-        if (!plot.HasCompletedFirstGrowth && elapsed < profile.CropGrowthSeconds) return difficulty > 0f;
-        return profile.CalendarInterval || profile.ProductionRate > 0f && (!profile.ProductionUsesGrowthMultiplier || difficulty > 0f);
+        if (!plot.HasCompletedFirstGrowth && elapsed < profile.CropGrowthSeconds) return growthMultiplier > 0f;
+        return profile.CalendarInterval || profile.ProductionRate > 0f && (!profile.ProductionUsesGrowthMultiplier || growthMultiplier > 0f);
     }
-    private static void AdvanceGrowth(CultivatorPlotState plot, CropProfile profile, float seconds, float difficulty)
+    private static void AdvanceGrowth(CultivatorPlotState plot, CropProfile profile, float seconds, float growthMultiplier)
     {
         float duration = plot.HasCompletedFirstGrowth && profile.Repeatable ? profile.RepeatSeconds : profile.GrowthSeconds;
         if (profile.Production == null)
-        { plot.Growth = Mathf.Clamp01(plot.Growth + seconds * difficulty / duration); return; }
+        { plot.Growth = Mathf.Clamp01(plot.Growth + seconds * growthMultiplier / duration); return; }
         float elapsed = plot.Growth * duration;
         if (!plot.HasCompletedFirstGrowth && elapsed < profile.CropGrowthSeconds)
         {
-            if (difficulty <= 0f) return;
-            float cropSeconds = Mathf.Min(seconds, (profile.CropGrowthSeconds - elapsed) / difficulty);
-            elapsed += cropSeconds * difficulty;
+            if (growthMultiplier <= 0f) return;
+            float cropSeconds = Mathf.Min(seconds, (profile.CropGrowthSeconds - elapsed) / growthMultiplier);
+            elapsed += cropSeconds * growthMultiplier;
             seconds -= cropSeconds;
         }
-        // 周期果实继续使用原生日历时长，生长难度只影响声明接受它的阶段。
-        float rate = profile.CalendarInterval ? 1f : profile.ProductionRate * (profile.ProductionUsesGrowthMultiplier ? difficulty : 1f);
+        // 周期果实继续使用原生日历时长，成长倍率只影响声明接受它的阶段。
+        float rate = profile.CalendarInterval ? 1f : profile.ProductionRate * (profile.ProductionUsesGrowthMultiplier ? growthMultiplier : 1f);
         plot.Growth = Mathf.Clamp01((elapsed + seconds * rate) / duration);
     }
     private bool PlantEmptyPlots()
@@ -509,7 +509,7 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
     private List<CultivatorHarvestOutput> RollHarvest(CultivatorPlotState plot, CropProfile profile)
     {
         var outputs = new List<CultivatorHarvestOutput>();
-        float multiplier = Mathf.Max(0f, GameDifficultyService.Current.World.LootAmountMultiplier);
+        float multiplier = Mathf.Max(0f, GameRuleConfiguration.Current.World.LootAmountMultiplier);
         foreach (CropYieldEntry output in profile.Outputs)
         {
             if (NextRandom01() > Mathf.Clamp01(output.probability * (profile.Production == null ? multiplier : 1f))) continue;
@@ -520,7 +520,7 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
                 plot.YieldGeneVariantIndex = gene;
             }
             int amount = min + (int)(NextRandom() % (uint)(max - min + 1));
-            if (profile.Production == null) amount = GameDifficultyService.ScaleRandomizedAmount(amount, multiplier);
+            if (profile.Production == null) amount = GameRuleMath.ScaleRandomizedAmount(amount, multiplier);
             if (amount > 0) outputs.Add(new() { ItemId = output.itemId, Amount = amount });
         }
         return outputs;

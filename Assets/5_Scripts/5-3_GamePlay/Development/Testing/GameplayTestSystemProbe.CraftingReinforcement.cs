@@ -15,6 +15,8 @@ public static partial class GameplayTestSystemProbe
     {
         Register("crafting", "tool_reinforcement", EntityToolReinforcement);
         Register("crafting", "tool_reinforcement_catalog", EntityReinforcementCatalog);
+        Register("crafting", "wood_shield_recipe", EntityWoodShieldRecipe);
+        Register("crafting", "wood_shield_reinforcement", EntityWoodShieldReinforcement);
         Register("agriculture", "manual_harvest_work", EntityManualHarvestWork);
         Register("agriculture", "crop_health_catalog", EntityCropHealthCatalog);
         Register("combat", "equipment_durability", EntityEquipmentDurability);
@@ -76,10 +78,11 @@ public static partial class GameplayTestSystemProbe
             ["coldWeaponMaximum"] = coldWeapon.MaxDurability,
             ["coldWeaponTagged"] = coldWeapon.Tags.Contains(EquipmentDurabilityRules.AttackEquipmentTag),
             ["obsidianToolMaximum"] = shovel.MaxDurability,
-            ["positiveWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, 2f),
-            ["blockedWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, 0f),
-            ["rejectedWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, -1f),
-            ["lastPoint"] = EquipmentDurabilityRules.ResolveRemaining(1f, 100f),
+            ["positiveHitWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, true),
+            ["zeroDamageHitWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, true),
+            ["damageRejectedAfterHitWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, true),
+            ["missWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, false),
+            ["lastPoint"] = EquipmentDurabilityRules.ResolveRemaining(1f, true),
             ["knifeCropMultiplier"] = knife,
             ["knifeWrongTarget"] = Mod_ResourceHarvest.ResolveAffinityMultiplier(ResourceToolKind.Axe, 1, ResourceToolKind.Knife, 1, 1f),
             ["postDefense"] = FlatWorld.Combat.CombatRules.ResolvePhysical(10f, 4f, 1f, knife),
@@ -194,6 +197,105 @@ public static partial class GameplayTestSystemProbe
             ["repeatRejected"] = secondRejected, ["dataNotifications"] = dataNotifications,
             ["outputStillBlocked"] = !result.Success && ReferenceEquals(output.Data.itemSlots[0].itemData, blocker)
         };
+    }
+    #endregion
+
+    #region 木盾正式配方与钉子加固采样
+    // 只采样正式匹配、实例复制、库存事务和快照，业务断言由 Lua 持有。
+    private static RuntimeRecipe EntityWoodShieldRecipeDefinition(bool reinforcement, out List<string> warnings)
+    {
+        string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath,
+            "GameConfig/Recipes/crafting/shields.json");
+        var definitions = new HashSet<string>(ItemDefinitionCatalogLoader.LoadBuiltInDefinitions().Select(value => value.Id));
+        return RecipeRuntimeFactory.BuildCatalog(RecipeRuntimeFactory.Deserialize(StreamingAssetsTextLoader.ReadAllText(path)),
+            definitions.Contains, out warnings).Single(value => reinforcement
+                ? value.Id == "core:wood_shield_nail_reinforcement" : value.Id == "core:木盾");
+    }
+
+    private static JObject EntityWoodShieldRecipe(JObject args)
+    {
+        RuntimeRecipe recipe = EntityWoodShieldRecipeDefinition(false, out List<string> warnings);
+        var definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions().ToDictionary(value => value.Id);
+        ItemData plank = EntityCraftingDefinitionData(definitions[Text(args, "plankId", "Plank")], (float)Number(args, "planks", 5));
+        ItemData rope = EntityCraftingDefinitionData(definitions[Text(args, "ropeId", "Rope")], (float)Number(args, "ropes", 5));
+        var input = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+        { new(0) { itemData = plank }, new(1) { itemData = rope } }, "shield materials") };
+        var blocker = EntityProbeData("probe:shield-blocker", 1);
+        var output = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+        { new(0) { itemData = Flag(args, "full", false) ? blocker : null } }, "shield output") };
+        var capabilities = new CraftingCapabilities { StationId = "handcraft", InputSlotLimit = 2, ApplyOutputMultiplier = false };
+        bool matched = CraftingRecipeMatcher.TryMatchRecipe(input, recipe, capabilities, out CraftingRecipeMatch match);
+        ItemData product = EntityCraftingDefinitionData(definitions[recipe.outputs.results[0].ItemName], recipe.outputs.results[0].amount);
+        bool prepared = false, committed = false;
+        if (matched)
+        {
+            prepared = CraftingTransaction.TryCreate(input, output, match, new[] { product }, false, out CraftingTransaction transaction, out _);
+            if (prepared && transaction.Commit(out _)) { transaction.Complete(); committed = true; }
+        }
+        return new JObject { ["warnings"] = new JArray(warnings), ["matched"] = matched, ["prepared"] = prepared,
+            ["success"] = committed, ["planks"] = input.Data.itemSlots[0].itemData?.Stack?.Amount ?? 0f,
+            ["ropes"] = input.Data.itemSlots[1].itemData?.Stack?.Amount ?? 0f,
+            ["outputId"] = output.Data.itemSlots[0].itemData?.IDName ?? "",
+            ["outputAmount"] = output.Data.itemSlots[0].itemData?.Stack?.Amount ?? 0f,
+            ["outputStillBlocked"] = ReferenceEquals(output.Data.itemSlots[0].itemData, blocker) };
+    }
+
+    private static JObject EntityWoodShieldReinforcement(JObject args)
+    {
+        RuntimeRecipe recipe = EntityWoodShieldRecipeDefinition(true, out List<string> warnings);
+        ItemDefinitionDto definition = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions().Single(value => value.Id == "Shield_Wood");
+        ItemData template = EntityCraftingDefinitionData(definition, 1);
+        template.Guid = 18001;
+        Func<ItemData> factory = ItemInstanceDataFactory.Compile(template);
+        ItemData shield = factory();
+        CraftedDurabilityQuality.ApplyToCraftedOutput(shield, (float)Number(args, "quality", 1));
+        shield.Durability = (float)Number(args, "durability", 40);
+        shield.ItemSpecialData = "{\"probe\":\"shield-state\"}";
+        shield.Tags.Add("CustomShieldTag");
+        if (Flag(args, "reinforced", false)) shield.Tags.Add(recipe.outputs.results[0].AddTag);
+        if (Flag(args, "adhesive", false)) shield.Tags.Add(CraftingInstanceOutput.ReinforcedTag);
+        if (Flag(args, "stacked", false)) shield.Stack.Amount = 2;
+        if (Flag(args, "otherShield", false)) shield.IDName = "probe:other-shield";
+        float durabilityBefore = shield.Durability, maximumBefore = shield.MaxDurability;
+        var nails = EntityProbeData("Nail", (float)Number(args, "nails", 6));
+        float nailsBefore = nails.Stack.Amount;
+        var input = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+        { new(0) { itemData = shield }, new(1) { itemData = nails } }, "shield reinforcement input") };
+        var blocker = EntityProbeData("probe:shield-blocker", 1);
+        var output = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+        { new(0) { itemData = Flag(args, "full", false) ? blocker : null } }, "shield reinforcement output") };
+        var capabilities = new CraftingCapabilities { StationId = Flag(args, "workbench", false) ? "workbench" : "handcraft",
+            InputSlotLimit = 2, ApplyOutputMultiplier = false };
+        bool matched = CraftingRecipeMatcher.TryMatchRecipe(input, recipe, capabilities, out _);
+        CraftingResult preview = CraftingService.PreviewRecipe(input, output, capabilities, recipe);
+        bool previewUnchanged = shield.Durability == durabilityBefore && shield.MaxDurability == maximumBefore &&
+            nails.Stack.Amount == nailsBefore && (Flag(args, "reinforced", false) || !shield.Tags.Contains(recipe.outputs.results[0].AddTag));
+        CraftingResult result = CraftingService.CraftRecipe(input, output, capabilities, recipe);
+        ItemData product = result.Success ? output.Data.itemSlots[0].itemData : null;
+        ItemData restored = null;
+        bool repeatRejected = false;
+        if (product != null)
+        {
+            restored = factory();
+            ItemInstanceSnapshot snapshot = ItemInstanceSnapshot.Capture(product);
+            snapshot.RestoreTo(restored);
+            snapshot.RestoreTo(restored);
+            var repeatInput = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+            { new(0) { itemData = restored }, new(1) { itemData = EntityProbeData("Nail", 3) } }, "repeat shield reinforcement") };
+            repeatRejected = !CraftingRecipeMatcher.TryMatchRecipe(repeatInput, recipe, capabilities, out _);
+        }
+        return new JObject { ["warnings"] = new JArray(warnings), ["matched"] = matched, ["preview"] = preview.Success,
+            ["previewUnchanged"] = previewUnchanged, ["success"] = result.Success,
+            ["shieldRemaining"] = input.Data.itemSlots[0].itemData?.Stack?.Amount ?? 0f,
+            ["nailsRemaining"] = input.Data.itemSlots[1].itemData?.Stack?.Amount ?? 0f,
+            ["outputAmount"] = product?.Stack?.Amount ?? 0f, ["outputId"] = product?.IDName ?? "",
+            ["maximum"] = product?.MaxDurability ?? 0f, ["durability"] = product?.Durability ?? 0f,
+            ["quality"] = product?.CraftedDurabilityMultiplier ?? 0f,
+            ["identityPreserved"] = restored != null && restored.Guid == shield.Guid && restored.ItemSpecialData == shield.ItemSpecialData,
+            ["tagsPreserved"] = restored != null && restored.Tags.Contains("CustomShieldTag") &&
+                restored.Tags.Contains(recipe.outputs.results[0].AddTag) && (!Flag(args, "adhesive", false) || restored.Tags.Contains(CraftingInstanceOutput.ReinforcedTag)),
+            ["restoredMaximum"] = restored?.MaxDurability ?? 0f, ["restoredDurability"] = restored?.Durability ?? 0f,
+            ["repeatRejected"] = repeatRejected, ["outputStillBlocked"] = ReferenceEquals(output.Data.itemSlots[0].itemData, blocker) };
     }
     #endregion
 }

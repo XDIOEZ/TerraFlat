@@ -122,6 +122,7 @@ public partial class Mod_GameController : Module
     public event Action AttackStarted;
     public event Action AttackEnded;
     public event Action BuildingRotationRequested; // 当前手持建筑的临时朝向切换。
+    public event Action ParryRequested;
     public event Action RollRequested; // 翻滚只通过中央输入仲裁进入玩法。
     public float AimDeadZone => Mathf.Clamp01(GamepadCursorDeadZone); // 手机和手柄共用的准星死区
 
@@ -204,6 +205,17 @@ public partial class Mod_GameController : Module
     public int GameplayInputLockOwnerCount => _gameplayInputLockOwners.Count; // 面板叠加锁数量只用于区分总锁来源。
 
     public bool IsRightClickHeld => _rightClickHeld; // 玩法模块只读取中央输入层维护的持续“使用”状态
+    public bool IsShiftRightClickRequested { get; private set; } // 只在本次鼠标使用分发期间保留修饰键快照。
+
+    /// <summary>一次性快捷动作消费后，阻止本次按住和松开继续使用换上来的手持物。</summary>
+    public bool TryConsumeShiftRightClick()
+    {
+        if (!IsShiftRightClickRequested) return false;
+        IsShiftRightClickRequested = false;
+        _rightClickHeld = false;
+        _suppressRightClickUntilRelease = true;
+        return true;
+    }
 
     /// <summary>
     /// 判断当前输入锁中是否存在不属于指定兼容面板的锁。
@@ -323,6 +335,7 @@ public partial class Mod_GameController : Module
         AttackStarted = null;
         AttackEnded = null;
         RollRequested = null;
+        ParryRequested = null;
         LeftClick.Clear();
         LeftClickUp.Clear();
         RightClick.Clear();
@@ -416,7 +429,11 @@ public partial class Mod_GameController : Module
 
         _suppressRightClickUntilRelease = false;
         _rightClickHeld = true;
-        RightClick.Invoke();
+        Keyboard keyboard = Keyboard.current;
+        IsShiftRightClickRequested = obj.control?.device is Mouse && keyboard != null &&
+            IsGameplayInputAllowed(keyboard) && keyboard.shiftKey.isPressed;
+        try { RightClick.Invoke(); }
+        finally { IsShiftRightClickRequested = false; }
     }
 
     public void RightClickUpAction(InputAction.CallbackContext obj) /// 右键抬起
@@ -643,6 +660,7 @@ public partial class Mod_GameController : Module
     private void RegisterInputCallbacks() /// 注册输入监听
     {
         _inputActions.Win10.Roll.performed += HandleRollInput;
+        _inputActions.Win10.Parry.performed += HandleParryInput;
         _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed += HandleBuildingRotation;
         _inputActions.Win10.LeftClick.performed += LeftClickAction;
         _inputActions.Win10.LeftClick.canceled += LeftClickUpAction;
@@ -681,6 +699,7 @@ public partial class Mod_GameController : Module
     private void UnregisterInputCallbacks() /// 取消输入监听
     {
         _inputActions.Win10.Roll.performed -= HandleRollInput;
+        _inputActions.Win10.Parry.performed -= HandleParryInput;
         _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed -= HandleBuildingRotation;
         _inputActions.Win10.LeftClick.performed -= LeftClickAction;
         _inputActions.Win10.LeftClick.canceled -= LeftClickUpAction;

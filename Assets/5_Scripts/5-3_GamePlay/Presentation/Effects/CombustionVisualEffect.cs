@@ -3,17 +3,15 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 通用燃烧表现：持续生成小型火焰、火星与烟雾粒子。
-/// 烟与火星在世界空间向上飘，主体火苗可配置为跟随燃烧点。
+/// 通用燃烧适配器：向独立 Shader 火焰转发燃烧状态、锚点和排序。
+/// 常驻火焰不模拟粒子，只有入水熄灭时产生一次性烟汽。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransformEffect
 {
     #region 常量与配置
 
-    private const string FlameName = "Combustion Flame Particles";
-    private const string EmberName = "Combustion Ember Particles";
-    private const string SmokeName = "Combustion Smoke Particles";
+    private const string FlameName = "Combustion Shader Flame";
     private const string ExtinguishRootName = "Combustion Extinguish Burst";
     private const float ExtinguishEffectLifetime = 1.6f;
 
@@ -21,20 +19,12 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     [SerializeField] private Transform flameAnchor;
     [SerializeField] private Material particleMaterial;
 
-    [Header("发射速率")]
-    [SerializeField, Min(0f)] private float flameRate = 8f;
-    [SerializeField, Min(0f)] private float emberRate = 1.4f;
-    [SerializeField, Min(0f)] private float smokeRate = 1.1f;
+    [SerializeField] private Material flameMaterial;
 
     private Light2D sourceLight;
     private SpriteRenderer sourceSpriteRenderer;
-    private ParticleSystem flameParticles;
-    private ParticleSystem emberParticles;
-    private ParticleSystem smokeParticles;
-    private ParticleSystemRenderer flameRenderer;
-    private ParticleSystemRenderer emberRenderer;
-    private ParticleSystemRenderer smokeRenderer;
-    private bool particlesPlaying;
+    private ShaderFlameEffect flame;
+    private bool effectPlaying;
     private bool combustionActive;
     private float flameScale = 1f;
     private float flameHeightRatio = 1f;
@@ -58,8 +48,9 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         ResolveReferences();
 
         Vector3 worldPosition = flameAnchor != null ? flameAnchor.position : transform.position;
-        int sortingLayerId = 0;
-        int sortingOrder = 3;
+        if (particleMaterial == null) particleMaterial = Resources.Load<Material>("Combustion_Particle");
+        int sortingLayerId = hasExplicitSorting ? explicitSortingLayerId : 0;
+        int sortingOrder = (hasExplicitSorting ? explicitSortingOrder : 0) + 3;
         if (sourceSpriteRenderer != null)
         {
             WorldSortingManager.ReadExternalRendererKey(sourceSpriteRenderer,
@@ -136,6 +127,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         particleObject.transform.localScale = Vector3.one;
 
         ParticleSystem particles = particleObject.GetComponent<ParticleSystem>();
+        particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ParticleSystem.MainModule main = particles.main;
         main.loop = false;
         main.playOnAwake = false;
@@ -201,59 +193,52 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     private void Awake()
     {
         ResolveReferences();
-        EnsureParticleSystems();
+        EnsureFlame();
         RefreshPlayingState(force: true);
     }
 
     private void OnEnable()
     {
         ResolveReferences();
-        EnsureParticleSystems();
+        EnsureFlame();
         RefreshPlayingState(force: true);
     }
 
     private void LateUpdate()
     {
+        if (!combustionActive) return;
         RefreshRendererAnchor();
+        RefreshFlamePose();
         RefreshSorting();
         RefreshPlayingState(force: false);
     }
 
     private void OnDisable()
     {
-        SetParticleSystemsPlaying(false, clear: true);
-        particlesPlaying = false;
-    }
-
-    private void OnValidate()
-    {
-        flameRate = Mathf.Max(0f, flameRate);
-        emberRate = Mathf.Max(0f, emberRate);
-        smokeRate = Mathf.Max(0f, smokeRate);
+        flame?.SetBurning(false);
+        effectPlaying = false;
     }
 
     #endregion
 
     #region 引用与状态
 
-    // 行网格设施没有 SpriteRenderer，直接复用粒子模板并显式传入宿主排序。
+    // 行网格设施没有 SpriteRenderer，直接复用火焰模板并显式传入宿主排序。
     public void BindWorldPresentation(CombustionVisualEffect template, int sortingLayerId, int sortingOrder)
     {
         if (template == null)
             throw new System.ArgumentNullException(nameof(template));
 
         particleMaterial = template.particleMaterial;
-        flameRate = template.flameRate;
-        emberRate = template.emberRate;
-        smokeRate = template.smokeRate;
+        flameMaterial = template.flameMaterial;
         hasExplicitSorting = true;
         explicitSortingLayerId = sortingLayerId;
         explicitSortingOrder = sortingOrder;
-        EnsureParticleSystems();
+        EnsureFlame();
         RefreshSorting();
     }
 
-    // 火苗跟随手持物，烟和火星继续独立飘散。
+    // 保留内容配置接口，原发射倍率现在只控制火势，不再驱动粒子数量。
     public void ConfigureFlamePresentation(float scale, float heightRatio,
         float emissionMultiplier, bool followAnchor, bool followRenderer, Vector3 rendererOffset)
     {
@@ -263,9 +248,8 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         attachFlameToAnchor = followAnchor;
         followSourceRenderer = followRenderer;
         sourceRendererAnchorOffset = rendererOffset;
-        SetParticleSystemPlaying(flameParticles, false, clear: true);
         ResolveReferences();
-        EnsureParticleSystems();
+        EnsureFlame();
         RefreshPlayingState(force: true);
     }
 
@@ -298,8 +282,14 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     /// <summary>由通用燃烧模块显式驱动表现开关，不从具体物品类型推断。</summary>
     public void SetCombustionActive(bool active)
     {
+        bool changed = combustionActive != active || flame == null;
         combustionActive = active;
-        RefreshPlayingState(force: true);
+        if (flame == null)
+        {
+            ResolveReferences();
+            EnsureFlame();
+        }
+        RefreshPlayingState(force: changed);
     }
 
     /// <summary>优先使用同层级 Light2D 的位置作为燃烧点。</summary>
@@ -331,7 +321,10 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         if (!followSourceRenderer || rendererFlameAnchor == null || sourceSpriteRenderer == null)
             return;
         Transform source = sourceSpriteRenderer.transform;
-        Vector3 anchorPosition = source.TransformPoint(sourceRendererAnchorOffset);
+        Vector3 offset = sourceRendererAnchorOffset;
+        if (sourceSpriteRenderer.flipX) offset.x = -offset.x;
+        if (sourceSpriteRenderer.flipY) offset.y = -offset.y;
+        Vector3 anchorPosition = source.TransformPoint(offset);
         Quaternion anchorRotation = source.rotation;
         // 静止火源不反复写入 Transform；源或父级移动时仍按最终世界姿态同步。
         if (rendererFlameAnchor.position != anchorPosition || rendererFlameAnchor.rotation != anchorRotation)
@@ -346,306 +339,60 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
             rendererFlameAnchor.localScale = anchorScale;
     }
 
-    /// <summary>光源被关闭时同步熄灭燃烧粒子。</summary>
+    /// <summary>光源被关闭时同步隐藏火焰，不改变权威燃烧状态。</summary>
     private void RefreshPlayingState(bool force)
     {
         bool shouldPlay = combustionActive &&
                           isActiveAndEnabled &&
                           (sourceLight == null ||
                            (sourceLight.enabled && sourceLight.intensity > 0f));
-        if (!force && shouldPlay == particlesPlaying)
+        if (!force && shouldPlay == effectPlaying)
             return;
 
-        SetParticleSystemsPlaying(shouldPlay, clear: !shouldPlay);
-        particlesPlaying = shouldPlay;
-    }
-
-    private void SetParticleSystemsPlaying(bool shouldPlay, bool clear)
-    {
-        SetParticleSystemPlaying(flameParticles, shouldPlay, clear);
-        SetParticleSystemPlaying(emberParticles, shouldPlay, clear);
-        SetParticleSystemPlaying(smokeParticles, shouldPlay, clear);
-    }
-
-    private static void SetParticleSystemPlaying(ParticleSystem particles, bool shouldPlay, bool clear)
-    {
-        if (particles == null)
-            return;
-
-        if (shouldPlay)
-        {
-            if (!particles.isPlaying)
-                particles.Play(true);
-            return;
-        }
-
-        ParticleSystemStopBehavior behavior = clear
-            ? ParticleSystemStopBehavior.StopEmittingAndClear
-            : ParticleSystemStopBehavior.StopEmitting;
-        particles.Stop(true, behavior);
+        flame?.SetBurning(shouldPlay);
+        effectPlaying = shouldPlay;
     }
 
     #endregion
 
-    #region 粒子装配
+    #region 网格装配与宿主同步
 
-    private void EnsureParticleSystems()
+    private void EnsureFlame()
     {
-        if (flameAnchor == null)
-            return;
-
-        flameParticles ??= FindParticleSystem(FlameName);
-        emberParticles ??= FindParticleSystem(EmberName);
-        smokeParticles ??= FindParticleSystem(SmokeName);
-
-        if (flameParticles == null)
-            flameParticles = CreateParticleSystem(FlameName);
-        if (emberParticles == null)
-            emberParticles = CreateParticleSystem(EmberName);
-        if (smokeParticles == null)
-            smokeParticles = CreateParticleSystem(SmokeName);
-
-        flameRenderer = flameParticles.GetComponent<ParticleSystemRenderer>();
-        emberRenderer = emberParticles.GetComponent<ParticleSystemRenderer>();
-        smokeRenderer = smokeParticles.GetComponent<ParticleSystemRenderer>();
-        ReparentParticleSystem(flameParticles);
-        ReparentParticleSystem(emberParticles);
-        ReparentParticleSystem(smokeParticles);
-        ConfigureFlame(flameParticles);
-        ConfigureEmbers(emberParticles);
-        ConfigureSmoke(smokeParticles);
+        if (flameAnchor == null) return;
+        if (flame == null)
+        {
+            var root = new GameObject(FlameName);
+            root.layer = gameObject.layer;
+            root.transform.SetParent(flameAnchor, false);
+            flame = root.AddComponent<ShaderFlameEffect>();
+        }
+        if (flame.transform.parent != flameAnchor) flame.transform.SetParent(flameAnchor, false);
+        flame.transform.localPosition = Vector3.zero;
+        flame.transform.localScale = Vector3.one;
+        float strength = flameEmissionMultiplier > 0f ? 0.85f + 0.15f * Mathf.Sqrt(flameEmissionMultiplier) : 0f;
+        flame.Configure(new Vector2(0.15f * flameScale, 0.20f * flameScale * flameHeightRatio), strength, flameMaterial);
+        RefreshFlamePose();
         RefreshSorting();
     }
 
-    private void ReparentParticleSystem(ParticleSystem particles)
+    // 手持火焰可随武器倾斜，其他火源保持向世界上方燃烧。
+    private void RefreshFlamePose()
     {
-        if (particles.transform.parent != flameAnchor)
-            particles.transform.SetParent(flameAnchor, false);
-    }
-
-    private ParticleSystem FindParticleSystem(string objectName)
-    {
-        Transform child = flameAnchor.Find(objectName);
-        return child != null ? child.GetComponent<ParticleSystem>() : null;
-    }
-
-    private ParticleSystem CreateParticleSystem(string objectName)
-    {
-        var particleObject = new GameObject(objectName, typeof(ParticleSystem));
-        particleObject.layer = gameObject.layer;
-        particleObject.transform.SetParent(flameAnchor, false);
-        particleObject.transform.localPosition = Vector3.zero;
-        particleObject.transform.localRotation = Quaternion.identity;
-        particleObject.transform.localScale = Vector3.one;
-
-        ParticleSystem particles = particleObject.GetComponent<ParticleSystem>();
-        ParticleSystemRenderer renderer = particleObject.GetComponent<ParticleSystemRenderer>();
-        if (renderer != null && particleMaterial != null)
-            renderer.sharedMaterial = particleMaterial;
-        return particles;
-    }
-
-    /// <summary>主体火苗：短寿命、较密集，形成持续跳动的暖色核心。</summary>
-    private void ConfigureFlame(ParticleSystem particles)
-    {
-        ConfigureBase(
-            particles,
-            maxParticles: Mathf.Clamp(Mathf.CeilToInt(flameRate * flameEmissionMultiplier * 0.32f) + 2, 12, 64),
-            emissionRate: flameRate * flameEmissionMultiplier,
-            lifetimeMin: 0.18f,
-            lifetimeMax: 0.32f,
-            sizeMin: 0.055f * flameScale,
-            sizeMax: 0.095f * flameScale,
-            radius: 0.018f * flameScale,
-            velocityXMin: -0.035f * flameScale,
-            velocityXMax: 0.035f * flameScale,
-            velocityYMin: 0.15f * flameScale,
-            velocityYMax: 0.28f * flameScale);
-
-        ParticleSystem.MainModule main = particles.main;
-        main.simulationSpace = attachFlameToAnchor
-            ? ParticleSystemSimulationSpace.Local
-            : ParticleSystemSimulationSpace.World;
-        main.prewarm = attachFlameToAnchor;
-        main.startSize3D = true;
-        main.startSizeX = new ParticleSystem.MinMaxCurve(0.055f * flameScale, 0.095f * flameScale);
-        main.startSizeY = new ParticleSystem.MinMaxCurve(
-            0.055f * flameScale * flameHeightRatio, 0.095f * flameScale * flameHeightRatio);
-        main.startSizeZ = 1f;
-
-        ParticleSystem.ColorOverLifetimeModule color = particles.colorOverLifetime;
-        color.enabled = true;
-        color.color = new ParticleSystem.MinMaxGradient(CreateGradient(
-            new Color(1f, 0.95f, 0.45f, 1f),
-            new Color(1f, 0.42f, 0.08f, 1f),
-            new Color(0.75f, 0.08f, 0.02f, 1f),
-            0.95f,
-            0f));
-
-        ParticleSystem.SizeOverLifetimeModule size = particles.sizeOverLifetime;
-        size.enabled = true;
-        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
-            new Keyframe(0f, 0.5f),
-            new Keyframe(0.3f, 1f),
-            new Keyframe(1f, 0.15f)));
-    }
-
-    /// <summary>火星：数量少、速度快，用亮点强调正在燃烧。</summary>
-    private void ConfigureEmbers(ParticleSystem particles)
-    {
-        ConfigureBase(
-            particles,
-            maxParticles: 6,
-            emissionRate: emberRate,
-            lifetimeMin: 0.45f,
-            lifetimeMax: 0.85f,
-            sizeMin: 0.014f,
-            sizeMax: 0.026f,
-            radius: 0.025f,
-            velocityXMin: -0.11f,
-            velocityXMax: 0.11f,
-            velocityYMin: 0.25f,
-            velocityYMax: 0.5f);
-
-        ParticleSystem.ColorOverLifetimeModule color = particles.colorOverLifetime;
-        color.enabled = true;
-        color.color = new ParticleSystem.MinMaxGradient(CreateGradient(
-            new Color(1f, 0.9f, 0.28f, 1f),
-            new Color(1f, 0.32f, 0.04f, 1f),
-            new Color(0.55f, 0.05f, 0.01f, 1f),
-            1f,
-            0f));
-
-        ParticleSystem.SizeOverLifetimeModule size = particles.sizeOverLifetime;
-        size.enabled = true;
-        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
-            new Keyframe(0f, 1f),
-            new Keyframe(1f, 0.2f)));
-    }
-
-    /// <summary>烟雾：低频、低透明度，缓慢上浮并逐渐扩散消失。</summary>
-    private void ConfigureSmoke(ParticleSystem particles)
-    {
-        ConfigureBase(
-            particles,
-            maxParticles: 6,
-            emissionRate: smokeRate,
-            lifetimeMin: 0.9f,
-            lifetimeMax: 1.45f,
-            sizeMin: 0.055f,
-            sizeMax: 0.09f,
-            radius: 0.02f,
-            velocityXMin: -0.045f,
-            velocityXMax: 0.045f,
-            velocityYMin: 0.1f,
-            velocityYMax: 0.18f);
-
-        ParticleSystem.ColorOverLifetimeModule color = particles.colorOverLifetime;
-        color.enabled = true;
-        color.color = new ParticleSystem.MinMaxGradient(CreateGradient(
-            new Color(0.28f, 0.25f, 0.22f, 1f),
-            new Color(0.2f, 0.2f, 0.2f, 1f),
-            new Color(0.13f, 0.13f, 0.13f, 1f),
-            0.16f,
-            0f));
-
-        ParticleSystem.SizeOverLifetimeModule size = particles.sizeOverLifetime;
-        size.enabled = true;
-        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
-            new Keyframe(0f, 0.45f),
-            new Keyframe(0.45f, 0.8f),
-            new Keyframe(1f, 1.3f)));
-    }
-
-    /// <summary>三个效果共用低开销的世界空间发射骨架。</summary>
-    private void ConfigureBase(
-        ParticleSystem particles,
-        int maxParticles,
-        float emissionRate,
-        float lifetimeMin,
-        float lifetimeMax,
-        float sizeMin,
-        float sizeMax,
-        float radius,
-        float velocityXMin,
-        float velocityXMax,
-        float velocityYMin,
-        float velocityYMax)
-    {
-        ParticleSystem.MainModule main = particles.main;
-        main.loop = true;
-        main.playOnAwake = false;
-        main.prewarm = false;
-        main.simulationSpace = ParticleSystemSimulationSpace.World;
-        main.startSpeed = 0f;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(lifetimeMin, lifetimeMax);
-        main.startSize = new ParticleSystem.MinMaxCurve(sizeMin, sizeMax);
-        main.startColor = Color.white;
-        main.maxParticles = maxParticles;
-
-        ParticleSystem.EmissionModule emission = particles.emission;
-        emission.enabled = true;
-        emission.rateOverTime = Mathf.Max(0f, emissionRate);
-
-        ParticleSystem.ShapeModule shape = particles.shape;
-        shape.enabled = true;
-        shape.shapeType = ParticleSystemShapeType.Circle;
-        shape.radius = radius;
-        shape.radiusThickness = 1f;
-
-        ParticleSystem.VelocityOverLifetimeModule velocity = particles.velocityOverLifetime;
-        velocity.enabled = true;
-        velocity.space = ParticleSystemSimulationSpace.World;
-        // X/Y/Z 统一使用 TwoConstants，避免 Unity 粒子速度曲线模式不一致报错。
-        velocity.x = new ParticleSystem.MinMaxCurve(velocityXMin, velocityXMax);
-        velocity.y = new ParticleSystem.MinMaxCurve(velocityYMin, velocityYMax);
-        velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
-
-        ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
-        if (renderer == null)
-            return;
-
-        renderer.renderMode = ParticleSystemRenderMode.Billboard;
-        renderer.alignment = ParticleSystemRenderSpace.View;
-        renderer.sortMode = ParticleSystemSortMode.OldestInFront;
-        if (particleMaterial != null)
-            renderer.sharedMaterial = particleMaterial;
+        if (flame == null) return;
+        Quaternion rotation = attachFlameToAnchor && flameAnchor != null ? flameAnchor.rotation : Quaternion.identity;
+        if (flame.transform.rotation != rotation) flame.transform.rotation = rotation;
     }
 
     private void RefreshSorting()
     {
-        if (!hasExplicitSorting && sourceSpriteRenderer == null)
-            sourceSpriteRenderer = GetComponentInParent<SpriteRenderer>();
-
-        int sortingLayerId = hasExplicitSorting ? explicitSortingLayerId :
+        if (flame == null) return;
+        int layerId = hasExplicitSorting ? explicitSortingLayerId :
             sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingLayerID : 0;
-        int sortingOrder = (hasExplicitSorting ? explicitSortingOrder :
-            sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingOrder : 0) + 2;
-        // 粒子渲染器只在首次绑定或失效后重新查找，外部排序变更仍逐帧对齐。
-        flameRenderer = ResolveParticleRenderer(flameParticles, flameRenderer);
-        emberRenderer = ResolveParticleRenderer(emberParticles, emberRenderer);
-        smokeRenderer = ResolveParticleRenderer(smokeParticles, smokeRenderer);
-        ApplySorting(flameRenderer, sortingLayerId, sortingOrder);
-        ApplySorting(emberRenderer, sortingLayerId, sortingOrder + 1);
-        ApplySorting(smokeRenderer, sortingLayerId, sortingOrder - 1);
-    }
-
-    private static ParticleSystemRenderer ResolveParticleRenderer(
-        ParticleSystem particles, ParticleSystemRenderer cached)
-    {
-        return cached != null ? cached :
-            particles != null ? particles.GetComponent<ParticleSystemRenderer>() : null;
-    }
-
-    private static void ApplySorting(ParticleSystemRenderer renderer, int sortingLayerId, int sortingOrder)
-    {
-        if (renderer == null)
-            return;
-
-        if (renderer.sortingLayerID != sortingLayerId)
-            renderer.sortingLayerID = sortingLayerId;
-        if (renderer.sortingOrder != sortingOrder)
-            renderer.sortingOrder = sortingOrder;
+        int order = hasExplicitSorting ? explicitSortingOrder :
+            sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingOrder : 0;
+        // 留在宿主 SortingGroup 内使用相对顺序，独立掉落火焰由其后端传入最终键。
+        flame.SetSorting(layerId, order + 2);
     }
 
     private static Gradient CreateGradient(

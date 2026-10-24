@@ -28,6 +28,7 @@ const AGENT_INSTRUCTIONS =
   "Use editor.js.eval for Unity Editor automation; it runs JavaScript in the Editor PuerTS VM and normally does not generate C# or trigger domain reload. " +
   "Use runtime.js.eval for Play Mode, Android, iOS, or standalone Player automation; pass httpUrl or configure selectedTargetUrl when targeting a remote phone/player. " +
   "Write PuerTS JavaScript with CS.UnityEngine/CS.UnityEditor first, return only JSON-serializable values, and do not return Unity objects directly. " +
+  "For System.Type arguments, use puer.$typeof(CS.Namespace.Type), not the CS.* JavaScript class itself. For example: CS.UnityEngine.Resources.FindObjectsOfTypeAll(puer.$typeof(CS.UnityEngine.GameObject)). Object searches require a type derived from UnityEngine.Object. " +
   "If a wrapped C# type or member is unavailable, use __unity_mcp.typeExists/getStatic/getStaticPath/setStatic/invokeStatic as the reflection fallback. " +
   "For Editor scene/window context, use editor.hierarchy.get or get-hierarchy to export hierarchy JSON, editor.window.screenshot or screenshot to capture EditorWindow PNGs, and editor.window.focus or focus-window to bring Unity forward. " +
   "For phone UI automation, observe before acting with screen.screenshot, runtime.ui.snapshot, runtime.ui.find, and runtime.ui.raycast, then click with runtime.ui.click or input.tap. " +

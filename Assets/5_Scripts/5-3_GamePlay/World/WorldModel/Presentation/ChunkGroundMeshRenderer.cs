@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Profiling;
@@ -123,12 +124,26 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         ActiveCellCount--;
     }
 
+    // 水分变化沿用现有批次，只改参数，不重算 Sprite、UV、变换或网格边界。
+    public void SetCellSurfaceData(int x, int y, Vector4 data)
+    {
+        int index = y * width + x;
+        cellGroups[index]?.SetSurfaceData(index, data, bulkUpdating);
+    }
+
     private Group GetOrCreateGroup(Texture texture, Material material, bool singleQuad)
     {
         var key = (texture, material, singleQuad);
         if (groups.TryGetValue(key, out Group existing)) return existing;
         var group = new Group(parent, width, height, shader, material, texture, layer, singleQuad);
-        groups.Add(key, group);
+        try { groups.Add(key, group); }
+        catch
+        {
+            // 原生 Mesh/Buffer 与池内数组已经创建，登记失败不能留下无人持有的 Group。
+            try { group.Dispose(); }
+            catch (Exception cleanupError) { Debug.LogException(cleanupError); }
+            throw;
+        }
         return group;
     }
 
@@ -207,7 +222,12 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
 
     public void Dispose()
     {
-        foreach (Group group in groups.Values) group.Dispose();
+        // 一个纹理批次的原生释放异常不能阻止其它批次归还池化数组。
+        foreach (Group group in groups.Values)
+        {
+            try { group.Dispose(); }
+            catch (Exception error) { Debug.LogException(error); }
+        }
         groups.Clear();
         quads.Clear();
         Array.Clear(cellGroups, 0, cellGroups.Length);
@@ -236,8 +256,11 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         private readonly GraphicsBuffer groundCellBuffer;
         private readonly int width;
         private readonly int height;
+        private readonly int cellCount;
+        private readonly int vertexCount;
         private readonly bool singleQuad;
         private bool geometryDirty;
+        private bool disposed;
         public Material Material { get; }
         public bool Dirty { get; private set; }
 
@@ -249,119 +272,137 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             this.width = width;
             this.height = height;
             this.singleQuad = singleQuad;
-            int cellCount = width * height;
-            mesh = new Mesh { name = $"Chunk_{layer}_{texture.name}", hideFlags = HideFlags.HideAndDontSave };
-            mesh.MarkDynamic();
-            int vertexCount = singleQuad ? 4 : cellCount * 4;
-            using (GroupVerticesMarker.Auto())
-                vertices = new Vertex[vertexCount];
-            mesh.SetVertexBufferParams(vertexCount,
-                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
-                new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 4),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord3, VertexAttributeFormat.Float32, 1),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord4, VertexAttributeFormat.Float32, 4),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord5, VertexAttributeFormat.Float32, 4),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord6, VertexAttributeFormat.Float32, 1));
-            int indexCount = singleQuad ? 6 : cellCount * 6;
-            if (singleQuad)
+            cellCount = checked(width * height);
+            vertexCount = singleQuad ? 4 : checked(cellCount * 4);
+            try
             {
-                ushort[] indices = { 0, 2, 1, 1, 2, 3 };
-                mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(indices, 0, 0, indices.Length, UploadFlags);
-                using (GroupCellsMarker.Auto())
-                    groundCells = new GroundCellData[cellCount];
-                using (GroupBufferMarker.Auto())
-                    groundCellBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellCount,
-                        Marshal.SizeOf<GroundCellData>());
-                root = new GameObject($"{layer}Mesh_{texture.name}");
-                root.SetActive(false);
-            }
-            else if (vertices.Length <= ushort.MaxValue)
-            {
-                var indices = new ushort[indexCount];
-                for (int cell = 0; cell < cellCount; cell++)
+                mesh = new Mesh { name = $"Chunk_{layer}_{texture.name}", hideFlags = HideFlags.HideAndDontSave };
+                mesh.MarkDynamic();
+                using (GroupVerticesMarker.Auto())
                 {
-                    int vertex = cell * 4, target = cell * 6;
-                    indices[target] = (ushort)vertex;
-                    indices[target + 1] = (ushort)(vertex + 2);
-                    indices[target + 2] = (ushort)(vertex + 1);
-                    indices[target + 3] = (ushort)(vertex + 1);
-                    indices[target + 4] = (ushort)(vertex + 2);
-                    indices[target + 5] = (ushort)(vertex + 3);
+                    vertices = ArrayPool<Vertex>.Shared.Rent(vertexCount);
+                    Array.Clear(vertices, 0, vertexCount);
                 }
-                mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(indices, 0, 0, indexCount, UploadFlags);
-            }
-            else
-            {
-                var indices = new uint[indexCount];
-                for (int cell = 0; cell < cellCount; cell++)
+                mesh.SetVertexBufferParams(vertexCount,
+                    new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+                    new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 4),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord3, VertexAttributeFormat.Float32, 1),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord4, VertexAttributeFormat.Float32, 4),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord5, VertexAttributeFormat.Float32, 4),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord6, VertexAttributeFormat.Float32, 1));
+                int indexCount = singleQuad ? 6 : cellCount * 6;
+                if (singleQuad)
                 {
-                    uint vertex = (uint)(cell * 4);
-                    int target = cell * 6;
-                    indices[target] = vertex;
-                    indices[target + 1] = vertex + 2;
-                    indices[target + 2] = vertex + 1;
-                    indices[target + 3] = vertex + 1;
-                    indices[target + 4] = vertex + 2;
-                    indices[target + 5] = vertex + 3;
+                    ushort[] indices = { 0, 2, 1, 1, 2, 3 };
+                    mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt16);
+                    mesh.SetIndexBufferData(indices, 0, 0, indices.Length, UploadFlags);
+                    using (GroupCellsMarker.Auto())
+                    {
+                        groundCells = ArrayPool<GroundCellData>.Shared.Rent(cellCount);
+                        // 池内旧区块的 active/UV 不得泄漏给本次初绑和 GPU。
+                        Array.Clear(groundCells, 0, cellCount);
+                    }
+                    using (GroupBufferMarker.Auto())
+                        groundCellBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellCount,
+                            Marshal.SizeOf<GroundCellData>());
+                    root = new GameObject($"{layer}Mesh_{texture.name}");
+                    root.SetActive(false);
                 }
-                mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt32);
-                mesh.SetIndexBufferData(indices, 0, 0, indexCount, UploadFlags);
+                else if (vertexCount <= ushort.MaxValue)
+                {
+                    var indices = new ushort[indexCount];
+                    for (int cell = 0; cell < cellCount; cell++)
+                    {
+                        int vertex = cell * 4, target = cell * 6;
+                        indices[target] = (ushort)vertex;
+                        indices[target + 1] = (ushort)(vertex + 2);
+                        indices[target + 2] = (ushort)(vertex + 1);
+                        indices[target + 3] = (ushort)(vertex + 1);
+                        indices[target + 4] = (ushort)(vertex + 2);
+                        indices[target + 5] = (ushort)(vertex + 3);
+                    }
+                    mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
+                    mesh.SetIndexBufferData(indices, 0, 0, indexCount, UploadFlags);
+                }
+                else
+                {
+                    var indices = new uint[indexCount];
+                    for (int cell = 0; cell < cellCount; cell++)
+                    {
+                        uint vertex = (uint)(cell * 4);
+                        int target = cell * 6;
+                        indices[target] = vertex;
+                        indices[target + 1] = vertex + 2;
+                        indices[target + 2] = vertex + 1;
+                        indices[target + 3] = vertex + 1;
+                        indices[target + 4] = vertex + 2;
+                        indices[target + 5] = vertex + 3;
+                    }
+                    mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt32);
+                    mesh.SetIndexBufferData(indices, 0, 0, indexCount, UploadFlags);
+                }
+                mesh.subMeshCount = 1;
+                mesh.SetSubMesh(0, new SubMeshDescriptor(0, indexCount), UploadFlags);
+                if (!singleQuad)
+                {
+                    // 新增逐格纹理批次时先把未使用格清零，避免首次增量写入后 GPU 未初始化顶点铺满整个区块。
+                    mesh.SetVertexBufferData(vertices, 0, 0, vertexCount, 0, UploadFlags);
+                }
+                if (!singleQuad)
+                {
+                    mesh.bounds = new Bounds(new Vector3(width * 0.5f, height * 0.5f),
+                        new Vector3(width + 6f, height + 6f, 2f));
+                }
+                int renderQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(layer);
+                Material = new Material(shader) { name = $"Chunk_{layer}_{texture.name}",
+                    hideFlags = HideFlags.HideAndDontSave, renderQueue = renderQueue };
+                Material.CopyPropertiesFromMaterial(sourceMaterial);
+                Material.shaderKeywords = sourceMaterial.shaderKeywords;
+                Material.SetTexture("_MainTex", texture);
+                Material.SetVector("_ChunkSize", new Vector4(width, height,
+                    width > 0 ? 1f / width : 0f, height > 0 ? 1f / height : 0f));
+                if (singleQuad)
+                {
+                    Material.EnableKeyword("FLATWORLD_CHUNK_CELL_BUFFER");
+                    Material.SetBuffer("_ChunkCellData", groundCellBuffer);
+                }
+                Material.renderQueue = renderQueue;
+                root ??= new GameObject($"{layer}Mesh_{texture.name}");
+                root.transform.SetParent(parent, false);
+                root.AddComponent<MeshFilter>().sharedMesh = mesh;
+                MeshRenderer renderer = root.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = Material;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.lightProbeUsage = LightProbeUsage.Off;
+                renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                if (layer == ChunkBatchRendererGroupService.VisualLayer.Snow)
+                {
+                    // 地面雪采用地形光照，但排序高于地面与冰面、低于角色。
+                    WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory,
+                        out int sortingLayerId, out int sortingOrder);
+                    renderer.sortingLayerID = sortingLayerId;
+                    renderer.sortingOrder = checked(sortingOrder + 1);
+                }
+                else if (layer == ChunkBatchRendererGroupService.VisualLayer.Blocking)
+                {
+                    // 墙体位于地表阴影与地表痕迹之上，但仍保持在玩家和树木等动态实体之后。
+                    WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundMarkCategory,
+                        out int sortingLayerId, out int sortingOrder);
+                    renderer.sortingLayerID = sortingLayerId;
+                    renderer.sortingOrder = checked(sortingOrder + 1);
+                }
             }
-            mesh.subMeshCount = 1;
-            mesh.SetSubMesh(0, new SubMeshDescriptor(0, indexCount), UploadFlags);
-            if (!singleQuad)
+            catch
             {
-                // 新增逐格纹理批次时先把未使用格清零，避免首次增量写入后 GPU 未初始化顶点铺满整个区块。
-                mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length, 0, UploadFlags);
-            }
-            if (!singleQuad)
-            {
-                mesh.bounds = new Bounds(new Vector3(width * 0.5f, height * 0.5f),
-                    new Vector3(width + 6f, height + 6f, 2f));
-            }
-            int renderQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(layer);
-            Material = new Material(shader) { name = $"Chunk_{layer}_{texture.name}",
-                hideFlags = HideFlags.HideAndDontSave, renderQueue = renderQueue };
-            Material.CopyPropertiesFromMaterial(sourceMaterial);
-            Material.shaderKeywords = sourceMaterial.shaderKeywords;
-            Material.SetTexture("_MainTex", texture);
-            Material.SetVector("_ChunkSize", new Vector4(width, height,
-                width > 0 ? 1f / width : 0f, height > 0 ? 1f / height : 0f));
-            if (singleQuad)
-            {
-                Material.EnableKeyword("FLATWORLD_CHUNK_CELL_BUFFER");
-                Material.SetBuffer("_ChunkCellData", groundCellBuffer);
-            }
-            Material.renderQueue = renderQueue;
-            root ??= new GameObject($"{layer}Mesh_{texture.name}");
-            root.transform.SetParent(parent, false);
-            root.AddComponent<MeshFilter>().sharedMesh = mesh;
-            MeshRenderer renderer = root.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = Material;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            renderer.lightProbeUsage = LightProbeUsage.Off;
-            renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-            if (layer == ChunkBatchRendererGroupService.VisualLayer.Snow)
-            {
-                // 地面雪采用地形光照，但排序高于地面与冰面、低于角色。
-                WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory,
-                    out int sortingLayerId, out int sortingOrder);
-                renderer.sortingLayerID = sortingLayerId;
-                renderer.sortingOrder = checked(sortingOrder + 1);
-            }
-            else if (layer == ChunkBatchRendererGroupService.VisualLayer.Blocking)
-            {
-                // 墙体位于地表阴影与地表痕迹之上，但仍保持在玩家和树木等动态实体之后。
-                WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundMarkCategory,
-                    out int sortingLayerId, out int sortingOrder);
-                renderer.sortingLayerID = sortingLayerId;
-                renderer.sortingOrder = checked(sortingOrder + 1);
+                // 材质/Buffer/组件初始化中途失败也不能泄漏池数组与原生资源。
+                // 清理失败不能覆盖原始构建异常，仍要由上层终止本次绑定。
+                try { Dispose(); }
+                catch (Exception cleanupError) { Debug.LogException(cleanupError); }
+                throw;
             }
         }
 
@@ -412,6 +453,24 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             Upload(index, bulk);
         }
 
+        public void SetSurfaceData(int index, Vector4 data, bool bulk)
+        {
+            if (singleQuad)
+            {
+                if (groundCells[index].Contact.Equals(data)) return;
+                groundCells[index].Contact = data;
+                UploadSingleQuad(index, bulk);
+            }
+            else
+            {
+                int start = index * 4;
+                if (vertices[start].Contact.Equals(data)) return;
+                for (int corner = 0; corner < 4; corner++)
+                    vertices[start + corner].Contact = data;
+                Upload(index, bulk);
+            }
+        }
+
         private void WriteSingleQuad(int index, Quad quad, Color tint,
             Matrix4x4 transform, Vector4 contact, float elevation, Vector4 neighbours, bool bulk)
         {
@@ -451,7 +510,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         private void UpdateSingleQuadGeometry()
         {
             int minX = width, minY = height, maxX = -1, maxY = -1;
-            for (int index = 0; index < groundCells.Length; index++)
+            for (int index = 0; index < cellCount; index++)
             {
                 if (groundCells[index].Meta.y <= 0.5f)
                     continue;
@@ -493,7 +552,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             if (singleQuad)
             {
                 using (GroupCellUploadMarker.Auto())
-                    groundCellBuffer.SetData(groundCells);
+                    groundCellBuffer.SetData(groundCells, 0, 0, cellCount);
                 geometryDirty = true;
                 using (GroupGeometryMarker.Auto())
                     UpdateSingleQuadGeometry();
@@ -501,26 +560,40 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             else
             {
                 using (GroupVertexUploadMarker.Auto())
-                    mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length, 0, UploadFlags);
+                    mesh.SetVertexBufferData(vertices, 0, 0, vertexCount, 0, UploadFlags);
             }
             Dirty = false;
         }
 
         public void Dispose()
         {
-            root.SetActive(false);
-            groundCellBuffer?.Dispose();
-            if (Application.isPlaying)
+            if (disposed) return;
+            disposed = true;
+            try
             {
-                UnityEngine.Object.Destroy(root);
-                UnityEngine.Object.Destroy(mesh);
-                UnityEngine.Object.Destroy(Material);
+                if (root != null) root.SetActive(false);
             }
-            else
+            finally
             {
-                UnityEngine.Object.DestroyImmediate(root);
-                UnityEngine.Object.DestroyImmediate(mesh);
-                UnityEngine.Object.DestroyImmediate(Material);
+                try { groundCellBuffer?.Dispose(); }
+                finally
+                {
+                    // Unity 网格/Buffer 上传是同步的，释放后可安全归还缓冲池。
+                    if (groundCells != null) ArrayPool<GroundCellData>.Shared.Return(groundCells);
+                    if (vertices != null) ArrayPool<Vertex>.Shared.Return(vertices);
+                    if (Application.isPlaying)
+                    {
+                        if (root != null) UnityEngine.Object.Destroy(root);
+                        if (mesh != null) UnityEngine.Object.Destroy(mesh);
+                        if (Material != null) UnityEngine.Object.Destroy(Material);
+                    }
+                    else
+                    {
+                        if (root != null) UnityEngine.Object.DestroyImmediate(root);
+                        if (mesh != null) UnityEngine.Object.DestroyImmediate(mesh);
+                        if (Material != null) UnityEngine.Object.DestroyImmediate(Material);
+                    }
+                }
             }
         }
     }

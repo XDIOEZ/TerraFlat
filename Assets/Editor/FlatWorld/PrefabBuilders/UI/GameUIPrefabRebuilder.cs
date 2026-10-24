@@ -35,6 +35,7 @@ public static class GameUIPrefabRebuilder
         SlotPrefabPath,
         CraftingRoot + "UI_HandCraftTable.prefab",
         CraftingRoot + "UI_MakerTable.prefab",
+        CraftingRoot + "UI_Anvil.prefab",
         CraftingRoot + "UI_FireDrill.prefab",
         CraftingRoot + "UI_FlintStrike.prefab"
     };
@@ -63,8 +64,9 @@ public static class GameUIPrefabRebuilder
         { BagPrefabPath, new[] { "Scroll View", "Content", "关闭" } },
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
         { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "燃料显示条", "FWUI_FurnaceTemperatureValue", "FWUI_FurnaceInputCapacity", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_6", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_Anvil.prefab", new[] { "工具_1", "输入_1", "输出_1", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "拆回建筑按钮", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "燃料显示条", "FWUI_FurnaceTemperatureValue", "FWUI_FurnaceInputCapacity", "FWUI_InductionTargetInput", "FWUI_ApplyInductionTarget", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
         { CraftingRoot + "UI_FlintStrike.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
@@ -114,13 +116,14 @@ public static class GameUIPrefabRebuilder
         List<BuildTarget> targets = new List<BuildTarget>
         {
             new BuildTarget(BagPrefabPath, BuildModularInventoryBagPreview),
-            new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", string.Empty, string.Empty, 2, new Vector2(112f, 112f))),
+            new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", BuildEquipmentWindow),
             new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", string.Empty, string.Empty, 5, new Vector2(88f, 88f))),
             new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", string.Empty, string.Empty, 5, new Vector2(88f, 88f))),
             new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftingSelectionWindow(root, "手工制作", string.Empty, 4)),
             new BuildTarget(CraftingRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", string.Empty, 1, true)),
             new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", string.Empty, 1, true)),
             new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable),
+            new BuildTarget(CraftingRoot + "UI_Anvil.prefab", BuildAnvil),
             new BuildTarget(CraftingRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
             new BuildTarget(CraftingRoot + "UI_Bonfire.prefab", root => BuildFurnace(root, true)),
             new BuildTarget(ScreensRoot + "UI_Death.prefab", BuildDeathScreen),
@@ -278,7 +281,7 @@ public static class GameUIPrefabRebuilder
         Debug.Log("[Game UI] 已按灰阶简约风格重构基础物品槽位。");
     }
 
-    /// <summary>仅更新快捷栏名称提示，保留九格槽位和现有快捷栏样式。</summary>
+    /// <summary>仅更新快捷栏名称提示，保留十格槽位和现有快捷栏样式。</summary>
     [MenuItem("FlatWorld/其他工具/UI/重建手持物名称提示")]
     public static void RebuildHotbarItemNameHUD()
     {
@@ -454,6 +457,21 @@ public static class GameUIPrefabRebuilder
             : "[Game UI] 功能列表按钮重建失败，请检查控制台。");
     }
 
+    [MenuItem("FlatWorld/其他工具/UI/同步工作台工具柜共享槽")]
+    public static void RebuildWorkbenchSharedInputUI()
+    {
+        const string path = CraftingRoot + "UI_MakerTable.prefab";
+        GameObject root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            // 只补第六格并排好材料槽，保留现有界面的视觉和绑定身份。
+            EnsureNamedSlot(root.transform, "输入_1", "输入_6");
+            LayoutCraftingSlots(root.transform, "输入_", 6, 20f, 168f, 376f, 112f, 3);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
     [MenuItem("FlatWorld/其他工具/UI/重构合成候选界面")]
     public static void RebuildCraftingSelectionUI()
     {
@@ -469,7 +487,8 @@ public static class GameUIPrefabRebuilder
             new BuildTarget(
                 CraftingRoot + "UI_HandCraftTable.prefab",
                 root => BuildCraftingSelectionWindow(root, "手工制作", string.Empty, 4)),
-            new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable)
+            new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable),
+            new BuildTarget(CraftingRoot + "UI_Anvil.prefab", BuildAnvil)
         };
 
         int rebuilt = 0;
@@ -647,6 +666,58 @@ public static class GameUIPrefabRebuilder
         Debug.LogError("[Game UI Contract] 验证失败：\n- " + string.Join("\n- ", failures));
     }
 
+    #region 装备槽位布局
+
+    private static void BuildEquipmentWindow(GameObject root)
+    {
+        RectTransform chrome = PrepareWindow(root, 680f, 560f, "装备", string.Empty, string.Empty, true);
+        SetTopLeft(FindRect(chrome, "FWUI_Header"), 0f, 0f, 680f, 40f);
+        SetTopLeft(FindRect(chrome, "FWUI_AccentRail"), 0f, 0f, 3f, 40f);
+        SetTopLeft(FindRect(chrome, "FWUI_HeaderRule"), 0f, 40f, 680f, 1f);
+        SetTopLeft(FindRect(chrome, "FWUI_标题"), 16f, 8f, 574f, 24f);
+        FindRect(chrome, "FWUI_标题").GetComponent<TextMeshProUGUI>().fontSize = 20f;
+        SetTopLeft(FindRect(chrome, "FWUI_InnerField"), 14f, 48f, 652f, 498f);
+        FindRect(chrome, "FWUI_Footer").gameObject.SetActive(false);
+
+        RectTransform content = FindRect(root.transform, "UI_Content");
+        if (content == null) throw new MissingReferenceException("装备页缺少 UI_Content。");
+        SetCentered(content, Vector2.zero, new Vector2(630f, 516f));
+        List<ItemSlot_UI> slots = new();
+        foreach (Transform child in content)
+            if (child.TryGetComponent(out ItemSlot_UI slot)) slots.Add(slot);
+        List<EquipmentSlotRule> rules = EquipmentSlotCatalog.CreateDefaultRules();
+        GameObject slotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SlotPrefabPath);
+        while (slots.Count < rules.Count)
+        {
+            var slotObject = (GameObject)PrefabUtility.InstantiatePrefab(slotPrefab, content);
+            slots.Add(slotObject.GetComponent<ItemSlot_UI>());
+        }
+
+        // 正式资产和运行时共用槽位目录，新增眼部后重建也不会退回四槽背包布局。
+        for (int i = 0; i < slots.Count; i++)
+        {
+            slots[i].gameObject.SetActive(i < rules.Count);
+            if (i >= rules.Count) continue;
+            EquipmentSlotRule rule = rules[i];
+            SetCentered((RectTransform)slots[i].transform, rule.UiPosition, new Vector2(92f, 92f));
+            TextMeshProUGUI label = CreateText(rule.LabelObjectName, root.transform, rule.DisplayName,
+                13f, Muted, FontStyles.Normal, TextAlignmentOptions.Center);
+            SetCentered(label.rectTransform, rule.UiPosition + new Vector2(0f, -58f), new Vector2(132f, 24f));
+            label.gameObject.AddComponent<LocalizedTextBinder>().Configure(FlatWorldLocalizationService.UiTable,
+                FlatWorldLocalizationService.GetUiTextKey(rule.DisplayName), rule.DisplayName);
+        }
+
+        Image portrait = CreateImage("FWUI_Avatar", root.transform, new Color(.06f, .07f, .08f, .9f));
+        portrait.preserveAspect = true;
+        SetCentered(portrait.rectTransform, new Vector2(0f, -8f), new Vector2(150f, 220f));
+        RuntimeUIPrefabBuilder.EnsureEquipmentConfigurationButton(root);
+        RectTransform close = FindRect(root.transform, "关闭");
+        close.anchoredPosition = new Vector2(-8f, -2f);
+        close.sizeDelta = new Vector2(36f, 36f);
+    }
+
+    #endregion
+
     private static void BuildScrollWindow(
         GameObject root,
         float width,
@@ -682,16 +753,55 @@ public static class GameUIPrefabRebuilder
             scrollRect.vertical = true;
             scrollRect.scrollSensitivity = 34f;
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            ConfigureInventoryScrollLayout(scrollRect);
         }
     }
 
+    #region 建筑库存滚动布局
+    private static void ConfigureInventoryScrollLayout(ScrollRect scroll)
+    {
+        const float scrollbarWidth = 32f;
+        if (scroll.viewport == null || scroll.content == null) return;
+
+        // 滚动条与内容共同使用滚动区坐标，清除旧版手动偏移和固定内容宽度。
+        float reservedWidth = scroll.verticalScrollbar != null ? scrollbarWidth : 0f;
+        RectTransform viewport = scroll.viewport;
+        viewport.localScale = Vector3.one;
+        viewport.anchorMin = Vector2.zero;
+        viewport.anchorMax = Vector2.one;
+        viewport.pivot = new Vector2(0f, 1f);
+        viewport.offsetMin = Vector2.zero;
+        viewport.offsetMax = new Vector2(-reservedWidth, 0f);
+
+        RectTransform content = scroll.content;
+        content.localScale = Vector3.one;
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = Vector2.one;
+        content.pivot = new Vector2(0f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = new Vector2(0f, content.sizeDelta.y);
+        ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>() ?? content.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        if (scroll.verticalScrollbar == null) return;
+        RectTransform scrollbar = (RectTransform)scroll.verticalScrollbar.transform;
+        scrollbar.localScale = Vector3.one;
+        scrollbar.anchorMin = new Vector2(1f, 0f);
+        scrollbar.anchorMax = Vector2.one;
+        scrollbar.pivot = new Vector2(1f, 0.5f);
+        scrollbar.anchoredPosition = Vector2.zero;
+        scrollbar.sizeDelta = new Vector2(scrollbarWidth, 0f);
+    }
+    #endregion
+
     /// <summary>
     /// 构建灰阶简约行囊版式。
-    /// 保留现有 920×560 窗口和九列滚动布局，只清理旧彩色装饰并统一内容区层级。
+    /// 使用 1004×560 窗口和十列滚动布局，只清理旧彩色装饰并统一内容区层级。
     /// </summary>
     private static void BuildModularInventoryBagPreview(GameObject root)
     {
-        const float width = 920f;
+        const float width = 1004f;
         const float height = 560f;
 
         RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty, true);
@@ -707,7 +817,7 @@ public static class GameUIPrefabRebuilder
         RectTransform title = FindRect(chrome, "FWUI_标题");
         if (title != null)
         {
-            SetTopLeft(title, 26f, 18f, width - 116f, 42f);
+            SetTopLeft(title, 26f, 18f, 168f, 42f);
             TMP_Text titleText = title.GetComponent<TMP_Text>();
             if (titleText != null)
             {
@@ -749,7 +859,7 @@ public static class GameUIPrefabRebuilder
         if (grid != null)
         {
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 9;
+            grid.constraintCount = 10;
             grid.cellSize = new Vector2(80f, 80f);
             grid.spacing = new Vector2(4f, 4f);
             grid.padding = new RectOffset(8, 8, 8, 8);
@@ -1070,7 +1180,7 @@ public static class GameUIPrefabRebuilder
     /// 构建移动端合成选择面板：左侧放大材料槽，中间滚动展示全部可制作配方，右侧显示双产物预览。
     /// 面板按 1920×1080 参考画布的 70% 设计，边框只保留 1 像素，主要点击目标不低于 60 逻辑像素。
     /// </summary>
-    private static void BuildCraftingSelectionWindow(GameObject root, string title, string eyebrow, int inputCount)
+    private static void BuildCraftingSelectionWindow(GameObject root, string title, string eyebrow, int inputCount, int outputCount = 2)
     {
         UnwrapCraftingContent(root);
         const float width = 1344f;
@@ -1079,10 +1189,10 @@ public static class GameUIPrefabRebuilder
         const float sectionHeight = 568f;
 
         RemoveNamedSlots(root.transform, "输入_", inputCount);
-        RemoveNamedSlots(root.transform, "输出_", 2);
+        RemoveNamedSlots(root.transform, "输出_", outputCount);
         for (int index = 2; index <= inputCount; index++)
             EnsureNamedSlot(root.transform, "输入_1", $"输入_{index}");
-        EnsureNamedSlot(root.transform, "输出_1", "输出_2");
+        if (outputCount > 1) EnsureNamedSlot(root.transform, "输出_1", "输出_2");
 
         RectTransform frame = PrepareWindow(
             root,
@@ -1099,7 +1209,7 @@ public static class GameUIPrefabRebuilder
 
         int inputColumns = inputCount <= 4 ? 2 : 3;
         LayoutCraftingSlots(root.transform, "输入_", inputCount, 20f, 168f, 376f, inputCount == 2 ? 136f : 112f, inputColumns);
-        LayoutCraftingSlots(root.transform, "输出_", 2, 944f, 168f, 380f, 136f, 2);
+        LayoutCraftingSlots(root.transform, "输出_", outputCount, 944f, 168f, 380f, 136f, 2);
         BuildRecipeCandidateScroll(frame, 424f, 164f, 492f, 486f);
 
         SetLegacyCraftingProgressActive(root.transform, false);
@@ -1115,7 +1225,7 @@ public static class GameUIPrefabRebuilder
     [MenuItem("FlatWorld/其他工具/UI/Adapt Crafting Panels Safe Area Only")]
     public static void AdaptCraftingPanelsSafeAreaOnly()
     {
-        foreach (string name in new[] { "UI_HandCraftTable", "UI_MakerTable" })
+        foreach (string name in new[] { "UI_HandCraftTable", "UI_MakerTable", "UI_Anvil" })
         {
             string path = CraftingRoot + name + ".prefab";
             GameObject root = PrefabUtility.LoadPrefabContents(path);
@@ -1200,7 +1310,41 @@ public static class GameUIPrefabRebuilder
 
     private static void BuildMakerTable(GameObject root)
     {
-        BuildCraftingSelectionWindow(root, "制作台", string.Empty, 5);
+        BuildCraftingSelectionWindow(root, "制作台", string.Empty, 6);
+        RemoveMakerFlowArrow(root.transform);
+    }
+
+    /// <summary>砧使用独立工具与材料槽，拆除按钮和提示共用有明确边界的底栏。</summary>
+    private static void BuildAnvil(GameObject root)
+    {
+        BuildCraftingSelectionWindow(root, "铁砧", string.Empty, 1, 1);
+        RectTransform content = (RectTransform)root.transform.Find("CraftingContent");
+        EnsureNamedSlot(content, "输入_1", "工具_1");
+        SetTopLeft(FindRect(content, "工具_1"), 64f, 208f, 136f, 136f);
+        SetTopLeft(FindRect(content, "输入_1"), 216f, 208f, 136f, 136f);
+        SetTopLeft(FindRect(content, "输出_1"), 1066f, 208f, 136f, 136f);
+        TextMeshProUGUI tool = CreateText("FWUI_AnvilToolLabel", content, "金属锤", 20f, Cream, FontStyles.Normal, TextAlignmentOptions.Center);
+        TextMeshProUGUI material = CreateText("FWUI_AnvilMaterialLabel", content, "材料", 20f, Cream, FontStyles.Normal, TextAlignmentOptions.Center);
+        SetTopLeft(tool.rectTransform, 64f, 170f, 136f, 28f);
+        SetTopLeft(material.rectTransform, 216f, 170f, 136f, 28f);
+        RectTransform action = FindRect(content, "合成按钮");
+        RectTransform dismantle = FindRect(content, "拆回建筑按钮");
+        if (dismantle == null)
+        {
+            dismantle = UnityEngine.Object.Instantiate(action, content, false);
+            dismantle.name = "拆回建筑按钮";
+        }
+        dismantle.anchorMin = dismantle.anchorMax = dismantle.pivot = new Vector2(1f, 0f);
+        dismantle.anchoredPosition = new Vector2(-356f, 8f);
+        dismantle.sizeDelta = new Vector2(180f, 60f);
+        ConfigureActionButton(dismantle.gameObject, "拆除", false);
+        FindRect(content, "FWUI_FooterHint").sizeDelta = new Vector2(752f, 26f);
+        bool active = root.activeSelf;
+        root.SetActive(false);
+        BuildingPanelActions actions = root.GetComponent<BuildingPanelActions>() ?? root.AddComponent<BuildingPanelActions>();
+        actions.DismantleButton = dismantle.GetComponent<Button>();
+        actions.Title = FindRect(content, "FWUI_标题").GetComponent<TMP_Text>();
+        root.SetActive(active);
         RemoveMakerFlowArrow(root.transform);
     }
 
@@ -1259,7 +1403,7 @@ public static class GameUIPrefabRebuilder
             RectTransform output = FindRect(root.transform, "输出");
             if (input != null)
             {
-                SetTopLeft(input, 56f, 156f, 168f, 252f);
+                SetTopLeft(input, 56f, 156f, 168f, 270f);
                 ArrangeSlotsCentered(input, 3, 1, 82f, 12f);
             }
             if (fuel != null)
@@ -1316,6 +1460,8 @@ public static class GameUIPrefabRebuilder
                 capacity.raycastTarget = false;
             }
         }
+
+        if (!bonfire) AddInductionTemperatureControls(frame);
 
         RectTransform illustration = bonfire ? FindDirectRect(root.transform, "Image_1") : null;
         if (illustration != null)
@@ -1406,6 +1552,46 @@ public static class GameUIPrefabRebuilder
         label.raycastTarget = false;
     }
 
+    #region 电磁炉温控正式控件
+    private static void AddInductionTemperatureControls(RectTransform frame)
+    {
+        // 共用炉面板只预置独立温控区，电磁炉会话按能力启用。
+        RectTransform controls = CreateRect("FWUI_InductionTemperatureControls", frame);
+        SetTopLeft(controls, 316f, 174f, 220f, 288f);
+        TextMeshProUGUI target = CreateText("FWUI_InductionTargetValue", controls, string.Empty,
+            13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetTopLeft(target.rectTransform, 0f, 0f, 220f, 18f);
+
+        GameObject inputRoot = (GameObject)PrefabUtility.InstantiatePrefab(
+            AssetDatabase.LoadAssetAtPath<GameObject>(CommonControlsRoot + "UI_InputField.prefab"), controls);
+        inputRoot.name = "FWUI_InductionTargetInput";
+        TMP_InputField input = inputRoot.GetComponent<TMP_InputField>();
+        SetTopLeft((RectTransform)input.transform, 0f, 26f, 132f, 40f);
+        input.contentType = TMP_InputField.ContentType.DecimalNumber;
+        input.characterLimit = 12;
+        if (input.placeholder is TMP_Text placeholder) placeholder.text = string.Empty;
+
+        GameObject buttonRoot = (GameObject)PrefabUtility.InstantiatePrefab(
+            AssetDatabase.LoadAssetAtPath<GameObject>(CommonControlsRoot + "UI_Button.prefab"), controls);
+        buttonRoot.name = "FWUI_ApplyInductionTarget";
+        SetTopLeft((RectTransform)buttonRoot.transform, 144f, 26f, 76f, 40f);
+        buttonRoot.GetComponentInChildren<TMP_Text>(true).text = "应用";
+
+        TextMeshProUGUI feedback = CreateText("FWUI_InductionSettingFeedback", controls, string.Empty,
+            13f, Muted, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+        SetTopLeft(feedback.rectTransform, 0f, 224f, 220f, 64f);
+        feedback.enableWordWrapping = true;
+        foreach (Transform child in controls.GetComponentsInChildren<Transform>(true))
+        {
+            if (!PrefabUtility.IsPartOfPrefabInstance(child)) continue;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(child.gameObject);
+            foreach (Component component in child.GetComponents<Component>())
+                if (component != null) PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+        }
+        controls.gameObject.SetActive(false);
+    }
+    #endregion
+
     private static void BuildDeathScreen(GameObject root)
     {
         RectTransform rect = root.GetComponent<RectTransform>();
@@ -1440,7 +1626,7 @@ public static class GameUIPrefabRebuilder
         SetTopCenter(title.rectTransform, 82f, 720f, 150f);
         // 来源链较长时允许多行并缩小字号，给下方操作保留固定空间。
         title.enableAutoSizing = true;
-        title.fontSizeMin = 26f;
+        title.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(44f);
         title.fontSizeMax = 44f;
         title.enableWordWrapping = true;
         title.richText = false;
@@ -1474,7 +1660,8 @@ public static class GameUIPrefabRebuilder
         rect.anchorMax = new Vector2(0.5f, 0f);
         rect.pivot = new Vector2(0.5f, 0f);
         rect.anchoredPosition = new Vector2(0f, UIUserSettings.DefaultHotbarBottomSpacing);
-        rect.sizeDelta = new Vector2(890f, 104f);
+        // 加宽一个槽位和间距，保持十格快捷栏的格子尺寸与两侧留白。
+        rect.sizeDelta = new Vector2(982f, 104f);
 
         Image image = EnsureImage(root);
         image.color = new Color(0.025f, 0.043f, 0.058f, 0.92f);
@@ -1492,7 +1679,7 @@ public static class GameUIPrefabRebuilder
             grid.startAxis = GridLayoutGroup.Axis.Horizontal;
             grid.childAlignment = TextAnchor.MiddleCenter;
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 9;
+            grid.constraintCount = 10;
         }
 
         // 快捷栏内嵌的是旧版槽位实例，必须同时清掉其绿色像素底图，
@@ -1507,7 +1694,7 @@ public static class GameUIPrefabRebuilder
         BuildHotbarItemName(root);
     }
 
-    /// <summary>名称底板位于快捷栏上方 14 像素，320×52，不参与九格布局或触控射线。</summary>
+    /// <summary>名称底板位于快捷栏上方 14 像素，320×52，不参与十格布局或触控射线。</summary>
     private static void BuildHotbarItemName(GameObject root)
     {
         RectTransform plate = FindDirectRect(root.transform, "手持物名称提示") ??
@@ -1546,7 +1733,7 @@ public static class GameUIPrefabRebuilder
         label.alignment = TextAlignmentOptions.Center;
         label.fontSize = 32f;
         label.enableAutoSizing = true;
-        label.fontSizeMin = 20f;
+        label.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(32f);
         label.fontSizeMax = 32f;
         label.enableWordWrapping = false;
         label.overflowMode = TextOverflowModes.Ellipsis;
@@ -1915,7 +2102,7 @@ public static class GameUIPrefabRebuilder
             text.alignment = isValue ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
             text.fontSize = 18f;
             text.enableAutoSizing = true;
-            text.fontSizeMin = 14f;
+            text.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(18f);
             text.fontSizeMax = 18f;
             text.enableWordWrapping = false;
             text.overflowMode = TextOverflowModes.Ellipsis;
@@ -2526,6 +2713,7 @@ public static class GameUIPrefabRebuilder
     {
         const float spacing = 16f;
         int columns = Mathf.Clamp(maxColumns, 1, count);
+        Transform content = root.Find("CraftingContent") ?? root;
 
         for (int index = 1; index <= count; index++)
         {
@@ -2539,7 +2727,7 @@ public static class GameUIPrefabRebuilder
             int itemsInRow = Mathf.Min(columns, count - row * columns);
             float rowWidth = itemsInRow * size + Mathf.Max(0, itemsInRow - 1) * spacing;
             float left = areaX + (areaWidth - rowWidth) * 0.5f;
-            slot.SetParent(root, false);
+            slot.SetParent(content, false);
             slot.localScale = Vector3.one;
             slot.SetAsLastSibling();
             SetTopLeft(slot, left + column * (size + spacing), top + row * (size + spacing), size, size);
@@ -3051,7 +3239,7 @@ public static class GameUIPrefabRebuilder
         text.color = color;
         text.alignment = alignment;
         text.enableWordWrapping = false;
-        text.overflowMode = TextOverflowModes.Ellipsis;
+        FlatWorldUITextLayout.Configure(text, size);
         text.raycastTarget = false;
         return text;
     }

@@ -7,10 +7,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using MemoryPack;
 
 /// <summary>
 /// 加载本体 Actor JSON 目录，并把数据配置绑定到保留行为组件的 AI 外壳 Prefab。
-/// 外壳与可选动画控制器使用稳定 Addressables 地址；无动画 Actor 保留外壳上的静态 Sprite。
+/// 外壳、首帧图片与可选动画控制器使用稳定 Addressables 地址。
 /// </summary>
 public static class ActorDefinitionCatalogLoader
 {
@@ -75,7 +76,13 @@ public static class ActorDefinitionCatalogLoader
     /// <summary>同步读取 Actor 定义，供编辑器迁移、静态测试和诊断使用。</summary>
     public static List<ItemDefinitionDto> LoadBuiltInDefinitions()
     {
-        string manifestJson = File.ReadAllText(BuiltInManifestPath);
+        BinaryContentCache cache = CreateBinaryCache();
+        if (cache.TryRead(out ActorDefinitionInputs cached))
+        {
+            CacheResolvedSources(cached.Sources);
+            return cached.Definitions;
+        }
+        string manifestJson = cache.ReadText(BuiltInManifestPath);
         ActorDefinitionManifestDto manifest = DeserializeManifest(manifestJson);
         ValidateManifest(manifest);
 
@@ -83,12 +90,58 @@ public static class ActorDefinitionCatalogLoader
         foreach (ActorDefinitionPackageDto package in manifest.Packages.Where(entry => entry.Enabled))
         {
             string packagePath = ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, package.Path);
-            catalogs.Add(ConvertActorCatalogToItemCatalog(File.ReadAllText(packagePath), package.Id));
+            catalogs.Add(ConvertActorCatalogToItemCatalog(cache.ReadText(packagePath), package.Id));
         }
 
         List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
         CacheResolvedSources(resolved);
-        return ConvertResolvedDefinitions(resolved);
+        List<ItemDefinitionDto> definitions = ConvertResolvedDefinitions(resolved);
+        cache.Store(new ActorDefinitionInputs { Sources = resolved, Definitions = definitions });
+        return definitions;
+    }
+
+    private static BinaryContentCache CreateBinaryCache()
+        => BinaryContentCache.ForBuiltIn<ActorDefinitionInputs>("actors", BuiltInActorRoot, BuiltInManifestPath, 1);
+
+    private static IEnumerator LoadBuiltInSourcesAsync(BinaryContentCache cache,
+        Action<List<JObject>> completed, Action<Exception> failed, Action<float> progress)
+    {
+        string manifestJson = null;
+        Exception readError = null;
+        yield return cache.ReadTextAsync(BuiltInManifestPath,
+            text => manifestJson = text, exception => readError = exception);
+        if (readError != null) { failed?.Invoke(readError); yield break; }
+        ActorDefinitionManifestDto manifest;
+        try { manifest = DeserializeManifest(manifestJson); ValidateManifest(manifest); }
+        catch (Exception exception) { failed?.Invoke(exception); yield break; }
+
+        ActorDefinitionPackageDto[] packages = manifest.Packages.Where(entry => entry.Enabled).ToArray();
+        var catalogs = new List<string>(packages.Length);
+        for (int index = 0; index < packages.Length; index++)
+        {
+            ActorDefinitionPackageDto package = packages[index];
+            string packagePath;
+            try { packagePath = ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, package.Path); }
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            string packageJson = null;
+            readError = null;
+            yield return cache.ReadTextAsync(packagePath,
+                text => packageJson = text, exception => readError = exception);
+            if (readError != null)
+            {
+                failed?.Invoke(new IOException($"Actor 分包读取失败：{package.Id} ({packagePath})", readError));
+                yield break;
+            }
+            string converted = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () => ConvertActorCatalogToItemCatalog(packageJson, package.Id),
+                value => converted = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+            catalogs.Add(converted);
+            progress?.Invoke(0.15f * (index + 1) / packages.Length);
+        }
+        yield return StreamingAssetsTextLoader.RunPureDataAsync(
+            () => ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs), completed, failed);
     }
 
     /// <summary>异步加载全部本体 Actor 资源并原子注册。</summary>
@@ -105,81 +158,26 @@ public static class ActorDefinitionCatalogLoader
             yield break;
         }
 
-        string manifestJson = null;
+        BinaryContentCache cache = CreateBinaryCache();
+        ActorDefinitionInputs cached = null;
+        // 世界内逐个隔离无效 Actor 的重载仍读取原始候选，不缓存保留旧版后的混合结果。
+        if (previous == null) yield return cache.TryReadAsync<ActorDefinitionInputs>(value => cached = value);
+        List<JObject> resolved = cached?.Sources;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-            BuiltInManifestPath,
-            text => manifestJson = text,
-            exception => readError = exception);
-        if (readError != null)
+        if (resolved == null)
         {
-            failed?.Invoke(readError);
-            yield break;
-        }
-
-        ActorDefinitionManifestDto manifest;
-        try
-        {
-            manifest = DeserializeManifest(manifestJson);
-            ValidateManifest(manifest);
-        }
-        catch (Exception exception)
-        {
-            failed?.Invoke(exception);
-            yield break;
-        }
-
-        ActorDefinitionPackageDto[] packages = manifest.Packages.Where(entry => entry.Enabled).ToArray();
-        var catalogs = new List<string>(packages.Length);
-        for (int index = 0; index < packages.Length; index++)
-        {
-            ActorDefinitionPackageDto package = packages[index];
-            string packagePath;
-            try
-            {
-                packagePath = ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, package.Path);
-            }
-            catch (Exception exception)
-            {
-                failed?.Invoke(exception);
-                yield break;
-            }
-
-            string packageJson = null;
-            readError = null;
-            yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-                packagePath,
-                text => packageJson = text,
-                exception => readError = exception);
-            if (readError != null)
-            {
-                failed?.Invoke(new IOException($"Actor 分包读取失败：{package.Id} ({packagePath})", readError));
-                yield break;
-            }
-
-            string converted = null;
-            yield return StreamingAssetsTextLoader.RunPureDataAsync(
-                () => ConvertActorCatalogToItemCatalog(packageJson, package.Id),
-                value => converted = value, exception => readError = exception);
+            yield return LoadBuiltInSourcesAsync(cache, value => resolved = value,
+                exception => readError = exception, progress);
             if (readError != null) { failed?.Invoke(readError); yield break; }
-            catalogs.Add(converted);
-
-            progress?.Invoke(packages.Length == 0 ? 0.15f : 0.15f * (index + 1) / packages.Length);
         }
-
-        List<JObject> resolved = null;
-        yield return StreamingAssetsTextLoader.RunPureDataAsync(
-            () => ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs),
-            value => resolved = value, exception => readError = exception);
-        if (readError != null) { failed?.Invoke(readError); yield break; }
         List<ItemDefinitionDto> definitions;
         var rejected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
             CacheResolvedSources(resolved);
-            definitions = previous == null
+            definitions = cached?.Definitions ?? (previous == null
                 ? ConvertResolvedDefinitions(resolved)
-                : ConvertResolvedDefinitionsForReload(resolved, previous, rejected);
+                : ConvertResolvedDefinitionsForReload(resolved, previous, rejected));
             if (previous == null)
                 ItemDefinitionCatalogLoader.ValidateLootTableItemIds(gameRes, definitions);
         }
@@ -187,6 +185,13 @@ public static class ActorDefinitionCatalogLoader
         {
             failed?.Invoke(exception);
             yield break;
+        }
+
+        if (previous == null)
+        {
+            if (cached == null)
+                yield return cache.StoreAsync(new ActorDefinitionInputs { Sources = resolved, Definitions = definitions });
+            cache.Report("生物", definitions.Count);
         }
 
         ItemDefinitionDto[] concrete = definitions.Where(definition => !definition.Abstract).ToArray();
@@ -276,6 +281,12 @@ public static class ActorDefinitionCatalogLoader
             yield return null;
         }
 
+        var loadedSprites = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+        var spriteErrors = new Dictionary<string, Exception>(StringComparer.OrdinalIgnoreCase);
+        // 复用正式资源队列与编辑器纹理预热；失败地址留给对应 Actor 的发布事务处理。
+        yield return ItemDefinitionCatalogLoader.LoadVisualAssets(gameRes, candidates, loadedSprites,
+            ItemDefinitionCatalogLoader.SelectVisualSpriteAddresses, null, spriteErrors);
+
         IEnumerator BuildRuntimeActors()
         {
             var loadedShells = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
@@ -302,6 +313,8 @@ public static class ActorDefinitionCatalogLoader
                 foreach (KeyValuePair<string, RuntimeAnimatorController> pair in previous.Controllers)
                     LoadedControllers.Add(pair.Key, pair.Value);
             }
+            foreach (KeyValuePair<string, Sprite> pair in loadedSprites)
+                LoadedSprites[pair.Key] = pair.Value;
             foreach (KeyValuePair<string, AsyncOperationHandle<RuntimeAnimatorController>> pair in controllerHandles)
             {
                 if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
@@ -319,13 +332,16 @@ public static class ActorDefinitionCatalogLoader
                     string shellId = definition.ShellPrefab.Trim();
                     string controllerAddress = definition.Visual?.AnimatorControllerAddress?.Trim();
                     if (shellErrors.TryGetValue(shellId, out Exception shellError)) throw shellError;
+                    foreach (string spriteAddress in ItemDefinitionCatalogLoader.SelectVisualSpriteAddresses(definition))
+                        if (spriteErrors.TryGetValue(spriteAddress.Trim(), out Exception spriteError))
+                            throw spriteError;
                     if (!string.IsNullOrWhiteSpace(controllerAddress) &&
                         controllerErrors.TryGetValue(controllerAddress, out Exception controllerError))
                     {
                         throw controllerError;
                     }
                     selected.Add(id, ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
-                        gameRes, definition, LoadedSprites, LoadedControllers,
+                        gameRes, definition, loadedSprites, LoadedControllers,
                         isActor: true, preloadedShells: loadedShells));
                 }
                 catch (Exception exception)
@@ -639,6 +655,17 @@ public static class ActorDefinitionCatalogLoader
 
     #endregion
 }
+
+#region Actor 配置缓存
+
+[MemoryPackable]
+public sealed partial class ActorDefinitionInputs
+{
+    public List<ItemDefinitionDto> Definitions;
+    [BinaryJsonObjectList] public List<JObject> Sources;
+}
+
+#endregion
 
 /// <summary>Actor 本体配置清单。</summary>
 [Serializable]

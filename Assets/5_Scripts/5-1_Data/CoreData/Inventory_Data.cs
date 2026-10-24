@@ -185,6 +185,7 @@ public partial class Inventory_Data
 
     public void SetOne_ItemData(int index, ItemData inputItemData)
     {
+        if (!CanAcceptItem(inputItemData, GetItemSlot(index))) return;
         EnsureRuntimeEvents();
         Event_OnBeforeDataChanged.Invoke(itemSlots[index]);
         itemSlots[index].itemData = inputItemData;
@@ -280,7 +281,7 @@ public partial class Inventory_Data
         var inputData = inputSlotHand.itemData;
 
         // 禁止放入状态只拦截进入库存的物品；取出已有物品仍然允许。
-        if (IsDepositBlocked && inputData != null)
+        if (inputData != null && (IsDepositBlocked || !CanAcceptItem(inputData, localSlot)))
             return;
 
         // 情况1：两个都为空
@@ -410,6 +411,8 @@ public partial class Inventory_Data
         ItemData localData = localSlot.itemData;
         ItemData targetData = targetSlot.itemData;
 
+        if (!CanAcceptItem(targetData, localSlot) || !targetInventory.CanAcceptItem(localData, targetSlot)) return false;
+
         if (!ReferenceEquals(this, targetInventory) &&
             (!CanReplaceItem(localData, targetData) || !targetInventory.CanReplaceItem(targetData, localData)))
             return false;
@@ -476,34 +479,33 @@ public partial class Inventory_Data
 
     public bool ChangeItemAmount(ItemSlot localSlot, ItemSlot inputSlotHand, int count)
     {
-        if (inputSlotHand.itemData == null)
+        ItemData source = localSlot?.itemData, target = inputSlotHand?.itemData;
+        if (source?.Stack == null || inputSlotHand == null || ReferenceEquals(localSlot, inputSlotHand) ||
+            count <= 0 || target != null && !source.CanStackWith(target)) return false;
+        if (itemSlots?.Contains(inputSlotHand) == true && !CanAcceptItem(source, inputSlotHand)) return false;
+        int moved = Mathf.Min(count, GetWholeStackAmount(source.Stack.Amount));
+        moved = Mathf.Min(moved, GetWholeStackAmount(Mathf.Max(0f,
+            inputSlotHand.SlotMaxVolume - (target?.Stack?.Amount ?? 0f))));
+        if (!source.Stack.Stackable) moved = Mathf.Min(moved, 1);
+        if (moved <= 0) return false;
+        if (target == null && source.Stack.Amount == moved)
         {
-            var tempData = CloneForStackSplit(localSlot.itemData);
-            tempData.Stack.Amount = 0;
-            inputSlotHand.itemData = tempData;
-        }
-
-        // 确保两个物品的特殊数据一致
-        if (localSlot.itemData != null &&
-            !localSlot.itemData.HasSameStackIdentity(inputSlotHand.itemData))
-            return false;
-
-        int changed = 0;
-
-        while (changed < count &&
-               localSlot.itemData != null &&
-               localSlot.itemData.Stack.Amount > 0 &&
-               inputSlotHand.itemData.Stack.Amount < inputSlotHand.SlotMaxVolume)
-        {
-            localSlot.itemData.Stack.Amount--;
-            inputSlotHand.itemData.Stack.Amount++;
-            changed++;
-        }
-
-        if (localSlot.itemData != null && localSlot.itemData.Stack.Amount <= 0)
+            inputSlotHand.itemData = source;
             localSlot.ClearData();
-
-        return changed > 0;
+            return true;
+        }
+        if (target == null)
+        {
+            target = CloneForStackSplit(source);
+            target.Stack.Amount = 0f;
+            inputSlotHand.itemData = target;
+        }
+        ItemDurabilityRules.CopyTopWear(source, target);
+        target.Stack.Amount += moved;
+        source.Stack.Amount -= moved;
+        ItemDurabilityRules.AdvanceAfterRemoval(source);
+        if (source.Stack.Amount <= 0f) localSlot.ClearData();
+        return true;
     }
 
     #endregion
@@ -557,6 +559,7 @@ public partial class Inventory_Data
         Event_OnBeforeDataChanged.Invoke(sourceSlot);
         consumedItemData = sourceData;
         sourceData.Stack.Amount -= amount;
+        ItemDurabilityRules.AdvanceAfterRemoval(sourceData);
         if (sourceData.Stack.Amount <= 0f)
             sourceSlot.itemData = null;
 
@@ -608,7 +611,7 @@ public partial class Inventory_Data
     public bool TryAddItem(ItemData inputItemData, bool doAdd, out float addedAmount)
     {
         addedAmount = 0f;
-        if (IsDepositBlocked || inputItemData?.Stack == null || inputItemData.Stack.Amount <= 0f)
+        if (IsDepositBlocked || !CanAcceptItem(inputItemData) || inputItemData?.Stack == null || inputItemData.Stack.Amount <= 0f)
             return false;
 
         if (inputItemData.Stack.Weight < 0f || inputItemData.Stack.Volume < 0f)
@@ -623,6 +626,7 @@ public partial class Inventory_Data
 
         float remainingAmount = Mathf.Min(originalAmount, capacityAllowedAmount);
         bool addedAny = false;
+        bool topTransferred = false;
 
         // 无限库存的只读预检承诺可动态增加普通槽，不提前分配空格或改动物品。
         if (HasUnlimitedSlots && !doAdd)
@@ -639,7 +643,7 @@ public partial class Inventory_Data
             for (int i = 0; i < itemSlots.Count && remainingAmount > 0f; i++)
             {
                 ItemSlot slot = itemSlots[i];
-                if (slot.itemData != null)
+                if (slot.itemData != null || !CanAcceptItem(inputItemData, slot))
                     continue;
 
                 // 创造模式可丢出多件工具，重新拾取时仍按每格一件拆分。
@@ -648,6 +652,7 @@ public partial class Inventory_Data
                 {
                     ItemData newItem = CloneForStackSplit(inputItemData);
                     newItem.Stack.Amount = toAdd;
+                    if (topTransferred) ItemDurabilityRules.AdvanceAfterRemoval(newItem);
                     newItem.Stack.CanBePickedUp = false;
                     SetOne_ItemData(i, newItem);
                     Event_RefreshUI.Invoke(i);
@@ -655,6 +660,7 @@ public partial class Inventory_Data
                         EnsureSpareSlot();
                 }
                 remainingAmount -= toAdd;
+                topTransferred = true;
             }
 
             addedAmount = Mathf.Min(capacityAllowedAmount, originalAmount) - remainingAmount;
@@ -671,10 +677,12 @@ public partial class Inventory_Data
         {
             var slot = itemSlots[i];
             bool hasItem = slot.itemData != null;
-            bool sameItem = hasItem && slot.itemData.CanStackWith(inputItemData);
+            bool sameItem = hasItem && slot.itemData.Stack?.Stackable == true &&
+                slot.itemData.HasSameStackIdentity(inputItemData) &&
+                ItemDurabilityRules.CanMerge(slot.itemData, inputItemData, topTransferred);
 
             // 仅处理已有、同类、且未满的堆叠
-            if (!hasItem || !sameItem || slot.IsFull)
+            if (!hasItem || !sameItem || slot.IsFull || !CanAcceptItem(inputItemData, slot))
                 continue;
 
             float canAdd = Mathf.Max(0f, slot.SlotMaxVolume - slot.itemData.Stack.Amount);
@@ -683,12 +691,14 @@ public partial class Inventory_Data
 
             if (doAdd)
             {
+                if (!topTransferred) ItemDurabilityRules.CopyTopWear(inputItemData, slot.itemData);
                 ChangeItemDataAmount(i, toAdd);
                 Event_RefreshUI.Invoke(i);
             }
 
             remainingAmount -= toAdd;
             addedAny = true;
+            topTransferred = true;
         }
 
         // 第二轮：若还有剩余数量，再找空槽位放入（创建新堆叠）
@@ -698,7 +708,7 @@ public partial class Inventory_Data
             bool hasItem = slot.itemData != null;
 
             // 只处理空槽位，且槽位本身未被标记为满
-            if (hasItem || slot.IsFull)
+            if (hasItem || slot.IsFull || !CanAcceptItem(inputItemData, slot))
                 continue;
 
             float canAdd = Mathf.Max(0f, slot.SlotMaxVolume);
@@ -709,6 +719,7 @@ public partial class Inventory_Data
             {
                 var newItem = CloneForStackSplit(inputItemData);
                 newItem.Stack.Amount = toAdd;
+                if (topTransferred) ItemDurabilityRules.AdvanceAfterRemoval(newItem);
                 newItem.Stack.CanBePickedUp = false;
                 SetOne_ItemData(i, newItem);
                 Event_RefreshUI.Invoke(i);
@@ -716,6 +727,7 @@ public partial class Inventory_Data
 
             remainingAmount -= toAdd;
             addedAny = true;
+            topTransferred = true;
         }
 
         addedAmount = Mathf.Max(0f, Mathf.Min(capacityAllowedAmount, originalAmount) - remainingAmount);
@@ -798,8 +810,9 @@ public partial class Inventory_Data
             !ReferenceEquals(this, targetInventory) && targetInventory.IsDepositBlocked)
             return 0;
         ItemData from = slotFrom.itemData, to = slotTo.itemData;
+        if (!targetInventory.CanAcceptItem(from, slotTo)) return 0;
         if (from?.Stack == null || from.Stack.Amount < 1f || to != null &&
-            (to.Stack == null || !to.HasSameStackIdentity(from))) return 0;
+            (to.Stack == null || !to.CanStackWith(from))) return 0;
         if (!from.Stack.Stackable)
             return to == null && (ReferenceEquals(this, targetInventory) ||
                 targetInventory.GetCapacityLimitedAmount(from, 1f) + .0001f >= 1f) ? 1 : 0;
@@ -838,6 +851,7 @@ public partial class Inventory_Data
                 var newData = CloneForStackSplit(dataFrom);
                 newData.Stack.Amount = 1;
                 dataFrom.Stack.Amount -= 1;
+                ItemDurabilityRules.AdvanceAfterRemoval(dataFrom);
                 slotTo.itemData = newData;
             }
 
@@ -864,9 +878,11 @@ public partial class Inventory_Data
         // 克隆一个转移对象，设置转移数量
         var transferData = CloneForStackSplit(dataFrom);
         transferData.Stack.Amount = transferCount;
+        if (dataTo != null) ItemDurabilityRules.CopyTopWear(dataFrom, dataTo);
 
         // 扣除来源物品数量
         dataFrom.Stack.Amount -= transferCount;
+        ItemDurabilityRules.AdvanceAfterRemoval(dataFrom);
         if (dataFrom.Stack.Amount <= 0)
             slotFrom.ClearData();
 
@@ -1109,8 +1125,11 @@ public partial class Inventory_Data
                         continue;
 
                     float movedAmount = Mathf.Min(remainingAmount, availableAmount);
+                    ItemDurabilityRules.CopyTopWear(source, target);
                     target.Stack.Amount += movedAmount;
                     remainingAmount -= movedAmount;
+                    source.Stack.Amount = remainingAmount;
+                    ItemDurabilityRules.AdvanceAfterRemoval(source);
                 }
             }
 
@@ -1257,7 +1276,7 @@ public partial class Inventory_Data
     {
         return CanUseDefaultStacking(source) &&
                CanUseDefaultStacking(target) &&
-               source.HasSameStackIdentity(target);
+               source.CanStackWith(target);
     }
 
     private float GetAvailableStackAmount(ItemSlot slot, ItemData itemData)

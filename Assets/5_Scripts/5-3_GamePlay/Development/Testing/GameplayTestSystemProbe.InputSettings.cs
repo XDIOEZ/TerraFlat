@@ -20,6 +20,19 @@ public static partial class GameplayTestSystemProbe
         {
             var store = new InputSettingsMemoryStore();
             using var service = new InputBindingService(inputActions.asset, store);
+            // 读取正式快捷栏绑定及设置条目，核对十个槽位共用的数字键顺序。
+            var hotbar = inputActions.Win10.SwitchHotBar_Player;
+            var hotbarPaths = new JArray();
+            foreach (InputBinding binding in hotbar.bindings)
+                hotbarPaths.Add(binding.path);
+            var hotbarEntries = new JArray();
+            foreach (InputBindingEntry binding in service.Entries)
+                if (binding.Action == hotbar)
+                    hotbarEntries.Add(new JObject
+                    {
+                        ["index"] = binding.BindingIndex,
+                        ["path"] = hotbar.bindings[binding.BindingIndex].path
+                    });
             InputBindingEntry entry = service.Entries[0];
             if (existingOverride)
                 service.ClearBinding(entry);
@@ -61,6 +74,7 @@ public static partial class GameplayTestSystemProbe
             return new JObject
             {
                 ["mode"] = mode, ["existingOverride"] = existingOverride,
+                ["hotbarPaths"] = hotbarPaths, ["hotbarEntries"] = hotbarEntries,
                 ["initialJson"] = initialJson, ["baselineJson"] = baselineJson,
                 ["beforeDiscardJson"] = beforeDiscardJson,
                 ["finalJson"] = inputActions.asset.SaveBindingOverridesAsJson(),

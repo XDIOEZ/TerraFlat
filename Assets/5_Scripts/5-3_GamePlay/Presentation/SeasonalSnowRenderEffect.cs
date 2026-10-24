@@ -16,7 +16,7 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
     private float coverage; // 当前覆雪强度。
     private float nextSample; // 避免逐帧查询环境。
     public override bool RequiresContinuousRendering => false;
-    public override bool RequiresSpriteBodyRange => false;
+    public override bool RequiresSpriteBodyRange => coverage > 0f;
     /// <summary>绑定所有实际生成的物品，复用池化实例上已有组件。</summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Register()

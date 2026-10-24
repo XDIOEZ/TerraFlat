@@ -64,6 +64,43 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 局部环境与主动供氧
+        // 气罐优先从所在密闭舱扣真实气体，敞开环境才使用星球大气。
+        public bool TryGetPortableTankAirSource(Item tank, out IShipAtmosphereSource source)
+        {
+            source = null;
+            if (tank == null) return false;
+            if (TryGetSupport(tank.transform.position, out ShipState ship, out _, out Vector2 local))
+            {
+                EnsureMachineCompartmentGeometry(ship);
+                int x = (int)Math.Floor(local.x / ship.CellSizeMeters);
+                int y = (int)Math.Floor(local.y / ship.CellSizeMeters);
+                ShipCompartmentState room = ShipAtmosphereService.FindCompartment(ship, x, y);
+                source = room != null
+                    ? new TankShipAtmosphereSource(ShipAtmosphereService.GetCompartmentInventory(room),
+                        room.VolumeLiters, ShipAtmosphereService.MinimumCabinGasSpaceLiters)
+                    : GetOutside(ship);
+                return source != null;
+            }
+            if (IsSpaceView) return false;
+            string world = tank.gameObject.scene.name;
+            Vector2 point = PressureExplosionQueue.NormalizeInWorld(world,
+                WorldLocalPresentation.ToLogical((Vector2)tank.transform.position));
+            if (TryGetGroundEnvironment(world, point, out _))
+            {
+                ShipState geometry = GetGroundAtmosphere(world, false);
+                ShipCompartmentState room = ShipAtmosphereService.FindCompartment(geometry,
+                    Mathf.FloorToInt(point.x), Mathf.FloorToInt(point.y));
+                if (room == null) return false;
+                source = new TankShipAtmosphereSource(ShipAtmosphereService.GetCompartmentInventory(room),
+                    room.VolumeLiters, ShipAtmosphereService.MinimumCabinGasSpaceLiters);
+                return true;
+            }
+            if (!AtmosphereService.TryGetForWorld(world, out AtmosphereState atmosphere))
+                return false;
+            source = new PlanetShipAtmosphereSource(atmosphere, atmosphere.TemperatureKelvin - 273.15d);
+            return true;
+        }
+
         private const decimal AmbientMolesPerOxygenUnit = .0005m;
         public IShipAtmosphereSource GetOutside(ShipState ship)
         {

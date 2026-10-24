@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using MemoryPack;
 using UnityEngine;
 
@@ -223,9 +224,13 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
 
     protected override string GetDebugExtraInfo()
     {
-        string hungerText = IsHungry ? "饥饿" : $"饱食 {Data.HungerRemaining:F0}s";
+		string hungerText = IsHungry
+			? FlatWorldLocalizationService.GetUiText("饥饿")
+			: FlatWorldLocalizationService.GetUiFormat("饱食 {0:F0}s", Data.HungerRemaining);
         string targetText = currentTarget?.itemData?.IDName ?? "无目标";
-        return $" | {hungerText} | 目标: {targetText}";
+		if (currentTarget == null)
+			targetText = FlatWorldLocalizationService.GetUiText("无目标");
+		return FlatWorldLocalizationService.GetUiFormat(" | {0} | 目标: {1}", hungerText, targetText);
     }
 
     #endregion
@@ -254,7 +259,7 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
         stateMachine.Register(CreateMovingStateNode(
             SnowLeopardState.Chase,
             TickChase));
-        stateMachine.Register(CreateStoppedActionStateNode(
+        stateMachine.Register(CreateStateNode(
             SnowLeopardState.Attack,
             TickAttack));
     }
@@ -326,14 +331,15 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
 
         WorldNavigationDestinationResult moveResult = MoveToChaseTarget(
             currentTarget.transform.position,
-            chasePathCostLimit);
+            chasePathCostLimit,
+            attackTriggerDistance);
         if (TryHandleRejectedChasePath(moveResult, currentTarget, chasePathRetryDelay))
             return;
 
         FaceTarget(currentTarget.transform.position);
     }
 
-    private void TickAttack(float _)
+    private void TickAttack(float deltaTime)
     {
         if (!IsLivingTarget(currentTarget) || !FactionRelationService.CanAttack(item, currentTarget))
         {
@@ -345,21 +351,21 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
         Vector3 targetPosition = currentTarget.transform.position;
         FaceTarget(targetPosition, true);
         float distance = DistanceTo(currentTarget.transform);
-        if (distance <= attackTriggerDistance || attack.IsAttackLocked)
+        if (attack.IsAttackLocked)
         {
             StopMove();
-            if (!attack.IsAttackLocked && attack.IsCooldownDone)
-            {
-                attack.StartWindow(
-                    _animator,
-                    animAttack,
-                    WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
-            }
+        }
+        else if (distance <= attackTriggerDistance && attack.IsCooldownDone)
+        {
+            StopMove();
+            attack.StartWindow(
+                _animator,
+                animAttack,
+                WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
         }
         else
         {
-            attack.StopWindow();
-            StopMove();
+            TickChase(deltaTime);
         }
     }
 

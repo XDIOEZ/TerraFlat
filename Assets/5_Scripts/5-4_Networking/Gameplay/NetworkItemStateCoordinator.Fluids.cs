@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using MemoryPack;
 using Mirror;
 using UnityEngine;
@@ -9,6 +9,11 @@ namespace FlatWorld.Networking.Gameplay
         public uint RealmRevision;
         public uint WorldRevision => RealmRevision; public uint Token; public int SuitGuid; public bool On; }
     public struct NetworkSpacesuitHelmetResponse : NetworkMessage { public uint Token; public int SuitGuid; public byte[] State; }
+    public struct NetworkPortableTankFillRequest : NetworkMessage, INetworkWorldRequest {
+        public uint RealmRevision; public uint WorldRevision => RealmRevision;
+        public uint Token; public int TankGuid; }
+    public struct NetworkPortableTankFillResponse : NetworkMessage {
+        public uint Token; public int TankGuid; public bool Accepted; public byte[] State; }
     public struct NetworkAtmosphereState : NetworkMessage { public string WorldKey; public byte[] State; }
     public struct NetworkPressureExplosion : NetworkMessage { public byte[] Event; }
 
@@ -17,31 +22,38 @@ namespace FlatWorld.Networking.Gameplay
         #region 流体与宇航服权威同步
         private float nextAtmosphereSync;
         private uint lastHelmetReply;
+        private uint lastPortableFillReply;
         private readonly HashSet<ulong> receivedPressureExplosions = new();
         private void StartFluidServerBridge()
         {
             NetworkServer.RegisterHandler<NetworkSpacesuitHelmetRequest>(NetworkGameplayWorldScope.Wrap<NetworkSpacesuitHelmetRequest>(OnSuitHelmet), true);
+            NetworkServer.RegisterHandler<NetworkPortableTankFillRequest>(NetworkGameplayWorldScope.Wrap<NetworkPortableTankFillRequest>(OnPortableTankFill), true);
             PressureExplosionQueue.Presented += BroadcastPressureExplosion;
         }
         private void StopFluidServerBridge()
         {
             NetworkServer.UnregisterHandler<NetworkSpacesuitHelmetRequest>();
+            NetworkServer.UnregisterHandler<NetworkPortableTankFillRequest>();
             PressureExplosionQueue.Presented -= BroadcastPressureExplosion;
         }
         private void StartFluidClientBridge()
         {
             SpacesuitCommands.RemoteHelmetRequested += SendSuitHelmet;
+            PortableGasTankAirFilling.RemoteFillRequested += SendPortableTankFill;
             NetworkClient.RegisterHandler<NetworkSpacesuitHelmetResponse>(ApplySuitHelmet, true);
+            NetworkClient.RegisterHandler<NetworkPortableTankFillResponse>(ApplyPortableTankFill, true);
             NetworkClient.RegisterHandler<NetworkAtmosphereState>(ApplyAtmosphere, true);
             NetworkClient.RegisterHandler<NetworkPressureExplosion>(ApplyPressureExplosion, true);
         }
         private void StopFluidClientBridge()
         {
             SpacesuitCommands.RemoteHelmetRequested -= SendSuitHelmet;
+            PortableGasTankAirFilling.RemoteFillRequested -= SendPortableTankFill;
             NetworkClient.UnregisterHandler<NetworkSpacesuitHelmetResponse>();
+            NetworkClient.UnregisterHandler<NetworkPortableTankFillResponse>();
             NetworkClient.UnregisterHandler<NetworkAtmosphereState>();
             NetworkClient.UnregisterHandler<NetworkPressureExplosion>();
-            receivedPressureExplosions.Clear(); lastHelmetReply = 0;
+            receivedPressureExplosions.Clear(); lastHelmetReply = 0; lastPortableFillReply = 0;
         }
         private bool SendSuitHelmet(Player actor, int guid, bool on)
         {
@@ -79,6 +91,52 @@ namespace FlatWorld.Networking.Gameplay
                     FluidTankStorage.NotifyOwner(actor, suit);
                     return;
                 }
+        }
+        private bool SendPortableTankFill(Player actor, int guid)
+        {
+            if (!NetworkClient.ready || NetworkServer.active || actor == null || guid == 0 ||
+                actor != NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer ||
+                ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
+            NetworkClient.Send(new NetworkPortableTankFillRequest
+            { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = NextMachineToken(), TankGuid = guid });
+            return true;
+        }
+        private void OnPortableTankFill(NetworkConnectionToClient connection, NetworkPortableTankFillRequest request)
+        {
+            if (!AcceptMachineToken(connection, request.Token)) return;
+            Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item tank = ItemMgr.Instance?.GetItemByGuid(request.TankGuid);
+            bool accepted = actor != null && !actor.DestructionHandled &&
+                connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction != true &&
+                NetworkGameplayWorldScope.OwnsItem(connection, tank) &&
+                PortableGasTankAirFilling.Fill(tank, actor);
+            connection.Send(new NetworkPortableTankFillResponse
+            {
+                Token = request.Token,
+                TankGuid = request.TankGuid,
+                Accepted = accepted,
+                State = accepted ? FluidTankStorage.FindBinary(tank.itemData, Mod_FluidTank.ModuleId)?.BitData : null
+            });
+        }
+        private void ApplyPortableTankFill(NetworkPortableTankFillResponse response)
+        {
+            if (NetworkServer.active || response.Token == 0 ||
+                unchecked((int)(response.Token - lastPortableFillReply)) <= 0) return;
+            lastPortableFillReply = response.Token;
+            if (!response.Accepted || response.State == null || response.State.Length > 1024 * 1024) return;
+            Item tank = ItemMgr.Instance?.GetItemByGuid(response.TankGuid);
+            if (!PortableGasTankAirFilling.IsIronTank(tank?.itemData)) return;
+            Ex_ModData_MemoryPackable binary = FluidTankStorage.FindBinary(tank.itemData, Mod_FluidTank.ModuleId);
+            if (binary == null) return;
+            binary.BitData = response.State;
+            // 下一次读取按二进制引用换代重绑，不能用客户端旧缓存 Flush 覆盖权威结果。
+            tank.OnUIRefresh?.Invoke();
+            if (tank.Owner != null)
+            {
+                if (InventoryContextResolver.TryResolveContainingInventory(tank.Owner, tank.itemData, out Inventory inventory))
+                    inventory.Data.NotifyItemStateChanged(tank.itemData);
+                tank.Owner.OnUIRefresh?.Invoke();
+            }
         }
         private void TickFluidNetwork()
         {

@@ -445,6 +445,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
 
                 // 生成和掉落动画都成功后才提交背包扣减，失败时不会丢失玩家物品。
                 slot.Amount -= count;
+                ItemDurabilityRules.AdvanceAfterRemoval(slot.itemData);
                 if (slot.Amount <= 0)
                     slot.ClearData();
                 dropCommitted = true;

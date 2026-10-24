@@ -1,15 +1,36 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
 using Unity.Mathematics;
 using UnityEngine;
 
+/// <summary>机器操作回执与材料或面板无关，未确认时不能当作成功或服务器拒绝。</summary>
+public readonly struct MachineOperationReceipt
+{
+    #region 操作结果
+    public readonly uint Token;
+    public readonly int EntityId;
+    public readonly string Operation;
+    public readonly string Argument;
+    public readonly bool Confirmed;
+    public readonly bool Accepted;
+    public readonly string Reason;
+
+    public MachineOperationReceipt(uint token, int entityId, string operation, string argument,
+        bool confirmed, bool accepted, string reason)
+    {
+        Token = token; EntityId = entityId; Operation = operation; Argument = argument ?? string.Empty;
+        Confirmed = confirmed; Accepted = accepted; Reason = reason ?? string.Empty;
+    }
+    #endregion
+}
+
+public delegate bool MachineRemoteOperationSender(int entityId, string operation, string argument, out uint token);
+
 public static partial class MachineWorld
 {
     #region 地面物品输送
-    private static readonly RaycastHit2D[] transportHits = new RaycastHit2D[1];
-
     /// <summary>只读取当前世界的数据格，不因查询输送带而创建世界或加载区块。</summary>
     public static MachineEntity GetTransportAt(Vector2 position)
     {
@@ -17,66 +38,58 @@ public static partial class MachineWorld
         return node?.Definition.Transport != null ? node : null;
     }
 
-    /// <summary>分段经过实际带格，连续带、转弯和反转都不会因节点遍历顺序重复加速。</summary>
-    public static Vector2 TransportGroundItem(Vector2 position, float seconds)
+    /// <summary>输送带只提供路径速度，运动合成与阻挡复用水流、风的同一内核。</summary>
+    public static Vector2 TransportGroundItem(Vector2 position, float seconds, ItemData item = null)
+        => LooseItemMotion.AdvanceConveyor(worldKey, item, position, seconds);
+
+    internal static Vector2 SampleLooseConveyorVelocity(Vector2 position, float seconds)
     {
-        if (!GameNetwork.HasStateAuthority || !MachineDefinition.Positive(seconds)) return position;
-        Vector2 current = position;
-        float remaining = Mathf.Min(seconds, .5f);
-        ContactFilter2D filter = new ContactFilter2D { useTriggers = false };
-        filter.SetLayerMask(LayerMask.GetMask("Collider"));
-        for (int segment = 0; segment < 64 && remaining > .00001f; segment++)
-        {
-            MachineEntity belt = GetTransportAt(current);
-            if (belt == null || !belt.Active || belt.SpeedRpm <= 0f) break;
-            MachineTransportDefinition transport = belt.Definition.Transport;
-            Vector2 center = (Vector2)belt.Cell + Vector2.one * .5f;
-            Vector2 offset = PressureExplosionQueue.DeltaInWorld(worldKey, center, current);
-            float speed = transport.Speed * GetWorkEfficiency(belt);
-            float step = Mathf.Min(remaining, .1f / speed);
-            if (!belt.ConveyorRoute.TryMove(offset, speed * step * Mathf.Sign(belt.Rpm),
-                transport.HalfWidth, out Vector2 advanced)) break;
-            Vector2 move = advanced - offset;
-            float distance = move.magnitude;
-            // Physics2D 只给出墙体和实体的阻挡反馈，掉落物位置仍由数据系统持有。
-            bool localPresentation = worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if (localPresentation && distance > .00001f && GameplayPhysics2D.CircleCast(current, .06f, move / distance,
-                filter, transportHits, distance) > 0)
-            {
-                float allowed = Mathf.Max(0f, transportHits[0].distance - .01f);
-                current += move / distance * allowed;
-                break;
-            }
-            Vector2 destination = PressureExplosionQueue.NormalizeInWorld(worldKey, current + move);
-            if (localPresentation)
-            {
-                if (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(destination, out _)) break;
-            }
-            else if (WorldAddress.FromWorldKey(worldKey).IsSurface)
-            {
-                var surface = FlatWorld.Spaceflight.SpaceSurfaceQuery.GetLandingSurface(worldKey, destination);
-                if (surface.BlockingTileId != 0) break;
-            }
-            current = destination;
-            remaining -= step;
-        }
-        return current;
+        if (!MachineDefinition.Positive(seconds)) return Vector2.zero;
+        MachineEntity belt = GetTransportAt(position);
+        if (belt == null || !belt.Active || belt.SpeedRpm <= 0f) return Vector2.zero;
+        MachineTransportDefinition transport = belt.Definition.Transport;
+        float speed = transport.Speed * GetWorkEfficiency(belt);
+        if (!MachineDefinition.Positive(speed)) return Vector2.zero;
+        Vector2 center = (Vector2)belt.Cell + Vector2.one * .5f;
+        Vector2 offset = PressureExplosionQueue.DeltaInWorld(worldKey, center, position);
+        return belt.ConveyorRoute.TryMove(offset, speed * seconds * Mathf.Sign(belt.Rpm),
+            transport.HalfWidth, out Vector2 advanced) ? (advanced - offset) / seconds : Vector2.zero;
     }
     #endregion
 
     #region 设施状态与环境
     private static readonly Dictionary<string, Func<MachineEntity, MachineAirflowEffect>> airflowProviders = new(StringComparer.Ordinal);
-    public static event Func<int, string, string, bool> RemoteOperationRequested;
+    private static uint localOperationToken;
+    public static event MachineRemoteOperationSender RemoteOperationRequested;
+    public static event Action<MachineOperationReceipt> OperationCompleted;
 
     /// <summary>客户端仅发送操作意图，不能通过面板直接改写机器状态。</summary>
     public static bool RequestOperation(MachineEntity entity, string operation, string argument, Player actor)
+        => RequestOperation(entity, operation, argument, actor, out _);
+
+    public static bool RequestOperation(MachineEntity entity, string operation, string argument, Player actor, out uint token)
     {
+        token = 0;
         using var nodeScope = UseNodeScope(entity);
         if (!Contains(entity)) return false;
         if (entity.Definition.Electrical?.Hidden == true && !EngineeringVision.CanSee(actor)) return false;
-        return GameNetwork.HasStateAuthority ? Execute(entity, operation, argument, actor)
-            : RemoteOperationRequested?.Invoke(entity.Id, operation, argument) == true;
+        if (!GameNetwork.HasStateAuthority)
+        {
+            MachineRemoteOperationSender sender = RemoteOperationRequested;
+            return sender != null && sender(entity.Id, operation, argument, out token);
+        }
+        localOperationToken++;
+        if (localOperationToken == 0) localOperationToken++;
+        token = localOperationToken;
+        bool accepted = Execute(entity, operation, argument, actor);
+        ReportOperationReceipt(new MachineOperationReceipt(token, entity.Id, operation, argument,
+            true, accepted, accepted ? string.Empty : "设备未接受此操作"));
+        return accepted;
     }
+
+    // 传输层只报告与已登记请求匹配的真实回执或明确的未确认结果。
+    public static void ReportOperationReceipt(MachineOperationReceipt receipt)
+        => OperationCompleted?.Invoke(receipt);
 
     /// <summary>普通工作方块和机械节点使用同一个快照封装，不需要伪造机械模块。</summary>
     public static MachineState ReadMachineState(ItemData snapshot)
@@ -187,7 +200,7 @@ public static partial class MachineWorld
                 continue;
             }
             // 船内格不对应地表场景，设施与船上机械网一样持续模拟。
-            bool active = KeepSimulatingWithoutPlayers;
+            bool active = KeepSimulatingWithoutPlayers || entity.SharedInventoryConsumers > 0;
             int range = entity.Active ? MachineCatalog.Settings.DeactivationChunks : MachineCatalog.Settings.ActivationChunks;
             if (!active)
                 foreach (Vector2Int player in players)

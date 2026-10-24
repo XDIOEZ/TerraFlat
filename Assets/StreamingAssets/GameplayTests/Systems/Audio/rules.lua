@@ -136,6 +136,17 @@ for _, row in ipairs({ { first = "probe.first", second = "probe.second", errors 
     end, "音频目录装配、重复校验和缓存重建")
 end
 
+-- 只有主动停用事件允许空录音，不能把丢失录音的正常事件当成静音配置。
+for _, row in ipairs({ { firstEnabled = false, errors = 0 }, { firstEnabled = true, errors = 1 } }) do
+    test.system("audio", "catalog_lifecycle", row, function(data)
+        assert(data.defaultPlaybackEnabled, "新增 Cue 没有默认启用播放")
+        assert(data.firstPlaybackEnabled == row.firstEnabled and data.firstClipCount == 0,
+            "事件播放开关或空录音采样不正确")
+        assert(data.errors == row.errors, "目录混淆了主动停用与正常事件缺失录音")
+        assert(data.found and data.resolvedFirst, "停用事件丢失了正式目录身份")
+    end, "事件启停与缺失录音校验：" .. tostring(row.firstEnabled))
+end
+
 -- 使用玩家当地风强直接驱动正式风声状态，不建世界或播放声音。
 local function wind_sequence(label, steps)
     test.system("audio", "wind_sequence", { steps = steps }, function(data)

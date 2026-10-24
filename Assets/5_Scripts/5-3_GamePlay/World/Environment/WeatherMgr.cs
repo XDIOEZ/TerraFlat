@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using Sirenix.OdinInspector;
@@ -167,9 +168,9 @@ public partial class WeatherMgr : MonoBehaviour
         if (!IsLocalWeatherWorld) return true;
         Camera camera = Camera.main;
         Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
-        TryGetPrecipitationAt(position, out float rain, out float snow);
-        BeginPrecipitationPresentationTransition(rain, snow,
-            transitionSeconds < 0f ? _precipitationTransitionSeconds : transitionSeconds);
+        if (TryGetPrecipitationAt(position, out float rain, out float snow))
+            BeginPrecipitationPresentationTransition(rain, snow,
+                transitionSeconds < 0f ? _precipitationTransitionSeconds : transitionSeconds);
         RefreshRainEffect();
         return true;
     }
@@ -201,12 +202,8 @@ public partial class WeatherMgr : MonoBehaviour
         float rainIntensity = _presentedRainIntensity;
         if (rainIntensity <= 0.001f)
         {
-            if (_rainEffectInstance != null)
-            {
-                _rainEffectController.ApplySettings(0f);
-                if (!_rainEffectController.HasAliveParticles)
-                    _rainEffectInstance.SetActive(false);
-            }
+            if (_rainEffectInstance != null && _rainEffectInstance.activeSelf)
+                _rainEffectInstance.SetActive(false);
 
             SetRainGroundSplashActive(false, 0f);
 
@@ -219,13 +216,8 @@ public partial class WeatherMgr : MonoBehaviour
             return;
         }
 
-        rainEffectInstance.SetActive(true);
-        SyncRainEffectTransform(rainEffectInstance.transform);
-
-        if (_rainEffectController != null)
-        {
-            _rainEffectController.ApplySettings(rainIntensity);
-        }
+        if (!rainEffectInstance.activeSelf) rainEffectInstance.SetActive(true);
+        SyncRainEffectCamera();
 
         SetRainGroundSplashActive(true, rainIntensity);
     }
@@ -281,7 +273,7 @@ public partial class WeatherMgr : MonoBehaviour
         return _rainEffectInstance;
     }
 
-    /// <summary>启停独立地面水花层，不修改原雨层 Prefab 与粒子参数。</summary>
+    /// <summary>地面水花独立消费雨量，停雨后继续播完已有水花。</summary>
     private void SetRainGroundSplashActive(bool active, float intensity)
     {
         if (!active)
@@ -333,30 +325,11 @@ public partial class WeatherMgr : MonoBehaviour
         return null;
     }
 
-    private void SyncRainEffectTransform(Transform rainEffectTransform)
+    private void SyncRainEffectCamera()
     {
-        if (rainEffectTransform == null)
-        {
-            return;
-        }
-
-        // RainEffectController 会在 LateUpdate 中依据相机顶部完成精确定位；
-        // 这里再写一次中心点会与其相互覆盖，造成发射区域在场景中漂移。
-        if (_rainEffectController != null && rainEffectTransform == _rainEffectController.transform)
-        {
-            return;
-        }
-
-        Camera mainCamera = Camera.main;
-        if (mainCamera != null)
-        {
-            rainEffectTransform.position = new Vector3(mainCamera.transform.position.x, mainCamera.transform.position.y, 0f);
-            rainEffectTransform.rotation = Quaternion.identity;
-            return;
-        }
-
-        rainEffectTransform.position = transform.position;
-        rainEffectTransform.rotation = Quaternion.identity;
+        if (_rainEffectController == null) return;
+        _rainEffectController.SyncToCamera(Camera.main, _presentedRainIntensity);
+        _rainEffectController.SetWind(presentedWindDirection * _presentedWindStrength);
     }
 
 #endregion
@@ -385,36 +358,59 @@ public partial class WeatherMgr : MonoBehaviour
     {
         Camera camera = Camera.main;
         Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
-        TryGetPrecipitationAt(position, out float rain, out float snow);
-        TryGetWeatherAt(position, out var weather);
+        bool hasWeather = TryGetWeatherAt(position, out var weather);
+        bool hasPrecipitation = TryGetPrecipitationAt(position, out float rain, out float snow);
         float step = Mathf.Max(0f, deltaTime) / Mathf.Max(0.01f, _weatherTransitionSeconds);
         float previousRain = _presentedRainIntensity;
         float previousSnow = _presentedSnowIntensity;
         float previousWind = _presentedWindStrength;
 
         // 任意雨量都走完整段由少到多的过渡，跨区块从当前值续接。
-        if (!Mathf.Approximately(_targetRainIntensity, rain) ||
-            !Mathf.Approximately(_targetSnowIntensity, snow))
-            BeginPrecipitationPresentationTransition(rain, snow, _precipitationTransitionSeconds);
+        if (TryUpdatePrecipitationTargets(hasPrecipitation, rain, snow,
+                ref _targetRainIntensity, ref _targetSnowIntensity))
+            BeginPrecipitationPresentationTransition(_targetRainIntensity, _targetSnowIntensity,
+                _precipitationTransitionSeconds);
         _precipitationTransitionElapsed += Mathf.Max(0f, deltaTime);
         float precipitationProgress = _activePrecipitationTransitionSeconds <= 0f ? 1f :
             Mathf.Clamp01(_precipitationTransitionElapsed / _activePrecipitationTransitionSeconds);
         float precipitationBlend = Mathf.SmoothStep(0f, 1f, precipitationProgress);
         _presentedRainIntensity = Mathf.Lerp(_rainTransitionStartIntensity, _targetRainIntensity, precipitationBlend);
         _presentedSnowIntensity = Mathf.Lerp(_snowTransitionStartIntensity, _targetSnowIntensity, precipitationBlend);
-        _presentedWindStrength = Mathf.MoveTowards(previousWind, Mathf.Clamp01(weather.WindStrength), step);
-        bool windDirectionChanged = MaintainWindDirection(new Vector2(weather.WindX, weather.WindY), step);
-        _presentedCloudCoverage = Mathf.MoveTowards(_presentedCloudCoverage, Mathf.Clamp01(weather.CloudCoverage), step);
+        bool windDirectionChanged = false;
+        if (hasWeather)
+        {
+            _presentedWindStrength = Mathf.MoveTowards(previousWind, Mathf.Clamp01(weather.WindStrength), step);
+            windDirectionChanged = MaintainWindDirection(new Vector2(weather.WindX, weather.WindY), step);
+            _presentedCloudCoverage = Mathf.MoveTowards(_presentedCloudCoverage, Mathf.Clamp01(weather.CloudCoverage), step);
+        }
 
         bool rainTailActive = _presentedRainIntensity <= 0.001f &&
             ((_rainEffectInstance != null && _rainEffectInstance.activeSelf) ||
              (_rainGroundSplashInstance != null && _rainGroundSplashInstance.activeSelf));
-        bool snowTailActive = _presentedSnowIntensity <= 0.001f && snowEffect != null && snowEffect.activeSelf;
         if (_presentedRainIntensity != previousRain || _presentedSnowIntensity != previousSnow ||
-            rainTailActive || snowTailActive)
+            rainTailActive)
             RefreshRainEffect();
         if (_presentedWindStrength != previousWind || windDirectionChanged)
             RefreshWindFeedback();
+    }
+
+    internal static bool TryUpdatePrecipitationTargets(bool sampleAvailable, float rain, float snow,
+        ref float targetRain, ref float targetSnow)
+    {
+        // 暂时读不到有效降水时沿用上一目标，避免把采样空档误当成停雨。
+        if (!sampleAvailable || !float.IsFinite(rain) || !float.IsFinite(snow))
+            return false;
+
+        float nextRain = Mathf.Clamp01(rain);
+        float nextSnow = Mathf.Clamp01(snow);
+        bool changed = !Mathf.Approximately(targetRain, nextRain) ||
+                       !Mathf.Approximately(targetSnow, nextSnow);
+        if (!changed)
+            return false;
+
+        targetRain = nextRain;
+        targetSnow = nextSnow;
+        return true;
     }
 
     private void ResetWeatherPresentation()
@@ -519,7 +515,7 @@ public partial class WeatherMgr : MonoBehaviour
         AdvanceOceanWaveClock(Time.deltaTime);
         MaintainSnowPresentation();
         if (_rainEffectInstance != null && _rainEffectInstance.activeSelf)
-            SyncRainEffectTransform(_rainEffectInstance.transform);
+            SyncRainEffectCamera();
     }
 
     private void OnGUI()
@@ -542,7 +538,8 @@ public partial class WeatherMgr : MonoBehaviour
     private void DrawDebugWindow(int windowId)
     {
         Rect titleBarRect = new Rect(0f, 0f, _debugWindowRect.width, TitleBarHeight);
-        GUI.Label(titleBarRect, $"天气调试面板  [{_toggleDebugPanelInputKey}] 切换", _titleStyle);
+        GUI.Label(titleBarRect,
+            UiFormat("天气调试面板  [{0}] 切换", _toggleDebugPanelInputKey.ToString()), _titleStyle);
 
         Rect closeButtonRect = new Rect(_debugWindowRect.width - 26f, 4f, 22f, 20f);
         if (GUI.Button(closeButtonRect, "×", _buttonStyle))
@@ -554,65 +551,77 @@ public partial class WeatherMgr : MonoBehaviour
         GUILayout.BeginArea(contentRect);
         _scrollPosition = GUILayout.BeginScrollView(_scrollPosition);
 
-        GUILayout.Label($"当前天气: {CurrentWeather}", _labelStyle);
-        GUILayout.Label($"天气阶段: {CurrentWeatherPhase}", _valueStyle);
-        GUILayout.Label($"天气强度: {CurrentWeatherIntensity:F2}", _valueStyle);
-        GUILayout.Label($"当地风力: {CurrentWindStrength:F2}", _valueStyle);
-        GUILayout.Label($"阶段剩余: {CurrentWeatherRemainingTime:F1} 秒", _valueStyle);
-        GUILayout.Label($"天气修正: {CurrentWeatherTemperatureOffset:F2} ℃", _valueStyle);
+        GUILayout.Label(UiFormat("当前天气：{0}", GetWeatherName(CurrentWeather)), _labelStyle);
+        GUILayout.Label(UiFormat("天气阶段：{0}", GetWeatherPhaseName(CurrentWeatherPhase)), _valueStyle);
+        GUILayout.Label(UiFormat("天气强度：{0:F2}", CurrentWeatherIntensity), _valueStyle);
+        GUILayout.Label(UiFormat("当地风力：{0:F2}", CurrentWindStrength), _valueStyle);
+        GUILayout.Label(UiFormat("阶段剩余：{0:F1} 秒", CurrentWeatherRemainingTime), _valueStyle);
+        GUILayout.Label(UiFormat("天气修正：{0:F2} ℃", CurrentWeatherTemperatureOffset), _valueStyle);
 
         PlanetData planetData = GetActivePlanetData();
         if (planetData != null)
         {
-            GUILayout.Label($"基础温度: {planetData.GlobalTemperature:F2} ℃", _valueStyle);
+            GUILayout.Label(UiFormat("基础温度：{0:F2} ℃", planetData.GlobalTemperature), _valueStyle);
             Camera camera = Camera.main;
             Vector2 localPosition = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
             if (TryGetLocalWeather(out var sample))
             {
                 Int2 weatherSize = regionalEngine.GetRegionSize(sample.Region);
-                GUILayout.Label($"天气区: {sample.Region.X}, {sample.Region.Y}", _valueStyle);
-                GUILayout.Label($"共享范围: {weatherSize.X}×{weatherSize.Y} 格", _valueStyle);
+                GUILayout.Label(UiFormat("天气区：{0}, {1}", sample.Region.X, sample.Region.Y), _valueStyle);
+                GUILayout.Label(UiFormat("共享范围：{0}×{1} 格", weatherSize.X, weatherSize.Y), _valueStyle);
                 if (TryGetWeatherProfileAt(localPosition, out var profile))
                 {
-                    GUILayout.Label(GameNetwork.HasStateAuthority ? "天气区固定参数" : "本块生成参数（气候参考）", _valueStyle);
-                    GUILayout.Label($"生成湿度: {profile.Climate.AirHumidity:F3}  风力: {profile.Climate.WindStrength:F3}", _valueStyle);
-                    GUILayout.Label($"每 {regionalSettings.CheckIntervalSeconds:F0} 秒检查一次空闲天气", _valueStyle);
+                    GUILayout.Label(Ui(GameNetwork.HasStateAuthority
+                        ? "天气区固定参数"
+                        : "本块生成参数（气候参考）"), _valueStyle);
+                    GUILayout.Label(UiFormat("生成湿度：{0:F3}  风力：{1:F3}",
+                        profile.Climate.AirHumidity, profile.Climate.WindStrength), _valueStyle);
+                    GUILayout.Label(UiFormat("每 {0:F0} 秒检查一次空闲天气",
+                        regionalSettings.CheckIntervalSeconds), _valueStyle);
                     foreach (var element in profile.Elements)
                     {
-                        string label = element.Id switch { "rain" => "下雨", "wind" => "刮风", "thunder" => "打雷", _ => element.Id };
-                        GUILayout.Label($"{label}: 概率 {element.Probability:P0}  强度 {element.Intensity:F2}  持续 {element.DurationSeconds:F0} 秒", _valueStyle);
+                        string label = element.Id switch
+                        {
+                            "rain" => Ui("下雨"),
+                            "wind" => Ui("刮风"),
+                            "thunder" => Ui("打雷"),
+                            _ => element.Id
+                        };
+                        GUILayout.Label(UiFormat("{0}：概率 {1:P0}  强度 {2:F2}  持续 {3:F0} 秒",
+                            label, element.Probability, element.Intensity, element.DurationSeconds), _valueStyle);
                     }
                 }
                 if (TemperatureMgr.Instance.TryGetAmbientTemperature(localPosition, out float temperature))
-                    GUILayout.Label($"当地实时温度: {temperature:F2} ℃", _valueStyle);
-                GUILayout.Label($"云: {sample.CloudCoverage:F2}  雾: {sample.FogDensity:F2}  雷电: {sample.LightningActivity:F2}", _valueStyle);
+                    GUILayout.Label(UiFormat("当地实时温度：{0:F2} ℃", temperature), _valueStyle);
+                GUILayout.Label(UiFormat("云：{0:F2}  雾：{1:F2}  雷电：{2:F2}",
+                    sample.CloudCoverage, sample.FogDensity, sample.LightningActivity), _valueStyle);
             }
-            else GUILayout.Label("所在天气区尚未就绪", _valueStyle);
+            else GUILayout.Label(Ui("所在天气区尚未就绪"), _valueStyle);
         }
         else
         {
-            GUILayout.Label("当前没有可用的星球数据", _valueStyle);
+            GUILayout.Label(Ui("当前没有可用的星球数据"), _valueStyle);
         }
 
         GUILayout.Space(8f);
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("晴天"))
+        if (GUILayout.Button(Ui("晴天")))
         {
             ClearWeather();
         }
 
-        if (GUILayout.Button("雨天"))
+        if (GUILayout.Button(Ui("雨天")))
         {
             SetRain();
         }
 
-        if (GUILayout.Button("阴天"))
+        if (GUILayout.Button(Ui("阴天")))
         {
             SetCloudy();
         }
 
-        if (GUILayout.Button("大雾"))
+        if (GUILayout.Button(Ui("大雾")))
         {
             SetFog();
         }
@@ -620,16 +629,16 @@ public partial class WeatherMgr : MonoBehaviour
 
         if (planetData != null)
         {
-            if (GUILayout.Button("暴风雷雨")) SetWeather(WeatherType.Storm, 1f);
-            if (GUILayout.Button("玩家上方三格雷击（有真实伤害）")) StrikeLightningDebug();
+            if (GUILayout.Button(Ui("暴风雷雨"))) SetWeather(WeatherType.Storm, 1f);
+            if (GUILayout.Button(Ui("玩家上方三格雷击（有真实伤害）"))) StrikeLightningDebug();
             GUILayout.Space(8f);
-            GUILayout.Label("风力", _labelStyle);
+            GUILayout.Label(Ui("风力"), _labelStyle);
             float nextWindStrength = GUILayout.HorizontalSlider(planetData.WindStrength, 0f, 1f);
             if (!Mathf.Approximately(nextWindStrength, planetData.WindStrength))
                 SetWindStrength(nextWindStrength);
 
             GUILayout.Space(8f);
-            GUILayout.Label("天气强度", _labelStyle);
+            GUILayout.Label(Ui("天气强度"), _labelStyle);
             float nextIntensity = GUILayout.HorizontalSlider(planetData.WeatherIntensity, 0f, 1f);
             if (!Mathf.Approximately(nextIntensity, planetData.WeatherIntensity))
             {
@@ -637,30 +646,59 @@ public partial class WeatherMgr : MonoBehaviour
             }
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("小雨 0.35", _buttonStyle))
+            if (GUILayout.Button(Ui("小雨 0.35"), _buttonStyle))
             {
                 SetWeather(WeatherType.Rain, 0.35f);
             }
 
-            if (GUILayout.Button("中雨 0.65", _buttonStyle))
+            if (GUILayout.Button(Ui("中雨 0.65"), _buttonStyle))
             {
                 SetWeather(WeatherType.Rain, 0.65f);
             }
 
-            if (GUILayout.Button("大雨 1.0", _buttonStyle))
+            if (GUILayout.Button(Ui("大雨 1.0"), _buttonStyle))
             {
                 SetWeather(WeatherType.Rain, 1f);
             }
             GUILayout.EndHorizontal();
         }
 
-        GUILayout.Label("拖动标题栏移动，拖动右下角缩放", _footerStyle);
+        GUILayout.Label(Ui("拖动标题栏移动，拖动右下角缩放"), _footerStyle);
         GUILayout.EndScrollView();
         GUILayout.EndArea();
 
         HandleResize(titleBarRect);
         GUI.DragWindow(titleBarRect);
     }
+
+    private static string Ui(string sourceText) => FlatWorldLocalizationService.GetUiText(sourceText);
+
+    private static string UiFormat(string sourceTemplate, params object[] arguments) =>
+        FlatWorldLocalizationService.GetUiFormat(sourceTemplate, arguments);
+
+    private static string GetWeatherName(WeatherType weather) => Ui(weather switch
+    {
+        WeatherType.Clear => "晴天",
+        WeatherType.Cloudy => "阴天",
+        WeatherType.Rain => "雨天",
+        WeatherType.Storm => "暴风雷雨",
+        WeatherType.Fog => "大雾",
+        _ => "未知天气"
+    });
+
+    private static string GetWeatherPhaseName(WeatherPhase phase) => Ui(phase switch
+    {
+        WeatherPhase.Clear => "晴朗",
+        WeatherPhase.Forecast => "降雨预报",
+        WeatherPhase.RainStarting => "开始降雨",
+        WeatherPhase.RainSteady => "稳定降雨",
+        WeatherPhase.RainHeavy => "暴雨",
+        WeatherPhase.RainEnding => "降雨结束",
+        WeatherPhase.Recovery => "雨后恢复",
+        WeatherPhase.Fog => "大雾",
+        WeatherPhase.Cloudy => "阴天",
+        _ => "未知天气阶段"
+    });
 
     private void HandleResize(Rect titleBarRect)
     {

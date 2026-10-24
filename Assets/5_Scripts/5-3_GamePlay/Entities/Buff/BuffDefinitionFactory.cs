@@ -21,7 +21,7 @@ public static class BuffDefinitionFactory
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("Buff JSON 为空");
 
-        return JsonConvert.DeserializeObject<BuffCatalogDto>(json, StrictJsonSettings)
+        return JsonConfigurationCache.Deserialize<BuffCatalogDto>(json, StrictJsonSettings)
             ?? throw new InvalidDataException("Buff JSON 无法反序列化");
     }
 

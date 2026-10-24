@@ -27,6 +27,7 @@ namespace FlatWorld.Spaceflight
         private Sprite connectionSource;
         private SpriteRenderer[] fiberParts;
         private SpriteRenderer[] pipeParts;
+        private SpriteRenderer pipeOverlay;
         private SortingGroup pipeSortingGroup;
         private ulong boundStructureRevision;
         private ShipState boundShip;
@@ -47,7 +48,7 @@ namespace FlatWorld.Spaceflight
             boundPiece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall or ShipPieceKind.Navigation) &&
             ((boundPiece.Kind is ShipPieceKind.Console or ShipPieceKind.DockingPort or
                 ShipPieceKind.Engine or ShipPieceKind.Door) ||
-                machineTarget != null);
+                machineTarget != null || boundPiece.ItemId == SpaceSession.SpaceElevatorTerminalItemId);
         public bool CanInteract(Item actor)
         {
             if (actor == null || !HasInteractionAction || !IsValid) return false;
@@ -142,7 +143,7 @@ namespace FlatWorld.Spaceflight
         {
             if (visual == null) return;
             MachineDefinition machine = MachineCatalog.Get(piece.ItemId);
-            if (machine?.Fluid?.Kind != "pipe" && pipeSortingGroup != null) pipeSortingGroup.enabled = false;
+            if (machine?.IsFluidPipeSegment != true && pipeSortingGroup != null) pipeSortingGroup.enabled = false;
             bool connectionLine = machine?.IsConnectionLine == true || piece.Kind == ShipPieceKind.Fiber;
             WorldSortingManager.GetInstance().ApplyRenderer(visual,
                 piece.Kind == ShipPieceKind.Floor || connectionLine
@@ -166,7 +167,7 @@ namespace FlatWorld.Spaceflight
         }
         // 创建和恢复共用线路层级，保持尾焰、地板、管线、电线、光纤的先后顺序。
         internal static int ResolveSortingOrder(ShipPieceState piece, MachineDefinition machine)
-            => piece.Kind == ShipPieceKind.Floor ? -4 : machine?.Fluid?.Kind == "pipe" ? -3
+            => piece.Kind == ShipPieceKind.Floor ? -4 : machine?.IsFluidPipeSegment == true ? -3
                 : machine?.Electrical?.IsWire == true ? -2 : piece.Kind == ShipPieceKind.Fiber ? -1 : 0;
 
         public void Rebind(ShipState ship, ShipPieceState piece, bool force = false)
@@ -298,7 +299,7 @@ namespace FlatWorld.Spaceflight
             if (visual == null || node?.Definition.IsConnectionLine != true || boundPiece?.IsAlive != true ||
                 node.ScopeKey != machineScopeKey) return;
             using var nodeScope = MachineWorld.UseNodeScope(node);
-            bool pipe = node.Definition.Fluid?.Kind == "pipe";
+            bool pipe = node.Definition.IsFluidPipeSegment;
             int mask = pipe ? MachineWorld.GetFluidPipeConnectionMask(node)
                 : MachineWorld.GetElectricalWireConnectionMask(node.Cell);
             string state = (pipe ? "pipe" : "wire") + mask;
@@ -328,11 +329,34 @@ namespace FlatWorld.Spaceflight
                 if (pipeSortingGroup != null) pipeSortingGroup.enabled = false;
                 if (pipeParts != null) foreach (SpriteRenderer part in pipeParts) if (part != null) part.enabled = false;
             }
+            SynchronizePipeOverlay(definition, pipe);
             if (connectionMask == mask && connectionSource == definition.Sprite && visual.sprite == body) return;
             visual.sprite = body;
             if (pipe) FluidPipeConnectionVisual.Apply(visual, northArm, ref pipeParts, mask);
             connectionMask = mask;
             connectionSource = definition.Sprite;
+        }
+
+        private void SynchronizePipeOverlay(RuntimeItemDefinition definition, bool pipe)
+        {
+            Sprite overlay = pipe && definition.TryGetVisualStateSprite("pipeOverlay", out Sprite configured) ? configured : null;
+            if (pipeOverlay == null)
+            {
+                if (overlay == null) return;
+                GameObject child = new("Pipe Device Overlay");
+                child.transform.SetParent(visual.transform, false);
+                pipeOverlay = child.AddComponent<SpriteRenderer>();
+            }
+            if (pipeOverlay.enabled != (overlay != null)) pipeOverlay.enabled = overlay != null;
+            if (overlay == null) return;
+            if (pipeOverlay.sprite != overlay) pipeOverlay.sprite = overlay;
+            if (pipeOverlay.sharedMaterial != visual.sharedMaterial) pipeOverlay.sharedMaterial = visual.sharedMaterial;
+            if (pipeOverlay.color != visual.color) pipeOverlay.color = visual.color;
+            if (pipeOverlay.sortingLayerID != visual.sortingLayerID) pipeOverlay.sortingLayerID = visual.sortingLayerID;
+            if (pipeOverlay.sortingOrder != visual.sortingOrder + 1) pipeOverlay.sortingOrder = visual.sortingOrder + 1;
+            if (pipeOverlay.transform.localPosition != Vector3.zero) pipeOverlay.transform.localPosition = Vector3.zero;
+            if (pipeOverlay.transform.localRotation != Quaternion.identity) pipeOverlay.transform.localRotation = Quaternion.identity;
+            if (pipeOverlay.transform.localScale != Vector3.one) pipeOverlay.transform.localScale = Vector3.one;
         }
         public void SetVisualLift(Vector3 visualLiftOffset)
         {
@@ -356,6 +380,8 @@ namespace FlatWorld.Spaceflight
         {
             if (!CanInteract(actor) || actor is not Player player) return;
             session.FindPiece(pieceId, out ShipState ship, out ShipPieceState piece);
+            if (piece.ItemId == SpaceSession.SpaceElevatorTerminalItemId)
+            { SpaceElevatorPanelSession.Open(session, player, pieceId); return; }
             if (piece.Kind == ShipPieceKind.Console || piece.Kind == ShipPieceKind.DockingPort || piece.Kind == ShipPieceKind.Engine)
             { ShipPanelSession.Open(session, player, shipId, pieceId); return; }
             if (piece.Kind == ShipPieceKind.Door)

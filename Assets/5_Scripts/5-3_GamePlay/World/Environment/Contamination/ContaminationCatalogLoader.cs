@@ -115,7 +115,7 @@ public static class ContaminationCatalogLoader
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("污染清单为空");
 
-        return JsonConvert.DeserializeObject<ContaminationManifestDto>(json, StrictJsonSettings)
+        return JsonConfigurationCache.Deserialize<ContaminationManifestDto>(json, StrictJsonSettings)
             ?? throw new InvalidDataException("污染清单无法反序列化");
     }
 

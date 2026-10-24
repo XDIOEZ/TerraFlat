@@ -1,3 +1,4 @@
+using FlatWorld.Localization;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -59,7 +60,7 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
     public float timeScaleHintDuration = 1.0f;
 
     // 时间提示内部变量
-    private string timeScaleHintText = string.Empty;
+    private bool timeScaleHintIsReset;
     private float timeScaleHintTimer = 0f;
     private bool showTimeScaleHint = false;
     private float initialUnityTimeScale = 1.0f;
@@ -178,10 +179,8 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
 
     private void OnGUI()
     {
-        if (showTimeScaleHint && !string.IsNullOrEmpty(timeScaleHintText))
-        {
+        if (showTimeScaleHint)
             DrawTimeScaleHint();
-        }
     }
 
     protected override void OnSave() { }
@@ -550,8 +549,8 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
     {
         timeScale = 1.0f;
         Time.timeScale = timeScale;
-        timeScaleHintText = "时间速度已重置为正常速度";
-        Debug.Log(timeScaleHintText);
+        timeScaleHintIsReset = true;
+        Debug.Log("时间速度已重置为正常速度");
     }
 
     /// <summary>按当前值增减时间流速，供管理员快捷键和旧命令调用。</summary>
@@ -573,7 +572,7 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
 
         timeScale = newScale;
         Time.timeScale = timeScale;
-        timeScaleHintText = $"时间速度: {timeScale:F1}x";
+        timeScaleHintIsReset = false;
         Debug.Log($"时间速度调整为: {timeScale:F1}x");
         return true;
     }
@@ -598,7 +597,7 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
     private void DrawTimeScaleHint()
     {
         float alpha = Mathf.Clamp01(timeScaleHintTimer / timeScaleHintDuration);
-        
+
         GUIStyle style = new GUIStyle(GUI.skin.label)
         {
             fontSize = 24,
@@ -606,10 +605,13 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
             alignment = TextAnchor.MiddleCenter
         };
         style.normal.textColor = new Color(1, 1, 1, alpha);
-        
+
         // 显示在屏幕上方 1/4 处
         Rect position = new Rect(0, Screen.height * 0.25f, Screen.width, 50);
-        GUI.Label(position, timeScaleHintText, style);
+        string hint = timeScaleHintIsReset
+            ? FlatWorldLocalizationService.GetUiText("时间速度已重置为正常速度")
+            : FlatWorldLocalizationService.GetUiFormat("时间速度：{0:F1}×", timeScale);
+        GUI.Label(position, hint, style);
     }
 
     #endregion

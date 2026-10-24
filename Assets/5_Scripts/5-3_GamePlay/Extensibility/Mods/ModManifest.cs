@@ -4,8 +4,9 @@ using Newtonsoft.Json;
 
 #region MOD 清单
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModManifest
+public sealed partial class ModManifest
 {
     [JsonProperty("apiVersion")]
     public int ApiVersion = 1;
@@ -76,8 +77,9 @@ public sealed class ModManifest
     public string ContentHash;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModManagedDefinition
+public sealed partial class ModManagedDefinition
 {
     [JsonProperty("entryAssembly", Required = Required.Always)]
     public string EntryAssembly;
@@ -90,8 +92,9 @@ public sealed class ModManagedDefinition
     public List<string> Dependencies = new();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModDependency
+public sealed partial class ModDependency
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -106,8 +109,9 @@ public sealed class ModDependency
     public bool Optional;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModBundleDefinition
+public sealed partial class ModBundleDefinition
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -235,15 +239,17 @@ public sealed class ModItemDefinition
 
 #region MOD Patch
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModPatchDocument
+public sealed partial class ModPatchDocument
 {
     [JsonProperty("patches")]
     public List<ModPatchOperation> Patches = new();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModPatchOperation
+public sealed partial class ModPatchOperation
 {
     [JsonProperty("target", Required = Required.Always)]
     public string Target;
@@ -254,9 +260,11 @@ public sealed class ModPatchOperation
     [JsonProperty("path", Required = Required.Always)]
     public string Path;
 
+    [MemoryPack.MemoryPackAllowSerialize]
     [JsonProperty("value")]
     public Newtonsoft.Json.Linq.JToken Value;
 
+    [MemoryPack.MemoryPackAllowSerialize]
     [JsonProperty("expect")]
     public Newtonsoft.Json.Linq.JToken Expect;
 
@@ -268,8 +276,9 @@ public sealed class ModPatchOperation
 
 #region MOD 本地化与设置
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModLocalizationDocument
+public sealed partial class ModLocalizationDocument
 {
     [JsonProperty("language", Required = Required.Always)]
     public string Language;
@@ -278,15 +287,17 @@ public sealed class ModLocalizationDocument
     public Dictionary<string, string> Entries = new();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModSettingsDocument
+public sealed partial class ModSettingsDocument
 {
     [JsonProperty("settings")]
     public List<ModSettingDefinition> Settings = new();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModSettingDefinition
+public sealed partial class ModSettingDefinition
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -297,6 +308,7 @@ public sealed class ModSettingDefinition
     [JsonProperty("scope")]
     public string Scope = "client";
 
+    [MemoryPack.MemoryPackAllowSerialize]
     [JsonProperty("default")]
     public Newtonsoft.Json.Linq.JToken DefaultValue;
 

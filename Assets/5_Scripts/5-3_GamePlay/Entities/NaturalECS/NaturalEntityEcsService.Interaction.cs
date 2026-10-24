@@ -117,7 +117,7 @@ namespace FlatWorld.NaturalEntities
                 if (!records.TryGetValue(id, out Record record) || !record.IsValid) continue;
                 NaturalEntityBody body = simulation.GetBody(id);
                 Vector2Int root = WorldTopologyRuntime.NormalizeCell(new Vector2Int(Mathf.FloorToInt(body.Position.x), Mathf.FloorToInt(body.Position.y)));
-                if (root == cell) return true;
+                if (OccupiesCell(record, root, cell)) return true;
             }
             return false;
         }
@@ -146,7 +146,7 @@ namespace FlatWorld.NaturalEntities
             foreach (Record record in query)
             {
                 if (!record.IsValid || record.DimensionId != WorldEntityRuntime.DimensionId ||
-                    WorldTopologyRuntime.Distance(actor.transform.position, record.WorldPosition) > radius) continue;
+                    SqrDistanceToBounds(actor.transform.position, record.HitBounds) > radius * radius) continue;
                 bool hasHealth = simulation.TryGet(record.Handle.Id, out AiecsVital vital);
                 result.Add(new NaturalEntityTargetObservation(record.Handle, record, record.Profile.Definition.Id,
                     record.HitBounds, hasHealth, hasHealth ? new Vector2(vital.Hp, vital.MaxHp) : default));
@@ -495,6 +495,7 @@ namespace FlatWorld.NaturalEntities
             var target = new CombatIdentity { Backend = CombatBackend.Entity, Value = (1UL << 63) | (uint)record.Handle.Id,
                 Generation = (uint)record.Handle.Generation, World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
             if (!weapon.TryReserveExternalTarget(target)) return;
+            weapon.ConsumeWeaponDurabilityForHit();
             float damage = ApplyDamage(record.Handle, context, weapon);
             if (damage >= 0f && weapon != null) weapon.PublishExternalDamage(context, damage);
         }
@@ -528,7 +529,7 @@ namespace FlatWorld.NaturalEntities
             if (context.IsTrueDamage == 0 && !environmentalDamage && context.Clock.Time - vital.LastDamageTime < vital.DamageInterval) return -1f;
             float4 damage = context.IsTrueDamage != 0 ? math.max(0f, context.Damage) :
                 CombatRules.Resolve(context.Damage, GameplayCombatBridge.Values(record.Profile.HealthDefaults.DefenseValues),
-                    GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false), vital.ReceivedMultiplier * resourceMultiplier);
+                    GameplayCombatBridge.Tuning().Resolve(context.SourceIsPlayer != 0, false), vital.ReceivedMultiplier * resourceMultiplier);
             float previous = vital.Hp;
             vital.Hp = math.max(0f, vital.Hp - math.csum(damage));
             if (context.IsTrueDamage == 0 && !environmentalDamage) vital.LastDamageTime = context.Clock.Time;
@@ -538,6 +539,20 @@ namespace FlatWorld.NaturalEntities
             record.FlashUntil = Time.time + 0.15f;
             RefreshPresentation(handle);
             float actualDamage = previous - vital.Hp;
+            RememberResourceHit(record, context.Origin, actualDamage);
+            // 批量资源仅偏移提交的视觉矩阵，物理投影、占格与掉落坐标仍使用原位置。
+            if (sender != null && CombatHitFeedback.HasImpact(actualDamage))
+            {
+                record.HitShakeStartedAt = Time.time;
+                record.HitShakeDuration = CombatHitFeedback.ShakeDuration(sender.HitShakeDuration);
+                record.HitShakeDistance = CombatHitFeedback.ShakeDistance(sender.HitShakeDistance);
+                record.HitShakeDirection = CombatHitFeedback.ShakeDirection(
+                    WorldTopologyRuntime.ShortestDelta((Vector2)context.Origin, record.WorldPosition));
+                if (record.HitShakeDuration > 0f && record.HitShakeDistance > 0f)
+                    flashPresentationWatch.Add(handle.Id);
+            }
+            ResourceHarvestHitBonus.TrySpawn(context, actualDamage, resourceMultiplier,
+                record.Profile.Definition.LootTableId, ResourceLootPosition(record));
             if (actualDamage > 0f) PublishNetworkStateCommitted(record);
             // 显式声明的声音跟随有效命中发声，零伤按配置处理，致命命中也在移除前播放一次。
             if (!environmentalDamage && context.Attack.Source.Backend != CombatBackend.Environment &&
@@ -676,19 +691,19 @@ namespace FlatWorld.NaturalEntities
                 }
                 if (record.Profile.HarvestOutputs != null)
                 {
-                    float multiplier = Mathf.Max(0f, GameDifficultyService.Current.World.LootAmountMultiplier);
+                    float multiplier = Mathf.Max(0f, GameRuleConfiguration.Current.World.LootAmountMultiplier);
                     foreach (CropYieldEntry output in record.Profile.HarvestOutputs)
                     {
                         if (UnityEngine.Random.value > Mathf.Clamp01(output.probability * multiplier)) continue;
-                        int amount = GameDifficultyService.ScaleRandomizedAmount(UnityEngine.Random.Range(output.minAmount, output.maxAmount + 1), multiplier);
+                        int amount = GameRuleMath.ScaleRandomizedAmount(UnityEngine.Random.Range(output.minAmount, output.maxAmount + 1), multiplier);
                         if (amount > 0) spawned.Add(DroppedItemService.SpawnLoot(output.itemId, position, amount));
                     }
                 }
                 else
                 {
                     if (!string.IsNullOrWhiteSpace(record.Profile.TreeSeedId)) spawned.Add(DroppedItemService.SpawnLoot(record.Profile.TreeSeedId, position));
-                    int amount = GameDifficultyService.ScaleRandomizedAmount(UnityEngine.Random.Range(record.Profile.TreeFoodMinimum,
-                        record.Profile.TreeFoodMaximum + 1), GameDifficultyService.Current.World.LootAmountMultiplier);
+                    int amount = GameRuleMath.ScaleRandomizedAmount(UnityEngine.Random.Range(record.Profile.TreeFoodMinimum,
+                        record.Profile.TreeFoodMaximum + 1), GameRuleConfiguration.Current.World.LootAmountMultiplier);
                     if (amount > 0) spawned.Add(DroppedItemService.SpawnLoot(record.Profile.TreeFoodId, position, amount));
                 }
             }
@@ -719,11 +734,11 @@ namespace FlatWorld.NaturalEntities
                     simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle crop) && crop.Harvested == 0 &&
                     simulation.TryGet(record.Handle.Id, out EntityGrowth growth) && growth.Progress >= growth.MaxProgress)
                 {
-                    float multiplier = Mathf.Max(0f, GameDifficultyService.Current.World.LootAmountMultiplier);
+                    float multiplier = Mathf.Max(0f, GameRuleConfiguration.Current.World.LootAmountMultiplier);
                     foreach (CropYieldEntry output in record.Profile.HarvestOutputs)
                     {
                         if (UnityEngine.Random.value > Mathf.Clamp01(output.probability * multiplier)) continue;
-                        int amount = GameDifficultyService.ScaleRandomizedAmount(
+                        int amount = GameRuleMath.ScaleRandomizedAmount(
                             UnityEngine.Random.Range(output.minAmount, output.maxAmount + 1), multiplier);
                         if (amount > 0) DroppedItemService.SpawnLoot(output.itemId, record.Snapshot.transform.position, amount);
                     }
@@ -745,10 +760,10 @@ namespace FlatWorld.NaturalEntities
                         if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle harvested) && harvested.Harvested != 0 &&
                             (record.Profile.HarvestOutputs?.Exists(output => string.Equals(output.itemId, entry.ItemId, StringComparison.OrdinalIgnoreCase)) == true ||
                              string.Equals(record.Profile.Collection?.CollectItemId, entry.ItemId, StringComparison.OrdinalIgnoreCase))) continue;
-                        float multiplier = GameDifficultyService.Current.World.LootAmountMultiplier * YieldMultiplier(record, entry.ItemId);
-                        if (UnityEngine.Random.value > Mathf.Clamp01(entry.Probability * GameDifficultyService.Current.World.LootAmountMultiplier)) continue;
-                        int count = GameDifficultyService.ScaleRandomizedAmount(entry.RollAmount(), multiplier);
-                        if (count > 0) DroppedItemService.SpawnLoot(entry.ItemId, record.Snapshot.transform.position, count);
+                        float multiplier = GameRuleConfiguration.Current.World.LootAmountMultiplier * YieldMultiplier(record, entry.ItemId);
+                        if (UnityEngine.Random.value > Mathf.Clamp01(entry.Probability * GameRuleConfiguration.Current.World.LootAmountMultiplier)) continue;
+                        int count = GameRuleMath.ScaleRandomizedAmount(entry.RollAmount(), multiplier);
+                        if (count > 0) DroppedItemService.SpawnLoot(entry.ItemId, ResourceLootPosition(record), count);
                     }
             }
             finally { CompleteRemoval(record); }

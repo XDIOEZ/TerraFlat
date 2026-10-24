@@ -5,14 +5,44 @@ using FlatWorld.Combat;
 using FlatWorld.Geometry;
 using FlatWorld.Networking;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Pool;
 
 /// <summary>机械数据格的战斗适配器；只在武器 Pulse 内投影候选受击 Collider。</summary>
 public sealed class MachineCombatBridge : IGameplayCombatBridge
 {
     #region 数据受击
     public static readonly MachineCombatBridge Instance = new();
+    private static readonly ProfilerMarker CandidateMarker = new("FlatWorld.Combat.MachineCandidates");
+    private static readonly ProfilerMarker PhysicsMarker = new("FlatWorld.Combat.MachinePhysicsQuery");
+    private static readonly ProfilerMarker HitMarker = new("FlatWorld.Combat.MachineApplyHits");
+    private static readonly Comparison<OrderedMachineHit> CompareHits = CompareMachineHits;
     private MachineCombatBridge() { }
+
+    internal readonly struct OrderedMachineHit
+    {
+        public readonly CombatColliderHit2D Hit;
+        public readonly float DistanceSquared;
+        public OrderedMachineHit(CombatColliderHit2D hit, float distanceSquared)
+        { Hit = hit; DistanceSquared = distanceSquared; }
+    }
+
+    // 预先缓存距离并复用静态比较器，不再为每次挥击的排序创建捕获 center 的闭包。
+    internal static void SortMachineHits(List<CombatColliderHit2D> hits, Vector2 center, List<OrderedMachineHit> output)
+    {
+        output.Clear();
+        for (int i = 0; i < hits.Count; i++)
+        {
+            CombatColliderHit2D hit = hits[i];
+            output.Add(new OrderedMachineHit(hit, Vector2.SqrMagnitude(hit.Point - center)));
+        }
+        if (output.Count > 1) output.Sort(CompareHits);
+    }
+
+    private static int CompareMachineHits(OrderedMachineHit a, OrderedMachineHit b) =>
+        a.Hit.Fraction != b.Hit.Fraction ? a.Hit.Fraction.CompareTo(b.Hit.Fraction) :
+        a.DistanceSquared.CompareTo(b.DistanceSquared);
 
     /// <summary>机械后端不接管已有世界 Item 的身份。</summary>
     public bool TryGetIdentity(Item item, out CombatIdentity identity)
@@ -27,40 +57,48 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         if (!GameNetwork.HasStateAuthority || weapon == null || weapon.RemainingAttackTargets == 0) return;
         float2 center = shape.BoundsCenter, extents = shape.BoundsExtents;
         Vector2 padding = MachineWorld.GetCombatSearchPadding();
+        int highestLayer = MachineWorld.HighestOccupiedLayer;
         int minX = Mathf.FloorToInt(center.x - extents.x - padding.x);
         int maxX = Mathf.FloorToInt(center.x + extents.x + padding.x);
         int minY = Mathf.FloorToInt(center.y - extents.y - padding.y);
         int maxY = Mathf.FloorToInt(center.y + extents.y + padding.y);
-        var nodes = new List<(MachineEntity Node, RuntimeItemDefinition Definition)>();
-        var seen = new HashSet<int>();
-        var colliderHits = new List<CombatColliderHit2D>();
+        // 每次 Pulse 租借独立集合，避免频繁构造候选列表；嵌套命中仍需隔离自身快照。
+        using var nodeLease = ListPool<(MachineEntity Node, RuntimeItemDefinition Definition)>.Get(out var nodes);
+        using var seenLease = HashSetPool<int>.Get(out var seen);
+        using var hitLease = ListPool<CombatColliderHit2D>.Get(out var colliderHits);
+        using var orderedLease = ListPool<OrderedMachineHit>.Get(out var orderedHits);
+        GameRes resources = GameRes.ExistingInstance;
         using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
         {
-            for (int y = minY; y <= maxY; y++)
-            for (int x = minX; x <= maxX; x++)
-            for (int layer = 0; layer <= 5; layer++)
+            using (CandidateMarker.Auto())
             {
-                MachineEntity node = MachineWorld.GetAtCurrentWorld(new Vector2Int(x, y), layer);
-                if (node == null || !seen.Add(node.Id)) continue;
-                if (node.Definition.Electrical?.Hidden == true && !EngineeringVision.CanSee(weapon.item?.Owner)) continue;
-                if (GameRes.ExistingInstance == null ||
-                    !GameRes.ExistingInstance.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition) ||
-                    definition.Health?.HasHp != true)
-                    throw new InvalidOperationException("机械耐久定义无效：" + node.Definition.Id);
-                Vector2 relative = WorldTopologyRuntime.ShortestDelta(
-                    (Vector2)center, node.Snapshot.transform.position);
-                PerceptionShape2D hitShape = ResolveHitShape(definition.Health, (Vector2)center + relative,
-                    node.RotationQuarterTurns, node.Definition.IsConverter);
-                physics.Add(nodes.Count, hitShape);
-                nodes.Add((node, definition));
+                for (int y = minY; y <= maxY; y++)
+                for (int x = minX; x <= maxX; x++)
+                for (int layer = 0; layer <= highestLayer; layer++)
+                {
+                    MachineEntity node = MachineWorld.GetAtCurrentWorld(new Vector2Int(x, y), layer);
+                    if (node == null || !seen.Add(node.Id)) continue;
+                    if (node.Definition.Electrical?.Hidden == true && !EngineeringVision.CanSee(weapon.item?.Owner)) continue;
+                    if (resources == null ||
+                        !resources.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition) ||
+                        definition.Health?.HasHp != true)
+                        throw new InvalidOperationException("机械耐久定义无效：" + node.Definition.Id);
+                    Vector2 relative = WorldTopologyRuntime.ShortestDelta(
+                        (Vector2)center, node.Snapshot.transform.position);
+                    PerceptionShape2D hitShape = ResolveHitShape(definition.Health, (Vector2)center + relative,
+                        node.RotationQuarterTurns, node.Definition.IsConverter);
+                    physics.Add(nodes.Count, hitShape);
+                    nodes.Add((node, definition));
+                }
             }
-            physics.Query(shape, colliderHits);
+            using (PhysicsMarker.Auto())
+                physics.Query(shape, colliderHits);
         }
-        colliderHits.Sort((a, b) => a.Fraction != b.Fraction ? a.Fraction.CompareTo(b.Fraction) :
-            Vector2.SqrMagnitude(a.Point - (Vector2)center).CompareTo(Vector2.SqrMagnitude(b.Point - (Vector2)center)));
-        for (int i = 0; i < colliderHits.Count && weapon.RemainingAttackTargets > 0; i++)
+        using var hitMarker = HitMarker.Auto();
+        SortMachineHits(colliderHits, (Vector2)center, orderedHits);
+        for (int i = 0; i < orderedHits.Count && weapon.RemainingAttackTargets > 0; i++)
         {
-            CombatColliderHit2D contact = colliderHits[i];
+            CombatColliderHit2D contact = orderedHits[i].Hit;
             (MachineEntity node, RuntimeItemDefinition definition) = nodes[contact.CandidateId];
             if (!MachineWorld.Contains(node)) continue;
             var identity = new CombatIdentity
@@ -77,7 +115,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         }
     }
 
-    /// <summary>防御、难度和建筑倍率与普通伤害接收器共用数值规则。</summary>
+    /// <summary>防御、攻击参数和建筑倍率与普通伤害接收器共用数值规则。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void ApplyDamage(MachineEntity node, RuntimeItemDefinition definition,
         Mod_Damage weapon, CombatDamageContext context)
@@ -85,8 +123,8 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         if (!GameNetwork.HasStateAuthority || node == null || !MachineWorld.Contains(node)) return;
         MachineWorld.WakeForInteraction(node);
         if (node.State == null) return;
-        float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false);
-        float damage = CalculateDamage(definition.Health, context, difficulty);
+        float attackMultiplier = GameplayCombatBridge.Tuning().Resolve(context.SourceIsPlayer != 0, false);
+        float damage = CalculateDamage(definition.Health, context, attackMultiplier);
         if (!math.isfinite(damage)) throw new InvalidOperationException("机器伤害数值无效：" + node.Definition.Id);
         if (damage <= 0f)
         {
@@ -183,13 +221,13 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
 
     /// <summary>防御后才应用建筑倍率，机器与普通实体共用四类伤害规则。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static float CalculateDamage(ItemHealthDefinitionDto health, CombatDamageContext context, float difficulty)
+    public static float CalculateDamage(ItemHealthDefinitionDto health, CombatDamageContext context, float attackMultiplier)
     {
         ItemDefenseDefinitionDto defense = health.Defense;
         float weakness = context.IsTrueDamage != 0 ? 1f : Mod_ResourceHarvest.ResolveAffinityMultiplier(
             health.WeakTool, 1, (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
         return CombatRules.ResolvePhysical(math.csum(context.Damage),
-            context.IsTrueDamage != 0 ? 0f : defense?.Physical ?? 0f, difficulty, weakness);
+            context.IsTrueDamage != 0 ? 0f : defense?.Physical ?? 0f, attackMultiplier, weakness);
     }
     #endregion
 }

@@ -1,3 +1,146 @@
+-- 正式存档控件与运行时绑定保持同一个身份，漏建按钮时直接暴露资产回归。
+test.system("ui_settings", "pressure_hud_display_cache", {}, function(data)
+    assert(data.unchanged and data.roundingCorrect, "HUD 未按一位小数缓存稳定的气压显示状态")
+    assert(data.pressureChanged and data.safeRangeChanged and data.extensionChanged
+        and data.highExtensionChanged and data.bufferChanged, "HUD 气压数值变化没有刷新")
+    assert(data.helmetChanged and data.dangerChanged and data.highDangerChanged,
+        "HUD 呼吸来源或临界气压危险状态变化被相同的舍入值吞掉")
+end, "气压 HUD：显示精度复用、动态读数、安全阈值及呼吸来源失效")
+
+test.system("ui_settings", "save_selection_controls", {}, function(data)
+    local counts = {}
+    for _, name in ipairs(data.buttons) do counts[name] = (counts[name] or 0) + 1 end
+    for _, name in ipairs({
+        "开始游戏按钮", "加载存档按钮", "删除存档按钮", "返回按钮", data.renameKey,
+        "批量删除存档按钮", "确认批量删除按钮", "取消批量删除按钮",
+        "二次确认删除按钮", "二次确认取消按钮"
+    }) do
+        assert(counts[name] == 1, "存档正式面板的绑定按钮缺失或重名：" .. name)
+    end
+    local rename = data.rename
+    assert(rename and rename.active and not rename.interactable,
+        "改名按钮应可见，未选择存档时保持不可点击")
+    assert(rename.raycast and not rename.labelRaycast and rename.navigation == 3,
+        "改名按钮缺少点击面，文字阻挡输入，或未参与自动手柄导航")
+    assert(rename.label == "重命名", "存档改名按钮显示文本丢失")
+    local bounds, parent = rename.bounds, rename.parent
+    assert(bounds.width >= 52 and bounds.height >= 52
+        and bounds.left >= parent.left and bounds.right <= parent.right
+        and bounds.bottom >= parent.bottom and bounds.top <= parent.top,
+        "存档改名按钮点击面积不足或超出操作区")
+    local label = rename.labelBounds
+    assert(label and label.width > 0 and label.height > 0
+        and label.left >= bounds.left and label.right <= bounds.right
+        and label.bottom >= bounds.bottom and label.top <= bounds.top,
+        "存档改名按钮文字区域为空或超出按钮")
+    assert(rename.title and bounds.bottom >= rename.title.top,
+        "存档改名按钮遮挡了当前存档标题")
+    assert(rename.load and bounds.right <= rename.load.left,
+        "存档改名按钮遮挡了载入按钮")
+end, "存档正式面板按钮身份、初始状态与布局")
+
+-- 信息查询不创建窗口或物品表现；同一份结构化状态再交给独立 UI 格式化接口。
+for _, row in ipairs({
+    {mode = "both", count = 2, melt = 125}, {mode = "ice", count = 1, melt = 125},
+    {mode = "food", count = 1}, {mode = "expired", count = 2, melt = 0},
+    {mode = "negative", count = 2, melt = 300}, {mode = "same_target", count = 1, melt = 125},
+    {mode = "nan", count = 1}, {mode = "infinity", count = 1}, {mode = "zero", count = 1},
+    {mode = "disabled", count = 0}, {mode = "definition_disabled", count = 0},
+    {mode = "missing", count = 0}, {mode = "wrong_identity", count = 0}, {mode = "two_slots", count = 4, melt = 125}
+}) do
+    test.system("ui_settings", "item_info_food", {mode = row.mode}, function(data)
+        assert(#data.timers == row.count and #data.display == row.count,
+            "食物信息遗漏启用计时，或显示了无效、禁用、缺失状态")
+        assert(data.unchanged and data.repeatStable, "查看食物信息改写状态或重复查询结果不一致")
+        assert(data.minuteText == data.expectedMinuteText and data.roundedText == data.expectedRoundedText,
+            "UI 时间格式化没有正确处理分秒或正剩余时间向上取整")
+        local slots = {}
+        for _, timer in ipairs(data.timers) do
+            assert(timer.clock == "Simulation", "食物运行步进计时被误标为世界时钟")
+            slots[timer.slot] = true
+            if timer.id == "food.melting" then
+                assert(timer.remaining == row.melt and timer.duration == 300 and timer.scope == "NextUnit",
+                    "冰块应显示下一个融化，而不是整堆消失")
+            else
+                assert(timer.id == "food.spoilage" and timer.remaining == 1680 and timer.duration == 1800
+                    and timer.scope == "WholeStack" and timer.target == "Meat_Rotten", "腐败计时或目标状态错误")
+            end
+        end
+        if row.mode == "two_slots" then assert(slots.food and slots.second, "同能力的不同模块实例槽被合并") end
+    end, "物品数据接口与 UI 接口：" .. row.mode)
+end
+
+-- 建筑资产的滚动区与槽位保持在各自容器内，避免构建器遗留旧坐标。
+local function assert_building_rect_inside(child, parent, label)
+    assert(child.left >= parent.left - 0.1 and child.right <= parent.right + 0.1
+        and child.bottom >= parent.bottom - 0.1 and child.top <= parent.top + 0.1, label)
+    assert(child.scaleX == 1 and child.scaleY == 1, "建筑控件保留了异常缩放")
+end
+
+for _, panel in ipairs({"UI_CompostBin", "UI_MeatRack"}) do
+    test.system("ui_settings", "building_panel_layout", {panel = panel}, function(data)
+        assert_building_rect_inside(data.bar, data.scroll, "建筑滚动条跑到滚动区外")
+        assert_building_rect_inside(data.viewport, data.scroll, "建筑视口越界")
+        assert(data.viewport.right <= data.bar.left + 0.1, "建筑视口与滚动条重叠")
+        local required = data.padding + data.columns * data.cellWidth + (data.columns - 1) * data.spacing
+        assert(data.content.width >= required, "固定列槽位超出内容容器宽度")
+        assert(math.abs(data.content.left - data.viewportLocal.left) < 0.1
+            and math.abs(data.content.right - data.viewportLocal.right) < 0.1, "库存内容未跟随视口宽度")
+        assert(data.verticalFit == 2 and data.verticalScroll and not data.horizontalScroll,
+            "建筑库存未保留纵向内容自适应与滚动")
+    end, "建筑滚动资产布局：" .. panel)
+end
+
+test.system("ui_settings", "building_panel_layout", {panel = "UI_Furnace"}, function(data)
+    assert(#data.input.slots == 3 and #data.output.slots == 2, "熔炉正式输入输出槽位数量错误")
+    for _, container in ipairs({data.input, data.output}) do
+        for _, slot in ipairs(container.slots) do
+            assert_building_rect_inside(slot, container.bounds, "熔炉槽位超出输入或输出容器")
+        end
+    end
+end, "熔炉输入输出完整收进正式容器")
+
+for _, row in ipairs({
+    {mode = "same_world", remaining = 940}, {mode = "no_clock", remaining = 1040},
+    {mode = "other_world", remaining = 1040}, {mode = "rewound", remaining = 1040},
+    {mode = "expired", remaining = 0}, {mode = "new", remaining = 1440}
+}) do
+    test.system("ui_settings", "item_info_lifetime", {mode = row.mode}, function(data)
+        assert(#data.timers == 1 and #data.display == 1, "火种自然消失倒计时缺失或重复")
+        local timer = data.timers[1]
+        assert(timer.id == "item.timed_despawn" and timer.remaining == row.remaining and timer.duration == 1440
+            and timer.clock == "World" and timer.scope == "WholeStack", "自然消失计时的时间源或堆叠语义错误")
+        assert(data.samePayloadReference and data.samePayloadBytes and data.payloadNotifications == 0 and data.repeatStable,
+            "只读生命周期查询初始化、推进或写回了真实计时状态")
+    end, "生命周期只读投影：" .. row.mode)
+end
+
+test.system("ui_settings", "item_info_extension", {}, function(data)
+    assert(#data.timers == 1 and data.timers[1].remaining == 42 and data.fallbackDisplayCount == 1,
+        "新增信息提供者仍依赖 Prefab、窗口或修改中央业务分支")
+    assert(data.rejectsDuplicate and data.wrongOwnerRejected and data.unregisters and data.afterUnregisterCount == 0,
+        "信息提供者重复注册或注销所有权处理错误")
+    assert(data.rejectsInvalidElapsed, "非有限进度不应流入其他系统或 UI")
+end, "新增模块通过数据接口扩展并独立显示")
+
+test.system("ui_settings", "item_info_numeric", {}, function(data)
+    local expected = {
+        ["item.amount"] = 3, ["item.weight_kg"] = 6, ["item.volume_liters"] = 1.5,
+        ["item.durability"] = 7, ["combat.physical_attack"] = 12.5
+    }
+    assert(#data.values == 5 and data.displayCount == 5 and #data.baseOnly == 4,
+        "基础数值或攻击力没有通过数据接口暴露，或缺少模块定义时基础值丢失")
+    for _, value in ipairs(data.values) do
+        assert(value.value == expected[value.id], "物品信息原始数值错误：" .. value.id)
+        if value.id == "item.durability" then assert(value.maximum == 10, "耐久上限丢失") end
+    end
+    for _, value in ipairs(data.reloaded) do
+        if value.id == "combat.physical_attack" then assert(value.value == 8, "资源定义重载后复用了旧攻击力") end
+    end
+    assert(data.attackVisible and data.unchanged and #data.defaultValues == 1 and data.defaultDisplayCount == 0,
+        "伤害信息迁移后丢失、查看信息修改状态，或 UI 隐藏默认耐久时错误删除原始数据")
+end, "基础参数与攻击力共享结构化数据，显示接口只负责格式化")
+
 test.system("ui_settings", "hover_and_mod_selection", {}, function(data)
     assert(data.earlyHidden and data.delayCompletedVisible and data.reenteredHidden,
         "物品介绍没有等满0.3秒，或离开后重新悬停沿用了上次等待")
@@ -208,6 +351,53 @@ for _, row in ipairs({ { size = -1, expected = 0.5 }, { size = 0.5, expected = 0
         assert(data.size == row.expected, "移动控件倍率没有按正式范围或异常默认值处理")
     end, "UI 独立控件倍率：" .. row.expected)
 end
+
+for _, control in ipairs({"move", "aim", "attack", "interact", "use", "roll"}) do
+    for _, row in ipairs({
+        {size = 1.5, width = 1920, height = 1080, x = 0.43, y = 0.52},
+        {size = 0.7, width = 1280, height = 720, x = 0.43, y = 0.52},
+        {size = 2, width = 1280, height = 720, x = -1, y = 2, edge = true}
+    }) do
+        test.system("ui_settings", "mobile_layout", {
+            control = control, size = row.size, width = row.width, height = row.height, x = row.x, y = row.y
+        }, function(data)
+            assert(data.supportsPosition and data.raycast, "正式摇杆或按钮的布局拖拽被禁止或被祖先过滤器挡住")
+            assert(data.inputsDisabled, "布局预览仍然启用了玩法输入或按钮缩放反馈")
+            assert(math.abs(data.size - row.size) < 0.001, "拖拽修改了已经选择的控件倍率")
+            for _, sample in ipairs({data.afterDown, data.afterForeign, data.afterDrag}) do
+                assert(math.abs(sample.width - data.before.width) < 0.01 and
+                    math.abs(sample.height - data.before.height) < 0.01,
+                    "点按或拖拽把控件恢复成了原来的大小")
+            end
+            assert(math.abs(data.afterForeign.left - data.before.left) < 0.01 and
+                math.abs(data.afterForeign.bottom - data.before.bottom) < 0.01,
+                "其他手指接管了正在编辑的控件")
+            assert(math.abs(data.x - data.startX) + math.abs(data.y - data.startY) > 0.01,
+                "布局拖拽没有实际移动控件")
+            if not row.edge then
+                assert(math.abs(data.x - row.x) < 0.001 and math.abs(data.y - row.y) < 0.001,
+                    "布局拖拽后的中心位置错误")
+            end
+            assert(data.afterDrag.left >= data.root.left - 0.01 and data.afterDrag.right <= data.root.right + 0.01 and
+                data.afterDrag.bottom >= data.root.bottom - 0.01 and data.afterDrag.top <= data.root.top + 0.01,
+                "缩放后拖拽使控件越过安全区边界")
+            if control == "interact" or control == "use" or control == "roll" then
+                assert(math.abs(data.feedbackBaseScale - row.size) < 0.001,
+                    "按钮反馈没有采用布局保存的基础大小")
+            end
+        end, "触屏布局点按、拖动、尺寸保持与多指隔离：" .. control .. " / " .. row.size)
+    end
+end
+
+test.system("ui_settings", "mobile_layout", {
+    control = "aim", floatingRuntime = true, size = 1.5, x = 0.43, y = 0.52
+}, function(data)
+    assert(data.supportsPosition and math.abs(data.x - 0.43) < 0.001 and math.abs(data.y - 0.52) < 0.001,
+        "浮动摇杆没有应用布局中的待机位置")
+    assert(data.zoneUnchanged, "移动或缩放浮动摇杆改变了正式触控捕获区")
+    assert(math.abs(data.before.width - data.afterDrag.width) < 0.01 and math.abs(data.size - 1.5) < 0.001,
+        "浮动摇杆应用位置时丢失了自定义大小")
+end, "浮动摇杆只应用底座位置和尺寸，保持捕获区不变")
 
 for _, row in ipairs({
     {mode = "inside", allowed = false, rootInside = true},
@@ -455,6 +645,14 @@ end
 for _, existing in ipairs({ false, true }) do
     for _, mode in ipairs({ "unchanged", "modified", "reverted", "committed" }) do
         test.system("ui_settings", "input_binding_session", { mode = mode, existingOverride = existing }, function(data)
+            assert(#data.hotbarPaths == 10 and #data.hotbarEntries == 10,
+                "快捷栏默认按键或可重绑条目没有覆盖十格")
+            for index, path in ipairs(data.hotbarPaths) do
+                local digit = path:match("<Keyboard>/#%((%d)%)$") or path:match("<Keyboard>/(%d)$")
+                assert(digit == tostring(index % 10), "快捷栏按键没有按1到9、0顺序对应十格")
+                local entry = data.hotbarEntries[index]
+                assert(entry.index == index - 1 and entry.path == path, "按键设置与真实快捷栏槽位映射不一致")
+            end
             local dirty = mode == "modified"
             local edits = mode == "unchanged" and 0 or (mode == "reverted" and 2 or 1)
             assert(data.existingOverride == existing and data.mode == mode
@@ -679,8 +877,66 @@ test.system("ui_settings", "virtualized_inventory", {}, function(data)
         "强制刷新重建了回调，或解绑没有清理映射并恢复布局")
     assert(data.expandedPoolCount == 18 and data.expandedMappingValid,
         "更大视口重新绑定后没有扩充槽位池或丢失数据映射")
+    local rebound = {
+        {name = "initial", y = 0, count = 41, filtered = false},
+        {name = "sameData", y = 96, count = 41, filtered = false},
+        {name = "shrink", y = 96, count = 40, filtered = false},
+        {name = "grow", y = 96, count = 43, filtered = false},
+        {name = "clamped", y = 92, count = 18, filtered = false},
+        {name = "queryChanged", y = 0, count = 21, filtered = true},
+        {name = "filteredSameData", y = 72, count = 21, filtered = true},
+        {name = "filteredShrink", y = 72, count = 20, filtered = true},
+        {name = "filteredGrow", y = 72, count = 22, filtered = true},
+        {name = "filteredClamped", y = 44, count = 10, filtered = true},
+        {name = "empty", y = 0, count = 0, filtered = true},
+        {name = "dataChanged", y = 0, count = 21, filtered = true},
+        {name = "sameDataNewWrapper", y = 72, count = 21, filtered = true},
+        {name = "queryChangedAgain", y = 0, count = 21, filtered = true},
+        {name = "queryCleared", y = 0, count = 41, filtered = false}
+    }
+    assert(#data.rebindSamples == #rebound, "创造背包扩缩槽的搜索重绑采样缺失")
+    for index, sample in ipairs(data.rebindSamples) do
+        local want = rebound[index]
+        assert(sample.name == want.name and math.abs(sample.scrollY - want.y) < 0.01,
+            "扩缩槽或重复绑定改变了原滚动位置，或换数据、改筛选后未回顶：" .. want.name)
+        assert(sample.visibleCount == want.count and sample.filtered == want.filtered and sample.mappingValid,
+            "扩缩槽后搜索投影、槽位数量或真实索引错误：" .. want.name)
+    end
 end, "创造背包滚动：保留重叠槽位、复用交互回调与末尾回滚")
 
+
+-- 复选分类是并集；同类历史标签允许别名，未知分类不能绕过过滤。
+for _, row in ipairs({
+    {tags = {}, selected = {}, expected = true},
+    {tags = {"Tool"}, selected = {"tool"}, expected = true},
+    {tags = {"Tool"}, selected = {"tool", "mechanical"}, expected = true},
+    {tags = {"InventoryGroup.MechanicalPower"}, selected = {"tool", "mechanical"}, expected = true},
+    {tags = {"Tool", "InventoryGroup.MechanicalPower"}, selected = {"tool", "mechanical"}, expected = true},
+    {tags = {"tool", "inventorygroup.mechanicalpower"}, selected = {"TOOL", "mechanical"}, expected = true},
+    {tags = {"Toolsmith"}, selected = {"tool"}, expected = false},
+    {tags = {"InventoryGroup.Electrical"}, selected = {"electrical"}, expected = true},
+    {tags = {"35", "InventoryGroup.Chemistry", "InventoryCategory.PipeBlock"}, selected = {"pipe", "industrial"}, expected = true},
+    {tags = {"Tool"}, selected = {"missing"}, expected = false},
+    {tags = {"Food"}, selected = {"tool", "food"}, expected = true}
+}) do
+    test.system("ui_settings", "inventory_category_filter", row, function(data)
+        assert(data.matches == row.expected, "任一分类命中即可，且使用完整稳定标签匹配")
+    end, "库存分类并集：" .. table.concat(row.selected, "+") .. " / " .. table.concat(row.tags, ","))
+end
+
+test.system("ui_settings", "inventory_filter_projection", {}, function(data)
+    local expected = {{2,8,26},{2,8,15,26},{2,8,15,26,39},{2,15,26,39},{},{0,1,2,3,4,5,6,7,8,9,10,11}}
+    assert(data.filterPreservedData, "分类过滤移动或替换了真实库存数据")
+    assert(#data.samples == #expected)
+    for index, sample in ipairs(data.samples) do
+        local want = expected[index]
+        assert(#sample.indices == #want, "过滤、库存更新或清空分类后的可见条目数量错误")
+        for offset, value in ipairs(want) do assert(sample.indices[offset] == value, "投影丢失真实槽位索引") end
+        assert(sample.count == (index == 6 and 41 or #want))
+        assert(sample.routed and sample.dense and sample.mapping, "过滤后的布局、点击或槽位映射错误")
+        assert(sample.poolCount == 12 and sample.scrollY == 0, "过滤扩大对象池或没有回到结果顶部")
+    end
+end, "库存分类过滤：并集、不可见格更新、删除、空结果与恢复真实索引")
 
 -- 日志查看和复制共用类型过滤，异常和断言属于报错。
 for mask = 0, 7 do
@@ -706,3 +962,38 @@ for _, size in ipairs({{2560,1440},{1920,1080},{1600,900},{1280,720},{960,720},{
         end, "背包底边避让快捷栏 " .. size[1] .. "x" .. size[2] .. " / " .. scale)
     end
 end
+
+-- 扫描包含嵌套控件的正式资产，防止关闭自动缩放、过高下限或 Overflow 再次让长翻译出框。
+test.system("ui_settings", "text_fitting_assets", {}, function(data)
+    assert(data.prefabs >= 80 and #data.texts >= 800, "正式 UI 文字扫描范围异常缩小")
+    local bounded, flowing, screenshot_buttons = 0, 0, 0
+    for _, text in ipairs(data.texts) do
+        local label = text.prefab .. "/" .. text.name
+        if text.button then
+            for _, point in ipairs(text.button.textCorners) do
+                assert(point.x >= text.button.left - 1 and point.x <= text.button.right + 1
+                    and point.y >= text.button.bottom - 1 and point.y <= text.button.top + 1,
+                    "文字矩形本身跑出了按钮：" .. label)
+            end
+        end
+        if text.mode == "bounded" then
+            bounded = bounded + 1
+            assert(text.auto, "固定区域文字未开启自动缩放：" .. label)
+            assert(text.min > 0 and text.min <= text.max, "字号范围无效：" .. label)
+            assert(text.max <= text.designSize + 0.01, "自动缩放超过设计字号：" .. label)
+            assert(text.min <= math.min(text.max, math.max(12, math.min(18, text.max * 0.6))) + 0.01,
+                "最小字号过高，长翻译无法继续缩小：" .. label)
+            assert(text.overflow == 1 or text.overflow == 3, "固定区域仍允许文字出框：" .. label)
+            if text.prefab:find("UI_SaveSelectionPanel.prefab", 1, true)
+                and (text.name == "返回按钮_文字" or text.name == "批量删除存档按钮_文字") then
+                screenshot_buttons = screenshot_buttons + 1
+                assert(text.min <= 14, "截图中的长英文按钮没有降低最小字号")
+            end
+        elseif text.mode == "content" then
+            flowing = flowing + 1
+            assert(not text.auto, "内容长高与自动字号发生尺寸竞争：" .. label)
+        end
+    end
+    assert(bounded >= 700 and flowing >= 10, "普通文字或动态正文的扫描范围缺失")
+    assert(screenshot_buttons == 2, "未覆盖截图中的两个正式按钮")
+end, "所有正式 UI 文字缩放范围与溢出设置")

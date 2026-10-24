@@ -55,6 +55,21 @@ public static partial class GameplayTestSystemProbe
             if (definition.Abstract) continue;
             var sample = new JObject { ["id"] = definition.Id };
             actors.Add(sample);
+            sample["initialSpriteAddress"] = definition.Visual?.SpriteAddress ?? string.Empty;
+            Sprite initialSprite = null;
+            string initialSpriteError = string.Empty;
+#if UNITY_EDITOR
+            bool hasInitialSprite = ItemDefinitionCatalogLoader.TryLoadEditorSprite(definition.Visual?.SpriteAddress,
+                out initialSprite, out initialSpriteError);
+#else
+            bool hasInitialSprite = GameRes.ExistingInstance != null &&
+                GameRes.ExistingInstance.TryGetItemDefinition(definition.Id, out RuntimeItemDefinition runtimeDefinition) &&
+                (initialSprite = runtimeDefinition.Sprite) != null;
+#endif
+            sample["hasInitialSprite"] = hasInitialSprite;
+            sample["initialSpriteName"] = initialSprite != null ? initialSprite.name : string.Empty;
+            sample["initialSpriteError"] = initialSpriteError ?? string.Empty;
+            sample["runtimeSprite"] = CaptureAiInitialSpriteDefinition(definition, initialSprite);
             bool hasModule = definition.Modules.TryGetValue("animator", out ItemModuleDefinitionDto configured);
             sample["hasAnimatorModule"] = hasModule;
             if (!hasModule) continue;
@@ -89,6 +104,67 @@ public static partial class GameplayTestSystemProbe
                 sample["flightDependencies"] = CaptureAiFlightDependencies(definition, shell);
         }
         return new JObject { ["actors"] = actors, ["requiredAnimationId"] = ModText.AnimatorReceiver };
+    }
+
+    // 真实构建运行时定义，避免仅验证编辑器能读到图片而漏掉 Actor 编译丢弃 Sprite。
+    private static JObject CaptureAiInitialSpriteDefinition(ItemDefinitionDto source, Sprite sprite)
+    {
+        var root = new GameObject("[LuaActorInitialSpriteDefinition]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            GameItem shell = root.AddComponent<GameItem>();
+            shell.BindData(EntityProbeData("test:actor_sprite_shell", 1f));
+            var definition = new ItemDefinitionDto
+            {
+                Id = source.Id,
+                GameName = source.GameName,
+                ShellPrefab = "test:actor_sprite_shell",
+                Visual = new ItemVisualDefinitionDto { SpriteAddress = source.Visual?.SpriteAddress }
+            };
+            var shells = new Dictionary<string, GameObject> { [definition.ShellPrefab] = root };
+            var sprites = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+            string address = definition.Visual.SpriteAddress?.Trim();
+            if (!string.IsNullOrWhiteSpace(address)) sprites[address] = sprite;
+            RuntimeItemDefinition built = ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
+                null, definition, sprites, isActor: true, preloadedShells: shells);
+            bool missingRejected = false, nullRejected = false, absentAddressRejected = false;
+            string missingError = string.Empty;
+            try
+            {
+                ItemDefinitionCatalogLoader.BuildRuntimeDefinition(null, definition,
+                    new Dictionary<string, Sprite>(), isActor: true, preloadedShells: shells);
+            }
+            catch (System.IO.InvalidDataException exception)
+            {
+                missingRejected = true;
+                missingError = exception.Message;
+            }
+            if (!string.IsNullOrWhiteSpace(address)) sprites[address] = null;
+            try
+            {
+                ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
+                    null, definition, sprites, isActor: true, preloadedShells: shells);
+            }
+            catch (System.IO.InvalidDataException) { nullRejected = true; }
+            definition.Visual.SpriteAddress = null;
+            try
+            {
+                ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
+                    null, definition, sprites, isActor: true, preloadedShells: shells);
+            }
+            catch (System.IO.InvalidDataException) { absentAddressRejected = true; }
+            return new JObject
+            {
+                ["isActor"] = built.IsActor,
+                ["sameSprite"] = sprite != null && ReferenceEquals(built.Sprite, sprite),
+                ["spriteName"] = built.Sprite != null ? built.Sprite.name : string.Empty,
+                ["missingRejected"] = missingRejected, ["nullRejected"] = nullRejected,
+                ["absentAddressRejected"] = absentAddressRejected, ["missingError"] = missingError,
+                ["inactive"] = !root.activeSelf && !shell.IsInitialized
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
     // 先按显式 JSON 身份绑定再初始化注册，避免 Canonical 默认值把错误 ID 悄悄纠正。

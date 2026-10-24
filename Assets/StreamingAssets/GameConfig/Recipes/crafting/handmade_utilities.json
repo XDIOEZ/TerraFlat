@@ -99,8 +99,8 @@
           "amount": 4
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -126,8 +126,8 @@
           "amount": 6
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         }
       ],
@@ -158,8 +158,8 @@
           "amount": 6
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         }
       ],
@@ -190,8 +190,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         }
       ],

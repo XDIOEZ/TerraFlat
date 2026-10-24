@@ -18,9 +18,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {
@@ -102,9 +102,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -135,9 +135,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -167,9 +167,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -199,9 +199,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,

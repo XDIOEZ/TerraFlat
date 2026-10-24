@@ -1,6 +1,8 @@
 -- 真实格子后端与独立材料槽执行放置、失败退料和冲突拒绝，采样返回前拆除自有墙。
 test.check("player_ready", "建造现场测试玩家就绪")
-test.runtime("building", "placement", {}, function(data)
+for _, id in ipairs({"Wall_Wood_Summoner", "Floor_Wood_Summoner", "Floor_Stone_Summoner",
+    "WaterPlatform_Summoner", "Platform_Stone_Summoner"}) do
+test.runtime("building", "placement", {summonerId = id}, function(data)
     assert(data.scope == "live-isolated-world", "建造测试没有进入隔离世界")
     assert(not data.rejectedAccepted and data.writesAfterRejection == 1 and data.amountAtRejectedPublish == 1
         and data.expectedTile > 0 and data.tileAtRejectedPublish == data.expectedTile,
@@ -11,7 +13,11 @@ test.runtime("building", "placement", {}, function(data)
     assert(not data.overlapAccepted and data.amountAfterOverlap == 1 and data.placementWrites == 2,
         "重叠放置未拒绝或额外扣料/写入地形")
     assert(data.restored, "建造现场没有拆除自有墙并恢复地块")
-end, "真实格子建筑放置、扣料、失败回滚与占地冲突")
+    assert(data.publishHasTile and data.returnedTile == data.expectedTile
+        and data.returnedSupport == data.expectedSupport, "格子后端未返回正式网络发布目标")
+    assert(data.liquidAfterPlacement == data.expectedLiquid, "放置建筑改写了下方原液体")
+end, "真实格子建筑放置、发布目标、扣料、失败回滚与占地冲突：" .. id)
+end
 
 for _, amount in ipairs({1, 2}) do
     local expected = amount - 1

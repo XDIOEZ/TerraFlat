@@ -4,6 +4,7 @@
 
 - RPM/SourceRpm/SpeedRatio 有符号：正逆时针、负顺时针；方向由 RPM 派生，功率与效率取绝对值 SpeedRpm。轴/离合器/跨轴器保持方向，啮合/齿轮箱翻转；闭环方向冲突停整网。
 - 同速有效源累加扭矩，异速冲突停转。用力器是输入终点、不转送扭矩，按最近可达源距离分配固定 TorqueLoad，同距按稳定 ID；不足完整需求只停该用力器。传动件不限制通过量，TorqueCapacity 不参与求解。
+- 负载档位由 TorqueLoadStep 声明，默认10；木/布传送带用1点档保留每段2点消耗。分配、面板与功率都读 MachineEntity.RequiredTorque，不能再次按十点取整；动力源供给档位不变。规则 `mechanical/conveyor_loads` 覆盖拐角与真过载。
 - 效率 SpeedRpm/RequiredRpm 不封顶。齿轮箱左大轮输入 RPM×2/扭矩×0.5，右小轮反向，负载按侧倍率折算；水车 RPM 来自真实水流和半径，供给由基础扭矩决定。
 - CrossShaft 在 Layer1，需要同格 Layer0 下穿节点，但 A/B 只连相邻 Layer0。世界端口/预览/动画共用 RotationQuarterTurns；手持朝向临时保存。PlacementRotationSteps 声明2/4朝向（普通/GM引擎为4），统一 NextPlacementQuarterTurns，不按物品身份加旋转分支。
 - 手推声明 ManualDriveTorque/Rpm/SecondsPerPress；CanManualDrive 排除手推后查整网外源，存在则禁手推，加工仍读最终 RPM。

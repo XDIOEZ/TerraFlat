@@ -48,7 +48,7 @@ namespace FlatWorld.Spaceflight
         }
         public void EnsureNetworkPassenger(Player player)
         {
-            if (player == null || State == null || State.Passengers.Exists(value => value.ProfileId == player.ProfileName)) return;
+            if (player == null || State == null || FindPassenger(player.ProfileName) != null) return;
             SpacePassengerState passenger = GetPassenger(player);
             passenger.IsInSpace = SpaceMgr.IsSpaceScene(player.Data.CurrentSceneName);
             passenger.LandingWorldKey = passenger.IsInSpace ? null : player.Data.CurrentSceneName;
@@ -58,7 +58,7 @@ namespace FlatWorld.Spaceflight
         public void SetNetworkPlayerRealm(string profile, bool inSpace, SpaceSectorPosition position, string worldKey)
         {
             if (!GameNetwork.HasStateAuthority || State == null || !position.LocalMeters.IsFinite) return;
-            SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == profile);
+            SpacePassengerState passenger = FindPassenger(profile);
             if (passenger == null) { passenger = new SpacePassengerState { ProfileId = profile }; State.Passengers.Add(passenger); }
             position = SpaceSectorCoordinates.Normalize(position.Sector, position.LocalMeters);
             passenger.IsInSpace = inSpace; passenger.FreeMotion.Sector = position.Sector; passenger.FreeMotion.PositionMeters = position.LocalMeters;
@@ -67,18 +67,19 @@ namespace FlatWorld.Spaceflight
         }
         public void SubmitPassengerInput(string profile, SpacePassengerInput input)
         {
-            if (!GameNetwork.HasStateAuthority || State?.Passengers.Exists(value => value.ProfileId == profile) != true) return;
+            if (!GameNetwork.HasStateAuthority || State == null) return;
+            SpacePassengerState passenger = FindPassenger(profile);
+            if (passenger == null) return;
             if (!float.IsFinite(input.MoveX) || !float.IsFinite(input.MoveY) || !float.IsFinite(input.Turn) || !float.IsFinite(input.Thrust)) return;
             Vector2 move = Vector2.ClampMagnitude(new Vector2(input.MoveX, input.MoveY), 1f);
             input.MoveX = move.x; input.MoveY = move.y; input.Turn = Mathf.Clamp(input.Turn, -1f, 1f);
             passengerInputs[profile] = input;
-            SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == profile);
             if (!string.IsNullOrEmpty(passenger.ConsolePieceId)) SetControl(passenger.ConsolePieceId, move, input.Turn);
         }
         public void RemoveNetworkPassengerInput(string profile)
         {
             passengerInputs.Remove(profile);
-            SpacePassengerState passenger = State?.Passengers.Find(value => value.ProfileId == profile);
+            SpacePassengerState passenger = FindPassenger(profile);
             if (passenger?.ConsolePieceId != null) ClearControl(passenger.ConsolePieceId);
         }
         /// <summary>只读返回服务端最后接受的输入，便于联机诊断和隔离测试。</summary>
@@ -93,7 +94,7 @@ namespace FlatWorld.Spaceflight
             if (!GameNetwork.HasStateAuthority) return RejectShipOperation("当前端没有世界操作权限。", out reason);
             if (!TryGetNetworkObserver(profile, out SpaceNetworkObserver observer))
                 return RejectShipOperation("玩家所在世界尚未就绪。", out reason);
-            SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == profile);
+            SpacePassengerState passenger = FindPassenger(profile);
             if (intent.Kind == SpaceNetworkIntentKind.Respawn) return ExecuteNetworkRespawn(profile, out reason);
             if (intent.Kind == SpaceNetworkIntentKind.LaunchGroundShip)
             {
@@ -109,18 +110,18 @@ namespace FlatWorld.Spaceflight
                 return true;
             }
 
-            if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem)
+            if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem or SpaceNetworkIntentKind.OffhandParry)
             {
                 if (!observer.InSpace && intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.TargetId != observer.WorldKey)
                     return RejectShipOperation("动作来自其他世界，当前玩家无法执行。", out reason);
                 Mod_HotBar combatHotbar = FindNetworkPlayer(profile)?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-                if (intent.Kind != SpaceNetworkIntentKind.AttackEnd)
+                if (intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.Kind != SpaceNetworkIntentKind.OffhandParry)
                 {
                     if (combatHotbar == null || intent.SelectedSlot < 0 || intent.SelectedSlot >= combatHotbar.MaxIndex)
                         return RejectShipOperation("当前快捷栏或所选槽位无效。", out reason);
                     combatHotbar.ApplyNetworkSelectedIndex(intent.SelectedSlot);
                 }
-                return ExecuteNetworkAttack(profile, intent.Kind == SpaceNetworkIntentKind.Attack ? 0 : intent.Kind == SpaceNetworkIntentKind.AttackEnd ? 1 : 2,
+                return ExecuteNetworkAttack(profile, intent.Kind == SpaceNetworkIntentKind.Attack ? 0 : intent.Kind == SpaceNetworkIntentKind.AttackEnd ? (intent.Action == 4 ? 4 : 1) : intent.Kind == SpaceNetworkIntentKind.OffhandParry ? 3 : 2,
                     new SpaceSectorPosition(intent.Sector, new SpaceVector2(intent.X, intent.Y)), out reason);
             }
             if (intent.Kind == SpaceNetworkIntentKind.HarvestNatural)

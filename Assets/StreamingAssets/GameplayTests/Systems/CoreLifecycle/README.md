@@ -1,8 +1,16 @@
 # 核心生命周期与资源会话
 
+2026-10-24 启动资源调度优化新增 `core_lifecycle/editor_asset_loading`：在独立 ResourceManager 中核对默认 AssetDatabase 请求使用独立 Provider、原缓存不被替换、子图地址/类型/数据/依赖保留、重复请求仅注册一次、自定义 Provider 与 Bundle 位置不接管。启动 UI 与 Buff 图标复用已有四槽队列，队列并发/失败/取消的规则仍由 `resource_queue` 覆盖；真实 UI 和可选图标缺失流程尚无新增现场断言。Unity 正在 PlayMode，按用户要求未编译、未运行；实际编辑器/运行包启动耗时由用户验收。
+
+2026-10-24 全部启动 JSON 接入共享 `FlatWorld.ContentCache`：涵盖 StreamingAssets 内容目录、Resources 中的天气/概率/机械/渲染/UI/本地化/台词配置，以及 MOD 清单与配置。`core_lifecycle/json_configuration_cache` 补充统一解析边界、冷构建/热命中计数、调用方对象隔离、大小写字典、跨程序集嵌套配置、地块/MOD 参数树、结构派生成员排除、内容更新及解析异常不缓存。加载幕仅在真实重建后追加双语首次较慢提示。本轮只做静态编译/源生成器检查，未运行 Lua，未验证实际加载画面、启动耗时或 Android 真机。
+
+2026-10-24 启动实体二进制缓存新增 `core_lifecycle/binary_content_cache`（未运行，玩法及性能由用户验收）：使用自有临时目录调用正式缓存和继承解析，覆盖首次构建、跨会话命中、独立对象、四种防御值、精确整数/小数参数树、Unity 数值与占地、Actor 原始继承来源、同大小同时间戳 JSON/父定义/清单更新、缺失来源、代码契约变化、损坏/截断重建、读取期间改动、写入失败及临时文件清理。该规则不启动 GameRes，不代表真实冷启动/二次启动耗时、F5 或 Android 包内读取已经验证。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`core_lifecycle/difficulty_rules、startup_prefabs、resource_plan、resource_queue、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+快速入口：`rules.lua`；操作：`core_lifecycle/difficulty_rules、rule_pipeline、startup_prefabs、resource_plan、resource_queue、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+
+2026-10-23 业务规则与难度解耦（本轮由用户验收，未编译、未运行）：正式 GameRuleConfiguration 接受任意来源，从独立基础值重建并发布不可变快照；新增来源组合、同来源替换、撤销、会话清理、外逸引用、非法倍率、构建失败回滚、通知异常隔离与重入拒绝断言。难度只发布修正，加载/换档一次完成装配；切换失败恢复存档参数。仅采样隔离配置容器，不证明真实存档重载、网络全量替换、道具覆盖、实际死亡或跨维度流程。
 
 2026-10-19 手机端联机入口新增快速规则（本轮按用户要求未编译、未运行）：只读采样正式启动 UI 清单，检查联机面板及现有菜单、手机面板在启动阶段预载，资源键非空且不重复；不启动 GameRes 或创建临时资产。此项不证明触屏点击、资源后台加载时的面板打开、Host/Join 就绪门禁或 Android 真机运行，仍由用户验收。
 

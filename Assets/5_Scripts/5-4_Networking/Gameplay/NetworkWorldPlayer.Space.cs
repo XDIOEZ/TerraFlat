@@ -115,7 +115,19 @@ namespace FlatWorld.Networking.Gameplay
         private void SynchronizeGroundObserver()
         {
             SpaceSession session = SpaceSessionForNetwork;
-            SpacePassengerState passenger = session?.State?.Passengers.Find(value => value.ProfileId == displayName);
+            // 每帧同步不分配捕获委托；这里直接只读现有乘员，不创建新成员。
+            var passengers = session?.State?.Passengers;
+            SpacePassengerState passenger = null;
+            if (passengers != null)
+                for (int i = 0; i < passengers.Count; i++)
+                {
+                    SpacePassengerState candidate = passengers[i];
+                    if (candidate != null && candidate.ProfileId == displayName)
+                    {
+                        passenger = candidate;
+                        break;
+                    }
+                }
             if (passenger == null || passenger.IsInSpace || passenger.Supported || passenger.SurfaceDescending) return;
             if (passenger.RealmRevision != authoritativeRealmRevision) return;
             Vector2 logical = (Vector2)WorldTopologyRuntime.NormalizePosition(authoritativePosition);
@@ -124,11 +136,31 @@ namespace FlatWorld.Networking.Gameplay
         [Server]
         private void PublishServerPlayerState(bool force = false)
         {
-            serverStateTimer -= Time.unscaledDeltaTime;
-            if (corePlayer == null || !corePlayer.IsInitialized || !force && serverStateTimer > 0f) return;
+            bool ownedDirty = isOwned && itemStateDirty && pendingTeleportRequest == 0 && !authoritativeWorldTransferPending &&
+                !ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction();
+            if (corePlayer == null || !corePlayer.IsInitialized || !force && !ownedDirty && serverStateTimer > 0f) return;
             serverStateTimer = .2f;
-            byte[] payload = ItemNetworkStateSerialization.CaptureCachedNetworkPayload(corePlayer, true, out _, out uint hash);
-            if (!ItemNetworkStateSerialization.IsValidPayload(payload) || !force && hash == serverStateHash) return;
+            // 捕获前只消费已有脏标记，保存回调产生的新变化仍留给下一次发布。
+            if (isOwned) itemStateDirty = false;
+            byte[] payload;
+            uint hash;
+            try
+            {
+                using var captureDebug = StateCapturePoint.Measure();
+                using var worldScope = NetworkGameplayWorldScope.Use(this);
+                payload = ItemNetworkStateSerialization.CaptureCachedNetworkPayload(corePlayer, true, out _, out hash);
+            }
+            catch
+            {
+                if (isOwned) itemStateDirty = true;
+                throw;
+            }
+            if (!ItemNetworkStateSerialization.IsValidPayload(payload))
+            {
+                if (ownedDirty) itemStateDirty = true;
+                return;
+            }
+            if (!force && hash == serverStateHash) return;
             serverStateHash = hash;
             if (authoritativeGroundCombatPending)
             {
@@ -158,7 +190,8 @@ namespace FlatWorld.Networking.Gameplay
                 authoritativeGroundCombatPending = true; acknowledgedGroundCombatHash = 0; groundCombatSentHashes.Clear();
                 groundCombatFrozen = false;
             }
-            serverGroundAttackHeld = kind == SpaceNetworkIntentKind.Attack;
+            if (kind != SpaceNetworkIntentKind.OffhandParry)
+                serverGroundAttackHeld = kind == SpaceNetworkIntentKind.Attack;
             lastGroundCombatInput = Time.unscaledTime;
             groundCombatReleaseAfter = Time.unscaledTime + 1f;
             return true;
@@ -178,9 +211,9 @@ namespace FlatWorld.Networking.Gameplay
         }
         private void UpdateNetworkCombat()
         {
-            using var worldScope = isServer ? NetworkGameplayWorldScope.Use(this) : null;
             if (isServer && authoritativeGroundCombatPending)
             {
+                using var worldScope = NetworkGameplayWorldScope.Use(this);
                 bool validWorld = SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) &&
                     !observer.InSpace && !string.IsNullOrWhiteSpace(observer.WorldKey);
                 if ((!validWorld || Time.unscaledTime - lastGroundCombatInput > 1f) && serverGroundAttackHeld)
@@ -190,7 +223,8 @@ namespace FlatWorld.Networking.Gameplay
                     Item held = corePlayer?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
                     Mod_ColdWeapon cold = held?.GetComponentInChildren<Mod_ColdWeapon>(true);
                     Mod_Damage damage = held?.GetComponentInChildren<Mod_Damage>(true);
-                    if ((cold == null || cold.CurrentState == AttackState.Idle) && (damage == null || !damage.IsDamageEnabled()))
+                    if ((cold == null || cold.CurrentState == AttackState.Idle) && (damage == null || !damage.IsDamageEnabled()) &&
+                        corePlayer?.itemMods.GetMod_ByID<Mod_ShieldCombat>(Mod_ShieldCombat.ModuleId)?.HasActiveAction != true)
                     {
                         SpaceSessionForNetwork?.EndNetworkAttack(displayName);
                         groundCombatSentHashes.Clear();

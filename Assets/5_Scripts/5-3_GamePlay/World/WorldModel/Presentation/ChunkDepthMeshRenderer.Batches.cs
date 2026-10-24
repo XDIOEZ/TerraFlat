@@ -11,6 +11,7 @@ internal sealed partial class ChunkDepthMeshRenderer
     private struct Vertex
     {
         public Vector3 Position;
+        public Vector4 SpriteBounds;
         public Color32 Tint;
         public Vector2 Uv;
         public Vector4 LocalClip;
@@ -27,6 +28,7 @@ internal sealed partial class ChunkDepthMeshRenderer
     private static readonly VertexAttributeDescriptor[] Layout =
     {
         new(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+        new(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 4),
         new(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
         new(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
         new(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
@@ -158,6 +160,8 @@ internal sealed partial class ChunkDepthMeshRenderer
             Vector4 basis = new(matrix.m00, matrix.m10, matrix.m01, matrix.m11);
             Vector4 origin = new(matrix.m03, matrix.m13, matrix.m23, 0f);
             Bounds spriteBounds = entry.Geometry.Bounds;
+            Vector4 localBounds = new(spriteBounds.center.x, spriteBounds.center.y,
+                spriteBounds.extents.x, spriteBounds.extents.y);
             Vector4 effects = new(spriteBounds.min.y, spriteBounds.max.y,
                 visual.Occluder ? 1f : 0f, visual.Highlighted ? 1f : 0f);
             // 输送带复用闲置裁剪和效果通道传递 UV 带面范围，不增加顶点流。
@@ -170,7 +174,7 @@ internal sealed partial class ChunkDepthMeshRenderer
                 Vector3 position = matrix.MultiplyPoint3x4(local);
                 vertices[entry.VertexStart + i] = new Vertex
                 {
-                    Position = position, Tint = visual.Tint, Uv = entry.Geometry.Uv[i],
+                    Position = position, SpriteBounds = localBounds, Tint = visual.Tint, Uv = entry.Geometry.Uv[i],
                     LocalClip = new Vector4(local.x, local.y, conveyor ? visual.Conveyor.z : visual.Crop.x, visual.Crop.w),
                     Basis = basis, Origin = origin, Animation = visual.Animation,
                     Region = visual.Region, Effects = effects, State = visual.State

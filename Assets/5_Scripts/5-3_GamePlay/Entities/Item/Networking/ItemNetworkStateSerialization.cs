@@ -62,7 +62,9 @@ public static class ItemNetworkStateSerialization
 
         ItemData data = item.itemData;
         uint generation = item.RuntimeGeneration;
-        item.ModuleSave();
+        // 玩家公开快照不需要重存私有背包，其他模块仍按正式保存入口执行。
+        if (item is Player) item.ModuleSavePublicNetworkState();
+        else item.ModuleSave();
         if (!IsCurrentItem(item, data, generation)) return default;
         // OnSave 仍刷新模块内部状态，未变化的纯数据直接复用冻结负载。
         ItemNetworkCaptureCache.CaptureResult result = ItemNetworkCaptureCache.Capture(item, ignoreTransform);

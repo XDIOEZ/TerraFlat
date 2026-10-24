@@ -20,7 +20,8 @@ public partial class WeatherMgr
     private void Awake()
     {
         if (templateManager == null) templateManager = this;
-        DontDestroyOnLoad(gameObject);
+        // 预制体子节点跟随 WorldManager 生命周期，独立世界根节点才自行跨场景保留。
+        if (transform.parent == null) DontDestroyOnLoad(gameObject);
     }
 
     public static WeatherMgr GetForWorld(string worldKey, bool create = true)

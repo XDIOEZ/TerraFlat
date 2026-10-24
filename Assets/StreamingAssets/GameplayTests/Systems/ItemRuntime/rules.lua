@@ -44,6 +44,19 @@ for _, actorId in ipairs({"SmallFish", "Bird"}) do
             "激活后的初始动画短名/完整路径播放或非法状态拒绝失败")
         assert(data.singleSpriteDiscarded,
             "单图表现禁用身体 Animator 后仍残留初始动画")
+        local cold = data.coldController
+        assert(cold and cold.coldBeforeLoad and cold.coldLoaded and cold.coldQueued,
+            "自然出生的停用外壳未正确加载动画模块或保留冷态参数")
+        assert(cold.activeInitialized and cold.restoredMove,
+            "控制器激活后未正确初始化或恢复延迟写入的 Move 参数")
+        assert(not cold.warningsDuringColdLoad and cold.warningsAfterActivation == 0,
+            "冷加载或正式激活仍触发了 Animator is not playing an AnimatorController")
+        local single = data.coldSingleSprite
+        assert(single and single.coldBeforeLoad and single.coldLoaded and
+            single.activeInitialized and single.animatorSuppressed,
+            "单图生物在冷外壳加载时没有保持 Animator 停用或激活后接管失败")
+        assert(not single.warningsDuringColdLoad and single.warningsAfterActivation == 0,
+            "正式单图生物的冷加载或激活仍提前读取 Animator 参数")
     end, actorId .. "冷外壳延迟状态校验，激活播放、单图接管及回池清理")
 end
 
@@ -55,6 +68,22 @@ test.system("item_runtime", "matter_transition_scan", {}, function(data)
     assert(data.noLiquidMatch and data.emptyRejected and data.nullRejected,
         "物质固液类型或空定义的拒绝规则改变")
 end, "材料只读条件表索引扫描保持优先级、温湿度边界及空值语义")
+
+test.system("item_runtime", "matter_moisture_info", {}, function(data)
+    assert(data.initialFound and math.abs(data.initial - .8) < .0001
+        and data.initialDisplayed and data.initialText == data.expectedInitialText
+        and data.uninitializedUnchanged,
+        "未开始环境模拟的生肉没有显示初始80%含水量，或查看时修改了状态")
+    assert(data.liveFound and math.abs(data.live - .412) < .0001
+        and data.liveDisplayed and data.liveText == data.expectedLiveText and data.liveUnchanged,
+        "含水量没有按已推进的当前数值刷新显示，或查询改写了状态")
+    assert(data.boundaryFound and math.abs(data.boundary - .2) < .0001
+        and data.boundaryDisplayed and data.boundaryText == data.expectedBoundaryText,
+        "20%风干临界值显示不正确")
+    assert(data.invalidRejected and data.emptyMoistureVisible
+        and data.inertHidden and data.moistureTransitionVisible,
+        "非法湿度、零含水物品或只具备燃烧特质的物品筛选错误")
+end, "悬浮窗含水百分比、初始/当前状态、风干临界与无关物品隐藏")
 
 -- 检查模块结构版本和正式物品工厂的可变状态隔离。
 test.system("item_runtime", "cleanup_lookup", {}, function(data)
@@ -76,6 +105,9 @@ test.system("item_runtime", "world_matter_structure", {}, function(data)
     assert(data.combustionCached and data.inactiveCombustionExcluded and
         data.combustionRemovalInvalidated and data.combustionVisualRemoved,
         "散落物燃烧模块缓存未绑定正式模块身份或未随结构变更失效")
+    assert(data.dropInitiallyAllowed and data.dropMovingBlocked and data.dropFloatingAllowed and
+        data.dropSinkingAllowed and data.dropFinishedAllowed and data.dropRemovalInvalidated,
+        "短期抛物线运动状态变化没有实时刷新资格，或结构缓存没有随模块移除失效")
 end, "世界散落物资格缓存、能力变更与零分配热路径")
 
 for _, row in ipairs({
@@ -157,6 +189,46 @@ for _, network in ipairs({false, true}) do
         assert(left and right and lifted, "主动走路没有表现左右摇摆与起伏")
         checkAnimationRest(data.samples[#data.samples])
     end, network and "单图远端移动与停止复位" or "单图本地主动移动与停止复位")
+end
+
+for _, geometry in ipairs({
+    {name = "普通挂点"},
+    {name = "镜像缩放父级", mirrored = true, rootScaleX = 1.3, rootScaleY = .8, nestedVisual = true},
+    {name = "远端身体", network = true},
+    {name = "统一光标瞄准", withHeldAim = true}
+}) do
+    geometry.withHeldAttachment = true
+    geometry.steps = {
+        {moving = true, deltaTime = .08}, {deltaTime = .13},
+        {running = true, deltaTime = .09},
+        {attack = true, x = 1, y = 1, aimX = 1, aimY = 4, deltaTime = .04},
+        {aimX = 4, aimY = -1, deltaTime = .04},
+        {jump = true, deltaTime = .08}, {hit = true, deltaTime = .05},
+        {moving = false, reset = true, deltaTime = 0},
+        {moving = true, deltaTime = .08}, {lifecycle = "unload"},
+        {lifecycle = "load", deltaTime = .08},
+        {mode = "Animator", deltaTime = .08},
+        {mode = "SingleSprite", moving = true, deltaTime = .08},
+        {componentEnabled = false}, {componentEnabled = true, deltaTime = .08}
+    }
+    test.system("item_runtime", "single_sprite_animation", geometry, function(data)
+        checkAnimationBoundary(data)
+        assert(data.samples[1].heldOffset > .001 and data.samples[3].heldOffset > .001,
+            "走路或奔跑时手持物没有跟随身体手部位置")
+        for _, sample in ipairs(data.samples) do
+            assert(sample.heldPositionError < .0002, "手持物与身体上的同一手部参考点发生错位")
+            assert(sample.heldParentPreserved and sample.handAnchorError < .00001 and sample.heldScaleError < .00001,
+                "手持跟随改动了原挂点、物品父级或物品缩放")
+            if geometry.withHeldAim then
+                assert(sample.heldAimError < .05, "手部移动后未从最新位置朝向统一光标")
+            else
+                assert(sample.heldRotationError < .005, "手持位置跟随覆盖了原有武器朝向")
+            end
+        end
+        assert(data.samples[8].heldOffset < .0002 and data.samples[10].heldOffset < .0002 and
+            data.samples[12].heldOffset < .0002 and data.samples[14].heldOffset < .0002,
+            "复位、卸载、切换模式或停用后手持物仍残留身体偏移")
+    end, "单图手持位置跟随与光标朝向：" .. geometry.name)
 end
 
 test.system("item_runtime", "single_sprite_animation", {steps = {
@@ -542,6 +614,17 @@ test.system("item_runtime", "single_sprite_shell_assembly", {actorId = "Wolf"}, 
         "狼正式单图配置没有应用到停用外壳中的精确动画组件")
 end, "真实狼外壳稳定槽位编译、内嵌动画复用与重复视觉拒绝")
 
+test.system("item_runtime", "compiled_module_parameters", {}, function(data)
+    assert(data.repeatedValidations == 3 and data.customRejected, "配置复用跳过了当前原型的自有校验")
+    assert(data.missingColliderRejected and data.changedColliderRejected and data.nullTargetRejected,
+        "配置复用接受了缺失、变型的碰撞体或空模块")
+    assert(data.independent and data.reapplied and data.colliderApplied, "配置复用共享了实例状态或漏写特殊参数")
+    assert(#data.invalidInputs == 4, "缺少严格参数编译的拒绝用例")
+    for _, rejected in ipairs(data.invalidInputs) do
+        assert(rejected, "未知字段、错误类型、保留字段或未知特殊块没有在首次编译时拒绝")
+    end
+end, "已编译模块参数复用、原型复查与实例隔离")
+
 test.system("item_runtime", "module_assembly_identity", {}, function(data)
     assert(#data.awakeBindings == 2, "缺少真实AI或转身模块的Awake身份回归")
     for _, row in ipairs(data.awakeBindings) do
@@ -560,3 +643,35 @@ test.system("item_runtime", "module_assembly_identity", {}, function(data)
         "资源预检没有复用编译选定的内嵌或独立Prefab原型")
     assert(data.inactiveStableNamesDistinct, "停用宿主中同能力模块推导出重复稳定名")
 end, "模块来源身份、嵌套物品所有权、精确Prefab位置与停用宿主稳定槽位")
+
+test.system("item_runtime", "tinder_material", {}, function(data)
+    assert(data.flintAcceptsCotton and data.flintRejectsStone, "取火器没有接收棉花或错误地接收石头")
+    assert(data.coldRejected and data.heatOutput == "FireSeed" and data.heatRatio == 1,
+        "棉花受热转火种的边界或数量错误")
+    assert(data.weaveOutput == "Cloth", "添加取火用途破坏了棉花纺织")
+    assert(data.lifetime == 1440 and data.moduleId == "Item.TimedDespawn" and data.enabled and data.notFood,
+        "火种没有启用独立的一游戏日寿命，或被误配为食物")
+end, "棉花打火石/热转化与火种正式定义")
+
+for _, input in ipairs({
+    {steps = {{now = 480}, {now = 1919.9}, {now = 1920}}, elapsed = {0, 1439.9, 1440}, expired = {false, false, true}},
+    {steps = {{now = 0}, {now = 700}, {now = 700}, {now = 700, restore = true}, {now = 1440}},
+        elapsed = {0, 700, 700, 700, 1440}, expired = {false, false, false, false, true}},
+    {steps = {{now = 0}, {now = 600}, {now = 300}, {now = 1140}},
+        elapsed = {0, 600, 600, 1440}, expired = {false, false, false, true}},
+    {steps = {{now = 0}, {now = 600}, {now = 50000, world = "moon"}, {now = 50840, world = "moon"}},
+        elapsed = {0, 600, 600, 1440}, expired = {false, false, false, true}},
+    {steps = {{now = 0}, {now = 5000}}, elapsed = {0, 5000}, expired = {false, true}},
+    {steps = {{now = 0}, {now = 1440, enabled = false}}, elapsed = {0, 0}, expired = {false, false}},
+    {lifetime = 0, steps = {{now = 0}, {now = 1440}}, elapsed = {0, 0}, expired = {false, false}},
+}) do
+    test.system("item_runtime", "timed_despawn", input, function(data)
+        for index, sample in ipairs(data.samples) do
+            assert(sample.expired == input.expired[index], "火种寿命边界、暂停或跨世界时钟错误")
+            assert(math.abs(sample.elapsed - input.elapsed[index]) < .001,
+                "火种快照恢复、跳时或时钟倒退丢失/重复累计寿命")
+        end
+        assert(data.staleRejected and data.removed and data.empty and data.amount == 0 and data.noProducts,
+            "自然消失误删替换物、残留库存或产生了灰烬")
+    end, "火种游戏时钟、快照与无副产物清除")
+end

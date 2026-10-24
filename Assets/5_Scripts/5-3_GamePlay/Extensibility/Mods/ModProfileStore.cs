@@ -7,8 +7,9 @@ using UnityEngine;
 
 #region MOD 配置档案
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ModProfile
+public sealed partial class ModProfile
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion = 1;
@@ -84,7 +85,7 @@ public static class ModProfileStore
             return new ModProfile();
 
         string json = File.ReadAllText(ActiveProfilePath);
-        ModProfile profile = JsonConvert.DeserializeObject<ModProfile>(json) ?? new ModProfile();
+        ModProfile profile = JsonConfigurationCache.Deserialize<ModProfile>(json) ?? new ModProfile();
         Normalize(profile);
         return profile;
     }

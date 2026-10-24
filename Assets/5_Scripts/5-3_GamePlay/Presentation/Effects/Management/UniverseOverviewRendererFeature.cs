@@ -280,11 +280,12 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
                 }
                 double angle = body.RotationInitialRadians + (Math.Abs(body.RotationPeriodSeconds) > 1e-12d
                     ? state.SimulationSeconds * Math.PI * 2d / body.RotationPeriodSeconds : 0d);
-                Quaternion rotation = Quaternion.Euler(0f, 0f, (float)(Math.IEEERemainder(angle, Math.PI * 2d) * 180d / Math.PI));
+                Quaternion rotation = Quaternion.Euler(0f, 0f, (float)(body.EquatorTiltRadians * 180d / Math.PI));
                 SpaceVector2 light = sun != null ? (sun.PositionMeters - body.PositionMeters).Normalized : default;
                 Vector3 direction = Quaternion.Inverse(rotation) * new Vector3((float)light.X, (float)light.Y, .8f);
                 properties.SetVector(LightId, direction.normalized);
                 properties.SetFloat(SeedId, (body.Seed & 0xFFFF) * .0137f);
+                properties.SetFloat("_SurfaceRotation", (float)Math.IEEERemainder(angle, Math.PI * 2d));
                 float surfaceExtent = properties.GetFloat("_SurfaceExtent");
                 float scale = (float)radius * surfaceExtent;
                 cmd.DrawMesh(quad, Matrix4x4.TRS(new Vector3((float)x, (float)y, 0f), rotation,

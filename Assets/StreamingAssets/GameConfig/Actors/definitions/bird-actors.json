@@ -106,6 +106,7 @@
             "fleeTriggerDistance": 12.0,
             "fleeSafeDistance": 30.0,
             "fleeRunDistance": 30.0,
+            "canBeCaughtByFishingRod": true,
             "additionalForageTags": ["Berry", "Fruit"],
             "fishHuntHungerRate": 0.7,
             "fishHuntRadius": 12.0,
@@ -147,6 +148,8 @@
             "Data": {
               "Hp": 30,
               "MaxHp": 30,
+              "AccuracyLevel": 7,
+              "SizeLevel": 3,
               "DefenseValues": {
                 "Physical": 0
               },
@@ -173,6 +176,14 @@
       "gameName": "海鸥",
       "description": "仅在沙滩群系生态生成的鸟类变体。",
       "modules": {
+        "health": {
+          "parameters": {
+            "Data": { "SizeLevel": 4 }
+          }
+        },
+        "ai": {
+          "parameters": { "canBeCaughtByFishingRod": false }
+        },
         "animator": {
           "parameters": {
             "visualMode": 1
@@ -285,7 +296,8 @@
             "fleeTriggerDistance": 3.0,
             "fleeSafeDistance": 6.0,
             "fleeRunDistance": 5.0,
-            "hurtEscapeSeconds": 2.0
+            "hurtEscapeSeconds": 2.0,
+            "canBeCaughtByFishingRod": false
           }
         },
         "beeBehavior": {
@@ -314,6 +326,9 @@
             "Data": {
               "Hp": 6,
               "MaxHp": 6,
+              "AccuracyLevel": 7,
+              "SizeLevel": 2,
+              "DodgeChance": 0.0,
               "DefenseValues": {
                 "Physical": 0
               },

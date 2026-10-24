@@ -17,6 +17,7 @@ internal sealed class PlanetSurfacePresentation : IDisposable
     private static readonly int ExtentId = Shader.PropertyToID("_SurfaceExtent");
     private static readonly int LightId = Shader.PropertyToID("_SurfaceLightDirection");
     private static readonly int SeedId = Shader.PropertyToID("_SurfaceSeed");
+    private static readonly int RotationId = Shader.PropertyToID("_SurfaceRotation");
     private readonly SpriteRenderer source;
     private readonly bool sourceWasEnabled;
     private readonly MaterialPropertyBlock properties = new();
@@ -27,6 +28,7 @@ internal sealed class PlanetSurfacePresentation : IDisposable
     private BodyState lightingBody;
     private Vector3 lastLightDirection;
     private int lastSeed = int.MinValue;
+    private double lastRotation = double.NaN;
     private PlanetSurfaceStyle style;
 
     private PlanetSurfacePresentation(SpriteRenderer source)
@@ -114,6 +116,13 @@ internal sealed class PlanetSurfacePresentation : IDisposable
         {
             lastSeed = body.Seed;
             properties.SetFloat(SeedId, (body.Seed & 0xFFFF) * .0137f);
+        }
+        double rotation = Math.IEEERemainder(session.GetUniverse(body.Sector).GetRotationRadians(body.BodyId), Math.PI * 2d);
+        if (rotation != lastRotation)
+        {
+            lastRotation = rotation;
+            properties.SetFloat(RotationId, (float)rotation);
+            changed = true;
         }
         if (style != PlanetSurfaceStyle.Stellar && lightingBody != null)
         {

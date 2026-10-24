@@ -67,7 +67,9 @@ public sealed class CraftingStationController : IDisposable
     public bool IsDisposed => disposed;
 
     public CraftingResult Preview(RuntimeRecipe recipe)
-        => CraftingService.PreviewRecipe(inputInventory, outputInventory, capabilities, recipe);
+        => authoritativeProcessor != null && authoritativeProcessor.Recipe?.Id == recipe?.Id
+            ? authoritativeProcessor.Preview()
+            : CraftingService.PreviewRecipe(inputInventory, outputInventory, capabilities, recipe);
 
     /// <summary>只提供候选按钮身份，外部输入仍须走按钮的正式事件链。</summary>
     public Button FindRecipeButton(string recipeId)
@@ -206,6 +208,7 @@ public sealed class CraftingStationController : IDisposable
 
     private void OnCraftButtonClick()
     {
+        if (disposed) return;
         if (authoritativeProcessor != null)
         {
             performAuthoritativeWork?.Invoke();
@@ -257,6 +260,7 @@ public sealed class CraftingStationController : IDisposable
     /// <summary>输入变化时一次更新候选集合；输出空间不会隐藏材料本身能够制作的配方。</summary>
     private void RefreshCandidates()
     {
+        if (disposed || panel == null) return;
         string previousRecipeId = authoritativeProcessor?.State.RecipeId ?? selectedRecipe?.Id;
         if (!CraftingRecipeMatcher.TryMatchAll(
                 inputInventory,
@@ -342,7 +346,8 @@ public sealed class CraftingStationController : IDisposable
             FindRect(button.transform, CandidateOutputAmountName)?.GetComponent<TextMeshProUGUI>(),
             FindRect(button.transform, CandidateMaterialsName),
             FindRect(button.transform, CandidateMaterialTemplateName),
-            inputInventory);
+            inputInventory,
+            capabilities.ApplyOutputMultiplier);
         entry.Bind(() => SelectRecipe(entry.Recipe));
         return entry;
     }
@@ -389,14 +394,10 @@ public sealed class CraftingStationController : IDisposable
             return;
         }
 
-        CraftingResult preview = CraftingService.PreviewRecipe(
-            inputInventory,
-            outputInventory,
-            capabilities,
-            selectedRecipe);
+        CraftingResult preview = Preview(selectedRecipe);
         craftButton.interactable = preview.Success;
 
-        CraftingResult description = CraftingService.DescribeRecipe(selectedRecipe, inputInventory);
+        CraftingResult description = CraftingService.DescribeRecipe(selectedRecipe, inputInventory, capabilities.ApplyOutputMultiplier);
         if (description.Success)
         {
             int requiredClicks = Mathf.Max(1, requiredClickCount());
@@ -500,6 +501,7 @@ public sealed class CraftingStationController : IDisposable
         private readonly RectTransform materials;
         private readonly RectTransform materialTemplate;
         private readonly Inventory inputInventory;
+        private readonly bool applyOutputMultiplier;
         private readonly List<MaterialEntry> materialEntries = new();
         private UnityAction selectAction;
 
@@ -510,7 +512,8 @@ public sealed class CraftingStationController : IDisposable
             TextMeshProUGUI outputAmount,
             RectTransform materials,
             RectTransform materialTemplate,
-            Inventory inputInventory)
+            Inventory inputInventory,
+            bool applyOutputMultiplier)
         {
             this.button = button ?? throw new ArgumentNullException(nameof(button));
             background = button.targetGraphic as Image ?? button.GetComponent<Image>();
@@ -520,6 +523,7 @@ public sealed class CraftingStationController : IDisposable
             this.materials = materials ?? throw new InvalidOperationException("配方候选模板缺少材料列表");
             this.materialTemplate = materialTemplate ?? throw new InvalidOperationException("配方候选模板缺少材料图标模板");
             this.inputInventory = inputInventory;
+            this.applyOutputMultiplier = applyOutputMultiplier;
             materialTemplate.gameObject.SetActive(false);
             foreach (Transform child in materials)
                 if (child != materialTemplate && child.name.StartsWith("材料项_", StringComparison.Ordinal))
@@ -546,7 +550,7 @@ public sealed class CraftingStationController : IDisposable
         public void Show(RuntimeRecipe recipe)
         {
             Recipe = recipe ?? throw new ArgumentNullException(nameof(recipe));
-            CraftingResult description = CraftingService.DescribeRecipe(recipe, inputInventory);
+            CraftingResult description = CraftingService.DescribeRecipe(recipe, inputInventory, applyOutputMultiplier);
             ItemData primaryOutput = description.PrimaryOutput;
             string itemId = primaryOutput?.IDName ?? recipe.outputs?.results?[0]?.ItemName;
 

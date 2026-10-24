@@ -127,6 +127,7 @@ public partial class ItemMgr
     {
         public float2 Center;
         public float DetectionRadius;
+        public float MaximumDetectionRadius;
         public float BroadphaseRadius;
         public int LayerMask;
         public int ExcludedInstanceId;
@@ -183,7 +184,8 @@ public partial class ItemMgr
                                 float2 distanceToBounds = math.max(
                                     math.abs(candidate.BoundsCenter - imageCenter) - candidate.BoundsExtents,
                                     0f);
-                                float effectiveRadius = query.DetectionRadius * candidate.PerceptionRadiusMultiplier;
+                                float effectiveRadius = math.min(query.MaximumDetectionRadius,
+                                    query.DetectionRadius * candidate.PerceptionRadiusMultiplier);
                                 if (math.lengthsq(distanceToBounds) > effectiveRadius * effectiveRadius)
                                     continue;
 
@@ -375,7 +377,9 @@ public partial class ItemMgr
             {
                 Center = new float2(detectorPosition.x, detectorPosition.y),
                 DetectionRadius = detectionRadius,
-                BroadphaseRadius = detectionRadius * maximumTargetPerceptionMultiplier + maximumShapeReach,
+                MaximumDetectionRadius = detector.MaximumDetectionRadius,
+                BroadphaseRadius = Mathf.Min(detector.MaximumDetectionRadius,
+                    detectionRadius * maximumTargetPerceptionMultiplier) + maximumShapeReach,
                 LayerMask = detector.itemLayer.value,
                 ExcludedInstanceId = excludedItem != null ? excludedItem.GetInstanceID() : 0,
                 WorldId = detector.gameObject.scene.handle,
@@ -723,9 +727,9 @@ public partial class ItemMgr
             return false;
 
         Vector2 center = new Vector2(query.Center.x, query.Center.y);
-        float effectiveRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+        float effectiveRadius = Mathf.Min(query.MaximumDetectionRadius, Mod_ItemDetector.CalculateEffectiveDetectionRadius(
             query.DetectionRadius,
-            candidateSnapshot.PerceptionRadiusMultiplier);
+            candidateSnapshot.PerceptionRadiusMultiplier));
         if (!_perceptionTargets.TryGetValue(candidate, out PerceptionTarget target) || target.Bridge == null)
             return false;
 

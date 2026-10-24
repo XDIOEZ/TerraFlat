@@ -55,6 +55,8 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
             throw new InvalidOperationException("燃料交互面板缺少 BuildingPanelActions。");
         buildingActions.Bind(target.item);
 
+        // 交给 UIManager 按当前面板层级处理返回，不单独维护 ESC 状态。
+        current.panel.PrepareForGameplayWindow();
         current.panel.Open();
         current.Refresh();
     }

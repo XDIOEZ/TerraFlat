@@ -61,7 +61,8 @@ internal sealed partial class DroppedItemRuntime
                     foreach (int id in bucket)
                     {
                         LightweightDroppedBody body = simulation.Get(id);
-                        if (body.Pickable != 0 && picker.CanReachDroppedPoint(domain.NearestImagePosition((Vector2)bounds.center, body.Position)))
+                        if (body.Pickable != 0 && picker.CanReachDroppedPoint(
+                            domain.NearestImagePosition((Vector2)bounds.center, body.Position), body.IsOnBottom))
                             nearby.Add(id);
                     }
                 }
@@ -81,7 +82,8 @@ internal sealed partial class DroppedItemRuntime
         try
         {
             LightweightDroppedBody body = simulation.Get(id);
-            if (body.Pickable == 0 || body.Amount <= 0f) return;
+            if (body.Pickable == 0 || body.Amount <= 0f || !picker.CanReachDroppedPoint(
+                domain.NearestImagePosition((Vector2)picker.item.transform.position, body.Position), body.IsOnBottom)) return;
             ItemData payload = payloads[id];
             using var transactionDebug = PickupTransactionDebug.Measure(1, payload.IDName);
             ItemData candidate;
@@ -98,6 +100,7 @@ internal sealed partial class DroppedItemRuntime
             if (remaining >= body.Amount) return;
             DroppedItemVisual visual = visuals[id];
             body.Amount = remaining;
+            if (remaining > 0f) payload.Durability = candidate.Durability;
             if (remaining <= 0f) Remove(id); else simulation.Set(body);
             PickupCommittedDebug.AddWork(1);
             // 数量提交先于表现；声音或短期动画失败不能复活已入包的物品。

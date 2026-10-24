@@ -50,6 +50,10 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     private bool hovered;
     private bool pressed;
     private bool selected;
+    private Vector3 baseScale;
+    private bool baseScaleCaptured;
+
+    public Vector3 BaseScale => baseScaleCaptured ? baseScale : transform.localScale;
 
     #endregion
 
@@ -57,13 +61,15 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
 
     private void Awake()
     {
+        CaptureBaseScale();
         selectable = GetComponent<Selectable>();
         ConfigureSelectedColor();
     }
 
     private void OnEnable()
     {
-        transform.localScale = Vector3.one;
+        CaptureBaseScale();
+        transform.localScale = baseScale;
         selected = EventSystemGuard.IsGamepadMode && EventSystem.current != null &&
                    EventSystem.current.currentSelectedGameObject == gameObject;
         SetSelectionVisual(selected);
@@ -77,7 +83,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
         pressed = false;
         selected = false;
         RestoreSelectionOutline();
-        transform.localScale = Vector3.one;
+        transform.localScale = BaseScale;
     }
 
     private void OnDestroy()
@@ -90,6 +96,24 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     #endregion
 
     #region 指针反馈
+
+    /// <summary>布局拥有者更新基础大小，悬停、按压和启停都在这个大小上叠加反馈。</summary>
+    public void SetBaseScale(Vector3 value)
+    {
+        KillScaleTween();
+        baseScale = value;
+        baseScaleCaptured = true;
+        transform.localScale = value;
+        AnimateToCurrentState();
+    }
+
+    private void CaptureBaseScale()
+    {
+        if (baseScaleCaptured)
+            return;
+        baseScale = transform.localScale;
+        baseScaleCaptured = true;
+    }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
@@ -184,7 +208,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
         if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
             return;
 
-        bool canInteract = selectable == null || selectable.IsInteractable();
+        bool canInteract = selectable == null || selectable.isActiveAndEnabled && selectable.IsInteractable();
         if (!canInteract && selected)
         {
             selected = false;
@@ -194,7 +218,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
         float target = !canInteract
             ? 1f
             : pressed ? pressedScale : selected ? selectedScale : hovered ? hoverScale : 1f;
-        Vector3 targetScale = Vector3.one * target;
+        Vector3 targetScale = BaseScale * target;
         KillScaleTween();
         if ((transform.localScale - targetScale).sqrMagnitude <= ScaleComparisonEpsilonSquared)
         {

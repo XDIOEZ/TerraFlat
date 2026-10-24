@@ -44,7 +44,14 @@ public sealed partial class MachineEntity
     public string ScopeKey;
     public Vector2Int Cell;
     public MachineDefinition Definition;
-    public ItemData Snapshot;
+    private ItemData snapshot;
+    public ItemData Snapshot
+    {
+        get => snapshot;
+        set { snapshot = value; WorkEfficiencyMultiplier = CraftedWorkEfficiencyQuality.Read(value); }
+    }
+    public float WorkEfficiencyMultiplier { get; private set; } = 1f;
+    internal int SharedInventoryConsumers; // 共享库存仍有使用者时保留其权威运行实例。
     public MachineState State;
     public RecipeProcessor Processor;
     public MachineLogic Logic; // 非机械专用玩法由粗粒度领域对象执行。
@@ -99,6 +106,7 @@ public sealed partial class MachineEntity
     public float LoadTorque => Definition.IsConverter
         ? ConversionMode == ElectricalConversionMode.Generator ? Definition.TorqueLoad : 0f
         : Definition.TorqueLoad;
+    public float RequiredTorque => MechanicalNetworkGraph.RoundLoadTorque(LoadTorque, Definition.TorqueLoadStep);
     public bool IsElectricalGenerator => Definition.Electrical?.IsGenerator == true ||
         Definition.IsConverter && ConversionMode == ElectricalConversionMode.Generator;
     public bool IsElectricalConsumer => Definition.Electrical?.IsConsumer == true ||
@@ -166,7 +174,7 @@ public sealed partial class MachineEntity
     /// <summary>供给显示为沿传动路径实际可取得的扭矩；用力器始终显示自身固定需求。</summary>
     public void GetLocalTorque(out float supply, out float demand)
     {
-        demand = MechanicalNetworkGraph.RoundLoadTorqueToTens(LoadTorque);
+        demand = RequiredTorque;
         if (!FlowVisited || Network == null)
         {
             supply = 0f;
@@ -235,6 +243,7 @@ public sealed partial class MechanicalNetworkGraph
     public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
     private readonly Dictionary<Vector3Int, MachineEntity> cells = new();
     private readonly HashSet<Vector2Int> occupiedOnPlacementLayers = new();
+    private readonly HashSet<Vector2Int> movementBlockingCells = new();
     private readonly Dictionary<Vector2Int, MachineEntity> pressureSwitches = new();
     public readonly List<MechanicalNetwork> Networks = new();
     internal readonly List<MechanicalNetwork> ConverterNetworks = new();
@@ -287,9 +296,15 @@ public sealed partial class MechanicalNetworkGraph
     internal MachineEntity AtNormalized(Vector2Int cell, int layer)
         => cells.TryGetValue(new Vector3Int(cell.x, cell.y, layer), out var node) ? node : null;
 
-    /// <summary>已归一化格上的任一放置层占用，供建筑与 LOS 一次查询。</summary>
+    /// <summary>放置冲突独立于通行和视线，非实体设施仍占用自己的放置层。</summary>
     internal bool IsOccupiedOnPlacementLayersNormalized(Vector2Int cell)
         => occupiedOnPlacementLayers.Contains(cell);
+
+    /// <summary>所有层的实体合并成一个只读索引；导航与视线查询无需逐层扫描。</summary>
+    internal bool IsMovementBlockedNormalized(Vector2Int cell)
+        => movementBlockingCells.Contains(cell);
+
+    internal int HighestOccupiedLayer { get; private set; } = -1;
 
     /// <summary>空机械世界跳过逐帧交互格扫描。</summary>
     internal bool HasNodes => cells.Count > 0;
@@ -311,7 +326,7 @@ public sealed partial class MechanicalNetworkGraph
         for (int dx = -extent; dx <= extent; dx++)
         {
             Vector2Int cell = NormalizeCell(center + new Vector2Int(dx, dy));
-            for (int layer = 0; layer <= 5; layer++)
+            for (int layer = 0; layer <= HighestOccupiedLayer; layer++)
             {
                 MachineEntity node = AtNormalized(cell, layer);
                 if (node != null && window.Seen.Add(node)) window.Nodes.Add(node);
@@ -355,6 +370,8 @@ public sealed partial class MechanicalNetworkGraph
     {
         pointerWindow.Reset(); nearbyWindow.Reset();
         cells.Clear(); occupiedOnPlacementLayers.Clear(); pressureSwitches.Clear(); Networks.Clear(); ConverterNetworks.Clear(); Facilities.Clear();
+        movementBlockingCells.Clear();
+        HighestOccupiedLayer = -1;
         HasBellows = false;
         rebuildNodes.AddRange(nodes);
         List<MachineEntity> sorted = rebuildNodes;
@@ -365,6 +382,8 @@ public sealed partial class MechanicalNetworkGraph
             var key = new Vector3Int(node.Cell.x, node.Cell.y, node.Definition.Layer);
             if (cells.ContainsKey(key)) throw new InvalidOperationException("机械格重复占用：" + key);
             cells.Add(key, node);
+            HighestOccupiedLayer = Mathf.Max(HighestOccupiedLayer, node.Definition.Layer);
+            if (node.Definition.BlocksTraversal) movementBlockingCells.Add(node.Cell);
             if (node.Definition.Kind == "bellows") HasBellows = true;
             if (node.Definition.Layer == 0 || node.Definition.Layer == 1)
                 occupiedOnPlacementLayers.Add(node.Cell);
@@ -416,6 +435,7 @@ public sealed partial class MechanicalNetworkGraph
             network.SingleChunk = network.Bounds.size.x == 1 && network.Bounds.size.y == 1;
             if (network.HasConverters) ConverterNetworks.Add(network);
         }
+        RefreshConveyorConnections(sorted);
     }
 
     private static int CompareNodes(MachineEntity a, MachineEntity b) => a.Id.CompareTo(b.Id);
@@ -677,7 +697,7 @@ public sealed partial class MechanicalNetworkGraph
 
     /// <summary>用力器需求固定为配置值，仅为上游分配换算到根侧单位。</summary>
     private static float GetRootSideLoad(MachineEntity node)
-        => RoundLoadTorqueToTens(node.LoadTorque) / node.TorqueRatio;
+        => node.RequiredTorque / node.TorqueRatio;
 
     /// <summary>从用力器沿实际连接查找可达动力源，输入终点不能作为其它节点的传动通道。</summary>
     // 路径只在可达节点、有效源或输入终点状态变化时失效，出力大小变化继续复用原距离。
@@ -804,8 +824,12 @@ public sealed partial class MechanicalNetworkGraph
         return Mathf.Floor(torque / 10f + .5f) * 10f;
     }
 
-    /// <summary>非零用力器至少消耗一档；需求只由自身配置决定，不随转速变化。</summary>
+    /// <summary>负载档位由设备配置，分配、面板和功率换算统一读取 RequiredTorque。</summary>
+    public static float RoundLoadTorque(float torque, float step)
+        => torque > 0f ? Mathf.Max(step, Mathf.Floor(torque / step + .5f) * step) : 0f;
+
+    /// <summary>普通用力器仍按十点一档计算，保留显式十点档调用入口。</summary>
     public static float RoundLoadTorqueToTens(float torque)
-        => torque > 0f ? Mathf.Max(10f, RoundTorqueToTens(torque)) : 0f;
+        => RoundLoadTorque(torque, 10f);
     #endregion
 }

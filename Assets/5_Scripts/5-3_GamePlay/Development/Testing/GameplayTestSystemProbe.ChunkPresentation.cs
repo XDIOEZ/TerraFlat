@@ -10,7 +10,10 @@ public static partial class GameplayTestSystemProbe
     #region 基础地形分步绑定与取消
 
     private static void RegisterChunkPresentationOperations(Dictionary<string, Func<JObject, JObject>> operations)
-        => operations.Add("world_streaming/base_presentation_steps", ServiceBasePresentationSteps);
+    {
+        operations.Add("world_streaming/base_presentation_steps", ServiceBasePresentationSteps);
+        operations.Add("world_streaming/collision_dirty_queue", ServiceCollisionDirtyQueue);
+    }
 
     // 独立空地形实走正式绑定器，检查预算与所有权，不伪造可见地块或替代画面验收。
     private static JObject ServiceBasePresentationSteps(JObject args)

@@ -68,6 +68,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         public string SnapshotBase64;
         public string BuildingPrefabId;
         public string SummonerPrefabId;
+        // 保存单件建筑实际消耗的材料，替代料不再靠配方反推。
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public SortedDictionary<string, float> CraftingMaterials;
         // 手持物与建筑共同持有的状态模块；放置/拆回时按稳定 ID 转移当前数据。
         [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string[] SharedModuleIds;
@@ -139,15 +142,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     #region 建筑空间层
     [Tooltip("地板层设施允许同格放置实体建筑，不阻挡通行或视线。")]
     public BuildingPlacementLayer PlacementLayer = BuildingPlacementLayer.Structure;
-    public bool IsGroundFacility
-    {
-        get
-        {
-            int layer = BuildingOccupancyRegistry.GetPlacementLayer(this);
-            return layer == (int)BuildingPlacementLayer.Ground || layer == Mod_ShipPart.GroundFloorLayer;
-        }
-    }
-    public bool BlocksMovement => !IsGroundFacility && (BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? true);
+    [Tooltip("无扩展通行策略时的建筑声明；关闭后保留交互/受击与占格，但不阻挡角色或视线。")]
+    public bool BlocksMovementWhenPlaced = true;
+    public bool IsGroundFacility => BuildingTraversalRules.IsGroundLayer(BuildingOccupancyRegistry.GetPlacementLayer(this));
+    public bool BlocksMovement => BuildingTraversalRules.BlocksMovement(
+        BuildingOccupancyRegistry.GetPlacementLayer(this),
+        BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? BlocksMovementWhenPlaced);
     #endregion
 
     #region 建筑伤害兼容
@@ -411,6 +411,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         var request = new BuildingPlacementRequest
         {
             SourceData = sourceSlot.itemData,
+            SourceItem = item,
             SourceInventory = hotBar.Data,
             SourceSlot = sourceSlot,
             Actor = actor,
@@ -783,7 +784,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
                     state.SnapshotBase64 = snapshotBase64;
                 }))
                 throw new InvalidOperationException("机械召唤器缺少建筑模块");
-            returned.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64);
+            returned.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64, returned);
             if (onShip)
                 return FlatWorld.Spaceflight.SpaceSession.Current.TryDismantleMachinePiece(node, returned, out reason);
             summoner = ItemMgr.Instance.InstantiateItem(returned, position,
@@ -817,7 +818,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         {
             string summonerId = ResolveSummonerPrefabId(node.Definition.Id, building);
             if (!BuildingMaterialSalvage.TrySpawnRandomMaterialSalvage(
-                    summonerId, NormalizePlacement(node.Snapshot.transform.position), out string reason))
+                    summonerId, NormalizePlacement(node.Snapshot.transform.position), out string reason,
+                    buildingData: node.Snapshot))
                 Debug.LogWarning("[机械摧毁] " + reason);
         }
         MachineWorld.Remove(node.Id);
@@ -905,10 +907,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     private static void CopySharedDurability(ItemData source, ItemData target, IReadOnlyCollection<string> sharedModuleIds)
     {
         CraftedDurabilityQuality.CopyInstanceQuality(source, target);
-        if (source == null || target == null || sharedModuleIds == null || !sharedModuleIds.Contains(Mod_HandDrill.ModuleId))
-            return;
-        target.MaxDurability = Mathf.Max(0f, source.MaxDurability);
-        target.Durability = Mathf.Clamp(source.Durability, 0f, target.MaxDurability);
+        if (source == null || target == null) return;
+        if (sharedModuleIds?.Contains(Mod_HandDrill.ModuleId) == true)
+            target.MaxDurability = Mathf.Max(0f, source.MaxDurability);
+        BuildingModuleStateTransfer.CopyDurabilityRatio(source, target);
     }
 
     public void RejectNetworkDismantle(string reason)
@@ -1036,7 +1038,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         item.itemData.inHand = false;
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = true;
-        item.itemData.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64);
+        item.itemData.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64, item.itemData);
         SetColliderMode(enabled: true, trigger: true, damageReceiverEnabled: false);
         BuildingOccupancyRegistry.Unregister(this);
         SyncLightOccluder();
@@ -1047,6 +1049,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     {
         snapshotBase64 = null;
         reason = null;
+
+        foreach (Module module in item.itemMods.Mods.Values)
+            if (module is IBuildingDismantlePolicy policy && !policy.CanDismantle(out reason)) return false;
 
         try
         {
@@ -1198,6 +1203,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (!BuildingPlacementService.ValidateActorEligibility(Data?.BuildingPrefabId,
                 placementActor != null ? placementActor : item?.Owner, out reason))
             return false;
+
+        if (!BuildingPlacementLifecycle.ValidatePlacementRules(item,
+                placementActor != null ? placementActor : item?.Owner, position, out reason)) return false;
 
         float maximumPlacementDistance = GetMaxPlacementDistance(placementActor);
         if (!IsWithinPlacementDistance(authorityPosition, position, maximumPlacementDistance))
@@ -2314,10 +2322,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     }
 
     /// <summary>以归一化建筑快照生成稳定堆叠身份；相同状态的召唤器可合堆，状态不同的快照仍分开。</summary>
-    private static string CreateStatefulSummonerIdentity(string snapshotBase64)
+    private static string CreateStatefulSummonerIdentity(string snapshotBase64, ItemData carrier = null)
     {
         if (string.IsNullOrWhiteSpace(snapshotBase64))
-            return string.Empty;
+            return TryReadBuildingData(carrier, out _, out Building_Data state) && state.CraftingMaterials != null
+                ? BuildingMaterialSalvage.CreateMaterialStackIdentity(state.CraftingMaterials)
+                : string.Empty;
 
         using (SHA256 sha256 = SHA256.Create())
         {

@@ -103,7 +103,7 @@ public class Mod_Fuel : Module
         float actualAmount =
             amount *
             burnSpeedMultiplier *
-            GameDifficultyService.Current.Production.FuelConsumptionMultiplier;
+            GameRuleConfiguration.Current.Production.FuelConsumptionMultiplier;
         Data.Fuel.x = Mathf.Max(Data.Fuel.x - actualAmount, 0f);
         
         if (Data.Fuel.x <= 0.01f) 

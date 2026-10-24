@@ -1,5 +1,7 @@
+using System;
 using System.Globalization;
 using FlatWorld.Diagnostics;
+using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
@@ -67,10 +69,10 @@ public sealed partial class GMReflectionConsole
     private void RefreshPerformanceDebugControls()
     {
         if (performanceStatisticsButton == null) return;
-        performanceStatisticsButton.GetComponentInChildren<TextMeshProUGUI>(true).text =
-            PerformanceDebugRegistry.StatisticsEnabled ? "性能统计：开" : "性能统计：关";
-        performanceSlowButton.GetComponentInChildren<TextMeshProUGUI>(true).text =
-            PerformanceDebugRegistry.SlowSummaryEnabled ? "慢操作摘要：开" : "慢操作摘要：关";
+        SetLocalizedText(performanceStatisticsButton.GetComponentInChildren<TextMeshProUGUI>(true),
+            PerformanceDebugRegistry.StatisticsEnabled ? "性能统计：开" : "性能统计：关");
+        SetLocalizedText(performanceSlowButton.GetComponentInChildren<TextMeshProUGUI>(true),
+            PerformanceDebugRegistry.SlowSummaryEnabled ? "慢操作摘要：开" : "慢操作摘要：关");
         if (performanceThresholdInput != null && !performanceThresholdInput.isFocused)
             performanceThresholdInput.SetTextWithoutNotify(PerformanceDebugRegistry.SlowThresholdMilliseconds.ToString("0.##", CultureInfo.InvariantCulture));
     }
@@ -78,15 +80,99 @@ public sealed partial class GMReflectionConsole
     private void PrintPerformanceSummary()
     {
         string summary = PerformanceDebugRegistry.BuildSummary();
-        if (performanceSummaryText != null) performanceSummaryText.text = summary;
+        if (performanceSummaryText != null)
+            SetLocalizedProvider(performanceSummaryText, () => LocalizePerformanceSummary(summary));
         Debug.Log(summary);
         SetStatus("性能摘要已显示并写入日志。", GmTextSecondary);
+    }
+
+    // 保留性能点名称和采样值，只替换可翻译的固定标签。
+    private static string LocalizePerformanceSummary(string summary)
+    {
+        if (string.IsNullOrEmpty(summary)) return string.Empty;
+        string[] lines = summary.Replace("\r", string.Empty).Split('\n');
+        if (lines.Length > 0 && lines[0].StartsWith("[性能 DEBUG] ", StringComparison.Ordinal))
+            lines[0] = FlatWorldLocalizationService.GetUiText("[性能 DEBUG]") + " " +
+                       FlatWorldLocalizationService.GetUiText("区段为包含子调用的 Total，不可相加当作整帧。");
+
+        if (lines.Length > 1 && TryReadPerformanceSummaryFields(lines[1], out string statistics,
+                out string slowSummary, out string threshold, out string registered, out string excess))
+        {
+            lines[1] = FlatWorldLocalizationService.GetUiFormat(
+                "性能统计 {0}，慢操作摘要 {1}，阈值 {2} ms，注册点位 {3}，超额点位 {4}",
+                FlatWorldLocalizationService.GetUiText(statistics.Equals("True", StringComparison.OrdinalIgnoreCase) ? "开" : "关"),
+                FlatWorldLocalizationService.GetUiText(slowSummary.Equals("True", StringComparison.OrdinalIgnoreCase) ? "开" : "关"),
+                threshold, registered, excess);
+        }
+
+        for (int i = 2; i < lines.Length; i++)
+            lines[i] = LocalizePerformanceRow(lines[i]);
+        return string.Join("\n", lines);
+    }
+
+    private static bool TryReadPerformanceSummaryFields(string line, out string statistics,
+        out string slowSummary, out string threshold, out string registered, out string excess)
+    {
+        statistics = slowSummary = threshold = registered = excess = string.Empty;
+        return TryReadPerformanceField(line, "统计=", "，慢摘要=", out statistics) &&
+               TryReadPerformanceField(line, "，慢摘要=", "，阈值=", out slowSummary) &&
+               TryReadPerformanceField(line, "，阈值=", "ms，注册=", out threshold) &&
+               TryReadPerformanceField(line, "ms，注册=", "，超额点位=", out registered) &&
+               TryReadPerformanceField(line, "，超额点位=", null, out excess);
+    }
+
+    private static bool TryReadPerformanceField(string line, string prefix, string suffix, out string value)
+    {
+        value = string.Empty;
+        int start = line.IndexOf(prefix, StringComparison.Ordinal);
+        if (start < 0) return false;
+        start += prefix.Length;
+        int end = suffix == null ? line.Length : line.IndexOf(suffix, start, StringComparison.Ordinal);
+        if (end < start) return false;
+        value = line.Substring(start, end - start);
+        return true;
+    }
+
+    private static string LocalizePerformanceRow(string line)
+    {
+        int dataStart = line.IndexOf(" | ", StringComparison.Ordinal);
+        if (dataStart < 0) return line;
+        string pointName = line.Substring(0, dataStart);
+        string[] fields = line.Substring(dataStart + 3).Split(' ');
+        for (int i = 0; i < fields.Length; i++)
+        {
+            int separator = fields[i].IndexOf('=');
+            if (separator <= 0) continue;
+            string fieldName = fields[i].Substring(0, separator);
+            string fieldValue = fields[i].Substring(separator + 1);
+            fields[i] = FlatWorldLocalizationService.GetUiFormat("{0}={1}",
+                GetLocalizedPerformanceFieldName(fieldName), fieldValue);
+        }
+        return pointName + " | " + string.Join(" ", fields);
+    }
+
+    private static string GetLocalizedPerformanceFieldName(string fieldName)
+    {
+        string sourceLabel = fieldName switch
+        {
+            "calls" => "调用次数",
+            "work" => "工作量",
+            "total" => "总耗时",
+            "max" => "最大耗时",
+            "gauge" => "当前量",
+            "peak" => "峰值",
+            _ => null
+        };
+        return sourceLabel == null
+            ? fieldName
+            : FlatWorldLocalizationService.GetUiText(sourceLabel);
     }
 
     private void ClearPerformanceStatistics()
     {
         PerformanceDebugRegistry.Clear();
-        if (performanceSummaryText != null) performanceSummaryText.text = "性能统计已清空；当前开关与阈值保留。";
+        if (performanceSummaryText != null)
+            SetLocalizedText(performanceSummaryText, "性能统计已清空；当前开关与阈值保留。");
         SetStatus("性能统计已清空。", GmTextSecondary);
     }
 

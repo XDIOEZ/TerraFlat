@@ -84,7 +84,7 @@ namespace FlatWorld.Combat
         public float4 Damage; // 合计为物理攻击力，分槽仅保留旧表现标签。
         public float2 Origin, HitPoint; // 来源与最终命中位置。
         public CombatClock Clock; // 生效 Tick/时间。
-        public byte SourceIsPlayer, IsTrueDamage; // 难度身份与是否跳过类型防御。
+        public byte SourceIsPlayer, IsTrueDamage; // 来源角色身份与是否跳过类型防御。
         public byte SlowEnabled; // 可选受击减速。
         public float SlowMultiplier, SlowDuration; // 受击减速参数。
         public float BuildingMultiplier; // 防御后的建筑倍率。
@@ -99,11 +99,11 @@ namespace FlatWorld.Combat
         public int Stacks; // 一次施加层数；旧生产者的零值按一层处理。
     }
 
-    /// <summary>由 Gameplay 冻结的难度规则，两个后端使用同一个计算函数。</summary>
-    public struct CombatDifficulty
+    /// <summary>由 Gameplay 冻结的战斗参数，两个后端使用同一个计算函数。</summary>
+    public struct CombatTuning
     {
         public float PlayerAttack, CreatureAttack, CreatureHealth; // 保持现有攻击倍率/生物血量归一化语义。
-        /// <summary>按攻击来源与接收方身份选择难度倍率。</summary>
+        /// <summary>按攻击来源与接收方身份选择攻击及生命归一化倍率。</summary>
         public float Resolve(bool sourceIsPlayer, bool targetIsPlayer) =>
             math.max(0f, sourceIsPlayer ? PlayerAttack : CreatureAttack) /
             (targetIsPlayer ? 1f : math.max(0.1f, CreatureHealth));
@@ -113,17 +113,17 @@ namespace FlatWorld.Combat
     public static class CombatRules
     {
         /// <summary>物理攻击只扣一次防御，再应用弱点等受击倍率；旧分槽仅分配反馈。</summary>
-        public static float4 Resolve(float4 damage, float4 defense, float difficulty, float receivedMultiplier)
+        public static float4 Resolve(float4 damage, float4 defense, float attackMultiplier, float receivedMultiplier)
         {
             float4 positive = math.max(0f, damage);
             float attack = math.csum(positive);
-            float loss = ResolvePhysical(attack, math.cmax(math.max(0f, defense)), difficulty, receivedMultiplier);
+            float loss = ResolvePhysical(attack, math.cmax(math.max(0f, defense)), attackMultiplier, receivedMultiplier);
             return attack > 0f ? positive * (loss / attack) : float4.zero;
         }
 
         /// <summary>全部后端共用一个物理结算公式；未破防时弱点不能制造伤害。</summary>
-        public static float ResolvePhysical(float attack, float defense, float difficulty = 1f, float receivedMultiplier = 1f) =>
-            math.max(0f, math.max(0f, attack) * math.max(0f, difficulty) - math.max(0f, defense)) * math.max(0f, receivedMultiplier);
+        public static float ResolvePhysical(float attack, float defense, float attackMultiplier = 1f, float receivedMultiplier = 1f) =>
+            math.max(0f, math.max(0f, attack) * math.max(0f, attackMultiplier) - math.max(0f, defense)) * math.max(0f, receivedMultiplier);
 
         /// <summary>把结算分量按实际生命损失裁掉过量伤害。</summary>
         public static float4 ActualLoss(float4 resolved, float loss)

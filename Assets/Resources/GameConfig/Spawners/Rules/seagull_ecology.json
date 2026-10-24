@@ -2,11 +2,8 @@
   "schemaVersion": 1,
   "config": {
     "id": "seagull_ecology",
-    "scheduleMode": "countdown",
     "ecologyGroup": "animals",
     "requireGlobalDarkness": false,
-    "spawnTriggerTime": 360.0,
-    "spawnsPerDay": 4,
     "minSpawnDistance": 15.0,
     "maxSpawnDistance": 50.0,
     "playerVisibilityExclusionDistance": 18.0,
@@ -15,16 +12,10 @@
     "spawnSearchRetryCount": 24,
     "spawnCount": 4,
     "spawnChance": 1.0,
-    "daysBetweenSpawns": 1,
     "groupAliveLimit": 24,
     "maxEcologyBudget": 24,
     "dailyBudgetRecovery": 12,
-    "recoveryTargetPopulation": 8,
-    "recoveryCheckInterval": 8.0,
-    "growthIntervalDays": 1,
-    "maxLifetimeSpawnCount": 4096,
     "asyncSpawnInterval": 0.25,
-    "unboundedDailyGrowth": false,
     "ignorePopulationLimits": false,
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 1.0,
@@ -53,6 +44,7 @@
           }
         }
       }
-    ]
+    ],
+    "ignoreEcologyBudget": false
   }
 }

@@ -4,8 +4,8 @@
     {
       "id": "Traveler_Hood",
       "parent": "Equipment_Base",
-      "gameName": "旅人兜帽",
-      "description": "旅人套装的棕色布兜帽，轻便耐用，可与其他头部装备替换。",
+      "gameName": "皮制帽子",
+      "description": "用骨针和棉线缝制的皮帽，保护头部。",
       "durability": 90,
       "maxDurability": 90,
       "amount": 1,
@@ -45,7 +45,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "旅人兜帽防护",
+                "Name": "皮制帽子防护",
                 "DefenseBonus": {
                   "Physical": 1
                 },
@@ -61,8 +61,8 @@
     {
       "id": "Traveler_Vest",
       "parent": "Equipment_Base",
-      "gameName": "旅人皮甲",
-      "description": "旅人套装的皮革外甲，保护胸腹，可与其他套装混搭。",
+      "gameName": "皮制上衣",
+      "description": "用骨针和棉线缝制的皮制上衣，保护胸腹。",
       "durability": 140,
       "maxDurability": 140,
       "amount": 1,
@@ -101,7 +101,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "旅人皮甲防护",
+                "Name": "皮制上衣防护",
                 "DefenseBonus": {
                   "Physical": 3
                 },
@@ -118,8 +118,8 @@
     {
       "id": "Traveler_Gloves",
       "parent": "Equipment_Base",
-      "gameName": "旅人手套",
-      "description": "旅人套装的皮革手套，保护双手。",
+      "gameName": "皮制手套",
+      "description": "用骨针和棉线缝制的皮手套，保护双手。",
       "durability": 80,
       "maxDurability": 80,
       "amount": 1,
@@ -158,7 +158,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "旅人手套防护",
+                "Name": "皮制手套防护",
                 "DefenseBonus": {
                   "Physical": 1
                 },
@@ -175,8 +175,8 @@
     {
       "id": "Traveler_Trousers",
       "parent": "Equipment_Base",
-      "gameName": "旅人长裤",
-      "description": "旅人套装的耐磨长裤，保护腰腿。",
+      "gameName": "皮制裤子",
+      "description": "用骨针和棉线缝制的耐磨皮裤，保护腰腿。",
       "durability": 100,
       "maxDurability": 100,
       "amount": 1,
@@ -215,7 +215,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "旅人长裤防护",
+                "Name": "皮制裤子防护",
                 "DefenseBonus": {
                   "Physical": 1
                 },
@@ -233,8 +233,8 @@
     {
       "id": "Traveler_Boots",
       "parent": "Equipment_Base",
-      "gameName": "旅人皮靴",
-      "description": "旅人套装的厚底皮靴，可独立替换鞋子槽位。",
+      "gameName": "皮制鞋子",
+      "description": "用骨针和棉线缝制的厚底皮鞋，保护双脚。",
       "durability": 100,
       "maxDurability": 100,
       "amount": 1,
@@ -273,7 +273,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "旅人皮靴防护",
+                "Name": "皮制鞋子防护",
                 "DefenseBonus": {
                   "Physical": 1
                 },
@@ -290,8 +290,8 @@
     {
       "id": "IronGuard_Helmet",
       "parent": "Equipment_Base",
-      "gameName": "铁卫头盔",
-      "description": "铁卫套装的灰蓝铁盔，为头部提供防护。",
+      "gameName": "铁头盔",
+      "description": "用熟铁锭锻造的铁头盔，为头部提供防护。",
       "durability": 180,
       "maxDurability": 180,
       "amount": 1,
@@ -332,7 +332,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "铁卫头盔防护",
+                "Name": "铁头盔防护",
                 "DefenseBonus": {
                   "Physical": 4
                 },
@@ -348,8 +348,8 @@
     {
       "id": "IronGuard_Cuirass",
       "parent": "Equipment_Base",
-      "gameName": "铁卫胸甲",
-      "description": "铁卫套装的灰蓝铁胸甲，重点保护胸腹。",
+      "gameName": "铁胸甲",
+      "description": "用熟铁锭锻造的铁胸甲，重点保护胸腹。",
       "durability": 240,
       "maxDurability": 240,
       "amount": 1,
@@ -389,7 +389,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "铁卫胸甲防护",
+                "Name": "铁胸甲防护",
                 "DefenseBonus": {
                   "Physical": 6
                 },
@@ -406,8 +406,8 @@
     {
       "id": "IronGuard_Gauntlets",
       "parent": "Equipment_Base",
-      "gameName": "铁卫护手",
-      "description": "铁卫套装的铁制护手，保护双手。",
+      "gameName": "铁护手",
+      "description": "用熟铁锭锻造的铁护手，保护双手。",
       "durability": 150,
       "maxDurability": 150,
       "amount": 1,
@@ -447,7 +447,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "铁卫护手防护",
+                "Name": "铁护手防护",
                 "DefenseBonus": {
                   "Physical": 3
                 },
@@ -464,8 +464,8 @@
     {
       "id": "IronGuard_Greaves",
       "parent": "Equipment_Base",
-      "gameName": "铁卫腿甲",
-      "description": "铁卫套装的铁制腿甲，保护腰腿。",
+      "gameName": "铁腿甲",
+      "description": "用熟铁锭锻造的铁腿甲，保护腰腿。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -505,7 +505,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "铁卫腿甲防护",
+                "Name": "铁腿甲防护",
                 "DefenseBonus": {
                   "Physical": 4
                 },
@@ -523,8 +523,8 @@
     {
       "id": "IronGuard_Boots",
       "parent": "Equipment_Base",
-      "gameName": "铁卫战靴",
-      "description": "铁卫套装的加固战靴，可独立替换鞋子槽位。",
+      "gameName": "铁战靴",
+      "description": "用熟铁锭锻造的加固战靴，保护脚部。",
       "durability": 180,
       "maxDurability": 180,
       "amount": 1,
@@ -564,7 +564,7 @@
             "equipmentInstances": [
               {
                 "$concreteType": "EquipmentInstance_Defense",
-                "Name": "铁卫战靴防护",
+                "Name": "铁战靴防护",
                 "DefenseBonus": {
                   "Physical": 2
                 },

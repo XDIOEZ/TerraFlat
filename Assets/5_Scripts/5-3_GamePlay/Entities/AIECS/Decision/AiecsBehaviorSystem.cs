@@ -46,10 +46,13 @@ namespace FlatWorld.AIECS
                 float2 destination;
                 if (hasSlot)
                 {
+                    // 已取得近战名额的站位与停止误差必须一同落在起手范围内。
+                    contactRadius = AIApproachRange.ResolveStopDistance(contactRadius, definition.AttackStartRange);
                     AiecsEngagementSlot slot = EngagementSlots[index];
                     float2 radial = AiecsEngagementSlots.Direction(target.Entity, slot.Index, slot.Count);
                     destination = Spatial.Domain.Normalize(target.Position + radial * contactRadius);
-                    actor.StopDistance = 0.08f;
+                    actor.StopDistance = AIApproachRange.ResolveStopDistance(
+                        0.08f, definition.AttackStartRange - contactRadius);
                 }
                 else
                 {

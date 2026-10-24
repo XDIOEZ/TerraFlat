@@ -15,6 +15,42 @@ MonoBehaviour:
   m_TableCollectionName: FlatWorld
   m_TableCollectionNameGuidString: a6b2aa1bb32def84a8055087b25aa325
   m_Entries:
+  - m_Id: 27615045296885764
+    m_Key: item.CopperHammer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885765
+    m_Key: item.CopperHammer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885766
+    m_Key: item.IronHammer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885767
+    m_Key: item.IronHammer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885768
+    m_Key: item.SteelHammer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885769
+    m_Key: item.SteelHammer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402000
+    m_Key: item.Crossbow_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402001
+    m_Key: item.Crossbow_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402002
+    m_Key: tag.Crossbow.name
+    m_Metadata:
+      m_Items: []
   - m_Id: 4702777344
     m_Key: item.Axe_Stone.name
     m_Metadata:
@@ -1745,6 +1781,2165 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 23082859458715658
     m_Key: item.InductionStove_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715659
+    m_Key: item.SpaceElevatorTerminal.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715660
+    m_Key: item.SpaceElevatorTerminal_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715661
+    m_Key: item.SpaceElevatorTerminal.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715662
+    m_Key: item.SpaceElevatorTerminal_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715663
+    m_Key: item.Shield_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715664
+    m_Key: item.Shield_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596266936504320
+    m_Key: item.Traveler_Hood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427136
+    m_Key: item.Traveler_Hood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427137
+    m_Key: item.Traveler_Vest.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427138
+    m_Key: item.Traveler_Vest.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427139
+    m_Key: item.Traveler_Gloves.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427140
+    m_Key: item.Traveler_Gloves.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427141
+    m_Key: item.Traveler_Trousers.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427142
+    m_Key: item.Traveler_Trousers.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427143
+    m_Key: item.Traveler_Boots.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427144
+    m_Key: item.Traveler_Boots.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427145
+    m_Key: item.Thread.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427146
+    m_Key: item.Thread.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427147
+    m_Key: item.Needle_Bone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427148
+    m_Key: item.Needle_Bone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427149
+    m_Key: item.Cotton.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427150
+    m_Key: item.Cotton.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267586621440
+    m_Key: tag.SewingNeedle.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267221491712
+    m_Key: item.LeatherStrap.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267485732864
+    m_Key: item.LeatherStrap.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267485732865
+    m_Key: tag.BindingDurability:1.3.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267485732866
+    m_Key: tag.CraftedQuality.BindingReinforced.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605608893026304
+    m_Key: item.IronGuard_Helmet.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305536
+    m_Key: item.IronGuard_Helmet.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305537
+    m_Key: item.IronGuard_Cuirass.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305538
+    m_Key: item.IronGuard_Cuirass.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305539
+    m_Key: item.IronGuard_Gauntlets.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305540
+    m_Key: item.IronGuard_Gauntlets.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305541
+    m_Key: item.IronGuard_Greaves.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305542
+    m_Key: item.IronGuard_Greaves.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305543
+    m_Key: item.IronGuard_Boots.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305544
+    m_Key: item.IronGuard_Boots.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499840
+    m_Key: item.Steel_Helmet.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499841
+    m_Key: item.Steel_Helmet.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499842
+    m_Key: item.Steel_Gauntlets.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499843
+    m_Key: item.Steel_Gauntlets.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499844
+    m_Key: item.Steel_Greaves.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499845
+    m_Key: item.Steel_Greaves.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499846
+    m_Key: item.Steel_Boots.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499847
+    m_Key: item.Steel_Boots.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608689814835200
+    m_Key: item.Needle_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128256
+    m_Key: item.Needle_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128257
+    m_Key: item.Needle_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128258
+    m_Key: item.Needle_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128259
+    m_Key: item.IronAnvil.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128260
+    m_Key: item.IronAnvil_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128261
+    m_Key: item.IronAnvil.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128262
+    m_Key: item.IronAnvil_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128263
+    m_Key: item.CopperAnvil.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128264
+    m_Key: item.CopperAnvil_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128265
+    m_Key: item.Ingot_Tungsten.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128266
+    m_Key: item.Ingot_Tungsten.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128267
+    m_Key: item.Ore_Tungsten.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128268
+    m_Key: item.Ore_Tungsten.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128269
+    m_Key: item.Mine_Tungsten.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128270
+    m_Key: item.Mine_Tungsten.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615044965535744
+    m_Key: item.SteelNail.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885760
+    m_Key: item.ToolCabinet.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885761
+    m_Key: item.ToolCabinet_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885762
+    m_Key: item.Nail.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885763
+    m_Key: tag.Nail.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402003
+    m_Key: item.RailTrack_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402004
+    m_Key: item.RailTrack_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402005
+    m_Key: item.RailTrack.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402006
+    m_Key: item.RailTrack.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402007
+    m_Key: item.Minecart_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402008
+    m_Key: item.Minecart_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402009
+    m_Key: item.Minecart.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402010
+    m_Key: item.Minecart.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402011
+    m_Key: item.SteamEngine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402012
+    m_Key: item.SteamEngine.description
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 1500752182028533811
+  references:
+    version: 2
+    RefIds:
+    - rid: 1500752182028533811
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1786200316845
+  - m_Id: 27915473976856576
+    m_Key: item.Wire_Hidden.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474467590144
+    m_Key: item.Wire_Hidden_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474467590145
+    m_Key: item.Engineering_Goggles.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474471784448
+    m_Key: item.ShipWreck.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144576
+    m_Key: item.Snowball.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144577
+    m_Key: item.Boat.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144578
+    m_Key: item.Boat_Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144579
+    m_Key: item.Glass.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338880
+    m_Key: item.Crucible.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338881
+    m_Key: item.Blowgun_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338882
+    m_Key: item.StoneThrowingRope.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338883
+    m_Key: item.StoneSlab.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338884
+    m_Key: item.Peat.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338885
+    m_Key: item.DrilledPlank.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338886
+    m_Key: item.WoodAsh.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338887
+    m_Key: item.IronPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338888
+    m_Key: item.RawIronPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338889
+    m_Key: item.CopperPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338890
+    m_Key: item.BronzePlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338891
+    m_Key: item.TinPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338892
+    m_Key: item.SteelPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533184
+    m_Key: item.OrePowder_Coal.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533185
+    m_Key: item.OrePowder_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533186
+    m_Key: item.OrePowder_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533187
+    m_Key: item.OrePowder_Tin.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533188
+    m_Key: item.OrePowder_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533189
+    m_Key: item.OrePowder_Niter.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533190
+    m_Key: item.Beeswax.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533191
+    m_Key: item.BirdEgg.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533192
+    m_Key: item.CarbonFilament.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533193
+    m_Key: item.Cloth.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533194
+    m_Key: item.SilkFiber.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533195
+    m_Key: item.Silk.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533196
+    m_Key: item.Plastic.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727488
+    m_Key: item.SiliconPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727489
+    m_Key: item.Ingot_Gold.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727490
+    m_Key: item.Ore_Gold.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727491
+    m_Key: item.OrePowder_Gold.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727492
+    m_Key: item.Mine_Gold.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727493
+    m_Key: item.Ore_Diamond.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727494
+    m_Key: item.Mine_Diamond.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727495
+    m_Key: item.Obsidian.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727496
+    m_Key: item.Mine_Obsidian.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727497
+    m_Key: item.Dagger_Obsidian.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727498
+    m_Key: item.Spear_Obsidian.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727499
+    m_Key: item.IronBucket.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727500
+    m_Key: item.IronBucket_Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727501
+    m_Key: item.Ore_Sulfur.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727502
+    m_Key: item.Mine_Sulfur.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921792
+    m_Key: item.Mine_Stone_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921793
+    m_Key: item.Mine_Coal_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921794
+    m_Key: item.Mine_Copper_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921795
+    m_Key: item.Mine_Iron_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921796
+    m_Key: item.Mine_Tin_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921797
+    m_Key: item.Mine_Niter_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921798
+    m_Key: item.Mine_Diamond_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921799
+    m_Key: item.Mine_Gold_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921800
+    m_Key: item.Mine_Obsidian_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921801
+    m_Key: item.Mine_Sulfur_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921802
+    m_Key: item.Mine_Tungsten_Large.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921803
+    m_Key: item.Tree_Dead.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921804
+    m_Key: item.Scissors.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921805
+    m_Key: item.DrilledStick.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921806
+    m_Key: item.StoneHammer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921807
+    m_Key: item.MechanicalLoom.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921808
+    m_Key: item.MechanicalLoom_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921809
+    m_Key: item.CopperAnvil.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921810
+    m_Key: item.CopperAnvil_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921811
+    m_Key: item.Rubber.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921812
+    m_Key: item.Generator_Basic.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921813
+    m_Key: item.Generator_Basic_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921814
+    m_Key: item.Wire_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921815
+    m_Key: item.Wire_Copper_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921816
+    m_Key: item.Battery_Basic.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921817
+    m_Key: item.Battery_Basic_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921818
+    m_Key: item.ElectricLightBulb.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921819
+    m_Key: item.ElectricLightBulb_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310400
+    m_Key: item.Tree_Oak.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310401
+    m_Key: item.Seed_Cotton.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310402
+    m_Key: item.CottonCrop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310403
+    m_Key: item.CactusPiece.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310404
+    m_Key: item.Cactus.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310405
+    m_Key: item.GrassBed_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310406
+    m_Key: item.GrassBed.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310407
+    m_Key: item.NaturalMineEntrance.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310408
+    m_Key: item.Seed_Foxtail.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310409
+    m_Key: item.Flour.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504704
+    m_Key: item.Shovel_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504705
+    m_Key: item.Shovel_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504706
+    m_Key: item.Shovel_RawIron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504707
+    m_Key: item.Shovel_Bronze.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504708
+    m_Key: item.Shovel_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504709
+    m_Key: item.CommandManual.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504710
+    m_Key: item.Floor_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504711
+    m_Key: item.Floor_Stone_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504712
+    m_Key: item.Floor_Copper_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504713
+    m_Key: item.Floor_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504714
+    m_Key: item.Floor_Bronze_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504715
+    m_Key: item.Splint.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504716
+    m_Key: item.Bandage_Plant.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504717
+    m_Key: item.Wool.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504718
+    m_Key: item.WoodenBarrel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504719
+    m_Key: item.WoodenBarrel_Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504720
+    m_Key: item.FishingRod.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504721
+    m_Key: item.FishingHook_Bone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504722
+    m_Key: item.FishingHook_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504723
+    m_Key: item.FishingHook_Gold.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504724
+    m_Key: item.Conveyor_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504725
+    m_Key: item.Conveyor_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504726
+    m_Key: item.Conveyor_Cloth.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504727
+    m_Key: item.Conveyor_Cloth_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504728
+    m_Key: item.FluidPipe.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504729
+    m_Key: item.FluidPipe_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504730
+    m_Key: item.FluidValve.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504731
+    m_Key: item.FluidValve_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504732
+    m_Key: item.FluidOutlet.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893312
+    m_Key: item.FluidOutlet_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893313
+    m_Key: item.GasSelector.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893314
+    m_Key: item.GasSelector_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893315
+    m_Key: item.GasTankBlock_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893316
+    m_Key: item.GasTankBlock_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893317
+    m_Key: item.GasTankBlock_Steel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893318
+    m_Key: item.GasTankBlock_Steel_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893319
+    m_Key: item.LiquidStorageTank.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893320
+    m_Key: item.LiquidStorageTank_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893321
+    m_Key: item.GasPump_Mechanical.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893322
+    m_Key: item.GasPump_Mechanical_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893323
+    m_Key: item.LiquidPump_Electric.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893324
+    m_Key: item.LiquidPump_Electric_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893325
+    m_Key: item.PressureProbe_Mechanical.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893326
+    m_Key: item.PressureProbe_Mechanical_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893327
+    m_Key: item.PressureProbe_Electronic.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893328
+    m_Key: item.PressureProbe_Electronic_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893329
+    m_Key: item.GasCompressor_Mechanical.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893330
+    m_Key: item.GasCompressor_Mechanical_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893331
+    m_Key: item.GasCompressor_Electric.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893332
+    m_Key: item.GasCompressor_Electric_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893333
+    m_Key: item.ElectricHeater.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893334
+    m_Key: item.ElectricHeater_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893335
+    m_Key: item.FluidFilter.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893336
+    m_Key: item.FluidFilter_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893337
+    m_Key: item.WaterElectrolyzer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893338
+    m_Key: item.WaterElectrolyzer_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893339
+    m_Key: item.GasEngine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281920
+    m_Key: item.GasEngine_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281921
+    m_Key: item.FilterResidue.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281922
+    m_Key: item.PortableGasTank_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281923
+    m_Key: item.PortableGasTank_Steel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281924
+    m_Key: item.Spacesuit_Head.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476224
+    m_Key: item.Spacesuit_Torso.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476225
+    m_Key: item.Spacesuit_Hands.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476226
+    m_Key: item.Spacesuit_Legs.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476227
+    m_Key: item.Spacesuit_Feet.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476228
+    m_Key: item.WaterTrough.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476229
+    m_Key: item.WaterTrough_Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476230
+    m_Key: item.ShipFloor_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474555670528
+    m_Key: item.ShipFloor_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474555670529
+    m_Key: item.ShipFloor_Refractory.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864832
+    m_Key: item.ShipFloor_Refractory_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864833
+    m_Key: item.ShipWall_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864834
+    m_Key: item.ShipWall_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864835
+    m_Key: item.ShipWall_Refractory.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864836
+    m_Key: item.ShipWall_Refractory_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864837
+    m_Key: item.ShipDoor.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864838
+    m_Key: item.ShipDoor_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864839
+    m_Key: item.ShipDockingPort.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864840
+    m_Key: item.ShipDockingPort_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864841
+    m_Key: item.ShipConsole.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864842
+    m_Key: item.ShipConsole_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864843
+    m_Key: item.ShipChemicalEngine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864844
+    m_Key: item.ShipChemicalEngine_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864845
+    m_Key: item.ShipGravityGenerator.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864846
+    m_Key: item.ShipGravityGenerator_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864847
+    m_Key: item.ShipNavigation.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864848
+    m_Key: item.ShipNavigation_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864849
+    m_Key: item.ShipAirSupply.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864850
+    m_Key: item.ShipAirSupply_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864851
+    m_Key: item.ShipFiber.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864852
+    m_Key: item.ShipFiber_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864853
+    m_Key: item.SpaceCultivator.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864854
+    m_Key: item.SpaceCultivator_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059136
+    m_Key: item.Wire_Hidden.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059137
+    m_Key: item.Wire_Hidden_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059138
+    m_Key: item.Engineering_Goggles.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059139
+    m_Key: item.ShipWreck.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059140
+    m_Key: item.Snowball.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447744
+    m_Key: item.Boat.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447745
+    m_Key: item.Boat_Building.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447746
+    m_Key: item.Sand.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447747
+    m_Key: item.Glass.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447748
+    m_Key: item.Crucible.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447749
+    m_Key: item.Blowgun_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447750
+    m_Key: item.StoneThrowingRope.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447751
+    m_Key: item.Fiber.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447752
+    m_Key: item.StoneSlab.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642048
+    m_Key: item.Peat.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642049
+    m_Key: item.DrilledPlank.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642050
+    m_Key: item.DrilledStoneSlab.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642051
+    m_Key: item.DrilledStone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642052
+    m_Key: item.WoodAsh.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642053
+    m_Key: item.Paper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642054
+    m_Key: item.Nail.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642055
+    m_Key: item.IronPlate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642056
+    m_Key: item.RawIronPlate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642057
+    m_Key: item.CopperPlate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642058
+    m_Key: item.BronzePlate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642059
+    m_Key: item.TinPlate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642060
+    m_Key: item.SteelPlate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642061
+    m_Key: item.OrePowder_Coal.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642062
+    m_Key: item.OrePowder_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642063
+    m_Key: item.OrePowder_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642064
+    m_Key: item.OrePowder_Tin.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642065
+    m_Key: item.OrePowder_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836352
+    m_Key: item.OrePowder_Niter.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836353
+    m_Key: item.Beeswax.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836354
+    m_Key: item.SteelNail.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836355
+    m_Key: item.BirdEgg.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836356
+    m_Key: item.CarbonFilament.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836357
+    m_Key: item.Cloth.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836358
+    m_Key: item.SilkFiber.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836359
+    m_Key: item.Silk.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836360
+    m_Key: item.Plastic.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836361
+    m_Key: item.SiliconPlate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836362
+    m_Key: item.Ingot_Gold.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836363
+    m_Key: item.Ore_Gold.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836364
+    m_Key: item.OrePowder_Gold.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836365
+    m_Key: item.Mine_Gold.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836366
+    m_Key: item.Ore_Diamond.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836367
+    m_Key: item.Mine_Diamond.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836368
+    m_Key: item.Obsidian.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836369
+    m_Key: item.Mine_Obsidian.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836370
+    m_Key: item.Dagger_Obsidian.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836371
+    m_Key: item.Spear_Obsidian.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836372
+    m_Key: item.IronBucket.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836373
+    m_Key: item.IronBucket_Building.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836374
+    m_Key: item.Ore_Sulfur.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836375
+    m_Key: item.Mine_Sulfur.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836376
+    m_Key: item.Beehive.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224960
+    m_Key: item.Flower.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224961
+    m_Key: item.Mine_Stone_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224962
+    m_Key: item.Mine_Coal_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224963
+    m_Key: item.Mine_Copper_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224964
+    m_Key: item.Mine_Iron_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224965
+    m_Key: item.Mine_Tin_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224966
+    m_Key: item.Mine_Niter_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224967
+    m_Key: item.Mine_Diamond_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224968
+    m_Key: item.Mine_Gold_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224969
+    m_Key: item.Mine_Obsidian_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224970
+    m_Key: item.Mine_Sulfur_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224971
+    m_Key: item.Mine_Tungsten_Large.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224972
+    m_Key: item.Tree_Dead.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224973
+    m_Key: item.Scissors.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224974
+    m_Key: item.DrilledStick.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224975
+    m_Key: item.StoneHammer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224976
+    m_Key: item.HandCrank.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419264
+    m_Key: item.HandCrank_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419265
+    m_Key: item.WaterWheel.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419266
+    m_Key: item.WaterWheel_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419267
+    m_Key: item.Windmill.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419268
+    m_Key: item.Windmill_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419269
+    m_Key: item.Shaft_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419270
+    m_Key: item.Shaft_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419271
+    m_Key: item.Gear_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419272
+    m_Key: item.Gear_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419273
+    m_Key: item.Gearbox_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419274
+    m_Key: item.Gearbox_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419275
+    m_Key: item.Clutch.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419276
+    m_Key: item.Clutch_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613568
+    m_Key: item.CrossShaft.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613569
+    m_Key: item.CrossShaft_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613570
+    m_Key: item.Millstone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613571
+    m_Key: item.Millstone_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613572
+    m_Key: item.MechanicalBellows.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613573
+    m_Key: item.MechanicalBellows_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613574
+    m_Key: item.Sawmill.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613575
+    m_Key: item.Sawmill_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613576
+    m_Key: item.MechanicalLoom.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613577
+    m_Key: item.MechanicalLoom_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613578
+    m_Key: item.MechanicalHammer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613579
+    m_Key: item.MechanicalHammer_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613580
+    m_Key: item.ToolCabinet.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613581
+    m_Key: item.ToolCabinet_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613582
+    m_Key: item.Rubber.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613583
+    m_Key: item.Generator_Basic.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613584
+    m_Key: item.Generator_Basic_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613585
+    m_Key: item.Wire_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613586
+    m_Key: item.Wire_Copper_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613587
+    m_Key: item.Battery_Basic.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613588
+    m_Key: item.Battery_Basic_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613589
+    m_Key: item.ElectricLightBulb.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613590
+    m_Key: item.ElectricLightBulb_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613591
+    m_Key: item.Tree_Oak.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613592
+    m_Key: item.HandDrill.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613593
+    m_Key: item.HandDrill_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613594
+    m_Key: item.Seed_Cotton.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613595
+    m_Key: item.CottonCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613596
+    m_Key: item.CactusPiece.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613597
+    m_Key: item.Cactus.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002176
+    m_Key: item.GrassBed_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002177
+    m_Key: item.GrassBed.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002178
+    m_Key: item.NaturalMineEntrance.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002179
+    m_Key: item.Seed_Foxtail.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002180
+    m_Key: item.Flour.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002181
+    m_Key: item.Shovel_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002182
+    m_Key: item.Shovel_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002183
+    m_Key: item.Shovel_RawIron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002184
+    m_Key: item.Shovel_Bronze.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002185
+    m_Key: item.Shovel_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002186
+    m_Key: item.CommandManual.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002187
+    m_Key: item.Floor_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002188
+    m_Key: item.Floor_Stone_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196480
+    m_Key: item.Floor_Copper_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196481
+    m_Key: item.Floor_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196482
+    m_Key: item.Floor_Bronze_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196483
+    m_Key: item.Splint.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196484
+    m_Key: item.Bandage_Plant.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196485
+    m_Key: item.Wool.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196486
+    m_Key: item.WoodenBarrel.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196487
+    m_Key: item.WoodenBarrel_Building.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196488
+    m_Key: item.FishingRod.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196489
+    m_Key: item.FishingHook_Bone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196490
+    m_Key: item.FishingHook_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196491
+    m_Key: item.FishingHook_Gold.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196492
+    m_Key: item.Conveyor_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196493
+    m_Key: item.Conveyor_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196494
+    m_Key: item.Conveyor_Cloth.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196495
+    m_Key: item.Conveyor_Cloth_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196496
+    m_Key: item.FluidPipe.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196497
+    m_Key: item.FluidPipe_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196498
+    m_Key: item.FluidValve.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196499
+    m_Key: item.FluidValve_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196500
+    m_Key: item.FluidOutlet.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196501
+    m_Key: item.FluidOutlet_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196502
+    m_Key: item.GasSelector.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196503
+    m_Key: item.GasSelector_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196504
+    m_Key: item.GasTankBlock_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196505
+    m_Key: item.GasTankBlock_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196506
+    m_Key: item.GasTankBlock_Steel.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196507
+    m_Key: item.GasTankBlock_Steel_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585088
+    m_Key: item.LiquidStorageTank.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585089
+    m_Key: item.LiquidStorageTank_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585090
+    m_Key: item.GasPump_Mechanical.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585091
+    m_Key: item.GasPump_Mechanical_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585092
+    m_Key: item.LiquidPump_Electric.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585093
+    m_Key: item.LiquidPump_Electric_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585094
+    m_Key: item.PressureProbe_Mechanical.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585095
+    m_Key: item.PressureProbe_Mechanical_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585096
+    m_Key: item.PressureProbe_Electronic.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585097
+    m_Key: item.PressureProbe_Electronic_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585098
+    m_Key: item.GasCompressor_Mechanical.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585099
+    m_Key: item.GasCompressor_Mechanical_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585100
+    m_Key: item.GasCompressor_Electric.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585101
+    m_Key: item.GasCompressor_Electric_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585102
+    m_Key: item.ElectricHeater.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585103
+    m_Key: item.ElectricHeater_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585104
+    m_Key: item.FluidFilter.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585105
+    m_Key: item.FluidFilter_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585106
+    m_Key: item.WaterElectrolyzer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585107
+    m_Key: item.WaterElectrolyzer_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585108
+    m_Key: item.GasEngine.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585109
+    m_Key: item.GasEngine_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585110
+    m_Key: item.FilterResidue.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585111
+    m_Key: item.PortableGasTank_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585112
+    m_Key: item.PortableGasTank_Steel.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585113
+    m_Key: item.Spacesuit_Head.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585114
+    m_Key: item.Spacesuit_Torso.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585115
+    m_Key: item.Spacesuit_Hands.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585116
+    m_Key: item.Spacesuit_Legs.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585117
+    m_Key: item.Spacesuit_Feet.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585118
+    m_Key: item.WaterTrough.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585119
+    m_Key: item.WaterTrough_Building.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585120
+    m_Key: item.ShipFloor_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585121
+    m_Key: item.ShipFloor_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585122
+    m_Key: item.ShipFloor_Refractory.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585123
+    m_Key: item.ShipFloor_Refractory_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585124
+    m_Key: item.ShipWall_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585125
+    m_Key: item.ShipWall_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585126
+    m_Key: item.ShipWall_Refractory.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585127
+    m_Key: item.ShipWall_Refractory_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585128
+    m_Key: item.ShipDoor.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585129
+    m_Key: item.ShipDoor_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779392
+    m_Key: item.ShipDockingPort.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779393
+    m_Key: item.ShipDockingPort_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779394
+    m_Key: item.ShipConsole.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779395
+    m_Key: item.ShipConsole_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779396
+    m_Key: item.ShipChemicalEngine.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779397
+    m_Key: item.ShipChemicalEngine_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779398
+    m_Key: item.ShipGravityGenerator.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779399
+    m_Key: item.ShipGravityGenerator_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779400
+    m_Key: item.ShipNavigation.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779401
+    m_Key: item.ShipNavigation_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779402
+    m_Key: item.ShipAirSupply.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779403
+    m_Key: item.ShipAirSupply_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779404
+    m_Key: item.ShipFiber.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779405
+    m_Key: item.ShipFiber_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779406
+    m_Key: item.SpaceCultivator.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474631168000
+    m_Key: item.SpaceCultivator_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474996072448
+    m_Key: tag.AnimalProduct.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474996072449
+    m_Key: tag.Armor.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475004461056
+    m_Key: tag.Arrow.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475004461057
+    m_Key: tag.Axe.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475004461058
+    m_Key: tag.BeeForage.Crop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238272
+    m_Key: tag.BeeForage.Flower.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238273
+    m_Key: tag.Berry.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238274
+    m_Key: tag.Blowgun.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238275
+    m_Key: tag.Bow.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238276
+    m_Key: tag.Bronze.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238277
+    m_Key: tag.BronzePlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238278
+    m_Key: tag.Carnivore.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238279
+    m_Key: tag.Combustion.Tinder.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238280
+    m_Key: tag.Material.Tinder.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238281
+    m_Key: tag.Container.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238282
+    m_Key: tag.Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238283
+    m_Key: tag.CopperPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238284
+    m_Key: tag.Crucible.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238285
+    m_Key: tag.Equipment.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238286
+    m_Key: tag.Fiber.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238287
+    m_Key: tag.Food.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238288
+    m_Key: tag.Fruit.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238289
+    m_Key: tag.Glass.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238290
+    m_Key: tag.Gold.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238291
+    m_Key: tag.HandDrill.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626880
+    m_Key: tag.Herbivore.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626881
+    m_Key: tag.Ingot.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626882
+    m_Key: tag.InventoryGroup.MechanicalPower.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626883
+    m_Key: tag.Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626884
+    m_Key: tag.IronPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626885
+    m_Key: tag.Knife.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626886
+    m_Key: tag.ManualForge.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626887
+    m_Key: tag.Material.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626888
+    m_Key: tag.Metal.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626889
+    m_Key: tag.Mineral.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821184
+    m_Key: tag.Modern.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821185
+    m_Key: tag.Omnivore.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821186
+    m_Key: tag.Ore.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821187
+    m_Key: tag.Pickaxe.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821188
+    m_Key: tag.Plant.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821189
+    m_Key: tag.Powder.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821190
+    m_Key: tag.PreserveFreshness.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821191
+    m_Key: tag.RangedWeapon.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821192
+    m_Key: tag.RawIron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821193
+    m_Key: tag.RawIronPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209792
+    m_Key: tag.readable.paper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209793
+    m_Key: tag.readable.writing.ink.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209794
+    m_Key: tag.Rope.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209795
+    m_Key: tag.SaltFood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209796
+    m_Key: tag.Sand.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209797
+    m_Key: tag.Seed.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209798
+    m_Key: tag.Shovel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209799
+    m_Key: tag.Spear.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209800
+    m_Key: tag.Steel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209801
+    m_Key: tag.SteelPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598400
+    m_Key: tag.Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598401
+    m_Key: tag.Throwable.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598402
+    m_Key: tag.Tin.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598403
+    m_Key: tag.TinPlate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598404
+    m_Key: tag.Sulfur.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598405
+    m_Key: tag.Tool.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598406
+    m_Key: tag.Tree.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598407
+    m_Key: tag.Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598408
+    m_Key: tag.WroughtIron.name
     m_Metadata:
       m_Items: []
   m_Metadata:

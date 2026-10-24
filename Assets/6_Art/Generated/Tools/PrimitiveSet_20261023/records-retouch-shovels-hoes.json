@@ -1,0 +1,284 @@
+{
+  "date": "2026-10-24",
+  "tool": "built-in image_gen",
+  "request": "减少工具噪点与锯齿毛刺；最新用户要求由64x64改为32x32",
+  "normalization": "native 32x32; source generated pixels extracted by nearest neighbor; nondither palette; binary alpha; target visible bounds = prior bounds / 2 with outward rounding; original normalized pivot, GUID and sprite ID unchanged; PPU halved",
+  "initialHoePromptNote": "Hoe_Copper and Hoe_Iron were generated before the user requested 32x32; final extraction follows the newer 32x32 instruction.",
+  "items": [
+    {
+      "id": "Hoe_Copper",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-b7e340f5-2976-49b8-857a-866c47c116a8.png",
+      "prompt": "Use case: precise-object-edit. The input is an existing 64x64 game tool sprite enlarged by nearest-neighbor for visibility. RETOUCH THIS EXACT TOOL, do not redesign it. Remove the noisy disconnected bright/dark pixels from the shaft and straps: form three long connected brown wood bands and a few clearly connected broad tan fastening wraps. Repair sawtooth-like nibs and notches to deliberate clean staircase contours. Preserve the handmade crooked shaft, load-bearing joint lashings, exact tool head side and shape, diagonal lower-left grip to upper-right head, same relative positions, dimensions and transparent padding. Keep fine enough 64x64 logical pixel resolution; do NOT shrink the logical grid to 32. Keep the same pixel geometry while reorganizing color clusters into simpler contiguous planes. Only 10-14 flat opaque colors total. Each material 2-3 broad flat shades, upper-left illumination. Hard square pixels on one uniform 64x64 logical grid, no smaller pixels, blur, antialiasing, dithering, grain, scattered white specks, checkerboard colors, scratches, 3D render, modern hardware, surrounding white outline, text, grid lines or shadow. True transparent background. One existing tool only, square canvas. Subject is a COPPER HOE, with its head hanging down on the RIGHT side of the upper end of the wooden haft. The hoe blade must be unmistakably reddish-orange copper with a contiguous pale warm copper edge highlight and deep russet shadow; separate this red metal from the brown wood. Preserve hoe structure, not an axe.",
+      "beforeHash": "091cc7b4ce27e9920cdd99b35408f1a7fffe9a7ce3780f059c26e2f33f43c8c7",
+      "afterHash": "e6c2974f24b32432e061d1bd80bd7bad41fa33ed930c6ee7b3ea749e32684941",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        3,
+        3,
+        32,
+        31
+      ],
+      "expectedBounds": [
+        3,
+        3,
+        32,
+        31
+      ],
+      "visibleColors": 15,
+      "partialAlpha": 0,
+      "ppuBefore": 59.00602927,
+      "ppuAfter": 29.503014635,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Hoe_Iron",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-2fd1e3e3-b07f-4c74-8272-dcd71cdacba8.png",
+      "prompt": "Use case: precise-object-edit. The input is an existing 64x64 game tool sprite enlarged by nearest-neighbor for visibility. RETOUCH THIS EXACT TOOL, do not redesign it. Remove the noisy disconnected bright/dark pixels from the shaft and straps: form three long connected brown wood bands and a few clearly connected broad tan fastening wraps. Repair sawtooth-like nibs and notches to deliberate clean staircase contours. Preserve the handmade crooked shaft, load-bearing joint lashings, exact tool head side and shape, diagonal lower-left grip to upper-right head, same relative positions, dimensions and transparent padding. Keep fine enough 64x64 logical pixel resolution; do NOT shrink the logical grid to 32. Keep the same pixel geometry while reorganizing color clusters into simpler contiguous planes. Only 10-14 flat opaque colors total. Each material 2-3 broad flat shades, upper-left illumination. Hard square pixels on one uniform 64x64 logical grid, no smaller pixels, blur, antialiasing, dithering, grain, scattered white specks, checkerboard colors, scratches, 3D render, modern hardware, surrounding white outline, text, grid lines or shadow. True transparent background. One existing tool only, square canvas. Subject is an IRON HOE, with its head hanging down on the RIGHT side of the upper end of the wooden haft. The hoe blade must be cool silvery blue-gray iron in three clean planes with one connected pale silver edge highlight, clear metal sheen but no random sparkles. Preserve hoe structure, not an axe.",
+      "beforeHash": "a250d2ee91bc43de8f1a38bf57be6e4c281b77dcfa3f17f4fd9feec1fe98b737",
+      "afterHash": "25c3ae8be40a44b4e270b0db0e51381ab11c738211732aff6674feeae8d4a4ec",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        3,
+        4,
+        32,
+        30
+      ],
+      "expectedBounds": [
+        3,
+        4,
+        32,
+        30
+      ],
+      "visibleColors": 15,
+      "partialAlpha": 0,
+      "ppuBefore": 57.752915955,
+      "ppuAfter": 28.8764579775,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Hoe_Stone",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-821ed6ba-d1f2-4c4a-9430-2dbf9ac32e20.png",
+      "prompt": "Use case: precise-object-edit. Input is an existing tool sprite enlarged by nearest-neighbor. Retouch its exact handmade identity and material, now simplifying it onto a TRUE 32x32 LOGICAL PIXEL GRID. The whole hoe should occupy about 27x27 logical pixels, including handle lower-left to head upper-right. ALL squares must be on this one grid, only 32 pixels across full canvas; the wood shaft is 2-3 logical pixels thick. Deliberately remove noisy bits and sawtooth nibs: the handle has just THREE long uninterrupted flat color bands, not a chain of spots, and fastening has two broad readable crossed tan wraps. Keep hoe head hanging down on RIGHT side of haft, same shape, slight bend, same relative head/grip position and transparent padding as input. Do not redesign into axe, do not add parts. Clean orderly stepped hard pixel contour, coherent larger color clusters, muted colors. Only 10-12 flat opaque colors total, no tiny details, speckle, wood grain, checkerboard shading, separated dark spots, white sparkles, blur, gradients, antialiasing, dither, 3D shine, border, cast shadow, text, gridlines. True transparent background. One hoe only. The blade is MATTE medium neutral-gray STONE with 2-3 large plain chipped facets, subdued pale gray cutting edge. Preserve dark crooked wooden handle and real tan joint lashings. Stone should not shine like metal.",
+      "beforeHash": "33e069a93eb9742c5d846896bbc1d9e050949923fcbabaf2d5d3777dc9f03335",
+      "afterHash": "d36888344f9a28f23880cd70271e04b2fba6e5bafdfb8aacd5aa86c53e0c8732",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        3,
+        3,
+        32,
+        30
+      ],
+      "expectedBounds": [
+        3,
+        3,
+        32,
+        30
+      ],
+      "visibleColors": 14,
+      "partialAlpha": 0,
+      "ppuBefore": 60.516191541,
+      "ppuAfter": 30.2580957705,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Hoe_Wood",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-3c034e5c-e81f-43f7-a639-e1bca50fc4b9.png",
+      "prompt": "Use case: precise-object-edit. Input is an existing tool sprite enlarged by nearest-neighbor. Retouch its exact handmade identity and material, now simplifying it onto a TRUE 32x32 LOGICAL PIXEL GRID. The whole hoe should occupy about 27x27 logical pixels, including handle lower-left to head upper-right. ALL squares must be on this one grid, only 32 pixels across full canvas; the wood shaft is 2-3 logical pixels thick. Deliberately remove noisy bits and sawtooth nibs: the handle has just THREE long uninterrupted flat color bands, not a chain of spots, and fastening has two broad readable crossed tan wraps. Keep hoe head hanging down on RIGHT side of haft, same shape, slight bend, same relative head/grip position and transparent padding as input. Do not redesign into axe, do not add parts. Clean orderly stepped hard pixel contour, coherent larger color clusters, muted colors. Only 10-12 flat opaque colors total, no tiny details, speckle, wood grain, checkerboard shading, separated dark spots, white sparkles, blur, gradients, antialiasing, dither, 3D shine, border, cast shadow, text, gridlines. True transparent background. One hoe only. The hoe is WOOD, including thick brown wooden hoe blade hanging on the right. Use warm desaturated brown for head, lighter tan joint binding, medium brown crooked shaft. Preserve primitive fork/cleft fastening. Wood surface has continuous broad shaded planes and no metallic highlights.",
+      "beforeHash": "3e2260db04aaae88fb7a7633862474298f2c909e441804ae81d1e36cbd851630",
+      "afterHash": "f6a48d754c4169e1a5d5184db1ffc2446dff86689f4c26c46f31d08cc61a92ba",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        4,
+        3,
+        31,
+        30
+      ],
+      "expectedBounds": [
+        4,
+        3,
+        31,
+        30
+      ],
+      "visibleColors": 15,
+      "partialAlpha": 0,
+      "ppuBefore": 57.913571522,
+      "ppuAfter": 28.956785761,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Shovel_Bronze",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-c154ba77-b8f7-405c-8f0e-470cfec0f4b8.png",
+      "prompt": "Use case: precise-object-edit. This is a retouch of the specific primitive shovel in input, NOT a new design. Preserve its head shape, broad pointed blade upper-right, wooden grip lower-left, bent shaft angle, proportions and transparent padding. Simplify all colors and outline onto ONE 32x32 logical pixel grid, approximately 27x28 logical pixels for full tool, shaft 2-3 logical pixels thick. The shaft has only three LONG UNINTERRUPTED warm brown flat shading strips; no wood-grain dots, no jagged sawtooth nibs along contour, no alternating spotted highlight. Keep the head attached using two thick readable tan cross wraps and one simple knot, no tiny string clutter. Blade uses 2-3 broad flat connected planes and one short coherent edge highlight. Retain clean large square pixel clusters and controlled staircase outline. 12-14 opaque flat colors total, upper-left light, low saturation, no blurry or smooth painted texture. True transparent background, no background, cast shadow, text, labels or frame. No scattered sparkles, tiny white pixels, scratches, noise, dither, antialiasing, gradients, regular modern hardware, glossy 3D, or full bright outline. One shovel only. Blade is clearly BRONZE, with muted ochre olive-brown broad main face, dark brown bronze shadow and a restrained pale gold edge highlight. Keep bronze distinct from reddish copper, use no bright yellow brass and no all-over green patina.",
+      "beforeHash": "a0df330ba313d8b27d257bb52b9ded594136454efe6a427116bcc08810974246",
+      "afterHash": "6ca1b0da0cd5d95ac9b255903ab140f1eb23628ac4506bfd68f137a18b1c95f7",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        5,
+        2,
+        31,
+        31
+      ],
+      "expectedBounds": [
+        4,
+        2,
+        31,
+        31
+      ],
+      "visibleColors": 14,
+      "partialAlpha": 0,
+      "ppuBefore": 62.539851687,
+      "ppuAfter": 31.2699258435,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Shovel_Copper",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-da4dec43-23b9-4075-90e2-efcfaf305ddd.png",
+      "prompt": "Use case: precise-object-edit. This is a retouch of the specific primitive shovel in input, NOT a new design. Preserve its head shape, broad pointed blade upper-right, wooden grip lower-left, bent shaft angle, proportions and transparent padding. Simplify all colors and outline onto ONE 32x32 logical pixel grid, approximately 27x28 logical pixels for full tool, shaft 2-3 logical pixels thick. The shaft has only three LONG UNINTERRUPTED warm brown flat shading strips; no wood-grain dots, no jagged sawtooth nibs along contour, no alternating spotted highlight. Keep the head attached using two thick readable tan cross wraps and one simple knot, no tiny string clutter. Blade uses 2-3 broad flat connected planes and one short coherent edge highlight. Retain clean large square pixel clusters and controlled staircase outline. 12-14 opaque flat colors total, upper-left light, low saturation, no blurry or smooth painted texture. True transparent background, no background, cast shadow, text, labels or frame. No scattered sparkles, tiny white pixels, scratches, noise, dither, antialiasing, gradients, regular modern hardware, glossy 3D, or full bright outline. One shovel only. Blade is clearly RED COPPER, with russet shadow, salmon reddish-orange broad main face, and restrained pale warm copper blade highlight. Keep copper distinct from brown wooden shaft; no green rust.",
+      "beforeHash": "415a0ff6d8aba04d4911bf6f420a33317bdaff84c890081805357f4f2699d7ff",
+      "afterHash": "33227bc1576f23dbddfb4680ddd02c92109e403692d97f751ee1993dce9c3c26",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        4,
+        3,
+        32,
+        31
+      ],
+      "expectedBounds": [
+        4,
+        2,
+        32,
+        31
+      ],
+      "visibleColors": 15,
+      "partialAlpha": 0,
+      "ppuBefore": 63.824028632,
+      "ppuAfter": 31.912014316,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Shovel_Iron",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-1bb5e288-a415-44d2-8e82-7d84055bf846.png",
+      "prompt": "Use case: precise-object-edit. Retouch the EXISTING shovel sprite in the input, preserve its silhouette, handmade assembly, slightly crooked shaft, diagonal lower-left grip to upper-right blade, head/grip proportions and transparent margins. Simplify it onto ONE TRUE 32x32 logical pixel grid, the complete object occupies approximately 27x28 logical pixels, shaft about 2-3 logical pixels wide. No added tiny texture pixels. Primary correction: DELETE disconnected tiny highlights, dark dots and jagged sawtooth nibs on the wooden shaft. Replace with THREE long continuous brown shading bands, and only two or three clear thick tan wraps and knot at the actual blade-to-shaft connection. Shovel blade has few large connected shading shapes. Smooth the contour into consistent deliberate pixel staircases while retaining crisp pixel-art edges. About 12-14 purposeful opaque flat colors total; upper-left light, low saturation. No micro-detail, wood grain, rust speckles, checkerboard shading, dithering, blur, antialiasing, gradients, random bright pixels, regular modern socket, 3D polish, all-around white outline, text, grid or cast shadow. True transparent background, one shovel only. Blade is wrought IRON, cool medium silvery blue-gray, broad main plane and a single darker plane with a short connected pale silver cutting-edge highlight. Cleaner and brighter than raw iron, still a hand-forged primitive shovel.",
+      "beforeHash": "be0c182280f003824f29796bf9db324a07bf960c6547da31b1e96a73e870665f",
+      "afterHash": "00b12551e3e19d823500fed69229200836df960a02c1ba1572337ba8232d0558",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        5,
+        2,
+        31,
+        31
+      ],
+      "expectedBounds": [
+        4,
+        2,
+        31,
+        31
+      ],
+      "visibleColors": 15,
+      "partialAlpha": 0,
+      "ppuBefore": 64.099209391,
+      "ppuAfter": 32.0496046955,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Shovel_RawIron",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-08d949b9-cc10-4d9b-95e4-785021e62d0e.png",
+      "prompt": "Use case: precise-object-edit. Retouch the EXISTING shovel sprite in the input, preserve its silhouette, handmade assembly, slightly crooked shaft, diagonal lower-left grip to upper-right blade, head/grip proportions and transparent margins. Simplify it onto ONE TRUE 32x32 logical pixel grid, the complete object occupies approximately 27x28 logical pixels, shaft about 2-3 logical pixels wide. No added tiny texture pixels. Primary correction: DELETE disconnected tiny highlights, dark dots and jagged sawtooth nibs on the wooden shaft. Replace with THREE long continuous brown shading bands, and only two or three clear thick tan wraps and knot at the actual blade-to-shaft connection. Shovel blade has few large connected shading shapes. Smooth the contour into consistent deliberate pixel staircases while retaining crisp pixel-art edges. About 12-14 purposeful opaque flat colors total; upper-left light, low saturation. No micro-detail, wood grain, rust speckles, checkerboard shading, dithering, blur, antialiasing, gradients, random bright pixels, regular modern socket, 3D polish, all-around white outline, text, grid or cast shadow. True transparent background, one shovel only. Blade is crude RAW IRON, darker charcoal blue-gray, two broad simple dull metal facets, short muted silver cutting-edge strip, at most ONE broad dark rust patch. Darker than refined iron but recognizably metal. No mottled rust noise.",
+      "beforeHash": "b6a5671a639fdc016a5976a46f1a5a9dbfe2dfcdd18aedbb5e4f6609c08e6972",
+      "afterHash": "f0f835a0d49789f64e5bff30d055df5d424c009e28d09ca568ccef010f59a481",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        5,
+        2,
+        31,
+        31
+      ],
+      "expectedBounds": [
+        4,
+        2,
+        31,
+        31
+      ],
+      "visibleColors": 15,
+      "partialAlpha": 0,
+      "ppuBefore": 63.42654525,
+      "ppuAfter": 31.713272625,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Shovel_Stone",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-1bef9d60-19a2-4570-82dd-604e0065f340.png",
+      "prompt": "Use case: precise-object-edit. Retouch the exact existing primitive shovel in input, retaining its recognizable handmade shape, long crooked wooden shaft, thick tan lashing at blade-to-handle joint, original blade side and diagonal lower-left grip to upper-right head and overall transparent margins. Primary request: remove its spotted noisy texture and irregular sawtooth little outline protrusions. Make the surfaces continuous purposeful larger flat color shapes and clean deliberate pixel staircases. Put the full sprite on ONE UNIFORM 32x32 LOGICAL PIXEL GRID; approximately 27x28 logical pixels for the complete tool, 2-3 logical pixel wide shaft. Exactly 3 long uninterrupted brown flat shading bands on shaft, two thick crossed tan fastening wraps; keep primitive structure simple. Blade has 2-3 large plain facets, no tiny textural detail, grain, scattered dark spots or little highlights. Muted believable retro pixel art, 10-12 opaque flat colors, upper-left light, hard edges. True transparent alpha background, no cast shadow, text, border or grid. No noise, checkerboard shading, dither, gradients, blur, antialiasing, modern hardware, photorealistic or glossy 3D. One shovel only. Blade is a thick MATTE STONE shovel head, neutral medium gray with just two broad chipped facets and a subdued pale gray edge. Preserve gray stone material, not shiny iron.",
+      "beforeHash": "2b557b4c58d40f73dbb5f4fd595bade475daef939d5398c99560b8ddd1ecab56",
+      "afterHash": "d6bd3e883ac4ce9c683551681933c0da2ce522645d9e180e61531f9bbdf466ea",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        4,
+        2,
+        31,
+        30
+      ],
+      "expectedBounds": [
+        4,
+        2,
+        31,
+        30
+      ],
+      "visibleColors": 14,
+      "partialAlpha": 0,
+      "ppuBefore": 62.509276019,
+      "ppuAfter": 31.2546380095,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    },
+    {
+      "id": "Shovel_Wood",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-65528800-c439-4101-a32d-4c6ca8641905.png",
+      "prompt": "Use case: precise-object-edit. Retouch the exact existing primitive shovel in input, retaining its recognizable handmade shape, long crooked wooden shaft, thick tan lashing at blade-to-handle joint, original blade side and diagonal lower-left grip to upper-right head and overall transparent margins. Primary request: remove its spotted noisy texture and irregular sawtooth little outline protrusions. Make the surfaces continuous purposeful larger flat color shapes and clean deliberate pixel staircases. Put the full sprite on ONE UNIFORM 32x32 LOGICAL PIXEL GRID; approximately 27x28 logical pixels for the complete tool, 2-3 logical pixel wide shaft. Exactly 3 long uninterrupted brown flat shading bands on shaft, two thick crossed tan fastening wraps; keep primitive structure simple. Blade has 2-3 large plain facets, no tiny textural detail, grain, scattered dark spots or little highlights. Muted believable retro pixel art, 10-12 opaque flat colors, upper-left light, hard edges. True transparent alpha background, no cast shadow, text, border or grid. No noise, checkerboard shading, dither, gradients, blur, antialiasing, modern hardware, photorealistic or glossy 3D. One shovel only. Entire tool including blade is WOOD, broad warm brown hand-carved wooden shovel blade, desaturated ochre-brown light plane and dark brown shadow. Joint has clear tan bindings. Preserve broad wooden blade, no metal edge or metallic sheen.",
+      "beforeHash": "055801b465aa6d858f694e8f3ff8f437f9a677e84dfe0c679d22575fe9b2ac65",
+      "afterHash": "a164c7bcc2a9f8da6ec2c6c2e918bcaa70bd8bf14833c75f2a2bd051a3ab3478",
+      "width": 32,
+      "height": 32,
+      "alphaBounds": [
+        4,
+        2,
+        32,
+        31
+      ],
+      "expectedBounds": [
+        4,
+        2,
+        32,
+        31
+      ],
+      "visibleColors": 14,
+      "partialAlpha": 0,
+      "ppuBefore": 64.068633722,
+      "ppuAfter": 32.034316861,
+      "pivotPreserved": true,
+      "normalization": "source alpha bounding box -> prior bounding box scaled by 0.5, nearest neighbor, nondither palette, binary alpha; native 32x32"
+    }
+  ],
+  "delivery": {
+    "savedFiles": "35 native32 PNGs and import metadata; existing item references retained",
+    "editor": "No active Import, Refresh, Play Mode switch or reload performed by the agents. At handoff Unity automatically imported all35 textures; AssetDatabase reports32x32 for every texture.",
+    "acceptance": "No gameplay acceptance performed; user verifies actual holding, actions, thin lines, burning and inventory appearance."
+  }
+}

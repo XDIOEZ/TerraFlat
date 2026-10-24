@@ -9,6 +9,12 @@
       "name": "物品实体与模块运行规则与边界",
       "luaPath": "GameplayTests/Systems/ItemRuntime/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "mineral_property_rules",
+      "name": "矿物硬度与韧性参考目录",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/mineral-properties.lua",
+      "enabled": true
     }
   ]
 }

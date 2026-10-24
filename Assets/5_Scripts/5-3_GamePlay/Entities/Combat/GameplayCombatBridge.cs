@@ -87,11 +87,11 @@ public static class GameplayCombatBridge
         return new CombatIdentity { Backend = CombatBackend.External, Value = unchecked((uint)item.itemData.Guid), Generation = item.RuntimeGeneration };
     }
 
-    /// <summary>统一难度参数供旧接收器与纯数据结算使用。</summary>
-    public static CombatDifficulty Difficulty()
+    /// <summary>冻结当前战斗参数供接收器与纯数据结算共同使用。</summary>
+    public static CombatTuning Tuning()
     {
-        var values = GameDifficultyService.Current.CreatureCombat;
-        return new CombatDifficulty { PlayerAttack = values.PlayerAttackMultiplier,
+        var values = GameRuleConfiguration.Current.CreatureCombat;
+        return new CombatTuning { PlayerAttack = values.PlayerAttackMultiplier,
             CreatureAttack = values.AttackMultiplier, CreatureHealth = values.MaxHealthMultiplier };
     }
 
@@ -119,7 +119,7 @@ public static class GameplayCombatBridge
             DeathCauseId = sender is IDeathCauseSource reason ? NarrativeCauseId(reason.DeathCauseId) : default,
             Faction = FactionRelationService.GetFactionId(item), Damage = Values(sender.DamageValues), Clock = clock,
             Origin = sender is Mod_Damage weapon ? (float2)weapon.DamageOrigin : item != null ? (float2)(Vector2)item.transform.position : float2.zero,
-            SourceIsPlayer = (byte)(GameDifficultyService.IsPlayer(item) ? 1 : 0),
+            SourceIsPlayer = (byte)(ActorIdentity.IsPlayer(item) ? 1 : 0),
             SlowEnabled = (byte)(slow != null && slow.HitSlowdownEnabled ? 1 : 0),
             SlowMultiplier = slow?.HitSlowMultiplier ?? 1f, SlowDuration = slow?.HitSlowDuration ?? 0f,
             BuildingMultiplier = sender is IBuildingDamageSource building ? building.BuildingDamageMultiplier : 1f };

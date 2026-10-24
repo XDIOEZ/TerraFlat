@@ -223,10 +223,10 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
             CurrentValue));
     }
 
-    /// <summary>把基础体力变化换算为难度规则下的实际变化。</summary>
+    /// <summary>按当前角色体力参数换算消耗与恢复，不识别参数来源。</summary>
     private float ResolveStaminaDelta(float value)
     {
-        float multiplier = GameDifficultyService.ResolveStaminaDeltaMultiplier(item, value);
+        float multiplier = ActorRuleModifiers.ResolveStaminaDeltaMultiplier(item, value);
         return value * multiplier;
     }
 

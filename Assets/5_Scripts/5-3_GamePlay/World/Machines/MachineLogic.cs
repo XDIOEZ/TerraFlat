@@ -18,6 +18,8 @@ public abstract class MachineLogic : IDisposable
     public virtual string Status => string.Empty;
     public virtual string ActionLabel => string.Empty;
     public virtual bool CanAct => true;
+    // 逻辑按自身工作状态缩放已配置需求，其他机器默认保持原功率。
+    public virtual float ElectricalDemandFactor => 1f;
     public event Action Changed;
     private bool disposed;
 
@@ -155,6 +157,8 @@ public static class MachineInventory
 
     public static bool IsBeingDragged(Inventory inventory)
     {
+        if (inventory is LinkedCraftingInput linked)
+            return IsBeingDragged(linked.Primary) || linked.Shared != null && IsBeingDragged(linked.Shared);
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
             if (inventory.IsSlotBeingDragged(i)) return true;
         return false;

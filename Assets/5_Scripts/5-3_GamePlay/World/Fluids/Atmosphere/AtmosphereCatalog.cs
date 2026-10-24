@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class AtmosphereDefinitionDto
+public sealed partial class AtmosphereDefinitionDto
 {
     [JsonProperty("id", Required = Required.Always)] public string Id;
     [JsonProperty("initialStandardCubicMeters", Required = Required.Always)] public decimal InitialStandardCubicMeters;
@@ -15,8 +16,9 @@ public sealed class AtmosphereDefinitionDto
     [JsonProperty("composition", Required = Required.Always)] public List<AtmosphereCompositionDto> Composition;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class AtmosphereCompositionDto
+public sealed partial class AtmosphereCompositionDto
 {
     [JsonProperty("fluidId", Required = Required.Always)] public string FluidId;
     [JsonProperty("fraction", Required = Required.Always)] public decimal Fraction;

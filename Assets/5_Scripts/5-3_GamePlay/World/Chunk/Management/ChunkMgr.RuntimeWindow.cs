@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
@@ -1396,11 +1396,20 @@ public partial class ChunkMgr
     /// <summary>先移除区块登记；正常流送回池，整个窗口关闭时直接销毁 View。</summary>
     private void DeactivateRuntimeBinding(RuntimeWorldAddress address, bool recycleView = true)
     {
-        retiringRuntimeBindings.Remove(address);
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+        {
+            retiringRuntimeBindings.Remove(address);
             return;
+        }
         using var scope = binding.RestoredTerrainChunk != null || binding.PresentationRoutine != null ||
                           binding.View?.Model != null ? RequireRuntimeWorldContext() : null;
+        // 建筑与地形共同离开表现窗；快照失败时保留绑定，不能留下无地形的半艘船。
+        if (SaveDataMgr.Instance != null && !SaveDataMgr.Instance.TryUnloadRuntimeBuildingsForChunk(address))
+        {
+            retiringRuntimeBindings.Add(address);
+            return;
+        }
+        retiringRuntimeBindings.Remove(address);
         if (binding.RestoredTerrainChunk != null)
             WeatherMgr.ExistingInstance?.FlushSurfaceWork(binding.RestoredTerrainChunk);
         FinishRuntimeChunkPresentation(binding);

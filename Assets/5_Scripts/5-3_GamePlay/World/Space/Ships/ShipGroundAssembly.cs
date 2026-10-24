@@ -111,6 +111,9 @@ namespace FlatWorld.Spaceflight
             try
             {
                 selected = CollectGroundAssembly(world, console.Id);
+                foreach (ShipGroundBuildingStore.Entry entry in selected)
+                    if (entry.Data.IDName == SpaceElevatorTerminalItemId)
+                        throw new InvalidOperationException("太空电梯终端固定在地面，不能随飞船起飞；请将飞船与电梯地板分开。");
                 GetGroundAtmosphere(world);
                 foreach (ShipGroundBuildingStore.Entry entry in selected)
                 {

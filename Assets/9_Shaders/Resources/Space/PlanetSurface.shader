@@ -10,6 +10,7 @@ Shader "FlatWorld/Space/PlanetSurface"
         _SurfaceExtent("Surface Extent", Float) = 1.12
         _SurfaceLightDirection("Sun Direction", Vector) = (0.65,0.35,0.8,0)
         _SurfaceSeed("Surface Seed", Float) = 0
+        _SurfaceRotation("Surface Rotation", Float) = 0
     }
     SubShader
     {
@@ -30,6 +31,7 @@ Shader "FlatWorld/Space/PlanetSurface"
             float _SurfaceExtent;
             float4 _SurfaceLightDirection;
             float _SurfaceSeed;
+            float _SurfaceRotation;
         CBUFFER_END
 
         struct Attributes
@@ -91,7 +93,8 @@ Shader "FlatWorld/Space/PlanetSurface"
             float glow = _SurfaceStyle > 2.5 ? PlanetCorona(p, radius) : PlanetAtmosphere(radius, normal);
             float alpha = max(coverage, glow) * _Color.a;
             clip(alpha - 0.0001);
-            float3 coords = normal * max(1.0, _SurfaceDetailScale) + _SurfaceSeed;
+            float3 surfaceNormal = PlanetRotate(normal, _SurfaceRotation);
+            float3 coords = surfaceNormal * max(1.0, _SurfaceDetailScale) + _SurfaceSeed;
             float coarse = _SurfaceStyle < 1.5 ? PlanetFractal(coords) : 0.5;
             float fine = PlanetFilteredNoise(coords * 7.3 + 91.0) - 0.5;
             float diffuse = saturate(dot(normal, normalize(_SurfaceLightDirection.xyz)));
@@ -116,7 +119,7 @@ Shader "FlatWorld/Space/PlanetSurface"
                 color = lerp(ocean, terrain, land * _SurfaceDetailStrength);
                 float ice = smoothstep(0.86 + (coarse - 0.5) * 0.08, 0.95, abs(normal.y));
                 color = lerp(color, half3(0.88,0.94,1.0), ice);
-                float3 cloudCoords = PlanetRotate(normal, _Time.y * 0.012) * (_SurfaceDetailScale * 1.7) + _SurfaceSeed + 137.0;
+                float3 cloudCoords = PlanetRotate(surfaceNormal, _Time.y * 0.012) * (_SurfaceDetailScale * 1.7) + _SurfaceSeed + 137.0;
                 float clouds = PlanetFractal(cloudCoords);
                 float cloudAlpha = PlanetCloudOpacity(clouds);
                 color *= 1.0 - cloudAlpha * 0.14;
@@ -127,7 +130,7 @@ Shader "FlatWorld/Space/PlanetSurface"
             }
             else if (_SurfaceStyle < 2.5)
             {
-                float3 flowCoords = PlanetRotate(normal, _Time.y * 0.018) * _SurfaceDetailScale + _SurfaceSeed;
+                float3 flowCoords = PlanetRotate(surfaceNormal, _Time.y * 0.018) * _SurfaceDetailScale + _SurfaceSeed;
                 float flow = PlanetFractal(flowCoords);
                 float bandPhase = normal.y * _SurfaceDetailScale * 3.0 + (flow - 0.5) * 6.0;
                 float bandVisibility = 1.0 - smoothstep(0.8, 3.0, fwidth(bandPhase));

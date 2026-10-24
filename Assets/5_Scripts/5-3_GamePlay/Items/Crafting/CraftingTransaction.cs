@@ -271,11 +271,13 @@ public sealed class CraftingTransaction
         private readonly List<ItemData> originalItems = new List<ItemData>();
         private readonly List<ItemData> workingItems = new List<ItemData>();
         private readonly int originalSlotCount;
+        private readonly uint originalStructureRevision;
 
         public InventoryState(Inventory inventory, bool captureOriginalState)
         {
             Inventory = inventory;
             originalSlotCount = inventory.Data.itemSlots.Count;
+            originalStructureRevision = inventory.Data.ContentStructureRevision;
             foreach (ItemSlot slot in inventory.Data.itemSlots)
             {
                 ItemData snapshot = Clone(slot?.itemData);
@@ -295,7 +297,8 @@ public sealed class CraftingTransaction
 
         public bool IsCurrentShapeValid()
         {
-            return Inventory?.Data?.itemSlots != null && Inventory.Data.itemSlots.Count == originalSlotCount;
+            return Inventory?.Data?.itemSlots != null && Inventory.Data.itemSlots.Count == originalSlotCount &&
+                Inventory.Data.ContentStructureRevision == originalStructureRevision;
         }
 
         public bool TryConsume(int slotIndex, float amount)

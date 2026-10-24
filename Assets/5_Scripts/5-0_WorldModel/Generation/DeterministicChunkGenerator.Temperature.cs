@@ -88,6 +88,24 @@ namespace FlatWorld.WorldModel
             return SamplePolarDistance(request, settings, worldX, worldY) <= halfWidth;
         }
 
+        // 建造资格与地理温度共用赤道带，边界随同一世界种子和经度偏移。
+        public static bool IsInsideEquatorBand(ChunkGenerationRequest request, int worldX, int worldY)
+        {
+            ChunkGenerationSettingsSnapshot settings = request.Profile.Settings;
+            if (!request.Topology.IsWrapped) return false;
+            double halfSpan = request.Topology.Span.Y * .5d;
+            if (!settings.PolarBandEnabled)
+            {
+                double center = request.Topology.Min.Y + halfSpan;
+                double distance = Math.Abs(request.Topology.NormalizeY(worldY) - center);
+                return distance <= halfSpan * settings.EquatorBandWidthRatio;
+            }
+            double halfWidth = Math.Min(halfSpan * (1d - settings.PolarBandHalfWidth),
+                halfSpan * settings.EquatorBandWidthRatio);
+            return SamplePolarDistance(request, settings, request.Topology.NormalizeX(worldX),
+                request.Topology.NormalizeY(worldY)) >= halfSpan - halfWidth;
+        }
+
         #endregion
 
         #region 赤道二次峰值底温

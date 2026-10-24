@@ -103,8 +103,9 @@ public sealed class AI_AnimalSkillController
 }
 
 /// <summary>动物技能目录根节点。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class AnimalSkillCatalog
+public sealed partial class AnimalSkillCatalog
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion;
@@ -116,8 +117,9 @@ public sealed class AnimalSkillCatalog
 /// <summary>
 /// 可由 JSON 配置的动物技能模板。数值不写入技能模块 Prefab，避免不同动物复制出多套逻辑。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class AnimalSkillDefinition
+public sealed partial class AnimalSkillDefinition
 {
     public const string ChargeAttackType = "chargeAttack";
     public const string BiteAttackType = "biteAttack";
@@ -179,7 +181,8 @@ public sealed class AnimalSkillDefinition
 public static class AnimalSkillCatalogLoader
 {
     public const int SupportedSchemaVersion = 1;
-    public const string RelativeConfigPath = "GameConfig/Skills/animal-skills.json";
+    public const string RelativeRoot = "GameConfig/Skills";
+    public const string RelativeConfigPath = RelativeRoot + "/animal-skills.json";
 
     private static readonly JsonSerializerSettings StrictJsonSettings = new JsonSerializerSettings
     {
@@ -187,13 +190,29 @@ public static class AnimalSkillCatalogLoader
         DateParseHandling = DateParseHandling.None
     };
 
+    public static string BuiltInRoot =>
+        StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeRoot);
+
     public static string BuiltInConfigPath =>
         StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeConfigPath);
+
+    #region 内建二进制缓存
+
+    private static BinaryContentCache CreateBinaryCache()
+        => BinaryContentCache.ForBuiltIn<AnimalSkillCatalog>("animal-skills", BuiltInRoot, BuiltInConfigPath, 1);
 
     /// <summary>同步读取目录，供编辑器迁移和静态检查使用。</summary>
     public static AnimalSkillCatalog LoadBuiltIn()
     {
-        return Deserialize(StreamingAssetsTextLoader.ReadAllText(BuiltInConfigPath));
+        BinaryContentCache cache = CreateBinaryCache();
+        if (cache.TryRead(out AnimalSkillCatalog cached))
+        {
+            Validate(cached);
+            return cached;
+        }
+        AnimalSkillCatalog catalog = DeserializeUncached(cache.ReadText(BuiltInConfigPath));
+        cache.Store(catalog);
+        return catalog;
     }
 
     /// <summary>异步读取目录，供 GameRes 启动阶段加载。</summary>
@@ -201,22 +220,41 @@ public static class AnimalSkillCatalogLoader
         Action<AnimalSkillCatalog> completed,
         Action<Exception> failed)
     {
-        string json = null;
-        Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-            BuiltInConfigPath,
-            text => json = text,
-            exception => readError = exception);
-
-        if (readError != null)
+        BinaryContentCache cache = CreateBinaryCache();
+        AnimalSkillCatalog catalog = null;
+        yield return cache.TryReadAsync<AnimalSkillCatalog>(value => catalog = value);
+        if (catalog != null)
         {
-            failed?.Invoke(readError);
-            yield break;
+            Exception validationError = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () => { Validate(catalog); return true; }, _ => { }, error => validationError = error);
+            if (validationError != null) { failed?.Invoke(validationError); yield break; }
+        }
+        else
+        {
+            string json = null;
+            Exception readError = null;
+            yield return cache.ReadTextAsync(
+                BuiltInConfigPath,
+                text => json = text,
+                exception => readError = exception);
+
+            if (readError != null)
+            {
+                failed?.Invoke(readError);
+                yield break;
+            }
+
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () => DeserializeUncached(json), value => catalog = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+            yield return cache.StoreAsync(catalog);
         }
 
         try
         {
-            completed?.Invoke(Deserialize(json));
+            cache.Report("动物技能", catalog.Skills.Count);
+            completed?.Invoke(catalog);
         }
         catch (Exception exception)
         {
@@ -230,12 +268,23 @@ public static class AnimalSkillCatalogLoader
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("动物技能 JSON 为空");
 
-        AnimalSkillCatalog catalog = JsonConvert.DeserializeObject<AnimalSkillCatalog>(
+        AnimalSkillCatalog catalog = JsonConfigurationCache.Deserialize<AnimalSkillCatalog>(
             json,
             StrictJsonSettings);
         Validate(catalog);
         return catalog;
     }
+
+    private static AnimalSkillCatalog DeserializeUncached(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            throw new InvalidDataException("动物技能 JSON 为空");
+        AnimalSkillCatalog catalog = JsonConvert.DeserializeObject<AnimalSkillCatalog>(json, StrictJsonSettings);
+        Validate(catalog);
+        return catalog;
+    }
+
+    #endregion
 
     private static void Validate(AnimalSkillCatalog catalog)
     {

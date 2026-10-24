@@ -1,4 +1,51 @@
 -- 正式植物 Job 同时覆盖栽培和野生植物，耗水不依赖生长状态。
+test.system("agriculture", "soil_commit_unchanged", {}, function(data)
+    assert(data.uninitialized and data.needsMoistureProjection,
+        "初次自然土壤或缺少湿度表现层不能跳过正式保存")
+    assert(data.equal and data.dryEqual and data.dryStillEqual,
+        "已有水肥状态无变化时仍重复提交，包括耗尽后无效扣水/扣肥")
+    assert(data.changedRemainder and data.changedProjection and data.wateringChanges,
+        "耗水进度、肥力表现差异或有效补水没有触发新提交")
+    assert(data.allocation == 0, "土壤幂等性热判断仍产生托管分配")
+end, "植物水肥：真实变化提交、干土空操作跳过、初始化与表现完整性")
+
+for _, row in ipairs({
+    {label = "零水为干土", source = 1, water = 0, moisture = 1, expected = 0},
+    {label = "五级水分", source = 1, water = 5, moisture = 0, expected = 0.5},
+    {label = "十级为湿土", source = 1, water = 10, expected = 1},
+    {label = "农业水量优先", source = 1, water = 2, moisture = 1, expected = 0.2},
+    {label = "农业缺水层按零水", source = 1, moisture = 1, expected = 0},
+    {label = "自然湿润度回退", moisture = 0.7, expected = 0.7},
+    {label = "零来源仍读自然值", source = 0, water = 10, moisture = 0.3, expected = 0.3},
+    {label = "自然湿润度按十级取整", moisture = 0.34, expected = 0.3},
+    {label = "无环境数据用定义默认", defaultWater = 6, expected = 0.6},
+    {label = "负水量截断", source = 1, water = -2, expected = 0},
+    {label = "超量水截断", source = 1, water = 15, expected = 1}
+}) do
+    local expected = row
+    test.system("agriculture", "soil_moisture_visual", row, function(data)
+        assert(math.abs(data.ratio - expected.expected) < 0.00001,
+            expected.label .. "没有给地块Shader传入正确的含水比例")
+        assert(data.enabled == 1 and data.reserved, expected.label .. "的耕地标记或保留通道错误")
+        assert(data.readOnly and data.allocatedBytes == 0, "水分表现查询写回土壤、触发灌溉或产生热分配")
+        assert(data.waterLayer and data.sourceLayer and data.generatedMoistureLayer,
+            "耕地水分更新遗漏了真实水量、土壤来源或生成湿润度")
+        assert(data.fertilityIgnored and data.progressIgnored and data.genericChangeIgnored,
+            "肥力、累计进度或通用地形通知被错误当成仅刷新耕地水分")
+    end, "耕地干湿Shader输入：" .. row.label)
+end
+
+test.system("agriculture", "soil_persistence_keys", {}, function(data)
+    assert(data.worldKeyEquivalent and data.missingDoesNotCreate and data.reused and data.isolated,
+        "农业差量键缓存改变当前世界、地表/洞穴/星区/船身份，或只读查询创建了空记录")
+    assert(data.valuesPreserved and data.currentValues,
+        "农业热查询复用缓存后没有读取实时水肥，或覆盖原有作物和差量对象")
+    assert(data.bounded and data.cleared and data.replaced,
+        "农业键缓存无界增长，或换档清理后返回了旧差量对象")
+    assert(data.iterations == 8192 and data.allocatedBytes == 0,
+        "已预热的逐格农业差量记录仍重复格式化区块名称和存档键")
+end, "农业差量坐标键复用、世界隔离与热提交零分配")
+
 test.system("agriculture", "crop_health_catalog", {}, function(data)
     assert(#data.crops > 0, "未读取到正式作物定义")
     for _, crop in ipairs(data.crops) do

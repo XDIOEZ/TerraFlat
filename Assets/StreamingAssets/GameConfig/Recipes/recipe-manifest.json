@@ -1,6 +1,11 @@
 {
   "schemaVersion": 1,
   "packages": [
+    { "id": "crafting/railway", "path": "crafting/railway.json", "enabled": true },
+    { "id": "crafting/metal_hammers", "path": "crafting/metal_hammers.json", "enabled": true },
+    { "id": "crafting/forging", "path": "crafting/forging.json", "enabled": true },
+    { "id": "crafting/sewing", "path": "crafting/sewing.json", "enabled": true },
+    {"id": "crafting/shields", "path": "crafting/shields.json", "enabled": true},
     { "id": "crafting/engineering", "path": "crafting/engineering.json", "enabled": true },
     { "id": "crafting/tool_reinforcement", "path": "crafting/tool_reinforcement.json", "enabled": true },
     {
@@ -26,6 +31,11 @@
     {
       "id": "crafting/tools",
       "path": "crafting/tools.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/metal_armor",
+      "path": "crafting/metal_armor.json",
       "enabled": true
     },
     {
@@ -126,6 +136,11 @@
     {
       "id": "crafting/handmade_utilities",
       "path": "crafting/handmade_utilities.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/space_elevator",
+      "path": "crafting/space_elevator.json",
       "enabled": true
     }
   ]

@@ -20,6 +20,8 @@ namespace FlatWorld.NaturalEntities
             public float ShadowWidth;
             public Vector3 RenderOffset;
             public float HarvestShakeStartedAt = float.NegativeInfinity;
+            public float HitShakeStartedAt, HitShakeDuration, HitShakeDistance;
+            public Vector2 HitShakeDirection;
         }
 
         private static ContactShadowBatchRenderer contactShadows { get => State.contactShadows; set => State.contactShadows = value; }
@@ -115,6 +117,12 @@ namespace FlatWorld.NaturalEntities
                 {
                     flashPresentationScratch.Add(id);
                     continue;
+                }
+                if (record.HitShakeDuration > 0f)
+                {
+                    MarkPresentationDirty(record);
+                    if (Time.time - record.HitShakeStartedAt < record.HitShakeDuration) continue;
+                    record.HitShakeDuration = 0f;
                 }
                 if (Time.time - record.HarvestShakeStartedAt < .24f)
                 {
@@ -282,7 +290,9 @@ namespace FlatWorld.NaturalEntities
             Vector3 anchor = new(body.Position.x, body.Position.y);
             record.RenderOffset = WorldLocalPresentation.ProjectPosition(anchor) - anchor;
             Vector3 localAnchor = anchor + record.RenderOffset;
-            Matrix4x4 projectedMatrix = Matrix4x4.Translate(record.RenderOffset) * matrix;
+            Vector3 hitOffset = CombatHitFeedback.EvaluateShake(Time.time - record.HitShakeStartedAt,
+                record.HitShakeDuration, record.HitShakeDistance, record.HitShakeDirection);
+            Matrix4x4 projectedMatrix = Matrix4x4.Translate(record.RenderOffset + hitOffset) * matrix;
             int part = 0;
             // 主体和附属果实共用真实树根行，不再创建逐树补绘或切换两套渲染器。
             owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix, tint, localAnchor,
@@ -290,7 +300,9 @@ namespace FlatWorld.NaturalEntities
                 highlighted: record.Highlighted);
 
             Bounds visible = ShadowFootprintResolver.MeasureVisibleWorldBounds(sprite, matrix);
-            owner.IncludeNaturalEntityBounds(visible, record.RenderOffset);
+            Bounds renderBounds = visible;
+            if (record.HitShakeDuration > 0f) renderBounds.Expand(record.HitShakeDistance * 2f);
+            owner.IncludeNaturalEntityBounds(renderBounds, record.RenderOffset);
             var settings = record.Profile.Definition.Visual?.Shadows;
             Vector3 foot = ShadowFootprintResolver.ResolveFoot(matrix, visible, settings?.FootLocalPosition,
                 0f, settings?.FootOverlap);
@@ -311,7 +323,7 @@ namespace FlatWorld.NaturalEntities
                 int count = Mathf.Min(stock.Count, collection.IndicatorLocalPositions.Count);
                 for (int index = 0; index < count; index++)
                 {
-                    Matrix4x4 fruitMatrix = Matrix4x4.Translate(record.RenderOffset) * BodyMatrix(body) * Matrix4x4.TRS(collection.IndicatorLocalPositions[index],
+                    Matrix4x4 fruitMatrix = Matrix4x4.Translate(record.RenderOffset + hitOffset) * BodyMatrix(body) * Matrix4x4.TRS(collection.IndicatorLocalPositions[index],
                         Quaternion.identity, Vector3.one * collection.IndicatorScale);
                     owner.SetNaturalEntityPart(record.Handle.Id, part++, fruitDefinition.Sprite, fruitDefinition.Material,
                         fruitMatrix, Color.white, localAnchor,
@@ -322,7 +334,7 @@ namespace FlatWorld.NaturalEntities
             {
                 CanopyFruitState state = GetCanopy(record);
                 foreach (CanopyFruitRecord fruit in state.Fruits)
-                    DrawCanopyFruit(record, fruit, CrownPosition(record, fruit.Slot),
+                    DrawCanopyFruit(record, fruit, CrownPosition(record, fruit.Slot) + (Vector2)hitOffset,
                         Mathf.Lerp(record.Profile.Canopy.SmallScale, 1f, fruit.Growth01(state.Time)), anchor, ref part);
                 foreach (CanopyFruitRecord fruit in state.Flights)
                     DrawCanopyFruit(record, fruit, Mod_CanopyFruit.FlightPosition(fruit, state.Time), 1f, anchor, ref part);

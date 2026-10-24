@@ -16,7 +16,7 @@ using Stopwatch = System.Diagnostics.Stopwatch;
 /// 应用退出不保存生态差量；已有管理器仍存活时正常注销物品，依赖引用仅在绑定和登记时获取。
 /// 初次绑定同时限制单步数量和耗时，宿主全部处理完后才处理伴生物。
 /// </summary>
-public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkViewRenderer
+public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkViewRenderer
 {
     #region 字段
 
@@ -68,8 +68,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     }
 
     public int SpawnedItemCount => spawnedItems.Count;
-    public int EcsEntityCount => staticEntities.Count;
-    public int EcsOnlyEntityCount => staticEntities.Count;
+    public int EcsEntityCount => staticEntities.Count + PrimarySharedEntityCount;
+    public int EcsOnlyEntityCount => EcsEntityCount;
 
     /// <summary>按稳定 GUID 查询当前区块已经实例化的自然物。</summary>
     public bool TryGetSpawnedItem(int guid, out Item item)
@@ -272,6 +272,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         }
         finally
         {
+            ReleaseSharedEntities();
             unbindItems.Clear();
             unbindItemSet.Clear();
             spawnedItems.Clear();
@@ -309,6 +310,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
         CaptureSpawnedItemStates();
         CaptureStaticEntityStates();
+        CaptureSharedEntities();
     }
 
     /// <summary>普通 Item 仍需复制快照，因为解绑后的对象池实例会继续复用原 ItemData。</summary>
@@ -415,6 +417,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 yield return budget.WaitForNextSlice();
         }
 
+        IEnumerator sharedCapture = CaptureSharedEntitiesCoroutine(capturedChunk, budget);
+        while (sharedCapture.MoveNext()) yield return sharedCapture.Current;
         List<StaticNaturalRuntime> staticRuntimes = new(staticEntities.Values);
         for (int i = 0; i < staticRuntimes.Count; i++)
         {
@@ -443,6 +447,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         if (staticEntities.ContainsKey(placement.Guid)) return true;
         if (terrainOwner == null || chunkManager == null)
             throw new InvalidOperationException("资源实体需要有效的区块表现与世界上下文。");
+        if (placement.IsShared) return BindSharedEntity(placement, definition);
         if (!CanSpawnCompanionForHost(placement)) return true;
 
         RuntimeWorldAddress address = boundChunk.Address;
@@ -477,6 +482,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     /// <summary>资源刷新只重编配置和重提实例；生命周期与玩法状态仍属于原 Entity。</summary>
     private void RefreshStaticVisuals()
     {
+        RefreshSharedEntities();
         foreach (StaticNaturalRuntime runtime in staticEntities.Values)
         {
             if (GameRes.ExistingInstance == null ||
@@ -786,6 +792,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         for (int i = 0; i < 4 && placements.Count > 0; i++)
         {
             NaturalItemPlacement placement = placements[renewalCursor++ % placements.Count];
+            if (placement.IsShared) continue;
             if (!spawnedItems.ContainsKey(placement.Guid) &&
                 !staticEntities.ContainsKey(placement.Guid) &&
                 chunkManager.IsNaturalRenewalDue(boundChunk.Address, placement.Guid))

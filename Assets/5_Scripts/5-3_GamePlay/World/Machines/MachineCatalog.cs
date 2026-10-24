@@ -10,6 +10,9 @@ public static class MachineCatalog
     #region 目录与扩展
     private static Dictionary<string, MachineDefinition> definitions = new(StringComparer.Ordinal);
     private static Dictionary<string, MachineProcessDefinition> processes = new(StringComparer.Ordinal);
+    // 旧存档/热重载仍保留字符串键字典；热配方查询改用值类型组合键，避免每步拼接站点和材料名。
+    private static readonly Dictionary<(string Station, string Input), MachineProcessDefinition> processIndex = new();
+    private static Dictionary<string, MachineProcessDefinition> indexedProcessOwner;
     /// <summary>仅供当前世界恢复旧节点用的临时身份集合。</summary>
     private static HashSet<string> retiredDefinitionIds = new(StringComparer.Ordinal);
     /// <summary>仅供当前世界继续处理旧机械配方的临时键集合。</summary>
@@ -22,7 +25,7 @@ public static class MachineCatalog
     internal static void ConfigureResourceReload(ResourceReloadContext context)
     {
         context.AddDictionary(() => definitions, value => definitions = value);
-        context.AddDictionary(() => processes, value => processes = value);
+        context.AddDictionary(() => processes, value => { processes = value; InvalidateProcessIndex(); });
         context.AddSet(() => retiredDefinitionIds, value => retiredDefinitionIds = value);
         context.AddSet(() => retiredProcessKeys, value => retiredProcessKeys = value);
         context.Add(() => loaded, value => loaded = value, false);
@@ -57,6 +60,8 @@ public static class MachineCatalog
     internal static string[] RetainMissingEntries(ReloadSnapshot previous)
     {
         if (previous == null) throw new ArgumentNullException(nameof(previous));
+        // 先作废再写入：即使后续保留旧配方过程中抛异常，也不能留下旧查询索引。
+        InvalidateProcessIndex();
         var retained = new List<string>();
         foreach (KeyValuePair<string, MachineDefinition> pair in previous.Definitions)
         {
@@ -78,6 +83,7 @@ public static class MachineCatalog
     /// <summary>世界退出并保存完毕后移除仅供该世界使用的旧机械身份。</summary>
     internal static void ReleaseRetiredEntries()
     {
+        InvalidateProcessIndex();
         foreach (string id in retiredDefinitionIds) definitions.Remove(id);
         foreach (string key in retiredProcessKeys) processes.Remove(key);
         retiredDefinitionIds.Clear();
@@ -90,6 +96,7 @@ public static class MachineCatalog
         loaded = false;
         definitions.Clear();
         processes.Clear();
+        InvalidateProcessIndex();
         retiredDefinitionIds.Clear();
         retiredProcessKeys.Clear();
         Settings = new();
@@ -109,7 +116,7 @@ public static class MachineCatalog
         if (loaded) return;
         TextAsset asset = Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog");
         if (asset == null) throw new InvalidOperationException("缺少机械扭矩配置目录。");
-        MachineCatalogDocument document = JsonConvert.DeserializeObject<MachineCatalogDocument>(asset.text);
+        MachineCatalogDocument document = JsonConfigurationCache.Deserialize<MachineCatalogDocument>(asset.text);
         if (document == null || document.Version != 1) throw new InvalidOperationException("机械目录版本无效。");
         if (document.Settings == null || document.Nodes == null || document.Processes == null)
             throw new InvalidOperationException("机械目录缺少参数或内容列表。");
@@ -136,7 +143,30 @@ public static class MachineCatalog
     public static bool TryGetProcess(string station, string input, out MachineProcessDefinition result)
     {
         EnsureLoaded();
-        return processes.TryGetValue(station + "\u001f" + input, out result);
+        // 极端旧数据若含原分隔符，仍使用旧键表达式，避免两个复合身份发生歧义。
+        if (station?.IndexOf('\u001f') >= 0 || input?.IndexOf('\u001f') >= 0)
+            return processes.TryGetValue(station + "\u001f" + input, out result);
+        if (!ReferenceEquals(indexedProcessOwner, processes)) RebuildProcessIndex();
+        return processIndex.TryGetValue((station ?? string.Empty, input ?? string.Empty), out result);
+    }
+
+    private static void InvalidateProcessIndex()
+    {
+        indexedProcessOwner = null;
+        processIndex.Clear();
+    }
+
+    private static void RebuildProcessIndex()
+    {
+        processIndex.Clear();
+        // 按历史复合键索引，而非读取可能已被 MOD 改写的配方字段。
+        foreach (KeyValuePair<string, MachineProcessDefinition> pair in processes)
+        {
+            int separator = pair.Key.IndexOf('\u001f');
+            if (separator < 0) continue;
+            processIndex[(pair.Key.Substring(0, separator), pair.Key.Substring(separator + 1))] = pair.Value;
+        }
+        indexedProcessOwner = processes;
     }
 
     private static void RegisterDefinitionCore(MachineDefinition definition)
@@ -151,13 +181,15 @@ public static class MachineCatalog
     {
         process.Validate();
         processes[process.Station + "\u001f" + process.Input] = process;
+        InvalidateProcessIndex();
     }
     #endregion
 }
 
 /// <summary>机械首版加载参数：默认 0.1 秒模拟步长、1/2 区块激活滞回、5 秒远离冷却。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class MechanicalSettings
+public sealed partial class MechanicalSettings
 {
     #region 参数
     public float TickSeconds = 0.1f;
@@ -192,13 +224,16 @@ public sealed class MechanicalSettings
 }
 
 /// <summary>机械节点声明端口流向、扭矩和负载扭矩。普通传动件可反向传动；变速箱按实际输入侧选择转速与扭矩倍率。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class MachineDefinition
+public sealed partial class MachineDefinition
 {
     #region 参数
     public string Id;
     public string[] FormerIds; // 合并后的旧身份只用于查找，实际节点使用当前定义。
     public string LogicId = ""; // 可注册的粗粒度玩法；留空表示原机械网络设备。
+    public bool ProvidesWorkbenchInput; // 单格储物设施可把真实库存借给相邻工作台。
+    [MemoryPack.MemoryPackIgnore]
     [JsonIgnore] public MachineContent Content;
     public string Kind = "shaft"; // shaft/gear/gearbox/clutch/bridge/source/consumer/bellows
     public string Ports = "axis"; // axis 为朝向两端，all 为四向
@@ -215,6 +250,7 @@ public sealed class MachineDefinition
     public float Rpm = 20f;
     public float RequiredRpm = 20f; // 用力器达到 100% 工作效率所需的转速。
     public float TorqueLoad;
+    public float TorqueLoadStep = 10f; // 小负载可声明更细的扭矩档位，不必被抬到普通机器的十点档。
     public float AirflowHeatingRateBonusPercent; // 额定风量给炉内材料增加的加热效率百分点。
     public float ManualWorkSecondsPerPress; // 面板一次手动推动贡献的加工时间；0 表示不开放手动推进。
     public float ManualDriveTorque; // 手推时向机械网络输出的扭矩；0 表示不能手推供能。
@@ -237,13 +273,25 @@ public sealed class MachineDefinition
     public MachineLightDefinition Lighting; // 通用照明参数与具体灯泡外观分离。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
     public BatteryChargeIndicatorDefinition BatteryIndicator; // 指示灯布局独立于电池充放电规则。
+    [MemoryPack.MemoryPackIgnore]
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
+    [MemoryPack.MemoryPackIgnore]
+    [JsonIgnore] public bool BlocksTraversal => BuildingTraversalRules.BlocksMovement(Layer, BlocksMovement);
+    [MemoryPack.MemoryPackIgnore]
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
+    [MemoryPack.MemoryPackIgnore]
     public bool HasElectricalPorts => Electrical?.HasConnection == true;
+    [MemoryPack.MemoryPackIgnore]
     public bool IsConverter => Electrical?.IsConverter == true;
-    public bool IsConnectionLine => Electrical?.IsWire == true || Fluid?.Kind == "pipe"; // 自动接邻格的线路与设备主体分层显示。
-    public int VisualLayer => Fluid?.Kind == "pipe" ? -2 : Electrical?.IsWire == true ? -1 : Layer; // 显示和同格交互共用底层到高层的顺序。
-    public bool Rotatable => !IsConnectionLine && (Fluid != null || Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0));
+    [MemoryPack.MemoryPackIgnore]
+    public bool IsFluidPipeSegment => Fluid?.Kind == "pipe" || Fluid?.PipeSegment == true;
+    [MemoryPack.MemoryPackIgnore]
+    public bool IsConnectionLine => Electrical?.IsWire == true || IsFluidPipeSegment; // 自动接邻格的线路与设备主体分层显示。
+    [MemoryPack.MemoryPackIgnore]
+    public int VisualLayer => IsFluidPipeSegment ? -2 : Electrical?.IsWire == true ? -1 : Layer; // 显示和同格交互共用底层到高层的顺序。
+    [MemoryPack.MemoryPackIgnore]
+    public bool Rotatable => (!IsConnectionLine || Fluid?.PipeSegment == true) && Fluid?.Kind != "pipe" &&
+        (Fluid != null || Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0));
     /// <summary>放置输入按定义轮换朝向，具体设备通过配置声明自己的旋转档数。</summary>
     public int NextPlacementQuarterTurns(int current)
     {
@@ -285,7 +333,7 @@ public sealed class MachineDefinition
     {
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all" && Ports != "none") ||
             (PortMode != "auto" && PortMode != "input" && PortMode != "output" && PortMode != "relay") ||
-            !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
+            !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) || !Positive(TorqueLoadStep) ||
             !NonNegative(AirflowHeatingRateBonusPercent) ||
             (SourceRotationDirection != 1 && SourceRotationDirection != -1) ||
             (Source == "water" && !Positive(SourceRadius)) ||
@@ -340,8 +388,9 @@ public sealed class MachineDefinition
 }
 
 /// <summary>额定转速下的输送速度与有效带宽，方向由放置朝向和有符号 RPM 决定。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class MachineTransportDefinition
+public sealed partial class MachineTransportDefinition
 {
     #region 地面输送配置
     public float Speed = .8f;
@@ -361,8 +410,9 @@ public sealed class MachineTransportDefinition
 }
 
 /// <summary>机械建筑统一连接杆端口表现；双端口左右镜像，单端口由 StartX 正负决定左右。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class MechanicalAxisPortVisualDefinition
+public sealed partial class MechanicalAxisPortVisualDefinition
 {
     #region 标准连接杆端口
     public int Count;
@@ -390,8 +440,9 @@ public sealed class MechanicalAxisPortVisualDefinition
 }
 
 /// <summary>电气节点的通用配置；首版按整网功率解算，同时保留电压、电流和电阻接口。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ElectricalDefinition
+public sealed partial class ElectricalDefinition
 {
     #region 电气参数
     public string Role = "wire"; // wire/generator/consumer/battery
@@ -411,12 +462,18 @@ public sealed class ElectricalDefinition
     public string PowerProvider = ""; // generator 可选动态供电比例，例如 mechanical。
     public string DemandProvider = ""; // consumer 可选动态需求比例，例如 motor。
 
+    [MemoryPack.MemoryPackIgnore]
     public bool HasConnection => Connection == "cell" || Connection == "right" || Connection == "up" ||
         Connection == "left" || Connection == "down";
+    [MemoryPack.MemoryPackIgnore]
     public bool IsWire => Role == "wire";
+    [MemoryPack.MemoryPackIgnore]
     public bool IsGenerator => Role == "generator";
+    [MemoryPack.MemoryPackIgnore]
     public bool IsConsumer => Role == "consumer";
+    [MemoryPack.MemoryPackIgnore]
     public bool IsBattery => Role == "battery";
+    [MemoryPack.MemoryPackIgnore]
     public bool IsConverter => Role == "converter";
     public Vector2Int GetConnectionOffset(int rotation)
     {
@@ -461,8 +518,9 @@ public sealed class ElectricalDefinition
 }
 
 /// <summary>独立加工关系；每个工作站与输入身份只对应一条规则，默认一进一出，可注册多产物。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class MachineProcessDefinition
+public sealed partial class MachineProcessDefinition
 {
     #region 配方
     public string Station;
@@ -471,6 +529,7 @@ public sealed class MachineProcessDefinition
     public List<RuntimeRecipeResult> Outputs = new();
     public float WorkSeconds = 4f; // 设备达到 RequiredRpm 时的满效率工作时间。
     [JsonIgnore] private RuntimeRecipe recipe;
+    [MemoryPack.MemoryPackIgnore]
     public RuntimeRecipe Recipe => recipe ??= new RuntimeRecipe
     {
         Id = "mechanical." + Station + "." + Input,
@@ -493,7 +552,8 @@ public sealed class MachineProcessDefinition
 }
 
 /// <summary>本体机械目录的明确版本边界。</summary>
-public sealed class MachineCatalogDocument
+[MemoryPack.MemoryPackable]
+public sealed partial class MachineCatalogDocument
 {
     public int Version = 1;
     public MechanicalSettings Settings = new();

@@ -862,6 +862,43 @@ namespace PuertsUnityMcp.Tests
             Assert.AreEqual("runtime-from-project", runtimeConfig.name);
         }
 
+        #region AbstractConstructorRegistration
+        [Test]
+        public void ScriptHostRegistersAbstractBasesWithoutConstructorWarnings()
+        {
+            // 覆盖抽象父类注册、具体子类构造及抽象类实例化拒绝。
+            string constructorWarning = null;
+            Application.LogCallback onLog = (message, stack, type) =>
+            {
+                if (type == LogType.Warning && message.StartsWith("wrap ctor for " + typeof(AbstractConstructorBaseForTest)))
+                {
+                    constructorWarning = message;
+                }
+            };
+            Application.logMessageReceived += onLog;
+            try
+            {
+                using (var host = new PuertsScriptHost("abstract-constructor-test"))
+                {
+                    Assert.AreEqual(7, host.EvalRaw<int>("new CS.PuertsUnityMcp.Tests.ConcreteConstructorForTest(7).Value"));
+                    Assert.AreEqual(17, host.EvalRaw<int>("CS.PuertsUnityMcp.Tests.AbstractConstructorBaseForTest.Kind"));
+                    var error = host.EvalRaw<string>(@"
+                        (function() {
+                            try { new CS.PuertsUnityMcp.Tests.AbstractConstructorBaseForTest(7); return ''; }
+                            catch (error) { return String(error); }
+                        })()
+                    ");
+                    StringAssert.Contains("no constructor for " + typeof(AbstractConstructorBaseForTest), error);
+                }
+                Assert.IsNull(constructorWarning, constructorWarning);
+            }
+            finally
+            {
+                Application.logMessageReceived -= onLog;
+            }
+        }
+        #endregion
+
         [Test]
         public void ReflectionGatewayDoesNotWriteAotMissLogByDefault()
         {
@@ -1219,4 +1256,24 @@ namespace PuertsUnityMcp.Tests
             }
         }
     }
+
+    #region AbstractConstructorFixtures
+    public abstract class AbstractConstructorBaseForTest
+    {
+        public AbstractConstructorBaseForTest(int value)
+        {
+            Value = value;
+        }
+
+        public int Value { get; }
+        public static int Kind => 17;
+    }
+
+    public sealed class ConcreteConstructorForTest : AbstractConstructorBaseForTest
+    {
+        public ConcreteConstructorForTest(int value) : base(value)
+        {
+        }
+    }
+    #endregion
 }

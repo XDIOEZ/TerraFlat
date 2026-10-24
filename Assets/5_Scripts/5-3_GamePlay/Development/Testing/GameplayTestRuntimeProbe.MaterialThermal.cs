@@ -14,12 +14,15 @@ public static partial class GameplayTestRuntimeProbe
     {
         Register("processing", "material_transition", CaptureMaterialTransition);
         Register("processing", "material_transition_atomic", CaptureMaterialTransitionAtomic);
+        Register("processing", "meat_heat_and_dry", CaptureMeatHeatAndDry);
         Register("processing", "material_reaction", CaptureMaterialReaction);
         Register("processing", "material_alloy_atomic", CaptureMaterialAlloyAtomic);
         Register("processing", "material_heating_coefficient", CaptureMaterialHeatingCoefficient);
+        Register("processing", "material_heating_window", CaptureMaterialHeatingWindow);
         Register("processing", "furnace_heat_only", (_, _) => MachineWorld.CaptureGameplayFurnaceHeatOnly());
         Register("processing", "induction_power", (_, args) => MachineWorld.CaptureGameplayInductionPower(args));
-        Register("processing", "induction_grid", (_, _) => MachineWorld.CaptureGameplayInductionGrid());
+        Register("processing", "induction_grid", (_, args) => MachineWorld.CaptureGameplayInductionGrid(args));
+        Register("processing", "induction_target", (_, _) => MachineWorld.CaptureGameplayInductionTarget());
         Register("processing", "furnace_input_capacity", (_, args) => MachineWorld.CaptureGameplayFurnaceInputCapacity(args));
     }
 
@@ -58,6 +61,39 @@ public static partial class GameplayTestRuntimeProbe
         return new JObject { ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output) };
     }
 
+    // 同一正式供热入口分别接受长步和小步，并在满槽后从真实快照恢复材料重试。
+    private static JObject CaptureMaterialHeatingWindow(Player _, JObject args)
+    {
+        var materials = args["materials"] as JArray ?? new JArray(new JObject
+            { ["id"] = "Ore_Tungsten", ["amount"] = 2, ["temperature"] = 20 });
+        Inventory input = CreateDragInventory("lua.thermal.window.input", materials.Select(value =>
+            ThermalMaterial(value.Value<string>("id"), value.Value<float>("amount"),
+                value.Value<float?>("temperature") ?? 20f)).ToArray());
+        bool full = GameplayTestSystemProbe.Flag(args, "full", false);
+        Inventory output = CreateDragInventory("lua.thermal.window.output", full
+            ? new[] { ThermalMaterial("StoneSlab", 1f, 20f) } : new ItemData[4]);
+        float seconds = (float)GameplayTestSystemProbe.Number(args, "seconds", 400d);
+        int segments = Math.Max(1, (int)GameplayTestSystemProbe.Number(args, "segments", 1d));
+        for (int index = 0; index < segments; index++)
+            FurnaceMaterialHeating.Process(input, output, 3500f, seconds / segments, 1.5f);
+        var result = new JObject { ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output) };
+        if (!full) return result;
+        foreach (ItemSlot slot in input.Data.itemSlots)
+        {
+            if (slot.itemData == null) continue;
+            ItemInstanceSnapshot snapshot = MemoryPack.MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(
+                ItemSnapshotSerialization.SerializePayload(ItemInstanceSnapshot.Capture(slot.itemData)));
+            ItemData restored = GameRes.ExistingInstance.CreateItemData(snapshot.DefinitionId);
+            snapshot.RestoreTo(restored);
+            slot.itemData = restored;
+        }
+        foreach (ItemSlot slot in output.Data.itemSlots) slot.itemData = null;
+        FurnaceMaterialHeating.Process(input, output, 3500f, .1f, 1.5f);
+        result["resumedInput"] = ThermalSlots(input);
+        result["resumedOutput"] = ThermalSlots(output);
+        return result;
+    }
+
     private static JObject CaptureMaterialTransitionAtomic(Player _, JObject args)
     {
         ItemData source = ThermalMaterial("Log", 4f, 500f);
@@ -76,15 +112,85 @@ public static partial class GameplayTestRuntimeProbe
         return result;
     }
 
+    // 验证地面散物的热转化与晾架的蒸发走同一份生肉物质定义。
+    private static JObject CaptureMeatHeatAndDry(Player player, JObject args)
+    {
+        ItemData heated = CreateDragItem("Meat", 2f);
+        ItemMatterRuntime.EnsureInitialized(heated, 20f);
+        string heatedOutput = "";
+        float heatedAmount = 0f;
+        int heatedSeconds = 0;
+        for (int second = 1; second <= 180; second++)
+        {
+            WorldItemMatterRules.Advance(heated, 800f, 1f, null, out _);
+            if (!ItemMatterRuntime.TryCreateSolidTransitionOutputs(heated, out var products)) continue;
+            heatedOutput = products[0].IDName;
+            heatedAmount = products[0].Stack.Amount;
+            heatedSeconds = second;
+            break;
+        }
+
+        ItemData drying = CreateDragItem("Meat", 2f);
+        ItemMatterRuntime.EnsureInitialized(drying, 20f);
+        string driedOutput = "";
+        float driedAmount = 0f;
+        int driedSeconds = 0;
+        for (int second = 1; second <= 240; second++)
+        {
+            ItemMatterRuntime.Advance(drying, 20f, 4f, 1f);
+            if (!ItemMatterRuntime.TryCreateSolidTransitionOutputs(drying, out var products)) continue;
+            driedOutput = products[0].IDName;
+            driedAmount = products[0].Stack.Amount;
+            driedSeconds = second;
+            break;
+        }
+
+        ItemData boundary = CreateDragItem("Meat", 1f);
+        ItemMatterRuntime.EnsureInitialized(boundary, 20f);
+        boundary.MatterState.Moisture = .2f;
+        boundary.MatterState.TemperatureCelsius = 199.99f;
+        string lowTemperature = ItemMatterRuntime.GetMatchedTransition(boundary, false)?.OutputItemId ?? "";
+        boundary.MatterState.TemperatureCelsius = 200f;
+        string cookingBoundary = ItemMatterRuntime.GetMatchedTransition(boundary, false)?.OutputItemId ?? "";
+        boundary.MatterState.TemperatureCelsius = 500f;
+        string veryHot = ItemMatterRuntime.GetMatchedTransition(boundary, false)?.OutputItemId ?? "";
+        boundary.MatterState.TemperatureCelsius = 20f;
+        boundary.MatterState.Moisture = .8f;
+        bool freshUnchanged = ItemMatterRuntime.GetMatchedTransition(boundary, false) == null;
+
+        Inventory furnaceInput = CreateDragInventory("lua.meat.furnace.input",
+            ThermalMaterial("Meat", 1f, 200f));
+        Inventory furnaceOutput = CreateDragInventory("lua.meat.furnace.output", new ItemData[1]);
+        MaterialThermalProcessor.Process(furnaceInput, furnaceOutput);
+        return new JObject
+        {
+            ["heatedOutput"] = heatedOutput, ["heatedAmount"] = heatedAmount,
+            ["heatedSeconds"] = heatedSeconds, ["heatedTemperature"] = heated.MatterState.TemperatureCelsius,
+            ["driedOutput"] = driedOutput, ["driedAmount"] = driedAmount,
+            ["driedSeconds"] = driedSeconds, ["driedTemperature"] = drying.MatterState.TemperatureCelsius,
+            ["lowTemperature"] = lowTemperature, ["cookingBoundary"] = cookingBoundary,
+            ["veryHot"] = veryHot, ["freshUnchanged"] = freshUnchanged,
+            ["furnaceInput"] = ThermalSlots(furnaceInput), ["furnaceOutput"] = ThermalSlots(furnaceOutput)
+        };
+    }
+
     private static JObject CaptureMaterialReaction(Player _, JObject args)
     {
         float temperature = (float)GameplayTestSystemProbe.Number(args, "temperature", 1000d);
         float amount = (float)GameplayTestSystemProbe.Number(args, "amount", 2d);
         bool mixed = GameplayTestSystemProbe.Flag(args, "mixed", false);
-        Inventory input = mixed
-            ? CreateDragInventory("lua.thermal.reaction.source", ThermalMaterial("Ore_Copper", 2f, 999.99f),
-                ThermalMaterial("Ore_Copper", 2f, temperature))
-            : CreateDragInventory("lua.thermal.reaction.source", ThermalMaterial("Ore_Copper", amount, temperature));
+        Inventory input;
+        // Lua 提供各堆材料初态，反应选择和扣料仍由正式热加工入口处理。
+        if (args["materials"] is JArray materials)
+            input = CreateDragInventory("lua.thermal.reaction.source", materials.OfType<JObject>().Select(material =>
+                ThermalMaterial(GameplayTestSystemProbe.Text(material, "id", "Ore_Copper"),
+                    (float)GameplayTestSystemProbe.Number(material, "amount", amount),
+                    (float)GameplayTestSystemProbe.Number(material, "temperature", temperature))).ToArray());
+        else
+            input = mixed
+                ? CreateDragInventory("lua.thermal.reaction.source", ThermalMaterial("Ore_Copper", 2f, 999.99f),
+                    ThermalMaterial("Ore_Copper", 2f, temperature))
+                : CreateDragInventory("lua.thermal.reaction.source", ThermalMaterial("Ore_Copper", amount, temperature));
         Inventory output = CreateDragInventory("lua.thermal.reaction.output", new ItemData[2]);
         MaterialThermalProcessor.Process(input, output);
         return new JObject { ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output) };
@@ -256,6 +362,10 @@ public static partial class MachineWorld
         var stove = node.Logic as InductionStoveLogic
             ?? throw new InvalidOperationException("电磁炉领域未建立。");
         float offered = (float)GameplayTestSystemProbe.Number(args, "watts", 1200d);
+        float target = (float)GameplayTestSystemProbe.Number(args, "target", 2000d);
+        if (!stove.Execute(InductionStoveLogic.SetTargetTemperatureOperation,
+                target.ToString(System.Globalization.CultureInfo.InvariantCulture), null))
+            throw new InvalidOperationException("电磁炉测试目标温度被正式命令拒绝。");
         JObject panel = CaptureThermalPanelBindings(node, stove.Input, stove.Output);
         ItemData wood = GameRes.ExistingInstance.CreateItemData("Log");
         wood.Stack.Amount = 3f;
@@ -275,10 +385,11 @@ public static partial class MachineWorld
             ["heatingRatePercent"] = stove.HeatingRatePercent,
             ["voltage"] = node.Definition.Electrical.NominalVoltage, ["ratedWatts"] = node.Definition.Electrical.PowerWatts,
             ["maximum"] = node.Definition.Induction.MaxTemperature,
+            ["target"] = stove.TargetTemperature, ["requestedWatts"] = stove.RequestedWatts,
             ["temperatureUpSpeed"] = node.Definition.Induction.TemperatureUpSpeed, ["panel"] = panel
         };
         stove.Input.Data.SetOne_ItemData(2, null);
-        node.ElectricalSuppliedWatts = 1200f;
+        node.ElectricalSuppliedWatts = stove.RequestedWatts;
         stove.Tick(1000f);
         result["longStepMaximum"] = stove.Temperature;
         node.ElectricalSuppliedWatts = 0f;
@@ -288,32 +399,101 @@ public static partial class MachineWorld
     }
 
     // 正式电池和电线经过生产电网求解器向电磁炉供电，不直接写入供电结果。
-    internal static JObject CaptureGameplayInductionGrid()
+    internal static JObject CaptureGameplayInductionGrid(JObject args)
     {
         using var fixture = new GameplayFluidScope();
         MachineEntity stoveNode = fixture.Add("InductionStove", 0);
         var stove = (InductionStoveLogic)stoveNode.Logic;
+        float target = (float)GameplayTestSystemProbe.Number(args, "target", 2000d);
+        stove.Execute(InductionStoveLogic.SetTargetTemperatureOperation,
+            target.ToString(System.Globalization.CultureInfo.InvariantCulture), null);
         MachineEntity left = fixture.Add("Battery_Basic", -1);
         MachineEntity right = fixture.Add("Battery_Basic", 1);
+        MachineEntity extraLeft = fixture.Add("Battery_Basic", -2);
+        MachineEntity extraRight = fixture.Add("Battery_Basic", 2);
+        fixture.Add("Wire_Copper", -2);
         fixture.Add("Wire_Copper", -1);
         fixture.Add("Wire_Copper", 0);
         fixture.Add("Wire_Copper", 1);
-        left.ElectricalStoredJoules = right.ElectricalStoredJoules = 60000f;
+        fixture.Add("Wire_Copper", 2);
+        left.ElectricalStoredJoules = right.ElectricalStoredJoules =
+            extraLeft.ElectricalStoredJoules = extraRight.ElectricalStoredJoules = 60000f;
         fixture.Rebuild();
-        float beforeEnergy = left.ElectricalStoredJoules + right.ElectricalStoredJoules;
+        float Energy() => left.ElectricalStoredJoules + right.ElectricalStoredJoules +
+            extraLeft.ElectricalStoredJoules + extraRight.ElectricalStoredJoules;
+        float beforeEnergy = Energy();
         SolveElectricalNetworks(1f);
         float supplied = stoveNode.ElectricalSuppliedWatts;
-        float consumed = beforeEnergy - left.ElectricalStoredJoules - right.ElectricalStoredJoules;
+        float consumed = beforeEnergy - Energy();
         stove.Tick(1f);
         float poweredTemperature = stove.Temperature;
-        left.ElectricalStoredJoules = right.ElectricalStoredJoules = 0f;
+        left.ElectricalStoredJoules = right.ElectricalStoredJoules =
+            extraLeft.ElectricalStoredJoules = extraRight.ElectricalStoredJoules = 0f;
         SolveElectricalNetworks(1f);
         stove.Tick(1f);
         return new JObject { ["sameNetwork"] = ReferenceEquals(left.ElectricalNetwork, stoveNode.ElectricalNetwork)
-                && ReferenceEquals(right.ElectricalNetwork, stoveNode.ElectricalNetwork),
+                && ReferenceEquals(right.ElectricalNetwork, stoveNode.ElectricalNetwork)
+                && ReferenceEquals(extraLeft.ElectricalNetwork, stoveNode.ElectricalNetwork)
+                && ReferenceEquals(extraRight.ElectricalNetwork, stoveNode.ElectricalNetwork),
+            ["target"] = stove.TargetTemperature, ["requestedWatts"] = stove.RequestedWatts,
             ["poweredWatts"] = supplied, ["batteryConsumedJoules"] = consumed,
             ["poweredTemperature"] = poweredTemperature, ["emptyWatts"] = stoveNode.ElectricalSuppliedWatts,
             ["coastingTemperature"] = stove.Temperature };
+    }
+
+    internal static JObject CaptureGameplayInductionTarget()
+    {
+        using var fixture = new GameplayFluidScope();
+        MachineEntity node = fixture.Add("InductionStove");
+        var stove = (InductionStoveLogic)node.Logic;
+        float defaultTarget = stove.TargetTemperature;
+        bool Set(string value) => stove.Execute(InductionStoveLogic.SetTargetTemperatureOperation, value, null);
+        bool minimumAccepted = Set("20"), maximumAccepted = Set("3500");
+        var invalid = new JArray();
+        foreach (string value in new[] { "19.9", "3500.1", "NaN", "Infinity", "-Infinity", "abc" })
+        {
+            bool accepted = Set(value);
+            invalid.Add(new JObject { ["value"] = value, ["accepted"] = accepted, ["target"] = stove.TargetTemperature });
+        }
+        var receipts = new JArray();
+        void Receive(MachineOperationReceipt receipt)
+        {
+            if (receipt.EntityId == node.Id)
+                receipts.Add(new JObject { ["token"] = receipt.Token, ["entityId"] = receipt.EntityId,
+                    ["operation"] = receipt.Operation, ["argument"] = receipt.Argument,
+                    ["confirmed"] = receipt.Confirmed, ["accepted"] = receipt.Accepted, ["reason"] = receipt.Reason });
+        }
+        uint acceptedToken, rejectedToken;
+        MachineWorld.OperationCompleted += Receive;
+        try
+        {
+            MachineWorld.RequestOperation(node, InductionStoveLogic.SetTargetTemperatureOperation, "1500", null, out acceptedToken);
+            MachineWorld.RequestOperation(node, InductionStoveLogic.SetTargetTemperatureOperation, "NaN", null, out rejectedToken);
+        }
+        finally { MachineWorld.OperationCompleted -= Receive; }
+        Set("3500");
+        node.ElectricalSuppliedWatts = 2100f;
+        stove.Tick(1000f);
+        float hot = stove.Temperature;
+        bool lowered = Set("1000");
+        float afterCommand = stove.Temperature;
+        stove.Tick(1f);
+        float cooling = stove.Temperature;
+        stove.Capture();
+        using var restored = new InductionStoveLogic(node);
+        ItemData saved = ItemInstanceDataFactory.CloneRuntime(node.Snapshot);
+        Set("2000");
+        bool remoteApplied = stove.ApplyRemoteSnapshot(saved);
+        node.ElectricalSuppliedWatts = 0f;
+        stove.Tick(1f);
+        return new JObject { ["default"] = defaultTarget, ["minimumAccepted"] = minimumAccepted,
+            ["maximumAccepted"] = maximumAccepted, ["invalid"] = invalid,
+            ["entityId"] = node.Id, ["receipts"] = receipts,
+            ["acceptedToken"] = acceptedToken, ["rejectedToken"] = rejectedToken,
+            ["lowered"] = lowered, ["hot"] = hot, ["afterCommand"] = afterCommand,
+            ["cooling"] = cooling, ["savedTarget"] = restored.TargetTemperature,
+            ["remoteApplied"] = remoteApplied, ["remoteTarget"] = stove.TargetTemperature,
+            ["disconnected"] = stove.Temperature, ["requestedWatts"] = stove.RequestedWatts };
     }
 
     // 容量测试使用真实物品转移和制作事务，跨槽总量仍由库存生产规则决定。

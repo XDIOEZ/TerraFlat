@@ -10,8 +10,30 @@ public partial class SaveDataMgr
     #region 天气地表批量差量
 
     public static event Action<WeatherSurfaceChunkSnapshot> AuthoritativeWeatherSurfaceChanged;
+    // 非网络订阅者始终正常收事件；联机层另行登记发布器与远端需求查询。
+    public static Action<WeatherSurfaceChunkSnapshot> ReplicateWeatherSurfaceToRemote;
+    public static Func<string, bool> HasWeatherSurfaceReplicationAudience;
     private readonly Dictionary<int, SnowCellSaveData> weatherSnowIndex = new();
     private readonly Dictionary<int, WeatherSurfaceCellDelta> weatherSurfaceIndex = new();
+
+    private static bool ShouldReplicateWeatherSurface(string worldKey)
+    {
+        if (ReplicateWeatherSurfaceToRemote == null) return false;
+        if (HasWeatherSurfaceReplicationAudience == null) return true;
+        try { return HasWeatherSurfaceReplicationAudience(worldKey); }
+        catch (Exception exception)
+        {
+            // 观察者查询故障时保守发布，不能阻断本次权威地表落档。
+            Debug.LogWarning($"[天气地表] 远端观察者查询失败，回退完整发布：{exception.Message}");
+            return true;
+        }
+    }
+
+    internal static bool ShouldBuildWeatherSurfaceDelta(string worldKey, out bool replicate)
+    {
+        replicate = ShouldReplicateWeatherSurface(worldKey);
+        return replicate || AuthoritativeWeatherSurfaceChanged != null;
+    }
 
     // 每个区块只建一次格索引，雨雪补水不得覆盖已有作物快照。
     public void RecordWeatherSurfaceChunk(ChunkRuntime chunk, IReadOnlyList<int> soilChanged,
@@ -28,7 +50,8 @@ public partial class SaveDataMgr
         record.SnowCells ??= new List<SnowCellSaveData>();
         weatherSnowIndex.Clear();
         weatherSurfaceIndex.Clear();
-        bool publish = AuthoritativeWeatherSurfaceChanged != null;
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        bool publish = ShouldBuildWeatherSurfaceDelta(worldKey, out bool replicate);
         try
         {
             if ((soilChanged?.Count ?? 0) > 0)
@@ -74,8 +97,9 @@ public partial class SaveDataMgr
             if (publish)
             {
                 WeatherSurfaceDelta payload = BuildWeatherSurfaceDelta();
-                AuthoritativeWeatherSurfaceChanged?.Invoke(new WeatherSurfaceChunkSnapshot(
-                    GameplayWorldRegistry.ExecutionWorldKey, chunk.Address, terrain.Revision, payload, false));
+                var snapshot = new WeatherSurfaceChunkSnapshot(worldKey, chunk.Address, terrain.Revision, payload, false);
+                AuthoritativeWeatherSurfaceChanged?.Invoke(snapshot);
+                if (replicate) ReplicateWeatherSurfaceToRemote?.Invoke(snapshot);
             }
         }
         finally

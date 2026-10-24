@@ -107,7 +107,9 @@ namespace FlatWorld.Networking.Gameplay
         private static void SendToWorld<T>(string world, T message) where T : struct, NetworkMessage
         {
             foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
-                if (TryGetConnectionWorld(connection, out string observerWorld) &&
+                if (connection != null && connection is not LocalConnectionToClient &&
+                    connection.isAuthenticated && connection.isReady &&
+                    TryGetConnectionWorld(connection, out string observerWorld) &&
                     string.Equals(world, observerWorld, System.StringComparison.Ordinal)) connection.Send(message);
         }
 #endregion

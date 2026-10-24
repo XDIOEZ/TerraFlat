@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using FlatWorld.Localization;
 using TMPro;
@@ -27,6 +28,8 @@ public sealed class BuffStatusRowView : MonoBehaviour
     private GameObject stackBadge;
     private TextMeshProUGUI stackText;
     private string buffId;
+    private readonly List<Transform> referenceTransforms = new(16);
+    private bool referencesResolved;
 
     public string BuffId => buffId;
 
@@ -159,36 +162,40 @@ public sealed class BuffStatusRowView : MonoBehaviour
 
     private void ResolveReferences()
     {
-        nameText ??= FindChildText(NameNodeName);
-        remainingText ??= FindChildText(RemainingNodeName);
-        iconInitialText ??= FindChildText(IconInitialNodeName);
-        iconImage ??= FindChild(IconNodeName)?.GetComponent<UnityEngine.UI.Image>();
-        stackBadge ??= FindChild(StackBadgeNodeName)?.gameObject;
-        stackText ??= FindChildText(StackTextNodeName);
-    }
+        if (referencesResolved)
+            return;
 
-    private TextMeshProUGUI FindChildText(string childName)
-    {
-        TextMeshProUGUI[] texts = GetComponentsInChildren<TextMeshProUGUI>(true);
-        for (int i = 0; i < texts.Length; i++)
+        // 预制体层级固定，首轮只遍历一次且复用 List 缓冲，避免每个 Buff 反复创建多个组件数组。
+        GetComponentsInChildren(true, referenceTransforms);
+        for (int i = 0; i < referenceTransforms.Count; i++)
         {
-            if (texts[i] != null && texts[i].name == childName)
-                return texts[i];
+            Transform node = referenceTransforms[i];
+            if (node == null)
+                continue;
+            switch (node.name)
+            {
+                case NameNodeName:
+                    nameText ??= node.GetComponent<TextMeshProUGUI>();
+                    break;
+                case RemainingNodeName:
+                    remainingText ??= node.GetComponent<TextMeshProUGUI>();
+                    break;
+                case IconInitialNodeName:
+                    iconInitialText ??= node.GetComponent<TextMeshProUGUI>();
+                    break;
+                case IconNodeName:
+                    iconImage ??= node.GetComponent<UnityEngine.UI.Image>();
+                    break;
+                case StackBadgeNodeName:
+                    stackBadge ??= node.gameObject;
+                    break;
+                case StackTextNodeName:
+                    stackText ??= node.GetComponent<TextMeshProUGUI>();
+                    break;
+            }
         }
-
-        return null;
-    }
-
-    private Transform FindChild(string childName)
-    {
-        Transform[] children = GetComponentsInChildren<Transform>(true);
-        for (int i = 0; i < children.Length; i++)
-        {
-            if (children[i] != null && children[i].name == childName)
-                return children[i];
-        }
-
-        return null;
+        referenceTransforms.Clear();
+        referencesResolved = true;
     }
 
     #endregion

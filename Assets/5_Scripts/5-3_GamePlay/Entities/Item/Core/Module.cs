@@ -41,6 +41,12 @@ public interface IItemModuleDependencyBinder
     void BindModuleDependencies(ItemMods modules);
 }
 
+/// <summary>公开网络快照只需保存可复制状态时，由模块自行实现轻量保存入口。</summary>
+public interface IPublicNetworkStateSaver
+{
+    void SavePublicNetworkState();
+}
+
 /// <summary>世界 Item 越出或重入模拟范围时的模块回调；供导航等运行态释放与恢复。</summary>
 public interface ISimulationRangeAware
 {
@@ -474,6 +480,18 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (!IsRuntimeLoaded || saving) return;
         saving = true;
         try { OnSave(); }
+        finally { saving = false; }
+    }
+
+    internal void SavePublicNetworkRuntime()
+    {
+        if (!IsRuntimeLoaded || saving) return;
+        saving = true;
+        try
+        {
+            if (this is IPublicNetworkStateSaver saver) saver.SavePublicNetworkState();
+            else OnSave();
+        }
         finally { saving = false; }
     }
 

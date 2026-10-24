@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "notes": "两项均为1～10整数参考级。硬度参考莫氏硬度，取代表值或整级近似，不能当作线性倍率；韧性表示抗断裂能力，是依据脆性、解理和结构作出的游戏分级，不是现实通用量表，也不等于延展性。矿脉与掉落矿石共用参考项，不代表完整岩体的实测强度；目前不参与玩法结算。",
+  "sources": [
+    "https://www.nps.gov/articles/mohs-hardness-scale.htm",
+    "https://www.gia.edu/gia-news-research/how-protect-diamond-chipping",
+    "https://www.nmnhs.com/gemmology/classification/gem_id_en-5BA10-Malachite.html",
+    "https://ohiodnr.gov/discover-and-learn/rock-minerals-fossils/minerals/hematite",
+    "https://rruff.info/doclib/hom/cassiterite.pdf",
+    "https://commonminerals.esci.umn.edu/minerals-o-s/sulfur",
+    "https://www.itia.info/wp-content/uploads/2024/10/2024_Mining_Part_1.pdf"
+  ],
+  "minerals": [
+    {
+      "id": "coal",
+      "referenceMaterial": "普通煤；松脆、易碎，煤种差异暂作统一近似。",
+      "hardness": 2,
+      "toughness": 1,
+      "itemIds": ["Ore_Coal", "Mine_Coal", "Mine_Coal_Large"]
+    },
+    {
+      "id": "copper_ore",
+      "referenceMaterial": "孔雀石；按游戏现有铜矿石名称取值，不采用纯铜的延展性。",
+      "hardness": 4,
+      "toughness": 2,
+      "itemIds": ["Ore_Copper", "Mine_Copper", "Mine_Copper_Large"]
+    },
+    {
+      "id": "flint",
+      "referenceMaterial": "燧石；微晶石英质，坚硬但仍会脆性断裂。",
+      "hardness": 7,
+      "toughness": 3,
+      "itemIds": ["Ore_Flint"]
+    },
+    {
+      "id": "iron_ore",
+      "referenceMaterial": "致密赤铁矿；作为未细分种类的铁矿石代表。",
+      "hardness": 6,
+      "toughness": 3,
+      "itemIds": ["Ore_Iron", "Mine_Iron", "Mine_Iron_Large"]
+    },
+    {
+      "id": "tin_ore",
+      "referenceMaterial": "锡石；硬度6～7取7，属于脆性氧化物，不采用纯锡的性质。",
+      "hardness": 7,
+      "toughness": 3,
+      "itemIds": ["Ore_Tin", "Mine_Tin", "Mine_Tin_Large"]
+    },
+    {
+      "id": "stone",
+      "referenceMaterial": "普通致密硅酸盐岩石；石种尚未细分，暂以坚实石料作统一近似。",
+      "hardness": 6,
+      "toughness": 4,
+      "itemIds": ["Ore_Stone", "Mine_Stone", "Mine_Stone_Large"]
+    },
+    {
+      "id": "niter",
+      "referenceMaterial": "硝石（硝酸钾晶体）；较软且脆，不采用研磨后粉末的颗粒性质。",
+      "hardness": 2,
+      "toughness": 1,
+      "itemIds": ["Ore_Niter", "Mine_Niter", "Mine_Niter_Large"]
+    },
+    {
+      "id": "diamond",
+      "referenceMaterial": "金刚石；莫氏硬度10，但存在解理，抗断裂能力不按最高级处理。",
+      "hardness": 10,
+      "toughness": 4,
+      "itemIds": ["Ore_Diamond", "Mine_Diamond", "Mine_Diamond_Large"]
+    },
+    {
+      "id": "gold_ore",
+      "referenceMaterial": "石英脉型含金矿石；按石英质矿石整体近似，不采用纯金的低硬度和高延展性。",
+      "hardness": 7,
+      "toughness": 3,
+      "itemIds": ["Ore_Gold", "Mine_Gold", "Mine_Gold_Large"]
+    },
+    {
+      "id": "obsidian",
+      "referenceMaterial": "黑曜石；天然火山玻璃，硬而易崩裂。",
+      "hardness": 5,
+      "toughness": 2,
+      "itemIds": ["Obsidian", "Mine_Obsidian", "Mine_Obsidian_Large"]
+    },
+    {
+      "id": "sulfur",
+      "referenceMaterial": "自然硫；硬度约1.5～2.5取2，质软且脆。",
+      "hardness": 2,
+      "toughness": 1,
+      "itemIds": ["Ore_Sulfur", "Mine_Sulfur", "Mine_Sulfur_Large"]
+    },
+    {
+      "id": "tungsten_ore",
+      "referenceMaterial": "白钨矿；以常见钨矿物硬度4.5～5取5，不采用金属钨的性质。",
+      "hardness": 5,
+      "toughness": 2,
+      "itemIds": ["Ore_Tungsten", "Mine_Tungsten", "Mine_Tungsten_Large"]
+    }
+  ]
+}

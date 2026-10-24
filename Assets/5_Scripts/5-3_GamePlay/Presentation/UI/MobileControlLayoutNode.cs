@@ -42,13 +42,14 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     private Vector3 baseLocalScale;
     private Vector3 baseJoystickVisualScale;
     private Vector2 baseAnchoredPosition;
+    private Vector2 baseJoystickVisualPosition;
     private bool scaleCaptured;
     private bool editingPreview;
     private int dragPointerId = int.MinValue;
 
     public event System.Action<MobileControlLayoutNode> Selected;
     public bool SupportsSize => true;
-    public bool SupportsPosition => !IsFloatingJoystick;
+    public bool SupportsPosition => PositionTarget != null;
     public float SizeMultiplier { get; private set; } = 1f;
 
     public string ControlId => controlId;
@@ -60,6 +61,10 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         (joystickRole == MobileVirtualJoystick.JoystickRole.Aim ||
          (joystickRole == MobileVirtualJoystick.JoystickRole.Move && UIUserSettings.FloatingMoveJoystick));
     private RectTransform SizeTarget => IsFloatingJoystick ? joystickVisualTarget : LayoutTarget;
+    // 浮动摇杆只移动底座的待机位置，编辑预览才移动缩小后的外框。
+    private RectTransform PositionTarget => IsFloatingJoystick && !editingPreview
+        ? joystickVisualTarget
+        : LayoutTarget;
 
     #endregion
 
@@ -126,6 +131,8 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         LayoutTarget.localScale = baseLocalScale;
         if (!fixedMoveJoystickOnly && !IsFloatingJoystick)
             LayoutTarget.anchoredPosition = baseAnchoredPosition;
+        if (IsFloatingJoystick && !editingPreview)
+            joystickVisualTarget.anchoredPosition = baseJoystickVisualPosition;
         ApplySize(root, UIUserSettings.GetMobileControlSize(controlId));
         if (!SupportsPosition ||
             !UIUserSettings.TryGetMobileControlLayoutPosition(controlId, out Vector2 position))
@@ -165,6 +172,9 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
             root.rect.height / Mathf.Max(0.001f, extent.y));
         target.localScale = new Vector3(originalScale.x * SizeMultiplier * fit,
             originalScale.y * SizeMultiplier * fit, originalScale.z);
+        FlatWorldUIFeedback feedback = target.GetComponent<FlatWorldUIFeedback>();
+        if (feedback != null)
+            feedback.SetBaseScale(target.localScale);
         if (SupportsPosition || editingPreview)
             ApplyNormalizedPosition(root, center);
     }
@@ -174,17 +184,19 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     {
         if (scaleCaptured)
             return;
-        baseLocalScale = LayoutTarget.localScale;
+        FlatWorldUIFeedback feedback = LayoutTarget.GetComponent<FlatWorldUIFeedback>();
+        baseLocalScale = feedback != null ? feedback.BaseScale : LayoutTarget.localScale;
         baseJoystickVisualScale = joystickVisualTarget != null ? joystickVisualTarget.localScale : Vector3.one;
         baseAnchoredPosition = LayoutTarget.anchoredPosition;
+        baseJoystickVisualPosition = joystickVisualTarget != null ? joystickVisualTarget.anchoredPosition : Vector2.zero;
         scaleCaptured = true;
     }
 
     /// <summary>把目标中心放到根节点的归一化位置，并保证整个目标仍留在可用区域内。</summary>
     public void ApplyNormalizedPosition(RectTransform root, Vector2 normalizedPosition)
     {
-        RectTransform target = LayoutTarget;
-        if (root == null || target == null || (!SupportsPosition && !editingPreview))
+        RectTransform target = PositionTarget;
+        if (root == null || target == null)
             return;
 
         Vector2 clamped = new Vector2(
@@ -203,7 +215,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     /// <summary>把目标当前中心换算成根节点内的归一化位置。</summary>
     public Vector2 CaptureNormalizedPosition(RectTransform root)
     {
-        RectTransform target = LayoutTarget;
+        RectTransform target = PositionTarget;
         if (root == null || target == null)
             return new Vector2(0.5f, 0.5f);
 
@@ -266,7 +278,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         if (!TryGetPointerLocalPosition(eventData, out Vector2 pointerLocal))
             return;
 
-        Vector2 centerLocal = editingRoot.InverseTransformPoint(GetWorldCenter(LayoutTarget));
+        Vector2 centerLocal = editingRoot.InverseTransformPoint(GetWorldCenter(PositionTarget));
         dragPointerId = eventData.pointerId;
         Selected?.Invoke(this);
         pointerOffset = centerLocal - pointerLocal;

@@ -506,6 +506,9 @@ public partial class EcologyRuleSaveData
     public double MinimumEnvironmentValue;
     public double? MaximumEnvironmentValue;
     public bool RequireNaturalPlantableGround;
+    public int SharedRadius;
+    public int FootprintWidth = 1;
+    public int FootprintHeight = 1;
 
     #endregion
 
@@ -540,6 +543,9 @@ public partial class EcologyRuleSaveData
             MinimumEnvironmentValue = snapshot.MinimumEnvironmentValue,
             MaximumEnvironmentValue = snapshot.MaximumEnvironmentValue,
             RequireNaturalPlantableGround = snapshot.RequireNaturalPlantableGround,
+            SharedRadius = snapshot.SharedRadius,
+            FootprintWidth = snapshot.FootprintWidth,
+            FootprintHeight = snapshot.FootprintHeight,
             CompanionOnly = snapshot.CompanionOnly,
             CompanionHostTag = snapshot.CompanionHostTag,
             RequiredChunkTag = snapshot.RequiredChunkTag,
@@ -593,7 +599,7 @@ public partial class EcologyRuleSaveData
             ItemCountDistribution,
             ItemCountMin,
             MaximumEnvironmentValue ?? double.MaxValue,
-            RequireNaturalPlantableGround);
+            RequireNaturalPlantableGround, SharedRadius, FootprintWidth, FootprintHeight);
     }
 
     #endregion

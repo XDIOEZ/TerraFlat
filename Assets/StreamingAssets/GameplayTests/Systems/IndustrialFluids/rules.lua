@@ -126,3 +126,30 @@ test.system("industrial_fluids", "portable_tank_payload", {}, function(data)
     assert(data.remainingPressure > 0 and data.remainingPressure < data.initialPressure, "扣气后压力没有下降")
     assert(data.unchangedContentFlushReusesBytes, "内容变更写回后再次 Flush 仍重复序列化")
 end, "便携气罐真实组分、内能、压力与按需序列化")
+
+test.system("industrial_fluids", "portable_tank_air_fill", {}, function(data)
+    assert(data.filled, "铁气罐未能从真实大气抽取气体")
+    assert(data.oxygen > 0 and data.nitrogen > 0, "充气未保留空气中的氮氧混合组分")
+    near(data.pressure, 101.325, "4 L 气罐未按真实容积温度达到 1 标准大气压", .0001)
+    near(data.temperature, 293.15, "充装时没有保留气源温度和内能", .001)
+    assert(data.sourceConserved, "充气过程造气或丢气")
+    assert(not data.filledAgain and data.againSourceUnchanged, "已经达到目标压力仍继续扣除环境气体")
+    assert(not data.vacuumFilled and data.vacuumTargetEmpty, "真空环境凭空生成了空气")
+    assert(not data.thinFilled and data.thinSourceUnchanged and data.thinTargetEmpty,
+        "无压缩机时从低压大气直接制造标准气压")
+    assert(data.seededGas and data.seededLiquid and data.mixedFilled, "含已有气液的气罐无法正常补气")
+    assert(data.carbonPreserved and data.liquidPreserved and data.liquidSpacePreserved,
+        "补充空气清空了原有气体或液体")
+    assert(data.mixedGasAdded and data.mixedConserved, "混气补充破坏物质量守恒")
+    assert(data.mixedPressure <= 101.325 and data.mixedPressure > 101.324,
+        "含液相和旧气体的目标压力没有按有效气相容积与内能解算")
+    assert(data.existingEnergyPreserved, "混气覆盖了已有内能")
+    assert(data.roomSeeded and data.roomFilled and data.roomMolesConserved and data.roomEnergyConserved,
+        "密闭舱空气充装未保证物质量和内能守恒")
+    near(data.roomMixedTemperature, 310, "密闭舱抽气没有保持真实气源温度", .001)
+    assert(data.partialFilled and data.partialConserved and
+        data.partialPressure > 0 and data.partialPressure < 101.325,
+        "气源不足时未部分充装或错误创造气体补足目标")
+    assert(data.ironCarrier and data.ironBuilding and data.steelExcluded,
+        "一键空气功能错误扩展到钢制气罐")
+end, "铁制气罐真实空气充装、守恒、真空拒绝、带气液补充和目标压力")

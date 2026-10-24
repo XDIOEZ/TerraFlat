@@ -114,15 +114,84 @@ test.system("rendering", "terrain_shadow_dirty_queue", {}, function(data)
         "重复脏格未合并，或中断/失败后丢失待更新格")
     assert(data.fullReentrant and data.rebuilding and data.empty and data.cleared and data.reset,
         "提交中重建、清理或重新绑定遗留旧阴影脏格")
+    assert(#data.neighbourhoods == 15, "缺少阴影八邻域和越界更新采样")
+    for _, area in ipairs(data.neighbourhoods) do
+        local expected = {}
+        for y = 0, 4 do
+            for x = 0, 4 do
+                if math.abs(x - area.x) <= 1 and math.abs(y - area.y) <= 1 then
+                    expected[#expected + 1] = y * 5 + x
+                end
+            end
+        end
+        assert(#area.indices == #expected, "阴影漏刷斜邻格、重复标记或跨区块更新范围过大")
+        for index, cell in ipairs(expected) do
+            assert(area.indices[index] == cell, "阴影跨区块边缘或四角映射错误")
+        end
+    end
 end, "地形阴影增量脏格队列、提交重入与异常重试")
 
+do
+    local function has(mask, index) return math.floor(mask / (2 ^ (index - 1))) % 2 == 1 end
+    local adjacent = { { 1, 3 }, { 2, 3 }, { 1, 4 }, { 2, 4 } }
+    for mask = 0, 255 do
+        test.system("rendering", "terrain_shadow_masks", { mask = mask }, function(data)
+            assert(data.visible == (mask ~= 0), "仅有斜对角高地时没有提交阴影格，或平地多画阴影")
+            for index = 1, 4 do
+                assert(data.edges[index] == (has(mask, index) and 1 or 0), "四向高差改变了原有直边")
+                local corner = has(mask, index + 4) and not has(mask, adjacent[index][1])
+                    and not has(mask, adjacent[index][2])
+                assert(data.corners[index] == (corner and 1 or 0), "圆角缺失、方向颠倒或重复补已覆盖的边")
+            end
+        end, "地形阴影八邻域全部组合：" .. mask)
+    end
+    for index = 1, 4 do
+        for _, row in ipairs({
+            { args = { difference = 6 }, delta = 6, label = "多层高差仍补角" },
+            { args = { difference = 0 }, delta = 0, label = "同高不补角" },
+            { args = { difference = -3 }, delta = 0, label = "较低斜邻格不投影" },
+            { args = { difference = 0, wallCaster = true }, delta = 1, label = "墙脚共用圆角" },
+            { args = { missingCaster = true }, delta = 0, label = "缺失斜邻格不伪造阴影" },
+            { args = { wallReceiver = true }, delta = 0, label = "墙顶不接收圆角" },
+            { args = { missingReceiver = true }, delta = 0, label = "空格不接收圆角" }
+        }) do
+            row.args.mask = 2 ^ (index + 3)
+            test.system("rendering", "terrain_shadow_masks", row.args, function(data)
+                assert(data.visible == (row.delta > 0), "圆角接收条件错误：" .. row.label)
+                for direction = 1, 4 do
+                    assert(data.edges[direction] == 0, "只有斜邻高地却画出整条直边")
+                    assert(data.corners[direction] == (direction == index and row.delta or 0),
+                        "圆角高度或接收条件错误：" .. row.label)
+                end
+            end, "地形阴影圆角边界：" .. index .. "/" .. row.label)
+        end
+    end
+end
+
 test.system("rendering", "dropped_combustion_material", {}, function(data)
-    assert(data.assigned, "掉落物燃烧粒子没有绑定材质，会显示紫块")
-    assert(data.shared, "重复创建燃烧粒子没有复用共享材质")
-    assert(data.shader == "Universal Render Pipeline/2D/Sprite-Unlit-Default" and data.supported,
-        "掉落物燃烧材质没有使用可用的 URP 2D 着色器")
-    assert(data.texture == "Circle", "掉落物燃烧材质丢失透明粒子贴图")
-end, "掉落物燃烧粒子绑定可用材质并共享透明贴图")
+    assert(data.assigned and data.shared and data.sharedMesh, "火焰没有共享正式材质与网格")
+    assert(data.shader == "Game/Effects/ShaderFlame" and data.supported and data.passes,
+        "火焰缺少可用的 URP 2D / Forward Shader Pass")
+    assert(data.pixelsPerUnit == 32 and data.animationFPS == 12,
+        "共享火焰没有使用与人物匹配的像素密度和逐帧动画")
+    assert(data.vertices == 4 and data.particles == 0, "常驻火焰仍依赖粒子模拟或重复生成复杂网格")
+    assert(data.independentPhase, "不同火源使用相同相位，会同步跳动")
+    assert(data.width == 2 and data.height == 3 and data.boundsWidth == 2 and data.boundsHeight == 3
+        and data.boundsCenterY == 1.5, "Shader 尺寸没有同步 CPU 裁剪边界或火焰底部锚点")
+    assert(data.sortingOrder == 37 and data.adapterOrder == 82, "掉落物或设施火焰丢失宿主排序")
+    assert(data.startsStopped and data.lights and data.disabled and data.reenabled,
+        "火焰初始开关或组件启停错误")
+    assert(data.staysExtinguished and data.zeroIntensityHidden and data.finiteBounds,
+        "回池后重新点燃、零火势残留，或无效配置污染网格边界")
+    assert(data.adapterLights and data.adapterExtinguishes, "燃烧模块没有转发点燃和熄灭状态")
+    assert(math.abs(data.attachedUpX + math.sin(math.rad(75))) < .0001
+        and math.abs(data.attachedUpY - math.cos(math.rad(75))) < .0001,
+        "显式跟随锚点的火焰丢失宿主倾斜")
+    for _, prefix in ipairs({"uprightUp", "mirroredUp"}) do
+        assert(math.abs(data[prefix .. "X"]) < .0001 and math.abs(data[prefix .. "Y"] - 1) < .0001
+            and math.abs(data[prefix .. "Z"]) < .0001, "直立火焰继承了手持倾斜或左右翻面")
+    end
+end, "Shader 火焰共享资源、零常驻粒子、边界、排序与生命周期")
 
 test.system("rendering", "cave_shadow_lazy_creation", {}, function(data)
     assert(data.candidates == 1 and data.createdAtBind == 0 and data.createdWithoutLight == 0,
@@ -139,7 +208,11 @@ test.system("rendering", "cave_shadow_lazy_creation", {}, function(data)
     assert(data.worldX == 17.5 and data.worldY == 13 and data.enabledAfterRebind == 1,
         "阴影筛选没有跟随区块位置和镜像缩放")
     assert(data.fallbackEnabled == 1, "无法判断局部光范围时丢失保守阴影回退")
-end, "洞穴墙阴影首次受光按需创建并复用原网格")
+    assert(data.caveCandidates == 0 and data.caveEnabled == 0 and not data.caveCasterActive,
+        "洞穴仍在生成墙体遮黑效果，或池化阴影从地表泄漏到洞穴")
+    assert(data.surfaceRecovered == 1 and data.surfaceCasterReused,
+        "返回地表后未恢复正常墙体阴影，或重复创建阴影网格")
+end, "洞穴移除墙体视野遮黑，地表阴影仍按需创建并安全复用")
 
 for _, row in ipairs({
     { args = {}, level = 11, neighbour = 11, inner = 0, outer = 0, label = "同高异材质不画边" },
@@ -214,13 +287,25 @@ test.system("rendering", "terrain_height_save", { naturalDepth = 2 }, function(d
         "采挖快照恢复覆盖了天然底床，或把天然凹陷混进玩家采挖层数")
 end, "天然底床独立于玩家采挖快照恢复")
 
-test.system("rendering", "terrain_height_neighbours", {}, function(data)
+for _, direction in ipairs({ { -1, 0, 1, 0 }, { 1, 0, 2, 0 }, { 0, -1, 3, 0 }, { 0, 1, 4, 0 },
+    { -1, -1, 0, 1 }, { 1, -1, 0, 2 }, { -1, 1, 0, 3 }, { 1, 1, 0, 4 } }) do
+test.system("rendering", "terrain_height_neighbours", { dx = direction[1], dy = direction[2] }, function(data)
     assert(data.dimensionServicePreserved, "只读高度查询创建或替换了全局维度管理器")
     assert(not data.missing and data.available and data.initial == 0, "缺失或刚加载的邻区高度查询错误")
     assert(data.changed and data.lowered == -3, "跨区块查询没有立即读取新的采挖深度")
     assert(data.evicted and not data.afterEviction, "邻区卸载后仍返回旧高度")
     assert(data.reloaded and data.restored == 0, "邻区重载后复用了旧高度缓存")
-end, "跨区块高低查询跟随邻区加载、采挖、卸载与重载")
+    assert(not data.missingMasks.visible and not data.changedMasks.visible and not data.evictedMasks.visible,
+        "缺失、挖低或卸载的邻区留下了旧阴影")
+    for _, masks in ipairs({ data.loadedMasks, data.reloadedMasks }) do
+        assert(masks.visible, "邻区加载或重载后没有补上阴影")
+        for index = 1, 4 do
+            assert(masks.edges[index] == (direction[3] == index and 1 or 0), "跨区块直边方向错误")
+            assert(masks.corners[index] == (direction[4] == index and 1 or 0), "跨区块圆角方向错误")
+        end
+    end
+end, "八方向跨区块阴影加载、采挖、卸载与重载：" .. direction[1] .. "/" .. direction[2])
+end
 
 test.system("rendering", "fog_config", {}, function(data)
     assert(data.valid, "合法雾配置被拒绝")
@@ -250,6 +335,25 @@ test.system("rendering", "shadow_proxy_changes", {}, function(data)
     assert(data.slicedVisible and data.meshVisible, "阴影绘制模式切换后显示节点错误")
     assert(data.recycledSource and data.recycledProperties, "阴影归池后没有重新提交源与属性")
 end, "太阳阴影静态复用与动态变化")
+
+for _, pixelsPerUnit in ipairs({8, 16, 32, 64, 1254}) do
+    test.system("rendering", "shadow_proxy_blur_scale", {pixelsPerUnit = pixelsPerUnit}, function(data)
+        local expectedScale = pixelsPerUnit / 16
+        assert(data.initialUpdated and data.textureBound, "阴影代理首次绑定未提交贴图与参数")
+        assert(math.abs(data.scale - expectedScale) < 0.0001,
+            "机械/普通物品阴影未自动按源PPU统一柔化宽度")
+        assert(data.texelX == 1 / 16 and data.texelY == 1 / 8,
+            "图集采样步长没有使用整张纹理尺寸")
+        assert(math.abs(data.paddingX - 5 / 16) < 0.0001 and math.abs(data.paddingY - 5 / 16) < 0.0001,
+            "阴影网格外沿与世界柔化半径不一致，可能被硬裁切")
+        assert(data.pointFilterPreserved, "阴影柔化修改了主体贴图的像素过滤")
+        assert(not data.repeatedSource and not data.repeatedProperties, "静止方块重复提交阴影参数")
+        assert(data.frameUpdated and data.nextScale == 1 and data.nextUvMinX == 0.5 and data.nextUvMaxX == 1,
+            "更换图集帧后遗留旧分辨率倍率或UV边界")
+        assert(data.recycledUpdated and math.abs(data.recycledScale - expectedScale) < 0.0001,
+            "代理归池重用后遗留上一物品的柔化倍率")
+    end, "世界方块阴影统一柔化倍率、换帧与复用：PPU=" .. pixelsPerUnit)
+end
 
 test.system("rendering", "shadow_footprint_matrix", {}, function(data)
     assert(data.cases == 192 and data.maximumError < 0.0002,
@@ -647,6 +751,21 @@ test.system("rendering", "effect_composition", {}, function(data)
     assert(data.diagnosticSubmitted == 4 and data.diagnosticSpriteSkipped == 1,
         "渲染诊断未区分MPB提交与同图跳过")
 end, "静态覆雪免重传、效果启停与水线换图合成")
+
+test.system("rendering", "sprite_snow_bounds", {}, function(data)
+    assert(#data.samples == 8, "缺少雪线依赖的偏心原点、换图或翻面采样")
+    for index, sample in ipairs(data.samples) do
+        assert(math.abs(sample.centerX - (index % 2 == 0 and -1 or 1)) < 0.0001,
+            "雪线原图中心没有跟随水平翻面")
+        local bottom = index <= 4 and 1.5 or -1.5
+        local flipY = index % 4 == 0 or index % 4 == 3
+        assert(math.abs(sample.centerY - (flipY and -bottom or bottom)) < 0.0001,
+            "雪线原图中心没有跟随垂直翻面或 Sprite 换图")
+        assert(sample.halfWidth == 2 and sample.halfHeight == 3,
+            "旋转或非等比缩放改变了应交由 Shader 变换的原图半尺寸")
+        assert(sample.unchangedMarker == 37, "静止 Sprite 重复提交雪线元数据")
+    end
+end, "水平雪线所需的原图范围、偏心原点、翻面、换图和静态免重传")
 
 
 test.system("rendering", "ship_block_visual", {}, function(data)

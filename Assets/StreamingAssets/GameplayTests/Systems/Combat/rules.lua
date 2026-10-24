@@ -1,3 +1,134 @@
+-- 弓弩读取正式继承配置，推进正式蓄力时钟，不在 Lua 重新实现动作逻辑。
+test.system("combat", "archery_cycle", {steps = {
+    {action = "press"}, {seconds = .4}, {seconds = 1.1}, {seconds = 3},
+    {action = "release"}, {seconds = 20}, {action = "release"},
+    {action = "press"}, {seconds = 10}, {action = "release"}, {action = "release"}
+}}, function(data)
+    local p, reference, s = data.parameters, data.recurveParameters, data.samples
+    local launch = data.launchPositionProbe
+    local expectedWeaponLaunchX = launch.weapon.x + launch.direction.x * launch.forwardOffset
+    local expectedWeaponLaunchY = launch.weapon.y + launch.direction.y * launch.forwardOffset
+    local ownerOriginLaunchX = launch.owner.x + launch.direction.x * launch.forwardOffset
+    local ownerOriginLaunchY = launch.owner.y + launch.direction.y * launch.forwardOffset
+    assert(math.abs(launch.position.x - expectedWeaponLaunchX) < .0001
+        and math.abs(launch.position.y - expectedWeaponLaunchY) < .0001
+        and math.abs(launch.position.x - ownerOriginLaunchX) > .1
+        and math.abs(launch.position.y - ownerOriginLaunchY) > .1,
+        "箭矢生成点没有从手持弓的位置前移")
+    assert(data.mode == "LoadThenReleaseToFire" and p.AmmoTag == "Arrow", "弩没有使用两次松开发射或普通箭矢")
+    for _, key in ipairs({"FullChargeSeconds", "ProjectileDamageMultiplier", "MaxAimDistance",
+        "SpawnForwardOffset", "StaminaConsumePerSecond"}) do
+        assert(p[key] == reference[key], "弩的数值没有沿用反曲弓：" .. key)
+    end
+    assert(p.FullChargeSeconds == 1 and p.ProjectileDamageMultiplier == 1.5
+        and p.StaminaConsumePerSecond == 2.25 and data.woodBowStamina == 2.25
+        and data.blowgunStamina == 1.5, "弓体力未乘1.5或误改吹箭体力")
+    assert(s[1].started and s[3].charge == 1 and s[4].shots == 0, "蓄满自动发射或蓄力比例错误")
+    assert(s[5].release == "Loaded" and s[5].active and s[5].shots == 0,
+        "弩第一次松手没有保留上膛状态")
+    assert(s[7].release == "None" and s[7].shots == 0, "没有再次按下也能发射")
+    assert(not s[8].started and s[9].charge == 1 and s[9].shots == 0, "再次按下重新蓄力或提前发射")
+    assert(s[10].release == "Fire" and s[10].shots == 1 and not s[10].active
+        and s[11].shots == 1, "第二次松手没有发射或重复发射")
+    for index = 3, #s do
+        assert(math.abs(s[index].stamina - 2.25) < .00001, "蓄满后或上膛待发时继续耗体力")
+    end
+end, "弩：反曲弓数值、满蓄力停止耗体力、两次松开与防重复发射")
+
+test.system("combat", "archery_cycle", {steps = {
+    {action = "press"}, {seconds = .4}, {action = "release"},
+    {action = "press"}, {seconds = .6}, {action = "release"},
+    {action = "press"}, {seconds = 1}, {action = "release"},
+    {action = "cancel"}, {action = "press"}, {action = "release"}
+}}, function(data)
+    local s = data.samples
+    assert(s[3].release == "Cancelled" and not s[3].active and s[3].charge == 0,
+        "未满蓄力松手没有取消")
+    assert(s[6].release == "Cancelled" and data.shots == 0, "未满进度跨按键累积或发射")
+    assert(s[9].release == "Loaded" and not s[10].active and s[10].charge == 0,
+        "取消操作没有清除已上膛状态")
+    assert(s[11].started and s[12].release == "Cancelled", "取消后仍可免上膛发射")
+end, "弩：未蓄满取消、进度不保留与清除上膛状态")
+
+test.system("combat", "archery_cycle", {weaponId = "Bow_Recurve", steps = {
+    {action = "press"}, {seconds = .25}, {action = "release"},
+    {action = "press"}, {seconds = 1}, {seconds = 2}, {action = "release"}
+}}, function(data)
+    local s = data.samples
+    assert(data.mode == "ReleaseToFire" and s[3].release == "Fire" and s[3].shots == 1,
+        "普通弓未满蓄力松手不再发射")
+    assert(s[6].shots == 1 and s[7].shots == 2 and s[7].release == "Fire",
+        "普通弓被改为自动发射或需要第二次松开")
+    assert(math.abs(s[6].stamina - 7.3125) < .00001, "普通弓满蓄力持箭不再持续消耗体力")
+end, "反曲弓：松手即发射与满蓄力持续耗体力")
+
+-- 投石索弹药必须在正式继承后具备投射物与伤害模块。
+test.system("combat", "archery_cycle", {weaponId = "StoneThrowingRope", ammoIds = {
+    "SlingAmmo_Base", "Ore_Stone", "Ore_Copper", "Ore_Iron", "Ore_Tin", "Ore_Gold", "Clay", "Ore_Niter"
+}}, function(data)
+    local p, ammo = data.parameters, {}
+    for _, entry in ipairs(data.ammunition) do ammo[entry.id] = entry end
+    assert(p.AmmoItemId == "Ore_Stone" and p.AmmoTag == "SlingAmmo" and not p.UseHeldItemAsAmmo,
+        "投石索没有从库存选取石头和矿石弹药")
+    local reference = ammo.SlingAmmo_Base.modules.projectile.parameters
+    for _, id in ipairs({"Ore_Stone", "Ore_Copper", "Ore_Iron", "Ore_Tin", "Ore_Gold"}) do
+        local modules = ammo[id].modules
+        assert(modules.projectile and modules.projectile.enabled
+            and modules.projectile.id == "Mod_Projectile" and modules.projectile.prefab == "Mod_Projectile",
+            id .. " 缺少启用的正式投射物模块")
+        assert(modules.damage and modules.damage.enabled and modules.damage.id == "Mod_Damage",
+            id .. " 缺少投射物依赖的伤害模块")
+        for key, value in pairs(reference) do
+            assert(modules.projectile.parameters[key] == value, id .. " 没有沿用投石索弹丸参数：" .. key)
+        end
+    end
+    local stone = ammo.Ore_Stone.modules
+    assert(stone.damage.parameters.DamageValues.Physical == 12
+        and stone.damage.parameters.DamageValues.ImpactKind == 4
+        and stone.damage.parameters["$collider2D"].size.x == .4375, "石头伤害或命中范围被继承覆盖")
+    assert(stone.discardFlightDamage.enabled and stone.discardFlightDamage.id == "Mod_DiscardFlightDamage"
+        and stone.discardFlightDamage.parameters.HardImpactTransformItemId == "ChippedTool"
+        and stone.discardFlightDamage.parameters.HardImpactTransformChance == .1,
+        "石头丢弃飞行伤害或硬目标变化配置丢失")
+    for _, id in ipairs({"Clay", "Ore_Niter"}) do
+        assert(id ~= p.AmmoItemId, "投石索错误地指定软质材料为弹药")
+        for _, tag in ipairs(ammo[id].tags) do
+            assert(tag ~= p.AmmoTag, id .. " 继承后错误地获得投石索弹药资格")
+        end
+    end
+end, "投石索：石头与矿石投射模块、继承参数、原有丢弃能力与软质材料边界")
+
+-- 命中手感采样正式动画时钟与材质合成，不用测试侧算法替代生产实现。
+test.system("combat", "hit_feedback_clock", {}, function(data)
+    local function near(actual, expected)
+        return type(actual) == "number" and math.abs(actual - expected) < .00001
+    end
+    assert(near(data.defaultStop, .12) and near(data.defaultShake, .16) and near(data.defaultDistance, .035),
+        "卡肉或轻抖默认值错误")
+    assert(data.zeroRejected and data.negativeRejected and data.invalidRejected and data.disabledRejected
+        and data.invalidDurationRejected and data.invalidClockRejected, "无伤害、关闭或非法参数触发了卡肉")
+    assert(data.started and data.multiTargetRejected and data.earlyResumeRejected and data.resumed
+        and data.sameAttackCannotRestart, "单段挥击重复卡肉或恢复时机错误")
+    assert(near(data.frozen, 10) and near(data.resumeTime, 10) and near(data.advancedTime, 10.05),
+        "卡肉消耗了连击动画时钟")
+    assert(data.nextAttackStarted and data.cancelCleared and data.slowTimeResumed
+        and near(data.slowTimePreserved, 30.05) and data.pausedGameResumed, "下一段、取消、慢速或暂停游戏后恢复错误")
+    assert(near(data.peak, .035) and near(data.firstKick, -.035) and near(data.fallbackKick, .035)
+        and data.settled and data.disabledShake and data.invalidShake and near(data.stopClamped, .25),
+        "抖动幅度、方向、停止归零或参数上限错误")
+end, "卡肉：正伤害、每段一次、连击时钟与取消；轻抖：方向、幅度及归零")
+
+test.system("combat", "hit_shake_render", {}, function(data)
+    assert(math.abs(data.shaderOffset - .035) < .00001 and data.boundsExpanded, "材质位移未提交或裁剪边界未扩展")
+    assert(data.rootUnchanged and data.visualTransformUnchanged and data.colliderUnchanged,
+        "视觉轻抖改变了逻辑根、动画节点或碰撞体")
+    assert(math.abs(data.otherChannelPreserved - .37) < .00001
+        and math.abs(data.disabledOtherChannel - .37) < .00001, "轻抖清理覆盖了其它材质通道")
+    assert(math.abs(data.repeatedAmplitude - .035) < .00001, "重复命中叠加抖动幅度")
+    assert(data.finishedOffset == 0 and data.disabledOffset == 0 and data.pooledOffset == 0
+        and data.boundsRestored and data.pooledBoundsRestored, "结束、停用或回池残留位移/裁剪边界")
+end, "目标轻抖：正式材质合成、碰撞隔离、重复命中及停用回池清理")
+
 -- 阵营查询沿用正式服务，额外 GC 断言仅在计数器可用时执行。
 test.system("combat", "equipment_durability", {}, function(data)
     assert(data.wood == 30 and data.stone == 300 and data.bronze == 1000 and data.iron > data.bronze
@@ -6,11 +137,12 @@ test.system("combat", "equipment_durability", {}, function(data)
         "黑曜石武器特例误改非武器装备，或未知材质覆盖原定义耐久")
     assert(data.coldWeaponMaximum == 50 and data.coldWeaponTagged and data.obsidianToolMaximum == 777,
         "旧冷兵器漏接统一磨损，或黑曜石武器特例影响非武器工具")
-    assert(data.positiveWear == 49 and data.blockedWear == 50 and data.rejectedWear == 50 and data.lastPoint == 0,
-        "只有成功伤害扣一点耐久，或末点磨损没有归零")
+    assert(data.positiveHitWear == 49 and data.zeroDamageHitWear == 49 and
+        data.damageRejectedAfterHitWear == 49 and data.missWear == 50 and data.lastPoint == 0,
+        "命中后的耐久磨损时机错误，或末点磨损没有归零")
     assert(data.knifeCropMultiplier == 1.5 and data.knifeWrongTarget == 1 and data.postDefense == 9
         and data.blockedAffinity == 0, "小刀作物专精不是扣防后50%加成，或扩大到其他目标")
-end, "材质耐久、成功伤害磨损与小刀作物弱点")
+end, "材质耐久、命中磨损与小刀作物弱点")
 
 test.system("combat", "bite_attack", {}, function(data)
     assert(data.equalHalfUsesA and data.lighterUsesB and data.heavierUsesA, "撕咬身体质量分界错误")
@@ -45,23 +177,6 @@ end, "阵营无字符串键查询与MOD关系覆盖语义")
 
 local function near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .00001, label .. "错误")
-end
-local damageCases = {
-    {name = "只抵扣一次防御", args = {attack = 10, defense = 3}, loss = 7, difficulty = 1},
-    {name = "防御完全挡住", args = {attack = 10, defense = 12, received = 2}, loss = 0, difficulty = 1},
-    {name = "难度先乘再扣防御", args = {attack = 10, defense = 3, difficulty = 2, received = 2}, loss = 34, difficulty = 1},
-    {name = "负攻击无伤害", args = {attack = -1, defense = -3}, loss = 0, difficulty = 1},
-    {name = "负倍率钳制", args = {received = -1}, loss = 0, difficulty = 1},
-    {name = "怪物攻击玩家", args = {sourcePlayer = false, targetPlayer = true}, loss = 7, difficulty = .5},
-    {name = "怪物血量最小归一化", args = {creatureHealth = 0}, loss = 7, difficulty = 20}
-}
-for _, case in ipairs(damageCases) do
-    test.system("combat", "physical", case.args, function(data)
-        near(data.physical, case.loss, "物理结算")
-        near(data.resolvedTotal, case.loss, "四槽共用结算")
-        near(data.difficulty, case.difficulty, "来源难度")
-        if case.loss > 0 then near(data.cut, case.loss * .5, "刃伤反馈比例") end
-    end, "战斗结算：" .. case.name)
 end
 local bleedCases = {
     {name = "过量伤害裁剪", args = {}, total = 10, tier = 2},

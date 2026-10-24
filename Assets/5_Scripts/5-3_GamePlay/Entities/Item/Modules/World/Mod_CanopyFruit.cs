@@ -153,15 +153,15 @@ public sealed partial class Mod_CanopyFruit : Module, INaturalResourceInitialize
         RemoveVisual(fruit.Id);
     }
 
-    /// <summary>产量修饰只在此边界使用一次；自然落果像采摘一样为一份，砍伐额外服从死亡战利品难度。</summary>
+    /// <summary>产量修饰只在此边界使用一次；自然落果像采摘一样为一份，砍伐额外接受战利品产量倍率。</summary>
     public void SpawnFruit(CanopyFruitRecord fruit, bool chopped)
     {
         string output = fruit.Split ? SplitItemId : FruitItemId;
         if (fruit.OutputAmount < 0)
         {
             float multiplier = ResourceYieldUtility.GetMultiplier(item, FruitItemId);
-            if (chopped) multiplier *= GameDifficultyService.Current.World.LootAmountMultiplier;
-            fruit.OutputAmount = GameDifficultyService.ScaleRandomizedAmount(1, multiplier);
+            if (chopped) multiplier *= GameRuleConfiguration.Current.World.LootAmountMultiplier;
+            fruit.OutputAmount = GameRuleMath.ScaleRandomizedAmount(1, multiplier);
         }
         if (fruit.OutputAmount > 0)
             DroppedItemService.SpawnLoot(output, new Vector2(fruit.EndX, fruit.EndY), fruit.OutputAmount,

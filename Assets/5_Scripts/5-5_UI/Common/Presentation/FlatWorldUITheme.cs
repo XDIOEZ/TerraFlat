@@ -1377,7 +1377,7 @@ public static class FlatWorldUITheme
         text.color = color;
         text.alignment = alignment;
         text.enableWordWrapping = false;
-        text.overflowMode = TextOverflowModes.Ellipsis;
+        FlatWorldUITextLayout.Configure(text, size);
         text.raycastTarget = false;
 
         if (ContainsChinese(value))

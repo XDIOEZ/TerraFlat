@@ -225,7 +225,7 @@ public static class ModSettingsRegistry
         if (!File.Exists(path))
             return;
 
-        JObject stored = JObject.Parse(File.ReadAllText(path));
+        JObject stored = JsonConfigurationCache.ParseObject(File.ReadAllText(path));
         foreach (JProperty property in stored.Properties())
         {
             string id = NormalizeId(modId, property.Name);

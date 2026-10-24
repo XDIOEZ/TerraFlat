@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using Stopwatch = System.Diagnostics.Stopwatch;
@@ -33,8 +34,12 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
     private bool machineObstaclesDirty;
     private bool naturalResetPending;
     private readonly List<Collider2D> colliderScratch = new();
-    private static readonly HashSet<ChunkCollisionRenderer> dirtyRenderers = new();
+    private static readonly ObstacleDirtyQueue dirtyRenderers = new();
     private static readonly List<ChunkCollisionRenderer> dirtyRendererScratch = new();
+    private static readonly ProfilerMarker FlushObstacleMarker = new("FlatWorld.ChunkPhysics.FlushObstacles");
+    private static readonly ProfilerMarker RebuildObstacleMarker = new("FlatWorld.ChunkPhysics.RebuildObstacles");
+    private static readonly ProfilerMarker PublishObstacleMarker = new("FlatWorld.ChunkPhysics.PublishObstacles");
+    private string boundWorldKey;
     private bool dataObstaclesDirty;
     private int obstacleColliderCount;
 
@@ -109,6 +114,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
             throw new System.ArgumentNullException(nameof(chunk));
         Unbind();
         BoundChunk = chunk;
+        boundWorldKey = gameObject.scene.name;
         if (chunk.Terrain != null)
             chunk.Terrain.Changed += HandleTerrainChanged;
         MachineWorld.CellChanged += HandleMachineCellChanged;
@@ -138,7 +144,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         pendingNaturalBodies.Clear();
         obstacleColliders?.Clear();
         obstacleColliderCount = 0;
-        dirtyRenderers.Remove(this);
+        dirtyRenderers.Remove(boundWorldKey, this);
+        boundWorldKey = null;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         System.Array.Clear(dirtyReasonCounts, 0, dirtyReasonCounts.Length);
         visualRevisionDefinitionSample = null;
@@ -210,14 +217,14 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void HandleMachineCellChanged(Vector2Int cell)
     {
-        if (MachineWorld.WorldKey == gameObject.scene.name) MarkDataObstaclesDirty(cell);
+        if (MachineWorld.WorldKey == boundWorldKey) MarkDataObstaclesDirty(cell);
     }
 
     /// <summary>记录最终实体状态，旧/新位置通知在同一物理 Tick 合并，不扫描其它树。</summary>
     private void HandleNaturalBodyChanged(NaturalEntityEcsService.BlockingBodySnapshot body, bool exists,
         NaturalEntityEcsService.PhysicsBodyChangeReason reason)
     {
-        if (BoundChunk?.Terrain == null || body.WorldKey != gameObject.scene.name) return;
+        if (BoundChunk?.Terrain == null || body.WorldKey != boundWorldKey) return;
         long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.NaturalKind, body.RuntimeId);
         if (!obstacleColliders.Contains(key) && !pendingNaturalBodies.ContainsKey(body.RuntimeId) &&
             !TryResolveLocalBox(body.Bounds.center, body.Bounds.extents, out _, out _)) return;
@@ -240,7 +247,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void HandlePhysicsBodiesReset()
     {
-        if (GameplayWorldRegistry.ExecutionWorldKey != gameObject.scene.name) return;
+        if (GameplayWorldRegistry.ExecutionWorldKey != boundWorldKey) return;
         pendingNaturalBodies.Clear();
         naturalResetPending = true;
         QueueDataObstacleRebuild(DirtyReason.NaturalReset);
@@ -272,13 +279,16 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         dirtyReasonCounts[(int)reason]++;
 #endif
         dataObstaclesDirty = true;
-        dirtyRenderers.Add(this);
+        dirtyRenderers.Add(boundWorldKey, this);
     }
 
+    internal static bool HasDirtyDataObstacles(string worldKey) => dirtyRenderers.HasPending(worldKey);
+
     /// <summary>由 ChunkMgr 的单一物理 Tick 批量处理脏区块，同一 Chunk 在一次刷新前只入队一次。</summary>
-    internal static void FlushDirtyDataObstacles()
+    internal static void FlushDirtyDataObstacles(string worldKey)
     {
-        if (dirtyRenderers.Count == 0) return;
+        if (!dirtyRenderers.HasPending(worldKey)) return;
+        using var marker = FlushObstacleMarker.Auto();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         long flushStarted = Stopwatch.GetTimestamp();
         long rebuildTicks = 0;
@@ -292,13 +302,13 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         string visualDefinitionSample = null;
         System.Array.Clear(flushReasonCounts, 0, flushReasonCounts.Length);
 #endif
-        dirtyRendererScratch.Clear();
-        dirtyRendererScratch.AddRange(dirtyRenderers);
-        dirtyRenderers.Clear();
+        // 先取出本世界当前批次，回调中新产生的脏通知继续留给下一次物理 Tick。
+        dirtyRenderers.Take(worldKey, dirtyRendererScratch);
         for (int i = 0; i < dirtyRendererScratch.Count; i++)
         {
             ChunkCollisionRenderer renderer = dirtyRendererScratch[i];
-            if (renderer == null || !renderer.dataObstaclesDirty || renderer.BoundChunk?.Terrain == null)
+            if (renderer == null || renderer.boundWorldKey != worldKey ||
+                !renderer.dataObstaclesDirty || renderer.BoundChunk?.Terrain == null)
                 continue;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (!hasMachineSample && renderer.dirtyReasonCounts[(int)DirtyReason.Machine] > 0)
@@ -320,7 +330,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
             renderer.visualRevisionGuidSample = 0;
             long rebuildStarted = Stopwatch.GetTimestamp();
 #endif
-            int changedBoxes = renderer.RebuildDataObstacles();
+            int changedBoxes;
+            using (RebuildObstacleMarker.Auto()) changedBoxes = renderer.RebuildDataObstacles();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             long rebuildFinished = Stopwatch.GetTimestamp();
             long chunkTicks = rebuildFinished - rebuildStarted;
@@ -336,7 +347,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
                 slowestBoxes = renderer.obstacleColliderCount;
             }
 #endif
-            if (changedBoxes > 0) ObstaclePresentationChanged?.Invoke(renderer);
+            if (changedBoxes > 0)
+                using (PublishObstacleMarker.Auto()) ObstaclePresentationChanged?.Invoke(renderer);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             presentationTicks += Stopwatch.GetTimestamp() - rebuildFinished;
 #endif
@@ -417,7 +429,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         for (int i = 0; i < machineCells.Count; i++)
         {
             MachineEntity node = machineCells[i].Node;
-            if (node?.Definition.BlocksMovement != true || HasPhysicalItemCollider(node) ||
+            if (node?.Definition.BlocksTraversal != true || HasPhysicalItemCollider(node) ||
                 !projectedMachineIds.Add(node.Id)) continue;
             MachineCollisionBounds.ResolveWorldBox(node, out Vector2 center, out Vector2 halfExtents);
             long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id);
@@ -437,10 +449,11 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         dirtyMachineScratch.Clear();
         dirtyMachineScratch.AddRange(dirtyMachineCells);
         dirtyMachineCells.Clear();
+        int highestLayer = MachineWorld.HighestOccupiedLayer;
         foreach (Vector2Int cell in dirtyMachineScratch)
         {
             currentMachineIds.Clear();
-            for (int layer = 0; layer <= 5; layer++)
+            for (int layer = 0; layer <= highestLayer; layer++)
             {
                 MachineEntity node = MachineWorld.GetAtCurrentWorld(cell, layer);
                 if (node == null) continue;
@@ -450,7 +463,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
                     dirtyMachineScratch.Clear();
                     return changed + SyncMachineObstacles();
                 }
-                if (node.Definition?.BlocksMovement != true || !currentMachineIds.Add(node.Id))
+                if (node.Definition?.BlocksTraversal != true || !currentMachineIds.Add(node.Id))
                     continue;
                 if (HasPhysicalItemCollider(node))
                 {
@@ -540,6 +553,60 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
     {
         Unbind();
         obstacleColliders?.Dispose();
+    }
+
+    #endregion
+
+    #region 世界碰撞队列所有权
+
+    /// <summary>按绑定世界隔离脏批次，空世界只查字典，取批次后再次入队不会丢通知。</summary>
+    internal sealed class ObstacleDirtyQueue
+    {
+        private readonly Dictionary<string, HashSet<ChunkCollisionRenderer>> worlds = new(System.StringComparer.Ordinal);
+        private readonly Stack<HashSet<ChunkCollisionRenderer>> pool = new();
+
+        internal bool HasPending(string worldKey) => worldKey != null &&
+            worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries) && entries.Count > 0;
+
+        internal void Add(string worldKey, ChunkCollisionRenderer renderer)
+        {
+            if (worldKey == null || renderer == null) return;
+            if (!worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries))
+            {
+                entries = pool.Count > 0 ? pool.Pop() : new HashSet<ChunkCollisionRenderer>();
+                worlds.Add(worldKey, entries);
+            }
+            entries.Add(renderer);
+        }
+
+        internal void Remove(string worldKey, ChunkCollisionRenderer renderer)
+        {
+            if (worldKey == null || !worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries)) return;
+            entries.Remove(renderer);
+            if (entries.Count == 0) Release(worldKey, entries);
+        }
+
+        internal void Take(string worldKey, List<ChunkCollisionRenderer> output)
+        {
+            output.Clear();
+            if (worldKey == null || !worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries)) return;
+            foreach (ChunkCollisionRenderer renderer in entries)
+                if (renderer != null) output.Add(renderer);
+            Release(worldKey, entries);
+        }
+
+        private void Release(string worldKey, HashSet<ChunkCollisionRenderer> entries)
+        {
+            worlds.Remove(worldKey);
+            entries.Clear();
+            pool.Push(entries);
+        }
+
+        internal void Clear()
+        {
+            worlds.Clear();
+            pool.Clear();
+        }
     }
 
     #endregion

@@ -2,9 +2,10 @@
 
 在项目根目录运行 `powershell -File Tools/Tests/GroundCover/verify.ps1`，需要 .NET 8 SDK 和 Unity 已生成的项目引用。
 
-脚本先编译当前生产程序集，再调用真实 `BuildSurfaceCell` 和 `ChunkEcologyGenerator`，读取正式地表 Profile 与花朵 JSON。
+脚本独立编译当前世界生成源码，补齐 Unity 播放期间尚未更新到项目文件的新脚本，不依赖其他玩法程序集；再调用真实 `BuildSurfaceCell` 和 `ChunkEcologyGenerator`，读取正式地表 Profile 与花朵 JSON。独立 CLR 没有 Unity 原生 Profiler，只在忽略目录中的临时源码副本禁用四个 Profiler 标记初始化，不改生成算法。
 
 - 草：零降水、截图降水、湿润地面逐渐增加密度；固定种子保持相同格子和结果；泥土与泥炭允许草；极冷、极热、石地和水下排除草。
+- 低温草：正式配置及默认值为低于 15℃ 概率乘 0.5；三个种子、三档降水和六档温度逐格对照同温度基础概率减半的结果，检查恰好 15℃ 与更暖时不变、低温仅取原草格子集、重复生成稳定。
 - 花：截图的 14.2℃、0.106 降水、0.657 高度不再被旧硬门槛排除；零降水仍保留稀疏生成；极冷、极热拒绝生成。
 
 草测试注入固定气候到正式单格构建链，花测试注入固定地形到正式生态链；不验证风携水汽算法、游戏画面、原生 BRG/GPU、存档恢复或操作体验。所有构建产物保存在忽略的 `Temp/GroundCoverValidation`，不启动、暂停或退出 Unity。

@@ -42,8 +42,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -74,8 +74,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -106,8 +106,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -138,8 +138,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -170,8 +170,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -202,8 +202,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -397,6 +397,28 @@
       "actions": []
     },
     {
+      "id": "core:Platform_Iron_Summoner_WroughtIron",
+      "displayName": "铁平台（熟铁）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Platform_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:Wall_Iron_Summoner",
       "displayName": "铁墙",
       "recipeType": "crafting",
@@ -407,6 +429,28 @@
         {
           "match": "exact_item",
           "itemId": "Ingot_RawIron",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Wall_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:Wall_Iron_Summoner_WroughtIron",
+      "displayName": "铁墙（熟铁）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
           "amount": 2
         }
       ],

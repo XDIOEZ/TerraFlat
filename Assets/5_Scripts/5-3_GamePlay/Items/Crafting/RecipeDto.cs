@@ -5,8 +5,9 @@ using Newtonsoft.Json;
 /// <summary>
 /// JSON 配方目录；只保存可序列化数据，不包含 Unity 对象引用或行为实现。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipeCatalogDto
+public sealed partial class RecipeCatalogDto
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion = 1;
@@ -18,8 +19,9 @@ public sealed class RecipeCatalogDto
 /// <summary>
 /// 配方分包清单；按顺序加载启用的业务配方文件。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipeManifestDto
+public sealed partial class RecipeManifestDto
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion = 1;
@@ -28,8 +30,9 @@ public sealed class RecipeManifestDto
     public List<RecipePackageDto> Packages = new List<RecipePackageDto>();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipePackageDto
+public sealed partial class RecipePackageDto
 {
     [JsonProperty("id")]
     public string Id;
@@ -44,10 +47,12 @@ public sealed class RecipePackageDto
 /// <summary>
 /// 单条 JSON 配方定义。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipeDto
+public sealed partial class RecipeDto
 {
     /// <summary>仅用于编辑器按业务分包聚合与维护，不写入单个配方包 JSON。</summary>
+    [MemoryPack.MemoryPackIgnore]
     [JsonIgnore]
     public string Package = "crafting/survival";
 
@@ -104,8 +109,9 @@ public sealed class RecipeDto
     public List<RecipeActionDto> Actions = new List<RecipeActionDto>();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipeIngredientDto
+public sealed partial class RecipeIngredientDto
 {
     [JsonProperty("minTemperature", NullValueHandling = NullValueHandling.Ignore)]
     public float? MinTemperature;
@@ -128,13 +134,21 @@ public sealed class RecipeIngredientDto
     public int Amount;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipeOutputDto
+public sealed partial class RecipeOutputDto
 {
+    #region 实例产物配置
     [JsonProperty("copyInputTag", NullValueHandling = NullValueHandling.Ignore)]
     public string CopyInputTag;
+    // 指定物品或标签复制原实例，加固状态由配方标签声明。
+    [JsonProperty("copyInputItemId", NullValueHandling = NullValueHandling.Ignore)]
+    public string CopyInputItemId;
+    [JsonProperty("addTag", NullValueHandling = NullValueHandling.Ignore)]
+    public string AddTag;
     [JsonProperty("reinforceWithAdhesive", DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool ReinforceWithAdhesive;
+    #endregion
     [JsonProperty("itemId")]
     public string ItemId;
 
@@ -146,8 +160,9 @@ public sealed class RecipeOutputDto
     public float? DurabilityMultiplier;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipeLiquidOutputDto
+public sealed partial class RecipeLiquidOutputDto
 {
     [JsonProperty("liquidId")]
     public string LiquidId;
@@ -156,8 +171,9 @@ public sealed class RecipeLiquidOutputDto
     public float Amount = 1f;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class RecipeActionDto
+public sealed partial class RecipeActionDto
 {
     [JsonProperty("type")]
     public string Type;

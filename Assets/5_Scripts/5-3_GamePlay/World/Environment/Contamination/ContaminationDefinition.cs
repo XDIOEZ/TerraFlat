@@ -55,8 +55,9 @@ public sealed class ContaminationDefinition
 }
 
 /// <summary>污染定义 JSON DTO；本体和 MOD 共用同一份 schema。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ContaminationDefinitionDto
+public sealed partial class ContaminationDefinitionDto
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -87,8 +88,9 @@ public sealed class ContaminationDefinitionDto
 }
 
 /// <summary>一个污染定义分包。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ContaminationCatalogDto
+public sealed partial class ContaminationCatalogDto
 {
     [JsonProperty("schemaVersion", Required = Required.Always)]
     public int SchemaVersion;
@@ -98,8 +100,9 @@ public sealed class ContaminationCatalogDto
 }
 
 /// <summary>污染目录清单。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ContaminationManifestDto
+public sealed partial class ContaminationManifestDto
 {
     [JsonProperty("schemaVersion", Required = Required.Always)]
     public int SchemaVersion;
@@ -109,8 +112,9 @@ public sealed class ContaminationManifestDto
 }
 
 /// <summary>污染清单中的一个分包条目。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class ContaminationPackageDto
+public sealed partial class ContaminationPackageDto
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -149,7 +153,7 @@ public static class ContaminationDefinitionFactory
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("污染定义分包为空");
 
-        return JsonConvert.DeserializeObject<ContaminationCatalogDto>(json, StrictJsonSettings)
+        return JsonConfigurationCache.Deserialize<ContaminationCatalogDto>(json, StrictJsonSettings)
             ?? throw new InvalidDataException("污染定义分包无法反序列化");
     }
 

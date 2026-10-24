@@ -74,7 +74,7 @@ public partial class Mod_Food
     public partial class FoodHealthState
     {
         public bool Enabled = true;
-        public float HealSpeed = 1f;
+        public float HealSpeed = 0f;
 
         [Tooltip("大于 0 时按间隔一次性回血；为 0 时使用 HealSpeed 连续回血")]
         public float HealInterval = 0f;

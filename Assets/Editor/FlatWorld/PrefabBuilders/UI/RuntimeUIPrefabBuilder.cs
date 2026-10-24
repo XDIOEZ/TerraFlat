@@ -112,7 +112,8 @@ public static partial class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
-            "设置", "视觉特效", "显示设置", "镜头控制", "语言", "提示", "存档加载失败", "确定");
+            "设置", "视觉特效", "显示设置", "镜头控制", "语言", "提示", "存档加载失败", "确定",
+            "界面语言会立即切换，点击保存后保留修改。", "当前语言：简体中文", "当前语言：English");
         Debug.Log("[Runtime UI] 已固化游戏内设置主界面，并同步主菜单客户端设置子集。");
     }
 
@@ -965,7 +966,7 @@ public static partial class RuntimeUIPrefabBuilder
         stackText.fontStyle = FontStyles.Bold;
         stackText.alignment = TextAlignmentOptions.Center;
         stackText.enableWordWrapping = false;
-        stackText.overflowMode = TextOverflowModes.Overflow;
+        stackText.overflowMode = TextOverflowModes.Ellipsis;
         Stretch(stackText.rectTransform);
         AddOutline(stackText, new Color(0.05f, 0.05f, 0.05f, 0.92f));
 
@@ -1130,6 +1131,7 @@ public static partial class RuntimeUIPrefabBuilder
         logRect.sizeDelta = Vector2.zero;
         logText.alignment = TextAlignmentOptions.TopLeft;
         logText.enableWordWrapping = true;
+        logText.enableAutoSizing = false;
         logText.overflowMode = TextOverflowModes.Overflow;
         logText.richText = false;
         logText.lineSpacing = 4f;
@@ -1261,7 +1263,7 @@ public static partial class RuntimeUIPrefabBuilder
         title.fontStyle = FontStyles.Bold;
         title.alignment = TextAlignmentOptions.Center;
         title.enableAutoSizing = true;
-        title.fontSizeMin = 20f;
+        title.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(28f);
         title.fontSizeMax = 28f;
         title.enableWordWrapping = false;
         title.overflowMode = TextOverflowModes.Ellipsis;
@@ -1270,7 +1272,7 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI status = CreateText(GameRes.ResourceLoadingStatusKey, card.transform, "正在加载资源…", 18f, Muted);
         status.alignment = TextAlignmentOptions.Center;
         status.enableAutoSizing = true;
-        status.fontSizeMin = 15f;
+        status.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(18f);
         status.fontSizeMax = 18f;
         status.enableWordWrapping = true;
         status.overflowMode = TextOverflowModes.Ellipsis;
@@ -1297,7 +1299,7 @@ public static partial class RuntimeUIPrefabBuilder
         hint.gameObject.SetActive(false);
         hint.alignment = TextAlignmentOptions.Center;
         hint.enableAutoSizing = true;
-        hint.fontSizeMin = 14f;
+        hint.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(16f);
         hint.fontSizeMax = 16f;
         hint.enableWordWrapping = false;
         hint.overflowMode = TextOverflowModes.Ellipsis;
@@ -1461,7 +1463,7 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI eyebrow = CreateText("维度加载标题", card.transform, "维度跃迁", 17f, Muted);
         eyebrow.alignment = TextAlignmentOptions.Center;
         eyebrow.enableAutoSizing = true;
-        eyebrow.fontSizeMin = 14f;
+        eyebrow.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(17f);
         eyebrow.fontSizeMax = 17f;
         eyebrow.enableWordWrapping = false;
         eyebrow.overflowMode = TextOverflowModes.Ellipsis;
@@ -1483,7 +1485,7 @@ public static partial class RuntimeUIPrefabBuilder
         dimensionName.fontStyle = FontStyles.Bold;
         dimensionName.alignment = TextAlignmentOptions.Center;
         dimensionName.enableAutoSizing = true;
-        dimensionName.fontSizeMin = 22f;
+        dimensionName.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(34f);
         dimensionName.fontSizeMax = 34f;
         dimensionName.enableWordWrapping = false;
         dimensionName.overflowMode = TextOverflowModes.Ellipsis;
@@ -1492,7 +1494,7 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI status = CreateText(GameManager.DimensionLoadingStatusKey, card.transform, "正在创建目标维度…", 18f, Cream);
         status.alignment = TextAlignmentOptions.Center;
         status.enableAutoSizing = true;
-        status.fontSizeMin = 15f;
+        status.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(18f);
         status.fontSizeMax = 18f;
         status.enableWordWrapping = true;
         status.overflowMode = TextOverflowModes.Ellipsis;
@@ -1515,7 +1517,7 @@ public static partial class RuntimeUIPrefabBuilder
         hint.gameObject.SetActive(false);
         hint.alignment = TextAlignmentOptions.Center;
         hint.enableAutoSizing = true;
-        hint.fontSizeMin = 14f;
+        hint.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(16f);
         hint.fontSizeMax = 16f;
         hint.enableWordWrapping = false;
         hint.overflowMode = TextOverflowModes.Ellipsis;
@@ -2079,7 +2081,7 @@ public static partial class RuntimeUIPrefabBuilder
             "速度和距离：25%～200%，100% 为默认；数值越低越容易触发。\n开启方向限制时需朝目标容器甩动，关闭后仍按方向优先选择目标。",
             17f, Muted);
         hint.enableWordWrapping = true;
-        hint.overflowMode = TextOverflowModes.Overflow;
+        hint.overflowMode = TextOverflowModes.Ellipsis;
         hint.gameObject.AddComponent<LayoutElement>().minHeight = 52f;
     }
 
@@ -2317,7 +2319,7 @@ public static partial class RuntimeUIPrefabBuilder
 
         TextMeshProUGUI message = CreateText("Message", root.transform, string.Empty, 28f, new Color(0.96f, 0.94f, 0.88f, 1f));
         message.enableAutoSizing = true;
-        message.fontSizeMin = 20f;
+        message.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(28f);
         message.fontSizeMax = 28f;
         message.enableWordWrapping = true;
         message.overflowMode = TextOverflowModes.Ellipsis;
@@ -2419,6 +2421,8 @@ public static partial class RuntimeUIPrefabBuilder
         EnsureGameSettingsPage(root);
         Transform graphicsPage = ConfigureGraphicsSettingsPage(content);
         graphicsPage.gameObject.SetActive(false);
+        Transform languagePage = ConfigureLanguageSettingsPage(content);
+        languagePage.gameObject.SetActive(false);
         EnsureActionListTabButton(
             root.transform,
             FindTransform(root.transform, SettingsActionListPagination.TabBarName),
@@ -2447,6 +2451,30 @@ public static partial class RuntimeUIPrefabBuilder
             GameManager.MainMenuSettingsEffectsQualityKey,
             new[] { "高", "中", "低" });
         return graphicsPage;
+    }
+
+    /// <summary>主菜单与游戏内共用同一语言设置页和下拉控件。</summary>
+    private static Transform ConfigureLanguageSettingsPage(Transform content)
+    {
+        Transform languagePage = EnsureActionListPage(
+            content,
+            SettingsActionListPagination.LanguagePageName);
+        ClearDirectChildren(languagePage);
+        CreateSettingsHeader(languagePage, "语言");
+        CreateSettingsHint(languagePage, "界面语言会立即切换，点击保存后保留修改。", 48f);
+        CreateSettingsDropdownRow(
+            languagePage,
+            "游戏语言",
+            GameManager.MainMenuSettingsLanguageDropdownKey,
+            new[] { "简体中文", "English" });
+        TextMeshProUGUI languageStatus = CreateText(
+            GameManager.MainMenuSettingsLanguageStatusTextKey,
+            languagePage,
+            string.Empty,
+            16f,
+            Muted);
+        languageStatus.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+        return languagePage;
     }
 
     /// <summary>
@@ -2489,24 +2517,7 @@ public static partial class RuntimeUIPrefabBuilder
 
         Transform graphicsPage = ConfigureGraphicsSettingsPage(content);
 
-        Transform languagePage = EnsureActionListPage(
-            content,
-            SettingsActionListPagination.LanguagePageName);
-        ClearDirectChildren(languagePage);
-        CreateSettingsHeader(languagePage, "语言");
-        CreateSettingsHint(languagePage, "界面语言会立即切换，点击保存后保留修改。", 48f);
-        CreateSettingsDropdownRow(
-            languagePage,
-            "游戏语言",
-            GameManager.MainMenuSettingsLanguageDropdownKey,
-            new[] { "简体中文", "English" });
-        TextMeshProUGUI languageStatus = CreateText(
-            GameManager.MainMenuSettingsLanguageStatusTextKey,
-            languagePage,
-            string.Empty,
-            16f,
-            Muted);
-        languageStatus.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+        Transform languagePage = ConfigureLanguageSettingsPage(content);
 
         Transform[] orderedPages =
         {
@@ -2593,13 +2604,39 @@ public static partial class RuntimeUIPrefabBuilder
         resetRect.anchorMin = new Vector2(1f, 0f);
         resetRect.anchorMax = new Vector2(1f, 0f);
         resetRect.pivot = new Vector2(1f, 0f);
-        resetRect.anchoredPosition = new Vector2(-24f, 8f);
+        resetRect.anchoredPosition = new Vector2(-168f, 8f);
         resetRect.sizeDelta = new Vector2(190f, 60f);
         LayoutElement resetLayout = resetButton.GetComponent<LayoutElement>();
         if (resetLayout != null)
             resetLayout.ignoreLayout = true;
         SetButtonLabelSize(resetButton, 17f);
         resetButton.transform.SetAsLastSibling();
+
+        // 保存按钮由正式 Prefab 持有，重建时保留设置会话需要的稳定节点名。
+        DestroyTransformIfPresent(root.transform, SettingsEditSessionController.SaveButtonName);
+        Button saveButton = CreateButton(
+            SettingsEditSessionController.SaveButtonName,
+            root.transform,
+            "保存",
+            132f,
+            60f,
+            true);
+        RectTransform saveRect = saveButton.GetComponent<RectTransform>();
+        saveRect.anchorMin = new Vector2(1f, 0f);
+        saveRect.anchorMax = new Vector2(1f, 0f);
+        saveRect.pivot = new Vector2(1f, 0f);
+        saveRect.anchoredPosition = new Vector2(-24f, 8f);
+        saveRect.sizeDelta = new Vector2(132f, 60f);
+        LayoutElement saveLayout = saveButton.GetComponent<LayoutElement>();
+        if (saveLayout != null)
+            saveLayout.ignoreLayout = true;
+        SetButtonLabelSize(saveButton, 17f);
+        saveButton.transform.SetAsLastSibling();
+        if (footerHint != null)
+        {
+            RectTransform hintRect = footerHint.rectTransform;
+            hintRect.offsetMax = new Vector2(-382f, hintRect.offsetMax.y);
+        }
 
         Transform close = FindTransform(root.transform, GameManager.MainMenuSettingsCloseButtonKey);
         close?.SetAsLastSibling();
@@ -2914,7 +2951,7 @@ public static partial class RuntimeUIPrefabBuilder
         prompt.alignment = TextAlignmentOptions.Center;
         prompt.enableWordWrapping = true;
         prompt.enableAutoSizing = true;
-        prompt.fontSizeMin = 22f;
+        prompt.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(30f);
         prompt.fontSizeMax = 30f;
         prompt.gameObject.AddComponent<LayoutElement>().preferredHeight = 150f;
 
@@ -3105,6 +3142,7 @@ public static partial class RuntimeUIPrefabBuilder
         ConfigureButtonVisual(sortButton, false, "排序");
         ConfigureButtonVisual(organizeButton, false, "整理");
         ConfigureBagSearchClearButton(root);
+        ConfigureInventoryCategoryFilter(root);
     }
 
     /// <summary>在行囊搜索框右侧安装手机端可直接点击的扫把清空按钮。</summary>
@@ -3116,6 +3154,12 @@ public static partial class RuntimeUIPrefabBuilder
             : null;
         if (searchInput == null)
             throw new MissingComponentException("UI_Bag.prefab 缺少 FWUI_BagSearch 输入框。");
+
+        RectTransform searchRect = searchInput.GetComponent<RectTransform>();
+        searchRect.anchorMin = new Vector2(0f, 1f);
+        searchRect.anchorMax = new Vector2(0f, 1f);
+        searchRect.anchoredPosition = new Vector2(390f, -39f);
+        searchRect.sizeDelta = new Vector2(360f, 54f);
 
         Transform existing = searchTransform.Find("清空搜索");
         Button clearButton = existing != null ? existing.GetComponent<Button>() : null;
@@ -3675,7 +3719,7 @@ public static partial class RuntimeUIPrefabBuilder
         hint.enableWordWrapping = false;
         hint.overflowMode = TextOverflowModes.Ellipsis;
         hint.raycastTarget = false;
-        Button decrease = CreateButton("缩小按钮", header.transform, "−", 76f, 60f, false);
+        Button decrease = CreateButton("缩小按钮", header.transform, "-", 76f, 60f, false);
         Button increase = CreateButton("放大按钮", header.transform, "+", 76f, 60f, false);
         RectTransform decreaseRect = decrease.GetComponent<RectTransform>();
         RectTransform increaseRect = increase.GetComponent<RectTransform>();
@@ -3888,7 +3932,7 @@ public static partial class RuntimeUIPrefabBuilder
         CreateMobileHotbarSideButton(hotbarAnchor, "背包", true, true);
     }
 
-    /// <summary>创建单个快捷栏侧边入口，并排除九格布局控制。</summary>
+    /// <summary>创建单个快捷栏侧边入口，并排除十格布局控制。</summary>
     private static void CreateMobileHotbarSideButton(
         Transform hotbarAnchor,
         string name,
@@ -4421,8 +4465,8 @@ public static partial class RuntimeUIPrefabBuilder
         LayoutElement rootLayout = dropdown.gameObject.AddComponent<LayoutElement>();
         rootLayout.preferredWidth = preferredWidth;
         rootLayout.preferredHeight = 64f;
-        dropdown.captionText.fontSize = 20f;
-        dropdown.itemText.fontSize = 19f;
+        FlatWorldUITextLayout.Configure(dropdown.captionText, 20f);
+        FlatWorldUITextLayout.Configure(dropdown.itemText, 19f);
 
         Transform item = dropdown.itemText.transform.parent;
         item.GetComponent<LayoutElement>().preferredHeight = 60f;
@@ -4581,7 +4625,7 @@ public static partial class RuntimeUIPrefabBuilder
             ? button.GetComponentInChildren<TextMeshProUGUI>(true)
             : null;
         if (label != null)
-            label.fontSize = fontSize;
+            FlatWorldUITextLayout.Configure(label, fontSize);
     }
 
     private static void ConfigureButtonVisual(Button button, bool primary, string caption)
@@ -4606,7 +4650,7 @@ public static partial class RuntimeUIPrefabBuilder
             label = CreateText("Text (TMP)", button.transform, caption, 14f, Cream);
         label.text = caption;
         label.font = font;
-        label.fontSize = 14f;
+        FlatWorldUITextLayout.Configure(label, 14f);
         label.fontStyle = FontStyles.Bold;
         label.alignment = TextAlignmentOptions.Center;
         Stretch(label.rectTransform);
@@ -4633,6 +4677,7 @@ public static partial class RuntimeUIPrefabBuilder
         text.fontSize = size;
         text.color = color;
         text.alignment = TextAlignmentOptions.MidlineLeft;
+        FlatWorldUITextLayout.Configure(text, size);
         text.raycastTarget = false;
         return text;
     }
@@ -4641,7 +4686,7 @@ public static partial class RuntimeUIPrefabBuilder
     {
         TextMeshProUGUI text = CreateText(name, parent, value, 25f, color);
         text.enableAutoSizing = true;
-        text.fontSizeMin = 18f;
+        text.fontSizeMin = FlatWorldUITextLayout.MinimumFontSize(25f);
         text.fontSizeMax = 25f;
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Ellipsis;

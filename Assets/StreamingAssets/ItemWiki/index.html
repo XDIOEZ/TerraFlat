@@ -4,7 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FlatWorld · Item Wiki</title>
-    <link rel="stylesheet" href="styles.css?v=20260920-buffs">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23142746'/%3E%3Cpath d='M7 6h18v20H7z' fill='%23efc991'/%3E%3Cpath d='M10 11h12M10 16h12M10 21h8' stroke='%23654638' stroke-width='2'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css?v=20261023-tree">
+    <link rel="stylesheet" href="tech-tree.css?v=20261023-tree">
 </head>
 <body>
 <div class="site-shell">
@@ -26,18 +28,23 @@
                 <strong>全物品总览</strong>
                 <small>ITEM ATLAS</small>
             </button>
-            <button id="designViewButton" class="header-page-button" type="button">
+            <button id="techTreeViewButton" class="header-page-button" type="button">
                 <span>03</span>
+                <strong>科技树</strong>
+                <small>TECH TREE</small>
+            </button>
+            <button id="designViewButton" class="header-page-button" type="button">
+                <span>04</span>
                 <strong>游戏设计</strong>
                 <small>GAME DESIGN</small>
             </button>
             <button id="systemMapViewButton" class="header-page-button" type="button">
-                <span>04</span>
+                <span>05</span>
                 <strong>系统结构</strong>
                 <small>SCRIPT WORLD</small>
             </button>
             <button id="buffViewButton" class="header-page-button" type="button">
-                <span>05</span>
+                <span>06</span>
                 <strong>BUFF</strong>
                 <small>状态与数值</small>
             </button>
@@ -89,7 +96,7 @@
 
                     <div id="indexToolsContent" class="index-tools-content">
                         <div class="summary-strip">
-                            <div><strong id="countConcrete">—</strong><span>可用物品</span></div>
+                            <div><strong id="countConcrete">—</strong><span>可用条目</span></div>
                             <div><strong id="countAbstract">—</strong><span>抽象模板</span></div>
                             <div><strong id="countPackages">—</strong><span>JSON 分包</span></div>
                         </div>
@@ -202,6 +209,10 @@
             </div>
 
             <div id="overviewGrid" class="overview-grid"></div>
+        </section>
+
+        <section id="techTreeBook" class="tech-tree-book pixel-frame" aria-label="物品科技树" hidden>
+            <div id="techTreeRoot"><p class="no-data">正在整理物品与加工路线…</p></div>
         </section>
 
         <section id="designBook" class="design-book pixel-frame" hidden>
@@ -338,8 +349,8 @@
     </main>
 
     <footer class="wiki-footer">
-        <span>数据源：GameConfig/Items、Actors、Buffs（按清单加载）</span>
-        <span>JSON 是唯一真源 · Wiki 编辑会校验并回写真实分包</span>
+        <span>数据源：GameConfig/Items、Recipes、Actors、Buffs（按清单加载）</span>
+        <span id="footerCapability">JSON 实时档案 · 正在识别服务模式</span>
     </footer>
 </div>
 
@@ -380,9 +391,11 @@
     </details>
 </template>
 
-<script src="mechanics.js?v=20260918-1" defer></script>
-<script src="mechanics-rules.js?v=20260918-1" defer></script>
-<script src="buffs.js?v=1" defer></script>
-<script src="app.js?v=20260920-buffs" defer></script>
+<script src="mechanics.js?v=20261023-tree" defer></script>
+<script src="mechanics-rules.js?v=20261023-tree" defer></script>
+<script src="buffs.js?v=20261023-tree" defer></script>
+<script src="tech-tree-model.js?v=20261023-tree" defer></script>
+<script src="tech-tree.js?v=20261023-tree" defer></script>
+<script src="app.js?v=20261023-tree" defer></script>
 </body>
 </html>

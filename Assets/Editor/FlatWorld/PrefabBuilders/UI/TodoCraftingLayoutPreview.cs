@@ -18,7 +18,7 @@ public static class TodoCraftingLayoutPreview
     #region 验证定义
 
     private const string OutputDirectory = "Library/FlatWorldTodoValidation";
-    private static readonly string[] PanelIds = { "UI_HandCraftTable", "UI_MakerTable" };
+    private static readonly string[] PanelIds = { "UI_HandCraftTable", "UI_MakerTable", "UI_Anvil" };
     private static readonly Vector2Int[] AvailableSizes =
     {
         new Vector2Int(1920, 1080), new Vector2Int(640, 360),
@@ -102,6 +102,8 @@ public static class TodoCraftingLayoutPreview
             Require(Mathf.Abs(presentationScale - (id == "UI_HandCraftTable" ? 0.6f : 0.8f)) < 0.001f,
                 $"{id} 制作面板表现比例不正确：{presentationScale}。");
             Require(bounds != null, $"{id} 缺少固定内容边界引用。");
+            foreach (ItemSlot_UI slot in instance.GetComponentsInChildren<ItemSlot_UI>(true))
+                Require(slot.transform.IsChildOf(bounds), $"{id} 槽位 {slot.name} 脱离缩放内容层。");
             Require(Mathf.Abs(bounds.sizeDelta.x - 1344f) < 0.01f &&
                     Mathf.Abs(bounds.sizeDelta.y - 756f) < 0.01f,
                 $"{id} 内容层不再是 1344×756。");

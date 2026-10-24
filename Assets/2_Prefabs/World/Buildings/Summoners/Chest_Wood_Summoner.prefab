@@ -73,7 +73,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 2055244437, guid: 9de1db5190b67f540b562921ffb5cd5d, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f7bf7289615440218d78d6e41fc5987c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -281,6 +281,12 @@ MonoBehaviour:
         Data:
           Name: "\u80CC\u5305\u6A21\u5757"
           itemSlots:
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
           - CanAcceptTags: []
             SlotMaxVolume: 0
             Index: 0

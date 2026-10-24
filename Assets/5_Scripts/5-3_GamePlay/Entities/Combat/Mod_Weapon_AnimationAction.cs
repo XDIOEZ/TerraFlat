@@ -9,7 +9,7 @@ public interface IWeaponActionAnimation
     bool TryRequestAction(bool queueIfBusy = false);
 }
 
-public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, IWeaponActionAnimation
+public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, IWeaponActionAnimation
 {
     #region Config
     [Tooltip("武器动画树 Animator")]
@@ -29,7 +29,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     [SerializeField] private bool loopComboOnHold = true;
     [Tooltip("攻击速度倍率，1.0 为原速")]
     [SerializeField, ReadOnly] private float attackSpeedMultiplier = 1f;
-    [Tooltip("每次实际开始一段挥动攻击时消耗的基础体力；最终消耗受难度倍率影响")]
+    [Tooltip("每次实际开始一段挥动攻击时消耗的基础体力；最终消耗由角色体力参数修正")]
     [SerializeField, Min(0f)] private float staminaCostPerAttack = 5f;
     #endregion
 
@@ -58,6 +58,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     // 持有者体力模块；没有体力模块的非玩家持有者不受该限制。
     private Mod_Stamina ownerStamina;
     private bool isHoldingInput;
+    private bool restoreIdleWhenActive;
     #endregion
     #region 基础参数
 
@@ -108,6 +109,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             }
         }
         animator = item.GetComponentInChildren<Animator>();
+        BindHitFeedback(cachedDamageModule);
         ApplyAttackSpeedToAnimator();
         DisableDamageOutsideAttack(force: true);
     }
@@ -129,6 +131,9 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
     protected override void OnUnload()
     {
+        UnbindHitFeedback();
+        isHoldingInput = false;
+        ResetToIdle(playAnimation: false);
         UnbindAttackInput();
     }
 
@@ -153,6 +158,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     [InfoBox("驱动持有者攻击语义与连击状态机")]
     private void Update()
     {
+        RestoreIdleWhenReady();
         if (cachedController != null && cachedController.IsGameplayInputLocked)
         {
             isHoldingInput = false;
@@ -169,6 +175,8 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
         // 落地和远端武器不读取全局鼠标，只由持有者控制器或公开动作接口驱动。
 
+        if (UpdateHitStop()) return;
+
         if (queuedNext)
         {
             TryStartNext();
@@ -176,7 +184,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
         TryStartNext();
 
-        if (isAttacking && Time.time > comboDeadline)
+        if (isAttacking && AttackTime > comboDeadline)
         {
             ResetToIdle();
         }
@@ -197,9 +205,20 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     /// <summary>请求一段实际挥动；只有动画在本次调用中真正开始时返回 true。</summary>
     public bool TryRequestAttack(bool queueIfBusy = true)
     {
+        if (!IsRuntimeLoaded || !isActiveAndEnabled)
+            return false;
+
         if (animator == null)
         {
             Debug.LogError($"{name} 缺少 Animator 组件。", this);
+            return false;
+        }
+
+        if (!CanPlayWeaponAnimation()) return false;
+
+        if (UpdateHitStop())
+        {
+            if (queueIfBusy) queuedNext = true;
             return false;
         }
 
@@ -214,7 +233,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             return StartAttack(0);
         }
 
-        if (Time.time > comboDeadline)
+        if (AttackTime > comboDeadline)
         {
             ResetToIdle();
             return StartAttack(0);
@@ -223,7 +242,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
         int nextIndex = currentIndex + 1;
         if (nextIndex < attackAnimationNames.Count)
         {
-            if (Time.time < nextReadyTime)
+            if (AttackTime < nextReadyTime)
             {
                 if (queueIfBusy)
                     queuedNext = true;
@@ -262,12 +281,18 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             return;
         }
 
+        if (!IsRuntimeLoaded || !isActiveAndEnabled || !CanPlayWeaponAnimation())
+            return;
+
+        ResetHitStop();
+        restoreIdleWhenActive = false;
         animator.Play(animationName);
     }
 
     [InfoBox("开始播放指定索引的攻击动画")]
     private bool StartAttack(int index)
     {
+        if (!IsRuntimeLoaded || !isActiveAndEnabled || !CanPlayWeaponAnimation()) return false;
         if (EquipmentDurabilityRules.RejectBrokenAttack(item)) { ResetToIdle(); return false; }
         if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) return false;
         if (!TryConsumeAttackStamina())
@@ -280,6 +305,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             return false;
         }
 
+        ResetHitStop();
         currentIndex = index;
         isAttacking = true;
         queuedNext = false;
@@ -288,6 +314,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
         string animationName = attackAnimationNames[index];
         currentStateHash = Animator.StringToHash(animationName);
+        restoreIdleWhenActive = false;
         animator.Play(animationName, 0, 0f);
         animator.Update(0f);
 
@@ -310,8 +337,8 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             scaledLength = 0.1f;
         }
 
-        comboDeadline = Time.time + scaledWindow;
-        nextReadyTime = Time.time + scaledLength;
+        comboDeadline = AttackTime + scaledWindow;
+        nextReadyTime = AttackTime + scaledLength;
         PlayOwnerAttackPresentation();
         return true;
     }
@@ -345,7 +372,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     [InfoBox("检查并尝试衔接下一段连击")]
     private void TryStartNext()
     {
-        if (!isAttacking)
+        if (!isAttacking || IsHitStopped)
         {
             return;
         }
@@ -360,12 +387,12 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
         bool isCurrentState = stateInfo.shortNameHash == currentStateHash;
         bool finished = isCurrentState && stateInfo.normalizedTime >= 1f;
 
-        if (!finished && Time.time < nextReadyTime)
+        if (!finished && AttackTime < nextReadyTime)
         {
             return;
         }
 
-        if (Time.time > comboDeadline + comboWindowGrace)
+        if (AttackTime > comboDeadline + comboWindowGrace)
         {
             return;
         }
@@ -385,16 +412,41 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     }
 
     [InfoBox("退出攻击并回到待机")]
-    private void ResetToIdle()
+    private void ResetToIdle(bool playAnimation = true)
     {
+        ResetHitStop();
         isAttacking = false;
         currentIndex = -1;
         comboDeadline = 0f;
         nextReadyTime = 0f;
         queuedNext = false;
         currentStateHash = 0;
-        animator.Play(idleAnimationName, 0, 0f);
+        // 场景迁移的停用回调只清理战斗状态，等待 Animator 真正激活后再播放待机。
+        if (playAnimation && CanPlayWeaponAnimation())
+        {
+            animator.Play(idleAnimationName, 0, 0f);
+            restoreIdleWhenActive = false;
+        }
+        else
+        {
+            restoreIdleWhenActive = true;
+        }
         DisableDamageOutsideAttack(force: true);
+    }
+
+    private bool CanPlayWeaponAnimation()
+    {
+        return animator != null && animator.gameObject.activeInHierarchy &&
+               animator.isActiveAndEnabled && animator.runtimeAnimatorController != null;
+    }
+
+    private void RestoreIdleWhenReady()
+    {
+        if (!restoreIdleWhenActive || !IsRuntimeLoaded || !isActiveAndEnabled || !CanPlayWeaponAnimation())
+            return;
+
+        animator.Play(idleAnimationName, 0, 0f);
+        restoreIdleWhenActive = false;
     }
 
     /// <summary>待机时关闭伤害碰撞体，防止 Prefab 默认值异常造成常驻伤害。</summary>
@@ -431,7 +483,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             return;
         }
 
-        animator.speed = AttackSpeedMultiplier;
+        animator.speed = IsHitStopped ? 0f : AttackSpeedMultiplier;
     }
     #endregion
 }

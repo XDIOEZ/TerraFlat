@@ -8,6 +8,7 @@ public partial class Mod_Building
         if (placed == null) throw new ArgumentNullException(nameof(placed));
         if (string.IsNullOrWhiteSpace(carrierId)) return placed;
         ItemData carrier = GameRes.ExistingInstance.CreateItemData(carrierId);
+        CopyCraftingMaterials(placed, carrier);
         carrier.Guid = GenerateUniqueRuntimeGuid(); carrier.inHand = false; carrier.Stack.Amount = 1f;
         // 回收载体与普通拆回共用正式快照封包，供放置与载荷读取按同一契约恢复。
         if (!ItemNetworkStateSerialization.TrySerializeItemData(placed, out byte[] payload) ||

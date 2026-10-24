@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/5_Scripts/5-1_Data/ItemData/ItemData.cs" />
+    <Compile Include="../../../Assets/5_Scripts/5-1_Data/ItemData/ItemDurabilityRules.cs" />
+    <Compile Include="../../../Assets/5_Scripts/5-1_Data/CoreData/Inventory_Data.cs" />
+    <Compile Include="../../../Assets/5_Scripts/5-1_Data/CoreData/Inventory_Data.Capacity.cs" />
+    <Compile Include="../../../Assets/5_Scripts/5-1_Data/CoreData/Inventory_Data.Durability.cs" />
+    <Compile Include="../../../Assets/5_Scripts/5-1_Data/CoreData/ItemSlot.cs" />
+  </ItemGroup>
+</Project>

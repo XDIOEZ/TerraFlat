@@ -131,6 +131,7 @@ public void AddItem(ItemData itemData)
     else if (this.itemData.CanStackWith(itemData))
     {
         // 插槽中已有相同ID的物品，增加堆叠数量
+        ItemDurabilityRules.CopyTopWear(itemData, this.itemData);
         this.itemData.Stack.Amount += itemData.Stack.Amount;
     }
     // 若插槽中有不同ID的物品，则不进行任何操作
@@ -152,6 +153,7 @@ public void DestroyItem(float destroyCount)
         {
             // 销毁数量小于堆叠数量，减少堆叠
             itemData.Stack.Amount -= destroyCount;
+            if (destroyCount >= 1f) ItemDurabilityRules.AdvanceAfterRemoval(itemData);
         }
         else
         {

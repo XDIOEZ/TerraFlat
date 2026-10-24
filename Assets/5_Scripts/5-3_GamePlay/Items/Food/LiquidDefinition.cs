@@ -160,8 +160,9 @@ public sealed class LiquidDrinkEffect
 }
 
 /// <summary>液体 JSON DTO；MOD definitionFiles 的 liquids 数组与本体目录共用此 schema。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LiquidDefinitionDto
+public sealed partial class LiquidDefinitionDto
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -219,8 +220,9 @@ public sealed class LiquidDefinitionDto
 }
 
 /// <summary>液体饮用后果 DTO；当前通用后果为按概率向饮用者添加 Buff。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LiquidDrinkEffectDto
+public sealed partial class LiquidDrinkEffectDto
 {
     [JsonProperty("buffId", Required = Required.Always)]
     public string BuffId;
@@ -233,8 +235,9 @@ public sealed class LiquidDrinkEffectDto
 }
 
 /// <summary>单条液体加热规则 DTO。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LiquidHeatProcessDto
+public sealed partial class LiquidHeatProcessDto
 {
     [JsonProperty("mode", Required = Required.Always)]
     public string Mode;
@@ -259,8 +262,9 @@ public sealed class LiquidHeatProcessDto
 }
 
 /// <summary>液体冷却凝固规则 DTO；固体产物引用正式物品 ID，跨目录引用由目录加载阶段校验。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LiquidSolidificationDto
+public sealed partial class LiquidSolidificationDto
 {
     [JsonProperty("meltingPoint", Required = Required.Always)]
     public float MeltingPoint;
@@ -273,8 +277,9 @@ public sealed class LiquidSolidificationDto
 }
 
 /// <summary>液体投料配方 DTO；原料与目标液体在完整目录载入后验证。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LiquidIngredientReactionDto
+public sealed partial class LiquidIngredientReactionDto
 {
     [JsonProperty("itemId", Required = Required.Always)] public string ItemId;
     [JsonProperty("amount", Required = Required.Always)] public int Amount;
@@ -283,8 +288,9 @@ public sealed class LiquidIngredientReactionDto
 }
 
 /// <summary>本体液体目录。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LiquidCatalogDto
+public sealed partial class LiquidCatalogDto
 {
     [JsonProperty("schemaVersion", Required = Required.Always)]
     public int SchemaVersion;
@@ -320,7 +326,7 @@ public static class LiquidDefinitionFactory
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("液体目录为空");
 
-        return JsonConvert.DeserializeObject<LiquidCatalogDto>(json, StrictJsonSettings)
+        return JsonConfigurationCache.Deserialize<LiquidCatalogDto>(json, StrictJsonSettings)
             ?? throw new InvalidDataException("液体目录无法反序列化");
     }
 

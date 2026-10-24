@@ -1,3 +1,11 @@
+test.system("building", "chunk_residency", {}, function(data)
+    assert(data.scope == "production-registry-only", "必须调用正式建筑归属索引")
+    assert(data.duplicateCount == 1 and data.isolatedCount == 1, "重复登记或同坐标跨世界串入区块")
+    assert(data.oldChunkCount == 0 and data.newChunkCount == 1, "建筑迁移后仍留在旧区块")
+    assert(data.destroyRemoved and data.reusedCount == 1, "建筑回收或对象池复用残留旧归属")
+    assert(data.copyClearsPrevious and data.cleared, "区块采样或世界释放留下旧建筑引用")
+end, "地面船体和普通建筑的区块归属、跨界、回收及复用")
+
 test.system("building", "placement_feedback", {}, function(data)
     assert(#data.details == 2 and data.details[1] == "召唤器数量不足" and data.details[2] == "地块支撑能力不足",
         "建造拒绝原因被统一位置错误覆盖")
@@ -28,3 +36,46 @@ test.system("building", "placement_distance", {}, function(data)
     assert(data.survival == 7.5 and data.fallback == 3.25, "生存放置半径未减半，或忽略玩家实际交互范围")
     assert(data.creativeUnlimited, "减半半径错误限制了创造放置")
 end, "建筑距离：生存跟随实际交互半径、无玩家回退与创造无限")
+
+local material_cases = {
+    { label = "普通绳子", straps = 0, ropes = 4, quantity = 1 },
+    { label = "纯皮带", straps = 4, ropes = 0, quantity = 1 },
+    { label = "混合绳料", straps = 2, ropes = 2, quantity = 1 },
+    { label = "增产分摊", straps = 2, ropes = 2, quantity = 2 }
+}
+for _, scenario in ipairs(material_cases) do
+    test.system("building", "material_provenance", scenario, function(data)
+        assert(data.matched and data.prepared and data.success, "木箱真实材料未通过制作事务")
+        assert(data.previewUnchanged and not data.inputsUnchanged and data.spareUntouched,
+            "材料预览提前扣料、制作未扣料或多余输入被算入材料")
+        local quantity = scenario.quantity
+        assert(data.materials.Plank == 6 / quantity, "制作增产没有按每件分摊木板成本")
+        assert((data.materials.Rope or 0) == scenario.ropes / quantity,
+            "普通绳子被替换成标签默认物品，或存储/放置/拆回丢失材料")
+        assert((data.materials.LeatherStrap or 0) == scenario.straps / quantity,
+            "实际皮带材料没有跨建筑移交保留")
+        assert(data.materials.Stick_Wood == nil, "未消耗的额外材料进入回收清单")
+        assert(data.zeroRecovery and data.fullRecovery.Plank == 6 / quantity,
+            "零概率仍返料，或满概率没有使用真实木板成本")
+        assert((data.fullRecovery.Rope or 0) == scenario.ropes / quantity and
+            (data.fullRecovery.LeatherStrap or 0) == scenario.straps / quantity,
+            "随机回收没有使用实际替代材料")
+        assert(data.proportional.Plank == math.floor(3 / quantity) and
+            (data.proportional.Rope or 0) == math.floor(scenario.ropes / quantity * 0.5) and
+            (data.proportional.LeatherStrap or 0) == math.floor(scenario.straps / quantity * 0.5),
+            "磨损固定返料没有使用实际材料并逐种向下取整")
+        assert(data.reorderedIdentity and not data.differentMaterialsStack,
+            "相同材料因扣料顺序无法合堆，或不同材料建筑被合堆")
+        assert(data.isolated and data.invalidRejected, "材料记录共享了可变引用，或非法数量未拒绝")
+    end, "木箱材料记录、保存恢复与两种回收：" .. scenario.label)
+end
+
+test.system("building", "material_provenance", { full = true }, function(data)
+    assert(data.matched and data.prepared and not data.success, "满输出槽仍然完成制作")
+    assert(data.previewUnchanged and data.inputsUnchanged, "输出被阻挡时制作材料被扣除")
+end, "建筑材料记录不破坏满输出回滚")
+
+test.system("building", "material_provenance", { ropes = 0, straps = 0 }, function(data)
+    assert(not data.matched and not data.prepared and not data.success, "缺少绳料仍制作出带材料记录的木箱")
+    assert(data.inputsUnchanged, "缺少绳料时扣除了木板")
+end, "建筑缺料不生成虚假材料记录")

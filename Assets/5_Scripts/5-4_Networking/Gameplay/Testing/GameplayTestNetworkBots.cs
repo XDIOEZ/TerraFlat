@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
+using FlatWorld.Diagnostics;
 using FlatWorld.Spaceflight;
 using Mirror;
 using Newtonsoft.Json.Linq;
@@ -85,6 +87,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             result["authorityInitialized"] = Enumerable.Range(31, count)
                 .All(id => world.Core(id).CorePlayer.IsInitialized);
+            result["hostStatePublishing"] = CaptureHostStatePublishing(world.Core(31));
             var inventories = Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data.ModuleDataDic.Values
                 .OfType<Inventory_ModuleData>().ToArray()).ToArray();
             Inventory_ModuleData[] native = inventories.SelectMany(value => value).ToArray();
@@ -154,6 +157,81 @@ namespace FlatWorld.Networking.Gameplay
             yield return null;
             result["cleanup"] = world.CleanupSample();
             completed(result);
+        }
+
+        private static JObject CaptureHostStatePublishing(NetworkWorldPlayer bot)
+        {
+            const BindingFlags fields = BindingFlags.Instance | BindingFlags.NonPublic;
+            FieldInfo Field(string name) => typeof(NetworkWorldPlayer).GetField(name, fields)
+                ?? throw new MissingFieldException(typeof(NetworkWorldPlayer).FullName, name);
+            MethodInfo Method(string name) => typeof(NetworkWorldPlayer).GetMethod(name, fields)
+                ?? throw new MissingMethodException(typeof(NetworkWorldPlayer).FullName, name);
+            long CaptureCount() => PerformanceDebugRegistry.CaptureSnapshot()
+                .Single(point => point.Name == "FlatWorld.Network.Player.StateCapture").Calls;
+            void Publish(bool force) => Method("PublishServerPlayerState").Invoke(bot, new object[] { force });
+            string[] names = { "itemStateDirty", "itemStateSendTimer", "lastSubmittedItemStateHash",
+                "serverStateTimer", "serverStateHash", "authoritativeItemState" };
+            object[] previous = names.Select(name => Field(name).GetValue(bot)).ToArray();
+            PropertyInfo owned = typeof(NetworkIdentity).GetProperty(nameof(NetworkIdentity.isOwned));
+            bool previousOwned = bot.isOwned;
+            bool statistics = PerformanceDebugRegistry.StatisticsEnabled;
+            Func<bool> pendingInventory = ItemNetworkStateSerialization.IsLocalInventoryTransactionPending;
+            try
+            {
+                // 只在同一同步采样内切换自有假人的 Host 标志，仍调用实际发布入口并完整恢复。
+                owned.SetValue(bot.netIdentity, true);
+                PerformanceDebugRegistry.SetStatisticsEnabled(true);
+                ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = static () => false;
+                Field("itemStateDirty").SetValue(bot, true);
+                Field("itemStateSendTimer").SetValue(bot, 0f);
+                Field("lastSubmittedItemStateHash").SetValue(bot, 17u);
+                Field("serverStateTimer").SetValue(bot, 10f);
+                long before = CaptureCount();
+                Method("UpdateOwnedItemState").Invoke(bot, null);
+                var result = new JObject
+                {
+                    ["ownedSubmissionCaptures"] = CaptureCount() - before,
+                    ["clientQueueUntouched"] = (bool)Field("itemStateDirty").GetValue(bot) &&
+                        (float)Field("itemStateSendTimer").GetValue(bot) == 0f &&
+                        (uint)Field("lastSubmittedItemStateHash").GetValue(bot) == 17u
+                };
+                before = CaptureCount();
+                Publish(false);
+                result["dirtyImmediateCaptures"] = CaptureCount() - before;
+                byte[] payload = (byte[])Field("authoritativeItemState").GetValue(bot);
+                result["validPublishedIdentity"] = ItemNetworkStateSerialization.TryReadIdentity(payload, out int guid, out _) &&
+                    guid == bot.CorePlayer.itemData.Guid;
+                byte[] retained = (byte[])payload.Clone();
+                Field("itemStateDirty").SetValue(bot, false);
+                before = CaptureCount();
+                Publish(false);
+                result["idleCaptures"] = CaptureCount() - before;
+                before = CaptureCount();
+                Publish(true);
+                result["forcedCaptures"] = CaptureCount() - before;
+                Field("itemStateDirty").SetValue(bot, false);
+                Method("OnRuntimeItemStateChanged").Invoke(bot, new object[] { bot.CorePlayer });
+                before = CaptureCount();
+                Publish(false);
+                result["newDirtyCaptures"] = CaptureCount() - before;
+                Field("itemStateDirty").SetValue(bot, true);
+                ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = static () => true;
+                before = CaptureCount();
+                Publish(false);
+                result["pendingInventoryCaptures"] = CaptureCount() - before;
+                before = CaptureCount();
+                Publish(true);
+                result["pendingInventoryForceCaptures"] = CaptureCount() - before;
+                result["retainedPayloadUnchanged"] = payload.SequenceEqual(retained);
+                return result;
+            }
+            finally
+            {
+                for (int i = 0; i < names.Length; i++) Field(names[i]).SetValue(bot, previous[i]);
+                owned.SetValue(bot.netIdentity, previousOwned);
+                ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = pendingInventory;
+                PerformanceDebugRegistry.SetStatisticsEnabled(statistics);
+            }
         }
 
         private static bool HaveSeparateInventoryContainers(Inventory_Data[][] players)

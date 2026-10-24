@@ -16,9 +16,12 @@ public class RecipeProcessor : IDisposable
     public RuntimeRecipe Recipe { get; private set; }
     public float RequiredWork { get; private set; } = 1f;
     public bool IsCommitting => committing;
+    public bool IsAdvancing { get; private set; }
+    public Func<bool> BeginWork; // 通过材料、容量和拖拽检查后才消耗本次工作的外部条件。
     public Func<CraftingResult> PreviewOverride;
     public Func<Player, CraftingResult> CommitOverride;
     private readonly bool registeredProcess;
+    private readonly bool catalogRecipes;
     private readonly bool ownsInventories;
     private bool disposed;
     private const int MaxCompletionsPerAdvance = 64;
@@ -26,9 +29,11 @@ public class RecipeProcessor : IDisposable
     public event Action<RecipeProcessor> StateChanged; // 世界快照增量同步入口。
     private bool committing;
 
-    public RecipeProcessor(string station, RecipeProcessingState state, string processCapability = null, int? processCapabilityLevel = null)
+    public RecipeProcessor(string station, RecipeProcessingState state, string processCapability = null, int? processCapabilityLevel = null,
+        bool catalogRecipes = false)
     {
         Station = station;
+        this.catalogRecipes = catalogRecipes;
         ProcessCapability = processCapability?.Trim() ?? string.Empty;
         ProcessCapabilityLevel = processCapabilityLevel.HasValue && processCapabilityLevel.Value > 0
             ? processCapabilityLevel
@@ -36,10 +41,11 @@ public class RecipeProcessor : IDisposable
         State = state ?? throw new ArgumentNullException(nameof(state));
         RebaseInventory(State.Input);
         RebaseInventory(State.Output);
-        Input = new ProcessingInventory(station, ProcessCapability, ProcessCapabilityLevel) { Data = state.Input };
+        Input = new ProcessingInventory(station, ProcessCapability, ProcessCapabilityLevel, catalogRecipes) { Data = state.Input };
         Output = new Inventory { Data = state.Output };
-        Capabilities = new CraftingCapabilities { StationId = station, InputSlotLimit = 1, ApplyDifficultyOutputMultiplier = false };
-        registeredProcess = true;
+        Capabilities = new CraftingCapabilities { StationId = station, InputSlotLimit = 1, ApplyOutputMultiplier = false,
+            RequireExplicitStation = catalogRecipes };
+        registeredProcess = !catalogRecipes;
         ownsInventories = true;
         Input.InitData();
         Output.InitData();
@@ -91,33 +97,44 @@ public class RecipeProcessor : IDisposable
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual bool Advance(float workSeconds, Player actor = null)
     {
-        if (disposed || committing || !MachineDefinition.Positive(workSeconds)) return false;
+        if (disposed || committing || IsAdvancing || !MachineDefinition.Positive(workSeconds)) return false;
         // 玩家正在拖动加工槽时保留当前物品，避免高速生产在松手前消费或替换来源堆。
         if (MachineInventory.IsBeingDragged(Input) || MachineInventory.IsBeingDragged(Output)) return false;
         ReconcileRecipe();
         if (Recipe == null || !Preview().Success) return false;
-        State.Progress += workSeconds;
-        bool success = false;
-        int completed = 0;
-        while (Recipe != null && State.Progress >= RequiredWork && completed < MaxCompletionsPerAdvance)
+        IsAdvancing = true;
+        try
         {
-            float cost = RequiredWork;
-            committing = true;
-            try
+            if (BeginWork?.Invoke() == false) return false;
+            State.Progress += workSeconds;
+            bool success = false;
+            int completed = 0;
+            while (Recipe != null && State.Progress >= RequiredWork && completed < MaxCompletionsPerAdvance)
             {
-                CraftingResult result = Commit(actor);
-                if (!result.Success) break;
-                State.Progress = Mathf.Max(0f, State.Progress - cost);
-                success = true;
-                completed++;
+                float cost = RequiredWork;
+                committing = true;
+                try
+                {
+                    CraftingResult result = Commit(actor);
+                    if (!result.Success) break;
+                    State.Progress = Mathf.Max(0f, State.Progress - cost);
+                    success = true;
+                    completed++;
+                }
+                finally { committing = false; }
+                ReconcileRecipe();
+                if (!Preview().Success) break;
             }
-            finally { committing = false; }
-            ReconcileRecipe();
-            if (!Preview().Success) break;
+            return success;
         }
-        Changed?.Invoke(); StateChanged?.Invoke(this);
-        return success;
+        finally
+        {
+            IsAdvancing = false;
+            Changed?.Invoke(); StateChanged?.Invoke(this);
+        }
     }
+
+    public void RefreshConditions() { Changed?.Invoke(); StateChanged?.Invoke(this); }
 
     /// <summary>独立具名事务入口供 Harmony 修改；默认仍使用统一库存锁和原子提交。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -152,7 +169,19 @@ public class RecipeProcessor : IDisposable
     { if (!committing) { Changed?.Invoke(); StateChanged?.Invoke(this); } }
     private void ReconcileRecipe()
     {
-        if (registeredProcess)
+        if (catalogRecipes)
+        {
+            RuntimeRecipe next = null;
+            if (CraftingRecipeMatcher.TryMatchAll(Input, Capabilities, out var matches, out _))
+            {
+                foreach (CraftingRecipeMatch match in matches)
+                    if (match.Recipe.Id == State.RecipeId) { next = match.Recipe; break; }
+                if (next == null && matches.Count > 0) next = matches[0].Recipe;
+            }
+            // 材料变化后保留合法选择，砧上的金属板和针共用正式配方列表。
+            SelectRecipe(next, next?.ProcessingSeconds > 0f ? next.ProcessingSeconds : 1f);
+        }
+        else if (registeredProcess)
         {
             if (!string.IsNullOrWhiteSpace(ProcessCapability))
             {
@@ -194,6 +223,7 @@ public class RecipeProcessor : IDisposable
         StateChanged = null;
         PreviewOverride = null;
         CommitOverride = null;
+        BeginWork = null;
     }
     #endregion
 
@@ -203,16 +233,30 @@ public class RecipeProcessor : IDisposable
         private readonly string station;
         private readonly string processCapability;
         private readonly int? processCapabilityLevel;
-        public ProcessingInventory(string station, string processCapability, int? processCapabilityLevel)
+        private readonly bool catalogRecipes;
+        public ProcessingInventory(string station, string processCapability, int? processCapabilityLevel, bool catalogRecipes)
         {
             this.station = station;
             this.processCapability = processCapability;
             this.processCapabilityLevel = processCapabilityLevel;
+            this.catalogRecipes = catalogRecipes;
         }
         public override bool CanAcceptQuickTransfer(ItemSlot source, ItemSlot target)
             => base.CanAcceptQuickTransfer(source, target) &&
-               (!string.IsNullOrWhiteSpace(processCapability)
+               (catalogRecipes ? AcceptsCatalogMaterial(source?.itemData) : !string.IsNullOrWhiteSpace(processCapability)
                    ? ItemProcessingResolver.TryResolve(source?.itemData, processCapability, processCapabilityLevel, out _)
                    : MachineCatalog.TryGetProcess(station, source?.itemData?.IDName, out _));
+
+        private bool AcceptsCatalogMaterial(ItemData data)
+        {
+            if (data == null || GameRes.ExistingInstance == null) return false;
+            foreach (RuntimeRecipe recipe in GameRes.ExistingInstance.GetRecipes(RecipeType.Crafting))
+            {
+                if (!string.Equals(recipe.RequiredStation, station, StringComparison.OrdinalIgnoreCase)) continue;
+                foreach (RuntimeRecipeIngredient ingredient in recipe.inputs.RowItems_List)
+                    if (CraftingIngredientMatcher.MatchesIdentity(ingredient, data)) return true;
+            }
+            return false;
+        }
     }
 }

@@ -20,8 +20,18 @@ public static partial class GameplayTestSystemProbe
         var packages = new JArray();
         foreach (RecipePackageDto package in manifest.Packages)
             if (package.Enabled) packages.Add(package.Path);
+        var packagePaths = new[] { "crafting/handmade_equipment.json", "crafting/handmade_utilities.json" };
+        string requestedPackage = Text(args, "package", string.Empty);
+        if (!string.IsNullOrWhiteSpace(requestedPackage))
+        {
+            bool enabled = false;
+            foreach (RecipePackageDto package in manifest.Packages)
+                if (package.Enabled && string.Equals(package.Path, requestedPackage, StringComparison.OrdinalIgnoreCase)) enabled = true;
+            if (!enabled) throw new InvalidOperationException("测试只能读取已启用配方包：" + requestedPackage);
+            packagePaths = new[] { requestedPackage };
+        }
         var samples = new JArray();
-        foreach (string packagePath in new[] { "crafting/handmade_equipment.json", "crafting/handmade_utilities.json" })
+        foreach (string packagePath in packagePaths)
         {
             RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(StreamingAssetsTextLoader.ReadAllText(
                 RecipeCatalogLoader.ResolvePackagePath(recipeRoot, packagePath)));
@@ -35,9 +45,20 @@ public static partial class GameplayTestSystemProbe
                 for (int index = 0; index < recipe.inputs.RowItems_List.Count; index++)
                     if (recipe.inputs.RowItems_List[index].amount == 0)
                         missingTools.Add(EntityCraftingHandmadeAttempt(recipe, definitions, false, false, index));
+                // 指定配方包时逐种移除材料，复用正式匹配和事务验证替代配方。
+                var missingMaterials = new JArray();
+                var ingredients = new JArray();
+                for (int index = 0; index < recipe.inputs.RowItems_List.Count; index++)
+                {
+                    RuntimeRecipeIngredient ingredient = recipe.inputs.RowItems_List[index];
+                    ingredients.Add(new JObject { ["id"] = ingredient.ItemName, ["amount"] = ingredient.amount });
+                    if (!string.IsNullOrWhiteSpace(requestedPackage) && ingredient.amount > 0)
+                        missingMaterials.Add(EntityCraftingHandmadeAttempt(recipe, definitions, true, false, -1, index));
+                }
                 samples.Add(new JObject
                 {
                     ["id"] = recipe.Id, ["package"] = packagePath, ["warnings"] = new JArray(warnings),
+                    ["station"] = recipe.RequiredStation, ["ingredients"] = ingredients, ["missingMaterials"] = missingMaterials,
                     ["expectedOutputs"] = expectedOutputs, ["inputKinds"] = recipe.inputs.RowItems_List.Count,
                     ["normal"] = EntityCraftingHandmadeAttempt(recipe, definitions, false, false),
                     ["missing"] = EntityCraftingHandmadeAttempt(recipe, definitions, true, false),
@@ -45,11 +66,27 @@ public static partial class GameplayTestSystemProbe
                 });
             }
         }
-        return new JObject { ["enabledPackages"] = packages, ["recipes"] = samples };
+        var sampledDefinitions = new JObject();
+        if (args?["definitionIds"] is JArray definitionIds)
+            foreach (JToken token in definitionIds)
+            {
+                string id = token.Value<string>();
+                ItemDefinitionDto definition = definitions[id];
+                // 只采样材料规则字段，避免序列化 Unity Color 等带计算属性的表现数据。
+                sampledDefinitions[id] = new JObject
+                {
+                    ["id"] = definition.Id, ["gameName"] = definition.GameName,
+                    ["weight"] = definition.Weight ?? 0f, ["volume"] = definition.Volume ?? 0f,
+                    ["stackable"] = definition.Stackable ?? true,
+                    ["matter"] = definition.Matter == null ? null : JObject.FromObject(definition.Matter)
+                };
+            }
+        return new JObject { ["enabledPackages"] = packages, ["recipes"] = samples, ["definitions"] = sampledDefinitions };
     }
 
     private static JObject EntityCraftingHandmadeAttempt(RuntimeRecipe recipe,
-        Dictionary<string, ItemDefinitionDto> definitions, bool missingMaterial, bool fullOutput, int missingToolIndex = -1)
+        Dictionary<string, ItemDefinitionDto> definitions, bool missingMaterial, bool fullOutput, int missingToolIndex = -1,
+        int missingMaterialIndex = -1)
     {
         var inputSlots = new List<ItemSlot>();
         var expectedInput = new JArray();
@@ -66,7 +103,8 @@ public static partial class GameplayTestSystemProbe
                 if (itemId == null) throw new InvalidOperationException($"配方 {recipe.Id} 找不到标签材料 {ingredient.Tag}");
             }
             float amount = Mathf.Max(1, ingredient.amount);
-            if (missingMaterial && !removedOne && ingredient.amount > 0) { amount -= 1f; removedOne = true; }
+            if (missingMaterial && !removedOne && ingredient.amount > 0 &&
+                (missingMaterialIndex < 0 || inputSlots.Count == missingMaterialIndex)) { amount -= 1f; removedOne = true; }
             if (inputSlots.Count == missingToolIndex) amount = 0f;
             Data_GeneralItem material = EntityCraftingDefinitionData(definitions[itemId], amount);
             material.Guid = 1800 + inputSlots.Count;
@@ -90,7 +128,7 @@ public static partial class GameplayTestSystemProbe
             products.Add(EntityCraftingDefinitionData(definitions[result.ItemName], result.amount));
         bool matched = CraftingRecipeMatcher.TryMatchRecipe(input, recipe, new CraftingCapabilities
         { StationId = "workbench", CompatibleStationIds = new[] { "handcraft" }, InputSlotLimit = 5,
-            ApplyDifficultyOutputMultiplier = false }, out CraftingRecipeMatch match);
+            ApplyOutputMultiplier = false }, out CraftingRecipeMatch match);
         bool prepared = false, committed = false;
         if (matched)
         {

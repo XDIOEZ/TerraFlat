@@ -37,6 +37,8 @@ namespace FlatWorld.Audio
             return true;
         }
 
+        #region 声音事件目录校验
+
         public List<string> GetValidationErrors()
         {
             List<string> errors = new List<string>();
@@ -59,10 +61,24 @@ namespace FlatWorld.Audio
 
                 if (!ids.Add(cue.Id))
                     errors.Add($"事件 ID 重复：{cue.Id}");
+
+                // 停用事件可以暂不配置录音，启用事件则必须保留完整可播放引用。
+                if (!cue.PlaybackEnabled)
+                    continue;
+                if (cue.Clips == null || cue.Clips.Count == 0)
+                {
+                    errors.Add($"声音事件 {cue.Id} 没有可播放的 AudioClip");
+                    continue;
+                }
+                for (int clipIndex = 0; clipIndex < cue.Clips.Count; clipIndex++)
+                    if (cue.Clips[clipIndex] == null)
+                        errors.Add($"声音事件 {cue.Id} 的 AudioClip 索引 {clipIndex} 为空");
             }
 
             return errors;
         }
+
+        #endregion
 
         public void RebuildIndex()
         {

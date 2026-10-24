@@ -24,7 +24,7 @@ namespace FlatWorld.NaturalEntities
             using ResourceQuery query = QueryBounds(center, Vector2.one * radius);
             foreach (Record record in query)
             {
-                float distance = WorldTopologyRuntime.Distance(center, record.Snapshot.transform.position);
+                float distance = Mathf.Sqrt(SqrDistanceToBounds(center, record.HitBounds));
                 if (!record.IsValid || distance > radius || record.DimensionId != WorldEntityRuntime.DimensionId) continue;
                 CombatIdentity target = ItemMgr.Instance?.User_Player != null ? GameplayCombatBridge.Identity(ItemMgr.Instance.User_Player) : default;
                 var source = new CombatIdentity { Backend = CombatBackend.Environment, Value = eventId,

@@ -31,7 +31,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         [Tooltip("生成所需时间")]
         public float MaxProductionTime = 100f;
 
-        [Tooltip("大于0时按当前世界天数作为固定生产周期，不受生产速度与难度倍率影响")]
+        [Tooltip("大于0时按当前世界天数作为固定生产周期，不受生产速度与成长倍率影响")]
         public float ProductionIntervalDays;
 
         [Tooltip("当前累计生产时间")]
@@ -176,7 +176,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
     public Ex_ModData_MemoryPackable _ModDataMemoryPackable;
     public Mod_Grow growModule;
     public float ProductionSpeed = 1f; // 生产速度倍率
-    [Tooltip("生产进度是否受作物生长难度倍率影响")]
+    [Tooltip("生产进度是否接受通用作物成长倍率")]
     public bool UseCropGrowthMultiplier;
 
     private IProductionStockReceiver[] stockReceivers = System.Array.Empty<IProductionStockReceiver>();
@@ -324,10 +324,10 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
                 continue;
 
             // 累加生产时间
-            float difficultyMultiplier = UseCropGrowthMultiplier
-                ? GameDifficultyService.Current.Production.CropGrowthMultiplier
+            float growthMultiplier = UseCropGrowthMultiplier
+                ? GameRuleConfiguration.Current.Production.CropGrowthMultiplier
                 : 1f;
-            float productionRate = calendarInterval ? 1f : ProductionSpeed * difficultyMultiplier;
+            float productionRate = calendarInterval ? 1f : ProductionSpeed * growthMultiplier;
             float productionDuration = GetProductionDuration(data);
             data.ProductionTime += deltaTime * productionRate;
 

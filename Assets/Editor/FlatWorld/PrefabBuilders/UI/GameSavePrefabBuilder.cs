@@ -194,6 +194,11 @@ public static class GameSavePrefabBuilder
         currentLabel.gameObject.SetActive(false);
         SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 28f), new Vector2(0f, 1f));
 
+        // 正式面板与运行时沿用同一个改名按钮身份，重建时一并保留绑定入口。
+        Button renameButton = CreateButton(panel.transform, font, GameManager.GameSaveRenameButtonKey, "重命名", new Vector2(24f, -28f), new Vector2(180f, 52f), InkSoft, Cream, 18f, new Vector2(0f, 1f));
+        renameButton.interactable = false;
+        renameButton.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+
         TMP_Text currentSave = CreateText(GameManager.GameSaveSelectedTextKey, panel.transform, GameManager.GameSaveNoSelectionText, font, 36f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(currentSave.rectTransform, new Vector2(24f, -88f), new Vector2(550f, 52f), new Vector2(0f, 1f));
 
@@ -564,6 +569,8 @@ public static class GameSavePrefabBuilder
         Stretch(placeholder.rectTransform);
         TextMeshProUGUI valueText = (TextMeshProUGUI)CreateText("Text", area, string.Empty, font, 23f, Cream, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
         Stretch(valueText.rectTransform);
+        valueText.enableAutoSizing = false;
+        valueText.overflowMode = TextOverflowModes.Overflow;
 
         TMP_InputField input = inputObject.GetComponent<TMP_InputField>();
         input.targetGraphic = background;
@@ -638,7 +645,7 @@ public static class GameSavePrefabBuilder
         text.color = color;
         text.alignment = alignment;
         text.enableWordWrapping = wrapping;
-        text.overflowMode = wrapping ? TextOverflowModes.Ellipsis : TextOverflowModes.Overflow;
+        FlatWorldUITextLayout.Configure(text, size);
         text.raycastTarget = false;
         return text;
     }

@@ -20,11 +20,17 @@
         "Prey"
       ],
       "visual": {
+        "spriteAddress": "Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Idle_1]",
         "animationState": "Stand",
         "animatorControllerAddress": "flatworld.actor.animator.rabbit",
         "flipX": false
       },
       "modules": {
+        "health": {
+          "parameters": {
+            "Data": { "SizeLevel": 4 }
+          }
+        },
         "animator": {
           "parameters": {
             "visualMode": 1
@@ -419,6 +425,7 @@
         "Carnivore"
       ],
       "visual": {
+        "spriteAddress": "Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Idle_1]",
         "animationState": "Idle",
         "animatorControllerAddress": "flatworld.actor.animator.snowleopard",
         "flipX": false
@@ -500,6 +507,7 @@
             "Data": {
               "Hp": 60,
               "MaxHp": 60,
+              "SizeLevel": 6,
               "DefenseValues": {
                 "Physical": 3
               },

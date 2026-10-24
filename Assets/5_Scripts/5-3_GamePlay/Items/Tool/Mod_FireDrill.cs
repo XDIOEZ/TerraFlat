@@ -95,6 +95,8 @@ public class Mod_FireDrill : Module, IInteractable
     public override void ModUpdate(float deltaTime)
     {
         if (!GameNetwork.HasStateAuthority || Heater == null) return;
+        InputInventory?.ModUpdate(deltaTime);
+        OutputInventory?.ModUpdate(deltaTime);
         SyncHeatingSettings();
         Heater.Tick(GetAmbientTemperature(), deltaTime);
         UpdateOutputPreviewProgress();

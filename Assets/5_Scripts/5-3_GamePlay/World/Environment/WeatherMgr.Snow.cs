@@ -6,8 +6,8 @@ public partial class WeatherMgr
     #region 积雪查询
 
     private SnowCoverConfig snowConfig; // 独立平衡资源。
-    private GameObject snowEffect; // 正式粒子资源实例。
-    private RainEffectController snowController; // 复用相机覆盖和强度控制能力。
+    private GameObject snowEffect; // 正式 Shader 降雪资源实例。
+    private SnowEffectController snowController; // 独立网格表现不承担粒子模拟。
     private bool lastSnowing; // 温度变化也能触发雨雪切换。
 
     /// <summary>当前镜头所在地已由降雨和环境温度判定为降雪。</summary>
@@ -54,7 +54,7 @@ public partial class WeatherMgr
 
     #region 降雪表现
 
-    /// <summary>雨雪粒子按各自表现强度交接，不承担积雪存档。</summary>
+    /// <summary>降雪网格消费平滑后的天气强度，不承担积雪存档。</summary>
     private bool RefreshSnowEffect()
     {
         Camera camera = Camera.main;
@@ -63,22 +63,21 @@ public partial class WeatherMgr
         SetSnowingState(camera != null && IsSnowingAt(camera.transform.position));
         if (!active)
         {
-            if (snowEffect != null)
-            {
-                snowController.ApplySettings(0f);
-                if (!snowController.HasAliveParticles)
-                    snowEffect.SetActive(false);
-            }
+            if (snowEffect != null && snowEffect.activeSelf)
+                snowEffect.SetActive(false);
             return false;
         }
         if (snowEffect == null)
         {
             GameObject prefab = Resources.Load<GameObject>("Weather/SnowEffect");
+            if (prefab == null) throw new MissingReferenceException("缺少 Weather/SnowEffect 降雪预制体。");
             snowEffect = Instantiate(prefab, transform);
-            snowController = snowEffect.GetComponent<RainEffectController>();
+            snowController = snowEffect.GetComponent<SnowEffectController>();
+            if (snowController == null) throw new MissingComponentException("降雪预制体缺少 SnowEffectController。");
         }
-        snowEffect.SetActive(true);
+        if (!snowEffect.activeSelf) snowEffect.SetActive(true);
         snowController.SyncToCamera(camera, snowIntensity);
+        snowController.SetWind(presentedWindDirection * _presentedWindStrength);
         return true;
     }
 

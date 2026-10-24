@@ -21,6 +21,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/egg_schedule", EntityEggSchedule);
         operations.Add("ai/state_machine", EntityAiStateMachine);
         operations.Add("ai/advance_target", EntityAiAdvance);
+        operations.Add("ai/approach_ranges", EntityAiApproachRanges);
         operations.Add("ai/attack_window", EntityAiAttackWindow);
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
@@ -34,6 +35,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/spawn_attempt", EntitySpawnAttempt);
         operations.Add("ai/aquatic_traversal", EntityAquaticTraversal);
         operations.Add("ai/hive_resident_schedule", EntityHiveResidentSchedule);
+        operations.Add("ai/bee_target_search", EntityBeeTargetSearch);
         operations.Add("player/movement_cost", EntityMovementCost);
         operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("item_runtime/single_sprite_animation", EntitySingleSpriteAnimation);
@@ -43,6 +45,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
+        operations.Add("combat/death_rule_override", EntityDeathRuleOverride);
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
         operations.Add("combat/loot_amount", EntityLootAmount);
@@ -152,6 +155,8 @@ public static partial class GameplayTestSystemProbe
             animator.enabled = false;
             root.SetActive(true);
             bool singleSpriteDiscarded = !item.HasPendingInitialAnimatorState;
+            JObject coldController = SampleColdAnimatorController(controller, actorId == "Bird");
+            JObject coldSingleSprite = SampleColdAnimatorController(controller, false, true);
             return new JObject
             {
                 ["queuedWhileInactive"] = queuedWhileInactive,
@@ -166,8 +171,75 @@ public static partial class GameplayTestSystemProbe
                 ["activePlayed"] = activePlayed,
                 ["fullPathPlayed"] = fullPathPlayed,
                 ["invalidStateRejected"] = invalidStateRejected,
-                ["singleSpriteDiscarded"] = singleSpriteDiscarded
+                ["singleSpriteDiscarded"] = singleSpriteDiscarded,
+                ["coldController"] = coldController,
+                ["coldSingleSprite"] = coldSingleSprite
             };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 使用正式控制器复现自然出生的停用加载，并检查激活后延迟写入的参数。
+    private static JObject SampleColdAnimatorController(RuntimeAnimatorController controller, bool checkMoveParameter,
+        bool singleSpriteMode = false)
+    {
+        var root = new GameObject("[ColdAnimatorController]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        int animatorWarnings = 0;
+        void CountAnimatorWarning(string message, string stack, LogType type)
+        {
+            if (type == LogType.Warning && message.Contains("Animator is not playing an AnimatorController"))
+                animatorWarnings++;
+        }
+
+        try
+        {
+            GameItem item = root.AddComponent<GameItem>();
+            item.BindData(EntityProbeData("test:cold_animator_controller", 1f));
+            GameObject visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+            visual.AddComponent<SpriteRenderer>();
+            Animator animator = visual.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+            Mod_AnimatorController animation = visual.AddComponent<Mod_AnimatorController>();
+            animation.animator = animator;
+            animation.visualMode = singleSpriteMode
+                ? Mod_AnimatorController.VisualMode.SingleSprite
+                : Mod_AnimatorController.VisualMode.Animator;
+            animation.ModuleInit(item, new Ex_ModData_MemoryPackable { Enabled = true });
+            item.itemMods.AddMod(animation);
+
+            bool coldBeforeLoad = !animator.isInitialized && !root.activeInHierarchy;
+            Application.logMessageReceived += CountAnimatorWarning;
+            try
+            {
+                animation.Load();
+                bool coldLoaded = animation.IsRuntimeLoaded && !animator.isInitialized;
+                bool coldQueued = !checkMoveParameter || animation.SetBool(AnimationText.Move, true);
+                bool warningsDuringColdLoad = animatorWarnings > 0;
+
+                root.SetActive(true);
+                bool animatorSuppressed = singleSpriteMode && !animator.enabled;
+                if (!singleSpriteMode && !animator.isInitialized) animator.Rebind();
+                bool activeInitialized = singleSpriteMode ? animatorSuppressed : animator.isInitialized;
+                bool restoredMove = singleSpriteMode || !checkMoveParameter || (activeInitialized &&
+                    animation.SetBool(AnimationText.Run, false) &&
+                    animator.GetBool(Animator.StringToHash(AnimationText.Move)));
+                int warningsAfterActivation = animatorWarnings;
+                animation.Unload();
+                return new JObject
+                {
+                    ["coldBeforeLoad"] = coldBeforeLoad,
+                    ["coldLoaded"] = coldLoaded,
+                    ["coldQueued"] = coldQueued,
+                    ["activeInitialized"] = activeInitialized,
+                    ["animatorSuppressed"] = animatorSuppressed,
+                    ["restoredMove"] = restoredMove,
+                    ["warningsDuringColdLoad"] = warningsDuringColdLoad,
+                    ["warningsAfterActivation"] = warningsAfterActivation
+                };
+            }
+            finally { Application.logMessageReceived -= CountAnimatorWarning; }
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
     }
@@ -419,7 +491,7 @@ public static partial class GameplayTestSystemProbe
             ["chickenChance"] = chicken.SpawnChance, ["chickenWeight"] = chicken.Probability,
             ["boarChance"] = boar.SpawnChance, ["boarWeight"] = boar.Probability,
             ["defaultChance"] = new SpawnerConfig.SpawnEntry().SpawnChance,
-            ["fishSpawnsPerDay"] = fishSpawns.SpawnsPerDay, ["fishSpawnCount"] = fishSpawns.SpawnCount,
+            ["fishSpawnCount"] = fishSpawns.SpawnCount,
             ["fishWaterOnly"] = fishSpawns.WaterOnly,
             ["fishAllowedBiomes"] = new JArray(fishSpawns.AllowedBiomeNames),
             ["fishSafeMin"] = temperature["SafeTemperatureMin"], ["fishSafeMax"] = temperature["SafeTemperatureMax"]
@@ -972,13 +1044,61 @@ public static partial class GameplayTestSystemProbe
         return new JObject { ["trees"] = trees };
     }
 
+    /// <summary>采样死亡模块正式开关、世界默认更新和二进制恢复入口，判断留给 Lua。</summary>
+    private static JObject EntityDeathRuleOverride(JObject args)
+    {
+        var root = new GameObject("[DeathRuleOverride]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            Mod_PlayerDeathState module = root.AddComponent<Mod_PlayerDeathState>();
+            var enabledRules = new GameRuleSnapshot(new GameRuleValues { DropAllCarriedItems = true });
+            var disabledRules = new GameRuleSnapshot(new GameRuleValues { DropAllCarriedItems = false });
+            module.ApplyWorldRules(enabledRules);
+            bool defaultEnabled = module.DropAllCarriedItems;
+            module.SetDropAllCarriedItems(false);
+            bool explicitDisabled = !module.DropAllCarriedItems && module.HasDropAllCarriedItemsOverride;
+            module.ApplyWorldRules(disabledRules);
+            module.ApplyWorldRules(enabledRules);
+            bool retainedDisabled = !module.DropAllCarriedItems;
+
+            module.ModData.WriteData(module.Data);
+            module.Data = new Mod_PlayerDeathState.SaveData();
+            module.RestoreSavedDeathState();
+            bool restoredDisabled = !module.DropAllCarriedItems && module.HasDropAllCarriedItemsOverride;
+            module.ClearDropAllCarriedItemsOverride();
+            bool clearedToWorld = module.DropAllCarriedItems && !module.HasDropAllCarriedItemsOverride;
+            module.SetDropAllCarriedItems(true);
+            module.ApplyWorldRules(disabledRules);
+            bool retainedEnabled = module.DropAllCarriedItems;
+            module.ClearDropAllCarriedItemsOverride();
+            bool clearedToDisabled = !module.DropAllCarriedItems && !module.HasDropAllCarriedItemsOverride;
+
+            module.SetDropAllCarriedItems(true);
+            module.ModData = new Ex_ModData_MemoryPackable();
+            module.RestoreSavedDeathState();
+            bool freshPayloadCleared = !module.DropAllCarriedItems && !module.HasDropAllCarriedItemsOverride;
+            module.ApplyWorldRules(enabledRules);
+            bool freshUsesWorld = module.DropAllCarriedItems;
+            return new JObject
+            {
+                ["defaultEnabled"] = defaultEnabled, ["explicitDisabled"] = explicitDisabled,
+                ["retainedDisabled"] = retainedDisabled, ["restoredDisabled"] = restoredDisabled,
+                ["clearedToWorld"] = clearedToWorld, ["retainedEnabled"] = retainedEnabled,
+                ["clearedToDisabled"] = clearedToDisabled, ["freshPayloadCleared"] = freshPayloadCleared,
+                ["freshUsesWorld"] = freshUsesWorld
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
     private static JObject EntityPhysicalDamage(JObject args)
     {
         float attack = (float)Number(args, "attack", 10d), defense = (float)Number(args, "defense", 3d);
-        float difficulty = (float)Number(args, "difficulty", 1d), received = (float)Number(args, "received", 1d);
+        float attackMultiplier = (float)Number(args, "attackMultiplier", 1d), received = (float)Number(args, "received", 1d);
         var damage = new float4(attack * .5f, attack * .25f, attack * .25f, 0f);
-        float4 resolved = CombatRules.Resolve(damage, new float4(defense), difficulty, received);
-        var difficultyRules = new CombatDifficulty
+        float4 resolved = CombatRules.Resolve(damage, new float4(defense), attackMultiplier, received);
+        var tuning = new CombatTuning
         {
             PlayerAttack = (float)Number(args, "playerAttack", 2d),
             CreatureAttack = (float)Number(args, "creatureAttack", .5d),
@@ -986,9 +1106,9 @@ public static partial class GameplayTestSystemProbe
         };
         return new JObject
         {
-            ["physical"] = CombatRules.ResolvePhysical(attack, defense, difficulty, received),
+            ["physical"] = CombatRules.ResolvePhysical(attack, defense, attackMultiplier, received),
             ["resolvedTotal"] = math.csum(resolved), ["cut"] = resolved.x, ["pierce"] = resolved.y,
-            ["difficulty"] = difficultyRules.Resolve(Flag(args, "sourcePlayer", true), Flag(args, "targetPlayer", false))
+            ["attackMultiplier"] = tuning.Resolve(Flag(args, "sourcePlayer", true), Flag(args, "targetPlayer", false))
         };
     }
 

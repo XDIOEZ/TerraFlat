@@ -1,9 +1,82 @@
 using System;
+using System.Runtime.CompilerServices;
 using TMPro;
 using UnityEngine;
 
 namespace FlatWorld.Localization
 {
+    #region 运行时文本绑定
+
+    /// <summary>统一为动态 TMP 文本绑定本地化模板，并在内容变化或语言切换时刷新。</summary>
+    public static class LocalizedTextRuntime
+    {
+        private sealed class TextSource
+        {
+            public string Text;
+            public object[] Arguments;
+            public Func<string> Provider;
+            public bool IsFormatted;
+            public bool IsBound;
+        }
+
+        private static readonly ConditionalWeakTable<TMP_Text, TextSource> Sources =
+            new ConditionalWeakTable<TMP_Text, TextSource>();
+
+        public static void SetText(TMP_Text target, string sourceText)
+        {
+            SetSource(target, sourceText, null, null);
+        }
+
+        public static void SetFormat(TMP_Text target, string sourceTemplate, params object[] arguments)
+        {
+            SetSource(target, sourceTemplate, arguments, null);
+        }
+
+        public static void SetProvider(TMP_Text target, Func<string> provider)
+        {
+            if (provider == null)
+                return;
+
+            SetSource(target, string.Empty, null, provider);
+        }
+
+        private static void SetSource(TMP_Text target, string sourceText, object[] arguments, Func<string> provider)
+        {
+            if (target == null)
+                return;
+
+            TextSource source = Sources.GetValue(target, _ => new TextSource());
+            source.Text = sourceText ?? string.Empty;
+            source.Arguments = arguments == null ? null : (object[])arguments.Clone();
+            source.Provider = provider;
+            source.IsFormatted = source.Arguments != null && source.Arguments.Length > 0;
+
+            LocalizedTextBinder binder = target.GetComponent<LocalizedTextBinder>();
+            if (binder == null)
+                binder = target.gameObject.AddComponent<LocalizedTextBinder>();
+
+            if (!source.IsBound)
+            {
+                source.IsBound = true;
+                binder.ConfigureRuntime(() => Resolve(source));
+                return;
+            }
+
+            target.text = Resolve(source);
+        }
+
+        private static string Resolve(TextSource source)
+        {
+            if (source.Provider != null)
+                return source.Provider() ?? string.Empty;
+            return source.IsFormatted
+                ? FlatWorldLocalizationService.GetUiFormat(source.Text, source.Arguments)
+                : FlatWorldLocalizationService.GetUiText(source.Text);
+        }
+    }
+
+    #endregion
+
     /// <summary>
     /// 将一个 String Table key 绑定到 TMP 文本。挂到任意带 TMP_Text 的 UI 节点即可随语言切换刷新。
     /// </summary>

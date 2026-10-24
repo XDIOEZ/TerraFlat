@@ -6,6 +6,7 @@ public sealed partial class MachineEntity
     #region 输送带派生状态
     public ConveyorPath Conveyor, PreviousConveyor;
     public int ConveyorMode; // 冷节点也保留手动连接方式，重建拓扑时无需唤醒库存。
+    public int ConveyorConnectedDriveMask; // 侧轴是否伸出只读取正式机械图边，不依赖转速。
     public float ConveyorVisualPhase, ConveyorVisualSpeed, ConveyorVisualTime;
     public ConveyorPath ConveyorRoute => Conveyor.Valid ? Conveyor : ConveyorPath.Straight(RotationQuarterTurns);
     #endregion
@@ -54,8 +55,22 @@ public sealed partial class MechanicalNetworkGraph
                 }
             }
         }
+    }
+
+    // 等全部机械图边建立后统一比较，先放带还是先放轴都能触发同一格的表现刷新。
+    private void RefreshConveyorConnections(List<MachineEntity> sorted)
+    {
         foreach (MachineEntity node in sorted)
-            if (node.Definition.Transport != null && !node.Conveyor.Same(node.PreviousConveyor)) ConveyorChanges.Add(node);
+        {
+            if (node.Definition.Transport == null) continue;
+            int mask = 0;
+            foreach (MechanicalLink link in node.Links)
+                if (link.Target.Definition.Transport == null && node.ConveyorRoute.HasDrivePort(link.Direction))
+                    mask |= 1 << link.Direction;
+            if (mask != node.ConveyorConnectedDriveMask || !node.Conveyor.Same(node.PreviousConveyor))
+                ConveyorChanges.Add(node);
+            node.ConveyorConnectedDriveMask = mask;
+        }
     }
 
     private int CountConveyorLinks(MachineEntity node)

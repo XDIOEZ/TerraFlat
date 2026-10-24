@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
@@ -84,14 +84,26 @@ namespace FlatWorld.Spaceflight
             Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
             Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-            if (controller == null || hotbar?.CurentSelectItem == null || health?.Hp <= 0f) return false;
+            if (controller == null || health == null || health.Hp <= 0f ||
+                (action == 0 || action == 2) && hotbar?.CurentSelectItem == null) return false;
+            if (action == 4)
+            {
+                EndNetworkAttack(profile);
+                reason = null;
+                return true;
+            }
             SpaceVector2 delta = observer.InSpace ? SpaceSectorCoordinates.Difference(aim, observer.Position)
                 : SpaceVector2.FromVector2(PressureExplosionQueue.DeltaInWorld(observer.WorldKey, observer.Position.LocalMeters.ToVector2(), aim.LocalMeters.ToVector2()));
             if (!delta.IsFinite || delta.Magnitude > 8192d) { reason = "瞄准位置超出范围"; return false; }
             if (!controller.TryAcquireExternalGameplayControl(networkCombatControl)) return false;
             controller.TrySetExternalAimWorldPosition(networkCombatControl, player.transform.position + (Vector3)delta.ToVector2());
             player.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint)?.PlayerTakeItem_FaceMouse(.1f);
-            if (action == 2) hotbar.CurentSelectItem.Act();
+            if (action == 3)
+            {
+                if (player.itemMods.GetMod_ByID<Mod_ShieldCombat>(Mod_ShieldCombat.ModuleId)?.TryParry() != true)
+                { reason = "副手没有可用盾牌，或弹反尚未冷却"; return false; }
+            }
+            else if (action == 2) hotbar.CurentSelectItem.Act();
             else if (!controller.TrySetExternalAttackHeld(networkCombatControl, action == 0)) return false;
             reason = null;
             return true;
@@ -100,11 +112,19 @@ namespace FlatWorld.Spaceflight
         public void EndNetworkAttack(string profile)
         {
             Mod_GameController controller = FindNetworkPlayer(profile)?.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+            // 超时/断线取消不能被当成短按松开而额外盾击。正常松开走 action=1。
+            FindNetworkPlayer(profile)?.itemMods.GetMod_ByID<Mod_ShieldCombat>(Mod_ShieldCombat.ModuleId)?.CancelAction();
             controller?.TrySetExternalAttackHeld(networkCombatControl, false);
         }
 
         public static bool SubmitNetworkAttack(Item weapon, int action, Vector2 worldAim)
             => SubmitNetworkItemAction(weapon, action, worldAim, false);
+
+        public static bool SubmitNetworkParry(Item player, Vector2 worldAim)
+            => SubmitNetworkItemAction(player, 3, worldAim, false);
+
+        public static bool SubmitNetworkShieldCancel(Item player)
+            => SubmitNetworkItemAction(player, 4, player != null ? (Vector2)player.transform.position : Vector2.zero, false);
 
         public static bool SubmitNetworkUse(Item heldItem, Vector2 worldAim)
             => SubmitNetworkItemAction(heldItem, 2, worldAim, true);
@@ -116,15 +136,21 @@ namespace FlatWorld.Spaceflight
             if (!GameNetwork.IsOnline || GameNetwork.HasStateAuthority) return false;
             if (player == null || session == null ||
                 !session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer)) return true;
+            if (action == 4)
+            {
+                ClientAttackHeld = false;
+                if (!observer.InSpace && !ClientGroundCombatPending) return true;
+            }
             bool startsGroundCombat = !observer.InSpace && !ClientGroundCombatPending;
             if (startsGroundCombat && SpaceNetworkBridge.CombatPreparationSender?.Invoke(player.ProfileName) != true) return true;
-            if (action != 2) ClientAttackHeld = action == 0;
+            if (action == 0 || action == 1) ClientAttackHeld = action == 0;
             if (!observer.InSpace) ClientGroundCombatPending = true;
             SpaceSectorPosition aim = observer.InSpace ? session.UnprojectSectorPosition(worldAim)
                 : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(worldAim)));
             bool sent = SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent
             {
-                Kind = useItem ? SpaceNetworkIntentKind.UsePlayerItem : action == 0 ? SpaceNetworkIntentKind.Attack : action == 1 ? SpaceNetworkIntentKind.AttackEnd : SpaceNetworkIntentKind.UseSkill,
+                Kind = action == 3 ? SpaceNetworkIntentKind.OffhandParry : useItem ? SpaceNetworkIntentKind.UsePlayerItem : action == 0 ? SpaceNetworkIntentKind.Attack : action == 1 || action == 4 ? SpaceNetworkIntentKind.AttackEnd : SpaceNetworkIntentKind.UseSkill,
+                Action = action == 4 ? 4 : 0,
                 Sector = aim.Sector, X = aim.LocalMeters.X, Y = aim.LocalMeters.Y, TargetId = observer.InSpace ? null : observer.WorldKey,
                 SelectedSlot = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurrentIndex ?? -1, StartsGroundCombat = startsGroundCombat
             });

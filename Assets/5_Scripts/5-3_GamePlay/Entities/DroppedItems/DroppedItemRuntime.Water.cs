@@ -189,25 +189,18 @@ internal sealed partial class DroppedItemRuntime
                 if (!CheckEnvironment(id, out RuntimeTerrainTileSample sample) || !simulation.Contains(id)) continue;
                 LightweightDroppedBody body = simulation.Get(id);
                 ChunkMgr chunks = ChunkMgr.ExistingInstance;
-                RuntimeWaterCurrentSample current;
+                if (body.WaterKind == 0 || body.IsOnBottom || !environmentMotionOwners.Add(id)) continue;
+                Vector2 velocity = Vector2.zero;
                 using (WaterCurrentMarker.Auto())
-                    if (body.WaterKind == 0 || chunks == null ||
-                        !chunks.TryGetRuntimeWaterCurrent(body.Position, sample, out current)) continue;
-                float speed = ResolveDriftSpeed(current.Kind, current.Flow, payloads[id].Stack);
-                if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f) continue;
+                    if (chunks != null && chunks.TryGetRuntimeWaterCurrent(body.Position, sample, out RuntimeWaterCurrentSample current))
+                        velocity = current.Direction * ResolveDriftSpeed(current.Kind, current.Flow, payloads[id].Stack);
                 float driftSeconds = Mathf.Min(step, 1f);
                 Vector2 destination;
                 using (WaterDestinationMarker.Auto())
-                {
-                    destination = domain.Normalize((Vector2)body.Position + current.Direction * (speed * driftSeconds));
-                    if (!WorldItemWaterSystem.TryResolveWaterAt(destination, out bool isWater) || !isWater) continue;
-                }
+                    destination = LooseItemMotion.AdvanceWater(matterWorldKey, payloads[id], body.Position,
+                        velocity, driftSeconds, body.LiquidDepth < .995f);
                 using (WaterCommitMarker.Auto())
-                {
-                    presentation.RecordWaterDrift(id, domain.ShortestDelta(body.Position, destination), driftSeconds);
-                    body.Position = destination; simulation.Set(body); UpdatePlacement(id); CheckEnvironment(id);
-                    moved++;
-                }
+                    if (CommitEnvironmentMotion(id, destination, driftSeconds)) moved++;
             }
             WaterMovedPoint.AddWork(moved);
         }
@@ -251,6 +244,14 @@ internal sealed partial class DroppedItemRuntime
                 wetItems.Remove(id); simulation.SetWater(id, null);
                 changed = true;
             }
+            if (changed) { body.Pickable = 1; simulation.Set(body); UpdatePlacement(id); }
+            return true;
+        }
+
+        if (body.IsOnBottom)
+        {
+            // 河底静物只等待所在格的地形事件，退出水体时再恢复显示和普通运动。
+            wetItems.Remove(id);
             if (changed) { body.Pickable = 1; simulation.Set(body); UpdatePlacement(id); }
             return true;
         }

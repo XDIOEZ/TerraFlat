@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using FlatWorld.Spaceflight;
 using FlatWorld.Structures;
 using TMPro;
@@ -53,9 +54,18 @@ public sealed partial class GMReflectionConsole
             selectedFixedStructureId = fixedStructures[0].Id;
         }
         if (fixedStructureText != null)
-            fixedStructureText.text = index >= 0
-                ? $"{index + 1}/{fixedStructures.Count}  {fixedStructures[index].DisplayName}"
-                : fixedStructuresLoading ? "正在读取结构模板…" : "没有可用的飞船模板";
+        {
+            if (index >= 0)
+            {
+                int selectedIndex = index;
+                SetLocalizedProvider(fixedStructureText, () => FlatWorldLocalizationService.GetUiFormat(
+                    "{0}/{1}  {2}", selectedIndex + 1, fixedStructures.Count,
+                    FlatWorldLocalizationService.GetUiText(fixedStructures[selectedIndex].DisplayName)));
+            }
+            else
+                SetLocalizedText(fixedStructureText,
+                    fixedStructuresLoading ? "正在读取结构模板…" : "没有可用的飞船模板");
+        }
         if (fixedStructureBuildButton != null)
             fixedStructureBuildButton.interactable = index >= 0 && !fixedStructuresLoading && !fixedStructureRequestPending;
     }
@@ -79,7 +89,7 @@ public sealed partial class GMReflectionConsole
             fixedStructuresLoading = false;
             fixedStructuresLoaded = true;
             RefreshFixedStructureOptions();
-            SetStatus("结构模板读取失败：" + error.Message, Color.yellow);
+            SetStatusFormat("结构模板读取失败：{0}", Color.yellow, error.Message);
         }));
         RefreshFixedStructureOptions();
     }

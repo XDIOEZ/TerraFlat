@@ -49,6 +49,9 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     /// <summary>中间空白层平时对输入透明，拿起物品后才接收世界丢弃手势。</summary>
     public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
     {
+        // uGUI 仍会调用已停用的自定义过滤器，停用时必须放行编辑器的拖拽射线。
+        if (!isActiveAndEnabled)
+            return true;
         return PlayerMobileControlsHUD.CanDropHeldItemAtScreenPosition(screenPoint, eventCamera) &&
                (!raycastOnlyWhileHoldingItem || HasPlayerHeldItem());
     }

@@ -8,13 +8,15 @@ using UnityEngine;
 
 namespace FlatWorld.Spaceflight
 {
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class SurfaceProfile
+    public sealed partial class SurfaceProfile
     {
         #region 独立地表与环境配置
         public string Id;
         public double TemperatureCelsius = 26d;
         public double PressureKPa = 100d;
+        [BinaryAtmosphereComposition]
         public Dictionary<string, decimal> AtmosphereComposition = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, double> NumericParameters = new(StringComparer.Ordinal);
         public Dictionary<string, string> TextParameters = new(StringComparer.Ordinal);
@@ -42,7 +44,7 @@ namespace FlatWorld.Spaceflight
 
         public SpaceCatalog(string json)
         {
-            config = JsonConvert.DeserializeObject<SpaceCatalogConfig>(json,
+            config = JsonConfigurationCache.Deserialize<SpaceCatalogConfig>(json,
                 new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }) ??
                 throw new InvalidDataException("星系配置为空");
             if (config.SchemaVersion != 1 || string.IsNullOrWhiteSpace(config.TemplateId) || config.Surfaces == null || config.SectorSystems == null)
@@ -138,6 +140,7 @@ namespace FlatWorld.Spaceflight
                 body.OrbitalEccentricity = definition.OrbitalEccentricity;
                 body.OrbitalPeriapsisRadians = definition.OrbitalPeriapsisRadians;
                 body.RotationPeriodSeconds = definition.RotationPeriodSeconds;
+                body.EquatorTiltRadians = definition.EquatorTiltRadians;
             }
         }
 
@@ -329,8 +332,9 @@ namespace FlatWorld.Spaceflight
         #endregion
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    internal sealed class SpaceCatalogConfig
+    internal sealed partial class SpaceCatalogConfig
     {
         #region 模板序列化
         public int SchemaVersion;
@@ -345,8 +349,9 @@ namespace FlatWorld.Spaceflight
         #endregion
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    internal sealed class SpaceSectorSystemDefinition
+    internal sealed partial class SpaceSectorSystemDefinition
     {
         #region 可扩展星区内容目录
         public SpaceSectorId Sector;

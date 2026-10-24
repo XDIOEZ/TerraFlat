@@ -19,6 +19,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("dimension/cave_exit_cache_sources", CaveExitCacheSources);
         operations.Add("dimension/cave_exit_cache_identity", CaveExitCacheIdentity);
         operations.Add("dimension/cave_exit_cache_distance", CaveExitCacheDistance);
+        operations.Add("dimension/cave_runtime_time_registration", CaveRuntimeTimeRegistration);
         operations.Add("dimension/portal_world_ownership", PortalWorldOwnership);
         operations.Add("rendering/cave_shadow_spheres", CaveShadowSpheres);
         operations.Add("rendering/cave_shadow_lazy_creation", CaveShadowLazyCreation);
@@ -64,6 +65,48 @@ public static partial class GameplayTestSystemProbe
                 item, CavePerformanceAddress, new DimensionDefinition());
             return new JObject();
         });
+        return result;
+    }
+
+    #endregion
+
+    #region 联机洞穴运行时时钟补登
+
+    private static JObject CaveRuntimeTimeRegistration(JObject args)
+    {
+        string surface = CavePerformanceSurface.WorldKey;
+        string cave = CavePerformanceAddress.WorldKey;
+        var currentTime = new TimeData { CurrentTime = 720f };
+        currentTime.EnsureTimeSystemDefaults();
+        TimeData caveTime = currentTime.CreateRuntimeCopy();
+        caveTime.ReferenceScene = surface;
+
+        var saved = new DayTimeSaveData();
+        saved.WorldTimeDict[surface] = new SerializableTimeData(currentTime);
+        saved.WorldTimeDict[cave] = new SerializableTimeData(caveTime);
+        saved.SceneLightingRateDict[surface] = 0.9f;
+        saved.SceneLightingRateDict[cave] = 0.4f;
+        var clocks = new Dictionary<string, TimeData>();
+        var rates = new Dictionary<string, float>();
+
+        DayTimeSystem.RegisterMissingRuntimeSceneTimeData(surface, saved, clocks, rates);
+        TimeData liveSurface = clocks[surface];
+        liveSurface.CurrentTime = 800f;
+        DayTimeSystem.RegisterMissingRuntimeSceneTimeData(cave, saved, clocks, rates);
+        TimeData registeredCave = clocks[cave];
+        var result = new JObject
+        {
+            ["sourceClockAlive"] = ReferenceEquals(liveSurface, clocks[surface]) && liveSurface.CurrentTime == 800f,
+            ["caveReferencesSurface"] = registeredCave.ReferenceScene == surface,
+            ["caveHasLightCurve"] = registeredCave.LightParams.Evaluate(0.5f) > 0f,
+            ["surfaceRate"] = rates[surface],
+            ["caveRate"] = rates[cave],
+            ["clockCount"] = clocks.Count
+        };
+        registeredCave.CurrentTime = 900f;
+        DayTimeSystem.RegisterMissingRuntimeSceneTimeData(cave, saved, clocks, rates);
+        result["repeatKeepsClock"] = ReferenceEquals(registeredCave, clocks[cave]) && registeredCave.CurrentTime == 900f;
+        result["repeatKeepsRate"] = Mathf.Approximately(rates[cave], 0.4f);
         return result;
     }
 
@@ -318,6 +361,28 @@ public static partial class GameplayTestSystemProbe
             renderer.RefreshShadowVisibility(noLights, true, true);
             samples["fallbackEnabled"] = renderer.EnabledOccluderCount;
             samples["retainedAtEnd"] = renderer.RetainedOccluderCount;
+
+            // 洞穴取消墙体遮黑后，地表阴影槽回池复用也不能在洞穴中重新启用。
+            using var caveWorld = new FlatWorld.WorldModel.WorldRuntime(global::WorldAddress.CaveDimensionId, 1);
+            var caveAddress = new FlatWorld.WorldModel.WorldAddress(
+                global::WorldAddress.CaveDimensionId, new FlatWorld.WorldModel.Int2(0, 0));
+            var caveProfile = new FlatWorld.WorldModel.ChunkGenerationProfileSnapshot("probe:cave_no_shadows", 1, 4, 2);
+            var caveRequest = caveWorld.BeginChunkGeneration(caveAddress, 1, caveProfile);
+            using (var buffer = new FlatWorld.WorldModel.ChunkTerrainBuffer(4, 2))
+            using (var generated = new FlatWorld.WorldModel.ChunkGenerationResult(caveRequest, buffer))
+                if (!caveWorld.TryCommit(generated, out string caveReason)) throw new InvalidOperationException(caveReason);
+            caveWorld.TryGetChunk(caveAddress, out var caveChunk);
+            caveChunk.Terrain.SetCell(0, 0, wall);
+            renderer.Bind(caveChunk);
+            renderer.RefreshShadowVisibility(near, true, true);
+            samples["caveCandidates"] = renderer.ActiveOccluderCount;
+            samples["caveEnabled"] = renderer.EnabledOccluderCount;
+            samples["caveCasterActive"] = first.gameObject.activeSelf;
+
+            renderer.Bind(chunk);
+            renderer.RefreshShadowVisibility(noLights, true, true);
+            samples["surfaceRecovered"] = renderer.EnabledOccluderCount;
+            samples["surfaceCasterReused"] = first == root.GetComponentInChildren<ShadowCaster2D>(true);
             return samples;
         }
         finally

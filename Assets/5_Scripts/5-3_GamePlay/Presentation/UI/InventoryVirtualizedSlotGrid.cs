@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -12,10 +14,18 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
     #region 配置与状态
 
     [SerializeField, Min(0)] private int bufferRows = 1;
+    private static readonly ProfilerMarker ResizeMarker = new("FlatWorld.Inventory.VirtualGrid.Resize");
+    private static readonly ProfilerMarker RefreshMarker = new("FlatWorld.Inventory.VirtualGrid.Refresh");
+    private static readonly ProfilerMarker RebindMarker = new("FlatWorld.Inventory.VirtualGrid.Rebind");
+    private static readonly ProfilerMarker FilterMarker = new("FlatWorld.Inventory.VirtualGrid.Filter");
 
     private readonly List<ItemSlot_UI> pooledSlots = new();
     private readonly List<int> boundIndices = new();
     private readonly List<bool> initializedBindings = new();
+    private readonly List<int> filteredIndices = new();
+    private Predicate<ItemData> filter;
+    private bool filterDirty;
+    private bool resetScrollPending;
 
     private Inventory inventory;
     private RectTransform content;
@@ -25,6 +35,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
     private ContentSizeFitter contentSizeFitter;
     private InventorySlotVisualProfile visualProfile;
     private InventoryBagSearch bagSearch;
+    private BasePanel ownerPanel;
     private GameObject slotPrefab;
 
     private Vector2 cellSize = new(80f, 80f);
@@ -36,6 +47,9 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
     private bool refreshPending;
 
     public IReadOnlyList<ItemSlot_UI> PooledSlots => pooledSlots;
+    public bool IsBound => inventory != null;
+    public int VisibleSlotCount => filter != null ? filteredIndices.Count : inventory?.Data?.itemSlots?.Count ?? 0;
+    public event Action<int> VisibleCountChanged;
 
     #endregion
 
@@ -62,13 +76,19 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
     {
         if (scrollRect != null)
             scrollRect.onValueChanged.RemoveListener(OnScrollValueChanged);
+        if (ownerPanel != null)
+            ownerPanel.Opened -= HandlePanelOpened;
         for (int i = 0; i < pooledSlots.Count; i++)
             if (boundIndices[i] >= 0 && pooledSlots[i] != null)
                 inventory?.UnbindVirtualSlotUI(pooledSlots[i], boundIndices[i]);
         pooledSlots.Clear();
         boundIndices.Clear();
         initializedBindings.Clear();
+        filteredIndices.Clear();
+        filter = null;
+        filterDirty = resetScrollPending = false;
         inventory = null;
+        ownerPanel = null;
         refreshPending = false;
         if (gridLayout != null)
             gridLayout.enabled = true;
@@ -81,17 +101,28 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
         if (inventory == null || viewport == null)
             return;
 
+        // 关闭面板仍保留组件运行时，跳过不可见槽位的布局和批量刷新，重新打开时补做一次。
+        if (ownerPanel != null && !ownerPanel.IsOpen())
+        {
+            refreshPending = true;
+            return;
+        }
+
         Vector2 viewportSize = viewport.rect.size;
         if ((viewportSize - lastViewportSize).sqrMagnitude > 0.25f)
         {
+            using var marker = ResizeMarker.Auto();
             lastViewportSize = viewportSize;
             EnsurePoolCapacity();
             UpdateContentSize();
-            RebindVisibleSlots(true);
+            RebindVisibleSlots(true, refreshExisting: false);
         }
 
         if (refreshPending && !inventory.HasActiveSlotDrag)
+        {
+            using var marker = RefreshMarker.Auto();
             RebindVisibleSlots(true);
+        }
     }
 
     /// <summary>绑定真实库存，并把原有静态槽位转为固定大小的复用池。</summary>
@@ -107,7 +138,13 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
         if (scrollRect != null)
             scrollRect.onValueChanged.RemoveListener(OnScrollValueChanged);
 
+        if (ownerPanel != null)
+            ownerPanel.Opened -= HandlePanelOpened;
         inventory = targetInventory;
+        ownerPanel = GetComponent<BasePanel>();
+        if (ownerPanel != null)
+            ownerPanel.Opened += HandlePanelOpened;
+        filterDirty = true;
         content = targetContent;
         slotPrefab = targetSlotPrefab;
         visualProfile = targetVisualProfile;
@@ -191,7 +228,18 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 
     private void OnScrollValueChanged(Vector2 _)
     {
+        if (ownerPanel != null && !ownerPanel.IsOpen())
+        {
+            refreshPending = true;
+            return;
+        }
         RebindVisibleSlots(false);
+    }
+
+    /// <summary>重新打开时立即提交关闭期间累计的库存变化，不让旧槽位短暂出现在面板中。</summary>
+    private void HandlePanelOpened()
+    {
+        RebindVisibleSlots(true);
     }
 
     /// <summary>行囊空白区域收到滚轮时同样交给内部滚动列表。</summary>
@@ -237,18 +285,23 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
         if (inventory?.Data?.itemSlots == null || content == null)
             return;
 
-        int rowCount = Mathf.CeilToInt(inventory.Data.itemSlots.Count / (float)columns);
+        int rowCount = Mathf.CeilToInt(VisibleSlotCount / (float)columns);
         float height = padding.top + padding.bottom;
         if (rowCount > 0)
             height += rowCount * cellSize.y + Mathf.Max(0, rowCount - 1) * spacing.y;
 
         Vector2 size = content.sizeDelta;
-        size.y = Mathf.Max(0f, height);
-        content.sizeDelta = size;
+        float targetHeight = Mathf.Max(0f, height);
+        if (!Mathf.Approximately(size.y, targetHeight))
+        {
+            size.y = targetHeight;
+            content.sizeDelta = size;
+        }
     }
 
-    private void RebindVisibleSlots(bool force)
+    private void RebindVisibleSlots(bool force, bool refreshExisting = true)
     {
+        using var marker = RebindMarker.Auto();
         if (inventory?.Data?.itemSlots == null || content == null)
             return;
 
@@ -259,7 +312,12 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
         }
 
         refreshPending = false;
-        int rowCount = Mathf.CeilToInt(inventory.Data.itemSlots.Count / (float)columns);
+        if (filterDirty)
+        {
+            RebuildFilteredIndices();
+            force = true;
+        }
+        int rowCount = Mathf.CeilToInt(VisibleSlotCount / (float)columns);
         float rowStep = Mathf.Max(1f, cellSize.y + spacing.y);
         float scrollY = Mathf.Max(0f, content.anchoredPosition.y);
         int visibleRow = Mathf.Clamp(Mathf.FloorToInt(scrollY / rowStep), 0, Mathf.Max(0, rowCount - 1));
@@ -276,13 +334,26 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 
         // 数据索引固定映射到环形池，仍在可视范围的槽位不换对象、不重绑回调。
         int poolOffset = firstIndex % poolCount;
+        // 投影可能把任意两格交换到同一池内，先解绑全部旧映射再绑定，避免覆盖别人的新映射。
+        for (int poolIndex = 0; poolIndex < poolCount; poolIndex++)
+        {
+            int viewIndex = firstIndex + (poolIndex - poolOffset + poolCount) % poolCount;
+            int nextIndex = ResolveDataIndex(viewIndex);
+            int oldIndex = boundIndices[poolIndex];
+            if (oldIndex >= 0 && oldIndex != nextIndex)
+            {
+                inventory.UnbindVirtualSlotUI(pooledSlots[poolIndex], oldIndex);
+                boundIndices[poolIndex] = -1;
+            }
+        }
         for (int poolIndex = 0; poolIndex < pooledSlots.Count; poolIndex++)
         {
             ItemSlot_UI slot = pooledSlots[poolIndex];
             if (slot == null)
                 continue;
 
-            int dataIndex = firstIndex + (poolIndex - poolOffset + poolCount) % poolCount;
+            int viewIndex = firstIndex + (poolIndex - poolOffset + poolCount) % poolCount;
+            int dataIndex = ResolveDataIndex(viewIndex);
             int oldIndex = boundIndices[poolIndex];
             if (oldIndex >= 0 && oldIndex != dataIndex)
                 inventory.UnbindVirtualSlotUI(slot, oldIndex);
@@ -299,7 +370,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
                 slot.gameObject.SetActive(true);
             if (oldIndex != dataIndex)
             {
-                PositionSlot(slot, dataIndex);
+                PositionSlot(slot, viewIndex);
                 if (initializedBindings[poolIndex])
                     inventory.RebindVirtualSlotUI(slot, dataIndex);
                 else
@@ -310,9 +381,9 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
                 boundIndices[poolIndex] = dataIndex;
                 bagSearch?.RefreshRenderedSlot(slot, dataIndex);
             }
-            else if (force)
+            else if (force && refreshExisting)
             {
-                PositionSlot(slot, dataIndex);
+                PositionSlot(slot, viewIndex);
                 slot.RefreshUI();
                 bagSearch?.RefreshRenderedSlot(slot, dataIndex);
             }
@@ -346,15 +417,78 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 
     #region 外部刷新
 
+    /// <summary>筛选只保存显示索引映射，不整理、复制或删除库存物品。</summary>
+    public void SetFilter(Predicate<ItemData> predicate, bool resetScroll = true)
+    {
+        filter = predicate;
+        filterDirty = true;
+        resetScrollPending |= resetScroll;
+        if (ownerPanel != null && !ownerPanel.IsOpen())
+        {
+            refreshPending = true;
+            return;
+        }
+        RebindVisibleSlots(true);
+    }
+
+    private int ResolveDataIndex(int viewIndex)
+    {
+        if (viewIndex < 0 || viewIndex >= VisibleSlotCount) return -1;
+        return filter != null ? filteredIndices[viewIndex] : viewIndex;
+    }
+
+    private void RebuildFilteredIndices()
+    {
+        using var marker = FilterMarker.Auto();
+        filteredIndices.Clear();
+        if (filter != null)
+            for (int index = 0; index < inventory.Data.itemSlots.Count; index++)
+                if (filter(inventory.Data.itemSlots[index]?.itemData)) filteredIndices.Add(index);
+        filterDirty = false;
+        UpdateContentSize();
+        if (scrollRect != null && resetScrollPending) scrollRect.StopMovement();
+        float maxY = Mathf.Max(0f, content.rect.height - (viewport != null ? viewport.rect.height : 0f));
+        Vector2 position = content.anchoredPosition;
+        position.y = resetScrollPending ? 0f : Mathf.Clamp(position.y, 0f, maxY);
+        content.anchoredPosition = position;
+        resetScrollPending = false;
+        firstBoundRow = -1;
+        VisibleCountChanged?.Invoke(VisibleSlotCount);
+    }
+
     /// <summary>刷新当前已经实例化的槽位，不遍历整份库存数据。</summary>
     public void RefreshVisibleSlots()
     {
+        filterDirty |= filter != null;
+        if (ownerPanel != null && !ownerPanel.IsOpen())
+        {
+            refreshPending = true;
+            return;
+        }
         RebindVisibleSlots(true);
     }
 
     /// <summary>仅刷新当前可见的数据索引；不可见索引无需创建 UI。</summary>
     public void RefreshSlot(int dataIndex)
     {
+        if (ownerPanel != null && !ownerPanel.IsOpen())
+        {
+            filterDirty |= filter != null;
+            refreshPending = true;
+            return;
+        }
+        // 单槽物品变化未改变筛选命中关系时，只刷新本槽，不重新过滤整个库存。
+        if (filter != null)
+        {
+            bool membershipChanged = filterDirty || inventory?.Data?.itemSlots == null ||
+                dataIndex < 0 || dataIndex >= inventory.Data.itemSlots.Count ||
+                (filteredIndices.BinarySearch(dataIndex) >= 0) != filter(inventory.Data.itemSlots[dataIndex]?.itemData);
+            if (membershipChanged)
+            {
+                filterDirty = true;
+                refreshPending = true;
+            }
+        }
         if (inventory?.itemSlot_UI == null || dataIndex < 0 || dataIndex >= inventory.itemSlot_UI.Count)
             return;
 

@@ -2,11 +2,8 @@
   "schemaVersion": 1,
   "config": {
     "id": "wildlife_resources",
-    "scheduleMode": "countdown",
     "ecologyGroup": "animals",
     "requireGlobalDarkness": false,
-    "spawnTriggerTime": 720.0,
-    "spawnsPerDay": 2,
     "minSpawnDistance": 15.0,
     "maxSpawnDistance": 50.0,
     "playerVisibilityExclusionDistance": 20.0,
@@ -15,21 +12,19 @@
     "spawnSearchRetryCount": 5,
     "spawnCount": 2,
     "spawnChance": 0.5,
-    "daysBetweenSpawns": 1,
     "groupAliveLimit": 12,
     "maxEcologyBudget": 12,
     "dailyBudgetRecovery": 6,
-    "recoveryTargetPopulation": 4,
-    "recoveryCheckInterval": 8.0,
-    "growthIntervalDays": 3,
-    "maxLifetimeSpawnCount": 64,
     "asyncSpawnInterval": 0.0,
-    "unboundedDailyGrowth": false,
     "ignorePopulationLimits": false,
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 1.0,
-    "allowedBiomeNames": ["森林"],
-    "allowedGroundTileIds": [1],
+    "allowedBiomeNames": [
+      "森林"
+    ],
+    "allowedGroundTileIds": [
+      1
+    ],
     "recycleDistance": 110.0,
     "recycleGraceSeconds": 20.0,
     "spawnEntries": [
@@ -60,6 +55,7 @@
       "enabled": false,
       "treesPerActor": 4,
       "spawnRadius": 3.0
-    }
+    },
+    "ignoreEcologyBudget": false
   }
 }

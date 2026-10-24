@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
+public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable, IPublicNetworkStateSaver
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;
@@ -403,6 +403,41 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
 
         try
         {
+            SavePanelState();
+
+            // 保存所有 InventoryInstances；不能只遍历字典，否则没有名称的槽位会漏存。
+            if (InventoryInstances != null)
+            {
+                for (int i = 0; i < InventoryInstances.Count; i++)
+                {
+                    Inventory currentInventory = InventoryInstances[i];
+                    if (currentInventory == null)
+                        continue;
+
+                    currentInventory.Save();
+                    Data.Data[GetInventoryKey(currentInventory, i)] = currentInventory.Data;
+                }
+            }
+
+            Item_Data.ModuleDataDic[_Data.Name] = Data;
+        }
+        finally
+        {
+            equipment?.RestoreBagStorageAfterOwnerSave();
+        }
+    }
+
+    public void SavePublicNetworkState()
+    {
+        Data ??= new Inventory_ModuleData();
+        // 公开网络负载只包含面板状态；私有槽位不需要卸装收纳袋或逐槽保存。
+        SavePanelState();
+        if (item?.itemData != null && !string.IsNullOrEmpty(Data.Name))
+            item.itemData.ModuleDataDic[Data.Name] = Data;
+    }
+
+    private void SavePanelState()
+    {
         // 保存面板开关状态 - 仅保存第一个面板的状态作为参考
         if (inventoryBasePanelCache.Count > 0)
         {
@@ -441,26 +476,6 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
             }
         }
 
-        // 保存所有 InventoryInstances；不能只遍历字典，否则没有名称的槽位会漏存。
-        if (InventoryInstances != null)
-        {
-            for (int i = 0; i < InventoryInstances.Count; i++)
-            {
-                Inventory currentInventory = InventoryInstances[i];
-                if (currentInventory == null)
-                    continue;
-
-                currentInventory.Save();
-                Data.Data[GetInventoryKey(currentInventory, i)] = currentInventory.Data;
-            }
-        }
-
-        Item_Data.ModuleDataDic[_Data.Name] = Data;
-        }
-        finally
-        {
-            equipment?.RestoreBagStorageAfterOwnerSave();
-        }
     }
     #endregion
 

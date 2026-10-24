@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 通用燃烧视觉模块：把燃烧状态转发给同 Prefab 的 CombustionVisualEffect。
-/// 只负责火焰、火星和烟雾表现，不负责燃料、光照、伤害或温度。
+/// 只负责 Shader 火焰与入水烟汽，不负责燃料、光照、伤害或温度。
 /// </summary>
 public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
 {

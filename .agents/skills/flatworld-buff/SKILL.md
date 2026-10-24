@@ -13,7 +13,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json` 及分包：内容真源。
 - `Assets/StreamingAssets/ItemWiki/{buffs.js,buff_validation.py,wiki_server.py}`：展示、校验、文件指纹/备份/原子写回。
 - Buff HUD 通过 `BuffStatusRowView` 和 `FlatWorldUI` 翻译 `DisplayName`，语言切换由 `PlayerBuffStatusHUD` 刷新；定义 ID 不参与翻译。
-- 可选 `iconAddress` 指向 `Generated/Buff/StatusIcons` 的像素 Sprite；`BuffCatalogLoader` 按地址去重预载，句柄归 GameRes 资源会话，HUD 只读 `Definition.Icon`。正式行的白色 `状态图标` 与灰底/层数徽标分开；缺图用名称首字，复用清空旧图。
+- 可选 `iconAddress` 指向 `Generated/Buff/StatusIcons` 的像素 Sprite；`BuffCatalogLoader` 按地址去重并用公共四槽队列预载，句柄归 GameRes 资源会话，单张失败不阻止其他图标，HUD 只读 `Definition.Icon`。正式行的白色 `状态图标` 与灰底/层数徽标分开；缺图用名称首字，复用清空旧图。
 
 ## 定义与状态
 

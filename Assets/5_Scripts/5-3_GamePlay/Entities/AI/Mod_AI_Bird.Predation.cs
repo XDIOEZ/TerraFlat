@@ -372,15 +372,15 @@ public sealed partial class Mod_AI_Bird : IAquaticPredatorThreat
         }
 
         float distanceSqr = WorldTopologyRuntime.SqrDistance(body.position, meatPosition);
+        mover.Speed.BaseValue = groundSpeed;
+        mover.SetInteractionDestination(meatPosition, peckRange);
         if (distanceSqr > peckRange * peckRange)
         {
-            mover.Speed.BaseValue = groundSpeed;
-            mover.SetDestination(meatPosition);
             return true;
         }
-        mover.StopMovement();
         if (food.TryEatDroppedFood(fishHuntMeatTarget, FishMeatTag, peckRange))
         {
+            mover.StopMovement();
             ResetFishHunting(releaseCaptured: false);
             return false;
         }

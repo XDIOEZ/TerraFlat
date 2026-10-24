@@ -20,6 +20,12 @@ public static class TileDefinitionFactory
 
     public static TileDefinitionCatalogDto DeserializeCatalog(string json)
     {
+        return JsonConfigurationCache.Parse(json, () => DeserializeCatalogUncached(json));
+    }
+
+    /// <summary>本体目录由总缓存持有，MOD 和编辑器单独解析时仍走共享 JSON 缓存。</summary>
+    internal static TileDefinitionCatalogDto DeserializeCatalogUncached(string json)
+    {
         var catalog = TileDefinitionJson.Read<TileDefinitionCatalogDto>(TileDefinitionJson.Parse(json));
         if (catalog.SchemaVersion != SupportedSchemaVersion || catalog.Tiles == null)
             throw new InvalidDataException($"不支持的地块目录 schemaVersion：{catalog.SchemaVersion}");

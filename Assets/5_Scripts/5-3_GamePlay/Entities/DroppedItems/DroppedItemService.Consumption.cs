@@ -136,6 +136,7 @@ public static partial class DroppedItemService
             Item source = handle.Legacy;
             if (source.itemData.Tags?.Contains(tag) != true || source.itemData.Stack.Amount < amount) return false;
             source.itemData.Stack.Amount -= amount;
+            ItemDurabilityRules.AdvanceAfterRemoval(source.itemData);
             if (source.itemData.Stack.Amount <= 0f) source.DestroySelf();
             else source.OnUIRefresh?.Invoke();
             return true;

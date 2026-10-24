@@ -121,6 +121,8 @@ internal sealed partial class DroppedItemRuntime
             LightweightDroppedBody body = simulation.Get(id);
             if (body.Pickable == 0 || body.Amount < amount || payloads[id].Tags?.Contains(tag) != true) return false;
             body.Amount -= amount;
+            payloads[id].Stack.Amount = body.Amount;
+            ItemDurabilityRules.AdvanceAfterRemoval(payloads[id]);
             if (body.Amount <= 0f) Remove(id); else simulation.Set(body);
             return true;
         }

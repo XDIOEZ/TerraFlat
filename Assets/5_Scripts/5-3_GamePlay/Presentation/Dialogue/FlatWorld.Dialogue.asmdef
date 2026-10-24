@@ -2,6 +2,7 @@
     "name": "FlatWorld.Dialogue",
     "rootNamespace": "FlatWorld.Dialogue",
     "references": [
+        "FlatWorld.ContentCache",
         "Data",
         "GamePlay",
         "FlatWorld.WorldModel",

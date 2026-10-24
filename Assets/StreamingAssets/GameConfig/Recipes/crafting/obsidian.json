@@ -9,7 +9,7 @@
       "inputs": [
         { "match": "exact_item", "itemId": "Obsidian", "amount": 1 },
         { "match": "exact_item", "itemId": "Stick_Wood", "amount": 1 },
-        { "match": "exact_item", "itemId": "Rope", "amount": 1 }
+        { "match": "tag", "tag": "Rope", "amount": 1 }
       ],
       "outputs": [{ "itemId": "Dagger_Obsidian", "amount": 1 }],
       "actions": []
@@ -22,7 +22,7 @@
       "inputs": [
         { "match": "exact_item", "itemId": "Obsidian", "amount": 2 },
         { "match": "exact_item", "itemId": "Stick_Wood", "amount": 2 },
-        { "match": "exact_item", "itemId": "Rope", "amount": 1 }
+        { "match": "tag", "tag": "Rope", "amount": 1 }
       ],
       "outputs": [{ "itemId": "Spear_Obsidian", "amount": 1 }],
       "actions": []

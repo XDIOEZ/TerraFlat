@@ -66,6 +66,9 @@ namespace FlatWorld.WorldModel
         private readonly IReadOnlyDictionary<Int2, GeneratedHydrologyCell> cells;
         private readonly IReadOnlyDictionary<Int2, double> floodplainCells;
 
+        /// <summary>海水上的独立流场，不参与淡水水量、降水水源或湖泊合成。</summary>
+        internal IReadOnlyDictionary<Int2, EstuaryCurrentSample> EstuaryCells { get; }
+
         /// <summary>外圈天然淡水只供生成期距离采样，不提交到邻区。</summary>
         internal IEnumerable<KeyValuePair<Int2, GeneratedHydrologyCell>> WaterCells => cells;
 
@@ -74,12 +77,18 @@ namespace FlatWorld.WorldModel
 
         internal GeneratedHydrologyMap(
             IReadOnlyDictionary<Int2, GeneratedHydrologyCell> cells,
-            IReadOnlyDictionary<Int2, double> floodplainCells)
+            IReadOnlyDictionary<Int2, double> floodplainCells,
+            IReadOnlyDictionary<Int2, EstuaryCurrentSample> estuaryCells = null)
         {
             this.cells = cells ?? throw new ArgumentNullException(nameof(cells));
             this.floodplainCells = floodplainCells ??
                                    throw new ArgumentNullException(nameof(floodplainCells));
+            EstuaryCells = estuaryCells;
         }
+
+        internal EstuaryCurrentSample GetEstuary(int worldX, int worldY) =>
+            EstuaryCells != null && EstuaryCells.TryGetValue(new Int2(worldX, worldY), out var sample)
+                ? sample : default;
 
         /// <summary>查询世界坐标上的淡水类型和水文数据。</summary>
         internal bool TryGet(int worldX, int worldY, out GeneratedHydrologyCell cell) =>

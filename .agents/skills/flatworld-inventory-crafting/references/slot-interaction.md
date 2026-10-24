@@ -2,8 +2,9 @@
 
 ## 统一事务与目标
 
-- PC OnDesktopTap 经 Inventory_Hand 整组取放、滚轮逐件；触屏轻点单件，槽间拖拽复用鼠标事务，异类交换双向校验。世界目标实现 IInventoryDragDropTarget，经来源事务原位修改。
+- PC OnDesktopTap 经 Inventory_Hand 整组取放、普通滚轮逐件、Shift+滚轮按来源堆叠每次取放一半；触屏轻点单件，槽间拖拽复用鼠标事务，异类交换双向校验。世界目标实现 IInventoryDragDropTarget，经来源事务原位修改。
 - 拖放、指定数量、Shift、双端甩动选定目标后都走 TryCommitSlotTransfer，预检/提交共用 CanTransferToSlot；仅allowSwap启用交换。快捷转移先合堆再填空，提交统一刷新、调用双方 OnSlotTransferCommitted，快捷栏在此同步手持/网络，输入层不补发。数量预检走 GetTransferableQuantityTo，不试转移。
+- 需限制来源会话的拖拽用 InventoryDragTransaction.WithAccessGuard 组合条件，提交、消费来源和手部回退共检；保留原交易的半组物品来源与回退状态，不在包装器里重新猜来源槽。
 - 装备窗口 InitUI 绑定 Opened/Closed，覆盖Open/Toggle/交互/恢复入口；Shift/甩动复用 CanAcceptQuickTransfer 的标签/容量策略。
 
 ## 快速甩动

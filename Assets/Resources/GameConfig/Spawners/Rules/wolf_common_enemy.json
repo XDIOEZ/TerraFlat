@@ -2,11 +2,8 @@
   "schemaVersion": 1,
   "config": {
     "id": "wolf_common_enemy",
-    "scheduleMode": "countdown",
     "ecologyGroup": "commonEnemies",
     "requireGlobalDarkness": false,
-    "spawnTriggerTime": 1200.0,
-    "spawnsPerDay": 1,
     "minSpawnDistance": 24.0,
     "maxSpawnDistance": 50.0,
     "playerVisibilityExclusionDistance": 22.0,
@@ -15,23 +12,29 @@
     "spawnSearchRetryCount": 10,
     "spawnCount": 2,
     "spawnCountWeights": [
-      { "count": 1, "weight": 0.05 },
-      { "count": 2, "weight": 0.05 },
-      { "count": 3, "weight": 0.45 },
-      { "count": 4, "weight": 0.45 }
+      {
+        "count": 1,
+        "weight": 0.05
+      },
+      {
+        "count": 2,
+        "weight": 0.05
+      },
+      {
+        "count": 3,
+        "weight": 0.45
+      },
+      {
+        "count": 4,
+        "weight": 0.45
+      }
     ],
     "batchSpawnRadius": 3.0,
     "spawnChance": 0.8,
-    "daysBetweenSpawns": 2,
     "groupAliveLimit": 6,
     "maxEcologyBudget": 8,
     "dailyBudgetRecovery": 2,
-    "recoveryTargetPopulation": 3,
-    "recoveryCheckInterval": 10.0,
-    "growthIntervalDays": 3,
-    "maxLifetimeSpawnCount": 64,
     "asyncSpawnInterval": 0.0,
-    "unboundedDailyGrowth": false,
     "ignorePopulationLimits": false,
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 0.35,
@@ -54,6 +57,7 @@
       "enabled": false,
       "treesPerActor": 4,
       "spawnRadius": 3.0
-    }
+    },
+    "ignoreEcologyBudget": false
   }
 }

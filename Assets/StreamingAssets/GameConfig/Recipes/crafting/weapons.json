@@ -15,8 +15,8 @@
           "amount": 1
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         },
         {
@@ -47,8 +47,8 @@
           "amount": 1
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         },
         {
@@ -80,8 +80,8 @@
           "amount": 3
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 3
         }
       ],
@@ -113,8 +113,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -123,6 +123,24 @@
           "itemId": "Bow_Recurve",
           "amount": 1
         }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:弩",
+      "displayName": "弩",
+      "recipeType": "crafting",
+      "requiredStation": "workbench",
+      "inputRule": "unordered",
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        { "match": "exact_item", "itemId": "Bow_Recurve", "amount": 1 },
+        { "match": "exact_item", "itemId": "Plank", "amount": 2 },
+        { "match": "tag", "tag": "Rope", "amount": 1 }
+      ],
+      "outputs": [
+        { "itemId": "Crossbow_Wood", "amount": 1 }
       ],
       "actions": []
     },
@@ -141,8 +159,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -163,7 +181,7 @@
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
-        {"match": "exact_item", "itemId": "Rope", "amount": 2},
+        {"match": "tag", "tag": "Rope", "amount": 2},
         {"match": "exact_item", "itemId": "Leather", "amount": 1}
       ],
       "outputs": [

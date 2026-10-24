@@ -3,16 +3,18 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>全局 UI 配色 JSON 数据，只保存可调色块，不承载具体控件逻辑。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FlatWorldUIThemeConfig
+public sealed partial class FlatWorldUIThemeConfig
 {
     public int schemaVersion;
     public FlatWorldUIThemeSwatch[] colors;
 }
 
 /// <summary>一个具名 UI 色块，hex 支持 #RRGGBB 与 #RRGGBBAA。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FlatWorldUIThemeSwatch
+public sealed partial class FlatWorldUIThemeSwatch
 {
     public string id;
     public string hex;
@@ -59,7 +61,7 @@ public static class FlatWorldUIThemeConfigCatalog
         if (asset == null)
             throw new InvalidOperationException($"缺少 UI 配色配置：Resources/{ResourcePath}.json");
 
-        FlatWorldUIThemeConfig config = JsonUtility.FromJson<FlatWorldUIThemeConfig>(asset.text);
+        FlatWorldUIThemeConfig config = JsonConfigurationCache.FromUnityJson<FlatWorldUIThemeConfig>(asset.text);
         if (config == null || config.schemaVersion != SupportedSchemaVersion || config.colors == null || config.colors.Length == 0)
             throw new InvalidOperationException($"UI 配色配置结构无效：Resources/{ResourcePath}.json");
 

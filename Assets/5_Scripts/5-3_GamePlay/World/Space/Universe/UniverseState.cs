@@ -52,8 +52,9 @@ namespace FlatWorld.Spaceflight
         #endregion
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class BodyState
+    public sealed partial class BodyState
     {
         #region 星体轨道与地表配置
         public string BodyId;
@@ -68,6 +69,7 @@ namespace FlatWorld.Spaceflight
         public double RadiusMeters;
         public double SurfaceGravity;
         public double AtmosphereThickness;
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public double MassKg => SurfaceGravity * RadiusMeters * RadiusMeters / 6.67430e-11d;
         public double PlacementDistanceMeters;
         public double PlacementAngleRadians;
@@ -76,8 +78,11 @@ namespace FlatWorld.Spaceflight
         public double OrbitalPeriapsisRadians;
         public double RotationPeriodSeconds;
         public double RotationInitialRadians;
+        public double EquatorTiltRadians;
         public SpaceVector2 PositionMeters;
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public SpaceVector2 VelocityMetersPerSecond;
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public WorldAddress SurfaceAddress => new(PlanetId, WorldAddress.SurfaceDimensionId);
         #endregion
     }

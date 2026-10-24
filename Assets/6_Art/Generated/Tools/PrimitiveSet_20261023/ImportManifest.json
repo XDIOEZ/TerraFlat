@@ -1,17 +1,35 @@
 {
-  "schemaVersion": 1,
-  "date": "2026-10-23",
-  "generation": "built-in image_gen; raw PNG copied without pixel edits",
+  "schemaVersion": 4,
+  "date": "2026-10-24",
+  "generation": "GIMP MCP native 1. Pixel pencil retouch using explicit reviewed coordinates; connected existing material shades, unchanged Alpha silhouette and native pixel grid; no image regeneration, blur, quantization or resampling",
   "scope": "35 tools plus 3 placed counterparts",
   "addressablesGroup": "PrimitiveTools",
-  "torchRendererFlameAnchor": {"x":0.375135,"y":0.378489,"z":0},
-  "torchModuleLightPosition": {"x":-0.002372,"y":0.532893,"z":0},
+  "torchRendererFlameAnchor": {
+    "x": 0.375135,
+    "y": 0.378489,
+    "z": 0
+  },
+  "torchModuleLightPosition": {
+    "x": -0.002372,
+    "y": 0.532893,
+    "z": 0
+  },
   "import": {
     "filter": "Point",
     "mipmaps": false,
     "compression": "None",
-    "maxTextureSize": 128,
-    "fishingRodMaxTextureSize": 256
+    "maxTextureSize": 32,
+    "fishingRodMaxTextureSize": 32,
+    "nativeSize": null,
+    "paletteLimit": 16,
+    "alpha": "0/255",
+    "sourceGrid": [
+      32,
+      32
+    ],
+    "canvasMode": "per-item: 24 uncropped32x32; 11 tightly cropped axes/pickaxes <=32 with1px transparent margin",
+    "tightCropCount": 11,
+    "uncroppedCount": 24
   },
   "items": [
     {
@@ -38,22 +56,107 @@
         15
       ],
       "sourceWorldExtent": 1.29994,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 20,
+      "height": 20,
       "alphaBounds": [
-        322,
-        318,
-        995,
-        990
+        1,
+        1,
+        19,
+        19
       ],
-      "ppu": 628.493003,
-      "pivotX": 0.3320255,
-      "pivotY": 0.2848644,
+      "ppu": 16.03809896,
+      "pivotX": 0.18124079999999995,
+      "pivotY": 0.20578304000000003,
       "guid": "e05381bd999547baa41296237fcbc192",
-      "spriteId": "c8067b55d81541b4be8cf1830288eee7"
+      "spriteId": "c8067b55d81541b4be8cf1830288eee7",
+      "visibleColors": 10,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            16,
+            16,
+            51,
+            51
+          ],
+          "ppu": 32.07619792,
+          "visibleColors": 15
+        },
+        {
+          "id": "Axe_Stone",
+          "name": "石斧",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_031.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Stone/Axe_Stone_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.123333305,
+            0.12222226
+          ],
+          "sourceAlpha": [
+            0,
+            0,
+            14,
+            15
+          ],
+          "sourceWorldExtent": 1.29994,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            8,
+            8,
+            26,
+            26
+          ],
+          "ppu": 16.03809896,
+          "pivotX": 0.3320255,
+          "pivotY": 0.2848644,
+          "guid": "e05381bd999547baa41296237fcbc192",
+          "spriteId": "c8067b55d81541b4be8cf1830288eee7",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                16,
+                16,
+                51,
+                51
+              ],
+              "ppu": 32.07619792,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "71294738e12d7274fdab635f1de4348d6998376b1537d955218a710dc5874c19",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "33632e8dea42dcc954843c33949a13b1a609bf0b8ebec14d18f48a8f22db5bc9",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Axe_Stone.xcf",
+      "canvasCrop": {
+        "x": 7,
+        "y": 7,
+        "width": 20,
+        "height": 20
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Axe_Flint",
@@ -79,22 +182,107 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 17,
+      "height": 17,
       "alphaBounds": [
-        361,
-        363,
-        945,
-        934
+        1,
+        1,
+        16,
+        16
       ],
-      "ppu": 639.27327,
-      "pivotX": 0.3531898,
-      "pivotY": 0.3182456,
+      "ppu": 16.313193493,
+      "pivotX": 0.19423962352941176,
+      "pivotY": 0.1872858352941177,
       "guid": "edc659420ef24d43bb24961e1b504d98",
-      "spriteId": "e2774543c39244f39cd20b35099ec39c"
+      "spriteId": "e2774543c39244f39cd20b35099ec39c",
+      "visibleColors": 6,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            18,
+            19,
+            48,
+            48
+          ],
+          "ppu": 32.626386986,
+          "visibleColors": 15
+        },
+        {
+          "id": "Axe_Flint",
+          "name": "燧石斧",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_366.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Flint/Axe_Flint_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.2,
+            0.2
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            9,
+            9,
+            24,
+            24
+          ],
+          "ppu": 16.313193493,
+          "pivotX": 0.3531898,
+          "pivotY": 0.3182456,
+          "guid": "edc659420ef24d43bb24961e1b504d98",
+          "spriteId": "e2774543c39244f39cd20b35099ec39c",
+          "visibleColors": 10,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                18,
+                19,
+                48,
+                48
+              ],
+              "ppu": 32.626386986,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "97d2d081dd0d6f35ea2ae68303b835d6e1a9d65497ce7c47527a1ab4dcb0b28d",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "b214dad22b820c65ee0f2bffb6870a6a3a49870dd86fa6b91b01d6474f3c428d",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Axe_Flint.xcf",
+      "canvasCrop": {
+        "x": 8,
+        "y": 8,
+        "width": 17,
+        "height": 17
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Axe_Copper",
@@ -120,22 +308,107 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 23,
+      "height": 23,
       "alphaBounds": [
-        327,
-        240,
-        1145,
-        1032
+        1,
+        1,
+        22,
+        22
       ],
-      "ppu": 871.584217,
-      "pivotX": 0.352201,
-      "pivotY": 0.2647687,
+      "ppu": 22.241383528,
+      "pivotX": 0.18567095652173912,
+      "pivotY": 0.19446080000000004,
       "guid": "7446ac90b6da4963b91c11aef7342fd4",
-      "spriteId": "d42ebdb2510d4d0db35e5767f8865a99"
+      "spriteId": "d42ebdb2510d4d0db35e5767f8865a99",
+      "visibleColors": 9,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            17,
+            12,
+            58,
+            53
+          ],
+          "ppu": 44.482767056,
+          "visibleColors": 15
+        },
+        {
+          "id": "Axe_Copper",
+          "name": "铜斧",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_376.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Copper/Axe_Copper_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.2,
+            0.2
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            8,
+            6,
+            29,
+            27
+          ],
+          "ppu": 22.241383528,
+          "pivotX": 0.352201,
+          "pivotY": 0.2647687,
+          "guid": "7446ac90b6da4963b91c11aef7342fd4",
+          "spriteId": "d42ebdb2510d4d0db35e5767f8865a99",
+          "visibleColors": 13,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                17,
+                12,
+                58,
+                53
+              ],
+              "ppu": 44.482767056,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "9359a54b78d91ba3d74f2a68c90b4569955918c7a54c37749d92ad7a757aaee8",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "2fe4d6fa5638335e06ab6666c7a85541db4bec1060624e62675c81212d65a5be",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Axe_Copper.xcf",
+      "canvasCrop": {
+        "x": 7,
+        "y": 5,
+        "width": 23,
+        "height": 23
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Axe_Bronze",
@@ -161,22 +434,107 @@
         15
       ],
       "sourceWorldExtent": 1.6154,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 25,
+      "height": 22,
       "alphaBounds": [
-        288,
-        280,
-        1147,
-        1063
+        1,
+        1,
+        24,
+        21
       ],
-      "ppu": 621.756686,
-      "pivotX": 0.3256778,
-      "pivotY": 0.2390431,
+      "ppu": 15.866199324,
+      "pivotX": 0.17686758400000002,
+      "pivotY": 0.16588087272727273,
       "guid": "3485ad47803a4404a2fe2ebad5aff372",
-      "spriteId": "aa4e77ad774f4e4080673c89aa14f332"
+      "spriteId": "aa4e77ad774f4e4080673c89aa14f332",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            15,
+            14,
+            59,
+            54
+          ],
+          "ppu": 31.732398648,
+          "visibleColors": 15
+        },
+        {
+          "id": "Axe_Bronze",
+          "name": "青铜斧",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_032.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Bronze/Axe_Bronze_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 12,
+          "sourcePivot": [
+            0.2,
+            0.2
+          ],
+          "sourceAlpha": [
+            1,
+            0,
+            14,
+            15
+          ],
+          "sourceWorldExtent": 1.6154,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            7,
+            7,
+            30,
+            27
+          ],
+          "ppu": 15.866199324,
+          "pivotX": 0.3256778,
+          "pivotY": 0.2390431,
+          "guid": "3485ad47803a4404a2fe2ebad5aff372",
+          "spriteId": "aa4e77ad774f4e4080673c89aa14f332",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                15,
+                14,
+                59,
+                54
+              ],
+              "ppu": 31.732398648,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "2ed47c099f6e21f8c3447bbe28bf636a4207add9c680d574498a5653b0a2f4ae",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "8ef72839a60b710aa5bc71697dc794711e795c9143b4e2adce7630acb5500d1e",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Axe_Bronze.xcf",
+      "canvasCrop": {
+        "x": 6,
+        "y": 6,
+        "width": 25,
+        "height": 22
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Axe_RawIron",
@@ -202,22 +560,107 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 22,
+      "height": 22,
       "alphaBounds": [
-        320,
-        258,
-        1096,
-        1020
+        1,
+        1,
+        21,
+        21
       ],
-      "ppu": 840.735338,
-      "pivotX": 0.3419298,
-      "pivotY": 0.2709888,
+      "ppu": 21.4541713045,
+      "pivotX": 0.1791706181818182,
+      "pivotY": 0.16689279999999995,
       "guid": "4dacbcb013e64e0ba3688f3c470576f3",
-      "spriteId": "efaeab7dcbc54bc1aa27196aef80b8d5"
+      "spriteId": "efaeab7dcbc54bc1aa27196aef80b8d5",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            16,
+            13,
+            56,
+            52
+          ],
+          "ppu": 42.908342609,
+          "visibleColors": 15
+        },
+        {
+          "id": "Axe_RawIron",
+          "name": "生铁斧",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_371.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.12,
+            0.12
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            8,
+            6,
+            28,
+            26
+          ],
+          "ppu": 21.4541713045,
+          "pivotX": 0.3419298,
+          "pivotY": 0.2709888,
+          "guid": "4dacbcb013e64e0ba3688f3c470576f3",
+          "spriteId": "efaeab7dcbc54bc1aa27196aef80b8d5",
+          "visibleColors": 13,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                16,
+                13,
+                56,
+                52
+              ],
+              "ppu": 42.908342609,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "cf0aadfa8d25c2de4aa7a02b6253e74d5692a2616d19c811f9f30505ba7e5093",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "c0313d49bfc41d16af1831df7e74e2d04cdf643dd72e443b30fbe9a3b1f2f61f",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Axe_RawIron.xcf",
+      "canvasCrop": {
+        "x": 7,
+        "y": 5,
+        "width": 22,
+        "height": 22
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Axe_Iron",
@@ -243,22 +686,107 @@
         15
       ],
       "sourceWorldExtent": 1.6154,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 23,
+      "height": 23,
       "alphaBounds": [
-        313,
-        250,
-        1112,
-        1049
+        1,
+        1,
+        22,
+        22
       ],
-      "ppu": 583.674251,
-      "pivotX": 0.3389155,
-      "pivotY": 0.2519936,
+      "ppu": 14.8943987495,
+      "pivotX": 0.16718678260869563,
+      "pivotY": 0.17668674782608693,
       "guid": "0d8c9a15b055461ea56f2b61a42e50fd",
-      "spriteId": "e95822559fed4159bd944b4bcbb12eb1"
+      "spriteId": "e95822559fed4159bd944b4bcbb12eb1",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            16,
+            13,
+            57,
+            54
+          ],
+          "ppu": 29.788797499,
+          "visibleColors": 15
+        },
+        {
+          "id": "Axe_Iron",
+          "name": "铁斧",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_033.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 12,
+          "sourcePivot": [
+            0.2,
+            0.2
+          ],
+          "sourceAlpha": [
+            1,
+            0,
+            14,
+            15
+          ],
+          "sourceWorldExtent": 1.6154,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            8,
+            6,
+            29,
+            27
+          ],
+          "ppu": 14.8943987495,
+          "pivotX": 0.3389155,
+          "pivotY": 0.2519936,
+          "guid": "0d8c9a15b055461ea56f2b61a42e50fd",
+          "spriteId": "e95822559fed4159bd944b4bcbb12eb1",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                16,
+                13,
+                57,
+                54
+              ],
+              "ppu": 29.788797499,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "2cece6acac64c71ed6e75aaa1a6b4c0193ef8ac42717816f6ef3cd83bad1e2c8",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "8d9573f26363b992f46b781a8feeb941f4e2b56a0fd2f45e9ae4c48d058bb2ec",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Axe_Iron.xcf",
+      "canvasCrop": {
+        "x": 7,
+        "y": 5,
+        "width": 23,
+        "height": 23
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Pickaxe_Stone",
@@ -284,22 +812,107 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 23,
+      "height": 25,
       "alphaBounds": [
-        267,
-        199,
-        1102,
-        1097
+        1,
+        1,
+        22,
+        24
       ],
-      "ppu": 886.064303,
-      "pivotX": 0.306252,
-      "pivotY": 0.2247687,
+      "ppu": 22.6108913045,
+      "pivotX": 0.1652201739130435,
+      "pivotY": 0.167703936,
       "guid": "29ce80f9e71d4d62a1a5e2e76b160654",
-      "spriteId": "108a93657a0140ea94dd9f0848cf9eee"
+      "spriteId": "108a93657a0140ea94dd9f0848cf9eee",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            14,
+            10,
+            56,
+            56
+          ],
+          "ppu": 45.221782609,
+          "visibleColors": 15
+        },
+        {
+          "id": "Pickaxe_Stone",
+          "name": "石镐",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_363.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Stone/Pickaxe_Stone_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22154638,
+            0.22019465
+          ],
+          "sourceAlpha": [
+            1,
+            2,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            7,
+            5,
+            28,
+            28
+          ],
+          "ppu": 22.6108913045,
+          "pivotX": 0.306252,
+          "pivotY": 0.2247687,
+          "guid": "29ce80f9e71d4d62a1a5e2e76b160654",
+          "spriteId": "108a93657a0140ea94dd9f0848cf9eee",
+          "visibleColors": 11,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                14,
+                10,
+                56,
+                56
+              ],
+              "ppu": 45.221782609,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "1b87874bc2b15f71f286ef089d31513ac16ac3b97c1cd2395f13e1f8ac6e7932",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "2c2bcf1dd0f8acd5e61c605c53caf61db1e5d1d4179e4c49e70433c69e171b0c",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Stone.xcf",
+      "canvasCrop": {
+        "x": 6,
+        "y": 4,
+        "width": 23,
+        "height": 25
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Pickaxe_Copper",
@@ -325,22 +938,107 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 22,
+      "height": 23,
       "alphaBounds": [
-        284,
-        257,
-        1049,
-        1033
+        1,
+        1,
+        21,
+        22
       ],
-      "ppu": 775.889735,
-      "pivotX": 0.3119936,
-      "pivotY": 0.262185,
+      "ppu": 19.799419075,
+      "pivotX": 0.18108159999999998,
+      "pivotY": 0.19086608695652174,
       "guid": "aac1182fe8e947cdae3f59f963e649de",
-      "spriteId": "a0806539bb6b4b32b72efc9578d6de0e"
+      "spriteId": "a0806539bb6b4b32b72efc9578d6de0e",
+      "visibleColors": 10,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            14,
+            13,
+            54,
+            53
+          ],
+          "ppu": 39.59883815,
+          "visibleColors": 15
+        },
+        {
+          "id": "Pickaxe_Copper",
+          "name": "铜镐",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_373.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Copper/Pickaxe_Copper_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22019461,
+            0.21749125
+          ],
+          "sourceAlpha": [
+            1,
+            2,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            7,
+            6,
+            27,
+            27
+          ],
+          "ppu": 19.799419075,
+          "pivotX": 0.3119936,
+          "pivotY": 0.262185,
+          "guid": "aac1182fe8e947cdae3f59f963e649de",
+          "spriteId": "a0806539bb6b4b32b72efc9578d6de0e",
+          "visibleColors": 11,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                14,
+                13,
+                54,
+                53
+              ],
+              "ppu": 39.59883815,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "e228b982cb4118d05f199e41a5c1a9591bf5dc14d1e8405b68f6eef6e24814bb",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "b077b9cdd25d0fb1afd28f79efdfdd2b796d89ef53ea609da2e3268bf666575e",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Copper.xcf",
+      "canvasCrop": {
+        "x": 6,
+        "y": 5,
+        "width": 22,
+        "height": 23
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Pickaxe_RawIron",
@@ -366,22 +1064,107 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 24,
+      "height": 25,
       "alphaBounds": [
-        283,
-        232,
-        1128,
-        1111
+        1,
+        1,
+        23,
+        24
       ],
-      "ppu": 886.693872,
-      "pivotX": 0.3201276,
-      "pivotY": 0.2114833,
+      "ppu": 22.626956861,
+      "pivotX": 0.17683680000000002,
+      "pivotY": 0.190698624,
       "guid": "728d6cf3ebe945a8bdb60777b7ae9095",
-      "spriteId": "c44497471c2c48b88136ce2502ad1f74"
+      "spriteId": "c44497471c2c48b88136ce2502ad1f74",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            14,
+            12,
+            58,
+            57
+          ],
+          "ppu": 45.253913722,
+          "visibleColors": 15
+        },
+        {
+          "id": "Pickaxe_RawIron",
+          "name": "粗铁铁镐",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_368.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_RawIron/Pickaxe_RawIron_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.2228981,
+            0.22019465
+          ],
+          "sourceAlpha": [
+            1,
+            2,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            7,
+            6,
+            29,
+            29
+          ],
+          "ppu": 22.626956861,
+          "pivotX": 0.3201276,
+          "pivotY": 0.2114833,
+          "guid": "728d6cf3ebe945a8bdb60777b7ae9095",
+          "spriteId": "c44497471c2c48b88136ce2502ad1f74",
+          "visibleColors": 8,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                14,
+                12,
+                58,
+                57
+              ],
+              "ppu": 45.253913722,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "5cb5540578ba980778b54a5494d9caa4f6565caa9b59c8a4f54bb43c53397792",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "137fa3506d5b57a4eca70c93a725d7a54a63f8a51596666482ef513bf1c43b21",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_RawIron.xcf",
+      "canvasCrop": {
+        "x": 6,
+        "y": 5,
+        "width": 24,
+        "height": 25
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Pickaxe_Bronze",
@@ -407,22 +1190,107 @@
         15
       ],
       "sourceWorldExtent": 1.38833,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 22,
+      "height": 23,
       "alphaBounds": [
-        298,
-        247,
-        1052,
-        1046
+        1,
+        1,
+        21,
+        22
       ],
-      "ppu": 658.766369,
-      "pivotX": 0.3219298,
-      "pivotY": 0.254386,
+      "ppu": 16.8106250465,
+      "pivotX": 0.19553425454545453,
+      "pivotY": 0.1800153043478261,
       "guid": "7d4cc2706c324f8aae77f3fa811fe186",
-      "spriteId": "bc351011ee1c46c29323d4e1c5d9b68a"
+      "spriteId": "bc351011ee1c46c29323d4e1c5d9b68a",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            15,
+            13,
+            54,
+            53
+          ],
+          "ppu": 33.621250093,
+          "visibleColors": 15
+        },
+        {
+          "id": "Pickaxe_Bronze",
+          "name": "青铜镐",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_020.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Bronze/Pickaxe_Bronze_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.15666392,
+            0.1553122
+          ],
+          "sourceAlpha": [
+            0,
+            0,
+            15,
+            15
+          ],
+          "sourceWorldExtent": 1.38833,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            7,
+            6,
+            27,
+            27
+          ],
+          "ppu": 16.8106250465,
+          "pivotX": 0.3219298,
+          "pivotY": 0.254386,
+          "guid": "7d4cc2706c324f8aae77f3fa811fe186",
+          "spriteId": "bc351011ee1c46c29323d4e1c5d9b68a",
+          "visibleColors": 11,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                15,
+                13,
+                54,
+                53
+              ],
+              "ppu": 33.621250093,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "f3f5fc2b2c005d2a6b284964b09ec27132c86c03cd11219b11240a9c197a9a22",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "115f869f83acbb0d11a2963a0f86e9dc966e503712fd81ebedba94be75546638",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Bronze.xcf",
+      "canvasCrop": {
+        "x": 6,
+        "y": 5,
+        "width": 22,
+        "height": 23
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Pickaxe_Iron",
@@ -448,22 +1316,107 @@
         15
       ],
       "sourceWorldExtent": 1.38833,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 23,
+      "height": 23,
       "alphaBounds": [
-        278,
-        279,
-        1077,
-        1092
+        1,
+        1,
+        22,
+        22
       ],
-      "ppu": 679.648637,
-      "pivotX": 0.3110048,
-      "pivotY": 0.2192663,
+      "ppu": 17.3435058885,
+      "pivotX": 0.17183276521739135,
+      "pivotY": 0.17463137391304348,
       "guid": "531f6438e34d49cdaff5edcef67cc5e3",
-      "spriteId": "4c99d3ce6e994f0fad7aa8673aeaf244"
+      "spriteId": "4c99d3ce6e994f0fad7aa8673aeaf244",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            14,
+            14,
+            55,
+            56
+          ],
+          "ppu": 34.687011777,
+          "visibleColors": 15
+        },
+        {
+          "id": "Pickaxe_Iron",
+          "name": "熟铁铁镐",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_021.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Iron/Pickaxe_Iron_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.15666397,
+            0.15260881
+          ],
+          "sourceAlpha": [
+            0,
+            0,
+            15,
+            15
+          ],
+          "sourceWorldExtent": 1.38833,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            7,
+            7,
+            28,
+            28
+          ],
+          "ppu": 17.3435058885,
+          "pivotX": 0.3110048,
+          "pivotY": 0.2192663,
+          "guid": "531f6438e34d49cdaff5edcef67cc5e3",
+          "spriteId": "4c99d3ce6e994f0fad7aa8673aeaf244",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                14,
+                14,
+                55,
+                56
+              ],
+              "ppu": 34.687011777,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "e3ab1e92d38c9c05108f910d89ea856701e1a0f6664dc5d3e86e70b669b69bb0",
+          "retouchRecord": "records-retouch-axes-pickaxes.json"
+        }
+      ],
+      "sha256": "0d3d89ce5453df4209df5be1ea0461173b98d4ed9943bf4f459aa3fe6763592c",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Iron.xcf",
+      "canvasCrop": {
+        "x": 6,
+        "y": 6,
+        "width": 23,
+        "height": 23
+      },
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Shovel_Wood",
@@ -489,22 +1442,102 @@
         29
       ],
       "sourceWorldExtent": 1.1803,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        153,
-        81,
-        1227,
-        1205
+        4,
+        2,
+        32,
+        31
       ],
-      "ppu": 1255.344792,
+      "ppu": 32.034316861,
       "pivotX": 0.2420255,
       "pivotY": 0.1638756,
       "guid": "4ae7b460a7ae499e9e47062f5f90659d",
-      "spriteId": "f8c2a5ca10744614b15ba238ed5337c8"
+      "spriteId": "f8c2a5ca10744614b15ba238ed5337c8",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            4,
+            63,
+            62
+          ],
+          "ppu": 64.068633722,
+          "visibleColors": 15
+        },
+        {
+          "id": "Shovel_Wood",
+          "name": "木铲",
+          "definition": "shells/ancient_stage.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/WoodShovel/WoodShovel_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Wood/Shovel_Wood_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            28,
+            29
+          ],
+          "sourceWorldExtent": 1.1803,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            2,
+            32,
+            31
+          ],
+          "ppu": 32.034316861,
+          "pivotX": 0.2420255,
+          "pivotY": 0.1638756,
+          "guid": "4ae7b460a7ae499e9e47062f5f90659d",
+          "spriteId": "f8c2a5ca10744614b15ba238ed5337c8",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                4,
+                63,
+                62
+              ],
+              "ppu": 64.068633722,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "a164c7bcc2a9f8da6ec2c6c2e918bcaa70bd8bf14833c75f2a2bd051a3ab3478",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "4ce2e3e040e1aae35c6799e672d0116672a76098f235b5cb0c4e47aa77d0fd06",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Wood.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Shovel_Stone",
@@ -530,22 +1563,102 @@
         29
       ],
       "sourceWorldExtent": 1.1803,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        148,
-        103,
-        1208,
-        1182
+        4,
+        2,
+        31,
+        30
       ],
-      "ppu": 1224.791127,
+      "ppu": 31.2546380095,
       "pivotX": 0.2364753,
       "pivotY": 0.177193,
       "guid": "8f6d7ad2162c4b7aad8a6cddd5c111a0",
-      "spriteId": "31d2290bcefd4b1ca4b509c7db417fbe"
+      "spriteId": "31d2290bcefd4b1ca4b509c7db417fbe",
+      "visibleColors": 10,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            5,
+            62,
+            60
+          ],
+          "ppu": 62.509276019,
+          "visibleColors": 15
+        },
+        {
+          "id": "Shovel_Stone",
+          "name": "石铲",
+          "definition": "shells/ancient_stage.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Stone/Shovel_Stone_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            28,
+            29
+          ],
+          "sourceWorldExtent": 1.1803,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            2,
+            31,
+            30
+          ],
+          "ppu": 31.2546380095,
+          "pivotX": 0.2364753,
+          "pivotY": 0.177193,
+          "guid": "8f6d7ad2162c4b7aad8a6cddd5c111a0",
+          "spriteId": "31d2290bcefd4b1ca4b509c7db417fbe",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                5,
+                62,
+                60
+              ],
+              "ppu": 62.509276019,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "d6bd3e883ac4ce9c683551681933c0da2ce522645d9e180e61531f9bbdf466ea",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "7c6b7a0419a0e8d1e709a42f832b2a797dddc093d3a783e64a213f1dc5754932",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Stone.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Shovel_Copper",
@@ -571,22 +1684,102 @@
         29
       ],
       "sourceWorldExtent": 1.1803,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        176,
-        84,
-        1225,
-        1188
+        4,
+        3,
+        32,
+        31
       ],
-      "ppu": 1250.552061,
+      "ppu": 31.912014316,
       "pivotX": 0.2575758,
       "pivotY": 0.1751994,
       "guid": "ea3ecc24900e417f99f9d6a5edaca108",
-      "spriteId": "7caf58290e3c4ab19dd4003f8349f633"
+      "spriteId": "7caf58290e3c4ab19dd4003f8349f633",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            9,
+            4,
+            63,
+            61
+          ],
+          "ppu": 63.824028632,
+          "visibleColors": 15
+        },
+        {
+          "id": "Shovel_Copper",
+          "name": "铜铲",
+          "definition": "shells/ancient_stage.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/CopperShovel/CopperShovel_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            28,
+            29
+          ],
+          "sourceWorldExtent": 1.1803,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            3,
+            32,
+            31
+          ],
+          "ppu": 31.912014316,
+          "pivotX": 0.2575758,
+          "pivotY": 0.1751994,
+          "guid": "ea3ecc24900e417f99f9d6a5edaca108",
+          "spriteId": "7caf58290e3c4ab19dd4003f8349f633",
+          "visibleColors": 15,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                9,
+                4,
+                63,
+                61
+              ],
+              "ppu": 63.824028632,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "33227bc1576f23dbddfb4680ddd02c92109e403692d97f751ee1993dce9c3c26",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "3882d44ba3adc059ca81608d4c5341d8d71e52330de63a40be2c27037ad6ea61",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Copper.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Shovel_RawIron",
@@ -612,22 +1805,102 @@
         29
       ],
       "sourceWorldExtent": 1.1803,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        159,
-        86,
-        1216,
-        1194
+        5,
+        2,
+        31,
+        31
       ],
-      "ppu": 1242.763871,
+      "ppu": 31.713272625,
       "pivotX": 0.2449123,
       "pivotY": 0.1708612,
       "guid": "2abf93390def4fbdaa92c759bcb45230",
-      "spriteId": "4889ebe1ac4b4861beb3c221e9019261"
+      "spriteId": "4889ebe1ac4b4861beb3c221e9019261",
+      "visibleColors": 10,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            4,
+            62,
+            61
+          ],
+          "ppu": 63.42654525,
+          "visibleColors": 15
+        },
+        {
+          "id": "Shovel_RawIron",
+          "name": "粗铁铲",
+          "definition": "shells/ancient_stage.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/RawIronShovel/RawIronShovel_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_RawIron/Shovel_RawIron_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            28,
+            29
+          ],
+          "sourceWorldExtent": 1.1803,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            5,
+            2,
+            31,
+            31
+          ],
+          "ppu": 31.713272625,
+          "pivotX": 0.2449123,
+          "pivotY": 0.1708612,
+          "guid": "2abf93390def4fbdaa92c759bcb45230",
+          "spriteId": "4889ebe1ac4b4861beb3c221e9019261",
+          "visibleColors": 15,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                4,
+                62,
+                61
+              ],
+              "ppu": 63.42654525,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "f0f835a0d49789f64e5bff30d055df5d424c009e28d09ca568ccef010f59a481",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "6e7f027e704c21b70319471e8c6b1f726e19770e1d18e1d4a722e8f9ae75b00c",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Shovel_RawIron.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Shovel_Bronze",
@@ -653,22 +1926,102 @@
         29
       ],
       "sourceWorldExtent": 1.1803,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        159,
-        107,
-        1202,
-        1201
+        5,
+        2,
+        31,
+        31
       ],
-      "ppu": 1225.390219,
+      "ppu": 31.2699258435,
       "pivotX": 0.2433493,
       "pivotY": 0.1637161,
       "guid": "4433633a11a14807bb218131d803dd36",
-      "spriteId": "1dfbb65ea3664e57aac30da27128ed4f"
+      "spriteId": "1dfbb65ea3664e57aac30da27128ed4f",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            5,
+            61,
+            61
+          ],
+          "ppu": 62.539851687,
+          "visibleColors": 15
+        },
+        {
+          "id": "Shovel_Bronze",
+          "name": "青铜铲",
+          "definition": "shells/ancient_stage.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/BronzeShovel/BronzeShovel_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Bronze/Shovel_Bronze_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            28,
+            29
+          ],
+          "sourceWorldExtent": 1.1803,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            5,
+            2,
+            31,
+            31
+          ],
+          "ppu": 31.2699258435,
+          "pivotX": 0.2433493,
+          "pivotY": 0.1637161,
+          "guid": "4433633a11a14807bb218131d803dd36",
+          "spriteId": "1dfbb65ea3664e57aac30da27128ed4f",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                5,
+                61,
+                61
+              ],
+              "ppu": 62.539851687,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "6ca1b0da0cd5d95ac9b255903ab140f1eb23628ac4506bfd68f137a18b1c95f7",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "beb59914f623de827e82d1725608cbf9b168b1211209879f6cce7966a3ba2601",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Bronze.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Shovel_Iron",
@@ -694,22 +2047,102 @@
         29
       ],
       "sourceWorldExtent": 1.1803,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        157,
-        97,
-        1223,
-        1211
+        5,
+        2,
+        31,
+        31
       ],
-      "ppu": 1255.943884,
+      "ppu": 32.0496046955,
       "pivotX": 0.2443222,
       "pivotY": 0.1579745,
       "guid": "5d3ae22d259a471faa23c4752de35a3f",
-      "spriteId": "1799edbc440443209e62c2ca022aacf2"
+      "spriteId": "1799edbc440443209e62c2ca022aacf2",
+      "visibleColors": 9,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            5,
+            62,
+            62
+          ],
+          "ppu": 64.099209391,
+          "visibleColors": 15
+        },
+        {
+          "id": "Shovel_Iron",
+          "name": "铁铲",
+          "definition": "shells/ancient_stage.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/IronShovel/IronShovel_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Iron/Shovel_Iron_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            28,
+            29
+          ],
+          "sourceWorldExtent": 1.1803,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            5,
+            2,
+            31,
+            31
+          ],
+          "ppu": 32.0496046955,
+          "pivotX": 0.2443222,
+          "pivotY": 0.1579745,
+          "guid": "5d3ae22d259a471faa23c4752de35a3f",
+          "spriteId": "1799edbc440443209e62c2ca022aacf2",
+          "visibleColors": 15,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                5,
+                62,
+                62
+              ],
+              "ppu": 64.099209391,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "00b12551e3e19d823500fed69229200836df960a02c1ba1572337ba8232d0558",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "f185524c6b6bf287e7acdf2cfe9bebb1ff3eef7d9b6b6d4c10709683a56acc92",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Iron.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Hoe_Wood",
@@ -735,22 +2168,102 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        166,
-        117,
-        1214,
-        1158
+        4,
+        3,
+        31,
+        30
       ],
-      "ppu": 1134.744042,
+      "ppu": 28.956785761,
       "pivotX": 0.2494896,
       "pivotY": 0.1920893,
       "guid": "a38aedaf57f64c5eaafa6c2e4ad1bbaf",
-      "spriteId": "7e890d5b8d45447190d83a12ff85136e"
+      "spriteId": "7e890d5b8d45447190d83a12ff85136e",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            9,
+            6,
+            62,
+            59
+          ],
+          "ppu": 57.913571522,
+          "visibleColors": 15
+        },
+        {
+          "id": "Hoe_Wood",
+          "name": "木锄头",
+          "definition": "shells/hoes.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_362.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Wood/Hoe_Wood_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22154638,
+            0.22019465
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            3,
+            31,
+            30
+          ],
+          "ppu": 28.956785761,
+          "pivotX": 0.2494896,
+          "pivotY": 0.1920893,
+          "guid": "a38aedaf57f64c5eaafa6c2e4ad1bbaf",
+          "spriteId": "7e890d5b8d45447190d83a12ff85136e",
+          "visibleColors": 15,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                9,
+                6,
+                62,
+                59
+              ],
+              "ppu": 57.913571522,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "f6a48d754c4169e1a5d5184db1ffc2446dff86689f4c26c46f31d08cc61a92ba",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "4a05c02070575c7b1de753a88555a4aef45f782b699c8b5d118e77c94ee2630d",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Wood.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Hoe_Stone",
@@ -776,22 +2289,102 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        126,
-        111,
-        1239,
-        1175
+        3,
+        3,
+        32,
+        30
       ],
-      "ppu": 1185.739128,
+      "ppu": 30.2580957705,
       "pivotX": 0.2248485,
       "pivotY": 0.1811005,
       "guid": "6206c140b31a484d9998520f17b95319",
-      "spriteId": "cd3a7cb4e53f40f6af5de3799039298c"
+      "spriteId": "cd3a7cb4e53f40f6af5de3799039298c",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            6,
+            6,
+            63,
+            60
+          ],
+          "ppu": 60.516191541,
+          "visibleColors": 15
+        },
+        {
+          "id": "Hoe_Stone",
+          "name": "石锄头",
+          "definition": "shells/hoes.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_367.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Stone/Hoe_Stone_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22154638,
+            0.22019465
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            3,
+            32,
+            30
+          ],
+          "ppu": 30.2580957705,
+          "pivotX": 0.2248485,
+          "pivotY": 0.1811005,
+          "guid": "6206c140b31a484d9998520f17b95319",
+          "spriteId": "cd3a7cb4e53f40f6af5de3799039298c",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                6,
+                6,
+                63,
+                60
+              ],
+              "ppu": 60.516191541,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "d36888344f9a28f23880cd70271e04b2fba6e5bafdfb8aacd5aa86c53e0c8732",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "6eb111b6f8040e28d7a3e5e41ba739714660c05bc1e18108704f7bf4e64f5b43",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Stone.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Hoe_Copper",
@@ -817,22 +2410,102 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        131,
-        137,
-        1237,
-        1193
+        3,
+        3,
+        32,
+        31
       ],
-      "ppu": 1156.149386,
+      "ppu": 29.503014635,
       "pivotX": 0.2280542,
       "pivotY": 0.1658533,
       "guid": "5e83b806712a43b9add0a442fc135831",
-      "spriteId": "100262aed17f48e0822bc04cafe7af3a"
+      "spriteId": "100262aed17f48e0822bc04cafe7af3a",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            7,
+            7,
+            63,
+            61
+          ],
+          "ppu": 59.00602927,
+          "visibleColors": 15
+        },
+        {
+          "id": "Hoe_Copper",
+          "name": "铜锄头",
+          "definition": "shells/hoes.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_377.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Copper/Hoe_Copper_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22154638,
+            0.22019465
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            3,
+            32,
+            31
+          ],
+          "ppu": 29.503014635,
+          "pivotX": 0.2280542,
+          "pivotY": 0.1658533,
+          "guid": "5e83b806712a43b9add0a442fc135831",
+          "spriteId": "100262aed17f48e0822bc04cafe7af3a",
+          "visibleColors": 15,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                7,
+                7,
+                63,
+                61
+              ],
+              "ppu": 59.00602927,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "e6c2974f24b32432e061d1bd80bd7bad41fa33ed930c6ee7b3ea749e32684941",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "1a70dd1b82a8ee9196890955cb0f5c6ad8754d530f42e6219dd212d45f405f7b",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Copper.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Hoe_Iron",
@@ -858,22 +2531,102 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        142,
-        162,
-        1238,
-        1175
+        3,
+        4,
+        32,
+        30
       ],
-      "ppu": 1131.596197,
+      "ppu": 28.8764579775,
       "pivotX": 0.2357097,
       "pivotY": 0.1754067,
       "guid": "154f70c7dd9048118817e17aaea6d6b8",
-      "spriteId": "c82a3fdb45e94e6095dfbe42f8b4376f"
+      "spriteId": "c82a3fdb45e94e6095dfbe42f8b4376f",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            7,
+            8,
+            63,
+            60
+          ],
+          "ppu": 57.752915955,
+          "visibleColors": 15
+        },
+        {
+          "id": "Hoe_Iron",
+          "name": "铁锄头",
+          "definition": "shells/hoes.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_372.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Hoe_Iron/Hoe_Iron_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22154638,
+            0.22019465
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            4,
+            32,
+            30
+          ],
+          "ppu": 28.8764579775,
+          "pivotX": 0.2357097,
+          "pivotY": 0.1754067,
+          "guid": "154f70c7dd9048118817e17aaea6d6b8",
+          "spriteId": "c82a3fdb45e94e6095dfbe42f8b4376f",
+          "visibleColors": 15,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                7,
+                8,
+                63,
+                60
+              ],
+              "ppu": 57.752915955,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "25c3ae8be40a44b4e270b0db0e51381ab11c738211732aff6674feeae8d4a4ec",
+          "retouchRecord": "records-retouch-shovels-hoes.json"
+        }
+      ],
+      "sha256": "feecd062544b54f3caaa671964af15595be4a9443bb419e17741b77a01999a9b",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Iron.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Dagger_Stone",
@@ -899,22 +2652,102 @@
         13
       ],
       "sourceWorldExtent": 0.858,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        185,
-        137,
-        1207,
-        1160
+        4,
+        3,
+        31,
+        30
       ],
-      "ppu": 1623.06999,
+      "ppu": 41.4180539715,
       "pivotX": 0.2617384,
       "pivotY": 0.1884848,
       "guid": "89971d84329940b4876b720bb65f95e4",
-      "spriteId": "174222088a024ed3a432fdd8149ac55d"
+      "spriteId": "174222088a024ed3a432fdd8149ac55d",
+      "visibleColors": 10,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            9,
+            7,
+            62,
+            59
+          ],
+          "ppu": 82.836107943,
+          "visibleColors": 15
+        },
+        {
+          "id": "Dagger_Stone",
+          "name": "石制小刀",
+          "definition": "shells/weapons.json",
+          "sourceSprite": "Assets/6_Art/Items/Tool_Weapon.png[石制小刀]",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Stone/Dagger_Stone_Icon.png",
+          "sourceRect": [
+            16,
+            49,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22,
+            0.22
+          ],
+          "sourceAlpha": [
+            1,
+            4,
+            10,
+            13
+          ],
+          "sourceWorldExtent": 0.858,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            3,
+            31,
+            30
+          ],
+          "ppu": 41.4180539715,
+          "pivotX": 0.2617384,
+          "pivotY": 0.1884848,
+          "guid": "89971d84329940b4876b720bb65f95e4",
+          "spriteId": "174222088a024ed3a432fdd8149ac55d",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                9,
+                7,
+                62,
+                59
+              ],
+              "ppu": 82.836107943,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "ad76528416d84f6689dc012babde0ea9bec96c908393c3d2404fcf362598c380",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "7b1e55c5d52266d04e794206f52af6656a88c604317f37fbfd18cbc453166eff",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Stone.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Dagger_Copper",
@@ -940,22 +2773,102 @@
         14
       ],
       "sourceWorldExtent": 0.858,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        141,
-        69,
-        1205,
-        1208
+        3,
+        2,
+        31,
+        31
       ],
-      "ppu": 1759.052836,
+      "ppu": 44.8881106475,
       "pivotX": 0.2313397,
       "pivotY": 0.1631579,
       "guid": "5e6401ff15d64760b3f6368b2fb2b76c",
-      "spriteId": "ad77e8b6eb904afa9501c42e0667859c"
+      "spriteId": "ad77e8b6eb904afa9501c42e0667859c",
+      "visibleColors": 10,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            7,
+            4,
+            61,
+            62
+          ],
+          "ppu": 89.776221295,
+          "visibleColors": 15
+        },
+        {
+          "id": "Dagger_Copper",
+          "name": "铜制小刀",
+          "definition": "shells/weapons.json",
+          "sourceSprite": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_19]",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Copper/Dagger_Copper_Icon.png",
+          "sourceRect": [
+            64,
+            48,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.22,
+            0.22
+          ],
+          "sourceAlpha": [
+            1,
+            5,
+            10,
+            14
+          ],
+          "sourceWorldExtent": 0.858,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            2,
+            31,
+            31
+          ],
+          "ppu": 44.8881106475,
+          "pivotX": 0.2313397,
+          "pivotY": 0.1631579,
+          "guid": "5e6401ff15d64760b3f6368b2fb2b76c",
+          "spriteId": "ad77e8b6eb904afa9501c42e0667859c",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                7,
+                4,
+                61,
+                62
+              ],
+              "ppu": 89.776221295,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "d628fd433bc380b6c203e014239e140082f7dc1eb272e09e60f0a1e5615f478f",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "5ff585db9ebef07b60a2e7843979b40b5193f6aa7a20cef99bd3428c55b30303",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Copper.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Dagger_Bone",
@@ -981,22 +2894,102 @@
         15
       ],
       "sourceWorldExtent": 1.38833,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        179,
-        114,
-        1194,
-        1184
+        4,
+        3,
+        31,
+        30
       ],
-      "ppu": 1029.044619,
+      "ppu": 26.2595118085,
       "pivotX": 0.2561722,
       "pivotY": 0.1745933,
       "guid": "ba94a0e98d5745f1b7a4a4dc86d5de61",
-      "spriteId": "7decc14acc2745a284e92dada13cdce5"
+      "spriteId": "7decc14acc2745a284e92dada13cdce5",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            9,
+            6,
+            61,
+            60
+          ],
+          "ppu": 52.519023617,
+          "visibleColors": 15
+        },
+        {
+          "id": "Dagger_Bone",
+          "name": "骨制小刀",
+          "definition": "shells/weapons.json",
+          "sourceSprite": "Assets/6_Art/Items/Weapons/Item_Weapon_006.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Bone/Dagger_Bone_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.15,
+            0.15
+          ],
+          "sourceAlpha": [
+            0,
+            0,
+            15,
+            15
+          ],
+          "sourceWorldExtent": 1.38833,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            3,
+            31,
+            30
+          ],
+          "ppu": 26.2595118085,
+          "pivotX": 0.2561722,
+          "pivotY": 0.1745933,
+          "guid": "ba94a0e98d5745f1b7a4a4dc86d5de61",
+          "spriteId": "7decc14acc2745a284e92dada13cdce5",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                9,
+                6,
+                61,
+                60
+              ],
+              "ppu": 52.519023617,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "93a15b1771ba0dd8517a736ad2c6174a096198d1c844880982fbd94a3e5f16a6",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "4cf6f2977bcff6d5caba8d9d33e8740e89f95d6048cb656837acacc0365bd419",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Bone.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Knife_Flint",
@@ -1022,22 +3015,102 @@
         14
       ],
       "sourceWorldExtent": 1.12316,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        159,
-        116,
-        1177,
-        1177
+        4,
+        3,
+        30,
+        30
       ],
-      "ppu": 1256.88042,
+      "ppu": 32.0735035405,
       "pivotX": 0.2405582,
       "pivotY": 0.1791707,
       "guid": "4798f08ab11448988f76b3584dbc3be2",
-      "spriteId": "d2cfcc6e32854936b3de98b9ea2d8bbf"
+      "spriteId": "d2cfcc6e32854936b3de98b9ea2d8bbf",
+      "visibleColors": 11,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            6,
+            60,
+            60
+          ],
+          "ppu": 64.147007081,
+          "visibleColors": 15
+        },
+        {
+          "id": "Knife_Flint",
+          "name": "燧石小刀",
+          "definition": "shells/weapons.json",
+          "sourceSprite": "Assets/6_Art/Items/Weapons/Guns/iron-weapons.png[iron-weapons_248]",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Knife_Flint/Knife_Flint_Icon.png",
+          "sourceRect": [
+            128,
+            160,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.8,
+            0.2
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "sourceWorldExtent": 1.12316,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            3,
+            30,
+            30
+          ],
+          "ppu": 32.0735035405,
+          "pivotX": 0.2405582,
+          "pivotY": 0.1791707,
+          "guid": "4798f08ab11448988f76b3584dbc3be2",
+          "spriteId": "d2cfcc6e32854936b3de98b9ea2d8bbf",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                6,
+                60,
+                60
+              ],
+              "ppu": 64.147007081,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "fec883ddd6f627d6e82b4b7f76c03b0422cccec52e8362c7cf0fb834eedaaa00",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "019ab85966e5d7d236f1e88246ef599951056a3ef160aefd7918781ef609b822",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Knife_Flint.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Dagger_Obsidian",
@@ -1063,22 +3136,102 @@
         834
       ],
       "sourceWorldExtent": 0.86284,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        136,
-        120,
-        1207,
-        1185
+        3,
+        3,
+        31,
+        30
       ],
-      "ppu": 1692.63158,
+      "ppu": 43.193150367,
       "pivotX": 0.228134,
       "pivotY": 0.1732376,
       "guid": "7b2457c921e8466ca8d8072f25527a6b",
-      "spriteId": "e683390b18cd494399a70c1a12d59cf5"
+      "spriteId": "e683390b18cd494399a70c1a12d59cf5",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            7,
+            6,
+            62,
+            60
+          ],
+          "ppu": 86.386300734,
+          "visibleColors": 15
+        },
+        {
+          "id": "Dagger_Obsidian",
+          "name": "黑曜石小刀",
+          "definition": "shells/obsidian.json",
+          "sourceSprite": "Assets/6_Art/Generated/Combat/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            1254,
+            1254
+          ],
+          "sourcePPU": 1254,
+          "sourcePivot": [
+            0.8,
+            0.48
+          ],
+          "sourceAlpha": [
+            88,
+            470,
+            1169,
+            834
+          ],
+          "sourceWorldExtent": 0.86284,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            3,
+            31,
+            30
+          ],
+          "ppu": 43.193150367,
+          "pivotX": 0.228134,
+          "pivotY": 0.1732376,
+          "guid": "7b2457c921e8466ca8d8072f25527a6b",
+          "spriteId": "e683390b18cd494399a70c1a12d59cf5",
+          "visibleColors": 10,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                7,
+                6,
+                62,
+                60
+              ],
+              "ppu": 86.386300734,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "58814437418fc9ad22e6bb731489cfc3b4422efc459aed82ea1de9a76769f06b",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "4b8bb79db8bdaf4899c0aad0cb3fec8eb654a95f5f39c7676d2f35a41f8e8784",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Obsidian.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "WoodHammer",
@@ -1104,22 +3257,102 @@
         14
       ],
       "sourceWorldExtent": 0.875,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        116,
-        96,
-        1243,
-        1202
+        3,
+        2,
+        32,
+        31
       ],
-      "ppu": 1572.132094,
+      "ppu": 40.1182033555,
       "pivotX": 0.218437,
       "pivotY": 0.1642584,
       "guid": "33ab12d649e2468890f0dcc2365436b6",
-      "spriteId": "8d5989c5e3494b12a690a1d27e0ecd91"
+      "spriteId": "8d5989c5e3494b12a690a1d27e0ecd91",
+      "visibleColors": 8,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            6,
+            5,
+            63,
+            61
+          ],
+          "ppu": 80.236406711,
+          "visibleColors": 15
+        },
+        {
+          "id": "WoodHammer",
+          "name": "木锤",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/WoodHammer/WoodHammer_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            1,
+            1,
+            14,
+            14
+          ],
+          "sourceWorldExtent": 0.875,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            2,
+            32,
+            31
+          ],
+          "ppu": 40.1182033555,
+          "pivotX": 0.218437,
+          "pivotY": 0.1642584,
+          "guid": "33ab12d649e2468890f0dcc2365436b6",
+          "spriteId": "8d5989c5e3494b12a690a1d27e0ecd91",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                6,
+                5,
+                63,
+                61
+              ],
+              "ppu": 80.236406711,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "a008ea2c77c77e14e694f72019e0252391c222a01a93bc0a10f35460cca44bbe",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "896271d3309f51769cbafc5846c7a535f06df051bc067288c3f2f8dc8d11b1cb",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/WoodHammer.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "StoneHammer",
@@ -1145,22 +3378,102 @@
         28
       ],
       "sourceWorldExtent": 0.875,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        157,
-        95,
-        1214,
-        1191
+        4,
+        2,
+        31,
+        31
       ],
-      "ppu": 1511.522942,
+      "ppu": 38.5715583285,
       "pivotX": 0.2433174,
       "pivotY": 0.1719139,
       "guid": "6b22ce5196da4ff7a5b3aa5f603331af",
-      "spriteId": "5cc77bc327dd458b8100a68a1cdd6e47"
+      "spriteId": "5cc77bc327dd458b8100a68a1cdd6e47",
+      "visibleColors": 9,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            5,
+            62,
+            61
+          ],
+          "ppu": 77.143116657,
+          "visibleColors": 15
+        },
+        {
+          "id": "StoneHammer",
+          "name": "石锤",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/StoneHammer/StoneHammer_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/StoneHammer/StoneHammer_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.21875,
+            0.21875
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            29,
+            28
+          ],
+          "sourceWorldExtent": 0.875,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            2,
+            31,
+            31
+          ],
+          "ppu": 38.5715583285,
+          "pivotX": 0.2433174,
+          "pivotY": 0.1719139,
+          "guid": "6b22ce5196da4ff7a5b3aa5f603331af",
+          "spriteId": "5cc77bc327dd458b8100a68a1cdd6e47",
+          "visibleColors": 12,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                5,
+                62,
+                61
+              ],
+              "ppu": 77.143116657,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "cd8aa91cc8dd6c34fc78606c2581eb5ae68079e5ae486c40288eebc208b8eba8",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "4f70e5f2e5a772c62f08687d34c38b9bb2301402adc01340095eeb7cc9222fe7",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/StoneHammer.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Scissors",
@@ -1186,22 +3499,102 @@
         29
       ],
       "sourceWorldExtent": 0.875,
-      "rotation": 225,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        186,
-        108,
-        1224,
-        1189
+        4,
+        3,
+        32,
+        31
       ],
-      "ppu": 1537.382847,
+      "ppu": 39.2314602105,
       "pivotX": 0.2643222,
       "pivotY": 0.1718341,
       "guid": "88bf6aa13b874598b7701a3873320337",
-      "spriteId": "f4240a3eb04b4326816587d6a3cfd465"
+      "spriteId": "f4240a3eb04b4326816587d6a3cfd465",
+      "visibleColors": 9,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            9,
+            6,
+            63,
+            61
+          ],
+          "ppu": 78.462920421,
+          "visibleColors": 15
+        },
+        {
+          "id": "Scissors",
+          "name": "剪刀",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Generated/InventoryCrafting/Scissors/Scissors_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Scissors/Scissors_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.5,
+            0.5
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            29,
+            29
+          ],
+          "sourceWorldExtent": 0.875,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            3,
+            32,
+            31
+          ],
+          "ppu": 39.2314602105,
+          "pivotX": 0.2643222,
+          "pivotY": 0.1718341,
+          "guid": "88bf6aa13b874598b7701a3873320337",
+          "spriteId": "f4240a3eb04b4326816587d6a3cfd465",
+          "visibleColors": 13,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                9,
+                6,
+                63,
+                61
+              ],
+              "ppu": 78.462920421,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "1c9a1072168aa6a8dbf874379b9fa463d389acc3624da5fe57359f61a8be752c",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "2661831e1198fcda71832254ed7a5ce6f689dc17ec53f235b3dcfa0cf64d21ff",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Scissors.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "ChippedTool",
@@ -1227,22 +3620,102 @@
         12
       ],
       "sourceWorldExtent": 0.75,
-      "rotation": 0,
-      "flipX": true,
+      "rotation": 315,
+      "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        158,
-        119,
-        1149,
-        1156
+        4,
+        3,
+        30,
+        30
       ],
-      "ppu": 1384,
+      "ppu": 35.31738437,
       "pivotX": 0.5215311,
       "pivotY": 0.4912281,
       "guid": "61c575b8d9b44679abec20c63c1832a0",
-      "spriteId": "a4d44d8e09af4da19df0334401409f90"
+      "spriteId": "a4d44d8e09af4da19df0334401409f90",
+      "visibleColors": 12,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            8,
+            6,
+            59,
+            59
+          ],
+          "ppu": 70.63476874,
+          "visibleColors": 15
+        },
+        {
+          "id": "ChippedTool",
+          "name": "打制石器",
+          "definition": "shells/weapons.json",
+          "sourceSprite": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_98]",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/ChippedTool/ChippedTool_Icon.png",
+          "sourceRect": [
+            224,
+            112,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0,
+            0
+          ],
+          "sourceAlpha": [
+            2,
+            4,
+            13,
+            12
+          ],
+          "sourceWorldExtent": 0.75,
+          "rotation": 315,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            3,
+            30,
+            30
+          ],
+          "ppu": 35.31738437,
+          "pivotX": 0.5215311,
+          "pivotY": 0.4912281,
+          "guid": "61c575b8d9b44679abec20c63c1832a0",
+          "spriteId": "a4d44d8e09af4da19df0334401409f90",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                8,
+                6,
+                59,
+                59
+              ],
+              "ppu": 70.63476874,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "1aeb38cfaa5792aff2bc4ad2dda28eff3b52350de573f250bd53fd47335128a8",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "e6131d5ecc0e6918f20ddc84809b08ff7197655fff55e61166d465dd2821924c",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/ChippedTool.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "FishingRod",
@@ -1271,19 +3744,99 @@
       "rotation": 0,
       "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        128,
-        75,
-        1195,
-        1191
+        3,
+        2,
+        31,
+        31
       ],
-      "ppu": 1374.769231,
+      "ppu": 35.081830456,
       "pivotX": 0.2213078,
       "pivotY": 0.1741467,
       "guid": "15078ada487542ca8f0e57a1a451a6f9",
-      "spriteId": "73ff90ec003d474797f4a1a3d461ea88"
+      "spriteId": "73ff90ec003d474797f4a1a3d461ea88",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            7,
+            4,
+            61,
+            61
+          ],
+          "ppu": 70.163660912,
+          "visibleColors": 9
+        },
+        {
+          "id": "FishingRod",
+          "name": "钓鱼竿",
+          "definition": "shells/fishing.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Item_Tool_389.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.2,
+            0.2
+          ],
+          "sourceAlpha": [
+            1,
+            2,
+            13,
+            14
+          ],
+          "sourceWorldExtent": 0.8125,
+          "rotation": 0,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            2,
+            31,
+            31
+          ],
+          "ppu": 35.081830456,
+          "pivotX": 0.2213078,
+          "pivotY": 0.1741467,
+          "guid": "15078ada487542ca8f0e57a1a451a6f9",
+          "spriteId": "73ff90ec003d474797f4a1a3d461ea88",
+          "visibleColors": 8,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                7,
+                4,
+                61,
+                61
+              ],
+              "ppu": 70.163660912,
+              "visibleColors": 9
+            }
+          ],
+          "sha256": "c9c4c3bcd1622d181b9780bdf8d35738d022b71b722a3a189185151c2afa4387",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "3060d59128c259c2707d8ba387ed4365ab7ea97308a0f2767e33c472b0523fb0",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/FishingRod.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "FlintStrike",
@@ -1312,19 +3865,99 @@
       "rotation": 0,
       "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        226,
-        283,
-        1040,
-        1018
+        6,
+        7,
+        27,
+        26
       ],
-      "ppu": 931.428571,
+      "ppu": 23.7685121785,
       "pivotX": 0.5051834,
       "pivotY": 0.4808612,
       "guid": "a26921880a4a40208ed9afe977554ab4",
-      "spriteId": "39a34a7af9ff4b1faa9ea239e88c639a"
+      "spriteId": "39a34a7af9ff4b1faa9ea239e88c639a",
+      "visibleColors": 6,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            12,
+            14,
+            53,
+            52
+          ],
+          "ppu": 47.537024357,
+          "visibleColors": 15
+        },
+        {
+          "id": "FlintStrike",
+          "name": "打火石",
+          "definition": "shells/tools.json",
+          "sourceSprite": "Assets/6_Art/Items/Tools/Flint.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FlintStrike/FlintStrike_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.5,
+            0.5
+          ],
+          "sourceAlpha": [
+            2,
+            2,
+            28,
+            29
+          ],
+          "sourceWorldExtent": 0.875,
+          "rotation": 0,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            6,
+            7,
+            27,
+            26
+          ],
+          "ppu": 23.7685121785,
+          "pivotX": 0.5051834,
+          "pivotY": 0.4808612,
+          "guid": "a26921880a4a40208ed9afe977554ab4",
+          "spriteId": "39a34a7af9ff4b1faa9ea239e88c639a",
+          "visibleColors": 10,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                12,
+                14,
+                53,
+                52
+              ],
+              "ppu": 47.537024357,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "963818b01c961a0d340e9d8c91fd123d6a9bd4243d152899a61631d8ff8d12b3",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "afae2af61fc68dc88d3cc7c77b9ebcf49284152303e5201207f90f6d0e0d16f0",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/FlintStrike.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "SparkMaker_Summoner",
@@ -1353,19 +3986,99 @@
       "rotation": 0,
       "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        175,
-        206,
-        1201,
-        1165
+        4,
+        5,
+        31,
+        30
       ],
-      "ppu": 657.28,
+      "ppu": 16.772695375,
       "pivotX": 0.1395534,
       "pivotY": 0.0701754,
       "guid": "d70505a32b2b45ff92af679100ba433c",
-      "spriteId": "d9e7f455e84c49b3a7fb00b06ff9a5d6"
+      "spriteId": "d9e7f455e84c49b3a7fb00b06ff9a5d6",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            9,
+            11,
+            61,
+            60
+          ],
+          "ppu": 33.54539075,
+          "visibleColors": 10
+        },
+        {
+          "id": "SparkMaker_Summoner",
+          "name": "钻木取火工具",
+          "definition": "shells/building_summoners.json",
+          "sourceSprite": "Assets/6_Art/Items/ADDSparkMaker.png[ADDSparkMaker_11]",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
+          "sourceRect": [
+            136,
+            192,
+            42,
+            50
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0,
+            0
+          ],
+          "sourceAlpha": [
+            0,
+            0,
+            41,
+            49
+          ],
+          "sourceWorldExtent": 1.5625,
+          "rotation": 0,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            5,
+            31,
+            30
+          ],
+          "ppu": 16.772695375,
+          "pivotX": 0.1395534,
+          "pivotY": 0.0701754,
+          "guid": "d70505a32b2b45ff92af679100ba433c",
+          "spriteId": "d9e7f455e84c49b3a7fb00b06ff9a5d6",
+          "visibleColors": 7,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                9,
+                11,
+                61,
+                60
+              ],
+              "ppu": 33.54539075,
+              "visibleColors": 10
+            }
+          ],
+          "sha256": "43523929dd051841ec3520be689a8b0b323628d870ad1e8c258f31204fc3efe5",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "0774b01d7453085fb1fbf04a7c3624546689f0be9aa919d5d076facef1402510",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/SparkMaker_Summoner.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "Torch_Summoner",
@@ -1394,19 +4107,99 @@
       "rotation": 45,
       "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        167,
-        101,
-        1221,
-        1194
+        4,
+        2,
+        31,
+        31
       ],
-      "ppu": 2081.119871,
+      "ppu": 53.1067271705,
       "pivotX": 0.2509569,
       "pivotY": 0.1691866,
       "guid": "1239a55e1ad5428093df3599f2294c73",
-      "spriteId": "8b09adcc6a7b4958a121960fd168640d"
+      "spriteId": "8b09adcc6a7b4958a121960fd168640d",
+      "visibleColors": 7,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            9,
+            5,
+            62,
+            61
+          ],
+          "ppu": 106.213454341,
+          "visibleColors": 15
+        },
+        {
+          "id": "Torch_Summoner",
+          "name": "火把",
+          "definition": "shells/building_summoners.json",
+          "sourceSprite": "Assets/6_Art/Generated/Tools/Torch/Torch_Spent.png[Torch_Spent]",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            64,
+            64
+          ],
+          "sourcePPU": 16,
+          "sourcePivot": [
+            0.475,
+            0.15
+          ],
+          "sourceAlpha": [
+            29,
+            44,
+            32,
+            54
+          ],
+          "sourceWorldExtent": 0.6875,
+          "rotation": 45,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            4,
+            2,
+            31,
+            31
+          ],
+          "ppu": 53.1067271705,
+          "pivotX": 0.2509569,
+          "pivotY": 0.1691866,
+          "guid": "1239a55e1ad5428093df3599f2294c73",
+          "spriteId": "8b09adcc6a7b4958a121960fd168640d",
+          "visibleColors": 13,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                9,
+                5,
+                62,
+                61
+              ],
+              "ppu": 106.213454341,
+              "visibleColors": 15
+            }
+          ],
+          "sha256": "26545c51a1b4be101ab5d6baf278a3e584250dd0386f1da0f1396c4fed8e59b9",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "0eed817b2fb2e75fad09df0710188d18e1c0b0ba8c0b4d4526599a73987adf0b",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/Torch_Summoner.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     },
     {
       "id": "HandDrill_Summoner",
@@ -1435,19 +4228,150 @@
       "rotation": 0,
       "flipX": false,
       "flipY": false,
-      "width": 1254,
-      "height": 1254,
+      "width": 32,
+      "height": 32,
       "alphaBounds": [
-        129,
-        82,
-        1124,
-        1182
+        3,
+        2,
+        29,
+        30
       ],
-      "ppu": 1531.826087,
+      "ppu": 39.0896609125,
       "pivotX": 0.5172665,
       "pivotY": 0.5147008,
       "guid": "bf652f961d274c748370c8bd5438c938",
-      "spriteId": "eac8988be2bc4c189be870ddf12237b4"
+      "spriteId": "eac8988be2bc4c189be870ddf12237b4",
+      "visibleColors": 12,
+      "history": [
+        {
+          "date": "2026-10-24",
+          "width": 64,
+          "height": 64,
+          "alphaBounds": [
+            7,
+            4,
+            57,
+            60
+          ],
+          "ppu": 78.179321825,
+          "visibleColors": 13
+        },
+        {
+          "id": "HandDrill_Summoner",
+          "name": "手钻",
+          "definition": "shells/hand_drill.json",
+          "sourceSprite": "Assets/6_Art/Generated/Mechanical/Items/HandDrill/HandDrill_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.5,
+            0.5
+          ],
+          "sourceAlpha": [
+            4,
+            5,
+            26,
+            27
+          ],
+          "sourceWorldExtent": 0.71875,
+          "rotation": 0,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            2,
+            29,
+            30
+          ],
+          "ppu": 39.0896609125,
+          "pivotX": 0.5172665,
+          "pivotY": 0.5147008,
+          "guid": "bf652f961d274c748370c8bd5438c938",
+          "spriteId": "eac8988be2bc4c189be870ddf12237b4",
+          "visibleColors": 14,
+          "history": [
+            {
+              "date": "2026-10-24",
+              "width": 64,
+              "height": 64,
+              "alphaBounds": [
+                7,
+                4,
+                57,
+                60
+              ],
+              "ppu": 78.179321825,
+              "visibleColors": 13
+            }
+          ],
+          "sha256": "040e4439dd411c9134bce62560bebca7c3a715bb02b7ccc52358f51ce489e237",
+          "retouchRecord": "records-retouch-small-tools.json"
+        }
+      ],
+      "sha256": "ea293ca420d3162dcbbd6c3fd7620dfb45d40ce4e498d920055407f3b2f55187",
+      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/HandDrill_Summoner.xcf",
+      "canvasCrop": null,
+      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
     }
-  ]
+  ],
+  "pixelRedrawDate": "2026-10-24",
+  "history": [
+    {
+      "date": "2026-10-24",
+      "schemaVersion": 2,
+      "generation": "built-in image_gen independent redraws; native 64x64, nearest grid sampling plus source-palette coverage voting for thin lines, no dithering, <=16 opaque colors, binary alpha",
+      "import": {
+        "filter": "Point",
+        "mipmaps": false,
+        "compression": "None",
+        "maxTextureSize": 64,
+        "fishingRodMaxTextureSize": 64,
+        "nativeSize": [
+          64,
+          64
+        ],
+        "paletteLimit": 16,
+        "alpha": "0/255"
+      }
+    },
+    {
+      "date": "2026-10-24",
+      "schemaVersion": 3,
+      "generation": "built-in image_gen per-item retouch, connected material planes and reduced contour nibs; true native32 extraction, no dither, binary alpha; existing normalized grip pivots preserved, PPU halved",
+      "import": {
+        "filter": "Point",
+        "mipmaps": false,
+        "compression": "None",
+        "maxTextureSize": 32,
+        "fishingRodMaxTextureSize": 32,
+        "nativeSize": [
+          32,
+          32
+        ],
+        "paletteLimit": 16,
+        "alpha": "0/255"
+      },
+      "delivery": {
+        "savedFiles": "35 native32 PNGs and import metadata; existing item references retained",
+        "editor": "No active Import, Refresh, Play Mode switch or reload performed by the agents. At handoff Unity automatically imported all35 textures; AssetDatabase reports32x32 for every texture.",
+        "acceptance": "No gameplay acceptance performed; user verifies actual holding, actions, thin lines, burning and inventory appearance."
+      }
+    }
+  ],
+  "retouchDate": "2026-10-24",
+  "delivery": {
+    "savedFiles": "35 GIMP native-pixel retouched PNGs: 24 stay32x32, 11 axes/pickaxes crop transparent margins to tight <=32px rectangles. Existing references and PPU retained; 11 pivots rebased to keep every opaque world position.",
+    "editor": "The agents did not control Play Mode, force Import, Refresh or reload. Editor import/Console status is reported separately by the primary agent.",
+    "acceptance": "No gameplay acceptance performed; the user verifies inventory appearance, holding, actions, thin lines and burning."
+  },
+  "gimpRetouchDate": "2026-10-24"
 }

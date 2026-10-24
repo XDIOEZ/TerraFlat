@@ -202,6 +202,8 @@
             "Data": {
               "Hp": 30,
               "MaxHp": 30,
+              "AccuracyLevel": 7,
+              "SizeLevel": 2,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
@@ -370,6 +372,7 @@
             "wanderRadius": 3.0,
             "forageRadius": 8.0,
             "eatRange": 0.9,
+            "forageStopDistance": 0.3,
             "eatSeconds": 0.8,
             "scanInterval": 0.5,
             "fleeTriggerDistance": 6.0,

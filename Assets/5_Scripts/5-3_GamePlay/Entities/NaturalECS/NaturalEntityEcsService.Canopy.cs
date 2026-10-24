@@ -157,8 +157,8 @@ namespace FlatWorld.NaturalEntities
             if (fruit.OutputAmount < 0)
             {
                 float multiplier = YieldMultiplier(record, record.Profile.Canopy.FruitItemId);
-                if (chopped) multiplier *= GameDifficultyService.Current.World.LootAmountMultiplier;
-                fruit.OutputAmount = GameDifficultyService.ScaleRandomizedAmount(1, multiplier);
+                if (chopped) multiplier *= GameRuleConfiguration.Current.World.LootAmountMultiplier;
+                fruit.OutputAmount = GameRuleMath.ScaleRandomizedAmount(1, multiplier);
             }
             if (fruit.OutputAmount <= 0) return;
             DroppedItemService.SpawnLoot(itemId, new Vector2(fruit.EndX, fruit.EndY), fruit.OutputAmount, radius: 0f, duration: 0f);

@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 78;
+        public const int CurrentGenerationSignature = 79;
 
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
@@ -126,6 +126,8 @@ namespace FlatWorld.WorldModel
                             request, terrain, surfaceEcology);
                     }
                 }
+                using (timing?.MeasureStage("ecology.shared_resources") ?? default)
+                    ecology = AppendSharedResources(request, terrain, ecology, cancellationToken);
                 return new ChunkGenerationResult(request, terrain, ecology);
             }
             catch
@@ -406,6 +408,7 @@ namespace FlatWorld.WorldModel
             int lava = volcanic.Count > 0 ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId) : 0;
             var airHumidity = new GeographicAirHumiditySampler(request, settings, riverMap, volcanic, cancellationToken);
             float humidityBackground = AirHumiditySettings.FromProfile(request.Profile).Background;
+            bool hasEstuary = false;
             using (timing?.MeasureStage("terrain.biome") ?? default)
             {
                 batch.ClassifyCore(cancellationToken);
@@ -419,6 +422,7 @@ namespace FlatWorld.WorldModel
                         batch.GetCore(x, y), batch, x, y,
                         request.Address.ChunkOrigin.X + x,
                         request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater, lava, volcanic);
+                    hasEstuary |= batch.Output[index].Estuary.Influence > 0d;
                     batch.Output[index].AirHumidity = airHumidity.Sample(
                         request.Address.ChunkOrigin.X + x, request.Address.ChunkOrigin.Y + y);
                     batch.Output[index].AirHumidityBackground = humidityBackground;
@@ -426,7 +430,7 @@ namespace FlatWorld.WorldModel
             }
             using (timing?.MeasureStage("terrain.environment_write") ?? default)
             {
-                var layers = new SurfaceEnvironmentWriter(terrain);
+                var layers = new SurfaceEnvironmentWriter(terrain, hasEstuary);
                 for (int y = 0; y < terrain.Height; y++)
                 for (int x = 0; x < terrain.Width; x++)
                 {
@@ -478,6 +482,7 @@ namespace FlatWorld.WorldModel
             public float RiverFlow;
             public float RiverFlowX;
             public float RiverFlowY;
+            public EstuaryCurrentSample Estuary;
             public float RiverFloodplain;
             public float RiverSurfaceLevel;
             public float RiverKind;
@@ -500,6 +505,9 @@ namespace FlatWorld.WorldModel
             private readonly float[] riverFlow;
             private readonly float[] riverFlowX;
             private readonly float[] riverFlowY;
+            private readonly float[] estuaryX;
+            private readonly float[] estuaryY;
+            private readonly float[] estuaryInfluence;
             private readonly float[] riverFloodplain;
             private readonly float[] riverSurfaceLevel;
             private readonly float[] riverKind;
@@ -509,7 +517,7 @@ namespace FlatWorld.WorldModel
             private readonly float[] snowDepth;
             private readonly float[] naturalDepthLevels;
 
-            public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain)
+            public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain, bool hasEstuary = false)
             {
                 height = terrain.GetOrCreateEnvironmentLayer("height");
                 temperature = terrain.GetOrCreateEnvironmentLayer("temperature");
@@ -524,6 +532,10 @@ namespace FlatWorld.WorldModel
                 riverFlow = terrain.GetOrCreateEnvironmentLayer("riverFlow");
                 riverFlowX = terrain.GetOrCreateEnvironmentLayer("riverFlowX");
                 riverFlowY = terrain.GetOrCreateEnvironmentLayer("riverFlowY");
+                // 普通陆地、湖泊和远洋区块不为局部河口分配整层数组。
+                estuaryX = hasEstuary ? terrain.GetOrCreateEnvironmentLayer(EstuaryCurrentKernel.DirectionXLayer) : null;
+                estuaryY = hasEstuary ? terrain.GetOrCreateEnvironmentLayer(EstuaryCurrentKernel.DirectionYLayer) : null;
+                estuaryInfluence = hasEstuary ? terrain.GetOrCreateEnvironmentLayer(EstuaryCurrentKernel.InfluenceLayer) : null;
                 riverFloodplain = terrain.GetOrCreateEnvironmentLayer("riverFloodplain");
                 riverSurfaceLevel = terrain.GetOrCreateEnvironmentLayer("riverSurfaceLevel");
                 riverKind = terrain.GetOrCreateEnvironmentLayer("riverKind");
@@ -549,6 +561,12 @@ namespace FlatWorld.WorldModel
                 riverFlow[index] = value.RiverFlow;
                 riverFlowX[index] = value.RiverFlowX;
                 riverFlowY[index] = value.RiverFlowY;
+                if (estuaryInfluence != null)
+                {
+                    estuaryX[index] = (float)value.Estuary.X;
+                    estuaryY[index] = (float)value.Estuary.Y;
+                    estuaryInfluence[index] = (float)value.Estuary.Influence;
+                }
                 riverFloodplain[index] = value.RiverFloodplain;
                 riverSurfaceLevel[index] = value.RiverSurfaceLevel;
                 riverKind[index] = value.RiverKind;
@@ -742,7 +760,8 @@ namespace FlatWorld.WorldModel
             // 单格查询同样调用纯地形扩展，出生与群系定位不能看到扩展前的地表。
             using var sample = new ChunkTerrainBuffer(1, 1, types);
             sample.SetCell(0, 0, output.Cell); sample.SetLiquid(0, 0, output.LiquidTypeIndex, output.LiquidLevel);
-            sample.SetGrass(0, 0, output.Grass); new SurfaceEnvironmentWriter(sample).Write(0, output);
+            sample.SetGrass(0, 0, output.Grass);
+            new SurfaceEnvironmentWriter(sample, output.Estuary.Influence > 0d).Write(0, output);
             var cellRequest = new ChunkGenerationRequest(request.WorldEpoch,
                 new WorldAddress(request.Address.DimensionId, new Int2(worldX, worldY)), request.WorldSeed,
                 request.RequestVersion, request.Profile, request.Topology);
@@ -948,6 +967,7 @@ namespace FlatWorld.WorldModel
             double grassDensity = snowSurface
                 ? settings.GrassDensity * settings.SnowGrassDensityMultiplier
                 : settings.GrassDensity;
+            grassDensity *= settings.ResolveGrassTemperatureMultiplier(temperatureCelsius);
             double rainfallDensity = settings.GrassDryDensityMultiplier +
                 (1d - settings.GrassDryDensityMultiplier) *
                 Clamp01(precipitation / settings.GrassRainfallForFullDensity);
@@ -982,6 +1002,8 @@ namespace FlatWorld.WorldModel
                 RiverFlow = river ? (float)riverCell.Flow : 0f,
                 RiverFlowX = river ? (float)riverCell.FlowDirectionX : 0f,
                 RiverFlowY = river ? (float)riverCell.FlowDirectionY : 0f,
+                Estuary = ocean && initialLiquidLevel > 0 && !lavaCell && riverMap != null
+                    ? riverMap.GetEstuary(worldX, worldY) : default,
                 RiverFloodplain = (float)floodplain,
                 RiverSurfaceLevel = river ? (float)riverCell.SurfaceLevel : 0f,
                 RiverKind = river ? (float)riverCell.Kind : 0f,

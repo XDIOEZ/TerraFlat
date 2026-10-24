@@ -1,4 +1,4 @@
-// 所有地表高差只在较低一侧绘制，共享完整格子网格与同一份四向层差。
+// 所有地表高差只在较低一侧绘制，共享完整格子网格与四条直边、四个圆角。
 Shader "FlatWorld/2D/Terrain Height Shadow"
 {
     Properties
@@ -38,6 +38,7 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
             float2 uv : TEXCOORD0;
             float2 positionWS : TEXCOORD1;
             nointerpolation half4 edgeMask : TEXCOORD2;
+            nointerpolation half4 cornerMask : TEXCOORD3;
             half4 tint : COLOR;
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
@@ -71,6 +72,7 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
             output.uv = input.uv;
             output.positionWS = positionWS.xy;
             output.edgeMask = data.data0;
+            output.cornerMask = data.data1;
             output.tint = input.color * data.tint;
             UNITY_TRANSFER_INSTANCE_ID(input, output);
             return output;
@@ -79,10 +81,18 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
         half4 ShadeShadow(Varyings input)
         {
             float4 distances = float4(input.uv.x, 1.0 - input.uv.x, input.uv.y, 1.0 - input.uv.y);
+            float width = max(_ElevationEdgeWidth, 0.001);
             // 整数层差只决定该边是否投影，所有正高差共用相同深浅与宽度。
-            float4 edges = (1.0 - smoothstep(0.0, max(_ElevationEdgeWidth, 0.001), distances)) *
+            float4 edges = (1.0 - smoothstep(0.0, width, distances)) *
                 step(1.0, input.edgeMask);
             half shadow = max(max(edges.x, edges.y), max(edges.z, edges.w));
+            if (any(input.cornerMask >= 1.0))
+            {
+                // 以格子四角为圆心补四分之一圆，与直边同宽同衰减，取最大值避免交汇处叠黑。
+                float4 radii = sqrt(distances.xyxy * distances.xyxy + distances.zzww * distances.zzww);
+                float4 corners = (1.0 - smoothstep(0.0, width, radii)) * step(1.0, input.cornerMask);
+                shadow = max(shadow, max(max(corners.x, corners.y), max(corners.z, corners.w)));
+            }
             half alpha = saturate(shadow * _ShadowStrength * _ElevationStrength) * input.tint.a *
                 _Color.a * _RendererColor.a * _ShadowColor.a;
             return half4(lerp(half3(1, 1, 1), _ShadowColor.rgb, alpha), 0);

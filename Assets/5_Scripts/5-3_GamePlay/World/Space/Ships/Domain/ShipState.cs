@@ -47,6 +47,7 @@ namespace FlatWorld.Spaceflight
         public double DisableHealth;
         public double MaxDisableHealth;
         public bool Destroyed;
+        public bool ProtectedAnchor;
         public bool SealsAtmosphere;
         public bool BlocksMovement;
         // 舱门只切换通行状态，结构阻挡配置和气密能力保持独立。
@@ -103,11 +104,22 @@ namespace FlatWorld.Spaceflight
     }
 
     [Serializable, JsonObject(MemberSerialization.Fields)]
+    public sealed class ShipAnchorState
+    {
+        #region 固定站台锚定
+        // 锚定本地原点而不是重心，扩建改变质量后站台仍留在原位。
+        public string BodyId;
+        public double OffsetX, OffsetY;
+        #endregion
+    }
+
+    [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipState
     {
         public string ShipId = Guid.NewGuid().ToString("N");
         public SpaceSectorId Sector;
         public string IdentityAnchorPieceId;
+        public ShipAnchorState Anchor;
         public string ReferenceBodyId;
         public string WorldAddress;
         public ShipPlatformKind PlatformKind;

@@ -32,7 +32,7 @@ namespace FlatWorld.Dialogue
             TextAsset asset = Resources.Load<TextAsset>(SettingsResourcePath);
             if (asset == null)
                 throw new InvalidOperationException("缺少 Dialogue/TemperatureFeedback.json");
-            TemperatureSpeechSettings loaded = JsonConvert.DeserializeObject<TemperatureSpeechSettings>(asset.text);
+            TemperatureSpeechSettings loaded = JsonConfigurationCache.Deserialize<TemperatureSpeechSettings>(asset.text);
             if (loaded == null)
                 throw new InvalidOperationException("体温反馈配置为空。");
             loaded.Validate();
@@ -66,7 +66,8 @@ namespace FlatWorld.Dialogue
     }
 
     /// <summary>温度反馈专用 JSON 配置，阈值偏移只影响提示，不改变冷/热伤害边界。</summary>
-    public sealed class TemperatureSpeechSettings
+    [MemoryPack.MemoryPackable]
+    public sealed partial class TemperatureSpeechSettings
     {
         #region 配置
 

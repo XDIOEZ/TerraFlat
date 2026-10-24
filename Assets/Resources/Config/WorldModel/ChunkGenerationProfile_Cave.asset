@@ -141,8 +141,18 @@ MonoBehaviour:
   ecologyGlobalMultiplier: 1
   ecologyRuleIds:
   - cave.flora.mushroom
+  - cave.giant.stone
+  - cave.giant.coal
+  - cave.giant.copper
+  - cave.giant.iron
+  - cave.giant.tin
+  - cave.giant.gold
+  - cave.giant.niter
+  - cave.giant.diamond
+  - cave.giant.tungsten
   caveResourceRuleIds:
   - cave.resource.diamond
+  - cave.resource.tungsten
   - cave.resource.gold
   - cave.resource.niter
   - cave.resource.tin

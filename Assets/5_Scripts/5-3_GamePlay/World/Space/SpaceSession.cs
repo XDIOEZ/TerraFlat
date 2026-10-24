@@ -71,6 +71,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            ResetElevatorRuntime();
             ClearGroundPreparations();
             observedNetworkRealms.Clear();
             ResetPresentationHistory();
@@ -99,6 +100,7 @@ namespace FlatWorld.Spaceflight
             ResetPresentationHistory();
             ResetSpacePhysics();
             ReleaseViews();
+            ResetElevatorRuntime();
             contents.Clear(); controlRequests.Clear();
             ClearQueryIndexes();
             engineOutputs.Clear();
@@ -139,6 +141,7 @@ namespace FlatWorld.Spaceflight
             Current.CaptureContents();
             Current.CaptureLooseItems();
             Current.CapturePassengerAuthoritativePositions();
+            Current.CaptureElevatorCargo();
             save.SpaceStateJson = JsonConvert.SerializeObject(Current.State);
         }
         public static void EndSession()
@@ -149,6 +152,7 @@ namespace FlatWorld.Spaceflight
             Current.ClearGroundPreparations();
             Current.ResetPresentationHistory();
             Current.ResetSpacePhysics();
+            Current.ResetElevatorRuntime();
             Current.ReleaseViews();
             Current.DestroyDrivingCameraTarget();
             Current.owner = null;
@@ -246,6 +250,7 @@ namespace FlatWorld.Spaceflight
             using (ShipContactMarker.Auto()) StepSpacePhysics(assemblies, seconds);
             CommitSurfaceContacts(seconds);
             NormalizeSectorOwnership();
+            StepSpaceElevators(seconds);
             environmentElapsed += (float)seconds;
             if (environmentElapsed >= .2f)
             {

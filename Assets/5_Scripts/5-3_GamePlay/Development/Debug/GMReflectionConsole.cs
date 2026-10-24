@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using TMPro;
+using FlatWorld.Localization;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -21,6 +22,25 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed partial class GMReflectionConsole : MonoBehaviour
 {
+    #region Runtime UI localization
+
+    private static void SetLocalizedText(TMP_Text target, string sourceText)
+    {
+        LocalizedTextRuntime.SetText(target, sourceText);
+    }
+
+    private static void SetLocalizedFormat(TMP_Text target, string sourceTemplate, params object[] arguments)
+    {
+        LocalizedTextRuntime.SetFormat(target, sourceTemplate, arguments);
+    }
+
+    private static void SetLocalizedProvider(TMP_Text target, Func<string> provider)
+    {
+        LocalizedTextRuntime.SetProvider(target, provider);
+    }
+
+    #endregion
+
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private const string AdministratorName = "管理员";
     private const int MaxDiscoveredCommands = 36;
@@ -111,7 +131,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private GameObject hoverInspectorTarget;
     private Item hoverInspectorItem;
     private string hoverInspectorText = string.Empty;
-    private string hoverInspectorTitle = "F6 属性观察器";
+    private string hoverInspectorTargetName = string.Empty;
     private Vector2 hoverInspectorScroll;
     private float hoverInspectorNextRefreshTime;
     private GUIStyle hoverInspectorTitleStyle;
@@ -212,6 +232,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         worldLayerOverlay = gameObject.AddComponent<GMWorldLayerOverlay>();
         EnsureEventSystem();
         BuildWindow();
+        FlatWorldLocalizationService.LanguageChanged += HandleLocalizedCatalogRefresh;
         Mod_ItemPicker.PickerLoaded += HandlePickupPickerLoaded;
         ApplyPersistedTogglePreferences();
         RestartRestorePreferences();
@@ -221,6 +242,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnDestroy()
     {
+        FlatWorld.Localization.FlatWorldLocalizationService.LanguageChanged -= HandleLocalizedCatalogRefresh;
         Mod_ItemPicker.PickerLoaded -= HandlePickupPickerLoaded;
         CancelLocationSearches();
         GMConsolePreferences.SavePendingChanges();
@@ -236,6 +258,13 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         UnbindGameEventManager();
     }
 
+    private void HandleLocalizedCatalogRefresh(string localeCode)
+    {
+        if (airdropBrowserRoot != null && airdropBrowserRoot.activeSelf)
+            RebuildAirdropItemGrid();
+        if (aiCreatureBrowserRoot != null && aiCreatureBrowserRoot.activeSelf)
+            RebuildAiCreatureGrid();
+    }
     private void Update()
     {
         // IMGUI 在 Canvas 之后绘制；GM 打开时只隐藏开发血条，不修改玩家配置的 ShowHealth 开关。
@@ -247,6 +276,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
         RefreshAiecsPageIfNeeded();
+        RefreshWorldCreaturesPageIfNeeded();
         if (IsPageSectionInView(GmPageId.Device))
             RefreshDevicePageIfNeeded();
         RefreshDayTimeControlIfNeeded();
@@ -379,29 +409,31 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         if (hoverInspectorTarget == null)
         {
-            hoverInspectorTitle = "F6 属性观察器";
-            hoverInspectorText = "已开启。\n把鼠标移动到带 2D 碰撞体的游戏对象上即可查看参数。";
+            hoverInspectorTargetName = string.Empty;
+            hoverInspectorText = FlatWorldLocalizationService.GetUiText(
+                "已开启。\n把鼠标移动到带 2D 碰撞体的游戏对象上即可查看参数。");
             return;
         }
 
         string displayName = hoverInspectorItem?.itemData?.GameName;
         if (string.IsNullOrWhiteSpace(displayName))
             displayName = hoverInspectorTarget.name;
-        hoverInspectorTitle = $"F6 属性观察器  ·  {displayName}";
+        hoverInspectorTargetName = displayName;
 
         Transform root = hoverInspectorTarget.transform;
-        hoverInspectorBuilder.AppendLine($"对象: {hoverInspectorTarget.name}");
-        hoverInspectorBuilder.AppendLine($"类型: {(hoverInspectorItem != null ? hoverInspectorItem.GetType().Name : "GameObject")}");
-        hoverInspectorBuilder.AppendLine($"位置: {FormatInspectorValue(root.position)}");
-        hoverInspectorBuilder.AppendLine($"旋转Z: {root.eulerAngles.z:0.###}°");
-        hoverInspectorBuilder.AppendLine($"缩放: {FormatInspectorValue(root.lossyScale)}");
+        hoverInspectorBuilder.AppendLine(FlatWorldLocalizationService.GetUiFormat("对象：{0}", hoverInspectorTarget.name));
+        hoverInspectorBuilder.AppendLine(FlatWorldLocalizationService.GetUiFormat(
+            "类型：{0}", hoverInspectorItem != null ? hoverInspectorItem.GetType().Name : "GameObject"));
+        hoverInspectorBuilder.AppendLine(FlatWorldLocalizationService.GetUiFormat("位置：{0}", FormatInspectorValue(root.position)));
+        hoverInspectorBuilder.AppendLine(FlatWorldLocalizationService.GetUiFormat("旋转 Z：{0:0.###}°", root.eulerAngles.z));
+        hoverInspectorBuilder.AppendLine(FlatWorldLocalizationService.GetUiFormat("缩放：{0}", FormatInspectorValue(root.lossyScale)));
 
         AppendUnityRuntimeSummary(hoverInspectorBuilder, hoverInspectorTarget);
 
         if (hoverInspectorItem?.itemData != null)
         {
             hoverInspectorBuilder.AppendLine();
-            hoverInspectorBuilder.AppendLine("【ItemData】");
+            hoverInspectorBuilder.AppendLine(FlatWorldLocalizationService.GetUiText("【ItemData】"));
             AppendInspectorObject(
                 hoverInspectorBuilder,
                 hoverInspectorItem.itemData,
@@ -410,7 +442,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 maxDepth: 2);
 
             hoverInspectorBuilder.AppendLine();
-            hoverInspectorBuilder.AppendLine($"【模块】 {hoverInspectorItem.Mods?.Count ?? 0}");
+            hoverInspectorBuilder.AppendLine(FlatWorldLocalizationService.GetUiFormat(
+                "【模块】 {0}", hoverInspectorItem.Mods?.Count ?? 0));
             if (hoverInspectorItem.Mods != null)
             {
                 foreach (KeyValuePair<string, Module> pair in hoverInspectorItem.Mods.OrderBy(entry => entry.Key))
@@ -440,7 +473,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         {
             hoverInspectorBuilder.Length = HoverInspectorTextLimit;
             hoverInspectorBuilder.AppendLine();
-            hoverInspectorBuilder.Append("……参数过多，显示已在 60KB 处截断。");
+            hoverInspectorBuilder.Append(FlatWorldLocalizationService.GetUiText("……参数过多，显示已在 60KB 处截断。"));
         }
 
         hoverInspectorText = hoverInspectorBuilder.ToString();
@@ -453,29 +486,37 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (body != null)
         {
             builder.AppendLine(
-                $"刚体: {body.bodyType}, Simulated={body.simulated}, 速度={FormatInspectorValue(body.velocity)}, 角速度={body.angularVelocity:0.###}");
+                FlatWorldLocalizationService.GetUiFormat(
+                    "刚体：{0}, Simulated={1}, 速度={2}, 角速度={3:0.###}",
+                    body.bodyType, body.simulated, FormatInspectorValue(body.velocity), body.angularVelocity));
         }
 
         SpriteRenderer sprite = target.GetComponentInChildren<SpriteRenderer>(true);
         if (sprite != null)
         {
             builder.AppendLine(
-                $"精灵: {(sprite.sprite != null ? sprite.sprite.name : "-")}, Sorting={sprite.sortingLayerName}/{sprite.sortingOrder}, 可见={sprite.isVisible}");
+                FlatWorldLocalizationService.GetUiFormat(
+                    "精灵：{0}, Sorting={1}/{2}, 可见={3}",
+                    sprite.sprite != null ? sprite.sprite.name : "-", sprite.sortingLayerName,
+                    sprite.sortingOrder, sprite.isVisible));
         }
 
         Collider2D[] colliders = target.GetComponentsInChildren<Collider2D>(true);
         if (colliders.Length > 0)
         {
-            builder.AppendLine($"碰撞体: {colliders.Length}");
+            builder.AppendLine(FlatWorldLocalizationService.GetUiFormat("碰撞体：{0}", colliders.Length));
             int shown = Mathf.Min(colliders.Length, 8);
             for (int i = 0; i < shown; i++)
             {
                 Collider2D collider = colliders[i];
                 builder.AppendLine(
-                    $"  - {collider.GetType().Name}: Enabled={collider.enabled}, Trigger={collider.isTrigger}, Bounds={FormatInspectorValue(collider.bounds)}");
+                    FlatWorldLocalizationService.GetUiFormat(
+                        "  - {0}: Enabled={1}, Trigger={2}, Bounds={3}",
+                        collider.GetType().Name, collider.enabled, collider.isTrigger,
+                        FormatInspectorValue(collider.bounds)));
             }
             if (colliders.Length > shown)
-                builder.AppendLine($"  - ……其余 {colliders.Length - shown} 个");
+                builder.AppendLine(FlatWorldLocalizationService.GetUiFormat("  - ……其余 {0} 个", colliders.Length - shown));
         }
     }
 
@@ -504,7 +545,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             if (!wroteHeader)
             {
                 builder.AppendLine();
-                builder.AppendLine("【运行时玩法组件】");
+                builder.AppendLine(FlatWorldLocalizationService.GetUiText("【运行时玩法组件】"));
                 wroteHeader = true;
             }
 
@@ -532,7 +573,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         {
             if (ReferenceEquals(hoverInspectorObjectPath[i], value))
             {
-                builder.AppendLine($"{indent}<循环引用: {value.GetType().Name}>");
+                builder.AppendLine(FlatWorldLocalizationService.GetUiFormat(
+                    "{0}<循环引用：{1}>", indent, value.GetType().Name));
                 return;
             }
         }
@@ -560,18 +602,20 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 }
                 catch (Exception exception)
                 {
-                    builder.AppendLine($"{indent}{field.Name}: <读取失败 {exception.GetType().Name}>");
+                    builder.AppendLine(FlatWorldLocalizationService.GetUiFormat(
+                        "{0}{1}: <读取失败 {2}>", indent, field.Name, exception.GetType().Name));
                     continue;
                 }
 
                 if (ShouldExpandInspectorValue(fieldValue, depth, maxDepth))
                 {
-                    builder.AppendLine($"{indent}{field.Name}:");
+                    builder.AppendLine(FlatWorldLocalizationService.GetUiFormat("{0}{1}：", indent, field.Name));
                     AppendInspectorObject(builder, fieldValue, indent + "  ", depth + 1, maxDepth);
                 }
                 else
                 {
-                    builder.AppendLine($"{indent}{field.Name}: {FormatInspectorValue(fieldValue)}");
+                    builder.AppendLine(FlatWorldLocalizationService.GetUiFormat(
+                        "{0}{1}: {2}", indent, field.Name, FormatInspectorValue(fieldValue)));
                 }
             }
         }
@@ -681,7 +725,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             case Bounds bounds:
                 return $"Center={FormatInspectorValue(bounds.center)}, Size={FormatInspectorValue(bounds.size)}";
             case UnityEngine.Object unityObject:
-                return unityObject != null ? $"{unityObject.name} [{unityObject.GetType().Name}]" : "<销毁对象>";
+                return unityObject != null
+                    ? $"{unityObject.name} [{unityObject.GetType().Name}]"
+                    : "<" + FlatWorldLocalizationService.GetUiText("销毁对象") + ">";
             case IDictionary dictionary:
                 return FormatInspectorDictionary(dictionary);
             case IEnumerable enumerable when value is not string:
@@ -770,7 +816,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         hoverInspectorTarget = null;
         hoverInspectorItem = null;
         hoverInspectorText = string.Empty;
-        hoverInspectorTitle = "F6 属性观察器";
+        hoverInspectorTargetName = string.Empty;
         hoverInspectorScroll = Vector2.zero;
     }
 
@@ -803,9 +849,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         GUI.color = previousColor;
 
         Rect titleRect = new Rect(x + 14f, y + 10f, panelWidth - 28f, 28f);
-        GUI.Label(titleRect, hoverInspectorTitle, hoverInspectorTitleStyle);
+        string localizedTitle = string.IsNullOrEmpty(hoverInspectorTargetName)
+            ? FlatWorldLocalizationService.GetUiText("F6 属性观察器")
+            : FlatWorldLocalizationService.GetUiFormat("F6 属性观察器  ·  {0}", hoverInspectorTargetName);
+        GUI.Label(titleRect, localizedTitle, hoverInspectorTitleStyle);
         Rect hintRect = new Rect(x + 14f, y + 39f, panelWidth - 28f, 22f);
-        GUI.Label(hintRect, "F6 关闭 · 滚轮浏览 · 参数约 8 次/秒刷新", hoverInspectorHintStyle);
+        GUI.Label(hintRect,
+            FlatWorldLocalizationService.GetUiText("F6 关闭 · 滚轮浏览 · 参数约 8 次/秒刷新"),
+            hoverInspectorHintStyle);
 
         Rect viewRect = new Rect(x + 10f, y + 66f, panelWidth - 20f, panelHeight - 76f);
         float contentWidth = Mathf.Max(100f, viewRect.width - 22f);
@@ -1693,7 +1744,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         GameObject textObject = CreateUiObject("Text", parent);
         TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
         text.font = ResolveUiFont();
-        text.text = value;
+        SetLocalizedText(text, value);
         text.fontSize = fontSize;
         text.color = color;
         text.alignment = TextAlignmentOptions.MidlineLeft;
@@ -1963,8 +2014,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         if (availableStructures.Count == 0)
         {
-            structureSelectionText.text = "没有可用的遗迹定义";
-            structureHintText.text = "请检查 Resources/Config/StructureCatalog_Default。";
+            SetLocalizedText(structureSelectionText, "没有可用的遗迹定义");
+            SetLocalizedText(structureHintText, "请检查 Resources/Config/StructureCatalog_Default。");
             return;
         }
 
@@ -1976,18 +2027,22 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         string displayName = string.IsNullOrWhiteSpace(definition.DisplayName)
             ? definition.StructureId
             : definition.DisplayName;
-        structureSelectionText.text =
-            $"{selectedStructureIndex + 1}/{availableStructures.Count}  {displayName}  /  {definition.StructureId}";
+        SetLocalizedFormat(
+            structureSelectionText,
+            "{0}/{1}  {2}  /  {3}",
+            selectedStructureIndex + 1, availableStructures.Count, displayName, definition.StructureId);
 
         if (!TryGetCurrentWorldSeed(out int worldSeed))
         {
-            structureHintText.text = "进入游戏世界后才能按种子定位遗迹。";
+            SetLocalizedText(structureHintText, "进入游戏世界后才能按种子定位遗迹。");
             return;
         }
 
         int count = StructureRuntimeRegistry.Count(worldSeed, definition.StructureId);
-        structureHintText.text =
-            $"已加载记录 {count} 个；传送会按世界种子推算最近生成点，无需提前探索。";
+        SetLocalizedFormat(
+            structureHintText,
+            "已加载记录 {0} 个；传送会按世界种子推算最近生成点，无需提前探索。",
+            count);
     }
 
     private void TeleportToSelectedStructure()
@@ -2036,9 +2091,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 out StructureRuntimeLocation location,
                 out int scannedRegionCount))
         {
-            SetStatus(
-                $"种子定位失败：扫描 {scannedRegionCount} 个区域后没有满足生成条件的位置。",
-                Color.yellow);
+            SetStatusFormat(
+                "种子定位失败：扫描 {0} 个区域后没有满足生成条件的位置。",
+                Color.yellow, scannedRegionCount);
             return;
         }
 
@@ -2153,9 +2208,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         GMConsolePreferences.SetPlayerMoveSpeed(multiplier);
         RefreshPlayerMoveSpeedButton();
-        SetStatus(
-            $"玩家移动速度已调整为 {multiplier:0.#} 倍。",
-            multiplier > 1f ? GmAccentHover : GmTextSecondary);
+        SetStatusFormat("玩家移动速度已调整为 {0:0.#} 倍。",
+            multiplier > 1f ? GmAccentHover : GmTextSecondary, multiplier);
     }
 
     private void ApplyPlayerMoveSpeedInput()
@@ -2200,11 +2254,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             appliedMultiplier.ToString("0.##", CultureInfo.InvariantCulture));
         GMConsolePreferences.SetPlayerMoveSpeed(appliedMultiplier);
         RefreshPlayerMoveSpeedButton();
-        SetStatus(
-            $"玩家移动速度已调整为 {appliedMultiplier:0.##} 倍。",
-            appliedMultiplier > 1f
-                ? GmAccentHover
-                : GmTextSecondary);
+        SetStatusFormat("玩家移动速度已调整为 {0:0.##} 倍。",
+            appliedMultiplier > 1f ? GmAccentHover : GmTextSecondary, appliedMultiplier);
     }
 
     private void RefreshPlayerMoveSpeedButton()
@@ -2218,7 +2269,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         {
             TextMeshProUGUI label = playerMoveSpeedButton.GetComponentInChildren<TextMeshProUGUI>(true);
             if (label != null)
-                label.text = $"玩家移速：{multiplier:0.##}x";
+                SetLocalizedFormat(label, "玩家移速：{0:0.##}x", multiplier);
         }
 
         Button statusButton = playerMoveSpeedApplyButton ?? playerMoveSpeedButton;
@@ -2321,7 +2372,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         TextMeshProUGUI label =
             chunkLoadSpeedUnlimitedButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = unlimited ? "恢复" : "无限";
+            SetLocalizedText(label, unlimited ? "恢复" : "无限");
 
         SetGmButtonVisual(
             chunkLoadSpeedUnlimitedButton,
@@ -2342,17 +2393,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         if (chunkManager.IsChunkLoadSpeedUnlimited)
         {
-            SetStatus(
-                $"区块加载已设为自动最大；后台并发 {chunkManager.EffectiveBackgroundGenerationConcurrency}，仍保留主线程安全预算。",
-                GmAccentHover);
+            SetStatusFormat(
+                "区块加载已设为自动最大；后台并发 {0}，仍保留主线程安全预算。",
+                GmAccentHover, chunkManager.EffectiveBackgroundGenerationConcurrency);
             return;
         }
 
-        SetStatus(
-            $"区块加载速度已调整为 {appliedMultiplier:0.##} 倍。",
-            appliedMultiplier > 1f
-                ? GmAccentHover
-                : GmTextSecondary);
+        SetStatusFormat("区块加载速度已调整为 {0:0.##} 倍。",
+            appliedMultiplier > 1f ? GmAccentHover : GmTextSecondary, appliedMultiplier);
     }
 
     private void ToggleTeleportShortcut()
@@ -2394,9 +2442,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         TextMeshProUGUI label = adminInvincibilityButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
         {
-            label.text = canToggle
+            SetLocalizedText(label, canToggle
                 ? (enabled ? "管理员无敌：开" : "管理员无敌：关")
-                : "管理员无敌：需权限";
+                : "管理员无敌：需权限");
         }
 
         adminInvincibilityButton.interactable = canToggle;
@@ -2414,7 +2462,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         bool enabled = Mod_PlayerAdminController.TeleportToMouseShortcutEnabled;
         TextMeshProUGUI label = teleportShortcutButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = enabled ? "T 传送：开" : "T 传送：关";
+            SetLocalizedText(label, enabled ? "T 传送：开" : "T 传送：关");
 
         SetGmButtonVisual(
             teleportShortcutButton,
@@ -2450,7 +2498,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         bool visible = AI_DebugOverlay.Visible;
         TextMeshProUGUI label = animalDebugOverlayButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = visible ? "动物参数：开" : "动物参数：关";
+            SetLocalizedText(label, visible ? "动物参数：开" : "动物参数：关");
 
         SetGmButtonVisual(
             animalDebugOverlayButton,
@@ -2476,7 +2524,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         bool visible = HiveColonyDebugOverlay.Visible;
         TextMeshProUGUI label = hiveDebugOverlayButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = visible ? "蜂巢参数：开" : "蜂巢参数：关";
+            SetLocalizedText(label, visible ? "蜂巢参数：开" : "蜂巢参数：关");
 
         SetGmButtonVisual(
             hiveDebugOverlayButton,
@@ -2492,7 +2540,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         bool visible = WorldNavigationPathDebugOverlay.RoutesVisible;
         TextMeshProUGUI label = navigationPathButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = visible ? "AI 路线提示：开" : "AI 路线提示：关";
+            SetLocalizedText(label, visible ? "AI 路线提示：开" : "AI 路线提示：关");
 
         SetGmButtonVisual(
             navigationPathButton,
@@ -2625,20 +2673,24 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         {
             object result = command.Method.Invoke(command.Target, command.Arguments);
             string resultMessage = result as string;
-            SetStatus(
-                string.IsNullOrWhiteSpace(resultMessage)
-                    ? $"已执行：{command.Category} / {command.Label}"
-                    : resultMessage,
-                new Color(0.35f, 0.95f, 0.85f));
+            if (string.IsNullOrWhiteSpace(resultMessage))
+                SetStatusProvider(() => FlatWorldLocalizationService.GetUiFormat(
+                    "已执行：{0} / {1}",
+                    FlatWorldLocalizationService.GetUiText(command.Category),
+                    FlatWorldLocalizationService.GetUiText(command.Label)),
+                    new Color(0.35f, 0.95f, 0.85f));
+            else
+                SetStatus(resultMessage, new Color(0.35f, 0.95f, 0.85f));
         }
         catch (TargetInvocationException exception)
         {
-            SetStatus($"执行失败：{exception.InnerException?.Message ?? exception.Message}", new Color(1f, 0.42f, 0.38f));
+            SetStatusFormat("执行失败：{0}", new Color(1f, 0.42f, 0.38f),
+                exception.InnerException?.Message ?? exception.Message);
             Debug.LogException(exception.InnerException ?? exception);
         }
         catch (Exception exception)
         {
-            SetStatus($"执行失败：{exception.Message}", new Color(1f, 0.42f, 0.38f));
+            SetStatusFormat("执行失败：{0}", new Color(1f, 0.42f, 0.38f), exception.Message);
             Debug.LogException(exception);
         }
     }
@@ -2649,7 +2701,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         MethodInfo method = target != null ? FindCompatibleMethod(target.GetType(), methodName, arguments) : null;
         if (target == null || method == null)
         {
-            SetStatus($"未找到可用指令：{typeName}.{methodName}", Color.yellow);
+            SetStatusFormat("未找到可用指令：{0}.{1}", Color.yellow, typeName, methodName);
             return;
         }
 
@@ -2674,7 +2726,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         airdropBrowserRoot.SetActive(true);
         SyncBrowserRootsToWindow();
         RefreshItemIds();
-        SetAirdropBrowserStatus("点击任意物品即可空投到玩家附近。", new Color(0.66f, 0.71f, 0.71f));
+        SetAirdropBrowserStatus(
+            () => FlatWorldLocalizationService.GetUiText("点击任意物品即可空投到玩家附近。"),
+            new Color(0.66f, 0.71f, 0.71f));
     }
 
     private void CloseAirdropBrowser()
@@ -2692,7 +2746,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SyncBrowserRootsToWindow();
         RefreshAiCreatureIds();
         SetAiCreatureBrowserStatus(
-            "点击任意生物即可召唤；批量召唤会自动散布，避免重叠。",
+            () => FlatWorldLocalizationService.GetUiText("点击任意生物即可召唤；批量召唤会自动散布，避免重叠。"),
             new Color(0.66f, 0.71f, 0.71f));
     }
 
@@ -2823,12 +2877,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         if (availableAirdropItems.Count == 0 && availableAiCreatures.Count == 0)
         {
-            itemHintText.text = "打开上方目录载入可用内容；若目录为空，请先进入游戏世界。";
+            SetLocalizedText(itemHintText, "打开上方目录载入可用内容；若目录为空，请先进入游戏世界。");
             return;
         }
 
-        itemHintText.text =
-            $"已发现 {availableAirdropItems.Count} 个物品、{availableAiCreatures.Count} 个 AI 生物。";
+        SetLocalizedFormat(
+            itemHintText,
+            "已发现 {0} 个物品、{1} 个 AI 生物。",
+            availableAirdropItems.Count, availableAiCreatures.Count);
     }
 
     private void RebuildAirdropItemGrid()
@@ -2844,7 +2900,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             ? availableAirdropItems
             : availableAirdropItems
                 .Where(item =>
-                    item.DisplayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    GetCatalogDisplayName(item.ItemId, item.DisplayName, false).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                     item.ItemId.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToList();
 
@@ -2863,9 +2919,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         if (airdropBrowserCountText != null)
         {
-            airdropBrowserCountText.text = string.IsNullOrWhiteSpace(query)
-                ? $"全部 {availableAirdropItems.Count}"
-                : $"显示 {visibleItems.Count} / {availableAirdropItems.Count}";
+            if (string.IsNullOrWhiteSpace(query))
+                SetLocalizedFormat(airdropBrowserCountText, "全部 {0}", availableAirdropItems.Count);
+            else
+                SetLocalizedFormat(airdropBrowserCountText, "显示 {0} / {1}", visibleItems.Count, availableAirdropItems.Count);
         }
     }
 
@@ -2893,7 +2950,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             ? availableAiCreatures
             : availableAiCreatures
                 .Where(creature =>
-                    creature.DisplayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    GetCatalogDisplayName(creature.ItemId, creature.DisplayName, true).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                     creature.ItemId.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToList();
 
@@ -2908,7 +2965,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 creature.Icon,
                 () => SpawnAiCreature(creature),
                 creature.IconAtlas,
-                creature.IconUv);
+                creature.IconUv,
+                isActor: true);
         }
 
         if (visibleCreatures.Count == 0)
@@ -2923,9 +2981,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         if (aiCreatureBrowserCountText != null)
         {
-            aiCreatureBrowserCountText.text = string.IsNullOrWhiteSpace(query)
-                ? $"全部 {availableAiCreatures.Count}"
-                : $"显示 {visibleCreatures.Count} / {availableAiCreatures.Count}";
+            if (string.IsNullOrWhiteSpace(query))
+                SetLocalizedFormat(aiCreatureBrowserCountText, "全部 {0}", availableAiCreatures.Count);
+            else
+                SetLocalizedFormat(aiCreatureBrowserCountText, "显示 {0} / {1}", visibleCreatures.Count, availableAiCreatures.Count);
         }
     }
 
@@ -2937,7 +2996,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         Sprite icon,
         UnityAction onClick,
         Texture iconAtlas = null,
-        Rect iconUv = default)
+        Rect iconUv = default,
+        bool isActor = false)
     {
         GameObject tile = CreateUiObject(objectName, parent);
         Image tileImage = tile.AddComponent<Image>();
@@ -3003,6 +3063,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             displayName,
             12f,
             GmTextPrimary);
+        SetLocalizedProvider(nameText, () => FlatWorldLocalizationService.GetUiText(
+            GetCatalogDisplayName(itemId, displayName, isActor)));
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.enableWordWrapping = false;
         nameText.overflowMode = TextOverflowModes.Ellipsis;
@@ -3027,6 +3089,16 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         idRect.offsetMax = new Vector2(-5f, 22f);
     }
 
+    private static string GetCatalogDisplayName(string itemId, string fallback, bool isActor)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null) return fallback ?? string.Empty;
+        if (isActor && resources.TryGetActorDefinition(itemId, out RuntimeItemDefinition actorDefinition))
+            return actorDefinition.DisplayName;
+        if (!isActor && resources.TryGetItemPresentation(itemId, out string itemName, out _))
+            return itemName;
+        return fallback ?? string.Empty;
+    }
     private void SpawnAiCreature(AiCreatureEntry entry)
     {
         if (entry == null || string.IsNullOrWhiteSpace(entry.ItemId))
@@ -3152,16 +3224,66 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void SetAiCreatureResult(string message, Color color)
     {
-        SetStatus(message, color);
-        SetAiCreatureBrowserStatus(message, color);
+        Func<string> provider = () => LocalizeAiCreatureResult(message);
+        SetStatusProvider(provider, color);
+        SetAiCreatureBrowserStatus(provider, color);
     }
 
-    private void SetAiCreatureBrowserStatus(string message, Color color)
+    // 按稳定结果模板重排文案，并保留异常详情原文。
+    private static string LocalizeAiCreatureResult(string message)
+    {
+        if (string.IsNullOrEmpty(message)) return string.Empty;
+        const string successPrefix = "召唤成功：";
+        if (message.StartsWith(successPrefix, StringComparison.Ordinal))
+        {
+            string payload = message.Substring(successPrefix.Length);
+            int separator = payload.LastIndexOf(" × ", StringComparison.Ordinal);
+            if (separator >= 0)
+                return FlatWorldLocalizationService.GetUiFormat("召唤成功：{0} × {1}",
+                    FlatWorldLocalizationService.GetUiText(payload.Substring(0, separator)),
+                    payload.Substring(separator + 3));
+        }
+
+        const string partialPrefix = "部分召唤成功：";
+        if (message.StartsWith(partialPrefix, StringComparison.Ordinal))
+        {
+            string payload = message.Substring(partialPrefix.Length);
+            int reasonSeparator = payload.IndexOf('；');
+            int countSeparator = reasonSeparator > 0 ? payload.LastIndexOf(' ', reasonSeparator - 1) : -1;
+            int ratioSeparator = countSeparator >= 0 ? payload.IndexOf('/', countSeparator + 1) : -1;
+            if (reasonSeparator >= 0 && countSeparator >= 0 && ratioSeparator > countSeparator)
+                return FlatWorldLocalizationService.GetUiFormat("部分召唤成功：{0} {1}/{2}；{3}",
+                    FlatWorldLocalizationService.GetUiText(payload.Substring(0, countSeparator)),
+                    payload.Substring(countSeparator + 1, ratioSeparator - countSeparator - 1),
+                    payload.Substring(ratioSeparator + 1, reasonSeparator - ratioSeparator - 1),
+                    LocalizeAiSpawnFailure(payload.Substring(reasonSeparator + 1)));
+        }
+
+        const string failurePrefix = "召唤失败：";
+        if (message.StartsWith(failurePrefix, StringComparison.Ordinal))
+            return FlatWorldLocalizationService.GetUiFormat("召唤失败：{0}",
+                LocalizeAiSpawnFailure(message.Substring(failurePrefix.Length)));
+        return FlatWorldLocalizationService.GetUiText(message);
+    }
+
+    private static string LocalizeAiSpawnFailure(string message)
+    {
+        const string exceptionPrefix = "生物生成异常：";
+        if (message.StartsWith(exceptionPrefix, StringComparison.Ordinal))
+            return FlatWorldLocalizationService.GetUiFormat("生物生成异常：{0}", message.Substring(exceptionPrefix.Length));
+        return message == "该物种的 ECS 后端未启用或尚未就绪。" ||
+               message == "生物创建失败，请检查 Item/AI 初始化日志及世界是否就绪。" ||
+               message == "玩家附近没有适合该生物的已加载导航位置。"
+            ? FlatWorldLocalizationService.GetUiText(message)
+            : message;
+    }
+
+    private void SetAiCreatureBrowserStatus(Func<string> provider, Color color)
     {
         if (aiCreatureBrowserStatusText == null)
             return;
 
-        aiCreatureBrowserStatusText.text = message;
+        SetLocalizedProvider(aiCreatureBrowserStatusText, provider);
         aiCreatureBrowserStatusText.color = color;
     }
 
@@ -3225,16 +3347,46 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void SetAirdropResult(string message, Color color)
     {
-        SetStatus(message, color);
-        SetAirdropBrowserStatus(message, color);
+        Func<string> provider = () => LocalizeAirdropResult(message);
+        SetStatusProvider(provider, color);
+        SetAirdropBrowserStatus(provider, color);
     }
 
-    private void SetAirdropBrowserStatus(string message, Color color)
+    private static string LocalizeAirdropResult(string message)
+    {
+        if (string.IsNullOrEmpty(message)) return string.Empty;
+        const string successPrefix = "空投成功：";
+        if (message.StartsWith(successPrefix, StringComparison.Ordinal))
+        {
+            string payload = message.Substring(successPrefix.Length);
+            int separator = payload.LastIndexOf(" × ", StringComparison.Ordinal);
+            if (separator >= 0)
+                return FlatWorldLocalizationService.GetUiFormat("空投成功：{0} × {1}",
+                    payload.Substring(0, separator), payload.Substring(separator + 3));
+        }
+
+        const string failurePrefix = "空投失败：";
+        if (message.StartsWith(failurePrefix, StringComparison.Ordinal))
+            return FlatWorldLocalizationService.GetUiFormat("空投失败：{0}",
+                LocalizeAirdropFailureReason(message.Substring(failurePrefix.Length)));
+        return FlatWorldLocalizationService.GetUiText(message);
+    }
+
+    private static string LocalizeAirdropFailureReason(string message)
+    {
+        return message == "未找到 ItemMgr。" ||
+               message == "ItemMgr 未提供 string ItemId 实例化入口。" ||
+               message == "ItemMgr 未返回 Item 实例。"
+            ? FlatWorldLocalizationService.GetUiText(message)
+            : message;
+    }
+
+    private void SetAirdropBrowserStatus(Func<string> provider, Color color)
     {
         if (airdropBrowserStatusText == null)
             return;
 
-        airdropBrowserStatusText.text = message;
+        SetLocalizedProvider(airdropBrowserStatusText, provider);
         airdropBrowserStatusText.color = color;
     }
 
@@ -3543,7 +3695,25 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (statusText == null)
             return;
 
-        statusText.text = message;
+        SetLocalizedText(statusText, message);
+        statusText.color = color;
+    }
+
+    private void SetStatusFormat(string template, Color color, params object[] arguments)
+    {
+        if (statusText == null)
+            return;
+
+        SetLocalizedFormat(statusText, template, arguments);
+        statusText.color = color;
+    }
+
+    private void SetStatusProvider(Func<string> provider, Color color)
+    {
+        if (statusText == null)
+            return;
+
+        SetLocalizedProvider(statusText, provider);
         statusText.color = color;
     }
 

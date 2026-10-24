@@ -2,7 +2,9 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
+快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows、collision_dirty_queue`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
+
+2026-10-24 新增但未执行：`collision_dirty_queue` 使用独立的正式碰撞队列与停用身份组件，覆盖空世界查询、多世界隔离、同对象去重、取批次后的再次入队、解绑换世界、销毁清理、世界重置及预热后1024轮零分配。正式固定步在查到本世界脏队列后才借现有世界上下文；细分标记覆盖上下文释放、障碍更新及镜像通知。此夹具不创建物理几何，不证明真实碰撞、跨世界受击或卡顿改善；本轮保留用户PlayMode，仅静态修改。
 
 2026-10-23 新增但未执行：`world_streaming/incremental_world_scope` 在活动场景仍为地表时调用正式洞穴准备，等待完整窗口和真实 ChunkView 绑定；随后把自有续步租约交给同一 ChunkMgr 正式协程，实际跨两帧注册自然实体，并由 Lua 核对每步的世界、Scene、管理器、独立 ECS、yield 后上下文恢复及正常/取消的唯一 Dispose。同步失效夹具临时给自有续步指定未登记世界或其他管理器拥有的世界，检查拒绝推进和解绑且不补建世界。夹具只回收自己的资源/占位 View，不切换活动场景；不代表洞穴画面、真实入口交互或联机迁移已验收。外部 `GamePlay.csproj` 定向编译检查通过（0 错误、39 警告），Unity 控制台结果由本轮主代理最终确认；未运行 Lua 或 PlayMode 测试。
 

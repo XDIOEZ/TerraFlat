@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:leather_cutting",
+      "displayName": "切割鞣制皮革",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 2,
+      "inputs": [
+        { "match": "tag", "tag": "Knife", "amount": 0 },
+        { "match": "exact_item", "itemId": "Leather", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "LeatherStrap", "amount": 4 }],
+      "actions": []
+    },
+    {
+      "id": "core:cotton_thread",
+      "displayName": "棉花捻线",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [{ "match": "exact_item", "itemId": "Cotton", "amount": 1 }],
+      "outputs": [{ "itemId": "Thread", "amount": 2 }],
+      "actions": []
+    },
+    {
+      "id": "core:bone_needle",
+      "displayName": "打磨骨针",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "exact_item", "itemId": "Bone", "amount": 1 },
+        { "match": "exact_item", "itemId": "ChippedTool", "amount": 0 }
+      ],
+      "outputs": [{ "itemId": "Needle_Bone", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:leather_hat",
+      "displayName": "皮制帽子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "tag", "tag": "SewingNeedle", "amount": 0 },
+        { "match": "exact_item", "itemId": "Thread", "amount": 2 },
+        { "match": "exact_item", "itemId": "Leather", "amount": 2 }
+      ],
+      "outputs": [{ "itemId": "Traveler_Hood", "amount": 1 }],
+      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+    },
+    {
+      "id": "core:leather_vest",
+      "displayName": "皮制上衣",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "tag", "tag": "SewingNeedle", "amount": 0 },
+        { "match": "exact_item", "itemId": "Thread", "amount": 4 },
+        { "match": "exact_item", "itemId": "Leather", "amount": 6 }
+      ],
+      "outputs": [{ "itemId": "Traveler_Vest", "amount": 1 }],
+      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+    },
+    {
+      "id": "core:leather_gloves",
+      "displayName": "皮制手套",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "tag", "tag": "SewingNeedle", "amount": 0 },
+        { "match": "exact_item", "itemId": "Thread", "amount": 1 },
+        { "match": "exact_item", "itemId": "Leather", "amount": 2 }
+      ],
+      "outputs": [{ "itemId": "Traveler_Gloves", "amount": 1 }],
+      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+    },
+    {
+      "id": "core:leather_trousers",
+      "displayName": "皮制裤子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "tag", "tag": "SewingNeedle", "amount": 0 },
+        { "match": "exact_item", "itemId": "Thread", "amount": 3 },
+        { "match": "exact_item", "itemId": "Leather", "amount": 4 }
+      ],
+      "outputs": [{ "itemId": "Traveler_Trousers", "amount": 1 }],
+      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+    },
+    {
+      "id": "core:leather_shoes",
+      "displayName": "皮制鞋子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "tag", "tag": "SewingNeedle", "amount": 0 },
+        { "match": "exact_item", "itemId": "Thread", "amount": 2 },
+        { "match": "exact_item", "itemId": "Leather", "amount": 3 }
+      ],
+      "outputs": [{ "itemId": "Traveler_Boots", "amount": 1 }],
+      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+    }
+  ]
+}

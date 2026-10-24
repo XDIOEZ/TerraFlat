@@ -38,11 +38,12 @@ public sealed partial class GMReflectionConsole
         deviceTitle.fontStyle = FontStyles.Bold;
         deviceTitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
 
-        TextMeshProUGUI deviceInfo = CreateText(page.Content,
-            $"平台：{Application.platform}\n处理器：{SystemInfo.processorType}（{SystemInfo.processorCount} 逻辑线程）\n" +
-            $"设备物理内存：{SystemInfo.systemMemorySize} MB\n显卡：{SystemInfo.graphicsDeviceName}",
-            13f,
-            GmTextSecondary);
+        TextMeshProUGUI deviceInfo = CreateText(page.Content, string.Empty, 13f, GmTextSecondary);
+        SetLocalizedFormat(
+            deviceInfo,
+            "平台：{0}\n处理器：{1}（{2} 逻辑线程）\n设备物理内存：{3} MB\n显卡：{4}",
+            Application.platform, SystemInfo.processorType, SystemInfo.processorCount,
+            SystemInfo.systemMemorySize, SystemInfo.graphicsDeviceName);
         deviceInfo.enableWordWrapping = true;
         deviceInfo.gameObject.AddComponent<LayoutElement>().preferredHeight = 112f;
         BuildPerformanceDebugControls(page.Content);
@@ -65,8 +66,7 @@ public sealed partial class GMReflectionConsole
             return;
 
         nextDeviceDataRefreshAt = Time.unscaledTime + DeviceDataRefreshInterval;
-        string processName = Application.isEditor ? "编辑器进程驻留" : "游戏进程驻留";
-        string processMemory = "当前平台不支持读取";
+        string processMemory = "N/A";
         if (!processMemoryUnavailable)
         {
             try
@@ -81,17 +81,22 @@ public sealed partial class GMReflectionConsole
             }
         }
 
-        deviceMemoryText.text =
-            $"{processName}：{processMemory}\n" +
-            $"Unity 已分配：{FormatDeviceMemory(Profiler.GetTotalAllocatedMemoryLong())}\n" +
-            $"Unity 已预留：{FormatDeviceMemory(Profiler.GetTotalReservedMemoryLong())}\n" +
-            $"Mono 堆已使用：{FormatDeviceMemory(Profiler.GetMonoUsedSizeLong())}\n" +
-            $"Mono 堆容量：{FormatDeviceMemory(Profiler.GetMonoHeapSizeLong())}";
+        string memorySummaryTemplate = Application.isEditor
+            ? "编辑器进程驻留：{0}\nUnity 已分配：{1}\nUnity 已预留：{2}\nMono 堆已使用：{3}\nMono 堆容量：{4}"
+            : "游戏进程驻留：{0}\nUnity 已分配：{1}\nUnity 已预留：{2}\nMono 堆已使用：{3}\nMono 堆容量：{4}";
+        SetLocalizedFormat(
+            deviceMemoryText,
+            memorySummaryTemplate,
+            processMemory,
+            FormatDeviceMemory(Profiler.GetTotalAllocatedMemoryLong()),
+            FormatDeviceMemory(Profiler.GetTotalReservedMemoryLong()),
+            FormatDeviceMemory(Profiler.GetMonoUsedSizeLong()),
+            FormatDeviceMemory(Profiler.GetMonoHeapSizeLong()));
     }
 
     private static string FormatDeviceMemory(long bytes)
     {
-        return bytes >= 0 ? $"{bytes / 1048576d:F1} MiB" : "不可用";
+        return bytes >= 0 ? $"{bytes / 1048576d:F1} MiB" : "N/A";
     }
 
     #endregion

@@ -1,0 +1,490 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "RailTrack_Summoner",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "铁路",
+      "description": "铺设在地面的一格铁路，会自动连接成直线或弯道；支持矿车通行，不连接机械传动网络。",
+      "amount": 1,
+      "weight": 8,
+      "volume": 10,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
+        "spriteStates": {
+          "straight": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
+          "curve": "Assets/6_Art/Generated/Railway/Rail_Curve.png"
+        },
+        "sortingOrder": -5,
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "size": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 120,
+        "maxHp": 120,
+        "defense": {
+          "physical": 8
+        },
+        "combatBalanceVersion": 1,
+        "weakTool": 4,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"RailTrack\",\"SummonerPrefabId\":\"RailTrack_Summoner\",\"SharedModuleIds\":[]}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false,
+            "PlacementLayer": "Ground",
+            "BlocksMovementWhenPlaced": false
+          }
+        }
+      },
+      "worldDropBehavior": "interactive",
+      "durability": 1,
+      "maxDurability": 1
+    },
+    {
+      "id": "RailTrack",
+      "parent": "BuildingBody_Base",
+      "gameName": "铁路",
+      "description": "铺设在地面的一格铁路，会自动连接成直线或弯道；支持矿车通行，不连接机械传动网络。",
+      "amount": 1,
+      "weight": 8,
+      "volume": 10,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
+        "spriteStates": {
+          "straight": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
+          "curve": "Assets/6_Art/Generated/Railway/Rail_Curve.png"
+        },
+        "sortingOrder": -5,
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "size": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 120,
+        "maxHp": 120,
+        "defense": {
+          "physical": 8
+        },
+        "combatBalanceVersion": 1,
+        "weakTool": 4,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":2,\"Role\":1,\"BuildingPrefabId\":\"RailTrack\",\"SummonerPrefabId\":\"RailTrack_Summoner\",\"SharedModuleIds\":[]}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false,
+            "PlacementLayer": "Ground",
+            "BlocksMovementWhenPlaced": false
+          }
+        },
+        "railTrack": {
+          "prefab": "Module_RailTrack",
+          "id": "Mod_RailTrack",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":1}",
+            "Type": 0
+          }
+        }
+      },
+      "durability": 1,
+      "maxDurability": 1
+    },
+    {
+      "id": "Minecart_Summoner",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "BuildingSummonerShell",
+      "requiredGroundSupport": 3,
+      "gameName": "矿车",
+      "description": "可放在地面或铁路上，走向车体即可推动；地面阻力很大，铁轨上顺轨移动。每车一人，F 上下车；左侧两个引擎位、右侧18格货仓。水容器和燃料放入货仓，装好引擎后用 WASD 驾驶，地面只能缓慢挪动；附近矿车可连接共用动力。",
+      "amount": 1,
+      "weight": 80,
+      "volume": 220,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Railway/Minecart.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "physical": 12
+        },
+        "combatBalanceVersion": 1,
+        "weakTool": 4
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Minecart\",\"SummonerPrefabId\":\"Minecart_Summoner\",\"SharedModuleIds\":[\"Mod_MinecartInventory\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": false,
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "minecartInventory": {
+          "prefab": "Module_MinecartInventory",
+          "id": "Mod_MinecartInventory",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "CargoSlots": 18,
+            "MaxCargoWeightKg": 600,
+            "MaxCargoVolumeCubicMeters": 0.6
+          }
+        },
+        "minecartPlacement": {
+          "prefab": "Module_MinecartPlacement",
+          "id": "Mod_MinecartPlacement",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "RailCaptureDistance": 0.25
+          }
+        }
+      },
+      "worldDropBehavior": "interactive"
+    },
+    {
+      "id": "Minecart",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "CarrierBodyShell",
+      "requiredGroundSupport": 3,
+      "gameName": "矿车",
+      "description": "可放在地面或铁路上，走向车体即可推动；地面阻力很大，铁轨上顺轨移动。每车一人，F 上下车；左侧两个引擎位、右侧18格货仓。水容器和燃料放入货仓，装好引擎后用 WASD 驾驶，地面只能缓慢挪动；附近矿车可连接共用动力。",
+      "amount": 1,
+      "weight": 80,
+      "volume": 220,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Railway/Minecart.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "size": {
+            "x": 0.8,
+            "y": 1
+          }
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "physical": 12
+        },
+        "combatBalanceVersion": 1,
+        "weakTool": 4,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": {
+            "x": 0.8,
+            "y": 1
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":2,\"Role\":1,\"BuildingPrefabId\":\"Minecart\",\"SummonerPrefabId\":\"Minecart_Summoner\",\"SharedModuleIds\":[\"Mod_MinecartInventory\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": false,
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "minecartInventory": {
+          "prefab": "Module_MinecartInventory",
+          "id": "Mod_MinecartInventory",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "CargoSlots": 18,
+            "MaxCargoWeightKg": 600,
+            "MaxCargoVolumeCubicMeters": 0.6
+          }
+        },
+        "carrier": {
+          "prefab": "Module_Carrier",
+          "id": "Mod_Carrier",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "MaxSpeed": 5,
+            "BoostSpeedMultiplier": 1,
+            "Acceleration": 3,
+            "Braking": 6,
+            "FacingTurnSpeed": 90,
+            "Radius": 0.35,
+            "LandSpeedMultiplier": 1,
+            "LandPushSpeedMultiplier": 0.2,
+            "WaterCurrentSpeed": 0,
+            "HullSize": {
+              "x": 0.8,
+              "y": 1
+            },
+            "SeatOffset": {
+              "x": 0,
+              "y": 0.1
+            },
+            "AllowsWater": false
+          }
+        },
+        "minecart": {
+          "prefab": "Module_Minecart",
+          "id": "Mod_Minecart",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "MaxSpeed": 5,
+            "Acceleration": 3,
+            "Braking": 6,
+            "PowerPerCart": 1,
+            "CouplingDistance": 1.75,
+            "GroundSpeedMultiplier": 0.025,
+            "GroundBraking": 60,
+            "RailCaptureDistance": 0.25,
+            "PushSpeedMultiplier": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "SteamEngine_Body",
+      "parent": "BuildingBody_Base",
+      "gameName": "蒸汽机-建筑",
+      "description": "地面蒸汽动力机。左侧管道输入蒸汽，右侧机械轴输出动力；运行时把蒸汽冷凝为纯水，冷凝水存满后停止，可用容器取出。额定 20 RPM、40 扭矩。",
+      "amount": 1,
+      "weight": 35,
+      "volume": 45,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.MechanicalPower"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Railway/SteamEngine.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SteamEngine_Body\",\"SummonerPrefabId\":\"SteamEngine\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SteamEngine_Body"
+          }
+        }
+      },
+      "durability": 1,
+      "maxDurability": 1
+    },
+    {
+      "id": "SteamEngine",
+      "parent": "BuildingSummoner_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "蒸汽机",
+      "description": "地面蒸汽动力机。左侧管道输入蒸汽，右侧机械轴输出动力；运行时把蒸汽冷凝为纯水，冷凝水存满后停止，可用容器取出。额定 20 RPM、40 扭矩。",
+      "weight": 35,
+      "volume": 45,
+      "amount": 1,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.MechanicalPower"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Railway/SteamEngine.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SteamEngine_Body\",\"SummonerPrefabId\":\"SteamEngine\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SteamEngine_Body"
+          }
+        }
+      },
+      "durability": 1,
+      "maxDurability": 1
+    }
+  ]
+}

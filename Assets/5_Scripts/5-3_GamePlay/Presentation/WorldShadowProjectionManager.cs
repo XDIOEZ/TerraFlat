@@ -221,11 +221,14 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
 
         // 太阳方向只影响全局参数与裁剪盒，源帧和脚点不变时复用已提交的属性块。
-        internal bool UpdateProperties(MaterialPropertyBlock block, Vector4 caster, Vector4 uvBounds, float texelScale)
+        internal bool UpdateProperties(MaterialPropertyBlock block, Vector4 caster, Vector4 uvBounds)
         {
             if (!propertiesDirty && lastCaster.Equals(caster)) return false;
             block.Clear();
             Texture2D texture = sourceSprite.texture;
+            // 代理从同一阴影网格取得柔化倍率，机械和普通物品都不能漏传高分辨率补偿。
+            float texelScale = sourceDrawMode == SpriteDrawMode.Simple
+                ? SharedSpriteMeshCache.GetSunShadowGeometry(sourceSprite).TexelScale : 1f;
             block.SetTexture(MainTextureId, texture);
             block.SetVector(TexelSizeId, new Vector4(1f / texture.width, 1f / texture.height, texelScale, 0f));
             block.SetVector(UvBoundsId, uvBounds);
@@ -562,7 +565,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
         proxy.SetSource(part.Sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
         proxy.SetPose(position, rotation, part.Scale);
-        proxy.UpdateProperties(properties, new Vector4(footY, 1f, height, 1f), GetSpriteUvBounds(part.Sprite), 0f);
+        proxy.UpdateProperties(properties, new Vector4(footY, 1f, height, 1f), GetSpriteUvBounds(part.Sprite));
         proxy.bounds = projected;
         proxy.enabled = true;
         binding.Revision = part.Revision;
@@ -643,10 +646,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         ShadowProxy proxy = binding.Proxy;
         proxy.SetSource(source.sprite, source.drawMode, source.size, source.flipX, source.flipY, source.color.a);
         proxy.SetPose(source.transform.position - visualOffset, source.transform.rotation, source.transform.lossyScale);
-        float texelScale = source.drawMode == SpriteDrawMode.Simple
-            ? SharedSpriteMeshCache.GetSunShadowGeometry(source.sprite).TexelScale : 1f;
         proxy.UpdateProperties(properties, new Vector4(footY, heightScale, height, 1f),
-            GetSpriteUvBounds(source.sprite), texelScale);
+            GetSpriteUvBounds(source.sprite));
         // Shader 顶点投影超出原始 Sprite，显式扩大世界包围盒以免相机提前裁掉长阴影。
         proxy.bounds = projected;
         proxy.enabled = true;

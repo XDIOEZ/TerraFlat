@@ -185,19 +185,12 @@ public static partial class DroppedItemService
                 Mod_Building.TryReadBuildingData(item.itemData, out _, out var building) && building.Role == BuildingRole.PlacedBuilding ||
                 MachineWorld.GetTransportAt(item.transform.position) != belt || !transportedItems.Add(item.itemData.Guid)) continue;
             MachineWorld.TryReceiveConveyorDrop(new DroppedItemTransferPort(item), item.transform.position, seconds, out bool terminal);
-            if (terminal) continue;
-            Vector2 position = MachineWorld.TransportGroundItem(item.transform.position, seconds);
-            if (WorldTopologyRuntime.ShortestDelta(item.transform.position, position).sqrMagnitude < .00000001f) continue;
-            Vector3 display = WorldTopologyRuntime.NearestImagePosition(item.transform.position, position);
-            display.z = item.transform.position.z;
-            Rigidbody2D body = item.GetComponent<Rigidbody2D>();
-            if (body != null) { body.position = display; body.velocity = Vector2.zero; }
-            item.transform.position = display;
-            item.itemData.transform.position = new Vector3(position.x, position.y, display.z);
-            manager.NotifyRuntimeItemMoved(item);
-            ItemWorldPlacement.TryAttachWorldModelTransientItem(item, display);
-            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-            WorldItemWaterSystem.TryEnterWater(item, requirePickable: true);
+            if (!IsLoosePickable(item)) continue;
+            Vector2 position = terminal
+                ? LooseItemMotion.AdvanceExternal(belt.ScopeKey, item.itemData, item.transform.position, seconds)
+                : MachineWorld.TransportGroundItem(item.transform.position, seconds, item.itemData);
+            if (LooseItemMotion.CommitItemPosition(item, position))
+                WorldItemWaterSystem.TryEnterWater(item, requirePickable: true);
         }
         transportCandidates.Clear(); transportDedupe.Clear();
     }
@@ -217,6 +210,22 @@ public static partial class DroppedItemService
     }
 
     #region 生成与回收
+
+    // 完整 Item 也按脚下整格摸底，避免物品落在格子另一角时碰不到原拾取触发器。
+    internal static void TryPickupBottomItem(Item target)
+    {
+        if (target?.itemData?.Stack?.CanBePickedUp != true) return;
+        uint generation = target.RuntimeGeneration;
+        using var pickerLease = UnityEngine.Pool.ListPool<Mod_ItemPicker>.Get(out List<Mod_ItemPicker> snapshot);
+        snapshot.AddRange(pickers);
+        foreach (Mod_ItemPicker picker in snapshot)
+        {
+            if (picker == null || !picker.isActiveAndEnabled || picker.gameObject.scene != target.gameObject.scene) continue;
+            picker.TryPickupBottomItem(target);
+            if (target == null || target.RuntimeGeneration != generation || target.DestructionHandled ||
+                target.itemData.Stack.CanBePickedUp != true) break;
+        }
+    }
 
     /// <summary>先成功创建掉落态，再由调用者提交库存扣减；passive 不实例化完整 Item。</summary>
     public static DroppedItemHandle Spawn(ItemData source, Vector2 position, Vector2? destination = null,
@@ -249,6 +258,8 @@ public static partial class DroppedItemService
                 bezierOffset, arcHeight, rotationSpeed, spawnReason, sourceItem);
         EnsureContext();
         ItemData payload = FastCloner.FastCloner.DeepClone(source);
+        bool onBottom = duration <= 0f && WorldItemWaterSystem.GetSavedBottomState(payload);
+        WorldItemWaterSystem.SetSavedBottomState(payload, false);
         payload.inHand = false; payload.Stack.CanBePickedUp = true;
         RemoveLegacyDropData(payload);
         int id;
@@ -259,7 +270,9 @@ public static partial class DroppedItemService
         LightweightDroppedBody body = new()
         {
             Id = id, Position = start, Scale = new Unity.Mathematics.float2(finalScale.x, finalScale.y),
-            Rotation = finalRotation, Amount = payload.Stack.Amount, Pickable = 0
+            Rotation = finalRotation, Amount = payload.Stack.Amount, Pickable = 0,
+            WaterKind = onBottom ? LightweightDroppedBody.BottomWaterKind : (byte)0,
+            LiquidDepth = onBottom ? 1f : 0f, SubmergedProgress = onBottom ? 1f : 0f
         };
         LightweightDroppedFlight? flight = duration > 0f ? new LightweightDroppedFlight
         {
@@ -382,7 +395,7 @@ public static partial class DroppedItemService
         try
         {
             item.ModuleSave();
-            handle = Spawn(item.itemData, item.transform.position,
+            handle = Spawn(item.itemData, item.transform.position, destination: item.transform.position,
                 rotation: item.transform.eulerAngles.z, sourceItem: item);
             if (!handle.IsValid) return false;
             ItemMgr.Instance.DespawnItem(item, saveData: false);

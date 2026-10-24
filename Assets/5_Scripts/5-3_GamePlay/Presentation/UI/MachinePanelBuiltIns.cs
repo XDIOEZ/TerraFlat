@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Globalization;
 using FlatWorld.Localization;
 using UnityEngine;
 using TMPro;
@@ -40,10 +42,7 @@ internal static class MachinePanelBuiltIns
 
     private static IMachinePanelSession CreateManualProcessing(MachineEntity entity)
     {
-        var logic = (ManualProcessingLogic)entity.Logic;
-        return new MechanicalPanelSession("UI_HandDrill", entity, logic.Processor,
-            actor => MachineWorld.RequestOperation(entity, "work", "", actor),
-            () => logic.Status, () => logic.ActionLabel, () => logic.CanAct);
+        return new ManualProcessingMachinePanelSession(entity);
     }
 
     private static IMachinePanelSession CreateHandDrill(MachineEntity entity)
@@ -57,22 +56,65 @@ internal static class MachinePanelBuiltIns
     #endregion
 }
 
+/// <summary>手动工作站复用正式配方列表，只绑定实际存在的输入输出槽。</summary>
+internal sealed class ManualProcessingMachinePanelSession : MachinePanelSession
+{
+    #region 手动工作站绑定
+    private readonly CraftingStationController controller;
+    private readonly ManualProcessingLogic manual;
+    private readonly TMP_Text durability;
+
+    public ManualProcessingMachinePanelSession(MachineEntity entity) : base(entity, bindDefaultInventories: false)
+    {
+        try
+        {
+            manual = (ManualProcessingLogic)Logic;
+            BasePanel panel = CreatePanel(manual.PanelPrefab);
+            if (manual.ToolInventory != null) BindSlots(panel, manual.ToolInventory, "工具", matchSlotVisibility: true);
+            BindSlots(panel, manual.Processor.Input, "输入", matchSlotVisibility: true);
+            BindSlots(panel, manual.Processor.Output, "输出", allowDirectionalDeposit: false, matchSlotVisibility: true);
+            durability = panel.GetText("FWUI_FooterHint");
+            durability?.GetComponent<LocalizedTextBinder>()?.ConfigureRuntime(() => manual.Status);
+            controller = new CraftingStationController(panel, manual.Processor.Input, manual.Processor.Output,
+                manual.Processor.Capabilities, () => Mathf.CeilToInt(manual.Processor.RequiredWork / manual.WorkPerClick), () => Actor,
+                authoritativeProcessor: manual.Processor,
+                selectRecipe: id => MachineWorld.RequestOperation(Entity, "select", id, Actor),
+                performWork: () => MachineWorld.RequestOperation(Entity, "work", "", Actor));
+        }
+        catch { Dispose(); throw; }
+    }
+
+    protected override void RefreshPresentation()
+    { if (durability != null) durability.text = manual.Status; }
+    protected override void DisposePresentation() => controller?.Dispose();
+    #endregion
+}
+
 /// <summary>工作台表现只绑定工作台领域公开的库存和加工入口。</summary>
 internal sealed class WorkbenchMachinePanelSession : MachinePanelSession
 {
     #region 工作台绑定
 
     private readonly CraftingStationController controller;
+    private readonly WorkbenchLogic workbench;
+    private readonly BasePanel workbenchPanel;
+    private readonly ItemSlot_UI sharedSlot;
+    private InventorySlotMirrorBinding sharedBinding;
 
     public WorkbenchMachinePanelSession(MachineEntity entity) : base(entity, bindDefaultInventories: false)
     {
         try
         {
             var logic = (WorkbenchLogic)Logic;
+            workbench = logic;
             BasePanel panel = CreatePanel(logic.PanelPrefab);
+            workbenchPanel = panel;
             BindSlots(panel, logic.Input, "输入");
             BindSlots(panel, logic.Output, "输出", allowDirectionalDeposit: false);
-            controller = new CraftingStationController(panel, logic.Input, logic.Output,
+            sharedSlot = panel.GetButton("输入_6")?.GetComponent<ItemSlot_UI>()
+                ?? throw new InvalidOperationException("工作台面板缺少工具柜共享槽。");
+            sharedSlot.gameObject.SetActive(false);
+            controller = new CraftingStationController(panel, logic.Processor.Input, logic.Output,
                 logic.Processor.Capabilities, () => logic.RequiredClicks, () => Actor,
                 authoritativeProcessor: logic.Processor,
                 selectRecipe: id => MachineWorld.RequestOperation(Entity, "select", id, Actor),
@@ -81,7 +123,23 @@ internal sealed class WorkbenchMachinePanelSession : MachinePanelSession
         catch { Dispose(); throw; }
     }
 
-    protected override void DisposePresentation() => controller?.Dispose();
+    protected override void RefreshPresentation()
+    {
+        if (!ReferenceEquals(sharedBinding?.Inventory, workbench.SharedInput))
+        {
+            sharedBinding?.Dispose();
+            sharedBinding = workbench.SharedInput != null
+                ? new InventorySlotMirrorBinding(workbench.SharedInput, sharedSlot) : null;
+        }
+        if (sharedBinding != null)
+        {
+            sharedBinding.Inventory.DefaultTarget_Inventory = workbench.Input.DefaultTarget_Inventory;
+            sharedBinding.Inventory.SyncQuickTransferTarget(workbenchPanel);
+        }
+    }
+
+    protected override void DisposePresentation()
+    { sharedBinding?.Dispose(); controller?.Dispose(); }
 
     #endregion
 }
@@ -130,15 +188,30 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
     #endregion
 }
 
-/// <summary>电磁炉复用库存面板，仅展示材料、炉温和真实供电。</summary>
+/// <summary>电磁炉复用库存面板，温控草稿通过权威操作提交并等待真实回执。</summary>
 internal sealed class InductionStovePanelSession : MachinePanelSession
 {
     #region 电磁炉绑定
     private readonly InductionStoveLogic stove;
+    private readonly BasePanel inductionPanel;
     private readonly TMP_Text temperature;
     private readonly TMP_Text power;
     private readonly TMP_Text capacity;
     private readonly TMP_Text hint;
+    private readonly TMP_InputField targetInput;
+    private readonly UnityEngine.UI.Button applyTarget;
+    private readonly TMP_Text applyLabel;
+    private readonly TMP_Text targetValue;
+    private readonly TMP_Text settingFeedback;
+    private bool draftDirty;
+    private bool targetPending;
+    private bool targetAccepted;
+    private uint pendingToken;
+    private float pendingTemperature;
+    private string pendingArgument;
+    private string feedbackSource;
+    private string feedbackReason;
+    private Coroutine targetConfirmationWatch;
 
     public InductionStovePanelSession(MachineEntity entity) : base(entity, bindDefaultInventories: false)
     {
@@ -146,6 +219,7 @@ internal sealed class InductionStovePanelSession : MachinePanelSession
         {
             stove = (InductionStoveLogic)Logic;
             BasePanel panel = CreatePanel(stove.PanelPrefab);
+            inductionPanel = panel;
             BindSlots(panel, stove.Input, "输入", matchSlotVisibility: true);
             BindSlots(panel, stove.Output, "输出", allowDirectionalDeposit: false, matchSlotVisibility: true);
             // 电力炉没有燃料或点火操作，共用面板只保留实际使用的控件。
@@ -166,19 +240,168 @@ internal sealed class InductionStovePanelSession : MachinePanelSession
             capacity = panel.GetText("FWUI_FurnaceInputCapacity");
             power = panel.GetText("FWUI_FurnaceFuelLabel");
             hint = panel.GetText("FWUI_FooterHint");
+            targetInput = panel.GetInputField("FWUI_InductionTargetInput")
+                ?? throw new InvalidOperationException("电磁炉正式面板缺少目标温度输入框。");
+            applyTarget = panel.GetButton("FWUI_ApplyInductionTarget")
+                ?? throw new InvalidOperationException("电磁炉正式面板缺少温度应用按钮。");
+            targetValue = panel.GetText("FWUI_InductionTargetValue");
+            settingFeedback = panel.GetText("FWUI_InductionSettingFeedback");
+            applyLabel = applyTarget.GetComponentInChildren<TMP_Text>(true);
+            targetInput.transform.parent.gameObject.SetActive(true);
+            targetInput.onValueChanged.AddListener(TargetDraftChanged);
+            targetInput.onSubmit.AddListener(SubmitTargetTemperature);
+            applyTarget.onClick.AddListener(ApplyTargetTemperature);
+            panel.Closed += ClearTargetConfirmation;
+            MachineWorld.OperationCompleted += HandleOperationCompleted;
+            if (power != null)
+            {
+                power.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 42f);
+                power.enableWordWrapping = true;
+            }
         }
         catch { Dispose(); throw; }
     }
 
     protected override void RefreshPresentation()
     {
-        if (temperature != null) temperature.text = stove.Status;
+        if (temperature != null) temperature.text = FlatWorldLocalizationService.GetUiFormat(
+            "当前炉温 {0:0.#}°C", stove.Temperature);
         if (capacity != null) capacity.text = FurnaceInputCapacityFeedback.Describe(stove.Input);
         if (power != null) power.text = FlatWorldLocalizationService.GetUiFormat(
-            "实际供电 {0:0.#}/{1:0.#} W", stove.SuppliedWatts, Entity.Definition.Electrical.PowerWatts);
+            "需求功率 {0:0.#} W\n实际供电 {1:0.#} W", stove.RequestedWatts, stove.SuppliedWatts);
         if (hint != null) hint.text = FlatWorldLocalizationService.GetUiFormat(
             "升温系数 {0:0}% · {1}", stove.HeatingRatePercent,
-            FlatWorldLocalizationService.GetUiText(stove.SuppliedWatts > 0f ? "正在加热" : "没有电"));
+            FlatWorldLocalizationService.GetUiText(stove.Temperature > stove.TargetTemperature + .1f ? "自然冷却" :
+                stove.SuppliedWatts <= 0f ? "没有电" : stove.Temperature < stove.TargetTemperature ? "正在加热" : "已达到目标温度"));
+        RefreshTargetControls();
+    }
+
+    protected override void OnOpened()
+    {
+        ClearTargetConfirmation();
+        draftDirty = false;
+        feedbackSource = feedbackReason = string.Empty;
+        targetInput.SetTextWithoutNotify(stove.TargetTemperature.ToString("0.#", CultureInfo.InvariantCulture));
+        RefreshTargetControls();
+    }
+
+    private void TargetDraftChanged(string _)
+    {
+        draftDirty = true;
+        if (!targetPending) feedbackSource = feedbackReason = string.Empty;
+        RefreshTargetControls();
+    }
+
+    private void SubmitTargetTemperature(string _) => ApplyTargetTemperature();
+
+    private bool TryGetTargetTemperature(out float target) =>
+        float.TryParse(targetInput.text, NumberStyles.Float, CultureInfo.InvariantCulture, out target) &&
+        float.IsFinite(target) && target >= stove.MinimumTargetTemperature && target <= stove.MaximumTargetTemperature;
+
+    private void ApplyTargetTemperature()
+    {
+        if (!IsOpen || targetPending || !TryGetTargetTemperature(out float target)) return;
+        targetPending = true;
+        targetAccepted = false;
+        pendingTemperature = target;
+        pendingArgument = target.ToString("R", CultureInfo.InvariantCulture);
+        feedbackSource = feedbackReason = string.Empty;
+        // 先登记本次草稿，再发命令，兼容主机同步回执与客户端异步确认。
+        if (!MachineWorld.RequestOperation(Entity, InductionStoveLogic.SetTargetTemperatureOperation,
+            pendingArgument, Actor, out pendingToken) && targetPending)
+        {
+            targetPending = false;
+            draftDirty = true;
+            feedbackSource = "请求未发出，请重试";
+        }
+        RefreshTargetControls();
+    }
+
+    private void HandleOperationCompleted(MachineOperationReceipt receipt)
+    {
+        if (!targetPending || receipt.Token != pendingToken || receipt.EntityId != Entity.Id ||
+            receipt.Operation != InductionStoveLogic.SetTargetTemperatureOperation || receipt.Argument != pendingArgument) return;
+        if (receipt.Confirmed && receipt.Accepted) targetAccepted = true;
+        else
+        {
+            targetPending = false;
+            draftDirty = true;
+            StopTargetConfirmationWatch();
+            feedbackSource = receipt.Confirmed ? "温度设置被拒绝：{0}" : "温度设置结果未确认：{0}";
+            feedbackReason = receipt.Reason;
+        }
+        if (IsOpen) RefreshTargetControls();
+        if (IsOpen && targetPending && targetAccepted && targetConfirmationWatch == null)
+            targetConfirmationWatch = inductionPanel.StartCoroutine(WaitForTargetState(pendingToken));
+    }
+
+    private IEnumerator WaitForTargetState(uint token)
+    {
+        // 回执确认和状态快照各自收尾，不能因收到确认包就永久等待旧状态。
+        yield return new WaitForSecondsRealtime(8f);
+        targetConfirmationWatch = null;
+        if (IsOpen) RefreshTargetControls();
+        if (!targetPending || !targetAccepted || pendingToken != token) yield break;
+        targetPending = false;
+        draftDirty = true;
+        feedbackSource = "设备状态尚未同步，请重新打开面板确认";
+        feedbackReason = string.Empty;
+        if (IsOpen) RefreshTargetControls();
+    }
+
+    private void StopTargetConfirmationWatch()
+    {
+        if (targetConfirmationWatch != null && inductionPanel != null)
+            inductionPanel.StopCoroutine(targetConfirmationWatch);
+        targetConfirmationWatch = null;
+    }
+
+    private void ClearTargetConfirmation()
+    {
+        StopTargetConfirmationWatch();
+        targetPending = targetAccepted = false;
+        pendingToken = 0;
+    }
+
+    private void RefreshTargetControls()
+    {
+        if (targetInput == null) return;
+        if (targetPending && targetAccepted && Mathf.Approximately(stove.TargetTemperature, pendingTemperature))
+        {
+            targetPending = false;
+            StopTargetConfirmationWatch();
+            draftDirty = !TryGetTargetTemperature(out float draft) || !Mathf.Approximately(draft, pendingTemperature);
+            feedbackSource = "目标温度已更新";
+        }
+        if (!targetInput.isFocused && !draftDirty && !targetPending)
+            targetInput.SetTextWithoutNotify(stove.TargetTemperature.ToString("0.#", CultureInfo.InvariantCulture));
+        string range = FlatWorldLocalizationService.GetUiFormat("请输入 {0:0.#}～{1:0.#}°C",
+            stove.MinimumTargetTemperature, stove.MaximumTargetTemperature);
+        if (targetInput.placeholder is TMP_Text placeholder) placeholder.text =
+            stove.MinimumTargetTemperature.ToString("0.#", CultureInfo.InvariantCulture) + "–" +
+            stove.MaximumTargetTemperature.ToString("0.#", CultureInfo.InvariantCulture) + "°C";
+        if (targetValue != null) targetValue.text = FlatWorldLocalizationService.GetUiFormat("目标温度 {0:0.#}°C", stove.TargetTemperature);
+        if (applyLabel != null) applyLabel.text = FlatWorldLocalizationService.GetUiText("应用");
+        bool valid = TryGetTargetTemperature(out _);
+        applyTarget.interactable = !targetPending && valid;
+        if (settingFeedback != null) settingFeedback.text = targetPending
+            ? FlatWorldLocalizationService.GetUiText(targetAccepted ? "设备已确认，等待状态同步" : "等待设备确认")
+            : !valid && draftDirty ? range
+            : string.IsNullOrEmpty(feedbackSource) ? string.Empty
+            : FlatWorldLocalizationService.GetUiFormat(feedbackSource, FlatWorldLocalizationService.GetUiText(feedbackReason ?? string.Empty));
+    }
+
+    protected override void DisposePresentation()
+    {
+        ClearTargetConfirmation();
+        if (inductionPanel != null) inductionPanel.Closed -= ClearTargetConfirmation;
+        MachineWorld.OperationCompleted -= HandleOperationCompleted;
+        if (targetInput != null)
+        {
+            targetInput.onValueChanged.RemoveListener(TargetDraftChanged);
+            targetInput.onSubmit.RemoveListener(SubmitTargetTemperature);
+        }
+        if (applyTarget != null) applyTarget.onClick.RemoveListener(ApplyTargetTemperature);
     }
     #endregion
 }

@@ -50,7 +50,7 @@ namespace FlatWorld.AIECS
         public float2 InitialProgressRange;
         public int MinimumAmount, MaximumAmount, Limit, Completed, GeneVariantIndex;
         public uint RandomState;
-        public byte Initialized, UseGrowthDifficulty;
+        public byte Initialized, UseGrowthMultiplier;
     }
 
     #endregion
@@ -141,7 +141,7 @@ namespace FlatWorld.AIECS
     public partial class EntityPlantModuleSystem : SystemBase
     {
         public double GameTime;
-        public float StepSeconds, DayLength, GrowthDifficulty;
+        public float StepSeconds, DayLength, GrowthMultiplier;
         public bool Seasonal;
         private NativeArray<EntitySeasonPeriod> seasons;
         private EntityQuery plants, stocks;
@@ -176,14 +176,14 @@ namespace FlatWorld.AIECS
                 Dependency = new PlantJob
                 {
                     GameTime = GameTime, Delta = StepSeconds, DayLength = math.max(0.01f, DayLength),
-                    Difficulty = GrowthDifficulty, Seasonal = Seasonal, Seasons = seasons,
+                    GrowthMultiplier = GrowthMultiplier, Seasonal = Seasonal, Seasons = seasons,
                     Climates = GetComponentLookup<EntityClimate>(),
                     WeatherInputs = GetComponentLookup<EntityWeatherInput>(true)
                 }.ScheduleParallel(plants, Dependency);
             if (!stocks.IsEmptyIgnoreFilter)
                 Dependency = new StockJob
                 {
-                    Delta = StepSeconds, DayLength = math.max(0.01f, DayLength), Difficulty = GrowthDifficulty,
+                    Delta = StepSeconds, DayLength = math.max(0.01f, DayLength), GrowthMultiplier = GrowthMultiplier,
                     Growth = GetComponentLookup<EntityGrowth>(true), Climates = GetComponentLookup<EntityClimate>(true)
                 }.ScheduleParallel(stocks, Dependency);
         }
@@ -198,7 +198,7 @@ namespace FlatWorld.AIECS
         private partial struct PlantJob : IJobEntity
         {
             public double GameTime;
-            public float Delta, DayLength, Difficulty;
+            public float Delta, DayLength, GrowthMultiplier;
             public bool Seasonal;
             [ReadOnly] public NativeArray<EntitySeasonPeriod> Seasons;
             // 每次 Execute 只写自身 Entity 的耐候组件，不跨实体写入。
@@ -250,7 +250,7 @@ namespace FlatWorld.AIECS
                         math.lerp(soil.MinimumFertilityMultiplier, 1f, math.saturate(soil.Fertility / math.max(0.01f, soil.MaxFertility)));
                     float weather = historical ? 1f : localWeather.GrowthMultiplier *
                         (1f + localWeather.RainIntensity * growth.RainGrowthBonus);
-                    float increment = seconds * growth.Speed * multiplier * suitability * weather * math.max(0f, Difficulty);
+                    float increment = seconds * growth.Speed * multiplier * suitability * weather * math.max(0f, GrowthMultiplier);
                     if (increment <= 0f) continue;
                     growth.Progress = math.min(growth.MaxProgress, growth.Progress + increment);
                     float usedFertility = math.min(soil.Fertility, soil.FertilityPerSecond * seconds);
@@ -273,7 +273,7 @@ namespace FlatWorld.AIECS
                     float suitability = hasClimate ? climate.GrowthMultiplier : 1f;
                     growth.Progress = math.min(growth.MaxProgress, growth.Progress + Delta * growth.Speed *
                         math.max(0f, growth.EnvironmentMultiplier) * suitability * localWeather.GrowthMultiplier *
-                        (1f + localWeather.RainIntensity * growth.RainGrowthBonus) * math.max(0f, Difficulty));
+                        (1f + localWeather.RainIntensity * growth.RainGrowthBonus) * math.max(0f, GrowthMultiplier));
                     if (growth.Progress > before)
                     {
                         float used = math.min(soil.Fertility, soil.FertilityPerSecond * Delta);
@@ -301,7 +301,7 @@ namespace FlatWorld.AIECS
         [BurstCompile]
         private partial struct StockJob : IJobEntity
         {
-            public float Delta, DayLength, Difficulty;
+            public float Delta, DayLength, GrowthMultiplier;
             [ReadOnly] public ComponentLookup<EntityGrowth> Growth;
             [ReadOnly] public ComponentLookup<EntityClimate> Climates;
 
@@ -329,7 +329,7 @@ namespace FlatWorld.AIECS
                     }
                     bool calendarInterval = rule.IntervalDays > 0f;
                     float duration = calendarInterval ? math.max(0.01f, rule.IntervalDays * DayLength) : rule.Duration;
-                    float rate = calendarInterval ? 1f : rule.Speed * (rule.UseGrowthDifficulty != 0 ? math.max(0f, Difficulty) : 1f);
+                    float rate = calendarInterval ? 1f : rule.Speed * (rule.UseGrowthMultiplier != 0 ? math.max(0f, GrowthMultiplier) : 1f);
                     rule.Progress += Delta * rate;
                     for (int work = 0; work < 64 && rule.Progress >= duration; work++)
                     {

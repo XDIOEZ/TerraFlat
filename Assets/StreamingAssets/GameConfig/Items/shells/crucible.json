@@ -84,14 +84,14 @@
         "combatBalanceVersion": 1
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/crucible.png[crucible]",
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
         "spriteStates": {
-          "empty": "Assets/6_Art/Items/crucible.png[crucible]",
-          "filled": "Assets/6_Art/Items/crucible.png[crucible]",
-          "molten_glass": "Assets/6_Art/Items/crucible.png[crucible]",
-          "molten_copper": "Assets/6_Art/Items/crucible.png[crucible]",
-          "molten_tin": "Assets/6_Art/Items/crucible.png[crucible]",
-          "molten_iron": "Assets/6_Art/Items/crucible.png[crucible]"
+          "empty": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "filled": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_glass": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_copper": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_tin": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_iron": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png"
         }
       },
       "modules": {

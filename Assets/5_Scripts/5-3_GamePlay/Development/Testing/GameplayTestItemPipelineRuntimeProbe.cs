@@ -292,6 +292,8 @@ public static class GameplayTestItemPipelineRuntimeProbe
     {
         Item weapon = null;
         string weaponId = args.Value<string>("weaponId") ?? "ChippedTool";
+        // 按用例指定的真实攻击状态采样，覆盖不同武器的挥动动作。
+        string attackStateName = args.Value<string>("attackStateName") ?? "Attack_1";
         Mod_Stamina stamina = player.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         float originalStamina = stamina != null ? stamina.CurrentValue : 0f;
         var result = new JObject();
@@ -333,7 +335,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
                 if (animator != null)
                 {
                     AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
-                    sawAttackState |= state.IsName("Attack_1");
+                    sawAttackState |= state.IsName(attackStateName);
                     returnedToIdle = sawAttackState && state.IsName("Idle_0");
                 }
                 sawOpenWindow |= damage != null && damage.IsDamageEnabled();
@@ -347,6 +349,43 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["returnedToIdle"] = returnedToIdle;
             result["finalWindowClosed"] = damage != null && !damage.IsDamageEnabled();
             result["sampledFrames"] = sampledFrames;
+
+            // 攻击中停用再启用真实武器，检查场景迁移同类的 Animator 失活路径。
+            Animator weaponAnimator = animation?.animator;
+            if (weaponAnimator != null)
+            {
+                bool keepStateOnDisable = weaponAnimator.keepAnimatorControllerStateOnDisable;
+                bool inactiveAnimatorWarning = false;
+                Application.LogCallback onLog = (message, _, type) =>
+                {
+                    if (message.Contains("Game object with animator is inactive")) inactiveAnimatorWarning = true;
+                };
+                Application.logMessageReceived += onLog;
+                try
+                {
+                    weaponAnimator.keepAnimatorControllerStateOnDisable = true;
+                    result["beforeDisableActionRequested"] = animation.TryRequestAction();
+                    weapon.gameObject.SetActive(false);
+                    result["inactiveActionRejected"] = !animation.TryRequestAction();
+                    result["disabledWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+                    result["disabledHitStopCleared"] = !animation.IsHitStopped &&
+                                                       Mathf.Approximately(weaponAnimator.speed, animation.AttackSpeedMultiplier);
+                    weapon.gameObject.SetActive(true);
+                    yield return null;
+                    yield return null;
+                    result["reactivatedIdle"] = weaponAnimator.isActiveAndEnabled &&
+                                                weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName("Idle_0");
+                    result["reactivatedWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+                    result["reactivatedActionRequested"] = animation.TryRequestAction();
+                    result["reactivatedAttackState"] = weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName(attackStateName);
+                }
+                finally
+                {
+                    Application.logMessageReceived -= onLog;
+                    if (weaponAnimator != null) weaponAnimator.keepAnimatorControllerStateOnDisable = keepStateOnDisable;
+                    result["inactiveAnimatorWarning"] = inactiveAnimatorWarning;
+                }
+            }
             result["limitations"] = "正式手持装配、公开动作入口和真实动画伤害窗；未覆盖手机摇杆输入、命中结算或画面手感。";
         }
         finally

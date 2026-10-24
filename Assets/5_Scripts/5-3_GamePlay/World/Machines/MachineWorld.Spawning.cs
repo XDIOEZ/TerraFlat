@@ -17,7 +17,7 @@ public static partial class MachineWorld
             throw new ArgumentException("生成机器必须带有效的落地定义和稳定 GUID。", nameof(snapshot));
         if (nodes.TryGetValue(snapshot.Guid, out MachineEntity existing)) return existing;
         if (owner?.Mechanical?.RemovedGenerated.TryGetValue(worldKey, out var removed) == true && removed.Contains(snapshot.Guid)) return null;
-        ItemData candidate = FastCloner.FastCloner.DeepClone(snapshot);
+        ItemData candidate = ItemInstanceDataFactory.CloneRuntime(snapshot);
         candidate.transform ??= new ItemTransform();
         Vector2Int cell = CellOf(position);
         candidate.transform.position = new Vector3(cell.x + .5f, cell.y + .5f, position.z);
@@ -38,7 +38,7 @@ public static partial class MachineWorld
         if (nodes.TryGetValue(snapshot.Guid, out var existing)) return existing;
         if (GetAt(CellOf(snapshot.transform.position), MachineCatalog.Get(snapshot.IDName).Layer) != null)
             throw new InvalidOperationException("恢复机器的占地已经被其它实体使用。");
-        RestoreDescriptor(FastCloner.FastCloner.DeepClone(snapshot));
+        RestoreDescriptor(ItemInstanceDataFactory.CloneRuntime(snapshot));
         MachineEntity entity = nodes[snapshot.Guid];
         try { WakeNode(entity); }
         catch

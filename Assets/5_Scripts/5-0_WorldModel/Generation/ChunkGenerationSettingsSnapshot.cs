@@ -446,6 +446,10 @@ namespace FlatWorld.WorldModel
                 Positive(GetDouble(numbers, "river.fullWidthFlow", 0.45d), 0.45d));
             RiverMaxWidth = ScaleDistance(
                 GetInt(numbers, "river.maxWidth", 7), WorldSpatialDistanceScale, 1, 64);
+            RiverEstuaryLength = ScaleDistance(
+                GetInt(numbers, "river.estuary.length", 18), WorldSpatialDistanceScale, 0, 96);
+            RiverEstuarySpread = Math.Tan(Clamp(
+                GetDouble(numbers, "river.estuary.halfAngleDegrees", 35d), 5d, 60d) * Math.PI / 180d);
             RiverMeanderStrength = Clamp(
                 GetDouble(numbers, "river.meanderStrength", 0.85d), 0d, 1.5d);
             RiverMeanderScale = Math.Max(8d, FinitePositive(
@@ -544,6 +548,10 @@ namespace FlatWorld.WorldModel
             GrassMinimumCelsius = Finite(GetDouble(numbers, "grass.minimumCelsius", -10d), -10d);
             GrassMaximumCelsius = Math.Max(GrassMinimumCelsius,
                 Finite(GetDouble(numbers, "grass.maximumCelsius", 50d), 50d));
+            GrassColdThresholdCelsius = Finite(
+                GetDouble(numbers, "grass.coldThresholdCelsius", 15d), 15d);
+            GrassColdDensityMultiplier = Clamp01(
+                GetDouble(numbers, "grass.coldDensityMultiplier", 0.5d));
             GrassRainfallForFullDensity = Math.Max(0.0001d,
                 Clamp01(GetDouble(numbers, "grass.rainfallForFullDensity", 0.15d)));
             GrassDryDensityMultiplier = Clamp01(
@@ -886,6 +894,10 @@ namespace FlatWorld.WorldModel
         public double RiverFullWidthFlow { get; }
         /// <summary>河道允许扩展到的最大格宽。</summary>
         public int RiverMaxWidth { get; }
+        /// <summary>入海口扇面延伸格数；零关闭，只改变海水表层流向。</summary>
+        public int RiverEstuaryLength { get; }
+        /// <summary>扇面半角的正切，按下游距离扩大两侧范围。</summary>
+        public double RiverEstuarySpread { get; }
         /// <summary>在严格下坡候选方向内施加的连续弯曲强度，单位为八方向扇区。</summary>
         public double RiverMeanderStrength { get; }
         /// <summary>连续弯曲场的世界格尺度；越大，河弯越舒缓。</summary>
@@ -945,6 +957,9 @@ namespace FlatWorld.WorldModel
         /// <summary>草的摄氏温度下限，不受归一化气候标尺变化影响。</summary>
         public double GrassMinimumCelsius { get; }
         public double GrassMaximumCelsius { get; }
+        /// <summary>严格低于此摄氏温度时，草的生成概率叠加低温倍率。</summary>
+        public double GrassColdThresholdCelsius { get; }
+        public double GrassColdDensityMultiplier { get; }
         /// <summary>降水达到此值时恢复完整密度，更干燥时连续变稀。</summary>
         public double GrassRainfallForFullDensity { get; }
         /// <summary>适合生长的干燥地面保留的密度比例，零降水也不会突然清空草层。</summary>
@@ -1034,6 +1049,14 @@ namespace FlatWorld.WorldModel
         /// <summary>普通地面默认有多难走；数字越大，寻路越不喜欢走。</summary>
         public short DefaultNavigationCost { get; }
         /// <summary>水域的有限寻路代价；高于陆地，但所有水格仍参与带权寻路。</summary>
+
+        #region 草地低温密度
+
+        /// <summary>低温仅按比例稀疏草层，不替代原有气候资格、降水或积雪规则。</summary>
+        public double ResolveGrassTemperatureMultiplier(double temperatureCelsius) =>
+            temperatureCelsius < GrassColdThresholdCelsius ? GrassColdDensityMultiplier : 1d;
+
+        #endregion
 
         #region 地理温度换算
 

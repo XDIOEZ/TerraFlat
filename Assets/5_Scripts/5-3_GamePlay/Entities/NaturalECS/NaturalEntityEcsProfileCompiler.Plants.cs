@@ -19,7 +19,7 @@ namespace FlatWorld.NaturalEntities
         public List<CropYieldEntry> HarvestOutputs;
         public List<Mod_Production.ItemProductionData> Production;
         public float ProductionSpeed = 1f;
-        public bool ProductionUsesGrowthDifficulty, AllowCultivatedHarvest;
+        public bool ProductionUsesGrowthMultiplier, AllowCultivatedHarvest;
         public int ManualHarvestWorkSteps = ManualHarvestWork.DefaultSteps;
         public string TreeFoodId, TreeSeedId;
         public int TreeFoodMinimum, TreeFoodMaximum;
@@ -120,7 +120,7 @@ namespace FlatWorld.NaturalEntities
             JObject p = ParseParameters(module, out reason);
             profile.Production = DeserializeConfiguration<List<Mod_Production.ItemProductionData>>(p?["ProductionList"]);
             profile.ProductionSpeed = p?.Value<float?>("ProductionSpeed") ?? 1f;
-            profile.ProductionUsesGrowthDifficulty = p?.Value<bool?>("UseCropGrowthMultiplier") ?? false;
+            profile.ProductionUsesGrowthMultiplier = p?.Value<bool?>("UseCropGrowthMultiplier") ?? false;
             profile.ProductionModuleName = module.StableName;
             return profile.Production != null;
         }

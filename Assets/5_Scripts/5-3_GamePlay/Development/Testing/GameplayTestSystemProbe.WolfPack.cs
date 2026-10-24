@@ -12,6 +12,8 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("ai/wolf_pack", EntityAiWolfPack);
         operations.Add("ai/wolf_formation_topology", EntityWolfFormationTopology);
+        operations.Add("ai/wolf_target_memory", _ => EntityAiWolfPack(
+            new JObject { ["count"] = 3, ["probeMemory"] = true }));
     }
 
     // 正式狼群站位算法在环绕、无限世界和半周期平局时保持同一距离及分翼规则。
@@ -158,6 +160,8 @@ public static partial class GameplayTestSystemProbe
                 wolves[index].RefreshProbe();
             }
             wolves[0].TriggerPackAttack(player);
+            if (Flag(args, "probeMemory", false))
+                return SampleWolfTargetMemory(wolves, detectors, player);
             var packCounts = new JArray();
             var validatedAllyCounts = new JArray();
             var leaders = new JArray();
@@ -191,6 +195,125 @@ public static partial class GameplayTestSystemProbe
         finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
+    // 无世界规则环境使用正式检测器的不可见结果，状态转换仍调用正式评估与切换钩子。
+    private static JObject SampleWolfTargetMemory(List<GameplayTestWolfPackProbeAI> wolves,
+        List<Mod_ItemDetector> detectors, Item player)
+    {
+        if (Application.isPlaying || ChunkMgr.ExistingInstance != null)
+            throw new InvalidOperationException("狼记忆规则只允许在未加载世界的编辑态执行。");
+        GameplayTestWolfPackProbeAI wolf = wolves[0];
+        Mod_ItemDetector detector = detectors[0];
+        wolf.enableWander = false;
+        var result = new JObject { ["visibleState"] = wolf.DecideProbe().ToString() };
+        Vector3 firstPosition = wolf.LastKnownThreatPosition;
+        result["initialMemoryX"] = firstPosition.x;
+
+        // 保留旧候选列表，同时移动隐藏目标，核验旧列表不会偷更新最后已知坐标。
+        detector.wallsBlockPerception = true;
+        player.transform.position += new Vector3(0f, 8f);
+        result["hiddenState"] = wolf.DecideProbe().ToString();
+        result["memoryFrozen"] = wolf.LastKnownThreatPosition == firstPosition && !wolf.ThreatVisible;
+        wolf.TickTimersProbe(2f);
+        result["travellingMemoryRetained"] = wolf.HasThreatMemory && !wolf.WaitingAtLastThreatPosition;
+        player.transform.position = wolf.transform.position + Vector3.right * .1f;
+        result["hiddenNearbyState"] = wolf.DecideProbe().ToString();
+        result["hiddenNearbyMemoryFrozen"] = wolf.LastKnownThreatPosition == firstPosition;
+
+        wolf.transform.position = firstPosition;
+        wolf.DecideProbe();
+        result["arrivalWaitStarted"] = wolf.WaitingAtLastThreatPosition;
+        wolf.TickTimersProbe(wolf.lostTargetSearchDuration - .1f);
+        result["waitRetained"] = wolf.HasThreatMemory;
+        wolf.TickTimersProbe(.2f);
+        result["waitExpired"] = !wolf.HasThreatMemory && wolf.CurrentThreat == null;
+        result["afterWaitState"] = wolf.DecideProbe().ToString();
+
+        wolf.transform.position = Vector3.zero;
+        player.transform.position = new Vector3(8f, 0f);
+        detector.wallsBlockPerception = false;
+        result["reacquiredState"] = wolf.DecideProbe().ToString();
+        detector.wallsBlockPerception = true;
+        player.transform.position = new Vector3(20f, 3f);
+        wolf.DecideProbe();
+        wolf.TickTimersProbe(1f);
+        detector.wallsBlockPerception = false;
+        result["reacquiredDuringTravelState"] = wolf.DecideProbe().ToString();
+        result["reacquiredMemoryUpdated"] = wolf.ThreatVisible &&
+            wolf.LastKnownThreatPosition == player.transform.position;
+
+        detector.wallsBlockPerception = true;
+        wolf.DecideProbe();
+        wolf.transform.position = wolf.LastKnownThreatPosition;
+        wolf.DecideProbe();
+        player.transform.position = new Vector3(25f, 3f);
+        detector.wallsBlockPerception = false;
+        result["reacquiredDuringWaitState"] = wolf.DecideProbe().ToString();
+        result["reacquiredWaitCleared"] = !wolf.WaitingAtLastThreatPosition && wolf.ThreatVisible;
+
+        detector.wallsBlockPerception = true;
+        wolf.DecideProbe();
+        wolf.TickTimersProbe(wolf.lostTargetTravelTimeout + .1f);
+        result["travelExpired"] = !wolf.HasThreatMemory && wolf.CurrentThreat == null;
+
+        wolf.transform.position = Vector3.zero;
+        player.transform.position = new Vector3(8f, 0f);
+        detector.wallsBlockPerception = false;
+        wolf.DecideProbe();
+        detector.wallsBlockPerception = true;
+        player.itemData.Guid++;
+        wolf.DecideProbe();
+        result["reusedIdentityCleared"] = !wolf.HasThreatMemory && wolf.CurrentThreat == null;
+
+        detector.wallsBlockPerception = false;
+        wolf.DecideProbe();
+        wolf.CancelAdvance();
+        result["commandCancelCleared"] = !wolf.HasThreatMemory && wolf.CurrentThreat == null;
+        wolf.DecideProbe();
+        wolf.ResetProbe();
+        result["runtimeResetCleared"] = !wolf.HasThreatMemory && wolf.CurrentThreat == null;
+
+        GameplayTestWolfPackProbeAI caller = wolves[1];
+        detectors[1].wallsBlockPerception = false;
+        caller.DecideProbe();
+        Vector3 reportedPosition = caller.LastKnownThreatPosition;
+        detector.wallsBlockPerception = true;
+        wolf.ReceivePackCall(player, caller);
+        player.transform.position += new Vector3(7f, 6f);
+        result["reportedState"] = wolf.DecideProbe().ToString();
+        result["reportedMemoryFrozen"] = wolf.LastKnownThreatPosition == reportedPosition && !wolf.ThreatVisible;
+        detectors[1].wallsBlockPerception = true;
+        caller.DecideProbe();
+        wolf.ResetProbe();
+        wolf.ReceivePackCall(player, caller);
+        result["unseenCallerIgnored"] = !wolf.HasThreatMemory && wolf.CurrentThreat == null;
+
+        // 集火及支援入口在尚未首次切换状态时也必须锁住已确认的追踪意图。
+        wolf.ResetIdleProbe();
+        wolf.transform.position = Vector3.zero;
+        player.transform.position = new Vector3(8f, 0f);
+        detector.wallsBlockPerception = false;
+        wolf.TriggerPackAttack(player);
+        Vector3 triggeredPosition = wolf.LastKnownThreatPosition;
+        detector.wallsBlockPerception = true;
+        player.transform.position += new Vector3(0f, 6f);
+        result["triggerBeforeDecisionState"] = wolf.DecideProbe().ToString();
+        result["triggerBeforeDecisionMemoryFrozen"] = wolf.HasThreatMemory && !wolf.ThreatVisible &&
+            wolf.LastKnownThreatPosition == triggeredPosition;
+
+        wolf.ResetIdleProbe();
+        detector.wallsBlockPerception = false;
+        detectors[1].wallsBlockPerception = false;
+        caller.DecideProbe();
+        wolf.ReceivePackCall(player, caller);
+        Vector3 calledPosition = wolf.LastKnownThreatPosition;
+        detector.wallsBlockPerception = true;
+        player.transform.position += new Vector3(0f, 6f);
+        result["callBeforeDecisionState"] = wolf.DecideProbe().ToString();
+        result["callBeforeDecisionMemoryFrozen"] = wolf.HasThreatMemory && !wolf.ThreatVisible &&
+            wolf.LastKnownThreatPosition == calledPosition;
+        return result;
+    }
+
     #endregion
 }
 
@@ -212,6 +335,24 @@ internal sealed class GameplayTestWolfPackProbeAI : AI_Wolf
     public void SetProbeReady(bool ready) => _isReady = ready;
     public void RefreshProbe() => OnPreEvaluate();
     public WolfState EvaluateProbe() => EvaluateNextState();
+    public WolfState DecideProbe()
+    {
+        OnPreEvaluate();
+        WolfState next = EvaluateNextState();
+        if (next != _currentState)
+        {
+            OnBeforeSwitchState(_currentState, next);
+            _currentState = next;
+        }
+        return next;
+    }
+    public void TickTimersProbe(float deltaTime) => UpdateExtraTimers(deltaTime);
+    public void ResetProbe() => OnResetRuntimeState();
+    public void ResetIdleProbe()
+    {
+        _currentState = WolfState.Idle;
+        OnResetRuntimeState();
+    }
 
     #endregion
 }

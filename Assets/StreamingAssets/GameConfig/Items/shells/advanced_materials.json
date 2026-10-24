@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Plastic",
+      "parent": "BasicItem_Base",
+      "gameName": "塑料",
+      "description": "轻质塑料板料，表面平整，便于加工成型。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.3,
+      "volume": 0.4,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/AdvancedMaterials/Plastic/Plastic_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "SiliconPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "硅板",
+      "description": "薄片状硅材料，具有平整的深灰色表面。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.5,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/AdvancedMaterials/SiliconPlate/SiliconPlate_Icon.png"
+      },
+      "modules": {}
+    }
+  ]
+}

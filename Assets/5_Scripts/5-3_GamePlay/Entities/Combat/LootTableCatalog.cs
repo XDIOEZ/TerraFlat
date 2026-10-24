@@ -11,8 +11,9 @@ using UnityEngine;
 /// <summary>
 /// 战利品表 JSON 根目录。表以稳定 ID 注册，Item/Actor 只保存引用 ID；每个条目独立判定概率并生成随机数量。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LootTableCatalogDto
+public sealed partial class LootTableCatalogDto
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion = 1;
@@ -22,8 +23,9 @@ public sealed class LootTableCatalogDto
 }
 
 /// <summary>一张可复用的战利品表定义。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LootTableDefinitionDto
+public sealed partial class LootTableDefinitionDto
 {
     [JsonProperty("id")]
     public string Id;
@@ -33,8 +35,9 @@ public sealed class LootTableDefinitionDto
 }
 
 /// <summary>单项掉落规则；itemId 使用 ItemDefinition 的稳定 ID。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class LootTableEntryDefinitionDto
+public sealed partial class LootTableEntryDefinitionDto
 {
     [JsonProperty("itemId")]
     public string ItemId;
@@ -189,7 +192,7 @@ public static class LootTableCatalogLoader
         LootTableCatalogDto catalog;
         try
         {
-            catalog = JsonConvert.DeserializeObject<LootTableCatalogDto>(json, SerializerSettings);
+            catalog = JsonConfigurationCache.Deserialize<LootTableCatalogDto>(json, SerializerSettings);
         }
         catch (Exception exception)
         {

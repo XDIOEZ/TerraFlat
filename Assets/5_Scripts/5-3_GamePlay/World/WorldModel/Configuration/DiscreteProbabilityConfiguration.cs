@@ -4,10 +4,11 @@ using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>JSON 原表、运行态修正和最终快照之间的统一入口。</summary>
-public static class DiscreteProbabilityConfiguration
+public static partial class DiscreteProbabilityConfiguration
 {
     #region 加载与修正管线
-    private sealed class CatalogDefinition
+    [MemoryPack.MemoryPackable]
+    private sealed partial class CatalogDefinition
     {
         public int SchemaVersion;
         public DiscreteProbabilityTableDefinition[] Tables;
@@ -16,7 +17,7 @@ public static class DiscreteProbabilityConfiguration
     private static CatalogDefinition source;
     private static DiscreteProbabilityCatalog current;
     private static DiscreteProbabilityModifier modifiers;
-    private static object difficultyRules;
+    private static long rulesVersion = -1;
 
     public static event DiscreteProbabilityModifier Modifying
     {
@@ -26,10 +27,9 @@ public static class DiscreteProbabilityConfiguration
 
     public static DiscreteProbabilityCatalog Capture()
     {
-        var activeDifficulty = GameDifficultyService.Current;
-        if (!ReferenceEquals(difficultyRules, activeDifficulty))
+        if (rulesVersion != GameRuleConfiguration.Version)
         {
-            difficultyRules = activeDifficulty;
+            rulesVersion = GameRuleConfiguration.Version;
             current = null;
         }
         if (current != null) return current;
@@ -37,7 +37,7 @@ public static class DiscreteProbabilityConfiguration
         {
             TextAsset asset = Resources.Load<TextAsset>("Config/Probability/discrete-probability-tables");
             if (asset == null) throw new MissingReferenceException("缺少 Config/Probability/discrete-probability-tables 概率配置。");
-            source = JsonConvert.DeserializeObject<CatalogDefinition>(asset.text, new JsonSerializerSettings
+            source = JsonConfigurationCache.Deserialize<CatalogDefinition>(asset.text, new JsonSerializerSettings
             {
                 MissingMemberHandling = MissingMemberHandling.Error,
                 ObjectCreationHandling = ObjectCreationHandling.Replace
@@ -45,10 +45,14 @@ public static class DiscreteProbabilityConfiguration
             if (source == null || source.SchemaVersion != 1 || source.Tables == null || source.Tables.Length == 0)
                 throw new InvalidOperationException("离散概率目录格式无效。");
         }
-        // 原表只读，所有难度及扩展修正都发生在构建最终快照之前。
+        // 原表只读，所有外部修正都发生在构建最终快照之前。
         return current = new DiscreteProbabilityCatalog(source.Tables, modifiers);
     }
 
     public static void Reload() { source = null; current = null; }
+
+    // 关闭域重载时也撤掉上轮会话快照，避免相同版本号复用旧修正。
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeCache() { current = null; rulesVersion = -1; }
     #endregion
 }

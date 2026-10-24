@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-public partial class Mod_ColdWeapon : Module
+public partial class Mod_ColdWeapon : Module, IHeldItemPositionControl
 {
     #region 序列化字段与数据
     public Ex_ModData_MemoryPackable Data;
@@ -87,6 +87,7 @@ public partial class Mod_ColdWeapon : Module
     #endregion
 
     #region 属性
+    public bool ControlsHeldItemPosition => IsRuntimeLoaded && Enabled && isActiveAndEnabled && CurrentState != AttackState.Idle;
     public float AttackSpeed { get => weaponData.AttackSpeed; set => weaponData.AttackSpeed = value; }
     public float MaxAttackDistance { get => weaponData.MaxAttackDistance; set => weaponData.MaxAttackDistance = value; }
     public float ReturnSpeed { get => weaponData.ReturnSpeed; set => weaponData.ReturnSpeed = value; }

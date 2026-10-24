@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
@@ -14,7 +15,132 @@ public static partial class GameplayTestSystemProbe
     [UnityEditor.InitializeOnLoadMethod]
 #endif
     private static void RegisterLineOfSightRules()
-        => Register("ai", "line_of_sight_batch", LineOfSightBatch);
+    {
+        Register("ai", "line_of_sight_batch", LineOfSightBatch);
+        Register("ai", "passable_building_sight", PassableBuildingSight);
+        Register("ai", "unified_building_obstruction", UnifiedBuildingObstruction);
+    }
+
+    // 遍历完整设备目录，新增同类设施也必须经过正式遮挡筛选和整数格视线。
+    private static JObject PassableBuildingSight(JObject args)
+    {
+        var definitions = new List<MachineDefinition>();
+        var candidate = new ResourceReloadContext();
+        MachineCatalog.ConfigureResourceReload(candidate);
+        candidate.InCandidate(() =>
+        {
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var entry in MachineCatalog.CaptureReloadSnapshot().Definitions)
+                if (ids.Add(entry.Value.Id)) definitions.Add(entry.Value);
+        });
+        definitions.Sort((left, right) => string.CompareOrdinal(left.Id, right.Id));
+        int catalogCount = definitions.Count;
+        // 任意名称及各覆盖层的可通行扩展不能依赖传送带白名单。
+        for (int layer = 0; layer <= 6; layer++)
+            definitions.Add(new MachineDefinition
+            {
+                Id = "test:passable_layer_" + layer, BlocksMovement = false, PlacementLayer = layer
+            });
+        for (int layer = 0; layer <= 15; layer++)
+            definitions.Add(new MachineDefinition
+            {
+                Id = "test:solid_layer_" + layer, BlocksMovement = true, PlacementLayer = layer
+            });
+        using var world = new WorldRuntime("sight_probe", 1);
+        ChunkRuntime chunk = SightProbeChunk(world, Vector2Int.zero);
+        using var query = new GridLineOfSightQuery();
+        query.Begin(world, default, "sight_probe", 4, 4, new Vector2(.5f, .5f));
+        var samples = new JArray();
+        foreach (MachineDefinition definition in definitions)
+        {
+            bool blocking = BuildingOccupancyRegistry.BlocksSight(definition);
+            chunk.Terrain.SetDynamicSightBlockingCell(1, 0, blocking);
+            bool visible = query.HasClearLineTo(new Vector2(3.5f, .5f));
+            // 同格保留实体障碍时，可通行覆盖层不能抹掉原有地形墙。
+            chunk.Terrain.SetCell(1, 0, SightProbeCell(true));
+            bool wallVisible = query.HasClearLineTo(new Vector2(3.5f, .5f));
+            chunk.Terrain.SetCell(1, 0, SightProbeCell(false));
+            samples.Add(new JObject
+            {
+                ["id"] = definition.Id, ["blocksMovement"] = definition.BlocksMovement,
+                ["blocksTraversal"] = definition.BlocksTraversal,
+                ["layer"] = definition.Layer, ["blocksSight"] = blocking, ["visible"] = visible,
+                ["wallVisible"] = wallVisible,
+                ["afterWallRemovedVisible"] = query.HasClearLineTo(new Vector2(3.5f, .5f))
+            });
+        }
+        chunk.Terrain.SetDynamicSightBlockingCell(1, 0, false);
+        bool removedVisible = query.HasClearLineTo(new Vector2(3.5f, .5f));
+        chunk.Terrain.SetCell(1, 0, SightProbeCell(true));
+        return new JObject
+        {
+            ["catalogCount"] = catalogCount, ["extensionCount"] = definitions.Count - catalogCount,
+            ["samples"] = samples, ["removedVisible"] = removedVisible,
+            ["terrainWallVisible"] = query.HasClearLineTo(new Vector2(3.5f, .5f))
+        };
+    }
+
+    // 同一声明分别经过普通建筑、数据编译和真实机械格索引，不启动当前世界。
+    private static JObject UnifiedBuildingObstruction(JObject args)
+    {
+        var root = new GameObject("[UnifiedBuildingObstruction]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            Mod_Building building = root.AddComponent<Mod_Building>();
+            var samples = new JArray();
+            var graph = new MechanicalNetworkGraph(new Vector2Int(16, 16), Vector2Int.zero, default(WorldTopologyDomain));
+            Vector2Int cell = new(3, 4);
+            for (int layer = 0; layer <= 15; layer++)
+            foreach (bool declaredBlocking in new[] { false, true })
+            {
+                building.PlacementLayer = (BuildingPlacementLayer)layer;
+                building.BlocksMovementWhenPlaced = declaredBlocking;
+                var parameters = new JObject
+                {
+                    [nameof(Mod_Building.PlacementLayer)] = layer,
+                    [nameof(Mod_Building.BlocksMovementWhenPlaced)] = declaredBlocking
+                };
+                var configuration = new MachineModuleConfiguration(new RuntimeItemModuleDefinition(
+                    "building", ModText.Building, "test:building", parameters.ToString(), true), building);
+                var definition = new MachineDefinition { Id = "test:compiled", Ports = "none" };
+                BuildingTraversalRules.ApplyToMachine(definition, configuration);
+                var node = new MachineEntity { Id = 1, Cell = cell, Definition = definition };
+                graph.Rebuild(new[] { node });
+                samples.Add(new JObject
+                {
+                    ["layer"] = layer, ["declared"] = declaredBlocking,
+                    ["gameObjectBlocking"] = building.BlocksMovement,
+                    ["compiledLayer"] = definition.Layer,
+                    ["compiledBlocking"] = definition.BlocksTraversal,
+                    ["indexedBlocking"] = graph.IsMovementBlockedNormalized(cell),
+                    ["sightBlocking"] = BuildingOccupancyRegistry.BlocksSight(definition),
+                    ["highestLayer"] = graph.HighestOccupiedLayer,
+                    ["placementRetained"] = ReferenceEquals(graph.At(cell, layer), node)
+                });
+            }
+
+            var solid = new MachineEntity { Id = 1, Cell = cell,
+                Definition = new MachineDefinition { Id = "test:upper", PlacementLayer = 15, Ports = "none" } };
+            var overlay = new MachineEntity { Id = 2, Cell = cell,
+                Definition = new MachineDefinition { Id = "test:overlay", PlacementLayer = 3, BlocksMovement = false, Ports = "none" } };
+            graph.Rebuild(new[] { solid, overlay });
+            bool stackedBlocked = graph.IsMovementBlockedNormalized(cell);
+            graph.Rebuild(new[] { solid });
+            bool overlayRemovedBlocked = graph.IsMovementBlockedNormalized(cell);
+            graph.Rebuild(new[] { overlay });
+            bool solidRemovedClear = !graph.IsMovementBlockedNormalized(cell) && graph.At(cell, 3) == overlay;
+            graph.Rebuild(Array.Empty<MachineEntity>());
+            bool emptyClear = !graph.IsMovementBlockedNormalized(cell);
+            return new JObject
+            {
+                ["samples"] = samples, ["stackedBlocked"] = stackedBlocked,
+                ["overlayRemovedBlocked"] = overlayRemovedBlocked, ["solidRemovedClear"] = solidRemovedClear,
+                ["emptyClear"] = emptyClear, ["emptyHighestLayer"] = graph.HighestOccupiedLayer
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
 
     private static ChunkRuntime SightProbeChunk(WorldRuntime world, Vector2Int origin,
         string dimension = "sight_probe", int width = 4, int height = 4)

@@ -21,6 +21,7 @@ namespace FlatWorld.Spaceflight
         public List<ShipDockingPairState> Docking = new();
         public List<SpaceLooseItemState> LooseItems = new();
         public List<GroundAtmosphereState> GroundAtmospheres = new();
+        public List<SpaceElevatorState> Elevators = new();
         public long NavigationSequence;
     }
 

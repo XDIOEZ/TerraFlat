@@ -128,8 +128,9 @@ public sealed class FluidPhaseChangeDefinition
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidDefinitionDto
+public sealed partial class FluidDefinitionDto
 {
     [JsonProperty("id", Required = Required.Always)] public string Id;
     [JsonProperty("displayName", Required = Required.Always)] public string DisplayName;
@@ -145,8 +146,9 @@ public sealed class FluidDefinitionDto
     [JsonProperty("sourceReferences")] public List<string> SourceReferences;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidPhaseChangeDto
+public sealed partial class FluidPhaseChangeDto
 {
     [JsonProperty("latentHeatJPerMol", Required = Required.Always)] public double LatentHeatJPerMol;
     [JsonProperty("referenceBoilingKelvin", Required = Required.Always)] public double ReferenceBoilingKelvin;
@@ -154,8 +156,9 @@ public sealed class FluidPhaseChangeDto
     [JsonProperty("saturation", Required = Required.Always)] public List<FluidSaturationPointDto> Saturation;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidSaturationPointDto
+public sealed partial class FluidSaturationPointDto
 {
     [JsonProperty("temperatureKelvin", Required = Required.Always)] public double TemperatureKelvin;
     [JsonProperty("pressureKPa", Required = Required.Always)] public double PressureKPa;

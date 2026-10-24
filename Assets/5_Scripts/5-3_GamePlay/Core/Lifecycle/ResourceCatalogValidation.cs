@@ -82,7 +82,7 @@ public static class ResourceCatalogValidation
                 }
                 finally { (routine as IDisposable)?.Dispose(); }
             }
-            yield return null;
+            if (resources.ShouldYieldResourceWork()) yield return null;
         }
         if (errors.Count > 0) throw new InvalidDataException($"资源引用校验发现 {errors.Count} 个问题：\n" + string.Join("\n", errors));
     }
@@ -125,8 +125,7 @@ internal sealed class ItemResourceCatalogValidator : IIncrementalResourceCatalog
                         errors.Add($"物品 {definition.Id} -> 模块 {assembly.StableName} -> Prefab {assembly.PrefabId} 缺失");
                         continue;
                     }
-                    if (definition.TryGetModuleParameters(assembly.StableName, out string parameters))
-                        ModuleJsonConfigurator.Validate(prototype, definition.Id, assembly.StableName, assembly.ModuleId, parameters);
+                    assembly.ValidateConfiguration(prototype);
                 }
             }
             catch (Exception exception) { errors.Add($"物品 {definition.Id}：{exception.Message}"); }

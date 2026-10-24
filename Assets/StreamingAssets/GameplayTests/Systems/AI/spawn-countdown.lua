@@ -1,66 +1,60 @@
+-- 所有自然生物共享世界倒计时；规则和物种只在到期且存在合格落点后参与抽取。
+test.system("ai", "spawn_monitor", {}, function(data)
+    assert(data.initialized and data.remaining == 7.5 and data.interval == 80 and data.sameClock,
+        "监控没有读取世界共享进度，或按物种权重生成了不同计时")
+    assert(data.pausedRemaining == 7.5 and data.pausedInterval == 80 and data.unchanged and data.lastObserved == 500,
+        "暂停刷新或查看监控修改了真实进度")
+    assert(data.pending == 3 and data.otherPending == 0 and data.pendingRemaining == 0 and data.batchUnchanged,
+        "未抽中的物种出现待出生队列，或监控消费了共享批次")
+    assert(not data.missingInitialized and data.missingRemaining == -1 and data.missingInterval == 50,
+        "未初始化的世界时钟被伪装成已经到期")
+    assert(data.disabled, "关闭自然生成的规则仍被显示为候选")
+end, "世界单一倒计时监控只读，待出生数只属于本轮所选物种")
+
 test.system("ai", "spawn_countdown", {}, function(data)
-    local animalCount = 0
-    for _, rule in ipairs(data.catalog) do
-        if rule.id == "ghost_milestone_growth" then
-            assert(rule.mode == "DayMilestoneGrowth", "幽灵逐日增长规则被改动")
-        elseif rule.id == "zombie_horde" then
-            assert(rule.mode == "TimedWindows", "僵尸固定窗口规则被改动")
-        else
-            assert(rule.mode == "Countdown", "自然动物仍使用固定日窗口：" .. rule.id)
-            animalCount = animalCount + #rule.entries
-            for _, entry in ipairs(rule.entries) do
-                assert(entry.interval > 0, "动物倒计时间隔无效：" .. entry.species)
-            end
-        end
-    end
-    assert(animalCount == 8, "正式八种自然动物没有全部迁移独立倒计时")
-    assert(data.initial.pending == 0 and data.initial.remaining == data.interval,
-        "首次进入世界没有等待完整间隔")
+    assert(data.ruleCount == 9 and data.speciesCount == 10 and data.zombieDisabled,
+        "共享生物库遗漏正式规则或错误开启自然尸潮")
+    assert(data.initial.pending == 0 and data.initial.remaining == data.interval and data.earlySelectionRejected,
+        "首次进入世界未等待完整间隔，或到期前已经绑定物种")
     assert(data.beforeDue.pending == 0 and math.abs(data.beforeDue.remaining - .25) < .000001,
-        "倒计时在到期前提前生成，或连续推进时被重置")
-    assert(data.exactDue.pending == data.batchSize and data.exactDue.remaining == 0,
-        "恰好到期没有排入指定物种的一轮出生")
-    assert(data.blockedRound.pending == data.batchSize and data.blockedRound.totalPending == data.batchSize,
-        "地点、数量或预算受阻等待期间丢掉当前机会，或累计了额外多轮")
-    assert(data.blockedRound.replacements == 0, "即时补员绕过了倒计时")
-    assert(data.savedRemaining.pending == 0 and math.abs(data.savedRemaining.remaining - .25) < .000001,
-        "二进制存档丢失未完成的倒计时")
-    assert(data.offlineRestored.pending == 0 and math.abs(data.offlineRestored.remaining - .25) < .000001,
-        "读档后把离线时段补进倒计时")
-    assert(data.savedPending.pending == data.batchSize and data.savedPending.totalPending == data.batchSize,
-        "二进制存档丢失了正在等待落点的指定物种机会")
+        "世界倒计时提前触发或逐次被重置")
+    assert(data.exactDue and data.notChosenAtExpiry,
+        "共享计时没有在边界到期，或尚未筛选加载区域就预定了物种")
+    assert(data.blockedRound.pending == data.batchSize and data.blockedRound.totalPending == data.batchSize
+        and data.blockedRound.replacements == 0 and data.secondSelectionRejected,
+        "已有本轮批次时叠加第二物种、离线积压或即时补员")
+    assert(data.savedRemaining.pending == 0 and math.abs(data.savedRemaining.remaining - .25) < .000001
+        and math.abs(data.offlineRestored.remaining - .25) < .000001,
+        "世界存档丢失共享剩余时间或读档补算离线时间")
+    assert(data.savedPending.pending == data.batchSize and data.savedSelection,
+        "存档丢失本轮唯一的规则、物种或剩余出生数量")
     assert(data.chanceSkipped.pending == data.batchSize - 1 and data.chanceSkipped.lifetime == 0
-        and data.chanceSkipped.budget == -1, "独立概率落空没有消费一次机会，或错误累计出生/消耗预算")
+        and data.chanceSkipped.budget == -1, "独立概率落空未消费机会，或误扣预算和累计出生")
     assert(data.completed.pending == 0 and data.completed.remaining == data.interval
-        and data.completed.lifetime == data.batchSize - 1,
-        "整轮完成后未重新等待完整间隔，或出生累计不正确")
-    assert(data.nextBeforeDue.pending == 0 and data.nextExactDue.pending == data.batchSize,
-        "等待地点期间的时间被追补为第二轮，或后续倒计时没有继续")
-    assert(data.independentChicken.pending == data.mixedBatchSize and data.independentBoar.pending == 0
-        and data.independentBoar.remaining > 0, "小鸡和野猪仍共用一个倒计时")
-    assert(math.abs(data.weightedIntervalRatio - data.originalWeightRatio) < .00001,
-        "小鸡和野猪拆为独立倒计时后丢掉原有相对稀有度")
-    assert(data.bothDueTotal == data.mixedBatchSize * 2, "不同物种的当前轮次没有独立保留")
-    local order = data.blockedSelectionOrder
-    assert(order[1] == "Chicken" and order[2] == "WildBoar" and order[3] == "Chicken" and order[4] == "WildBoar",
-        "一种动物找不到位置时挡住另一种动物，或重试时重新随机更换当前轮的物种")
-    assert(data.otherSpeciesPendingAfterSkip.pending == data.mixedBatchSize,
-        "小鸡消费机会时改动了野猪的独立队列")
-    assert(data.roundChanceSkipped.pending == 0 and data.roundChanceSkipped.remaining > 0,
-        "整轮概率落空后立即反复重抽到成功")
-    assert(data.certainChancePending == data.mixedBatchSize and data.zeroChancePending == 0
-        and data.boundaryChanceRollCalls == 0,
-        "零/必定概率仍抽随机数，或随机值恰好为一时错过必定出生")
-    assert(not data.preciseBeforeDue and data.preciseExactDue,
-        "长时间存档的倒计时精度不足以判断到期")
-    assert(data.invalidIntervalsRejected == 4, "倒计时接纳了零、负数或非有限间隔")
-    local counts = {0, 0, 0}
-    for _, priority in ipairs(data.busyWorkPriorities) do
-        counts[priority + 1] = counts[priority + 1] + 1
+        and data.completed.lifetime == data.batchSize - 1 and data.selectionCleared,
+        "完成批次后没有清除所选物种并重启同一个世界时钟")
+    assert(not data.nextBeforeDue and data.nextExactDue,
+        "批次等待时间被补算为第二轮，或共享倒计时不再推进")
+    for index, count in ipairs(data.distribution) do
+        assert(math.abs(count / 10000 - data.expectedWeights[index]) <= .00011,
+            "跨配置候选没有统一按物种权重抽取：" .. index)
     end
+    assert(data.emptySelection == -1 and data.filteredSelection == "SmallFish" and data.weightDoesNotChangeClock,
+        "空候选强行指定物种、环境筛选后仍抽中其它生物，或权重影响时钟")
+    assert(data.roundChanceSkipped and data.certainChance and not data.zeroChance and data.boundaryChanceRollCalls == 0,
+        "概率落空立即重抽到成功，或零/必定概率错误消费随机数")
+    assert(data.pausePreservesRemaining and data.frequencyScalesRemaining and data.frequencyScalesInterval,
+        "频率关闭后积累时间，或调整频率不保持统一时钟的进度比例")
+    assert(not data.preciseBeforeDue and data.preciseExactDue and data.invalidIntervalsRejected == 4,
+        "长存档到期精度不足或接纳非法间隔")
+    assert(data.loadedAccepted and data.generatingRejected and data.otherWorldRejected
+        and data.missingChunkRejected and data.unloadedRejected,
+        "生成中、未加载、其它维度或已经卸载的区块加入了自然候选池")
+    local counts = {0, 0, 0}
+    for _, priority in ipairs(data.busyWorkPriorities) do counts[priority + 1] = counts[priority + 1] + 1 end
     assert(counts[1] == 3 and counts[2] == 3 and counts[3] == 3,
-        "连续跑图时出生、显隐和居民装卸没有轮流获得优先机会")
-end, "自然动物持续倒计时、独立物种、存档恢复与调度公平")
+        "出生、显隐和居民装卸失去轮转机会")
+end, "世界统一自然刷新：到期后环境候选抽取、存档、暂停、概率与批次不积压")
 
 -- 自然、蜂巢、孵化、技能和手动请求共用同一个管理器的权威与就绪守卫。
 test.system("ai", "creature_request", {}, function(data)
@@ -96,7 +90,7 @@ test.system("ai", "spawn_batches", {}, function(data)
         "完成或开始下一批后沿用旧锚点和出生格")
     assert(#data.invalidConfigurationsRejected == 11, "批次配置拒绝覆盖缺失")
     for _, rejected in ipairs(data.invalidConfigurationsRejected) do
-        assert(rejected, "批次数量、权重、半径或不支持的调度模式未拒绝")
+        assert(rejected, "批次数量、权重、半径或无效全局间隔未拒绝")
     end
     assert(data.fixedCount == data.fixedExpectedCount and data.fixedCountRolls == 0,
         "没有配置数量权重的原规则行为或随机数消耗被改动")

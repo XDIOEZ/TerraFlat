@@ -63,9 +63,11 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         try
         {
             payloads.Add(body.Id, data); visuals.Add(body.Id, visual);
+            // 出生即建立寿命起点；过期读档载荷由下一轮统一移除，不改变生成事务。
+            TimedDespawnRules.IsWorldItemExpired(data, matterWorldKey);
             lastMatterTimes.Add(body.Id, matterTime);
             UpdatePlacement(body.Id);
-            if (body.WaterKind != 0) wetItems.Add(body.Id);
+            if (body.WaterKind != 0 && !body.IsOnBottom) wetItems.Add(body.Id);
             if (!flight.HasValue) QueueEnvironment(body.Id);
         }
         catch { Remove(body.Id); throw; }
@@ -125,6 +127,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     public void Tick(float deltaTime, IEnumerable<Mod_ItemPicker> pickers)
     {
         if (deltaTime <= 0f) return;
+        environmentMotionOwners.Clear();
         domain = WorldTopologyRuntime.GetActiveDomain();
         using var terrainSampling = new TerrainSamplingScope(this);
         using (MotionTickMarker.Auto())
@@ -133,7 +136,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             foreach (LightweightDroppedChange change in changes)
             {
                 if (!simulation.Contains(change.Id)) continue;
-                if (change.Kind == 3) { Remove(change.Id); continue; }
+                if (change.Kind == 3) wetItems.Remove(change.Id);
                 if (change.Kind == 1) CheckEnvironment(change.Id);
                 if (simulation.Contains(change.Id)) UpdatePlacement(change.Id);
             }
@@ -166,14 +169,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
                 FastCloner.FastCloner.DeepClone(record.Data));
             DroppedItemService.RemoveLegacyDropData(data);
             data.inHand = false; data.Stack.CanBePickedUp = true;
-            LightweightDroppedBody body = new()
-            {
-                Id = data.Guid, Amount = data.Stack.Amount, Position = domain.Normalize(record.Position),
-                Scale = record.Scale, Rotation = record.Rotation, VisualHeight = record.VisualHeight,
-                LiquidDepth = record.LiquidDepth, WaterKind = record.WaterKind, Pickable = 0,
-                SubmergedProgress = record.WaterKind == 2 && record.HasWaterTransition
-                    ? Mathf.Clamp01((record.WaterElapsed - record.WaterDuration) / WorldItemWaterRules.SubmergedRecedeDuration) : 0f
-            };
+            LightweightDroppedBody body = record.RestoreBody(data, domain);
             LightweightDroppedFlight? flight = record.HasFlight ? new LightweightDroppedFlight
             {
                 Start = record.FlightStart, End = record.FlightEnd, Control = record.FlightControl,
@@ -200,6 +196,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     {
         MachineWorld.CellChanged -= RefreshTransportCell;
         transportItems.Clear(); transportScratch.Clear();
+        environmentMotionOwners.Clear();
         ClearTerrainSubscriptions();
         presentation.Dispose(); simulation.Dispose();
         payloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
@@ -213,6 +210,22 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     #region 输送带掉落物
     private readonly HashSet<int> transportItems = new();
     private readonly List<int> transportScratch = new();
+    private readonly HashSet<int> environmentMotionOwners = new();
+
+    // 环境来源只交付目标，位置、空间索引、水态和表现统一在这里提交。
+    private bool CommitEnvironmentMotion(int id, Vector2 position, float interpolationSeconds = 0f)
+    {
+        if (!simulation.Contains(id)) return false;
+        LightweightDroppedBody body = simulation.Get(id);
+        Vector2 movement = domain.ShortestDelta(body.Position, position);
+        if (movement.sqrMagnitude <= .00000001f) return false;
+        if (interpolationSeconds > 0f) presentation.RecordWaterDrift(id, movement, interpolationSeconds);
+        body.Position = position;
+        simulation.Set(body);
+        UpdatePlacement(id);
+        CheckEnvironment(id);
+        return true;
+    }
 
     /// <summary>放置、拆除或转速改变时只检查这个格附近的空间桶，静止地面物不逐帧查带。</summary>
     private void RefreshTransportCell(Vector2Int cell)
@@ -237,15 +250,14 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         {
             if (!simulation.Contains(id)) { transportItems.Remove(id); continue; }
             LightweightDroppedBody body = simulation.Get(id);
-            if (body.Pickable == 0 || body.WaterKind != 0 || simulation.TryGetFlight(id, out _)) continue;
+            if (body.Pickable == 0 || body.WaterKind != 0 || simulation.TryGetFlight(id, out _) ||
+                !environmentMotionOwners.Add(id)) continue;
             MachineWorld.TryReceiveConveyorDrop(GetConveyorOutput(id), body.Position, seconds, out bool terminal);
-            if (terminal) continue;
-            Vector2 position = MachineWorld.TransportGroundItem(body.Position, seconds);
-            if (WorldTopologyRuntime.ShortestDelta(body.Position, position).sqrMagnitude < .00000001f) continue;
-            body.Position = position;
-            simulation.Set(body);
-            UpdatePlacement(id);
-            CheckEnvironment(id);
+            if (!simulation.Contains(id)) continue;
+            Vector2 position = terminal
+                ? LooseItemMotion.AdvanceExternal(matterWorldKey, payloads[id], body.Position, seconds)
+                : MachineWorld.TransportGroundItem(body.Position, seconds, payloads[id]);
+            CommitEnvironmentMotion(id, position);
         }
     }
     #endregion
@@ -260,37 +272,31 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     private void TickWind(float seconds)
     {
-        WorldMotionSystem.WindSamplingContext context;
-        ChunkMgr chunks;
+        WorldMotionSystem.WindSamplingContext context = default;
+        bool hasWind;
         using (WindPrepareMarker.Auto())
         {
-            if (!WorldMotionSystem.HasWindPush ||
-                !WorldMotionSystem.TryCreateWindSamplingContext(out context))
-                return;
+            hasWind = WorldMotionSystem.HasWindPush && WorldMotionSystem.TryCreateWindSamplingContext(out context);
+            if (!hasWind && !LooseItemMotion.HasVelocitySources) return;
             windScratch.Clear();
             windScratch.AddRange(simulation.Ids);
-            chunks = ChunkMgr.ExistingInstance;
         }
         foreach (int id in windScratch)
         {
             if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) continue;
             LightweightDroppedBody body = simulation.Get(id);
-            if (body.Pickable == 0 || body.LiquidDepth >= 0.995f) continue;
+            // 水流和带面在各自节奏内已经合成外力，同一物品不能再额外走一遍风推动。
+            if (body.Pickable == 0 || body.LiquidDepth >= 0.995f || body.WaterKind != 0 ||
+                transportItems.Contains(id) || !environmentMotionOwners.Add(id)) continue;
             Vector2 velocity;
             using (WindSampleMarker.Auto())
-                velocity = context.Sample(body.Position, payloads[id].Stack.CurrentWeight);
-            if (velocity.sqrMagnitude <= 0f) continue;
+                velocity = hasWind ? context.Sample(body.Position, payloads[id].Stack.CurrentWeight) : Vector2.zero;
+            if (velocity.sqrMagnitude <= 0f && !LooseItemMotion.HasVelocitySources) continue;
             Vector2 destination;
             using (WindResolveMarker.Auto())
-                destination = WorldMotionSystem.ResolveLooseWindPosition(body.Position, velocity * seconds, domain, chunks);
-            if (((Vector2)domain.ShortestDelta(body.Position, destination)).sqrMagnitude <= 0.00000001f) continue;
+                destination = LooseItemMotion.AdvanceExternal(matterWorldKey, payloads[id], body.Position, seconds, velocity);
             using (WindCommitMarker.Auto())
-            {
-                body.Position = destination;
-                simulation.Set(body);
-                UpdatePlacement(id);
-                CheckEnvironment(id);
-            }
+                CommitEnvironmentMotion(id, destination);
         }
         windScratch.Clear();
     }

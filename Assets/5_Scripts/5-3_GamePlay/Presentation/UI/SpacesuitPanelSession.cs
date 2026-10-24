@@ -193,8 +193,12 @@ public static class PortableFluidPanel
         if (!sessions.TryGetValue(tank.itemData.Guid, out var panel) || !panel.IsAlive)
         {
             panel?.Dispose();
-            sessions[tank.itemData.Guid] = panel = new MechanicalPanelSession("UI_FluidTank", tank, null, null,
-                () => Status(tank.itemData, actor), () => "", refreshStatusPeriodically: true,
+            sessions[tank.itemData.Guid] = panel = new MechanicalPanelSession("UI_FluidTank", tank, null,
+                player => PortableGasTankAirFilling.Fill(tank, player),
+                () => Status(tank.itemData, actor),
+                () => PortableGasTankAirFilling.IsIronTank(tank.itemData) ? "充入空气（1 atm）" : "",
+                actionAvailable: () => PortableGasTankAirFilling.CanFill(tank, actor),
+                refreshStatusPeriodically: true,
                 gasCapacity01: () => GasCapacity01(tank.itemData));
         }
         panel.Toggle(actor);
@@ -216,6 +220,8 @@ public static class PortableFluidPanel
         var lines = new List<string> { FlatWorldLocalizationService.GetUiFormat("气量 {0:0.###} 标准L", FluidUnits.MolToStandardLiters(inventory.GasMoles)),
             FlatWorldLocalizationService.GetUiFormat("液体 {0:0.###} L · 总容积 {1:0.###} L", inventory.GetLiquidLiters(), config.VolumeLiters),
             FlatWorldLocalizationService.GetUiFormat("温度 {0:0.##} ℃", inventory.GetTemperatureKelvin() - 273.15), FlatWorldLocalizationService.GetUiFormat("气压 {0:0.##}/{1:0.##} kPa", pressure, config.MaxSafePressureKPa) };
+        if (PortableGasTankAirFilling.IsIronTank(data))
+            lines.Add(FlatWorldLocalizationService.GetUiFormat("空气充装目标：{0:0.###} kPa（绝对压力）", PortableGasTankAirFilling.TargetPressureKPa));
         foreach (FluidComponentState component in inventory.State.Components)
             lines.Add(FlatWorldLocalizationService.GetUiFormat("{0}：气 {1:0.###} mol · 液 {2:0.###} mol", FlatWorldLocalizationService.GetUiText(FluidCatalog.Default.Find(component.FluidId).DisplayName), component.GasMoles, component.LiquidMoles));
         if (pressure > config.MaxSafePressureKPa) lines.Add(FlatWorldLocalizationService.GetUiText("超压：罐壁持续受损，归零时爆炸"));

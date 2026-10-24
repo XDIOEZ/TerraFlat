@@ -16,6 +16,7 @@ public partial class MonsterSpawnerManager
     {
         // 只统计本轮世界进入后的事务，不把上个世界或维度的诊断混进来。
         SuccessfulCreatureBirths = SuccessfulCreatureRestores = RolledBackCreatureCreations = 0;
+        _spawnObservations.Clear();
     }
 
     // 来源负责何时、何地出生，管理器只负责权威校验、唯一身份、实际创建与失败回收。

@@ -1,0 +1,295 @@
+{
+  "date": "2026-10-24",
+  "method": "built-in image_gen.imagegen",
+  "canvas": {
+    "width": 32,
+    "height": 48,
+    "pixelsPerUnit": 32,
+    "pivot": [
+      0.5,
+      0
+    ],
+    "sourceFacesLeft": true,
+    "alphaThreshold": 128,
+    "sampling": "area_weighted_palette_mode",
+    "palette": [
+      "#171B22",
+      "#323D4D",
+      "#4E5D6F",
+      "#75889B",
+      "#9FB0BF",
+      "#5A3A27"
+    ],
+    "minimumOpaqueCoverage": 0.5
+  },
+  "preview": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/SteelArmor/SteelArmor_Preview.png",
+  "scope": "Five independent empty steel armor wearable layers with a shared six-color palette and area-weighted color sampling; no character body, hair or inventory-icon edits.",
+  "assets": [
+    {
+      "id": "Steel_Helmet",
+      "itemId": "Steel_Helmet",
+      "name": "钢头盔",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/SteelArmor/Steel_Helmet_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+      "sourceRects": [
+        [
+          241,
+          71,
+          630,
+          519
+        ]
+      ],
+      "targetRects": [
+        [
+          5,
+          1,
+          24,
+          19
+        ]
+      ],
+      "references": {
+        "placement": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
+        "material": "Assets/6_Art/Generated/Equipment/Steel_Helmet/Steel_Helmet_Icon.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction asset: one empty wearable STEEL HELMET sprite layer for a very low resolution 32x48 pixel character.\nImage 1 is the existing helmet placement template. Image 2 is the character body FOR ALIGNMENT ONLY; never draw any body, skin, face or character pixels in the output.\nRedraw the helmet from image 1 as a simple rounded open-face forged steel bowl, low domed cap with a solid reinforced brow and ONE short close-fitting rear ear guard at the far image-right side. Match the same almost frontal slightly left-facing head, size and position on the full transparent portrait canvas. The cap occupies logical x5..28,y1..12; the small rear ear guard may continue only at x24..27,y12..19. End all equipment by y19, well above the neck. The ENTIRE face opening, approximately x7..23,y12..21, must be completely transparent, with BOTH EYES, forehead, nose, cheeks and mouth of the reference body unobstructed when overlaid.\nArtwork must look natively hand placed at 32x48 logical resolution, enlarged to a 1024x1536 2:3 transparent canvas without adding detail. HARD SQUARE PIXEL BLOCKS, one logical pixel=32x32 export pixels. Extremely simple coarse low-resolution silhouette. Use no more than SIX opaque flat colors: dark charcoal outline #1F252F, dark steel #323D4D, medium steel #4E5D6F, light steel #75889B, one restrained steel highlight #9FB0BF and a tiny dark brown lining #5A3A27. Each tone forms a BROAD CONNECTED REGION. The upper-left light highlight is a single compact solid patch, no thin diagonal stripes, no isolated speckles. Right half broad dark shade. Flat colors with no texture, no gradients.\nKeep the whole shared character canvas and all transparent margins: do not center or zoom the cap, do not output a standalone inventory icon. Output empty equipment only on genuine alpha transparency, alpha zero in all face openings. No character, no face, no skin, no hair, no mannequin, no backplate inside face. No dangling straps, braids, chains, feathers, crest, pointed crown, horns, visor, rivets, scratches, dither, checkerboard highlights, alternating bright pixels, crosshatching, white shine, antialiasing, soft edges, glow, background or text.",
+      "refinementPrompt": "Use case: precise-object-edit.\nEdit target is this EMPTY STEEL HELMET wearable overlay on a 1024x1536 transparent canvas. Keep the helmet position, size, rounded bowl, brow, broad flat steel color clusters and image-right short ear guard exactly unchanged.\nFix ONLY the stray dangling fragments at the IMAGE-LEFT FRONT EDGE below the brow. Remove BOTH vertical strips on the far left underneath the brow: the short strip around x240..295,y385..465 AND the detached strip around x265..295,y510..595. Make all of x0..310,y380..650 fully alpha zero. This left front side must end cleanly at the solid horizontal brow, without any hanging straps, vertical bars or isolated pixels. The body face will show through this area later; do not draw a face.\nMaintain a crisp near-black charcoal single-logical-pixel outline #171B22 around the exterior bowl/brow/back guard; retain only 5 flat steel/leather material colors #323D4D #4E5D6F #75889B #9FB0BF #5A3A27. All color areas are hard square large connected pixel blocks at a logical 32x48 resolution. No dithering, tiny bright dots, new details, shine stripes, smooth shading or glow.\nPreserve the original 1024x1536 whole canvas and transparent padding. Face opening and surroundings remain TRUE alpha zero. Empty equipment only, no skin, face, eyes, hair, body, mannequin, background, text, checkerboard or extra equipment.",
+      "refinementReason": "Remove the isolated image-left front strips below the brow without changing the steel bowl or face aperture.",
+      "revisionReason": "Replace checkerboard highlights with connected steel color clusters, remove dangling front fragments, shorten the rear ear guard and preserve the transparent face opening.",
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#171B22",
+          "#323D4D",
+          "#4E5D6F",
+          "#75889B",
+          "#9FB0BF",
+          "#5A3A27"
+        ],
+        "colorDistance": "squared RGB distance; each opaque source pixel votes for its nearest palette entry, weighted by overlap area with the target pixel"
+      }
+    },
+    {
+      "id": "Steel_Cuirass",
+      "itemId": "Chestplate_Iron",
+      "name": "钢甲",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/SteelArmor/Steel_Cuirass_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Cuirass.png",
+      "sourceRects": [
+        [
+          196,
+          721,
+          676,
+          385
+        ]
+      ],
+      "targetRects": [
+        [
+          3,
+          22,
+          27,
+          13
+        ]
+      ],
+      "references": {
+        "placement": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png",
+        "style": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction asset: an EMPTY ARMOR WEARABLE LAYER for FlatWorld's extremely low resolution 32x48 pixel character, on a TRUE transparent 1024x1536 portrait canvas. Image 1 is the strict POSITION AND SILHOUETTE template for this piece. Image 2 is the current STEEL HELMET: use ONLY its exact coarse pixel style, steel palette, large flat color clusters and outline; DO NOT draw a helmet.\nRedraw the equipment of image 1 to match image 2. Keep the full shared character canvas, facing, empty space and placement of image 1. Treat the image as a 32x48 logical grid enlarged 32 times. Every logical pixel is a large square block. Maximum SIX flat opaque colors: outline #171B22, dark steel #323D4D, medium steel #4E5D6F, light steel #75889B, restrained highlight #9FB0BF, brown leather #5A3A27. Steel uses one broad upper-left highlight patch, broad middle tone, broad right shadow. Hard edges and connected large color regions; no decorative fine details.\nExactly ONE SHORT WIDE STEEL BREASTPLATE overlay, including two small solid shoulder caps. A clean broad steel chest panel, simple lower belly plate and minimal brown leather shoulder fasteners. Overall logical bounds x3..29,y22..34 (27 pixels WIDE and only 13 pixels HIGH); this stylized character has a very short torso. Match the neckline, shoulders, waist and wide proportions of image 1. The solid main panel must cover the shirt torso from x10..23,y24..33, with no transparent holes or strips down the chest. Neck, face and bare arms stay outside the armor. Preserve the slight image-left facing frontal view. No long sleeves, chains, hanging waist ornaments, gloves or legs.\nAll character-canvas areas outside the equipment and every gap/opening must be ALPHA ZERO. Equipment only; no person, mannequin, skin, hands, arms, feet, face, hair, underlying shirt or pants. Do not enlarge the equipment to fill the canvas. No inventory-icon pose or perspective. No white specks, dither, checkerboard highlights, metallic scratches, rivets, repeated dots, tiny straps, highlights in alternating pixels, mottled shading, gradients, blur, soft alpha, glow, background, grid lines, text or other equipment.",
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#171B22",
+          "#323D4D",
+          "#4E5D6F",
+          "#75889B",
+          "#9FB0BF",
+          "#5A3A27"
+        ],
+        "colorDistance": "squared RGB distance; each opaque source pixel votes for its nearest palette entry, weighted by overlap area with the target pixel"
+      },
+      "revisionReason": "Match the steel helmet with six flat colors and connected broad steel surfaces; redraw the piece silhouette instead of retaining noisy highlights or thin disconnected rims."
+    },
+    {
+      "id": "Steel_Gauntlets",
+      "itemId": "Steel_Gauntlets",
+      "name": "钢手套",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/SteelArmor/Steel_Gauntlets_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Gauntlets.png",
+      "sourceRects": [
+        [
+          49,
+          946,
+          205,
+          240
+        ],
+        [
+          770,
+          946,
+          205,
+          240
+        ]
+      ],
+      "targetRects": [
+        [
+          1,
+          29,
+          8,
+          9
+        ],
+        [
+          24,
+          29,
+          8,
+          9
+        ]
+      ],
+      "references": {
+        "placement": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png",
+        "style": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction asset: an EMPTY ARMOR WEARABLE LAYER for FlatWorld's extremely low resolution 32x48 pixel character, on a TRUE transparent 1024x1536 portrait canvas. Image 1 is the strict POSITION AND SILHOUETTE template for this piece. Image 2 is the current STEEL HELMET: use ONLY its exact coarse pixel style, steel palette, large flat color clusters and outline; DO NOT draw a helmet.\nRedraw the equipment of image 1 to match image 2. Keep the full shared character canvas, facing, empty space and placement of image 1. Treat the image as a 32x48 logical grid enlarged 32 times. Every logical pixel is a large square block. Maximum SIX flat opaque colors: outline #171B22, dark steel #323D4D, medium steel #4E5D6F, light steel #75889B, restrained highlight #9FB0BF, brown leather #5A3A27. Steel uses one broad upper-left highlight patch, broad middle tone, broad right shadow. Hard edges and connected large color regions; no decorative fine details.\nExactly TWO separate short chunky STEEL GAUNTLETS in the reference's relaxed down-hanging hand positions. Left piece logical x1..8,y29..37; right piece x24..31,y29..37. Each is only 8x9 logical pixels. A broad solid steel mitten/back-of-hand shape with a short cuff and minimal brown leather at flexible edge; closed opaque hand armor that COVERS the whole fist, not a thin bracelet or a hollow ring. The front hand plane is a single connected medium steel block with one small wide light patch. Thumb is a single chunky projection. Use the exact mirrored down/outward shape and spacing from image 1. Keep the large central gap fully transparent. No exposed skin, wrists, arms or connecting bar.\nAll character-canvas areas outside the equipment and every gap/opening must be ALPHA ZERO. Equipment only; no person, mannequin, skin, hands, arms, feet, face, hair, underlying shirt or pants. Do not enlarge the equipment to fill the canvas. No inventory-icon pose or perspective. No white specks, dither, checkerboard highlights, metallic scratches, rivets, repeated dots, tiny straps, highlights in alternating pixels, mottled shading, gradients, blur, soft alpha, glow, background, grid lines, text or other equipment.",
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#171B22",
+          "#323D4D",
+          "#4E5D6F",
+          "#75889B",
+          "#9FB0BF",
+          "#5A3A27"
+        ],
+        "colorDistance": "squared RGB distance; each opaque source pixel votes for its nearest palette entry, weighted by overlap area with the target pixel"
+      },
+      "revisionReason": "Match the steel helmet with six flat colors and connected broad steel surfaces; redraw the piece silhouette instead of retaining noisy highlights or thin disconnected rims."
+    },
+    {
+      "id": "Steel_Greaves",
+      "itemId": "Steel_Greaves",
+      "name": "钢腿甲",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/SteelArmor/Steel_Greaves_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Greaves.png",
+      "sourceRects": [
+        [
+          226,
+          984,
+          571,
+          360
+        ]
+      ],
+      "targetRects": [
+        [
+          5,
+          33,
+          23,
+          10
+        ]
+      ],
+      "references": {
+        "placement": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png",
+        "style": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction asset: an EMPTY ARMOR WEARABLE LAYER for FlatWorld's extremely low resolution 32x48 pixel character, on a TRUE transparent 1024x1536 portrait canvas. Image 1 is the strict POSITION AND SILHOUETTE template for this piece. Image 2 is the current STEEL HELMET: use ONLY its exact coarse pixel style, steel palette, large flat color clusters and outline; DO NOT draw a helmet.\nRedraw the equipment of image 1 to match image 2. Keep the full shared character canvas, facing, empty space and placement of image 1. Treat the image as a 32x48 logical grid enlarged 32 times. Every logical pixel is a large square block. Maximum SIX flat opaque colors: outline #171B22, dark steel #323D4D, medium steel #4E5D6F, light steel #75889B, restrained highlight #9FB0BF, brown leather #5A3A27. Steel uses one broad upper-left highlight patch, broad middle tone, broad right shadow. Hard edges and connected large color regions; no decorative fine details.\nExactly ONE combined SHORT STEEL LEG-ARMOR overlay with two separate short spread legs joined at a plain waist belt. Overall logical x5..27,y33..42, only 23 pixels wide by 10 pixels HIGH. Match image 1's extremely short legs and their separation: broad solid thigh/knee plates cover the reference pants, no delicate segmented chains. Left leg slopes slightly image-left; right leg slopes slightly image-right in a standing pose. Use two broad medium steel plates with short connected light highlights and dark flexible joints. The central V-shaped crotch gap stays alpha zero. A simple brown leather fastening at the top. Ends at the ankles ABOVE boots; no feet or boots. No body anatomy or trousers drawn underneath.\nAll character-canvas areas outside the equipment and every gap/opening must be ALPHA ZERO. Equipment only; no person, mannequin, skin, hands, arms, feet, face, hair, underlying shirt or pants. Do not enlarge the equipment to fill the canvas. No inventory-icon pose or perspective. No white specks, dither, checkerboard highlights, metallic scratches, rivets, repeated dots, tiny straps, highlights in alternating pixels, mottled shading, gradients, blur, soft alpha, glow, background, grid lines, text or other equipment.",
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#171B22",
+          "#323D4D",
+          "#4E5D6F",
+          "#75889B",
+          "#9FB0BF",
+          "#5A3A27"
+        ],
+        "colorDistance": "squared RGB distance; each opaque source pixel votes for its nearest palette entry, weighted by overlap area with the target pixel"
+      },
+      "revisionReason": "Match the steel helmet with six flat colors and connected broad steel surfaces; redraw the piece silhouette instead of retaining noisy highlights or thin disconnected rims."
+    },
+    {
+      "id": "Steel_Boots",
+      "itemId": "Steel_Boots",
+      "name": "钢靴子",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/SteelArmor/Steel_Boots_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Boots.png",
+      "sourceRects": [
+        [
+          170,
+          1276,
+          283,
+          208
+        ],
+        [
+          652,
+          1276,
+          260,
+          208
+        ]
+      ],
+      "targetRects": [
+        [
+          5,
+          40,
+          10,
+          6
+        ],
+        [
+          20,
+          40,
+          10,
+          6
+        ]
+      ],
+      "references": {
+        "placement": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png",
+        "style": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction asset: an EMPTY ARMOR WEARABLE LAYER for FlatWorld's extremely low resolution 32x48 pixel character, on a TRUE transparent 1024x1536 portrait canvas. Image 1 is the strict POSITION AND SILHOUETTE template for this piece. Image 2 is the current STEEL HELMET: use ONLY its exact coarse pixel style, steel palette, large flat color clusters and outline; DO NOT draw a helmet.\nRedraw the equipment of image 1 to match image 2. Keep the full shared character canvas, facing, empty space and placement of image 1. Treat the image as a 32x48 logical grid enlarged 32 times. Every logical pixel is a large square block. Maximum SIX flat opaque colors: outline #171B22, dark steel #323D4D, medium steel #4E5D6F, light steel #75889B, restrained highlight #9FB0BF, brown leather #5A3A27. Steel uses one broad upper-left highlight patch, broad middle tone, broad right shadow. Hard edges and connected large color regions; no decorative fine details.\nExactly TWO separate SHORT WIDE STEEL ARMORED BOOTS in the reference's standing pose. Left boot logical x5..14,y40..45; right boot x20..29,y40..45. EACH boot is a low rounded chunky shape only 10 pixels WIDE by 6 pixels HIGH. Cover each whole foot with a SOLID broad steel toe/instep cap, dark single-pixel sole and small brown leather cuff. Continuous toe caps with no open holes or outlined-only rings; one connected light patch on each upper-left surface. Preserve the reference's exact foot angle, size, spacing, level soles and floor baseline. Transparent gap between boots. No tall shin guards, knees, legs, skin or feet inside.\nAll character-canvas areas outside the equipment and every gap/opening must be ALPHA ZERO. Equipment only; no person, mannequin, skin, hands, arms, feet, face, hair, underlying shirt or pants. Do not enlarge the equipment to fill the canvas. No inventory-icon pose or perspective. No white specks, dither, checkerboard highlights, metallic scratches, rivets, repeated dots, tiny straps, highlights in alternating pixels, mottled shading, gradients, blur, soft alpha, glow, background, grid lines, text or other equipment.",
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#171B22",
+          "#323D4D",
+          "#4E5D6F",
+          "#75889B",
+          "#9FB0BF",
+          "#5A3A27"
+        ],
+        "colorDistance": "squared RGB distance; each opaque source pixel votes for its nearest palette entry, weighted by overlap area with the target pixel"
+      },
+      "revisionReason": "Match the steel helmet with six flat colors and connected broad steel surfaces; redraw the piece silhouette instead of retaining noisy highlights or thin disconnected rims."
+    }
+  ]
+}

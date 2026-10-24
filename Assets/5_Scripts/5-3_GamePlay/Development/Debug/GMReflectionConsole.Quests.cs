@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Localization;
 using FlatWorld.Gameplay.Quests;
 using TMPro;
 using UnityEngine;
@@ -280,7 +281,7 @@ public sealed partial class GMReflectionConsole
             if (snapshot?.Status == QuestStatus.ReadyToClaim)
                 readyCount++;
 
-            row.StatusText.text = GetQuestStatusText(row.Definition, snapshot);
+            SetLocalizedProvider(row.StatusText, () => GetQuestStatusText(row.Definition, snapshot));
             row.StatusText.color = GetQuestStatusColor(snapshot);
             row.AcceptButton.interactable = boundGmQuestRuntime != null && !hasSnapshot;
             row.ClaimButton.interactable = snapshot?.Status == QuestStatus.ReadyToClaim;
@@ -289,24 +290,26 @@ public sealed partial class GMReflectionConsole
         if (gmQuestSummaryText == null)
             return;
 
-        gmQuestSummaryText.text = boundGmQuestRuntime == null
-            ? $"测试任务 {availableDebugQuests.Count} · 请先进入游戏世界"
-            : $"测试任务 {availableDebugQuests.Count} · 已开启 {acceptedCount} · 可交付 {readyCount}";
+        if (boundGmQuestRuntime == null)
+            SetLocalizedFormat(gmQuestSummaryText, "测试任务 {0} · 请先进入游戏世界", availableDebugQuests.Count);
+        else
+            SetLocalizedFormat(gmQuestSummaryText, "测试任务 {0} · 已开启 {1} · 可交付 {2}",
+                availableDebugQuests.Count, acceptedCount, readyCount);
     }
 
     private static string GetQuestStatusText(QuestDefinition definition, QuestSnapshot snapshot)
     {
         if (snapshot == null)
-            return "未开启";
+            return FlatWorldLocalizationService.GetUiText("未开启");
         if (snapshot.Status == QuestStatus.ReadyToClaim)
-            return "目标完成\n等待手动交付";
+            return FlatWorldLocalizationService.GetUiText("目标完成\n等待手动交付");
         if (snapshot.Status == QuestStatus.Completed)
-            return "已完成";
+            return FlatWorldLocalizationService.GetUiText("已完成");
 
         QuestStageDefinition stage = definition.Stages?.FirstOrDefault(value =>
             string.Equals(value.Id, snapshot.CurrentStageId, StringComparison.OrdinalIgnoreCase));
         if (stage?.Objectives == null || stage.Objectives.Count == 0)
-            return $"进行中\n阶段：{snapshot.CurrentStageId}";
+            return FlatWorldLocalizationService.GetUiFormat("进行中\n阶段：{0}", snapshot.CurrentStageId);
 
         string[] objectives = stage.Objectives.Select(objective =>
         {
@@ -314,9 +317,11 @@ public sealed partial class GMReflectionConsole
             float current = 0f;
             snapshot.ObjectiveProgress?.TryGetValue(key, out current);
             string label = string.IsNullOrWhiteSpace(objective.Label) ? objective.Id : objective.Label;
-            return $"{label} {current:0.##}/{objective.Required:0.##}";
+            return FlatWorldLocalizationService.GetUiFormat(
+                "{0} {1:0.##}/{2:0.##}", FlatWorldLocalizationService.GetUiText(label), current,
+                objective.Required);
         }).ToArray();
-        return "进行中\n" + string.Join("；", objectives);
+        return FlatWorldLocalizationService.GetUiFormat("进行中\n{0}", string.Join("；", objectives));
     }
 
     private static Color GetQuestStatusColor(QuestSnapshot snapshot)
@@ -366,17 +371,19 @@ public sealed partial class GMReflectionConsole
         }
         if (!QuestCatalog.TryGet(questId, out QuestDefinition definition) || !definition.DebugOnly)
         {
-            SetStatus($"拒绝开启非测试任务：{questId}", Color.yellow);
+            SetStatusFormat("拒绝开启非测试任务：{0}", Color.yellow, questId);
             return;
         }
         if (!runtime.AcceptQuest(questId, out error))
         {
-            SetStatus($"开启任务失败：{error}", Color.yellow);
+            SetStatusFormat("开启任务失败：{0}", Color.yellow, error);
             RefreshQuestRowStates();
             return;
         }
 
-        SetStatus($"已开启测试任务：{definition.Title}", new Color(0.35f, 0.95f, 0.85f));
+        SetStatusProvider(() => FlatWorldLocalizationService.GetUiFormat(
+            "已开启测试任务：{0}", FlatWorldLocalizationService.GetUiText(definition.Title)),
+            new Color(0.35f, 0.95f, 0.85f));
         RefreshQuestRowStates();
     }
 
@@ -410,8 +417,16 @@ public sealed partial class GMReflectionConsole
         }
 
         Color color = failed == 0 ? new Color(0.35f, 0.95f, 0.85f) : Color.yellow;
-        string failureSuffix = string.IsNullOrWhiteSpace(firstFailure) ? string.Empty : $"；首个失败：{firstFailure}";
-        SetStatus($"测试任务批量开启：成功 {accepted}，跳过 {skipped}，失败 {failed}{failureSuffix}", color);
+        SetStatusProvider(() =>
+        {
+            string failureSuffix = string.IsNullOrWhiteSpace(firstFailure)
+                ? string.Empty
+                : FlatWorldLocalizationService.GetUiFormat(
+                    "；首个失败：{0}", FlatWorldLocalizationService.GetUiText(firstFailure));
+            return FlatWorldLocalizationService.GetUiFormat(
+                "测试任务批量开启：成功 {0}，跳过 {1}，失败 {2}{3}",
+                accepted, skipped, failed, failureSuffix);
+        }, color);
         RefreshQuestRowStates();
     }
 
@@ -424,17 +439,19 @@ public sealed partial class GMReflectionConsole
         }
         if (!QuestCatalog.TryGet(questId, out QuestDefinition definition) || !definition.DebugOnly)
         {
-            SetStatus($"拒绝交付非测试任务：{questId}", Color.yellow);
+            SetStatusFormat("拒绝交付非测试任务：{0}", Color.yellow, questId);
             return;
         }
         if (!runtime.ClaimQuest(questId, out error))
         {
-            SetStatus($"交付任务失败：{error}", Color.yellow);
+            SetStatusFormat("交付任务失败：{0}", Color.yellow, error);
             RefreshQuestRowStates();
             return;
         }
 
-        SetStatus($"已交付测试任务：{definition.Title}", new Color(0.35f, 0.95f, 0.85f));
+        SetStatusProvider(() => FlatWorldLocalizationService.GetUiFormat(
+            "已交付测试任务：{0}", FlatWorldLocalizationService.GetUiText(definition.Title)),
+            new Color(0.35f, 0.95f, 0.85f));
         RefreshQuestRowStates();
     }
 

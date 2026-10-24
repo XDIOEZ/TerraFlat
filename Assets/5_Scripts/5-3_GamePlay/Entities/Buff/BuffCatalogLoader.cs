@@ -179,7 +179,7 @@ public static class BuffCatalogLoader
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("Buff 分包清单为空");
 
-        return JsonConvert.DeserializeObject<BuffManifestDto>(json, StrictJsonSettings)
+        return JsonConfigurationCache.Deserialize<BuffManifestDto>(json, StrictJsonSettings)
             ?? throw new InvalidDataException("Buff 分包清单无法反序列化");
     }
 
@@ -294,21 +294,26 @@ public static class BuffCatalogLoader
     private static IEnumerator LoadIconsAsync(GameRes gameRes, IReadOnlyList<BuffDefinition> definitions)
     {
         var icons = new Dictionary<string, Sprite>(StringComparer.Ordinal);
+        var addresses = new List<string>();
         foreach (BuffDefinition definition in definitions)
         {
             string address = definition.IconAddress;
-            if (string.IsNullOrWhiteSpace(address))
-                continue;
-            if (!icons.TryGetValue(address, out Sprite icon))
+            if (!string.IsNullOrWhiteSpace(address) && icons.TryAdd(address, null)) addresses.Add(address);
+        }
+
+        // 可选图标共用有界队列，单张缺失仍保留名称首字回退。
+        yield return ResourceLoadQueue.Run(addresses.Count,
+            index => TryBeginIconLoad(gameRes, addresses[index], out AsyncOperationHandle<Sprite> request) ? request : default,
+            request => !request.IsValid() || request.IsDone,
+            (index, request) =>
             {
-                if (TryBeginIconLoad(gameRes, address, out AsyncOperationHandle<Sprite> request))
-                {
-                    yield return request;
-                    icon = ReadLoadedIcon(request, address);
-                }
-                icons.Add(address, icon);
-            }
-            definition.Icon = icon;
+                if (request.IsValid()) icons[addresses[index]] = ReadLoadedIcon(request, addresses[index]);
+            }, gameRes.ShouldYieldResourceWork);
+
+        foreach (BuffDefinition definition in definitions)
+        {
+            if (string.IsNullOrWhiteSpace(definition.IconAddress)) continue;
+            definition.Icon = icons[definition.IconAddress];
             if (gameRes.ShouldYieldResourceWork())
                 yield return null;
         }

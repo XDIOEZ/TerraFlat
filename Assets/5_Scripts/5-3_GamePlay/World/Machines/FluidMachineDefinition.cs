@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>工业流体设备只声明能力和预算，气液共用同一库存与运输入口。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidMachineDefinition
+public sealed partial class FluidMachineDefinition
 {
     #region 设备与端口配置
     public const string LiquidResiduePortId = "liquid-residue";
     public string Kind = "pipe";
+    public bool PipeSegment; // 设备本身作为管段接入连线拓扑与管道表现。
     public string MaterialId = "iron";
     public double VolumeLiters = 1;
     public double MinimumGasSpaceLiters = .001;
@@ -60,6 +62,7 @@ public sealed class FluidMachineDefinition
             port?.Validate(ownerId);
             if (port == null || !ids.Add(port.Id)) throw new ArgumentException("工业端口身份重复：" + ownerId);
         }
+        if (PipeSegment && Ports.Length == 0) throw new ArgumentException("管段必须声明至少一个管道端口：" + ownerId);
         foreach (FluidMachineReactionDefinition reaction in Reactions) reaction.Validate(ownerId);
         if (!string.IsNullOrEmpty(LiquidResidueFluidId) && string.IsNullOrWhiteSpace(LiquidResidueChamber))
             throw new ArgumentException("液体副产物缺少库存腔身份：" + ownerId);
@@ -72,8 +75,9 @@ public sealed class FluidMachineDefinition
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidMachinePortDefinition
+public sealed partial class FluidMachinePortDefinition
 {
     #region 类型化世界端口
     public string Id;
@@ -94,8 +98,9 @@ public sealed class FluidMachinePortDefinition
 }
 
 /// <summary>反应物及产物以 mol 系数描述，热量和实际供能采用同一反应预算。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidMachineReactionDefinition
+public sealed partial class FluidMachineReactionDefinition
 {
     #region 守恒加工配方
     public string Id;
@@ -124,8 +129,9 @@ public sealed class FluidMachineReactionDefinition
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class FluidReactionTerm
+public sealed partial class FluidReactionTerm
 {
     #region 摩尔比例
     public string Chamber = "main";

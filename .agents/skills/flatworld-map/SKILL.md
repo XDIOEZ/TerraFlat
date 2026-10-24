@@ -39,7 +39,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - `WorldLiquidReplenishment` 订阅 `SurfaceLiquidPumped`，固定取水点及四邻涉及的最多 16 条邻边，双向按水量差的一半转移整级水量，直到邻边差不超过一级；供水格保留至少一级，空格与浅水格均可补水。目标须为 `GetLiquidBaseline` 中原有同种水域，普通陆地、异种液体和显式挡水格不参与；不递归扩张、不凭空造水，复用 `TrySet` 的差量/表现通知，规则在 `SurfaceFluids/replenishment.lua`。
 - 地表倒水/取水事件只在订阅变化时生成监听器快照，派发时不调用 `GetInvocationList`；补水邻边用 `ListPool` 借还，通知中的新增/退订影响下一次派发，异常仍逐监听器隔离。回归 `surface_fluids/notification_dispatch`。
 - 海底材质读取 `height`：`terrain.oceanSandMinimumHeight..SeaLevel` 为沙底，其下石底；沙滩由 `BeachLevel` 控制。河床中心/边缘材质来自 `river.bed*`，边缘底材只用于局部沉积段；湖泊读 `terrain.riverbedTileId`。
-- `riverFlowX/Y` 保存真实河道下游切线，`ChunkMgr.TryGetRuntimeWaterCurrent` 是消费入口；湖面静止，海洋表层暂用 `windX/Y`。实验流向经 `TryGetExperimentalLiquidFlow` 查询，不覆写天然流向；显式挡水来源登记 `WorldLiquidFlowObstacles`，平台不自动挡水。
+- `riverFlowX/Y` 保存真实河道下游切线，`ChunkMgr.TryGetRuntimeWaterCurrent` 是消费入口；湖面静止，普通海洋表层使用 `windX/Y`。入海口独立生成 `estuary.currentX/currentY/influence` 扇面，默认延伸18格、半角35°（`river.estuary.length/halfAngleDegrees`），仅覆盖连通海水，不改水量、盐水身份或淡水降水源。核心延续下游，两侧发散，外缘按转角衔接海流以免正反速度抵消；运行时、冷区块和海面表现共用 `WaterEnvironmentRules`。回归为环境 Lua 的 `estuary_current` 与 `Tools/Tests/EstuaryCurrent/verify.py`。实验流向经 `TryGetExperimentalLiquidFlow` 查询，不覆写天然流向；显式挡水来源登记 `WorldLiquidFlowObstacles`，平台不自动挡水。
 - 承重读取地块 `loadCapacity` 或液体 `worldWater.loadCapacity`，覆盖层优先于底部液面。共享 Behaviour 只保存规则，长按/Tick/接触时钟属于角色。
 
 - `Mod_TileEffectReceiver` 在单轮脚下/四邻液体接触查询时先筛真实水量及平台遮断，干格不构建完整 `RuntimeTerrainTileSample`；入水、岸边行为仍实时结算，旧 Map 回退不变。回归 `ecology/soil_liquid_prefilter`。
@@ -66,12 +66,14 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - 自然物数量、岩浆湖半径、河床边缘沉积及聚落距离档位共用 `DiscreteProbability` 与 `generation.*` 概率表；Profile 创建时冻结最终概率到数字参数，保存/派生窗口继续沿用，生成与生态指纹均覆盖概率。聚落用11个归一化距离档的二项概率表读取生成倍率；原有地形、范围和总生成率规则仍由各系统负责。
 - `CompanionHostTag` 要求同格实际宿主；`RequiredChunkTag/RequiredTagChunkRadius` 查确定性邻区标签，不依赖加载顺序。洞穴占格顺序为入口 → 配置植物 → 藤蔓/矿物，安全区不生植物。
 - 草与可采植被分别由 `ChunkGrassRenderer/ChunkGroundCoverRenderer` 绘制；`groundCover:true` 保留确定性点，采集才创建 Item，持久化用生态删除 GUID。`GroundCoverSystem` 管理选格/图层，解绑不是采集。
+- 草外观在 `ChunkView.spriteVariants` 选切片：前 24 项为基础草，其后按 `accentVariantChance` 点缀；跨源图统一目标 PPU 与中心锚点并共享 Sprite。目前使用 `Low_Grass/Grass.png` 和 `GrassAndFlower.png` 的简约小草、小花，不用 `GroundGrass_Atlas`。
 - `Mod_GroundCoverHarvest` 组合使用能力：`requiredUses` 只累计同一地形实例/格子/植被身份上真正开始的挥动，换目标或卸载清零，完成后才出货/移除来源。剪刀 1 次得 2 份纤维，打制石器 4 次得 1 份；花朵均保留原物品。草资格须等于 `ChunkTerrainData.GrassPresent`，清草复用 `TryConsumeGrass`，不能将非零空格状态当作草。
 - 采集的中间次数不发送角色台词，不借自言自语气泡显示操作进度。
-- 草读取可自然种植底材、摄氏温度和高度资格，水下不生成；降水按 `grass.rainfallForFullDensity/dryDensityMultiplier` 连续调密度，不设骤然清空的降水门槛。草原花由群系、自然底材和稀疏分布筛选；耐旱植物按群系/降水筛选，`maxRiverFloodplainStrength` 可排湿地。自然作物用 `naturalPlantable/requireNaturalPlantableGround` 表达基质；伴生矿产用 `requiredEnvironmentLayer/minimumEnvironmentValue`，缺层拒绝。
+- 草读取可自然种植底材、摄氏温度和高度资格，水下不生成；低于 `grass.coldThresholdCelsius`（默认 15℃）时概率再乘 `grass.coldDensityMultiplier`（默认 0.5），恰好阈值不减量；降水按 `grass.rainfallForFullDensity/dryDensityMultiplier` 连续调密度，不设骤然清空的降水门槛。低温与积雪、降水倍率相乘，不改稳定随机选格。草原花由群系、自然底材和稀疏分布筛选；耐旱植物按群系/降水筛选，`maxRiverFloodplainStrength` 可排湿地。自然作物用 `naturalPlantable/requireNaturalPlantableGround` 表达基质；伴生矿产用 `requiredEnvironmentLayer/minimumEnvironmentValue`，缺层拒绝。
 - 草花规则回归：`Tools/Tests/GroundCover/verify.ps1` 编译生产代码，检查干湿密度、确定性、底材和摄氏资格；不证明游戏画面或原生 BRG 恢复效果。
 - `INaturalRenewalPolicy` 保存 `RenewalYears`；成功补位后才清移除标记，玩家种植、建筑/耕地/平台不参加自然补位。萝卜分森林/草原两条规则；泥炭仅在草原侧石地交界且排除 floodplain。
 - 草原/森林普通矿山由 `surface-common.json` 的煤、铜、铁、金、锡、硫规则共享（`biomeMask=48`），有效概率为对应石地矿山的 10%；石头矿山用各群系原规则保持同一比例，零散石头单独配置。新增规则须登记 Surface Profile 的 `ecologyRuleIds`。
+- 巨型矿山由 `NaturalItems/giant-mines.json` 配置十一矿种、地表八条/洞穴九条规则，总候选概率预算 0.13；同一 Profile 共享单一间距网格并互斥抽矿种，生态条件只查锚点，完整生成净空仍排除水、障碍、结构和洞口安全区；生成净空可大于真实碰撞与导航占格。
 - 山顶岩浆湖由 `lake.lava.*` 和确定性山峰候选生成；`rareMaxRadius` 是长尾上限，`lava.shore` 仅标天然岸带。接触属性来自 `WorldLiquidSettings`，热源读未被平台遮挡的实际液体。
 - `groundHarvest` 声明工具/等级/产物/距离/使用次数/挖后地表。`Mod_GroundHarvestToolBase → GroundTileHarvestSystem` 累积并保存进度，完成一层才生成掉落/提交地面；`GroundTileLayerSystem` 保存天然层数和覆盖栈，覆盖栈含原地块、进度、草层，开采优先弹栈。
 - 采挖 Ground 后 `RuntimeGrassClearing.Clear` 同步独立草层和差量；工具白框共用实际操作的只读校验，铲子优先积雪。平台/地板仍属于独立支撑层。

@@ -4,13 +4,6 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 
-public enum SpawnerScheduleMode
-{
-    TimedWindows = 0,
-    DayMilestoneGrowth = 1,
-    Countdown = 2
-}
-
 public enum SpawnerEcologyGroup
 {
     Animals = 0,
@@ -19,9 +12,10 @@ public enum SpawnerEcologyGroup
 }
 
 /// <summary>树木生态扩展配置；默认关闭，不改变其他物种的生成和后端。</summary>
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
 [Serializable]
-public sealed class SpawnerTreeHabitat
+public sealed partial class SpawnerTreeHabitat
 {
     public bool Enabled;
     public int TreesPerActor = 4;
@@ -31,9 +25,10 @@ public sealed class SpawnerTreeHabitat
 #region 出生批次数量定义
 
 /// <summary>同一轮出生数量的相对权重，未配置时沿用固定数量。</summary>
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
 [Serializable]
-public sealed class SpawnerBatchSizeWeight
+public sealed partial class SpawnerBatchSizeWeight
 {
     public int Count;
     public float Weight;
@@ -44,7 +39,7 @@ public sealed class SpawnerBatchSizeWeight
 /// <summary>
 /// 生成规则的世界运行时快照；只由已校验的 JSON 定义创建，不作为编辑器资源维护。
 /// </summary>
-public class SpawnerConfig : ScriptableObject
+public partial class SpawnerConfig : ScriptableObject
 {
     public SpawnerTreeHabitat TreeHabitat = new();
     public bool WaterOnly;
@@ -91,17 +86,19 @@ public class SpawnerConfig : ScriptableObject
         public SpawnerSpawnInitialization Initialization = new();
     }
 
+    [MemoryPack.MemoryPackable]
     [JsonObject(ItemRequired = Required.Always)]
     [Serializable]
-    public class SpawnerSpawnInitialization
+    public partial class SpawnerSpawnInitialization
     {
         [LabelText("营养初始化")]
         public SpawnerNutritionInitialization Nutrition = new();
     }
 
+    [MemoryPack.MemoryPackable]
     [JsonObject(ItemRequired = Required.Always)]
     [Serializable]
-    public class SpawnerNutritionInitialization
+    public partial class SpawnerNutritionInitialization
     {
         [LabelText("启用")]
         public bool Enabled;
@@ -129,14 +126,11 @@ public class SpawnerConfig : ScriptableObject
 
 #endregion
 
-#region 时间配置
+#region 规则身份与光照条件
 
     [LabelText("持久化标识")]
     [Tooltip("用于存档中区分不同生成配置。留空时使用资源名称。")]
     public string PersistentId;
-
-    [LabelText("调度模式")]
-    public SpawnerScheduleMode ScheduleMode = SpawnerScheduleMode.TimedWindows;
 
     [LabelText("生态生成组")]
     public SpawnerEcologyGroup EcologyGroup = SpawnerEcologyGroup.Animals;
@@ -144,19 +138,6 @@ public class SpawnerConfig : ScriptableObject
     [LabelText("仅在全局无光时生成")]
     [Tooltip("启用后，只在昼夜系统的全局光照为0时处理生成。")]
     public bool RequireGlobalDarkness;
-
-    /// <summary>
-    /// 生成触发时间 - 白天12点（游戏秒数）
-    /// 一天时长1440秒，12点对应 12/24 * 1440 = 720秒
-    /// </summary>
-    [LabelText("生成触发时间")]
-    [Tooltip("一天中触发怪物生成的时间点，单位为游戏秒，默认是中午12点")]
-    public float SpawnTriggerTime = 720f; // 每天触发生成的时间点（游戏秒）
-
-    [LabelText("每日生成次数")]
-    [Tooltip("每天均匀分布多少个生成窗口。1 表示每天一次，2 表示刷新频率翻倍")]
-    [MinValue(1)]
-    public int SpawnsPerDay = 1;
 
 #endregion
 
@@ -212,17 +193,13 @@ public class SpawnerConfig : ScriptableObject
     public List<SpawnerBatchSizeWeight> SpawnCountWeights = new();
 
     [LabelText("同批出生半径"), MinValue(0f)]
-    [Tooltip("仅倒计时规则可用；大于零时整批围绕首个成功出生点生成，零表示独立选点。")]
+    [Tooltip("大于零时整批围绕首个成功出生点生成，零表示独立选点。")]
     public float BatchSpawnRadius;
 
     [LabelText("总体生成概率")]
-    [Tooltip("每天触发时间点发生生成的总体概率（0-1），例如0.8表示80%概率生成")]
+    [Tooltip("统一倒计时抽中本规则后的一次概率；失败消费本轮机会，不重新抽取物种")]
     [Range(0f, 1f)]
-    public float SpawnChance = 1f; // 触发当天实际生成的概率
-
-    [LabelText("生成间隔天数")]
-    [Tooltip("两次成功生成之间至少间隔多少个游戏日")]
-    public int DaysBetweenSpawns = 1; // 两次成功生成之间的最小间隔，单位：游戏日
+    public float SpawnChance = 1f; // 抽中规则后实际生成的概率
 
     [LabelText("生成组存活上限")]
     [Tooltip("当前世界中该配置生成组允许存活的最大数量")]
@@ -239,35 +216,13 @@ public class SpawnerConfig : ScriptableObject
     [MinValue(0)]
     public int DailyBudgetRecovery = 4;
 
-    [LabelText("目标种群数量")]
-    [Tooltip("低于该值时按照恢复间隔产生补位需求；0 表示仅按时间窗口生成")]
-    [MinValue(0)]
-    public int RecoveryTargetPopulation;
-
-    [LabelText("生态恢复间隔")]
-    [Tooltip("检查死亡补位和生态恢复的真实秒数")]
-    [MinValue(0.5f)]
-    public float RecoveryCheckInterval = 8f;
-
-    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
-    [LabelText("每多少天增加一次")]
-    [MinValue(1)]
-    public int GrowthIntervalDays = 3;
-
-    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
-    [LabelText("累计生成上限")]
-    [MinValue(1)]
-    public int MaxLifetimeSpawnCount = 64;
-
-    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
     [LabelText("分帧生成间隔")]
     [MinValue(0f)]
     public float AsyncSpawnInterval;
 
-    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
-    [LabelText("无上限逐日增长")]
-    [Tooltip("启用后，第 N 天排入 N 只生物，并忽略生态预算、物种、生成组、玩家周边与全局存活上限。")]
-    public bool UnboundedDailyGrowth;
+    [LabelText("忽略生态预算")]
+    [Tooltip("仅免除生态预算消耗，仍参与世界统一倒计时；种群上限由独立开关控制。")]
+    public bool IgnoreEcologyBudget;
 
     [LabelText("忽略种群数量上限")]
     [Tooltip("启用后不再用物种、生成组、玩家周边或全局数量限制生成和回收；仍保留生成计划、概率、生态预算与远距离回收。")]
@@ -300,8 +255,6 @@ public class SpawnerConfig : ScriptableObject
     public float RecycleGraceSeconds = 20f;
 
     #endregion
-
-
 
 #region 辅助方法
 

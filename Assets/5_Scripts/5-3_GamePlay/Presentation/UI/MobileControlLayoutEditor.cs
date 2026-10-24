@@ -185,13 +185,7 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
                 previewOpacityGroup = gameplayLayer.gameObject.AddComponent<CanvasGroup>();
         }
 
-        Button[] previewButtons = previewObject.GetComponentsInChildren<Button>(true);
-        for (int index = 0; index < previewButtons.Length; index++)
-            previewButtons[index].enabled = false;
-
-        Graphic[] graphics = previewObject.GetComponentsInChildren<Graphic>(true);
-        for (int index = 0; index < graphics.Length; index++)
-            graphics[index].raycastTarget = false;
+        PreparePreviewInput(previewObject);
 
         layoutNodes = previewObject.GetComponentsInChildren<MobileControlLayoutNode>(true);
         defaultPositions.Clear();
@@ -206,6 +200,22 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
             node.ApplySavedPosition(previewRoot);
             node.SetEditing(previewRoot, true);
             node.Selected += SelectNode;
+        }
+    }
+
+    /// <summary>预览仅保留布局交互，停用玩法触点、丢弃过滤和会改写尺寸的按钮反馈。</summary>
+    internal static void PreparePreviewInput(GameObject preview)
+    {
+        Behaviour[] behaviours = preview.GetComponentsInChildren<Behaviour>(true);
+        for (int index = 0; index < behaviours.Length; index++)
+        {
+            Behaviour behaviour = behaviours[index];
+            if (behaviour is Button || behaviour is FlatWorldUIFeedback ||
+                behaviour is MobileVirtualJoystick || behaviour is MobileInputButton ||
+                behaviour is MobileHeldItemDropSurface)
+                behaviour.enabled = false;
+            if (behaviour is Graphic graphic)
+                graphic.raycastTarget = false;
         }
     }
 

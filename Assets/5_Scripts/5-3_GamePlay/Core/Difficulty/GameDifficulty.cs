@@ -64,7 +64,7 @@ public sealed class PlayerSurvivalDifficultyRules
 }
 
 /// <summary>
-/// 生物战斗规则的统一扩展点；攻击与生命系统统一读取这里的倍率。
+/// 难度预设的战斗参数，只用于装配业务配置来源。
 /// </summary>
 public sealed class CreatureCombatDifficultyRules
 {
@@ -86,10 +86,6 @@ public sealed class CreatureCombatDifficultyRules
         MaxHealthMultiplier = maxHealthMultiplier;
         PlayerDamageTakenMultiplier = playerDamageTakenMultiplier;
     }
-
-    /// <summary>仅对生物攻击玩家应用防御后的受伤倍率，环境和玩家攻击保持原规则。</summary>
-    public float ResolveReceivedDamageMultiplier(bool sourceIsPlayer, bool targetIsPlayer, bool environmental)
-        => !sourceIsPlayer && targetIsPlayer && !environmental ? Mathf.Max(0f, PlayerDamageTakenMultiplier) : 1f;
 
     #endregion
 }
@@ -409,7 +405,7 @@ public static class GameDifficultyCatalog
 }
 
 /// <summary>
-/// 当前世界难度的唯一运行时入口。难度选择属于存档，不使用全局 PlayerPrefs。
+/// 难度选择、预设及设置入口，只向业务配置发布修正。
 /// </summary>
 public static class GameDifficultyService
 {
@@ -427,6 +423,8 @@ public static class GameDifficultyService
     private static GameSaveData cachedSaveData;
     private static GameDifficultyId cachedDifficultyId;
     private static GameDifficultyDefinition cachedDefinition;
+    private static readonly object ruleSource = new();
+    private const int RulePriority = -1000;
 
     public static GameDifficultyId CurrentId
     {
@@ -466,7 +464,11 @@ public static class GameDifficultyService
 
     public static bool TrySetCurrent(GameDifficultyId difficulty, out string error)
     {
-        GameSaveData saveData = SaveDataMgr.Instance?.SaveData;
+        return TrySetCurrent(SaveDataMgr.Instance?.SaveData, difficulty, out error);
+    }
+
+    internal static bool TrySetCurrent(GameSaveData saveData, GameDifficultyId difficulty, out string error)
+    {
         if (saveData == null)
         {
             error = "当前没有已加载的游戏存档，无法修改难度。";
@@ -480,8 +482,16 @@ public static class GameDifficultyService
             return true;
         }
 
+        GameDifficultyId previous = saveData.Difficulty;
         saveData.Difficulty = normalized;
-        InvalidateCache();
+        try { PublishRules(saveData); }
+        catch (Exception exception)
+        {
+            saveData.Difficulty = previous;
+            InvalidateCache();
+            error = $"游戏规则更新失败：{exception.Message}";
+            return false;
+        }
         DifficultyChanged?.Invoke(normalized);
         error = null;
         return true;
@@ -489,16 +499,30 @@ public static class GameDifficultyService
 
     public static bool TrySetCustom(GameDifficultyRuleValues values, out string error)
     {
-        GameSaveData saveData = SaveDataMgr.Instance?.SaveData;
+        return TrySetCustom(SaveDataMgr.Instance?.SaveData, values, out error);
+    }
+
+    internal static bool TrySetCustom(GameSaveData saveData, GameDifficultyRuleValues values, out string error)
+    {
         if (saveData == null)
         {
             error = "当前没有已加载的游戏存档，无法修改难度。";
             return false;
         }
 
+        GameDifficultyId previousDifficulty = saveData.Difficulty;
+        GameDifficultyRuleValues previousValues = GameDifficultyCatalog.ReadCustomRules(saveData);
         saveData.Difficulty = GameDifficultyId.Custom;
         GameDifficultyCatalog.WriteCustomRules(saveData, values);
-        InvalidateCache();
+        try { PublishRules(saveData); }
+        catch (Exception exception)
+        {
+            saveData.Difficulty = previousDifficulty;
+            GameDifficultyCatalog.WriteCustomRules(saveData, previousValues);
+            InvalidateCache();
+            error = $"自定义游戏规则更新失败：{exception.Message}";
+            return false;
+        }
         DifficultyChanged?.Invoke(GameDifficultyId.Custom);
 
         error = null;
@@ -597,74 +621,50 @@ public static class GameDifficultyService
 
     #endregion
 
-    #region 通用倍率工具
+    #region 向业务规则单向发布
 
-    public static int ScaleCount(int baseValue, float multiplier, int minimum = 0)
+    internal static void PublishRules(GameSaveData saveData, bool replaceSession = false)
     {
-        if (baseValue <= 0 || multiplier <= 0f)
-            return minimum;
+        InvalidateCache();
+        if (saveData == null)
+        {
+            if (replaceSession) GameRuleConfiguration.ResetSession();
+            else GameRuleConfiguration.RemoveModifier(ruleSource);
+            return;
+        }
 
-        return Mathf.Max(minimum, Mathf.RoundToInt(baseValue * multiplier));
+        GameDifficultyId id = GameDifficultyCatalog.Normalize(saveData.Difficulty);
+        GameDifficultyDefinition definition = id == GameDifficultyId.Custom
+            ? GameDifficultyCatalog.CreateCustom(GameDifficultyCatalog.ReadCustomRules(saveData))
+            : GameDifficultyCatalog.Get(id);
+        if (replaceSession)
+            GameRuleConfiguration.ResetSession(ruleSource, values => ApplyRuleModifier(values, definition), RulePriority);
+        else
+            GameRuleConfiguration.SetModifier(ruleSource, values => ApplyRuleModifier(values, definition), RulePriority);
     }
 
-    public static int ScaleRandomizedAmount(int baseValue, float multiplier)
+    // 只修正传入候选，不查实体和存档，也不参与业务伤害、消耗或掉落结算。
+    internal static void ApplyRuleModifier(GameRuleValues values, GameDifficultyDefinition definition)
     {
-        if (baseValue <= 0 || multiplier <= 0f)
-            return 0;
-
-        float scaled = baseValue * multiplier;
-        int result = Mathf.FloorToInt(scaled);
-        if (UnityEngine.Random.value < scaled - result)
-            result++;
-
-        return Mathf.Max(0, result);
-    }
-
-    public static bool IsPlayer(Item candidate)
-    {
-        if (candidate == null)
-            return false;
-
-        Item owner = candidate.Owner != null ? candidate.Owner : candidate;
-        // 非玩家是正常查询结果，避免 Editor 为缺失组件创建诊断字符串。
-        return owner is Player || owner.TryGetComponent<Player>(out _);
-    }
-
-    public static float ResolveDirectDamageMultiplier(Item attacker, Item receiver)
-    {
-        GameDifficultyDefinition difficulty = Current;
-        float multiplier = IsPlayer(attacker)
-            ? difficulty.CreatureCombat.PlayerAttackMultiplier
-            : difficulty.CreatureCombat.AttackMultiplier;
-
-        if (!IsPlayer(receiver))
-            multiplier /= Mathf.Max(0.1f, difficulty.CreatureCombat.MaxHealthMultiplier);
-
-        return Mathf.Max(0f, multiplier);
-    }
-
-    public static float ResolveEnvironmentalDamageMultiplier(Item receiver)
-    {
-        return IsPlayer(receiver)
-            ? Mathf.Max(0f, Current.PlayerSurvival.EnvironmentalDamageMultiplier)
-            : 1f;
-    }
-
-    public static float ResolveHealingMultiplier(Item receiver)
-    {
-        return IsPlayer(receiver)
-            ? Mathf.Max(0f, Current.PlayerSurvival.HealingMultiplier)
-            : 1f;
-    }
-
-    public static float ResolveStaminaDeltaMultiplier(Item owner, float delta)
-    {
-        if (!IsPlayer(owner))
-            return 1f;
-
-        return delta < 0f
-            ? Mathf.Max(0f, Current.PlayerSurvival.StaminaConsumptionMultiplier)
-            : Mathf.Max(0f, Current.PlayerSurvival.StaminaRecoveryMultiplier);
+        if (values == null) throw new ArgumentNullException(nameof(values));
+        if (definition == null) throw new ArgumentNullException(nameof(definition));
+        values.DropAllCarriedItems = definition.PlayerDeath.DropAllCarriedItems;
+        values.PlayerAttackMultiplier *= definition.CreatureCombat.PlayerAttackMultiplier;
+        values.CreatureAttackMultiplier *= definition.CreatureCombat.AttackMultiplier;
+        values.CreatureHealthMultiplier *= definition.CreatureCombat.MaxHealthMultiplier;
+        values.PlayerDamageTakenMultiplier *= definition.CreatureCombat.PlayerDamageTakenMultiplier;
+        values.HungerDrainMultiplier *= definition.PlayerSurvival.HungerDrainMultiplier;
+        values.StaminaConsumptionMultiplier *= definition.PlayerSurvival.StaminaConsumptionMultiplier;
+        values.StaminaRecoveryMultiplier *= definition.PlayerSurvival.StaminaRecoveryMultiplier;
+        values.HealingMultiplier *= definition.PlayerSurvival.HealingMultiplier;
+        values.EnvironmentalDamageMultiplier *= definition.PlayerSurvival.EnvironmentalDamageMultiplier;
+        values.TimeSpeedMultiplier *= definition.World.TimeSpeedMultiplier;
+        values.SpawnFrequencyMultiplier *= definition.World.SpawnFrequencyMultiplier;
+        values.SpawnPopulationMultiplier *= definition.World.SpawnPopulationMultiplier;
+        values.LootAmountMultiplier *= definition.World.LootAmountMultiplier;
+        values.CropGrowthMultiplier *= definition.Production.CropGrowthMultiplier;
+        values.FuelConsumptionMultiplier *= definition.Production.FuelConsumptionMultiplier;
+        values.CraftingOutputMultiplier *= definition.Production.CraftingOutputMultiplier;
     }
 
     private static void InvalidateCache()

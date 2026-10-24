@@ -608,9 +608,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {
@@ -651,9 +651,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {
@@ -683,9 +683,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {
@@ -720,9 +720,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {
@@ -757,9 +757,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {
@@ -794,9 +794,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {
@@ -1337,6 +1337,7 @@
     {
       "id": "MinersNote",
       "parent": "Rope",
+      "tags": [],
       "gameName": "矿工笔记",
       "description": "铁矿先用石镐采铜、再用铜镐开采。粗铁加木柄与绳子可制粗铁铁镐；铜锡按九比一冶炼青铜。备足陶罐饮水和食物，再去洞穴寻找更深的矿脉。",
       "weight": 0.1,

@@ -72,7 +72,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     private BasePanel panel; // 通用面板生命周期。
     private ILiquidVessel vessel; // 手持与数据机器共用容器领域契约。
     private Item actor; // 操作者。
-    private TextMeshProUGUI title, hint; // 当前容器名称与通用操作提示。
+    private TextMeshProUGUI title; // 当前容器名称。
     private TextMeshProUGUI status; // 水质、份数与提示。
     private Button drink; // 根据液体定义与余量启用。
     private static WaterVesselPanel current; // 世界 UI 下的一份面板实例。
@@ -140,7 +140,6 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     {
         panel = GetComponent<BasePanel>();
         title = panel.GetText("陶罐标题");
-        hint = panel.GetText("说明文本");
         status = panel.GetText("水量状态");
         drink = panel.GetButton("饮水按钮");
         vesselArt = transform.Find("设置对话框/陶罐剖面/陶罐切面") as RectTransform;
@@ -193,10 +192,6 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
                      GameRes.Instance.TryGetItemDefinition(vessel.ItemData.IDName, out RuntimeItemDefinition definition)
             ? definition.DisplayName
             : FlatWorldLocalizationService.GetUiText("水容器");
-        hint.text = FlatWorldLocalizationService.GetUiText(contents == null
-            ? "可以混装液体；每次按比例取出单种一份。拖入原料或其他容器可装液，拖动容器可倾倒。"
-            : "拖入物品可存放，点击或拖出可取回；满桶淡水加十份盐制盐水，拖桶沿可倾倒。");
-
         LiquidDefinition liquid = vessel.CurrentLiquid;
         Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, liquid);
         contentsView.SetLiquidFraction(vessel.Capacity > 0 ? vessel.Data.Amount / vessel.Capacity : 0f);

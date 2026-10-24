@@ -17,6 +17,8 @@
 
 ## 状态与事务
 
+- 机器 Place/恢复/网络合并/捕获/归档统一用 `ItemInstanceDataFactory.CloneRuntime` 复制快照，复用只读 `SharedConfiguration`，模块字节、堆叠、位姿和嵌套库存独立；不要重新用 FastCloner 扫描整份配置对象图。规则 `mechanical/runtime_snapshot_clone`。
+- 完整目录的 `machine-prewarm` 分步预备状态编解码、空拓扑及独立熄火炉体的构造/捕获/零秒 Tick 和空库存材料流程；原位更新候选跳过。预备不经 MOD 工厂，不调用真实 Place/Spawn、非零机器 Tick、环境或存档接口；取消/异常释放已构造的私有炉体，不宣称覆盖全部首次 JIT。
 - 初始化库存/战利品仅一次，随机空结果也完成；最大生命由当前定义和 CraftedDurabilityMultiplier 派生，受损值不重复叠乘。MachineCombatBridge 消费真实武器窗口，以 PublishExternalDamage 回传实损。
 - 放置失败不扣召唤器。MachineArchive 独立保存，缺 MOD 定义留冷快照，卸载显示不删节点/库存；CaptureCurrentWorld 捕获期间固定 scopeOverride，嵌套租约不得把船库存写进地表。
 - 整笔拆回事务进入 UseNodeScope；船机器经 SpaceSession.TryDismantleMachinePiece 交付太空掉落并继承位置/点速度，节点删除成功后撤部件、设备、视图并重建结构。联机准备拆除仅支持地表。

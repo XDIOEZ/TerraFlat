@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Ingot_Tungsten",
+      "parent": "BasicItem_Base",
+      "gameName": "钨锭",
+      "description": "由钨矿石在3422℃以上高温冶炼得到的金属锭，密度大、耐高温，可作为高级材料储存。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5.8,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ingot", "Metal", "Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/TungstenIngot_Icon.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 0.7, "y": 0.63 }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ore_Tungsten",
+      "parent": "BasicItem_Base",
+      "gameName": "钨矿石",
+      "description": "地下稀有的含钨矿石。将电磁炉目标温度设至3422℃以上，每2份可高温冶炼为1份钨锭。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3.6,
+      "volume": 0.75,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ore", "Mineral", "Material"],
+      "reactions": [
+        {
+          "id": "core:tungsten_ore_to_ingot",
+          "minTemperature": 3422,
+          "maxTemperature": 9999,
+          "inputs": [{ "match": "exact_item", "itemId": "Ore_Tungsten", "amount": 2 }],
+          "outputs": [{ "itemId": "Ingot_Tungsten", "amount": 1 }]
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Tungsten/Ore_Tungsten_Icon.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 0.7, "y": 0.63 }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Mine_Tungsten",
+      "parent": "Mine_Iron",
+      "gameName": "钨矿脉",
+      "description": "地下洞穴中的稀有钨矿脉，比铁矿坚硬，使用镐开采后掉落钨矿石。",
+      "stackable": false,
+      "canBePickedUp": false,
+      "lootTableId": "Mine_Tungsten_Default",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Tungsten/Mine_Tungsten_Idle.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 80,
+              "MaxHp": 80,
+              "DefenseValues": { "Physical": 24 },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
+          }
+        }
+      }
+    }
+  ]
+}

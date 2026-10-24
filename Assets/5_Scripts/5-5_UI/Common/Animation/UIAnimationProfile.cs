@@ -55,8 +55,9 @@ public sealed class UIAnimationProfile
 }
 
 #region JSON 传输结构
+[MemoryPack.MemoryPackable]
 [JsonObject(MemberSerialization.OptIn)]
-internal sealed class UIAnimationData
+internal sealed partial class UIAnimationData
 {
     [JsonProperty] public float openDuration = 0.2f;
     [JsonProperty] public float closeDuration = 0.15f;
@@ -67,15 +68,17 @@ internal sealed class UIAnimationData
     [JsonProperty] public string closeEase = "InCubic";
 }
 
+[MemoryPack.MemoryPackable]
 [JsonObject(MemberSerialization.OptIn)]
-internal sealed class UIAnimationEntry
+internal sealed partial class UIAnimationEntry
 {
     [JsonProperty] public string id = null;
     [JsonProperty] public UIAnimationData data = null;
 }
 
+[MemoryPack.MemoryPackable]
 [JsonObject(MemberSerialization.OptIn)]
-internal sealed class UIAnimationDocument
+internal sealed partial class UIAnimationDocument
 {
     [JsonProperty] public int version = 1;
     [JsonProperty] public string defaultId = UIAnimationManager.DefaultAnimationId;

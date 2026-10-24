@@ -39,10 +39,10 @@ public abstract partial class ItemData
     [FastClonerIgnore]
     public string Description = "什么都没有描述";
 
-    [Tooltip("物品耐久度")]
+    [Tooltip("当前一件的耐久；堆叠中的其他件为满耐久")]
     [MemoryPackIgnore] public float Durability = 1;
 
-    [Tooltip("物品耐久度")]
+    [Tooltip("单件最大耐久；0表示不启用耐久消耗")]
     [MemoryPackIgnore] public float MaxDurability = 1;
 
     [Tooltip("新版Tag系统_适配新版合成表")]
@@ -238,7 +238,7 @@ public abstract partial class ItemData
     {
         return Stack != null && other?.Stack != null &&
                Stack.Stackable && other.Stack.Stackable &&
-               HasSameStackIdentity(other);
+               HasSameStackIdentity(other) && ItemDurabilityRules.CanMerge(this, other);
     }
 
     #endregion

@@ -2,6 +2,21 @@ local function near(a, b, message)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
 end
 
+test.system("surface_fluids", "bottom_recovery", {}, function(data)
+    assert(data.stillSinking and data.completed, "完全浸没后没有保留视觉下沉阶段，或沉底过渡没有结束")
+    assert(data.retainedCount == 1 and data.onBottom, "沉底后物品被删除，或保存恢复后重新开始下沉")
+    near(data.amount, 7, "沉底或存档往返吞掉了堆叠数量")
+    near(data.scale, .5, "沉底隐藏修改了物品真实尺寸")
+    near(data.visualScale, 0, "沉底物重载后重新显示")
+    near(data.x, -.9, "沉底物重新推进后水平位置改变")
+    near(data.y, -.9, "沉底物重新推进后垂直位置改变")
+    assert(data.sameCell and not data.shoreCell and not data.adjacentWaterCell,
+        "沉底物未允许同格拾取，或从岸边、相邻水格被吸走")
+    assert(data.floatingReach, "新增摸底限制改变了水面物品的原拾取规则")
+    assert(data.itemStateSaved and data.itemStateCleared and data.otherState == 42 and data.rawStateRestored,
+        "完整物品没有保存沉底状态、拾取时未清理，或覆盖了其他特殊数据")
+end, "沉底保留、视觉隐藏、存档往返、负坐标同格拾取与完整物品状态清理")
+
 test.system("surface_fluids", "notification_dispatch", {}, function(data)
     assert(data.iterations == 1024 and data.hits == 2048,
         "正式取水通知在重复发送时丢失或重复调用监听器")
@@ -42,6 +57,17 @@ test.system("surface_fluids", "liquid_layer", {}, function(data)
     assert(flow.full.left == 10 and flow.full.right == 10, "满格溢出十级")
     assert(flow.single.left == 1 and flow.single.right == 0 and flow.single.transfers == 0, "单份水被拆开或来回移动")
     assert(flow.edge.left < 6 and flow.edge.right > 0 and flow.edge.left + flow.edge.right == 6, "有效邻边没有整份转移")
+    assert(#flow.canalPairs == 121, "跨水渠整数边界没有全组合回归")
+    for _, pair in ipairs(flow.canalPairs) do
+        local source, target, amount = pair[1], pair[2], pair[3]
+        local sourceAfter, targetAfter = source - amount, target + amount
+        assert(amount >= 0 and amount == math.floor(amount) and amount == math.floor(math.max(0, source - target) / 2),
+            "连通水域转移量错误或出现了碎份")
+        assert(sourceAfter >= 0 and targetAfter <= 10 and sourceAfter + targetAfter == source + target,
+            "水渠交换超容量、造水或丢水")
+        assert(source <= target or sourceAfter >= targetAfter,
+            "水渠两端交换后液位逆转")
+    end
 end, "整数十级液体、存档恢复、守恒流动与边界停稳")
 
 -- 正式目录决定液体浮力，单件密度与堆叠数量无关。

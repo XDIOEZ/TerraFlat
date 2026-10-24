@@ -58,6 +58,13 @@ public partial class MonsterSpawnerManager
         {
             Debug.LogError($"[MonsterSpawnerManager] 分帧出生失败：{error}", this);
             CancelNaturalCreatureBirth();
+            // 创建异常也消耗本批的有限重试次数，不能永久占住唯一的刷新机会。
+            if (_naturalCountdown.PendingCount > 0)
+            {
+                SpawnerConfig selected = _spawnerConfigs.Find(config =>
+                    config.PersistentId == _naturalCountdown.SelectedConfigId);
+                if (selected != null) RecordNaturalSpawnFailure(selected, GetOrCreateState(selected));
+            }
         }
     }
 
@@ -151,41 +158,45 @@ public partial class MonsterSpawnerManager
         using (var creation = SpawnCreatureInSteps(entry.PrefabName, position, _ => born = true, entry,
                    () => IsNaturalCreatureCommitAllowed(config, state, entry, position)))
             while (creation.MoveNext()) yield return creation.Current;
-        if (!born) yield break;
+        if (!born)
+        {
+            ObserveSpawn(config, "分帧创建未交付，检查回滚计数与控制台");
+            RecordNaturalSpawnFailure(config, state);
+            yield break;
+        }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (_samplingPerformance) _sampleSpawnSuccesses++;
 #endif
         if (TryGetCurrentTimeData(out _, out TimeData timeData)) currentDay = timeData.GetCurrentDay();
         recordBirth?.Invoke();
-        if (!config.UnboundedDailyGrowth)
+        if (!config.IgnoreEcologyBudget)
             state.AvailableBudget = Mathf.Max(0, state.AvailableBudget - Mathf.Max(1, entry.EcologyCost));
         _remainingSearchAttempts.Remove(config);
         _nextSpawnRetryTime[GetConfigKey(config)] = Time.unscaledTime + Mathf.Max(_settings.EcologyTickInterval, config.AsyncSpawnInterval);
-        if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
-            CompleteCountdownSpawnAttempt(state, entry, true, currentDay);
-        else state.CompleteSpawnAttempt(true, currentDay);
+        CompleteNaturalSpawnAttempt(state, true, currentDay);
+        ObserveSpawn(config, "生成成功");
     }
 
     private bool IsNaturalCreatureCommitAllowed(SpawnerConfig config, SpawnerProgressSaveData state,
         SpawnerConfig.SpawnEntry entry, Vector3 position)
     {
-        // 准备期间玩家和地形仍会变化，真正交付前重新检查出生资格。
-        if (config == null || _chunkManager == null || _itemManager == null) return false;
-        RefreshPlayerPositions(_itemManager.PlayerInSceneName);
+        // 准备期间地形与玩家仍在变化，真正交付前重新复核本轮身份和全部出生门槛。
+        if (config == null || _chunkManager == null || _itemManager == null ||
+            GameRuleConfiguration.Current.World.SpawnFrequencyMultiplier <= 0f ||
+            !IsCountdownBatchFor(_naturalCountdown, config.PersistentId, entry.PrefabName)) return false;
+        RefreshPlayerPositions(_ownedWorld);
         PrepareNearbyGroupCounts(config);
-        int globalLimit = GameDifficultyService.ScaleCount(_settings.GlobalAliveLimit,
-            GameDifficultyService.Current.World.SpawnPopulationMultiplier, 1);
-        return CanSpawnEntry(config, entry, state) &&
-               (config.UnboundedDailyGrowth || config.IgnorePopulationLimits ||
-                (CountPopulationLimitedAlive() < globalLimit && CountGroupAlive(config) < GetEffectiveGroupLimit(config))) &&
-               (!config.RequireGlobalDarkness || IsGlobalDark(_itemManager.PlayerInSceneName)) &&
-               _playerPositions.Count > 0 && IsWithinPlayerPopulationLimit(config, position) &&
-               IsWithinLocalSpeciesLimit(config, entry, position) &&
-               !IsNearAnyPlayer(position, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) &&
-               !IsVisibleByAnyActiveCamera(position, 0.15f) &&
-               _chunkManager.IsRuntimeEntityPresentationReady(position) && IsRuntimeTerrainReady(position) &&
-               (config.WaterOnly ? AquaticHabitat.CanSwimAt(position) : IsWalkableSpawnPosition(position)) &&
-               IsBiomeAllowed(config, position) && IsGroundTileAllowed(config, position) && IsLightAllowed(config, position);
+        SpawnerCountdownProgress batch = GetSpawnBatch(config, entry);
+        int requiredRoom = GetCountdownBatchRequiredRoom(batch);
+        int globalLimit = GameRuleMath.ScaleCount(_settings.GlobalAliveLimit,
+            GameRuleConfiguration.Current.World.SpawnPopulationMultiplier, 1);
+        return _playerPositions.Count > 0 && CanSpawnEntry(config, entry, state, requiredRoom) &&
+               (config.IgnorePopulationLimits ||
+                ((long)CountPopulationLimitedAlive() + requiredRoom <= globalLimit &&
+                 (long)CountGroupAlive(config) + requiredRoom <= GetEffectiveGroupLimit(config))) &&
+               (!config.RequireGlobalDarkness || IsGlobalDark(_ownedWorld)) &&
+               IsWithinLocalSpeciesLimit(config, entry, position, requiredRoom) &&
+               IsValidSpawnPosition(config, position, batch, requiredRoom);
     }
 
     #endregion

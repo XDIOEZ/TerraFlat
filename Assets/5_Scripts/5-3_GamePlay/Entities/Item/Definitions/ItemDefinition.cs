@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 using FlatWorld.Localization;
 using FlatWorld.WorldModel;
+using MemoryPack;
 
 /// <summary>游戏本体 JSON 物品目录；文件可按玩法类别拆分。</summary>
 [Serializable]
@@ -49,7 +50,8 @@ public sealed class ItemDefinitionPackageDto
 
 /// <summary>单个物品定义。parent 用于复用同类物品的公共配置。</summary>
 [Serializable]
-public sealed class ItemDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemDefinitionDto
 {
     /// <summary>稳定业务 ID；名称或语言变化不得改变此标识。</summary>
     [JsonProperty("id")]
@@ -128,6 +130,7 @@ public sealed class ItemDefinitionDto
 
     /// <summary>不依赖 Collider 的确定性世界格占地；偏移相对物品根节点所在格。</summary>
     [JsonProperty("worldGridOccupancy", NullValueHandling = NullValueHandling.Ignore)]
+    [BinaryGridOccupancy]
     public WorldGridOccupancyData WorldGridOccupancy;
 
     /// <summary>掉落物最终落入水体时，可选转换成另一物品 ID；数量保持不变。</summary>
@@ -155,6 +158,7 @@ public sealed class ItemDefinitionDto
 
     /// <summary>ItemData 中除公共快捷字段外的其余静态模板数据。</summary>
     [JsonProperty("itemData")]
+    [BinaryJsonObject]
     public JObject ItemData;
 
     [JsonProperty("visual")]
@@ -174,11 +178,13 @@ public sealed class ItemDefinitionDto
 
     /// <summary>Actor 的 ECS 能力模块及参数，继承合并后交给 AIECS 冷路径编译。</summary>
     [JsonProperty("ecs", NullValueHandling = NullValueHandling.Ignore)]
+    [BinaryJsonObject]
     public JObject Ecs;
 }
 
 [Serializable]
-public sealed class ItemVisualDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemVisualDefinitionDto
 {
     [JsonProperty("rendererPath")]
     public string RendererPath;
@@ -212,7 +218,7 @@ public sealed class ItemVisualDefinitionDto
     [JsonProperty("animatorControllerAddress", NullValueHandling = NullValueHandling.Ignore)]
     public string AnimatorControllerAddress;
 
-    /// <summary>绑定 AnimatorController 后默认播放的状态名；Actor 用它代替 Sprite 子资源地址。</summary>
+    /// <summary>序列帧模式的初始状态名；单图摇摆使用 spriteAddress，不依赖 Animator 状态采样。</summary>
     [JsonProperty("animationState", NullValueHandling = NullValueHandling.Ignore)]
     public string AnimationState;
 
@@ -258,7 +264,8 @@ public sealed class ItemVisualDefinitionDto
 
 /// <summary>程序化液面的 0～1 Sprite UV 开口范围与源像素亮度上限；亮度默认 165，容器可按内腔配色覆盖以保护外沿。</summary>
 [Serializable]
-public sealed class LiquidSurfaceDefinition
+[MemoryPackable]
+public sealed partial class LiquidSurfaceDefinition
 {
     [JsonProperty("bounds", Required = Required.Always)]
     public Rect Bounds;
@@ -287,7 +294,8 @@ public sealed class LiquidSurfaceDefinition
 /// 椭圆底座阴影宽度以世界格为单位；只填写落地点时仍可单独校正太阳投影。
 /// </summary>
 [Serializable]
-public sealed class ItemShadowVisualDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemShadowVisualDefinitionDto
 {
     #region 落地点与底座尺寸
 
@@ -311,7 +319,8 @@ public sealed class ItemShadowVisualDefinitionDto
 }
 
 [Serializable]
-public sealed class ItemColliderDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemColliderDefinitionDto
 {
     [JsonProperty("path")]
     public string Path;
@@ -345,7 +354,8 @@ public sealed class ItemColliderDefinitionDto
 }
 
 [Serializable]
-public sealed class ItemHealthDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemHealthDefinitionDto
 {
     [JsonProperty("hasHp")]
     public bool HasHp = true;
@@ -375,10 +385,12 @@ public sealed class ItemHealthDefinitionDto
 }
 
 [Serializable]
-public sealed class ItemDefenseDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemDefenseDefinitionDto
 {
     #region 物理防御与旧内容兼容
     [JsonProperty("physical")]
+    [MemoryPackIgnore] // 派生快捷属性不写缓存，保留四种防御原值。
     public float Physical
     {
         get => Mathf.Max(0f, Mathf.Max(Mathf.Max(Cutting, Piercing), Mathf.Max(Chopping, Blunt)));
@@ -396,7 +408,8 @@ public sealed class ItemDefenseDefinitionDto
 }
 
 [Serializable]
-public sealed class ItemModuleDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemModuleDefinitionDto
 {
     /// <summary>模块 Prefab ID；外壳已内置该模块时也使用同一个稳定 ID。</summary>
     [JsonProperty("prefab")]
@@ -411,16 +424,19 @@ public sealed class ItemModuleDefinitionDto
 
     /// <summary>模块持久化数据；会写入克隆后的具体 ModuleData 子类。</summary>
     [JsonProperty("data")]
+    [BinaryJsonObject]
     public JObject Data;
 
     /// <summary>直接映射到 Module 的可序列化字段，支持 $transform 特殊块。</summary>
     [JsonProperty("parameters")]
+    [BinaryJsonObject]
     public JObject Parameters;
 }
 
 /// <summary>物品自身声明的单物料加工响应；工作量使用抽象单位，由具体设备决定推进速度。</summary>
 [Serializable]
-public sealed class ItemProcessingDefinitionDto
+[MemoryPackable]
+public sealed partial class ItemProcessingDefinitionDto
 {
     [JsonProperty("inputAmount")]
     public int InputAmount = 1;
@@ -439,14 +455,16 @@ public sealed class ItemProcessingDefinitionDto
 }
 
 [Serializable]
-public sealed class ItemProcessingCapabilityDto
+[MemoryPackable]
+public sealed partial class ItemProcessingCapabilityDto
 {
     [JsonProperty("level")]
     public int Level = 1;
 }
 
 [Serializable]
-public sealed class ItemProcessingOutputDto
+[MemoryPackable]
+public sealed partial class ItemProcessingOutputDto
 {
     [JsonProperty("itemId")]
     public string ItemId;
@@ -580,7 +598,8 @@ public sealed class RuntimeItemDefinition
         string[] formerIds = null,
         RuntimeItemMatterDefinition matter = null,
         IReadOnlyList<RuntimeItemReactionDefinition> reactions = null,
-        GameRes moduleResources = null)
+        GameRes moduleResources = null,
+        ItemModulePrototypeCache modulePrototypeCache = null)
     {
         Id = id;
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -654,7 +673,8 @@ public sealed class RuntimeItemDefinition
         moduleIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
             moduleIds.Add(module.ModuleId);
-        ModuleAssemblies = ItemModuleAssemblyCompiler.Compile(moduleResources, id, shellPrefab, ModuleDefinitions, UsesResourceEntities);
+        ModuleAssemblies = ItemModuleAssemblyCompiler.Compile(moduleResources, id, shellPrefab,
+            ModuleDefinitions, UsesResourceEntities, modulePrototypeCache);
         moduleAssembliesByName = new Dictionary<string, RuntimeItemModuleAssemblyPlan>(ModuleAssemblies.Count, StringComparer.Ordinal);
         foreach (RuntimeItemModuleAssemblyPlan assembly in ModuleAssemblies)
             moduleAssembliesByName.Add(assembly.StableName, assembly);

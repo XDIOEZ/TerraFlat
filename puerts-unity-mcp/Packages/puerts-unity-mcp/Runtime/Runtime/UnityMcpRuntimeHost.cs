@@ -269,7 +269,7 @@ namespace PuertsUnityMcp
                 Task.FromResult(UnityJson.ToJson(ListTargets()))));
 
             tools.Register(new DelegateUnityMcpTool("runtime.js.eval", "Execute PuerTS JavaScript in the runtime VM, including Play Mode and phone/player builds. Use runtime-safe CS.UnityEngine APIs when wrapped; use __unity_mcp.invokeStatic(type, method, ...args), getStatic, getStaticPath, setStatic, or typeExists as reflection fallback. Return JSON-serializable data.", JsonSchemas.Object(
-                JsonSchemas.StringProperty("code", "PuerTS JavaScript. In script mode use return; in expression mode provide a single expression. Prefer CS.* APIs, fallback to __unity_mcp for reflection."),
+                JsonSchemas.StringProperty("code", "PuerTS JavaScript. In script mode use return; in expression mode provide a single expression. For System.Type arguments use puer.$typeof(CS.Namespace.Type), e.g. CS.UnityEngine.Resources.FindObjectsOfTypeAll(puer.$typeof(CS.UnityEngine.GameObject)); object searches require a UnityEngine.Object type. Prefer CS.* APIs, fallback to __unity_mcp for reflection."),
                 JsonSchemas.StringProperty("mode", "script or expression."),
                 JsonSchemas.StringProperty("chunkName", "Optional chunk name for stack traces.")), (ctx, args) =>
             {

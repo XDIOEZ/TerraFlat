@@ -25,7 +25,29 @@ public partial class GameRes
     /// <summary>完整资源会话的当前总进度，供世界加载页在抢跑进入时复用。</summary>
     public float LoadProgress => loadingProgress;
     /// <summary>完整资源会话的当前阶段文案。</summary>
-    public string LoadStatusText => loadingText ?? string.Empty;
+    public string LoadStatusText => GetResourceLoadStatusText();
+    private int cacheBuildStartRevision;
+    private bool resourceSessionStarted;
+    private string cachedHintSource, cachedHintLocale, cachedHintStatus;
+    private const string FirstCacheBuildHint = "首次加载可能较慢，请稍候";
+    private bool ShowCacheBuildHint => LoadState == ResourceLoadState.Loading && !resourceLoadFailed &&
+                                       BinaryContentCache.BuildRevision > cacheBuildStartRevision;
+
+    /// <summary>首次构建缓存时保留阶段和进度，再补充玩家能看懂的等待提示。</summary>
+    private string GetResourceLoadStatusText()
+    {
+        string source = loadingText ?? string.Empty;
+        if (!ShowCacheBuildHint) return source;
+        string locale = FlatWorld.Localization.FlatWorldLocalizationService.CurrentLocaleCode;
+        if (cachedHintStatus == null || cachedHintSource != source || cachedHintLocale != locale)
+        {
+            cachedHintSource = source;
+            cachedHintLocale = locale;
+            cachedHintStatus = FlatWorld.Localization.FlatWorldLocalizationService.GetUiText(source) + "\n" +
+                               FlatWorld.Localization.FlatWorldLocalizationService.GetUiText(FirstCacheBuildHint);
+        }
+        return cachedHintStatus;
+    }
     /// <summary>最后一次失败的阶段与原因。</summary>
     [Sirenix.OdinInspector.ShowInInspector] public string LastLoadError { get; private set; }
     /// <summary>当前或最后执行的阶段 ID。</summary>
@@ -166,6 +188,8 @@ public partial class GameRes
         Exception prepareError = null;
         try
         {
+            cacheBuildStartRevision = resourceSessionStarted ? BinaryContentCache.BuildRevision : 0;
+            resourceSessionStarted = true;
             GameplayTestResourceCache.Begin();
             ItemMgr.GetInstance()?.ClearResourcePools();
             ClearResourceSession();
@@ -194,6 +218,8 @@ public partial class GameRes
         showLoadingGUI = false;
         Debug.Log($"[GameRes] 资源目录就绪：{ItemDefinitions.Count} 个物品/Actor，{TileBlockDict.Count} 个 TileBlock，" +
                   $"{recipeById.Count} 个配方，持有 {resourceAssets.HandleCount} 个资源请求。");
+        Debug.Log($"[启动二进制缓存] 其他 JSON 配置：命中 {JsonConfigurationCache.Hits}，" +
+                  $"新建 {JsonConfigurationCache.Builds}，写入失败 {JsonConfigurationCache.WriteFailures}。");
     }
 
     /// <summary>保留原始异常与阶段，清理异常作为附加原因记录，不覆盖首个失败。</summary>
@@ -404,27 +430,21 @@ public partial class GameRes
             startupPrefabLocationIds.Add(GetLocationIdentity(location));
 
         var loadedNames = new HashSet<string>(StringComparer.Ordinal);
-        for (int i = 0; i < selected.Count; i++)
-        {
-            IResourceLocation location = selected[i];
-            string prefabKey = StartupPrefabKeys[i];
-            Debug.Log($"[GameRes] 启动 UI 加载：{prefabKey} ({location.PrimaryKey})");
-
-            var handle = resourceAssets.Load<GameObject>(location);
-            while (!handle.IsDone)
+        yield return ResourceLoadQueue.Run(selected.Count,
+            index =>
             {
-                float itemProgress = (i + handle.PercentComplete) / selected.Count;
-                loadPipeline.Report(itemProgress * 0.9f);
-                yield return null;
-            }
-
-            GameObject prefab = ResourceAssetScope.Require(handle, $"启动必要 UI Prefab {prefabKey}");
-            if (prefab == null)
-                throw new InvalidDataException($"启动必要 UI Prefab 加载出空资源：{prefabKey}");
-            RegisterPrefabAlias(prefab.name, prefab);
-            loadedNames.Add(prefab.name);
-            LoadedCount++;
-        }
+                IResourceLocation location = selected[index];
+                Debug.Log($"[GameRes] 启动 UI 加载：{StartupPrefabKeys[index]} ({location.PrimaryKey})");
+                return resourceAssets.Load<GameObject>(location);
+            }, handle => handle.IsDone,
+            (index, handle) =>
+            {
+                GameObject prefab = ResourceAssetScope.Require(handle, $"启动必要 UI Prefab {StartupPrefabKeys[index]}");
+                RegisterPrefabAlias(prefab.name, prefab);
+                loadedNames.Add(prefab.name);
+                LoadedCount++;
+            }, ShouldYieldResourceWork,
+            completed => loadPipeline.Report(0.9f * completed / selected.Count));
 
         foreach (string prefabKey in StartupPrefabKeys)
         {

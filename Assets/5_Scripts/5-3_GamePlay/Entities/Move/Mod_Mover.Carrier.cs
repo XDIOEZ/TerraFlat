@@ -67,7 +67,8 @@ public partial class Mod_Mover
                 input.magnitude, inputController.AimDeadZone, 1f);
         bool hasMoveInput = input.sqrMagnitude > InputMoveThresholdSqr;
         // 载具消费玩家已经仲裁过的长按奔跑语义，避免自己再次轮询 InputAction 导致 Shift 状态丢失。
-        bool boostRequested = !locked && hasMoveInput && holdRunInputActive;
+        bool boostRequested = !locked && hasMoveInput && holdRunInputActive &&
+            (CarrierSource is not ICarrierBoostPolicy boostPolicy || boostPolicy.AllowsRiderBoost);
         bool boostActive = boostRequested && stamina != null && stamina.CurrentValue >= RunStaminaThreshold;
 
         if (boostActive)

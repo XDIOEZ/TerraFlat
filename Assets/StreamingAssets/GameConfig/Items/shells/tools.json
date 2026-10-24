@@ -2,6 +2,28 @@
   "schemaVersion": 1,
   "items": [
     {
+      "id": "Needle_Bone",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Needle_Bone.prefab",
+      "gameName": "骨针",
+      "description": "由骨头打磨成的缝纫工具。耐久为10，每成功缝制一件装备消耗1点耐久，耗尽后损坏。",
+      "durability": 10,
+      "maxDurability": 10,
+      "amount": 1,
+      "weight": 0.02,
+      "volume": 0.01,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Tool",
+        "SewingNeedle"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png"
+      },
+      "modules": {}
+    },
+    {
       "id": "Scissors",
       "parent": "Knife_Base",
       "gameName": "剪刀",
@@ -13,15 +35,17 @@
       "volume": 0.15,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Tool"],
+      "tags": [
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Scissors/Scissors_Icon.png",
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -43,7 +67,12 @@
           "prefab": "Module_GroundCoverHarvest",
           "id": "Mod_GroundCoverHarvest",
           "enabled": true,
-          "parameters": { "reach": 2.0, "grassYieldItemId": "Fiber", "grassYieldAmount": 2, "requiredUses": 1 }
+          "parameters": {
+            "reach": 2.0,
+            "grassYieldItemId": "Fiber",
+            "grassYieldAmount": 2,
+            "requiredUses": 1
+          }
         }
       }
     },
@@ -213,9 +242,18 @@
           "prefab": "Module_Fuel",
           "id": "燃料模块",
           "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
           "parameters": {
-            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
             "lightBaseIntensity": 1.0,
             "burnSpeedMultiplier": 1.0,
             "igniteWhileHeld": false
@@ -270,9 +308,18 @@
           "prefab": "Module_Fuel",
           "id": "燃料模块",
           "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
           "parameters": {
-            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
             "lightBaseIntensity": 1.0,
             "burnSpeedMultiplier": 1.0,
             "igniteWhileHeld": false
@@ -304,7 +351,10 @@
           "minLevel": 3,
           "maxLevel": 5,
           "outputs": [
-            { "itemId": "Plank", "amount": 4 }
+            {
+              "itemId": "Plank",
+              "amount": 4
+            }
           ]
         }
       },
@@ -511,7 +561,7 @@
       "parent": "WoodTool_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/FireSeed.prefab",
       "gameName": "火种",
-      "description": "适合引火的干燥火种。",
+      "description": "适合引火的火种，会在一个游戏日（1440游戏秒）后自然熄灭并消失，不留下灰烬。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -567,6 +617,17 @@
         }
       },
       "modules": {
+        "lifetime": {
+          "prefab": "Item.TimedDespawn",
+          "id": "Item.TimedDespawn",
+          "enabled": true,
+          "data": {
+            "BitData": []
+          },
+          "parameters": {
+            "LifetimeGameSeconds": 1440.0
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Mod_Damage",
@@ -763,7 +824,10 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Axe", "Tool"],
+      "tags": [
+        "Axe",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Stone/Axe_Stone_Icon.png",
         "rendererLocalPosition": {
@@ -774,7 +838,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -787,7 +851,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -941,7 +1005,10 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Axe", "Tool"],
+      "tags": [
+        "Axe",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Flint/Axe_Flint_Icon.png",
         "rendererLocalPosition": {
@@ -952,7 +1019,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -965,7 +1032,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -1119,7 +1186,10 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Axe", "Tool"],
+      "tags": [
+        "Axe",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Copper/Axe_Copper_Icon.png",
         "rendererLocalPosition": {
@@ -1130,7 +1200,7 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -1143,7 +1213,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -1297,7 +1367,10 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Axe", "Tool"],
+      "tags": [
+        "Axe",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Bronze/Axe_Bronze_Icon.png",
         "rendererLocalPosition": {
@@ -1308,7 +1381,7 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -1321,7 +1394,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -1467,40 +1540,43 @@
       "id": "Axe_RawIron",
       "parent": "Axe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_RawIron.prefab",
-      "gameName": "生铁斧",
+      "gameName": "生铁铁斧",
       "description": "以粗铁锻成的斧头，是早期金属砍伐工具。",
-      "durability": 100.0,
-      "maxDurability": 100.0,
-      "amount": 1.0,
+      "durability": 100,
+      "maxDurability": 100,
+      "amount": 1,
       "weight": 2.1,
-      "volume": 3.0,
+      "volume": 3,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Axe", "Tool"],
+      "tags": [
+        "Axe",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
         "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
+          "x": 0,
+          "y": 0,
+          "z": 0
         },
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 225.0
+          "x": 0,
+          "y": 0,
+          "z": 315
         },
         "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
+          "x": 1,
+          "y": 1,
+          "z": 1
         },
         "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -1509,13 +1585,13 @@
           "enabled": true,
           "isTrigger": true,
           "offset": {
-            "x": 0.0,
-            "y": 0.0
+            "x": 0,
+            "y": 0
           },
           "path": "",
           "size": {
-            "x": 1.0,
-            "y": 1.0
+            "x": 1,
+            "y": 1
           }
         }
       },
@@ -1545,22 +1621,22 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "lastDamageTime": 0.0,
+            "lastDamageTime": 0,
             "$transform": {
               "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": 0,
+                "y": 0,
+                "z": 0
               },
               "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": 0,
+                "y": 0,
+                "z": 0
               },
               "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": 1,
+                "y": 1,
+                "z": 1
               }
             },
             "$collider2D": {
@@ -1568,12 +1644,12 @@
               "enabled": false,
               "isTrigger": true,
               "offset": {
-                "x": 0.0,
-                "y": 0.0
+                "x": 0,
+                "y": 0
               },
               "size": {
-                "x": 1.0,
-                "y": 1.0
+                "x": 1,
+                "y": 1
               }
             }
           }
@@ -1591,27 +1667,27 @@
             "attackAnimationNames": [
               "Attack_2"
             ],
-            "comboWindowOverride": -1.0,
+            "comboWindowOverride": -1,
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
-            "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 3.0,
+            "attackSpeedMultiplier": 1,
+            "staminaCostPerAttack": 3,
             "RawData": [],
             "$transform": {
               "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": 0,
+                "y": 0,
+                "z": 0
               },
               "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": 0,
+                "y": 0,
+                "z": 0
               },
               "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": 1,
+                "y": 1,
+                "z": 1
               }
             }
           }
@@ -1621,20 +1697,20 @@
         "code": "",
         "transform": {
           "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0
           },
           "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 0
           },
           "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
+            "x": 1,
+            "y": 1,
+            "z": 1
           }
         },
         "ItemSpecialData": "",
@@ -1654,7 +1730,10 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Axe", "Tool"],
+      "tags": [
+        "Axe",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
         "rendererLocalPosition": {
@@ -1665,7 +1744,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -1678,7 +1757,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -1855,7 +1934,10 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Modern", "Tool"],
+      "tags": [
+        "Modern",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Stone/Pickaxe_Stone_Icon.png",
         "rendererLocalPosition": {
@@ -1866,7 +1948,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -1879,7 +1961,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -2029,7 +2111,12 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Pickaxe", "Copper", "Modern", "Tool"],
+      "tags": [
+        "Pickaxe",
+        "Copper",
+        "Modern",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Copper/Pickaxe_Copper_Icon.png",
         "rendererLocalPosition": {
@@ -2040,7 +2127,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -2053,7 +2140,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -2209,7 +2296,10 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["36", "Tool"],
+      "tags": [
+        "36",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Bronze/Pickaxe_Bronze_Icon.png",
         "rendererLocalPosition": {
@@ -2220,7 +2310,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -2233,7 +2323,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -2380,40 +2470,45 @@
       "id": "Pickaxe_RawIron",
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
-      "gameName": "粗铁铁镐",
+      "gameName": "生铁铁镐",
       "description": "由未经锻打除杂的粗铁制成，性能略高于铜镐、低于青铜镐，适合作为过渡工具；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
-      "durability": 200.0,
-      "maxDurability": 200.0,
-      "amount": 1.0,
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
       "weight": 3.36,
-      "volume": 4.0,
+      "volume": 4,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Pickaxe", "RawIron", "Modern", "Tool"],
+      "tags": [
+        "Pickaxe",
+        "RawIron",
+        "Modern",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_RawIron/Pickaxe_RawIron_Icon.png",
         "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
+          "x": 0,
+          "y": 0,
+          "z": 0
         },
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 225.0
+          "x": 0,
+          "y": 0,
+          "z": 315
         },
         "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
+          "x": 1,
+          "y": 1,
+          "z": 1
         },
         "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -2422,13 +2517,13 @@
           "enabled": true,
           "isTrigger": true,
           "offset": {
-            "x": 0.0,
-            "y": 0.0
+            "x": 0,
+            "y": 0
           },
           "path": "",
           "size": {
-            "x": 1.0,
-            "y": 1.0
+            "x": 1,
+            "y": 1
           }
         }
       },
@@ -2436,7 +2531,7 @@
         "resourceTool": {
           "parameters": {
             "harvestTier": 3,
-            "harvestEfficiency": 2.0
+            "harvestEfficiency": 2
           }
         },
         "damage": {
@@ -2460,22 +2555,22 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "lastDamageTime": 0.0,
+            "lastDamageTime": 0,
             "$transform": {
               "localPosition": {
                 "x": -0.5656856,
                 "y": 0.565685451,
-                "z": 0.0
+                "z": 0
               },
               "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 270.0
+                "x": 0,
+                "y": 0,
+                "z": 270
               },
               "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": 1,
+                "y": 1,
+                "z": 1
               }
             },
             "$collider2D": {
@@ -2483,12 +2578,12 @@
               "enabled": false,
               "isTrigger": true,
               "offset": {
-                "x": 0.0,
-                "y": 0.0
+                "x": 0,
+                "y": 0
               },
               "size": {
-                "x": 1.0,
-                "y": 1.0
+                "x": 1,
+                "y": 1
               }
             }
           }
@@ -2506,10 +2601,10 @@
             "attackAnimationNames": [
               "Attack_2"
             ],
-            "comboWindowOverride": -1.0,
+            "comboWindowOverride": -1,
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
-            "attackSpeedMultiplier": 1.0,
+            "attackSpeedMultiplier": 1,
             "staminaCostPerAttack": 2.85,
             "RawData": [],
             "$transform": {
@@ -2519,14 +2614,14 @@
                 "z": -9.931686
               },
               "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": 0,
+                "y": 0,
+                "z": 0
               },
               "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": 1,
+                "y": 1,
+                "z": 1
               }
             }
           }
@@ -2536,20 +2631,20 @@
         "code": "",
         "transform": {
           "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0
           },
           "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 0
           },
           "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
+            "x": 1,
+            "y": 1,
+            "z": 1
           }
         },
         "ItemSpecialData": "",
@@ -2560,40 +2655,45 @@
       "id": "Pickaxe_Iron",
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab",
-      "gameName": "熟铁铁镐",
+      "gameName": "铁镐",
       "description": "由粗铁锻打除杂得到的熟铁制成，性能高于粗铁铁镐，可用于更稳定的中后期采矿；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
-      "durability": 200.0,
-      "maxDurability": 200.0,
-      "amount": 1.0,
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
       "weight": 3.425,
-      "volume": 4.0,
+      "volume": 4,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Pickaxe", "Iron", "Modern", "Tool"],
+      "tags": [
+        "Pickaxe",
+        "Iron",
+        "Modern",
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Iron/Pickaxe_Iron_Icon.png",
         "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
+          "x": 0,
+          "y": 0,
+          "z": 0
         },
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 225.0
+          "x": 0,
+          "y": 0,
+          "z": 315
         },
         "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
+          "x": 1,
+          "y": 1,
+          "z": 1
         },
         "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -2602,13 +2702,13 @@
           "enabled": true,
           "isTrigger": true,
           "offset": {
-            "x": 0.0,
-            "y": 0.0
+            "x": 0,
+            "y": 0
           },
           "path": "",
           "size": {
-            "x": 1.0,
-            "y": 1.0
+            "x": 1,
+            "y": 1
           }
         }
       },
@@ -2616,7 +2716,7 @@
         "resourceTool": {
           "parameters": {
             "harvestTier": 4,
-            "harvestEfficiency": 2.0
+            "harvestEfficiency": 2
           }
         },
         "damage": {
@@ -2640,22 +2740,22 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "lastDamageTime": 0.0,
+            "lastDamageTime": 0,
             "$transform": {
               "localPosition": {
                 "x": -0.565685749,
                 "y": 0.5656856,
-                "z": 0.0
+                "z": 0
               },
               "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 270.0
+                "x": 0,
+                "y": 0,
+                "z": 270
               },
               "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": 1,
+                "y": 1,
+                "z": 1
               }
             },
             "$collider2D": {
@@ -2663,12 +2763,12 @@
               "enabled": false,
               "isTrigger": true,
               "offset": {
-                "x": 0.0,
-                "y": 0.0
+                "x": 0,
+                "y": 0
               },
               "size": {
-                "x": 1.0,
-                "y": 1.0
+                "x": 1,
+                "y": 1
               }
             }
           }
@@ -2686,11 +2786,11 @@
             "attackAnimationNames": [
               "Attack_2"
             ],
-            "comboWindowOverride": -1.0,
+            "comboWindowOverride": -1,
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
-            "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 3.0,
+            "attackSpeedMultiplier": 1,
+            "staminaCostPerAttack": 3,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -2699,14 +2799,14 @@
                 "z": -9.931686
               },
               "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": 0,
+                "y": 0,
+                "z": 0
               },
               "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": 1,
+                "y": 1,
+                "z": 1
               }
             }
           }
@@ -2716,20 +2816,20 @@
         "code": "",
         "transform": {
           "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0
           },
           "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 0
           },
           "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
+            "x": 1,
+            "y": 1,
+            "z": 1
           }
         },
         "ItemSpecialData": "",
@@ -2774,15 +2874,17 @@
       "volume": 2.5,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Tool"],
+      "tags": [
+        "Tool"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -2804,6 +2906,22 @@
             "buildingDamageMultiplier": 1.0
           }
         },
+        "animation": {
+          "prefab": "Module_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "parameters": {
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_2"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 0.9
+          }
+        },
         "resourceTool": {
           "prefab": "Module_ResourceTool",
           "id": "Mod_ResourceTool",
@@ -2818,7 +2936,9 @@
     },
     {
       "id": "StoneHammer",
-      "tags": ["Tool"],
+      "tags": [
+        "Tool"
+      ],
       "parent": "WoodHammer",
       "gameName": "石锤",
       "description": "以石头制成锤头、木棍作为握柄的重型锤子。比木锤威力更高，但每次挥击会消耗更多体力。",
@@ -2835,9 +2955,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false
       },
       "modules": {

@@ -1,4 +1,72 @@
 -- 正式端点解析和网络物品字节协议无需创建 Host/Client。
+test.system("networking", "player_capture_cache", {}, function(data)
+    assert(#data.fields == 24, "玩家缓存没有逐项覆盖全部专属状态")
+    for _, row in ipairs(data.fields) do
+        assert(row.reused and row.invalidated and row.sameFrameChanged and row.oldPayloadUnchanged,
+            "玩家快照缓存命中、字段失效、同帧更新或旧缓冲隔离失败：" .. row.field)
+    end
+    assert(data.publicPrivateInventoryIgnored and data.privateInventoryChanged,
+        "玩家公开与私有库存的缓存范围不符合正式快照")
+    assert(data.nullInventoryNormalized and data.unsupportedFallsBack,
+        "玩家空库存规范化或未知类型完整捕获回退错误")
+end, "玩家快照缓存：逐字段变化、公开私有边界、同帧变化与冻结缓冲")
+
+test.system("networking", "public_network_save_route", {}, function(data)
+    assert(data.publicOnly and data.fallbackSaved and data.payloadReused,
+        "玩家公开快照未使用模块的轻量保存接口，或普通模块的正式保存被跳过")
+    assert(data.fullSaveUnchanged and data.newValueCaptured and data.oldPayloadUnchanged,
+        "完整存档保存被错误跳过、状态变化未进入快照或历史载荷被改写")
+end, "玩家公开网络保存：轻量模块、普通模块回退、完整存档及数据隔离")
+
+test.system("networking", "hotbar_save_cache", {}, function(data)
+    assert(data.firstWrites == 1 and data.repeatedWrites == 0 and data.payloadReused and data.heldSavedEveryTime,
+        "热栏没有复用未变化载荷，或错误跳过了正式手持保存回调")
+    assert(data.heldChangeWrites == 1 and data.heldChangeCaptured and data.selectionWrites == 1 and data.selectionCaptured,
+        "手持实际保存的变化或选中槽位没有进入热栏快照")
+    assert(#data.inventoryFields == 11, "热栏库存字段覆盖不完整")
+    for _, row in ipairs(data.inventoryFields) do
+        assert(row.writes == 1, "热栏库存真实变化未重新捕获：" .. row.field)
+    end
+    assert(data.layoutNotPersistedWrites == 0, "热栏为不属于快照的接收布局重复编码")
+    for _, key in ipairs({ "externalRewriteWrites", "moduleRebindWrites", "inventoryRebindWrites", "generationWrites",
+        "codecRevisionWrites", "fallbackFirstWrites", "fallbackRepeatWrites" }) do
+        assert(data[key] == 1, "热栏缓存失效或未知状态回退错误：" .. key)
+    end
+    assert(data.externalRewriteRepaired and data.unloadInvalidates,
+        "热栏外部原位改写没有恢复，或卸载后仍沿用旧保存缓存")
+end, "热栏保存缓存：实际OnSave计数、手持进度、字段变化、原位改写和代际失效")
+
+test.system("networking", "terrain_replication", {}, function(data)
+    assert(data.partialAccepted and not data.partialFull, "缺片的地形快照被标成完整")
+    assert(data.support == 91 and data.effectiveGround == 91 and data.walkable,
+        "平台没有进入正式支撑面和通行查询")
+    assert(data.baseGround == 17 and data.baseCost == 25 and data.liquid == 8 and data.weather == 45,
+        "平台同步破坏了底层地形、液体或天气")
+    assert(data.duplicateAccepted and data.duplicateWrites == 0, "重复地形消息再次写入权威副本")
+    assert(data.removeAccepted and data.oldSnapshotSupport == 0 and data.fullAfterReorder,
+        "旧完整快照覆盖了更新的拆除，或乱序后无法完成补拉")
+    assert(not data.removedWalkable and data.removedLiquid == 8, "拆平台没有恢复水域原通行")
+    assert(data.wallAccepted and data.wall == 74 and data.damage == 9 and data.oldDeltaWall == 74,
+        "墙体/损伤不同步或被旧差量回退")
+    assert(not data.invalidAccepted and data.atomicSupport == 0, "非法地形批次留下半批修改")
+    for _, key in ipairs({"nanAccepted", "wrongSizeAccepted", "wrongTokenAccepted", "zeroRevisionAccepted",
+        "oversizeAccepted", "invalidatedFull", "duplicateCompleted", "reloadedFull", "oldChunkTokenAccepted"}) do
+        assert(not data[key], "地形复制边界校验失败：" .. key)
+    end
+    assert(data.refreshedFull and data.reloadedComplete and data.reloadedSupport == 0 and data.reloadedWall == 0,
+        "重载或重新补拉后残留旧平台/墙体")
+end, "格子建筑：平台/墙体、底液保留、乱序、坏包、区块重载")
+
+test.system("networking", "terrain_wire", {}, function(data)
+    assert(data.protocol >= 24 and data.remainingBytes == 0 and data.cellCount == 2,
+        "格子建筑 Mirror 协议未完整往返")
+    assert(data.world == "probe-world" and data.dimension == "surface" and data.realm == 7 and data.token == 3,
+        "地形消息丢失世界身份或补拉令牌")
+    assert(data.chunkX == -16 and data.chunkY == 32 and data.revision == 1234567890123,
+        "负区块坐标或地形版本被截断")
+    assert(data.support == 91 and data.baseGround == 17, "地形协议混淆支撑层和原地面")
+end, "格子建筑：正式 Mirror 序列化和世界身份")
+
 test.system("networking", "world_request_gate", {}, function(data)
     assert(data.valid and data.unversioned, "合法世界请求被门禁拒绝")
     for _, key in ipairs({ "notReady", "transferring", "missingObserver", "missingWorld", "staleRevision" }) do

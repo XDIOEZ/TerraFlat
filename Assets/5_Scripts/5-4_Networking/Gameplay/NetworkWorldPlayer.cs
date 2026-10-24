@@ -1,6 +1,7 @@
-﻿// AI-Context: Mirror 玩家网络聚合器；负责运动、全模块快照、转身、动画与远程手持物，严禁远程副本获得本地输入权。
+// AI-Context: Mirror 玩家网络聚合器；负责运动、全模块快照、转身、动画与远程手持物，严禁远程副本获得本地输入权。
 
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using FlatWorld.Spaceflight;
 using Mirror;
 using TMPro;
@@ -15,6 +16,14 @@ namespace FlatWorld.Networking.Gameplay
     [DisallowMultipleComponent]
     public sealed partial class NetworkWorldPlayer : NetworkBehaviour
     {
+        #region 玩家同步性能采样
+        private static readonly PerformanceDebugPoint AuthorityUpdatePoint = new("FlatWorld.Network.Player.Authority");
+        private static readonly PerformanceDebugPoint NetworkActionsPoint = new("FlatWorld.Network.Player.Actions");
+        private static readonly PerformanceDebugPoint OwnedMovementPoint = new("FlatWorld.Network.Player.OwnedMovement");
+        private static readonly PerformanceDebugPoint OwnedStatePoint = new("FlatWorld.Network.Player.OwnedState");
+        private static readonly PerformanceDebugPoint StateCapturePoint = new("FlatWorld.Network.Player.StateCapture");
+        #endregion
+
         private const float MaxSupportedWorldCoordinate = 100000f;
 
         private static readonly Color[] PlayerColors =
@@ -153,6 +162,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopClient()
         {
+            ReleaseNetworkShield();
             ReleaseNetworkActionConstraints();
             UnbindTeleport();
             RestoreSinglePlayerStreaming();
@@ -186,18 +196,26 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             if (isServer)
             {
+                using var authorityDebug = AuthorityUpdatePoint.Measure();
+                serverStateTimer -= Time.unscaledDeltaTime;
                 using var worldScope = NetworkGameplayWorldScope.Use(this);
                 if (corePlayer == null) EnsureCorePlayer(isOwned);
                 MaintainPlayerAuthority();
                 SynchronizeGroundObserver();
                 RefreshSpaceAuthority();
-                PublishServerPlayerState();
             }
-            UpdateNetworkCombat();
-            UpdateNetworkRoll();
-            UpdateNetworkActionConstraints();
+            using (NetworkActionsPoint.Measure())
+            {
+                UpdateNetworkCombat();
+                UpdateNetworkRoll();
+                UpdateNetworkShield();
+                UpdateNetworkActionConstraints();
+            }
             if (!NetworkClient.active)
+            {
+                if (isServer) PublishServerPlayerState();
                 return;
+            }
 
             if (corePlayer == null && Time.unscaledTime >= nextCorePlayerRetryTime)
             {
@@ -207,12 +225,14 @@ namespace FlatWorld.Networking.Gameplay
 
             if (isOwned)
             {
-                UpdateOwnedMovement();
-                UpdateOwnedItemState();
-                return;
+                using (OwnedMovementPoint.Measure()) UpdateOwnedMovement();
+                using (OwnedStatePoint.Measure()) UpdateOwnedItemState();
             }
+            else
+                using (isServer ? NetworkGameplayWorldScope.Use(this) : null) UpdateRemoteMovement();
 
-            using (isServer ? NetworkGameplayWorldScope.Use(this) : null) UpdateRemoteMovement();
+            // 本机与服务器共用角色，只在本帧动作完成后统一发布最终状态。
+            if (isServer) PublishServerPlayerState();
         }
 
         private void UpdateOwnedMovement()
@@ -268,6 +288,8 @@ namespace FlatWorld.Networking.Gameplay
                 corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(
                     ShipSurfacePresentation.GroundPosition(corePlayer.gameObject, corePlayer.transform.position));
 
+            if (isServer) return;
+
             itemStateSendTimer -= Time.deltaTime;
             if (!itemStateDirty && itemStateSendTimer > 0f)
                 return;
@@ -277,19 +299,16 @@ namespace FlatWorld.Networking.Gameplay
 
             try
             {
-                byte[] payload = ItemNetworkStateSerialization.Capture(corePlayer, true);
+                using var captureDebug = StateCapturePoint.Measure();
+                byte[] payload = ItemNetworkStateSerialization.CaptureCachedNetworkPayload(corePlayer, true, out _, out uint hash);
                 if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                     return;
 
-                uint hash = ItemNetworkStateSerialization.CalculateHash(payload);
                 if (hash == lastSubmittedItemStateHash)
                     return;
 
                 lastSubmittedItemStateHash = hash;
-                if (isServer)
-                    ApplyItemStateOnServer(payload);
-                else
-                    CmdSubmitItemState(payload, authoritativeRealmRevision);
+                CmdSubmitItemState(payload, authoritativeRealmRevision);
             }
             catch (System.Exception exception)
             {
@@ -621,7 +640,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void ApplyRemoteVisualState(NetworkPlayerVisualState state)
         {
-            if (corePlayer == null)
+            // 本机动画始终读取自己的移动模块，传送后的待机快照不能接管它。
+            if (corePlayer == null || isOwned)
                 return;
 
             CacheAnimatorModules();

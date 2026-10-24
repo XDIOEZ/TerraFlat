@@ -281,6 +281,108 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 23e5f6b4cbbf4e89846ce7a74a81f775
+    m_Address: Assets/6_Art/Generated/Equipment/Steel_Boots/Steel_Boots_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5e363ff4923b44aabffd941c4343dd2b
+    m_Address: Assets/6_Art/Generated/Equipment/Steel_Helmet/Steel_Helmet_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6cb0db034bc447dba5e1633ef855f581
+    m_Address: Assets/6_Art/Generated/Equipment/Steel_Greaves/Steel_Greaves_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a8c1d79b299b49baa1f710b47ad52382
+    m_Address: Assets/6_Art/Generated/Equipment/Steel_Gauntlets/Steel_Gauntlets_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2b81860a35724874a4df17069a10d39b
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Cuirass.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2c8a3c57982a47faa5335ec882c165f9
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Gauntlets.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 322c44d40f694f69b0e24d81dd8bf83f
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Greaves.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 897226c917a141fa8dbb07983fdc7d31
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Boots.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 93eaf29a8b124dfebc65dfd04db9679c
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dfbc5be90a134c28b8df43dec66158db
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4eb1a2cdc07d42f48ad676def2ebe522
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4466af33be6349b4b2f87d3fa4099380
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9c9575a507984ca49accd4bb2c98397e
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Head.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aab5277269af419a83b806674664a35c
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Torso.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c5ae56247a444444995f337c04fb36a1
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Hands.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 50248c8f86d44464916f1d41245e3828
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Legs.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d7c72c25f10a4cd78ea7c43fd08b7409
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Feet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

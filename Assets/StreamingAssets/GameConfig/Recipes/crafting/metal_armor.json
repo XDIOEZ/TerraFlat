@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:iron_helmet",
+      "displayName": "铁头盔",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 3 }],
+      "outputs": [{ "itemId": "IronGuard_Helmet", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:iron_cuirass",
+      "displayName": "铁胸甲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 6 }],
+      "outputs": [{ "itemId": "IronGuard_Cuirass", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:iron_gauntlets",
+      "displayName": "铁护手",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 2 }],
+      "outputs": [{ "itemId": "IronGuard_Gauntlets", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:iron_greaves",
+      "displayName": "铁腿甲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 4 }],
+      "outputs": [{ "itemId": "IronGuard_Greaves", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:iron_boots",
+      "displayName": "铁战靴",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 2 }],
+      "outputs": [{ "itemId": "IronGuard_Boots", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:steel_helmet",
+      "displayName": "钢头盔",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_Steel", "amount": 3 }],
+      "outputs": [{ "itemId": "Steel_Helmet", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:钢制铁甲",
+      "displayName": "钢甲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_Steel", "amount": 8 }],
+      "outputs": [{ "itemId": "Chestplate_Iron", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:steel_gauntlets",
+      "displayName": "钢手套",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_Steel", "amount": 2 }],
+      "outputs": [{ "itemId": "Steel_Gauntlets", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:steel_greaves",
+      "displayName": "钢腿甲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_Steel", "amount": 5 }],
+      "outputs": [{ "itemId": "Steel_Greaves", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:steel_boots",
+      "displayName": "钢靴子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_Steel", "amount": 3 }],
+      "outputs": [{ "itemId": "Steel_Boots", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}

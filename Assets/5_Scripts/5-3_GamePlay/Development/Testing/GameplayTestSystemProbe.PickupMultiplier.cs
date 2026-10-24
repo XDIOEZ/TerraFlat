@@ -57,6 +57,8 @@ public static partial class GameplayTestSystemProbe
             var source = new Data_GeneralItem
             {
                 IDName = "probe:pickup_multiplier",
+                Durability = (float)Number(args, "durability", 1),
+                MaxDurability = (float)Number(args, "maximum", 1),
                 Stack = new ItemStack
                 {
                     Amount = (float)Number(args, "amount", 3),
@@ -75,6 +77,7 @@ public static partial class GameplayTestSystemProbe
             float Count(Inventory inventory) => inventory.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
             float preflight = picker.GetAcceptablePickupSourceAmount(source);
             bool preflightUnchanged = sourceDuringCommit.Count == 0 && sourceMassChanges.Count == 0 &&
+                source.Durability == (float)Number(args, "durability", 1) &&
                 source.Stack.Amount == (float)Number(args, "amount", 3) && source.Stack.CanBePickedUp;
             bool accepted = picker.TryAcceptNetworkPickup(source, out float consumed, out float added,
                 Flag(args, "allowPartial", true));
@@ -84,6 +87,9 @@ public static partial class GameplayTestSystemProbe
                 ["accepted"] = accepted,
                 ["firstAmount"] = Count(first),
                 ["secondAmount"] = inventories.Count > 1 ? Count(inventories[1]) : 0f,
+                ["firstDurability"] = first.Data.GetItemSlot(0)?.itemData?.Durability ?? 0f,
+                ["secondDurability"] = inventories.Count > 1 ? inventories[1].Data.GetItemSlot(0)?.itemData?.Durability ?? 0f : 0f,
+                ["remainingDurability"] = source.Durability,
                 ["remaining"] = source.Stack.CanBePickedUp ? source.Stack.Amount : 0f,
                 ["pickable"] = source.Stack.CanBePickedUp
             };

@@ -28,6 +28,8 @@ public sealed class EquipmentSlotRule
 /// <summary>装备槽位使用稳定 ASCII ID/Tag，具体生物只需要复用同一套规则。</summary>
 public static class EquipmentSlotCatalog
 {
+    #region 装备槽定义
+
     public const string Head = "Head";
     public const string TorsoOuter = "TorsoOuter";
     public const string Hands = "Hands";
@@ -35,6 +37,8 @@ public static class EquipmentSlotCatalog
     public const string TorsoInner = "TorsoInner";
     public const string Legs = "Legs";
     public const string FeetInner = "FeetInner";
+    public const string OffHand = "OffHand";
+    public const string Eyes = "Eyes";
 
     public const string HeadTag = "EquipmentSlot.Head";
     public const string TorsoOuterTag = "EquipmentSlot.TorsoOuter";
@@ -43,22 +47,36 @@ public static class EquipmentSlotCatalog
     public const string TorsoInnerTag = "EquipmentSlot.TorsoInner";
     public const string LegsTag = "EquipmentSlot.Legs";
     public const string FeetInnerTag = "EquipmentSlot.FeetInner";
+    public const string OffHandTag = "EquipmentSlot.OffHand";
+    public const string EyesTag = "EquipmentSlot.Eyes";
     public const string AnyTag = "EquipmentSlot.Any";
+    public const string BlocksSlotTagPrefix = "EquipmentBlocksSlot.";
 
     public static List<EquipmentSlotRule> CreateDefaultRules()
     {
         // 前四个索引保持旧槽语义，避免开发期现有测试装备突然换位。
         return new List<EquipmentSlotRule>
         {
-            new(Head, "头部 / 帽·盔", HeadTag, "FWUI_SlotLabel_Head", new Vector2(-225f, 155f)),
-            new(TorsoOuter, "外衬 / 护甲", TorsoOuterTag, "FWUI_SlotLabel_Chest", new Vector2(-225f, 20f)),
-            new(Hands, "手部", HandsTag, "FWUI_SlotLabel_Hand", new Vector2(225f, 155f)),
-            new(FeetOuter, "鞋子", FeetOuterTag, "FWUI_SlotLabel_Feet", new Vector2(225f, -170f)),
-            new(TorsoInner, "内衬 / 衣物", TorsoInnerTag, "FWUI_SlotLabel_TorsoInner", new Vector2(-225f, -115f)),
-            new(Legs, "腿部 / 裤装", LegsTag, "FWUI_SlotLabel_Legs", new Vector2(225f, 50f)),
-            new(FeetInner, "袜子", FeetInnerTag, "FWUI_SlotLabel_FeetInner", new Vector2(225f, -60f))
+            new(Head, "头部 / 帽·盔", HeadTag, "FWUI_SlotLabel_Head", new Vector2(-225f, 180f)),
+            new(TorsoOuter, "外衬 / 护甲", TorsoOuterTag, "FWUI_SlotLabel_Chest", new Vector2(-225f, 55f)),
+            new(Hands, "手部", HandsTag, "FWUI_SlotLabel_Hand", new Vector2(225f, 180f)),
+            new(FeetOuter, "鞋子", FeetOuterTag, "FWUI_SlotLabel_Feet", new Vector2(225f, -185f)),
+            new(TorsoInner, "内衬 / 衣物", TorsoInnerTag, "FWUI_SlotLabel_TorsoInner", new Vector2(-225f, -70f)),
+            new(Legs, "腿部 / 裤装", LegsTag, "FWUI_SlotLabel_Legs", new Vector2(225f, 55f)),
+            new(FeetInner, "袜子", FeetInnerTag, "FWUI_SlotLabel_FeetInner", new Vector2(225f, -70f)),
+            new(OffHand, "副手", OffHandTag, "FWUI_SlotLabel_OffHand", new Vector2(-225f, -185f)),
+            new(Eyes, "眼部 / 眼镜", EyesTag, "FWUI_SlotLabel_Eyes", new Vector2(0f, 180f))
         };
     }
+
+    /// <summary>装备通过槽位标签声明互斥关系，不依赖头盔或眼镜的具体类型。</summary>
+    public static bool BlocksSlot(ItemData equipment, string slotId)
+    {
+        return equipment?.Tags != null && !string.IsNullOrWhiteSpace(slotId) &&
+               equipment.Tags.ContainsTag(BlocksSlotTagPrefix + slotId);
+    }
+
+    #endregion
 }
 
 [Serializable]
@@ -89,6 +107,19 @@ public class Inventory_Equipment : Inventory
         SlotRules ??= EquipmentSlotCatalog.CreateDefaultRules();
         if (SlotRules.Count == 0)
             SlotRules = EquipmentSlotCatalog.CreateDefaultRules();
+
+        // 具体生物沿用自己的布局，仅补齐当前装备系统新增的独立槽。
+        List<EquipmentSlotRule> defaults = null;
+        if (GetSlotIndex(EquipmentSlotCatalog.OffHand) < 0)
+        {
+            defaults = EquipmentSlotCatalog.CreateDefaultRules();
+            SlotRules.Add(defaults.Find(rule => rule.Id == EquipmentSlotCatalog.OffHand));
+        }
+        if (GetSlotIndex(EquipmentSlotCatalog.Eyes) < 0)
+        {
+            defaults ??= EquipmentSlotCatalog.CreateDefaultRules();
+            SlotRules.Add(defaults.Find(rule => rule.Id == EquipmentSlotCatalog.Eyes));
+        }
 
         Data ??= new Inventory_Data(new List<ItemSlot>(), ModText.Equipment_Module);
         Data.itemSlots ??= new List<ItemSlot>();
@@ -123,11 +154,28 @@ public class Inventory_Equipment : Inventory
             return false;
 
         EquipmentSlotRule rule = SlotRules[index];
-        if (rule == null || string.IsNullOrWhiteSpace(rule.RequiredTag))
+        if (rule == null || !string.IsNullOrWhiteSpace(rule.RequiredTag) &&
+            (itemData.Tags == null ||
+             !itemData.Tags.ContainsTag(rule.RequiredTag) && !itemData.Tags.ContainsTag(EquipmentSlotCatalog.AnyTag)))
+            return false;
+
+        if (Data?.itemSlots == null)
             return true;
 
-        return itemData.Tags != null &&
-               (itemData.Tags.ContainsTag(rule.RequiredTag) || itemData.Tags.ContainsTag(EquipmentSlotCatalog.AnyTag));
+        int count = Mathf.Min(SlotRules.Count, Data.itemSlots.Count);
+        for (int otherIndex = 0; otherIndex < count; otherIndex++)
+        {
+            ItemData otherItem = Data.itemSlots[otherIndex]?.itemData;
+            // 替换本槽会先卸下原件；同一件装备在槽间移动也不与自己冲突。
+            if (otherIndex == index || otherItem == null || ReferenceEquals(otherItem, itemData))
+                continue;
+
+            if (EquipmentSlotCatalog.BlocksSlot(otherItem, rule.Id) ||
+                EquipmentSlotCatalog.BlocksSlot(itemData, SlotRules[otherIndex]?.Id))
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>按装备标签寻找第一个兼容槽位，供 AI 与脚本直接使用。</summary>
@@ -159,7 +207,20 @@ public class Inventory_Equipment : Inventory
             return false;
 
         int index = Data.itemSlots.IndexOf(targetSlot);
-        return CanEquipAt(index, sourceSlot?.itemData);
+        ItemData sourceItem = sourceSlot?.itemData;
+        if (!CanEquipAt(index, sourceItem))
+            return false;
+
+        int sourceIndex = Data.itemSlots.IndexOf(sourceSlot);
+        ItemData displacedItem = targetSlot.itemData;
+        if (sourceIndex < 0 || displacedItem == null || displacedItem.CanStackWith(sourceItem))
+            return true;
+        if (sourceIndex >= SlotRules.Count)
+            return false;
+
+        // 装备栏内部交换后两件仍会同时穿戴，额外核对双方最终占用的槽。
+        return !EquipmentSlotCatalog.BlocksSlot(sourceItem, SlotRules[sourceIndex]?.Id) &&
+               !EquipmentSlotCatalog.BlocksSlot(displacedItem, SlotRules[index]?.Id);
     }
 
     #endregion

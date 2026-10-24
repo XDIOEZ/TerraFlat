@@ -116,7 +116,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UserSavePath: 
-  SaveData:
+  currentSaveData:
     Mechanical:
       NextPressureExplosionId: 0
       PressureExplosions: []

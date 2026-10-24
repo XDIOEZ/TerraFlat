@@ -2,7 +2,7 @@
 
 2026-10-23。正式使用增高贴地版：低饱和、偏写实的复古粗像素；同一套岩石尺度、左上光源和矿体结构，矿脉延伸到不规则贴地底边。
 
-共 10 种矿山。铁、铜、煤复制用户认可的增高样稿，其余 7 种使用内置 image_gen 以该样稿为结构与画风参考重绘。每种为独立透明 PNG，通过对应物品定义的 visual.spriteAddress 和 ItemSprite Addressables 主地址引用；不替换掉落矿石图标或冰山。
+共 11 种矿山。铁、铜、煤复制用户认可的增高样稿，其余矿山使用内置 image_gen 以该样稿为结构与画风参考重绘。每种为独立透明 PNG，通过对应物品定义的 visual.spriteAddress 和 ItemSprite Addressables 主地址引用；不替换掉落矿石图标或冰山。
 
 | 矿山 | 正式贴图 |
 | --- | --- |
@@ -16,8 +16,11 @@
 | 硫磺矿 | [Mine_Sulfur](Mine_Sulfur/Mine_Sulfur_Idle.png) |
 | 硝石矿 | [Mine_Niter](Mine_Niter/Mine_Niter_Idle.png) |
 | 黑曜石矿 | [Mine_Obsidian](Mine_Obsidian/Mine_Obsidian_Idle.png) |
+| 钨矿 | [Mine_Tungsten](Mine_Tungsten/Mine_Tungsten_Idle.png) |
 
 按用户要求未运行游戏内验收。已进入世界的实例需要通过现有资源配置刷新流程或重新进入世界，才能观察当前定义的贴图。
+
+2026-10-24 新增钨矿：沿用铁／锡矿的贴地轮廓、灰岩块面、左上光源与粗像素尺度，矿物采用深褐黑黑钨矿脉、少量灰色亚金属切面和灰白石英。内置 image_gen 提示词要求天然矿脉延伸到底边、无底座、无发光、透明背景；保留 1402×1122 画布，仅将生成的透明边缘归一为 0／255 Alpha。PPU 1402、中心 Pivot、单 Sprite，通过 PNG 主地址与 ItemSprite 标签加载。
 
 ## 本轮矿山光泽统一（2026-10-23）
 

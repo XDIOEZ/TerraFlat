@@ -125,12 +125,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4b67b1d1bc74d0484778a0d2d0ad6e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sourceTexture: {fileID: 2800000, guid: 1b5b62469456441890ca2ae80b398c87, type: 3}
-  variantCount: 32
-  textureColumns: 6
-  spriteSizePixels: 209
-  pixelsPerUnit: 418
-  grassMaterial: {fileID: 2100000, guid: 14e44684465b403baf074b99152e2ff3, type: 2}
+  spriteVariants:
+  - {fileID: 317918403, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 636411898, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -624116570, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1494673022, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 668895493, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1911465596, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 495791750, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1639504845, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1959538330, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1845185204, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1426977360, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 190259301, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 96397132, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -1608690095, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -127857404, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -775370736, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1560719583, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -711160403, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1385419387, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1494189713, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1626820315, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 50625348, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1660648115, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -312201771, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1786677223, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1771469233, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -559459405, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -382877244, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1909173673, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 136324332, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: -965553549, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  - {fileID: 1227382596, guid: 733ec46c8a890984c8a063b1eb94496b, type: 3}
+  pixelsPerUnit: 32
+  accentVariantChance: 0.08
+  grassMaterial: {fileID: 2100000, guid: 0620ecdeaac3408aaa7aaa42b1564c0c, type: 2}
 --- !u!114 &2009
 MonoBehaviour:
   m_ObjectHideFlags: 0

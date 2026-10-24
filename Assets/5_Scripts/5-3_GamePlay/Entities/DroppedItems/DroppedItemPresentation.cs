@@ -76,7 +76,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         public LightweightDroppedBody LastBody;
         public Vector2 LastNearestPosition;
         public WorldItemWaterRules.DriftInterpolation WaterDrift;
-        public ParticleSystem CombustionParticles;
+        public ShaderFlameEffect CombustionFlame;
         public bool LastBurning;
         public bool HasState;
     }
@@ -169,6 +169,7 @@ internal sealed class DroppedItemPresentation : IDisposable
             if (!simulation.Contains(id) || !visuals.TryGetValue(id, out DroppedItemVisual visual))
                 continue;
             LightweightDroppedBody body = simulation.Get(id);
+            if (body.IsOnBottom) continue;
             active.TryGetValue(id, out PooledView view);
             float2 displayPosition = body.Position;
             if (view != null)
@@ -362,22 +363,22 @@ internal sealed class DroppedItemPresentation : IDisposable
 
     #region 燃烧表现
 
-    /// <summary>轻量掉落物只按需创建粒子子节点，不增加逐物品脚本或 Update。</summary>
+    /// <summary>轻量掉落物按需创建共享网格火焰，动画不增加逐物品 Update。</summary>
     private static void SetCombustionPlaying(PooledView view, bool burning, int sortingLayerId, int sortingOrder)
     {
         if (!burning)
         {
-            if (view.CombustionParticles != null)
-                view.CombustionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (view.CombustionFlame != null)
+                view.CombustionFlame.SetBurning(false);
             return;
         }
 
-        ParticleSystem particles = view.CombustionParticles ??= WorldItemCombustionVisual.Create(view.Root.transform);
-        ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
-        renderer.sortingLayerID = sortingLayerId;
-        renderer.sortingOrder = sortingOrder;
-        if (!particles.isPlaying)
-            particles.Play(true);
+        // 独立根保持世界向上与固定尺寸，掉落物翻滚或缩放时不把火焰一起倒置。
+        ShaderFlameEffect flame = view.CombustionFlame ??= WorldItemCombustionVisual.Create(view.Root.transform.parent);
+        if (flame.transform.position != view.Root.transform.position)
+            flame.transform.position = view.Root.transform.position;
+        flame.SetSorting(sortingLayerId, sortingOrder);
+        flame.SetBurning(true);
     }
 
 
@@ -390,15 +391,18 @@ internal sealed class DroppedItemPresentation : IDisposable
         view.HasState = false;
         view.WaterDrift = default;
         view.LastBurning = false;
-        if (view.CombustionParticles != null)
-            view.CombustionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        if (view.CombustionFlame != null)
+            view.CombustionFlame.SetBurning(false);
         view.Renderer.sprite = null;
         view.Renderer.SetPropertyBlock(null);
         view.Root.SetActive(false);
         if (pool.Count < MaxRetainedViews)
             pool.Push(view);
         else
+        {
+            if (view.CombustionFlame != null) DestroyObject(view.CombustionFlame.gameObject);
             DestroyObject(view.Root);
+        }
     }
 
     private void ReleaseAllActive()

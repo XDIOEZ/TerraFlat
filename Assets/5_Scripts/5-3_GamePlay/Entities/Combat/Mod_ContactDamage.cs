@@ -155,7 +155,7 @@ internal sealed class ContactDamageRuntime
                 Origin = center,
                 HitPoint = collider.ClosestPoint(center),
                 Clock = new CombatClock { Tick = (ulong)Time.frameCount, Time = now, DeltaTime = Time.deltaTime },
-                SourceIsPlayer = (byte)(sourceItem != null && GameDifficultyService.IsPlayer(sourceItem) ? 1 : 0),
+                SourceIsPlayer = (byte)(sourceItem != null && ActorIdentity.IsPlayer(sourceItem) ? 1 : 0),
                 BuildingMultiplier = 1f
             };
             cooldowns[identity] = now + settings.DamageInterval; // 先预约，避免受击回调重入或多碰撞体重复扎伤。

@@ -13,6 +13,9 @@ namespace FlatWorld.Spaceflight
         public SpaceVector2 Velocity;
         public double AngleRadians, AngularVelocityRadians, MassKg, InertiaKgM2, RadiusMeters, InputRetention;
         public bool FreeCircle, FreezeRotation, Active;
+        public bool Kinematic;
+        public SpaceSectorPosition KinematicTarget;
+        public SpaceVector2 KinematicTargetVelocity;
         public ShipAssemblyState Assembly;
         public SpacePassengerState Passenger;
         public SpaceLooseItemState LooseItem;
@@ -102,6 +105,7 @@ namespace FlatWorld.Spaceflight
             if (!bodies.TryGetValue(id, out SpacePhysicsBody body)) bodies.Add(id, body = new SpacePhysicsBody(id));
             if (!body.Active) { body.Active = true; active.Add(body); }
             body.Shapes.Clear(); body.InputRetention = 1d;
+            body.Kinematic = false;
             body.ContactNormals.Clear();
             return body;
         }
@@ -294,6 +298,8 @@ namespace FlatWorld.Spaceflight
             body.Root.layer = collisionLayer;
             SynchronizeBodyShapes(body);
             Rigidbody2D rigidbody = body.Rigidbody;
+            RigidbodyType2D bodyType = body.Kinematic ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
+            if (rigidbody.bodyType != bodyType) rigidbody.bodyType = bodyType;
             rigidbody.constraints = body.FreezeRotation ? RigidbodyConstraints2D.FreezeRotation : RigidbodyConstraints2D.None;
             rigidbody.useAutoMass = false;
             rigidbody.mass = (float)Math.Max(.001d, body.MassKg);
@@ -390,6 +396,13 @@ namespace FlatWorld.Spaceflight
                 island.EndVelocity = island.Frame.HasValue ? frame.NextVelocity : default;
             }
             foreach (SpacePhysicsBody body in active) PrepareBody(body);
+            foreach (SpacePhysicsBody body in active)
+                if (body.Kinematic)
+                {
+                    // 固定站台通过原生运动学速度抵达锚点，接触仍由同一物理场景解算。
+                    SpaceVector2 delta = SpaceSectorCoordinates.Relative(body.KinematicTarget, body.Position.Sector) - body.Position.LocalMeters;
+                    body.Rigidbody.velocity = ((delta - body.Island.OriginDelta) / seconds).ToVector2();
+                }
             UpdateCollisionFilters();
             Physics2D.SyncTransforms();
             float previousSpeed = Physics2D.maxTranslationSpeed, previousRotation = Physics2D.maxRotationSpeed;
@@ -416,6 +429,13 @@ namespace FlatWorld.Spaceflight
             }
             foreach (SpacePhysicsBody body in active)
             {
+                if (body.Kinematic)
+                {
+                    body.Position = body.KinematicTarget;
+                    body.Velocity = body.KinematicTargetVelocity;
+                    body.AngleRadians = body.AngularVelocityRadians = 0d;
+                    continue;
+                }
                 SpaceVector2 delta = SpaceVector2.FromVector2(body.Rigidbody.position - body.StartLocalPosition) + body.Island.OriginDelta;
                 body.Position = SpaceSectorCoordinates.Normalize(body.Position.Sector, body.Position.LocalMeters + delta);
                 body.Velocity = SpaceVector2.FromVector2(body.Rigidbody.velocity) + body.Island.EndVelocity;
@@ -426,6 +446,7 @@ namespace FlatWorld.Spaceflight
 
         private void ApplyForces(SpacePhysicsBody body, int sourceCount, double clock, double seconds, SpaceGameplaySettings settings)
         {
+            if (body.Kinematic) return;
             SpacePhysicsIsland island = body.Island;
             SpaceVector2 framePosition = island.Origin.LocalMeters, frameVelocity = default, frameAcceleration = default;
             if (island.Frame is SpaceGravitySource frame)

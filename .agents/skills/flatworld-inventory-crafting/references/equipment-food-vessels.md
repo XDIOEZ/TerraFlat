@@ -2,7 +2,10 @@
 
 ## 装备与生存
 
+- 熟铁五件套在 `Items/shells/character_outfits.json`，钢甲沿用 `equipment.json` 的 `Chestplate_Iron` 业务 ID，其余钢套在 `steel_equipment.json`；十件金属护甲的配方统一由 `Recipes/crafting/metal_armor.json` 管理，分别消耗熟铁锭和钢锭。
 - Mod_Equipment按EquipmentSlot标签组合能力、世界主交互优先。ThermalInsulation只改安全温度上下界，耐寒/耐热独立，不改传热/当前温度。
+- 眼部独立使用 `EquipmentSlot.Eyes`，与头部可同时穿戴；装备可用 `EquipmentBlocksSlot.<槽ID>` 声明双向互斥，统一由 `Inventory_Equipment.CanEquipAt` 校验。当前头盔未设置眼部互斥。
+- `Mod_Equipment.TryEquipFromSlot` 通过真实库存 `TryMoveSlotTo` 穿戴/交换，旧装备回来源槽，保留容量、接收、拖拽和联机事务门禁；快捷栏 Shift+右键只负责选择这个入口。
 - 配置效果实现 IEquipmentConfiguration，由CollectConfigurationTargets/TryOpenConfiguration收集/校验、同件去重，卸下/更换拒旧目标。宇航服生命支持/配置挂持罐衣服，头盔仅套装资格/自身防护；独立单槽InventoryInstanceSnapshot只收单只纯氧罐，两相变化停供，扣真实罐量后SupplyOxygen，来源不归氧气模块。
 - FoodRulePipeline初始化后复用Tick/观察者列表，不定时全扫；RequiresFoodTick实时判，新扩展保持插入顺序。世界静态Food可休眠，腐败/融化走冷数据。蛋白质管回血门槛，IHealingCostPolicy一次结算成本；濒死/HP≤0停被动回血与生存伤害，体力按有效MaxValue恢复。
 - BodyPartTreatmentSession管医疗等待/提交，UI仅发意图；食物效果由目录与IFoodMechanic组合，咬痕从EatingProgress/GUID重建。

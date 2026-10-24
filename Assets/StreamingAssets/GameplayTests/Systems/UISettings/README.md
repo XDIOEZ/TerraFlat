@@ -1,5 +1,13 @@
 # UI与设置
 
+2026-10-24：`pressure_hud_display_cache` 检查气压 HUD 一位小数可复用、不足 0.1 的采样抖动不重复格式化，同时覆盖压力、上下限、扩展保护、缓冲剩余量、头盔密封与危险阈值变化。HUD 实际采用语言变更时缓存本地化模板，正常刷新仅在显示状态改变时生成字符串；目前处于用户 PlayMode，未执行 Unity Lua 或实测优化后 GC。
+
+2026-10-24 新增 `save_selection_controls`：只读正式存档选择 Prefab，检查十个按钮身份唯一、改名按钮初始禁用、点击面与手柄自动导航，以及文字区域宽高有效并在按钮内、按钮在操作区内且不遮挡存档标题或载入按钮。构建器同步补回改名按钮，防止下次重建再次漏掉。用户正在 PlayMode，本轮未编译或运行 Lua；实际选择、改名、批量删除和重开流程由用户验收。
+
+2026-10-24：`input_binding_session` 增补十格快捷栏默认 `1～9、0` 的顺序及十项可重绑条目映射；`bag_hotbar_layout` 使用十列背包与快捷栏的实际尺寸。用户正在 PlayMode，本轮只静态修改，未编译、未运行 Lua。
+
+2026-10-24：新增 `item_info_food/item_info_lifetime/item_info_extension/item_info_numeric`，通过正式数据接口和独立 UI 格式化接口采样腐败、下一块冰块融化、1440 游戏秒自然消失、基础参数与攻击力；覆盖双计时、同能力多实例槽、禁用/缺失/错误身份、无效数值、到期与负进度、世界时钟缺失/倒退/跨世界、重复查询不写回载荷、第三方提供者注册/注销，以及定义重载和默认耐久只在 UI 隐藏。夹具不创建窗口、Prefab、世界或玩家，不消耗物品；当前用户 PlayMode 保持运行，未执行 Unity Lua 或真实联机悬浮窗口验收。
+
 2026-10-21：`virtualized_inventory` 补充活动槽的真实库存身份、隐藏和解绑后清空绑定断言；本轮仅静态修改，未编译或运行。
 
 2026-10-21 新增 `gamepad_input_reenable`：独立输入资产和虚拟手柄通过正式 UI 控制器，采样首次配置、连续三次停用/恢复、停用期间替换/撤销输入资产及资产销毁；确认检测读取真实重绑按键状态，固定白名单反射只读取绑定与调用正式确认检测。静态修改，本轮未编译、未运行；实际虚拟键盘打开、返回分发和界面重启由用户验收。
@@ -34,7 +42,9 @@
 
 2026-10-15：当时登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增的下拉布局、设置会话规则尚未编译或执行，不属于该历史通过范围；本轮只做静态修改，保留用户当前 PlayMode，最终画面验收由用户进行。
 
-快速入口：`rules.lua`；操作：`ui_settings/mobile_size、navigation_policy、panel_lifecycle、held_item_world_drop、held_item_world_drop_position、dropdown_layout、edit_session_values、edit_session_commit、edit_session_participants、edit_session_errors、input_binding_session`。
+快速入口：`rules.lua`；操作：`ui_settings/mobile_size、mobile_layout、navigation_policy、panel_lifecycle、held_item_world_drop、held_item_world_drop_position、dropdown_layout、edit_session_values、edit_session_commit、edit_session_participants、edit_session_errors、input_binding_session`。
+
+2026-10-24 新增 `mobile_layout`：使用正式手机 HUD 的独立副本和正式预览准备入口，覆盖六类控件的实际 Graphic 祖先过滤、点按/拖动后尺寸保持、其他触点拒绝、两种根尺寸和边界夹紧；另检查浮动朝向摇杆应用底座位置及尺寸时保持捕获区不变。夹具不写玩家偏好、不注册用户 UI、不发送虚拟设备输入。本轮六份改动脚本的外部 C# 静态编译通过，保留用户 PlayMode，Unity 未重编译、未执行 Lua；不覆盖真实手指输入、保存/取消的完整设置会话、浮动触点释放及运行时按钮 Tween 的跨帧画面，由用户验收。
 
 已编写的规则覆盖：正式 UIUserSettings 控件倍率净化；停用独立 Selectable 的手柄焦点策略（设置滑块、显示条、滚动条、快捷栏）；停用独立 BasePanel 的关闭初始化、重复开关事件幂等、视觉透明度和交互状态。临时排序计数在结束时恢复，不注册测试面板到 UIManager。
 
@@ -58,3 +68,12 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`，与本地化系统共
 
 
 2026-10-21 界面整理新增 `log_filters`（普通/警告/错误的8种组合，异常和断言统一归错误）、`world_settings_pages`（真实基础/高级分页切换与实例保留）、`bag_hotbar_layout`（六种画布尺寸与两档缩放下真实RectTransform底边对齐）。本轮用户自行验收，未执行Lua或真实手机/手柄输入；规则不覆盖正式Prefab画面、键盘弹出、失败存档弹窗、版本HUD和实际首次动画布局。设置顶部归并为常用类别，显示/视觉进入画质，镜头进入按键绑定，语言进入界面设置；隐藏子页保留正式页面和原Provider，不丢设置。
+
+
+库存分类新增 `inventory_category_filter`（并集、精确标签、大小写、历史别名、未知分类）与 `inventory_filter_projection`（紧凑显示、真实索引、点击路由、不可见格更新、空结果、清除恢复、对象池不膨胀）。离线规则与外部编译入口为 `Tools/Tests/InventoryCategoryFilter/verify.py --build`；Unity 正在运行时不执行 Lua 或重载，新下拉框画面、触屏/键鼠输入及生命周期仍需正式编辑器验收。
+
+2026-10-24 新增 `ui_settings/building_panel_layout`：直接读取堆肥箱、晾肉架、熔炉正式 Prefab，Lua 检查滚动条和视口边界、固定五列的内容宽度预算、内容跟随视口、纵向滚动及熔炉三格输入、两格输出的容器预算。该规则只检查资产布局，不代表运行时画面或多分辨率交互通过；本轮保留用户 PlayMode，未编译、未运行 Lua。
+
+2026-10-24 砧新增共享 `anvil_ui_rules`（`anvil.lua`）：读取手工/工作台/砧正式 Prefab 的槽数、缩放层归属、边界及底栏按钮间距，采样铜铁砧正式工具配置；独立加工器经真实 BeginWork 回调与正式耐久事务检查逐击磨损、最后一点耐久、预检拒绝不扣，以及 ManualProcessingState 工具/进度封包往返。回调夹具不等同于真实 ManualProcessingRuntime 的材料/容量/拖拽/网络门禁，工具能力解析、完整配方产出、放置拆回和实际多分辨率窗口仍由用户验收。本轮保持 PlayMode，未编译或运行 Lua。
+
+2026-10-24 新增 `ui_settings/text_fitting_assets`：只读扫描 UI 目录及 UIRoot 的全部正式 Prefab（含嵌套公共控件），Lua 检查普通文字已启用自动缩放、最大字号不超过设计值、最小字号足够低且使用省略/截断，并特别覆盖存档页返回和批量删除按钮；同时检查输入正文、自动长高正文和分页内容的尺寸归属。此处检查资产设置，不代表多语言真实字形、多分辨率和实际画面通过。本轮用户自行验收且 Unity 保持 PlayMode，未编译、未运行 Lua。

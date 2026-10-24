@@ -82,7 +82,12 @@ public sealed class Mod_FluidTank : Module, IItemModuleDependencyBinder, IModule
         receiver.ConsumeCurrentDeath();
         FluidTankStorage.Rupture(item.itemData, item.Owner != null ? item.Owner : item, RemoveLiveTank);
     }
-    private void OpenHeld() { if (item.Owner != null) OnInteractStart(item.Owner); }
+    private void OpenHeld()
+    {
+        if (item.Owner != null &&
+            item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building)?.IsPlacementModeActive != true)
+            OnInteractStart(item.Owner);
+    }
     private bool RemoveLiveTank()
     {
         if (item == null || ItemMgr.Instance == null) return false;

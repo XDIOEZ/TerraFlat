@@ -184,6 +184,7 @@ public static partial class GameplayTestRuntimeProbe
                 ["id"] = item.IDName,
                 ["guid"] = item.Guid,
                 ["hasStack"] = item.Stack != null,
+                ["stackable"] = item.Stack?.Stackable ?? false,
                 ["amount"] = item.Stack?.Amount ?? 0f,
                 ["canBePickedUp"] = item.Stack?.CanBePickedUp ?? false
             });

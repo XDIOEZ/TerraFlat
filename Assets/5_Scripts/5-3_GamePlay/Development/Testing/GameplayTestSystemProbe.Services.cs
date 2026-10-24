@@ -29,9 +29,14 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
         operations.Add("core_lifecycle/resource_queue", ServiceResourceQueue);
+        operations.Add("core_lifecycle/editor_asset_loading", ServiceEditorAssetLoading);
+        operations.Add("item_runtime/compiled_module_parameters", ServiceCompiledModuleParameters);
         operations.Add("core_lifecycle/resource_candidate", ServiceResourceCandidate);
+        operations.Add("core_lifecycle/binary_content_cache", ServiceBinaryContentCache);
+        operations.Add("core_lifecycle/json_configuration_cache", ServiceJsonConfigurationCache);
         operations.Add("core_lifecycle/startup_prefabs", ServiceStartupPrefabs);
         operations.Add("core_lifecycle/difficulty_rules", ServiceDifficultyRules);
+        operations.Add("core_lifecycle/rule_pipeline", GameRuleConfiguration.ProbeRulePipeline);
         operations.Add("item_runtime/module_structure", ServiceModuleStructure);
         operations.Add("item_runtime/clone_runtime", ServiceCloneRuntime);
         operations.Add("item_runtime/cleanup_lookup", ServiceItemCleanupLookup);
@@ -182,14 +187,17 @@ public static partial class GameplayTestSystemProbe
         GameDifficultyDefinition definition = Flag(args, "custom", false)
             ? GameDifficultyCatalog.CreateCustom(new GameDifficultyRuleValues())
             : GameDifficultyCatalog.Get((GameDifficultyId)(int)Number(args, "level", 0d));
-        float received = definition.CreatureCombat.ResolveReceivedDamageMultiplier(
+        var values = new GameRuleValues();
+        GameDifficultyService.ApplyRuleModifier(values, definition);
+        var rules = new GameRuleSnapshot(values);
+        float received = rules.CreatureCombat.ResolveReceivedDamageMultiplier(
             Flag(args, "sourcePlayer", false), Flag(args, "targetPlayer", true), Flag(args, "environmental", false));
         return new JObject
         {
-            ["hungerDrain"] = definition.PlayerSurvival.HungerDrainMultiplier,
-            ["environmentalDamage"] = definition.PlayerSurvival.EnvironmentalDamageMultiplier,
-            ["creatureAttack"] = definition.CreatureCombat.AttackMultiplier,
-            ["playerAttack"] = definition.CreatureCombat.PlayerAttackMultiplier,
+            ["hungerDrain"] = rules.PlayerSurvival.HungerDrainMultiplier,
+            ["environmentalDamage"] = rules.PlayerSurvival.EnvironmentalDamageMultiplier,
+            ["creatureAttack"] = rules.CreatureCombat.AttackMultiplier,
+            ["playerAttack"] = rules.CreatureCombat.PlayerAttackMultiplier,
             ["received"] = received,
             ["damage"] = FlatWorld.Combat.CombatRules.ResolvePhysical(
                 (float)Number(args, "attack", 10d), (float)Number(args, "defense", 3d), 1f, received)
@@ -762,11 +770,18 @@ public static partial class GameplayTestSystemProbe
         var second = ScriptableObject.CreateInstance<AudioCue>();
         var catalog = ScriptableObject.CreateInstance<AudioCatalog>();
         first.hideFlags = second.hideFlags = catalog.hideFlags = HideFlags.HideAndDontSave;
+        bool defaultPlaybackEnabled = first.PlaybackEnabled;
         try
         {
             // Unity 正式 JSON 装配私有序列化字段，验证独立目录的缓存重建和重复事件拒绝。
-            JsonUtility.FromJsonOverwrite(new JObject { ["id"] = firstId }.ToString(), first);
-            JsonUtility.FromJsonOverwrite(new JObject { ["id"] = secondId }.ToString(), second);
+            JsonUtility.FromJsonOverwrite(new JObject
+            {
+                ["id"] = firstId, ["playbackEnabled"] = Flag(args, "firstEnabled", false)
+            }.ToString(), first);
+            JsonUtility.FromJsonOverwrite(new JObject
+            {
+                ["id"] = secondId, ["playbackEnabled"] = false
+            }.ToString(), second);
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(new ServiceAudioCatalogDocument { cues = new[] { first, second } }), catalog);
             catalog.RebuildIndex();
             bool found = catalog.TryGet("  " + firstId.ToUpperInvariant() + "  ", out AudioCue resolved);
@@ -774,6 +789,9 @@ public static partial class GameplayTestSystemProbe
             return new JObject
             {
                 ["cueCount"] = catalog.Cues.Count, ["errors"] = errors.Count,
+                ["defaultPlaybackEnabled"] = defaultPlaybackEnabled,
+                ["firstPlaybackEnabled"] = first.PlaybackEnabled,
+                ["firstClipCount"] = first.Clips.Count,
                 ["found"] = found, ["resolvedFirst"] = ReferenceEquals(resolved, first),
                 ["emptyAccepted"] = catalog.TryGet("", out _), ["firstId"] = first.Id, ["secondId"] = second.Id
             };

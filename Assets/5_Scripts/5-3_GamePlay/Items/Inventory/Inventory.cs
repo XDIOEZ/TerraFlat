@@ -5,7 +5,7 @@
 // 面板生命周期：SwitchUI() / EnsurePanelCreated() / ReleaseRuntimePanel()
 // 数据与 UI 同步：InitData() / InitUI() / SyncData() / RefreshUI()
 // 虚拟化槽位：BindSlotUI() / RebindVirtualSlotUI() / PrepareVirtualizedSlotUIMap()
-// 鼠标与触摸：OnDesktopTap() / OnTouchTap() / OnScroll() / OnTouchLongPress()
+// 鼠标与触摸：OnDesktopTap() / OnTouchTap() / OnScroll() / OnShiftScroll() / OnTouchLongPress()
 // 拖动处理：OnMouseDragBegin() / OnMouseDragDrop() / TryMoveSlotTo()
 // 快速转移：OnShiftQuickTransfer() / OnFlickTransfer() / TryQuickTransferTo() / SyncQuickTransferTarget()
 // 运行时容量：AppendExternalSlots() / RemoveExternalSlots() / AddSlotsAtRuntime()
@@ -33,6 +33,7 @@ public sealed class InventoryDragTransaction
     private readonly Func<Inventory, int, bool> _fallbackDropHandler;
     private readonly Func<ItemData> _sourceItemProvider;
     private Action _onCompleted;
+    private Func<bool> _accessGuard;
     private bool _fallbackPrepared;
     private bool _completed;
 
@@ -63,10 +64,24 @@ public sealed class InventoryDragTransaction
         _fallbackPrepared = fallbackPrepared;
     }
 
+    #region 组合访问守卫
+
+    /// <summary>附加来源访问条件，并保留原事务的真实物品来源和手部回退状态。</summary>
+    public InventoryDragTransaction WithAccessGuard(Func<bool> canAccess)
+    {
+        if (canAccess == null) throw new ArgumentNullException(nameof(canAccess));
+        if (_accessGuard == canAccess) return this;
+        Func<bool> previous = _accessGuard;
+        _accessGuard = previous == null ? canAccess : () => previous() && canAccess();
+        return this;
+    }
+
+    #endregion
+
     /// <summary>尝试把当前拖拽物直接提交到指定库存槽位。</summary>
     public bool TryDrop(Inventory targetInventory, int targetIndex)
     {
-        if (_completed || _dropHandler == null || targetInventory == null)
+        if (_completed || _accessGuard?.Invoke() == false || _dropHandler == null || targetInventory == null)
             return false;
 
         if (!_dropHandler(targetInventory, targetIndex))
@@ -82,7 +97,7 @@ public sealed class InventoryDragTransaction
     /// </summary>
     public bool TryConsumeSourceItem(Func<ItemData, bool> consumer)
     {
-        if (_completed || consumer == null || _sourceItemProvider == null)
+        if (_completed || _accessGuard?.Invoke() == false || consumer == null || _sourceItemProvider == null)
             return false;
 
         ItemData sourceItem = _sourceItemProvider();
@@ -97,7 +112,7 @@ public sealed class InventoryDragTransaction
     /// <summary>按需把尚未提交的来源物品转入手部槽，并切换后续放置来源。</summary>
     public bool PrepareFallback()
     {
-        if (_completed)
+        if (_completed || _accessGuard?.Invoke() == false)
             return false;
 
         if (_fallbackPrepared)
@@ -145,6 +160,8 @@ public sealed class InventoryDragTransaction
 public class Inventory
 {
     [NonSerialized] public MachineEntity MachineOwner; // 数据机器的归属信息不参与库存序列化。
+    [NonSerialized, FastCloner.Code.FastClonerIgnore] public Func<bool> RuntimeAccessGuard; // 临时面板会话在实际提交时再核对访问资格。
+    public bool CanAccessRuntime => RuntimeAccessGuard?.Invoke() != false;
     #region 字段和属性
 
     [FoldoutGroup("基础引用"), ReadOnly, LabelText("所属物品")]
@@ -789,6 +806,7 @@ public class Inventory
             itemSlotUI.OnLeftClick.Clear();
             itemSlotUI.OnGamepadSubmit.Clear();
             itemSlotUI._OnScroll.Clear();
+            itemSlotUI._OnShiftScroll.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
             itemSlotUI.OnFlickTransfer = null;
             itemSlotUI.HasFlickTarget = null;
@@ -806,6 +824,7 @@ public class Inventory
             itemSlotUI.OnLeftClick += OnLeftClick;
             itemSlotUI.OnGamepadSubmit += OnGamepadSubmit;
             itemSlotUI._OnScroll += OnScroll;
+            itemSlotUI._OnShiftScroll += OnShiftScroll;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
             itemSlotUI.OnFlickTransfer = OnFlickTransfer;
             itemSlotUI.HasFlickTarget = HasVisibleFlickTarget;
@@ -842,7 +861,7 @@ public class Inventory
         }
     }
 
-    public void BindSlotUI(ItemSlot_UI slotUI, int bindIndex = -1)
+    public void BindSlotUI(ItemSlot_UI slotUI, int bindIndex = -1, bool registerPrimary = true)
     {
         if (slotUI == null)
         {
@@ -861,7 +880,7 @@ public class Inventory
 
         int fixedIndex = Mathf.Clamp(bindIndex, 0, Data.itemSlots.Count - 1);
 
-        RegisterSlotUI(slotUI, fixedIndex);
+        if (registerPrimary) RegisterSlotUI(slotUI, fixedIndex);
 
         slotUI.InitializeSlot(
             fixedIndex,
@@ -878,6 +897,7 @@ public class Inventory
         slotUI.OnLeftClick.Clear();
         slotUI.OnGamepadSubmit.Clear();
         slotUI._OnScroll.Clear();
+        slotUI._OnShiftScroll.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
         slotUI.OnFlickTransfer = null;
         slotUI.HasFlickTarget = null;
@@ -895,6 +915,7 @@ public class Inventory
         slotUI.OnLeftClick += OnLeftClick;
         slotUI.OnGamepadSubmit += OnGamepadSubmit;
         slotUI._OnScroll += OnScroll;
+        slotUI._OnShiftScroll += OnShiftScroll;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
         slotUI.OnFlickTransfer = OnFlickTransfer;
         slotUI.HasFlickTarget = HasVisibleFlickTarget;
@@ -1320,8 +1341,22 @@ public class Inventory
         return requestedIndex;
     }
 
+    #region 滚轮物品转移
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnScroll(int index, float direction)
+    {
+        TransferScrollQuantity(index, direction, splitStack: false);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnShiftScroll(int index, float direction)
+    {
+        TransferScrollQuantity(index, direction, splitStack: true);
+    }
+
+    // 普通滚轮搬一件，Shift滚轮搬来源堆叠的一半，事务仍走库存原有接收和同步规则。
+    private void TransferScrollQuantity(int index, float direction, bool splitStack)
     {
         if (direction == 0f ||
             !TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot))
@@ -1336,13 +1371,20 @@ public class Inventory
             localSlot = Data.itemSlots[index];
         }
 
-        // 滚轮只在当前槽与鼠标携带槽间转移，并分别通知两个库存，不能借用快捷栏目标。
+        // 滚轮只在当前槽与鼠标携带槽间转移，不借用快捷栏目标。
         ItemSlot sourceSlot = direction > 0f ? handSlot : localSlot;
         ItemData sourceItem = sourceSlot.itemData;
         float before = sourceItem?.Stack?.Amount ?? 0f;
+        int amount = 1;
+        if (splitStack)
+        {
+            int sourceAmount = Inventory_Data.GetWholeStackAmount(before);
+            amount = Mathf.Max(1, Mathf.CeilToInt(sourceAmount * 0.5f));
+        }
+
         bool transferred = direction > 0f
-            ? handInventory.TryTransferQuickQuantity(handSlot, this, localSlot, 1)
-            : TryTransferQuickQuantity(localSlot, handInventory, handSlot, 1);
+            ? handInventory.TryTransferQuickQuantity(handSlot, this, localSlot, amount)
+            : TryTransferQuickQuantity(localSlot, handInventory, handSlot, amount);
         if (!transferred)
             return;
 
@@ -1353,6 +1395,8 @@ public class Inventory
             ? TouchTapFlow.None
             : direction < 0f ? TouchTapFlow.Pickup : TouchTapFlow.PutDown;
     }
+
+    #endregion
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public virtual void OnLeftClick(int index)
@@ -1542,7 +1586,8 @@ public class Inventory
             null,
             false,
             true,
-            () => ReferenceEquals(handSlot.itemData, draggedItem) ? draggedItem : null);
+            () => ReferenceEquals(handSlot.itemData, draggedItem) ? draggedItem : null)
+            .WithAccessGuard(() => CanAccessRuntime);
     }
 
     public virtual bool OnTouchWorldLongPress(Vector2 screenPosition)
@@ -1575,7 +1620,7 @@ public class Inventory
         handInventory = GetPlayerHandInventory();
         localSlot = null;
         handSlot = null;
-        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
+        if (!CanAccessRuntime || FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
 
         if (!IsValidQuickTransferTarget(handInventory) || Data == null || Data.itemSlots == null ||
             index < 0 || index >= Data.itemSlots.Count || handInventory == this)
@@ -1589,7 +1634,7 @@ public class Inventory
     /// <summary>创建以当前槽为来源的直接拖拽事务，不在拖拽开始时改写手部槽。</summary>
     public virtual InventoryDragTransaction OnMouseDragBegin(int index)
     {
-        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return null;
+        if (!CanAccessRuntime || FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return null;
         if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count ||
             Data.itemSlots[index]?.itemData?.Stack == null)
             return null;
@@ -1620,7 +1665,7 @@ public class Inventory
                     targetInventory, targetIndex, true),
             true,
             sourceItemProvider: () => ResolveCurrentDragSource(sourceSlot, draggedItem),
-            onCompleted: () => EndSlotDrag(sourceSlot));
+            onCompleted: () => EndSlotDrag(sourceSlot)).WithAccessGuard(() => CanAccessRuntime);
     }
 
     /// <summary>判断指定来源槽是否正被拖拽，供持续加工在用户操作期间暂缓消费。</summary>
@@ -2092,6 +2137,7 @@ public class Inventory
     private bool CanTransferToSlot(ItemSlot sourceSlot, Inventory targetInventory, ItemSlot targetSlot,
         int amount, bool allowSwap)
     {
+        if (!CanAccessRuntime || targetInventory?.CanAccessRuntime != true) return false;
         ItemData source = sourceSlot?.itemData;
         if (source?.Stack == null || targetSlot == null || amount <= 0 ||
             Data?.itemSlots == null || targetInventory?.Data?.itemSlots == null ||
@@ -2159,9 +2205,12 @@ public class Inventory
     /// </summary>
     public virtual bool CanAcceptQuickTransfer(ItemSlot sourceSlot, ItemSlot targetSlot)
     {
+        if (!CanAccessRuntime) return false;
         ItemData sourceItem = sourceSlot?.itemData;
         if (sourceItem == null || targetSlot == null)
             return false;
+
+        if (Data != null && !Data.CanAcceptItem(sourceItem, targetSlot)) return false;
 
         if (Data?.IsDepositBlocked == true &&
             (Data.itemSlots == null || !Data.itemSlots.Contains(sourceSlot)))
@@ -2615,7 +2664,7 @@ public class Inventory
 public static class InventoryPanelLayout
 {
     public const float PanelMargin = 18f;
-    private const float DefaultBagWidth = 920f;
+    private const float DefaultBagWidth = 1004f;
     private const float FullScreenCraftingThreshold = 0.65f;
 
     /// <summary>首次摆放背包时按真实快捷栏上沿对齐，所有坐标统一到安全区父节点。</summary>

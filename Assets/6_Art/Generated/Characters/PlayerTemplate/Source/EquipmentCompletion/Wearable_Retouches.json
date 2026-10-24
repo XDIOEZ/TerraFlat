@@ -1,0 +1,1259 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-24",
+  "method": "Retouch original artwork in place with one-pixel edits; preserve silhouettes, original palettes, highlights and shading; no complete repaint.",
+  "assets": [
+    {
+      "itemId": "Engineering_Goggles",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": []
+    },
+    {
+      "itemId": "Chestplate_Iron",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Cuirass.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": []
+    },
+    {
+      "itemId": "Chestplate_Twine",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 23,
+          "y": 28,
+          "rgba": [
+            33,
+            27,
+            21,
+            255
+          ],
+          "reason": "补齐单像素透明漏点",
+          "before": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "x": 17,
+          "y": 28,
+          "rgba": [
+            183,
+            155,
+            101,
+            255
+          ],
+          "before": [
+            58,
+            48,
+            33,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 12,
+          "y": 28,
+          "rgba": [
+            183,
+            155,
+            101,
+            255
+          ],
+          "before": [
+            87,
+            75,
+            44,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 15,
+          "y": 29,
+          "rgba": [
+            205,
+            179,
+            126,
+            255
+          ],
+          "before": [
+            87,
+            75,
+            44,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 17,
+          "y": 31,
+          "rgba": [
+            183,
+            155,
+            101,
+            255
+          ],
+          "before": [
+            84,
+            66,
+            53,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 18,
+          "y": 33,
+          "rgba": [
+            150,
+            128,
+            82,
+            255
+          ],
+          "before": [
+            116,
+            101,
+            62,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Chestplate_Twine_Retouch.xcf"
+    },
+    {
+      "itemId": "Chestplate_Wood",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 26,
+          "y": 27,
+          "rgba": [
+            137,
+            95,
+            61,
+            255
+          ],
+          "before": [
+            81,
+            52,
+            38,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 19,
+          "y": 29,
+          "rgba": [
+            81,
+            52,
+            38,
+            255
+          ],
+          "before": [
+            52,
+            35,
+            28,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 19,
+          "y": 31,
+          "rgba": [
+            81,
+            52,
+            38,
+            255
+          ],
+          "before": [
+            52,
+            35,
+            28,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Chestplate_Wood_Retouch.xcf"
+    },
+    {
+      "itemId": "Traveler_Hood",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 19,
+          "y": 3,
+          "rgba": [
+            144,
+            83,
+            45,
+            255
+          ],
+          "before": [
+            122,
+            68,
+            41,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 22,
+          "y": 21,
+          "rgba": [
+            109,
+            57,
+            37,
+            255
+          ],
+          "before": [
+            66,
+            32,
+            22,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 22,
+          "y": 10,
+          "rgba": [
+            111,
+            60,
+            36,
+            255
+          ],
+          "before": [
+            95,
+            50,
+            35,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 23,
+          "y": 11,
+          "rgba": [
+            111,
+            60,
+            36,
+            255
+          ],
+          "before": [
+            96,
+            49,
+            34,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 19,
+          "y": 8,
+          "rgba": [
+            144,
+            84,
+            47,
+            255
+          ],
+          "before": [
+            129,
+            76,
+            42,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 23,
+          "y": 4,
+          "rgba": [
+            119,
+            64,
+            37,
+            255
+          ],
+          "before": [
+            104,
+            55,
+            36,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 27,
+          "y": 14,
+          "rgba": [
+            108,
+            57,
+            36,
+            255
+          ],
+          "before": [
+            96,
+            49,
+            35,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 26,
+          "y": 14,
+          "rgba": [
+            108,
+            57,
+            36,
+            255
+          ],
+          "before": [
+            98,
+            49,
+            32,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 23,
+          "y": 6,
+          "rgba": [
+            114,
+            61,
+            35,
+            255
+          ],
+          "before": [
+            104,
+            54,
+            35,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 9,
+          "y": 9,
+          "rgba": [
+            142,
+            85,
+            43,
+            255
+          ],
+          "before": [
+            136,
+            77,
+            36,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 24,
+          "y": 13,
+          "rgba": [
+            100,
+            51,
+            35,
+            255
+          ],
+          "before": [
+            109,
+            59,
+            35,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 21,
+          "y": 9,
+          "rgba": [
+            111,
+            59,
+            36,
+            255
+          ],
+          "before": [
+            102,
+            52,
+            35,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 22,
+          "y": 6,
+          "rgba": [
+            114,
+            61,
+            35,
+            255
+          ],
+          "before": [
+            105,
+            56,
+            35,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 18,
+          "y": 4,
+          "rgba": [
+            145,
+            83,
+            44,
+            255
+          ],
+          "before": [
+            152,
+            90,
+            46,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 26,
+          "y": 15,
+          "rgba": [
+            108,
+            57,
+            36,
+            255
+          ],
+          "before": [
+            116,
+            62,
+            37,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 19,
+          "y": 7,
+          "rgba": [
+            129,
+            71,
+            40,
+            255
+          ],
+          "before": [
+            122,
+            67,
+            40,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 18,
+          "y": 7,
+          "rgba": [
+            129,
+            71,
+            40,
+            255
+          ],
+          "before": [
+            124,
+            66,
+            37,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 20,
+          "y": 9,
+          "rgba": [
+            111,
+            59,
+            36,
+            255
+          ],
+          "before": [
+            117,
+            63,
+            36,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Traveler_Hood_Retouch.xcf"
+    },
+    {
+      "itemId": "Traveler_Vest",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 22,
+          "y": 25,
+          "rgba": [
+            107,
+            62,
+            26,
+            255
+          ],
+          "before": [
+            68,
+            30,
+            17,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 15,
+          "y": 27,
+          "rgba": [
+            246,
+            170,
+            61,
+            255
+          ],
+          "before": [
+            247,
+            164,
+            50,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 15,
+          "y": 26,
+          "rgba": [
+            246,
+            170,
+            61,
+            255
+          ],
+          "before": [
+            252,
+            169,
+            51,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 10,
+          "y": 28,
+          "rgba": [
+            119,
+            52,
+            31,
+            255
+          ],
+          "before": [
+            110,
+            49,
+            29,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Traveler_Vest_Retouch.xcf"
+    },
+    {
+      "itemId": "Traveler_Gloves",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 4,
+          "y": 35,
+          "rgba": [
+            114,
+            53,
+            34,
+            255
+          ],
+          "before": [
+            62,
+            23,
+            21,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 26,
+          "y": 32,
+          "rgba": [
+            119,
+            59,
+            36,
+            255
+          ],
+          "before": [
+            84,
+            38,
+            30,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 5,
+          "y": 32,
+          "rgba": [
+            120,
+            58,
+            35,
+            255
+          ],
+          "before": [
+            103,
+            45,
+            34,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 26,
+          "y": 30,
+          "rgba": [
+            120,
+            59,
+            36,
+            255
+          ],
+          "before": [
+            114,
+            55,
+            34,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Traveler_Gloves_Retouch.xcf"
+    },
+    {
+      "itemId": "Traveler_Trousers",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 9,
+          "y": 40,
+          "rgba": [
+            102,
+            47,
+            34,
+            255
+          ],
+          "before": [
+            59,
+            20,
+            23,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 10,
+          "y": 40,
+          "rgba": [
+            114,
+            52,
+            29,
+            255
+          ],
+          "before": [
+            78,
+            34,
+            27,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 13,
+          "y": 35,
+          "rgba": [
+            128,
+            59,
+            34,
+            255
+          ],
+          "before": [
+            97,
+            42,
+            29,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 19,
+          "y": 34,
+          "rgba": [
+            123,
+            55,
+            32,
+            255
+          ],
+          "before": [
+            105,
+            45,
+            29,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Traveler_Trousers_Retouch.xcf"
+    },
+    {
+      "itemId": "Traveler_Boots",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": []
+    },
+    {
+      "itemId": "IronGuard_Helmet",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 11,
+          "y": 8,
+          "rgba": [
+            108,
+            105,
+            116,
+            255
+          ],
+          "before": [
+            94,
+            90,
+            102,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 25,
+          "y": 14,
+          "rgba": [
+            83,
+            77,
+            90,
+            255
+          ],
+          "before": [
+            59,
+            51,
+            66,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 18,
+          "y": 5,
+          "rgba": [
+            112,
+            111,
+            119,
+            255
+          ],
+          "before": [
+            125,
+            125,
+            131,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 19,
+          "y": 5,
+          "rgba": [
+            112,
+            111,
+            119,
+            255
+          ],
+          "before": [
+            124,
+            123,
+            131,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 23,
+          "y": 6,
+          "rgba": [
+            104,
+            102,
+            112,
+            255
+          ],
+          "before": [
+            93,
+            92,
+            102,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 23,
+          "y": 7,
+          "rgba": [
+            104,
+            102,
+            112,
+            255
+          ],
+          "before": [
+            97,
+            95,
+            107,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 20,
+          "y": 8,
+          "rgba": [
+            104,
+            102,
+            112,
+            255
+          ],
+          "before": [
+            99,
+            97,
+            109,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/IronGuard_Helmet_Retouch.xcf"
+    },
+    {
+      "itemId": "IronGuard_Cuirass",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 21,
+          "y": 26,
+          "rgba": [
+            141,
+            140,
+            147,
+            255
+          ],
+          "before": [
+            87,
+            84,
+            96,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 22,
+          "y": 24,
+          "rgba": [
+            143,
+            139,
+            149,
+            255
+          ],
+          "before": [
+            108,
+            108,
+            119,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 22,
+          "y": 26,
+          "rgba": [
+            144,
+            141,
+            150,
+            255
+          ],
+          "before": [
+            116,
+            114,
+            125,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 23,
+          "y": 26,
+          "rgba": [
+            174,
+            172,
+            175,
+            255
+          ],
+          "before": [
+            153,
+            151,
+            158,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 17,
+          "y": 30,
+          "rgba": [
+            110,
+            106,
+            118,
+            255
+          ],
+          "before": [
+            103,
+            100,
+            112,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 17,
+          "y": 31,
+          "rgba": [
+            110,
+            106,
+            118,
+            255
+          ],
+          "before": [
+            114,
+            112,
+            124,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 16,
+          "y": 30,
+          "rgba": [
+            110,
+            106,
+            118,
+            255
+          ],
+          "before": [
+            104,
+            103,
+            115,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/IronGuard_Cuirass_Retouch.xcf"
+    },
+    {
+      "itemId": "IronGuard_Gauntlets",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 5,
+          "y": 33,
+          "rgba": [
+            147,
+            145,
+            155,
+            255
+          ],
+          "before": [
+            68,
+            62,
+            75,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 28,
+          "y": 33,
+          "rgba": [
+            170,
+            169,
+            174,
+            255
+          ],
+          "before": [
+            138,
+            137,
+            145,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 29,
+          "y": 35,
+          "rgba": [
+            170,
+            169,
+            174,
+            255
+          ],
+          "before": [
+            161,
+            159,
+            166,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 29,
+          "y": 34,
+          "rgba": [
+            170,
+            169,
+            174,
+            255
+          ],
+          "before": [
+            165,
+            165,
+            169,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/IronGuard_Gauntlets_Retouch.xcf"
+    },
+    {
+      "itemId": "IronGuard_Greaves",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 19,
+          "y": 34,
+          "rgba": [
+            27,
+            60,
+            80,
+            255
+          ],
+          "before": [
+            30,
+            65,
+            88,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        },
+        {
+          "x": 16,
+          "y": 35,
+          "rgba": [
+            26,
+            58,
+            77,
+            255
+          ],
+          "before": [
+            28,
+            62,
+            84,
+            255
+          ],
+          "reason": "在原有同材质细小色阶中连接像素簇，保留亮暗结构和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/IronGuard_Greaves_Retouch.xcf"
+    },
+    {
+      "itemId": "IronGuard_Boots",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 9,
+          "y": 42,
+          "rgba": [
+            190,
+            191,
+            194,
+            255
+          ],
+          "before": [
+            67,
+            62,
+            73,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 12,
+          "y": 43,
+          "rgba": [
+            83,
+            78,
+            94,
+            255
+          ],
+          "before": [
+            62,
+            56,
+            71,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/IronGuard_Boots_Retouch.xcf"
+    },
+    {
+      "itemId": "Steel_Helmet",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 18,
+          "y": 9,
+          "rgba": [
+            78,
+            93,
+            111,
+            255
+          ],
+          "before": [
+            50,
+            61,
+            77,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Steel_Helmet_Retouch.xcf"
+    },
+    {
+      "itemId": "Steel_Gauntlets",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Gauntlets.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": []
+    },
+    {
+      "itemId": "Steel_Greaves",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Greaves.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": [
+        {
+          "x": 9,
+          "y": 39,
+          "rgba": [
+            117,
+            136,
+            155,
+            255
+          ],
+          "before": [
+            50,
+            61,
+            77,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        },
+        {
+          "x": 21,
+          "y": 39,
+          "rgba": [
+            117,
+            136,
+            155,
+            255
+          ],
+          "before": [
+            50,
+            61,
+            77,
+            255
+          ],
+          "reason": "沿原图相邻同材质色阶修顺孤立暗点，保留原轮廓和高光"
+        }
+      ],
+      "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Steel_Greaves_Retouch.xcf"
+    },
+    {
+      "itemId": "Steel_Boots",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Boots.png",
+      "sourceRevision": "b2ed312172a1dc85c117d8f071a5d9c0083ba24d",
+      "edits": []
+    },
+    {
+      "itemId": "Spacesuit_Head",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Head.png",
+      "sourceRevision": "e47b5352e78797abc43a886a57e25913f370e821",
+      "edits": []
+    },
+    {
+      "itemId": "Spacesuit_Torso",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Torso.png",
+      "sourceRevision": "e47b5352e78797abc43a886a57e25913f370e821",
+      "edits": []
+    },
+    {
+      "itemId": "Spacesuit_Hands",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Hands.png",
+      "sourceRevision": "e47b5352e78797abc43a886a57e25913f370e821",
+      "edits": []
+    },
+    {
+      "itemId": "Spacesuit_Legs",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Legs.png",
+      "sourceRevision": "e47b5352e78797abc43a886a57e25913f370e821",
+      "edits": []
+    },
+    {
+      "itemId": "Spacesuit_Feet",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Feet.png",
+      "sourceRevision": "e47b5352e78797abc43a886a57e25913f370e821",
+      "edits": []
+    }
+  ]
+}

@@ -8,12 +8,16 @@ public partial class ItemMgr
 {
     #region 世界散落物物质结算
 
+    private static readonly Unity.Profiling.ProfilerMarker FlamePresentationMarker =
+        new("ItemMgr.LateUpdate.WorldMatterFlames");
     private const float WorldMatterTickInterval = 1f;
     private const int WorldMatterItemsPerStep = 64;
     private static readonly long WorldMatterStepBudgetTicks = System.Math.Max(1L, Stopwatch.Frequency / 1000L);
     private readonly List<Item> worldMatterSnapshot = new();
     private readonly Dictionary<Item, WorldMatterEntry> worldMatterEntries = new(ItemReferenceComparer.Instance);
     private readonly Dictionary<Item, WorldMatterStructure> worldMatterStructures = new(ItemReferenceComparer.Instance);
+    // 每帧只刷新确实存在火焰的散落物，其他物质条目仍按原周期结算。
+    private readonly HashSet<WorldMatterEntry> worldMatterFlames = new();
     private double worldMatterTime;
     private double nextWorldMatterSweepTime = WorldMatterTickInterval;
     private int worldMatterCursor;
@@ -25,8 +29,7 @@ public partial class ItemMgr
         public uint Generation;
         public double LastTime;
         public WorldMatterStructure Structure;
-        public ParticleSystem Particles;
-        public ParticleSystemRenderer ParticleRenderer;
+        public ShaderFlameEffect Flame;
     }
 
     // 层级能力只在结构或代际改变时读取，动态物种和投射物附着仍使用当前状态。
@@ -39,6 +42,7 @@ public partial class ItemMgr
         private readonly uint structureVersion;
         private readonly bool hasAiComponent;
         private readonly bool hasTileReceiver;
+        private readonly Mod_Droping dropping;
         private readonly Mod_Projectile projectile;
         private readonly Mod_Combustion combustion;
         private readonly Mod_CombustionVisual combustionVisual;
@@ -53,6 +57,7 @@ public partial class ItemMgr
             // 燃烧能力随模块结构缓存，运行时启停仍按当前状态判断。
             combustion = modules?.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId);
             combustionVisual = modules?.GetMod_ByID<Mod_CombustionVisual>(Mod_CombustionVisual.ModuleId);
+            dropping = modules?.GetMod_ByID<Mod_Droping>(ModText.Drop);
             using var scope = ListPool<MonoBehaviour>.Get(out var behaviours);
             item.GetComponentsInChildren(true, behaviours);
             foreach (MonoBehaviour behaviour in behaviours)
@@ -74,10 +79,13 @@ public partial class ItemMgr
         internal Mod_CombustionVisual ActiveCombustionVisual => combustionVisual != null &&
             combustionVisual.Enabled && combustionVisual.IsRuntimeLoaded ? combustionVisual : null;
 
-        internal bool BlocksWorldMatter => hasTileReceiver ||
+        internal bool BlocksWorldMatter => DropInProgress || hasTileReceiver ||
             (item is not Player && item is not global::Map &&
              (hasAiComponent || MonsterManager.IsRegisteredSpeciesId(item.itemData?.IDName))) ||
             (projectile != null && projectile.HasActiveWorldAttachment);
+
+        internal bool DropInProgress => dropping?.drop != null &&
+            !dropping.drop.waterFloating && !dropping.drop.waterSinking;
     }
 
     // 完整散落物独立于模块调度推进，休眠模块的普通联机掉落也能受热燃烧。
@@ -171,8 +179,7 @@ public partial class ItemMgr
         if (item == null || !item.IsInitialized || item.DestructionHandled || item.IsInPool ||
             !item.gameObject.activeInHierarchy || !IsRuntimeItemRegistered(item) ||
             item.Owner != null || item.InHand || item.itemData?.Stack == null ||
-            !item.itemData.Stack.CanBePickedUp || item.itemData.Stack.Amount <= 0f ||
-            Mod_Droping.IsDropInProgress(item))
+            !item.itemData.Stack.CanBePickedUp || item.itemData.Stack.Amount <= 0f)
             return false;
         if (!worldMatterStructures.TryGetValue(item, out WorldMatterStructure structure) || !structure.IsCurrent(item))
             worldMatterStructures[item] = structure = new WorldMatterStructure(item);
@@ -246,28 +253,39 @@ public partial class ItemMgr
             return;
         }
 
-        if (entry.Particles == null)
+        if (entry.Flame == null) entry.Flame = WorldItemCombustionVisual.Create(transform);
+        // 特效资源暂不可用时不可留下空索引；下一次物质 Tick 仍可重试。
+        if (entry.Flame == null)
         {
-            entry.Particles = WorldItemCombustionVisual.Create(transform);
-            entry.ParticleRenderer = entry.Particles.GetComponent<ParticleSystemRenderer>();
+            worldMatterFlames.Remove(entry);
+            return;
         }
+        worldMatterFlames.Add(entry);
         SpriteRenderer sprite = entry.Item.Sprite;
-        entry.Particles.transform.position = sprite != null ? sprite.transform.position : entry.Item.transform.position;
-        if (sprite != null && entry.ParticleRenderer != null)
+        Vector3 position = sprite != null ? sprite.transform.position : entry.Item.transform.position;
+        if (entry.Flame.transform.position != position) entry.Flame.transform.position = position;
+        if (sprite != null)
         {
             WorldSortingManager.ReadExternalRendererKey(sprite, out int layer, out int order);
-            entry.ParticleRenderer.sortingLayerID = layer;
-            entry.ParticleRenderer.sortingOrder = order + 2;
+            entry.Flame.SetSorting(layer, order + 2);
         }
-        if (!entry.Particles.isPlaying)
-            entry.Particles.Play(true);
+        entry.Flame.SetBurning(true);
     }
 
     private void PresentWorldItemMatter()
     {
-        foreach (WorldMatterEntry entry in worldMatterEntries.Values)
-            if (entry.Particles != null)
-                RefreshWorldItemCombustionVisual(entry);
+        if (worldMatterFlames.Count == 0) return;
+        using var sample = FlamePresentationMarker.Auto();
+        // Refresh 可销毁火焰/注销物品，租借独立快照同时兼容回调重入。
+        using var lease = ListPool<WorldMatterEntry>.Get(out var active);
+        active.AddRange(worldMatterFlames);
+        for (int i = 0; i < active.Count; i++)
+        {
+            WorldMatterEntry entry = active[i];
+            if (!worldMatterFlames.Contains(entry)) continue;
+            if (entry.Flame == null) { DestroyWorldItemCombustionVisual(entry); continue; }
+            RefreshWorldItemCombustionVisual(entry);
+        }
     }
 
     private void ReleaseWorldItemMatter(Item item)
@@ -280,13 +298,13 @@ public partial class ItemMgr
         worldMatterEntries.Remove(item);
     }
 
-    private static void DestroyWorldItemCombustionVisual(WorldMatterEntry entry)
+    private void DestroyWorldItemCombustionVisual(WorldMatterEntry entry)
     {
-        if (entry.Particles == null) return;
-        entry.Particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        UnityEngine.Object.Destroy(entry.Particles.gameObject);
-        entry.Particles = null;
-        entry.ParticleRenderer = null;
+        worldMatterFlames.Remove(entry);
+        if (entry.Flame == null) { entry.Flame = null; return; }
+        entry.Flame.SetBurning(false);
+        UnityEngine.Object.Destroy(entry.Flame.gameObject);
+        entry.Flame = null;
     }
 
     private void ClearWorldItemMatter()
@@ -294,6 +312,7 @@ public partial class ItemMgr
         foreach (WorldMatterEntry entry in worldMatterEntries.Values)
             DestroyWorldItemCombustionVisual(entry);
         worldMatterEntries.Clear();
+        worldMatterFlames.Clear();
         worldMatterStructures.Clear();
         worldMatterSnapshot.Clear();
         worldMatterCursor = 0;

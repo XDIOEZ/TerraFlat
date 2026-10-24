@@ -23,6 +23,7 @@ public enum CraftingFailureReason
 /// </summary>
 public sealed class CraftingCapabilities
 {
+    #region 制作能力与站点资格
     public RecipeType RecipeType = RecipeType.Crafting;
     public string StationId = string.Empty;
     public IReadOnlyList<string> CompatibleStationIds; // 同类制作入口可额外接受的工作站标识。
@@ -31,11 +32,13 @@ public sealed class CraftingCapabilities
     public int MaxRecipeHeight;
     public bool AllowCompactGrid;
     public bool AllowOutputIntoInput;
-    public bool ApplyDifficultyOutputMultiplier = true; // 固定物料转换可关闭普通合成的难度增产。
+    public bool ApplyOutputMultiplier = true; // 固定物料转换可关闭普通合成的规则增产。
+    public bool RequireExplicitStation; // 专用设备只接收明确归属本站的配方。
 
     /// <summary>空标识对所有普通制作入口开放；额外标识仅由工作站显式声明。</summary>
     public bool SupportsStation(string requiredStation)
     {
+        if (RequireExplicitStation && string.IsNullOrWhiteSpace(requiredStation)) return false;
         if (string.IsNullOrWhiteSpace(requiredStation) ||
             string.Equals(requiredStation, StationId, StringComparison.OrdinalIgnoreCase))
             return true;
@@ -49,6 +52,7 @@ public sealed class CraftingCapabilities
 
         return false;
     }
+    #endregion
 }
 
 /// <summary>

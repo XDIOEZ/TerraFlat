@@ -151,7 +151,7 @@ namespace FlatWorld.AIECS
     [DisableAutoCreation]
     public partial class EntityCapabilitySystem : SystemBase
     {
-        public float StepSeconds, DayLength, DifficultyGrowthMultiplier;
+        public float StepSeconds, DayLength, GrowthMultiplier;
         public double GameTime;
         public bool Seasonal;
         private NativeArray<EntitySeasonPeriod> seasons;
@@ -198,7 +198,7 @@ namespace FlatWorld.AIECS
                 Dependency = new GrowthJob
                 {
                     DeltaTime = StepSeconds,
-                    DifficultyMultiplier = DifficultyGrowthMultiplier,
+                    GrowthMultiplier = GrowthMultiplier,
                     Climates = GetComponentLookup<EntityClimate>(true),
                     WeatherInputs = GetComponentLookup<EntityWeatherInput>(true)
                 }.ScheduleParallel(growthQuery, Dependency);
@@ -280,7 +280,7 @@ namespace FlatWorld.AIECS
         [BurstCompile]
         private partial struct GrowthJob : IJobEntity
         {
-            public float DeltaTime, DifficultyMultiplier;
+            public float DeltaTime, GrowthMultiplier;
             [ReadOnly] public ComponentLookup<EntityClimate> Climates;
             [ReadOnly] public ComponentLookup<EntityWeatherInput> WeatherInputs;
 
@@ -299,7 +299,7 @@ namespace FlatWorld.AIECS
                     ? WeatherInputs[entity] : new EntityWeatherInput { GrowthMultiplier = 1f };
                 float multiplier = math.max(0f, growth.EnvironmentMultiplier) * math.max(0f, climateMultiplier) *
                     (1f + math.saturate(weather.RainIntensity) * math.max(0f, growth.RainGrowthBonus)) *
-                    math.max(0f, weather.GrowthMultiplier) * math.max(0f, DifficultyMultiplier);
+                    math.max(0f, weather.GrowthMultiplier) * math.max(0f, GrowthMultiplier);
                 growth.Progress = math.min(growth.MaxProgress, growth.Progress + math.max(0f, growth.Speed) * DeltaTime * multiplier);
                 int stage = 0;
                 for (int i = 0; i < growth.Thresholds.Length; i++)

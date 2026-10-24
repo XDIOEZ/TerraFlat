@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -340,12 +341,23 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         GUIUtility.systemCopyBuffer = snapshot;
         if (statusText != null)
         {
-            string collapsedSummary = collapsedEntries > 0
-                ? $"，合并 {collapsedEntries} 条重复记录"
-                : string.Empty;
-            statusText.text = truncated
-                ? $"已复制最近 {copiedEntries} 个日志槽位{collapsedSummary}，较早类型已省略。"
-                : $"已复制当前 {copiedEntries} 个日志槽位{collapsedSummary}。";
+            if (truncated)
+            {
+                if (collapsedEntries > 0)
+                    SetLocalizedFormat(statusText, "已复制最近 {0} 个日志槽位，合并 {1} 条重复记录，较早类型已省略。",
+                        copiedEntries, collapsedEntries);
+                else
+                    SetLocalizedFormat(statusText, "已复制最近 {0} 个日志槽位，较早类型已省略。", copiedEntries);
+            }
+            else if (collapsedEntries > 0)
+            {
+                SetLocalizedFormat(statusText, "已复制当前 {0} 个日志槽位，合并 {1} 条重复记录。",
+                    copiedEntries, collapsedEntries);
+            }
+            else
+            {
+                SetLocalizedFormat(statusText, "已复制当前 {0} 个日志槽位。", copiedEntries);
+            }
         }
     }
 
@@ -361,7 +373,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         PlayerPrefs.SetInt(CopyEntryCountPreferenceKey, copyEntryCount);
         PlayerPrefs.Save();
         if (statusText != null)
-            statusText.text = $"复制时将取最近 {copyEntryCount} 个去重日志槽位。";
+            SetLocalizedFormat(statusText, "复制时将取最近 {0} 个去重日志槽位。", copyEntryCount);
     }
 
     /// <summary>把当前复制条数同步到输入框且不触发重复回调。</summary>
@@ -376,7 +388,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     {
         GameLogManager.ClearRuntimeLogBuffer();
         if (statusText != null)
-            statusText.text = "面板日志已清空，磁盘日志仍然保留。";
+            SetLocalizedText(statusText, "面板日志已清空，磁盘日志仍然保留。");
         RefreshPresentation(force: true);
     }
 
@@ -406,15 +418,16 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         GameLogManager.GetRuntimeLogCounts(out int total, out int warnings, out int errors);
         if (toggleLabel != null)
         {
-            toggleLabel.text = errors > 0
-                ? $"日志  E:{errors}"
-                : warnings > 0
-                    ? $"日志  W:{warnings}"
-                    : $"日志  {total}";
+            if (errors > 0)
+                SetLocalizedFormat(toggleLabel, "日志  E:{0}", errors);
+            else if (warnings > 0)
+                SetLocalizedFormat(toggleLabel, "日志  W:{0}", warnings);
+            else
+                SetLocalizedFormat(toggleLabel, "日志  {0}", total);
         }
 
         if (summaryText != null)
-            summaryText.text = $"共 {total} 条    错误 {errors}    警告 {warnings}";
+            SetLocalizedFormat(summaryText, "共 {0} 条    错误 {1}    警告 {2}", total, errors, warnings);
 
         if (debugPanel != null && debugPanel.activeSelf)
             RefreshLogText();
@@ -434,7 +447,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
             errorLogsToggle == null || errorLogsToggle.isOn);
         logText.text = BuildDisplayLog(snapshot);
         if (truncated && statusText != null)
-            statusText.text = "页面只显示最近内容；复制条数可在顶部手动设置。";
+            SetLocalizedText(statusText, "页面只显示最近内容；复制条数可在顶部手动设置。");
 
         LayoutRebuilder.MarkLayoutForRebuild(logText.rectTransform);
         if (logScrollRect != null)
@@ -499,6 +512,16 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
                TMP_FontAssetUtilities.GetCharacterFromFontAsset(
                    unicode, TMP_Settings.defaultFontAsset, true,
                    logText.fontStyle, logText.fontWeight, out _) != null;
+    }
+
+    private static void SetLocalizedText(TMP_Text target, string sourceText)
+    {
+        LocalizedTextRuntime.SetText(target, sourceText);
+    }
+
+    private static void SetLocalizedFormat(TMP_Text target, string sourceTemplate, params object[] arguments)
+    {
+        LocalizedTextRuntime.SetFormat(target, sourceTemplate, arguments);
     }
 
     #endregion

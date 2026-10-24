@@ -17,7 +17,11 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - 正式 Prefab 持完整视觉/引用，领域控制器持业务/实例，UIManager 管生命周期；节点名与 RuntimeUIPrefabKeys 是绑定身份，文本用 FlatWorldUI 表的 GetUiText/GetUiFormat，不翻译节点名。资产需在 Addressables Prefab 标签内，子目录继承 UI.asmdef，移动保 meta/GUID。
 - 主菜单为视觉基准：灰阶 Image、近白字、低对比边界、灰白焦点；根→内容/按钮逐级提亮，边框约2参考像素、文字描边约1。图标/语义色独立于 Chrome，信息 HUD 为角落锚点/透明容器。静态文案只留字段、操作、真实状态与必要规则。
 - `FlatWorldUIThemeConfigCatalog → FlatWorldUITheme → BasePanel/构建器` 共用主题。`ReusableUIControl` 嵌套 Prefab 持内部结构/字体/Sprite/几何，使用处持文案/事件/值/选项/外部布局，页签用 `ReusableUITabVisual.SetSelected`。构建器先停用有 Awake 的根，引用齐后激活；主题/控件迁移仅显式菜单，补建不覆盖人工编辑。
+- `FlatWorldUIFeedback` 的悬停、按压和启停均保留基础缩放；布局拥有者通过 `SetBaseScale` 更新大小，不能让反馈把玩家自定义尺寸重置成 100%。布局预览停用反馈，只保留正式布局拖拽。
 - 普通面板底板用 `UI_PanelBackground`，根 Image 只留透明射线；HUD/加载幕/主菜单独立外观，确认/改名阻断层透明。根 CanvasGroup.alpha=1、独立 Canvas.localScale=1，注册前 `InitClosed()`；启动加载面板由 WorldManager.prefab 直引，不依赖未就绪资源字典。
+- 启动缓存真实重建时，`GameRes.LoadStatusText` 在阶段文案后补充首次较慢提示，资源加载幕与抢跑入世加载页共用；命中缓存不提示，进度与失败文案沿用原流程，新增提示进入正式双语 UI 表。
+
+- 固定区域的 TMP 文字用 `FlatWorldUITextLayout.Configure(text, 设计字号)`：最大字号不自动放大，最小字号按设计值降低（通常12～18），超长内容用 Ellipsis；已有更小的有效下限可保留。正式 Prefab 同步存自动缩放与范围；输入正文、ContentSizeFitter/列表驱动的长正文、手动分页内容保留自身尺寸规则，不参加通用缩字。不要在 Update 中遍历修正文字。
 
 ## 生命周期与输入
 

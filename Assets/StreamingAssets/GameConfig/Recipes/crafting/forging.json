@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "mechanical.hand_forge.Ingot_RawIron",
+      "displayName": "锻打生铁板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "RawIronPlate",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "mechanical.hand_forge.Ingot_WroughtIron",
+      "displayName": "锻打熟铁板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "IronPlate",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "mechanical.hand_forge.Ingot_Copper",
+      "displayName": "锻打铜板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "mechanical.hand_forge.Ingot_Bronze",
+      "displayName": "锻打青铜板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Bronze",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "BronzePlate",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "mechanical.hand_forge.Ingot_Tin",
+      "displayName": "锻打锡板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Tin",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "TinPlate",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "mechanical.hand_forge.Ingot_Steel",
+      "displayName": "锻打钢板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Steel",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "SteelPlate",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "mechanical.hand_forge.Needle_Copper",
+      "displayName": "锻造铜针",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Needle_Copper",
+          "amount": 10
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "mechanical.hand_forge.Needle_Iron",
+      "displayName": "锻造铁针",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "hand_forge",
+      "processingSeconds": 12,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Needle_Iron",
+          "amount": 10
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

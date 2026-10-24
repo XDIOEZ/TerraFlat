@@ -121,7 +121,8 @@ public partial class GameRes
 
         bool stateChanged = lastPresentedFailure != resourceLoadFailed;
         bool progressChanged = !Mathf.Approximately(lastPresentedProgress, loadingProgress);
-        bool statusChanged = !string.Equals(lastPresentedStatus, loadingText, System.StringComparison.Ordinal);
+        string status = LoadStatusText;
+        bool statusChanged = !string.Equals(lastPresentedStatus, status, System.StringComparison.Ordinal);
         if (!resourceLoadingView.activeSelf)
             resourceLoadingView.SetActive(true);
 
@@ -144,7 +145,8 @@ public partial class GameRes
             ? FlatWorldLocalizationService.GetUiFormat(
                 "资源加载失败（{0}），修正配置后可按 Alt+R 重试",
                 FlatWorldLocalizationService.GetUiText(resourceLoadingFailureStage))
-            : FlatWorldLocalizationService.GetUiText(string.IsNullOrWhiteSpace(loadingText) ? "正在加载资源…" : loadingText);
+            : ShowCacheBuildHint ? status
+                : FlatWorldLocalizationService.GetUiText(string.IsNullOrWhiteSpace(status) ? "正在加载资源…" : status);
         resourceLoadingProgress.value = Mathf.Clamp01(loadingProgress);
         resourceLoadingProgressText.text = $"{Mathf.RoundToInt(loadingProgress * 100f)}%";
         resourceLoadingProgressText.color = accent;
@@ -152,7 +154,7 @@ public partial class GameRes
 
         lastPresentedFailure = resourceLoadFailed;
         lastPresentedProgress = loadingProgress;
-        lastPresentedStatus = loadingText ?? string.Empty;
+        lastPresentedStatus = status;
         resourceLoadingLanguageDirty = false;
     }
 

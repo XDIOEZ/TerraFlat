@@ -1,0 +1,806 @@
+{
+  "date": "2026-10-24",
+  "tool": "GIMP MCP native1px pencil",
+  "approvedSamples": [
+    "Axe_Iron",
+    "Pickaxe_Copper",
+    "Shovel_Bronze"
+  ],
+  "delivery": {
+    "savedFiles": "35 GIMP native-pixel retouched PNGs: 24 stay32x32, 11 axes/pickaxes crop transparent margins to tight <=32px rectangles. Existing references and PPU retained; 11 pivots rebased to keep every opaque world position.",
+    "editor": "The agents did not control Play Mode, force Import, Refresh or reload. Editor import/Console status is reported separately by the primary agent.",
+    "acceptance": "No gameplay acceptance performed; the user verifies inventory appearance, holding, actions, thin lines and burning."
+  },
+  "assets": [
+    {
+      "id": "Axe_Stone",
+      "width": 20,
+      "height": 20,
+      "visibleColors": 10,
+      "alphaBounds": [
+        1,
+        1,
+        19,
+        19
+      ],
+      "ppu": 16.03809896,
+      "pivotX": 0.18124079999999995,
+      "pivotY": 0.20578304000000003,
+      "sha256": "33632e8dea42dcc954843c33949a13b1a609bf0b8ebec14d18f48a8f22db5bc9",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Axe_Stone.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 7,
+        "y": 7,
+        "width": 20,
+        "height": 20
+      },
+      "edits": 34,
+      "approvedSample": false
+    },
+    {
+      "id": "Axe_Flint",
+      "width": 17,
+      "height": 17,
+      "visibleColors": 6,
+      "alphaBounds": [
+        1,
+        1,
+        16,
+        16
+      ],
+      "ppu": 16.313193493,
+      "pivotX": 0.19423962352941176,
+      "pivotY": 0.1872858352941177,
+      "sha256": "b214dad22b820c65ee0f2bffb6870a6a3a49870dd86fa6b91b01d6474f3c428d",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Axe_Flint.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 8,
+        "y": 8,
+        "width": 17,
+        "height": 17
+      },
+      "edits": 23,
+      "approvedSample": false
+    },
+    {
+      "id": "Axe_Copper",
+      "width": 23,
+      "height": 23,
+      "visibleColors": 9,
+      "alphaBounds": [
+        1,
+        1,
+        22,
+        22
+      ],
+      "ppu": 22.241383528,
+      "pivotX": 0.18567095652173912,
+      "pivotY": 0.19446080000000004,
+      "sha256": "2fe4d6fa5638335e06ab6666c7a85541db4bec1060624e62675c81212d65a5be",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Axe_Copper.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 7,
+        "y": 5,
+        "width": 23,
+        "height": 23
+      },
+      "edits": 55,
+      "approvedSample": false
+    },
+    {
+      "id": "Axe_Bronze",
+      "width": 25,
+      "height": 22,
+      "visibleColors": 8,
+      "alphaBounds": [
+        1,
+        1,
+        24,
+        21
+      ],
+      "ppu": 15.866199324,
+      "pivotX": 0.17686758400000002,
+      "pivotY": 0.16588087272727273,
+      "sha256": "8ef72839a60b710aa5bc71697dc794711e795c9143b4e2adce7630acb5500d1e",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Axe_Bronze.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 6,
+        "y": 6,
+        "width": 25,
+        "height": 22
+      },
+      "edits": 53,
+      "approvedSample": false
+    },
+    {
+      "id": "Axe_RawIron",
+      "width": 22,
+      "height": 22,
+      "visibleColors": 8,
+      "alphaBounds": [
+        1,
+        1,
+        21,
+        21
+      ],
+      "ppu": 21.4541713045,
+      "pivotX": 0.1791706181818182,
+      "pivotY": 0.16689279999999995,
+      "sha256": "c0313d49bfc41d16af1831df7e74e2d04cdf643dd72e443b30fbe9a3b1f2f61f",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Axe_RawIron.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 7,
+        "y": 5,
+        "width": 22,
+        "height": 22
+      },
+      "edits": 41,
+      "approvedSample": false
+    },
+    {
+      "id": "Axe_Iron",
+      "width": 23,
+      "height": 23,
+      "visibleColors": 8,
+      "alphaBounds": [
+        1,
+        1,
+        22,
+        22
+      ],
+      "ppu": 14.8943987495,
+      "pivotX": 0.16718678260869563,
+      "pivotY": 0.17668674782608693,
+      "sha256": "8d9573f26363b992f46b781a8feeb941f4e2b56a0fd2f45e9ae4c48d058bb2ec",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Axe_Iron.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 7,
+        "y": 5,
+        "width": 23,
+        "height": 23
+      },
+      "edits": 53,
+      "approvedSample": true
+    },
+    {
+      "id": "Pickaxe_Stone",
+      "width": 23,
+      "height": 25,
+      "visibleColors": 8,
+      "alphaBounds": [
+        1,
+        1,
+        22,
+        24
+      ],
+      "ppu": 22.6108913045,
+      "pivotX": 0.1652201739130435,
+      "pivotY": 0.167703936,
+      "sha256": "2c2bcf1dd0f8acd5e61c605c53caf61db1e5d1d4179e4c49e70433c69e171b0c",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Stone.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 6,
+        "y": 4,
+        "width": 23,
+        "height": 25
+      },
+      "edits": 79,
+      "approvedSample": false
+    },
+    {
+      "id": "Pickaxe_Copper",
+      "width": 22,
+      "height": 23,
+      "visibleColors": 10,
+      "alphaBounds": [
+        1,
+        1,
+        21,
+        22
+      ],
+      "ppu": 19.799419075,
+      "pivotX": 0.18108159999999998,
+      "pivotY": 0.19086608695652174,
+      "sha256": "b077b9cdd25d0fb1afd28f79efdfdd2b796d89ef53ea609da2e3268bf666575e",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Copper.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 6,
+        "y": 5,
+        "width": 22,
+        "height": 23
+      },
+      "edits": 71,
+      "approvedSample": true
+    },
+    {
+      "id": "Pickaxe_RawIron",
+      "width": 24,
+      "height": 25,
+      "visibleColors": 7,
+      "alphaBounds": [
+        1,
+        1,
+        23,
+        24
+      ],
+      "ppu": 22.626956861,
+      "pivotX": 0.17683680000000002,
+      "pivotY": 0.190698624,
+      "sha256": "137fa3506d5b57a4eca70c93a725d7a54a63f8a51596666482ef513bf1c43b21",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_RawIron.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 6,
+        "y": 5,
+        "width": 24,
+        "height": 25
+      },
+      "edits": 28,
+      "approvedSample": false
+    },
+    {
+      "id": "Pickaxe_Bronze",
+      "width": 22,
+      "height": 23,
+      "visibleColors": 7,
+      "alphaBounds": [
+        1,
+        1,
+        21,
+        22
+      ],
+      "ppu": 16.8106250465,
+      "pivotX": 0.19553425454545453,
+      "pivotY": 0.1800153043478261,
+      "sha256": "115f869f83acbb0d11a2963a0f86e9dc966e503712fd81ebedba94be75546638",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Bronze.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 6,
+        "y": 5,
+        "width": 22,
+        "height": 23
+      },
+      "edits": 59,
+      "approvedSample": false
+    },
+    {
+      "id": "Pickaxe_Iron",
+      "width": 23,
+      "height": 23,
+      "visibleColors": 7,
+      "alphaBounds": [
+        1,
+        1,
+        22,
+        22
+      ],
+      "ppu": 17.3435058885,
+      "pivotX": 0.17183276521739135,
+      "pivotY": 0.17463137391304348,
+      "sha256": "0d3d89ce5453df4209df5be1ea0461173b98d4ed9943bf4f459aa3fe6763592c",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Pickaxe_Iron.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-axes-pickaxes.json",
+      "crop": {
+        "x": 6,
+        "y": 6,
+        "width": 23,
+        "height": 23
+      },
+      "edits": 64,
+      "approvedSample": false
+    },
+    {
+      "id": "Shovel_Wood",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        4,
+        2,
+        32,
+        31
+      ],
+      "ppu": 32.034316861,
+      "pivotX": 0.2420255,
+      "pivotY": 0.1638756,
+      "sha256": "4ce2e3e040e1aae35c6799e672d0116672a76098f235b5cb0c4e47aa77d0fd06",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Wood.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 105,
+      "approvedSample": false
+    },
+    {
+      "id": "Shovel_Stone",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 10,
+      "alphaBounds": [
+        4,
+        2,
+        31,
+        30
+      ],
+      "ppu": 31.2546380095,
+      "pivotX": 0.2364753,
+      "pivotY": 0.177193,
+      "sha256": "7c6b7a0419a0e8d1e709a42f832b2a797dddc093d3a783e64a213f1dc5754932",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Stone.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 57,
+      "approvedSample": false
+    },
+    {
+      "id": "Shovel_Copper",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 8,
+      "alphaBounds": [
+        4,
+        3,
+        32,
+        31
+      ],
+      "ppu": 31.912014316,
+      "pivotX": 0.2575758,
+      "pivotY": 0.1751994,
+      "sha256": "3882d44ba3adc059ca81608d4c5341d8d71e52330de63a40be2c27037ad6ea61",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Copper.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 104,
+      "approvedSample": false
+    },
+    {
+      "id": "Shovel_RawIron",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 10,
+      "alphaBounds": [
+        5,
+        2,
+        31,
+        31
+      ],
+      "ppu": 31.713272625,
+      "pivotX": 0.2449123,
+      "pivotY": 0.1708612,
+      "sha256": "6e7f027e704c21b70319471e8c6b1f726e19770e1d18e1d4a722e8f9ae75b00c",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Shovel_RawIron.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 39,
+      "approvedSample": false
+    },
+    {
+      "id": "Shovel_Bronze",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 8,
+      "alphaBounds": [
+        5,
+        2,
+        31,
+        31
+      ],
+      "ppu": 31.2699258435,
+      "pivotX": 0.2433493,
+      "pivotY": 0.1637161,
+      "sha256": "beb59914f623de827e82d1725608cbf9b168b1211209879f6cce7966a3ba2601",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Bronze.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 96,
+      "approvedSample": true
+    },
+    {
+      "id": "Shovel_Iron",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 9,
+      "alphaBounds": [
+        5,
+        2,
+        31,
+        31
+      ],
+      "ppu": 32.0496046955,
+      "pivotX": 0.2443222,
+      "pivotY": 0.1579745,
+      "sha256": "f185524c6b6bf287e7acdf2cfe9bebb1ff3eef7d9b6b6d4c10709683a56acc92",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Shovel_Iron.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 91,
+      "approvedSample": false
+    },
+    {
+      "id": "Hoe_Wood",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        4,
+        3,
+        31,
+        30
+      ],
+      "ppu": 28.956785761,
+      "pivotX": 0.2494896,
+      "pivotY": 0.1920893,
+      "sha256": "4a05c02070575c7b1de753a88555a4aef45f782b699c8b5d118e77c94ee2630d",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Wood.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 98,
+      "approvedSample": false
+    },
+    {
+      "id": "Hoe_Stone",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 8,
+      "alphaBounds": [
+        3,
+        3,
+        32,
+        30
+      ],
+      "ppu": 30.2580957705,
+      "pivotX": 0.2248485,
+      "pivotY": 0.1811005,
+      "sha256": "6eb111b6f8040e28d7a3e5e41ba739714660c05bc1e18108704f7bf4e64f5b43",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Stone.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 92,
+      "approvedSample": false
+    },
+    {
+      "id": "Hoe_Copper",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        3,
+        3,
+        32,
+        31
+      ],
+      "ppu": 29.503014635,
+      "pivotX": 0.2280542,
+      "pivotY": 0.1658533,
+      "sha256": "1a70dd1b82a8ee9196890955cb0f5c6ad8754d530f42e6219dd212d45f405f7b",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Copper.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 103,
+      "approvedSample": false
+    },
+    {
+      "id": "Hoe_Iron",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        3,
+        4,
+        32,
+        30
+      ],
+      "ppu": 28.8764579775,
+      "pivotX": 0.2357097,
+      "pivotY": 0.1754067,
+      "sha256": "feecd062544b54f3caaa671964af15595be4a9443bb419e17741b77a01999a9b",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Hoe_Iron.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-shovels-hoes.json",
+      "crop": null,
+      "edits": 69,
+      "approvedSample": false
+    },
+    {
+      "id": "Dagger_Stone",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 10,
+      "alphaBounds": [
+        4,
+        3,
+        31,
+        30
+      ],
+      "ppu": 41.4180539715,
+      "pivotX": 0.2617384,
+      "pivotY": 0.1884848,
+      "sha256": "7b1e55c5d52266d04e794206f52af6656a88c604317f37fbfd18cbc453166eff",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Stone.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 74,
+      "approvedSample": false
+    },
+    {
+      "id": "Dagger_Copper",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 10,
+      "alphaBounds": [
+        3,
+        2,
+        31,
+        31
+      ],
+      "ppu": 44.8881106475,
+      "pivotX": 0.2313397,
+      "pivotY": 0.1631579,
+      "sha256": "5ff585db9ebef07b60a2e7843979b40b5193f6aa7a20cef99bd3428c55b30303",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Copper.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 112,
+      "approvedSample": false
+    },
+    {
+      "id": "Dagger_Bone",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        4,
+        3,
+        31,
+        30
+      ],
+      "ppu": 26.2595118085,
+      "pivotX": 0.2561722,
+      "pivotY": 0.1745933,
+      "sha256": "4cf6f2977bcff6d5caba8d9d33e8740e89f95d6048cb656837acacc0365bd419",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Bone.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 111,
+      "approvedSample": false
+    },
+    {
+      "id": "Knife_Flint",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 11,
+      "alphaBounds": [
+        4,
+        3,
+        30,
+        30
+      ],
+      "ppu": 32.0735035405,
+      "pivotX": 0.2405582,
+      "pivotY": 0.1791707,
+      "sha256": "019ab85966e5d7d236f1e88246ef599951056a3ef160aefd7918781ef609b822",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Knife_Flint.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 81,
+      "approvedSample": false
+    },
+    {
+      "id": "Dagger_Obsidian",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 8,
+      "alphaBounds": [
+        3,
+        3,
+        31,
+        30
+      ],
+      "ppu": 43.193150367,
+      "pivotX": 0.228134,
+      "pivotY": 0.1732376,
+      "sha256": "4b8bb79db8bdaf4899c0aad0cb3fec8eb654a95f5f39c7676d2f35a41f8e8784",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Dagger_Obsidian.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 95,
+      "approvedSample": false
+    },
+    {
+      "id": "WoodHammer",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 8,
+      "alphaBounds": [
+        3,
+        2,
+        32,
+        31
+      ],
+      "ppu": 40.1182033555,
+      "pivotX": 0.218437,
+      "pivotY": 0.1642584,
+      "sha256": "896271d3309f51769cbafc5846c7a535f06df051bc067288c3f2f8dc8d11b1cb",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/WoodHammer.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 117,
+      "approvedSample": false
+    },
+    {
+      "id": "StoneHammer",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 9,
+      "alphaBounds": [
+        4,
+        2,
+        31,
+        31
+      ],
+      "ppu": 38.5715583285,
+      "pivotX": 0.2433174,
+      "pivotY": 0.1719139,
+      "sha256": "4f70e5f2e5a772c62f08687d34c38b9bb2301402adc01340095eeb7cc9222fe7",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/StoneHammer.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 84,
+      "approvedSample": false
+    },
+    {
+      "id": "Scissors",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 9,
+      "alphaBounds": [
+        4,
+        3,
+        32,
+        31
+      ],
+      "ppu": 39.2314602105,
+      "pivotX": 0.2643222,
+      "pivotY": 0.1718341,
+      "sha256": "2661831e1198fcda71832254ed7a5ce6f689dc17ec53f235b3dcfa0cf64d21ff",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Scissors.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 109,
+      "approvedSample": false
+    },
+    {
+      "id": "ChippedTool",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alphaBounds": [
+        4,
+        3,
+        30,
+        30
+      ],
+      "ppu": 35.31738437,
+      "pivotX": 0.5215311,
+      "pivotY": 0.4912281,
+      "sha256": "e6131d5ecc0e6918f20ddc84809b08ff7197655fff55e61166d465dd2821924c",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/ChippedTool.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 159,
+      "approvedSample": false
+    },
+    {
+      "id": "FishingRod",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        3,
+        2,
+        31,
+        31
+      ],
+      "ppu": 35.081830456,
+      "pivotX": 0.2213078,
+      "pivotY": 0.1741467,
+      "sha256": "3060d59128c259c2707d8ba387ed4365ab7ea97308a0f2767e33c472b0523fb0",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/FishingRod.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 80,
+      "approvedSample": false
+    },
+    {
+      "id": "FlintStrike",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 6,
+      "alphaBounds": [
+        6,
+        7,
+        27,
+        26
+      ],
+      "ppu": 23.7685121785,
+      "pivotX": 0.5051834,
+      "pivotY": 0.4808612,
+      "sha256": "afae2af61fc68dc88d3cc7c77b9ebcf49284152303e5201207f90f6d0e0d16f0",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/FlintStrike.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 49,
+      "approvedSample": false
+    },
+    {
+      "id": "SparkMaker_Summoner",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        4,
+        5,
+        31,
+        30
+      ],
+      "ppu": 16.772695375,
+      "pivotX": 0.1395534,
+      "pivotY": 0.0701754,
+      "sha256": "0774b01d7453085fb1fbf04a7c3624546689f0be9aa919d5d076facef1402510",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/SparkMaker_Summoner.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 138,
+      "approvedSample": false
+    },
+    {
+      "id": "Torch_Summoner",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alphaBounds": [
+        4,
+        2,
+        31,
+        31
+      ],
+      "ppu": 53.1067271705,
+      "pivotX": 0.2509569,
+      "pivotY": 0.1691866,
+      "sha256": "0eed817b2fb2e75fad09df0710188d18e1c0b0ba8c0b4d4526599a73987adf0b",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/Torch_Summoner.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 141,
+      "approvedSample": false
+    },
+    {
+      "id": "HandDrill_Summoner",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alphaBounds": [
+        3,
+        2,
+        29,
+        30
+      ],
+      "ppu": 39.0896609125,
+      "pivotX": 0.5172665,
+      "pivotY": 0.5147008,
+      "sha256": "ea293ca420d3162dcbbd6c3fd7620dfb45d40ce4e498d920055407f3b2f55187",
+      "source": "Tools/Art/ToolGimpRetouch_20261024/HandDrill_Summoner.xcf",
+      "plan": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "crop": null,
+      "edits": 74,
+      "approvedSample": false
+    }
+  ]
+}

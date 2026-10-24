@@ -10,6 +10,15 @@ public interface ICraftingOutputRule
 /// <summary>制作产物状态扩展点；食品等业务自行注册，通用制作服务不依赖具体玩法。</summary>
 public static class CraftingOutputRules
 {
+    #region 实例产物标记
+    public static void ApplyInstanceTag(ItemData output, string tag)
+    {
+        if (output == null || string.IsNullOrWhiteSpace(tag)) return;
+        output.Tags ??= new List<string>();
+        if (!output.Tags.Contains(tag)) output.Tags.Add(tag);
+    }
+    #endregion
+
     private static readonly SortedDictionary<string, ICraftingOutputRule> Rules = new(); // 稳定执行顺序。
     /// <summary>同一身份重复初始化时替换规则。</summary>
     public static void Register(string id, ICraftingOutputRule rule) => Rules[id] = rule;
@@ -29,7 +38,9 @@ public static class CraftingOutputRules
 /// </summary>
 public static class CraftedDurabilityQuality
 {
+    #region 制作品质与状态迁移
     public const float DefaultMultiplier = 1f;
+    public const string MarkerTagPrefix = "CraftedQuality.";
 
     /// <summary>倍率必须为大于零的有限数。</summary>
     public static bool IsValidMultiplier(float multiplier)
@@ -64,8 +75,16 @@ public static class CraftedDurabilityQuality
     /// <summary>便携建筑在手持载体与落地本体之间迁移制作品质。</summary>
     public static void CopyInstanceQuality(ItemData source, ItemData target)
     {
-        if (source == null || target == null)
+        if (source == null || target == null || ReferenceEquals(source, target))
             return;
+
+        // 实例标记独立于耐久倍率，效率品质也必须跨放置和拆回保留。
+        target.Tags ??= new List<string>();
+        target.Tags.RemoveAll(tag => tag?.StartsWith(MarkerTagPrefix, System.StringComparison.Ordinal) == true);
+        if (source.Tags != null)
+            foreach (string tag in source.Tags)
+                if (tag?.StartsWith(MarkerTagPrefix, System.StringComparison.Ordinal) == true && !target.Tags.Contains(tag))
+                    target.Tags.Add(tag);
 
         float sourceMultiplier = NormalizeMultiplier(source.CraftedDurabilityMultiplier);
         float targetMultiplier = NormalizeMultiplier(target.CraftedDurabilityMultiplier);
@@ -133,4 +152,5 @@ public static class CraftedDurabilityQuality
         float multiplier = NormalizeMultiplier(itemData?.CraftedDurabilityMultiplier ?? DefaultMultiplier);
         return Mathf.Max(0f, (itemData?.MaxDurability ?? 0f) / multiplier);
     }
+    #endregion
 }

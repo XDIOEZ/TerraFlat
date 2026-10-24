@@ -334,6 +334,24 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     #region 装备逻辑
 
+    /// <summary>从所有者的真实库存穿戴或交换装备，换下的物品由正式事务放回来源槽。</summary>
+    public bool TryEquipFromSlot(Inventory sourceInventory, int sourceIndex)
+    {
+        if (item == null || sourceInventory == null || !ReferenceEquals(sourceInventory.item, item) ||
+            ReferenceEquals(sourceInventory, EquipmentInventory) ||
+            ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() ||
+            sourceInventory.Data?.itemSlots == null || (uint)sourceIndex >= (uint)sourceInventory.Data.itemSlots.Count ||
+            sourceInventory.IsSlotBeingDragged(sourceIndex) || EquipmentInventory?.Data?.itemSlots == null)
+            return false;
+
+        ItemData sourceItem = sourceInventory.Data.itemSlots[sourceIndex]?.itemData;
+        int targetIndex = EquipmentInventory.FindCompatibleSlot(sourceItem, preferEmpty: false);
+        if (targetIndex < 0 || EquipmentInventory.IsSlotBeingDragged(targetIndex))
+            return false;
+
+        return sourceInventory.TryMoveSlotTo(sourceIndex, EquipmentInventory, targetIndex);
+    }
+
     /// <summary>AI、建筑和普通 Item 都可直接复用的装备入口，不依赖玩家输入或装备 UI。</summary>
     public bool TryEquip(ItemData equipmentItem, string slotId, out ItemData displacedItem)
     {

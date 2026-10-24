@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:木盾",
+      "displayName": "木盾",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 5
+        },
+        {
+          "match": "tag",
+          "tag": "Rope",
+          "amount": 5
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shield_Wood",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:wood_shield_nail_reinforcement",
+      "displayName": "钉子加固木盾",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Shield_Wood",
+          "excludeTag": "NailReinforced",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Nail",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "copyInputItemId": "Shield_Wood",
+          "durabilityMultiplier": 1.5,
+          "addTag": "NailReinforced",
+          "amount": 1
+        }
+      ]
+    }
+  ]
+}

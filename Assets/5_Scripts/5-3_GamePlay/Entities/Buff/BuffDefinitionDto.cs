@@ -5,8 +5,9 @@ using Newtonsoft.Json;
 /// <summary>
 /// JSON Buff 目录。DTO 只包含数据，不引用 Unity 对象或 C# 行为类型。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class BuffCatalogDto
+public sealed partial class BuffCatalogDto
 {
     [JsonProperty("schemaVersion", Required = Required.Always)]
     public int SchemaVersion = 1;
@@ -16,8 +17,9 @@ public sealed class BuffCatalogDto
 }
 
 /// <summary>本体 Buff 分包清单；按声明顺序加载启用的 JSON 文件。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class BuffManifestDto
+public sealed partial class BuffManifestDto
 {
     [JsonProperty("schemaVersion", Required = Required.Always)]
     public int SchemaVersion = 1;
@@ -26,8 +28,9 @@ public sealed class BuffManifestDto
     public List<BuffPackageDto> Packages = new();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class BuffPackageDto
+public sealed partial class BuffPackageDto
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -39,8 +42,9 @@ public sealed class BuffPackageDto
     public bool Enabled = true;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class BuffDefinitionDto
+public sealed partial class BuffDefinitionDto
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -109,8 +113,9 @@ public sealed class BuffDefinitionDto
     public List<BuffEffectDto> Effects = new();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class BuffEffectDto
+public sealed partial class BuffEffectDto
 {
     [JsonProperty("phase", Required = Required.Always)]
     public string Phase;

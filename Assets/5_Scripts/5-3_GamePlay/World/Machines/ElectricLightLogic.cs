@@ -67,8 +67,9 @@ public sealed class ElectricLightLogic : MachineLogic
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class MachineLightDefinition
+public sealed partial class MachineLightDefinition
 {
     #region 通用机器照明配置
     public float Radius = 16f;

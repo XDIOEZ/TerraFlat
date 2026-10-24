@@ -439,7 +439,7 @@ public static class MainMenuPrefabBuilder
         text.color = color;
         text.alignment = alignment;
         text.enableWordWrapping = false;
-        text.overflowMode = TextOverflowModes.Overflow;
+        FlatWorldUITextLayout.Configure(text, size);
         text.raycastTarget = false;
         return text;
     }

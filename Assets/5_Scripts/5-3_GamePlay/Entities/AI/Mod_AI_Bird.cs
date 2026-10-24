@@ -22,7 +22,8 @@ public interface IBirdFlightPilot
 /// </summary>
 public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependencyBinder, IRuntimeAiPersistencePolicy,
     IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset,
-    IWaterCurrentExposure, IWindMotionOwner, ITemperatureSafetyMovement, IDamageSender
+    IWaterCurrentExposure, IWindMotionOwner, ITemperatureSafetyMovement, IDamageSender,
+    IFishingLineCatchTarget
 {
     #region 配置与独立存档
     public const string ModuleId = "AI_Bird"; // 飞行能力 ID 与具体 Prefab 名分别维护。
@@ -87,6 +88,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     public float groundWanderRadius = 2f;
     public float flightWanderRadius = 18f;
     public bool permanentFlight; // 蜜蜂等物种默认空中巡航，不进入普通鸟耐力循环；Pilot 可临时切到地面。
+    [Tooltip("允许普通小鸟被抛出的鱼钩勾住。")]
+    public bool canBeCaughtByFishingRod;
     [Min(0.01f)] public float flightStaminaMax = 100f;
     [Min(0f)] public float flightStaminaDrainRate = 1f;
     [Min(0f)] public float flightStaminaRecoveryRate = 10f;
@@ -123,7 +126,13 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     private bool temperatureSafetyRetreat;
     private bool temperatureSafetyReached;
     private Vector2 temperatureSafetyDestination;
+    private Mod_FishingRod fishingRod;
     public Item ActorItem => item;
+    public string HookedFeedback => "小鸟上钩了！左键将它拉近。";
+    public bool CanBeHookedByCast => canBeCaughtByFishingRod && loaded && IsAlive &&
+        !permanentFlight && flightPilot == null && fishingRod == null && !IsFishHunting &&
+        !temperatureSafetyRetreat && body != null && CanLand(body.position) &&
+        !AquaticHabitat.CanSwimAt(body.position);
     public bool PersistRuntimeAi => state.HomeHiveGuid == 0;
     public int HomeHiveGuid => state.HomeHiveGuid;
     public bool IsAlive => health != null && health.Hp > 0f;
@@ -183,6 +192,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         animationFlightDisplacement = Vector2.zero;
         animationFlightSeconds = 0f;
         stoppedForDeath = false;
+        fishingRod = null;
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
         ResetForaging();
@@ -210,6 +220,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     protected override void OnUnload()
     {
         loaded = false;
+        fishingRod = null;
         animationFlightDisplacement = Vector2.zero;
         animationFlightSeconds = 0f;
         if (health != null)
@@ -258,8 +269,21 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         }
         if (GameNetwork.HasStateAuthority)
         {
-            TickAuthoritativeFlight(deltaTime);
-            ApplyAirborneWind(deltaTime);
+            if (fishingRod != null)
+            {
+                mover.StopMovement();
+                body.velocity = Vector2.zero;
+                if (state.Phase == BirdFlightPhase.Landing)
+                {
+                    state.Elapsed += Mathf.Max(0f, deltaTime);
+                    if (state.Elapsed >= transitionDuration) CompleteLanding();
+                }
+            }
+            else
+            {
+                TickAuthoritativeFlight(deltaTime);
+                ApplyAirborneWind(deltaTime);
+            }
         }
         ApplyFlightPresentation();
     }
@@ -566,6 +590,41 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         ApplyFlightContact();
         ApplyFlightPresentation();
     }
+
+    #region 钓线约束
+    public bool TryHook(Mod_FishingRod rod)
+    {
+        if (!GameNetwork.HasStateAuthority || rod == null || !CanBeHookedByCast) return false;
+        fishingRod = rod;
+        escapeRemaining = 0f;
+        escapeThreat = null;
+        ResetFishHunting(releaseCaptured: true);
+        ResetFatigueLanding();
+        ResetForaging();
+        if (state.Phase is BirdFlightPhase.Flying or BirdFlightPhase.TakingOff or BirdFlightPhase.RunUp)
+            BeginLanding();
+        else
+            mover.StopMovement();
+        return true;
+    }
+
+    public bool IsHookedBy(Mod_FishingRod rod) => IsAlive && fishingRod == rod;
+
+    public void PullByLine(Mod_FishingRod rod, Vector2 position)
+    {
+        if (!GameNetwork.HasStateAuthority || !IsHookedBy(rod)) return;
+        body.position = WorldTopologyRuntime.NormalizePosition(position);
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+    }
+
+    public void ReleaseLine(Mod_FishingRod rod)
+    {
+        if (fishingRod != rod) return;
+        fishingRod = null;
+        mover.StopMovement();
+        state.HasTarget = false;
+    }
+    #endregion
 
     private void ApplyFlightContact()
     {

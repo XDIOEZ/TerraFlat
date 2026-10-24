@@ -133,6 +133,7 @@ public partial class WeatherMgr
     private void RefreshWindFeedback()
     {
         if (!IsLocalWeatherWorld || !presentationActive) return;
+        snowController?.SetWind(presentedWindDirection * _presentedWindStrength);
         Shader.SetGlobalFloat(GlobalWindStrengthShaderId, _presentedWindStrength);
         Shader.SetGlobalVector(GlobalWindDirectionShaderId,
             new Vector4(presentedWindDirection.x, presentedWindDirection.y, 0f, 0f));

@@ -1,13 +1,26 @@
 /// <summary>模块仅在正式材料事务已经完成后响应安装，失败候选和编辑器预览不触发世界副作用。</summary>
+#region 建筑生命周期扩展契约
 public interface IBuildingPlacementCommitted
 {
     void OnBuildingPlacementCommitted();
+}
+
+// 附加地理等资格可由多个模块组合，不接管建筑原有的占地层规则。
+public interface IBuildingPlacementRule
+{
+    bool ValidateBuildingPlacement(Item actor, UnityEngine.Vector3 position, out string reason);
 }
 
 /// <summary>允许特殊建筑在致死攻击时继续走 Mod_DamageReceiver 的死亡/战利品流程，而不是拆回召唤器。</summary>
 public interface IBuildingFatalDamagePolicy
 {
     bool UseDamageReceiverFatalResolution(Mod_DamageReceiver receiver);
+}
+
+// 特殊建筑通过自己的模块保护持久化关联，普通拆卸事务只询问资格。
+public interface IBuildingDismantlePolicy
+{
+    bool CanDismantle(out string reason);
 }
 
 /// <summary>扩展建筑的分层占格、候选状态和预览；手持临时配置只在提交候选时写入世界数据。</summary>
@@ -39,6 +52,7 @@ public interface IBuildingPreviewRotation
     bool CanRotatePlacement { get; }
     void RotatePlacement();
 }
+#endregion
 
 public static class BuildingPlacementLifecycle
 {
@@ -49,6 +63,16 @@ public static class BuildingPlacementLifecycle
         if (building?.itemMods == null) return;
         foreach (Module module in building.itemMods.Mods.Values)
             if (module is IBuildingPlacementCommitted listener) listener.OnBuildingPlacementCommitted();
+    }
+
+    public static bool ValidatePlacementRules(Item item, Item actor, UnityEngine.Vector3 position, out string reason)
+    {
+        reason = null;
+        if (item?.itemMods == null) return true;
+        var rules = item.itemMods.GetCapabilities<IBuildingPlacementRule>();
+        foreach (IBuildingPlacementRule rule in rules)
+            if (!rule.ValidateBuildingPlacement(actor, position, out reason)) return false;
+        return true;
     }
 
     /// <summary>同一建筑只能有一套占地扩展，模块组合完成后解析。</summary>

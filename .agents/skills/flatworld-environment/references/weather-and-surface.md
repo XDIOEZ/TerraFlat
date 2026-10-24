@@ -15,15 +15,18 @@
 - 原步长积分逐条排队，MaintainSurfaceWork 每渲染帧 2ms 软预算消费完整块；入队冻结温度标量/源数值、复用不可变权重，出队才逐格合成，等待不改相态。短导航租约护数据，解绑只冲该块。
 - 同步保存/退出/回拨结旧账；自动保存最终载荷阶段用短天气推进屏障预算排空，再冻核心/区块字节，取消/异常释放。屏障不冻结游戏秒/输入/表现，释放后有界追赶；旧世界/epoch/星球队列仅释放。到 MaximumCatchUpSteps 暂缓新步，不能集中冲刷或少结雨量。
 - SupplySurfaceWaterBatch 每块共用目录/水肥只读视图，满水跳过，规范格直接查占地；先批写水/湿度层及存档/权威差量再通知，湿地 BRG 合并上传。ChunkEnvironmentRenderer 只在最终显隐改变且提交成功后记缓存，重绑/Owner重建/配置变重采，液体覆盖/抽干仍更新。
+- 天气雪和玩家融雪在同一块内先合并后按层批写，替代逐格地形通知；无匹配远端且无其它订阅者时，RecordWeatherSurfaceChunk 仍保存权威水肥/雪层，但不构造网络载荷；非网络订阅者照常收到通知，远端新入世通过完整补拉恢复。规则为 `environment/surface_snow_batch` 和 `environment/surface_broadcast_gate`。
 
 ## 本机表现与事件
 
-- 雨雪用完整 _precipitationTransitionSeconds（默认12真实秒）SmoothStep，风/云光 _weatherTransitionSeconds 默认3秒；跨块从当前表现续接，不按低强度缩短。雨滴/水花随强度，雨声同值，停雨让旧粒子落完。
+- 雨雪用完整 _precipitationTransitionSeconds（默认12真实秒）SmoothStep，风/云光 _weatherTransitionSeconds 默认3秒；跨块从当前表现续接，不按低强度缩短。降水/天气采样暂缺时保留上次有效目标，不误转晴天；雨丝/水花随强度，雨声同值，停雨后已有地面水花继续播完。
 - SetPrecipitationIntensity(intensity,durationSeconds=60,transitionSeconds=-1) 只改本块：0强度停、0过渡立即、-1默认；普通客户端 false。PresentedRainIntensity/PresentedSnowIntensity 供表现，浇水/雪仍读真实天气。
-- 雨粒发射率/Transform 只在值变时提交，存活粒子容量仍收缩，重启/配置变重提；同帧水花共用视口框/WeatherMgr，逐点天气/地形和随机序列保留。
+- 降雨由 `RainEffectController` 单个2048样本固定网格与 `RainStreak` 顶点 Shader 绘制，无落雨 ParticleSystem；三档远近雨丝消费平滑雨量和风，整层风/镜头位移双精度积分，变化才交 MPB；覆盖与 CPU 裁剪框包含最长倾斜雨丝余量，停雨/换世界隐藏，销毁释放网格。同帧地面水花仍共用视口框/WeatherMgr，保留逐点天气/地形判断。
+- 落雪由 `SnowEffectController` 单网格顶点 Shader 绘制，不创建 ParticleSystem；消费同一平滑雪强度与风方向/强度，静态样本仅初始化一次，镜头范围与风偏移用 MPB，停雪/换世界隐藏，销毁释放网格。雪量控制可见样本密度，缩放覆盖更新 CPU 裁剪框；积雪积分和温度分流仍走天气正式规则。
 - thunder 期间按强度产新序号，默认最短20游戏秒，384格内共享间隔，事件开始先等；近期记录从存档恢复，距离用环绕最短值。权威保存/复制落点/强度，LightningStrikeSystem 同事件伤害一次；F12/StrikeLightningAt 可立即走真伤害链。
 - 雷束/电弧/闪屏共用近远雷 Cue MinDistance/MaxDistance 线性衰减（8格全、192格零），主束向上24格、Shader程序折线/分叉/光晕；雷声延迟照旧。
 - DenseFogRendererFeature 按玩家逻辑位置合成本地主相机，清晰半径 clearRadius/强度、柔边默认20格、外全遮。DenseFogPresentationTransition 从屏幕最远角外以完整30真实秒收拢/散开，浓度改变续当前边界；零强度散尽关，玩家/世界/Scene变重建，退出/抑制维度清理。
+- `WeatherMgr.Fog` 主动按生物所属天气区施加 `Item.SetPerceptionRadiusLimit`，上限共用 clearRadius/浓度，零雾、离区、注销、停用及退出时撤销；只影响已登记 GO 生物，排除玩家。区域半径改变才批量下发，注册/地址事件补齐新生和跨区，不依赖本机镜头或渲染过渡；感知模块只消费通用上限，体型倍率、旧目标和关闭墙体遮挡不能越界。规则 `environment/fog_perception`。
 - WeatherMgr.Audio 通过 AudioService 平滑当地雨/风循环，雨声读实时雨雪分流；雷声仅新 LightningOccurred，共落点、环绕最近副本、近远音色/传播延迟，LateUpdate SetWorldPosition，首次不补播，退出/抑制清待播/句柄。
 
 回归：`environment/rain_visual_batch`；地表队列/天气行为按 catalog 选对应断言。

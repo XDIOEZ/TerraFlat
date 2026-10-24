@@ -3,7 +3,7 @@
   "recipes": [
     {
       "id": "core:electrical_ElectricLightBulb",
-      "displayName": "灯泡",
+      "displayName": "灯泡（碳丝）",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -23,6 +23,49 @@
         {
           "match": "exact_item",
           "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CarbonFilament",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ElectricLightBulb_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:electrical_ElectricLightBulb_Tungsten",
+      "displayName": "灯泡（钨）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Glass",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Tungsten",
           "amount": 1
         }
       ],

@@ -20,11 +20,15 @@ namespace FlatWorld.Automation
         private const string ExportMenu = "FlatWorld/性能分析/导出选中或最新帧与控制台 JSON";
         private static readonly Type ToolbarType = typeof(Editor).Assembly.GetType("UnityEditor.Toolbar");
         private static bool exporting;
+        private static ToolbarToggle autoToggle;
+        private static ToolbarButton autoSettings;
 
         public static string ReportsRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "67_ProfileData"));
+        internal static bool IsExporting => exporting;
 
         static ProfilerSnapshotToolbar()
         {
+            ProfilerAutoExporter.SettingsChanged += RefreshAutoControls;
             if (!Application.isBatchMode)
                 EditorApplication.update += TryInstallButton;
         }
@@ -57,8 +61,20 @@ namespace FlatWorld.Automation
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
                     button.AddManipulator(new ContextualMenuManipulator(menu =>
-                        menu.menu.AppendAction("打开性能报告目录", _ => OpenReportsFolder())));
+                    {
+                        menu.menu.AppendAction("自动导出设置", _ => ProfilerAutoExportWindow.Open());
+                        menu.menu.AppendAction("低帧率自动导出", _ => ProfilerAutoExporter.Enabled = !ProfilerAutoExporter.Enabled,
+                            _ => ProfilerAutoExporter.Enabled ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
+                        menu.menu.AppendAction("打开性能报告目录", _ => OpenReportsFolder());
+                    }));
                     zone.Insert(0, button);
+                    autoToggle = new ToolbarToggle { text = "自动", tooltip = "设定时间内，低于目标 FPS 的累计时间达到 80% 时，先暂停编辑器再导出性能 JSON。" };
+                    autoToggle.RegisterValueChangedCallback(evt => ProfilerAutoExporter.Enabled = evt.newValue);
+                    autoSettings = new ToolbarButton(ProfilerAutoExportWindow.Open) { tooltip = "设置自动导出的 FPS 阈值、持续时间和启动缓冲时间。" };
+                    autoToggle.style.flexShrink = autoSettings.style.flexShrink = 0;
+                    zone.Insert(1, autoToggle);
+                    zone.Insert(2, autoSettings);
+                    RefreshAutoControls();
                     root.RegisterCallback<DetachFromPanelEvent>(OnToolbarDetached);
                 }
                 EditorApplication.update -= TryInstallButton;
@@ -77,6 +93,12 @@ namespace FlatWorld.Automation
             EditorApplication.update += TryInstallButton;
         }
 
+        private static void RefreshAutoControls()
+        {
+            autoToggle?.SetValueWithoutNotify(ProfilerAutoExporter.Enabled);
+            if (autoSettings != null) autoSettings.text = $"<{ProfilerAutoExporter.ThresholdFps:0.##} FPS";
+        }
+
         #endregion
 
         #region 快照导出与目录入口
@@ -84,7 +106,7 @@ namespace FlatWorld.Automation
         [MenuItem(ExportMenu)]
         public static void ExportSelectedFrame()
         {
-            if (exporting) return;
+            if (exporting || ProfilerAutoExporter.IsExportPending) return;
             try
             {
                 // Profiler 未打开或没有有效选中帧时，直接使用缓冲区最新一帧。

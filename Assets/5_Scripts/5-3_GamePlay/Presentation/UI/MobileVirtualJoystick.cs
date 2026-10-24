@@ -128,6 +128,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
 
         if (floatingOrigin)
         {
+            // 每次取得触点前记录玩家编辑后的待机位置，释放时再回到这里。
+            fixedBasePosition = baseRect.anchoredPosition;
             baseRect.position = interactionRect.TransformPoint(pointerLocal);
         }
 
@@ -221,7 +223,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         pointerEventCamera = null;
         if (returnKnobToCenter && knobRect != null)
             knobRect.anchoredPosition = Vector2.zero;
-        if (floatingOrigin && baseRect != null)
+        if (owned && floatingOrigin && baseRect != null)
             baseRect.anchoredPosition = fixedBasePosition;
         SetOwnershipVisualVisible(false);
 

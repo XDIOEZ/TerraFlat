@@ -150,7 +150,7 @@ public static partial class RuntimeUIPrefabBuilder
         rect.sizeDelta = new Vector2(240f, 64f);
         foreach (TextMeshProUGUI text in root.GetComponentsInChildren<TextMeshProUGUI>(true))
         {
-            text.fontSize = 20f;
+            FlatWorldUITextLayout.Configure(text, 20f);
             text.color = FlatWorldUITheme.TextPrimary;
             text.raycastTarget = false;
         }
@@ -504,6 +504,7 @@ public static partial class RuntimeUIPrefabBuilder
                string.Equals(rootName, "UI_DimensionLoading", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(rootName, "UI_Death", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(rootName, "UI_ReadableBook", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_FuelInteraction", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(rootName, "UI_WaterVessel", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(rootName, "UI_StoneMortar", StringComparison.OrdinalIgnoreCase);
     }

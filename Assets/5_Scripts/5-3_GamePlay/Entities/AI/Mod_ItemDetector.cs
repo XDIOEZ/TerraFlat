@@ -33,6 +33,7 @@ public class Mod_ItemDetector : Module
     private readonly HashSet<Item> _currentItemSet = new HashSet<Item>();
     private readonly HashSet<Item> _previousItemSet = new HashSet<Item>();
     private readonly List<Item> _emptyItems = new List<Item>(0);
+    private readonly List<Item> _rangeFilteredItems = new();
     private long _requestedVersion;
     private long _appliedVersion;
     private readonly GridLineOfSightQuery _lineOfSightQuery = new();
@@ -56,13 +57,15 @@ public class Mod_ItemDetector : Module
         set => detectionRadius = value;
     }
 
-    /// <summary>检查目标与检测器之间是否存在可阻挡感知的建筑或固定墙体。</summary>
+    public float MaximumDetectionRadius => item != null ? item.MaximumPerceptionRadius : float.PositiveInfinity;
+
+    /// <summary>按当前感知上限与墙体遮挡检查目标是否可见。</summary>
     public bool HasLineOfSight(Item target)
     {
         if (target == null)
             return false;
         if (!wallsBlockPerception)
-            return true;
+            return IsWithinPerceptionRadiusLimit(target);
 
         using GridLineOfSightQuery query = BeginLineOfSightQuery();
         return HasLineOfSight(target, query);
@@ -70,13 +73,13 @@ public class Mod_ItemDetector : Module
 
     /// <summary>
     /// 获取该检测器对指定目标使用的最终感知半径。
-    /// 观察者的基础检测半径与目标自身的被感知倍率共同生效。
+    /// 基础检测半径乘目标倍率后，再应用外部来源的统一上限。
     /// </summary>
     public float GetEffectiveDetectionRadius(Item target)
     {
-        return CalculateEffectiveDetectionRadius(
+        return Mathf.Min(MaximumDetectionRadius, CalculateEffectiveDetectionRadius(
             DetectionRadius,
-            target != null ? target.GetPerceptionRadiusMultiplier() : 1f);
+            target != null ? target.GetPerceptionRadiusMultiplier() : 1f));
     }
 
     /// <summary>按指定目标计算任意基础感知距离的最终范围，供 AI 状态阈值复用。</summary>
@@ -414,6 +417,28 @@ public class Mod_ItemDetector : Module
 
     #region 视线遮挡
 
+    // 已锁定目标和旧检测结果也受通用上限约束，关闭墙体遮挡不会绕过它。
+    internal bool IsWithinPerceptionRadiusLimit(Item target)
+    {
+        if (target == null) return false;
+        float radius = MaximumDetectionRadius;
+        if (float.IsPositiveInfinity(radius)) return true;
+        ItemMgr manager = ItemMgr.GetExistingInstance();
+        if (manager != null && manager.TryIsWithinDataPerceptionRange(transform.position, target, radius, out bool within))
+            return within;
+        return WorldTopologyRuntime.SqrDistance(transform.position, target.transform.position) <= radius * radius;
+    }
+
+    private void HandlePerceptionRadiusLimitChanged()
+    {
+        _rangeFilteredItems.Clear();
+        foreach (Item target in CurrentItemsInArea)
+            if (IsWithinPerceptionRadiusLimit(target)) _rangeFilteredItems.Add(target);
+        ApplyDetectorResults(++_requestedVersion, _rangeFilteredItems);
+        _rangeFilteredItems.Clear();
+        RequestDetectorUpdate();
+    }
+
     /// <summary>本轮冻结真实观察者位置与世界上下文，候选射线复用寻址，结束后清空引用。</summary>
     internal GridLineOfSightQuery BeginLineOfSightQuery()
     {
@@ -433,7 +458,7 @@ public class Mod_ItemDetector : Module
     }
 
     internal bool HasLineOfSight(Item target, GridLineOfSightQuery query)
-        => target != null && (!wallsBlockPerception ||
+        => target != null && IsWithinPerceptionRadiusLimit(target) && (!wallsBlockPerception ||
                               query != null && query.HasClearLineTo(target.transform.position));
 
     #endregion
@@ -506,12 +531,12 @@ public class Mod_ItemDetector : Module
         Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // 淡红
 
         Gizmos.color = transparentYellow;
-        Gizmos.DrawWireSphere(transform.position, DetectionRadius);
+        Gizmos.DrawWireSphere(transform.position, GetEffectiveDetectionRadius(null));
 
         if (Selection.Contains(gameObject))
         {
             Gizmos.color = transparentRed;
-            Gizmos.DrawWireSphere(transform.position, DetectionRadius);
+            Gizmos.DrawWireSphere(transform.position, GetEffectiveDetectionRadius(null));
         }
     }
 #endif
@@ -521,7 +546,11 @@ public class Mod_ItemDetector : Module
     /// </summary>
     protected override void OnLoad()
     {
-        // 可以在需要时实现
+        if (item != null)
+        {
+            item.PerceptionRadiusLimitChanged -= HandlePerceptionRadiusLimitChanged;
+            item.PerceptionRadiusLimitChanged += HandlePerceptionRadiusLimitChanged;
+        }
     }
 
     /// <summary>
@@ -534,6 +563,8 @@ public class Mod_ItemDetector : Module
 
     protected override void OnUnload()
     {
+        if (item != null) item.PerceptionRadiusLimitChanged -= HandlePerceptionRadiusLimitChanged;
+        _rangeFilteredItems.Clear();
         _lineOfSightQuery.Dispose();
     }
 

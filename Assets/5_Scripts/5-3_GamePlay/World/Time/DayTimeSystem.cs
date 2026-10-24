@@ -190,7 +190,7 @@ private void TimeRun(string sceneName, float deltaTime)
             sceneName,
             deltaTime *
             timeData.TimeScaleModifier *
-            GameDifficultyService.Current.World.TimeSpeedMultiplier);
+            GameRuleConfiguration.Current.World.TimeSpeedMultiplier);
 }
 
     /// <summary>
@@ -761,6 +761,35 @@ private void TimeRun(string sceneName, float deltaTime)
         {
             SceneLightingRateDict[sceneName] = 1.0f;
         }
+    }
+
+    /// <summary>联机新建维度时只补齐运行时缺失的时钟，不覆盖已在推进的地表时间。</summary>
+    public void EnsureRuntimeSceneTimeData(string sceneName, DayTimeSaveData saveData)
+    {
+        WorldTimeDict ??= new Dictionary<string, TimeData>();
+        SceneLightingRateDict ??= new Dictionary<string, float>();
+        RegisterMissingRuntimeSceneTimeData(sceneName, saveData, WorldTimeDict, SceneLightingRateDict);
+    }
+
+    internal static void RegisterMissingRuntimeSceneTimeData(string sceneName, DayTimeSaveData saveData,
+        Dictionary<string, TimeData> runtimeClocks, Dictionary<string, float> runtimeLightingRates)
+    {
+        if (string.IsNullOrEmpty(sceneName) || saveData == null || runtimeClocks == null || runtimeLightingRates == null)
+            return;
+
+        if ((!runtimeClocks.TryGetValue(sceneName, out TimeData existing) || existing == null) &&
+            saveData.WorldTimeDict != null &&
+            saveData.WorldTimeDict.TryGetValue(sceneName, out SerializableTimeData stored) && stored != null)
+        {
+            TimeData restored = stored.ToTimeData();
+            restored.EnsureTimeSystemDefaults();
+            restored.EnsureDarkNightWindow();
+            runtimeClocks[sceneName] = restored;
+        }
+
+        if (!runtimeLightingRates.ContainsKey(sceneName) && saveData.SceneLightingRateDict != null &&
+            saveData.SceneLightingRateDict.TryGetValue(sceneName, out float lightingRate))
+            runtimeLightingRates[sceneName] = Mathf.Clamp01(lightingRate);
     }
 
     private TimeData CreateConfiguredTimeData()

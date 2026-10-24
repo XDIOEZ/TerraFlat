@@ -1,9 +1,10 @@
-﻿// AI-Context: 世界 Item 与建筑的服务端权威协调器；客户端只能请求，GUID、放置校验、生成与广播均由服务端提交。
+// AI-Context: 世界 Item 与建筑的服务端权威协调器；客户端只能请求，GUID、放置校验、生成与广播均由服务端提交。
 using System;
 using System.Collections.Generic;
 using FlatWorld.Gameplay.Building;
 using FlatWorld.Spaceflight;
 using Mirror;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace FlatWorld.Networking.Gameplay
@@ -22,6 +23,10 @@ namespace FlatWorld.Networking.Gameplay
         private const float PickupReservationSeconds = 6f;
         private const float MaxPickupDistance = 5f;
         private const float BuildingRequestTimeout = 8f;
+        private static readonly ProfilerMarker ScheduledScanMarker = new("FlatWorld.Network.Items.ScheduledScan");
+        private static readonly ProfilerMarker CaptureMarker = new("FlatWorld.Network.Items.Capture");
+        private static readonly ProfilerMarker SpawnCandidatesMarker = new("FlatWorld.Network.Items.SpawnCandidates");
+        private static readonly ProfilerMarker PendingStatesMarker = new("FlatWorld.Network.Items.PendingStates");
 
         private sealed class StateRecord
         {
@@ -82,6 +87,8 @@ namespace FlatWorld.Networking.Gameplay
         private readonly Dictionary<int, StateRecord> clientStates = new();
         private readonly Dictionary<int, NetworkItemStateMessage> pendingClientStates = new();
         private readonly Dictionary<int, float> pendingSpawnCandidates = new();
+        private readonly List<int> pendingStateKeys = new();
+        private readonly List<int> spawnCandidateKeys = new(MaxSpawnCandidatesPerFrame);
         private readonly HashSet<int> requestedClientSpawns = new();
         private readonly HashSet<int> networkInstantiationsInProgress = new();
         private readonly Dictionary<int, ClientPickupRequest> pendingClientPickups = new();
@@ -89,6 +96,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly Dictionary<uint, ClientBuildingRequest> pendingClientBuildings = new();
         private readonly Dictionary<uint, ClientBuildingDismantleRequest> pendingClientDismantles = new();
         private readonly HashSet<int> dirtyMechanicalNodes = new(); // 加工进度等节点状态按既有扫描频率合并发送。
+        private readonly List<int> mechanicalFlushKeys = new();
         private readonly List<MachineEntity> mechanicalSyncNodes = new();
         private readonly Dictionary<int, string> dirtyMechanicalWorlds = new();
         private float nextMechanicalScanTime;
@@ -126,6 +134,7 @@ namespace FlatWorld.Networking.Gameplay
             MachineWorld.NodeRemoved += OnMechanicalRemoved;
             MachineWorld.VisualSpeedChanged += OnMechanicalSpeedChanged;
             StartMachineServerBridge();
+            StartTerrainServerBridge();
             serverHandlersRegistered = true;
             UpdateRuntimeBridgeRegistration();
         }
@@ -145,6 +154,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkBuildingDismantleResponse>(OnClientBuildingDismantleResponse, false);
             NetworkClient.RegisterHandler<NetworkMechanicalNodeMessage>(OnClientMechanicalNode, false);
             StartMachineClientBridge();
+            StartTerrainClientBridge();
             clientHandlersRegistered = true;
             requestedInitialState = false;
             UpdateRuntimeBridgeRegistration();
@@ -167,6 +177,7 @@ namespace FlatWorld.Networking.Gameplay
             MachineWorld.NodeRemoved -= OnMechanicalRemoved;
             MachineWorld.VisualSpeedChanged -= OnMechanicalSpeedChanged;
             StopMachineServerBridge();
+            StopTerrainServerBridge();
             dirtyMechanicalNodes.Clear();
             ReleaseAllPickupReservations();
             serverHandlersRegistered = false;
@@ -190,6 +201,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkBuildingDismantleResponse>();
             NetworkClient.UnregisterHandler<NetworkMechanicalNodeMessage>();
             StopMachineClientBridge();
+            StopTerrainClientBridge();
             clientHandlersRegistered = false;
             clientStates.Clear();
             pendingClientStates.Clear();
@@ -207,6 +219,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void Update()
         {
+            TickMachineOperationReceipts();
+            TickTerrainReplication();
             if (pendingQuickTransfer.HasValue && Time.unscaledTime > machineTransferDeadline)
                 pendingQuickTransfer = null;
             TickFluidNetwork();
@@ -228,6 +242,14 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             ApplyPendingClientStates();
+
+            // 私有 Host 没有远端接收者时不持续序列化世界物品；远端入世请求会同步捕获完整基线。
+            if (NetworkServer.active && !HasRemoteReadyClient())
+            {
+                ClearScheduledScan();
+                nextScanTime = Time.unscaledTime;
+                return;
+            }
 
             if (scheduledScanItems == null)
             {
@@ -275,6 +297,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void ProcessScheduledScan()
         {
+            using var marker = ScheduledScanMarker.Auto();
             if (scheduledScanItems == null)
                 return;
 
@@ -399,16 +422,18 @@ namespace FlatWorld.Networking.Gameplay
         private void FlushMechanicalStates()
         {
             if (dirtyMechanicalNodes.Count == 0) return;
-            int[] ids = new int[dirtyMechanicalNodes.Count];
-            dirtyMechanicalNodes.CopyTo(ids);
+            // 循环复用待同步节点快照，避免机械状态频繁变化时反复分配数组。
+            mechanicalFlushKeys.Clear();
+            mechanicalFlushKeys.AddRange(dirtyMechanicalNodes);
             dirtyMechanicalNodes.Clear();
-            foreach (int id in ids)
+            foreach (int id in mechanicalFlushKeys)
             {
                 if (!dirtyMechanicalWorlds.Remove(id, out string worldKey)) continue;
                 using IDisposable worldScope = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : MachineWorld.UseScope(worldKey);
                 MachineEntity node = MachineWorld.GetById(id);
                 if (node != null) BroadcastMechanicalSnapshot(node);
             }
+            mechanicalFlushKeys.Clear();
         }
 
         /// <summary>独立节点快照传输，不生成 NetworkItemSpawnMessage。</summary>
@@ -564,17 +589,20 @@ namespace FlatWorld.Networking.Gameplay
             if (pendingClientStates.Count == 0 || ItemMgr.Instance == null)
                 return;
 
-            int[] keys = new int[pendingClientStates.Count];
-            pendingClientStates.Keys.CopyTo(keys, 0);
-            for (int i = 0; i < keys.Length; i++)
+            using var marker = PendingStatesMarker.Auto();
+            // 尚未加载的世界实体可能跨多帧等待，复用键缓冲避免每帧分配。
+            pendingStateKeys.Clear();
+            pendingStateKeys.AddRange(pendingClientStates.Keys);
+            for (int i = 0; i < pendingStateKeys.Count; i++)
             {
-                int guid = keys[i];
+                int guid = pendingStateKeys[i];
                 if (pendingClientStates.TryGetValue(guid, out NetworkItemStateMessage message) &&
                     TryApplyClientState(message))
                 {
                     pendingClientStates.Remove(guid);
                 }
             }
+            pendingStateKeys.Clear();
         }
 
         private bool TryApplyClientState(NetworkItemStateMessage message)
@@ -673,12 +701,17 @@ namespace FlatWorld.Networking.Gameplay
             if (pendingSpawnCandidates.Count == 0 || ItemMgr.Instance == null)
                 return;
 
-            int[] guids = new int[pendingSpawnCandidates.Count];
-            pendingSpawnCandidates.Keys.CopyTo(guids, 0);
-            int count = Mathf.Min(MaxSpawnCandidatesPerFrame, guids.Length);
-            for (int i = 0; i < count; i++)
+            using var marker = SpawnCandidatesMarker.Auto();
+            // 只复制本帧预算内的 GUID，避免大量新实体出现时按整个队列分配数组。
+            spawnCandidateKeys.Clear();
+            foreach (int guid in pendingSpawnCandidates.Keys)
             {
-                int guid = guids[i];
+                spawnCandidateKeys.Add(guid);
+                if (spawnCandidateKeys.Count >= MaxSpawnCandidatesPerFrame) break;
+            }
+            for (int i = 0; i < spawnCandidateKeys.Count; i++)
+            {
+                int guid = spawnCandidateKeys[i];
                 pendingSpawnCandidates.Remove(guid);
 
                 Item item = ItemMgr.Instance.GetItemByGuid(guid);
@@ -690,6 +723,7 @@ namespace FlatWorld.Networking.Gameplay
                 else if (NetworkClient.active)
                     RequestServerSpawn(item, start, end, remaining);
             }
+            spawnCandidateKeys.Clear();
         }
 
         private void RequestServerSpawn(Item item, Vector2 start, Vector2 end, float duration)
@@ -990,6 +1024,7 @@ namespace FlatWorld.Networking.Gameplay
                 var placement = new BuildingPlacementRequest
                 {
                     SourceData = sourceData,
+                    SourceItem = hotBar.CurentSelectItem,
                     SourceInventory = hotBar.Data,
                     SourceSlot = sourceSlot,
                     Actor = actor,
@@ -1028,6 +1063,11 @@ namespace FlatWorld.Networking.Gameplay
         // 网络层只发布权威结果，生成、扣料和回滚都由领域放置事务完成。
         private bool PublishBuildingPlacement(BuildingPlacementResult result)
         {
+            if (result.TileCell.HasValue)
+                return PublishTerrainPlacement(result.TileCell.Value);
+            if (!string.IsNullOrWhiteSpace(result.ShipId))
+                return result.PlacedData != null && GetComponent<NetworkSpaceStateCoordinator>()?.TryPublishBuildingPlacement(
+                    result.ShipId, result.PlacedData.Guid) == true;
             if (result.Machine != null)
             {
                 BroadcastMechanicalSnapshot(result.Machine);
@@ -1525,6 +1565,8 @@ namespace FlatWorld.Networking.Gameplay
 
             if (NetworkServer.active)
             {
+                // 没有远端玩家时，权威状态保留在运行时；新连接补拉时再捕获完整快照。
+                if (!HasRemoteReadyClient()) return;
                 ProcessServerItem(item);
                 return;
             }
@@ -1594,6 +1636,17 @@ namespace FlatWorld.Networking.Gameplay
             return items;
         }
 
+        private static bool HasRemoteReadyClient()
+        {
+            if (!NetworkServer.active) return false;
+            // Mirror 的 Host 本地连接共用权威世界，不需要序列化给自己。
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                if (connection != null && connection is not LocalConnectionToClient &&
+                    connection.isAuthenticated && connection.isReady)
+                    return true;
+            return false;
+        }
+
         private static bool ShouldSynchronize(Item item)
         {
             if (item != null && SpaceSession.TryGetCombatFrame(item, out _, out _)) return false;
@@ -1611,6 +1664,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private static byte[] CaptureSafely(Item item, out ulong version, out uint hash)
         {
+            using var marker = CaptureMarker.Auto();
             version = 0;
             hash = 0;
             try

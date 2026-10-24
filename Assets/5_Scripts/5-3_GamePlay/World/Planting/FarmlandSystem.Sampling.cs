@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 public static partial class FarmlandSystem
@@ -80,6 +81,30 @@ public static partial class FarmlandSystem
         {
             if (leased && hasQuery && manager != null && query.IsForWorld(manager.WorldRuntime))
                 CommitSoil(sample, soil, allowNaturalSoil, normalizedWorldCell: true);
+        }
+
+        /// <summary>
+        /// 原生植物本轮水肥结算没有数值变化时，仅已初始化且完整同步的格可跳过写回。
+        /// 不能只看作物快照相等：首次自然土壤与缺失的表现层仍需正式提交。
+        /// </summary>
+        internal static bool IsAlreadyCommitted(RuntimeTerrainTileSample sample, TileData_Farmland soil)
+        {
+            ChunkTerrainData terrain = sample.Terrain;
+            if (terrain == null || terrain.IsDisposed || soil == null) return false;
+            int x = sample.LocalCell.x, y = sample.LocalCell.y;
+            float fertility = soil.Fertility;
+            return terrain.TryGetEnvironmentValue(SourceLayer, x, y, out float source) && source > 0f &&
+                terrain.TryGetEnvironmentValue(WaterLayer, x, y, out float water) && water.Equals(soil.waterValue) &&
+                terrain.TryGetEnvironmentValue(WaterSupplyRemainderLayer, x, y, out float supply) &&
+                    supply.Equals(soil.waterSupplyRemainder) &&
+                terrain.TryGetEnvironmentValue(WaterConsumptionRemainderLayer, x, y, out float consumption) &&
+                    consumption.Equals(soil.waterConsumptionRemainder) &&
+                terrain.TryGetEnvironmentValue(FertilityLayer, x, y, out float storedFertility) &&
+                    storedFertility.Equals(fertility) &&
+                terrain.TryGetEnvironmentValue("moisture", x, y, out float moisture) &&
+                    moisture.Equals(Mathf.Clamp01((float)soil.waterValue / soil.maxWater)) &&
+                terrain.TryGetEnvironmentValue("fertility", x, y, out float generatedFertility) &&
+                    generatedFertility.Equals(Mathf.Clamp(fertility, 0f, soil.maxFertility));
         }
 
         public void Dispose()

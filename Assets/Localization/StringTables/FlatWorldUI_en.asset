@@ -18,6 +18,42 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 17923500000001245
+    m_Localized: "Metal Hammer"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001246
+    m_Localized: "Dismantle"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001247
+    m_Localized: "Iron Anvil"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001248
+    m_Localized: "A suitable unbroken tool is required"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001249
+    m_Localized: "The workstation has insufficient durability"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001212
+    m_Localized: "Next unit melts in: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001213
+    m_Localized: "Disappears in: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001214
+    m_Localized: "{0} (game time)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001215
+    m_Localized: "Time remaining: {0}"
+    m_Metadata:
+      m_Items: []
   - m_Id: 5952679936
     m_Localized: Inventory
     m_Metadata:
@@ -5808,6 +5844,3041 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 10228915849170947
     m_Localized: Roll
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000128
+    m_Localized: "Space Elevator"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000129
+    m_Localized: "Space Elevator Terminal"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000130
+    m_Localized: "Ground Terminal"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000131
+    m_Localized: "Space Station"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000132
+    m_Localized: "Send Cargo Cabin"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000133
+    m_Localized: "Call Cargo Cabin"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000134
+    m_Localized: "Ride to Space Station"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000135
+    m_Localized: "Ride to {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000136
+    m_Localized: "Switch Inventory"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000137
+    m_Localized: "Click an item on the left to load cargo, or on the right to unload it."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000138
+    m_Localized: "Loaded into the cargo cabin."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000139
+    m_Localized: "Unloaded into the selected inventory."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000140
+    m_Localized: "Ride booked. Stay near the terminal; you will travel when the cabin arrives."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000141
+    m_Localized: "Cargo cabin dispatched. Unload at the other terminal after arrival."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000142
+    m_Localized: "Cargo cabin called. Please wait for arrival."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000143
+    m_Localized: "Cargo in transit \u00b7 {0:0.0} seconds remaining"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000144
+    m_Localized: "This terminal: {0} \u00b7 Cabin docked at: {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000145
+    m_Localized: "Stay near the terminal for your ride. Leaving cancels your ride while cargo continues. Expand the station with floors, walls and equipment."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000146
+    m_Localized: "Mass {0:0.#}/{1:0.#} kg\nVolume {2:0.#}/{3:0.#} L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000147
+    m_Localized: "{0} \u00b7 Load cargo \u00b7 {1}/{2}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000148
+    m_Localized: "Cabin \u00b7 Unload cargo \u00b7 {0}/{1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000149
+    m_Localized: "{0}. {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000150
+    m_Localized: "{0}. {1} \u00d7 {2:0.##}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000151
+    m_Localized: "Cabin docked at ground"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000152
+    m_Localized: "Cabin docked at station"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000153
+    m_Localized: "Travelling to station"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000154
+    m_Localized: "Returning to ground"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000155
+    m_Localized: "The elevator connection does not exist."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000156
+    m_Localized: "The cabin is in transit."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000157
+    m_Localized: "The elevator destination is invalid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000158
+    m_Localized: "The cabin is already at this terminal."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000159
+    m_Localized: "The elevator travel time is invalid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000160
+    m_Localized: "This slot has no cargo to transfer."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000161
+    m_Localized: "Cargo transferred."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000162
+    m_Localized: "The destination has no available capacity or cannot accept this item."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000163
+    m_Localized: "This elevator prototype supports the local host only. Remote clients are not supported yet."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000164
+    m_Localized: "The player or elevator session is not ready."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000165
+    m_Localized: "A world transition is in progress. Please try again shortly."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000166
+    m_Localized: "Move closer to this elevator terminal."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000167
+    m_Localized: "This terminal is not connected to an elevator yet."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000168
+    m_Localized: "Move closer to an elevator terminal before operating it."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000169
+    m_Localized: "On the planet surface, move closer to an installed elevator terminal."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000170
+    m_Localized: "Space elevators require a registered planet surface."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000171
+    m_Localized: "Connected to the existing station."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000172
+    m_Localized: "This prototype supports one elevator per planet. The existing ground terminal is at ({0:0.#}, {1:0.#})."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000173
+    m_Localized: "The ground elevator is connected to an expandable station."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000174
+    m_Localized: "Failed to create the elevator station: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000175
+    m_Localized: "Paired elevator terminals anchor the connection and cannot be dismantled in this prototype. The surrounding station can be expanded freely."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000176
+    m_Localized: "The fixed station core anchor cannot be removed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000177
+    m_Localized: "Elevator Cargo Cabin"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000178
+    m_Localized: "The cabin is not at this terminal. Wait for it or call it first."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000179
+    m_Localized: "Cargo can only be transferred to or from your own inventory."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000180
+    m_Localized: "The cabin is not docked at this terminal."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000181
+    m_Localized: "You already have a ride booked."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000182
+    m_Localized: "Ride booked. Stay near the terminal; leaving cancels your ride while cargo continues."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000183
+    m_Localized: "The cabin has departed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000184
+    m_Localized: "Your ride was cancelled. Cargo continues to its destination."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000185
+    m_Localized: "The cabin has arrived. Cargo can now be unloaded."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000186
+    m_Localized: "The cabin is at ground level. Cargo can now be unloaded."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000187
+    m_Localized: "The cabin is at the station. Cargo can now be unloaded."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000188
+    m_Localized: "The station elevator terminal is no longer operational."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000189
+    m_Localized: "No safe floor is available near the station terminal. Clear a floor cell first."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000190
+    m_Localized: "The ground world is not loaded. Call the elevator from the ground first."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000191
+    m_Localized: "The ground terminal is destroyed. Rebuild it at the original position to reconnect."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000192
+    m_Localized: "No safe arrival position is available near the ground terminal. Clear the surrounding area first."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000193
+    m_Localized: "{0} Cargo remains in the cabin."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000194
+    m_Localized: "Arrived. Cargo can be loaded or unloaded at this terminal."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000195
+    m_Localized: "The player transfer did not complete. Call the cabin and try again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000196
+    m_Localized: "Fixed stations do not support ship docking yet."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000197
+    m_Localized: "The elevator terminal is anchored to the ground and cannot launch with a ship. Separate the ship floors from the elevator."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000198
+    m_Localized: "The ride was cancelled because you left the terminal during preparation."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001199
+    m_Localized: "All categories"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001200
+    m_Localized: "Categories ({0})"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001201
+    m_Localized: "Match any selected category"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001202
+    m_Localized: "Clear categories"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001203
+    m_Localized: "No matching items"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001204
+    m_Localized: "Electricity"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001205
+    m_Localized: "Industrial blocks"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001206
+    m_Localized: "Pipe blocks"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001207
+    m_Localized: "Food"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001208
+    m_Localized: "Materials"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001209
+    m_Localized: "Building blocks"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001210
+    m_Localized: "Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001211
+    m_Localized: "Chemistry"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001216
+    m_Localized: "Offhand"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001217
+    m_Localized: "Offhand parry"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001218
+    m_Localized: "Furnace {0:0.#}\u00b0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001219
+    m_Localized: "Target temperature {0:0.#}\u00b0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001220
+    m_Localized: "Power requested {0:0.#} W\nPower supplied {1:0.#} W"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001221
+    m_Localized: "Enter {0:0.#}\u2013{1:0.#}\u00b0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001222
+    m_Localized: "Waiting for device confirmation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001223
+    m_Localized: "Target temperature updated"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001224
+    m_Localized: "Request not sent. Please retry."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001225
+    m_Localized: "Temperature setting rejected: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001226
+    m_Localized: "Temperature setting unconfirmed: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001227
+    m_Localized: "Cooling naturally"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001228
+    m_Localized: "Target temperature reached"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001229
+    m_Localized: "The device did not accept this operation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001230
+    m_Localized: "Invalid machine operation parameters"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001231
+    m_Localized: "The operation request expired. Please retry."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001232
+    m_Localized: "Waiting for the server to confirm the picked-up inventory"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001233
+    m_Localized: "The device world changed. Reopen the panel."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001234
+    m_Localized: "The device is unavailable or too far away"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001235
+    m_Localized: "The machine operation is unconfirmed. Please retry."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001236
+    m_Localized: "Connection closed. The operation is unconfirmed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001237
+    m_Localized: "The player has not finished loading the world"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001238
+    m_Localized: "Changing worlds. Please try again shortly."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001239
+    m_Localized: "The player world is not ready"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001240
+    m_Localized: "The world state changed. Please retry the operation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001241
+    m_Localized: "Device confirmed; waiting for state sync"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001242
+    m_Localized: "Device state has not synced. Reopen the panel to confirm."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001243
+    m_Localized: "The first load may take a little longer. Please wait."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001244
+    m_Localized: "Eyes / Glasses"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001250
+    m_Localized: "Minecart"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001253
+    m_Localized: "Cargo"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001254
+    m_Localized: "Connect Nearby Cart"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001255
+    m_Localized: "Carts connected"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001256
+    m_Localized: "Cart disconnected"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001257
+    m_Localized: "WASD to drive; F to dismount"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001258
+    m_Localized: "Seat empty"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001259
+    m_Localized: "Seat occupied"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001260
+    m_Localized: "Board"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001261
+    m_Localized: "Dismount"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001262
+    m_Localized: "Train: {0} carts · {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001263
+    m_Localized: "Cargo {0:0.#}/{1:0.#} kg · {2:0.#}/{3:0.#} L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001264
+    m_Localized: "Install engines on the left. Put water and fuel in cargo on the right. You can drive with the window closed."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001265
+    m_Localized: Settings Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001266
+    m_Localized: Controller Input
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001267
+    m_Localized: Backspace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001268
+    m_Localized: Space
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001269
+    m_Localized: Oxygen is below 5%; it cannot be ignited.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001270
+    m_Localized: 'Moisture: {0}%'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001271
+    m_Localized: "Elevator in transit \xB7 {0:0.0}s remaining"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001272
+    m_Localized: "Current terminal: {0} \xB7 Cabin at: {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001273
+    m_Localized: 'Pending delivery: insufficient space in {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001274
+    m_Localized: "Weight {0:0.#}/{1:0.#} kg \xB7 Volume {2:0.#}/{3:0.#} L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001275
+    m_Localized: '{0} The cargo will continue to the destination warehouse.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001276
+    m_Localized: '{0}
+
+      Rated power {1:0.##} W
+
+      Current power {2:0.##}
+      W'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001277
+    m_Localized: "Lon {0:0.00}\xB0  Lat {1:0.00}\xB0"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001278
+    m_Localized: MOD Settings Changed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001279
+    m_Localized: Restart the game to apply MOD settings?
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001280
+    m_Localized: Ratio {0:0.##}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001281
+    m_Localized: Efficiency {0:0.#}% (required {1:0} RPM)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001282
+    m_Localized: "Speed x{0:0.##} \xB7 Torque x{1:0.##}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001251
+    m_Localized: "Steam Engine Configuration"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001252
+    m_Localized: "Engine Slots"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001283
+    m_Localized: "{0} · Output level {1}/3 · Power {2:0.##}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001284
+    m_Localized: "At full output: {0:0.###} water units/sec; {1:0.#} seconds per unit of fuel energy.\nPut water vessels and fuel in cargo. Installed engines draw resources automatically; lower output uses proportionally less."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001285
+    m_Localized: "Turn Engine Off"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001286
+    m_Localized: "Turn Engine On"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001287
+    m_Localized: "Low 33%"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001288
+    m_Localized: "Medium 67%"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000001289
+    m_Localized: "High 100%"
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []
+  - m_Id: 10679429661495296
+    m_Localized: Weather Debug Panel  [{0}] Toggle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845312
+    m_Localized: 'Current weather: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845313
+    m_Localized: 'Weather phase: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845314
+    m_Localized: Clear Sky
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845315
+    m_Localized: Cloudy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845316
+    m_Localized: Rain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845317
+    m_Localized: Thunderstorm
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845318
+    m_Localized: Fog
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845319
+    m_Localized: Unknown weather
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845320
+    m_Localized: Clear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845321
+    m_Localized: Rain forecast
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845322
+    m_Localized: Rain starting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845323
+    m_Localized: Steady rain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845324
+    m_Localized: Heavy rain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845325
+    m_Localized: Rain ending
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845326
+    m_Localized: Post-rain recovery
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845327
+    m_Localized: Unknown weather phase
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845328
+    m_Localized: 'Weather intensity: {0:F2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845329
+    m_Localized: 'Local wind: {0:F2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845330
+    m_Localized: 'Phase remaining: {0:F1} s'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845331
+    m_Localized: "Weather temperature offset: {0:F2} \xB0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845332
+    m_Localized: "Base temperature: {0:F2} \xB0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845333
+    m_Localized: 'Weather region: {0}, {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845334
+    m_Localized: "Shared range: {0}\xD7{1} tiles"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845335
+    m_Localized: Weather-region parameters
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845336
+    m_Localized: Chunk generation parameters (climate reference)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845337
+    m_Localized: 'Generated humidity: {0:F3}  Wind: {1:F3}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845338
+    m_Localized: Check for idle weather every {0:F0} seconds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845339
+    m_Localized: Rain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679429992845340
+    m_Localized: Wind
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233920
+    m_Localized: Thunder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233921
+    m_Localized: '{0}: Chance {1:P0}  Intensity {2:F2}  Duration {3:F0} s'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233922
+    m_Localized: "Local temperature: {0:F2} \xB0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233923
+    m_Localized: 'Clouds: {0:F2}  Fog: {1:F2}  Lightning: {2:F2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233924
+    m_Localized: The current weather region is not ready.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233925
+    m_Localized: No planet data is available.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233926
+    m_Localized: Strike three cells above the player (causes real damage)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233927
+    m_Localized: Wind
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233928
+    m_Localized: Weather intensity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233929
+    m_Localized: Light rain 0.35
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233930
+    m_Localized: Moderate rain 0.65
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233931
+    m_Localized: Heavy rain 1.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233932
+    m_Localized: Drag the title bar to move; drag the lower-right corner to resize.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233933
+    m_Localized: <b>Environment Monitor</b>
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233934
+    m_Localized: <b>Environment Monitor / Tile Overview</b>
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430001233935
+    m_Localized: <b>Raw Terrain / Environment Layers</b>
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428224
+    m_Localized: <b>Agriculture State</b>
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428225
+    m_Localized: 'Mouse world coordinates: ({0:F2}, {1:F2})'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428226
+    m_Localized: There is no loaded WorldModel tile data at the pointed location.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428227
+    m_Localized: Move the mouse over loaded terrain to inspect it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428228
+    m_Localized: "Press {0} to close  |  \u2191\u2193 / PgUp/PgDn / scroll to change
+      pages"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428229
+    m_Localized: Page {0} of {1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428230
+    m_Localized: 'World cell: ({0}, {1})  Local cell: ({2}, {3})'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428231
+    m_Localized: 'Mouse world: ({0:F2}, {1:F2})  Dimension: {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428232
+    m_Localized: 'Chunk origin: ({0}, {1})  Revision: {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428233
+    m_Localized: 'Tile: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428234
+    m_Localized: 'Biome: {0} (ID {1})'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428235
+    m_Localized: 'Walkable: {0}  Navigation cost: {1}  Flags: {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428236
+    m_Localized: 'Tile layers: {0}  Grass: {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428237
+    m_Localized: Present
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428238
+    m_Localized: None
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428239
+    m_Localized: 'Support surface: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428240
+    m_Localized: 'Definition: {0}  Display name: {1}  Tile asset: {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428241
+    m_Localized: 'Template: tag={0}  penalty={1}  walkable={2}  demolition={3:F2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430005428242
+    m_Localized: "Temperature: ambient {0:F2}\xB0C  generated base {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816832
+    m_Localized: "{0:F2}\xB0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816833
+    m_Localized: "Temperature: generated base {0:F2}\xB0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816834
+    m_Localized: 'Normalized temperature: {0:F4}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816835
+    m_Localized: Humidity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816836
+    m_Localized: Precipitation
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816837
+    m_Localized: Soil fertility
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816838
+    m_Localized: Height
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816839
+    m_Localized: '{0}: {1:F4}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816840
+    m_Localized: "Wind vector: ({0:F3}, {1:F3})  Angle {2:F1}\xB0"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816841
+    m_Localized: 'Hydrology: kind={0:G4}  flow={1:F4}  riverDepth={2:F4}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816842
+    m_Localized: 'Liquid: {0}  Amount: {1}/10  Type index: {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816843
+    m_Localized: 'Water current: {0}  Direction ({1:F3}, {2:F3})  Flow {3:F4}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816844
+    m_Localized: River
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816845
+    m_Localized: Ocean
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816846
+    m_Localized: Experimental liquid
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816847
+    m_Localized: Unknown
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816848
+    m_Localized: 'Farmland: {0}  Soil-state tile ID: {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816849
+    m_Localized: 'Moisture: {0}/{1} ({2:F1}%)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816850
+    m_Localized: 'Fertility: {0:F4}/{1:F4} ({2:F1}%)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816851
+    m_Localized: 'World cell: ({0}, {1})  Chunk: ({2}, {3})'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816852
+    m_Localized: 'Ground tile: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816853
+    m_Localized: 'Background tile: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816854
+    m_Localized: 'Blocking tile: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816855
+    m_Localized: 'Effective top tile: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816856
+    m_Localized: 'Tile stack [{0}]: {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816857
+    m_Localized: 'Liquid: ID={0}  Type={1}  Level={2}/10'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816858
+    m_Localized: 'Environment layer count: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816859
+    m_Localized: '{0}: {1:G7}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816860
+    m_Localized: Empty (#0)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816861
+    m_Localized: '{0} [{1}] #{2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816862
+    m_Localized: Unknown tile #{0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816863
+    m_Localized: Cave Stone Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816864
+    m_Localized: Soil
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816865
+    m_Localized: Clay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816866
+    m_Localized: Bedrock
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816867
+    m_Localized: Peat Block
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816868
+    m_Localized: Farmland
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816869
+    m_Localized: Cave Rock Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816870
+    m_Localized: Stone Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816871
+    m_Localized: Wooden Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816872
+    m_Localized: Water Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816873
+    m_Localized: Stone Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816874
+    m_Localized: Copper Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816875
+    m_Localized: Iron Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816876
+    m_Localized: Bronze Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816877
+    m_Localized: Copper Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816878
+    m_Localized: Iron Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816879
+    m_Localized: Bronze Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816880
+    m_Localized: Dirt Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816881
+    m_Localized: Wooden Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816882
+    m_Localized: Stone Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816883
+    m_Localized: Copper Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816884
+    m_Localized: Iron Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816885
+    m_Localized: Bronze Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816886
+    m_Localized: Lunar Regolith
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816887
+    m_Localized: Martian Dust
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816888
+    m_Localized: Fusion in Progress
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816889
+    m_Localized: Beach
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816890
+    m_Localized: Desert
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816891
+    m_Localized: Temperate Grassland
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816892
+    m_Localized: Forest
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816893
+    m_Localized: Snowfield
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816894
+    m_Localized: Snowfield
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816895
+    m_Localized: Stonefield
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816896
+    m_Localized: MOD {0} is enabled and will take effect after reloading.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816897
+    m_Localized: MOD {0} is disabled and will take effect after reloading.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430013816898
+    m_Localized: FlatWorld MOD Manager ({0} to close)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011136
+    m_Localized: Enablement and load order changes take effect after the next content
+      reload. In a single-player world, the active save is saved, reloaded, and reopened
+      automatically.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011137
+    m_Localized: 'State: {0} | Loaded: {1} | Fingerprint: {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011138
+    m_Localized: Not started
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011139
+    m_Localized: Loading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011140
+    m_Localized: Ready
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011141
+    m_Localized: Failed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011142
+    m_Localized: Unknown state
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011143
+    m_Localized: Safe mode is active. All external MODs are skipped.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011144
+    m_Localized: 'Recent error: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011145
+    m_Localized: Copy MOD folder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011146
+    m_Localized: Safe mode next launch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011147
+    m_Localized: Reload content now
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011148
+    m_Localized: MOD folder path copied.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011149
+    m_Localized: Safe mode requested for the next launch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011150
+    m_Localized: Reloading game resources and MODs.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011151
+    m_Localized: No MODs found. Put a folder containing manifest.json in Mods, then
+      refresh.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011152
+    m_Localized: '{0}  Version {1}  [{2}]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011153
+    m_Localized: 'Invalid package: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011154
+    m_Localized: Loaded
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011155
+    m_Localized: Not loaded
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011156
+    m_Localized: Disable this folder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011157
+    m_Localized: '{0} [{1}]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011158
+    m_Localized: Client
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011159
+    m_Localized: Server
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011160
+    m_Localized: Disabled folder {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011161
+    m_Localized: Settings saved; reload content for the change to take effect.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011162
+    m_Localized: Settings saved.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011163
+    m_Localized: 'Failed to save settings: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011164
+    m_Localized: Soft load order saved; dependencies still take priority.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011165
+    m_Localized: Time speed reset to normal.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011166
+    m_Localized: "Time speed: {0:F1}\xD7"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430018011167
+    m_Localized: 'State: {0}{1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205440
+    m_Localized: Wandering
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205441
+    m_Localized: Foraging
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205442
+    m_Localized: Eating
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205443
+    m_Localized: Sleeping
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205444
+    m_Localized: Mating
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205445
+    m_Localized: Laying eggs
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205446
+    m_Localized: Fleeing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205447
+    m_Localized: Alert
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205448
+    m_Localized: Chasing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205449
+    m_Localized: Attacking
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205450
+    m_Localized: Charging
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205451
+    m_Localized: Searching last position
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205452
+    m_Localized: Avoiding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205453
+    m_Localized: Advancing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430022205454
+    m_Localized: Copied the latest {0} log slots, merged {1} duplicate entries, and
+      omitted earlier types.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399744
+    m_Localized: Copied the latest {0} log slots; earlier types were omitted.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399745
+    m_Localized: Copied the current {0} log slots and merged {1} duplicate entries.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399746
+    m_Localized: Copied the current {0} log slots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399747
+    m_Localized: Copy will include the latest {0} deduplicated log slots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399748
+    m_Localized: Panel logs cleared; disk logs were kept.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399749
+    m_Localized: Logs  E:{0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399750
+    m_Localized: Logs  W:{0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399751
+    m_Localized: Logs  {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399752
+    m_Localized: '{0} total    {1} errors    {2} warnings'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399753
+    m_Localized: The page only shows recent entries. Set the copy count at the top.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399754
+    m_Localized: Alive {0} / Target {1} / Wandering {2} / Chasing {3} / Fleeing {4}
+      / Attacking {5}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399755
+    m_Localized: 'This tick: perception requests {0}, candidates {1}, LOS {2}, hot
+      cells {3}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399756
+    m_Localized: 'Total: player hits {0} (-{1:0.0} HP), weapon-to-ECS hits {2}, deaths
+      {3}, drops {4}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399757
+    m_Localized: Shared targets {0} / chunks {1} / exit maps {2} / target maps {3}
+      / chunk routes {4}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399758
+    m_Localized: 'Simulation stopped: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399759
+    m_Localized: 'Creation failed: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399760
+    m_Localized: Spawned {0} ECS units this round. See the live stats below for current
+      population and behavior.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399761
+    m_Localized: 'Battle: {0} spawned total; this wave {1} / target {2}. See the
+      stats below for current population.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399762
+    m_Localized: 'Submitted 1 creature yield test request: {0}. Waiting for real
+      tile occupancy and spawning; death counts and drop chances are unchanged.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399763
+    m_Localized: Waiting for the main game world; create a temporary world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399764
+    m_Localized: Connected to the current game world. Choose an AIECS GM test scene.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399765
+    m_Localized: Waiting for a temporary world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399766
+    m_Localized: AIECS test units have been cleared. Use the button to restart the
+      scene.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399767
+    m_Localized: The current battle loot table has no additional creature yield definitions.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399768
+    m_Localized: '[Performance DEBUG]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399769
+    m_Localized: Sections include child calls in Total and must not be added as a
+      full-frame total.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399770
+    m_Localized: Performance statistics {0}, slow-operation summary {1}, threshold
+      {2} ms, registered points {3}, excess points {4}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399771
+    m_Localized: Calls
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399772
+    m_Localized: Work
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399773
+    m_Localized: Total time
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399774
+    m_Localized: Maximum time
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399775
+    m_Localized: Current value
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399776
+    m_Localized: Peak
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399777
+    m_Localized: '{0}={1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399778
+    m_Localized: FlatWorld GM Tool  /  Test Console
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399779
+    m_Localized: F4 Open / Close
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399780
+    m_Localized: File
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399781
+    m_Localized: Items and Characters
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399782
+    m_Localized: System Control
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399783
+    m_Localized: Reflection Commands
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399784
+    m_Localized: Item Drop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399785
+    m_Localized: 'Item ID:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399786
+    m_Localized: Enter item ID
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399787
+    m_Localized: 'Quantity:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399788
+    m_Localized: Spawn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399789
+    m_Localized: "Loading item list\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399790
+    m_Localized: Quick Controls
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399791
+    m_Localized: Set as Admin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399792
+    m_Localized: Teleport to Cursor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399793
+    m_Localized: Creative Inventory
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399794
+    m_Localized: Held Item +9999
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399795
+    m_Localized: Inventory +100
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399796
+    m_Localized: Time -0.5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430026399797
+    m_Localized: Reset Time
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594048
+    m_Localized: Reflection Debug Commands
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594049
+    m_Localized: "Scanning reflection commands\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594050
+    m_Localized: Scan Again
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594051
+    m_Localized: Press F4 to open or close this window.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594052
+    m_Localized: GM Tools
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594053
+    m_Localized: F4  Open / Close
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594054
+    m_Localized: Test Spawn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594055
+    m_Localized: Open Item Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594056
+    m_Localized: Open AI Creature Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594057
+    m_Localized: Search for and spawn items or AI creatures near the player.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594058
+    m_Localized: Common Actions
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594059
+    m_Localized: 'T Teleport: On'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594060
+    m_Localized: 'Player Speed: 1x'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594061
+    m_Localized: 'AI Path Hints: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594062
+    m_Localized: Ruin Teleport
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594063
+    m_Localized: "Loading ruin catalog\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594064
+    m_Localized: Teleport to Nearest Ruin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594065
+    m_Localized: Refresh
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594066
+    m_Localized: Find the nearest ruin spawn point in unexplored areas from the world
+      seed.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594067
+    m_Localized: Select an item to drop it near the player.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594068
+    m_Localized: Search item names or IDs
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594069
+    m_Localized: "Loading items\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594070
+    m_Localized: Click any item to drop it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594071
+    m_Localized: AI Creature Spawn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594072
+    m_Localized: Click a creature to spawn it near the player.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594073
+    m_Localized: Search creature names or IDs
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594074
+    m_Localized: "1\u201320"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594075
+    m_Localized: Refresh Creatures
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594076
+    m_Localized: "Loading creatures\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594077
+    m_Localized: Click a creature to spawn it; batch spawns are spread out to avoid
+      overlap.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594078
+    m_Localized: No ruin definitions are available.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594079
+    m_Localized: Check Resources/Config/StructureCatalog_Default.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594080
+    m_Localized: Enter a game world to locate ruins from its seed.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594081
+    m_Localized: No items are available to drop.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594082
+    m_Localized: No matching items.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594083
+    m_Localized: No AI creatures are available to spawn.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594084
+    m_Localized: No matching creatures.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594085
+    m_Localized: Buff ID
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594086
+    m_Localized: Enter a registered Buff ID
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594087
+    m_Localized: Refresh Catalog
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594088
+    m_Localized: Duration (seconds)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594089
+    m_Localized: Leave blank to use the JSON default
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594090
+    m_Localized: Apply Count
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594091
+    m_Localized: Permanent buffs stay permanent; stack count follows each buff's
+      own stacking rules.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594092
+    m_Localized: "Loading buff catalog\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594093
+    m_Localized: Confirm and Select Target
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594094
+    m_Localized: Clear Buffs
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594095
+    m_Localized: Buff target selection is not active.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594096
+    m_Localized: Runtime targets that accept buffs (click an index)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594097
+    m_Localized: "Loading targets\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594098
+    m_Localized: Refresh Targets
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594099
+    m_Localized: No buff definitions are loaded.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594100
+    m_Localized: "The buff catalog is not loaded. Enter a game world and click \u201CRefresh
+      Catalog\u201D."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594101
+    m_Localized: Buff ID not found. Enter a registered MOD buff ID or browse the
+      catalog with the left and right buttons.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594102
+    m_Localized: '{0:0.##} s'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594103
+    m_Localized: No buff description.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594104
+    m_Localized: "<b>{0}</b>  ({1}) \xB7 Duration: {2} \xB7 {3} \xB7 {4} effects\n{5}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594105
+    m_Localized: No active Mod_BuffManager targets are present in the loaded scene.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594106
+    m_Localized: 'Current targets: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594107
+    m_Localized: The buff target list changed. Click a target index again.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594108
+    m_Localized: That buff target is no longer available. The target list has been
+      refreshed.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594109
+    m_Localized: Select a loaded buff first.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594110
+    m_Localized: A permanent buff cannot override duration. Clear the duration field
+      before confirming.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594111
+    m_Localized: There is no active buff target selection.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594112
+    m_Localized: "Buff distribution mode: {0} \xD7{1}{2}. Click a target index below;
+      click \u201CCancel\u201D to exit."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594113
+    m_Localized: "Buff clearing mode: click a target index below. Click \u201CClear
+      Buffs\u201D again to exit."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594114
+    m_Localized: Cleared {1} buffs from {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594115
+    m_Localized: '{0} has no buffs to clear.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594116
+    m_Localized: 'Could not apply the buff to {0}: {1}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594117
+    m_Localized: Applied {1} to {0}, but could not override its duration.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594118
+    m_Localized: "Applied {1} \xD7{2}{3} to {0}."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594119
+    m_Localized: "Distribution mode is on: {0} \xD7{1}. Click a target index below
+      to keep applying."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430030594120
+    m_Localized: "Clear mode is on: click a target index below to remove all its
+      buffs. Click \u201CClear Buffs\u201D again to exit."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788352
+    m_Localized: "Select a buff, then click a target index below. Use \u201CBatch
+      Apply\u201D to apply it continuously."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788353
+    m_Localized: Fixed Structures / Test Ship
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788354
+    m_Localized: "Loading structure templates\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788355
+    m_Localized: Spawn Test Ship
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788356
+    m_Localized: Refresh Templates
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788357
+    m_Localized: Refill Nearby Test Ship
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788358
+    m_Localized: Spawns in nearby loaded, clear surface terrain; the server handles
+      multiplayer. Add ship types in JSON. Supplies fill remaining capacity without
+      repairing the hull or cabin atmosphere.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788359
+    m_Localized: '{0}/{1}  {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788360
+    m_Localized: No ship templates are available.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788361
+    m_Localized: 'Failed to load structure templates: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788362
+    m_Localized: Select a ship template first.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788363
+    m_Localized: "Spawning test ship\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788364
+    m_Localized: Wait for the structure templates to finish loading.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788365
+    m_Localized: "Refilling a nearby test ship\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788366
+    m_Localized: Select an AI creature to spawn.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788367
+    m_Localized: Local player not found; cannot determine the spawn position.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788368
+    m_Localized: The ECS backend for this species is disabled or not ready.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788369
+    m_Localized: 'Creature spawn exception: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788370
+    m_Localized: Creature creation failed. Check Item/AI initialization logs and
+      world readiness.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788371
+    m_Localized: No suitable loaded navigation position was found near the player.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788372
+    m_Localized: "Spawned successfully: {0} \xD7 {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788373
+    m_Localized: 'Partially spawned: {0} {1}/{2}; {3}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788374
+    m_Localized: 'Spawn failed: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788375
+    m_Localized: Select an item to airdrop.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430034788376
+    m_Localized: Local player not found; cannot determine the airdrop position.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176960
+    m_Localized: "Airdrop succeeded: {0} \xD7 {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176961
+    m_Localized: 'Airdrop failed: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176962
+    m_Localized: ItemMgr not found.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176963
+    m_Localized: ItemMgr does not expose a string ItemId instantiation method.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176964
+    m_Localized: ItemMgr did not return an Item instance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176965
+    m_Localized: Memory Usage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176966
+    m_Localized: "Loading memory data\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176967
+    m_Localized: Game Memory Usage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176968
+    m_Localized: 'Editor mode: process resident memory includes the Unity Editor.
+      Unity allocated memory can be used to observe runtime changes.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176969
+    m_Localized: Process resident memory is the amount of physical memory currently
+      resident for the game process. Unity reserved memory is not additional usage.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176970
+    m_Localized: Running Device
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176971
+    m_Localized: 'Platform: {0}
+
+      Processor: {1} ({2} logical threads)
+
+      Physical
+      memory: {3} MB
+
+      GPU: {4}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176972
+    m_Localized: Environment Info
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176973
+    m_Localized: 'Show Temperature: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176974
+    m_Localized: 'Show Pollution: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176975
+    m_Localized: 'Show Monster Navigation: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176976
+    m_Localized: "\u25A0  {temperature:0}\xB0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176977
+    m_Localized: "\u25A0  {load * 100f:0}%"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176978
+    m_Localized: "Temperature: blue is cold and red is hot, on a fixed -20 to 60\xB0C
+      scale. Pollution: green is clean and red is heavily polluted; each cell shows
+      the highest normalized load among registered pollution types, including MODs.
+      Unloaded areas are transparent.\nMonster navigation: each reachable cell shows
+      the next step toward the local player. A blue dot marks the player's target
+      cell; a red cross marks unreachable cells. Obstacles and unloaded cells are
+      not drawn. This reads the actual shared flow field; it does not mean every
+      monster is chasing. Nothing appears until the target is ready.\nHigher opacity
+      makes the surface clearer: 0% fully covered, 100% fully transparent."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176979
+    m_Localized: Opacity  {0:0}%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176980
+    m_Localized: Layer Opacity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176981
+    m_Localized: Temperature layer enabled; it stays visible after closing the GM
+      window.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176982
+    m_Localized: Temperature layer disabled.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176983
+    m_Localized: Pollution layer enabled; it stays visible after closing the GM window.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176984
+    m_Localized: Pollution layer disabled.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176985
+    m_Localized: Monster navigation layer enabled. It appears cell by cell when the
+      shared target is ready and remains visible after closing the GM window.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176986
+    m_Localized: Monster navigation layer disabled.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176987
+    m_Localized: '{0}: {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176988
+    m_Localized: On
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176989
+    m_Localized: Off
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176990
+    m_Localized: 'Performance DEBUG: Profiler sections are always available; extra
+      call counts and slow-operation summaries are off by default.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176991
+    m_Localized: 'Performance Stats: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176992
+    m_Localized: 'Slow Operation Summary: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176993
+    m_Localized: Output Performance Summary
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176994
+    m_Localized: Clear Performance Stats
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176995
+    m_Localized: Slow Threshold ms
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176996
+    m_Localized: Apply Threshold
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176997
+    m_Localized: Click Output Summary to display it. Sections include child calls
+      and cannot be added as a full-frame total.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176998
+    m_Localized: Key Performance DEBUG
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043176999
+    m_Localized: Enter a slow-operation threshold from 0.1 to 10,000 milliseconds.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177000
+    m_Localized: Slow-operation threshold updated.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177001
+    m_Localized: 'Performance Stats: On'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177002
+    m_Localized: 'Slow Operation Summary: On'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177003
+    m_Localized: Performance summary displayed and written to the log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177004
+    m_Localized: Performance stats cleared; current toggles and threshold were kept.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177005
+    m_Localized: Performance stats cleared.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177006
+    m_Localized: 'Pickup Multiplier: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177007
+    m_Localized: "10\xD7"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430043177008
+    m_Localized: Pickup Multiplier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342784
+    m_Localized: "Only multiplies stackable items picked up by the local player,
+      from 1\xD7 to 100\xD7. Capacity is unchanged; if the full stack does not fit,
+      it stays on the ground. Host only in multiplayer."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342785
+    m_Localized: "Pickup multiplier enabled: stackable items \xD7{0}."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342786
+    m_Localized: Pickup multiplier disabled; normal pickup amounts restored.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342787
+    m_Localized: 'Pickup Multiplier: On'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342788
+    m_Localized: "{0}\xD7"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342789
+    m_Localized: Teleport Near Planet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342790
+    m_Localized: Enter a single-player world to load planets
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342791
+    m_Localized: Teleport Near Planet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342792
+    m_Localized: 'Single-player: teleport from the surface, underground, or space
+      to a point 100 m above the target surface, then begin travel from rest. Moves
+      only the player and exits piloting automatically.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342793
+    m_Localized: '{0}/{1}  {2}  /  {3}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342794
+    m_Localized: Enter a single-player world before choosing a target planet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342795
+    m_Localized: Another celestial body blocks the area near the target planet. Teleporting
+      is unavailable for now.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342796
+    m_Localized: Teleported beside {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342797
+    m_Localized: Teleport did not complete. Check the scene-loading message or log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342798
+    m_Localized: Cannot teleport now. Wait for the world to load or the scene transition
+      to finish.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342799
+    m_Localized: "Teleporting beside {0}\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342800
+    m_Localized: Cannot teleport now. Enter the game and close other panels.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430068342801
+    m_Localized: Click the scene to choose a teleport destination
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537088
+    m_Localized: Biome Teleport
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537089
+    m_Localized: Start Search
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537090
+    m_Localized: Click Start Search to teleport when a match is found. Searching
+      may take several minutes and can be canceled at any time.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537091
+    m_Localized: A search is already running. Wait for it or cancel it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537092
+    m_Localized: Enter a single-player or host world before using biome teleport.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537093
+    m_Localized: Biome teleport is for planetary surfaces. Return to the surface
+      first.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537094
+    m_Localized: "Searching\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537095
+    m_Localized: Searching for {0}; you will be teleported when it is found. You
+      can cancel at any time.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537096
+    m_Localized: Generation settings are not ready or contain errors. Check the Console
+      log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537097
+    m_Localized: Could not start biome search. Details were written to the log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537098
+    m_Localized: Search canceled. No teleport was performed.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537099
+    m_Localized: '{0}: {1}, stride {2} tiles; checked {3:N0} locations in {4}:{5:00}.
+      Cancel anytime.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537100
+    m_Localized: '{0}: {1}; checked {2:N0} locations in {3}:{4:00}. Cancel anytime.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537101
+    m_Localized: Biome search failed. Details were written to the log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537102
+    m_Localized: Search failed. Check the Console log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537103
+    m_Localized: '{0}; checked {1:N0} locations but found no teleportable {2}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537104
+    m_Localized: '{0} search ended: {1}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537105
+    m_Localized: Cannot teleport now. Wait for the world to be ready or the previous
+      teleport to finish.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537106
+    m_Localized: "Biome found. Waiting for the server to confirm the teleport\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537107
+    m_Localized: Biome teleport did not complete. Check the multiplayer connection
+      or try again later.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537108
+    m_Localized: Found {0} at ({1}, {2}) after checking {3:N0} sample locations.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537109
+    m_Localized: Biome Found
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537110
+    m_Localized: "Canceling search\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537111
+    m_Localized: Tile Teleport
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537112
+    m_Localized: Enter a tile name or ID and press Enter to teleport
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537113
+    m_Localized: Search and Teleport
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537114
+    m_Localized: 'For example: clay tile, peat, or sand. Searches the current dimension
+      and teleports when found. Cancel anytime.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537115
+    m_Localized: A search is already running. Wait for it or cancel it first.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537116
+    m_Localized: Enter a tile name first, such as clay tile.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537117
+    m_Localized: "No tile named \u201C{0}\u201D was found. Check the name or enter
+      a tile ID."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537118
+    m_Localized: 'Multiple tiles matched. Enter the full name or an ID: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537119
+    m_Localized: Enter a single-player or host surface/cave world before using tile
+      teleport.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537120
+    m_Localized: Could not start the tile search. Check the Console.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537121
+    m_Localized: Tile search canceled.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537122
+    m_Localized: '{0}: {1}; checked {2:N0} tiles in {3}:{4:00}. Cancel anytime.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537123
+    m_Localized: Tile search failed. Check the Console.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537124
+    m_Localized: Search complete. There is no standable {0} in this dimension.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537125
+    m_Localized: The target tile changed during the search. Search again.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537126
+    m_Localized: Teleported to {0} at ({1}, {2}).
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537127
+    m_Localized: "Canceling tile search\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537128
+    m_Localized: World Wind --
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537129
+    m_Localized: World Wind
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537130
+    m_Localized: 0% is calm and 100% is strongest. Drag to observe grass and leaves.
+      The host controls this in multiplayer.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537131
+    m_Localized: World Wind {0:0}%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537132
+    m_Localized: Enter a game world before adjusting the wind.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537133
+    m_Localized: There is no planetary wind setting to change. The host controls
+      this in multiplayer.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537134
+    m_Localized: Click any item to airdrop it near the player.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537135
+    m_Localized: "Loading test quest catalog\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537136
+    m_Localized: Enable All
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537137
+    m_Localized: Enable All Test Quests
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537138
+    m_Localized: There are no debugOnly test quests in the current catalog.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537139
+    m_Localized: The quest catalog has not finished loading.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537140
+    m_Localized: Not Accepted
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537141
+    m_Localized: Accept Quest
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537142
+    m_Localized: Turn In Quest
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430072537143
+    m_Localized: "Test Quests {0} \xB7 Enter a game world first"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731392
+    m_Localized: "Test Quests {0} \xB7 Accepted {1} \xB7 Ready to turn in {2}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731393
+    m_Localized: 'Objective complete
+
+      Waiting for manual turn-in'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731394
+    m_Localized: 'In progress
+
+      Stage: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731395
+    m_Localized: '{0} {1:0.##}/{2:0.##}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731396
+    m_Localized: 'In progress
+
+      {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731397
+    m_Localized: 'Cannot accept a non-test quest: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731398
+    m_Localized: 'Failed to accept quest: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731399
+    m_Localized: 'Test quest accepted: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731400
+    m_Localized: '; first failure: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731401
+    m_Localized: 'Batch test quest acceptance: {0} accepted, {1} skipped, {2} failed{3}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731402
+    m_Localized: 'Cannot turn in a non-test quest: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731403
+    m_Localized: 'Failed to turn in quest: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731404
+    m_Localized: 'Test quest turned in: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731405
+    m_Localized: Quest objectives and automatic turn-in states refreshed.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731406
+    m_Localized: "Waiting to enter a world\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731407
+    m_Localized: "Waiting for spawn scheduling data\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731408
+    m_Localized: World Creature Info
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731409
+    m_Localized: Countdowns and limits use game seconds and show actual progress;
+      retries and scheduling use real seconds. Totals include registered living AI,
+      bees, and parked residents, but exclude players, corpses, and pending spawns.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731410
+    m_Localized: No local player is available; creature counts are unavailable.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731411
+    m_Localized: 'Current world: {0}
+
+      No spawner has been found for this world.
+      Creature counts and countdowns are unavailable.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731412
+    m_Localized: Enter the world and wait for the spawner to initialize. If it remains
+      unavailable, check the Console.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731413
+    m_Localized: 'Current world: {0}  Player: ({1:F1}, {2:F1})
+
+      Total living
+      creatures: {3} (active GO {4} / hidden GO {5} / parked snapshot {6} / ECS {7})
+
+      Loaded
+      residents under global cap: {8} / {9}  Creating: {10}
+
+      This world session:
+      births {11} / restores {12} / creation rollbacks {13}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731414
+    m_Localized: Schedule overdue by {0:F1} real seconds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731415
+    m_Localized: Next schedule in {0:F1} real seconds / interval {1:F2} seconds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731416
+    m_Localized: 'Status: {0}
+
+      {1}  Spawn frequency multiplier {2:0.##}  Game
+      time multiplier {3:0.##}
+
+      {4}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731417
+    m_Localized: View actual spawn progress on the server or host.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731418
+    m_Localized: The natural animal countdown has not started.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731419
+    m_Localized: 'Next due: {0}; overdue, {1} awaiting spawn. See below for blockers.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731420
+    m_Localized: 'Next spawn: {0}  Remaining {1:0.0} game seconds / limit {2:0.0}
+      game seconds'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731421
+    m_Localized: The client does not hold the server countdown.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731422
+    m_Localized: 'Scheduling: {0} (no per-species countdown)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731423
+    m_Localized: Countdown not started / limit {0:0.0} game seconds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731424
+    m_Localized: Spawn countdown {0:0.0} game seconds / limit {1:0.0} game seconds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731425
+    m_Localized: No individual limit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731426
+    m_Localized: Not initialized
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731427
+    m_Localized: Unlimited
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731428
+    m_Localized: This rule has no spawn attempt history.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731429
+    m_Localized: 'Last attempt by this rule: {0} ({1:F1} real seconds ago)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731430
+    m_Localized: "{0} [{1}]  World population {2} / {3}\n{4}  Pending spawns {5}\nRule
+      {6}  Budget {7}  Rule births {8}  Spawn distance {9:0.#}\u2013{10:0.#} tiles\n{11} 
+      Retry wait {12:F1} real seconds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731431
+    m_Localized: Player
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731432
+    m_Localized: Buff
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731433
+    m_Localized: Spawning
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731434
+    m_Localized: Teleport
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731435
+    m_Localized: Game Events
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430076731436
+    m_Localized: Debug Commands
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120000
+    m_Localized: Quests
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120001
+    m_Localized: Layer Display
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120002
+    m_Localized: AIECS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120003
+    m_Localized: Device Data
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120004
+    m_Localized: Enter a name to jump to it
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120005
+    m_Localized: Enter a feature, event name, or command
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120006
+    m_Localized: 'Admin Invulnerability: Permission Required'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120007
+    m_Localized: Click to Teleport
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120008
+    m_Localized: Open Item Airdrop Catalog
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120009
+    m_Localized: Open AI Creature Catalog
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120010
+    m_Localized: Refresh Chunks
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120011
+    m_Localized: Player Battle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120012
+    m_Localized: Two-Team Battle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120013
+    m_Localized: Wander Without a Target
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120014
+    m_Localized: Flee at Low Health
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120015
+    m_Localized: Clear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120016
+    m_Localized: 'Player Participation in Perception and Combat: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120017
+    m_Localized: 'Local Avoidance: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120018
+    m_Localized: Units per Team
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120019
+    m_Localized: Creature Yield Test
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120020
+    m_Localized: Time of Day
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120021
+    m_Localized: View Zoom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120022
+    m_Localized: Chunk Load Range
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120023
+    m_Localized: Movement Speed Multiplier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120024
+    m_Localized: Multiplier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120025
+    m_Localized: Load Multiplier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120026
+    m_Localized: Multiplier/Unlimited
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120027
+    m_Localized: Reload JSON
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120028
+    m_Localized: FlatWorld GM Tools
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120029
+    m_Localized: Opening the catalog loads the currently available items and creatures.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120030
+    m_Localized: No matching feature was found. Try a shorter search.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120031
+    m_Localized: No debug commands are safe to run.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120032
+    m_Localized: The game event manager is unavailable.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120033
+    m_Localized: Operation failed. Confirm that you have entered a game world and
+      this client has state authority.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120034
+    m_Localized: No usable events were loaded. Check Resources/Config/GameEvents/Definitions.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120035
+    m_Localized: The current world has no AIECS host available, so the GM debug entry
+      cannot be created.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120036
+    m_Localized: AIECS has no development scene where player participation can be
+      toggled.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120037
+    m_Localized: You are not in a usable AIECS world yet. This page will connect
+      to the debug entry automatically after you enter a world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120038
+    m_Localized: "Loaded {0} events \xB7 {1} in progress"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120039
+    m_Localized: '{0}  <color=#80969B>({1})</color>'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120040
+    m_Localized: No event description.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120041
+    m_Localized: '{0:0.##} days'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120042
+    m_Localized: Ends when the action completes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120043
+    m_Localized: "Trigger {0} \xB7 Duration {1} \xB7 {2} actions \xB7 {3}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120044
+    m_Localized: Not Running
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120045
+    m_Localized: 'Ended event: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120046
+    m_Localized: 'Triggered event: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120047
+    m_Localized: Event configuration reloaded with {0} issues. Check the Console.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120048
+    m_Localized: Event configuration reloaded. {0} events available.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120049
+    m_Localized: 'Enabled.
+
+      Move the cursor over a game object with a 2D collider
+      to inspect its properties.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120050
+    m_Localized: 'Object: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120051
+    m_Localized: 'Type: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120052
+    m_Localized: 'Position: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120053
+    m_Localized: "Rotation Z: {0:0.###}\xB0"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120054
+    m_Localized: 'Scale: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120055
+    m_Localized: '[ItemData]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120056
+    m_Localized: '[Module] {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120057
+    m_Localized: 'Rigidbody: {0}, Simulated={1}, Velocity={2}, Angular velocity={3:0.###}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120058
+    m_Localized: 'Sprite: {0}, Sorting={1}/{2}, Visible={3}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120059
+    m_Localized: 'Collider: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120060
+    m_Localized: '  - {0}: Enabled={1}, Trigger={2}, Bounds={3}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120061
+    m_Localized: "  - \u2026and {0} more"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120062
+    m_Localized: '[Runtime Gameplay Components]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120063
+    m_Localized: '{0}<Circular reference: {1}>'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120064
+    m_Localized: '{0}{1}: <Read failed: {2}>'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120065
+    m_Localized: '{0}{1}:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120066
+    m_Localized: '{0}{1}: {2}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120067
+    m_Localized: "\u2026Too many properties; display truncated at 60 KB."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120068
+    m_Localized: Destroy Object
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120069
+    m_Localized: F6 Property Inspector
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120070
+    m_Localized: "F6 Property Inspector  \xB7  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120071
+    m_Localized: "F6 Close \xB7 Scroll to browse \xB7 Properties refresh about 8
+      times per second"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120072
+    m_Localized: '{0} rated power {1:0.##} W, current power {2:0.##} W'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120073
+    m_Localized: Spawn queued {0} | spawning {1} | pending commit {2} | pending display
+      {3}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120074
+    m_Localized: 'Player Speed: {0:0.##}x'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120075
+    m_Localized: "[{0}] {1}  \xB7  Active buffs: {2}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120076
+    m_Localized: Enabled
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10679430085120077
+    m_Localized: Disabled
     m_Metadata:
       m_Items: []
   references:

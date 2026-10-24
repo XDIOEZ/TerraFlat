@@ -29,9 +29,13 @@ var results = new Dictionary<string, object>();
 #endregion
 
 #region 草地生成回归
-byte[] Grass(double rain, double celsius = 14.2155, int ground = 1, double height = .657033, int seed = 277168505)
+byte[] Grass(double rain, double celsius = 14.2155, int ground = 1, double height = .657033,
+    int seed = 277168505, double densityScale = 1d, double? coldMultiplierOverride = null)
 {
     var n = new Dictionary<string, double>(numbers);
+    n["grass.density"] = numbers["grass.density"] * densityScale;
+    if (coldMultiplierOverride.HasValue)
+        n["grass.coldDensityMultiplier"] = coldMultiplierOverride.Value;
     n["biome.grassland.groundTileId"] = ground;
     n["biome.grassland.minimumCelsius"] = -100;
     n["biome.grassland.maximumCelsius"] = 100;
@@ -45,7 +49,7 @@ byte[] Grass(double rain, double celsius = 14.2155, int ground = 1, double heigh
     Set("Height", height); Set("TemperatureCelsius", celsius);
     Set("Temperature", profile.Settings.NormalizeTemperatureCelsius(celsius));
     Set("Precipitation", rain); Set("BaseBiome", SurfaceBiomeKind.Grassland); Set("Classified", true);
-    var batch = Activator.CreateInstance(batchType, request, profile.Settings)!;
+    var batch = Activator.CreateInstance(batchType, new object[] { request, profile.Settings, null! })!;
     try
     {
         var samples = (Array)batchType.GetField("samples", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(batch)!;
@@ -80,6 +84,41 @@ results["grassCellsPer1024"]=new {dry=Count(dry),screenshotRain=Count(originalRa
 
 #endregion
 
+#region 低温减半与温度边界回归
+Check(numbers["grass.coldThresholdCelsius"] == 15d && numbers["grass.coldDensityMultiplier"] == 0.5d,
+    "surface profile lost the 15 Celsius / half density rule");
+var defaultSettings = new ChunkGenerationProfileSnapshot("grass.defaults", 1, 4, 4).Settings;
+Check(defaultSettings.GrassColdThresholdCelsius == 15d && defaultSettings.GrassColdDensityMultiplier == 0.5d,
+    "profiles without explicit cold settings do not default to half density below 15 Celsius");
+int coldCells = 0, originalColdCells = 0, temperatureCases = 0;
+foreach (int seed in new[] { 277168505, 17413, 8321 })
+foreach (double rain in new[] { 0d, .105704d, .15d })
+foreach (double celsius in new[] { -10d, 0d, 14.999d, 15d, 15.001d, 35d })
+{
+    var actual = Grass(rain, celsius, seed: seed);
+    var unscaled = Grass(rain, celsius, seed: seed, coldMultiplierOverride: 1d);
+    // 正式单格结果必须与同温度、同种子下基础概率减半完全一致，而非只比较近似数量。
+    var expected = Grass(rain, celsius, seed: seed,
+        densityScale: celsius < 15d ? 0.5d : 1d, coldMultiplierOverride: 1d);
+    Check(actual.SequenceEqual(expected), $"cold density/boundary mismatch at {celsius} Celsius, rain {rain}, seed {seed}");
+    Check(actual.SequenceEqual(Grass(rain, celsius, seed: seed)), "cold rule broke deterministic regeneration");
+    Check(actual.Select((value, index) => value != ChunkTerrainData.GrassPresent ||
+        unscaled[index] == ChunkTerrainData.GrassPresent).All(value => value),
+        "cold rule moved grass to previously empty cells");
+    if (celsius < 15d)
+    {
+        coldCells += Count(actual);
+        originalColdCells += Count(unscaled);
+    }
+    else
+        Check(actual.SequenceEqual(unscaled), "temperature at or above 15 Celsius changed grass");
+    temperatureCases++;
+}
+Check(coldCells > 0 && coldCells < originalColdCells, "cold fixtures did not exercise a real density reduction");
+results["coldGrass"]=new {temperatureCases, coldCells, originalColdCells};
+
+#endregion
+
 #region 花朵生态回归
 using var flowers=JsonDocument.Parse(File.ReadAllText(Path.Combine(root,"Assets/StreamingAssets/GameConfig/WorldGeneration/NaturalItems/surface-grassland.json")));
 var flower=flowers.RootElement.GetProperty("ecologyRules").EnumerateArray().Single(r=>r.GetProperty("ruleId").GetString()=="surface.grassland.flower");
@@ -111,6 +150,6 @@ Check(Flowers(-38,.105704)==0,"cold flowers generated");
 Check(Flowers(60,.105704)==0,"hot flowers generated");
 results["flowerCellsPer16384"]=new {screenshotConditions=normalFlowers,zeroRain=zeroRainFlowers};
 Console.WriteLine(JsonSerializer.Serialize(results));
-Console.WriteLine("PASS: dry/wet density, deterministic seeds, dirt/peat, cold/hot/underwater exclusions, flower eligibility.");
+Console.WriteLine("PASS: dry/wet density, half density below 15 Celsius, exact temperature boundaries, deterministic seeds, dirt/peat, cold/hot/underwater exclusions, flower eligibility.");
 
 #endregion

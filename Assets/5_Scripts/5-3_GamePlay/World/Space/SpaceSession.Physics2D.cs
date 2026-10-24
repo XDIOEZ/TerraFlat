@@ -31,6 +31,13 @@ namespace FlatWorld.Spaceflight
                 body.AngleRadians = body.AngularVelocityRadians = 0d;
                 body.MassKg = assembly.MassKg; body.InertiaKgM2 = assembly.InertiaKgM2;
                 body.RadiusMeters = AssemblyRadius(assembly);
+                ShipState anchorShip = GetShip(assembly.MemberShipIds[0]);
+                if (anchorShip?.Anchor != null)
+                {
+                    body.Kinematic = true;
+                    body.KinematicTarget = GetAnchoredShipPosition(anchorShip, State.SimulationSeconds);
+                    body.KinematicTargetVelocity = GetUniverse(GetBody(anchorShip.Anchor.BodyId).Sector).GetVelocityAtTime(anchorShip.Anchor.BodyId, State.SimulationSeconds);
+                }
                 AddSpaceShipShapes(body, assembly);
             }
             foreach (SpacePassengerState passenger in State.Passengers)

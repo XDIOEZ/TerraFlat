@@ -58,7 +58,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
     #endregion
 
-    private const int CompactSaveVersion = 32; // 核心移除冶炼速度字段，旧结构须先由版本检查明确拒绝。
+    private const int CompactSaveVersion = 33; // 死亡规则新增角色覆盖状态，旧结构在反序列化前明确拒绝。
     private const int ModdedSaveVersion = 15;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
@@ -106,8 +106,30 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     [Tooltip("玩家的存档路径")]
     public string UserSavePath = ""; // 初始化为空，将在Awake中设置
 
-    [Tooltip("当前使用的存档数据")]
-    public GameSaveData SaveData;
+    [SerializeField, HideInInspector]
+    private GameSaveData currentSaveData;
+
+    [ShowInInspector]
+    public GameSaveData SaveData
+    {
+        get => currentSaveData;
+        set
+        {
+            if (ReferenceEquals(currentSaveData, value)) return;
+            GameSaveData previous = currentSaveData;
+            currentSaveData = value;
+            // 换根档时先发布最终规则，再允许后续世界和角色加载读取配置。
+            try
+            {
+                if (ReferenceEquals(instance, this)) GameWorldRuleSession.Bind(value);
+            }
+            catch
+            {
+                currentSaveData = previous;
+                throw;
+            }
+        }
+    }
 
     [Tooltip("当前控制的角色 ID；字段名保留以兼容现有调用")]
     public string CurrentContrrolPlayerName;
@@ -168,7 +190,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         base.Awake();
         if (ReferenceEquals(instance, this))
+        {
             SceneManager.activeSceneChanged += InvalidateActivePlanetScene;
+            GameWorldRuleSession.Bind(currentSaveData);
+        }
         InitializeUserSavePath();
     }
 
@@ -182,6 +207,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     protected override void OnDestroy()
     {
         SceneManager.activeSceneChanged -= InvalidateActivePlanetScene;
+        if (ReferenceEquals(instance, this)) GameWorldRuleSession.Bind(null);
         base.OnDestroy();
     }
 
@@ -1566,6 +1592,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             currentCell, accumulatedDamage, baseline.GetCell(x, y),
             baseline.GetAccumulatedDamage(x, y));
         runtimeTerrainDirtyChunks.Add(key);
+        NotifyAuthoritativeTerrainCellChanged(chunk, placedCell.LocalPosition);
     }
 
     /// <summary>保存前复核本次变脏的运行时区块，避免只依赖单格通知留下半成品差量。</summary>
@@ -1797,6 +1824,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         runtimeTerrainDirtyChunks.Clear();
         runtimeBuildingDirtyChunks.Clear();
         runtimeBuildingDirtyAddresses.Clear();
+        unloadedRuntimeBuildingGuids.Clear();
+        buildingUnloadFailures.Clear();
         restoredRuntimeAiChunks.Clear();
         ClearParkedRuntimeAi();
         restoredRuntimeAiWorld = null;
@@ -1972,6 +2001,11 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         string planetName = ResolveRuntimePlanetName();
         RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(worldPosition);
         string key = BuildChunkKey(planetName, ToChunkName(address));
+        if (!buildingItem.DestructionHandled)
+        {
+            chunkManager.RegisterRuntimeBuilding(buildingItem);
+            MarkRuntimeBuildingResident(key, buildingItem.itemData.Guid);
+        }
         runtimeBuildingDirtyChunks.Add(key);
         runtimeBuildingDirtyAddresses[key] = address;
         if (chunkDeltas.TryGetValue(key, out ChunkSaveRecord current))
@@ -1991,6 +2025,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
             chunkDeltas[key] = record = CreateRuntimeChunkDelta(planetName, address);
         int guid = buildingItem.itemData.Guid;
+        MarkRuntimeBuildingResident(key, guid);
         record.ChangedItems?.RemoveAll(data => data?.Guid == guid);
         record.RemovedItemGuids ??= new List<int>();
         if (!record.RemovedItemGuids.Contains(guid)) record.RemovedItemGuids.Add(guid);
@@ -2162,7 +2197,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
 
         record.ChangedItems ??= new List<ItemData>();
-        record.ChangedItems.RemoveAll(IsRuntimeBuildingData);
+        RemoveReplacedRuntimeBuildingSnapshots(key, record.ChangedItems, savedItems);
         record.RemovedItemGuids ??= new List<int>();
         for (int i = 0; i < savedItems.Count; i++)
         {
@@ -2235,6 +2270,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                     transformData.rotation,
                     transformData.scale);
                 restored?.Load();
+                if (restored != null) RecordRuntimeBuildingChange(restored);
             }
             catch (Exception exception)
             {

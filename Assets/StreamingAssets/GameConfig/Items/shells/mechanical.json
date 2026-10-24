@@ -1898,9 +1898,9 @@
       "id": "CopperAnvil",
       "parent": "BuildingBody_Base",
       "gameName": "铜砧-建筑",
-      "description": "铜砧必须先放置在地上，再交互锻打各类金属锭；每次锻打推进 0.7 工作秒。",
-      "durability": 1,
-      "maxDurability": 1,
+      "description": "放置后锻造金属板或缝纫针，每次锻打推进0.7工作秒。耐久500，每产出一件物品消耗1点；耗尽后损坏并掉落配方50%的材料及内部物品。",
+      "durability": 500,
+      "maxDurability": 500,
       "amount": 1,
       "weight": 45,
       "volume": 60,
@@ -1950,7 +1950,7 @@
           "id": "手动加工模块",
           "enabled": true,
           "data": { "BitData": [], "Type": 0 },
-          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7 }
+          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7, "DurabilityPerProduct": 1, "BreakRecoveryFraction": 0.5, "RequiredToolKind": 4, "RequiredToolTag": "Metal", "ToolDurabilityPerClick": 1 }
         }
       }
     },
@@ -1959,9 +1959,9 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "铜砧",
-      "description": "使用时直接进入放置操作；必须放在地上才能交互锻打金属，不能手持加工。",
-      "durability": 1,
-      "maxDurability": 1,
+      "description": "使用后放置在地上才能锻造。耐久500，每产出一件物品消耗1点；耗尽后损坏并返还5个铜锭。",
+      "durability": 500,
+      "maxDurability": 500,
       "amount": 1,
       "weight": 18,
       "volume": 24,
@@ -2011,7 +2011,82 @@
           "id": "手动加工模块",
           "enabled": true,
           "data": { "BitData": [], "Type": 0 },
-          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7 }
+          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7, "DurabilityPerProduct": 1, "BreakRecoveryFraction": 0.5, "RequiredToolKind": 4, "RequiredToolTag": "Metal", "ToolDurabilityPerClick": 1 }
+        }
+      }
+    },
+    {
+      "id": "ToolCabinet",
+      "parent": "Chest_Wood",
+      "gameName": "工具柜-建筑",
+      "description": "单格工具柜。相邻八格内的工作台可直接使用柜中这一格作为第六个材料格，同一工作台不可叠加。",
+      "stackable": false,
+      "weight": 30,
+      "volume": 60,
+      "tags": [
+        "35",
+        "InventoryCategory.IndustrialBlock"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/ToolCabinet/ToolCabinet_Building.png",
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ToolCabinet\",\"SummonerPrefabId\":\"ToolCabinet_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "UI_背包": {
+          "prefab": "Module_ToolCabinetStorage",
+          "id": "UI_背包",
+          "enabled": true,
+          "data": {
+            "Data": {},
+            "InventoryInitName": "",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "ToolCabinet_Summoner",
+      "parent": "Chest_Wood_Summoner",
+      "gameName": "工具柜",
+      "description": "单格工具柜。相邻八格内的工作台可直接使用柜中这一格作为第六个材料格，同一工作台不可叠加。",
+      "stackable": false,
+      "weight": 30,
+      "volume": 60,
+      "tags": [
+        "35",
+        "InventoryCategory.IndustrialBlock"
+      ],
+      "worldDropBehavior": "interactive",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/ToolCabinet/ToolCabinet_Building.png",
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ToolCabinet\",\"SummonerPrefabId\":\"ToolCabinet_Summoner\"}",
+            "Type": 0
+          }
         }
       }
     }

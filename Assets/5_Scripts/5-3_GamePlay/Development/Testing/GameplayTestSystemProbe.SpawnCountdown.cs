@@ -17,6 +17,76 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/spawn_batches", EntitySpawnBatches);
         operations.Add("ai/creature_request", EntityCreatureRequest);
         operations.Add("ai/tree_habitat_batch", EntityTreeHabitatBatch);
+        operations.Add("ai/spawner_update_work", EntitySpawnerUpdateWork);
+        operations.Add("ai/spawn_monitor", EntitySpawnMonitor);
+    }
+
+    // 监控必须只读实际计时，不能为了显示推进时间、补建状态或重启批次。
+    private static JObject EntitySpawnMonitor(JObject args)
+    {
+        SpawnerConfig config = ScriptableObject.CreateInstance<SpawnerConfig>();
+        try
+        {
+            config.PersistentId = "monitor";
+            var settings = new SpawnerRuntimeSettings { NaturalSpawnIntervalGameSeconds = 50f };
+            var entry = new SpawnerConfig.SpawnEntry { PrefabName = "MonitorSpecies", Probability = 1f };
+            var other = new SpawnerConfig.SpawnEntry { PrefabName = "OtherSpecies", Probability = 99f };
+            var countdown = new SpawnerCountdownProgress
+            {
+                RemainingGameSeconds = 7.5d, IntervalGameSeconds = 80d, LastObservedGameSeconds = 500d
+            };
+            string before = Convert.ToBase64String(MemoryPackSerializer.Serialize(countdown));
+            var observed = MonsterSpawnerManager.ReadCountdownMonitor(config, entry, countdown, settings, 2f);
+            var paused = MonsterSpawnerManager.ReadCountdownMonitor(config, entry, countdown, settings, 0f);
+            var otherRow = MonsterSpawnerManager.ReadCountdownMonitor(config, other, countdown, settings, 1f);
+            bool unchanged = before == Convert.ToBase64String(MemoryPackSerializer.Serialize(countdown));
+            var missing = MonsterSpawnerManager.ReadCountdownMonitor(config, entry, null, settings, 1f);
+            countdown.BeginBatch(3);
+            countdown.SelectedConfigId = config.PersistentId;
+            countdown.SelectedSpeciesId = entry.PrefabName;
+            before = Convert.ToBase64String(MemoryPackSerializer.Serialize(countdown));
+            var pending = MonsterSpawnerManager.ReadCountdownMonitor(config, entry, countdown, settings, 1f);
+            var otherPending = MonsterSpawnerManager.ReadCountdownMonitor(config, other, countdown, settings, 1f);
+            bool batchUnchanged = before == Convert.ToBase64String(MemoryPackSerializer.Serialize(countdown));
+            config.SpawnChance = 0f;
+            var disabled = MonsterSpawnerManager.ReadCountdownMonitor(config, entry, countdown, settings, 1f);
+            return new JObject
+            {
+                ["remaining"] = observed.RemainingGameSeconds, ["interval"] = observed.IntervalGameSeconds,
+                ["initialized"] = observed.CountdownInitialized,
+                ["pausedRemaining"] = paused.RemainingGameSeconds, ["pausedInterval"] = paused.IntervalGameSeconds,
+                ["unchanged"] = unchanged, ["batchUnchanged"] = batchUnchanged,
+                ["lastObserved"] = countdown.LastObservedGameSeconds, ["pending"] = pending.Pending,
+                ["pendingRemaining"] = pending.RemainingGameSeconds,
+                ["missingInitialized"] = missing.CountdownInitialized, ["missingRemaining"] = missing.RemainingGameSeconds,
+                ["missingInterval"] = missing.IntervalGameSeconds,
+                ["sameClock"] = otherRow.RemainingGameSeconds == observed.RemainingGameSeconds &&
+                    otherRow.IntervalGameSeconds == observed.IntervalGameSeconds,
+                ["otherPending"] = otherPending.Pending, ["disabled"] = !disabled.NaturalSpawnEnabled
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(config); }
+    }
+
+    // 采正式空转守卫，确保初始化、分帧出生和到期调度都不会被提前跳过。
+    private static JObject EntitySpawnerUpdateWork(JObject args)
+    {
+        return new JObject
+        {
+            ["initialization"] = MonsterSpawnerManager.RequiresUpdateWorldContext(false, false, false, false, 1f, 2f),
+            ["idle"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, 2f),
+            ["due"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 2f, 2f),
+            ["overdue"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 3f, 2f),
+            ["birthPending"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, true, 1f, 2f),
+            ["birthCompleted"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, 2f),
+            ["disabled"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, false, true, true, 3f, 2f),
+            ["missingSettings"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, false, true, 3f, 2f),
+            ["nanNow"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, float.NaN, 2f),
+            ["nanNext"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, float.NaN),
+            ["infiniteNow"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, float.PositiveInfinity, 2f),
+            ["infiniteNext"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, float.PositiveInfinity),
+            ["negativeInfinityNow"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, float.NegativeInfinity, 2f)
+        };
     }
 
     // 采正式入口使用的请求守卫，不创建世界或修改单例。
@@ -114,97 +184,106 @@ public static partial class GameplayTestSystemProbe
     {
         SpawnerConfigCatalog catalog = SpawnerConfigCatalogLoader.LoadBuiltIn();
         var configs = new List<SpawnerConfig>();
-        var result = new JObject();
         try
         {
-            var modes = new JArray();
-            SpawnerConfig bird = null, wildlife = null;
+            int speciesCount = 0;
             foreach (SpawnerConfigDefinition definition in catalog.Configs)
             {
-                SpawnerConfig config = definition.CreateRuntimeConfig();
-                configs.Add(config);
-                var entries = new JArray();
-                foreach (SpawnerConfig.SpawnEntry entry in config.SpawnEntries)
-                    entries.Add(new JObject { ["species"] = entry.PrefabName,
-                        ["interval"] = MonsterSpawnerManager.GetCountdownInterval(config, entry, 1440d, 1f) });
-                modes.Add(new JObject { ["id"] = config.PersistentId,
-                    ["mode"] = config.ScheduleMode.ToString(), ["entries"] = entries });
-                if (config.PersistentId == "bird_ecology") bird = config;
-                if (config.PersistentId == "wildlife_resources") wildlife = config;
+                configs.Add(definition.CreateRuntimeConfig());
+                speciesCount += definition.SpawnEntries.Count;
             }
-            result["catalog"] = modes;
-            if (bird == null || wildlife == null) throw new InvalidOperationException("倒计时采样缺少正式鸟或野生动物配置。");
-            SpawnerConfig.SpawnEntry birdEntry = bird.SpawnEntries[0];
-            double interval = MonsterSpawnerManager.GetCountdownInterval(bird, birdEntry, 1440d, 1f);
+            SpawnerConfig bird = configs.Find(value => value.PersistentId == "bird_ecology");
+            SpawnerConfig wildlife = configs.Find(value => value.PersistentId == "wildlife_resources");
+            SpawnerConfig fish = configs.Find(value => value.PersistentId == "small_fish_ecology");
+            var entry = bird.SpawnEntries[0];
+            double interval = MonsterSpawnerManager.GetCountdownInterval(catalog.Settings, 1f);
+            var save = new MonsterSpawnerSaveData();
             var state = new SpawnerProgressSaveData();
-            void Tick(double time) => MonsterSpawnerManager.AdvanceCountdownSchedule(bird, state, time, 1440d, 1f, () => 0f);
+            save.ConfigStates.Add(bird.PersistentId, state);
+            SpawnerCountdownProgress clock = save.NaturalCountdown;
+            bool Tick(double time) => MonsterSpawnerManager.AdvanceCountdownSchedule(clock, time, catalog.Settings, 1f);
+            var result = new JObject { ["interval"] = interval, ["batchSize"] = bird.SpawnCount,
+                ["speciesCount"] = speciesCount, ["ruleCount"] = configs.Count,
+                ["zombieDisabled"] = configs.Find(value => value.PersistentId == "zombie_horde").SpawnChance == 0f };
             Tick(100d);
-            result["initial"] = CountdownSample(state, birdEntry.PrefabName);
+            result["initial"] = CountdownSample(clock, state);
+            result["earlySelectionRejected"] = !MonsterSpawnerManager.TryBeginCountdownBatch(clock, bird, entry, state, 1f, () => 0f);
             Tick(100d + interval - 0.25d);
-            result["beforeDue"] = CountdownSample(state, birdEntry.PrefabName);
-            var restored = MemoryPackSerializer.Deserialize<SpawnerProgressSaveData>(MemoryPackSerializer.Serialize(state));
-            result["savedRemaining"] = CountdownSample(restored, birdEntry.PrefabName);
-            restored.ResetCountdownObservation();
-            MonsterSpawnerManager.AdvanceCountdownSchedule(bird, restored, 999999d, 1440d, 1f, () => 0f);
-            result["offlineRestored"] = CountdownSample(restored, birdEntry.PrefabName);
-            Tick(100d + interval);
-            result["exactDue"] = CountdownSample(state, birdEntry.PrefabName);
+            result["beforeDue"] = CountdownSample(clock, state);
+            var restored = MemoryPackSerializer.Deserialize<MonsterSpawnerSaveData>(MemoryPackSerializer.Serialize(save));
+            result["savedRemaining"] = CountdownSample(restored.NaturalCountdown, restored.ConfigStates[bird.PersistentId]);
+            restored.NaturalCountdown.LastObservedGameSeconds = -1d;
+            MonsterSpawnerManager.AdvanceCountdownSchedule(restored.NaturalCountdown, 999999d, catalog.Settings, 1f);
+            result["offlineRestored"] = CountdownSample(restored.NaturalCountdown, restored.ConfigStates[bird.PersistentId]);
+            result["exactDue"] = Tick(100d + interval);
+            result["notChosenAtExpiry"] = clock.PendingCount == 0 && clock.SelectedSpeciesId == null;
+            MonsterSpawnerManager.TryBeginCountdownBatch(clock, bird, entry, state, 1f, () => 0f);
             Tick(100d + interval * 100d);
-            result["blockedRound"] = CountdownSample(state, birdEntry.PrefabName);
-            var pendingSave = MemoryPackSerializer.Deserialize<SpawnerProgressSaveData>(MemoryPackSerializer.Serialize(state));
-            result["savedPending"] = CountdownSample(pendingSave, birdEntry.PrefabName);
-            MonsterSpawnerManager.CompleteCountdownSpawnAttempt(state, birdEntry, false, 0);
-            result["chanceSkipped"] = CountdownSample(state, birdEntry.PrefabName);
-            while (state.PendingSpawnCount > 0)
-                MonsterSpawnerManager.CompleteCountdownSpawnAttempt(state, birdEntry, true, 0);
-            result["completed"] = CountdownSample(state, birdEntry.PrefabName);
-            Tick(100d + interval * 101d - 0.25d);
-            result["nextBeforeDue"] = CountdownSample(state, birdEntry.PrefabName);
-            Tick(100d + interval * 101d);
-            result["nextExactDue"] = CountdownSample(state, birdEntry.PrefabName);
+            result["blockedRound"] = CountdownSample(clock, state);
+            restored = MemoryPackSerializer.Deserialize<MonsterSpawnerSaveData>(MemoryPackSerializer.Serialize(save));
+            result["savedPending"] = CountdownSample(restored.NaturalCountdown, restored.ConfigStates[bird.PersistentId]);
+            result["savedSelection"] = restored.NaturalCountdown.SelectedConfigId == bird.PersistentId &&
+                restored.NaturalCountdown.SelectedSpeciesId == entry.PrefabName;
+            result["secondSelectionRejected"] = !MonsterSpawnerManager.TryBeginCountdownBatch(clock, wildlife,
+                wildlife.SpawnEntries[0], new SpawnerProgressSaveData(), 1f, () => 0f);
+            MonsterSpawnerManager.CompleteCountdownSpawnAttempt(clock, state, false, 0, 100d + interval * 100d);
+            result["chanceSkipped"] = CountdownSample(clock, state);
+            while (clock.PendingCount > 0)
+                MonsterSpawnerManager.CompleteCountdownSpawnAttempt(clock, state, true, 0, 100d + interval * 100d);
+            result["completed"] = CountdownSample(clock, state);
+            result["selectionCleared"] = clock.SelectedConfigId == null && clock.SelectedSpeciesId == null;
+            result["nextBeforeDue"] = Tick(100d + interval * 101d - 0.25d);
+            result["nextExactDue"] = Tick(100d + interval * 101d);
 
-            var mixed = new SpawnerProgressSaveData();
-            SpawnerConfig.SpawnEntry chicken = wildlife.SpawnEntries.Find(entry => entry.PrefabName == "Chicken");
-            SpawnerConfig.SpawnEntry boar = wildlife.SpawnEntries.Find(entry => entry.PrefabName == "WildBoar");
-            double chickenInterval = MonsterSpawnerManager.GetCountdownInterval(wildlife, chicken, 1440d, 1f);
-            double boarInterval = MonsterSpawnerManager.GetCountdownInterval(wildlife, boar, 1440d, 1f);
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, mixed, 0d, 1440d, 1f, () => 0f);
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, mixed, chickenInterval, 1440d, 1f, () => 0f);
-            result["independentChicken"] = CountdownSample(mixed, "Chicken");
-            result["independentBoar"] = CountdownSample(mixed, "WildBoar");
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, mixed, boarInterval, 1440d, 1f, () => 0f);
-            result["bothDueTotal"] = mixed.PendingSpawnCount;
-            var selected = new JArray();
-            for (int i = 0; i < 4; i++)
-                selected.Add(MonsterSpawnerManager.SelectPendingCountdownEntry(wildlife, mixed)?.PrefabName);
-            result["blockedSelectionOrder"] = selected;
-            MonsterSpawnerManager.CompleteCountdownSpawnAttempt(mixed, chicken, false, 0);
-            result["otherSpeciesPendingAfterSkip"] = CountdownSample(mixed, "WildBoar");
-            result["weightedIntervalRatio"] = boarInterval / chickenInterval;
-            result["originalWeightRatio"] = chicken.Probability / boar.Probability;
+            var candidates = new List<MonsterSpawnerManager.NaturalSpawnCandidate>
+            {
+                new(bird, entry, Vector3.zero),
+                new(wildlife, wildlife.SpawnEntries[0], Vector3.zero),
+                new(wildlife, wildlife.SpawnEntries[1], Vector3.zero)
+            };
+            var distribution = new int[3];
+            for (int i = 0; i < 10000; i++)
+                distribution[MonsterSpawnerManager.SelectCountdownCandidate(candidates, (i + 0.5f) / 10000f)]++;
+            double totalWeight = entry.Probability + (double)wildlife.SpawnEntries[0].Probability + wildlife.SpawnEntries[1].Probability;
+            result["distribution"] = new JArray(distribution);
+            result["expectedWeights"] = new JArray(entry.Probability / totalWeight,
+                wildlife.SpawnEntries[0].Probability / totalWeight, wildlife.SpawnEntries[1].Probability / totalWeight);
+            candidates.Clear();
+            result["emptySelection"] = MonsterSpawnerManager.SelectCountdownCandidate(candidates, 0f);
+            candidates.Add(new(fish, fish.SpawnEntries[0], Vector3.zero));
+            result["filteredSelection"] = candidates[MonsterSpawnerManager.SelectCountdownCandidate(candidates, 1f)].Entry.PrefabName;
+            result["weightDoesNotChangeClock"] = MonsterSpawnerManager.GetCountdownInterval(catalog.Settings, 1f) == interval;
 
-            var skipped = new SpawnerProgressSaveData();
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, skipped, 0d, 1440d, 1f, () => 1f);
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, skipped, chickenInterval, 1440d, 1f, () => 1f);
-            result["roundChanceSkipped"] = CountdownSample(skipped, "Chicken");
-            float configuredChance = wildlife.SpawnChance;
-            int chanceCalls = 0;
+            var skipped = new SpawnerCountdownProgress();
+            skipped.Advance(0d, interval); skipped.Advance(interval, interval);
+            MonsterSpawnerManager.TryBeginCountdownBatch(skipped, wildlife, wildlife.SpawnEntries[0],
+                new SpawnerProgressSaveData(), 1f, () => 1f);
+            result["roundChanceSkipped"] = skipped.PendingCount == 0 && skipped.RemainingGameSeconds == interval;
+            int rolls = 0;
             wildlife.SpawnChance = 1f;
-            var always = new SpawnerProgressSaveData();
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, always, 0d, 1440d, 1f, () => { chanceCalls++; return 1f; });
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, always, chickenInterval, 1440d, 1f, () => { chanceCalls++; return 1f; });
-            result["certainChancePending"] = always.SpeciesCountdowns["Chicken"].PendingCount;
+            skipped.Advance(interval * 2d, interval);
+            result["certainChance"] = MonsterSpawnerManager.TryBeginCountdownBatch(skipped, wildlife,
+                wildlife.SpawnEntries[0], new SpawnerProgressSaveData(), 1f, () => { rolls++; return 1f; });
+            skipped.Restart(interval); skipped.Advance(interval * 3d, interval);
             wildlife.SpawnChance = 0f;
-            var never = new SpawnerProgressSaveData();
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, never, 0d, 1440d, 1f, () => { chanceCalls++; return 0f; });
-            MonsterSpawnerManager.AdvanceCountdownSchedule(wildlife, never, chickenInterval, 1440d, 1f, () => { chanceCalls++; return 0f; });
-            result["zeroChancePending"] = never.SpeciesCountdowns["Chicken"].PendingCount;
-            result["boundaryChanceRollCalls"] = chanceCalls;
-            wildlife.SpawnChance = configuredChance;
-            var clock = new SpawnerCountdownProgress();
-            clock.Advance(1e12d, 1d);
-            result["preciseBeforeDue"] = clock.Advance(1e12d + 0.5d, 1d);
-            result["preciseExactDue"] = clock.Advance(1e12d + 1d, 1d);
+            result["zeroChance"] = MonsterSpawnerManager.TryBeginCountdownBatch(skipped, wildlife,
+                wildlife.SpawnEntries[0], new SpawnerProgressSaveData(), 1f, () => { rolls++; return 0f; });
+            result["boundaryChanceRollCalls"] = rolls;
+
+            var paused = new SpawnerCountdownProgress();
+            MonsterSpawnerManager.AdvanceCountdownSchedule(paused, 0d, catalog.Settings, 1f);
+            MonsterSpawnerManager.AdvanceCountdownSchedule(paused, interval / 4d, catalog.Settings, 1f);
+            double beforePause = paused.RemainingGameSeconds;
+            MonsterSpawnerManager.AdvanceCountdownSchedule(paused, 999999d, catalog.Settings, 0f);
+            MonsterSpawnerManager.AdvanceCountdownSchedule(paused, 1999999d, catalog.Settings, 1f);
+            result["pausePreservesRemaining"] = paused.RemainingGameSeconds == beforePause;
+            MonsterSpawnerManager.AdvanceCountdownSchedule(paused, 1999999d, catalog.Settings, 2f);
+            result["frequencyScalesRemaining"] = paused.RemainingGameSeconds == beforePause / 2d;
+            result["frequencyScalesInterval"] = paused.IntervalGameSeconds == interval / 2d;
+            var precise = new SpawnerCountdownProgress();
+            precise.Advance(1e12d, 1d);
+            result["preciseBeforeDue"] = precise.Advance(1e12d + 0.5d, 1d);
+            result["preciseExactDue"] = precise.Advance(1e12d + 1d, 1d);
             int rejected = 0;
             foreach (double bad in new[] { 0d, -1d, double.NaN, double.PositiveInfinity })
                 try { new SpawnerCountdownProgress().Advance(0d, bad); }
@@ -214,20 +293,29 @@ public static partial class GameplayTestSystemProbe
             int cursor = 0;
             for (int i = 0; i < 9; i++) priority.Add(MonsterSpawnerManager.NextLifecycleWork(ref cursor));
             result["busyWorkPriorities"] = priority;
-            result["interval"] = interval;
-            result["batchSize"] = bird.SpawnCount;
-            result["mixedBatchSize"] = wildlife.SpawnCount;
+
+            using var world = new WorldRuntime("spawn_loaded", 1);
+            var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0));
+            var profile = new ChunkGenerationProfileSnapshot("spawn_loaded", 1, 16, 16);
+            var request = world.BeginChunkGeneration(address, 1, profile);
+            var chunk = world.Chunks[address];
+            result["generatingRejected"] = !MonsterSpawnerManager.IsLoadedNaturalSpawnChunk(chunk, "surface");
+            using var terrain = new ChunkTerrainBuffer(16, 16);
+            terrain.SetCell(0, 0, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+            using (var committed = new ChunkGenerationResult(request, terrain))
+                if (!world.TryCommit(committed, out string reason)) throw new InvalidOperationException(reason);
+            result["loadedAccepted"] = MonsterSpawnerManager.IsLoadedNaturalSpawnChunk(chunk, "surface");
+            result["otherWorldRejected"] = !MonsterSpawnerManager.IsLoadedNaturalSpawnChunk(chunk, "cave");
+            result["missingChunkRejected"] = !MonsterSpawnerManager.IsLoadedNaturalSpawnChunk(null, "surface");
+            world.Dispose();
+            result["unloadedRejected"] = !MonsterSpawnerManager.IsLoadedNaturalSpawnChunk(chunk, "surface");
             return result;
         }
-        finally
-        {
-            foreach (SpawnerConfig config in configs) UnityEngine.Object.DestroyImmediate(config);
-        }
+        finally { foreach (SpawnerConfig config in configs) UnityEngine.Object.DestroyImmediate(config); }
     }
 
-    private static JObject CountdownSample(SpawnerProgressSaveData state, string species)
+    private static JObject CountdownSample(SpawnerCountdownProgress countdown, SpawnerProgressSaveData state)
     {
-        SpawnerCountdownProgress countdown = state.SpeciesCountdowns[species];
         return new JObject { ["remaining"] = countdown.RemainingGameSeconds,
             ["pending"] = countdown.PendingCount, ["totalPending"] = state.PendingSpawnCount,
             ["replacements"] = state.PendingReplacementCount, ["lifetime"] = state.LifetimeSpawnCount,
@@ -257,23 +345,23 @@ public static partial class GameplayTestSystemProbe
             };
 
             SpawnerConfig.SpawnEntry entry = config.SpawnEntries[0];
-            double interval = MonsterSpawnerManager.GetCountdownInterval(config, entry, 1440d, 1f);
+            double interval = MonsterSpawnerManager.GetCountdownInterval(catalog.Settings, 1f);
             int rolls = 0;
             float Roll() { rolls++; return 0.75f; }
             var state = new SpawnerProgressSaveData();
-            MonsterSpawnerManager.AdvanceCountdownSchedule(config, state, 0d, 1440d, 1f, Roll);
-            MonsterSpawnerManager.AdvanceCountdownSchedule(config, state, interval, 1440d, 1f, Roll);
-            SpawnerCountdownProgress batch = state.SpeciesCountdowns[entry.PrefabName];
+            var batch = new SpawnerCountdownProgress();
+            MonsterSpawnerManager.AdvanceCountdownSchedule(batch, 0d, catalog.Settings, 1f);
+            MonsterSpawnerManager.AdvanceCountdownSchedule(batch, interval, catalog.Settings, 1f);
+            MonsterSpawnerManager.TryBeginCountdownBatch(batch, config, entry, state, 1f, Roll);
             result["initialBatchCount"] = batch.PendingCount;
             result["initialRequiredRoom"] = MonsterSpawnerManager.GetCountdownBatchRequiredRoom(batch);
             batch.RecordBatchBirth(10.5f, 20.5f, "surface");
             result["continuingRequiredRoom"] = MonsterSpawnerManager.GetCountdownBatchRequiredRoom(batch);
-            MonsterSpawnerManager.CompleteCountdownSpawnAttempt(state, entry, true, 0);
-            MonsterSpawnerManager.AdvanceCountdownSchedule(config, state, interval * 100d, 1440d, 1f, Roll);
+            MonsterSpawnerManager.CompleteCountdownSpawnAttempt(batch, state, true, 0, interval);
+            MonsterSpawnerManager.AdvanceCountdownSchedule(batch, interval * 100d, catalog.Settings, 1f);
             result["blockedPending"] = batch.PendingCount;
             result["chanceRollsAfterWait"] = rolls;
-            var restored = MemoryPackSerializer.Deserialize<SpawnerProgressSaveData>(MemoryPackSerializer.Serialize(state));
-            SpawnerCountdownProgress saved = restored.SpeciesCountdowns[entry.PrefabName];
+            SpawnerCountdownProgress saved = MemoryPackSerializer.Deserialize<SpawnerCountdownProgress>(MemoryPackSerializer.Serialize(batch));
             result["saved"] = new JObject { ["hasAnchor"] = saved.HasBatchAnchor, ["x"] = saved.BatchAnchorX,
                 ["y"] = saved.BatchAnchorY, ["scene"] = saved.BatchAnchorScene, ["cells"] = saved.BatchSpawnCells.Count,
                 ["pending"] = saved.PendingCount };
@@ -299,7 +387,7 @@ public static partial class GameplayTestSystemProbe
                 new[] { new Vector3(-15.5f, 0.5f) }, 1f, wrapped);
             result["wrappedCandidate"] = MonsterSpawnerManager.IsCountdownBatchCandidate(saved, new Vector3(-15.5f, 0.5f), 3f, wrapped);
             while (state.PendingSpawnCount > 0)
-                MonsterSpawnerManager.CompleteCountdownSpawnAttempt(state, entry, true, 0);
+                MonsterSpawnerManager.CompleteCountdownSpawnAttempt(batch, state, true, 0, interval);
             result["completed"] = new JObject { ["hasAnchor"] = batch.HasBatchAnchor, ["cells"] = batch.BatchSpawnCells.Count,
                 ["pending"] = batch.PendingCount, ["remaining"] = batch.RemainingGameSeconds, ["interval"] = interval };
             batch.RecordBatchBirth(-10.5f, -20.5f, "surface");
@@ -330,14 +418,14 @@ public static partial class GameplayTestSystemProbe
                 catch (InvalidDataException) { rejected.Add(true); }
             }
             definition.BatchSpawnRadius = validRadius;
-            definition.ScheduleMode = "timedWindows";
+            catalog.Settings.NaturalSpawnIntervalGameSeconds = 0f;
             try { SpawnerConfigCatalogLoader.Validate(catalog); rejected.Add(false); }
             catch (InvalidDataException) { rejected.Add(true); }
             result["invalidConfigurationsRejected"] = rejected;
             config.SpawnCountWeights.Clear();
             int fixedRolls = 0;
             result["fixedCount"] = MonsterSpawnerManager.DetermineCountdownBatchCount(config, 2f, () => { fixedRolls++; return 0f; });
-            result["fixedExpectedCount"] = GameDifficultyService.ScaleCount(config.SpawnCount, 2f, 1);
+            result["fixedExpectedCount"] = GameRuleMath.ScaleCount(config.SpawnCount, 2f, 1);
             result["fixedCountRolls"] = fixedRolls;
             return result;
         }

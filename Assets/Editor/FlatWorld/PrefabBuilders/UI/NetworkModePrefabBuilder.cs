@@ -268,6 +268,8 @@ public static class NetworkModePrefabBuilder
         input.targetGraphic = background;
         input.textViewport = viewport;
         input.textComponent = (TextMeshProUGUI)valueText;
+        valueText.enableAutoSizing = false;
+        valueText.overflowMode = TextOverflowModes.Overflow;
         input.placeholder = placeholder;
         input.contentType = contentType;
         input.text = initialValue;
@@ -369,7 +371,7 @@ public static class NetworkModePrefabBuilder
         text.color = color;
         text.alignment = alignment;
         text.enableWordWrapping = wordWrapping;
-        text.overflowMode = wordWrapping ? TextOverflowModes.Ellipsis : TextOverflowModes.Overflow;
+        FlatWorldUITextLayout.Configure(text, fontSize);
         text.raycastTarget = false;
         return text;
     }

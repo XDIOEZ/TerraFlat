@@ -33,7 +33,7 @@ public class Mod_PlantGrow : Module
         // 更新生产进度
         _data.progress +=
             _data.productionSpeed.Value *
-            GameDifficultyService.Current.Production.CropGrowthMultiplier *
+            GameRuleConfiguration.Current.Production.CropGrowthMultiplier *
             deltaTime;
 
         // 检查是否达到特殊生产点
@@ -69,9 +69,9 @@ public class Mod_PlantGrow : Module
     {
         if (loot.lootName != "")
         {
-            int outputAmount = GameDifficultyService.ScaleRandomizedAmount(
+            int outputAmount = GameRuleMath.ScaleRandomizedAmount(
                 loot.GetRandomLootAmount(),
-                GameDifficultyService.Current.World.LootAmountMultiplier);
+                GameRuleConfiguration.Current.World.LootAmountMultiplier);
             if (outputAmount <= 0)
             {
                 _data.nodeIndex++;

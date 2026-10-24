@@ -18,6 +18,42 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 27615045296885764
+    m_Localized: "Copper Hammer"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885765
+    m_Localized: "A copper-headed metal hammer with a wooden handle. Use it at a metal anvil. Durability 100; each valid strike consumes 1 durability."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885766
+    m_Localized: "Iron Hammer"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885767
+    m_Localized: "A wrought-iron hammer for repeated forging at a metal anvil. Durability 200; each valid strike consumes 1 durability."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885768
+    m_Localized: "Steel Hammer"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885769
+    m_Localized: "A durable steel-headed hammer for forging at a metal anvil. Durability 400; each valid strike consumes 1 durability."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402000
+    m_Localized: "Crossbow"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402001
+    m_Localized: "A wooden crossbow using ordinary arrows, with the same damage, range and charge time as a recurve bow. Hold attack to fully load, then release without firing. Press and release attack again to shoot. Stamina drains only while loading, stopping at full charge. Releasing early cancels loading."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402002
+    m_Localized: "Crossbow"
+    m_Metadata:
+      m_Items: []
   - m_Id: 4702777344
     m_Localized: Stone Axe
     m_Metadata:
@@ -171,11 +207,12 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938120
-    m_Localized: Leather
+    m_Localized: Tanned Leather
     m_Metadata:
       m_Items: []
   - m_Id: 4878938121
-    m_Localized: Leather.
+    m_Localized: Tanned leather used to sew leather equipment. Cutting one piece
+      produces four leather straps.
     m_Metadata:
       m_Items: []
   - m_Id: 4878938122
@@ -191,7 +228,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938125
-    m_Localized: Raw Hide.
+    m_Localized: Untanned animal hide that can be processed into tanned leather.
     m_Metadata:
       m_Items: []
   - m_Id: 4878938126
@@ -343,7 +380,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326724
-    m_Localized: An empty coconut shell.
+    m_Localized: A sturdy coconut shell that holds, empties, and transfers water and can be used for crafting. Use Place on Ground in its vessel panel; it can be used or packed up with its water contents intact.
     m_Metadata:
       m_Items: []
   - m_Id: 4887326729
@@ -491,11 +528,12 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776576
-    m_Localized: Iron Chestplate
+    m_Localized: Steel Chestplate
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776577
-    m_Localized: Chestplate Iron.
+    m_Localized: A heavy chestplate forged from steel ingots; trades some movement
+      speed for reliable protection.
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776578
@@ -734,71 +772,72 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 3818405305606144
-    m_Localized: Quest Text
+    m_Localized: From Stone Tools to Copper Ingots
     m_Metadata:
       m_Items: []
   - m_Id: 3818405322383360
-    m_Localized: Quest Text
+    m_Localized: Start by gathering stone. Craft tools, enter the cave, light the
+      smelter, and produce copper and pig iron ingots.
     m_Metadata:
       m_Items: []
   - m_Id: 3818405330771968
-    m_Localized: Quest Text
+    m_Localized: Pick up 2 stones
     m_Metadata:
       m_Items: []
   - m_Id: 3818405334966272
-    m_Localized: Quest Text
+    m_Localized: Craft a chipped stone tool
     m_Metadata:
       m_Items: []
   - m_Id: 3818405339160576
-    m_Localized: Quest Text
+    m_Localized: Gather 2 logs
     m_Metadata:
       m_Items: []
   - m_Id: 3818405343354880
-    m_Localized: Quest Text
+    m_Localized: Gather 2 wooden sticks
     m_Metadata:
       m_Items: []
   - m_Id: 3818405355937792
-    m_Localized: Quest Text
+    m_Localized: Craft a workbench
     m_Metadata:
       m_Items: []
   - m_Id: 3818405360132096
-    m_Localized: Quest Text
+    m_Localized: Craft a stone pickaxe
     m_Metadata:
       m_Items: []
   - m_Id: 3818405368520704
-    m_Localized: Quest Text
+    m_Localized: Craft a stone axe
     m_Metadata:
       m_Items: []
   - m_Id: 3818405376909312
-    m_Localized: Quest Text
+    m_Localized: Mine iron ore in the cave
     m_Metadata:
       m_Items: []
   - m_Id: 3818405381103616
-    m_Localized: Quest Text
+    m_Localized: Mine 2 copper ore in the cave
     m_Metadata:
       m_Items: []
   - m_Id: 3818405385297920
-    m_Localized: Quest Text
+    m_Localized: Mine coal in the cave
     m_Metadata:
       m_Items: []
   - m_Id: 3818405393686528
-    m_Localized: Quest Text
+    m_Localized: Craft a smelter
     m_Metadata:
       m_Items: []
   - m_Id: 3818405397880832
-    m_Localized: Quest Text
+    m_Localized: Light the smelter to start smelting
     m_Metadata:
       m_Items: []
   - m_Id: 3818405402075136
-    m_Localized: Quest Text
+    m_Localized: Smelt 1 charcoal
     m_Metadata:
       m_Items: []
   - m_Id: 3818405406269440
-    m_Localized: Quest Text
+    m_Localized: Smelt 1 pig iron ingot
     m_Metadata:
       m_Items: []
   - m_Id: 3818405410463744
-    m_Localized: Quest Text
+    m_Localized: Smelt 1 copper ingot
     m_Metadata:
       m_Items: []
   - m_Id: 6403757195223040
@@ -1779,11 +1818,2474 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715657
-    m_Localized: "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots, 150% heating coefficient, up to 2000 C, rated 120 V and 1200 W. Materials transform at their own temperature and retain residual heat after power loss."
+    m_Localized: "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials transform at their own temperature and cool naturally after lowering the target or losing power."
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715658
-    m_Localized: "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots, 150% heating coefficient, up to 2000 C, rated 120 V and 1200 W. Materials transform at their own temperature and retain residual heat after power loss."
+    m_Localized: "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials transform at their own temperature and cool naturally after lowering the target or losing power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715659
+    m_Localized: "Space Elevator Terminal"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715660
+    m_Localized: "Space Elevator"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715661
+    m_Localized: "Connects the ground to an expandable fixed space station. Transports cargo and players both ways. Paired terminals cannot be dismantled. This prototype does not consume power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715662
+    m_Localized: "Connects the ground to an expandable fixed space station. Transports cargo and players both ways. Paired terminals cannot be dismantled. This prototype does not consume power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715663
+    m_Localized: "Wooden Shield"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715664
+    m_Localized: "A shield of lashed wooden slats. In hand: tap primary attack to bash (+5 defense during the action), or hold to guard (+10 defense, half movement speed). In the offhand slot: use Parry (Q by default) for a brief +10 defense window. Equipping alone grants no passive defense."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596266936504320
+    m_Localized: Leather Hat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427136
+    m_Localized: A leather hat sewn with a bone needle and cotton thread to protect
+      the head.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427137
+    m_Localized: Leather Vest
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427138
+    m_Localized: A leather vest sewn with a bone needle and cotton thread to protect
+      the chest and abdomen.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427139
+    m_Localized: Leather Gloves
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427140
+    m_Localized: Leather gloves sewn with a bone needle and cotton thread to protect
+      the hands.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427141
+    m_Localized: Leather Trousers
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427142
+    m_Localized: Durable leather trousers sewn with a bone needle and cotton thread
+      to protect the waist and legs.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427143
+    m_Localized: Leather Shoes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427144
+    m_Localized: Thick-soled leather shoes sewn with a bone needle and cotton thread
+      to protect the feet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427145
+    m_Localized: Cotton Thread
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427146
+    m_Localized: Fine thread spun from cotton, used with a bone needle to sew leather
+      equipment.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427147
+    m_Localized: Bone Needle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427148
+    m_Localized: A sewing tool shaped from bone with 10 durability. Sewing one piece
+      of equipment consumes 1 durability; it breaks when depleted.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427149
+    m_Localized: Cotton
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267582427150
+    m_Localized: Flammable natural fiber that can be used as tinder, spun into thread,
+      or woven into cloth.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27596267586621440
+    m_Localized: Sewing Needle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267221491712
+    m_Localized: Leather Strap
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267485732864
+    m_Localized: Cut from tanned leather. Replaces rope one for one. Using straps
+      for all required binding materials increases current and maximum durability
+      by 30%. One strap can also reinforce a tool. Both methods share one strap bonus,
+      independently stackable with adhesive and nail reinforcement.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267485732865
+    m_Localized: Binding Durability +30%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27603267485732866
+    m_Localized: Strap Reinforced
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605608893026304
+    m_Localized: Iron Helmet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305536
+    m_Localized: A helmet forged from wrought iron ingots to protect the head.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305537
+    m_Localized: Iron Cuirass
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305538
+    m_Localized: A cuirass forged from wrought iron ingots to protect the chest and
+      abdomen.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305539
+    m_Localized: Iron Gauntlets
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305540
+    m_Localized: Gauntlets forged from wrought iron ingots to protect both hands.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305541
+    m_Localized: Iron Greaves
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305542
+    m_Localized: Greaves forged from wrought iron ingots to protect the waist and
+      legs.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305543
+    m_Localized: Iron Boots
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611338305544
+    m_Localized: Reinforced boots forged from wrought iron ingots to protect the
+      feet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499840
+    m_Localized: Steel Helmet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499841
+    m_Localized: A helmet forged from steel ingots to provide sturdy head protection.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499842
+    m_Localized: Steel Gauntlets
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499843
+    m_Localized: Gauntlets forged from steel ingots, with steel plates and leather
+      protecting both hands.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499844
+    m_Localized: Steel Greaves
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499845
+    m_Localized: Greaves forged from steel ingots, with formed plates protecting
+      the waist and legs.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499846
+    m_Localized: Steel Boots
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27605611342499847
+    m_Localized: Boots forged from steel ingots, reinforced with steel plates over
+      the feet and ankles.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608689814835200
+    m_Localized: Copper Needle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128256
+    m_Localized: A metal sewing tool forged on an anvil. Has 100 durability and loses
+      1 for each completed item. Breaks at zero; stacked needles are used one at
+      a time.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128257
+    m_Localized: Iron Needle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128258
+    m_Localized: A metal sewing tool forged on an anvil. Has 200 durability and loses
+      1 for each completed item. Breaks at zero; stacked needles are used one at
+      a time.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128259
+    m_Localized: Iron Anvil
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128260
+    m_Localized: Iron Anvil
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128261
+    m_Localized: Place this anvil to forge metal plates or sewing needles. Has 1,000
+      durability and loses 1 per item produced. When worn out, drops 5 wrought iron
+      ingots and all contents.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128262
+    m_Localized: Place this anvil to forge metal plates or sewing needles. Has 1,000
+      durability and loses 1 per item produced. When worn out, drops 5 wrought iron
+      ingots and all contents.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128263
+    m_Localized: Place this anvil to forge metal plates or sewing needles. Each strike
+      adds 0.7 work seconds. Has 500 durability and loses 1 per item produced. When
+      worn out, drops half its recipe materials and all contents.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128264
+    m_Localized: Place on the ground to forge items. Has 500 durability and loses
+      1 per item produced. When worn out, drops 5 copper ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128265
+    m_Localized: "Tungsten Ingot"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128266
+    m_Localized: "A dense, heat-resistant metal ingot smelted from tungsten ore at 3422 C or above. Can be stacked and stored as an advanced material."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128267
+    m_Localized: "Tungsten Ore"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128268
+    m_Localized: "Rare tungsten-bearing ore from underground. Set an induction stove target to at least 3422 C to smelt 2 ore into 1 tungsten ingot."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128269
+    m_Localized: "Tungsten Deposit"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27608690188128270
+    m_Localized: "A rare tungsten vein in underground caves, harder than iron ore. Mine with a pickaxe to obtain tungsten ore."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615044965535744
+    m_Localized: Steel Nail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885760
+    m_Localized: Tool Cabinet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885761
+    m_Localized: Tool Cabinet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885762
+    m_Localized: Wrought Iron Nail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045296885763
+    m_Localized: Metal Nail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402003
+    m_Localized: "Railway Track"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402004
+    m_Localized: "A ground railway tile that connects into straights and curves. Minecarts follow it; it has no mechanical power connection."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402005
+    m_Localized: "Railway Track"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402006
+    m_Localized: "A ground railway tile that connects into straights and curves. Minecarts follow it; it has no mechanical power connection."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402007
+    m_Localized: "Minecart"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402008
+    m_Localized: "Place on ground or rails and walk into the cart to push it. Ground resistance is very high; rails guide movement. One rider per cart; F boards or dismounts. Two engine slots on the left, 18 cargo slots on the right. Put water vessels and fuel in cargo and install an engine to drive with WASD. Engines only move slowly on ground. Connect nearby carts to share power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402009
+    m_Localized: "Minecart"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402010
+    m_Localized: "Place on ground or rails and walk into the cart to push it. Ground resistance is very high; rails guide movement. One rider per cart; F boards or dismounts. Two engine slots on the left, 18 cargo slots on the right. Put water vessels and fuel in cargo and install an engine to drive with WASD. Engines only move slowly on ground. Connect nearby carts to share power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402011
+    m_Localized: "Steam Engine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27615045322402012
+    m_Localized: "A removable steam power module. Right-click while held to configure the switch and output level. Install in an engine slot; it draws water from vessels and fuel in train cargo to power the entire train."
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []
+  - m_Id: 27915473976856576
+    m_Localized: Hidden Wire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474467590144
+    m_Localized: Hidden Wire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474467590145
+    m_Localized: Engineering Goggles
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474471784448
+    m_Localized: Shipwreck
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144576
+    m_Localized: Snowball
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144577
+    m_Localized: Simple Raft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144578
+    m_Localized: Simple Raft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474501144579
+    m_Localized: Glass
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338880
+    m_Localized: Crucible
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338881
+    m_Localized: Wooden Blowgun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338882
+    m_Localized: Sling
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338883
+    m_Localized: Stone Slab
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338884
+    m_Localized: Peat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338885
+    m_Localized: Drilled Plank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338886
+    m_Localized: Wood Ash
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338887
+    m_Localized: Iron Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338888
+    m_Localized: Pig Iron Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338889
+    m_Localized: Copper Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338890
+    m_Localized: Bronze Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338891
+    m_Localized: Tin Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474505338892
+    m_Localized: Steel Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533184
+    m_Localized: Coal Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533185
+    m_Localized: Malachite Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533186
+    m_Localized: Iron Ore Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533187
+    m_Localized: Tin Ore Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533188
+    m_Localized: Stone Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533189
+    m_Localized: Niter Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533190
+    m_Localized: Beeswax
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533191
+    m_Localized: Bird Egg
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533192
+    m_Localized: Carbon Filament
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533193
+    m_Localized: Cloth
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533194
+    m_Localized: Silk Fiber
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533195
+    m_Localized: Silk
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474509533196
+    m_Localized: Plastic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727488
+    m_Localized: Silicon Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727489
+    m_Localized: Gold Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727490
+    m_Localized: Gold Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727491
+    m_Localized: Gold Ore Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727492
+    m_Localized: Gold Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727493
+    m_Localized: Diamond Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727494
+    m_Localized: Diamond Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727495
+    m_Localized: Obsidian
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727496
+    m_Localized: Obsidian Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727497
+    m_Localized: Obsidian Dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727498
+    m_Localized: Obsidian Spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727499
+    m_Localized: Iron Bucket
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727500
+    m_Localized: Iron Bucket
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727501
+    m_Localized: Sulfur
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474513727502
+    m_Localized: Sulfur Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921792
+    m_Localized: Giant Stone Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921793
+    m_Localized: Giant Coal Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921794
+    m_Localized: Giant Copper Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921795
+    m_Localized: Giant Iron Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921796
+    m_Localized: Giant Tin Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921797
+    m_Localized: Giant Niter Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921798
+    m_Localized: Giant Diamond Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921799
+    m_Localized: Giant Gold Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921800
+    m_Localized: Giant Obsidian Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921801
+    m_Localized: Giant Sulfur Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921802
+    m_Localized: Giant Tungsten Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921803
+    m_Localized: Dead Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921804
+    m_Localized: Scissors
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921805
+    m_Localized: Drilled Stick
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921806
+    m_Localized: Stone Hammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921807
+    m_Localized: Mechanical Loom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921808
+    m_Localized: Mechanical Loom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921809
+    m_Localized: Copper Anvil
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921810
+    m_Localized: Copper Anvil
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921811
+    m_Localized: Rubber
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921812
+    m_Localized: Basic Generator
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921813
+    m_Localized: Basic Generator
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921814
+    m_Localized: Copper Wire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921815
+    m_Localized: Copper Wire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921816
+    m_Localized: Basic Battery
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921817
+    m_Localized: Basic Battery
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921818
+    m_Localized: Light Bulb
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474517921819
+    m_Localized: Light Bulb
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310400
+    m_Localized: Oak Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310401
+    m_Localized: Cotton Seed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310402
+    m_Localized: Cotton
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310403
+    m_Localized: Cactus Chunk
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310404
+    m_Localized: Cactus
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310405
+    m_Localized: Grass Bed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310406
+    m_Localized: Grass Bed-Building
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310407
+    m_Localized: Natural Cave Entrance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310408
+    m_Localized: Foxtail Grass Seed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474526310409
+    m_Localized: Flour
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504704
+    m_Localized: Wooden Shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504705
+    m_Localized: Copper Shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504706
+    m_Localized: Raw Iron Shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504707
+    m_Localized: Bronze Shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504708
+    m_Localized: Iron Shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504709
+    m_Localized: Command Manual
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504710
+    m_Localized: Wooden Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504711
+    m_Localized: Stone Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504712
+    m_Localized: Copper Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504713
+    m_Localized: Iron Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504714
+    m_Localized: Bronze Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504715
+    m_Localized: Splint
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504716
+    m_Localized: Plant Bandage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504717
+    m_Localized: Wool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504718
+    m_Localized: Wooden Barrel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504719
+    m_Localized: Wooden Barrel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504720
+    m_Localized: Fishing Rod
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504721
+    m_Localized: Bone Fishing Hook
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504722
+    m_Localized: Iron Fishing Hook
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504723
+    m_Localized: Gold Fishing Hook
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504724
+    m_Localized: Wooden Conveyor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504725
+    m_Localized: Wooden Conveyor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504726
+    m_Localized: Cloth Conveyor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504727
+    m_Localized: Cloth Conveyor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504728
+    m_Localized: Universal Fluid Pipe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504729
+    m_Localized: Universal Fluid Pipe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504730
+    m_Localized: Fluid Valve
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504731
+    m_Localized: Fluid Valve
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474530504732
+    m_Localized: Fluid Outlet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893312
+    m_Localized: Fluid Outlet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893313
+    m_Localized: Gas Selector
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893314
+    m_Localized: Gas Selector
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893315
+    m_Localized: Iron Gas Tank Block
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893316
+    m_Localized: Iron Gas Tank Block
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893317
+    m_Localized: Steel Gas Tank Block
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893318
+    m_Localized: Steel Gas Tank Block
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893319
+    m_Localized: Liquid Storage Tank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893320
+    m_Localized: Liquid Storage Tank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893321
+    m_Localized: Mechanical Gas Pump
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893322
+    m_Localized: Mechanical Gas Pump
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893323
+    m_Localized: Electric Liquid Pump
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893324
+    m_Localized: Electric Liquid Pump
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893325
+    m_Localized: Mechanical Pressure Probe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893326
+    m_Localized: Mechanical Pressure Probe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893327
+    m_Localized: Electronic Pressure Probe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893328
+    m_Localized: Electronic Pressure Probe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893329
+    m_Localized: Mechanical Gas Compressor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893330
+    m_Localized: Mechanical Gas Compressor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893331
+    m_Localized: Electric Gas Compressor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893332
+    m_Localized: Electric Gas Compressor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893333
+    m_Localized: Electric Heater
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893334
+    m_Localized: Electric Heater
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893335
+    m_Localized: Fluid Filter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893336
+    m_Localized: Fluid Filter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893337
+    m_Localized: Water Electrolyzer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893338
+    m_Localized: Water Electrolyzer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474538893339
+    m_Localized: Hydrogen Energy Engine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281920
+    m_Localized: Hydrogen Energy Engine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281921
+    m_Localized: Impurities
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281922
+    m_Localized: Iron Portable Gas Tank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281923
+    m_Localized: Steel Portable Gas Tank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474547281924
+    m_Localized: Spacesuit Helmet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476224
+    m_Localized: Spacesuit Torso
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476225
+    m_Localized: Spacesuit Gloves
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476226
+    m_Localized: Spacesuit Pants
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476227
+    m_Localized: Spacesuit Boots
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476228
+    m_Localized: Water Trough
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476229
+    m_Localized: Water Trough
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474551476230
+    m_Localized: Iron Ship Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474555670528
+    m_Localized: Iron Ship Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474555670529
+    m_Localized: Refractory Ship Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864832
+    m_Localized: Refractory Ship Floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864833
+    m_Localized: Iron Ship Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864834
+    m_Localized: Iron Ship Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864835
+    m_Localized: Refractory Ship Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864836
+    m_Localized: Refractory Ship Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864837
+    m_Localized: Ship Airlock Door
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864838
+    m_Localized: Ship Airlock Door
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864839
+    m_Localized: Ship Docking Port
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864840
+    m_Localized: Ship Docking Port
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864841
+    m_Localized: Ship Console
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864842
+    m_Localized: Ship Console
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864843
+    m_Localized: Chemical Rocket Engine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864844
+    m_Localized: Chemical Rocket Engine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864845
+    m_Localized: Gravity Generator
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864846
+    m_Localized: Gravity Generator
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864847
+    m_Localized: Autopilot Control Block
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864848
+    m_Localized: Autopilot Control Block
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864849
+    m_Localized: Cabin Air Supply
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864850
+    m_Localized: Cabin Air Supply
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864851
+    m_Localized: Fiber Optic Cable
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864852
+    m_Localized: Fiber Optic Cable
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864853
+    m_Localized: Space Cultivator
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474559864854
+    m_Localized: Space Cultivator
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059136
+    m_Localized: Carries power normally. Hold it or wear engineering goggles to see
+      and handle it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059137
+    m_Localized: Copper wire with a concealing sheath. It carries power normally;
+      hold it or wear engineering goggles to see and handle it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059138
+    m_Localized: When held or worn over the eyes, reveals hidden wires and lets you
+      interact with them. Can be worn with a helmet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059139
+    m_Localized: Large debris left when a hull breaks apart. It records the original
+      components and inventory; attack it to salvage and release its contents.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474564059140
+    m_Localized: A packed snowball dug up with a shovel. Right-click to place it;
+      each snowball adds one snow layer. Stack layers, then shovel them back up.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447744
+    m_Localized: Crafted from four planks and two logs. Walk into the placed raft
+      to push it. On land or in water, point at it and press F to board. Use the
+      directional keys or stick to row without spending stamina; hold Shift to row
+      faster at the running stamina cost. Point at the raft and press F to dismount,
+      landing on nearby ground when possible or in the water otherwise.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447745
+    m_Localized: A white outline appears when the cursor points at the raft. On land
+      or in water, point at the raft and press F to board or dismount. Normal rowing
+      uses no stamina; hold Shift while moving to spend stamina and row faster. Pointing
+      at reachable seawater still lets F interact with the water and drink. The raft
+      drifts with currents. Dismounting far offshore puts you in the water if no
+      land is nearby. A loaded save restores it as an empty raft.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447746
+    m_Localized: Place it in a crucible and heat it to the right temperature to melt
+      it into molten glass.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447747
+    m_Localized: Transparent glass formed by cooling and solidifying molten glass.
+      Used to make glass products.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447748
+    m_Localized: Holds solid materials such as sand and ore, and can also store hot
+      liquids. A heat source heats only the crucible; its contents melt or transform
+      according to their own temperature and reaction properties.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447749
+    m_Localized: Hold the attack button to charge, then blow into the microphone.
+      Releasing fires one arrow from the same inventory. Louder blows make arrows
+      fly faster and add up to 100% damage.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447750
+    m_Localized: A throwing tool made from rope and leather. Stones in the hotbar
+      and suitable hard ores can be used as sling ammunition. Hold the attack button
+      to charge and show the trajectory, then release to throw. Projectiles can be
+      picked up after landing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447751
+    m_Localized: Coarse fiber stripped from plant skins. A basic material for rope
+      and other survival items.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474572447752
+    m_Localized: A heavy slab mined from a large stone deposit or a cave entrance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642048
+    m_Localized: Flammable organic soil dug from wetlands. Can be used as a low-temperature
+      fuel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642049
+    m_Localized: A wooden mechanical part made by drilling a through-hole in a plank.
+      Used for the structure and connections of mechanical torque devices.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642050
+    m_Localized: A stone mechanical part made by drilling a through-hole in a slab.
+      Used for the structure and connections of mechanical torque devices.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642051
+    m_Localized: A stone mechanical part made by drilling a through-hole in a stone.
+      Used in mechanical torque devices.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642052
+    m_Localized: Ash left after burning plant matter, used as a lightweight basic
+      processing material.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642053
+    m_Localized: Adds pages to readable notes.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642054
+    m_Localized: A metal nail forged from wrought iron ingots. Used to fasten wood
+      and mechanical structures.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642055
+    m_Localized: An iron plate forged from wrought iron ingots. Used in further metalworking.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642056
+    m_Localized: A plate hand-forged from pig iron ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642057
+    m_Localized: A plate forged from copper ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642058
+    m_Localized: A plate forged from bronze ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642059
+    m_Localized: A plate forged from tin ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642060
+    m_Localized: A plate forged from steel ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642061
+    m_Localized: Fine coal powder made by grinding coal ore in a stone mortar. Used
+      for further material processing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642062
+    m_Localized: Copper ore powder made by grinding malachite in a stone mortar.
+      Used for further material processing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642063
+    m_Localized: Iron ore powder made by grinding iron ore in a stone mortar. Used
+      for further material processing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642064
+    m_Localized: Tin ore powder made by grinding tin ore in a stone mortar. Used
+      for further material processing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474576642065
+    m_Localized: Stone powder made by grinding stone in a stone mortar. Used for
+      further material processing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836352
+    m_Localized: Fine niter powder made by grinding niter in a stone mortar. Used
+      to make fertilizer.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836353
+    m_Localized: Golden natural beeswax produced by beehives. It can be eaten directly
+      and is rich in carbohydrates and vitamins, but reduces water by 5.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836354
+    m_Localized: A metal nail forged from steel ingots. When used with steel plates
+      to craft a mechanical hammer or sawmill, it increases the finished machine's
+      efficiency by 20%.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836355
+    m_Localized: An egg laid by small birds and seagulls. It can be picked up, eaten,
+      or cooked. Each bird can lay one at most every two days.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836356
+    m_Localized: "A filament made by heating thin thread to 500\xB0C until it carbonizes.
+      Combine it with glass, copper plate, and wrought iron ingot at a workbench
+      to make a light bulb."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836357
+    m_Localized: A piece of fabric woven from cotton. Used as a crafting material.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836358
+    m_Localized: A long, flexible natural fiber that can be woven into silk.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836359
+    m_Localized: A soft, lightweight fabric woven from silk fiber. Used as a crafting
+      material.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836360
+    m_Localized: Lightweight plastic sheet material with a smooth surface that is
+      easy to shape.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836361
+    m_Localized: A thin silicon sheet with a smooth, dark gray surface.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836362
+    m_Localized: A refined metal bar used for crafting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836363
+    m_Localized: Gold-bearing ore that can be smelted into gold ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836364
+    m_Localized: Gold ore powder made by grinding gold ore in a stone mortar. Used
+      for further material processing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836365
+    m_Localized: A gold-bearing vein that must be mined with a pickaxe. Mining drops
+      gold ore.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836366
+    m_Localized: Rare ore mined from a diamond deposit. Can be picked up, stacked
+      and stored as a material.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836367
+    m_Localized: A rare diamond vein in underground caves. Drops diamond ore when
+      mined. No tool tier is required; mining efficiency depends on damage, defense
+      and tool harvesting bonuses.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836368
+    m_Localized: Sharp black stone scattered along the shore of mountaintop lava
+      lakes. Can be used as a handheld knife or crafted into an obsidian dagger or
+      spear.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836369
+    m_Localized: An obsidian deposit beside a mountaintop lava lake. Mine it with
+      a pickaxe to obtain obsidian; there is no minimum tool tier.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836370
+    m_Localized: A small blade for close combat.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836371
+    m_Localized: A spear with an obsidian point. Uses the standard spear thrust attack.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836372
+    m_Localized: An iron bucket that can hold water or hot magma. Place it on the
+      ground to catch rain; dismantling it preserves the liquid and rain collection
+      progress.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836373
+    m_Localized: An open iron bucket placed on the ground. It catches rain and can
+      be dismantled without losing its liquid, temperature, or rain collection progress.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836374
+    m_Localized: Mineral deposits scattered around mountains and mountain lava vents.
+      Can also be obtained by mining sulfur deposits.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836375
+    m_Localized: Sulfur ore found in mountains and around mountain lava vents. Mining
+      drops sulfur; pickaxes improve yield, with no minimum tool tier.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474580836376
+    m_Localized: A wild beehive beside a forest tree, with a golden wax layer and
+      a dark entrance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224960
+    m_Localized: A few wildflowers gathered from a grass flower layer with scissors.
+      Can be picked up and stacked.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224961
+    m_Localized: A huge natural stone deposit with the same mining behavior and drops
+      as a regular stone deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224962
+    m_Localized: A huge natural coal deposit with the same mining behavior and drops
+      as a regular coal deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224963
+    m_Localized: A huge natural copper deposit with the same mining behavior and
+      drops as a regular copper deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224964
+    m_Localized: A huge natural iron deposit with the same mining behavior and drops
+      as a regular iron deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224965
+    m_Localized: A huge natural tin deposit with the same mining behavior and drops
+      as a regular tin deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224966
+    m_Localized: A huge natural niter deposit with the same mining behavior and drops
+      as a regular niter deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224967
+    m_Localized: A huge natural diamond deposit with the same mining behavior and
+      drops as a regular diamond deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224968
+    m_Localized: A huge natural gold deposit with the same mining behavior and drops
+      as a regular gold deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224969
+    m_Localized: A huge natural obsidian deposit with the same mining behavior and
+      drops as a regular obsidian deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224970
+    m_Localized: A huge natural sulfur deposit with the same mining behavior and
+      drops as a regular sulfur deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224971
+    m_Localized: A huge natural tungsten deposit with the same mining behavior and
+      drops as a regular tungsten deposit. Mine continuously from its edge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224972
+    m_Localized: A dead tree that can be chopped down for logs and sticks.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224973
+    m_Localized: Aim at a nearby grass layer. When a white square appears, right-click
+      or tap to cut one tile of grass and collect 2 plant fibers. Scissors can also
+      harvest wildflowers.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224974
+    m_Localized: A wooden mechanical part made by drilling a through-hole in a stick.
+      Used as a shaft core and connector in mechanical torque devices.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224975
+    m_Localized: A heavy hammer with a stone head and wooden handle. More powerful
+      than a wooden hammer, but each swing costs more stamina.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474589224976
+    m_Localized: Hand Crank.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419264
+    m_Localized: Hand Crank.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419265
+    m_Localized: Water Wheel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419266
+    m_Localized: Water Wheel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419267
+    m_Localized: Windmill.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419268
+    m_Localized: Windmill.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419269
+    m_Localized: Wooden Shaft.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419270
+    m_Localized: Wooden Shaft.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419271
+    m_Localized: Only the short shaft on its left connects to a drive shaft. Its
+      teeth mesh with adjacent gears.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419272
+    m_Localized: When placed, only the short shaft on its left connects to a drive
+      shaft. Its teeth mesh with adjacent gears.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419273
+    m_Localized: "Gearbox building. Input through the large gear outputs 2\xD7 speed
+      and 0.5\xD7 torque; input through the small gear outputs 0.5\xD7 speed and
+      2\xD7 torque."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419274
+    m_Localized: "When placed, input through the large gear outputs 2\xD7 speed and
+      0.5\xD7 torque; input through the small gear outputs 0.5\xD7 speed and 2\xD7
+      torque."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419275
+    m_Localized: Clutch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474593419276
+    m_Localized: Clutch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613568
+    m_Localized: Shaft Bridge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613569
+    m_Localized: Shaft Bridge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613570
+    m_Localized: Millstone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613571
+    m_Localized: Millstone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613572
+    m_Localized: "Point the outlet at an adjacent furnace or blast furnace to raise
+      its maximum temperature based on speed. At 20 RPM it adds up to 300\xB0C; only
+      the higher bonus from the bellows or oxygen-assisted combustion applies."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613573
+    m_Localized: "Point the outlet at an adjacent furnace or blast furnace to raise
+      its maximum temperature based on speed. At 20 RPM it adds up to 300\xB0C; only
+      the higher bonus from the bellows or oxygen-assisted combustion applies."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613574
+    m_Localized: Sawmill.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613575
+    m_Localized: Sawmill.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613576
+    m_Localized: Connect it to mechanical power to weave materials. Cotton can be
+      woven into cloth and silk into silk; higher speed makes processing faster.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613577
+    m_Localized: Connect it to mechanical power after placing it to weave automatically.
+      The loom provides the weaving operation; the input materials determine the
+      output and work required.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613578
+    m_Localized: Driven by mechanical power, it forges pig iron into wrought iron
+      and hammers wrought iron, copper, bronze, tin, and steel ingots into matching
+      plates.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613579
+    m_Localized: A mechanical hammer that connects to a drive shaft and automatically
+      processes pig iron, wrought iron, copper, bronze, tin, and steel ingots.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613580
+    m_Localized: A one-slot tool cabinet. Workbenches within eight adjacent cells
+      can use its slot as a sixth material slot. A workbench cannot receive this
+      bonus from more than one cabinet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613581
+    m_Localized: A one-slot tool cabinet. Workbenches within eight adjacent cells
+      can use its slot as a sixth material slot. A workbench cannot receive this
+      bonus from more than one cabinet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613582
+    m_Localized: An elastic, well-insulated material used to make wires.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613583
+    m_Localized: Connect a wire to the left and a drive shaft to the right. When
+      powered it outputs mechanical power; when mechanically driven it outputs electricity.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613584
+    m_Localized: Connect a wire to the left and a drive shaft to the right. When
+      powered it outputs mechanical power; when mechanically driven it outputs electricity.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613585
+    m_Localized: A copper wire for connecting electrical equipment.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613586
+    m_Localized: A copper wire for connecting electrical equipment, made from copper
+      and rubber.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613587
+    m_Localized: Stores surplus power from the grid and discharges automatically
+      when generation is insufficient.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613588
+    m_Localized: Stores surplus power from the grid and discharges automatically
+      when generation is insufficient.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613589
+    m_Localized: Lights automatically when connected to a copper wire in the same
+      cell and turns off without power. Its radius is 16 tiles, twice that of a torch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613590
+    m_Localized: Lights automatically when connected to a copper wire in the same
+      cell and turns off without power. Its radius is 16 tiles, twice that of a torch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613591
+    m_Localized: An oak tree that grows in forests and can yield rubber in the same
+      way that resin is collected.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613592
+    m_Localized: A hand-operated drilling tool that can be placed to open its drilling
+      work panel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613593
+    m_Localized: A portable hand drill. When placed, it shares the hand drill's work
+      state.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613594
+    m_Localized: Plant it to grow cotton.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613595
+    m_Localized: Harvest cotton fibers when mature.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613596
+    m_Localized: A juicy cactus chunk with its spines removed. Eat it to restore
+      40 water and a small amount of nutrition.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474597613597
+    m_Localized: A drought-tolerant plant that grows in arid deserts, not on wet
+      beaches or riverbanks. Touching it causes puncture damage. Mature plants yield
+      edible, hydrating cactus chunks and can also be cleared with a weapon.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002176
+    m_Localized: A simple bed tied from dry grass and rope. Place it on the ground
+      to sleep.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002177
+    m_Localized: A grass bed that occupies two adjacent cells. Sleep in it like a
+      tent.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002178
+    m_Localized: A naturally formed surface cave entrance. Destroying it blocks the
+      corresponding underground exit.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002179
+    m_Localized: Foxtail seeds made by grinding foxtail grass in a stone mortar.
+      Plant them on valid farmland; they can also be eaten directly.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002180
+    m_Localized: Grind five foxtail seeds in a stone mortar to make one portion of
+      flour. It can be eaten directly for carbohydrates and protein, but consumes
+      water.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002181
+    m_Localized: Right-click six times to dig grass, sand, or peat tiles. Can also
+      dig clay deposits on riverbanks.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002182
+    m_Localized: Right-click three times to dig grass, sand, or peat tiles. Can also
+      dig clay deposits on riverbanks.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002183
+    m_Localized: A transitional shovel made from raw iron. Digs faster than a copper
+      shovel, but the metal has not been fully refined.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002184
+    m_Localized: A durable bronze shovel that digs grass, sand, peat, and riverbank
+      clay faster.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002185
+    m_Localized: A durable wrought-iron shovel forged from iron. Suitable for extended
+      digging and harvesting clay.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002186
+    m_Localized: A chat command manual obtained with /help. It contains one piece
+      of charcoal. Hold it and use it to read and edit the manual.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002187
+    m_Localized: A wooden floor laid over ordinary land. It changes only the surface
+      appearance; dismantling it restores the original tile.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474606002188
+    m_Localized: A stone floor laid over ordinary land. It changes only the surface
+      appearance; dismantling it restores the original tile.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196480
+    m_Localized: A copper floor laid over ordinary land. It changes only the surface
+      appearance; dismantling it restores the original tile.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196481
+    m_Localized: An iron floor laid over ordinary land. It changes only the surface
+      appearance; dismantling it restores the original tile.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196482
+    m_Localized: A bronze floor laid over ordinary land. It changes only the surface
+      appearance; dismantling it restores the original tile.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196483
+    m_Localized: Right-click to choose a body part. After 3 seconds of setting, it
+      immediately restores 10 durability, then restores another 10 after 144 seconds.
+      Splints do not stack on the same body part and do not restore health.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196484
+    m_Localized: Use while held to bandage the head or torso, restoring 10 points
+      of part durability. Does not restore health.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196485
+    m_Localized: Soft wool sheared from sheep. Use it to make cloth.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196486
+    m_Localized: A water barrel sealed with planks, rope, and resin. Holds water
+      and six item stacks. Add ten portions of salt to a full barrel of fresh water
+      to make brine. Using resin glue to craft it increases maximum durability by
+      50%.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196487
+    m_Localized: A water barrel placed on the ground. Dismantle it without losing
+      its liquid, stored items, or durability quality.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196488
+    m_Localized: Right-click to set a hook and one piece of bait. Left-click to cast;
+      after a small fish takes the bait, left-click again to reel it in.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196489
+    m_Localized: Attach it to a fishing rod's hook slot and add one food item as
+      bait. It can be cast 10 times. Each successful cast consumes 1 durability;
+      it breaks when durability runs out.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196490
+    m_Localized: Attach it to a fishing rod's hook slot and add one food item as
+      bait. It can be cast 100 times. Each successful cast consumes 1 durability;
+      it breaks when durability runs out.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196491
+    m_Localized: Attach it to a fishing rod's hook slot and add one food item as
+      bait. It can be cast 1,000 times. Each successful cast consumes 1 durability;
+      it breaks when durability runs out.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196492
+    m_Localized: Moves dropped items on the ground when connected to mechanical power.
+      Rotate the building to change direction; reversing power reverses transport.
+      Rated for 20 RPM and 0.8 tiles per second.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196493
+    m_Localized: Moves dropped items on the ground when connected to mechanical power.
+      Rotate the building to change direction; reversing power reverses transport.
+      Rated for 20 RPM and 0.8 tiles per second.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196494
+    m_Localized: A cloth belt connects the rollers and carries items; a wooden frame
+      supports it. When powered, it moves dropped items on the ground. Rotate the
+      building to change direction; reversing power reverses transport. Rated for
+      20 RPM and 0.8 tiles per second.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196495
+    m_Localized: A cloth belt connects the rollers and carries items; a wooden frame
+      supports it. When powered, it moves dropped items on the ground. Rotate the
+      building to change direction; reversing power reverses transport. Rated for
+      20 RPM and 0.8 tiles per second.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196496
+    m_Localized: A gas and liquid pipe laid on a separate overlay layer. It can share
+      a cell with wires and automatically connects to adjacent pipes and matching
+      equipment ports. Silver-blue pipes and teal collars identify fluid lines; pipes
+      can be stacked in the inventory.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196497
+    m_Localized: A gas and liquid pipe laid on a separate overlay layer. It can share
+      a cell with wires and automatically connects to adjacent pipes and matching
+      equipment ports. Silver-blue pipes and teal collars identify fluid lines; pipes
+      can be stacked in the inventory.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196498
+    m_Localized: A fluid valve. Use its configuration panel to inspect actual gas
+      and liquid contents, direction, and power. Empty equipment starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196499
+    m_Localized: A fluid valve. Use its configuration panel to inspect actual gas
+      and liquid contents, direction, and power. Empty equipment starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196500
+    m_Localized: "Releases gas or liquid from a pipe. When it points toward an adjacent
+      furnace and actually vents oxygen, it raises the maximum combustion temperature
+      by 500\xB0C. Only the higher bonus from this or mechanical bellows applies."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196501
+    m_Localized: "Releases gas or liquid from a pipe. When it points toward an adjacent
+      furnace and actually vents oxygen, it raises the maximum combustion temperature
+      by 500\xB0C. Only the higher bonus from this or mechanical bellows applies."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196502
+    m_Localized: A gas selector pipe. Use its configuration panel to inspect actual
+      gas and liquid contents, direction, and power. Empty equipment starts under
+      vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196503
+    m_Localized: A gas selector pipe. Use its configuration panel to inspect actual
+      gas and liquid contents, direction, and power. Empty equipment starts under
+      vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196504
+    m_Localized: A one-cell iron gas tank block. Adjacent blocks of the same material
+      connect into a shared tank, adding 100 L per cell. Dismantling releases that
+      cell's share of gas and liquid and returns an empty block. Empty tanks start
+      under vacuum and exchange heat with the surrounding environment.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196505
+    m_Localized: A one-cell iron gas tank block. Adjacent blocks of the same material
+      connect into a shared tank, adding 100 L per cell. Dismantling releases that
+      cell's share of gas and liquid and returns an empty block. Empty tanks start
+      under vacuum and exchange heat with the surrounding environment.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196506
+    m_Localized: A one-cell steel gas tank block. Adjacent blocks of the same material
+      connect into a shared tank, adding 100 L per cell. Dismantling releases that
+      cell's share of gas and liquid and returns an empty block. Empty tanks start
+      under vacuum and exchange heat with the surrounding environment.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474610196507
+    m_Localized: A one-cell steel gas tank block. Adjacent blocks of the same material
+      connect into a shared tank, adding 100 L per cell. Dismantling releases that
+      cell's share of gas and liquid and returns an empty block. Empty tanks start
+      under vacuum and exchange heat with the surrounding environment.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585088
+    m_Localized: A liquid storage tank. Use its configuration panel to inspect actual
+      gas and liquid contents, direction, and power. Empty tanks start under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585089
+    m_Localized: A liquid storage tank. Use its configuration panel to inspect actual
+      gas and liquid contents, direction, and power. Empty tanks start under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585090
+    m_Localized: A mechanical gas pump. Use its configuration panel to inspect actual
+      gas and liquid contents, direction, and power. Empty equipment starts under
+      vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585091
+    m_Localized: A mechanical gas pump. Use its configuration panel to inspect actual
+      gas and liquid contents, direction, and power. Empty equipment starts under
+      vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585092
+    m_Localized: An electric liquid pump. Use its configuration panel to inspect
+      actual gas and liquid contents, direction, and power. Empty equipment starts
+      under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585093
+    m_Localized: An electric liquid pump. Use its configuration panel to inspect
+      actual gas and liquid contents, direction, and power. Empty equipment starts
+      under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585094
+    m_Localized: A mechanical gas-pressure probe. Use its configuration panel to
+      inspect actual gas and liquid contents, direction, and power. Empty equipment
+      starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585095
+    m_Localized: A mechanical gas-pressure probe. Use its configuration panel to
+      inspect actual gas and liquid contents, direction, and power. Empty equipment
+      starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585096
+    m_Localized: An electronic gas-pressure probe. Use its configuration panel to
+      inspect actual gas and liquid contents, direction, and power. Empty equipment
+      starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585097
+    m_Localized: An electronic gas-pressure probe. Use its configuration panel to
+      inspect actual gas and liquid contents, direction, and power. Empty equipment
+      starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585098
+    m_Localized: A mechanical gas compressor. Use its configuration panel to inspect
+      actual gas and liquid contents, direction, and power. Empty equipment starts
+      under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585099
+    m_Localized: A mechanical gas compressor. Use its configuration panel to inspect
+      actual gas and liquid contents, direction, and power. Empty equipment starts
+      under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585100
+    m_Localized: An electric gas compressor. Use its configuration panel to inspect
+      actual gas and liquid contents, direction, and power. Empty equipment starts
+      under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585101
+    m_Localized: An electric gas compressor. Use its configuration panel to inspect
+      actual gas and liquid contents, direction, and power. Empty equipment starts
+      under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585102
+    m_Localized: Heats the surrounding area while powered and stops when power is
+      lost. Can warm nearby gas tanks.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585103
+    m_Localized: Heats the surrounding area while powered and stops when power is
+      lost. Can warm nearby gas tanks.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585104
+    m_Localized: A fluid filter. Use its configuration panel to inspect actual gas
+      and liquid contents, direction, and power. Empty equipment starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585105
+    m_Localized: A fluid filter. Use its configuration panel to inspect actual gas
+      and liquid contents, direction, and power. Empty equipment starts under vacuum.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585106
+    m_Localized: Electrolyzes water when powered. Fresh water produces a hydrogen-oxygen
+      mix; brine and seawater produce a hydrogen-chlorine mix. It has one water inlet
+      and one gas outlet. Alkali stays in a byproduct chamber that can be emptied
+      with a handheld liquid container; solid impurities are collected in the residue
+      slot.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585107
+    m_Localized: Electrolyzes water when powered. Fresh water produces a hydrogen-oxygen
+      mix; brine and seawater produce a hydrogen-chlorine mix. It has one water inlet
+      and one gas outlet. Alkali stays in a byproduct chamber that can be emptied
+      with a handheld liquid container; solid impurities are collected in the residue
+      slot.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585108
+    m_Localized: A hydrogen engine with separate input pipes for hydrogen and oxygen.
+      It consumes them at a 2:1 molar ratio to produce mechanical power and returns
+      water through a liquid output pipe. It stops if hydrogen or oxygen is missing,
+      there is no valid load, or the recovered water tank is full.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585109
+    m_Localized: A hydrogen engine with separate input pipes for hydrogen and oxygen.
+      It consumes them at a 2:1 molar ratio to produce mechanical power and returns
+      water through a liquid output pipe. It stops if hydrogen or oxygen is missing,
+      there is no valid load, or the recovered water tank is full.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585110
+    m_Localized: Solid impurities separated by filtration or electrolysis.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585111
+    m_Localized: Starts under vacuum; fill it with filling equipment. Gas and liquid
+      share its capacity. Overpressure causes ongoing damage, and when wall durability
+      reaches zero the tank explodes at its holder's position.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585112
+    m_Localized: Starts under vacuum; fill it with filling equipment. Gas and liquid
+      share its capacity. Overpressure causes ongoing damage, and when wall durability
+      reaches zero the tank explodes at its holder's position.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585113
+    m_Localized: "Outer spacesuit armor; choose any clothing to wear underneath.
+      Expands the safe body-temperature range and improves cold and heat resistance.
+      Wearing the full spacesuit\u2014helmet, suit, pants, boots, and gloves\u2014with
+      the helmet on also expands the safe pressure range. Replace the oxygen tank
+      in the suit's configuration panel."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585114
+    m_Localized: Outer spacesuit armor; choose any clothing to wear underneath. Expands
+      the safe body-temperature range and improves cold and heat resistance. Wearing
+      the full suit with the helmet on also expands the safe pressure range. The
+      configuration panel lets you replace oxygen and propulsion tanks. Landing impacts
+      consume the suit's durability; impacts beyond its protection can still injure
+      the player.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585115
+    m_Localized: "Outer spacesuit armor; choose any clothing to wear underneath.
+      Expands the safe body-temperature range and improves cold and heat resistance.
+      Wearing the full spacesuit\u2014helmet, suit, pants, boots, and gloves\u2014with
+      the helmet on also expands the safe pressure range. Replace the oxygen tank
+      in the suit's configuration panel."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585116
+    m_Localized: "Outer spacesuit armor; choose any clothing to wear underneath.
+      Expands the safe body-temperature range and improves cold and heat resistance.
+      Wearing the full spacesuit\u2014helmet, suit, pants, boots, and gloves\u2014with
+      the helmet on also expands the safe pressure range. Replace the oxygen tank
+      in the suit's configuration panel."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585117
+    m_Localized: "Outer spacesuit armor; choose any clothing to wear underneath.
+      Expands the safe body-temperature range and improves cold and heat resistance.
+      Wearing the full spacesuit\u2014helmet, suit, pants, boots, and gloves\u2014with
+      the helmet on also expands the safe pressure range. Replace the oxygen tank
+      in the suit's configuration panel."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585118
+    m_Localized: A placeable wooden trough that holds 64 units of mixed liquid and
+      can be dismantled. It holds no solid items. Each draw removes one liquid in
+      its actual proportion; even less than one unit can be poured or pumped out.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585119
+    m_Localized: A placed trough that holds 64 units of mixed liquid and can connect
+      to a liquid pump or outlet. Dismantling it preserves the liquid mix, temperature,
+      pending output batches, and durability.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585120
+    m_Localized: Four-way connections form an independent hull. A complete floor
+      supports crew and protects them from hazardous tiles below.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585121
+    m_Localized: Four-way connections form an independent hull. A complete floor
+      supports crew and protects them from hazardous tiles below.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585122
+    m_Localized: Four-way connections form an independent hull. A complete floor
+      supports crew and protects them from hazardous tiles below.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585123
+    m_Localized: Four-way connections form an independent hull. A complete floor
+      supports crew and protects them from hazardous tiles below.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585124
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585125
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585126
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585127
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585128
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474618585129
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779392
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779393
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779394
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779395
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779396
+    m_Localized: A one-cell airtight block engine that must be installed on the outer
+      edge of a hull. Its nozzle must face outside with a clear path ahead. The nozzle
+      points down and the air inlet points up by default; press R while placing to
+      rotate it. Connect the inlet to hydrogen and oxygen tanks with pipes, and connect
+      a wire.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779397
+    m_Localized: A one-cell airtight block engine that must be installed on the outer
+      edge of a hull. Its nozzle must face outside with a clear path ahead. The nozzle
+      points down and the air inlet points up by default; press R while placing to
+      rotate it. Connect the inlet to hydrogen and oxygen tanks with pipes, and connect
+      a wire.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779398
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779399
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779400
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779401
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779402
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779403
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779404
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779405
+    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
+      with its hull.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474622779406
+    m_Localized: Four separate growing slots can grow different non-tree crops at
+      once. Crops grow when connected to power and real irrigation water; buckets
+      and pipes share the same water tank. Fertilizer is optional, and growth pauses
+      without power or water. Interact to harvest, change seeds, or add water.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474631168000
+    m_Localized: A four-slot planter that can be placed on the ground or a ship floor.
+      It needs power and water. Dismantling it preserves all seeds, crop growth,
+      water, and harvests.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474996072448
+    m_Localized: Animal Product
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915474996072449
+    m_Localized: Armor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475004461056
+    m_Localized: Arrow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475004461057
+    m_Localized: Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475004461058
+    m_Localized: Bee Forage Crop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238272
+    m_Localized: Bee Forage Flower
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238273
+    m_Localized: Berry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238274
+    m_Localized: Blowgun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238275
+    m_Localized: Bow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238276
+    m_Localized: Bronze
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238277
+    m_Localized: Bronze Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238278
+    m_Localized: Carnivore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238279
+    m_Localized: Tinder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238280
+    m_Localized: Tinder Material
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238281
+    m_Localized: Container
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238282
+    m_Localized: Copper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238283
+    m_Localized: Copper Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238284
+    m_Localized: Crucible
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238285
+    m_Localized: Equipment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238286
+    m_Localized: Fiber
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238287
+    m_Localized: Food
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238288
+    m_Localized: Fruit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238289
+    m_Localized: Glass
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238290
+    m_Localized: Gold
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475021238291
+    m_Localized: Hand Drill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626880
+    m_Localized: Herbivore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626881
+    m_Localized: Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626882
+    m_Localized: Mechanical Power
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626883
+    m_Localized: Iron
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626884
+    m_Localized: Iron Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626885
+    m_Localized: Knife
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626886
+    m_Localized: Manual Forge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626887
+    m_Localized: Material
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626888
+    m_Localized: Metal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475029626889
+    m_Localized: Mineral
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821184
+    m_Localized: Modern
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821185
+    m_Localized: Omnivore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821186
+    m_Localized: Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821187
+    m_Localized: Pickaxe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821188
+    m_Localized: Plant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821189
+    m_Localized: Powder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821190
+    m_Localized: Preserve Freshness
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821191
+    m_Localized: Ranged Weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821192
+    m_Localized: Raw Iron
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475033821193
+    m_Localized: Raw Iron Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209792
+    m_Localized: Paper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209793
+    m_Localized: Writing Ink
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209794
+    m_Localized: Rope
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209795
+    m_Localized: Salted Food
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209796
+    m_Localized: Sand
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209797
+    m_Localized: Seed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209798
+    m_Localized: Shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209799
+    m_Localized: Spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209800
+    m_Localized: Steel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475042209801
+    m_Localized: Steel Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598400
+    m_Localized: Stone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598401
+    m_Localized: Throwable
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598402
+    m_Localized: Tin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598403
+    m_Localized: Tin Plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598404
+    m_Localized: Sulfur
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598405
+    m_Localized: Tool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598406
+    m_Localized: Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598407
+    m_Localized: Wood
+    m_Metadata:
+      m_Items: []
+  - m_Id: 27915475050598408
+    m_Localized: Wrought Iron
     m_Metadata:
       m_Items: []
   references:

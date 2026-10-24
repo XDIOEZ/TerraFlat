@@ -9,6 +9,12 @@
       "name": "手工制作规则与边界",
       "luaPath": "GameplayTests/Systems/Crafting/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "anvil_ui_rules",
+      "name": "砧工具与制作布局规则",
+      "luaPath": "GameplayTests/Systems/UISettings/anvil.lua",
+      "enabled": true
     }
   ]
 }

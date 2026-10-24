@@ -15,10 +15,13 @@ public partial class SaveDataMgr
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
         record.SupportCells.RemoveAll(cell => cell.LocalPosition == sample.LocalCell);
         int id = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
-        if (id == 0)
-            return;
-        sample.Terrain.TryGetEnvironmentValue(TerrainSupportLayer.CostLayer, sample.LocalCell.x, sample.LocalCell.y, out float cost);
-        record.SupportCells.Add(new SupportCellSaveData { LocalPosition = sample.LocalCell, TileId = id, NavigationCost = (short)cost });
+        if (id != 0)
+        {
+            sample.Terrain.TryGetEnvironmentValue(TerrainSupportLayer.CostLayer, sample.LocalCell.x, sample.LocalCell.y, out float cost);
+            record.SupportCells.Add(new SupportCellSaveData { LocalPosition = sample.LocalCell, TileId = id, NavigationCost = (short)cost });
+        }
+        if (ChunkMgr.ExistingInstance?.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk) == true)
+            NotifyAuthoritativeTerrainCellChanged(chunk, sample.LocalCell);
     }
 
     /// <summary>在区块表现绑定前恢复独立支撑层。</summary>

@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: ui.click
   m_EditorClassIdentifier: 
   id: ui.click
+  playbackEnabled: 0
   bus: 2
   clips: []
   selection: 0

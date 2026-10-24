@@ -51,7 +51,6 @@ public static partial class RuntimeUIPrefabBuilder
         liquid.Styles = CreateWaterVesselLiquidStyles();
         // 液流必须排在罐体子树之后：短液桥负责跨过厚嘴沿接上罐内水，外部水柱继续从嘴沿向外延伸。
         pour.transform.SetAsLastSibling();
-        CreateSettingsHint(content, "拖入其他容器可转移液体，拖动容器可倾倒。", 64f);
 
         GameObject actions = CreateUIObject("操作列表", content);
         LayoutElement actionsLayout = actions.AddComponent<LayoutElement>();
@@ -113,6 +112,17 @@ public static partial class RuntimeUIPrefabBuilder
                 LeftOutlet = new Vector2(35f / 128f, 76.5f / 128f),
                 RightOutlet = new Vector2(93f / 128f, 76.5f / 128f),
                 MouthWidth = 58f / 128f
+            },
+            // 坩埚用独立剖面，并按宽口与深内腔放置液面和出液点。
+            new WaterVesselPanel.VesselAppearance
+            {
+                ItemId = "Crucible",
+                Cutaway = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/CrucibleUI/Crucible_Cutaway.png"),
+                Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/CrucibleUI/Crucible_Interior.png"),
+                FillRange = new Vector2(43f / 128f, 106f / 128f),
+                LeftOutlet = new Vector2(12f / 128f, 95f / 128f),
+                RightOutlet = new Vector2(116f / 128f, 95f / 128f),
+                MouthWidth = 104f / 128f
             }
         };
 
@@ -133,8 +143,7 @@ public static partial class RuntimeUIPrefabBuilder
 
     /// <summary>增量同步该面板新增的运行时文案，避免扫描和重写其它 UI Prefab。</summary>
     private static void SyncWaterVesselUiTexts() =>
-        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
-            "蜂蜜", "拖入其他容器可转移液体，拖动容器可倾倒。");
+        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts("蜂蜜");
 
     /// <summary>正式 Prefab 的定向同步与完整重建共用一份样式，避免新增液体只在其中一条路径生效。</summary>
     private static WaterVesselLiquidGraphic.LiquidStyle[] CreateWaterVesselLiquidStyles() => new[]

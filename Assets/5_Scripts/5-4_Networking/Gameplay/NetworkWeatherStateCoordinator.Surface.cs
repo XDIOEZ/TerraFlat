@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
 using MemoryPack;
 using Mirror;
@@ -14,6 +15,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private const int MaxPendingSurfaceChunks = 256;
         private const int MaxSurfacePayloadBytes = 8 * 1024 * 1024;
+        private static readonly Func<string, bool> SurfaceAudience = HasRemoteSurfaceObservers;
         private readonly Dictionary<RuntimeWorldAddress, SurfaceCursor> surfaceCursors = new();
         private readonly Dictionary<RuntimeWorldAddress, PendingSurface> pendingSurfaces = new();
         private readonly Dictionary<RuntimeWorldAddress, SurfaceAssembly> surfaceAssemblies = new();
@@ -63,13 +65,31 @@ namespace FlatWorld.Networking.Gameplay
         private void StartWeatherSurfaceServer()
         {
             NetworkServer.RegisterHandler<NetworkWeatherSurfaceRequest>(OnServerWeatherSurfaceRequest, false);
-            SaveDataMgr.AuthoritativeWeatherSurfaceChanged += HandleAuthoritativeWeatherSurfaceChanged;
+            SaveDataMgr.HasWeatherSurfaceReplicationAudience = SurfaceAudience;
+            SaveDataMgr.ReplicateWeatherSurfaceToRemote = HandleAuthoritativeWeatherSurfaceChanged;
         }
 
         private void StopWeatherSurfaceServer()
         {
             NetworkServer.UnregisterHandler<NetworkWeatherSurfaceRequest>();
-            SaveDataMgr.AuthoritativeWeatherSurfaceChanged -= HandleAuthoritativeWeatherSurfaceChanged;
+            if (SaveDataMgr.ReplicateWeatherSurfaceToRemote == HandleAuthoritativeWeatherSurfaceChanged)
+                SaveDataMgr.ReplicateWeatherSurfaceToRemote = null;
+            if (SaveDataMgr.HasWeatherSurfaceReplicationAudience == SurfaceAudience)
+                SaveDataMgr.HasWeatherSurfaceReplicationAudience = null;
+        }
+
+        // 私有 Host 无远端观察者时仍保留权威存档，省掉整块天气网络快照和字节组包。
+        private static bool HasRemoteSurfaceObservers(string world)
+        {
+            if (!NetworkServer.active || string.IsNullOrEmpty(world)) return false;
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                if (connection != null && connection is not LocalConnectionToClient &&
+                    connection.isAuthenticated && connection.isReady &&
+                    connection.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer player &&
+                    !player.IsWorldTransferPending && player.TryGetSpaceObserver(out SpaceNetworkObserver observer) &&
+                    !observer.InSpace && string.Equals(observer.WorldKey, world, StringComparison.Ordinal))
+                    return true;
+            return false;
         }
 
         private void StartWeatherSurfaceClient()
@@ -139,13 +159,14 @@ namespace FlatWorld.Networking.Gameplay
 
         private void HandleAuthoritativeWeatherSurfaceChanged(WeatherSurfaceChunkSnapshot snapshot)
         {
-            if (NetworkServer.active)
+            if (HasRemoteSurfaceObservers(snapshot.WorldKey))
                 SendWeatherSurface(snapshot, null);
         }
 
         // 大区块沿现有世界快照方式分片，客户端只接收本地已有窗口。
         private void SendWeatherSurface(WeatherSurfaceChunkSnapshot snapshot, NetworkConnectionToClient target)
         {
+            if (target == null && !HasRemoteSurfaceObservers(snapshot.WorldKey)) return;
             byte[] payload = MemoryPackSerializer.Serialize(snapshot.Payload);
             if (payload.Length > MaxSurfacePayloadBytes)
                 throw new InvalidOperationException("天气地表载荷超过区块复制上限。");

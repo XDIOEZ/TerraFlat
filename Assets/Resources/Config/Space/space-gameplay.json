@@ -34,5 +34,9 @@
   "GravityRestDistanceMeters": 0.05,
   "GravityRestSpeedMetersPerSecond": 0.01,
   "SpacePhysicsSubsteps": 4,
-  "SpacePhysicsIslandDistanceMeters": 512.0
+  "SpacePhysicsIslandDistanceMeters": 512.0,
+  "ElevatorTravelSeconds": 12.0,
+  "ElevatorCargoSlots": 24,
+  "ElevatorCargoMaxWeightKg": 2000.0,
+  "ElevatorCargoMaxVolumeLiters": 4000.0
 }

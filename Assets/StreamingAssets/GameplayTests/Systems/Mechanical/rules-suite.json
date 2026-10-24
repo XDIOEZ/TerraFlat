@@ -9,6 +9,12 @@
       "name": "机械动力规则与边界",
       "luaPath": "GameplayTests/Systems/Mechanical/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "railway_rules",
+      "name": "铁路与通用引擎规则",
+      "luaPath": "GameplayTests/Systems/Mechanical/railway.lua",
+      "enabled": true
     }
   ]
 }

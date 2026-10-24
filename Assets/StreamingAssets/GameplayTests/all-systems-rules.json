@@ -29,9 +29,21 @@
       "enabled": true
     },
     {
+      "id": "combat_shield_rules",
+      "name": "木盾单击长按、弹反窗口与副手索引",
+      "luaPath": "GameplayTests/Systems/Combat/shield-rules.lua",
+      "enabled": true
+    },
+    {
       "id": "combat_probability_rules",
       "name": "统一离散概率与掉落数量",
       "luaPath": "GameplayTests/Systems/Combat/probability.lua",
+      "enabled": true
+    },
+    {
+      "id": "combat_external_rules",
+      "name": "来源无关的战斗参数与死亡开关",
+      "luaPath": "GameplayTests/Systems/Combat/external-rules.lua",
       "enabled": true
     },
     {
@@ -65,6 +77,12 @@
       "enabled": true
     },
     {
+      "id": "anvil_ui_rules",
+      "name": "砧工具与制作布局规则",
+      "luaPath": "GameplayTests/Systems/UISettings/anvil.lua",
+      "enabled": true
+    },
+    {
       "id": "containers_rules",
       "name": "液体容器规则与边界",
       "luaPath": "GameplayTests/Systems/Containers/rules.lua",
@@ -74,6 +92,12 @@
       "id": "agriculture_rules",
       "name": "农业种植规则与边界",
       "luaPath": "GameplayTests/Systems/Agriculture/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "agriculture_external_rules",
+      "name": "外部成长规则配置输入",
+      "luaPath": "GameplayTests/Systems/Agriculture/external-rules.lua",
       "enabled": true
     },
     {
@@ -143,6 +167,12 @@
       "enabled": true
     },
     {
+      "id": "railway_rules",
+      "name": "铁路与通用引擎规则",
+      "luaPath": "GameplayTests/Systems/Mechanical/railway.lua",
+      "enabled": true
+    },
+    {
       "id": "electrical_rules",
       "name": "电力规则与边界",
       "luaPath": "GameplayTests/Systems/Electrical/rules.lua",
@@ -170,6 +200,12 @@
       "id": "space_ship_damage_rules",
       "name": "飞船局部伤害、设备瘫痪与成块残骸",
       "luaPath": "GameplayTests/Systems/Space/ship_damage_rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "space_elevator_rules",
+      "name": "太空电梯往返、真实货舱与固定站台扩建",
+      "luaPath": "GameplayTests/Systems/Space/elevator_rules.lua",
       "enabled": true
     },
     {
@@ -206,6 +242,12 @@
       "id": "item_runtime_rules",
       "name": "物品实体与模块运行规则与边界",
       "luaPath": "GameplayTests/Systems/ItemRuntime/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "mineral_property_rules",
+      "name": "矿物硬度与韧性参考目录",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/mineral-properties.lua",
       "enabled": true
     },
     {

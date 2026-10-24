@@ -10,6 +10,7 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterDenseFogOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("rendering/fog_transition", ServiceDenseFogTransition);
+        operations.Add("environment/fog_perception", EnvironmentFogPerception);
     }
 
     private static JObject ServiceDenseFogTransition(JObject args)

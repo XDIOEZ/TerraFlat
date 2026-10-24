@@ -207,6 +207,12 @@ namespace FlatWorld.Spaceflight
                             mass += ReadInventory(handcraft.inputInventory?.Data, depth + 1) + ReadInventory(handcraft.outputInventory?.Data, depth + 1);
                         else if (module is Mod_HandMade handmade && handmade.InventoryRefDic != null)
                             foreach (Inventory inventory in handmade.InventoryRefDic.Values) mass += ReadInventory(inventory?.Data, depth + 1);
+                        else if (module is Mod_ManualProcessor manual)
+                        {
+                            mass += ReadInventory(manual.Processor?.Input.Data, depth + 1) +
+                                ReadInventory(manual.Processor?.Output.Data, depth + 1) + ReadInventory(manual.ToolInventory?.Data, depth + 1);
+                            liveModules.Add(entry.Key);
+                        }
                     }
                 }
                 if (data is Data_Player player && player._inventoryData != null)
@@ -257,6 +263,12 @@ namespace FlatWorld.Spaceflight
                     }
                     else if (module.ModuleId == Mod_FluidTank.ModuleId && !portableRead)
                         mass += ReadFluidMass(ReadBinary<FluidTankState>(binary)?.Contents);
+                    else if (module.ModuleId == Mod_ManualProcessor.ModuleId && machine?.Logic is not ManualProcessingLogic)
+                    {
+                        ManualProcessingState manual = ReadBinary<ManualProcessingState>(binary);
+                        mass += ReadInventory(manual?.Processing?.Input, depth + 1) +
+                            ReadInventory(manual?.Processing?.Output, depth + 1) + ReadInventory(manual?.Tool, depth + 1);
+                    }
                     else if (module.ModuleId == Mod_Cultivator.ModuleId && machine?.Logic is not CultivatorLogic)
                     {
                         CultivatorState plots = ReadBinary<CultivatorState>(binary);

@@ -75,7 +75,11 @@ public partial class ChunkMgr
     }
 
     /// <summary>正常加载已恢复差量的区块直接通知实验器，避免在恢复期间触发模拟。</summary>
-    private void NotifyLiquidFlowChunkReady(ChunkRuntime chunk) => liquidFlowExperiment?.Observe(chunk);
+    private void NotifyLiquidFlowChunkReady(ChunkRuntime chunk)
+    {
+        liquidBodies?.Observe(chunk);
+        liquidFlowExperiment?.Observe(chunk);
+    }
 
     /// <summary>在清空世界之前释放，防止异步邻区结果写入新世界。</summary>
     private void StopLiquidFlowExperiment()

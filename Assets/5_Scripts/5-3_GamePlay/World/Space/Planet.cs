@@ -28,11 +28,11 @@ public class Planet : MonoBehaviour
                 surfaceDetailStrength, surfaceDetailScale);
             initializedPresentation = true;
         }
-        // 星体位置和自转共用权威时钟，表现层只投影本步结果。
+        // 赤道轴保持固定，自转只交给球面纹理，平台不会随整张画面绕圈。
         Vector2 position = session.ProjectPosition(new FlatWorld.Spaceflight.SpaceSectorPosition(body.Sector, body.PositionMeters));
         transform.position = new Vector3(position.x, position.y, 0f);
         transform.localScale = renderScale;
-        transform.rotation = Quaternion.Euler(0f, 0f, (float)(session.GetUniverse(body.Sector).GetRotationRadians(body.BodyId) * 180d / System.Math.PI));
+        transform.rotation = Quaternion.Euler(0f, 0f, (float)(body.EquatorTiltRadians * 180d / System.Math.PI));
         surfacePresentation?.UpdateLighting(session, body);
     }
 

@@ -90,6 +90,28 @@
       "actions": []
     },
     {
+      "id": "core:Floor_Iron_Summoner_WroughtIron",
+      "displayName": "铁地板（熟铁）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Floor_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:Floor_Bronze_Summoner",
       "displayName": "青铜地板",
       "recipeType": "crafting",

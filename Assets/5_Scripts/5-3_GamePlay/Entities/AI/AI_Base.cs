@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -532,7 +533,7 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 			resolveTarget,
 			() => transform.position,
 			getArrivalDistance,
-			MoveTo,
+			destination => MoveToInteractionTarget(destination, Mathf.Max(0.05f, getArrivalDistance())),
 			StopMove,
 			onArrived,
 			onEnter,
@@ -994,12 +995,19 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 		_mover.SetDestination(target);
 	}
 
+	/// <summary>进食等动作进入外圈即可执行，移动仍独立接近内圈。</summary>
+	protected void MoveToInteractionTarget(Vector3 target, float actionRange)
+	{
+		_mover.SetInteractionDestination(target, actionRange);
+	}
+
 	/// <summary>提交受总代价限制的追击目标，并返回当前异步导航结果。</summary>
 	protected WorldNavigationDestinationResult MoveToChaseTarget(
 		Vector3 target,
-		int maximumPathCostExclusive)
+		int maximumPathCostExclusive,
+		float actionRange)
 	{
-		return _mover.SetCostLimitedDestination(target, maximumPathCostExclusive);
+		return _mover.SetInteractionDestination(target, actionRange, maximumPathCostExclusive);
 	}
 
 	/// <summary>消费路径代价拒绝结果，并在重试间隔内屏蔽同一追击目标。</summary>
@@ -1123,16 +1131,16 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 
 			string buffName = string.IsNullOrWhiteSpace(runtime.Definition.DisplayName)
 				? runtime.DefinitionId
-				: runtime.Definition.DisplayName;
+				: FlatWorldLocalizationService.GetUiText(runtime.Definition.DisplayName);
 			string duration = runtime.Definition.IsPermanent
-				? "永久"
+				? FlatWorldLocalizationService.GetUiText("永久")
 				: $"{Mathf.CeilToInt(Mathf.Max(0f, runtime.RemainingDurationSeconds))}s";
-			buffTexts.Add($"{buffName}({duration})");
+			buffTexts.Add(FlatWorldLocalizationService.GetUiFormat("{0} ({1})", buffName, duration));
 		}
 
 		return buffTexts.Count == 0
 			? string.Empty
-			: $" | Buff: {string.Join(", ", buffTexts)}";
+			: FlatWorldLocalizationService.GetUiFormat(" | Buff: {0}", string.Join(", ", buffTexts));
 	}
 #endregion
 
@@ -1280,7 +1288,10 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 		}
 
 		string extra = GetDebugExtraInfo() + GetDebugBuffInfo();
-		debugStateContent.text = $"状态: {GetStateTextCN(_currentState)}{extra}";
+		debugStateContent.text = FlatWorldLocalizationService.GetUiFormat(
+			"状态: {0}{1}",
+			FlatWorldLocalizationService.GetUiText(GetStateTextCN(_currentState)),
+			extra);
 		Vector2 size = _debugStateStyle.CalcSize(debugStateContent);
 		float width = Mathf.Max(120f, size.x + 14f);
 		float height = 28f;

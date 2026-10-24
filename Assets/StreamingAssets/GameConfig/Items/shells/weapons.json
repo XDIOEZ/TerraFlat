@@ -92,9 +92,9 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -137,9 +137,9 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 315.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -182,9 +182,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -220,9 +220,9 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 225
+          "z": 315
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "color": {
           "r": 1,
@@ -979,11 +979,11 @@
       "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/ChippedTool/ChippedTool_Icon.png",
-        "flipX": true,
+        "flipX": false,
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": 0
+          "z": 315
         },
         "flipY": false,
         "color": {
@@ -1175,8 +1175,8 @@
             "ignore2DShadowsOnSourceSprite": false,
             "$transform": {
               "localPosition": {
-                "x": -0.002372,
-                "y": 0.532893,
+                "x": 0.532893,
+                "y": 0.002372,
                 "z": 0
               }
             }
@@ -1194,7 +1194,7 @@
             "flameScale": 3.0,
             "flameHeightRatio": 1.8,
             "flameEmissionMultiplier": 3.0,
-            "attachFlameToAnchor": true,
+            "attachFlameToAnchor": false,
             "followSourceRenderer": true,
             "sourceRendererAnchorOffset": {
               "x": 0.375135,
@@ -1317,10 +1317,11 @@
           "parameters": {
             "AmmoTag": "Arrow",
             "FullChargeSeconds": 1.0,
+            "ReleaseMode": "ReleaseToFire",
             "ProjectileDamageMultiplier": 1.0,
             "MaxAimDistance": 24.0,
             "SpawnForwardOffset": 0.45,
-            "StaminaConsumePerSecond": 1.5,
+            "StaminaConsumePerSecond": 2.25,
             "NockedArrowStartLocalPosition": {
               "x": 0.14,
               "y": 0.0,
@@ -1362,6 +1363,24 @@
       }
     },
     {
+      "id": "Crossbow_Wood",
+      "parent": "Bow_Recurve",
+      "gameName": "弩",
+      "description": "使用普通箭矢的木弩，伤害、射程和上膛速度与反曲弓相同。按住左键蓄满上膛，松手不会射出；再按下并松开左键才发射。满蓄力后不再消耗体力，未蓄满就松手会取消上膛。",
+      "tags": ["Crossbow", "RangedWeapon", "Wood", "Tool"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Crossbow_Wood_Icon.png",
+        "flipX": false
+      },
+      "modules": {
+        "bow": {
+          "parameters": {
+            "ReleaseMode": "LoadThenReleaseToFire"
+          }
+        }
+      }
+    },
+    {
       "id": "Blowgun_Wood",
       "parent": "Bow_Wood",
       "gameName": "吹箭",
@@ -1376,6 +1395,7 @@
       "modules": {
         "bow": {
           "parameters": {
+            "StaminaConsumePerSecond": 1.5,
             "ShowNockedAmmo": false,
             "OverrideHeldVisualTransform": true,
             "HeldVisualLocalPosition": {

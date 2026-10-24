@@ -72,7 +72,8 @@ internal sealed class AIBehaviorGraphPerception
         {
             Item candidate = candidates[i];
             if (candidate == null || candidate == _actor || candidate.DestructionHandled ||
-                !HasAnyTag(candidate, tags) || !IsConsumableFood(candidate))
+                !HasAnyTag(candidate, tags) || !IsConsumableFood(candidate) ||
+                !_detector.IsWithinPerceptionRadiusLimit(candidate))
                 continue;
             float effectiveDistance = Mod_ItemDetector.CalculateEffectiveDetectionRadius(distance, candidate);
             float candidateDistance = WorldTopologyRuntime.SqrDistance(

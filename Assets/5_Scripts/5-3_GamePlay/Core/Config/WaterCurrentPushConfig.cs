@@ -6,8 +6,9 @@ using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>玩家与生物共用的水流推动配置；未列出的实体按权威单体重量计算速度。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class WaterCurrentPushConfigDto
+public sealed partial class WaterCurrentPushConfigDto
 {
     #region JSON 字段
 
@@ -19,8 +20,9 @@ public sealed class WaterCurrentPushConfigDto
 }
 
 /// <summary>未单独列出的实体按最大流速和半速体重换算，单位为格/秒与千克。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class WaterCurrentWeightRuleDto
+public sealed partial class WaterCurrentWeightRuleDto
 {
     #region JSON 字段
 
@@ -31,8 +33,9 @@ public sealed class WaterCurrentWeightRuleDto
 }
 
 /// <summary>单个稳定 Actor ID 的水流推动速度；零表示该生物不会被水流推动。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class WaterCurrentActorPushDto
+public sealed partial class WaterCurrentActorPushDto
 {
     #region JSON 字段
 
@@ -118,7 +121,7 @@ public static class WaterCurrentPushConfigLoader
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("水流推动 JSON 为空。");
-        WaterCurrentPushConfigDto dto = JsonConvert.DeserializeObject<WaterCurrentPushConfigDto>(
+        WaterCurrentPushConfigDto dto = JsonConfigurationCache.Deserialize<WaterCurrentPushConfigDto>(
             json, StrictJsonSettings);
         if (dto == null || dto.SchemaVersion != SupportedSchemaVersion)
             throw new InvalidDataException($"不支持的水流推动 schemaVersion：{dto?.SchemaVersion}");

@@ -109,7 +109,7 @@ namespace FlatWorld.WorldModel
                 ArrayPool<double>.Shared.Return(deltaX);
                 ArrayPool<double>.Shared.Return(deltaY);
             }
-            return new GeneratedHydrologyMap(cells, floodplains);
+            return new GeneratedHydrologyMap(cells, floodplains, rivers?.EstuaryCells);
         }
 
         /// <summary>环绕外圈只保留一份规范坐标，并为盆地枚举与输出相交的镜像。</summary>

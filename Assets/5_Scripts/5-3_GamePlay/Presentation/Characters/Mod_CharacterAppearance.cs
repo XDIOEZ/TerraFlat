@@ -28,7 +28,8 @@ public sealed class Mod_CharacterAppearance : Module, IItemModuleDependencyBinde
     {
         EquipmentSlotCatalog.TorsoInner, EquipmentSlotCatalog.Legs, EquipmentSlotCatalog.FeetInner,
         EquipmentSlotCatalog.TorsoOuter, EquipmentSlotCatalog.Hands, EquipmentSlotCatalog.FeetOuter,
-        EquipmentSlotCatalog.Head
+        // 眼镜独立叠在头盔上方，两处装备共用原有穿戴像素坐标。
+        EquipmentSlotCatalog.Head, EquipmentSlotCatalog.Eyes
     };
 
     #endregion

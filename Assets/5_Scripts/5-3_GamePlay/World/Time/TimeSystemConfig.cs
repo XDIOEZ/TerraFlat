@@ -21,8 +21,9 @@ public static class TimeSystemModes
     }
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemConfigCatalog
+public sealed partial class TimeSystemConfigCatalog
 {
     #region 配置字段
 
@@ -33,8 +34,9 @@ public sealed class TimeSystemConfigCatalog
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemProfileConfig
+public sealed partial class TimeSystemProfileConfig
 {
     #region 配置字段
 
@@ -172,8 +174,9 @@ public sealed class TimeSystemProfileConfig
     #endregion
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemCurveKeyConfig
+public sealed partial class TimeSystemCurveKeyConfig
 {
     public float Time;
     public float Value;
@@ -181,29 +184,33 @@ public sealed class TimeSystemCurveKeyConfig
     public float OutTangent;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemGradientConfig
+public sealed partial class TimeSystemGradientConfig
 {
     public List<TimeSystemGradientColorKeyConfig> ColorKeys = new();
     public List<TimeSystemGradientAlphaKeyConfig> AlphaKeys = new();
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemGradientColorKeyConfig
+public sealed partial class TimeSystemGradientColorKeyConfig
 {
     public TimeSystemColorConfig Color = new();
     public float Time;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemGradientAlphaKeyConfig
+public sealed partial class TimeSystemGradientAlphaKeyConfig
 {
     public float Alpha = 1f;
     public float Time;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemMoonConfig
+public sealed partial class TimeSystemMoonConfig
 {
     public float CycleDays = 29.53f;
     public float NewMoonNightIntensity = 0.035f;
@@ -211,8 +218,9 @@ public sealed class TimeSystemMoonConfig
     public float InitialPhase = 0.5f;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemPresentationConfig
+public sealed partial class TimeSystemPresentationConfig
 {
     public TimeSystemColorConfig DefaultLightColor = new() { R = 1f, G = 1f, B = 1f, A = 1f };
     public bool SyncTileLightLayer = true;
@@ -220,8 +228,9 @@ public sealed class TimeSystemPresentationConfig
     public float InactiveChunkLightRefreshInterval = 5f;
 }
 
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TimeSystemColorConfig
+public sealed partial class TimeSystemColorConfig
 {
     public float R = 1f;
     public float G = 1f;

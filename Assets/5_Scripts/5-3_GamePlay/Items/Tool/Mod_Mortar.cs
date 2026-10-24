@@ -8,7 +8,7 @@ using UnityEngine;
 /// 可携带的配方加工容器：石臼通过捣击执行普通合成，坩埚通过加热执行容器配方。
 /// 两种模式共用固定库存、快捷转移、事务匹配和 ItemData 持久化；UI 只负责交互与反馈。
 /// </summary>
-public sealed class Mod_Mortar : Module, IInteractable, IInventory
+public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselContents
 {
     #region 配置与状态
     public const string ModuleId = "Mod_Mortar";
@@ -27,6 +27,8 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     public bool EnableStrikeGesture = true; // 坩埚模式关闭捣击手势，只保留材料容器面板。
     public string ContainerLabel = "石臼"; // 面板标题和异常信息使用的容器名称。
     private readonly MortarInventory bowl = new MortarInventory();
+    public Inventory Contents => bowl;
+    public event Action Changed; // 让通用容器面板读取并刷新同一份材料库存。
     private MortarState state;
     private BasePanel panel;
     private MortarInteractionView view;
@@ -98,6 +100,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         batch = null;
         actor = null;
         bowl.DefaultTarget_Inventory = null;
+        Changed = null;
     }
     private void OnDestroy() => Unload();
     #endregion
@@ -173,6 +176,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             RebuildBatch();
         Save();
         view?.SyncSlots(bowl);
+        Changed?.Invoke();
     }
 
     /// <summary>选择当前可执行的一份配方，不放大原料和产物数量。</summary>
@@ -531,7 +535,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
 
     #endregion
 
-    /// <summary>只接收该工作站的原料与产物，避免无关物品或石臼自身被放入容器。</summary>
+    /// <summary>石臼按物品加工能力筛选；坩埚接收固体，由材料自身声明的热规则决定转化。</summary>
     public sealed class MortarInventory : Inventory
     {
         public string StationId;
@@ -608,22 +612,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             if (MaterialOnly && Mod_WaterVessel.TryRead(candidate, out _, out _)) return false;
             if (!string.Equals(StationId, CrucibleStationId, StringComparison.OrdinalIgnoreCase))
                 return ItemProcessingResolver.TryResolve(candidate, ProcessCapability, out _);
-
-            RecipeType recipeType = string.Equals(StationId, CrucibleStationId, StringComparison.OrdinalIgnoreCase)
-                ? RecipeType.Smelting
-                : RecipeType.Crafting;
-            foreach (RuntimeRecipe recipe in GameRes.Instance.GetRecipes(recipeType))
-            {
-                if (!string.Equals(recipe.RequiredStation, StationId, StringComparison.OrdinalIgnoreCase)) continue;
-                foreach (RuntimeRecipeIngredient ingredient in recipe.inputs.RowItems_List)
-                {
-                    if (ingredient.matchMode == MatchMode.ExactItem && ingredient.ItemName == candidate.IDName) return true;
-                    if (ingredient.matchMode == MatchMode.ByTag && candidate.Tags != null && candidate.Tags.Contains(ingredient.Tag)) return true;
-                }
-                foreach (RuntimeRecipeResult output in recipe.outputs?.results ?? new List<RuntimeRecipeResult>())
-                    if (output.ItemName == candidate.IDName) return true;
-            }
-            return false;
+            return true;
         }
     }
 }

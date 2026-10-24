@@ -96,7 +96,7 @@ public sealed class UIAnimationManager
         {
             if (string.IsNullOrWhiteSpace(json))
                 throw new ArgumentException("配置不能为空。");
-            document = JsonConvert.DeserializeObject<UIAnimationDocument>(json, new JsonSerializerSettings
+            document = JsonConfigurationCache.Deserialize<UIAnimationDocument>(json, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.None,
                 MissingMemberHandling = MissingMemberHandling.Error

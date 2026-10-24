@@ -41,7 +41,7 @@ namespace FlatWorld.Gameplay.Building
                 if (!TileBuildingSystem.TryPlace(request.Position, state.TileBlockId, out cell, out reason))
                     throw new InvalidOperationException(reason);
                 return new BuildingPlacementResult(request.BuildingId, () => Remove(cell),
-                    () => RuntimeGrassClearing.ClearAt(request.Position));
+                    () => RuntimeGrassClearing.ClearAt(request.Position), tileCell: cell);
             }
             catch
             {
@@ -133,7 +133,10 @@ namespace FlatWorld.Gameplay.Building
                 if (building == null) throw new MissingComponentException(data.IDName + " 缺少建筑模块");
                 if (!building.ValidateAuthoritativePlacement(request.AuthorityPosition, out string reason, request.Actor))
                     throw new InvalidOperationException(reason);
-                building.SetAsInstalled(initializeHealth: !restoredSnapshot);
+                // 声明了共享生命模块的便携设施使用载体原血量，首次落地不应免费修复。
+                bool carriesHealth = Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data state) &&
+                    state.SharedModuleIds != null && Array.IndexOf(state.SharedModuleIds, ModText.Hp) >= 0;
+                building.SetAsInstalled(initializeHealth: !restoredSnapshot && !carriesHealth);
                 return new BuildingPlacementResult(data.IDName, () => Remove(candidate),
                     () =>
                     {

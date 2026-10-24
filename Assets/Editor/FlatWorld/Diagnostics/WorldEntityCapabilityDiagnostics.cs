@@ -56,7 +56,7 @@ public static class WorldEntityCapabilityDiagnostics
         system.StepSeconds = 1f;
         system.GameTime = 1d;
         system.DayLength = 24f;
-        system.DifficultyGrowthMultiplier = 1f;
+        system.GrowthMultiplier = 1f;
         var season = new EntitySeasonPeriod
         {
             EndTimeSeconds = double.PositiveInfinity, Fractions = new double4(0.25d),

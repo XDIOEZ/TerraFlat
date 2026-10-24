@@ -60,6 +60,7 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
     [Min(0f)] public float AngerDecayPerSecond = 0.1f; // 无目标时百秒归零。
     [Min(0.1f)] public float TargetScanInterval = 0.2f; // 运动状态采样间隔。
     [Min(0.1f)] public float StingDistance = 0.45f; // 近身蜇刺距离。
+    [Min(0f)] public float ChaseStopDistance = 0.2f; // 追击内圈独立于蜇刺和冷却。
     [Min(0.1f)] public float StingInterval = 1f; // 同一蜜蜂的攻击间隔。
 
     private BeeState state = new(); // 本蜂权威玩法状态。
@@ -352,13 +353,13 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
     {
         if (HasHiveDefenseTarget)
             return state.Orphaned ? "巢毁复仇" : "护巢追击";
-        if (nightSleepRequested && colony != null)
+        if (nightSleepRequested && colony != null && !HasActiveAngryPursuit)
             return "回巢睡觉";
         if (state.Angry)
         {
             if (lockedTarget != null)
                 return "愤怒追击";
-            return searchingLastPosition ? $"搜索目标({lostTargetAngerRemaining:F1}秒)" : "愤怒巡航";
+            return searchingLastPosition ? $"警戒搜索({lostTargetAngerRemaining:F1}秒)" : "愤怒巡航";
         }
 
         if (state.ReturningHome)
@@ -379,7 +380,9 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
         if (lockedTarget != null)
             return lockedTarget.itemData?.IDName ?? lockedTarget.name;
         if (searchingLastPosition)
-            return $"最后位置({lastSeenPosition.x:F1},{lastSeenPosition.y:F1})";
+            return hasSearchFlightTarget
+                ? $"搜索点({searchFlightTarget.x:F1},{searchFlightTarget.y:F1})"
+                : $"最后位置({lastSeenPosition.x:F1},{lastSeenPosition.y:F1})";
         if (forageCrop != null)
             return forageCrop.itemData?.IDName ?? forageCrop.name;
         if (forageFlowerGuid != 0)

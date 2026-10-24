@@ -13,7 +13,7 @@ namespace UnityEngine
         public static Vector2Int operator +(Vector2Int a, Vector2Int b) => new(a.x + b.x, a.y + b.y);
     }
     public readonly record struct Vector3Int(int x, int y, int z);
-    public readonly record struct Vector3(float x, float y, float z);
+    public readonly partial record struct Vector3(float x, float y, float z);
     public readonly struct BoundsInt
     {
         public readonly int xMin, yMin;
@@ -21,7 +21,7 @@ namespace UnityEngine
         public BoundsInt(int x, int y, int z, int width, int height, int depth)
         { xMin = x; yMin = y; size = new(width, height, depth); }
     }
-    public static class Mathf
+    public static partial class Mathf
     {
         public static float Max(float a, float b) => MathF.Max(a, b);
         public static int Max(int a, int b) => Math.Max(a, b);
@@ -60,7 +60,8 @@ namespace FlatWorld.Spaceflight
 public sealed class ItemData { public TransformData transform = new(); }
 public sealed class TransformData { public Vector3 position; }
 public sealed class RecipeProcessor { }
-public sealed class MachineLogic { }
+public class MachineLogic { }
+public sealed class ShipDeviceLogic : MachineLogic { public bool IsDeviceRunning = true; }
 public sealed class Mod_MechanicalNode { }
 public sealed class MachineState { public float ManualSeconds, Hp = 100f, ElectricalStoredJoules; }
 public readonly struct WorldTopologyDomain
@@ -80,6 +81,7 @@ public sealed class MachineDefinition
     public bool HasMechanicalPorts = true;
     public int Layer;
     public float Torque, Rpm = 60, TorqueLoad, ManualDriveTorque, ManualDriveRpm = 60;
+    public float TorqueLoadStep = 10f;
     public int SourceRotationDirection = 1;
     public ElectricalDefinition Electrical;
     public object Fluid;
@@ -87,12 +89,14 @@ public sealed class MachineDefinition
     public float[] Ratios = { 1f, 2f };
     public bool IsConverter => Electrical?.IsConverter == true;
     public static bool Positive(float value) => float.IsFinite(value) && value > 0f;
+    public static bool NonNegative(float value) => float.IsFinite(value) && value >= 0f;
+    public static bool Finite(float value) => float.IsFinite(value);
     public string GetPortMode() => PortMode;
     public bool HasAxlePort(int direction) => true;
     public void GetTransmission(bool smallInput, int ratio, out float speed, out float torque)
     { speed = smallInput ? .5f : 2f; torque = 1f / speed; }
 }
-public sealed class TransportDefinition { public bool SideDrive; }
+public sealed class TransportDefinition { public bool SideDrive = true, AutoConnect = true; }
 public sealed class ElectricalDefinition
 {
     public bool UnlimitedGeneration;
@@ -119,17 +123,6 @@ public sealed partial class MachineEntity
 {
     public float TestSourceFactor = 1f;
     public int TestSourceCalls;
-    public ConveyorPath ConveyorRoute = new();
-}
-public sealed class ConveyorPath
-{
-    public bool HasPathPort(int direction) => true;
-    public bool HasDrivePort(int direction) => true;
-}
-public sealed partial class MechanicalNetworkGraph
-{
-    public readonly List<MachineEntity> ConveyorChanges = new();
-    private void RebuildConveyorPaths(List<MachineEntity> nodes) { }
 }
 public static partial class MachineWorld
 {
@@ -168,6 +161,13 @@ public static partial class MachineWorld
         TransportStep++;
     }
     public static void SettleCoupled(float seconds) => SolveElectricalNetworks(seconds);
+    public static void RebuildTopologyForTest(IEnumerable<MachineEntity> entities)
+    {
+        nodes.Clear();
+        foreach (MachineEntity node in entities) nodes.Add(node.Id, node);
+        dirty = true;
+        RebuildGraphsIfDirty();
+    }
 
     // 保留优化前的耦合步骤作为差分参考，只替换外部Unity依赖，不复制新缓存实现。
     public static void SettleCoupledReference(float seconds)

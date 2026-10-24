@@ -103,8 +103,8 @@
       "maxTemperature": 2000.0,
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -135,8 +135,8 @@
       "maxTemperature": 2000.0,
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -172,8 +172,8 @@
           "amount": 3
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -231,8 +231,8 @@
           "amount": 3
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -263,8 +263,8 @@
           "amount": 3
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -295,8 +295,8 @@
           "amount": 3
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -308,28 +308,6 @@
       "outputs": [
         {
           "itemId": "Pickaxe_Iron",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:钢制铁甲",
-      "displayName": "钢制铁甲",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "temperature": 0.0,
-      "maxTemperature": 2000.0,
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "Ingot_Steel",
-          "amount": 8
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Chestplate_Iron",
           "amount": 1
         }
       ],
@@ -349,8 +327,8 @@
           "amount": 3
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {

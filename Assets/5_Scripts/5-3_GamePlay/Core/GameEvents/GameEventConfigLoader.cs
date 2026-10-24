@@ -65,7 +65,7 @@ namespace FlatWorld.Gameplay.Events
             JObject root;
             try
             {
-                root = JObject.Parse(source.Text);
+                root = JsonConfigurationCache.ParseObject(source.Text);
             }
             catch (Exception exception)
             {
@@ -113,7 +113,7 @@ namespace FlatWorld.Gameplay.Events
                 GameEventDefinition definition;
                 try
                 {
-                    definition = eventObject.ToObject<GameEventDefinition>(serializer);
+                    definition = JsonConfigurationCache.FromToken<GameEventDefinition>(eventObject, serializer);
                 }
                 catch (Exception exception)
                 {

@@ -1,4 +1,23 @@
 -- 地形生成、采挖与植被工作规则，不生成当前玩家世界，也不截图。
+for _, case in ipairs({
+    {args = {}, threshold = 15, multiplier = 0.5},
+    {args = {threshold = 20, multiplier = 0.25}, threshold = 20, multiplier = 0.25},
+    {args = {multiplier = 0}, threshold = 15, multiplier = 0},
+    {args = {multiplier = 1}, threshold = 15, multiplier = 1},
+    {args = {multiplier = -1}, threshold = 15, multiplier = 0},
+    {args = {multiplier = 2}, threshold = 15, multiplier = 1}
+}) do
+    local input = case
+    test.system("terrain", "grass_temperature_density", input.args, function(data)
+        assert(data.threshold == input.threshold and data.multiplier == input.multiplier,
+            "草的低温阈值、默认减半倍率或配置钳制错误")
+        assert(data.below == input.multiplier and data.repeated == data.below,
+            "严格低于阈值时草没有按比例减量，或重复采样不稳定")
+        assert(data.at == 1 and data.above == 1,
+            "恰好达到阈值或更温暖时仍然降低了草的生成概率")
+    end, "草低温概率倍率与严格温度边界：" .. input.threshold .. "/" .. input.multiplier)
+end
+
 for _, scenario in ipairs({ "ocean", "freshwater", "cave", "frozen_ocean" }) do
     test.system("terrain", "natural_waterbed", { scenario = scenario }, function(data)
         local natural, river, lake = 0, 0, 0

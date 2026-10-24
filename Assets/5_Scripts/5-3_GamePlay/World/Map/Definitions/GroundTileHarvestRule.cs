@@ -4,8 +4,9 @@ using System;
 /// 地表资源的多次采挖配置。工具品质决定每格需要的右键次数；
 /// 工作进度保存在权威区块格子差量，后续 MOD 可复用此规则。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class GroundTileHarvestRule
+public sealed partial class GroundTileHarvestRule
 {
     #region 采挖配置
     public ResourceToolKind RequiredTool = ResourceToolKind.Shovel; // 工具类别。

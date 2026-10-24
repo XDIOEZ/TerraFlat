@@ -191,7 +191,7 @@ namespace FlatWorld.NaturalEntities
                             Limit = config.MaxProductionCount, Progress = Mathf.Max(0f, saved?.ProductionTime ?? config.ProductionTime),
                             Completed = saved?.CurrentProductionCount ?? 0, Initialized = (byte)(saved?.IsInitialized == true ? 1 : 0),
                             RandomState = saved?.EntityRandomState is > 0 ? saved.EntityRandomState : randomSeed,
-                            UseGrowthDifficulty = (byte)(profile.ProductionUsesGrowthDifficulty ? 1 : 0)
+                            UseGrowthMultiplier = (byte)(profile.ProductionUsesGrowthMultiplier ? 1 : 0)
                         });
                     }
                 }
@@ -284,6 +284,8 @@ namespace FlatWorld.NaturalEntities
         private static readonly ProfilerMarker SoilReadMarker = new("NaturalEntityRuntime.Soil.Read");
         private static readonly ProfilerMarker SoilLightMarker = new("NaturalEntityRuntime.Soil.Light");
         private static readonly ProfilerMarker SoilCommitMarker = new("NaturalEntityRuntime.Soil.Commit");
+        private static readonly ProfilerMarker SoilCommitReadMarker = new("NaturalEntityRuntime.Soil.Commit.Read");
+        private static readonly ProfilerMarker SoilCommitWriteMarker = new("NaturalEntityRuntime.Soil.Commit.Write");
         private static readonly ProfilerMarker SpatialPublishMarker = new("NaturalEntityRuntime.Publish.Spatial");
 
         private static void FreezeSoil(Record record)
@@ -330,13 +332,35 @@ namespace FlatWorld.NaturalEntities
             if (!simulation.TryGet(record.Handle.Id, out EntityPlantSoil soil) ||
                 (soil.AddedWater == 0f && soil.UsedWater == 0f && soil.UsedFertility == 0f)) return;
             using var sample = SoilCommitMarker.Auto();
-            if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) &&
-                soils.TryRead(PlantSoilCell(record, plant), out TileData_Farmland target, out RuntimeTerrainTileSample sampled,
-                    allowNaturalSoil: plant.Cultivated == 0))
+            TileData_Farmland target = null;
+            RuntimeTerrainTileSample sampled = default;
+            EntityPlantLifecycle plant;
+            bool hasSoil;
+            using (SoilCommitReadMarker.Auto())
+                hasSoil = simulation.TryGet(record.Handle.Id, out plant) &&
+                    soils.TryRead(PlantSoilCell(record, plant), out target, out sampled,
+                        allowNaturalSoil: plant.Cultivated == 0);
+            if (hasSoil)
             {
-                target.AccumulateWaterSupply(soil.AddedWater); target.AccumulateWaterConsumption(soil.UsedWater);
-                target.ConsumeFertility(soil.UsedFertility);
-                soils.CommitSampled(sampled, target, allowNaturalSoil: plant.Cultivated == 0);
+                // 保持逐株读取、灌溉和提交顺序，仅拆开统计真实读写与差量持久化成本。
+                using (SoilCommitWriteMarker.Auto())
+                {
+                    int previousWater = target.waterValue;
+                    float previousSupply = target.waterSupplyRemainder;
+                    float previousConsumption = target.waterConsumptionRemainder;
+                    float previousFertility = target.Fertility;
+                    // 读取接口已规范化快照；零量调用会再次规范化而没有业务增量。
+                    if (soil.AddedWater != 0f) target.AccumulateWaterSupply(soil.AddedWater);
+                    if (soil.UsedWater != 0f) target.AccumulateWaterConsumption(soil.UsedWater);
+                    if (soil.UsedFertility != 0f) target.ConsumeFertility(soil.UsedFertility);
+                    bool changed = previousWater != target.waterValue ||
+                        !previousSupply.Equals(target.waterSupplyRemainder) ||
+                        !previousConsumption.Equals(target.waterConsumptionRemainder) ||
+                        !previousFertility.Equals(target.Fertility);
+                    // 缺水/缺肥导致的无效扣量可跳过写盘，但未初始化或表现层不一致仍需补全。
+                    if (changed || !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sampled, target))
+                        soils.CommitSampled(sampled, target, allowNaturalSoil: plant.Cultivated == 0);
+                }
             }
             soil.AddedWater = soil.UsedWater = soil.UsedFertility = 0f;
             simulation.Set(record.Handle.Id, soil, notifyChanged: false);

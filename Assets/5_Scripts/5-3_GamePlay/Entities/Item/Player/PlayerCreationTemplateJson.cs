@@ -10,8 +10,9 @@ using UnityEngine;
 #region 玩家创建配置模型
 
 /// <summary>玩家创建 JSON 配置目录；创建期属性只用于新玩家，热量传导速率始终取当前配置。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class PlayerCreationTemplateCatalogConfig
+public sealed partial class PlayerCreationTemplateCatalogConfig
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion = 1;
@@ -24,8 +25,9 @@ public sealed class PlayerCreationTemplateCatalogConfig
 }
 
 /// <summary>单个玩家创建模板；字段保持普通 JSON DTO，不依赖 Unity 资产。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class PlayerCreationTemplateConfig
+public sealed partial class PlayerCreationTemplateConfig
 {
     [JsonProperty("id", Required = Required.Always)]
     public string Id;
@@ -45,8 +47,9 @@ public sealed class PlayerCreationTemplateConfig
     [JsonProperty("stamina")]
     public StaminaSettings Stamina = new();
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class CoreSettings
+    public sealed partial class CoreSettings
     {
         [JsonProperty("dataSpeed")] public float DataSpeed = 8f;
         [JsonProperty("playerPov")] public float PlayerPov = 10f;
@@ -58,8 +61,9 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("maxCarryVolume")] public float MaxCarryVolume = 100f;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class MovementSettings
+    public sealed partial class MovementSettings
     {
         [JsonProperty("speed")] public float Speed = 3.5f;
         [JsonProperty("slowDownSpeed")] public float SlowDownSpeed = 5f;
@@ -76,8 +80,9 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("runWaterConsumeMultiplier")] public float RunWaterConsumeMultiplier = 0.25f;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class FoodSettings
+    public sealed partial class FoodSettings
     {
         [JsonProperty("nutrition")] public NutritionSettings Nutrition = new();
         [JsonProperty("nutritionConsumeSpeed")] public float NutritionConsumeSpeed = 0.05f;
@@ -95,8 +100,9 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("proteinHealThreshold")] public float ProteinHealThreshold = 60f;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class NutritionSettings
+    public sealed partial class NutritionSettings
     {
         [JsonProperty("carbohydrates")] public float Carbohydrates = 50f;
         [JsonProperty("maxCarbohydrates")] public float MaxCarbohydrates = 100f;
@@ -110,8 +116,9 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("maxVitamins")] public float MaxVitamins = 100f;
     }
 
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class StaminaSettings
+    public sealed partial class StaminaSettings
     {
         [JsonProperty("currentStamina")] public float CurrentStamina = 100f;
         [JsonProperty("maxStamina")] public float MaxStamina = 100f;
@@ -301,7 +308,7 @@ public static class PlayerCreationTemplateJsonLoader
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("玩家创建 JSON 为空");
 
-        PlayerCreationTemplateCatalogConfig catalog = JsonConvert.DeserializeObject<PlayerCreationTemplateCatalogConfig>(
+        PlayerCreationTemplateCatalogConfig catalog = JsonConfigurationCache.Deserialize<PlayerCreationTemplateCatalogConfig>(
             json,
             StrictJsonSettings);
         Validate(catalog);

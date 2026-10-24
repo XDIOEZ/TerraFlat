@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -277,6 +277,7 @@ public partial class ChunkMgr
         }
         ReconcileRuntimeWindowBindings();
         AdvanceLiquidFlowExperiment(deltaSeconds);
+        liquidBodies?.Advance();
     }
 
     /// <summary>玩家修改性能模式后，立即调整后台线程数量。</summary>
@@ -317,6 +318,7 @@ public partial class ChunkMgr
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
         sightBlockingChunkCommittedSubscription =
             world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
+        liquidBodies = new WorldLiquidBodySystem(this, ResolveCurrentDimensionId());
     }
 
     #region 视线遮挡层接入
@@ -333,6 +335,7 @@ public partial class ChunkMgr
     /// <summary>切换场景时释放旧生成器，下次进入按当前资源会话创建新世界。</summary>
     private void ResetWorldRuntimeForSceneChange(bool retainPresentationPool = false)
     {
+        StopLiquidBodies();
         StopLiquidFlowExperiment();
         WorldLiquidFlowObstacles.ClearWorld();
         ClearRuntimeWindowBindings(retainPresentationPool);
@@ -354,6 +357,7 @@ public partial class ChunkMgr
         using var scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
         IsWorldRuntimeShuttingDown = true;
         ReleaseAirHumidityField();
+        StopLiquidBodies();
         StopLiquidFlowExperiment();
         WorldLiquidFlowObstacles.ClearWorld();
         if (runtimeHost != null)
@@ -375,6 +379,9 @@ public partial class ChunkMgr
     /// <summary>完整卸载世界与终止管理器共用释放顺序，不保留上一资源会话的液体编号表。</summary>
     private void DisposeWorldRuntime()
     {
+        StopLiquidBodies();
+        runtimeBuildings.Clear();
+        ReleaseSharedNaturalEntities();
         RuntimeChunkMgr manager = runtimeChunkManager;
         runtimeChunkManager = null;
         runtimeGenerator = null;

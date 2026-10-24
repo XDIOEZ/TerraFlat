@@ -2,6 +2,56 @@
   "schemaVersion": 1,
   "items": [
     {
+      "id": "Coconut_Shell_Building",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingBody_Base",
+      "labelKey": "item.Coconut_Shell.name",
+      "descriptionKey": "item.Coconut_Shell.description",
+      "gameName": "椰壳",
+      "description": "坚硬的椰壳，可像陶罐一样装水、饮水、倒空与转水，也可作为制作材料。可在容器面板中放到地上，放下后可交互使用或拆回，水量保留。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.7,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png",
+        "liquidSurface": { "bounds": { "x": 0.0625, "y": 0.36, "width": 0.875, "height": 0.56 }, "maxSourceChannel": 100 },
+        "collider": {
+          "size": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"Coconut_Shell_Building\",\"SummonerPrefabId\":\"Coconut_Shell\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          }
+        },
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "capacity": 6,
+            "CollectsRainwater": true
+          }
+        }
+      }
+    },
+    {
       "id": "ClayJar_Building",
       "parent": "BuildingBody_Base",
       "gameName": "陶罐-建筑",

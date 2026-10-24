@@ -8,6 +8,7 @@ public partial class MonsterSpawnerSaveData
 {
     public Dictionary<string, SpawnerProgressSaveData> ConfigStates = new();
     public List<AiecsResidentSaveData> EntitiesResidents = new();
+    public SpawnerCountdownProgress NaturalCountdown = new();
 }
 
 /// <summary>正式 ECS 居民的持久玩法值；蜂巢成员仍由蜂巢存档持有。</summary>
@@ -36,25 +37,14 @@ public partial class SpawnerProgressSaveData
 {
     #region 生成队列进度
 
-    public float LastProcessedTotalTime = -1f;
     public int LastSpawnDay = -999;
 
     public int AvailableBudget = -1;
     public int LastBudgetRecoveryDay = -1;
     public int PendingReplacementCount;
 
-    public int ProcessedGrowthMilestones;
     public int PendingSpawnCount;
     public int LifetimeSpawnCount;
-    public Dictionary<string, SpawnerCountdownProgress> SpeciesCountdowns = new();
-    public int CountdownEntryCursor;
-
-    public void ResetCountdownObservation()
-    {
-        if (SpeciesCountdowns == null) return;
-        foreach (SpawnerCountdownProgress countdown in SpeciesCountdowns.Values)
-            if (countdown != null) countdown.LastObservedGameSeconds = -1d;
-    }
 
     /// <summary>独立概率落空也消耗一次排队机会，只有真正出生才累计出生数量。</summary>
     public void CompleteSpawnAttempt(bool spawned, int currentDay)
@@ -74,7 +64,7 @@ public partial class SpawnerProgressSaveData
     #endregion
 }
 
-/// <summary>每个物种只保留当前倒计时或一轮待出生，同批落点独立于玩家当前的位置。</summary>
+/// <summary>每个世界只保存一个自然刷新时钟，到期抽中的规则、物种和当前批次随世界存档。</summary>
 [MemoryPackable]
 [Serializable]
 public partial class SpawnerCountdownProgress
@@ -85,6 +75,7 @@ public partial class SpawnerCountdownProgress
     public double LastObservedGameSeconds = -1d;
     public double IntervalGameSeconds;
     public int PendingCount;
+    public string SelectedConfigId, SelectedSpeciesId;
     public bool HasBatchAnchor;
     public float BatchAnchorX, BatchAnchorY;
     public string BatchAnchorScene;
@@ -96,6 +87,8 @@ public partial class SpawnerCountdownProgress
         if (double.IsNaN(totalGameSeconds) || double.IsInfinity(totalGameSeconds) || totalGameSeconds < 0d ||
             double.IsNaN(intervalGameSeconds) || double.IsInfinity(intervalGameSeconds) || intervalGameSeconds <= 0d)
             throw new ArgumentOutOfRangeException(nameof(intervalGameSeconds), "倒计时需要有限的游戏时间和正间隔。");
+        if (IntervalGameSeconds > 0d && RemainingGameSeconds > 0d)
+            RemainingGameSeconds *= intervalGameSeconds / IntervalGameSeconds;
         IntervalGameSeconds = intervalGameSeconds;
         if (RemainingGameSeconds < 0d) RemainingGameSeconds = intervalGameSeconds;
         double elapsed = LastObservedGameSeconds < 0d ? 0d : Math.Max(0d, totalGameSeconds - LastObservedGameSeconds);
@@ -110,6 +103,8 @@ public partial class SpawnerCountdownProgress
         if (double.IsNaN(intervalGameSeconds) || double.IsInfinity(intervalGameSeconds) || intervalGameSeconds <= 0d)
             throw new ArgumentOutOfRangeException(nameof(intervalGameSeconds));
         PendingCount = 0;
+        SelectedConfigId = SelectedSpeciesId = null;
+        IntervalGameSeconds = intervalGameSeconds;
         RemainingGameSeconds = intervalGameSeconds;
         ClearBatchAnchor();
     }

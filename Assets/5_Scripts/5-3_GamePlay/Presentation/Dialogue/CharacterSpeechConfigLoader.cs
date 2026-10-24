@@ -105,7 +105,7 @@ namespace FlatWorld.Dialogue
             JObject root;
             try
             {
-                root = JObject.Parse(source.Text);
+                root = JsonConfigurationCache.ParseObject(source.Text);
             }
             catch (Exception exception)
             {
@@ -177,7 +177,7 @@ namespace FlatWorld.Dialogue
                 CharacterSpeechConfigEntry entry;
                 try
                 {
-                    entry = entryObject.ToObject<CharacterSpeechConfigEntry>(serializer);
+                    entry = JsonConfigurationCache.FromToken<CharacterSpeechConfigEntry>(entryObject, serializer);
                 }
                 catch (Exception exception)
                 {

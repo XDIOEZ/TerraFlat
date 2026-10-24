@@ -89,7 +89,7 @@ public static class FishingAssetBuilder
         var fish = new Texture2D(16, 16, TextureFormat.RGBA32, false);
         try
         {
-            if (!source.LoadImage(File.ReadAllBytes("Assets/6_Art/Characters/Hana Caraka - Livestock & Fish [Sample]/Fish.png")))
+            if (!source.LoadImage(File.ReadAllBytes("Assets/6_Art/Characters/Hana Caraka - Livestock & Fish Sample/Fish.png")))
                 throw new InvalidDataException("现有鱼素材读取失败。");
             fish.SetPixels(source.GetPixels(0, 16, 16, 16));
             fish.Apply();

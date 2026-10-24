@@ -106,7 +106,7 @@ public sealed class MonsterManager : MonoBehaviour
             // 配置数量远小于实体数量，同时允许运行时调整 IgnorePopulationLimits 而不漂移。
             int count = 0;
             foreach (KeyValuePair<SpawnerConfig, int> pair in _activeGroupCounts)
-                if (pair.Key != null && !pair.Key.UnboundedDailyGrowth && !pair.Key.IgnorePopulationLimits)
+                if (pair.Key != null && !pair.Key.IgnorePopulationLimits)
                     count += pair.Value;
             return count;
         }
@@ -421,7 +421,7 @@ public sealed class MonsterManager : MonoBehaviour
         {
             int count = 0;
             foreach (KeyValuePair<SpawnerConfig, int> pair in _residentGroupCounts)
-                if (pair.Key != null && !pair.Key.UnboundedDailyGrowth && !pair.Key.IgnorePopulationLimits)
+                if (pair.Key != null && !pair.Key.IgnorePopulationLimits)
                     count += pair.Value;
             return count;
         }

@@ -14,8 +14,9 @@ namespace FlatWorld.WorldModel
     }
 
     /// <summary>触发概率直接读表，每次事件独立读取强度和持续时间的离散配置。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class WeatherElementRule
+    public sealed partial class WeatherElementRule
     {
         #region 气候权重与三个数值范围
         public string Id;
@@ -108,7 +109,8 @@ namespace FlatWorld.WorldModel
     }
 
     [Serializable]
-    public struct WeatherAssociationRule
+    [MemoryPack.MemoryPackable]
+    public partial struct WeatherAssociationRule
     {
         #region 天气关联
         public string SourceId;
@@ -118,8 +120,9 @@ namespace FlatWorld.WorldModel
     }
 
     /// <summary>共享天气区的覆盖范围、固定时钟与可扩展要素配置，速率统一使用游戏秒。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class RegionalWeatherSettings
+    public sealed partial class RegionalWeatherSettings
     {
         #region 固定时钟与天气要素
         // 相邻多个地形区块共享一场天气，避免走几步就穿过整片雨区。

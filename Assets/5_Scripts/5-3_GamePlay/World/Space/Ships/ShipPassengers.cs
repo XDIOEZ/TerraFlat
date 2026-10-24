@@ -127,6 +127,7 @@ namespace FlatWorld.Spaceflight
             // 重力只需要确认地板支撑，不读取昂贵的船外地表与舱气状态。
             if (!ShipAtmosphereService.HasFloor(ship, (int)Math.Floor(x / ship.CellSizeMeters),
                     (int)Math.Floor(y / ship.CellSizeMeters))) return false;
+            if (ship.Anchor != null) return true;
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (!piece.IsAlive || piece.Kind != ShipPieceKind.GravityGenerator || !IsPowered(ship, piece)) continue;

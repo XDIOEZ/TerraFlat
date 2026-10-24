@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-24",
+  "method": "built-in image_gen.imagegen",
+  "reference": "Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png",
+  "wearableNote": "Steel armor has five independent 32x48 wearable layers and reuses the common helmet hair mask; inventory icons are independent assets.",
+  "wearableManifest": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/SteelArmor/Generation.json",
+  "assets": [
+    {
+      "id": "Steel_Helmet",
+      "name": "钢头盔",
+      "output": "Assets/6_Art/Generated/Equipment/Steel_Helmet/Steel_Helmet_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a16a14-7559-7182-a4aa-513162e669cd/exec-5c451f3b-653a-4722-ac3d-3117bcef6552.png",
+      "prompt": "Use case: style-transfer. Asset type: FlatWorld sandbox inventory equipment icon, transparent PNG.\nInput image 1 is a STYLE AND MATERIAL reference only: the existing STEEL CUIRASS. Create the companion equipment named 钢头盔, keeping the same handmade useful construction, muted charcoal blue-gray steel, broad silver-gray edge highlights and brown leather straps.\nONE EMPTY STEEL HELMET: practical open-faced rounded forged steel bowl with a short broad reinforced brow, open face aperture, chunky steel cheek pieces, brown leather neck straps. No visor covering the entire face, no horns, spikes or crest. Left-facing three-quarter view.\nLow-saturation semi-realistic RETRO PIXEL ART. Coarse pixel clusters equivalent to a hand-placed 40x40 sprite enlarged with nearest-neighbor. About 12-20 subdued colors, broad flat planes, one shadow tone, sparse highlight blocks from upper left. Hard square pixel steps, natural equipment proportions. Complete centered subject in a square canvas with generous transparent margins.\nThe background must be genuinely transparent RGBA, including open holes. No person, mannequin, anatomy, skin, hair, tools, extra items, text, labels, logo, watermark, floor, cast shadow, colored backdrop, checkerboard, soft glow, blur, gradients, tiny speckles, scratches, noisy detail or glossy 3D. Keep the same coarse pixel density and restrained handmade style as the reference."
+    },
+    {
+      "id": "Steel_Gauntlets",
+      "name": "钢手套",
+      "output": "Assets/6_Art/Generated/Equipment/Steel_Gauntlets/Steel_Gauntlets_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a16a14-7559-7182-a4aa-513162e669cd/exec-2feaef24-d38b-400b-bbe6-17ca99d850e8.png",
+      "prompt": "Use case: style-transfer. Asset type: FlatWorld sandbox inventory equipment icon, transparent PNG.\nInput image 1 is a STYLE AND MATERIAL reference only: the existing STEEL CUIRASS. Create the companion equipment named 钢手套, keeping the same handmade useful construction, muted charcoal blue-gray steel, broad silver-gray edge highlights and brown leather straps.\nONE MATCHED PAIR OF EMPTY STEEL GAUNTLETS with broad forged steel plates on backs of hands, two or three chunky finger segments, short wide cuff, brown leather undergloves and simple leather wrist straps. Paired gloves at a slight three-quarter angle with one slightly behind the other. No arms.\nLow-saturation semi-realistic RETRO PIXEL ART. Coarse pixel clusters equivalent to a hand-placed 40x40 sprite enlarged with nearest-neighbor. About 12-20 subdued colors, broad flat planes, one shadow tone, sparse highlight blocks from upper left. Hard square pixel steps, natural equipment proportions. Complete centered subject in a square canvas with generous transparent margins.\nThe background must be genuinely transparent RGBA, including open holes. No person, mannequin, anatomy, skin, hair, tools, extra items, text, labels, logo, watermark, floor, cast shadow, colored backdrop, checkerboard, soft glow, blur, gradients, tiny speckles, scratches, noisy detail or glossy 3D. Keep the same coarse pixel density and restrained handmade style as the reference."
+    },
+    {
+      "id": "Steel_Greaves",
+      "name": "钢腿甲",
+      "output": "Assets/6_Art/Generated/Equipment/Steel_Greaves/Steel_Greaves_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a16a14-7559-7182-a4aa-513162e669cd/exec-a84f13d3-5a84-48a6-8363-deb5b450abd4.png",
+      "prompt": "Use case: style-transfer. Asset type: FlatWorld sandbox inventory equipment icon, transparent PNG.\nInput image 1 is a STYLE AND MATERIAL reference only: the existing STEEL CUIRASS. Create the companion equipment named 钢腿甲, keeping the same handmade useful construction, muted charcoal blue-gray steel, broad silver-gray edge highlights and brown leather straps.\nONE MATCHED SET OF EMPTY STEEL LEG ARMOR: practical connected waist band and paired thigh/knee/shin guards, broad formed steel plates, a few broad brown leather attachment straps. Clearly show leg armor, not boots or chest armor. Compact paired silhouette from waist to just above ankles, front three-quarter view. No wearer or legs.\nLow-saturation semi-realistic RETRO PIXEL ART. Coarse pixel clusters equivalent to a hand-placed 40x40 sprite enlarged with nearest-neighbor. About 12-20 subdued colors, broad flat planes, one shadow tone, sparse highlight blocks from upper left. Hard square pixel steps, natural equipment proportions. Complete centered subject in a square canvas with generous transparent margins.\nThe background must be genuinely transparent RGBA, including open holes. No person, mannequin, anatomy, skin, hair, tools, extra items, text, labels, logo, watermark, floor, cast shadow, colored backdrop, checkerboard, soft glow, blur, gradients, tiny speckles, scratches, noisy detail or glossy 3D. Keep the same coarse pixel density and restrained handmade style as the reference."
+    },
+    {
+      "id": "Steel_Boots",
+      "name": "钢靴子",
+      "output": "Assets/6_Art/Generated/Equipment/Steel_Boots/Steel_Boots_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a16a14-7559-7182-a4aa-513162e669cd/exec-7877ec8d-ebf9-4808-93e9-f0c0acecb684.png",
+      "prompt": "Use case: style-transfer. Asset type: FlatWorld sandbox inventory equipment icon, transparent PNG.\nInput image 1 is a STYLE AND MATERIAL reference only: the existing STEEL CUIRASS. Create the companion equipment named 钢靴子, keeping the same handmade useful construction, muted charcoal blue-gray steel, broad silver-gray edge highlights and brown leather straps.\nONE MATCHED PAIR OF EMPTY STEEL ARMORED BOOTS: brown leather short sturdy boots reinforced with broad forged steel toe caps, steel instep plates and simple short ankle guards, broad soles and practical rounded toes. Two plain brown leather straps and a few dull rivets. Left-facing three-quarter view, one boot slightly behind the other. No legs.\nLow-saturation semi-realistic RETRO PIXEL ART. Coarse pixel clusters equivalent to a hand-placed 40x40 sprite enlarged with nearest-neighbor. About 12-20 subdued colors, broad flat planes, one shadow tone, sparse highlight blocks from upper left. Hard square pixel steps, natural equipment proportions. Complete centered subject in a square canvas with generous transparent margins.\nThe background must be genuinely transparent RGBA, including open holes. No person, mannequin, anatomy, skin, hair, tools, extra items, text, labels, logo, watermark, floor, cast shadow, colored backdrop, checkerboard, soft glow, blur, gradients, tiny speckles, scratches, noisy detail or glossy 3D. Keep the same coarse pixel density and restrained handmade style as the reference."
+    }
+  ]
+}

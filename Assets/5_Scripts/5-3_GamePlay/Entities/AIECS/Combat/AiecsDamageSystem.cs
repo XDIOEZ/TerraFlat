@@ -67,7 +67,7 @@ namespace FlatWorld.AIECS
     #endregion
 
     #region 生命结算
-    /// <summary>正式 ECS 生命权威：四类伤害、防御、难度、部位、间隔、Buff 和慢速在同一目标写入域提交。</summary>
+    /// <summary>正式 ECS 生命权威：四类伤害、防御、战斗参数、部位、间隔、Buff 和慢速在同一目标写入域提交。</summary>
     [BurstCompile]
     public partial struct AiecsDamageSettlementSystem : IJobEntity
     {
@@ -79,7 +79,7 @@ namespace FlatWorld.AIECS
         [ReadOnly] public AiecsSpatialView Spatial;
         public NativeList<AiecsDamageResult>.ParallelWriter Results;
         public NativeList<AiecsHitEvent>.ParallelWriter ExternalHits;
-        public CombatDifficulty Difficulty;
+        public CombatTuning Tuning;
 
         /// <summary>每个目标串行处理自己的命中；其它目标可安全并行，外部生命只输出给 Bridge。</summary>
         private void Execute(Entity entity, in AiecsIdentity identity, in AiecsDefense defense,
@@ -107,7 +107,7 @@ namespace FlatWorld.AIECS
                     if (context.IsTrueDamage == 0 && !environmental) vital.LastDamageTime = context.Clock.Time;
                     float4 damage = context.IsTrueDamage != 0 ? math.max(float4.zero, context.Damage) :
                         CombatRules.Resolve(context.Damage, defense.Values,
-                            Difficulty.Resolve(context.SourceIsPlayer != 0, identity.Player != 0), vital.ReceivedMultiplier);
+                            Tuning.Resolve(context.SourceIsPlayer != 0, identity.Player != 0), vital.ReceivedMultiplier);
                     float amount = math.csum(damage);
                     float before = vital.Hp;
                     if (amount > 0f)

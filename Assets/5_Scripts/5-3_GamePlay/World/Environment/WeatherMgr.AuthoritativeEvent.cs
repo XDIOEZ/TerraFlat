@@ -92,12 +92,14 @@ public partial class WeatherMgr
         if (IsLocalWeatherWorld) lightningEffect?.Initialize(this);
         AdvanceRegionalWeather();
         NormalizeData(planetData);
+        MaintainFogPerception();
     }
 
     private void MaintainWeatherEventSystem()
     {
         SubscribeTimeSystem();
         AdvanceRegionalWeather();
+        MaintainFogPerception();
         MaintainWindPushField();
         MaintainSurfaceWork();
         if (!IsLocalWeatherWorld) return;
@@ -109,6 +111,7 @@ public partial class WeatherMgr
 
     private void ShutdownWeatherEventSystem()
     {
+        ResetFogPerception();
         UnsubscribeTimeSystem();
         FlushSurfaceWork();
         PersistRegionalStates();

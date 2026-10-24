@@ -1,5 +1,8 @@
+using System;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -63,6 +66,89 @@ public static partial class GameplayTestSystemProbe
             ["secondStillPending"] = secondStillPending, ["survivors"] = survivors,
             ["remainingCount"] = completed.Residents.Count
         };
+    }
+
+    #endregion
+
+    #region 蜜蜂丢失目标后的警戒搜索
+
+    // 固定采样正式搜索状态和目的地，不加载世界，也不向 Lua 开放反射能力。
+    private static JObject EntityBeeTargetSearch(JObject args)
+    {
+        if (Application.isPlaying || ChunkMgr.ExistingInstance != null)
+            throw new InvalidOperationException("蜜蜂搜索规则只允许在未加载世界的编辑态执行。");
+        var root = new GameObject("[BeeTargetSearch]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        UnityEngine.Random.State randomState = UnityEngine.Random.state;
+        try
+        {
+            UnityEngine.Random.InitState(1031);
+            var bee = root.AddComponent<Mod_BeeBehavior>();
+            var target = root.AddComponent<GameItem>();
+            var colony = root.AddComponent<Mod_HiveColony>();
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            Type type = typeof(Mod_BeeBehavior);
+            T Read<T>(string name) => (T)type.GetField(name, flags).GetValue(bee);
+            void Write(string name, object value) => type.GetField(name, flags).SetValue(bee, value);
+            object Call(string name, params object[] values) => type.GetMethod(name, flags).Invoke(bee, values);
+            var state = new Mod_BeeBehavior.BeeState { Anger = bee.AngerMaximum, Angry = true };
+            var lastSeen = new Vector2(12f, 10f);
+            Write("state", state);
+            Write("colony", colony);
+            Write("lockedTarget", target);
+            Write("hiveDefenseTarget", target);
+            Write("lastSeenPosition", lastSeen);
+            Call("BeginLastPositionSearch");
+            var result = new JObject
+            {
+                ["defenseBecameSearch"] = bee.HasActiveAngryPursuit && !bee.HasHiveDefenseTarget &&
+                    ReferenceEquals(Read<Item>("lastSeenTarget"), target)
+            };
+            Vector2 travel = (Vector2)Call("AdvanceLastPositionSearch", new Vector2(10f, 10f), 2f);
+            result["travelsToMemory"] = travel == lastSeen;
+            result["remainingAfterTravel"] = Read<float>("lostTargetAngerRemaining");
+            target.transform.position = new Vector3(55f, 55f);
+            Vector2 first = (Vector2)Call("AdvanceLastPositionSearch", lastSeen, 1f);
+            result["firstTravelDistance"] = Vector2.Distance(lastSeen, first);
+            result["firstSearchRadius"] = WorldTopologyRuntime.ShortestDelta(lastSeen, first).magnitude;
+            result["lockRadius"] = bee.AngryLockRadius;
+            Vector2 retained = (Vector2)Call("AdvanceLastPositionSearch", lastSeen, .25f);
+            result["waypointRetained"] = retained == first;
+            Vector2 second = (Vector2)Call("AdvanceLastPositionSearch", first, .25f);
+            result["nextTravelDistance"] = WorldTopologyRuntime.ShortestDelta(first, second).magnitude;
+            result["memoryFrozen"] = Read<Vector2>("lastSeenPosition") == lastSeen;
+            result["stillSearching"] = bee.HasActiveAngryPursuit && state.Angry;
+            float remaining = Read<float>("lostTargetAngerRemaining");
+            Call("AdvanceLastPositionSearch", first, -1f);
+            result["negativeTimeIgnored"] = Read<float>("lostTargetAngerRemaining") == remaining;
+            bee.SetNightSleepRequested(true);
+            result["nightKeepsSearch"] = bee.HasActiveAngryPursuit &&
+                Read<float>("lostTargetAngerRemaining") == remaining;
+            result["debugState"] = (string)Call("GetBeeDebugState");
+            Call("LockMovingTarget", target);
+            result["reacquiredClearsSearch"] = ReferenceEquals(Read<Item>("lockedTarget"), target) &&
+                !Read<bool>("searchingLastPosition") && !Read<bool>("hasSearchFlightTarget") &&
+                !Read<bool>("reachedLastSeenPosition") && Read<float>("lostTargetAngerRemaining") == 0f &&
+                Read<Vector2>("lastSeenPosition") == (Vector2)target.transform.position;
+            Call("BeginLastPositionSearch");
+            Call("AdvanceLastPositionSearch", lastSeen, bee.LostTargetAngerSeconds);
+            result["timeoutClearsSearch"] = !bee.HasActiveAngryPursuit && !state.Angry && state.Anger == 0f &&
+                !Read<bool>("hasSearchFlightTarget") && Read<Item>("lastSeenTarget") == null;
+            state.Angry = true;
+            Write("lockedTarget", target);
+            Call("BeginLastPositionSearch");
+            Call("AdvanceLastPositionSearch", (Vector2)target.transform.position, .1f);
+            Call("ResetBeeCombat");
+            result["resetClearsSearch"] = !bee.HasActiveAngryPursuit &&
+                !Read<bool>("hasSearchFlightTarget") && !Read<bool>("reachedLastSeenPosition") &&
+                Read<float>("lostTargetAngerRemaining") == 0f;
+            return result;
+        }
+        finally
+        {
+            UnityEngine.Random.state = randomState;
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     #endregion

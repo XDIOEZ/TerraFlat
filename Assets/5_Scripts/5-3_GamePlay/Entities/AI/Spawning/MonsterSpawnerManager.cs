@@ -34,7 +34,6 @@ public partial class MonsterSpawnerManager : MonoBehaviour
     private readonly Dictionary<Item, float> _farAwaySince = new();
     private readonly HashSet<Item> _chunkDormantItems = new();
     private readonly Dictionary<string, float> _nextSpawnRetryTime = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, float> _nextRecoveryCheckTime = new(StringComparer.Ordinal);
     private readonly Dictionary<SpawnerConfig, int> _remainingSearchAttempts = new();
     private readonly Dictionary<int, float> _nextResidentWakeAttempt = new();
     private readonly List<SpawnerConfig> _jsonRuntimeConfigs = new();
@@ -53,7 +52,6 @@ public partial class MonsterSpawnerManager : MonoBehaviour
     private bool _hasLimitedEntities;
     private readonly List<Item> _presentationItems = new(32);
     private int _monsterSnapshotVersion = -1;
-    private int _spawnConfigCursor;
     private int _activeResidentCursor;
     private int _parkedAddressCursor;
     private int _lifecycleWorkCursor;
@@ -178,8 +176,8 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         AiRuntimeBackendService.ClearRoutes();
         ReleaseJsonRuntimeConfigs();
         _nextSpawnRetryTime.Clear();
-        _nextRecoveryCheckTime.Clear();
         _remainingSearchAttempts.Clear();
+        _spawnObservations.Clear();
         _nextResidentWakeAttempt.Clear();
         enabled = false;
         _itemManager = null;
@@ -282,6 +280,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
 
         if (!TryGetCurrentTimeData(out string sceneName, out TimeData timeData))
         {
+            _naturalCountdown.LastObservedGameSeconds = -1d;
             ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick));
             return;
         }
@@ -289,6 +288,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         RefreshPlayerPositions(sceneName);
         if (_playerPositions.Count == 0)
         {
+            _naturalCountdown.LastObservedGameSeconds = -1d;
             ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick));
             return;
         }
@@ -302,17 +302,10 @@ public partial class MonsterSpawnerManager : MonoBehaviour
 
             SpawnerProgressSaveData state = GetOrCreateState(config);
             RecoverEcologyBudget(config, state, currentDay);
-            ClampPendingSpawns(config, state);
-
-            if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
-                ProcessCountdowns(config, state, timeData);
-            else if (config.ScheduleMode == SpawnerScheduleMode.DayMilestoneGrowth)
-                ProcessMilestoneGrowth(config, state, sceneName, currentDay);
-            else
-                ProcessTimedWindows(config, state, sceneName, timeData, currentDay);
-
-            QueuePopulationRecovery(config, state);
         }
+
+        AdvanceCountdownSchedule(_naturalCountdown, timeData.GetTotalGameTimeSeconds(), _settings,
+            GameRuleConfiguration.Current.World.SpawnFrequencyMultiplier);
 
         // 出生、显隐和居民装卸轮流优先，每轮最多执行一次实体生命周期操作。
         bool snapshotInProgress = SaveDataMgr.Instance?.IsEcologySnapshotInProgress == true;
@@ -345,6 +338,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         using var worldScope = EnterOwnedWorld();
         MonsterSpawnerSaveData state = saveData.GetMonsterSpawnerData(_ownedWorld);
         state.ConfigStates = _runtimeStates ?? new Dictionary<string, SpawnerProgressSaveData>();
+        state.NaturalCountdown = _naturalCountdown;
         // ECS 停用时保留原有冷快照，不让未启动的后端覆盖历史居民。
         if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
             AiRuntimeBackendService.Ecology?.CaptureResidents(state);
@@ -355,6 +349,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         if (saveData == null)
         {
             _runtimeStates = new Dictionary<string, SpawnerProgressSaveData>();
+            _naturalCountdown = new SpawnerCountdownProgress();
             return;
         }
 
@@ -362,8 +357,8 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         saved.ConfigStates ??= new Dictionary<string, SpawnerProgressSaveData>();
         _runtimeStates = saved.ConfigStates;
         // 恢复存档保留剩余时长，重新绑定观察基准，不补离线期间的游戏时间。
-        foreach (SpawnerProgressSaveData state in _runtimeStates.Values)
-            state?.ResetCountdownObservation();
+        _naturalCountdown = saved.NaturalCountdown ??= new SpawnerCountdownProgress();
+        _naturalCountdown.LastObservedGameSeconds = -1d;
     }
 
     #endregion
@@ -385,170 +380,21 @@ public partial class MonsterSpawnerManager : MonoBehaviour
                _dayTimeSystem.TryGetResolvedTimeData(sceneName, out _, out timeData);
     }
 
-    private void ProcessTimedWindows(
-        SpawnerConfig config,
-        SpawnerProgressSaveData state,
-        string sceneName,
-        TimeData timeData,
-        int currentDay)
-    {
-        float currentTotalTime = timeData.GetTotalGameTime();
-        if (state.LastProcessedTotalTime < 0f)
-        {
-            state.LastProcessedTotalTime = currentTotalTime;
-            return;
-        }
-
-        if (currentTotalTime < state.LastProcessedTotalTime)
-            state.LastProcessedTotalTime = currentTotalTime;
-
-        float previousTotalTime = state.LastProcessedTotalTime;
-        state.LastProcessedTotalTime = currentTotalTime;
-        if (currentTotalTime <= previousTotalTime)
-            return;
-
-        float frequencyMultiplier = GameDifficultyService.Current.World.SpawnFrequencyMultiplier;
-        if (frequencyMultiplier <= 0f)
-            return;
-
-        int spawnsPerDay = GameDifficultyService.ScaleCount(
-            config.SpawnsPerDay,
-            frequencyMultiplier,
-            1);
-        float dayLength = Mathf.Max(1f, timeData.DayLength);
-        float interval = dayLength / spawnsPerDay;
-        float firstTriggerTime = Mathf.Repeat(config.SpawnTriggerTime, dayLength);
-        // 跨天快进只处理当前日窗口，不能把离线期间的出生事件一次性补进当前视野。
-        int endDay = Mathf.Max(0, Mathf.FloorToInt(currentTotalTime / dayLength));
-        int startDay = endDay;
-
-        for (int day = startDay; day <= endDay; day++)
-        {
-            if (config.DaysBetweenSpawns > 1 &&
-                day - state.LastSpawnDay < config.DaysBetweenSpawns)
-            {
-                continue;
-            }
-
-            for (int windowIndex = 0; windowIndex < spawnsPerDay; windowIndex++)
-            {
-                float triggerTimeInDay = Mathf.Repeat(firstTriggerTime + interval * windowIndex, dayLength);
-                float triggerTotalTime = day * dayLength + triggerTimeInDay;
-                if (triggerTotalTime <= previousTotalTime || triggerTotalTime > currentTotalTime)
-                    continue;
-
-                if (config.RequireGlobalDarkness &&
-                    !IsScheduledTimeDark(sceneName, timeData, triggerTimeInDay))
-                {
-                    continue;
-                }
-
-                if (config.SpawnChance <= 0f || UnityEngine.Random.value >= config.SpawnChance)
-                    continue;
-
-                int queueRoom = Mathf.Max(
-                    0,
-                    GetEffectiveGroupLimit(config) -
-                    CountGroupAlive(config) -
-                    state.PendingSpawnCount -
-                    state.PendingReplacementCount);
-                int scheduledCount = GameDifficultyService.ScaleCount(
-                    config.SpawnCount,
-                    frequencyMultiplier,
-                    1);
-                state.PendingSpawnCount += Mathf.Min(queueRoom, scheduledCount);
-                state.LastSpawnDay = day;
-            }
-        }
-    }
-
-    private void ProcessMilestoneGrowth(
-        SpawnerConfig config,
-        SpawnerProgressSaveData state,
-        string sceneName,
-        int currentDay)
-    {
-        int dayNumber = Mathf.Max(1, currentDay + 1);
-        int growthInterval = Mathf.Max(1, config.GrowthIntervalDays);
-        if (config.UnboundedDailyGrowth)
-        {
-            QueueUnboundedDailyGrowth(config, state, dayNumber);
-            return;
-        }
-
-        int lifetimeLimit = GameDifficultyService.ScaleCount(
-            config.MaxLifetimeSpawnCount,
-            GameDifficultyService.Current.World.SpawnPopulationMultiplier,
-            1);
-        int limit = Mathf.Min(
-            Mathf.Clamp(lifetimeLimit, 1, 64),
-            GetEffectiveGroupLimit(config));
-        int targetScheduledCount = Mathf.Min(
-            limit,
-            GameDifficultyService.ScaleCount(
-                dayNumber / growthInterval,
-                GameDifficultyService.Current.World.SpawnFrequencyMultiplier));
-        int alreadyScheduled = CountGroupAlive(config) +
-                               Mathf.Max(0, state.PendingSpawnCount) +
-                               Mathf.Max(0, state.PendingReplacementCount);
-
-        if (targetScheduledCount > alreadyScheduled)
-            state.PendingSpawnCount += targetScheduledCount - alreadyScheduled;
-
-        state.ProcessedGrowthMilestones =
-            Mathf.Max(state.ProcessedGrowthMilestones, targetScheduledCount);
-        state.PendingSpawnCount = Mathf.Clamp(
-            state.PendingSpawnCount,
-            0,
-            Mathf.Max(0, targetScheduledCount - CountGroupAlive(config)));
-    }
-
-    /// <summary>为无上限逐日模式排入当晚对应数量。</summary>
-    private void QueueUnboundedDailyGrowth(
-        SpawnerConfig config,
-        SpawnerProgressSaveData state,
-        int dayNumber)
-    {
-        int lastProcessedDay = Mathf.Max(0, state.ProcessedGrowthMilestones);
-        if (dayNumber <= lastProcessedDay)
-            return;
-
-        long firstMissingDay = lastProcessedDay + 1L;
-        long missingDayCount = dayNumber - lastProcessedDay;
-        long scheduledCount = (firstMissingDay + dayNumber) * missingDayCount / 2L;
-        state.PendingSpawnCount = (int)Math.Min(
-            int.MaxValue,
-            (long)Mathf.Max(0, state.PendingSpawnCount) + scheduledCount);
-        state.ProcessedGrowthMilestones = dayNumber;
-    }
-
-    private bool IsScheduledTimeDark(string sceneName, TimeData timeData, float timeInDay)
-    {
-        if (timeData?.LightParams == null)
-            return false;
-
-        float dayLength = Mathf.Max(1f, timeData.DayLength);
-        if (!_dayTimeSystem.SceneLightingRateDict.TryGetValue(sceneName, out float lightingRate))
-            lightingRate = 1f;
-        float lighting = timeData.LightParams.Evaluate(Mathf.Repeat(timeInDay, dayLength) / dayLength) * lightingRate;
-        return lighting <= LightLayerMgr.CompletelyDarkValue + 0.0001f;
-    }
-
     #endregion
 
-    #region 生态预算与补位
+    #region 生态预算
 
     private static void RecoverEcologyBudget(SpawnerConfig config, SpawnerProgressSaveData state, int currentDay)
     {
-        if (config.UnboundedDailyGrowth)
+        if (config.IgnoreEcologyBudget)
         {
             state.AvailableBudget = int.MaxValue;
             state.LastBudgetRecoveryDay = currentDay;
             return;
         }
 
-        float populationMultiplier = GameDifficultyService.Current.World.SpawnPopulationMultiplier;
-        int maxBudget = GameDifficultyService.ScaleCount(
+        float populationMultiplier = GameRuleConfiguration.Current.World.SpawnPopulationMultiplier;
+        int maxBudget = GameRuleMath.ScaleCount(
             config.MaxEcologyBudget,
             populationMultiplier,
             1);
@@ -567,7 +413,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         if (daysPassed <= 0)
             return;
 
-        int recoveryPerDay = GameDifficultyService.ScaleCount(
+        int recoveryPerDay = GameRuleMath.ScaleCount(
             config.DailyBudgetRecovery,
             populationMultiplier);
         long restored = (long)daysPassed * recoveryPerDay;
@@ -578,100 +424,15 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         state.LastBudgetRecoveryDay = currentDay;
     }
 
-    private void QueuePopulationRecovery(SpawnerConfig config, SpawnerProgressSaveData state)
-    {
-        if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
-            return;
-        if (config.RecoveryTargetPopulation <= 0)
-            return;
-        string key = GetConfigKey(config);
-        float now = Time.unscaledTime;
-        if (_nextRecoveryCheckTime.TryGetValue(key, out float nextCheck) && now < nextCheck)
-            return;
-
-        int targetPopulation = Mathf.Min(
-            GameDifficultyService.ScaleCount(
-                config.RecoveryTargetPopulation,
-                GameDifficultyService.Current.World.SpawnPopulationMultiplier),
-            GetEffectiveGroupLimit(config));
-        if (targetPopulation <= 0)
-            return;
-
-        _nextRecoveryCheckTime[key] = now + Mathf.Max(0.5f, config.RecoveryCheckInterval);
-        int aliveCount = CountGroupAlive(config);
-        int pendingCount = Mathf.Max(0, state.PendingSpawnCount) + Mathf.Max(0, state.PendingReplacementCount);
-        int missingCount = targetPopulation - aliveCount - pendingCount;
-        if (missingCount > 0)
-            state.PendingReplacementCount += missingCount;
-    }
-
-    private void ClampPendingSpawns(SpawnerConfig config, SpawnerProgressSaveData state)
-    {
-        if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
-            return;
-        if (state.PendingSpawnCount <= 0 && state.PendingReplacementCount <= 0)
-            return;
-        if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth)
-        {
-            state.PendingSpawnCount = Mathf.Max(0, state.PendingSpawnCount);
-            state.PendingReplacementCount = Mathf.Max(0, state.PendingReplacementCount);
-            return;
-        }
-
-        int availableRoom = Mathf.Max(0, GetEffectiveGroupLimit(config) - CountGroupAlive(config));
-        state.PendingSpawnCount = Mathf.Clamp(state.PendingSpawnCount, 0, availableRoom);
-        availableRoom -= state.PendingSpawnCount;
-        state.PendingReplacementCount = Mathf.Clamp(state.PendingReplacementCount, 0, availableRoom);
-    }
-
-    private void QueueDeathReplacement(SpawnerConfig config)
-    {
-        if (!enabled || config == null || config.ScheduleMode == SpawnerScheduleMode.Countdown ||
-            config.RecoveryTargetPopulation <= 0)
-            return;
-
-        SpawnerProgressSaveData state = GetOrCreateState(config);
-        int target = Mathf.Min(
-            GameDifficultyService.ScaleCount(
-                config.RecoveryTargetPopulation,
-                GameDifficultyService.Current.World.SpawnPopulationMultiplier),
-            GetEffectiveGroupLimit(config));
-        int aliveAfterDeath = Mathf.Max(0, CountGroupAlive(config) - 1);
-        int pending = Mathf.Max(0, state.PendingSpawnCount) + Mathf.Max(0, state.PendingReplacementCount);
-        if (aliveAfterDeath + pending < target)
-            state.PendingReplacementCount++;
-    }
-
     #endregion
 
     #region 生成执行
-
-    /// <summary>每轮只处理一个配置的一次候选搜索或创建；配置轮转防止长期饥饿。</summary>
-    private bool ProcessDueSpawnWork(string sceneName, int currentDay)
-    {
-        int count = _spawnerConfigs.Count;
-        if (count == 0) return false;
-        int cursor = _spawnConfigCursor % count;
-        for (int visited = 0; visited < count; visited++)
-        {
-            SpawnerConfig config = _spawnerConfigs[cursor];
-            cursor = (cursor + 1) % count;
-            if (config == null) continue;
-            if (ProcessPendingSpawns(config, GetOrCreateState(config), sceneName, currentDay))
-            {
-                _spawnConfigCursor = cursor;
-                return true;
-            }
-        }
-        _spawnConfigCursor = cursor;
-        return false;
-    }
 
     private bool ProcessPendingSpawns(
         SpawnerConfig config,
         SpawnerProgressSaveData state,
         string sceneName,
-        int currentDay)
+        int currentDay, SpawnerConfig.SpawnEntry countdownEntry, Vector3? selectedPosition = null)
     {
         if (state.PendingSpawnCount <= 0 && state.PendingReplacementCount <= 0)
             return false;
@@ -683,84 +444,74 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         if (now < _nextCreatureBirthTime)
             return false;
 
-        if (!HasAvailableBackendEntry(config))
-            return false;
-
         if (config.RequireGlobalDarkness && !IsGlobalDark(sceneName))
-            return false;
+        {
+            ObserveSpawn(config, "本批需要的全局黑暗已失效");
+            RecordNaturalSpawnFailure(config, state);
+            return true;
+        }
 
-        if (_monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors) &&
-            !UsesEntityPopulation(config))
-            return false;
-
-        SpawnerConfig.SpawnEntry countdownEntry = config.ScheduleMode == SpawnerScheduleMode.Countdown
-            ? SelectPendingCountdownEntry(config, state) : null;
-        if (config.ScheduleMode == SpawnerScheduleMode.Countdown && countdownEntry == null)
-            return false;
-        bool spawned = TrySpawnOne(config, state, currentDay, out bool skippedByChance, out bool queued, countdownEntry);
+        bool spawned = TrySpawnOne(config, state, currentDay, out bool skippedByChance, out bool queued, countdownEntry,
+            selectedPosition: selectedPosition);
         if (queued) return true;
         if (!spawned && !skippedByChance)
         {
-            int remaining = _remainingSearchAttempts.TryGetValue(config, out int value)
-                ? value - 1 : Mathf.Max(1, config.SpawnSearchRetryCount) - 1;
-            if (remaining <= 0)
-            {
-                _remainingSearchAttempts.Remove(config);
-                _nextSpawnRetryTime[key] = now + Mathf.Max(0.05f, _settings.SpawnRetryInterval);
-            }
-            else
-            {
-                _remainingSearchAttempts[config] = remaining;
-            }
+            RecordNaturalSpawnFailure(config, state);
             return true;
         }
 
         _remainingSearchAttempts.Remove(config);
         _nextSpawnRetryTime[key] = now + Mathf.Max(_settings.EcologyTickInterval, config.AsyncSpawnInterval);
 
-        if (countdownEntry == null) state.CompleteSpawnAttempt(spawned, currentDay);
-        else CompleteCountdownSpawnAttempt(state, countdownEntry, spawned, currentDay);
+        CompleteNaturalSpawnAttempt(state, spawned, currentDay);
         return true;
     }
 
     private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state, int currentDay,
         out bool skippedByChance, out bool queued,
-        SpawnerConfig.SpawnEntry requestedEntry = null, bool incremental = true)
+        SpawnerConfig.SpawnEntry requestedEntry = null, bool incremental = true, Vector3? selectedPosition = null)
     {
         skippedByChance = false;
         queued = false;
         if (_naturalCreatureBirth != null) return false;
-        SpawnerCountdownProgress batch = GetSpawnBatch(config, state, requestedEntry);
+        SpawnerCountdownProgress batch = GetSpawnBatch(config, requestedEntry);
         int requiredRoom = GetCountdownBatchRequiredRoom(batch);
-        int globalLimit = GameDifficultyService.ScaleCount(
+        int globalLimit = GameRuleMath.ScaleCount(
             _settings.GlobalAliveLimit,
-            GameDifficultyService.Current.World.SpawnPopulationMultiplier,
+            GameRuleConfiguration.Current.World.SpawnPopulationMultiplier,
             1);
-        if (!config.UnboundedDailyGrowth &&
-            !config.IgnorePopulationLimits &&
-            ((long)CountPopulationLimitedAlive() + requiredRoom > globalLimit ||
-             (long)CountGroupAlive(config) + requiredRoom > GetEffectiveGroupLimit(config)))
+        if (!config.IgnorePopulationLimits)
         {
-            return false;
+            if ((long)CountPopulationLimitedAlive() + requiredRoom > globalLimit)
+                return ObserveSpawn(config, "全局生态剩余名额不足以容纳本批");
+            if ((long)CountGroupAlive(config) + requiredRoom > GetEffectiveGroupLimit(config))
+                return ObserveSpawn(config, "分组剩余名额或树木栖息地容量不足以容纳本批");
         }
 
         SpawnerConfig.SpawnEntry entry = requestedEntry ?? DetermineAvailableEntry(config, state);
         if (entry == null)
-            return false;
+            return ObserveSpawn(config, "没有满足预算、物种上限和后端条件的条目");
         if (requestedEntry != null && !CanSpawnEntry(config, requestedEntry, state, requiredRoom))
-            return false;
+            return ObserveSpawn(config, "本物种的预算、人数或后端条件不满足");
 
-        if (!TryGetValidSpawnPosition(config, out Vector3 spawnPosition, batch, requiredRoom))
+        Vector3 spawnPosition;
+        if (selectedPosition.HasValue)
+        {
+            spawnPosition = selectedPosition.Value;
+            PrepareNearbyGroupCounts(config);
+            if (!IsValidSpawnPosition(config, spawnPosition, batch, requiredRoom)) return false;
+        }
+        else if (!TryGetValidSpawnPosition(config, out spawnPosition, batch, requiredRoom))
             return false;
 
         if (!IsWithinLocalSpeciesLimit(config, entry, spawnPosition, requiredRoom))
-            return false;
+            return ObserveSpawn(config, "落点附近的同物种数量已达上限");
 
         // 概率落空是已完成的机会，不能按找不到地点重试到最终必定生成。
         if (entry.SpawnChance < 1f && !entry.PassesSpawnChance(UnityEngine.Random.value))
         {
             skippedByChance = true;
-            return false;
+            return ObserveSpawn(config, "独立生成概率未通过，本次机会已消费");
         }
 
         // 即使资源初始化失败，昂贵的创建尝试也不能在同一短时间窗内反复执行。
@@ -768,16 +519,18 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         if (incremental && !AiRuntimeBackendService.UsesEntities(entry.PrefabName))
         {
             _naturalCreatureBirth = CreateNaturalCreatureInSteps(config, state, entry, spawnPosition, currentDay,
-                () => batch?.RecordBatchBirth(spawnPosition.x, spawnPosition.y, _itemManager.PlayerInSceneName));
+                () => batch?.RecordBatchBirth(spawnPosition.x, spawnPosition.y, _ownedWorld));
+            ObserveSpawn(config, "已开始分帧创建");
             queued = true;
             return false;
         }
         if (!TrySpawnMonster(entry, spawnPosition))
-            return false;
+            return ObserveSpawn(config, "生物创建失败，检查回滚计数与控制台");
 
-        batch?.RecordBatchBirth(spawnPosition.x, spawnPosition.y, _itemManager.PlayerInSceneName);
-        if (!config.UnboundedDailyGrowth)
+        batch?.RecordBatchBirth(spawnPosition.x, spawnPosition.y, _ownedWorld);
+        if (!config.IgnoreEcologyBudget)
             state.AvailableBudget = Mathf.Max(0, state.AvailableBudget - Mathf.Max(1, entry.EcologyCost));
+        ObserveSpawn(config, "生成成功");
         return true;
     }
 
@@ -831,7 +584,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         if (entry == null ||
             string.IsNullOrWhiteSpace(entry.PrefabName) ||
             entry.Probability <= 0f ||
-            (!config.UnboundedDailyGrowth && (long)state.AvailableBudget < (long)Mathf.Max(1, entry.EcologyCost) * requiredRoom))
+            (!config.IgnoreEcologyBudget && (long)state.AvailableBudget < (long)Mathf.Max(1, entry.EcologyCost) * requiredRoom))
         {
             return false;
         }
@@ -851,10 +604,10 @@ public partial class MonsterSpawnerManager : MonoBehaviour
             (long)AiRuntimeBackendService.Ecology.ResidentCount + requiredRoom > Mathf.Max(1, _settings.MaxLoadedEntityActors))
             return false;
 
-         int speciesLimit = GameDifficultyService.ScaleCount(
+         int speciesLimit = GameRuleMath.ScaleCount(
              entry.SpeciesAliveLimit,
-             GameDifficultyService.Current.World.SpawnPopulationMultiplier);
-         return config.IgnorePopulationLimits || config.UnboundedDailyGrowth ||
+             GameRuleConfiguration.Current.World.SpawnPopulationMultiplier);
+         return config.IgnorePopulationLimits ||
              entry.SpeciesAliveLimit <= 0 ||
              (long)CountSpeciesAlive(entry.PrefabName) + requiredRoom <= speciesLimit;
     }
@@ -875,35 +628,50 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         }
         else
         {
-            Vector3 anchor = _playerPositions[UnityEngine.Random.Range(0, _playerPositions.Count)];
-            float randomAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
-            float randomDistance = UnityEngine.Random.Range(
-                Mathf.Max(0f, config.MinSpawnDistance),
-                Mathf.Max(config.MinSpawnDistance, config.MaxSpawnDistance));
-            candidate = anchor + new Vector3(
-                Mathf.Cos(randomAngle) * randomDistance,
-                Mathf.Sin(randomAngle) * randomDistance,
-                0f);
-            if (config.TreeHabitat.Enabled && !TryGetTreeHabitatPosition(config, out candidate))
-                return false;
+            if (config.TreeHabitat.Enabled)
+            {
+                if (!TryGetTreeHabitatPosition(config, out candidate))
+                    return ObserveSpawn(config, "玩家附近没有合格的树木栖息地");
+            }
+            else if (!TryGetLoadedSpawnCandidate(config, out candidate))
+                return ObserveSpawn(config, "玩家周围没有符合距离的已加载区块");
         }
         candidate = WorldTopologyRuntime.NormalizePosition(candidate);
         candidate.x = Mathf.Floor(candidate.x) + 0.5f;
         candidate.y = Mathf.Floor(candidate.y) + 0.5f;
 
-        if ((batch != null && !IsCountdownBatchCandidate(batch, candidate, config.BatchSpawnRadius, WorldTopologyRuntime.GetActiveDomain())) ||
-            IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) ||
-            IsVisibleByAnyActiveCamera(candidate, 0.15f) ||
-            !IsWithinPlayerPopulationLimit(config, candidate, requiredRoom) ||
-            !_chunkManager.IsRuntimeEntityPresentationReady(candidate) ||
-            !IsRuntimeTerrainReady(candidate) ||
-            !(config.WaterOnly ? AquaticHabitat.CanSwimAt(candidate) : IsWalkableSpawnPosition(candidate)) ||
-            !IsBiomeAllowed(config, candidate) ||
-            !IsGroundTileAllowed(config, candidate) ||
-            !IsLightAllowed(config, candidate))
-            return false;
-
+        if (!IsValidSpawnPosition(config, candidate, batch, requiredRoom)) return false;
         spawnPosition = candidate;
+        return true;
+    }
+
+    private bool IsValidSpawnPosition(SpawnerConfig config, Vector3 candidate,
+        SpawnerCountdownProgress batch = null, int requiredRoom = 1)
+    {
+        if (!IsNearAnyPlayer(candidate, config.MaxSpawnDistance + 0.0001f))
+            return ObserveSpawn(config, "候选超出玩家周围的生成距离");
+        // 顺序沿用原短路校验，只记录这次候选最先被哪条规则拒绝。
+        if (batch != null && !IsCountdownBatchCandidate(batch, candidate, config.BatchSpawnRadius, WorldTopologyRuntime.GetActiveDomain()))
+            return ObserveSpawn(config, "候选超出同批半径或与本批出生格重复");
+        if (IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)))
+            return ObserveSpawn(config, "候选离玩家过近");
+        if (IsVisibleByAnyActiveCamera(candidate, 0.15f))
+            return ObserveSpawn(config, "候选仍在玩家视野内");
+        if (!IsWithinPlayerPopulationLimit(config, candidate, requiredRoom))
+            return ObserveSpawn(config, "候选附近的玩家区域人数已达上限");
+        if (!_chunkManager.IsRuntimeEntityPresentationReady(candidate))
+            return ObserveSpawn(config, "候选区块的表现尚未就绪");
+        if (!IsRuntimeTerrainReady(candidate))
+            return ObserveSpawn(config, "候选地形尚未就绪");
+        if (!(config.WaterOnly ? AquaticHabitat.CanSwimAt(candidate) : IsWalkableSpawnPosition(candidate)))
+            return ObserveSpawn(config, "候选不满足水域或可行走地面要求");
+        if (!IsBiomeAllowed(config, candidate))
+            return ObserveSpawn(config, "候选群系不符合规则");
+        if (!IsGroundTileAllowed(config, candidate))
+            return ObserveSpawn(config, "候选地块类型不符合规则");
+        if (!IsLightAllowed(config, candidate))
+            return ObserveSpawn(config, "候选光照不符合规则");
+
         return true;
     }
 
@@ -1097,12 +865,12 @@ public partial class MonsterSpawnerManager : MonoBehaviour
 
     private bool IsWithinPlayerPopulationLimit(SpawnerConfig config, Vector3 candidate, int requiredRoom = 1)
     {
-        if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth)
+        if (config.IgnorePopulationLimits)
             return true;
 
-        int limit = GameDifficultyService.ScaleCount(
+        int limit = GameRuleMath.ScaleCount(
             config.PerPlayerAliveLimit,
-            GameDifficultyService.Current.World.SpawnPopulationMultiplier);
+            GameRuleConfiguration.Current.World.SpawnPopulationMultiplier);
         if (limit <= 0)
             return true;
 
@@ -1126,10 +894,10 @@ public partial class MonsterSpawnerManager : MonoBehaviour
     private bool IsWithinLocalSpeciesLimit(
         SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 candidate, int requiredRoom = 1)
     {
-        if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth || entry.SpeciesAliveLimit <= 0)
+        if (config.IgnorePopulationLimits || entry.SpeciesAliveLimit <= 0)
             return true;
-        int limit = GameDifficultyService.ScaleCount(
-            entry.SpeciesAliveLimit, GameDifficultyService.Current.World.SpawnPopulationMultiplier);
+        int limit = GameRuleMath.ScaleCount(
+            entry.SpeciesAliveLimit, GameRuleConfiguration.Current.World.SpawnPopulationMultiplier);
         int loaded = CountSpeciesAlive(entry.PrefabName);
         int nearbyParked = SaveDataMgr.Instance?.CountParkedRuntimeAiSpeciesWithinRadius(
             entry.PrefabName, candidate,
@@ -1139,12 +907,12 @@ public partial class MonsterSpawnerManager : MonoBehaviour
 
     private int GetEffectiveGroupLimit(SpawnerConfig config)
     {
-        if (config.UnboundedDailyGrowth || config.IgnorePopulationLimits)
+        if (config.IgnorePopulationLimits)
             return int.MaxValue;
 
-        int populationLimit = GameDifficultyService.ScaleCount(
+        int populationLimit = GameRuleMath.ScaleCount(
             config.GroupAliveLimit,
-            GameDifficultyService.Current.World.SpawnPopulationMultiplier,
+            GameRuleConfiguration.Current.World.SpawnPopulationMultiplier,
             1);
         if (config.TreeHabitat.Enabled)
             populationLimit = Mathf.Min(populationLimit, RuntimeTreeHabitatIndex.ResolveCapacity(
@@ -1217,7 +985,9 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         _itemSnapshot.Clear();
         _monsterSnapshot.Clear();
         _monsterSnapshotVersion = -1;
-        _spawnConfigCursor = 0;
+        _nextNaturalSelectionTime = 0f;
+        _naturalSpawnCandidates.Clear();
+        _naturalSpawnChunks.Clear();
         _activeResidentCursor = 0;
         _parkedAddressCursor = 0;
         _lifecycleWorkCursor = 0;
@@ -1302,7 +1072,6 @@ public partial class MonsterSpawnerManager : MonoBehaviour
     private void OnMonsterDeathStarted(Item item, SpawnerConfig config)
     {
         using var worldScope = EnterOwnedWorld();
-        QueueDeathReplacement(config);
     }
 
     /// <summary>分批休眠远处活体并恢复邻近居民；一次调度最多执行一个实体生命周期操作。</summary>
@@ -1481,51 +1250,23 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         return key;
     }
 
-    [Button("调试：触发首个配置")]
+    [Button("调试：触发统一自然刷新")]
     public void DebugTriggerSpawn()
     {
-        if (_spawnerConfigs == null || _spawnerConfigs.Count == 0 || _spawnerConfigs[0] == null)
-            return;
-
-        SpawnerConfig config = _spawnerConfigs[0];
-        SpawnerProgressSaveData state = GetOrCreateState(config);
-        if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
-        {
-            if (!TryGetCurrentTimeData(out _, out TimeData timeData) || config.SpawnEntries.Count == 0)
-                return;
-            SpawnerConfig.SpawnEntry entry = config.SpawnEntries[0];
-            state.SpeciesCountdowns ??= new();
-            if (!state.SpeciesCountdowns.TryGetValue(entry.PrefabName, out SpawnerCountdownProgress countdown))
-                state.SpeciesCountdowns.Add(entry.PrefabName, countdown = new SpawnerCountdownProgress());
-            countdown.IntervalGameSeconds = GetCountdownInterval(config, entry, timeData.DayLength,
-                GameDifficultyService.Current.World.SpawnFrequencyMultiplier);
-            if (countdown.PendingCount <= 0)
-                countdown.BeginBatch(DetermineCountdownBatchCount(config,
-                    GameDifficultyService.Current.World.SpawnFrequencyMultiplier, CountdownChanceRoll));
-            countdown.RemainingGameSeconds = 0d;
-            RefreshCountdownPendingCount(state);
-            return;
-        }
-        state.PendingSpawnCount += Mathf.Max(1, config.SpawnCount);
-    }
-
-    [Button("调试：幽灵待生成数量+1")]
-    public void DebugQueueOneGrowthSpawn()
-    {
-        SpawnerConfig config = _spawnerConfigs?.Find(
-            value => value != null && value.ScheduleMode == SpawnerScheduleMode.DayMilestoneGrowth);
-        if (config == null)
-            return;
-
-        SpawnerProgressSaveData state = GetOrCreateState(config);
-        state.PendingReplacementCount++;
+        if (!GameNetwork.HasStateAuthority || _settings == null || _naturalCountdown.PendingCount > 0 ||
+            !TryGetCurrentTimeData(out _, out TimeData timeData)) return;
+        _naturalCountdown.IntervalGameSeconds = GetCountdownInterval(_settings,
+            GameRuleConfiguration.Current.World.SpawnFrequencyMultiplier);
+        _naturalCountdown.RemainingGameSeconds = 0d;
+        _naturalCountdown.LastObservedGameSeconds = timeData.GetTotalGameTimeSeconds();
+        _nextNaturalSelectionTime = 0f;
     }
 
     [Button("调试：立即生成幽灵")]
     public void DebugSpawnGhostImmediate()
     {
         SpawnerConfig config = _spawnerConfigs?.Find(
-            value => value != null && value.ScheduleMode == SpawnerScheduleMode.DayMilestoneGrowth);
+            value => value != null && value.SpawnEntries.Exists(entry => entry.PrefabName == "Ghost"));
         if (config == null)
         {
             Debug.LogWarning("[MonsterSpawnerManager] 未找到幽灵生成配置。", this);

@@ -1,0 +1,497 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-24",
+  "method": "built-in image_gen.imagegen",
+  "nativePixelRedraw": {
+    "date": "2026-10-24",
+    "method": "GIMP 3.0.4 via GIMP MCP; native 1. Pixel pencil strokes at 32x48; no source-image sampling",
+    "master": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_PixelMaster.xcf",
+    "pixelMap": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Pixels.json",
+    "parts": ["Spacesuit_Head", "Spacesuit_Torso", "Spacesuit_Hands", "Spacesuit_Legs", "Spacesuit_Feet"],
+    "supersedes": "The five spacesuit sourceRects, targetRects, sampling and prompts below describe the original generated versions only; final wearable PNGs come from the native pixel master.",
+    "outputAlpha": [0, 255],
+    "maximumVisibleColors": 8
+  },
+  "canvas": {
+    "width": 32,
+    "height": 48,
+    "pixelsPerUnit": 32,
+    "pivot": [
+      0.5,
+      0
+    ],
+    "sourceFacesLeft": true
+  },
+  "scope": "Fill all eight missing player body-wearable layers in enabled item definitions; existing leather, iron, steel and offhand shield visuals are retained.",
+  "coverage": {
+    "registeredEquipment": 24,
+    "bodyWearables": 23,
+    "missingBefore": 8,
+    "added": 8,
+    "dynamicEquipment": [
+      {
+        "id": "Shield_Wood",
+        "presentation": "existing independent offhand SpriteRenderer",
+        "owner": "Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_ShieldCombat.cs"
+      }
+    ],
+    "missingAfter": 0
+  },
+  "previews": [
+    "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/EquipmentCompletion_Preview.png",
+    "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Preview.png"
+  ],
+  "assets": [
+    {
+      "id": "Chestplate_Twine",
+      "name": "藤甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/equipment.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Chestplate_Twine_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png",
+      "sourceRects": [
+        [
+          67,
+          45,
+          1673,
+          763
+        ]
+      ],
+      "targetRects": [
+        [
+          3,
+          22,
+          27,
+          13
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#211b15",
+          "#3a3021",
+          "#574b2c",
+          "#74653e",
+          "#968052",
+          "#b79b65",
+          "#cdb37e",
+          "#e0c799",
+          "#3a3029",
+          "#544235"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png"
+      },
+      "prompt": "Edit IMAGE 1, the small wide IRON CHEST ARMOR sprite, into a RATTAN / VINE-WOVEN CHEST ARMOR sprite. Image 1 is the exact pose, scale and silhouette template: retain its WIDE SHORT torso, left-facing three-quarter projection, sloped open neckline, two short shoulder guards, their near/far asymmetry, and the short waist. Output only one EMPTY WEARABLE EQUIPMENT LAYER in the same wide-short composition on TRUE TRANSPARENCY. Coarse logical pixel art: only 27 pixels wide by 13 pixels high; each logical pixel a large crisp square. Do not draw a tall frontal product vest. Image 2 is the body for fitting/alignment ONLY; exclude all person pixels. Image 3 is the user's iron-suit screenshot for the approved apparent bulk, worn angle and pixel quality only, no UI/night lighting.\nChange iron material into matte handwoven dried plant rattan: broad tan / muted ochre flexible strips, THREE clear thick horizontal woven bands crossed by only a few wide vertical strips, dark brown liner visible through a few broad gaps, small shoulder pads made of the same broad woven strips and secured with plant-fiber ties. Preserve the iron template's short side-facing torso geometry and shoulder-to-waist proportions, transparent neck and arm openings. Material should read immediately as broad rough basket weave rather than vertical wooden planks, leather or metal. Desaturated straw-tan, olive-brown shadows, a few muted ivory-tan highlights, dark brown-black contour matching input 1's weight. Use large continuous pixel shapes and controlled sparse shading at the same native detail level as iron armor. No fine checker weave, no tiny noisy fibers, no shiny gold, no gradients, no white glints, no blur or antialiasing. No back plate or collar filling the open neck hole, no long straps, no loose dangling vines, no torso-length extension, no skin/person/mannequin/head/face/hair/hands/legs, no other gear, no cast shadow, aura, background, grid, text, logo. The whole shape should look like the iron chest armor fitted to the same small character, rebuilt in rattan.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Female.png",
+        "wornScreenshot": ".agents/skills/flatworld-art/assets/iron-armor-worn-anchor.png"
+      },
+      "refinedOn": "2026-10-24",
+      "refinement": "Match user-approved IronGuard_Cuirass worn size, left-facing source pose and native pixel quality; preserve wood/rattan material identity."
+    },
+    {
+      "id": "Chestplate_Wood",
+      "name": "木甲",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/equipment.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Chestplate_Wood_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png",
+      "sourceRects": [
+        [
+          139,
+          112,
+          1528,
+          697
+        ]
+      ],
+      "targetRects": [
+        [
+          3,
+          22,
+          27,
+          13
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#1d1613",
+          "#34231c",
+          "#513426",
+          "#6e4831",
+          "#895f3d",
+          "#a27a50",
+          "#bd9b6a",
+          "#d2b786",
+          "#292a2c",
+          "#454247"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png"
+      },
+      "prompt": "Edit IMAGE 1, the small wide IRON CHEST ARMOR sprite, into a WOOD CHEST ARMOR sprite. Image 1 is the exact pose and shape template: keep its WIDE SHORT silhouette, its left-facing three-quarter projection, the two detached-looking short shoulder/upper-arm guards, the sloping neck opening, the short broad chest, side folds and short waist. Output an empty wearable armor layer in the SAME wide-short composition and same near/far shoulder geometry as image 1, on TRUE TRANSPARENCY. Work on a coarse logical grid of only 27 pixels wide by 13 pixels high, display each logical pixel as a large crisp square. Do not make an upright catalog vest.\nReplace the silver metal surfaces with a few broad dark-walnut wooden lamella slats bound with two simple muted-tan fiber cords; shoulder guards are also wood slats tied with cord. Keep the cloth under the short shoulder guards dark desaturated brown. Primitive hand-crafted functional armor, matte wood, a few large connected shades, firm dark contour of the same weight as input 1. Preserve input 1's apparent bulk, compact shoulder-to-waist distance, slight side-facing torso angle and asymmetry. Image 2 is body-alignment reference ONLY, exclude the person. Image 3 is the user-approved game screenshot, use only scale, body angle and coarse pixel feel, no UI or dark game lighting. Material readably wood, no metal or silver. No front-facing symmetric product view, no long tunic, no long shoulder straps, no backplate filling the neck hole, no sleeves beyond the short shoulder guards, no skin/person/mannequin/face/hair/hands/legs, no hanging rope tails, no fine grain or dense marks, no tiny detailed highlights, no blur, antialiasing, gradient, aura, shadows, background, grid, text or logo. Only the compact wooden armor matching image 1.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Female.png",
+        "wornScreenshot": ".agents/skills/flatworld-art/assets/iron-armor-worn-anchor.png"
+      },
+      "refinedOn": "2026-10-24",
+      "refinement": "Match user-approved IronGuard_Cuirass worn size, left-facing source pose and native pixel quality; preserve wood/rattan material identity."
+    },
+    {
+      "id": "Engineering_Goggles",
+      "name": "工程护目镜",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/engineering.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Engineering_Goggles_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png",
+      "sourceRects": [
+        [
+          114,
+          561,
+          796,
+          300
+        ]
+      ],
+      "targetRects": [
+        [
+          6,
+          12,
+          18,
+          6
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#242730",
+          "#65462E",
+          "#967044",
+          "#CAB070",
+          "#255663",
+          "#4D8991",
+          "#A5C3BB"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction asset: EMPTY WEARABLE SPRITE LAYER for FlatWorld's 32x48 logical-pixel character. True transparent PNG with a 1024x1536 full portrait character canvas. Image 1 is the placement template; if it is a body it is ALIGNMENT ONLY and must not be drawn. Image 2 is the inventory icon: use only its material/construction identity. Image 3 is the approved steel helmet: copy ONLY its coarse square pixel density, clear silhouette and large connected flat color clusters, not its blue steel material or headgear shape. Image 4, when present, is body alignment only.\nOne small pair of BRASS ENGINEERING GOGGLES with a brown leather strap, worn ACROSS THE EYES of the base body. Two round chunky brass rims and a short nose bridge with small teal glass glints. Keep each lens center ENTIRELY TRANSPARENT so the original eyes show through. Not a hat or helmet; this item must keep the character's hair, scalp, nose, cheeks and mouth visible. Exact logical bounds x7..25,y12..17 (19x6 pixels). Eye centers are approximately (11,14) and (18,14); the holes must include x10..13,y13..16 and x17..20,y13..16. A single-pixel rim around each lens, no opaque center fill or fake eyes. Strap stays at the far left/right temples only, not across the face. Design/material from image 2; position follows image 1's face.\nUse ONLY these flat material colors: #242730 #65462E #967044 #CAB070 #255663 #4D8991 #A5C3BB\nHard-edged chunky native-looking pixel art on a 32x48 logical grid, enlarged by 32 without adding detail. At most the specified palette; dark crisp outline, broad upper-left light and broad shadows. Preserve transparent full-canvas padding and all openings. Do not zoom, recenter or fill the canvas. Equipment only: no person, face, eyes, skin, body, mannequin, hair, shirt or pants underneath, no extra equipment. No dense highlights, dither, checkerboard, tiny rivets, noise, gradients, texture speckles, smooth edges, glow, background, text or grid lines.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+      }
+    },
+    {
+      "id": "Spacesuit_Head",
+      "name": "宇航服头盔",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Head_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Head.png",
+      "sourceRects": [
+        [
+          55,
+          236,
+          939,
+          1054
+        ]
+      ],
+      "targetRects": [
+        [
+          4,
+          0,
+          25,
+          24
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#242730",
+          "#484F5C",
+          "#737C88",
+          "#B1A58B",
+          "#D8CFB6",
+          "#F0E7D0",
+          "#B76F34",
+          "#34717A"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Head.png",
+        "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction asset: EMPTY WEARABLE SPRITE LAYER for FlatWorld's 32x48 logical-pixel character. True transparent PNG with a 1024x1536 full portrait character canvas. Image 1 is the placement template; if it is a body it is ALIGNMENT ONLY and must not be drawn. Image 2 is the inventory icon: use only its material/construction identity. Image 3 is the approved steel helmet: copy ONLY its coarse square pixel density, clear silhouette and large connected flat color clusters, not its blue steel material or headgear shape. Image 4, when present, is body alignment only.\nOne ROUND PRESSURE SPACESUIT HELMET, warm ivory shell, dark gray sealed rim and collar, one small orange latch, restrained teal glass reflection at the outer upper visor corner. Same construction/color identity as image 2, simplified strongly. Logical bounds x4..28,y0..22; the character has a broad large head. A broad EMPTY TRANSPARENT front visor aperture, clear across x8..23,y10..20, must reveal the original face including both eyes, nose and mouth. No dark visor fill, backplate, replacement face, skin or mannequin. Keep a solid ivory dome above and behind the head, narrow rim only outside the face aperture, and a dark collar below the chin at y21..22. Shell looks fully enclosing and pressurized while the face is visible through the transparent window. Preserve image 1's body/head coordinates, slightly image-left facing, not a tilted inventory icon.\nUse ONLY these flat material colors: #242730 #484F5C #737C88 #B1A58B #D8CFB6 #F0E7D0 #B76F34 #34717A\nHard-edged chunky native-looking pixel art on a 32x48 logical grid, enlarged by 32 without adding detail. At most the specified palette; dark crisp outline, broad upper-left light and broad shadows. Preserve transparent full-canvas padding and all openings. Do not zoom, recenter or fill the canvas. Equipment only: no person, face, eyes, skin, body, mannequin, hair, shirt or pants underneath, no extra equipment. No dense highlights, dither, checkerboard, tiny rivets, noise, gradients, texture speckles, smooth edges, glow, background, text or grid lines.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+      },
+      "refinementPrompt": "Use case: precise-object-edit.\nImage 1 is an EMPTY IVORY SPACESUIT HELMET on a 1024x1536 transparent canvas. Image 2 is only a diagnostic preview of the helmet on the character. Fix the helmet FRAME AND FACE APERTURE of image 1; never copy people, labels or other equipment from image 2.\nThe image-left visor rim is too thin and becomes isolated dots when reduced to 25x24 logical pixels. Make the whole left visor frame CONTINUOUS and THICK, approximately 65-80 export pixels (about TWO final logical pixels), from the left brow down to the bottom chin frame. No gaps, rivet dots or disconnected fragments. Keep this rim outside the face.\nWiden and lower the empty transparent face aperture so the COMPLETE original face, BOTH eyes, cheeks, nose and MOUTH show. The broad central region approximately x205..790,y700..1155 of image 1 MUST be completely alpha zero, with NO steel, ivory, dark backplate or glass fill in it. In final logical character coordinates, the face window must clear x8..23,y11..20. Keep the lower chin frame/collar BELOW the mouth, at the bottom of the helmet near image y1180..1280. Join it continuously to the left rim and right shell, with a solid gray pressure seal below the chin.\nPreserve the ivory dome, dark gray rim, orange latch, small teal corner reflection, exact outer size/position and full 1024x1536 transparent canvas. Use LARGE FLAT HARD PIXEL COLOR CLUSTERS with at most these colors: #242730 #484F5C #737C88 #B1A58B #D8CFB6 #F0E7D0 #B76F34 #34717A. Crisp thick low-resolution outline. No texture dots, gradients, dither, checker pattern, glow, person, face, body, hair, mannequin, background, text or extra equipment. Return only the empty helmet layer with the repaired continuous rim and broad transparent visor."
+    },
+    {
+      "id": "Spacesuit_Torso",
+      "name": "宇航服衣服",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Torso_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Torso.png",
+      "sourceRects": [
+        [
+          48,
+          532,
+          928,
+          636
+        ]
+      ],
+      "targetRects": [
+        [
+          3,
+          21,
+          27,
+          15
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.45,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#242730",
+          "#484F5C",
+          "#737C88",
+          "#B1A58B",
+          "#D8CFB6",
+          "#F0E7D0",
+          "#B76F34",
+          "#34717A"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Torso.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction game asset: EMPTY WEARABLE EQUIPMENT LAYER for a 32x48 logical-pixel character, on a TRUE transparent 1024x1536 full portrait canvas. Image 1 gives exact body-part placement and pose; image 2 is the item's inventory icon for MATERIAL AND CONSTRUCTION ONLY; image 3 is the approved steel helmet for coarse square PIXEL STYLE only, not blue steel colors; image 4 is the base BODY for ALIGNMENT ONLY. Never draw any body pixels. Redraw the equipment as part of ONE MATCHING warm-ivory and dark-gray spacesuit set.\nOne EMPTY warm ivory PRESSURE SUIT JACKET WITH TWO LONG SLEEVES in the base body's relaxed pose. Cover the whole short torso and both bare arms down to the glove cuffs, including the skin at the forearms: the jacket must form a continuous sealed fabric layer, not just a breastplate. Dark gray neck ring and wrist seals, simple dark zipper, one compact teal chest control panel and one small muted orange latch. All features are broad flat blocks. Exact logical bounds x3..29,y21..35 (27x15 pixels); neckline near y21, waist near y33, sleeve cuffs near y31..34. Match image 4's real short body, arms slope down and outward. Image 1 only supplies torso anchoring; add the sleeves to cover image 4's arms. No gloves, hands, head, legs, boots or backpack. Neck hole and arm-to-torso gaps truly transparent. No pipes, dense buttons, hoses, badges or floating pieces.\nUse ONLY these flat palette colors: #242730 #484F5C #737C88 #B1A58B #D8CFB6 #F0E7D0 #B76F34 #34717A. Coarse hard square pixels, exactly the feel of a native 32x48 sprite enlarged 32 times. Crisp charcoal outline, broad connected ivory highlights on upper-left, broad cloth shadow to right, simple dark joint seals. Keep full shared canvas padding and all gaps exactly alpha zero. No zooming/recentering. No person, skin, face, body, mannequin, hair, shirt, pants underlay or extra equipment. No scattered white shine, checkerboard, dither, tiny rivets, fine texture, intricate folds, gradients, blur, soft glow, background, text or grid.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+      }
+    },
+    {
+      "id": "Spacesuit_Hands",
+      "name": "宇航服手套",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Hands_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Hands.png",
+      "sourceRects": [
+        [
+          18,
+          771,
+          280,
+          412
+        ],
+        [
+          729,
+          771,
+          278,
+          412
+        ]
+      ],
+      "targetRects": [
+        [
+          1,
+          29,
+          8,
+          9
+        ],
+        [
+          24,
+          29,
+          8,
+          9
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#242730",
+          "#484F5C",
+          "#737C88",
+          "#B1A58B",
+          "#D8CFB6",
+          "#F0E7D0",
+          "#B76F34",
+          "#34717A"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Hands.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction game asset: EMPTY WEARABLE EQUIPMENT LAYER for a 32x48 logical-pixel character, on a TRUE transparent 1024x1536 full portrait canvas. Image 1 gives exact body-part placement and pose; image 2 is the item's inventory icon for MATERIAL AND CONSTRUCTION ONLY; image 3 is the approved steel helmet for coarse square PIXEL STYLE only, not blue steel colors; image 4 is the base BODY for ALIGNMENT ONLY. Never draw any body pixels. Redraw the equipment as part of ONE MATCHING warm-ivory and dark-gray spacesuit set.\nExactly TWO separate warm ivory PRESSURE SUIT GLOVES, matching the existing relaxed down-hanging hand placement. Left logical bounds x1..8,y29..37; right x24..31,y29..37. Each only 8x9 pixels. Broad opaque ivory mitten/back-of-hand surfaces, dark gray pressure-seal cuffs and one small muted orange closure each. Closed gloves cover the entire fist, including fingertips and thumb, with no skin or hollow rings. Left/right pose and wide central transparent gap must match image 1 exactly; do not draw the inventory icon's crossed or upturned gloves. No forearms, sleeves or connecting bar. Broad left light and right shadow, at most one seam.\nUse ONLY these flat palette colors: #242730 #484F5C #737C88 #B1A58B #D8CFB6 #F0E7D0 #B76F34 #34717A. Coarse hard square pixels, exactly the feel of a native 32x48 sprite enlarged 32 times. Crisp charcoal outline, broad connected ivory highlights on upper-left, broad cloth shadow to right, simple dark joint seals. Keep full shared canvas padding and all gaps exactly alpha zero. No zooming/recentering. No person, skin, face, body, mannequin, hair, shirt, pants underlay or extra equipment. No scattered white shine, checkerboard, dither, tiny rivets, fine texture, intricate folds, gradients, blur, soft glow, background, text or grid.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+      }
+    },
+    {
+      "id": "Spacesuit_Legs",
+      "name": "宇航服裤子",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Legs_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Legs.png",
+      "sourceRects": [
+        [
+          145,
+          624,
+          783,
+          829
+        ]
+      ],
+      "targetRects": [
+        [
+          5,
+          33,
+          23,
+          11
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#242730",
+          "#484F5C",
+          "#737C88",
+          "#B1A58B",
+          "#D8CFB6",
+          "#F0E7D0",
+          "#B76F34",
+          "#34717A"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Legs.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction game asset: EMPTY WEARABLE EQUIPMENT LAYER for a 32x48 logical-pixel character, on a TRUE transparent 1024x1536 full portrait canvas. Image 1 gives exact body-part placement and pose; image 2 is the item's inventory icon for MATERIAL AND CONSTRUCTION ONLY; image 3 is the approved steel helmet for coarse square PIXEL STYLE only, not blue steel colors; image 4 is the base BODY for ALIGNMENT ONLY. Never draw any body pixels. Redraw the equipment as part of ONE MATCHING warm-ivory and dark-gray spacesuit set.\nOne combined warm ivory PRESSURE SUIT TROUSERS overlay in the reference's short spread-leg standing pose, with plain dark waist seal, two broad cloth legs and simple dark gray knee patches. Logical bounds x5..27,y33..43: only 23 pixels wide and 11 pixels high. Cover all the existing pants down to ankles with continuous opaque fabric; no exposed pants stripes or holes along either leg. Preserve a clean alpha-zero V-shaped gap between legs. Same leg angle, spacing and VERY SHORT proportions as image 1 and image 4. Do not draw the tall inventory-icon trousers. A single muted orange waist latch, minimal material folds. End above the feet; no boots, feet, pelvis anatomy, skin or upper body.\nUse ONLY these flat palette colors: #242730 #484F5C #737C88 #B1A58B #D8CFB6 #F0E7D0 #B76F34 #34717A. Coarse hard square pixels, exactly the feel of a native 32x48 sprite enlarged 32 times. Crisp charcoal outline, broad connected ivory highlights on upper-left, broad cloth shadow to right, simple dark joint seals. Keep full shared canvas padding and all gaps exactly alpha zero. No zooming/recentering. No person, skin, face, body, mannequin, hair, shirt, pants underlay or extra equipment. No scattered white shine, checkerboard, dither, tiny rivets, fine texture, intricate folds, gradients, blur, soft glow, background, text or grid.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+      }
+    },
+    {
+      "id": "Spacesuit_Feet",
+      "name": "宇航服鞋子",
+      "definition": "Assets/StreamingAssets/GameConfig/Items/shells/chemistry_equipment.json",
+      "source": "Assets/6_Art/Generated/Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Feet_Source.png",
+      "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Feet.png",
+      "sourceRects": [
+        [
+          101,
+          1172,
+          336,
+          307
+        ],
+        [
+          624,
+          1172,
+          322,
+          307
+        ]
+      ],
+      "targetRects": [
+        [
+          5,
+          40,
+          10,
+          6
+        ],
+        [
+          20,
+          40,
+          10,
+          6
+        ]
+      ],
+      "sampling": {
+        "method": "area_weighted_palette_mode",
+        "sourceAlphaThreshold": 128,
+        "minimumOpaqueCoverage": 0.5,
+        "outputAlpha": [
+          0,
+          255
+        ],
+        "palette": [
+          "#242730",
+          "#484F5C",
+          "#737C88",
+          "#B1A58B",
+          "#D8CFB6",
+          "#F0E7D0",
+          "#B76F34",
+          "#34717A"
+        ],
+        "colorDistance": "squared RGB distance; nearest palette votes weighted by overlap area"
+      },
+      "visualStates": {
+        "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Feet.png"
+      },
+      "prompt": "Use case: precise-object-edit / style-transfer.\nProduction game asset: EMPTY WEARABLE EQUIPMENT LAYER for a 32x48 logical-pixel character, on a TRUE transparent 1024x1536 full portrait canvas. Image 1 gives exact body-part placement and pose; image 2 is the item's inventory icon for MATERIAL AND CONSTRUCTION ONLY; image 3 is the approved steel helmet for coarse square PIXEL STYLE only, not blue steel colors; image 4 is the base BODY for ALIGNMENT ONLY. Never draw any body pixels. Redraw the equipment as part of ONE MATCHING warm-ivory and dark-gray spacesuit set.\nExactly TWO separate LOW WIDE warm ivory PRESSURE SUIT BOOTS in the reference's standing pose. Left logical x5..14,y40..45; right x20..29,y40..45. Each only 10 pixels wide and 6 pixels high. Solid rounded ivory toe/instep, dark gray sole and compact sealed cuff, one small muted orange latch at the side. The entire foot shape must be opaque, not just an outline; no holes or exposed feet. Match image 1's foot angle, spacing, small short proportions and equal level soles. No tall shafts, shin armor, legs or skin. Broad color regions only, no repeated straps or bright dots.\nUse ONLY these flat palette colors: #242730 #484F5C #737C88 #B1A58B #D8CFB6 #F0E7D0 #B76F34 #34717A. Coarse hard square pixels, exactly the feel of a native 32x48 sprite enlarged 32 times. Crisp charcoal outline, broad connected ivory highlights on upper-left, broad cloth shadow to right, simple dark joint seals. Keep full shared canvas padding and all gaps exactly alpha zero. No zooming/recentering. No person, skin, face, body, mannequin, hair, shirt, pants underlay or extra equipment. No scattered white shine, checkerboard, dither, tiny rivets, fine texture, intricate folds, gradients, blur, soft glow, background, text or grid.",
+      "references": {
+        "materialIcon": "Assets/6_Art/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png",
+        "pixelStyle": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+        "body": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+      }
+    }
+  ]
+}

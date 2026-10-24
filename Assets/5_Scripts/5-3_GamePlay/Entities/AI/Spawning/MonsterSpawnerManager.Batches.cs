@@ -11,13 +11,13 @@ public partial class MonsterSpawnerManager
     internal static int GetCountdownBatchRequiredRoom(SpawnerCountdownProgress batch) =>
         batch != null && !batch.HasBatchAnchor ? Mathf.Max(1, batch.PendingCount) : 1;
 
-    private SpawnerCountdownProgress GetSpawnBatch(SpawnerConfig config, SpawnerProgressSaveData state,
-        SpawnerConfig.SpawnEntry entry)
+    private SpawnerCountdownProgress GetSpawnBatch(SpawnerConfig config, SpawnerConfig.SpawnEntry entry)
     {
-        if (config.ScheduleMode != SpawnerScheduleMode.Countdown || config.BatchSpawnRadius <= 0f || entry == null ||
-            !state.SpeciesCountdowns.TryGetValue(entry.PrefabName, out SpawnerCountdownProgress batch))
+        if (config.BatchSpawnRadius <= 0f || entry == null ||
+            !IsCountdownBatchFor(_naturalCountdown, config.PersistentId, entry.PrefabName))
             return null;
-        if (batch.HasBatchAnchor && (!IsCountdownBatchAnchorUsable(batch, _itemManager.PlayerInSceneName,
+        SpawnerCountdownProgress batch = _naturalCountdown;
+        if (batch.HasBatchAnchor && (!IsCountdownBatchAnchorUsable(batch, _ownedWorld,
                 _playerPositions, config.MaxSpawnDistance + config.BatchSpawnRadius, WorldTopologyRuntime.GetActiveDomain()) ||
             !_chunkManager.IsRuntimeEntityPresentationReady(new Vector3(batch.BatchAnchorX, batch.BatchAnchorY))))
             batch.ClearBatchAnchor();

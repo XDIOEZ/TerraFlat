@@ -50,6 +50,7 @@ MonoBehaviour:
   castSpeed: 12
   reelSpeed: 8
   fishingLine: {fileID: 8821436795980342210}
+  castSprite: {fileID: 21300000, guid: 6cdab99f627a4000a238769bf2a911d0, type: 3}
   Data:
     StableName: fishing
     ModuleId: Mod_FishingRod

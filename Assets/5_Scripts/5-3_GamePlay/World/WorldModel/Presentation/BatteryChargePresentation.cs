@@ -1,7 +1,8 @@
 using System;
 using UnityEngine;
 
-public sealed class BatteryChargeIndicatorDefinition
+[MemoryPack.MemoryPackable]
+public sealed partial class BatteryChargeIndicatorDefinition
 {
     #region 三格指示灯配置
     public Vector4[] Cells = Array.Empty<Vector4>(); // 原图左上为原点的像素矩形，依次为左、中、右。

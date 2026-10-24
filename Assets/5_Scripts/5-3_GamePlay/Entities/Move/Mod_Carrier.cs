@@ -8,7 +8,7 @@ using UnityEngine;
 /// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
@@ -34,6 +34,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     public Vector2 DrivenVelocity { get; private set; } // 划船或主动推动的速度。
     public Vector2 ExternalVelocity { get; private set; } // 环境传入的被动速度。
     public Mod_Mover PushSource { get; private set; } // 当前推动来源，瞬时关系不入存档。
+    public Vector2 PushedVelocity => PushSource != null && Time.time <= pushValidUntil && CanReceivePush(PushSource)
+        ? pushedVelocity : Vector2.zero;
     public Vector2 PushHalfExtents => Vector2.Scale(HullSize * 0.5f,
         new Vector2(Mathf.Abs(item.transform.lossyScale.x), Mathf.Abs(item.transform.lossyScale.y)));
     public bool IsAvailable => loaded && isActiveAndEnabled && item != null && !item.DestructionHandled &&
@@ -56,6 +58,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     private Vector2 facingHeading = Vector2.up; // 船头只由操作者划行输入改变，推动、水流和滑行都保留朝向。
     private float pushValidUntil;
     private CarrierWaterWake waterWake;
+    private ICarrierMotionDriver motionDriver;
+    public bool AllowsRiderBoost => motionDriver == null || motionDriver.AllowsRiderBoost;
+    public Rigidbody2D Body => body;
     #endregion
 
     #region 生命周期
@@ -64,6 +69,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     {
         building = modules.RequireSingleModById<Mod_Building>(ModText.Building);
         health = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
+        var drivers = modules.GetCapabilities<ICarrierMotionDriver>();
+        if (drivers.Count > 1) throw new InvalidOperationException("一个载具只能装配一套运动策略。");
+        motionDriver = drivers.Count == 0 ? null : drivers[0];
     }
 
     /// <summary>只恢复空座位，不迁移任何启动资产或旧存档。</summary>
@@ -93,8 +101,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         requestedBoost = false;
         lastPhysicsPosition = body.position;
         BindVisualTransform();
-        waterWake = item.GetComponent<CarrierWaterWake>() ?? item.gameObject.AddComponent<CarrierWaterWake>();
-        waterWake.Bind(this, visualRenderer);
+        if (motionDriver == null)
+        {
+            waterWake = item.GetComponent<CarrierWaterWake>() ?? item.gameObject.AddComponent<CarrierWaterWake>();
+            waterWake.Bind(this, visualRenderer);
+        }
         BindRuntimeSources();
         ActivateInstalledCarrier();
     }
@@ -175,6 +186,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         body.constraints = RigidbodyConstraints2D.FreezeRotation;
+        motionDriver?.ActivateCarrier(this, body);
         lastPhysicsPosition = body.position;
         building.ReleasePlacementOccupancy();
         activated = true;
@@ -198,6 +210,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         if (!IsAvailable || !GameNetwork.HasStateAuthority || player == null || !player.IsLocalProfile)
             return false;
         Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+        if (motionDriver != null) return motionDriver.CanInteractWithCarrier(player, mover);
         return mover != null && (Rider == mover || (Rider == null && mover.CarrierSource == null));
     }
 
@@ -208,14 +221,31 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         ActivateInstalledCarrier();
         Player player = ResolvePlayer(actor);
         Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+        if (motionDriver != null)
+        {
+            motionDriver.InteractWithCarrier(player, mover);
+            return;
+        }
+        ToggleRider(player, mover);
+    }
+
+    /// <summary>所有车型共用单座上下车与安全下车规则。</summary>
+    public bool ToggleRider(Player player, Mod_Mover mover)
+    {
+        if (!IsAvailable || player == null || mover == null || !GameNetwork.HasStateAuthority) return false;
         if (Rider == mover)
         {
             StopMotion();
             if (TryFindDismount(out Vector2 destination) || TryFindWaterDismount(mover, out destination))
+            {
                 mover.DetachCarrier(destination);
-            return;
+                return true;
+            }
+            return false;
         }
-        if (mover.TryAttachCarrier(this, player.transform.position)) Rider = mover;
+        if (Rider != null || mover.CarrierSource != null || !mover.TryAttachCarrier(this, player.transform.position)) return false;
+        Rider = mover;
+        return true;
     }
 
     /// <summary>输入发送者可能是玩家自己的手部 Item，身份沿正式 Owner 链解析。</summary>
@@ -307,6 +337,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         RefreshPushSource();
         Vector2 input = Rider != null && Rider.isActiveAndEnabled && ReferenceEquals(Rider.CarrierSource, this) &&
             !requestedControlsLocked ? requestedInput : Vector2.zero;
+        if (motionDriver != null)
+        {
+            motionDriver.StepCarrierMotion(this, input, requestedControlsLocked, deltaTime);
+            return;
+        }
         float speedLimit = ResolveSurfaceSpeedLimit(body.position);
         if (Rider != null && requestedBoost)
             speedLimit *= BoostSpeedMultiplier;
@@ -343,7 +378,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
 
     /// <summary>当前有效玩家输入才可推动；已乘坐同一载具的乘员不能形成循环作用链。</summary>
     public bool CanReceivePush(Mod_Mover source)
-        => IsAvailable && GameNetwork.HasStateAuthority && source != null && source != Rider &&
+        => (motionDriver == null || motionDriver is ICarrierPushMotionPolicy) && IsAvailable && GameNetwork.HasStateAuthority && source != null && source != Rider &&
            source.CarrierSource == null && source.RequestedMoveInput.sqrMagnitude > 0.001f;
 
     internal void HandlePhysicalContact(Collision2D collision)
@@ -353,8 +388,12 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
             : null;
         if (!CanReceivePush(source) || source.rb == null || body == null) return;
         Vector2 towardCarrier = WorldTopologyRuntime.ShortestDelta(source.rb.position, body.position);
-        if (Vector2.Dot(source.DrivenVelocity, towardCarrier) <= 0.001f) return;
-        RequestPush(source, source.DrivenVelocity, Time.fixedDeltaTime);
+        Vector2 intent = source.CarrierPushIntentVelocity;
+        if (Vector2.Dot(intent, towardCarrier) <= 0.001f) return;
+        Vector2 accepted = RequestPush(source, intent, Time.fixedDeltaTime);
+        if (motionDriver is ICarrierPushMotionPolicy policy) accepted = policy.ResolvePusherLimit(accepted);
+        Vector2 normal = towardCarrier.normalized;
+        source.SetCarrierPushResistance(this, normal, Mathf.Max(0f, Vector2.Dot(accepted, normal)));
     }
 
     /// <summary>物理接触产生推动意图，下一固定步交给刚体处理。</summary>
@@ -365,7 +404,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         bool inWater = manager != null && manager.TryGetRuntimeTerrainTile(source.rb.position, out RuntimeTerrainTileSample tile) &&
                        tile.LiquidDepth > 0f;
         PushSource = source;
-        pushedVelocity = WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier);
+        pushedVelocity = motionDriver is ICarrierPushMotionPolicy policy
+            ? policy.ResolveCarrierPush(velocity, inWater)
+            : WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier);
         pushValidUntil = Time.time + Mathf.Max(0.1f, deltaTime * 2f);
         return pushedVelocity;
     }
@@ -407,6 +448,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
 
     public void StopMotion()
     {
+        motionDriver?.StopCarrierMotion();
         requestedInput = Vector2.zero;
         requestedControlsLocked = true;
         requestedBoost = false;
@@ -416,6 +458,30 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         if (body != null && body.simulated)
             body.velocity = Vector2.zero;
         CurrentVelocity = Vector2.zero;
+    }
+
+    /// <summary>轨道等运动策略提交同一刚体的位置，座位、空间通知和视觉仍归通用载具。</summary>
+    public void ApplyDrivenPosition(Vector2 position, Vector2 heading, float deltaTime)
+    {
+        if (body == null || !IsAvailable) return;
+        Vector2 previous = body.position;
+        body.MovePosition(position);
+        DrivenVelocity = (position - previous) / Mathf.Max(.0001f, deltaTime);
+        ExternalVelocity = Vector2.zero;
+        CurrentVelocity = DrivenVelocity;
+        if (heading.sqrMagnitude > .0001f) facingHeading = heading.normalized;
+        UpdateVisualFacing();
+    }
+
+    /// <summary>实体载具只提交刚体速度，接触和车钩后的实际位置继续由物理系统决定。</summary>
+    public void ApplyDrivenVelocity(Vector2 velocity, Vector2 heading)
+    {
+        if (body == null || !IsAvailable) return;
+        body.velocity = velocity;
+        DrivenVelocity = velocity;
+        ExternalVelocity = Vector2.zero;
+        if (heading.sqrMagnitude > .0001f) facingHeading = heading.normalized;
+        UpdateVisualFacing();
     }
 
     /// <summary>木筏原图默认朝上；只旋转视觉子节点，禁止旋转载具根节点和座位坐标系。</summary>
@@ -475,6 +541,23 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     }
 
     /// <summary>覆盖整个船体包围范围，不能只测中心或四个方向而漏过墙角。</summary>
+    public bool CanTraversePosition(Vector2 position)
+    {
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null) return false;
+        Vector2 half = PushHalfExtents - Vector2.one * .001f;
+        for (int x = Mathf.FloorToInt(position.x - half.x); x <= Mathf.FloorToInt(position.x + half.x); x++)
+            for (int y = Mathf.FloorToInt(position.y - half.y); y <= Mathf.FloorToInt(position.y + half.y); y++)
+            {
+                if (!manager.TryGetRuntimeTerrainTile(new Vector2(x + .5f, y + .5f), out RuntimeTerrainTileSample tile)) return false;
+                bool terrain = tile.Cell.BlockingTileId == 0 && tile.Cell.BackTileId == 0 && tile.TopTileId != 0 &&
+                    (tile.Cell.Flags & TerrainCellFlags.Blocking) == 0 &&
+                    (tile.LiquidDepth > 0f ? AllowsWater : tile.Terrain.IsWalkable(tile.LocalCell.x, tile.LocalCell.y));
+                if (!BuildingOccupancyRegistry.GetEffectiveWalkable(tile.WorldCell, terrain)) return false;
+            }
+        return true;
+    }
+
     private bool CanOccupyFootprint(Vector2 position)
     {
         Vector2 half = PushHalfExtents - Vector2.one * 0.001f;

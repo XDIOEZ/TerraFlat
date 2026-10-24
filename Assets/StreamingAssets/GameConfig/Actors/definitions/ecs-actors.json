@@ -19,6 +19,7 @@
         "Blood"
       ],
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Idle_LR_Sheet.png[Character_Zombie_Idle_Right]",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -51,6 +52,7 @@
             "Data": {
               "Hp": 50,
               "MaxHp": 50,
+              "SizeLevel": 5,
               "DefenseValues": {
                 "Physical": 2
               },

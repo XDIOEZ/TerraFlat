@@ -14,8 +14,9 @@ public enum GroundPlacementLiquidRequirement
 /// 地表覆盖的来源约束；配置在 Tile_Block 上，与阻挡墙和动态建筑分开。
 /// 液体要求直接读取独立 Liquid 层，不能通过 TerrainCellFlags 间接表达。
 /// </summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class GroundTilePlacementRule
+public sealed partial class GroundTilePlacementRule
 {
     #region 来源约束
     [Tooltip("原地形必须具备的全部标记；地板要求 Walkable。")]

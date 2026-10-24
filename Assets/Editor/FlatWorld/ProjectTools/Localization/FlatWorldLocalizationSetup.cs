@@ -32,12 +32,21 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishDescriptionOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                { "Crossbow_Wood", "A wooden crossbow using ordinary arrows, with the same damage, range and charge time as a recurve bow. Hold attack to fully load, then release without firing. Press and release attack again to shoot. Stamina drains only while loading, stopping at full charge. Releasing early cancels loading." },
+                { "CopperHammer", "A copper-headed metal hammer with a wooden handle. Use it at a metal anvil. Durability 100; each valid strike consumes 1 durability." },
+                { "IronHammer", "A wrought-iron hammer for repeated forging at a metal anvil. Durability 200; each valid strike consumes 1 durability." },
+                { "SteelHammer", "A durable steel-headed hammer for forging at a metal anvil. Durability 400; each valid strike consumes 1 durability." },
+                { "SpaceElevatorTerminal", "Connects the ground to an expandable fixed space station. Transports cargo and players both ways. Paired terminals cannot be dismantled. This prototype does not consume power." },
+                { "SpaceElevatorTerminal_Summoner", "Connects the ground to an expandable fixed space station. Transports cargo and players both ways. Paired terminals cannot be dismantled. This prototype does not consume power." },
                 { "BlastFurnace", "A furnace with forced airflow for high temperature metalworking. 3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input capacity." },
                 { "Smelter", "A furnace for smelting ore. 2 input slots, a 50% material heating coefficient, and 50 kg / 50 L input capacity." },
                 { "BlastFurnace_Summoner", "A furnace with forced airflow for high temperature metalworking. 3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input capacity." },
                 { "Smelter_Summoner", "A furnace for smelting ore. 2 input slots, a 50% material heating coefficient, and 50 kg / 50 L input capacity." },
-                { "InductionStove", "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots, 150% heating coefficient, up to 2000 C, rated 120 V and 1200 W. Materials transform at their own temperature and retain residual heat after power loss." },
-                { "InductionStove_Summoner", "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots, 150% heating coefficient, up to 2000 C, rated 120 V and 1200 W. Materials transform at their own temperature and retain residual heat after power loss." },
+                { "InductionStove", "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials transform at their own temperature and cool naturally after lowering the target or losing power." },
+                { "InductionStove_Summoner", "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials transform at their own temperature and cool naturally after lowering the target or losing power." },
+                { "Mine_Tungsten", "A rare tungsten vein in underground caves, harder than iron ore. Mine with a pickaxe to obtain tungsten ore." },
+                { "Ore_Tungsten", "Rare tungsten-bearing ore from underground. Set an induction stove target to at least 3422 C to smelt 2 ore into 1 tungsten ingot." },
+                { "Ingot_Tungsten", "A dense, heat-resistant metal ingot smelted from tungsten ore at 3422 C or above. Can be stacked and stored as an advanced material." },
                 { "Ore_Diamond", "Rare ore mined from a diamond deposit. Can be picked up, stacked and stored as a material." },
                 { "Mine_Diamond", "A rare diamond vein in underground caves. Drops diamond ore when mined. No tool tier is required; mining efficiency depends on damage, defense and tool harvesting bonuses." },
                 { "ClayJar", "Holds 8 servings. Fill it at a water source; boil fresh water or evaporate seawater in a furnace." },
@@ -81,6 +90,26 @@ namespace FlatWorld.Localization.Editor
                     "quest.flatworld.first_chipped_tool.objective.craft_chipped_tool",
                     "Craft one chipped stone tool"
                 },
+                { "quest.flatworld.survival_mining_path.title", "From Stone Tools to Copper Ingots" },
+                {
+                    "quest.flatworld.survival_mining_path.description",
+                    "Start by gathering stone. Craft tools, enter the cave, light the smelter, and produce copper and pig iron ingots."
+                },
+                { "quest.flatworld.survival_mining_path.objective.pick_stone", "Pick up 2 stones" },
+                { "quest.flatworld.survival_mining_path.objective.craft_chipped_tool", "Craft a chipped stone tool" },
+                { "quest.flatworld.survival_mining_path.objective.pick_logs", "Gather 2 logs" },
+                { "quest.flatworld.survival_mining_path.objective.pick_sticks", "Gather 2 wooden sticks" },
+                { "quest.flatworld.survival_mining_path.objective.craft_workbench", "Craft a workbench" },
+                { "quest.flatworld.survival_mining_path.objective.craft_stone_pickaxe", "Craft a stone pickaxe" },
+                { "quest.flatworld.survival_mining_path.objective.craft_stone_axe", "Craft a stone axe" },
+                { "quest.flatworld.survival_mining_path.objective.mine_iron_ore", "Mine iron ore in the cave" },
+                { "quest.flatworld.survival_mining_path.objective.mine_copper_ore", "Mine 2 copper ore in the cave" },
+                { "quest.flatworld.survival_mining_path.objective.mine_coal_ore", "Mine coal in the cave" },
+                { "quest.flatworld.survival_mining_path.objective.craft_smelter", "Craft a smelter" },
+                { "quest.flatworld.survival_mining_path.objective.ignite_smelter", "Light the smelter to start smelting" },
+                { "quest.flatworld.survival_mining_path.objective.smelt_charcoal", "Smelt 1 charcoal" },
+                { "quest.flatworld.survival_mining_path.objective.smelt_raw_iron", "Smelt 1 pig iron ingot" },
+                { "quest.flatworld.survival_mining_path.objective.smelt_copper", "Smelt 1 copper ingot" },
                 { "quest.flatworld.debug_open_inventory.title", "Test: Open Inventory" },
                 {
                     "quest.flatworld.debug_open_inventory.description",
@@ -126,6 +155,112 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                { "金属锤", "Metal Hammer" },
+                { "拆除", "Dismantle" },
+                { "铁砧", "Iron Anvil" },
+                { "需要符合要求且未损坏的工具", "A suitable unbroken tool is required" },
+                { "工作站耐久不足", "The workstation has insufficient durability" },
+                { "全部分类", "All categories" },
+                { "分类（{0}）", "Categories ({0})" },
+                { "匹配任一所选分类", "Match any selected category" },
+                { "清除分类", "Clear categories" },
+                { "没有匹配物品", "No matching items" },
+                { "电力", "Electricity" },
+                { "工业方块", "Industrial blocks" },
+                { "管道方块", "Pipe blocks" },
+                { "食物", "Food" },
+                { "材料", "Materials" },
+                { "建筑方块", "Building blocks" },
+                { "种子", "Seeds" },
+                { "化工", "Chemistry" },
+                { "设置面板", "Settings Panel" },
+                { "手柄输入", "Controller Input" },
+                { "退格", "Backspace" },
+                { "空格", "Space" },
+                { "氧气不足 5%，无法点火。", "Oxygen is below 5%; it cannot be ignited." },
+                { "含水量：{0}%", "Moisture: {0}%" },
+                { "轿厢运输中 · 剩余 {0:0.0} 秒", "Elevator in transit · {0:0.0}s remaining" },
+                { "当前终端：{0} · 轿厢停靠：{1}", "Current terminal: {0} · Cabin at: {1}" },
+                { "待入库：{0}空间不足", "Pending delivery: insufficient space in {0}" },
+                { "重量 {0:0.#}/{1:0.#} kg · 体积 {2:0.#}/{3:0.#} L", "Weight {0:0.#}/{1:0.#} kg · Volume {2:0.#}/{3:0.#} L" },
+                { "{0}已发送物资会继续送往目的地仓库。", "{0} The cargo will continue to the destination warehouse." },
+                { "{0}\n额定功率 {1:0.##} W\n当前功率 {2:0.##} W", "{0}\nRated power {1:0.##} W\nCurrent power {2:0.##} W" },
+                { "经 {0:0.00}°  纬 {1:0.00}°", "Lon {0:0.00}°  Lat {1:0.00}°" },
+                { "MOD 设置已更改", "MOD Settings Changed" },
+                { "是否重启游戏以应用 MOD 设置？", "Restart the game to apply MOD settings?" },
+                // 太空电梯正式面板与权威回执共用双语文案。
+                { "固定站台暂不支持船体对接。", "Fixed stations do not support ship docking yet." },
+                { "太空电梯终端固定在地面，不能随飞船起飞；请将飞船与电梯地板分开。", "The elevator terminal is anchored to the ground and cannot launch with a ship. Separate the ship floors from the elevator." },
+                { "乘坐准备期间玩家离开终端，已取消乘坐。", "The ride was cancelled because you left the terminal during preparation." },
+                // 太空电梯正式面板与权威回执共用双语文案。
+                { "太空电梯", "Space Elevator" },
+                { "太空电梯终端", "Space Elevator Terminal" },
+                { "地面站台", "Ground Terminal" },
+                { "太空站台", "Space Station" },
+                { "发送货舱", "Send Cargo Cabin" },
+                { "召回货舱", "Call Cargo Cabin" },
+                { "乘坐前往太空站台", "Ride to Space Station" },
+                { "乘坐前往{0}", "Ride to {0}" },
+                { "切换背包", "Switch Inventory" },
+                { "点击左侧物品装货，点击右侧物品卸货。", "Click an item on the left to load cargo, or on the right to unload it." },
+                { "已装入货舱。", "Loaded into the cargo cabin." },
+                { "已卸入当前背包。", "Unloaded into the selected inventory." },
+                { "已预约乘坐：请留在终端附近等候，到站后自动前往。", "Ride booked. Stay near the terminal; you will travel when the cabin arrives." },
+                { "货舱已出发，抵达后可在另一端卸货。", "Cargo cabin dispatched. Unload at the other terminal after arrival." },
+                { "已召回货舱，请等待抵达。", "Cargo cabin called. Please wait for arrival." },
+                { "货舱运输中 · 剩余 {0:0.0} 秒", "Cargo in transit · {0:0.0} seconds remaining" },
+                { "当前终端：{0} · 货舱停靠：{1}", "This terminal: {0} · Cabin docked at: {1}" },
+                { "乘坐需在终端附近等候；走开会取消乘坐，货运继续。顶层可继续铺地板、围墙和放置设备。", "Stay near the terminal for your ride. Leaving cancels your ride while cargo continues. Expand the station with floors, walls and equipment." },
+                { "重量 {0:0.#}/{1:0.#} kg\n体积 {2:0.#}/{3:0.#} L", "Mass {0:0.#}/{1:0.#} kg\nVolume {2:0.#}/{3:0.#} L" },
+                { "{0} · 装货 · {1}/{2}", "{0} · Load cargo · {1}/{2}" },
+                { "货舱 · 卸货 · {0}/{1}", "Cabin · Unload cargo · {0}/{1}" },
+                { "{0}. {1}", "{0}. {1}" },
+                { "{0}. {1} × {2:0.##}", "{0}. {1} × {2:0.##}" },
+                { "轿厢停在地面", "Cabin docked at ground" },
+                { "轿厢停在空间站", "Cabin docked at station" },
+                { "正在前往空间站", "Travelling to station" },
+                { "正在返回地面", "Returning to ground" },
+                { "电梯线路不存在。", "The elevator connection does not exist." },
+                { "轿厢正在运行。", "The cabin is in transit." },
+                { "电梯目的地无效。", "The elevator destination is invalid." },
+                { "轿厢已经停在这一端。", "The cabin is already at this terminal." },
+                { "电梯运行时间配置无效。", "The elevator travel time is invalid." },
+                { "这一格没有可转移的物资。", "This slot has no cargo to transfer." },
+                { "物资已转移。", "Cargo transferred." },
+                { "目标库存没有可用容量或不接收这种物品。", "The destination has no available capacity or cannot accept this item." },
+                { "电梯原型目前仅支持本机房主操作，远程客户端暂未开放。", "This elevator prototype supports the local host only. Remote clients are not supported yet." },
+                { "玩家或电梯会话尚未就绪。", "The player or elevator session is not ready." },
+                { "正在切换世界，请稍后操作。", "A world transition is in progress. Please try again shortly." },
+                { "请靠近这一端的电梯终端。", "Move closer to this elevator terminal." },
+                { "这个终端还没有绑定电梯线路。", "This terminal is not connected to an elevator yet." },
+                { "请靠近电梯终端后操作。", "Move closer to an elevator terminal before operating it." },
+                { "请在星球地表靠近已安装的电梯终端。", "On the planet surface, move closer to an installed elevator terminal." },
+                { "太空电梯只能建在已登记的星球地表。", "Space elevators require a registered planet surface." },
+                { "已连接现有空间站。", "Connected to the existing station." },
+                { "原型每个星球支持一条线路；已有地面终端在 ({0:0.#}, {1:0.#})。", "This prototype supports one elevator per planet. The existing ground terminal is at ({0:0.#}, {1:0.#})." },
+                { "地面电梯已连接可扩建的空间站。", "The ground elevator is connected to an expandable station." },
+                { "电梯空间站创建失败：{0}", "Failed to create the elevator station: {0}" },
+                { "已配对的电梯终端是线路锚点，原型暂不支持拆回；周围空间站可以自由扩建。", "Paired elevator terminals anchor the connection and cannot be dismantled in this prototype. The surrounding station can be expanded freely." },
+                { "固定站台的核心锚点不能拆除。", "The fixed station core anchor cannot be removed." },
+                { "电梯轿厢货舱", "Elevator Cargo Cabin" },
+                { "轿厢尚未停在这一端，请等待或先呼叫轿厢。", "The cabin is not at this terminal. Wait for it or call it first." },
+                { "只能从玩家自己的真实库存装卸物资。", "Cargo can only be transferred to or from your own inventory." },
+                { "轿厢尚未停在这一端。", "The cabin is not docked at this terminal." },
+                { "你已有一个乘坐预约。", "You already have a ride booked." },
+                { "已预约乘坐，请留在终端附近；走开会取消乘坐，货运继续。", "Ride booked. Stay near the terminal; leaving cancels your ride while cargo continues." },
+                { "轿厢已出发。", "The cabin has departed." },
+                { "乘坐已取消，轿厢物资继续运输。", "Your ride was cancelled. Cargo continues to its destination." },
+                { "货舱已抵达，物资可以取出。", "The cabin has arrived. Cargo can now be unloaded." },
+                { "轿厢停在地面，物资可以取出。", "The cabin is at ground level. Cargo can now be unloaded." },
+                { "轿厢停在空间站，物资可以取出。", "The cabin is at the station. Cargo can now be unloaded." },
+                { "空间站电梯终端已失效。", "The station elevator terminal is no longer operational." },
+                { "空间站终端周围没有安全落脚的地板，请先清出一格。", "No safe floor is available near the station terminal. Clear a floor cell first." },
+                { "地面世界尚未加载，请先在地面呼叫电梯。", "The ground world is not loaded. Call the elevator from the ground first." },
+                { "地面终端已损毁，请在原位置重建终端后重新绑定。", "The ground terminal is destroyed. Rebuild it at the original position to reconnect." },
+                { "地面终端周围没有安全落脚点，请先清空周围位置。", "No safe arrival position is available near the ground terminal. Clear the surrounding area first." },
+                { "{0}物资仍保留在轿厢。", "{0} Cargo remains in the cabin." },
+                { "已抵达，可在本端装卸物资。", "Arrived. Cargo can be loaded or unloaded at this terminal." },
+                { "玩家迁移未完成，请重新呼叫轿厢后再试。", "The player transfer did not complete. Call the cabin and try again." },
                 // 设置分页和日志筛选的新文案与正式界面一起同步。
                 { "基础", "Basic" },
                 { "高级", "Advanced" },
@@ -423,6 +558,31 @@ namespace FlatWorld.Localization.Editor
                 { "正在加热", "Heating" },
                 { "输入重量 {0:0.##}/{1:0.##} kg\n输入体积 {2:0.##}/{3:0.##} L", "Input weight {0:0.##}/{1:0.##} kg\nInput volume {2:0.##}/{3:0.##} L" },
                 { "电磁炉", "Induction Stove" },
+                { "当前炉温 {0:0.#}°C", "Furnace {0:0.#}°C" },
+                { "目标温度 {0:0.#}°C", "Target temperature {0:0.#}°C" },
+                { "需求功率 {0:0.#} W\n实际供电 {1:0.#} W", "Power requested {0:0.#} W\nPower supplied {1:0.#} W" },
+                { "请输入 {0:0.#}～{1:0.#}°C", "Enter {0:0.#}–{1:0.#}°C" },
+                { "等待设备确认", "Waiting for device confirmation" },
+                { "设备已确认，等待状态同步", "Device confirmed; waiting for state sync" },
+                { "设备状态尚未同步，请重新打开面板确认", "Device state has not synced. Reopen the panel to confirm." },
+                { "目标温度已更新", "Target temperature updated" },
+                { "请求未发出，请重试", "Request not sent. Please retry." },
+                { "温度设置被拒绝：{0}", "Temperature setting rejected: {0}" },
+                { "温度设置结果未确认：{0}", "Temperature setting unconfirmed: {0}" },
+                { "自然冷却", "Cooling naturally" },
+                { "已达到目标温度", "Target temperature reached" },
+                { "设备未接受此操作", "The device did not accept this operation" },
+                { "机器操作参数无效", "Invalid machine operation parameters" },
+                { "操作请求已过期，请重试", "The operation request expired. Please retry." },
+                { "正在等待服务器确认拾取库存", "Waiting for the server to confirm the picked-up inventory" },
+                { "设备所在世界已变化，请重新打开面板", "The device world changed. Reopen the panel." },
+                { "设备不可操作或距离过远", "The device is unavailable or too far away" },
+                { "机器操作尚未确认，请重试", "The machine operation is unconfirmed. Please retry." },
+                { "联机连接已关闭，操作未确认", "Connection closed. The operation is unconfirmed." },
+                { "玩家尚未完成世界加载", "The player has not finished loading the world" },
+                { "正在切换世界，请稍后重试", "Changing worlds. Please try again shortly." },
+                { "玩家所在世界尚未就绪", "The player world is not ready" },
+                { "世界状态已更新，请重试操作", "The world state changed. Please retry the operation" },
                 { "实际供电 {0:0.#}/{1:0.#} W", "Power supplied {0:0.#}/{1:0.#} W" },
                 { "升温系数 {0:0}% · {1}", "Heating coefficient {0:0}% · {1}" },
                 { "通电自动加热", "Heats automatically when powered" },
@@ -539,6 +699,9 @@ namespace FlatWorld.Localization.Editor
                 { "过载", "Overloaded" },
                 { "运行中", "Running" },
                 { "传动比冲突", "Ratio Conflict" },
+                { "传动比 {0:0.##}", "Ratio {0:0.##}" },
+                { "工作效率 {0:0.#}%（需求 {1:0} RPM）", "Efficiency {0:0.#}% (required {1:0} RPM)" },
+                { "转速倍率 {0:0.##} · 扭矩倍率 {1:0.##}", "Speed x{0:0.##} · Torque x{1:0.##}" },
                 { "转向冲突", "Rotation Conflict" },
                 { "正转", "Forward" },
                 { "反转", "Reverse" },
@@ -763,6 +926,7 @@ namespace FlatWorld.Localization.Editor
                 { "特效质量", "Effects Quality" },
                 { "游戏语言", "Language" },
                 { "语言", "Language" },
+                { "界面语言会立即切换，点击保存后保留修改。", "Language changes apply immediately. Click Save to keep them." },
                 { "简体中文", "Simplified Chinese" },
                 { "返回", "Back" },
                 { "关闭", "Close" },
@@ -1217,6 +1381,7 @@ namespace FlatWorld.Localization.Editor
                 { "暂无运行日志。", "No runtime logs." },
                 { "复制时将取最近 50 个去重日志槽位。", "Copies the 50 most recent unique log slots." },
                 { "正在准备游戏", "Preparing Game" },
+                { "首次加载可能较慢，请稍候", "The first load may take a little longer. Please wait." },
                 { "正在加载资源…", "Loading Resources…" },
                 { "若加载失败，这里会显示完整原因。", "Detailed error information appears here if loading fails." },
                 { "血量", "Health" },
@@ -1291,6 +1456,7 @@ namespace FlatWorld.Localization.Editor
                 { "陆地平台", "Platform on Land" },
                 { "{0} · 装备", "{0} · Equipment" },
                 { "头部 / 帽·盔", "Head / Hat & Helmet" },
+                { "眼部 / 眼镜", "Eyes / Glasses" },
                 { "外衬 / 护甲", "Outerwear / Armor" },
                 { "鞋子", "Shoes" },
                 { "内衬 / 衣物", "Innerwear / Clothing" },
@@ -1332,6 +1498,10 @@ namespace FlatWorld.Localization.Editor
                 { "未挂饵", "No Bait" },
                 { "物理攻击力：{0}", "Physical Attack: {0}" },
                 { "距离完全腐败：{0}", "Until Fully Spoiled: {0}" },
+                { "下一个融化：{0}", "Next unit melts in: {0}" },
+                { "距离消失：{0}", "Disappears in: {0}" },
+                { "{0}（游戏时间）", "{0} (game time)" },
+                { "剩余时间：{0}", "Time remaining: {0}" },
                 { "{0}小时{1}分钟", "{0} h {1} min" },
                 { "{0}小时", "{0} h" },
                 { "{0}分{1}秒", "{0} min {1} s" },
@@ -1647,7 +1817,7 @@ namespace FlatWorld.Localization.Editor
 
             for (int i = 0; i < sourceTexts.Length; i++)
             {
-                string sourceText = sourceTexts[i]?.Trim();
+                string sourceText = sourceTexts[i];
                 if (string.IsNullOrWhiteSpace(sourceText))
                     continue;
                 if (!EnglishUiOverrides.TryGetValue(sourceText, out string englishText) ||
@@ -1668,6 +1838,110 @@ namespace FlatWorld.Localization.Editor
             EditorUtility.SetDirty(englishTable);
             AssetDatabase.SaveAssets();
             Debug.Log($"[FlatWorld Localization] 已增量同步 {syncedKeys.Count} 条运行时 UI 文本。");
+        }
+
+        /// <summary>只同步 Setup 已登记的运行时 UI 文本，不扫描内容表或 Prefab。</summary>
+        [MenuItem("FlatWorld/其他工具/Localization/Sync Registered Runtime UI Texts")]
+        public static void SyncRegisteredRuntimeUiTexts()
+        {
+            SyncRuntimeUiTexts(new List<string>(EnglishUiOverrides.Keys).ToArray());
+        }
+
+        /// <summary>只同步 starter.json 中生存采矿主线的 17 条双语文本。</summary>
+        [MenuItem("FlatWorld/其他工具/Localization/Sync Starter Mining Quest Text")]
+        public static void SyncStarterMiningQuestText()
+        {
+            Locale chinese = AssetDatabase.LoadAssetAtPath<Locale>(ChineseLocalePath);
+            Locale english = AssetDatabase.LoadAssetAtPath<Locale>(EnglishLocalePath);
+            if (chinese == null || english == null)
+                throw new InvalidOperationException("FlatWorld Locale 尚未初始化，请先运行 Setup Default Tables。");
+
+            StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(
+                FlatWorldLocalizationService.DefaultTable);
+            if (collection == null)
+                throw new InvalidOperationException("FlatWorld StringTableCollection 不存在，请先运行 Setup Default Tables。");
+
+            StringTable chineseTable = EnsureTable(collection, chinese);
+            StringTable englishTable = EnsureTable(collection, english);
+            string questPath = Path.Combine(Application.dataPath, "StreamingAssets/GameConfig/Quests/starter.json");
+            JObject root = JObject.Parse(File.ReadAllText(questPath));
+            if (!(root["quests"] is JArray quests))
+                throw new InvalidOperationException("starter.json 缺少 quests 列表。");
+
+            JObject starterQuest = null;
+            foreach (JToken token in quests)
+            {
+                if (token is JObject quest && string.Equals(
+                        quest.Value<string>("id"), "flatworld:first_chipped_tool", StringComparison.Ordinal))
+                {
+                    starterQuest = quest;
+                    break;
+                }
+            }
+
+            if (starterQuest == null)
+                throw new InvalidOperationException("starter.json 缺少 flatworld:first_chipped_tool 主线。");
+
+            const string questKeyPrefix = "quest.flatworld.survival_mining_path.";
+            var questTexts = new List<KeyValuePair<string, string>>();
+            AddStarterQuestText(questTexts, starterQuest.Value<string>("titleKey"), starterQuest.Value<string>("title"), questKeyPrefix);
+            AddStarterQuestText(questTexts, starterQuest.Value<string>("descriptionKey"), starterQuest.Value<string>("description"), questKeyPrefix);
+            if (starterQuest["stages"] is JArray stages)
+            {
+                foreach (JToken stageToken in stages)
+                {
+                    if (!(stageToken is JObject stage) || !(stage["objectives"] is JArray objectives))
+                        continue;
+                    foreach (JToken objectiveToken in objectives)
+                    {
+                        if (!(objectiveToken is JObject objective))
+                            continue;
+                        AddStarterQuestText(
+                            questTexts,
+                            objective.Value<string>("labelKey"),
+                            objective.Value<string>("label"),
+                            questKeyPrefix);
+                    }
+                }
+            }
+
+            if (questTexts.Count != 17)
+                throw new InvalidOperationException($"主线文本应为 17 条，实际找到 {questTexts.Count} 条。");
+
+            foreach (KeyValuePair<string, string> questText in questTexts)
+            {
+                if (!EnglishQuestOverrides.TryGetValue(questText.Key, out string translatedText) ||
+                    string.IsNullOrWhiteSpace(translatedText) ||
+                    string.Equals(translatedText, "Quest Text", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"主线文本缺少英文翻译：{questText.Key}");
+            }
+
+            var syncedKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, string> questText in questTexts)
+                SyncQuestText(chineseTable, englishTable, questText.Key, questText.Value, syncedKeys);
+
+            EditorUtility.SetDirty(collection);
+            EditorUtility.SetDirty(collection.SharedData);
+            EditorUtility.SetDirty(chineseTable);
+            EditorUtility.SetDirty(englishTable);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[FlatWorld Localization] 已定向同步 starter 主线 {syncedKeys.Count} 条文本。");
+        }
+
+        private static void AddStarterQuestText(
+            ICollection<KeyValuePair<string, string>> questTexts,
+            string key,
+            string sourceText,
+            string requiredPrefix)
+        {
+            string normalizedKey = key?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedKey) ||
+                !normalizedKey.StartsWith(requiredPrefix, StringComparison.Ordinal))
+                return;
+            if (string.IsNullOrWhiteSpace(sourceText))
+                throw new InvalidOperationException($"主线文本缺少中文源文案：{normalizedKey}");
+
+            questTexts.Add(new KeyValuePair<string, string>(normalizedKey, sourceText));
         }
 
         /// <summary>仅同步透视开关和触控尺寸界面的新增文案。</summary>
@@ -2054,6 +2328,7 @@ namespace FlatWorld.Localization.Editor
                 || string.Equals(entry.Value, legacyValue, StringComparison.Ordinal)
                 || string.Equals(entry.Value, itemId, StringComparison.Ordinal)
                 || string.Equals(entry.Value?.Trim(), "UI Text", StringComparison.Ordinal)
+                || string.Equals(entry.Value?.Trim(), "Quest Text", StringComparison.Ordinal)
                 || ContainsChinese(entry.Value))
                 entry.Value = value ?? string.Empty;
         }

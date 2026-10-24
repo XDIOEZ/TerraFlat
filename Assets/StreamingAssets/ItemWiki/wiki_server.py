@@ -17,6 +17,7 @@ import json
 import os
 import socket
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -25,11 +26,13 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlparse
+from urllib.request import urlopen
 from buff_validation import validate_catalogs as validate_buff_catalogs
 
 
 WIKI_DIRECTORY = Path(__file__).resolve().parent
 PROJECT_ROOT = WIKI_DIRECTORY.parents[2]
+PROJECT_ID = hashlib.sha256(str(PROJECT_ROOT).replace("\\", "/").lower().encode("utf-8")).hexdigest()[:16]
 ITEM_ROOT = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / "Items"
 ITEM_MANIFEST = ITEM_ROOT / "item-manifest.json"
 BUFF_ROOT = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / "Buffs"
@@ -49,6 +52,11 @@ PUBLIC_WIKI_FILES = {
     "item-metadata.json",
     "module-glossary.json",
     "styles.css",
+    "tech-tree.js",
+    "tech-tree-model.js",
+    "tech-tree-eras.json",
+    "tech-tree.css",
+    "readme.md",
 }
 PUBLIC_IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
 
@@ -218,11 +226,23 @@ def resolve_items(sources: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any
             result.pop("gameName", None)
             result.pop("labelKey", None)
             result.pop("descriptionKey", None)
+            result.pop("formerIds", None)
+            result.pop("processing", None)
         remove_replaced_module_bodies(result, source)
         result = merge_like_json_net(result, source)
+        if "removeModules" in source:
+            removals = source["removeModules"]
+            modules = result.get("modules")
+            if not isinstance(removals, list) or not isinstance(modules, dict):
+                raise WikiValidationError(f"物品 {source['id']} removeModules 必须是有效模块名数组")
+            for name in removals:
+                if not isinstance(name, str) or not name.strip() or name.strip() not in modules:
+                    raise WikiValidationError(f"物品 {source['id']} removeModules 找不到模块：{name}")
+                modules.pop(name.strip())
         result["id"] = source["id"]
         result["abstract"] = bool(source.get("abstract", False))
         result.pop("parent", None)
+        result.pop("removeModules", None)
         resolving.remove(key)
         resolved[key] = result
         return result
@@ -330,6 +350,21 @@ def validate_all_items(roots_by_package: dict[str, dict[str, Any]], packages: li
                     raise WikiValidationError(
                         f"物品 {item['id']} 模块引用了不存在或抽象的 ItemDefinition：{target}"
                     )
+
+        # 与游戏加载器一致，物品加工只能引用当前目录中的真实产物。
+        processing = item.get("processing")
+        if processing is not None and not isinstance(processing, dict):
+            raise WikiValidationError(f"物品 {item['id']} processing 必须是对象")
+        for capability, definition in (processing or {}).items():
+            if not capability.strip() or not isinstance(definition, dict):
+                raise WikiValidationError(f"物品 {item['id']} 包含无效加工能力")
+            outputs = definition.get("outputs")
+            if not isinstance(outputs, list) or not outputs:
+                raise WikiValidationError(f"物品 {item['id']} 加工能力 {capability} 缺少产物")
+            for output in outputs:
+                target = str(output.get("itemId") or "").strip() if isinstance(output, dict) else ""
+                if target.lower() not in concrete_ids:
+                    raise WikiValidationError(f"物品 {item['id']} 加工能力 {capability} 引用无效产物：{target}")
 
 
 def save_item(payload: dict[str, Any]) -> dict[str, Any]:
@@ -461,12 +496,12 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def end_headers(self) -> None:
         """公开模式补充基础浏览器安全响应头，避免页面被第三方站点嵌入。"""
-        request_path = urlparse(self.path).path
-        if request_path == WIKI_URL_PATH.rstrip("/") or request_path.startswith(WIKI_URL_PATH):
+        if self.is_live_data_path():
             self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")
@@ -475,6 +510,19 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
             self.send_header("X-Frame-Options", "DENY")
             self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
+
+    def is_live_data_path(self) -> bool:
+        """Wiki 与配置按当前磁盘内容返回，避免缓存掩盖维护结果。"""
+        path = unquote(urlparse(self.path).path).lower()
+        return (path == WIKI_URL_PATH.rstrip("/").lower() or path.startswith(WIKI_URL_PATH.lower())
+                or path.startswith("/assets/streamingassets/gameconfig/")
+                or path == "/assets/resources/config/mechanical/mechanical-catalog.json")
+
+    def send_head(self):
+        """动态维护的数据不使用秒级修改时间的 304 响应。"""
+        if self.is_live_data_path() and "If-Modified-Since" in self.headers:
+            del self.headers["If-Modified-Since"]
+        return super().send_head()
 
     def is_public_static_path_allowed(self, request_path: str) -> bool:
         """公开模式只放行 Wiki 页面、Item 配置、战利品表和 Sprite 所需文件。"""
@@ -499,13 +547,12 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                 return True
             return False
 
-        item_prefix = "assets/streamingassets/gameconfig/items/"
-        if lower.startswith(item_prefix) and lower.endswith(".json"):
-            return True
         if lower == "assets/streamingassets/gameconfig/loottables/loot-tables.json":
             return True
+        if lower in {"assets/resources/config/mechanical/mechanical-catalog.json", "assets/streamingassets/gameconfig/liquids/liquids.json"}:
+            return True
 
-        for directory, manifest_name in (("Actors", "actor-manifest.json"), ("Recipes", "recipe-manifest.json"), ("Buffs", "buff-manifest.json")):
+        for directory, manifest_name in (("Items", "item-manifest.json"), ("Actors", "actor-manifest.json"), ("Recipes", "recipe-manifest.json"), ("Buffs", "buff-manifest.json")):
             prefix = f"assets/streamingassets/gameconfig/{directory.lower()}/"
             if lower.startswith(prefix):
                 config_root = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / directory
@@ -547,7 +594,8 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                     "publicReadOnly": self.public_readonly,
                     "projectRoot": None if self.public_readonly else str(PROJECT_ROOT),
                     "service": "FlatWorldItemWiki",
-                    "version": 2,
+                    "projectId": PROJECT_ID,
+                    "version": 3,
                 },
             )
             return
@@ -563,6 +611,9 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
     def do_HEAD(self) -> None:
         """公开模式对 HEAD 使用与 GET 相同的静态文件白名单。"""
         request_path = urlparse(self.path).path
+        if request_path == "/api/wiki/status":
+            self.do_GET()
+            return
         if self.public_readonly:
             if request_path == "/":
                 self.send_wiki_redirect()
@@ -600,6 +651,63 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
             self.send_json(500, {"ok": False, "error": f"保存失败：{error}"})
 
 
+#region 后台启动与同项目服务复用
+def read_running_status(port: int) -> dict[str, Any] | None:
+    """短超时查询现有 Wiki，不向其他服务发送写入请求。"""
+    try:
+        with urlopen(f"http://127.0.0.1:{port}/api/wiki/status", timeout=0.5) as response:
+            value = json.load(response)
+        return value if isinstance(value, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def is_same_wiki(status: dict[str, Any] | None, public_readonly: bool) -> bool:
+    """服务必须属于当前项目且读写模式相同，才允许启动器复用。"""
+    if not status or status.get("service") != "FlatWorldItemWiki":
+        return False
+    if status.get("publicReadOnly") is not public_readonly or status.get("writable") is not (not public_readonly):
+        return False
+    if status.get("projectId") == PROJECT_ID:
+        return True
+    return not public_readonly and os.path.normcase(str(status.get("projectRoot", ""))) == os.path.normcase(str(PROJECT_ROOT))
+
+
+def ensure_running(port: int, public_readonly: bool) -> dict[str, Any]:
+    """复用健康服务或启动自己的后台进程；端口冲突保留原服务并给出错误。"""
+    result = {"url": f"http://127.0.0.1:{port}{WIKI_URL_PATH}", "started": False, "processId": None}
+    if is_same_wiki(read_running_status(port), public_readonly):
+        return result
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        try:
+            probe.bind(("127.0.0.1", port))
+        except OSError as error:
+            raise RuntimeError(f"端口 {port} 已被其他服务或其他模式的 Wiki 使用；请保留现有服务并另选端口。") from error
+
+    log_root = PROJECT_ROOT / "Library" / "FlatWorldItemWiki"
+    log_root.mkdir(parents=True, exist_ok=True)
+    error_log = log_root / f"server-{port}.err.log"
+    command = [sys.executable, "-B", "-u", str(Path(__file__).resolve()), "--port", str(port), "--strict-port", "--no-browser"]
+    if public_readonly:
+        command.append("--public-readonly")
+    with (log_root / f"server-{port}.out.log").open("ab") as stdout, error_log.open("ab") as stderr:
+        process = subprocess.Popen(command, cwd=str(WIKI_DIRECTORY), stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr,
+                                   creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+                                   start_new_session=os.name != "nt")
+    for _ in range(40):
+        if is_same_wiki(read_running_status(port), public_readonly):
+            return {**result, "started": True, "processId": process.pid}
+        if process.poll() is not None:
+            break
+        time.sleep(0.2)
+    if process.poll() is None:
+        process.terminate()
+    raise RuntimeError(f"Wiki 服务未能启动，请查看 {error_log}")
+#endregion
+
+
 def main() -> None:
     """启动本机 Wiki 服务；公开分享时可切换为严格只读白名单模式。"""
     parser = argparse.ArgumentParser(description="FlatWorld Item Wiki local server")
@@ -607,13 +715,24 @@ def main() -> None:
     parser.add_argument("--no-browser", action="store_true", help="只启动服务，不自动打开浏览器")
     parser.add_argument("--public-readonly", action="store_true", help="启用公开分享只读白名单模式")
     parser.add_argument("--strict-port", action="store_true", help="端口被占用时直接失败，不自动顺延")
+    parser.add_argument("--ensure-running", action="store_true", help="复用同项目服务或在后台启动，然后退出启动器")
+    parser.add_argument("--session-json", action="store_true", help="以 JSON 返回启动结果，供项目启动脚本使用")
     args = parser.parse_args()
+    if not 1024 <= args.port <= 65535:
+        parser.error("port 必须介于 1024 与 65535")
+
+    if args.ensure_running:
+        session = ensure_running(args.port, args.public_readonly)
+        print(json.dumps(session, ensure_ascii=False) if args.session_json else f"[Item Wiki] {session['url']}")
+        if not args.no_browser:
+            webbrowser.open(session["url"])
+        return
 
     WikiRequestHandler.public_readonly = args.public_readonly
 
     server = None
     selected_port = args.port
-    candidates = (args.port,) if args.strict_port else range(args.port, args.port + 20)
+    candidates = (args.port,) if args.strict_port else range(args.port, min(65536, args.port + 20))
     for candidate in candidates:
         try:
             server = ExclusiveThreadingHTTPServer(("127.0.0.1", candidate), WikiRequestHandler)

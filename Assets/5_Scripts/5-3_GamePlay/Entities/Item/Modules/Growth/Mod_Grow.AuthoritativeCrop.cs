@@ -317,7 +317,7 @@ public partial class Mod_Grow
         if (!Data.isCultivatedCrop) farmlandMultiplier *= Mathf.Max(0f, Data.environmentGrowthMultiplier);
         float growthDelta = CalculateGrowthDelta(Data.GrowSpeed, farmlandMultiplier,
             historical ? 1f : ResolveWeatherGrowthMultiplier(),
-            GameDifficultyService.Current.Production.CropGrowthMultiplier, deltaTime);
+            GameRuleConfiguration.Current.Production.CropGrowthMultiplier, deltaTime);
 
         if (growthDelta <= 0f)
             return;
@@ -336,13 +336,13 @@ public partial class Mod_Grow
         float baseSpeed,
         float farmlandMultiplier,
         float weatherMultiplier,
-        float difficultyMultiplier,
+        float growthMultiplier,
         float deltaTime)
     {
         return Mathf.Max(0f, baseSpeed) *
                Mathf.Max(0f, farmlandMultiplier) *
                Mathf.Max(0f, weatherMultiplier) *
-               Mathf.Max(0f, difficultyMultiplier) *
+               Mathf.Max(0f, growthMultiplier) *
                Mathf.Max(0f, deltaTime);
     }
 
@@ -480,9 +480,9 @@ public partial class Mod_Grow
             SpawnHarvestItem(harvestSeedItemId, 1);
 
             int baseFoodAmount = UnityEngine.Random.Range(harvestFoodMin, harvestFoodMax + 1);
-            int foodAmount = GameDifficultyService.ScaleRandomizedAmount(
+            int foodAmount = GameRuleMath.ScaleRandomizedAmount(
                 baseFoodAmount,
-                GameDifficultyService.Current.World.LootAmountMultiplier);
+                GameRuleConfiguration.Current.World.LootAmountMultiplier);
             if (foodAmount > 0)
                 SpawnHarvestItem(harvestFoodItemId, foodAmount);
 

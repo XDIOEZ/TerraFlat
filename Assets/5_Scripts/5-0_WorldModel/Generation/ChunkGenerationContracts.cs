@@ -224,6 +224,38 @@ namespace FlatWorld.WorldModel
             ecologyList.Sort((left, right) =>
                 StringComparer.Ordinal.Compare(left.RuleId, right.RuleId));
             EcologyRules = new ReadOnlyCollection<EcologySpawnRuleSnapshot>(ecologyList);
+            // 共享资源在冻结时排好互斥概率区间，区块热路径只读取同一个候选网格。
+            var sharedRules = new List<EcologySpawnRuleSnapshot>();
+            var sharedWeights = new List<double>();
+            double largestSharedWeight = 0d;
+            foreach (EcologySpawnRuleSnapshot rule in ecologyList)
+            {
+                if (rule.SharedRadius <= 0) continue;
+                if (SharedEcologySpacing != 0 && SharedEcologySpacing != rule.PatchSpacing)
+                    throw new InvalidOperationException("同一 Profile 的共享资源必须使用相同候选间距，避免不同网格的矿体互叠。");
+                SharedEcologySpacing = rule.PatchSpacing;
+                SharedEcologyMaximumRadius = Math.Max(SharedEcologyMaximumRadius, rule.SharedRadius);
+                sharedRules.Add(rule);
+                double weight = rule.SpawnChance * rule.SpawnChanceMultiplier * rule.PatchChance;
+                sharedWeights.Add(weight);
+                largestSharedWeight = Math.Max(largestSharedWeight, weight);
+            }
+            if (largestSharedWeight > 0d)
+            {
+                double normalizedTotal = 0d;
+                for (int i = 0; i < sharedWeights.Count; i++)
+                    normalizedTotal += sharedWeights[i] /= largestSharedWeight;
+                double chance = Math.Min(1d, EcologyGlobalMultiplier * largestSharedWeight * normalizedTotal);
+                double cumulative = 0d;
+                for (int i = 0; i < sharedWeights.Count; i++)
+                {
+                    cumulative += chance * (sharedWeights[i] / normalizedTotal);
+                    sharedWeights[i] = Math.Min(chance, cumulative);
+                }
+                sharedWeights[sharedWeights.Count - 1] = chance;
+            }
+            SharedEcologyRules = new ReadOnlyCollection<EcologySpawnRuleSnapshot>(sharedRules);
+            SharedEcologyCumulativeChances = new ReadOnlyCollection<double>(sharedWeights);
             var caveResourceList = caveResourceRules == null
                 ? new List<CaveResourceRuleSnapshot>()
                 : new List<CaveResourceRuleSnapshot>(caveResourceRules);
@@ -275,6 +307,10 @@ namespace FlatWorld.WorldModel
         public double EcologyGlobalMultiplier { get; }
         /// <summary>自然生态物品规则；只含字符串、数值和稳定标签。</summary>
         public IReadOnlyList<EcologySpawnRuleSnapshot> EcologyRules { get; }
+        public IReadOnlyList<EcologySpawnRuleSnapshot> SharedEcologyRules { get; }
+        public IReadOnlyList<double> SharedEcologyCumulativeChances { get; }
+        public int SharedEcologySpacing { get; }
+        public int SharedEcologyMaximumRadius { get; }
         /// <summary>洞穴矿脉规则；列表顺序代表从稀有到常见的回退优先级。</summary>
         public IReadOnlyList<CaveResourceRuleSnapshot> CaveResourceRules { get; }
         /// <summary>矿洞复算地表入口和高度时使用的冻结配对上下文；地表 Profile 为空。</summary>
@@ -478,6 +514,13 @@ namespace FlatWorld.WorldModel
                 EcologySpawnRuleSnapshot rule = rules[i];
                 AddString(ref hash, rule.RuleId);
                 AddString(ref hash, rule.ItemId);
+                if (rule.SharedRadius > 0)
+                {
+                    AddString(ref hash, "sharedResource");
+                    AddLong(ref hash, rule.SharedRadius);
+                    AddLong(ref hash, rule.FootprintWidth);
+                    AddLong(ref hash, rule.FootprintHeight);
+                }
                 AddLong(ref hash, rule.ItemCount);
                 if (rule.ItemCountDistribution != EcologyItemCountDistribution.Fixed)
                 {

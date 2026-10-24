@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
+[DefaultExecutionOrder(-50)]
 public partial class Mod_FocusPoint : Module
 {
     #region Fields
@@ -18,6 +19,7 @@ public partial class Mod_FocusPoint : Module
     private List<Transform> _cachedValidTargets;
     private readonly Dictionary<Transform, float> _currentAimAngles = new Dictionary<Transform, float>();
     private readonly Dictionary<Transform, float> _baseLocalXAngles = new Dictionary<Transform, float>();
+    private readonly HashSet<Transform> _presentedRotationTargets = new HashSet<Transform>();
     private int _lastTargetCount = -1;
     private bool _needsRefresh = true;
     #endregion
@@ -31,6 +33,12 @@ public partial class Mod_FocusPoint : Module
     public void OnValidate()
     {
         _Data.ID = ModText.FocusPoint;
+    }
+
+    private void LateUpdate()
+    {
+        if (!IsRuntimeLoaded || !Enabled || Mod_GameController == null) return;
+        RefreshPresentedRotation(Time.deltaTime);
     }
     #endregion
 
@@ -73,7 +81,7 @@ public partial class Mod_FocusPoint : Module
         if (targetRotationTransforms == null || targetRotationTransforms.Count == 0 || !Data.ActivateRotation) 
             return;
 
-        PlayerTakeItem_FaceMouse(deltaTime);
+        PlayerTakeItem_FaceMouse(deltaTime, includePresentedTargets: false);
     }
 
     protected override void OnSave()
@@ -83,7 +91,7 @@ public partial class Mod_FocusPoint : Module
     #endregion
 
     #region Public Methods
-    public void PlayerTakeItem_FaceMouse(float deltaTime)
+    public void PlayerTakeItem_FaceMouse(float deltaTime, bool includePresentedTargets = true)
     {
         if (Mod_GameController == null)
         {
@@ -98,8 +106,15 @@ public partial class Mod_FocusPoint : Module
         // 仅在启用旋转且列表有对象时执行逻辑
         if (Data.ActivateRotation)
         {
-            FaceToMouse(Data.See_Point, deltaTime);
+            FaceToMouse(Data.See_Point, deltaTime, includePresentedTargets ? (bool?)null : false);
         }
+    }
+
+    internal void RefreshPresentedRotation(float deltaTime)
+    {
+        // 身体在 -100 顺序完成手持位置更新，随后瞄准，最后由伤害模块采样命中盒。
+        if (Data.ActivateRotation && _presentedRotationTargets.Count > 0)
+            FaceToMouse(Data.See_Point, deltaTime, afterPresentation: true);
     }
 
     [ContextMenu("清理空对象")]
@@ -120,10 +135,12 @@ public partial class Mod_FocusPoint : Module
     }
 
     /// <summary>注册需要随统一朝向旋转的对象。</summary>
-    public void AddRotationTarget(Transform target)
+    public void AddRotationTarget(Transform target, bool updateAfterPresentation = false)
     {
-        if (target == null || targetRotationTransforms.Contains(target))
-            return;
+        if (target == null) return;
+        if (updateAfterPresentation) _presentedRotationTargets.Add(target);
+        else _presentedRotationTargets.Remove(target);
+        if (targetRotationTransforms.Contains(target)) return;
 
         targetRotationTransforms.Add(target);
         _needsRefresh = true;
@@ -138,12 +155,13 @@ public partial class Mod_FocusPoint : Module
         targetRotationTransforms.Remove(target);
         _currentAimAngles.Remove(target);
         _baseLocalXAngles.Remove(target);
+        _presentedRotationTargets.Remove(target);
         _needsRefresh = true;
     }
     #endregion
 
     #region Private Methods
-    private void FaceToMouse(Vector3 targetPosition, float deltaTime)
+    private void FaceToMouse(Vector3 targetPosition, float deltaTime, bool? afterPresentation = null)
     {
         bool bodyRotationAim = turnBody != null && !turnBody.IsMirroringEnabled;
         List<Transform> targets = GetValidRotationTargets();
@@ -160,6 +178,8 @@ public partial class Mod_FocusPoint : Module
         // 遍历所有有效目标执行旋转
         foreach (var targetTrans in targets)
         {
+            if (afterPresentation.HasValue && _presentedRotationTargets.Contains(targetTrans) != afterPresentation.Value)
+                continue;
             Vector3 targetOrigin = targetTrans.position;
             Vector2 direction = ResolveAimDelta(targetOrigin, targetPosition, bodyRotationAim, topology);
 
@@ -254,6 +274,7 @@ public partial class Mod_FocusPoint : Module
 
                 _currentAimAngles.Remove(trackedTarget);
                 _baseLocalXAngles.Remove(trackedTarget);
+                _presentedRotationTargets.Remove(trackedTarget);
             }
             
             // 仅在调试模式下输出警告

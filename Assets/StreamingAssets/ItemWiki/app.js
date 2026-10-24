@@ -7,6 +7,7 @@
     const LOOT_TABLE_PATH = "../GameConfig/LootTables/loot-tables.json";
     const MODULE_GLOSSARY_PATH = "module-glossary.json";
     const ITEM_METADATA_PATH = "item-metadata.json";
+    const TECH_TREE_CONFIG_PATH = "tech-tree-eras.json";
     const DESIGN_DOC_INDEX_PATH = "docs/README.md";
     const SYSTEM_MAP_DOC_PATH = "docs/system-script-map.md";
     const SYSTEM_MAP_NODE_WIDTH = 300;
@@ -99,6 +100,12 @@
         mechanicsContext: null,
         selectedId: null,
         spriteCache: new Map(),
+        spriteGeneration: 0,
+        imageZoomRequest: 0,
+        techTree: null,
+        techTreeConfig: null,
+        techTreeResources: {},
+        techTreeError: "",
         designDocs: [],
         designLoaded: false,
         selectedDesignPath: DESIGN_DOC_INDEX_PATH,
@@ -136,6 +143,10 @@
         catalogViewButton: document.getElementById("catalogViewButton"),
         buffViewButton: document.getElementById("buffViewButton"),
         overviewViewButton: document.getElementById("overviewViewButton"),
+        techTreeViewButton: document.getElementById("techTreeViewButton"),
+        techTreeBook: document.getElementById("techTreeBook"),
+        techTreeRoot: document.getElementById("techTreeRoot"),
+        footerCapability: document.getElementById("footerCapability"),
         designViewButton: document.getElementById("designViewButton"),
         systemMapViewButton: document.getElementById("systemMapViewButton"),
         settingsButton: document.getElementById("settingsButton"),
@@ -202,6 +213,21 @@
 
     // 页面启动时绑定交互并加载当前 JSON。
     function init() {
+        state.techTree = window.ItemTechTree?.create({
+            root: els.techTreeRoot,
+            loadSprite,
+            openItem: id => {
+                setView("catalog");
+                selectItem(id);
+                locateSelectedItemInIndex();
+            },
+            clearGlobalSearch: () => {
+                els.globalSearch.value = "";
+                renderList();
+                renderOverview();
+            },
+            onSelect: id => history.replaceState(null, "", `#tech-tree${id ? `/${encodeURIComponent(id)}` : ""}`)
+        });
         bindEvents();
         restoreIndexSideState();
         restoreIndexCollapseState();
@@ -218,6 +244,7 @@
         els.globalSearch.addEventListener("input", () => {
             renderList();
             renderOverview();
+            state.techTree?.setSearch(els.globalSearch.value);
         });
         els.categorySelect.addEventListener("change", () => {
             syncCategoryTabs();
@@ -246,6 +273,7 @@
         els.catalogViewButton.addEventListener("click", () => setView("catalog"));
         els.buffViewButton.addEventListener("click", () => setView("buffs"));
         els.overviewViewButton.addEventListener("click", () => setView("overview"));
+        els.techTreeViewButton.addEventListener("click", () => setView("tech-tree"));
         els.designViewButton.addEventListener("click", () => setView("design"));
         els.systemMapViewButton.addEventListener("click", () => setView("system-map"));
         els.settingsButton.addEventListener("click", () => setView("settings"));
@@ -271,7 +299,7 @@
                 if (!els.imageZoomModal.hidden) closeImageZoom();
                 else if (!els.lootModal.hidden) closeLootModal();
             }
-            if (event.key === "/" && document.activeElement !== els.globalSearch) {
+            if (event.key === "/" && !event.target.closest?.("input, textarea, select, [contenteditable='true']")) {
                 if (!els.imageZoomModal.hidden || !els.lootModal.hidden) return;
                 event.preventDefault();
                 els.globalSearch.focus();
@@ -284,6 +312,7 @@
         });
         window.addEventListener("resize", () => hideModuleFieldTooltip());
         window.addEventListener("scroll", () => hideModuleFieldTooltip(), true);
+        window.addEventListener("hashchange", applyLocationRoute);
     }
 
     // 仅在档案浏览且未编辑文本/打开弹窗时接管左右方向键，避免干扰输入框与原生控件。
@@ -378,15 +407,24 @@
         els.reloadButton.disabled = true;
         try {
             await checkWriteCapability();
-            state.spriteCache.clear();
-            const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes, buffs] = await Promise.all([
+            clearSpriteCache();
+            state.techTreeError = "";
+            const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes, buffs, techTreeData] = await Promise.all([
                 fetchJson(ITEM_MANIFEST_PATH),
                 fetchJson(LOOT_TABLE_PATH),
                 fetchJson(MODULE_GLOSSARY_PATH),
                 fetchJson(ITEM_METADATA_PATH),
                 ItemMechanics.loadManifest(fetchJson, "../GameConfig/Actors/", "actor-manifest.json", "actors"),
                 ItemMechanics.loadManifest(fetchJson, "../GameConfig/Recipes/", "recipe-manifest.json", "recipes"),
-                loadBuffCatalog()
+                loadBuffCatalog(),
+                Promise.all([
+                    fetchJson(TECH_TREE_CONFIG_PATH),
+                    fetchJson("../../../Assets/Resources/Config/Mechanical/mechanical-catalog.json"),
+                    fetchJson("../GameConfig/Liquids/liquids.json")
+                ]).catch(error => {
+                    state.techTreeError = error.message;
+                    return null;
+                })
             ]);
             const packages = (manifest.packages || []).filter(pkg => pkg && pkg.enabled !== false);
             const packagePayloads = await Promise.all(packages.map(async pkg => ({
@@ -423,6 +461,8 @@
             state.buffHashes = buffs.hashes;
             state.actors = actors;
             state.recipes = Array.from(recipes.resolved.values());
+            state.techTreeConfig = techTreeData?.[0] || null;
+            state.techTreeResources = { mechanicalCatalog: techTreeData?.[1], liquids: techTreeData?.[2] };
             state.itemMetadata = itemMetadata && itemMetadata.schemaVersion === 1 && isPlainObject(itemMetadata.items)
                 ? itemMetadata
                 : { schemaVersion: 1, items: {} };
@@ -443,12 +483,13 @@
             restoreOrSelectFirst(preferredId);
             setStatus(
                 "ready",
-                `已载入 ${state.entries.filter(entry => !entry.final.abstract && entry.kind === "item").length} 个物品、${state.entries.filter(entry => !entry.final.abstract && entry.kind === "actor").length} 个生物、${state.recipes.length} 个配方、${state.buffSources.size} 个 BUFF；双击数值编辑，生物只读。`
+                `已载入 ${state.entries.filter(entry => !entry.final.abstract && entry.kind === "item").length} 个物品、${state.entries.filter(entry => !entry.final.abstract && entry.kind === "actor").length} 个生物、${state.mechanicsContext.recipes?.length ?? state.recipes.length} 条配方与加工、${state.buffSources.size} 个 BUFF；${state.writable ? `物品${state.buffWritable ? "与 BUFF" : ""}可双击编辑，生物只读。` : "当前为只读浏览。"}${state.techTreeError ? " 科技树暂不可用，详见科技树页。" : ""}`
             );
         } catch (error) {
             console.error(error);
             setStatus("error", `读取失败：${error.message}`);
             els.itemList.innerHTML = `<div class="no-data">${escapeHtml(error.message)}</div>`;
+            state.techTree?.setError(error.message);
             showEmpty();
         } finally {
             els.reloadButton.disabled = false;
@@ -513,6 +554,9 @@
             state.projectRoot = "";
         }
         updateSystemMapEditorHint();
+        els.footerCapability.textContent = state.writable
+            ? "本地编辑模式 · 保存会校验并回写真实分包 · 生物只读"
+            : "只读浏览模式 · 所有数据来自当前 JSON";
     }
 
     // 完整模拟 ItemDefinitionCatalogLoader 的 parent 合并策略。
@@ -554,6 +598,22 @@
         state.entries.push(...Array.from(state.actors.resolved.values()).map(final => buildEntry(final, "actor")));
         state.mechanicsContext = ItemMechanics.createContext(state.entries, state.recipes, state.lootTables);
         state.entries.push(...Array.from(state.buffSources, ([key, source]) => BuffWiki.makeEntry(source, state.buffPackages.get(key))));
+        rebuildTechTree();
+    }
+
+    // 科技树只消费当前解析结果，时代规则独立配置，重新读取和保存后一起更新。
+    function rebuildTechTree() {
+        try {
+            if (!state.techTree || !window.ItemTechTreeModel) throw new Error("科技树脚本未加载，请重新打开页面。");
+            if (!state.techTreeConfig) throw new Error(state.techTreeError || "时代配置未加载。");
+            const model = ItemTechTreeModel.build(state.entries, state.mechanicsContext.recipes || state.recipes, state.techTreeConfig,
+                { ...state.techTreeResources, lootTables: state.lootTables });
+            state.techTree.setModel(model);
+        } catch (error) {
+            state.techTreeError = error.message;
+            if (state.techTree) state.techTree.setError(error.message);
+            else els.techTreeRoot.textContent = `科技树读取失败：${error.message}`;
+        }
     }
 
     // 优先按 Manifest 分包和模块语义生成开发者友好分类。
@@ -612,15 +672,18 @@
         });
     }
 
-    // 切换档案浏览、全物品总览、游戏设计、脚本世界与设置页；书本只作为视觉容器，不限制信息架构。
-    function setView(view) {
-        state.activeView = ["overview", "design", "system-map", "settings", "buffs"].includes(view) ? view : "catalog";
+    // 按页面切换物品档案、科技树与系统资料，并保持可分享地址同步。
+    function setView(view, updateRoute = true) {
+        state.activeView = ["overview", "tech-tree", "design", "system-map", "settings", "buffs"].includes(view) ? view : "catalog";
         const overview = state.activeView === "overview";
+        const techTree = state.activeView === "tech-tree";
         const design = state.activeView === "design";
         const systemMap = state.activeView === "system-map";
         const settings = state.activeView === "settings";
         document.body.classList.toggle("overview-mode", overview);
-        els.catalogBook.hidden = overview || design || systemMap || settings;
+        document.body.classList.toggle("tech-tree-mode", techTree);
+        els.catalogBook.hidden = overview || techTree || design || systemMap || settings;
+        els.techTreeBook.hidden = !techTree;
         els.overviewBook.hidden = !overview;
         els.designBook.hidden = !design;
         els.systemMapBook.hidden = !systemMap;
@@ -628,9 +691,19 @@
         els.catalogViewButton.classList.toggle("active", state.activeView === "catalog");
         els.buffViewButton.classList.toggle("active", state.activeView === "buffs");
         els.overviewViewButton.classList.toggle("active", overview);
+        els.techTreeViewButton.classList.toggle("active", techTree);
         els.designViewButton.classList.toggle("active", design);
         els.systemMapViewButton.classList.toggle("active", systemMap);
         els.settingsButton.classList.toggle("active", settings);
+        for (const button of [els.catalogViewButton, els.buffViewButton, els.overviewViewButton, els.techTreeViewButton, els.designViewButton, els.systemMapViewButton, els.settingsButton]) {
+            button.setAttribute("aria-pressed", String(button.classList.contains("active")));
+        }
+        if (updateRoute) {
+            const selectedTreeId = techTree ? state.techTree?.getSelectedId() : "";
+            history.replaceState(null, "", `#${state.activeView}${selectedTreeId ? `/${encodeURIComponent(selectedTreeId)}` : ""}`);
+        }
+        if (techTree) state.techTree?.show();
+        else state.techTree?.hide();
         if (overview) renderOverview();
         if (design) loadDesignDocs();
         if (systemMap) loadSystemMap();
@@ -640,12 +713,12 @@
             renderList();
             const candidates = getCatalogEntries();
             const selected = candidates.find(entry => entry.id === state.selectedId) || candidates[0];
-            if (selected) selectItem(selected.id);
+            if (selected) selectItem(selected.id, updateRoute);
             else showEmpty();
         }
     }
 
-    // README 的“系统目录”表即 03 页导航真源，新增/排序文档时无需同步第二份网页配置。
+    // README 的系统目录就是设计页导航真源，新增文档时无需维护网页副本。
     async function loadDesignDocs() {
         if (state.designLoaded) {
             renderDesignDocList();
@@ -1496,11 +1569,11 @@
     }
 
     // 选中物品并刷新详情和列表选中态。
-    function selectItem(id) {
+    function selectItem(id, updateRoute = true) {
         const entry = state.entries.find(candidate => candidate.id.toLowerCase() === String(id).toLowerCase());
         if (!entry) return;
         state.selectedId = entry.id;
-        history.replaceState(null, "", `#${encodeURIComponent(entry.id)}`);
+        if (updateRoute) history.replaceState(null, "", `#item/${encodeURIComponent(entry.id)}`);
         els.itemList.querySelectorAll(".item-row").forEach(row => {
             row.classList.toggle("selected", row.dataset.itemId.toLowerCase() === entry.id.toLowerCase());
         });
@@ -1592,13 +1665,40 @@
 
     // URL Hash 优先恢复上次条目，否则选择当前第一个可用物品。
     function restoreOrSelectFirst(preferredId = null) {
-        const hashId = decodeURIComponent(location.hash.replace(/^#/, ""));
-        const requestedId = String(preferredId || hashId || "").toLowerCase();
+        const route = readLocationRoute();
+        if (route.view !== "catalog" && route.view !== "buffs") {
+            applyLocationRoute();
+            return;
+        }
+        const requestedId = String(route.id || preferredId || "").toLowerCase();
         const preferred = state.entries.find(entry => entry.id.toLowerCase() === requestedId);
-        if (preferred?.kind === "buff" && state.activeView === "catalog") setView("buffs");
+        setView(preferred?.kind === "buff" || route.view === "buffs" ? "buffs" : "catalog", false);
         const firstConcrete = getCatalogEntries().find(entry => entry.final.abstract !== true);
         if (preferred || firstConcrete) selectItem((preferred || firstConcrete).id);
         else showEmpty();
+    }
+
+    // 新地址支持科技树与档案直达，同时保留原先 #物品ID 链接。
+    function readLocationRoute() {
+        let hash = location.hash.slice(1);
+        try { hash = decodeURIComponent(hash); } catch { hash = ""; }
+        if (hash === "tech-tree" || hash.startsWith("tech-tree/")) return { view: "tech-tree", id: hash.slice(10) };
+        if (["overview", "design", "system-map", "settings", "buffs", "catalog"].includes(hash)) return { view: hash, id: "" };
+        const id = hash.startsWith("item/") ? hash.slice(5) : hash;
+        return { view: id.startsWith("buff:") ? "buffs" : "catalog", id };
+    }
+
+    function applyLocationRoute() {
+        if (!state.entries.length) return;
+        const route = readLocationRoute();
+        if (route.view === "tech-tree") {
+            setView("tech-tree", false);
+            state.techTree?.select(route.id, { notify: false, center: true });
+            return;
+        }
+        const entry = route.id ? findItemEntry(route.id) : null;
+        setView(entry?.kind === "buff" ? "buffs" : route.view, false);
+        if (entry) selectItem(entry.id, false);
     }
 
     // 绘制右页完整开发者详情。
@@ -1625,9 +1725,20 @@
             `<div class="badge-row">` +
             `<span class="badge">${escapeHtml(entry.category)}</span>` +
             `<span class="badge blue">${escapeHtml(entry.package.id)}</span>` +
-            (entry.final.abstract ? `<span class="badge red">ABSTRACT</span>` : `<span class="badge green">RUNTIME ITEM</span>`) +
+            (entry.final.abstract ? `<span class="badge red">ABSTRACT</span>` : `<span class="badge green">${entry.kind === "actor" ? "生物 · 只读" : "RUNTIME ITEM"}</span>`) +
             `</div>`;
         hero.append(icon, title);
+        if (entry.kind === "item" && !entry.final.abstract) {
+            const treeLink = document.createElement("button");
+            treeLink.type = "button";
+            treeLink.className = "detail-tree-link";
+            treeLink.textContent = "在科技树中查看 →";
+            treeLink.addEventListener("click", () => {
+                setView("tech-tree");
+                state.techTree?.select(entry.id, { center: true, reveal: true });
+            });
+            title.appendChild(treeLink);
+        }
         els.detailContent.appendChild(hero);
 
         const titleHeading = title.querySelector("h2");
@@ -2264,7 +2375,7 @@
     // 把当前词条变成可直接双击编辑的字段；编辑完成后立即写回权威 JSON。
     function attachInlineEditor(host, entry, target) {
         if (!host || !entry || !target) return;
-        if (entry.kind === "actor" || state.publicReadOnly) return;
+        if (entry.kind === "actor" || state.publicReadOnly || !state.writable || (entry.kind === "buff" && !state.buffWritable)) return;
         host.classList.add("inline-editable");
         host.tabIndex = 0;
         host.setAttribute("role", "button");
@@ -2653,9 +2764,10 @@
     // SpriteAddress 支持普通图片和 Unity 多 Sprite PNG 子资源。
     async function fillSpriteIcon(host, spriteAddress, displayName) {
         if (!spriteAddress || typeof spriteAddress !== "string") return;
+        const generation = state.spriteGeneration;
         try {
             const sprite = await loadSprite(spriteAddress);
-            if (!host.isConnected || !sprite) return;
+            if (!host.isConnected || !sprite || generation !== state.spriteGeneration) return;
             host.textContent = "";
             if (sprite.kind === "image") {
                 const img = document.createElement("img");
@@ -2702,6 +2814,7 @@
     async function openImageZoom(entry, options = {}) {
         const address = options.address || entry?.final?.visual?.spriteAddress;
         if (!address) return;
+        const request = ++state.imageZoomRequest;
         const title = options.title || entry.displayName;
         const context = options.context ? ` · ${options.context}` : "";
         els.imageZoomTitle.textContent = title;
@@ -2710,6 +2823,7 @@
         els.imageZoomModal.hidden = false;
         try {
             const sprite = await loadSprite(address);
+            if (request !== state.imageZoomRequest) return;
             if (!sprite || els.imageZoomModal.hidden) {
                 if (!sprite) els.imageZoomBody.innerHTML = `<div class="no-data">无法读取这个 Sprite。</div>`;
                 return;
@@ -2873,14 +2987,28 @@
             updateBaseSize();
             applyTransform();
         } catch (error) {
+            if (request !== state.imageZoomRequest) return;
             els.imageZoomBody.innerHTML = `<div class="no-data">大图加载失败：${escapeHtml(error.message)}</div>`;
         }
     }
 
     // 关闭物品 Sprite 放大预览。
     function closeImageZoom() {
+        state.imageZoomRequest++;
         els.imageZoomModal.hidden = true;
         els.imageZoomBody.innerHTML = "";
+    }
+
+    // 重读时释放旧图集裁剪 URL，未完成请求也不会覆盖新一代页面。
+    function clearSpriteCache() {
+        state.spriteGeneration++;
+        closeImageZoom();
+        for (const promise of state.spriteCache.values()) {
+            promise.then(sprite => {
+                if (sprite?.url?.startsWith("blob:")) URL.revokeObjectURL(sprite.url);
+            }).catch(() => {});
+        }
+        state.spriteCache.clear();
     }
 
     // 拆分 Unity Sprite Address，统一识别普通贴图与图集子 Sprite。

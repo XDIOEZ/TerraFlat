@@ -168,6 +168,8 @@ namespace FlatWorld.Editor.ContentWorkshop
         public string ItemId;
         public int Amount = 1;
         public string CopyInputTag;
+        public string CopyInputItemId;
+        public string AddTag;
         public bool ReinforceWithAdhesive;
         public float? DurabilityMultiplier;
 
@@ -178,6 +180,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                 ItemId = ItemId,
                 Amount = Amount,
                 CopyInputTag = CopyInputTag,
+                CopyInputItemId = CopyInputItemId,
+                AddTag = AddTag,
                 ReinforceWithAdhesive = ReinforceWithAdhesive,
                 DurabilityMultiplier = DurabilityMultiplier
             };
@@ -289,6 +293,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                     ItemId = output.ItemId,
                     Amount = Mathf.Max(1, output.Amount),
                     CopyInputTag = output.CopyInputTag,
+                    CopyInputItemId = output.CopyInputItemId,
+                    AddTag = output.AddTag,
                     ReinforceWithAdhesive = output.ReinforceWithAdhesive,
                     DurabilityMultiplier = output.DurabilityMultiplier
                 });
@@ -446,7 +452,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             if (string.IsNullOrWhiteSpace(DisplayName))
                 throw new InvalidOperationException("请填写玩家看到的配方名称。");
             if (Outputs.Count == 0 || Outputs.Any(output => string.IsNullOrWhiteSpace(output.ItemId) &&
-                                                          string.IsNullOrWhiteSpace(output.CopyInputTag)))
+                                                          string.IsNullOrWhiteSpace(output.CopyInputTag) &&
+                                                          string.IsNullOrWhiteSpace(output.CopyInputItemId)))
                 throw new InvalidOperationException("配方至少需要一个有效产物。");
             if (ActiveIngredients.All(ingredient => ingredient.IsEmpty))
                 throw new InvalidOperationException("请至少放入一种材料。");
@@ -465,6 +472,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                     ItemId = output.ItemId?.Trim(),
                     Amount = Mathf.Max(1, output.Amount),
                     CopyInputTag = output.CopyInputTag?.Trim(),
+                    CopyInputItemId = output.CopyInputItemId?.Trim(),
+                    AddTag = output.AddTag?.Trim(),
                     ReinforceWithAdhesive = output.ReinforceWithAdhesive,
                     DurabilityMultiplier = output.DurabilityMultiplier
                 }).ToList(),

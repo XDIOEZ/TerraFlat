@@ -9,7 +9,7 @@ public enum WeaponHitboxRegion
 }
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemTooltipInfoProvider
+public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier
 {
     #region 伤害相关数据
 
@@ -27,6 +27,12 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private CombatImpactEffectSet impactEffectSet;
     [Tooltip("每次有效命中都播放的通用特效，例如伤害数字；不重复放入类型命中特效。")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
+
+    [Header("命中目标轻抖")]
+    [Range(0f, 1f), Tooltip("正伤害后的视觉抖动时长；0关闭，不移动目标碰撞体。")]
+    public float HitShakeDuration = CombatHitFeedback.DefaultShakeDuration;
+    [Range(0f, 0.25f), Tooltip("视觉抖动最大世界距离，默认0.035米；不影响目标真实位置。")]
+    public float HitShakeDistance = CombatHitFeedback.DefaultShakeDistance;
 
     [Header("物理攻击")]
     [Tooltip("物理攻击力只减一次目标防御，再应用匹配工具的两倍弱点。")]
@@ -272,22 +278,18 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     {
         if (GameplayCombatBridge.Identity(item) != context.Attack.Source || context.Attack.Sequence != attackSequence) return;
         if (damage >= 0f) SpawnEffect(context.HitPoint, damage);
-        ConsumeWeaponDurability(damage);
         OnExternalDamageResolved?.Invoke(context, damage);
         OnDamageApplied?.Invoke(damage);
     }
+
+    /// <summary>几何与逻辑命中确认后、生命结算前消耗攻击装备耐久。</summary>
+    public void ConsumeWeaponDurabilityForHit() => EquipmentDurabilityRules.ConsumeSuccessfulHit(
+        LaunchedWeaponDurabilityOwner != null ? LaunchedWeaponDurabilityOwner : item,
+        LaunchedWeaponDurabilityData,
+        LaunchedWeaponInventoryOwner);
     #endregion
 
     #region IDamageSender 实现
-    /// <summary>库存说明从最终物品配置读取攻击力，帮助玩家选择下一档工具。</summary>
-    public bool TryGetItemTooltipInfo(ItemTooltipInfoContext context, out string info)
-    {
-        string json = context.ModuleDefinition?.ParametersJson;
-        CombatDamage values = string.IsNullOrWhiteSpace(json) ? DamageValues :
-            Newtonsoft.Json.Linq.JObject.Parse(json)["DamageValues"]?.ToObject<CombatDamage>() ?? DamageValues;
-        info = FlatWorld.Localization.FlatWorldLocalizationService.GetUiFormat("物理攻击力：{0}", values.Physical.ToString("0.##"));
-        return values.Physical > 0f;
-    }
     /// <summary>伤害发送者保持为伤害物品自身；Owner 只用于排除自伤，不改写旧的攻击者语义。</summary>
     Item IDamageSender.attacker { get => item; set => item = value; }
     CombatDamage IDamageSender.DamageValues => ResolveDamageValues();
@@ -591,7 +593,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             return;
         }
 
-        // 造成伤害
+        // 命中判定通过后先磨损武器，再由目标裁定伤害或格挡。
+        ConsumeWeaponDurabilityForHit();
         float acDamage = receiver.Hurt(this);
 
         // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
@@ -601,8 +604,12 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             SpawnEffect(hitPoint, acDamage);
         }
 
+        if (CombatHitFeedback.HasImpact(acDamage) && receiver != null && receiver.item != null)
+            ActorRenderHitShakeEffect.Play(receiver.item,
+                WorldTopologyRuntime.ShortestDelta(DamageOrigin, receiver.item.transform.position),
+                HitShakeDuration, HitShakeDistance);
+
         // 触发伤害完成事件（无论伤害是否大于 0 都会触发）
-        ConsumeWeaponDurability(acDamage);
         OnReceiverDamageResolved?.Invoke(receiver, acDamage);
         OnDamageApplied?.Invoke(acDamage);
 
@@ -613,11 +620,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     #region 逻辑命中
 
-    private const float HealthyEqualSizeHitChance = 0.73f;
-    private const float LogicalHitChanceFloor = 0.02f;
-    private const float LogicalHitChanceCeiling = 0.98f;
-    private const float TargetSizeExponent = 0.5f;
-
     /// <summary>只对角色攻击角色追加逻辑命中判定，环境、资源和普通物件伤害保持原规则。</summary>
     private bool TryResolveLogicalHit(Mod_DamageReceiver receiver, out float chance)
     {
@@ -627,14 +629,20 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (!IsLogicalHitActor(attackActor) || !IsLogicalHitActor(targetActor))
             return true;
 
-        float weaponFactor = HitChanceMultiplier;
+        Mod_DamageReceiver attackerHealth = attackActor.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        int accuracyLevel = attackerHealth?.AccuracyLevel ?? CreatureHitChanceRules.DefaultAccuracyLevel;
         float stateFactor = ResolveAttackerStateHitChanceMultiplier(attackActor);
-        float sizeFactor = Mathf.Pow(Mathf.Max(0.05f, receiver.HitSizeCoefficient), TargetSizeExponent);
-        chance = Mathf.Clamp(
-            HealthyEqualSizeHitChance * weaponFactor * stateFactor * sizeFactor,
-            LogicalHitChanceFloor,
-            LogicalHitChanceCeiling);
-        return Random.value < chance;
+        chance = CreatureHitChanceRules.Calculate(accuracyLevel, receiver.SizeLevel, HitChanceMultiplier, stateFactor);
+        chance = CreatureHitChanceRules.ApplyDodge(chance, receiver.DodgeChance);
+        if (receiver.item?.itemMods != null)
+        {
+            foreach (Module module in receiver.item.itemMods.Mods.Values)
+                if (module != null && module.Enabled && module.IsRuntimeLoaded && module.isActiveAndEnabled &&
+                    module is ICreatureDodgeChanceSource dodgeSource)
+                    chance = CreatureHitChanceRules.ApplyDodge(chance, dodgeSource.DodgeChance);
+        }
+        // 0级必须永不命中，满级组合的100%也不应被随机值上边界击穿。
+        return chance >= 1f || (chance > 0f && Random.value < chance);
     }
 
     /// <summary>武器、箭矢等多级 Owner 最终都归到真实攻击角色。</summary>
@@ -752,7 +760,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         tileDamageAppliedThisWindow = true;
         if (result.AppliedDamage >= 0f)
             SpawnEffect(result.HitPoint, result.AppliedDamage);
-        ConsumeWeaponDurability(result.AppliedDamage);
         OnDamageApplied?.Invoke(result.AppliedDamage);
         lastDamageTime = Time.time;
     }
@@ -811,9 +818,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (!OnlyDealDamageWhenInHand) return true;
         return item.InHand;
     }
-
-    private void ConsumeWeaponDurability(float damage) => EquipmentDurabilityRules.ConsumeSuccessfulDamage(
-        LaunchedWeaponDurabilityOwner != null ? LaunchedWeaponDurabilityOwner : item, LaunchedWeaponDurabilityData, damage, LaunchedWeaponInventoryOwner);
 
     private void HandleSourceDeath(Mod_DamageReceiver health)
     {

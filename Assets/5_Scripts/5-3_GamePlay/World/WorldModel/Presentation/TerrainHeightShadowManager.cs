@@ -160,14 +160,8 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
     private bool Refresh(int x, int y)
     {
         var layer = ChunkBatchRendererGroupService.VisualLayer.TerrainHeightShadow;
-        if (!TrySample(x, y, out TerrainSurfaceHeight surface) || !surface.ReceivesShadow)
-        {
-            owner.ClearLayerVisual(layer, x, y);
-            return true;
-        }
-        Vector4 edges = new(Delta(x - 1, y, surface), Delta(x + 1, y, surface),
-            Delta(x, y - 1, surface), Delta(x, y + 1, surface));
-        if (edges == Vector4.zero)
+        if (!TryGetShadowMasks(world, chunk.Address, chunk.Terrain, x, y, useGeneratedHeight,
+                out Vector4 edges, out Vector4 corners))
         {
             owner.ClearLayerVisual(layer, x, y);
             return true;
@@ -175,22 +169,37 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         Int2 origin = chunk.Address.ChunkOrigin;
         Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(origin.X + x + .5f, origin.Y + y + .5f));
         return owner.SetLayerVisual(layer, x, y, SharedSpriteMeshCache.GetTerrainShadowCell(),
-            material, matrix, Color.white, edges, Vector4.zero);
+            material, matrix, Color.white, edges, corners);
     }
 
-    private int Delta(int x, int y, TerrainSurfaceHeight receiver) =>
-        TrySample(x, y, out TerrainSurfaceHeight neighbour)
-            ? TerrainSurfaceHeightLayer.GetShadowDelta(receiver, neighbour) : 0;
+    /// <summary>直边依次为左/右/下/上，圆角依次为左下/右下/左上/右上，共用正式邻格解析。</summary>
+    internal static bool TryGetShadowMasks(WorldRuntime world, RuntimeWorldAddress address, ChunkTerrainData terrain,
+        int x, int y, bool useGeneratedHeight, out Vector4 edges, out Vector4 corners)
+    {
+        edges = corners = Vector4.zero;
+        if (!TryResolveSurface(world, address, terrain, x, y, useGeneratedHeight, out TerrainSurfaceHeight surface) ||
+            !surface.ReceivesShadow) return false;
+        edges = new Vector4(Delta(x - 1, y), Delta(x + 1, y), Delta(x, y - 1), Delta(x, y + 1));
+        // 相邻直边已覆盖的角不重复采样，只有斜邻高地时也必须提交圆角阴影格。
+        corners = new Vector4(
+            edges.x == 0 && edges.z == 0 ? Delta(x - 1, y - 1) : 0,
+            edges.y == 0 && edges.z == 0 ? Delta(x + 1, y - 1) : 0,
+            edges.x == 0 && edges.w == 0 ? Delta(x - 1, y + 1) : 0,
+            edges.y == 0 && edges.w == 0 ? Delta(x + 1, y + 1) : 0);
+        return edges != Vector4.zero || corners != Vector4.zero;
 
-    private bool TrySample(int x, int y, out TerrainSurfaceHeight surface)
-        => TryResolveSurface(world, chunk.Address, chunk.Terrain, x, y, useGeneratedHeight, out surface);
+        int Delta(int neighbourX, int neighbourY) =>
+            TryResolveSurface(world, address, terrain, neighbourX, neighbourY, useGeneratedHeight, out var neighbour)
+                ? TerrainSurfaceHeightLayer.GetShadowDelta(surface, neighbour) : 0;
+    }
 
     private static bool TryResolveSurface(WorldRuntime world, RuntimeWorldAddress address, ChunkTerrainData terrain,
         int x, int y, bool useGeneratedHeight, out TerrainSurfaceHeight surface)
     {
+        surface = default;
+        if (terrain == null || terrain.IsDisposed) return false;
         if ((uint)x < (uint)terrain.Width && (uint)y < (uint)terrain.Height)
             return ReadSurface(terrain, x, y, useGeneratedHeight, out surface);
-        surface = default;
         if (world == null) return false;
         int offsetX = x < 0 ? -terrain.Width : x >= terrain.Width ? terrain.Width : 0;
         int offsetY = y < 0 ? -terrain.Height : y >= terrain.Height ? terrain.Height : 0;
@@ -208,18 +217,13 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         enabled = true;
     }
 
-    private void Mark(int x, int y)
-    {
-        if (chunk?.Terrain == null || (uint)x >= (uint)chunk.Terrain.Width ||
-            (uint)y >= (uint)chunk.Terrain.Height) return;
-        dirty.Mark(y * chunk.Terrain.Width + x);
-        dirtyAny = true;
-        enabled = true;
-    }
-
     private void MarkArea(int x, int y)
     {
-        Mark(x, y); Mark(x - 1, y); Mark(x + 1, y); Mark(x, y - 1); Mark(x, y + 1);
+        if (chunk?.Terrain == null) return;
+        dirty.MarkArea(x, y, chunk.Terrain.Width, chunk.Terrain.Height);
+        if (dirty.PendingCount == 0) return;
+        dirtyAny = true;
+        enabled = true;
     }
 
     private static bool AffectsHeight(ChunkTerrainChanged change) =>
@@ -262,8 +266,9 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         if (world == null || chunk?.Terrain == null) return;
         var seen = new HashSet<RuntimeWorldAddress>();
         int width = chunk.Terrain.Width, height = chunk.Terrain.Height;
-        Subscribe(-width, 0, seen); Subscribe(width, 0, seen);
-        Subscribe(0, -height, seen); Subscribe(0, height, seen);
+        for (int y = -1; y <= 1; y++)
+        for (int x = -1; x <= 1; x++)
+            if (x != 0 || y != 0) Subscribe(x * width, y * height, seen);
     }
 
     private void Subscribe(int offsetX, int offsetY, HashSet<RuntimeWorldAddress> seen)
@@ -279,24 +284,16 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         {
             if (!AffectsHeight(value)) return;
             foreach (int index in value.GetCellIndices(terrain.Width))
-                MarkNeighbourCell(index % terrain.Width, index / terrain.Width, terrain, offsetX, offsetY);
+                MarkArea(index % terrain.Width + offsetX, index / terrain.Width + offsetY);
         };
         Action<ChunkLiquidBatchChanged> liquid = value =>
         {
             foreach (int index in value.CellIndices.Span)
-                MarkNeighbourCell(index % terrain.Width, index / terrain.Width, terrain, offsetX, offsetY);
+                MarkArea(index % terrain.Width + offsetX, index / terrain.Width + offsetY);
         };
         terrain.Changed += changed;
         terrain.LiquidBatchChanged += liquid;
         terrainSubscriptions.Add(new NeighbourSubscription(terrain, changed, liquid));
-    }
-
-    private void MarkNeighbourCell(int x, int y, ChunkTerrainData terrain, int offsetX, int offsetY)
-    {
-        if (offsetX < 0 && x == terrain.Width - 1) Mark(0, y);
-        else if (offsetX > 0 && x == 0) Mark(chunk.Terrain.Width - 1, y);
-        else if (offsetY < 0 && y == terrain.Height - 1) Mark(x, 0);
-        else if (offsetY > 0 && y == 0) Mark(x, chunk.Terrain.Height - 1);
     }
 
     private void NeighboursChanged() { SubscribeNeighbours(); MarkAll(); }
@@ -359,6 +356,15 @@ internal sealed class TerrainShadowDirtyQueue
         if (queuedFlags == null || (uint)index >= (uint)queuedFlags.Length || queuedFlags[index]) return;
         queuedFlags[index] = true;
         pending.Add(index);
+    }
+
+    /// <summary>本区与邻区变化都裁剪到三乘三邻域，包含四角且不扫描无关格。</summary>
+    internal void MarkArea(int x, int y, int width, int height)
+    {
+        int minX = Math.Max(0, x - 1), maxX = Math.Min(width - 1, x + 1);
+        int minY = Math.Max(0, y - 1), maxY = Math.Min(height - 1, y + 1);
+        for (int row = minY; row <= maxY; row++)
+        for (int column = minX; column <= maxX; column++) Mark(row * width + column);
     }
 
     internal void MarkAll()

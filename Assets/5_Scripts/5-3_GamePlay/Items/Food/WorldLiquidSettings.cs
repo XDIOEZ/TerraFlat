@@ -7,7 +7,8 @@ using UnityEngine;
 /// 液体在世界中的资源与接触规则；一份液体固定增加一个整数等级，默认寻路成本 20000。
 /// 容器专用液体可以不声明 worldWater；声明后的本体与 MOD 液体共用渲染和角色生存链。
 /// </summary>
-public sealed class WorldLiquidSettings
+[MemoryPack.MemoryPackable]
+public sealed partial class WorldLiquidSettings
 {
     public const float MaximumRadiantHeatRadius = 8f;
 
@@ -39,8 +40,11 @@ public sealed class WorldLiquidSettings
 
     #region 会话资源与校验
     private WorldLiquidBehaviour behaviour;
+    [MemoryPack.MemoryPackIgnore]
     [JsonIgnore] public WorldLiquidBehaviour Behaviour => behaviour ??= new WorldLiquidBehaviour(this);
+    [MemoryPack.MemoryPackIgnore]
     [JsonIgnore] public Sprite Sprite { get; internal set; }
+    [MemoryPack.MemoryPackIgnore]
     [JsonIgnore] public Material Material { get; internal set; }
     /// <summary>目录注册前验证，拒绝无法绘制或数值不合法的世界液体。</summary>
     public void Validate(string id)

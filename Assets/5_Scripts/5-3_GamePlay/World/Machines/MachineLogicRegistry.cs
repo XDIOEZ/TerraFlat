@@ -185,6 +185,7 @@ public static class MachineLogicRegistry
             Id = id, Kind = selected.Id, LogicId = selected.Id, Ports = "none",
             CastVisualShadows = true, Content = content
         };
+        BuildingTraversalRules.ApplyToMachine(result, content.Find<Mod_Building>());
         compiled[id] = (source, result);
         return result;
     }

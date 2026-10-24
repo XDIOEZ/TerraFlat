@@ -85,13 +85,13 @@ public sealed partial class GMReflectionConsole
         worldWindSlider.interactable = planetData != null && GameNetwork.HasStateAuthority;
         if (planetData == null)
         {
-            worldWindStrengthText.text = "世界风力 --";
+            SetLocalizedText(worldWindStrengthText, "世界风力 --");
             worldWindSlider.SetValueWithoutNotify(0f);
             return;
         }
 
         float strength = Mathf.Clamp01(planetData.WindStrength);
-        worldWindStrengthText.SetText("世界风力 {0:0}%", strength * 100f);
+        SetLocalizedFormat(worldWindStrengthText, "世界风力 {0:0}%", strength * 100f);
         worldWindSlider.SetValueWithoutNotify(strength * 100f);
     }
 

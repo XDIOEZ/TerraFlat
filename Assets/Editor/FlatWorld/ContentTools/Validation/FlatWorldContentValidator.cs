@@ -1104,7 +1104,7 @@ public static class FlatWorldContentValidator
                 }
 
                 // 动画能力沿继承后的正式 ID 绑定，不能用实现名或禁用模块满足依赖。
-                if (prototype is Mod_AnimatorController)
+                if (prototype is Mod_AnimatorController animation)
                 {
                     if (!string.Equals(moduleId, ModText.AnimatorReceiver, StringComparison.Ordinal))
                     {
@@ -1126,6 +1126,25 @@ public static class FlatWorldContentValidator
                             $"{actorField}.modules[{pair.Key}].enabled",
                             "生物动画模块必须启用，禁用时不会加载单图表现或动画事件。",
                             prototype);
+                    }
+
+                    // 正式生物统一单图摇摆，静态首帧不能再依赖旧 Animator 的状态名。
+                    string modeText = pair.Value.Parameters?["visualMode"]?.ToString();
+                    Mod_AnimatorController.VisualMode mode = animation.visualMode;
+                    if (modeText != null)
+                        Enum.TryParse(modeText, true, out mode);
+                    if (mode != Mod_AnimatorController.VisualMode.SingleSprite)
+                    {
+                        AddError(report, "FWC-ACTORJSON-007", ActorManifestAssetPath,
+                            $"{actorField}.modules[{pair.Key}].parameters.visualMode",
+                            "正式生物必须使用 SingleSprite 摇摆模式。", prototype);
+                    }
+                    if (!ItemDefinitionCatalogLoader.TryLoadEditorSprite(definition.Visual?.SpriteAddress,
+                        out _, out string spriteError))
+                    {
+                        AddError(report, "FWC-ACTORJSON-008", ActorManifestAssetPath,
+                            $"{actorField}.visual.spriteAddress",
+                            $"摇摆动画必须配置可加载的静态首帧：{spriteError}", prototype);
                     }
                 }
 

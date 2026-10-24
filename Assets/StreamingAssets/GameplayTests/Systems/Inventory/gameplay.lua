@@ -284,6 +284,8 @@ end, "登记原始玩家库存、创造状态与载荷恢复")
 test.gm("enable_admin")
 test.gm("initialize_creative_inventory")
 test.check("gm_creative_inventory_enabled", "正式创造背包已开启并填充目录物品")
+test.select_hotbar(9)
+test.check("hotbar_slot:9", "十格快捷栏的最后一格可通过正式入口选择")
 test.select_hotbar(0)
 test.check("hotbar_slot:0", "库存初始化后快捷栏仍可选择")
 
@@ -299,7 +301,7 @@ test.runtime("inventory", "creative_snapshot", {}, function(data)
         assert(type(item.slot) == "number" and item.slot >= 0 and item.slot < data.slotCount
             and not seenSlots[item.slot], "实际背包槽位无效或重复")
         assert(type(item.id) == "string" and #item.id > 0 and item.hasStack
-            and type(item.amount) == "number" and item.amount > 0,
+            and type(item.stackable) == "boolean" and type(item.amount) == "number" and item.amount > 0,
             "创造背包包含失效物品或非正数数量")
         seenSlots[item.slot] = true
     end
@@ -318,10 +320,10 @@ test.runtime("inventory", "creative_snapshot", {}, function(data)
         local current = bySlot[original.slot]
         assert(current and current.id == original.id and current.guid == original.guid,
             "重复填充改变了原有槽位的物品定义或身份")
-        local increase = firstOccurrence[original.id] and 0 or 100
+        local increase = firstOccurrence[original.id] and 0 or (original.stackable and 100 or 1)
         firstOccurrence[original.id] = true
         assert(math.abs(current.amount - original.amount - increase) < 0.001,
-            "重复填充未按定义准确补充100个，或错误累加了重复槽位：" .. original.id)
+            "重复填充未按可堆叠100个、不可堆叠1个补充，或错误累加了重复槽位：" .. original.id)
     end
 end, "重复创造填充的同槽身份、物品数量与无重复扩容")
 
@@ -431,3 +433,23 @@ test.runtime("inventory", "creative_restore", {}, function(data)
     assert(math.abs(data.weight - data.originalWeight) <= .001,
         "创造背包留有额外物品载荷，可能导致后续飞船过重或跨系统测试失真")
 end, "恢复原始库存、创造容量与角色载荷，禁止污染后续Lua")
+
+-- 使用独立键鼠走正式玩家输入与手持实例，结束后归还原装备和快捷栏引用。
+for _, mode in ipairs({"left_shift", "right_shift", "empty", "blocked", "normal", "plain_item", "locked"}) do
+    test.runtime("inventory", "held_equipment_shortcut", {mode = mode}, function(data)
+        local equipped = mode == "left_shift" or mode == "right_shift" or mode == "empty"
+        local ordinary = mode == "normal" or mode == "plain_item"
+        if equipped then
+            assert(data.sourceIsPrevious and data.eyesIsIncoming,
+                "Shift加右键没有穿戴到眼部，或旧装备没有返回当前手持槽")
+        else
+            assert(data.unchanged, "普通使用、互斥或输入锁状态错误地交换了装备")
+        end
+        assert(data.acts == (ordinary and 1 or 0) and data.releases == (ordinary and 1 or 0),
+            "快捷装备重复触发了普通使用/松开，或改坏普通右键和非装备使用")
+        assert(data.heldAfterPress == ordinary and not data.heldAfterRelease and not data.requestLeaked,
+            "一次性快捷装备留下持续使用状态、过期修饰键或没有清理松键")
+        assert(data.stableUntilRelease and data.helmetUnchanged and data.restored,
+            "按住/松开重复交换、影响头盔，或没有归还隔离玩家原物品")
+    end, "真实手持装备组合键：" .. mode)
+end

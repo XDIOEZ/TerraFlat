@@ -40,6 +40,7 @@ public static partial class MachineWorld
     public static string WorldKey => worldKey;
     /// <summary>机械数据格变化时通知区块表现与导航，不依赖世界物品实例。</summary>
     public static event Action<Vector2Int> CellChanged;
+    public static event Action<string, Vector2Int> NodeCellChanged; // 包含船舱和后台作用域的真实节点格变化。
     public static event Action<MachineEntity> NodeStateChanged; // 联机只在数据变化时采集节点快照。
     public static event Action<int> NodeRemoved; // 权威节点删除通知。
     public static event Action<MachineEntity> VisualSpeedChanged; // 只传输转速，不传重复库存快照。
@@ -51,13 +52,15 @@ public static partial class MachineWorld
         UnbindMachineResources();
         airflowProviders.Clear();
         RemoteOperationRequested = null;
+        OperationCompleted = null;
+        localOperationToken = 0;
         MachineInventoryCommands.Reset();
         nodes.Clear(); interactions.Clear(); processorOwners.Clear(); sourceProviders.Clear(); sourceRpmProviders.Clear(); players.Clear();
         graph = null; owner = null; worldKey = null; dirty = false; suppressRemoval = false; elapsed = 0;
         TransportStep = 0;
         ResetElectricalRuntime();
         ResetFluidRuntime();
-        CellChanged = null;
+        CellChanged = null; NodeCellChanged = null;
         ResetSurfaceChangeBatch();
         NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null;
     }
@@ -167,12 +170,13 @@ public static partial class MachineWorld
             throw new InvalidOperationException("机械节点 GUID 重复：" + snapshot.Guid);
         MachineState state = ReadMachineState(snapshot);
         if (state.Hp < 0f) state.Hp = ResolveMaximumHp(snapshot);
+        // 只复制可变实例状态并复用只读定义，避免首次放置反射遍历整份配置图。
         var node = new MachineEntity
         {
             Id = snapshot.Guid,
             Cell = cell,
             Definition = definition,
-            Snapshot = FastCloner.FastCloner.DeepClone(snapshot),
+            Snapshot = ItemInstanceDataFactory.CloneRuntime(snapshot),
             State = state
         };
         InitializeElectricalState(node, state);
@@ -224,7 +228,7 @@ public static partial class MachineWorld
             return null;
         List<MachineEntity> remainingTanks = ReleaseDismantledFluidTank(node);
         CaptureNode(node);
-        ItemData snapshot = FastCloner.FastCloner.DeepClone(node.Snapshot);
+        ItemData snapshot = ItemInstanceDataFactory.CloneRuntime(node.Snapshot);
         RememberGeneratedRemoval(node);
         DisposeProcessor(node);
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
@@ -250,7 +254,7 @@ public static partial class MachineWorld
         if (node == null || !nodes.TryGetValue(node.Id, out MachineEntity current) ||
             !ReferenceEquals(node, current)) return null;
         CaptureNode(node);
-        return FastCloner.FastCloner.DeepClone(node.Snapshot);
+        return ItemInstanceDataFactory.CloneRuntime(node.Snapshot);
     }
 
     /// <summary>初次加入联机世界时枚举全部权威节点。</summary>
@@ -316,7 +320,7 @@ public static partial class MachineWorld
         }
         node.Cell = CellOf(snapshot.transform.position);
         node.Definition = definition;
-        node.Snapshot = FastCloner.FastCloner.DeepClone(snapshot);
+        node.Snapshot = ItemInstanceDataFactory.CloneRuntime(snapshot);
         MachineState incomingState = ReadMachineState(node.Snapshot);
         bool applied = sameDefinition && node.Logic?.ApplyRemoteSnapshot(node.Snapshot) == true;
         if (!applied && sameDefinition && node.Processor != null && incomingState.Processing != null)
@@ -399,6 +403,25 @@ public static partial class MachineWorld
         if (graph == null) return null;
         RebuildGraphsIfDirty();
         return graph.At(cell, layer);
+    }
+
+    /// <summary>统一读取本世界所有机械层的实体阻挡，不把占格当墙或漏掉非零层设备。</summary>
+    internal static bool IsMovementBlockedNormalized(Vector2Int cell)
+    {
+        if (graph == null) return false;
+        RebuildGraphsIfDirty();
+        return graph.IsMovementBlockedNormalized(graph.NormalizeCell(cell));
+    }
+
+    // 按本世界实际已用层查询，既支持扩展层，也避免无设备时扫描空层。
+    internal static int HighestOccupiedLayer
+    {
+        get
+        {
+            if (graph == null) return -1;
+            RebuildGraphsIfDirty();
+            return graph.HighestOccupiedLayer;
+        }
     }
 
     /// <summary>攻击候选查询涵盖完整受击范围，而不是把所有机器假定为一格大小。</summary>
@@ -523,7 +546,7 @@ public static partial class MachineWorld
         RebuildGraphsIfDirty();
         for (int y = bounds.yMin; y < bounds.yMax; y++)
         for (int x = bounds.xMin; x < bounds.xMax; x++)
-        for (int layer = 0; layer <= 5; layer++)
+        for (int layer = 0; layer <= graph.HighestOccupiedLayer; layer++)
         {
             MachineEntity node = graph.At(new Vector2Int(x, y), layer);
             if (node != null) result.Add(new MachineRenderCell(node, new Vector2Int(x, y)));
@@ -570,6 +593,8 @@ public static partial class MachineWorld
     private static readonly PerformanceDebugPoint MachineTickMarker = new("MachineWorld.Tick");
     private static readonly PerformanceDebugPoint MachineFluidBeginMarker = new("MachineWorld.Fluid.Begin");
     private static readonly PerformanceDebugPoint MachineLogicMarker = new("MachineWorld.Logic.Advance");
+    private static readonly PerformanceDebugPoint MachineNodeLogicMarker = new("MachineWorld.Logic.Nodes");
+    private static readonly PerformanceDebugPoint MachineFacilityLogicMarker = new("MachineWorld.Logic.Facilities");
     private static readonly PerformanceDebugPoint MachineFluidCompleteMarker = new("MachineWorld.Fluid.Complete");
     #endregion
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -618,16 +643,21 @@ public static partial class MachineWorld
             using (MachineLogicMarker.Measure())
             {
                 int simulatedNodes = 0;
-                foreach (var network in graph.Networks)
+                using (MachineNodeLogicMarker.Measure())
                 {
-                    if (!network.Active) continue;
-                    foreach (var node in network.Nodes)
+                    foreach (var network in graph.Networks)
                     {
-                        SimulateNode(node, step);
-                        simulatedNodes++;
+                        if (!network.Active) continue;
+                        foreach (var node in network.Nodes)
+                        {
+                            SimulateNode(node, step);
+                            simulatedNodes++;
+                        }
                     }
+                    MachineNodeLogicMarker.AddWork(simulatedNodes);
                 }
-                AdvanceFacilities(step);
+                using (MachineFacilityLogicMarker.Measure())
+                    AdvanceFacilities(step);
                 MachineLogicMarker.AddWork(simulatedNodes);
                 MachineLogicMarker.SetGauge(graph.Networks.Count);
             }
@@ -736,15 +766,15 @@ public static partial class MachineWorld
             interaction.RefreshPanel();
     }
 
-    /// <summary>用力器效率严格按需求转速线性计算；允许超过 100%，不得截断或重复除以基准转速。</summary>
+    /// <summary>用力器按需求转速线性计算并乘实例加工品质，允许超过100%。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float GetWorkEfficiency(MachineEntity node)
     {
         if (node?.Definition == null || node.SpeedRpm <= 0) return 0;
-        return node.SpeedRpm / node.Definition.RequiredRpm;
+        return node.SpeedRpm / node.Definition.RequiredRpm * node.WorkEfficiencyMultiplier;
     }
 
-    /// <summary>加工工作量由最终分配的转速决定，扭矩只作为解算门槛。</summary>
+    /// <summary>加工工作量由实际转速和实例效率决定，扭矩只作为解算门槛。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float CalculateWorkAmount(MachineEntity node, float seconds)
         => Mathf.Max(0f, seconds) * GetWorkEfficiency(node);
@@ -999,7 +1029,7 @@ public static partial class MachineWorld
         if (node.View != null)
         {
             node.View.item.Save();
-            node.Snapshot = FastCloner.FastCloner.DeepClone(node.View.item.itemData);
+            node.Snapshot = ItemInstanceDataFactory.CloneRuntime(node.View.item.itemData);
         }
         node.Logic?.Capture();
         MachineState state = node.State ?? ReadMachineState(node.Snapshot);
@@ -1021,7 +1051,7 @@ public static partial class MachineWorld
             if (owner.Mechanical.Worlds.TryGetValue(worldKey, out var previous))
                 foreach (var data in previous)
                     if (MachineCatalog.Get(data.IDName) == null) saved.Add(data);
-            foreach (var node in nodes.Values) { CaptureNode(node); saved.Add(FastCloner.FastCloner.DeepClone(node.Snapshot)); }
+            foreach (var node in nodes.Values) { CaptureNode(node); saved.Add(ItemInstanceDataFactory.CloneRuntime(node.Snapshot)); }
             saved.Sort(CompareSnapshots);
             owner.Mechanical.Worlds[worldKey] = saved;
         }

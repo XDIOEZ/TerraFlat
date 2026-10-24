@@ -189,8 +189,8 @@
       "maxTemperature": 2000.0,
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -351,8 +351,8 @@
           "amount": 1
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -388,8 +388,8 @@
           "amount": 1
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {

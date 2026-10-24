@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using FlatWorld.WorldModel;
 using MemoryPack;
 using Sirenix.OdinInspector;
@@ -387,7 +388,9 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	protected override string GetDebugExtraInfo()
 	{
-		return $" | 狂暴: {Data.RageLevel:P0} | 玩家累计伤害: {Data.PlayerDamageAccumulated:F1}";
+		return FlatWorldLocalizationService.GetUiFormat(
+			" | 狂暴: {0:P0} | 玩家累计伤害: {1:F1}",
+			Data.RageLevel, Data.PlayerDamageAccumulated);
 	}
 	#endregion
 
@@ -430,11 +433,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		RegisterLocomotionStateNodes(stateMachine, WildBoarState.Idle, WildBoarState.Move);
 		stateMachine.Register(CreateMovingStateNode(WildBoarState.Forage, _ => TickForage()));
-		stateMachine.Register(CreateStoppedStateNode(WildBoarState.Eat, TickEat));
+		stateMachine.Register(CreateStateNode(WildBoarState.Eat, TickEat));
 		stateMachine.Register(CreateStoppedStateNode(WildBoarState.Sleep, TickSleep));
 		stateMachine.Register(CreateStoppedStateNode(WildBoarState.Alert, TickAlert));
 		stateMachine.Register(CreateMovingStateNode(WildBoarState.Chase, _ => TickChase()));
-		stateMachine.Register(CreateStoppedActionStateNode(WildBoarState.Attack, _ => TickAttack()));
+		stateMachine.Register(CreateStateNode(WildBoarState.Attack, _ => TickAttack()));
 		// 技能模块自己控制蓄力停车与冲刺移动，不能使用会每帧停车的攻击节点。
 		stateMachine.Register(CreateStateNode(
 			WildBoarState.Skill,
@@ -453,7 +456,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		if (IsGrassMealDue() && TryAcquireGrassTarget())
 		{
-			MoveTo(GetGrassTargetWorldPosition());
+			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
 			return;
 		}
 
@@ -463,13 +466,14 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			_currentFoodTarget = FindClosestEdibleItem();
 			if (_currentFoodTarget == null) { StopMove(); return; }
 		}
-		MoveTo(_currentFoodTarget.transform.position);
+		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
 	}
 
 	private void TickEat(float deltaTime)
 	{
 		if (IsGrassMealDue() && TryAcquireGrassTarget())
 		{
+			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
 			if (GetGrassTargetDistance() > eatDistance || _stateElapsed < grassEatDuration)
 				return;
 
@@ -482,24 +486,27 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 			if (consumed)
 				ConsumeGrass(grassPosition);
+			StopMove();
 			return;
 		}
 
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) return;
+			if (_currentFoodTarget == null) { StopMove(); return; }
 		}
 
+		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
 		if (DistanceTo(_currentFoodTarget.transform) > eatDistance) return;
 
 		Mod_Food targetFood = _currentFoodTarget.GetComponentInChildren<Mod_Food>();
-		if (targetFood == null) { _currentFoodTarget = null; return; }
+		if (targetFood == null) { _currentFoodTarget = null; StopMove(); return; }
 
 		_food.Eat(targetFood);
 		if (_currentFoodTarget == null || _currentFoodTarget.itemData == null || _currentFoodTarget.itemData.Stack.Amount <= 0)
 		{
 			_currentFoodTarget = null;
+			StopMove();
 		}
 	}
 
@@ -521,15 +528,14 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (_currentThreat == null) { StopMove(); return; }
 		_chaseTarget = _currentThreat.transform.position;
 		Vector3 navigationTarget = GetAttackPositionNavigationTarget(_chaseTarget);
-		if (HasReachedAttackPosition(_chaseTarget))
-		{
-			StopMove();
-			return;
-		}
 
-		// 追击目标是玩家左右两侧的站位点，并补偿 Mover_AI 自带的到达停止距离。
+		// 直接接近真实站位点，停止内圈同时受站位容差和横纵攻击余量约束。
+		float horizontalMargin = attackTriggerDistance - Mathf.Abs(
+			WorldTopologyRuntime.ShortestDelta(_chaseTarget, navigationTarget).x);
+		float approachRange = Mathf.Max(0.01f, Mathf.Min(
+			attackPositionTolerance, Mathf.Min(horizontalMargin, attackVerticalTriggerDistance)));
 		WorldNavigationDestinationResult moveResult =
-			MoveToChaseTarget(navigationTarget, chasePathCostLimit);
+			MoveToChaseTarget(navigationTarget, chasePathCostLimit, approachRange);
 		if (TryHandleRejectedChasePath(moveResult, _currentThreat, chasePathRetryDelay))
 			return;
 
@@ -547,8 +553,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 		Vector3 targetPosition = _currentThreat.transform.position;
 		FaceTarget(targetPosition, true);
-		StopMove();
-		HasReachedAttackPosition(targetPosition);
+		if (_attack.IsAttackLocked) { StopMove(); return; }
 
 		// 攻击窗口由 AI_AttackController 自己完成；目标在攻击过程中移出范围时，
 		// 不再提前打断窗口，避免攻击动画、伤害窗口和状态机不同步。
@@ -557,11 +562,13 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			IsTargetInsideAttackRange(targetPosition) &&
 			HasReachedAttackPosition(targetPosition))
 		{
+			StopMove();
 			_attack.StartWindow(
 				_animator,
 				animAttack,
 				WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
 		}
+		else TickChase();
 	}
 
 	private void EnterSkill()
@@ -720,26 +727,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#endregion
 
 	#region Helpers - WildBoar 特有
-	/// <summary>计算玩家左右两侧的攻击站位点，并扣除移动模块的停止距离。</summary>
+	/// <summary>返回真实攻击站位，停止容差由本次导航请求独立负责。</summary>
 	private Vector3 GetAttackPositionNavigationTarget(Vector3 targetPosition)
 	{
 		UpdateAttackPositionTarget(targetPosition);
-
-		float desiredDistance = Mathf.Clamp(
-			attackPositionDistance,
-			0.1f,
-			Mathf.Max(0.1f, attackTriggerDistance - 0.05f));
-		float navigationStopDistance = _mover != null
-			? Mathf.Max(0f, _mover.stopDistance)
-			: 0f;
-		float navigationDistance = Mathf.Max(
-			0.05f,
-			desiredDistance - navigationStopDistance);
-		Vector3 navigationTarget = new Vector3(
-			targetPosition.x + _attackPositionSide * navigationDistance,
-			targetPosition.y,
-			transform.position.z);
-		return WorldTopologyRuntime.NormalizePosition(navigationTarget);
+		return _attackPositionTarget;
 	}
 
 	/// <summary>判断野猪是否已到达锁定的左右攻击站位。</summary>

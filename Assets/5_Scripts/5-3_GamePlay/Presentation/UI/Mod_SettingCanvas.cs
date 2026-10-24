@@ -145,6 +145,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             pagination?.GetPageRoot(SettingsActionListPagination.AudioPageName));
         UISettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.InterfacePageName));
+        LanguageSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.LanguagePageName));
         CameraControlSettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
         CoordinateDisplaySettingsPanelLauncher.Ensure(

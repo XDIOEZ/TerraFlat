@@ -7,6 +7,10 @@ namespace FlatWorld.DroppedItems
     /// <summary>轻量掉落物的权威热数据；只保留世界表现、拾取、水体与数量。</summary>
     public struct LightweightDroppedBody
     {
+        #region 世界水态与热数据
+
+        public const byte BottomWaterKind = 3;
+
         public int Id;
         public float2 Position;
         public float2 Scale;
@@ -15,8 +19,12 @@ namespace FlatWorld.DroppedItems
         public float Amount;
         public float LiquidDepth;
         public float SubmergedProgress;
-        public byte WaterKind;
+        public byte WaterKind; // 0 陆地、1 漂浮、2 下沉、3 河底静止。
         public byte Pickable;
+
+        public bool IsOnBottom => WaterKind == BottomWaterKind;
+
+        #endregion
     }
 
     /// <summary>只有短期抛掷中的掉落物才持有轨迹。</summary>
@@ -52,6 +60,8 @@ namespace FlatWorld.DroppedItems
     /// </summary>
     public sealed class LightweightDroppedItemSimulation : IDisposable
     {
+        #region 轻量运动与水态推进
+
         private readonly Dictionary<int, LightweightDroppedBody> bodies = new();
         private readonly Dictionary<int, LightweightDroppedFlight> flights = new();
         private readonly Dictionary<int, LightweightDroppedWaterTransition> waters = new();
@@ -73,7 +83,7 @@ namespace FlatWorld.DroppedItems
                 throw new ArgumentException("轻量掉落物 ID 为空或重复。", nameof(body));
             if (!math.all(math.isfinite(body.Position)) || !math.all(math.isfinite(body.Scale)) ||
                 !math.all(math.isfinite(new float4(body.Amount, body.Rotation, body.VisualHeight, body.LiquidDepth))) ||
-                body.Amount <= 0f || body.WaterKind > 2 || !math.isfinite(body.SubmergedProgress) ||
+                body.Amount <= 0f || body.WaterKind > LightweightDroppedBody.BottomWaterKind || !math.isfinite(body.SubmergedProgress) ||
                 body.SubmergedProgress < 0f || body.SubmergedProgress > 1f)
                 throw new ArgumentException("轻量掉落物热数据无效。", nameof(body));
 
@@ -180,18 +190,22 @@ namespace FlatWorld.DroppedItems
                     ? math.saturate((transition.Elapsed - transition.Duration) /
                                     math.max(0.0001f, transition.RecedeDuration))
                     : 0f;
-                bodies[id] = body;
-
                 bool finished = transition.Elapsed >= endTime;
+                bool reachedBottom = finished && body.WaterKind == 2;
+                // 沉没结束只转为河底静止态，实体、位置和数量继续保留给拾取与存档。
+                if (reachedBottom) body.WaterKind = LightweightDroppedBody.BottomWaterKind;
+                bodies[id] = body;
                 if (finished) waters.Remove(id);
                 else waters[id] = transition;
                 changes.Add(new LightweightDroppedChange
                 {
                     Id = id,
-                    Kind = (byte)(finished ? (body.WaterKind == 2 ? 3 : 2) : 0)
+                    Kind = (byte)(finished ? (reachedBottom ? 3 : 2) : 0)
                 });
             }
         }
+
+        #endregion
 
         #region 模拟工作区生命周期
         public void Dispose()

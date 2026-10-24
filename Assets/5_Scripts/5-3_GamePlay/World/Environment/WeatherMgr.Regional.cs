@@ -535,6 +535,7 @@ public partial class WeatherMgr
         }
         PersistRegionalStates();
         UpdateLocalWeatherProjection();
+        MaintainFogPerception();
         if (regionalEngine.TryGetRegionSnapshot(region, out var sample))
             AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(ownedWorld, sample));
         PublishAuthoritativeWeatherState();

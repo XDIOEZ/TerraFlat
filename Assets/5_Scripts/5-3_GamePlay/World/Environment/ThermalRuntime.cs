@@ -50,6 +50,26 @@ public static class ThermalRuntime
             Math.Max(currentTemperature, ambientTemperature));
     }
 
+    /// <summary>解析反算达到指定温度的时间，供热处理直接推进到相变边界。</summary>
+    public static double GetAmbientTransferSeconds(double currentTemperature, double ambientTemperature,
+        double boundaryTemperature, double heatingRateMultiplier = 1d)
+    {
+        if (!double.IsFinite(currentTemperature) || !double.IsFinite(ambientTemperature) ||
+            !double.IsFinite(boundaryTemperature) || !double.IsFinite(heatingRateMultiplier) ||
+            heatingRateMultiplier < 0d || boundaryTemperature < Math.Min(currentTemperature, ambientTemperature) ||
+            boundaryTemperature > Math.Max(currentTemperature, ambientTemperature)) return double.PositiveInfinity;
+        if (boundaryTemperature == currentTemperature) return 0d;
+        double multiplier = ambientTemperature > currentTemperature ? heatingRateMultiplier : 1d;
+        if (multiplier <= 0d) return double.PositiveInfinity;
+        double distance = Math.Abs(ambientTemperature - currentTemperature);
+        double remaining = Math.Abs(ambientTemperature - boundaryTemperature);
+        double exponential = Math.Log(Math.Max(distance, MinimumRateDifference) /
+            Math.Max(remaining, MinimumRateDifference)) / AmbientDecayRate;
+        double linear = (Math.Min(distance, MinimumRateDifference) - Math.Min(remaining, MinimumRateDifference)) /
+            MinimumAmbientTemperatureChangePerSecond;
+        return (exponential + linear) / multiplier;
+    }
+
     // 供热倍率只缩放升温所用时间，冷却和调用方的真实加工时间保持原值。
     public static float ResolveHeatingSeconds(float currentTemperature, float targetTemperature,
         float seconds, float heatingRateMultiplier = 1f)

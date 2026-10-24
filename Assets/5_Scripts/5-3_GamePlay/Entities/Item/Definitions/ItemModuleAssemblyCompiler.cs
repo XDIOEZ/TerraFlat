@@ -6,6 +6,42 @@ using FlatWorld.NaturalEntities;
 using UnityEngine;
 using UnityEngine.Pool;
 
+/// <summary>单次目录编译的 Prefab 组件索引；不跨资源会话复用，避免原位更新拿到旧组件。</summary>
+public sealed class ItemModulePrototypeCache
+{
+    #region 编译期组件索引
+
+    private readonly Dictionary<GameObject, (Module[] Modules, bool ContainsItem)> prefabComponents = new();
+    private readonly Dictionary<GameObject, Module[]> shellComponents = new();
+
+    internal void GetPrefabComponents(GameObject prefab, out Module[] modules, out bool containsItem)
+    {
+        if (!prefabComponents.TryGetValue(prefab, out var snapshot))
+        {
+            bool containsItem = prefab.GetComponentInChildren<Item>(true) != null;
+            snapshot = (containsItem ? Array.Empty<Module>() : prefab.GetComponentsInChildren<Module>(true),
+                containsItem);
+            prefabComponents.Add(prefab, snapshot);
+        }
+        modules = snapshot.Modules;
+        containsItem = snapshot.ContainsItem;
+    }
+
+    internal Module[] GetOwnedShellComponents(GameObject shell)
+    {
+        if (!shellComponents.TryGetValue(shell, out Module[] modules))
+        {
+            GetPrefabComponents(shell, out Module[] allModules, out _);
+            modules = Array.FindAll(allModules,
+                module => ItemModuleAssemblyCompiler.IsOwnedByRoot(module, shell.transform));
+            shellComponents.Add(shell, modules);
+        }
+        return modules;
+    }
+
+    #endregion
+}
+
 /// <summary>当前定义独占的模块装配计划，实例只绑定状态，不重复查资源或推测组件类型。</summary>
 public sealed class RuntimeItemModuleAssemblyPlan
 {
@@ -56,6 +92,14 @@ public sealed class RuntimeItemModuleAssemblyPlan
     // 资源预检复用编译选定的组件，避免把具体 Prefab 地址误当成能力 ID。
     internal Module ResolveImplementationPrototype(Transform shellRoot)
         => ModulePrefab != null ? prefabLocation?.Resolve(ModulePrefab.transform) : ResolveEmbeddedModule(shellRoot);
+
+    /// <summary>目录复查复用严格编译结果，不再把相同模块 JSON 反复解析成临时对象。</summary>
+    internal void ValidateConfiguration(Module prototype)
+    {
+        if (!MatchesImplementation(prototype))
+            throw new InvalidDataException($"物品 {itemId} 的模块 {StableName} 实现类型与编译计划不一致。");
+        parameters?.ValidateTarget(prototype);
+    }
 
     public bool MatchesImplementation(Module module)
         => module != null && module.GetType() == ModuleType;
@@ -266,11 +310,12 @@ internal static class ItemModuleAssemblyCompiler
 
     internal static IReadOnlyList<RuntimeItemModuleAssemblyPlan> Compile(GameRes resources,
         string itemId, GameObject shell, IReadOnlyList<RuntimeItemModuleDefinition> definitions,
-        bool usesResourceEntities)
+        bool usesResourceEntities, ItemModulePrototypeCache prototypeCache = null)
     {
-        Module[] embeddedModules = shell != null ? shell.GetComponentsInChildren<Module>(true) : Array.Empty<Module>();
-        if (shell != null)
-            embeddedModules = Array.FindAll(embeddedModules, module => IsOwnedByRoot(module, shell.transform));
+        Module[] embeddedModules = shell == null ? Array.Empty<Module>() :
+            prototypeCache != null ? prototypeCache.GetOwnedShellComponents(shell) :
+            Array.FindAll(shell.GetComponentsInChildren<Module>(true),
+                module => IsOwnedByRoot(module, shell.transform));
         var claimed = new HashSet<Module>();
         var result = new RuntimeItemModuleAssemblyPlan[definitions.Count];
         for (int index = 0; index < definitions.Count; index++)
@@ -283,7 +328,7 @@ internal static class ItemModuleAssemblyCompiler
             }
 
             GameObject prefab = resources?.GetPrefab(definition.PrefabId, false);
-            Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(null, prefab, definition.ModuleId);
+            Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(null, prefab, definition.ModuleId, prototypeCache);
             if (prefab != null && prototype == null)
                 throw new InvalidDataException($"物品 {itemId} 的模块 Prefab {definition.PrefabId} 不包含目标 Module。");
             Type moduleType = prototype?.GetType();

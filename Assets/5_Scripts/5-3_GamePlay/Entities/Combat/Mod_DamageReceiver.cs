@@ -1,4 +1,4 @@
-﻿// AI-Context: 生命值权威数据与受伤反馈模块；远程应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
+// AI-Context: 生命值权威数据与受伤反馈模块；远程应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
 
 using System;
 using Sirenix.OdinInspector;
@@ -71,34 +71,11 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         get => Data.DefenseValues;
     }
 
-    #region 逻辑命中体积
+    #region 生物命中属性
 
-    /// <summary>逻辑命中使用的目标体积系数；玩家固定按 1，内置动物可使用物种默认值并允许内容覆盖。</summary>
-    public float HitSizeCoefficient => ResolveHitSizeCoefficient();
-
-    private float ResolveHitSizeCoefficient()
-    {
-        if (Data != null && Data.HitSizeCoefficientOverride > 0f)
-            return Mathf.Clamp(Data.HitSizeCoefficientOverride, 0.05f, 3f);
-
-        if (item is Player || item?.itemData?.Tags?.ContainsTag(Tag.Player) == true)
-            return 1f;
-
-        return item?.itemData?.IDName switch
-        {
-            "Bee" => 0.10f,
-            "Bird" => 0.30f,
-            "Seagull" => 0.45f,
-            "Chicken" => 0.55f,
-            "Rabbit" => 0.45f,
-            "Wolf" => 0.95f,
-            "Sheep" => 1.10f,
-            "WildBoar" => 1.20f,
-            "SnowLeopard" => 1.05f,
-            "Zombie" => 1.00f,
-            _ => 1f
-        };
-    }
+    public int AccuracyLevel => Mathf.Clamp(Data?.AccuracyLevel ?? CreatureHitChanceRules.DefaultAccuracyLevel, 0, 10);
+    public int SizeLevel => Mathf.Clamp(Data?.SizeLevel ?? CreatureHitChanceRules.DefaultSizeLevel, 0, 10);
+    public float DodgeChance => Mathf.Clamp(Data?.DodgeChance ?? 0f, 0f, CreatureHitChanceRules.MaximumExtraDodgeChance);
 
     #endregion
 
@@ -156,9 +133,13 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         [Tooltip("Chance that one attack selects two distinct parts. Each selected part receives 50% damage.")]
         public float TwoPartHitChance = 0.25f;
 
-        [Header("逻辑命中设置")]
-        [Tooltip("目标体积系数覆盖；0 表示使用内置物种默认值，玩家和未知目标默认 1。")]
-        public float HitSizeCoefficientOverride = 0f;
+        [Header("生物逻辑命中")]
+        [Range(0, 10), Tooltip("攻击命中等级；0=0%，每级增加10%，玩家默认7级。")]
+        public int AccuracyLevel = CreatureHitChanceRules.DefaultAccuracyLevel;
+        [Range(0, 10), Tooltip("受击体型等级；0=0%，每级增加10%的被命中系数。")]
+        public int SizeLevel = CreatureHitChanceRules.DefaultSizeLevel;
+        [Range(0f, CreatureHitChanceRules.MaximumExtraDodgeChance), Tooltip("独立闪避技能概率；与体型命中系数及其它闪避分别乘算。")]
+        public float DodgeChance = 0f;
 
         public int BodyPartDataVersion = 0;
         public List<BodyPartHealth> BodyParts = new List<BodyPartHealth>();
@@ -341,7 +322,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     protected override void OnLoad()
     {
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         CombatPhysicsChannels.AssignDamageReceiver(this);
         ClearBodyPartPenalties();
         ClearHitSlowdown();
@@ -375,7 +356,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         modData.ReadData(ref Data);
         UpgradeBodyPartData();
         NormalizeStatRanges();
-        if (Hp <= 0f) ClearTemporaryInvulnerability();
+        if (Hp <= 0f) ClearTemporaryCombatEffects();
         if (previousHp <= 0f && Hp > 0f)
             ResetDeathResolution();
         if (item?.itemData != null && !string.IsNullOrEmpty(modData.Name))
@@ -485,13 +466,13 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     public void OnItemTakenFromPool()
     {
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         ReleaseWorldHealthPanel();
     }
 
     public void OnItemReturnedToPool()
     {
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         ReleaseWorldHealthPanel();
     }
 
@@ -616,21 +597,21 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     private void OnDestroy()
     {
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         Unload();
         ReleaseWorldHealthPanel();
     }
 
     private void OnDisable()
     {
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         // Unity 停用对象会中止协程，同步清除句柄以便再次受伤时重新计时。
         HidePanel();
     }
 
     protected override void OnUnload()
     {
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         incomingDamageRules.Clear();
         resolvingHealing = false;
         ClearBodyPartPenalties();
@@ -749,7 +730,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             $"target={item?.itemData?.IDName}:{item?.itemData?.Guid} factionBytes={faction.Length} prefixHex={prefix}", this);
     }
 
-    /// <summary>新旧攻击共享间隔、物理伤害、难度、归因和原有生命提交/反馈链。</summary>
+    /// <summary>新旧攻击共享间隔、物理伤害、战斗参数、归因和原有生命提交/反馈链。</summary>
     private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false)
     {
         if (IsTemporarilyInvulnerable) return -1f;
@@ -757,10 +738,10 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
         if (!ignoreInterval && context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
         if (!ignoreInterval) lastDamageTime = context.Clock.Time;
-        bool targetIsPlayer = GameDifficultyService.IsPlayer(item);
-        float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, targetIsPlayer);
-        // 怪物攻击玩家的难度减伤放在防御后，部位伤害和命中反馈共用同一倍率。
-        rules *= GameDifficultyService.Current.CreatureCombat.ResolveReceivedDamageMultiplier(
+        bool targetIsPlayer = ActorIdentity.IsPlayer(item);
+        float attackMultiplier = GameplayCombatBridge.Tuning().Resolve(context.SourceIsPlayer != 0, targetIsPlayer);
+        // 角色受击修正放在防御后，部位伤害和命中反馈共用同一倍率。
+        rules *= GameRuleConfiguration.Current.CreatureCombat.ResolveReceivedDamageMultiplier(
             context.SourceIsPlayer != 0, targetIsPlayer,
             context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment);
         if (context.IsTrueDamage == 0 && context.Attack.Source.Backend != FlatWorld.Combat.CombatBackend.Environment)
@@ -768,9 +749,9 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
                 (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
         List<BodyPartDamageInfo> preparedHits = null;
         var values = UsesBodyPartHealth && context.IsTrueDamage == 0
-            ? ResolveBodyPartAttack(context.Damage, difficulty, Mathf.Max(0f, damageTakenMultiplier) * rules, targetPart, out preparedHits)
+            ? ResolveBodyPartAttack(context.Damage, attackMultiplier, Mathf.Max(0f, damageTakenMultiplier) * rules, targetPart, out preparedHits)
             : FlatWorld.Combat.CombatRules.Resolve(context.Damage,
-                context.IsTrueDamage != 0 ? Unity.Mathematics.float4.zero : GameplayCombatBridge.Values(Defense), difficulty,
+                context.IsTrueDamage != 0 ? Unity.Mathematics.float4.zero : GameplayCombatBridge.Values(GetEffectiveDefense()), attackMultiplier,
                 Mathf.Max(0f, damageTakenMultiplier) * rules);
         float damage = Unity.Mathematics.math.csum(values);
         if (damage > 0f || Random.value <= 0.1f)
@@ -782,7 +763,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
                 if (Data.AttackersUIDs.Count > 3) Data.AttackersUIDs.RemoveAt(0);
             }
         }
-        return ResolveDamage(damage, legacySender, difficulty > 0f ? (damage > 0f ? 1f : 0.5f) : 0f,
+        return ResolveDamage(damage, legacySender, attackMultiplier > 0f ? (damage > 0f ? 1f : 0.5f) : 0f,
             GameplayCombatBridge.LegacyValues(values), context, preparedHits);
     }
 
@@ -990,7 +971,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     public virtual float ForceHurt(float damage, DeathCauseRecord deathCause)
     {
         if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0) return -1;
-        damage *= GameDifficultyService.ResolveEnvironmentalDamageMultiplier(item);
+        damage *= ActorRuleModifiers.ResolveEnvironmentalDamageMultiplier(item);
         damage *= Mathf.Max(0f, damageTakenMultiplier);
         if (damage <= 0f) return Hp;
 
@@ -1013,7 +994,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             // 能力表按模块结构版本缓存，本次快照不会因成本通知中的增删而改变。
             IReadOnlyList<IHealingCostPolicy> costPolicies = item != null
                 ? item.itemMods.GetCapabilities<IHealingCostPolicy>() : Array.Empty<IHealingCostPolicy>();
-            healAmount *= GameDifficultyService.ResolveHealingMultiplier(item);
+            healAmount *= ActorRuleModifiers.ResolveHealingMultiplier(item);
             healAmount = Mathf.Min(healAmount, Mathf.Max(0f, MaxHp - oldHp));
             if (healAmount <= 0f) return Hp;
             foreach (IHealingCostPolicy policy in costPolicies)
@@ -1279,7 +1260,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (!CanMutateBodyState()) return;
         Data.MaxHp = value;
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, value);
-        if (Data.Hp <= 0f) ClearTemporaryInvulnerability();
+        if (Data.Hp <= 0f) ClearTemporaryCombatEffects();
         NotifyBodyStateChanged();
     }
 
@@ -1287,7 +1268,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     {
         if (float.IsNaN(value) || float.IsInfinity(value)) throw new ArgumentOutOfRangeException(nameof(value));
         Data.Hp = Mathf.Clamp(value, 0f, Data.MaxHp);
-        if (Data.Hp <= 0f) ClearTemporaryInvulnerability();
+        if (Data.Hp <= 0f) ClearTemporaryCombatEffects();
         bodyPenaltiesDirty = true;
     }
 
@@ -1433,11 +1414,10 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         Data.MaxHp = Mathf.Max(0f, Data.MaxHp);
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
         Data.TwoPartHitChance = Mathf.Clamp01(Data.TwoPartHitChance);
-        Data.HitSizeCoefficientOverride = !float.IsNaN(Data.HitSizeCoefficientOverride) &&
-                                          !float.IsInfinity(Data.HitSizeCoefficientOverride) &&
-                                          Data.HitSizeCoefficientOverride > 0f
-            ? Mathf.Clamp(Data.HitSizeCoefficientOverride, 0.05f, 3f)
-            : 0f;
+        Data.AccuracyLevel = Mathf.Clamp(Data.AccuracyLevel, 0, 10);
+        Data.SizeLevel = Mathf.Clamp(Data.SizeLevel, 0, 10);
+        Data.DodgeChance = float.IsNaN(Data.DodgeChance) || float.IsInfinity(Data.DodgeChance)
+            ? 0f : Mathf.Clamp(Data.DodgeChance, 0f, CreatureHitChanceRules.MaximumExtraDodgeChance);
         Data.DefenseValues ??= new CombatDefense();
         Data.DefenseValues.ClampNonNegative();
 
@@ -1492,7 +1472,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     /// <summary>新实例加载或显式复活时取消上一轮延迟销毁，开启新的死亡结算周期。</summary>
     private void ResetDeathResolution()
     {
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         _deathHandled = false;
         if (Hp > 0f && Data != null) Data.DeathCause = null;
         if (_deathCoroutine != null)
@@ -1508,7 +1488,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             return;
 
         _deathHandled = true;
-        ClearTemporaryInvulnerability();
+        ClearTemporaryCombatEffects();
         _deathConsumedByExternalHandler = false;
         try
         {
@@ -1558,6 +1538,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     private void DispatchDamageReceived(DamageReceiverDamageInfo damageInfo)
     {
+        ResourceHarvestHitBonus.TrySpawn(damageInfo, weakTool);
         CombatAudioRouter.PlayImpact(this, damageInfo);
         OnDamageReceived?.Invoke(damageInfo);
         DamageReceivedStatusEffectRegistry.Publish(damageInfo);
@@ -1678,11 +1659,11 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
             // 数量统一使用条目声明的分布。
             int baseDropAmount = lootEntry.RollAmount();
-            // 环境等产出修饰由源物品的通用模块提供，与难度合并后只随机取整一次。
+            // 环境等产出修饰由源物品的通用模块提供，与世界产出参数合并后只随机取整一次。
             float resourceMultiplier = ResourceYieldUtility.GetMultiplier(item, lootEntry.LootPrefabName);
-            int dropAmount = GameDifficultyService.ScaleRandomizedAmount(
+            int dropAmount = GameRuleMath.ScaleRandomizedAmount(
                 baseDropAmount,
-                GameDifficultyService.Current.World.LootAmountMultiplier * resourceMultiplier);
+                GameRuleConfiguration.Current.World.LootAmountMultiplier * resourceMultiplier);
 
             // 如果数量为0，跳过
             if (dropAmount <= 0)

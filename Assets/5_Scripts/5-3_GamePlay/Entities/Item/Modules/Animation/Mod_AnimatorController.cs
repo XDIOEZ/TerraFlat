@@ -18,8 +18,10 @@ public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGro
 
     public Animator animator;
     private readonly Dictionary<string, int> _boolParameterHashes = new Dictionary<string, int>();
+    private readonly Dictionary<string, bool> _pendingBoolValues = new Dictionary<string, bool>();
     private readonly HashSet<string> _loggedWarnings = new HashSet<string>();
     private int _cachedControllerId;
+    private int _cachedAnimatorId;
     #endregion
 
     #region 模块生命周期
@@ -30,7 +32,8 @@ public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGro
             animator = GetComponent<Animator>();
         }
 
-        RefreshControllerCache();
+        // 分帧生成时物品仍处于停用状态，Animator 的参数表必须等正式激活后才能读取。
+        InvalidateControllerCache();
         InitializePresentation();
     }
 
@@ -46,11 +49,15 @@ public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGro
     {
         ReleasePresentation();
         ClearPresentationSources();
+        _pendingBoolValues.Clear();
+        InvalidateControllerCache();
+        _loggedWarnings.Clear();
     }
 
     public override void OnResourcesReloaded()
     {
         base.OnResourcesReloaded();
+        InvalidateControllerCache();
         ReleasePresentation();
         CachePresentationSources();
         if (CanAdvancePresentation)
@@ -109,12 +116,23 @@ public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGro
         if (IsSingleSpriteMode)
             return SetSingleSpriteBool(parameterName, value);
 
-        if (!TryGetAnimator(parameterName) || string.IsNullOrWhiteSpace(parameterName))
+        if (string.IsNullOrWhiteSpace(parameterName))
         {
             return false;
         }
 
-        RefreshControllerCache();
+        if (!TryGetAnimator(parameterName))
+        {
+            // 冷外壳尚未初始化时保留最新参数值，避免激活后漏掉奔跑等一次性状态变更。
+            if (animator != null && (!animator.isActiveAndEnabled || !animator.isInitialized))
+            {
+                _pendingBoolValues[parameterName] = value;
+                return true;
+            }
+            return false;
+        }
+
+        FlushPendingBoolValues();
         if (!_boolParameterHashes.TryGetValue(parameterName, out int parameterHash))
         {
             return false;
@@ -134,36 +152,35 @@ public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGro
         }
 
         if (animator != null && animator.runtimeAnimatorController != null)
-        {
-            RefreshControllerCache();
-            return true;
-        }
+            return RefreshControllerCache();
 
-        WarnOnce(
-            $"animator:{operationName}",
-            $"[{nameof(Mod_AnimatorController)}] 缺少 Animator 或 RuntimeAnimatorController，无法执行 '{operationName}'。",
-            this);
+        // 停用的出生候选尚未完成资源与控制器绑定，不把合法的冷加载误报为配置错误。
+        if (isActiveAndEnabled && CanAdvancePresentation)
+            WarnOnce(
+                $"animator:{operationName}",
+                $"[{nameof(Mod_AnimatorController)}] 物品 {item?.itemData?.IDName} 缺少 Animator 或 RuntimeAnimatorController，无法执行 '{operationName}'。",
+                this);
         return false;
     }
 
-    private void RefreshControllerCache()
+    private bool RefreshControllerCache()
     {
-        int controllerId = animator != null && animator.runtimeAnimatorController != null
-            ? animator.runtimeAnimatorController.GetInstanceID()
-            : 0;
-        if (_cachedControllerId == controllerId)
+        RuntimeAnimatorController controller = animator != null ? animator.runtimeAnimatorController : null;
+        if (controller == null || !animator.isActiveAndEnabled || !animator.isInitialized)
         {
-            return;
+            InvalidateControllerCache();
+            return false;
         }
+
+        int controllerId = controller.GetInstanceID();
+        int animatorId = animator.GetInstanceID();
+        if (_cachedControllerId == controllerId && _cachedAnimatorId == animatorId)
+            return true;
 
         _cachedControllerId = controllerId;
+        _cachedAnimatorId = animatorId;
         _boolParameterHashes.Clear();
         _loggedWarnings.Clear();
-
-        if (animator == null)
-        {
-            return;
-        }
 
         AnimatorControllerParameter[] parameters = animator.parameters;
         for (int i = 0; i < parameters.Length; i++)
@@ -174,6 +191,33 @@ public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGro
                 _boolParameterHashes[parameter.name] = parameter.nameHash;
             }
         }
+        return true;
+    }
+
+    private void InvalidateControllerCache()
+    {
+        _cachedControllerId = 0;
+        _cachedAnimatorId = 0;
+        _boolParameterHashes.Clear();
+    }
+
+    private void FlushPendingBoolValues()
+    {
+        foreach (KeyValuePair<string, bool> pending in _pendingBoolValues)
+            if (_boolParameterHashes.TryGetValue(pending.Key, out int hash))
+                animator.SetBool(hash, pending.Value);
+        _pendingBoolValues.Clear();
+    }
+
+    private void FlushReadyAnimatorParameters()
+    {
+        if (!CanAdvancePresentation || !isActiveAndEnabled ||
+            (_pendingBoolValues.Count == 0 && _cachedControllerId != 0))
+            return;
+
+        // 激活后验证控制器是否存在，并把冷加载阶段的参数恢复到正式状态机。
+        if (TryGetAnimator("激活动画控制器"))
+            FlushPendingBoolValues();
     }
 
     private bool TryResolveState(

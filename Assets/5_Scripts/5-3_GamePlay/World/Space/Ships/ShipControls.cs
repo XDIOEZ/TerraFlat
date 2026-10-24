@@ -106,6 +106,7 @@ namespace FlatWorld.Spaceflight
             string failure = GetConsoleOperationFailure(exists, exists && console.IsOperational && !ship.IsWreck,
                 exists && GetDevice(id)?.Enabled != false, exists && IsPowered(ship, console));
             if (failure != null) return RejectShipOperation(failure, out reason);
+            if (ship.Anchor != null) return RejectShipOperation("固定站台由锚点维持位置，不能驾驶、起降或导航。", out reason);
             return true;
         }
 
@@ -212,7 +213,7 @@ namespace FlatWorld.Spaceflight
             foreach (ShipDockingPortState own in ship.DockingPorts)
             foreach (ShipState other in State.Ships)
             {
-                if (other == ship) continue;
+                if (other == ship || ship.Anchor != null || other.Anchor != null) continue;
                 ShipFlightState otherFlight = GetFlight(other.ShipId);
                 bool ownSpace = ownFlight.Phase is ShipFlightPhase.Cruising;
                 bool otherSpace = otherFlight.Phase is ShipFlightPhase.Cruising;

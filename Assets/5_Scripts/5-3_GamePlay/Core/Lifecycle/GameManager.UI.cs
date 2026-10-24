@@ -4,7 +4,7 @@
 // 维度加载：PresentDimensionLoading() / EnsureDimensionLoadingView() / HideDimensionLoadingViewImmediate()
 // 保存与资源重载提示：BeginSaveStatus() / CompleteSaveStatus() / BeginResourceReloadStatus() / EndResourceReloadStatus()
 // 主菜单：OpenHellowCanvas() / OpenMainMenuSettings() / OpenMainMenuExitConfirmation()
-// 设置：BindMainMenuSettingsQuality() / BindMainMenuSettingsLanguage()
+// 设置：BindMainMenuSettingsQuality() / LanguageSettingsPanelLauncher
 // 新游戏：OpenNewGame() / CreateNewWorld() / TryBuildNewWorldCreationRequest()
 // 新游戏分页与难度：ShowNewGamePage() / OpenNewGameDifficultyPanel() / ConfirmNewGameDifficulty()
 // 存档选择：OpenGameSaveManager() / OnClick_StartGame_Button() / OnClick_LoadSaveData_Button() / OnClick_DeleteSave_Button()
@@ -923,6 +923,8 @@ public partial class GameManager
             pagination?.GetPageRoot(SettingsActionListPagination.AudioPageName));
         UISettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.InterfacePageName));
+        LanguageSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.LanguagePageName));
         CameraControlSettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
         CoordinateDisplaySettingsPanelLauncher.Ensure(
@@ -933,7 +935,6 @@ public partial class GameManager
             pagination?.GetPageRoot(SettingsActionListPagination.InputBindingPageName),
             panel,
             null);
-        BindMainMenuSettingsLanguage(panel);
         SettingsEditSessionController.Ensure(panel);
         panel.RefreshUIComponents();
         pagination?.RefreshPageLifecycles();
@@ -994,7 +995,7 @@ public partial class GameManager
             return labels;
 
         for (int i = 0; i < options.Count; i++)
-            labels.Add(options[i]?.DisplayName ?? string.Empty);
+            labels.Add(FlatWorldLocalizationService.GetUiText(options[i]?.DisplayName ?? string.Empty));
         return labels;
     }
 
@@ -1015,95 +1016,10 @@ public partial class GameManager
 
     #region 主菜单语言设置
 
-    /// <summary>绑定语言下拉框；当前提供简体中文和英语两个 Locale。</summary>
-    private void BindMainMenuSettingsLanguage(BasePanel panel)
-    {
-        ISettingsDropdown languageSetting =
-            FlatWorldLocalizationService.SettingsProvider.GetDropdown(
-                FlatWorldLocalizationService.LocaleSettingKey);
-        TMP_Dropdown languageDropdown = GetMainMenuSettingsLanguageDropdown(panel);
-        if (languageDropdown == null || languageSetting == null)
-        {
-            Debug.LogError(
-                $"[GameManager] 主菜单设置 Prefab 缺少语言下拉列表：{MainMenuSettingsLanguageDropdownKey}",
-                panel);
-            return;
-        }
-
-        FlatWorldLocalizationService.Initialize();
-        languageDropdown.ClearOptions();
-        languageDropdown.AddOptions(GetSettingOptionLabels(languageSetting.Options));
-        languageDropdown.onValueChanged.AddListener(
-            selectedIndex => OnMainMenuSettingsLanguageChanged(
-                panel,
-                languageSetting,
-                selectedIndex));
-        RefreshMainMenuSettingsLanguage(panel);
-    }
-
-    /// <summary>按下拉索引切换语言，失败时恢复当前有效选择。</summary>
-    private static void OnMainMenuSettingsLanguageChanged(
-        BasePanel panel,
-        ISettingsDropdown setting,
-        int selectedIndex)
-    {
-        if (!TryApplyLanguage(setting, selectedIndex, out string error))
-        {
-            RefreshMainMenuSettingsLanguage(panel);
-            if (!string.IsNullOrEmpty(error))
-                SetMainMenuSettingsLanguageStatus(
-                    panel,
-                    FlatWorldLocalizationService.GetUiText(error));
-            return;
-        }
-
-        RefreshMainMenuSettingsLanguage(panel);
-    }
-
-    private static bool TryApplyLanguage(
-        ISettingsDropdown setting,
-        int selectedIndex,
-        out string error)
-    {
-        if (setting == null)
-        {
-            error = "语言设置提供者尚未注册。";
-            return false;
-        }
-
-        return setting.TrySetSelectedIndex(selectedIndex, out error);
-    }
-
-    /// <summary>根据当前 Locale 回填下拉框，并显示即时保存状态。</summary>
+    /// <summary>主菜单重开或恢复默认时刷新共用语言页。</summary>
     private static void RefreshMainMenuSettingsLanguage(BasePanel panel)
     {
-        TMP_Dropdown languageDropdown = GetMainMenuSettingsLanguageDropdown(panel);
-        if (languageDropdown == null)
-            return;
-
-        ISettingsDropdown languageSetting =
-            FlatWorldLocalizationService.SettingsProvider.GetDropdown(
-                FlatWorldLocalizationService.LocaleSettingKey);
-        if (languageSetting == null)
-            return;
-
-        int selectedIndex = languageSetting.SelectedIndex;
-        languageDropdown.SetValueWithoutNotify(selectedIndex);
-        languageDropdown.RefreshShownValue();
-        SetMainMenuSettingsLanguageStatus(
-            panel,
-            selectedIndex == 0
-                ? FlatWorldLocalizationService.GetUiText("当前语言：简体中文")
-                : FlatWorldLocalizationService.GetUiText("当前语言：English"));
-    }
-
-    /// <summary>查找主菜单设置内的语言下拉框。</summary>
-    private static TMP_Dropdown GetMainMenuSettingsLanguageDropdown(BasePanel panel)
-    {
-        Transform dropdownTransform = panel == null
-            ? null
-            : FindChildRecursive(panel.transform, MainMenuSettingsLanguageDropdownKey);
-        return dropdownTransform?.GetComponent<TMP_Dropdown>();
+        panel?.GetComponentInChildren<LanguageSettingsPanelLauncher>(true)?.RefreshView();
     }
 
     /// <summary>更新设置面板底部的状态文字。</summary>
@@ -1112,12 +1028,6 @@ public partial class GameManager
         TextMeshProUGUI statusText = panel?.GetText(MainMenuSettingsLanguageStatusTextKey);
         if (statusText != null)
             statusText.text = status;
-    }
-
-    /// <summary>兼容语言设置调用的状态文字入口。</summary>
-    private static void SetMainMenuSettingsLanguageStatus(BasePanel panel, string status)
-    {
-        SetMainMenuSettingsStatus(panel, status);
     }
 
     #endregion

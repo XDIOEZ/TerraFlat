@@ -35,7 +35,7 @@ namespace FlatWorld.Spaceflight
             if (shipAId == shipBId || !ValidTolerance(positionToleranceMeters) || !ValidTolerance(angleToleranceRadians) ||
                 !ValidTolerance(maximumRelativeSpeed)) return false;
             ShipState a = FindShip(ships, shipAId), b = FindShip(ships, shipBId);
-            if (a == null || b == null) return false;
+            if (a == null || b == null || a.Anchor != null || b.Anchor != null) return false;
             SynchronizePorts(a); SynchronizePorts(b);
             ShipDockingPortState portA = FindPort(a, portAId), portB = FindPort(b, portBId);
             if (portA == null || portB == null || !CanCapture(a, portA, b, portB,
@@ -84,6 +84,7 @@ namespace FlatWorld.Spaceflight
             if (pair.Connected) return true;
             ShipState a = FindShip(ships, pair.ShipAId), b = FindShip(ships, pair.ShipBId);
             if (a == null || b == null) { reason = "对接飞船已失效。"; return false; }
+            if (a.Anchor != null || b.Anchor != null) { reason = "固定站台暂不支持船体对接。"; return false; }
             if (!ShipStructureService.HasConsole(a) || !ShipStructureService.HasConsole(b))
             { reason = "对接双方都需要有效控制台。"; return false; }
             SynchronizePorts(a); SynchronizePorts(b);

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
+using FlatWorld.Localization;
 using FlatWorld.WorldModel;
 using TMPro;
 using UnityEngine;
@@ -215,7 +216,10 @@ public sealed partial class GMReflectionConsole
         SurfaceBiomeKind biome = teleportBiomes[selectedBiomeIndex];
         string name = biome == SurfaceBiomeKind.Snow
             ? "雪原" : SurfaceBiomeClassifier.GetLegacyName((int)biome);
-        biomeSelectionText.text = $"{selectedBiomeIndex + 1}/{teleportBiomes.Length}  {name}  /  {biome}";
+        int selectedIndex = selectedBiomeIndex;
+        SetLocalizedProvider(biomeSelectionText, () => FlatWorldLocalizationService.GetUiFormat(
+            "{0}/{1}  {2}  /  {3}", selectedIndex + 1, teleportBiomes.Length,
+            FlatWorldLocalizationService.GetUiText(name), biome));
     }
 
     private void TeleportToSelectedBiome()
@@ -252,10 +256,11 @@ public sealed partial class GMReflectionConsole
         try
         {
             biomeTeleportButton.interactable = false;
-            biomeTeleportButton.GetComponentInChildren<TextMeshProUGUI>().text = "搜索中…";
+            SetLocalizedText(biomeTeleportButton.GetComponentInChildren<TextMeshProUGUI>(), "搜索中…");
             string name = biome == SurfaceBiomeKind.Snow
                 ? "雪原" : SurfaceBiomeClassifier.GetLegacyName((int)biome);
-            biomeHintText.text = $"正在搜索{name}，找到后自动传送；可以随时取消。";
+            SetLocalizedProvider(biomeHintText, () => FlatWorldLocalizationService.GetUiFormat(
+                "正在搜索{0}，找到后自动传送；可以随时取消。", FlatWorldLocalizationService.GetUiText(name)));
             var progress = new DeterministicChunkGenerator.BiomeSearchProgress();
             double startedAt = Time.realtimeSinceStartupAsDouble;
             double nextProgressAt = startedAt;
@@ -271,7 +276,7 @@ public sealed partial class GMReflectionConsole
             catch (Exception exception)
             {
                 Debug.LogException(exception);
-                biomeHintText.text = "生成配置尚未就绪或存在错误，请查看 Console 日志。";
+                SetLocalizedText(biomeHintText, "生成配置尚未就绪或存在错误，请查看 Console 日志。");
                 SetStatus("无法开始群系定位，详细原因已写入日志。", Color.yellow);
             }
             if (task == null)
@@ -285,36 +290,58 @@ public sealed partial class GMReflectionConsole
                 if (cancellation.IsCancellationRequested || !IsSameWorld())
                 {
                     cancellation.Cancel();
-                    biomeHintText.text = "搜索已取消，没有执行传送。";
+                    SetLocalizedText(biomeHintText, "搜索已取消，没有执行传送。");
                     yield break;
                 }
                 if (Time.realtimeSinceStartupAsDouble >= nextProgressAt)
                 {
                     DeterministicChunkGenerator.BiomeSearchSnapshot snapshot = progress.Latest;
                     int seconds = (int)(Time.realtimeSinceStartupAsDouble - startedAt);
-                    string step = snapshot.Stride > 0 ? $"，间隔 {snapshot.Stride} 格" : string.Empty;
-                    biomeHintText.text = $"{name}：{snapshot.Stage}{step}；已检查 {snapshot.SampledCount:N0} 处，耗时 {seconds / 60}:{seconds % 60:00}，可取消。";
+                    int stride = snapshot.Stride;
+                    if (stride > 0)
+                    {
+                        SetLocalizedProvider(biomeHintText, () => FlatWorldLocalizationService.GetUiFormat(
+                            "{0}：{1}，间隔 {2} 格；已检查 {3:N0} 处，耗时 {4}:{5:00}，可取消。",
+                            FlatWorldLocalizationService.GetUiText(name),
+                            FlatWorldLocalizationService.GetUiText(snapshot.Stage),
+                            stride, snapshot.SampledCount, seconds / 60, seconds % 60));
+                    }
+                    else
+                    {
+                        SetLocalizedProvider(biomeHintText, () => FlatWorldLocalizationService.GetUiFormat(
+                            "{0}：{1}；已检查 {2:N0} 处，耗时 {3}:{4:00}，可取消。",
+                            FlatWorldLocalizationService.GetUiText(name),
+                            FlatWorldLocalizationService.GetUiText(snapshot.Stage),
+                            snapshot.SampledCount, seconds / 60, seconds % 60));
+                    }
                     nextProgressAt = Time.realtimeSinceStartupAsDouble + 0.25d;
                 }
                 yield return null;
             }
             if (task.IsCanceled || cancellation.IsCancellationRequested || !IsSameWorld())
             {
-                biomeHintText.text = "搜索已取消，没有执行传送。";
+                SetLocalizedText(biomeHintText, "搜索已取消，没有执行传送。");
                 yield break;
             }
             if (task.IsFaulted)
             {
                 Debug.LogException(task.Exception.GetBaseException());
                 SetStatus("群系定位失败，详细原因已写入日志。", Color.yellow);
-                biomeHintText.text = "定位失败，请查看 Console 日志。";
+                SetLocalizedText(biomeHintText, "定位失败，请查看 Console 日志。");
                 yield break;
             }
             DeterministicChunkGenerator.BiomeSearchResult result = task.Result;
             if (!result.Found)
             {
-                biomeHintText.text = $"{progress.Latest.Stage}；检查 {result.SampledCount:N0} 处，未找到可传送的{name}。";
-                SetStatus($"{name}搜索结束：{progress.Latest.Stage}。", Color.yellow);
+                SetLocalizedProvider(biomeHintText, () => FlatWorldLocalizationService.GetUiFormat(
+                    "{0}；检查 {1:N0} 处，未找到可传送的{2}。",
+                    FlatWorldLocalizationService.GetUiText(progress.Latest.Stage),
+                    result.SampledCount, FlatWorldLocalizationService.GetUiText(name)));
+                SetLocalizedProvider(statusText, () => FlatWorldLocalizationService.GetUiFormat(
+                    "{0}搜索结束：{1}。", FlatWorldLocalizationService.GetUiText(name),
+                    FlatWorldLocalizationService.GetUiText(progress.Latest.Stage)));
+                if (statusText != null)
+                    statusText.color = Color.yellow;
                 yield break;
             }
             Vector3 destination = new(result.Cell.X + 0.5f, result.Cell.Y + 0.5f,
@@ -326,21 +353,24 @@ public sealed partial class GMReflectionConsole
                 completed = true;
             }))
             {
-                biomeHintText.text = "当前无法传送，请等待世界就绪或上一笔传送结束。";
+                SetLocalizedText(biomeHintText, "当前无法传送，请等待世界就绪或上一笔传送结束。");
                 yield break;
             }
             while (!completed)
             {
                 if (!IsSameWorld()) yield break;
-                biomeHintText.text = "已定位群系，正在等待服务器确认传送…";
+                SetLocalizedText(biomeHintText, "已定位群系，正在等待服务器确认传送…");
                 yield return null;
             }
             if (!succeeded)
             {
-                biomeHintText.text = "群系传送未完成，请检查联机状态或稍后重试。";
+                SetLocalizedText(biomeHintText, "群系传送未完成，请检查联机状态或稍后重试。");
                 yield break;
             }
-            biomeHintText.text = $"已定位{name}：({result.Cell.X}, {result.Cell.Y})，检查 {result.SampledCount} 个采样位置。";
+            SetLocalizedProvider(biomeHintText, () => FlatWorldLocalizationService.GetUiFormat(
+                "已定位{0}：({1}, {2})，检查 {3:N0} 个采样位置。",
+                FlatWorldLocalizationService.GetUiText(name), result.Cell.X, result.Cell.Y,
+                result.SampledCount));
             Debug.Log($"[GM] 已按正式生成规则传送到群系 {name} ({biome})，落点={destination}，采样={result.SampledCount}");
             teleported = true;
 
@@ -358,7 +388,7 @@ public sealed partial class GMReflectionConsole
             if (biomeTeleportButton != null)
             {
                 biomeTeleportButton.interactable = true;
-                biomeTeleportButton.GetComponentInChildren<TextMeshProUGUI>().text = "开始搜索";
+                SetLocalizedText(biomeTeleportButton.GetComponentInChildren<TextMeshProUGUI>(), "开始搜索");
             }
         }
         if (teleported)
@@ -370,7 +400,7 @@ public sealed partial class GMReflectionConsole
         if (biomeSearchCancellation == null) return;
         biomeSearchCancellation.Cancel();
         if (biomeHintText != null)
-            biomeHintText.text = "正在取消搜索…";
+            SetLocalizedText(biomeHintText, "正在取消搜索…");
     }
 
     #endregion

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FlatWorld.Localization;
 using FlatWorld.WorldModel;
 using TMPro;
 using UnityEngine;
@@ -58,7 +59,7 @@ public sealed partial class GMReflectionConsole
         GameRes resources = GameRes.ExistingInstance;
         if (TileSearchNameRules.Normalize(query).Length == 0 || resources == null)
         {
-            tileTeleportHint.text = "请先输入地块名称，例如：粘土地块。";
+            SetLocalizedText(tileTeleportHint, "请先输入地块名称，例如：粘土地块。");
             return;
         }
         var matches = new List<(RuntimeTileDefinition Definition, int Score)>();
@@ -74,9 +75,15 @@ public sealed partial class GMReflectionConsole
             .Select(match => match.Definition).OrderBy(definition => definition.Id, StringComparer.Ordinal).ToArray();
         if (candidates.Length != 1)
         {
-            tileTeleportHint.text = candidates.Length == 0 ? $"没有名为“{query}”的地块，请检查名称或输入地块 ID。" :
-                "匹配到多个地块，请输入完整名称或 ID：" + string.Join("、",
-                    candidates.Take(6).Select(definition => $"{definition.DisplayName} [{definition.Id}]"));
+            if (candidates.Length == 0)
+                SetLocalizedFormat(tileTeleportHint, "没有名为“{0}”的地块，请检查名称或输入地块 ID。", query);
+            else
+                SetLocalizedProvider(tileTeleportHint, () => FlatWorldLocalizationService.GetUiFormat(
+                    "匹配到多个地块，请输入完整名称或 ID：{0}",
+                    string.Join(", ", candidates.Take(6).Select(definition =>
+                        FlatWorldLocalizationService.GetUiFormat(
+                            "{0} [{1}]", FlatWorldLocalizationService.GetUiText(definition.DisplayName),
+                            definition.Id)))));
             return;
         }
         Player player = ItemMgr.GetInstance()?.User_Player;
@@ -86,7 +93,7 @@ public sealed partial class GMReflectionConsole
             manager == null || !ChunkMgr.IsSurfaceStreamingScene || !manager.IsWorldModelRuntimeActive ||
             !manager.IsAuthoritativeSimulation)
         {
-            tileTeleportHint.text = "请先进入单机或主机的地表/洞穴世界，再执行地块传送。";
+            SetLocalizedText(tileTeleportHint, "请先进入单机或主机的地表/洞穴世界，再执行地块传送。");
             return;
         }
         var cancellation = new CancellationTokenSource();
@@ -107,7 +114,8 @@ public sealed partial class GMReflectionConsole
             tileTeleportButton.interactable = false;
             tileTeleportInput.interactable = false;
             string name = definition.DisplayName;
-            tileTeleportHint.text = $"正在搜索{name}，找到后自动传送；可以随时取消。";
+            SetLocalizedProvider(tileTeleportHint, () => FlatWorldLocalizationService.GetUiFormat(
+                "正在搜索{0}，找到后自动传送；可以随时取消。", FlatWorldLocalizationService.GetUiText(name)));
             Vector3 logical = WorldLocalPresentation.ToLogical(player.transform.position);
             var anchor = new Int2(Mathf.FloorToInt(logical.x), Mathf.FloorToInt(logical.y));
             string dimension = manager.ResolveWorldAddress(logical).DimensionId;
@@ -121,7 +129,7 @@ public sealed partial class GMReflectionConsole
             catch (Exception exception)
             {
                 Debug.LogException(exception);
-                tileTeleportHint.text = "无法开始地块搜索，请查看控制台。";
+                SetLocalizedText(tileTeleportHint, "无法开始地块搜索，请查看控制台。");
             }
             if (task == null) yield break;
             _ = task.ContinueWith(completed => { _ = completed.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
@@ -130,33 +138,38 @@ public sealed partial class GMReflectionConsole
                 if (cancellation.IsCancellationRequested || !IsSameWorld())
                 {
                     cancellation.Cancel();
-                    tileTeleportHint.text = "地块搜索已取消。";
+                    SetLocalizedText(tileTeleportHint, "地块搜索已取消。");
                     yield break;
                 }
                 if (Time.realtimeSinceStartupAsDouble >= nextProgressAt)
                 {
                     int seconds = (int)(Time.realtimeSinceStartupAsDouble - startedAt);
                     var snapshot = progress.Latest;
-                    tileTeleportHint.text = $"{name}：{snapshot.Stage}；已检查 {snapshot.SampledCount:N0} 格，耗时 {seconds / 60}:{seconds % 60:00}，可取消。";
+                    SetLocalizedProvider(tileTeleportHint, () => FlatWorldLocalizationService.GetUiFormat(
+                        "{0}：{1}；已检查 {2:N0} 格，耗时 {3}:{4:00}，可取消。",
+                        FlatWorldLocalizationService.GetUiText(name),
+                        FlatWorldLocalizationService.GetUiText(snapshot.Stage),
+                        snapshot.SampledCount, seconds / 60, seconds % 60));
                     nextProgressAt = Time.realtimeSinceStartupAsDouble + .25d;
                 }
                 yield return null;
             }
             if (task.IsCanceled || cancellation.IsCancellationRequested || !IsSameWorld())
             {
-                tileTeleportHint.text = "地块搜索已取消。";
+                SetLocalizedText(tileTeleportHint, "地块搜索已取消。");
                 yield break;
             }
             if (task.IsFaulted)
             {
                 Debug.LogException(task.Exception.GetBaseException());
-                tileTeleportHint.text = "地块搜索失败，请查看控制台。";
+                SetLocalizedText(tileTeleportHint, "地块搜索失败，请查看控制台。");
                 yield break;
             }
             var result = task.Result;
             if (!result.Found)
             {
-                tileTeleportHint.text = $"已搜索完成，当前维度没有可站立的{name}。";
+                SetLocalizedProvider(tileTeleportHint, () => FlatWorldLocalizationService.GetUiFormat(
+                    "已搜索完成，当前维度没有可站立的{0}。", FlatWorldLocalizationService.GetUiText(name)));
                 yield break;
             }
             Vector3 destination = new(result.Cell.X + .5f, result.Cell.Y + .5f, logical.z);
@@ -165,7 +178,7 @@ public sealed partial class GMReflectionConsole
                     definition.RuntimeTileId) || TerrainSupportLayer.GetTileId(current.Terrain,
                     current.LocalCell.x, current.LocalCell.y) != 0))
             {
-                tileTeleportHint.text = "目标地块在搜索期间发生了变化，请重新搜索。";
+                SetLocalizedText(tileTeleportHint, "目标地块在搜索期间发生了变化，请重新搜索。");
                 yield break;
             }
             // 提交传送不等于落点已应用，只有权威回执成功才显示完成。
@@ -176,7 +189,7 @@ public sealed partial class GMReflectionConsole
                 completed = true;
             }))
             {
-                tileTeleportHint.text = "当前无法传送，请等待世界就绪或上一笔传送结束。";
+                SetLocalizedText(tileTeleportHint, "当前无法传送，请等待世界就绪或上一笔传送结束。");
                 yield break;
             }
             double teleportDeadline = Time.realtimeSinceStartupAsDouble + 30d;
@@ -185,14 +198,18 @@ public sealed partial class GMReflectionConsole
                 if (cancellation.IsCancellationRequested || !IsSameWorld()) yield break;
                 if (Time.realtimeSinceStartupAsDouble >= teleportDeadline)
                 {
-                    tileTeleportHint.text = "等待传送结果超时，尚未确认落点。";
+                    SetLocalizedText(tileTeleportHint, "等待传送结果超时，尚未确认落点。");
                     yield break;
                 }
-                tileTeleportHint.text = "已定位地块，正在等待传送结果…";
+                SetLocalizedText(tileTeleportHint, "已定位地块，正在等待传送结果…");
                 yield return null;
             }
-            tileTeleportHint.text = teleported ? $"已传送到{name}：({result.Cell.X}, {result.Cell.Y})。" :
-                "地块传送未完成，落点尚未应用。";
+            if (teleported)
+                SetLocalizedProvider(tileTeleportHint, () => FlatWorldLocalizationService.GetUiFormat(
+                    "已传送到{0}：({1}, {2})。", FlatWorldLocalizationService.GetUiText(name),
+                    result.Cell.X, result.Cell.Y));
+            else
+                SetLocalizedText(tileTeleportHint, "地块传送未完成，落点尚未应用。");
             if (teleported) Debug.Log($"[GM] 已传送到地块 {definition.Id}，逻辑落点={destination}");
 
             bool IsSameWorld() => this != null && player != null && traits != null && manager != null &&
@@ -216,7 +233,7 @@ public sealed partial class GMReflectionConsole
     {
         if (tileSearchCancellation == null) return;
         tileSearchCancellation.Cancel();
-        if (tileTeleportHint != null) tileTeleportHint.text = "正在取消地块搜索…";
+        if (tileTeleportHint != null) SetLocalizedText(tileTeleportHint, "正在取消地块搜索…");
     }
 
     private void CancelLocationSearches()

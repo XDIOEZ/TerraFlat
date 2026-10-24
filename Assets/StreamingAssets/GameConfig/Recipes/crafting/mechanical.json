@@ -2,6 +2,27 @@
   "schemaVersion": 1,
   "recipes": [
     {
+      "id": "core:mechanical_IronAnvil",
+      "displayName": "铁砧",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 10
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "IronAnvil_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:mechanical_HandCrank",
       "displayName": "手摇轮",
       "recipeType": "crafting",
@@ -26,8 +47,8 @@
           "amount": 1
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -97,8 +118,8 @@
           "amount": 8
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 4
         },
         {
@@ -224,8 +245,8 @@
           "amount": 1
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -262,8 +283,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         }
       ],
@@ -338,8 +359,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -377,7 +398,7 @@
         },
         {
           "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
+          "itemId": "IronPlate",
           "amount": 3
         },
         {
@@ -389,6 +410,11 @@
           "match": "exact_item",
           "itemId": "Shaft_Wood_Summoner",
           "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Nail",
+          "amount": 4
         }
       ],
       "outputs": [
@@ -410,7 +436,7 @@
       "inputs": [
         { "match": "exact_item", "itemId": "DrilledPlank", "amount": 4 },
         { "match": "exact_item", "itemId": "DrilledStick", "amount": 2 },
-        { "match": "exact_item", "itemId": "Rope", "amount": 2 },
+        { "match": "tag", "tag": "Rope", "amount": 2 },
         { "match": "exact_item", "itemId": "Gear_Wood_Summoner", "amount": 1 },
         { "match": "exact_item", "itemId": "Shaft_Wood_Summoner", "amount": 1 }
       ],
@@ -440,7 +466,7 @@
         },
         {
           "match": "exact_item",
-          "itemId": "Ingot_RawIron",
+          "itemId": "IronPlate",
           "amount": 3
         },
         {
@@ -452,6 +478,11 @@
           "match": "exact_item",
           "itemId": "Shaft_Wood_Summoner",
           "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Nail",
+          "amount": 4
         }
       ],
       "outputs": [
@@ -500,8 +531,8 @@
           "amount": 2
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 2
         },
         {
@@ -546,6 +577,352 @@
       "outputs": [
         {
           "itemId": "Conveyor_Cloth_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Sawmill_iron_steel_nails",
+      "displayName": "锯木机（铁板、钢钉）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "IronPlate",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelNail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Sawmill_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Sawmill_steel_iron_nails",
+      "displayName": "锯木机（钢板、熟铁钉）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelPlate",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Nail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Sawmill_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Sawmill_steel",
+      "displayName": "锯木机（全钢，效率+20%）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelPlate",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelNail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Sawmill_Summoner",
+          "amount": 1,
+          "addTag": "CraftedQuality.WorkEfficiency:1.2"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_MechanicalHammer_iron_steel_nails",
+      "displayName": "机械锻锤（铁板、钢钉）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "IronPlate",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelNail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "MechanicalHammer_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_MechanicalHammer_steel_iron_nails",
+      "displayName": "机械锻锤（钢板、熟铁钉）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelPlate",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Nail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "MechanicalHammer_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_MechanicalHammer_steel",
+      "displayName": "机械锻锤（全钢，效率+20%）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelPlate",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelNail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "MechanicalHammer_Summoner",
+          "amount": 1,
+          "addTag": "CraftedQuality.WorkEfficiency:1.2"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_SteelNail",
+      "displayName": "钢钉",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Steel",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "StoneHammer",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "SteelNail",
+          "amount": 8
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_ToolCabinet",
+      "displayName": "工具柜",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "amount": 4
+        },
+        {
+          "match": "tag",
+          "tag": "Nail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ToolCabinet_Summoner",
           "amount": 1
         }
       ],

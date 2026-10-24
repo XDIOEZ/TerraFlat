@@ -86,7 +86,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     /// <summary>注册 MOD 新类别或替换现有类别配置；JSON 只定义静态排序键。</summary>
     public void RegisterProfile(string json)
     {
-        WorldSortingProfile profile = JsonUtility.FromJson<WorldSortingProfile>(json);
+        WorldSortingProfile profile = JsonConfigurationCache.FromUnityJson<WorldSortingProfile>(json);
         RegisterProfile(profile);
     }
 

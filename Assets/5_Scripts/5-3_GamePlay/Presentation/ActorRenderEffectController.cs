@@ -28,6 +28,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
 
     private static readonly int BodyMinVId = Shader.PropertyToID("_BodyMinV");
     private static readonly int BodyMaxVId = Shader.PropertyToID("_BodyMaxV");
+    private static readonly int SpriteLocalBoundsId = Shader.PropertyToID("_SpriteLocalBounds");
 
     #region 性能诊断
     // 固定点位只记数字，区分模块更新、空闲跳过和实际 Renderer 提交。
@@ -53,7 +54,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     private bool renderStateDirty = true;
     private readonly List<uint> moduleVersions = new();
     private readonly List<bool> moduleActiveStates = new();
-    private readonly Dictionary<Renderer, Sprite> submittedSprites = new();
+    private readonly Dictionary<Renderer, (Sprite Sprite, bool FlipX, bool FlipY)> submittedSprites = new();
 
     public IReadOnlyList<Renderer> Renderers => renderers;
 
@@ -121,17 +122,20 @@ public sealed class ActorRenderEffectController : MonoBehaviour
             if (renderer == null)
                 continue;
 
-            Sprite sprite = renderer is SpriteRenderer spriteRenderer ? spriteRenderer.sprite : null;
+            SpriteRenderer spriteRenderer = renderer as SpriteRenderer;
+            Sprite sprite = spriteRenderer != null ? spriteRenderer.sprite : null;
+            var spriteState = (Sprite: sprite, FlipX: spriteRenderer != null && spriteRenderer.flipX,
+                FlipY: spriteRenderer != null && spriteRenderer.flipY);
             // 静态参数未变化时保留已提交的 MPB，换图和动态效果仍按当前帧刷新。
-            if (!applyEffects && submittedSprites.TryGetValue(renderer, out Sprite previousSprite) &&
-                previousSprite == sprite)
+            if (!applyEffects && submittedSprites.TryGetValue(renderer, out var previousSprite) &&
+                previousSprite == spriteState)
             {
                 skipped++;
                 continue;
             }
 
             renderer.GetPropertyBlock(propertyBlock);
-            ApplySpriteBodyRange(sprite, propertyBlock);
+            ApplySpriteBodyRange(sprite, spriteState.FlipX, spriteState.FlipY, propertyBlock);
             bool isExternalRenderer = externalRenderers.Contains(renderer);
 
             for (int moduleIndex = 0; moduleIndex < modules.Count; moduleIndex++)
@@ -148,7 +152,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
             }
 
             renderer.SetPropertyBlock(propertyBlock);
-            submittedSprites[renderer] = sprite;
+            submittedSprites[renderer] = spriteState;
             submitted++;
         }
         SpriteSkipDebug.AddWork(skipped);
@@ -395,7 +399,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     #region Sprite Metadata
 
     /// <summary>把当前 Sprite 的本地可见高度同步给 Shader，动画换帧时仍能正确计算水面位置。</summary>
-    private static void ApplySpriteBodyRange(Sprite sprite, MaterialPropertyBlock block)
+    private static void ApplySpriteBodyRange(Sprite sprite, bool flipX, bool flipY, MaterialPropertyBlock block)
     {
         if (sprite == null)
             return;
@@ -406,6 +410,10 @@ public sealed class ActorRenderEffectController : MonoBehaviour
         float maxY = Mathf.Max(bounds.max.y, minY + 0.0001f);
         block.SetFloat(BodyMinVId, minY);
         block.SetFloat(BodyMaxVId, maxY);
+        // 原图中心和半尺寸只在提交时读取，世界变换留给 Shader 处理。
+        block.SetVector(SpriteLocalBoundsId, new Vector4(
+            flipX ? -bounds.center.x : bounds.center.x,
+            flipY ? -bounds.center.y : bounds.center.y, bounds.extents.x, bounds.extents.y));
     }
 
     #endregion

@@ -8,29 +8,32 @@ namespace FlatWorld.Localization
     /// 物品 Tag 的本地化目录：ItemData.Tags 永远保存稳定 ASCII ID，显示与搜索再映射到各语言标签。
     /// 内置目录同时作为 String Table 尚未同步时的编辑期/开发期来源；MOD 可按相同稳定 ID 注册额外语言。
     /// </summary>
-    public static class ItemTagLocalizationCatalog
+    public static partial class ItemTagLocalizationCatalog
     {
         #region 数据契约
 
         public const string ResourcePath = "Localization/ItemTagCatalog";
         public const string EditorAssetPath = "Assets/Resources/Localization/ItemTagCatalog.json";
 
+        [MemoryPack.MemoryPackable]
         [Serializable]
-        public sealed class CatalogData
+        public sealed partial class CatalogData
         {
             public int schemaVersion;
             public TagEntryData[] tags;
         }
 
+        [MemoryPack.MemoryPackable]
         [Serializable]
-        public sealed class TagEntryData
+        public sealed partial class TagEntryData
         {
             public string id;
             public LocalizedLabelData[] labels;
         }
 
+        [MemoryPack.MemoryPackable]
         [Serializable]
-        public sealed class LocalizedLabelData
+        public sealed partial class LocalizedLabelData
         {
             public string locale;
             public string text;
@@ -64,7 +67,7 @@ namespace FlatWorld.Localization
             if (asset == null)
                 throw new InvalidOperationException($"缺少物品 Tag 本地化目录：Resources/{ResourcePath}");
 
-            CatalogData catalog = JsonUtility.FromJson<CatalogData>(asset.text);
+            CatalogData catalog = JsonConfigurationCache.FromUnityJson<CatalogData>(asset.text);
             if (catalog == null || catalog.schemaVersion != 1 || catalog.tags == null)
                 throw new InvalidOperationException($"物品 Tag 本地化目录格式无效：{EditorAssetPath}");
 

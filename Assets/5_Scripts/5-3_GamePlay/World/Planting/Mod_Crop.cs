@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>
 /// 农作物的权威状态容器：只管理幼苗、成熟、耕地成长与一次性收获调度。
 /// 具体产物、任务、特效等收获结果通过 ICropHarvestAction 独立注册，避免继续堆入成长模块。
-/// 满水满肥时的基础成熟时间由 growthDurationSeconds 决定，环境与难度倍率只结算一次。
+/// 满水满肥时的基础成熟时间由 growthDurationSeconds 决定，环境与通用成长倍率只结算一次。
 /// </summary>
 [Serializable]
 [MemoryPackable]
@@ -365,11 +365,11 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
         float farmlandMultiplier = CalculateFarmlandGrowthMultiplier(farmlandData);
         float weatherMultiplier = (historical ? 1f : ResolveWeatherGrowthMultiplier()) * environmentMultiplier;
-        float difficultyMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
+        float growthMultiplier = GameRuleConfiguration.Current.Production.CropGrowthMultiplier;
         float growthDelta = safeDeltaTime / growthDurationSeconds *
                             farmlandMultiplier *
                             weatherMultiplier *
-                            Mathf.Max(0f, difficultyMultiplier);
+                            Mathf.Max(0f, growthMultiplier);
         if (growthDelta <= 0f)
             return;
 

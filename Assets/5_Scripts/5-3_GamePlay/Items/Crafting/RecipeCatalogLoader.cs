@@ -199,7 +199,7 @@ public static class RecipeCatalogLoader
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("配方分包清单为空");
-        return JsonConvert.DeserializeObject<RecipeManifestDto>(json);
+        return JsonConfigurationCache.Deserialize<RecipeManifestDto>(json);
     }
 
     public static string SerializeManifest(RecipeManifestDto manifest)

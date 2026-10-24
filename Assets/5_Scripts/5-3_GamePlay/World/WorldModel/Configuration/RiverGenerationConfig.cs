@@ -128,7 +128,7 @@ public static class RiverGenerationConfigLoader
         try
         {
             RiverGenerationConfigFile source =
-                JsonConvert.DeserializeObject<RiverGenerationConfigFile>(json, JsonSettings);
+                JsonConfigurationCache.Deserialize<RiverGenerationConfigFile>(json, JsonSettings);
             return new RiverGenerationConfigCatalog(source);
         }
         catch (JsonException error)
@@ -164,30 +164,34 @@ public static class RiverGenerationConfigService
 #region JSON 数据
 
 #pragma warning disable CS0649 // 以下字段由 JSON 反序列化赋值。
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class RiverGenerationConfigFile
+internal sealed partial class RiverGenerationConfigFile
 {
     [JsonProperty("schemaVersion")] public int SchemaVersion;
     [JsonProperty("profiles")] public List<RiverGenerationProfileConfig> Profiles;
 }
 
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class RiverGenerationProfileConfig
+internal sealed partial class RiverGenerationProfileConfig
 {
     [JsonProperty("profileId")] public string ProfileId;
     [JsonProperty("numericParameters")] public List<RiverGenerationNumericParameter> NumericParameters;
     [JsonProperty("textParameters")] public List<RiverGenerationTextParameter> TextParameters;
 }
 
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class RiverGenerationNumericParameter
+internal sealed partial class RiverGenerationNumericParameter
 {
     [JsonProperty("id")] public string Id;
     [JsonProperty("value")] public double Value;
 }
 
+[MemoryPack.MemoryPackable]
 [JsonObject(ItemRequired = Required.Always)]
-internal sealed class RiverGenerationTextParameter
+internal sealed partial class RiverGenerationTextParameter
 {
     [JsonProperty("id")] public string Id;
     [JsonProperty("value")] public string Value;

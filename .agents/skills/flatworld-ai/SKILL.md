@@ -22,13 +22,21 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 后端与生命周期
 
+- F4 → 生成与 AI → 世界生物信息读取 `MonsterSpawnerManager.Monitoring.cs` 快照；按本地玩家世界查询现有管理器/后端，不补建调度状态。倒计时/上限为真实游戏秒，调度/重试/最近尝试年龄为现实秒；生物合计含当前世界存活 GO、ECS 和已索引休眠居民，排除玩家/尸体/创建候选。仅可见时采样，真实生成分支只记录最近结果，不重新选点或抽概率；只读计时回归 `ai/spawn_monitor`。
+
+- `MonsterSpawnerManager.Update` 已初始化且未到生态 Tick、也无分帧出生任务时，在进入世界上下文前返回；初始化和出生任务仍及时推进。`FlatWorld.MonsterSpawner.Advance` 包含世界作用域进出，Tick/Create 继续细分实际工作；回归 `ai/spawner_update_work`。
+
+- **追近不等于动作**：共用 `FlatWorld.Navigation.AIApproachRange`，停止内圈取配置停止距离与动作范围一半中的较小值。地面动作目标必须用 `Mod_Mover_AI.SetInteractionDestination`（可带路径代价上限），不覆写普通 `stopDistance`；巡逻、温度避险保持各自配置。鱼 `forageStopDistance=0.3`、`eatRange=0.9`，追近过程中仍按实际距离累计摄食，越界或换目标才清零。鸟啄食、行为图、鸡/野猪、狼/雪豹、蜜蜂使用同一内外圈原则；只有真正攻击前摇/伤害窗口/后摇或技能锁定才禁止移动，冷却不强制停车。狼编队、野猪左右站位及可选 ECS 站位必须把目标偏移和停止余量一同算入动作范围。禁止通过放大进食/伤害范围掩盖提前停车。离线真实鱼方法回归：`python Tools/Tests/AiApproachRanges/verify.py`；Lua 规则：`ai/approach_ranges`。
+
 - `AiRuntimeBackendService` 的 GO Actor 身份、前进与取消命令查询使用 `ListPool<MonoBehaviour>` 和 `GetComponentsInChildren(true, list)`，避免每次查询创建子组件数组；指令先按原顺序检查绑定到本 Item 的真实 Actor，再用同一份即时组件列表寻找首个接收器。列表调用结束即回池，不缓存模块结构/代际，不改变 ECS 后端回退和死亡拒绝规则。
 - ECS 宿主/后端路由按 WorldKey 独立，观察与战斗代理包含该世界所有真实玩家；距离档取最近玩家，不能只跟主机视角。联机客户端不 Tick 权威生态，`AiEcologyNetworkBridge` 将正式表现快照按连接 WorldKey/RealmRevision 分片同步，完整包才替换 BRG 列表，移动按世界最短位移插值；离开世界/断线释放副本缓存，死亡/掉落仍由服务器提交。
 
 - GO 自然出生通过 `SpawnCreatureInSteps` 单任务分帧：池未命中异步复制外壳，逐模块配置/依赖/Load，每帧目标 1.5ms、最多 8 步；单个模块不可抢占。候选停用且未登记，完成后复核落点/人数/预算再交付，成功才记账；退出、失效或取消释放候选。显式即时出生与居民恢复仍保留同步入口。
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
+- 单图首帧必须配置 `visual.spriteAddress`，使用已注册 Addressables 的 `Assets/...png[切片名]`；摇摆初始化直接读取定义 Sprite，不启动旧 Animator、不依赖 Idle/Stand 状态。共享狼外壳的 Zombie 必须覆盖首帧。内容校验 `FWC-ACTORJSON-007/008` 检查模式与首帧；静态入口 `python Tools/Tests/ActorSway/verify.py`，正式规则 `ai/single_sprite_catalog`。
 - 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。
-- 自然动物 `countdown` 在每条规则的 `SpeciesCountdowns` 中按物种保存剩余时长和待出生数，按游戏时间推进且跨区块不重置；无落点或满员保留当前一轮，完成（含独立概率落空）后重计时，不补离线或累计多轮。原权重折算刷新间隔，仍共用预算和人数限制；出生、显隐、居民装卸三路轮转，避免跑图持续显隐导致出生饥饿。
+- 所有自然生物（含夜怪）共用世界存档 `MonsterSpawnerSaveData.NaturalCountdown`；`spawner-settings.json/naturalSpawnIntervalGameSeconds` 是唯一基础刷新间隔，频率倍率统一缩放这一时钟，不再派生物种时钟；固定数量批次保留原有倍率规则，显式数量权重不缩量。禁止恢复逐物种/逐规则时钟、固定日窗口、逐日补生或死亡即时补员。到期后 `NaturalSelection` 只采样当前世界玩家附近已就绪区块，沿正式水陆/树木/群系/地块/光照/可见性/预算/人数规则筛选，再把跨配置合格物种按 `probability` 放进同一奖池；权重不换算间隔。没有合格落点时保持到期、尚未指定物种，不加载新区域。
+- 一轮只绑定一个规则/物种及其批次数量。规则概率落空消费整轮，物种概率落空消费一次出生；不重抽直到成功、不扣失败预算。完成整批才重启共享时钟；有限选点/创建重试耗尽则放弃未出生部分并重计时，防止失效栖息地永久锁住全世界刷新。跨区块不重置，读档/无玩家/频率为零不补时间；所选物种、剩余批次与锚点随世界一起保存。事件/GM/孵化/蜂巢和居民恢复不消费自然时钟。监控只显示一个世界倒计时，未抽中物种没有待出生队列。离线生产调度回归 `python Tools/Tests/NaturalSpawnCountdown/verify.py`；Unity 规则 `ai/spawn_countdown`、`ai/spawn_monitor`、`ai/spawn_batches`。出生、显隐、居民装卸三路仍轮转。
 - `spawnCountWeights` 可声明每批数量权重（显式数量不随频率缩量）；狼 1/2 只各 5%、3/4 只各 45%，`batchSpawnRadius=3`。首只前预检整批剩余人数/预算，成功后逐帧一只落在同批锚点附近且不重复占格；锚点随进度保存，离开玩家范围/换场景/锚区块卸载才重选，下一批重新选锚。规则 `ai/spawn_batches`。
 - `MonsterSpawnerManager.TrySpawnCreature` 是自然/夜怪、事件、GM/技能/MOD、生物战利品、生产孵化与蜂巢的新出生入口；`AiRuntimeBackendService.TrySpawnDirect` 仅转发给已存在管理器。来源保留时间/落点/预算规则，通用事务检查权威、世界就绪、GUID（含休眠/创建中身份），统一装配、Load、回调后身份/代际复核与失败回收。自然调度关闭不禁用显式出生；ItemMgr 仍是物品/网络副本的底层工厂，不反向依赖生物管理器。
 - `ConfigureRoutes` 冻结物种归属，未列物种默认 GO；显式 ECS 失败不自动回退。后端只通过 `IAiEcologyBackend.TryCreateActor` 接受管理器批准的实际创建，GO 专用初始化回调不能用于 ECS。快照与蜂巢老成员分别走 `TryRestoreCreature/TryRestoreResident`，恢复不消费出生计划/预算、不增加新生统计；同物种保持单一后端。
@@ -44,6 +52,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 风推动由 `WorldMotionSystem` 共用完整物品目录的质量规则；ECS 模板/居民保存当前定义的 `CurrentWeight`，资源发布后同步。世界桥采当地风速，Burst 只消费被动 `WindVelocity` 并扫掠通行；不写入主动速度/动画，无风时不扫描居民，风停当次清残留。
 - GO 鸟/蜜蜂空中通过 `IWindMotionOwner` 独占风位移，地面交给 Mover；悬停也受风且风不改变主动飞行朝向。幽灵直追与无 Mover 导航分别叠风；鱼仅离水受风，正在蹦跳时同步平移起点，入水或被携带/钓住后停止。
 - 感知用稳定身份、空间桶和整数格 LOS；地形/建筑遮挡独立于导航。外部武器经候选筛选、临时 Collider 投影和 Physics2D 命中，镜像绑定不影响受击资格；整体 HP 来自 Actor 配置，部位耐久独立，耗尽部位仍可命中。
+- GO 感知最终半径受 `Item.MaximumPerceptionRadius` 通用外部上限约束，批查询在目标倍率后钳制，旧候选/锁定目标也实时受限；雾的施加与撤销归 `WeatherMgr.Fog`，AI 不查询天气。幽灵直查玩家同样钳制；回归 `environment/fog_perception`。
 - Actor 感知冻结时同轮仿射变换一次性写入 Burst 形状与粗筛包围盒，保留复杂形状、负缩放和独立查询的相同包围语义；规则 `ai/perception_shape_batch`。
 - 狼的目标筛选与通用 Detector 最近物查询在单次遍历内最多获取一次 `WorldTopologyDomain`，无匹配对象时不解析世界边界；逐候选仍实时读位置和阵营，通用入口供鸡、野猪使用，规则 `ai/closest_target_batch` 覆盖接缝、同距、玩家和移动目标。
 - `Mod_ItemDetector.ApplyDetectorResults` 仅在 `DebugMode` 开启时构造旧候选差集并比较进入/离开，普通批次保留去重、顺序和原标签 List 引用；关闭 Debug 时清理旧集合，回归 `ai/detector_apply_batch`。
@@ -59,6 +68,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 - 狼 `ai` 槽位的能力 ID 必须为 `AI`，`Module_AI_Wolf` 仅为 Prefab 身份；组群、呼叫和编队只接纳已就绪、启用、存活且友好的狼，按持久 Guid 选同一头狼。两只起协同追击，独狼避让、双狼低血撤退规则保留；回归 `ai/wolf_pack` 使用正式定义注册身份后调用真实决策。
 - 狼的一轮状态评估先筛选有效同伴，再复用同一列表计算追击编队；新一轮和卸载时清空，支援呼叫仍实时复核资格。
+- 狼追击丢失视野进入 `Search`：只去 `AI_Wolf.TargetMemory` 保存的最后可见/同伴报告坐标，默认赶路上限15秒、到点搜索3秒，重见恢复追击；旧感知候选须重新核验LOS，不更新隐藏目标坐标或起手攻击。集火与有效支援呼叫立即允许保留追踪记忆，不能等待首次状态切换后才生效。未见目标的同伴不传播情报；目标身份/代际、卸载和指令取消清记忆。规则 `ai/wolf_target_memory`；离线入口/记忆回归 `python Tools/Tests/AiTargetMemory/verify.py`。
 - 狼群追击编队单次刷新冻结 `WorldTopologyDomain`，左右翼分配、同伴分离和站位归一化共用这份拓扑；同伴位置和路径可走性仍实时读取，回归 `ai/wolf_formation_topology`。
 - 单图共用 `Mod_AnimatorController`；鸟、蜂、鱼、幽灵通过 `IActorAnimationMotionSource` 报告主动移动与已有外观高度/倾角，风、水流等被动位移不计迈步。单图模式下旧身体 Animator 与鱼独立游动摇摆让出姿态，Ghost/Fish 的纯控制器不附带 Renderer 或物理组件；目录与窄信号回归见 AI/ItemRuntime 测试说明。
 - 单图死亡由动画模块订阅生命 `DeathStarted`：冻结致死瞬间 Sprite，上抛并翻转 180° 后保持；`deathDuration/deathJumpHeight` 由 Actor 根定义并继承，正式 AI 统一 0.76 秒/0.35 米。生命 `Data.DestroyDelay=1.1` 留出落地停尸时间；死亡/掉落/回收仍归生命模块，动画不自行删物。
@@ -73,7 +83,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - GM 动物、蜜蜂和蜂巢头顶诊断共用 `AI_DebugOverlay.CanDrawWorldLabels`，正式背包/制作/设置等交互面板或手机抽屉打开时暂时让位，关闭后仍保留 GM 开关状态。
 - GO AI 状态评估回调在实例内复用；普通动物、蜜蜂、蜂巢的头顶标签共用 AI_DebugOverlayRenderer，在 IMGUI Repaint 绘制并复用 GUIContent，蜂巢保留独立开关。
 - 蜂巢首次先登记完整成员意图及稳定 GUID，普通首次/恢复/日出/繁殖共用每巢每帧一只的实例化配额；未完成意图和睡眠状态随存档保留，成功创建后才提交，死亡不重补初始成员。受击护巢绕过配额立即出巢，卸载不继续推进待生成工作。
-- 蜜蜂追击/护巢受 AngryLockRadius/LOS 约束，丢目标按 LostTargetAngerSeconds 保持搜索最后可见位置，到点等待，重见重计时；夜间归巢不抢占追击，蜂巢销毁后无领地巡逻。
+- 蜜蜂追击/护巢受 AngryLockRadius/LOS 约束，丢目标按 LostTargetAngerSeconds 保持警戒搜索：先到最后可见位置，再在附近持续巡飞，不读取隐藏目标新位置；重见恢复追击，夜间归巢不抢占搜索，蜂巢销毁后同样可搜索。规则 `ai/bee_target_search` 采正式搜索计时、目的地与清理，不覆盖真实飞行和感知现场。
 - 鸟飞行导航只查线路是否加载，区块尺寸来自当前 ActiveGenerationProfile。`IBirdFlightPilot` 可组合独立 Pilot；巡航/避让用限角速度圆弧，弧线与位移共用地形查询。
 - 鸟前视弧线跨连续小段复用规范格游标，只合并纯地形存在查询；实际位移、下一条弧线及地面复合约束重新复核。落点环扫共用本轮拓扑和地形寻址，逐候选实时 `CanLand`；规则 `ai/flight_traversal_batch`。
 - 鸟离地撤实体阻挡，仅留感知/受击 Trigger；`BirdLift` 下独立运动学刚体承接受击盒，按当前 Sprite/镜像/动画姿态同步，卸载恢复配置。空中死亡先收视觉高度，再统一生命/掉落流程。

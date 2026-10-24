@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "recipes": [
     {
+      "id": "core:tool_reinforcement_leather_strap",
+      "displayName": "皮革皮带加固工具",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "tag", "tag": "Tool", "excludeTag": "CraftedQuality.BindingReinforced", "amount": 1 },
+        { "match": "exact_item", "itemId": "LeatherStrap", "amount": 1 }
+      ],
+      "outputs": [
+        { "copyInputTag": "Tool", "durabilityMultiplier": 1.3, "addTag": "CraftedQuality.BindingReinforced", "amount": 1 }
+      ]
+    },
+    {
       "id": "core:tool_reinforcement_hot_resin",
       "displayName": "热树脂强化工具",
       "recipeType": "crafting",

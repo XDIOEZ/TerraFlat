@@ -17,7 +17,13 @@
     <!-- 直接编译生产机械、电力和耦合调度算法，不启动或操作 Unity。 -->
     <Compile Include="Program.cs" />
     <Compile Include="TestDoubles.cs" />
+    <Compile Include="ConveyorDoubles.cs" />
+    <Compile Include="ConveyorTests.cs" />
+    <Compile Include="ConveyorLoadTests.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MechanicalNetwork.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MechanicalNetworkGraph.Conveyors.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/ConveyorPath.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/ConveyorPresentation.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/ElectricalNetwork.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.MechanicalSolver.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.Electrical.cs" />

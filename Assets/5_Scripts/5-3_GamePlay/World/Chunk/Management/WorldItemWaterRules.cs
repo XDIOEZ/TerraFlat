@@ -56,6 +56,15 @@ public static class WorldItemWaterRules
 
     #endregion
 
+    #region 沉底拾取
+
+    // 沉底物必须走到同一格才能摸回，仍在水面或下沉中的物品沿用原拾取范围。
+    public static bool CanPickUp(bool onBottom, Vector2 pickerPosition, Vector2 itemPosition) => !onBottom ||
+        Mathf.FloorToInt(pickerPosition.x) == Mathf.FloorToInt(itemPosition.x) &&
+        Mathf.FloorToInt(pickerPosition.y) == Mathf.FloorToInt(itemPosition.y);
+
+    #endregion
+
     #region 无实例浮沉计算
 
     /// <summary>不含物品重量的基础流速供水面表现复用；湖泊静止。</summary>

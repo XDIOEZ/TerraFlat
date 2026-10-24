@@ -20,26 +20,38 @@ local function nearWeapon(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
 end
 for _, weaponCase in ipairs({
-    {id = "ChippedTool", name = "打制石器", physical = 6},
-    {id = "Obsidian", name = "黑曜石", physical = 9}
+    {id = "ChippedTool", name = "打制石器", physical = 6, stamina = 1.5, impact = 1, shell = "ChippedTool", attack = "Attack_1"},
+    {id = "Obsidian", name = "黑曜石", physical = 9, stamina = 1.5, impact = 1, shell = "ChippedTool", attack = "Attack_1"},
+    {id = "WoodHammer", name = "木锤", physical = 6, stamina = 0.9, impact = 4, shell = "Stick", attack = "Attack_2"},
+    {id = "StoneHammer", name = "石锤", physical = 10, stamina = 2.7, impact = 4, shell = "Stick", attack = "Attack_2"}
 }) do
     local case = weaponCase
-    test.runtime("combat", "held_weapon_action", {weaponId = case.id}, function(data)
+    test.runtime("combat", "held_weapon_action", {weaponId = case.id, attackStateName = case.attack}, function(data)
         assert(data.weaponId == case.id, "未使用真实" .. case.name .. "定义")
         assert(data.held.inHand and data.held.ownedByPlayer and data.held.registered and data.held.indexed, case.name .. "没有完成正式手持装配")
         assert(data.animationRegistered and data.animationLoaded, case.name .. "攻击动作模块未注册或未加载")
         assert(data.damageRegistered and data.damageLoaded, case.name .. "伤害模块未注册或未加载")
-        assert(data.shellPrefabId == "ChippedTool" and data.hasKnifeTag, case.name .. "没有复用打制石器外壳或缺少小刀类别")
+        assert(data.shellPrefabId == case.shell, case.name .. "没有复用对应武器外壳")
+        if case.shell == "ChippedTool" then
+            assert(data.hasKnifeTag, case.name .. "缺少小刀类别")
+        else
+            assert(data.rendererPath == "Render/GameObject", case.name .. "没有绑定挥锤的实际渲染节点")
+        end
         nearWeapon(data.physicalDamage, case.physical, case.name .. "物理攻击力")
-        nearWeapon(data.staminaCostPerAttack, 1.5, case.name .. "每次基础精力消耗")
-        assert(data.impactKind == 1, case.name .. "没有使用切割伤害类型")
+        nearWeapon(data.staminaCostPerAttack, case.stamina, case.name .. "每次基础精力消耗")
+        assert(data.impactKind == case.impact, case.name .. "伤害类型错误")
         assert(data.initialWindowClosed, case.name .. "待机时伤害窗未关闭")
         assert(data.actionRequested and data.sawAttackState, case.name .. "公开动作入口没有启动攻击动画")
         assert(data.sawOpenWindow, case.name .. "攻击动画未打开真实伤害窗")
         assert(data.returnedToIdle and data.finalWindowClosed, case.name .. "单次攻击后未回待机或未关闭伤害窗")
+        assert(data.beforeDisableActionRequested and data.inactiveActionRejected, case.name .. "停用前未挥击或失活期间仍能攻击")
+        assert(data.disabledWindowClosed and data.disabledHitStopCleared, case.name .. "停用未清理伤害窗与动画速度")
+        assert(data.reactivatedIdle and data.reactivatedWindowClosed, case.name .. "再次启用未恢复待机或关闭伤害窗")
+        assert(data.reactivatedActionRequested and data.reactivatedAttackState, case.name .. "再次启用后无法正常攻击")
+        assert(data.inactiveAnimatorWarning == false, case.name .. "停用时仍对失活 Animator 播放动画")
         if case.id == "ChippedTool" then
             referenceWeapon = data
-        else
+        elseif case.id == "Obsidian" then
             assert(referenceWeapon ~= nil, "缺少打制石器的真实参考采样")
             assert(data.rendererPath == "Render/Render_1", "黑曜石贴图没有绑定武器的实际渲染节点")
             nearWeapon(data.physicalDamage, referenceWeapon.physicalDamage * 1.5, "黑曜石相对打制石器的伤害倍率")

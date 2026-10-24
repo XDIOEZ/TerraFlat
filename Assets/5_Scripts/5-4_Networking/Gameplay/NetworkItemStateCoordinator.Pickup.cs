@@ -340,6 +340,7 @@ namespace FlatWorld.Networking.Gameplay
                     SpaceSession.Current?.TryGetNetworkLooseItem(reservation.SourceData.Guid, out _, out SpaceSectorPosition position) == true &&
                     SpaceSectorCoordinates.Difference(position, observer.Position).Magnitude <= MaxPickupDistance;
             return reservation.Actor?.IsInSpace != true && reservation.Item != null &&
+                WorldItemWaterSystem.CanPickUpAt(reservation.Item, GetConnectionLogicalPosition(reservation.Connection)) &&
                 WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(reservation.Connection),
                     GetLogicalItemPosition(reservation.Item)) <= MaxPickupDistance;
         }
@@ -361,6 +362,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             item = ItemMgr.Instance.GetItemByGuid(itemGuid);
             if (!CanSynchronizeWorldItem(item) || !NetworkGameplayWorldScope.OwnsItem(connection, item) || item.itemData.Stack?.CanBePickedUp != true ||
+                !WorldItemWaterSystem.CanPickUpAt(item, GetConnectionLogicalPosition(connection)) ||
                 WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), GetLogicalItemPosition(item)) > MaxPickupDistance)
             { item = null; return false; }
             return true;

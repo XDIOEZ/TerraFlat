@@ -2,6 +2,73 @@ local function near(a, b, message)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
 end
 
+test.system("processing", "mineral_content", {}, function(data)
+    local mine, iron = data.mine.modules["生命值系统模块"].parameters.Data,
+        data.iron.modules["生命值系统模块"].parameters.Data
+    assert(mine.MaxHp == 80 and mine.MaxHp > iron.MaxHp and mine.DefenseValues.Physical == 24
+        and mine.DefenseValues.Physical > iron.DefenseValues.Physical, "钨矿硬度没有高于正式铁矿")
+    assert(data.mine.modules.harvestRequirement.parameters.requiredTool == 1
+        and data.mine.entityRuntime == data.iron.entityRuntime, "钨矿未复用镐专精与矿物实体后端")
+    assert(#data.loot == 1 and data.loot[1].LootPrefabName == "Ore_Tungsten"
+        and data.loot[1].DropChance == 1 and data.loot[1].MinAmount > 0,
+        "钨矿没有通过正式掉落表必掉钨矿石")
+    local order, tungsten = {}, nil
+    for index, rule in ipairs(data.caveRules) do
+        order[rule.itemId] = index
+        if rule.itemId == "Mine_Tungsten" then tungsten = rule end
+    end
+    assert(tungsten and math.abs(tungsten.threshold - .94) < .00001 and math.abs(tungsten.scale - .03) < .00001
+        and order.Mine_Diamond < order.Mine_Tungsten and order.Mine_Tungsten < order.Mine_Gold,
+        "钨矿未登记地下稀有矿脉或破坏了矿物优先顺序")
+    assert(data.surfaceCount == 0, "钨矿被错误接入地表自然生成")
+    for _, item in ipairs({ data.ore, data.ingot }) do
+        assert(item.stackable and item.canBePickedUp and item.weight > 0 and item.volume > 0
+            and #item.gameName > 0 and #item.description > 0 and #item.visual.spriteAddress > 0,
+            "钨矿石或钨锭缺少库存、名称、描述或贴图定义")
+    end
+    for _, sample in ipairs({ {id = "Ore_Tungsten", state = data.oreState},
+        {id = "Ingot_Tungsten", state = data.ingotState} }) do
+        local state = sample.state
+        assert(state.added and state.addedAmount == 3 and state.amount == 5,
+            "钨物品没有通过正式库存合并为一堆：" .. sample.id)
+        assert(state.savedId == sample.id and state.savedAmount == 5 and state.savedTemperature == 1800,
+            "钨物品实例快照丢失稳定身份、数量或材料温度：" .. sample.id)
+        assert(state.serialized and state.identified and state.networkId == sample.id and state.networkGuid == 9681,
+            "钨物品不能复用正式网络负载身份：" .. sample.id)
+    end
+end, "钨矿地下目录、硬度、镐专精、掉落及钨材料堆叠和快照身份")
+
+for _, sample in ipairs({
+    {temperature = 3421.99, matched = false, committed = false},
+    {temperature = 3422, matched = true, committed = true},
+    {temperature = 3500, matched = true, committed = true},
+    {temperature = 3422, amounts = {Ore_Tungsten = 1}, matched = false, committed = false},
+    {temperature = 3422, full = true, matched = true, committed = false}
+}) do
+    test.system("processing", "mineral_reaction", sample, function(data)
+        assert(data.minimum == 3422 and data.maximum == 9999 and data.matched == sample.matched
+            and data.committed == sample.committed, "钨熔炼的温区、缺料或满槽判定错误")
+        if sample.committed then
+            assert(data.input[1].amount == 0 and data.output[1].id == "Ingot_Tungsten"
+                and data.output[1].amount == 1, "钨熔炼没有按两矿换一锭原子提交")
+        else
+            assert(data.unchanged, "钨熔炼拒绝后仍扣料或改写输出")
+        end
+    end, string.format("钨矿正式反应事务：%g℃，满槽%s", sample.temperature, tostring(sample.full == true)))
+end
+
+for _, sample in ipairs({{target = 20, watts = 12}, {target = 1000, watts = 600},
+    {target = 2000, watts = 1200}, {target = 3500, watts = 2100}}) do
+    test.system("processing", "induction_temperature", sample, function(data)
+        assert(data.minimum == 20 and data.maximum == 3500 and data.default == 2000 and data.maximumWatts == 2100,
+            "电磁炉目标温区、默认值或最高功率错误")
+        assert(math.abs(data.requestedWatts - sample.watts) < .001 and data.clamped == sample.target,
+            "电磁炉没有按目标温度线性请求电量")
+        assert(data.boundarySeconds > 0 and data.boundarySeconds < 400,
+            "钨熔点的解析传热到界时间不在正式供热可达范围")
+    end, string.format("电磁炉目标%g℃请求%gW", sample.target, sample.watts))
+end
+
 for _, input in ipairs({
     { roll = 0, expected = true },
     { roll = 0.0999, expected = true },
@@ -180,7 +247,10 @@ test.system("processing", "cold_motion_workspace", {}, function(data)
     near(data.landedPosition, 2, "重新读取档案后没有连续完成原轨迹")
     near(data.middleDepth, .25, "漂浮物水线中点错误")
     near(data.finalDepth, .5, "漂浮物水线终点错误")
-    assert(not data.floatingTransition and data.sinkingCount == 0, "浮起过渡没有结束或沉没物仍留在档案")
+    assert(not data.floatingTransition, "浮起过渡没有结束")
+    assert(data.sinkingCount == 1 and data.sinkingRetained, "沉底物被删除，或没有结束过渡并保留拾取资格")
+    near(data.sinkingDepth, 1, "沉底物后台推进后丢失完全浸没状态")
+    near(data.sinkingAmount, 1, "沉底物后台推进后改变了数量")
     assert(data.duplicateError == "ArgumentException", "同世界重复实物身份没有被拒绝")
     near(data.recoveredPosition, .5, "失败后残留工作区污染下一轮冷物推进")
     assert(data.repeatedMotionBytes == 0, "已预热的冷物推进仍逐步重建模拟器或工作列表")

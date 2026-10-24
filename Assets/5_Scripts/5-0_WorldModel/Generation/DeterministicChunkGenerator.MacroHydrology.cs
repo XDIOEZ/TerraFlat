@@ -28,7 +28,8 @@ namespace FlatWorld.WorldModel
             var centers = new Dictionary<Int2, ChannelCenterSample>();
             var outputWindow = new HydrologyOutputWindow(request);
             int margin = settings.RiverMaxWidth + settings.RiverFloodplainMaxRadius +
-                         settings.RiverRunoffCellSize / 3 + 3 + outputWindow.Padding;
+                         settings.RiverRunoffCellSize / 3 + 3 + outputWindow.Padding +
+                         settings.RiverEstuaryLength;
             int minX = request.Address.ChunkOrigin.X - margin;
             int minY = request.Address.ChunkOrigin.Y - margin;
             int maxX = request.Address.ChunkOrigin.X + request.Profile.Width + margin;
@@ -168,6 +169,10 @@ namespace FlatWorld.WorldModel
                     timing?.RecordStageCount("river.local_refine.terminal_candidates", terminals.Count, accumulate: true);
                 }
             }
+            Dictionary<Int2, EstuaryCurrentSample> estuaries;
+            using (timing?.MeasureStage("river.local_refine.estuary", accumulate: true) ?? default)
+                estuaries = BuildEstuaryCurrents(settings, sampling, outputWindow, centers, cancellationToken);
+            timing?.RecordStageCount("river.local_refine.estuary_cells", estuaries.Count, accumulate: true);
             timing?.RecordStageCount("river.local_refine.water_cells", riverCells.Count, accumulate: true);
             timing?.RecordStageCount("river.local_refine.floodplain_cells", floodplainCells.Count, accumulate: true);
             timing?.RecordStageCount("river.local_refine.height_cache_hits", sampling.HeightHitCount, accumulate: true);
@@ -176,7 +181,7 @@ namespace FlatWorld.WorldModel
             timing?.RecordStageCount("river.local_refine.bend_cache_misses", sampling.ChannelCenterBiasMissCount, accumulate: true);
             timing?.RecordStageDuration("river.local_refine.height_compute",
                 sampling.HeightComputeTicks * 1000d / Stopwatch.Frequency, accumulate: true);
-            return new GeneratedHydrologyMap(riverCells, floodplainCells);
+            return new GeneratedHydrologyMap(riverCells, floodplainCells, estuaries);
         }
 
         private static Int2 ChannelPosition(MacroHydrologyRegion region, int index) =>

@@ -16,7 +16,7 @@
       "id": "Chestplate_Iron",
       "parent": "Equipment_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Iron.prefab",
-      "gameName": "铁甲",
+      "gameName": "钢甲",
       "description": "以钢锭锻造成的重型胸甲，牺牲少量移动速度换取可靠防护。",
       "durability": 200.0,
       "maxDurability": 200.0,
@@ -29,10 +29,14 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.TorsoOuter"
+        "EquipmentSlot.TorsoOuter",
+        "Material.Steel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png",
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Cuirass.png"
+        },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -166,6 +170,9 @@
         "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png"
+        },
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Twine/Chestplate_Twine_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
@@ -295,6 +302,9 @@
         "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png"
+        },
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,

@@ -6,5 +6,6 @@
   "ecologyTickInterval": 0.25,
   "maxLoadedGameObjectActors": 96,
   "maxLoadedEntityActors": 8192,
-  "residentChecksPerTick": 8
+  "residentChecksPerTick": 8,
+  "naturalSpawnIntervalGameSeconds": 360.0
 }

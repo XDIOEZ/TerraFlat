@@ -37,6 +37,14 @@
           "value": 7
         },
         {
+          "id": "river.estuary.length",
+          "value": 18
+        },
+        {
+          "id": "river.estuary.halfAngleDegrees",
+          "value": 35
+        },
+        {
           "id": "river.meanderStrength",
           "value": 1.15
         },

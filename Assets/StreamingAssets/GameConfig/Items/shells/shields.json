@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Shield_Wood",
+      "parent": "Equipment_Base",
+      "gameName": "木盾",
+      "labelKey": "item.Shield_Wood.name",
+      "descriptionKey": "item.Shield_Wood.description",
+      "description": "用5块木板和5根绳子制作的盾牌，可用3个钉子加固一次，当前耐久与耐久上限同时提高50%。手持时：左键单击盾击，动作中防御+5；长按举盾，防御+10、移动速度减半。装备到副手后，可使用弹反按键（默认Q）短暂获得10点防御。装备本身不提供常驻防御。",
+      "durability": 100,
+      "maxDurability": 100,
+      "amount": 1,
+      "weight": 2.5,
+      "volume": 4,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "Tool",
+        "Shield",
+        "Wood",
+        "EquipmentSlot.OffHand"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Shield_Wood/Shield_Wood_Icon.png",
+        "rendererPath": "图片",
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "rendererLocalPosition": {
+          "x": 0.18,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "flipX": false,
+        "flipY": false,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.75,
+            "y": 0.75
+          }
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": []
+          }
+        },
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {
+              "Physical": 5,
+              "ImpactKind": 4
+            },
+            "DamageInterval": -1,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": true,
+            "MaxAttackTargets": 3,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.7,
+            "HitSlowDuration": 0.2
+          }
+        },
+        "shield": {
+          "prefab": "Module_Shield",
+          "id": "Shield",
+          "enabled": true,
+          "parameters": {
+            "Settings": {
+              "HoldThreshold": 0.2,
+              "BashDuration": 0.3,
+              "BashDefense": 5,
+              "GuardDefense": 10,
+              "GuardSpeedMultiplier": 0.5,
+              "ParryDuration": 0.2,
+              "ParryDefense": 10,
+              "ParryCooldown": 0.6
+            }
+          }
+        }
+      }
+    }
+  ]
+}

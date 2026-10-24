@@ -62,7 +62,8 @@ namespace FlatWorld.WorldModel
             EcologyItemCountDistribution itemCountDistribution = EcologyItemCountDistribution.Fixed,
             int itemCountMin = 1,
             double maximumEnvironmentValue = double.MaxValue,
-            bool requireNaturalPlantableGround = false)
+            bool requireNaturalPlantableGround = false,
+            int sharedRadius = 0, int footprintWidth = 1, int footprintHeight = 1)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -72,6 +73,16 @@ namespace FlatWorld.WorldModel
                 throw new ArgumentOutOfRangeException(nameof(distributionMode));
             if (!Enum.IsDefined(typeof(EcologyItemCountDistribution), itemCountDistribution))
                 throw new ArgumentOutOfRangeException(nameof(itemCountDistribution));
+            if (sharedRadius < 0 || sharedRadius > 64 || footprintWidth < 1 || footprintHeight < 1 ||
+                (footprintWidth & 1) == 0 || (footprintHeight & 1) == 0 ||
+                sharedRadius > 0 && (companionOnly || itemCount != 1 ||
+                    itemCountDistribution != EcologyItemCountDistribution.Fixed ||
+                    footprintWidth > sharedRadius * 2 + 1 || footprintHeight > sharedRadius * 2 + 1 ||
+                    patchSpacing < sharedRadius * 4 + 4))
+                throw new ArgumentException("跨区块资源需要独立单实体、奇数占地及足够的生成间距。");
+            SharedRadius = sharedRadius;
+            FootprintWidth = footprintWidth;
+            FootprintHeight = footprintHeight;
             if (!companionOnly && !string.IsNullOrWhiteSpace(requiredChunkTag))
                 throw new ArgumentException("Chunk tag requirements only apply to companions.",
                     nameof(requiredChunkTag));
@@ -103,6 +114,8 @@ namespace FlatWorld.WorldModel
             MinHeight = Clamp01(minHeight);
             MaxHeight = Math.Max(MinHeight, Clamp01(maxHeight));
             ProvidedTags = new ReadOnlyCollection<string>(NormalizeTags(providedTags));
+            if (sharedRadius > 0 && ProvidedTags.Count > 0)
+                throw new ArgumentException("共享静态资源不能声明伴生宿主标签。", nameof(providedTags));
             CompanionOnly = companionOnly;
             CompanionHostTag = companionHostTag?.Trim() ?? string.Empty;
             RequiredChunkTag = requiredChunkTag?.Trim() ?? string.Empty;
@@ -176,6 +189,10 @@ namespace FlatWorld.WorldModel
         public double PatchRadius { get; }
         /// <summary>每个候选网格实际形成聚落的概率。</summary>
         public double PatchChance { get; }
+        /// <summary>大于零时按稀疏候选网格生成，覆盖此半径的区块共享一个实体。</summary>
+        public int SharedRadius { get; }
+        public int FootprintWidth { get; }
+        public int FootprintHeight { get; }
 
         #endregion
 
@@ -253,7 +270,7 @@ namespace FlatWorld.WorldModel
 
         public NaturalItemPlacement(int guid, string itemId, int localX, int localY,
             float offsetX, float offsetY, string ruleId, int hostGuid = 0,
-            string targetDimensionId = null)
+            string targetDimensionId = null, Int2? sharedAnchor = null)
         {
             Guid = guid == 0 ? 1 : guid;
             ItemId = itemId ?? string.Empty;
@@ -264,6 +281,7 @@ namespace FlatWorld.WorldModel
             RuleId = ruleId ?? string.Empty;
             HostGuid = hostGuid;
             TargetDimensionId = targetDimensionId?.Trim() ?? string.Empty;
+            SharedAnchor = sharedAnchor;
         }
 
         public int Guid { get; }
@@ -278,6 +296,9 @@ namespace FlatWorld.WorldModel
         /// <summary>非空表示该自然物是跨维度传送门；目标位置默认与当前世界格一一对应。</summary>
         public string TargetDimensionId { get; }
         public bool IsDimensionPortal => !string.IsNullOrWhiteSpace(TargetDimensionId);
+        /// <summary>共享实体的规范世界格；LocalX/Y 仅表示当前代理区块中的最近镜像。</summary>
+        public Int2? SharedAnchor { get; }
+        public bool IsShared => SharedAnchor.HasValue;
 
         #endregion
     }
@@ -295,6 +316,7 @@ namespace FlatWorld.WorldModel
             OffsetX = placement.OffsetX;
             OffsetY = placement.OffsetY;
             RuleId = placement.RuleId;
+            SharedAnchor = placement.SharedAnchor;
         }
 
         public int Guid { get; }
@@ -306,7 +328,8 @@ namespace FlatWorld.WorldModel
         public string RuleId { get; }
 
         public NaturalItemPlacement ToPlacement() => new NaturalItemPlacement(
-            Guid, ItemId, LocalX, LocalY, OffsetX, OffsetY, RuleId);
+            Guid, ItemId, LocalX, LocalY, OffsetX, OffsetY, RuleId, sharedAnchor: SharedAnchor);
+        public Int2? SharedAnchor { get; }
         #endregion
     }
 
@@ -342,7 +365,7 @@ namespace FlatWorld.WorldModel
     /// 在已完成的纯地形上执行可配置生态阶段。
     /// 宿主和伴生物都由规则声明，不读取 Prefab 标签，因此后台生成可以完全无头运行。
     /// </summary>
-    public static class ChunkEcologyGenerator
+    public static partial class ChunkEcologyGenerator
     {
         #region 生成常量
 
@@ -405,7 +428,7 @@ namespace FlatWorld.WorldModel
             for (int ruleIndex = 0; ruleIndex < rules.Count; ruleIndex++)
             {
                 EcologySpawnRuleSnapshot rule = rules[ruleIndex];
-                if (rule == null)
+                if (rule == null || rule.SharedRadius > 0)
                     continue;
                 if (rule.CompanionOnly)
                     companionRules.Add(rule);
@@ -625,7 +648,7 @@ namespace FlatWorld.WorldModel
             for (int ruleIndex = 0; ruleIndex < rules.Count; ruleIndex++)
             {
                 EcologySpawnRuleSnapshot rule = rules[ruleIndex];
-                if (rule == null || rule.CompanionOnly || !RuleProvidesTag(rule, tag))
+                if (rule == null || rule.SharedRadius > 0 || rule.CompanionOnly || !RuleProvidesTag(rule, tag))
                     continue;
                 for (int y = 0; y < request.Profile.Height; y++)
                 for (int x = 0; x < request.Profile.Width; x++)
@@ -660,7 +683,7 @@ namespace FlatWorld.WorldModel
             for (int i = 0; i < rules.Count; i++)
             {
                 EcologySpawnRuleSnapshot rule = rules[i];
-                if (rule != null && !rule.CompanionOnly && RuleProvidesTag(rule, tag))
+                if (rule != null && rule.SharedRadius == 0 && !rule.CompanionOnly && RuleProvidesTag(rule, tag))
                     taggedRules.Add(rule);
             }
             if (taggedRules.Count == 0) return false;

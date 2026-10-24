@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:metal_hammer_copper",
+      "displayName": "铜锤",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {"match": "exact_item", "itemId": "Ingot_Copper", "amount": 3},
+        {"match": "exact_item", "itemId": "Stick_Wood", "amount": 1},
+        {"match": "tag", "tag": "Rope", "amount": 2}
+      ],
+      "outputs": [{"itemId": "CopperHammer", "amount": 1}],
+      "actions": []
+    },
+    {
+      "id": "core:metal_hammer_iron",
+      "displayName": "铁锤",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {"match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 3},
+        {"match": "exact_item", "itemId": "Stick_Wood", "amount": 1},
+        {"match": "tag", "tag": "Rope", "amount": 2}
+      ],
+      "outputs": [{"itemId": "IronHammer", "amount": 1}],
+      "actions": []
+    },
+    {
+      "id": "core:metal_hammer_steel",
+      "displayName": "钢锤",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {"match": "exact_item", "itemId": "Ingot_Steel", "amount": 3},
+        {"match": "exact_item", "itemId": "Stick_Wood", "amount": 1},
+        {"match": "tag", "tag": "Rope", "amount": 2}
+      ],
+      "outputs": [{"itemId": "SteelHammer", "amount": 1}],
+      "actions": []
+    }
+  ]
+}

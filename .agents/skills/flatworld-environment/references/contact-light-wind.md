@@ -22,4 +22,12 @@
 - WorldMotionSystem.TryCreateWindSamplingContext 每批冻目录质量范围、星球重力、活动拓扑/ChunkMgr；每件真质量/当地四区仍采，小步阻挡/移动后检测仍实时。质量范围依 ItemDefinitionRevision/引用缓存；单件/批量共场，直接读区域风字段/BuildWind，不为风组整份雨雷快照。
 - 全域无有效推动时单件直接零、全零区不采；HasWindPush 包含停风尾段，不能按原始瞬时风强跳过。
 
+## 散物统一运动
+
+- `Entities/Move/LooseItemMotion.Core.cs` 是传送带、水流和外力共用的合成/小步积分入口；`LooseItemMotion.cs` 负责实际世界的地形、碰撞和完整 Item 提交。来源只交付速度，不能各自再写物品位置。
+- 新增推动注册 `LooseItemMotion.RegisterVelocitySource(id, context => velocity)`，返回单位/秒；可按 `WorldKey/Position/Item/Mass/InWater` 筛选，释放返回租约即撤销。采样须无副作用，不在回调里累计时间或修改物品；没有风但有注册来源时也会推动。
+- `MachineWorld.SampleLooseConveyorVelocity` 保留带形、转速和侧向收拢；水流仍读 `WorldItemWaterRules.ResolveDriftSpeed`。统一先合成载体、风及扩展速度，再过阻挡；水流自身受岸线限制，独立外力可推物上岸。
+- 轻量散物的水/带/风归 `CommitEnvironmentMotion` 提交，完整 Item 归 `CommitItemPosition`；后台存档复用同一内核且只查所属世界，不借用镜头物理场。保留原环境检查节奏、浮沉和入箱事务；外力不重复进入水/带物品的备用风循环。
+- 回归 `mechanical/loose_item_motion`、`mechanical/loose_item_sources`；PlayMode 期间只运行 `Tools/Tests/LooseItemMotion` 离线纯规则，不把它当作 Unity 场景碰撞或联机验收。
+
 回归：`environment/tile_effect_reenable`、`environment/light_registry`、`environment/light_sampling`、`environment/wind_push_transition`。

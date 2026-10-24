@@ -18,7 +18,7 @@
       "tags": ["Sheep", "Animal", "Blood", "Prey"],
       "visual": {
         "animationState": "Stand",
-        "flipX": false
+        "flipX": true
       },
       "modules": {
         "animator": {

@@ -1,4 +1,5 @@
 using FlatWorld.Combat;
+using FlatWorld.Navigation;
 using FlatWorld.Networking;
 using UnityEngine;
 
@@ -81,8 +82,9 @@ public sealed partial class Mod_AI_Bird
         if (state.Phase == BirdFlightPhase.Flying)
         {
             // 食物所在格可落地不代表鸟当前脚下也可落地，先飞到可落脚的位置再收起翅膀。
-            if (distance <= peckRange && CanLand(body.position)) BeginLanding();
-            else if (distance <= peckRange)
+            float landingDistance = AIApproachRange.ResolveStopDistance(FlightTargetArrivalDistance, peckRange);
+            if (distance <= landingDistance && CanLand(body.position)) BeginLanding();
+            else if (distance <= landingDistance)
             {
                 Vector2Int targetCell = new(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y));
                 FlyTowards(WorldTopologyRuntime.NormalizePosition(new Vector2(targetCell.x + 0.5f, targetCell.y + 0.5f)), deltaTime);
@@ -91,18 +93,18 @@ public sealed partial class Mod_AI_Bird
             return true;
         }
         state.Elapsed = 0f;
+        mover.Speed.BaseValue = groundSpeed;
+        mover.SetInteractionDestination(target, peckRange);
         if (distance > peckRange)
         {
             peckRemaining = peckSeconds;
-            mover.Speed.BaseValue = groundSpeed;
-            mover.SetDestination(target);
             return true;
         }
-        mover.StopMovement();
         peckRemaining -= deltaTime;
         if (peckRemaining > 0f) return true;
         peckRemaining = peckSeconds;
-        if (!food.TryEatDroppedFood(forageTarget, forageTargetTag, peckRange)) forageTarget = default;
+        if (!food.TryEatDroppedFood(forageTarget, forageTargetTag, peckRange))
+        { forageTarget = default; mover.StopMovement(); }
         return true;
     }
 

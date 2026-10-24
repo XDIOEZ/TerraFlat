@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Needle_Copper",
+      "parent": "Needle_Bone",
+      "gameName": "铜针",
+      "description": "在砧上由金属锭锻成的缝纫工具。耐久100，每成功缝制一件装备消耗1点，耗尽后损坏；可堆叠，逐根使用。",
+      "durability": 100,
+      "maxDurability": 100,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Tools/Needle_Copper/Needle_Copper_Icon.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "Needle_Iron",
+      "parent": "Needle_Bone",
+      "gameName": "铁针",
+      "description": "在砧上由金属锭锻成的缝纫工具。耐久200，每成功缝制一件装备消耗1点，耗尽后损坏；可堆叠，逐根使用。",
+      "durability": 200,
+      "maxDurability": 200,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Tools/Needle_Iron/Needle_Iron_Icon.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "IronAnvil",
+      "parent": "CopperAnvil",
+      "gameName": "铁砧-建筑",
+      "description": "放置后锻造金属板或缝纫针。耐久1000，每产出一件物品消耗1点；耗尽后损坏并返还5个熟铁锭，内部物品一起掉落。",
+      "durability": 1000,
+      "maxDurability": 1000,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/IronAnvil_World.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"IronAnvil\",\"SummonerPrefabId\":\"IronAnvil_Summoner\",\"SharedModuleIds\":[\"手动加工模块\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": false
+          }
+        }
+      }
+    },
+    {
+      "id": "IronAnvil_Summoner",
+      "parent": "CopperAnvil_Summoner",
+      "gameName": "铁砧",
+      "description": "放置后锻造金属板或缝纫针。耐久1000，每产出一件物品消耗1点；耗尽后损坏并返还5个熟铁锭，内部物品一起掉落。",
+      "durability": 1000,
+      "maxDurability": 1000,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/IronAnvil_World.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"IronAnvil\",\"SummonerPrefabId\":\"IronAnvil_Summoner\",\"SharedModuleIds\":[\"手动加工模块\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": false
+          }
+        }
+      }
+    }
+  ]
+}

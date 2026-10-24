@@ -14,12 +14,13 @@ public static class ItemRuntimeStateFingerprint
     {
         signature = 0;
         if (data == null || visiting == null || visiting.Count >= MaxNestedItems ||
-            (data.GetType() != typeof(Data_GeneralItem) && data.GetType() != typeof(BlockData)) ||
+            (data.GetType() != typeof(Data_GeneralItem) && data.GetType() != typeof(BlockData) && data.GetType() != typeof(Data_Player)) ||
             data.PreservedModuleStates?.Length > 0 || !visiting.Add(data)) return false;
         try
         {
             var hash = new ItemRuntimeFingerprintBuilder();
-            hash.Add(data.GetType() == typeof(Data_GeneralItem) ? 0 : 3);
+            hash.Add(ModuleInstanceStateCodecs.Revision);
+            hash.Add(data.GetType() == typeof(Data_GeneralItem) ? 0 : data.GetType() == typeof(Data_Player) ? 1 : 3);
             hash.Add(data.IDName);
             hash.Add(data.Guid);
             if (data.Stack != null && data.Stack.GetType() != typeof(ItemStack)) return false;
@@ -62,10 +63,59 @@ public static class ItemRuntimeStateFingerprint
                     hash.Add(moduleSignature);
                 }
             if (data is Data_GeneralItem general) hash.Add(general.code);
+            if (data is Data_Player player && !AppendPlayer(ref hash, player, publicState, visiting)) return false;
             signature = hash.Value;
             return true;
         }
         finally { visiting.Remove(data); }
+    }
+
+    #endregion
+
+    #region 玩家实例状态指纹
+
+    // 与 PlayerInstanceSnapshot 的公开和私有字段保持一致，未覆盖的扩展类型仍完整捕获。
+    private static bool AppendPlayer(ref ItemRuntimeFingerprintBuilder hash, Data_Player player,
+        bool publicState, HashSet<ItemData> visiting)
+    {
+        hash.Add(player.CurrentSceneName);
+        hash.Add(player.hp != null);
+        if (player.hp != null)
+        {
+            if (player.hp.GetType() != typeof(Hp)) return false;
+            hash.Add(player.hp.Value);
+            hash.Add(player.hp.maxValue);
+            AppendStrings(ref hash, player.hp.Weaknesses);
+        }
+        hash.Add(player.defense != null);
+        if (player.defense != null)
+        {
+            if (player.defense.GetType() != typeof(Defense)) return false;
+            hash.Add(player.defense.Cutting);
+            hash.Add(player.defense.Piercing);
+            hash.Add(player.defense.Chopping);
+            hash.Add(player.defense.Blunt);
+        }
+        hash.Add(player.Speed != null);
+        if (player.Speed != null)
+        {
+            if (player.Speed.GetType() != typeof(GameValue_float)) return false;
+            hash.Add(player.Speed.BaseValue);
+            hash.Add(player.Speed.BaseAdditive);
+            hash.Add(player.Speed.AdditiveModifier);
+            hash.Add(player.Speed.MultiplicativeModifier);
+            hash.Add(player.Speed.FinalAdditive);
+        }
+        hash.Add(player.stamina);
+        hash.Add(player.staminaMax);
+        hash.Add(player.staminaRecoverySpeed);
+        hash.Add(player.Name_User);
+        hash.Add(player.PlayerPov);
+        hash.Add(player.MaxCarryWeight);
+        hash.Add(player.MaxCarryVolume);
+        hash.Add(player.PerceptionRadiusMultiplier);
+        hash.Add(publicState);
+        return publicState || AppendInventories(ref hash, player._inventoryData, visiting);
     }
 
     #endregion
@@ -155,6 +205,26 @@ public static class ItemRuntimeStateFingerprint
 
     #region 内嵌库存与列表
 
+    /// <summary>直接比较库存持久状态；槽位内物品始终包含位姿及私有模块状态。</summary>
+    public static bool TryCalculateInventory(Inventory_Data data, HashSet<ItemData> visiting, out ulong signature)
+    {
+        signature = 0;
+        if (visiting == null) return false;
+        var hash = new ItemRuntimeFingerprintBuilder();
+        hash.Add(ModuleInstanceStateCodecs.Revision);
+        if (!AppendInventory(ref hash, data, visiting)) return false;
+        signature = hash.Value;
+        return true;
+    }
+
+    /// <summary>二进制载荷按内容比较，外部原位改写也会使缓存失效。</summary>
+    public static ulong CalculateBinaryPayload(byte[] bytes)
+    {
+        var hash = new ItemRuntimeFingerprintBuilder();
+        AppendBytes(ref hash, bytes);
+        return hash.Value;
+    }
+
     private static bool AppendInventories(ref ItemRuntimeFingerprintBuilder hash,
         Dictionary<string, Inventory_Data> inventories, HashSet<ItemData> visiting)
     {
@@ -163,28 +233,33 @@ public static class ItemRuntimeStateFingerprint
         foreach (KeyValuePair<string, Inventory_Data> pair in inventories)
         {
             hash.Add(pair.Key);
-            Inventory_Data inventory = pair.Value;
-            hash.Add(inventory != null);
-            if (inventory == null) continue;
-            if (inventory.GetType() != typeof(Inventory_Data)) return false;
-            hash.Add(inventory.Name);
-            hash.Add(inventory.Index);
-            hash.Add(inventory.IsInjected);
-            hash.Add(inventory.PanelPosition);
-            hash.Add(inventory.PanelIsOpen);
-            hash.Add(inventory.IsDepositBlocked);
-            hash.Add(inventory.itemSlots?.Count ?? 0);
-            if (inventory.itemSlots == null) continue;
-            foreach (ItemSlot slot in inventory.itemSlots)
-            {
-                if (slot != null && slot.GetType() != typeof(ItemSlot)) return false;
-                ItemData item = slot?.itemData;
-                hash.Add(item != null);
-                if (item == null) continue;
-                // 库存快照中的内嵌物品始终包含自己的位姿与私有状态。
-                if (!TryCalculate(item, true, false, visiting, out ulong itemSignature)) return false;
-                hash.Add(itemSignature);
-            }
+            if (!AppendInventory(ref hash, pair.Value, visiting)) return false;
+        }
+        return true;
+    }
+
+    private static bool AppendInventory(ref ItemRuntimeFingerprintBuilder hash,
+        Inventory_Data inventory, HashSet<ItemData> visiting)
+    {
+        hash.Add(inventory != null);
+        if (inventory == null) return true;
+        if (inventory.GetType() != typeof(Inventory_Data)) return false;
+        hash.Add(inventory.Name);
+        hash.Add(inventory.Index);
+        hash.Add(inventory.IsInjected);
+        hash.Add(inventory.PanelPosition);
+        hash.Add(inventory.PanelIsOpen);
+        hash.Add(inventory.IsDepositBlocked);
+        hash.Add(inventory.itemSlots?.Count ?? 0);
+        if (inventory.itemSlots == null) return true;
+        foreach (ItemSlot slot in inventory.itemSlots)
+        {
+            if (slot != null && slot.GetType() != typeof(ItemSlot)) return false;
+            ItemData item = slot?.itemData;
+            hash.Add(item != null);
+            if (item == null) continue;
+            if (!TryCalculate(item, true, false, visiting, out ulong itemSignature)) return false;
+            hash.Add(itemSignature);
         }
         return true;
     }

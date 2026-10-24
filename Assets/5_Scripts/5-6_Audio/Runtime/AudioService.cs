@@ -384,7 +384,8 @@ namespace FlatWorld.Audio
 
         public AudioHandle Play(AudioCue cue, AudioPlayOptions options)
         {
-            if (cue == null)
+            // 显式停用的事件在选片、冷却和声源分配之前结束，真正缺片仍走原有诊断。
+            if (cue == null || !cue.PlaybackEnabled)
                 return AudioHandle.Invalid;
 
             options.Normalize();

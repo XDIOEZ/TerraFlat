@@ -4,10 +4,17 @@
   "continueAfterFailure": true,
   "buildShowroom": false,
   "cases": [
+    {"id": "combat_shield_rules", "name": "木盾单击长按、弹反窗口与副手索引", "luaPath": "GameplayTests/Systems/Combat/shield-rules.lua", "enabled": true},
     {
       "id": "combat_probability_rules",
       "name": "统一离散概率与掉落数量",
       "luaPath": "GameplayTests/Systems/Combat/probability.lua",
+      "enabled": true
+    },
+    {
+      "id": "combat_external_rules",
+      "name": "来源无关的战斗参数与死亡开关",
+      "luaPath": "GameplayTests/Systems/Combat/external-rules.lua",
       "enabled": true
     },
     {

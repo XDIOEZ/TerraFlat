@@ -95,10 +95,19 @@ public sealed class RuntimeLiquidOutput
     public float Amount = 1f;
 }
 
-public sealed class RuntimeRecipeResult
+[MemoryPack.MemoryPackable]
+public sealed partial class RuntimeRecipeResult
 {
+    #region 实例产物配置
     public string CopyInputTag;
+    public string CopyInputItemId;
+    public string AddTag;
     public bool ReinforceWithAdhesive;
+    // 两种来源都经过原实例克隆，统一保留身份和已有品质。
+    [MemoryPack.MemoryPackIgnore]
+    public bool CopiesInputInstance => !string.IsNullOrWhiteSpace(CopyInputTag) ||
+                                       !string.IsNullOrWhiteSpace(CopyInputItemId);
+    #endregion
     public string ItemName = string.Empty;
     public int amount = 1;
     public float durabilityMultiplier = CraftedDurabilityQuality.DefaultMultiplier;

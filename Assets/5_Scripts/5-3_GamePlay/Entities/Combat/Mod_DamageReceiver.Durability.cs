@@ -46,22 +46,22 @@ public partial class Mod_DamageReceiver
     /// <summary>全身基础防御与覆盖此部位的装备防御只合并一次，再抵扣一次物理防御。</summary>
     public CombatDefense GetBodyPartDefense(BodyPartHealth part)
     {
-        var result = new CombatDefense(Defense.Cutting, Defense.Piercing, Defense.Chopping, Defense.Blunt);
+        var result = GetEffectiveDefense();
         result.Add(part.DefenseValues);
         foreach (BodyArmor armor in bodyArmorSources.Values)
             if (Array.IndexOf(armor.Parts, part.Part) >= 0) result.Add(armor.Defense);
         return result;
     }
 
-    /// <summary>共享纯计算入口；先按难度修正攻击并减护甲，再应用部位和来源倍率，不受剩余耐久截断。</summary>
+    /// <summary>共享纯计算入口；先修正攻击并减护甲，再应用部位和来源倍率，不受剩余耐久截断。</summary>
     public static float4 CalculateBodyPartDamage(float4 raw, CombatDefense armor, float partMultiplier,
-        float share = 1f, float difficulty = 1f, float receivedMultiplier = 1f)
+        float share = 1f, float attackMultiplier = 1f, float receivedMultiplier = 1f)
     {
-        return FlatWorld.Combat.CombatRules.Resolve(raw, GameplayCombatBridge.Values(armor), difficulty,
+        return FlatWorld.Combat.CombatRules.Resolve(raw, GameplayCombatBridge.Values(armor), attackMultiplier,
             share * partMultiplier * receivedMultiplier);
     }
 
-    private float4 ResolveBodyPartAttack(float4 raw, float difficulty, float receivedMultiplier,
+    private float4 ResolveBodyPartAttack(float4 raw, float attackMultiplier, float receivedMultiplier,
         BodyPartType? targetPart, out List<BodyPartDamageInfo> hits)
     {
         hits = new List<BodyPartDamageInfo>(2);
@@ -76,16 +76,16 @@ public partial class Mod_DamageReceiver
         BodyPartHealth second = !targetPart.HasValue && UnityEngine.Random.value < Data.TwoPartHitChance
             ? SelectRandomBodyPart(first) : null;
         float share = second == null ? 1f : 0.5f;
-        float4 result = PrepareBodyPartHit(first, raw, share, difficulty, receivedMultiplier, hits);
-        if (second != null) result += PrepareBodyPartHit(second, raw, share, difficulty, receivedMultiplier, hits);
+        float4 result = PrepareBodyPartHit(first, raw, share, attackMultiplier, receivedMultiplier, hits);
+        if (second != null) result += PrepareBodyPartHit(second, raw, share, attackMultiplier, receivedMultiplier, hits);
         return result;
     }
 
-    private float4 PrepareBodyPartHit(BodyPartHealth part, float4 raw, float share, float difficulty,
+    private float4 PrepareBodyPartHit(BodyPartHealth part, float4 raw, float share, float attackMultiplier,
         float receivedMultiplier, List<BodyPartDamageInfo> hits)
     {
         float4 typed = CalculateBodyPartDamage(raw, GetBodyPartDefense(part), part.DamageMultiplier,
-            share, difficulty, receivedMultiplier);
+            share, attackMultiplier, receivedMultiplier);
         float damage = math.csum(typed);
         hits.Add(new BodyPartDamageInfo { Part = part.Part, DamageValue = damage, DamageShare = share,
             HpBefore = part.Hp, HpAfter = Mathf.Max(0f, part.Hp - damage), MaxHp = part.MaxHp,

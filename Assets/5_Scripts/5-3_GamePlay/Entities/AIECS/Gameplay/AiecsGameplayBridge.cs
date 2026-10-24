@@ -264,7 +264,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (factionRevision != FactionRelationService.Revision) RefreshFactions();
             var centers = Simulation.GroupPositions;
             for (int i = 0; i < Templates.Length; i++) if (centers[i].z > 0f) Navigation.UpdateGoal(goals[i], centers[i].xy);
-            losView = los.Read(Navigation.Read()); Simulation.Difficulty = GameplayCombatBridge.Difficulty();
+            losView = los.Read(Navigation.Read()); Simulation.Tuning = GameplayCombatBridge.Tuning();
             DayTimeSystem clock = DayTimeSystem.Instance;
             if (clock != null &&
                 clock.TryGetResolvedTimeData(worldKey, out _, out TimeData day) &&
@@ -507,7 +507,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>稀疏桶只筛数据候选；Collider2D 决定几何命中后再预约攻击配额。</summary>
         public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
         {
-            if (Simulation == null || !GameDifficultyService.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
+            if (Simulation == null || !ActorIdentity.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
                 (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
             using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
             var view = Simulation.Spatial;
@@ -561,7 +561,9 @@ namespace FlatWorld.AIECS.Gameplay
             foreach (WeaponCandidate candidate in weaponCandidates)
             {
                 if (weapon.RemainingAttackTargets == 0) break;
-                if (weapon.TryReserveExternalTarget(candidate.Hit.TargetKey)) Simulation.SubmitHit(candidate.Hit);
+                if (!weapon.TryReserveExternalTarget(candidate.Hit.TargetKey)) continue;
+                weapon.ConsumeWeaponDurabilityForHit();
+                Simulation.SubmitHit(candidate.Hit);
             }
         }
 
@@ -667,7 +669,7 @@ namespace FlatWorld.AIECS.Gameplay
                 foreach (var entry in table.Entries)
                 {
                     if (UnityEngine.Random.value > entry.Probability) continue;
-                    int count = GameDifficultyService.ScaleRandomizedAmount(entry.RollAmount(), GameDifficultyService.Current.World.LootAmountMultiplier);
+                    int count = GameRuleMath.ScaleRandomizedAmount(entry.RollAmount(), GameRuleConfiguration.Current.World.LootAmountMultiplier);
                     if (count > 0) QueueLoot(entry.ItemId, death.Position, count);
                 }
             }

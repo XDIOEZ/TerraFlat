@@ -19,6 +19,13 @@ public static partial class GameplayTestSystemProbe
         GameplayTestAnimationMotionSource motionSource = null;
         Mod_DamageReceiver health = null;
         Mod_Damage damage = null;
+        Mod_HotBar hotbar = null;
+        Mod_FocusPoint heldFocus = null;
+        Transform handReference = null;
+        Transform handAnchor = null;
+        Transform heldTransform = null;
+        Vector3 handAnchorLocalPosition = default;
+        Quaternion heldLocalRotation = Quaternion.Euler(0f, 0f, 23f);
         int deathStartedCount = 0;
         var sprites = new List<Sprite>();
         try
@@ -132,6 +139,34 @@ public static partial class GameplayTestSystemProbe
             }
             animation.ModuleInit(item, new Ex_ModData_MemoryPackable { Enabled = true });
             item.itemMods.AddMod(animation);
+            if (Flag(args, "withHeldAttachment", false))
+            {
+                // 身体上的真实参考点只作观测，手持物仍通过正式快捷栏跟随接口更新。
+                handReference = new GameObject("HandReference").transform;
+                handReference.SetParent(visual.transform, false);
+                handReference.localPosition = new Vector3(.42f, .65f, 0f);
+                handAnchor = new GameObject("HandAnchor").transform;
+                handAnchor.SetParent(root.transform, false);
+                handAnchor.position = handReference.position;
+                handAnchorLocalPosition = handAnchor.localPosition;
+                heldTransform = new GameObject("HeldItem").transform;
+                heldTransform.SetParent(handAnchor, false);
+                GameItem heldItem = heldTransform.gameObject.AddComponent<GameItem>();
+                heldItem.BindData(EntityProbeData("test:held_attachment", 1f));
+                heldTransform.localRotation = heldLocalRotation;
+                hotbar = handAnchor.gameObject.AddComponent<Mod_HotBar>();
+                hotbar.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.Hotbar, Enabled = true });
+                hotbar.spawnLocation = handAnchor;
+                hotbar.CurentSelectItem = heldItem;
+                hotbar.BindHeldItemPresentation(animation);
+                if (Flag(args, "withHeldAim", false))
+                {
+                    heldFocus = root.AddComponent<Mod_FocusPoint>();
+                    heldFocus.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.FocusPoint, Enabled = true });
+                    heldFocus.Data.RotationSpeed = 36000f;
+                    heldFocus.AddRotationTarget(heldTransform, updateAfterPresentation: true);
+                }
+            }
             Animator sourceAnimator = Flag(args, "withAnimator", false) ? root.AddComponent<Animator>() : null;
             animation.animator = sourceAnimator;
             root.SetActive(true);
@@ -269,6 +304,17 @@ public static partial class GameplayTestSystemProbe
                 if (animation.IsRuntimeLoaded && animation.Enabled && animation.enabled)
                     animation.AdvancePresentation((float)Number(step, "deltaTime", .08d));
 
+                float heldAimError = 0f;
+                if (heldFocus != null)
+                {
+                    Vector2 aim = (Vector2)root.transform.position + new Vector2(
+                        (float)Number(step, "aimX", 3d), (float)Number(step, "aimY", 2d));
+                    heldFocus.Data.See_Point = aim;
+                    heldFocus.RefreshPresentedRotation(.1f);
+                    Vector2 expectedAim = WorldTopologyRuntime.ShortestDelta(heldTransform.position, aim);
+                    heldAimError = Vector2.Angle(heldTransform.right, expectedAim);
+                }
+
                 Vector3 offset = visual.transform.position - visualPosition;
                 bool hasBaseMatrix = animation.TryGetBaseVisualMatrix(visual.transform, out Matrix4x4 baseMatrix);
                 Matrix4x4 expectedBaseMatrix = visualParent.localToWorldMatrix *
@@ -312,6 +358,13 @@ public static partial class GameplayTestSystemProbe
                     ["hasBaseMatrix"] = hasBaseMatrix,
                     ["basePositionError"] = hasBaseMatrix ? Vector3.Distance(visualPosition, baseMatrix.MultiplyPoint3x4(Vector3.zero)) : -1f,
                     ["baseMatrixError"] = hasBaseMatrix ? baseMatrixError : -1f,
+                    ["heldPositionError"] = heldTransform != null ? Vector3.Distance(heldTransform.position, handReference.position) : 0f,
+                    ["heldOffset"] = heldTransform != null ? Vector3.Distance(heldTransform.position, handAnchor.position) : 0f,
+                    ["heldRotationError"] = heldTransform != null ? Quaternion.Angle(heldLocalRotation, heldTransform.localRotation) : 0f,
+                    ["heldAimError"] = heldAimError,
+                    ["heldScaleError"] = heldTransform != null ? Vector3.Distance(Vector3.one, heldTransform.localScale) : 0f,
+                    ["heldParentPreserved"] = heldTransform == null || heldTransform.parent == handAnchor,
+                    ["handAnchorError"] = handAnchor != null ? Vector3.Distance(handAnchorLocalPosition, handAnchor.localPosition) : 0f,
                     ["loaded"] = animation.IsRuntimeLoaded
                 });
             }
@@ -370,6 +423,7 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
+            if (hotbar != null) hotbar.BindHeldItemPresentation(null);
             try
             {
                 try { if (animation != null) animation.Unload(); }

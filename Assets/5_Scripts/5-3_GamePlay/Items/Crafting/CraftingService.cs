@@ -51,9 +51,9 @@ public static class CraftingService
     }
 
     /// <summary>只创建配方产物数据，供候选列表和输出槽展示，不检查库存空间。</summary>
-    public static CraftingResult DescribeRecipe(RuntimeRecipe recipe, Inventory input = null)
+    public static CraftingResult DescribeRecipe(RuntimeRecipe recipe, Inventory input = null, bool applyOutputMultiplier = true)
     {
-        return TryPrepareOutputs(recipe, out List<ItemData> outputs, out CraftingResult failure, inputInventory: input)
+        return TryPrepareOutputs(recipe, out List<ItemData> outputs, out CraftingResult failure, applyOutputMultiplier, inputInventory: input)
             ? CraftingResult.Succeeded(recipe, outputs)
             : failure;
     }
@@ -266,7 +266,7 @@ public static class CraftingService
         if (suppliedOutputs == null)
         {
             if (!TryPrepareOutputs(match.Recipe, out outputs, out CraftingResult outputFailure,
-                    capabilities?.ApplyDifficultyOutputMultiplier ?? true, inputInventory, match)) return outputFailure;
+                    capabilities?.ApplyOutputMultiplier ?? true, inputInventory, match)) return outputFailure;
         }
         else
         {
@@ -337,6 +337,11 @@ public static class CraftingService
 
     private static bool TryAcquireInventory(Inventory inventory, List<Inventory> acquiredInventories)
     {
+        if (inventory is LinkedCraftingInput linked)
+        {
+            if (!TryAcquireInventory(linked.Primary, acquiredInventories)) return false;
+            if (linked.Shared != null && !TryAcquireInventory(linked.Shared, acquiredInventories)) return false;
+        }
         if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
         for (int index = 0; index < acquiredInventories.Count; index++)
         {
@@ -363,7 +368,7 @@ public static class CraftingService
         RuntimeRecipe recipe,
         out List<ItemData> outputs,
         out CraftingResult failure,
-        bool applyDifficultyMultiplier = true, Inventory inputInventory = null, CraftingRecipeMatch match = null)
+        bool applyOutputMultiplier = true, Inventory inputInventory = null, CraftingRecipeMatch match = null)
     {
         outputs = new List<ItemData>();
         failure = null;
@@ -375,7 +380,7 @@ public static class CraftingService
 
         foreach (RuntimeRecipeResult output in recipe.outputs.results)
         {
-            if (output != null && !string.IsNullOrWhiteSpace(output.CopyInputTag))
+            if (output?.CopiesInputInstance == true)
             {
                 if (!CraftingInstanceOutput.TryCreate(inputInventory, recipe, match, output, out ItemData copied, out string error))
                 { failure = CraftingResult.Failed(CraftingFailureReason.InvalidOutput, error, recipe); return false; }
@@ -410,9 +415,10 @@ public static class CraftingService
             }
 
             CraftedDurabilityQuality.ApplyToCraftedOutput(itemData, output.durabilityMultiplier);
-            itemData.Stack.Amount = applyDifficultyMultiplier ? GameDifficultyService.ScaleCount(
+            CraftingOutputRules.ApplyInstanceTag(itemData, output.AddTag);
+            itemData.Stack.Amount = applyOutputMultiplier ? GameRuleMath.ScaleCount(
                 output.amount,
-                GameDifficultyService.Current.Production.CraftingOutputMultiplier,
+                GameRuleConfiguration.Current.Production.CraftingOutputMultiplier,
                 1) : output.amount;
             outputs.Add(itemData);
         }

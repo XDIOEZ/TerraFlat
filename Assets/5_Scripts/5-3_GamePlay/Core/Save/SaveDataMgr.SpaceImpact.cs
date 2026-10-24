@@ -273,7 +273,8 @@ public partial class SaveDataMgr
     {
         Mod_Building.TryReadBuildingData(placed, out _, out Mod_Building.Building_Data building);
         string summoner = !string.IsNullOrWhiteSpace(building?.SummonerPrefabId) ? building.SummonerPrefabId : Mod_Building.GetSummonerPrefabId(placed.IDName);
-        if (!BuildingMaterialSalvage.TryCreateRandomMaterialSalvage(summoner, out List<ItemData> materials, out string reason))
+        if (!BuildingMaterialSalvage.TryCreateRandomMaterialSalvage(summoner, out List<ItemData> materials, out string reason,
+                buildingData: placed))
         { Debug.LogWarning("[地表结构冲击] " + reason); return; }
         foreach (ItemData material in materials) AddPersistentImpactDrop(material, worldKey, position, visible);
     }

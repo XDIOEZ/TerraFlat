@@ -77,7 +77,10 @@ public static partial class MachineWorld
     private static void NotifySurfaceMechanicalChanged(Vector2Int cell)
     { if (!IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey) PublishSurfaceMechanicalChange(cell); }
     private static void NotifySurfaceCellChanged(Vector2Int cell)
-    { if (!IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey) PublishSurfaceCellChange(cell); }
+    {
+        NodeCellChanged?.Invoke(worldKey, cell);
+        if (!IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey) PublishSurfaceCellChange(cell);
+    }
 
     public static void ReleaseShipScope(string shipId, bool capture = false)
     {

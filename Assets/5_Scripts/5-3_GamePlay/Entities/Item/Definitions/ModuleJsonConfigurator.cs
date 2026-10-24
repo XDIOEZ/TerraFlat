@@ -78,9 +78,11 @@ public static class ModuleJsonConfigurator
         private readonly JObject transform;
         private readonly JObject collider;
         private readonly JsonSerializer serializer;
+        private readonly Type colliderType;
+        private readonly JObject customValidationParameters;
 
         internal PreparedParameters(Type moduleType, string itemId, string moduleName, string moduleId,
-            JObject regular, JObject transform, JObject collider)
+            JObject regular, JObject transform, JObject collider, Type colliderType, JObject customValidationParameters)
         {
             this.moduleType = moduleType;
             this.itemId = itemId;
@@ -89,7 +91,28 @@ public static class ModuleJsonConfigurator
             this.regular = regular;
             this.transform = transform;
             this.collider = collider;
+            this.colliderType = colliderType;
+            this.customValidationParameters = customValidationParameters;
             serializer = JsonSerializer.Create(Settings);
+        }
+
+        /// <summary>配置语法和字段类型已在编译时检查，只复查当前原型结构与模块自有约束。</summary>
+        internal void ValidateTarget(Module module)
+        {
+            try
+            {
+                if (module == null || module.GetType() != moduleType)
+                    throw new InvalidOperationException("模块类型与已编译配置不一致。");
+                if (collider != null && module.GetComponent<Collider2D>()?.GetType() != colliderType)
+                    throw new MissingComponentException("Collider2D 与已编译配置不一致。");
+                if (module is IModuleJsonParameterValidator validator)
+                    validator.ValidateJsonParameters((JObject)customValidationParameters.DeepClone());
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    $"物品 {itemId} 的模块 {moduleName}({moduleId}) 原型与已编译 JSON 参数不匹配", exception);
+            }
         }
 
         /// <summary>将已校验参数应用到同类型模块，不重复解析和生成 JSON 字符串。</summary>
@@ -125,10 +148,13 @@ public static class ModuleJsonConfigurator
             ValidateParameters(module, moduleName, parameters);
             JObject transform = parameters["$transform"] as JObject;
             JObject collider = parameters["$collider2D"] as JObject;
+            JObject customValidationParameters = module is IModuleJsonParameterValidator
+                ? (JObject)parameters.DeepClone() : null;
+            Type colliderType = collider != null ? module.GetComponent<Collider2D>().GetType() : null;
             parameters.Remove("$transform");
             parameters.Remove("$collider2D");
             return new PreparedParameters(module.GetType(), itemId, moduleName, moduleId,
-                parameters, transform, collider);
+                parameters, transform, collider, colliderType, customValidationParameters);
         }
         catch (Exception exception)
         {
@@ -167,7 +193,7 @@ public static class ModuleJsonConfigurator
     {
         try
         {
-            return JObject.Parse(json);
+            return JsonConfigurationCache.ParseObject(json);
         }
         catch (Exception exception)
         {

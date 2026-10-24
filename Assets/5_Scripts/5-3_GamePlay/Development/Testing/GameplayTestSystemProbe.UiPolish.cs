@@ -18,6 +18,54 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "world_settings_pages", CaptureWorldSettingsPages);
         Register("ui_settings", "bag_hotbar_layout", CaptureBagHotbarLayout);
         Register("ui_settings", "hover_and_mod_selection", CaptureHoverAndModSelection);
+        Register("ui_settings", "pressure_hud_display_cache", CapturePressureHudDisplayCache);
+    }
+
+    private static JObject CapturePressureHudDisplayCache(JObject args)
+    {
+        var baseline = new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.21d, 80.01f, 120.01f, 10.11f, 8.11f, 12.41d, false);
+        var unchanged = new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.23d, 80.02f, 120.02f, 10.12f, 8.12f, 12.44d, false);
+        bool withinOneDecimal = baseline.Equals(unchanged);
+        bool pressureChanged = !baseline.Equals(new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.26d, 80.01f, 120.01f, 10.11f, 8.11f, 12.41d, false));
+        bool safeRangeChanged = !baseline.Equals(new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.21d, 80.06f, 120.01f, 10.11f, 8.11f, 12.41d, false));
+        bool extensionChanged = !baseline.Equals(new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.21d, 80.01f, 120.01f, 10.16f, 8.11f, 12.41d, false));
+        bool highExtensionChanged = !baseline.Equals(new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.21d, 80.01f, 120.01f, 10.11f, 8.16f, 12.41d, false));
+        bool bufferChanged = !baseline.Equals(new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.21d, 80.01f, 120.01f, 10.11f, 8.11f, 12.46d, false));
+        bool helmetChanged = !baseline.Equals(new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            101.21d, 80.01f, 120.01f, 10.11f, 8.11f, 12.41d, true));
+        var low = new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            79.98d, 80f, 120f, 0f, 0f, 1d, false);
+        var safe = new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            80.02d, 80f, 120f, 0f, 0f, 1d, false);
+        bool dangerChanged = low.Pressure == safe.Pressure && low.Danger == -1 &&
+            safe.Danger == 0 && !low.Equals(safe);
+        var high = new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            120.02d, 80f, 120f, 0f, 0f, 1d, false);
+        var upperSafe = new PlayerWorldCoordinateHUD.PressureDisplayKey(
+            119.98d, 80f, 120f, 0f, 0f, 1d, false);
+        bool highDangerChanged = high.Pressure == upperSafe.Pressure && high.Danger == 1 &&
+            upperSafe.Danger == 0 && !high.Equals(upperSafe);
+        return new JObject
+        {
+            ["unchanged"] = withinOneDecimal,
+            ["pressureChanged"] = pressureChanged,
+            ["safeRangeChanged"] = safeRangeChanged,
+            ["extensionChanged"] = extensionChanged,
+            ["highExtensionChanged"] = highExtensionChanged,
+            ["bufferChanged"] = bufferChanged,
+            ["helmetChanged"] = helmetChanged,
+            ["dangerChanged"] = dangerChanged,
+            ["highDangerChanged"] = highDangerChanged,
+            ["roundingCorrect"] = baseline.Pressure == 101.2d && baseline.Minimum == 80d &&
+                baseline.Buffer == 12.4d
+        };
     }
 
     private static JObject CaptureHoverAndModSelection(JObject args)
@@ -105,13 +153,13 @@ public static partial class GameplayTestSystemProbe
             parent.sizeDelta = new Vector2((float)Number(args, "width", 1920), (float)Number(args, "height", 1080));
             RectTransform bag = new GameObject("Bag", typeof(RectTransform)).GetComponent<RectTransform>();
             bag.SetParent(parent, false);
-            bag.sizeDelta = new Vector2(920, 640);
+            bag.sizeDelta = new Vector2(1004, 560);
             bag.localScale = Vector3.one * (float)Number(args, "scale", 0.6);
             RectTransform hotbar = new GameObject("Hotbar", typeof(RectTransform)).GetComponent<RectTransform>();
             hotbar.SetParent(parent, false);
             hotbar.anchorMin = hotbar.anchorMax = new Vector2(0.5f, 0);
             hotbar.pivot = new Vector2(0.5f, 0);
-            hotbar.sizeDelta = new Vector2(800, 96);
+            hotbar.sizeDelta = new Vector2(982, 104);
             hotbar.anchoredPosition = new Vector2(0, 24);
             InventoryPanelLayout.ApplyDefaultBagPosition(bag, hotbar);
             Vector3[] corners = new Vector3[4];

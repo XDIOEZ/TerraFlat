@@ -236,7 +236,7 @@ public partial class Mod_ItemPicker : Module
             return;
 
         if (Mod_Droping.IsDropInProgress(pickAble) ||
-            !pickAble.itemData.Stack.CanBePickedUp)
+            !pickAble.itemData.Stack.CanBePickedUp || !CanReachWaterItem(pickAble))
         {
             deferredPickupItems.Add(pickAble);
             pickupAttemptedItems.Remove(pickAble);
@@ -287,7 +287,7 @@ public partial class Mod_ItemPicker : Module
             return;
 
         if (Mod_Droping.IsDropInProgress(pickAble) ||
-            !pickAble.itemData.Stack.CanBePickedUp)
+            !pickAble.itemData.Stack.CanBePickedUp || !CanReachWaterItem(pickAble))
         {
             deferredPickupItems.Add(pickAble);
             pickupAttemptedItems.Remove(pickAble);
@@ -382,6 +382,8 @@ public partial class Mod_ItemPicker : Module
         ItemData pickupData = ItemInstanceDataFactory.CloneRuntime(itemData);
         using var planLease = UnityEngine.Pool.ListPool<PickupInventoryPlan>.Get(out var plan);
         float targetAmount = BuildPickupPlan(pickupData, sourceAmount, multiplier, plan);
+        // 容量计划模拟下一件的状态，正式提交必须重新从原本的受损件开始。
+        pickupData.Durability = itemData.Durability;
         if (targetAmount <= 0.0001f || !allowPartial && targetAmount + 0.0001f < requestedAmount)
         {
             PickupCapacityRejectedDebug.AddWork(1);
@@ -403,6 +405,9 @@ public partial class Mod_ItemPicker : Module
                 added = targetInventory.Data.TryAddItem(pickupData, true, out inventoryAddedAmount);
             if (!added || inventoryAddedAmount <= 0f)
                 continue;
+
+            // 当前受损件只进入第一个成功接收的库存，后续分配都是完整件。
+            ItemDurabilityRules.AdvanceAfterRemoval(pickupData);
 
             // 快捷栏只能容纳一部分时，余量继续进入主背包，不能提前结束此次拾取。
             remainingAmount = Mathf.Max(0f, remainingAmount - inventoryAddedAmount);
@@ -429,6 +434,7 @@ public partial class Mod_ItemPicker : Module
         float worldRemainingAmount = Mathf.Max(0f, sourceAmount - consumedSourceAmount);
         bool fullyAdded = worldRemainingAmount <= 0.0001f;
         itemData.Stack.Amount = fullyAdded ? sourceAmount : worldRemainingAmount;
+        if (!fullyAdded) ItemDurabilityRules.AdvanceAfterRemoval(itemData);
         itemData.Stack.CanBePickedUp = !fullyAdded;
         try
         {
@@ -474,6 +480,7 @@ public partial class Mod_ItemPicker : Module
 
     private float BuildPickupPlan(ItemData candidate, float sourceAmount, int multiplier, List<PickupInventoryPlan> plan)
     {
+        WorldItemWaterSystem.SetSavedBottomState(candidate, false);
         float requestedAmount = sourceAmount * multiplier;
         if (!float.IsFinite(requestedAmount) || requestedAmount <= 0f)
             return 0f;
@@ -491,6 +498,7 @@ public partial class Mod_ItemPicker : Module
             if (wholeUnits) available = Inventory_Data.GetWholeStackAmount(available + .0001f);
             if (available <= .0001f) continue;
             plan.Add(new PickupInventoryPlan(inventory, available));
+            ItemDurabilityRules.AdvanceAfterRemoval(candidate);
             remainingCapacity = Mathf.Max(0f, remainingCapacity - available);
             if (remainingCapacity <= .0001f) break;
         }
@@ -607,11 +615,34 @@ public partial class Mod_ItemPicker : Module
             !droppedPickupCollider.enabled || item == null || item.DestructionHandled) return false;
         bounds = droppedPickupCollider.bounds;
         bounds.Expand(0.5f);
+        // 沉底物按脚下整格拾取，即使恰好落在该格的另一角也不能漏掉。
+        Vector3 cell = new(Mathf.Floor(item.transform.position.x), Mathf.Floor(item.transform.position.y), bounds.center.z);
+        bounds.Encapsulate(cell);
+        bounds.Encapsulate(cell + new Vector3(1f, 1f, 0f));
         return true;
     }
 
-    internal bool CanReachDroppedPoint(Vector2 point)
+    private bool CanReachWaterItem(Item target) => item != null &&
+        WorldItemWaterSystem.CanPickUpAt(target, WorldLocalPresentation.ToLogical(item.transform.position));
+
+    internal void TryPickupBottomItem(Item target)
     {
+        if (!CanPickUp || !CanReachWaterItem(target))
+        {
+            pickupAttemptedItems.Remove(target);
+            deferredPickupItems.Remove(target);
+            return;
+        }
+        RefreshPickupAttempts();
+        if (deferredPickupItems.Remove(target) || pickupAttemptedItems.Add(target))
+            TryPickUp(target, logMissingInventories: false);
+    }
+
+    internal bool CanReachDroppedPoint(Vector2 point, bool onBottom = false)
+    {
+        if (onBottom)
+            return item != null && WorldItemWaterRules.CanPickUp(true,
+                WorldTopologyRuntime.NormalizePosition(item.transform.position), WorldTopologyRuntime.NormalizePosition(point));
         return droppedPickupCollider != null &&
             (droppedPickupCollider.ClosestPoint(point) - point).sqrMagnitude <= 0.0625f;
     }

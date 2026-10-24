@@ -98,7 +98,7 @@ public static class TimeSystemConfigLoader
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("时间系统 JSON 为空");
 
-        TimeSystemConfigCatalog catalog = JsonConvert.DeserializeObject<TimeSystemConfigCatalog>(
+        TimeSystemConfigCatalog catalog = JsonConfigurationCache.Deserialize<TimeSystemConfigCatalog>(
             json,
             StrictJsonSettings);
         Validate(catalog);

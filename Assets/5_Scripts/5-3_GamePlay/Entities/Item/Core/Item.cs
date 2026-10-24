@@ -72,6 +72,50 @@ public abstract class Item : MonoBehaviour
             : Mathf.Max(0f, multiplier);
     }
 
+    #region 外部感知范围限制
+
+    private Dictionary<object, float> perceptionRadiusLimits;
+    public float MaximumPerceptionRadius { get; private set; } = float.PositiveInfinity;
+    internal event Action PerceptionRadiusLimitChanged;
+
+    // 外部来源主动施加上限，目标体型倍率和生物原始配置不能突破最终范围。
+    public void SetPerceptionRadiusLimit(object source, float radius)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (!float.IsFinite(radius) || radius < 0f) throw new ArgumentOutOfRangeException(nameof(radius));
+        perceptionRadiusLimits ??= new Dictionary<object, float>();
+        if (perceptionRadiusLimits.TryGetValue(source, out float previous) && previous == radius) return;
+        perceptionRadiusLimits[source] = radius;
+        RefreshPerceptionRadiusLimit();
+    }
+
+    public void RemovePerceptionRadiusLimit(object source)
+    {
+        if (source != null && perceptionRadiusLimits?.Remove(source) == true)
+            RefreshPerceptionRadiusLimit();
+    }
+
+    public float ClampPerceptionRadius(float radius) => Mathf.Min(radius, MaximumPerceptionRadius);
+
+    private void RefreshPerceptionRadiusLimit()
+    {
+        float radius = float.PositiveInfinity;
+        if (perceptionRadiusLimits != null)
+            foreach (float value in perceptionRadiusLimits.Values) radius = Mathf.Min(radius, value);
+        if (MaximumPerceptionRadius == radius) return;
+        MaximumPerceptionRadius = radius;
+        PerceptionRadiusLimitChanged?.Invoke();
+    }
+
+    private void ClearPerceptionRadiusLimits()
+    {
+        perceptionRadiusLimits?.Clear();
+        MaximumPerceptionRadius = float.PositiveInfinity;
+        PerceptionRadiusLimitChanged = null;
+    }
+
+    #endregion
+
     /// <summary>
     /// 将序列化数据绑定到运行时控制器。
     /// 这是 ItemData 整体替换的唯一公开入口。
@@ -532,6 +576,7 @@ public abstract class Item : MonoBehaviour
         catch (Exception error) { errors.Add(error); }
         try { ModuleUnload(); }
         catch (Exception error) { errors.Add(error); }
+        ClearPerceptionRadiusLimits();
         if (errors.Count > 0)
             throw new AggregateException($"物品 {name} 回收时发生错误，运行态已结束。", errors);
     }
@@ -541,6 +586,7 @@ public abstract class Item : MonoBehaviour
         ClearPendingInitialAnimatorState();
         PersistenceOwner = null;
         ModuleUnload();
+        ClearPerceptionRadiusLimits();
         StopAllCoroutines();
         destructionHandled = false;
         isInitialized = false;
@@ -901,7 +947,11 @@ public abstract class Item : MonoBehaviour
     /// 保存所有模块数据
     /// 使用副本遍历避免在保存过程中修改集合导致的异常
     /// </summary>
-    public void ModuleSave()
+    public void ModuleSave() => SaveModules(publicNetworkStateOnly: false);
+
+    internal void ModuleSavePublicNetworkState() => SaveModules(publicNetworkStateOnly: true);
+
+    private void SaveModules(bool publicNetworkStateOnly)
     {
         using var scope = ListPool<Module>.Get(out var snapshot);
         CopyModulesTo(snapshot);
@@ -909,7 +959,9 @@ public abstract class Item : MonoBehaviour
         foreach (Module module in snapshot)
         {
             if (!modulesLoaded || RuntimeGeneration != generation) return;
-            if (module != null && itemMods.HasMod(module)) module.SaveRuntime();
+            if (module == null || !itemMods.HasMod(module)) continue;
+            if (publicNetworkStateOnly) module.SavePublicNetworkRuntime();
+            else module.SaveRuntime();
         }
     }
 
@@ -1077,23 +1129,7 @@ public abstract class Item : MonoBehaviour
     /// <param name="amount">减少量</param>
     public void DecreaseDurability(int amount)
     {
-        if (itemData == null || itemData.Durability <= 0)
-            return;
-
-        // 使用 ItemData 内置方法变更耐久（传入负值表示减少）
-        itemData.AddDurability(-amount);
-
-        // 物品耐久为0时触发事件
-        if (itemData.Durability <= 0)
-        {
-            itemData.Durability = 0;
-            OnDurabilityModified?.Invoke(itemData.Durability);
-        }
-        else
-        {
-            // 物品耐久改变时触发事件
-            OnDurabilityModified?.Invoke(itemData.Durability);
-        }
+        ItemDurabilityService.TryConsume(this, amount);
     }
 
     [Button("注入到ItemMgr")]

@@ -12,11 +12,16 @@ public static partial class GameplayTestSystemProbe
     private static Dictionary<string, Func<JObject, JObject>> CreateOperations()
     {
         var result = new Dictionary<string, Func<JObject, JObject>>(StringComparer.Ordinal);
+        RegisterShieldOperations(result);
         RegisterEntityOperations(result);
         RegisterWorldMatterOperations(result);
+        RegisterTimedDespawnOperations(result);
         RegisterBirdFlightQueryOperations(result);
         RegisterNaturalEntityBatchOperations(result);
         RegisterWorldOperations(result);
+        RegisterBuildingStreamingOperations(result);
+        RegisterConveyorLoadOperations(result);
+        RegisterRailwayOperations(result);
         RegisterServiceOperations(result);
         result.Add("rendering/dropped_combustion_material", ServiceDroppedCombustionMaterial);
         RegisterDenseFogOperations(result);
@@ -31,9 +36,11 @@ public static partial class GameplayTestSystemProbe
         RegisterInteractionOperations(result);
         RegisterNavigationOperations(result);
         RegisterEnvironmentBatchOperations(result);
+        RegisterLooseItemMotionOperations(result);
         RegisterTestingOperations(result);
         RegisterTerrainHeightShadowOperations(result);
         RegisterShipFlightHudOperations(result);
+        RegisterSpaceElevatorOperations(result);
         return result;
     }
 

@@ -212,47 +212,6 @@ function Watch-WikiTunnelLog {
     }
 }
 
-# 返回可用 Python 启动命令与参数前缀，兼容 Windows py Launcher 与直接 python。
-function Get-PythonLaunchInfo {
-    $py = Get-Command py -ErrorAction SilentlyContinue
-    if ($py) {
-        return @{ FilePath = $py.Source; PrefixArgs = @('-3') }
-    }
-    $python = Get-Command python -ErrorAction SilentlyContinue
-    if ($python) {
-        return @{ FilePath = $python.Source; PrefixArgs = @() }
-    }
-    throw '未找到 Python，请先安装 Python 或将其加入 PATH。'
-}
-
-# 清理上一次异常退出遗留的公开 Wiki Python 服务，不影响原 8765 开发者 Wiki。
-function Stop-StalePublicWikiServer {
-    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.Name -match '^python(w)?\.exe$' -and $_.CommandLine -and
-            $_.CommandLine -like "*$serverScript*" -and
-            $_.CommandLine -match '--public-readonly'
-        } |
-        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-}
-
-# 等待公开 Wiki 的只读状态 API 可访问，并确认服务没有误启用写入能力。
-function Wait-PublicWikiReady {
-    for ($attempt = 0; $attempt -lt 30; $attempt++) {
-        Start-Sleep -Milliseconds 200
-        try {
-            $status = Invoke-RestMethod -Uri "http://127.0.0.1:$wikiPort/api/wiki/status" -Method Get -TimeoutSec 2
-            if ($status.publicReadOnly -eq $true -and $status.writable -eq $false) {
-                return
-            }
-        }
-        catch {
-            # 服务启动的短暂窗口内连接失败属于正常重试路径。
-        }
-    }
-    throw '公开 Wiki 服务未能在预期时间内进入只读状态。'
-}
-
 $serverProcess = $null
 $sakuraServiceProcess = $null
 $exitCode = 0
@@ -270,22 +229,14 @@ try {
         throw '检测到 SakuraFrpService 已在运行。请先关闭现有 SakuraFrp 启动器核心服务，再重新运行公开 Wiki，避免重复启动隧道。'
     }
 
-    Stop-StalePublicWikiServer
-    $python = Get-PythonLaunchInfo
-    $serverArgs = @($python.PrefixArgs) + @(
-        $serverScript,
-        '--port', [string]$wikiPort,
-        '--public-readonly',
-        '--strict-port',
-        '--no-browser'
-    )
-    $serverProcess = Start-Process -FilePath $python.FilePath -ArgumentList $serverArgs -PassThru -WindowStyle Hidden
-    Wait-PublicWikiReady
+    # 公共入口复用同项目的只读服务，仅回收本次启动且由自己持有的进程。
+    $wikiSession = & (Join-Path $wikiDirectory 'Start-ItemWiki.ps1') -Port $wikiPort -PublicReadOnly -NoBrowser -PassThru
+    if ($wikiSession.started) { $serverProcess = Get-Process -Id $wikiSession.processId -ErrorAction Stop }
 
     Write-Host "[Item Wiki] 公开只读服务：$localWikiUrl"
     Write-Host "[SakuraFrp] 正在启动隧道 #$($tunnel.id)。"
     Write-Host '[SakuraFrp] 朋友访问时，请使用下方日志给出的 HTTPS 公开地址。'
-    Write-Host '[SakuraFrp] 关闭本窗口即可同时停止公开 Wiki 与本次隧道。'
+    Write-Host '[SakuraFrp] 关闭本窗口停止本次启动的服务与隧道；已复用的 Wiki 服务会保留。'
     if (-not $NoBrowser) {
         Start-Process $localWikiUrl
     }
@@ -293,8 +244,8 @@ try {
     $logPath = Get-SakuraLogPath
     $initialLogLength = if (Test-Path $logPath) { (Get-Item $logPath).Length } else { 0 }
     $sakuraServiceProcess = Start-Process -FilePath $sakuraServicePath -ArgumentList @(
-        '-c', $sakuraConfigPath, '--daemon'
-    ) -PassThru -NoNewWindow
+        '-c', ('"' + $sakuraConfigPath + '"'), '--daemon'
+    ) -PassThru -WindowStyle Hidden
     Watch-WikiTunnelLog -ServiceProcess $sakuraServiceProcess -InitialLength $initialLogLength
     if ($sakuraServiceProcess.ExitCode -ne 0) {
         throw "SakuraFrpService 异常退出，退出码：$($sakuraServiceProcess.ExitCode)。"

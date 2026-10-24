@@ -4,7 +4,7 @@ using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
-/// <summary>成功取水后在本格与四邻涉及的相邻边上均衡水量，不扩大到整个水域。</summary>
+/// <summary>天然大片静水转交水域级求解；小水洼与其它水体保留原有局部补水。</summary>
 public static class WorldLiquidReplenishment
 {
     #region 补水规则
@@ -54,6 +54,7 @@ public static class WorldLiquidReplenishment
             !chunks.TryGetRuntimeTerrainTile((Vector2)origin.WorldCell + Vector2.one * .5f, out var current) ||
             !ReferenceEquals(current.Terrain, origin.Terrain))
             return;
+        if (chunks.WakeStaticWaterBody(current)) return;
         // 邻边缓冲借还可重入的 ListPool，重复取水不再逐次创建列表。
         using var edgeLease = UnityEngine.Pool.ListPool<(RuntimeTerrainTileSample A, RuntimeTerrainTileSample B)>.Get(
             out List<(RuntimeTerrainTileSample A, RuntimeTerrainTileSample B)> edges);
@@ -91,9 +92,13 @@ public static class WorldLiquidReplenishment
             TryTransfer(source, target);
     }
 
-    private static bool TryTransfer(RuntimeTerrainTileSample source, RuntimeTerrainTileSample target)
+    internal static bool TryTransfer(RuntimeTerrainTileSample source, RuntimeTerrainTileSample target,
+        bool connectedCanal = false)
     {
-        int amount = GetTransferLevel(source, target);
+        int amount = connectedCanal
+            ? GetConnectedTransferLevel(source.Terrain.GetLiquidLevel(source.LocalCell.x, source.LocalCell.y),
+                target.Terrain.GetLiquidLevel(target.LocalCell.x, target.LocalCell.y))
+            : GetTransferLevel(source, target);
         if (amount <= 0) return false;
         int before = source.Terrain.GetLiquidLevel(source.LocalCell.x, source.LocalCell.y);
         int targetBefore = target.Terrain.GetLiquidLevel(target.LocalCell.x, target.LocalCell.y);
@@ -128,6 +133,15 @@ public static class WorldLiquidReplenishment
                     throw new InvalidOperationException("邻格补水失败后无法归还来源水量。");
             }
         }
+    }
+
+    /// <summary>已验证同类连通水渠的整数交换量；不以水域汇总值直接增减真实水量。</summary>
+    public static int GetConnectedTransferLevel(int sourceLevel, int targetLevel)
+    {
+        if ((uint)sourceLevel > LiquidCellValue.MaximumLevel ||
+            (uint)targetLevel > LiquidCellValue.MaximumLevel)
+            throw new ArgumentOutOfRangeException(nameof(sourceLevel), "水渠交换的水位超出零到十级。");
+        return Math.Max(0, (sourceLevel - targetLevel) / 2);
     }
     #endregion
 }

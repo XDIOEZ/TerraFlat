@@ -63,7 +63,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     public int PlacementQuarterTurns { get; private set; } // 当前手持预览的逆时针九十度步数。
     public bool CanRotatePlacement => !placed && item != null && item.InHand && Definition != null && Definition.Rotatable;
     public int OccupancyLayer => ResolveDefinition()?.Layer ?? 0;
-    public bool BlocksMovement => ResolveDefinition()?.BlocksMovement ?? true;
+    public bool BlocksMovement => ResolveDefinition()?.BlocksTraversal ?? true;
     public float PlayerMoveSpeedMultiplier => ResolveDefinition()?.PlayerMoveSpeedMultiplier ?? 1f;
     private MechanicalPanelSession panel;
     private Mod_GameController controller;

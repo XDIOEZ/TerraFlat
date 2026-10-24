@@ -36,8 +36,8 @@ MonoBehaviour:
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.08
-  maxInstances: 2
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

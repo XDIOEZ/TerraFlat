@@ -27,6 +27,9 @@ public sealed partial class Mod_BeeBehavior
     private bool searchingLastPosition; // 正在确认目标最后出现点。
     private Item lastSeenTarget; // 搜索期间可重新锁定原目标，包括已经停下的生物。
     private float lostTargetAngerRemaining; // 丢失目标后剩余的愤怒搜索秒数。
+    private bool reachedLastSeenPosition; // 到达记忆点后改为附近巡飞，不再反复折返原点。
+    private Vector2 searchFlightTarget; // 当前警戒搜索点，只围绕最后已知位置选择。
+    private bool hasSearchFlightTarget; // 未到点时复用同一个搜索点。
     private float targetScanElapsed; // 位移采样累计游戏秒。
     private int scanGeneration; // 目标采样轮次。
     private float colonyAlertAnger; // 蜂巢领地共享警戒换算出的当前愤怒值，不持久化。
@@ -119,9 +122,7 @@ public sealed partial class Mod_BeeBehavior
         hiveDefenseTarget = target;
         lockedTarget = target;
         lastSeenPosition = target.transform.position;
-        searchingLastPosition = false;
-        lastSeenTarget = null;
-        lostTargetAngerRemaining = 0f;
+        ResetLastPositionSearch();
         state.Anger = AngerMaximum;
         state.Angry = true;
         state.ReturningHome = false;
@@ -147,7 +148,7 @@ public sealed partial class Mod_BeeBehavior
 
         lockedTarget = hiveDefenseTarget;
         lastSeenPosition = hiveDefenseTarget.transform.position;
-        searchingLastPosition = false;
+        ResetLastPositionSearch();
         ChaseLockedTarget(flightSeconds);
         return true;
     }
@@ -157,9 +158,7 @@ public sealed partial class Mod_BeeBehavior
     {
         nearestMoving = null;
         lockedTarget = null;
-        searchingLastPosition = false;
-        lastSeenTarget = null;
-        lostTargetAngerRemaining = 0f;
+        ResetLastPositionSearch();
         overlapSeconds.Clear();
         motionSamples.Clear();
         expiredSamples.Clear();
@@ -271,9 +270,7 @@ public sealed partial class Mod_BeeBehavior
         state.Anger = AngerMaximum;
         state.Angry = true;
         overlapSeconds.Clear();
-        searchingLastPosition = false;
-        lastSeenTarget = null;
-        lostTargetAngerRemaining = 0f;
+        ResetLastPositionSearch();
     }
     #endregion
 
@@ -297,19 +294,16 @@ public sealed partial class Mod_BeeBehavior
         }
         if (searchingLastPosition)
         {
-            lostTargetAngerRemaining = Mathf.Max(0f, lostTargetAngerRemaining - gameSeconds);
-            if (lostTargetAngerRemaining <= 0f)
+            Vector2 destination = AdvanceLastPositionSearch(item.transform.position, gameSeconds);
+            if (searchingLastPosition)
             {
-                searchingLastPosition = false;
-                lastSeenTarget = null;
-                state.Anger = 0f;
-                state.Angry = false;
+                if (!bird.TryFlyTo(destination, flightSeconds, 1f))
+                {
+                    reachedLastSeenPosition = true;
+                    hasSearchFlightTarget = false;
+                }
                 return;
             }
-            if (WorldTopologyRuntime.SqrDistance(item.transform.position, lastSeenPosition) >
-                StingDistance * StingDistance)
-                bird.FlyTo(lastSeenPosition, flightSeconds);
-            return; // 到达最后位置仍等待，不能提前结束十秒搜索。
         }
         // 尚未锁定过目标的愤怒巡航沿用缓慢衰减，丢失目标则由十秒搜索负责结束。
         state.Anger = Mathf.Max(0f, state.Anger - AngerDecayPerSecond * gameSeconds);
@@ -330,6 +324,69 @@ public sealed partial class Mod_BeeBehavior
         hiveDefenseTarget = null;
         searchingLastPosition = true;
         lostTargetAngerRemaining = LostTargetAngerSeconds;
+        reachedLastSeenPosition = false;
+        hasSearchFlightTarget = false;
+    }
+
+    /// <summary>先抵达最后已知位置，再持续选取附近搜索点，直到搜索到期。</summary>
+    private Vector2 AdvanceLastPositionSearch(Vector2 position, float gameSeconds)
+    {
+        lostTargetAngerRemaining = Mathf.Max(0f, lostTargetAngerRemaining - Mathf.Max(0f, gameSeconds));
+        if (lostTargetAngerRemaining <= 0f)
+        {
+            ResetLastPositionSearch();
+            state.Anger = 0f;
+            state.Angry = false;
+            return position;
+        }
+
+        float arrivalDistanceSqr = PatrolArrivalDistance * PatrolArrivalDistance;
+        if (!reachedLastSeenPosition)
+        {
+            if (WorldTopologyRuntime.SqrDistance(position, lastSeenPosition) > arrivalDistanceSqr)
+                return lastSeenPosition;
+            reachedLastSeenPosition = true;
+        }
+        if (hasSearchFlightTarget &&
+            WorldTopologyRuntime.SqrDistance(position, searchFlightTarget) > arrivalDistanceSqr)
+            return searchFlightTarget;
+
+        float radius = Mathf.Max(PatrolPreferredTravelDistance, AngryLockRadius);
+        float preferredDistanceSqr = PatrolPreferredTravelDistance * PatrolPreferredTravelDistance;
+        float bestDistanceSqr = -1f;
+        for (int attempt = 0; attempt < PatrolTargetSelectionAttempts; attempt++)
+        {
+            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(
+                lastSeenPosition + UnityEngine.Random.insideUnitCircle * radius);
+            float distanceSqr = WorldTopologyRuntime.SqrDistance(position, candidate);
+            if (distanceSqr > bestDistanceSqr)
+            {
+                bestDistanceSqr = distanceSqr;
+                searchFlightTarget = candidate;
+            }
+            if (distanceSqr >= preferredDistanceSqr)
+                break;
+        }
+        if (bestDistanceSqr < preferredDistanceSqr)
+        {
+            Vector2 away = WorldTopologyRuntime.ShortestDelta(position, lastSeenPosition);
+            if (away.sqrMagnitude <= 0.0001f)
+                away = Vector2.right;
+            searchFlightTarget = WorldTopologyRuntime.NormalizePosition(lastSeenPosition + away.normalized * radius);
+        }
+        hasSearchFlightTarget = true;
+        return searchFlightTarget;
+    }
+
+    /// <summary>重新追击、搜索到期和回池统一释放临时搜索状态。</summary>
+    private void ResetLastPositionSearch()
+    {
+        searchingLastPosition = false;
+        lastSeenTarget = null;
+        lostTargetAngerRemaining = 0f;
+        reachedLastSeenPosition = false;
+        searchFlightTarget = default;
+        hasSearchFlightTarget = false;
     }
 
     /// <summary>更近的移动目标替换原目标；激怒者没有优先权。</summary>
@@ -337,9 +394,7 @@ public sealed partial class Mod_BeeBehavior
     {
         lockedTarget = target;
         lastSeenPosition = target.transform.position;
-        searchingLastPosition = false;
-        lastSeenTarget = null;
-        lostTargetAngerRemaining = 0f;
+        ResetLastPositionSearch();
     }
 
     /// <summary>愤怒时三格内且视线可达的已锁定目标，停下后仍保持追击资格。</summary>
@@ -357,9 +412,11 @@ public sealed partial class Mod_BeeBehavior
         Mod_DamageReceiver receiver = lockedTarget.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (receiver == null)
             return;
+        float stopDistance = FlatWorld.Navigation.AIApproachRange.ResolveStopDistance(ChaseStopDistance, StingDistance);
+        if (WorldTopologyRuntime.SqrDistance(item.transform.position, position) > stopDistance * stopDistance)
+            bird.FlyTo(position, flightSeconds);
         if (!IsInsideStingReach(receiver, position))
         {
-            bird.FlyTo(position, flightSeconds);
             return;
         }
         if (stingRemaining > 0f)
@@ -399,9 +456,7 @@ public sealed partial class Mod_BeeBehavior
         lockedTarget = null;
         hiveDefenseTarget = null;
         lastSeenPosition = default;
-        searchingLastPosition = false;
-        lastSeenTarget = null;
-        lostTargetAngerRemaining = 0f;
+        ResetLastPositionSearch();
         targetScanElapsed = 0f;
         scanGeneration = 0;
         colonyAlertAnger = 0f;

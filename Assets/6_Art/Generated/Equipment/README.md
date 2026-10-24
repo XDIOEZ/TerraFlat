@@ -1,5 +1,9 @@
 # 装备清单、样例与整套图标
 
+2026-10-24 更新：原“铁卫”五件已改为普通熟铁套（铁头盔、铁胸甲、铁护手、铁腿甲、铁战靴）；原 `Chestplate_Iron` 按其钢锭配方改名为钢甲。新增钢头盔、钢手套、钢腿甲、钢靴子四张图标，与钢甲组成完整钢套，当前可穿戴装备合计 23 件。钢套五件现已配齐独立的 32×48 穿戴层，头盔沿用头发遮罩并透明露出脸；[男女穿戴静态预览](../Characters/PlayerTemplate/Source/SteelArmor/SteelArmor_Preview.png)。[钢套图标绘图记录](GenerationPrompts_Steel.json) · [穿戴层源图与标定](../Characters/PlayerTemplate/Source/SteelArmor/Generation.json)。金属护甲配方统一在 `GameConfig/Recipes/crafting/metal_armor.json`。下方 2026-10-23 清单保留当时的交付记录。
+
+同日补齐藤甲、木甲、工程护目镜和宇航服五件的独立人物穿戴层，并接入物品定义及 Addressables；当前 23 件人物穿戴装备均有对应素材。另有木盾沿用独立副手显示。[新增素材预览](../Characters/PlayerTemplate/Source/EquipmentCompletion/EquipmentCompletion_Preview.png) · [宇航服逐件预览](../Characters/PlayerTemplate/Source/EquipmentCompletion/Spacesuit_Preview.png) · [绘图与覆盖记录](../Characters/PlayerTemplate/Source/EquipmentCompletion/Generation.json)。
+
 统计日期：2026-10-23。依据启用的物品目录和真实素材引用建立清单，先确认三张样例，再完成本轮指定的 19 件穿戴装备图标。
 
 **当前交付：19 张图标已齐，并接入游戏物品配置。** [打开整套图鉴](EquipmentIcons_20261023.html) · [交付清单](ProductionManifest.json) · [完整绘图提示词](GenerationPrompts_Production.json)。武器、工具和箭支由其他聊天处理，下面的广义统计仅作原始清单参考。

@@ -172,7 +172,7 @@ public static class BuildingOccupancyRegistry
         {
             foreach (Mod_Building building in entry.Value)
             {
-                if (building == null || !building.isActiveAndEnabled || !building.IsInstalled() || building.IsGroundFacility)
+                if (!BlocksSight(building))
                     continue;
                 SightBlockedCells.Add(entry.Key);
                 break;
@@ -183,8 +183,7 @@ public static class BuildingOccupancyRegistry
         {
             foreach (MachineEntity node in mechanicalNodes)
             {
-                if (node?.Definition == null ||
-                    (node.Definition.Layer != 0 && node.Definition.Layer != 1))
+                if (!BlocksSight(node?.Definition))
                     continue;
                 int2 cell = mechanicalTopology.Normalize(new int2(node.Cell.x, node.Cell.y));
                 SightBlockedCells.Add(new Vector2Int(cell.x, cell.y));
@@ -210,18 +209,7 @@ public static class BuildingOccupancyRegistry
 
     /// <summary>区块导航批量装载已经规范化坐标，不重复读取活动世界边界。</summary>
     internal static bool GetEffectiveWalkableNormalized(Vector2Int cell, bool terrainWalkable)
-    {
-        if (!terrainWalkable) return false;
-        MachineEntity mechanical = MachineWorld.GetAtCurrentWorld(cell, 0);
-        if (mechanical?.Definition.BlocksMovement == true) return false;
-        if (OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
-            foreach (Mod_Building building in occupants)
-                if (building != null && building.isActiveAndEnabled && building.IsInstalled() &&
-                    GetPlacementLayer(building) == 0 && !PassableBuildings.Contains(building) &&
-                    IsMovementBlocking(building))
-                    return false;
-        return true;
-    }
+        => terrainWalkable && !IsBuildingObstructionAt(cell);
 
     /// <summary>读取玩家当前格的建筑移速倍率；同格多来源取最强惩罚，避免多层机械重复叠乘。</summary>
     public static float GetPlayerMoveSpeedMultiplier(Vector2 position)
@@ -360,7 +348,7 @@ public static class BuildingOccupancyRegistry
     private static void RefreshCell(Vector2Int cell)
     {
         cell = WorldTopologyRuntime.NormalizeCell(cell);
-        bool sightBlocked = IsSightBlockedNormalized(cell);
+        bool sightBlocked = IsBuildingObstructionAt(cell);
         if (sightBlocked)
             SightBlockedCells.Add(cell);
         else
@@ -390,14 +378,22 @@ public static class BuildingOccupancyRegistry
     }
 
     #region 分层视线查询
-    /// <summary>地板占用只限制重复铺设，不把贴地设施写成动态视线障碍。</summary>
-    private static bool IsSightBlockedNormalized(Vector2Int cell)
+    // 实体物理、导航与动态视线共用声明，具体物品名称和覆盖层不提供额外特判。
+    internal static bool BlocksSight(MachineDefinition definition)
+        => definition?.BlocksTraversal == true;
+
+    private static bool BlocksSight(Mod_Building building)
+        => building != null && building.isActiveAndEnabled && building.IsInstalled() &&
+           !PassableBuildings.Contains(building) && IsMovementBlocking(building);
+
+    /// <summary>只有真实阻挡的建筑写入动态视线层，不能用建造占用代替遮挡。</summary>
+    private static bool IsBuildingObstructionAt(Vector2Int cell)
     {
-        if (MachineWorld.IsOccupiedOnPlacementLayersNormalized(cell)) return true;
+        if (MachineWorld.IsMovementBlockedNormalized(cell)) return true;
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants)) return false;
         occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());
         foreach (Mod_Building building in occupants)
-            if (!building.IsGroundFacility) return true;
+            if (BlocksSight(building)) return true;
         if (occupants.Count == 0) OccupantsByCell.Remove(cell);
         return false;
     }

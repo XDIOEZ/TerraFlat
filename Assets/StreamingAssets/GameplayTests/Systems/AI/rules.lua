@@ -1,4 +1,24 @@
-﻿-- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
+-- 动作在外圈生效，移动只在更小的内圈停止；禁止再次把到达和进食/攻击距离合并。
+for _, case in ipairs({
+    {range = .9, preferred = .3, stop = .3},
+    {range = .55, preferred = .5, stop = .275},
+    {range = .45, preferred = .2, stop = .2},
+    {range = .1, preferred = 5, stop = .05},
+    {range = .005, preferred = .5, stop = .0025}
+}) do
+    test.system("ai", "approach_ranges", {actionRange = case.range, stopDistance = case.preferred}, function(data)
+        assert(math.abs(data.stopDistance - case.stop) < .00001 and data.stopDistance < data.actionRange,
+            "追近停止距离没有独立收紧到动作范围内")
+        assert(math.abs(data.movingTimer - .3) < .00001 and data.outsideTimer == 0,
+            "接近中清零动作计时，或目标脱离范围后仍远程进食")
+        assert(math.abs(data.clampedStep - (case.range - case.stop)) < .00001 and data.innerStep == 0,
+            "低帧率步长越过停止内圈，或已进入内圈仍向前移动")
+        assert(data.invalidStop < data.actionRange and not data.invalidAction,
+            "非法配置/距离绕过了动作范围判定")
+    end, "追近与动作距离解耦：" .. case.range)
+end
+
+-- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
 test.system("ai", "wolf_formation_topology", {}, function(data)
     assert(data.cases == 7 and data.wrappedDeltas and data.infiniteDeltas,
         "狼群站位共用拓扑后改变了环绕接缝、负方向或半周期最短位移")
@@ -48,13 +68,51 @@ for _, exclusion in ipairs({"dead", "disabled", "unready", "foreign"}) do
     end, "狼群排除无效同伴：" .. exclusion)
 end
 
+test.system("ai", "wolf_target_memory", {}, function(data)
+    assert(data.visibleState == "Chase" and data.initialMemoryX == 15,
+        "看到玩家后没有追击或未记录真实位置")
+    assert(data.hiddenState == "Search" and data.memoryFrozen and data.travellingMemoryRetained,
+        "丢失视野后立即停追，或旧检测候选把隐藏目标位置泄露给狼")
+    assert(data.hiddenNearbyState == "Search" and data.hiddenNearbyMemoryFrozen,
+        "隐藏目标靠近后狼隔墙攻击或偷偷更新记忆")
+    assert(data.arrivalWaitStarted and data.waitRetained and data.waitExpired and data.afterWaitState == "Idle",
+        "狼到达最后位置后没有限时搜索，或搜索结束没有清理目标")
+    assert(data.reacquiredState == "Chase" and data.reacquiredDuringTravelState == "Chase" and
+        data.reacquiredMemoryUpdated and data.reacquiredDuringWaitState == "Chase" and data.reacquiredWaitCleared,
+        "赶往记忆点或到点等待时重新看见玩家没有恢复追击")
+    assert(data.travelExpired and data.reusedIdentityCleared and data.commandCancelCleared and data.runtimeResetCleared,
+        "搜索超时、实例身份变化、取消指令或运行态重置后仍残留旧目标")
+    assert(data.reportedState == "Search" and data.reportedMemoryFrozen and data.unseenCallerIgnored,
+        "同伴情报没有冻结已知坐标，或失去视野的同伴不断传播未知目标")
+    assert(data.triggerBeforeDecisionState == "Search" and data.triggerBeforeDecisionMemoryFrozen,
+        "集火确认到首次决策之间丢失视野，狼仍然立即忘记目标")
+    assert(data.callBeforeDecisionState == "Search" and data.callBeforeDecisionMemoryFrozen,
+        "收到可见目标的支援呼叫后首次决策前丢视野，狼仍然立即忘记目标")
+end, "狼丢失视野后追到最后位置、搜索、重新发现和安全清理")
+
 -- 所有正式物种都要在最终继承配置中启用单图，新增控制器只提供能力而不额外画身体。
 test.system("ai", "single_sprite_catalog", {}, function(data)
     assert(#data.actors >= 12, "正式 Actor Manifest 缺少已有物种")
     local ghost, fish, bird, bee = false, false, false, false
+    local snowLeopard, zombie = false, false
     for _, actor in ipairs(data.actors) do
         assert(actor.hasAnimatorModule and actor.hasControllerPrototype and actor.enabled and actor.visualMode == 1,
             "正式物种没有启用可装配的单图动画：" .. actor.id)
+        assert(actor.initialSpriteAddress ~= "" and actor.hasInitialSprite and actor.initialSpriteName ~= "",
+            "摇摆动画缺少不依赖 Animator 的静态首帧：" .. actor.id .. "：" .. actor.initialSpriteError)
+        local compiled = actor.runtimeSprite
+        assert(compiled.isActor and compiled.sameSprite and compiled.spriteName == actor.initialSpriteName,
+            "Actor 运行时定义丢弃或替换了已加载的首帧图片：" .. actor.id)
+        assert(compiled.missingRejected and compiled.nullRejected and compiled.absentAddressRejected
+            and compiled.missingError ~= "" and compiled.inactive,
+            "Actor 编译接纳了缺失、空引用或未配置的首帧，或规则意外加载了世界：" .. actor.id)
+        if actor.id == "SnowLeopard" then
+            assert(actor.initialSpriteName == "MiniWolf_Idle_1", "雪豹没有绑定自己的静态首帧")
+            snowLeopard = true
+        elseif actor.id == "Zombie" then
+            assert(actor.initialSpriteName == "Character_Zombie_Idle_Right", "僵尸错误复用了狼外壳的图片")
+            zombie = true
+        end
         assert(actor.stableName == "animator" and actor.moduleId == data.requiredAnimationId and actor.prefabId == actor.declaredPrefabId,
             "动画槽位、能力ID或具体Prefab身份不符合正式依赖契约：" .. actor.id)
         assert(actor.requiredCount == 1 and actor.registeredIdCount == 1 and actor.requiredSameInstance and not actor.requiredRejected,
@@ -97,6 +155,7 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
         end
     end
     assert(ghost and fish and bird and bee, "单图动画目录缺少幽灵、小鱼、鸟或蜜蜂")
+    assert(snowLeopard and zombie, "单图首帧回归缺少雪豹或共享狼外壳的僵尸")
 end, "正式全物种单图模式与幽灵小鱼纯控制器")
 
 test.system("ai", "single_sprite_aquatic", {}, function(data)
@@ -114,6 +173,57 @@ test.system("ai", "single_sprite_aquatic", {}, function(data)
     assert(not data.animatorSwimming.singleSprite and data.animatorSwimming.swimming and data.animatorSwimming.rotationError > .1,
         "鱼切回原模式后独立游动表现没有恢复")
 end, "鱼单图接管不双叠旧摆动且保留搁浅携带信号")
+
+test.system("ai", "passable_building_sight", {}, function(data)
+    assert(data.catalogCount >= 46 and data.extensionCount == 23 and
+        #data.samples == data.catalogCount + data.extensionCount, "没有采样完整设备目录及各层通行扩展")
+    local sampled = {}
+    for _, sample in ipairs(data.samples) do
+        assert(not sampled[sample.id], "设备视线样本身份重复：" .. sample.id)
+        sampled[sample.id] = sample
+        local expectedBlocking = sample.blocksMovement and sample.layer ~= 2 and sample.layer ~= 6
+        assert(sample.blocksTraversal == expectedBlocking and sample.blocksSight == expectedBlocking and sample.visible ~= expectedBlocking,
+            "可通行设施挡住视线，或实体设备失去遮挡：" .. sample.id)
+        assert(not sample.wallVisible and sample.afterWallRemovedVisible == sample.visible,
+            "同格覆盖层抹掉地形墙，或拆墙后未恢复设备自身规则：" .. sample.id)
+    end
+    for _, id in ipairs({"Conveyor_Wood", "Conveyor_Cloth", "Shaft_Wood", "Wire_Copper", "Wire_Hidden",
+        "FluidPipe", "FluidValve", "FluidOutlet", "GasSelector", "PressureProbe_Mechanical",
+        "PressureProbe_Electronic", "ElectricLightBulb"}) do
+        local sample = sampled[id]
+        assert(sample and not sample.blocksMovement and not sample.blocksSight and sample.visible,
+            "正式可通行物品漏配或被当成视线障碍：" .. id)
+    end
+    for layer = 0, 6 do
+        local sample = sampled["test:passable_layer_" .. layer]
+        assert(sample and sample.visible and not sample.blocksSight,
+            "不同名称或覆盖层的同类扩展没有继承通用透视规则：" .. layer)
+    end
+    for layer = 0, 15 do
+        local sample = sampled["test:solid_layer_" .. layer]
+        local expected = layer ~= 2 and layer ~= 6
+        assert(sample and sample.blocksSight == expected and sample.visible ~= expected,
+            "不同占地层的实体或地板没有遵守统一阻挡规则：" .. layer)
+    end
+    assert(data.removedVisible and not data.terrainWallVisible,
+        "动态设施移除没有恢复视线，或真实地形墙被错误放行")
+end, "全目录可通行设施不挡视线，各层扩展不靠名称特判，实体和叠加墙保留遮挡")
+
+test.system("ai", "unified_building_obstruction", {}, function(data)
+    assert(#data.samples == 32, "未覆盖全部16层的可通行与实体声明")
+    for _, sample in ipairs(data.samples) do
+        local expected = sample.declared and sample.layer ~= 2 and sample.layer ~= 6
+        assert(sample.gameObjectBlocking == expected and sample.compiledBlocking == expected and
+            sample.indexedBlocking == expected and sample.sightBlocking == expected,
+            "普通建筑、数据机器、导航和视线发生分歧：" .. sample.layer)
+        assert(sample.compiledLayer == sample.layer and sample.highestLayer == sample.layer and sample.placementRetained,
+            "数据化丢失占地层，或可通行建筑失去放置占格")
+    end
+    assert(data.stackedBlocked and data.overlayRemovedBlocked,
+        "可通行覆盖层或移除覆盖层抹掉了同格实体阻挡")
+    assert(data.solidRemovedClear and data.emptyClear and data.emptyHighestLayer == -1,
+        "实体移除后残留阻挡，或误删同格可通行设施")
+end, "普通建筑与数据机器统一通行遮挡，覆盖全部层及同格增删")
 
 test.system("ai", "line_of_sight_batch", {}, function(data)
     assert(not data.unknownSameCell and data.loadedSameCell and data.blockedEndpointsIgnored,
@@ -178,6 +288,20 @@ test.system("ai", "hive_resident_schedule", {}, function(data)
     assert(data.remainingCount == 2 and data.survivors[1] == 102 and data.survivors[2] == 103,
         "已登记初始成员死亡后被免费补足或改变剩余成员身份")
 end, "蜂巢分帧出巢的持久意图、配额与即时护巢")
+
+test.system("ai", "bee_target_search", {}, function(data)
+    assert(data.defenseBecameSearch and data.travelsToMemory and data.remainingAfterTravel == 8,
+        "护巢追击丢失目标后没有保留目标记忆并赶往最后位置")
+    assert(data.firstTravelDistance >= .75 and data.firstSearchRadius <= data.lockRadius + .001,
+        "到达最后位置后停在原地，或搜索点越出记忆点附近")
+    assert(data.waypointRetained and data.nextTravelDistance >= .75,
+        "搜索点每帧乱跳，或到点后没有继续巡飞搜索")
+    assert(data.memoryFrozen and data.stillSearching and data.negativeTimeIgnored and data.nightKeepsSearch,
+        "搜索泄露隐藏目标位置、被夜间归巢抢占，或倒计时被反向推进")
+    assert(string.find(data.debugState, "警戒搜索", 1, true), "搜索时头顶没有显示真实警戒状态")
+    assert(data.reacquiredClearsSearch, "重新锁定目标后残留旧搜索目的地或倒计时")
+    assert(data.timeoutClearsSearch and data.resetClearsSearch, "搜索到期或回池后残留旧目标及巡飞状态")
+end, "蜜蜂护巢丢失目标后持续警戒巡飞、重锁及清理")
 
 -- 正式水生线路保持原小段采样，连续相同液体格只查询一次。
 for _, case in ipairs({
@@ -409,6 +533,18 @@ test.system("ai", "stale_perception_batch", {}, function(data)
         "丢弃过期感知候选后未正确消费 NativeStream 或破坏下一组结果")
 end, "过期感知批次跳过无效视线与碰撞计算，完整消费结果流")
 
+
+test.system("ai", "spawner_update_work", {}, function(data)
+    assert(data.initialization and data.due and data.overdue,
+        "生物调度初始化、到期边界或过期调度被空转守卫跳过")
+    assert(not data.idle and data.birthPending and not data.birthCompleted,
+        "空转帧仍创建世界上下文，或分帧出生未完成时停止推进")
+    assert(not data.disabled and not data.missingSettings,
+        "调度器停用或缺少配置时仍进入已初始化世界")
+    assert(data.nanNow and data.nanNext and data.infiniteNow and
+        not data.infiniteNext and not data.negativeInfinityNow,
+        "非有限时钟与原先小于下一Tick的比较语义不一致")
+end, "生物调度空转跳过世界上下文，初始化与分帧出生保持")
 
 test.system("ai", "network_snapshot_buffer", {}, function(data)
     assert(data.incomplete and data.duplicatePart and data.assembled,

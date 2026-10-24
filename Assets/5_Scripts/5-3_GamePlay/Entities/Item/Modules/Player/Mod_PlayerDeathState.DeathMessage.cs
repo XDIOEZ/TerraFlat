@@ -1,9 +1,11 @@
 using FlatWorld.Localization;
 using TMPro;
+using Unity.Profiling;
 
 public partial class Mod_PlayerDeathState
 {
     #region 死亡描述展示
+    private static readonly ProfilerMarker DeathMessageMarker = new("FlatWorld.Player.Death.Message");
 
     private void SubscribeDeathMessageLocalization()
     {
@@ -19,6 +21,7 @@ public partial class Mod_PlayerDeathState
     /// <summary>死亡结算和语言切换只刷新已有面板，描述来源是权威血量锁存的死亡记录。</summary>
     private void RefreshDeathMessage()
     {
+        using var marker = DeathMessageMarker.Auto();
         if (_dyingPanel == null || !_isInDyingState)
             return;
 

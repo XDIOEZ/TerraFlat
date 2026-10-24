@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using FlatWorld.Localization;
 
 /// <summary>
 /// 通用面板视图：按节点名缓存控件、管理开关状态并补齐本地化、音频和手柄导航能力。
@@ -177,8 +178,19 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     public void SetPanelName(string name)
     {
-        PanelName = name;
-        GetText("信息").text = PanelName;
+        PanelName = name ?? string.Empty;
+        TMP_Text title = GetText("信息");
+        if (title != null)
+        {
+            LocalizedTextBinder binder = title.GetComponent<LocalizedTextBinder>();
+            if (binder == null)
+                binder = title.gameObject.AddComponent<LocalizedTextBinder>();
+
+            // 面板标题按当前业务名称重新查询，语言切换后自动刷新。
+            binder.ConfigureRuntime(() => string.IsNullOrWhiteSpace(PanelName)
+                ? string.Empty
+                : FlatWorldLocalizationService.GetUiText(PanelName));
+        }
         UIManager.Instance.RegisterPanel(this, PanelName);
     }
 

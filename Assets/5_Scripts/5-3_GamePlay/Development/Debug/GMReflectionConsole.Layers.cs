@@ -1,3 +1,4 @@
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -147,7 +148,7 @@ public sealed partial class GMReflectionConsole
         slider.handleRect = handle.rectTransform;
         slider.targetGraphic = handle;
         slider.SetValueWithoutNotify(worldLayerOverlay.Transparency * 100f);
-        worldLayerTransparencyText.SetText("透明度  {0:0}%", slider.value);
+        SetLocalizedFormat(worldLayerTransparencyText, "透明度  {0:0}%", slider.value);
         slider.onValueChanged.AddListener(SetWorldLayerTransparency);
 
         // 拖动只更新材质与内存偏好，松开或键盘移走焦点时统一落盘。
@@ -165,7 +166,7 @@ public sealed partial class GMReflectionConsole
     private void SetWorldLayerTransparency(float percent)
     {
         worldLayerOverlay.SetTransparency(percent / 100f);
-        worldLayerTransparencyText.SetText("透明度  {0:0}%", percent);
+        SetLocalizedFormat(worldLayerTransparencyText, "透明度  {0:0}%", percent);
         GMConsolePreferences.SetWorldLayerOverlayTransparency(worldLayerOverlay.Transparency);
     }
 
@@ -225,7 +226,11 @@ public sealed partial class GMReflectionConsole
     {
         if (button == null)
             return;
-        button.GetComponentInChildren<TextMeshProUGUI>(true).text = active ? $"{label}：开" : $"{label}：关";
+        TextMeshProUGUI buttonLabel = button.GetComponentInChildren<TextMeshProUGUI>(true);
+        SetLocalizedProvider(buttonLabel, () => FlatWorldLocalizationService.GetUiFormat(
+            "{0}：{1}",
+            FlatWorldLocalizationService.GetUiText(label),
+            FlatWorldLocalizationService.GetUiText(active ? "开" : "关")));
         SetGmButtonVisual(button, active ? GmSelection : GmSurfaceRaised, active);
     }
 

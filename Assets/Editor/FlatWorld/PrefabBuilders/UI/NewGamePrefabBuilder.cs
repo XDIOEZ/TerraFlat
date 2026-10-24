@@ -931,6 +931,8 @@ public static class NewGamePrefabBuilder
         Stretch(placeholder.rectTransform);
         TextMeshProUGUI valueText = (TextMeshProUGUI)CreateText("Text", area, initialValue, font, 23f, Cream, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
         Stretch(valueText.rectTransform);
+        valueText.enableAutoSizing = false;
+        valueText.overflowMode = TextOverflowModes.Overflow;
 
         TMP_InputField input = inputObject.GetComponent<TMP_InputField>();
         input.targetGraphic = background;
@@ -1007,7 +1009,7 @@ public static class NewGamePrefabBuilder
         text.color = color;
         text.alignment = alignment;
         text.enableWordWrapping = false;
-        text.overflowMode = TextOverflowModes.Overflow;
+        FlatWorldUITextLayout.Configure(text, size);
         text.raycastTarget = false;
         return text;
     }

@@ -1,0 +1,339 @@
+{
+  "date": "2026-10-24",
+  "tool": "built-in image_gen",
+  "productionSize": [
+    32,
+    32
+  ],
+  "normalization": "Per-item image editing followed by no-dither palette region coverage voting to true native32; original visible bounds mapped to half resolution, binary alpha; unchanged normalized grip pivots and GUIDs, PPU halved; Point, no mipmaps or compression.",
+  "validation": "Saved PNG/meta checked statically. At handoff Unity automatically imported all35 textures as32x32; no active Import/Refresh, Play Mode switch or gameplay acceptance performed by agents.",
+  "revisions": [
+    {
+      "id": "Axe_Flint",
+      "reason": "Removed metal-like silver rim from generated flint to retain matte stone identity",
+      "intermediateSource": "C:/Users/PC/.codex/generated_images/01a16c8c-14c7-7e41-b329-66407b917716/exec-3fd2504b-f8a1-4dc7-9320-88d2f4b53bfe.png"
+    },
+    {
+      "ids": [
+        "Axe_Copper",
+        "Axe_Iron"
+      ],
+      "reason": "Editing completed before user requested32; clean edited planes were formatted to32 by region voting."
+    }
+  ],
+  "items": [
+    {
+      "id": "Axe_Bronze",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-0e4b6132-0596-4f2a-81b8-50f282644449.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference BRONZE axe. Blade must be unmistakably warm golden-brown/olive-gold bronze, visibly distinct from reddish copper and silver iron. A broad ochre main blade plane, dark olive-brown side plane and ONE short contiguous pale-gold cutting edge sheen. No green paint or dense patina dots.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "5a363138f8bb9e0c6c19b006a223e247b89fef0360b396e49d8f1c96e620b95a",
+      "sha256": "2ed47c099f6e21f8c3447bbe28bf636a4207add9c680d574498a5653b0a2f4ae",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        15,
+        14,
+        59,
+        54
+      ],
+      "alphaBounds": [
+        7,
+        7,
+        30,
+        27
+      ],
+      "priorPPU": 31.732398648,
+      "ppu": 15.866199324,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Axe_Copper",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-c050efc0-dfdd-40f2-a587-872d2daffeaf.png",
+      "prompt": "Use case: precise-object-edit. Edit the existing tiny survival game tool sprite in image 1. Keep the SAME tool silhouette, handmade construction, proportions, wood shape, head side, lower-left grip to upper-right head orientation, canvas placement and transparent margins. Clean up its very noisy surfaces and serrated tiny outline: replace scattered single-pixel bright/dark specks and checkerboard wood grain with FEWER broad connected color planes and coherent shade strips; make the silhouette deliberate clean stair steps, no bristly notches. Preserve the real crossed rawhide lashings that secure the head to the handle, simplified to two or three chunky readable wraps and a knot. Work on a true UNIFORM 64x64 logical pixel grid, each logical pixel a flat square, no smaller details; the complete axe occupies the SAME roughly 40x40 central pixel area as the source. Restrained realistic retro pixel sprite, a maximum of about 16 flat opaque colors, 3 wood shades with a continuous lit face and shadow face, upper-left light, genuinely transparent background. No gradients, antialiasing, random mottling, dither, glitter, isolated white dots, dense grain, scratches, photorealism, 3D gloss, text, shadow, border, extra objects. Return ONE complete sprite only. Do not merely filter or blur the original: selectively repaint its color clusters to be clean and connected. The broad axe blade must read unmistakably RED COPPER, distinct from brown wood: burnt red-orange base, deep reddish-brown shadow plane and one short CONNECTED peach-copper edge sheen. More saturated red copper than the existing source. Keep blade reflectivity distinct from matte wood. No gold blade or gray blade.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "7d4e4525a4932e1d21511455d1127134d971a4ab135460ed7aa6bb8233adc82f",
+      "sha256": "9359a54b78d91ba3d74f2a68c90b4569955918c7a54c37749d92ad7a757aaee8",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 13,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        17,
+        12,
+        58,
+        53
+      ],
+      "alphaBounds": [
+        8,
+        6,
+        29,
+        27
+      ],
+      "priorPPU": 44.482767056,
+      "ppu": 22.241383528,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Axe_Flint",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-0765fff9-b337-49ea-af95-5ef242de4325.png",
+      "prompt": "Use case: precise-object-edit. Change ONLY the stone head material shading in this exact sprite. Preserve the wood handle, binding, silhouette, pose, canvas placement, transparent margins and coarse pixel grid. This is a primitive FLINT STONE axe, NOT metal: REMOVE the bright silver-white metal-like outline on the right cutting rim. Make the whole head matte near-black charcoal flint with ONE large dark warm-gray flake face and one muted slate-gray flake face. Keep the chipped cutting edge a medium charcoal gray, distinctly darker than the light tan lashings; there must be NO pale silver line, no white pixels on the flint, no polished rim or shine. The large facets should read as stone fracture faces. Preserve clear large flat connected color shapes, no speckles or noise. Final intended production canvas is 32x32 logical pixels, hard opaque pixel clusters on true transparent background. Single complete axe only.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "7ba47d229d72b930979160ad03e9e6686f59fc4afe1eb00309bb1f97a1f3c705",
+      "sha256": "97d2d081dd0d6f35ea2ae68303b835d6e1a9d65497ce7c47527a1ab4dcb0b28d",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 10,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        18,
+        19,
+        48,
+        48
+      ],
+      "alphaBounds": [
+        9,
+        9,
+        24,
+        24
+      ],
+      "priorPPU": 32.626386986,
+      "ppu": 16.313193493,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Axe_Iron",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-7b79d88b-b342-4113-82d6-e85a623ce0ef.png",
+      "prompt": "Use case: precise-object-edit. Edit the existing tiny survival game tool sprite in image 1. Keep the SAME tool silhouette, handmade construction, proportions, wood shape, head side, lower-left grip to upper-right head orientation, canvas placement and transparent margins. Clean up its very noisy surfaces and serrated tiny outline: replace scattered single-pixel bright/dark specks and checkerboard wood grain with FEWER broad connected color planes and coherent shade strips; make the silhouette deliberate clean stair steps, no bristly notches. Preserve the real crossed rawhide lashings that secure the head to the handle, simplified to two or three chunky readable wraps and a knot. Work on a true UNIFORM 64x64 logical pixel grid, each logical pixel a flat square, no smaller details; the complete axe occupies the SAME roughly 40x40 central pixel area as the source. Restrained realistic retro pixel sprite, a maximum of about 16 flat opaque colors, 3 wood shades with a continuous lit face and shadow face, upper-left light, genuinely transparent background. No gradients, antialiasing, random mottling, dither, glitter, isolated white dots, dense grain, scratches, photorealism, 3D gloss, text, shadow, border, extra objects. Return ONE complete sprite only. Do not merely filter or blur the original: selectively repaint its color clusters to be clean and connected. The broad axe blade must read refined hand-forged IRON: light SILVERY BLUE-GRAY main plane, darker slate blue-gray side and one connected pale silver cutting-edge highlight. Visibly lighter and more reflective than crude charcoal raw iron. Keep simple handmade shape and primitive fastening, no modern shiny steel ferrule.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "d111b881a5bf924b892923b9dd9d3eb3d11cc9542dd13139be732c95d0c34b4b",
+      "sha256": "2cece6acac64c71ed6e75aaa1a6b4c0193ef8ac42717816f6ef3cd83bad1e2c8",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        16,
+        13,
+        57,
+        54
+      ],
+      "alphaBounds": [
+        8,
+        6,
+        29,
+        27
+      ],
+      "priorPPU": 29.788797499,
+      "ppu": 14.8943987495,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Axe_RawIron",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-22e4fe22-481a-47c7-94d0-7038ebb1866a.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference RAW IRON axe. Blade is dark cool charcoal iron, a broad charcoal-gray face, a slate-gray side and ONE short connected cool silver cutting edge. Darker and rougher than refined silver-blue iron but still metallic, not a gray stone. Do not add rusty specks.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "2fa793488cd4a740a9df757e1642c164e1fb97df740a17cf1c1af0b00ac5e546",
+      "sha256": "cf0aadfa8d25c2de4aa7a02b6253e74d5692a2616d19c811f9f30505ba7e5093",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 13,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        16,
+        13,
+        56,
+        52
+      ],
+      "alphaBounds": [
+        8,
+        6,
+        28,
+        26
+      ],
+      "priorPPU": 42.908342609,
+      "ppu": 21.4541713045,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Axe_Stone",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-57f5e64c-6b28-4922-8151-2e81174d8704.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference primitive STONE AXE. Preserve its chunky gray stone wedge blade and actual primitive joint shape, not a metal axe. Main stone is muted neutral medium gray, one larger pale gray flaked face, one darker stone face, matte with NO metallic shine. Just two or three broad stone facets; no little chips or pebbled texture. The crooked brown wooden handle and broad tan joint lashings remain distinct.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "aeb61fabac5bf1ec59cb72cea72f20b602495e1e762c777dcac2c12fcea23e8b",
+      "sha256": "71294738e12d7274fdab635f1de4348d6998376b1537d955218a710dc5874c19",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        16,
+        16,
+        51,
+        51
+      ],
+      "alphaBounds": [
+        8,
+        8,
+        26,
+        26
+      ],
+      "priorPPU": 32.07619792,
+      "ppu": 16.03809896,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Pickaxe_Bronze",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-af8cbd6b-cc6c-4eed-a8a3-8bbc6fd7c499.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference BRONZE PICKAXE. Preserve its thin two-ended gently curved pick head crossing the top of the wood handle, pointed tips and broad joint lashings. Do NOT turn into an axe, hammer or shovel. Metal is golden brown/olive-gold BRONZE, visually distinct from red copper: broad ochre main plane, dark olive-brown underside and one connected muted pale-gold top glint. Do not add green rust spots or tiny scattered highlights. Both pointed tips must stay readable at32 size.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "d4c7293826d2cde7c9ea8faa2eb07ce9a96cd8a082606f3fa694dee7614c1ed2",
+      "sha256": "f3f5fc2b2c005d2a6b284964b09ec27132c86c03cd11219b11240a9c197a9a22",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 11,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        15,
+        13,
+        54,
+        53
+      ],
+      "alphaBounds": [
+        7,
+        6,
+        27,
+        27
+      ],
+      "priorPPU": 33.621250093,
+      "ppu": 16.8106250465,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Pickaxe_Copper",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-e2bf644a-af20-4021-84c0-1ea17f6e85a5.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference COPPER PICKAXE. Preserve its thin two-ended arched pick head across the top of the wood handle, both tapering pointed tips, and broad tan joint lashings. Do NOT turn into an axe, hammer or shovel. Metal must be unmistakably RED COPPER, warm burnt red-orange main plane, deep reddish-brown underside and a short connected peach-copper top glint. Keep both pointed tips readable at32 size, no tiny speckled highlights.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "ee219d557a5e1d1bf28212958b77ab915a3af5c721312555e5cce3c2f888d35c",
+      "sha256": "e228b982cb4118d05f199e41a5c1a9591bf5dc14d1e8405b68f6eef6e24814bb",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 11,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        14,
+        13,
+        54,
+        53
+      ],
+      "alphaBounds": [
+        7,
+        6,
+        27,
+        27
+      ],
+      "priorPPU": 39.59883815,
+      "ppu": 19.799419075,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Pickaxe_Iron",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-78b89cea-f8d5-465c-a309-2da87141021d.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference refined hand-forged IRON PICKAXE. Preserve the two-ended curved pick head crossing the top of the wood handle, two tapering pointed tips and tan joint lashings. Do NOT turn it into an axe, hammer or shovel. Metal is light SILVER BLUE-GRAY main plane with a darker slate underside and a clean short connected pale silver top-edge glint, distinctly lighter and more metallic than dark raw iron. Both tips must remain readable at32 size, no speckled gleam or modern polished machinery.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "888eb45d757e6adadc1360962763fa4afd99b22db6b7dd748073d1bf5945cfe3",
+      "sha256": "e3ab1e92d38c9c05108f910d89ea856701e1a0f6664dc5d3e86e70b669b69bb0",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        14,
+        14,
+        55,
+        56
+      ],
+      "alphaBounds": [
+        7,
+        7,
+        28,
+        28
+      ],
+      "priorPPU": 34.687011777,
+      "ppu": 17.3435058885,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Pickaxe_RawIron",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-8ecb5813-c5cc-4d9b-9423-df38e282c365.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference RAW IRON PICKAXE. Preserve the two-ended curved pick head crossing the top of the wooden handle, asymmetric tapering pointed tips and broad tan joint lashings. Do NOT turn into an axe, hammer or shovel. Head is dark cool charcoal iron: one broad charcoal main plane, slate blue-gray side and a short connected dull silver upper glint, visibly darker than refined silver-gray iron. Both tips readable at32 logical size, no little mottled rusty spots or scattered highlights.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "5e6ed4e01b36f21f7f1b77075174a719193f7b47d3b7f2eba935a8cf1493a17d",
+      "sha256": "5cb5540578ba980778b54a5494d9caa4f6565caa9b59c8a4f54bb43c53397792",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 8,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        14,
+        12,
+        58,
+        57
+      ],
+      "alphaBounds": [
+        7,
+        6,
+        29,
+        29
+      ],
+      "priorPPU": 45.253913722,
+      "ppu": 22.626956861,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    },
+    {
+      "id": "Pickaxe_Stone",
+      "sourceImage": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-14c7-7e41-b329-66407b917716\\exec-800013d7-d7be-405d-adc0-92edc268f38d.png",
+      "prompt": "Use case: precise-object-edit. Edit image 1 into a CLEANER, deliberately coarser native game sprite on a strict 32 BY 32 LOGICAL PIXEL GRID. The complete tool occupies only about 20 by 20 logical pixels in the same central framing and transparent margins. If output is enlarged, every logical pixel must be one equal flat square and no smaller detail pixels are allowed. Preserve this exact tool's identity, handmade construction, blade side, proportions, lower-left grip to upper-right head orientation. Remove the noisy flecks, wood-grain speckling, tiny scratches and serrated bristly outline. Simplify into large CONNECTED flat color shapes: wood is just one uninterrupted brown main face, one long warm light strip and one long dark side; NO mottling. Joint lashings are 2 or 3 broad tan crossed strips and a blocky knot holding the head securely, not a tangle of small spots. Keep wood slightly bent and head slightly asymmetrical and hand-forged. Upper-left light, 10-14 deliberate colors TOTAL, about 3 shades per material, true hard transparent alpha. Clean regular stair-step silhouette. No gradients, antialiasing, blur, dither, glitter, isolated white dots, dense texture, photorealistic 3D, background, shadow, text, hands or extra objects. Return ONE complete sprite only. Preserve the original canvas framing and tool bounding-box placement. Subject is the reference primitive STONE PICKAXE. Preserve the long two-ended stone pick head crossing the top of the wooden handle, with its original asymmetric pointed ends and crossed tan head-to-handle lashings. Do NOT turn it into an axe, hammer, or shovel. Stone is matte neutral gray with just two or three connected flaked planes, no white metal shine. Keep both pointed ends of the pick readable at native32 size, keep simple wood with a continuous light face and a dark side, no grain.",
+      "mode": "built-in image_gen precise-object-edit",
+      "beforeSha256": "667ef6cfb607f5294b0df68f81a1c0fc5802b07d9e308073a2b01ed9d3bc9cac",
+      "sha256": "1b87874bc2b15f71f286ef089d31513ac16ac3b97c1cd2395f13e1f8ac6e7932",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 11,
+      "alpha": "0/255",
+      "priorAlphaBounds": [
+        14,
+        10,
+        56,
+        56
+      ],
+      "alphaBounds": [
+        7,
+        5,
+        28,
+        28
+      ],
+      "priorPPU": 45.221782609,
+      "ppu": 22.6108913045,
+      "gridSampling": "palette region coverage vote, no dithering",
+      "anchorPolicy": "Original normalized grip pivot, GUID and spriteID preserved; visible bounds mapped to half-resolution, PPU halved."
+    }
+  ],
+  "delivery": {
+    "savedFiles": "35 native32 PNGs and import metadata; existing item references retained",
+    "editor": "No active Import, Refresh, Play Mode switch or reload performed by the agents. At handoff Unity automatically imported all35 textures; AssetDatabase reports32x32 for every texture.",
+    "acceptance": "No gameplay acceptance performed; user verifies actual holding, actions, thin lines, burning and inventory appearance."
+  }
+}

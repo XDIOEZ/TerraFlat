@@ -13,8 +13,8 @@
           "amount": 8
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 4
         },
         {
@@ -43,8 +43,8 @@
           "amount": 8
         },
         {
-          "match": "exact_item",
-          "itemId": "Rope",
+          "match": "tag",
+          "tag": "Rope",
           "amount": 4
         },
         {

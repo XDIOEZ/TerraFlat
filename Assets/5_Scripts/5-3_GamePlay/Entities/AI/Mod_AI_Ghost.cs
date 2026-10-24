@@ -211,6 +211,7 @@ public partial class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         float effectivePerceptionRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
             perceptionRadius,
             playerItem);
+        effectivePerceptionRadius = item.ClampPerceptionRadius(effectivePerceptionRadius);
         if (player != null &&
             WorldTopologyRuntime.SqrDistance(item.transform.position, player.position) <=
             effectivePerceptionRadius * effectivePerceptionRadius)

@@ -453,6 +453,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             changed.Kind != TerrainChangeKind.TileStack &&
             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
             return;
+        if (changed.Kind == TerrainChangeKind.Environment && IsSoilMoistureVisualLayer(changed.EnvironmentLayerId))
+        {
+            RefreshSoilMoistureVisuals(changed);
+            return;
+        }
         if (!AffectsBaseTerrainEnvironment(changed))
             return;
 
@@ -473,13 +478,16 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         }
     }
 
-    /// <summary>基础地形只读取高度、水流和风向，土壤与雪层不重提地形网格。</summary>
+    /// <summary>高度、水流和风向走地形刷新；土壤水分单独更新单格参数，雪层不重提地形网格。</summary>
     private static bool AffectsBaseTerrainEnvironment(ChunkTerrainChanged changed) =>
         changed.Kind != TerrainChangeKind.Environment ||
         changed.AffectsEnvironmentLayer("height") || changed.AffectsEnvironmentLayer("riverKind") ||
         changed.AffectsEnvironmentLayer("riverFlowX") || changed.AffectsEnvironmentLayer("riverFlowY") ||
         changed.AffectsEnvironmentLayer("riverFlow") || changed.AffectsEnvironmentLayer("windX") ||
-        changed.AffectsEnvironmentLayer("windY");
+        changed.AffectsEnvironmentLayer("windY") ||
+        changed.AffectsEnvironmentLayer(EstuaryCurrentKernel.DirectionXLayer) ||
+        changed.AffectsEnvironmentLayer(EstuaryCurrentKernel.DirectionYLayer) ||
+        changed.AffectsEnvironmentLayer(EstuaryCurrentKernel.InfluenceLayer);
 
     #region 世界火焰表现
 
@@ -1008,7 +1016,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         {
             SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground,
                 cell.GroundTileId, groundMaterial,
-                Vector4.zero, Vector4.zero);
+                BuildGroundSurfaceData(terrain, x, y, cell.GroundTileId), Vector4.zero);
         }
         else
         {
@@ -1489,7 +1497,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         return count > 0 ? velocity / count : Vector2.zero;
     }
 
-    /// <summary>海面风向按共享格角平均，保证相邻水格的波纹方向连续。</summary>
+    /// <summary>海面流向按共享格角平均，入海口波纹与物品漂流读取同一扇面。</summary>
     private Vector2 ResolveOceanCornerDirection(ChunkTerrainData terrain, int left, int bottom, Vector2 fallback)
     {
         Vector2 direction = Vector2.zero;
@@ -1505,9 +1513,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                     (SurfaceBiomeKind)cell.BiomeId != SurfaceBiomeKind.Ocean)
                     continue;
 
-                source.TryGetEnvironmentValue("windX", localX, localY, out float windX);
-                source.TryGetEnvironmentValue("windY", localX, localY, out float windY);
-                Vector2 sample = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+                Vector2 sample = WaterEnvironmentRules.ResolveOceanCurrentDirection(source, localX, localY);
                 if (sample.sqrMagnitude <= 0.000001f)
                     continue;
 

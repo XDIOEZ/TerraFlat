@@ -66,7 +66,7 @@ public static class SpawnerConfigCatalogLoader
         ValidateText(json, sourceName);
         try
         {
-            SpawnerConfigFile file = JsonConvert.DeserializeObject<SpawnerConfigFile>(json, StrictJsonSettings);
+            SpawnerConfigFile file = JsonConfigurationCache.Deserialize<SpawnerConfigFile>(json, StrictJsonSettings);
             if (file == null || file.SchemaVersion != SupportedSchemaVersion || file.Config == null)
                 throw new InvalidDataException($"生物生成规则 {sourceName} 缺少配置或 schemaVersion 不受支持");
             return file.Config;
@@ -83,7 +83,7 @@ public static class SpawnerConfigCatalogLoader
         ValidateText(json, "spawner-settings");
         try
         {
-            return JsonConvert.DeserializeObject<SpawnerRuntimeSettings>(json, StrictJsonSettings)
+            return JsonConfigurationCache.Deserialize<SpawnerRuntimeSettings>(json, StrictJsonSettings)
                 ?? throw new InvalidDataException("生物生成全局设置为空");
         }
         catch (JsonException exception)
@@ -131,6 +131,7 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException("生物生成全局设置缺失或 schemaVersion 不受支持");
         if (settings.GlobalAliveLimit < 1 ||
             !IsFinite(settings.SpawnRetryInterval) || settings.SpawnRetryInterval <= 0f ||
+            !IsFinite(settings.NaturalSpawnIntervalGameSeconds) || settings.NaturalSpawnIntervalGameSeconds <= 0f ||
             !IsFinite(settings.EcologyTickInterval) || settings.EcologyTickInterval < 0.1f ||
             settings.MaxLoadedGameObjectActors < 1 || settings.MaxLoadedEntityActors < 1 ||
             settings.ResidentChecksPerTick < 1)
@@ -153,27 +154,22 @@ public static class SpawnerConfigCatalogLoader
         if (!ids.Add(config.Id))
             throw new InvalidDataException($"生物生成配置 ID 重复：{config.Id}");
 
-        if (!IsSupportedScheduleMode(config.ScheduleMode))
-            throw new InvalidDataException($"生物生成配置 {config.Id} 的 scheduleMode 不受支持：{config.ScheduleMode}");
         if (!IsSupportedEcologyGroup(config.EcologyGroup))
             throw new InvalidDataException($"生物生成配置 {config.Id} 的 ecologyGroup 不受支持：{config.EcologyGroup}");
         if (config.SpawnEntries == null || config.SpawnEntries.Count == 0)
             throw new InvalidDataException($"生物生成配置 {config.Id} 至少需要一个 spawnEntry");
         if (!IsFinite(config.SpawnChance) || config.SpawnChance < 0f || config.SpawnChance > 1f)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的 spawnChance 无效：{config.SpawnChance}");
-        if (config.SpawnsPerDay < 1 || config.SpawnCount < 1 || config.SpawnSearchRetryCount < 1)
+        if (config.SpawnCount < 1 || config.SpawnSearchRetryCount < 1)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的数量或重试参数无效");
         ValidateSpawnBatch(config);
         if (!IsFinite(config.MinSpawnDistance) || !IsFinite(config.MaxSpawnDistance) ||
             config.MinSpawnDistance < 0f || config.MaxSpawnDistance < config.MinSpawnDistance)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的生成距离无效");
-        if (!IsFinite(config.SpawnTriggerTime) || config.SpawnTriggerTime < 0f ||
-            !IsFinite(config.PlayerVisibilityExclusionDistance) || config.PlayerVisibilityExclusionDistance < 0f ||
+        if (!IsFinite(config.PlayerVisibilityExclusionDistance) || config.PlayerVisibilityExclusionDistance < 0f ||
             !IsFinite(config.PlayerPopulationRadius) || config.PlayerPopulationRadius <= 0f ||
-            config.PerPlayerAliveLimit < 0 || config.DaysBetweenSpawns < 1 ||
-            config.DailyBudgetRecovery < 0 || config.RecoveryTargetPopulation < 0 ||
-            !IsFinite(config.RecoveryCheckInterval) || config.RecoveryCheckInterval <= 0f ||
-            config.GrowthIntervalDays < 1 || config.MaxLifetimeSpawnCount < 1 ||
+            config.PerPlayerAliveLimit < 0 ||
+            config.DailyBudgetRecovery < 0 ||
             !IsFinite(config.AsyncSpawnInterval) || config.AsyncSpawnInterval < 0f ||
             !IsFinite(config.MaxAllowedTileLight) || config.MaxAllowedTileLight < 0f || config.MaxAllowedTileLight > 1f ||
             !IsFinite(config.RecycleDistance) || config.RecycleDistance < 0f ||
@@ -233,22 +229,10 @@ public static class SpawnerConfigCatalogLoader
     {
         if (config.SpawnCountWeights == null || !IsFinite(config.BatchSpawnRadius) || config.BatchSpawnRadius < 0f)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的批次数量或半径无效");
-        bool hasBatch = config.SpawnCountWeights.Count > 0 || config.BatchSpawnRadius > 0f;
-        if (hasBatch && !string.Equals(config.ScheduleMode, nameof(SpawnerScheduleMode.Countdown), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"生物生成配置 {config.Id} 的批次扩展仅支持 countdown 调度");
         var counts = new HashSet<int>();
         foreach (SpawnerBatchSizeWeight option in config.SpawnCountWeights)
             if (option == null || option.Count < 1 || !IsFinite(option.Weight) || option.Weight <= 0f || !counts.Add(option.Count))
                 throw new InvalidDataException($"生物生成配置 {config.Id} 的批次数量权重必须为不重复的正数量和正权重");
-    }
-
-    private static bool IsSupportedScheduleMode(string value)
-    {
-        return string.Equals(value, "timedWindows", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(value, nameof(SpawnerScheduleMode.Countdown), StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(value, nameof(SpawnerScheduleMode.TimedWindows), StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(value, "dayMilestoneGrowth", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(value, nameof(SpawnerScheduleMode.DayMilestoneGrowth), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsSupportedEcologyGroup(string value)

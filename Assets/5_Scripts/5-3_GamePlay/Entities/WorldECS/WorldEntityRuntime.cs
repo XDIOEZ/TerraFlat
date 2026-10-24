@@ -231,14 +231,14 @@ public static class WorldEntityRuntime
         capabilities.GameTime = clock.GetTotalGameTimeSeconds();
         capabilities.DayLength = clock.DayLength;
         capabilities.Seasonal = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather != true;
-        capabilities.DifficultyGrowthMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
+        capabilities.GrowthMultiplier = GameRuleConfiguration.Current.Production.CropGrowthMultiplier;
         UpdateSeasonSnapshot(clock);
         capabilities.Update();
         plants.StepSeconds = capabilities.StepSeconds;
         plants.GameTime = capabilities.GameTime;
         plants.DayLength = capabilities.DayLength;
         plants.Seasonal = capabilities.Seasonal;
-        plants.GrowthDifficulty = capabilities.DifficultyGrowthMultiplier;
+        plants.GrowthMultiplier = capabilities.GrowthMultiplier;
         plants.DependOn(capabilities.PendingJobs);
         try { plants.Update(); }
         finally { plants.Complete(); }

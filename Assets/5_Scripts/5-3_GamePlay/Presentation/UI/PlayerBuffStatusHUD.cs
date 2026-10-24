@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -23,6 +24,9 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private const float RowSpacing = 6f;
     private const int MaxVisibleRows = 6;
     private const float TopSafeMargin = 16f;
+    private static readonly ProfilerMarker StructureMarker = new("FlatWorld.Buff.HUD.Structure");
+    private static readonly ProfilerMarker CreateRowMarker = new("FlatWorld.Buff.HUD.CreateRow");
+    private static readonly ProfilerMarker CreateViewMarker = new("FlatWorld.Buff.HUD.CreateView");
 
     private Player player;
     private Mod_BuffManager buffManager;
@@ -124,9 +128,9 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
         buffManager.BuffAdded += HandleBuffChanged;
         buffManager.BuffRemoved += HandleBuffChanged;
-        buffManager.BuffDurationChanged += HandleBuffContentChanged;
-        buffManager.BuffStacksChanged += HandleBuffContentChanged;
-        buffManager.BuffCountdownChanged += HandleBuffContentChanged;
+        buffManager.BuffDurationChanged += HandleBuffDurationChanged;
+        buffManager.BuffStacksChanged += HandleBuffStacksChanged;
+        buffManager.BuffCountdownChanged += HandleBuffDurationChanged;
         return true;
     }
 
@@ -136,9 +140,9 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         {
             buffManager.BuffAdded -= HandleBuffChanged;
             buffManager.BuffRemoved -= HandleBuffChanged;
-            buffManager.BuffDurationChanged -= HandleBuffContentChanged;
-            buffManager.BuffStacksChanged -= HandleBuffContentChanged;
-            buffManager.BuffCountdownChanged -= HandleBuffContentChanged;
+            buffManager.BuffDurationChanged -= HandleBuffDurationChanged;
+            buffManager.BuffStacksChanged -= HandleBuffStacksChanged;
+            buffManager.BuffCountdownChanged -= HandleBuffDurationChanged;
         }
 
         buffManager = null;
@@ -150,14 +154,24 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         RefreshStructure();
     }
 
-    /// <summary>时长变化只改对应文本，不触发布局重建。</summary>
-    private void HandleBuffContentChanged(BuffInstance runtime)
+    /// <summary>倒计时变化只刷新对应行的时间，不再重复解析名称、图标与层数。</summary>
+    private void HandleBuffDurationChanged(BuffInstance runtime)
     {
         if (runtime == null || string.IsNullOrWhiteSpace(runtime.DefinitionId))
             return;
 
         if (activeRows.TryGetValue(runtime.DefinitionId, out BuffStatusRowView rowView) && rowView != null)
-            rowView.Bind(runtime);
+            rowView.RefreshRemaining(runtime);
+    }
+
+    /// <summary>层数变化只刷新对应角标，其余信息由各自事件维护。</summary>
+    private void HandleBuffStacksChanged(BuffInstance runtime)
+    {
+        if (runtime == null || string.IsNullOrWhiteSpace(runtime.DefinitionId))
+            return;
+
+        if (activeRows.TryGetValue(runtime.DefinitionId, out BuffStatusRowView rowView) && rowView != null)
+            rowView.RefreshStackLevel(runtime);
     }
 
     private void HandleLanguageChanged(string _)
@@ -168,6 +182,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     /// <summary>读取 ActiveBuffs 快照并复用行 Prefab；仅此结构入口标记 Content 布局。</summary>
     private void RefreshStructure()
     {
+        using var marker = StructureMarker.Auto();
         if (player == null || player.DestructionHandled || player.IsUnloadingModules)
         {
             UnbindBuffManager();
@@ -193,13 +208,16 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         for (int i = 0; i < rowViews.Count; i++)
         {
             bool active = i < buffSnapshot.Count;
-            rowViews[i].gameObject.SetActive(active);
+            // 状态未改变就不重复触发 UI 节点启停和可能的 Canvas 重建。
+            bool wasActive = rowViews[i].gameObject.activeSelf;
+            if (wasActive != active)
+                rowViews[i].gameObject.SetActive(active);
             if (active)
             {
                 rowViews[i].Bind(buffSnapshot[i]);
                 activeRows[buffSnapshot[i].DefinitionId] = rowViews[i];
             }
-            else
+            else if (wasActive)
             {
                 rowViews[i].Clear();
             }
@@ -262,6 +280,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         rowViews.RemoveAll(row => row == null);
         while (rowViews.Count < requiredCount)
         {
+            using var marker = CreateRowMarker.Auto();
             GameObject rowObject = Instantiate(itemPrefab, contentRect, false);
             rowObject.name = RuntimeUIPrefabKeys.BuffStatusItem;
             BuffStatusRowView rowView = rowObject.GetComponent<BuffStatusRowView>();
@@ -316,7 +335,8 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             return false;
         }
 
-        viewObject = Instantiate(prefab, rootRect, false);
+        using (CreateViewMarker.Auto())
+            viewObject = Instantiate(prefab, rootRect, false);
         viewObject.name = ViewName;
         viewRect = viewObject.GetComponent<RectTransform>();
         viewCanvasGroup = viewObject.GetComponent<CanvasGroup>();
@@ -364,7 +384,9 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         if (viewRect == null || viewRect.parent == null || viewRect.parent.childCount <= 1)
             return;
 
-        viewRect.SetSiblingIndex(Mathf.Min(1, viewRect.parent.childCount - 1));
+        int targetIndex = Mathf.Min(1, viewRect.parent.childCount - 1);
+        if (viewRect.GetSiblingIndex() != targetIndex)
+            viewRect.SetSiblingIndex(targetIndex);
     }
 
     #endregion

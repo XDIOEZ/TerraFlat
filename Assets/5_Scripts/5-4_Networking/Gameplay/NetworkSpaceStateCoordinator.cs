@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -165,12 +165,12 @@ namespace FlatWorld.Networking.Gameplay
         private bool SendIntent(string profile, SpaceNetworkIntent intent)
         {
             if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() &&
-                intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem) return false;
+                intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem or SpaceNetworkIntentKind.OffhandParry) return false;
             if (NetworkServer.active || !NetworkClient.ready || !OwnsProfile(profile)) return false;
             intent.RealmRevision = NetworkClient.localPlayer.GetComponent<NetworkWorldPlayer>().RealmRevision;
             uint sequence = NextToken(ref intentSequence);
             if (intent.StartsGroundCombat || !SpaceSession.ClientGroundCombatPending &&
-                (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem))
+                (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem or SpaceNetworkIntentKind.OffhandParry))
                 latestCombatIntentSequence = sequence;
             NetworkClient.Send(new NetworkSpaceIntentRequest { Sequence = sequence, Intent = intent });
             return true;
@@ -203,7 +203,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             if (intent.Kind == SpaceNetworkIntentKind.Respawn)
             { StartCoroutine(ExecuteDimensionRespawn(connection, player.CorePlayer, message.Sequence, null)); return; }
-            if (player.HasServerPickupTransaction && intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem)
+            if (player.HasServerPickupTransaction && intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem or SpaceNetworkIntentKind.OffhandParry)
             {
                 connection.Send(new NetworkSpaceIntentResponse { Sequence = message.Sequence, Accepted = false,
                     Reason = "正在等待服务器确认拾取库存" });
@@ -212,7 +212,7 @@ namespace FlatWorld.Networking.Gameplay
             if (intent.Kind == SpaceNetworkIntentKind.CombatStateApplied)
             { player.AcknowledgeGroundCombat(unchecked((uint)intent.Action)); return; }
             bool wasGroundCombatPending = player.GroundCombatPending;
-            if (ValidIntent(intent) && (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem))
+            if (ValidIntent(intent) && (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem or SpaceNetworkIntentKind.OffhandParry))
                 player.PrepareGroundCombat(intent.Kind);
             string reason = "太空操作请求无效";
             bool accepted = ValidIntent(intent) && SpaceSession.Current != null &&

@@ -13,6 +13,16 @@ namespace FlatWorld.Audio
         [SerializeField, Tooltip("稳定事件 ID，例如 item.axe.swing")]
         private string id;
 
+        #region 事件播放开关
+
+        // 临时关闭事件时明确停用，空录音仍保留为启用事件的配置错误。
+        [SerializeField, Tooltip("关闭后不选取录音、不占用声源，也不消耗冷却")]
+        private bool playbackEnabled = true;
+
+        public bool PlaybackEnabled => playbackEnabled;
+
+        #endregion
+
         [SerializeField] private AudioBus bus = AudioBus.Sfx;
         [SerializeField] private List<AudioClip> clips = new List<AudioClip>();
         [SerializeField] private AudioClipSelection selection = AudioClipSelection.RandomNoRepeat;

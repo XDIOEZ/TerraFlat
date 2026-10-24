@@ -15,7 +15,7 @@ public static class ChunkWeatherConfiguration
             TextAsset asset = Resources.Load<TextAsset>("Config/Weather/regional-weather");
             if (asset == null)
                 throw new MissingReferenceException("缺少 Config/Weather/regional-weather 区块天气配置。");
-            RegionalWeatherSettings loaded = JsonUtility.FromJson<RegionalWeatherSettings>(asset.text);
+            RegionalWeatherSettings loaded = JsonConfigurationCache.FromUnityJson<RegionalWeatherSettings>(asset.text);
             SnowCoverConfig snow = Resources.Load<SnowCoverConfig>("Weather/SnowCoverConfig");
             if (loaded == null || snow == null)
                 throw new MissingReferenceException("区块天气或积雪配置不完整。");

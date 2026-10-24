@@ -41,15 +41,16 @@
     register(["Module_Weapon_AnimationAction", "Mod_Weapon_AnimationAction"], "近战/工具使用", "docs/systems/combat.md；Mod_Weapon_AnimationAction.StartAttack", body => [
         `挥动它进行攻击时，每次基础消耗 ${field(body, "staminaCostPerAttack")} 点体力；${get(body, "loopComboOnHold") === true ? "按住攻击键可以连续挥动。" : "每次攻击需要重新按下攻击键。"}`
     ]);
-    register(["Mod_Bow"], "弓的使用", "docs/systems/combat.md；Mod_Bow", body => {
+    register(["Mod_Bow"], "蓄力远程武器使用", "docs/systems/combat.md；Mod_Bow", body => {
         const usesSelfAsAmmo = get(body, "UseHeldItemAsAmmo") === true;
+        const loadsBeforeFire = get(body, "ReleaseMode") === "LoadThenReleaseToFire";
         const multiplier = get(body, "ProjectileDamageMultiplier");
         const lines = [
-            `按住攻击键可以蓄力，完整蓄力约需 ${field(body, "FullChargeSeconds")} 秒，期间每秒消耗 ${field(body, "StaminaConsumePerSecond")} 点体力；松开后${usesSelfAsAmmo ? "会把手里的这件物品直接投掷出去" : "会消耗一支可用箭矢并射出"}。`,
+            `按住攻击键可以蓄力，完整蓄力约需 ${field(body, "FullChargeSeconds")} 秒，期间每秒消耗 ${field(body, "StaminaConsumePerSecond")} 点体力；${loadsBeforeFire ? "蓄满后松手只会上膛，再按下并松开攻击键才消耗一支箭射出。满蓄力后不再消耗体力，未蓄满松手取消上膛" : `松开后${usesSelfAsAmmo ? "会把手里的这件物品直接投掷出去" : "会消耗一支可用箭矢并射出"}`}。`,
             `最远瞄准距离约为 ${field(body, "MaxAimDistance")}。`
         ];
         if (!usesSelfAsAmmo) {
-            lines[1] += `${typeof multiplier === "number" && multiplier !== 1 ? `这把弓还会把箭矢伤害调整为 ${text(multiplier)} 倍；` : ""}箭矢本身决定飞行、命中和回收等效果。`;
+            lines[1] += `${typeof multiplier === "number" && multiplier !== 1 ? `这件武器还会把箭矢伤害调整为 ${text(multiplier)} 倍；` : ""}箭矢本身决定飞行、命中和回收等效果。`;
         }
         return lines;
     });
@@ -74,7 +75,7 @@
         const food = data.FoodData || {};
         const nutrition = food.nutrition || {};
         if (entry.kind === "actor") return ["这个生物拥有自己的营养状态，营养会参与体力、健康和恢复等生存机制。"];
-        const lines = [`可以食用，食用后会补充碳水 ${text(nutrition.Carbohydrates)}、脂肪 ${text(nutrition.Fat)}、蛋白质 ${text(nutrition.Protein)}、水分 ${text(nutrition.Water)} 和维生素 ${text(nutrition.Vitamins)}；完整吃完大约需要 ${text(food.Max_EatingProgress)} 秒。`];
+        const lines = get(body, "ConsumptionEnabled") === false ? ["当前定义关闭了食用功能，不能直接吃下或喝下。"] : [`可以食用，食用后会补充碳水 ${text(nutrition.Carbohydrates)}、脂肪 ${text(nutrition.Fat)}、蛋白质 ${text(nutrition.Protein)}、水分 ${text(nutrition.Water)} 和维生素 ${text(nutrition.Vitamins)}；完整吃完需要 ${text(food.Max_EatingProgress)} 次食用操作。`];
         const spoilage = (data.MechanicStates || []).find(state => state.StateKey === "food.spoilage")?.Data;
         if (spoilage?.EnableSpoilage === true) lines.push(`放在库存中会逐渐腐败，大约 ${text(spoilage.SpoilageIntervalSeconds)} 秒后变成${named(context, spoilage.SpoilageTargetItemID)}。`);
         return lines;
@@ -157,7 +158,7 @@
         const serialized = body.data?.BitData;
         let data;
         if (typeof serialized === "string" && serialized.trim().startsWith("{")) data = JSON.parse(serialized);
-        return [`可以放置到世界中成为${data?.BuildingPrefabId ? named(context, data.BuildingPrefabId) : "对应建筑"}；放置时需要满足占地与地形条件，拆除后会重新变回可携带物品，并保留原有状态。`];
+        return [`可以放置到世界中成为${data?.BuildingPrefabId ? named(context, data.BuildingPrefabId) : "对应建筑"}；放置时需要满足占地与地形条件，支持拆回的建筑会保留其共享模块状态。`];
     });
     register(["Module_Mortar", "BuildingFeature_WorkBench_Mod_MakeTable"], "工作站加工", "docs/systems/crafting.md；CraftingStationController", body => [
         "可以作为加工工作站使用。把材料放进去后会显示能够完成的配方，确认制作时才会消耗材料并生成产物。"
@@ -224,6 +225,29 @@
     register(["Module_ReadableBook"], "阅读", "Mod_ReadableBook", body => [
         `拿在手上使用时会打开阅读界面，可以翻阅其中的 ${(get(body, "pages") || []).length} 页内容。`
     ]);
+    // #region 当前加工与生存模块
+    register(["Module_ManualProcessor"], "手动加工", "Mod_ManualProcessor；Mechanical/mechanical-catalog.json", body => [
+        `安装成建筑后可打开加工面板，每次操作推进 ${field(body, "WorkPerClick")} 的工作量；可用配方由 ${field(body, "Station")} 工作站定义决定。`
+    ]);
+    register(["Module_HandDrill"], "手钻加工", "Mod_HandDrill；Mechanical/mechanical-catalog.json", body => [
+        `手持或放置后可打开钻孔面板，每次有效操作推进 ${field(body, "WorkPerClick")} 的工作量并消耗 1 点耐久；钻头材质决定可用耐久。`
+    ]);
+    register(["Module_MechanicalNode"], "机器与网络", "Mod_MechanicalNode；Mechanical/mechanical-catalog.json", body => [
+        `它按机器目录中的 ${field(body, "DefinitionId")} 定义参与机械、电力或流体网络；实际接口、加工和运行条件以该定义为准。`
+    ]);
+    register(["Module_FluidTank"], "便携流体罐", "Mod_FluidTank", body => [
+        `气体与液体共用 ${field(body, "Configuration.VolumeLiters")} L 容积，安全压力上限为 ${field(body, "Configuration.MaxSafePressureKPa")} kPa；持续超压会损伤罐体。`
+    ]);
+    register(["Module_Spacesuit"], "宇航服供氧", "Mod_Spacesuit", () => [
+        "通过装备配置页装入合适的供氧气罐；穿齐所需部件并关闭头盔后，可向角色供氧并扩展安全气压范围，供氧会消耗罐内气体。"
+    ]);
+    register(["Module_VesselContents"], "容器内物品", "Mod_VesselContents", () => [
+        "容器内有六个独立物品槽，可与液体分别保存；满足当前液体的投料条件后，会按配方事务处理内部材料。"
+    ]);
+    register(["Module_ResourceTool"], "工具采集效率", "Mod_ResourceTool", body => [
+        `匹配资源的采集专精时，使用本工具的 ${field(body, "harvestEfficiency")} 倍采集效率；这不是禁止其他工具采集的等级门槛。`
+    ]);
+    // #endregion
     mechanics.rules.get("Module_Production").outputs = body => (parameters(body).ProductionList || []).map(output => ({ id: output.itemName, detail: `会周期性产出它，数量约为 ${range(output.itemCountMin, output.itemCountMax)}${output.SpawnProbability < 1 ? `，成功概率约为 ${percent(output.SpawnProbability)}` : ""}` }));
     mechanics.rules.get("Module_CropYield").outputs = body => (parameters(body).outputs || []).map(output => ({ id: output.itemId, detail: `成熟收获时会产出它，数量约为 ${range(output.minAmount, output.maxAmount)}${output.probability < 1 ? `，出现概率约为 ${percent(output.probability)}` : ""}` }));
     mechanics.rules.get("Module_Collectable").outputs = body => [{ id: parameters(body).CollectItemId, detail: "可以通过交互采集得到它" }];

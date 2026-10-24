@@ -2,6 +2,24 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+test.system("environment", "fog_perception", {}, function(data)
+    near(data.beforeFog, 60, "无雾时目标体型倍率没有保留")
+    near(data.denseRadius, 5, "浓雾没有主动将最终感知限制到清晰内圈")
+    assert(data.outsideBlockedWithoutWalls and data.boundaryVisible,
+        "关闭墙体遮挡绕过雾天限制，或清晰圈边界被错误拒绝")
+    near(data.basePreserved, 20, "雾天覆盖了生物的原始感知配置")
+    near(data.shortRange, 3, "原本更小的有效感知范围被雾天放大")
+    near(data.baseChangeStillLimited, 5, "生物调大原始半径后突破雾天上限")
+    near(data.lightFogRadius, 10, "淡雾没有与清晰圈共用浓度半径")
+    near(data.afterFog, 60, "雾散后没有恢复原本的最终感知范围")
+    near(data.otherSourcePreserved, 2, "撤销雾天时误删其他来源的限制")
+    near(data.afterRegionMove, 60, "离开雾区后仍残留旧区域限制")
+    near(data.oldRegionIsolated, 60, "旧区域天气继续影响已离开的生物")
+    near(data.newCreatureInFog, 20, "新加入雾区的生物没有立即获得上限")
+    assert(data.poolCleared and data.zeroFogUnlimited and data.invalidFogUnlimited,
+        "回池残留限制，或无雾和非法浓度产生错误上限")
+end, "雾天主动限制生物感知并在淡化、跨区和回收时恢复")
+
 for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
     test.system("environment", "discrete_weather", {id = id}, function(data)
         near(data.checkSeconds, 300, "天气检查间隔不是300游戏秒")
@@ -45,12 +63,50 @@ for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
     end, "所有天气读取JSON独立十档概率表：" .. id)
 end
 
+test.system("environment", "shader_snow", {}, function(data)
+    assert(data.prefabPresent and data.shaderController, "降雪没有绑定正式Shader控制器")
+    assert(data.particleSystems == 0 and data.meshFilters == 1 and data.meshRenderers == 1,
+        "降雪仍依赖粒子模拟，或没有使用单层网格")
+    assert(data.shader == "FlatWorld/Snowflake", "降雪材质没有绑定正式Shader")
+    near(data.width, 22.3, "降雪横向覆盖没有包含镜头冗余")
+    near(data.height, 11.3, "降雪纵向覆盖没有包含镜头冗余")
+    near(data.density, 0.25199, "降雪密度没有按可见面积计算")
+    near(data.halfDensity, data.density * 0.5, "小雪没有随天气强度减少")
+    near(data.clearDensity, 0, "停雪后仍保留可见雪花")
+    near(data.largeDensity, 1, "超大视野没有限制GPU雪花数量")
+    assert(data.maximumFlakes == 1500, "固定雪花预算被意外更改")
+    near(data.invalidWidth, 0.31, "非法宽度没有保留安全覆盖")
+    near(data.invalidHeight, 0.31, "非法高度没有保留安全覆盖")
+    near(data.invalidDensity, 0, "负密度没有归零")
+    near(data.negativeDensity, 0, "负天气强度没有停雪")
+    near(data.driftX, 7.25, "长时间风偏移损失精度")
+    near(data.driftY, -2.5, "反向风偏移损失精度")
+    near(data.wrappedX, data.driftX, "横向环绕改变雪花位置")
+    near(data.wrappedY, data.driftY, "纵向环绕改变雪花位置")
+end, "Shader降雪单网格资源、强度密度、镜头覆盖及长时间风偏移")
+
 test.system("environment", "rain_visual_batch", {}, function(data)
-    assert(data.emissionWrites == 4 and data.steadySkipped and data.reactivationRefreshes and data.newRateRefreshes,
-        "稳态雨雪重复写入粒子发射倍率，或重新启用后没有刷新")
-    assert(data.capWhileDraining == 80 and data.capAfterDraining == 12 and
-        data.capMinimum == 1 and data.capAtFullIntensity == 100,
-        "粒子容量收缩提前丢弃尚未落地的旧粒子，或未随雨量恢复")
+    assert(data.prefabPresent and data.shaderController, "降雨没有绑定正式Shader控制器")
+    assert(data.particleSystems == 0 and data.meshFilters == 1 and data.meshRenderers == 1,
+        "降雨仍依赖粒子模拟，或没有使用单个固定网格")
+    assert(data.shader == "FlatWorld/RainStreak", "降雨材质没有绑定雨丝Shader")
+    near(data.width, 23, "雨丝横向覆盖没有包含镜头和倾斜冗余")
+    near(data.height, 12, "雨丝纵向覆盖没有包含镜头和长度冗余")
+    near(data.density, 0.2021484375, "降雨密度没有按覆盖面积计算")
+    near(data.halfDensity, data.density * 0.5, "小雨数量没有随天气强度减少")
+    near(data.clearDensity, 0, "停雨后仍保留可见雨丝")
+    near(data.largeDensity, 1, "超大视野没有限制GPU雨丝数量")
+    assert(data.maximumDrops == 2048 and data.shaderBudget == data.maximumDrops,
+        "固定雨丝预算改变，或Shader与控制器的预算不一致")
+    near(data.invalidWidth, 0.03, "非法宽度没有保留安全覆盖")
+    near(data.invalidHeight, 0.03, "非法高度没有保留安全覆盖")
+    near(data.invalidDensity, 0, "负密度没有停雨")
+    near(data.negativeDensity, 0, "负天气强度没有停雨")
+    near(data.clampedDensity, data.density, "超出上限的天气强度没有钳制")
+    near(data.driftX, 7.25, "长时间风偏移损失精度")
+    near(data.driftY, -2.5, "反向风偏移损失精度")
+    near(data.wrappedX, data.driftX, "横向环绕改变雨丝位置")
+    near(data.wrappedY, data.driftY, "纵向环绕改变雨丝位置")
     near(data.minX, -5.2, "水花可见区域左边界改变")
     near(data.maxX, 25.2, "水花可见区域右边界改变")
     near(data.minY, -14.4, "水花可见区域下边界改变")
@@ -59,7 +115,7 @@ test.system("environment", "rain_visual_batch", {}, function(data)
     near(data.narrowMaxX, -39.75, "极窄横纵比上限错误")
     near(data.narrowMinY, 14.5, "非正交采样下边界改变")
     near(data.narrowMaxY, 19.5, "非正交采样上边界改变")
-end, "雨雪稳态发射参数缓存、旧雨滴渐退和同帧水花采样边界")
+end, "Shader降雨单网格资源、雨量密度、镜头覆盖、风偏移和独立水花采样边界")
 
 for _, input in ipairs({
     { fraction = 0, expected = false },
@@ -463,6 +519,12 @@ test.system("environment", "weather", {}, function(data)
     assert(data.firstRegionX == data.secondRegionX, "同一区域成员归属不一致")
     assert(data.frozenReady and data.frozenTemperature == 10, "后登记区块改写了区域冻结气候")
     near(data.endedPrecipitation, 0, "持续时间结束后降水事件没有停止")
+    assert(not data.unavailableTargetChanged, "缺少降水样本时错误改写了天气目标")
+    near(data.retainedRainTarget, .8, "降水采样暂缺时雨量目标没有保留")
+    near(data.retainedSnowTarget, .2, "降水采样暂缺时雪量目标没有保留")
+    assert(data.availableTargetChanged, "有效降水样本变化后没有更新天气目标")
+    near(data.updatedRainTarget, .3, "有效样本没有更新雨量目标")
+    near(data.updatedSnowTarget, .1, "有效样本没有更新雪量目标")
     assert(data.negativeRegionX == -128 and data.negativeRegionY == -128, "负坐标天气区域没有向下归整")
     near(data.rainProbability, 0.4, "自然天气统一概率倍率错误")
     near(data.wind8Probability, 0.4, "八级风仍叠加旧的概率压制", 0.000001)
@@ -628,6 +690,33 @@ test.system("environment", "water_current_reuse", {}, function(data)
         "水流速度复用后河流流量曲线、海洋定速或零推速规则改变")
 end, "掉落物水流同批复用地块样本，保持流向和液体变化语义")
 
+test.system("environment", "estuary_current", {x = 4, y = 0}, function(data)
+    assert(data.inside and data.active and data.kind == "Ocean" and data.x > .99,
+        "入海口核心必须顶住反向洋流，继续把物品推入海中")
+    assert(data.seawaterPreserved and not data.covered and not data.lake and not data.dry,
+        "河口流向改变了海水水量或身份，或越过平台、湖泊、干格限制")
+end, "河口核心向海推动且保留液体和表面接触规则")
+
+for _, side in ipairs({-1, 1}) do
+    test.system("environment", "estuary_current", {x = 8, y = side * 3}, function(data)
+        assert(data.inside and data.x > 0 and data.y * side > 0,
+            "河口扇面没有向两侧发散")
+    end, "入海口两侧分流 " .. side)
+end
+
+test.system("environment", "estuary_current", {x = 14.4, y = 0}, function(data)
+    assert(data.inside and data.influence > .49 and data.influence < .51 and
+        data.speed > .99 and math.abs(data.y) > .99,
+        "正反流过渡发生速度抵消，没有侧向绕开堵点")
+end, "反向洋流衔接保持非零侧向速度")
+
+for _, position in ipairs({{x = -6, y = 0}, {x = 19, y = 0}, {x = 4, y = 12}}) do
+    test.system("environment", "estuary_current", position, function(data)
+        assert(not data.inside and data.x < -.99 and math.abs(data.y) < .001,
+            "扇面范围以外没有保留原有洋流")
+    end, "扇面范围外恢复正常海流")
+end
+
 test.system("environment", "environment_batch_rejection", {}, function(data)
     assert(#data.rejected == 10, "非法输入采样不完整")
     for _, rejected in ipairs(data.rejected) do
@@ -684,6 +773,23 @@ test.system("environment", "environment_batch_revision", {}, function(data)
         "液体深度身份不变仍使缓存失效")
     assert(data.blockingRevision == 0, "环境和液体写入错误改变视线遮挡版本")
 end, "土壤、支撑成本、支撑身份和真实液体版本分离")
+
+test.system("environment", "surface_snow_batch", {}, function(data)
+    assert(data.callbacks == 2 and data.updatedCells == 3,
+        "同一区块的三格天气雪、玩家融雪没有合并为两层通知")
+    assert(data.batchedRevision and data.unchangedRevision,
+        "雪层批量版本错误或重复提交未变化数据")
+    near(data.weatherFirst, .5, "雪层第一格")
+    near(data.weatherThird, .25, "雪层第三格")
+    near(data.editedDepth, .75, "玩家编辑雪层")
+end, "融雪与降雪：批量写层、真实值、单层一次通知及不变写")
+
+test.system("environment", "surface_broadcast_gate", {}, function(data)
+    assert(data.noRemote and data.matchingWorld and data.otherWorld,
+        "无远端时仍序列化天气网络批次，或跨世界错误广播")
+    assert(data.unfilteredPublisher and data.otherSubscribersUnaffected,
+        "未绑定观察者筛选时误跳过网络发布，或错误屏蔽其它非网络订阅者")
+end, "天气地表网络快照：本机Host跳过、按世界选择、查询故障保守回退")
 
 test.system("environment", "surface_work_queue", {}, function(data)
     assert(data.initialCount == 3 and data.initialFirstLeases == 2,

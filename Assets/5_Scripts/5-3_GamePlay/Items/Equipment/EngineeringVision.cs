@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>工程视野只读手持与头部装备能力，不影响隐藏线路的电力模拟。</summary>
+/// <summary>工程视野只读手持、头部与眼部装备能力，不影响隐藏线路的电力模拟。</summary>
 public static class EngineeringVision
 {
     #region 工程视野资格
@@ -28,8 +28,8 @@ public static class EngineeringVision
         }
     }
 
-    public static bool HasCapability(ItemData held, ItemData head, ItemData carried = null)
-        => Active(held) || Active(head) || Active(carried);
+    public static bool HasCapability(ItemData held, ItemData head, ItemData carried = null, ItemData eyes = null)
+        => Active(held) || Active(head) || Active(carried) || Active(eyes);
 
     private static bool Active(ItemData data)
         => data != null && data.Stack?.Amount > 0f && data.Durability > 0f &&
@@ -42,7 +42,8 @@ public static class EngineeringVision
         var equipment = actor.itemMods.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module);
         var hand = actor.itemMods.GetMod_ByID<Mod_Hand>(ModText.Hand)?.HandInventory?.Data?.GetItemSlot(0)?.itemData;
         return HasCapability(hotbar?.CurrentSelectItemSlot?.itemData,
-            equipment?.GetEquippedItem(EquipmentSlotCatalog.Head), hand);
+            equipment?.GetEquippedItem(EquipmentSlotCatalog.Head), hand,
+            equipment?.GetEquippedItem(EquipmentSlotCatalog.Eyes));
     }
     #endregion
 }

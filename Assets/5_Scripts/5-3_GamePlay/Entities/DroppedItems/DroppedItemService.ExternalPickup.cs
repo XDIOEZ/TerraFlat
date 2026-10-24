@@ -23,6 +23,7 @@ public static partial class DroppedItemService
             float after = candidate.Stack.CanBePickedUp ? Mathf.Clamp(candidate.Stack.Amount, 0f, remaining) : 0f;
             if (after >= remaining) continue;
             remaining = after;
+            if (remaining > 0f) payload.Durability = candidate.Durability;
             payload.Stack.Amount = remaining;
             // 数量先提交，拾取声音失败也不能把已入包的东西留在地上。
             try { AudioService.Instance.PlayAt(AudioEventIds.ItemPickup, point); }

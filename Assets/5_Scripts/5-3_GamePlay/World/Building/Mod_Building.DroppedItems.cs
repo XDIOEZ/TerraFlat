@@ -41,7 +41,8 @@ public partial class Mod_Building
         if (!BuildingMaterialSalvage.TrySpawnRandomMaterialSalvage(
                 summonerId,
                 position,
-                out string reason))
+                out string reason,
+                buildingData: item.itemData))
         {
             Debug.LogWarning($"[建筑摧毁] {reason}", item);
         }
@@ -70,8 +71,8 @@ public partial class Mod_Building
             carrier.inHand = false;
             carrier.Stack.Amount = 1f;
             carrier.Stack.CanBePickedUp = true;
-            carrier.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64);
             BuildingModuleStateTransfer.Copy(item.itemData, carrier, Data.SharedModuleIds);
+            carrier.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64, carrier);
             CopySharedDurability(item.itemData, carrier, Data.SharedModuleIds);
             if (!WriteBuildingData(carrier, state =>
                 {
@@ -98,7 +99,7 @@ public partial class Mod_Building
 
 /// <summary>
 /// 建筑被非锤类伤害摧毁时的材料回收规则。
-/// 当前只从唯一、单件产出、全部为精确物品输入的普通制作配方反推材料，并按每份 50% 概率独立回收。
+/// 优先使用单件建筑的实际制作材料，并按每份 50% 概率独立回收。
 /// </summary>
 public static partial class BuildingMaterialSalvage
 {
@@ -125,50 +126,20 @@ public static partial class BuildingMaterialSalvage
         string buildingSummonerItemId,
         Vector2 position,
         out string reason,
-        float recoveryChance = DefaultRecoveryChance)
+        float recoveryChance = DefaultRecoveryChance,
+        ItemData buildingData = null)
     {
-        reason = null;
-        if (!IsBuildingSummoner(buildingSummonerItemId))
+        if (!TryCreateRandomMaterialSalvage(buildingSummonerItemId, out List<ItemData> materials,
+                out reason, recoveryChance, buildingData)) return false;
+        foreach (ItemData material in materials)
         {
-            reason = $"{buildingSummonerItemId} 不是建筑召唤器";
-            return false;
-        }
-
-        if (!TryResolveSalvageRecipe(buildingSummonerItemId, out RuntimeRecipe recipe, out reason))
-            return false;
-
-        recoveryChance = Mathf.Clamp01(recoveryChance);
-        Dictionary<string, int> materialAmounts = new(StringComparer.OrdinalIgnoreCase);
-        IReadOnlyList<RuntimeRecipeIngredient> ingredients = recipe.inputs.RowItems_List;
-        for (int i = 0; i < ingredients.Count; i++)
-        {
-            RuntimeRecipeIngredient ingredient = ingredients[i];
-            if (ingredient == null || ingredient.amount <= 0)
-                continue;
-
-            materialAmounts.TryGetValue(ingredient.ItemName, out int current);
-            materialAmounts[ingredient.ItemName] = current + ingredient.amount;
-        }
-
-        foreach (KeyValuePair<string, int> material in materialAmounts)
-        {
-            int recovered = 0;
-            for (int unit = 0; unit < material.Value; unit++)
-            {
-                if (UnityEngine.Random.value < recoveryChance)
-                    recovered++;
-            }
-
-            if (recovered <= 0)
-                continue;
-
             try
             {
-                DroppedItemService.SpawnLoot(material.Key, position, recovered);
+                DroppedItemService.SpawnLoot(material.IDName, position, material.Stack.Amount);
             }
             catch (Exception exception)
             {
-                reason = $"回收材料 {material.Key} 失败：{exception.Message}";
+                reason = $"回收材料 {material.IDName} 失败：{exception.Message}";
                 return false;
             }
         }
@@ -208,7 +179,7 @@ public static partial class BuildingMaterialSalvage
         if (recipe != null)
             return true;
 
-        reason = $"找不到建筑 {buildingSummonerItemId} 的唯一精确制作配方";
+        reason = $"建筑 {buildingSummonerItemId} 未记录实际制作材料，也找不到唯一的精确材料配方";
         return false;
     }
 

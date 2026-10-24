@@ -9,8 +9,9 @@ namespace FlatWorld.Gameplay.Quests
     /// 任务系统的纯数据定义；配置只描述条件、阶段、目标与奖励，具体行为由可注册处理器解释。
     /// definitionVersion 用于配置升级，现阶段任务为一次性任务，进度按玩家独立保存。
     /// </summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestDefinition
+    public sealed partial class QuestDefinition
     {
         public string Id;
         public int DefinitionVersion = 1;
@@ -26,14 +27,18 @@ namespace FlatWorld.Gameplay.Quests
         public List<QuestStageDefinition> Stages = new();
         public List<QuestRewardDefinition> Rewards = new();
 
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public string SourceModId;
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public string SourceFile;
+        [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public int SourceIndex;
     }
 
     /// <summary>任务阶段；completionMode 支持 all 或 any。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestStageDefinition
+    public sealed partial class QuestStageDefinition
     {
         public string Id;
         public string CompletionMode = QuestCompletionModes.All;
@@ -41,45 +46,53 @@ namespace FlatWorld.Gameplay.Quests
     }
 
     /// <summary>任务目标；parameters 由对应类型的目标处理器验证和读取。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestObjectiveDefinition
+    public sealed partial class QuestObjectiveDefinition
     {
         public string Id;
         public string Type;
         public string LabelKey;
         public string Label;
         public float Required = 1f;
+        [MemoryPack.MemoryPackAllowSerialize]
         public JObject Parameters = new();
     }
 
     /// <summary>任务接取条件；parameters 由对应类型的条件处理器验证和读取。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestConditionDefinition
+    public sealed partial class QuestConditionDefinition
     {
         public string Type;
+        [MemoryPack.MemoryPackAllowSerialize]
         public JObject Parameters = new();
     }
 
     /// <summary>任务奖励；所有处理器先生成计划，再由任务运行时一次性提交。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestRewardDefinition
+    public sealed partial class QuestRewardDefinition
     {
         public string Id;
         public string Type;
+        [MemoryPack.MemoryPackAllowSerialize]
         public JObject Parameters = new();
     }
 
     /// <summary>内建任务清单。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestManifestDto
+    public sealed partial class QuestManifestDto
     {
         public int SchemaVersion = QuestCatalog.SupportedSchemaVersion;
         public List<QuestPackageDto> Packages = new();
     }
 
     /// <summary>内建任务分包入口。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestPackageDto
+    public sealed partial class QuestPackageDto
     {
         public string Id;
         public string Path;
@@ -87,8 +100,9 @@ namespace FlatWorld.Gameplay.Quests
     }
 
     /// <summary>任务分包内容；MOD 定义文件也复用 Quests 数组的数据结构。</summary>
+    [MemoryPack.MemoryPackable]
     [Serializable]
-    public sealed class QuestCatalogDto
+    public sealed partial class QuestCatalogDto
     {
         public int SchemaVersion = QuestCatalog.SupportedSchemaVersion;
         public List<QuestDefinition> Quests = new();

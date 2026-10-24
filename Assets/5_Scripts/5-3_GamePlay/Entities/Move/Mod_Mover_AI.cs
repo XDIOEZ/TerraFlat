@@ -1,3 +1,4 @@
+using FlatWorld.Navigation;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -13,6 +14,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     public Transform target;
 
     [Header("到达判定")]
+    [Tooltip("普通移动停止距离；进食/攻击目标通过 SetInteractionDestination 单独收紧，不改写此配置。")]
     [MinValue(0.01f)]
     public float stopDistance = 0.5f;
 
@@ -156,11 +158,31 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         return DestinationResult;
     }
 
+    #region 动作目标接近
+    public float GetInteractionStopDistance(float actionRange)
+        => AIApproachRange.ResolveStopDistance(stopDistance, actionRange);
+
+    /// <summary>动作范围只限制本次接近的内圈停止距离，不改写巡逻或避险配置。</summary>
+    public WorldNavigationDestinationResult SetInteractionDestination(
+        Vector2 destination,
+        float actionRange,
+        int maximumPathCostExclusive = int.MaxValue,
+        bool forceRepath = false)
+    {
+        if (!CanActivelyMove || hasTemperatureSafetyDestination)
+            return DestinationResult;
+        SubmitDestination(ResolveTemperatureBiasedDestination(destination),
+            Mathf.Max(1, maximumPathCostExclusive), forceRepath, GetInteractionStopDistance(actionRange));
+        return DestinationResult;
+    }
+    #endregion
+
     /// <summary>统一同步移动模块状态并把目标交给导航代理。</summary>
     private void SubmitDestination(
         Vector2 destination,
         int maximumPathCostExclusive,
-        bool forceRepath)
+        bool forceRepath,
+        float? arrivalDistance = null)
     {
         if (!CanActivelyMove)
             return;
@@ -178,6 +200,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         if (NavigationAgent == null)
             return;
 
+        NavigationAgent.SetStoppingDistance(arrivalDistance ?? stopDistance);
         NavigationAgent.MaxSpeed = SpeedValue;
         if (maximumPathCostExclusive == int.MaxValue)
             NavigationAgent.SetDestination(destination, forceRepath);

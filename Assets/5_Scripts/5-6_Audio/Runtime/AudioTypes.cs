@@ -208,6 +208,7 @@ namespace FlatWorld.Audio
         public const string CombatWeaponPickaxeAttack = "combat.weapon.pickaxe.attack";
         public const string CombatWeaponSpearAttack = "combat.weapon.spear.attack";
         public const string CombatWeaponBluntAttack = "combat.weapon.blunt.attack";
+        public const string CombatWeaponCrossbowLoaded = "combat.weapon.crossbow.loaded";
         public const string CombatImpactDefault = "combat.impact.default";
         public const string CombatImpactFoliage = "combat.impact.foliage";
         public const string CombatImpactWood = "combat.impact.wood";

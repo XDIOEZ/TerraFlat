@@ -1,0 +1,500 @@
+{
+  "date": "2026-10-24",
+  "tool": "built-in image_gen",
+  "scope": "14 small tools; cleanup and native 32x32 conversion",
+  "normalization": "Painted edits, undithered limited palette, hard alpha and 32x32 grid extraction. PPU halved and normalized grip pivot retained. Specific thin-line extraction is recorded per item.",
+  "validation": {
+    "scope": "Static PNG/meta checks only; gameplay acceptance belongs to the user. Unity PlayMode was not controlled.",
+    "dimensions": "All 14 are true 32x32",
+    "alpha": "All use 0/255 only",
+    "meta": "GUID, spriteID, normalized pivot retained; PPU divided by two; MaxTextureSize 32"
+  },
+  "items": [
+    {
+      "id": "ChippedTool",
+      "prompt": "Use case: precise-object-edit. The attached PNG is the EDIT TARGET. Carefully clean this exact game item into a real NATIVE 32x32 LOGICAL PIXEL ART sprite. Subject: the same single primitive knapped handheld stone flake. Preserve its tapered sharp point at upper right, rounded heavier dark base at lower left, irregular triangular outline, brown-gray stone material and broad flake faces. It has no wood handle and no lashings; do not invent them. Keep only a few large flat stone faces and one broad pale bevel. Keep exact original design, shape, pose, relative positions, proportions, full-object bounding box and transparent framing. Merge surface micro-speckles into large connected flat clusters; use about 6-10 opaque colors, 3 or 4 purposeful stone planes, no little dark pits or scattered white flecks. Clean planned staircase outline, remove accidental one-pixel teeth while retaining recognizable stone chips and pointed ends. One uniform 32x32 logical grid; each logical pixel one hard flat square, no smaller texture detail. Preserve original tonal depth, no flat silhouette treatment. No blur, gradients, antialiasing, dithering, grain, photographic texture, modern metal shine, thick black outlines, extra objects, cast shadows, text or background. Real transparent alpha outside stones, full opacity inside. Keep the source's complete arrangement, output one item icon only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-2d057959-54ce-4c43-b7da-e5498ab6a573.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/ChippedTool/ChippedTool_Icon.png",
+      "beforeSha256": "e3073cc563091100f1636d9c6e6a6fdd2be09b5f837be1a508a052046e299d28",
+      "afterSha256": "1aeb38cfaa5792aff2bc4ad2dda28eff3b52350de573f250bd53fd47335128a8",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 14,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        8,
+        6,
+        59,
+        59
+      ],
+      "alphaBounds": [
+        4,
+        3,
+        30,
+        30
+      ],
+      "priorPPU": 70.63476874,
+      "ppu": 35.31738437,
+      "pivot": "{x: 0.5215311, y: 0.4912281}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "Dagger_Bone",
+      "prompt": "Use case: precise-object-edit. The attached PNG is the EDIT TARGET, an existing game tool sprite. Carefully clean and simplify this exact tool into a NATIVE 32x32 LOGICAL PIXEL ART SPRITE. Subject: one primitive bone dagger, preserve the long narrow ivory bone point at upper right, the tan rawhide joint wrapping and the short brown wood grip at lower left. Bone has warm cream and ochre shadow planes, matte and organic, not metal. Preserve the same diagonal pose, design, proportions, grip anchor, construction, full-object bounding box and transparent framing. Reduce the source's noisy surface detail into large connected pixel clusters, not a blurred miniature. At 32 logical pixels each logical pixel is a solid square; no subpixel detail. Use only 10-14 opaque flat colors total, about 3 shades per material. Keep wood highlights in a continuous strip, a darker connected side, and only 2 or 3 broad binding turns at the actual blade joint. Clean smooth stair-step silhouette without random jagged one-pixel teeth. No checkerboard mottling, tiny scratches, detached bright flecks, isolated dark pits, gradients, blurry antialiasing, painterly texture, thick black outlining or overly shiny 3D. Preserve material identity and clear functional pointed blade. Transparent alpha background, no floor, no cast shadow, no text, no multiple tools. Output ONE complete tool only in the same placement and orientation.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-7498cb83-e173-4494-b1a0-7d0221a5ec6f.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Bone/Dagger_Bone_Icon.png",
+      "beforeSha256": "282f55b56b7856420d449dd7341e7d5428b3b16098e51f1a723cab89233353c5",
+      "afterSha256": "93a15b1771ba0dd8517a736ad2c6174a096198d1c844880982fbd94a3e5f16a6",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        9,
+        6,
+        61,
+        60
+      ],
+      "alphaBounds": [
+        4,
+        3,
+        31,
+        30
+      ],
+      "priorPPU": 52.519023617,
+      "ppu": 26.2595118085,
+      "pivot": "{x: 0.2561722, y: 0.1745933}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "Dagger_Copper",
+      "prompt": "Use case: precise local sprite cleanup. The attached PNG is the EDIT TARGET, an existing 64x64 game sprite. Keep this exact object, material, handmade construction, diagonal direction, proportions, grip anchor, canvas placement and transparent margins. a single primitive handmade copper dagger. Preserve its short broad RED COPPER blade at upper right, pointed tip, dark brown wrapped grip at lower left, and tan lashings at the blade-to-grip joint. Strengthen the copper versus brown grip separation, with three connected red-orange copper planes and a short continuous pale warm blade-edge glint. The blade must remain copper, never gray iron. Clean up distracting tiny speckles and checkerboard mottling, especially on the grip and binding: replace disconnected bright/dark crumbs with continuous connected color strips that follow the form. Smooth the silhouette's accidental one-pixel teeth into deliberate clean staircase clusters without changing the silhouette design or rounding away its points. Retain readable thickness, actual binding turns and a chunky knot. Crisp restrained retro pixel art, one uniform native 64x64 logical grid, same pixel density as source. Only about 12-16 purposeful opaque flat colors total; three wood shades in connected strips, two or three material planes, a few broad tan bindings. Keep enough tonal depth to look like this original item. Every logical pixel is a flat hard square. Genuine transparent background; fully opaque subject. No blur, antialiasing, smooth shading, gradients, grain, dithering, scattered white flecks, little dark pits, edge glitter, thick black border, modern tool redesign, extra parts, text or shadows. This is a careful cleanup of this sprite, not a new design. Output ONE centered tool only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-a3fef1a9-e909-40be-9890-931e9e018e78.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Copper/Dagger_Copper_Icon.png",
+      "beforeSha256": "425b28f08ef179d2970faa73166a7fc4a4dcf22e353a261cd9ae9219da24c6e1",
+      "afterSha256": "d628fd433bc380b6c203e014239e140082f7dc1eb272e09e60f0a1e5615f478f",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 14,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        7,
+        4,
+        61,
+        62
+      ],
+      "alphaBounds": [
+        3,
+        2,
+        31,
+        31
+      ],
+      "priorPPU": 89.776221295,
+      "ppu": 44.8881106475,
+      "pivot": "{x: 0.2313397, y: 0.1631579}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "Dagger_Obsidian",
+      "prompt": "Use case: precise-object-edit. The attached PNG is the EDIT TARGET, an existing game tool sprite. Carefully clean and simplify this exact tool into a NATIVE 32x32 LOGICAL PIXEL ART SPRITE. Subject: one primitive obsidian dagger, preserve the dark blue-violet black angular stone blade at upper right, its few broad purple-gray flake planes and the brown wrapped wooden grip with tan lashings at lower left. The obsidian may have one short broad muted edge glint, no white glitter or grey iron blade. Preserve the same diagonal pose, design, proportions, grip anchor, construction, full-object bounding box and transparent framing. Reduce the source's noisy surface detail into large connected pixel clusters, not a blurred miniature. At 32 logical pixels each logical pixel is a solid square; no subpixel detail. Use only 10-14 opaque flat colors total, about 3 shades per material. Keep wood highlights in a continuous strip, a darker connected side, and only 2 or 3 broad binding turns at the actual blade joint. Clean smooth stair-step silhouette without random jagged one-pixel teeth. No checkerboard mottling, tiny scratches, detached bright flecks, isolated dark pits, gradients, blurry antialiasing, painterly texture, thick black outlining or overly shiny 3D. Preserve material identity and clear functional pointed blade. Transparent alpha background, no floor, no cast shadow, no text, no multiple tools. Output ONE complete tool only in the same placement and orientation.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-6aa80ce1-a0f8-4a6a-b8bf-78258e7706ed.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
+      "beforeSha256": "08e43bb8e80f0b0b70ccef0528d7b8e6ba7533b80d0cce709188eeee07847e7c",
+      "afterSha256": "58814437418fc9ad22e6bb731489cfc3b4422efc459aed82ea1de9a76769f06b",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 10,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        7,
+        6,
+        62,
+        60
+      ],
+      "alphaBounds": [
+        3,
+        3,
+        31,
+        30
+      ],
+      "priorPPU": 86.386300734,
+      "ppu": 43.193150367,
+      "pivot": "{x: 0.228134, y: 0.1732376}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "Dagger_Stone",
+      "prompt": "Use case: precise local sprite cleanup. The attached PNG is the EDIT TARGET, an existing 64x64 game sprite. Keep this exact object, material, handmade construction, diagonal direction, proportions, grip anchor, canvas placement and transparent margins. a single primitive handmade STONE dagger. Preserve its broad pointed slate-gray chipped stone blade at upper right, thick brown wood grip at lower left, and the tan load-bearing binding at the joint. Keep the stone matte with two or three large connected stone planes, rather than metal shine. Clean up distracting tiny speckles and checkerboard mottling, especially on the grip and binding: replace disconnected bright/dark crumbs with continuous connected color strips that follow the form. Smooth the silhouette's accidental one-pixel teeth into deliberate clean staircase clusters without changing the silhouette design or rounding away its points. Retain readable thickness, actual binding turns and a chunky knot. Crisp restrained retro pixel art, one uniform native 64x64 logical grid, same pixel density as source. Only about 12-16 purposeful opaque flat colors total; three wood shades in connected strips, two or three material planes, a few broad tan bindings. Keep enough tonal depth to look like this original item. Every logical pixel is a flat hard square. Genuine transparent background; fully opaque subject. No blur, antialiasing, smooth shading, gradients, grain, dithering, scattered white flecks, little dark pits, edge glitter, thick black border, modern tool redesign, extra parts, text or shadows. This is a careful cleanup of this sprite, not a new design. Output ONE centered tool only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-aea7004e-790f-45c1-a61b-f1e1a5d30a98.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Stone/Dagger_Stone_Icon.png",
+      "beforeSha256": "ed2db21b46293f3a4a5f7b72279cb491b89ea772c761ecc9c2395a292d4738f8",
+      "afterSha256": "ad76528416d84f6689dc012babde0ea9bec96c908393c3d2404fcf362598c380",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        9,
+        7,
+        62,
+        59
+      ],
+      "alphaBounds": [
+        4,
+        3,
+        31,
+        30
+      ],
+      "priorPPU": 82.836107943,
+      "ppu": 41.4180539715,
+      "pivot": "{x: 0.2617384, y: 0.1884848}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "FishingRod",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-8cc88231-f7a6-4149-8ba7-b8ce2737206d.png",
+      "prompt": "Use case: precise-object-edit. Retouch this exact primitive FISHING ROD sprite, preserving its full shape, diagonal brown branch pole from lower-left grip to upper-right tip, the tied hanging fishing line on the RIGHT, bark float and pale bone hook near lower-right, and the exact overall positions and transparent padding. Simplify for a TRUE 32x32 logical pixel grid, whole object within about 27x28 logical pixels. Smooth sawtooth nibs on pole into orderly deliberate pixel staircases, remove scattered brown/bright specks: just 3 LONG CONNECTED flat brown shading bands down pole, two broad pale-tan wraps securing line at tip. CRITICAL: fishing line must remain one continuous connected 1 logical pixel wide opaque cord, from tied rod tip DOWN the right side through small bark float to a clear U-shaped pale bone hook. There must be no broken gaps in the line. Keep line, hook and float inside canvas. No reel, guide rings, fish or modern equipment. 10-12 opaque flat colors, upper-left light, muted believable retro pixel art, clean connected color clusters. One uniform coarse logical grid; no noise, mottled wood grain, speckled highlights, dither, blur, gradients, antialiasing, extra tiny pixels, 3D, shadow, text, border or grid. True transparent background. One fishing rod only.",
+      "beforeHash": "679dd3ad25880f1b1b1bb964367bad5669a120a3ee89790ef1803a0b780d9f17",
+      "afterHash": "c9c4c3bcd1622d181b9780bdf8d35738d022b71b722a3a189185151c2afa4387",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 8,
+      "alpha": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        3,
+        2,
+        31,
+        31
+      ],
+      "priorAlphaBounds": [
+        7,
+        4,
+        61,
+        61
+      ],
+      "ppuBefore": 70.163660912,
+      "ppuAfter": 35.081830456,
+      "pivotPreserved": true,
+      "normalization": "source palette <=14, no dithering; weighted source-palette area voting into scaled prior bounds; 10% occupied-cell coverage retains continuous thin fishing line/bowstring; hard alpha; prior PPU / 2, normalized pivot/GUID preserved; fishing cord only: per-row maximum source coverage keeps one pixel per row in y7-16 and y20-22, upper pole and float untouched; hook uses 45% alpha and 10% pale bone coverage to preserve U opening",
+      "partialAlpha": 0,
+      "connectedComponents8": [
+        157
+      ],
+      "metaExact": true,
+      "lineWidthRows": {
+        "upper": [
+          7,
+          16
+        ],
+        "lower": [
+          20,
+          22
+        ],
+        "width": 1
+      },
+      "hookOpeningPixel": [
+        27,
+        25
+      ],
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Icon.png",
+      "beforeSha256": "679dd3ad25880f1b1b1bb964367bad5669a120a3ee89790ef1803a0b780d9f17",
+      "afterSha256": "c9c4c3bcd1622d181b9780bdf8d35738d022b71b722a3a189185151c2afa4387",
+      "priorPPU": 70.163660912,
+      "ppu": 35.081830456,
+      "pivot": "{x: 0.2213078, y: 0.1741467}"
+    },
+    {
+      "id": "FlintStrike",
+      "prompt": "Use case: precise-object-edit. The attached PNG is the EDIT TARGET. Carefully clean this exact game item into a real NATIVE 32x32 LOGICAL PIXEL ART sprite. Subject: the same fire-starting flint-and-striker icon consisting of EXACTLY TWO SEPARATE GRAY STONES in their original arrangement: one larger angular flint rock on the upper left and one small square stone at lower right, with a transparent gap between. Preserve both stones and the gap; do not merge them or remove the smaller stone. Broad matte gray flake planes and sparse pale edges, not metal. Keep exact original design, shape, pose, relative positions, proportions, full-object bounding box and transparent framing. Merge surface micro-speckles into large connected flat clusters; use about 6-10 opaque colors, 3 or 4 purposeful stone planes, no little dark pits or scattered white flecks. Clean planned staircase outline, remove accidental one-pixel teeth while retaining recognizable stone chips and pointed ends. One uniform 32x32 logical grid; each logical pixel one hard flat square, no smaller texture detail. Preserve original tonal depth, no flat silhouette treatment. No blur, gradients, antialiasing, dithering, grain, photographic texture, modern metal shine, thick black outlines, extra objects, cast shadows, text or background. Real transparent alpha outside stones, full opacity inside. Keep the source's complete arrangement, output one item icon only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-d4070323-98b3-49a0-98b8-ecf0f908a458.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FlintStrike/FlintStrike_Icon.png",
+      "beforeSha256": "e94ececac9141cb7b46cd82a51db6e22a2133c8709208d2933411fb871fce3a8",
+      "afterSha256": "963818b01c961a0d340e9d8c91fd123d6a9bd4243d152899a61631d8ff8d12b3",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 10,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        12,
+        14,
+        53,
+        52
+      ],
+      "alphaBounds": [
+        6,
+        7,
+        27,
+        26
+      ],
+      "priorPPU": 47.537024357,
+      "ppu": 23.7685121785,
+      "pivot": "{x: 0.5051834, y: 0.4808612}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "HandDrill_Summoner",
+      "prompt": "Use case: precise-object-edit. The attached PNG is the EDIT TARGET, the existing handmade hand-drill game icon. Clean and simplify THIS EXACT MECHANISM into a NATIVE 32x32 LOGICAL PIXEL ART sprite. Preserve its near-vertical central wooden spindle and bottom drill tip, the TALL TRIANGULAR TAN CORD running from spindle top down to both ends of the horizontal wooden pump crossbar, and the small brown circular flywheel below that crossbar. Keep all relative positions, proportions, structure, outline, full-object bounds and original transparent framing. It is a primitive hand-operated pump drill, NOT an electric drill, bow, shovel, machine or decoration. The two diagonal cord segments must remain fully continuous from apex to crossbar ends, clearly readable as single 32-grid-pixel lines; keep open triangle interiors transparent. Simplify speckled wood and bindings into broad connected flat clusters. One continuous warm highlight strip follows each main wooden part, with a connected darker side; 10-14 opaque flat colors total and only 2-3 shades per material. All logical pixels equal solid hard squares, on one uniform 32x32 grid. Clean planned staircase edges, no random tooth-shaped protrusions, no little texture flecks. Genuine transparent alpha outside complete mechanism, full opacity inside. No blur, antialiasing, gradients, dithering, grain, white speckle noise, dark pits, glossy modern parts, thick black outline, cast shadow, floor, text or extra objects. Output ONE complete drill mechanism only, in the original pose.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-9d7e83e5-49fc-412d-83f1-b9a1561a3ba6.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+      "beforeSha256": "d2d9b508d558e59bf6e147ee934e05651d7a8d4456a46c6d6308634704a7d903",
+      "afterSha256": "040e4439dd411c9134bce62560bebca7c3a715bb02b7ccc52358f51ce489e237",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 14,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        7,
+        4,
+        57,
+        60
+      ],
+      "alphaBounds": [
+        3,
+        2,
+        29,
+        30
+      ],
+      "priorPPU": 78.179321825,
+      "ppu": 39.0896609125,
+      "pivot": "{x: 0.5172665, y: 0.5147008}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.09
+    },
+    {
+      "id": "Knife_Flint",
+      "prompt": "Use case: precise-object-edit. Image 1 is the EDIT TARGET. Clean this exact small game tool into actual NATIVE 32x32 LOGICAL PIXEL ART. Subject: ONE small primitive flint knife; preserve its narrow slightly curved gray chipped stone blade pointing upper right, slim crooked brown handle toward lower left, and tan binding at the actual head joint. Matte stone planes, not shiny steel. Preserve all existing functional parts and their shape, proportions, orientation, grip anchor, full-object bounds and transparent framing. Simplify source noise to broad connected pixel clusters, no scattered light dots, no dark pits or checkerboard mottling. Clean planned staircase outline with no accidental one-pixel teeth. Use about 10-14 opaque flat colors; materials retain dimensional shading with 2 or 3 large planes, wood a long continuous highlight strip, binding only 2 or 3 broad turns. Metal scissors have one connected restrained pale blade glint, never glitter. Each logical pixel is one solid flat square on the same 32x32 grid, no finer detail. Real transparent alpha background and fully opaque subject. No blur, anti aliasing, gradients, dithering, texture grain, added decorations, thick black border, modern redesign, shadow, ground, text or multiple icons. One complete sprite only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-543add9b-1341-400f-ab0c-9da0244641d0.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Knife_Flint/Knife_Flint_Icon.png",
+      "beforeSha256": "f285fbdad1b7415c2b31ae4edcbd5ea523d12286521482dce587b10fc44957cc",
+      "afterSha256": "fec883ddd6f627d6e82b4b7f76c03b0422cccec52e8362c7cf0fb834eedaaa00",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 14,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        8,
+        6,
+        60,
+        60
+      ],
+      "alphaBounds": [
+        4,
+        3,
+        30,
+        30
+      ],
+      "priorPPU": 64.147007081,
+      "ppu": 32.0735035405,
+      "pivot": "{x: 0.2405582, y: 0.1791707}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "Scissors",
+      "prompt": "Use case: precise-object-edit. Image 1 is the EDIT TARGET. Clean this exact small game tool into actual NATIVE 32x32 LOGICAL PIXEL ART. Subject: ONE existing handmade pair of scissors. Preserve BOTH long pointed cool gray blades at upper right, the visible center pivot, and the two small open tan/brown loop handles at lower left. Keep the scissor gap and handle holes transparent and open, no rope or bindings across the hinge, no extra blade or handle. Preserve all existing functional parts and their shape, proportions, orientation, grip anchor, full-object bounds and transparent framing. Simplify source noise to broad connected pixel clusters, no scattered light dots, no dark pits or checkerboard mottling. Clean planned staircase outline with no accidental one-pixel teeth. Use about 10-14 opaque flat colors; materials retain dimensional shading with 2 or 3 large planes, wood a long continuous highlight strip, binding only 2 or 3 broad turns. Metal scissors have one connected restrained pale blade glint, never glitter. Each logical pixel is one solid flat square on the same 32x32 grid, no finer detail. Real transparent alpha background and fully opaque subject. No blur, anti aliasing, gradients, dithering, texture grain, added decorations, thick black border, modern redesign, shadow, ground, text or multiple icons. One complete sprite only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-bd53ffaa-41d0-4fee-8227-0378506346ab.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Scissors/Scissors_Icon.png",
+      "beforeSha256": "05db04fed044fd59b5f8b22bf989b07315d0e13bc69af2439e46c321c3be9ddb",
+      "afterSha256": "1c9a1072168aa6a8dbf874379b9fa463d389acc3624da5fe57359f61a8be752c",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 13,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        9,
+        6,
+        63,
+        61
+      ],
+      "alphaBounds": [
+        4,
+        3,
+        32,
+        31
+      ],
+      "priorPPU": 78.462920421,
+      "ppu": 39.2314602105,
+      "pivot": "{x: 0.2643222, y: 0.1718341}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "SparkMaker_Summoner",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-58d1-70d2-a244-2f40e4a5434a\\exec-65901904-bc35-4aa5-ae5d-e227ff7fa24f.png",
+      "prompt": "Use case: precise-object-edit. Retouch this EXACT primitive FRICTION FIRE-DRILL KIT, preserve its connected apparatus and relative placement: rough low wooden fireboard base, upright central wooden spindle and small top bearing, curved brown bow crossing diagonally behind spindle from lower-left to upper-right, taut pale cord tied between bow ends and LOOPED AROUND spindle. Keep its compact triangular silhouette, upright direction and full transparent margins. Simplify onto ONE TRUE 32x32 logical pixel grid, complete kit occupies roughly 26x25 logical pixels. Remove noisy isolated wood spots and sawtooth nibs: form 2-3 broad continuous brown wood planes and a few simple tied tan knots. CRITICAL: taut bow STRING must be a clean opaque continuous 1-pixel logical cord from left end to spindle loop to right end, no broken dotted gaps. Cord visibly works around spindle. Retain bow as a separate curved wooden member, wooden spindle reaches base, top bearing present. Smooth outlines into deliberate pixel steps, recognizable primitive functional assembly. No fire, sparks, smoke, drill motor or modern hardware. 10-12 flat opaque muted colors, upper-left light, big coherent hard square pixels, no grain, dither, scattered highlights, gradient, blur, antialiasing, tiny details, 3D render, shadow, text, grid or border. True transparent alpha background. One fire-making kit only.",
+      "beforeHash": "ab53f4d07e7863755126fa4660885920a73cd0bde446d39ef70847a4ee7bc879",
+      "afterHash": "43523929dd051841ec3520be689a8b0b323628d870ad1e8c258f31204fc3efe5",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 7,
+      "alpha": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        4,
+        5,
+        31,
+        30
+      ],
+      "priorAlphaBounds": [
+        9,
+        11,
+        61,
+        60
+      ],
+      "ppuBefore": 33.54539075,
+      "ppuAfter": 16.772695375,
+      "pivotPreserved": true,
+      "normalization": "source palette <=14, no dithering; weighted source-palette area voting into scaled prior bounds; 10% occupied-cell coverage retains continuous thin fishing line/bowstring; hard alpha; prior PPU / 2, normalized pivot/GUID preserved",
+      "partialAlpha": 0,
+      "connectedComponents8": [
+        293
+      ],
+      "metaExact": true,
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
+      "beforeSha256": "ab53f4d07e7863755126fa4660885920a73cd0bde446d39ef70847a4ee7bc879",
+      "afterSha256": "43523929dd051841ec3520be689a8b0b323628d870ad1e8c258f31204fc3efe5",
+      "priorPPU": 33.54539075,
+      "ppu": 16.772695375,
+      "pivot": "{x: 0.1395534, y: 0.0701754}"
+    },
+    {
+      "id": "StoneHammer",
+      "prompt": "Use case: precise-object-edit. Attached PNG is the EDIT TARGET. Retouch this exact game tool into an actual NATIVE 32x32 LOGICAL PIXEL ART sprite. Subject: a SINGLE primitive stone hammer, same angular gray stone head at upper right, crooked brown wooden handle down to lower left, and a few tan load-bearing cross lashings at the head joint. Keep the broad blunt stone striking faces, do not turn it into a pickaxe or iron tool. Matte gray stone, broad facets. Preserve exact item design, pose, proportions, full silhouette, grip location, alpha bounding box placement and empty transparent margins. Carefully simplify the surface speckles to large connected color clusters: handle has one LONG CONTINUOUS warm highlighted strip and one connected dark side with no checkerboard zigzag mottling. Keep dimensional form with 2-3 tones per material and 10-14 opaque flat colors total. Bindings are 2-3 broad turns and one chunky knot, readable at this tiny size. Clean deliberate staircase silhouette, no accidental spiky one-pixel teeth. Same uniform 32x32 logical grid everywhere, no micro-texture smaller than one logical pixel. Fully transparent background, fully opaque subject. No blur, antialiasing, gradients, dithering, grain, scattered white specks or dark pits, thick black border, modern manufactured design, added parts, text, floor or shadow. Output ONE tool only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-a9fd9967-7795-4ef8-bf0d-0f51a73d0b2f.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/StoneHammer/StoneHammer_Icon.png",
+      "beforeSha256": "dac004189d94793223aaa726eff987351a262b6cbff9597ac74dd5ddf6f98c24",
+      "afterSha256": "cd8aa91cc8dd6c34fc78606c2581eb5ae68079e5ae486c40288eebc208b8eba8",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        8,
+        5,
+        62,
+        61
+      ],
+      "alphaBounds": [
+        4,
+        2,
+        31,
+        31
+      ],
+      "priorPPU": 77.143116657,
+      "ppu": 38.5715583285,
+      "pivot": "{x: 0.2433174, y: 0.1719139}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "Torch_Summoner",
+      "prompt": "Use case: precise-object-edit. Attached image is the EDIT TARGET: the exact unlit primitive torch game sprite. Clean and simplify it into NATIVE 32x32 LOGICAL PIXEL ART. Preserve the same diagonal crooked brown stick from lower left to upper right, its grip location and proportions, and the wrapped dark fiber/resin bundle at upper right with a few thick tan bindings. Keep the torch UNLIT: no flames, sparks, smoke, glowing ember or light halo. The source's many tiny crisscross speckles must become just two or three readable broad binding bands and a large darker torch-head cluster. Handle has one long continuous warm highlight strip and one connected dark side, no checkerboard mottling. Keep original design, silhouette, full bounds and transparent margins. 10-14 opaque flat colors total, 2-3 shades per material, all logical pixels equal hard squares on one 32x32 grid. Planned staircase outline with accidental jagged teeth removed. Real alpha transparent background, fully opaque subject. No blur, antialiasing, gradients, grain, dithering, tiny bright flecks or black pits, thick black border, modern material redesign, text, floor or cast shadow. Output ONE complete torch only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-970bd214-5a32-42d5-9390-17abfdb16ae3.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
+      "beforeSha256": "737de1a285ea960b2848d923c286dbb2785260ac456088665c70ca23f9557226",
+      "afterSha256": "26545c51a1b4be101ab5d6baf278a3e584250dd0386f1da0f1396c4fed8e59b9",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 13,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        9,
+        5,
+        62,
+        61
+      ],
+      "alphaBounds": [
+        4,
+        2,
+        31,
+        31
+      ],
+      "priorPPU": 106.213454341,
+      "ppu": 53.1067271705,
+      "pivot": "{x: 0.2509569, y: 0.1691866}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    },
+    {
+      "id": "WoodHammer",
+      "prompt": "Use case: precise-object-edit. Attached PNG is the EDIT TARGET. Retouch this exact game tool into an actual NATIVE 32x32 LOGICAL PIXEL ART sprite. Subject: a SINGLE primitive wooden mallet, same chunky asymmetrical warm brown WOOD head at upper right, crooked wooden handle running lower left, and tan cross lashings at the head joint. Preserve the shape and hand-carved structural joints. It is all wood with bindings, no iron or stone head. Preserve exact item design, pose, proportions, full silhouette, grip location, alpha bounding box placement and empty transparent margins. Carefully simplify the surface speckles to large connected color clusters: handle has one LONG CONTINUOUS warm highlighted strip and one connected dark side with no checkerboard zigzag mottling. Keep dimensional form with 2-3 tones per material and 10-14 opaque flat colors total. Bindings are 2-3 broad turns and one chunky knot, readable at this tiny size. Clean deliberate staircase silhouette, no accidental spiky one-pixel teeth. Same uniform 32x32 logical grid everywhere, no micro-texture smaller than one logical pixel. Fully transparent background, fully opaque subject. No blur, antialiasing, gradients, dithering, grain, scattered white specks or dark pits, thick black border, modern manufactured design, added parts, text, floor or shadow. Output ONE tool only.",
+      "sourcePath": "C:\\Users\\PC\\.codex\\generated_images\\01a16c8c-d4aa-7952-afb8-e1f7b58acdca\\exec-3a5f9a97-0a1c-4f6e-92f2-cd2dfcc105f2.png",
+      "finalPath": "D:/_Unity/_UnityProject/FlatWorld/Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
+      "beforeSha256": "8f592a4d7756a51dc626208479a9bae1312f618fdc332a828f0e01bf629ad807",
+      "afterSha256": "a008ea2c77c77e14e694f72019e0252391c222a01a93bc0a10f35460cca44bbe",
+      "width": 32,
+      "height": 32,
+      "visibleColors": 12,
+      "alpha": [
+        0,
+        255
+      ],
+      "priorAlphaBounds": [
+        6,
+        5,
+        63,
+        61
+      ],
+      "alphaBounds": [
+        3,
+        2,
+        32,
+        31
+      ],
+      "priorPPU": 80.236406711,
+      "ppu": 40.1182033555,
+      "pivot": "{x: 0.218437, y: 0.1642584}",
+      "normalization": "ImageGen painted source, 16-color undithered palette, per-cell coverage and dominant-color vote, binary alpha, original alpha bounds mapped to half scale; PPU divided by two, normalized grip pivot retained",
+      "coverage": 0.4
+    }
+  ],
+  "delivery": {
+    "savedFiles": "35 native32 PNGs and import metadata; existing item references retained",
+    "editor": "No active Import, Refresh, Play Mode switch or reload performed by the agents. At handoff Unity automatically imported all35 textures; AssetDatabase reports32x32 for every texture.",
+    "acceptance": "No gameplay acceptance performed; user verifies actual holding, actions, thin lines, burning and inventory appearance."
+  }
+}

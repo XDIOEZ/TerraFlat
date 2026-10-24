@@ -94,21 +94,26 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject root = PrefabUtility.LoadPrefabContents(path);
         try
         {
-            // 装备页只提供通用入口，不读取任何具体装备类型。
-            Button button = root.GetComponentsInChildren<Button>(true)
-                .FirstOrDefault(value => value.name == "FWUI_ConfigureEquipment");
-            button ??= InstantiateSharedControl<Button>("UI_Button", "FWUI_ConfigureEquipment", root.transform);
-            LayoutIndustrialControl((RectTransform)button.transform, new Vector2(0, 28), new Vector2(190, 42),
-                new Vector2(.5f, 0), new Vector2(.5f, .5f));
-            TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
-            var binder = label.GetComponent<LocalizedTextBinder>() ?? label.gameObject.AddComponent<LocalizedTextBinder>();
-            binder.Configure(FlatWorldLocalizationService.UiTable,
-                FlatWorldLocalizationService.GetUiTextKey("装备配置"), "装备配置");
-            RecordSharedInstance(button.gameObject);
+            EnsureEquipmentConfigurationButton(root);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }
         AssetDatabase.SaveAssets();
+    }
+
+    internal static void EnsureEquipmentConfigurationButton(GameObject root)
+    {
+        // 单独补建与整页重建复用同一个通用入口，保持正式控件及引用一致。
+        Button button = root.GetComponentsInChildren<Button>(true)
+            .FirstOrDefault(value => value.name == "FWUI_ConfigureEquipment");
+        button ??= InstantiateSharedControl<Button>("UI_Button", "FWUI_ConfigureEquipment", root.transform);
+        LayoutIndustrialControl((RectTransform)button.transform, new Vector2(0, 28), new Vector2(190, 42),
+            new Vector2(.5f, 0), new Vector2(.5f, .5f));
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        var binder = label.GetComponent<LocalizedTextBinder>() ?? label.gameObject.AddComponent<LocalizedTextBinder>();
+        binder.Configure(FlatWorldLocalizationService.UiTable,
+            FlatWorldLocalizationService.GetUiTextKey("装备配置"), "装备配置");
+        RecordSharedInstance(button.gameObject);
     }
     #endregion
 

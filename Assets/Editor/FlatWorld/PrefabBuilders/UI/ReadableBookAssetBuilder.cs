@@ -167,7 +167,7 @@ public static class ReadableBookAssetBuilder
         if (text.font == null)
             throw new InvalidOperationException($"可阅读书籍 UI 缺少字体资源：{FontPath}");
         text.text = value;
-        text.fontSize = fontSize;
+        FlatWorldUITextLayout.Configure(text, fontSize);
         text.alignment = alignment;
         text.color = color;
         text.raycastTarget = raycastTarget;

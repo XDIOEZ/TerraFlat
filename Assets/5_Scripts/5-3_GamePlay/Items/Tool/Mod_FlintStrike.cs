@@ -9,7 +9,8 @@ public class Mod_FlintStrike : Module, IInteractable
 #region 基础参数
 
     public const float DefaultSuccessChancePerClick = 0.1f;
-    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 1f;
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -62,6 +63,13 @@ public class Mod_FlintStrike : Module, IInteractable
     protected override void OnSave()
     {
         ModSaveData.WriteData(RawData);
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return;
+        InputInventory?.ModUpdate(deltaTime);
+        OutputInventory?.ModUpdate(deltaTime);
     }
 
     protected override void OnUnload()
@@ -356,9 +364,10 @@ public class Mod_FlintStrike : Module, IInteractable
         return false;
     }
 
-    private bool IsValidTinder(ItemData itemData)
+    public bool IsValidTinder(ItemData itemData)
     {
-        return IsValidMaterial(itemData, TinderItemIds, TinderTags);
+        // 原材料火绒与已经点着的火种分开标记，新增纤维只需声明材料能力。
+        return itemData?.Tags?.Contains("Material.Tinder") == true || IsValidMaterial(itemData, TinderItemIds, TinderTags);
     }
 
     private bool IsValidMaterial(ItemData itemData, List<string> itemIds, List<string> tags)

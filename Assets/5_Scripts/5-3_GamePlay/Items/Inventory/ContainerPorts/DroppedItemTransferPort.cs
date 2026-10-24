@@ -13,7 +13,7 @@ public sealed class DroppedItemTransferPort : ContainerPortBase, IItemTransferPo
     private static Func<bool> Guard(Item item)
     { uint generation = item.RuntimeGeneration; return () => item != null && !item.DestructionHandled && item.RuntimeGeneration == generation && !item.InHand && item.Owner == null && item.itemData?.Stack?.CanBePickedUp == true; }
     public override object StorageIdentity => source.itemData;
-    public override long StateVersion => source.itemData.Stack.Amount.GetHashCode();
+    public override long StateVersion => source.itemData.Stack.Amount.GetHashCode() ^ source.itemData.Durability.GetHashCode();
     public ItemData PeekItem(string itemId = null, string tag = null)
         => IsValid && source.itemData.Stack.Amount >= 1f && (itemId == null || source.itemData.IDName == itemId) &&
             (tag == null || source.itemData.Tags.Contains(tag)) ? source.itemData : null;
@@ -25,10 +25,18 @@ public sealed class DroppedItemTransferPort : ContainerPortBase, IItemTransferPo
         if (!IsValid || !ReferenceEquals(expected, source.itemData) || amount <= 0 || source.itemData.Stack.Amount < amount) return false;
         extracted = ItemInstanceDataFactory.CloneRuntime(source.itemData); extracted.Stack.Amount = amount;
         if (source.itemData.Stack.Amount > amount) { int id; do id = Guid.NewGuid().GetHashCode(); while (id == 0 || id == extracted.Guid); extracted.Guid = id; }
-        source.itemData.Stack.Amount -= amount; return true;
+        source.itemData.Stack.Amount -= amount;
+        ItemDurabilityRules.AdvanceAfterRemoval(source.itemData);
+        return true;
     }
-    public override object CaptureState() => source.itemData.Stack.Amount;
-    public override void RestoreState(object snapshot) { source.itemData.Stack.Amount = (float)snapshot; source.OnUIRefresh?.Invoke(); }
+    public override object CaptureState() => (source.itemData.Stack.Amount, source.itemData.Durability);
+    public override void RestoreState(object snapshot)
+    {
+        var state = ((float Amount, float Durability))snapshot;
+        source.itemData.Durability = state.Durability;
+        source.itemData.Stack.Amount = state.Amount;
+        source.OnUIRefresh?.Invoke();
+    }
     public override void PublishState()
     { if (source.itemData.Stack.Amount <= 0f) source.DestroySelf(); else { source.OnUIRefresh?.Invoke(); ItemNetworkStateSerialization.NotifyRuntimeStateChanged(source); } }
     #endregion

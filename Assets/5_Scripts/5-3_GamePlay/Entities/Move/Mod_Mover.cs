@@ -270,7 +270,7 @@ public partial class Mod_Mover : Module
             !spaceMotionOwned && CarrierSource == null && rb.simulated && rb.bodyType == RigidbodyType2D.Dynamic)
         {
             ExternalVelocity = ResolveExternalVelocity();
-            rb.velocity = DrivenVelocity + ExternalVelocity;
+            rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
         }
 
         if (footstepAudioEnabled || swimmingAudioEnabled)
@@ -416,6 +416,7 @@ public partial class Mod_Mover : Module
             unchecked { motionResetVersion++; }
             // 先撤销旧租约和速度，再通知动作收尾，防止回调把旧运动写回来。
             InvalidateDrivenMotion();
+            ClearCarrierPushResistance();
             DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
             networkMoving = networkRunning = false;
             if (rb != null)
@@ -519,7 +520,7 @@ public partial class Mod_Mover : Module
             : delta.normalized * moveSpeed;
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
         ExternalVelocity = ResolveExternalVelocity();
-        rb.velocity = DrivenVelocity + ExternalVelocity;
+        rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
         UpdateMovementState();
     }
 
@@ -546,7 +547,7 @@ public partial class Mod_Mover : Module
         // 主动速度独立缓动，不能把上帧水流当作下帧主动移动的初速度。
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
         ExternalVelocity = ResolveExternalVelocity();
-        rb.velocity = DrivenVelocity + ExternalVelocity;
+        rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
         UpdateMovementState();
     }
 
@@ -568,7 +569,7 @@ public partial class Mod_Mover : Module
 
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
         ExternalVelocity = ResolveExternalVelocity();
-        rb.velocity = DrivenVelocity + ExternalVelocity;
+        rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
         UpdateMovementState();
     }
 

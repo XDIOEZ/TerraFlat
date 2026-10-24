@@ -4,6 +4,9 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
     {
         [PerRendererData] _MainTex("Tile Texture", 2D) = "white" {}
         _MaskTex("Light Mask", 2D) = "white" {}
+        _FarmlandDryColor("Farmland Dry Soil Color", Color) = (0.67,0.50,0.30,1)
+        _FarmlandDryBlend("Farmland Dry Color Strength", Range(0,1)) = 0.55
+        _FarmlandWetTint("Farmland Wet Soil Tint", Color) = (0.70,0.76,0.80,1)
 
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
@@ -36,6 +39,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             float2 uv : TEXCOORD0;
             half2 lightingUV : TEXCOORD1;
             float2 positionWS : TEXCOORD2;
+            half2 soilMoisture : TEXCOORD3;
 
             float2 positionOS : TEXCOORD6;
             half4 tint : COLOR;
@@ -47,6 +51,9 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
         CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float4 _RendererColor;
+            float4 _FarmlandDryColor;
+            float4 _FarmlandWetTint;
+            float _FarmlandDryBlend;
 
             float4 _ChunkSize;
         CBUFFER_END
@@ -76,6 +83,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             output.positionOS = input.positionOS.xy;
             output.uv = input.uv;
             output.tint = input.tint;
+            output.soilMoisture = input.contact.xy;
             output.lightingUV = half2(ComputeScreenPos(output.positionCS / output.positionCS.w).xy);
             return output;
         }
@@ -113,17 +121,25 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
         half4 SampleGround(Varyings input, out float2 sampleUV)
         {
             half4 tint = input.tint;
+            half2 soilMoisture = input.soilMoisture;
             sampleUV = input.uv;
             #if defined(FLATWORLD_CHUNK_CELL_BUFFER)
                 float2 spriteUV;
                 ChunkGroundCellData data = LoadGroundCell(input.positionOS, spriteUV);
                 sampleUV = ResolveAtlasUV(data, spriteUV);
                 tint = data.tint;
+                soilMoisture = data.contact.xy;
             #endif
 
-            half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, sampleUV) *
-                tint * _Color * _RendererColor;
-            return main;
+            half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, sampleUV);
+            // 同一张耕地图按真实水量从浅色干土过渡到深色湿土，保留原像素纹理与透明度。
+            if (soilMoisture.y > 0.5h)
+            {
+                half3 dry = lerp(main.rgb, _FarmlandDryColor.rgb, saturate(_FarmlandDryBlend));
+                half3 wet = main.rgb * _FarmlandWetTint.rgb;
+                main.rgb = lerp(dry, wet, saturate(soilMoisture.x));
+            }
+            return main * tint * _Color * _RendererColor;
         }
         ENDHLSL
 

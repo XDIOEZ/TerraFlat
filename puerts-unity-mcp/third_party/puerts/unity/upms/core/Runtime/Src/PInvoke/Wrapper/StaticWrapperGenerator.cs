@@ -350,7 +350,7 @@ namespace Puerts
                 }
             }
 
-            // --- Constructor ---
+            #region ConstructorGeneration
             try
             {
                 if (typeof(MulticastDelegate).IsAssignableFrom(type) && type != typeof(MulticastDelegate))
@@ -368,7 +368,8 @@ namespace Puerts
                         WrapperMethodName = "ctor"
                     });
                 }
-                else
+                // 静态包装同样只为可实例化类型生成构造器。
+                else if (!type.IsAbstract)
                 {
                     var ctors = type.GetConstructors()
                         .Where(ctorInfo => !ctorInfo.GetParameters().Any(pi => ParameterTypeNotAcceptable(pi.ParameterType)))
@@ -395,6 +396,7 @@ namespace Puerts
                 sb.AppendLine($"        // SKIPPED: Constructor — {EscapeComment(e.Message)}");
                 sb.AppendLine();
             }
+            #endregion
 
             // Emit static field declarations (for MethodInfo/FieldInfo constants etc.)
             if (allStaticFields.Count > 0)

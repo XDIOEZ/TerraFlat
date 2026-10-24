@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Steel_Helmet",
+      "parent": "Equipment_Base",
+      "gameName": "钢头盔",
+      "description": "用钢锭锻造的钢头盔，为头部提供坚固防护。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2.4,
+      "volume": 3.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Head", "Material.Steel"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Helmet/Steel_Helmet_Icon.png",
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
+          "wearableHairMask": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png"
+        },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "钢头盔防护",
+                "DefenseBonus": { "Physical": 6 },
+                "CoveredParts": ["Head"]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Steel_Gauntlets",
+      "parent": "Equipment_Base",
+      "gameName": "钢手套",
+      "description": "用钢锭锻造的钢手套，以钢片和皮革保护双手。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 1.2,
+      "volume": 1.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Hands", "Material.Steel"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Gauntlets/Steel_Gauntlets_Icon.png",
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Gauntlets.png"
+        },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "钢手套防护",
+                "DefenseBonus": { "Physical": 4 },
+                "CoveredParts": ["LeftHand", "RightHand"]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Steel_Greaves",
+      "parent": "Equipment_Base",
+      "gameName": "钢腿甲",
+      "description": "用钢锭锻造的钢腿甲，以成形钢板保护腰腿。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 4,
+      "volume": 4.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Legs", "Material.Steel"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Greaves/Steel_Greaves_Icon.png",
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Greaves.png"
+        },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "钢腿甲防护",
+                "DefenseBonus": { "Physical": 6 },
+                "CoveredParts": ["Pelvis", "LeftLeg", "RightLeg"]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Steel_Boots",
+      "parent": "Equipment_Base",
+      "gameName": "钢靴子",
+      "description": "用钢锭锻造的钢靴子，以钢制护片加固鞋面和踝部。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2.4,
+      "volume": 3,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.FeetOuter", "Material.Steel"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Boots/Steel_Boots_Icon.png",
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Boots.png"
+        },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "$concreteType": "EquipmentInstance_Defense",
+                "Name": "钢靴子防护",
+                "DefenseBonus": { "Physical": 3 },
+                "CoveredParts": ["LeftLeg", "RightLeg"]
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

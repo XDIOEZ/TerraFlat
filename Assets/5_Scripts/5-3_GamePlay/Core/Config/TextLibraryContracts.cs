@@ -43,24 +43,28 @@ public static class TextLibraryKeys
 }
 
 /// <summary>文字库 JSON 根对象。libraries 可随项目扩展，generators 只描述已有分类如何组合。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TextLibraryCatalogDto
+public sealed partial class TextLibraryCatalogDto
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion;
 
     [JsonProperty("libraries")]
+    [BinaryTextLibraries]
     public Dictionary<string, List<string>> Libraries =
         new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
     [JsonProperty("generators")]
+    [BinaryTextGenerators]
     public Dictionary<string, TextLibraryGeneratorDto> Generators =
         new Dictionary<string, TextLibraryGeneratorDto>(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>生成器定义；parts 按顺序随机取值并使用 separator 拼接。</summary>
+[MemoryPack.MemoryPackable]
 [Serializable]
-public sealed class TextLibraryGeneratorDto
+public sealed partial class TextLibraryGeneratorDto
 {
     [JsonProperty("parts")]
     public List<string> Parts = new List<string>();

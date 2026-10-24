@@ -127,6 +127,7 @@ public partial class WeatherMgr
 
     private void OnDisable()
     {
+        ResetFogPerception();
         DeactivateWeatherAudio();
         ResetWindPushField();
     }

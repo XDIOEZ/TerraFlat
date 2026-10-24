@@ -8,7 +8,7 @@ public partial class Mod_Food : IHealingCostPolicy
 
     public float LimitHealingAmount(float requestedAmount, Item healer)
     {
-        if (!IsRuntimeLoaded || !GameDifficultyService.IsPlayer(item)) return requestedAmount;
+        if (!IsRuntimeLoaded || !ActorIdentity.IsPlayer(item)) return requestedAmount;
         Nutrition nutrition = Data?.nutrition;
         float protein = nutrition != null && float.IsFinite(nutrition.Protein)
             ? Mathf.Max(0f, nutrition.Protein) : 0f;
@@ -17,7 +17,7 @@ public partial class Mod_Food : IHealingCostPolicy
 
     public void PayHealingCost(float actualAmount, Item healer)
     {
-        if (!IsRuntimeLoaded || !GameDifficultyService.IsPlayer(item) || actualAmount <= 0f) return;
+        if (!IsRuntimeLoaded || !ActorIdentity.IsPlayer(item) || actualAmount <= 0f) return;
         Nutrition nutrition = Data?.nutrition;
         if (nutrition == null) return;
         // 玩家各类治疗共用营养成本，部位耐久恢复继续使用自己的独立接口。

@@ -219,6 +219,10 @@ MonoBehaviour:
     Value: -10
   - Id: grass.maximumCelsius
     Value: 50
+  - Id: grass.coldThresholdCelsius
+    Value: 15
+  - Id: grass.coldDensityMultiplier
+    Value: 0.5
   - Id: grass.rainfallForFullDensity
     Value: 0.15
   - Id: grass.dryDensityMultiplier
@@ -442,4 +446,12 @@ MonoBehaviour:
   - surface.common.iron
   - surface.common.tin
   - surface.common.sulfur
+  - surface.giant.stone
+  - surface.giant.coal
+  - surface.giant.copper
+  - surface.giant.iron
+  - surface.giant.tin
+  - surface.giant.gold
+  - surface.giant.sulfur
+  - surface.giant.obsidian
   caveResourceRuleIds: []

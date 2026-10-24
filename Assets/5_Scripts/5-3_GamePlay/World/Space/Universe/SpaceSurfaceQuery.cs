@@ -371,9 +371,7 @@ namespace FlatWorld.Spaceflight
                 current = new RuntimeWaterCurrentSample(kind, direction, flow); return true;
             }
             if (kind != RuntimeWaterCurrentKind.Ocean) return false;
-            terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);
-            terrain.TryGetEnvironmentValue("windY", local.x, local.y, out float windY);
-            Vector2 ocean = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+            Vector2 ocean = WaterEnvironmentRules.ResolveOceanCurrentDirection(terrain, local.x, local.y);
             if (ocean == Vector2.zero) return false;
             current = new RuntimeWaterCurrentSample(kind, ocean, 1f); return true;
         }
@@ -406,6 +404,28 @@ namespace FlatWorld.Spaceflight
                 frozenProfiles.Add(planet, profile);
             }
             return profile;
+        }
+
+        // 只采样冻结地理规则，不为放置预览生成区块或加载场景。
+        public static bool IsInsideEquatorBand(string worldKey, Vector2 position, out double normalizedX)
+        {
+            normalizedX = 0d;
+            GameSaveData save = SaveDataMgr.Instance?.SaveData;
+            if (string.IsNullOrWhiteSpace(worldKey) || !global::WorldAddress.FromWorldKey(worldKey).IsSurface ||
+                save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(worldKey, out PlanetData planet) ||
+                !float.IsFinite(position.x) || !float.IsFinite(position.y) ||
+                !WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)) return false;
+            if (!ReferenceEquals(owner, save)) { Reset(); owner = save; }
+            BindResourceReload();
+            ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
+            var topology = new ChunkGenerationTopologySnapshot(new Int2(bounds.Min.x, bounds.Min.y),
+                new Int2(bounds.Span.x, bounds.Span.y));
+            int x = topology.NormalizeX(Mathf.FloorToInt(position.x));
+            int y = topology.NormalizeY(Mathf.FloorToInt(position.y));
+            normalizedX = (bounds.NormalizePosition(position).x - (double)bounds.Min.x) / bounds.Span.x;
+            var address = new RuntimeAddress(global::WorldAddress.SurfaceDimensionId, default);
+            var request = new ChunkGenerationRequest(1, address, GetGenerationSeed(save.Seed, worldKey), 1, profile, topology);
+            return DeterministicChunkGenerator.IsInsideEquatorBand(request, x, y);
         }
 
         private static void BindResourceReload()

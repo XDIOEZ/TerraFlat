@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using FlatWorld.Spaceflight;
 using TMPro;
@@ -58,9 +59,18 @@ public sealed partial class GMReflectionConsole
         }
         selectedTeleportBodyId = index >= 0 ? teleportBodies[index].BodyId : null;
         if (planetSelectionText != null)
-            planetSelectionText.text = index >= 0
-                ? $"{index + 1}/{teleportBodies.Count}  {teleportBodies[index].DisplayName}  /  {selectedTeleportBodyId}"
-                : "进入单机世界后读取星球";
+        {
+            if (index >= 0)
+            {
+                int selectedIndex = index;
+                SetLocalizedProvider(planetSelectionText, () => FlatWorldLocalizationService.GetUiFormat(
+                    "{0}/{1}  {2}  /  {3}", selectedIndex + 1, teleportBodies.Count,
+                    FlatWorldLocalizationService.GetUiText(teleportBodies[selectedIndex].DisplayName),
+                    selectedTeleportBodyId));
+            }
+            else
+                SetLocalizedText(planetSelectionText, "进入单机世界后读取星球");
+        }
         if (planetTeleportButton != null)
             planetTeleportButton.interactable = index >= 0 && !planetTeleportRunning;
     }
@@ -101,8 +111,11 @@ public sealed partial class GMReflectionConsole
             planetTeleportRunning = false;
             if (this == null) return;
             RefreshPlanetTeleportOptions();
-            SetStatus(succeeded ? $"已传送至{body.DisplayName}旁边。" : "传送未完成，请查看场景加载提示或日志。",
-                succeeded ? Color.green : Color.yellow);
+            if (succeeded)
+                SetStatusProvider(() => FlatWorldLocalizationService.GetUiFormat(
+                    "已传送至{0}旁边。", FlatWorldLocalizationService.GetUiText(body.DisplayName)), Color.green);
+            else
+                SetStatus("传送未完成，请查看场景加载提示或日志。", Color.yellow);
             if (succeeded) SetWindowVisible(false);
         });
         if (!accepted)
@@ -112,7 +125,8 @@ public sealed partial class GMReflectionConsole
             SetStatus("当前无法传送，请等待世界加载或场景切换完成。", Color.yellow);
         }
         else if (planetTeleportRunning)
-            SetStatus($"正在传送至{body.DisplayName}旁边…", Color.white);
+            SetStatusProvider(() => FlatWorldLocalizationService.GetUiFormat(
+                "正在传送至{0}旁边…", FlatWorldLocalizationService.GetUiText(body.DisplayName)), Color.white);
     }
 
     private static SpaceMotionState FindPlanetTeleportMotion(UniverseSimulation universe, BodyState body)

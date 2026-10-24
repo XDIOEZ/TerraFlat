@@ -30,7 +30,8 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.IndustrialBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Tileset.png[Smelter]",
@@ -417,7 +418,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Tileset.png[Tileset_77]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Chest_Wood/Chest_Wood_Closed.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": -0.5,
@@ -778,7 +779,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Meatrack.png[Meatrack]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Meatrack/Meatrack_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1153,7 +1154,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.IndustrialBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Smelter/Smelter_Unlit.png[Smelter_Unlit]",
@@ -1448,7 +1450,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.IndustrialBlock"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Tileset.png[workbenches]",
@@ -1840,7 +1843,7 @@
             "flameScale": 3.0,
             "flameHeightRatio": 1.8,
             "flameEmissionMultiplier": 3.0,
-            "attachFlameToAnchor": true,
+            "attachFlameToAnchor": false,
             "followSourceRenderer": true,
             "sourceRendererAnchorOffset": {
               "x": 0.375135,

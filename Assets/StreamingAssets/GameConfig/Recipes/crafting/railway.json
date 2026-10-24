@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:railway",
+      "displayName": "铁路",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "RailTrack_Summoner",
+          "amount": 4
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:minecart",
+      "displayName": "矿车",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "amount": 6
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Minecart_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:steam_engine",
+      "displayName": "蒸汽机",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "SteamEngine",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
@@ -42,6 +43,20 @@ public static class WaterEnvironmentRules
     /// <summary>海洋表层流向由世界风场决定，物理和水面表现共用此单位方向。</summary>
     public static Vector2 ResolveOceanCurrentDirection(Vector2 windDirection) =>
         windDirection.sqrMagnitude > 0.000001f ? windDirection.normalized : Vector2.zero;
+
+    /// <summary>运行时、冷区块与海面表现共用河口扇流；不改变海水身份和推动规则。</summary>
+    public static Vector2 ResolveOceanCurrentDirection(ChunkTerrainData terrain, int x, int y)
+    {
+        terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
+        terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
+        terrain.TryGetEnvironmentValue(EstuaryCurrentKernel.InfluenceLayer, x, y, out float influence);
+        if (influence <= 0f) return ResolveOceanCurrentDirection(new Vector2(windX, windY));
+        terrain.TryGetEnvironmentValue(EstuaryCurrentKernel.DirectionXLayer, x, y, out float plumeX);
+        terrain.TryGetEnvironmentValue(EstuaryCurrentKernel.DirectionYLayer, x, y, out float plumeY);
+        EstuaryCurrentKernel.ResolveDirection(windX, windY,
+            new EstuaryCurrentSample(plumeX, plumeY, influence), out double flowX, out double flowY);
+        return new Vector2((float)flowX, (float)flowY);
+    }
 
     /// <summary>风力只控制海浪速度、振幅和白沫，不参与潮汐相位。</summary>
     public static Vector3 ResolveOceanWaveFactors(float windStrength)

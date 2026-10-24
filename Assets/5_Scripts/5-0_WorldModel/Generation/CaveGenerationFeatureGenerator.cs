@@ -151,6 +151,26 @@ namespace FlatWorld.WorldModel
             return placements.Count == 0 ? ChunkEcologyData.Empty : new ChunkEcologyData(placements);
         }
 
+        /// <summary>共享大资源只读取正式入口落点，不额外生成入口周围灌木。</summary>
+        public static ChunkEcologyData GenerateSurfacePortalPlacements(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain)
+        {
+            var placements = new List<NaturalItemPlacement>();
+            AddSurfacePortals(request, terrain, request.Profile.Settings, placements,
+                new HashSet<int>(), new HashSet<int>());
+            return new ChunkEcologyData(placements);
+        }
+
+        /// <summary>共享矿体复用正式洞穴出口选择，避免遮住返回地表的配对入口。</summary>
+        public static ChunkEcologyData GenerateCavePortalPlacements(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, CancellationToken cancellationToken)
+        {
+            var placements = new List<NaturalItemPlacement>();
+            AddCavePortals(request, terrain, request.Profile.Settings, placements,
+                new HashSet<int>(), new HashSet<int>(), cancellationToken);
+            return new ChunkEcologyData(placements);
+        }
+
         /// <summary>把地表生态结果叠加天然矿洞入口，并让入口格优先于生态物品。</summary>
         public static ChunkEcologyData AppendSurfacePortals(ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain, ChunkEcologyData ecology)

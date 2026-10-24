@@ -79,7 +79,7 @@ public sealed class Mod_CropYield : Module, ICropHarvestAction
         if (ItemMgr.Instance == null)
             throw new InvalidOperationException("[Mod_CropYield] ItemMgr 尚未初始化。");
 
-        float lootMultiplier = Mathf.Max(0f, GameDifficultyService.Current.World.LootAmountMultiplier);
+        float lootMultiplier = Mathf.Max(0f, GameRuleConfiguration.Current.World.LootAmountMultiplier);
         foreach (CropYieldEntry output in outputs)
         {
             float effectiveProbability = Mathf.Clamp01(output.probability * lootMultiplier);
@@ -87,7 +87,7 @@ public sealed class Mod_CropYield : Module, ICropHarvestAction
                 continue;
 
             int baseAmount = UnityEngine.Random.Range(output.minAmount, output.maxAmount + 1);
-            int finalAmount = GameDifficultyService.ScaleRandomizedAmount(baseAmount, lootMultiplier);
+            int finalAmount = GameRuleMath.ScaleRandomizedAmount(baseAmount, lootMultiplier);
             if (finalAmount <= 0)
                 continue;
 

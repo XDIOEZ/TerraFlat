@@ -15,6 +15,12 @@
       "name": "飞船局部伤害、设备瘫痪与成块残骸",
       "luaPath": "GameplayTests/Systems/Space/ship_damage_rules.lua",
       "enabled": true
+    },
+    {
+      "id": "space_elevator_rules",
+      "name": "太空电梯往返、真实货舱与固定站台扩建",
+      "luaPath": "GameplayTests/Systems/Space/elevator_rules.lua",
+      "enabled": true
     }
   ]
 }

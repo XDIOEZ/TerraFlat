@@ -121,6 +121,45 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
                 }
             WeatherMgr a = WeatherMgr.GetForWorld(first), b = WeatherMgr.GetForWorld(second);
             result["distinctWeatherManagers"] = a != null && b != null && a != b && a.WorldKey == first && b.WorldKey == second;
+            if (a == null || b == null) throw new InvalidOperationException("天气生命周期回归需要已创建的正式世界天气管理器。");
+
+            // 实际触发 Awake，检查预制体子天气随父级清理，独立根天气自行持久化。
+            var weatherParent = new GameObject("Lua自有天气父节点");
+            own.Bodies.Add(weatherParent);
+            SceneManager.MoveGameObjectToScene(weatherParent, player.gameObject.scene);
+            var weatherChild = new GameObject("Lua自有子天气");
+            own.Bodies.Add(weatherChild);
+            weatherChild.transform.SetParent(weatherParent.transform, false);
+            var weatherRoot = new GameObject("Lua自有根天气");
+            own.Bodies.Add(weatherRoot);
+            SceneManager.MoveGameObjectToScene(weatherRoot, player.gameObject.scene);
+            int persistenceWarnings = 0;
+            void CountPersistenceWarning(string condition, string stack, LogType type)
+            {
+                if (type == LogType.Warning && condition.StartsWith("DontDestroyOnLoad only work", StringComparison.Ordinal))
+                    persistenceWarnings++;
+            }
+            Application.logMessageReceived += CountPersistenceWarning;
+            try
+            {
+                weatherChild.AddComponent<WeatherMgr>();
+                weatherRoot.AddComponent<WeatherMgr>();
+            }
+            finally { Application.logMessageReceived -= CountPersistenceWarning; }
+            result["weatherPersistenceWarnings"] = persistenceWarnings;
+            result["weatherChildRetainsOwner"] = weatherChild.transform.parent == weatherParent.transform &&
+                weatherChild.scene == player.gameObject.scene && weatherParent.scene == player.gameObject.scene;
+            result["weatherRootPersists"] = weatherRoot.transform.parent == null &&
+                weatherRoot.scene != player.gameObject.scene && weatherRoot.scene == a.gameObject.scene;
+            UnityEngine.Object.Destroy(weatherParent);
+            yield return null;
+            result["weatherChildDestroyedWithOwner"] = weatherParent == null && weatherChild == null;
+            result["weatherRootSurvivesOwner"] = weatherRoot != null;
+            UnityEngine.Object.Destroy(weatherRoot);
+            yield return null;
+            result["weatherFixtureReleased"] = weatherRoot == null;
+            result["weatherOwnersUnchanged"] = ReferenceEquals(a, WeatherMgr.GetForWorld(first, false)) &&
+                ReferenceEquals(b, WeatherMgr.GetForWorld(second, false));
             result["sceneUnchanged"] = SceneManager.GetActiveScene() == initialScene;
             result["localPlayerUnchanged"] = ReferenceEquals(player, ItemMgr.Instance.User_Player);
             completed(result);
