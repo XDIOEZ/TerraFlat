@@ -52,6 +52,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 风推动由 `WorldMotionSystem` 共用完整物品目录的质量规则；ECS 模板/居民保存当前定义的 `CurrentWeight`，资源发布后同步。世界桥采当地风速，Burst 只消费被动 `WindVelocity` 并扫掠通行；不写入主动速度/动画，无风时不扫描居民，风停当次清残留。
 - GO 鸟/蜜蜂空中通过 `IWindMotionOwner` 独占风位移，地面交给 Mover；悬停也受风且风不改变主动飞行朝向。幽灵直追与无 Mover 导航分别叠风；鱼仅离水受风，正在蹦跳时同步平移起点，入水或被携带/钓住后停止。
 - 感知用稳定身份、空间桶和整数格 LOS；地形/建筑遮挡独立于导航。外部武器经候选筛选、临时 Collider 投影和 Physics2D 命中，镜像绑定不影响受击资格；整体 HP 来自 Actor 配置，部位耐久独立，耗尽部位仍可命中。
+- `Mod_DamageReceiver.OnAttacked` 在有效攻击通过阵营/入伤规则后触发，零生命损失和受击间隔拒绝也会通知；`OnDamageReceived` 只表示实际掉血。反击、护巢、逃离和行为图响应订阅前者，伤害 Buff 保持订阅后者。
 - GO 感知最终半径受 `Item.MaximumPerceptionRadius` 通用外部上限约束，批查询在目标倍率后钳制，旧候选/锁定目标也实时受限；雾的施加与撤销归 `WeatherMgr.Fog`，AI 不查询天气。幽灵直查玩家同样钳制；回归 `environment/fog_perception`。
 - Actor 感知冻结时同轮仿射变换一次性写入 Burst 形状与粗筛包围盒，保留复杂形状、负缩放和独立查询的相同包围语义；规则 `ai/perception_shape_batch`。
 - 狼的目标筛选与通用 Detector 最近物查询在单次遍历内最多获取一次 `WorldTopologyDomain`，无匹配对象时不解析世界边界；逐候选仍实时读位置和阵营，通用入口供鸡、野猪使用，规则 `ai/closest_target_batch` 覆盖接缝、同距、玩家和移动目标。

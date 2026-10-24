@@ -253,7 +253,7 @@ public sealed class AIBehaviorGraphContext
     public void Dispose()
     {
         if (_damageEventSource != null)
-            _damageEventSource.OnDamageReceived -= HandleDamageReceived;
+            _damageEventSource.OnAttacked -= HandleAttacked;
         _damageEventSource = null;
         if (_worldTimeSource != null)
             _worldTimeSource.TimeAdvanced -= HandleWorldTimeAdvanced;
@@ -267,12 +267,12 @@ public sealed class AIBehaviorGraphContext
         if (Health == null)
             return;
         _damageEventSource = Health;
-        _damageEventSource.OnDamageReceived += HandleDamageReceived;
+        _damageEventSource.OnAttacked += HandleAttacked;
     }
 
-    private void HandleDamageReceived(DamageReceiverDamageInfo info)
+    private void HandleAttacked(DamageReceiverDamageInfo info)
     {
-        if (info == null || info.DamageValue <= 0f || info.Attacker == Actor)
+        if (info == null || info.Attacker == Actor)
             return;
 
         bool hasOrigin = DamageThreatOrigin.TryResolve(info, out Vector2 origin);

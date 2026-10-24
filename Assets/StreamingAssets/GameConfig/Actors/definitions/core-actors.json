@@ -1264,7 +1264,6 @@
             "wanderPenaltyWeight": 1.0,
             "playerAvoidDistance": 8.0,
             "playerAvoidSafeDistance": 30.0,
-            "retaliationDamageThresholdRate": 0.2,
             "retaliationDuration": 30.0,
             "chasePathCostLimit": 200,
             "chasePathRetryDelay": 3.0,

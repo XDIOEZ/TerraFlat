@@ -109,8 +109,8 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
         stingRemaining = 0f;
         if (state.Orphaned)
             bird.SetFlightHome(new Vector2(state.OrphanHomeX, state.OrphanHomeY));
-        damageReceiver.OnDamageReceived -= HandleBeeDamageReceived;
-        damageReceiver.OnDamageReceived += HandleBeeDamageReceived;
+        damageReceiver.OnAttacked -= HandleBeeAttacked;
+        damageReceiver.OnAttacked += HandleBeeAttacked;
         bird.RegisterFlightPilot(this);
         AI_DebugOverlay.Register(this, DrawDebugOverlay);
     }
@@ -145,7 +145,7 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
     {
         AI_DebugOverlay.Unregister(this);
         if (damageReceiver != null)
-            damageReceiver.OnDamageReceived -= HandleBeeDamageReceived;
+            damageReceiver.OnAttacked -= HandleBeeAttacked;
         bird?.UnregisterFlightPilot(this);
         ResetBeeTargets();
         colony = null;

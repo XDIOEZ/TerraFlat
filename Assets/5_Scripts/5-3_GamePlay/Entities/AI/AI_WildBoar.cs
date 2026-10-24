@@ -22,7 +22,7 @@ public enum WildBoarState
 }
 
 /// <summary>
-/// 野猪 AI：包含觅食、睡眠、主动避让和受伤反击；默认累计玩家造成最大生命值 20% 的实际伤害后，锁定该玩家追击 30 秒。
+/// 野猪 AI：包含觅食、睡眠、主动避让和受击反击；受到有效玩家攻击后，锁定该玩家追击 30 秒。
 /// 状态优先级：逃跑 > 反击技能 > 反击攻击 > 反击追击 > 避让 > 睡眠 > 进食 > 觅食 > 移动 > 待机。
 /// </summary>
 public partial class AI_WildBoar : AI_Base<WildBoarState>
@@ -37,7 +37,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		public WildBoarState State = WildBoarState.Idle;
 		public float Fatigue01 = 0f;
 		public float RageLevel = 0f;
-		public float PlayerDamageAccumulated = 0f; // 上次狂暴结束后玩家造成的累计实际伤害。
 		public float RetaliationTimeRemaining = 0f; // 狂暴反击剩余秒数。
 		public int RetaliationTargetGuid = 0; // 狂暴期间锁定玩家的运行时 GUID。
 		public bool GrassSustenanceInitialized;
@@ -155,8 +154,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/避让"), LabelText("玩家避让安全距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float playerAvoidSafeDistance = 30f; // 玩家进入此距离后结束本轮避让。
 
-	[TabGroup("配置", "行为"), BoxGroup("配置/行为/反击"), HorizontalGroup("配置/行为/反击/Hr1"), LabelText("受伤反击阈值"), Range(0f, 1f)]
-	public float retaliationDamageThresholdRate = 0.2f; // 玩家累计实伤占野猪最大生命值的比例。
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/反击"), HorizontalGroup("配置/行为/反击/Hr1"), LabelText("狂暴追击时长"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float retaliationDuration = 30f; // 触发反击后的追击时长。
 
@@ -243,8 +240,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	protected override float DetectorRefreshInterval => detectorRefreshInterval;
 	protected override bool DebugLogEnabled => debugLog;
-	/// <summary>短时记录伤害来源；受伤事件本身由 AI 基类统一监听。</summary>
-	protected override float DamageThreatMemoryDuration => 0.1f;
 	protected override bool IsMoveState(WildBoarState state) => state == WildBoarState.Move;
 	protected override bool IsIdleState(WildBoarState state) => state == WildBoarState.Idle;
 	protected override bool IsSleepState(WildBoarState state) => state == WildBoarState.Sleep;
@@ -335,7 +330,18 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		RefreshThreatTarget();
 	}
 
-	/// <summary>野猪受到有效伤害后获得 5 秒减伤 Buff。</summary>
+	/// <summary>野猪受到有效攻击就开始追击玩家，不要求实际生命损失。</summary>
+	protected override void OnAttacked(DamageReceiverDamageInfo damageInfo)
+	{
+		if (item == null || damageInfo == null || damageInfo.HpAfter <= 0f)
+			return;
+
+		Item player = ResolvePlayerDamageSource(damageInfo.Attacker);
+		if (player != null)
+			BeginRetaliation(player);
+	}
+
+	/// <summary>野猪实际受伤后获得 5 秒减伤 Buff。</summary>
 	protected override void OnDamageReceived(DamageReceiverDamageInfo damageInfo)
 	{
 		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
@@ -343,7 +349,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		buffManager?.AddBuff(DamageReductionBuffId);
-		AccumulatePlayerDamage(damageInfo);
 	}
 
 	protected override void OnBeforeSwitchState(WildBoarState previous, WildBoarState next)
@@ -389,8 +394,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	protected override string GetDebugExtraInfo()
 	{
 		return FlatWorldLocalizationService.GetUiFormat(
-			" | 狂暴: {0:P0} | 玩家累计伤害: {1:F1}",
-			Data.RageLevel, Data.PlayerDamageAccumulated);
+			" | 狂暴: {0:P0}",
+			Data.RageLevel);
 	}
 	#endregion
 
@@ -855,7 +860,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			if (Data.RetaliationTimeRemaining <= 0f)
 			{
 				Data.RetaliationTargetGuid = 0;
-				Data.PlayerDamageAccumulated = 0f;
 				_retaliationTarget = null;
 			}
 		}
@@ -863,28 +867,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		Data.RageLevel = GetRetaliationProgress();
 	}
 
-	/// <summary>累计玩家对野猪造成的实际生命损失，达到最大生命值阈值后锁定反击目标。</summary>
-	private void AccumulatePlayerDamage(DamageReceiverDamageInfo damageInfo)
-	{
-		if (IsRetaliating || damageInfo.HpAfter <= 0f)
-			return;
-
-		Item player = ResolvePlayerDamageSource(damageInfo.Attacker);
-		float maxHp = damageInfo.Receiver != null ? damageInfo.Receiver.MaxHp : 0f;
-		if (player == null || maxHp <= 0f)
-			return;
-
-		Data.PlayerDamageAccumulated += damageInfo.DamageValue;
-		if (Data.PlayerDamageAccumulated >= maxHp * retaliationDamageThresholdRate)
-			BeginRetaliation(player);
-	}
-
 	/// <summary>开始定时反击并记录目标 GUID，支持野猪存档恢复后继续锁定同一玩家。</summary>
 	private void BeginRetaliation(Item player)
 	{
 		_retaliationTarget = player;
 		_currentThreat = player;
-		Data.PlayerDamageAccumulated = 0f;
 		Data.RetaliationTargetGuid = player.itemData?.Guid ?? 0;
 		Data.RetaliationTimeRemaining = retaliationDuration;
 		Data.RageLevel = GetRetaliationProgress();
@@ -908,7 +895,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	/// <summary>攻击者优先解析到持有者，并只接受玩家实体或玩家标签。</summary>
 	private static Item ResolvePlayerDamageSource(Item attacker)
 	{
-		Item player = attacker != null ? attacker.Owner ?? attacker : null;
+		Item player = ResolveAttackOwner(attacker);
 		return IsPlayerThreat(player) ? player : null;
 	}
 

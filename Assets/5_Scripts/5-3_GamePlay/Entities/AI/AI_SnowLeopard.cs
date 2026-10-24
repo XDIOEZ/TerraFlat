@@ -171,6 +171,20 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
         attack.RecoveryDuration = attackRecoveryDuration;
     }
 
+    /// <summary>雪豹受到玩家攻击时直接锁定玩家，不等下一轮感知刷新。</summary>
+    protected override void OnAttacked(DamageReceiverDamageInfo damageInfo)
+    {
+        Item threat = ResolveAttackOwner(damageInfo?.Attacker);
+        if (!IsLivingTarget(threat) || !IsPlayerTarget(threat) || !FactionRelationService.CanAttack(item, threat))
+            return;
+
+        currentTarget = threat;
+        lockedTarget = threat;
+        lockedTargetIsRabbit = false;
+        rabbitChaseElapsed = 0f;
+        preyReacquireTimer = 0f;
+    }
+
     protected override void OnBindExtraModules()
     {
         if (_detector != null)

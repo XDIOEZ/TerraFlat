@@ -92,7 +92,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     [SerializeReference]
     public List<DamageReciver_Action> DeathActions = new List<DamageReciver_Action>(); // 死亡触发动作列表
 
-    public event Action<DamageReceiverDamageInfo> OnDamageReceived; // 收到伤害时触发，外部模块可订阅
+    public event Action<DamageReceiverDamageInfo> OnAttacked; // 有效攻击通过阵营与受击规则后触发，包含零伤命中。
+    public event Action<DamageReceiverDamageInfo> OnDamageReceived; // 实际生命损失大于零时触发，外部模块可订阅。
 
     public event Action<BodyPartDamageInfo> OnBodyPartDamaged;
     public event Action<BodyPartHealthChangeInfo> OnBodyPartHealthChanged;
@@ -736,6 +737,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (IsTemporarilyInvulnerable) return -1f;
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
+        DispatchAttacked(CreateDamageInfo(legacySender, 0f, Hp, Hp, context: context));
         if (!ignoreInterval && context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
         if (!ignoreInterval) lastDamageTime = context.Clock.Time;
         bool targetIsPlayer = ActorIdentity.IsPlayer(item);
@@ -1543,6 +1545,24 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         OnDamageReceived?.Invoke(damageInfo);
         DamageReceivedStatusEffectRegistry.Publish(damageInfo);
         DispatchDamageActions(HurtActions, damageInfo);
+    }
+
+    /// <summary>只把通过有效攻击校验的非环境来源通知给行为系统。</summary>
+    private void DispatchAttacked(DamageReceiverDamageInfo damageInfo)
+    {
+        if (damageInfo == null || damageInfo.Attacker == item)
+            return;
+
+        FlatWorld.Combat.CombatIdentity source = damageInfo.Context.Attack.Source;
+        if (source.IsValid && source.Backend == FlatWorld.Combat.CombatBackend.Environment)
+            return;
+
+        bool hasEntitySource = damageInfo.Attacker != null;
+        bool hasCombatSource = source.IsValid;
+        if (!hasEntitySource && !hasCombatSource)
+            return;
+
+        OnAttacked?.Invoke(damageInfo);
     }
 
     private void DispatchDamageActions(List<DamageReciver_Action> actions, DamageReceiverDamageInfo damageInfo)

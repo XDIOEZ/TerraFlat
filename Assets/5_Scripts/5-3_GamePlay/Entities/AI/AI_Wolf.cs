@@ -298,6 +298,16 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		_attack.RecoveryDuration = attackRecoveryDuration;
 	}
 
+	/// <summary>狼遇到有效攻击时记住实际攻击者，让感知暂未刷新时也能进入追踪流程。</summary>
+	protected override void OnAttacked(DamageReceiverDamageInfo damageInfo)
+	{
+		Item threat = ResolveAttackOwner(damageInfo?.Attacker);
+		if (!IsUsableThreat(threat) || !IsLivingActorTarget(threat))
+			return;
+
+		RememberThreat(threat, threat.transform.position, visible: true, pursue: true);
+	}
+
 	protected override void OnBindExtraModules()
 	{
 		if (_detector != null)

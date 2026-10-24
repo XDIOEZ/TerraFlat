@@ -44,17 +44,21 @@ public sealed partial class Mod_BeeBehavior
 
     public bool HasHiveDefenseTarget => hiveDefenseTarget != null;
 
-    /// <summary>只有正常巡逻中的蜜蜂受击才呼叫同巢支援，觅食、返巢和战斗状态不会连锁广播。</summary>
-    private void HandleBeeDamageReceived(DamageReceiverDamageInfo damageInfo)
+    /// <summary>蜜蜂自身受攻击立即护巢，只有原本正在巡逻的蜜蜂才向同伴呼叫支援。</summary>
+    private void HandleBeeAttacked(DamageReceiverDamageInfo damageInfo)
     {
-        if (damageInfo == null || damageInfo.DamageValue <= 0f || colony == null || !IsPatrollingForHelpCall())
+        if (damageInfo == null)
             return;
 
         Item attacker = ResolveAggressor(damageInfo.Attacker);
         if (!IsLivingCreature(attacker))
             return;
 
+        bool canCallAllies = colony != null && IsPatrollingForHelpCall();
         ForceHiveDefenseTarget(attacker);
+        if (!canCallAllies)
+            return;
+
         float queryRadius = (AllyHelpRadiusCells + 1f) * 1.414214f;
         ItemMgr.Instance.QueryItemsInCircleNonAlloc(item.transform.position, queryRadius, ~0, item,
             nearbyCreatures, nearbyDedupe);
