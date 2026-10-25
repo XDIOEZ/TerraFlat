@@ -101,7 +101,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         RefreshStatus();
         string caption = actionLabel?.Invoke() ?? string.Empty;
         view.SetActionVisible(!string.IsNullOrWhiteSpace(caption));
-        view.ActionButton.interactable = !string.IsNullOrWhiteSpace(caption) && actionAvailable?.Invoke() != false;
+        RefreshActionAvailability();
         TMP_Text actionText = view.ActionButton.GetComponentInChildren<TMP_Text>(true);
         // 共用按钮切换用途时同步本地化绑定，避免重新显示后恢复旧文案。
         LocalizedTextBinder actionBinder = actionText.GetComponent<LocalizedTextBinder>();
@@ -155,7 +155,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
             statusRefreshCoroutine = panel.StartCoroutine(RefreshStatusPeriodically());
     }
 
-    // 仅显式启用的可见面板定时读取状态，不重刷库存、按钮或布局。
+    // 只刷新可见状态和操作资格，环境或罐压变化后按钮及时更新，不重建库存与布局。
     private IEnumerator RefreshStatusPeriodically()
     {
         var wait = new WaitForSecondsRealtime(StatusRefreshIntervalSeconds);
@@ -163,8 +163,17 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         {
             yield return wait;
             RefreshStatus();
+            RefreshActionAvailability();
         }
         statusRefreshCoroutine = null;
+    }
+
+    private void RefreshActionAvailability()
+    {
+        if (!IsOpen) return;
+        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : default;
+        bool available = view.ActionButton.gameObject.activeSelf && actionAvailable?.Invoke() != false;
+        if (view.ActionButton.interactable != available) view.ActionButton.interactable = available;
     }
 
     private void RefreshStatus()

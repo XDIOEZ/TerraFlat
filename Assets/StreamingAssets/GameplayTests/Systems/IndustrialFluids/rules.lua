@@ -116,6 +116,7 @@ test.system("industrial_fluids", "portable_tank_cache", {}, function(data)
     near(data.volumeAfterExternalEdit, 4, "外部修改返回配置污染后续容量")
     near(data.otherVolume, 4, "修改气罐配置污染另一物品容量")
     assert(data.supportsSpacesuitAfterExternalEdit and data.otherSupportsSpacesuit, "外部修改返回配置污染供氧资格")
+    assert(not data.manualFillAfterExternalEdit, "外部修改返回配置开启了未声明的手动充气能力")
     assert(data.contentsReplacementRebound and data.readContentsUsesOwnedState, "Contents 换代后仍读旧库存")
     assert(data.unchangedFlushReusesBytes and data.unchangedClockFlushReusesBytes, "稳态气罐重复序列化")
     assert(data.clockChangeWritesBytes and data.persistedRuptured and data.rupturedTankRejected, "超压计时或破裂状态未持久化")
@@ -163,19 +164,26 @@ test.system("industrial_fluids", "portable_tank_placement", {}, function(data)
             and tank.configuration.MaxSafePressureKPa == (steel and 1800 or 600)
             and tank.configuration.MaterialId == (steel and "core:steel" or "core:iron"),
             "气罐放置前后的容积、耐压或材质不一致")
+        assert(tank.configuration.AllowManualAirFill, "铁制或钢制便携气罐没有声明手动充气能力")
     end
 end, "铁制和钢制便携气罐放置配对、拆回、共享内容与材质配置")
 
 test.system("industrial_fluids", "portable_tank_air_fill", {}, function(data)
-    assert(data.filled, "铁气罐未能从真实大气抽取气体")
+    assert(data.filled, "便携气罐未能从真实大气抽取气体")
     assert(data.oxygen > 0 and data.nitrogen > 0, "充气未保留空气中的氮氧混合组分")
     near(data.pressure, 101.325, "4 L 气罐未按真实容积温度达到 1 标准大气压", .0001)
     near(data.temperature, 293.15, "充装时没有保留气源温度和内能", .001)
     assert(data.sourceConserved, "充气过程造气或丢气")
     assert(not data.filledAgain and data.againSourceUnchanged, "已经达到目标压力仍继续扣除环境气体")
     assert(not data.vacuumFilled and data.vacuumTargetEmpty, "真空环境凭空生成了空气")
-    assert(not data.thinFilled and data.thinSourceUnchanged and data.thinTargetEmpty,
-        "无压缩机时从低压大气直接制造标准气压")
+    assert(data.thinFilled and data.thinConserved, "低压环境未按实际气压补气或破坏守恒")
+    near(data.thinPressure, 60, "低压补气超过了实际环境压力", .0001)
+    assert(data.normalCanFill and data.normalFilled and data.normalConserved,
+        "默认 100 kPa 环境中的充气按钮仍被禁用或充气事务失败")
+    near(data.normalPressure, 100, "默认环境补气没有按实际气压封顶", .0001)
+    assert(not data.normalCanFillAgain and not data.normalFilledAgain and data.normalRepeatUnchanged,
+        "达到环境压力后按钮未禁用，或重复充气仍扣除环境库存")
+    assert(data.higherPressureRejected, "低压环境可以继续给更高压气罐充气")
     assert(data.seededGas and data.seededLiquid and data.mixedFilled, "含已有气液的气罐无法正常补气")
     assert(data.carbonPreserved and data.liquidPreserved and data.liquidSpacePreserved,
         "补充空气清空了原有气体或液体")
@@ -189,6 +197,5 @@ test.system("industrial_fluids", "portable_tank_air_fill", {}, function(data)
     assert(data.partialFilled and data.partialConserved and
         data.partialPressure > 0 and data.partialPressure < 101.325,
         "气源不足时未部分充装或错误创造气体补足目标")
-    assert(data.ironCarrier and data.ironBuilding and data.steelExcluded,
-        "一键空气功能错误扩展到钢制气罐")
-end, "铁制气罐真实空气充装、守恒、真空拒绝、带气液补充和目标压力")
+    assert(data.unsupportedTankExcluded and data.nullTankExcluded, "未配置能力或空物品获得了手动充气资格")
+end, "便携气罐真实空气充装、100 kPa 环境、按钮资格、守恒与带气液补充")

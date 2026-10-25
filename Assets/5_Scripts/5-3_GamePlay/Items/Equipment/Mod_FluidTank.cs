@@ -19,6 +19,7 @@ public sealed class FluidTankConfiguration
     public float DamageIntervalSeconds = 1f;
     public double PhaseChangeMolesPerSecond = .2d;
     public bool SupportsSpacesuit = true;
+    public bool AllowManualAirFill; // 手动充空气由气罐定义声明，不按材质或物品名判断。
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(MaterialId) || !FluidUnits.IsFinite(VolumeLiters) || VolumeLiters <= 0d ||
@@ -152,10 +153,14 @@ public static class FluidTankStorage
             MaterialId = shared.MaterialId, VolumeLiters = shared.VolumeLiters,
             MinimumGasSpaceLiters = shared.MinimumGasSpaceLiters, MaxSafePressureKPa = shared.MaxSafePressureKPa,
             OverpressureDamagePerSecond = shared.OverpressureDamagePerSecond, DamageIntervalSeconds = shared.DamageIntervalSeconds,
-            PhaseChangeMolesPerSecond = shared.PhaseChangeMolesPerSecond, SupportsSpacesuit = shared.SupportsSpacesuit
+            PhaseChangeMolesPerSecond = shared.PhaseChangeMolesPerSecond, SupportsSpacesuit = shared.SupportsSpacesuit,
+            AllowManualAirFill = shared.AllowManualAirFill
         };
         return true;
     }
+    public static bool AllowsManualAirFill(ItemData item) =>
+        FindBinary(item, Mod_FluidTank.ModuleId) != null && GetTankConfiguration(item).AllowManualAirFill;
+
     private static bool TryGetStorage(ItemData item, out FluidInventory inventory, out FluidTankConfiguration config)
     {
         inventory = null; config = null;

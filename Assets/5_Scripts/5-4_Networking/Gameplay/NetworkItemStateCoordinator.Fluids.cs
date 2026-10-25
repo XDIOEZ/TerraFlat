@@ -125,7 +125,7 @@ namespace FlatWorld.Networking.Gameplay
             lastPortableFillReply = response.Token;
             if (!response.Accepted || response.State == null || response.State.Length > 1024 * 1024) return;
             Item tank = ItemMgr.Instance?.GetItemByGuid(response.TankGuid);
-            if (!PortableGasTankAirFilling.IsIronTank(tank?.itemData)) return;
+            if (!FluidTankStorage.AllowsManualAirFill(tank?.itemData)) return;
             Ex_ModData_MemoryPackable binary = FluidTankStorage.FindBinary(tank.itemData, Mod_FluidTank.ModuleId);
             if (binary == null) return;
             binary.BitData = response.State;

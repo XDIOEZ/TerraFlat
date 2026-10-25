@@ -135,11 +135,13 @@ public static partial class GameplayTestSystemProbe
         };
         firstConfig.VolumeLiters = 99d;
         firstConfig.SupportsSpacesuit = false;
+        firstConfig.AllowManualAirFill = true;
         FluidTankStorage.TryGet(item, out _, out FluidTankConfiguration afterExternalEdit);
         ItemData other = WorldPortableTankItem(out _);
         FluidTankStorage.TryGet(other, out FluidInventory otherInventory, out FluidTankConfiguration otherConfig);
         result["volumeAfterExternalEdit"] = afterExternalEdit.VolumeLiters;
         result["supportsSpacesuitAfterExternalEdit"] = afterExternalEdit.SupportsSpacesuit;
+        result["manualFillAfterExternalEdit"] = afterExternalEdit.AllowManualAirFill;
         result["otherVolume"] = otherConfig.VolumeLiters;
         result["otherSupportsSpacesuit"] = otherConfig.SupportsSpacesuit;
         result["itemsIsolated"] = !ReferenceEquals(first, otherInventory) &&
@@ -268,6 +270,19 @@ public static partial class GameplayTestSystemProbe
         bool thinFilled = PortableGasTankAirFilling.TryFillFromSource(
             new PlanetShipAtmosphereSource(thinAir, 20d), thinTarget, volume, minimum);
 
+        // 默认星球只有 100 kPa，按钮资格和实际补气必须共同接受此环境。
+        var normalAir = Air(100d);
+        var normalSource = new PlanetShipAtmosphereSource(normalAir, 20d);
+        var normalTarget = new FluidInventory();
+        decimal normalBefore = normalAir.CurrentMoles;
+        bool normalCanFill = PortableGasTankAirFilling.CanFillFromSource(normalSource, normalTarget, volume, minimum);
+        bool normalFilled = PortableGasTankAirFilling.TryFillFromSource(normalSource, normalTarget, volume, minimum);
+        decimal normalAfter = normalAir.CurrentMoles;
+        bool normalCanFillAgain = PortableGasTankAirFilling.CanFillFromSource(normalSource, normalTarget, volume, minimum);
+        bool normalFilledAgain = PortableGasTankAirFilling.TryFillFromSource(normalSource, normalTarget, volume, minimum);
+        bool higherPressureRejected = !PortableGasTankAirFilling.CanFillFromSource(
+            new PlanetShipAtmosphereSource(thinAir, 20d), target, volume, minimum);
+
         var occupied = new FluidInventory();
         FluidCatalog catalog = FluidCatalog.Default;
         bool seededGas = occupied.TryAdd(FluidInventory.CreateBatch(
@@ -308,8 +323,15 @@ public static partial class GameplayTestSystemProbe
             ["againSourceUnchanged"] = air.CurrentMoles == airAfter,
             ["temperature"] = target.GetTemperatureKelvin(),
             ["vacuumFilled"] = vacuumFilled, ["vacuumTargetEmpty"] = empty.IsEmpty,
-            ["thinFilled"] = thinFilled, ["thinSourceUnchanged"] = thinAir.CurrentMoles == thinBefore,
-            ["thinTargetEmpty"] = thinTarget.IsEmpty,
+            ["thinFilled"] = thinFilled,
+            ["thinPressure"] = thinTarget.GetPressureKPa(volume, minimum),
+            ["thinConserved"] = thinAir.CurrentMoles + thinTarget.GasMoles == thinBefore,
+            ["normalCanFill"] = normalCanFill, ["normalFilled"] = normalFilled,
+            ["normalPressure"] = normalTarget.GetPressureKPa(volume, minimum),
+            ["normalConserved"] = normalAfter + normalTarget.GasMoles == normalBefore,
+            ["normalCanFillAgain"] = normalCanFillAgain, ["normalFilledAgain"] = normalFilledAgain,
+            ["normalRepeatUnchanged"] = normalAir.CurrentMoles == normalAfter,
+            ["higherPressureRejected"] = higherPressureRejected,
             ["seededGas"] = seededGas, ["seededLiquid"] = seededLiquid, ["mixedFilled"] = mixedFilled,
             ["carbonPreserved"] = occupied.GetGasMoles(FluidIds.CarbonDioxide) == originalCarbon,
             ["liquidPreserved"] = occupied.GetLiquidMoles(FluidIds.PureWater) == originalWater,
@@ -328,9 +350,8 @@ public static partial class GameplayTestSystemProbe
             ["partialFilled"] = partialFilled,
             ["partialConserved"] = tinyRoom.GasMoles + partialTank.GasMoles == tinyBefore,
             ["partialPressure"] = partialTank.GetPressureKPa(volume, minimum),
-            ["ironCarrier"] = PortableGasTankAirFilling.IsIronTank(new Data_GeneralItem { IDName = PortableGasTankAirFilling.CarrierId }),
-            ["ironBuilding"] = PortableGasTankAirFilling.IsIronTank(new Data_GeneralItem { IDName = PortableGasTankAirFilling.BuildingId }),
-            ["steelExcluded"] = !PortableGasTankAirFilling.IsIronTank(new Data_GeneralItem { IDName = "PortableGasTank_Steel" })
+            ["unsupportedTankExcluded"] = !FluidTankStorage.AllowsManualAirFill(WorldPortableTankItem(out _)),
+            ["nullTankExcluded"] = !FluidTankStorage.AllowsManualAirFill(null)
         };
     }
 

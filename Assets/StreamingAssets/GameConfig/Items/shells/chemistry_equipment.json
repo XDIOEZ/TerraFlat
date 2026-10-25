@@ -68,6 +68,7 @@
           "parameters": {
             "Configuration": {
               "SupportsSpacesuit": true,
+              "AllowManualAirFill": true,
               "MaxSafePressureKPa": 600,
               "MaterialId": "core:iron",
               "DamageIntervalSeconds": 1,
@@ -131,6 +132,7 @@
           "parameters": {
             "Configuration": {
               "SupportsSpacesuit": true,
+              "AllowManualAirFill": true,
               "MaterialId": "core:iron",
               "VolumeLiters": 4,
               "MinimumGasSpaceLiters": 0.04,
@@ -210,6 +212,7 @@
           "parameters": {
             "Configuration": {
               "SupportsSpacesuit": true,
+              "AllowManualAirFill": true,
               "MaxSafePressureKPa": 1800,
               "MaterialId": "core:steel",
               "DamageIntervalSeconds": 1,
@@ -275,6 +278,7 @@
           "parameters": {
             "Configuration": {
               "SupportsSpacesuit": true,
+              "AllowManualAirFill": true,
               "MaterialId": "core:steel",
               "VolumeLiters": 4,
               "MinimumGasSpaceLiters": 0.04,

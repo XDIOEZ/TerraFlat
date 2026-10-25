@@ -4,23 +4,18 @@ using FlatWorld.Networking;
 using FlatWorld.Spaceflight;
 using UnityEngine;
 
-/// <summary>铁制气罐从真实环境转移混合气体；压力求解和环境所有权互不耦合。</summary>
+/// <summary>便携气罐从真实环境转移混合气体；压力求解和环境所有权互不耦合。</summary>
 public static class PortableGasTankAirFilling
 {
-    #region 身份、操作资格与权威入口
-    public const string CarrierId = "PortableGasTank_Iron";
-    public const string BuildingId = "PortableGasTank_Iron_Building";
+    #region 配置能力、操作资格与权威入口
     public const double TargetPressureKPa = 101.325d;
     private const double PressureToleranceKPa = .00001d;
     public static event Func<Player, int, bool> RemoteFillRequested;
 
-    public static bool IsIronTank(ItemData data) => data != null &&
-        (data.IDName == CarrierId || data.IDName == BuildingId);
-
     private static bool CanAccess(Item tank, Item actor)
     {
         if (tank?.itemData == null || actor == null || tank.DestructionHandled ||
-            actor.DestructionHandled || !IsIronTank(tank.itemData) ||
+            actor.DestructionHandled || !FluidTankStorage.AllowsManualAirFill(tank.itemData) ||
             tank.gameObject.scene.name != actor.gameObject.scene.name) return false;
         if (tank.Owner != null)
         {
@@ -40,15 +35,15 @@ public static class PortableGasTankAirFilling
     public static bool CanFill(Item tank, Item actor)
     {
         if (!CanAccess(tank, actor) ||
-            !FluidTankStorage.TryGet(tank.itemData, out FluidInventory contents, out FluidTankConfiguration config) ||
-            contents.GetPressureKPa(config.VolumeLiters, config.MinimumGasSpaceLiters) >= TargetPressureKPa - PressureToleranceKPa)
+            !FluidTankStorage.TryGet(tank.itemData, out FluidInventory contents, out FluidTankConfiguration config))
             return false;
-        return TryGetSource(tank, out IShipAtmosphereSource source) && source.PressureKPa >= TargetPressureKPa;
+        return TryGetSource(tank, out IShipAtmosphereSource source) &&
+            CanFillFromSource(source, contents, config.VolumeLiters, config.MinimumGasSpaceLiters);
     }
 
     public static bool Fill(Item tank, Player actor)
     {
-        if (tank == null || actor == null || !IsIronTank(tank.itemData)) return false;
+        if (tank == null || actor == null || !FluidTankStorage.AllowsManualAirFill(tank.itemData)) return false;
         if (!GameNetwork.HasStateAuthority)
             return CanAccess(tank, actor) && RemoteFillRequested?.Invoke(actor, tank.itemData.Guid) == true;
         if (!CanFill(tank, actor) ||
@@ -80,21 +75,36 @@ public static class PortableGasTankAirFilling
     #endregion
 
     #region 真实混合气体与目标压力事务
+    public static double GetTargetPressureKPa(Item tank) =>
+        TryGetSource(tank, out IShipAtmosphereSource source) ? GetTargetPressureKPa(source) : 0d;
+
+    // 自然补气以实际环境气压和一标准大气压中较低者为上限，100 kPa 环境也能使用。
+    private static double GetTargetPressureKPa(IShipAtmosphereSource source) =>
+        source != null && FluidUnits.IsFinite(source.PressureKPa)
+            ? Math.Max(0d, Math.Min(TargetPressureKPa, source.PressureKPa)) : 0d;
+
+    public static bool CanFillFromSource(IShipAtmosphereSource source, FluidInventory target,
+        double volumeLiters, double minimumGasSpaceLiters)
+    {
+        if (source == null || target == null || target.GasMoles >= FluidInventory.MaximumMoles ||
+            !FluidUnits.IsFinite(source.TemperatureCelsius) || source.TemperatureCelsius <= -273.15d ||
+            !FluidUnits.IsFinite(volumeLiters) || !FluidUnits.IsFinite(minimumGasSpaceLiters) ||
+            volumeLiters <= 0d || minimumGasSpaceLiters <= 0d || minimumGasSpaceLiters >= volumeLiters)
+            return false;
+        return target.GetPressureKPa(volumeLiters, minimumGasSpaceLiters) <
+            GetTargetPressureKPa(source) - PressureToleranceKPa;
+    }
+
     // 先取有限气源的实际组分，在影子库存中二分压力，余量退回来源后才提交气罐。
     public static bool TryFillFromSource(IShipAtmosphereSource source, FluidInventory target,
         double volumeLiters, double minimumGasSpaceLiters)
     {
-        if (source == null || target == null || !FluidUnits.IsFinite(source.PressureKPa) ||
-            source.PressureKPa < TargetPressureKPa || target.GasMoles >= FluidInventory.MaximumMoles ||
-            !FluidUnits.IsFinite(volumeLiters) || !FluidUnits.IsFinite(minimumGasSpaceLiters) ||
-            volumeLiters <= 0d || minimumGasSpaceLiters <= 0d || minimumGasSpaceLiters >= volumeLiters)
-            return false;
-        double currentPressure = target.GetPressureKPa(volumeLiters, minimumGasSpaceLiters);
-        if (currentPressure >= TargetPressureKPa - PressureToleranceKPa) return false;
+        if (!CanFillFromSource(source, target, volumeLiters, minimumGasSpaceLiters)) return false;
+        double targetPressure = GetTargetPressureKPa(source);
         double sourceKelvin = source.TemperatureCelsius + 273.15d;
         if (!FluidUnits.IsFinite(sourceKelvin) || sourceKelvin <= 0d) return false;
         double gasSpace = Math.Max(minimumGasSpaceLiters, volumeLiters - target.GetLiquidLiters());
-        double expectedMoles = TargetPressureKPa * gasSpace / (FluidUnits.GasConstant * sourceKelvin);
+        double expectedMoles = targetPressure * gasSpace / (FluidUnits.GasConstant * sourceKelvin);
         if (!FluidUnits.IsFinite(expectedMoles) || expectedMoles <= 0d) return false;
         decimal requested = AtmosphereService.Quantize((decimal)Math.Min((double)FluidInventory.MaximumMoles,
             expectedMoles * 2d + (double)AtmosphereService.MinimumMoles * 2d));
@@ -103,17 +113,17 @@ public static class PortableGasTankAirFilling
         IReadOnlyList<FluidBatch> drawn = source.TakeGas(requested);
         if (drawn == null || drawn.Count == 0) return false;
         FluidInventoryState before = target.State.Clone();
-        if (!TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, 1m, out FluidInventoryState accepted))
+        if (!TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, targetPressure, 1m, out FluidInventoryState accepted))
         {
             decimal low = 0m, high = 1m;
             for (int step = 0; step < 52; step++)
             {
                 decimal middle = (low + high) / 2m;
-                if (TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, middle, out _))
+                if (TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, targetPressure, middle, out _))
                     low = middle;
                 else high = middle;
             }
-            if (!TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, low, out accepted))
+            if (!TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, targetPressure, low, out accepted))
             {
                 ReturnUnused(source, drawn, 0m);
                 return false;
@@ -131,7 +141,7 @@ public static class PortableGasTankAirFilling
     }
 
     private static bool TryStage(FluidInventoryState original, FluidCatalog catalog,
-        IReadOnlyList<FluidBatch> drawn, double volume, double minimum, decimal fraction,
+        IReadOnlyList<FluidBatch> drawn, double volume, double minimum, double targetPressure, decimal fraction,
         out FluidInventoryState accepted)
     {
         accepted = null;
@@ -147,7 +157,7 @@ public static class PortableGasTankAirFilling
             if (!trial.TryAdd(piece, volume, minimum)) return false;
             added = true;
         }
-        if (!added || trial.GetPressureKPa(volume, minimum) > TargetPressureKPa) return false;
+        if (!added || trial.GetPressureKPa(volume, minimum) > targetPressure) return false;
         accepted = trial.State;
         return true;
     }
