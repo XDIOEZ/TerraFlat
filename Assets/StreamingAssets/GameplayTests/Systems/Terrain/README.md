@@ -1,5 +1,7 @@
 # 地形纯规则回归
 
+- `ocean_shelf_bathymetry` 检查离岸16格浅海、随后4格陡降到10级，覆盖直岸、单格岛屿、欧氏距离、环绕、全海/全陆、取消和单格/整块一致；`natural_waterbed` 同步检查海洋2～11层底床及淡水2～3层。`Tools/Tests/OceanBathymetry/verify.py` 独立编译当前WorldModel并通过10,767项检查，含simple/legacy正式生成及供湿分块一致。Unity退出PlayMode后执行地形规则（`20261025T163814029Z_c9d1ac16`）：上述5组海洋与4组底床Lua通过；全套在后续`cave_loose_resources`来源坐标断言失败，未宣称全套通过，未验收真实画面。
+
 - `river_generation_config` 直接读取正式河流 JSON，检查地表/洞穴目录加载、入海口长度/角度进入生成快照，以及缺少入海口参数、未知参数和重复参数均被拒绝。2026-10-25 单项 Lua 执行通过，共 7 项断言；未运行完整地形规则、资源会话或玩家世界。
 
 - 2026-10-24 新增 `grass_temperature_density`：读取正式草地温度倍率，Lua 检查默认低于 15℃ 乘 0.5、恰好 15℃ 与更暖时不减量、配置覆盖、倍率 0/1 与越界钳制、重复采样。`Tools/Tests/GroundCover/verify.ps1` 已独立编译通过并完成 54 组正式单格温度/降水/种子对照，原有底材、水下排除及花朵规则也通过；本轮保留用户 PlayMode，未运行 Unity Lua，不代表整项目编译或游戏画面已验收。

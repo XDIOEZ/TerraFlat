@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 79;
+        public const int CurrentGenerationSignature = 80;
 
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
@@ -406,7 +406,8 @@ namespace FlatWorld.WorldModel
             IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(
                 ExpandGenerationRequest(request, GetHydrologyOutputPadding(request)), cancellationToken);
             int lava = volcanic.Count > 0 ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId) : 0;
-            var airHumidity = new GeographicAirHumiditySampler(request, settings, riverMap, volcanic, cancellationToken);
+            using var airHumidity = new GeographicAirHumiditySampler(request, settings, riverMap,
+                volcanic, cancellationToken, batch.SampleCachedHeight);
             float humidityBackground = AirHumiditySettings.FromProfile(request.Profile).Background;
             bool hasEstuary = false;
             using (timing?.MeasureStage("terrain.biome") ?? default)
@@ -421,7 +422,7 @@ namespace FlatWorld.WorldModel
                     batch.Output[index] = BuildSurfaceCell(request, settings, riverMap,
                         batch.GetCore(x, y), batch, x, y,
                         request.Address.ChunkOrigin.X + x,
-                        request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater, lava, volcanic);
+                        request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater, lava, volcanic, airHumidity);
                     hasEstuary |= batch.Output[index].Estuary.Influence > 0d;
                     batch.Output[index].AirHumidity = airHumidity.Sample(
                         request.Address.ChunkOrigin.X + x, request.Address.ChunkOrigin.Y + y);
@@ -674,6 +675,16 @@ namespace FlatWorld.WorldModel
             public SurfaceClimateSample GetCore(int x, int y) =>
                 samples[(y + radius) * stride + x + radius];
 
+            // 离岸窗口复用已有气候高度，外圈不重复计算温度、风向和降水。
+            public double SampleCachedHeight(int worldX, int worldY)
+            {
+                int x = worldX - request.Address.ChunkOrigin.X + radius;
+                int y = worldY - request.Address.ChunkOrigin.Y + radius;
+                if ((uint)x < (uint)stride && (uint)y < (uint)(request.Profile.Height + radius * 2))
+                    return samples[y * stride + x].Height;
+                return SampleHeight(request, settings, worldX, worldY);
+            }
+
             public bool HasStoneNeighbor(int x, int y)
             {
                 for (int offsetY = -peatRadius; offsetY <= peatRadius; offsetY++)
@@ -749,12 +760,13 @@ namespace FlatWorld.WorldModel
             climate.BaseBiome = ResolveSurfaceBiome(settings, climate, baseMoisture, false);
             climate.Classified = true;
             IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(ExpandGenerationRequest(request, GetHydrologyOutputPadding(request)));
+            using var airHumidity = new GeographicAirHumiditySampler(request, settings, riverMap, volcanic);
             SurfaceCellOutput output = BuildSurfaceCell(request, settings, riverMap,
                 climate, null, x, y, worldX, worldY,
                 types.GetIndex(LiquidTypeCatalog.SeaWaterId),
                 types.GetIndex(LiquidTypeCatalog.DirtyWaterId),
-                volcanic.Count > 0 ? types.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic);
-            output.AirHumidity = new GeographicAirHumiditySampler(request, settings, riverMap, volcanic).Sample(worldX, worldY);
+                volcanic.Count > 0 ? types.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic, airHumidity);
+            output.AirHumidity = airHumidity.Sample(worldX, worldY);
             output.AirHumidityBackground = AirHumiditySettings.FromProfile(request.Profile).Background;
             if (terrainDecorator == null) return output;
             // 单格查询同样调用纯地形扩展，出生与群系定位不能看到扩展前的地表。
@@ -792,7 +804,8 @@ namespace FlatWorld.WorldModel
             int seaWater,
             int dirtyWater,
             int lava,
-            IReadOnlyList<LavaBasin> volcanic)
+            IReadOnlyList<LavaBasin> volcanic,
+            GeographicAirHumiditySampler airHumidity)
         {
             // 如果世界会绕回另一边，先把越界坐标换回世界内，保证两侧地形能严丝合缝。
             worldX = request.Topology.NormalizeX(worldX);
@@ -919,7 +932,7 @@ namespace FlatWorld.WorldModel
 
             // 地面与液体在同一批次提交，height 继续随权威区块移交。
             float initialLiquidDepth = ocean
-                ? (float)(1d - Math.Pow(Clamp01(height / Math.Max(0.0001d, settings.SeaLevel)), 2d))
+                ? airHumidity.GetOceanInitialLiquidDepth(worldX, worldY)
                 : river ? (float)riverCell.Depth : 0f;
             bool lavaCell = false;
             float lavaShore = 0f;
@@ -948,7 +961,9 @@ namespace FlatWorld.WorldModel
             }
             int initialLiquidLevel = QuantizeGeneratedLiquidLevel(initialLiquidDepth);
             // 先生成真实底床再冻结液体，水被抽干或结冰后凹陷仍然保留。
-            int naturalDepthLevels = ResolveNaturalBedDepth(initialLiquidLevel);
+            int naturalDepthLevels = ocean && !lavaCell
+                ? OceanShoreDistanceBathymetryKernel.ResolveNaturalOceanBedDepthLevels(initialLiquidLevel)
+                : ResolveNaturalBedDepth(initialLiquidLevel);
 
             // 海水同样按零下基温结冰，岩浆不参加水体结冰规则。
             if (!lavaCell && initialLiquidLevel > 0 && temperatureCelsius < 0f)

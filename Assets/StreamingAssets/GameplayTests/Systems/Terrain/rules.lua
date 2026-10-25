@@ -33,6 +33,29 @@ for _, case in ipairs({
     end, "草低温概率倍率与严格温度边界：" .. input.threshold .. "/" .. input.multiplier)
 end
 
+for _, scenario in ipairs({ "straight", "island", "wrapped", "ocean", "land" }) do
+    local input = scenario
+    test.system("terrain", "ocean_shelf_bathymetry", { scenario = input }, function(data)
+        assert(data.shelf == 16 and data.slope == 4, "海洋没有在离岸16格后用4格陡降")
+        assert(data.cancelled and data.diagonalDistance == 5, "取消或欧氏离岸距离错误")
+        for _, sample in ipairs(data.samples) do
+            local distance = math.min(sample.x, 20)
+            if input == "wrapped" then distance = math.min(sample.x, 64 - sample.x, 20) end
+            if input == "ocean" then distance = 20 end
+            if input == "land" then distance = 0 end
+            assert(sample.distance == distance, "跨边界或环绕的离岸距离不一致")
+            assert(sample.level == sample.singleLevel, "单格与整块生成水深不一致")
+            assert(sample.bed == (sample.level > 0 and sample.level + 1 or 0), "海底没有随水深下降")
+            if distance == 0 then assert(sample.level == 0, "海洋陡降侵入陆地") end
+            if distance > 0 and distance <= 16 then assert(sample.level >= 1 and sample.level <= 3, "近岸浅水带过深") end
+            if distance == 16 then assert(sample.level == 3, "陆架边缘深度错误") end
+            if distance == 17 then assert(sample.level == 5, "离岸17格没有开始明显陡降") end
+            if distance == 18 then assert(sample.level == 7, "离岸18格没有进入深水") end
+            if distance >= 20 then assert(sample.level == 10, "离岸20格没有达到最深水量") end
+        end
+    end, "海洋离岸陆架、陡降和分块一致性：" .. input)
+end
+
 for _, scenario in ipairs({ "ocean", "freshwater", "cave", "frozen_ocean" }) do
     test.system("terrain", "natural_waterbed", { scenario = scenario }, function(data)
         local natural, river, lake = 0, 0, 0
@@ -41,14 +64,17 @@ for _, scenario in ipairs({ "ocean", "freshwater", "cave", "frozen_ocean" }) do
             local depth = sample.naturalDepth
             if depth > 0 then
                 natural = natural + 1
-                assert(depth == 2 or depth == 3, "天然水体底床没有降低两到三层")
+                local ocean = scenario == "ocean" or scenario == "frozen_ocean"
+                assert(ocean and depth >= 2 and depth <= 11 or not ocean and (depth == 2 or depth == 3),
+                    "天然水体底床深度不符合海洋或淡水规则")
                 if sample.kind == 1 then river = river + 1 end
                 if sample.kind == 2 then lake = lake + 1 end
                 if scenario == "frozen_ocean" then
                     assert(sample.liquid == 0, "冻结水体仍残留液体")
                 else
                     assert(sample.liquid > 0, "未冻结的天然底床没有初始液体")
-                    assert(depth == (sample.liquid <= 5 and 2 or 3), "浅深水没有生成对应底床层数")
+                    assert(depth == (ocean and sample.liquid + 1 or (sample.liquid <= 5 and 2 or 3)),
+                        "浅深水没有生成对应底床层数")
                 end
             else
                 assert(sample.liquid == 0, "天然液体生成时漏写底床凹陷")

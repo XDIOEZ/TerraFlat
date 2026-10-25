@@ -17,6 +17,48 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/terrain_shadow_masks", ServiceTerrainShadowMasks);
         operations.Add("rendering/terrain_shadow_dirty_queue", ServiceTerrainShadowDirtyQueue);
         operations.Add("terrain/natural_waterbed", ServiceNaturalWaterbed);
+        operations.Add("terrain/ocean_shelf_bathymetry", ServiceOceanShelfBathymetry);
+    }
+
+    // 只提供直岸、岛屿与环绕岸线输入，距离、水量和底床均由正式生成核计算。
+    private static JObject ServiceOceanShelfBathymetry(JObject args)
+    {
+        string scenario = Text(args, "scenario", "straight");
+        var profile = new ChunkGenerationProfileSnapshot("probe:ocean-shelf", 1, 32, 32,
+            new Dictionary<string, double>());
+        var settings = profile.Settings;
+        double Height(int x, int y)
+        {
+            if (scenario == "ocean") return .25d;
+            if (scenario == "land") return .75d;
+            if (scenario == "island") return x == 0 && y == 0 ? .75d : .25d;
+            if (scenario == "wrapped") x = (x % 64 + 64) % 64;
+            return x <= 0 ? .75d : .25d;
+        }
+        bool cancelled = false;
+        try
+        {
+            using var ignored = new OceanShoreDistanceBathymetryKernel(0, 0, 1, 1, .5d,
+                settings.OceanShelfWidthTiles, settings.OceanSlopeWidthTiles, Height,
+                new System.Threading.CancellationToken(true));
+        }
+        catch (OperationCanceledException) { cancelled = true; }
+        using var whole = new OceanShoreDistanceBathymetryKernel(0, 0, 65, 1, .5d,
+            settings.OceanShelfWidthTiles, settings.OceanSlopeWidthTiles, Height);
+        var rows = new JArray();
+        for (int x = 0; x <= 64; x++)
+        {
+            using var single = new OceanShoreDistanceBathymetryKernel(x, 0, 1, 1, .5d,
+                settings.OceanShelfWidthTiles, settings.OceanSlopeWidthTiles, Height);
+            int level = LiquidCellValue.FromGeneratedDepth(whole.GetInitialLiquidDepth(x, 0));
+            rows.Add(new JObject { ["x"] = x, ["distance"] = whole.GetShoreDistance(x, 0),
+                ["level"] = level, ["singleLevel"] = LiquidCellValue.FromGeneratedDepth(single.GetInitialLiquidDepth(0, 0)),
+                ["bed"] = OceanShoreDistanceBathymetryKernel.ResolveNaturalOceanBedDepthLevels(level) });
+        }
+        using var diagonal = new OceanShoreDistanceBathymetryKernel(3, 4, 1, 1, .5d, 16, 4,
+            (x, y) => x == 0 && y == 0 ? .75d : .25d);
+        return new JObject { ["shelf"] = settings.OceanShelfWidthTiles, ["slope"] = settings.OceanSlopeWidthTiles,
+            ["cancelled"] = cancelled, ["diagonalDistance"] = diagonal.GetShoreDistance(0, 0), ["samples"] = rows };
     }
 
     // 直接推进阴影正式脏格队列，比较稀疏变更与全格重建的实际遍历数量。

@@ -47,6 +47,10 @@ MonoBehaviour:
     Value: 0.5
   - Id: terrain.oceanSandMinimumHeight
     Value: 0.498
+  - Id: terrain.ocean.shelfWidthTiles
+    Value: 16
+  - Id: terrain.ocean.slopeWidthTiles
+    Value: 4
   - Id: terrain.beachLevel
     Value: 0.51
   - Id: terrain.mountainLevel

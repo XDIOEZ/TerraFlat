@@ -282,6 +282,10 @@ namespace FlatWorld.WorldModel
             CaveFloorTileId = GetInt(numbers, "cave.floorTileId", StoneTileId);
             CaveWallTileId = GetInt(numbers, "cave.wallTileId", StoneTileId);
             SeaLevel = Clamp01(GetDouble(numbers, "terrain.seaLevel", 0.30d));
+            OceanShelfWidthTiles = ScaleDistance(GetInt(numbers, "terrain.ocean.shelfWidthTiles", 16),
+                WorldSpatialDistanceScale, 1, 128);
+            OceanSlopeWidthTiles = ScaleDistance(GetInt(numbers, "terrain.ocean.slopeWidthTiles", 4),
+                WorldSpatialDistanceScale, 1, 64);
             OceanSandMinimumHeight = Math.Min(SeaLevel,
                 Clamp01(GetDouble(numbers, "terrain.oceanSandMinimumHeight", 0.498d)));
             BeachLevel = Clamp01(GetDouble(numbers, "terrain.beachLevel", SeaLevel + 0.055d));
@@ -786,6 +790,8 @@ namespace FlatWorld.WorldModel
         public int CaveWallTileId { get; }
         /// <summary>高度低于这个数时生成海洋。</summary>
         public double SeaLevel { get; }
+        public int OceanShelfWidthTiles { get; }
+        public int OceanSlopeWidthTiles { get; }
         /// <summary>海洋格达到这个高度后才使用沙底，更深处统一使用石底。</summary>
         public double OceanSandMinimumHeight { get; }
         /// <summary>高于海面但低于这个数时生成沙滩。</summary>

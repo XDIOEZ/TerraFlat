@@ -56,10 +56,13 @@ byte[] Grass(double rain, double celsius = 14.2155, int ground = 1, double heigh
         for (int i = 0; i < samples.Length; i++) samples.SetValue(climate, i);
         var lavaListType = typeof(List<>).MakeGenericType(generatorType.GetNestedType("LavaBasin", BindingFlags.NonPublic)!);
         var lava = Activator.CreateInstance(lavaListType);
+        using var waterEnvironment = (IDisposable)Activator.CreateInstance(
+            generatorType.GetNestedType("GeographicAirHumiditySampler", BindingFlags.NonPublic)!,
+            new object[] { request, profile.Settings, null!, lava!, System.Threading.CancellationToken.None, null! })!;
         var grass = new byte[1024];
         for (int y=0; y<32; y++) for (int x=0; x<32; x++)
         {
-            var output=build.Invoke(null, new object[]{request, profile.Settings, null!, climate, batch, x,y,512+x,544+y,0,0,0,lava!})!;
+            var output=build.Invoke(null, new object[]{request, profile.Settings, null!, climate, batch, x,y,512+x,544+y,0,0,0,lava!,waterEnvironment})!;
             grass[y*32+x]=(byte)output.GetType().GetField("Grass")!.GetValue(output)!;
         }
         return grass;

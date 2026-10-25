@@ -20,7 +20,7 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>生成湿度只读取天然水文与冻结气候，缓存重复水源和混合温度。</summary>
-        private sealed class GeographicAirHumiditySampler
+        private sealed class GeographicAirHumiditySampler : IDisposable
         {
             private readonly struct InfluenceOffset
             {
@@ -38,22 +38,47 @@ namespace FlatWorld.WorldModel
             private readonly IReadOnlyList<LavaBasin> volcanic;
             private readonly InfluenceOffset[] offsets;
             private readonly CancellationToken cancellation;
+            private readonly Func<int, int, double> sampleHeight;
+            private OceanShoreDistanceBathymetryKernel oceanBathymetry;
             private readonly Dictionary<Int2, SurfaceClimateSample> climateSamples = new();
             private readonly Dictionary<Int2, float> blendedTemperatures = new();
             private readonly Dictionary<Int2, float> sourceStrengths = new();
 
             public GeographicAirHumiditySampler(ChunkGenerationRequest request,
                 ChunkGenerationSettingsSnapshot settings, GeneratedHydrologyMap hydrology,
-                IReadOnlyList<LavaBasin> volcanic = null, CancellationToken cancellation = default)
+                IReadOnlyList<LavaBasin> volcanic = null, CancellationToken cancellation = default,
+                Func<int, int, double> sampleHeight = null)
             {
                 this.request = request;
                 this.settings = settings;
                 this.hydrology = hydrology;
                 this.volcanic = volcanic ?? Array.Empty<LavaBasin>();
                 this.cancellation = cancellation;
+                this.sampleHeight = sampleHeight ?? ((x, y) => SampleHeight(request, settings, x, y));
                 humiditySettings = AirHumiditySettings.FromProfile(request.Profile);
                 offsets = BuildOffsets();
             }
+
+            // 海水生成与供湿共用一个带邻域的离岸窗口，避免每个水源重新扫描岸线。
+            public float GetOceanInitialLiquidDepth(int worldX, int worldY)
+            {
+                int padding = (int)Math.Ceiling(humiditySettings.RadiusTiles);
+                oceanBathymetry ??= new OceanShoreDistanceBathymetryKernel(
+                    request.Address.ChunkOrigin.X - padding, request.Address.ChunkOrigin.Y - padding,
+                    request.Profile.Width + padding * 2, request.Profile.Height + padding * 2,
+                    settings.SeaLevel, settings.OceanShelfWidthTiles, settings.OceanSlopeWidthTiles,
+                    sampleHeight, cancellation);
+                int x = worldX - request.Address.ChunkOrigin.X + padding;
+                int y = worldY - request.Address.ChunkOrigin.Y + padding;
+                if (request.Topology.IsWrapped)
+                {
+                    x = PositiveMod(x, request.Topology.Span.X);
+                    y = PositiveMod(y, request.Topology.Span.Y);
+                }
+                return oceanBathymetry.GetInitialLiquidDepth(x, y);
+            }
+
+            public void Dispose() => oceanBathymetry?.Dispose();
 
             public float Sample(int worldX, int worldY)
             {
@@ -82,8 +107,7 @@ namespace FlatWorld.WorldModel
                 float depth;
                 if (climate.Height < settings.SeaLevel)
                 {
-                    depth = (float)(1d - Math.Pow(Clamp01(climate.Height /
-                        Math.Max(0.0001d, settings.SeaLevel)), 2d));
+                    depth = GetOceanInitialLiquidDepth(source.X, source.Y);
                 }
                 else if (hydrology != null && hydrology.TryGet(source.X, source.Y,
                              out GeneratedHydrologyCell water))

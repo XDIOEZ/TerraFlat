@@ -34,7 +34,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 - JSON 构建 `RuntimeTileDefinition` 和共享 Behaviour；`TileBehaviourRegistry` 按显式 `type` 工厂解析，未知字段/非法数值失败。`TileData.ID/Name` 来自定义，位置/进度属于实例，`CreateTileData/Clone` 产生单格副本。`TileDefinitionEditorCatalog` 保存 JSON，`GameRes.GetTileBlock` 返回运行时定义。
 - Ground 是真实底材，Liquid 独立保存深度与身份。`WorldLiquidSystem.TryPump/TrySet` 改液体，地面替换不自动清水。`TerrainSupportLayer` 投影平台表面并遮断底部液体接触，底部液体仍存在。
-- 天然水域生成时把底床凹陷写入 `terrain.surface.naturalDepthLevels`：初始水量 1～5 级降低 2 层，6～10 级降低 3 层；地表、洞穴和冻结前水域共用，抽水/倒水不改底床。天然水面统一低于同地势岸边 1 层，深浅底床不再形成水内台阶；抽干后恢复真实底床高差，原始 `height`、玩家采挖与填土仍独立叠加。
+- 天然水域底床写入 `terrain.surface.naturalDepthLevels`：海洋为初始水量加 1（2～11 层），河湖/洞穴水量 1～5 级降低 2 层、6～10 级降低 3 层；冻结前生成，抽水/倒水不改底床。天然水面统一低于同地势岸边 1 层，抽干后露出真实底床；原始 `height`、玩家采挖与填土独立叠加。
+- 海洋水深由 `OceanShoreDistanceBathymetryKernel` 按最近陆地的欧氏距离生成，`terrain.ocean.shelfWidthTiles=16` 保留 1～3 级浅海，随后 `slopeWidthTiles=4` 陡降到 10 级；距离跟随空间倍率。分块/单格/供湿共用规则，池化窗口只补采高度，不改变大陆海岸；回归 `terrain/ocean_shelf_bathymetry`。
 - `WorldLiquidSourceResolver` 从 Liquid 层解析 `LiquidDefinition`；`WorldLiquidSourceTarget` 独立于 TileData。世界液体权威水量是 `int LiquidLevel` 0～10，一份液体等于一级；生成向上取整，正值至少一级。`GetLiquidDepth` 只由等级除以 10 派生表现比例。`TryPour` 成功只发布本格 `SurfaceLiquidAdded`，耕地按本格订阅吸水；取水派生规则等待端口事务成功 `PublishState` 后的 `SurfaceLiquidPumped`。
 - `WorldLiquidReplenishment` 订阅 `SurfaceLiquidPumped`，固定取水点及四邻涉及的最多 16 条邻边，双向按水量差的一半转移整级水量，直到邻边差不超过一级；供水格保留至少一级，空格与浅水格均可补水。目标须为 `GetLiquidBaseline` 中原有同种水域，普通陆地、异种液体和显式挡水格不参与；不递归扩张、不凭空造水，复用 `TrySet` 的差量/表现通知，规则在 `SurfaceFluids/replenishment.lua`。
 - 地表倒水/取水事件只在订阅变化时生成监听器快照，派发时不调用 `GetInvocationList`；补水邻边用 `ListPool` 借还，通知中的新增/退订影响下一次派发，异常仍逐监听器隔离。回归 `surface_fluids/notification_dispatch`。
