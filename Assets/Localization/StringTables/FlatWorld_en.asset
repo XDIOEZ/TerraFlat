@@ -392,11 +392,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326731
-    m_Localized: Egg
+    m_Localized: Chicken Egg
     m_Metadata:
       m_Items: []
   - m_Id: 4887326732
-    m_Localized: An egg from an animal.
+    m_Localized: An egg laid by a hen. It can be eaten, cooked, or hatched.
     m_Metadata:
       m_Items: []
   - m_Id: 4887326733

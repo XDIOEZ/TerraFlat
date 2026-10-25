@@ -637,6 +637,7 @@
     "已禁用": "Disabled"
   },
   "itemDescriptions": {
+    "Egg": "An egg laid by a hen. It can be eaten, cooked, or hatched.",
     "Bandage_Plant": "Use while held to bandage the head or torso, restoring 10 points of part durability. Does not restore health.",
     "Battery_Basic": "Stores surplus power from the grid and discharges automatically when generation is insufficient.",
     "Battery_Basic_Summoner": "Stores surplus power from the grid and discharges automatically when generation is insufficient.",

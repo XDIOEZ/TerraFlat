@@ -391,11 +391,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326731
-    m_Localized: "\u86CB"
+    m_Localized: "\u9E21\u86CB"
     m_Metadata:
       m_Items: []
   - m_Id: 4887326732
-    m_Localized: "\u53EF\u4EE5\u662F\u4EFB\u4F55\u52A8\u7269\u7684\u86CB"
+    m_Localized: "\u6BCD\u9E21\u4EA7\u4E0B\u7684\u86CB\uFF0C\u53EF\u98DF\u7528\u3001\u70F9\u996A\u6216\u7528\u4E8E\u5B75\u5316\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 4887326733
