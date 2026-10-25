@@ -7,6 +7,10 @@
       "sourcePrefab": "",
       "gameName": "鸟蛋",
       "description": "小鸟和海鸥产下的蛋，可拾取、食用或烹饪。每只鸟最快两天产下一颗。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/BirdEgg/BirdEgg_Icon.png",
+        "rendererLocalPosition": { "x": 0.0, "y": 0.0, "z": 0.0 }
+      },
       "removeModules": ["生产模块"],
       "reactions": [
         {
