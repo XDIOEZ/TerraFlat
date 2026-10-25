@@ -40,6 +40,40 @@ for _, case in ipairs(nutritionCases) do
         assert(not data.excessiveAccepted and data.afterRejected == data.afterEnergy, "失败能量请求扣了部分营养")
     end, "营养与能量：" .. case.name)
 end
+local spoilageCases = {
+    {name = "未到期湿肉不替换", args = {elapsed = 1798}, target = "", elapsed = 1799, advanced = true},
+    {name = "到期湿肉变腐肉", args = {moisture = .8}, target = "Meat_Rotten", elapsed = 1800, advanced = true},
+    {name = "略高于百分之二十仍腐败", args = {moisture = .200001}, target = "Meat_Rotten", elapsed = 1800, advanced = true},
+    {name = "恰好百分之二十变肉干", args = {moisture = .2}, target = "Meat_Dehydrate", elapsed = 1800, advanced = true},
+    {name = "低于百分之二十变肉干", args = {moisture = .199999}, target = "Meat_Dehydrate", elapsed = 1800, advanced = true},
+    {name = "未初始化读取初始含水量", args = {initialized = false, moisture = 0}, target = "Meat_Rotten", elapsed = 1800, advanced = true},
+    {name = "非法含水量不算风干成功", args = {invalidMoisture = true}, target = "Meat_Rotten", elapsed = 1800, advanced = true},
+    {name = "未配置干燥分流保留腐败规则", args = {noDrying = true, moisture = .1}, target = "Meat_Rotten", elapsed = 1800, advanced = true},
+    {name = "关闭腐败不推进", args = {enabled = false}, target = "", elapsed = 1799, advanced = false, ineligible = true},
+    {name = "无效周期不推进", args = {invalidInterval = true}, target = "", elapsed = 1799, advanced = false, ineligible = true},
+    {name = "负时间不推进", args = {seconds = -1}, target = "", elapsed = 1799, advanced = false},
+    {name = "非法时间不推进", args = {invalidSeconds = true}, target = "", elapsed = 1799, advanced = false},
+    {name = "替换前保留到期状态可重试", args = {elapsed = 1800}, target = "Meat_Rotten", elapsed = 1800, advanced = false, beforeReady = true},
+    {name = "大步进到期不重置计时", args = {seconds = 30}, target = "Meat_Rotten", elapsed = 1800, advanced = true}
+}
+for _, case in ipairs(spoilageCases) do
+    test.system("survival", "food_spoilage_moisture", case.args, function(data)
+        assert(data.eligible == (not case.ineligible) and data.beforeReady == (case.beforeReady == true),
+            "腐败资格或到期前状态错误")
+        assert(data.advanced == case.advanced and data.elapsed == case.elapsed, "腐败计时推进、钳制或失败重试错误")
+        assert(data.ready == (case.target ~= "") and data.target == case.target, "到期含水分流产物错误")
+        assert(data.restoredReady == data.ready and data.restoredTarget == data.target and not data.advancedOnZero,
+            "读回状态改变到期结果，或零时间推进了腐败")
+        near(data.configuredDryThreshold, .2, "到期干燥阈值")
+        near(data.matterDryThreshold, data.configuredDryThreshold, "自然风干与到期判断阈值一致")
+        assert(data.configuredDryTarget == "Meat_Dehydrate", "生肉缺少肉干分流配置")
+        assert(data.worldChanged and data.worldReady and data.worldTarget == "Meat_Rotten" and data.worldElapsed == 1800,
+            "世界落地食物未推进同一份腐败时钟或到期湿肉产物错误")
+        near(data.worldTemperatureAtExpiry, 20.5, "大步进环境只推进到腐败时刻")
+        near(data.worldExpiredTemperature, data.worldTemperatureAtExpiry, "替换等待期间停止额外风干与传热")
+    end, "生肉腐败与含水量：" .. case.name)
+end
+
 test.system("survival", "food_observer_index", {}, function(data)
     assert(data.registered and data.sortedCount and data.sortedTick and data.sortedState,
         "食物规则 Tick 或状态观察者索引遗漏、重复或改变优先级顺序")

@@ -4755,7 +4755,9 @@
                   "EnableSpoilage": true,
                   "SpoilageElapsedSeconds": 0.0,
                   "SpoilageIntervalSeconds": 1800.0,
-                  "SpoilageTargetItemID": "Meat_Rotten"
+                  "SpoilageTargetItemID": "Meat_Rotten",
+                  "DryingMaxMoisture": 0.2,
+                  "DryingTargetItemID": "Meat_Dehydrate"
                 }
               },
               {

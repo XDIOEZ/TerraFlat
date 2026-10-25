@@ -121,7 +121,7 @@ public partial class ItemMgr
                 bool changed = WorldItemMatterRules.Advance(entry.Data, item.transform.position, seconds,
                     liquidContact: true, out bool waterContact);
                 // 热分解先交接新物质，避免同一轮燃烧把已满足转化条件的材料直接扣没。
-                if (ItemMatterRuntime.TryCreateSolidTransitionOutputs(entry.Data, out IReadOnlyList<ItemData> products))
+                if (WorldItemMatterRules.TryCreateTransitionOutputs(entry.Data, out IReadOnlyList<ItemData> products))
                 {
                     var spawned = new List<DroppedItemHandle>();
                     try

@@ -12,7 +12,7 @@ public sealed class FoodRemainingTimeProvider : IItemInfoProvider
             context.ModuleDefinition?.Enabled != true) return;
 
         FoodSpoilageObserverData spoilage = FoodSpoilageObserverData.Load(foodData);
-        string targetId = spoilage.SpoilageTargetItemID?.Trim();
+        string targetId = spoilage.ResolveTargetItemID(context.ItemData);
         if (spoilage.EnableSpoilage && !string.IsNullOrWhiteSpace(targetId) &&
             !string.Equals(context.ItemData?.IDName, targetId, StringComparison.OrdinalIgnoreCase) &&
             ItemRemainingTimeInfo.TryCreate(FoodObserverStateStore.SpoilageStateKey,

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
         operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
         operations.Add("item_runtime/matter_moisture_info", MatterMoistureInfo);
+        operations.Add("survival/food_spoilage_moisture", FoodSpoilageMoisture);
         operations.Add("environment/combustion_oxygen", CombustionOxygen);
     }
 
@@ -288,6 +290,76 @@ public static partial class GameplayTestSystemProbe
             ["invalidRejected"] = invalidRejected, ["emptyMoistureVisible"] = emptyMoistureVisible,
             ["inertHidden"] = inertHidden && inertLines.Count == 0,
             ["moistureTransitionVisible"] = moistureTransitionVisible
+        };
+    }
+
+    #endregion
+
+    #region 食物到期与含水分流采样
+
+    // 读取正式生肉配置，采样共用时钟、临界含水量和世界环境步进，不修改真实库存。
+    private static JObject FoodSpoilageMoisture(JObject args)
+    {
+        string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath,
+            "GameConfig/Items/shells/basic_items.json");
+        JToken meat = JObject.Parse(StreamingAssetsTextLoader.ReadAllText(path))["items"]
+            .First(value => (string)value["id"] == "Meat");
+        var food = meat["modules"]["food"]["data"].ToObject<ModData_FoodData>();
+        food.StableName = "food";
+        food.ModuleId = ModText.Food;
+        var item = EntityProbeData("Meat", 3);
+        item.ModuleDataDic.Add(food.StableName, food);
+        item.MatterState = new ItemMatterState
+        {
+            Initialized = Flag(args, "initialized", true), TemperatureCelsius = 20f,
+            Moisture = Flag(args, "invalidMoisture", false) ? float.NaN : (float)Number(args, "moisture", .8)
+        };
+        RuntimeItemMatterDefinition matter = ItemMatterReactionCompiler.CompileMatter(
+            meat["matter"].ToObject<ItemMatterDefinitionDto>(), item.Tags, item.IDName);
+        var definition = new RuntimeItemDefinition(item.IDName, "", null, item, null, null, null,
+            null, null, null, null, null, null, matter: matter);
+        FoodSpoilageObserverData state = FoodSpoilageObserverData.Load(food);
+        string configuredDryTarget = state.DryingTargetItemID;
+        float configuredDryThreshold = state.DryingMaxMoisture;
+        state.SpoilageElapsedSeconds = (float)Number(args, "elapsed", 1799);
+        state.EnableSpoilage = Flag(args, "enabled", true);
+        if (Flag(args, "noDrying", false)) state.DryingTargetItemID = null;
+        if (Flag(args, "invalidInterval", false)) state.SpoilageIntervalSeconds = 0f;
+        state.Save(food);
+        bool eligible = FoodSpoilageObserverData.TryLoad(item, out _, out _);
+        bool beforeReady = state.TryGetExpiredTarget(item, out _, definition);
+        float seconds = Flag(args, "invalidSeconds", false) ? float.NaN : (float)Number(args, "seconds", 1);
+        bool advanced = state.Advance(seconds, food);
+        bool ready = state.TryGetExpiredTarget(item, out string target, definition);
+        FoodSpoilageObserverData restored = FoodSpoilageObserverData.Load(food);
+        bool restoredReady = restored.TryGetExpiredTarget(item, out string restoredTarget, definition);
+        bool advancedAgain = restored.Advance(0f, food);
+
+        var worldFood = meat["modules"]["food"]["data"].ToObject<ModData_FoodData>();
+        worldFood.StableName = "food";
+        worldFood.ModuleId = ModText.Food;
+        var worldItem = EntityProbeData("Meat", 2);
+        worldItem.ModuleDataDic.Add(worldFood.StableName, worldFood);
+        worldItem.MatterState = new ItemMatterState { Initialized = true, TemperatureCelsius = 20f, Moisture = .8f };
+        FoodSpoilageObserverData worldState = FoodSpoilageObserverData.Load(worldFood);
+        worldState.SpoilageElapsedSeconds = 1799f;
+        worldState.Save(worldFood);
+        bool worldChanged = WorldItemMatterRules.Advance(worldItem, 50f, 30f, null, out _);
+        worldState = FoodSpoilageObserverData.Load(worldFood);
+        bool worldReady = worldState.TryGetExpiredTarget(worldItem, out string worldTarget, definition);
+        float worldTemperatureAtExpiry = worldItem.MatterState.TemperatureCelsius;
+        WorldItemMatterRules.Advance(worldItem, 50f, 30f, null, out _);
+
+        return new JObject
+        {
+            ["eligible"] = eligible, ["beforeReady"] = beforeReady, ["advanced"] = advanced,
+            ["ready"] = ready, ["target"] = target ?? "", ["elapsed"] = state.SpoilageElapsedSeconds,
+            ["restoredReady"] = restoredReady, ["restoredTarget"] = restoredTarget ?? "",
+            ["advancedOnZero"] = advancedAgain, ["configuredDryTarget"] = configuredDryTarget,
+            ["configuredDryThreshold"] = configuredDryThreshold, ["matterDryThreshold"] = matter.Transitions[1].MaxMoisture,
+            ["worldChanged"] = worldChanged, ["worldReady"] = worldReady, ["worldTarget"] = worldTarget ?? "",
+            ["worldElapsed"] = worldState.SpoilageElapsedSeconds, ["worldTemperatureAtExpiry"] = worldTemperatureAtExpiry,
+            ["worldExpiredTemperature"] = worldItem.MatterState.TemperatureCelsius
         };
     }
 

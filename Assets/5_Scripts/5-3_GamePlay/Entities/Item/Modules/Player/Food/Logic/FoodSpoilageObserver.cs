@@ -5,10 +5,19 @@ using UnityEngine;
 [Serializable]
 public struct FoodSpoilageObserverData
 {
+    #region 腐败计时与含水分流
+
     public bool EnableSpoilage;
     public float SpoilageElapsedSeconds;
     public float SpoilageIntervalSeconds;
     public string SpoilageTargetItemID;
+    public float DryingMaxMoisture;
+    public string DryingTargetItemID;
+
+    public bool HasValidInterval => float.IsFinite(SpoilageIntervalSeconds) && SpoilageIntervalSeconds > 0f;
+    public float RemainingSeconds => EnableSpoilage && HasValidInterval
+        ? Mathf.Max(0f, SpoilageIntervalSeconds - SpoilageElapsedSeconds)
+        : float.PositiveInfinity;
 
     /// <summary>从通用观察者负载读取腐败数据。</summary>
     public static FoodSpoilageObserverData Load(ModData_FoodData persistentData)
@@ -24,7 +33,9 @@ public struct FoodSpoilageObserverData
             SpoilageTargetItemID = FoodObserverStateStore.ReadString(
                 state,
                 "SpoilageTargetItemID",
-                "Meat_Rotten")
+                "Meat_Rotten"),
+            DryingMaxMoisture = FoodObserverStateStore.ReadFloat(state, "DryingMaxMoisture", 0.2f),
+            DryingTargetItemID = FoodObserverStateStore.ReadString(state, "DryingTargetItemID")
         };
     }
 
@@ -38,7 +49,64 @@ public struct FoodSpoilageObserverData
         FoodObserverStateStore.WriteFloat(state, "SpoilageElapsedSeconds", SpoilageElapsedSeconds);
         FoodObserverStateStore.WriteFloat(state, "SpoilageIntervalSeconds", SpoilageIntervalSeconds);
         FoodObserverStateStore.WriteString(state, "SpoilageTargetItemID", SpoilageTargetItemID);
+        FoodObserverStateStore.WriteFloat(state, "DryingMaxMoisture", DryingMaxMoisture);
+        FoodObserverStateStore.WriteString(state, "DryingTargetItemID", DryingTargetItemID);
     }
+
+    // 库存和落地食物共用游戏时间，到期后保留状态供替换失败时重试。
+    public bool Advance(float seconds, ModData_FoodData persistentData)
+    {
+        if (!EnableSpoilage || !HasValidInterval || !float.IsFinite(seconds) || seconds <= 0f ||
+            SpoilageElapsedSeconds >= SpoilageIntervalSeconds) return false;
+        SpoilageElapsedSeconds = Mathf.Min(SpoilageIntervalSeconds, Mathf.Max(0f, SpoilageElapsedSeconds) + seconds);
+        FoodObserverStateStore.WriteFloat(FoodObserverStateStore.GetOrCreate(persistentData,
+            FoodObserverStateStore.SpoilageStateKey), "SpoilageElapsedSeconds", SpoilageElapsedSeconds);
+        return true;
+    }
+
+    // 只有显式配置干燥产物且含水量达标时才分流，其余仍使用腐败产物。
+    public string ResolveTargetItemID(ItemData item, RuntimeItemDefinition definition = null)
+    {
+        float moisture;
+        if (!string.IsNullOrWhiteSpace(DryingTargetItemID) && float.IsFinite(DryingMaxMoisture) &&
+            DryingMaxMoisture >= 0f && DryingMaxMoisture <= 1f &&
+            (definition != null ? ItemMatterInfoQuery.TryGetMoisture(item, definition, out moisture)
+                : ItemMatterInfoQuery.TryGetMoisture(item, out moisture)) && moisture <= DryingMaxMoisture)
+            return DryingTargetItemID.Trim();
+        return SpoilageTargetItemID?.Trim();
+    }
+
+    public bool TryGetExpiredTarget(ItemData item, out string targetItemID, RuntimeItemDefinition definition = null)
+    {
+        targetItemID = null;
+        if (!EnableSpoilage || !HasValidInterval || !float.IsFinite(SpoilageElapsedSeconds) ||
+            SpoilageElapsedSeconds < SpoilageIntervalSeconds) return false;
+        targetItemID = ResolveTargetItemID(item, definition);
+        return !string.IsNullOrWhiteSpace(targetItemID) &&
+            !string.Equals(item?.IDName, targetItemID, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool TryLoad(ItemData item, out ModData_FoodData foodData, out FoodSpoilageObserverData state)
+    {
+        foodData = null;
+        state = default;
+        ModuleDataCollection modules = item?.ModuleDataDic;
+        if (modules == null) return false;
+        foreach (var pair in modules)
+        {
+            if (pair.Value is not ModData_FoodData food || !food.Enabled ||
+                !string.Equals(food.ModuleId, ModText.Food, StringComparison.Ordinal) ||
+                FoodObserverStateStore.Find(food, FoodObserverStateStore.SpoilageStateKey) == null) continue;
+            FoodSpoilageObserverData candidate = Load(food);
+            if (!candidate.EnableSpoilage || !candidate.HasValidInterval) continue;
+            foodData = food;
+            state = candidate;
+            return true;
+        }
+        return false;
+    }
+
+    #endregion
 }
 
 /// <summary>
@@ -47,6 +115,8 @@ public struct FoodSpoilageObserverData
 /// </summary>
 public sealed class FoodSpoilageModuleDataObserver : IModuleDataRule
 {
+    #region 库存腐败结算
+
     /// <summary>只接收食物模块数据，避免观察者处理其他库存模块。</summary>
     public bool CanStep(ModuleDataTickContext context)
     {
@@ -69,8 +139,7 @@ public sealed class FoodSpoilageModuleDataObserver : IModuleDataRule
             return;
 
         // 配置异常时停止计时，避免无效数据导致物品立即替换或计时溢出。
-        float intervalSeconds = observerData.SpoilageIntervalSeconds;
-        if (intervalSeconds <= 0f || float.IsNaN(intervalSeconds) || float.IsInfinity(intervalSeconds))
+        if (!observerData.HasValidInterval)
         {
             Debug.LogWarning($"[FoodSpoilage] 腐败间隔无效，物品={context.ItemData.IDName}");
             return;
@@ -94,15 +163,8 @@ public sealed class FoodSpoilageModuleDataObserver : IModuleDataRule
         }
 
         // 使用游戏 Tick 累加运行时间，不能用现实时间直接替代。
-        observerData.SpoilageElapsedSeconds += Mathf.Max(0f, context.DeltaTime);
-        if (observerData.SpoilageElapsedSeconds < intervalSeconds)
-        {
-            observerData.Save(foodData);
-            return;
-        }
-
-        observerData.SpoilageElapsedSeconds = 0f;
-        observerData.Save(foodData);
+        observerData.Advance(context.DeltaTime, foodData);
+        if (!observerData.TryGetExpiredTarget(context.ItemData, out targetItemID, context.Definition)) return;
         // 由库存操作网关负责保留槽位、数量、GUID 和 UI 等运行时状态。
         if (!InventoryFoodItemOperationGateway.TryReplaceSlot(
             context.InventoryData,
@@ -117,6 +179,8 @@ public sealed class FoodSpoilageModuleDataObserver : IModuleDataRule
 
         Debug.Log($"[FoodSpoilage] 状态替换完成，原物品={context.ItemData.IDName}，目标物品={targetItemID}");
     }
+
+    #endregion
 }
 
 /// <summary>可融化食物的库存计时状态；复用食物观察者存储，不额外挂载运行时模块。</summary>

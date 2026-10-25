@@ -89,7 +89,7 @@ internal sealed partial class DroppedItemRuntime
     {
         using (MatterTransitionMarker.Auto())
         {
-            if (!ItemMatterRuntime.TryCreateSolidTransitionOutputs(data, out IReadOnlyList<ItemData> outputs)) return false;
+            if (!WorldItemMatterRules.TryCreateTransitionOutputs(data, out IReadOnlyList<ItemData> outputs)) return false;
             ItemData replacement = outputs[0];
             if (!GameRes.ExistingInstance.TryGetItemDefinition(replacement.IDName, out RuntimeItemDefinition target) ||
                 !target.UsesLightweightWorldDrop) return false;

@@ -1,6 +1,8 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>世界物品的环境传热适配；物质燃点与燃烧消耗仍由物品自身规则处理。</summary>
+/// <summary>世界物品的环境推进与到期产物编排，具体条件由物质和食物规则提供。</summary>
 public static class WorldItemMatterRules
 {
     #region 环境接触
@@ -48,8 +50,43 @@ public static class WorldItemMatterRules
             }
         }
 
-        return ItemMatterRuntime.Advance(data, targetTemperature, 1f, seconds,
-            submerged: waterContact, transferPerSecondOverride: contactHeatingPerSecond) || changed;
+        bool hasSpoilage = FoodSpoilageObserverData.TryLoad(data, out ModData_FoodData food,
+            out FoodSpoilageObserverData spoilage);
+        // 跨过保质期的大步进只模拟到到期时刻，避免到期后的蒸发把湿肉误判成肉干。
+        float environmentSeconds = hasSpoilage ? Mathf.Min(seconds, spoilage.RemainingSeconds) : seconds;
+        changed |= ItemMatterRuntime.Advance(data, targetTemperature, 1f, environmentSeconds,
+            submerged: waterContact, transferPerSecondOverride: contactHeatingPerSecond);
+        if (hasSpoilage) changed |= spoilage.Advance(seconds, food);
+        return changed;
+    }
+
+    // 两种世界掉落后端共用到期优先级和产物计划，实际替换仍由各后端的原事务提交。
+    public static bool TryCreateTransitionOutputs(ItemData data, out IReadOnlyList<ItemData> outputs)
+    {
+        outputs = Array.Empty<ItemData>();
+        if (!FoodSpoilageObserverData.TryLoad(data, out _, out FoodSpoilageObserverData spoilage) ||
+            !spoilage.TryGetExpiredTarget(data, out string targetItemID))
+            return ItemMatterRuntime.TryCreateSolidTransitionOutputs(data, out outputs);
+
+        GameRes resources = GameRes.ExistingInstance;
+        if (data.Stack == null || !float.IsFinite(data.Stack.Amount) || data.Stack.Amount <= 0f ||
+            resources == null || !resources.TryGetItemDefinition(targetItemID, out RuntimeItemDefinition definition))
+            return false;
+        ItemData product = resources.CreateItemData(targetItemID);
+        if (product?.Stack == null) return false;
+        product.Stack.Amount = data.Stack.Amount;
+        product.Stack.CanBePickedUp = data.Stack.CanBePickedUp;
+        product.transform = data.transform == null ? new ItemTransform() : new ItemTransform
+        {
+            position = data.transform.position, rotation = data.transform.rotation, scale = data.transform.scale
+        };
+        product.MatterState = new ItemMatterState
+        {
+            Initialized = true, TemperatureCelsius = data.MatterState?.TemperatureCelsius ?? TemperatureMgr.DefaultAmbientTemperature,
+            Moisture = definition.Matter?.InitialMoisture ?? 0f
+        };
+        outputs = new[] { product };
+        return true;
     }
 
     public static bool CanIgnite(ItemData data) => data?.MatterState?.Initialized == true &&
