@@ -1594,7 +1594,7 @@
         "InventoryCategory.IndustrialBlock"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Tileset.png[workbenches]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WorkBench/WorkBench_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
