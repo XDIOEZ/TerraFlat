@@ -197,6 +197,8 @@ test.system("mechanical", "loose_item_terrain_batch", {}, function(data)
     local function near(actual, expected, label)
         assert(math.abs(actual - expected) < .0001, label .. "：" .. tostring(actual))
     end
+    near(data.idleX, .25, "零速度保留位置")
+    assert(not data.idleSampling, "零速度仍准备地形和世界寻址")
     assert(data.initialDry and data.wet and data.covered and data.uncovered and data.drained,
         "散物同轮采样没有实时响应入水、遮水、揭开与抽干")
     assert(data.nextDry and data.nextWet and data.nextDrained, "跨区块后复用了旧水量")

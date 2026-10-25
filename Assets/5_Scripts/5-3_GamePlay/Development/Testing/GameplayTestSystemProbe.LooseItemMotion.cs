@@ -143,6 +143,8 @@ public static partial class GameplayTestSystemProbe
             TerrainQuery = new ChunkMgr.RuntimeTerrainPresenceQuery(world, topology, dimension, 2, 2)
         };
         Vector2 origin = new(.25f, .25f);
+        var idle = new LooseItemMotion.WorldField { World = MotionTestWorld };
+        Vector2 idlePosition = LooseItemMotion.Integrate(origin, .2f, ref idle);
         bool initialDry = !field.IsWater(origin);
         int water = first.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
         first.Terrain.SetLiquid(0, 0, water, 6);
@@ -181,6 +183,7 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["initialDry"] = initialDry, ["wet"] = wet, ["covered"] = covered,
+            ["idleX"] = idlePosition.x, ["idleSampling"] = idle.SamplingInitialized,
             ["uncovered"] = uncovered, ["drained"] = drained,
             ["nextDry"] = nextDry, ["nextWet"] = nextWet, ["nextDrained"] = nextDrained,
             ["movedX"] = moved.x, ["blockedX"] = blocked.x, ["wetBlockedX"] = wetBlockedCell.x,
