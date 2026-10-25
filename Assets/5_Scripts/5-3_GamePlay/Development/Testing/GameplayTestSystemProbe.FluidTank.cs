@@ -21,6 +21,7 @@ public static partial class GameplayTestSystemProbe
         Register("industrial_fluids", "portable_tank_cache", WorldPortableTankCache);
         Register("industrial_fluids", "portable_tank_payload", WorldPortableTankPayload);
         Register("industrial_fluids", "portable_tank_air_fill", WorldPortableTankAirFill);
+        Register("industrial_fluids", "portable_tank_placement", WorldPortableTankPlacement);
         Register("industrial_fluids", "cold_temperature_path", WorldColdTemperaturePath);
         Register("industrial_fluids", "cold_wind_cache", WorldColdWindCache);
     }
@@ -71,6 +72,36 @@ public static partial class GameplayTestSystemProbe
         return new JObject { ["tanks"] = rows };
     }
     #endregion
+
+    // 只读正式继承目录中的两种气罐配对和共享能力，不创建当前世界物品。
+    private static JObject WorldPortableTankPlacement(JObject args)
+    {
+        List<ItemDefinitionDto> definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
+        var tanks = new JArray();
+        foreach (string carrier in new[] { "PortableGasTank_Iron", "PortableGasTank_Steel" })
+        foreach (string id in new[] { carrier, carrier + "_Building" })
+        {
+            ItemDefinitionDto definition = definitions.Find(value => value.Id == id)
+                ?? throw new InvalidOperationException("缺少便携气罐定义：" + id);
+            ItemModuleDefinitionDto building = definition.Modules[ModText.Building];
+            Mod_Building.Building_Data state = new();
+            building.Data.ToObject<Ex_ModData>().ReadData(ref state);
+            ItemModuleDefinitionDto tank = definition.Modules["tank"];
+            tanks.Add(new JObject
+            {
+                ["id"] = id, ["enabled"] = building.Enabled != false && tank.Enabled != false,
+                ["role"] = (int)state.Role, ["bodyId"] = state.BuildingPrefabId,
+                ["carrierId"] = state.SummonerPrefabId,
+                ["sharedModules"] = new JArray(state.SharedModuleIds ?? Array.Empty<string>()),
+                ["explicitPlacement"] = building.Parameters?.Value<bool?>("RequiresPlacementRequest") == true,
+                ["stackable"] = definition.Stackable == true,
+                ["canBePickedUp"] = definition.CanBePickedUp != false,
+                ["maxHp"] = definition.Health?.MaxHp ?? 0f,
+                ["configuration"] = tank.Parameters["Configuration"].DeepClone()
+            });
+        }
+        return new JObject { ["tanks"] = tanks };
+    }
 
     // 独立物品使用不存在于目录的身份，规则采样不加载或改写当前资源会话。
     private static ItemData WorldPortableTankItem(out Ex_ModData_MemoryPackable binary)

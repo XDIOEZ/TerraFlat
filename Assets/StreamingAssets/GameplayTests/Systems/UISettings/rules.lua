@@ -100,6 +100,21 @@ test.system("ui_settings", "building_panel_layout", {panel = "UI_Furnace"}, func
     end
 end, "熔炉输入输出完整收进正式容器")
 
+test.system("ui_settings", "building_panel_layout", {panel = "UI_FluidTank"}, function(data)
+    assert(data.body.bottom >= data.footer.top and data.body.top <= data.header.bottom,
+        "气罐的信息面板与标题或底栏重叠")
+    assert(data.bodyButtonCount == 0 and #data.buttons == 3, "气罐正文混入操作按钮或底栏按钮缺失")
+    for _, button in ipairs(data.buttons) do
+        assert(button.inFooter, "气罐操作按钮未归属底边控制栏：" .. button.name)
+        assert_building_rect_inside(button.bounds, data.footer, "气罐操作按钮超出底栏")
+        assert(button.bounds.width >= 160 and button.bounds.height >= 46, "气罐按钮点击区域不足")
+    end
+    for index = 1, 2 do
+        assert(data.buttons[index].bounds.right < data.buttons[3].bounds.left,
+            "气罐放置或拆回按钮与充气按钮重叠")
+    end
+end, "便携气罐标题、信息、底栏分区与全部操作按钮布局")
+
 for _, row in ipairs({
     {mode = "same_world", remaining = 940}, {mode = "no_clock", remaining = 1040},
     {mode = "other_world", remaining = 1040}, {mode = "rewound", remaining = 1040},

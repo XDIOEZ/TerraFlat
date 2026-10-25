@@ -16,12 +16,13 @@ public static partial class GameplayTestSystemProbe
     private static JObject CaptureBuildingPanelLayout(JObject args)
     {
         string panelName = args.Value<string>("panel");
-        if (panelName != "UI_CompostBin" && panelName != "UI_MeatRack" && panelName != "UI_Furnace")
-            throw new ArgumentException("建筑布局采样仅允许堆肥箱、晾肉架和熔炉正式面板。");
+        if (panelName != "UI_CompostBin" && panelName != "UI_MeatRack" && panelName != "UI_Furnace" && panelName != "UI_FluidTank")
+            throw new ArgumentException("建筑布局采样仅允许堆肥箱、晾肉架、熔炉和便携气罐正式面板。");
         GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
             "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/" + panelName + ".prefab");
         if (prefab == null) throw new InvalidOperationException("建筑正式面板缺失：" + panelName);
 
+        if (panelName == "UI_FluidTank") return CapturePortableTankPanelLayout(prefab);
         if (panelName == "UI_Furnace")
             return new JObject
             {
@@ -46,6 +47,31 @@ public static partial class GameplayTestSystemProbe
             ["spacing"] = grid.spacing.x, ["padding"] = grid.padding.left + grid.padding.right,
             ["verticalFit"] = (int)scroll.content.GetComponent<ContentSizeFitter>().verticalFit,
             ["horizontalScroll"] = scroll.horizontal, ["verticalScroll"] = scroll.vertical
+        };
+    }
+
+    // 采样正式气罐的三段区域和按钮归属，避免底栏操作重新混进正文。
+    private static JObject CapturePortableTankPanelLayout(GameObject prefab)
+    {
+        RectTransform root = (RectTransform)prefab.transform;
+        RectTransform footer = FindBuildingPanelRect(prefab, "FWUI_Footer");
+        MechanicalPanelView view = prefab.GetComponent<MechanicalPanelView>();
+        BuildingPanelActions actions = prefab.GetComponent<BuildingPanelActions>();
+        var buttons = new JArray();
+        foreach (Button button in new[] { actions.PlaceButton, actions.DismantleButton, view.ActionButton })
+            buttons.Add(new JObject
+            {
+                ["name"] = button.name,
+                ["inFooter"] = button.transform.parent == footer,
+                ["bounds"] = CaptureBuildingRectBounds((RectTransform)button.transform, root)
+            });
+        return new JObject
+        {
+            ["header"] = CaptureBuildingRectBounds(FindBuildingPanelRect(prefab, "FWUI_Header"), root),
+            ["body"] = CaptureBuildingRectBounds(view.InnerField, root),
+            ["footer"] = CaptureBuildingRectBounds(footer, root),
+            ["bodyButtonCount"] = view.InnerField.GetComponentsInChildren<Button>(true).Length,
+            ["buttons"] = buttons
         };
     }
 

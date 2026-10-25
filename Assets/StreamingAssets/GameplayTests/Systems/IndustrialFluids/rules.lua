@@ -143,6 +143,29 @@ test.system("industrial_fluids", "portable_tank_payload", {}, function(data)
     assert(data.unchangedContentFlushReusesBytes, "内容变更写回后再次 Flush 仍重复序列化")
 end, "便携气罐真实组分、内能、压力与按需序列化")
 
+test.system("industrial_fluids", "portable_tank_placement", {}, function(data)
+    assert(#data.tanks == 4, "铁制或钢制气罐缺少载体或落地本体")
+    for index, tank in ipairs(data.tanks) do
+        local placed = index % 2 == 0
+        local carrier = index <= 2 and "PortableGasTank_Iron" or "PortableGasTank_Steel"
+        assert(tank.enabled and tank.role == (placed and 1 or 0) and not tank.stackable,
+            "便携气罐的建筑角色、启用状态或单件配置错误：" .. tank.id)
+        assert(tank.carrierId == carrier and tank.bodyId == carrier .. "_Building",
+            "便携气罐放置和拆回未使用同一配对")
+        assert(tank.canBePickedUp ~= placed and (placed or tank.explicitPlacement),
+            "气罐绕过了面板放置入口或建筑拆回流程")
+        local shared = {}
+        for _, id in ipairs(tank.sharedModules) do shared[id] = true end
+        assert(shared["流体气罐模块"] and shared["生命值系统模块"], "放置或拆回气罐没有保留气液与耐久")
+        local steel = index > 2
+        assert(tank.maxHp == (steel and 160 or 80), "气罐落地后最大耐久改变")
+        assert(tank.configuration.VolumeLiters == 4
+            and tank.configuration.MaxSafePressureKPa == (steel and 1800 or 600)
+            and tank.configuration.MaterialId == (steel and "core:steel" or "core:iron"),
+            "气罐放置前后的容积、耐压或材质不一致")
+    end
+end, "铁制和钢制便携气罐放置配对、拆回、共享内容与材质配置")
+
 test.system("industrial_fluids", "portable_tank_air_fill", {}, function(data)
     assert(data.filled, "铁气罐未能从真实大气抽取气体")
     assert(data.oxygen > 0 and data.nitrogen > 0, "充气未保留空气中的氮氧混合组分")

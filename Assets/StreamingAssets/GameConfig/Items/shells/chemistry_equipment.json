@@ -144,7 +144,7 @@
     },
     {
       "id": "PortableGasTank_Steel",
-      "parent": "BasicItem_Base",
+      "parent": "BuildingSummoner_Base",
       "worldDropBehavior": "interactive",
       "gameName": "钢制便携气罐",
       "description": "初始真空；通过充装设备装入气体。混装气液共用容积，超压持续损伤，罐壁归零会在持有者位置爆炸。",
@@ -195,6 +195,16 @@
         "combatBalanceVersion": 1
       },
       "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"PortableGasTank_Steel_Building\",\"SummonerPrefabId\":\"PortableGasTank_Steel\",\"SharedModuleIds\":[\"流体气罐模块\",\"生命值系统模块\"]}",
+            "Type": 0
+          },
+          "parameters": { "RequiresPlacementRequest": true }
+        },
         "tank": {
           "prefab": "Module_FluidTank",
           "parameters": {
@@ -214,6 +224,65 @@
           },
           "id": "流体气罐模块",
           "enabled": true
+        }
+      }
+    },
+    {
+      "id": "PortableGasTank_Steel_Building",
+      "parent": "BuildingBody_Base",
+      "gameName": "钢制便携气罐",
+      "labelKey": "item.PortableGasTank_Steel.name",
+      "descriptionKey": "item.PortableGasTank_Steel.description",
+      "description": "初始真空；通过充装设备装入气体。混装气液共用容积，超压持续损伤，罐壁归零会在持有者位置爆炸。",
+      "durability": 160,
+      "maxDurability": 160,
+      "amount": 1,
+      "weight": 3.5,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["Container", "FluidTank", "InventoryGroup.Chemical", "Material.Steel", "Container.FluidTank"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": { "size": { "x": 0.7, "y": 0.9 } }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 160,
+        "maxHp": 160,
+        "weakTool": 0,
+        "combatBalanceVersion": 1,
+        "defense": { "physical": 2 },
+        "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+                      "size": { "x": 0.7, "y": 0.9 }, "offset": { "x": 0, "y": 0 } }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"PortableGasTank_Steel_Building\",\"SummonerPrefabId\":\"PortableGasTank_Steel\",\"SharedModuleIds\":[\"流体气罐模块\",\"生命值系统模块\"]}",
+            "Type": 0
+          }
+        },
+        "tank": {
+          "prefab": "Module_FluidTank",
+          "id": "流体气罐模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Configuration": {
+              "SupportsSpacesuit": true,
+              "MaterialId": "core:steel",
+              "VolumeLiters": 4,
+              "MinimumGasSpaceLiters": 0.04,
+              "MaxSafePressureKPa": 1800,
+              "DamageIntervalSeconds": 1,
+              "OverpressureDamagePerSecond": 2
+            }
+          }
         }
       }
     },

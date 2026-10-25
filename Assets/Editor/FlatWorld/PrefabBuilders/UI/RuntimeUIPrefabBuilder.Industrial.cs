@@ -22,6 +22,7 @@ public static partial class RuntimeUIPrefabBuilder
             try
             {
                 ConfigureIndustrialPanel(root, name);
+                if (name == "UI_FluidTank") ConfigurePortableTankActions(root, root.GetComponent<MechanicalPanelView>());
                 if (name != "UI_Spacesuit") EnsureGasCapacityGauge(root.GetComponent<MechanicalPanelView>());
                 string path = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/" + name + ".prefab";
                 PrefabUtility.SaveAsPrefabAsset(root, path); EnsureRuntimePrefabAddressable(path);
@@ -62,6 +63,29 @@ public static partial class RuntimeUIPrefabBuilder
         AddIndustrialButton(root.transform, "FWUI_ApplyFluidSettings", "应用配置", new Vector2(494, -78), new Vector2(240, 40), new Vector2(0, 1), new Vector2(0, 1));
         AddIndustrialButton(root.transform, "FWUI_FluidPhase", "输出气体和液体", new Vector2(24, 29), new Vector2(190, 46), Vector2.zero, new Vector2(0, .5f));
         AddIndustrialButton(root.transform, "FWUI_RotateFluid", "旋转方向", new Vector2(226, 29), new Vector2(150, 46), Vector2.zero, new Vector2(0, .5f));
+    }
+
+    // 便携罐的放置、拆回和充气共用底栏，正文只承载状态与容量。
+    private static void ConfigurePortableTankActions(GameObject root, MechanicalPanelView view)
+    {
+        RectTransform footer = root.GetComponentsInChildren<RectTransform>(true)
+            .First(child => child.name == "FWUI_Footer");
+        BuildingPanelActions actions = root.GetComponent<BuildingPanelActions>();
+        if (actions.PlaceButton == null)
+            actions.PlaceButton = InstantiateSharedControl<Button>("UI_Button", "放置建筑按钮", footer);
+        MechanicalPanelView.SetButtonCaption(actions.PlaceButton, "放到地上");
+        MechanicalPanelView.SetButtonCaption(actions.DismantleButton, "拆回物品");
+        foreach (Button button in new[] { actions.PlaceButton, actions.DismantleButton, view.ActionButton })
+        {
+            bool action = button == view.ActionButton;
+            button.transform.SetParent(footer, false);
+            LayoutIndustrialControl((RectTransform)button.transform,
+                new Vector2(action ? -24 : 24, 0), new Vector2(160, 46),
+                new Vector2(action ? 1 : 0, .5f), new Vector2(action ? 1 : 0, .5f));
+            if (!action) button.gameObject.SetActive(false);
+            RecordSharedInstance(button.gameObject);
+        }
+        footer.SetAsLastSibling();
     }
     private static void AddIndustrialField(Transform parent, string name, string hint, Vector2 position, Vector2 size)
     {
