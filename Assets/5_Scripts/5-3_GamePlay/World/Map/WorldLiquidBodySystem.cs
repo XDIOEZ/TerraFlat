@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
-/// <summary>当前已加载的连通静水水域快照；水量的唯一真源仍是各格的 LiquidLevel。</summary>
+/// <summary>当前已加载的连通液体水域快照；水量的唯一真源仍是各格的 LiquidLevel。</summary>
 public readonly struct WorldLiquidBodySnapshot
 {
     #region 水域统计
@@ -30,13 +32,12 @@ public readonly struct WorldLiquidBodySnapshot
 }
 
 /// <summary>
-/// 天然静水分块建图、跨块组合统计；仅被修改的水域唤醒局部守恒转移，稳定后不再执行求解。
-/// 不申请额外区块租约，未加载部分不参与结算，也不把聚合值另存为第二份权威水量。
+/// 天然液体分块建图、跨块组合统计；仅被修改的水域唤醒局部守恒转移，稳定后不再执行求解。
+/// 抽尽已知水量后按需读取相邻区块，泵停止查询后释放数据租约；每格液深仍是唯一权威。
 /// </summary>
 public sealed class WorldLiquidBodySystem : IDisposable
 {
     #region 图与增量状态
-    private const int MinimumBodyCells = 16;
     private const int WorkCellsPerFrame = 128;
     private static readonly Vector2Int[] Directions =
         { Vector2Int.left, Vector2Int.right, Vector2Int.down, Vector2Int.up };
@@ -52,6 +53,14 @@ public sealed class WorldLiquidBodySystem : IDisposable
     private long topologyVersion = 1;
     private bool applying;
     private bool disposed;
+    private readonly Dictionary<RuntimeWorldAddress, ChunkLease> supplyLeases = new();
+    private readonly HashSet<RuntimeWorldAddress> failedSupplyLoads = new();
+    private CancellationTokenSource supplyCancellation;
+    private Task<ChunkRuntime> supplyLoad;
+    private RuntimeWorldAddress supplyLoadAddress;
+    private double lastPumpRequest;
+    public int PumpSupplyChunkCount => supplyLeases.Count;
+    public bool IsPumpSupplyLoading => supplyLoad != null;
 
     private readonly struct BoundaryEdge
     {
@@ -68,6 +77,7 @@ public sealed class WorldLiquidBodySystem : IDisposable
         public long TotalLevel;
         public Body Body;
         public readonly List<BoundaryEdge> Borders = new();
+        public readonly List<int> Members = new();
     }
 
     private sealed class Body
@@ -78,6 +88,9 @@ public sealed class WorldLiquidBodySystem : IDisposable
         public int ChunkCount;
         public bool HasUnloadedBoundary;
         public string LiquidId;
+        public readonly WorldLiquidSupplyIndex<(ChunkState State, int Index)> Supply = new();
+        public readonly List<LocalComponent> Components = new();
+        public readonly HashSet<RuntimeWorldAddress> MissingChunks = new();
     }
 
     private sealed class ChunkState
@@ -215,7 +228,10 @@ public sealed class WorldLiquidBodySystem : IDisposable
                 LocalComponent component = state.Components[componentIndex];
                 component.TotalLevel += difference;
                 if (component.Body != null && component.Body.Version == topologyVersion)
+                {
                     component.Body.TotalLevel += difference;
+                    component.Body.Supply.SetLevel((state, index), level);
+                }
             }
             state.Levels[index] = level;
         }
@@ -226,6 +242,7 @@ public sealed class WorldLiquidBodySystem : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        ReleasePumpSupply();
         WorldLiquidFlowObstacles.Changed -= OnObstacleChanged;
         evictedSubscription.Dispose();
         foreach (ChunkState state in observed.Values) state.Dispose();
@@ -273,11 +290,8 @@ public sealed class WorldLiquidBodySystem : IDisposable
         ChunkTerrainData terrain = state.Terrain;
         TerrainCell cell = terrain.GetCell(x, y);
         if (cell.BlockingTileId != 0 || (cell.Flags & TerrainCellFlags.Blocking) != 0 ||
-            (SurfaceBiomeKind)cell.BiomeId == SurfaceBiomeKind.Ocean ||
             WorldLiquidFlowObstacles.IsBlocked(WorldCell(state, x, y)))
             return false;
-        terrain.TryGetEnvironmentValue("riverKind", x, y, out float riverKind);
-        if (Mathf.RoundToInt(riverKind) != 0) return false;
         return true;
     }
 
@@ -300,7 +314,7 @@ public sealed class WorldLiquidBodySystem : IDisposable
         string id = terrain.LiquidTypes.GetId(type);
         return GameRes.ExistingInstance != null &&
             GameRes.ExistingInstance.TryGetLiquidDefinition(id, out LiquidDefinition definition) &&
-            definition.WorldWater?.WaterContact == true ? type : 0;
+            definition.WorldWater != null ? type : 0;
     }
 
     private void EnsureTopology(ChunkState state)
@@ -380,6 +394,7 @@ public sealed class WorldLiquidBodySystem : IDisposable
                 int index = frontier[head++];
                 int x = index % width, y = index / width;
                 component.Cells++;
+                component.Members.Add(index);
                 component.TotalLevel += state.Levels[index];
                 Vector2Int worldCell = WorldCell(state, x, y);
                 for (int d = 0; d < Directions.Length; d++)
@@ -411,8 +426,14 @@ public sealed class WorldLiquidBodySystem : IDisposable
         while (queue.Count != 0)
         {
             LocalComponent component = queue.Dequeue();
+            body.Components.Add(component);
             body.Cells += component.Cells;
             body.TotalLevel += component.TotalLevel;
+            // 干涸河段只保留连通边，不重扫全部空格，也不给零水位创建供水条目。
+            if (component.TotalLevel > 0)
+                foreach (int index in component.Members)
+                    if (component.State.Levels[index] > 0)
+                        body.Supply.SetLevel((component.State, index), component.State.Levels[index]);
             chunks.Add(component.State);
             foreach (BoundaryEdge edge in component.Borders)
             {
@@ -420,6 +441,7 @@ public sealed class WorldLiquidBodySystem : IDisposable
                 if (!TryGetState(neighbour, out _, out _, out _))
                 {
                     body.HasUnloadedBoundary = true;
+                    body.MissingChunks.Add(owner.ResolveWorldAddress((Vector2)neighbour + Vector2.one * .5f, dimension));
                     continue;
                 }
                 if (!TryGetComponent(neighbour, out LocalComponent other, out _) ||
@@ -444,6 +466,100 @@ public sealed class WorldLiquidBodySystem : IDisposable
         snapshot = new WorldLiquidBodySnapshot(body.LiquidId, body.TotalLevel, body.Cells,
             body.ChunkCount, body.HasUnloadedBoundary);
         return true;
+    }
+
+    /// <summary>泵口属于原有水域时，从同一连通组最高水位格供水，零级尾水也能全部抽尽。</summary>
+    public bool TryGetPumpSource(Vector2 position, out RuntimeTerrainTileSample source)
+    {
+        source = default;
+        if (disposed || world.Epoch != epoch || owner.LiquidFlowExperiment != null ||
+            !TryGetComponent(Vector2Int.FloorToInt(position), out LocalComponent component, out _))
+            return false;
+        Body body = ResolveBody(component);
+        lastPumpRequest = Time.unscaledTimeAsDouble;
+        if (!body.Supply.TryGetHighest(out var donor, out _))
+        {
+            RequestPumpFrontier(body);
+            return false;
+        }
+        ChunkState state = donor.State;
+        int x = donor.Index % state.Terrain.Width, y = donor.Index / state.Terrain.Width;
+        source = new RuntimeTerrainTileSample(state.Chunk.Address, state.Terrain, WorldCell(state, x, y),
+            new Vector2Int(x, y), state.Terrain.GetCell(x, y), 0);
+        return true;
+    }
+    #endregion
+
+    #region 抽液需求驱动的远端数据
+    private void RequestPumpFrontier(Body body)
+    {
+        if (!GameNetwork.HasStateAuthority || supplyLoad != null || !body.HasUnloadedBoundary) return;
+        RuntimeWorldAddress next = default;
+        bool found = false;
+        foreach (RuntimeWorldAddress address in body.MissingChunks)
+        {
+            if (failedSupplyLoads.Contains(address)) continue;
+            if (!found || address.CompareTo(next) < 0) { next = address; found = true; }
+        }
+        if (!found) return;
+        // 仅在本组已知水量抽尽时延伸一块数据，不生成远处表现，也不在一次查询里遍历整条河。
+        foreach (LocalComponent component in body.Components) HoldSupplyChunk(component.State.Chunk.Address);
+        HoldSupplyChunk(next);
+        supplyCancellation ??= new CancellationTokenSource();
+        supplyLoadAddress = next;
+        try { supplyLoad = owner.RequestLiquidFlowChunkAsync(next, supplyCancellation.Token); }
+        catch (Exception exception)
+        {
+            failedSupplyLoads.Add(next);
+            Debug.LogError($"[LiquidBody] 抽液邻区请求失败 {next}：{exception}");
+        }
+    }
+
+    private void HoldSupplyChunk(RuntimeWorldAddress address)
+    {
+        if (!supplyLeases.ContainsKey(address))
+            supplyLeases.Add(address, owner.AcquireChunkLease(address, ChunkLeaseKind.Simulation));
+    }
+
+    private void AdvancePumpSupply()
+    {
+        if (supplyLeases.Count == 0) return;
+        // 停泵、满罐或拆泵后归还远端缓存；超时只管理租约，不降低液体求解频率。
+        if (Time.unscaledTimeAsDouble - lastPumpRequest > 5d)
+        {
+            ReleasePumpSupply();
+            return;
+        }
+        if (supplyLoad == null || !supplyLoad.IsCompleted) return;
+        Task<ChunkRuntime> completed = supplyLoad;
+        supplyLoad = null;
+        try
+        {
+            ChunkRuntime chunk = completed.GetAwaiter().GetResult();
+            SaveDataMgr.Instance?.RestoreRuntimeTerrainForChunk(supplyLoadAddress, chunk);
+            SaveDataMgr.Instance?.RestoreRuntimeBuildingsForChunk(supplyLoadAddress);
+            Observe(chunk);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception exception)
+        {
+            failedSupplyLoads.Add(supplyLoadAddress);
+            Debug.LogError($"[LiquidBody] 抽液邻区读取失败 {supplyLoadAddress}：{exception}");
+        }
+    }
+
+    private void ReleasePumpSupply()
+    {
+        supplyCancellation?.Cancel();
+        supplyCancellation?.Dispose();
+        supplyCancellation = null;
+        // 已放弃请求的异常仅作观察，不能在后台线程访问世界或 Unity。
+        if (supplyLoad != null)
+            _ = supplyLoad.ContinueWith(task => { _ = task.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+        supplyLoad = null;
+        foreach (ChunkLease lease in supplyLeases.Values) lease.Dispose();
+        supplyLeases.Clear();
+        failedSupplyLoads.Clear();
     }
     #endregion
 
@@ -493,13 +609,12 @@ public sealed class WorldLiquidBodySystem : IDisposable
         WakeCross(from);
     }
 
-    /// <summary>已提交取水优先唤醒整个静水连接组；非天然小水域仍由旧局部规则处理。</summary>
+    /// <summary>已提交取水唤醒天然水域或已注水的水渠，临时倒在平地上的液体交给局部规则。</summary>
     public bool TryWake(RuntimeTerrainTileSample source)
     {
         if (!GameNetwork.HasStateAuthority || disposed || owner.LiquidFlowExperiment != null ||
             !TryGetComponent(source.WorldCell, out LocalComponent component, out RuntimeTerrainTileSample current) ||
-            !ReferenceEquals(current.Terrain, source.Terrain) ||
-            ResolveBody(component).Cells < MinimumBodyCells)
+            !ReferenceEquals(current.Terrain, source.Terrain))
             return false;
         WakeCross(source.WorldCell);
         return true;
@@ -509,8 +624,10 @@ public sealed class WorldLiquidBodySystem : IDisposable
     public void Advance()
     {
         if (disposed || world.Epoch != epoch) return;
+        AdvancePumpSupply();
         if (owner.LiquidFlowExperiment != null)
         {
+            ReleasePumpSupply();
             pending.Clear();
             pendingSet.Clear();
             return;
@@ -524,8 +641,7 @@ public sealed class WorldLiquidBodySystem : IDisposable
             {
                 Vector2Int position = pending.Dequeue();
                 pendingSet.Remove(position);
-                if (!TryGetComponent(position, out LocalComponent component, out RuntimeTerrainTileSample current) ||
-                    ResolveBody(component).Cells < MinimumBodyCells)
+                if (!TryGetComponent(position, out LocalComponent component, out RuntimeTerrainTileSample current))
                     continue;
                 foreach (Vector2Int direction in Directions)
                 {

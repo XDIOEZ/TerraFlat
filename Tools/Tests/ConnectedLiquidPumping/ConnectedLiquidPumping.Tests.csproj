@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)../../../</RepoRoot>
+    <BaseIntermediateOutputPath>$(RepoRoot)Temp/Tests/ConnectedLiquidPumping/obj/</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputPath>$(RepoRoot)Temp/Tests/ConnectedLiquidPumping/bin/$(Configuration)/</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="TestDoubles.cs" />
+    <!-- 直接编译正式连通建图、失效和供水桶；替身只提供区块存储与宿主边界。 -->
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidBodySystem.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidSupplyIndex.cs" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

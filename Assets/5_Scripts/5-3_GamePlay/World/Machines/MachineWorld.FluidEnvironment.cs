@@ -104,9 +104,14 @@ public static partial class MachineWorld
     {
         liquid = null; level = 0;
         if (TryResolveFluidSurfacePoint(localPosition, out world, out position))
-            return SpaceSurfaceQuery.TrySampleLiquid(world, position, out liquid, out level);
-        if (IsShipScope || worldKey != SceneManager.GetActiveScene().name || !WorldLiquidSourceResolver.TryResolve(localPosition, out WorldLiquidSourceTarget source))
+            return SpaceSurfaceQuery.TrySamplePumpLiquid(world, position, out position, out liquid, out level);
+        if (IsShipScope || worldKey != SceneManager.GetActiveScene().name)
             return false;
+        // 供水地址随连通组真实余量选择，失败时沿同一地址归还，不能只恢复已经抽空的入口格。
+        if (ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.TryGetConnectedLiquidPumpSource(localPosition, out var donor))
+            localPosition = (Vector2)donor.WorldCell + Vector2.one * .5f;
+        if (!WorldLiquidSourceResolver.TryResolve(localPosition, out WorldLiquidSourceTarget source)) return false;
         world = worldKey; position = localPosition; liquid = source.Liquid; level = source.Sample.LiquidLevel; return true;
     }
 

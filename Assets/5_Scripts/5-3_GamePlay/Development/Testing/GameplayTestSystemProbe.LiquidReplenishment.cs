@@ -14,10 +14,44 @@ public static partial class GameplayTestSystemProbe
         Register("surface_fluids", "replenishment", WorldLiquidReplenishmentRules);
         Register("surface_fluids", "replenishment_limits", WorldLiquidReplenishmentLimits);
         Register("surface_fluids", "replenishment_pair", WorldLiquidReplenishmentPair);
+        Register("surface_fluids", "connected_pump_supply", ConnectedPumpSupply);
     }
 
     private static TerrainCell ReplenishmentGround(int blocking = 0, TerrainCellFlags flags = TerrainCellFlags.Walkable) =>
         new(17, 0, blocking, 2, 5, flags);
+
+    private static JObject ConnectedPumpSupply(JObject args)
+    {
+        int count = (int)Number(args, "cells", 513);
+        if (count < 1 || count > 65536) throw new System.ArgumentOutOfRangeException(nameof(count));
+        var supply = new WorldLiquidSupplyIndex<int>();
+        for (int i = 0; i < count; i++) supply.SetLevel(i, i == 0 ? 0 : 1 + i % 10);
+        long initial = supply.TotalLevel, pumped = 0;
+        int selections = 0;
+        bool valid = true, highestFirst = true;
+        int previousLevel = 10;
+        // 只消费正式供水索引，不在夹具中重新搜索或计算供水格。
+        while (supply.TryGetHighest(out int cell, out int level))
+        {
+            valid &= cell > 0 && cell < count && level > 0 && level <= 10;
+            highestFirst &= level <= previousLevel;
+            previousLevel = level;
+            supply.SetLevel(cell, level - 1);
+            selections++;
+            pumped++;
+        }
+        bool exhausted = !supply.TryGetHighest(out _, out _) && supply.TotalLevel == 0;
+        supply.SetLevel(0, 1);
+        supply.SetLevel(0, 1);
+        bool restored = supply.TryGetHighest(out int restoredCell, out int restoredLevel);
+        return new JObject
+        {
+            ["cells"] = supply.Count, ["initial"] = initial, ["pumped"] = pumped,
+            ["selections"] = selections, ["valid"] = valid, ["highestFirst"] = highestFirst,
+            ["exhausted"] = exhausted, ["restored"] = restored && restoredCell == 0 && restoredLevel == 1,
+            ["restoredTotal"] = supply.TotalLevel
+        };
+    }
 
     private static RuntimeTerrainTileSample ReplenishmentSample(ChunkTerrainData terrain, int x, int y) =>
         new(default, terrain, new Vector2Int(x, y), new Vector2Int(x, y), terrain.GetCell(x, y), 0);

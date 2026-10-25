@@ -11,6 +11,19 @@ local cases = {
     { level = 10, supplied = { 5, 2, 1, 1 }, remaining = 1 }
 }
 
+for _, cells in ipairs({1, 2, 15, 16, 513, 4096}) do
+    local count = cells
+    test.system("surface_fluids", "connected_pump_supply", {cells = count}, function(data)
+        local expected = 0
+        for i = 1, count - 1 do expected = expected + 1 + i % 10 end
+        assert(data.cells == count and data.initial == expected, "供水缓存漏格或初始总量错误")
+        assert(data.valid and data.highestFirst, "供水缓存选择了空格、越界格或未优先抽高水位")
+        assert(data.pumped == expected and data.selections == expected and data.exhausted,
+            "抽空泵口后没有耗尽整组真实库存，或最后一级残水无法抽取")
+        assert(data.restored and data.restoredTotal == 1, "抽干后补液无法重新供水，或重复更新造水")
+    end, "连通供水缓存：空泵口、" .. count .. "格全量耗尽及重新注水")
+end
+
 for _, case in ipairs(cases) do
     local expected = case
     test.system("surface_fluids", "replenishment", { level = expected.level }, function(data)

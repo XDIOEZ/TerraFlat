@@ -70,3 +70,4 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `OwnerCullingEnabled` 默认关；开时按 Owner 可见集合重建索引，关时仍发布可见实例/绘制命令。后端在普通流送 Owner 暂空时保留，仅完整窗口关闭后释放。
 - F5 保留 Runtime/Chunk/租约/BRG，用权威 Tile/Liquid 刷新视觉，运行中的液体身份集合/索引不变。PlayMode 的 `AutomaticAssetRefresher` 锁程序集重载，退出编辑后应用 C# 改动。
 - 默认关闭的实验流动分为纯 `LiquidFlowSolver` 与 `WorldLiquidFlowExperiment` 生命周期；恢复差量/建筑后才算，在显式开放区域内传播，四邻共用松弛预算并限总流入/出。结束/异常/换世界归还租约，关闭不撤已存液深。
+- 正式 `WorldLiquidBodySystem` 按天然液体/水渠建连通缓存，工业泵通过 `TryGetConnectedLiquidPumpSource` 取得真实供水地址，沿同址扣量/回滚；水位桶增量更新，空泵口和一级尾水可抽尽。已知库存耗尽才单请求扩展邻区，恢复地形/建筑后纳入；停查5秒或退出释放额外租约。普通浸水查询不借远端水；实验求解器开启时不并行使用供水缓存。离线 `Tools/Tests/ConnectedLiquidPumping/`，Lua `surface_fluids/connected_pump_supply` 与 `industrial_fluids/connected_surface_pump`。

@@ -77,6 +77,20 @@ namespace FlatWorld.Spaceflight
             return found;
         }
 
+        /// <summary>工业抽液使用所属世界的连通水域供水地址，浸水和漂浮查询仍只读脚下实际液体。</summary>
+        public static bool TrySamplePumpLiquid(string worldKey, Vector2 point, out Vector2 sourcePoint,
+            out LiquidDefinition liquid, out int level)
+        {
+            sourcePoint = point;
+            DimensionManager dimension = DimensionManager.ExistingInstance;
+            ChunkMgr manager = ChunkMgr.ExistingInstance;
+            if (dimension != null && dimension.ActiveAddress.IsSurface &&
+                dimension.ActiveAddress.PlanetId == worldKey && SpaceSession.Current?.IsSpaceView != true &&
+                manager != null && manager.TryGetConnectedLiquidPumpSource(point, out var donor))
+                sourcePoint = (Vector2)donor.WorldCell + Vector2.one * .5f;
+            return TrySampleLiquid(worldKey, sourcePoint, out liquid, out level);
+        }
+
         // 同一抽液事务共用液体校验与地表采样，避免重复读取冷区块和存档差量。
         private static bool TryReadLiquidSurface(string worldKey, Vector2 point, out LandingSurfaceSample sample, out LiquidDefinition liquid)
         {
