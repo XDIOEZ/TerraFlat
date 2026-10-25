@@ -313,7 +313,7 @@ namespace FlatWorld.Dialogue
             providerRoutine = null;
         }
 
-        private CharacterSpeechContext BuildContext(CharacterSpeechTrigger trigger)
+        internal CharacterSpeechContext BuildContext(CharacterSpeechTrigger trigger)
         {
             CharacterSpeechContext context =
                 new CharacterSpeechContext(transform, trigger, Time.unscaledTime);

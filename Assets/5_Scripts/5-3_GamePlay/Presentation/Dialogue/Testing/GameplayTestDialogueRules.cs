@@ -27,6 +27,7 @@ namespace FlatWorld.Dialogue
             GameplayTestSystemProbe.Register("dialogue", "carry_weight_command", CaptureCarryWeightCommand);
             GameplayTestSystemProbe.Register("dialogue", "help_catalog", CaptureHelpCatalog);
             GameplayTestSystemProbe.Register("dialogue", "help_command", CaptureHelpCommand);
+            GameplayTestSystemProbe.Register("dialogue", "stamina_rejection", CaptureStaminaRejection);
         }
 
         #endregion
@@ -65,10 +66,19 @@ namespace FlatWorld.Dialogue
         {
             CharacterSpeechConfigLoadResult loaded = CharacterSpeechConfigLoader.LoadFromResources(logIssues: false);
             var incompleteIds = new JArray();
+            var externalEntries = new JArray();
             int translated = 0;
             int lines = 0;
             foreach (CharacterSpeechConfigEntry entry in loaded.Entries)
             {
+                if (entry.Triggers.Contains(CharacterSpeechTrigger.External))
+                    externalEntries.Add(new JObject
+                    {
+                        ["id"] = entry.Id, ["topic"] = entry.Topic,
+                        ["externalOnly"] = entry.Triggers.TrueForAll(trigger => trigger == CharacterSpeechTrigger.External),
+                        ["priority"] = entry.Priority.ToString(), ["cooldown"] = entry.Cooldown,
+                        ["lines"] = new JArray(entry.Lines), ["conditions"] = entry.Conditions.Count
+                    });
                 lines += entry.Lines.Count;
                 List<string> english = null;
                 bool complete = entry.LocalizedLines != null &&
@@ -108,8 +118,57 @@ namespace FlatWorld.Dialogue
                 ["lines"] = lines,
                 ["translatedLines"] = translated,
                 ["issues"] = loaded.Issues.Count,
-                ["incompleteIds"] = incompleteIds
+                ["incompleteIds"] = incompleteIds,
+                ["externalEntries"] = externalEntries
             };
+        }
+
+        #endregion
+
+        #region 体力不足事件采样
+
+        // 使用未加载世界的独立体力模块，核对拒绝事件和实际扣费结果。
+        private static JObject CaptureStaminaRejection(JObject args)
+        {
+            GameObject root = new("体力不足规则采样") { hideFlags = HideFlags.HideAndDontSave };
+            root.SetActive(false);
+            Mod_Stamina stamina = root.AddComponent<Mod_Stamina>();
+            stamina.Data = new Mod_Stamina.StaminaData
+            {
+                CurrentStamina = (float)GameplayTestSystemProbe.Number(args, "stamina", 0),
+                MaxStamina = 100f
+            };
+            int rejected = 0;
+            int consumed = 0;
+            string rejectedSource = string.Empty;
+            void HandleRejected(Mod_Stamina sender, string source)
+            {
+                if (sender != stamina) return;
+                rejected++;
+                rejectedSource = source;
+            }
+            void HandleConsumed(StaminaConsumptionRecord record) => consumed++;
+            Mod_Stamina.ConsumptionRejected += HandleRejected;
+            stamina.StaminaConsumed += HandleConsumed;
+            try
+            {
+                float cost = (float)GameplayTestSystemProbe.Number(args, "cost", 1);
+                string source = GameplayTestSystemProbe.Text(args, "source", ManualHarvestWork.StaminaSourceId);
+                bool continuous = GameplayTestSystemProbe.Flag(args, "continuous", false);
+                bool accepted = continuous || stamina.TryConsumeStamina(source, cost);
+                if (continuous) stamina.ConsumeStaminaPerSecond(source, cost, 1f);
+                return new JObject
+                {
+                    ["accepted"] = accepted, ["stamina"] = stamina.CurrentValue,
+                    ["rejected"] = rejected, ["consumed"] = consumed, ["source"] = rejectedSource
+                };
+            }
+            finally
+            {
+                Mod_Stamina.ConsumptionRejected -= HandleRejected;
+                stamina.StaminaConsumed -= HandleConsumed;
+                UnityEngine.Object.DestroyImmediate(root);
+            }
         }
 
         #endregion

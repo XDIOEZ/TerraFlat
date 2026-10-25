@@ -275,7 +275,8 @@ namespace FlatWorld.Dialogue
                             triggers[i],
                             out CharacterSpeechTrigger trigger) &&
                         (trigger == CharacterSpeechTrigger.Idle ||
-                         trigger == CharacterSpeechTrigger.StateChanged))
+                         trigger == CharacterSpeechTrigger.StateChanged ||
+                         trigger == CharacterSpeechTrigger.External))
                     {
                         continue;
                     }
@@ -285,7 +286,7 @@ namespace FlatWorld.Dialogue
                         sourceName,
                         entryId,
                         string.Empty,
-                        $"trigger '{triggers[i]}' 无效，配置仅支持 Idle 与 StateChanged。",
+                        $"trigger '{triggers[i]}' 无效，配置仅支持 Idle、StateChanged 与 External。",
                         logIssues);
                     valid = false;
                 }
@@ -357,12 +358,13 @@ namespace FlatWorld.Dialogue
                 {
                     CharacterSpeechTrigger trigger = entry.Triggers[i];
                     if (trigger != CharacterSpeechTrigger.Idle &&
-                        trigger != CharacterSpeechTrigger.StateChanged)
+                        trigger != CharacterSpeechTrigger.StateChanged &&
+                        trigger != CharacterSpeechTrigger.External)
                     {
                         valid &= Report(
                             entry,
                             string.Empty,
-                            $"trigger '{trigger}' 无效，配置仅支持 Idle 与 StateChanged。",
+                            $"trigger '{trigger}' 无效，配置仅支持 Idle、StateChanged 与 External。",
                             result,
                             logIssues);
                     }
@@ -371,7 +373,12 @@ namespace FlatWorld.Dialogue
 
             if (entry.Conditions == null || entry.Conditions.Count == 0)
             {
-                valid &= Report(entry, string.Empty, "conditions 不能为空。", result, logIssues);
+                // 仅由外部事件点名的台词可不带状态条件，自动台词仍需限制触发条件。
+                if (entry.Triggers == null || entry.Triggers.Count == 0 ||
+                    entry.Triggers.Exists(trigger => trigger != CharacterSpeechTrigger.External))
+                    valid &= Report(entry, string.Empty, "自动触发台词的 conditions 不能为空。", result, logIssues);
+                else
+                    entry.Conditions ??= new List<CharacterSpeechCondition>();
             }
             else
             {

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "stamina.work.exhausted",
+      "topic": "stamina.exhausted",
+      "triggers": ["External"],
+      "priority": "Player",
+      "conditions": [],
+      "lines": ["我已经筋疲力尽了", "让我歇会……", "一点力气都没有了，先歇一下", "实在干不动了，让我喘口气"],
+      "localizedLines": {
+        "en": ["I'm completely exhausted.", "Let me rest a moment...", "I've got no energy left. I need a break.", "I can't keep going. Let me catch my breath."]
+      },
+      "duration": 3.5,
+      "cooldown": 8,
+      "once": false,
+      "enabled": true
+    }
+  ]
+}

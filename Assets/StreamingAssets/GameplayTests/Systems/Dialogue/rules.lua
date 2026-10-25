@@ -32,7 +32,56 @@ test.system("dialogue", "builtin_locales", {}, function(data)
     assert(data.issues == 0, "正式自言自语资源存在无效配置")
     assert(#data.incompleteIds == 0 and data.translatedLines == data.lines,
         "正式台词仍缺英文或中英文句数不一致：" .. table.concat(data.incompleteIds, ", "))
-end, "正式角色台词完整覆盖中英文")
+    local exhausted = nil
+    for _, entry in ipairs(data.externalEntries) do
+        if entry.id == "stamina.work.exhausted" then exhausted = entry end
+    end
+    assert(exhausted and exhausted.externalOnly and exhausted.conditions == 0,
+        "筋疲力尽台词必须只由失败的工作主动触发")
+    assert(exhausted.priority == "Player" and exhausted.cooldown == 8,
+        "体力不足反馈的优先级或防刷屏冷却不正确")
+    assert(#exhausted.lines == 4 and exhausted.lines[1] == "我已经筋疲力尽了"
+        and exhausted.lines[2] == "让我歇会……", "体力不足台词缺少指定文案或随机变化")
+end, "正式角色台词完整覆盖中英文，体力不足只由工作失败触发")
+
+local external = [[{"schemaVersion":1,"entries":[{"id":"probe.external","topic":"stamina","priority":"Player","triggers":["External"],"conditions":[],"lines":["让我歇会"]}]}]]
+for _, json in ipairs({external, (string.gsub(external, '"conditions":%[%]', '"conditions":null'))}) do
+    test.system("dialogue", "config", { json = json }, function(data)
+        assert(data.count == 1 and data.issues == 0 and data.ids[1] == "probe.external",
+            "外部事件台词不能使用空条件")
+    end, "外部事件台词接受空条件并由点名请求触发")
+end
+for _, trigger in ipairs({'"External","Idle"', '"External","StateChanged"', '"Debug"'}) do
+    test.system("dialogue", "config", { json = string.gsub(external, '"External"', trigger) }, function(data)
+        assert(data.count == 0 and data.issues > 0,
+            "自动台词仍需条件，Debug 也不能混入正式配置")
+    end, "台词拒绝无条件自动触发及调试枚举：" .. trigger)
+end
+
+for _, row in ipairs({
+    { stamina = 0, cost = 1, accepted = false, remaining = 0, rejected = 1, consumed = 0 },
+    { stamina = .5, cost = 1, accepted = false, remaining = .5, rejected = 1, consumed = 0 },
+    { stamina = .999, cost = 1, accepted = false, remaining = .999, rejected = 1, consumed = 0 },
+    { stamina = 1, cost = 1, accepted = true, remaining = 0, rejected = 0, consumed = 1 },
+    { stamina = 2, cost = 1, accepted = true, remaining = 1, rejected = 0, consumed = 1 },
+    { stamina = 0, cost = 0, accepted = true, remaining = 0, rejected = 0, consumed = 0 },
+    { stamina = 0, cost = -1, accepted = true, remaining = 0, rejected = 0, consumed = 0 },
+    { stamina = 0, cost = 1, continuous = true, accepted = true, remaining = 0, rejected = 0, consumed = 0 }
+}) do
+    test.system("dialogue", "stamina_rejection", row, function(data)
+        assert(data.accepted == row.accepted and math.abs(data.stamina - row.remaining) < .00001,
+            "体力拒绝反馈改变了正式扣费结果")
+        assert(data.rejected == row.rejected and data.consumed == row.consumed,
+            "体力不足时未报告拒绝，或成功、免费和持续消耗时误报")
+        assert(data.source == (row.rejected == 1 and "flatworld.harvest.manual" or ""),
+            "体力不足事件未保留工作的稳定来源")
+    end, "体力工作拒绝：" .. row.stamina .. "/" .. row.cost .. (row.continuous and " 持续消耗" or ""))
+end
+
+test.system("dialogue", "stamina_rejection", { source = " ", stamina = 0, cost = 1 }, function(data)
+    assert(not data.accepted and data.rejected == 1 and data.source == "flatworld.stamina.unspecified",
+        "无来源的体力拒绝未归入默认来源")
+end, "体力拒绝保留未分类来源")
 
 -- 两种正式容量命令共用边界案例，拒绝时重量和体积均保持原值。
 for _, command in ipairs({ "carryweight", "carryvolume" }) do

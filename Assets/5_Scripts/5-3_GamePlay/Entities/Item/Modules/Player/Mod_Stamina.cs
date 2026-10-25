@@ -19,6 +19,14 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
     /// <summary>任意体力消费完成后发布；仅用于运行时观察和调试，不进入存档。</summary>
     public event Action<StaminaConsumptionRecord> StaminaConsumed;
 
+    #region 体力不足反馈
+    // 体力模块只报告扣费被拒绝，由表现层决定是否提示玩家。
+    public static event Action<Mod_Stamina, string> ConsumptionRejected;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetFeedbackEvents() => ConsumptionRejected = null;
+    #endregion
+
     /// <summary>缓存影响体力容量的模块，体力模块不依赖缺盐等具体玩法。</summary>
     public void BindModuleDependencies(ItemMods modules)
     {
@@ -192,7 +200,11 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
 
         float effectiveCost = Mathf.Max(0f, -ResolveStaminaDelta(-amount));
         if (CurrentValue + 0.0001f < effectiveCost)
+        {
+            ConsumptionRejected?.Invoke(this, string.IsNullOrWhiteSpace(sourceId)
+                ? StaminaConsumptionSources.Unspecified : sourceId);
             return false;
+        }
 
         float before = CurrentValue;
         CurrentValue = before - effectiveCost;

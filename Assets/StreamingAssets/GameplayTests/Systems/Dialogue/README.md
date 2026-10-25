@@ -1,12 +1,14 @@
 # 角色对话
 
+2026-10-25：增加工作体力不足气泡，采集、工具挥动等一次性扣费失败后通过语义事件点名 `External` 配置台词，随机四句并复用8秒冷却。`rules.lua` 新增正式扣费拒绝/余额不变、恰好足够、成功/免费/持续消耗不误报、来源保留及默认来源断言；同时检查中英文台词、外部空条件合法、自动空条件与Debug触发拒绝。按用户要求仅静态修改，未编译、未运行Lua或玩法验收；本地玩家筛选、实际连续点击的冷却、优先级阻挡后重试及联机反馈仍需现场确认。
+
 2026-10-20：气泡 UI 静止帧优化：`ScreenSpaceSpeechBubblePresenter` 保留原有每帧相机投影/视口裁剪与模态面板检查，仅在可见性实际变化时 `SetActive`，屏幕锚点变化时更新 `anchoredPosition`；重复 Hide 不再重新提交相同透明度。现有隔离场景用例覆盖发言、遮挡基础显示与主动隐藏，尚未自动比较静止、移动、镜头缩放及离屏回归的 Canvas 更新量；本轮未运行 Unity 编译或 PlayMode。
 
 2026-10-20：`WeatherExposureSpeechProvider` 附近燃烧源扫描使用可复用的物理重叠数组代替每次 `OverlapCircleAll` 分配；满容量自动扩容并重新查询，避免密集碰撞体导致漏报，且及时清理对象池 Collider 引用。原天气、燃料、点燃判断与刷新时序不变。当前 Lua 尚未覆盖热源密集场景、动态启停及雨天 Fact，未运行完整 Unity 编译或 PlayMode；需现场回归与 GC 对比。
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`dialogue/condition、config、builtin_locales、carry_weight_command、help_catalog、help_command`。
+快速入口：`rules.lua`；操作：`dialogue/condition、config、builtin_locales、carry_weight_command、help_catalog、help_command、stamina_rejection`。
 
 已编写的规则覆盖：CharacterSpeechConditionEvaluator 数值/文本/缺失Fact条件；CharacterSpeechConfigLoader 的 JSON/schema/Fact 校验与无效条目隔离；正式 Resources 自言自语资源的有效性与英文译文逐句齐全。
 

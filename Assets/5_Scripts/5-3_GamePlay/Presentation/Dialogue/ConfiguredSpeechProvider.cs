@@ -63,6 +63,26 @@ namespace FlatWorld.Dialogue
 
         #region Provider
 
+        // 玩法事件按稳定 ID 点名台词，复用条件、本地化和成功显示后的冷却。
+        public bool TrySpeakEntry(string entryId)
+        {
+            if (!isActiveAndEnabled || controller == null || !controller.isActiveAndEnabled ||
+                string.IsNullOrWhiteSpace(entryId))
+                return false;
+
+            EnsureConfigurationLoaded();
+            if (!entriesById.TryGetValue(entryId, out CharacterSpeechConfigEntry entry) ||
+                !SupportsTrigger(entry, CharacterSpeechTrigger.External) ||
+                !IsAvailable(entry, Time.unscaledTime))
+                return false;
+
+            if (entry.Conditions.Count > 0 && !CharacterSpeechConditionEvaluator.EvaluateAll(
+                    entry, controller.BuildContext(CharacterSpeechTrigger.External)))
+                return false;
+
+            return controller.Present(BuildRequest(entry));
+        }
+
         public bool CanProvide(CharacterSpeechContext context)
         {
             EnsureConfigurationLoaded();
@@ -70,7 +90,7 @@ namespace FlatWorld.Dialogue
             {
                 CharacterSpeechConfigEntry entry = entries[i];
                 if (SupportsTrigger(entry, CharacterSpeechTrigger.Idle) &&
-                    IsAvailable(entry, context) &&
+                    IsAvailable(entry, context.RequestedAt) &&
                     CharacterSpeechConditionEvaluator.EvaluateAll(entry, context))
                 {
                     return true;
@@ -132,7 +152,7 @@ namespace FlatWorld.Dialogue
                     continue;
                 }
 
-                if (IsAvailable(entry, context))
+                if (IsAvailable(entry, context.RequestedAt))
                     candidates.Add(entry);
             }
 
@@ -164,17 +184,17 @@ namespace FlatWorld.Dialogue
 
         private bool IsAvailable(
             CharacterSpeechConfigEntry entry,
-            CharacterSpeechContext context)
+            float requestedAt)
         {
             if (entry.Once && completionStore.IsCompleted(entry.CompletionFlag))
                 return false;
 
             if (!string.IsNullOrEmpty(entry.CooldownGroup) &&
                 nextAllowedGroupAt.TryGetValue(entry.CooldownGroup, out float groupAllowed) &&
-                context.RequestedAt < groupAllowed)
+                requestedAt < groupAllowed)
                 return false;
             return !nextAllowedSpeechAt.TryGetValue(entry.Id, out float nextAllowed) ||
-                   context.RequestedAt >= nextAllowed;
+                   requestedAt >= nextAllowed;
         }
 
         private static CharacterSpeechRequest BuildRequest(CharacterSpeechConfigEntry entry)
