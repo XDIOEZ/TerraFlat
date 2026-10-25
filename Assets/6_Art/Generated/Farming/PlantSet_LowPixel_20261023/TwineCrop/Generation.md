@@ -29,3 +29,9 @@ Subject: TwineCrop / wild vine, preserving an airy vine identity rather than bec
 - 新图：1199 × 1312 px，984 PPU；画布世界高度保持 1.33333333333333。
 - 画布世界宽度：1.21849593495935。
 - Alpha 的留白占比会影响可见植株大小；仅完成图片重绘，未进行 Unity 内场景验证。
+
+## 2026-10-25 导入修复
+
+- 原图仍为 1199 × 1312 px；此前导入上限 128 导致 Unity 实际缩成 117 × 128 px。
+- 主设置、默认平台、Standalone 和 Android 的 `maxTextureSize` 均改为 2048，保留原图分辨率，不重采样、不限色。
+- 保留 984 PPU、现有 Pivot、Point、无 Mipmap 和无压缩设置，植株游戏内尺寸不变；游戏内观感由用户验收。
