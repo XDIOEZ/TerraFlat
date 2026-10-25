@@ -1,4 +1,19 @@
 -- 地形生成、采挖与植被工作规则，不生成当前玩家世界，也不截图。
+test.system("terrain", "river_generation_config", {}, function(data)
+    assert(data.surface["river.estuary.length"] == 18 and data.surface["river.estuary.halfAngleDegrees"] == 35,
+        "正式河流JSON没有加载入海口长度或展开半角")
+    assert(data.estuaryLength == data.surface["river.estuary.length"] and
+            math.abs(data.estuarySpread - math.tan(math.rad(data.surface["river.estuary.halfAngleDegrees"]))) < 0.000001,
+        "河流目录的入海口参数没有进入生成快照")
+    assert(data.cave["cave.river.enabled"] == 1 and data.cave["cave.river.halfWidth"] == 0.72 and data.textCount == 0,
+        "河流目录没有同时保留洞穴参数或引入了多余文本配置")
+    assert(#data.missing == 2, "缺少入海口参数缺失回归")
+    for _, row in ipairs(data.missing) do
+        assert(row.rejected, "河流目录接受了缺少参数的JSON：" .. row.id)
+    end
+    assert(data.unknownRejected and data.duplicateRejected, "河流目录接受了未知或重复参数")
+end, "正式河流JSON加载、入海口快照参数与严格配置边界")
+
 for _, case in ipairs({
     {args = {}, threshold = 15, multiplier = 0.5},
     {args = {threshold = 20, multiplier = 0.25}, threshold = 20, multiplier = 0.25},

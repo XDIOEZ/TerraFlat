@@ -20,6 +20,7 @@ public sealed class RiverGenerationConfigCatalog
         "river.polarSourceChanceMultiplier", "river.minimumVisibleCourseLength", "river.tributaryStartFlow",
         "river.minLakeCells", "river.maxLakeCells", "river.maxLakeLevelRise", "river.lakeMinFlow", "river.lakeChance",
         "river.fullWidthFlow", "river.maxWidth", "river.meanderStrength", "river.meanderScale",
+        "river.estuary.length", "river.estuary.halfAngleDegrees",
         "river.floodplainStartFlow",
         "river.floodplainMaxRadius", "river.floodplainMaxSlope",
         "river.alluvialTileThreshold", "river.bedCenterTileId", "river.bedEdgeTileId",

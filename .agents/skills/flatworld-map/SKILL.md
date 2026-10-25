@@ -20,7 +20,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 - `Tiles/tile-manifest.json` 及分包是地块真源；`Assets/7_Tiles/` 是外观，`Assets/4_ScriptObjects/World/Tiles/` 的 SO 仅为稳定 ID/GUID 引用壳。
 - `WorldGeneration/NaturalItems/natural-item-manifest.json` 定义自然物/矿脉；Profile SO 只选 `ecologyRuleIds/caveResourceRuleIds` 和倍率，矿脉 ID 顺序是优先级。
-- `WorldGeneration/Hydrology/river-generation.json` 定义地表 `river.*` 与洞穴 `cave.river.*`；Profile 加载时合入快照，预览器编辑只作用于本次预览。
+- `WorldGeneration/Hydrology/river-generation.json` 定义地表 `river.*` 与洞穴 `cave.river.*`；新增参数同步 `RiverGenerationConfigCatalog` 严格清单（包括 `river.estuary.*`），回归 `terrain/river_generation_config` 直接读取正式 JSON。Profile 加载时合入快照，预览器编辑只作用于本次预览。
 - `Structures/fixed-structures.json` 经 `FixedStructureCatalog` 展开布局；后端管理占地、能力与回滚，自动遗迹走独立 SO/确定性生成链。
 - 星体地表覆盖来自 `Space/solar-system.json`；月球只用 `Tile_MoonRegolith`（独立灰白 TileBase），自然物/矿物、洞口和遗迹关闭，环形山半径 3～50 格，坑沿仍用月壤。尺寸分布复用 `SpaceSurfaceTerrain`，不靠石地外圈表现坑沿。
 

@@ -22,6 +22,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ecology/companion_bind_candidates", WorldEcologyCompanionBindCandidates);
         operations.Add("ecology/neighborhood_cache", WorldEcologyNeighborhoodCache);
         operations.Add("terrain/cached_generation", WorldCachedTerrainGeneration);
+        operations.Add("terrain/river_generation_config", WorldRiverGenerationConfig);
         operations.Add("terrain/river_diagnostic_aggregation", WorldRiverDiagnosticAggregation);
         operations.Add("terrain/climate_cache", WorldClimateCache);
         operations.Add("terrain/spawn_line", WorldSurfaceSpawnLine);

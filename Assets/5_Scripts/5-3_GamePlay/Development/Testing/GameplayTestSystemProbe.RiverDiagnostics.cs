@@ -1,10 +1,60 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 
 public static partial class GameplayTestSystemProbe
 {
+    #region 河流正式配置加载采样
+
+    // 直接读取正式 JSON 并调用生产加载器，避免理想化生成夹具漏掉参数清单不同步。
+    private static JObject WorldRiverGenerationConfig(JObject args)
+    {
+        string json = StreamingAssetsTextLoader.ReadAllText(RiverGenerationConfigLoader.BuiltInConfigPath);
+        RiverGenerationConfigCatalog catalog = RiverGenerationConfigLoader.Deserialize(json);
+        var surface = new Dictionary<string, double>();
+        var cave = new Dictionary<string, double>();
+        var surfaceTexts = new Dictionary<string, string>();
+        var caveTexts = new Dictionary<string, string>();
+        catalog.ApplyTo("surface.default", surface, surfaceTexts);
+        catalog.ApplyTo("cave.default", cave, caveTexts);
+        var settings = new ChunkGenerationProfileSnapshot("probe:river-config", 1, 4, 4, surface).Settings;
+
+        bool RejectMutation(Action<JArray> mutate)
+        {
+            JObject changed = JObject.Parse(json);
+            JToken profile = changed["profiles"].First(row => (string)row["profileId"] == "surface.default");
+            mutate((JArray)profile["numericParameters"]);
+            try { RiverGenerationConfigLoader.Deserialize(changed.ToString()); return false; }
+            catch (InvalidDataException) { return true; }
+        }
+
+        var missing = new JArray();
+        foreach (string id in new[] { "river.estuary.length", "river.estuary.halfAngleDegrees" })
+            missing.Add(new JObject
+            {
+                ["id"] = id,
+                ["rejected"] = RejectMutation(parameters => parameters.First(row => (string)row["id"] == id).Remove())
+            });
+        return new JObject
+        {
+            ["surface"] = JObject.FromObject(surface),
+            ["cave"] = JObject.FromObject(cave),
+            ["textCount"] = surfaceTexts.Count + caveTexts.Count,
+            ["estuaryLength"] = settings.RiverEstuaryLength,
+            ["estuarySpread"] = settings.RiverEstuarySpread,
+            ["missing"] = missing,
+            ["unknownRejected"] = RejectMutation(parameters => parameters.Add(
+                new JObject { ["id"] = "river.unknown", ["value"] = 1 })),
+            ["duplicateRejected"] = RejectMutation(parameters => parameters.Add(parameters[0].DeepClone()))
+        };
+    }
+
+    #endregion
+
     #region 河流请求诊断累计采样
 
     // 正式生成两次共享一个请求诊断，只返回原始计数与分段，断言交给 Lua。
