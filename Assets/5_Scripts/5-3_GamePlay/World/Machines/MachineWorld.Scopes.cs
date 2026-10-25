@@ -61,6 +61,7 @@ public static partial class MachineWorld
         public readonly Dictionary<(int NodeId, string Chamber), FluidInventory> Inventories = new();
         public readonly Dictionary<int, FluidTankGroup> TankOwners = new();
         public readonly List<FluidTankGroup> Tanks = new();
+        public readonly HashSet<MachineEntity> CombinedTankNotifications = new();
         public readonly Dictionary<FluidInventory, FluidInventoryState> Stock = new();
         public readonly Dictionary<FluidInventory, FluidInventoryState> StockCache = new();
         public readonly Dictionary<FluidInventory, double> Throughput = new();

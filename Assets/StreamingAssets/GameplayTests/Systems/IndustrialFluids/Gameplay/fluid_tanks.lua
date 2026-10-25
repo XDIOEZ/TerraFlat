@@ -1,6 +1,6 @@
 test.check("world_ready")
 test.runtime("industrial_fluids", "natural_fill", {}, function(d)
-    assert(d.filled and not d.repeat, "自然补气或满限拒绝错误")
+    assert(d.filled and not d["repeat"], "自然补气或满限拒绝错误")
     assert(math.abs(d.amount-d.capacity*d.fraction)<.000001, "自然补气未限制在配置占比")
     assert(math.abs(d.sourceTakenLiters-d.amount)<.000001, "自然补气没有扣真实来源")
     assert(not d.highFill and d.higherBefore==d.higherAfter and d.sourceStable, "超过自然上限的气体被排空")

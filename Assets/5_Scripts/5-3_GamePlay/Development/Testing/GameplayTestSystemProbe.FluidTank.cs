@@ -19,6 +19,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("industrial_fluids", "block_tank_stacking", WorldBlockTankStacking);
         Register("industrial_fluids", "liquid_block_tanks", WorldLiquidBlockTanks);
+        Register("industrial_fluids", "combined_tank_inventory", WorldCombinedFluidTankInventory);
         Register("industrial_fluids", "portable_tank_cache", WorldPortableTankCache);
         Register("industrial_fluids", "portable_tank_payload", WorldPortableTankPayload);
         Register("industrial_fluids", "portable_tank_air_fill", WorldPortableTankAirFill);
@@ -28,8 +29,19 @@ public static partial class GameplayTestSystemProbe
     }
 
     #region 方块气罐堆叠规则采样
+    private static FluidCatalog ReadBuiltInFluidCatalogForTankRules()
+    {
+        var catalog = new FluidCatalog(); var definitions = new List<FluidDefinition>();
+        string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, FluidCatalogLoader.RelativePath);
+        foreach (FluidDefinitionDto definition in FluidCatalogLoader.Deserialize(StreamingAssetsTextLoader.ReadAllText(path)).Fluids)
+            definitions.Add(new FluidDefinition(definition));
+        catalog.Register(definitions);
+        return catalog;
+    }
+
     private static JObject WorldBlockTankStacking(JObject args)
     {
+        FluidCatalog catalog = ReadBuiltInFluidCatalogForTankRules();
         var definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
         var machines = JsonConvert.DeserializeObject<MachineCatalogDocument>(
             Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog").text);
@@ -44,21 +56,22 @@ public static partial class GameplayTestSystemProbe
             Data_GeneralItem second = EntityCraftingDefinitionData(definition, 3);
             var row = new JObject { ["id"] = id, ["stackable"] = first.Stack.Stackable,
                 ["canStack"] = first.CanStackWith(second) };
+            row["combineAdjacent"] = machines.Nodes.Find(value => value.Id == id.Replace("_Summoner", ""))?.Fluid?.CombineAdjacent == true;
             if (id.StartsWith("GasTankBlock_", StringComparison.Ordinal))
             {
                 // 每个返还物独立保存本罐内容，不依赖网络组主或分摊副本。
-                var firstContents = new FluidInventory();
-                var secondContents = new FluidInventory();
-                firstContents.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.Oxygen), .1m, 0m, 293.15), 100, .001);
-                secondContents.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.Nitrogen), .2m, 0m, 293.15), 100, .001);
+                var firstContents = new FluidInventory(catalog: catalog);
+                var secondContents = new FluidInventory(catalog: catalog);
+                firstContents.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Oxygen), .1m, 0m, 293.15), 100, .001);
+                secondContents.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Nitrogen), .2m, 0m, 293.15), 100, .001);
                 var original = new FluidMachineState(); original.Chambers["main"] = firstContents.State;
                 var other = new FluidMachineState(); other.Chambers["main"] = secondContents.State;
                 MachinePersistence.Write(first, "fluid", original);
                 MachinePersistence.Write(second, "fluid", other);
                 var firstSaved = MachinePersistence.Read<FluidMachineState>(first, "fluid");
                 var secondSaved = MachinePersistence.Read<FluidMachineState>(second, "fluid");
-                var firstDecoded = new FluidInventory(firstSaved.Chambers["main"]);
-                var secondDecoded = new FluidInventory(secondSaved.Chambers["main"]);
+                var firstDecoded = new FluidInventory(firstSaved.Chambers["main"], catalog);
+                var secondDecoded = new FluidInventory(secondSaved.Chambers["main"], catalog);
                 row["independentPayloads"] = firstDecoded.GetGasMoles(FluidIds.Oxygen) == .1m &&
                     firstDecoded.GetGasMoles(FluidIds.Nitrogen) == 0m && secondDecoded.GetGasMoles(FluidIds.Nitrogen) == .2m &&
                     secondDecoded.GetGasMoles(FluidIds.Oxygen) == 0m;
@@ -72,8 +85,37 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 液罐方块配置与库存采样
+    private static JObject WorldCombinedFluidTankInventory(JObject args)
+    {
+        FluidCatalog catalog = ReadBuiltInFluidCatalogForTankRules();
+        var first = new FluidInventory(catalog: catalog); var second = new FluidInventory(catalog: catalog);
+        first.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Oxygen), FluidUnits.StandardLitersToMol(20), 0, 293.15), 100, .001);
+        second.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Nitrogen), FluidUnits.StandardLitersToMol(70), 0, 293.15), 100, .001);
+        var combined = new CombinedFluidTankInventory(catalog);
+        combined.AddMember(1, 100, 100, .1, first.State); combined.AddMember(2, 100, 100, .1, second.State);
+        combined.SynchronizeLocalShares();
+        var held = new FluidInventory(first.State.Clone(), catalog);
+        double before = (double)FluidUnits.MolToStandardLiters(combined.Inventory.GasMoles);
+        combined.RemoveMember(1);
+        var liquid = new FluidInventory(catalog: catalog); var other = new FluidInventory(catalog: catalog);
+        liquid.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.PureWater), 0,
+            FluidUnits.LiquidLitersToMol(catalog.Find(FluidIds.PureWater), 40), 293.15), 100, .001);
+        other.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.FilteredWater), 0,
+            FluidUnits.LiquidLitersToMol(catalog.Find(FluidIds.FilteredWater), 10), 293.15), 100, .001);
+        var combinedLiquid = new CombinedFluidTankInventory(catalog); combinedLiquid.AddMember(3, 100, 100, .1, liquid.State);
+        return new JObject { ["before"] = before, ["held"] = (double)FluidUnits.MolToStandardLiters(held.GasMoles),
+                ["remaining"] = (double)FluidUnits.MolToStandardLiters(combined.Inventory.GasMoles),
+                ["remainingCapacity"] = combined.GasCapacityStandardLiters, ["remainingMembers"] = combined.Count,
+                ["heldOxygen"] = (double)FluidUnits.MolToStandardLiters(held.GetGasMoles(FluidIds.Oxygen)),
+                ["remainingOxygen"] = (double)FluidUnits.MolToStandardLiters(combined.Inventory.GetGasMoles(FluidIds.Oxygen)),
+                ["rejectMixedLiquid"] = !combinedLiquid.CanCombineLiquid(other.State),
+                ["centerSlice"] = FluidTankBlockVisual.ResolveSourceSliceIndexForTankConnections(4, 2),
+                ["seamSlice"] = FluidTankBlockVisual.ResolveSourceSliceIndexForTankConnections(5, 2) };
+    }
+
     private static JObject WorldLiquidBlockTanks(JObject args)
     {
+        FluidCatalog fluidCatalog = ReadBuiltInFluidCatalogForTankRules();
         var definitions = new Dictionary<string, ItemDefinitionDto>(StringComparer.OrdinalIgnoreCase);
         foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
             if (!definition.Abstract) definitions.Add(definition.Id, definition);
@@ -102,16 +144,16 @@ public static partial class GameplayTestSystemProbe
                     ["sprite"] = definition.Visual.SpriteAddress, ["maxHp"] = definition.Health.MaxHp });
             }
             // 独立库存复用正式数量事务，采样满罐、异种拒绝、出液及拆装载荷。
-            var source = new FluidInventory(); var target = new FluidInventory(); var other = new FluidInventory();
+            var source = new FluidInventory(catalog: fluidCatalog); var target = new FluidInventory(catalog: fluidCatalog); var other = new FluidInventory(catalog: fluidCatalog);
             void AddLiquid(FluidInventory inventory, string fluidId, decimal liters)
-                => inventory.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(fluidId), 0m,
-                    FluidUnits.LiquidLitersToMol(FluidCatalog.Default.Find(fluidId), liters), 293.15), 1000, .001);
+                => inventory.TryAdd(FluidInventory.CreateBatch(fluidCatalog.Find(fluidId), 0m,
+                    FluidUnits.LiquidLitersToMol(fluidCatalog.Find(fluidId), liters), 293.15), 1000, .001);
             AddLiquid(source, FluidIds.PureWater, 150); AddLiquid(other, FluidIds.FilteredWater, 5);
             double filled = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Liquid, 150,
                 fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
             double overflow = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Liquid, 1,
                 fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
-            var delivered = new FluidInventory();
+            var delivered = new FluidInventory(catalog: fluidCatalog);
             double drained = IndustrialFluidTransfer.Transfer(target, delivered, FluidPhase.Liquid, 25, 100, 100);
             double mixed = IndustrialFluidTransfer.Transfer(other, target, FluidPhase.Liquid, 5,
                 fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
@@ -120,11 +162,12 @@ public static partial class GameplayTestSystemProbe
             var state = new FluidMachineState(); state.Chambers["main"] = target.State;
             var otherState = new FluidMachineState(); otherState.Chambers["main"] = other.State;
             MachinePersistence.Write(first, "fluid", state); MachinePersistence.Write(second, "fluid", otherState);
-            var restored = new FluidInventory(MachinePersistence.Read<FluidMachineState>(first, "fluid").Chambers["main"]);
-            var restoredOther = new FluidInventory(MachinePersistence.Read<FluidMachineState>(second, "fluid").Chambers["main"]);
+            var restored = new FluidInventory(MachinePersistence.Read<FluidMachineState>(first, "fluid").Chambers["main"], fluidCatalog);
+            var restoredOther = new FluidInventory(MachinePersistence.Read<FluidMachineState>(second, "fluid").Chambers["main"], fluidCatalog);
             RuntimeRecipe recipe = recipes.Find(value => value.Id == "core:chemistry_" + id)
                 ?? throw new InvalidOperationException("缺少液罐方块配方：" + id);
             rows.Add(new JObject { ["id"] = id, ["kind"] = fluid.Kind, ["material"] = fluid.MaterialId,
+                ["combineAdjacent"] = fluid.CombineAdjacent,
                 ["capacity"] = fluid.VolumeLiters, ["manualAirFill"] = fluid.AllowManualAirFill,
                 ["ports"] = JArray.FromObject(fluid.Ports), ["pairs"] = pairs,
                 ["stackable"] = carrier.Stackable == true && emptyStackable,
@@ -288,46 +331,49 @@ public static partial class GameplayTestSystemProbe
     // 使用真实星球大气库存适配，分别验证混合气、有限来源、已有库存和回滚。
     private sealed class OverdrawAirSource : IShipAtmosphereSource
     {
+        private readonly FluidCatalog catalog;
+        public OverdrawAirSource(FluidCatalog catalog) => this.catalog = catalog;
         public double PressureKPa => 100;
         public double TemperatureCelsius => 20;
         public decimal Taken, Returned;
         public IReadOnlyList<FluidBatch> TakeGas(decimal amount)
         {
             Taken = amount * 2;
-            return new[] { FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.Oxygen), Taken, 0m, 293.15d) };
+            return new[] { FluidInventory.CreateBatch(catalog.Find(FluidIds.Oxygen), Taken, 0m, 293.15d) };
         }
         public void ReleaseGas(FluidBatch gas) => Returned += gas.GasMoles;
     }
 
     private static JObject WorldPortableTankAirFill(JObject args)
     {
-        static FluidInventory Air(decimal moles)
+        FluidCatalog catalog = ReadBuiltInFluidCatalogForTankRules();
+        FluidInventory Air(decimal moles)
         {
-            var result = new FluidInventory();
-            result.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.Oxygen), moles * .21m, 0m, 293.15), 100, .001);
-            result.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.Nitrogen), moles * .79m, 0m, 293.15), 100, .001);
+            var result = new FluidInventory(catalog: catalog);
+            result.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Oxygen), moles * .21m, 0m, 293.15), 100, .001);
+            result.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Nitrogen), moles * .79m, 0m, 293.15), 100, .001);
             return result;
         }
         var sourceInventory = Air(10m);
         var source = new TankShipAtmosphereSource(sourceInventory, 100, .001);
-        var target = new FluidInventory();
+        var target = new FluidInventory(catalog: catalog);
         decimal before = sourceInventory.GasMoles;
         bool filled = PortableGasTankAirFilling.TryFillFromSource(source, target, 20d, .2d);
         decimal after = sourceInventory.GasMoles;
         bool again = PortableGasTankAirFilling.TryFillFromSource(source, target, 20d, .2d);
-        var vacuum = new FluidInventory();
-        var vacuumTarget = new FluidInventory();
+        var vacuum = new FluidInventory(catalog: catalog);
+        var vacuumTarget = new FluidInventory(catalog: catalog);
         bool vacuumFilled = PortableGasTankAirFilling.TryFillFromSource(new TankShipAtmosphereSource(vacuum, 100, .001), vacuumTarget, 20, .2);
         var partialSource = Air(.001m);
-        var partialTarget = new FluidInventory();
+        var partialTarget = new FluidInventory(catalog: catalog);
         bool partial = PortableGasTankAirFilling.TryFillFromSource(new TankShipAtmosphereSource(partialSource, 1, .001), partialTarget, 20, .2);
         var high = Air(1m);
         decimal highBefore = high.GasMoles, sourceBeforeHigh = sourceInventory.GasMoles;
         bool highFilled = PortableGasTankAirFilling.TryFillFromSource(source, high, 20, .2);
-        var tiny = new FluidInventory();
+        var tiny = new FluidInventory(catalog: catalog);
         decimal tinyBefore = sourceInventory.GasMoles;
         bool tinyFilled = PortableGasTankAirFilling.TryFillFromSource(source, tiny, .0001, .2);
-        var bad = new OverdrawAirSource(); var rejected = new FluidInventory();
+        var bad = new OverdrawAirSource(catalog); var rejected = new FluidInventory(catalog: catalog);
         bool badFilled = PortableGasTankAirFilling.TryFillFromSource(bad, rejected, 20, .2);
         return new JObject
         {

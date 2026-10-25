@@ -18,6 +18,7 @@ public static partial class MachineWorld
         if (owner?.Mechanical == null) throw new InvalidOperationException("工业物料释放缺少权威存档。");
         foreach (MachineEntity member in nodes.Values)
             if (member.Definition.Fluid != null) FluidDeviceOperations.ReleaseReservations(member);
+        DetachCombinedFluidTankMember(node);
         foreach (string chamber in state.Chambers.Keys)
         {
             FluidInventory inventory = GetFluidInventory(node, chamber);
@@ -71,6 +72,7 @@ public static partial class MachineWorld
             Text(node.Definition.Id); Text(node.Definition.LogicId); Text(definition.Kind); Text(definition.MaterialId);
             Number(definition.VolumeLiters); Number(definition.MinimumGasSpaceLiters);
             Number(definition.ThroughputLitersPerSecond); Number(definition.GasCapacityStandardLiters);
+            key.Append(definition.CombineAdjacent).Append(';');
             key.Append(state.Ruptured)
                 .Append('/').Append(GetFluidDeviceBehavior(node).PortsEnabled(node)).Append(';');
             Text(state.OutletPhase); Text(state.SelectedGasId);

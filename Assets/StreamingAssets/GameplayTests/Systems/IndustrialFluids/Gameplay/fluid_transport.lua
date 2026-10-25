@@ -1,6 +1,7 @@
 test.check("world_ready")
 test.runtime("industrial_fluids", "outlet", {}, function(d)
-    assert(d.zeroAccepted and d.rateAccepted and d.stopped==100, "零速率未停止排放")
+    assert(d.zeroAccepted and d.rateAccepted and d.stoppedContentsUnchanged, "零速率仍扣取了真实气体")
+    assert(math.abs(d.stopped-100)<.000001, "出口停止前的真实装料量错误")
     assert(math.abs((100-d.after)-2*d.seconds)<.000001, "出口未按实际每秒速率扣量")
     assert(math.abs(d.oxygen/d.nitrogen-21/79)<.000001, "普通排气改变混气比例")
     assert(d.savedRate==2, "出口速率没有进入正式快照")

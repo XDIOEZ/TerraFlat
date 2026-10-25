@@ -75,7 +75,7 @@ public static partial class MachineWorld
         FluidMachineState state = GetFluidState(node);
         return !state.Ruptured && TryGetFluidAirSource(node, out IShipAtmosphereSource source) &&
             PortableGasTankAirFilling.CanFillFromSource(source, GetFluidInventory(node),
-                node.Definition.Fluid.GasCapacityStandardLiters, node.Definition.Fluid.NaturalFillFraction);
+                GetFluidGasCapacityStandardLiters(node), node.Definition.Fluid.NaturalFillFraction);
     }
 
     internal static bool TryGetFluidAirSource(MachineEntity node, out IShipAtmosphereSource source)
@@ -93,7 +93,7 @@ public static partial class MachineWorld
         using var nodeScope = UseNodeScope(node);
         return CanFillFluidTankAir(node) && TryGetFluidAirSource(node, out IShipAtmosphereSource source) &&
             PortableGasTankAirFilling.TryFillFromSource(source, GetFluidInventory(node),
-                node.Definition.Fluid.GasCapacityStandardLiters, node.Definition.Fluid.NaturalFillFraction);
+                GetFluidGasCapacityStandardLiters(node), node.Definition.Fluid.NaturalFillFraction);
     }
 
     #endregion

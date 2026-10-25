@@ -124,9 +124,9 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         }
         if (logic.Behavior.IsStorage && Array.Exists(logic.Definition.Ports, port => port.Phase == "gas"))
         {
-            // 本罐容量只读取本罐真实气量。
+            // 组合罐的液位使用同一共享库存与总容量。
             FluidInventory inventory = MachineWorld.GetFluidInventory(logic.Entity, "main");
-            view.SetGasCapacity((float)((double)FluidUnits.MolToStandardLiters(inventory.GasMoles) / logic.Definition.GasCapacityStandardLiters));
+            view.SetGasCapacity((float)((double)FluidUnits.MolToStandardLiters(inventory.GasMoles) / MachineWorld.GetFluidGasCapacityStandardLiters(logic.Entity)));
         }
         string caption = logic.ActionLabel;
         view.SetActionVisible(!string.IsNullOrEmpty(caption));

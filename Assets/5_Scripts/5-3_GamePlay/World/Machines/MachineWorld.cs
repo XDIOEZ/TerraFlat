@@ -376,6 +376,7 @@ public static partial class MachineWorld
     public static void StateChanged(MachineEntity node)
     {
         if (!Contains(node)) return;
+        if (NotifyCombinedFluidTankGroupStateChanged(node)) return;
         NodeStateChanged?.Invoke(node);
 
     }

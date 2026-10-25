@@ -91,7 +91,7 @@ public static class FluidDeviceOperations
                     double budget = Math.Min(maximum - moved, GetFluidSupplyStandardLiters(workspace.Routes, i, seconds, true));
                     string filter = Filter(workspace.Routes, i); double grossFactor = GrossFactor(pending, filter);
                     double actual = IndustrialFluidTransfer.Transfer(pending, target, FluidPhase.Gas, budget,
-                        route.Node.Definition.Fluid.GasCapacityStandardLiters, route.Node.Definition.Fluid.VolumeLiters, Filter(workspace.Routes, i));
+                        MachineWorld.GetFluidGasCapacityStandardLiters(route.Node), MachineWorld.GetFluidVolumeLiters(route.Node), Filter(workspace.Routes, i));
                     if (actual <= 0) continue;
                     workspace.Visited.Add(target);
                     ConsumeFluidRouteBudget(workspace.Routes, i, actual * grossFactor); StateChanged(route.Node); moved += actual;
@@ -165,7 +165,7 @@ public static class FluidDeviceOperations
                 double budget = Math.Min(remaining - moved, Math.Min(GetIndustrialFreeCapacity(route.Node, FluidPhase.Liquid, fluid.Id, route.Chamber),
                     GetFluidSupplyStandardLiters(workspace.Routes, i, seconds, true)));
                 double actual = IndustrialFluidTransfer.Transfer(buffer, target, FluidPhase.Liquid, budget,
-                    route.Node.Definition.Fluid.GasCapacityStandardLiters, route.Node.Definition.Fluid.VolumeLiters, fluid.Id);
+                    MachineWorld.GetFluidGasCapacityStandardLiters(route.Node), MachineWorld.GetFluidVolumeLiters(route.Node), fluid.Id);
                 if (actual <= 0) continue;
                 ConsumeFluidRouteBudget(workspace.Routes, i, actual);
                 StateChanged(route.Node); StateChanged(node); moved += actual;
@@ -185,7 +185,7 @@ public static class FluidDeviceOperations
     public static void FillContainers(MachineEntity node, float seconds, bool liquid)
     {
         if (node.Logic is not FluidMachineLogic logic || logic.PortableTank == null) return;
-        double remaining = Rate(node, seconds); if (remaining <= 0) return;
+        decimal remaining = (decimal)Rate(node, seconds); if (remaining <= 0) return;
         var workspace = workspaces.GetOrCreateValue(node); FluidPhase phase = liquid ? FluidPhase.Liquid : FluidPhase.Gas;
         bool changed = false;
         foreach (var slot in logic.PortableTank.Data.itemSlots)
@@ -209,7 +209,7 @@ public static class FluidDeviceOperations
                 {
                     var route = workspace.Routes.Nodes[i]; var source = GetFluidInventory(route.Node, route.Chamber);
                     if ((liquid ? source.LiquidMoles : source.GasMoles) <= 0 || workspace.Visited.Contains(source)) continue;
-                    double budget = i == 0 ? remaining : Math.Min(remaining, GetFluidSupplyStandardLiters(workspace.Routes, i, seconds, true));
+                    double budget = i == 0 ? (double)remaining : Math.Min((double)remaining, GetFluidSupplyStandardLiters(workspace.Routes, i, seconds, true));
                     FluidInventoryState before = source.State.Clone(); double actual = 0d;
 
                     if (!liquid)
@@ -243,7 +243,7 @@ public static class FluidDeviceOperations
                     workspace.Visited.Add(source);
                     if (i == 0) StateChanged(node);
                     else ConsumeFluidSupplyBudget(workspace.Routes, i, Difference(before, source, phase), GetFluidRouteCharge(workspace.Routes, i, before, actual));
-                    remaining -= actual; changed = true;
+                    remaining -= (decimal)actual; changed = true;
                 }
             }
         }

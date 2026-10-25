@@ -73,6 +73,49 @@ public static class Program
           valve.State.ValveOpen=false;graph.Rebuild(new[]{source,valve,target});graph.CollectSupplyRoutes(target,"main",FluidPhase.Gas,new[]{"test:a"},routes);
           Require(!routes.Nodes.Any(n=>n.Node==source),"closed valve bypassed"); valve.State.ValveOpen=true;valve.Definition.Fluid.Ports[0].Mode="output";valve.Definition.Fluid.Ports[1].Mode="input";
           graph.Rebuild(new[]{source,valve,target});graph.CollectSupplyRoutes(target,"main",FluidPhase.Gas,new[]{"test:a"},routes);Require(!routes.Nodes.Any(n=>n.Node==source),"backwards valve bypassed"); });
+        Run("combined gas tanks share capacity and both gases", () =>
+        { var a=Gas(20); var b=Gas(70,0); var combined=new CombinedFluidTankInventory();
+          combined.AddMember(1,100,100,.1,a.State); combined.AddMember(2,100,100,.1,b.State);
+          Require(combined.Count==2 && Near(combined.VolumeLiters,200) && Near(combined.GasCapacityStandardLiters,200) && Near(Liters(combined.Inventory),90),"not combined");
+          var source=Gas(300);double moved=IndustrialFluidTransfer.Transfer(source,combined.Inventory,FluidPhase.Gas,300,combined.GasCapacityStandardLiters,combined.VolumeLiters);
+          Require(Near(moved,110)&&Near(Liters(combined.Inventory),200)&&Near(Liters(source),190),"combined gas capacity clipped or created matter");
+          combined.SynchronizeLocalShares();Require(Near(Liters(a),100)&&Near(Liters(b),100),"local shares not saved"); });
+        Run("dismantled combined member takes only its conserved share", () =>
+        { var a=Gas(20);var b=Gas(70,0);var combined=new CombinedFluidTankInventory();
+          combined.AddMember(1,100,100,.1,a.State);combined.AddMember(2,100,100,.1,b.State);combined.SynchronizeLocalShares();
+          var savedA=new FluidInventory(a.State.Clone());var savedB=new FluidInventory(b.State.Clone());
+          combined.RemoveMember(1);Require(Near(Liters(combined.Inventory),45)&&Near(Liters(savedA),45)&&Near(combined.VolumeLiters,100),"removal lost or cloned group");
+          var restored=new CombinedFluidTankInventory();restored.AddMember(2,100,100,.1,savedB.State);restored.AddMember(1,100,100,.1,savedA.State);
+          Require(Near(Liters(restored.Inventory),90)&&Near((double)restored.Inventory.GetGasMoles("test:a"),(double)Gas(20).GasMoles),"reverse restore changed composition"); });
+        Run("repeated uneven combined shares preserve exact moles and energy", () =>
+        { var original=Gas(1,.21);var first=original.State;var second=new FluidInventoryState();var third=new FluidInventoryState();
+          decimal exactGas=original.GasMoles;double energy=first.TotalInternalEnergyJoules;
+          for(int index=0;index<100;index++){var combined=new CombinedFluidTankInventory();combined.AddMember(1,1,1,.001,first);combined.AddMember(2,2,2,.001,second);combined.AddMember(3,3,3,.001,third);combined.SynchronizeLocalShares();
+            Require(first.Components.Sum(c=>c.GasMoles)+second.Components.Sum(c=>c.GasMoles)+third.Components.Sum(c=>c.GasMoles)==exactGas,"decimal share drift");
+            Require(Near(first.TotalInternalEnergyJoules+second.TotalInternalEnergyJoules+third.TotalInternalEnergyJoules,energy),"energy drift");}
+          Require(Near(Liters(new FluidInventory(first)),1d/6)&&Near(Liters(new FluidInventory(third)),.5),"capacity weighting ignored"); });
+        Run("combined liquids reject incompatible neighbours and preserve 200L", () =>
+        { var a=new FluidInventory();var b=new FluidInventory();var foreign=new FluidInventory();
+          a.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:a"),0,90,300),100,.001);
+          b.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:a"),0,60,300),100,.001);
+          foreign.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:b"),0,10,300),100,.001);
+          var combined=new CombinedFluidTankInventory();combined.AddMember(1,100,100,.1,a.State);combined.AddMember(2,100,100,.1,b.State);
+          Require(!combined.CanCombineLiquid(foreign.State),"foreign liquid merged");
+          Require(IndustrialFluidTransfer.Transfer(foreign,combined.Inventory,FluidPhase.Liquid,10,200,200)==0,"foreign liquid transferred");
+          var delivered=new FluidInventory();double moved=IndustrialFluidTransfer.Transfer(combined.Inventory,delivered,FluidPhase.Liquid,125,200,200);
+          combined.SynchronizeLocalShares();Require(Near(moved,125)&&Near(combined.Inventory.GetLiquidLiters(),25)&&Near(a.GetLiquidLiters()+b.GetLiquidLiters()+delivered.GetLiquidLiters(),150),"shared output lost material"); });
+        Run("unchanged shared save reuses local states and strips transient reservations", () =>
+        { var a=Gas(80);var b=Gas(0);var combined=new CombinedFluidTankInventory();combined.AddMember(1,100,100,.1,a.State);combined.AddMember(2,100,100,.1,b.State);
+          combined.Inventory.TryReserve("engine:test",FluidPhase.Gas,FluidUnits.StandardLitersToMol(10),out _);combined.SynchronizeLocalShares();
+          long first=a.State.StateRevision,second=b.State.StateRevision;combined.SynchronizeLocalShares();
+          Require(a.State.StateRevision==first&&b.State.StateRevision==second&&a.State.Ports.Count==0&&b.State.Ports.Count==0,"steady save rewrote shares or copied runtime reservation");
+          Require(combined.Inventory.GetAvailableMoles("test:a",FluidPhase.Gas)<combined.Inventory.GasMoles,"saving cancelled active reservation"); });
+        Run("client partial member updates keep authoritative shares", () =>
+        { var a=Gas(75);var b=Gas(50);var combined=new CombinedFluidTankInventory();
+          combined.AddMember(1,100,100,.1,a.State);combined.AddMember(2,100,100,.1,b.State);
+          combined.RemoveMember(2,false);Require(Near(Liters(a),75)&&Near(Liters(combined.Inventory),75),"client repartitioned a partial snapshot");
+          var next=new CombinedFluidTankInventory();next.AddMember(1,100,100,.1,a.State);next.AddMember(2,100,100,.1,Gas(75).State);
+          Require(Near(Liters(next.Inventory),150),"later authoritative member failed to restore exact group total"); });
         Console.WriteLine($"Result: {passed} passed, {failed} failed"); return failed==0?0:1;
     }
     #endregion

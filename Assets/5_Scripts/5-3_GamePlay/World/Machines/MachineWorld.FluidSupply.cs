@@ -90,7 +90,7 @@ public static partial class MachineWorld
                     if (budget <= 0d) continue;
                     FluidInventoryState before = source.State.Clone();
                     double moved = IndustrialFluidTransfer.Transfer(source, GetFluidInventory(receiver), phase, budget,
-                        receiver.Definition.Fluid.GasCapacityStandardLiters, receiver.Definition.Fluid.VolumeLiters, GetFluidRouteFilter(routes, i));
+                        GetFluidGasCapacityStandardLiters(receiver), GetFluidVolumeLiters(receiver), GetFluidRouteFilter(routes, i));
                     if (moved <= 0d) continue;
                     var consumed = new List<FluidRequirement>();
                     foreach (FluidComponentState component in before.Components)
@@ -111,8 +111,7 @@ public static partial class MachineWorld
         if (receiver == null || string.IsNullOrEmpty(fluidId)) return false;
         bool Matches(MachineEntity node, string id)
         {
-            if (!GetFluidState(node).Chambers.TryGetValue(id, out FluidInventoryState inventory)) return true;
-            foreach (FluidComponentState component in inventory.Components)
+            foreach (FluidComponentState component in GetFluidInventory(node, id).State.Components)
                 if (component.LiquidMoles > 0m && !FluidInventory.Same(component.FluidId, fluidId)) return false;
             return true;
         }

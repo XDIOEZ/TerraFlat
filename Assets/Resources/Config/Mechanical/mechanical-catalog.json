@@ -521,7 +521,8 @@
         "SingleLiquid": false,
         "ThroughputLitersPerSecond": 1000,
         "GasCapacityStandardLiters": 100,
-        "NaturalFillFraction": 0.2
+        "NaturalFillFraction": 0.2,
+        "CombineAdjacent": true
       }
     },
     {
@@ -580,7 +581,8 @@
         "ThroughputLitersPerSecond": 1000,
         "GasCapacityStandardLiters": 100,
         "NaturalFillFraction": 0.2,
-        "AllowManualAirFill": true
+        "AllowManualAirFill": true,
+        "CombineAdjacent": true
       }
     },
     {
@@ -635,7 +637,8 @@
         "VolumeLiters": 100,
         "MinimumGasSpaceLiters": 0.1,
         "AllowManualAirFill": false,
-        "ThroughputLitersPerSecond": 1000
+        "ThroughputLitersPerSecond": 1000,
+        "CombineAdjacent": true
       }
     },
     {
@@ -690,7 +693,8 @@
         "VolumeLiters": 100,
         "MinimumGasSpaceLiters": 0.1,
         "ThroughputLitersPerSecond": 1000,
-        "AllowManualAirFill": false
+        "AllowManualAirFill": false,
+        "CombineAdjacent": true
       }
     },
     {

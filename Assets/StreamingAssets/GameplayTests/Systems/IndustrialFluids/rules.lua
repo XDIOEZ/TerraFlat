@@ -2,11 +2,22 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.000001), message)
 end
 
+test.system("industrial_fluids", "combined_tank_inventory", {}, function(data)
+    near(data.before, 90, "组合罐没有合并真实气量")
+    near(data.held, 45, "拆回没有按单格容量分出内容")
+    near(data.remaining, 45, "拆回丢失或复制剩余气体")
+    near(data.heldOxygen + data.remainingOxygen, 20, "混气拆分改变实际组分")
+    near(data.remainingCapacity, 100, "拆回后容量未缩小")
+    assert(data.remainingMembers == 1 and data.rejectMixedLiquid, "成员拆分或异种液体组合拒绝错误")
+    assert(data.centerSlice == 4 and data.seamSlice == 9,
+        "组合接缝拉伸了中央气流或液滴标志")
+end, "组合气液罐真实库存、拆回守恒与标志接缝")
+
 test.system("industrial_fluids", "liquid_block_tanks", {}, function(data)
     assert(#data.tanks == 2 and #data.recipeWarnings == 0, "铁钢液罐或正式制作配方缺失")
     for index, tank in ipairs(data.tanks) do
         local expected_id = index == 1 and "LiquidTankBlock_Iron" or "LiquidTankBlock_Steel"
-        assert(tank.id == expected_id and tank.kind == "tank", "液罐没有复用正式储罐能力")
+        assert(tank.id == expected_id and tank.kind == "tank" and tank.combineAdjacent, "液罐没有启用自然组合储罐能力")
         assert(tank.material == (index == 1 and "iron" or "steel"), "液罐材质配置错误")
         near(tank.capacity, 100, "液罐容量不是100L")
         assert(not tank.manualAirFill and tank.stackable, "液罐误启用补气或空罐不能堆叠")
@@ -52,6 +63,7 @@ test.system("industrial_fluids", "block_tank_stacking", {}, function(data)
     assert(#data.tanks == 6, "气罐方块或便携气罐定义覆盖不完整")
     for _, tank in ipairs(data.tanks) do
         if string.sub(tank.id, 1, 13) == "GasTankBlock_" then
+            assert(tank.combineAdjacent, "气罐方块没有启用自然组合")
             assert(tank.stackable and tank.canStack, tank.id .. "没有启用同类方块堆叠")
             assert(tank.independentPayloads and tank.differentContentsCannotStack and tank.sourceUnchanged,
                 tank.id .. "独立罐内容保存混用、带不同气体合堆或改动原库存")

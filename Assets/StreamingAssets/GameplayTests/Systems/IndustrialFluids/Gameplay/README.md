@@ -1,7 +1,7 @@
 # 工业V1现场案例
 
 - fluid_inventory / fluid_thermodynamics：保留共用库存事务与物性基础。
-- fluid_state_save：独立罐保存、倒序恢复、拆回保留全部本地内容。
+- fluid_state_save：铁钢气液罐自然组合、三格容量、断桥拆分/复装、单格份额与倒序恢复、异种液体隔离/排空后合并及模板整组补给。
 - fluid_topology：只连接无库存、气液分离、阀门、方向、指定气体过滤。
 - fluid_transport：混合气比例排放、0停用、速率保存。
 - fluid_tanks：自然20%上限、三槽实际铁罐按顺序装填。

@@ -189,9 +189,16 @@ namespace FlatWorld.Structures
             Dictionary<int, FixedStructureResources> resources)
         {
             foreach (MachineWorld.FluidTankGroup group in groups)
+            {
+                var combined = new CombinedFluidTankInventory();
                 foreach (MachineEntity member in group.Members)
                     if (resources.TryGetValue(member.Id, out FixedStructureResources value) && HasFluid(value))
-                        CreateIndustrialFluidState(value.Gas, value.Liquids, member.Definition.Fluid);
+                    {
+                        FluidMachineDefinition definition = member.Definition.Fluid;
+                        combined.AddMember(member.Id, definition.VolumeLiters, definition.GasCapacityStandardLiters,
+                            definition.MinimumGasSpaceLiters, CreateIndustrialFluidState(value.Gas, value.Liquids, definition));
+                    }
+            }
         }
 
         public static void Refill(MachineEntity node, FixedStructureResources resources, HashSet<FluidInventory> filled)
@@ -209,9 +216,18 @@ namespace FlatWorld.Structures
             {
                 if (node.Definition.Fluid == null) throw new InvalidDataException("机器没有流体库存。");
                 FluidInventory inventory = MachineWorld.GetFluidInventory(node);
+                FluidInventoryState configured = CreateIndustrialFluidState(resources.Gas, resources.Liquids, node.Definition.Fluid);
                 if (filled.Add(inventory))
                 {
-                    inventory.Restore(CreateIndustrialFluidState(resources.Gas, resources.Liquids, node.Definition.Fluid));
+                    inventory.Restore(configured);
+                }
+                else
+                {
+                    // 组合罐按模板成员累加一次真实份额，不能只保留首格的补给量。
+                    var source = new FluidInventory(configured);
+                    foreach (FluidBatch batch in source.Drain())
+                        if (!inventory.TryAdd(batch, MachineWorld.GetFluidVolumeLiters(node) + .001d, .001d, false, true))
+                            throw new InvalidDataException("组合储罐的模板补给超出容量或液体冲突。");
                 }
             }
             FillInventories(node, resources, false);

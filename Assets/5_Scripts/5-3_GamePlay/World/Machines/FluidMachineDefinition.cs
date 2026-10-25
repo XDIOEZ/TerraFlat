@@ -21,6 +21,7 @@ public sealed partial class FluidMachineDefinition
     public double BatchLiquidServings = 1;
     public bool AllowPortableTank;
     public bool AllowManualAirFill; // 自然补气按固定容量占比扣取真实环境组分。
+    public bool CombineAdjacent; // 相邻同定义罐体共享库存和总容量，管道仍不持有库存。
     public float SolidFuelCapacity; // 显式启用三槽燃料炉，零容量设备不持有固体燃烧能力。
     public float SolidFuelAbsorptionSeconds = 3f;
     public FluidMachinePortDefinition[] Ports = Array.Empty<FluidMachinePortDefinition>();

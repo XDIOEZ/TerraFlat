@@ -26,7 +26,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 迁移以 TransferScopeNodes/TransferShipNodes 整批交接真实节点、加工器和各设备本地库存；不借拆装模拟迁移。
 - 加工资格归设备，转化与温度归材料；RecipeProcessor 复用 CraftingService 原子事务。燃料炉只供热，不持有配方或加工进度。
 - 面板与显示只读权威状态；库存命令校验操作者、距离与目标身份。拆回先成功交付全状态返还物，再移除节点。
-- 储罐手动补气由 `AllowManualAirFill` 启用，按 `NaturalFillFraction`（首版20%）补到固定标准升容量占比，真实扣环境气源；已有超出自然上限的气体不排空。动力泵可充满，各罐独立保存。
+- 储罐手动补气由 `AllowManualAirFill` 启用，按 `NaturalFillFraction`（首版20%）补到固定标准升总容量占比，真实扣环境气源；已有超出自然上限的气体不排空。`CombineAdjacent` 同类方块罐共享库存和总容量，保存/拆回只带按格容量分出的份额。
 - 三套拓扑共享节点、各自求解；扩展用注册策略与租约，保持设备规则、库存事务及表现分离。
 
 ## 按需资料

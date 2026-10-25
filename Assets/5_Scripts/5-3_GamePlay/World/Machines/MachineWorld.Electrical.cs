@@ -61,6 +61,7 @@ public static partial class MachineWorld
         RebuildFluidNetworks();
         RebuildCombatSearchPadding();
         dirty = false;
+        PublishCombinedFluidTankTopologyChanges();
         foreach (MachineEntity conveyor in graph.ConveyorChanges)
         {
             UpdateConveyorVisualSpeed(conveyor);

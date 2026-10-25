@@ -3649,19 +3649,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196504
-    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
+    m_Localized: "Adjacent matching blocks combine into one shared gas tank, adding 100 standard L per block. Natural refill stops at 20% of the total capacity; powered pumps can fill it. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196505
-    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
+    m_Localized: "Adjacent matching blocks combine into one shared gas tank, adding 100 standard L per block. Natural refill stops at 20% of the total capacity; powered pumps can fill it. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196506
-    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
+    m_Localized: "Adjacent matching blocks combine into one shared gas tank, adding 100 standard L per block. Natural refill stops at 20% of the total capacity; powered pumps can fill it. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196507
-    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
+    m_Localized: "Adjacent matching blocks combine into one shared gas tank, adding 100 standard L per block. Natural refill stops at 20% of the total capacity; powered pumps can fill it. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585088
@@ -4343,7 +4343,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010001
-    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010002
@@ -4351,7 +4351,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010003
-    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010004
@@ -4359,7 +4359,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010005
-    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010006
@@ -4367,7 +4367,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010007
-    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
   references:

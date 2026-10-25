@@ -26,11 +26,7 @@ public static class FluidTankBlockVisual
         out Sprite sprite, out Vector3 offset, out Vector3 scale)
     {
         int x = index % 3, y = index / 3;
-        int sourceX = x, sourceY = y;
-        // 接通的一侧取中央平板纹理，外侧仍保留原图的完整边框。
-        if (x == 0 && (connectionMask & 8) != 0 || x == 2 && (connectionMask & 2) != 0) sourceX = 1;
-        if (y == 0 && (connectionMask & 4) != 0 || y == 2 && (connectionMask & 1) != 0) sourceY = 1;
-        sprite = GetSlices(source)[sourceX + sourceY * 3];
+        sprite = GetSlices(source)[ResolveSourceSliceIndexForTankConnections(index, connectionMask)];
         float width = x == 1 ? 1f - BorderFraction * 2f : BorderFraction;
         float height = y == 1 ? 1f - BorderFraction * 2f : BorderFraction;
         offset = new Vector3((x - 1) * (.5f - BorderFraction * .5f),
@@ -38,10 +34,21 @@ public static class FluidTankBlockVisual
         scale = new Vector3(width / sprite.bounds.size.x, height / sprite.bounds.size.y, 1f);
     }
 
+    internal static int ResolveSourceSliceIndexForTankConnections(int index, int connectionMask)
+    {
+        int x = index % 3, y = index / 3;
+        int sourceX = x, sourceY = y;
+        // 接通的一侧取中央平板纹理，外侧仍保留原图的完整边框。
+        if (x == 0 && (connectionMask & 8) != 0 || x == 2 && (connectionMask & 2) != 0) sourceX = 1;
+        if (y == 0 && (connectionMask & 4) != 0 || y == 2 && (connectionMask & 1) != 0) sourceY = 1;
+        // 连边只复用空白金属，中央气流或液滴标志不拉伸到接缝。
+        return sourceX == 1 && sourceY == 1 && index != 4 ? 9 : sourceX + sourceY * 3;
+    }
+
     private static Sprite[] GetSlices(Sprite source)
     {
         if (slices.TryGetValue(source, out Sprite[] result)) return result;
-        result = new Sprite[9];
+        result = new Sprite[10];
         Rect rect = source.rect;
         for (int y = 0; y < 3; y++)
         for (int x = 0; x < 3; x++)
@@ -56,6 +63,10 @@ public static class FluidTankBlockVisual
             result[x + y * 3].name = source.name + "_TankPart_" + (x + y * 3);
             result[x + y * 3].hideFlags = HideFlags.DontSave;
         }
+        result[9] = Sprite.Create(source.texture, new Rect(rect.x + rect.width * .2f, rect.y + rect.height * .2f,
+            rect.width * .04f, rect.height * .04f), new Vector2(.5f, .5f), source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+        result[9].name = source.name + "_TankBlankPanel";
+        result[9].hideFlags = HideFlags.DontSave;
         slices.Add(source, result);
         return result;
     }
