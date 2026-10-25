@@ -56,7 +56,7 @@ namespace FlatWorld.Automation
                     {
                         name = ButtonName,
                         text = "性能 JSON",
-                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和整屏截图到 Logs/ProfileData；右键打开目录。"
+                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和整屏截图到 Logs/ProfileData；成功后自动复制报告文件夹完整路径，可直接粘贴给 Agent；右键打开目录。"
                     };
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
@@ -114,7 +114,8 @@ namespace FlatWorld.Automation
                 int last = ProfilerDriver.lastFrameIndex;
                 if (first < 0 || last < first)
                     throw new InvalidOperationException("Profiler 暂无可导出的帧，请先录制一些帧。");
-                var profiler = EditorWindow.focusedWindow as ProfilerWindow;
+                var notificationWindow = EditorWindow.focusedWindow;
+                var profiler = notificationWindow as ProfilerWindow;
                 if (profiler == null)
                 {
                     var windows = Resources.FindObjectsOfTypeAll<ProfilerWindow>();
@@ -123,10 +124,10 @@ namespace FlatWorld.Automation
                 long selected = profiler != null ? profiler.selectedFrameIndex : -1;
                 int frameIndex = selected >= first && selected <= last ? (int)selected : last;
                 string directory = ExportFrame(frameIndex);
+                // 导出成功后复制报告目录，并在当前窗口提示，方便直接粘贴给 Agent。
                 EditorGUIUtility.systemCopyBuffer = directory;
-                if (profiler != null)
-                    profiler.ShowNotification(new GUIContent("性能、日志、世界现场与整屏截图已导出，文件夹路径已复制"), 5d);
-                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 Logs/ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
+                (notificationWindow ?? profiler)?.ShowNotification(new GUIContent("性能报告已导出，文件夹完整路径已复制到剪贴板"), 5d);
+                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n文件夹完整路径已复制到剪贴板，可直接粘贴给 Agent。包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 Logs/ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
             }
             catch (Exception exception)
             {
