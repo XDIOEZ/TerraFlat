@@ -8,6 +8,7 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
 {
     #region 动作状态与依赖
     public const string ModuleId = "ShieldCombat";
+    public const string GuardHitStaminaSourceId = "flatworld.combat.shield_guard_hit";
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public Ex_ModData modData = new() { ID = ModuleId };
@@ -15,6 +16,8 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
     private readonly ShieldActionClock clock = new();
     private Mod_GameController controller;
     private Mod_DamageReceiver health;
+    private Mod_Stamina stamina;
+    private Mod_Roll roll;
     private Mod_Mover mover;
     private Mod_HotBar hotbar;
     private Mod_Equipment equipment;
@@ -47,6 +50,8 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
         UnbindCallbacks();
         controller = modules.GetMod_ByID<Mod_GameController>(ModText.Controller);
         health = modules.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        stamina = modules.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+        roll = modules.GetMod_ByID<Mod_Roll>(Mod_Roll.ModuleId);
         mover = modules.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         hotbar = modules.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         equipment = modules.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module);
@@ -61,7 +66,11 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
             controller.AttackEnded += HandlePrimaryEnded;
             controller.ParryRequested += HandleParryRequested;
         }
-        if (health != null) health.DeathStarted += HandleDeath;
+        if (health != null)
+        {
+            health.DeathStarted += HandleDeath;
+            health.OnHitReceived += HandleHitReceived;
+        }
         if (mover != null) mover.MotionReset += CancelAction;
         if (equipment != null) equipment.EquipmentChanged += RefreshOffhand;
         if (hotbar != null) hotbar.HeldItemChanged += HandleHandChanged;
@@ -86,12 +95,24 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
             controller.AttackEnded -= HandlePrimaryEnded;
             controller.ParryRequested -= HandleParryRequested;
         }
-        if (health != null) health.DeathStarted -= HandleDeath;
+        if (health != null)
+        {
+            health.DeathStarted -= HandleDeath;
+            health.OnHitReceived -= HandleHitReceived;
+        }
         if (mover != null) mover.MotionReset -= CancelAction;
         if (equipment != null) equipment.EquipmentChanged -= RefreshOffhand;
         if (hotbar != null) hotbar.HeldItemChanged -= HandleHandChanged;
     }
     private void HandleDeath(Mod_DamageReceiver _) => CancelAction();
+    private void HandleHitReceived(DamageReceiverDamageInfo info)
+    {
+        if (!GameNetwork.HasStateAuthority || !IsRuntimeLoaded || !isActiveAndEnabled || !Enabled ||
+            clock.Kind != ShieldActionKind.Guard || stamina?.Data == null || info == null || info.Receiver != health ||
+            !info.Context.Attack.Source.IsValid || info.Context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment) return;
+        // 举盾每次有效受击复用本角色翻滚费用，体力不足由体力模块扣到零。
+        stamina.ConsumeStamina(GuardHitStaminaSourceId, Mathf.Max(0f, roll != null ? roll.StaminaCost : Mod_Roll.DefaultStaminaCost));
+    }
     private void HandleHandChanged(ItemData data)
     {
         if (primaryRequested && !ReferenceEquals(primarySource, data)) CancelAction();
@@ -155,7 +176,7 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
     private bool CanAct() => GameNetwork.HasStateAuthority && IsRuntimeLoaded && isActiveAndEnabled && Enabled &&
         item != null && !item.DestructionHandled && health != null && health.Hp > 0f && !health.IsRuntimeTransitioning &&
         controller?.IsGameplayInputLocked != true && !ActorActionConstraints.IsAttackBlocked(item) &&
-        item.itemMods.GetMod_ByID<Mod_Roll>("Roll")?.IsRolling != true &&
+        roll?.IsRolling != true &&
         (!(item is Player player) || !player.IsLocalProfile || !EventSystemGuard.IsTextInputFocused);
     private bool ValidShield(Mod_Shield shield) => shield != null && shield.IsRuntimeLoaded && shield.Enabled &&
         shield.item != null && shield.item.InHand && shield.item.Owner == item &&

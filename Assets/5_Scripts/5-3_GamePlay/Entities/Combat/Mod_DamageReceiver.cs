@@ -93,6 +93,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     public List<DamageReciver_Action> DeathActions = new List<DamageReciver_Action>(); // 死亡触发动作列表
 
     public event Action<DamageReceiverDamageInfo> OnAttacked; // 有效攻击通过阵营与受击规则后触发，包含零伤命中。
+    public event Action<DamageReceiverDamageInfo> OnHitReceived; // 正式命中提交后触发，包含零伤命中，不包含冷却或无敌拒绝。
     public event Action<DamageReceiverDamageInfo> OnDamageReceived; // 实际生命损失大于零时触发，外部模块可订阅。
 
     public event Action<BodyPartDamageInfo> OnBodyPartDamaged;
@@ -827,7 +828,12 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
                     Data.DeathCause = deathCause?.Copy() ?? DeathCauseRecord.FromDamage(sender, context ?? default);
                     Data.DeathCause.Variant = Random.Range(0, int.MaxValue);
                 }
+            }
 
+            OnHitReceived?.Invoke(damageInfo);
+
+            if (damage > 0f)
+            {
                 foreach (BodyPartDamageInfo hit in damageInfo.BodyPartHits)
                     DispatchBodyPartDamaged(hit);
 

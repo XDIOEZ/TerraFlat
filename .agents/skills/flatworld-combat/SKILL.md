@@ -91,5 +91,6 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - `Mod_Shield` 提供盾牌能力与伤害窗，`Mod_ShieldCombat` 组合角色输入、装备、防御和速度；`ShieldActionClock` 负责单击/长按/冷却互斥。副手槽稳定 ID `OffHand`，标签 `EquipmentSlot.OffHand`。
 - 左键短按盾击（动作中 +5 防御），长按举盾（+10、移速 ×0.5）；只有真实副手盾牌允许 `Parry` 输入（默认 Q，短窗 +10，不是无敌）。配置在 `shells/shields.json`，不能加被动护甲代替动作防御。
+- 举盾在权威端订阅生命 `OnHitReceived`，每次正式非环境命中（含全挡零伤）经 `Mod_Stamina.ConsumeStamina` 支付本角色翻滚费用，默认10点、不足扣到零；盾击/弹反、冷却或无敌拒绝、环境/直接扣血不消费。费用来源 `flatworld.combat.shield_guard_hit`，回归 `combat/shield_hit_stamina`。
 - 临时防御用 `AcquireTemporaryDefense`，不改存档基础防御；普通/部位结算均消费有效防御。客户端 `OffhandParry` 走现有战斗权威交接，`NetworkWorldPlayer.Shield` 只复制表现。协议版本 25。
 - 独立验证：`python Tools/Tests/ShieldActions/verify.py --build`；正式 Lua：`Systems/Combat/shield-rules.lua`。Unity 播放中不刷新或运行场景测试。

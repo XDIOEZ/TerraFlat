@@ -8,6 +8,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     #region 配置与动作状态
     public const string ModuleId = "Roll";
     public const string StaminaSourceId = "flatworld.movement.roll";
+    public const float DefaultStaminaCost = 10f;
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public Ex_ModData modData = new() { ID = ModuleId };
@@ -16,7 +17,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     [Min(0f)] public float SpeedMultiplier = 2f;
     [Range(.01f, 1f)] public float ColliderScale = .5f;
     [Min(0f)] public float Cooldown = 0f;
-    [Min(0f)] public float StaminaCost = 10f;
+    [Min(0f)] public float StaminaCost = DefaultStaminaCost;
     public Transform visualRoot;
     public Collider2D[] bodyColliders = Array.Empty<Collider2D>();
     public bool IsRolling { get; private set; }
