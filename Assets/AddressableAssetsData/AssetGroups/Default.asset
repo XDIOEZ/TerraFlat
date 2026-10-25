@@ -1591,6 +1591,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3d90c82fbc7c44379437e45514a9e22f
+    m_Address: Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5712a19fbac535840803f6efdce3f650
     m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Growing.png
     m_ReadOnly: 0

@@ -31,7 +31,7 @@
         "InventoryCategory.IndustrialBlock"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Tileset.png[Smelter]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
