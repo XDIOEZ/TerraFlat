@@ -37,6 +37,16 @@
       "priority": "Critical",
       "conditions": [
         {
+          "fact": "weather.isRaining",
+          "operator": "Equal",
+          "value": "True"
+        },
+        {
+          "fact": "temperature.current",
+          "operator": "Less",
+          "value": "15"
+        },
+        {
           "fact": "weather.isExposed",
           "operator": "Equal",
           "value": "True"

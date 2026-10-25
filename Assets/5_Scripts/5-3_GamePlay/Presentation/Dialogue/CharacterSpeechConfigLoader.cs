@@ -35,6 +35,7 @@ namespace FlatWorld.Dialogue
             CharacterSpeechFacts.WeatherIsRaining,
             CharacterSpeechFacts.WeatherIsSnowing,
             CharacterSpeechFacts.SeasonPreparation,
+            CharacterSpeechFacts.TemperatureCurrent,
             CharacterSpeechFacts.TemperatureTransition,
             CharacterSpeechFacts.WeatherIsExposed,
             CharacterSpeechFacts.WeatherHasHeatSource,

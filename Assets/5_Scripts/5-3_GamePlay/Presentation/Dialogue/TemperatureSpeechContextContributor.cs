@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -55,6 +56,9 @@ namespace FlatWorld.Dialogue
             Mod_Temperature temperature = player.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
             if (temperature == null)
                 return;
+            // 直接提供角色实际体温，让台词配置自行判断温度条件。
+            context.SetFact(CharacterSpeechFacts.TemperatureCurrent,
+                temperature.Data.CurrentTemperature.ToString("R", CultureInfo.InvariantCulture));
             tracker.Tick(temperature.Data.CurrentTemperature,
                 temperature.SafeTemperatureMin + settings.ColdThresholdOffset,
                 temperature.SafeTemperatureMax + settings.HotThresholdOffset,

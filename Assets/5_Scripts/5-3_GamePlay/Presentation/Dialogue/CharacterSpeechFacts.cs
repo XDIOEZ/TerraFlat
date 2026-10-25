@@ -38,6 +38,7 @@ namespace FlatWorld.Dialogue
 
         #region 天气与暴露
 
+        public const string TemperatureCurrent = "temperature.current";
         public const string TemperatureTransition = "temperature.transition";
 
         public const string WeatherType = "weather.type";
