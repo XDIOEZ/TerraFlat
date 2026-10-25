@@ -1,0 +1,543 @@
+{
+  "date": "2026-10-25",
+  "generator": "Built-in image_gen",
+  "itemCount": 18,
+  "spriteCount": 19,
+  "postProcessing": "None. Generated PNG files copied byte-for-byte; native resolution, colors and alpha preserved.",
+  "importSettings": "Point filtering, no mipmaps, uncompressed; PPU preserves the old world canvas size. Stone door states share a corrected bottom baseline.",
+  "runtimeValidation": "Static PNG/import-setting/reference checks passed. Active Play Mode was neither paused nor stopped. Unity has deferred all 19 sprite imports, including two new asset GUIDs. Console: 0 errors and 2 existing unrelated warnings; in-game acceptance belongs to the user.",
+  "assets": [
+    {
+      "id": "Earth",
+      "name": "泥土",
+      "assetPath": "Assets/6_Art/Items/Tools/Item_Tool_231.png",
+      "guid": "e831a9eb194325143b7e7e1a10f84b45",
+      "originalAddress": "Assets/6_Art/Items/Tools/Item_Tool_231.png",
+      "originalSha256": "e081b460eb251fede8514277686a7708b2a034a7783a2640073894fb16f6b67f",
+      "outputSha256": "ae0e9d59e374cd80732a5f2098bbcf5c001f3623436a609238a4da9e4bc298fd",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Tools/Item_Tool_231.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: a compact low mound of loose dark brown earth, asymmetrical broad silhouette, dry crumbly humus with three or four large clods. Dark warm umber shadow, muted earthy brown and ochre lit planes. Clearly SOIL, not orange clay, not a pointed rock. A broad irregular low base, no container, no grass."
+    },
+    {
+      "id": "Apple",
+      "name": "苹果",
+      "assetPath": "Assets/6_Art/Food/Item_Food_013.png",
+      "guid": "1b6dd32ba60554e4b9129e54cd9c8f6a",
+      "originalAddress": "Assets/6_Art/Food/Item_Food_013.png",
+      "originalSha256": "aaf6665d3902f4a0d3eb7d73eb8a0dcb73e6efdc748e050c9b6010ed559f893f",
+      "outputSha256": "c62ac764a30ec081dfa285fdf5473f44c39ed35041ea13e010270abcddb2bb91",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Food/Item_Food_013.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one fresh RED APPLE with a short brown bent stem and a single muted green leaf, broad rounded slightly asymmetric lobed silhouette and a natural little central cleft. Deep muted red, warm brick-red body, a small pale warm upper-left highlight. No orange stripes, no cartoon face, no cut section."
+    },
+    {
+      "id": "Clay",
+      "name": "黏土",
+      "assetPath": "Assets/6_Art/Generated/InventoryCrafting/Clay/Clay_Icon.png",
+      "guid": "e2cb4edbc3684c10af988c8359ca0b90",
+      "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Clay/Clay_Icon.png",
+      "originalSha256": "ea24b6ac2b7bd18afebfc9f2c2b1ed98d6eee8b0df04cc120382f04d270d0f3d",
+      "outputSha256": "da9f299018d3d334a9cfa7ea2537e576e3b3a544ba9af76a1e7f01b974733d74",
+      "originalSize": [
+        64,
+        64
+      ],
+      "originalPPU": 64,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Generated/InventoryCrafting/Clay/Clay_Icon.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: two joined lumps of workable raw CLAY, one larger flattened kneaded mass and one smaller folded lobe with a broad finger-pressed crease. Muted terracotta orange brown, soft matte surfaces represented by large hard pixel facets, darker reddish folds. Clearly smoother and more cohesive than loose soil. No pot, no dry soil pebbles."
+    },
+    {
+      "id": "Door_Stone_Summoner",
+      "name": "石门",
+      "assetPath": "Assets/6_Art/Building/Door_Stone_Close.png",
+      "guid": "46bec2f007662bf42aba264dec445378",
+      "originalAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+      "originalSha256": "f28d198a8d9e40b16ab3392070f0807a18eb6e58ea0092eb3cffb85cb660f912",
+      "outputSha256": "c7d5a68f159d454b031029b2bef4c20c25ef84b0f70b1dcd3a614930f46eaf5b",
+      "originalSize": [
+        32,
+        32
+      ],
+      "originalPPU": 32,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.0877192982
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: a CLOSED STONE DOOR for a top-down wall building. Follow Image 1's horizontal low barrier orientation and keep the original square canvas composition. Across the bottom quarter of the square canvas is a horizontal heavy gray stone lintel/door slab between two slightly taller square stone jambs; visible upper surface and front rim, a central closed stone leaf. Broad irregular hand-cut stone blocks, muted warm gray material, a few dark mortar seams, darker front face, light upper edges. The top two-thirds of the canvas stay transparent. This is a short horizontal wall segment seen from above at the game's existing view, not a tall frontal archway. No elaborate ornament or metal mechanism."
+    },
+    {
+      "id": "Meat_Cooked",
+      "name": "熟肉",
+      "assetPath": "Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png",
+      "guid": "8db84c435e0f4242a7aa56004df170f5",
+      "originalAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_93]",
+      "originalSha256": "ed26ac4d40535af91b5faade02700f959497cca382d80cbfbf0b8ed6056a5fe1",
+      "outputSha256": "41c4eec454dc3acb92df273922dcc7933b3c84a3ca4d6247ed10d08f392280ed",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/icons_sheet.png[icons_sheet_93]",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one appetizing piece of COOKED MEAT, a broad irregular boneless roast/steak with seared dark brown crust, warm reddish brown center, golden brown upper-left edge, just two broad darker grill-sear shapes. Clearly cooked through rather than bright pink raw meat, no bone, no plate, no utensils, no garnish. Chunky readable silhouette."
+    },
+    {
+      "id": "MinersNote",
+      "name": "矿工笔记",
+      "assetPath": "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
+      "guid": "a5732d1324140c40b598f12d14fbbad2",
+      "originalAddress": "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
+      "originalSha256": "6fbc65f6b779f1c6ffbf39060933e32acea8e799ef85451d7d5ffb7eaff1904c",
+      "outputSha256": "32afc815160e4c0070a20e1b8839770667f7a3f61568c8f023d4c4e774c419cc",
+      "originalSize": [
+        32,
+        32
+      ],
+      "originalPPU": 32,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: a MINER'S NOTEBOOK, small battered parchment booklet in three-quarter view, warm yellowed paper pages, folded lower corner, simple brown leather stitched spine, one broad muted charcoal pickaxe symbol on cover, a few coarse dark short scribble marks that are not readable words. A short muted brown binding strap. Handmade, slightly irregular edges. No actual text, no title, no tiny detailed writing."
+    },
+    {
+      "id": "Nail",
+      "name": "熟铁钉",
+      "assetPath": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png",
+      "guid": "119c344607df4b00a2909c0e5d62b999",
+      "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png",
+      "originalSha256": "e06c965b3627ebb2386316be95d0e6fe3b6020027a8703e9598b19d7340c4c9a",
+      "outputSha256": "9eaedfcbfb7279b3810e594eb07106ca8f97da16ccb98d1d7fb2cf44e3698e5d",
+      "originalSize": [
+        32,
+        32
+      ],
+      "originalPPU": 32,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: three hand-forged WROUGHT IRON NAILS loosely crossed as one small bundle, clearly visible thick square slightly irregular heads, slender tapered shanks, sharp points, subtly uneven handmade forging. Muted dark iron gray with restrained lighter gray broad edges, no shiny blue steel, no screws, no modern ribbing. Strong simple diagonal composition."
+    },
+    {
+      "id": "Needle_Bone",
+      "name": "骨针",
+      "assetPath": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png",
+      "guid": "81191579e8ccd6841b113aaa97cb3890",
+      "originalAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png",
+      "originalSha256": "8aa68eb37661491f180f256da0375d434b6f62b1199ca31fce5b522dcecb1a28",
+      "outputSha256": "a2353c85251dab6d37310512f83a602eed8632085144ba212affb3207368aaa6",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Weapons/Item_Weapon_017.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one handmade BONE SEWING NEEDLE angled from bottom-left to top-right, warm ivory bone, gently tapered long shaft, a broad rounded upper end with a clearly visible elongated dark open needle eye, and a sharp narrow lower point. Slight handmade organic irregularity, subtle beige side shadow. No metal-blue colors, no thread, not a sword or spear."
+    },
+    {
+      "id": "Mushroom",
+      "name": "蘑菇",
+      "assetPath": "Assets/6_Art/Generated/Farming/Mushroom/Item_Mushroom.png",
+      "guid": "2ede27bbfd3cd8d4091b0184b9807686",
+      "originalAddress": "Assets/6_Art/Generated/Farming/Mushroom/Item_Mushroom.png",
+      "originalSha256": "219463cf7b3a5ce52c7314d2bae66b47c66fc633384a236e9aefe3db67444faa",
+      "outputSha256": "49b0e38ccc429ba8ccd79f9acd936714ee5ae4f39cb034fcd8874eb75f954c48",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Generated/Farming/Mushroom/Item_Mushroom.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one edible wild brown MUSHROOM, broad low domed warm ochre-brown cap with a slightly curled edge, short thick cream stalk, a narrow dark underside visible under cap. Natural asymmetrical silhouette. Coarse broad cream and tan patches only, not red and white poisonous toadstool, no cartoon face, no grass, no soil."
+    },
+    {
+      "id": "Ore_Stone",
+      "name": "石头",
+      "assetPath": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+      "guid": "f69b47e3c1c7a5b439c32e928803befd",
+      "originalAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+      "originalSha256": "007939f65f99d8a2181ca205d6c7c91de6899b8bfe46cb0b22e3c45179727416",
+      "outputSha256": "0bc5fd37b74cafbfd81c27d781b8fa262e67b6a33ab272545162c21d8a0ed151",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one ordinary loose STONE, roughly oval asymmetric chunky rock with four broad angular gray facets and a small chipped edge, matte warm neutral gray, subdued charcoal side shadow, pale gray upper left plane. No crystals, no metal ore veins, no speckles, no gems. Compact grounded shape clearly distinct from ore."
+    },
+    {
+      "id": "Ore_Tin",
+      "name": "锡矿石",
+      "assetPath": "Assets/6_Art/Items/Tools/Item_Tool_393.png",
+      "guid": "c422e4cb7f4f5c540a5f83256abdceaf",
+      "originalAddress": "Assets/6_Art/Items/Tools/Item_Tool_393.png",
+      "originalSha256": "ea098d614fdd754728be0300effebc7846b061dbb5f49e05d4ef0b89c1d0d013",
+      "outputSha256": "f6eeeb93bcf39a014f3a754a07d46dd78d0b1d56fbe8837bcd4f0f63921cff8a",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Tools/Item_Tool_393.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: a small loose lump of TIN ORE, cassiterite in matte gray-tan host rock. One broad dark brown-black mineral vein and a few subdued silvery taupe angular mineral faces. An irregular angular chunky silhouette, muted gray stone, brown-black cassiterite, restrained pale tin-gray glints. Not a silver ingot, not bright blue crystals, not copper-green or iron-red. No glowing sparkle."
+    },
+    {
+      "id": "Ore_Iron",
+      "name": "铁矿石",
+      "assetPath": "Assets/6_Art/Items/Tools/Item_Tool_391.png",
+      "guid": "87098d23f0b9ec442afa8b16f5662ef4",
+      "originalAddress": "Assets/6_Art/Items/Tools/Item_Tool_391.png",
+      "originalSha256": "42b8bed6ae6dd4261839932e607db40ae8035fd9b9f105e2822c0383ebafa1a2",
+      "outputSha256": "9204faa785825f12a05ece6f3d2ac614f0475c29fb6b0139974b485a39b21600",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Tools/Item_Tool_391.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one loose IRON ORE lump, dark charcoal-gray rock with large rusty red-brown hematite patches and a few muted gray angular metallic faces. Bold uneven angular silhouette, clearly readable rusty oxide material. Mostly matte weathered host rock with limited hard gray highlights. No molten glow, no polished ingot, no orange copper metal."
+    },
+    {
+      "id": "Ore_Copper",
+      "name": "孔雀石",
+      "assetPath": "Assets/6_Art/Items/Tools/Item_Tool_399.png",
+      "guid": "f4b1ad2c128ff8f47919ef031ff61bb7",
+      "originalAddress": "Assets/6_Art/Items/Tools/Item_Tool_399.png",
+      "originalSha256": "d1ef6436d03acd40cdacb0ff431eecc61504ed28f5764469ff022cf2deb71daf",
+      "outputSha256": "4d37dbbdd8c50cad8a7b3f596fb6223f1ee52af7a2e6e5c404865fb850afcb14",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Tools/Item_Tool_399.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one loose COPPER ORE lump, naturally green MALACHITE-bearing stone. A chunky gray-brown rock with two or three broad muted forest-green and moss-green bands/patches; a tiny earthy ochre weathered area. Green mineral is matte to slightly satin, not shiny copper metal. Clearly distinct green copper ore, no bright cyan crystal, no glow."
+    },
+    {
+      "id": "Ore_Coal",
+      "name": "煤矿石",
+      "assetPath": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
+      "guid": "43a4f364b6845db4ba5ee4ea6676cd92",
+      "originalAddress": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
+      "originalSha256": "1ed4b28dd6cc5afa857178cfca7126f27f13bd5def65867a747f8d197361ba2e",
+      "outputSha256": "bf374ffa643d7c37dc2ed5d665deaadc88f28894d995b67d5b258ce0d31d51bc",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 21,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1645.875,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Tools/Item_Tool_229.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: two joined chunks of COAL with a compact irregular jagged silhouette, broad stepped fracture planes, very dark neutral charcoal and muted gray highlights on the upper-left faces, black-brown deepest clefts. Matte slightly satin coal, readable at small size. No blue gemstone, no crystal spikes, no scattered pebble pile, no glow."
+    },
+    {
+      "id": "Peach",
+      "name": "桃子",
+      "assetPath": "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png",
+      "guid": "2e1970801c1dd2b45a096e6ebf2be981",
+      "originalAddress": "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png",
+      "originalSha256": "a71296bfc940ce7ba17006f8d1ea169fbac39fbb1159579cd401d2d642f31b72",
+      "outputSha256": "8759a11e454c7861032085a6843c135258410c88cc17545e40bc26b5ede34ca6",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one ripe PEACH, round slightly heart-shaped natural silhouette, a clear single shallow center crease, muted peach orange with a broad dusty pink-red blush, a tiny short brown stem and one soft muted green leaf. Matte velvety skin expressed with broad hard pixel color blocks, no fuzzy noisy texture, no shiny apple highlight."
+    },
+    {
+      "id": "Plank",
+      "name": "木板",
+      "assetPath": "Assets/6_Art/Items/Plants/Tree/item299.png",
+      "guid": "239704e336f808945b1d8fc10dc29fbd",
+      "originalAddress": "Assets/6_Art/Items/Plants/Tree/item299.png",
+      "originalSha256": "16d537d79080be76961fe054be42ae964639dafd76edfaa274d3a08bf2cc6fe7",
+      "outputSha256": "4491680e60d82973b399bddae2b70b8c4671e04b5cde3da1a473d19d002c499f",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/Plants/Tree/item299.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: a small stack of THREE ROUGH WOODEN PLANKS arranged diagonally from lower-left to upper-right, clear flat rectangular cut faces and uneven hand-cut ends, warm muted honey-brown wood, dark brown broad side planes, only two or three large grain marks and one simple knot, no nails or rope, no log bark."
+    },
+    {
+      "id": "Rope",
+      "name": "绳子",
+      "assetPath": "Assets/6_Art/Generated/InventoryCrafting/Rope/Rope_Icon.png",
+      "guid": "c13de22c8eb94ecd9fbef73b1c824e24",
+      "originalAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_80]",
+      "originalSha256": "d393f9ed12381db81cf8ba725c36b1905ef57c6620037642a2127548a930d5f0",
+      "outputSha256": "17cfcd421265ddf5f91aed476b04aa9ee2eacce1925af044e338171b32b00d06",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 16,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Items/icons_sheet.png[icons_sheet_80]",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one COIL OF NATURAL FIBER ROPE, thick tan hemp rope wound into two or three clear oval loops with a short loose end curving out at lower right. A visibly hollow dark transparent central opening, broad alternating ochre and muted brown rope bands, coarse simple twist marks, natural handmade fibers without hair noise. No metal chain, no tightly filled disk, no spool."
+    },
+    {
+      "id": "Sand",
+      "name": "沙子",
+      "assetPath": "Assets/6_Art/Generated/InventoryCrafting/Sand/Sand_Icon.png",
+      "guid": "e68d8b61dcec437aad9e89a5ec7cb421",
+      "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Sand/Sand_Icon.png",
+      "originalSha256": "40bd0184c9042ea1845615e4b5bbf60bd09baf9c311735d4a5fa54e56f412d7f",
+      "outputSha256": "ab52a945353f04c8beaa2194dabae9229fa81ffb1b1f03cb48feac196cd40a32",
+      "originalSize": [
+        16,
+        16
+      ],
+      "originalPPU": 32,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 2508.0,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Generated/InventoryCrafting/Sand/Sand_Icon.png",
+        "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: one low broad mound of fine dry SAND with two shallow rounded crests and a few large simple stepped edge grains. Pale desaturated warm golden beige, cream upper-left face, muted ochre base shadow. Smooth broad dune-like color shapes. Clearly lighter and finer than brown earth or orange clay, no pebbles, no grass, no container."
+    },
+    {
+      "id": "Door_Stone_Open",
+      "name": "石门（开启）",
+      "assetPath": "Assets/6_Art/Building/Door_Stone_Open.png",
+      "guid": "2b0010ef5159de94a92d746ac16eb9f5",
+      "originalAddress": "Assets/6_Art/Building/Door_Stone_Open.png",
+      "originalSha256": "f4f7f0aa7ba069d3e7f35661ce5471ceb6ee492042c24ff0dd2b58954407e065",
+      "outputSha256": "869c6f45fd8923e25bff92bd02a0716650e6cf9682ccf168fc0b76fb43b60f04",
+      "originalSize": [
+        32,
+        32
+      ],
+      "originalPPU": 32,
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254.0,
+      "pivot": [
+        0.5,
+        0.0877192982
+      ],
+      "referencePaths": [
+        "Assets/6_Art/Building/Door_Stone_Open.png (original)",
+        "Assets/6_Art/Building/Door_Stone_Close.png (redrawn)"
+      ],
+      "prompt": "Use case: precise-object-edit / sprite state variant. Asset type: OPEN state sprite for the same stone door in FlatWorld. Image 1 is the original open state used only to understand the clear open passage and two side jambs. Image 2 is the new CLOSED state and is the exact style, composition, material, scale, lighting, pixel density, canvas and alignment reference. Make one matching OPEN state of Image 2. Preserve both end pillars in Image 2 at exactly the same canvas positions, width, height, front-face baseline, gray colors and coarse pixel shading. Remove the horizontal stone leaves across the center to create a fully transparent unobstructed passage between the pillars. The two stone door leaves have swung upward away from the front baseline, each now lies almost vertically in top-down projection, behind and alongside its own jamb near the left/right edge. Keep this simple and readable like Image 1. No horizontal beam or threshold crossing the passage, no arch overhead, no extra wall. Keep the whole asset in the same lower portion of a square transparent canvas, identical scale and bottom alignment to Image 2. Low-saturation slightly realistic retro pixel art, broad coarse square pixel clusters, warm gray stone, dark gray front planes and restrained light upper-left planes. No soft gradients, no high-resolution texture, no noisy details, no background, no shadows outside stone, no text, no border. Actual transparency everywhere outside the open door, including its entire central passage. Preserve native output resolution and transparency."
+    }
+  ]
+}

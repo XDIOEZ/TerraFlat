@@ -17,6 +17,18 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 8db84c435e0f4242a7aa56004df170f5
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c13de22c8eb94ecd9fbef73b1c824e24
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Rope/Rope_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ffd05e4c2a3d434f8b7fa5d8b7a55eb6
     m_Address: Assets/6_Art/Generated/Combat/Archery/Crossbow_Wood_Icon.png
     m_ReadOnly: 0

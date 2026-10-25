@@ -831,7 +831,7 @@
         "Rope"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_80]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Rope/Rope_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -4849,7 +4849,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_93]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
