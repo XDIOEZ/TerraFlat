@@ -11,6 +11,7 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterWorldMatterOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("item_runtime/world_matter_structure", WorldMatterStructure);
+        operations.Add("item_runtime/natural_replacement_ownership", NaturalReplacementOwnership);
         operations.Add("item_runtime/ai_entity_live_query", AiEntityLiveQuery);
         operations.Add("item_runtime/world_tick_move_query", WorldTickMoveQuery);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
@@ -19,6 +20,59 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/food_spoilage_moisture", FoodSpoilageMoisture);
         operations.Add("environment/combustion_oxygen", CombustionOxygen);
     }
+
+    // 隔离停用实例调用正式生态交接，旧壳销毁不能删除候选的自然生成点。
+    private static JObject NaturalReplacementOwnership(JObject args) => WithEntityProbeItem(original =>
+        WithEntityProbeItem(replacement => WithEntityProbeItem(invalid =>
+        {
+            const int guid = 735019;
+            var root = new GameObject("GameplayTest Natural Replacement")
+                { hideFlags = HideFlags.HideAndDontSave };
+            root.SetActive(false);
+            var renderer = root.AddComponent<ChunkNaturalItemRenderer>();
+            try
+            {
+                original.BindData(EntityProbeData("probe:natural-original", 1));
+                replacement.BindData(EntityProbeData("probe:natural-replacement", 1));
+                invalid.BindData(EntityProbeData("probe:natural-invalid", 1));
+                original.itemData.Guid = replacement.itemData.Guid = guid;
+                invalid.itemData.Guid = guid + 1;
+                original.ResumeRuntimeAfterReplacement();
+                replacement.ResumeRuntimeAfterReplacement();
+                invalid.ResumeRuntimeAfterReplacement();
+                renderer.RegisterNaturalItem(original);
+                renderer.RegisterNaturalItem(original);
+                var result = new JObject
+                {
+                    ["singleRegistration"] = renderer.SpawnedItemCount == 1
+                };
+                try { renderer.RegisterNaturalItem(replacement); result["duplicateRejected"] = false; }
+                catch (InvalidOperationException) { result["duplicateRejected"] = true; }
+                try { renderer.ReplaceNaturalItem(original, invalid); result["wrongGuidRejected"] = false; }
+                catch (InvalidOperationException) { result["wrongGuidRejected"] = true; }
+                invalid.ModuleUnload();
+                invalid.itemData.Guid = guid;
+                try { renderer.ReplaceNaturalItem(original, invalid); result["unloadedRejected"] = false; }
+                catch (InvalidOperationException) { result["unloadedRejected"] = true; }
+                result["sourceKeptOnRejection"] = renderer.TryGetSpawnedItem(guid, out Item current) &&
+                    ReferenceEquals(current, original) && renderer.SpawnedItemCount == 1;
+
+                renderer.ReplaceNaturalItem(original, replacement);
+                result["replacementOwned"] = renderer.TryGetSpawnedItem(guid, out current) &&
+                    ReferenceEquals(current, replacement) && renderer.SpawnedItemCount == 1;
+                original.PrepareForDespawn(saveData: false);
+                result["oldDestroyed"] = original.DestructionHandled;
+                result["oldDestructionKeptReplacement"] = renderer.TryGetSpawnedItem(guid, out current) &&
+                    ReferenceEquals(current, replacement);
+                try { renderer.ReplaceNaturalItem(original, replacement); result["staleSourceRejected"] = false; }
+                catch (InvalidOperationException) { result["staleSourceRejected"] = true; }
+                replacement.PrepareForDespawn(saveData: false);
+                result["replacementDestructionRemoved"] = renderer.SpawnedItemCount == 0 &&
+                    !renderer.TryGetSpawnedItem(guid, out _);
+                return result;
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        })));
 
     // 查询必须实时接纳新增能力、停用子节点和移除变化，稳态不再创建组件数组。
     private static JObject AiEntityLiveQuery(JObject args) => WithEntityProbeItem(item =>

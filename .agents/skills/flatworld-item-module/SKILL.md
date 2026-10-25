@@ -40,7 +40,7 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 
 - Item.Load/LoadInSteps 共用该顺序；跨帧保留生命周期切换态，释放枚举器清理已加载模块。InstantiateItemInSteps 复用壳池，冷壳 InstantiateAsync，完成前不进世界/保存/网络索引，Profiler 作用域不跨让帧。
 - Module.Load/Save/Unload 是受控入口，子类覆写 OnLoad/OnSave/OnUnload；实际加载态决定保存/Tick，Enabled 是配置，运行切换 SetEnabled。资源建/清归 OnLoad/OnUnload，保存仅捕状态。
-- BindData 只绑未加载/未注册外壳。世界物换定义用 ReplaceRuntimeItem 的停用候选/失败恢复，不直接重绑活实例；场景销毁只经 ItemMgr.GetExistingInstance 注销，管理器已毁仍卸模块，不逐件搜全场单例。
+- BindData 只绑未加载/未注册外壳。世界物换定义用 ReplaceRuntimeItem 的停用候选/失败恢复，不直接重绑活实例；自然物在候选成功加载后经 ChunkNaturalItemRenderer.ReplaceNaturalItem 交接生态索引与销毁监听，失败保留原归属。场景销毁只经 ItemMgr.GetExistingInstance 注销，管理器已毁仍卸模块，不逐件搜全场单例。
 - PrepareItem 在停用池壳装模块/配置/依赖，不配世界 GUID、不 OnLoad；CommitPreparedItem 绑最新数据正式注册/加载，可继续停用待批显。句柄 Dispose 取消，资源实例/定义/重载版本变化失效；机器仍由 MachineWorld 管。
 - 池身份在 Item 序列化字段，PooledItemMarker 记 JSON 装配后层级基线；卸载完成且基线匹配才回池，资格独立于 saveData。临时缓冲按调用借还，嵌套生成不共用。
 - 恢复先按当前定义建实例，再以 StableName 合并状态；嵌套二进制库存由持有模块逐槽 rebase。生产配置与进度分离，产物身份匹配才保留时间/次数/初始化标记，制作耐久倍率进入堆叠身份。

@@ -25,6 +25,7 @@ public partial class ItemMgr
         public Chunk ChunkOwner;
         public bool WasPersistedInChunk;
         public ChunkNaturalItemRenderer TransientOwner;
+        public ChunkNaturalItemRenderer NaturalOwner;
         public ItemInstanceSnapshot OriginalState;
         public bool SourceTouched;
         public bool SourceDetached;
@@ -38,7 +39,7 @@ public partial class ItemMgr
 
     private readonly Dictionary<int, RuntimeItemReplacement> _runtimeItemReplacements = new();
 
-    /// <summary>普通世界物品换定义时交接外壳和运行态；提交失败恢复同一源实例。</summary>
+    /// <summary>世界物品换定义时交接外壳、运行态与生态归属；提交失败恢复同一源实例。</summary>
     public Item ReplaceRuntimeItem(Item original, ItemData replacement)
     {
         if (original == null) throw new ArgumentNullException(nameof(original));
@@ -80,7 +81,10 @@ public partial class ItemMgr
         transfer.TransientOwner = original.GetComponentInParent<ChunkNaturalItemRenderer>(true);
         if (transfer.TransientOwner != null && transfer.TransientOwner.TryGetSpawnedItem(guid, out Item natural) &&
             ReferenceEquals(natural, original))
-            throw new InvalidOperationException("自然生态持有的实体必须通过生态生命周期入口替换。");
+        {
+            transfer.NaturalOwner = transfer.TransientOwner;
+            transfer.TransientOwner = null;
+        }
         if (!_runtimeItemReplacements.TryAdd(guid, transfer))
             throw new InvalidOperationException($"Item {guid} 已在进行运行时替换。");
         if (!_runtimeDespawning.Add(original))
@@ -133,6 +137,8 @@ public partial class ItemMgr
                 throw new InvalidOperationException("替换候选体在生成回调中切换了运行代际。");
             EnsureReplacementSourceCurrent(transfer, registered: false);
             WorldItemWaterSystem.ScheduleSpawnCheck(candidate);
+            // 候选加载成功才交接生态登记，失败回滚仍由同一源实例持有自然生成点。
+            transfer.NaturalOwner?.ReplaceNaturalItem(original, candidate);
             FinishReplacedSource(transfer);
             return candidate;
         }

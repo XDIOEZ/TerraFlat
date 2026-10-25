@@ -77,6 +77,37 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         return spawnedItems.TryGetValue(guid, out item) && item != null;
     }
 
+    /// <summary>自然物统一登记稳定身份与销毁监听，重复登记同一实例保持幂等。</summary>
+    internal void RegisterNaturalItem(Item item)
+    {
+        if (item == null || item.itemData == null || item.itemData.Guid == 0)
+            throw new ArgumentException("自然物登记需要有效实例和稳定 GUID。", nameof(item));
+        int guid = item.itemData.Guid;
+        if (spawnedItems.TryGetValue(guid, out Item current) && !ReferenceEquals(current, item))
+            throw new InvalidOperationException($"自然物 {guid} 已由另一实例持有。");
+        item.OnItemDestroy -= HandleNaturalItemDestroy;
+        item.OnItemDestroy += HandleNaturalItemDestroy;
+        spawnedItems[guid] = item;
+    }
+
+    /// <summary>成功换定义只交接生态身份，旧外壳销毁不得被记录为采集。</summary>
+    internal void ReplaceNaturalItem(Item original, Item replacement)
+    {
+        if (applicationQuitting || unbinding)
+            throw new InvalidOperationException("生态正在退出，不能交接自然物。");
+        if (original == null || replacement == null || ReferenceEquals(original, replacement) ||
+            replacement.DestructionHandled || !replacement.IsInitialized)
+            throw new InvalidOperationException("生态替换需要不同的源实例和已加载候选。");
+        int guid = original.itemData?.Guid ?? 0;
+        if (guid == 0 || replacement.itemData?.Guid != guid ||
+            !spawnedItems.TryGetValue(guid, out Item current) || !ReferenceEquals(current, original))
+            throw new InvalidOperationException("自然物替换身份不一致或源实例已失去生态归属。");
+        replacement.OnItemDestroy -= HandleNaturalItemDestroy;
+        replacement.OnItemDestroy += HandleNaturalItemDestroy;
+        original.OnItemDestroy -= HandleNaturalItemDestroy;
+        spawnedItems[guid] = replacement;
+    }
+
     /// <summary>登记区块临时掉落物，使解绑时回收它而不写入生态存档。</summary>
     public void RegisterTransientItem(Item item)
     {
@@ -662,8 +693,7 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
                 initializer.InitializeNaturalResource(unchecked((uint)placement.Guid));
             item.Initialize_Env(environmentLayers,
                 new Vector2Int(placement.LocalX, placement.LocalY));
-            item.OnItemDestroy += HandleNaturalItemDestroy;
-            spawnedItems[placement.Guid] = item;
+            RegisterNaturalItem(item);
             if (renewing) chunkManager.CompleteNaturalRenewal(address, placement.Guid);
             return true;
         }
@@ -707,6 +737,9 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
             return;
 
         int guid = item.itemData.Guid;
+        if (!spawnedItems.TryGetValue(guid, out Item current) || !ReferenceEquals(current, item))
+            return;
+        item.OnItemDestroy -= HandleNaturalItemDestroy;
         spawnedItems.Remove(guid);
         if (boundChunk != null && chunkManager != null && !chunkManager.IsWorldRuntimeShuttingDown)
         {

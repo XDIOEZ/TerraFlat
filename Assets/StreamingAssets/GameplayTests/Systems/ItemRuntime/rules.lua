@@ -60,6 +60,17 @@ for _, actorId in ipairs({"SmallFish", "Bird"}) do
     end, actorId .. "冷外壳延迟状态校验，激活播放、单图接管及回池清理")
 end
 
+test.system("item_runtime", "natural_replacement_ownership", {}, function(data)
+    assert(data.singleRegistration and data.duplicateRejected,
+        "自然物重复登记同一实例不幂等，或允许另一实例覆盖稳定身份")
+    assert(data.wrongGuidRejected and data.unloadedRejected and data.sourceKeptOnRejection,
+        "生态交接接受了错误GUID或未加载候选，或拒绝时丢失原自然物")
+    assert(data.replacementOwned and data.oldDestroyed and data.oldDestructionKeptReplacement,
+        "材料换定义后生态索引未交给新实例，或旧壳销毁误删了自然生成点")
+    assert(data.staleSourceRejected and data.replacementDestructionRemoved,
+        "过期源实例仍可覆盖生态归属，或新实例销毁后残留自然物登记")
+end, "自然物换定义的身份交接、拒绝保留与新旧实例销毁边界")
+
 test.system("item_runtime", "matter_transition_scan", {}, function(data)
     assert(data.firstMatch and data.secondMatch,
         "物质转换条件没有按既有配置优先级选择首个匹配项")
