@@ -1,0 +1,20 @@
+{
+  "assetId": "Bone",
+  "date": "2026-10-25",
+  "generator": "Built-in image_gen",
+  "assetPath": "Assets/6_Art/Items/Tools/Item_Tool_327.png",
+  "assetGuid": "81b4dc488d6e9914596d43f5ebd2e6a0",
+  "references": [
+    "Assets/6_Art/Items/Tools/Item_Tool_327.png (original bone silhouette)",
+    "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png (pixel style)"
+  ],
+  "originalSize": [16, 16],
+  "originalPixelsPerUnit": 16,
+  "outputSize": [1254, 1254],
+  "outputPixelsPerUnit": 1254,
+  "worldCanvasSize": [1, 1],
+  "pivot": [0.5, 0.5],
+  "postProcessing": "None. Original generated resolution, colors and alpha preserved; copied without re-encoding.",
+  "importSettings": "Point filtering, no mipmaps, uncompressed. Existing GUID and Addressables address retained.",
+  "prompt": "Use case: style-transfer / precise-object-edit. Asset type: replacement inventory sprite for the raw Bone material in FlatWorld, a top-down 2D survival sandbox. Image 1 is the edit target: preserve the identity of one single intact animal long bone, its bottom-left to top-right diagonal orientation and centered square framing. Image 2 is ONLY the style reference for chunky low-resolution pixel clusters and restrained natural-material shading; do not include leather. Redraw the bone attractively with anatomically credible enlarged knobby joints at both ends, a gently curved tapered shaft, slightly asymmetric organic silhouette. Warm ivory and cream bone, muted warm beige midtones, subdued gray-brown shadows, small pale highlights on the upper-left surfaces. This must look like dry natural animal bone rather than polished blue metal. Low-saturation slightly realistic retro pixel art, large clean hard-edged square pixel clusters on a consistent coarse grid equivalent to roughly 32 by 32 logical pixels, a few broad continuous light and shadow shapes. No fine stippling, no noise, no gradients, no smooth antialiasing or tiny high-resolution detail. Thin restrained dark warm contour where needed, no heavy black sticker outline. Preserve a clear readable silhouette at small inventory size. Exactly one bone, extending across roughly 86 percent of the square canvas in both diagonal dimensions, with balanced transparent margins, centered pivot. Fully transparent background with hard alpha edges, no checkerboard baked into image, no ground, no cast shadow outside bone, no text, no border, no additional objects. Render the coarse pixel style directly at the native output resolution; do not simulate a detailed illustration."
+}
