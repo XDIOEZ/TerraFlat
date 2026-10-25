@@ -40,7 +40,7 @@ namespace FlatWorld.WorldModel
     }
     public readonly record struct ChunkEvicted(WorldAddress Address);
     public enum ChunkDataStatus { Ready }
-    public enum ChunkLeaseKind { Simulation }
+    public enum ChunkLeaseKind { Simulation, DataRetention }
     public sealed class ChunkLease(Action release) : IDisposable
     {
         private bool disposed;
@@ -84,6 +84,7 @@ namespace FlatWorld.WorldModel
         public LiquidCellValue GetLiquidBaseline(int x, int y) => Baseline[y * Size + x];
         public int GetLiquidLevel(int x, int y) => Levels[y * Size + x];
         public int GetLiquidTypeIndex(int x, int y) => Types[y * Size + x];
+        public string GetLiquidId(int x, int y) => LiquidTypes.GetId(GetLiquidTypeIndex(x, y));
         public bool IsLiquidChanged(int x, int y) => GetLiquidLevel(x, y) != GetLiquidBaseline(x, y).LiquidLevel;
         public bool TryGetEnvironmentValue(string id, int x, int y, out float value)
         { value = id == "excavated" ? Excavated[y * Size + x] : 0; return true; }
@@ -128,17 +129,32 @@ public sealed class ChunkMgr
 {
     public WorldRuntime WorldRuntime = new();
     public object LiquidFlowExperiment;
-    public int Leases, Requests;
+    public int Leases, SimulationLeases, Requests, Evictions;
+    public bool DelayLoads;
+    public readonly Dictionary<WorldAddress, TaskCompletionSource<ChunkRuntime>> WaitingLoads = new();
     public readonly Dictionary<WorldAddress, ChunkRuntime> Remote = new();
     public ChunkLease AcquireChunkLease(WorldAddress address, ChunkLeaseKind kind)
-    { Leases++; return new(() => Leases--); }
+    {
+        Leases++;
+        if (kind == ChunkLeaseKind.Simulation) SimulationLeases++;
+        return new(() => { Leases--; if (kind == ChunkLeaseKind.Simulation) SimulationLeases--; });
+    }
     public Task<ChunkRuntime> RequestLiquidFlowChunkAsync(WorldAddress address, CancellationToken cancellation)
     {
         Requests++;
+        if (DelayLoads)
+        {
+            var completion = new TaskCompletionSource<ChunkRuntime>();
+            WaitingLoads.Add(address, completion);
+            cancellation.Register(() => completion.TrySetCanceled());
+            return completion.Task;
+        }
         return Task.FromResult(Remote.TryGetValue(address, out var chunk) ? chunk : new ChunkRuntime { Address = address });
     }
     public WorldAddress ResolveWorldAddress(Vector2 p, string dimension) => new(dimension,
         new((int)Math.Floor(p.x / 16) * 16, (int)Math.Floor(p.y / 16) * 16));
+    public bool TryEvictUnleasedDiffusionChunkOutsideRuntimeWindows(WorldAddress address)
+    { Evictions++; return false; }
 }
 public sealed class SaveDataMgr
 {

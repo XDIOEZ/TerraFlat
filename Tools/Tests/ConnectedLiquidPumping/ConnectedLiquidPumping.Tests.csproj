@@ -14,9 +14,9 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="TestDoubles.cs" />
-    <!-- 直接编译正式连通建图、失效和供水桶；替身只提供区块存储与宿主边界。 -->
+    <!-- 直接编译正式邻格扩散和边界加载；替身只提供区块存储与宿主边界。 -->
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidBodySystem.cs" />
-    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidSupplyIndex.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidBodySystem.DiffusionStreaming.cs" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

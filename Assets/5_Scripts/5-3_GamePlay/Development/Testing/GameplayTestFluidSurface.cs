@@ -127,6 +127,7 @@ internal static class GameplayTestFluidSurface
             {
                 f.Begin(); pump.ElectricalSuppliedWatts = pump.Definition.Electrical.PowerWatts;
                 FluidDeviceOperations.AdvanceLiquidPump(pump, f.Seconds);
+                ChunkMgr.ExistingInstance.AdvanceWorldRuntime(0f);
             }
             var source = GetFluidInventory(pump); var target = GetFluidInventory(tank);
             bool bodyFound = ChunkMgr.ExistingInstance.TryGetStaticWaterBody(inlet.Position, out var body);

@@ -186,7 +186,7 @@ namespace FlatWorld.WorldModel
 
         /// <summary>
         /// 尝试删除一个区块。
-        /// 只有运行逻辑、画面和寻路的使用票都已经归还，才能真正删除；否则返回 false。
+        /// 只有运行逻辑、画面、寻路和数据保留票都已归还，才能真正删除；否则返回 false。
         /// </summary>
         public bool EvictChunk(WorldAddress address)
         {
@@ -194,7 +194,7 @@ namespace FlatWorld.WorldModel
             if (!chunks.TryGetValue(address, out ChunkRuntime chunk))
                 return false;
             if (chunk.SimulationLeaseCount > 0 || chunk.PresentationLeaseCount > 0 ||
-                chunk.NavigationLeaseCount > 0)
+                chunk.NavigationLeaseCount > 0 || chunk.DataRetentionLeaseCount > 0)
                 return false;
             chunk.BeginEviction();
             chunks.Remove(address);

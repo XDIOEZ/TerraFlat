@@ -631,6 +631,14 @@ namespace FlatWorld.WorldModel
             return World.EvictChunk(address);
         }
 
+        /// <summary>后台数据用完后仅回收无窗口需求且无任何租约的区块，不撤销其它系统的使用票。</summary>
+        public bool TryEvictUnleasedChunkOutsideRuntimeWindows(WorldAddress address)
+        {
+            ThrowIfDisposed();
+            address = _normalizer.Normalize(address);
+            return !_windowDataDemand.Contains(address) && !_pending.ContainsKey(address) && World.EvictChunk(address);
+        }
+
         /// <summary>让当前窗口里的区块全部停止运行和显示，但暂时保留已经生成的数据。</summary>
         public void ClearWindow()
         {

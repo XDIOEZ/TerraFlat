@@ -13,8 +13,8 @@ test.runtime("industrial_fluids", "surface_pump", {}, function(d)
 end, "真实地表淡水抽取、每秒速率与设备尾量")
 test.runtime("industrial_fluids", "connected_surface_pump", {}, function(d)
     assert(d.unpoweredLevel == d.initialLevel, "无电水泵消耗了连通水域")
-    assert(d.remainingLevel == 0 and d.inletLevel == 0, "空泵口没有抽尽远端格或残留最后一级水")
-    assert(d.bodyFound and d.bodyCells == 3 and d.bodyLevel == 0, "真实连通缓存的范围或水量错误")
-    assert(math.abs(d.pumpLiters + d.tankLiters - 3) < .000001 and d.tankLiters > 0,
+    assert(d.remainingLevel <= 2 and d.inletLevel == 0, "空泵口未通过邻格扩散持续得到补水")
+    assert(d.bodyFound and d.bodyCells == 3 and d.bodyLevel == d.remainingLevel, "真实连通统计与剩余水量不一致")
+    assert(math.abs(d.pumpLiters + d.tankLiters + d.remainingLevel * .25 - 3) < .000001 and d.tankLiters > 0,
         "连通地表水与泵、储罐库存不守恒")
-end, "空泵口持续抽尽三格真实水渠，包含最后一级残水")
+end, "空泵口等待邻格扩散、整数尾水停稳及泵罐守恒")

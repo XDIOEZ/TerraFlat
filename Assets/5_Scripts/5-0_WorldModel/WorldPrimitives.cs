@@ -114,7 +114,9 @@ namespace FlatWorld.WorldModel
     {
         Simulation,
         Presentation,
-        Navigation
+        Navigation,
+        /// <summary>只保留权威数据，不激活模拟、寻路或表现。</summary>
+        DataRetention
     }
 
     [Flags]

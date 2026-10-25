@@ -15,12 +15,9 @@ public partial class ChunkMgr
     internal bool WakeStaticWaterBody(RuntimeTerrainTileSample sample) =>
         liquidBodies?.TryWake(sample) == true;
 
-    /// <summary>选择真实供水格，缺水时按需准备邻区；实际扣量和回滚仍由既有地表事务负责。</summary>
-    public bool TryGetConnectedLiquidPumpSource(Vector2 position, out RuntimeTerrainTileSample source)
-    {
-        source = default;
-        return liquidBodies != null && liquidBodies.TryGetPumpSource(position, out source);
-    }
+    /// <summary>液体后台缓存释放后只回收窗口外且没有其它使用者的数据。</summary>
+    internal bool TryEvictUnleasedDiffusionChunkOutsideRuntimeWindows(FlatWorld.WorldModel.WorldAddress address) =>
+        runtimeChunkManager != null && runtimeChunkManager.TryEvictUnleasedChunkOutsideRuntimeWindows(address);
 
     private void StopLiquidBodies()
     {

@@ -13,6 +13,7 @@ namespace FlatWorld.WorldModel
         private int _simulationLeaseCount;
         private int _presentationLeaseCount;
         private int _navigationLeaseCount;
+        private int _dataRetentionLeaseCount;
         private bool _disposed;
 
         internal ChunkRuntime(WorldAddress address, WorldEventBus events)
@@ -49,6 +50,8 @@ namespace FlatWorld.WorldModel
         public int PresentationLeaseCount => _presentationLeaseCount;
         /// <summary>现在有多少寻路任务正在使用这个区块。</summary>
         public int NavigationLeaseCount => _navigationLeaseCount;
+        /// <summary>仅要求保留数据的使用票，不唤醒区块逻辑。</summary>
+        public int DataRetentionLeaseCount => _dataRetentionLeaseCount;
         /// <summary>是否还有寻路系统正在使用这个区块。</summary>
         public bool HasNavigationLease => _navigationLeaseCount > 0;
 
@@ -72,6 +75,9 @@ namespace FlatWorld.WorldModel
                     break;
                 case ChunkLeaseKind.Navigation:
                     _navigationLeaseCount++;
+                    break;
+                case ChunkLeaseKind.DataRetention:
+                    _dataRetentionLeaseCount++;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
@@ -173,6 +179,9 @@ namespace FlatWorld.WorldModel
                 case ChunkLeaseKind.Navigation:
                     _navigationLeaseCount = Math.Max(0, _navigationLeaseCount - 1);
                     break;
+                case ChunkLeaseKind.DataRetention:
+                    _dataRetentionLeaseCount = Math.Max(0, _dataRetentionLeaseCount - 1);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
@@ -189,6 +198,7 @@ namespace FlatWorld.WorldModel
             _simulationLeaseCount = 0;
             _presentationLeaseCount = 0;
             _navigationLeaseCount = 0;
+            _dataRetentionLeaseCount = 0;
         }
 
         private void SetDataStatus(ChunkDataStatus value)
