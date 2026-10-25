@@ -66,7 +66,7 @@ internal static class MechanicalShadowRegistry
 
     /// <summary>重用格子的阴影记录，只在资源或节点重建时计算可见轮廓。</summary>
     internal static void BeginNode(ChunkTilemapRenderer owner, Vector3Int key, Scene scene,
-        Sprite sprite, Vector3 origin, Quaternion rotation, ItemShadowVisualDefinitionDto settings)
+        Sprite sprite, Vector3 origin, Quaternion rotation, Vector3 scale, ItemShadowVisualDefinitionDto settings)
     {
         var identity = (owner, key);
         if (!entries.TryGetValue(identity, out Entry entry))
@@ -74,7 +74,7 @@ internal static class MechanicalShadowRegistry
             entry = new Entry();
             entries.Add(identity, entry);
         }
-        Matrix4x4 matrix = Matrix4x4.TRS(origin, rotation, Vector3.one);
+        Matrix4x4 matrix = Matrix4x4.TRS(origin, rotation, scale);
         Bounds bounds = ShadowFootprintResolver.MeasureVisibleWorldBounds(sprite, matrix);
         entry.Scene = scene;
         entry.Layer = owner.gameObject.layer;

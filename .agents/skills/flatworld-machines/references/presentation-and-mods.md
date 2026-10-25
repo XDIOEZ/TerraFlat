@@ -2,6 +2,7 @@
 
 - 主体/运动件按脚点Y行合批；MechanicalDepthVisual 仅交互/灯光，不持有HP/库存。MechanicalShaft 连接层在主体下，端口/铁环/短管独立生成，主体只画设备。
 - Pivot/Renderer 局部变换共供预览、落地、阴影，逻辑占地不随贴图偏移；运动件同画布/PPU/Pivot，变速先积旧相位再改角速度。太阳/接触阴影独立BRG，SpatialInteractionRegistry 注册同一数据目标。
+- 无端口设施落地批绘须读取 `visual.rendererLocalScale`，接触阴影按同一缩放测底边；不能只改预览或源 Prefab。现场回归 `building/facility_visual_scale`。
 - 降落经 MechanicalLandingPreparation 分帧预建停用外壳、灯光、部件缓冲、共享Sprite几何，不复制机器；BeginCommit 提供候选，区块接管后走正常生命周期，未消费候选随准备器释放。BeginSurfaceChangeBatch 仅在同步交接按世界/格去重，保留 CellChanged；SurfacePresentationCell(s)Changed 最终格/邻格各刷新一次，不延迟常规 Tick。
 - MachineDefinition.VisualLayer 共用管→线→设备的显示/命中顺序，GridInteractionSelector 对完整逻辑格叠层从上到下等分选择，不按窄贴图/邻格半径命中。FluidTankSelectionOutline 按 GetFluidTankMembers 的四邻连通生成组外框，切片/内容条/端口不各描边，逻辑节点不变。
 - Lighting 复用 electric-light，以实供 ElectricalSuppliedWatts 控制亮度/powered贴图，断电/休眠撤光；地表/船共用 MachineLightPresentation。保留玻璃Alpha，专用自发光按脚点排序、不提亮底座；灯泡120V/60W、半径16格，火把8格。

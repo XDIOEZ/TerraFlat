@@ -222,12 +222,15 @@ public sealed partial class ChunkTilemapRenderer
         Vector3 facilityBodyOffset = node.Definition.Ports == "none"
             ? (def.Visual?.RendererLocalPosition ?? Vector3.zero)
             : Vector3.zero;
+        Vector3 facilityBodyScale = node.Definition.Ports == "none"
+            ? (def.Visual?.RendererLocalScale ?? Vector3.one)
+            : Vector3.one;
         string kind = node.Definition.Kind;
         Vector3Int key = new(x, y, node.Definition.Layer);
         submittedMechanicalCells.Add(key);
         if (node.Definition.ShouldCastVisualShadows())
             MechanicalShadowRegistry.BeginNode(this, key, gameObject.scene, def.Sprite,
-                origin + rotation * facilityBodyOffset, rotation, def.Visual?.Shadows);
+                origin + rotation * facilityBodyOffset, rotation, facilityBodyScale, def.Visual?.Shadows);
         else MechanicalShadowRegistry.Remove(this, key);
         PrepareMechanicalDepthVisual(node, x, y, origin);
         MechanicalDepthVisual depthVisual = mechanicalDepthVisuals[key];
@@ -372,9 +375,9 @@ public sealed partial class ChunkTilemapRenderer
         Sprite body = def.Sprite;
         if (node.Definition.Lighting != null) body = MachineLightPresentation.ResolveBodySprite(node, def);
         if (node.Definition.LogicId == "vessel" && Mod_WaterVessel.TryResolvePresentationSprite(node.Snapshot, out Sprite vessel)) body = vessel;
-        // 设施本体沿用预览的图片局部偏移，让 Sprite Pivot 落在同一建造锚点上。
+        // 落地设施沿用预览的偏移和缩放，阴影与火焰共同读取这份主体变换。
         int facilityPart = Ports(node, x, y, 0, material, origin, rotation);
-        Part(node, x, y, facilityPart++, body, material, origin, rotation, facilityBodyOffset, Vector3.one, 0, 0f);
+        Part(node, x, y, facilityPart++, body, material, origin, rotation, facilityBodyOffset, facilityBodyScale, 0, 0f);
         depthVisual.UpdateFacility(node);
         }
         finally { depthVisual.EndUpdate(); }

@@ -22,6 +22,7 @@ public static partial class GameplayTestWorldRuntimeProbe
         GameplayTestRuntimeProbe.Register("agriculture", "planting_target", CapturePlantingTarget);
         GameplayTestRuntimeProbe.Register("agriculture", "pour_absorption", CapturePourAbsorption);
         GameplayTestRuntimeProbe.Register("building", "placement", CapturePlacement);
+        GameplayTestRuntimeProbe.Register("building", "facility_visual_scale", CaptureFacilityVisualScale);
         GameplayTestRuntimeProbe.Register("building", "host_placement_receipt", CaptureHostPlacementReceipt);
         GameplayTestRuntimeProbe.Register("fishing", "rig_roundtrip", CaptureFishingRig);
     }
@@ -343,6 +344,73 @@ public static partial class GameplayTestWorldRuntimeProbe
                 throw new InvalidOperationException("自有格子建筑清理失败：" + removeReason);
             site.Dispose();
             result["restored"] = site.IsRestored();
+        }
+    }
+    #endregion
+
+    #region 落地设施主体与阴影尺寸
+    // 实走材料扣除和机器落地，从正式绘制提交采样，避免只检查预览配置。
+    private static JObject CaptureFacilityVisualScale(Player player, JObject args)
+    {
+        GameRes resources = GameRes.ExistingInstance ?? throw new InvalidOperationException("正式资源目录未就绪。");
+        string id = GameplayTestSystemProbe.Text(args, "buildingId", "BlastFurnace");
+        if (!resources.TryGetItemDefinition(id, out RuntimeItemDefinition definition))
+            throw new InvalidOperationException("缺少设施本体定义：" + id);
+        ItemData source = resources.CreateItemData(id + "_Summoner");
+        source.Stack.Amount = 2f;
+        var slot = new ItemSlot(0) { itemData = source };
+        var inventory = new Inventory_Data(new List<ItemSlot> { slot }, "独立设施材料样本");
+        Site site = FindSite(player, sample => MachineWorld.GetAt(sample.WorldCell, 0) == null);
+        BuildingPlacementResult placement = null;
+        var result = new JObject();
+        try
+        {
+            var request = new BuildingPlacementRequest
+            {
+                SourceData = source, SourceInventory = inventory, SourceSlot = slot,
+                Position = site.Center, AuthorityPosition = site.Authority, MaximumDistance = 16f
+            };
+            if (!BuildingPlacementService.TryPlace(request, out placement, out string reason) || placement.Machine == null)
+                throw new InvalidOperationException("正式设施放置失败：" + reason);
+            if (!ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(site.Sample.Address, out var view) || view == null)
+                throw new InvalidOperationException("落地设施所属区块没有真实表现。");
+            ChunkTilemapRenderer owner = view.GetComponentInChildren<ChunkTilemapRenderer>(true);
+            if (owner == null) throw new InvalidOperationException("落地设施所属区块没有正式绘制器。");
+            Vector3 origin = site.Center + owner.DepthPresentationOffset;
+            MechanicalShadowRegistry.Entry shadow = MechanicalShadowRegistry.Entries.FirstOrDefault(entry =>
+                entry.Active && entry.PrimarySprite == definition.Sprite && entry.Parts.Any(part =>
+                    part != null && part.Active && part.Sprite == definition.Sprite && (part.Origin - origin).sqrMagnitude < .000001f));
+            MechanicalShadowRegistry.Part body = shadow?.Parts.FirstOrDefault(part =>
+                part != null && part.Active && part.Sprite == definition.Sprite);
+            if (body == null) throw new InvalidOperationException("落地设施没有提交真实主体与阴影部件。");
+            body.ResolveTransform(out Vector3 position, out Quaternion rotation);
+            Bounds bounds = ShadowFootprintResolver.MeasureVisibleWorldBounds(body.Sprite, Matrix4x4.TRS(position, rotation, body.Scale));
+            Vector3 configuredScale = definition.Visual?.RendererLocalScale ?? Vector3.one;
+            Vector3 configuredOffset = definition.Visual?.RendererLocalPosition ?? Vector3.zero;
+            Vector3 expectedFoot = ShadowFootprintResolver.ResolveFoot(Matrix4x4.TRS(position, rotation, body.Scale), bounds,
+                definition.Visual?.Shadows?.FootLocalPosition, 0f, definition.Visual?.Shadows?.FootOverlap);
+            result["placedId"] = placement.BuildingId;
+            result["amountAfterPlacement"] = slot.itemData?.Stack?.Amount ?? 0f;
+            result["scaleX"] = body.Scale.x; result["scaleY"] = body.Scale.y;
+            result["configuredScaleX"] = configuredScale.x; result["configuredScaleY"] = configuredScale.y;
+            result["offsetY"] = body.Offset.y; result["configuredOffsetY"] = configuredOffset.y;
+            result["visibleWidth"] = bounds.size.x; result["visibleHeight"] = bounds.size.y;
+            result["shadowFootError"] = Vector3.Distance(shadow.Foot, expectedFoot);
+            return result;
+        }
+        finally
+        {
+            try
+            {
+                if (placement?.Machine != null && !MachineWorld.DiscardPlacementCandidate(placement.Machine.Id))
+                    throw new InvalidOperationException("自有设施清理失败。");
+            }
+            finally
+            {
+                site.Dispose();
+                result["restored"] = site.IsRestored() &&
+                    (placement?.Machine == null || MachineWorld.GetById(placement.Machine.Id) == null);
+            }
         }
     }
     #endregion

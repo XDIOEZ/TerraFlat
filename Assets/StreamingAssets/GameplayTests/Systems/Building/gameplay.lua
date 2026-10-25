@@ -19,6 +19,24 @@ test.runtime("building", "placement", {summonerId = id}, function(data)
 end, "真实格子建筑放置、发布目标、扣料、失败回滚与占地冲突：" .. id)
 end
 
+for _, facility in ipairs({{id = "BlastFurnace", scale = 2}, {id = "Smelter", scale = 1}}) do
+    test.runtime("building", "facility_visual_scale", {buildingId = facility.id}, function(data)
+        assert(data.placedId == facility.id and data.amountAfterPlacement == 1,
+            "设施没有通过正式放置事务落地并扣除一份材料")
+        assert(data.scaleX == facility.scale and data.scaleY == facility.scale
+            and data.scaleX == data.configuredScaleX and data.scaleY == data.configuredScaleY,
+            "落地设施忽略了主体缩放，或改变了默认尺寸")
+        assert(math.abs(data.offsetY - data.configuredOffsetY) < 0.00001,
+            "落地设施没有沿用预览的主体偏移")
+        assert(data.shadowFootError < 0.00001, "接触阴影没有按放大后的主体底边落地")
+        if facility.id == "BlastFurnace" then
+            assert(data.visibleWidth >= 1 and data.visibleHeight >= 1.8,
+                "实际落地高炉的可见底座仍不足一个单位")
+        end
+        assert(data.restored, "设施采样没有移除自有节点并恢复空格")
+    end, "实际落地设施缩放、默认尺寸与阴影底边：" .. facility.id)
+end
+
 for _, amount in ipairs({1, 2}) do
     local expected = amount - 1
     test.runtime("building", "host_placement_receipt", {amount = amount}, function(data)
