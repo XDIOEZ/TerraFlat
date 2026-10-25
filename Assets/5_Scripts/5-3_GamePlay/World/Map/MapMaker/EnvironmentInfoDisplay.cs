@@ -414,15 +414,14 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
     }
 
-    /// <summary>耕地或已有农业状态时只显示可持久化的地块、水分与肥力。</summary>
+    /// <summary>只有真实耕地显示动态农业水肥，普通地块仅显示地理环境。</summary>
     private void AppendAgricultureSummary(RuntimeTerrainTileSample sample)
     {
         ChunkTerrainData terrain = sample.Terrain;
         Vector2Int local = sample.LocalCell;
         float sourceTileId = FarmlandSystem.Read(terrain, local, FarmlandSystem.SourceLayer);
-        bool hasAgricultureState = sourceTileId > 0f;
         bool isFarmland = FarmlandSystem.IsFarmland(sample.Cell);
-        if (!isFarmland && !hasAgricultureState)
+        if (!isFarmland)
             return;
 
         TileData_Farmland soil = FarmlandSystem.ReadSoilSnapshot(sample);

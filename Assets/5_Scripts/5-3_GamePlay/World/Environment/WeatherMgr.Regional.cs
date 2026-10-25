@@ -306,10 +306,13 @@ public partial class WeatherMgr
                         float precipitation = Mathf.Min(regionalEngine.SamplePrecipitationExposureAt(
                             pair.Key.ChunkOrigin, regionalExposure),
                             elapsed);
+                        TemperatureMgr temperatures = TemperatureMgr.Instance;
+                        bool maySnow = precipitation > 0f && (temperatures == null ||
+                            temperatures.MayFreezeAmbientChunk(pair.Value, PrecipitationFreezingTemperature));
                         if (WorldWeatherSurfaceSystem.HasSurfaceWork(pair.Value.Terrain, precipitation,
-                                surfaceWork.HasPending(pair.Value)) &&
-                            TemperatureMgr.Instance != null &&
-                            TemperatureMgr.Instance.TryCaptureAmbientChunk(pair.Value, out var temperature))
+                                surfaceWork.HasPending(pair.Value), maySnow) &&
+                            temperatures != null &&
+                            temperatures.TryCaptureAmbientChunk(pair.Value, out var temperature))
                         {
                             surfaceWork.Enqueue(pair.Value, elapsed, precipitation, temperature);
                             enqueuedChunks++;

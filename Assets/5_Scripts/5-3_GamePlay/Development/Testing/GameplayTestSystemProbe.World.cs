@@ -56,6 +56,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("agriculture/tilling_visual_schedule", WorldTillingVisualSchedule);
         operations.Add("agriculture/soil_moisture_visual", WorldSoilMoistureVisual);
         operations.Add("agriculture/soil_commit_unchanged", WorldSoilCommitUnchanged);
+        operations.Add("agriculture/farmland_scope", WorldFarmlandScope);
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("fishing/cast_supplies", WorldFishingCastSupplies);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
@@ -186,7 +187,7 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
-    /// <summary>采样正式地块 Shader 的水分输入，读取期间不允许灌溉或写回土壤。</summary>
+    /// <summary>仅比较农业权威字段，真实耕地资格由生产提交入口校验。</summary>
     private static JObject WorldSoilCommitUnchanged(JObject args)
     {
         using ChunkTerrainData terrain = EnvironmentBatchFixture(2, 1);
@@ -205,7 +206,7 @@ public static partial class GameplayTestSystemProbe
         Set(FarmlandSystem.WaterSupplyRemainderLayer, soil.waterSupplyRemainder);
         Set(FarmlandSystem.WaterConsumptionRemainderLayer, soil.waterConsumptionRemainder);
         Set(FarmlandSystem.FertilityLayer, soil.Fertility);
-        bool needsMoistureProjection = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        bool geographyIndependent = FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
         Set("moisture", .4f);
         Set("fertility", soil.Fertility);
         bool equal = FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
@@ -213,8 +214,11 @@ public static partial class GameplayTestSystemProbe
         bool changedRemainder = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
         Set(FarmlandSystem.WaterConsumptionRemainderLayer, soil.waterConsumptionRemainder);
         Set("fertility", .5f);
-        bool changedProjection = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        bool geographicChangesIgnored = FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
         Set("fertility", soil.Fertility);
+        Set(FarmlandSystem.FertilityLayer, .5f);
+        bool changedFertility = !FarmlandSystem.SoilSamplingBatch.IsAlreadyCommitted(sample, soil);
+        Set(FarmlandSystem.FertilityLayer, soil.Fertility);
         // 即使植物本次耗水不能继续扣到负数，干土/缺肥仍可以判为真正的无变化。
         soil.waterValue = 0;
         soil.waterSupplyRemainder = soil.waterConsumptionRemainder = 0f;
@@ -241,14 +245,78 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["uninitialized"] = uninitialized,
-            ["needsMoistureProjection"] = needsMoistureProjection,
+            ["geographyIndependent"] = geographyIndependent,
             ["equal"] = equal,
             ["changedRemainder"] = changedRemainder,
-            ["changedProjection"] = changedProjection,
+            ["geographicChangesIgnored"] = geographicChangesIgnored,
+            ["changedFertility"] = changedFertility,
             ["dryEqual"] = dryEqual,
             ["dryStillEqual"] = dryStillEqual,
             ["wateringChanges"] = wateringChanges,
             ["allocation"] = allocation
+        };
+    }
+
+    /// <summary>采样真实耕地索引、普通地块补水拒绝和地理初始值，避免测试复制农业算法。</summary>
+    private static JObject WorldFarmlandScope(JObject args)
+    {
+        using ChunkTerrainData terrain = EnvironmentBatchFixture(4, 2);
+        IReadOnlyList<int> indices = FarmlandSystem.GetFarmlandCellIndices(terrain, 14);
+        bool initiallyEmpty = indices.Count == 0;
+        TerrainCell original = terrain.GetCell(0, 0);
+        TerrainCell Farm() => new(14, 0, 0, original.BiomeId, original.NavigationCost, original.Flags);
+        terrain.SetCell(3, 1, Farm());
+        terrain.SetCell(1, 0, Farm());
+        bool ordered = indices.Count == 2 && indices[0] == 1 && indices[1] == 7;
+        terrain.SetCell(1, 0, original);
+        bool removed = indices.Count == 1 && indices[0] == 7;
+        terrain.SetEnvironmentValue(FarmlandSystem.SourceLayer, 0, 0, 1f);
+        terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, 0, 0, 10f);
+        terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, 0, 0, .1f);
+        terrain.SetEnvironmentValue(FarmlandSystem.WaterConsumptionRemainderLayer, 0, 0, .75f);
+        terrain.SetEnvironmentValue("moisture", 0, 0, .3f);
+        terrain.SetEnvironmentValue("fertility", 0, 0, .8f);
+        var sample = new RuntimeTerrainTileSample(default, terrain, Vector2Int.zero, Vector2Int.zero, original, original.GroundTileId);
+        var soil = new TileData_Farmland();
+        long revision = terrain.Revision;
+        FarmlandSystem.ReadSoilSnapshot(sample, soil);
+        bool normalReadOnly = terrain.Revision == revision && soil.waterValue == 3 &&
+            Mathf.Approximately(soil.Fertility, .8f) && soil.waterConsumptionRemainder == 0f;
+        FarmlandSystem.EnsureSoilState(sample);
+        bool supplyRejected = !FarmlandSystem.SupplySurfaceWater(sample, 3f, false) && terrain.Revision == revision;
+        FarmlandSystem.ReadGeographicSoilSnapshot(sample, soil);
+        bool geographicInitial = soil.waterValue == 3 && Mathf.Approximately(soil.Fertility, .8f) &&
+            soil.waterSupplyRemainder == 0f && soil.waterConsumptionRemainder == 0f;
+        bool environmentKeptIndex = ReferenceEquals(indices, FarmlandSystem.GetFarmlandCellIndices(terrain, 14)) &&
+            indices.Count == 1 && indices[0] == 7;
+        IReadOnlyList<int> remapped = FarmlandSystem.GetFarmlandCellIndices(terrain, 1);
+        bool remappedTile = remapped.Count == 7 && remapped[0] == 0;
+        var snow = WorldWeatherSurfaceSystem.GetSnowCellIndices(terrain);
+        terrain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 2, 0, .5f);
+        bool snowAdded = snow.Count == 1 && snow[0] == 2;
+        terrain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 2, 0, 0f);
+        bool snowMelted = snow.Count == 0;
+        terrain.SetEnvironmentValue(WorldSnowInteraction.DepthLayer, 2, 1, .4f);
+        terrain.SetEnvironmentValue(WorldSnowInteraction.EditedLayer, 2, 1, 1f);
+        bool playerSnowAdded = snow.Count == 1 && snow[0] == 6;
+        terrain.SetEnvironmentValue(WorldSnowInteraction.EditedLayer, 2, 1, 0f);
+        bool playerSnowRemoved = snow.Count == 0;
+        using ChunkTerrainData plain = EnvironmentBatchFixture(2, 1);
+        bool warmSkipped = !WorldWeatherSurfaceSystem.HasSurfaceWork(plain, 3f, maySnow: false);
+        bool coldKept = WorldWeatherSurfaceSystem.HasSurfaceWork(plain, 3f, maySnow: true);
+        plain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 0, 0, .2f);
+        bool meltingKept = WorldWeatherSurfaceSystem.HasSurfaceWork(plain, 0f, maySnow: false);
+        plain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 0, 0, 0f);
+        bool meltedSkipped = !WorldWeatherSurfaceSystem.HasSurfaceWork(plain, 3f, maySnow: false);
+        return new JObject
+        {
+            ["initiallyEmpty"] = initiallyEmpty, ["ordered"] = ordered, ["removed"] = removed,
+            ["normalReadOnly"] = normalReadOnly, ["supplyRejected"] = supplyRejected,
+            ["geographicInitial"] = geographicInitial, ["environmentKeptIndex"] = environmentKeptIndex,
+            ["remappedTile"] = remappedTile, ["snowAdded"] = snowAdded, ["snowMelted"] = snowMelted,
+            ["playerSnowAdded"] = playerSnowAdded, ["playerSnowRemoved"] = playerSnowRemoved,
+            ["warmSkipped"] = warmSkipped, ["coldKept"] = coldKept,
+            ["meltingKept"] = meltingKept, ["meltedSkipped"] = meltedSkipped
         };
     }
 

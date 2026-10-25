@@ -596,7 +596,29 @@ public static partial class GameplayTestSystemProbe
             local.GetChunkInfluences(origin), emptyLiquid);
         var afterTemperatures = new float[4];
         after.TrySample(chunk, new[] { 0, 1 }, afterTemperatures);
-        return new JObject { ["samples"] = samples, ["afterSourceRemoved"] = afterTemperatures[0] };
+        for (int y = 0; y < 2; y++)
+        for (int x = 0; x < 2; x++) chunk.Terrain.SetEnvironmentValue("temperature.celsius", x, y, 20f);
+        TemperatureMgr.AmbientChunkSnapshot Risk(float season = 0f, float orbit = 0f) =>
+            new(chunk, default, 0f, 0f, season, orbit, 0f, local.GetChunkInfluences(origin),
+                ReadOnlySpan<LiquidTemperatureField.Influence>.Empty);
+        bool warmRainOnly = !Risk().MayFreeze(0f);
+        bool seasonKept = Risk(-25f).MayFreeze(0f);
+        bool orbitalKept = Risk(0f, -.1f).MayFreeze(0f);
+        local.SetSource(owner, new UnityEngine.Vector2(.5f, .5f), 4f, -15f, true);
+        bool coolingKept = Risk().MayFreeze(0f);
+        local.RemoveSource(owner);
+        TemperatureMgr.AmbientChunkSnapshot rangeInvalidation = Risk();
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 1, 1, -1f);
+        bool geographicChangeKept = rangeInvalidation.MayFreeze(0f);
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 1, 1, 0f);
+        bool freezingEdgeKept = Risk().MayFreeze(0f);
+        return new JObject
+        {
+            ["samples"] = samples, ["afterSourceRemoved"] = afterTemperatures[0],
+            ["warmRainOnly"] = warmRainOnly, ["seasonKept"] = seasonKept, ["orbitalKept"] = orbitalKept,
+            ["coolingKept"] = coolingKept, ["geographicChangeKept"] = geographicChangeKept,
+            ["freezingEdgeKept"] = freezingEdgeKept
+        };
     }
 
     #endregion

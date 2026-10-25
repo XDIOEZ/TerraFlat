@@ -229,8 +229,8 @@ public static partial class FarmlandSystem
             return true;
         }
 
-        // 完成前只取原地表水肥快照；真正完成时才清草并把 Ground Tile 改成正式耕地。
-        TileData_Farmland soil = ReadSoilSnapshot(sample);
+        // 新耕地只继承地理基准，普通地块不维护可继承的动态水肥。
+        TileData_Farmland soil = ReadGeographicSoilSnapshot(sample);
         tillingStates.Remove(key);
         TillingVisualChanged?.Invoke(sample.Address, local);
         RuntimeGrassClearing.Clear(sample);
@@ -261,10 +261,10 @@ public static partial class FarmlandSystem
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null || !manager.TryGetRuntimeTerrainTile(
                 new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f), out sample) ||
-            !CanUseSoilCell(sample) || (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample)))
+            !CanUseSoilCell(sample) || !CanReadSoil(sample, allowNaturalSoil))
             return false;
         soil = ReadSoilSnapshot(sample);
-        if (TryAbsorbNearbyLiquid(sample, soil))
+        if (IsFarmland(sample.Cell) && TryAbsorbNearbyLiquid(sample, soil))
             CommitSoil(soil, allowNaturalSoil);
         return true;
     }
@@ -272,7 +272,7 @@ public static partial class FarmlandSystem
     /// <summary>成长或施肥完成后提交水肥快照。</summary>
     public static void CommitSoil(TileData_Farmland soil, bool allowNaturalSoil = false)
     {
-        if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
+        if (soil == null || ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
                 new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample))
             return;
         CommitSoil(sample, soil, allowNaturalSoil);
@@ -281,11 +281,10 @@ public static partial class FarmlandSystem
     private static void CommitSoil(RuntimeTerrainTileSample sample, TileData_Farmland soil, bool allowNaturalSoil,
         bool normalizedWorldCell = false)
     {
-        if (!CanUseSoilCell(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, sample.Cell,
-                sample.WorldCell, normalizedWorldCell) ||
-            (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample))) return;
+        if (!IsFarmland(sample.Cell) || !CanUseSoilCell(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y,
+                sample.Cell, sample.WorldCell, normalizedWorldCell)) return;
         soil.NormalizeValues();
-        if (Read(sample.Terrain, sample.LocalCell, SourceLayer) <= 0f)
+        if (Read(sample.Terrain, sample.LocalCell, SourceLayer) != sample.Cell.GroundTileId)
             sample.Terrain.SetEnvironmentValue(SourceLayer, sample.LocalCell.x, sample.LocalCell.y,
                 sample.Cell.GroundTileId);
         sample.Terrain.SetEnvironmentValue(WaterLayer, sample.LocalCell.x, sample.LocalCell.y, soil.waterValue);
@@ -294,7 +293,6 @@ public static partial class FarmlandSystem
         sample.Terrain.SetEnvironmentValue(WaterConsumptionRemainderLayer, sample.LocalCell.x, sample.LocalCell.y,
             soil.waterConsumptionRemainder);
         sample.Terrain.SetEnvironmentValue(FertilityLayer, sample.LocalCell.x, sample.LocalCell.y, soil.Fertility);
-        SyncSoilEnvironment(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, soil.waterValue, soil.Fertility);
         SaveDataMgr.Instance.RecordAgricultureCell(sample);
     }
 

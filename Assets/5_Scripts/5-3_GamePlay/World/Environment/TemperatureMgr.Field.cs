@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using FlatWorld.WorldModel;
 using FlatWorld.Diagnostics;
 using Unity.Profiling;
@@ -165,6 +166,70 @@ public partial class TemperatureMgr
 
     #region 统一逐格采样
 
+    private static readonly ConditionalWeakTable<ChunkTerrainData, GeographicTemperatureRange> geographicRanges = new();
+
+    // 地理温度只在生成层变化时重算范围，暖雨区块无需逐格结算落雪资格。
+    private sealed class GeographicTemperatureRange
+    {
+        private readonly ChunkTerrainData terrain;
+        private bool dirty = true;
+        private float minimum, maximum;
+        internal GeographicTemperatureRange(ChunkTerrainData terrain)
+        {
+            this.terrain = terrain;
+            terrain.Changed += change =>
+            {
+                if (change.Kind == TerrainChangeKind.Environment &&
+                    change.AffectsEnvironmentLayer("temperature.celsius")) dirty = true;
+            };
+        }
+
+        internal bool TryRead(out float low, out float high)
+        {
+            if (dirty)
+            {
+                minimum = float.PositiveInfinity;
+                maximum = float.NegativeInfinity;
+                if (terrain.TryGetEnvironmentLayer("temperature.celsius", out ReadOnlyMemory<float> values))
+                    foreach (float value in values.Span)
+                    {
+                        if (!float.IsFinite(value)) { minimum = float.NaN; break; }
+                        minimum = Mathf.Min(minimum, value);
+                        maximum = Mathf.Max(maximum, value);
+                    }
+                dirty = false;
+            }
+            low = minimum; high = maximum;
+            return float.IsFinite(low) && float.IsFinite(high);
+        }
+    }
+
+    private static float MinimumAmbientTemperature(ChunkTerrainData terrain, float ambientOffset,
+        float globalOffset, float seasonOffset, float orbitalFactor, float weatherOffset)
+    {
+        if (!geographicRanges.GetValue(terrain, value => new GeographicTemperatureRange(value))
+                .TryRead(out float low, out float high)) return float.NegativeInfinity;
+        float orbitalBaseline = orbitalFactor >= 0f ? low : high;
+        return low + ambientOffset + Mathf.Min(0f, seasonOffset) + weatherOffset +
+            Mathf.Max(1f, orbitalBaseline + globalOffset + 273.15f) * orbitalFactor;
+    }
+
+    internal bool MayFreezeAmbientChunk(ChunkRuntime chunk, float freezingTemperature)
+    {
+        PrepareFieldContext();
+        if (localTemperatureField == null || fieldChunkManager == null || chunk?.Terrain == null ||
+            chunk.Terrain.IsDisposed || chunk.Address.DimensionId != fieldDimension)
+            return true;
+        Vector2Int origin = new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+        float minimum = MinimumAmbientTemperature(chunk.Terrain, ambientFieldOffset,
+            fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature, seasonTiltOffsetAtPole,
+            orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt((Vector2)origin + Vector2.one * .5f) ?? 0f);
+        foreach (LocalTemperatureField.Influence influence in localTemperatureField.GetChunkInfluences(origin))
+            if (influence.Source.Cooling && influence.Source.Strength > 0f)
+                minimum = Mathf.Min(minimum, influence.Source.TargetTemperature);
+        return !float.IsFinite(minimum) || minimum <= freezingTemperature;
+    }
+
     internal sealed class AmbientChunkSnapshot
     {
         private readonly ChunkTerrainData terrain;
@@ -232,6 +297,16 @@ public partial class TemperatureMgr
                 temperatures[index] = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
             }
             return true;
+        }
+
+        internal bool MayFreeze(float freezingTemperature)
+        {
+            float minimum = MinimumAmbientTemperature(terrain, ambientOffset, globalOffset,
+                seasonOffset, orbitalFactor, weatherOffset);
+            foreach (FrozenInfluence influence in influences)
+                if (influence.Cooling && influence.Strength > 0f)
+                    minimum = Mathf.Min(minimum, influence.Target);
+            return !float.IsFinite(minimum) || minimum <= freezingTemperature;
         }
     }
 

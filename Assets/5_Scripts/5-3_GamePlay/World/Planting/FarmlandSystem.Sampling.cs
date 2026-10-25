@@ -59,14 +59,14 @@ public static partial class FarmlandSystem
             soil = null;
             if (!leased || !hasQuery || manager == null || !query.IsForWorld(manager.WorldRuntime) ||
                 !CanUseSoilCell(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, sample.Cell, sample.WorldCell, true) ||
-                (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample)))
+                !CanReadSoil(sample, allowNaturalSoil))
                 return false;
             template ??= (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate;
             snapshot ??= new TileData_Farmland();
             snapshot.CopyFrom(template);
             ReadSoilSnapshot(sample, snapshot);
             soil = snapshot;
-            if (TryAbsorbNearbyLiquid(sample, soil, this)) Commit(soil, allowNaturalSoil);
+            if (IsFarmland(sample.Cell) && TryAbsorbNearbyLiquid(sample, soil, this)) Commit(soil, allowNaturalSoil);
             return true;
         }
 
@@ -79,13 +79,13 @@ public static partial class FarmlandSystem
         // 本轮已取得的地块直接提交，避免每株植物重复寻址同一格。
         internal void CommitSampled(RuntimeTerrainTileSample sample, TileData_Farmland soil, bool allowNaturalSoil)
         {
-            if (leased && hasQuery && manager != null && query.IsForWorld(manager.WorldRuntime))
+            if (leased && hasQuery && manager != null && query.IsForWorld(manager.WorldRuntime) && IsFarmland(sample.Cell))
                 CommitSoil(sample, soil, allowNaturalSoil, normalizedWorldCell: true);
         }
 
         /// <summary>
         /// 原生植物本轮水肥结算没有数值变化时，仅已初始化且完整同步的格可跳过写回。
-        /// 不能只看作物快照相等：首次自然土壤与缺失的表现层仍需正式提交。
+        /// 地理湿润度和肥力只读，动态状态只比较农业自身的权威层。
         /// </summary>
         internal static bool IsAlreadyCommitted(RuntimeTerrainTileSample sample, TileData_Farmland soil)
         {
@@ -100,11 +100,7 @@ public static partial class FarmlandSystem
                 terrain.TryGetEnvironmentValue(WaterConsumptionRemainderLayer, x, y, out float consumption) &&
                     consumption.Equals(soil.waterConsumptionRemainder) &&
                 terrain.TryGetEnvironmentValue(FertilityLayer, x, y, out float storedFertility) &&
-                    storedFertility.Equals(fertility) &&
-                terrain.TryGetEnvironmentValue("moisture", x, y, out float moisture) &&
-                    moisture.Equals(Mathf.Clamp01((float)soil.waterValue / soil.maxWater)) &&
-                terrain.TryGetEnvironmentValue("fertility", x, y, out float generatedFertility) &&
-                    generatedFertility.Equals(Mathf.Clamp(fertility, 0f, soil.maxFertility));
+                    storedFertility.Equals(fertility);
         }
 
         public void Dispose()

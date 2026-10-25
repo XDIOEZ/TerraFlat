@@ -25,7 +25,8 @@ public static class PlantGrowthEnvironment
         float seconds = initialized ? (float)Math.Max(0d, now - lastTime) : 0f;
         initialized = true;
         lastTime = now;
-        if (seconds <= 0f || !FarmlandSystem.TryReadSoil(cell, out TileData_Farmland soil, out _, naturalSoil)) return;
+        if (seconds <= 0f || !FarmlandSystem.TryReadSoil(cell, out TileData_Farmland soil, out var sample, naturalSoil) ||
+            !FarmlandSystem.IsFarmland(sample.Cell)) return;
         float used = EntityPlantRules.CalculateWaterConsumption(soil.waterValue, soil.waterConsumptionRemainder,
             EntityPlantRules.WaterRate(clock.DayLength, multiplier), seconds);
         if (used <= 0f) return;

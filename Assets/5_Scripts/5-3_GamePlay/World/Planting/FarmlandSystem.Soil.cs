@@ -5,7 +5,7 @@ using UnityEngine;
 
 public static partial class FarmlandSystem
 {
-    #region 统一目标与原地表水肥
+    #region 统一目标与地理基准
 
     /// <summary>白色格子提示和正式锄地共用同一只读校验，不因显示预览改变土地。</summary>
     public static bool TryGetTillingTarget(Vector3 pointer, Vector3 owner, float range,
@@ -22,7 +22,12 @@ public static partial class FarmlandSystem
     }
 
     private static bool HasSoilState(RuntimeTerrainTileSample sample) =>
-        Read(sample.Terrain, sample.LocalCell, SourceLayer) > 0f;
+        Read(sample.Terrain, sample.LocalCell, SourceLayer) == sample.Cell.GroundTileId;
+
+    // 普通地块只为野生植物或已登记的自然基质作物提供只读地理基准。
+    private static bool CanReadSoil(RuntimeTerrainTileSample sample, bool allowNaturalSoil) =>
+        IsFarmland(sample.Cell) || allowNaturalSoil ||
+        SaveDataMgr.Instance?.HasNaturalSubstrateCrop(sample) == true;
 
     /// <summary>耕地已有液体覆盖时仍允许结算土壤，供九宫格灌溉吸收自身格液体。</summary>
     private static bool CanUseSoilCell(RuntimeTerrainTileSample sample) =>
@@ -39,7 +44,7 @@ public static partial class FarmlandSystem
         !(normalizedWorldCell ? BuildingOccupancyRegistry.IsOccupiedNormalized(worldCell) :
             BuildingOccupancyRegistry.IsOccupied(worldCell));
 
-    /// <summary>普通土地尚无农业差量时，读取生成环境；已有浇水、施肥或耕作则保留当前值。</summary>
+    /// <summary>只有真实耕地读取动态水肥，普通地块始终只读生成地理基准。</summary>
     public static TileData_Farmland ReadSoilSnapshot(RuntimeTerrainTileSample sample)
     {
         var soil = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate.Clone();
@@ -51,7 +56,7 @@ public static partial class FarmlandSystem
     internal static void ReadSoilSnapshot(RuntimeTerrainTileSample sample, TileData_Farmland soil)
     {
         soil.position = (Vector3Int)sample.WorldCell;
-        if (HasSoilState(sample))
+        if (IsFarmland(sample.Cell) && HasSoilState(sample))
         {
             soil.waterValue = ReadWaterLevel(sample.Terrain, sample.LocalCell);
             soil.waterSupplyRemainder = Read(sample.Terrain, sample.LocalCell, WaterSupplyRemainderLayer);
@@ -60,11 +65,26 @@ public static partial class FarmlandSystem
         }
         else
         {
-            if (sample.Terrain.TryGetEnvironmentValue("moisture", sample.LocalCell.x, sample.LocalCell.y, out float moisture))
-                soil.waterValue = Mathf.RoundToInt(Mathf.Clamp01(moisture) * soil.maxWater);
-            if (sample.Terrain.TryGetEnvironmentValue("fertility", sample.LocalCell.x, sample.LocalCell.y, out float fertility))
-                SetSnapshotFertility(soil, fertility);
+            ReadGeographicSoilSnapshot(sample, soil);
         }
+        soil.NormalizeValues();
+    }
+
+    internal static TileData_Farmland ReadGeographicSoilSnapshot(RuntimeTerrainTileSample sample)
+    {
+        var soil = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate.Clone();
+        ReadGeographicSoilSnapshot(sample, soil);
+        return soil;
+    }
+
+    internal static void ReadGeographicSoilSnapshot(RuntimeTerrainTileSample sample, TileData_Farmland soil)
+    {
+        soil.position = (Vector3Int)sample.WorldCell;
+        soil.waterSupplyRemainder = soil.waterConsumptionRemainder = 0f;
+        if (sample.Terrain.TryGetEnvironmentValue("moisture", sample.LocalCell.x, sample.LocalCell.y, out float moisture))
+            soil.waterValue = Mathf.RoundToInt(Mathf.Clamp01(moisture) * soil.maxWater);
+        if (sample.Terrain.TryGetEnvironmentValue("fertility", sample.LocalCell.x, sample.LocalCell.y, out float fertility))
+            SetSnapshotFertility(soil, fertility);
         soil.NormalizeValues();
     }
 
@@ -78,10 +98,10 @@ public static partial class FarmlandSystem
         soil.fertilityValue.FinalAdditive = 0f;
     }
 
-    /// <summary>只在实际耕作、浇水或播种时创建水肥差量；允许配置过的自然基质承载作物。</summary>
+    /// <summary>只有耕地创建水肥差量，自然基质播种单独保存作物。</summary>
     public static void EnsureSoilState(RuntimeTerrainTileSample sample)
     {
-        if (HasSoilState(sample)) return;
+        if (!IsFarmland(sample.Cell) || HasSoilState(sample)) return;
         TileData_Farmland soil = ReadSoilSnapshot(sample);
         int x = sample.LocalCell.x, y = sample.LocalCell.y;
         sample.Terrain.SetEnvironmentValue(SourceLayer, x, y, sample.Cell.GroundTileId);
@@ -95,13 +115,6 @@ public static partial class FarmlandSystem
     /// <summary>农业水分只读写 0～10 整级，生成湿润度继续使用 0～1 比例。</summary>
     public static int ReadWaterLevel(ChunkTerrainData terrain, Vector2Int local) =>
         Mathf.Clamp(Mathf.RoundToInt(Read(terrain, local, WaterLayer)), 0, TileData_Farmland.MaxWaterLevel);
-
-    public static void SyncSoilEnvironment(ChunkTerrainData terrain, int x, int y, int water, float fertility)
-    {
-        var template = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate;
-        terrain.SetEnvironmentValue("moisture", x, y, Mathf.Clamp01((float)water / template.maxWater));
-        terrain.SetEnvironmentValue("fertility", x, y, Mathf.Clamp(fertility, 0f, template.maxFertility));
-    }
 
     #endregion
 
@@ -134,7 +147,8 @@ public static partial class FarmlandSystem
     private static bool TryAbsorbNearbyLiquid(RuntimeTerrainTileSample farmland, TileData_Farmland soil,
         SoilSamplingBatch batch = null)
     {
-        if (!GameNetwork.HasStateAuthority || soil == null || ChunkMgr.ExistingInstance == null)
+        if (!GameNetwork.HasStateAuthority || soil == null || !IsFarmland(farmland.Cell) ||
+            ChunkMgr.ExistingInstance == null)
             return false;
 
         soil.NormalizeValues();

@@ -76,9 +76,18 @@ public partial class SaveDataMgr
             return;
         var record = GetRuntimeChunkRecord(address, true);
         var cell = record.FindAgricultureCell(local);
-        if (cell == null)
-            throw new InvalidOperationException("种植格缺少水肥状态，必须先准备种植基质。");
+        if (cell == null && crop == null) return;
+        cell ??= record.GetOrAddAgricultureCell(local);
         cell.Crop = crop == null ? null : CloneItemData(crop);
+        if (cell.Crop == null && cell.SourceTileId == 0)
+            record.AgricultureCells.Remove(cell);
+    }
+
+    /// <summary>自然基质上的玩家作物只登记植株，不创建地块水肥。</summary>
+    internal bool HasNaturalSubstrateCrop(RuntimeTerrainTileSample sample)
+    {
+        AgricultureCellSaveData cell = GetRuntimeChunkRecord(sample.Address, false)?.FindAgricultureCell(sample.LocalCell);
+        return cell is { SourceTileId: 0, Crop: not null };
     }
 
     public IReadOnlyList<AgricultureCellSaveData> GetAgricultureCells(RuntimeWorldAddress address) =>
@@ -106,14 +115,14 @@ public partial class SaveDataMgr
         {
             int x = cell.LocalPosition.x;
             int y = cell.LocalPosition.y;
+            if (cell.SourceTileId <= 0 || !FarmlandSystem.IsFarmland(chunk.Terrain.GetCell(x, y)))
+                continue;
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.SourceLayer, x, y, cell.SourceTileId);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, x, y, cell.Water);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterSupplyRemainderLayer, x, y, cell.WaterSupplyRemainder);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterConsumptionRemainderLayer, x, y,
                 cell.WaterConsumptionRemainder);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, x, y, cell.Fertility);
-            if (cell.SourceTileId != 0)
-                FarmlandSystem.SyncSoilEnvironment(chunk.Terrain, x, y, cell.Water, cell.Fertility);
         }
     }
 

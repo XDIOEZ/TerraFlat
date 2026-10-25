@@ -60,6 +60,7 @@ public partial class SaveDataMgr
                 {
                     int index = RequireWeatherSurfaceIndex(terrain, soilChanged[i]);
                     var local = new Vector2Int(index % terrain.Width, index / terrain.Width);
+                    if (!FarmlandSystem.IsFarmland(terrain.GetCell(local.x, local.y))) continue;
                     AgricultureCellSaveData cell = record.GetOrAddAgricultureCell(local);
                     cell.SourceTileId = (int)FarmlandSystem.Read(terrain, local, FarmlandSystem.SourceLayer);
                     cell.Water = FarmlandSystem.ReadWaterLevel(terrain, local);
@@ -126,6 +127,9 @@ public partial class SaveDataMgr
             if (record?.AgricultureCells != null)
                 foreach (AgricultureCellSaveData cell in record.AgricultureCells)
                 {
+                    if (cell.SourceTileId <= 0 ||
+                        !FarmlandSystem.IsFarmland(terrain.GetCell(cell.LocalPosition.x, cell.LocalPosition.y)))
+                        continue;
                     int index = RequireWeatherSurfaceIndex(terrain,
                         cell.LocalPosition.y * terrain.Width + cell.LocalPosition.x);
                     CaptureWeatherSoil(GetWeatherSurfaceDelta(index, cell.LocalPosition), terrain, cell.LocalPosition);
@@ -172,7 +176,7 @@ public partial class SaveDataMgr
         foreach (WeatherSurfaceCellDelta cell in payload.Cells)
         {
             int x = cell.LocalPosition.x, y = cell.LocalPosition.y;
-            if (cell.SoilChanged)
+            if (cell.SoilChanged && FarmlandSystem.IsFarmland(terrain.GetCell(x, y)))
             {
                 terrain.SetEnvironmentValue(FarmlandSystem.SourceLayer, x, y, cell.SoilSourceTileId);
                 terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, x, y, cell.Water);
@@ -180,7 +184,6 @@ public partial class SaveDataMgr
                 terrain.SetEnvironmentValue(FarmlandSystem.WaterConsumptionRemainderLayer, x, y,
                     cell.WaterConsumptionRemainder);
                 terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, x, y, cell.Fertility);
-                FarmlandSystem.SyncSoilEnvironment(terrain, x, y, cell.Water, cell.Fertility);
             }
             if (cell.SnowChanged)
             {

@@ -110,11 +110,11 @@ test.system("ecology", "soil_snapshot_reuse", {}, function(data)
     local function near(a, b) return math.abs(a - b) < 0.00001 end
     assert(data.generatedWater == 6 and near(data.generatedFertility, 0.7),
         "复用容器没有读取自然地表生成水肥")
-    assert(data.latestWater == 3 and near(data.latestFertility, 0.4) and near(data.latestRemainder, 0.25),
-        "同批土壤读取缓存了旧数值或丢失共用耗水尾数")
-    assert(data.emptyWater == 0 and data.emptyRemainder == 0,
-        "土壤水量耗尽后复用容器残留了旧耗水尾数")
-end, "自然物土壤容器复用仍逐次读取权威水肥与耗水尾数")
+    assert(data.latestWater == 6 and near(data.latestFertility, 0.7) and data.latestRemainder == 0,
+        "自然地表读取了残留的农业动态水肥")
+    assert(data.emptyWater == 6 and data.emptyRemainder == 0,
+        "普通地块被农业耗水更新污染，或复用容器残留了耗水尾数")
+end, "自然物土壤容器只读地理基准，忽略普通地块残留农业状态")
 
 test.system("ecology", "soil_liquid_prefilter", {}, function(data)
     assert(data.dry and data.waterMatches and data.covered and data.missing,

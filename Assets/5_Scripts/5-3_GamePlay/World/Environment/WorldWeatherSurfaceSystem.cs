@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
 using FlatWorld.Diagnostics;
 using FlatWorld.WorldModel;
@@ -7,6 +8,50 @@ using UnityEngine;
 
 public static class WorldWeatherSurfaceSystem
 {
+    #region 实际积雪索引
+
+    private static readonly ConditionalWeakTable<ChunkTerrainData, SnowCellIndex> snowCells = new();
+
+    // 雪层融化到零后立即移出候选，避免空数组让普通地块永久参与天气结算。
+    private sealed class SnowCellIndex
+    {
+        private readonly ChunkTerrainData terrain;
+        internal readonly List<int> Cells = new();
+        internal SnowCellIndex(ChunkTerrainData terrain)
+        {
+            this.terrain = terrain;
+            if (terrain.TryGetEnvironmentLayer(WorldSnowSystem.WeatherDepthLayer, out _) ||
+                terrain.TryGetEnvironmentLayer(WorldSnowInteraction.DepthLayer, out _))
+                for (int index = 0; index < terrain.CellCount; index++) Refresh(index);
+            terrain.Changed += OnChanged;
+        }
+
+        private void OnChanged(ChunkTerrainChanged change)
+        {
+            if (change.Kind != TerrainChangeKind.Environment ||
+                !(change.AffectsEnvironmentLayer(WorldSnowSystem.WeatherDepthLayer) ||
+                  change.AffectsEnvironmentLayer(WorldSnowInteraction.DepthLayer) ||
+                  change.AffectsEnvironmentLayer(WorldSnowInteraction.EditedLayer))) return;
+            foreach (int index in change.GetCellIndices(terrain.Width)) Refresh(index);
+        }
+
+        private void Refresh(int index)
+        {
+            int x = index % terrain.Width, y = index / terrain.Width;
+            bool hasSnow = WorldSnowSystem.GetWeatherDepth(terrain, x, y) > 0f ||
+                terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, out float edited) && edited > 0f &&
+                terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float depth) && depth > 0f;
+            int slot = Cells.BinarySearch(index);
+            if (hasSnow && slot < 0) Cells.Insert(~slot, index);
+            else if (!hasSnow && slot >= 0) Cells.RemoveAt(slot);
+        }
+    }
+
+    internal static IReadOnlyList<int> GetSnowCellIndices(ChunkTerrainData terrain) =>
+        snowCells.GetValue(terrain, value => new SnowCellIndex(value)).Cells;
+
+    #endregion
+
     #region 区块结算
 
     private static readonly List<int> SoilChanged = new();
@@ -46,13 +91,15 @@ public static class WorldWeatherSurfaceSystem
 
         using var profilerScope = AdvanceChunkMarker.Measure(1);
         ChunkTerrainData terrain = chunk.Terrain;
-        // 未产生过天气雪或玩家雪的晴天区块无需逐格结算。
-        if (!HasSurfaceWork(terrain, precipitationSeconds))
+        float freezingTemperature = weather.PrecipitationFreezingTemperature;
+        TemperatureMgr temperature = temperatureSnapshot == null ? TemperatureMgr.Instance : null;
+        bool maySnow = precipitationSeconds > 0f && (temperatureSnapshot != null
+            ? temperatureSnapshot.MayFreeze(freezingTemperature)
+            : temperature == null || temperature.MayFreezeAmbientChunk(chunk, freezingTemperature));
+        if (!HasSurfaceWork(terrain, precipitationSeconds, maySnow: maySnow))
             return;
 
         SnowCoverConfig config = GetSnowConfig();
-        float freezingTemperature = weather.PrecipitationFreezingTemperature;
-        TemperatureMgr temperature = temperatureSnapshot == null ? TemperatureMgr.Instance : null;
         if (temperatureSnapshot == null && temperature == null)
             return;
         if (ambientTemperatures.Length < terrain.CellCount)
@@ -65,7 +112,7 @@ public static class WorldWeatherSurfaceSystem
         }
         int activeCount;
         using (ExposureMarker.Measure(terrain.CellCount))
-            activeCount = CollectActiveCells(chunk, precipitationSeconds);
+            activeCount = CollectActiveCells(chunk, precipitationSeconds, maySnow);
         if (activeCount == 0)
             return;
         // 修改土壤和雪层前统一冻结当地温度，邻区热源依赖每块只检查一次。
@@ -133,7 +180,7 @@ public static class WorldWeatherSurfaceSystem
                     }
                     if (snowChanged)
                         SnowChanged.Add(index);
-                    if (waterPoints > 0f)
+                    if (waterPoints > 0f && FarmlandSystem.IsFarmland(terrain.GetCell(x, y)))
                         waterSupplies[waterSupplyCount++] = new SurfaceWaterSupply(index, waterPoints);
                 }
                 // 雨雪结果保持原顺序，在土壤补水前集中提交雪层，免除逐格通知。
@@ -168,16 +215,39 @@ public static class WorldWeatherSurfaceSystem
             terrain.PublishEnvironmentBatches();
     }
 
-    internal static bool HasSurfaceWork(ChunkTerrainData terrain, float precipitationSeconds, bool hasPending = false) =>
-        hasPending || precipitationSeconds > 0f ||
-        terrain.TryGetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 0, 0, out _) ||
-        terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, 0, 0, out _);
+    internal static bool HasSurfaceWork(ChunkTerrainData terrain, float precipitationSeconds,
+        bool hasPending = false, bool maySnow = true) =>
+        hasPending || precipitationSeconds > 0f && (maySnow || FarmlandSystem.GetFarmlandCellIndices(terrain).Count > 0) ||
+        GetSnowCellIndices(terrain).Count > 0;
 
     // 先筛选受本区块降水或已有积雪影响的地面格，不再逐格查询天气。
-    private static int CollectActiveCells(ChunkRuntime chunk, float precipitationSeconds)
+    private static int CollectActiveCells(ChunkRuntime chunk, float precipitationSeconds, bool maySnow)
     {
         ChunkTerrainData terrain = chunk.Terrain;
         int count = 0;
+        // 暖雨和融雪只合并实际耕地、积雪格，可能落雪时才处理全地表。
+        if (!maySnow)
+        {
+            IReadOnlyList<int> farmland = precipitationSeconds > 0f
+                ? FarmlandSystem.GetFarmlandCellIndices(terrain) : Array.Empty<int>();
+            IReadOnlyList<int> snow = GetSnowCellIndices(terrain);
+            int farmSlot = 0, snowSlot = 0;
+            while (farmSlot < farmland.Count || snowSlot < snow.Count)
+            {
+                int farmIndex = farmSlot < farmland.Count ? farmland[farmSlot] : int.MaxValue;
+                int snowIndex = snowSlot < snow.Count ? snow[snowSlot] : int.MaxValue;
+                int index = Math.Min(farmIndex, snowIndex);
+                bool snowCandidate = index == snowIndex;
+                if (index == farmIndex) farmSlot++;
+                if (index == snowIndex) snowSlot++;
+                int x = index % terrain.Width, y = index / terrain.Width;
+                if (!snowCandidate && TerrainSupportLayer.GetTileId(terrain, x, y) != 0) continue;
+                if (TerrainSupportLayer.GetSurfaceCell(terrain, x, y).GroundTileId != 0 &&
+                    WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) <= 0f)
+                    activeCells[count++] = index;
+            }
+            return count;
+        }
         for (int y = 0; y < terrain.Height; y++)
         for (int x = 0; x < terrain.Width; x++)
         {

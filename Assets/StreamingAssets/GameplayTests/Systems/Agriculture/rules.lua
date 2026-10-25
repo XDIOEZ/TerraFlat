@@ -1,13 +1,24 @@
 -- 正式植物 Job 同时覆盖栽培和野生植物，耗水不依赖生长状态。
 test.system("agriculture", "soil_commit_unchanged", {}, function(data)
-    assert(data.uninitialized and data.needsMoistureProjection,
-        "初次自然土壤或缺少湿度表现层不能跳过正式保存")
+    assert(data.uninitialized and data.geographyIndependent and data.geographicChangesIgnored,
+        "耕地水肥提交错误依赖或改写地理湿润度和肥力")
     assert(data.equal and data.dryEqual and data.dryStillEqual,
         "已有水肥状态无变化时仍重复提交，包括耗尽后无效扣水/扣肥")
-    assert(data.changedRemainder and data.changedProjection and data.wateringChanges,
+    assert(data.changedRemainder and data.changedFertility and data.wateringChanges,
         "耗水进度、肥力表现差异或有效补水没有触发新提交")
     assert(data.allocation == 0, "土壤幂等性热判断仍产生托管分配")
 end, "植物水肥：真实变化提交、干土空操作跳过、初始化与表现完整性")
+
+test.system("agriculture", "farmland_scope", {}, function(data)
+    assert(data.initiallyEmpty and data.ordered and data.removed and data.remappedTile and data.environmentKeptIndex,
+        "耕地索引遗漏真实地块变化、目录重映射或被水肥更新重建")
+    assert(data.normalReadOnly and data.supplyRejected and data.geographicInitial,
+        "普通地块被雨水创建农业状态，或新耕地错误继承动态水肥")
+    assert(data.snowAdded and data.snowMelted and data.playerSnowAdded and data.playerSnowRemoved,
+        "实际雪格索引没有跟随积雪、编辑标记或完全融化更新")
+    assert(data.warmSkipped and data.coldKept and data.meltingKept and data.meltedSkipped,
+        "暖雨普通地仍参与结算，或落雪/融雪被错误跳过")
+end, "仅真实耕地更新水肥，普通地只读地理，暖雨稀疏处理并保留雨雪边界")
 
 for _, row in ipairs({
     {label = "零水为干土", source = 1, water = 0, moisture = 1, expected = 0},
@@ -28,8 +39,8 @@ for _, row in ipairs({
             expected.label .. "没有给地块Shader传入正确的含水比例")
         assert(data.enabled == 1 and data.reserved, expected.label .. "的耕地标记或保留通道错误")
         assert(data.readOnly and data.allocatedBytes == 0, "水分表现查询写回土壤、触发灌溉或产生热分配")
-        assert(data.waterLayer and data.sourceLayer and data.generatedMoistureLayer,
-            "耕地水分更新遗漏了真实水量、土壤来源或生成湿润度")
+        assert(data.waterLayer and data.sourceLayer and not data.generatedMoistureLayer,
+            "耕地水分刷新没有只依赖农业权威层")
         assert(data.fertilityIgnored and data.progressIgnored and data.genericChangeIgnored,
             "肥力、累计进度或通用地形通知被错误当成仅刷新耕地水分")
     end, "耕地干湿Shader输入：" .. row.label)
@@ -42,6 +53,8 @@ test.system("agriculture", "soil_persistence_keys", {}, function(data)
         "农业热查询复用缓存后没有读取实时水肥，或覆盖原有作物和差量对象")
     assert(data.bounded and data.cleared and data.replaced,
         "农业键缓存无界增长，或换档清理后返回了旧差量对象")
+    assert(data.naturalCropOnly and data.naturalCropRemoved,
+        "自然基质播种伪造了普通地块水肥，或作物移除后仍开放只读种植资格")
     assert(data.iterations == 8192 and data.allocatedBytes == 0,
         "已预热的逐格农业差量记录仍重复格式化区块名称和存档键")
 end, "农业差量坐标键复用、世界隔离与热提交零分配")

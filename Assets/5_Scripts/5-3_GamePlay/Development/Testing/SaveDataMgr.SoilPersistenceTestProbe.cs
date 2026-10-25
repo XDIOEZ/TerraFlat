@@ -38,6 +38,7 @@ public partial class SaveDataMgr
         for (int i = 0; i < worlds.Length; i++)
             isolated &= GetRuntimeChunkRecord(worlds[i], address, false).FindAgricultureCell(Vector2Int.zero).Water == i;
 
+        // 数字地块仅用于独立存储读写，实际耕地资格由农业业务入口校验。
         using var buffer = new ChunkTerrainBuffer(8, 8);
         for (int y = 0; y < 8; y++)
         for (int x = 0; x < 8; x++)
@@ -81,6 +82,16 @@ public partial class SaveDataMgr
             _ = GetRuntimeChunkRecord("probe:bounded", new FlatWorld.WorldModel.WorldAddress("surface", new Int2(i * 32, 0)), false);
         bool bounded = chunkDeltaLookupKeys.Count <= 256 && chunkDeltas.Count == expectedRecordCount &&
             ReferenceEquals(first, GetRuntimeChunkRecord(address, false));
+        var naturalAddress = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(96, 96));
+        var naturalSample = new RuntimeTerrainTileSample(naturalAddress, terrain, new Vector2Int(96, 96),
+            Vector2Int.zero, terrain.GetCell(0, 0), 7);
+        RecordCultivatedCropData(naturalAddress, Vector2Int.zero, crop);
+        AgricultureCellSaveData cropOnly = GetRuntimeChunkRecord(naturalAddress, false).FindAgricultureCell(Vector2Int.zero);
+        bool naturalCropOnly = HasNaturalSubstrateCrop(naturalSample) && cropOnly.SourceTileId == 0 &&
+            cropOnly.Water == 0 && cropOnly.Fertility == 0f;
+        RecordCultivatedCropData(naturalAddress, Vector2Int.zero, null);
+        bool naturalCropRemoved = !HasNaturalSubstrateCrop(naturalSample) &&
+            GetRuntimeChunkRecord(naturalAddress, false).AgricultureCells.Count == 0;
         SaveData = new GameSaveData { saveName = "probe:soil-replacement" };
         ResetChunkDifferenceState();
         bool cleared = GetRuntimeChunkRecord(address, false) == null && chunkDeltas.Count == 0;
@@ -92,7 +103,8 @@ public partial class SaveDataMgr
             ["reused"] = reused, ["isolated"] = isolated, ["valuesPreserved"] = valuesPreserved,
             ["currentValues"] = currentValues, ["bounded"] = bounded,
             ["cleared"] = cleared, ["replaced"] = replaced,
-            ["iterations"] = iterations, ["allocatedBytes"] = allocatedBytes
+            ["iterations"] = iterations, ["allocatedBytes"] = allocatedBytes,
+            ["naturalCropOnly"] = naturalCropOnly, ["naturalCropRemoved"] = naturalCropRemoved
         };
     }
 

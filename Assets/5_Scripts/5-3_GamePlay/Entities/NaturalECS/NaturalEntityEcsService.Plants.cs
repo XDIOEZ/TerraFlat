@@ -340,7 +340,7 @@ namespace FlatWorld.NaturalEntities
                 hasSoil = simulation.TryGet(record.Handle.Id, out plant) &&
                     soils.TryRead(PlantSoilCell(record, plant), out target, out sampled,
                         allowNaturalSoil: plant.Cultivated == 0);
-            if (hasSoil)
+            if (hasSoil && FarmlandSystem.IsFarmland(sampled.Cell))
             {
                 // 保持逐株读取、灌溉和提交顺序，仅拆开统计真实读写与差量持久化成本。
                 using (SoilCommitWriteMarker.Auto())

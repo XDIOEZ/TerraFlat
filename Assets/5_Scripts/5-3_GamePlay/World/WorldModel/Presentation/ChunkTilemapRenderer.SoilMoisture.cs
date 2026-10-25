@@ -6,7 +6,7 @@ public sealed partial class ChunkTilemapRenderer
     #region 耕地水分表现
 
     internal static bool IsSoilMoistureVisualLayer(string layerId) =>
-        layerId == FarmlandSystem.WaterLayer || layerId == FarmlandSystem.SourceLayer || layerId == "moisture";
+        layerId == FarmlandSystem.WaterLayer || layerId == FarmlandSystem.SourceLayer;
 
     private static bool TryGetFarmlandTemplate(int tileId, out TileData_Farmland template)
     {

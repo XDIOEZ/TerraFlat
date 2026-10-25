@@ -846,6 +846,9 @@ test.system("environment", "surface_temperature_snapshot", {}, function(data)
     near(cold.seconds, 2, "冷快照丢失游戏时间")
     near(cold.precipitation, 1, "冷快照丢失降水积分")
     near(warm.precipitation, 3, "暖快照丢失降水积分")
+    assert(data.warmRainOnly and data.seasonKept and data.orbitalKept and data.coolingKept
+        and data.geographicChangeKept and data.freezingEdgeKept,
+        "暖雨前置筛选遗漏季节、轨道、局部制冷、地理温度变化或零度落雪边界")
 end, "天气地表冻结温度、跨冷热变化、热源值与几何权重独立")
 
 test.system("environment", "thermal_point_batch", {}, function(data)
