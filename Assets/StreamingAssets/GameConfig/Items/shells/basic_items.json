@@ -2975,7 +2975,7 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_54]",
+        "spriteAddress": "Assets/6_Art/Generated/Items/Berry/Item_Berry.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

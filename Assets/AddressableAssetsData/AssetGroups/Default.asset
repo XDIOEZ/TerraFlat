@@ -587,6 +587,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9ac7bb4886396bf4faec3bf7d1e9fe88
+    m_Address: Assets/6_Art/Generated/Items/Berry/Item_Berry.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 090f178416e041a99dba575c736b4bbe
     m_Address: Assets/6_Art/Generated/AI/Bee/Bee_Flying_Left.png
     m_ReadOnly: 0
