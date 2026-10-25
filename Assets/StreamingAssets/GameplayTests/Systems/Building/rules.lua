@@ -1,3 +1,17 @@
+test.system("building", "portable_building_health", {}, function(data)
+    local expected = { Coconut_Shell_Building = 20, ClayJar_Building = 40, StoneMortar_Building = 50, WoodenBarrel_Building = 60 }
+    assert(#data.buildings == 4, "可放置容器的正式定义覆盖不完整")
+    for _, row in ipairs(data.buildings) do
+        assert(row.validationError == "", row.id .. "没有通过正式机器受击校验：" .. row.validationError)
+        assert(row.hasHp and row.maxHp == expected[row.id] and row.hp == row.maxHp,
+            row.id .. "缺少满血初始状态或有效最大生命")
+        assert(row.triggerEnabled and row.colliderType == "BoxCollider2D" and row.width > 0 and row.height > 0,
+            row.id .. "没有配置有效的独立受击范围")
+    end
+    assert(data.missingHealth == "InvalidOperationException" and data.zeroHealth == "InvalidOperationException" and
+            data.missingTrigger == "InvalidOperationException", "机器受击校验接受了缺少生命或受击范围的配置")
+end, "落地椰壳、陶罐、石臼、木桶的正式受击配置与缺失拒绝")
+
 test.system("building", "chunk_residency", {}, function(data)
     assert(data.scope == "production-registry-only", "必须调用正式建筑归属索引")
     assert(data.duplicateCount == 1 and data.isolatedCount == 1, "重复登记或同坐标跨世界串入区块")

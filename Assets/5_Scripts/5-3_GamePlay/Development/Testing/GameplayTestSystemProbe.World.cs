@@ -50,6 +50,7 @@ public static partial class GameplayTestSystemProbe
         RegisterColdDropProbes(operations);
         operations.Add("building/support_layer", WorldSupportLayer);
         operations.Add("building/shared_state", WorldBuildingState);
+        operations.Add("building/portable_building_health", WorldPortableBuildingHealth);
         operations.Add("agriculture/soil", WorldSoil);
         operations.Add("agriculture/plant_growth", WorldPlantGrowth);
         operations.Add("agriculture/tilling_visual_schedule", WorldTillingVisualSchedule);
@@ -1284,6 +1285,39 @@ public static partial class GameplayTestSystemProbe
             ["distinctModule"] = !ReferenceEquals(copied, sourceModule),
             ["distinctPayload"] = !ReferenceEquals(copied.BitData, sourceModule.BitData),
             ["duplicate"] = duplicate, ["missing"] = missing, ["stacked"] = stacked
+        };
+    }
+
+    // 从正式继承目录检查落地容器受击配置，断言交给 Lua，不创建机器或玩家世界。
+    private static JObject WorldPortableBuildingHealth(JObject args)
+    {
+        List<ItemDefinitionDto> definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
+        var buildings = new JArray();
+        foreach (string id in new[] { "Coconut_Shell_Building", "ClayJar_Building", "StoneMortar_Building", "WoodenBarrel_Building" })
+        {
+            ItemDefinitionDto definition = definitions.Find(value => value.Id == id)
+                ?? throw new InvalidOperationException("缺少可放置容器定义：" + id);
+            ItemHealthDefinitionDto health = definition.Health;
+            Vector2 size = health?.Collider?.Size ?? Vector2.zero;
+            buildings.Add(new JObject
+            {
+                ["id"] = id,
+                ["validationError"] = WorldException(() => MachineCombatBridge.ValidateHealth(health)),
+                ["hasHp"] = health?.HasHp == true,
+                ["hp"] = health?.Hp ?? 0f,
+                ["maxHp"] = health?.MaxHp ?? 0f,
+                ["colliderType"] = health?.Collider?.Type,
+                ["triggerEnabled"] = health?.Collider != null && health.Collider.Enabled != false && health.Collider.IsTrigger != false,
+                ["width"] = size.x,
+                ["height"] = size.y
+            });
+        }
+        return new JObject
+        {
+            ["buildings"] = buildings,
+            ["missingHealth"] = WorldException(() => MachineCombatBridge.ValidateHealth(null)),
+            ["zeroHealth"] = WorldException(() => MachineCombatBridge.ValidateHealth(new ItemHealthDefinitionDto { MaxHp = 0f })),
+            ["missingTrigger"] = WorldException(() => MachineCombatBridge.ValidateHealth(new ItemHealthDefinitionDto()))
         };
     }
     #endregion

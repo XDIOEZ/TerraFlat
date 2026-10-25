@@ -20,6 +20,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 ## 核心边界
 
 - 召唤器/手持保留 Item；落地设施由 Place/SpawnGenerated/RestoreMachine 创建数据节点。Mod_MachineAuthoring 只存配置，ChunkView 不驱动业务。
+- 数据机器包含落地椰壳等容器，物品定义必须显式提供正最大生命及独立受击 Trigger，不能靠绕过校验补默认血量；回归 `building/portable_building_health`。
 - 世界时间由调用方传入；网络恢复完才 Tick、快照后才休眠。船与后台地表按自身世界继续模拟，不借当前场景的玩家、环境或掉落物。
 - 迁移以 TransferScopeNodes/TransferShipNodes 整批交接真实节点、加工器和共享库存；不要用会排放储罐的 Remove/Place 模拟迁移。
 - 加工资格归设备，转化与温度归材料；RecipeProcessor 复用 CraftingService 原子事务。燃料炉只供热，不持有配方或加工进度。
