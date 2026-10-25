@@ -46,6 +46,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 鼠标右键按下时由控制器冻结左右 Shift 汇总态；手持装备经 `Mod_HotBar → Mod_Equipment.TryEquipFromSlot` 穿戴或替换，旧件回当前快捷栏槽。该组合键独占按下、持续和松开，拒绝也不再执行普通 `Act`；非装备、普通右键和其他设备沿用现有使用链。
 - `PreciseInteraction` 默认关闭：光标命中优先，空命中按朝向/距离回退；开启后仅认落点。全部选择受距离约束，鼠标始终精确；手持 `Item.InHand` 排除于候选，包括同时实现世界目标接口的组件。手持建筑放置由右键使用提交，不阻断 F 交互和世界描边；放置态只暂停左键采集。
 - 发送器使用 Physics2D 查询，无交互 Trigger，`Module_Hand` 无 Collider2D，查询跳过伤害专用 Collider。无 Collider 目标及机器由 `SpatialInteractionRegistry.Query` 提供；逐帧描边只用 `QueryPreview` 的注册视觉，机械视觉以同一目标接入 `IWorldInteractionPreview`。
+- 中键 `PickWorldItem` 经正式输入仲裁后由 `WorldItemQuickPickService` 检索现有快捷栏/背包；先用发送器精确光标与同格分区，无光标目标才走可独立复用的世界格查询。数据目标通过 `IWorldInteractionTarget.ItemDefinitionId` 提供身份，建筑召唤器按建筑ID/TileBlockId匹配；空槽优先，满栏交换当前槽，网络事务确认后核对目标身份再切槽。
 - 同格叠层通过 `IGridInteractionTarget` 声明网格/格坐标/显示层级，`GridInteractionSelector` 只统计有资格且在距离内的目标，按光标由上到下平均分给底层到高层；正式按键与描边共用选择，重复视觉不增加份数，地板/墙不占份数。
 - 光标未命中后同轮半径兜底复用已完成的 `Physics2D.SyncTransforms`，显式点选仍独立同步；Profiler 区分 `FlatWorld.Interaction.PointerQuery/RadiusQuery`。
 - 指针、半径、注册目标和自然资源空间桶共用单轮 `WorldTopologyDomain`；桶内不逐格重建活动世界上下文，目标与准入仍每帧现查，不跨帧缓存或改变输入响应周期。

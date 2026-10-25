@@ -36,6 +36,7 @@ public interface IWorldInteractionTarget : IInteractable
 {
     Vector3 WorldPosition { get; }
     int TargetGuid { get; }
+    string ItemDefinitionId => null; // 世界目标自行提供物品身份，快速拿取无需识别具体后端。
     bool IsValid { get; }
 }
 

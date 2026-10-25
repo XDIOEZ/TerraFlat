@@ -20,6 +20,7 @@ public sealed class MachineInteractionTarget : IGridInteractionTarget, IWorldInt
 
     public Vector3 WorldPosition => node.Snapshot.transform.position;
     public int TargetGuid => node.Id;
+    public string ItemDefinitionId => node.Definition.Id;
     public bool IsValid => !disposed && MachineWorld.Contains(node);
     public bool CanInteract(Item actor) => IsValid &&
         (node.Definition.Electrical?.Hidden != true || EngineeringVision.CanSee(actor));

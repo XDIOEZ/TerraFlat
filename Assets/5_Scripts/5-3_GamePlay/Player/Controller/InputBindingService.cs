@@ -145,6 +145,7 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("Move_Player", "left", "向左移动", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("Move_Player", "right", "向右移动", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("LeftClick", null, "主要操作", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("PickWorldItem", null, "快速拿取光标物品", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("RightClick", null, "次要操作", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("E", null, "交互", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("F", null, "丢弃", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),

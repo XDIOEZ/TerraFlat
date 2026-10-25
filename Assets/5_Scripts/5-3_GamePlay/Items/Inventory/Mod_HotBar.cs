@@ -1,4 +1,4 @@
-﻿// AI-Context: 玩家快捷栏与手持物实例的唯一来源；远程应用只创建视觉副本，不绑定 UI/输入或参与 ItemMgr Tick。
+// AI-Context: 玩家快捷栏与手持物实例的唯一来源；远程应用只创建视觉副本，不绑定 UI/输入或参与 ItemMgr Tick。
 
 using DG.Tweening;
 using MemoryPack;
@@ -14,7 +14,7 @@ using UnityEngine.InputSystem;
 /// 快捷栏模块（Module形态）
 /// 内部通过 RuntimeInventory 复用原有 Inventory 逻辑。
 /// </summary>
-public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
+public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 {
     private const int FirstHotbarSlotIndex = 0;
 
@@ -341,6 +341,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         ResetSavedInventoryCache();
         if (runtimeUnloading) return;
         runtimeUnloading = true;
+        pendingWorldItemQuickPickIndex = -1;
         heldItemSyncPending = false;
         UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
         UnbindHotbarInput();
@@ -601,6 +602,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnInventoryModUpdate(float deltaTime)
     {
+        CompletePendingWorldItemQuickPickSelection();
         if (heldItemSyncPending)
             SyncCurrentHeldItemWithSlot();
     }

@@ -44,6 +44,7 @@ namespace FlatWorld.NaturalEntities
                 get { using var scope = UseHandle(Handle); return WorldLocalPresentation.ProjectPosition(Snapshot.transform.position); }
             }
             public int TargetGuid => Snapshot.Guid;
+            public string ItemDefinitionId => Snapshot.IDName;
             public bool IsValid
             {
                 get { using var scope = UseHandle(Handle); return Contains(Handle) && simulation.GetBody(Handle.Id).Dead == 0; }
@@ -134,6 +135,26 @@ namespace FlatWorld.NaturalEntities
                     simulation.TryGet(record.Handle.Id, out AiecsVital vital))
                 { health = new Vector2(vital.Hp, vital.MaxHp); return true; }
             return false;
+        }
+
+        /// <summary>鼠标格只读查询不要求资源已经成熟或可采集，复用自然实体空间桶。</summary>
+        public static bool TryGetWorldItemDefinitionAtCell(Vector2Int cell, out string itemId)
+        {
+            itemId = null;
+            if (simulation == null) return false;
+            cell = WorldTopologyRuntime.NormalizeCell(cell);
+            if (!spatialCells.TryGetValue(cell, out var bucket)) return false;
+            Record selected = null;
+            foreach (int id in bucket)
+            {
+                if (!records.TryGetValue(id, out Record record) || !record.IsValid ||
+                    record.DimensionId != WorldEntityRuntime.DimensionId) continue;
+                NaturalEntityBody body = simulation.GetBody(id);
+                Vector2Int root = WorldTopologyRuntime.NormalizeCell(new Vector2Int(Mathf.FloorToInt(body.Position.x), Mathf.FloorToInt(body.Position.y)));
+                if (OccupiesCell(record, root, cell) && (selected == null || record.Snapshot.Guid < selected.Snapshot.Guid)) selected = record;
+            }
+            itemId = selected?.Snapshot.IDName;
+            return !string.IsNullOrEmpty(itemId);
         }
 
         /// <summary>按实际空间桶观察当前世界存活实体，未激活生成点不会成为可操作目标。</summary>

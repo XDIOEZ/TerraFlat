@@ -423,3 +423,45 @@ for _, offset in ipairs({{x = 10, y = -20}, {x = -128, y = 256}}) do
         assert(data.destroyedRejected and data.clearedRejected, "失效源被镜像自有组件冒充成新的命中目标")
     end, "物理命中镜像归源与兄弟能力：" .. offset.x .. "," .. offset.y)
 end
+
+
+-- 中键拿取只匹配已有库存，正式事务保留整组状态并在满栏时双向交换。
+for _, case in ipairs({
+    {mode = "empty", accepted = true, selected = 1},
+    {mode = "partial", accepted = true, selected = 1},
+    {mode = "full", accepted = true, selected = 0},
+    {mode = "existing", accepted = true, selected = 2},
+    {mode = "current", accepted = true, selected = 0},
+    {mode = "building", accepted = true, selected = 1},
+    {mode = "tile", accepted = true, selected = 1},
+    {mode = "missing", accepted = false},
+    {mode = "invalid", accepted = false},
+    {mode = "locked", accepted = false},
+    {mode = "return_blocked", accepted = false},
+    {mode = "dragged", accepted = false},
+    {mode = "existing_dragged", accepted = false}
+}) do
+    test.system("player", "world_item_quick_pick", {mode = case.mode}, function(data)
+        assert(data.accepted == case.accepted, "快速拿取成功或拒绝结果不符：" .. case.mode)
+        assert(data.amount == (case.mode == "partial" and 2 or 3) and data.durability == 13 and data.special == "preserved-state", "快速拿取损坏数量或实例状态")
+        assert(data.binding == "<Mouse>/middleButton" and data.rebindable, "中键没有接入正式可重绑输入")
+        if case.accepted then
+            assert(data.selected == case.selected, "没有选择真实目标槽")
+            if case.mode == "partial" then
+                assert(data.expectedGuid ~= 0 and data.expectedGuid ~= 601 and data.destinationAmount == 1 and data.destinationSpecial == "preserved-state" and data.bagIncoming, "部分搬运没有保留余量或拆分身份")
+            else
+                assert(data.expectedGuid == 601 and data.destinationIncoming, "丢失原物品实例")
+            end
+            if case.mode == "full" then
+                assert(data.bagPrevious, "满快捷栏交换没有把旧物归还背包原槽")
+            elseif case.mode == "existing" or case.mode == "current" or case.mode == "partial" then
+                assert(data.bagIncoming, "已有快捷栏目标时仍搬动背包")
+            else
+                assert(data.currentPrevious and not data.bagIncoming, "空槽拿取误换当前物品或没有搬运")
+            end
+        else
+            assert(data.selected == -1 and data.bagIncoming and data.currentPrevious, "拒绝后库存仍发生变化")
+        end
+        if case.mode == "dragged" or case.mode == "existing_dragged" then assert(data.dragStarted, "来源拖拽前置没有成立") end
+    end, "光标物品快速拿取：" .. case.mode)
+end

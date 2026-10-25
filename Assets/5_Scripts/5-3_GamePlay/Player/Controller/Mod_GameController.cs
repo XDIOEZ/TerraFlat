@@ -659,6 +659,7 @@ public partial class Mod_GameController : Module
 
     private void RegisterInputCallbacks() /// 注册输入监听
     {
+        _inputActions.asset.FindAction("Win10/PickWorldItem", true).performed += HandleWorldItemQuickPickInput;
         _inputActions.Win10.Roll.performed += HandleRollInput;
         _inputActions.Win10.Parry.performed += HandleParryInput;
         _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed += HandleBuildingRotation;
@@ -698,6 +699,7 @@ public partial class Mod_GameController : Module
 
     private void UnregisterInputCallbacks() /// 取消输入监听
     {
+        _inputActions.asset.FindAction("Win10/PickWorldItem", true).performed -= HandleWorldItemQuickPickInput;
         _inputActions.Win10.Roll.performed -= HandleRollInput;
         _inputActions.Win10.Parry.performed -= HandleParryInput;
         _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed -= HandleBuildingRotation;

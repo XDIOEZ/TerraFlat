@@ -94,6 +94,15 @@ namespace InputSystem
             ""id"": ""bbdf934f-cb46-49bb-8823-fa4276d8d3cb"",
             ""actions"": [
                 {
+                    ""name"": ""PickWorldItem"",
+                    ""type"": ""Button"",
+                    ""id"": ""81dfdf87-1082-4561-89c6-2b2a30984d49"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Move_Player"",
                     ""type"": ""Value"",
                     ""id"": ""21df0a26-24c7-4a33-b626-39cc18a453c5"",
@@ -329,6 +338,17 @@ namespace InputSystem
                 }
             ],
             ""bindings"": [
+                {
+                    ""name"": """",
+                    ""id"": ""5a1448bc-c562-499a-9f9e-2bcb2c8e682c"",
+                    ""path"": ""<Mouse>/middleButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""PickWorldItem"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
                 {
                     ""name"": """",
                     ""id"": ""9c985ba8-1ac3-4448-a0b6-066888589ee8"",
