@@ -78,6 +78,10 @@ public static class WorldSnowInteraction
 
     #region 选格
     public static bool TryResolveTarget(Item held, float reach, out RuntimeTerrainTileSample sample, out string reason)
+        => TryResolveTarget(held, reach, null, out sample, out reason);
+
+    private static bool TryResolveTarget(Item held, float reach, RuntimeTerrainTileSample? lockedTarget,
+        out RuntimeTerrainTileSample sample, out string reason)
     {
         sample = default;
         reason = null;
@@ -91,10 +95,14 @@ public static class WorldSnowInteraction
         var controller = actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         var manager = ChunkMgr.ExistingInstance;
         if (controller == null || controller.IsGameplayInputLocked ||
-            (!controller.IsUsingMobile && controller.IsPointerOverUI()))
+            (!lockedTarget.HasValue && !controller.IsUsingMobile && controller.IsPointerOverUI()))
             return false;
+        Vector2 position = lockedTarget.HasValue
+            ? (Vector2)lockedTarget.Value.WorldCell + Vector2.one * 0.5f
+            : (Vector2)controller.GetMouseWorldPosition();
         if (manager == null || SaveDataMgr.Instance?.SaveData == null ||
-            !manager.TryGetRuntimeTerrainTile(controller.GetMouseWorldPosition(), out sample))
+            !manager.TryGetRuntimeTerrainTile(position, out sample) ||
+            (lockedTarget.HasValue && !ReferenceEquals(sample.Terrain, lockedTarget.Value.Terrain)))
         {
             reason = "目标地块尚未加载。";
             return false;
@@ -118,16 +126,17 @@ public static class WorldSnowInteraction
     #endregion
 
     #region 铲雪与铺雪
-    public static bool TryShovel(Item held, float reach, out Vector2Int cell, out string reason)
+    public static bool TryShovel(Item held, float reach, RuntimeTerrainTileSample target,
+        out Vector2Int cell, out string reason)
     {
         cell = default;
-        if (!TryResolveTarget(held, reach, out var sample, out reason)) return false;
+        if (!TryResolveTarget(held, reach, target, out var sample, out reason)) return false;
         int layers = GetLayerCount(sample);
         if (layers <= 0) { reason = "这里没有积雪。"; return false; }
         var previous = Capture(sample);
-        var drop = DroppedItemService.SpawnLoot(SnowballId, (Vector2)sample.WorldCell + Vector2.one * 0.5f, layers);
+        var drop = DroppedItemService.SpawnLoot(SnowballId, (Vector2)sample.WorldCell + Vector2.one * 0.5f, 1);
         if (!drop.IsValid) { reason = "雪球生成失败。"; return false; }
-        try { WriteLayers(sample, 0); }
+        try { WriteLayers(sample, layers - 1); }
         catch (Exception exception)
         {
             DroppedItemService.Remove(drop);

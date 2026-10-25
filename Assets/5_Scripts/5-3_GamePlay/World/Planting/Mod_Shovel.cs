@@ -12,10 +12,11 @@ public sealed class Mod_Shovel : Mod_GroundHarvestToolBase
         WorldSnowInteraction.TryResolveTarget(item, 2f, out sample, out _) &&
         WorldSnowInteraction.GetLayerCount(sample) > 0;
 
-    protected override bool TryWorkOverlay(out UnityEngine.Vector2Int cell, out float interval, out string reason)
+    protected override bool TryWorkOverlay(RuntimeTerrainTileSample target,
+        out UnityEngine.Vector2Int cell, out float interval, out string reason)
     {
         interval = 0.35f;
-        return WorldSnowInteraction.TryShovel(item, 2f, out cell, out reason);
+        return WorldSnowInteraction.TryShovel(item, 2f, target, out cell, out reason);
     }
     #endregion
 }

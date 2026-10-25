@@ -8,12 +8,16 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
 
     protected virtual bool SupportsGroundHarvest => true;
 
-    private IWeaponActionAnimation actionAnimation;
+    private IWeaponActionCompletionAnimation actionAnimation;
     private Mod_GameController ownerController;
     private WorldTileTargetOutline targetOutline;
     private bool actBound;
     private bool continuousUseArmed;
     private float nextUseTime;
+    private RuntimeTerrainTileSample? pendingOverlayTarget;
+    private Item pendingOverlayOwner;
+    private float overlayStartTime;
+    private bool overlayFailureFeedback;
 
     #endregion
 
@@ -23,7 +27,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
     public void BindModuleDependencies(ItemMods modules)
     {
         actionAnimation = SupportsGroundHarvest
-            ? modules.RequireSingleCapability<IWeaponActionAnimation>() : null;
+            ? modules.RequireSingleCapability<IWeaponActionCompletionAnimation>() : null;
     }
 
     protected override void OnLoad()
@@ -38,6 +42,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
             item.OnAct -= Act;
         actBound = false;
         continuousUseArmed = false;
+        ClearPendingOverlay();
         nextUseTime = 0f;
         ownerController = null;
         actionAnimation = null;
@@ -49,6 +54,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
     protected void OnDisable()
     {
         continuousUseArmed = false;
+        ClearPendingOverlay();
         nextUseTime = 0f;
         ownerController = null;
         ReleaseTargetVisuals();
@@ -84,7 +90,8 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         return false;
     }
 
-    protected virtual bool TryWorkOverlay(out Vector2Int cell, out float interval, out string reason)
+    protected virtual bool TryWorkOverlay(RuntimeTerrainTileSample target,
+        out Vector2Int cell, out float interval, out string reason)
     {
         cell = default;
         interval = 0f;
@@ -94,7 +101,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
 
     public override void Act()
     {
-        if (!SupportsGroundHarvest || item?.Owner == null)
+        if (!SupportsGroundHarvest || item?.Owner == null || pendingOverlayTarget.HasValue)
             return;
 
         ownerController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -107,6 +114,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         if (!SupportsGroundHarvest || item == null || !item.InHand || item.Owner is not Player player || !player.IsLocalProfile)
         {
             continuousUseArmed = false;
+            ClearPendingOverlay();
             ownerController = null;
             targetOutline?.Hide();
             return;
@@ -126,10 +134,11 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
     /// <summary>真实挥动开始后才提交一份挖掘进度。</summary>
     private void TryPerformSwing(Mod_GameController controller, bool showFailureFeedback)
     {
-        if (controller == null || item == null || !item.InHand || Time.time < nextUseTime)
+        if (controller == null || item == null || !item.InHand ||
+            pendingOverlayTarget.HasValue || Time.time < nextUseTime)
             return;
 
-        bool overlay = TryResolveOverlayTarget(out _);
+        bool overlay = TryResolveOverlayTarget(out RuntimeTerrainTileSample overlayTarget);
         string failureReason = null;
         if (!overlay && !GroundTileHarvestSystem.TryResolveTarget(this, out _, out _, out _, out failureReason))
         {
@@ -138,15 +147,23 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
             return;
         }
 
-        actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionAnimation>();
+        actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionCompletionAnimation>();
+        if (overlay)
+        {
+            if (!actionAnimation.TryRequestAction(CompleteOverlayWork)) return;
+            pendingOverlayTarget = overlayTarget;
+            pendingOverlayOwner = item.Owner;
+            overlayStartTime = Time.time;
+            overlayFailureFeedback = showFailureFeedback;
+            return;
+        }
+
         if (!actionAnimation.TryRequestAction(queueIfBusy: false))
             return;
 
         Vector2Int worldCell;
         float useInterval;
-        bool worked = overlay
-            ? TryWorkOverlay(out worldCell, out useInterval, out failureReason)
-            : GroundTileHarvestSystem.TryWork(this, out _, out worldCell, out useInterval, out failureReason);
+        bool worked = GroundTileHarvestSystem.TryWork(this, out _, out worldCell, out useInterval, out failureReason);
         if (!worked)
         {
             if (showFailureFeedback && !string.IsNullOrEmpty(failureReason))
@@ -155,11 +172,50 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         }
 
         nextUseTime = Time.time + useInterval;
-        // 铲空覆盖层后重新按右键才挖底层，避免一次长按顺手破坏雪下地面。
-        if (overlay) continuousUseArmed = false;
         if (HarvestKind == ResourceToolKind.Shovel)
             HoeTillingFeedback.PlayDigging(item, worldCell);
         UpdateTargetVisuals();
+    }
+
+    // 覆盖层锁定起手地格，动画完成后才逐次结算；挖空或取消后停止长按。
+    private void CompleteOverlayWork(bool completed)
+    {
+        if (!pendingOverlayTarget.HasValue) return;
+        RuntimeTerrainTileSample target = pendingOverlayTarget.Value;
+        Item owner = pendingOverlayOwner;
+        float startedAt = overlayStartTime;
+        bool showFailureFeedback = overlayFailureFeedback;
+        ClearPendingOverlay();
+        if (!completed || !IsRuntimeLoaded || !isActiveAndEnabled || item == null ||
+            !item.InHand || item.Owner != owner)
+        {
+            continuousUseArmed = false;
+            return;
+        }
+
+        if (!TryWorkOverlay(target, out Vector2Int cell, out float interval, out string reason))
+        {
+            continuousUseArmed = false;
+            if (showFailureFeedback && !string.IsNullOrEmpty(reason))
+                ItemActionFeedback.Show(item.Owner, reason);
+            return;
+        }
+
+        nextUseTime = startedAt + interval;
+        if (!TryResolveOverlayTarget(out RuntimeTerrainTileSample remaining) ||
+            !ReferenceEquals(remaining.Terrain, target.Terrain) || remaining.WorldCell != target.WorldCell)
+            continuousUseArmed = false;
+        if (HarvestKind == ResourceToolKind.Shovel)
+            HoeTillingFeedback.PlayDigging(item, cell);
+        UpdateTargetVisuals();
+    }
+
+    private void ClearPendingOverlay()
+    {
+        pendingOverlayTarget = null;
+        pendingOverlayOwner = null;
+        overlayStartTime = 0f;
+        overlayFailureFeedback = false;
     }
 
     /// <summary>白框只显示当前可采集覆盖层或可挖掘地块，失效时立即隐藏。</summary>

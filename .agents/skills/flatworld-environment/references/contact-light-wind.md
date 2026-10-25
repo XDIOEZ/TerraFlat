@@ -4,7 +4,7 @@
 
 - Mod_TileEffectReceiver 的 Ground/Liquid 各有运行器；Liquid 读真实深度，深水有体力时 LiquidFloating 仅暂停 Ground，浮沉边界一次 Exit/Enter。Ground 比 Terrain引用/TopTileId，仅重进才建实例 TileData。
 - 临时停用先退冰/水/雪，已加载模块重启按当前位置恢复；PrepareForWorldTransition 撤恢复资格，等就绪显式 RefreshCurrentTileEffects。新代际只重门禁，正常 Tick 再读，不在模块装配中施效果。
-- snow.depth（天然）、snow.weather.depth、snow.player.edited/depth/season 分离；天气雪随 SnowCells 保存、暖融补土壤水。WorldSnowInteraction 铲整格每层一 Snowball，铺回耗真物加一层；玩家编辑可超十层，空格留编辑标记，显示钳制不改产物。铲/铺转玩家厚度并清天气基线，取走的雪不融水。
+- snow.depth（天然）、snow.weather.depth、snow.player.edited/depth/season 分离；天气雪随 SnowCells 保存、暖融补土壤水。铲雪锁定起手地格，挥动动画完成才由 WorldSnowInteraction 扣一层并生成一个 Snowball；长按逐层挖，挖空即停，不接着挖底材。铺回耗真物加一层；玩家编辑可超十层，空格留编辑标记，显示钳制不改产物。铲/铺转玩家厚度并清天气基线，取走的雪不融水。
 - ContaminationSystem 唯一权威写，指标 flatworld.contamination.<definitionId>，保留服务端/差量/通知；脏污与具体病原负荷分指标。
 - 单机散物水态 DroppedItemRuntime.Water：陆地静物订本格变化，未知格限量重试、水中低频查流；替换先备载荷/共享视觉再提交整组数量，水花属实际世界Scene，浮力阈值与视觉浸没分离。
 

@@ -9,7 +9,13 @@ public interface IWeaponActionAnimation
     bool TryRequestAction(bool queueIfBusy = false);
 }
 
-public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, IWeaponActionAnimation
+/// <summary>需要在动作结束时结算的工具通过此能力接收完成或取消通知。</summary>
+public interface IWeaponActionCompletionAnimation : IWeaponActionAnimation
+{
+    bool TryRequestAction(System.Action<bool> onFinished);
+}
+
+public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, IWeaponActionCompletionAnimation
 {
     #region Config
     [Tooltip("武器动画树 Animator")]
@@ -59,6 +65,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     private Mod_Stamina ownerStamina;
     private bool isHoldingInput;
     private bool restoreIdleWhenActive;
+    private System.Action<bool> actionFinished;
     #endregion
     #region 基础参数
 
@@ -177,6 +184,8 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
 
         if (UpdateHitStop()) return;
 
+        UpdateActionCompletion();
+
         if (queuedNext)
         {
             TryStartNext();
@@ -184,7 +193,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
 
         TryStartNext();
 
-        if (isAttacking && AttackTime > comboDeadline)
+        if (isAttacking && actionFinished == null && AttackTime > comboDeadline)
         {
             ResetToIdle();
         }
@@ -205,7 +214,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     /// <summary>请求一段实际挥动；只有动画在本次调用中真正开始时返回 true。</summary>
     public bool TryRequestAttack(bool queueIfBusy = true)
     {
-        if (!IsRuntimeLoaded || !isActiveAndEnabled)
+        if (!IsRuntimeLoaded || !isActiveAndEnabled || actionFinished != null)
             return false;
 
         if (animator == null)
@@ -258,6 +267,44 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     /// <summary>对工具模块暴露稳定动作接口，内部仍复用现有攻击动画与体力节拍。</summary>
     public bool TryRequestAction(bool queueIfBusy = false) => TryRequestAttack(queueIfBusy);
 
+    /// <summary>只为本次实际开始的动作登记回调，取消时不结算工具产出。</summary>
+    public bool TryRequestAction(System.Action<bool> onFinished)
+    {
+        if (onFinished == null) throw new System.ArgumentNullException(nameof(onFinished));
+        if (!TryRequestAttack(queueIfBusy: false)) return false;
+        actionFinished = onFinished;
+        return true;
+    }
+
+    private void UpdateActionCompletion()
+    {
+        if (actionFinished == null) return;
+        if (!isAttacking || !CanPlayWeaponAnimation())
+        {
+            FinishAction(false);
+            return;
+        }
+
+        var state = animator.GetCurrentAnimatorStateInfo(0);
+        if (state.shortNameHash == currentStateHash)
+        {
+            if (state.normalizedTime >= 1f) FinishAction(true);
+        }
+        else
+        {
+            // 自动退出动画可结算，提前被其他状态替换则取消。
+            FinishAction(AttackTime >= nextReadyTime);
+        }
+    }
+
+    private void FinishAction(bool completed)
+    {
+        var callback = actionFinished;
+        actionFinished = null;
+        try { callback?.Invoke(completed); }
+        catch (System.Exception exception) { Debug.LogException(exception, this); }
+    }
+
     public float AttackSpeedMultiplier => attackSpeedMultiplier * BodyTraumaBuffEffects.GetAttackMultiplier(item?.Owner); /// 当前攻击速度倍率（只读）
     public float StaminaCostPerAttack => staminaCostPerAttack; /// 每段攻击的基础体力消耗（只读）
 
@@ -284,6 +331,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         if (!IsRuntimeLoaded || !isActiveAndEnabled || !CanPlayWeaponAnimation())
             return;
 
+        FinishAction(false);
         ResetHitStop();
         restoreIdleWhenActive = false;
         animator.Play(animationName);
@@ -372,7 +420,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     [InfoBox("检查并尝试衔接下一段连击")]
     private void TryStartNext()
     {
-        if (!isAttacking || IsHitStopped)
+        if (!isAttacking || IsHitStopped || actionFinished != null)
         {
             return;
         }
@@ -421,6 +469,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         nextReadyTime = 0f;
         queuedNext = false;
         currentStateHash = 0;
+        FinishAction(false);
         // 场景迁移的停用回调只清理战斗状态，等待 Animator 真正激活后再播放待机。
         if (playAnimation && CanPlayWeaponAnimation())
         {

@@ -49,6 +49,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - 技能模块通过所属 `Item.OnAct` 接收使用并在 Unload 解绑，不直接订阅玩家右键；快捷栏独占手持物使用入口。
 - Mod_Damage 管统一发送/窗口，工具由 Mod_ResourceTool/Mod_Shovel 等通过 ICombatDamageContextModifier 附上下文；动作表现经 IWeaponActionAnimation，概率状态由独立 DamageOnHitBuffApplier 组合。
+- 需等动画结束结算的工具用 IWeaponActionCompletionAnimation；回调 true 才提交，换手、停用、卸载或动作取消回调 false。完成按 Animator 实际进度判断，不用固定延时替代。
 - 动画武器不读取全局鼠标或旧 Input；攻击/长按由持有者 Mod_GameController 的中央语义驱动，工具/AI 复用公开动作接口。落地武器 Load 后也不获得输入权，联机假人拾取专项持续加载真实燧石刀覆盖该路径。
 - 动画近战物品的 JSON 必须显式组合 `damage` 与 `animation`；只声明伤害会使外壳内的动作模块在装配时被清退，已有 Animator 不能代替动作模块。
 - JSON 模块装配后 IItemModuleDependencyBinder 按稳定 ID 绑定；武器 Mod_Damage 的节点层级须匹配 Animator 伤害窗口曲线，不能随意挪动。修饰器从已注册 ItemMods 缓存并校验 FixedList 容量，多伤害盒合法，聚合器排除所有其它 Mod_Damage，避免互调。
