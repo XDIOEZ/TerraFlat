@@ -405,7 +405,7 @@
       "id": "Chest_Wood",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab",
-      "gameName": "木箱-建筑",
+      "gameName": "木箱子",
       "description": "用于存放物品的木制箱子。",
       "durability": 1.0,
       "maxDurability": 1.0,

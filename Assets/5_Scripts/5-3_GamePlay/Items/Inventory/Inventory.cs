@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.InventoryFeedback;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine.InputSystem;
 
@@ -572,14 +573,28 @@ public class Inventory
             }
         }
 
-        // 设置窗口信息
-        if (basePanel.TryGetText("窗口信息", out TMPro.TextMeshProUGUI titleText))
-            titleText.text = Data.Name;
+        // 容器标题读取物品名称，玩家行囊保留自身标题。
+        if (item != null && item is not Player &&
+            basePanel.TryGetText("FWUI_标题", out TextMeshProUGUI titleText))
+            LocalizedTextRuntime.SetProvider(titleText, ResolveContainerPanelTitle);
 
         // 调用UI初始化方法（此时basePanel已存在）
         InitUI();
 
         return true; // 成功创建了面板
+    }
+
+    /// <summary>通过物品定义读取容器标题，语言切换时重新获取名称。</summary>
+    private string ResolveContainerPanelTitle()
+    {
+        ItemData ownerData = item != null ? item.itemData : null;
+        if (ownerData == null)
+            return string.Empty;
+
+        RuntimeItemDefinition definition = null;
+        GameRes.ExistingInstance?.TryGetItemDefinition(ownerData.IDName, out definition);
+        return definition?.DisplayName ??
+            (!string.IsNullOrWhiteSpace(ownerData.GameName) ? ownerData.GameName : ownerData.IDName);
     }
 
     // 辅助方法：检查 Vector2 是否有效

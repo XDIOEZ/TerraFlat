@@ -551,7 +551,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277971165184
-    m_Localized: "\u6728\u7BB1"
+    m_Localized: "\u6728\u7BB1\u5B50"
     m_Metadata:
       m_Items: []
   - m_Id: 357277971165185
@@ -893,7 +893,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915972
-    m_Localized: "\u6728\u7BB1-\u5EFA\u7B51"
+    m_Localized: "\u6728\u7BB1\u5B50"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915973

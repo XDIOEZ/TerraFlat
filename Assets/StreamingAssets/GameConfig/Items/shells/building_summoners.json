@@ -268,7 +268,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab",
-      "gameName": "木箱",
+      "gameName": "木箱子",
       "description": "用于存放物品的木制箱子。",
       "durability": 1.0,
       "maxDurability": 1.0,
