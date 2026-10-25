@@ -1,20 +1,20 @@
 # FlatWorld 天气音效
 
-雨声和风声用 LMMS 1.2.2 的 MCP 创建轨道、编排音符与音量自动化，并通过 MCP 离线渲染，由 TripleOscillator 白噪声、滤波和包络合成。雷声使用真实打雷录音，裁切、滤波、淡出后通过 LMMS MCP 建立采样轨、编排和渲染。近雷保留炸响和不规则回响；远雷来自乡间远处滚雷录音，低通至 1150 Hz。LMMS 合成方式参考[官方 TripleOscillator 说明](https://docs.lmms.io/user-manual/instruments/triple-oscillator)。
+雨声使用 soundrecorder7 的 CC0 连续小雨实录，通过 LMMS 1.2.2 MCP 采样轨编排与离线渲染。普通风声仍由 TripleOscillator 白噪声、滤波和包络合成。雷声使用真实打雷录音，裁切、滤波、淡出后通过 LMMS MCP 建立采样轨、编排和渲染。近雷保留炸响和不规则回响；远雷来自乡间远处滚雷录音，低通至 1150 Hz。LMMS 合成方式参考[官方 TripleOscillator 说明](https://docs.lmms.io/user-manual/instruments/triple-oscillator)。
 
 | 游戏事件 | 资源 | 声音结构 |
 | --- | --- | --- |
-| `weather.rain.loop` | `Assets/Audio/Generated/weather.rain.loop__01.wav` | 31.7 秒；轻薄雨幕、弱化持续溅水底噪，约每秒 3.9 次的不规则雨滴 |
+| `weather.rain.loop` | `Assets/Audio/Generated/weather.rain.loop__01.wav` | 24 秒；连续真实雨幕和自然雨点，1 秒等功率首尾交叠，预加载 PCM 循环 |
 | `weather.wind.loop` | `Assets/Audio/Generated/weather.wind.loop__01.wav` | 43.7 秒；低频风体、较亮的空气与枝叶层，缓慢变化的阵风 |
 | `weather.wind.gale.loop` | `Assets/Audio/Generated/weather.wind.gale.loop__01.wav` | 49 秒；CC0 呼啸风实录、低频湍流风体、高处啸声与两组不规则阵风自动化，8 级起切换 |
 | `weather.thunder` | `Assets/Audio/Generated/weather.thunder__01.wav` 至 `__03.wav` | 17、17、23 秒单声道；真实近处炸雷与滚雷 |
 | `weather.thunder.far` | `Assets/Audio/Generated/weather.thunder.far__01.wav` 至 `__03.wav` | 18.2、23、23 秒单声道；真实远处滚雷 |
 
-四个完整工程 `Weather_Rain.mmp`、`Weather_Wind.mmp`、`Weather_Thunder.mmp`、`Weather_Thunder_Far.mmp` 可以在 LMMS 编辑。雨风音色参数通过 XML 调整，音符、自动化和渲染使用 MCP；近雷工程在 0、24、48 秒各放一段，远雷在 0、28、56 秒各放一段。准备好的采样保存在 `Sources/`；作者、CC0 许可、公共 HQ MP3 预览地址、SHA256、裁切范围和滤波参数见 `sources.json`，来源说明见 `THIRD_PARTY_NOTICES.md`。采样从公共预览解码，不是需要登录下载的原始无损文件。
+四个完整工程 `Weather_Rain.mmp`、`Weather_Wind.mmp`、`Weather_Thunder.mmp`、`Weather_Thunder_Far.mmp` 可以在 LMMS 编辑。普通风音色参数通过 XML 调整，音符、自动化和渲染使用 MCP；近雷工程在 0、24、48 秒各放一段，远雷在 0、28、56 秒各放一段。准备好的采样保存在 `Sources/`；作者、CC0 许可、公共 HQ MP3 预览地址、SHA256、裁切范围和滤波参数见 `sources.json` 及其引用的 `rain_sources.json`，来源说明见 `THIRD_PARTY_NOTICES.md`。采样从公共预览解码，不是需要登录下载的原始无损文件。
 
-雨声工程保留 155 个雨滴音符（原为 465 个），保留随机力度和左右声像；雨幕自动化音量缩到原来的 28%，持续溅水轨从 38 降到 8，雨滴轨从 20 调到 26。雨幕低通从 5500 Hz 收到 2200 Hz，雨滴滤波从 3400 Hz 收到 2600 Hz，让雨点更清楚、背景少一些雪花噪声。雨声母带目标 RMS 为 -20 dBFS、峰值上限 -6 dBFS，保留雨点动态，不自动把底噪补回原响度。
+2026-10-25 雨声改用连续实录，替换原先的合成雨幕与零散雨滴。`prepare_rain_sources.py` 校验下载 SHA256，保留立体声，重采样至 48 kHz，并用 80 Hz 高通和 5000 Hz 低通整理轰鸣与尖锐高频。LMMS 母带取 0.5～25.5 秒，1 秒首尾交叠后得到 24 秒循环；文件边界仍接回原录音的相邻采样，不加首尾静音。母带目标 RMS 为 -20 dBFS、峰值上限 -6 dBFS，实际电平受峰值约束，见 `manifest.json`。Unity 导入固定为 PCM、DecompressOnLoad、预加载，关闭后台加载与归一化，不在播放期间持续解码压缩音频；已有 GUID 保留。
 
-重新导出雨声时，通过 MCP `load_project` 加载 `Weather_Rain.mmp`，再用 `render_project` 输出 48 kHz WAV 到 `renders/Weather_Rain_raw.wav`，然后只替换雨声：
+重新导出雨声时，需要重建采样先运行 `python SoundDesign/Weather_LMMS/prepare_rain_sources.py`（numpy、scipy、soundfile，沿用 `.codex-tmp/audio-python`）。通过 MCP `load_project` 加载 `Weather_Rain.mmp`，再用 `render_project` 输出 48 kHz WAV 到 `renders/Weather_Rain_raw.wav`，然后只替换雨声：
 
 ```powershell
 python SoundDesign/Weather_LMMS/process_weather.py finalize --only-rain
@@ -33,6 +33,8 @@ python SoundDesign/Weather_LMMS/process_weather.py finalize --only-thunder
 游戏接入在 `WeatherMgr.Audio.cs`：雨风按本地强度平滑调音量，64 格内选近雷，64–192 格选远雷。雷声位置与雷光共用事件落点，传播延迟为最短环绕距离 / 64 秒；两组 Cue 均完整空间混音，8 格内不衰减，之后线性衰减至 192 格静音。播放期间每帧用 `WorldLocalPresentation.ProjectPosition` 映射落点，再用通用 `AudioService.SetWorldPosition` 更新，避免地图边界造成方位跳错。所有天气声走 Ambient 音量；读档不补播旧雷，退出世界或抑制天气的维度清理循环、等待和活动雷声。
 
 素材生成时只核对文件格式、电平和资源引用；实际音色、雨风过渡、循环听感、雷声与闪电的配合由玩家在游戏中验收。
+
+雨声回归已补入 Audio 的 `audio/voice_lifecycle`：读取正式 Cue、预解码数据与每 0.1 秒的 RMS，检查长循环、总线、单实例和无明显静音低谷。本轮保留用户 PlayMode，未编译、未运行 Lua、未作听感验收。天气声音发布署名随 `Assets/StreamingAssets/ThirdPartyNotices/Weather-SFX-CREDITS.md` 分发。
 
 狂风工程为 `Weather_Wind_Gale.mmp`：LMMS MCP 创建三层音轨、编排 54 秒采样和持续风声、两组音量自动化，再由 LMMS 1.2.2 渲染为 48 kHz WAV。实录来自 juryduty 的 [howling_wind.wav](https://freesound.org/people/juryduty/sounds/185070/)，原页面核对 CC0 1.0；使用公开 HQ MP3 预览，保留裁切后的 `Sources/gale_howling_01.wav`。另两层由 TripleOscillator 白噪声分别经过 260 Hz 低通与 1050 Hz 共振带通，形成低沉持续阵风和较高的风啸。LMMS 中的动态处理和软尖峰处理控制突然的峰值；新增工程使用 LMMS 1.2.2 正式读取的 `fxmixer/fxchannel` 标签，采样轨保留自己的效果链。
 

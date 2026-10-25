@@ -98,6 +98,55 @@ public static partial class GameplayTestPresentationRuntimeProbe
         };
     }
 
+    #region 正式雨声循环采样
+
+    // 读取正式雨声解码后的整段采样，静音空档和循环配置由 Lua 判断。
+    private static JObject CaptureRainCue(AudioService service)
+    {
+        bool loaded = service.TryGetCue(AudioEventIds.WeatherRainLoop, out AudioCue cue);
+        AudioClip clip = loaded && cue.Clips.Count == 1 ? cue.Clips[0] : null;
+        bool decoded = clip != null && clip.loadType == AudioClipLoadType.DecompressOnLoad &&
+                       clip.loadState == AudioDataLoadState.Loaded;
+        float[] samples = decoded ? new float[clip.samples * clip.channels] : Array.Empty<float>();
+        bool readable = decoded && samples.Length > 0 && clip.GetData(samples, 0);
+        double sum = 0d;
+        double minimumWindowRms = double.MaxValue;
+        double maximumWindowRms = 0d;
+        int windowSize = clip != null ? Mathf.Max(1, clip.frequency / 10) * clip.channels : 1;
+        if (readable)
+        {
+            for (int start = 0; start < samples.Length; start += windowSize)
+            {
+                int end = Math.Min(start + windowSize, samples.Length);
+                double windowSum = 0d;
+                for (int i = start; i < end; i++)
+                    windowSum += (double)samples[i] * samples[i];
+                sum += windowSum;
+                double rms = Math.Sqrt(windowSum / (end - start));
+                minimumWindowRms = Math.Min(minimumWindowRms, rms);
+                maximumWindowRms = Math.Max(maximumWindowRms, rms);
+            }
+        }
+        return new JObject
+        {
+            ["loaded"] = loaded, ["clipCount"] = loaded ? cue.Clips.Count : 0,
+            ["loop"] = loaded && cue.Loop, ["bus"] = loaded ? cue.Bus.ToString() : string.Empty,
+            ["cooldown"] = loaded ? cue.Cooldown : -1f,
+            ["spatialBlend"] = loaded ? cue.SpatialBlend : -1f,
+            ["maxInstances"] = loaded ? cue.MaxInstances : 0,
+            ["frequency"] = clip != null ? clip.frequency : 0,
+            ["channels"] = clip != null ? clip.channels : 0,
+            ["samples"] = clip != null ? clip.samples : 0,
+            ["preload"] = clip != null && clip.preloadAudioData,
+            ["decoded"] = decoded, ["readable"] = readable,
+            ["rms"] = readable ? Math.Sqrt(sum / samples.Length) : 0d,
+            ["minimumWindowRms"] = readable ? minimumWindowRms : 0d,
+            ["maximumWindowRms"] = maximumWindowRms
+        };
+    }
+
+    #endregion
+
     #region 正式点击事件停用采样
 
     // 直接调用正式点击事件与循环覆盖入口，检查主动静音不报警、不选片也不占声源。
@@ -342,6 +391,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["swimmingCues"] = swimmingCues,
                 ["animalIdleCues"] = CaptureAnimalIdleCues(service),
                 ["fireCue"] = CaptureFireCue(service),
+                ["rainCue"] = CaptureRainCue(service),
                 ["inventoryUiCueCount"] = inventoryUiCueCount,
                 ["inventoryUiCuesValid"] = inventoryUiCuesValid,
                 ["formalCatalog"] = service.Catalog != null, ["clipCount"] = loop.Clips.Count,

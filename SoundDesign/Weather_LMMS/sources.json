@@ -1,5 +1,5 @@
 {
-  "additionalSourceLists": ["gale_sources.json"],
+  "additionalSourceLists": ["gale_sources.json", "rain_sources.json"],
   "sources": [
     {
       "file": "Sources/near_01.wav",

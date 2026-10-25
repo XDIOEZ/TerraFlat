@@ -25,7 +25,7 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 - 核心：`Assets/5_Scripts/5-6_Audio/Runtime/` 的 `AudioService`、`AudioCatalog`、`AudioCue`、`AudioRuntimeConfig`、`AudioTypes`。
 - 玩法桥接：`Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/Mod_AudioEmitter.cs`、`Entities/Combat/CombatAudioRouter.cs`；UI 桥接：`Assets/5_Scripts/5-5_UI/Audio/`。
 - 配置：`Assets/Resources/Audio/`；工具：`Assets/5_Scripts/5-6_Audio/Editor/`。
-- 已接入天气音：`Assets/Audio/Generated/weather.*.wav`；LMMS MCP 工程与母带整理脚本在 `SoundDesign/Weather_LMMS/`。雨声密度由 `Weather_Rain.mmp` 的雨滴音符与雨幕自动化决定，重渲染后用 `process_weather.py finalize --only-rain` 单独替换，保留风雷资源。
+- 已接入天气音：`Assets/Audio/Generated/weather.*.wav`；LMMS MCP 工程与母带整理脚本在 `SoundDesign/Weather_LMMS/`。雨声使用 `rain_sources.json` 登记的 CC0 连续实录，`prepare_rain_sources.py` 整理采样，`Weather_Rain.mmp` 采样轨经 MCP 重渲染后用 `process_weather.py finalize --only-rain` 单独替换；24 秒立体声循环做 1 秒等功率首尾交叠，预加载 PCM/DecompressOnLoad，避免恢复为零散雨点或实时压缩解码。保留风雷资源，鸣谢随 `StreamingAssets/ThirdPartyNotices/Weather-SFX-CREDITS.md` 发布。
 - 玩法音效：`SoundDesign/Gameplay_SFX_LMMS/` 保存攻击、材质命中和交互三组工程；31 个 Cue 绑定 91 个单声道变体，`build_sfx.py build/finalize` 负责编排与母带整理。`combat.weapon.crossbow.loaded` 仅在弩完成上膛时播放。旧 C# 默认音效生成器已删除，避免覆盖 LMMS 成品。
 - 湿衣服移动循环 `player.wet_clothes.move.loop` 只保留短衣料摩擦，禁止恢复持续白噪声底层；经 LMMS MCP 重渲染 `Gameplay_Interactions.mmp` 后用 `build_sfx.py finalize --only-cue player.wet_clothes.move.loop` 单独替换，保留其他成品。
 - 事务反馈：`SoundDesign/Gameplay_Feedback_LMMS/` 的 6 类 Cue/12 个 LMMS MCP 变体覆盖建造成功/失败、合成、熔炼、火种和点炉；`GameplayFeedbackAudioBridge` 只订阅真实提交与主动拒绝事件，工程通过 `build_feedback.py build → lmms_mcp_render.py --render → finalize/verify` 重做。

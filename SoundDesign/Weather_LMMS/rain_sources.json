@@ -1,0 +1,26 @@
+{
+  "title": "Light Rain",
+  "author": "soundrecorder7",
+  "sourcePage": "https://freesound.org/people/soundrecorder7/sounds/167034/",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "licenseCheckedOn": "2026-10-25",
+  "previewUrl": "https://cdn.freesound.org/previews/167/167034_2328971-hq.mp3",
+  "previewSha256": "e96de7229dd13c42798e8bdad265123d4e1d1377135c9c54c829fe4c7cd3ed55",
+  "sourceNote": "使用公开 HQ MP3 预览，不是需要登录的原始 WAV；原作者说明没有雷声及其他背景声。",
+  "file": "Sources/rain_light_01.wav",
+  "cue": "weather.rain.loop",
+  "output": "Assets/Audio/Generated/weather.rain.loop__01.wav",
+  "processing": {
+    "sampleRate": 48000,
+    "channels": 2,
+    "highpassHz": 80,
+    "lowpassHz": 5000,
+    "sourcePeak": 0.7,
+    "loopStartSeconds": 0.5,
+    "loopEndSeconds": 25.5,
+    "crossfadeSeconds": 1.0,
+    "rmsDb": -20,
+    "peakDb": -6
+  }
+}

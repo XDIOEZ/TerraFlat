@@ -4,14 +4,14 @@
     {
       "file": "Assets/Audio/Generated/weather.rain.loop__01.wav",
       "project": "Weather_Rain.mmp",
-      "seconds": 31.7,
+      "seconds": 24.0,
       "sampleRate": 48000,
       "channels": 2,
       "loop": true,
       "peakDb": -6.0,
-      "rmsDb": -22.09,
-      "seamStep": 0.022147603039170766,
-      "rawPeak": 0.070465087890625
+      "rmsDb": -25.0,
+      "seamStep": 0.00216320890754753,
+      "rawPeak": 0.696502685546875
     },
     {
       "file": "Assets/Audio/Generated/weather.wind.loop__01.wav",

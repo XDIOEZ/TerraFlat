@@ -85,7 +85,7 @@ def finalize(only_thunder=False, only_rain=False):
     selected = {"Rain"} if only_rain else {"Thunder", "Thunder_Far"} if only_thunder else None
     entries = json.loads(manifest.read_text(encoding="utf-8"))["sounds"] if selected else []
     inputs = [
-        ("Rain", "weather.rain.loop__01.wav", 4, 36, True, -20, -6),
+        ("Rain", "weather.rain.loop__01.wav", .5, 25.5, True, -20, -6),
         ("Wind", "weather.wind.loop__01.wav", 4, 48, True, -17, -5),
         ("Thunder", "weather.thunder__01.wav", 0, 17, False, -24, -3),
         ("Thunder", "weather.thunder__02.wav", 24, 41, False, -24, -3),
@@ -102,10 +102,10 @@ def finalize(only_thunder=False, only_rain=False):
             cache[project] = read_wav(ROOT / "renders" / f"Weather_{project}_raw.wav")
         raw = cache[project]
         assert len(raw) >= round(end * RATE), f"Render too short: {project}"
-        data = make_loop(raw, start, end) if looping else raw[round(start*RATE):round(end*RATE)].copy()
+        data = make_loop(raw, start, end, crossfade=1 if project == "Rain" else .3) if looping else raw[round(start*RATE):round(end*RATE)].copy()
         raw_peak = float(np.max(np.abs(raw)))
         assert raw_peak < .9999, f"LMMS render clipped: {project}"
-        # 雨风由 LMMS 合成，雷声由 LMMS 编排真实录音；此处仅整理母带。
+        # 雨和雷声由 LMMS 编排真实录音，普通风仍为合成；此处仅整理母带。
         if not looping:
             data = data.mean(axis=1, keepdims=True)
         data -= data.mean(axis=0)
@@ -131,8 +131,10 @@ def finalize(only_thunder=False, only_rain=False):
         if filename == "weather.rain.loop__01.wav":
             target = Path(str(output) + ".meta")
             text = target.read_text(encoding="utf-8")
-            text = text.replace("loadType: 0", "loadType: 1").replace("sampleRateOverride: 44100", "sampleRateOverride: 48000")
-            text = text.replace("preloadAudioData: 0", "preloadAudioData: 1").replace("normalize: 1", "normalize: 0").replace("loadInBackground: 0", "loadInBackground: 1")
+            # 持续雨声预先解码为 PCM，循环时不再依赖实时压缩解码。
+            text = text.replace("loadType: 1", "loadType: 0").replace("compressionFormat: 1", "compressionFormat: 0")
+            text = text.replace("sampleRateOverride: 44100", "sampleRateOverride: 48000")
+            text = text.replace("preloadAudioData: 0", "preloadAudioData: 1").replace("normalize: 1", "normalize: 0").replace("loadInBackground: 1", "loadInBackground: 0")
             # 原资源的 meta 在 Windows 上为隐藏文件，原位写入以保留 GUID 和文件属性。
             with target.open("r+", encoding="utf-8") as stream:
                 stream.write("\n".join(line.rstrip() for line in text.splitlines())+"\n")
@@ -155,7 +157,7 @@ def finalize(only_thunder=False, only_rain=False):
 
 def relink():
     # 移动项目目录后，只更新 LMMS 的采样绝对路径。
-    for filename in ("Weather_Thunder.mmp", "Weather_Thunder_Far.mmp"):
+    for filename in ("Weather_Rain.mmp", "Weather_Thunder.mmp", "Weather_Thunder_Far.mmp"):
         path = ROOT / filename
         tree = ET.parse(path)
         for clip in tree.findall(".//sampleclip"):

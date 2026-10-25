@@ -39,6 +39,16 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
     assert(fire.minDistance == 1.5 and fire.maxDistance == 14, "篝火声音距离范围改变")
     assert(fire.clips[1].channels == 1 and fire.clips[1].frequency == 48000
         and fire.clips[1].samples == 960000, "篝火素材不是 20 秒 48kHz 单声道循环")
+    local rain = data.rainCue
+    assert(rain.loaded and rain.clipCount == 1 and rain.loop and rain.cooldown == 0 and rain.maxInstances == 1,
+        "雨声没有保持单实例、无冷却的连续循环")
+    assert(rain.bus == "Ambient" and rain.spatialBlend == 0 and rain.channels == 2 and rain.frequency == 48000,
+        "雨声没有使用全局环境音或 48kHz 立体声素材")
+    assert(rain.preload and rain.decoded and rain.readable and rain.samples >= rain.frequency * 20,
+        "雨声没有预先解码为可连续读取的长循环")
+    assert(rain.rms > 0 and rain.minimumWindowRms >= rain.rms * 0.1
+        and rain.maximumWindowRms <= rain.minimumWindowRms * 4,
+        "雨声仍有 0.1 秒以上的低谷或明显断续")
     assert(data.startupServiceStable and data.startupCatalogStable and data.startupSettingsStable,
         "重复预热替换了音频服务、目录或覆盖用户设置")
     assert(data.startupUiConfirmReady, "正式确认音没有完成音频数据预加载")
