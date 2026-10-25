@@ -1,3 +1,37 @@
+-- 雪球读取正式配置与投掷结果，区分有效命中和实际扣血。
+test.system("combat", "snowball_throw", {}, function(data)
+    local modules, samples, throwable = data.modules, {}, false
+    for _, tag in ipairs(data.tags) do if tag == "Throwable" then throwable = true end end
+    assert(data.worldDropBehavior == "interactive" and throwable,
+        "雪球没有保留完整投掷模块或缺少可投掷标记")
+    assert(modules.discardFlightDamage.enabled and
+        modules.discardFlightDamage.prefab == data.stoneFlightPrefab and
+        modules.discardFlightDamage.id == "Mod_DiscardFlightDamage", "雪球没有复用石头的丢弃飞行伤害")
+    local damage = modules.damage
+    assert(damage.enabled and damage.id == "Mod_Damage" and
+        damage.parameters.DamageValues.Physical == 1 and damage.parameters.DamageValues.ImpactKind == 4 and
+        damage.parameters.MaxAttackTargets == 1 and not damage.parameters.OnlyDealDamageWhenInHand,
+        "雪球伤害不是1点钝击，或飞行伤害条件错误")
+    assert(modules.snow.parameters.shatterChance == .5 and data.breaksPer10000 == 5000,
+        "雪球碎裂概率不是50%")
+    for _, sample in ipairs(data.samples) do samples[sample.name] = sample end
+    for _, name in ipairs({"miss_shatter", "rejected", "invalid_damage", "certain"}) do
+        assert(not samples[name].hit and not samples[name].damage and samples[name].result == "ScatterSnow",
+            name .. "：未命中碎裂没有允许铺一层雪")
+    end
+    for _, name in ipairs({"zero_hit", "hit_then_rejected"}) do
+        assert(samples[name].hit and not samples[name].damage and samples[name].result == "Shatter",
+            name .. "：零伤有效命中被当成未命中或错误铺雪")
+    end
+    for _, name in ipairs({"damage_hit", "damage_then_zero"}) do
+        assert(samples[name].hit and samples[name].damage and samples[name].result == "Shatter",
+            name .. "：实际扣血命中被漏记或错误铺雪")
+    end
+    for _, name in ipairs({"miss_keep", "hit_keep", "disabled", "invalid_chance", "invalid_roll"}) do
+        assert(samples[name].result == "Keep", name .. "：概率边界、关闭或非法参数没有保留雪球")
+    end
+end, "雪球：石头投掷复用、1点伤害、50%碎裂及零伤命中与未命中铺雪区别")
+
 -- 弓弩读取正式继承配置，推进正式蓄力时钟，不在 Lua 重新实现动作逻辑。
 test.system("combat", "archery_cycle", {steps = {
     {action = "press"}, {seconds = .4}, {seconds = 1.1}, {seconds = 3},

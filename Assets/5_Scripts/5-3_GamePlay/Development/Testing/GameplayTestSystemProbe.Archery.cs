@@ -11,7 +11,10 @@ public static partial class GameplayTestSystemProbe
     [UnityEditor.InitializeOnLoadMethod]
 #endif
     private static void RegisterArcheryRules()
-        => Register("combat", "archery_cycle", EntityArcheryCycle);
+    {
+        Register("combat", "archery_cycle", EntityArcheryCycle);
+        Register("combat", "snowball_throw", EntitySnowballThrow);
+    }
 
     /// <summary>读取正式弓弩定义并驱动生产蓄力时钟，断言由 Lua 按操作顺序执行。</summary>
     private static JObject EntityArcheryCycle(JObject args)
@@ -80,6 +83,48 @@ public static partial class GameplayTestSystemProbe
                 ["position"] = new JObject { ["x"] = launchProbePosition.x, ["y"] = launchProbePosition.y }
             },
             ["samples"] = samples, ["stamina"] = stamina, ["shots"] = shots, ["ammunition"] = ammunition };
+    }
+    #endregion
+
+    #region 雪球投掷结果与正式配置
+    // 采样通用投掷命中记录及雪球生产决策，Lua 持有概率和铺雪资格断言。
+    private static JObject EntitySnowballThrow(JObject args)
+    {
+        var definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
+        var snow = definitions.Single(value => value.Id == "Snowball");
+        var stone = definitions.Single(value => value.Id == "Ore_Stone");
+        float chance = snow.Modules["snow"].Parameters.Value<float>(nameof(Mod_Snowball.shatterChance));
+        var samples = new JArray();
+        void Sample(string name, float[] damages, float probability, float roll)
+        {
+            var outcome = new DiscardFlightOutcome();
+            foreach (float damage in damages) outcome.RecordResolvedDamage(damage);
+            samples.Add(new JObject { ["name"] = name, ["hit"] = outcome.HitTarget,
+                ["damage"] = outcome.DealtDamage,
+                ["result"] = Mod_Snowball.ResolveThrowResult(outcome, probability, roll).ToString() });
+        }
+
+        Sample("miss_shatter", Array.Empty<float>(), chance, .499999f);
+        Sample("miss_keep", Array.Empty<float>(), chance, .5f);
+        Sample("zero_hit", new[] { 0f }, chance, .25f);
+        Sample("damage_hit", new[] { 1f }, chance, .25f);
+        Sample("rejected", new[] { -1f }, chance, .25f);
+        Sample("hit_then_rejected", new[] { 0f, -1f }, chance, .25f);
+        Sample("damage_then_zero", new[] { 1f, 0f }, chance, .25f);
+        Sample("invalid_damage", new[] { float.NaN, float.PositiveInfinity, -1f }, chance, .25f);
+        Sample("hit_keep", new[] { 1f }, chance, .5f);
+        Sample("disabled", Array.Empty<float>(), 0f, 0f);
+        Sample("certain", Array.Empty<float>(), 1f, .999999f);
+        Sample("invalid_chance", Array.Empty<float>(), float.NaN, .25f);
+        Sample("invalid_roll", Array.Empty<float>(), chance, float.NaN);
+        int breaks = 0;
+        for (int i = 0; i < 10000; i++)
+            if (Mod_Snowball.ResolveThrowResult(default, chance, i / 10000f) != Mod_Snowball.ThrowResult.Keep)
+                breaks++;
+        return new JObject { ["worldDropBehavior"] = snow.WorldDropBehavior,
+            ["tags"] = new JArray(snow.Tags), ["modules"] = JObject.FromObject(snow.Modules),
+            ["stoneFlightPrefab"] = stone.Modules["discardFlightDamage"].Prefab,
+            ["samples"] = samples, ["breaksPer10000"] = breaks };
     }
     #endregion
 }

@@ -112,6 +112,12 @@ public static class WorldSnowInteraction
             reason = "距离地块太远。";
             return false;
         }
+        return CanPlaceSnow(sample, out reason);
+    }
+
+    private static bool CanPlaceSnow(RuntimeTerrainTileSample sample, out string reason)
+    {
+        reason = null;
         var surface = TerrainSupportLayer.GetSurfaceCell(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
         if (surface.GroundTileId == 0 || surface.BlockingTileId != 0 ||
             (surface.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) != 0 ||
@@ -126,6 +132,27 @@ public static class WorldSnowInteraction
     #endregion
 
     #region 铲雪与铺雪
+    /// <summary>外部供给方给已加载的有效地表增加一层雪，沿用正式保存和表现通知。</summary>
+    public static bool TryAddLayer(Vector2 position, out string reason)
+    {
+        reason = null;
+        if (!GameNetwork.HasStateAuthority || SaveDataMgr.Instance?.SaveData == null ||
+            ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample))
+            return false;
+        if (!CanPlaceSnow(sample, out reason)) return false;
+        SnowCellSaveData previous = Capture(sample);
+        try { WriteLayers(sample, checked(GetLayerCount(sample) + 1)); }
+        catch (Exception exception)
+        {
+            Rollback(sample, previous);
+            Debug.LogError($"[积雪] 增加雪层保存失败：{exception}");
+            reason = "增加雪层保存失败。";
+            return false;
+        }
+        return true;
+    }
+
     public static bool TryShovel(Item held, float reach, RuntimeTerrainTileSample target,
         out Vector2Int cell, out string reason)
     {

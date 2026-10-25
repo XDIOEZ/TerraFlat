@@ -76,6 +76,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 自然树 HitBounds 覆盖 BodyBounds；ECS 障碍 Collider 经 GameplayCombatBridge 绑定原生 Record，投射物传实际 Collider/接触点，近战仍用独立投影，两路共 ApplyWeaponHit/预约。回池解绑，镜像继承目标，身份变化递增投影版本；物理已反弹的零伤回执只补表现。
 - 可回收箭保持独立 Runtime Item，以目标 Item 根局部姿态附着并 NotifyRuntimeItemMoved，目标失效保留最后世界位。损坏材料从普通配方 ExactItem 按用量加权取一份，无法确定实际 Tag 材料则无回收。
 - 命中硬目标变成别物品由具体 Mod_DiscardFlightDamage 参数启用，不由通用投射物按材质 Tag 推断。
+- Mod_DiscardFlightDamage 在真实轨迹结束后发布 FlightCompleted，HitTarget 与 DealtDamage 分开：有效零伤命中算前者，闪避/负数拒绝不算。雪球组合该模块与1点钝击，50%碎裂由 Mod_Snowball 决策；只有未命中碎裂才给落点加一层雪，不把雪球规则写进飞行伤害模块。回归 `combat/snowball_throw`。
 
 ## 原生 ECS 与接触伤害
 

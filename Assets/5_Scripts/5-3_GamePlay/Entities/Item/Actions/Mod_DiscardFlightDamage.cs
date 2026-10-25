@@ -1,6 +1,21 @@
 using FlatWorld.Combat;
 using FlatWorld.NaturalEntities;
+using FlatWorld.Networking;
 using UnityEngine;
+
+/// <summary>丢弃飞行分别记录有效命中和实际扣血，防御挡住的零伤害仍属于命中。</summary>
+public struct DiscardFlightOutcome
+{
+    public bool HitTarget { get; private set; }
+    public bool DealtDamage { get; private set; }
+
+    public void RecordResolvedDamage(float damage)
+    {
+        if (!float.IsFinite(damage) || damage < 0f) return;
+        HitTarget = true;
+        DealtDamage |= damage > 0f;
+    }
+}
 
 /// <summary>通用丢弃飞行伤害模块：玩家主动丢出物品时临时开启同物品的伤害模块。</summary>
 public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinder, IDroppedItemSpawnContextReceiver
@@ -21,6 +36,9 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
 
     [Min(0f), Tooltip("目标对应伤害类型防御达到该数值才视为足够坚硬。")]
     public float HardImpactMinimumDefense = 2f;
+
+    /// <summary>实际掉落轨迹结束后发布本次投掷结果；卸载、取消和命中转换不发布。</summary>
+    public event System.Action<DiscardFlightOutcome> FlightCompleted;
 
     public override ModuleData _Data
     {
@@ -52,6 +70,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
     private bool hardImpactTransformPending;
     private long lastHardImpactTargetKey = long.MinValue;
     private double lastHardImpactTime = double.NegativeInfinity;
+    private DiscardFlightOutcome flightOutcome;
 
     #endregion
 
@@ -66,6 +85,8 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         damageModule.OnReceiverDamageResolved += HandleReceiverDamageResolved;
         damageModule.OnExternalDamageResolved -= HandleExternalDamageResolved;
         damageModule.OnExternalDamageResolved += HandleExternalDamageResolved;
+        damageModule.OnDamageApplied -= RecordFlightDamage;
+        damageModule.OnDamageApplied += RecordFlightDamage;
         ResetRuntimeState();
         damageModule.SetIdleTickSuppressed(true);
     }
@@ -80,6 +101,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         {
             damageModule.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
             damageModule.OnExternalDamageResolved -= HandleExternalDamageResolved;
+            damageModule.OnDamageApplied -= RecordFlightDamage;
         }
 
         StopDamage();
@@ -97,17 +119,21 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         if (!armedByDiscard && !damageActive)
             return;
 
-        bool stillFlying = item != null &&
-                           Time.timeAsDouble < damageEndTime &&
-                           Mod_Droping.IsDropInProgress(item);
+        bool stillFlying = item != null && !item.DestructionHandled && Mod_Droping.IsDropInProgress(item);
         if (stillFlying)
         {
-            TryStartDamage();
+            if (Time.timeAsDouble < damageEndTime) TryStartDamage();
+            else CloseDamageWindow();
             return;
         }
 
+        bool completed = armedByDiscard && item != null && !item.DestructionHandled;
+        DiscardFlightOutcome outcome = flightOutcome;
         StopDamage();
+        if (completed) FlightCompleted?.Invoke(outcome);
     }
+
+    private void OnDisable() => StopDamage();
 
     #endregion
 
@@ -116,7 +142,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
     /// <summary>只有玩家主动丢弃才激活，普通掉落、战利品和自然生成不会产生伤害。</summary>
     public void OnDroppedItemSpawned(in DroppedItemSpawnContext context)
     {
-        if (!Enabled || !isActiveAndEnabled ||
+        if (!Enabled || !isActiveAndEnabled || !GameNetwork.HasStateAuthority ||
             context.Reason != DroppedItemSpawnReason.PlayerDiscard ||
             context.Duration <= 0f)
         {
@@ -124,6 +150,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         }
 
         thrower = context.SourceItem;
+        flightOutcome = default;
         damageEndTime = Time.timeAsDouble + context.Duration;
         armedByDiscard = true;
         item?.MarkModuleScheduleDirty();
@@ -142,12 +169,19 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         item.Owner = thrower;
         damageModule.SetDeliveryCapabilities(
             CombatDeliveryCapabilities.Projectile | CombatDeliveryCapabilities.AirborneTargets);
-        damageModule.StartAttack();
+        // 开窗会立即补查重叠目标，先登记飞行状态才能收到这次同步命中。
         damageActive = true;
+        damageModule.StartAttack();
     }
 
     /// <summary>飞行结束后关闭伤害并解除临时投掷者归属。</summary>
     private void StopDamage()
+    {
+        CloseDamageWindow();
+        ResetRuntimeState();
+    }
+
+    private void CloseDamageWindow()
     {
         if (damageActive && damageModule != null)
         {
@@ -157,8 +191,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
 
         if (item != null && item.Owner == thrower)
             item.Owner = null;
-
-        ResetRuntimeState();
+        damageActive = false;
     }
 
     private void ResetRuntimeState()
@@ -171,12 +204,19 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         hardImpactTransformPending = false;
         lastHardImpactTargetKey = long.MinValue;
         lastHardImpactTime = double.NegativeInfinity;
+        flightOutcome = default;
         if (wasTicking) item?.MarkModuleScheduleDirty();
     }
 
     #endregion
 
     #region 丢弃命中变化
+
+    // 统一回执同时覆盖实体、原生资源和地块建筑，负数拒绝不计作命中。
+    private void RecordFlightDamage(float resolvedDamage)
+    {
+        if (damageActive) flightOutcome.RecordResolvedDamage(resolvedDamage);
+    }
 
     /// <summary>只有当前正在由玩家丢出的物品才允许触发命中变化。</summary>
     private void HandleReceiverDamageResolved(Mod_DamageReceiver receiver, float resolvedDamage)
@@ -245,16 +285,8 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
     /// <summary>先结束伤害窗口，下一帧再替换物品，避免在伤害回调栈里回收当前实体。</summary>
     private void SuspendDamageForTransform()
     {
-        if (damageActive && damageModule != null)
-        {
-            damageModule.StopAttack();
-            damageModule.SetDeliveryCapabilities(CombatDeliveryCapabilities.None);
-        }
-
-        damageActive = false;
+        CloseDamageWindow();
         armedByDiscard = false;
-        if (item != null && item.Owner == thrower)
-            item.Owner = null;
     }
 
     private void CompleteHardImpactTransform()
