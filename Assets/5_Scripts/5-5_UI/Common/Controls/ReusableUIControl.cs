@@ -9,11 +9,12 @@ public sealed class ReusableUIControl : MonoBehaviour
 {
     #region 公共控件边界
 
-    /// <summary>判断节点是否属于一个公共控件，包括未激活的下拉模板。</summary>
+    /// <summary>公共控件和专用控件的自有视觉都不由窗口主题或迁移覆盖。</summary>
     public static bool OwnsVisuals(Component component)
     {
         return component != null &&
-            component.GetComponentInParent<ReusableUIControl>(true) != null;
+            (component.GetComponentInParent<ReusableUIControl>(true) != null ||
+             UIVisualOwner.OwnsVisuals(component));
     }
 
     #endregion

@@ -897,6 +897,8 @@
       "CastVisualShadows": true,
       "Fluid": {
         "Kind": "water-engine",
+        "SolidFuelCapacity": 300,
+        "SolidFuelAbsorptionSeconds": 3,
         "Ports": [
           {
             "Id": "water-in",

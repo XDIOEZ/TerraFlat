@@ -19,6 +19,10 @@ public sealed class MechanicalPanelView : MonoBehaviour
     public TMP_Text BatteryPercentage;
     public Slider GasCapacity; // 气罐以实际气压相对安全上限显示只读容量。
     public TMP_Text GasPercentage;
+    public Slider WaterCapacity; // 所有水箱共用自下而上的蓝色液量条。
+    public TMP_Text WaterPercentage;
+    public Slider FuelRemaining; // 可燃设备读取自身燃料值，不读取投料数量。
+    public TMP_Text FuelValue;
     public Button ActionButton;
     public Button DismantleButton; // 已安装组件的拆回入口。
     public Button CloseButton;
@@ -159,7 +163,8 @@ public sealed class MechanicalPanelView : MonoBehaviour
         statusRect.anchorMin = Vector2.zero;
         statusRect.anchorMax = Vector2.one;
         statusRect.pivot = new Vector2(.5f, .5f);
-        statusRect.offsetMin = new Vector2(StatusPadding, StatusPadding);
+        statusRect.offsetMin = new Vector2(WaterCapacity != null && WaterCapacity.gameObject.activeSelf ? 118 : StatusPadding,
+            FuelRemaining != null && FuelRemaining.gameObject.activeSelf ? 210 : StatusPadding);
         statusRect.offsetMax = new Vector2(-272, -StatusPadding);
     }
 
@@ -174,6 +179,66 @@ public sealed class MechanicalPanelView : MonoBehaviour
         if (displayedGasPercentage == percentage) return;
         displayedGasPercentage = percentage;
         GasPercentage.SetText("{0}%", percentage);
+    }
+    #endregion
+
+    #region 水量与燃料显示
+    public void SetWaterCapacityVisible(bool visible)
+    {
+        if (WaterCapacity == null)
+        {
+            if (visible) throw new System.InvalidOperationException(name + " 缺少正式水量控件。");
+            return;
+        }
+        WaterCapacity.gameObject.SetActive(visible);
+    }
+
+    public void SetWaterCapacity(float amount, float capacity)
+        => SetCapacityReading(WaterCapacity, WaterPercentage, amount, capacity);
+
+    public void SetFuelRemaining(float amount, float capacity)
+        => SetCapacityReading(FuelRemaining, FuelValue, amount, capacity);
+
+    // 读数保持原始容量比例，填充封顶；空箱和零容量不产生无效值。
+    public static void SetCapacityReading(Slider slider, TMP_Text label, float amount, float capacity)
+    {
+        amount = float.IsFinite(amount) ? Mathf.Max(0, amount) : 0;
+        capacity = float.IsFinite(capacity) ? Mathf.Max(0, capacity) : 0;
+        slider.SetValueWithoutNotify(capacity > 0 ? Mathf.Clamp01(amount / capacity) : 0);
+        label.SetText("{0:0.00}/{1:0.00}", amount, capacity);
+    }
+
+    public void SetFluidLayout(bool waterVisible, bool fuelVisible, bool slotsVisible)
+    {
+        SetWaterCapacityVisible(waterVisible);
+        FuelRemaining.gameObject.SetActive(fuelVisible);
+        RectTransform status = (RectTransform)StatusScroll.transform;
+        status.anchorMin = Vector2.zero; status.anchorMax = Vector2.one;
+        status.offsetMin = new Vector2(waterVisible ? 118 : 12, slotsVisible ? 210 : 12);
+        status.offsetMax = new Vector2(-24, -12);
+        if (slotsVisible)
+        {
+            RectTransform row = (RectTransform)InputSlot.transform.parent;
+            row.SetParent(InnerField, false);
+            row.anchorMin = row.anchorMax = new Vector2(.5f, 0);
+            row.pivot = new Vector2(.5f, 0);
+            row.anchoredPosition = new Vector2(waterVisible ? 45 : 0, 28);
+            row.sizeDelta = new Vector2(320, 100);
+            foreach (ItemSlot_UI slot in row.GetComponentsInChildren<ItemSlot_UI>(true))
+            {
+                int index = slot.name.EndsWith("_3") ? 2 : slot.name.EndsWith("_2") ? 1 : 0;
+                RectTransform rect = (RectTransform)slot.transform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0, .5f);
+                rect.pivot = new Vector2(0, .5f);
+                rect.anchoredPosition = new Vector2(index * 110, 0);
+                rect.sizeDelta = new Vector2(100, 100);
+            }
+        }
+        RectTransform action = (RectTransform)ActionButton.transform;
+        action.SetParent(DismantleButton.transform.parent, false);
+        action.anchorMin = action.anchorMax = new Vector2(1, 0);
+        action.pivot = new Vector2(1, .5f); action.anchoredPosition = new Vector2(-24, 29);
+        action.sizeDelta = new Vector2(160, 46);
     }
     #endregion
 }

@@ -21,6 +21,8 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     private const int InvalidPointerId = int.MinValue;
 
     public WaterVesselLiquidGraphic Liquid; // 正式 Prefab 中的罐内水层。
+    public Slider WaterCapacity; // 各种水容器统一显示蓝色容量竖条。
+    public TMP_Text WaterPercentage;
     public RectTransform LeftPourOutlet; // 正倾角时使用的左侧罐口嘴沿锚点。
     public RectTransform RightPourOutlet; // 负倾角时使用的右侧罐口嘴沿锚点。
     public const string PrefabKey = "UI_WaterVessel";
@@ -204,6 +206,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             : FlatWorldLocalizationService.GetUiText("水容器");
         LiquidDefinition liquid = vessel.CurrentLiquid;
         Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, liquid);
+        MechanicalPanelView.SetCapacityReading(WaterCapacity, WaterPercentage, vessel.Data.Amount, vessel.Capacity);
         contentsView.SetLiquidFraction(vessel.Capacity > 0 ? vessel.Data.Amount / vessel.Capacity : 0f);
         string liquidName = Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount)
             ? FlatWorldLocalizationService.GetUiText("空容器")

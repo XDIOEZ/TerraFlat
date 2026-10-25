@@ -303,6 +303,12 @@ public static class FluidDeviceOperations
         if (joules <= 0) return 0;
         double maximumPower = node.Definition.Torque * node.Definition.Rpm * MachineCatalog.Settings.WattsPerTorqueRpm;
         double extent = Math.Min(reaction.MolesPerSecond * seconds, maximumPower * seconds / joules);
+        MachineSolidFuelBurner burner = (node.Logic as FluidMachineLogic)?.SolidFuelBurner;
+        if (burner != null)
+        {
+            extent = Math.Min(extent, burner.AvailableFullLoadSeconds * maximumPower / joules);
+            if (extent <= 0) { ReleaseReservations(node); return 0; }
+        }
         var workspace = workspaces.GetOrCreateValue(node);
         ReleaseEngine(workspace);
         for (int attempt = 0; attempt < 13; attempt++, extent *= .5)
@@ -351,6 +357,11 @@ public static class FluidDeviceOperations
         double work = Math.Min(maximum * seconds, used * node.SpeedRpm * MachineCatalog.Settings.WattsPerTorqueRpm * seconds);
         if (work <= 0) { ReleaseEngine(workspace); GetFluidState(node).Status = "没有有效负载"; return; }
         var reaction = EngineReaction(node);
+        MachineSolidFuelBurner burner = (node.Logic as FluidMachineLogic)?.SolidFuelBurner;
+        double maximumPower = node.Definition.Torque * node.Definition.Rpm * MachineCatalog.Settings.WattsPerTorqueRpm;
+        double fullLoadSeconds = maximumPower > 0 ? work / maximumPower : 0;
+        if (burner != null && (fullLoadSeconds <= 0 || fullLoadSeconds > burner.AvailableFullLoadSeconds + 1e-9))
+        { ReleaseEngine(workspace); GetFluidState(node).Status = "燃料不足或已经熄火"; return; }
         double extent = work / (reaction.ChemicalJoulesPerReaction * reaction.MechanicalEfficiency);
         if (workspace.ReservedExtent <= 0 || extent > workspace.ReservedExtent + 1e-12)
             throw new InvalidOperationException("引擎实际做功超过已预约原料。");
@@ -376,6 +387,8 @@ public static class FluidDeviceOperations
         }
         catch { foreach (var before in workspace.Before) before.Key.Restore(before.Value); throw; }
         finally { ReleaseEngine(workspace); }
+        burner?.ConsumeWork(fullLoadSeconds);
+        if (burner != null) StateChanged(node);
         foreach (var entry in workspace.Plan) StateChanged(entry.Route.Nodes[entry.Index].Node);
         GetFluidState(node).Status = "正在消耗原料供能";
     }

@@ -28,6 +28,7 @@ public sealed class CultivatorPanelSession : MachinePanelSession
             Bind(cultivator.Fertilizer, new[] { view.FertilizerSlot }, panel);
             BindActionButton(mechanical.ActionButton);
             view.WaterButton.onClick.AddListener(FillWater);
+            mechanical.SetWaterCapacityVisible(true);
             clearHandlers = new UnityEngine.Events.UnityAction[view.ClearPlotButtons.Length];
             for (int i = 0; i < clearHandlers.Length; i++)
             {
@@ -49,6 +50,7 @@ public sealed class CultivatorPanelSession : MachinePanelSession
     protected override void RefreshPresentation()
     {
         view.Status.text = cultivator.Status;
+        mechanical.SetWaterCapacity((float)cultivator.Water.GetLiquidLiters(), (float)MachineWorld.GetFluidVolumeLiters(Entity));
         mechanical.Title.text = FlatWorldLocalizationService.GetUiText("培育仓");
         MechanicalPanelView.SetButtonCaption(mechanical.ActionButton, cultivator.ActionLabel);
         cultivator.Seeds.RefreshUI();

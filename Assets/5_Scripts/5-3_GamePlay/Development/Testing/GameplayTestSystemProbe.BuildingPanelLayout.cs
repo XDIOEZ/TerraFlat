@@ -14,6 +14,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("ui_settings", "building_panel_layout", CaptureBuildingPanelLayout);
         Register("ui_settings", "vessel_contents_layers", CaptureVesselContentsLayers);
+        Register("ui_settings", "fluid_panel_layout", CaptureFluidPanelLayout);
     }
 
     // 读取正式容器外观，防止重建面板后坩埚材料重新落回液体遮罩内。
@@ -104,6 +105,149 @@ public static partial class GameplayTestSystemProbe
             if (slot.transform.parent == container)
                 slots.Add(CaptureBuildingRectBounds((RectTransform)slot.transform, container));
         return new JObject { ["bounds"] = CaptureBuildingRectBounds(container, container), ["slots"] = slots };
+    }
+
+    // 读取正式水量与燃料控件，颜色、方向、容量及槽位边界交给 Lua 判断。
+    private static JObject CaptureFluidPanelLayout(JObject args)
+    {
+        string panelName = args.Value<string>("panel");
+        string path = panelName switch
+        {
+            "UI_IndustrialFluid" => "Gameplay/Crafting/UI_IndustrialFluid",
+            "UI_Cultivator" => "Gameplay/Crafting/UI_Cultivator",
+            "UI_WaterVessel" => "Gameplay/Containers/UI_WaterVessel",
+            _ => throw new ArgumentException("水量面板采样仅允许工业设备、培育器与通用水容器。")
+        };
+        GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/2_Prefabs/2-1_UI/" + path + ".prefab");
+        if (prefab == null) throw new InvalidOperationException("水量正式面板缺失：" + panelName);
+        var previewRoot = new GameObject("水量面板隔离采样", typeof(RectTransform));
+        previewRoot.SetActive(false);
+        try
+        {
+            GameObject instance = UnityEngine.Object.Instantiate(prefab, previewRoot.transform, false);
+            MechanicalPanelView view = instance.GetComponent<MechanicalPanelView>();
+            if (panelName == "UI_IndustrialFluid") view.SetFluidLayout(true, true, true);
+            JObject result = CaptureFluidPanelInstance(instance, panelName);
+            RectTransform window = panelName == "UI_WaterVessel"
+                ? FindBuildingPanelRect(instance, "设置对话框") : (RectTransform)instance.transform;
+            // 真实主题入口不能把领域容量条重新染灰或压成半条轨道。
+            FlatWorldUITheme.Apply(instance.transform);
+            result["waterAfterTheme"] = CaptureFluidGauge(instance, "FWUI_WaterCapacity", window);
+            if (panelName == "UI_IndustrialFluid")
+                result["fuelAfterTheme"] = CaptureFluidGauge(instance, "FWUI_FuelRemaining", window);
+            FlatWorldUITheme.ApplyRuntimePalette(instance.transform);
+            result["waterAfterPalette"] = CaptureFluidGauge(instance, "FWUI_WaterCapacity", window);
+            if (panelName == "UI_IndustrialFluid")
+                result["fuelAfterPalette"] = CaptureFluidGauge(instance, "FWUI_FuelRemaining", window);
+            return result;
+        }
+        finally { UnityEngine.Object.DestroyImmediate(previewRoot); }
+    }
+
+    private static JObject CaptureFluidPanelInstance(GameObject prefab, string panelName)
+    {
+        RectTransform root = panelName == "UI_WaterVessel"
+            ? FindBuildingPanelRect(prefab, "设置对话框") : (RectTransform)prefab.transform;
+        var result = new JObject
+        {
+            ["root"] = CaptureBuildingRectBounds(root, root),
+            ["water"] = CaptureFluidGauge(prefab, "FWUI_WaterCapacity", root)
+        };
+        if (panelName == "UI_WaterVessel")
+        {
+            RectTransform picture = FindBuildingPanelRect(prefab, "陶罐剖面");
+            RectTransform water = FindBuildingPanelRect(prefab, "FWUI_WaterCapacity");
+            VerticalLayoutGroup layout = root.GetComponent<VerticalLayoutGroup>();
+            var rows = new JArray();
+            foreach (Transform child in root)
+            {
+                LayoutElement element = child.GetComponent<LayoutElement>();
+                rows.Add(new JObject
+                {
+                    ["name"] = child.name, ["active"] = child.gameObject.activeSelf,
+                    ["hasElement"] = element != null, ["ignored"] = element != null && element.ignoreLayout,
+                    ["minimum"] = element != null ? element.minHeight : -1,
+                    ["preferred"] = element != null ? element.preferredHeight : -1
+                });
+            }
+            // 水容器不激活业务脚本；Lua 根据正式布局所有者参数核对静态基准尺寸。
+            result["vesselLayout"] = new JObject
+            {
+                ["controlWidth"] = layout.childControlWidth, ["controlHeight"] = layout.childControlHeight,
+                ["expandWidth"] = layout.childForceExpandWidth, ["expandHeight"] = layout.childForceExpandHeight,
+                ["alignment"] = (int)layout.childAlignment,
+                ["leftPadding"] = layout.padding.left, ["rightPadding"] = layout.padding.right,
+                ["topPadding"] = layout.padding.top, ["bottomPadding"] = layout.padding.bottom,
+                ["spacing"] = layout.spacing, ["rows"] = rows,
+                ["picture"] = CaptureBuildingRectBounds(picture, root),
+                ["pictureLocal"] = CaptureBuildingRectBounds(picture, picture),
+                ["waterInPicture"] = CaptureBuildingRectBounds(water, picture)
+            };
+        }
+        if (panelName != "UI_IndustrialFluid") return result;
+
+        MechanicalPanelView view = prefab.GetComponent<MechanicalPanelView>();
+        var slots = new JArray();
+        foreach (ItemSlot_UI slot in prefab.GetComponentsInChildren<ItemSlot_UI>(true))
+            if (slot.name.StartsWith("输入_", StringComparison.Ordinal))
+                slots.Add(new JObject
+                {
+                    ["name"] = slot.name,
+                    ["bounds"] = CaptureBuildingRectBounds((RectTransform)slot.transform, root)
+                });
+        result["body"] = CaptureBuildingRectBounds(view.InnerField, root);
+        result["status"] = CaptureBuildingRectBounds((RectTransform)view.StatusScroll.transform, root);
+        result["fuel"] = CaptureFluidGauge(prefab, "FWUI_FuelRemaining", root);
+        result["slots"] = slots;
+        result["action"] = CaptureBuildingRectBounds((RectTransform)view.ActionButton.transform, root);
+        result["dismantle"] = CaptureBuildingRectBounds((RectTransform)view.DismantleButton.transform, root);
+        result["actionInBody"] = view.ActionButton.transform.IsChildOf(view.InnerField);
+        result["preserveLayout"] = view.PreservePrefabLayout;
+        return result;
+    }
+
+    private static JObject CaptureFluidGauge(GameObject prefab, string nodeName, RectTransform root)
+    {
+        RectTransform rect = FindBuildingPanelRect(prefab, nodeName);
+        Slider slider = rect.GetComponent<Slider>();
+        if (slider == null || slider.fillRect == null)
+            throw new InvalidOperationException(prefab.name + " 缺少完整容量条：" + nodeName);
+        Image fill = slider.fillRect.GetComponent<Image>();
+        RectTransform fillArea = (RectTransform)slider.fillRect.parent;
+        RectTransform labelRect = FindBuildingPanelRect(rect.gameObject, "Amount");
+        TMPro.TMP_Text label = labelRect.GetComponent<TMPro.TMP_Text>();
+        var readings = new JArray();
+        foreach (Vector2 reading in new[] { new Vector2(0, 100), new Vector2(25, 100), new Vector2(.25f, 100),
+                     new Vector2(100, 100), new Vector2(150, 100), new Vector2(10, 0) })
+        {
+            MechanicalPanelView.SetCapacityReading(slider, label, reading.x, reading.y);
+            readings.Add(new JObject { ["amount"] = reading.x, ["capacity"] = reading.y,
+                ["value"] = slider.value, ["label"] = label.text });
+        }
+        var graphics = new JArray();
+        foreach (Graphic graphic in rect.GetComponentsInChildren<Graphic>(true))
+            graphics.Add(new JObject { ["name"] = graphic.name, ["raycast"] = graphic.raycastTarget });
+        return new JObject
+        {
+            ["bounds"] = CaptureBuildingRectBounds(rect, root),
+            ["fillBounds"] = CaptureBuildingRectBounds(slider.fillRect, rect),
+            ["fillArea"] = CaptureBuildingRectBounds(fillArea, rect),
+            ["fillAreaLayout"] = new JObject
+            {
+                ["minX"] = fillArea.anchorMin.x, ["minY"] = fillArea.anchorMin.y,
+                ["maxX"] = fillArea.anchorMax.x, ["maxY"] = fillArea.anchorMax.y,
+                ["left"] = fillArea.offsetMin.x, ["bottom"] = fillArea.offsetMin.y,
+                ["right"] = fillArea.offsetMax.x, ["top"] = fillArea.offsetMax.y
+            },
+            ["localBounds"] = CaptureBuildingRectBounds(rect, rect),
+            ["direction"] = (int)slider.direction,
+            ["minimum"] = slider.minValue, ["maximum"] = slider.maxValue,
+            ["interactable"] = slider.interactable,
+            ["color"] = new JObject { ["r"] = fill.color.r, ["g"] = fill.color.g, ["b"] = fill.color.b },
+            ["label"] = CaptureBuildingRectBounds(labelRect, rect),
+            ["graphics"] = graphics, ["readings"] = readings
+        };
     }
 
     private static RectTransform FindBuildingPanelRect(GameObject prefab, string name)

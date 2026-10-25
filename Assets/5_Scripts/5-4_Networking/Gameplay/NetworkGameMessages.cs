@@ -6,8 +6,8 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        // 工业气网采用独立组主载荷与代次/序号，旧客户端不能按单管混合库存解释。
-        public const int CurrentVersion = 28;
+        // 工业机器快照新增固体燃烧状态与三槽燃料库存，双端统一使用新结构。
+        public const int CurrentVersion = 29;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 

@@ -24,6 +24,12 @@ public static partial class RuntimeUIPrefabBuilder
                 ConfigureIndustrialPanel(root, name);
                 if (name == "UI_FluidTank") ConfigurePortableTankActions(root, root.GetComponent<MechanicalPanelView>());
                 if (name != "UI_Spacesuit") EnsureGasCapacityGauge(root.GetComponent<MechanicalPanelView>());
+                if (name == "UI_IndustrialFluid")
+                {
+                    MechanicalPanelView view = root.GetComponent<MechanicalPanelView>();
+                    EnsureFluidReadings(view);
+                    view.SetFluidLayout(true, true, true);
+                }
                 string path = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/" + name + ".prefab";
                 PrefabUtility.SaveAsPrefabAsset(root, path); EnsureRuntimePrefabAddressable(path);
             }
@@ -221,6 +227,56 @@ public static partial class RuntimeUIPrefabBuilder
         image.rectTransform.anchorMin = Vector2.zero; image.rectTransform.anchorMax = Vector2.one;
         image.rectTransform.offsetMin = offsetMin; image.rectTransform.offsetMax = offsetMax;
         return image;
+    }
+    #endregion
+
+    #region 水箱与燃料正式控件
+    internal static void EnsureFluidReadings(MechanicalPanelView view)
+    {
+        if (view.WaterCapacity == null)
+            view.WaterCapacity = CreateCapacityGauge(view.InnerField, view.Status, "FWUI_WaterCapacity", true,
+                new Color(.15f, .48f, .85f, 1), out view.WaterPercentage);
+        if (view.FuelRemaining == null)
+            view.FuelRemaining = CreateCapacityGauge(view.InnerField, view.Status, "FWUI_FuelRemaining", false,
+                new Color(.95f, .7f, .18f, 1), out view.FuelValue);
+    }
+
+    internal static Slider CreateCapacityGauge(Transform parent, TMP_Text template, string name, bool vertical, Color color, out TMP_Text label)
+    {
+        var root = new GameObject(name, typeof(RectTransform), typeof(Slider), typeof(UIVisualOwner));
+        root.layer = parent.gameObject.layer;
+        var rect = (RectTransform)root.transform;
+        rect.SetParent(parent, false);
+        rect.anchorMin = vertical ? Vector2.zero : new Vector2(0, 0);
+        rect.anchorMax = vertical ? new Vector2(0, 1) : new Vector2(1, 0);
+        rect.pivot = new Vector2(0, .5f);
+        rect.offsetMin = vertical ? new Vector2(16, 24) : new Vector2(138, 156);
+        rect.offsetMax = vertical ? new Vector2(98, -24) : new Vector2(-34, 188);
+        Image border = AddGasCapacityImage("Body", rect, new Color(.65f, .65f, .65f, 1), Vector2.zero, Vector2.zero);
+        AddGasCapacityImage("Background", border.transform, new Color(.18f, .18f, .18f, 1), new Vector2(2, 2), new Vector2(-2, -2));
+        var area = new GameObject("FillArea", typeof(RectTransform));
+        area.layer = root.layer; area.transform.SetParent(border.transform, false);
+        var areaRect = (RectTransform)area.transform;
+        areaRect.anchorMin = Vector2.zero; areaRect.anchorMax = Vector2.one;
+        areaRect.offsetMin = new Vector2(5, 5); areaRect.offsetMax = new Vector2(-5, -5);
+        Image fill = AddGasCapacityImage("Fill", areaRect, color, Vector2.zero, Vector2.zero);
+        var text = new GameObject("Amount", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        text.layer = root.layer; text.transform.SetParent(rect, false);
+        label = text.GetComponent<TMP_Text>();
+        label.font = template.font; label.fontSharedMaterial = template.fontSharedMaterial;
+        label.fontSize = vertical ? 18 : 20; FlatWorldUITextLayout.Configure(label, label.fontSize);
+        label.alignment = TextAlignmentOptions.Center; label.enableWordWrapping = false;
+        label.color = Color.white; label.raycastTarget = false;
+        label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
+        label.rectTransform.offsetMin = new Vector2(4, 4); label.rectTransform.offsetMax = new Vector2(-4, -4);
+        label.text = "0/100";
+        Slider slider = root.GetComponent<Slider>();
+        slider.fillRect = fill.rectTransform; slider.targetGraphic = fill;
+        slider.direction = vertical ? Slider.Direction.BottomToTop : Slider.Direction.LeftToRight;
+        slider.minValue = 0; slider.maxValue = 1; slider.interactable = false;
+        slider.transition = Selectable.Transition.None; slider.navigation = new Navigation { mode = Navigation.Mode.None };
+        slider.SetValueWithoutNotify(0);
+        return slider;
     }
     #endregion
 }

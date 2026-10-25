@@ -346,15 +346,8 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     }
 
     private bool TryResolveFuel(ItemData item, out float value, out float limit)
-    {
-        value = limit = 0f;
-        if (item?.Stack == null || item.Stack.Amount < 1f || item.Tags?.ContainsTag(Tag.CombustionFuel) != true ||
-            !Mod_Fuel.TryResolveItemData(item, out FuelData offered)) return false;
-        bool tinder = IsIgnitionFuel(item);
-        value = tinder ? Mathf.Min(offered.Fuel.x, ignitionFuel) : offered.Fuel.x;
-        limit = tinder ? Mathf.Min(offered.MaxTemperature, ignitionTemperature) : offered.MaxTemperature;
-        return MachineDefinition.Positive(value) && MachineDefinition.Positive(limit) && Fuel.Fuel.y > 0f;
-    }
+        => FurnaceFuelRules.TryResolve(item, IsIgnitionFuel(item), ignitionFuel, ignitionTemperature,
+            out value, out limit) && Fuel.Fuel.y > 0f;
 
     /// <summary>燃料槽按语义挑选，避免槽位顺序决定点火是否成功。</summary>
     private bool TryFindFuelSlot(bool ignitionFuelOnly, out ItemSlot selected)
@@ -382,15 +375,10 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     }
 
     private bool IsIgnitionFuel(ItemData item)
-        => ignitionIds.Contains(item.IDName) || item.Tags != null && item.Tags.ContainsAnyTag(ignitionTags);
+        => FurnaceFuelRules.IsTinder(item, ignitionIds, ignitionTags);
 
     private static bool HasHeldIgnition(Player actor)
-    {
-        if (actor == null) return false;
-        Item held = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
-        return held != null && held.InHand && held.Owner == actor &&
-            held.itemMods?.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId)?.IsActivelyBurning == true;
-    }
+        => FurnaceFuelRules.HasHeldIgnition(actor);
 
     private void PublishTemperature()
     {

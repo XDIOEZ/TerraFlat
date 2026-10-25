@@ -115,6 +115,101 @@ test.system("ui_settings", "building_panel_layout", {panel = "UI_FluidTank"}, fu
     end
 end, "便携气罐标题、信息、底栏分区与全部操作按钮布局")
 
+-- 水量统一蓝色竖条，燃料继续使用黄色横条，数值始终来自真实容量比例。
+for _, panel in ipairs({"UI_IndustrialFluid", "UI_Cultivator", "UI_WaterVessel"}) do
+    test.system("ui_settings", "fluid_panel_layout", {panel = panel}, function(data)
+        local function check_gauge(gauge, direction, label)
+            assert(gauge.minimum == 0 and gauge.maximum == 1 and gauge.direction == direction
+                and not gauge.interactable, label .. "方向、量程或只读状态错误")
+            assert_building_rect_inside(gauge.bounds, data.root, label .. "超出窗口")
+            assert_building_rect_inside(gauge.label, gauge.localBounds, label .. "读数超出容量条")
+            local area = gauge.fillAreaLayout
+            assert(area.minX == 0 and area.minY == 0 and area.maxX == 1 and area.maxY == 1,
+                label .. "填充区域没有覆盖整条，被主题压成半高轨道")
+            for _, edge in ipairs({area.left, area.bottom, -area.right, -area.top}) do
+                assert(math.abs(edge - 5) < .1 or math.abs(edge - 6) < .1,
+                    label .. "填充区域边距丢失或不一致")
+            end
+            for _, graphic in ipairs(gauge.graphics) do
+                assert(not graphic.raycast, label .. "遮挡了鼠标或触屏交互：" .. graphic.name)
+            end
+            local expected = {0, .25, .0025, 1, 1, 0}
+            local labels = {"0.00/100.00", "25.00/100.00", "0.25/100.00", "100.00/100.00", "150.00/100.00", "10.00/0.00"}
+            assert(#gauge.readings == #expected, label .. "容量边界采样缺失")
+            for index, reading in ipairs(gauge.readings) do
+                assert(math.abs(reading.value - expected[index]) < .0001,
+                    label .. "没有使用实际数量/容量，或超容量和零容量未限制填充")
+                assert(reading.label == labels[index], label .. "真实数量或容量读数丢失")
+            end
+        end
+        local function check_theme_preserved(before, after, direction, label)
+            check_gauge(after, direction, label)
+            for _, channel in ipairs({"r", "g", "b"}) do
+                assert(math.abs(before.color[channel] - after.color[channel]) < .0001,
+                    label .. "被主题入口重置了语义颜色")
+            end
+            for _, edge in ipairs({"left", "right", "top", "bottom", "width", "height"}) do
+                assert(math.abs(before.bounds[edge] - after.bounds[edge]) < .1
+                    and math.abs(before.fillArea[edge] - after.fillArea[edge]) < .1,
+                    label .. "被主题入口改变了条体或填充区域")
+            end
+        end
+        local water = data.water
+        check_gauge(water, 2, "水量蓝条")
+        check_theme_preserved(water, data.waterAfterTheme, 2, "主题后的水量蓝条")
+        check_theme_preserved(water, data.waterAfterPalette, 2, "运行时调色后的水量蓝条")
+        assert(water.bounds.height > water.bounds.width and water.color.b > water.color.g
+            and water.color.g > water.color.r, "水量未使用统一蓝色竖条")
+        if panel == "UI_IndustrialFluid" then
+            check_gauge(data.fuel, 0, "燃料黄条")
+            check_theme_preserved(data.fuel, data.fuelAfterTheme, 0, "主题后的燃料黄条")
+            check_theme_preserved(data.fuel, data.fuelAfterPalette, 0, "运行时调色后的燃料黄条")
+            assert(data.fuel.bounds.width > data.fuel.bounds.height and data.fuel.color.r > data.fuel.color.g
+                and data.fuel.color.g > data.fuel.color.b, "燃料未使用黄色横条")
+            assert(data.preserveLayout and #data.slots == 3 and not data.actionInBody,
+                "蒸汽机缺少三燃料槽，或点火按钮混入正文")
+            assert_building_rect_inside(water.bounds, data.body, "水条超出正文")
+            assert_building_rect_inside(data.fuel.bounds, data.body, "燃料条超出正文")
+            assert(data.status.left >= water.bounds.right and data.fuel.bounds.left >= water.bounds.right,
+                "状态或燃料条遮挡左侧水量条")
+            for _, slot in ipairs(data.slots) do
+                assert_building_rect_inside(slot.bounds, data.body, "蒸汽机燃料槽超出正文")
+                assert(slot.bounds.top <= data.fuel.bounds.bottom and slot.bounds.left >= water.bounds.right,
+                    "蒸汽机燃料槽遮挡燃料或水量读数")
+            end
+            assert_building_rect_inside(data.action, data.root, "蒸汽机点火按钮超出窗口")
+            assert(data.action.top <= data.body.bottom and data.action.left > data.dismantle.right,
+                "蒸汽机点火按钮未位于右下角，或遮挡拆回按钮")
+        elseif panel == "UI_WaterVessel" then
+            local layout = data.vesselLayout
+            assert(layout.controlWidth and layout.controlHeight and layout.expandWidth
+                and not layout.expandHeight and layout.alignment == 0,
+                "水容器正文的布局轴或顶部对齐规则改变，静态基准不再对应正式布局")
+            local height, count = layout.topPadding + layout.bottomPadding, 0
+            local next_top, picture_height = data.root.top - layout.topPadding, nil
+            for _, row in ipairs(layout.rows) do
+                if row.active and not row.ignored then
+                    assert(row.hasElement, "水容器正文新增了没有明确尺寸预算的内容：" .. row.name)
+                    local row_height = math.max(0, row.minimum, row.preferred)
+                    if count > 0 then height = height + layout.spacing; next_top = next_top - layout.spacing end
+                    if row.name == "陶罐剖面" then
+                        picture_height = row_height
+                        assert(math.abs(layout.picture.top - next_top) < .1,
+                            "水容器剖面静态坐标没有跟随正式顶部内容预算")
+                    end
+                    height = height + row_height; next_top = next_top - row_height; count = count + 1
+                end
+            end
+            assert(height <= data.root.height and picture_height
+                and math.abs(layout.picture.height - picture_height) < .1
+                and math.abs(layout.picture.width - (data.root.width - layout.leftPadding - layout.rightPadding)) < .1,
+                "水容器静态剖面仍是未展开小框，或正文超过真实窗口预算")
+            assert_building_rect_inside(layout.picture, data.root, "水容器剖面超出真实窗口")
+            assert_building_rect_inside(layout.waterInPicture, layout.pictureLocal, "水量竖条超出容器剖面布局")
+        end
+    end, "含水建筑统一容量条与蒸汽机炉式布局：" .. panel)
+end
+
 for _, row in ipairs({
     {mode = "same_world", remaining = 940}, {mode = "no_clock", remaining = 1040},
     {mode = "other_world", remaining = 1040}, {mode = "rewound", remaining = 1040},

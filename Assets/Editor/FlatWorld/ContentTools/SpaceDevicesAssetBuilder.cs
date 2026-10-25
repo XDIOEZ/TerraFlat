@@ -81,7 +81,13 @@ public static class SpaceDevicesAssetBuilder
             for (int i = 0; i < 9; i++)
                 view.HarvestSlots[i] = AddSlot(inner, "收获_" + (i + 1), new Vector2(-350 + i % 3 * 90, 35 - i / 3 * 90));
             AddLabel(mechanical.Status, inner, "收获标题", "收获物品", new Vector2(-260, 94), new Vector2(270, 32));
-            Layout((RectTransform)mechanical.StatusScroll.transform, new Vector2(165, -55), new Vector2(550, 310));
+            Layout((RectTransform)mechanical.StatusScroll.transform, new Vector2(105, -55), new Vector2(430, 310));
+            mechanical.WaterCapacity = RuntimeUIPrefabBuilder.CreateCapacityGauge(inner, mechanical.Status,
+                "FWUI_WaterCapacity", true, new Color(.15f, .48f, .85f, 1), out mechanical.WaterPercentage);
+            RectTransform water = (RectTransform)mechanical.WaterCapacity.transform;
+            water.anchorMin = water.anchorMax = new Vector2(1, .5f);
+            water.pivot = new Vector2(1, .5f); water.anchoredPosition = new Vector2(-16, -70);
+            water.sizeDelta = new Vector2(82, 260);
             view.Status = mechanical.Status;
             mechanical.Status.fontSize = 21;
             mechanical.Status.enableAutoSizing = false;

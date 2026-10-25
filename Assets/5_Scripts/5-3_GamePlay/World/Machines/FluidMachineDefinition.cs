@@ -21,6 +21,8 @@ public sealed partial class FluidMachineDefinition
     public double BatchLiquidServings = 1;
     public bool AllowPortableTank;
     public bool AllowManualAirFill; // 自然补气按固定容量占比扣取真实环境组分。
+    public float SolidFuelCapacity; // 显式启用三槽燃料炉，零容量设备不持有固体燃烧能力。
+    public float SolidFuelAbsorptionSeconds = 3f;
     public FluidMachinePortDefinition[] Ports = Array.Empty<FluidMachinePortDefinition>();
     public FluidMachineReactionDefinition[] Reactions = Array.Empty<FluidMachineReactionDefinition>();
     public string LiquidResidueFluidId = ""; // 液体副产物保留在独立腔内，仅通过容器端口取液。
@@ -37,6 +39,7 @@ public sealed partial class FluidMachineDefinition
             !Positive(VolumeLiters) || !Positive(MinimumGasSpaceLiters) || MinimumGasSpaceLiters >= VolumeLiters ||
             !double.IsFinite(ThroughputLitersPerSecond) || ThroughputLitersPerSecond < 0 ||
             !Positive(BatchStandardLiters) || !Positive(GasCapacityStandardLiters) || !Positive(BatchLiquidServings) ||
+            !float.IsFinite(SolidFuelCapacity) || SolidFuelCapacity < 0 || !Positive(SolidFuelAbsorptionSeconds) ||
             !double.IsFinite(NaturalFillFraction) || NaturalFillFraction < 0 || NaturalFillFraction > 1 ||
             (BodySizeCells.HasValue && !Positive(BodySizeCells.Value)) || Ports == null || Reactions == null)
             throw new ArgumentException("工业流体设备配置无效：" + ownerId);

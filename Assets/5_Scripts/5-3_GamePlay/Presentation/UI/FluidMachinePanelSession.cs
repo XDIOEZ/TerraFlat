@@ -33,11 +33,13 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         apply = panel.GetButton("FWUI_ApplyFluidSettings"); phase = panel.GetButton("FWUI_FluidPhase"); rotate = panel.GetButton("FWUI_RotateFluid");
         if (primary == null || secondary == null || apply == null || phase == null || rotate == null)
             throw new InvalidOperationException("工业正式面板缺少配置控件。");
-        input = logic.PortableTank; output = null;
+        input = logic.FuelInventory ?? logic.PortableTank; output = null;
         view.SetProcessingVisible(false);
+        bool hasLiquid = Array.Exists(logic.Definition.Ports, port => port.Phase != "gas") || !string.IsNullOrEmpty(logic.Definition.LiquidResidueFluidId);
+        view.SetFluidLayout(hasLiquid, logic.FuelInventory != null, input != null);
         view.SetGasCapacityVisible(logic.Behavior.IsStorage && Array.Exists(logic.Definition.Ports, port => port.Phase == "gas"));
         rotate.gameObject.SetActive(!MachineWorld.IsFluidTankBlock(logic.Entity)); // 对称方块罐不提供无意义的朝向操作。
-        SetSection(view.InputSlot, input != null); SetSection(view.OutputSlot, output != null);
+        view.InputSlot.gameObject.SetActive(input != null); view.OutputSlot.gameObject.SetActive(false);
         foreach (ItemSlot_UI slot in panel.GetComponentsInChildren<ItemSlot_UI>(true))
             if (slot.name.StartsWith("输入_", StringComparison.Ordinal)) slot.gameObject.SetActive(input != null);
         BindContainers();
@@ -49,14 +51,6 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     }
     private TMP_InputField FindField(string name)
     { foreach (var field in panel.GetComponentsInChildren<TMP_InputField>(true)) if (field.name == name) return field; return null; }
-    private void SetSection(ItemSlot_UI slot, bool visible)
-    {
-        bool isInput = slot == view.InputSlot;
-        slot.gameObject.SetActive(visible);
-        foreach (GameObject visual in view.ProcessingVisuals)
-            if (visual.name.Contains(isInput ? "INPUT" : "OUTPUT", StringComparison.Ordinal) || visual == slot.gameObject)
-                visual.SetActive(visible);
-    }
     private static void Bind(Inventory inventory, ItemSlot_UI slot)
     { if (inventory == null) return; inventory.itemSlot_UI.Clear(); inventory.BindSlotUI(slot, 0); inventory.SyncData(); }
     private void BindContainers()
@@ -94,7 +88,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     }
     private void Act()
     {
-        if (logic.LiquidResiduePort != null) logic.TransferLiquidResidueTo(HeldLiquidVessel, actor);
+        if (logic.FuelInventory == null && logic.LiquidResiduePort != null) logic.TransferLiquidResidueTo(HeldLiquidVessel, actor);
         else MachineWorld.RequestOperation(logic.Entity, "work", "", actor);
         Refresh();
     }
@@ -117,6 +111,17 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         view.Title.text = FlatWorldLocalizationService.Get(FlatWorldLocalizationService.GetItemLabelKey(logic.Entity.Definition.Id),
             logic.Entity.Definition.Content?.Definition.DisplayName ?? logic.Entity.Definition.Id);
         view.Status.text = logic.Status;
+        if (view.WaterCapacity.gameObject.activeSelf)
+        {
+            string chamber = Array.Find(logic.Definition.Ports, port => port.Phase != "gas")?.Chamber ?? logic.Definition.LiquidResidueChamber;
+            FluidInventory liquid = MachineWorld.GetFluidInventory(logic.Entity, chamber);
+            view.SetWaterCapacity((float)liquid.GetLiquidLiters(), (float)MachineWorld.GetFluidVolumeLiters(logic.Entity));
+        }
+        if (logic.FuelInventory != null)
+        {
+            view.SetFuelRemaining(logic.Fuel.Fuel.x, logic.Fuel.Fuel.y);
+            for (int i = 0; i < input.itemSlot_UI.Count; i++) input.itemSlot_UI[i].SetProcessingProgress(logic.GetFuelAbsorptionProgress(i));
+        }
         if (logic.Behavior.IsStorage && Array.Exists(logic.Definition.Ports, port => port.Phase == "gas"))
         {
             // 本罐容量只读取本罐真实气量。
@@ -125,7 +130,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         }
         string caption = logic.ActionLabel;
         view.SetActionVisible(!string.IsNullOrEmpty(caption));
-        view.ActionButton.interactable = logic.Definition.AllowManualAirFill
+        view.ActionButton.interactable = logic.FuelInventory != null ? logic.CanAct : logic.Definition.AllowManualAirFill
             ? MachineWorld.CanFillFluidTankAir(logic.Entity)
             : logic.LiquidResiduePort == null || logic.CanTransferLiquidResidueTo(HeldLiquidVessel, actor);
         MechanicalPanelView.SetButtonCaption(view.ActionButton, caption);

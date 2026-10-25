@@ -23,6 +23,8 @@ public partial class FluidMachineState
     public decimal LastRetainedStandardLiters;
     public decimal LastEscapedStandardLiters;
     public Inventory_Data PortableTank = MachineInventory.NewData("容器", 3);
+    public FurnaceRuntimeState SolidFuel;
+    public Inventory_Data FuelInventory;
     public int LastFlowDirection = -1;
     public string LastFlowPhase = "";
     #endregion

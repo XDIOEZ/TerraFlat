@@ -12,6 +12,13 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public FluidMachineDefinition Definition => Entity.Definition.Fluid;
     public FluidDeviceBehavior Behavior => MachineWorld.GetFluidDeviceBehavior(Entity);
     private Inventory portableTank;
+    public Inventory FuelInventory { get; private set; }
+    public MachineSolidFuelBurner SolidFuelBurner { get; private set; }
+    public FuelData Fuel => SolidFuelBurner?.Fuel;
+    public float FuelRatio => Fuel?.Fuel.y > 0 ? Mathf.Clamp01(Fuel.Fuel.x / Fuel.Fuel.y) : 0;
+    public override bool IsBurning => !State.Ruptured && SolidFuelBurner?.IsBurning == true;
+    public override bool CanAct => !State.Ruptured && (SolidFuelBurner?.CanAct ?? base.CanAct);
+    public float GetFuelAbsorptionProgress(int slotIndex) => SolidFuelBurner?.Progress(slotIndex) ?? 0;
     private readonly IDisposable combustionSourceLease;
     public Inventory PortableTank { get { EnsureDeviceInventories(); return portableTank; } }
     private long deviceRegistryGeneration = -1;
@@ -23,7 +30,8 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public override float TickInterval => .1f;
     public override float Progress01 => (float)Math.Clamp(State.PumpProgress, 0, 1);
     public override string Status => Describe();
-    public override string ActionLabel => string.IsNullOrEmpty(Definition.LiquidResidueFluidId) ? Behavior.ActionLabel(Entity) : "装入手持容器";
+    public override string ActionLabel => SolidFuelBurner != null ? SolidFuelBurner.IsIgnited ? "熄火" : "点火" :
+        string.IsNullOrEmpty(Definition.LiquidResidueFluidId) ? Behavior.ActionLabel(Entity) : "装入手持容器";
     public override GameObject PanelPrefab => GameRes.Instance.GetPrefab(Definition.PanelId);
 
     public FluidMachineLogic(MachineEntity entity) : base(entity)
@@ -37,6 +45,14 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     {
         if (deviceRegistryGeneration == MachineLogicRegistry.FluidDeviceGeneration) return;
         deviceRegistryGeneration = MachineLogicRegistry.FluidDeviceGeneration;
+        if (Definition.SolidFuelCapacity > 0 && FuelInventory == null)
+        {
+            State.SolidFuel ??= new FurnaceRuntimeState { Fuel = new FuelData { Fuel = Vector2.zero } };
+            FuelInventory = Track(MachineInventory.Create(null, State.FuelInventory, "燃料", 3));
+            FuelInventory.Data.SetItemAcceptancePolicy((item, slot) => item?.Tags?.ContainsTag(Tag.CombustionFuel) == true);
+            State.FuelInventory = FuelInventory.Data;
+            SolidFuelBurner = new MachineSolidFuelBurner(Entity, FuelInventory, State.SolidFuel);
+        }
         if (Definition.AllowPortableTank && portableTank == null)
         {
             portableTank = Track(MachineInventory.Create(null, State.PortableTank, "装填容器", 3));
@@ -56,7 +72,14 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     {
         FluidMachineState incoming = MachinePersistence.Read<FluidMachineState>(snapshot, "fluid");
         if (incoming == null) return false;
+        if (FuelInventory != null && (incoming.SolidFuel == null || incoming.FuelInventory == null)) return false;
         if (PortableTank != null) { MachineInventory.ApplySnapshot(PortableTank, incoming.PortableTank); incoming.PortableTank = PortableTank.Data; }
+        if (FuelInventory != null)
+        {
+            MachineInventory.ApplySnapshot(FuelInventory, incoming.FuelInventory);
+            incoming.FuelInventory = FuelInventory.Data;
+            SolidFuelBurner.ApplyState(incoming.SolidFuel);
+        }
         State = incoming; NotifyRemoteChanged(); return true;
     }
 
@@ -64,6 +87,15 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     {
         EnsureDeviceInventories();
         if (!MachineWorld.IsFluidActive(Entity) || State.Ruptured) return;
+        if (SolidFuelBurner != null)
+        {
+            var fuelBefore = (Fuel.Fuel.x, State.SolidFuel.Smelting.IsSmelting, State.SolidFuel.AwaitingIgnition,
+                State.SolidFuel.Absorption.SlotIndex, State.SolidFuel.Absorption.ElapsedSeconds);
+            SolidFuelBurner.Tick(seconds);
+            var fuelAfter = (Fuel.Fuel.x, State.SolidFuel.Smelting.IsSmelting, State.SolidFuel.AwaitingIgnition,
+                State.SolidFuel.Absorption.SlotIndex, State.SolidFuel.Absorption.ElapsedSeconds);
+            if (fuelBefore != fuelAfter) NotifyChanged();
+        }
         FluidDeviceBehavior behavior = Behavior;
         // 内置设备没有实际变化就不推送整台状态，自定义策略仍保留原来的显式调度通知。
         if (!behavior.UsesObservedTickState) { behavior.Advance(Entity, seconds); NotifyChanged(); return; }
@@ -143,6 +175,13 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public override bool Execute(string operation, string argument, Player actor)
     {
         if (operation == "begin-interaction") return true;
+        if (operation == "work" && SolidFuelBurner != null)
+        {
+            if (State.Ruptured) return false;
+            if (!SolidFuelBurner.Toggle(actor)) return false;
+            NotifyChanged(true);
+            return true;
+        }
         if (operation == "fluid.rotate")
         {
             if (MachineWorld.IsFluidTankBlock(Entity) || State.Ruptured || Entity.State == null) return false;

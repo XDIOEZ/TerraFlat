@@ -28,6 +28,7 @@ public static partial class RuntimeUIPrefabBuilder
         CreateText("水量状态", content, "空容器　0 / 8 份", 22f, Cream).gameObject.AddComponent<LayoutElement>().preferredHeight = 58f;
         GameObject picture = CreateUIObject("陶罐剖面", content);
         picture.AddComponent<LayoutElement>().preferredHeight = 380f;
+        SetCentered((RectTransform)picture.transform, new Vector2(0, 22), new Vector2(760, 380));
         GameObject pour = CreateUIObject("倾倒液流", picture.transform, typeof(WaterVesselPourGraphic));
         SetCentered((RectTransform)pour.transform, new Vector2(-115f, 0f), new Vector2(420f, 420f));
         pour.GetComponent<WaterVesselPourGraphic>().raycastTarget = false;
@@ -71,6 +72,12 @@ public static partial class RuntimeUIPrefabBuilder
         ConfigureBackgroundlessWaterVessel(root, content);
         WaterVesselPanel panel = root.AddComponent<WaterVesselPanel>();
         panel.Liquid = liquid;
+        panel.WaterCapacity = CreateCapacityGauge(picture.transform, root.GetComponentInChildren<TMP_Text>(true),
+            "FWUI_WaterCapacity", true, new Color(.15f, .48f, .85f, 1), out panel.WaterPercentage);
+        RectTransform waterGauge = (RectTransform)panel.WaterCapacity.transform;
+        waterGauge.anchorMin = waterGauge.anchorMax = new Vector2(0, .5f);
+        waterGauge.pivot = new Vector2(0, .5f); waterGauge.anchoredPosition = new Vector2(8, 0);
+        waterGauge.sizeDelta = new Vector2(64, 330);
         panel.LeftPourOutlet = leftPourOutlet;
         panel.RightPourOutlet = rightPourOutlet;
         panel.Appearances = CreateWaterVesselAppearances();

@@ -707,6 +707,7 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Fluids/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Fluid*",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Tank*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineSolidFuelBurner.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
         "Assets/StreamingAssets/GameConfig/Fluids/*",
         "Assets/StreamingAssets/GameplayTests/Systems/IndustrialFluids/*",

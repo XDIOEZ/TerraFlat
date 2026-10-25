@@ -180,7 +180,7 @@ public static class FlatWorldUITheme
         Image[] images = root.GetComponentsInChildren<Image>(true);
         foreach (Image image in images)
         {
-            if (image == null)
+            if (image == null || UIVisualOwner.OwnsVisuals(image))
                 continue;
 
             string objectName = image.name;
@@ -218,7 +218,7 @@ public static class FlatWorldUITheme
         Slider[] sliders = root.GetComponentsInChildren<Slider>(true);
         foreach (Slider slider in sliders)
         {
-            if (slider == null)
+            if (slider == null || UIVisualOwner.OwnsVisuals(slider))
                 continue;
 
             Image background = FindNamedImage(slider.transform, "Background", "背景", "底板");
