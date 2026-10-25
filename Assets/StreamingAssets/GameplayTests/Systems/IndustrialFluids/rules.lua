@@ -2,6 +2,52 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.000001), message)
 end
 
+test.system("industrial_fluids", "liquid_block_tanks", {}, function(data)
+    assert(#data.tanks == 2 and #data.recipeWarnings == 0, "铁钢液罐或正式制作配方缺失")
+    for index, tank in ipairs(data.tanks) do
+        local expected_id = index == 1 and "LiquidTankBlock_Iron" or "LiquidTankBlock_Steel"
+        assert(tank.id == expected_id and tank.kind == "tank", "液罐没有复用正式储罐能力")
+        assert(tank.material == (index == 1 and "iron" or "steel"), "液罐材质配置错误")
+        near(tank.capacity, 100, "液罐容量不是100L")
+        assert(not tank.manualAirFill and tank.stackable, "液罐误启用补气或空罐不能堆叠")
+        assert(#tank.ports == 4 and #tank.pairs == 2, "液罐接口或建筑配对缺失")
+        local directions = {}
+        for _, port in ipairs(tank.ports) do
+            assert(port.Phase == "liquid" and port.Mode == "both" and port.Chamber == "main",
+                "液罐没有使用双向独立液体接口")
+            assert(not directions[port.Direction], "液罐端口方向重复")
+            directions[port.Direction] = true
+        end
+        for direction = 0, 3 do assert(directions[direction], "液罐缺少四向液体接口") end
+        for pair_index, pair in ipairs(tank.pairs) do
+            assert(pair.role == (pair_index == 1 and 1 or 0) and pair.bodyId == tank.id
+                and pair.carrierId == tank.id .. "_Summoner" and pair.machineId == tank.id,
+                "液罐放置、机器或拆回配对错误")
+            assert(pair.maxHp > 0 and pair.sprite == "Assets/6_Art/Generated/Chemistry/" .. tank.id .. "/" .. tank.id .. "_Idle.png",
+                "液罐缺少受击生命或独立液滴贴图引用")
+        end
+        near(tank.filled, 100, "液罐没有按实际容量接液")
+        near(tank.overflow, 0, "液罐满后仍接收液体")
+        near(tank.drained, 25, "液罐不能供出实际液体")
+        near(tank.mixed, 0, "液罐混入了另一种液体")
+        near(tank.sourceLeft, 50, "液罐超量扣取来源")
+        near(tank.stored, 75, "液罐保存恢复丢失内容")
+        near(tank.delivered, 25, "出液没有交付真实数量")
+        near(tank.otherStored, 5, "拒绝混液或保存影响了另一罐")
+        assert(tank.storedFluid == "core:pure_water" and tank.otherFluid == "core:filtered_water"
+            and tank.differentContentsCannotStack, "独立液罐串料或不同内容合堆")
+        assert(tank.crafted.committed and not tank.missing.committed and not tank.full.committed,
+            "液罐制作正常、缺料或输出满拒绝规则错误")
+        assert(tank.crafted.outputAfter[1].id == tank.id .. "_Summoner", "液罐制作产物不是可放置物品")
+        for _, refusal in ipairs({tank.missing, tank.full}) do
+            for slot_index, before in ipairs(refusal.inputBefore) do
+                local after = refusal.inputAfter[slot_index]
+                assert(before.id == after.id and before.amount == after.amount, "液罐制作拒绝后扣了材料")
+            end
+        end
+    end
+end, "铁钢液罐配对、四向液网、固定容量、拒绝混液、独立保存与制作事务")
+
 test.system("industrial_fluids", "block_tank_stacking", {}, function(data)
     assert(#data.tanks == 6, "气罐方块或便携气罐定义覆盖不完整")
     for _, tank in ipairs(data.tanks) do

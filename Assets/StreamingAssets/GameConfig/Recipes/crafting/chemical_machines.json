@@ -170,6 +170,62 @@
       "actions": []
     },
     {
+      "id": "core:chemistry_LiquidTankBlock_Iron",
+      "displayName": "铁液罐方块",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LiquidTankBlock_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemistry_LiquidTankBlock_Steel",
+      "displayName": "钢液罐方块",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Steel",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LiquidTankBlock_Steel_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:chemistry_LiquidStorageTank",
       "displayName": "储液罐",
       "recipeType": "crafting",

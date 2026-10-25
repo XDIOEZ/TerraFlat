@@ -942,6 +942,292 @@
       }
     },
     {
+      "id": "LiquidTankBlock_Iron",
+      "parent": "BuildingBody_Base",
+      "gameName": "铁液罐方块-建筑",
+      "description": "独立储存100L单种液体，拒绝混入其他液体。四面可连接液体管道；拆装保留本罐内容。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidTankBlock_Iron\",\"SummonerPrefabId\":\"LiquidTankBlock_Iron_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidTankBlock_Iron"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidTankBlock_Iron_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "铁液罐方块",
+      "description": "独立储存100L单种液体，拒绝混入其他液体。四面可连接液体管道；拆装保留本罐内容。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidTankBlock_Iron\",\"SummonerPrefabId\":\"LiquidTankBlock_Iron_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidTankBlock_Iron"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidTankBlock_Steel",
+      "parent": "BuildingBody_Base",
+      "gameName": "钢液罐方块-建筑",
+      "description": "独立储存100L单种液体，拒绝混入其他液体。四面可连接液体管道；拆装保留本罐内容。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidTankBlock_Steel\",\"SummonerPrefabId\":\"LiquidTankBlock_Steel_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidTankBlock_Steel"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidTankBlock_Steel_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "钢液罐方块",
+      "description": "独立储存100L单种液体，拒绝混入其他液体。四面可连接液体管道；拆装保留本罐内容。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidTankBlock_Steel\",\"SummonerPrefabId\":\"LiquidTankBlock_Steel_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidTankBlock_Steel"
+          }
+        }
+      }
+    },
+    {
       "id": "LiquidStorageTank",
       "parent": "BuildingBody_Base",
       "gameName": "储液罐-建筑",

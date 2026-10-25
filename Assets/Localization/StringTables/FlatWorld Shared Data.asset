@@ -2087,6 +2087,38 @@ MonoBehaviour:
     m_Key: item.SteamEngine.description
     m_Metadata:
       m_Items: []
+  - m_Id: 28102500000010000
+    m_Key: item.LiquidTankBlock_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010001
+    m_Key: item.LiquidTankBlock_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010002
+    m_Key: item.LiquidTankBlock_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010003
+    m_Key: item.LiquidTankBlock_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010004
+    m_Key: item.LiquidTankBlock_Steel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010005
+    m_Key: item.LiquidTankBlock_Steel.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010006
+    m_Key: item.LiquidTankBlock_Steel_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010007
+    m_Key: item.LiquidTankBlock_Steel_Summoner.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

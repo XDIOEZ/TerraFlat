@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "locale": "en",
   "names": {
+    "LiquidTankBlock_Iron": "Iron Liquid Tank Block",
+    "LiquidTankBlock_Iron_Summoner": "Iron Liquid Tank Block",
+    "LiquidTankBlock_Steel": "Steel Liquid Tank Block",
+    "LiquidTankBlock_Steel_Summoner": "Steel Liquid Tank Block",
     "LiquidFiller_Summoner": "Liquid Filling Machine",
     "LiquidFiller": "Liquid Filling Machine",
     "GasFiller_Summoner": "Gas Filling Machine",

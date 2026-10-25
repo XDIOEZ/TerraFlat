@@ -644,6 +644,10 @@
     "已禁用": "Disabled"
   },
   "itemDescriptions": {
+    "LiquidTankBlock_Iron": "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents.",
+    "LiquidTankBlock_Iron_Summoner": "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents.",
+    "LiquidTankBlock_Steel": "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents.",
+    "LiquidTankBlock_Steel_Summoner": "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents.",
     "PortableGasTank_Steel_Building": "Stores 60 standard L of gas. Filling equipment can fill it completely. Natural refill stops at 20% and never vents existing contents. Placement and dismantling preserve its contents.",
     "PortableGasTank_Iron_Building": "Stores 20 standard L of gas. Filling equipment can fill it completely. Natural refill stops at 20% and never vents existing contents. Placement and dismantling preserve its contents.",
     "LiquidFiller_Summoner": "Fills three actual containers in slot order 0, 1, 2. Skips unsuitable or full slots. Maximum rate: 2 L per second.",

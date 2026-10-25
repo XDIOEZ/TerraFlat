@@ -17,6 +17,18 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 4149e423b7f64db4b9095e4b486e0e6b
+    m_Address: Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1bac3a0b21af407c91783b6a5594d4aa
+    m_Address: Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8db84c435e0f4242a7aa56004df170f5
     m_Address: Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png
     m_ReadOnly: 0

@@ -4065,6 +4065,38 @@ MonoBehaviour:
     m_Localized: "独立储存60标准L气体，使用现有装填机可充满；自然补气上限20%，已有气体不会自动排空。放置和拆回保留真实内容。"
     m_Metadata:
       m_Items: []
+  - m_Id: 28102500000010000
+    m_Localized: "\u94c1\u6db2\u7f50\u65b9\u5757-\u5efa\u7b51"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010001
+    m_Localized: "\u72ec\u7acb\u50a8\u5b58100L\u5355\u79cd\u6db2\u4f53\uff0c\u62d2\u7edd\u6df7\u5165\u5176\u4ed6\u6db2\u4f53\u3002\u56db\u9762\u53ef\u8fde\u63a5\u6db2\u4f53\u7ba1\u9053\uff1b\u62c6\u88c5\u4fdd\u7559\u672c\u7f50\u5185\u5bb9\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010002
+    m_Localized: "\u94c1\u6db2\u7f50\u65b9\u5757"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010003
+    m_Localized: "\u72ec\u7acb\u50a8\u5b58100L\u5355\u79cd\u6db2\u4f53\uff0c\u62d2\u7edd\u6df7\u5165\u5176\u4ed6\u6db2\u4f53\u3002\u56db\u9762\u53ef\u8fde\u63a5\u6db2\u4f53\u7ba1\u9053\uff1b\u62c6\u88c5\u4fdd\u7559\u672c\u7f50\u5185\u5bb9\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010004
+    m_Localized: "\u94a2\u6db2\u7f50\u65b9\u5757-\u5efa\u7b51"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010005
+    m_Localized: "\u72ec\u7acb\u50a8\u5b58100L\u5355\u79cd\u6db2\u4f53\uff0c\u62d2\u7edd\u6df7\u5165\u5176\u4ed6\u6db2\u4f53\u3002\u56db\u9762\u53ef\u8fde\u63a5\u6db2\u4f53\u7ba1\u9053\uff1b\u62c6\u88c5\u4fdd\u7559\u672c\u7f50\u5185\u5bb9\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010006
+    m_Localized: "\u94a2\u6db2\u7f50\u65b9\u5757"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010007
+    m_Localized: "\u72ec\u7acb\u50a8\u5b58100L\u5355\u79cd\u6db2\u4f53\uff0c\u62d2\u7edd\u6df7\u5165\u5176\u4ed6\u6db2\u4f53\u3002\u56db\u9762\u53ef\u8fde\u63a5\u6db2\u4f53\u7ba1\u9053\uff1b\u62c6\u88c5\u4fdd\u7559\u672c\u7f50\u5185\u5bb9\u3002"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -4338,6 +4338,38 @@ MonoBehaviour:
     m_Localized: "Stores 60 standard L of gas. Filling equipment can fill it completely. Natural refill stops at 20% and never vents existing contents. Placement and dismantling preserve its contents."
     m_Metadata:
       m_Items: []
+  - m_Id: 28102500000010000
+    m_Localized: "Iron Liquid Tank Block"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010001
+    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010002
+    m_Localized: "Iron Liquid Tank Block"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010003
+    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010004
+    m_Localized: "Steel Liquid Tank Block"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010005
+    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010006
+    m_Localized: "Steel Liquid Tank Block"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010007
+    m_Localized: "Independently stores 100 L of one liquid and rejects other liquids. Connects to liquid pipes on all four sides. Placement and dismantling preserve its contents."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

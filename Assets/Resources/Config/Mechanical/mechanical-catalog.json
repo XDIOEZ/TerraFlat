@@ -584,6 +584,116 @@
       }
     },
     {
+      "Id": "LiquidTankBlock_Iron",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "tank",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "MaterialId": "iron",
+        "VolumeLiters": 100,
+        "MinimumGasSpaceLiters": 0.1,
+        "AllowManualAirFill": false,
+        "ThroughputLitersPerSecond": 1000
+      }
+    },
+    {
+      "Id": "LiquidTankBlock_Steel",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "tank",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "MaterialId": "steel",
+        "VolumeLiters": 100,
+        "MinimumGasSpaceLiters": 0.1,
+        "ThroughputLitersPerSecond": 1000,
+        "AllowManualAirFill": false
+      }
+    },
+    {
       "Id": "LiquidStorageTank",
       "Kind": "shaft",
       "Ports": "none",

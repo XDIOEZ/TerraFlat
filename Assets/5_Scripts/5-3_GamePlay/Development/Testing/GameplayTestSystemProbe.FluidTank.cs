@@ -18,6 +18,7 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterPortableFluidTankRules()
     {
         Register("industrial_fluids", "block_tank_stacking", WorldBlockTankStacking);
+        Register("industrial_fluids", "liquid_block_tanks", WorldLiquidBlockTanks);
         Register("industrial_fluids", "portable_tank_cache", WorldPortableTankCache);
         Register("industrial_fluids", "portable_tank_payload", WorldPortableTankPayload);
         Register("industrial_fluids", "portable_tank_air_fill", WorldPortableTankAirFill);
@@ -67,6 +68,77 @@ public static partial class GameplayTestSystemProbe
             rows.Add(row);
         }
         return new JObject { ["tanks"] = rows };
+    }
+    #endregion
+
+    #region 液罐方块配置与库存采样
+    private static JObject WorldLiquidBlockTanks(JObject args)
+    {
+        var definitions = new Dictionary<string, ItemDefinitionDto>(StringComparer.OrdinalIgnoreCase);
+        foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
+            if (!definition.Abstract) definitions.Add(definition.Id, definition);
+        var machines = JsonConvert.DeserializeObject<MachineCatalogDocument>(
+            Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog").text);
+        string recipeRoot = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RecipeCatalogLoader.RelativeRecipeRoot);
+        RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(StreamingAssetsTextLoader.ReadAllText(
+            RecipeCatalogLoader.ResolvePackagePath(recipeRoot, "crafting/chemical_machines.json")));
+        List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(catalog, definitions.ContainsKey, out List<string> warnings);
+        var rows = new JArray();
+        foreach (string id in new[] { "LiquidTankBlock_Iron", "LiquidTankBlock_Steel" })
+        {
+            MachineDefinition machine = machines.Nodes.Find(value => value.Id == id)
+                ?? throw new InvalidOperationException("缺少液罐方块定义：" + id);
+            machine.Validate();
+            FluidMachineDefinition fluid = machine.Fluid;
+            ItemDefinitionDto body = definitions[id], carrier = definitions[id + "_Summoner"];
+            var pairs = new JArray();
+            foreach (ItemDefinitionDto definition in new[] { body, carrier })
+            {
+                Mod_Building.Building_Data placement = new();
+                definition.Modules[ModText.Building].Data.ToObject<Ex_ModData>().ReadData(ref placement);
+                pairs.Add(new JObject { ["id"] = definition.Id, ["role"] = (int)placement.Role,
+                    ["bodyId"] = placement.BuildingPrefabId, ["carrierId"] = placement.SummonerPrefabId,
+                    ["machineId"] = definition.Modules["机械扭矩模块"].Parameters["DefinitionId"],
+                    ["sprite"] = definition.Visual.SpriteAddress, ["maxHp"] = definition.Health.MaxHp });
+            }
+            // 独立库存复用正式数量事务，采样满罐、异种拒绝、出液及拆装载荷。
+            var source = new FluidInventory(); var target = new FluidInventory(); var other = new FluidInventory();
+            void AddLiquid(FluidInventory inventory, string fluidId, decimal liters)
+                => inventory.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(fluidId), 0m,
+                    FluidUnits.LiquidLitersToMol(FluidCatalog.Default.Find(fluidId), liters), 293.15), 1000, .001);
+            AddLiquid(source, FluidIds.PureWater, 150); AddLiquid(other, FluidIds.FilteredWater, 5);
+            double filled = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Liquid, 150,
+                fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
+            double overflow = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Liquid, 1,
+                fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
+            var delivered = new FluidInventory();
+            double drained = IndustrialFluidTransfer.Transfer(target, delivered, FluidPhase.Liquid, 25, 100, 100);
+            double mixed = IndustrialFluidTransfer.Transfer(other, target, FluidPhase.Liquid, 5,
+                fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
+            Data_GeneralItem first = EntityCraftingDefinitionData(carrier, 1), second = EntityCraftingDefinitionData(carrier, 1);
+            bool emptyStackable = first.CanStackWith(second);
+            var state = new FluidMachineState(); state.Chambers["main"] = target.State;
+            var otherState = new FluidMachineState(); otherState.Chambers["main"] = other.State;
+            MachinePersistence.Write(first, "fluid", state); MachinePersistence.Write(second, "fluid", otherState);
+            var restored = new FluidInventory(MachinePersistence.Read<FluidMachineState>(first, "fluid").Chambers["main"]);
+            var restoredOther = new FluidInventory(MachinePersistence.Read<FluidMachineState>(second, "fluid").Chambers["main"]);
+            RuntimeRecipe recipe = recipes.Find(value => value.Id == "core:chemistry_" + id)
+                ?? throw new InvalidOperationException("缺少液罐方块配方：" + id);
+            rows.Add(new JObject { ["id"] = id, ["kind"] = fluid.Kind, ["material"] = fluid.MaterialId,
+                ["capacity"] = fluid.VolumeLiters, ["manualAirFill"] = fluid.AllowManualAirFill,
+                ["ports"] = JArray.FromObject(fluid.Ports), ["pairs"] = pairs,
+                ["stackable"] = carrier.Stackable == true && emptyStackable,
+                ["differentContentsCannotStack"] = !first.CanStackWith(second),
+                ["filled"] = filled, ["overflow"] = overflow, ["drained"] = drained, ["mixed"] = mixed,
+                ["sourceLeft"] = source.GetLiquidLiters(), ["stored"] = restored.GetLiquidLiters(),
+                ["otherStored"] = restoredOther.GetLiquidLiters(), ["delivered"] = delivered.GetLiquidLiters(),
+                ["storedFluid"] = restored.State.Components[0].FluidId,
+                ["otherFluid"] = restoredOther.State.Components[0].FluidId,
+                ["crafted"] = EntityCraftingHandmadeAttempt(recipe, definitions, false, false),
+                ["missing"] = EntityCraftingHandmadeAttempt(recipe, definitions, true, false),
+                ["full"] = EntityCraftingHandmadeAttempt(recipe, definitions, false, true) });
+        }
+        return new JObject { ["tanks"] = rows, ["recipeWarnings"] = new JArray(warnings) };
     }
     #endregion
 
