@@ -185,6 +185,8 @@ public partial class GameRes
 
     private IEnumerator RunResourceSessionCore()
     {
+        // 使用单调时钟统计完整资源会话，包含异步等待和菜单后台加载时间。
+        long resourceSessionStartedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
         Exception prepareError = null;
         try
         {
@@ -216,6 +218,10 @@ public partial class GameRes
         loadCoroutine = null;
         loadingProgress = 1;
         showLoadingGUI = false;
+        double totalResourceLoadMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - resourceSessionStartedTimestamp) *
+                                               1000d / System.Diagnostics.Stopwatch.Frequency;
+        Debug.Log($"<color=#7EDC8A><b>[GameRes] 全部资产加载完成</b></color>，总耗时：" +
+                  $"<color=#FFD166><b>{totalResourceLoadMilliseconds / 1000d:F2} 秒（{totalResourceLoadMilliseconds:F0} ms）</b></color>。", this);
         Debug.Log($"[GameRes] 资源目录就绪：{ItemDefinitions.Count} 个物品/Actor，{TileBlockDict.Count} 个 TileBlock，" +
                   $"{recipeById.Count} 个配方，持有 {resourceAssets.HandleCount} 个资源请求。");
         Debug.Log($"[启动二进制缓存] 其他 JSON 配置：命中 {JsonConfigurationCache.Hits}，" +
