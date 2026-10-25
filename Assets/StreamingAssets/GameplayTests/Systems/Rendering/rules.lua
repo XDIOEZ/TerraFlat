@@ -358,6 +358,12 @@ end
 test.system("rendering", "shadow_footprint_matrix", {}, function(data)
     assert(data.cases == 192 and data.maximumError < 0.0002,
         "角色阴影仿射包围盒与原四角投影不一致，误差：" .. tostring(data.maximumError))
+    assert(data.contactFootY >= data.opaqueBottomY and data.contactFootY < 0,
+        "带透明留白的物品阴影脚点仍低于可见底边，产生悬浮空隙")
+    assert(data.smallContactFootY >= data.smallOpaqueBottomY and data.smallContactFootY < 0,
+        "缩小物品的阴影没有与可见底边重叠")
+    assert(math.abs(data.explicitFootY + 0.4) < 0.00001,
+        "默认贴地调整覆盖了物品显式配置的零重叠脚点")
 end, "接触与太阳阴影的四角投影数学等价：镜像、旋转、偏心与缩放")
 
 for _, args in ipairs({

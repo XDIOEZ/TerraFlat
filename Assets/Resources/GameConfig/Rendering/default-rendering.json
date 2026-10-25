@@ -25,8 +25,8 @@
       "maximumWidth": 2.5,
       "groundOffset": 0.01,
       "heightRatio": 0.34,
-      "footOverlapRatio": 0.12,
-      "maximumFootOverlap": 0.18,
+      "footOverlapRatio": 0.25,
+      "maximumFootOverlap": 0.25,
       "rootedPlantBodyWidthRatio": 1.5,
       "rootedPlantVisualWidthLimit": 0.6
     },

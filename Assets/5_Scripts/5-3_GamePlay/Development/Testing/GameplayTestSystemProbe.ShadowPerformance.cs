@@ -186,7 +186,20 @@ public static partial class GameplayTestSystemProbe
             cases++;
         }
 
-        return new JObject { ["cases"] = cases, ["maximumError"] = maximumError };
+        // 石头导入轮廓含透明边距，默认脚点必须进入实际可见底边，显式零重叠仍保留。
+        var paddedItem = new Bounds(new Vector3(-.03125f, 0f, 0f), new Vector3(.9375f, .875f, 0f));
+        Vector3 contactFoot = ShadowFootprintResolver.ResolveFoot(Matrix4x4.identity, paddedItem, null);
+        Vector3 explicitFoot = ShadowFootprintResolver.ResolveFoot(Matrix4x4.identity, paddedItem,
+            new Vector2(0f, -.4f), footOverlap: 0f);
+        var halfSize = new Bounds(paddedItem.center * .5f, paddedItem.size * .5f);
+        Vector3 smallContactFoot = ShadowFootprintResolver.ResolveFoot(Matrix4x4.identity, halfSize, null);
+        return new JObject
+        {
+            ["cases"] = cases, ["maximumError"] = maximumError,
+            ["contactFootY"] = contactFoot.y, ["opaqueBottomY"] = -.3125f,
+            ["smallContactFootY"] = smallContactFoot.y, ["smallOpaqueBottomY"] = -.15625f,
+            ["explicitFootY"] = explicitFoot.y
+        };
     }
 
     // 通过真实 MPB 验证静态覆雪不重传，而水线换图和效果启停仍会提交。
