@@ -24,6 +24,9 @@ namespace FlatWorld.AIECS
         internal ComponentLookup<AiecsBrain> GetBrainLookup() =>
             GetComponentLookup<AiecsBrain>(true);
 
+        internal ComponentLookup<T> GetWritableLookup<T>() where T : unmanaged, IComponentData =>
+            GetComponentLookup<T>(false);
+
         protected override void OnUpdate()
         {
             // 本系统不加入更新组，只作为私有 AIECS World 的显式调度入口。
@@ -33,6 +36,9 @@ namespace FlatWorld.AIECS
             job.ScheduleParallel(query, dependency);
 
         internal JobHandle ScheduleParallel(AiecsSelectSimulationPulseJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsSuspendSimulationPulseJob job, EntityQuery query, JobHandle dependency) =>
             job.ScheduleParallel(query, dependency);
 
         internal JobHandle ScheduleParallel(AiecsPerceptionSystem job, EntityQuery query, JobHandle dependency) =>

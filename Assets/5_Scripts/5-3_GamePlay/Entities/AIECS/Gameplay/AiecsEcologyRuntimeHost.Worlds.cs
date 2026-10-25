@@ -56,7 +56,8 @@ namespace FlatWorld.AIECS.Gameplay
             ItemMgr items = ItemMgr.GetInstance();
             if (items != null)
                 foreach (Player player in items.Player_DIC.Values)
-                    if (player != null && player.IsInitialized && player.Data?.CurrentSceneName == ownedWorldKey)
+                    if (player != null && player.IsInitialized && player.gameObject.activeInHierarchy &&
+                        player.gameObject.scene.name == ownedWorldKey && player.Data?.CurrentSceneName == ownedWorldKey)
                         worldPlayers.Add(player);
             return worldPlayers.Count > 0 ? worldPlayers[0] : null;
         }

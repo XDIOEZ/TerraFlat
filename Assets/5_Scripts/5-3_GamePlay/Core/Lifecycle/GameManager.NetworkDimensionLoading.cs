@@ -7,7 +7,8 @@ public partial class GameManager
     // 复用加载页的显示协议，不触碰全服 IsGameplayReady 和世界进入生命周期。
     internal bool BeginNetworkDimensionLoading(DimensionDefinition definition)
     {
-        if (definition == null || networkDimensionLoading || isWorldEntryInProgress) return false;
+        if (definition == null || isWorldEntryInProgress) return false;
+        if (networkDimensionLoading) return networkDimensionTarget == definition.DimensionId;
         networkDimensionLoading = true;
         networkDimensionTarget = definition.DimensionId;
         ReportNetworkDimensionLoading("正在准备目标区域…", .1f);

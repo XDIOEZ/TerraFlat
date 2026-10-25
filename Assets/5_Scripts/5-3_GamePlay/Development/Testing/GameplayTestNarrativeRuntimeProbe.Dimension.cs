@@ -163,15 +163,23 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     #endregion
 
     #region 完整地表洞穴往返采样
-    private static IEnumerator WaitForDimension(WorldAddress expected, string profile, DimensionScope controls)
+    private static IEnumerator WaitForDimension(WorldAddress expected, string profile, DimensionScope controls, JObject protection = null)
     {
         double deadline = Time.realtimeSinceStartupAsDouble + 150d;
+        int frames = 0, unlockedFrames = 0, missingOwnerFrames = 0;
         while (true)
         {
             DimensionManager manager = DimensionManager.ExistingInstance;
             Player player = ItemMgr.Instance?.User_Player;
             if (player != null && player.ProfileName == profile && ReferenceEquals(player.Data, controls.Data))
                 controls.ProtectActorControl(player);
+            if (manager != null && manager.IsTransitioning && protection != null)
+            {
+                ++frames;
+                Mod_GameController input = player != null ? player.GetComponentInChildren<Mod_GameController>(true) : null;
+                if (input == null || !input.IsGameplayInputLocked) ++unlockedFrames;
+                if (input == null || input.GameplayInputLockOwnerCount == 0) ++missingOwnerFrames;
+            }
             if (manager != null && !manager.IsTransitioning)
             {
                 if (manager.ActiveAddress != expected)
@@ -181,6 +189,12 @@ public static partial class GameplayTestNarrativeRuntimeProbe
                     ChunkMgr.ExistingInstance?.AreRuntimeWindowPresentationsReady == true)
                 {
                     GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+                    if (protection != null)
+                    {
+                        protection["frames"] = frames;
+                        protection["unlockedFrames"] = unlockedFrames;
+                        protection["missingOwnerFrames"] = missingOwnerFrames;
+                    }
                     yield break;
                 }
             }
@@ -226,6 +240,24 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         return DimensionSample(player, DimensionManager.ExistingInstance.ActiveAddress);
     }
 
+    // 在请求刚发出的同一帧采样，防止只检查到目标准备完成后的呈现锁。
+    private static JObject DimensionRequestProtectionSample(Player player)
+    {
+        Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
+        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        return new JObject
+        {
+            ["loadingVisible"] = GameManager.Instance.IsDimensionLoadingPresentationVisible,
+            ["loadingTarget"] = GameManager.Instance.ActiveDimensionLoadingTargetId,
+            ["inputLocked"] = controller?.IsGameplayInputLocked == true,
+            ["inputOwners"] = controller?.GameplayInputLockOwnerCount ?? 0,
+            ["bodyPresent"] = body != null,
+            ["simulated"] = body != null && body.simulated,
+            ["velocitySqr"] = body != null ? body.velocity.sqrMagnitude : 0f,
+            ["running"] = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.RunPreference == true
+        };
+    }
+
     private static IEnumerator CaptureDimension(Player player, JObject args, Action<JObject> completed)
     {
         var scope = new DimensionScope(player);
@@ -236,24 +268,31 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             ["profile"] = scope.Profile, ["originalGuid"] = scope.OriginalPlayerGuid,
             ["originalInstance"] = scope.OriginalPlayerInstance,
             ["originalNetworkIdentity"] = scope.OriginalNetworkIdentity,
-            ["sameDimensionRejected"] = !DimensionManager.ExistingInstance.TryBeginTransition(player, WorldAddress.SurfaceDimensionId)
+            ["sameDimensionRejected"] = !DimensionManager.ExistingInstance.TryBeginTransition(player, WorldAddress.SurfaceDimensionId),
+            ["beforeEnter"] = DimensionRequestProtectionSample(player)
         };
         Exception failure = null;
         IEnumerator Journey()
         {
             Item entrance = scope.PrepareEntrance(player);
+            result["ecsResidentsBefore"] = GameplayTestRuntimeProbe.Capture(player, "dimension", "ecs_residents_begin", new JObject());
             using (GameplayTestSpaceScenario.BeginExpectedMigration(player))
             {
                 result["enterAccepted"] = DimensionManager.ExistingInstance.TryBeginTransition(player, WorldAddress.CaveDimensionId, entrance);
+                result["enterPending"] = DimensionRequestProtectionSample(player);
                 result["enterMigrationExpected"] = GameplayTestSpaceScenario.IsMigrationExpected;
                 if (!result.Value<bool>("enterAccepted")) throw new InvalidOperationException("正式入口拒绝进入洞穴。");
                 result["concurrentRejected"] = !DimensionManager.ExistingInstance.TryBeginTransition(player, WorldAddress.CaveDimensionId, entrance);
-                yield return WaitForDimension(scope.Cave, scope.Profile, scope);
+                var protection = new JObject();
+                result["enterProtection"] = protection;
+                yield return WaitForDimension(scope.Cave, scope.Profile, scope, protection);
             }
             result["enterMigrationReleased"] = !GameplayTestSpaceScenario.IsMigrationExpected;
             Player cavePlayer = ItemMgr.Instance.User_Player;
             result["cave"] = DimensionSample(cavePlayer, scope.Cave, scope);
+            result["afterEnter"] = DimensionRequestProtectionSample(cavePlayer);
             result["sameDataInCave"] = ReferenceEquals(cavePlayer.Data, scope.Data);
+            result["ecsResidentsCave"] = GameplayTestRuntimeProbe.Capture(cavePlayer, "dimension", "ecs_residents_sample", new JObject());
             Item exit = ItemMgr.Instance.GetItemByGuid(scope.Anchor.CaveExitGuid);
             result["exitCreated"] = exit != null && exit.IsInitialized && exit.itemData.IDName == "CaveExit";
             result["anchorFound"] = DimensionTravelProgressStore.TryGetAnchorByCaveExit(SaveDataMgr.Instance.SaveData, scope.Cave, exit, out var paired);
@@ -262,14 +301,19 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             using (GameplayTestSpaceScenario.BeginExpectedMigration(cavePlayer))
             {
                 result["returnAccepted"] = DimensionManager.ExistingInstance.TryBeginTransition(cavePlayer, WorldAddress.SurfaceDimensionId, exit);
+                result["returnPending"] = DimensionRequestProtectionSample(cavePlayer);
                 result["returnMigrationExpected"] = GameplayTestSpaceScenario.IsMigrationExpected;
                 if (!result.Value<bool>("returnAccepted")) throw new InvalidOperationException("正式配对出口拒绝返回地表。");
-                yield return WaitForDimension(scope.Surface, scope.Profile, scope);
+                var protection = new JObject();
+                result["returnProtection"] = protection;
+                yield return WaitForDimension(scope.Surface, scope.Profile, scope, protection);
             }
             result["returnMigrationReleased"] = !GameplayTestSpaceScenario.IsMigrationExpected;
             Player returned = ItemMgr.Instance.User_Player;
             result["surface"] = DimensionSample(returned, scope.Surface, scope);
+            result["afterReturn"] = DimensionRequestProtectionSample(returned);
             result["sameDataAfterReturn"] = ReferenceEquals(returned.Data, scope.Data);
+            result["ecsResidentsSurface"] = GameplayTestRuntimeProbe.Capture(returned, "dimension", "ecs_residents_sample", new JObject());
             result["returnNearEntrance"] = WorldTopologyRuntime.ShortestDelta(returned.transform.position, scope.Anchor.SurfaceEntrancePosition).magnitude;
             result["originalSurface"] = scope.Surface.WorldKey;
         }

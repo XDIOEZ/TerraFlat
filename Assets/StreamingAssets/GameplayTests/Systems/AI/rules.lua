@@ -1,3 +1,19 @@
+-- 原生居民按当前位置归块；卸载休眠保留身份，恢复不补算离线期限。
+for _, wrapped in ipairs({false, true}) do
+    test.system("ai", "ecs_resident_ownership", {wrapped = wrapped}, function(data)
+        assert(data.initiallyActive and data.movedChunkActive,
+            "居民跨块后仍依赖出生区块，或环绕坐标归块错误")
+        assert(data.unloadedSleeping and data.residentRetained and data.reloadedActive and data.sameIdentity,
+            "未知区块仍推进玩法，或区块卸载/恢复删掉并重生居民")
+        assert(math.abs(data.chunkTimerShift - 50) < .0001 and data.pausedAt == 62,
+            "区块睡眠没有平移期限，或重复暂停覆盖了首次暂停时刻")
+        for _, name in ipairs({"attackDeadline", "nutritionDeadline", "darknessDeadline", "darknessSampleDeadline", "chargeDeadline", "buffDeadline"}) do
+            assert(math.abs(data[name] - 10070) < .0001, "恢复时玩法期限跳过离线时间：" .. name)
+        end
+        assert(math.abs(data.birthShift - 2) < .0001, "繁殖的游戏日期限没有独立平移")
+    end, "ECS 居民固定世界、当前位置归块与休眠恢复：" .. tostring(wrapped))
+end
+
 -- 动作在外圈生效，移动只在更小的内圈停止；禁止再次把到达和进食/攻击距离合并。
 for _, case in ipairs({
     {range = .9, preferred = .3, stop = .3},

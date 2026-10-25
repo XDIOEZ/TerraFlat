@@ -560,6 +560,14 @@ namespace FlatWorld.AIECS
                 if (math.all(math.isfinite(observers[i]))) rangeObservers.Add(observers[i]);
         }
 
+        /// <summary>世界无人时冻结整批玩法期限，恢复沿用原身份且不补算离线时间。</summary>
+        public void Suspend(double time)
+        {
+            Complete();
+            scheduler.ScheduleParallel(new AiecsSuspendSimulationPulseJob { Time = time, GameDays = GameDays },
+                allQuery, default).Complete();
+        }
+
         /// <summary>阵营规则改变时更新冻结矩阵，正常 Tick 不重建关系。</summary>
         public void SetRelations(byte[] matrix) { Complete(); if (matrix.Length != relations.Length) throw new ArgumentException("阵营矩阵尺寸不匹配"); relations.CopyFrom(matrix); }
 
@@ -609,8 +617,14 @@ namespace FlatWorld.AIECS
             {
                 Range = range,
                 Observers = rangeObservers.AsArray(),
+                LoadedChunks = view.ChunkLookup,
+                Nutrition = scheduler.GetWritableLookup<AiecsNutrition>(),
+                Darkness = scheduler.GetWritableLookup<AiecsDarkness>(),
+                Tactics = scheduler.GetWritableLookup<AiecsTactics>(),
+                Reproduction = scheduler.GetWritableLookup<AiecsReproduction>(),
                 Domain = view.Domain,
                 Time = time,
+                GameDays = GameDays,
                 BaseDeltaTime = deltaTime,
                 Tick = Clock.Tick
             }, allQuery, default).Complete();

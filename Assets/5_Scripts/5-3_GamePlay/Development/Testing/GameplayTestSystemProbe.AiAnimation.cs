@@ -14,6 +14,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/single_sprite_catalog", EntityAiSingleSpriteCatalog);
         operations.Add("ai/single_sprite_aquatic", EntityAiSingleSpriteAquatic);
         operations.Add("ai/ecs_sway_animation", AiEcsSwayAnimation);
+        operations.Add("ai/ecs_resident_ownership", AiEcsResidentOwnership);
     }
 
     // Lua 读取正式摇摆采样器的姿态，不创建世界、实体、Renderer 或动画组件。

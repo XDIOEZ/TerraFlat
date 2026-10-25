@@ -44,11 +44,11 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 生物 `animator` 稳定槽位的能力 ID 固定为 `动画接收模块`（`ModText.AnimatorReceiver`），并须启用；`Module_Animator_AI` 等只作具体 Prefab 身份。`FWC-ACTORJSON-006` 检查最终继承配置；规则要先 `BindRuntimeIdentity` 保留显式 ID，再走 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，不能仅凭原型类型或模式判装配成功。
 - `WorldEntityRuntime` 独占共享 ECS World；AI 停用不影响树/作物。居民独立于 ChunkView，BRG 只显示已绑定 View 内居民，解绑不删除居民。
 - GO 保存 ItemData/休眠快照；蜂巢独占所属蜜蜂 GUID/BeeState；停用 ECS 保留 EntitiesResidents 冷快照，不转换为 GO。`IsCreated` 判断 World 有效性，快照先采全再替换，失效保留冷快照，清理可重复。
-- F5 换玩家撤旧代理，无玩家暂停模拟，新玩家重绑而保留居民；开发 Playground 与正式生态只推进一个 World。GamePlay 与 AIECS 通过独立桥/接口协作，延迟命中核对身份和绑定代际。
+- F5 换玩家撤旧代理，无玩家暂停模拟，新玩家重绑而保留居民；开发 Playground 固定出生 WorldKey，换层只撤玩家代理并隐藏原 BRG/血条，不清居民或自动重生。同一世界的开发与正式生态互斥，暂停、掉落与清理均借所属世界，不影响其他世界。GamePlay 与 AIECS 通过独立桥/接口协作，延迟命中核对身份和绑定代际。
 - 资源 ECS 独立于 AI 后端，蜜蜂采蜜查 `NaturalEntityEcsService`，栖息地合并 GO/ECS 树，不恢复完整资源 Item。Lua Actor 不要求 ECS 能力声明。
 - 树木栖息地两秒候选快照复用一次 `WorldTopologyDomain` 与 `ChunkMgr.RuntimeTerrainPresenceQuery`，只读真实 BiomeId，避免逐树重新解析世界/完整 Tile；最终随机落点仍实时检查原规则。回归为 `ai/tree_habitat_batch`。
 - 树木栖息地 ECS 记录在注册、移除与定义刷新时增量维护，两秒快照只遍历存活树；Profiler `NaturalEntityRuntime.TreeHabitat` / `FlatWorld.MonsterSpawner.TreeCandidates` 观察峰值。
-- ECS 用 60Hz 基础时钟与距离脉冲，恢复不追补全部离线 Tick；移动前快照用于感知、移动后用于命中。决策选意图，Active 再确认目标/朝向/LOS，前摇/Active/后摇时钟独立。
+- ECS 用 60Hz 基础时钟与距离脉冲；脉冲直接按当前位置查询本世界 Native 导航 Chunk 索引，未知块休眠，跨块不粘出生块，View 解绑不删居民。整世界无人也显式冻结脉冲，恢复平移攻击/Buff/能力与尸体期限，繁殖按游戏日平移，不补算离线 Tick。规则 `ai/ecs_resident_ownership` 与 `dimension/cave_roundtrip` 覆盖归块及真实换层身份。移动前快照用于感知、移动后用于命中，前摇/Active/后摇时钟独立。
 - 风推动由 `WorldMotionSystem` 共用完整物品目录的质量规则；ECS 模板/居民保存当前定义的 `CurrentWeight`，资源发布后同步。世界桥采当地风速，Burst 只消费被动 `WindVelocity` 并扫掠通行；不写入主动速度/动画，无风时不扫描居民，风停当次清残留。
 - GO 鸟/蜜蜂空中通过 `IWindMotionOwner` 独占风位移，地面交给 Mover；悬停也受风且风不改变主动飞行朝向。幽灵直追与无 Mover 导航分别叠风；鱼仅离水受风，正在蹦跳时同步平移起点，入水或被携带/钓住后停止。
 - 感知用稳定身份、空间桶和整数格 LOS；地形/建筑遮挡独立于导航。外部武器经候选筛选、临时 Collider 投影和 Physics2D 命中，镜像绑定不影响受击资格；整体 HP 来自 Actor 配置，部位耐久独立，耗尽部位仍可命中。

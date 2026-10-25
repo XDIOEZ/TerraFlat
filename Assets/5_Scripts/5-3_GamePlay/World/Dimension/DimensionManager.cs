@@ -51,6 +51,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     {
         GameManager.Event_PlayerEnterWorld -= OnPlayerEnteredWorld;
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        CancelLocalDimensionPresentation("维度管理器已停止。");
     }
 
     public void ActivateWorldFromScene(string worldKey)
@@ -159,14 +160,15 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Vector3 targetPosition,
         Action preparePlayerForSave)
     {
-        if (player == null || player != ItemMgr.Instance?.User_Player || preparePlayerForSave == null) return false;
+        if (IsTransitioning || localDimensionPresentation != null || player == null ||
+            player != ItemMgr.Instance?.User_Player || preparePlayerForSave == null) return false;
         return NetworkDimensionBridge.RequestRespawn(player, targetAddress, targetPosition, preparePlayerForSave);
     }
 
     #region 星球落地事务
     public bool TryBeginPlanetLanding(Player player, WorldAddress targetAddress, Vector2 position)
     {
-        if (IsTransitioning || player == null || player != ItemMgr.Instance?.User_Player ||
+        if (IsTransitioning || localDimensionPresentation != null || player == null || player != ItemMgr.Instance?.User_Player ||
             !targetAddress.IsValid || !IsFinitePosition(position)) return false;
         LoadCatalog();
         bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
@@ -176,15 +178,26 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         {
             // 联机恢复只迁移本机权威角色，禁止落入旧的全世界退出和重建事务。
             if (toSpace || !GameNetwork.HasStateAuthority) return false;
+            if (!TryBeginLocalDimensionPresentation(player, targetAddress, definition)) return false;
+            LocalDimensionPresentation presentation = localDimensionPresentation;
             networkTransitionPending = true;
             bool replied = false, acceptedReply = false;
-            bool sent = NetworkDimensionBridge.RequestExactLocal(player, targetAddress, position, (accepted, reason) =>
+            bool sent;
+            try
             {
-                replied = true; acceptedReply = accepted;
-                if (!accepted || !isTransitioning && localAddress == targetAddress) networkTransitionPending = false;
-                if (!accepted && !string.IsNullOrWhiteSpace(reason)) Debug.LogWarning("[维度恢复] " + reason, this);
-            });
-            if (!sent) networkTransitionPending = false;
+                sent = NetworkDimensionBridge.RequestExactLocal(player, targetAddress, position, (accepted, reason) =>
+                {
+                    replied = true; acceptedReply = accepted;
+                    CompleteLocalDimensionRequest(presentation, accepted, reason);
+                    if (!accepted && !string.IsNullOrWhiteSpace(reason)) Debug.LogWarning("[维度恢复] " + reason, this);
+                });
+            }
+            catch
+            {
+                CompleteLocalDimensionRequest(presentation, false, "维度恢复请求未能发出。");
+                throw;
+            }
+            if (!sent) CompleteLocalDimensionRequest(presentation, false, "维度恢复请求未能发出。");
             return sent && (!replied || acceptedReply);
         }
         if (!targetAddress.IsSurface ||
@@ -199,28 +212,39 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     private bool TryBeginTransitionInternal(Player player, string targetDimensionId,
         Item sourcePortalItem, bool generatedWorldPortal)
     {
-        if (IsTransitioning || player == null || player != ItemMgr.Instance?.User_Player || sourcePortalItem?.itemData == null ||
-            !TryGetDefinition(targetDimensionId, out _)) return false;
+        // 已提交但呈现失败的租约只供快照重试，不能被当成新的入口请求重复使用。
+        if (IsTransitioning || localDimensionPresentation != null || player == null || player != ItemMgr.Instance?.User_Player || sourcePortalItem?.itemData == null ||
+            !TryGetDefinition(targetDimensionId, out DimensionDefinition definition)) return false;
         WorldAddress source = WorldAddress.FromWorldKey(player.gameObject.scene.name);
         if (!source.IsValid || source.DimensionId == targetDimensionId) return false;
         Mod_DimensionPortal portal = sourcePortalItem.GetComponentInChildren<Mod_DimensionPortal>(true);
         if (portal == null || !portal.ValidateNetworkTransition(player, source, targetDimensionId, generatedWorldPortal)) return false;
+        if (!TryBeginLocalDimensionPresentation(player, source.WithDimension(targetDimensionId), definition)) return false;
+        LocalDimensionPresentation presentation = localDimensionPresentation;
 
         // 请求等待也是迁移的一部分，不能在服务器准备目标期间再启动第二次请求。
         networkTransitionPending = true;
         bool replied = false, acceptedReply = false;
-        bool sent = NetworkDimensionBridge.RequestTransition(player, targetDimensionId,
-            sourcePortalItem.itemData.Guid, generatedWorldPortal,
-            (accepted, reason) =>
-            {
-                replied = true; acceptedReply = accepted;
-                // 旧入口可能已随场景卸载销毁，必须使用 Unity 的存活判定而非 C# 空条件调用。
-                if (portal != null) portal.CancelNetworkTransitionRequest();
-                if (accepted) return;
-                networkTransitionPending = false;
-                if (!string.IsNullOrWhiteSpace(reason)) Debug.LogWarning("[维度切换] " + reason, this);
-            });
-        if (!sent) networkTransitionPending = false;
+        bool sent;
+        try
+        {
+            sent = NetworkDimensionBridge.RequestTransition(player, targetDimensionId,
+                sourcePortalItem.itemData.Guid, generatedWorldPortal,
+                (accepted, reason) =>
+                {
+                    replied = true; acceptedReply = accepted;
+                    // 旧入口可能已随场景卸载销毁，必须使用 Unity 的存活判定而非 C# 空条件调用。
+                    if (portal != null) portal.CancelNetworkTransitionRequest();
+                    CompleteLocalDimensionRequest(presentation, accepted, reason);
+                    if (!accepted && !string.IsNullOrWhiteSpace(reason)) Debug.LogWarning("[维度切换] " + reason, this);
+                });
+        }
+        catch
+        {
+            CompleteLocalDimensionRequest(presentation, false, "维度切换请求未能发出。");
+            throw;
+        }
+        if (!sent) CompleteLocalDimensionRequest(presentation, false, "维度切换请求未能发出。");
         return sent && (!replied || acceptedReply);
     }
 

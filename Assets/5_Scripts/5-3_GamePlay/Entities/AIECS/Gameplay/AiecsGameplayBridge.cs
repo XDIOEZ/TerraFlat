@@ -46,6 +46,8 @@ namespace FlatWorld.AIECS.Gameplay
         private FlowGoalHandle[] goals;
         private readonly Stack<int> freePlayerGroups = new();
         private readonly string worldKey;
+        private bool suspended;
+        private double suspendedAt;
         private readonly WorldNavigationManager navigationOwner;
         private readonly AiecsLosBridge los;
         private AiecsLosView losView;
@@ -76,6 +78,9 @@ namespace FlatWorld.AIECS.Gameplay
         public int PendingDropRecords => dropQueue.Count + (activeDrop.Remaining > 0 ? 1 : 0);
         public long LosChunkCopies => los.ChunkCopies;
         public int SharedGoalCount => goals.Length;
+        public string WorldKey => worldKey;
+        public bool HasWorldNavigation => Simulation?.IsCreated == true && Navigation != null &&
+            navigationOwner != null && navigationOwner.OwnsSharedNavigation(Navigation);
         #endregion
 
         #region 世界接入
@@ -93,7 +98,7 @@ namespace FlatWorld.AIECS.Gameplay
 
             this.actorIds = (string[])actorIds.Clone();
             Navigation = navigation; worldStamp = ++worldSequence;
-            worldKey = player.Data?.CurrentSceneName ?? player.gameObject.scene.name;
+            worldKey = player.gameObject.scene.name;
             navigationOwner = WorldNavigationManager.ExistingInstance;
             dimensionName = ChunkMgr.Instance.ResolveWorldAddress(player.transform.position).DimensionId;
             if (!DimensionIds.TryGetValue(dimensionName, out dimensionStamp))
@@ -159,7 +164,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>玩家复活或对象池代际改变后重新建立代理，旧实体版本和旧命中保持失效。</summary>
         public void EnsurePlayer(Player player)
         {
-            if (player == null || !player.gameObject.activeInHierarchy || player.Data?.CurrentSceneName != worldKey) return;
+            if (!BelongsToWorld(player)) return;
             CombatIdentity key = IdentityOf(player);
             if (proxyLookup.ContainsKey(key)) return;
             ReleasePlayer(player);
@@ -171,8 +176,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
-                if (proxies[i].Item is Player current && current != null && current.Data?.CurrentSceneName == worldKey &&
-                    current.gameObject.activeInHierarchy) continue;
+                if (proxies[i].Item is Player current && BelongsToWorld(current)) continue;
                 if (Simulation?.IsCreated == true) Simulation.Despawn(proxies[i].Entity);
                 proxyLookup.Remove(proxies[i].Key);
                 freePlayerGroups.Push(proxies[i].Group);
@@ -220,9 +224,21 @@ namespace FlatWorld.AIECS.Gameplay
             return true;
         }
 
-        /// <summary>玩家维度或导航缓存更换时必须结束整个旧模拟。</summary>
-        public bool IsCurrentWorld(Player player) => Simulation?.IsCreated == true && player != null && Navigation != null &&
-            player.Data?.CurrentSceneName == worldKey && navigationOwner != null && navigationOwner.OwnsSharedNavigation(Navigation);
+        /// <summary>玩家离开只撤外部代理，固定世界的居民与导航仍归原世界。</summary>
+        public bool IsCurrentWorld(Player player) => HasWorldNavigation && BelongsToWorld(player);
+
+        private bool BelongsToWorld(Item item) => item != null && item.IsInitialized &&
+            item.gameObject.activeInHierarchy && item.gameObject.scene.name == worldKey &&
+            (item is not Player player || player.Data?.CurrentSceneName == worldKey);
+
+        /// <summary>无观察者时只暂停一次，恢复时同时顺延尸体保留期限。</summary>
+        public void Suspend()
+        {
+            if (suspended || Simulation?.IsCreated != true) return;
+            suspended = true;
+            suspendedAt = Time.timeAsDouble;
+            Simulation.Suspend(suspendedAt);
+        }
 
         /// <summary>只暴露真实外部玩家代理的共享目标，复活代际、死亡和世界切换后旧目标不可观察。</summary>
         public bool TryGetPlayerFlow(Player player, out FlowNavigationCache cache, out FlowGoalHandle goal)
@@ -246,13 +262,25 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>每个模拟 Tick 同步外部代理、少量战略中心、地图版本和事件，不逐个读取 AI GameObject。</summary>
         public void Step(float deltaTime, double time, AiecsSimulationRange range = default)
         {
+            using var worldScope = GameplayWorldRegistry.ExecutionWorldKey == worldKey ? null : GameplayWorldRegistry.UseWorld(worldKey);
+            if (suspended)
+            {
+                double paused = math.max(0d, time - suspendedAt);
+                int count = corpses.Count;
+                while (count-- > 0)
+                {
+                    CorpseRecord corpse = corpses.Dequeue();
+                    corpse.Expires += paused;
+                    corpses.Enqueue(corpse);
+                }
+                suspended = false;
+            }
             Simulation.Complete();
             RefreshWaterCurrentPushSpeeds();
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
                 var proxy = proxies[i];
-                if (proxy.Item == null || proxy.Receiver == null || IdentityOf(proxy.Item) != proxy.Key || !proxy.Item.gameObject.activeInHierarchy ||
-                    proxy.Item.gameObject.scene.name != worldKey)
+                if (!BelongsToWorld(proxy.Item) || proxy.Receiver == null || IdentityOf(proxy.Item) != proxy.Key)
                 { Simulation.Despawn(proxy.Entity); proxyLookup.Remove(proxy.Key); freePlayerGroups.Push(proxy.Group); proxies.RemoveAt(i); continue; }
                 string faction = FactionRelationService.GetFactionId(proxy.Item);
                 if (!string.Equals(faction, proxy.Faction, StringComparison.Ordinal))
@@ -297,7 +325,8 @@ namespace FlatWorld.AIECS.Gameplay
             Simulation.Complete();
             EntityManager entities = Simulation.Entities;
             using EntityQuery query = entities.CreateEntityQuery(
-                ComponentType.ReadOnly<AiecsFlowAgent>(), ComponentType.ReadWrite<AiecsDarkness>());
+                ComponentType.ReadOnly<AiecsFlowAgent>(), ComponentType.ReadWrite<AiecsDarkness>(),
+                ComponentType.ReadOnly<AiecsSimulationPulse>());
             using NativeArray<Entity> actors = query.ToEntityArray(Allocator.Temp);
             foreach (Entity entity in actors)
             {
@@ -500,14 +529,14 @@ namespace FlatWorld.AIECS.Gameplay
         public bool TryGetIdentity(Item item, out CombatIdentity identity)
         {
             identity = default;
-            if (item?.itemData == null || item.gameObject.scene.name != worldKey) return false;
+            if (!BelongsToWorld(item)) return false;
             identity = IdentityOf(item); return true;
         }
 
         /// <summary>稀疏桶只筛数据候选；Collider2D 决定几何命中后再预约攻击配额。</summary>
         public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
         {
-            if (Simulation == null || !ActorIdentity.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
+            if (Simulation == null || !BelongsToWorld(weapon.item) || !ActorIdentity.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
                 (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
             using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
             var view = Simulation.Spatial;
@@ -647,7 +676,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             foreach (var hit in Simulation.ExternalHits)
             {
-                if (!proxyLookup.TryGetValue(hit.TargetKey, out var proxy) || proxy.Item == null || IdentityOf(proxy.Item) != hit.TargetKey) continue;
+                if (!proxyLookup.TryGetValue(hit.TargetKey, out var proxy) || !BelongsToWorld(proxy.Item) || IdentityOf(proxy.Item) != hit.TargetKey) continue;
                 // 使用独立值快照跨入旧后端，不把集合迭代临时值的字段直接作为只读引用传递。
                 CombatDamageContext context = hit.Context;
                 float damage = proxy.Receiver.Hurt(in context);

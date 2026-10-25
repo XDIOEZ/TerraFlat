@@ -187,6 +187,8 @@ public partial class GameManager
     private Coroutine dimensionLoadingHideCoroutine;
     private string activeDimensionLoadingTargetId = string.Empty;
 
+    public bool IsDimensionLoadingPresentationActive => dimensionLoadingView != null && dimensionLoadingView.activeInHierarchy;
+
     public bool IsDimensionLoadingPresentationVisible =>
         dimensionLoadingView != null &&
         dimensionLoadingView.activeInHierarchy &&

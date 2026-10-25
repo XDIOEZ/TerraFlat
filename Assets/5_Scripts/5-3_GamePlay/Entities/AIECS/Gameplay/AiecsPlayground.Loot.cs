@@ -67,7 +67,8 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>GM 显式验证罕见的生物产出分支；从当前战利品闭包选择，不改概率或伪造死亡。</summary>
         public void QueueActorLootTest()
         {
-            if (bridge == null || player == null) return;
+            if (bridge == null || !bridge.IsCurrentWorld(player)) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(bridge.WorldKey);
             foreach (var pair in lootActorTemplates)
             {
                 if (pair.Value < 2) continue;

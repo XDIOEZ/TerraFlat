@@ -1,7 +1,9 @@
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
+using FlatWorld.Navigation;
 
 namespace FlatWorld.AIECS
 {
@@ -18,7 +20,7 @@ namespace FlatWorld.AIECS
     /// <summary>可启停的每实体模拟脉冲；禁用时退出玩法查询，表现查询仍保留该实体。</summary>
     public struct AiecsSimulationPulse : IComponentData, IEnableableComponent
     {
-        public double LastTickTime, PausedAt;
+        public double LastTickTime, PausedAt, PausedGameDays;
         public float DeltaTime;
         public byte Tier;
     }
@@ -26,6 +28,22 @@ namespace FlatWorld.AIECS
     #endregion
 
     #region 模拟脉冲选择
+
+    // 整个世界无人时只冻结脉冲，保留实体身份和第一次暂停时刻。
+    [BurstCompile]
+    internal partial struct AiecsSuspendSimulationPulseJob : IJobEntity
+    {
+        public double Time, GameDays;
+        private void Execute(ref AiecsSimulationPulse pulse, EnabledRefRW<AiecsSimulationPulse> enabled)
+        {
+            if (pulse.Tier != 0 || pulse.PausedAt <= 0d)
+            { pulse.PausedAt = Time; pulse.PausedGameDays = GameDays; }
+            pulse.Tier = 0;
+            pulse.LastTickTime = Time;
+            pulse.DeltaTime = 0f;
+            enabled.ValueRW = false;
+        }
+    }
 
     /// <summary>
     /// 在 60 Hz 基础时钟上按距离选择 60、30、10 或 0 Hz。每个实体用身份错峰，
@@ -36,8 +54,13 @@ namespace FlatWorld.AIECS
     {
         public AiecsSimulationRange Range;
         [ReadOnly] public NativeArray<float2> Observers;
+        [ReadOnly] public NativeParallelHashMap<int2, int> LoadedChunks;
+        [NativeDisableParallelForRestriction] public ComponentLookup<AiecsNutrition> Nutrition;
+        [NativeDisableParallelForRestriction] public ComponentLookup<AiecsDarkness> Darkness;
+        [NativeDisableParallelForRestriction] public ComponentLookup<AiecsTactics> Tactics;
+        [NativeDisableParallelForRestriction] public ComponentLookup<AiecsReproduction> Reproduction;
         public WorldTopologyDomain Domain;
-        public double Time;
+        public double Time, GameDays;
         public float BaseDeltaTime;
         public ulong Tick;
 
@@ -51,7 +74,8 @@ namespace FlatWorld.AIECS
             byte tier = ResolveTier(identity, actor.Position);
             if (tier == 0)
             {
-                if (pulse.Tier != 0 || pulse.PausedAt <= 0d) pulse.PausedAt = Time;
+                if (pulse.Tier != 0 || pulse.PausedAt <= 0d)
+                { pulse.PausedAt = Time; pulse.PausedGameDays = GameDays; }
                 pulse.Tier = 0;
                 pulse.LastTickTime = Time;
                 pulse.DeltaTime = 0f;
@@ -60,14 +84,18 @@ namespace FlatWorld.AIECS
             }
 
             if (pulse.Tier == 0 && pulse.PausedAt > 0d)
+            {
                 ShiftTimers(Time - pulse.PausedAt, ref brain, ref attack, ref local,
                     ref status, ref vital, ref buffs);
+                ShiftOptionalTimers(entity, Time - pulse.PausedAt, GameDays - pulse.PausedGameDays);
+            }
 
             int divisor = tier == 1 ? 1 : tier == 2 ? 2 : 6;
             bool due = tier != pulse.Tier ||
                 (Tick + (uint)entity.Index) % (ulong)divisor == 0UL;
             pulse.Tier = tier;
             pulse.PausedAt = 0d;
+            pulse.PausedGameDays = 0d;
             if (!due)
             {
                 enabled.ValueRW = false;
@@ -82,8 +110,13 @@ namespace FlatWorld.AIECS
 
         private byte ResolveTier(AiecsIdentity identity, float2 position)
         {
-            if (Range.Enabled == 0 || identity.External != 0)
+            if (identity.External != 0)
                 return 1;
+
+            // 区块归属由本世界当前规范坐标直接派生，跨块移动后不会粘在出生区块。
+            int2 cell = Domain.Normalize((int2)math.floor(position));
+            if (!LoadedChunks.ContainsKey(FlowNavigationMath.ChunkOf(cell, Domain))) return 0;
+            if (Range.Enabled == 0) return 1;
 
             float distance = Domain.SqrDistance(position, Range.PlayerPosition);
             if (Observers.Length > 0)
@@ -96,6 +129,35 @@ namespace FlatWorld.AIECS
             if (distance <= Range.MiddleSquared) return 2;
             if (distance <= Range.FarSquared) return 3;
             return 0;
+        }
+
+        private void ShiftOptionalTimers(Entity entity, double seconds, double days)
+        {
+            if (Nutrition.HasComponent(entity))
+            {
+                AiecsNutrition value = Nutrition[entity];
+                if (value.NextSearchTime > 0d) value.NextSearchTime += seconds;
+                Nutrition[entity] = value;
+            }
+            if (Darkness.HasComponent(entity))
+            {
+                AiecsDarkness value = Darkness[entity];
+                if (value.NextDamageTime > 0d) value.NextDamageTime += seconds;
+                if (value.NextSampleTime > 0d) value.NextSampleTime += seconds;
+                Darkness[entity] = value;
+            }
+            if (Tactics.HasComponent(entity))
+            {
+                AiecsTactics value = Tactics[entity];
+                if (value.NextChargeTime > 0d) value.NextChargeTime += seconds;
+                Tactics[entity] = value;
+            }
+            if (Reproduction.HasComponent(entity))
+            {
+                AiecsReproduction value = Reproduction[entity];
+                if (value.NextBirthTime > 0d) value.NextBirthTime += math.max(0d, days);
+                Reproduction[entity] = value;
+            }
         }
 
         /// <summary>只在休眠结束时平移玩法时间戳，Buff 与攻击不在苏醒帧集中补算。</summary>

@@ -81,44 +81,52 @@ public sealed partial class DimensionManager
             !target.IsValid || !IsFinitePosition(position) || isTransitioning)
             throw new InvalidOperationException("本机维度呈现请求无效或已有切换正在执行。");
         if (!TryGetDefinition(target.DimensionId, out DimensionDefinition definition) ||
-            !GameManager.Instance.BeginNetworkDimensionLoading(definition))
+            !TryBeginLocalDimensionPresentation(actor, target, definition))
             throw new InvalidOperationException("目标维度加载页尚未就绪。");
-        bool requireConnection = GameNetwork.IsOnline;
-        INetworkSession session = GameNetwork.Session;
-        GameSaveData owner = SaveDataMgr.Instance?.SaveData;
+        LocalDimensionPresentation presentation = localDimensionPresentation;
+        presentation.Committed = true;
         isTransitioning = true;
-        Mod_GameController controller = actor.GetComponentInChildren<Mod_GameController>(true);
-        Mod_Mover mover = actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-        Rigidbody2D body = actor.GetComponent<Rigidbody2D>();
-        bool wasSimulated = body != null && body.simulated;
-        bool wasRunning = mover != null && mover.RunPreference;
         bool completed = false;
         Exception failure = null;
-        controller?.SetGameplayInputLocked(true);
-        if (body != null) body.simulated = false;
         try
         {
             yield return GameManager.RunWorldTransitionSteps(
-                ApplyNetworkPresentationSteps(actor, target, position, () => ReferenceEquals(owner, SaveDataMgr.Instance?.SaveData) &&
-                    GameManager.ExistingInstance?.IsInGameWorld == true && (!requireConnection || ReferenceEquals(session, GameNetwork.Session) && GameNetwork.IsOnline)), error => failure = error);
+                ApplyNetworkPresentationSteps(actor, target, position, () => IsLocalDimensionPresentationValid(presentation)), error => failure = error);
             if (failure != null) throw failure;
-            if (body != null) { body.velocity = Vector2.zero; body.simulated = wasSimulated; }
+            presentation.RestorePhysics();
             Physics2D.SyncTransforms();
             yield return new WaitForFixedUpdate();
+            if (!IsLocalDimensionPresentationValid(presentation))
+                throw new InvalidOperationException("维度呈现完成前角色或连接已改变。");
             actor.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
+            presentation.Game.EndNetworkDimensionLoading(true);
+            // 加载幕完全退场后才归还控制，避免淡出期间的按住移动泄漏到目标世界。
+            while (presentation.Game.IsDimensionLoadingPresentationActive)
+            {
+                if (!IsLocalDimensionPresentationValid(presentation))
+                    throw new InvalidOperationException("维度加载幕退场期间角色或连接已改变。");
+                yield return null;
+            }
             NetworkDimensionBridge.NotifyPresentationReady(actor, target.WorldKey);
             completed = true;
         }
         finally
         {
-            if (body != null) body.simulated = wasSimulated;
             isTransitioning = false;
             networkTransitionPending = false;
-            GameManager.Instance.EndNetworkDimensionLoading(completed, failure?.Message);
-            if (completed || !GameNetwork.IsOnline)
+            if (ReferenceEquals(localDimensionPresentation, presentation))
             {
-                controller?.SetGameplayInputLocked(false);
-                RestorePlayerRunState(actor, wasRunning);
+                if (completed || !IsLocalDimensionPresentationValid(presentation) || !presentation.RequiresConnection)
+                {
+                    if (!completed && presentation.Game != null) presentation.Game.EndNetworkDimensionLoading(false, failure?.Message);
+                    ReleaseLocalDimensionPresentation(presentation);
+                }
+                else
+                {
+                    // 权威归属已提交时，表现失败仍保持冻结，等待目标快照重试或断线退出。
+                    if (presentation.Body != null) presentation.Body.simulated = false;
+                    presentation.Game.EndNetworkDimensionLoading(false, failure?.Message);
+                }
             }
         }
     }

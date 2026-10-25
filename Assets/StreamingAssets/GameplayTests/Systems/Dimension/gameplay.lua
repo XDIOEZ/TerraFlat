@@ -4,6 +4,35 @@ test.check("player_ready", "地表主角就绪")
 test.runtime("dimension", "cave_roundtrip", {}, function(data)
     assert(data.sameDimensionRejected and data.concurrentRejected, "相同维度或并发迁移没有拒绝")
     assert(data.enterAccepted and data.returnAccepted, "正式维度入口或出口拒绝迁移")
+    for _, residents in ipairs({data.ecsResidentsBefore, data.ecsResidentsCave, data.ecsResidentsSurface}) do
+        assert(residents.active and residents.sameBridge and residents.sameIdentities and residents.sameSpawned,
+            "进出山洞销毁重建了开发模拟，或把同一批 ECS 居民重新生到目标维度")
+        assert(residents.residentCount > 0 and residents.residentCount == residents.initialCount and residents.world == residents.originalWorld,
+            "居民离开原世界、身份丢失或回程数量重复")
+    end
+    assert(not data.ecsResidentsCave.activeForLocal and data.ecsResidentsCave.externalPlayers == 0 and
+        data.ecsResidentsCave.visible == 0 and data.ecsResidentsCave.batches == 0 and not data.ecsResidentsCave.localSuspended,
+        "原世界居民仍在洞穴绘制、追踪玩家，或开发暂停错误地停止了洞穴实体世界")
+    assert(data.ecsResidentsSurface.activeForLocal and data.ecsResidentsSurface.externalPlayers > 0,
+        "返回地表后没有恢复原居民的玩家代理")
+    for _, state in ipairs({data.enterPending, data.returnPending}) do
+        assert(state.loadingVisible and state.inputLocked and state.inputOwners > 0,
+            "入口请求发出时没有立即显示过渡页并取得独立输入锁")
+        assert(state.bodyPresent and not state.simulated and state.velocitySqr == 0,
+            "等待服务端准备区块时主角仍保留惯性或物理移动")
+    end
+    assert(data.enterPending.loadingTarget == "cave" and data.returnPending.loadingTarget == "surface",
+        "入口请求期间加载页没有显示本次目标维度")
+    for _, protection in ipairs({data.enterProtection, data.returnProtection}) do
+        assert(protection.frames > 0 and protection.unlockedFrames == 0 and protection.missingOwnerFrames == 0,
+            "维度准备、绘制或加载幕退场期间提前释放了迁移输入租约")
+    end
+    assert(not data.afterEnter.loadingVisible and not data.afterReturn.loadingVisible,
+        "正式维度事务结束后加载幕仍未退场")
+    assert(data.afterEnter.simulated == data.beforeEnter.simulated and data.afterReturn.simulated == data.beforeEnter.simulated,
+        "复用请求阶段保护时错误地将已经冻结的刚体状态当成原始状态恢复")
+    assert(data.afterEnter.running == data.beforeEnter.running and data.afterReturn.running == data.beforeEnter.running,
+        "进出山洞改变了原有的奔跑偏好")
     assert(data.enterMigrationExpected and data.returnMigrationExpected, "正式洞穴往返没有登记宿主预期迁移租约")
     assert(data.enterMigrationReleased and data.returnMigrationReleased and data.migrationReleased, "维度事务完成后仍遗留迁移租约")
     assert(data.cave.address == data.cave.expected and data.cave.scene == data.cave.address and data.cave.savedScene == data.cave.address, "洞穴运行地址、Scene 与玩家存档不一致")

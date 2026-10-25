@@ -63,7 +63,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>正式玩家入场后等待真实导航窗口，不能在数据尚未准备好时创建替代网格。</summary>
         private void OnPlayerEntered(Player value)
         {
-            player = value; startRequested = autoStartScenario;
+            player = value; startRequested = autoStartScenario && bridge == null;
             if (manager != null) manager.Event_GameWorldExit -= OnWorldExit;
             manager = GameManager.Instance;
             if (manager != null) manager.Event_GameWorldExit += OnWorldExit;
@@ -75,18 +75,26 @@ namespace FlatWorld.AIECS.Gameplay
         private void Update()
         {
             if (active != this) return;
-            if (player == null) return;
             // 导航窗口可早于玩家周边 Chunk 完整绑定；统一等待正式可玩门禁，避免首批生成空场。
             if (startRequested && IsReady)
             { startRequested = false; StartScenario(mode); }
             if (bridge == null) return;
-            if (!bridge.IsCurrentWorld(player)) { StopScenario(); startRequested = true; return; }
+            if (!GameplayWorldRegistry.TryGet(bridge.WorldKey, out _) || !bridge.HasWorldNavigation)
+            { StopScenario(); SetStatus("原世界已卸载，开发单位已清理。"); return; }
+            using var worldScope = GameplayWorldRegistry.UseWorld(bridge.WorldKey);
+            SynchronizeScenarioPlayers();
+            if (scenarioPlayers.Count == 0)
+            {
+                bridge.Suspend();
+                simulationTime = Time.timeAsDouble;
+                return;
+            }
             const float step = 1f / 30f;
             int budget = 4;
             try
             {
                 while (simulationTime + step <= Time.timeAsDouble && budget-- > 0)
-                { simulationTime += step; bridge.EnsurePlayer(player); bridge.Step(step, simulationTime); }
+                { simulationTime += step; bridge.Step(step, simulationTime); }
             }
             catch (Exception exception)
             { SetStatus("模拟已停止：" + exception.Message); Debug.LogException(exception, this); StopScenario(); }
@@ -96,11 +104,15 @@ namespace FlatWorld.AIECS.Gameplay
         private void LateUpdate()
         {
             if (bridge == null) return;
+            if (!bridge.IsCurrentWorld(ItemMgr.Instance?.User_Player) ||
+                GameplayWorldRegistry.LocalPresentationWorldKey != bridge.WorldKey)
+            { display.Draw(bridge.Simulation, null, default); targetCamera = null; return; }
+            using var worldScope = GameplayWorldRegistry.UseWorld(bridge.WorldKey);
             if (targetCamera == null || !targetCamera.isActiveAndEnabled) targetCamera = Camera.main;
             ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
             display.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(player.gameObject.scene) : 0.4f;
             display.ShadowsEnabled = ShowFootShadows;
-            display.Draw(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain);
+            display.Draw(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain, IsScenarioPresentationReady);
         }
 
         /// <summary>退出世界先停止开发模拟，避免旧世界桥接命中进入新存档。</summary>
@@ -129,17 +141,21 @@ namespace FlatWorld.AIECS.Gameplay
         public void StartScenario(AiecsPlaygroundMode requested)
         {
             if (!IsReady) return;
-            AiecsEcologyRuntimeHost.Active?.SuspendForDevelopmentScenario(this);
+            using var worldScope = GameplayWorldRegistry.UseWorld(player.gameObject.scene.name);
             StopScenario(); mode = requested; spawned = 0; armyReinforcementWave = 0;
+            suspendedWorldKey = player.gameObject.scene.name;
             try
             {
+                AiecsEcologyRuntimeHost.Active?.SuspendForDevelopmentScenario(this);
                 BuildScenarioCatalog(out string[] ids, out string[] factions, out bool[] fleePolicies);
                 var cache = WorldNavigationManager.ExistingInstance.GetSharedNavigation();
                 float sense = requested == AiecsPlaygroundMode.Wander ? 4f : 18f;
                 bridge = new AiecsGameplayBridge(player, cache, ids, factions, sense, fleePolicies,
                     TrySpawnScenarioLootActor, removeSpawnedStaticDropsOnDispose: true);
+                scenarioChunks = ChunkMgr.ExistingInstance;
                 bridge.Simulation.LocalAvoidanceEnabled = LocalAvoidanceEnabled;
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
+                SynchronizeScenarioPlayers();
                 display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene,
                     AiecsWorldSortingResolver.Resolve());
                 simulationTime = Time.timeAsDouble;
@@ -168,6 +184,9 @@ namespace FlatWorld.AIECS.Gameplay
                 StartScenario(AiecsPlaygroundMode.Armies);
                 return;
             }
+            if (!bridge.IsCurrentWorld(player))
+            { SetStatus("开发单位仍留在原维度，请返回原维度后增援。"); return; }
+            using var worldScope = GameplayWorldRegistry.UseWorld(bridge.WorldKey);
 
             int before = spawned;
             SpawnArmyReinforcement();
@@ -223,8 +242,15 @@ namespace FlatWorld.AIECS.Gameplay
         {
             AiecsWorldRenderer oldDisplay = display;
             AiecsGameplayBridge oldBridge = bridge;
+            string oldWorld = oldBridge?.WorldKey ?? suspendedWorldKey;
+            bool worldRetained = !string.IsNullOrEmpty(oldWorld) && GameplayWorldRegistry.TryGet(oldWorld, out _);
+            using var worldScope = worldRetained ? GameplayWorldRegistry.UseWorld(oldWorld) : null;
+            if (worldRetained) WorldEntityRuntime.DevelopmentSuspended = false;
+            suspendedWorldKey = null;
             display = null;
             bridge = null;
+            scenarioChunks = null;
+            scenarioPlayers.Clear();
             try { oldDisplay?.Dispose(); }
             finally { oldBridge?.Dispose(); }
         }
@@ -259,6 +285,7 @@ namespace FlatWorld.AIECS.Gameplay
                                WorldNavigationManager.ExistingInstance.IsNavigationReady;
 
         public bool HasActiveScenario => bridge != null; // 当前是否存在开发模拟。
+        public bool HasActiveScenarioForWorld(string worldKey) => bridge != null && bridge.WorldKey == worldKey;
         public bool HealthOverlaySuppressed { get; set; } // GM 等开发 UI 覆盖画面时暂不绘制穿透面板的 IMGUI 血条。
         public bool PlayerParticipates => bridge != null && bridge.PlayerParticipates; // 玩家是否参与当前感知/战斗。
         public bool LocalAvoidanceEnabled { get; private set; } = true; // 连续 Steering + 密度分流默认开启，可由 GM 做对照测试。
@@ -362,6 +389,8 @@ namespace FlatWorld.AIECS.Gameplay
         private void OnGUI()
         {
             if (active != this || !ShowHealth || HealthOverlaySuppressed || bridge == null || display == null) return;
+            if (!bridge.IsCurrentWorld(ItemMgr.Instance?.User_Player) ||
+                GameplayWorldRegistry.LocalPresentationWorldKey != bridge.WorldKey) return;
             display.DrawHealth(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain);
         }
         #endregion

@@ -116,7 +116,7 @@ namespace FlatWorld.AIECS.Gameplay
                 return;
 
             // GM 开发场景与正式生态共享同一套玩家/导航资源，但任何时刻只允许一个模拟真正运行。
-            if (AiecsPlayground.Active?.HasActiveScenario == true)
+            if (AiecsPlayground.Active?.HasActiveScenarioForWorld(ownedWorldKey) == true)
             {
                 WorldEntityRuntime.DevelopmentSuspended = true;
                 if (_bridge != null)
@@ -128,7 +128,12 @@ namespace FlatWorld.AIECS.Gameplay
             _player = RefreshWorldPlayers();
             if (_bridge == null && _player != null) TryStartSimulation();
             SynchronizeWorldPlayers();
-            if (_player == null) ReleaseAllMirrors();
+            if (_player == null)
+            {
+                _bridge?.Suspend();
+                _simulationTime = Time.timeAsDouble;
+                ReleaseAllMirrors();
+            }
 
         }
 
@@ -139,7 +144,7 @@ namespace FlatWorld.AIECS.Gameplay
             using var worldScope = UseOwnedWorld();
             if (!AiRuntimeBackendService.UseEntities || deltaTime <= 0f ||
                 !_worldPrepared || !IsReady || _player == null ||
-                AiecsPlayground.Active?.HasActiveScenario == true || !_bridge.IsCurrentWorld(_player))
+                AiecsPlayground.Active?.HasActiveScenarioForWorld(ownedWorldKey) == true || !_bridge.IsCurrentWorld(_player))
                 return;
 
             float step = 1f / BaseSimulationHz;
@@ -210,7 +215,7 @@ namespace FlatWorld.AIECS.Gameplay
         private static bool IsRuntimeEntityPresentationReady(Vector2 position)
         {
             ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
-            return chunkManager == null || chunkManager.IsRuntimeEntityPresentationReady(position);
+            return chunkManager != null && chunkManager.IsRuntimeEntityPresentationReady(position);
         }
 
         /// <summary>脚本重载不保证调用 OnDestroy，停用阶段就释放自有模拟与原生绘制资源。</summary>
@@ -340,7 +345,7 @@ namespace FlatWorld.AIECS.Gameplay
         private void TryStartSimulation()
         {
             // 空闲的 GM 调试入口不阻断正式生态；只有正在运行的开发场景才独占模拟。
-            if (_startFailed || !_worldPrepared || AiecsPlayground.Active?.HasActiveScenario == true)
+            if (_startFailed || !_worldPrepared || AiecsPlayground.Active?.HasActiveScenarioForWorld(ownedWorldKey) == true)
                 return;
 
             _player = RefreshWorldPlayers();
