@@ -26,8 +26,23 @@ public sealed partial class WorldLiquidBodySystem
     {
         public RuntimeWorldAddress Address;
         public readonly HashSet<Vector2Int> SourceCells = new();
+        public bool SharedPumpSearchRequested;
         public CancellationTokenSource Cancellation;
         public Task<ChunkRuntime> Completion;
+    }
+
+    private bool TryQueueSharedPumpChunkData(RuntimeWorldAddress address)
+    {
+        if (failedBoundaryRequests.Contains(address)) return false;
+        if (!deferredBoundaryRequests.TryGetValue(address, out DeferredBoundaryDataRequest request))
+        {
+            if (deferredBoundaryRequests.Count >= MaximumQueuedDiffusionChunks) return false;
+            request = new DeferredBoundaryDataRequest { Address = address };
+            deferredBoundaryRequests.Add(address, request);
+            boundaryRequestOrder.Enqueue(address);
+        }
+        request.SharedPumpSearchRequested = true;
+        return true;
     }
 
     private bool TryRetainDiffusionChunkData(RuntimeWorldAddress address, bool reserveBoundaryRequestSlot = false)
@@ -107,6 +122,7 @@ public sealed partial class WorldLiquidBodySystem
         loadingBoundaryRequest = null;
         request.Cancellation?.Dispose();
         if (!restored) failedBoundaryRequests.Add(request.Address);
+        if (request.SharedPumpSearchRequested) NotifySharedPumpChunkDataReady(request.Address, restored);
         foreach (Vector2Int cell in request.SourceCells)
         {
             if (TryGetState(cell, out ChunkState state, out _, out _))
@@ -121,6 +137,7 @@ public sealed partial class WorldLiquidBodySystem
         foreach (var pair in diffusionDataLeases)
         {
             if (deferredBoundaryRequests.ContainsKey(pair.Key)) continue;
+            if (SharedPumpCandidateNeedsChunkData(pair.Key)) continue;
             if (observed.TryGetValue(pair.Key, out ChunkState state) &&
                 (state.PendingCellCount > 0 || state.DeferredBoundaryCount > 0)) continue;
             releaseDiffusionChunks.Add(pair.Key);
@@ -150,6 +167,7 @@ public sealed partial class WorldLiquidBodySystem
         foreach (ChunkState state in observed.Values) state.DeferredBoundaryCount = 0;
         foreach (ChunkLease lease in diffusionDataLeases.Values) lease.Dispose();
         diffusionDataLeases.Clear();
+        ClearSharedPumpSearches();
     }
     #endregion
 }

@@ -136,14 +136,28 @@ public static class WorldLiquidSystem
 
     /// <summary>持有区块采样的机械节点复用此入口，减少重复查询；校验仍由统一修改接口负责。</summary>
     public static bool TryPump(RuntimeTerrainTileSample sample, int requestedLevel, out string liquidId, out int removedLevel)
+        => TryPumpPreservingMinimumLevel(sample, requestedLevel, 0, out liquidId, out removedLevel);
+
+    /// <summary>共享水域取余水时在正式扣量处再次保留底水，不能依赖先前查询的水量快照。</summary>
+    public static bool TryPumpPreservingMinimumLevel(Vector2 position, int requestedLevel, int minimumRemainingLevel,
+        out string liquidId, out int removedLevel)
+    {
+        liquidId = null; removedLevel = 0;
+        return ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out var sample) &&
+            TryPumpPreservingMinimumLevel(sample, requestedLevel, minimumRemainingLevel, out liquidId, out removedLevel);
+    }
+
+    public static bool TryPumpPreservingMinimumLevel(RuntimeTerrainTileSample sample, int requestedLevel, int minimumRemainingLevel,
+        out string liquidId, out int removedLevel)
     {
         liquidId = null; removedLevel = 0;
         if (!GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed ||
-            requestedLevel <= 0) return false;
+            requestedLevel <= 0 || (uint)minimumRemainingLevel > LiquidCellValue.MaximumLevel) return false;
         int level = sample.Terrain.GetLiquidLevel(sample.LocalCell.x, sample.LocalCell.y);
-        if (level <= 0) return false;
+        if (level <= minimumRemainingLevel) return false;
         liquidId = sample.Terrain.GetLiquidId(sample.LocalCell.x, sample.LocalCell.y);
-        int removed = Math.Min(requestedLevel, level);
+        int removed = Math.Min(requestedLevel, level - minimumRemainingLevel);
         if (!TrySet(sample, liquidId, level - removed)) return false;
         removedLevel = removed;
         return true;

@@ -2,8 +2,10 @@
 
 执行：`dotnet run --project Tools/Tests/ConnectedLiquidPumping/ConnectedLiquidPumping.Tests.csproj --configuration Release`。
 
-直接编译正式 `WorldLiquidBodySystem` 及 `DiffusionStreaming`；宿主、区块存储、资源目录、两端交换入口和异步完成使用替身，不启动或刷新Unity。
+直接编译正式 `WorldLiquidBodySystem`、`DiffusionStreaming` 和 `PumpSearch`；宿主、区块存储、资源目录、两端交换入口和异步完成使用替身，不启动或刷新Unity。
 
-15项检查覆盖静水不加载、负坐标跨块扩散、停稳、地形水坝、异种液体、未知边界暂封、单请求去重、准备后邻格续流、不恢复建筑、休眠释放、取消晚到结果、失败不丢水、不无限重试、环形接缝及预算饱和释放。替身不替代真实生成、差量保存、区块逐出或Unity帧耗时验证。
+33项检查覆盖原15项邻格扩散、守恒、边界数据租约、失败、取消和预算检查，以及18项共享寻源检查：多泵复用、干入口通过相邻湿格恢复、一级水桥越过扩散停稳、末级回退、余水重激活、筑坝与拆坝、干河床/异种液体隔断、未知边界等待、跨块共享加载、候选卸载后重读、拓扑复用、已加载水域合并、孤立池分组和失败不误抽末级。
 
-正式Lua入口：`surface_fluids` 的 `replenishment.lua` 与工业 `fluid_pumps_compressors.lua`；前者新增真正 `WorldRuntime` 的数据租约规则，后者逐步推进正式世界的邻格扩散。仍使用0～10整数水量，差一级停稳；本次没有实现精细尾水、真实河床水头或海淡水交换。
+正式Lua入口为工业 `fluid_pumps_compressors.lua` 中的 `connected_surface_pump`、`shared_surface_pump_search`。后者检查实际取水事务保留一级、过期候选不得重复扣量、末级耗尽和倒水后重新发现。单格速率用例封闭四邻，避免误读场景原有水域。实现期间未中断用户PlayMode；其后编辑态地表两份Lua规则通过，工业规则因工作区另一项储罐测试缺少 core:oxygen 定义而失败。泵现场专项及新增共享寻源Lua已通过，报告 `20261025T165442827Z_5bae84e8`；离线替身不能替代真实生成、存档、联机或帧耗时验证。
+
+共享寻源面向当前流送世界，非活动星球冷查询仍用原有本地取水。水量仍为0～10整数，不处理细分尾水、真实河床水头或海淡水交换。未知区块只读地形和液体，不恢复画面、树或建筑。

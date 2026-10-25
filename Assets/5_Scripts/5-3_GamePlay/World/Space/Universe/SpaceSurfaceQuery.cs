@@ -67,6 +67,7 @@ namespace FlatWorld.Spaceflight
             int x = sample.Cell.x - originX, y = sample.Cell.y - originY;
             SaveDataMgr.Instance.RecordSpaceLiquidChange(worldKey, sample.Cell, liquidId, next,
                 baseline.GetLiquidId(x, y), baseline.GetLiquidLevel(x, y));
+            InvalidateActivePumpSearchAfterColdLiquidWrite(worldKey, sample.Cell);
             return accepted;
         }
 
@@ -74,6 +75,39 @@ namespace FlatWorld.Spaceflight
         {
             bool found = TryReadLiquidSurface(worldKey, point, out LandingSurfaceSample sample, out liquid);
             level = found ? sample.LiquidLevel : 0;
+            return found;
+        }
+
+        private static bool TryGetActivePumpSearchManager(string worldKey, out ChunkMgr manager)
+        {
+            manager = ChunkMgr.ExistingInstance;
+            DimensionManager dimension = DimensionManager.ExistingInstance;
+            return manager != null && dimension != null && dimension.ActiveAddress.IsSurface &&
+                dimension.ActiveAddress.PlanetId == worldKey && SpaceSession.Current?.IsSpaceView != true;
+        }
+
+        private static void InvalidateActivePumpSearchAfterColdLiquidWrite(string worldKey, Vector2Int cell)
+        {
+            if (TryGetActivePumpSearchManager(worldKey, out ChunkMgr manager)) manager.InvalidateConnectedLiquidPumpSearch(cell);
+        }
+
+        /// <summary>当前地表的多台泵共享水域搜索，冷世界沿用自身地址读取，绝不借其它世界的缓存。</summary>
+        public static bool TrySelectConnectedPumpLiquidInWorld(string worldKey, Vector2 point, out Vector2 sourcePoint,
+            out LiquidDefinition liquid, out int level, out WorldLiquidPumpSourceSelection selection)
+        {
+            sourcePoint = point; liquid = null; level = 0;
+            if (TryGetActivePumpSearchManager(worldKey, out ChunkMgr manager))
+            {
+                selection = manager.SelectConnectedLiquidPumpSource(point, out RuntimeTerrainTileSample sample);
+                if (selection == WorldLiquidPumpSourceSelection.Searching || selection == WorldLiquidPumpSourceSelection.Unavailable ||
+                    !WorldLiquidSystem.TryGetDefinition(sample, out liquid)) return false;
+                sourcePoint = (Vector2)sample.WorldCell + Vector2.one * .5f;
+                level = sample.LiquidLevel;
+                return true;
+            }
+            bool found = TrySampleLiquid(worldKey, point, out liquid, out level);
+            selection = found ? (level > 1 ? WorldLiquidPumpSourceSelection.Surplus : WorldLiquidPumpSourceSelection.LocalRemainder)
+                : WorldLiquidPumpSourceSelection.Unavailable;
             return found;
         }
 
@@ -92,10 +126,11 @@ namespace FlatWorld.Spaceflight
         }
 
         // 抽取冷世界真实有限库存，平台只遮断浸水而不复制或删除底部液体。
-        public static bool TryPumpLiquidInWorld(string worldKey, Vector2 point, int requestedLevel, out string liquidId, out int removedLevel)
+        public static bool TryPumpLiquidInWorld(string worldKey, Vector2 point, int requestedLevel, out string liquidId, out int removedLevel,
+            int minimumRemainingLevel = 0)
         {
             liquidId = null; removedLevel = 0;
-            if (!GameNetwork.HasStateAuthority || requestedLevel <= 0 ||
+            if (!GameNetwork.HasStateAuthority || requestedLevel <= 0 || (uint)minimumRemainingLevel > LiquidCellValue.MaximumLevel ||
                 !TryReadLiquidSurface(worldKey, point, out LandingSurfaceSample sample, out _)) return false;
             PlanetData planet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[worldKey];
             Vector2Int size = PlanetData.NormalizeChunkSize(planet.ChunkSize);
@@ -103,16 +138,18 @@ namespace FlatWorld.Spaceflight
             int originY = (int)Math.Floor(sample.Cell.y / (double)size.y) * size.y;
             var address = new RuntimeAddress(global::WorldAddress.SurfaceDimensionId, new Int2(originX, originY));
             if (GetLoadedTerrain(worldKey, address) != null)
-                return WorldLiquidSystem.TryPump(new Vector2(sample.Cell.x + .5f, sample.Cell.y + .5f), requestedLevel, out liquidId, out removedLevel);
+                return WorldLiquidSystem.TryPumpPreservingMinimumLevel(new Vector2(sample.Cell.x + .5f, sample.Cell.y + .5f),
+                    requestedLevel, minimumRemainingLevel, out liquidId, out removedLevel);
             if (!caches.TryGetValue(worldKey, out SurfaceCache cache) || !cache.World.TryGetChunkTerrain(address, out ChunkTerrainData baseline))
                 throw new InvalidOperationException("冷液体抽取前缺少地表生成基线");
-            removedLevel = Math.Min(requestedLevel, sample.LiquidLevel);
+            removedLevel = Math.Max(0, Math.Min(requestedLevel, sample.LiquidLevel - minimumRemainingLevel));
             int next = sample.LiquidLevel - removedLevel;
             if (removedLevel <= 0) return false;
             liquidId = sample.LiquidId;
             SaveDataMgr.Instance.RecordSpaceLiquidChange(worldKey, sample.Cell, next > 0 ? liquidId : null, next,
                 baseline.GetLiquidId(sample.Cell.x - originX, sample.Cell.y - originY),
                 baseline.GetLiquidLevel(sample.Cell.x - originX, sample.Cell.y - originY));
+            InvalidateActivePumpSearchAfterColdLiquidWrite(worldKey, sample.Cell);
             return true;
         }
         #endregion

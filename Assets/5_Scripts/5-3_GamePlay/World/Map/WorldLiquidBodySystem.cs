@@ -31,7 +31,7 @@ public readonly struct WorldLiquidBodySnapshot
 
 /// <summary>
 /// 天然液体分块建图、跨块组合统计；仅被修改的水域唤醒局部守恒转移，稳定后不再执行求解。
-/// 水流触及未知边界时仅准备邻区数据，稳定后释放；统计缓存不参与抽液选源。
+/// 水流触及未知边界时仅准备邻区数据，稳定后释放；泵另用当前湿格拓扑共享寻源，统计缓存独立。
 /// </summary>
 public sealed partial class WorldLiquidBodySystem : IDisposable
 {
@@ -158,14 +158,15 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
         topologyVersion++;
         // 恢复存档后的非平衡格也须唤醒；天然生成的未变湖泊则始终保持休眠。
         for (int i = 0; i < state.Terrain.CellCount; i++)
-        {
             if (pendingSet.Contains(WorldCell(state, i % state.Terrain.Width, i / state.Terrain.Width)))
                 state.PendingCellCount++;
+        // 先统计已有队列，再唤醒新格，避免新入队的后续索引被重复计数而无法释放租约。
+        for (int i = 0; i < state.Terrain.CellCount; i++)
             if (state.Terrain.IsLiquidChanged(i % state.Terrain.Width, i / state.Terrain.Width))
                 WakeCross(WorldCell(state, i % state.Terrain.Width, i / state.Terrain.Width));
-        }
         // 新加载的边界只与已观察邻块比较，不把远方水域一并加载进来。
         WakeJoiningBorders(state);
+        if (pumpChunkSnapshots.ContainsKey(chunk.Address)) PrepareSharedPumpChunkSnapshot(state);
     }
 
     private void OnEvicted(ChunkEvicted message)
@@ -180,6 +181,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
         if (disposed || !ReferenceEquals(owner.WorldRuntime, world) ||
             world.WorldId != GameplayWorldRegistry.ExecutionWorldKey) return;
         cell = WorldTopologyRuntime.NormalizeCell(cell);
+        InvalidateSharedPumpSearchChunk(owner.ResolveWorldAddress((Vector2)cell + Vector2.one * .5f, dimension));
         if (!TryGetState(cell, out ChunkState state, out int x, out int y)) return;
         Invalidate(state);
         WakeCross(cell);
@@ -187,6 +189,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
 
     private void OnTopologyChanged(ChunkState state, int x, int y)
     {
+        InvalidateSharedPumpSearchChunk(state.Chunk.Address);
         Invalidate(state);
         WakeCross(WorldCell(state, x, y));
     }
@@ -201,6 +204,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
 
     private void OnLiquidChanged(ChunkState state, int index)
     {
+        NotifySharedPumpSearchLiquidChanged(state, index);
         int x = index % state.Terrain.Width, y = index / state.Terrain.Width;
         if (state.Terrain.GetLiquidBaseline(x, y).LiquidLevel <= 0 &&
             TerrainSurfaceHeightLayer.GetExcavatedLevels(state.Terrain, x, y) == 0) return;
@@ -528,6 +532,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
             return;
         }
         CompleteDiffusionBoundaryDataRequest();
+        AdvanceSharedPumpSearches();
         applying = true;
         try
         {

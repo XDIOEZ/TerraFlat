@@ -99,16 +99,21 @@ public static partial class MachineWorld
     #endregion
 
     #region 明确世界地址的地表液体事务
-    internal static bool TrySampleFluidEnvironmentLiquid(Vector2 localPosition, out string world, out Vector2 position,
-        out LiquidDefinition liquid, out int level)
+    internal static bool TrySelectFluidEnvironmentPumpSource(Vector2 localPosition, out string world, out Vector2 position,
+        out LiquidDefinition liquid, out int level, out WorldLiquidPumpSourceSelection selection)
     {
         liquid = null; level = 0;
+        selection = WorldLiquidPumpSourceSelection.Unavailable;
         if (TryResolveFluidSurfacePoint(localPosition, out world, out position))
-            return SpaceSurfaceQuery.TrySampleLiquid(world, position, out liquid, out level);
+            return SpaceSurfaceQuery.TrySelectConnectedPumpLiquidInWorld(world, position, out position, out liquid, out level, out selection);
         if (IsShipScope || worldKey != SceneManager.GetActiveScene().name)
             return false;
-        if (!WorldLiquidSourceResolver.TryResolve(localPosition, out WorldLiquidSourceTarget source)) return false;
-        world = worldKey; position = localPosition; liquid = source.Liquid; level = source.Sample.LiquidLevel; return true;
+        if (ChunkMgr.ExistingInstance == null) return false;
+        selection = ChunkMgr.ExistingInstance.SelectConnectedLiquidPumpSource(localPosition, out RuntimeTerrainTileSample sample);
+        if (selection == WorldLiquidPumpSourceSelection.Searching || selection == WorldLiquidPumpSourceSelection.Unavailable ||
+            !WorldLiquidSystem.TryGetDefinition(sample, out liquid)) return false;
+        world = worldKey; position = (Vector2)sample.WorldCell + Vector2.one * .5f;
+        level = sample.LiquidLevel; return true;
     }
 
     internal static bool IsFluidEnvironmentSubmerged(MachineEntity node)
@@ -125,12 +130,13 @@ public static partial class MachineWorld
     }
 
     internal static bool TryPumpFluidEnvironmentLiquid(string world, Vector2 position, int requestedLevel,
-        out string liquidId, out int removedLevel)
+        int minimumRemainingLevel, out string liquidId, out int removedLevel)
     {
         liquidId = null; removedLevel = 0;
         if (WorldAddress.FromWorldKey(world).IsSurface)
-            return SpaceSurfaceQuery.TryPumpLiquidInWorld(world, position, requestedLevel, out liquidId, out removedLevel);
-        return world == SceneManager.GetActiveScene().name && WorldLiquidSystem.TryPump(position, requestedLevel, out liquidId, out removedLevel);
+            return SpaceSurfaceQuery.TryPumpLiquidInWorld(world, position, requestedLevel, out liquidId, out removedLevel, minimumRemainingLevel);
+        return world == SceneManager.GetActiveScene().name && WorldLiquidSystem.TryPumpPreservingMinimumLevel(
+            position, requestedLevel, minimumRemainingLevel, out liquidId, out removedLevel);
     }
 
     internal static int ReleaseFluidEnvironmentLiquid(string world, Vector2 position, string liquidId, int level)

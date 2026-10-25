@@ -17,4 +17,14 @@ test.runtime("industrial_fluids", "connected_surface_pump", {}, function(d)
     assert(d.bodyFound and d.bodyCells == 3 and d.bodyLevel == d.remainingLevel, "真实连通统计与剩余水量不一致")
     assert(math.abs(d.pumpLiters + d.tankLiters + d.remainingLevel * .25 - 3) < .000001 and d.tankLiters > 0,
         "连通地表水与泵、储罐库存不守恒")
-end, "空泵口等待邻格扩散、整数尾水停稳及泵罐守恒")
+end, "空入口通过共享水域取余水、整数残水及泵罐守恒")
+test.runtime("industrial_fluids", "shared_surface_pump_search", {}, function(d)
+    assert(d.first == "Surplus" and d.second == "Surplus" and d.sameSource and d.shared,
+        "同一水域的两处泵口没有复用候选格与连通缓存")
+    assert(d.taken and d.sourceAfter == 1 and d.rejectedStale,
+        "余水模式没有保留一级，或第二台泵使用旧查询重复扣水")
+    assert(d.final == "LocalRemainder" and d.localTaken and d.inletAfter == 0 and d.middleAfter == 1,
+        "确认余水耗尽后没有切换入口残水模式，或抽干了其它残水格")
+    assert(d.refunded and d.reactivated == "Surplus" and d.remaining == 3,
+        "退回真实来源后没有恢复候选资格，或两阶段抽液不守恒")
+end, "共享候选、扣量时复验、余水保底、末格切换与来源退回")

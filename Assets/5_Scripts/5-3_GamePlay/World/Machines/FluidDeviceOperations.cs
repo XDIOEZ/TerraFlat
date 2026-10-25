@@ -116,14 +116,16 @@ public static class FluidDeviceOperations
         while (remaining > 1e-9)
         {
             FluidDefinition fluid = null; string world = null; Vector2 position = default; LiquidDefinition liquid = null;
+            WorldLiquidPumpSourceSelection sourceSelection = WorldLiquidPumpSourceSelection.LocalRemainder;
             foreach (var component in buffer.State.Components)
                 if (component.LiquidMoles > 0) { fluid = FluidCatalog.Default.Find(component.FluidId); break; }
             if (fluid == null)
             {
                 Vector2 intake = (Vector2)(node.Cell + MechanicalNetworkGraph.Directions[(node.RotationQuarterTurns + 2) & 3]) + Vector2.one * .5f;
-                if (!TrySampleFluidEnvironmentLiquid(intake, out world, out position, out liquid, out int level) || level <= 0 ||
+                if (!TrySelectFluidEnvironmentPumpSource(intake, out world, out position, out liquid, out int level, out sourceSelection) || level <= 0 ||
                     !FluidCatalog.Default.TryFromLiquidId(liquid.Id, out fluid) || !fluid.AllowIndustrialTransport)
-                { state.Status = movedAny ? "正在抽液体" : "入口没有可抽取的液体"; return; }
+                { state.Status = movedAny ? "正在抽液体" : sourceSelection == WorldLiquidPumpSourceSelection.Searching
+                    ? "正在寻找可抽取的液体" : "入口没有可抽取的液体"; return; }
             }
             CollectFluidDeliveryRoutes(node, "main", FluidPhase.Liquid, new[] { fluid.Id }, workspace.Routes);
             bool destination = false;
@@ -136,7 +138,8 @@ public static class FluidDeviceOperations
             if (!destination) { state.Status = movedAny ? "正在抽液体" : "液网异种冲突或接收空间不足"; return; }
             if (buffer.LiquidMoles == 0)
             {
-                if (!TryPumpFluidEnvironmentLiquid(world, position, 1, out string actualId, out int removed) || removed <= 0) return;
+                int reserve = sourceSelection == WorldLiquidPumpSourceSelection.Surplus ? 1 : 0;
+                if (!TryPumpFluidEnvironmentLiquid(world, position, 1, reserve, out string actualId, out int removed) || removed <= 0) return;
                 var before = buffer.State.Clone();
                 try
                 {

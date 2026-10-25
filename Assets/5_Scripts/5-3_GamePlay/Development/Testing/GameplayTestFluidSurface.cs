@@ -13,8 +13,11 @@ internal static class GameplayTestFluidSurface
 #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoadMethod]
 #endif
-    private static void RegisterConnectedPumpProbe() => GameplayTestRuntimeProbe.Register(
-        "industrial_fluids", "connected_surface_pump", CaptureConnectedPumpFlow);
+    private static void RegisterConnectedPumpProbe()
+    {
+        GameplayTestRuntimeProbe.Register("industrial_fluids", "connected_surface_pump", CaptureConnectedPumpFlow);
+        GameplayTestRuntimeProbe.Register("industrial_fluids", "shared_surface_pump_search", CaptureSharedPumpSearchContract);
+    }
 
     internal static readonly Dictionary<string, Action<Action<string, bool, string>>> Cases = new(StringComparer.Ordinal)
     {
@@ -56,6 +59,16 @@ internal static class GameplayTestFluidSurface
             Require(Level == originalLevel && (Level == 0 || sample.Terrain.GetLiquidId(sample.LocalCell.x, sample.LocalCell.y) == originalId), "归还原始液体格");
         }
     }
+    private sealed class IsolatedPumpCellBoundary : IDisposable
+    {
+        public IsolatedPumpCellBoundary(Vector2Int cell)
+        {
+            // 单格速率测试封闭四邻，避免共享寻源读到场景原有水域。
+            WorldLiquidFlowObstacles.Register(this, new[] { cell + Vector2Int.left, cell + Vector2Int.right,
+                cell + Vector2Int.up, cell + Vector2Int.down });
+        }
+        public void Dispose() => WorldLiquidFlowObstacles.Unregister(this);
+    }
     #endregion
 
     #region 地表抽取、倾倒与工业泵守恒
@@ -79,6 +92,13 @@ internal static class GameplayTestFluidSurface
     #endregion
 
     #region 简单工业真实地表采样
+    internal static JObject CaptureSharedPumpSearchContract(Player player, JObject args)
+    {
+        args = (JObject)args.DeepClone();
+        args["sharedCacheContract"] = true;
+        return CaptureConnectedPumpFlow(player, args);
+    }
+
     internal static JObject CaptureConnectedPumpFlow(Player player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
@@ -87,6 +107,7 @@ internal static class GameplayTestFluidSurface
         using var middle = new LiquidCell(f.SurfacePoint(1));
         using var far = new LiquidCell(f.SurfacePoint(2));
         LiquidCell[] cells = { inlet, middle, far };
+        bool sharedCacheContract = args.Value<bool?>("sharedCacheContract") == true;
         float[] excavated = new float[3], covered = new float[3];
         var barrier = new object();
         var boundary = new List<Vector2Int>();
@@ -113,8 +134,9 @@ internal static class GameplayTestFluidSurface
                     sample.LocalCell.x, sample.LocalCell.y, 1);
                 sample.Terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.CoverLevelsLayerId,
                     sample.LocalCell.x, sample.LocalCell.y, 0);
-                cells[x].Set(x == 0 ? 0 : x == 1 ? 7 : 5);
+                cells[x].Set(sharedCacheContract ? (x == 2 ? 2 : 1) : x == 0 ? 0 : x == 1 ? 7 : 5);
             }
+            if (sharedCacheContract) return CaptureSharedPumpSelections(cells);
             var pump = f.Add("LiquidPump_Electric", 1);
             var tank = f.Add("LiquidStorageTank", 2);
             f.Begin(); pump.ElectricalSuppliedWatts = 0;
@@ -153,10 +175,43 @@ internal static class GameplayTestFluidSurface
         }
     }
 
+    private static JObject CaptureSharedPumpSelections(LiquidCell[] cells)
+    {
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        WorldLiquidPumpSourceSelection first = manager.SelectConnectedLiquidPumpSource(cells[0].Position, out var source);
+        int groups = manager.SharedLiquidPumpSearchGroupCount;
+        long builds = manager.SharedLiquidPumpTopologyBuildCount;
+        WorldLiquidPumpSourceSelection second = manager.SelectConnectedLiquidPumpSource(cells[1].Position, out var staleSource);
+        bool shared = groups == manager.SharedLiquidPumpSearchGroupCount && builds == manager.SharedLiquidPumpTopologyBuildCount;
+        bool taken = first == WorldLiquidPumpSourceSelection.Surplus && WorldLiquidSystem.TryPumpPreservingMinimumLevel(
+            source, 99, 1, out _, out int removed);
+        int afterSource = cells[2].Level;
+        bool rejectedStale = !WorldLiquidSystem.TryPumpPreservingMinimumLevel(staleSource, 1, 1, out _, out _);
+        WorldLiquidPumpSourceSelection final = manager.SelectConnectedLiquidPumpSource(cells[0].Position, out var local);
+        for (int i = 0; i < 64 && final == WorldLiquidPumpSourceSelection.Searching; i++)
+        {
+            manager.AdvanceWorldRuntime(0f);
+            final = manager.SelectConnectedLiquidPumpSource(cells[0].Position, out local);
+        }
+        bool localTaken = final == WorldLiquidPumpSourceSelection.LocalRemainder &&
+            WorldLiquidSystem.TryPump(local, 1, out _, out _);
+        bool refunded = WorldLiquidSystem.TryPour(cells[2].Position, cells[2].Definition.Id, 1, out int added) && added == 1;
+        WorldLiquidPumpSourceSelection reactivated = manager.SelectConnectedLiquidPumpSource(cells[0].Position, out _);
+        return new JObject
+        {
+            ["first"] = first.ToString(), ["second"] = second.ToString(), ["sameSource"] = source.WorldCell == staleSource.WorldCell,
+            ["shared"] = shared, ["taken"] = taken, ["sourceAfter"] = afterSource, ["rejectedStale"] = rejectedStale,
+            ["final"] = final.ToString(), ["localTaken"] = localTaken, ["inletAfter"] = cells[0].Level,
+            ["middleAfter"] = cells[1].Level, ["refunded"] = refunded, ["reactivated"] = reactivated.ToString(),
+            ["remaining"] = cells[0].Level + cells[1].Level + cells[2].Level
+        };
+    }
+
     internal static JObject CapturePumpFlow(Player player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope(surface: true); using var cell = new LiquidCell(f.SurfacePoint());
+        using var boundary = new IsolatedPumpCellBoundary(cell.Sample.WorldCell);
         cell.Set(10);
         var pump = f.Add("LiquidPump_Electric",1); var tank = f.Add("LiquidStorageTank",2);
         f.Begin(); pump.ElectricalSuppliedWatts=0; FluidDeviceOperations.AdvanceLiquidPump(pump,f.Seconds);

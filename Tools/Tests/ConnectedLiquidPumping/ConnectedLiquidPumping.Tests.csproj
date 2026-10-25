@@ -17,6 +17,7 @@
     <!-- 直接编译正式邻格扩散和边界加载；替身只提供区块存储与宿主边界。 -->
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidBodySystem.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidBodySystem.DiffusionStreaming.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquidBodySystem.PumpSearch.cs" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

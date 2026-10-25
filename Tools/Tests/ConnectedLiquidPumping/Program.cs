@@ -101,7 +101,110 @@ internal static class Program
             "many independent boundaries stay bounded and reserve a slot for forward progress");
         boundedBody.Dispose();
         Check(boundedOwner.Leases == 0, "budget saturation still releases every retained chunk on shutdown");
+        ValidateSharedPumpSearches();
         Console.WriteLine($"{passed} assertions passed; storage/async completion use doubles, diffusion/streaming compile production source.");
+    }
+
+    private static ChunkRuntime ShallowWater(int origin, int first = 2, int last = 5)
+    {
+        var chunk = new ChunkRuntime { Address = new("surface", new(origin, 0)) };
+        for (int x = first; x <= last; x++)
+        {
+            chunk.Terrain.Baseline[16 + x] = new(1, 1);
+            chunk.Terrain.Set(x, 1, 1, 1);
+        }
+        return chunk;
+    }
+
+    private static void ValidateSharedPumpSearches()
+    {
+        var owner = new ChunkMgr(); using var system = new WorldLiquidBodySystem(owner, "surface");
+        var shallow = ShallowWater(0); shallow.Terrain.Set(5, 1, 1, 2); system.Observe(shallow);
+        var first = system.SelectConnectedPumpSource(new(2.5f, 1.5f), out var source);
+        long builds = system.PumpSearchTopologyBuildCount;
+        var second = system.SelectConnectedPumpSource(new(3.5f, 1.5f), out var sameSource);
+        Check(first == WorldLiquidPumpSourceSelection.Surplus && second == first && source.WorldCell == sameSource.WorldCell &&
+              source.WorldCell == new Vector2Int(5, 1) && system.SharedPumpSearchGroupCount == 1 && builds == system.PumpSearchTopologyBuildCount,
+            "two pumps share one wet-body cache and bypass the 2-1-0 diffusion staircase");
+        shallow.Terrain.Set(5, 1, 1, 1);
+        Check(system.SelectConnectedPumpSource(new(2.5f, 1.5f), out var remainder) == WorldLiquidPumpSourceSelection.LocalRemainder &&
+              remainder.WorldCell == new Vector2Int(2, 1) && remainder.Terrain.GetLiquidLevel(2, 1) == 1,
+            "only an exhausted completed search permits the local final layer");
+        shallow.Terrain.Set(5, 1, 1, 2);
+        Check(system.SelectConnectedPumpSource(new(2.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Surplus &&
+              builds == system.PumpSearchTopologyBuildCount,
+            "adding surplus reactivates the shared candidate without rebuilding wet topology");
+        shallow.Terrain.Set(2, 1, 0, 0);
+        Check(system.SelectConnectedPumpSource(new(2.5f, 1.5f), out var dryInletSource) == WorldLiquidPumpSourceSelection.Surplus &&
+              dryInletSource.WorldCell == new Vector2Int(5, 1),
+            "an already dry inlet can recover surplus through its directly adjacent wet water body");
+        shallow.Terrain.Set(2, 1, 1, 1);
+        shallow.Terrain.Wall(4, 1, true);
+        Check(system.SelectConnectedPumpSource(new(2.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.LocalRemainder,
+            "new wall invalidates the source path and separates the remaining surplus");
+        shallow.Terrain.Wall(4, 1, false);
+        Check(system.SelectConnectedPumpSource(new(2.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Surplus,
+            "removing wall reconnects shared source discovery");
+        shallow.Terrain.Set(4, 1, 0, 0);
+        Check(system.SelectConnectedPumpSource(new(2.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.LocalRemainder,
+            "original riverbed that is currently dry cannot connect two wet pools");
+        shallow.Terrain.Set(4, 1, 2, 1);
+        Check(system.SelectConnectedPumpSource(new(2.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.LocalRemainder,
+            "different liquid cannot bridge a cached water path");
+        var pendingOwner = new ChunkMgr { DelayLoads = true };
+        using var pendingSystem = new WorldLiquidBodySystem(pendingOwner, "surface");
+        var near = ShallowWater(0, 14, 15); var far = ShallowWater(16, 0, 1);
+        far.Terrain.Set(1, 1, 1, 2); pendingOwner.Remote.Add(far.Address, far); pendingSystem.Observe(near);
+        Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Searching,
+            "unknown boundary does not count as proof that only one-level water remains");
+        pendingSystem.Advance();
+        Check(pendingOwner.Requests == 1 && pendingSystem.SelectConnectedPumpSource(new(15.5f, 1.5f), out _) ==
+              WorldLiquidPumpSourceSelection.Searching && near.Terrain.GetLiquidLevel(15, 1) == 1,
+            "two pumps reuse a single pending data read and preserve inlet water");
+        pendingOwner.WaitingLoads[far.Address].SetResult(far); pendingOwner.DelayLoads = false;
+        pendingSystem.Advance();
+        Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out var farSource) == WorldLiquidPumpSourceSelection.Surplus &&
+              farSource.WorldCell == new Vector2Int(17, 1) && pendingOwner.SimulationLeases == 0 &&
+              pendingSystem.SharedPumpSearchGroupCount == 1,
+            "cold neighbouring wet component joins the same shared body using data-only loading");
+        long remoteBuilds = pendingSystem.PumpSearchTopologyBuildCount;
+        pendingOwner.WorldRuntime.Events.Evict(far.Address);
+        Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Searching,
+            "cached cold donor waits for authoritative data instead of withdrawing from a stale snapshot");
+        pendingSystem.Advance(); pendingSystem.Advance();
+        Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Surplus &&
+              pendingSystem.PumpSearchTopologyBuildCount == remoteBuilds,
+            "unchanged cold reload reuses topology and candidate cache");
+        far.Terrain.Set(1, 1, 1, 1);
+        pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _);
+        pendingSystem.Advance();
+        Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.LocalRemainder,
+            "complete shared search enables local fallback only after all connected surplus is exhausted");
+        Time.unscaledTimeAsDouble = 6; pendingSystem.Advance(); Time.unscaledTimeAsDouble = 0;
+        Check(pendingOwner.Leases == 0 && pendingSystem.PumpSearchCachedChunkCount > 0,
+            "idle source data is released while lightweight topology remains cached");
+        var mergingOwner = new ChunkMgr(); using var merging = new WorldLiquidBodySystem(mergingOwner, "surface");
+        var west = ShallowWater(0, 14, 15); var east = ShallowWater(16, 0, 1);
+        west.Terrain.Set(14, 1, 1, 2); east.Terrain.Set(1, 1, 1, 2);
+        merging.Observe(west); merging.Observe(east);
+        merging.SelectConnectedPumpSource(new(14.5f, 1.5f), out _);
+        merging.SelectConnectedPumpSource(new(17.5f, 1.5f), out _);
+        merging.Advance();
+        Check(merging.SharedPumpSearchGroupCount == 1,
+            "already-loaded adjoining water bodies merge caches even while both pumps have surplus");
+        var separateOwner = new ChunkMgr(); using var separate = new WorldLiquidBodySystem(separateOwner, "surface");
+        var pools = ShallowWater(0); pools.Terrain.Set(4, 1, 0, 0); separate.Observe(pools);
+        separate.SelectConnectedPumpSource(new(2.5f, 1.5f), out _);
+        separate.SelectConnectedPumpSource(new(5.5f, 1.5f), out _);
+        Check(separate.SharedPumpSearchGroupCount == 2, "disconnected same-liquid pools keep independent caches");
+        var badOwner = new ChunkMgr { DelayLoads = true }; using var bad = new WorldLiquidBodySystem(badOwner, "surface");
+        var badNear = ShallowWater(0, 14, 15); bad.Observe(badNear);
+        bad.SelectConnectedPumpSource(new(14.5f, 1.5f), out _); bad.Advance();
+        badOwner.WaitingLoads.Values.Single().SetException(new Exception("expected shared-search load failure"));
+        bad.Advance();
+        Check(bad.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Searching &&
+              badNear.Terrain.GetLiquidLevel(14, 1) == 1,
+            "failed shared search never certifies exhaustion or consumes the final inlet layer");
     }
     #endregion
 }
