@@ -42,7 +42,7 @@ public sealed partial class MechanicalDepthVisual
         MachineLightPresentation.ConfigureLight(facilityLight, lighting, power);
 
         PartVisual body = parts[0];
-        Transform sortingRoot = body != null ? owner?.DepthMesh.GetPartSortingRoot(
+        Transform sortingRoot = body != null ? owner?.GetBuildingDepthRenderer(submerged).GetPartSortingRoot(
             ChunkDepthMeshRenderer.MachineDomain, entityId, body.Id) : null;
         if (!lighting.EmissiveSprite || sortingRoot == null)
         {
@@ -62,6 +62,7 @@ public sealed partial class MechanicalDepthVisual
         poweredEmission.sortingLayerID = sortingRoot.GetComponent<SortingGroup>().sortingLayerID;
         poweredEmission.sortingOrder = body.Order + 1;
         MachineLightPresentation.ConfigureEmission(poweredEmission, body.Sprite, body.Tint, lighting, power);
+        poweredEmission.sharedMaterial = owner.ResolveBuildingOverlayMaterialForSubmergedSurface(poweredEmission.sharedMaterial, submerged);
     }
 
     private void ReleaseLighting()

@@ -13,6 +13,58 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("world_streaming/base_presentation_steps", ServiceBasePresentationSteps);
         operations.Add("world_streaming/collision_dirty_queue", ServiceCollisionDirtyQueue);
+        operations.Add("rendering/building_liquid_surface", ServiceBuildingLiquidSurface);
+    }
+
+    // 使用正式液体与支撑写入采样变化，Lua负责判断水下、水上及批量排水的结果。
+    private static JObject ServiceBuildingLiquidSurface(JObject args)
+    {
+        using var buffer = new ChunkTerrainBuffer(2, 1, LiquidTypeCatalog.BuiltIn);
+        using ChunkTerrainData terrain = buffer.Seal();
+        var samples = new JArray();
+        var notifications = new JArray();
+        void Sample(string stage) => samples.Add(new JObject
+        {
+            ["stage"] = stage,
+            ["submerged"] = ChunkTilemapRenderer.IsBuildingSubmergedByUnsupportedLiquid(terrain, 0, 0),
+            ["depth"] = terrain.GetLiquidDepth(0, 0),
+            ["support"] = TerrainSupportLayer.GetTileId(terrain, 0, 0)
+        });
+        terrain.Changed += changed =>
+        {
+            if (changed.Kind == TerrainChangeKind.Liquid || changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
+                notifications.Add(new JObject { ["kind"] = "single", ["submerged"] =
+                    ChunkTilemapRenderer.IsBuildingSubmergedByUnsupportedLiquid(terrain, 0, 0) });
+        };
+        terrain.LiquidBatchChanged += changed =>
+        {
+            foreach (int index in changed.CellIndices.Span)
+                notifications.Add(new JObject { ["kind"] = "batch", ["index"] = index, ["submerged"] =
+                    ChunkTilemapRenderer.IsBuildingSubmergedByUnsupportedLiquid(terrain, index % terrain.Width, index / terrain.Width) });
+        };
+        int water = LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        Sample("dry");
+        terrain.SetLiquid(0, 0, water, 5); Sample("water");
+        TerrainSupportLayer.Set(terrain, 0, 0, 23, 1); Sample("platform");
+        TerrainSupportLayer.Set(terrain, 0, 0, 0, 0); Sample("removed");
+        terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(0, 0, 0) }); Sample("drained");
+        terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(0, water, 1), new LiquidCellUpdate(1, water, 10) }); Sample("shallow");
+        TerrainSupportLayer.Set(terrain, 1, 0, 23, 1); Sample("neighbour_platform");
+        var sorting = WorldRenderingConfigCatalog.Default.sorting;
+        int groundQueue = 0, waterQueue = 0;
+        foreach (var profile in sorting.batchProfiles)
+        {
+            if (profile.visualLayer == "Ground") groundQueue = sorting.batchRenderQueueBase + profile.renderQueueOffset;
+            if (profile.visualLayer == "Water") waterQueue = sorting.batchRenderQueueBase + profile.renderQueueOffset;
+        }
+        return new JObject
+        {
+            ["samples"] = samples, ["notifications"] = notifications,
+            ["groundQueue"] = groundQueue, ["waterQueue"] = waterQueue,
+            ["buildingQueue"] = ChunkTilemapRenderer.ResolveSubmergedBuildingRenderQueue(),
+            ["outsideSubmerged"] = ChunkTilemapRenderer.IsBuildingSubmergedByUnsupportedLiquid(terrain, -1, 0),
+            ["missingSubmerged"] = ChunkTilemapRenderer.IsBuildingSubmergedByUnsupportedLiquid(null, 0, 0)
+        };
     }
 
     // 独立空地形实走正式绑定器，检查预算与所有权，不伪造可见地块或替代画面验收。

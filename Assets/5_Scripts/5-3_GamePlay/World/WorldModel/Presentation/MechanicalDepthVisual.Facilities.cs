@@ -11,6 +11,7 @@ public sealed partial class MechanicalDepthVisual
     private Light2D facilityLight;
     private CombustionVisualEffect facilityCombustion;
     private MachineModuleConfiguration facilityCombustionConfiguration;
+    private int facilityCombustionSortingLayer;
     private bool facilityCombustionTouched;
 
     /// <summary>灯光保留 Unity 专用代理，晾架内容与主体一起合入脚点行。</summary>
@@ -98,7 +99,7 @@ public sealed partial class MechanicalDepthVisual
         }
 
         PartVisual body = parts[0];
-        Transform sortingRoot = owner?.DepthMesh.GetPartSortingRoot(
+        Transform sortingRoot = owner?.GetBuildingDepthRenderer(submerged).GetPartSortingRoot(
             ChunkDepthMeshRenderer.MachineDomain, entityId, body.Id);
         if (sortingRoot == null)
         {
@@ -117,10 +118,10 @@ public sealed partial class MechanicalDepthVisual
         }
         facilityCombustion.transform.SetParent(sortingRoot, true);
 
-        if (!ReferenceEquals(facilityCombustionConfiguration, config))
+        int layerId = sortingRoot.GetComponent<SortingGroup>().sortingLayerID;
+        if (!ReferenceEquals(facilityCombustionConfiguration, config) || facilityCombustionSortingLayer != layerId)
         {
             CombustionVisualEffect template = source.GetComponent<CombustionVisualEffect>();
-            int layerId = sortingRoot.GetComponent<SortingGroup>().sortingLayerID;
             facilityCombustion.BindWorldPresentation(template, layerId, body.Order);
             facilityCombustion.ConfigureFlamePresentation(
                 config.Value("flameScale", source.flameScale),
@@ -129,7 +130,10 @@ public sealed partial class MechanicalDepthVisual
                 config.Value("attachFlameToAnchor", source.attachFlameToAnchor),
                 false, Vector3.zero);
             facilityCombustionConfiguration = config;
+            facilityCombustionSortingLayer = layerId;
         }
+        facilityCombustion.SetFlamePresentationMaterialOverride(
+            owner.ResolveBuildingOverlayMaterialForSubmergedSurface(facilityCombustion.FlameSourceMaterial, submerged));
 
         Vector3 anchor = config.Value("sourceRendererAnchorOffset", source.sourceRendererAnchorOffset);
         if (config.Value("followSourceRenderer", source.followSourceRenderer))

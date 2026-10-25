@@ -15,6 +15,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     private readonly Transform parent;
     private readonly int? sortingLayerOverrideId;
     private readonly int sortingOrderOverride;
+    private readonly int renderQueue;
     private readonly Dictionary<PartKey, Entry> entries = new();
     private readonly Dictionary<int, Row> rows = new();
     private readonly HashSet<Group> dirtyGroups = new();
@@ -29,11 +30,13 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal int DrawGroupCount { get; private set; }
     internal static event Action BeforeFlush;
 
-    internal ChunkDepthMeshRenderer(Transform parent, int? sortingLayerOverrideId = null, int sortingOrderOverride = 0)
+    internal ChunkDepthMeshRenderer(Transform parent, int? sortingLayerOverrideId = null, int sortingOrderOverride = 0,
+        int renderQueue = 3000)
     {
         this.parent = parent != null ? parent : throw new ArgumentNullException(nameof(parent));
         this.sortingLayerOverrideId = sortingLayerOverrideId;
         this.sortingOrderOverride = sortingOrderOverride;
+        this.renderQueue = renderQueue;
         active.Add(this);
         EnsureDispatcher();
     }
@@ -69,7 +72,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         float rowY = rowIndex + .5f;
         local.m13 -= rowY;
         var key = new PartKey(domain, entityId, part);
-        var groupKey = new GroupKey(material, sprite.texture, sprite.associatedAlphaSplitTexture, order);
+        var groupKey = new GroupKey(material, sprite.texture, sprite.associatedAlphaSplitTexture, order, renderQueue);
         if (entries.TryGetValue(key, out Entry previous) &&
             (previous.Group.Row.Index != rowIndex || !previous.Group.Key.Equals(groupKey)))
         {
@@ -272,12 +275,12 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     {
         internal readonly Material Source;
         internal readonly Texture2D Texture, Alpha;
-        internal readonly int Order;
-        internal GroupKey(Material source, Texture2D texture, Texture2D alpha, int order)
-        { Source = source; Texture = texture; Alpha = alpha; Order = order; }
-        public bool Equals(GroupKey other) => Source == other.Source && Texture == other.Texture && Alpha == other.Alpha && Order == other.Order;
+        internal readonly int Order, RenderQueue;
+        internal GroupKey(Material source, Texture2D texture, Texture2D alpha, int order, int renderQueue)
+        { Source = source; Texture = texture; Alpha = alpha; Order = order; RenderQueue = renderQueue; }
+        public bool Equals(GroupKey other) => Source == other.Source && Texture == other.Texture && Alpha == other.Alpha && Order == other.Order && RenderQueue == other.RenderQueue;
         public override bool Equals(object other) => other is GroupKey key && Equals(key);
-        public override int GetHashCode() => HashCode.Combine(Source, Texture, Alpha, Order);
+        public override int GetHashCode() => HashCode.Combine(Source, Texture, Alpha, Order, RenderQueue);
     }
 
     private readonly struct Visual : IEquatable<Visual>

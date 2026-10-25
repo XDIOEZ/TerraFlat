@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>尚由 Item 驱动的门、帐篷等只更换绘制后端；模块、碰撞、库存和存档不迁移到网格里。</summary>
 internal static class BuildingDepthMeshBridge
@@ -33,7 +34,7 @@ internal static class BuildingDepthMeshBridge
         if (item == null) return;
         Unregister(item);
         Mod_Building building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-        if (building?.Data?.Role != BuildingRole.PlacedBuilding || building.IsGroundFacility || item.Sprite == null) return;
+        if (building?.Data?.Role != BuildingRole.PlacedBuilding || item.Sprite == null) return;
         // 移动车辆不是静态格子建筑，继续由自己的动态表现控制。
         if (item.GetComponentInChildren<Mod_Carrier>(true) != null) return;
         if (!hooked)
@@ -91,6 +92,7 @@ internal static class BuildingDepthMeshBridge
         internal Sprite FrameSprite;
         internal Material FrameMaterial;
         internal ShaderKind FrameShader;
+        internal ChunkDepthMeshRenderer SubmittedRenderer;
         internal Source(SpriteRenderer renderer, int part)
         { Renderer = renderer; Transform = renderer.transform; OriginalForceOff = renderer.forceRenderingOff; Part = part; }
     }
@@ -105,10 +107,16 @@ internal static class BuildingDepthMeshBridge
         private readonly bool connectionLine;
         private ChunkView view;
         private ChunkTilemapRenderer owner;
+        private bool hasSubmittedSources;
+        private readonly CombustionVisualEffect[] combustionEffects;
+        private SortingGroup combustionSortingGroup;
+        private bool ownsCombustionSortingGroup, combustionSortingOverridden, originalCombustionSortingEnabled;
+        private int originalCombustionSortingLayer, originalCombustionSortingOrder;
 
         internal Binding(Item item, Mod_Building building)
         {
             Item = item; this.building = building; entityId = item.GetInstanceID();
+            combustionEffects = item.GetComponentsInChildren<CombustionVisualEffect>(true);
             connectionLine = item.GetComponentInChildren<Mod_ShipPart>(true)?.Configuration.Kind == FlatWorld.Spaceflight.ShipPieceKind.Fiber;
             var renderers = new List<SpriteRenderer>();
             item.GetComponentsInChildren(true, renderers);
@@ -123,10 +131,25 @@ internal static class BuildingDepthMeshBridge
         internal void Present()
         {
             Vector3 anchor = Item.transform.position;
-            if (building == null || building.IsGroundFacility || !Item.isActiveAndEnabled || Item.InHand || !building.IsInstalled() ||
+            if (building == null || !Item.isActiveAndEnabled || Item.InHand || !building.IsInstalled() ||
                 ChunkMgr.ExistingInstance == null ||
                 !ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(anchor, out ChunkView currentView))
             { Release(); return; }
+            if (view != currentView || owner == null)
+            {
+                Release();
+                view = currentView;
+                owner = currentView.GetComponentInChildren<ChunkTilemapRenderer>(true);
+            }
+            if (owner == null || !owner.IsBatchPresentationRegistered) { Release(); return; }
+            bool submerged = FlatWorld.Spaceflight.SpaceSession.Current?.Owns(Item.itemData.Guid) != true &&
+                owner.IsBuildingSubmergedAtWorldAnchor(anchor);
+            if (building.IsGroundFacility && !submerged)
+            {
+                if (hasSubmittedSources) ReleaseSources();
+                return;
+            }
+            UpdateCombustionWaterSurfacePresentation(submerged);
             // 多部件建筑整件选择后端，不能把一个未知 MOD 图层和主体拆到两个同深度排序单元。
             foreach (Source source in sources)
             {
@@ -147,13 +170,6 @@ internal static class BuildingDepthMeshBridge
                 source.FrameMaterial = material;
                 source.FrameShader = shader;
             }
-            if (view != currentView || owner == null)
-            {
-                Release();
-                view = currentView;
-                owner = currentView.GetComponentInChildren<ChunkTilemapRenderer>(true);
-            }
-            if (owner == null || !owner.IsBatchPresentationRegistered) { Release(); return; }
             SpriteRenderer mainSprite = Item.Sprite;
             int baseOrder = mainSprite != null ? mainSprite.sortingOrder : 0;
             bool shadowChanged = false;
@@ -183,14 +199,18 @@ internal static class BuildingDepthMeshBridge
                 Vector4 state = new(Float(material, HitFlashId, 0f), Float(material, SnowId, 0f),
                     Float(material, DissolveId, 0f), 1f);
                 Vector3 flip = new(renderer.flipX ? -1f : 1f, renderer.flipY ? -1f : 1f, 1f);
-                ChunkDepthMeshRenderer rendererBackend = connectionLine ? owner.MechanicalConnectorDepthMesh : owner.DepthMesh;
+                ChunkDepthMeshRenderer rendererBackend = owner.GetBuildingDepthRenderer(submerged, connectionLine);
+                if (source.SubmittedRenderer != rendererBackend)
+                    source.SubmittedRenderer?.Remove(ChunkDepthMeshRenderer.BuildingDomain, entityId, source.Part);
+                source.SubmittedRenderer = rendererBackend;
                 rendererBackend.Set(ChunkDepthMeshRenderer.BuildingDomain, entityId, source.Part,
                     sprite, material, source.Transform.localToWorldMatrix * Matrix4x4.Scale(flip),
-                    anchor, renderer.sortingOrder - baseOrder, renderer.color, crop,
+                    anchor, renderer.sortingOrder - baseOrder - (submerged && connectionLine ? 1024 : 0), renderer.color, crop,
                     occluder: Float(material, OccluderId, 0f) > .5f, highlighted: source.Highlighted, state: state);
                 if (renderer == mainSprite && (!source.Submitted || source.LastSprite != sprite)) shadowChanged = true;
                 source.LastSprite = sprite;
                 source.Submitted = true;
+                hasSubmittedSources = true;
                 projected[renderer] = source;
                 renderer.forceRenderingOff = true;
             }
@@ -211,15 +231,59 @@ internal static class BuildingDepthMeshBridge
             projected.Remove(source.Renderer);
             if (source.Renderer != null) source.Renderer.forceRenderingOff = source.OriginalForceOff;
             source.Submitted = false;
+            source.SubmittedRenderer = null;
             source.Highlighted = false;
         }
         internal void Release()
         {
+            ReleaseSources();
+            owner = null; view = null;
+        }
+
+        private void ReleaseSources()
+        {
+            UpdateCombustionWaterSurfacePresentation(false);
             bool restoreShadow = Item != null && IsProjected(Item.Sprite);
             foreach (Source source in sources) Remove(source);
-            owner = null; view = null;
+            hasSubmittedSources = false;
             if (restoreShadow && Item != null && !Item.DestructionHandled && building != null && building.isActiveAndEnabled)
                 building.RefreshLightOcclusion();
+        }
+
+        // 附属火焰保留原宿主生命周期，只临时调整整件分组与共享材质的水面层。
+        private void UpdateCombustionWaterSurfacePresentation(bool submerged)
+        {
+            if (combustionEffects.Length == 0) return;
+            if (submerged && !combustionSortingOverridden)
+            {
+                combustionSortingGroup = Item.GetComponent<SortingGroup>();
+                if (combustionSortingGroup == null)
+                {
+                    combustionSortingGroup = Item.gameObject.AddComponent<SortingGroup>();
+                    combustionSortingGroup.sortAtRoot = true;
+                    ownsCombustionSortingGroup = true;
+                }
+                originalCombustionSortingLayer = combustionSortingGroup.sortingLayerID;
+                originalCombustionSortingOrder = combustionSortingGroup.sortingOrder;
+                originalCombustionSortingEnabled = !ownsCombustionSortingGroup && combustionSortingGroup.enabled;
+                combustionSortingGroup.enabled = true;
+                combustionSortingGroup.sortingLayerID = SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer);
+                combustionSortingGroup.sortingOrder = 0;
+                combustionSortingOverridden = true;
+            }
+            else if (!submerged && combustionSortingOverridden)
+            {
+                if (combustionSortingGroup != null)
+                {
+                    combustionSortingGroup.sortingLayerID = originalCombustionSortingLayer;
+                    combustionSortingGroup.sortingOrder = originalCombustionSortingOrder;
+                    combustionSortingGroup.enabled = originalCombustionSortingEnabled;
+                }
+                combustionSortingOverridden = false;
+            }
+            foreach (CombustionVisualEffect effect in combustionEffects)
+                if (effect != null) effect.SetFlamePresentationMaterialOverride(submerged && owner != null
+                    ? owner.ResolveBuildingOverlayMaterialForSubmergedSurface(effect.FlameSourceMaterial, true) : null);
         }
     }
 

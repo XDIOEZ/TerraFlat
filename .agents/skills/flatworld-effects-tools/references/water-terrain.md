@@ -22,6 +22,8 @@
 
 ## 角色接触
 
+- 落地建筑/机器直接放在有液体且无 `TerrainSupportLayer` 的格时，共用区块水下行网格，排序为地形层、队列在海床后水面前；平台不清原始液体，只改变支撑判断。普通 GO 桥与数据机器统一选后端，平台增删、单格及批量液体通知仅在水下状态改变时迁移机器部件；船上设备不读地表水。回归 `rendering/building_liquid_surface` 覆盖规则与真实数据通知，最终遮挡仍需画面验收。
+
 - `ActorWaterCommon.hlsl` 共用 Sprite-Lit-Master/AIECS，旋转附属物用角色世界水线；读取 `Mod_TileEffectReceiver` 有效淹没，浮动不改权威 LiquidDepth。接触独立于 Ground，液体身份变化才 Exit/Enter，邻格容错只用于交互。
 - 掉落沉没先浸没再远离，SubmergedProgress 只缩表现矩阵，不改质量/体积/原 Scale；WaterElapsed 延续进度，权威层销毁，离水/拾取/回池恢复。
 - 物件覆雪共用 `SpriteSnowCommon.hlsl`，按原图仿射包围盒的世界 Y 合成水平雪线；Sprite 的中心/半尺寸经控制器 MPB、行网格经 Tangent 传入，翻面和机械动画同步，不能退回本地 Y 随物件旋转。

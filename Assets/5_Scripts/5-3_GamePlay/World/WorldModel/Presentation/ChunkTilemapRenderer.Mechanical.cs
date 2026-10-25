@@ -42,6 +42,7 @@ public sealed partial class ChunkTilemapRenderer
     private readonly List<MachineWorld.MachineRenderCell> mechanicalVisualNodes = new();
     private readonly Dictionary<Vector3Int, MechanicalDepthVisual> mechanicalDepthVisuals = new(); // 机器的交互和灯光桥，图像统一合入行网格。
     private readonly HashSet<Vector3Int> submittedMechanicalCells = new(); // 资源重建时清理已提交的机械和阴影身份。
+    private int submittedMechanicalHighestLayer = -1; // 保留旧最高层，最后一个高层节点拆除时仍能清理表现。
     private readonly Dictionary<Vector3Int, int> submittedWireMasks = new(); // 相邻事件只重提连接发生变化的电线。
     private readonly Dictionary<Vector3Int, int> submittedPipeMasks = new(); // 管口增删和旋转只刷新连接外形变化的邻管。
     private readonly Dictionary<Vector3Int, int> submittedTankMasks = new(); // 储罐边框只在四邻连接变化时重新提交。
@@ -79,6 +80,7 @@ public sealed partial class ChunkTilemapRenderer
         ClearMechanicalDepthVisuals();
         MechanicalShadowRegistry.RemoveOwner(this);
         submittedMechanicalCells.Clear();
+        submittedMechanicalHighestLayer = -1;
     }
 
     /// <summary>从权威机械数据重建当前区块所有图层。</summary>
@@ -91,6 +93,7 @@ public sealed partial class ChunkTilemapRenderer
             MechanicalShadowRegistry.Remove(this, key);
         }
         submittedMechanicalCells.Clear();
+        submittedMechanicalHighestLayer = -1;
         var origin = boundChunk.Address.ChunkOrigin;
         MachineWorld.CollectInBounds(new BoundsInt(origin.X, origin.Y, 0,
             boundChunk.Terrain.Width, boundChunk.Terrain.Height, 1), mechanicalVisualNodes);
@@ -116,7 +119,8 @@ public sealed partial class ChunkTilemapRenderer
             new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
         int x = Mathf.RoundToInt(displacement.x), y = Mathf.RoundToInt(displacement.y);
         if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) return;
-        for (int occupancy = 0; occupancy <= 5; occupancy++)
+        int highestLayer = Math.Max(MachineWorld.HighestOccupiedLayer, submittedMechanicalHighestLayer);
+        for (int occupancy = 0; occupancy <= highestLayer; occupancy++)
         {
             MachineEntity node = MachineWorld.GetAt(cell, occupancy);
             if (node != null) SubmitMechanicalNode(node, x, y);
@@ -130,6 +134,31 @@ public sealed partial class ChunkTilemapRenderer
                 RemoveMechanicalDepthVisual(x, y, occupancy);
             }
         }
+    }
+
+    /// <summary>液体与平台变化只重提水下状态真正改变的机器格，流量变化不重建部件。</summary>
+    private void RefreshMechanicalSubmergedSurfaceCells(FlatWorld.WorldModel.ChunkTerrainChanged changed)
+    {
+        if (!batchPresentationComplete || mechanicalDepthVisuals.Count == 0 ||
+            !(changed.Kind == FlatWorld.WorldModel.TerrainChangeKind.Liquid ||
+              changed.AffectsEnvironmentLayer(FlatWorld.WorldModel.TerrainSupportLayer.TileIdLayer))) return;
+        foreach (int index in changed.GetCellIndices(boundChunk.Terrain.Width))
+            RefreshMechanicalSubmergedSurfaceCell(index);
+    }
+
+    private void RefreshMechanicalSubmergedSurfaceCell(int index)
+    {
+        if (!batchPresentationComplete || mechanicalDepthVisuals.Count == 0) return;
+        int width = boundChunk.Terrain.Width;
+        var origin = boundChunk.Address.ChunkOrigin;
+        int x = index % width, y = index / width;
+        for (int layer = 0; layer <= submittedMechanicalHighestLayer; layer++)
+            if (mechanicalDepthVisuals.TryGetValue(new Vector3Int(x, y, layer), out var visual) &&
+                visual.RequiresSubmergedSurfaceRefresh)
+            {
+                RefreshMechanicalCell(WorldTopologyRuntime.NormalizeCell(new Vector2Int(origin.X + x, origin.Y + y)));
+                break;
+            }
     }
 
     /// <summary>跨区块与环绕边界的相邻罐体沿正式同材共享组更新外壳。</summary>
@@ -228,6 +257,7 @@ public sealed partial class ChunkTilemapRenderer
         string kind = node.Definition.Kind;
         Vector3Int key = new(x, y, node.Definition.Layer);
         submittedMechanicalCells.Add(key);
+        submittedMechanicalHighestLayer = Math.Max(submittedMechanicalHighestLayer, node.Definition.Layer);
         if (node.Definition.ShouldCastVisualShadows())
             MechanicalShadowRegistry.BeginNode(this, key, gameObject.scene, def.Sprite,
                 origin + rotation * facilityBodyOffset, rotation, facilityBodyScale, def.Visual?.Shadows);
@@ -434,7 +464,7 @@ public sealed partial class ChunkTilemapRenderer
             fluidIndicatorSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
                 new Vector2(.5f, .5f), Texture2D.whiteTexture.width);
         Color gas = new(.4f, .8f, 1, .95f), liquid = new(.9f, .68f, .25f, .95f);
-        double gasCapacity = node.Definition.Fluid.GasCapacityStandardLiters;
+        double gasCapacity = MachineWorld.GetFluidGasCapacityStandardLiters(node);
         float gasAmount = Mathf.Clamp01((float)(FluidUnits.MolToStandardLiters(inventory.GasMoles) / (decimal)gasCapacity));
         float liquidAmount = Mathf.Clamp01((float)(inventory.GetLiquidLiters() / MachineWorld.GetFluidVolumeLiters(node)));
         if (gasAmount > 0)

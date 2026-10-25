@@ -453,6 +453,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             changed.Kind != TerrainChangeKind.TileStack &&
             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
             return;
+        RefreshMechanicalSubmergedSurfaceCells(changed);
         if (changed.Kind == TerrainChangeKind.Environment && IsSoilMoistureVisualLayer(changed.EnvironmentLayerId))
         {
             RefreshSoilMoistureVisuals(changed);
@@ -843,6 +844,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     /// <summary>延后到本帧所有液体 Chunk 写回之后，合并处理岸线、四角液深与高度边。</summary>
     private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed)
     {
+        foreach (int index in changed.CellIndices.Span)
+            RefreshMechanicalSubmergedSurfaceCell(index);
         if (hasLavaLiquid || BatchContainsLava(changed))
             liquidGlowDirty = true;
         QueueLiquidVisuals(changed, 0, 0);

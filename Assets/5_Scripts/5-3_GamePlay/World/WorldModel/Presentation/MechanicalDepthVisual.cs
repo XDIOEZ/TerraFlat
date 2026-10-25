@@ -15,11 +15,14 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         internal Vector4 Animation, Conveyor;
         internal int Id, Order;
         internal bool Touched, Visible, DrawBelowMechanical;
+        internal ChunkDepthMeshRenderer SubmittedRenderer;
     }
     private readonly PartVisual[] parts = new PartVisual[16];
     private ChunkTilemapRenderer owner;
     private int entityId, occupancy;
     private bool highlighted, disposed;
+    private bool submerged;
+    internal bool RequiresSubmergedSurfaceRefresh => owner != null && submerged != owner.IsBuildingSubmergedAtWorldAnchor(transform.position);
     private MachineEntity tankEntity;
     private FluidTankSelectionOutline tankOutline;
 
@@ -36,6 +39,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     internal void BeginUpdate(Vector3 position)
     {
         transform.position = position;
+        submerged = owner.IsBuildingSubmergedAtWorldAnchor(position);
         foreach (PartVisual part in parts) if (part != null) part.Touched = false;
         foreach (PartVisual part in facilityParts) if (part != null) part.Touched = false;
         if (facilityLight != null) facilityLight.enabled = false;
@@ -77,12 +81,14 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     private void Submit(PartVisual part)
     {
         if (owner == null || disposed || !part.Visible || !owner.IsBatchPresentationRegistered) return;
-        ChunkDepthMeshRenderer renderer = part.DrawBelowMechanical
-            ? owner.MechanicalConnectorDepthMesh : owner.DepthMesh;
+        ChunkDepthMeshRenderer renderer = owner.GetBuildingDepthRenderer(submerged, part.DrawBelowMechanical);
+        if (part.SubmittedRenderer != renderer)
+            part.SubmittedRenderer?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id);
+        part.SubmittedRenderer = renderer;
         renderer.Set(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id,
             part.Sprite, part.Material,
             Matrix4x4.TRS(transform.position + part.Offset, part.Rotation, part.Scale),
-            transform.position, part.Order, part.Tint, animation: part.Animation,
+            transform.position, part.Order - (submerged && part.DrawBelowMechanical ? 1024 : 0), part.Tint, animation: part.Animation,
             highlighted: highlighted && tankEntity == null, conveyor: part.Conveyor);
     }
 

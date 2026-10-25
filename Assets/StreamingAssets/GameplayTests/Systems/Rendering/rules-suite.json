@@ -9,6 +9,12 @@
       "name": "渲染光影与特效规则与边界",
       "luaPath": "GameplayTests/Systems/Rendering/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "rendering_building_liquid_surface",
+      "name": "建筑水面覆盖：平台与液体增量规则",
+      "luaPath": "GameplayTests/Systems/Rendering/building-liquid-surface.lua",
+      "enabled": true
     }
   ]
 }

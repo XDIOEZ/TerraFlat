@@ -1,4 +1,5 @@
 using UnityEngine;
+using FlatWorld.WorldModel;
 
 public sealed partial class ChunkTilemapRenderer
 {
@@ -6,6 +7,8 @@ public sealed partial class ChunkTilemapRenderer
     private const string MechanicalConnectorSortingLayerName = "MechanicalShaft";
     private ChunkDepthMeshRenderer depthMesh;
     private ChunkDepthMeshRenderer mechanicalConnectorDepthMesh;
+    private ChunkDepthMeshRenderer submergedBuildingDepthMesh;
+    private readonly System.Collections.Generic.Dictionary<Material, Material> submergedBuildingOverlayMaterials = new();
     internal ChunkDepthMeshRenderer DepthMesh
     {
         get
@@ -31,9 +34,9 @@ public sealed partial class ChunkTilemapRenderer
         }
     }
 
-    public int DepthMeshPartCount => (depthMesh?.PartCount ?? 0) + (mechanicalConnectorDepthMesh?.PartCount ?? 0);
-    public int DepthMeshRowCount => (depthMesh?.RowCount ?? 0) + (mechanicalConnectorDepthMesh?.RowCount ?? 0);
-    public int DepthMeshDrawGroupCount => (depthMesh?.DrawGroupCount ?? 0) + (mechanicalConnectorDepthMesh?.DrawGroupCount ?? 0);
+    public int DepthMeshPartCount => (depthMesh?.PartCount ?? 0) + (mechanicalConnectorDepthMesh?.PartCount ?? 0) + (submergedBuildingDepthMesh?.PartCount ?? 0);
+    public int DepthMeshRowCount => (depthMesh?.RowCount ?? 0) + (mechanicalConnectorDepthMesh?.RowCount ?? 0) + (submergedBuildingDepthMesh?.RowCount ?? 0);
+    public int DepthMeshDrawGroupCount => (depthMesh?.DrawGroupCount ?? 0) + (mechanicalConnectorDepthMesh?.DrawGroupCount ?? 0) + (submergedBuildingDepthMesh?.DrawGroupCount ?? 0);
 
     /// <summary>只用于视觉矩阵；区块逻辑地址、机械格和存档不跟随本机世界镜像移动。</summary>
     internal Vector3 DepthPresentationOffset => boundChunk == null ? Vector3.zero : transform.position -
@@ -46,27 +49,38 @@ public sealed partial class ChunkTilemapRenderer
     {
         depthMesh?.Dispose();
         mechanicalConnectorDepthMesh?.Dispose();
+        submergedBuildingDepthMesh?.Dispose();
         depthMesh = null;
         mechanicalConnectorDepthMesh = null;
+        submergedBuildingDepthMesh = null;
+        foreach (Material material in submergedBuildingOverlayMaterials.Values)
+            if (Application.isPlaying) Destroy(material); else DestroyImmediate(material);
+        submergedBuildingOverlayMaterials.Clear();
     }
 
     private void ClearDepthPresentation()
     {
         depthMesh?.Clear();
         mechanicalConnectorDepthMesh?.Clear();
+        submergedBuildingDepthMesh?.Clear();
     }
     internal void RemoveMachineDepthPart(int entityId, int part)
     {
         depthMesh?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part);
         mechanicalConnectorDepthMesh?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part);
+        submergedBuildingDepthMesh?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part);
     }
     internal void RemoveMachineDepthEntity(int entityId)
     {
         depthMesh?.RemoveEntity(ChunkDepthMeshRenderer.MachineDomain, entityId);
         mechanicalConnectorDepthMesh?.RemoveEntity(ChunkDepthMeshRenderer.MachineDomain, entityId);
+        submergedBuildingDepthMesh?.RemoveEntity(ChunkDepthMeshRenderer.MachineDomain, entityId);
     }
     internal void RemoveBuildingDepthPart(int entityId, int part)
-        => depthMesh?.Remove(ChunkDepthMeshRenderer.BuildingDomain, entityId, part);
+    {
+        depthMesh?.Remove(ChunkDepthMeshRenderer.BuildingDomain, entityId, part);
+        submergedBuildingDepthMesh?.Remove(ChunkDepthMeshRenderer.BuildingDomain, entityId, part);
+    }
 
     /// <summary>区块重选镜像后同步绝对坐标阴影和交互桥，行网格仍由同一 View 持有。</summary>
     internal void RefreshDepthProjection()
@@ -81,6 +95,52 @@ public sealed partial class ChunkTilemapRenderer
         foreach (SortingLayer layer in SortingLayer.layers)
             if (layer.name == MechanicalConnectorSortingLayerName) return layer.id;
         throw new System.InvalidOperationException("项目缺少 Sorting Layer：" + MechanicalConnectorSortingLayerName);
+    }
+    #endregion
+
+    #region 建筑水面覆盖
+    /// <summary>平台保留底层液体，只按实际支撑覆盖决定建筑是否位于水下。</summary>
+    public static bool IsBuildingSubmergedByUnsupportedLiquid(ChunkTerrainData terrain, int x, int y) =>
+        terrain != null && (uint)x < (uint)terrain.Width && (uint)y < (uint)terrain.Height &&
+        terrain.GetLiquidDepth(x, y) > 0f && TerrainSupportLayer.GetTileId(terrain, x, y) == 0;
+
+    internal bool IsBuildingSubmergedAtWorldAnchor(Vector3 worldAnchor)
+    {
+        Vector3 local = transform.InverseTransformPoint(worldAnchor);
+        return IsBuildingSubmergedByUnsupportedLiquid(boundChunk?.Terrain, Mathf.FloorToInt(local.x), Mathf.FloorToInt(local.y));
+    }
+
+    /// <summary>直接复用真实水面的半透明覆盖，水下批次与海床使用同一排序层。</summary>
+    internal ChunkDepthMeshRenderer GetBuildingDepthRenderer(bool submerged, bool connectionLine = false)
+    {
+        if (!submerged) return connectionLine ? MechanicalConnectorDepthMesh : DepthMesh;
+        if (submergedBuildingDepthMesh == null || submergedBuildingDepthMesh.IsDisposed)
+        {
+            int layer = SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer);
+            submergedBuildingDepthMesh = new ChunkDepthMeshRenderer(transform, layer, 0, ResolveSubmergedBuildingRenderQueue());
+        }
+        return submergedBuildingDepthMesh;
+    }
+
+    public static int ResolveSubmergedBuildingRenderQueue()
+    {
+        var sorting = WorldRenderingConfigCatalog.Default.sorting;
+        foreach (var profile in sorting.batchProfiles)
+            if (profile.visualLayer == "Water") return sorting.batchRenderQueueBase + profile.renderQueueOffset - 1;
+        throw new System.InvalidOperationException("世界渲染配置缺少 Water 批次。");
+    }
+
+    /// <summary>发光与火焰借用区块共享副本，随主体放到水面之前且不修改源材质。</summary>
+    internal Material ResolveBuildingOverlayMaterialForSubmergedSurface(Material source, bool submerged)
+    {
+        if (!submerged || source == null) return source;
+        if (!submergedBuildingOverlayMaterials.TryGetValue(source, out Material material))
+        {
+            material = new Material(source) { name = source.name + "_SubmergedBuilding",
+                hideFlags = HideFlags.HideAndDontSave, renderQueue = ResolveSubmergedBuildingRenderQueue() };
+            submergedBuildingOverlayMaterials.Add(source, material);
+        }
+        return material;
     }
     #endregion
 }

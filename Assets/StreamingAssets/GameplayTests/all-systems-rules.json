@@ -299,6 +299,12 @@
       "enabled": true
     },
     {
+      "id": "rendering_building_liquid_surface",
+      "name": "建筑水面覆盖：平台与液体增量规则",
+      "luaPath": "GameplayTests/Systems/Rendering/building-liquid-surface.lua",
+      "enabled": true
+    },
+    {
       "id": "testing_rules",
       "name": "Lua回归框架规则与边界",
       "luaPath": "GameplayTests/Systems/Testing/rules.lua",

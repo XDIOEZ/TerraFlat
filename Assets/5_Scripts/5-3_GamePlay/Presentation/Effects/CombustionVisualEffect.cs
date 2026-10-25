@@ -37,6 +37,16 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     private bool hasExplicitSorting;
     private int explicitSortingLayerId;
     private int explicitSortingOrder;
+    private Material presentationFlameMaterialOverride;
+    public Material FlameSourceMaterial => flameMaterial != null ? flameMaterial : Resources.Load<Material>(ShaderFlameEffect.MaterialResourcePath);
+
+    /// <summary>宿主按所在水面层提供共享表现材质，不改变燃烧状态或源模板。</summary>
+    public void SetFlamePresentationMaterialOverride(Material material)
+    {
+        if (presentationFlameMaterialOverride == material) return;
+        presentationFlameMaterialOverride = material;
+        EnsureFlame();
+    }
 
     #endregion
 
@@ -371,7 +381,8 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         flame.transform.localPosition = Vector3.zero;
         flame.transform.localScale = Vector3.one;
         float strength = flameEmissionMultiplier > 0f ? 0.85f + 0.15f * Mathf.Sqrt(flameEmissionMultiplier) : 0f;
-        flame.Configure(new Vector2(0.15f * flameScale, 0.20f * flameScale * flameHeightRatio), strength, flameMaterial);
+        flame.Configure(new Vector2(0.15f * flameScale, 0.20f * flameScale * flameHeightRatio), strength,
+            presentationFlameMaterialOverride != null ? presentationFlameMaterialOverride : flameMaterial);
         RefreshFlamePose();
         RefreshSorting();
     }

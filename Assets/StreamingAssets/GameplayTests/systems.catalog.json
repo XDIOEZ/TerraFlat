@@ -1253,6 +1253,10 @@
         "Assets/Shaders/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Rendering/*",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkTilemapRenderer*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkDepthMeshRenderer*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/BuildingDepthMeshBridge.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/MechanicalDepthVisual*.cs",
         "Assets/5_Scripts/5-1_Data/Settings/WorldRenderingConfig.cs",
         "Assets/5_Scripts/5-1_Data/Settings/WorldRenderingConfig.WindStreaks.cs",
         "Assets/Resources/GameConfig/Rendering/*",
@@ -1267,7 +1271,8 @@
         "environment"
       ],
       "ruleCaseIds": [
-        "rendering_rules"
+        "rendering_rules",
+        "rendering_building_liquid_surface"
       ],
       "rulesSuite": "GameplayTests/Systems/Rendering/rules-suite.json",
       "integrationSuites": [

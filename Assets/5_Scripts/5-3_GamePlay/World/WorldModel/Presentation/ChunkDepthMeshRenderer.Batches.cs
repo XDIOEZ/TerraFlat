@@ -228,16 +228,16 @@ internal sealed partial class ChunkDepthMeshRenderer
     #region 跨行共享材质
     private sealed class MaterialLease : IDisposable
     {
-        private static readonly Dictionary<(Material, Texture2D, Texture2D), MaterialLease> cache = new();
+        private static readonly Dictionary<(Material, Texture2D, Texture2D, int), MaterialLease> cache = new();
         private static GameRes resourceOwner;
-        private readonly (Material, Texture2D, Texture2D) key;
+        private readonly (Material, Texture2D, Texture2D, int) key;
         private int references;
         internal readonly Material Material;
         internal float SwayMargin { get; private set; }
 
         private MaterialLease(GroupKey key)
         {
-            this.key = (key.Source, key.Texture, key.Alpha);
+            this.key = (key.Source, key.Texture, key.Alpha, key.RenderQueue);
             Shader shader = Resources.Load<Shader>("Shaders/ChunkDepthSpriteLit");
             if (shader == null) throw new InvalidOperationException("缺少 Shaders/ChunkDepthSpriteLit 行合批 Shader。");
             Material = new Material(shader) { name = "DepthShared_" + key.Source.name + "_" + key.Texture.name,
@@ -250,7 +250,7 @@ internal sealed partial class ChunkDepthMeshRenderer
         {
             Material source = key.Item1;
             Material.CopyPropertiesFromMaterial(source);
-            Material.renderQueue = 3000;
+            Material.renderQueue = key.Item4;
             Material.SetTexture("_MainTex", key.Item2);
             Material.SetTexture("_AlphaTex", key.Item3 != null ? key.Item3 : Texture2D.whiteTexture);
             Material.SetFloat("_EnableExternalAlpha", key.Item3 != null ? 1f : 0f);
@@ -282,7 +282,7 @@ internal sealed partial class ChunkDepthMeshRenderer
                 resourceOwner = resources;
                 if (resourceOwner != null) resourceOwner.ResourcesReloaded += RefreshSharedMaterials;
             }
-            var identity = (key.Source, key.Texture, key.Alpha);
+            var identity = (key.Source, key.Texture, key.Alpha, key.RenderQueue);
             if (!cache.TryGetValue(identity, out MaterialLease lease))
                 cache.Add(identity, lease = new MaterialLease(key));
             lease.references++;
