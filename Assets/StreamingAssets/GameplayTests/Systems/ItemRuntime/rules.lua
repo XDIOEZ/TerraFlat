@@ -641,6 +641,12 @@ test.system("item_runtime", "module_assembly_identity", {}, function(data)
         "独立模块没有恢复精确Prefab组件位置，或仅凭同名祖先接受了错误实现")
     assert(data.shellPrototypeExact and data.prefabPrototypeExact,
         "资源预检没有复用编译选定的内嵌或独立Prefab原型")
+    assert(data.cachedShellLookupExact and data.cachedShellCompileExact,
+        "缓存遗漏了带Item外壳的内嵌模块，或编译跨过了子物品边界")
+    assert(data.cachedItemPrefabsRejected,
+        "缓存把包含Item的物品外壳当作独立模块Prefab接受")
+    assert(data.cachedShellsAfterRejectionExact and data.cachedPrefabPrototypeExact,
+        "独立模块的拒绝结果污染了外壳缓存，或合法独立模块无法解析")
     assert(data.inactiveStableNamesDistinct, "停用宿主中同能力模块推导出重复稳定名")
 end, "模块来源身份、嵌套物品所有权、精确Prefab位置与停用宿主稳定槽位")
 

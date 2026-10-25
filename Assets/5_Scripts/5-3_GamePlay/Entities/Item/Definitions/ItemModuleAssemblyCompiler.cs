@@ -31,8 +31,8 @@ public sealed class ItemModulePrototypeCache
     {
         if (!shellComponents.TryGetValue(shell, out Module[] modules))
         {
-            GetPrefabComponents(shell, out Module[] allModules, out _);
-            modules = Array.FindAll(allModules,
+            // 物品外壳本来就含 Item，不能复用独立模块 Prefab 的排除结果。
+            modules = Array.FindAll(shell.GetComponentsInChildren<Module>(true),
                 module => ItemModuleAssemblyCompiler.IsOwnedByRoot(module, shell.transform));
             shellComponents.Add(shell, modules);
         }

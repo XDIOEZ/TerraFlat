@@ -467,6 +467,25 @@ public static partial class GameplayTestSystemProbe
             bool nestedExcludedFromCompile = ReferenceEquals(plan.ResolveEmbeddedModule(shell.transform), source);
             bool shellPrototypeExact = ReferenceEquals(plan.ResolveImplementationPrototype(shell.transform), source);
 
+            // 同一缓存分别覆盖物品外壳、子物品和独立模块，避免一种查询污染另一种查询。
+            var prototypeCache = new ItemModulePrototypeCache();
+            bool cachedShellLookupExact =
+                ReferenceEquals(ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, source.ResolvedModuleId), source) &&
+                ReferenceEquals(ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, source.ResolvedModuleId, prototypeCache), source) &&
+                ReferenceEquals(ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, source.ResolvedModuleId, prototypeCache), source);
+            RuntimeItemModuleAssemblyPlan cachedPlan = ItemModuleAssemblyCompiler.Compile(null, "test:cached-identity", shell,
+                new[] { definition }, usesResourceEntities: false, prototypeCache: prototypeCache)[0];
+            bool cachedShellCompileExact = ReferenceEquals(cachedPlan.ResolveImplementationPrototype(shell.transform), source);
+            bool cachedShellAsPrefabRejected = false;
+            try { ItemDefinitionCatalogLoader.FindModulePrototype(null, shell, source.ResolvedModuleId, prototypeCache); }
+            catch (System.IO.InvalidDataException) { cachedShellAsPrefabRejected = true; }
+            bool cachedNestedPrefabRejected = false;
+            try { ItemDefinitionCatalogLoader.FindModulePrototype(null, nested, ModText.AnimatorReceiver, prototypeCache); }
+            catch (System.IO.InvalidDataException) { cachedNestedPrefabRejected = true; }
+            bool cachedShellsAfterRejectionExact =
+                ReferenceEquals(ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, source.ResolvedModuleId, prototypeCache), source) &&
+                ReferenceEquals(ItemDefinitionCatalogLoader.FindModulePrototype(nested, null, ModText.AnimatorReceiver, prototypeCache), nestedModule);
+
             GameObject first = UnityEngine.Object.Instantiate(shell, root.transform, false);
             Module firstModule = plan.ResolveEmbeddedModule(first.transform);
             bool sourceIdentityRestored = plan.TryRestoreRuntimeIdentity(firstModule, first.transform) && plan.MatchesBoundModule(firstModule);
@@ -490,6 +509,8 @@ public static partial class GameplayTestSystemProbe
             implementation.transform.SetParent(prefab.transform, false);
             var prototype = implementation.AddComponent<Mod_AnimatorController>();
             prototype._Data = new Ex_ModData_MemoryPackable { StableName = "animator", ModuleId = ModText.AnimatorReceiver };
+            bool cachedPrefabPrototypeExact = ReferenceEquals(
+                ItemDefinitionCatalogLoader.FindModulePrototype(null, prefab, ModText.AnimatorReceiver, prototypeCache), prototype);
             var prefabDefinition = new RuntimeItemModuleDefinition("animator", ModText.AnimatorReceiver, prefab.name, null, true);
             var prefabPlan = new RuntimeItemModuleAssemblyPlan("test:identity", prefabDefinition, prefab, prototype, null, null, null);
             GameObject correctPrefab = UnityEngine.Object.Instantiate(prefab, shell.transform, false);
@@ -555,6 +576,11 @@ public static partial class GameplayTestSystemProbe
                 ["awakeBindings"] = awakeBindings,
                 ["nestedExcludedFromCompile"] = nestedExcludedFromCompile,
                 ["shellPrototypeExact"] = shellPrototypeExact,
+                ["cachedShellLookupExact"] = cachedShellLookupExact,
+                ["cachedShellCompileExact"] = cachedShellCompileExact,
+                ["cachedItemPrefabsRejected"] = cachedShellAsPrefabRejected && cachedNestedPrefabRejected,
+                ["cachedShellsAfterRejectionExact"] = cachedShellsAfterRejectionExact,
+                ["cachedPrefabPrototypeExact"] = cachedPrefabPrototypeExact,
                 ["sourceIdentityRestored"] = sourceIdentityRestored,
                 ["canonicalIdentityRestored"] = canonicalIdentityRestored,
                 ["sourceStableConflictRejected"] = sourceStableConflictRejected,

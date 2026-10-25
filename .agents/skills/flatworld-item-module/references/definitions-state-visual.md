@@ -4,6 +4,7 @@
 
 - Manifest 唯一发现内容；RuntimeItemDefinition 冷编译 Prefab/组件槽/参数。shellPrefab 引通用目录，shellAddress 为独立壳，sourcePrefab 仅编辑器/冗余排除，删源同步删字段；生成不回退同名 Prefab。
 - 未绑定组件仅在精确编译位置接受当前定义或冷编译来源身份，可将共享模板默认槽/能力转为具体定义；不覆盖无关 ID/槽/已绑定 Prefab。独立 Prefab 同时匹配根地址和组件位置；目录预检复用计划，纯数据能力不找 GO。
+- 模块原型缓存区分物品外壳与独立模块 Prefab：外壳允许根 Item，仅排除子 Item 的模块；独立模块禁止包含 Item，拒绝结果不能清空外壳模块。回归 `item_runtime/module_assembly_identity`。
 - ItemMgr 冷工厂取 GameRes.InstantiateItemShell 原壳，以最终 ItemData 仅装配一次；公共 InstantiatePrefab 仍已配置。Load 按 StableName 单次建索引，排子 Item、拒重复槽。
 - 非 Actor 显式提供/继承正 weight/volume 和明确 stackable，冷载荷外壳同约束。ModuleJsonConfigurator 参数严格契约，解析后的参数 JSON 通过共享二进制缓存复用，模块字段校验和应用仍按当前定义执行；向量写 x/y/z，不将 Unity Vector 计算属性给 JToken.FromObject。gameName 属定义，业务 id/翻译键/formerIds 分离。
 - 本体/最终目录复查通过装配计划复用已解析的参数，字段类型仅在 Prepare 严格检查一次；复查仍验证当前原型类型、所需 Collider2D 类型及模块自有校验，不把复用变成跳过校验。回归 `item_runtime/compiled_module_parameters`。
