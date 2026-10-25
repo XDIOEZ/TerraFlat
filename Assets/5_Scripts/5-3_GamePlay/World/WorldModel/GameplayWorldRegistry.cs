@@ -105,6 +105,21 @@ public static class GameplayWorldRegistry
         catch { execution = previous; throw; }
     }
 
+    // 销毁只借用仍属于调用方的注册记录，场景卸载中也绝不补建世界。
+    internal static bool TryUseExistingWorldForOwnerRelease(string worldKey, object expectedOwner, out IDisposable scope)
+    {
+        scope = null;
+        if (string.IsNullOrEmpty(worldKey) || expectedOwner == null ||
+            !worlds.TryGetValue(worldKey, out GameplayWorldRuntime existing) ||
+            !ReferenceEquals(existing.Chunks, expectedOwner) && !ReferenceEquals(existing.Navigation, expectedOwner))
+            return false;
+        GameplayWorldRuntime previous = execution;
+        execution = existing;
+        try { scope = new WorldScope(previous, MachineWorld.UseExistingScopeForOwnerRelease(worldKey)); }
+        catch { execution = previous; throw; }
+        return true;
+    }
+
     public static IDisposable UseSpaceScene(string worldKey)
     {
         if (!SpaceMgr.IsSpaceScene(worldKey)) throw new ArgumentException("必须指定已存在的真实星区场景。", nameof(worldKey));

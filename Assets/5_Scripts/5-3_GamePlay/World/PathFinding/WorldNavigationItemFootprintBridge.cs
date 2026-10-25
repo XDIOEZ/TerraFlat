@@ -158,14 +158,14 @@ internal sealed class WorldNavigationItemFootprintBridge
     {
         if (navigationManager == null || item == null)
             return;
-        using var worldScope = navigationManager.UseWorldContext();
-
         int itemId = item.GetInstanceID();
-        if (registeredItemIds.Remove(itemId))
-        {
+        if (!registeredItemIds.Remove(itemId))
+            return;
+        registeredAnchorByItem.Remove(itemId);
+        // 先核对本桥登记，再借所属世界清理，退出期间不创建已卸载世界。
+        navigationManager.TryUseExistingWorldForRelease(out var worldScope);
+        using (worldScope)
             navigationManager.UnregisterObstacle(itemId);
-            registeredAnchorByItem.Remove(itemId);
-        }
     }
 
     /// <summary>活动物品的模块或配置结构变化时刷新已注册 Item 的占地。</summary>

@@ -28,3 +28,15 @@ test.runtime("industrial_fluids", "shared_surface_pump_search", {}, function(d)
     assert(d.refunded and d.reactivated == "Surplus" and d.remaining == 3,
         "退回真实来源后没有恢复候选资格，或两阶段抽液不守恒")
 end, "共享候选、扣量时复验、余水保底、末格切换与来源退回")
+
+test.runtime("industrial_fluids", "visible_surface_pump", {after=false}, function(d)
+    assert(d.waterCells == 20 and d.wetCells == 20 and d.initialLevel == 200 and d.remainingLevel == 200,
+        "抽前现场不是完整的5×4真实水池")
+    assert(d.unpoweredLevel == d.initialLevel and d.pumpLiters == 0 and d.tankLiters[1] == 0 and d.tankLiters[2] == 0,
+        "空电池状态下真实Tick消耗水或产生了储罐库存")
+    assert(d.pumpCount == 2 and d.pipeCount == 4 and d.tankCount == 2 and d.wireCount == 8,
+        "抽前现场缺少双电泵、正式液管、储罐或铜线")
+    assert(d.sharedWaterSearch, "两台正式电泵未共享同一水域的寻源缓存")
+    assert(d.inViewport and d.visibleMachineBridges == d.machineCount and d.machineCount == 18,
+        "真实水池或正式设备表现没有完整进入镜头")
+end, "抽前可见现场：5×4水池、共享水域双电泵和真实管罐电路")

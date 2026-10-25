@@ -428,7 +428,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         }
     }
 
-    public IEnumerator Run(string source, string chunkName)
+    public IEnumerator Run(string source, string chunkName, Func<IEnumerator> beforeCleanup = null)
     {
         if (disposed || running)
         {
@@ -446,6 +446,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 Succeeded = false;
                 record("runtime", "执行真实流程", false, exception.ToString());
             });
+            if (beforeCleanup != null)
+                yield return Advance(RunBeforeRuntimeCleanup(beforeCleanup), exception =>
+                {
+                    Succeeded = false;
+                    record("before_runtime_cleanup", "清理前保存测试现场", false, exception.ToString());
+                });
             yield return Advance(GameplayTestRuntimeProbe.CleanupAsync(), exception =>
             {
                 Succeeded = false;
@@ -473,6 +479,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 }
             }
         }
+    }
+
+    // 回调创建和跨帧执行都交给统一异常保护，截图失败仍继续释放现场租约。
+    private static IEnumerator RunBeforeRuntimeCleanup(Func<IEnumerator> beforeCleanup)
+    {
+        yield return beforeCleanup();
     }
 
     private IEnumerator RunPlayCommands(string source, string chunkName)

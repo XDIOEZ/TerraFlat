@@ -114,6 +114,34 @@ public static partial class MachineWorld
         EnsureScope();
         return lease;
     }
+    #region 销毁阶段借用现有机器作用域
+    // 世界释放只切换已有机器状态，不加载目录、建图或登记新作用域。
+    internal static IDisposable UseExistingScopeForOwnerRelease(string key)
+    {
+        if (string.IsNullOrEmpty(key) || !scopes.TryGetValue(key, out ScopeState existing)) return null;
+        var lease = new ExistingScopeOwnerReleaseLease(scope, scopeOverride);
+        scope = existing;
+        scopeOverride = key;
+        return lease;
+    }
+
+    private sealed class ExistingScopeOwnerReleaseLease : IDisposable
+    {
+        private readonly ScopeState previousScope;
+        private readonly string previousOverride;
+        private bool disposed;
+        public ExistingScopeOwnerReleaseLease(ScopeState previousScope, string previousOverride)
+        { this.previousScope = previousScope; this.previousOverride = previousOverride; }
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            scope = previousScope;
+            scopeOverride = previousOverride;
+        }
+    }
+    #endregion
+
     public struct ScopeLease : IDisposable
     {
         private readonly string previous;

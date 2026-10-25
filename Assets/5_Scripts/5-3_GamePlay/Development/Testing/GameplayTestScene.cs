@@ -407,19 +407,18 @@ public sealed class GameplayTestScene : MonoBehaviour
         nextScreenshotAt = Time.realtimeSinceStartupAsDouble + Mathf.Max(1f, screenshotIntervalSeconds);
         periodicScreenshotsEnabled = true;
         bool succeeded = false;
+        bool finalScreenshotRequested = false;
         try
         {
             // 每个用例自己捕获异常，读取失败或 Lua 报错不会截断整个测试清单。
-            yield return AdvanceGuarded(ExecuteCase(testCase));
+            yield return AdvanceGuarded(ExecuteCase(testCase, () =>
+            {
+                finalScreenshotRequested = true;
+                return CaptureFinalScreenshotBeforeRuntimeCleanup(testCase);
+            }));
             succeeded = luaRunner?.Succeeded == true;
-            periodicScreenshotsEnabled = false;
-            // 定时取图先写盘；短用例和提前失败的用例在收尾时也必须留一张有效图。
-            while (screenshotCapturing && !interruptionRequested) yield return null;
-            if (!interruptionRequested && !HasValidScreenshot(testCase))
-                yield return CaptureAutomaticScreenshot(testCase, "用例结束补拍");
-            if (!interruptionRequested && !HasValidScreenshot(testCase))
-                Record("screenshot_coverage", "每个已执行用例至少一张截图", false,
-                    "自动截图失败，请查看本用例 screenshots 中的采集错误。");
+            if (!finalScreenshotRequested)
+                yield return CaptureFinalScreenshotBeforeRuntimeCleanup(testCase);
         }
         finally
         {
@@ -429,7 +428,7 @@ public sealed class GameplayTestScene : MonoBehaviour
         }
     }
 
-    private IEnumerator ExecuteCase(GameplayTestCaseReport testCase)
+    private IEnumerator ExecuteCase(GameplayTestCaseReport testCase, Func<IEnumerator> beforeCleanup)
     {
         Stage("case." + testCase.Id + ".load_lua");
         string script = null;
@@ -437,12 +436,24 @@ public sealed class GameplayTestScene : MonoBehaviour
         Record("load_lua", "读取测试 Lua", true, testCase.LuaPath);
         Stage("case." + testCase.Id + ".lua");
         luaRunner = new GameplayTestLuaRunner(player, Check, Record);
-        yield return luaRunner.Run(script, "@" + testCase.LuaPath);
+        yield return luaRunner.Run(script, "@" + testCase.LuaPath, beforeCleanup);
     }
 
     #region 定时截图
-    private static bool HasValidScreenshot(GameplayTestCaseReport testCase)
-        => testCase.Screenshots.Exists(image => string.IsNullOrEmpty(image.Error) && File.Exists(image.Path));
+    private IEnumerator CaptureFinalScreenshotBeforeRuntimeCleanup(GameplayTestCaseReport testCase)
+    {
+        periodicScreenshotsEnabled = false;
+        // 结束图必须保留尚未清理的设备，已有定时图也不能跳过最后现场。
+        while (screenshotCapturing && !interruptionRequested) yield return null;
+        if (interruptionRequested) yield break;
+        int previousCount = testCase.Screenshots.Count;
+        yield return CaptureAutomaticScreenshot(testCase, "用例结束补拍");
+        if (testCase.Screenshots.Count <= previousCount ||
+            !string.IsNullOrEmpty(testCase.Screenshots[testCase.Screenshots.Count - 1].Error) ||
+            !File.Exists(testCase.Screenshots[testCase.Screenshots.Count - 1].Path))
+            Record("screenshot_coverage", "清理前保存用例结束现场", false,
+                "结束截图失败，请查看本用例 screenshots 中的采集错误。");
+    }
 
     private IEnumerator CaptureAutomaticScreenshot(GameplayTestCaseReport testCase, string label)
     {

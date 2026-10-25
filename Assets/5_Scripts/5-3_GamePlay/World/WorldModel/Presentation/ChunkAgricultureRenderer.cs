@@ -137,7 +137,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             CaptureStateForUnbind();
         chunk.Terrain.Changed -= HandleChanged;
         FarmlandSystem.TillingVisualChanged -= HandleTillingVisualChanged;
-        FarmlandSystem.ClearTillingProgress(chunk.Address);
+        ClearTillingProgressForOwnedRuntimeChunk();
         if (terrainOwner != null) terrainOwner.BatchPresentationRebuilt -= RefreshEntityPresentation;
         using (CropDespawnMarker.Auto())
         {
@@ -336,11 +336,26 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void OnApplicationQuit() => applicationQuitting = true;
 
+    // 旧表现只清仍归原管理器和原区块的临时进度，避免同地址的新世界被误清。
+    private void ClearTillingProgressForOwnedRuntimeChunk()
+    {
+        if (chunk == null || ReferenceEquals(chunkManager, null) ||
+            !chunkManager.TryGetChunkRuntime(chunk.Address, out ChunkRuntime ownedChunk) ||
+            !ReferenceEquals(ownedChunk, chunk))
+            return;
+        string worldKey = !string.IsNullOrEmpty(chunkManager.OwnedWorldKey)
+            ? chunkManager.OwnedWorldKey : chunkManager.WorldRuntime?.WorldId;
+        if (string.IsNullOrEmpty(worldKey) ||
+            !GameplayWorldRegistry.Worlds.TryGetValue(worldKey, out GameplayWorldRuntime registered) ||
+            !ReferenceEquals(registered.Chunks, chunkManager))
+            return;
+        FarmlandSystem.ClearTillingProgress(chunk.Address);
+    }
+
     private void OnDestroy()
     {
         FarmlandSystem.TillingVisualChanged -= HandleTillingVisualChanged;
-        if (chunk != null)
-            FarmlandSystem.ClearTillingProgress(chunk.Address);
+        ClearTillingProgressForOwnedRuntimeChunk();
     }
 
     #endregion

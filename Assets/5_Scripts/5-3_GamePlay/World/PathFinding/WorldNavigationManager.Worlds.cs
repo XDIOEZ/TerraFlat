@@ -53,6 +53,13 @@ public sealed partial class WorldNavigationManager
 
     public IDisposable UseWorldContext() => string.IsNullOrEmpty(ownedWorldKey) ? null : GameplayWorldRegistry.UseWorld(ownedWorldKey);
 
+    internal bool TryUseExistingWorldForRelease(out IDisposable scope)
+    {
+        scope = null;
+        return string.IsNullOrEmpty(ownedWorldKey) ||
+            GameplayWorldRegistry.TryUseExistingWorldForOwnerRelease(ownedWorldKey, this, out scope);
+    }
+
     public static void ReleaseWorld(string worldKey)
     {
         if (!worldManagers.Remove(worldKey, out WorldNavigationManager manager) || manager == null) return;

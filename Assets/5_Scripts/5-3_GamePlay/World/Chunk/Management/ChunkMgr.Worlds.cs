@@ -8,6 +8,7 @@ public partial class ChunkMgr
     public new static ChunkMgr Instance => GameplayWorldRegistry.ExecutionChunks ?? SingletonAutoMono<ChunkMgr>.Instance;
     public static ChunkMgr LocalInstance => instance;
     public string OwnedWorldKey { get; private set; }
+    private bool isReleasingOwnedWorldContext;
 
     public static void ClearLocalNetworkWorld() => instance = null;
     public void ReleaseRegisteredWorld() => ShutdownWorldRuntime();
@@ -37,6 +38,9 @@ public partial class ChunkMgr
 
     private IDisposable RequireRuntimeWorldContext()
     {
+        // 仅销毁解绑允许复用已核对归属的卸载中上下文，正常流送仍要求世界已加载。
+        if (isReleasingOwnedWorldContext && ReferenceEquals(GameplayWorldRegistry.ExecutionChunks, this))
+            return null;
         if (!TryUseRuntimeWorldContext(out IDisposable scope))
             throw new InvalidOperationException("[ChunkMgr] 所属世界已注销或管理器已更换，不能在另一世界解绑区块表现。");
         return scope;

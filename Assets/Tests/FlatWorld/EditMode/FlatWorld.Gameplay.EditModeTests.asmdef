@@ -3,6 +3,7 @@
     "rootNamespace": "FlatWorld.Tests.EditMode",
     "references": [
         "GamePlay",
+        "FlatWorld.Utilities",
         "FlatWorld.WorldModel",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

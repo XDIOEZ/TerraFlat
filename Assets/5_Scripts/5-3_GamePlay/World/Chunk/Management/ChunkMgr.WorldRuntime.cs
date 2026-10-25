@@ -113,11 +113,7 @@ public partial class ChunkMgr
         try
         {
             if (!IsWorldRuntimeShuttingDown)
-            {
-                using var scope = !string.IsNullOrEmpty(OwnedWorldKey) && GameplayWorldRegistry.TryGet(OwnedWorldKey, out _)
-                    ? GameplayWorldRegistry.UseWorld(OwnedWorldKey) : null;
-                ShutdownWorldRuntime();
-            }
+                ShutdownWorldRuntime(destroyingOwner: true);
         }
         finally
         {
@@ -349,60 +345,86 @@ public partial class ChunkMgr
     }
 
     /// <summary>彻底关闭世界运行时，释放区块、任务和事件资源。</summary>
-    private void ShutdownWorldRuntime()
+    private void ShutdownWorldRuntime(bool destroyingOwner = false)
     {
         if (IsWorldRuntimeShuttingDown)
             return;
 
-        using var scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
+        IDisposable scope = null;
+        bool canReleaseWorld = !destroyingOwner;
+        if (!destroyingOwner)
+            scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
         IsWorldRuntimeShuttingDown = true;
-        ReleaseAirHumidityField();
-        StopLiquidBodies();
-        StopLiquidFlowExperiment();
-        WorldLiquidFlowObstacles.ClearWorld();
-        if (runtimeHost != null)
-            runtimeHost.Bind(null);
-        runtimeChunkManager?.CancelAllRequests();
-        runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
         try
         {
-            ClearRuntimeWindowBindings();
+            if (destroyingOwner)
+            {
+                string worldKey = !string.IsNullOrEmpty(OwnedWorldKey) ? OwnedWorldKey : WorldRuntime?.WorldId;
+                canReleaseWorld = GameplayWorldRegistry.TryUseExistingWorldForOwnerRelease(worldKey, this, out scope) ||
+                    string.IsNullOrEmpty(OwnedWorldKey) && TryUseRuntimeWorldContext(out scope);
+                isReleasingOwnedWorldContext = canReleaseWorld;
+            }
+            ReleaseAirHumidityField();
+            StopLiquidBodies();
+            StopLiquidFlowExperiment();
+            if (runtimeHost != null)
+                runtimeHost.Bind(null);
+            runtimeChunkManager?.CancelAllRequests();
+            runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
+            if (canReleaseWorld)
+            {
+                WorldLiquidFlowObstacles.ClearWorld();
+                ClearRuntimeWindowBindings();
+            }
+            else
+                ReleaseOrphanedRuntimeWindowBindings();
         }
         finally
         {
-            // 表现清理发生异常时，后台任务与纯数据仍必须释放，原始异常继续上报。
-            WorldEntityRuntime.ReleaseWorld();
-            DisposeWorldRuntime();
+            try
+            {
+                // 世界已被替换时不碰其它世界，任何解绑异常都必须继续释放自有纯数据。
+                try { if (canReleaseWorld) WorldEntityRuntime.ReleaseWorld(); }
+                finally { DisposeWorldRuntime(); }
+            }
+            finally
+            {
+                isReleasingOwnedWorldContext = false;
+                scope?.Dispose();
+            }
         }
     }
 
     /// <summary>完整卸载世界与终止管理器共用释放顺序，不保留上一资源会话的液体编号表。</summary>
     private void DisposeWorldRuntime()
     {
-        StopLiquidBodies();
-        runtimeBuildings.Clear();
-        ReleaseSharedNaturalEntities();
         RuntimeChunkMgr manager = runtimeChunkManager;
-        runtimeChunkManager = null;
-        runtimeGenerator = null;
-        sightBlockingChunkCommittedSubscription?.Dispose();
-        sightBlockingChunkCommittedSubscription = null;
-        activeGenerationSnapshot = null;
-        runtimeTileCatalogSnapshot = null;
-        defaultGenerationSnapshot = null;
-        if (manager != null)
+        try
         {
-            WorldRuntime world = manager.World;
-            try
+            StopLiquidBodies();
+            runtimeBuildings.Clear();
+            ReleaseSharedNaturalEntities();
+            sightBlockingChunkCommittedSubscription?.Dispose();
+        }
+        finally
+        {
+            runtimeChunkManager = null;
+            runtimeGenerator = null;
+            sightBlockingChunkCommittedSubscription = null;
+            activeGenerationSnapshot = null;
+            runtimeTileCatalogSnapshot = null;
+            defaultGenerationSnapshot = null;
+            if (manager != null)
             {
+                WorldRuntime world = manager.World;
+                try
+                {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
+                    world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
 #endif
-                manager.Dispose();
-            }
-            finally
-            {
-                world.Dispose();
+                    manager.Dispose();
+                }
+                finally { world.Dispose(); }
             }
         }
     }

@@ -95,6 +95,12 @@
       "enabled": true
     },
     {
+      "id": "fluid_surface_pump_after",
+      "name": "真实双电泵抽后水池与管罐",
+      "luaPath": "GameplayTests/Systems/SurfaceFluids/fluid_surface_pump_after.lua",
+      "enabled": true
+    },
+    {
       "id": "fluid_reactions",
       "name": "实际氢氧与液水发动机",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_reactions.lua",

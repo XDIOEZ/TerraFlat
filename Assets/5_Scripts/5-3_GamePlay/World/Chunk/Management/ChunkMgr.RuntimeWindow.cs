@@ -1430,6 +1430,42 @@ public partial class ChunkMgr
         }
     }
 
+    /// <summary>所属注册已失效时只释放本管理器持有的画面、租约与队列。</summary>
+    private void ReleaseOrphanedRuntimeWindowBindings()
+    {
+        // 注册记录已失效时仅撤本管理器持有的实例和租约，不按世界地址卸载其它管理器的建筑。
+        Exception failure = null;
+        foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
+        {
+            try { (binding.PresentationRoutine as IDisposable)?.Dispose(); }
+            catch (Exception exception) { failure ??= exception; }
+            binding.PresentationRoutine = null;
+            ChunkView view = binding.View;
+            binding.View = null;
+            try { DestroyOrphanedRuntimeChunkView(view); }
+            catch (Exception exception) { failure ??= exception; }
+        }
+        activeRuntimeBindings.Clear();
+        while (chunkViewPool.Count > 0)
+        {
+            try { DestroyOrphanedRuntimeChunkView(chunkViewPool.Dequeue().TakeView()); }
+            catch (Exception exception) { failure ??= exception; }
+        }
+        ClearRuntimeWindowBindings();
+        if (failure != null) throw failure;
+    }
+
+    private void DestroyOrphanedRuntimeChunkView(ChunkView view)
+    {
+        if (view == null) return;
+        try { view.Unbind(); }
+        finally
+        {
+            if (Application.isPlaying) UnityEngine.Object.Destroy(view.gameObject);
+            else UnityEngine.Object.DestroyImmediate(view.gameObject);
+        }
+    }
+
     /// <summary>清空全部区块画面绑定和窗口目标记录。</summary>
     private void ClearRuntimeWindowBindings(bool retainPresentationPool = false)
     {

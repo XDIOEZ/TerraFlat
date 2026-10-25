@@ -23,14 +23,14 @@ namespace FlatWorld.GameplayMCP
             var operations = GameplayGatewayTool.Operations;
             var publicTools = discovery.DiscoverAllTools().Where(tool => tool.Discoverable && tool.Namespace == "FlatWorld.GameplayMCP").ToArray();
             var registered = discovery.GetEnabledTools();
-            var states = (JObject)((SuccessResponse)ToolStates.HandleCommand(new JObject())).Data;
+            var states = JObject.FromObject(((SuccessResponse)ToolStates.HandleCommand(new JObject())).Data);
             var advertised = (JArray)states["tools"];
-            var catalog = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject())).Data;
-            var uiContract = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["operation"] = "ui" })).Data;
+            var catalog = JObject.FromObject(((SuccessResponse)GameplayGatewayTool.Discover(new JObject())).Data);
+            var uiContract = JObject.FromObject(((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["operation"] = "ui" })).Data);
             var uiMetadata = discovery.GetToolMetadata("gameplay_ui");
             // 只读正式发现契约，规则采样不启动录制或导出。
-            var profilerContract = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["operation"] = "profiler" })).Data;
-            var diagnostics = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["domain"] = "diagnostics" })).Data;
+            var profilerContract = JObject.FromObject(((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["operation"] = "profiler" })).Data);
+            var diagnostics = JObject.FromObject(((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["domain"] = "diagnostics" })).Data);
             var profilerMetadata = discovery.GetToolMetadata("gameplay_profiler");
             var unknown = GameplayGatewayTool.HandleCommand(new JObject { ["operation"] = "read_console" }).GetAwaiter().GetResult();
             var malformed = GameplayGatewayTool.HandleCommand(new JObject { ["operation"] = "ui", ["arguments"] = new JArray() }).GetAwaiter().GetResult();
