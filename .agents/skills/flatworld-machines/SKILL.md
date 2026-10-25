@@ -46,3 +46,4 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - `World/Railways/` 的铁路仅复用 `ConveyorPath`/静态曲面，不接机械输送业务；`RailTrackNetwork` 按所属世界场景登记、双端口互认并按真实弧长推进。
 - `EnginePowerService` 只识别注册的 `IEnginePowerProvider`，供给方管理自己的冷 `ItemData`。地面蒸汽机接液体水管，按真实负载消耗水产能，不要求锅炉或预制蒸汽；铁路可携引擎保留自身已有燃料与动力规则。
 - 矿车可放在地面或铁路，推动复用载具接触链；地面高阻、轨道约束和进出轨由矿车运动策略管理。`Mod_MinecartPlacement` 只检查实际吸轨位置的车辆净空，基础地形、支撑与占地资格仍归建造事务；两端定义以 `requiredGroundSupport=3` 拒绝承重2的液面。
+- 矿车沿轨驾驶优先消费通用引擎动力；无实际输出时由当前驾驶者通过 `Mod_Stamina.TryConsumeStamina` 支付人力，默认功率0.25、满输入每秒体力5，整列每步只扣一次。松键、输入锁、离轨、阻挡和体力不足不新增人力输出；回归 `railway.lua` 的 `minecart_manual_drive`。

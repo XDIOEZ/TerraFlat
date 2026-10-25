@@ -12,6 +12,32 @@ public static partial class GameplayTestSystemProbe
         result.Add("mechanical/minecart_contracts", MinecartMotionRules);
         result.Add("mechanical/minecart_held_turn", MinecartHeldTurnRules);
         result.Add("mechanical/minecart_surface", MinecartSurfaceRules);
+        result.Add("mechanical/minecart_manual_drive", MinecartManualDriveRules);
+    }
+    private static JObject MinecartManualDriveRules(JObject args)
+    {
+        var root = new GameObject("MinecartManualDriveRules");
+        root.SetActive(false);
+        try
+        {
+            Mod_Stamina stamina = root.AddComponent<Mod_Stamina>();
+            stamina.Data = new Mod_Stamina.StaminaData
+            { CurrentStamina = (float)Number(args, "stamina", 10), MaxStamina = 100f };
+            int transactions = 0;
+            string source = string.Empty;
+            stamina.StaminaConsumed += record => { transactions++; source = record.SourceId; };
+            float power = MinecartDrivingRules.TrySupplyManualPower(Flag(args, "missingStamina", false) ? null : stamina,
+                Flag(args, "onRail", true), (float)Number(args, "throttle", 1),
+                (float)Number(args, "enginePower", 0), .25f, 5f, (float)Number(args, "seconds", 1));
+            return new JObject
+            {
+                ["power"] = power, ["stamina"] = stamina.CurrentValue,
+                ["transactions"] = transactions, ["source"] = source,
+                ["singleSpeed"] = MinecartDrivingRules.NextSpeed(0f, 1f, 5f, power, 1f, 3f, 6f, 1f),
+                ["trainSpeed"] = MinecartDrivingRules.NextSpeed(0f, 1f, 5f, power, 4f, 3f, 6f, 1f)
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
     private static JObject MinecartSurfaceRules(JObject args)
     {

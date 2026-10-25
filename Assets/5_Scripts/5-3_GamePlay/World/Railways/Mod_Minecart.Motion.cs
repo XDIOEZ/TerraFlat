@@ -222,6 +222,7 @@ public sealed partial class Mod_Minecart
         private Vector2 driveWorld, pushWorld;
         private float driveSign, pushSign;
         private bool driverOnRail;
+        private Mod_Minecart drivingCart;
         private bool railPush;
         public MinecartTrain(Mod_Minecart first) => Cars.Add(first);
 
@@ -270,6 +271,7 @@ public sealed partial class Mod_Minecart
         private bool ReadInputs()
         {
             bool driver = false; driveWorld = pushWorld = Vector2.zero; driveSign = pushSign = 0f; driverOnRail = railPush = false;
+            drivingCart = null;
             pushers.Clear();
             for (int i = 0; i < Cars.Count; i++)
             {
@@ -282,6 +284,7 @@ public sealed partial class Mod_Minecart
                 if (!driver && (cart.onRail ? Mathf.Abs(throttle) > .01f : input.sqrMagnitude > .001f))
                 {
                     driver = true; driverOnRail = cart.onRail;
+                    drivingCart = cart;
                     driveWorld = cart.onRail ? positions[i].Tangent * throttle : Vector2.ClampMagnitude(input, 1f);
                     float projection = Vector2.Dot(input, cart.motionHeading);
                     driveSign = cart.onRail ? throttle : Mathf.Abs(projection) <= .01f
@@ -365,8 +368,11 @@ public sealed partial class Mod_Minecart
             float available = 0f;
             if (driver)
                 foreach (Mod_Minecart cart in Cars) available += EnginePowerService.AvailablePower(cart.EngineInventory.Data, cart.CargoInventory.Data);
-            int predictedGround = Plan(available, seconds, groundCount);
-            if (predictedGround != groundCount) Plan(available, seconds, predictedGround);
+            float manualPower = drivingCart?.Carrier.Rider?.stamina != null
+                ? MinecartDrivingRules.ResolveManualPower(driverOnRail, driveSign, available, drivingCart.ManualPower) : 0f;
+            float plannedPower = available + manualPower;
+            int predictedGround = Plan(plannedPower, seconds, groundCount);
+            if (predictedGround != groundCount) Plan(plannedPower, seconds, predictedGround);
             float allowed = MovementClearance(seconds);
             if (allowed <= .0001f)
             {
@@ -382,8 +388,24 @@ public sealed partial class Mod_Minecart
                     EnginePowerService.Supply(cart.EngineInventory.Data, cart.CargoInventory.Data, seconds, remaining, out float power);
                     supplied += power; remaining -= power;
                 }
-                Plan(supplied, seconds, predictedGround);
+            }
+            // 先确认实际供能与可通行位移，再由当前驾驶者支付一次人力体力。
+            manualPower = drivingCart?.Carrier.Rider?.stamina != null
+                ? MinecartDrivingRules.ResolveManualPower(driverOnRail, driveSign, supplied, drivingCart.ManualPower) : 0f;
+            if (supplied + manualPower != plannedPower)
+            {
+                Plan(supplied + manualPower, seconds, predictedGround);
                 allowed = Mathf.Min(allowed, MovementClearance(seconds));
+            }
+            if (manualPower > 0f && allowed > .0001f)
+            {
+                float paidPower = MinecartDrivingRules.TrySupplyManualPower(drivingCart.Carrier.Rider.stamina,
+                    driverOnRail, driveSign, supplied, drivingCart.ManualPower, drivingCart.ManualStaminaPerSecond, seconds);
+                if (paidPower <= 0f)
+                {
+                    Plan(supplied, seconds, predictedGround);
+                    allowed = Mathf.Min(allowed, MovementClearance(seconds));
+                }
             }
             Speed = 0f;
             for (int i = 0; i < Cars.Count; i++)

@@ -18,6 +18,8 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
     public float Acceleration = 3f;
     public float Braking = 6f;
     public float PowerPerCart = 1f;
+    public float ManualPower = .25f;
+    public float ManualStaminaPerSecond = 5f;
     public float CouplingDistance = 1.75f;
     public float GroundSpeedMultiplier = .025f;
     public float GroundBraking = 60f;
@@ -62,9 +64,10 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
     protected override void OnLoad()
     {
         if (!(MaxSpeed > 0f && Acceleration > 0f && Braking > 0f && PowerPerCart > 0f &&
+            ManualPower > 0f && ManualStaminaPerSecond > 0f &&
             CouplingDistance >= .8f && GroundSpeedMultiplier > 0f && GroundSpeedMultiplier <= 1f &&
             GroundBraking > 0f && RailCaptureDistance > 0f && RailCaptureDistance < .5f && PushSpeedMultiplier > 0f) ||
-            !float.IsFinite(MaxSpeed + Acceleration + Braking + PowerPerCart + CouplingDistance +
+            !float.IsFinite(MaxSpeed + Acceleration + Braking + PowerPerCart + ManualPower + ManualStaminaPerSecond + CouplingDistance +
                 GroundSpeedMultiplier + GroundBraking + RailCaptureDistance + PushSpeedMultiplier))
             throw new InvalidOperationException("矿车速度、动力和连接距离配置无效。");
         state = Data.GetData<MinecartState>() ?? new MinecartState();

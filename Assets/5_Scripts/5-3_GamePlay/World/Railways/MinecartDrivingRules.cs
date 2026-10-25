@@ -3,6 +3,26 @@ using UnityEngine;
 /// <summary>玩家选择屏幕方向，动力只决定矿车能够达到的速度和加速能力。</summary>
 public static class MinecartDrivingRules
 {
+    #region 人力供能与体力事务
+    public const string ManualDriveStaminaSource = "flatworld.railway.manual_drive";
+
+    public static float ResolveManualPower(bool onRail, float throttle, float enginePower, float manualPower)
+        => onRail && float.IsFinite(throttle) && Mathf.Abs(throttle) > .01f &&
+            float.IsFinite(enginePower) && enginePower <= .0001f &&
+            float.IsFinite(manualPower) && manualPower > 0f ? manualPower : 0f;
+
+    // 人力只请求通用体力事务，角色倍率与管理员规则由体力模块统一处理。
+    public static float TrySupplyManualPower(Mod_Stamina stamina, bool onRail, float throttle,
+        float enginePower, float manualPower, float staminaPerSecond, float seconds)
+    {
+        float power = ResolveManualPower(onRail, throttle, enginePower, manualPower);
+        if (power <= 0f || stamina == null || !(staminaPerSecond > 0f) || !(seconds > 0f) ||
+            !float.IsFinite(staminaPerSecond * seconds)) return 0f;
+        return stamina.TryConsumeStamina(ManualDriveStaminaSource,
+            staminaPerSecond * seconds * Mathf.Clamp01(Mathf.Abs(throttle))) ? power : 0f;
+    }
+    #endregion
+
     #region 输入与动力运动规则
     public static float ResolveThrottle(Vector2 input, Vector2 tangent)
     {

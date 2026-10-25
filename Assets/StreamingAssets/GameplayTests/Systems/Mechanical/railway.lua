@@ -43,13 +43,41 @@ local directions = {
 for _, case in ipairs(directions) do
     test.system("mechanical", "minecart_contracts", case.args, function(data)
         assert(math.abs(data.throttle - case.value) < 0.0001, "WASD方向与轨道切线不一致")
-        assert(data.zeroPower == 0 and data.idle == 0, "无动力或松键后不应自行驾驶")
+        assert(data.zeroPower == 0 and data.idle == 0, "引擎与人力都未供能或松键后不应自行驾驶")
         assert((case.value == 0 and data.speed == 0) or data.speed * case.value > 0, "动力运动方向错误")
     end, "矿车：" .. case.name)
 end
 test.system("mechanical", "minecart_contracts", {power = 0.5}, function(data)
     assert(math.abs(data.speed - 1.5) < 0.0001, "实际供能减少时加速度仍按预估满功率结算")
 end, "矿车：按实际输出计算加速")
+
+local manual_cases = {
+    {name = "无引擎消耗体力", args = {}, power = .25, stamina = 5, transactions = 1},
+    {name = "倒车同样消耗体力", args = {throttle = -1}, power = .25, stamina = 5, transactions = 1},
+    {name = "半油门按比例消耗", args = {throttle = .5}, power = .25, stamina = 7.5, transactions = 1},
+    {name = "分步按实际时间消耗", args = {seconds = .2}, power = .25, stamina = 9, transactions = 1},
+    {name = "蒸汽动力优先", args = {enginePower = 1}, power = 0, stamina = 10, transactions = 0},
+    {name = "弱引擎不额外扣体力", args = {enginePower = .1}, power = 0, stamina = 10, transactions = 0},
+    {name = "松键不扣体力", args = {throttle = 0}, power = 0, stamina = 10, transactions = 0},
+    {name = "离轨不做人力驾驶", args = {onRail = false}, power = 0, stamina = 10, transactions = 0},
+    {name = "体力不足原子拒绝", args = {stamina = 4}, power = 0, stamina = 4, transactions = 0},
+    {name = "体力耗尽没有动力", args = {stamina = 0}, power = 0, stamina = 0, transactions = 0},
+    {name = "恰好足够可驱动", args = {stamina = 5}, power = .25, stamina = 0, transactions = 1},
+    {name = "没有体力模块不免费供能", args = {missingStamina = true}, power = 0, stamina = 10, transactions = 0},
+    {name = "零时间不供能不扣费", args = {seconds = 0}, power = 0, stamina = 10, transactions = 0}
+}
+for _, case in ipairs(manual_cases) do
+    test.system("mechanical", "minecart_manual_drive", case.args, function(data)
+        near(data.power, case.power, "人力供能资格错误")
+        near(data.stamina, case.stamina, "人力驾驶体力扣除错误")
+        assert(data.transactions == case.transactions, "人力驾驶重复扣费或拒绝时仍扣费")
+        if case.transactions > 0 then
+            assert(data.source == "flatworld.railway.manual_drive", "人力体力消耗来源错误")
+            assert(data.singleSpeed > 0 and data.trainSpeed > 0 and data.trainSpeed < data.singleSpeed,
+                "人力不能驱动车列或增加车厢没有降低速度")
+        end
+    end, "矿车人力：" .. case.name)
+end
 
 test.system("mechanical", "minecart_held_turn", {}, function(data)
     assert(#data.paths == 24, "长按过弯没有覆盖十二种轨道的正反方向")
