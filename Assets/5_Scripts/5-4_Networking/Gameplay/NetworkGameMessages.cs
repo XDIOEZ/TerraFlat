@@ -272,7 +272,7 @@ namespace FlatWorld.Networking.Gameplay
         public string ItemId;
         public byte[] SourcePayload;
         public Vector3 Position;
-        public int RotationQuarterTurns; // 机械召唤器的放置朝向。
+        public int RotationQuarterTurns; // 建筑放置的四向朝向。
         public bool HorizontalMirrorX; // 普通横向建筑仅左右镜像的临时放置朝向。
     }
 

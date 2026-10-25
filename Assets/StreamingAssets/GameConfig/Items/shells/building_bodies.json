@@ -546,7 +546,7 @@
         "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
         "rendererLocalPosition": {
           "x": 0.0,
-          "y": -0.5,
+          "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
@@ -605,7 +605,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\",\"AllowQuarterTurnPlacement\":true,\"FootprintWidth\":1,\"FootprintHeight\":1}",
             "Type": 0
           }
         },
@@ -616,6 +616,9 @@
           "data": {
             "BitData": "",
             "Type": 0
+          },
+          "parameters": {
+            "UseItemSprite": true
           }
         }
       },
@@ -664,7 +667,7 @@
         "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png[Door_Wood_Close]",
         "rendererLocalPosition": {
           "x": 0.0,
-          "y": -0.5,
+          "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
@@ -723,7 +726,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\",\"AllowQuarterTurnPlacement\":true,\"FootprintWidth\":1,\"FootprintHeight\":1}",
             "Type": 0
           }
         },
@@ -734,6 +737,9 @@
           "data": {
             "BitData": "",
             "Type": 0
+          },
+          "parameters": {
+            "UseItemSprite": true
           }
         }
       },

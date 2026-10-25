@@ -624,6 +624,9 @@ public static class BuildingShellMigrationTool
         };
         if (data.HasValues)
             result["data"] = data;
+        // 单图门显式保留双扇模式，避免重建目录后退回旧状态贴图。
+        if (module is Mod_Door door && door.UseItemSprite)
+            result["parameters"] = new JObject { [nameof(Mod_Door.UseItemSprite)] = true };
         if (includeParameters)
         {
             JObject parameters = ItemDefinitionMigrationTool.SerializeModuleParameters(module);

@@ -26,7 +26,7 @@ Transform:
   m_GameObject: {fileID: 4582682433376852556}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.5, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -112,7 +112,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6382287163295674986}
@@ -266,13 +266,16 @@ MonoBehaviour:
     SnapshotBase64: 
     BuildingPrefabId: "Door_Wood"
     SummonerPrefabId: "Door_Wood_Summoner"
+    AllowQuarterTurnPlacement: 1
+    FootprintWidth: 1
+    FootprintHeight: 1
     TileBlockId: 
   BuildingData:
     Name: 
     ID: "\u5EFA\u7B51\u6A21\u5757"
     isRunning: 0
     Type: 0
-    BitData: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Door_Wood","SummonerPrefabId":"Door_Wood_Summoner"}'
+    BitData: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Door_Wood","SummonerPrefabId":"Door_Wood_Summoner","AllowQuarterTurnPlacement":true,"FootprintWidth":1,"FootprintHeight":1}'
   GhostShadow: {fileID: 0}
   boxCollider2D: {fileID: 0}
   StartInstall:
@@ -348,8 +351,9 @@ MonoBehaviour:
     BitData: 
   Data:
     IsOpen: 0
-  CloseSprite: {fileID: 21300000, guid: 985f25c4e151e2b48bd110594bf011fe, type: 3}
-  OpenSprite: {fileID: 21300000, guid: ab2ebbbd4bd644c48986a6eb41b7f88d, type: 3}
+  CloseSprite: {fileID: 0}
+  OpenSprite: {fileID: 0}
+  UseItemSprite: 1
   DoorRenderer: {fileID: 5660411217501825636}
   DoorCollider: {fileID: 4499975697599601602}
   InteractionCollider: {fileID: 0}

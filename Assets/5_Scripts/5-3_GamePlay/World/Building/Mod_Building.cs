@@ -81,6 +81,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         public int FootprintWidth;
         [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
         public int FootprintHeight;
+        // 普通建筑可按配置逐次旋转九十度，预览和正式放置共用朝向。
+        [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+        public bool AllowQuarterTurnPlacement;
         // 横向长建筑可在放置前通过 R 键只切换左右朝向，不改变占地宽高。
         [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
         public bool AllowHorizontalMirrorPlacement;
@@ -135,10 +138,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public bool IsDismantlePending => _dismantlePending;
     public bool IsPlacementModeActive => IsSummoner && (!RequiresPlacementRequest || _placementRequested);
     public bool PlacementHorizontalMirrorX => _placementMirrorX;
-    private int _shipPlacementQuarterTurns;
-    public bool CanRotateHorizontalPlacement => (Data?.AllowHorizontalMirrorPlacement == true || Mod_ShipPart.Read(item?.itemData) != null) && IsPlacementActionAvailable;
+    private int _placementQuarterTurns;
+    public int PlacementQuarterTurns => GetLocalPlacementQuarterTurns();
+    private bool AllowsQuarterTurnPlacement => Data?.AllowQuarterTurnPlacement == true || Mod_ShipPart.Read(item?.itemData) != null;
+    public bool CanRotateHorizontalPlacement => (Data?.AllowHorizontalMirrorPlacement == true || AllowsQuarterTurnPlacement) && IsPlacementActionAvailable;
     public bool CanRotatePlacement => CanRotateHorizontalPlacement;
-    public void RotatePlacement() => RotateHorizontalPlacement();
 
     #region 建筑空间层
     [Tooltip("地板层设施允许同格放置实体建筑，不阻挡通行或视线。")]
@@ -254,6 +258,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         UnbindPlacementRotationInput();
         _placementRequested = false;
         _placementMirrorX = false;
+        _placementQuarterTurns = 0;
         _ownerController = null;
         EnsureRuntimeReferences();
         CaptureBaseSpriteFlip();
@@ -326,6 +331,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             {
                 _placementRequested = false;
                 _placementMirrorX = false;
+                _placementQuarterTurns = 0;
                 UnbindPlacementRotationInput();
             }
             CleanupGhost();
@@ -420,7 +426,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             AuthorityPosition = GetAuthorityPosition(),
             MaximumDistance = GetMaxPlacementDistance(actor),
             HorizontalMirrorX = _placementMirrorX,
-            RotationQuarterTurns = GetLocalPlacementQuarterTurns(),
+            RotationQuarterTurns = PlacementQuarterTurns,
             Extension = BuildingPlacementLifecycle.GetExtension(item)
         };
         if (!BuildingPlacementService.TryPlace(request, out BuildingPlacementResult result, out reason))
@@ -1221,7 +1227,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         }
 
         Vector2Int placementCell = GetPlacementCell(position);
-        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryValidatePlacement(item.itemData, position, GetLocalPlacementQuarterTurns(), out bool shipValid, out reason) == true)
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryValidatePlacement(item.itemData, position, PlacementQuarterTurns, out bool shipValid, out reason) == true)
             return shipValid;
         IBuildingPlacementExtension placementExtension = BuildingPlacementLifecycle.GetExtension(item);
         if (placementExtension != null && !placementExtension.ValidatePlacement(placementCell, out reason))
@@ -1619,21 +1625,21 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
     #region 放置朝向
 
-    /// <summary>横向建筑只镜像图片，不交换占地宽高。</summary>
-    private void RotateHorizontalPlacement()
+    /// <summary>四向建筑旋转九十度，仅横向镜像的建筑继续保持原占地。</summary>
+    public void RotatePlacement()
     {
-        if (!CanRotateHorizontalPlacement)
+        if (!CanRotatePlacement)
             return;
 
-        if (Mod_ShipPart.Read(item?.itemData) != null)
-        { _shipPlacementQuarterTurns = (_shipPlacementQuarterTurns + 1) & 3; return; }
+        if (AllowsQuarterTurnPlacement)
+        { _placementQuarterTurns = (_placementQuarterTurns + 1) & 3; return; }
         _placementMirrorX = !_placementMirrorX;
         ApplyHorizontalMirrorPreview();
     }
 
     private void BindPlacementRotationInput()
     {
-        if ((Data?.AllowHorizontalMirrorPlacement != true && Mod_ShipPart.Read(item?.itemData) == null) || item?.Owner == null)
+        if ((Data?.AllowHorizontalMirrorPlacement != true && !AllowsQuarterTurnPlacement) || item?.Owner == null)
             return;
 
         Mod_GameController controller = item.Owner.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller)
@@ -1645,14 +1651,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
         UnbindPlacementRotationInput();
         _ownerController = controller;
-        _ownerController.BuildingRotationRequested += RotateHorizontalPlacement;
+        _ownerController.BuildingRotationRequested += RotatePlacement;
         _rotationInputBound = true;
     }
 
     private void UnbindPlacementRotationInput()
     {
         if (_rotationInputBound && _ownerController != null)
-            _ownerController.BuildingRotationRequested -= RotateHorizontalPlacement;
+            _ownerController.BuildingRotationRequested -= RotatePlacement;
         _rotationInputBound = false;
     }
 
@@ -1823,7 +1829,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         GhostShadow.UpdateAlpha(1f);
         IBuildingPlacementExtension extension = BuildingPlacementLifecycle.GetExtension(item);
         extension?.ApplyPreview(GhostShadow);
-        int quarterTurns = GetLocalPlacementQuarterTurns();
+        int quarterTurns = PlacementQuarterTurns;
         float angle = quarterTurns * 90f;
         if (FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item.itemData, mouse, quarterTurns, out _, out float snappedAngle) == true)
             angle = snappedAngle;
@@ -2191,10 +2197,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     private IEnumerable<Vector2Int> GetFootprintCells(Vector2Int anchorCell)
     {
         GetUnrotatedFootprintSize(out int width, out int height);
-        Mod_ShipPart part = item?.itemMods?.GetMod_ByID<Mod_ShipPart>(Mod_ShipPart.ModuleId);
         int quarterTurns = Data?.Role == BuildingRole.PlacedBuilding
             ? Mathf.RoundToInt((item?.itemData?.transform?.rotation ?? Quaternion.identity).eulerAngles.z / 90f) & 3
-            : part != null ? GetLocalPlacementQuarterTurns() : 0;
+            : PlacementQuarterTurns;
         if ((quarterTurns & 1) != 0) (width, height) = (height, width);
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -2395,10 +2400,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             new Vector3(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f, 0f));
 
     private int GetLocalPlacementQuarterTurns()
-        => item?.GetComponentInChildren<Mod_MechanicalNode>(true)?.PlacementQuarterTurns ?? _shipPlacementQuarterTurns;
+        => item?.GetComponentInChildren<Mod_MechanicalNode>(true)?.PlacementQuarterTurns ?? _placementQuarterTurns;
 
     private Vector3 NormalizeRequestedPlacement(Vector3 position)
-        => FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item?.itemData, position, GetLocalPlacementQuarterTurns(), out Vector2 snapped, out _) == true
+        => FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item?.itemData, position, PlacementQuarterTurns, out Vector2 snapped, out _) == true
             ? new Vector3(snapped.x, snapped.y, 0f) : NormalizePlacement(position);
 
     /// <summary>建筑只保留 XY 平面旋转，避免无效四元数或三维倾斜污染 2D 世界。</summary>

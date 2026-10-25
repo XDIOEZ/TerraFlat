@@ -840,28 +840,50 @@ end, "水平雪线所需的原图范围、偏心原点、翻面、换图和静�
 
 
 test.system("rendering", "ship_block_visual", {}, function(data)
-    local s = {}
-    for _, value in ipairs(data.samples) do
-        s[value.name] = value
-        assert(not value.sourceVisible, "双扇门显示时主体没有隐藏")
-        assert(value.sourceScaleX == 2 and math.abs(value.sourceRotation - 90) < 0.001,
-            "门动画改写了安装缩放或旋转")
+    local axes = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}}
+    assert(#data.orientations == 4, "双扇门缺少四个安装朝向")
+    for index, row in ipairs(data.orientations) do
+        local s = {}
+        for _, value in ipairs(row.samples) do
+            s[value.name] = value
+            assert(not value.sourceVisible, "双扇门显示时主体没有隐藏")
+            assert(value.sourceScaleX == 2 and value.sourceScaleY == 3
+                and math.abs(value.sourceRotation - row.quarterTurns * 90) < 0.001,
+                "门动画改写了安装缩放或旋转")
+        end
+        assert(row.quarterTurns == index - 1 and s.closed.progress == 0
+            and math.abs(s.closed.leftX + 0.25) < 0.0001
+            and math.abs(s.closed.rightX - 0.25) < 0.0001, "关闭门板没有完整拼合一格")
+        local axis = axes[index]
+        local function travel(sample, side)
+            local dx = sample[side .. "WorldX"] - s.closed[side .. "WorldX"]
+            local dy = sample[side .. "WorldY"] - s.closed[side .. "WorldY"]
+            assert(math.abs(dx * axis[2] - dy * axis[1]) < 0.0001,
+                "门扇没有沿安装朝向的横轴滑动：" .. row.quarterTurns)
+            return dx * axis[1] + dy * axis[2]
+        end
+        local openingLeft, openingRight = travel(s.opening, "left"), travel(s.opening, "right")
+        assert(math.abs(s.opening.progress - 0.5) < 0.0001 and openingLeft < 0 and openingRight > 0
+            and math.abs(openingLeft + openingRight) < 0.0001, "开门没有在世界中对称滑向两边")
+        assert(math.abs(s.reversing.progress - 0.25) < 0.0001
+            and travel(s.reversing, "left") > openingLeft and travel(s.reversing, "left") < 0
+            and travel(s.reversing, "right") < openingRight and travel(s.reversing, "right") > 0,
+            "中途关门没有从当前进度反转")
+        assert(s.closed_again.progress == 0 and math.abs(travel(s.closed_again, "left")) < 0.0001
+            and math.abs(travel(s.closed_again, "right")) < 0.0001, "关门没有恢复原来的世界位置")
+        assert(s.open.progress == 1 and s.restored_open.progress == 1
+            and travel(s.open, "left") < openingLeft and travel(s.open, "right") > openingRight
+            and math.abs(travel(s.restored_open, "left") - travel(s.open, "left")) < 0.0001
+            and math.abs(travel(s.restored_open, "right") - travel(s.open, "right")) < 0.0001,
+            "开门终点或首次恢复开门状态错误")
+        assert(s.appearance.order == 37 and math.abs(s.appearance.green - 0.4) < 0.0001,
+            "门叶没有同步主体排序与颜色")
+        assert(row.sourceRestored and row.activeLeavesAfterRelease == 0, "回收未恢复主体或残留门叶")
     end
-    assert(s.closed.progress == 0 and math.abs(s.closed.leftX + 0.25) < 0.0001
-        and math.abs(s.closed.rightX - 0.25) < 0.0001, "关闭门板没有完整拼合一格")
-    assert(math.abs(s.opening.progress - 0.5) < 0.0001 and s.opening.leftX < s.closed.leftX,
-        "开门没有连续向两边滑动")
-    assert(math.abs(s.reversing.progress - 0.25) < 0.0001
-        and s.reversing.leftX > s.opening.leftX, "中途关门没有从当前进度反转")
-    assert(s.closed_again.progress == 0 and s.open.progress == 1
-        and s.restored_open.progress == 1, "关门终点、开门终点或首次开门恢复错误")
-    assert(s.appearance.order == 37 and math.abs(s.appearance.green - 0.4) < 0.0001,
-        "门叶没有同步主体排序与颜色")
-    assert(data.sourceRestored and data.activeLeavesAfterRelease == 0, "回收未恢复主体或残留门叶")
     assert(data.engineSize == 1 and data.gmEngineSize == 1, "普通或GM化学引擎仍被缩成非满格")
     local expected = {0.85, 0.55, 0.32}
     for i, value in ipairs(data.defaultBodySizes) do
         assert(math.abs(value - expected[i]) < 0.0001, "引擎满格改动改变了其它设备默认尺寸")
     end
     for _, rejected in ipairs(data.invalidRejected) do assert(rejected, "无效机身尺寸没有被拒绝") end
-end, "化学引擎满格、双扇门双向动画、反转恢复与回收")
+end, "化学引擎满格、四朝向双扇门世界滑动、反转恢复与回收")

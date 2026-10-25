@@ -26,6 +26,26 @@ test.system("building", "placement_feedback", {}, function(data)
     assert(data.semanticCount == 2 and data.actorPreserved, "详细原因通道破坏既有音效语义或玩家归属")
 end, "建造数量和支撑拒绝原因原样发布且保留语义事件")
 
+test.system("building", "door_definitions", {}, function(data)
+    assert(#data.doors == 4, "缺少木门石门的召唤器或本体定义")
+    for _, door in ipairs(data.doors) do
+        local isSummoner = string.sub(door.id, -9) == "_Summoner"
+        local bodyId = isSummoner and string.sub(door.id, 1, -10) or door.id
+        assert(door.buildingEnabled and door.quarterTurnAllowed and door.role == (isSummoner and 0 or 1),
+            door.id .. "未启用正式四向放置或载体/本体角色配置错误")
+        assert(door.stackable and door.sharedModuleCount == 0,
+            door.id .. "堆叠门不能引入仅允许单件复制的共享模块")
+        assert(door.bodyId == bodyId and door.summonerId == bodyId .. "_Summoner",
+            door.id .. "放置后没有指向同一扇门")
+        assert(door.spriteAddress == "Assets/6_Art/Building/" .. bodyId .. "_Close.png[" .. bodyId .. "_Close]"
+            and door.spriteStateCount == 0, door.id .. "闭合图来源或双扇动画状态配置错误")
+        if not isSummoner then
+            assert(door.hasDoorModule and door.useItemSprite,
+                door.id .. "没有通过正式门模块使用双扇滑动表现")
+        end
+    end
+end, "木门石门：正式载体本体四向配置、配对与共用双扇表现")
+
 test.system("building", "support_layer", {}, function(data)
     assert(data.surfaceGround == 90 and data.surfaceCost == 2 and data.surfaceWalkable,
         "覆盖支撑没有提供新的有效地面和通行成本")

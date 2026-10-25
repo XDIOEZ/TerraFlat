@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-25",
+  "generator": "Built-in image_gen; one separate invocation per material",
+  "postProcessing": "None. Generated PNG files copied byte-for-byte to existing runtime asset paths; native output resolution, colors and alpha preserved. Only preview compositing scales images for display.",
+  "referenceAsset": "Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png",
+  "promptSet": "Tools/Art/DoorSliding_20261025_Prompts.json",
+  "previewPath": "Tools/Art/DoorSliding_20261025_Preview.png",
+  "historicalPreview": "Tools/Art/ItemRedraw_20261025_Historical_Preview.png",
+  "runtimePresentation": "Placed bodies use UseItemSprite=true. DoorSlideVisual splits the current closed sprite at rect horizontal midpoint, then slides both halves including their frame along local X. OpenSprite references are cleared in source/module Prefabs; old open PNG files remain historical inactive assets. Summoner JSON keeps its original module composition, so stacked door items retain ordinary placement behavior.",
+  "placement": "One cell, centered pivot, PPU equals native width, zero renderer local position, unit renderer/root scale. Mod_Building.data.BitData declares AllowQuarterTurnPlacement=true in bodies and summoners. No shared state modules are added; door state remains in the ordinary placed-building snapshot.",
+  "validation": "Static asset/config/reference checks only. User Play Mode left running. No refresh, compile, PlayMode execution or gameplay acceptance performed.",
+  "assets": [
+    {
+      "id": "Door_Wood",
+      "summonerId": "Door_Wood_Summoner",
+      "assetPath": "Assets/6_Art/Building/Door_Wood_Close.png",
+      "guid": "985f25c4e151e2b48bd110594bf011fe",
+      "originalSha256": "c96183fd21fcad0c99fbbe1927a7023b65b33cd20ed1d5d7d4dc48738ba85d31",
+      "outputSha256": "a37f2b842cac514778e6f1793a551837c281474f1ed8c7323fa8c6cb5af7063f",
+      "sourceGeneratedPath": "C:\\Users\\PC\\.codex\\generated_images\\01a17238-dc64-7b50-af54-98a56864c66d\\exec-01a5d3be-c014-43f8-8d6c-c3a6c5759082.png",
+      "historicalAssetPath": "Tools/Art/DoorSliding_20261025_History/Door_Wood_Close_Previous.png",
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "alphaLevelsPreserved": 256,
+      "transparentPixelCount": 217282,
+      "visibleBounds": [
+        0,
+        0,
+        1235,
+        1254
+      ],
+      "worldCanvas": [
+        1,
+        1
+      ],
+      "spriteMode": "UseItemSprite / DoorSlideVisual left-right halves"
+    },
+    {
+      "id": "Door_Stone",
+      "summonerId": "Door_Stone_Summoner",
+      "assetPath": "Assets/6_Art/Building/Door_Stone_Close.png",
+      "guid": "46bec2f007662bf42aba264dec445378",
+      "originalSha256": "c7d5a68f159d454b031029b2bef4c20c25ef84b0f70b1dcd3a614930f46eaf5b",
+      "outputSha256": "7f5518efd278c1824315c3ee0aea6888e1c9a8d0a99c70dd514675c08bbdfda2",
+      "sourceGeneratedPath": "C:\\Users\\PC\\.codex\\generated_images\\01a17238-dc64-7b50-af54-98a56864c66d\\exec-f9e1bab9-2a4a-4ded-b1aa-cc1e7c212b56.png",
+      "historicalAssetPath": "Tools/Art/DoorSliding_20261025_History/Door_Stone_Close_Previous.png",
+      "outputSize": [
+        1254,
+        1254
+      ],
+      "outputPPU": 1254,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "alphaLevelsPreserved": 256,
+      "transparentPixelCount": 191075,
+      "visibleBounds": [
+        21,
+        2,
+        1230,
+        1224
+      ],
+      "worldCanvas": [
+        1,
+        1
+      ],
+      "spriteMode": "UseItemSprite / DoorSlideVisual left-right halves"
+    }
+  ]
+}

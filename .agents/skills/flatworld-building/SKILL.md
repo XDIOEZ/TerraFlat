@@ -41,6 +41,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - `BuildingOccupancyRegistry` 的导航和动态LOS共用建筑阻挡查询；机械图按全部已用层合并实体格，开门 `SetPassable` 只撤自身阻挡，不撤放置占格。同格可通行设施不能抹掉另一实体或地形墙；GO/ECS读同一遮挡位。`ai/passable_building_sight/unified_building_obstruction` 覆盖全目录、0～15层、数据投影和增删；机器表现/交互/受击扫描使用实际最高已用层，空世界不扫描。
 - 机器接触几何由区块静态 Collider 投影，移速仍读 PlayerMoveSpeedMultiplier；机械通过 IBuildingPlacementExtension 声明层/候选/快照，IBuildingPlacementCommitted 后才登记世界副作用。
 - 普通船地板由 Mod_ShipPart 声明独立占地层6和通行规则，可与管线/设备共格；船门复用正式 Door 模块。安装朝向来自候选数据，预览/占地按同一四向尺寸计算；Mod_Building.Orientation 补偿多格贴图和碰撞，卸载恢复，不继承手持旋转。
+- 普通建筑通过 `Building_Data.AllowQuarterTurnPlacement` 声明四向放置；本地事务、联机请求、预览和占地统一读取 `Mod_Building.PlacementQuarterTurns`，水平镜像仍由原配置独立控制。
 - 门绑定所属主 Sprite/根碰撞体，开门保留交互与占格，经 SetPassable 改通行；安装后再同步状态。模块碰撞体引用运行时绑定 Item 根，不额外叠加模块 Collider。
 - PlacementLayer=Ground 占 Layer2，允许与 Layer0 共格；Trigger、不阻导航/LOS、无三类阴影。排序为 ground-building，Queue2991 位于地表覆盖后、Blocking2992 前。
 - requiredGroundSupport 为当前定义配置，各格比较有效表面 loadCapacity，等值可放；支撑覆盖优先，其次液面 worldWater，再次干地 Tile。

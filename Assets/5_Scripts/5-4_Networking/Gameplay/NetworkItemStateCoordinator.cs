@@ -987,18 +987,26 @@ namespace FlatWorld.Networking.Gameplay
                 ExpiresAt = Time.unscaledTime + BuildingRequestTimeout
             };
 
-            NetworkClient.Send(new NetworkBuildingPlaceRequest
-            { RealmRevision = NetworkGameplayWorldScope.LocalRevision,
-                RequestToken = token,
-                SourceItemGuid = source.itemData.Guid,
-                ItemId = source.itemData.IDName,
-                SourcePayload = payload,
-                Position = NormalizeBuildingPosition(position),
-                RotationQuarterTurns = (BuildingPlacementLifecycle.GetExtension(source) as Mod_MechanicalNode)?.PlacementQuarterTurns ?? 0,
-                HorizontalMirrorX = building.PlacementHorizontalMirrorX
-            });
+            NetworkClient.Send(CreateBuildingPlaceRequest(building, position, token, payload));
             return true;
         }
+
+        #region 联机建造请求组包
+        // 所有建筑都从同一放置入口读取朝向，避免非机械建筑在组包时丢失旋转。
+        internal static NetworkBuildingPlaceRequest CreateBuildingPlaceRequest(
+            Mod_Building building, Vector3 position, uint requestToken, byte[] sourcePayload)
+            => new()
+            {
+                RealmRevision = NetworkGameplayWorldScope.LocalRevision,
+                RequestToken = requestToken,
+                SourceItemGuid = building.item.itemData.Guid,
+                ItemId = building.item.itemData.IDName,
+                SourcePayload = sourcePayload,
+                Position = NormalizeBuildingPosition(position),
+                RotationQuarterTurns = building.PlacementQuarterTurns,
+                HorizontalMirrorX = building.PlacementHorizontalMirrorX
+            };
+        #endregion
 
         private void OnServerBuildingPlaceRequest(
             NetworkConnectionToClient connection,

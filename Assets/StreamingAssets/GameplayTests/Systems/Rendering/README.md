@@ -82,4 +82,4 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/pla
 
 2026-10-18 新增但未执行：`rendering/cave_shadow_lazy_creation` 使用独立 4×2 权威区块和正式 `ChunkLightOccluderRenderer.Bind/RefreshShadowVisibility`，断言无灯时不创建阴影对象、首次受光创建真实 URP 网格、失光关闭与再次受光复用、解绑重绑后的墙位置/尺寸/镜像更新，以及未知光范围的保守回退。本组不改变正在冻结的现场；尚未验证最终墙体漏光和重新采样后的帧率，全受光新墙冷创建仍有开销。
 
-2026-10-19 新增但未执行：`rendering/ship_block_visual` 采正式化学引擎目录机身尺寸和共用 `DoorSlideVisual`，覆盖双向滑动、中途反转、首次开门恢复、旋转缩放保留、排序/颜色同步与释放。用户正在 PlayMode，本轮只静态修改，未编译或运行；实际门交互、通行和最终拼缝由用户验收。
+2026-10-19 新增但未执行：`rendering/ship_block_visual` 采正式化学引擎目录机身尺寸和共用 `DoorSlideVisual`，覆盖双向滑动、中途反转、首次开门恢复、旋转缩放保留、排序/颜色同步与释放。2026-10-25 增强为 0/90/180/270 度各自采样门扇世界坐标，断言沿安装横轴对称滑动、原位关合、反转和开门状态重建，避免只检查局部 X 导致方向错误漏检。用户正在 PlayMode，本轮只静态修改，未编译或运行；实际门交互、通行、预览到落地的方向和最终拼缝由用户验收。

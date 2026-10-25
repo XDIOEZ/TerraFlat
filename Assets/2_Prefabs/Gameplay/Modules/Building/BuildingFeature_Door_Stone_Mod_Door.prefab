@@ -53,8 +53,9 @@ MonoBehaviour:
     BitData: 
   Data:
     IsOpen: 0
-  CloseSprite: {fileID: 21300000, guid: 46bec2f007662bf42aba264dec445378, type: 3}
-  OpenSprite: {fileID: 21300000, guid: 2b0010ef5159de94a92d746ac16eb9f5, type: 3}
+  CloseSprite: {fileID: 0}
+  OpenSprite: {fileID: 0}
+  UseItemSprite: 1
   DoorRenderer: {fileID: 0}
   DoorCollider: {fileID: 0}
   InteractionCollider: {fileID: 0}

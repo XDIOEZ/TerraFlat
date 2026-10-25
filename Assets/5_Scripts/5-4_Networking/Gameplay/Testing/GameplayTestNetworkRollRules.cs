@@ -23,6 +23,73 @@ namespace FlatWorld.Networking.Gameplay
             GameplayTestSystemProbe.Register("networking", "initial_sync_gate", CaptureInitialSyncGate);
             GameplayTestSystemProbe.Register("networking", "world_request_gate", CaptureWorldRequestGate);
             GameplayTestSystemProbe.Register("networking", "local_observer_window", CaptureLocalObserverWindow);
+            GameplayTestSystemProbe.Register("networking", "building_orientation_request", CaptureBuildingOrientationRequest);
+        }
+        #endregion
+
+        #region 普通门正式转向与网络组包采样
+        private static JObject CaptureBuildingOrientationRequest(JObject args)
+        {
+            List<ItemDefinitionDto> definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
+            var doors = new JArray();
+            foreach (string id in new[] { "Door_Wood_Summoner", "Door_Stone_Summoner" })
+            {
+                ItemDefinitionDto definition = definitions.Find(value => value.Id == id)
+                    ?? throw new System.InvalidOperationException("缺少门召唤器定义：" + id);
+                ItemModuleDefinitionDto module = definition.Modules[ModText.Building];
+                var root = new GameObject("[LuaDoorPlacementRequest]") { hideFlags = HideFlags.HideAndDontSave };
+                root.SetActive(false);
+                GameItem owner = null, held = null;
+                try
+                {
+                    owner = root.AddComponent<GameItem>();
+                    owner.BindData(new Data_GeneralItem { IDName = "probe:door-owner" });
+                    var child = new GameObject("held-door");
+                    child.transform.SetParent(root.transform, false);
+                    held = child.AddComponent<GameItem>();
+                    held.BindData(new Data_GeneralItem { IDName = id, Guid = 91901,
+                        Stack = new ItemStack { Amount = 1 } });
+                    held.Owner = owner;
+                    held.SetInHand(true);
+                    Mod_Building building = child.AddComponent<Mod_Building>();
+                    building.item = held;
+                    building.BuildingData = module.Data.ToObject<Ex_ModData>();
+                    building.BuildingData.ReadData(ref building.Data);
+                    var samples = new JArray();
+                    // 自有手持门直接走正式转向、组包和 Mirror 往返，不复算放置角度。
+                    for (int step = 0; step <= 4; step++)
+                    {
+                        byte[] payload = { 1, 3, 7 };
+                        NetworkBuildingPlaceRequest request = NetworkItemStateCoordinator.CreateBuildingPlaceRequest(
+                            building, new Vector3(3.5f, -4.5f, 0f), (uint)(17 + step), payload);
+                        using NetworkWriterPooled writer = NetworkWriterPool.Get();
+                        writer.Write(request);
+                        using NetworkReaderPooled reader = NetworkReaderPool.Get(writer.ToArraySegment());
+                        NetworkBuildingPlaceRequest decoded = reader.Read<NetworkBuildingPlaceRequest>();
+                        samples.Add(new JObject { ["canRotate"] = building.CanRotatePlacement,
+                            ["placementTurns"] = building.PlacementQuarterTurns,
+                            ["requestTurns"] = request.RotationQuarterTurns, ["wireTurns"] = decoded.RotationQuarterTurns,
+                            ["mirror"] = request.HorizontalMirrorX, ["wireMirror"] = decoded.HorizontalMirrorX,
+                            ["requestToken"] = decoded.RequestToken, ["sourceGuid"] = decoded.SourceItemGuid,
+                            ["itemId"] = decoded.ItemId, ["remainingBytes"] = reader.Remaining,
+                            ["payloadPreserved"] = decoded.SourcePayload != null && decoded.SourcePayload.Length == 3 &&
+                                decoded.SourcePayload[0] == 1 && decoded.SourcePayload[1] == 3 && decoded.SourcePayload[2] == 7 });
+                        if (step < 4) building.RotatePlacement();
+                    }
+                    held.SetInHand(false);
+                    building.RotatePlacement();
+                    doors.Add(new JObject { ["id"] = id, ["samples"] = samples,
+                        ["hasMechanicalNode"] = held.GetComponentInChildren<Mod_MechanicalNode>(true) != null,
+                        ["afterLeavingHand"] = building.PlacementQuarterTurns,
+                        ["canRotateOutsideHand"] = building.CanRotatePlacement });
+                }
+                finally
+                {
+                    try { held?.PrepareForDespawn(saveData: false); owner?.PrepareForDespawn(saveData: false); }
+                    finally { Object.DestroyImmediate(root); }
+                }
+            }
+            return new JObject { ["doors"] = doors };
         }
         #endregion
 

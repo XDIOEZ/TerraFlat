@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-25",
+  "generator": "Built-in image_gen",
+  "transparentBackground": true,
+  "postProcessing": "None; original generated PNG files are copied byte-for-byte.",
+  "assets": [
+    {
+      "id": "Door_Wood",
+      "referencePaths": [
+        "Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png",
+        "Assets/6_Art/Building/Door_Wood_Close.png (before replacement)",
+        "Assets/6_Art/Building/Wall_Wood.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: one CLOSED WOODEN DOUBLE SLIDING DOOR sprite for the 2D top-down sandbox FlatWorld. Image 1 (ShipDoor_Closed) is the EXACT composition and geometry reference: square full-cell front-facing square assembly, straight upright outer edges, a complete square frame near all four canvas edges, two equal side-by-side square-ish wooden leaves and a perfectly vertical closed seam exactly at canvas horizontal midpoint. Replace the science-fiction metal material with handmade muted brown timber. Image 2 (old wooden door) and Image 3 (wood wall) provide ONLY timber material, warm restrained brown colors, chunky wood grain; do not copy their tall or wall silhouette. The wooden door must fill almost the entire SQUARE canvas both horizontally AND vertically, like Image 1. Only a very narrow transparent margin outside the square object, not a large transparent upper area. All visible components belong to left or right half and will slide horizontally apart; no crossbar or bolt bridging the center seam. Simple thick square timber perimeter, vertical wooden boards with a few broad grain marks, believable simple hand-cut construction, one matching recessed wooden grip on each leaf beside the seam. Low-saturation slightly realistic retro PIXEL ART, clearly coarse hard-edged square pixel clusters, few broad continuous color shapes, upper-left light, restrained highlights and broad dark brown shadows. Preserve the coarse pixel density of Image 1 and avoid detailed fine wood grain. Render directly at native output resolution; do not make a small icon embedded in a large canvas. No perspective, no diagonal edges, no three-dimensional side face, no arch, no raised base, no floor, no setting, no text, no watermark, no heavy black sticker contour, no bright orange sci-fi accents or electronic elements. Actual transparent background outside the door. The entire closed square door center is opaque. Square canvas."
+    },
+    {
+      "id": "Door_Stone",
+      "referencePaths": [
+        "Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png",
+        "Assets/6_Art/Building/Door_Stone_Close.png (before replacement)",
+        "Assets/6_Art/Building/Wall_Stone_Medium.png"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: one CLOSED STONE DOUBLE SLIDING DOOR sprite for the 2D top-down sandbox FlatWorld. Image 1 (ShipDoor_Closed) is the EXACT composition and geometry reference: square full-cell front-facing square assembly, straight upright outer edges, a complete square frame near all four canvas edges, two equal side-by-side stone leaves and a perfectly vertical closed seam exactly at canvas horizontal midpoint. Replace the science-fiction metal material with hand-cut muted gray stone blocks and slabs. Image 2 (old stone door) and Image 3 (stone wall) provide ONLY stone material, gray colors, broad cracks and chunky block shading; do not copy their short horizontal barrier silhouette or large blank space. The stone door must fill almost the entire SQUARE canvas both horizontally AND vertically, like Image 1. Only a very narrow transparent margin outside the square object, not a large transparent upper area. All visible components belong to left or right half and will slide horizontally apart; no crossbar or bolt bridging the center seam. Simple substantial square hand-cut stone perimeter, two broad heavy stone slabs with a few large irregular stone block joints and restrained wear, one small matching recessed handhold on each slab beside the seam. Low-saturation slightly realistic retro PIXEL ART, clearly coarse hard-edged square pixel clusters, few broad continuous warm gray color shapes, upper-left light, broad darker gray shadows and restrained highlights. Preserve the coarse pixel density of Image 1 and avoid fine textures. Render directly at native output resolution; do not make a small icon embedded in a large canvas. No perspective, no diagonal outer edges, no three-dimensional side face, no arch, no raised base, no floor, no setting, no text, no watermark, no heavy black sticker contour, no bright orange sci-fi accents or electronic elements. Actual transparent background outside the door. The entire closed square door center is opaque. Square canvas."
+    }
+  ]
+}

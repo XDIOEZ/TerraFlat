@@ -74,6 +74,27 @@ test.system("networking", "world_request_gate", {}, function(data)
     end
 end, "建造与拆除：世界门禁提供真实拒绝原因")
 
+test.system("networking", "building_orientation_request", {}, function(data)
+    assert(#data.doors == 2, "缺少木门或石门的非机械放置采样")
+    for _, door in ipairs(data.doors) do
+        assert(not door.hasMechanicalNode and #door.samples == 5, "门放置采样误走机械节点或缺少一整圈转向")
+        for index, sample in ipairs(door.samples) do
+            local turns = (index - 1) % 4
+            assert(sample.canRotate and sample.placementTurns == turns,
+                door.id .. "没有通过正式手持转向入口保持四向角度")
+            assert(sample.requestTurns == turns and sample.wireTurns == turns,
+                door.id .. "正式网络组包或 Mirror 往返丢失放置角度")
+            assert(not sample.mirror and not sample.wireMirror,
+                door.id .. "四向旋转被错误当成水平镜像")
+            assert(sample.requestToken == 16 + index and sample.sourceGuid == 91901
+                and sample.itemId == door.id and sample.payloadPreserved and sample.remainingBytes == 0,
+                door.id .. "门建造请求往返丢失材料身份、令牌或快照")
+        end
+        assert(not door.canRotateOutsideHand and door.afterLeavingHand == 0,
+            door.id .. "离开手持后仍可修改放置角度")
+    end
+end, "木门石门：正式四向转向、非机械建造请求与 Mirror 朝向往返")
+
 test.system("networking", "local_observer_window", {}, function(data)
     assert(data.localX == 16.5 and data.remoteX == 15.5, "本机预测跨块时仍使用旧服务器窗口，或远端误用预测")
     assert(data.invalidX == 15.5 and data.wrappedX == -31.5, "非法预测没有回退，或环绕后窗口没有跟随本机")
