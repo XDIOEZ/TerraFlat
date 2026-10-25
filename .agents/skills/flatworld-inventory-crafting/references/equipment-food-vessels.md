@@ -22,4 +22,5 @@
 - WorldLiquidSourceResolver/WorldLiquidSystem.TryPump读稳定身份，地表0～10整数级、1份=1级；空位向下取整，先世界提交再写容器。worldWater液体倒到干地/同类液面写独立Liquid层，成功只通知本格、农业自行吸水。
 - PourToGround按开口/倾角连续计时，每批严格1份、不足整份不扣；90°可倒尽完整份，混液尾量留桶，整份出口跳尾量并尊重其他口预约。先扣源再写地表，拒收恢复快照，容量不决定流速。
 - UI按独立pointerId/未旋转父坐标解释，右负Z、左正Z；WaterVesselPourGraphic连续显示、不反扣数据。
+- 固体真实槽抵达倒置开口后经 `VesselContentsOperations → InventoryWorldDrop` 出料，和玩家丢弃共用先生成后扣量/失败撤销；客户端发容器槽位及GUID意图，服务端取真实内容。坩埚装拆共享液体和Mortar库存，空锅仍打开统一容器面板。
 - 饮水只看Drinkable/余量，满水分也可主动喝，drinkEffects经LiquidDrinkEffectProcessor结算。图标由ItemDataPresentationResolverRegistry/GameRes.TryGetItemPresentation按状态重绘并保留物理轮廓；手持内部变化同时通知真实库存与Item.OnUIRefresh。

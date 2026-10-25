@@ -36,18 +36,22 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         public Vector2 FillRange; // 水位下限、上限，按底部为零归一化。
         public Vector2 LeftOutlet, RightOutlet; // 左右嘴沿的归一化位置。
         public float MouthWidth; // 开口宽度占容器剖面宽度的比例；越宽，固定流速越快。
+        public Rect StorageBounds; // 可选固体运动区；未声明时复用默认内腔。
     }
 
     public VesselAppearance[] Appearances = Array.Empty<VesselAppearance>(); // 特定容器的外观覆盖，未匹配时恢复 Prefab 默认外观。
     private VesselAppearance defaultAppearance; // 首次绑定时保存的默认外观。
     private Image vesselImage, interiorImage; // 已绑定的剖面和内腔图像。
     private float activeMouthWidthMultiplier = 1f; // 当前开口相对默认容器开口的宽度倍率。
+    private Rect defaultStorageBounds;
     private float pourAmountAccumulator; // 连续液流的计时累计；达到一份后才离散结算一次。
     private bool pourStreamCommitted; // 真实倒出第一份后才维持连续液流，拒收立即停止续流。
 
     /// <summary>切换容器时一次性应用完整外观，避免复用面板残留上一个容器的遮罩或出水位置。</summary>
     private void ApplyAppearance(string itemId)
     {
+        if (Mod_Building.TryReadBuildingData(vessel.ItemData, out _, out var building) &&
+            !string.IsNullOrWhiteSpace(building.SummonerPrefabId)) itemId = building.SummonerPrefabId;
         VesselAppearance appearance = defaultAppearance;
         foreach (VesselAppearance candidate in Appearances)
         {
@@ -58,6 +62,8 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         vesselImage.sprite = appearance.Cutaway;
         interiorImage.sprite = appearance.Interior;
         Liquid.FillRange = appearance.FillRange;
+        contentsView.StorageBounds = appearance.StorageBounds.width > 0f && appearance.StorageBounds.height > 0f
+            ? appearance.StorageBounds : defaultStorageBounds;
         if (appearance.MouthWidth <= 0f || defaultAppearance.MouthWidth <= 0f)
             throw new InvalidOperationException($"水容器外观 {itemId} 未配置有效罐口宽度。");
         activeMouthWidthMultiplier = appearance.MouthWidth / defaultAppearance.MouthWidth;
@@ -124,7 +130,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         else buildingActions.Bind(target.Item);
         current.panel.Open();
         current.contents = target.ContentsSource;
-        current.contentsView.Bind(current.contents);
+        current.contentsView.Bind(current.contents, current.TrySpillContents);
         if (current.contents != null)
         {
             current.contents.Contents.DefaultTarget_Inventory = owner.GetComponentInChildren<Mod_Hand>()?.HandInventory
@@ -159,6 +165,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         contentsView = GetComponent<VesselContentsView>();
         if (contentsView == null)
             throw new InvalidOperationException("水容器面板缺少 VesselContentsView，正式 Prefab 未完成物品库存绑定。");
+        defaultStorageBounds = contentsView.StorageBounds;
         vesselImage = vesselArt.GetComponent<Image>();
         interiorImage = Liquid.transform.parent.GetComponent<Image>();
         Rect artRect = vesselArt.rect;
@@ -226,6 +233,17 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     }
     /// <summary>完成一次饮水并即时更新余量。</summary>
     private void Drink() { vessel.Drink(actor); Refresh(); }
+
+    // 物理图标抵达开口后再提交真实出料，生成失败或服务器未确认时仍保留原槽。
+    private bool TrySpillContents(int slotIndex)
+    {
+        Inventory inventory = contents?.Contents;
+        if (vessel == null || !vessel.CanOperate(actor) || inventory?.Data?.itemSlots == null ||
+            (uint)slotIndex >= (uint)inventory.Data.itemSlots.Count) return false;
+        ItemData data = inventory.Data.itemSlots[slotIndex]?.itemData;
+        return data != null && VesselContentsOperations.TrySpill(vessel, actor, slotIndex, data.Guid,
+            vesselTiltDegrees >= 0f ? -1 : 1);
+    }
 
     #region 库存容器拖入转液
 

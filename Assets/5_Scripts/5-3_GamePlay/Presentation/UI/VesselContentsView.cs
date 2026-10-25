@@ -24,6 +24,7 @@ public sealed class VesselContentsView : MonoBehaviour
     private Coroutine motion;
     private float liquidFraction;
     private float previousTilt;
+    private Func<int, bool> spillSlot;
 
     private sealed class Body
     {
@@ -33,13 +34,16 @@ public sealed class VesselContentsView : MonoBehaviour
         public float Spin;
         public bool Occupied;
         public bool HasPose;
+        public float NextSpillAttempt;
     }
 
     /// <summary>切换木桶时解除旧槽位绑定；同一木桶的库存变化保留已有物品落点。</summary>
-    public void Bind(IVesselContents contents)
+    public void Bind(IVesselContents contents, Func<int, bool> trySpillSlot = null)
     {
+        spillSlot = trySpillSlot;
         if (ReferenceEquals(target, contents)) { SyncSlots(); return; }
         Unbind();
+        spillSlot = trySpillSlot;
         target = contents;
         if (target == null) return;
         target.Changed += SyncSlots;
@@ -66,6 +70,7 @@ public sealed class VesselContentsView : MonoBehaviour
         }
         bodies.Clear();
         target = null;
+        spillSlot = null;
     }
 
     /// <summary>液体份数只改变图标阻尼，不参与库存权威状态。</summary>
@@ -162,11 +167,12 @@ public sealed class VesselContentsView : MonoBehaviour
     private Vector2 InitialRestPosition(int index)
     {
         Rect bounds = LocalBounds();
-        int column = index % 3;
-        int row = index / 3;
+        int columns = Mathf.Max(1, Mathf.FloorToInt((bounds.width - 60f) / 48f) + 1);
+        int column = index % columns;
+        int row = index / columns;
         return new Vector2(
-            Mathf.Lerp(bounds.xMin + 30f, bounds.xMax - 30f, column / 2f),
-            bounds.yMin + 25f + row * 48f);
+            columns == 1 ? bounds.center.x : Mathf.Lerp(bounds.xMin + 30f, bounds.xMax - 30f, column / (float)(columns - 1)),
+            Mathf.Min(bounds.yMax - 27f, bounds.yMin + 27f + row * 48f));
     }
 
     /// <summary>成功投料后从实际松手位置启动重力；合并到旧堆叠时不搬动原物品。</summary>
@@ -234,12 +240,14 @@ public sealed class VesselContentsView : MonoBehaviour
             int steps = Mathf.Max(1, Mathf.CeilToInt(frame / 0.008f));
             float dt = frame / steps;
             bool settled = true;
+            Body spilling = null;
             Rect bounds = LocalBounds();
             Vector2 gravity = Quaternion.Inverse(VesselArt.localRotation) * (Vector3.down * 850f);
             float surface = Mathf.Lerp(bounds.yMin, bounds.yMax, liquidFraction);
             foreach (Body body in MovingBodies())
             {
                 if (!body.Occupied || !body.Rect.gameObject.activeSelf) continue;
+                if (body.Slot != null && target.Contents.IsSlotBeingDragged(body.Slot.slotIndex)) continue;
                 Vector2 position = body.Rect.anchoredPosition;
                 bool touchingBoundary = false;
                 for (int step = 0; step < steps; step++)
@@ -264,7 +272,14 @@ public sealed class VesselContentsView : MonoBehaviour
                     if (position.y > bounds.yMax - 24f)
                     {
                         position.y = bounds.yMax - 24f;
-                        body.Velocity.y *= -0.35f;
+                        if (body.Slot != null && spillSlot != null && spilling == null &&
+                            VesselContentsOperations.ReachesOpenMouth(VesselArt.localEulerAngles.z,
+                                position.y, bounds.yMax - 24f) && Time.unscaledTime >= body.NextSpillAttempt)
+                        {
+                            spilling = body;
+                            body.Velocity = Vector2.zero;
+                        }
+                        else body.Velocity.y *= -0.35f;
                         touchingBoundary = true;
                     }
                     body.Rect.Rotate(0f, 0f, body.Spin * dt);
@@ -274,6 +289,13 @@ public sealed class VesselContentsView : MonoBehaviour
                 settled &= touchingBoundary && body.Velocity.sqrMagnitude < 225f;
             }
             settled &= !ResolveBodyCollisions(bounds);
+            // 枚举结束后才扣真实槽位，库存回调可安全刷新图标和空槽。
+            if (spilling != null)
+            {
+                spilling.NextSpillAttempt = Time.unscaledTime + .15f;
+                spillSlot(spilling.Slot.slotIndex);
+                settled = false;
+            }
             quiet = settled ? quiet + frame : 0f;
             yield return null;
         }

@@ -456,9 +456,10 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselConte
             return true;
         }
 
-        if (!item.InHand && hasLiquid)
+        if (vessel.CanOperate(playerItem))
         {
-            vessel.OnInteractStart(playerItem);
+            // 空锅、只有固体和已有液体都使用同一容器视图。
+            vessel.OpenPanel(playerItem);
             return true;
         }
 

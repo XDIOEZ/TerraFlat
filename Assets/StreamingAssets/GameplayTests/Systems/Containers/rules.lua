@@ -69,7 +69,7 @@ for _, case in ipairs(quality_cases) do
     end, "容器接雨水质：" .. case.name)
 end
 
-for _, id in ipairs({"WoodenBarrel", "IronBucket"}) do
+for _, id in ipairs({"WoodenBarrel", "IronBucket", "Crucible"}) do
     test.system("containers", "portable_vessels", {id = id}, function(data)
         assert(#data.definitions == 2, "容器缺少手持或落地本体定义")
         for index, definition in ipairs(data.definitions) do
@@ -84,11 +84,39 @@ for _, id in ipairs({"WoodenBarrel", "IronBucket"}) do
             end
             assert(shared, "装拆没有保留真实液体模块")
             if index == 1 then assert(definition.requiresPlacement, "手持容器没有显式放置入口") end
+            if id == "Crucible" then
+                local solid_shared = false
+                for _, module_id in ipairs(building.SharedModuleIds) do
+                    if module_id == "Mod_Mortar" then solid_shared = true end
+                end
+                assert(solid_shared and definition.mortarEnabled, "坩埚装拆没有保留固体材料库存")
+                if index == 2 then assert(definition.gameObjectBackend, "落地坩埚错误进入不支持组合能力的机器领域") end
+            end
         end
         assert(data.amount == 3.5 and data.water == 3 and data.oil == .5 and data.temperature == 18,
             "放置和拆回丢失液体组分或温度")
         assert(data.progress == .75 and data.distinctPayload, "放置和拆回丢失接雨进度或错误共用载荷")
+        if id == "Crucible" then
+            assert(data.solidAmount == 3 and data.solidTemperature == 700 and data.solidIndependent,
+                "坩埚放置或拆回丢失固体数量、材料温度，或共享了同一份载荷")
+        end
     end, "便携容器放置配置与状态往返：" .. id)
+end
+
+for _, case in ipairs({
+    {tilt = 0, center = 100, canSpill = false},
+    {tilt = 90, center = 100, canSpill = false},
+    {tilt = -90, center = 100, canSpill = false},
+    {tilt = 135, center = 99, canSpill = false},
+    {tilt = 135, center = 100, canSpill = true},
+    {tilt = -135, center = 100, canSpill = true},
+    {tilt = 180, center = 101, canSpill = true},
+    {tilt = -180, center = 100, canSpill = true},
+    {tilt = 360, center = 100, canSpill = false}
+}) do
+    test.system("containers", "contents_open_mouth", case, function(data)
+        assert(data.canSpill == case.canSpill, "真实物品未到开口、直立或横放时也出料，或倒置后仍封口")
+    end, string.format("固体容器开口边界：倾角%g，物品高度%g", case.tilt, case.center))
 end
 test.system("containers", "composition", {water = 0, oil = 0}, function(data)
     assert(data.initial == 0 and not data.reserved and not data.repeatReserved, "空容器产生虚假预约")

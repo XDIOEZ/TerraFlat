@@ -120,8 +120,115 @@
             "EnableStrikeGesture": false,
             "ContainerLabel": "坩埚"
           }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Crucible_Building\",\"SummonerPrefabId\":\"Crucible\",\"SharedModuleIds\":[\"Mod_WaterVessel\",\"Mod_Mortar\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
         }
-      }
+      },
+      "shellPrefab": "BuildingSummonerShell"
+    },
+    {
+      "id": "Crucible_Building",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingBody_Base",
+      "gameName": "坩埚",
+      "description": "可装入沙子、矿石等固体材料，也可保存高温液体。热源只加热坩埚，内部材料按自身温度和反应特质熔化或转化。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.0,
+      "volume": 3.0,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "Container",
+        "Crucible"
+      ],
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "weakTool": 4,
+        "combatBalanceVersion": 1,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": {
+            "x": 0.8,
+            "y": 0.8
+          }
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+        "spriteStates": {
+          "empty": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "filled": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_glass": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_copper": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_tin": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
+          "molten_iron": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png"
+        },
+        "collider": {
+          "size": {
+            "x": 0.8,
+            "y": 0.8
+          }
+        }
+      },
+      "modules": {
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "capacity": 8,
+            "reach": 2.0,
+            "CollectsRainwater": true
+          }
+        },
+        "mortar": {
+          "prefab": "Module_Mortar",
+          "id": "Mod_Mortar",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "StationId": "crucible",
+            "SlotCount": 6,
+            "EnableStrikeGesture": false,
+            "ContainerLabel": "坩埚"
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"Crucible_Building\",\"SummonerPrefabId\":\"Crucible\",\"SharedModuleIds\":[\"Mod_WaterVessel\",\"Mod_Mortar\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "UseGameObjectBackend": true
+          }
+        }
+      },
+      "labelKey": "item.Crucible.name",
+      "descriptionKey": "item.Crucible.description"
     }
   ]
 }

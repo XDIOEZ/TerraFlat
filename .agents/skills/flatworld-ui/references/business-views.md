@@ -32,8 +32,9 @@
 
 ## 水容器
 
-- WaterVesselPanel.Appearances按物品ID持剖面/Mask/水位区间/出口/MouthWidth，未匹配恢复默认；PNG-Y向下，水位/出口归一化Y向上。液面/液流读LiquidDefinition.viscosity与VisualState/LiquidStyle，连续波面固定步长，Graphic不结算液量。
+- WaterVesselPanel.Appearances按载体物品ID持剖面/Mask/水位区间/出口/MouthWidth和可选StorageBounds，落地外观按SummonerPrefabId回查，未匹配恢复默认；PNG-Y向下，水位/出口归一化Y向上。液面/液流读LiquidDefinition.viscosity与VisualState/LiquidStyle，连续波面固定步长，Graphic不结算液量。
 - 倾倒按基准流速×嘴宽比×倾角，不按容量；90°取消保留上限但仍按流速递减。液层世界水平、网格覆盖旋转Mask，从下侧嘴沿出水；Mod_WaterVessel成功移除后才触发液流。
 - WaterVesselPourGraphic在Mask外、切面子树后，前景窄液桥接罐内/嘴沿、主柱始于嘴沿。透明根无底板射线，罐体手势/拖放、按钮独立；VesselContentsView在Mask下克隆真实槽、空槽在占用槽下，物理只改姿态、关闭只销视觉；固体槽拒绝后仍可命中IInventoryDragDropTarget转液入口。
+- 倒置后真实固体抵嘴沿，在物理枚举结束后提交正式出料；临时合并投料图标不扣量，出料失败留原槽。窄内腔按实际宽度排列静止物品，避免初始三列重叠。
 
 - 砧使用独立 `UI_Anvil`（金属锤/材料各一格、产物一格），标题从建筑对应载体的正式名称读取，拆除位于开始制作左侧并复用 BuildingPanelActions 事务。制作槽增补/重排必须归 `CraftingContent`，不能挂全屏根；布局源、正式 Prefab 和 TodoCraftingLayoutPreview 同步。

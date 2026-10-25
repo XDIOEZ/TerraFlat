@@ -1267,10 +1267,16 @@ MonoBehaviour:
   - ItemId: Crucible
     Cutaway: {fileID: 21300000, guid: 09574895142643309b6f234809367234, type: 3}
     Interior: {fileID: 21300000, guid: 501bc32d14bb49d6b0c95881b1b9a78a, type: 3}
-    FillRange: {x: 0.3359375, y: 0.828125}
+    FillRange: {x: 0.15625, y: 0.828125}
     LeftOutlet: {x: 0.09375, y: 0.7421875}
     RightOutlet: {x: 0.90625, y: 0.7421875}
     MouthWidth: 0.8125
+    StorageBounds:
+      serializedVersion: 2
+      x: 0.32
+      y: 0.22
+      width: 0.36
+      height: 0.52
 --- !u!114 &9223372036854775807
 MonoBehaviour:
   m_ObjectHideFlags: 0

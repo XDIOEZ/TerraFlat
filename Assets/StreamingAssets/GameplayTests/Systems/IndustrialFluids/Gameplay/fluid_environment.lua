@@ -2,6 +2,21 @@
 test.check("world_ready")
 test.check("player_ready")
 
+test.runtime("containers", "contents_spill", {}, function(data)
+    assert(not data.wrongIdentity and data.afterRejected == 3, "过期固体实例也能出料或拒绝时丢料")
+    assert(data.spilled and not data.repeat and data.remaining == 0 and data.worldDropAlive,
+        "坩埚出料没有生成真实世界掉落、重复生成或扣空后仍能出料")
+    assert(data.dropAmount == 3 and data.dropTemperature == 700 and data.playerDiscard and data.sourceIsPlayer,
+        "出料数量或材料温度丢失，或没有复用玩家丢弃上下文")
+    assert(data.world == data.expectedWorld, "坩埚出料落到了其他维度")
+    assert(not data.changedAccepted and data.changedAmount == 3 and data.candidateRolledBack,
+        "生成期间源槽变化后仍扣量，或未撤销候选掉落")
+    assert(data.gameObjectBackend, "落地坩埚仍进入不支持组合模块的机器领域")
+    assert(data.candidateCreated and data.placedSolidAmount == 3 and data.placedSolidTemperature == 700
+        and data.placedShellTemperature == 500 and data.shellStateIndependent,
+        "正式放置候选缺少材料、材料温度或壳温度，或壳体物态与载体共引用")
+end, "坩埚真实固体出料：世界掉落、数量温度、拒绝与生成后回滚")
+
 for _, input in ipairs({
     {current = 20, ambient = 120, seconds = 1},
     {current = 120, ambient = 20, seconds = 1},

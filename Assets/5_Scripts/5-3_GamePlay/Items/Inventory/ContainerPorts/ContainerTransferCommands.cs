@@ -25,6 +25,7 @@ public sealed class ContainerTransferIntent
     public float Amount;
     public string ContentId, Tag;
     public int ExpectedContentGuid;
+    public int ContentSlot = -1;
     public int WorldCellX, WorldCellY, HorizontalCellOffset;
 }
 
@@ -68,6 +69,14 @@ public static class ContainerTransferCommands
             Operation = "fill-inventory", Target = to, Amount = Mathf.Min(source.Stack.Amount, maximum),
             Source = new ContainerPortAddress { ColdItem = true, Inventory = address, Slot = slot, ItemGuid = source.Guid, ItemId = source.IDName, LiquidRevision = revision }
         }, player);
+    }
+    // 固体出料只上传容器、真实槽位与原实例身份，不接受客户端提供物品载荷。
+    public static bool RequestContentsSpill(ILiquidVessel target, Item actor, int slot, int guid, int direction)
+    {
+        if (actor is not Player player ||
+            !TryAddress(player, target, ContainerPortDirection.Output, out var address)) return false;
+        return Request(new ContainerTransferIntent { Operation = "spill-items", Target = address, Amount = 1,
+            ContentSlot = slot, ExpectedContentGuid = guid, HorizontalCellOffset = Math.Sign(direction) }, player);
     }
     public static bool TryAddress(Player actor, ILiquidVessel vessel, ContainerPortDirection direction, out ContainerPortAddress address, string portId = null)
     {
@@ -140,6 +149,15 @@ public static class ContainerTransferCommands
         ContainerTransferFailure failure = ContainerTransferFailure.None;
         if (target == null || !target.CanAccess(context, out failure)) return new(target == null ? ContainerTransferFailure.StaleReference : failure);
         ILiquidVessel vessel = ResolveVessel(actor, intent.Target);
+        if (intent.Operation == "spill-items")
+        {
+            if (vessel == null || !vessel.CanOperate(actor) ||
+                (target.Configuration.Direction & ContainerPortDirection.Output) == 0)
+                return new(ContainerTransferFailure.AccessDenied);
+            return VesselContentsOperations.TrySpill(vessel, actor, intent.ContentSlot,
+                intent.ExpectedContentGuid, intent.HorizontalCellOffset)
+                ? new(ContainerTransferFailure.None) : new(ContainerTransferFailure.Changed);
+        }
         if (vessel != null && intent.Target.LiquidRevision >= 0 && vessel.Data.Revision != intent.Target.LiquidRevision) return new(ContainerTransferFailure.Changed);
         if (intent.Operation is "drink" or "pour" or "world-fill" or "fill-inventory")
         {

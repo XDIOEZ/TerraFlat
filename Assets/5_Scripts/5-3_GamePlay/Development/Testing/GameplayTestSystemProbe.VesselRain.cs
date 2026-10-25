@@ -18,6 +18,7 @@ public static partial class GameplayTestSystemProbe
         Register("containers", "rainwater", EntityVesselRainwater);
         Register("containers", "portable_vessels", EntityPortableVessels);
         Register("containers", "rainwater_quality", EntityRainwaterQuality);
+        Register("containers", "contents_open_mouth", EntityContentsOpenMouth);
     }
 
     // 使用独立容器状态采样正式接雨时钟，Lua 决定水量和时间边界是否正确。
@@ -59,7 +60,8 @@ public static partial class GameplayTestSystemProbe
         {
             "IronBucket" => "iron_bucket.json",
             "WoodenBarrel" => "wooden_barrel.json",
-            _ => throw new ArgumentException("便携容器配置采样仅支持铁桶和木桶。")
+            "Crucible" => "crucible.json",
+            _ => throw new ArgumentException("便携容器配置采样不支持该容器。")
         };
         var document = JObject.Parse(File.ReadAllText(Path.Combine(Application.streamingAssetsPath,
             "GameConfig", "Items", "shells", file)));
@@ -75,7 +77,9 @@ public static partial class GameplayTestSystemProbe
                 ["buildingEnabled"] = module?["enabled"],
                 ["building"] = module?["data"]?["BitData"] is JValue data ? JObject.Parse(data.Value<string>()) : null,
                 ["requiresPlacement"] = module?["parameters"]?["RequiresPlacementRequest"],
-                ["rainEnabled"] = definition["modules"]?["vessel"]?["parameters"]?["CollectsRainwater"]
+                ["rainEnabled"] = definition["modules"]?["vessel"]?["parameters"]?["CollectsRainwater"],
+                ["gameObjectBackend"] = module?["parameters"]?["UseGameObjectBackend"],
+                ["mortarEnabled"] = definition["modules"]?["mortar"]?["enabled"]
             });
         }
 
@@ -90,11 +94,24 @@ public static partial class GameplayTestSystemProbe
         original.Composition["test:oil"] = .5f;
         MixedLiquidContents.SynchronizeAmounts(original);
         ((Ex_ModData_MemoryPackable)source.ModuleDataDic["vessel"]).WriteData(original);
-        BuildingModuleStateTransfer.Copy(source, placed, new[] { Mod_WaterVessel.ModuleId });
-        BuildingModuleStateTransfer.Copy(placed, returned, new[] { Mod_WaterVessel.ModuleId });
+        string[] shared = { Mod_WaterVessel.ModuleId };
+        if (id == "Crucible")
+        {
+            shared = new[] { Mod_WaterVessel.ModuleId, Mod_Mortar.ModuleId };
+            foreach (ItemData itemData in new[] { source, placed, returned })
+                itemData.ModuleDataDic.Add("mortar", new Ex_ModData_MemoryPackable
+                    { ID = Mod_Mortar.ModuleId, Name = "mortar", isRunning = true });
+            ItemData sand = EntityProbeData("Sand", 3f);
+            sand.MatterState = new ItemMatterState { Initialized = true, TemperatureCelsius = 700f };
+            var contents = new MortarState { Bowl = new Inventory_Data(new List<ItemSlot>
+                { new ItemSlot(0) { itemData = sand } }, "坩埚") };
+            ((Ex_ModData_MemoryPackable)source.ModuleDataDic["mortar"]).WriteData(contents);
+        }
+        BuildingModuleStateTransfer.Copy(source, placed, shared);
+        BuildingModuleStateTransfer.Copy(placed, returned, shared);
         var restored = new LiquidContainerState();
         ((Ex_ModData_MemoryPackable)returned.ModuleDataDic["vessel"]).ReadData(ref restored);
-        return new JObject
+        var result = new JObject
         {
             ["definitions"] = definitions, ["amount"] = restored.Amount,
             ["water"] = MixedLiquidContents.GetAmount(restored, "test:water"),
@@ -104,7 +121,24 @@ public static partial class GameplayTestSystemProbe
                 ((Ex_ModData_MemoryPackable)source.ModuleDataDic["vessel"]).BitData,
                 ((Ex_ModData_MemoryPackable)returned.ModuleDataDic["vessel"]).BitData)
         };
+        if (id == "Crucible")
+        {
+            var restoredContents = ((Ex_ModData_MemoryPackable)returned.ModuleDataDic["mortar"]).GetData<MortarState>();
+            ItemData restoredSand = restoredContents.Bowl.itemSlots[0].itemData;
+            result["solidAmount"] = restoredSand.Stack.Amount;
+            result["solidTemperature"] = restoredSand.MatterState.TemperatureCelsius;
+            result["solidIndependent"] = !ReferenceEquals(
+                ((Ex_ModData_MemoryPackable)source.ModuleDataDic["mortar"]).BitData,
+                ((Ex_ModData_MemoryPackable)returned.ModuleDataDic["mortar"]).BitData);
+        }
+        return result;
     }
+
+    // 采样生产开口判定，Lua 覆盖直立、横放、左右倒置与尚未到口的边界。
+    private static JObject EntityContentsOpenMouth(JObject args)
+        => new JObject { ["canSpill"] = VesselContentsOperations.ReachesOpenMouth(
+            (float)Number(args, "tilt", 0), (float)Number(args, "center", 100),
+            (float)Number(args, "mouth", 100)) };
 
     // 正式污染定义与独立地形共用生产读取入口，邻格保持干净以检查取样范围。
     private static JObject EntityRainwaterQuality(JObject args)

@@ -172,6 +172,10 @@ public static class MachineLogicRegistry
         { compiled[id] = (source, null); return null; }
 
         MachineContent content = new(source);
+        MachineModuleConfiguration buildingConfiguration = content.Find<Mod_Building>();
+        if (buildingConfiguration?.Value(nameof(Mod_Building.UseGameObjectBackend),
+                ((Mod_Building)buildingConfiguration.Authoring).UseGameObjectBackend) == true)
+        { compiled[id] = (source, null); return null; }
         Registration selected = null;
         foreach (Registration entry in registrations.Values)
         {

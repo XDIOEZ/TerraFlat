@@ -92,6 +92,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public Ex_ModData BuildingData;
     public BuildingShadow GhostShadow;
     public bool RequiresPlacementRequest; // 可手持使用的设施先从面板进入放置模式，避免与使用动作冲突。
+    public bool UseGameObjectBackend; // 组合能力需要完整物品生命周期时，明确保留 Item 建筑后端。
     private bool _placementRequested;
     private GameObject _definitionPreviewSource;
     private string _definitionPreviewItemId;
@@ -572,7 +573,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
             // 即使带有拆除快照，也以当前手持容器的数据覆盖共享模块，不能恢复旧水量/旧库存。
             BuildingModuleStateTransfer.Copy(summonerData, placedData, carrierState.SharedModuleIds);
-            CopySharedDurability(summonerData, placedData, carrierState.SharedModuleIds);
+            CopySharedItemState(summonerData, placedData, carrierState.SharedModuleIds);
         }
         catch (Exception exception)
         {
@@ -774,7 +775,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             returned.transform.rotation = Quaternion.identity;
             returned.transform.scale = DroppedItemService.ResolveDefaultWorldDropScale(returned);
             BuildingModuleStateTransfer.Copy(node.Snapshot, returned, building.SharedModuleIds);
-            CopySharedDurability(node.Snapshot, returned, building.SharedModuleIds);
+            CopySharedItemState(node.Snapshot, returned, building.SharedModuleIds);
             if (!WriteBuildingData(returned, state =>
                 {
                     state.Role = BuildingRole.Summoner;
@@ -870,7 +871,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
             // 在 Load 之前还原模块数据，使拆回后的手持面板立即读到建筑中的最新状态。
             BuildingModuleStateTransfer.Copy(item.itemData, summonerData, Data.SharedModuleIds);
-            CopySharedDurability(item.itemData, summonerData, Data.SharedModuleIds);
+            CopySharedItemState(item.itemData, summonerData, Data.SharedModuleIds);
 
             summoner = ItemMgr.Instance.InstantiateItem(
                 summonerData,
@@ -904,11 +905,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         _dismantlePending = false;
     }
 
-    /// <summary>迁移制作材料品质；手钻继续兼容其独立模块保存的动态耐久。</summary>
-    private static void CopySharedDurability(ItemData source, ItemData target, IReadOnlyCollection<string> sharedModuleIds)
+    /// <summary>迁移便携实例的物态、制作品质和耐久，手钻保留动态耐久上限。</summary>
+    private static void CopySharedItemState(ItemData source, ItemData target, IReadOnlyCollection<string> sharedModuleIds)
     {
         CraftedDurabilityQuality.CopyInstanceQuality(source, target);
         if (source == null || target == null) return;
+        // 便携设施装拆保留壳体物态；源尚未初始化时继续使用目标定义的状态。
+        if (source.MatterState?.Initialized == true)
+            target.MatterState = FastCloner.FastCloner.DeepClone(source.MatterState);
         if (sharedModuleIds?.Contains(Mod_HandDrill.ModuleId) == true)
             target.MaxDurability = Mathf.Max(0f, source.MaxDurability);
         BuildingModuleStateTransfer.CopyDurabilityRatio(source, target);

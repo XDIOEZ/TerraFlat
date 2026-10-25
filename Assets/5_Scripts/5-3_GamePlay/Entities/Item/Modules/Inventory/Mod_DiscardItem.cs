@@ -420,44 +420,15 @@ public class Mod_DiscardItem : Mod_BaseDroper
         }
 
         string droppedItemId = slot.itemData?.IDName;
-        bool dropCommitted = false;
-        if (count <= slot.Amount)
-        {
-            // 克隆数据
-            ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
-            newItemData.Stack.Amount = count;
-            newItemData.Stack.CanBePickedUp = false;
-            newItemData.inHand = false;
-
-            DroppedItemHandle newDrop = default;
-            try
-            {
-                // 掉落态直接进入 ECS；只在生成成功后扣减库存。
-                Vector2 startPos = transform.position;
-                Vector2 endPos = worldPosition ?? (screenPosition.HasValue
-                    ? Mod_GameController.GetMouseWorldPosition(screenPosition.Value)
-                    : DropPos);
-                float distance = WorldTopologyRuntime.Distance(startPos, endPos);
-                float animTime = baseDropDuration + distance * distanceSensitivity;
-                newDrop = DroppedItemService.Spawn(newItemData, startPos, endPos, animTime,
-                    bezierOffset: defaultMoveMode == MoveMode.BezierCurve ? bezierOffset : 0f, arcHeight: arcHeight,
-                    spawnReason: DroppedItemSpawnReason.PlayerDiscard, sourceItem: item);
-
-                // 生成和掉落动画都成功后才提交背包扣减，失败时不会丢失玩家物品。
-                slot.Amount -= count;
-                ItemDurabilityRules.AdvanceAfterRemoval(slot.itemData);
-                if (slot.Amount <= 0)
-                    slot.ClearData();
-                dropCommitted = true;
-            }
-            catch (Exception exception)
-            {
-                if (!dropCommitted) DroppedItemService.Remove(newDrop);
-
-                Debug.LogError($"掉落物生成失败：{newItemData.IDName}，{exception.Message}", this);
-            }
-        }
-
+        Vector2 startPos = transform.position;
+        Vector2 endPos = worldPosition ?? (screenPosition.HasValue
+            ? Mod_GameController.GetMouseWorldPosition(screenPosition.Value)
+            : DropPos);
+        float distance = WorldTopologyRuntime.Distance(startPos, endPos);
+        float animTime = baseDropDuration + distance * distanceSensitivity;
+        // 容器出料复用玩家同一条掉落生成和扣量事务。
+        bool dropCommitted = InventoryWorldDrop.TryDrop(slot, count, item, startPos, endPos, animTime,
+            defaultMoveMode == MoveMode.BezierCurve ? bezierOffset : 0f, arcHeight);
         if (dropCommitted)
             BeginHeldDropAnimation(slot, droppedItemId);
 
