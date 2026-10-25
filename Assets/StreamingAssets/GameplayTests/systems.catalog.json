@@ -1246,6 +1246,8 @@
         "Assets/StreamingAssets/GameplayTests/Systems/Rendering/*",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/*.cs",
         "Assets/5_Scripts/5-1_Data/Settings/WorldRenderingConfig.cs",
+        "Assets/5_Scripts/5-1_Data/Settings/WorldRenderingConfig.WindStreaks.cs",
+        "Assets/Resources/GameConfig/Rendering/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/*Layer.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkLightOccluderRenderer.cs",
         "Assets/5_Scripts/5-0_WorldModel/TerrainSurfaceHeightLayer.cs",

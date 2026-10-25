@@ -17,11 +17,12 @@ MonoBehaviour:
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
   m_RendererFeatures:
   - {fileID: 6792246138593207564}
+  - {fileID: 5871139065490132741}
   - {fileID: 6119732469843578001}
   - {fileID: 7551732469843578124}
   - {fileID: 8629541376652089314}
   - {fileID: 8357198432651427101}
-  m_RendererFeatureMap: 0ce5dd4de0e7425e914c73f141a8ed540c4dcfa7ab24cd68e217e229294ac2771dbda337b2bbfa73
+  m_RendererFeatureMap: 0ce5dd4de0e7425e054f7599df797a51914c73f141a8ed540c4dcfa7ab24cd68e217e229294ac2771dbda337b2bbfa73
   m_UseNativeRenderPass: 0
   m_TransparencySortMode: 3
   m_TransparencySortAxis: {x: 0, y: 1, z: 0}
@@ -79,6 +80,20 @@ MonoBehaviour:
   m_Name: Dense Fog
   m_EditorClassIdentifier:
   fogShader: {fileID: 4800000, guid: d489a6ceb2da4436ad9832b4ed5788ad, type: 3}
+  m_Active: 1
+--- !u!114 &5871139065490132741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc6c48f9e3504ad893c94901f0385ff1, type: 3}
+  m_Name: Wind Streaks
+  m_EditorClassIdentifier:
+  windShader: {fileID: 4800000, guid: 904fec2659be4003b4be53e74d5a0f19, type: 3}
   m_Active: 1
 --- !u!114 &6119732469843578001
 MonoBehaviour:

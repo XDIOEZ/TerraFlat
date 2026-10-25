@@ -13,6 +13,7 @@ public sealed partial class WorldRenderingConfig
     public RenderingOcclusion occlusion;
     public RenderingDenseFog denseFog;
     public RenderingZoomClouds zoomClouds;
+    public RenderingWindStreaks windStreaks;
     public RenderingUniverseView universeView;
     public RenderingInteractionOutline interactionOutline;
     public RenderingPostProcess postProcess;
@@ -366,7 +367,7 @@ public static class WorldRenderingConfigCatalog
         if (config == null || config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||
-            config.denseFog == null || config.zoomClouds == null || config.universeView == null ||
+            config.denseFog == null || config.zoomClouds == null || config.windStreaks == null || config.universeView == null ||
             config.postProcess == null || config.postProcess.worldVolume == null ||
             config.postProcess.worldVolume.bloom == null ||
             config.postProcess.worldVolume.colorGrading == null ||
@@ -377,7 +378,7 @@ public static class WorldRenderingConfigCatalog
             config.sorting.batchProfiles == null ||
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
             throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
-        if (!config.denseFog.IsValid || !config.zoomClouds.IsValid || !config.universeView.IsValid ||
+        if (!config.denseFog.IsValid || !config.zoomClouds.IsValid || !config.windStreaks.IsValid || !config.universeView.IsValid ||
             config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 5 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
             config.preferences.waterStyle < 0 || config.preferences.waterStyle > 3 ||

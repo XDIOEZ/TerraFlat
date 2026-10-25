@@ -25,6 +25,8 @@
 
 ## 后处理与远景
 
+- `WindStreakRendererFeature/WindStreaks` 读取所属本机世界 `WeatherMgr.PresentedWind`，与植被共用平滑风向/强度；`windStreaks` 渲染 JSON 管阈值、速度、尺寸和透明度。只在本地主相机最终堆栈绘制一次，位于大雾后、加载边界云和宇宙远景前，不复制屏幕或建粒子；相位逐帧积分并补最短镜头位移，CPU/Shader 共用128格周期。无风/禁天气/换玩家或世界清理，暂停不推进；规则 `rendering/wind_streaks` 不代表 GPU 画面验收。
+
 - `WorldPostProcessQuality` 从渲染 JSON 建 Volume，随世界生命周期建立/释放自建 Profile/组件；`ScreenPostProcessManager` 优先级 100 合成状态。六档各持 URP 资产、共用 2D Renderer，比例 0.6/0.75/0.9/1/1/1.2；`GraphicsQualityPresets` 只组合表现接口。
 - 动态 Volume 不直接启用 URP「剔除未使用后处理变体」；`UberPostShaderVariantStripper` 仅剔除未启用的畸变/色差/颗粒/Bloom 脏镜头，增加效果同步剔除表。`LowHealthRedEdgeRendererFeature` 仅最终相机且强度>0 时 Alpha Blend；普通 Vignette 只会乘法压暗。
 - URP 14 的 `IsCameraProjectionMatrixFlipped()` 在 SetupRenderPasses/Pass 等目标就绪阶段调用，AddRenderPasses 仅筛选/传参/入队；自定义 Blitter 由调用方传源 RTHandle 纹理步长，Blit.hlsl 无 `_BlitTexture_TexelSize`。

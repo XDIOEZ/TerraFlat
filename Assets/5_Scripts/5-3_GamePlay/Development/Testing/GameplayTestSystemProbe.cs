@@ -25,6 +25,7 @@ public static partial class GameplayTestSystemProbe
         RegisterServiceOperations(result);
         result.Add("rendering/dropped_combustion_material", ServiceDroppedCombustionMaterial);
         RegisterDenseFogOperations(result);
+        RegisterWindStreakOperations(result);
         RegisterCharacterAppearanceOperations(result);
         RegisterChunkPresentationOperations(result);
         RegisterSwimmingAudioOperations(result);

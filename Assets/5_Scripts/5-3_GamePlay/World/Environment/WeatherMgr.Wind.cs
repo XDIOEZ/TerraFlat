@@ -53,6 +53,10 @@ public partial class WeatherMgr
     private float oceanWaveTime; // 独立积分风浪时钟，风速变化不跳相位，也不改潮汐时钟
     private Vector2 presentedWindDirection;
 
+    // 表现层共用已平滑的本机风，后台世界和禁用天气的维度不输出风效。
+    public Vector2 PresentedWind => isActiveAndEnabled && presentationActive && IsLocalWeatherWorld &&
+        _weatherRuntimeAllowed ? presentedWindDirection * _presentedWindStrength : Vector2.zero;
+
     /// <summary>只推进视觉风浪；暂停时停止，普通客户端读取已复制风力。</summary>
     private void AdvanceOceanWaveClock(float deltaTime)
     {

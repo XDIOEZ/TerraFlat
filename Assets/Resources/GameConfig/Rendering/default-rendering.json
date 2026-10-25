@@ -71,6 +71,18 @@
     "color": { "r": 0.94, "g": 0.96, "b": 1.0, "a": 1.0 },
     "shadowStrength": 0.14
   },
+  "windStreaks": {
+    "startStrength": 0.15,
+    "fullStrength": 0.85,
+    "minimumSpeed": 3.0,
+    "maximumSpeed": 18.0,
+    "minimumLength": 0.65,
+    "maximumLength": 2.7,
+    "width": 0.035,
+    "cellSize": { "x": 7.0, "y": 1.4 },
+    "maximumOpacity": 0.48,
+    "color": { "r": 0.88, "g": 0.95, "b": 1.0, "a": 1.0 }
+  },
   "universeView": {
     "startOrthographicSize": 60.0,
     "opaqueOrthographicSize": 90.0,

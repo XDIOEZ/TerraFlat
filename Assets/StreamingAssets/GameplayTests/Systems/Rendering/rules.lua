@@ -1,5 +1,70 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
 do
+    local function near(actual, expected, label)
+        assert(math.abs(actual - expected) < 0.0001, label)
+    end
+
+    test.system("rendering", "wind_streaks", { steps = {
+        { x = 0 }, { x = 0.1 }, { x = 0.15 }, { x = 0.4 }, { x = 0.65 }, { x = 0.85 }, { x = 2 }
+    } }, function(data)
+        assert(data.validConfig, "默认风纹配置无效")
+        for index = 1, 3 do
+            assert(not data.samples[index].visible, "静风或微风仍在绘制风纹")
+        end
+        for index = 4, 6 do
+            local sample = data.samples[index]
+            assert(sample.visible and sample.directionX == 1 and sample.directionY == 0,
+                "风纹没有沿实际吹去方向移动")
+            if index > 4 then
+                for _, key in ipairs({ "speed", "opacity", "density", "length" }) do
+                    assert(sample[key] > data.samples[index - 1][key], "风力增大没有增强风纹：" .. key)
+                end
+            end
+            near(sample.phaseX, 0, "只改风力却跳变风纹相位")
+        end
+        for _, key in ipairs({ "speed", "opacity", "density", "length" }) do
+            near(data.samples[6][key], data.samples[7][key], "超上限风力没有钳制：" .. key)
+        end
+    end, "风纹：静风关闭、风力增强、吹去方向与上限")
+
+    for _, direction in ipairs({ { 0.85, 0, 1, 0 }, { -0.85, 0, -1, 0 },
+        { 0, 0.85, 0, 1 }, { 0, -0.85, 0, -1 }, { 0.6, 0.6, math.sqrt(0.5), math.sqrt(0.5) } }) do
+        test.system("rendering", "wind_streaks", { steps = {
+            { x = direction[1], y = direction[2], seconds = 0.25 }
+        } }, function(data)
+            local sample = data.samples[1]
+            assert(sample.visible, "有风却没有风纹")
+            near(sample.directionX, direction[3], "风纹水平风向颠倒")
+            near(sample.directionY, direction[4], "风纹垂直风向颠倒")
+            near(sample.phaseX, data.period - sample.speed * 0.25 / data.cellX,
+                "风纹逆风移动或使用总时间乘当前风速")
+            near(sample.phaseY, 0, "风纹横向漂移")
+        end, "风纹：四向和斜向运动 " .. direction[1] .. "/" .. direction[2])
+    end
+
+    test.system("rendering", "wind_streaks", { steps = {
+        { seconds = 0.25 }, { seconds = 0 }, { seconds = -1 }, { invalidSeconds = true },
+        { cameraX = 1.4, cameraY = -2.8 }, { invalidWind = true }, { x = 0.85 }, { reset = true }
+    } }, function(data)
+        local first = data.samples[1]
+        for index = 2, 4 do
+            near(data.samples[index].phaseX, first.phaseX, "暂停、负时间或非法时间继续推进风纹")
+        end
+        near(data.samples[5].phaseX, (first.phaseX + 1.4 / data.cellX) % data.period,
+            "镜头移动时风纹粘在屏幕上")
+        near(data.samples[5].phaseY, data.period - 2.8 / data.cellY, "镜头横向移动补偿错误")
+        assert(not data.samples[6].visible and not data.samples[8].visible,
+            "无效风或退出世界后仍残留风纹")
+        near(data.samples[7].phaseX, 0, "重新启用继承了旧世界相位")
+        near(data.samples[8].opacity, 0, "重置未清除风纹透明度")
+    end, "风纹：暂停、镜头移动、非法输入与世界重置")
+
+    test.system("rendering", "wind_streaks", { config = { width = 0 }, steps = { {} } }, function(data)
+        assert(not data.validConfig and not data.samples[1].visible, "无效风纹尺寸没有关闭绘制")
+    end, "风纹：拒绝无效尺寸")
+end
+
+do
     local clear = { 0, 0, 0, 0 }
     local metal = { 90, 110, 140, 255 }
     local hairColor = { 70, 35, 15, 255 }
