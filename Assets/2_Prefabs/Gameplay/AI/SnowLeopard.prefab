@@ -708,7 +708,8 @@ MonoBehaviour:
   chaseFormationVerticalSpacing: 0.42
   chaseFormationMaxVerticalRatio: 0.55
   chaseFormationAttackMargin: 0.18
-  chaseFormationAttackSlotTolerance: 0.14
+  chaseFormationArrivalDistance: 0.3
+  chaseFormationResumeDistance: 0.6
   chaseSeparationDistance: 0.85
   chaseSeparationStrength: 0.7
   chaseSeparationMaxOffset: 0.2

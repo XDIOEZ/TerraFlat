@@ -78,6 +78,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	private int _chaseFormationMemberCount;
 
 	private bool _hasChaseFormationTarget;
+	private bool _holdingChaseFormationPosition;
 	private readonly List<AI_Wolf> _packAllies = new List<AI_Wolf>(8);
 	private readonly List<AI_Wolf> _chaseFormationMembers = new List<AI_Wolf>(8);
 	private static readonly Comparison<AI_Wolf> ChaseFormationMemberComparer = CompareChaseFormationMembers;
@@ -122,8 +123,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), HorizontalGroup("配置/群体/追击站位/参数3"), LabelText("攻击安全余量"), SuffixLabel("米", true), MinValue(0.01f)]
 	public float chaseFormationAttackMargin = 0.18f;
-	[HorizontalGroup("配置/群体/追击站位/参数3"), LabelText("攻击槽容差"), SuffixLabel("米", true), MinValue(0.01f)]
-	public float chaseFormationAttackSlotTolerance = 0.14f;
+	[HorizontalGroup("配置/群体/追击站位/参数3"), LabelText("站位停止距离"), SuffixLabel("米", true), MinValue(0.01f)]
+	public float chaseFormationArrivalDistance = 0.3f;
+	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), LabelText("站位恢复移动距离"), SuffixLabel("米", true), MinValue(0.01f)]
+	public float chaseFormationResumeDistance = 0.6f;
 
 	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), HorizontalGroup("配置/群体/追击站位/参数4"), LabelText("分离距离"), SuffixLabel("米", true), MinValue(0.05f)]
 	public float chaseSeparationDistance = 0.85f;
@@ -348,13 +351,16 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			}
 		}
 
-		// 离开攻击状态：停止伤害窗口，进入冷却
+		// 只有打断尚未结束的攻击才重新计冷却，追击切换保留已流逝的冷却。
 		if (previous == WolfState.Attack && next != WolfState.Attack)
 		{
-			_attack.OnExitAttackState();
+			if (_attack.IsAttackLocked)
+				_attack.OnExitAttackState();
+			else
+				_attack.StopWindow();
 		}
 
-		if (previous == WolfState.Chase && next != WolfState.Chase)
+		if (next != WolfState.Chase && next != WolfState.Attack)
 		{
 			ClearChaseFormation();
 		}
@@ -418,6 +424,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	public AI_Wolf PackLeader => _alphaWolf;
 	public Item CurrentThreat => _currentThreat;
 	public float AttackRange => attackTriggerDistance;
+	internal float AttackCooldownRemaining => _attack.CooldownRemaining;
+	internal bool IsAttackLocked => _attack.IsAttackLocked;
+	internal Vector3? ChaseFormationTarget => _hasChaseFormationTarget ? _chaseFormationTarget : (Vector3?)null;
 	public bool HasAdvanceCommand => Data?.HasAdvanceCommand == true;
 	public Vector3 AdvanceTargetPosition => Data?.AdvanceTargetPosition ?? transform.position;
 
@@ -597,6 +606,13 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		// 编队点本身已占用一部分攻击距离，导航内圈只能使用剩余余量。
 		float approachRange = Mathf.Max(0.01f, attackTriggerDistance -
 			WorldTopologyRuntime.Distance(chaseTarget, _lastKnownThreatPosition));
+		if (ShouldHoldChaseFormationPosition(approachRange))
+		{
+			StopMove();
+			FaceTarget(_lastKnownThreatPosition);
+			TryCallNearbyWolves();
+			return;
+		}
 		WorldNavigationDestinationResult moveResult =
 			MoveToChaseTarget(chaseTarget, chasePathCostLimit, approachRange);
 		if (TryHandleRejectedChasePath(moveResult, _currentThreat, chasePathRetryDelay))
@@ -717,8 +733,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		if (!IsAggressiveAdvanceActive() && _packCount < 2) return false;
 		if (distance > attackTriggerDistance) return false;
 
-		// 已分配追击槽位时先走到自己的攻击站位，再切攻击，避免刚进范围就把狼群锁成一团。
-		return HasReachedChaseFormationAttackSlot();
+		// 编队只引导接近方向，不能让已经进入攻击范围的狼继续找点而错过出手。
+		return true;
 	}
 
 	/// <summary>追击条件：双狼以上且在追击范围内</summary>
@@ -978,10 +994,13 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	/// <summary>刷新追击槽位：同一目标的狼按稳定 ID 排序，并在左右浅扇形中分配不同目的地。</summary>
 	private void RefreshChaseFormationTarget()
 	{
-		ClearChaseFormation();
+		_chaseFormationMembers.Clear();
 
 		if (!enableChaseFormation || !_threatVisible || _currentThreat == null || !IsPlayerChaseTarget(_currentThreat))
+		{
+			ClearChaseFormation();
 			return;
+		}
 
 		_chaseFormationMembers.Add(this);
 		for (int i = 0; i < _packAllies.Count; i++)
@@ -1147,16 +1166,25 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		return IsPlayerThreat(target);
 	}
 
-	/// <summary>阵型追击期间，只有足够靠近自身槽位才允许进入攻击状态。</summary>
-	private bool HasReachedChaseFormationAttackSlot()
+	/// <summary>站位到达后保留更宽的恢复边界，吸收刹车惯性和目标小幅移动。</summary>
+	private bool ShouldHoldChaseFormationPosition(float approachRange)
 	{
-		if (!_hasChaseFormationTarget)
-			return true;
+		if (!_hasChaseFormationTarget ||
+			WorldTopologyRuntime.SqrDistance(transform.position, _lastKnownThreatPosition) >
+			attackTriggerDistance * attackTriggerDistance)
+		{
+			_holdingChaseFormationPosition = false;
+			return false;
+		}
 
-		float tolerance = Mathf.Min(
-			Mathf.Max(0.01f, chaseFormationAttackSlotTolerance),
-			Mathf.Max(0.05f, chaseFormationAttackMargin));
-		return WorldTopologyRuntime.SqrDistance(transform.position, _chaseFormationTarget) <= tolerance * tolerance;
+		float arrivalDistance = Mathf.Max(Mathf.Max(0.01f, chaseFormationArrivalDistance),
+			_mover != null ? _mover.GetInteractionStopDistance(approachRange) : 0f);
+		float tolerance = _holdingChaseFormationPosition
+			? Mathf.Max(arrivalDistance, chaseFormationResumeDistance)
+			: arrivalDistance;
+		_holdingChaseFormationPosition =
+			WorldTopologyRuntime.SqrDistance(transform.position, _chaseFormationTarget) <= tolerance * tolerance;
+		return _holdingChaseFormationPosition;
 	}
 
 	/// <summary>导航未就绪时交给既有导航重试；就绪后只接受可走阵型目标。</summary>
@@ -1174,6 +1202,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		_chaseFormationSlot = -1;
 		_chaseFormationMemberCount = 0;
 		_hasChaseFormationTarget = false;
+		_holdingChaseFormationPosition = false;
 	}
 
 	/// <summary>优先使用持久化 Item Guid 排序，对象池复用时再回退到实例 ID。</summary>

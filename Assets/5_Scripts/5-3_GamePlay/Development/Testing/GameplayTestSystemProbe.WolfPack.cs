@@ -14,6 +14,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/wolf_formation_topology", EntityWolfFormationTopology);
         operations.Add("ai/wolf_target_memory", _ => EntityAiWolfPack(
             new JObject { ["count"] = 3, ["probeMemory"] = true }));
+        operations.Add("ai/wolf_combat_position", _ => EntityAiWolfPack(
+            new JObject { ["count"] = 3, ["probeCombat"] = true }));
     }
 
     // 正式狼群站位算法在环绕、无限世界和半周期平局时保持同一距离及分翼规则。
@@ -94,6 +96,7 @@ public static partial class GameplayTestSystemProbe
             var candidates = new List<Item>();
             int count = Mathf.Clamp((int)Number(args, "count", 4), 1, 4);
             string exclusion = Text(args, "exclude", string.Empty);
+            bool probeCombat = Flag(args, "probeCombat", false);
             for (int index = 0; index < count; index++)
             {
                 var host = new GameObject("Wolf" + index);
@@ -114,6 +117,12 @@ public static partial class GameplayTestSystemProbe
                 detector.wallsBlockPerception = false;
                 health.Data.Hp = health.Data.MaxHp * (float)Number(args, "hpRate", 1d);
                 ai.PrepareProbe(detector, health);
+                if (probeCombat)
+                {
+                    var mover = host.AddComponent<Mod_Mover_AI>();
+                    Register("mover", mover);
+                    ai.PrepareCombatProbe(mover);
+                }
                 host.transform.position = new Vector3(index, 0f);
                 if (index == count - 1)
                 {
@@ -152,6 +161,7 @@ public static partial class GameplayTestSystemProbe
             playerData.Tags = new List<string> { "Player" };
             player.BindData(playerData);
             playerHost.transform.position = new Vector3((float)Number(args, "playerX", 15d), 0f);
+            if (probeCombat) root.SetActive(true);
             for (int index = 0; index < count; index++)
             {
                 var visible = new List<Item>(candidates) { candidates[0] };
@@ -162,6 +172,8 @@ public static partial class GameplayTestSystemProbe
             wolves[0].TriggerPackAttack(player);
             if (Flag(args, "probeMemory", false))
                 return SampleWolfTargetMemory(wolves, detectors, player);
+            if (probeCombat)
+                return SampleWolfCombatPosition(wolves, detectors[0], player);
             var packCounts = new JArray();
             var validatedAllyCounts = new JArray();
             var leaders = new JArray();
@@ -193,6 +205,58 @@ public static partial class GameplayTestSystemProbe
             };
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 直接推进正式攻击节点，采样偏离站位、刹车漂移、恢复追击和冷却连续性。
+    private static JObject SampleWolfCombatPosition(List<GameplayTestWolfPackProbeAI> wolves,
+        Mod_ItemDetector detector, Item player)
+    {
+        if (Application.isPlaying || ChunkMgr.ExistingInstance != null)
+            throw new InvalidOperationException("狼攻击站位规则只允许在未加载世界的编辑态执行。");
+        GameplayTestWolfPackProbeAI wolf = wolves[0];
+        Mod_Mover_AI mover = wolf.GetComponent<Mod_Mover_AI>();
+        player.transform.position = Vector3.zero;
+        wolf.transform.position = new Vector3(-1.8f, 0f);
+        wolves[1].transform.position = new Vector3(1.05f, 0f);
+        wolves[2].transform.position = new Vector3(1.05f, -.42f);
+        var result = new JObject { ["offSlotState"] = wolf.TickCombatProbe(0f).ToString() };
+        Vector3? formation = wolf.ChaseFormationTarget;
+        result["formationActive"] = formation.HasValue;
+        result["slotError"] = formation.HasValue
+            ? WorldTopologyRuntime.Distance(wolf.transform.position, formation.Value) : -1f;
+        result["firstAttackStarted"] = wolf.IsAttackLocked && !mover.CanMove;
+
+        wolf.TickTimersProbe(wolf.attackDamageStartDelay + wolf.attackDamageWindow + .01f);
+        wolf.TickTimersProbe(wolf.attackRecoveryDuration + .01f);
+        float cooldown = wolf.AttackCooldownRemaining;
+        result["cooldownBefore"] = cooldown;
+        wolf.transform.position = new Vector3(-1.05f, 0f);
+        wolf.TickCombatProbe(0f);
+        result["arrivedStopped"] = !mover.CanMove && !mover.HasActiveDestination;
+        wolf.transform.position = new Vector3(-1.45f, 0f);
+        wolf.TickCombatProbe(0f);
+        result["driftStopped"] = !mover.CanMove && !mover.HasActiveDestination;
+        player.transform.position = new Vector3(.1f, 0f);
+        wolf.TickCombatProbe(0f);
+        result["smallTargetMotionStopped"] = !mover.CanMove && !mover.HasActiveDestination;
+
+        wolf.transform.position = new Vector3(-1.75f, 0f);
+        result["repositionState"] = wolf.TickCombatProbe(0f).ToString();
+        result["repositionResumed"] = mover.CanMove && mover.HasActiveDestination;
+        player.transform.position = new Vector3(1.5f, 0f);
+        result["outOfRangeState"] = wolf.TickCombatProbe(0f).ToString();
+        result["outOfRangeResumed"] = mover.CanMove && mover.HasActiveDestination && !wolf.IsAttackLocked;
+        result["cooldownAfterChase"] = wolf.AttackCooldownRemaining;
+        player.transform.position = Vector3.zero;
+        result["returnedState"] = wolf.TickCombatProbe(0f).ToString();
+        result["cooldownAfterReturn"] = wolf.AttackCooldownRemaining;
+        result["secondAttackState"] = wolf.TickCombatProbe(cooldown + .01f).ToString();
+        result["secondAttackStarted"] = wolf.IsAttackLocked && !mover.CanMove;
+
+        detector.wallsBlockPerception = true;
+        result["hiddenState"] = wolf.TickCombatProbe(0f).ToString();
+        result["hiddenAttackStopped"] = !wolf.IsAttackLocked;
+        return result;
     }
 
     // 无世界规则环境使用正式检测器的不可见结果，状态转换仍调用正式评估与切换钩子。
@@ -333,6 +397,25 @@ internal sealed class GameplayTestWolfPackProbeAI : AI_Wolf
     }
 
     public void SetProbeReady(bool ready) => _isReady = ready;
+    public void PrepareCombatProbe(Mod_Mover_AI mover)
+    {
+        _mover = mover;
+        _currentState = WolfState.Chase;
+        _stateMachine = new AIStateMachine<WolfState>();
+        ConfigureStateNodes(_stateMachine);
+        _stateMachine.Initialize(_currentState);
+    }
+
+    public WolfState TickCombatProbe(float deltaTime)
+    {
+        UpdateExtraTimers(deltaTime);
+        OnPreEvaluate();
+        WolfState next = EvaluateNextState();
+        if (next != _currentState) SwitchState(next);
+        _stateMachine.Tick(deltaTime);
+        return _currentState;
+    }
+
     public void RefreshProbe() => OnPreEvaluate();
     public WolfState EvaluateProbe() => EvaluateNextState();
     public WolfState DecideProbe()

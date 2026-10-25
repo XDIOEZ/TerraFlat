@@ -45,6 +45,27 @@ test.system("ai", "wolf_formation_topology", {}, function(data)
         "站位左右翼选择在环绕接缝、直线距离或近重合时改变")
 end, "狼群站位批次冻结拓扑，环绕位移、归一化和左右翼分配等价")
 
+test.system("ai", "wolf_combat_position", {}, function(data)
+    assert(data.formationActive and data.slotError > .6,
+        "夹具没有真正启用编队或未覆盖偏离站位的攻击机会")
+    assert(data.offSlotState == "Attack" and data.firstAttackStarted,
+        "狼已进入攻击范围，仍为了对准编队点而拒绝出手")
+    assert(data.arrivedStopped and data.driftStopped and data.smallTargetMotionStopped,
+        "到达后惯性漂移或目标小幅移动触发了反复找点")
+    assert(data.repositionState == "Attack" and data.repositionResumed,
+        "站位明显偏离后没有在冷却期间恢复移动")
+    assert(data.outOfRangeState == "Chase" and data.outOfRangeResumed,
+        "目标离开攻击距离后没有恢复追击或仍在起手攻击")
+    assert(data.cooldownBefore > 0 and data.cooldownBefore < 2 and
+        math.abs(data.cooldownAfterChase - data.cooldownBefore) < .00001 and
+        math.abs(data.cooldownAfterReturn - data.cooldownBefore) < .00001,
+        "追击与攻击来回切换重新计满了攻击冷却")
+    assert(data.returnedState == "Attack" and data.secondAttackState == "Attack" and data.secondAttackStarted,
+        "冷却结束后仍被站位调整挡住下一次攻击")
+    assert(data.hiddenState == "Search" and data.hiddenAttackStopped,
+        "丢失视野后仍在攻击隐藏目标")
+end, "狼攻击优先于精确站位，到点保持、明显位移追击且冷却不中断")
+
 for _, case in ipairs({
     {name = "四狼互认并响应支援接口", args = {count = 4, callOnly = true}, members = 4, state = "Chase"},
     {name = "三狼主动追击", args = {count = 3}, members = 3, state = "Chase"},
