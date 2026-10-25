@@ -15,7 +15,7 @@ public interface IWindMotionOwner
 }
 
 /// <summary>
-/// 游戏意图与环境速度的公共入口；接触、推动和阻挡交给 Physics2D。
+/// 游戏意图与环境速度的公共入口；风先计算背风区，实体接触与位移阻挡交给 Physics2D。
 /// </summary>
 public static class WorldMotionSystem
 {
@@ -23,13 +23,15 @@ public static class WorldMotionSystem
     public static bool HasWindPush => WeatherMgr.ExistingInstance?.HasWindPush == true;
 
     /// <summary>同一批物品共用质量目录与星球重力，风区和重量仍按每个物品单独结算。</summary>
-    public readonly struct WindSamplingContext
+    public struct WindSamplingContext
     {
         private readonly WeatherMgr weather;
         private readonly double surfaceGravity;
         private readonly float minimumMass;
         private readonly float maximumMass;
         private readonly WorldTopologyDomain topology;
+        private readonly bool canSampleShelter;
+        private WindShelterQuery shelterQuery;
 
         internal WindSamplingContext(WeatherMgr weather, double surfaceGravity, float minimumMass, float maximumMass)
         {
@@ -38,6 +40,12 @@ public static class WorldMotionSystem
             this.minimumMass = minimumMass;
             this.maximumMass = maximumMass;
             topology = WorldTopologyRuntime.GetActiveDomain();
+            ChunkMgr chunks = ChunkMgr.ExistingInstance;
+            ChunkMgr.RuntimeTerrainPresenceQuery terrainQuery = default;
+            canSampleShelter = chunks != null && chunks.TryCreateTerrainPresenceQuery(out terrainQuery);
+            shelterQuery = canSampleShelter
+                ? new WindShelterQuery(terrainQuery, BuildingOccupancyRegistry.CaptureWindBlockingQuery(), topology)
+                : default;
         }
 
         public Vector2 Sample(Vector2 position, float mass)
@@ -47,7 +55,30 @@ public static class WorldMotionSystem
             // 沉重物品不用再查所在天气区域，也不进行不必要的坐标投影。
             if (required > WindEnvironmentRules.MaximumWindLevel)
                 return Vector2.zero;
-            return weather.SampleWindPushVelocityAt(topology.Normalize(position), required);
+            position = topology.Normalize(position);
+            Vector2 velocity = weather.SampleWindPushVelocityAt(position, required);
+            if (velocity.sqrMagnitude <= 0f) return Vector2.zero;
+            return canSampleShelter && WindShelterRules.IsSheltered(position, velocity, ref shelterQuery)
+                ? Vector2.zero : velocity;
+        }
+    }
+
+    private struct WindShelterQuery : IWindShelterQuery
+    {
+        private ChunkMgr.RuntimeTerrainPresenceQuery terrain;
+        private readonly BuildingOccupancyRegistry.WindBlockingQuery buildings;
+        private readonly WorldTopologyDomain topology;
+
+        internal WindShelterQuery(ChunkMgr.RuntimeTerrainPresenceQuery terrain,
+            BuildingOccupancyRegistry.WindBlockingQuery buildings, WorldTopologyDomain topology)
+        { this.terrain = terrain; this.buildings = buildings; this.topology = topology; }
+
+        public bool TryGetWindBlocking(Vector2Int cell, out bool blocking)
+        {
+            cell = new Vector2Int(topology.NormalizeX(cell.x), topology.NormalizeY(cell.y));
+            if (!terrain.TryGetTerrainWindBlockingNormalized(cell, out blocking)) return false;
+            blocking |= buildings.IsBlocked(cell);
+            return true;
         }
     }
 

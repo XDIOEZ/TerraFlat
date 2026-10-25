@@ -261,6 +261,7 @@ public sealed partial class MachineDefinition
     public float ForwardTorqueRatio = 1f; // 从左/下侧输入时输出侧的扭矩倍率。
     public float ReverseTorqueRatio = 1f; // 从右/上侧输入时输出侧的扭矩倍率。
     public bool BlocksMovement = true; // 是否作为实体障碍阻挡角色与导航。
+    public bool BlocksWindWhenPlaced; // 完整建筑可声明挡风，普通设施默认不创建背风区。
     public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
     public bool? CastVisualShadows; // MOD 可覆盖用力器与发力器的默认两类世界阴影。
     public int PlacementLayer = -1; // -1 沿用机械默认层；电线等覆盖层可显式使用独立层。
@@ -277,6 +278,8 @@ public sealed partial class MachineDefinition
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
     [MemoryPack.MemoryPackIgnore]
     [JsonIgnore] public bool BlocksTraversal => BuildingTraversalRules.BlocksMovement(Layer, BlocksMovement);
+    [MemoryPack.MemoryPackIgnore]
+    [JsonIgnore] public bool BlocksWind => BlocksWindWhenPlaced && BlocksTraversal;
     [MemoryPack.MemoryPackIgnore]
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
     [MemoryPack.MemoryPackIgnore]

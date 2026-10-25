@@ -256,6 +256,15 @@ public partial class ChunkMgr
             return true;
         }
 
+        /// <summary>风射线只读固定实体阻挡位，不构造地表、水体或物品定义样本。</summary>
+        internal bool TryGetTerrainWindBlockingNormalized(Vector2Int cell, out bool blocking)
+        {
+            blocking = false;
+            if (!IsLoadedNormalized(new Vector2(cell.x + 0.5f, cell.y + 0.5f))) return false;
+            blocking = cachedChunk.Terrain.GetCell(cell.x - cachedOriginX, cell.y - cachedOriginY).BlocksLineOfSight;
+            return true;
+        }
+
         /// <summary>九宫格灌溉先筛实际水格，干格不再构造完整地块样本。</summary>
         internal bool TrySampleSurfaceLiquid(Vector2 position, out RuntimeTerrainTileSample sample)
         {

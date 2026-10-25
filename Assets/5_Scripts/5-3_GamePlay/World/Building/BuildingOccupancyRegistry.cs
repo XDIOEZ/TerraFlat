@@ -17,6 +17,7 @@ public static class BuildingOccupancyRegistry
         public readonly Dictionary<Vector2Int, HashSet<Mod_Building>> Occupants = new();
         public readonly Dictionary<Mod_Building, HashSet<Vector2Int>> Buildings = new();
         public readonly HashSet<Vector2Int> SightBlocked = new();
+        public readonly HashSet<Vector2Int> WindBlocked = new();
         public readonly HashSet<Mod_Building> Passable = new();
     }
 
@@ -42,6 +43,7 @@ public static class BuildingOccupancyRegistry
     private static Dictionary<Vector2Int, HashSet<Mod_Building>> OccupantsByCell => Index.Occupants;
     private static Dictionary<Mod_Building, HashSet<Vector2Int>> CellsByBuilding => Index.Buildings;
     private static HashSet<Vector2Int> SightBlockedCells => Index.SightBlocked;
+    private static HashSet<Vector2Int> WindBlockedCells => Index.WindBlocked;
     private static HashSet<Mod_Building> PassableBuildings => Index.Passable;
 
     public static IDisposable SubscribeCells(Action<Vector2Int> handler)
@@ -79,12 +81,16 @@ public static class BuildingOccupancyRegistry
     {
         if (string.IsNullOrEmpty(key)) return;
         if (worlds.Remove(key, out WorldIndex index))
+        {
             foreach (Mod_Building building in index.Buildings.Keys) buildingWorlds.Remove(building);
+            index.WindBlocked.Clear();
+        }
         if (cachedWorldKey == key) { cachedWorldKey = null; cachedIndex = null; }
     }
 
     public static void ReleaseAll()
     {
+        foreach (WorldIndex index in worlds.Values) index.WindBlocked.Clear();
         worlds.Clear(); buildingWorlds.Clear(); indexWorldOverride = null;
         cachedWorldKey = null; cachedIndex = null;
     }
@@ -139,6 +145,44 @@ public static class BuildingOccupancyRegistry
 
     #endregion
 
+    #region 挡风格查询
+
+    internal readonly struct WindBlockingQuery
+    {
+        private readonly HashSet<Vector2Int> cells;
+        internal WindBlockingQuery(HashSet<Vector2Int> cells) => this.cells = cells;
+        public bool IsBlocked(Vector2Int cell) => cells?.Contains(cell) == true;
+    }
+
+    internal static WindBlockingQuery CaptureWindBlockingQuery()
+    {
+        MachineWorld.PrepareWindBlockingQuery();
+        return new WindBlockingQuery(Index.WindBlocked);
+    }
+
+    // 独立世界采样只查现有登记，不借镜头世界或创建空索引。
+    internal static WindBlockingQuery CaptureWindBlockingQuery(string worldKey)
+        => new(worlds.TryGetValue(worldKey ?? string.Empty, out WorldIndex index) ? index.WindBlocked : null);
+
+    public static bool IsWindBlockingNormalized(Vector2Int cell)
+        => CaptureWindBlockingQuery().IsBlocked(cell);
+
+    private static bool BlocksWind(Mod_Building building)
+        => building != null && building.isActiveAndEnabled && building.IsInstalled() &&
+           building.BlocksWindWhenPlaced && building.BlocksMovement && !PassableBuildings.Contains(building);
+
+    private static bool IsWindBlockingAt(Vector2Int cell)
+    {
+        if (string.Equals(WorldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal) &&
+            MachineWorld.IsWindBlockedNormalized(cell)) return true;
+        if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants)) return false;
+        foreach (Mod_Building building in occupants)
+            if (BlocksWind(building)) return true;
+        return false;
+    }
+
+    #endregion
+
     #region 视线遮挡层
 
     /// <summary>新区块就绪时从占地索引一次性填入动态遮挡位。</summary>
@@ -168,32 +212,36 @@ public static class BuildingOccupancyRegistry
         WorldTopologyDomain mechanicalTopology)
     {
         SightBlockedCells.Clear();
+        WindBlockedCells.Clear();
         foreach (KeyValuePair<Vector2Int, HashSet<Mod_Building>> entry in OccupantsByCell)
         {
+            bool sightBlocked = false, windBlocked = false;
             foreach (Mod_Building building in entry.Value)
             {
-                if (!BlocksSight(building))
-                    continue;
-                SightBlockedCells.Add(entry.Key);
-                break;
+                sightBlocked = sightBlocked || BlocksSight(building);
+                windBlocked = windBlocked || BlocksWind(building);
+                if (sightBlocked && windBlocked) break;
             }
+            if (sightBlocked) SightBlockedCells.Add(entry.Key);
+            if (windBlocked) WindBlockedCells.Add(entry.Key);
         }
 
         if (mechanicalNodes != null)
         {
             foreach (MachineEntity node in mechanicalNodes)
             {
-                if (!BlocksSight(node?.Definition))
-                    continue;
+                if (node?.Definition == null) continue;
                 int2 cell = mechanicalTopology.Normalize(new int2(node.Cell.x, node.Cell.y));
-                SightBlockedCells.Add(new Vector2Int(cell.x, cell.y));
+                var worldCell = new Vector2Int(cell.x, cell.y);
+                if (BlocksSight(node.Definition)) SightBlockedCells.Add(worldCell);
+                if (node.Definition.BlocksWind) WindBlockedCells.Add(worldCell);
             }
         }
 
         Revision++;
         SightBlockingRebuildRevision++;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (manager == null)
+        if (!OwnsChunkManager(manager))
             return;
         foreach (KeyValuePair<FlatWorld.WorldModel.WorldAddress, ChunkRuntime> pair in manager.Chunks)
             InitializeSightBlockingForChunk(pair.Value);
@@ -354,8 +402,11 @@ public static class BuildingOccupancyRegistry
         else
             SightBlockedCells.Remove(cell);
 
+        if (IsWindBlockingAt(cell)) WindBlockedCells.Add(cell);
+        else WindBlockedCells.Remove(cell);
+
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (manager != null && manager.WorldRuntime != null && !manager.IsWorldRuntimeShuttingDown)
+        if (OwnsChunkManager(manager) && manager.WorldRuntime != null && !manager.IsWorldRuntimeShuttingDown)
         {
             Vector2 center = new(cell.x + 0.5f, cell.y + 0.5f);
             var address = manager.ResolveWorldAddress(center);
@@ -377,6 +428,12 @@ public static class BuildingOccupancyRegistry
         Index.CellChanged?.Invoke(cell);
     }
 
+    // 未注册场景的清理与夹具只改自身索引，不把占地投影写进正在游玩的世界。
+    private static bool OwnsChunkManager(ChunkMgr manager)
+        => manager != null && string.Equals(WorldKey,
+            !string.IsNullOrEmpty(manager.OwnedWorldKey) ? manager.OwnedWorldKey : manager.WorldRuntime?.WorldId,
+            StringComparison.Ordinal);
+
     #region 分层视线查询
     // 实体物理、导航与动态视线共用声明，具体物品名称和覆盖层不提供额外特判。
     internal static bool BlocksSight(MachineDefinition definition)
@@ -389,7 +446,8 @@ public static class BuildingOccupancyRegistry
     /// <summary>只有真实阻挡的建筑写入动态视线层，不能用建造占用代替遮挡。</summary>
     private static bool IsBuildingObstructionAt(Vector2Int cell)
     {
-        if (MachineWorld.IsMovementBlockedNormalized(cell)) return true;
+        if (string.Equals(WorldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal) &&
+            MachineWorld.IsMovementBlockedNormalized(cell)) return true;
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants)) return false;
         occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());
         foreach (Mod_Building building in occupants)

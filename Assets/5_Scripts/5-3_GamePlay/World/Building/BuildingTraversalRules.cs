@@ -16,6 +16,7 @@ public static class BuildingTraversalRules
             return;
         definition.PlacementLayer = (int)configuration.Value(nameof(Mod_Building.PlacementLayer), authoring.PlacementLayer);
         definition.BlocksMovement = configuration.Value(nameof(Mod_Building.BlocksMovementWhenPlaced), authoring.BlocksMovementWhenPlaced);
+        definition.BlocksWindWhenPlaced = configuration.Value(nameof(Mod_Building.BlocksWindWhenPlaced), authoring.BlocksWindWhenPlaced);
     }
 
     #endregion

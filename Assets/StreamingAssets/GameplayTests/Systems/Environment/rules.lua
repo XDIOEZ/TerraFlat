@@ -493,6 +493,57 @@ test.system("environment", "wind_push_transition", {}, function(data)
     near(data.rawStrength, 1, "平滑推动不应改写原始风强")
 end, "风推动时间渐入渐出、改档续接、反向、空间边界与副本")
 
+test.system("environment", "wind_shelter", {}, function(data)
+    near(data.distance, 12, "建筑背风区距离")
+    assert(data.behind, "完整建筑背风面没有挡住推动")
+    assert(not data.upwind and not data.side, "建筑迎风面或旁边误成背风区")
+    assert(not data.oldSideAfterReverse and data.newSideAfterReverse, "风向反转后背风区没有换边")
+    assert(data.insideDistance and not data.outsideDistance, "背风区的十二格边界错误")
+    assert(data.windMagnitudeIndependent, "推速档位改变了同方向的挡风范围")
+    assert(data.negativePosition and data.integerBoundary, "负坐标或整数格边界漏风")
+    assert(data.diagonal and data.diagonalCorner, "斜风从完整方块或贴角接缝穿过")
+    assert(not data.diagonalSide, "射线旁的建筑错误封住明显空隙")
+    assert(data.cornerKnownHorizontalWall and data.cornerKnownVerticalWall,
+        "角点另一侧未加载时抹掉了已知建筑的挡风")
+    assert(not data.unknownBeforeWall and data.wallBeforeUnknown,
+        "未加载区域被当墙或覆盖了此前已知挡风格")
+    assert(not data.calm and not data.invalidWind and not data.invalidPosition and data.invalidQueryCalls == 0,
+        "无风或非法输入仍查询挡风占地")
+    assert(data.wrapped and data.wrappedEquivalent, "环绕缝或等价坐标的挡风不同")
+    local buildings = data.buildings
+    assert(buildings.installed, "夹具没有通过正式数据入口恢复安装态")
+    assert(#buildings.footprint == 4, "多格建筑夹具缺失占地")
+    for _, blocked in ipairs(buildings.footprint) do
+        assert(blocked, "多格建筑仅部分占地挡风")
+    end
+    assert(buildings.closed and not buildings.open and buildings.closedAgain,
+        "正式门开关没有即时更新背风区")
+    assert(not buildings.removed and buildings.replaced, "建筑拆除或重新放置后残留旧挡风结果")
+    assert(buildings.stackedStillBlocked and not buildings.lastBlockerRemoved,
+        "同格多来源的挡风被开门或撤销另一个建筑抹掉")
+    assert(not buildings.ordinaryFacility and buildings.facilityKeepsOtherBlocker,
+        "普通设施误成挡风源或抹掉同格另一完整建筑")
+    assert(buildings.otherWorldClear and buildings.secondWorldBlocked and buildings.firstWorldStillClear and buildings.releasedWorldClear,
+        "建筑挡风索引串到了另一个世界")
+    local terrain = data.terrain
+    assert(terrain.floorReady and not terrain.floorBlocked and not terrain.dynamicOnly,
+        "普通地面或仅阻视线的设施被当作完整挡风墙")
+    assert(terrain.wall and not terrain.nonSolidTile and not terrain.removed and not terrain.replacement,
+        "地形墙添加、移除、非实体配置或同地址替换后仍读旧结果")
+    assert(not terrain.missingReady and not terrain.missingBlocked and not terrain.missingCreatedChunk,
+        "缺失地形查询创建了区块或凭空提供挡风")
+    assert(terrain.negativeWall and terrain.wrappedWall and not terrain.oldEpochReady,
+        "地形挡风的负坐标、环绕缝或世界代际隔离错误")
+    assert(#data.machines == 16, "机器挡风声明组合不完整")
+    for _, sample in ipairs(data.machines) do
+        local expected = sample.declared and sample.movement and sample.layer ~= 2 and sample.layer ~= 6
+        assert(sample.compiledLayer == sample.layer and sample.compiledDeclaration == sample.declared,
+            "机器数据化丢失建筑层或显式挡风声明")
+        assert(sample.compiledBlocking == expected and sample.indexedBlocking == expected,
+            "机器挡风索引未遵守显式声明、通行资格或地板层排除")
+    end
+end, "建筑背风区、方向距离、门与占地实时更新及世界隔离")
+
 test.system("environment", "weather_associations", {}, function(data)
     near(data.probability, .3, "关联天气应增加十个百分点")
     near(data.clamped, 1, "关联概率应限制在百分之百")

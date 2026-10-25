@@ -22,6 +22,7 @@
 - RegionalWindPushField 每规范区分别平滑三起吹档向量：起停/改档/反向从当前值用完整 _weatherTransitionSeconds（默认3真实秒）SmoothStep，再混四区。Time.timeAsDouble 不随日历跳，暂停冻结；客户端同场，每帧复用，同帧 WindQueryRevision 变补同步。世界/代际/拓扑/禁天气清，首次从零起、停风尾段仍 HasWindPush。
 - WorldMotionSystem.TryCreateWindSamplingContext 每批冻目录质量范围、星球重力、活动拓扑/ChunkMgr；每件真质量/当地四区仍采，小步阻挡/移动后检测仍实时。质量范围依 ItemDefinitionRevision/引用缓存；单件/批量共场，直接读区域风字段/BuildWind，不为风组整份雨雷快照。
 - 全域无有效推动时单件直接零、全零区不采；HasWindPush 包含停风尾段，不能按原始瞬时风强跳过。
+- `WindShelterRules` 沿实际推动的反风向逐格查最多12格，完整实体后方返回零风推；负坐标、斜墙接缝和循环边界共用连续射线。固定地形读 `TerrainCell.BlocksLineOfSight`，动态建筑只读独立挡风声明，未加载区不生成地形、不当墙。批量上下文冻结所属世界挡风索引与地形寻址，格值随放置、拆除、开门实时更新；风声/视觉和非风外力不受影响。
 
 ## 散物统一运动
 

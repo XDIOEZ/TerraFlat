@@ -244,6 +244,7 @@ public sealed partial class MechanicalNetworkGraph
     private readonly Dictionary<Vector3Int, MachineEntity> cells = new();
     private readonly HashSet<Vector2Int> occupiedOnPlacementLayers = new();
     private readonly HashSet<Vector2Int> movementBlockingCells = new();
+    private readonly HashSet<Vector2Int> windBlockingCells = new();
     private readonly Dictionary<Vector2Int, MachineEntity> pressureSwitches = new();
     public readonly List<MechanicalNetwork> Networks = new();
     internal readonly List<MechanicalNetwork> ConverterNetworks = new();
@@ -303,6 +304,9 @@ public sealed partial class MechanicalNetworkGraph
     /// <summary>所有层的实体合并成一个只读索引；导航与视线查询无需逐层扫描。</summary>
     internal bool IsMovementBlockedNormalized(Vector2Int cell)
         => movementBlockingCells.Contains(cell);
+
+    internal bool IsWindBlockedNormalized(Vector2Int cell)
+        => windBlockingCells.Contains(cell);
 
     internal int HighestOccupiedLayer { get; private set; } = -1;
 
@@ -371,6 +375,7 @@ public sealed partial class MechanicalNetworkGraph
         pointerWindow.Reset(); nearbyWindow.Reset();
         cells.Clear(); occupiedOnPlacementLayers.Clear(); pressureSwitches.Clear(); Networks.Clear(); ConverterNetworks.Clear(); Facilities.Clear();
         movementBlockingCells.Clear();
+        windBlockingCells.Clear();
         HighestOccupiedLayer = -1;
         HasBellows = false;
         rebuildNodes.AddRange(nodes);
@@ -384,6 +389,7 @@ public sealed partial class MechanicalNetworkGraph
             cells.Add(key, node);
             HighestOccupiedLayer = Mathf.Max(HighestOccupiedLayer, node.Definition.Layer);
             if (node.Definition.BlocksTraversal) movementBlockingCells.Add(node.Cell);
+            if (node.Definition.BlocksWind) windBlockingCells.Add(node.Cell);
             if (node.Definition.Kind == "bellows") HasBellows = true;
             if (node.Definition.Layer == 0 || node.Definition.Layer == 1)
                 occupiedOnPlacementLayers.Add(node.Cell);

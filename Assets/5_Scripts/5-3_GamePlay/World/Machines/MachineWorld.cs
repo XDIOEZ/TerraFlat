@@ -413,6 +413,19 @@ public static partial class MachineWorld
         return graph.IsMovementBlockedNormalized(graph.NormalizeCell(cell));
     }
 
+    internal static bool IsWindBlockedNormalized(Vector2Int cell)
+    {
+        if (graph == null) return false;
+        RebuildGraphsIfDirty();
+        return graph.IsWindBlockedNormalized(graph.NormalizeCell(cell));
+    }
+
+    // 每批风采样只同步一次机械图，逐格射线直接读取建筑挡风索引。
+    internal static void PrepareWindBlockingQuery()
+    {
+        if (graph != null) RebuildGraphsIfDirty();
+    }
+
     // 按本世界实际已用层查询，既支持扩展层，也避免无设备时扫描空层。
     internal static int HighestOccupiedLayer
     {

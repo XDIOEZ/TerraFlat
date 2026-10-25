@@ -149,6 +149,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public BuildingPlacementLayer PlacementLayer = BuildingPlacementLayer.Structure;
     [Tooltip("无扩展通行策略时的建筑声明；关闭后保留交互/受击与占格，但不阻挡角色或视线。")]
     public bool BlocksMovementWhenPlaced = true;
+    [Tooltip("完整墙面等实体建筑启用挡风；开门、可通行设施和地板不提供背风区。")]
+    public bool BlocksWindWhenPlaced;
     public bool IsGroundFacility => BuildingTraversalRules.IsGroundLayer(BuildingOccupancyRegistry.GetPlacementLayer(this));
     public bool BlocksMovement => BuildingTraversalRules.BlocksMovement(
         BuildingOccupancyRegistry.GetPlacementLayer(this),
