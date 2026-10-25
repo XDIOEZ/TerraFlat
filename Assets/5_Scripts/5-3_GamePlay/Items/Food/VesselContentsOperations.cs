@@ -20,7 +20,7 @@ public static class VesselContentsOperations
             ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
 
         Vector2 origin = vessel.Machine != null ? vessel.Machine.Position
-            : vessel.Item?.InHand == true ? actor.transform.position : vessel.Item.transform.position;
+            : vessel.Item?.InHand == true ? (Vector2)actor.transform.position : (Vector2)vessel.Item.transform.position;
         int side = direction < 0 ? -1 : 1;
         Vector2 destination = origin + new Vector2(side * 1.1f, -.25f);
         Mod_DiscardItem discard = actor.GetComponentInChildren<Mod_DiscardItem>(true);
