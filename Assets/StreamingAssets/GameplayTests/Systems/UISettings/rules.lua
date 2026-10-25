@@ -204,6 +204,7 @@ for _, panel in ipairs({"UI_IndustrialFluid", "UI_Cultivator", "UI_WaterVessel"}
             assert(data.status.left >= water.bounds.right and data.fuel.bounds.left >= water.bounds.right,
                 "状态或燃料条遮挡左侧水量条")
             for _, slot in ipairs(data.slots) do
+                assert(data.slotRowVisible and slot.visibleWithinPanel, "蒸汽机燃料槽被加工区父节点隐藏")
                 assert_building_rect_inside(slot.bounds, data.body, "蒸汽机燃料槽超出正文")
                 assert(slot.bounds.top <= data.fuel.bounds.bottom and slot.bounds.left >= water.bounds.right,
                     "蒸汽机燃料槽遮挡燃料或水量读数")
@@ -239,6 +240,25 @@ for _, panel in ipairs({"UI_IndustrialFluid", "UI_Cultivator", "UI_WaterVessel"}
             assert_building_rect_inside(layout.waterInPicture, layout.pictureLocal, "水量竖条超出容器剖面布局")
         end
     end, "含水建筑统一容量条与蒸汽机炉式布局：" .. panel)
+end
+
+-- 气体装填与无库存设备共用工业页面，显隐必须覆盖整个槽位层级。
+for _, mode in ipairs({"gas", "storage"}) do
+    test.system("ui_settings", "fluid_panel_layout", {panel = "UI_IndustrialFluid", mode = mode}, function(data)
+        local visible = mode == "gas"
+        assert(#data.slots == 3 and data.slotRowVisible == visible, "工业设备三槽父节点显隐错误：" .. mode)
+        assert(not data.waterVisible and not data.fuelVisible, "纯气体设备出现水量或燃料控件")
+        for index, slot in ipairs(data.slots) do
+            assert(slot.visibleWithinPanel == visible, "装填槽被父节点隐藏或无库存设备残留槽位：" .. slot.name)
+            assert_building_rect_inside(slot.bounds, data.body, "气体装填槽超出正文")
+            if visible then
+                assert(slot.bounds.top <= data.status.bottom, "装填槽与状态文字重叠")
+                if index > 1 then
+                    assert(slot.bounds.left >= data.slots[index - 1].bounds.right, "气体装填槽相互重叠")
+                end
+            end
+        end
+    end, "工业页面加工区关闭后的三槽显隐：" .. mode)
 end
 
 for _, row in ipairs({

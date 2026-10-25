@@ -216,9 +216,11 @@ public sealed class MechanicalPanelView : MonoBehaviour
         status.anchorMin = Vector2.zero; status.anchorMax = Vector2.one;
         status.offsetMin = new Vector2(waterVisible ? 118 : 12, slotsVisible ? 210 : 12);
         status.offsetMax = new Vector2(-24, -12);
+        RectTransform row = (RectTransform)InputSlot.transform.parent;
+        // 加工区关闭后，工业库存必须连同槽位父节点按真实容量恢复显隐。
+        row.gameObject.SetActive(slotsVisible);
         if (slotsVisible)
         {
-            RectTransform row = (RectTransform)InputSlot.transform.parent;
             row.SetParent(InnerField, false);
             row.anchorMin = row.anchorMax = new Vector2(.5f, 0);
             row.pivot = new Vector2(.5f, 0);

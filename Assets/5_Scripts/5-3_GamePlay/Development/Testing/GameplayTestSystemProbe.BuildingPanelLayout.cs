@@ -127,7 +127,16 @@ public static partial class GameplayTestSystemProbe
         {
             GameObject instance = UnityEngine.Object.Instantiate(prefab, previewRoot.transform, false);
             MechanicalPanelView view = instance.GetComponent<MechanicalPanelView>();
-            if (panelName == "UI_IndustrialFluid") view.SetFluidLayout(true, true, true);
+            if (panelName == "UI_IndustrialFluid")
+            {
+                // 复现正式会话先关闭加工区再配置库存的顺序，覆盖父节点隐藏和模式切换。
+                view.SetProcessingVisible(false);
+                view.SetFluidLayout(false, false, false);
+                string mode = args.Value<string>("mode") ?? "fuel";
+                view.SetFluidLayout(mode == "fuel", mode == "fuel", mode != "storage");
+                foreach (ItemSlot_UI slot in instance.GetComponentsInChildren<ItemSlot_UI>(true))
+                    if (slot.name.StartsWith("输入_", StringComparison.Ordinal)) slot.gameObject.SetActive(mode != "storage");
+            }
             JObject result = CaptureFluidPanelInstance(instance, panelName);
             RectTransform window = panelName == "UI_WaterVessel"
                 ? FindBuildingPanelRect(instance, "设置对话框") : (RectTransform)instance.transform;
@@ -191,11 +200,20 @@ public static partial class GameplayTestSystemProbe
         var slots = new JArray();
         foreach (ItemSlot_UI slot in prefab.GetComponentsInChildren<ItemSlot_UI>(true))
             if (slot.name.StartsWith("输入_", StringComparison.Ordinal))
+            {
+                bool visibleWithinPanel = true;
+                for (Transform ancestor = slot.transform; ancestor != prefab.transform; ancestor = ancestor.parent)
+                    visibleWithinPanel &= ancestor.gameObject.activeSelf;
                 slots.Add(new JObject
                 {
                     ["name"] = slot.name,
+                    ["visibleWithinPanel"] = visibleWithinPanel,
                     ["bounds"] = CaptureBuildingRectBounds((RectTransform)slot.transform, root)
                 });
+            }
+        result["slotRowVisible"] = view.InputSlot.transform.parent.gameObject.activeSelf;
+        result["waterVisible"] = view.WaterCapacity.gameObject.activeSelf;
+        result["fuelVisible"] = view.FuelRemaining.gameObject.activeSelf;
         result["body"] = CaptureBuildingRectBounds(view.InnerField, root);
         result["status"] = CaptureBuildingRectBounds((RectTransform)view.StatusScroll.transform, root);
         result["fuel"] = CaptureFluidGauge(prefab, "FWUI_FuelRemaining", root);
