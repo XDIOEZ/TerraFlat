@@ -17,12 +17,44 @@ public partial class WeatherMgr
     private AudioHandle rainAudioHandle;
     private AudioHandle windAudioHandle;
     private AudioHandle galeAudioHandle;
-    private float rainAudioVolume;
+    private RainAudioState rainAudioState;
     private WindAudioState windAudioState;
     private bool weatherAudioSubscribed;
     private bool weatherAudioBaselineReady;
     private readonly List<PendingWeatherThunder> pendingWeatherThunder = new(8);
     private readonly List<ActiveWeatherThunder> weatherThunderHandles = new(6);
+
+    internal struct RainAudioState
+    {
+        public float PresentedIntensity { get; private set; }
+        public float TargetIntensity { get; private set; }
+        public float Volume => 0.9f * PresentedIntensity;
+        private float startIntensity;
+        private float elapsed;
+        private float duration;
+
+        public void Advance(bool sampleAvailable, float rainIntensity, float deltaTime, float transitionSeconds)
+        {
+            // 缺少玩家所在地的降水样本时沿用上一目标，不把加载空档当成停雨。
+            if (sampleAvailable && float.IsFinite(rainIntensity))
+            {
+                float target = Mathf.Clamp01(rainIntensity);
+                if (!Mathf.Approximately(TargetIntensity, target))
+                {
+                    startIntensity = PresentedIntensity;
+                    TargetIntensity = target;
+                    elapsed = 0f;
+                    duration = float.IsFinite(transitionSeconds) ? Mathf.Max(0f, transitionSeconds) : 12f;
+                }
+            }
+            float step = float.IsFinite(deltaTime) ? Mathf.Max(0f, deltaTime) : 0f;
+            elapsed = Mathf.Min(duration, elapsed + step);
+            float progress = duration <= 0f ? 1f : Mathf.SmoothStep(0f, 1f, elapsed / duration);
+            PresentedIntensity = Mathf.Lerp(startIntensity, TargetIntensity, progress);
+        }
+
+        public void Reset() => this = default;
+    }
 
     internal struct WindAudioState
     {
@@ -115,7 +147,7 @@ public partial class WeatherMgr
         windAudioHandle.Stop(0.5f);
         galeAudioHandle.Stop(0.5f);
         rainAudioHandle = windAudioHandle = galeAudioHandle = AudioHandle.Invalid;
-        rainAudioVolume = 0f;
+        rainAudioState.Reset();
         windAudioState.Reset();
     }
 
@@ -141,24 +173,25 @@ public partial class WeatherMgr
         if (!_weatherRuntimeAllowed || !weatherAudioSubscribed)
             return;
 
-        // 雨声沿用雨量表现，风声独立跟随本机玩家脚下的真实风场。
-        float rain = _presentedRainIntensity;
-        UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, 0.9f * rain,
-            ref rainAudioHandle, ref rainAudioVolume, followPresentation: true);
-        float wind = 0f;
+        // 雨声和风声都读取玩家脚下的逻辑位置，不让镜头越过加载边缘改变听音。
+        float wind = 0f, rain = 0f;
+        bool hasPrecipitation = false;
         if (TryGetWeatherAudioPlayer(out Player player))
         {
             Vector2 position = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
-            if (TryGetWeatherAt(position, out var weather))
-                wind = weather.WindStrength;
+            hasPrecipitation = TryGetPrecipitationAt(position, out rain, out _);
+            if (TryGetWindBlendAt(position, out var windBlend))
+                wind = Mathf.Clamp01(Unity.Mathematics.math.length(windBlend.Wind));
         }
+        rainAudioState.Advance(hasPrecipitation, rain, Time.deltaTime, _precipitationTransitionSeconds);
+        UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, rainAudioState.Volume, ref rainAudioHandle);
         windAudioState.Advance(wind, Time.unscaledDeltaTime, _weatherTransitionSeconds);
-        UpdateWindLoop(AudioEventIds.WeatherWindLoop, windAudioState.NormalVolume, ref windAudioHandle);
-        UpdateWindLoop(AudioEventIds.WeatherWindGaleLoop, windAudioState.GaleVolume, ref galeAudioHandle);
+        UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, windAudioState.NormalVolume, ref windAudioHandle);
+        UpdateWeatherLoop(AudioEventIds.WeatherWindGaleLoop, windAudioState.GaleVolume, ref galeAudioHandle);
         PlayPendingWeatherThunder();
     }
 
-    private static void UpdateWindLoop(string cueId, float volume, ref AudioHandle handle)
+    private static void UpdateWeatherLoop(string cueId, float volume, ref AudioHandle handle)
     {
         if (volume <= WeatherAudioThreshold)
         {
@@ -176,32 +209,6 @@ public partial class WeatherMgr
             handle = AudioService.Instance.Play(cueId, options);
         }
         AudioService.Instance.SetVolumeScale(handle, volume);
-    }
-
-    private static void UpdateWeatherLoop(string cueId, float targetVolume,
-        ref AudioHandle handle, ref float currentVolume, bool followPresentation = false)
-    {
-        // 雨声直接跟随已平滑的雨量，避免小雨刚开始就被开方放大。
-        currentVolume = followPresentation ? targetVolume :
-            Mathf.MoveTowards(currentVolume, targetVolume, Time.unscaledDeltaTime * 0.75f);
-        if (currentVolume <= WeatherAudioThreshold && targetVolume <= WeatherAudioThreshold)
-        {
-            handle.Stop(0.8f);
-            handle = AudioHandle.Invalid;
-            currentVolume = 0f;
-            return;
-        }
-
-        if (!handle.IsPlaying)
-        {
-            AudioPlayOptions options = AudioPlayOptions.Global(currentVolume);
-            options.FadeIn = followPresentation ? 0f : 0.8f;
-            options.OverrideLoop = true;
-            options.Loop = true;
-            handle = AudioService.Instance.Play(cueId, options);
-        }
-
-        AudioService.Instance.SetVolumeScale(handle, currentVolume);
     }
 
     #endregion

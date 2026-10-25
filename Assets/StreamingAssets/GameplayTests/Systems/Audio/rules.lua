@@ -147,6 +147,60 @@ for _, row in ipairs({ { firstEnabled = false, errors = 0 }, { firstEnabled = tr
     end, "事件启停与缺失录音校验：" .. tostring(row.firstEnabled))
 end
 
+-- 玩家雨声只跟随有效降水；缺失区块样本继续上一目标，不重建循环。
+local function rain_sequence(label, steps)
+    test.system("audio", "rain_sequence", { steps = steps }, function(data)
+        assert(#data.samples == #steps, "雨声没有返回完整连续采样")
+        for i, sample in ipairs(data.samples) do
+            local step = steps[i]
+            assert(math.abs(sample.intensity - step.intensity) < 0.00001,
+                label .. "，第 " .. i .. " 步雨声没有从当前音量连续过渡")
+            assert(math.abs(sample.target - step.target) < 0.00001,
+                label .. "，第 " .. i .. " 步缺样或停雨目标错误")
+            assert(math.abs(sample.volume - step.intensity * 0.9) < 0.00001,
+                label .. "，第 " .. i .. " 步雨声音量倍率错误")
+        end
+    end, "雨声连续性：" .. label)
+end
+
+rain_sequence("完整十二秒起雨，区块缺样与无效数值不误停", {
+    { rain = 0.8, intensity = 0, target = 0.8 },
+    { rain = 0.8, deltaTime = 3, intensity = 0.125, target = 0.8 },
+    { rain = 0.8, deltaTime = 3, intensity = 0.4, target = 0.8 },
+    { rain = 0.8, deltaTime = 6, intensity = 0.8, target = 0.8 },
+    { available = false, deltaTime = 30, intensity = 0.8, target = 0.8 },
+    { invalidRain = true, deltaTime = 30, intensity = 0.8, target = 0.8 }
+})
+
+rain_sequence("真实停雨淡出，途中恢复与缺样续接不归零", {
+    { rain = 0.8, deltaTime = 12, intensity = 0.8, target = 0.8 },
+    { rain = 0, deltaTime = 3, intensity = 0.675, target = 0 },
+    { rain = 0, deltaTime = 3, intensity = 0.4, target = 0 },
+    { rain = 1, intensity = 0.4, target = 1 },
+    { available = false, deltaTime = 6, intensity = 0.7, target = 1 },
+    { rain = 1, deltaTime = 6, intensity = 1, target = 1 },
+    { rain = 0, deltaTime = 12, intensity = 0, target = 0 }
+})
+
+rain_sequence("未就绪不抢播，小雨保留完整过渡，退出重置", {
+    { available = false, rain = 1, deltaTime = 100, intensity = 0, target = 0 },
+    { invalidRain = true, deltaTime = 100, intensity = 0, target = 0 },
+    { rain = 0.1, deltaTime = 6, intensity = 0.05, target = 0.1 },
+    { available = false, deltaTime = 6, intensity = 0.1, target = 0.1 },
+    { reset = true, intensity = 0, target = 0 },
+    { rain = 0.6, deltaTime = 6, intensity = 0.3, target = 0.6 },
+    { rain = 0.6, deltaTime = 6, intensity = 0.6, target = 0.6 }
+})
+
+rain_sequence("负时间、卡帧、越界雨量和零时长边界", {
+    { rain = 2, deltaTime = 1000, intensity = 1, target = 1 },
+    { rain = 0.2, deltaTime = -1, intensity = 1, target = 0.2 },
+    { rain = 0.2, deltaTime = 6, intensity = 0.6, target = 0.2 },
+    { rain = 0.2, deltaTime = 6, intensity = 0.2, target = 0.2 },
+    { rain = -1, transitionSeconds = 0, intensity = 0, target = 0 },
+    { rain = 1, transitionSeconds = -1, intensity = 1, target = 1 }
+})
+
 -- 使用玩家当地风强直接驱动正式风声状态，不建世界或播放声音。
 local function wind_sequence(label, steps)
     test.system("audio", "wind_sequence", { steps = steps }, function(data)

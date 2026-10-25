@@ -1,5 +1,7 @@
 # 音频
 
+2026-10-25 追加雨声载块断续修复：雨声改读玩家逻辑位置的真实降水，独立包络保留十二秒完整过渡；缺失/无效样本沿用上一目标，淡出途中恢复从当前音量续接，真实停雨才回收句柄。`audio/rain_sequence` 增加四组连续步骤，覆盖起雨、缺样、小雨、停雨、恢复、重置和时间边界；`environment/weather` 同时检查邻区风场不能伪装成本区有效降水。修改前只读观察 65 秒与随后 180 秒，未捕获本次断声，不能据此认定修复后听感通过；当前用户 PlayMode 保持运行，未重编译或执行 Unity/Lua。离线抽取本轮正式雨声状态和降水查询方法，使用真实 Unity 数学库与当前 WorldModel 程序集检查，91 项通过；只覆盖规则，不代表整个 Unity 工程编译或实际断声流程已验证。
+
 2026-10-25：雨声换成 CC0 连续小雨实录，24 秒立体声循环做 1 秒首尾交叠，沿用原 GUID，导入改为预加载 PCM/DecompressOnLoad。`audio/voice_lifecycle` 新增正式雨声 Cue、单实例/零冷却、48kHz 立体声、预解码长循环和每 0.1 秒原始 RMS 的断言，防止录音退回静音空档或明显低谷；不替代听感与真实天气切换检查。本轮按用户要求只做静态修改，未编译、未运行 Lua；Unity PlayMode 保持原状，最终雨声由用户验收。
 
 2026-10-24：`ui.click` 沿用暂时静音，改为正式 `AudioCue.playbackEnabled=false`，不再用空录音暗示禁声。播放入口在选片、随机、冷却与声源分配前拒绝主动停用的事件，循环覆盖同样生效；正常启用却缺失录音仍保留播放警告，目录校验也会报错。`catalog_lifecycle` 规则补默认启用、主动停用空录音合法与启用空录音报错断言；`voice_lifecycle` 直接调用真实 `ui.click` 的稳定 ID 和循环覆盖入口，检查无句柄、无新增声源、不消费随机与无警告，确认音另外负责正常 UI 预热和暂停后声源复用。当前 Unity 正在用户的 PlayMode，本轮只静态修改，未编译或运行，最终点击静音与其他 UI 声音由用户验收。
@@ -20,7 +22,7 @@
 
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、combat_impact、tree_impact_configuration、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
+快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 

@@ -19,7 +19,7 @@
 
 ## 本机表现与事件
 
-- 雨雪用完整 _precipitationTransitionSeconds（默认12真实秒）SmoothStep，风/云光 _weatherTransitionSeconds 默认3秒；跨块从当前表现续接，不按低强度缩短。降水/天气采样暂缺时保留上次有效目标，不误转晴天；雨丝/水花随强度，雨声同值，停雨后已有地面水花继续播完。
+- 雨雪用完整 _precipitationTransitionSeconds（默认12秒）SmoothStep，风/云光 _weatherTransitionSeconds 默认3秒；跨块从当前表现续接，不按低强度缩短。降水必须有本区真实快照，不能把仅有邻区混合风场当成有效零雨量；缺样保留上一目标。雨丝/水花跟随镜头表现，雨声独立读取本机玩家逻辑位置并保持同长度过渡；停雨后已有地面水花继续播完。
 - SetPrecipitationIntensity(intensity,durationSeconds=60,transitionSeconds=-1) 只改本块：0强度停、0过渡立即、-1默认；普通客户端 false。PresentedRainIntensity/PresentedSnowIntensity 供表现，浇水/雪仍读真实天气。
 - 降雨由 `RainEffectController` 单个2048样本固定网格与 `RainStreak` 顶点 Shader 绘制，无落雨 ParticleSystem；三档远近雨丝消费平滑雨量和风，整层风/镜头位移双精度积分，变化才交 MPB；覆盖与 CPU 裁剪框包含最长倾斜雨丝余量，停雨/换世界隐藏，销毁释放网格。同帧地面水花仍共用视口框/WeatherMgr，保留逐点天气/地形判断。
 - 落雪由 `SnowEffectController` 单网格顶点 Shader 绘制，不创建 ParticleSystem；消费同一平滑雪强度与风方向/强度，静态样本仅初始化一次，镜头范围与风偏移用 MPB，停雪/换世界隐藏，销毁释放网格。雪量控制可见样本密度，缩放覆盖更新 CPU 裁剪框；积雪积分和温度分流仍走天气正式规则。

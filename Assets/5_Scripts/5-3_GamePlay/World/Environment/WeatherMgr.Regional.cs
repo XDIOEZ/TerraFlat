@@ -146,11 +146,20 @@ public partial class WeatherMgr
     public bool TryGetPrecipitationAt(Vector2 position, out float rainIntensity, out float snowIntensity)
     {
         rainIntensity = snowIntensity = 0f;
-        if (!TryGetWeatherAt(position, out var sample) ||
+        if (!_weatherRuntimeAllowed || !TryGetPrecipitationSnapshot(regionalEngine, position, out var sample) ||
             !TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float temperature)) return false;
         if (temperature <= PrecipitationFreezingTemperature) snowIntensity = sample.PrecipitationIntensity;
         else rainIntensity = sample.PrecipitationIntensity;
         return true;
+    }
+
+    // 邻区风场可用不代表当前位置已有降水档案，降水必须读取本区真实快照。
+    internal static bool TryGetPrecipitationSnapshot(RegionalWeatherEngine engine, Vector2 position,
+        out RegionalWeatherSnapshot sample)
+    {
+        sample = default;
+        return engine != null && float.IsFinite(position.x) && float.IsFinite(position.y) &&
+               engine.TryGetSnapshot(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)), out sample);
     }
 
     private float GetLocalRainIntensity()

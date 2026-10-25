@@ -5,13 +5,44 @@ using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
 {
-    #region 风声音色与连续包络采样
+    #region 雨风声音色与连续包络采样
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoadMethod]
 #endif
-    private static void RegisterWindAudioRules() => Register("audio", "wind_sequence", ServiceWindSequence);
+    private static void RegisterWindAudioRules()
+    {
+        Register("audio", "wind_sequence", ServiceWindSequence);
+        Register("audio", "rain_sequence", ServiceRainSequence);
+    }
+
+    private static JObject ServiceRainSequence(JObject args)
+    {
+        if (args["steps"] is not JArray steps || steps.Count == 0 || steps.Count > 128)
+            throw new ArgumentException("雨声音效采样需要 1 至 128 个连续步骤。");
+
+        var state = new WeatherMgr.RainAudioState();
+        var samples = new JArray();
+        foreach (JToken value in steps)
+        {
+            if (value is not JObject step)
+                throw new ArgumentException("雨声音效采样步骤必须是对象。");
+            // 只驱动正式雨声包络，缺样与有效停雨由 Lua 分别断言。
+            if (Flag(step, "reset", false))
+                state.Reset();
+            else
+                state.Advance(Flag(step, "available", true),
+                    Flag(step, "invalidRain", false) ? float.NaN : (float)Number(step, "rain", 0),
+                    (float)Number(step, "deltaTime", 0), (float)Number(step, "transitionSeconds", 12));
+            samples.Add(new JObject
+            {
+                ["intensity"] = state.PresentedIntensity,
+                ["target"] = state.TargetIntensity, ["volume"] = state.Volume
+            });
+        }
+        return new JObject { ["samples"] = samples };
+    }
 
     private static JObject ServiceWindSequence(JObject args)
     {

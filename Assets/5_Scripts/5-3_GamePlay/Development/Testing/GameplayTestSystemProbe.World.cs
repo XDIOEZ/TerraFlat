@@ -1130,6 +1130,14 @@ public static partial class GameplayTestSystemProbe
         float retainedSnowTarget = heldSnowTarget;
         bool availableTargetChanged = WeatherMgr.TryUpdatePrecipitationTargets(true, .3f, .1f,
             ref heldRainTarget, ref heldSnowTarget);
+        var missingPosition = new Vector2(128.5f, 64f);
+        bool neighborWindAvailable = engine.TryGetWindBlend(new Unity.Mathematics.double2(
+            missingPosition.x, missingPosition.y), out _);
+        bool missingPrecipitationAvailable = WeatherMgr.TryGetPrecipitationSnapshot(engine, missingPosition, out _);
+        bool realClearAvailable = WeatherMgr.TryGetPrecipitationSnapshot(engine, Vector2.one, out var clearSample);
+        float retainedRain = .8f, retainedSnow = .2f;
+        bool windOnlyTargetChanged = WeatherMgr.TryUpdatePrecipitationTargets(missingPrecipitationAvailable,
+            0f, 0f, ref retainedRain, ref retainedSnow);
         return new JObject
         {
             ["firstReady"] = firstReady, ["secondReady"] = secondReady,
@@ -1142,6 +1150,11 @@ public static partial class GameplayTestSystemProbe
             ["retainedRainTarget"] = retainedRainTarget, ["retainedSnowTarget"] = retainedSnowTarget,
             ["availableTargetChanged"] = availableTargetChanged,
             ["updatedRainTarget"] = heldRainTarget, ["updatedSnowTarget"] = heldSnowTarget,
+            ["neighborWindAvailable"] = neighborWindAvailable,
+            ["missingPrecipitationAvailable"] = missingPrecipitationAvailable,
+            ["windOnlyTargetChanged"] = windOnlyTargetChanged,
+            ["windOnlyRainTarget"] = retainedRain, ["windOnlySnowTarget"] = retainedSnow,
+            ["realClearAvailable"] = realClearAvailable, ["realClearPrecipitation"] = clearSample.PrecipitationIntensity,
             ["negativeRegionX"] = negative.X, ["negativeRegionY"] = negative.Y,
             ["rainProbability"] = settings.ResolveActivationProbability(new WeatherElementProfile("rain", .4f, .5f, 60f)),
             ["wind8Probability"] = settings.ResolveActivationProbability(new WeatherElementProfile("wind", .4f, .8f, 60f)),
