@@ -10,8 +10,30 @@ public static partial class GameplayTestSystemProbe
 
     [UnityEditor.InitializeOnLoadMethod]
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void RegisterBuildingPanelLayoutRules() =>
+    private static void RegisterBuildingPanelLayoutRules()
+    {
         Register("ui_settings", "building_panel_layout", CaptureBuildingPanelLayout);
+        Register("ui_settings", "vessel_contents_layers", CaptureVesselContentsLayers);
+    }
+
+    // 读取正式容器外观，防止重建面板后坩埚材料重新落回液体遮罩内。
+    private static JObject CaptureVesselContentsLayers(JObject args)
+    {
+        GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_WaterVessel.prefab");
+        WaterVesselPanel panel = prefab.GetComponent<WaterVesselPanel>();
+        var appearances = new JArray();
+        foreach (WaterVesselPanel.VesselAppearance appearance in panel.Appearances)
+            appearances.Add(new JObject
+            {
+                ["id"] = appearance.ItemId,
+                ["aboveInterior"] = appearance.ContentsAboveInterior,
+                ["bottom"] = appearance.StorageBounds.yMin,
+                ["left"] = appearance.StorageBounds.xMin,
+                ["right"] = appearance.StorageBounds.xMax
+            });
+        return new JObject { ["appearances"] = appearances };
+    }
 
     private static JObject CaptureBuildingPanelLayout(JObject args)
     {

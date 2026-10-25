@@ -14,7 +14,7 @@ public sealed class VesselContentsView : MonoBehaviour
     #region 配置与绑定
 
     public ItemSlot_UI SlotTemplate; // 正式 UI_Slot 模板，运行时只克隆为真实库存槽位。
-    public RectTransform Interior; // 罐内遮罩，也是槽位的局部运动坐标系。
+    public RectTransform Interior; // 槽位的局部运动坐标系，由容器外观选择内腔遮罩或前景剖面。
     public RectTransform VesselArt; // 当前剖面的倾角来源。
     public Rect StorageBounds = new Rect(0.26f, 0.12f, 0.48f, 0.62f); // 木桶可见内腔的归一化边界。
 

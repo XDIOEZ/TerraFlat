@@ -123,7 +123,8 @@ public static partial class RuntimeUIPrefabBuilder
                 LeftOutlet = new Vector2(12f / 128f, 95f / 128f),
                 RightOutlet = new Vector2(116f / 128f, 95f / 128f),
                 MouthWidth = 104f / 128f,
-                StorageBounds = new Rect(.32f, .22f, .36f, .52f)
+                StorageBounds = new Rect(.32f, .22f, .36f, .52f),
+                ContentsAboveInterior = true
             }
         };
 

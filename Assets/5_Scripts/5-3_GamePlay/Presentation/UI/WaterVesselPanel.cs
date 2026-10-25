@@ -37,6 +37,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         public Vector2 LeftOutlet, RightOutlet; // 左右嘴沿的归一化位置。
         public float MouthWidth; // 开口宽度占容器剖面宽度的比例；越宽，固定流速越快。
         public Rect StorageBounds; // 可选固体运动区；未声明时复用默认内腔。
+        public bool ContentsAboveInterior; // 开放剖面的固体独立显示在内腔前方，不被液体遮罩裁掉底部。
     }
 
     public VesselAppearance[] Appearances = Array.Empty<VesselAppearance>(); // 特定容器的外观覆盖，未匹配时恢复 Prefab 默认外观。
@@ -62,6 +63,8 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         vesselImage.sprite = appearance.Cutaway;
         interiorImage.sprite = appearance.Interior;
         Liquid.FillRange = appearance.FillRange;
+        contentsView.Interior = appearance.ContentsAboveInterior
+            ? vesselArt : (RectTransform)Liquid.transform.parent;
         contentsView.StorageBounds = appearance.StorageBounds.width > 0f && appearance.StorageBounds.height > 0f
             ? appearance.StorageBounds : defaultStorageBounds;
         if (appearance.MouthWidth <= 0f || defaultAppearance.MouthWidth <= 0f)

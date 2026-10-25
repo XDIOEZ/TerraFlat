@@ -1012,3 +1012,16 @@ test.system("ui_settings", "text_fitting_assets", {}, function(data)
     assert(bounded >= 700 and flowing >= 10, "普通文字或动态正文的扫描范围缺失")
     assert(screenshot_buttons == 2, "未覆盖截图中的两个正式按钮")
 end, "所有正式 UI 文字缩放范围与溢出设置")
+
+test.system("ui_settings", "vessel_contents_layers", {}, function(data)
+    local crucible_found = false
+    for _, appearance in ipairs(data.appearances) do
+        assert(appearance.aboveInterior == (appearance.id == "Crucible"), "固体前景层配置错误，坩埚仍受液体遮罩裁剪或其他容器丢失遮罩")
+        if appearance.id == "Crucible" then
+            crucible_found = true
+            assert(appearance.bottom >= .2199 and appearance.left >= .3199 and appearance.right <= .6801,
+                "坩埚前景材料的活动边界越过锅沿")
+        end
+    end
+    assert(crucible_found, "正式容器面板缺少坩埚外观")
+end, "坩埚材料独立前景层与锅内活动边界")
