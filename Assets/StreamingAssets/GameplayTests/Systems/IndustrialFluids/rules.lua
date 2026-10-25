@@ -2,6 +2,22 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.000001), message)
 end
 
+test.system("industrial_fluids", "block_tank_stacking", {}, function(data)
+    assert(#data.tanks == 6, "气罐方块或便携气罐定义覆盖不完整")
+    for _, tank in ipairs(data.tanks) do
+        if string.sub(tank.id, 1, 13) == "GasTankBlock_" then
+            assert(tank.stackable and tank.canStack, tank.id .. "没有启用同类方块堆叠")
+            assert(tank.empty and not tank.bodyTemperatureInitialized and tank.groupOwnerId == 0
+                and tank.randomState == 1, tank.id .. "返空方块仍携带罐温、组主或随机状态")
+            assert(tank.sourceUnchanged, tank.id .. "准备返还物时改动了原储罐状态")
+            assert(tank.repackedCanStack and tank.added and tank.addedAmount == 3 and tank.amount == 5,
+                tank.id .. "不同运行记录的空方块不能通过正式库存合堆")
+        else
+            assert(not tank.stackable and not tank.canStack, tank.id .. "便携气罐被错误改为可堆叠")
+        end
+    end
+end, "铁钢气罐方块可堆叠、返空状态归一与便携气罐隔离")
+
 test.system("industrial_fluids", "reservations", {}, function(data)
     assert(data.reserved and data.transferred, "正式预留或转移失败")
     near(data.reservedMoles, 3, "端口没有预留指定数量")

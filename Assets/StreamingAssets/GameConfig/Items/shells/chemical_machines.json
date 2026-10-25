@@ -665,7 +665,7 @@
       "amount": 1,
       "weight": 20,
       "volume": 30,
-      "stackable": false,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35",
@@ -737,7 +737,7 @@
       "amount": 1,
       "weight": 20,
       "volume": 30,
-      "stackable": false,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "35",
@@ -808,7 +808,7 @@
       "amount": 1,
       "weight": 20,
       "volume": 30,
-      "stackable": false,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35",
@@ -880,7 +880,7 @@
       "amount": 1,
       "weight": 20,
       "volume": 30,
-      "stackable": false,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "35",

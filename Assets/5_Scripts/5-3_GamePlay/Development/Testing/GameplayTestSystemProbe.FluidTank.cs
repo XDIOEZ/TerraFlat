@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -16,12 +17,60 @@ public static partial class GameplayTestSystemProbe
 #endif
     private static void RegisterPortableFluidTankRules()
     {
+        Register("industrial_fluids", "block_tank_stacking", WorldBlockTankStacking);
         Register("industrial_fluids", "portable_tank_cache", WorldPortableTankCache);
         Register("industrial_fluids", "portable_tank_payload", WorldPortableTankPayload);
         Register("industrial_fluids", "portable_tank_air_fill", WorldPortableTankAirFill);
         Register("industrial_fluids", "cold_temperature_path", WorldColdTemperaturePath);
         Register("industrial_fluids", "cold_wind_cache", WorldColdWindCache);
     }
+
+    #region 方块气罐堆叠规则采样
+    private static JObject WorldBlockTankStacking(JObject args)
+    {
+        var definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
+        var machines = JsonConvert.DeserializeObject<MachineCatalogDocument>(
+            Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog").text);
+        var rows = new JArray();
+        // 只使用正式目录的独立物品和快照，不登记或改动玩家世界中的储罐。
+        foreach (string id in new[] { "GasTankBlock_Iron", "GasTankBlock_Iron_Summoner",
+            "GasTankBlock_Steel", "GasTankBlock_Steel_Summoner", "PortableGasTank_Iron", "PortableGasTank_Steel" })
+        {
+            ItemDefinitionDto definition = definitions.Find(value => value.Id == id)
+                ?? throw new InvalidOperationException("缺少气罐定义：" + id);
+            Data_GeneralItem first = EntityCraftingDefinitionData(definition, 2);
+            Data_GeneralItem second = EntityCraftingDefinitionData(definition, 3);
+            var row = new JObject { ["id"] = id, ["stackable"] = first.Stack.Stackable,
+                ["canStack"] = first.CanStackWith(second) };
+            if (id.StartsWith("GasTankBlock_", StringComparison.Ordinal))
+            {
+                string bodyId = id.EndsWith("_Summoner", StringComparison.Ordinal) ? id[..^9] : id;
+                var node = new MachineEntity { Definition = machines.Nodes.Find(value => value.Id == bodyId) };
+                var original = new FluidMachineState { BodyTemperatureInitialized = true,
+                    BodyTemperatureCelsius = 120, GroupOwnerId = 987, RandomState = 97, Status = "测试运行记录" };
+                original.Chambers["main"] = new FluidInventoryState();
+                MachinePersistence.Write(first, "fluid", original);
+                MachinePersistence.Write(second, "fluid", new FluidMachineState { BodyTemperatureInitialized = true,
+                    BodyTemperatureCelsius = -20, GroupOwnerId = 654, RandomState = 23 });
+                MachineWorld.PrepareDismantledFluidSnapshot(node, first);
+                MachineWorld.PrepareDismantledFluidSnapshot(node, second);
+                FluidMachineState prepared = MachinePersistence.Read<FluidMachineState>(first, "fluid");
+                var inventory = new Inventory_Data(new List<ItemSlot> { new(0) { itemData = first } }, "block-tank-stack");
+                row["repackedCanStack"] = first.CanStackWith(second);
+                row["added"] = inventory.TryAddItem(second, true, out float added);
+                row["addedAmount"] = added;
+                row["amount"] = first.Stack.Amount;
+                row["empty"] = prepared.Chambers.Count == 0;
+                row["bodyTemperatureInitialized"] = prepared.BodyTemperatureInitialized;
+                row["groupOwnerId"] = prepared.GroupOwnerId;
+                row["randomState"] = prepared.RandomState;
+                row["sourceUnchanged"] = original.Chambers.Count == 1 && original.GroupOwnerId == 987;
+            }
+            rows.Add(row);
+        }
+        return new JObject { ["tanks"] = rows };
+    }
+    #endregion
 
     // 独立物品使用不存在于目录的身份，规则采样不加载或改写当前资源会话。
     private static ItemData WorldPortableTankItem(out Ex_ModData_MemoryPackable binary)

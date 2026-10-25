@@ -140,10 +140,8 @@ public static partial class MachineWorld
     public static void PrepareDismantledFluidSnapshot(MachineEntity node, ItemData snapshot)
     {
         if (!IsFluidTankBlock(node) || snapshot == null) return;
-        FluidMachineState state = MachinePersistence.Read<FluidMachineState>(snapshot, "fluid");
-        if (state == null) return;
-        state.Chambers.Clear(); state.GroupOwnerId = 0; state.OverpressureVictimId = 0;
-        MachinePersistence.Write(snapshot, "fluid", state);
+        // 空方块不携带罐温、组主和运行记录，避免同类返还物被临时状态拆成不同堆叠。
+        MachinePersistence.Write(snapshot, "fluid", new FluidMachineState());
     }
 
     // 组合罐按拆下罐体的真实容积分摊，只把这一块的份额排入当地环境。
