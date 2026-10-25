@@ -64,6 +64,8 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 行为能力与表现
 
+- ECS 生物由 `AiecsSwayAnimation` 在共享首图上合成摇摆、呼吸、定向攻击和死亡翻转，BRG 主体与太阳阴影共用结果；动作按完整身份保存，联机副本用 GUID 建立本地身份。目录每状态只留首图与定义基础姿态，参数沿用正式动画模块；鸟类保留外壳状态贴图与真实高度。导出器不再读取 Animator 时间轴；规则 `ai/ecs_sway_animation`，PlayMode 中不重导或刷新。
+
 - 狼普通攻击距离2.1米、前摇0.25秒，真实命中盒按原尺寸放大50%；`biteAttackSkill` 组合通用撕咬。活动技能保留Attack状态并禁止普通攻击起手；继承狼外壳的Zombie/SnowLeopard显式移除该模块，由自身定义决定是否复用。
 
 - 狼 `ai` 槽位的能力 ID 必须为 `AI`，`Module_AI_Wolf` 仅为 Prefab 身份；组群、呼叫和编队只接纳已就绪、启用、存活且友好的狼，按持久 Guid 选同一头狼。两只起协同追击，独狼避让、双狼低血撤退规则保留；回归 `ai/wolf_pack` 使用正式定义注册身份后调用真实决策。

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using FlatWorld.AIECS;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -12,6 +13,79 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/network_snapshot_buffer", AiNetworkSnapshotBuffer);
         operations.Add("ai/single_sprite_catalog", EntityAiSingleSpriteCatalog);
         operations.Add("ai/single_sprite_aquatic", EntityAiSingleSpriteAquatic);
+        operations.Add("ai/ecs_sway_animation", AiEcsSwayAnimation);
+    }
+
+    // Lua 读取正式摇摆采样器的姿态，不创建世界、实体、Renderer 或动画组件。
+    private static JObject AiEcsSwayAnimation(JObject args)
+    {
+        AiecsAnimationClip Clip(string name, int sprite) => new AiecsAnimationClip
+        {
+            State = name, Duration = 1f, Loop = true,
+            Frames = new[] { new AiecsAnimationFrame { Sprite = sprite, Scale = Vector3.one } }
+        };
+        var visual = new AiecsActorVisual { Clips = new[] { Clip("Stand", 0), Clip("Flying", 1) } };
+        visual.Sway.idleBreathAmount = 0f;
+        var geometry = new[]
+        {
+            new AiecsSpriteGeometry { LocalRect = new Rect(-0.5f, 0f, 1f, 1f) },
+            new AiecsSpriteGeometry { LocalRect = new Rect(-0.5f, 0f, 1f, 1f) }
+        };
+        var animation = new AiecsSwayAnimation(visual, geometry);
+        JObject Sample(ref AiecsSwayState sampleState, AiecsDisplayRecord sampleRecord, float delta)
+        {
+            AiecsSwayPose pose = animation.Sample(ref sampleState, sampleRecord, delta);
+            Bounds bounds = animation.GetBounds(pose.Frame, pose.Mirror);
+            return new JObject { ["sprite"] = pose.Frame.Sprite, ["mirror"] = pose.Mirror,
+                ["angle"] = pose.Frame.Rotation, ["centerX"] = bounds.center.x, ["bottom"] = bounds.min.y };
+        }
+        var result = new JObject();
+        var state = new AiecsSwayState();
+        var record = new AiecsDisplayRecord { Facing = new Unity.Mathematics.float2(1f, 0f), Moving = 1 };
+        result["moving"] = Sample(ref state, record, 0.1f);
+        record.Moving = 0;
+        result["stopped"] = Sample(ref state, record, 0.2f);
+        record.AttackPhase = AiecsAttackPhase.Windup;
+        result["windup"] = Sample(ref state, record, 0.1f);
+        record.AttackPhase = AiecsAttackPhase.Active; record.ActionElapsed = 0.03f;
+        result["attack"] = Sample(ref state, record, 0f);
+        record.AttackPhase = AiecsAttackPhase.Recovery; record.ActionElapsed = 0f;
+        record.Facing.x = -1f;
+        result["recovery"] = Sample(ref state, record, 0.06f);
+        result["attackEnded"] = Sample(ref state, record, 0.2f);
+        var other = new AiecsSwayState();
+        record.Facing.x = -1f; record.AttackPhase = AiecsAttackPhase.Active; record.ActionElapsed = 0.03f;
+        result["leftAttack"] = Sample(ref other, record, 0f);
+        record.Facing.x = 1f; record.AttackPhase = AiecsAttackPhase.Ready;
+        record.FlightCruiseHeight = 1f; record.FlightHeight = 1f; record.FlightAirborne = 1;
+        result["flying"] = Sample(ref state, record, 0f);
+        record.Dead = 1; record.Facing.x = -1f; record.FlightHeight = 0f; record.FlightAirborne = 0;
+        record.ActionElapsed = 0f;
+        result["deathStart"] = Sample(ref state, record, 0f);
+        record.ActionElapsed = 0.38f;
+        result["deathMiddle"] = Sample(ref state, record, 0f);
+        record.ActionElapsed = 0.76f;
+        result["deathEnd"] = Sample(ref state, record, 0f);
+        record.ActionElapsed = 2f;
+        result["deathHeld"] = Sample(ref state, record, 0f);
+        record.Dead = 0; record.FlightCruiseHeight = 0f; record.Facing.x = 1f;
+        result["revived"] = Sample(ref state, record, 0f);
+#if UNITY_EDITOR
+        var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<AiecsAnimationCatalog>(
+            "Assets/6_Art/Generated/Actors/AIECS/生物动画目录.asset");
+        var actors = new JArray();
+        foreach (AiecsActorVisual actor in catalog.Actors)
+        {
+            var states = new JArray();
+            foreach (AiecsAnimationClip clip in actor.Clips)
+                states.Add(new JObject { ["state"] = clip.State, ["frames"] = clip.Frames.Length,
+                    ["source"] = catalog.Sprites[clip.Frames[0].Sprite].Source });
+            actors.Add(new JObject { ["id"] = actor.Id, ["states"] = states,
+                ["deathDuration"] = actor.Sway.deathDuration });
+        }
+        result["actors"] = actors;
+#endif
+        return result;
     }
 
     // 规则驱动正式快照缓冲，覆盖分片与世界代际边界，不启动网络或模拟。

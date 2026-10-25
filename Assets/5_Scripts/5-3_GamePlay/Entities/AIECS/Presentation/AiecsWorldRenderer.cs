@@ -1,4 +1,5 @@
 ﻿using System;
+using FlatWorld.Combat;
 using Unity.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
@@ -28,6 +29,12 @@ namespace FlatWorld.AIECS
     /// </summary>
     public sealed class AiecsWorldRenderer : IDisposable
     {
+        #region ECS生物摇摆批量表现
+        private sealed class SwayEntry
+        {
+            public AiecsSwayState State;
+            public int LastDraw;
+        }
         private struct DrawItem
         {
             public int Index, Visual, Row, Layer, Order; public float Y;
@@ -47,14 +54,10 @@ namespace FlatWorld.AIECS
         }
         private readonly AiecsAnimationCatalog catalog;
         private readonly int[] visuals;
-        private readonly int[,] clips;
-        private const int StandClip = 0;
-        private const int MoveClip = 1;
-        private const int AttackClip = 2;
-        private const int DeathClip = 3;
-        private const int TakingOffClip = 4;
-        private const int FlyingClip = 5;
-        private const int LandingClip = 6;
+        private readonly AiecsSwayAnimation[] animations;
+        private readonly Dictionary<CombatIdentity, SwayEntry> animationStates = new();
+        private readonly List<CombatIdentity> expiredStates = new();
+        private int drawSequence;
         private readonly AiecsBatchRendererGroup batch;
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
@@ -78,7 +81,8 @@ namespace FlatWorld.AIECS
         {
             this.catalog = catalog; this.scene = scene; this.sortingKeys = sortingKeys;
             if (catalog == null || catalog.Material == null) throw new InvalidOperationException("请先导出 AIECS 动画目录。");
-            visuals = new int[actorIds.Length]; clips = new int[actorIds.Length, 7];
+            visuals = new int[actorIds.Length];
+            animations = new AiecsSwayAnimation[actorIds.Length];
             shadowFootprints = new Vector4[actorIds.Length];
             sunShadowHeights = new float[actorIds.Length];
             for (int i = 0; i < actorIds.Length; i++)
@@ -87,14 +91,8 @@ namespace FlatWorld.AIECS
                 visuals[i] = Array.FindIndex(catalog.Actors, value => value.Id == actorIds[i]);
                 if (visuals[i] < 0) throw new InvalidOperationException("AIECS 动画目录缺少 " + actorIds[i]);
                 var definition = catalog.Actors[visuals[i]];
-                clips[i, StandClip] = FindClip(definition, "Stand", "Idle");
-                clips[i, MoveClip] = FindClip(definition, "Move", "Walk");
-                clips[i, AttackClip] = FindClip(definition, "Attack", "Attack");
-                clips[i, DeathClip] = FindClip(definition, "Death", "Dead");
-                clips[i, TakingOffClip] = FindClip(definition, "TakingOff", "TakeOff");
-                clips[i, FlyingClip] = FindClip(definition, "Flying", "Fly");
-                clips[i, LandingClip] = FindClip(definition, "Landing", "Land");
-                var idle = definition.Clips[clips[i, StandClip]].Sample(0f);
+                animations[i] = new AiecsSwayAnimation(definition, catalog.Sprites);
+                var idle = animations[i].StandFrame;
                 shadowFootprints[i] = AiecsShadowRenderer.MeasureFootprint(definition, catalog.Sprites[idle.Sprite], idle);
             }
             shadows = new AiecsShadowRenderer(scene, sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
@@ -111,18 +109,6 @@ namespace FlatWorld.AIECS
             sunShadowHeights[definitionIndex] = multiplier;
         }
 
-        /// <summary>按原始状态尾名匹配，不把缺少的功能动画当作已迁移动作。</summary>
-        private static int FindClip(AiecsActorVisual visual, string first, string second)
-        {
-            for (int i = 0; i < visual.Clips.Length; i++)
-            {
-                string state = visual.Clips[i].State;
-                if (state.EndsWith("." + first, StringComparison.OrdinalIgnoreCase) || state.Equals(first, StringComparison.OrdinalIgnoreCase) ||
-                    state.EndsWith("." + second, StringComparison.OrdinalIgnoreCase) || state.Equals(second, StringComparison.OrdinalIgnoreCase)) return i;
-            }
-            return 0;
-        }
-
         /// <summary>读取真实 ECS 位置/行为/生命，循环世界只绘制相机最近镜像。</summary>
         public void Draw(AiecsSimulation simulation, Camera camera, WorldTopologyDomain domain,
             Func<Vector2, bool> presentationReady = null)
@@ -136,6 +122,7 @@ namespace FlatWorld.AIECS
             {
                 visible.Clear(); BatchCount = 0; shadows.Hide(); sunShadows.Hide();
                 batch.Hide();
+                animationStates.Clear();
                 return;
             }
             shadows.Begin();
@@ -161,69 +148,45 @@ namespace FlatWorld.AIECS
             }
             visible.Sort(DrawComparer.Instance);
             batch.Begin();
+            drawSequence++;
             for (int i = 0; i < visible.Count; i++)
             {
                 var item = visible[i]; var record = records[item.Index]; var definition = catalog.Actors[item.Visual];
-                    int action = ResolveClip(record);
-                    AiecsAnimationClip clip = definition.Clips[clips[record.Definition, action]];
-                    float sampleTime = ResolveSampleTime(record, action, clip);
-                    var frame = clip.Sample(sampleTime);
-                    float2 ground = center + domain.ShortestDelta(center, record.Position);
-                    var actor = new AiecsPrototypeActor
-                    {
-                        Position = ground + new float2(0f, record.FlightHeight),
-                        WaterBlend = Mathf.Clamp01(record.WaterBlend)
-                    };
-                    float liquidDepth = Mathf.Clamp01(record.LiquidDepth);
-                    float waterTint = Mathf.Lerp(0.12f, 0.8f, liquidDepth);
-                    Color color = definition.Color;
-                    if (record.Dead != 0) color.a *= Mathf.Clamp01(2f - record.ActionElapsed);
-                    // 复用真实水态和当前可见列表，绝不逐实体查询地形或创建阴影组件。
-                    if (ShadowsEnabled)
-                        shadows.Append(new Vector2(ground.x, ground.y), shadowFootprints[record.Definition],
-                            record.Facing.x < 0f, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.LiquidDepth, record.WaterBlend));
-                    if (sunShadows.Active)
-                        sunShadows.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], record.Facing.x < 0f,
-                            color.a, ground.y + shadowFootprints[record.Definition].y - 0.02f,
-                            sunShadowHeights[record.Definition]);
+                if (!animationStates.TryGetValue(record.Key, out SwayEntry entry))
+                    animationStates.Add(record.Key, entry = new SwayEntry());
+                entry.LastDraw = drawSequence;
+                AiecsSwayPose pose = animations[record.Definition].Sample(ref entry.State, record, Time.deltaTime);
+                var frame = pose.Frame;
+                float2 ground = center + domain.ShortestDelta(center, record.Position);
+                var actor = new AiecsPrototypeActor
+                {
+                    Position = ground,
+                    WaterBlend = Mathf.Clamp01(record.WaterBlend)
+                };
+                float liquidDepth = Mathf.Clamp01(record.LiquidDepth);
+                float waterTint = Mathf.Lerp(0.12f, 0.8f, liquidDepth);
+                Color color = definition.Color;
+                if (record.Dead != 0) color.a *= Mathf.Clamp01(2f - record.ActionElapsed);
+                // 复用真实水态和当前可见列表，绝不逐实体查询地形或创建阴影组件。
+                if (ShadowsEnabled)
+                    shadows.Append(new Vector2(ground.x, ground.y), shadowFootprints[record.Definition],
+                        pose.Mirror, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.LiquidDepth, record.WaterBlend));
+                if (sunShadows.Active)
+                    sunShadows.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], pose.Mirror,
+                        color.a, ground.y + shadowFootprints[record.Definition].y - 0.02f,
+                        sunShadowHeights[record.Definition]);
                 batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
-                    record.Facing.x < 0f, color);
+                    pose.Mirror, color);
             }
+            // 离开可见列表就释放实体动作，身份换槽不会继承别的生物的姿态。
+            expiredStates.Clear();
+            foreach (var pair in animationStates)
+                if (pair.Value.LastDraw != drawSequence) expiredStates.Add(pair.Key);
+            foreach (CombatIdentity key in expiredStates) animationStates.Remove(key);
             batch.Submit();
             BatchCount = batch.Count > 0 ? 1 : 0;
             shadows.End();
             sunShadows.End();
-        }
-
-        /// <summary>飞行表现优先于地面移动，避免 ECS 鸟升空后仍播放 Walk。</summary>
-        private static int ResolveClip(AiecsDisplayRecord record)
-        {
-            if (record.Dead != 0) return DeathClip;
-            if (record.Behavior == (int)AiecsBehavior.Attack && record.AttackPhase == AiecsAttackPhase.Active)
-                return AttackClip;
-            if (record.FlightCruiseHeight > 0.001f)
-            {
-                if (record.FlightAirborne != 0)
-                    return record.FlightHeight < record.FlightCruiseHeight * 0.5f ? TakingOffClip : FlyingClip;
-                if (record.FlightHeight > 0.01f) return LandingClip;
-            }
-            return record.Moving != 0 ? MoveClip : StandClip;
-        }
-
-        /// <summary>起降动画直接跟随实际高度进度，行为状态切换不会让非循环动画跳到末帧。</summary>
-        private static float ResolveSampleTime(AiecsDisplayRecord record, int action, AiecsAnimationClip clip)
-        {
-            if (action == TakingOffClip)
-            {
-                float takeoffHeight = Mathf.Max(0.001f, record.FlightCruiseHeight * 0.5f);
-                return clip.Duration * Mathf.Clamp01(record.FlightHeight / takeoffHeight);
-            }
-            if (action == LandingClip)
-            {
-                float cruiseHeight = Mathf.Max(0.001f, record.FlightCruiseHeight);
-                return clip.Duration * Mathf.Clamp01((1f - record.FlightHeight / cruiseHeight) * 2f);
-            }
-            return record.ActionElapsed;
         }
 
         /// <summary>开发 HUD 最多绘制 64 个可见实体血条，不创建逐实体 UI 节点。</summary>
@@ -258,9 +221,11 @@ namespace FlatWorld.AIECS
                 finally
                 {
                     batch.Dispose();
+                    animationStates.Clear(); expiredStates.Clear();
                     visible.Clear(); BatchCount = 0;
                 }
             }
         }
+        #endregion
     }
 }

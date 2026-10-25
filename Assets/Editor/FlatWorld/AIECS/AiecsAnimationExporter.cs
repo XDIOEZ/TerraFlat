@@ -1,10 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEditor;
-using UnityEditor.Animations;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
@@ -12,7 +11,7 @@ using UnityEngine;
 namespace FlatWorld.AIECS.Editor
 {
     /// <summary>
-    /// P1 动画导出器：复用正式 Manifest 的校验和继承合并，从 Addressables 解析实际控制器。
+    /// 单图摇摆导出器：复用正式 Manifest 的继承合并、身体首图和动画模块参数。
     /// 不实例化正式 Actor、不改源贴图；真实 Sprite 三角形先解包，再生成禁止缩图的专用点采样图集。
     /// </summary>
     internal sealed class AiecsAnimationExporter
@@ -116,44 +115,47 @@ namespace FlatWorld.AIECS.Editor
         }
         #endregion
 
-        #region 控制器与时间轴
-        /// <summary>导出一个继承合并后的物种，覆盖控制器按实际映射解析。</summary>
+        #region 单图摇摆目录
+        /// <summary>直接导出正式身体首图与状态贴图，不读取旧 Animator 时间轴。</summary>
         private AiecsActorVisual ExportActor(ItemDefinitionDto definition)
         {
             ItemVisualDefinitionDto visual = definition.Visual;
-            RuntimeAnimatorController source = Resolve<RuntimeAnimatorController>(visual.AnimatorControllerAddress);
-            var overrides = new Dictionary<AnimationClip, AnimationClip>();
-            if (source is AnimatorOverrideController over)
-            {
-                var pairs = new List<KeyValuePair<AnimationClip, AnimationClip>>();
-                over.GetOverrides(pairs);
-                foreach (var pair in pairs) overrides[pair.Key] = pair.Value != null ? pair.Value : pair.Key;
-                source = over.runtimeAnimatorController;
-            }
-            if (!(source is AnimatorController controller))
-                throw new InvalidDataException(definition.Id + " 控制器类型不受支持。");
-            if (controller.layers.Length != 1)
-                throw new InvalidDataException(definition.Id + " 使用多层 Animator，须先补齐混合导出。");
             var result = new AiecsActorVisual
             {
                 Id = definition.Id, SortingLayerId = SortingLayer.NameToID(visual.SortingLayerName),
                 SortingOrder = visual.SortingOrder ?? 0, Color = visual.Color ?? Color.white,
                 FlipX = visual.FlipX ?? false, FlipY = visual.FlipY ?? false
             };
-            var clips = new List<AiecsAnimationClip>();
-            ExportStates(controller.layers[0].stateMachine, controller.layers[0].name, definition, overrides, clips);
-            result.Clips = clips.ToArray();
-            if (result.Clips.Length == 0) throw new InvalidDataException(definition.Id + " 没有可用状态。");
-            float min = float.PositiveInfinity;
-            float max = float.NegativeInfinity;
-            foreach (AiecsAnimationClip clip in clips)
-            foreach (AiecsAnimationFrame frame in clip.Frames)
+            var clips = new List<AiecsAnimationClip> { ExportState("Stand", Resolve<Sprite>(visual.SpriteAddress), visual) };
+            if (!definition.Modules.TryGetValue("animator", out ItemModuleDefinitionDto configured))
+                throw new InvalidDataException(definition.Id + " 缺少动画模块配置。");
+            GameObject shell = AssetDatabase.LoadAssetAtPath<GameObject>(definition.SourcePrefab);
+            GameObject module = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Gameplay/Modules/Animation/" + configured.Prefab + ".prefab");
+            string moduleId = string.IsNullOrWhiteSpace(configured.Id) ? configured.Prefab : configured.Id;
+            var prototype = ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, moduleId) as Mod_AnimatorController;
+            prototype ??= ItemDefinitionCatalogLoader.FindModulePrototype(null, module, moduleId) as Mod_AnimatorController;
+            if (prototype == null) throw new InvalidDataException(definition.Id + " 缺少动画模块原型。");
+            dependencies.Add(definition.SourcePrefab);
+            if (module != null) dependencies.Add(AssetDatabase.GetAssetPath(module));
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(prototype), result.Sway);
+            if (configured.Parameters != null)
+                JsonUtility.FromJsonOverwrite(configured.Parameters.ToString(), result.Sway);
+            foreach (Mod_AnimatorController.SingleSpriteState state in prototype.singleSpriteStates ?? Array.Empty<Mod_AnimatorController.SingleSpriteState>())
             {
+                if (state == null || string.IsNullOrWhiteSpace(state.stateName) || state.sprite == null)
+                    throw new InvalidDataException(definition.Id + " 的单图状态贴图不完整。");
+                clips.Add(ExportState(state.stateName, state.sprite, visual));
+            }
+            result.Clips = clips.ToArray();
+            float min = float.PositiveInfinity, max = float.NegativeInfinity;
+            foreach (AiecsAnimationClip clip in result.Clips)
+            {
+                AiecsAnimationFrame frame = clip.Frames[0];
                 Rect rect = GetLocalRect(sprites[frame.Sprite]);
                 for (int corner = 0; corner < 4; corner++)
                 {
-                    Vector3 point = new Vector3(corner % 2 == 0 ? rect.xMin : rect.xMax,
-                        corner < 2 ? rect.yMin : rect.yMax, 0f);
+                    Vector3 point = new Vector3(corner % 2 == 0 ? rect.xMin : rect.xMax, corner < 2 ? rect.yMin : rect.yMax);
                     point.x *= result.FlipX ? -1f : 1f;
                     point.y *= result.FlipY ? -1f : 1f;
                     point = Quaternion.Euler(0, 0, frame.Rotation) * Vector3.Scale(point, frame.Scale) + frame.Position;
@@ -164,100 +166,16 @@ namespace FlatWorld.AIECS.Editor
             return result;
         }
 
-        /// <summary>递归使用完整状态路径，明确拒绝尚未实现的 BlendTree 或动态状态速度。</summary>
-        private void ExportStates(AnimatorStateMachine machine, string path, ItemDefinitionDto definition,
-            Dictionary<AnimationClip, AnimationClip> overrides, List<AiecsAnimationClip> output)
+        private AiecsAnimationClip ExportState(string state, Sprite sprite, ItemVisualDefinitionDto visual)
         {
-            foreach (ChildAnimatorState child in machine.states)
+            return new AiecsAnimationClip
             {
-                AnimatorState state = child.state;
-                if (!(state.motion is AnimationClip clip) || state.speed <= 0f || state.speedParameterActive ||
-                    state.timeParameterActive || state.mirror || state.mirrorParameterActive || state.cycleOffset != 0f || state.cycleOffsetParameterActive)
-                    throw new InvalidDataException(definition.Id + "/" + state.name + " 使用未支持的运动、镜像或动态时间参数。");
-                if (overrides.TryGetValue(clip, out AnimationClip replacement)) clip = replacement;
-                dependencies.Add(AssetDatabase.GetAssetPath(clip));
-                if (state.behaviours.Length != 0)
-                    diagnostics.Add(definition.Id + "/" + state.name + "：StateMachineBehaviour 未迁移，不能转正。");
-                output.Add(ExportClip(clip, path + "." + state.name, state.speed, definition));
-            }
-            foreach (ChildAnimatorStateMachine child in machine.stateMachines)
-                ExportStates(child.stateMachine, path + "." + child.stateMachine.name, definition, overrides, output);
-        }
-
-        /// <summary>保留实际 Sprite 键帧时长；有 Transform 曲线时同时按源帧率采样姿态。</summary>
-        private AiecsAnimationClip ExportClip(AnimationClip clip, string state, float speed, ItemDefinitionDto definition)
-        {
-            EditorCurveBinding[] objectBindings = AnimationUtility.GetObjectReferenceCurveBindings(clip);
-            if (objectBindings.Length != 1 || objectBindings[0].type != typeof(SpriteRenderer) || objectBindings[0].propertyName != "m_Sprite")
-                throw new InvalidDataException(definition.Id + "/" + state + " 不是单 Sprite 动作，附属物须先实现导出。");
-            EditorCurveBinding spriteBinding = objectBindings[0];
-            if (!string.IsNullOrEmpty(spriteBinding.path))
-                throw new InvalidDataException(definition.Id + "/" + state + " 的 Sprite 不在 Animator 本节点，须先处理层级变换。");
-            ObjectReferenceKeyframe[] keys = AnimationUtility.GetObjectReferenceCurve(clip, spriteBinding);
-            if (keys.Length == 0 || keys[0].time > 0f || clip.length <= 0f || keys.Any(x => !(x.value is Sprite)))
-                throw new InvalidDataException(definition.Id + "/" + state + " 含空白帧或缺少起始图片，不能静默补图。");
-            var transforms = new List<KeyValuePair<string, AnimationCurve>>();
-            var markers = new List<AiecsAnimationMarker>();
-            foreach (EditorCurveBinding binding in AnimationUtility.GetCurveBindings(clip))
-            {
-                AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, binding);
-                string property = binding.propertyName.Replace("m_", "").ToLowerInvariant();
-                if (binding.type == typeof(Transform) && binding.path == spriteBinding.path &&
-                    (property.StartsWith("localposition.") || property.StartsWith("localscale.") ||
-                     property == "localeuleranglesraw.z" || property == "localeulerangles.z"))
-                    transforms.Add(new KeyValuePair<string, AnimationCurve>(property, curve));
-                else
-                {
-                    string label = binding.path + "|" + binding.type.Name + "|" + binding.propertyName;
-                    markers.Add(new AiecsAnimationMarker { Binding = label, Curve = curve });
-                    diagnostics.Add(definition.Id + "/" + state + "：保留曲线 " + label + "，尚未接入玩法结算。");
-                }
-            }
-            foreach (AnimationEvent evt in AnimationUtility.GetAnimationEvents(clip))
-            {
-                markers.Add(new AiecsAnimationMarker { Binding = "event|" + evt.functionName, Time = evt.time,
-                    Payload = JsonUtility.ToJson(evt) });
-                diagnostics.Add(definition.Id + "/" + state + "：保留事件 " + evt.functionName + "，尚未映射语义。");
-            }
-            bool loop = AnimationUtility.GetAnimationClipSettings(clip).loopTime;
-            var times = new SortedSet<float>(keys.Where(x => x.time < clip.length).Select(x => x.time)) { 0f };
-            // 非循环动作必须保留末端键帧和末端姿态，死亡等动作才能准确停在终态。
-            if (!loop) times.Add(clip.length);
-            if (transforms.Count != 0)
-            {
-                foreach (var curve in transforms)
-                    foreach (Keyframe key in curve.Value.keys)
-                        if (key.time >= 0f && key.time < clip.length) times.Add(key.time);
-                int samples = Mathf.CeilToInt(clip.length * clip.frameRate);
-                for (int index = 1; index < samples; index++) times.Add(index / clip.frameRate);
-            }
-            var frames = new List<AiecsAnimationFrame>();
-            int keyIndex = 0;
-            foreach (float time in times)
-            {
-                while (keyIndex + 1 < keys.Length && keys[keyIndex + 1].time <= time) keyIndex++;
-                var frame = new AiecsAnimationFrame
-                {
-                    Start = time / speed, Sprite = RegisterSprite((Sprite)keys[keyIndex].value),
-                    Position = definition.Visual.RendererLocalPosition ?? Vector3.zero,
-                    Scale = definition.Visual.RendererLocalScale ?? Vector3.one,
-                    Rotation = (definition.Visual.RendererLocalEulerAngles ?? Vector3.zero).z
-                };
-                foreach (var transform in transforms) ApplyTransform(ref frame, transform.Key, transform.Value.Evaluate(time));
-                frames.Add(frame);
-            }
-            return new AiecsAnimationClip { State = state, Duration = clip.length / speed,
-                Loop = loop,
-                Frames = frames.ToArray(), Markers = markers.ToArray() };
-        }
-
-        /// <summary>将受支持的绝对局部姿态曲线写入帧；其余曲线在导出时显式登记。</summary>
-        private static void ApplyTransform(ref AiecsAnimationFrame frame, string property, float value)
-        {
-            int axis = property.EndsWith(".x") ? 0 : property.EndsWith(".y") ? 1 : 2;
-            if (property.StartsWith("localposition.")) frame.Position[axis] = value;
-            else if (property.StartsWith("localscale.")) frame.Scale[axis] = value;
-            else frame.Rotation = value;
+                State = state, Duration = 1f, Loop = true, Markers = Array.Empty<AiecsAnimationMarker>(),
+                Frames = new[] { new AiecsAnimationFrame { Sprite = RegisterSprite(sprite),
+                    Position = visual.RendererLocalPosition ?? Vector3.zero,
+                    Scale = visual.RendererLocalScale ?? Vector3.one,
+                    Rotation = (visual.RendererLocalEulerAngles ?? Vector3.zero).z } }
+            };
         }
         #endregion
 
@@ -385,17 +303,17 @@ namespace FlatWorld.AIECS.Editor
             return Hash128.Compute(text.ToString()).ToString();
         }
 
-        /// <summary>记录实际帧数和能力缺口，防止把可显示动作当成完整生物迁移。</summary>
+        /// <summary>记录单图状态与共享图集，不把资源导出当成运行验收。</summary>
         private static void WriteReport(AiecsAnimationCatalog catalog, string path)
         {
-            var report = new StringBuilder("# AIECS P1 动画导出记录\n\n");
+            var report = new StringBuilder("# AIECS 单图摇摆导出记录\n\n");
             report.AppendLine("源指纹：" + catalog.SourceFingerprint);
             report.AppendLine("\n这是资源导出结果，不是 Play Mode、视觉或性能验收。\n");
-            report.AppendLine("| Actor | 动作数 | 时间轴帧数 | 语义标记数 |\n| --- | --- | --- | --- |");
+            report.AppendLine("| Actor | 状态数 | 单图数 | 语义标记数 |\n| --- | --- | --- | --- |");
             foreach (AiecsActorVisual actor in catalog.Actors)
                 report.AppendLine($"| {actor.Id} | {actor.Clips.Length} | {actor.Clips.Sum(x => x.Frames.Length)} | {actor.Clips.Sum(x => x.Markers.Length)} |");
             report.AppendLine($"\n共 {catalog.Sprites.Length} 张去重 Sprite；图集 {catalog.Material.mainTexture.width}×{catalog.Material.mainTexture.height}。\n");
-            report.AppendLine("## 尚未迁移\n\n- Animator 转场与参数驱动由后续 ECS 决策接管，本切片仅播放明确动作。\n- 命中、生命、Buff、生态、世界水深、阴影批次、附属物和正式资源加载均未接入。\n- 自定义法线/Mask/材质效果的导出尚未实现，当前原型为平面法线与白 Mask。\n");
+            report.AppendLine("## 表现范围\n\n- 身体按明确状态选图，摇摆、攻击撞击与死亡翻转由 ECS 表现采样器合成。\n- 生命、伤害、移动与飞行高度由正式模拟负责，导出目录只保存表现数据。\n- 自定义法线/Mask/材质效果尚未导出，当前使用平面法线与白 Mask。\n");
             foreach (string diagnostic in catalog.Diagnostics) report.AppendLine("- " + diagnostic);
             File.WriteAllText(path, report.ToString(), new UTF8Encoding(false));
             AssetDatabase.ImportAsset(path);

@@ -4,11 +4,12 @@ using UnityEngine;
 namespace FlatWorld.AIECS
 {
     /// <summary>
-    /// 从启用的 Actor Manifest 和实际动画控制器导出的只读表现目录。
+    /// 从正式 Actor 首图、状态贴图和摇摆参数导出的只读表现目录。
     /// 帧几何保留原图尺寸、Pivot 和 PPU；图集只改变采样坐标，不参与生命或攻击结算。
     /// </summary>
     public sealed class AiecsAnimationCatalog : ScriptableObject
     {
+        #region 共享表现资源
         // 配置及动画依赖指纹，供重新导出时识别资源漂移。
         public string SourceFingerprint;
         // 共用 Lit 材质与点采样图集。
@@ -19,6 +20,7 @@ namespace FlatWorld.AIECS
         public AiecsActorVisual[] Actors;
         // 未支持的曲线、状态与事件说明，不能当成已迁移能力。
         public string[] Diagnostics;
+        #endregion
     }
 
     /// <summary>一张 Sprite 的真实局部矩形与专用图集 UV，单位沿用原始 PPU。</summary>
@@ -39,6 +41,7 @@ namespace FlatWorld.AIECS
     [Serializable]
     public sealed class AiecsActorVisual
     {
+        #region 物种表现配置
         // Actor 稳定定义 ID。
         public string Id;
         // 原有外部排序语义。
@@ -50,41 +53,49 @@ namespace FlatWorld.AIECS
         public bool FlipY;
         // 跨动作固定身体参考范围，避免切帧导致水线抖动。
         public Vector2 BodyYRange;
-        // 实际状态名对应的独立帧表。
+        // 与正式动画模块同名的纯值摇摆参数。
+        public AiecsSwaySettings Sway = new AiecsSwaySettings();
+        // 每个状态只保存一张身体图片，不再导出逐帧时间轴。
         public AiecsAnimationClip[] Clips;
+        #endregion
     }
 
-    /// <summary>一个 Animator 状态的图片时间轴；非循环动作必须停在末帧。</summary>
+    [Serializable]
+    public sealed class AiecsSwaySettings
+    {
+        #region 单图动作参数
+        // 字段名与动画模块一致，导出时直接复用最终配置。
+        public float walkSwingAngle = 8f;
+        public float walkSwingSpeed = 12f;
+        public float walkBobAmount = 0.04f;
+        public float walkReturnSpeed = 12f;
+        public float runSwingMultiplier = 1.2f;
+        public float runSpeedMultiplier = 1.5f;
+        public float idleBreathAmount = 0.008f;
+        public float attackDashDistance = 0.22f;
+        public float attackDashForwardTime = 0.06f;
+        public float attackDashBackTime = 0.12f;
+        public float deathDuration = 0.76f;
+        public float deathJumpHeight = 0.35f;
+        #endregion
+    }
+
+    /// <summary>一个表现状态的固定首图与预览元数据。</summary>
     [Serializable]
     public sealed class AiecsAnimationClip
     {
         // 完整状态路径，避免嵌套状态重名。
         public string State;
-        // 已计入状态速度的时长与循环规则。
+        // 资源预览元数据，动作时序由摇摆采样器负责。
         public float Duration;
         public bool Loop;
-        // 按开始时刻递增的帧。
+        // 正式状态只保留一张身体首图。
         public AiecsAnimationFrame[] Frames;
         // 原始语义曲线与事件仅供后续迁移，不由渲染器调用。
         public AiecsAnimationMarker[] Markers;
-
-        /// <summary>按每个实体独立的播放时钟查找帧，非循环动作保持最后一帧。</summary>
-        public AiecsAnimationFrame Sample(float seconds)
-        {
-            float time = Loop ? Mathf.Repeat(seconds, Duration) : Mathf.Clamp(seconds, 0f, Duration);
-            int low = 0;
-            int high = Frames.Length - 1;
-            while (low < high)
-            {
-                int mid = (low + high + 1) / 2;
-                if (Frames[mid].Start <= time) low = mid;
-                else high = mid - 1;
-            }
-            return Frames[low];
-        }
     }
 
-    /// <summary>按实际 Sprite 键帧和 Transform 曲线采样的图片帧。</summary>
+    /// <summary>身体首图及纯表现局部姿态，由程序动作生成最终变换。</summary>
     [Serializable]
     public struct AiecsAnimationFrame
     {

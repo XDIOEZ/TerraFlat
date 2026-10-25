@@ -158,6 +158,37 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
     assert(snowLeopard and zombie, "单图首帧回归缺少雪豹或共享狼外壳的僵尸")
 end, "正式全物种单图模式与幽灵小鱼纯控制器")
 
+-- ECS 与普通生物一样只选状态首图，动作由正式批量摇摆采样器合成。
+test.system("ai", "ecs_sway_animation", {}, function(data)
+    assert(data.moving.sprite == 0 and math.abs(data.moving.angle) > 1,
+        "ECS 移动没有摇摆或仍切换旧行走帧")
+    assert(data.stopped.sprite == 0 and math.abs(data.stopped.angle) < .001,
+        "ECS 停止后没有回正")
+    assert(math.abs(data.windup.centerX) < .001 and data.attack.centerX > .05 and data.leftAttack.centerX < -.05,
+        "ECS 前摇提前撞击，或镜像后攻击方向相反")
+    assert(data.recovery.centerX > 0 and math.abs(data.attackEnded.centerX) < .001,
+        "ECS 撞击没有跨后摇返回原位")
+    assert(data.flying.sprite == 1 and math.abs(data.flying.bottom - 1) < .001,
+        "ECS 飞行状态没有保留状态首图与高度")
+    assert(data.deathStart.sprite == data.flying.sprite and not data.deathStart.mirror
+        and math.abs(data.deathStart.bottom - data.flying.bottom) < .001,
+        "ECS 死亡没有冻结致死瞬间图片、朝向或飞行高度")
+    assert(data.deathMiddle.bottom > .35 and math.abs(data.deathEnd.angle - 180) < .001
+        and math.abs(data.deathEnd.bottom) < .001 and math.abs(data.deathHeld.bottom) < .001,
+        "ECS 死亡没有翻转落地并保持终态")
+    assert(data.revived.sprite == 0 and math.abs(data.revived.angle) < .001 and math.abs(data.revived.bottom) < .001,
+        "ECS 重建生命后残留旧死亡姿态")
+    if data.actors then
+        assert(#data.actors >= 11, "ECS 目录丢失已有物种")
+        for _, actor in ipairs(data.actors) do
+            assert(math.abs(actor.deathDuration - .76) < .001, "ECS 未沿用正式死亡动作参数：" .. actor.id)
+            for _, state in ipairs(actor.states) do
+                assert(state.frames == 1 and state.source ~= "", "ECS 状态仍携带逐帧动画：" .. actor.id)
+            end
+        end
+    end
+end, "ECS 单图摇摆、定向攻击、飞行死亡冻结和落地复位")
+
 test.system("ai", "single_sprite_aquatic", {}, function(data)
     for _, sample in ipairs({data.swimming, data.stranded, data.carried}) do
         assert(sample.singleSprite and sample.positionError < .00001 and sample.rotationError < .001,

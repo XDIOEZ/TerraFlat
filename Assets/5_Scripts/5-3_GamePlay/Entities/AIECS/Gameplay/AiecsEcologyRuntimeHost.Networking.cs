@@ -85,6 +85,9 @@ namespace FlatWorld.AIECS.Gameplay
                 { owner.replicaRecords[i] = new AiecsDisplayRecord { External = 1 }; continue; }
                 owner.replicaRecords[i] = new AiecsDisplayRecord
                 {
+                    // 客户端也用稳定身份保存独立摇摆和死亡冻结姿态。
+                    Key = new FlatWorld.Combat.CombatIdentity { Backend = FlatWorld.Combat.CombatBackend.Entity,
+                        Value = unchecked((ulong)(uint)actor.Guid), Generation = 1 },
                     Definition = definition, Position = new float2(actor.Position.x, actor.Position.y),
                     Facing = new float2(actor.Facing.x, actor.Facing.y), Hp = actor.Hp, MaxHp = actor.MaxHp,
                     ActionElapsed = actor.ActionElapsed, LiquidDepth = actor.LiquidDepth, WaterBlend = actor.WaterBlend,

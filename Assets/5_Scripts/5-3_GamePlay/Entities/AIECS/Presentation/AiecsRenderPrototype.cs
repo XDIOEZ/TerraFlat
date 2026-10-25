@@ -53,6 +53,8 @@ namespace FlatWorld.AIECS
         private AiecsLegacySortScope legacy;
         private readonly List<AiecsRenderBatch> batches = new();
         private readonly List<DisplayItem> display = new();
+        private AiecsSwayAnimation[] animations;
+        private AiecsSwayState[] animationStates;
         private readonly Plane[] planes = new Plane[6];
         private static readonly DisplayComparer Comparer = new();
         #endregion
@@ -65,6 +67,9 @@ namespace FlatWorld.AIECS
             try
             {
                 ValidateInputs();
+                animations = new AiecsSwayAnimation[Catalog.Actors.Length];
+                for (int i = 0; i < animations.Length; i++) animations[i] = new AiecsSwayAnimation(Catalog.Actors[i], Catalog.Sprites);
+                animationStates = new AiecsSwayState[EntityCount];
                 legacy = new AiecsLegacySortScope(LegacyRoot);
                 world = new World("AIECS P1 渲染原型");
                 scheduler = world.GetOrCreateSystemManaged<AiecsPrototypeJobSchedulerSystem>();
@@ -134,6 +139,7 @@ namespace FlatWorld.AIECS
             if (snapshot.IsCreated) snapshot.Dispose();
             if (world != null && world.IsCreated) world.Dispose();
             world = null; scheduler = null;
+            animations = null; animationStates = null;
             display.Clear();
             CreatedEntities = UpdatedPositions = VisibleEntities = SubmittedSprites = 0;
             ColorBatches = UploadedBytes = LegacyDisplayItems = 0;
@@ -159,7 +165,9 @@ namespace FlatWorld.AIECS
             {
                 AiecsPrototypeActor actor = snapshot[index];
                 AiecsActorVisual definition = Catalog.Actors[actor.Definition];
-                AiecsAnimationFrame frame = definition.Clips[actor.Action].Sample(actor.Elapsed);
+                // 独立渲染原型也复用正式摇摆采样，不再播放旧图片时间轴。
+                var record = new AiecsDisplayRecord { Moving = (byte)(Travel > 0.001f ? 1 : 0), Facing = new float2(1f, 0f) };
+                AiecsAnimationFrame frame = animations[actor.Definition].Sample(ref animationStates[index], record, Time.deltaTime).Frame;
                 Rect rect = Catalog.Sprites[frame.Sprite].LocalRect;
                 Vector3 first = AiecsRenderBatch.TransformPoint(new Vector3(rect.xMin, rect.yMin), actor, definition, frame);
                 var bounds = new Bounds(first, Vector3.zero);

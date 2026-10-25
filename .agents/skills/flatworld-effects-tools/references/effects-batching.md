@@ -17,7 +17,7 @@
 
 - `AiecsWorldRenderer` 只读模拟后 Display，按排序后连续批次走原生 Universal2D/NormalsRendering，主体/阴影独立统计。AIECSRuntime 层默认只在 SceneView 隐藏。
 - `AiecsShadowRenderer` 每批≤4096、16位索引/24字节顶点，复用可见表与 Display 水态；太阳阴影读全局太阳/当前图集。缺相机/空帧/关闭/退出时隐藏或回收。
-- 动画从真实 Actor Manifest/覆盖控制器、三角形/UV 导出，保留尺寸/Pivot/PPU与非循环终点；重导仅显式菜单并保 GUID。`AiecsLegacySortScope` 用于单相机完整 Sprite 场景。
+- AIECS 从真实 Actor 首图、外壳状态贴图和动画模块参数导出单图目录，保留三角形/UV、尺寸/Pivot/PPU；程序摇摆结果同时供 BRG、裁剪和太阳阴影使用。重导仅显式菜单并保 GUID，PlayMode 不重导。`AiecsLegacySortScope` 用于单相机完整 Sprite 场景。
 - `DroppedItemPresentation` 按空间行/贴图/层增量合并真实 Sprite，静止不重传、离视野释放；类别 world-item，材质 `Assets/9_Shaders/Resources/DroppedItems`，水线为规范坐标，用默认零 `_WaterLineOffset` 补镜像。
 - DOTS 实例读取用 `DOTSInstanceData_Load4` 兼容 GLES 常量缓冲；各 Pass 自行引入使用的二维调试类型。
 

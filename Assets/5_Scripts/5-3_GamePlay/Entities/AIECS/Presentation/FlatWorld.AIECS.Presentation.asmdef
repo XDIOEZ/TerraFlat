@@ -1,6 +1,6 @@
 {
     "name": "FlatWorld.AIECS.Presentation",
-    "references": ["FlatWorld.AIECS", "FlatWorld.WorldTopology", "Data", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Burst"],
+    "references": ["FlatWorld.AIECS", "FlatWorld.Combat.Core", "FlatWorld.WorldTopology", "Data", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Burst"],
     "autoReferenced": true,
     "allowUnsafeCode": true
 }

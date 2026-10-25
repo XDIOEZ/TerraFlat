@@ -77,7 +77,7 @@ namespace FlatWorld.AIECS.Editor
             int measured = 0;
             foreach (AiecsActorVisual actor in catalog.Actors)
             {
-                AiecsAnimationFrame frame = actor.Clips[0].Sample(0f);
+                AiecsAnimationFrame frame = actor.Clips[0].Frames[0];
                 var sprite = catalog.Sprites[frame.Sprite];
                 Require(sprite.VisibleRect.width > 0 && sprite.VisibleRect.height > 0, actor.Id + " 非透明边界缺失。");
                 Vector4 shape = AiecsShadowRenderer.MeasureFootprint(actor, sprite, frame);
