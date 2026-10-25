@@ -391,16 +391,24 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		}
 	}
 
+	private AI_DebugOverlay.TextCache<(int Count, bool Leader, bool Formation, int Slot, int Members, bool Advance)> debugExtraCache;
+
 	protected override string GetDebugExtraInfo()
 	{
+		var key = (_packCount, _isAlphaWolf, _hasChaseFormationTarget,
+			_chaseFormationSlot, _chaseFormationMemberCount, HasAdvanceCommand);
+		uint generation = item != null ? item.RuntimeGeneration : 0;
+		if (debugExtraCache.TryGet(key, AI_DebugOverlay.TextLocale, generation, out string cached))
+			return cached;
 		string roleText = FlatWorldLocalizationService.GetUiText(_isAlphaWolf ? "头狼" : "跟随");
 		string advanceText = HasAdvanceCommand ? FlatWorldLocalizationService.GetUiText(" | 推进: 是") : string.Empty;
 		string formationText = _hasChaseFormationTarget
 			? FlatWorldLocalizationService.GetUiFormat(
 				" | 追击位: {0}/{1}", GetChaseFormationSlotLabel(_chaseFormationSlot), _chaseFormationMemberCount)
 			: string.Empty;
-		return FlatWorldLocalizationService.GetUiFormat(
-			" | 狼群数: {0} | 角色: {1}{2}{3}", _packCount, roleText, formationText, advanceText);
+		return debugExtraCache.Store(key, AI_DebugOverlay.TextLocale, generation,
+			FlatWorldLocalizationService.GetUiFormat(
+				" | 狼群数: {0} | 角色: {1}{2}{3}", _packCount, roleText, formationText, advanceText));
 	}
 #endregion
 

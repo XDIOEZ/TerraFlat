@@ -135,7 +135,7 @@ public static class WorldMotionSystem
         looseWindItems.Add(item, new LooseWindRegistration
         {
             Building = building,
-            WaterRuntime = item.GetComponent<WorldItemWaterRuntime>(),
+            WaterRuntime = item.TryGetComponent(out WorldItemWaterRuntime waterRuntime) ? waterRuntime : null,
             LastMotionFrame = -1
         });
     }
@@ -169,6 +169,8 @@ public static class WorldMotionSystem
         if (!hasWind && !LooseItemMotion.HasVelocitySources) return;
         looseWindScratch.Clear();
         looseWindScratch.AddRange(looseWindItems.Keys);
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        int motionFrame = Time.frameCount;
         foreach (Item item in looseWindScratch)
         {
             if (!looseWindItems.TryGetValue(item, out LooseWindRegistration registration))
@@ -179,14 +181,14 @@ public static class WorldMotionSystem
                 looseWindItems.Remove(item);
                 continue;
             }
-            if (!item.isActiveAndEnabled || item.gameObject.scene.name != GameplayWorldRegistry.ExecutionWorldKey ||
+            if (!item.isActiveAndEnabled || item.gameObject.scene.name != worldKey ||
                 Mod_Droping.IsDropInProgress(item) || registration.WaterRuntime?.IsActive == true ||
-                registration.LastMotionFrame == Time.frameCount || LooseItemMotion.IsDrivenByConveyor(item.transform.position))
+                registration.LastMotionFrame == motionFrame || LooseItemMotion.IsDrivenByConveyor(item.transform.position))
                 continue;
             Vector2 position = item.transform.position;
             Vector2 velocity = hasWind ? context.Sample(position, item.itemData.Stack.CurrentWeight) : Vector2.zero;
             if (velocity.sqrMagnitude <= 0f && !LooseItemMotion.HasVelocitySources) continue;
-            Vector2 destination = LooseItemMotion.AdvanceExternal(item.gameObject.scene.name, item.itemData,
+            Vector2 destination = LooseItemMotion.AdvanceExternal(worldKey, item.itemData,
                 position, seconds, velocity);
             if (LooseItemMotion.CommitItemPosition(item, destination)) WorldItemWaterSystem.ScheduleSpawnCheck(item);
         }

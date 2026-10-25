@@ -85,6 +85,22 @@ test.system("item_runtime", "matter_moisture_info", {}, function(data)
         "非法湿度、零含水物品或只具备燃烧特质的物品筛选错误")
 end, "悬浮窗含水百分比、初始/当前状态、风干临界与无关物品隐藏")
 
+test.system("item_runtime", "ai_entity_live_query", {}, function(data)
+    assert(data.initiallyNotAi and data.negativeStable and data.negativeAllocatedBytes == 0,
+        "普通物品的AI资格查询不稳定或仍逐次分配组件数组")
+    assert(data.addedImmediately and data.inactiveIncluded and data.positiveStable,
+        "新增或停用子节点中的AI能力没有保持实时识别规则")
+    assert(data.positiveAllocatedBytes == 0 and data.removedImmediately,
+        "AI能力查询仍分配临时数组或移除后沿用过期资格")
+end, "AI实体实时组件查询、停用能力、移除失效与零分配")
+
+test.system("item_runtime", "world_tick_move_query", {}, function(data)
+    assert(data.firstMoveRegistered and data.singleRegistration and data.allocatedBytes == 0,
+        "物品移动调度登记重复或同场景移动仍复制场景名")
+    assert(data.removed and data.reboundRegistered and data.removedAgain,
+        "移动调度的注销或重新绑定登记失效")
+end, "物品调度同场景移动零分配、首次登记与回收重绑")
+
 -- 检查模块结构版本和正式物品工厂的可变状态隔离。
 test.system("item_runtime", "cleanup_lookup", {}, function(data)
     assert(data.stable, "场景销毁期间无搜索单例读取不稳定")

@@ -13,6 +13,7 @@
 
 - 完整Item由 WorldItemWaterSystem 按最终位置推水态，轻量共 WorldItemWaterRules；水态不进库存，轨迹完先移 Mod_Droping 再准拾。河流加速按总重，浮沉按单件kg/L：普通水阈1，乘 buoyancyThresholdMultiplier（海水1.5/岩浆6），达阈沉，倍率不改液体重量。IWaterEntryTransformEffect 回收前脱源。
 - 轻量水态/流查询同Tick共 RuntimeTerrainTileSample，仅省寻址，水深/流向/实验流实时。完整散物登记缓存建筑/水态引用，ActivateExistingItem 更新水态、注销回收；两后端 WindSamplingContext 每批共质量范围/星球重力。
+- 完整散物的水流/风/传送带单次推进复用 `RuntimeTerrainPresenceQuery`，逐步仍查当前液深、遮挡及区块代际；运动拓扑从 `PressureExplosionQueue.TryGetTopology` 按原星球规则单次冻结，不混用当前维度地形的拓扑。缺刚体/水态组件用 `TryGetComponent`，避免 Editor 生成缺组件诊断分配；规则 `mechanical/loose_item_terrain_batch`。
 - 轻量/稳定浮Item保留0.5s逻辑漂流；DriftInterpolation 仅显示匀速追已确认位置。轻量只可见视图存插值；完整仅偏 Sprite并保局部基准，水线逐帧跟。环绕最短位移，离水/拾取/回池清偏移，不改索引/存档。
 - 完全下沉后转河底静止态，只隐藏表现、停水流/风推动，保留实物和拾取索引；必须走到同格才可摸回。轻量 WaterKind=3 并释放视图、退出漂流批次，地形事件负责干格恢复；完整 Item 用 forceRenderingOff 保留碰撞，以 `flatworld.worldItemWater` 保存沉底状态，入包候选清除此标记。活动/后台/存档共用轻量水态恢复，禁止沉底完成时删除载荷。回归 `surface_fluids/bottom_recovery`、`processing/cold_motion_workspace`。
 

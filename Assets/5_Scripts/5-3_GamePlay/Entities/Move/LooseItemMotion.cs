@@ -1,11 +1,12 @@
 using FlatWorld.Networking;
+using FlatWorld.WorldModel;
+using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public static partial class LooseItemMotion
 {
     #region 世界采样与统一阻挡
-    private struct WorldField : IField
+    internal struct WorldField : IField
     {
         internal string World;
         internal ItemData Item;
@@ -13,30 +14,63 @@ public static partial class LooseItemMotion
         internal bool Conveyor, InWater, ReceiveExternal;
         internal ChunkMgr Chunks;
         internal bool LocalPhysics;
+        internal bool SamplingInitialized, HasTerrainQuery, SurfaceWorld;
+        internal ChunkMgr.RuntimeTerrainPresenceQuery TerrainQuery;
+        internal WorldTopologyDomain Topology;
         public bool WaterOnly => InWater;
         public Vector2 CarrierVelocity(Vector2 position, float seconds) => Conveyor
             ? MachineWorld.SampleLooseConveyorVelocity(position, seconds) : WaterVelocity;
         public Vector2 ExternalVelocity(Vector2 position) => ReceiveExternal
             ? WindVelocity + SampleAdditionalVelocity(new LooseItemMotionContext(World, Item, position, InWater))
             : Vector2.zero;
-        public Vector2 Delta(Vector2 from, Vector2 to) => PressureExplosionQueue.DeltaInWorld(World, from, to);
+        public Vector2 Delta(Vector2 from, Vector2 to)
+        {
+            EnsureSampling();
+            float2 delta = Topology.ShortestDelta(new float2(from.x, from.y), new float2(to.x, to.y));
+            return new Vector2(delta.x, delta.y);
+        }
         public bool IsWater(Vector2 position)
         {
-            position = PressureExplosionQueue.NormalizeInWorld(World, position);
+            EnsureSampling();
+            position = NormalizeMotionPosition(Topology, position);
+            if (HasTerrainQuery)
+                return TerrainQuery.TrySample(position, out RuntimeTerrainTileSample current) && current.LiquidDepth > 0f;
             return Chunks != null
                 ? Chunks.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample) && sample.LiquidDepth > 0f
                 : FlatWorld.Spaceflight.SpaceSurfaceQuery.TrySampleLiquid(World, position, out _, out _);
         }
         public Vector2 Move(Vector2 position, Vector2 displacement)
-            => ResolveDisplacement(World, position, displacement, Chunks, LocalPhysics);
+        {
+            EnsureSampling();
+            return ResolveDisplacement(World, position, displacement, Chunks, LocalPhysics,
+                SurfaceWorld, Topology, HasTerrainQuery, ref TerrainQuery);
+        }
+
+        private void EnsureSampling()
+        {
+            if (SamplingInitialized) return;
+            // 确认有位移之后才建立单次寻址，静水、无风和零外力不新增准备成本。
+            SamplingInitialized = true;
+            HasTerrainQuery = Chunks != null && Chunks.TryCreateTerrainPresenceQuery(out TerrainQuery);
+            Topology = PressureExplosionQueue.TryGetTopology(World, out WorldTopologyBounds bounds)
+                ? bounds.ToDomain() : default;
+            SurfaceWorld = !HasTerrainQuery && Chunks == null && WorldAddress.FromWorldKey(World).IsSurface;
+        }
     }
 
     private static readonly RaycastHit2D[] hits = new RaycastHit2D[1];
     private static int collisionMask;
 
+    private static Vector2 NormalizeMotionPosition(WorldTopologyDomain topology, Vector2 position)
+    {
+        float2 normalized = topology.Normalize(new float2(position.x, position.y));
+        return new Vector2(normalized.x, normalized.y);
+    }
+
     // 数据阻挡和本地实体碰撞归同一入口，后台世界绝不借用镜头所在世界的物理场。
     private static Vector2 ResolveDisplacement(string world, Vector2 position, Vector2 displacement,
-        ChunkMgr chunks, bool localPhysics)
+        ChunkMgr chunks, bool localPhysics, bool surfaceWorld,
+        WorldTopologyDomain topology, bool hasTerrainQuery, ref ChunkMgr.RuntimeTerrainPresenceQuery terrainQuery)
     {
         int steps = Mathf.Clamp(Mathf.CeilToInt(displacement.magnitude / .1f), 1, 128);
         Vector2 move = displacement / steps;
@@ -45,18 +79,21 @@ public static partial class LooseItemMotion
         {
             if (collisionMask == 0) collisionMask = LayerMask.GetMask("Collider");
             filter.SetLayerMask(collisionMask);
-            if (chunks == null) return position; // 本地地形窗口未准备好，不靠查询临时加载地形。
+            if (chunks == null && !hasTerrainQuery) return position; // 本地地形窗口未准备好，不靠查询临时加载地形。
         }
         for (int index = 0; index < steps; index++)
         {
-            Vector2 destination = PressureExplosionQueue.NormalizeInWorld(world, position + move);
-            if (chunks != null)
+            Vector2 destination = NormalizeMotionPosition(topology, position + move);
+            if (hasTerrainQuery || chunks != null)
             {
-                if (!chunks.TryGetRuntimeTerrainTile(destination, out RuntimeTerrainTileSample sample) ||
+                bool found = hasTerrainQuery
+                    ? terrainQuery.TrySample(destination, out RuntimeTerrainTileSample sample)
+                    : chunks.TryGetRuntimeTerrainTile(destination, out sample);
+                if (!found ||
                     !BuildingOccupancyRegistry.GetEffectiveWalkable(sample.WorldCell,
                         sample.Cell.IsWalkable || sample.LiquidDepth > 0f)) break;
             }
-            else if (WorldAddress.FromWorldKey(world).IsSurface)
+            else if (surfaceWorld)
             {
                 if (!FlatWorld.Spaceflight.SpaceSurfaceQuery.TryGetLandingSurface(world, destination, out var surface) ||
                     surface.BlockingTileId != 0) break;
@@ -66,7 +103,8 @@ public static partial class LooseItemMotion
                 move / distance, filter, hits, distance) > 0)
             {
                 float allowed = Mathf.Clamp(hits[0].distance - .01f, 0f, distance);
-                return PressureExplosionQueue.NormalizeInWorld(world, position + move / distance * allowed);
+                Vector2 stopped = position + move / distance * allowed;
+                return NormalizeMotionPosition(topology, stopped);
             }
             position = destination;
         }
@@ -79,11 +117,12 @@ public static partial class LooseItemMotion
         bool receiveExternal, Vector2? windVelocity)
     {
         bool ownsContext = world == GameplayWorldRegistry.ExecutionWorldKey;
+        ChunkMgr chunks = ownsContext ? ChunkMgr.ExistingInstance : null;
         return new WorldField
         {
             World = world, Item = item, InWater = inWater, ReceiveExternal = receiveExternal,
-            Chunks = ownsContext ? ChunkMgr.ExistingInstance : null,
-            LocalPhysics = world == SceneManager.GetActiveScene().name,
+            Chunks = chunks,
+            LocalPhysics = world == GameplayWorldRegistry.LocalPresentationWorldKey,
             WindVelocity = receiveExternal ? windVelocity ?? (ownsContext && item?.Stack != null
                 ? WorldMotionSystem.SampleWindVelocity(position, item.Stack.CurrentWeight) : Vector2.zero) : Vector2.zero
         };
@@ -129,8 +168,7 @@ public static partial class LooseItemMotion
         Vector2 movement = PressureExplosionQueue.DeltaInWorld(world, before, position);
         if (movement.sqrMagnitude <= .00000001f) return false;
         Vector3 display = new(before.x + movement.x, before.y + movement.y, item.transform.position.z);
-        Rigidbody2D body = item.GetComponent<Rigidbody2D>();
-        if (body != null) { body.position = display; body.velocity = Vector2.zero; }
+        if (item.TryGetComponent(out Rigidbody2D body)) { body.position = display; body.velocity = Vector2.zero; }
         item.transform.position = display;
         item.itemData.transform.position = new Vector3(position.x, position.y, display.z);
         if (world == GameplayWorldRegistry.ExecutionWorldKey)

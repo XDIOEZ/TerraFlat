@@ -140,7 +140,7 @@ public static class PressureExplosionQueue
         => TryGetTopology(world, out WorldTopologyBounds bounds) ? bounds.NormalizePosition(position) : position;
     public static Vector2 DeltaInWorld(string world, Vector2 from, Vector2 to)
         => TryGetTopology(world, out WorldTopologyBounds bounds) ? bounds.ShortestDelta(from, to) : to - from;
-    private static bool TryGetTopology(string world, out WorldTopologyBounds bounds)
+    internal static bool TryGetTopology(string world, out WorldTopologyBounds bounds)
     {
         bounds = default;
         var planets = SaveDataMgr.Instance?.SaveData?.PlanetData_Dict;

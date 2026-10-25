@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
@@ -12,6 +14,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("mechanical/loose_item_motion", LooseItemMotionValues);
         operations.Add("mechanical/loose_item_sources", LooseItemSourceValues);
+        operations.Add("mechanical/loose_item_terrain_batch", LooseItemTerrainBatchValues);
     }
 
     // 夹具只提供地形、墙、环绕与带形，时间积分与力合成直接调用正式生产内核。
@@ -108,6 +111,84 @@ public static partial class GameplayTestSystemProbe
             };
         }
         finally { self?.Dispose(); }
+    }
+
+    // 自有世界只准备地形，水态、移动阻挡、环绕与生命周期均调用正式运动采样。
+    private static JObject LooseItemTerrainBatchValues(JObject args)
+    {
+        const string dimension = "probe:loose-motion-terrain";
+        using var world = new WorldRuntime(dimension, 1);
+        var profile = new ChunkGenerationProfileSnapshot(dimension, 1, 2, 2);
+        ChunkRuntime Commit(int x)
+        {
+            var address = new FlatWorld.WorldModel.WorldAddress(dimension, new Int2(x, 0));
+            ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1, profile);
+            using var buffer = new ChunkTerrainBuffer(2, 2);
+            for (int row = 0; row < 2; row++)
+            for (int column = 0; column < 2; column++)
+                buffer.SetCell(column, row, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+            using var generated = new ChunkGenerationResult(request, buffer);
+            if (!world.TryCommit(generated, out string reason)) throw new InvalidOperationException(reason);
+            world.TryGetChunk(address, out ChunkRuntime chunk);
+            return chunk;
+        }
+
+        ChunkRuntime first = Commit(0);
+        Commit(-4);
+        ChunkRuntime neighbour = Commit(2);
+        WorldTopologyDomain topology = new(new int2(-4, -4), new int2(8, 8), true);
+        var field = new LooseItemMotion.WorldField
+        {
+            World = MotionTestWorld, SamplingInitialized = true, HasTerrainQuery = true, Topology = topology,
+            TerrainQuery = new ChunkMgr.RuntimeTerrainPresenceQuery(world, topology, dimension, 2, 2)
+        };
+        Vector2 origin = new(.25f, .25f);
+        bool initialDry = !field.IsWater(origin);
+        int water = first.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        first.Terrain.SetLiquid(0, 0, water, 6);
+        bool wet = field.IsWater(origin);
+        TerrainSupportLayer.Set(first.Terrain, 0, 0, 90, 1);
+        bool covered = !field.IsWater(origin);
+        TerrainSupportLayer.Set(first.Terrain, 0, 0, 0, 1);
+        bool uncovered = field.IsWater(origin);
+        first.Terrain.SetLiquid(0, 0, 0, 0);
+        bool drained = !field.IsWater(origin);
+        Vector2 neighbouringPoint = new(2.25f, .25f);
+        bool nextDry = !field.IsWater(neighbouringPoint);
+        neighbour.Terrain.SetLiquid(0, 0, neighbour.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 6);
+        bool nextWet = field.IsWater(neighbouringPoint);
+        neighbour.Terrain.SetLiquid(0, 0, 0, 0);
+        bool nextDrained = !field.IsWater(neighbouringPoint);
+        Vector2 moved = field.Move(origin, Vector2.right * .1f);
+        first.Terrain.SetCell(0, 0, new TerrainCell(1, 0, 2, 1, 1, TerrainCellFlags.Blocking));
+        Vector2 blocked = field.Move(origin, Vector2.right * .1f);
+        first.Terrain.SetLiquid(0, 0, water, 6);
+        Vector2 wetBlockedCell = field.Move(origin, Vector2.right * .1f);
+        Vector2 seam = field.Move(new Vector2(3.95f, .25f), Vector2.right * .1f);
+        Vector2 seamDelta = field.Delta(new Vector2(3.95f, .25f), seam);
+        field.Topology = default;
+        Vector2 independentMotion = field.Move(new Vector2(3.95f, .25f), Vector2.right * .1f);
+        field.Topology = topology;
+        Vector2 missing = field.Move(new Vector2(.25f, 1.95f), Vector2.up * .1f);
+        field.IsWater(origin);
+        world.EvictChunk(first.Address);
+        bool evictedWater = field.IsWater(origin);
+        Vector2 evictedMove = field.Move(origin, Vector2.right * .1f);
+        Commit(0);
+        Vector2 reloaded = field.Move(origin, Vector2.right * .1f);
+        world.BeginNewEpoch(2);
+        Vector2 oldEpoch = field.Move(origin, Vector2.right * .1f);
+        return new JObject
+        {
+            ["initialDry"] = initialDry, ["wet"] = wet, ["covered"] = covered,
+            ["uncovered"] = uncovered, ["drained"] = drained,
+            ["nextDry"] = nextDry, ["nextWet"] = nextWet, ["nextDrained"] = nextDrained,
+            ["movedX"] = moved.x, ["blockedX"] = blocked.x, ["wetBlockedX"] = wetBlockedCell.x,
+            ["seamX"] = seam.x, ["seamDeltaX"] = seamDelta.x,
+            ["independentMotionX"] = independentMotion.x, ["missingY"] = missing.y,
+            ["evictedWater"] = evictedWater, ["evictedX"] = evictedMove.x,
+            ["reloadedX"] = reloaded.x, ["oldEpochX"] = oldEpoch.x
+        };
     }
     #endregion
 }

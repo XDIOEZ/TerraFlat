@@ -601,3 +601,14 @@ test.system("ai", "network_snapshot_buffer", {}, function(data)
     assert(data.newerReplacesIncomplete and data.emptyClears and data.duplicateGuid and data.invalidRejected,
         "缺片后的新快照不能恢复，或空快照/身份去重/非法坐标边界失效")
 end, "联机生态完整快照：乱序、缺片恢复、代际与身份边界")
+
+test.system("ai", "debug_overlay_cache", {}, function(data)
+    assert(data.initialMiss and data.reused and data.stateChanged,
+        "头顶文字没有复用相同显示值，或状态改变后继续使用旧文字")
+    assert(data.localeChanged and data.generationChanged and data.buffLocaleInvalidated,
+        "切语言或物品重新装载后头顶文字缓存没有失效")
+    assert(data.seconds and data.replacementUpdated and data.expired,
+        "Buff 同秒复用、倒计时跨秒、同秒替换或到期清除错误")
+    assert(data.permanentReused and data.cleared and data.restored,
+        "永久 Buff、空列表或回池清理后重新显示仍沿用旧文字")
+end, "头顶调试按显示值复用文字，语言、Buff与池代际实时更新")

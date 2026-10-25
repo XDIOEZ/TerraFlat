@@ -102,8 +102,7 @@ public static class WorldItemWaterSystem
         if (DroppedItemService.UsesLightweightDrops && DroppedItemService.TryConvertLooseItem(item))
             return EntryResult.Transformed;
 
-        WorldItemWaterRuntime existingRuntime = item.GetComponent<WorldItemWaterRuntime>();
-        if (existingRuntime != null && existingRuntime.IsActive)
+        if (item.TryGetComponent(out WorldItemWaterRuntime existingRuntime) && existingRuntime.IsActive)
             return EntryResult.Activated;
 
         if (GameNetwork.HasStateAuthority && TryTransformOnWaterEntry(item))
@@ -133,7 +132,7 @@ public static class WorldItemWaterSystem
     public static bool CanPickUpAt(Item item, Vector2 pickerPosition)
     {
         if (item == null) return false;
-        WorldItemWaterRuntime runtime = item.GetComponent<WorldItemWaterRuntime>();
+        item.TryGetComponent(out WorldItemWaterRuntime runtime);
         bool onBottom = runtime?.IsOnBottom == true || GetSavedBottomState(item.itemData);
         if (!onBottom) return true;
         return WorldItemWaterRules.CanPickUp(true,
@@ -176,7 +175,7 @@ public static class WorldItemWaterSystem
     {
         WorldMotionSystem.UnregisterLooseWindItem(item);
         CancelSpawnCheck(item);
-        item?.GetComponent<WorldItemWaterRuntime>()?.Deactivate();
+        if (item != null && item.TryGetComponent(out WorldItemWaterRuntime runtime)) runtime.Deactivate();
     }
 
     private static bool IsLooseWorldItemCandidate(Item item)
@@ -208,8 +207,7 @@ public static class WorldItemWaterSystem
         CancelSpawnCheck(item);
         ItemWorldPlacement.TryAttachWorldModelTransientItem(item, item.transform.position);
 
-        WorldItemWaterRuntime runtime = item.GetComponent<WorldItemWaterRuntime>();
-        if (runtime == null)
+        if (!item.TryGetComponent(out WorldItemWaterRuntime runtime))
             runtime = item.gameObject.AddComponent<WorldItemWaterRuntime>();
         WorldMotionSystem.BindLooseWindWaterRuntime(item, runtime);
         runtime.Activate(item);

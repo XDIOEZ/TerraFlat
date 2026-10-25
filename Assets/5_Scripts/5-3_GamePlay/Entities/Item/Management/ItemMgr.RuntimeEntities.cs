@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using UnityEngine.Pool;
 using UnityEngine.SceneManagement;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
@@ -11,6 +12,8 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 internal static class RuntimeAiEntityUtility
 {
+    #region AI 实体身份识别
+
     private const string GenericAiModuleId = "AI";
     private const string AiModulePrefix = "AI_";
     private const string LegacyAiChunkMarkerId = "ChunkAssigner";
@@ -27,8 +30,10 @@ internal static class RuntimeAiEntityUtility
             return true;
         }
 
-        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        // 每次实时读取能力，临时列表归还池，避免移动检查反复创建整份组件数组。
+        using var scope = ListPool<MonoBehaviour>.Get(out var behaviours);
+        item.GetComponentsInChildren(true, behaviours);
+        for (int i = 0; i < behaviours.Count; i++)
         {
             if (behaviours[i] is IAIActor)
                 return true;
@@ -70,6 +75,8 @@ internal static class RuntimeAiEntityUtility
                 string.Equals(value, LegacyAiChunkMarkerId, StringComparison.OrdinalIgnoreCase) ||
                 value.StartsWith(AiModulePrefix, StringComparison.OrdinalIgnoreCase));
     }
+
+    #endregion
 }
 
 #region 运行时 AI 持久化契约

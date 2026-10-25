@@ -15,6 +15,81 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/single_sprite_aquatic", EntityAiSingleSpriteAquatic);
         operations.Add("ai/ecs_sway_animation", AiEcsSwayAnimation);
         operations.Add("ai/ecs_resident_ownership", AiEcsResidentOwnership);
+        operations.Add("ai/debug_overlay_cache", AiDebugOverlayCache);
+    }
+
+    // 直接采样正式头顶缓存，检查同秒 Buff、换语言、池代际与字符串复用边界。
+    private static JObject AiDebugOverlayCache(JObject args)
+    {
+        var cache = new AI_DebugOverlay.TextCache<(int Count, bool Leader)>();
+        bool initialMiss = !cache.TryGet((8, true), "zh-CN", 1, out _);
+        string initial = new string(new[] { 'w', 'o', 'l', 'f' });
+        cache.Store((8, true), "zh-CN", 1, initial);
+        bool reused = cache.TryGet((8, true), "zh-CN", 1, out string same) && ReferenceEquals(initial, same);
+        bool stateChanged = !cache.TryGet((7, true), "zh-CN", 1, out _) &&
+                            !cache.TryGet((8, false), "zh-CN", 1, out _);
+        bool localeChanged = !cache.TryGet((8, true), "en", 1, out _);
+        bool generationChanged = !cache.TryGet((8, true), "zh-CN", 2, out _);
+
+        var host = new GameObject("ai-debug-cache-rule");
+        host.SetActive(false);
+        Item receiver = null;
+        try
+        {
+            receiver = host.AddComponent<Item>();
+            var definition = new BuffDefinition { Id = "test:wet", DisplayName = "", DurationSeconds = 3f };
+            var timed = new BuffInstance();
+            timed.Initialize(definition, receiver);
+            timed.RemainingDurationSeconds = 2.9f;
+            var buffs = new Dictionary<string, BuffInstance> { ["timed"] = timed };
+            var buffCache = new AI_DebugOverlay.BuffTextCache();
+            string first = buffCache.GetText(buffs, "zh-CN");
+            timed.RemainingDurationSeconds = 2.1f;
+            string sameSecond = buffCache.GetText(buffs, "zh-CN");
+            timed.RemainingDurationSeconds = 1.9f;
+            string nextSecond = buffCache.GetText(buffs, "zh-CN");
+            bool seconds = ReferenceEquals(first, sameSecond) && first.Contains("3s") &&
+                           nextSecond.Contains("2s") && !ReferenceEquals(nextSecond, first);
+
+            var replacement = new BuffInstance();
+            replacement.Initialize(new BuffDefinition { Id = "test:other", DisplayName = "", DurationSeconds = 3f }, receiver);
+            replacement.RemainingDurationSeconds = 1.9f;
+            buffs["timed"] = replacement;
+            string replaced = buffCache.GetText(buffs, "zh-CN");
+            bool replacementUpdated = replaced.Contains("test:other") && !replaced.Contains("test:wet");
+            replacement.RemainingDurationSeconds = 0f;
+            bool expired = buffCache.GetText(buffs, "zh-CN") == string.Empty;
+
+            var permanent = new BuffInstance();
+            permanent.Initialize(new BuffDefinition { Id = "test:permanent", DisplayName = "" }, receiver);
+            buffs["permanent"] = permanent;
+            buffs["missing"] = new BuffInstance();
+            string permanentText = buffCache.GetText(buffs, "zh-CN");
+            permanent.RemainingDurationSeconds = 20f;
+            bool permanentReused = permanentText.Contains("test:permanent") &&
+                                   ReferenceEquals(permanentText, buffCache.GetText(buffs, "zh-CN"));
+            string otherLocale = buffCache.GetText(buffs, "en");
+            bool buffLocaleInvalidated = !ReferenceEquals(permanentText, otherLocale);
+            buffs.Clear();
+            bool cleared = buffCache.GetText(buffs, "en") == string.Empty;
+            buffs["permanent"] = permanent;
+            buffCache.Clear();
+            bool restored = buffCache.GetText(buffs, "en").Contains("test:permanent");
+
+            return new JObject
+            {
+                ["initialMiss"] = initialMiss, ["reused"] = reused, ["stateChanged"] = stateChanged,
+                ["localeChanged"] = localeChanged, ["generationChanged"] = generationChanged,
+                ["seconds"] = seconds, ["replacementUpdated"] = replacementUpdated, ["expired"] = expired,
+                ["permanentReused"] = permanentReused, ["buffLocaleInvalidated"] = buffLocaleInvalidated,
+                ["cleared"] = cleared, ["restored"] = restored
+            };
+        }
+        finally
+        {
+            receiver?.PrepareForDespawn(false);
+            UnityEngine.Object.DestroyImmediate(host);
+        }
     }
 
     // Lua 读取正式摇摆采样器的姿态，不创建世界、实体、Renderer 或动画组件。

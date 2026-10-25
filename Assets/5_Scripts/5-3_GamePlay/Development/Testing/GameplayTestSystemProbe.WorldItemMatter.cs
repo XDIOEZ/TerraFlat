@@ -10,11 +10,73 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterWorldMatterOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("item_runtime/world_matter_structure", WorldMatterStructure);
+        operations.Add("item_runtime/ai_entity_live_query", AiEntityLiveQuery);
+        operations.Add("item_runtime/world_tick_move_query", WorldTickMoveQuery);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
         operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
         operations.Add("item_runtime/matter_moisture_info", MatterMoistureInfo);
         operations.Add("environment/combustion_oxygen", CombustionOxygen);
     }
+
+    // 查询必须实时接纳新增能力、停用子节点和移除变化，稳态不再创建组件数组。
+    private static JObject AiEntityLiveQuery(JObject args) => WithEntityProbeItem(item =>
+    {
+        item.BindData(EntityProbeData("probe:live-ai-query", 1));
+        bool initiallyNotAi = !RuntimeAiEntityUtility.IsAiEntity(item) && !RuntimeAiEntityUtility.IsAiEntity(null);
+        for (int i = 0; i < 16; i++) RuntimeAiEntityUtility.IsAiEntity(item);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        bool negativeStable = true;
+        for (int i = 0; i < 256; i++) negativeStable &= !RuntimeAiEntityUtility.IsAiEntity(item);
+        long negativeAllocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        var aiObject = new GameObject("LiveAiCapability");
+        aiObject.transform.SetParent(item.transform, false);
+        var marker = aiObject.AddComponent<GameplayTestWorldMatterAiMarker>();
+        bool addedImmediately = RuntimeAiEntityUtility.IsAiEntity(item);
+        aiObject.SetActive(false);
+        marker.enabled = false;
+        bool inactiveIncluded = RuntimeAiEntityUtility.IsAiEntity(item);
+        before = GC.GetAllocatedBytesForCurrentThread();
+        bool positiveStable = true;
+        for (int i = 0; i < 256; i++) positiveStable &= RuntimeAiEntityUtility.IsAiEntity(item);
+        long positiveAllocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        UnityEngine.Object.DestroyImmediate(aiObject);
+        bool removedImmediately = !RuntimeAiEntityUtility.IsAiEntity(item);
+        return new JObject
+        {
+            ["initiallyNotAi"] = initiallyNotAi, ["negativeStable"] = negativeStable,
+            ["negativeAllocatedBytes"] = negativeAllocated, ["addedImmediately"] = addedImmediately,
+            ["inactiveIncluded"] = inactiveIncluded, ["positiveStable"] = positiveStable,
+            ["positiveAllocatedBytes"] = positiveAllocated, ["removedImmediately"] = removedImmediately
+        };
+    });
+
+    // 调用真实世界调度入口，覆盖首次移动登记、重复移动、注销和重新绑定。
+    private static JObject WorldTickMoveQuery(JObject args) => WithEntityProbeItem(item =>
+    {
+        item.BindData(EntityProbeData("probe:world-tick-move", 1));
+        var scheduler = new WorldItemTickScheduler();
+        scheduler.NotifyMoved(item);
+        bool firstMoveRegistered = scheduler.RegisteredCount == 1;
+        for (int i = 0; i < 16; i++) scheduler.NotifyMoved(item);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 256; i++) scheduler.NotifyMoved(item);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        bool singleRegistration = scheduler.RegisteredCount == 1;
+        scheduler.Remove(item);
+        bool removed = scheduler.RegisteredCount == 0;
+        item.BindData(EntityProbeData("probe:world-tick-rebound", 2));
+        scheduler.NotifyMoved(item);
+        scheduler.Register(item);
+        bool reboundRegistered = scheduler.RegisteredCount == 1;
+        scheduler.Remove(item);
+        return new JObject
+        {
+            ["firstMoveRegistered"] = firstMoveRegistered, ["singleRegistration"] = singleRegistration,
+            ["allocatedBytes"] = allocated, ["removed"] = removed, ["reboundRegistered"] = reboundRegistered,
+            ["removedAgain"] = scheduler.RegisteredCount == 0
+        };
+    });
 
     // 独立停用宿主只读取正式资格缓存，不创建世界、拾取器或完整物品管理器。
     private static JObject WorldMatterStructure(JObject args) => WithEntityProbeItem(item =>

@@ -39,6 +39,7 @@ public static class AI_DebugOverlay
 	private static readonly Dictionary<MonoBehaviour, Action<Camera>> hiveSources = new();
 	private static AI_DebugOverlayRenderer renderer;
 	public static bool Visible { get; private set; }
+	internal static string TextLocale { get; private set; }
 
 	/// <summary>游戏面板打开时暂避让头顶调试文字，关闭面板后自动恢复原开关。</summary>
 	public static bool CanDrawWorldLabels
@@ -116,6 +117,7 @@ public static class AI_DebugOverlay
 		Camera camera = Camera.main;
 		if (camera == null)
 			return;
+		TextLocale = FlatWorldLocalizationService.CurrentLocaleCode;
 		if (drawActors)
 			foreach (var source in sources)
 				if (source.Key != null && source.Key.isActiveAndEnabled)
@@ -133,6 +135,96 @@ public static class AI_DebugOverlay
 		hiveSources.Clear();
 		renderer = null;
 		Visible = false;
+		TextLocale = null;
+	}
+	#endregion
+
+	#region 调试文字复用
+	// 只在显示值、语言或物品代际改变时重新格式化，仍逐帧读取真实状态。
+	internal struct TextCache<TKey> where TKey : struct
+	{
+		private TKey key;
+		private string locale;
+		private uint generation;
+		private string text;
+
+		public bool TryGet(TKey current, string currentLocale, uint currentGeneration, out string cached)
+		{
+			cached = text;
+			return text != null && locale == currentLocale && generation == currentGeneration &&
+				EqualityComparer<TKey>.Default.Equals(key, current);
+		}
+
+		public string Store(TKey current, string currentLocale, uint currentGeneration, string value)
+		{
+			key = current;
+			locale = currentLocale;
+			generation = currentGeneration;
+			return text = value;
+		}
+	}
+
+	internal sealed class BuffTextCache
+	{
+		private readonly List<(string Name, string Id, bool Permanent, int Seconds)> states = new();
+		private readonly List<string> texts = new();
+		private string locale;
+		private string text = string.Empty;
+
+		public string GetText(Dictionary<string, BuffInstance> buffs, string currentLocale)
+		{
+			bool changed = locale != currentLocale;
+			int count = 0;
+			if (buffs != null)
+				foreach (BuffInstance runtime in buffs.Values)
+				{
+					if (runtime?.Definition == null || runtime.IsExpired)
+						continue;
+					var current = (runtime.Definition.DisplayName, runtime.DefinitionId,
+						runtime.Definition.IsPermanent,
+						runtime.Definition.IsPermanent ? 0 :
+							Mathf.CeilToInt(Mathf.Max(0f, runtime.RemainingDurationSeconds)));
+					if (count == states.Count)
+					{
+						states.Add(current);
+						changed = true;
+					}
+					else if (!states[count].Equals(current))
+					{
+						states[count] = current;
+						changed = true;
+					}
+					count++;
+				}
+			if (count < states.Count)
+			{
+				states.RemoveRange(count, states.Count - count);
+				changed = true;
+			}
+			if (!changed)
+				return text;
+
+			locale = currentLocale;
+			texts.Clear();
+			foreach (var state in states)
+			{
+				string buffName = string.IsNullOrWhiteSpace(state.Name)
+					? state.Id : FlatWorldLocalizationService.GetUiText(state.Name);
+				string duration = state.Permanent
+					? FlatWorldLocalizationService.GetUiText("永久") : $"{state.Seconds}s";
+				texts.Add(FlatWorldLocalizationService.GetUiFormat("{0} ({1})", buffName, duration));
+			}
+			return text = texts.Count == 0 ? string.Empty :
+				FlatWorldLocalizationService.GetUiFormat(" | Buff: {0}", string.Join(", ", texts));
+		}
+
+		public void Clear()
+		{
+			states.Clear();
+			texts.Clear();
+			locale = null;
+			text = string.Empty;
+		}
 	}
 	#endregion
 }
@@ -200,6 +292,13 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	private Action<TState> switchStateCallback;
 	private Func<TState, bool> canTransitionCallback;
 	private readonly GUIContent debugStateContent = new();
+	private AI_DebugOverlay.TextCache<(TState State, string Extra, string Buffs)> debugLabelCache;
+	private AI_DebugOverlay.BuffTextCache debugBuffCache;
+	private GUIStyle debugSizeStyle;
+	private Font debugSizeFont;
+	private int debugSizeFontSize;
+	private FontStyle debugSizeFontStyle;
+	private float debugLabelWidth;
 	private readonly List<AIFleeStateNode<TState>> _fleeStateNodes = new List<AIFleeStateNode<TState>>(); // 受击重选目标时查找当前逃离节点。
 	private TState _locomotionIdleState;
 	private bool _hasLocomotionIdleState;
@@ -403,6 +502,9 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	protected override void OnUnload()
 	{
 		AI_DebugOverlay.Unregister(this);
+		debugBuffCache?.Clear();
+		debugLabelCache = default;
+		debugStateContent.text = string.Empty;
 		UnbindDamageThreatEvents();
 		_deathDamageSources.Clear();
 		_stateMachine?.Reset();
@@ -1120,27 +1222,7 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	private string GetDebugBuffInfo()
 	{
 		Mod_BuffManager buffManager = item?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
-		if (buffManager?.ActiveBuffs == null || buffManager.ActiveBuffs.Count == 0)
-			return string.Empty;
-
-		List<string> buffTexts = new List<string>(buffManager.ActiveBuffs.Count);
-		foreach (BuffInstance runtime in buffManager.ActiveBuffs.Values)
-		{
-			if (runtime?.Definition == null || runtime.IsExpired)
-				continue;
-
-			string buffName = string.IsNullOrWhiteSpace(runtime.Definition.DisplayName)
-				? runtime.DefinitionId
-				: FlatWorldLocalizationService.GetUiText(runtime.Definition.DisplayName);
-			string duration = runtime.Definition.IsPermanent
-				? FlatWorldLocalizationService.GetUiText("永久")
-				: $"{Mathf.CeilToInt(Mathf.Max(0f, runtime.RemainingDurationSeconds))}s";
-			buffTexts.Add(FlatWorldLocalizationService.GetUiFormat("{0} ({1})", buffName, duration));
-		}
-
-		return buffTexts.Count == 0
-			? string.Empty
-			: FlatWorldLocalizationService.GetUiFormat(" | Buff: {0}", string.Join(", ", buffTexts));
+		return (debugBuffCache ??= new()).GetText(buffManager?.ActiveBuffs, AI_DebugOverlay.TextLocale);
 	}
 #endregion
 
@@ -1272,7 +1354,7 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	{
 		Vector3 worldPos = transform.position + new Vector3(0f, 1.4f, 0f);
 		Vector3 screenPos = camera.WorldToScreenPoint(worldPos);
-		if (screenPos.z <= 0f)
+		if (screenPos.z <= 0f || screenPos.y < -14f || screenPos.y > Screen.height + 14f)
 		{
 			return;
 		}
@@ -1287,13 +1369,26 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 			};
 		}
 
-		string extra = GetDebugExtraInfo() + GetDebugBuffInfo();
-		debugStateContent.text = FlatWorldLocalizationService.GetUiFormat(
-			"状态: {0}{1}",
-			FlatWorldLocalizationService.GetUiText(GetStateTextCN(_currentState)),
-			extra);
-		Vector2 size = _debugStateStyle.CalcSize(debugStateContent);
-		float width = Mathf.Max(120f, size.x + 14f);
+		var key = (_currentState, GetDebugExtraInfo(), GetDebugBuffInfo());
+		uint generation = item != null ? item.RuntimeGeneration : 0;
+		bool textChanged = !debugLabelCache.TryGet(key, AI_DebugOverlay.TextLocale, generation, out _);
+		if (textChanged)
+			debugStateContent.text = debugLabelCache.Store(key, AI_DebugOverlay.TextLocale, generation,
+				FlatWorldLocalizationService.GetUiFormat("状态: {0}{1}",
+					FlatWorldLocalizationService.GetUiText(GetStateTextCN(_currentState)), key.Item2 + key.Item3));
+		Font effectiveFont = _debugStateStyle.font != null ? _debugStateStyle.font : GUI.skin.font;
+		if (textChanged || !ReferenceEquals(debugSizeStyle, _debugStateStyle) || debugSizeFont != effectiveFont ||
+			debugSizeFontSize != _debugStateStyle.fontSize || debugSizeFontStyle != _debugStateStyle.fontStyle)
+		{
+			debugLabelWidth = Mathf.Max(120f, _debugStateStyle.CalcSize(debugStateContent).x + 14f);
+			debugSizeStyle = _debugStateStyle;
+			debugSizeFont = effectiveFont;
+			debugSizeFontSize = _debugStateStyle.fontSize;
+			debugSizeFontStyle = _debugStateStyle.fontStyle;
+		}
+		float width = debugLabelWidth;
+		if (screenPos.x + width * 0.5f < 0f || screenPos.x - width * 0.5f > Screen.width)
+			return;
 		float height = 28f;
 		Rect rect = new Rect(
 			screenPos.x - width * 0.5f,
