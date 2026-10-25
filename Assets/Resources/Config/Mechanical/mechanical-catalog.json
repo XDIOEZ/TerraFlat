@@ -226,9 +226,24 @@
       "Ports": "none",
       "BatteryIndicator": {
         "Cells": [
-          { "x": 527, "y": 373, "z": 43, "w": 37 },
-          { "x": 605, "y": 373, "z": 44, "w": 37 },
-          { "x": 685, "y": 373, "z": 42, "w": 37 }
+          {
+            "x": 527,
+            "y": 373,
+            "z": 43,
+            "w": 37
+          },
+          {
+            "x": 605,
+            "y": 373,
+            "z": 44,
+            "w": 37
+          },
+          {
+            "x": 685,
+            "y": 373,
+            "z": 42,
+            "w": 37
+          }
         ]
       },
       "Electrical": {
@@ -297,7 +312,7 @@
             "Chamber": "main",
             "Direction": 0,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -306,7 +321,7 @@
             "Chamber": "main",
             "Direction": 1,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -315,7 +330,7 @@
             "Chamber": "main",
             "Direction": 2,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -324,13 +339,11 @@
             "Chamber": "main",
             "Direction": 3,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           }
         ],
-        "VolumeLiters": 1,
-        "GasBufferStandardLiters": 10,
         "ThroughputLitersPerSecond": 1000
       }
     },
@@ -350,7 +363,7 @@
             "Chamber": "main",
             "Direction": 0,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -359,7 +372,7 @@
             "Chamber": "main",
             "Direction": 1,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -368,7 +381,7 @@
             "Chamber": "main",
             "Direction": 2,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -377,7 +390,7 @@
             "Chamber": "main",
             "Direction": 3,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           }
@@ -400,7 +413,7 @@
             "Chamber": "main",
             "Direction": 2,
             "Mode": "input",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -409,7 +422,7 @@
             "Chamber": "main",
             "Direction": 0,
             "Mode": "output",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": true,
             "FluidId": ""
           }
@@ -442,16 +455,7 @@
           {
             "Id": "selected",
             "Chamber": "main",
-            "Direction": 1,
-            "Mode": "output",
-            "Phase": "gas",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "other",
-            "Chamber": "main",
-            "Direction": 3,
+            "Direction": 0,
             "Mode": "output",
             "Phase": "gas",
             "Outlet": false,
@@ -477,7 +481,7 @@
             "Chamber": "main",
             "Direction": 0,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -486,7 +490,7 @@
             "Chamber": "main",
             "Direction": 1,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -495,7 +499,7 @@
             "Chamber": "main",
             "Direction": 2,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -504,7 +508,7 @@
             "Chamber": "main",
             "Direction": 3,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           }
@@ -512,13 +516,12 @@
         "MaterialId": "iron",
         "VolumeLiters": 100,
         "MinimumGasSpaceLiters": 0.1,
-        "MaxSafePressureKPa": 800,
-        "CombineAdjacent": true,
         "AllowManualAirFill": true,
         "SingleGas": false,
         "SingleLiquid": false,
         "ThroughputLitersPerSecond": 1000,
-        "TrackAmbientTemperature": true
+        "GasCapacityStandardLiters": 100,
+        "NaturalFillFraction": 0.2
       }
     },
     {
@@ -537,7 +540,7 @@
             "Chamber": "main",
             "Direction": 0,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -546,7 +549,7 @@
             "Chamber": "main",
             "Direction": 1,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -555,7 +558,7 @@
             "Chamber": "main",
             "Direction": 2,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           },
@@ -564,7 +567,7 @@
             "Chamber": "main",
             "Direction": 3,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "gas",
             "Outlet": false,
             "FluidId": ""
           }
@@ -572,12 +575,12 @@
         "MaterialId": "steel",
         "VolumeLiters": 100,
         "MinimumGasSpaceLiters": 0.1,
-        "MaxSafePressureKPa": 2000,
-        "CombineAdjacent": true,
         "SingleGas": false,
         "SingleLiquid": false,
         "ThroughputLitersPerSecond": 1000,
-        "TrackAmbientTemperature": true
+        "GasCapacityStandardLiters": 100,
+        "NaturalFillFraction": 0.2,
+        "AllowManualAirFill": true
       }
     },
     {
@@ -596,7 +599,7 @@
             "Chamber": "main",
             "Direction": 0,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "liquid",
             "Outlet": false,
             "FluidId": ""
           },
@@ -605,7 +608,7 @@
             "Chamber": "main",
             "Direction": 1,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "liquid",
             "Outlet": false,
             "FluidId": ""
           },
@@ -614,7 +617,7 @@
             "Chamber": "main",
             "Direction": 2,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "liquid",
             "Outlet": false,
             "FluidId": ""
           },
@@ -623,16 +626,15 @@
             "Chamber": "main",
             "Direction": 3,
             "Mode": "both",
-            "Phase": "both",
+            "Phase": "liquid",
             "Outlet": false,
             "FluidId": ""
           }
         ],
         "VolumeLiters": 200,
         "MinimumGasSpaceLiters": 0.1,
-        "MaxSafePressureKPa": 400,
         "SingleGas": false,
-        "SingleLiquid": false,
+        "SingleLiquid": true,
         "MaterialId": "liquid-storage"
       }
     },
@@ -659,10 +661,8 @@
         ],
         "VolumeLiters": 2,
         "BatchStandardLiters": 1,
-        "GasBufferStandardLiters": 1,
-        "MaximumPumpPressureKPa": 800,
         "PumpBatchesPerSecond": 2,
-        "WorkJoulesPerStandardLiter": 300
+        "ThroughputLitersPerSecond": 2
       },
       "TorqueLoad": 20,
       "RequiredRpm": 20,
@@ -706,7 +706,6 @@
           }
         ],
         "VolumeLiters": 2,
-        "WorkJoulesPerStandardLiter": 300,
         "ThroughputLitersPerSecond": 2
       },
       "Electrical": {
@@ -714,130 +713,6 @@
         "Connection": "cell",
         "NominalVoltage": 120,
         "PowerWatts": 600,
-        "DemandProvider": "fluid"
-      }
-    },
-    {
-      "Id": "PressureProbe_Mechanical",
-      "Kind": "shaft",
-      "Ports": "axis",
-      "LogicId": "fluid",
-      "PlacementLayer": 4,
-      "BlocksMovement": false,
-      "CastVisualShadows": false,
-      "Fluid": {
-        "Kind": "mechanical-probe",
-        "Ports": []
-      },
-      "AxlePorts": [
-        "left",
-        "right"
-      ]
-    },
-    {
-      "Id": "PressureProbe_Electronic",
-      "Kind": "shaft",
-      "Ports": "none",
-      "LogicId": "fluid",
-      "PlacementLayer": 5,
-      "BlocksMovement": false,
-      "CastVisualShadows": false,
-      "Fluid": {
-        "Kind": "electronic-probe",
-        "Ports": []
-      },
-      "Electrical": {
-        "Role": "switch",
-        "Connection": "cell",
-        "NominalVoltage": 120
-      }
-    },
-    {
-      "Id": "GasCompressor_Mechanical",
-      "Kind": "consumer",
-      "Ports": "axis",
-      "LogicId": "fluid",
-      "PlacementLayer": 0,
-      "BlocksMovement": true,
-      "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "compressor",
-        "Ports": [
-          {
-            "Id": "in",
-            "Chamber": "main",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "gas",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "out",
-            "Chamber": "output",
-            "Direction": 0,
-            "Mode": "output",
-            "Phase": "both",
-            "Outlet": true,
-            "FluidId": ""
-          }
-        ],
-        "VolumeLiters": 10,
-        "GasBufferStandardLiters": 100,
-        "MaximumPumpPressureKPa": 4000,
-        "AllowPortableTank": true
-      },
-      "TorqueLoad": 20,
-      "RequiredRpm": 20,
-      "AxlePorts": [
-        "left"
-      ],
-      "AxisPortVisual": {
-        "Count": 1,
-        "StartX": -0.25,
-        "Y": 0
-      }
-    },
-    {
-      "Id": "GasCompressor_Electric",
-      "Kind": "shaft",
-      "Ports": "none",
-      "LogicId": "fluid",
-      "PlacementLayer": 0,
-      "BlocksMovement": true,
-      "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "compressor",
-        "Ports": [
-          {
-            "Id": "in",
-            "Chamber": "main",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "gas",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "out",
-            "Chamber": "output",
-            "Direction": 0,
-            "Mode": "output",
-            "Phase": "both",
-            "Outlet": true,
-            "FluidId": ""
-          }
-        ],
-        "VolumeLiters": 10,
-        "GasBufferStandardLiters": 100,
-        "MaximumPumpPressureKPa": 4000,
-        "AllowPortableTank": true
-      },
-      "Electrical": {
-        "Role": "consumer",
-        "Connection": "cell",
-        "NominalVoltage": 120,
-        "PowerWatts": 1200,
         "DemandProvider": "fluid"
       }
     },
@@ -924,333 +799,6 @@
       }
     },
     {
-      "Id": "FluidFilter",
-      "Kind": "shaft",
-      "Ports": "none",
-      "LogicId": "fluid",
-      "PlacementLayer": 0,
-      "BlocksMovement": true,
-      "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "filter",
-        "Ports": [
-          {
-            "Id": "in",
-            "Chamber": "main",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "liquid",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "out",
-            "Chamber": "output",
-            "Direction": 0,
-            "Mode": "output",
-            "Phase": "liquid",
-            "Outlet": true,
-            "FluidId": ""
-          }
-        ],
-        "VolumeLiters": 10,
-        "Reactions": [
-          {
-            "Id": "core:filter_dirty_water",
-            "Inputs": [
-              {
-                "FluidId": "core:dirty_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:filtered_water",
-                "Chamber": "output",
-                "Phase": "liquid",
-                "Moles": 0.99
-              }
-            ],
-            "MolesPerSecond": 5,
-            "RequiredJoulesPerReaction": 100,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "FilterResidue",
-            "ResidueItemsPerReaction": 0.180153,
-            "RequiresFilter": true
-          }
-        ],
-        "FilterMaterialItemId": "Cloth",
-        "FilterWorkPerItem": 500
-      },
-      "Electrical": {
-        "Role": "consumer",
-        "Connection": "cell",
-        "NominalVoltage": 120,
-        "PowerWatts": 600,
-        "DemandProvider": "fluid"
-      }
-    },
-    {
-      "Id": "WaterElectrolyzer",
-      "Kind": "shaft",
-      "Ports": "none",
-      "LogicId": "fluid",
-      "PlacementLayer": 0,
-      "BlocksMovement": true,
-      "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "electrolyzer",
-        "Ports": [
-          {
-            "Id": "water-in",
-            "Chamber": "main",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "liquid",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "gas-out",
-            "Chamber": "output",
-            "Direction": 0,
-            "Mode": "output",
-            "Phase": "gas",
-            "Outlet": true,
-            "FluidId": ""
-          }
-        ],
-        "VolumeLiters": 10,
-        "GasBufferStandardLiters": 100,
-        "SingleGas": false,
-        "Reactions": [
-          {
-            "Id": "core:water_electrolysis",
-            "Inputs": [
-              {
-                "FluidId": "core:pure_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:hydrogen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 1.0
-              },
-              {
-                "FluidId": "core:oxygen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.5
-              }
-            ],
-            "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 285830.0,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 241826.0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:filtered_water_electrolysis",
-            "Inputs": [
-              {
-                "FluidId": "core:filtered_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:hydrogen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 1.0
-              },
-              {
-                "FluidId": "core:oxygen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.5
-              }
-            ],
-            "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 285830.0,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 241826.0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:drinkable_water_electrolysis",
-            "Inputs": [
-              {
-                "FluidId": "core:drinkable_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:hydrogen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 1.0
-              },
-              {
-                "FluidId": "core:oxygen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.5
-              }
-            ],
-            "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 285830.0,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 241826.0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:dirty_water_electrolysis",
-            "Inputs": [
-              {
-                "FluidId": "core:dirty_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:hydrogen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.99
-              },
-              {
-                "FluidId": "core:oxygen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.495
-              }
-            ],
-            "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 282971.7,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 239407.74,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "FilterResidue",
-            "ResidueItemsPerReaction": 0.180153,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:salt_water_electrolysis",
-            "Inputs": [
-              {
-                "FluidId": "core:salt_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:hydrogen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.005394469666649956
-              },
-              {
-                "FluidId": "core:chlorine",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.005394469666649956
-              },
-              {
-                "FluidId": "core:sodium_hydroxide_solution",
-                "Chamber": "byproduct",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 3236.681799989974,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:sea_water_electrolysis",
-            "Inputs": [
-              {
-                "FluidId": "core:sea_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:hydrogen",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.005394469666649956
-              },
-              {
-                "FluidId": "core:chlorine",
-                "Chamber": "output",
-                "Phase": "gas",
-                "Moles": 0.005394469666649956
-              },
-              {
-                "FluidId": "core:sodium_hydroxide_solution",
-                "Chamber": "byproduct",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 3236.681799989974,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
-          }
-        ],
-        "LiquidResidueFluidId": "core:sodium_hydroxide_solution",
-        "LiquidResidueChamber": "byproduct"
-      },
-      "Electrical": {
-        "Role": "consumer",
-        "Connection": "cell",
-        "NominalVoltage": 120,
-        "PowerWatts": 3000,
-        "DemandProvider": "fluid"
-      }
-    },
-    {
       "Id": "GasEngine",
       "Kind": "source",
       "Ports": "axis",
@@ -1290,7 +838,6 @@
           }
         ],
         "VolumeLiters": 10,
-        "GasBufferStandardLiters": 100,
         "Reactions": [
           {
             "Id": "core:hydrogen_engine",
@@ -1349,49 +896,33 @@
       "BlocksMovement": true,
       "CastVisualShadows": true,
       "Fluid": {
-        "Kind": "engine",
+        "Kind": "water-engine",
         "Ports": [
           {
-            "Id": "steam-in",
+            "Id": "water-in",
             "Chamber": "main",
             "Direction": 2,
             "Mode": "input",
-            "Phase": "gas",
-            "Outlet": false,
-            "FluidId": "core:pure_water"
+            "Phase": "liquid"
           }
         ],
-        "VolumeLiters": 10,
-        "GasBufferStandardLiters": 100,
-        "LiquidResidueFluidId": "core:pure_water",
-        "LiquidResidueChamber": "condensate",
+        "VolumeLiters": 1,
+        "ThroughputLitersPerSecond": 0.1,
         "Reactions": [
           {
-            "Id": "core:steam_engine",
+            "Id": "core:water_engine",
             "Inputs": [
               {
                 "FluidId": "core:pure_water",
                 "Chamber": "main",
-                "Phase": "gas",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:pure_water",
-                "Chamber": "condensate",
                 "Phase": "liquid",
                 "Moles": 1
               }
             ],
+            "Outputs": [],
             "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 0,
             "ChemicalJoulesPerReaction": 40660,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
+            "MechanicalEfficiency": 0.4
           }
         ]
       },
@@ -1432,8 +963,6 @@
         "BodySizeCells": 1,
         "VolumeLiters": 5,
         "MinimumGasSpaceLiters": 1,
-        "MaxSafePressureKPa": 2000,
-        "GasBufferStandardLiters": 100,
         "ThroughputLitersPerSecond": 1000,
         "BatchStandardLiters": 10,
         "SingleGas": false,
@@ -1466,8 +995,6 @@
         "BodySizeCells": 1,
         "VolumeLiters": 5,
         "MinimumGasSpaceLiters": 1,
-        "MaxSafePressureKPa": 2000,
-        "GasBufferStandardLiters": 100,
         "ThroughputLitersPerSecond": 1000,
         "BatchStandardLiters": 10,
         "SingleGas": false,
@@ -1532,7 +1059,6 @@
         "MinimumGasSpaceLiters": 0.02,
         "SingleLiquid": false,
         "SingleGas": false,
-        "CombineAdjacent": false,
         "Ports": [
           {
             "Id": "gas-input",
@@ -1541,7 +1067,8 @@
             "Phase": "gas",
             "Chamber": "main"
           }
-        ]
+        ],
+        "PullFromNetwork": true
       }
     },
     {
@@ -1562,7 +1089,6 @@
         "MinimumGasSpaceLiters": 0.02,
         "SingleLiquid": false,
         "SingleGas": false,
-        "CombineAdjacent": false,
         "Ports": [
           {
             "Id": "water-input",
@@ -1571,7 +1097,190 @@
             "Phase": "liquid",
             "Chamber": "main"
           }
+        ],
+        "PullFromNetwork": true
+      }
+    },
+    {
+      "Id": "LiquidPipe",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 2,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "pipe",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 1,
+        "ThroughputLitersPerSecond": 1000
+      }
+    },
+    {
+      "Id": "LiquidValve",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 2,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "valve",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          }
         ]
+      }
+    },
+    {
+      "Id": "LiquidOutlet",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 2,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "outlet",
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "out",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "liquid",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ]
+      }
+    },
+    {
+      "Id": "GasFiller",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "filler",
+        "AllowPortableTank": true,
+        "ThroughputLitersPerSecond": 2,
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas"
+          }
+        ],
+        "GasCapacityStandardLiters": 2
+      }
+    },
+    {
+      "Id": "LiquidFiller",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "liquid-filler",
+        "AllowPortableTank": true,
+        "ThroughputLitersPerSecond": 2,
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid"
+          }
+        ],
+        "VolumeLiters": 1
       }
     }
   ],

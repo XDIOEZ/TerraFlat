@@ -46,14 +46,8 @@ public static partial class MachineWorld
         public MechanicalNetworkGraph Graph;
         public ElectricalNetworkGraph Electrical;
         public FluidNetworkGraph Fluid;
-        public IndustrialGasNetworkGraph Gas;
-        public IndustrialLiquidNetworkGraph Liquid;
-        public readonly FluidGasReplicaCache GasReplica = new();
-        public long GasEpoch;
         public string FluidTopologyKey;
         public FluidCatalog FluidTopologyCatalog;
-        public bool PublishGasTopologyPending;
-        public bool PendingGasRestore;
         public GameSaveData Owner;
         private MachineScopeIdentity identity;
         public string Key { get => identity.WorldKey; set => identity = new MachineScopeIdentity(value); }
@@ -74,6 +68,7 @@ public static partial class MachineWorld
         public readonly Dictionary<FluidInventory, FluidInventoryState> GasStockCache = new();
         public readonly Dictionary<FluidInventory, double> GasThroughput = new();
         public readonly Dictionary<(int NodeId, string PortId), double> GasPortThroughput = new();
+        public readonly Dictionary<int, double> GasNodeBudget = new(), LiquidNodeBudget = new();
         public readonly Dictionary<MachineEntity, double> MechanicalPower = new();
         public readonly Dictionary<int, int> Appearance = new();
     }
@@ -228,7 +223,6 @@ public static partial class MachineWorld
         using (UseScope(fromKey))
         {
             RebuildGraphsIfDirty();
-            if (scope.PendingGasRestore) throw new InvalidOperationException("气网成员尚未恢复完整，不能迁移部分载荷。");
             for (int i = 0; i < ids.Count; i++)
             {
                 if (!identities.Add(ids[i])) throw new ArgumentException("批量转移包含重复机器身份。", nameof(ids));
@@ -303,17 +297,13 @@ public static partial class MachineWorld
             source.TopologyMutationDepth++;
             try
             {
-                var groups = new HashSet<FluidTankGroup>();
-                foreach (ScopeNodeTransfer candidate in candidates)
-                    if (fluidTankOwners.TryGetValue(candidate.Node.Id, out FluidTankGroup group)) groups.Add(group);
                 dirty = true;
-                foreach (FluidTankGroup group in groups) PartitionFluidGroupForScopeTransfer(group);
                 foreach (ScopeNodeTransfer candidate in candidates)
                 {
                     MachineEntity node = candidate.Node;
                     if (node.Definition.Fluid != null)
                     {
-                        candidate.Fluid = MachinePersistence.Clone(GetFluidState(node));
+                        candidate.Fluid = CreatePersistentFluidState(node);
                         DisposeMachineRuntime(node);
                         candidate.Fluid = DetachFluidNodeForScopeTransfer(node);
                     }
@@ -434,9 +424,7 @@ public static partial class MachineWorld
         {
             if (!IsShipScope || !nodes.TryGetValue(node.Id, out MachineEntity current) || !ReferenceEquals(node, current)) return null;
             RebuildGraphsIfDirty();
-            if (IsSharedGasNetworkMember(node)) DetachGasNetworksToLocal();
             CaptureNode(node);
-            if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) PartitionFluidGroupForScopeTransfer(group);
             ItemData snapshot = Remove(node.Id);
             if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
             RebuildGraphsIfDirty();

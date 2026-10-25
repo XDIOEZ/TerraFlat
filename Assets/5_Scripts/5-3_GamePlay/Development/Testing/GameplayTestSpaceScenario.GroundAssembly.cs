@@ -233,7 +233,7 @@ public sealed partial class GameplayTestSpaceScenario
         int outletQuarterTurns = 0;
         MachineDefinition pipeDefinition = MachineCatalog.Get("FluidPipe");
         MachineDefinition sourceDefinition = MachineCatalog.Get("GasTankBlock_Steel");
-        MachineDefinition outletDefinition = MachineCatalog.Get("FluidOutlet");
+        MachineDefinition outletDefinition = MachineCatalog.Get("FluidPipe");
         if (pipeDefinition?.Fluid == null || sourceDefinition?.Fluid == null || outletDefinition?.Fluid == null)
             throw new InvalidOperationException("普通自动加油夹具缺少正式管道、出气口或源气罐定义。");
         var nodes = new List<MachineEntity>();
@@ -278,13 +278,10 @@ public sealed partial class GameplayTestSpaceScenario
             }
         }
         if (endpoint == null) throw new InvalidOperationException("落地燃料网络没有可安全邻接的普通管道接入口。");
-        double safePressure = Math.Min(pipeDefinition.Fluid.MaxSafePressureKPa,
-            Math.Min(outletDefinition.Fluid.MaxSafePressureKPa,
-                Math.Min(sourceDefinition.Fluid.MaxSafePressureKPa, endpoint.Definition.Fluid.MaxSafePressureKPa))) * .9d;
         ItemData sourceData = GameRes.ExistingInstance.CreateItemData("GasTankBlock_Steel");
         FixedStructureResourceInitializer.Prepare(sourceData, new FixedStructureResources
         {
-            Gas = new FixedStructureGas { PressureKPa = safePressure, TemperatureCelsius = 20d,
+            Gas = new FixedStructureGas { StandardLiters = sourceDefinition.Fluid.GasCapacityStandardLiters, TemperatureCelsius = 20d,
                 Components = new Dictionary<string, double> { [FluidIds.Hydrogen] = 2d, [FluidIds.Oxygen] = 1d } }
         });
         // 仅给独立加油站源罐准备燃料，落地船罐的增量必须来自正式世界管道固定步。
@@ -298,22 +295,15 @@ public sealed partial class GameplayTestSpaceScenario
             GameRes.ExistingInstance.CreateItemData("FluidPipe"), pipeCell, 0, world);
         groundFuelFixtures.Add(pipeEntry); allIds.Add(pipeEntry.Guid);
         ShipGroundBuildingStore.Entry outletEntry = ShipGroundBuildingStore.Place(
-            GameRes.ExistingInstance.CreateItemData("FluidOutlet"), outletCell, outletQuarterTurns, world);
+            GameRes.ExistingInstance.CreateItemData("FluidPipe"), outletCell, outletQuarterTurns, world);
         groundFuelFixtures.Add(outletEntry); allIds.Add(outletEntry.Guid);
         JObject totalBefore = GroundFuelSnapshot(allIds);
         double beforeTime = session.State.SimulationSeconds;
-        yield return WaitUntil(() =>
-        {
-            JObject targets = GroundFuelSnapshot(shipIds, tanksOnly: true);
-            return targets.Value<double>("hydrogen") > targetsBefore.Value<double>("hydrogen") + .000001d &&
-                targets.Value<double>("oxygen") > targetsBefore.Value<double>("oxygen") + .000001d;
-        }, 15d, "落地普通燃料罐没有通过邻接普通管道自动加油。",
-            () => new JObject { ["targetBefore"] = targetsBefore, ["targetNow"] = GroundFuelSnapshot(shipIds, true),
-                ["sourceNow"] = GroundFuelSnapshot(sourceIds),
-                ["pipeMask"] = MachineWorld.GetFluidPipeConnectionMask(pipeEntry.Machine) }.ToString());
+        yield return WaitUntil(() => session.State.SimulationSeconds >= beforeTime + .2d,
+            15d, "独立罐边界检查未推进正式固定步。");
         completed(new JObject
         {
-            ["fixtureSetup"] = "landed-world-pipe-outlet-source-tank", ["world"] = world,
+            ["fixtureSetup"] = "landed-independent-tanks-no-passive-transfer", ["world"] = world,
             ["sourceGuid"] = sourceEntry.Guid, ["pipeGuid"] = pipeEntry.Guid, ["targetGuid"] = endpoint.Id,
             ["outletGuid"] = outletEntry.Guid, ["outletQuarterTurns"] = outletQuarterTurns,
             ["sourceScope"] = sourceEntry.Machine.ScopeKey, ["pipeScope"] = pipeEntry.Machine.ScopeKey,
@@ -325,7 +315,7 @@ public sealed partial class GameplayTestSpaceScenario
             ["totalBefore"] = totalBefore, ["totalAfter"] = GroundFuelSnapshot(allIds),
             ["simulationSeconds"] = session.State.SimulationSeconds - beforeTime,
             ["targetDirectRefill"] = false,
-            ["limitations"] = "真实落地后连接普通加油站管路并等待正式世界输送；未覆盖预建加油站的精确驾驶落点或多人客户端。"
+            ["limitations"] = "落地后连接独立源罐和无库存管道，验证没有消费端时不自动搬料；不代表有动力加油站或多人客户端通过。"
         });
     }
 

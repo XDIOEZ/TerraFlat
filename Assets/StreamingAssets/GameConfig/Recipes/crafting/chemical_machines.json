@@ -3,7 +3,7 @@
   "recipes": [
     {
       "id": "core:chemistry_FluidPipe",
-      "displayName": "通用管道",
+      "displayName": "气体管道",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -31,7 +31,7 @@
     },
     {
       "id": "core:chemistry_FluidValve",
-      "displayName": "流体阀门",
+      "displayName": "气体阀门",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -59,7 +59,7 @@
     },
     {
       "id": "core:chemistry_FluidOutlet",
-      "displayName": "出气口",
+      "displayName": "气体输出口",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -259,128 +259,6 @@
       "actions": []
     },
     {
-      "id": "core:chemistry_PressureProbe_Mechanical",
-      "displayName": "机械气压探针",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "amount": 2
-        },
-        {
-          "match": "exact_item",
-          "itemId": "CopperPlate",
-          "amount": 1
-        },
-        {
-          "match": "exact_item",
-          "itemId": "Shaft_Wood_Summoner",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "PressureProbe_Mechanical_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:chemistry_PressureProbe_Electronic",
-      "displayName": "电子气压探针",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "amount": 2
-        },
-        {
-          "match": "exact_item",
-          "itemId": "CopperPlate",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "PressureProbe_Electronic_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:chemistry_GasCompressor_Mechanical",
-      "displayName": "机械气体压缩机",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "amount": 6
-        },
-        {
-          "match": "exact_item",
-          "itemId": "CopperPlate",
-          "amount": 1
-        },
-        {
-          "match": "exact_item",
-          "itemId": "Shaft_Wood_Summoner",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "GasCompressor_Mechanical_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:chemistry_GasCompressor_Electric",
-      "displayName": "电力气体压缩机",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "amount": 6
-        },
-        {
-          "match": "exact_item",
-          "itemId": "CopperPlate",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "GasCompressor_Electric_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:chemistry_ElectricHeater",
       "displayName": "电热器",
       "recipeType": "crafting",
@@ -409,67 +287,6 @@
       "actions": []
     },
     {
-      "id": "core:chemistry_FluidFilter",
-      "displayName": "过滤器",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "amount": 6
-        },
-        {
-          "match": "exact_item",
-          "itemId": "CopperPlate",
-          "amount": 1
-        },
-        {
-          "match": "exact_item",
-          "itemId": "Cloth",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "FluidFilter_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:chemistry_WaterElectrolyzer",
-      "displayName": "水电解器",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "amount": 6
-        },
-        {
-          "match": "exact_item",
-          "itemId": "CopperPlate",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "WaterElectrolyzer_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:chemistry_GasEngine",
       "displayName": "氢能发动机",
       "recipeType": "crafting",
@@ -492,6 +309,146 @@
       "outputs": [
         {
           "itemId": "GasEngine_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemistry_LiquidPipe",
+      "displayName": "液体管道",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LiquidPipe_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemistry_LiquidValve",
+      "displayName": "液体阀门",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LiquidValve_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemistry_LiquidOutlet",
+      "displayName": "液体输出口",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LiquidOutlet_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemistry_GasFiller",
+      "displayName": "气体装填机",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "GasFiller_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemistry_LiquidFiller",
+      "displayName": "液体装填机",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LiquidFiller_Summoner",
           "amount": 1
         }
       ],

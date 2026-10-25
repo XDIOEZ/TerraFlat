@@ -31,18 +31,15 @@ public static partial class GameplayTestRuntimeProbe
         ["containers/whole_pour"] = CaptureVesselWholePour,
         ["world_streaming/live_window"] = CaptureLiveWindow,
         ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip,
-        ["industrial_fluids/selector_routes"] = GameplayTestFluidNetworks.CaptureSelectorRoutes,
-        ["industrial_fluids/phase_preference"] = GameplayTestFluidNetworks.CapturePhasePreference,
-        ["industrial_fluids/tank_ownership"] = GameplayTestFluidNetworks.CaptureTankOwnership,
-        ["industrial_fluids/tank_manual_air_fill"] = GameplayTestFluidNetworks.CaptureTankManualAirFill,
-        ["industrial_fluids/ground_scope_roundtrip"] = GameplayTestFluidNetworks.CaptureGroundScopeRoundtrip,
-        ["industrial_fluids/reaction_capacity"] = GameplayTestFluidDevices.CaptureReactionCapacity,
-        ["industrial_fluids/device_status_feedback"] = GameplayTestFluidDevices.CaptureStatusFeedback,
-        ["industrial_fluids/residue_transfer"] = GameplayTestFluidDevices.CaptureResidueTransfer,
-        ["industrial_fluids/liquid_pump_flow"] = GameplayTestFluidDevices.CaptureLiquidPump,
-        ["industrial_fluids/surface_pump_flow"] = GameplayTestFluidSurface.CapturePumpFlow,
-        ["industrial_fluids/surface_outlet_flow"] = GameplayTestFluidSurface.CaptureOutletFlow,
-        ["industrial_fluids/surface_outlet_rate"] = GameplayTestFluidSurface.CaptureOutletRate
+        ["industrial_fluids/routes"] = GameplayTestFluidNetworks.CaptureRoutes,
+        ["industrial_fluids/ownership"] = GameplayTestFluidNetworks.CaptureOwnership,
+        ["industrial_fluids/natural_fill"] = GameplayTestFluidNetworks.CaptureNaturalFill,
+        ["industrial_fluids/outlet"] = GameplayTestFluidNetworks.CaptureOutlet,
+        ["industrial_fluids/pump"] = GameplayTestFluidDevices.CapturePump,
+        ["industrial_fluids/filler"] = GameplayTestFluidDevices.CaptureFiller,
+        ["industrial_fluids/engine"] = GameplayTestFluidDevices.CaptureEngine,
+        ["industrial_fluids/surface_pump"] = GameplayTestFluidSurface.CapturePumpFlow,
+        ["industrial_fluids/surface_outlet"] = GameplayTestFluidSurface.CaptureOutletFlow
     };
 
     public static void Register(string systemId, string operationId, Func<Player, JObject, JObject> handler)

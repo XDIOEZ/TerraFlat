@@ -12,12 +12,8 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public FluidMachineDefinition Definition => Entity.Definition.Fluid;
     public FluidDeviceBehavior Behavior => MachineWorld.GetFluidDeviceBehavior(Entity);
     private Inventory portableTank;
-    private Inventory filterMaterial;
-    private Inventory residue;
     private readonly IDisposable combustionSourceLease;
     public Inventory PortableTank { get { EnsureDeviceInventories(); return portableTank; } }
-    public Inventory FilterMaterial { get { EnsureDeviceInventories(); return Behavior.UsesFilterMaterial ? filterMaterial : null; } }
-    public Inventory Residue { get { EnsureDeviceInventories(); return Behavior.StoresResidue ? residue : null; } }
     private long deviceRegistryGeneration = -1;
     private readonly List<IContainerPort> containerPorts = new();
     private IndustrialLiquidTransferPort liquidResiduePort;
@@ -43,14 +39,15 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         deviceRegistryGeneration = MachineLogicRegistry.FluidDeviceGeneration;
         if (Definition.AllowPortableTank && portableTank == null)
         {
-            portableTank = Track(MachineInventory.Create(null, State.PortableTank, "气罐", 1));
-            portableTank.Data.itemSlots[0].CanAcceptTags = new() { "Container.FluidTank" };
+            portableTank = Track(MachineInventory.Create(null, State.PortableTank, "装填容器", 3));
+            foreach (ItemSlot slot in portableTank.Data.itemSlots) slot.SlotMaxVolume = 1;
+            // 接收规则在权威库存执行，三个槽位共用真实容器能力校验。
+            portableTank.Data.SetItemAcceptancePolicy((item, slot) => Definition.Kind == "liquid-filler"
+                ? Mod_WaterVessel.TryRead(item, out _, out _)
+                : FluidTankStorage.TryGet(item, out _, out _));
             State.PortableTank = portableTank.Data;
         }
-        if (Behavior.UsesFilterMaterial && filterMaterial == null)
-        { filterMaterial = Track(MachineInventory.Create(null, State.FilterMaterial, "滤材", 1)); State.FilterMaterial = filterMaterial.Data; }
-        if (Behavior.StoresResidue && residue == null)
-        { residue = Track(MachineInventory.Create(null, State.Residue, "残渣", 1)); State.Residue = residue.Data; }
+
     }
     public override void Dispose()
     { combustionSourceLease?.Dispose(); base.Dispose(); }
@@ -60,20 +57,17 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         FluidMachineState incoming = MachinePersistence.Read<FluidMachineState>(snapshot, "fluid");
         if (incoming == null) return false;
         if (PortableTank != null) { MachineInventory.ApplySnapshot(PortableTank, incoming.PortableTank); incoming.PortableTank = PortableTank.Data; }
-        if (FilterMaterial != null) { MachineInventory.ApplySnapshot(FilterMaterial, incoming.FilterMaterial); incoming.FilterMaterial = FilterMaterial.Data; }
-        if (Residue != null) { MachineInventory.ApplySnapshot(Residue, incoming.Residue); incoming.Residue = Residue.Data; }
         State = incoming; NotifyRemoteChanged(); return true;
     }
 
     public override void Tick(float seconds)
     {
         EnsureDeviceInventories();
-        if (!MachineWorld.IsFluidActive(Entity) || State.Ruptured || !string.IsNullOrEmpty(State.RuptureBudgetId)) return;
+        if (!MachineWorld.IsFluidActive(Entity) || State.Ruptured) return;
         FluidDeviceBehavior behavior = Behavior;
         // 内置设备没有实际变化就不推送整台状态，自定义策略仍保留原来的显式调度通知。
         if (!behavior.UsesObservedTickState) { behavior.Advance(Entity, seconds); NotifyChanged(); return; }
-        var before = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.WorldLiquidPumpLiters, State.DissipatedHeatJoules,
-            State.FilterRemainingWork, State.RandomState);
+        var before = (State.Status, State.PumpProgress, State.WorldLiquidPumpLiters, State.RandomState);
         tickContents.Clear();
         foreach (string chamber in State.Chambers.Keys)
         {
@@ -81,8 +75,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
             tickContents.Add((chamber, contents, contents.StateRevision));
         }
         behavior.Advance(Entity, seconds);
-        var after = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.WorldLiquidPumpLiters, State.DissipatedHeatJoules,
-            State.FilterRemainingWork, State.RandomState);
+        var after = (State.Status, State.PumpProgress, State.WorldLiquidPumpLiters, State.RandomState);
         bool changed = before != after || tickContents.Count != State.Chambers.Count;
         if (!changed)
             foreach (var previous in tickContents)
@@ -105,8 +98,9 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         {
             containerPorts.Clear(); portRegistryGeneration = ContainerPortFactoryRegistry.Generation;
             liquidResiduePort = null;
-            foreach (FluidMachinePortDefinition port in Definition.Ports)
-                if (port.Phase != "gas") containerPorts.Add(new IndustrialLiquidTransferPort(this, port));
+            if (Behavior.IsStorage)
+                foreach (FluidMachinePortDefinition port in Definition.Ports)
+                    if (port.Phase != "gas") containerPorts.Add(new IndustrialLiquidTransferPort(this, port));
             // 取液口只供手动容器事务使用，不参与世界管道或相邻泵拓扑。
             if (!string.IsNullOrEmpty(Definition.LiquidResidueFluidId))
             {
@@ -149,18 +143,9 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public override bool Execute(string operation, string argument, Player actor)
     {
         if (operation == "begin-interaction") return true;
-        if (operation == "fluid.vent") return MachineWorld.VentFluidPipe(Entity);
-        if (operation == "fluid.phase")
+        if (operation == "fluid.rotate")
         {
-            if (argument != "gas" && argument != "liquid" && argument != "both") return false;
-            if (State.OutletPhase == argument) return true;
-            State.OutletPhase = argument;
-            MachineWorld.TopologyChanged(Entity);
-            return true;
-        }
-        else if (operation == "fluid.rotate")
-        {
-            if (MachineWorld.IsFluidTankBlock(Entity) || State.Ruptured || !string.IsNullOrEmpty(State.RuptureBudgetId) || Entity.State == null) return false;
+            if (MachineWorld.IsFluidTankBlock(Entity) || State.Ruptured || Entity.State == null) return false;
             Entity.State.RotationQuarterTurns = (Entity.State.RotationQuarterTurns + 1) & 3;
             MachineWorld.TopologyChanged(Entity); return true;
         }
@@ -177,69 +162,31 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("血量 {0:0.#}/{1:0.#}", Entity.State?.Hp ?? MachineWorld.ReadMachineState(Entity.Snapshot).Hp, MachineWorld.ResolveMaximumHp(Entity.Snapshot)));
         foreach (string chamber in State.Chambers.Keys)
         {
-            if (chamber == "main" && State.GroupOwnerId != 0) { DescribeInventory(text, chamber); continue; }
             DescribeInventory(text, chamber);
         }
         if (State.Chambers.Count == 0) DescribeInventory(text, "main");
         Behavior.AppendDescription(Entity, text);
         if (State.LastEmittedStandardLiters > 0) text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("排出 {0:0.###} 标准 L · 留存 {1:0.###} · 逸散 {2:0.###}", State.LastEmittedStandardLiters, State.LastRetainedStandardLiters, State.LastEscapedStandardLiters));
         foreach (var blocked in State.BlockedPorts) text.Append("\n").Append(blocked.Key).Append("：").Append(FlatWorldLocalizationService.GetUiText(blocked.Value));
-        foreach (var warning in State.PhaseWarnings)
-        {
-            const string prefix = "超出首轮相变曲线，保留真实相态：";
-            string message = warning.Value.StartsWith(prefix, StringComparison.Ordinal)
-                ? FlatWorldLocalizationService.GetUiFormat("超出首轮相变曲线，保留真实相态：{0}", warning.Value.Substring(prefix.Length))
-                : FlatWorldLocalizationService.GetUiText(warning.Value);
-            text.Append("\n").Append(warning.Key).Append("：").Append(message);
-        }
-        foreach (var residue in State.ResidueProgress) if (residue.Value > 0) text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("已保留待成份残渣 {0}：{1:0.######} 份", residue.Key, residue.Value));
         return text.ToString();
     }
     private void DescribeInventory(StringBuilder text, string chamber)
     {
+        if (Definition.Kind is "pipe" or "valve" or "selector" or "outlet" or "filler" or "liquid-filler") return;
         FluidInventory inventory = MachineWorld.GetFluidInventory(Entity, chamber);
-        FluidInventory gasInventory = MachineWorld.GetPhaseFluidInventory(Entity, chamber, FluidPhase.Gas);
-        if (!ReferenceEquals(inventory, gasInventory))
-        {
-            // 连通气网的读数取共享组，液体信息只取当前管段，不把两相混为同一份库存。
-            double gasVolume = MachineWorld.GetPhaseFluidVolumeLiters(Entity, FluidPhase.Gas);
-            double gasMinimum = MachineWorld.GetPhaseFluidMinimumGasSpaceLiters(Entity, FluidPhase.Gas);
-            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat(
-                "{0}气网：{1:0.##}℃ · {2:0.##} kPa · {3:0.###} 标准 L · 连通容积 {4:0.###} L",
-                chamber, gasInventory.GetTemperatureKelvin() - 273.15, gasInventory.GetPressureKPa(gasVolume, gasMinimum),
-                FluidUnits.MolToStandardLiters(gasInventory.GasMoles), gasVolume));
-            foreach (FluidComponentState component in gasInventory.State.Components)
-            {
-                if (component.GasMoles <= 0m) continue;
-                decimal ratio = gasInventory.GasMoles == 0m ? 0m : component.GasMoles / gasInventory.GasMoles * 100m;
-                text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.###} 标准 L ({2:0.#}%)",
-                    FlatWorldLocalizationService.GetUiText(gasInventory.Catalog.Find(component.FluidId).DisplayName),
-                    FluidUnits.MolToStandardLiters(component.GasMoles), ratio));
-            }
-            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("本段液体 {0:0.###} L", inventory.GetLiquidLiters()));
-            foreach (FluidComponentState component in inventory.State.Components)
-                if (component.LiquidMoles > 0m)
-                    text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("{0}：液体 {1:0.###} L",
-                        FlatWorldLocalizationService.GetUiText(inventory.Catalog.Find(component.FluidId).DisplayName),
-                        FluidUnits.MolToLiquidLiters(inventory.Catalog.Find(component.FluidId), component.LiquidMoles)));
-            return;
-        }
-        double volume = MachineWorld.GetFluidVolumeLiters(Entity), minimum = MachineWorld.GetFluidMinimumGasSpaceLiters(Entity);
-        text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.##}℃ · {2:0.##}/{3:0.##} kPa\n气体 {4:0.###} 标准 L · 液体 {5:0.###} L · 气相空间 {6:0.###} L",
-            chamber, inventory.GetTemperatureKelvin() - 273.15, inventory.GetPressureKPa(volume, minimum), Definition.MaxSafePressureKPa,
-            FluidUnits.MolToStandardLiters(inventory.GasMoles), inventory.GetLiquidLiters(), Math.Max(minimum, volume - inventory.GetLiquidLiters())));
+        bool gas = Array.Exists(Definition.Ports, port => port.Phase == "gas");
+        text.Append("\n").Append(gas
+            ? FlatWorldLocalizationService.GetUiFormat("气量 {0:0.###}/{1:0.###} 标准 L", FluidUnits.MolToStandardLiters(inventory.GasMoles), Definition.GasCapacityStandardLiters)
+            : FlatWorldLocalizationService.GetUiFormat("液体 {0:0.###}/{1:0.###} L", inventory.GetLiquidLiters(), Definition.VolumeLiters));
         foreach (FluidComponentState component in inventory.State.Components)
         {
             FluidDefinition substance = inventory.Catalog.Find(component.FluidId);
-            decimal gasRatio = inventory.GasMoles > 0 ? component.GasMoles / inventory.GasMoles * 100 : 0;
-            decimal totalServings = 0;
-            foreach (FluidComponentState current in inventory.State.Components) totalServings += FluidUnits.MolToServings(inventory.Catalog.Find(current.FluidId), current.LiquidMoles);
-            decimal liquidRatio = totalServings > 0 ? FluidUnits.MolToServings(substance, component.LiquidMoles) / totalServings * 100 : 0;
-            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("{0}：气 {1:0.###} 标准 L ({2:0.#}%) · 液 {3:0.###} L ({4:0.#}%)", FlatWorldLocalizationService.GetUiText(substance.DisplayName),
-                FluidUnits.MolToStandardLiters(component.GasMoles), gasRatio, FluidUnits.MolToLiquidLiters(substance, component.LiquidMoles), liquidRatio));
+            text.Append("\n").Append(gas
+                ? FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.###} 标准 L", FlatWorldLocalizationService.GetUiText(substance.DisplayName), FluidUnits.MolToStandardLiters(component.GasMoles))
+                : FlatWorldLocalizationService.GetUiFormat("{0}：液体 {1:0.###} L", FlatWorldLocalizationService.GetUiText(substance.DisplayName), FluidUnits.MolToLiquidLiters(substance, component.LiquidMoles)));
         }
-        foreach (FluidOutputReservation reservation in inventory.State.Ports)
-            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("待输出 {0}：{1} {2:0.######} mol", reservation.PortId, FlatWorldLocalizationService.GetUiText(inventory.Catalog.Find(reservation.FluidId).DisplayName), reservation.TotalMoles));
+        if (Definition.AllowManualAirFill)
+            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("自然补气上限 {0:0.#}% · 动力充装可充满", Definition.NaturalFillFraction * 100d));
     }
     #endregion
 }

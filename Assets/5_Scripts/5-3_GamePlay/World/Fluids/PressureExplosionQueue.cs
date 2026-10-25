@@ -197,7 +197,6 @@ public static class PressureExplosionQueue
             }
             Present(entry);
         }
-        if (!archive.PressureExplosions.Exists(value => value.WorldKey == world)) MachineWorld.CompleteFluidRuptures();
         AdvanceLiquidSpills(world);
     }
     public static void ReleaseMaterials(PressureExplosionEvent entry, string world, Vector2 center)

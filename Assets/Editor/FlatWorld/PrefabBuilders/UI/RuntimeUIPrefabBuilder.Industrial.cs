@@ -56,9 +56,23 @@ public static partial class RuntimeUIPrefabBuilder
         status.anchoredPosition = new Vector2(0, name == "UI_FluidTank" ? 0 : -140);
         status.sizeDelta = new Vector2(-24, name == "UI_FluidTank" ? -24 : -304);
         if (name != "UI_IndustrialFluid") return;
+        // 三个正式槽位由同一真实装填库存绑定，重建时保留同名契约。
+        RectTransform containerSlots = (RectTransform)view.InputSlot.transform.parent;
+        containerSlots.sizeDelta = new Vector2(320, 144);
+        for (int index = 1; index < 3; index++)
+        {
+            ItemSlot_UI slot = UnityEngine.Object.Instantiate(view.InputSlot, containerSlots);
+            slot.name = "输入_" + (index + 1);
+            ((RectTransform)slot.transform).anchoredPosition = new Vector2(index * 102, 0);
+        }
         foreach (GameObject visual in view.ProcessingVisuals)
             ((RectTransform)visual.transform).anchoredPosition += Vector2.down * 34;
-        AddIndustrialField(root.transform, "FWUI_FluidSettingPrimary", "气体ID / 断开压强 / 充装压强", new Vector2(24, -78), new Vector2(245, 40));
+        for (int index = 1; index < 3; index++)
+        {
+            Transform slot = containerSlots.Find("输入_" + (index + 1));
+            ((RectTransform)slot).anchoredPosition = ((RectTransform)view.InputSlot.transform).anchoredPosition + Vector2.right * (index * 102);
+        }
+        AddIndustrialField(root.transform, "FWUI_FluidSettingPrimary", "气体ID / 每秒速率（0停止）", new Vector2(24, -78), new Vector2(245, 40));
         AddIndustrialField(root.transform, "FWUI_FluidSettingSecondary", "恢复压强 kPa", new Vector2(280, -78), new Vector2(200, 40));
         AddIndustrialButton(root.transform, "FWUI_ApplyFluidSettings", "应用配置", new Vector2(494, -78), new Vector2(240, 40), new Vector2(0, 1), new Vector2(0, 1));
         AddIndustrialButton(root.transform, "FWUI_FluidPhase", "输出气体和液体", new Vector2(24, 29), new Vector2(190, 46), Vector2.zero, new Vector2(0, .5f));

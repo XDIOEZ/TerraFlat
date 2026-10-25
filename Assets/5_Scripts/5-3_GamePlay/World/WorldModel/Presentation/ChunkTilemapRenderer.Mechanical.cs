@@ -388,7 +388,6 @@ public sealed partial class ChunkTilemapRenderer
         int tankMask = tankBlock ? MachineWorld.GetFluidTankConnectionMask(node) : 0;
         FluidMachineState state = MachineWorld.GetFluidState(node);
         FluidInventory inventory = MachineWorld.GetFluidInventory(node);
-        bool probe = node.Definition.Fluid.Kind is "mechanical-probe" or "electronic-probe";
         bool pipe = node.Definition.IsFluidPipeSegment;
         if (pipe)
         {
@@ -428,19 +427,11 @@ public sealed partial class ChunkTilemapRenderer
         MechanicalDepthVisual visual = mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)];
         Ports(node, x, y, 6, material, origin, rotation);
         visual.UpdateFacility(node);
-        if (probe) { visual.SetPartTint(0, state.ProbeConnected ? new Color(.35f, 1, .45f) : new Color(1, .25f, .2f)); return; }
-        if (inventory.GetPressureKPa(MachineWorld.GetFluidVolumeLiters(node), MachineWorld.GetFluidMinimumGasSpaceLiters(node)) > node.Definition.Fluid.MaxSafePressureKPa)
-        {
-            Color danger = new(1, .35f, .25f);
-            visual.SetPartTint(0, danger);
-            if (tankBlock) for (int part = 8; part < 16; part++) visual.SetPartTint(part, danger);
-        }
         if (fluidIndicatorSprite == null)
             fluidIndicatorSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
                 new Vector2(.5f, .5f), Texture2D.whiteTexture.width);
         Color gas = new(.4f, .8f, 1, .95f), liquid = new(.9f, .68f, .25f, .95f);
-        double gasCapacity = node.Definition.Fluid.GasBufferStandardLiters *
-            (MachineWorld.GetFluidVolumeLiters(node) / node.Definition.Fluid.VolumeLiters);
+        double gasCapacity = node.Definition.Fluid.GasCapacityStandardLiters;
         float gasAmount = Mathf.Clamp01((float)(FluidUnits.MolToStandardLiters(inventory.GasMoles) / (decimal)gasCapacity));
         float liquidAmount = Mathf.Clamp01((float)(inventory.GetLiquidLiters() / MachineWorld.GetFluidVolumeLiters(node)));
         if (gasAmount > 0)

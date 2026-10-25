@@ -196,7 +196,7 @@ public static class PortableFluidPanel
             sessions[tank.itemData.Guid] = panel = new MechanicalPanelSession("UI_FluidTank", tank, null,
                 player => PortableGasTankAirFilling.Fill(tank, player),
                 () => Status(tank),
-                () => FluidTankStorage.AllowsManualAirFill(tank.itemData) ? "充入空气（1 atm）" : "",
+                () => FluidTankStorage.AllowsManualAirFill(tank.itemData) ? "自然补气" : "",
                 actionAvailable: () => PortableGasTankAirFilling.CanFill(tank, actor),
                 refreshStatusPeriodically: true,
                 gasCapacity01: () => GasCapacity01(tank.itemData));
@@ -207,25 +207,21 @@ public static class PortableFluidPanel
     {
         if (tank != null && sessions.TryGetValue(tank.itemData.Guid, out var panel)) { panel.Dispose(); sessions.Remove(tank.itemData.Guid); }
     }
-    // 容量占比使用真实气压与安全耐压，破裂气罐按空罐显示。
+    // 容量按实际标准气量计算，温度变化不改变容量上限。
     private static float GasCapacity01(ItemData data)
     {
         if (!FluidTankStorage.TryGet(data, out var inventory, out var config)) return 0f;
-        return (float)(inventory.GetPressureKPa(config.VolumeLiters, config.MinimumGasSpaceLiters) / config.MaxSafePressureKPa);
+        return (float)((double)FluidUnits.MolToStandardLiters(inventory.GasMoles) / config.GasCapacityStandardLiters);
     }
     public static string Status(Item tank)
     {
         ItemData data = tank.itemData;
-        if (!FluidTankStorage.TryGet(data, out var inventory, out var config)) return FlatWorldLocalizationService.GetUiText("气罐已经破裂");
-        double pressure = inventory.GetPressureKPa(config.VolumeLiters, config.MinimumGasSpaceLiters);
-        var lines = new List<string> { FlatWorldLocalizationService.GetUiFormat("气量 {0:0.###} 标准L", FluidUnits.MolToStandardLiters(inventory.GasMoles)),
-            FlatWorldLocalizationService.GetUiFormat("液体 {0:0.###} L · 总容积 {1:0.###} L", inventory.GetLiquidLiters(), config.VolumeLiters),
-            FlatWorldLocalizationService.GetUiFormat("温度 {0:0.##} ℃", inventory.GetTemperatureKelvin() - 273.15), FlatWorldLocalizationService.GetUiFormat("气压 {0:0.##}/{1:0.##} kPa", pressure, config.MaxSafePressureKPa) };
+        if (!FluidTankStorage.TryGet(data, out var inventory, out var config)) return FlatWorldLocalizationService.GetUiText("气罐不可用");
+        var lines = new List<string> { FlatWorldLocalizationService.GetUiFormat("气量 {0:0.###}/{1:0.###} 标准 L", FluidUnits.MolToStandardLiters(inventory.GasMoles), config.GasCapacityStandardLiters) };
         if (FluidTankStorage.AllowsManualAirFill(data))
-            lines.Add(FlatWorldLocalizationService.GetUiFormat("空气充装目标：{0:0.###} kPa（绝对压力）", PortableGasTankAirFilling.GetTargetPressureKPa(tank)));
+            lines.Add(FlatWorldLocalizationService.GetUiFormat("自然补气上限 {0:0.#}% · 动力充装可充满", config.NaturalFillFraction * 100d));
         foreach (FluidComponentState component in inventory.State.Components)
-            lines.Add(FlatWorldLocalizationService.GetUiFormat("{0}：气 {1:0.###} mol · 液 {2:0.###} mol", FlatWorldLocalizationService.GetUiText(FluidCatalog.Default.Find(component.FluidId).DisplayName), component.GasMoles, component.LiquidMoles));
-        if (pressure > config.MaxSafePressureKPa) lines.Add(FlatWorldLocalizationService.GetUiText("超压：罐壁持续受损，归零时爆炸"));
+            lines.Add(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.###} 标准 L", FlatWorldLocalizationService.GetUiText(FluidCatalog.Default.Find(component.FluidId).DisplayName), FluidUnits.MolToStandardLiters(component.GasMoles)));
         return string.Join("\n", lines);
     }
     #endregion

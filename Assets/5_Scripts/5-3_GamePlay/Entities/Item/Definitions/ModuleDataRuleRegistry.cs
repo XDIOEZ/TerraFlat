@@ -136,7 +136,6 @@ public static class ModuleDataRuleRegistry
         Register(ModText.Food, "food.spoilage", _ => new FoodSpoilageModuleDataObserver());
         Register(ModText.Food, "food.melting", _ => new FoodMeltingModuleDataObserver(), 10);
         Register(Mod_TimedDespawn.ModuleId, "item.timed_despawn", definition => new TimedDespawnInventoryRule(definition));
-        Register(Mod_FluidTank.ModuleId, "fluid_tank.overpressure", definition => new FluidTankInventoryRule(definition));
         Register(Mod_Spacesuit.ModuleId, "spacesuit.stored_tank", _ => new SpacesuitInventoryRule());
     }
 

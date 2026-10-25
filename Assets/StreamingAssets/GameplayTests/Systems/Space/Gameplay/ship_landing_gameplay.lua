@@ -207,22 +207,22 @@ test.space("ship_landing", function(data)
         whole_view(ship.viewCache.descending, ship.landed.pieceCount, label .. "/下降")
         ground_view(ship.viewCache.returned, label .. "/落地")
         local fuel = ship.autoRefuel
-        assert(fuel.fixtureSetup == "landed-world-pipe-outlet-source-tank" and not fuel.targetDirectRefill and
+        assert(fuel.fixtureSetup == "landed-independent-tanks-no-passive-transfer" and not fuel.targetDirectRefill and
             fuel.world == ship.landedAgain.world and fuel.sourceScope == fuel.world and fuel.pipeScope == fuel.world and
             fuel.outletScope == fuel.world and fuel.targetScope == fuel.world and restored[fuel.targetGuid],
             "落地加油没有使用普通地面管路与原 Guid 燃料罐：" .. label)
         assert(fuel.sourceGuid ~= fuel.targetGuid and fuel.pipeGuid ~= fuel.outletGuid and
             (fuel.pipeMask == 5 or fuel.pipeMask == 10) and fuel.simulationSeconds > 0,
-            "加油管路没有正式连通，或未等待真实世界固定步：" .. label)
+            "独立罐连接管路没有正式连通，或未等待真实世界固定步：" .. label)
         for _, id in ipairs({"hydrogen", "oxygen"}) do
-            assert(fuel.targetsAfter[id] > fuel.targetsBefore[id] + 0.000001 and
-                fuel.sourceAfter[id] < fuel.sourceBefore[id] - 0.000001,
+            assert(math.abs(fuel.targetsAfter[id]-fuel.targetsBefore[id])<0.000001 and
+                math.abs(fuel.sourceAfter[id]-fuel.sourceBefore[id])<0.000001,
                 "普通管路没有把真实 " .. id .. " 从源罐送进落地船罐：" .. label)
             assert(math.abs(fuel.totalAfter[id] - fuel.totalBefore[id]) <= 0.0000001 * math.max(1, fuel.totalBefore[id]),
                 "普通加油全链没有守恒真实 " .. id .. "：" .. label)
         end
     end
-    return "GM 普通建筑、隐藏准备与结构失效、原对象及最新状态移交、真实起降和管路氢氧自动加油：" .. #data.ships .. " 个船型"
-end, "普通建筑飞船起降与落地管路自动加油")
+    return "GM 普通建筑、隐藏准备与结构失效、原对象及最新状态移交、真实起降和管路氢氧独立罐无被动输送：" .. #data.ships .. " 个船型"
+end, "普通建筑飞船起降与落地管路独立罐无被动输送")
 test.check("world_ready", "飞船落地专项清理后地表世界就绪")
 test.check("player_ready", "飞船落地专项清理后当前玩家重新绑定")

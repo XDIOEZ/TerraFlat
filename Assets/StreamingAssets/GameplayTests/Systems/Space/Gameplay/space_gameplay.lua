@@ -304,23 +304,23 @@ do
                 end
             end
             local refuel = ship.autoRefuel
-            assert(refuel.fixtureSetup == "landed-world-pipe-outlet-source-tank" and not refuel.targetDirectRefill,
-                "自动加油没有使用正式普通管道、定向出气口和独立源罐：" .. label)
+            assert(refuel.fixtureSetup == "landed-independent-tanks-no-passive-transfer" and not refuel.targetDirectRefill,
+                "独立罐无被动输送没有使用正式普通管道、定向出气口和独立源罐：" .. label)
             assert(refuel.world == ship.landedAgain.world and refuel.sourceScope == refuel.world and
                 refuel.pipeScope == refuel.world and refuel.outletScope == refuel.world and refuel.targetScope == refuel.world,
                 "落地加油仍依赖特殊船体作用域：" .. label)
             assert(refuel.pipeMask == 5 or refuel.pipeMask == 10, "普通加油管道没有两端连通：" .. label)
-            assert(refuel.simulationSeconds > 0, "自动加油没有等待真实固定步：" .. label)
+            assert(refuel.simulationSeconds > 0, "独立罐无被动输送没有等待真实固定步：" .. label)
             for _, fluid in ipairs({"hydrogen", "oxygen"}) do
-                assert(refuel.targetsAfter[fluid] > refuel.targetsBefore[fluid] + 0.000001 and
-                    refuel.sourceAfter[fluid] < refuel.sourceBefore[fluid] - 0.000001,
+                assert(math.abs(refuel.targetsAfter[fluid]-refuel.targetsBefore[fluid])<0.000001 and
+                    math.abs(refuel.sourceAfter[fluid]-refuel.sourceBefore[fluid])<0.000001,
                     "落地燃料罐没有从普通源罐接收真实" .. fluid .. "：" .. label)
                 local before, after = refuel.totalBefore[fluid], refuel.totalAfter[fluid]
                 assert(math.abs(after - before) <= 0.0000001 * math.max(1, before),
-                    "普通地面自动加油没有守恒真实" .. fluid .. "：" .. label)
+                    "普通地面独立罐无被动输送没有守恒真实" .. fluid .. "：" .. label)
             end
         end
-        return "普通建筑生成、点火装配、真实航行、落地还原及普通管道自动加油：" .. #data.ships .. " 个船型"
+        return "普通建筑生成、点火装配、真实航行、落地还原及普通管道独立罐无被动输送：" .. #data.ships .. " 个船型"
     end, "所有船型的真实起飞航行降落")
 end
 

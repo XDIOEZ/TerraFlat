@@ -62,7 +62,8 @@ namespace FlatWorld.Structures
     [MemoryPack.MemoryPackable]
     public sealed partial class FixedStructureGas
     {
-        [JsonProperty(Required = Required.Always)] public double PressureKPa { get; set; }
+        public double PressureKPa { get; set; }
+        public double? StandardLiters { get; set; }
         public double TemperatureCelsius { get; set; } = 20d;
         [JsonProperty(Required = Required.Always)] public Dictionary<string, double> Components { get; set; }
     }
@@ -220,7 +221,8 @@ namespace FlatWorld.Structures
         private static void ValidateGas(FixedStructureGas gas, string context)
         {
             if (gas == null) return;
-            if (!Finite(gas.PressureKPa) || gas.PressureKPa <= 0d || !Finite(gas.TemperatureCelsius) ||
+            if ((!gas.StandardLiters.HasValue && (!Finite(gas.PressureKPa) || gas.PressureKPa <= 0d)) ||
+                (gas.StandardLiters.HasValue && (!Finite(gas.StandardLiters.Value) || gas.StandardLiters.Value < 0d)) || !Finite(gas.TemperatureCelsius) ||
                 gas.TemperatureCelsius <= -273.15d || gas.Components == null || gas.Components.Count == 0)
                 throw new InvalidDataException($"{context} 的气压、温度或气体配比无效。");
             double total = 0d;

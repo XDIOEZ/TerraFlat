@@ -133,7 +133,7 @@ namespace FlatWorld.Spaceflight
                         using (MachineWorld.UseScope("ship:" + ship.ShipId))
                         {
                             FluidMachineState fluid = MachineWorld.GetFluidState(placed);
-                            fluid.Ruptured = false; fluid.RuptureBudgetId = ""; fluid.OverpressureVictimId = 0;
+                            fluid.Ruptured = false;
                             MachineWorld.CaptureFluidState(placed);
                         }
                     }

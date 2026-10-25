@@ -4,12 +4,10 @@ using FlatWorld.Networking;
 using FlatWorld.Spaceflight;
 using UnityEngine;
 
-/// <summary>便携气罐从真实环境转移混合气体；压力求解和环境所有权互不耦合。</summary>
+/// <summary>便携气罐从真实环境转移混合气体；固定容量和环境所有权互不耦合。</summary>
 public static class PortableGasTankAirFilling
 {
     #region 配置能力、操作资格与权威入口
-    public const double TargetPressureKPa = 101.325d;
-    private const double PressureToleranceKPa = .00001d;
     public static event Func<Player, int, bool> RemoteFillRequested;
 
     private static bool CanAccess(Item tank, Item actor)
@@ -38,7 +36,7 @@ public static class PortableGasTankAirFilling
             !FluidTankStorage.TryGet(tank.itemData, out FluidInventory contents, out FluidTankConfiguration config))
             return false;
         return TryGetSource(tank, out IShipAtmosphereSource source) &&
-            CanFillFromSource(source, contents, config.VolumeLiters, config.MinimumGasSpaceLiters);
+            CanFillFromSource(source, contents, config.GasCapacityStandardLiters, config.NaturalFillFraction);
     }
 
     public static bool Fill(Item tank, Player actor)
@@ -49,7 +47,7 @@ public static class PortableGasTankAirFilling
         if (!CanFill(tank, actor) ||
             !FluidTankStorage.TryGet(tank.itemData, out FluidInventory contents, out FluidTankConfiguration config) ||
             !TryGetSource(tank, out IShipAtmosphereSource source) ||
-            !TryFillFromSource(source, contents, config.VolumeLiters, config.MinimumGasSpaceLiters))
+            !TryFillFromSource(source, contents, config.GasCapacityStandardLiters, config.NaturalFillFraction))
             return false;
         FluidTankStorage.Write(tank.itemData, contents);
         if (tank.Owner != null) FluidTankStorage.NotifyOwner(actor, tank.itemData);
@@ -72,106 +70,68 @@ public static class PortableGasTankAirFilling
         source = new PlanetShipAtmosphereSource(atmosphere, atmosphere.TemperatureKelvin - 273.15d);
         return true;
     }
+
+    public static void ReleaseContents(Item tank)
+    {
+        if (tank == null || !FluidTankStorage.TryGet(tank.itemData, out FluidInventory contents, out _) ||
+            !TryGetSource(tank, out IShipAtmosphereSource source)) return;
+        // 气罐不运行化学反应；排气直接交给所属环境的正式气体接口。
+        foreach (FluidComponentState component in new List<FluidComponentState>(contents.State.Components))
+        {
+            if (component.GasMoles <= 0m) continue;
+            var trial = new FluidInventory(contents.State.Clone(), contents.Catalog);
+            if (!trial.TryTakeExact(component.FluidId, FluidPhase.Gas, component.GasMoles, out FluidBatch gas)) continue;
+            source.ReleaseGas(gas);
+            contents.Restore(trial.State);
+            FluidTankStorage.Write(tank.itemData, contents);
+        }
+        FluidTankStorage.Write(tank.itemData, contents);
+    }
     #endregion
 
-    #region 真实混合气体与目标压力事务
-    public static double GetTargetPressureKPa(Item tank) =>
-        TryGetSource(tank, out IShipAtmosphereSource source) ? GetTargetPressureKPa(source) : 0d;
-
-    // 自然补气以实际环境气压和一标准大气压中较低者为上限，100 kPa 环境也能使用。
-    private static double GetTargetPressureKPa(IShipAtmosphereSource source) =>
-        source != null && FluidUnits.IsFinite(source.PressureKPa)
-            ? Math.Max(0d, Math.Min(TargetPressureKPa, source.PressureKPa)) : 0d;
-
+    #region 真实混合气体与自然补气上限
     public static bool CanFillFromSource(IShipAtmosphereSource source, FluidInventory target,
-        double volumeLiters, double minimumGasSpaceLiters)
+        double capacityStandardLiters, double naturalFillFraction)
     {
-        if (source == null || target == null || target.GasMoles >= FluidInventory.MaximumMoles ||
-            !FluidUnits.IsFinite(source.TemperatureCelsius) || source.TemperatureCelsius <= -273.15d ||
-            !FluidUnits.IsFinite(volumeLiters) || !FluidUnits.IsFinite(minimumGasSpaceLiters) ||
-            volumeLiters <= 0d || minimumGasSpaceLiters <= 0d || minimumGasSpaceLiters >= volumeLiters)
+        if (source == null || target == null || target.LiquidMoles > 0m ||
+            !FluidUnits.IsFinite(source.PressureKPa) || source.PressureKPa <= 0d ||
+            !FluidUnits.IsFinite(capacityStandardLiters) || capacityStandardLiters <= 0d ||
+            !FluidUnits.IsFinite(naturalFillFraction) || naturalFillFraction <= 0d || naturalFillFraction > 1d)
             return false;
-        return target.GetPressureKPa(volumeLiters, minimumGasSpaceLiters) <
-            GetTargetPressureKPa(source) - PressureToleranceKPa;
+        decimal room = FluidUnits.StandardLitersToMol((decimal)(capacityStandardLiters * naturalFillFraction)) - target.GasMoles;
+        return AtmosphereService.Quantize(Math.Max(0m, room)) > 0m;
     }
 
-    // 先取有限气源的实际组分，在影子库存中二分压力，余量退回来源后才提交气罐。
+    // 只补到配置占比，实际组分从真实气源扣除；高于上限时保持原存量。
     public static bool TryFillFromSource(IShipAtmosphereSource source, FluidInventory target,
-        double volumeLiters, double minimumGasSpaceLiters)
+        double capacityStandardLiters, double naturalFillFraction)
     {
-        if (!CanFillFromSource(source, target, volumeLiters, minimumGasSpaceLiters)) return false;
-        double targetPressure = GetTargetPressureKPa(source);
-        double sourceKelvin = source.TemperatureCelsius + 273.15d;
-        if (!FluidUnits.IsFinite(sourceKelvin) || sourceKelvin <= 0d) return false;
-        double gasSpace = Math.Max(minimumGasSpaceLiters, volumeLiters - target.GetLiquidLiters());
-        double expectedMoles = targetPressure * gasSpace / (FluidUnits.GasConstant * sourceKelvin);
-        if (!FluidUnits.IsFinite(expectedMoles) || expectedMoles <= 0d) return false;
-        decimal requested = AtmosphereService.Quantize((decimal)Math.Min((double)FluidInventory.MaximumMoles,
-            expectedMoles * 2d + (double)AtmosphereService.MinimumMoles * 2d));
+        if (!CanFillFromSource(source, target, capacityStandardLiters, naturalFillFraction)) return false;
+        decimal room = FluidUnits.StandardLitersToMol((decimal)(capacityStandardLiters * naturalFillFraction)) - target.GasMoles;
+        decimal requested = AtmosphereService.Quantize(Math.Min(room, FluidInventory.MaximumMoles - target.GasMoles));
         if (requested <= 0m) return false;
-
         IReadOnlyList<FluidBatch> drawn = source.TakeGas(requested);
         if (drawn == null || drawn.Count == 0) return false;
-        FluidInventoryState before = target.State.Clone();
-        if (!TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, targetPressure, 1m, out FluidInventoryState accepted))
+        bool committed = false;
+        try
         {
-            decimal low = 0m, high = 1m;
-            for (int step = 0; step < 52; step++)
+            var trial = new FluidInventory(target.State.Clone(), target.Catalog);
+            decimal received = 0m;
+            foreach (FluidBatch gas in drawn)
             {
-                decimal middle = (low + high) / 2m;
-                if (TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, targetPressure, middle, out _))
-                    low = middle;
-                else high = middle;
+                if (!gas.IsGas || gas.LiquidMoles > 0m || gas.GasMoles <= 0m ||
+                    !trial.Catalog.TryGet(gas.FluidId, out _) || !FluidUnits.IsFinite(gas.InternalEnergyJoules)) return false;
+                received += gas.GasMoles;
+                if (received > requested || !trial.TryAdd(gas, 1d, .001d)) return false;
             }
-            if (!TryStage(before, target.Catalog, drawn, volumeLiters, minimumGasSpaceLiters, targetPressure, low, out accepted))
-            {
-                ReturnUnused(source, drawn, 0m);
-                return false;
-            }
-            if (low <= 0m)
-            {
-                ReturnUnused(source, drawn, 0m);
-                return false;
-            }
-            ReturnUnused(source, drawn, low);
+            if (received <= 0m || received > room) return false;
+            target.Restore(trial.State);
+            committed = true;
+            return true;
         }
-        // 影子库存已经预检混合后的真实温压，提交时只替换同一份持久内容。
-        target.Restore(accepted);
-        return true;
-    }
-
-    private static bool TryStage(FluidInventoryState original, FluidCatalog catalog,
-        IReadOnlyList<FluidBatch> drawn, double volume, double minimum, double targetPressure, decimal fraction,
-        out FluidInventoryState accepted)
-    {
-        accepted = null;
-        var trial = new FluidInventory(original.Clone(), catalog);
-        bool added = false;
-        foreach (FluidBatch gas in drawn)
+        finally
         {
-            if (!gas.IsGas || !catalog.TryGet(gas.FluidId, out _) ||
-                !FluidUnits.IsFinite(gas.InternalEnergyJoules)) return false;
-            decimal moles = AtmosphereService.Quantize(gas.GasMoles * fraction);
-            if (moles <= 0m) continue;
-            var piece = Portion(gas, moles);
-            if (!trial.TryAdd(piece, volume, minimum)) return false;
-            added = true;
-        }
-        if (!added || trial.GetPressureKPa(volume, minimum) > targetPressure) return false;
-        accepted = trial.State;
-        return true;
-    }
-
-    private static FluidBatch Portion(FluidBatch gas, decimal moles) =>
-        new(gas.FluidId, moles, 0m, gas.InternalEnergyJoules * (double)(moles / gas.GasMoles));
-
-    private static void ReturnUnused(IShipAtmosphereSource source, IReadOnlyList<FluidBatch> batches, decimal fraction)
-    {
-        foreach (FluidBatch gas in batches)
-        {
-            decimal accepted = AtmosphereService.Quantize(gas.GasMoles * fraction);
-            decimal unused = gas.GasMoles - accepted;
-            if (unused > 0m) source.ReleaseGas(Portion(gas, unused));
+            if (!committed) foreach (FluidBatch gas in drawn) source.ReleaseGas(gas);
         }
     }
     #endregion

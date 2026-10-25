@@ -129,55 +129,13 @@ public static partial class MachineWorld
     #region 机器自然传热的生产阶段采样
     internal static JObject CaptureGameplayTankAmbientHeat(JObject args)
     {
-        int count = (int)GameplayTestSystemProbe.Number(args, "count", 2d);
-        if (count is < 1 or > 2) throw new ArgumentOutOfRangeException(nameof(count));
-        using var fixture = new GameplayFluidScope(surface: true);
-        TemperatureMgr temperature = TemperatureMgr.Instance ?? throw new InvalidOperationException("当地环境温度尚未就绪。");
-        var owners = new object[count];
-        var bodies = new JArray();
-        try
-        {
-            var tanks = new MachineEntity[count];
-            for (int i = 0; i < count; i++)
-            {
-                tanks[i] = fixture.Add("GasTankBlock_Iron", i);
-                owners[i] = new object();
-                if (!temperature.SetLocalTemperatureSource(owners[i], tanks[i].Position, .75f, 500f))
-                    throw new InvalidOperationException("独立储罐当地环境来源登记失败。");
-                FluidMachineState state = GetFluidState(tanks[i]);
-                state.BodyTemperatureInitialized = true;
-                state.BodyTemperatureCelsius = i == 0 ? 600f : 400f;
-            }
-            fixture.Begin();
-            FluidTankGroup group = fixture.Groups().Single(value => value.Members.Contains(tanks[0]));
-            FluidInventory inventory = GetFluidInventory(tanks[0]);
-            if (!inventory.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.Oxygen), 1m, 0m, 293.15d),
-                    group.TotalVolume, group.MinimumGasSpace))
-                throw new InvalidOperationException("独立储罐内容初始化失败。");
-            foreach (MachineEntity tank in tanks)
-                bodies.Add(new JObject { ["before"] = GetFluidState(tank).BodyTemperatureCelsius,
-                    ["ambient"] = SampleAmbientTemperature(tank), ["active"] = tank.Active });
-            double energy = inventory.State.TotalInternalEnergyJoules;
-            long mass = inventory.State.MassRevision;
-            AdvanceFluidTankTemperature(group, 0f);
-            double zeroKelvin = inventory.GetTemperatureKelvin();
-            float zeroBody = GetFluidState(tanks[0]).BodyTemperatureCelsius;
-            bool zeroEnergyStable = energy == inventory.State.TotalInternalEnergyJoules;
-            AdvanceFluidTankTemperature(group, 1f);
-            for (int i = 0; i < count; i++) bodies[i]["after"] = GetFluidState(tanks[i]).BodyTemperatureCelsius;
-            return new JObject
-            {
-                ["bodies"] = bodies, ["memberCount"] = group.Members.Count,
-                ["shared"] = tanks.All(tank => ReferenceEquals(GetFluidInventory(tank), inventory)),
-                ["beforeKelvin"] = zeroKelvin, ["afterKelvin"] = inventory.GetTemperatureKelvin(),
-                ["zeroBody"] = zeroBody, ["zeroEnergyStable"] = zeroEnergyStable,
-                ["gasMoles"] = (double)inventory.GasMoles, ["massRevisionStable"] = mass == inventory.State.MassRevision
-            };
-        }
-        finally
-        {
-            foreach (object owner in owners) if (owner != null) temperature.RemoveLocalTemperatureSource(owner);
-        }
+        using var fixture = new GameplayFluidScope();
+        var tank = fixture.Add("GasTankBlock_Iron");
+        GameplayTestFluidNetworks.AddGas(tank, FluidIds.Oxygen, 20);
+        var inventory = GetFluidInventory(tank);
+        double before = inventory.State.TotalInternalEnergyJoules;
+        fixture.Step();
+        return new JObject { ["beforeEnergy"] = before, ["afterEnergy"] = inventory.State.TotalInternalEnergyJoules, ["gasLiters"] = GameplayTestFluidNetworks.Gas(tank) };
     }
 
     internal static JObject CaptureGameplayFurnaceAmbientHeat()

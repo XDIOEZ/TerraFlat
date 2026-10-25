@@ -34,7 +34,7 @@ internal static class GameplayTestFluidSurface
             Position = position;
             Require(ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out sample), "真实地形采样");
             originalId = sample.Terrain.GetLiquidId(sample.LocalCell.x, sample.LocalCell.y); originalLevel = Level;
-            Require(GameRes.ExistingInstance.TryGetLiquidDefinition(FluidCatalog.Default.Find(FluidIds.PureWater).LiquidId, out LiquidDefinition water), "纯水地表定义");
+            Require(GameRes.ExistingInstance.TryGetLiquidDefinition("core:dirty_water", out LiquidDefinition water), "纯水地表定义");
             Definition = water;
         }
         public void Set(int level)
@@ -70,215 +70,37 @@ internal static class GameplayTestFluidSurface
 
     #endregion
 
-    #region 工业泵与出口的真实阶段采样
+    #region 简单工业真实地表采样
     internal static JObject CapturePumpFlow(Player player, JObject args)
     {
-        using var f = new GameplayFluidScope(surface: true);
-        var cell = new LiquidCell(f.SurfacePoint());
-        var result = new JObject { ["originalCell"] = CellSample(cell), ["seconds"] = f.Seconds };
-        using (cell)
-        {
-            cell.Set(5);
-            MachineEntity pump = f.Add("LiquidPump_Electric", 1), tank = f.Add("LiquidStorageTank", 2);
-            f.Rebuild();
-            FluidDefinition water = FluidCatalog.Default.Find(FluidIds.PureWater);
-            result["waterId"] = water.Id;
-            result["depthPerServing"] = LiquidCellValue.ToNormalizedDepth(1);
-            result["molesPerServing"] = FluidUnits.ServingsToMol(water, 1m);
-            result["before"] = PumpSample(f, cell, pump, tank);
-            pump.ElectricalSuppliedWatts = 0;
-            FluidDeviceOperations.AdvanceLiquidPump(pump, f.Seconds);
-            result["unpowered"] = PumpSample(f, cell, pump, tank);
-            f.Begin();
-            result["beginning"] = PumpSample(f, cell, pump, tank);
-            pump.ElectricalSuppliedWatts = pump.Definition.Electrical.PowerWatts;
-            FluidDeviceOperations.AdvanceLiquidPump(pump, f.Seconds);
-            result["accumulated"] = PumpSample(f, cell, pump, tank);
-            int chargingSteps = 1;
-            while (cell.Level == 5 && chargingSteps < 200)
-            { FluidDeviceOperations.AdvanceLiquidPump(pump, f.Seconds); chargingSteps++; }
-            result["chargingSteps"] = chargingSteps;
-            result["pumped"] = PumpSample(f, cell, pump, tank);
-            f.Complete();
-            result["sameStep"] = PumpSample(f, cell, pump, tank);
-            f.Begin();
-            result["nextBeginning"] = PumpSample(f, cell, pump, tank);
-            f.Complete();
-            result["nextStep"] = PumpSample(f, cell, pump, tank);
-            MachineEntity gas = f.Add("GasPump_Mechanical");
-            f.Rebuild();
-            bool canOutput = GetFluidDeviceBehavior(gas).CanOutput(gas, out string reason);
-            result["wetGasPump"] = new JObject { ["submerged"] = FluidDeviceOperations.IsGasPumpWet(gas),
-                ["canOutput"] = canOutput, ["reason"] = reason, ["inventory"] = InventorySample(gas) };
-        }
-        result["restoredCell"] = CellSample(cell);
-        return result;
-    }
-
-    internal static JObject CaptureOutletFlow(Player player, JObject args)
-    {
-        using var f = new GameplayFluidScope(surface: true);
-        var cell = new LiquidCell(f.SurfacePoint(2));
-        var result = new JObject { ["originalCell"] = CellSample(cell), ["seconds"] = f.Seconds };
-        using (cell)
-        {
-            cell.Set(0);
-            MachineEntity outlet = f.Add("FluidOutlet", 1);
-            f.Rebuild();
-            GetFluidState(outlet).OutletPhase = "liquid";
-            FluidInventory inventory = GetFluidInventory(outlet);
-            FluidDefinition water = FluidCatalog.Default.Find(FluidIds.PureWater);
-            result["waterId"] = water.Id;
-            result["depthPerServing"] = LiquidCellValue.ToNormalizedDepth(1);
-            result["molesPerServing"] = FluidUnits.ServingsToMol(water, 1m);
-            outlet.Definition.Fluid.ThroughputLitersPerSecond = (double)FluidUnits.MolToLiquidLiters(water, FluidUnits.ServingsToMol(water, 1m)) / (f.Seconds * 4d);
-            Require(inventory.TryAdd(FluidInventory.CreateBatch(water, 0, FluidUnits.ServingsToMol(water, 2.5m), 293.15),
-                GetFluidVolumeLiters(outlet), GetFluidMinimumGasSpaceLiters(outlet)), "出口液体装料");
-            result["before"] = OutletSample(f, cell, outlet);
-            f.Step();
-            result["accumulated"] = OutletSample(f, cell, outlet);
-            for (int attempt = 0; cell.Level == 0 && attempt < 32; attempt++) f.Step();
-            result["emitted"] = OutletSample(f, cell, outlet);
-            cell.Set(10);
-            // 堵塞阶段从独立温水库存开始，避免上一阶段残留水蒸气先凝结而掩盖蒸发断言。
-            inventory.Drain();
-            // 蒸发会令液相略低于整份数量；三份温水可独立验证拒收、部分提交和解除堵塞续送。
-            Require(inventory.TryAdd(FluidInventory.CreateBatch(water, 0, FluidUnits.ServingsToMol(water, 3m), 293.15),
-                GetFluidVolumeLiters(outlet), GetFluidMinimumGasSpaceLiters(outlet)), "堵塞测试装料");
-            result["beforeBlocked"] = OutletSample(f, cell, outlet);
-            f.Step();
-            for (int attempt = 0; GetFluidState(outlet).BlockedPorts.Count == 0 && attempt < 32; attempt++) f.Step();
-            result["blocked"] = OutletSample(f, cell, outlet);
-            // 只腾出一级空间，正式出口必须消耗一整份再增加一级。
-            cell.Set(9);
-            result["beforePartial"] = OutletSample(f, cell, outlet);
-            f.Step();
-            for (int attempt = 0; cell.Level == 9 && attempt < 32; attempt++) f.Step();
-            result["partial"] = OutletSample(f, cell, outlet);
-            cell.Set(0);
-            result["beforeRetry"] = OutletSample(f, cell, outlet);
-            f.Step();
-            for (int attempt = 0; cell.Level == 0 && attempt < 32; attempt++) f.Step();
-            result["retried"] = OutletSample(f, cell, outlet);
-            result["phaseSwitch"] = CapturePhaseSwitch(f, cell, outlet, water, player);
-        }
-        result["restoredCell"] = CellSample(cell);
-        return result;
-    }
-
-    private static JObject CapturePhaseSwitch(GameplayFluidScope f, LiquidCell cell, MachineEntity outlet,
-        FluidDefinition water, Player player)
-    {
-        FluidInventory inventory = GetFluidInventory(outlet);
-        FluidMachineLogic logic = outlet.Logic as FluidMachineLogic ?? throw new InvalidOperationException("排液出口缺少正式配置逻辑。");
-        inventory.Drain();
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var f = new GameplayFluidScope(surface: true); using var cell = new LiquidCell(f.SurfacePoint());
         cell.Set(10);
-        Require(logic.Execute("fluid.phase", "liquid", player), "切相前排液配置");
-        Require(inventory.TryAdd(FluidInventory.CreateBatch(water, 0, FluidUnits.ServingsToMol(water, 2m), 293.15),
-            GetFluidVolumeLiters(outlet), GetFluidMinimumGasSpaceLiters(outlet)), "切相温水装料");
-        var result = new JObject { ["beforeBlocked"] = OutletSample(f, cell, outlet) };
-        f.Step();
-        for (int attempt = 0; GetFluidState(outlet).BlockedPorts.Count == 0 && attempt < 32; attempt++) f.Step();
-        result["blocked"] = OutletSample(f, cell, outlet);
-        // 正式加料留下超过单步吞吐的水蒸气批次，分别观察两个子槽的真实切相边界。
-        Require(inventory.TryAdd(FluidInventory.CreateBatch(water, .1m, 0, 293.15),
-            GetFluidVolumeLiters(outlet), GetFluidMinimumGasSpaceLiters(outlet)), "切相水蒸气装料");
-        result["beforeGasCommand"] = OutletSample(f, cell, outlet);
-        result["gasCommandAccepted"] = logic.Execute("fluid.phase", "gas", player);
-        result["gasCommand"] = OutletSample(f, cell, outlet);
-        f.Begin();
-        result["gasBeginning"] = OutletSample(f, cell, outlet);
-        f.Complete();
-        result["gasStep"] = OutletSample(f, cell, outlet);
-        result["liquidCommandAccepted"] = logic.Execute("fluid.phase", "liquid", player);
-        result["liquidCommand"] = OutletSample(f, cell, outlet);
-        cell.Set(0);
-        result["beforeRetry"] = OutletSample(f, cell, outlet);
-        f.Begin();
-        result["liquidBeginning"] = OutletSample(f, cell, outlet);
-        f.Complete();
-        for (int attempt = 0; cell.Level == 0 && attempt < 32; attempt++) f.Step();
-        result["liquidStep"] = OutletSample(f, cell, outlet);
-        return result;
+        var pump = f.Add("LiquidPump_Electric",1); var tank = f.Add("LiquidStorageTank",2);
+        f.Begin(); pump.ElectricalSuppliedWatts=0; FluidDeviceOperations.AdvanceLiquidPump(pump,f.Seconds);
+        int unpowered=cell.Level;
+        for(int i=0;i<10;i++) { f.Begin();pump.ElectricalSuppliedWatts=pump.Definition.Electrical.PowerWatts;
+            FluidDeviceOperations.AdvanceLiquidPump(pump,f.Seconds); }
+        var source=GetFluidInventory(pump);var target=GetFluidInventory(tank);
+        return new JObject { ["unpoweredLevel"]=unpowered,["level"]=cell.Level,["initialLevel"]=10,
+            ["sourceLiters"]=source.GetLiquidLiters(),["targetLiters"]=target.GetLiquidLiters(),["seconds"]=f.Seconds,
+            ["rate"]=pump.Definition.Fluid.ThroughputLitersPerSecond,["servingLiters"]=.25,
+            ["dirtyWaterMoles"]=(double)target.GetLiquidMoles("core:dirty_water"),["pureWaterMoles"]=(double)target.GetLiquidMoles(FluidIds.PureWater) };
     }
-
-    internal static JObject CaptureOutletRate(Player player, JObject args)
+    internal static JObject CaptureOutletFlow(Player player,JObject args)
     {
-        using var f = new GameplayFluidScope(surface: true);
-        var cell = new LiquidCell(f.SurfacePoint(2));
-        var result = new JObject { ["originalCell"] = CellSample(cell), ["seconds"] = f.Seconds };
-        using (cell)
-        {
-            cell.Set(0);
-            MachineEntity outlet = f.Add("FluidOutlet", 1);
-            f.Rebuild();
-            GetFluidState(outlet).OutletPhase = "liquid";
-            // 加大自有夹具缓冲以持有足量库存，吞吐分别使用真实液泵速率和现有出口速率。
-            double highThroughput = outlet.Definition.Fluid.ThroughputLitersPerSecond;
-            outlet.Definition.Fluid.VolumeLiters = Math.Max(10d, outlet.Definition.Fluid.VolumeLiters);
-            outlet.Definition.Fluid.ThroughputLitersPerSecond = 2d;
-            FluidDefinition water = FluidCatalog.Default.Find(FluidIds.PureWater);
-            FluidInventory inventory = GetFluidInventory(outlet);
-            Require(inventory.TryAdd(FluidInventory.CreateBatch(water, 0, FluidUnits.ServingsToMol(water, 20m), 293.15),
-                GetFluidVolumeLiters(outlet), GetFluidMinimumGasSpaceLiters(outlet)), "速率回归装入完整份液体");
-            result["molesPerServing"] = FluidUnits.ServingsToMol(water, 1m);
-            result["before"] = OutletSample(f, cell, outlet);
-            var ticks = new JArray();
-            for (int tick = 0; tick < 10; tick++) { f.Step(); ticks.Add(OutletSample(f, cell, outlet)); }
-            result["ticks"] = ticks;
-            result["normalRate"] = 2d;
-            cell.Set(0);
-            outlet.Definition.Fluid.ThroughputLitersPerSecond = highThroughput;
-            result["highRate"] = highThroughput;
-            result["beforeHigh"] = OutletSample(f, cell, outlet);
-            f.Step();
-            result["high"] = OutletSample(f, cell, outlet);
-            cell.Set(10);
-            result["beforeBlocked"] = OutletSample(f, cell, outlet);
-            f.Step();
-            result["blocked"] = OutletSample(f, cell, outlet);
-        }
-        result["restoredCell"] = CellSample(cell);
-        return result;
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var f=new GameplayFluidScope(surface:true);using var cell=new LiquidCell(f.SurfacePoint(2));
+        cell.Set(0);var tank=f.Add("LiquidStorageTank");var outlet=f.Add("LiquidOutlet",1);
+        var water=FluidCatalog.Default.Find("core:dirty_water");var stock=GetFluidInventory(tank);
+        stock.TryAdd(FluidInventory.CreateBatch(water,0,FluidUnits.LiquidLitersToMol(water,3),293.15),201,.001);
+        GetFluidDeviceBehavior(outlet).Execute(outlet,"fluid.rate","0");f.Step();int stopped=cell.Level;
+        GetFluidDeviceBehavior(outlet).Execute(outlet,"fluid.rate","2");
+        for(int i=0;i<10;i++)f.Step();
+        double after=stock.GetLiquidLiters();int emitted=cell.Level;
+        cell.Set(10);double beforeFull=stock.GetLiquidLiters();f.Step();
+        return new JObject { ["stoppedLevel"]=stopped,["emittedLevel"]=emitted,["sourceAfter"]=after,
+            ["initialLiters"]=3,["fullSourceBefore"]=beforeFull,["fullSourceAfter"]=stock.GetLiquidLiters(),["seconds"]=f.Seconds };
     }
-
-    private static JObject CellSample(LiquidCell cell) => new()
-    { ["liquidId"] = cell.Id, ["depth"] = cell.Depth, ["level"] = cell.Level, ["ground"] = cell.Ground };
-
-    private static JObject InventorySample(MachineEntity node)
-    {
-        FluidInventory inventory = GetFluidInventory(node);
-        FluidMachineState state = GetFluidState(node);
-        return new JObject { ["state"] = JObject.FromObject(inventory.State),
-            ["randomState"] = inventory.State.RandomState.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            ["gasMoles"] = inventory.GasMoles, ["liquidMoles"] = inventory.LiquidMoles,
-            ["waterGasMoles"] = inventory.GetGasMoles(FluidIds.PureWater),
-            ["waterLiquidMoles"] = inventory.GetLiquidMoles(FluidIds.PureWater),
-            ["energy"] = inventory.State.TotalInternalEnergyJoules, ["temperatureKelvin"] = inventory.GetTemperatureKelvin(),
-            ["volumeLiters"] = GetFluidVolumeLiters(node), ["minimumGasSpaceLiters"] = GetFluidMinimumGasSpaceLiters(node),
-            ["maximumPhaseMolesPerSecond"] = node.Definition.Fluid.MaximumPhaseMolesPerSecond,
-            ["blockedPorts"] = JObject.FromObject(state.BlockedPorts), ["phaseWarnings"] = JObject.FromObject(state.PhaseWarnings),
-            ["status"] = state.Status, ["outletPhase"] = state.OutletPhase,
-            ["worldPumpLiters"] = state.WorldLiquidPumpLiters, ["worldOutputLiters"] = JObject.FromObject(state.WorldLiquidOutputLiters),
-            ["lastFlowPhase"] = state.LastFlowPhase, ["suppliedWatts"] = node.ElectricalSuppliedWatts,
-            ["emittedGasMoles"] = FluidUnits.StandardLitersToMol(state.LastEmittedStandardLiters) };
-    }
-
-    private static JObject BudgetSample(GameplayFluidScope f, MachineEntity node)
-    {
-        bool known = f.Budget(GetFluidInventory(node), out FluidInventoryState stock, out double liters);
-        decimal gas = 0, liquid = 0;
-        if (stock != null)
-            foreach (FluidComponentState component in stock.Components) { gas += component.GasMoles; liquid += component.LiquidMoles; }
-        return new JObject { ["known"] = known, ["state"] = stock == null ? null : JObject.FromObject(stock),
-            ["gasMoles"] = gas, ["liquidMoles"] = liquid, ["remainingLiters"] = liters };
-    }
-
-    private static JObject PumpSample(GameplayFluidScope f, LiquidCell cell, MachineEntity pump, MachineEntity tank)
-        => new() { ["cell"] = CellSample(cell), ["pump"] = InventorySample(pump), ["tank"] = InventorySample(tank),
-            ["budget"] = BudgetSample(f, pump) };
-
-    private static JObject OutletSample(GameplayFluidScope f, LiquidCell cell, MachineEntity outlet)
-        => new() { ["cell"] = CellSample(cell), ["outlet"] = InventorySample(outlet), ["budget"] = BudgetSample(f, outlet) };
     #endregion
 }

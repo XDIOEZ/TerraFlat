@@ -8881,6 +8881,34 @@ MonoBehaviour:
     m_Localized: Disabled
     m_Metadata:
       m_Items: []
+  - m_Id: 28000000000200000
+    m_Localized: "Natural air refill"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200001
+    m_Localized: "Gas tank unavailable"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200002
+    m_Localized: "Gas {0:0.###}/{1:0.###} standard L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200003
+    m_Localized: "Liquid {0:0.###}/{1:0.###} L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200004
+    m_Localized: "Natural refill limit {0:0.#}% · Powered filling can reach full capacity"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200005
+    m_Localized: "{0}: {1:0.###} standard L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200006
+    m_Localized: "Gas ID / Rate per second (0 stops)"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

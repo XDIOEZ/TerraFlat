@@ -1,0 +1,6 @@
+test.check("world_ready")
+test.runtime("industrial_fluids", "pump", {}, function(d)
+    assert(d.unpowered == 0 and d.unpoweredSourceStable, "机械气泵无动力仍抽气")
+    assert(math.abs(d.full-d.capacity)<.000001 and d.fullSourceStable, "机械气泵未充满固定容量或超量扣源")
+    assert(math.abs(d.sourceTaken-d.full)<.000001, "机械气泵没有扣真实气源")
+end, "机械动力气泵实际抽气与固定容量")

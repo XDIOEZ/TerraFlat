@@ -23,10 +23,10 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - `Mod_Building.UseGameObjectBackend` 显式保留组合能力建筑的 Item 后端，自动机器编译返回空；坩埚同时复用固体热加工和液体模块，不强行装成普通石臼机器。
 - 数据机器包含落地椰壳等容器，物品定义必须显式提供正最大生命及独立受击 Trigger，不能靠绕过校验补默认血量；回归 `building/portable_building_health`。
 - 世界时间由调用方传入；网络恢复完才 Tick、快照后才休眠。船与后台地表按自身世界继续模拟，不借当前场景的玩家、环境或掉落物。
-- 迁移以 TransferScopeNodes/TransferShipNodes 整批交接真实节点、加工器和共享库存；不要用会排放储罐的 Remove/Place 模拟迁移。
+- 迁移以 TransferScopeNodes/TransferShipNodes 整批交接真实节点、加工器和各设备本地库存；不借拆装模拟迁移。
 - 加工资格归设备，转化与温度归材料；RecipeProcessor 复用 CraftingService 原子事务。燃料炉只供热，不持有配方或加工进度。
 - 面板与显示只读权威状态；库存命令校验操作者、距离与目标身份。拆回先成功交付全状态返还物，再移除节点。
-- 储罐手动补气由 `AllowManualAirFill` 配置启用，复用真实环境气源与1标准大气压事务，组合罐按共享容积计算；对称方块罐隐藏并拒绝旋转。
+- 储罐手动补气由 `AllowManualAirFill` 启用，按 `NaturalFillFraction`（首版20%）补到固定标准升容量占比，真实扣环境气源；已有超出自然上限的气体不排空。动力泵可充满，各罐独立保存。
 - 三套拓扑共享节点、各自求解；扩展用注册策略与租约，保持设备规则、库存事务及表现分离。
 
 ## 按需资料
@@ -36,7 +36,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - [作用域、后台与归档](references/scopes-and-lifecycle.md)
 - [加工、炉体与温度](references/processing-and-heat.md)
 - [机械、电力与连接](references/power-networks.md)
-- [工业气液与共享罐](references/industrial-fluids.md)
+- [工业气液简化契约](references/industrial-fluids.md)
 - [表现、面板与 C# MOD](references/presentation-and-mods.md)
 
 机械/气液案例入口分别为 `GameplayTests/mechanical-suite.json`、`GameplayTests/fluid-suite.json`；执行与报告按 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，细目见 GameplayTests 的 README 与 IndustrialFluids 覆盖矩阵。
@@ -44,5 +44,5 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 ## 铁路与库存引擎
 
 - `World/Railways/` 的铁路仅复用 `ConveyorPath`/静态曲面，不接机械输送业务；`RailTrackNetwork` 按所属世界场景登记、双端口互认并按真实弧长推进。
-- `EnginePowerService` 只识别注册的 `IEnginePowerProvider`，引擎位按能力收物；供给方自己管理冷 `ItemData` 的状态和资源，接收方不识别具体引擎。地面蒸汽机是 `FluidMachine`/机械动力源：管道从左侧输入纯水蒸汽，右侧机械轴输出动力，冷凝水留在设备内供容器取出。
+- `EnginePowerService` 只识别注册的 `IEnginePowerProvider`，供给方管理自己的冷 `ItemData`。地面蒸汽机接液体水管，按真实负载消耗水产能，不要求锅炉或预制蒸汽；铁路可携引擎保留自身已有燃料与动力规则。
 - 矿车可放在地面或铁路，推动复用载具接触链；地面高阻、轨道约束和进出轨由矿车运动策略管理。`Mod_MinecartPlacement` 只检查实际吸轨位置的车辆净空，基础地形、支撑与占地资格仍归建造事务；两端定义以 `requiredGroundSupport=3` 拒绝承重2的液面。

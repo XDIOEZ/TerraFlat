@@ -61,7 +61,6 @@ public static partial class MachineWorld
         RebuildFluidNetworks();
         RebuildCombatSearchPadding();
         dirty = false;
-        PublishGasTopology();
         foreach (MachineEntity conveyor in graph.ConveyorChanges)
         {
             UpdateConveyorVisualSpeed(conveyor);
@@ -212,6 +211,37 @@ public static partial class MachineWorld
 
     private static float GetElectricalDemandFactor(MachineEntity node)
         => Mathf.Clamp01(GetConfiguredElectricalDemandFactor(node) * (node?.Logic?.ElectricalDemandFactor ?? 1f));
+
+    // 起机前按真实用电者判断转换器的潜在负载，不依赖上一轮电机/发电模式。
+    internal static bool HasPotentialMechanicalLoad(MachineEntity source)
+    {
+        if (source?.Network == null) return false;
+        foreach (MachineEntity member in source.Network.Nodes)
+        {
+            if (!member.Definition.IsConverter)
+            {
+                if (member.RequiredTorque > 0f) return true;
+                continue;
+            }
+            if (member.ElectricalNetwork == null || member.Definition.TorqueLoad <= 0f) continue;
+            float voltage = member.Definition.Electrical.NominalVoltage;
+            foreach (MachineEntity target in member.ElectricalNetwork.Nodes)
+            {
+                ElectricalDefinition electrical = target.Definition.Electrical;
+                if (target == member || electrical == null || electrical.IsConverter || !electrical.AcceptsVoltage(voltage)) continue;
+                if (electrical.IsBattery && electrical.MaxChargeWatts > 0f)
+                {
+                    float stored = target.State != null ? target.ElectricalStoredJoules : ReadMachineState(target.Snapshot).ElectricalStoredJoules;
+                    if (stored < electrical.CapacityJoules) return true;
+                }
+                if (!electrical.IsConsumer || electrical.PowerWatts <= 0f) continue;
+                float demand = target.State == null && string.IsNullOrWhiteSpace(electrical.DemandProvider)
+                    ? Mathf.Clamp01(target.Logic?.ElectricalDemandFactor ?? 1f) : GetElectricalDemandFactor(target);
+                if (demand > 0f) return true;
+            }
+        }
+        return false;
+    }
 
     private static float GetConfiguredElectricalDemandFactor(MachineEntity node)
     {

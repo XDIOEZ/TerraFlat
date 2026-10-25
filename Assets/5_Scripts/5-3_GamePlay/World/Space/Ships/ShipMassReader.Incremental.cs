@@ -19,7 +19,7 @@ namespace FlatWorld.Spaceflight
                 public object State;
                 public object Logic, Processor;
                 public FluidMachineState MachineFluid;
-                public Inventory_Data Portable, Filter, Residue, Input, Output;
+                public Inventory_Data Portable, Input, Output;
                 public readonly List<Inventory_Data> MachineInventories = new();
                 public readonly Dictionary<string, FluidInventoryState> Chambers = new(StringComparer.Ordinal);
                 public readonly Dictionary<string, (Module Module, bool Enabled, bool Loaded)> LiveModules = new(StringComparer.Ordinal);
@@ -142,8 +142,7 @@ namespace FlatWorld.Spaceflight
                 FluidMachineState fluid = machine.Definition.Fluid != null ? MachineWorld.GetFluidState(machine) : null;
                 if (!ReferenceEquals(source.MachineFluid, fluid)) return false;
                 if (fluid == null) return true;
-                if (!ReferenceEquals(source.Portable, fluid.PortableTank) || !ReferenceEquals(source.Filter, fluid.FilterMaterial) ||
-                    !ReferenceEquals(source.Residue, fluid.Residue) || source.Chambers.Count != fluid.Chambers.Count) return false;
+                if (!ReferenceEquals(source.Portable, fluid.PortableTank) || source.Chambers.Count != fluid.Chambers.Count) return false;
                 foreach (var entry in fluid.Chambers)
                     if (!source.Chambers.TryGetValue(entry.Key, out FluidInventoryState previous) || !ReferenceEquals(previous, entry.Value)) return false;
                 return true;
@@ -156,7 +155,7 @@ namespace FlatWorld.Spaceflight
                 if (machine.Logic != null)
                     for (int i = 0; i < machine.Logic.Inventories.Count; i++) source.MachineInventories.Add(machine.Logic.Inventories[i]?.Data);
                 FluidMachineState fluid = machine.Definition.Fluid != null ? MachineWorld.GetFluidState(machine) : null;
-                source.MachineFluid = fluid; source.Portable = fluid?.PortableTank; source.Filter = fluid?.FilterMaterial; source.Residue = fluid?.Residue;
+                source.MachineFluid = fluid; source.Portable = fluid?.PortableTank;
                 source.Chambers.Clear();
                 if (fluid != null) foreach (var entry in fluid.Chambers) source.Chambers.Add(entry.Key, entry.Value);
             }
@@ -198,7 +197,7 @@ namespace FlatWorld.Spaceflight
                     FluidMachineState fluids = MachineWorld.GetFluidState(machine);
                     foreach (string chamber in fluids.Chambers.Keys) mass += ReadFluidMass(MachineWorld.GetFluidInventory(machine, chamber)?.State);
                     mass += ReadFluidMass(MachineWorld.GetFluidInventory(machine, "main")?.State);
-                    mass += ReadInventory(fluids.PortableTank, 0) + ReadInventory(fluids.FilterMaterial, 0) + ReadInventory(fluids.Residue, 0);
+                    mass += ReadInventory(fluids.PortableTank, 0);
                 }
                 return EndSource(source, mass);
             }

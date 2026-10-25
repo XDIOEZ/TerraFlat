@@ -90,7 +90,7 @@ public class FluidDeviceBehavior
     public virtual bool ReceivesOnDemand => false;
     public virtual bool SwitchesMechanicalPorts => false;
     public virtual bool SwitchesElectricalPorts => false;
-    public virtual bool IsSharedStorage => false;
+    public virtual bool IsStorage => false;
     public virtual bool PortsEnabled(MachineEntity node) => node.State.ValveOpen;
     public virtual bool CanOutput(MachineEntity node, out string reason) { reason = null; return true; }
     public virtual bool CanRoute(MachineEntity node, FluidMachinePortDefinition port, FluidPhase phase, string id, out string reason)
@@ -98,8 +98,6 @@ public class FluidDeviceBehavior
 }
 public static partial class MachineWorld
 {
-    internal static IndustrialGasNetworkGraph Gas;
-    public static bool IsSharedGasNetworkMember(MachineEntity node) => Gas != null && Gas.TryGetGroup(node, out _);
     private static readonly FluidDeviceBehavior transit = new();
     private sealed class Device : FluidDeviceBehavior { public override bool IsTransit => false; }
     private sealed class Outlet : FluidDeviceBehavior { public override bool EmitsToEnvironment => true; }

@@ -199,8 +199,8 @@ public static partial class MachineWorld
         EnsureScope();
         if (!GameNetwork.HasStateAuthority) return false;
         if (!nodes.TryGetValue(id, out MachineEntity node)) return true;
-        if (node.Definition.Fluid != null && IsSharedGasNetworkMember(node)) DetachGasNetworksToLocal();
         nodes.Remove(id);
+        if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         dirty = true;
         try
         {
@@ -230,23 +230,15 @@ public static partial class MachineWorld
         if (node.Definition.Fluid != null)
         {
             RebuildGraphsIfDirty();
-            if (scope.PendingGasRestore) throw new InvalidOperationException("气网成员尚未恢复完整，不能提前拆走共享库存。");
-            if (IsSharedGasNetworkMember(node)) DetachGasNetworksToLocal();
         }
-        List<MachineEntity> remainingTanks = ReleaseDismantledFluidTank(node);
         CaptureNode(node);
         ItemData snapshot = ItemInstanceDataFactory.CloneRuntime(node.Snapshot);
         RememberGeneratedRemoval(node);
         DisposeProcessor(node);
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
         nodes.Remove(id);
+        if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         dirty = true;
-        if (remainingTanks != null)
-        {
-            RebuildGraphsIfDirty();
-            foreach (MachineEntity member in remainingTanks)
-            { CaptureFluidState(member); StateChanged(member); }
-        }
         NotifySurfaceMechanicalChanged(node.Cell);
         NotifySurfaceCellChanged(node.Cell);
         NodeRemoved?.Invoke(id);
@@ -364,7 +356,6 @@ public static partial class MachineWorld
         nodes.Remove(id);
         if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         fluidStates.Remove(id);
-        scope.GasReplica.RemoveMember(id);
         ForgetFluidNodeInventoryCaches(id);
         dirty = true;
         NotifySurfaceMechanicalChanged(node.Cell);
@@ -386,14 +377,7 @@ public static partial class MachineWorld
     {
         if (!Contains(node)) return;
         NodeStateChanged?.Invoke(node);
-        if (gasGraph != null && gasGraph.TryGetGroup(node, out var gasGroup))
-        {
-            gasGroup.UpdateLiquid(node, GetFluidInventory(node));
-            if (gasGroup.OwnerId != node.Id && nodes.TryGetValue(gasGroup.OwnerId, out MachineEntity gasOwner))
-                NodeStateChanged?.Invoke(gasOwner);
-        }
-        if (node.Definition.Fluid != null && fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && group.OwnerId != node.Id &&
-            nodes.TryGetValue(group.OwnerId, out MachineEntity sharedOwner)) NodeStateChanged?.Invoke(sharedOwner);
+
     }
 
     /// <summary>直接按世界格和占地层查询机械数据节点。</summary>
@@ -590,7 +574,6 @@ public static partial class MachineWorld
         if (node.View == null || node.View.item != item) return;
         if (GameNetwork.HasStateAuthority && node.Definition.Fluid != null)
         {
-            if (IsSharedGasNetworkMember(node)) DetachGasNetworksToLocal();
             CaptureFluidState(node);
             MachinePersistence.Write(item.itemData, "fluid", MachinePersistence.Read<FluidMachineState>(node.Snapshot, "fluid"));
         }
@@ -964,14 +947,6 @@ public static partial class MachineWorld
         if (IsOccupied(cell, definition.Layer)) { reason = "当前机械层已占用"; return false; }
         if (BuildingOccupancyRegistry.IsOccupied(cell, layer: definition.Layer))
         { reason = "当前建筑层已占用"; return false; }
-        if (definition.Fluid?.CombineAdjacent == true)
-            foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
-            {
-                MachineEntity neighbor = graph.At(cell + direction, 0);
-                if (neighbor?.Definition.Fluid?.MaterialId == definition.Fluid.MaterialId &&
-                    !string.IsNullOrEmpty(GetFluidState(neighbor).RuptureBudgetId))
-                { reason = "相邻储罐正在结算破裂"; return false; }
-            }
         if (definition.Kind == "bridge")
         {
             if (graph.At(cell, 0)?.Definition.HasMechanicalPorts != true)

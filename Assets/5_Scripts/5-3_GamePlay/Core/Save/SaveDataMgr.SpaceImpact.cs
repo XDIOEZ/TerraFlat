@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FlatWorld.Combat;
@@ -234,12 +234,9 @@ public partial class SaveDataMgr
         if (node.Processor != null) { inventories.Add(node.Processor.Input); inventories.Add(node.Processor.Output); }
         foreach (Inventory inventory in inventories)
             DropImpactInventory(inventory?.Data, worldKey, position, visible);
-        bool ruptured = MachineWorld.HandleFluidTankZeroHp(node);
-        if (!ruptured)
-        {
-            AddImpactMaterials(node.Snapshot, worldKey, position, visible);
-            MachineWorld.Remove(node.Id);
-        }
+        MachineWorld.ReleaseDestroyedFluidContents(node);
+        AddImpactMaterials(node.Snapshot, worldKey, position, visible);
+        MachineWorld.Remove(node.Id);
         if (visible && node.View?.item != null && !node.View.item.DestructionHandled)
             ItemMgr.Instance.DespawnItem(node.View.item, false);
     }

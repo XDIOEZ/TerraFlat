@@ -5,7 +5,7 @@
       "parent": "BuildingSummoner_Base",
       "worldDropBehavior": "interactive",
       "gameName": "铁制便携气罐",
-      "description": "可放置到地上、拆回并保留罐内气体与耐久；面板可从真实环境补充空气至 1 标准大气压，也可使用压缩机充装。4 L、耐压 600 kPa。",
+      "description": "独立储存20标准L气体，使用现有装填机可充满；自然补气上限20%，已有气体不会自动排空。放置和拆回保留真实内容。",
       "durability": 80,
       "maxDurability": 80,
       "amount": 1,
@@ -61,7 +61,9 @@
             "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"PortableGasTank_Iron_Building\",\"SummonerPrefabId\":\"PortableGasTank_Iron\",\"SharedModuleIds\":[\"流体气罐模块\",\"生命值系统模块\"]}",
             "Type": 0
           },
-          "parameters": { "RequiresPlacementRequest": true }
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
         },
         "tank": {
           "prefab": "Module_FluidTank",
@@ -69,12 +71,11 @@
             "Configuration": {
               "SupportsSpacesuit": true,
               "AllowManualAirFill": true,
-              "MaxSafePressureKPa": 600,
               "MaterialId": "core:iron",
-              "DamageIntervalSeconds": 1,
               "VolumeLiters": 4,
               "MinimumGasSpaceLiters": 0.04,
-              "OverpressureDamagePerSecond": 2
+              "GasCapacityStandardLiters": 20,
+              "NaturalFillFraction": 0.2
             }
           },
           "data": {
@@ -90,7 +91,7 @@
       "id": "PortableGasTank_Iron_Building",
       "parent": "BuildingBody_Base",
       "gameName": "铁制便携气罐-建筑",
-      "description": "放置在地面的 4 L 铁气罐；右键查看真实气压与组分，可充入周围空气至 101.325 kPa 或拆回背包。",
+      "description": "独立储存20标准L气体，使用现有装填机可充满；自然补气上限20%，已有气体不会自动排空。放置和拆回保留真实内容。",
       "durability": 80,
       "maxDurability": 80,
       "amount": 1,
@@ -98,11 +99,27 @@
       "volume": 5,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["Container", "FluidTank", "InventoryGroup.Chemical", "Material.Iron", "Container.FluidTank"],
+      "tags": [
+        "Container",
+        "FluidTank",
+        "InventoryGroup.Chemical",
+        "Material.Iron",
+        "Container.FluidTank"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png",
-        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
-        "collider": { "size": { "x": 0.7, "y": 0.9 } }
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "collider": {
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          }
+        }
       },
       "health": {
         "hasHp": true,
@@ -110,9 +127,22 @@
         "maxHp": 80,
         "weakTool": 0,
         "combatBalanceVersion": 1,
-        "defense": { "physical": 2 },
-        "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-                      "size": { "x": 0.7, "y": 0.9 }, "offset": { "x": 0, "y": 0 } }
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
       },
       "modules": {
         "建筑模块": {
@@ -128,7 +158,10 @@
           "prefab": "Module_FluidTank",
           "id": "流体气罐模块",
           "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
           "parameters": {
             "Configuration": {
               "SupportsSpacesuit": true,
@@ -136,9 +169,8 @@
               "MaterialId": "core:iron",
               "VolumeLiters": 4,
               "MinimumGasSpaceLiters": 0.04,
-              "MaxSafePressureKPa": 600,
-              "DamageIntervalSeconds": 1,
-              "OverpressureDamagePerSecond": 2
+              "GasCapacityStandardLiters": 20,
+              "NaturalFillFraction": 0.2
             }
           }
         }
@@ -149,7 +181,7 @@
       "parent": "BuildingSummoner_Base",
       "worldDropBehavior": "interactive",
       "gameName": "钢制便携气罐",
-      "description": "初始真空；通过充装设备装入气体。混装气液共用容积，超压持续损伤，罐壁归零会在持有者位置爆炸。",
+      "description": "独立储存60标准L气体，使用现有装填机可充满；自然补气上限20%，已有气体不会自动排空。放置和拆回保留真实内容。",
       "durability": 160,
       "maxDurability": 160,
       "amount": 1,
@@ -205,7 +237,9 @@
             "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"PortableGasTank_Steel_Building\",\"SummonerPrefabId\":\"PortableGasTank_Steel\",\"SharedModuleIds\":[\"流体气罐模块\",\"生命值系统模块\"]}",
             "Type": 0
           },
-          "parameters": { "RequiresPlacementRequest": true }
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
         },
         "tank": {
           "prefab": "Module_FluidTank",
@@ -213,12 +247,11 @@
             "Configuration": {
               "SupportsSpacesuit": true,
               "AllowManualAirFill": true,
-              "MaxSafePressureKPa": 1800,
               "MaterialId": "core:steel",
-              "DamageIntervalSeconds": 1,
               "VolumeLiters": 4,
               "MinimumGasSpaceLiters": 0.04,
-              "OverpressureDamagePerSecond": 2
+              "GasCapacityStandardLiters": 60,
+              "NaturalFillFraction": 0.2
             }
           },
           "data": {
@@ -236,7 +269,7 @@
       "gameName": "钢制便携气罐",
       "labelKey": "item.PortableGasTank_Steel.name",
       "descriptionKey": "item.PortableGasTank_Steel.description",
-      "description": "初始真空；通过充装设备装入气体。混装气液共用容积，超压持续损伤，罐壁归零会在持有者位置爆炸。",
+      "description": "独立储存60标准L气体，使用现有装填机可充满；自然补气上限20%，已有气体不会自动排空。放置和拆回保留真实内容。",
       "durability": 160,
       "maxDurability": 160,
       "amount": 1,
@@ -244,11 +277,27 @@
       "volume": 5,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["Container", "FluidTank", "InventoryGroup.Chemical", "Material.Steel", "Container.FluidTank"],
+      "tags": [
+        "Container",
+        "FluidTank",
+        "InventoryGroup.Chemical",
+        "Material.Steel",
+        "Container.FluidTank"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
-        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
-        "collider": { "size": { "x": 0.7, "y": 0.9 } }
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "collider": {
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          }
+        }
       },
       "health": {
         "hasHp": true,
@@ -256,9 +305,22 @@
         "maxHp": 160,
         "weakTool": 0,
         "combatBalanceVersion": 1,
-        "defense": { "physical": 2 },
-        "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-                      "size": { "x": 0.7, "y": 0.9 }, "offset": { "x": 0, "y": 0 } }
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
       },
       "modules": {
         "建筑模块": {
@@ -274,7 +336,10 @@
           "prefab": "Module_FluidTank",
           "id": "流体气罐模块",
           "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
           "parameters": {
             "Configuration": {
               "SupportsSpacesuit": true,
@@ -282,9 +347,8 @@
               "MaterialId": "core:steel",
               "VolumeLiters": 4,
               "MinimumGasSpaceLiters": 0.04,
-              "MaxSafePressureKPa": 1800,
-              "DamageIntervalSeconds": 1,
-              "OverpressureDamagePerSecond": 2
+              "GasCapacityStandardLiters": 60,
+              "NaturalFillFraction": 0.2
             }
           }
         }
@@ -373,11 +437,19 @@
         "maxHp": 200,
         "hasHp": true,
         "combatBalanceVersion": 1,
-        "defense": { "physical": 2 },
+        "defense": {
+          "physical": 2
+        },
         "collider": {
           "type": "BoxCollider2D",
-          "size": { "x": 0.7, "y": 0.9 },
-          "offset": { "x": 0, "y": 0 },
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
           "isTrigger": true,
           "enabled": true
         }

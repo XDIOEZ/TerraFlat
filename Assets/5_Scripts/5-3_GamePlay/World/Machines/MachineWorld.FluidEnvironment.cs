@@ -73,31 +73,29 @@ public static partial class MachineWorld
         if (!Contains(node)) return false;
         RebuildGraphsIfDirty();
         FluidMachineState state = GetFluidState(node);
-        return !state.Ruptured && string.IsNullOrEmpty(state.RuptureBudgetId) &&
-            GetFluidInventory(node).GetPressureKPa(GetFluidVolumeLiters(node), GetFluidMinimumGasSpaceLiters(node)) <
-                PortableGasTankAirFilling.TargetPressureKPa - .00001d &&
-            GetFluidAmbientPressureKPa(node) >= PortableGasTankAirFilling.TargetPressureKPa;
+        return !state.Ruptured && TryGetFluidAirSource(node, out IShipAtmosphereSource source) &&
+            PortableGasTankAirFilling.CanFillFromSource(source, GetFluidInventory(node),
+                node.Definition.Fluid.GasCapacityStandardLiters, node.Definition.Fluid.NaturalFillFraction);
+    }
+
+    internal static bool TryGetFluidAirSource(MachineEntity node, out IShipAtmosphereSource source)
+    {
+        if (TryGetLocalAtmosphereKey(node, out string atmosphereKey))
+            return RequireShipEnvironment().TryGetMachineAirSource(atmosphereKey, node.Position, out source);
+        AtmosphereState atmosphere = GetCurrentAtmosphere(node);
+        source = atmosphere == null ? null : new PlanetShipAtmosphereSource(atmosphere, atmosphere.TemperatureKelvin - 273.15d);
+        return source != null;
     }
 
     internal static bool FillFluidTankAir(MachineEntity node)
     {
         if (!GameNetwork.HasStateAuthority || node == null) return false;
         using var nodeScope = UseNodeScope(node);
-        if (!CanFillFluidTankAir(node)) return false;
-        IShipAtmosphereSource source;
-        if (TryGetLocalAtmosphereKey(node, out string atmosphereKey))
-        {
-            if (!RequireShipEnvironment().TryGetMachineAirSource(atmosphereKey, node.Position, out source)) return false;
-        }
-        else
-        {
-            AtmosphereState atmosphere = GetCurrentAtmosphere(node);
-            source = new PlanetShipAtmosphereSource(atmosphere, atmosphere.TemperatureKelvin - 273.15d);
-        }
-        // 组合罐按整组真实容积补气，保留原有气液并从所属地表或密闭舱扣量。
-        return PortableGasTankAirFilling.TryFillFromSource(source, GetFluidInventory(node),
-            GetFluidVolumeLiters(node), GetFluidMinimumGasSpaceLiters(node));
+        return CanFillFluidTankAir(node) && TryGetFluidAirSource(node, out IShipAtmosphereSource source) &&
+            PortableGasTankAirFilling.TryFillFromSource(source, GetFluidInventory(node),
+                node.Definition.Fluid.GasCapacityStandardLiters, node.Definition.Fluid.NaturalFillFraction);
     }
+
     #endregion
 
     #region 明确世界地址的地表液体事务

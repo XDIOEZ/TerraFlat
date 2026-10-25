@@ -17,17 +17,11 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="TestDoubles.cs" />
-    <Compile Include="GasTransportHarness.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/IndustrialFluidTransfer.cs" />
     <!-- 库存和气液拓扑直接编译正式源码，不在测试中重写被测算法。 -->
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/FluidNetworkGraph.cs" />
-    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/IndustrialGasTransferPort.cs" />
-    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.GasTransport.cs" />
-    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.FluidPortRules.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidState.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidInventory.cs" />
-    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidGasPartition.cs" />
-    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidGasLiquidPhaseBridge.cs" />
-    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidGasNetworkSnapshot.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidUnits.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidRequirement.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidThermodynamics.cs" />

@@ -42,8 +42,6 @@ public static class GameplayTestMechanicalPlant
         new("belt_crank", "HandCrank", 4, 3, 1),
         new("water", "WaterWheel", 0, 4),
         new("water_shaft", "Shaft_Wood", 1, 4),
-        new("probe", "PressureProbe_Mechanical", 1, 4),
-        new("probe_pipe", "FluidPipe", 1, 4),
         new("cross_under", "Shaft_Wood", 2, 4, 1),
         new("cross", "CrossShaft", 2, 4),
         new("pump", "GasPump_Mechanical", 3, 4),
@@ -80,7 +78,6 @@ public static class GameplayTestMechanicalPlant
     private static string lastError;
     private static DroppedItemHandle conveyorDrop;
     private static Vector2 conveyorDropStart;
-    private const decimal ProbeTestMoles = 0.195m;
 
     public static bool TryBuild(Player player, out string message)
     {
@@ -299,7 +296,7 @@ public static class GameplayTestMechanicalPlant
                 message = "已拆除测试机械工厂并恢复水流与风力条件。";
                 return true;
             case "mechanical_diagnose":
-                string[] aliases = { "water", "water_shaft", "probe", "cross", "pump", "wind", "gear_mid", "sawmill", "conveyor_wood" };
+                string[] aliases = { "water", "water_shaft", "cross", "pump", "wind", "gear_mid", "sawmill", "conveyor_wood" };
                 var diagnostics = new List<string>();
                 foreach (string alias in aliases)
                 {
@@ -308,23 +305,6 @@ public static class GameplayTestMechanicalPlant
                     diagnostics.Add($"{alias}: RPM={node.Rpm:0.##}, source={node.SourceFactor:0.###}, load={node.LoadSatisfied}, availableTorque={node.AvailableTorque:0.#}, net={node.Network?.Status ?? "none"}, links=[{links}]");
                 }
                 message = string.Join(" | ", diagnostics);
-                return true;
-            case "mechanical_probe_high":
-                FluidInventory pressurePipe = MachineWorld.GetFluidInventory(parts["probe_pipe"]);
-                if (!pressurePipe.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.Nitrogen),
-                        ProbeTestMoles, 0m, 293.15),
-                        MachineWorld.GetFluidVolumeLiters(parts["probe_pipe"]),
-                        MachineWorld.GetFluidMinimumGasSpaceLiters(parts["probe_pipe"])))
-                { message = "无法向真实测压管道注入试验气体。"; return false; }
-                MachineWorld.StateChanged(parts["probe_pipe"]);
-                message = "已向真实管道施加 450~500kPa 的试验气压。";
-                return true;
-            case "mechanical_probe_low":
-                FluidInventory depressurized = MachineWorld.GetFluidInventory(parts["probe_pipe"]);
-                if (!depressurized.TryTakeExact(FluidIds.Nitrogen, FluidPhase.Gas, ProbeTestMoles, out _))
-                { message = "试验管道中的气体无法按量排出。"; return false; }
-                MachineWorld.StateChanged(parts["probe_pipe"]);
-                message = "已将测压管道泄压至零。";
                 return true;
             case "mechanical_conveyor_drop":
                 if (conveyorDrop.IsValid) DroppedItemService.Remove(conveyorDrop);
@@ -401,16 +381,6 @@ public static class GameplayTestMechanicalPlant
             case "mechanical_cross_isolated":
                 passed = parts["cross"].Network != null && parts["cross_under"].Network != null &&
                     !ReferenceEquals(parts["cross"].Network, parts["cross_under"].Network);
-                return true;
-            case "mechanical_probe_disconnected":
-                passed = !parts["probe"].FluidProbeConnected &&
-                    MachineWorld.GetPressureProbeReading(parts["probe"]) > 450 &&
-                    parts["pump"].SpeedRpm < .01f;
-                return true;
-            case "mechanical_probe_reconnected":
-                passed = parts["probe"].FluidProbeConnected &&
-                    MachineWorld.GetPressureProbeReading(parts["probe"]) < 400 &&
-                    parts["pump"].SpeedRpm > 0f;
                 return true;
             case "mechanical_conveyor_transports_item":
                 passed = conveyorDrop.IsValid &&

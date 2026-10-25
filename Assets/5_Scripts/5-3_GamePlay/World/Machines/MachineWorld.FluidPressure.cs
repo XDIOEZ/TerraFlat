@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Text;
 using FlatWorld.Combat;
 using FlatWorld.Localization;
@@ -8,13 +7,7 @@ using UnityEngine;
 
 public static partial class MachineWorld
 {
-    #region 探针测压与真实动力断边
-    public static double GetPressureProbeReading(MachineEntity probe)
-    {
-        MachineEntity pipe = fluidGraph?.PipeAt(probe.Cell);
-        return pipe == null ? 0 : GetPhaseFluidInventory(pipe, "main", FluidPhase.Gas).GetPressureKPa(
-            GetPhaseFluidVolumeLiters(pipe, FluidPhase.Gas), GetPhaseFluidMinimumGasSpaceLiters(pipe, FluidPhase.Gas));
-    }
+    #region 环境说明与设备拆装
     public static string DescribeAtmosphere(MachineEntity node = null)
     {
         AtmosphereState atmosphere = GetCurrentAtmosphere(node);
@@ -32,162 +25,18 @@ public static partial class MachineWorld
         if (!IsFluidActive(node) || node.Definition.Fluid == null || GetFluidState(node).Ruptured) return 0;
         return GetFluidDeviceBehavior(node).ElectricalDemand(node);
     }
-    #endregion
-
-    #region 同一血量与有限组合爆炸
-    private static void AdvanceFluidTankPressure(float seconds)
-    {
-        // 常态不分配损伤列表，首次超压受损成员按原顺序等概率选择。
-        List<MachineEntity> broken = null;
-        List<(MachineEntity Node, float Amount)> shipDamage = null;
-        foreach (FluidTankGroup group in fluidTankGroups)
-        {
-            if (!group.Active || group.Members.Count == 0) continue;
-            AdvanceFluidTankTemperature(group, seconds);
-            FluidPhaseChangeResult phase = FluidThermodynamics.AdvancePhaseChange(group.Inventory, group.TotalVolume, group.MinimumGasSpace, seconds,
-                group.Members[0].Definition.Fluid.MaximumPhaseMolesPerSecond, false, false);
-            foreach (MachineEntity member in group.Members) UpdateFluidPhaseWarning(member, "main", phase);
-            if (phase.ConvertedMoles > 0) StateChanged(group.Members[0]);
-            double pressure = group.Inventory.GetPressureKPa(group.TotalVolume, group.MinimumGasSpace);
-            if (pressure <= group.MaxSafePressure || !string.IsNullOrEmpty(GetFluidState(group.Members[0]).RuptureBudgetId))
-            { group.OverpressureVictimId = 0; continue; }
-            MachineEntity victim = null;
-            foreach (MachineEntity member in group.Members)
-                if (member.Id == group.OverpressureVictimId && member.State?.Hp > 0) victim = member;
-            if (victim == null)
-            {
-                int aliveCount = 0;
-                foreach (MachineEntity member in group.Members) if (member.State?.Hp > 0) aliveCount++;
-                if (aliveCount == 0) continue;
-                decimal roll = FluidRandom.Next01(ref group.RandomState);
-                int selectedIndex = Math.Min(aliveCount - 1, (int)(roll * aliveCount));
-                foreach (MachineEntity member in group.Members)
-                    if (member.State?.Hp > 0 && selectedIndex-- == 0) { victim = member; break; }
-                group.OverpressureVictimId = victim.Id;
-            }
-            float damage = (float)(victim.Definition.Fluid.OverpressureDamagePerSecond * seconds);
-            if (IsShipScope && FlatWorld.Spaceflight.SpaceSession.Current?.Owns(victim.Id) == true)
-            {
-                (shipDamage ??= new List<(MachineEntity Node, float Amount)>()).Add((victim, damage));
-                continue;
-            }
-            victim.State.Hp = Mathf.Max(0, victim.State.Hp - damage);
-            Mod_Building.SetMechanicalDamageState(victim.Snapshot, victim.State.Hp < ResolveMaximumHp(victim.Snapshot) * .5f);
-            StateChanged(victim);
-            if (victim.State.Hp <= 0) (broken ??= new List<MachineEntity>()).Add(victim);
-        }
-        // 船体统一扣耐久和销毁部件，收集完再处理，避免破罐重建正在遍历的储罐组。
-        if (shipDamage != null)
-            foreach (var hit in shipDamage)
-                FlatWorld.Spaceflight.SpaceSession.Current?.ApplyPieceDamage(hit.Node.Id, hit.Amount, "罐体超压");
-        if (broken != null)
-            foreach (MachineEntity node in broken) HandleFluidTankZeroHp(node);
-    }
-
-    /// <summary>各罐体读取当地温度层，共享库存只汇总传热后推进一次。</summary>
-    private static void AdvanceFluidTankTemperature(FluidTankGroup group, float seconds)
-    {
-        if (!MachineDefinition.Positive(seconds)) return;
-        int temperatureCount = 0;
-        double totalBodyTemperature = 0;
-        foreach (MachineEntity member in group.Members)
-        {
-            FluidMachineDefinition definition = member.Definition.Fluid;
-            FluidMachineState state = GetFluidState(member);
-            if (!member.Active || !definition.TrackAmbientTemperature || state.Ruptured ||
-                !string.IsNullOrEmpty(state.RuptureBudgetId) ||
-                !TryGetFluidAmbientTemperature(member, out float ambient)) continue;
-            ambient = Mathf.Max(-273.149f, ambient);
-            float previous = state.BodyTemperatureCelsius;
-            bool initialized = state.BodyTemperatureInitialized;
-            state.BodyTemperatureCelsius = initialized
-                ? ThermalRuntime.AdvanceAmbient(previous, ambient, seconds)
-                : ambient;
-            state.BodyTemperatureInitialized = true;
-            if (!initialized || previous != state.BodyTemperatureCelsius) StateChanged(member);
-            temperatureCount++;
-            totalBodyTemperature += state.BodyTemperatureCelsius;
-        }
-        if (temperatureCount == 0 || group.Inventory.IsEmpty) return;
-        // 组合罐只用实际罐体平均温度推进共享库存一次，罐数不改变自然传热百分比。
-        double heat = FluidThermodynamics.ExchangeHeatWithEnvironment(
-            group.Inventory, totalBodyTemperature / temperatureCount + 273.15, seconds);
-        if (Math.Abs(heat) > .000001)
-            foreach (MachineEntity member in group.Members) StateChanged(member);
-    }
-
     public static bool CanDismantleFluid(MachineEntity node, out string reason)
     {
-        using var nodeScope = UseNodeScope(node);
         reason = null;
-        if (node?.Definition.Fluid == null) return true;
-        RebuildGraphsIfDirty();
-        if (scope.PendingGasRestore) { reason = "气网成员尚未恢复完整"; return false; }
-        FluidMachineState state = GetFluidState(node);
-        if (!string.IsNullOrEmpty(state.RuptureBudgetId)) { reason = "正在结算罐体破裂，请等待爆炸结束"; return false; }
-        if (IsFluidTankBlock(node)) return true;
-        if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && !group.Inventory.IsEmpty)
-        { reason = "请先排空整个组合储罐的气体和液体"; return false; }
-        if (IsSharedGasNetworkMember(node) && GetPhaseFluidInventory(node, "main", FluidPhase.Gas).GasMoles > 0m)
-        { reason = "请先排空连通管网的气体"; return false; }
-        foreach (string chamber in state.Chambers.Keys)
-            if (!GetFluidInventory(node, chamber).IsEmpty) { reason = "请先排空这台设备或管段的气体和液体"; return false; }
-        return true;
+        return node == null || node.Definition.Fluid == null || Contains(node);
     }
 
-    #region 方块储罐拆除排放
-    // 返还物只保存空罐快照，真实排放延后到节点删除提交，失败不扣库存。
+    // 返还物携带本机完整库存；交付失败时原节点仍是唯一物料所有者。
     public static void PrepareDismantledFluidSnapshot(MachineEntity node, ItemData snapshot)
     {
-        if (!IsFluidTankBlock(node) || snapshot == null) return;
-        // 空方块不携带罐温、组主和运行记录，避免同类返还物被临时状态拆成不同堆叠。
-        MachinePersistence.Write(snapshot, "fluid", new FluidMachineState());
+        if (node?.Definition.Fluid == null || snapshot == null) return;
+        MachinePersistence.Write(snapshot, "fluid", CreatePersistentFluidState(node));
     }
-
-    // 组合罐按拆下罐体的真实容积分摊，只把这一块的份额排入当地环境。
-    private static List<MachineEntity> ReleaseDismantledFluidTank(MachineEntity node)
-    {
-        if (!IsFluidTankBlock(node) || GetFluidState(node).Ruptured) return null;
-        RebuildGraphsIfDirty();
-        List<MachineEntity> remaining = new();
-        if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group))
-        {
-            foreach (MachineEntity member in group.Members) if (member.Id != node.Id) remaining.Add(member);
-            PartitionFluidGroupForScopeTransfer(group);
-        }
-        FluidMachineState state = GetFluidState(node);
-        var batches = new List<FluidBatch>();
-        foreach (string chamber in new List<string>(state.Chambers.Keys))
-            batches.AddRange(GetFluidInventory(node, chamber).Drain());
-        state.LastEmittedStandardLiters = 0; state.LastRetainedStandardLiters = 0; state.LastEscapedStandardLiters = 0;
-        foreach (FluidBatch batch in batches)
-        {
-            FluidDefinition definition = FluidCatalog.Default.Find(batch.FluidId);
-            double temperature = BatchTemperature(definition, batch);
-            if (batch.GasMoles > 0m)
-                RecordAtmosphereEmission(node, FluidInventory.CreateBatch(definition, batch.GasMoles, 0m, temperature));
-            if (batch.LiquidMoles <= 0m) continue;
-            string spillWorld = worldKey;
-            Vector2 spillPosition = node.Position;
-            if (TryResolveFluidSurfacePoint(node.Position, out string surfaceWorld, out Vector2 surfacePosition))
-            { spillWorld = surfaceWorld; spillPosition = surfacePosition; }
-            var spill = new PressureLiquidSpillState
-            {
-                WorldKey = spillWorld, FluidId = batch.FluidId, Center = spillPosition,
-                LiquidMoles = batch.LiquidMoles, InternalEnergyJoules = definition.EnergyAt(0m, batch.LiquidMoles, temperature)
-            };
-            if (IsShipScope && RequireShipEnvironment().TryGetMachineSpillAnchor(shipScopeId, node.Position,
-                out string detachedWorld, out Vector2 detachedPosition))
-            { spill.DetachedWorldKey = detachedWorld; spill.DetachedCenter = detachedPosition; }
-            owner.Mechanical.PendingPressureLiquidSpills.Add(spill);
-        }
-        state.GroupOwnerId = node.Id; state.OverpressureVictimId = 0;
-        dirty = true;
-        return remaining;
-    }
-    #endregion
-
-    /// <summary>压力爆炸沿真实机器生命与物理防御结算，只有归零才再入破裂队列。</summary>
     public static bool TryApplyEnvironmentalDamage(MachineEntity node, float amount)
     {
         if (!GameNetwork.HasStateAuthority || !Contains(node) || !float.IsFinite(amount) || amount <= 0) return false;
@@ -203,73 +52,9 @@ public static partial class MachineWorld
             Mod_Building.SetMechanicalDamageState(node.Snapshot, node.State.Hp < ResolveMaximumHp(node.Snapshot) * .5f);
             StateChanged(node); return actual > 0;
         }
-        if (!HandleFluidTankZeroHp(node)) Mod_Building.DestroyMechanical(node);
+        Mod_Building.DestroyMechanical(node);
         return true;
     }
 
-    public static bool HandleFluidTankZeroHp(MachineEntity node)
-    {
-        if (!GameNetwork.HasStateAuthority || GetFluidDeviceBehavior(node)?.IsSharedStorage != true || !Contains(node)) return false;
-        FluidMachineState state = GetFluidState(node);
-        if (state.Ruptured) return true;
-        if (node.State != null && node.State.Hp > 0) return false;
-        if (!fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group))
-        { RebuildGraphsIfDirty(); fluidTankOwners.TryGetValue(node.Id, out group); }
-        if (group == null) throw new InvalidOperationException("气罐破裂前缺少组合库存。");
-        List<FluidBatch> gas = new(), liquid = new();
-        FluidTankRuptureBudget budget;
-        if (!string.IsNullOrEmpty(state.RuptureBudgetId) && owner.Mechanical.FluidRuptures.TryGetValue(state.RuptureBudgetId, out budget)) { }
-        else
-        {
-            double pressure = group.Inventory.GetPressureKPa(group.TotalVolume, group.MinimumGasSpace);
-            double gasSpace = group.Inventory.GasMoles > 0 ? Math.Max(group.MinimumGasSpace, group.TotalVolume - group.Inventory.GetLiquidLiters()) : 0;
-            budget = new FluidTankRuptureBudget
-            { BatchId = worldKey + ":" + Guid.NewGuid().ToString("N"), PressureKPa = pressure, WorldKey = worldKey };
-            foreach (MachineEntity member in group.Members)
-            {
-                double positive = Math.Max(0, pressure - GetFluidAmbientPressureKPa(member));
-                budget.Intensities[member.Id] = positive * gasSpace * member.Definition.Fluid.VolumeLiters / group.TotalVolume;
-                GetFluidState(member).RuptureBudgetId = budget.BatchId;
-            }
-            owner.Mechanical.FluidRuptures[budget.BatchId] = budget;
-            foreach (FluidBatch batch in group.Inventory.Drain())
-            {
-                FluidDefinition definition = FluidCatalog.Default.Find(batch.FluidId);
-                double temperature = BatchTemperature(definition, batch);
-                if (batch.GasMoles > 0) gas.Add(FluidInventory.CreateBatch(definition, batch.GasMoles, 0, temperature));
-                if (batch.LiquidMoles > 0) liquid.Add(FluidInventory.CreateBatch(definition, 0, batch.LiquidMoles, temperature));
-            }
-            group.OverpressureVictimId = 0; SaveFluidGroups();
-            foreach (MachineEntity member in group.Members) CaptureFluidState(member);
-        }
-        state.Ruptured = true;
-        if (budget.Claimed.Add(node.Id))
-            PressureExplosionQueue.Enqueue(worldKey, node.Snapshot.transform.position, budget.Intensities[node.Id],
-                budget.BatchId + ":" + node.Id, gas, liquid);
-        CaptureFluidState(node);
-        Remove(node.Id);
-        return true;
-    }
-
-    public static void CompleteFluidRuptures()
-    {
-        if (owner?.Mechanical?.FluidRuptures == null) return;
-        var completed = new List<string>();
-        bool unlocked = false;
-        foreach (var pair in owner.Mechanical.FluidRuptures)
-            if (pair.Value.WorldKey == worldKey) completed.Add(pair.Key);
-        foreach (MachineEntity node in nodes.Values)
-        {
-            if (node.Definition.Fluid == null) continue;
-            FluidMachineState state = GetFluidState(node);
-            if (string.IsNullOrEmpty(state.RuptureBudgetId) || !completed.Contains(state.RuptureBudgetId) &&
-                owner.Mechanical.FluidRuptures.ContainsKey(state.RuptureBudgetId)) continue;
-            // 分裂后迁到另一作用域的成员也要释放已结清的旧批次锁，不重放破罐库存。
-            state.RuptureBudgetId = ""; state.OverpressureVictimId = 0; CaptureFluidState(node);
-            unlocked = true;
-        }
-        foreach (string id in completed) owner.Mechanical.FluidRuptures.Remove(id);
-        if (completed.Count > 0 || unlocked) dirty = true;
-    }
     #endregion
 }

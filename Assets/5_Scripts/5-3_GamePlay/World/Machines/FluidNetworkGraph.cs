@@ -42,6 +42,10 @@ public sealed class FluidNetworkGraph
     private readonly Dictionary<Vector2Int, List<MachineEntity>> devices = new();
     private readonly Dictionary<int, List<Edge>> incoming = new();
     private readonly Dictionary<int, int> outletDistance = new();
+    private readonly Dictionary<int, List<Edge>> outgoing = new();
+    public readonly List<Edge> GasEdges = new();
+    public readonly List<Edge> LiquidEdges = new();
+    private readonly Dictionary<(int, string), List<SupplyNode>> liquidComponents = new();
     private readonly Dictionary<int, int> connectionMasks = new(); // 连接外形只读取正式端口图，不依赖本轮流量。
     private static readonly int[] directionBits = { 2, 1, 8, 4 };
     public readonly List<Edge> Edges = new();
@@ -67,8 +71,8 @@ public sealed class FluidNetworkGraph
         for (int index = 0; index < workspace.Nodes.Count; index++)
         {
             SupplyNode downstream = workspace.Nodes[index];
-            // 气网在相邻端口已经给出唯一总库存；不要再沿普通管段走到另一台设备去越级取料。
-            if (phase == FluidPhase.Gas && index > 0 && MachineWorld.IsSharedGasNetworkMember(downstream.Node)) continue;
+            // 储罐是唯一物料来源，搜索只穿过无库存的连接节点。
+            if (index > 0 && !IsTransit(downstream.Node)) continue;
             if (!incoming.TryGetValue(downstream.Node.Id, out var inputs)) continue;
             foreach (Edge edge in inputs)
             {
@@ -86,10 +90,37 @@ public sealed class FluidNetworkGraph
         }
     }
 
+    // 正向仅寻找真实接收设备，经过的方向、相别和筛选规则全部生效。
+    public void CollectDeliveryRoutes(MachineEntity source, string chamber, FluidPhase phase,
+        IReadOnlyList<string> requiredFluidIds, SupplyWorkspace workspace)
+    {
+        workspace.Phase = phase; workspace.Nodes.Clear(); workspace.Visited.Clear();
+        if (source?.Definition.Fluid == null || !CanSupply(source, phase)) return;
+        workspace.Nodes.Add(new SupplyNode(source, chamber, -1)); workspace.Visited.Add((source.Id, chamber));
+        for (int index = 0; index < workspace.Nodes.Count; index++)
+        {
+            SupplyNode upstream = workspace.Nodes[index];
+            if (index > 0 && !IsTransit(upstream.Node)) continue;
+            if (!outgoing.TryGetValue(upstream.Node.Id, out var edges)) continue;
+            FluidDeviceBehavior behavior = MachineWorld.GetFluidDeviceBehavior(upstream.Node);
+            if (!behavior.CanOutput(upstream.Node, out _)) continue;
+            foreach (Edge edge in edges)
+            {
+                if (edge.Target == null || edge.SourcePort.Chamber != upstream.Chamber || !CanSupply(edge.Target, phase)) continue;
+                bool allowed = true;
+                foreach (string id in requiredFluidIds)
+                    if (!Accepts(edge.SourcePort, phase, id) || !Accepts(edge.TargetPort, phase, id) ||
+                        !behavior.CanRoute(upstream.Node, edge.SourcePort, phase, id, out _)) { allowed = false; break; }
+                if (!allowed || !workspace.Visited.Add((edge.Target.Id, edge.TargetPort.Chamber))) continue;
+                workspace.Nodes.Add(new SupplyNode(edge.Target, edge.TargetPort.Chamber, index, edge));
+            }
+        }
+    }
+
     private static bool CanSupply(MachineEntity node, FluidPhase phase)
     {
         FluidMachineState state = MachineWorld.GetFluidState(node);
-        return state != null && !state.Ruptured && string.IsNullOrEmpty(state.RuptureBudgetId) &&
+        return state != null && !state.Ruptured &&
             MachineWorld.GetFluidDeviceBehavior(node).PortsEnabled(node) &&
             (state.OutletPhase == "both" || state.OutletPhase == (phase == FluidPhase.Gas ? "gas" : "liquid"));
     }
@@ -99,7 +130,7 @@ public sealed class FluidNetworkGraph
 
     public void Rebuild(IEnumerable<MachineEntity> source)
     {
-        pipes.Clear(); devices.Clear(); incoming.Clear(); outletDistance.Clear(); connectionMasks.Clear(); Edges.Clear(); Components.Clear(); NodeComponents.Clear();
+        pipes.Clear(); devices.Clear(); incoming.Clear(); outgoing.Clear(); GasEdges.Clear(); LiquidEdges.Clear(); outletDistance.Clear(); connectionMasks.Clear(); Edges.Clear(); Components.Clear(); NodeComponents.Clear();
         var sorted = new List<MachineEntity>();
         foreach (MachineEntity node in source)
         {
@@ -135,6 +166,10 @@ public sealed class FluidNetworkGraph
         }
         foreach (Edge edge in Edges)
         {
+            if (edge.SourcePort.Phase != "liquid" && (edge.TargetPort == null || edge.TargetPort.Phase != "liquid")) GasEdges.Add(edge);
+            if (edge.SourcePort.Phase != "gas" && (edge.TargetPort == null || edge.TargetPort.Phase != "gas")) LiquidEdges.Add(edge);
+            if (!outgoing.TryGetValue(edge.Source.Id, out var outputs)) outgoing[edge.Source.Id] = outputs = new List<Edge>();
+            outputs.Add(edge);
             if (edge.Target == null) continue;
             connectionMasks[edge.Source.Id] = GetConnectionMask(edge.Source) | directionBits[edge.Direction];
             connectionMasks[edge.Target.Id] = GetConnectionMask(edge.Target) | directionBits[(edge.Direction + 2) & 3];
@@ -160,6 +195,42 @@ public sealed class FluidNetworkGraph
             }
         }
         BuildComponents(sorted);
+        BuildLiquidComponents();
+    }
+
+    public IReadOnlyList<SupplyNode> GetLiquidComponent(MachineEntity node, string chamber)
+        => liquidComponents.TryGetValue((node.Id, chamber), out var members) ? members : null;
+
+    // 连通成员只在拓扑变动时计算，按腔体分组，查询不反复遍历整张图。
+    private void BuildLiquidComponents()
+    {
+        liquidComponents.Clear();
+        var adjacent = new Dictionary<(int, string), List<SupplyNode>>();
+        foreach (Edge edge in LiquidEdges)
+        {
+            if (edge.Target == null) continue;
+            var source = (edge.Source.Id, edge.SourcePort.Chamber); var target = (edge.Target.Id, edge.TargetPort.Chamber);
+            if (!adjacent.TryGetValue(source, out var a)) adjacent.Add(source, a = new());
+            if (!adjacent.TryGetValue(target, out var b)) adjacent.Add(target, b = new());
+            a.Add(new SupplyNode(edge.Target, edge.TargetPort.Chamber, -1));
+            b.Add(new SupplyNode(edge.Source, edge.SourcePort.Chamber, -1));
+        }
+        var queue = new Queue<SupplyNode>();
+        foreach (var pair in adjacent)
+        {
+            if (liquidComponents.ContainsKey(pair.Key)) continue;
+            var members = new List<SupplyNode>();
+            SupplyNode root = pair.Value[0];
+            // 任一邻居会反向带回根节点，避免另建节点查找表。
+            queue.Enqueue(root); liquidComponents[(root.Node.Id, root.Chamber)] = members;
+            while (queue.Count > 0)
+            {
+                SupplyNode node = queue.Dequeue(); members.Add(node);
+                if (!adjacent.TryGetValue((node.Node.Id, node.Chamber), out var neighbors)) continue;
+                foreach (SupplyNode next in neighbors)
+                    if (liquidComponents.TryAdd((next.Node.Id, next.Chamber), members)) queue.Enqueue(next);
+            }
+        }
     }
 
     private bool Connect(MachineEntity source, FluidMachinePortDefinition output, MachineEntity target, int direction)
@@ -207,12 +278,7 @@ public sealed class FluidNetworkGraph
                 MachineEntity pipe = PipeAt(node.Cell);
                 if (pipe != null) LinkComponent(neighbors, node, pipe);
             }
-            if (!node.Definition.Fluid.CombineAdjacent || !behavior.IsSharedStorage) continue;
-            foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
-                if (devices.TryGetValue(normalize(node.Cell + direction), out var adjacent))
-                    foreach (MachineEntity neighbor in adjacent)
-                        if (neighbor.Definition.Fluid.CombineAdjacent && MachineWorld.GetFluidDeviceBehavior(neighbor).IsSharedStorage && neighbor.Definition.Fluid.MaterialId == node.Definition.Fluid.MaterialId)
-                            LinkComponent(neighbors, node, neighbor);
+
         }
         var queue = new Queue<MachineEntity>();
         foreach (MachineEntity root in sorted)
@@ -236,293 +302,6 @@ public sealed class FluidNetworkGraph
         if (!neighbors.TryGetValue(a.Id, out var first)) neighbors[a.Id] = first = new();
         if (!neighbors.TryGetValue(b.Id, out var second)) neighbors[b.Id] = second = new();
         first.Add(b); second.Add(a);
-    }
-    #endregion
-}
-
-/// <summary>气相只在拓扑改变时归并普通管段，液相依旧保留每段独立库存。</summary>
-internal sealed class IndustrialGasNetworkGraph
-{
-    #region 气网分组与边界
-    internal sealed class Group
-    {
-        public readonly List<MachineEntity> Members = new();
-        public readonly FluidInventory Inventory = new();
-        public readonly List<FluidLiquidPhaseContact> PhaseContacts = new();
-        public double MaximumPhaseMolesPerSecond;
-        private readonly Dictionary<int, double> liquidLiters = new();
-        public double TotalVolumeLiters;
-        public double MinimumGasSpaceLiters;
-        public double ThroughputLitersPerSecond;
-        public long Epoch;
-        private long snapshotSequence;
-        public double OccupiedLiquidLiters { get; private set; }
-        public double GasSpaceLiters => Math.Max(MinimumGasSpaceLiters, TotalVolumeLiters - OccupiedLiquidLiters);
-        public int OwnerId => Members[0].Id;
-
-        public double GetMemberGasSpaceLiters(MachineEntity node)
-            => Math.Max(node.Definition.Fluid.MinimumGasSpaceLiters,
-                node.Definition.Fluid.VolumeLiters - liquidLiters.GetValueOrDefault(node.Id));
-
-        public FluidGasNetworkSnapshot CaptureSnapshot()
-        {
-            var snapshot = new FluidGasNetworkSnapshot
-            {
-                Epoch = Epoch, Sequence = checked(++snapshotSequence), OwnerId = OwnerId,
-                VolumeLiters = TotalVolumeLiters, MinimumGasSpaceLiters = MinimumGasSpaceLiters,
-                OccupiedLiquidLiters = OccupiedLiquidLiters, Inventory = Inventory.State.Clone()
-            };
-            foreach (MachineEntity member in Members) snapshot.MemberIds.Add(member.Id);
-            snapshot.Validate(Inventory.Catalog);
-            return snapshot;
-        }
-
-        public void UpdateLiquid(MachineEntity node, FluidInventory local)
-        {
-            double next = local.GetLiquidLiters();
-            liquidLiters.TryGetValue(node.Id, out double previous);
-            liquidLiters[node.Id] = next;
-            OccupiedLiquidLiters = Math.Max(0d, OccupiedLiquidLiters + next - previous);
-        }
-    }
-
-    private readonly Dictionary<int, Group> nodeGroups = new();
-    public readonly List<Group> Groups = new();
-    public readonly List<FluidNetworkGraph.Edge> Edges = new();
-
-    public bool TryGetGroup(MachineEntity node, out Group group)
-    { group = null; return node != null && nodeGroups.TryGetValue(node.Id, out group); }
-
-    private static bool AcceptsGas(FluidMachinePortDefinition port)
-        => port != null && (port.Phase == "both" || port.Phase == "gas");
-
-    private static bool IsPassiveGasPipe(MachineEntity node)
-    {
-        FluidMachineDefinition definition = node?.Definition.Fluid;
-        if (definition == null || !MachineWorld.GetFluidDeviceBehavior(node).IsTransit ||
-            MachineWorld.GetFluidDeviceBehavior(node).EmitsToEnvironment ||
-            definition.Kind == "selector" || definition.Ports.Length == 0 ||
-            MachineWorld.GetFluidState(node).OutletPhase == "liquid") return false;
-        foreach (FluidMachinePortDefinition port in definition.Ports)
-            if (port.Chamber != "main" || port.Mode != "both" || port.Outlet ||
-                !AcceptsGas(port) || !string.IsNullOrEmpty(port.FluidId)) return false;
-        return true;
-    }
-
-    public IndustrialGasNetworkGraph(FluidNetworkGraph topology, IEnumerable<MachineEntity> nodes,
-        Func<MachineEntity, FluidInventory> localInventory)
-    {
-        var originals = new Dictionary<FluidInventory, FluidInventoryState>();
-        FluidInventory CaptureLocal(MachineEntity node)
-        {
-            FluidInventory inventory = localInventory(node);
-            if (!originals.ContainsKey(inventory)) originals.Add(inventory, inventory.State.Clone());
-            return inventory;
-        }
-        try { Build(topology, nodes, CaptureLocal); }
-        catch
-        {
-            // 后面的成员不能接收时，前面已经归并的成员也必须归还，不能随失败的图一起消失。
-            foreach (var original in originals) original.Key.Restore(original.Value);
-            throw;
-        }
-    }
-
-    private void Build(FluidNetworkGraph topology, IEnumerable<MachineEntity> nodes,
-        Func<MachineEntity, FluidInventory> localInventory)
-    {
-        var passive = new Dictionary<int, MachineEntity>();
-        var neighbors = new Dictionary<int, List<int>>();
-        foreach (MachineEntity node in nodes)
-            if (IsPassiveGasPipe(node)) passive.Add(node.Id, node);
-        foreach (FluidNetworkGraph.Edge edge in topology.Edges)
-        {
-            if (edge.Target == null || !AcceptsGas(edge.SourcePort) || !AcceptsGas(edge.TargetPort) ||
-                !passive.ContainsKey(edge.Source.Id) || !passive.ContainsKey(edge.Target.Id)) continue;
-            if (!neighbors.TryGetValue(edge.Source.Id, out var list)) neighbors.Add(edge.Source.Id, list = new List<int>());
-            list.Add(edge.Target.Id);
-            if (!neighbors.TryGetValue(edge.Target.Id, out var reverse)) neighbors.Add(edge.Target.Id, reverse = new List<int>());
-            reverse.Add(edge.Source.Id);
-        }
-        var queue = new Queue<int>();
-        foreach (MachineEntity root in passive.Values)
-        {
-            if (nodeGroups.ContainsKey(root.Id)) continue;
-            var group = new Group(); Groups.Add(group);
-            nodeGroups.Add(root.Id, group); queue.Enqueue(root.Id);
-            while (queue.Count > 0)
-            {
-                int id = queue.Dequeue();
-                MachineEntity node = passive[id];
-                group.Members.Add(node);
-                group.TotalVolumeLiters += node.Definition.Fluid.VolumeLiters;
-                group.MinimumGasSpaceLiters += node.Definition.Fluid.MinimumGasSpaceLiters;
-                if (!neighbors.TryGetValue(id, out var adjacent)) continue;
-                foreach (int next in adjacent)
-                    if (nodeGroups.TryAdd(next, group)) queue.Enqueue(next);
-            }
-            group.Members.Sort((a, b) => a.Id.CompareTo(b.Id));
-            foreach (MachineEntity member in group.Members)
-            {
-                FluidInventory local = localInventory(member);
-                group.UpdateLiquid(member, local);
-                AbsorbGas(group, local);
-                group.PhaseContacts.Add(new FluidLiquidPhaseContact(local, member.Definition.Fluid.VolumeLiters,
-                    member.Definition.Fluid.MinimumGasSpaceLiters, member.Definition.Fluid.SingleLiquid));
-                group.MaximumPhaseMolesPerSecond += member.Definition.Fluid.MaximumPhaseMolesPerSecond;
-            }
-        }
-        foreach (FluidNetworkGraph.Edge edge in topology.Edges)
-        {
-            if (!AcceptsGas(edge.SourcePort) || edge.TargetPort != null && !AcceptsGas(edge.TargetPort)) continue;
-            if (edge.Target != null && TryGetGroup(edge.Source, out Group source) &&
-                TryGetGroup(edge.Target, out Group target) && ReferenceEquals(source, target)) continue;
-            Edges.Add(edge);
-        }
-        var boundaryPorts = new HashSet<(int, string)>();
-        foreach (FluidNetworkGraph.Edge edge in Edges)
-        {
-            if (TryGetGroup(edge.Source, out Group sourceGroup) && boundaryPorts.Add((edge.Source.Id, edge.SourcePort.Id)))
-                sourceGroup.ThroughputLitersPerSecond += edge.Source.Definition.Fluid.ThroughputLitersPerSecond;
-            if (edge.Target != null && TryGetGroup(edge.Target, out Group targetGroup) && boundaryPorts.Add((edge.Target.Id, edge.TargetPort.Id)))
-                targetGroup.ThroughputLitersPerSecond += edge.Target.Definition.Fluid.ThroughputLitersPerSecond;
-        }
-    }
-
-    public static void AbsorbGas(Group group, FluidInventory local)
-    {
-        if (local.GasMoles <= 0m) return;
-        FluidInventoryState backup = local.State.Clone();
-        FluidInventoryState beforeGroup = group.Inventory.State.Clone();
-        bool firstBatch = group.Inventory.GasMoles == 0m;
-        var gasPorts = new List<FluidOutputReservation>();
-        foreach (FluidOutputReservation reservation in local.State.Ports)
-            if (reservation.GasMoles > 0m)
-                gasPorts.Add(new FluidOutputReservation
-                { PortId = reservation.PortId, FluidId = reservation.FluidId, GasMoles = reservation.GasMoles });
-        local.ClearGas(out List<FluidBatch> batches);
-        try
-        {
-            if (firstBatch) group.Inventory.State.RandomState = backup.RandomState;
-            foreach (FluidBatch batch in batches)
-                if (!group.Inventory.TryAdd(batch, group.GasSpaceLiters, group.MinimumGasSpaceLiters))
-                    throw new InvalidOperationException("气网合并未能守恒接收原气体库存。");
-            foreach (FluidOutputReservation port in gasPorts)
-            {
-                if (group.Inventory.GetReservation(port.PortId) != null)
-                    throw new InvalidOperationException("气网合并出现重复气体端口预留：" + port.PortId);
-                group.Inventory.State.Ports.Add(port);
-            }
-            if (gasPorts.Count > 0) group.Inventory.State.SynchronizeReservations();
-        }
-        catch
-        {
-            local.Restore(backup);
-            group.Inventory.Restore(beforeGroup);
-            throw;
-        }
-    }
-
-    // 分网前按真实气相空间分配；先验证全部目标，再提交，不能把某段的液体空间当成气体空间。
-    public void FlushToLocal(Func<MachineEntity, bool> stillExists, Func<MachineEntity, FluidInventory> localInventory)
-    {
-        // 拆卸/销毁必须先取出份额再删除成员。拓扑事务不做外部排放，避免回调中断后二次排气。
-        foreach (Group group in Groups)
-            foreach (MachineEntity member in group.Members)
-                if (!stillExists(member)) throw new InvalidOperationException("气网成员删除前未交接库存，原气网已保留：" + member.Id);
-        var snapshots = new Dictionary<FluidInventory, FluidInventoryState>();
-        var originals = new Dictionary<FluidInventory, FluidInventoryState>();
-        try
-        {
-            foreach (Group group in Groups)
-            {
-                if (group.Inventory.GasMoles == 0m) continue;
-                originals.Add(group.Inventory, group.Inventory.State.Clone());
-                var spaces = new List<decimal>(group.Members.Count);
-                var memberIds = new List<int>(group.Members.Count);
-                foreach (MachineEntity member in group.Members)
-                {
-                    group.UpdateLiquid(member, localInventory(member));
-                    spaces.Add((decimal)group.GetMemberGasSpaceLiters(member));
-                    memberIds.Add(member.Id);
-                }
-                FluidInventoryState[] shares = FluidGasPartition.Prepare(group.Inventory, spaces, memberIds);
-                for (int index = 0; index < group.Members.Count; index++)
-                {
-                    MachineEntity member = group.Members[index];
-                    var share = new FluidInventory(shares[index], group.Inventory.Catalog);
-                    if (share.GasMoles == 0m) continue;
-                    double temperature = share.GetTemperatureKelvin();
-                    FluidInventory local = localInventory(member);
-                    double startingEnergy = local.State.TotalInternalEnergyJoules;
-                    if (!snapshots.ContainsKey(local)) snapshots.Add(local, local.State.Clone());
-                    foreach (FluidComponentState component in share.State.Components)
-                    {
-                        FluidBatch batch = FluidInventory.CreateBatch(group.Inventory.Catalog.Find(component.FluidId),
-                            component.GasMoles, 0m, temperature);
-                        if (!local.TryAdd(batch, member.Definition.Fluid.VolumeLiters,
-                            member.Definition.Fluid.MinimumGasSpaceLiters))
-                            throw new InvalidOperationException("气网拆分未能守恒写回成员库存：" + member.Id);
-                    }
-                    local.State.TotalInternalEnergyJoules = startingEnergy + share.State.TotalInternalEnergyJoules;
-                    foreach (FluidOutputReservation reservation in share.State.Ports)
-                    {
-                        if (local.GetReservation(reservation.PortId) != null)
-                            throw new InvalidOperationException("气网拆分出现重复端口预留：" + reservation.PortId);
-                        local.State.Ports.Add(reservation.Clone());
-                    }
-                    local.State.SynchronizeReservations();
-                    FluidInventory.ValidateState(local.State, local.Catalog);
-                }
-            }
-            foreach (var original in originals) original.Key.ClearGas(out _);
-        }
-        catch
-        {
-            foreach (var local in snapshots) local.Key.Restore(local.Value);
-            foreach (var original in originals) original.Key.Restore(original.Value);
-            throw;
-        }
-    }
-    #endregion
-}
-
-/// <summary>液体只遍历可接受液相的正式端口边，不使用气相共享库存。</summary>
-internal sealed class IndustrialLiquidNetworkGraph
-{
-    #region 液相有向连通
-    public readonly List<FluidNetworkGraph.Edge> Edges = new();
-    private readonly Dictionary<int, int> outletDistance = new();
-    public IndustrialLiquidNetworkGraph(FluidNetworkGraph topology)
-    {
-        var incoming = new Dictionary<int, List<FluidNetworkGraph.Edge>>();
-        var queue = new Queue<int>();
-        foreach (FluidNetworkGraph.Edge edge in topology.Edges)
-            if (edge.SourcePort.Phase != "gas" && (edge.TargetPort == null || edge.TargetPort.Phase != "gas"))
-            {
-                Edges.Add(edge);
-                if (edge.Target != null)
-                {
-                    if (!incoming.TryGetValue(edge.Target.Id, out var inputs)) incoming.Add(edge.Target.Id, inputs = new());
-                    inputs.Add(edge);
-                }
-                if ((edge.Environment || edge.SourcePort.Outlet && edge.Target != null &&
-                    !MachineWorld.GetFluidDeviceBehavior(edge.Target).IsTransit) && outletDistance.TryAdd(edge.Source.Id, 0))
-                    queue.Enqueue(edge.Source.Id);
-            }
-        while (queue.Count > 0)
-        {
-            int target = queue.Dequeue();
-            if (!incoming.TryGetValue(target, out var inputs)) continue;
-            foreach (FluidNetworkGraph.Edge edge in inputs)
-                if (outletDistance.TryAdd(edge.Source.Id, outletDistance[target] + 1)) queue.Enqueue(edge.Source.Id);
-        }
-    }
-    public bool CanRoute(FluidNetworkGraph.Edge edge)
-    {
-        if (edge.Environment || edge.SourcePort.Outlet) return true;
-        return edge.Target != null && outletDistance.TryGetValue(edge.Source.Id, out int source) &&
-            outletDistance.TryGetValue(edge.Target.Id, out int target) && target < source;
     }
     #endregion
 }

@@ -587,8 +587,7 @@ internal sealed class CultivatorWaterPort : ContainerPortBase, ILiquidTransferPo
     {
         using var scope = MachineWorld.UseNodeScope(logic.Entity);
         if (!IsValid || !Configuration.AllowsLiquid(id) || !logic.Water.Catalog.TryGet(id, out var definition)) return 0f;
-        double availableLiters = Math.Max(0d, MachineWorld.GetFluidVolumeLiters(logic.Entity) -
-            MachineWorld.GetFluidMinimumGasSpaceLiters(logic.Entity) - logic.Water.GetLiquidLiters());
+        double availableLiters = MachineWorld.GetIndustrialFreeCapacity(logic.Entity, FluidPhase.Liquid, definition.Id);
         return Mathf.Min(requested, (float)((decimal)availableLiters / definition.LitersPerServing));
     }
     public bool InsertLiquid(LiquidTransferBatch batch, float servings)
@@ -598,7 +597,7 @@ internal sealed class CultivatorWaterPort : ContainerPortBase, ILiquidTransferPo
         FluidDefinition definition = logic.Water.Catalog.Find(batch.LiquidId);
         FluidBatch actual = FluidInventory.CreateBatch(definition, 0m, FluidUnits.ServingsToMol(definition, (decimal)servings),
             FluidUnits.CelsiusToKelvin(batch.TemperatureCelsius));
-        return logic.Water.TryAdd(actual, MachineWorld.GetFluidVolumeLiters(logic.Entity), MachineWorld.GetFluidMinimumGasSpaceLiters(logic.Entity));
+        return logic.Water.TryAdd(actual, MachineWorld.GetFluidVolumeLiters(logic.Entity) + .001d, .001d, false, true);
     }
     public override object CaptureState() => logic.Water.State.Clone();
     public override void RestoreState(object snapshot) => logic.Water.Restore((FluidInventoryState)snapshot);

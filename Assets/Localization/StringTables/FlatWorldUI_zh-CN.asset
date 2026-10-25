@@ -8705,6 +8705,34 @@ MonoBehaviour:
     m_Localized: "\u5DF2\u7981\u7528"
     m_Metadata:
       m_Items: []
+  - m_Id: 28000000000200000
+    m_Localized: "自然补气"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200001
+    m_Localized: "气罐不可用"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200002
+    m_Localized: "气量 {0:0.###}/{1:0.###} 标准 L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200003
+    m_Localized: "液体 {0:0.###}/{1:0.###} L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200004
+    m_Localized: "自然补气上限 {0:0.#}% · 动力充装可充满"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200005
+    m_Localized: "{0}：{1:0.###} 标准 L"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000200006
+    m_Localized: "气体ID / 每秒速率（0停止）"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

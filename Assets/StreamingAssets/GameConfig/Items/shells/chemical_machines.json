@@ -4,8 +4,8 @@
     {
       "id": "FluidPipe",
       "parent": "BuildingBody_Base",
-      "gameName": "通用管道-建筑",
-      "description": "铺在独立覆盖层的气液管道，可与电线同格铺设，自动连接相邻管道和朝向匹配的设备管口。银蓝粗管和青色管箍用于识别流体线路，背包里可按数量堆叠。",
+      "gameName": "气体管道-建筑",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -95,8 +95,8 @@
       "id": "FluidPipe_Summoner",
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
-      "gameName": "通用管道",
-      "description": "铺在独立覆盖层的气液管道，可与电线同格铺设，自动连接相邻管道和朝向匹配的设备管口。银蓝粗管和青色管箍用于识别流体线路，背包里可按数量堆叠。",
+      "gameName": "气体管道",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -185,8 +185,8 @@
     {
       "id": "FluidValve",
       "parent": "BuildingBody_Base",
-      "gameName": "流体阀门-建筑",
-      "description": "流体阀门。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "gameName": "气体阀门-建筑",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -258,8 +258,8 @@
       "id": "FluidValve_Summoner",
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
-      "gameName": "流体阀门",
-      "description": "流体阀门。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "gameName": "气体阀门",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -330,8 +330,8 @@
     {
       "id": "FluidOutlet",
       "parent": "BuildingBody_Base",
-      "gameName": "出气口-建筑",
-      "description": "排出管道中的气体或液体；朝向相邻炉子实际排出氧气时，燃烧温度上限增加 500℃，与机械风箱只取最高加成。",
+      "gameName": "气体输出口-建筑",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -403,8 +403,8 @@
       "id": "FluidOutlet_Summoner",
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
-      "gameName": "出气口",
-      "description": "排出管道中的气体或液体；朝向相邻炉子实际排出氧气时，燃烧温度上限增加 500℃，与机械风箱只取最高加成。",
+      "gameName": "气体输出口",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -476,7 +476,7 @@
       "id": "GasSelector",
       "parent": "BuildingBody_Base",
       "gameName": "气体筛选管道-建筑",
-      "description": "气体筛选管道。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "只放行指定气体组分，其他组分留在来源；不改变物质身份。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -568,7 +568,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "气体筛选管道",
-      "description": "气体筛选管道。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "只放行指定气体组分，其他组分留在来源；不改变物质身份。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -659,7 +659,7 @@
       "id": "GasTankBlock_Iron",
       "parent": "BuildingBody_Base",
       "gameName": "铁气罐方块-建筑",
-      "description": "占用一格的铁气罐方块，相邻同材质方块自动连成共享储罐，每格增加100 L容量。拆除时释放该格份额的气体和液体，返还空方块。空罐默认真空，罐体向内部气液传递所在环境的温度。",
+      "description": "独立储存100标准L气体。自然补气上限20%，动力气泵可充满；拆装保留本罐内容。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -731,7 +731,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "铁气罐方块",
-      "description": "占用一格的铁气罐方块，相邻同材质方块自动连成共享储罐，每格增加100 L容量。拆除时释放该格份额的气体和液体，返还空方块。空罐默认真空，罐体向内部气液传递所在环境的温度。",
+      "description": "独立储存100标准L气体。自然补气上限20%，动力气泵可充满；拆装保留本罐内容。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -802,7 +802,7 @@
       "id": "GasTankBlock_Steel",
       "parent": "BuildingBody_Base",
       "gameName": "钢气罐方块-建筑",
-      "description": "占用一格的钢气罐方块，相邻同材质方块自动连成共享储罐，每格增加100 L容量。拆除时释放该格份额的气体和液体，返还空方块。空罐默认真空，罐体向内部气液传递所在环境的温度。",
+      "description": "独立储存100标准L气体。自然补气上限20%，动力气泵可充满；拆装保留本罐内容。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -874,7 +874,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "钢气罐方块",
-      "description": "占用一格的钢气罐方块，相邻同材质方块自动连成共享储罐，每格增加100 L容量。拆除时释放该格份额的气体和液体，返还空方块。空罐默认真空，罐体向内部气液传递所在环境的温度。",
+      "description": "独立储存100标准L气体。自然补气上限20%，动力气泵可充满；拆装保留本罐内容。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -945,7 +945,7 @@
       "id": "LiquidStorageTank",
       "parent": "BuildingBody_Base",
       "gameName": "储液罐-建筑",
-      "description": "储液罐。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "独立储存200L单种液体，异种液体拒绝接收；拆装保留本罐内容。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1017,7 +1017,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "储液罐",
-      "description": "储液罐。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "独立储存200L单种液体，异种液体拒绝接收；拆装保留本罐内容。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1088,7 +1088,7 @@
       "id": "GasPump_Mechanical",
       "parent": "BuildingBody_Base",
       "gameName": "机械气体泵-建筑",
-      "description": "机械气体泵。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "有机械动力时从真实环境抽取混合气体，每秒2标准L，可将储罐充满。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1160,7 +1160,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械气体泵",
-      "description": "机械气体泵。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "有机械动力时从真实环境抽取混合气体，每秒2标准L，可将储罐充满。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1371,578 +1371,6 @@
       }
     },
     {
-      "id": "PressureProbe_Mechanical",
-      "parent": "BuildingBody_Base",
-      "gameName": "机械气压探针-建筑",
-      "description": "机械气压探针。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 5,
-      "volume": 2,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 0.7,
-            "y": 0.7
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"PressureProbe_Mechanical\",\"SummonerPrefabId\":\"PressureProbe_Mechanical_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": false
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "PressureProbe_Mechanical"
-          }
-        }
-      }
-    },
-    {
-      "id": "PressureProbe_Mechanical_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "机械气压探针",
-      "description": "机械气压探针。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 5,
-      "volume": 2,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 0.7,
-            "y": 0.7
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"PressureProbe_Mechanical\",\"SummonerPrefabId\":\"PressureProbe_Mechanical_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": false
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "PressureProbe_Mechanical"
-          }
-        }
-      }
-    },
-    {
-      "id": "PressureProbe_Electronic",
-      "parent": "BuildingBody_Base",
-      "gameName": "电子气压探针-建筑",
-      "description": "电子气压探针。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 5,
-      "volume": 2,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Electronic/PressureProbe_Electronic_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 0.7,
-            "y": 0.7
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"PressureProbe_Electronic\",\"SummonerPrefabId\":\"PressureProbe_Electronic_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": false
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "PressureProbe_Electronic"
-          }
-        }
-      }
-    },
-    {
-      "id": "PressureProbe_Electronic_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "电子气压探针",
-      "description": "电子气压探针。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 5,
-      "volume": 2,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Electronic/PressureProbe_Electronic_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 0.7,
-            "y": 0.7
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"PressureProbe_Electronic\",\"SummonerPrefabId\":\"PressureProbe_Electronic_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": false
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "PressureProbe_Electronic"
-          }
-        }
-      }
-    },
-    {
-      "id": "GasCompressor_Mechanical",
-      "parent": "BuildingBody_Base",
-      "gameName": "机械气体压缩机-建筑",
-      "description": "机械气体压缩机。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Mechanical/GasCompressor_Mechanical_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GasCompressor_Mechanical\",\"SummonerPrefabId\":\"GasCompressor_Mechanical_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "GasCompressor_Mechanical"
-          }
-        }
-      }
-    },
-    {
-      "id": "GasCompressor_Mechanical_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "机械气体压缩机",
-      "description": "机械气体压缩机。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Mechanical/GasCompressor_Mechanical_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GasCompressor_Mechanical\",\"SummonerPrefabId\":\"GasCompressor_Mechanical_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "GasCompressor_Mechanical"
-          }
-        }
-      }
-    },
-    {
-      "id": "GasCompressor_Electric",
-      "parent": "BuildingBody_Base",
-      "gameName": "电力气体压缩机-建筑",
-      "description": "电力气体压缩机。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GasCompressor_Electric\",\"SummonerPrefabId\":\"GasCompressor_Electric_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "GasCompressor_Electric"
-          }
-        }
-      }
-    },
-    {
-      "id": "GasCompressor_Electric_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "电力气体压缩机",
-      "description": "电力气体压缩机。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GasCompressor_Electric\",\"SummonerPrefabId\":\"GasCompressor_Electric_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "GasCompressor_Electric"
-          }
-        }
-      }
-    },
-    {
       "id": "ElectricHeater",
       "parent": "BuildingBody_Base",
       "gameName": "电热器-建筑",
@@ -2081,294 +1509,6 @@
           },
           "parameters": {
             "DefinitionId": "ElectricHeater"
-          }
-        }
-      }
-    },
-    {
-      "id": "FluidFilter",
-      "parent": "BuildingBody_Base",
-      "gameName": "过滤器-建筑",
-      "description": "过滤器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidFilter/FluidFilter_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"FluidFilter\",\"SummonerPrefabId\":\"FluidFilter_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidFilter"
-          }
-        }
-      }
-    },
-    {
-      "id": "FluidFilter_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "过滤器",
-      "description": "过滤器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidFilter/FluidFilter_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"FluidFilter\",\"SummonerPrefabId\":\"FluidFilter_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidFilter"
-          }
-        }
-      }
-    },
-    {
-      "id": "WaterElectrolyzer",
-      "parent": "BuildingBody_Base",
-      "gameName": "水电解器-建筑",
-      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液保留在副产物液腔，可装入手持液体容器；固体杂质从残渣槽取出。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/WaterElectrolyzer/WaterElectrolyzer_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WaterElectrolyzer\",\"SummonerPrefabId\":\"WaterElectrolyzer_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "WaterElectrolyzer"
-          }
-        }
-      }
-    },
-    {
-      "id": "WaterElectrolyzer_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "电解器",
-      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液保留在副产物液腔，可装入手持液体容器；固体杂质从残渣槽取出。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/WaterElectrolyzer/WaterElectrolyzer_Idle.png"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WaterElectrolyzer\",\"SummonerPrefabId\":\"WaterElectrolyzer_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "WaterElectrolyzer"
           }
         }
       }
@@ -2536,6 +1676,763 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png"
       },
       "modules": {}
+    },
+    {
+      "id": "LiquidPipe",
+      "parent": "BuildingBody_Base",
+      "gameName": "液体管道-建筑",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5,
+      "volume": 2,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+        "spriteStates": {
+          "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",
+          "pipe1": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]",
+          "pipe2": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]",
+          "pipe3": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]",
+          "pipe4": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]",
+          "pipe5": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]",
+          "pipe6": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]",
+          "pipe7": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]",
+          "pipe8": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]",
+          "pipe9": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]",
+          "pipe10": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+          "pipe11": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]",
+          "pipe12": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]",
+          "pipe13": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]",
+          "pipe14": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]",
+          "pipe15": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]"
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidPipe\",\"SummonerPrefabId\":\"LiquidPipe_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidPipe"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidPipe_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "液体管道",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5,
+      "volume": 2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+        "spriteStates": {
+          "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",
+          "pipe1": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]",
+          "pipe2": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]",
+          "pipe3": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]",
+          "pipe4": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]",
+          "pipe5": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]",
+          "pipe6": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]",
+          "pipe7": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]",
+          "pipe8": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]",
+          "pipe9": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]",
+          "pipe10": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+          "pipe11": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]",
+          "pipe12": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]",
+          "pipe13": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]",
+          "pipe14": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]",
+          "pipe15": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]"
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidPipe\",\"SummonerPrefabId\":\"LiquidPipe_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidPipe"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidValve",
+      "parent": "BuildingBody_Base",
+      "gameName": "液体阀门-建筑",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5,
+      "volume": 2,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidValve\",\"SummonerPrefabId\":\"LiquidValve_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidValve"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidValve_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "液体阀门",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5,
+      "volume": 2,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidValve\",\"SummonerPrefabId\":\"LiquidValve_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidValve"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidOutlet",
+      "parent": "BuildingBody_Base",
+      "gameName": "液体输出口-建筑",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5,
+      "volume": 2,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidOutlet\",\"SummonerPrefabId\":\"LiquidOutlet_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidOutlet"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidOutlet_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "液体输出口",
+      "description": "只连接对应气体或液体管网；管道不储存物质。阀门控制通断，输出口可设置每秒速率，0为停止。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5,
+      "volume": 2,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.PipeBlock"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidOutlet\",\"SummonerPrefabId\":\"LiquidOutlet_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidOutlet"
+          }
+        }
+      }
+    },
+    {
+      "id": "GasFiller",
+      "parent": "BuildingBody_Base",
+      "gameName": "气体装填机-建筑",
+      "description": "放入三个实际容器，按槽0、1、2依次装填；不合适或已满的槽会跳过，每秒最多2L。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GasFiller\",\"SummonerPrefabId\":\"GasFiller_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "GasFiller"
+          }
+        }
+      }
+    },
+    {
+      "id": "GasFiller_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "气体装填机",
+      "description": "放入三个实际容器，按槽0、1、2依次装填；不合适或已满的槽会跳过，每秒最多2L。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GasFiller\",\"SummonerPrefabId\":\"GasFiller_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "GasFiller"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidFiller",
+      "parent": "BuildingBody_Base",
+      "gameName": "液体装填机-建筑",
+      "description": "放入三个实际容器，按槽0、1、2依次装填；不合适或已满的槽会跳过，每秒最多2L。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidFiller\",\"SummonerPrefabId\":\"LiquidFiller_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidFiller"
+          }
+        }
+      }
+    },
+    {
+      "id": "LiquidFiller_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "液体装填机",
+      "description": "放入三个实际容器，按槽0、1、2依次装填；不合适或已满的槽会跳过，每秒最多2L。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LiquidFiller\",\"SummonerPrefabId\":\"LiquidFiller_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LiquidFiller"
+          }
+        }
+      }
     }
   ]
 }

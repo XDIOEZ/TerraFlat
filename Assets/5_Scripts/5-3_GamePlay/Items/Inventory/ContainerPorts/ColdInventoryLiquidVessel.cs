@@ -20,11 +20,15 @@ public sealed class ColdInventoryLiquidVessel : ILiquidVessel, IContainerPortPro
     public ColdInventoryLiquidVessel(ItemData data, Inventory inventory, Item owner)
     {
         if (!Mod_WaterVessel.TryRead(data, out storage, out state)) throw new ArgumentException("物品不具备液体容器能力。");
-        ItemData = data; this.inventory = inventory; Owner = owner; ownerGeneration = owner.RuntimeGeneration; observedBytes = storage.BitData;
+        ItemData = data; this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        Owner = owner; ownerGeneration = owner != null ? owner.RuntimeGeneration : 0; observedBytes = storage.BitData;
         configurations = Mod_WaterVessel.ResolvePortConfigurations(data);
         machineOwner = inventory.MachineOwner;
     }
-    public bool IsValid => Owner != null && !Owner.DestructionHandled && Owner.RuntimeGeneration == ownerGeneration &&
+    // 机器库存由真实机器身份守护，玩家库存继续校验玩家运行代次。
+    public bool IsValid => (machineOwner != null
+        ? MachineWorld.Contains(machineOwner) && machineOwner.Active && ReferenceEquals(inventory.MachineOwner, machineOwner)
+        : Owner != null && !Owner.DestructionHandled && Owner.RuntimeGeneration == ownerGeneration) &&
         HasCurrentStorage() && storage.Enabled &&
         (machineOwner == null || MachineWorld.Contains(machineOwner) && ReferenceEquals(inventory.MachineOwner, machineOwner)) &&
         inventory.Data.itemSlots.Exists(slot => ReferenceEquals(slot?.itemData, ItemData));
@@ -67,7 +71,8 @@ public sealed class ColdInventoryLiquidVessel : ILiquidVessel, IContainerPortPro
         if (!IsValid) throw new InvalidOperationException("冷液体容器已离开原库存。");
         Mod_WaterVessel.Validate(Data, Capacity); storage.WriteData(state); observedBytes = storage.BitData;
         inventory.Data.NotifyItemStateChanged(ItemData); inventory.Save();
-        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(Owner); Changed?.Invoke();
+        if (Owner != null) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(Owner);
+        Changed?.Invoke();
     }
     #endregion
 }

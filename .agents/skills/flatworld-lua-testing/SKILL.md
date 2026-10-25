@@ -39,7 +39,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 
 - 先把改动的正常、边界、拒绝、回滚和关键流程对应到具体Lua断言；缺少则先增强同系统Lua，必要时扩展正式白名单采样，不复制业务算法或开放反射/任意C#。
 - `test.system(system,operation,args,validator,label)` 调用独立规则；`test.runtime(...)` 只用于正式隔离世界。每个回调必须实际调用assert，无断言即失败。参数排队时冻结，回调不能追加命令。
-- 气液 PlayMode 的选择器、相态、组主、设备容量、液碱端口和地表泵/出口通过 `test.runtime("industrial_fluids",...)` 返回原始采样，Lua持有业务断言；既有 `test.fluid` 用于尚未迁移的子案例，新增判断不堆回C#。
+- 气液 PlayMode 的无库存连接图、过滤、独立罐、固定容量、三槽装填和地表泵/出口通过 `test.runtime("industrial_fluids",...)` 返回原始采样，Lua持有业务断言；既有 `test.fluid` 用于尚未迁移的子案例，新增判断不堆回C#。
 - 联机假人专项在 `Systems/Networking/gameplay-suite.json`，`test.runtime("networking","bots_*",...)` 接正式 Mirror 内存传输/独立连接和服务端处理；检查实际回复、权威状态及收尾，不将传输送达或服务端删物当成真实 Client 库存接收。
 - 规则模式只允许system/log且至少一个system；不进入Test Framework/PlayMode，不建资源/存档世界。场景模式默认 EditMode→PlayMode；显式 `--playmode-only` 则直接进入 PlayMode，保留清单预检与 Lua 断言但不启动 EditMode 测试。
 - `gameplay` 清单若跨 Lua 依赖前置现场，在案例上声明 `dependsOn`（只引用更早且启用的用例）；多选/单选自动补齐前置，不能依赖列表相邻的隐含状态。

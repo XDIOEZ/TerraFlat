@@ -187,20 +187,12 @@ public static partial class MachineWorld
                         save.Mechanical?.PendingPressureLiquidSpills.RemoveAll(spill => spill.WorldKey == key);
                         save.Mechanical?.PressureExplosions.RemoveAll(entry => entry.WorldKey == key);
                         save.Mechanical?.RecentPressureExplosionSources.RemoveAll(id => id.StartsWith(key + ":", StringComparison.Ordinal));
-                        if (save.Mechanical != null)
-                        {
-                            var batches = new List<string>();
-                            foreach (var pair in save.Mechanical.FluidRuptures)
-                                if (pair.Value.WorldKey == key) batches.Add(pair.Key);
-                            foreach (string id in batches) save.Mechanical.FluidRuptures.Remove(id);
-                        }
                     }
                 }
                 foreach (string key in ownedKeys) scopes.Remove(key);
                 foreach (string id in shipIds) shipScopeKeys.Remove(id);
                 foreach (MachineEntity node in created)
                     if (node.Definition.Fluid != null) fluidBehaviors.Remove(node.Definition.Fluid);
-                FluidDeviceOperations.ClearCompiledReactions();
             }
             finally { if (planetId != null) save.PlanetData_Dict.Remove(planetId); lease.Dispose(); }
         }

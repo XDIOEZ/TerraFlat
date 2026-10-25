@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json.Linq;
 
 namespace FlatWorld.Structures
 {
@@ -27,11 +26,41 @@ namespace FlatWorld.Structures
             {
                 if (definition.Fluid == null) throw new InvalidDataException("物品没有流体库存：" + data.IDName);
                 FluidMachineState state = MachinePersistence.Read<FluidMachineState>(data, "fluid") ?? new FluidMachineState();
-                state.Chambers["main"] = CreateFluidState(resources.Gas, resources.Liquids, definition.Fluid.VolumeLiters,
-                    definition.Fluid.MinimumGasSpaceLiters, definition.Fluid.MaxSafePressureKPa);
+                state.Chambers["main"] = CreateIndustrialFluidState(resources.Gas, resources.Liquids, definition.Fluid);
                 MachinePersistence.Write(data, "fluid", state);
             }
             ValidateInventoryDefinitions(resources);
+        }
+
+        // 工业模板按固定数量初始化；船舱继续使用下方独立的气压初始化接口。
+        public static FluidInventoryState CreateIndustrialFluidState(FixedStructureGas gas, Dictionary<string, decimal> liquids, FluidMachineDefinition definition)
+        {
+            var inventory = new FluidInventory();
+            double temperature = gas == null ? FluidUnits.ReferenceTemperatureKelvin : gas.TemperatureCelsius + 273.15d;
+            if (!Positive(temperature)) throw new InvalidDataException("工业模板温度无效。");
+            if (liquids != null)
+                foreach (var pair in liquids)
+                {
+                    FluidDefinition fluid = FluidCatalog.Default.Find(pair.Key);
+                    if (pair.Value <= 0m || !inventory.TryAdd(FluidInventory.CreateBatch(fluid, 0m,
+                        FluidUnits.LiquidLitersToMol(fluid, pair.Value), temperature), definition.VolumeLiters + .001d, .001d, false, true))
+                        throw new InvalidDataException("工业模板液体类型或容量冲突。");
+                }
+            if (gas != null)
+            {
+                if (!gas.StandardLiters.HasValue || !Finite(gas.StandardLiters.Value) || gas.StandardLiters < 0d ||
+                    gas.StandardLiters > definition.GasCapacityStandardLiters || gas.Components == null || gas.Components.Count == 0)
+                    throw new InvalidDataException("工业气体模板必须配置容量内的 standardLiters。");
+                double fractions = 0d;
+                foreach (var pair in gas.Components) { if (!Positive(pair.Value)) throw new InvalidDataException("气体比例无效。"); fractions += pair.Value; }
+                foreach (var pair in gas.Components)
+                {
+                    decimal amount = FluidUnits.StandardLitersToMol((decimal)(gas.StandardLiters.Value * pair.Value / fractions));
+                    if (amount > 0m && !inventory.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find(pair.Key), amount, 0m, temperature),
+                        definition.VolumeLiters + .001d, .001d)) throw new InvalidDataException("工业模板气体无法加入。");
+                }
+            }
+            return inventory.State.Clone();
         }
 
         public static FluidInventoryState CreateFluidState(FixedStructureGas gas, Dictionary<string, decimal> liquids,
@@ -160,25 +189,9 @@ namespace FlatWorld.Structures
             Dictionary<int, FixedStructureResources> resources)
         {
             foreach (MachineWorld.FluidTankGroup group in groups)
-            {
-                FixedStructureResources first = null;
-                MachineEntity firstNode = null;
                 foreach (MachineEntity member in group.Members)
-                    if (resources.TryGetValue(member.Id, out var candidate) && HasFluid(candidate))
-                    { first = candidate; firstNode = member; break; }
-                if (first == null) continue;
-                foreach (MachineEntity member in group.Members)
-                {
-                    if (!resources.TryGetValue(member.Id, out var candidate) || !HasFluid(candidate) ||
-                        !JToken.DeepEquals(first.Gas == null ? null : JToken.FromObject(first.Gas),
-                            candidate.Gas == null ? null : JToken.FromObject(candidate.Gas)) ||
-                        !SameLiquidDensity(first.Liquids, firstNode.Definition.Fluid.VolumeLiters,
-                            candidate.Liquids, member.Definition.Fluid.VolumeLiters))
-                        throw new InvalidDataException("共享储罐包含手动罐体或不同资源模板，补给已取消。");
-                }
-                CreateFluidState(first.Gas, ScaleLiquids(first.Liquids, group.TotalVolume / firstNode.Definition.Fluid.VolumeLiters),
-                    group.TotalVolume, group.MinimumGasSpace, group.MaxSafePressure);
-            }
+                    if (resources.TryGetValue(member.Id, out FixedStructureResources value) && HasFluid(value))
+                        CreateIndustrialFluidState(value.Gas, value.Liquids, member.Definition.Fluid);
         }
 
         public static void Refill(MachineEntity node, FixedStructureResources resources, HashSet<FluidInventory> filled)
@@ -198,35 +211,12 @@ namespace FlatWorld.Structures
                 FluidInventory inventory = MachineWorld.GetFluidInventory(node);
                 if (filled.Add(inventory))
                 {
-                    double volume = MachineWorld.GetFluidVolumeLiters(node);
-                    // 相邻罐只补整组一次，液体按原模板的体积分数扩展。
-                    inventory.Restore(CreateFluidState(resources.Gas, ScaleLiquids(resources.Liquids,
-                        volume / node.Definition.Fluid.VolumeLiters), volume,
-                        MachineWorld.GetFluidMinimumGasSpaceLiters(node), node.Definition.Fluid.MaxSafePressureKPa));
+                    inventory.Restore(CreateIndustrialFluidState(resources.Gas, resources.Liquids, node.Definition.Fluid));
                 }
             }
             FillInventories(node, resources, false);
             MachineWorld.CaptureSnapshot(node);
             MachineWorld.StateChanged(node);
-        }
-
-        private static Dictionary<string, decimal> ScaleLiquids(Dictionary<string, decimal> source, double factor)
-        {
-            if (source == null) return null;
-            var result = new Dictionary<string, decimal>(StringComparer.Ordinal);
-            foreach (var pair in source) result.Add(pair.Key, pair.Value * (decimal)factor);
-            return result;
-        }
-
-        private static bool SameLiquidDensity(Dictionary<string, decimal> first, double firstVolume,
-            Dictionary<string, decimal> second, double secondVolume)
-        {
-            if ((first?.Count ?? 0) != (second?.Count ?? 0)) return false;
-            if (first == null || first.Count == 0) return true;
-            foreach (var pair in first)
-                if (second == null || !second.TryGetValue(pair.Key, out decimal other) ||
-                    Math.Abs((double)pair.Value / firstVolume - (double)other / secondVolume) > 1e-10d) return false;
-            return true;
         }
 
         private static void ValidateBattery(MachineDefinition definition, double ratio)

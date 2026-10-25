@@ -7,16 +7,13 @@ test.system("industrial_fluids", "block_tank_stacking", {}, function(data)
     for _, tank in ipairs(data.tanks) do
         if string.sub(tank.id, 1, 13) == "GasTankBlock_" then
             assert(tank.stackable and tank.canStack, tank.id .. "没有启用同类方块堆叠")
-            assert(tank.empty and not tank.bodyTemperatureInitialized and tank.groupOwnerId == 0
-                and tank.randomState == 1, tank.id .. "返空方块仍携带罐温、组主或随机状态")
-            assert(tank.sourceUnchanged, tank.id .. "准备返还物时改动了原储罐状态")
-            assert(tank.repackedCanStack and tank.added and tank.addedAmount == 3 and tank.amount == 5,
-                tank.id .. "不同运行记录的空方块不能通过正式库存合堆")
+            assert(tank.independentPayloads and tank.differentContentsCannotStack and tank.sourceUnchanged,
+                tank.id .. "独立罐内容保存混用、带不同气体合堆或改动原库存")
         else
             assert(not tank.stackable and not tank.canStack, tank.id .. "便携气罐被错误改为可堆叠")
         end
     end
-end, "铁钢气罐方块可堆叠、返空状态归一与便携气罐隔离")
+end, "铁钢气罐方块可堆叠、各罐独立内容保存与便携气罐隔离")
 
 test.system("industrial_fluids", "reservations", {}, function(data)
     assert(data.reserved and data.transferred, "正式预留或转移失败")
@@ -118,12 +115,9 @@ test.system("industrial_fluids", "portable_tank_cache", {}, function(data)
     assert(data.supportsSpacesuitAfterExternalEdit and data.otherSupportsSpacesuit, "外部修改返回配置污染供氧资格")
     assert(not data.manualFillAfterExternalEdit, "外部修改返回配置开启了未声明的手动充气能力")
     assert(data.contentsReplacementRebound and data.readContentsUsesOwnedState, "Contents 换代后仍读旧库存")
-    assert(data.unchangedFlushReusesBytes and data.unchangedClockFlushReusesBytes, "稳态气罐重复序列化")
-    assert(data.clockChangeWritesBytes and data.persistedRuptured and data.rupturedTankRejected, "超压计时或破裂状态未持久化")
-    near(data.persistedClock, 0.25, "真实超压计时写回错误")
+    assert(data.unchangedFlushReusesBytes, "稳态气罐重复序列化")
     assert(data.payloadReplacementRebound and data.binaryReplacementRebound, "外部二进制或模块换代后仍复用旧库存")
-    near(data.payloadReplacementClock, 0, "载荷替换后残留旧超压计时")
-    assert(not data.payloadReplacementRuptured and data.loadedPayloadFlushReusesBytes, "新载荷状态错误或读取后重复序列化")
+    assert(data.loadedPayloadFlushReusesBytes, "新载荷状态错误或读取后重复序列化")
 end, "便携气罐包装复用、配置隔离与载荷换代")
 
 test.system("industrial_fluids", "portable_tank_payload", {}, function(data)
@@ -161,41 +155,20 @@ test.system("industrial_fluids", "portable_tank_placement", {}, function(data)
         local steel = index > 2
         assert(tank.maxHp == (steel and 160 or 80), "气罐落地后最大耐久改变")
         assert(tank.configuration.VolumeLiters == 4
-            and tank.configuration.MaxSafePressureKPa == (steel and 1800 or 600)
+            and tank.configuration.GasCapacityStandardLiters == (steel and 60 or 20)
+            and tank.configuration.NaturalFillFraction == .2
             and tank.configuration.MaterialId == (steel and "core:steel" or "core:iron"),
-            "气罐放置前后的容积、耐压或材质不一致")
+            "气罐放置前后的容量、自然上限或材质不一致")
         assert(tank.configuration.AllowManualAirFill, "铁制或钢制便携气罐没有声明手动充气能力")
     end
 end, "铁制和钢制便携气罐放置配对、拆回、共享内容与材质配置")
 
 test.system("industrial_fluids", "portable_tank_air_fill", {}, function(data)
-    assert(data.filled, "便携气罐未能从真实大气抽取气体")
-    assert(data.oxygen > 0 and data.nitrogen > 0, "充气未保留空气中的氮氧混合组分")
-    near(data.pressure, 101.325, "4 L 气罐未按真实容积温度达到 1 标准大气压", .0001)
-    near(data.temperature, 293.15, "充装时没有保留气源温度和内能", .001)
-    assert(data.sourceConserved, "充气过程造气或丢气")
-    assert(not data.filledAgain and data.againSourceUnchanged, "已经达到目标压力仍继续扣除环境气体")
-    assert(not data.vacuumFilled and data.vacuumTargetEmpty, "真空环境凭空生成了空气")
-    assert(data.thinFilled and data.thinConserved, "低压环境未按实际气压补气或破坏守恒")
-    near(data.thinPressure, 60, "低压补气超过了实际环境压力", .0001)
-    assert(data.normalCanFill and data.normalFilled and data.normalConserved,
-        "默认 100 kPa 环境中的充气按钮仍被禁用或充气事务失败")
-    near(data.normalPressure, 100, "默认环境补气没有按实际气压封顶", .0001)
-    assert(not data.normalCanFillAgain and not data.normalFilledAgain and data.normalRepeatUnchanged,
-        "达到环境压力后按钮未禁用，或重复充气仍扣除环境库存")
-    assert(data.higherPressureRejected, "低压环境可以继续给更高压气罐充气")
-    assert(data.seededGas and data.seededLiquid and data.mixedFilled, "含已有气液的气罐无法正常补气")
-    assert(data.carbonPreserved and data.liquidPreserved and data.liquidSpacePreserved,
-        "补充空气清空了原有气体或液体")
-    assert(data.mixedGasAdded and data.mixedConserved, "混气补充破坏物质量守恒")
-    assert(data.mixedPressure <= 101.325 and data.mixedPressure > 101.324,
-        "含液相和旧气体的目标压力没有按有效气相容积与内能解算")
-    assert(data.existingEnergyPreserved, "混气覆盖了已有内能")
-    assert(data.roomSeeded and data.roomFilled and data.roomMolesConserved and data.roomEnergyConserved,
-        "密闭舱空气充装未保证物质量和内能守恒")
-    near(data.roomMixedTemperature, 310, "密闭舱抽气没有保持真实气源温度", .001)
-    assert(data.partialFilled and data.partialConserved and
-        data.partialPressure > 0 and data.partialPressure < 101.325,
-        "气源不足时未部分充装或错误创造气体补足目标")
-    assert(data.unsupportedTankExcluded and data.nullTankExcluded, "未配置能力或空物品获得了手动充气资格")
-end, "便携气罐真实空气充装、100 kPa 环境、按钮资格、守恒与带气液补充")
+    assert(data.filled and data.conserved, "自然补气没有使用真实来源或破坏守恒")
+    near(data.standardLiters, 4, "自然补气未到20%固定数量上限", .00001)
+    near(data.oxygenRatio, .21, "混合空气组分比例被改写", .00001)
+    assert(data.repeatRejected and data.highPreserved, "达到或高于自然上限仍改动内容")
+    assert(data.vacuumRejected and data.partial, "真空造气或有限来源未部分充装")
+    assert(data.tinyFilled and data.tinyConserved and data.tinyLiters <= .00002, "微小固定容量失败或超上限")
+    assert(data.rollback and data.nullTankExcluded, "拒绝充装未完整回源或空物品获得能力")
+end, "便携罐20%自然补气、混合比例、有限来源、微容量与拒绝回滚")

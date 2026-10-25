@@ -78,12 +78,11 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
     {
         if (!float.IsFinite(requested) || requested <= 0 || !Configuration.AllowsLiquid(liquidId) ||
             !FluidCatalog.Default.TryFromLiquidId(liquidId, out FluidDefinition fluid) || !fluid.AllowIndustrialTransport ||
-            logic.State.Ruptured || !string.IsNullOrEmpty(logic.State.RuptureBudgetId)) return 0;
-        if (logic.Definition.SingleLiquid)
-            foreach (FluidComponentState component in Inventory.State.Components)
-                if (component.LiquidMoles > 0 && component.FluidId != fluid.Id) return 0;
+            logic.State.Ruptured || MachineWorld.GetFluidDeviceBehavior(logic.Entity).IsTransit || !MachineWorld.CanAcceptIndustrialLiquid(logic.Entity, fluid.Id)) return 0;
+        foreach (FluidComponentState component in Inventory.State.Components)
+            if (component.LiquidMoles > 0 && component.FluidId != fluid.Id) return 0;
         double space = Math.Max(0, MachineWorld.GetFluidVolumeLiters(logic.Entity) -
-            MachineWorld.GetFluidMinimumGasSpaceLiters(logic.Entity) - Inventory.GetLiquidLiters());
+            Inventory.GetLiquidLiters());
         return Math.Min(requested, AvailableServings(fluid, FluidUnits.LiquidLitersToMol(fluid, (decimal)space)));
     }
     public bool ExtractLiquid(LiquidTransferBatch batch, float servings)
@@ -98,8 +97,8 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
         if (GetReceivableServings(batch.LiquidId, servings) + .000001f < servings ||
             !FluidCatalog.Default.TryFromLiquidId(batch.LiquidId, out FluidDefinition fluid)) return false;
         FluidBatch actual = FluidInventory.CreateBatch(fluid, 0, FluidUnits.ServingsToMol(fluid, (decimal)servings), Math.Max(.001, batch.TemperatureCelsius + 273.15));
-        return Inventory.TryAdd(actual, MachineWorld.GetFluidVolumeLiters(logic.Entity), MachineWorld.GetFluidMinimumGasSpaceLiters(logic.Entity),
-            logic.Definition.SingleGas, logic.Definition.SingleLiquid);
+        return Inventory.TryAdd(actual, MachineWorld.GetFluidVolumeLiters(logic.Entity) + .001d, .001d,
+            false, true);
     }
     public override object CaptureState() => Inventory.State.Clone();
     public override void RestoreState(object snapshot) => Inventory.Restore((FluidInventoryState)snapshot);

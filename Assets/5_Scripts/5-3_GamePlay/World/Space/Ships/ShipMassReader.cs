@@ -297,7 +297,7 @@ namespace FlatWorld.Spaceflight
                 mass += ReadInventory(saved.Drying?.Inventory, depth + 1);
                 FluidMachineState fluid = saved.Fluid;
                 if (fluid?.Chambers != null) foreach (FluidInventoryState chamber in fluid.Chambers.Values) mass += ReadFluidMass(chamber);
-                mass += ReadInventory(fluid?.PortableTank, depth + 1) + ReadInventory(fluid?.FilterMaterial, depth + 1) + ReadInventory(fluid?.Residue, depth + 1);
+                mass += ReadInventory(fluid?.PortableTank, depth + 1);
                 return mass;
             }
         }

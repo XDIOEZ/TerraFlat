@@ -141,7 +141,6 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
                 node.State.Hp < MachineWorld.ResolveMaximumHp(node.Snapshot) * .5f);
             MachineWorld.StateChanged(node);
         }
-        else if (MachineWorld.HandleFluidTankZeroHp(node)) { }
         else if (weapon != null && weapon.TileDamageToolKind == TileDamageToolKind.Hammer)
         {
             if (!Mod_Building.TryDismantleMechanical(node, out string reason))

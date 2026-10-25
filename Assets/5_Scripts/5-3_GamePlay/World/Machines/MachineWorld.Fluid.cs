@@ -7,25 +7,19 @@ using UnityEngine;
 
 public static partial class MachineWorld
 {
-    #region 统一流体世界与共享储罐
+    #region 无库存连接图与本地储罐
+    // 展示与船体统计沿用单罐视图，每个视图严格只有一个库存所有者。
     public sealed class FluidTankGroup
     {
         public readonly List<MachineEntity> Members = new();
         public FluidInventory Inventory;
         public double TotalVolume;
         public double MinimumGasSpace;
-        public double MaxSafePressure;
-        public int OverpressureVictimId;
-        public ulong RandomState = 1;
         public bool Active;
-        internal int SavedVictimId = int.MinValue;
-        internal ulong SavedRandomState;
         public int OwnerId => Members.Count == 0 ? 0 : Members[0].Id;
     }
 
     private static FluidNetworkGraph fluidGraph { get => scope.Fluid; set => scope.Fluid = value; }
-    private static IndustrialGasNetworkGraph gasGraph { get => scope.Gas; set => scope.Gas = value; }
-    private static IndustrialLiquidNetworkGraph liquidGraph { get => scope.Liquid; set => scope.Liquid = value; }
     private static Dictionary<int, FluidMachineState> fluidStates => scope.Fluids;
     private static Dictionary<(int NodeId, string Chamber), FluidInventory> fluidInventories => scope.Inventories;
     private static Dictionary<int, FluidTankGroup> fluidTankOwners => scope.TankOwners;
@@ -37,6 +31,9 @@ public static partial class MachineWorld
     private static Dictionary<int, int> fluidAppearance => scope.Appearance;
 
     internal static FluidNetworkGraph FluidGraph => fluidGraph;
+    internal static double GetIndustrialThroughput(MachineEntity node)
+        => GetFluidDeviceBehavior(node).EmitsToEnvironment && GetFluidState(node).OutputLitersPerSecond >= 0d
+            ? GetFluidState(node).OutputLitersPerSecond : node.Definition.Fluid.ThroughputLitersPerSecond;
     private static readonly Dictionary<FluidMachineDefinition, (string Kind, long Generation, FluidDeviceBehavior Behavior)> fluidBehaviors = new();
     public static FluidDeviceBehavior GetFluidDeviceBehavior(MachineEntity node)
     {
@@ -51,7 +48,7 @@ public static partial class MachineWorld
     }
     internal static Vector2Int NormalizeMachineCell(Vector2Int cell) => graph.NormalizeCell(cell);
     internal static void ClearFluidDefinitionCaches()
-    { fluidBehaviors.Clear(); FluidDeviceOperations.ClearCompiledReactions(); }
+    { fluidBehaviors.Clear(); }
     internal static void InvalidateFluidDeviceStrategies()
     {
         ClearFluidDefinitionCaches();
@@ -88,13 +85,8 @@ public static partial class MachineWorld
         state = MachinePersistence.Read<FluidMachineState>(node.Snapshot, "fluid") ?? new FluidMachineState();
         state.Chambers ??= new(StringComparer.Ordinal);
         state.BlockedPorts ??= new(StringComparer.Ordinal);
-        state.PhaseWarnings ??= new(StringComparer.Ordinal);
-        state.ResidueProgress ??= new(StringComparer.Ordinal);
         FluidMachineDefinition definition = node.Definition.Fluid;
-        if (state.DisconnectPressureKPa < 0) state.DisconnectPressureKPa = definition.DefaultDisconnectPressureKPa;
-        if (state.ReconnectPressureKPa < 0) state.ReconnectPressureKPa = definition.DefaultReconnectPressureKPa;
         if (state.RandomState == 1) state.RandomState = unchecked((ulong)(uint)node.Id * 0x9E3779B97F4A7C15UL) | 1UL;
-        node.FluidProbeConnected = state.ProbeConnected;
         fluidStates.Add(node.Id, state);
         return state;
     }
@@ -103,9 +95,10 @@ public static partial class MachineWorld
     {
         FluidMachineState state = GetFluidState(node);
         if (state == null) return null;
-        if (chamberId == "main" && fluidTankOwners.TryGetValue(node.Id, out var group)) return group.Inventory;
         var key = (node.Id, chamberId);
         if (fluidInventories.TryGetValue(key, out FluidInventory existing)) return existing;
+        if (GetFluidDeviceBehavior(node).IsTransit)
+        { var empty = new FluidInventory(); fluidInventories.Add(key, empty); return empty; }
         if (!state.Chambers.TryGetValue(chamberId, out FluidInventoryState contents))
             state.Chambers[chamberId] = contents = new FluidInventoryState();
         var inventory = new FluidInventory(contents);
@@ -113,45 +106,20 @@ public static partial class MachineWorld
         return inventory;
     }
 
-    // 气体只从整网共享气腔取料，液体始终访问设备或管段本地的真实液腔。
+    // 物料始终由设备自己的腔体持有，连接图没有容量和气体副本。
     internal static FluidInventory GetPhaseFluidInventory(MachineEntity node, string chamber, FluidPhase phase)
+        => GetFluidInventory(node, chamber);
+    internal static double GetPhaseFluidVolumeLiters(MachineEntity node, FluidPhase phase) => GetFluidVolumeLiters(node);
+    internal static double GetPhaseFluidMinimumGasSpaceLiters(MachineEntity node, FluidPhase phase) => GetFluidMinimumGasSpaceLiters(node);
+    public static double GetFluidVolumeLiters(MachineEntity node) => node.Definition.Fluid.VolumeLiters;
+    public static double GetFluidMinimumGasSpaceLiters(MachineEntity node) => node.Definition.Fluid.MinimumGasSpaceLiters;
+    public static double GetIndustrialFreeCapacity(MachineEntity node, FluidPhase phase, string fluidId = null, string chamber = "main")
     {
-        if (phase == FluidPhase.Gas && chamber == "main")
-        {
-            if (!GameNetwork.HasStateAuthority && scope.GasReplica.TryGet(node.Id, out var replica)) return replica.Inventory;
-            if (gasGraph != null && gasGraph.TryGetGroup(node, out var group)) return group.Inventory;
-        }
-        return GetFluidInventory(node, chamber);
+        if (node?.Definition.Fluid == null || GetFluidDeviceBehavior(node).IsTransit ||
+            phase == FluidPhase.Liquid && fluidId != null && !CanAcceptIndustrialLiquid(node, fluidId, chamber)) return 0d;
+        return IndustrialFluidTransfer.FreeCapacity(GetFluidInventory(node, chamber), phase,
+            node.Definition.Fluid.GasCapacityStandardLiters, node.Definition.Fluid.VolumeLiters, fluidId);
     }
-
-    public static bool IsSharedGasNetworkMember(MachineEntity node)
-        => node != null && (gasGraph != null && gasGraph.TryGetGroup(node, out _) ||
-            !GameNetwork.HasStateAuthority && scope.GasReplica.TryGet(node.Id, out _));
-
-    internal static double GetPhaseFluidVolumeLiters(MachineEntity node, FluidPhase phase)
-    {
-        if (phase == FluidPhase.Gas)
-        {
-            if (!GameNetwork.HasStateAuthority && scope.GasReplica.TryGet(node.Id, out var replica)) return replica.GasSpaceLiters;
-            if (gasGraph != null && gasGraph.TryGetGroup(node, out var group)) return group.GasSpaceLiters;
-        }
-        return GetFluidVolumeLiters(node);
-    }
-
-    internal static double GetPhaseFluidMinimumGasSpaceLiters(MachineEntity node, FluidPhase phase)
-    {
-        if (phase == FluidPhase.Gas)
-        {
-            if (!GameNetwork.HasStateAuthority && scope.GasReplica.TryGet(node.Id, out var replica)) return replica.Snapshot.MinimumGasSpaceLiters;
-            if (gasGraph != null && gasGraph.TryGetGroup(node, out var group)) return group.MinimumGasSpaceLiters;
-        }
-        return GetFluidMinimumGasSpaceLiters(node);
-    }
-
-    public static double GetFluidVolumeLiters(MachineEntity node)
-        => fluidTankOwners.TryGetValue(node.Id, out var group) ? group.TotalVolume : node.Definition.Fluid.VolumeLiters;
-    public static double GetFluidMinimumGasSpaceLiters(MachineEntity node)
-        => fluidTankOwners.TryGetValue(node.Id, out var group) ? group.MinimumGasSpace : node.Definition.Fluid.MinimumGasSpaceLiters;
     public static MachineEntity GetFluidPipeAt(Vector2Int cell)
     { EnsureScope(); RebuildGraphsIfDirty(); return fluidGraph?.PipeAt(cell); }
     public static int GetFluidPipeConnectionMask(MachineEntity node)
@@ -165,7 +133,7 @@ public static partial class MachineWorld
     { EnsureScope(); RebuildGraphsIfDirty(); result.Clear(); result.AddRange(fluidTankGroups); }
 
     public static bool IsFluidTankBlock(MachineEntity node)
-        => node?.Definition.Fluid?.CombineAdjacent == true && GetFluidDeviceBehavior(node)?.IsSharedStorage == true;
+        => node?.Definition.Fluid != null && GetFluidDeviceBehavior(node)?.IsStorage == true;
 
     public static IReadOnlyList<MachineEntity> GetFluidTankMembers(MachineEntity node)
     {
@@ -176,164 +144,48 @@ public static partial class MachineWorld
     }
 
     // 外观只连接同一权威储罐组的四邻格，位序为北1、东2、南4、西8。
-    public static int GetFluidTankConnectionMask(MachineEntity node)
-    {
-        if (!IsFluidTankBlock(node)) return 0;
-        using var nodeScope = UseNodeScope(node);
-        RebuildGraphsIfDirty();
-        if (!fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) return 0;
-        int mask = 0;
-        foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
-        {
-            MachineEntity neighbor = graph.At(node.Cell + direction, node.Definition.Layer);
-            if (neighbor == null || !fluidTankOwners.TryGetValue(neighbor.Id, out FluidTankGroup adjacent) ||
-                !ReferenceEquals(group, adjacent)) continue;
-            mask |= direction.y > 0 ? 1 : direction.x > 0 ? 2 : direction.y < 0 ? 4 : 8;
-        }
-        return mask;
-    }
+    public static int GetFluidTankConnectionMask(MachineEntity node) => 0;
 
     private static void RebuildFluidNetworks()
     {
-        var sorted = new List<MachineEntity>(nodes.Values); sorted.Sort((a, b) => a.Id.CompareTo(b.Id));
+        var sorted = new List<MachineEntity>(nodes.Values); sorted.Sort((a,b) => a.Id.CompareTo(b.Id));
         string topologyKey = GetFluidTopologyKey(sorted);
-        if (fluidGraph != null && string.Equals(scope.FluidTopologyKey, topologyKey, StringComparison.Ordinal) &&
-            ReferenceEquals(scope.FluidTopologyCatalog, FluidCatalog.Default)) return;
-        // 先把旧连通组归还本地腔体，阀门、拆装、分网不会重复产生或吞掉气体。
-        gasGraph?.FlushToLocal(node => nodes.TryGetValue(node.Id, out MachineEntity current) && ReferenceEquals(current, node),
-            node => GetFluidInventory(node));
-        gasGraph = null; liquidGraph = null;
-        SaveFluidGroups();
-        var previousGroups = new List<FluidTankGroup>(fluidTankGroups);
-        var previousContents = new HashSet<FluidInventoryState>();
+        if (fluidGraph != null && scope.FluidTopologyKey == topologyKey && ReferenceEquals(scope.FluidTopologyCatalog, FluidCatalog.Default)) return;
         fluidTankOwners.Clear(); fluidTankGroups.Clear();
-        var tankCells = new Dictionary<Vector2Int, MachineEntity>();
         foreach (MachineEntity node in sorted)
-            if (node.Definition.Fluid?.CombineAdjacent == true && GetFluidDeviceBehavior(node).IsSharedStorage)
-                tankCells.Add(graph.NormalizeCell(node.Cell), node);
-        var queue = new Queue<MachineEntity>();
-        foreach (MachineEntity root in sorted)
         {
-            if (GetFluidDeviceBehavior(root)?.IsSharedStorage != true || fluidTankOwners.ContainsKey(root.Id)) continue;
-            var group = new FluidTankGroup(); fluidTankGroups.Add(group); fluidTankOwners.Add(root.Id, group); queue.Enqueue(root);
-            while (queue.Count > 0)
-            {
-                MachineEntity node = queue.Dequeue(); group.Members.Add(node);
-                FluidMachineDefinition definition = node.Definition.Fluid;
-                group.TotalVolume += definition.VolumeLiters; group.MinimumGasSpace += definition.MinimumGasSpaceLiters;
-                group.MaxSafePressure = definition.MaxSafePressureKPa;
-                if (!definition.CombineAdjacent) continue;
-                foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
-                {
-                    if (!tankCells.TryGetValue(graph.NormalizeCell(node.Cell + direction), out MachineEntity neighbor) ||
-                        neighbor.Definition.Fluid.MaterialId != definition.MaterialId || fluidTankOwners.ContainsKey(neighbor.Id)) continue;
-                    fluidTankOwners.Add(neighbor.Id, group); queue.Enqueue(neighbor);
-                }
-            }
-            group.Members.Sort((a, b) => a.Id.CompareTo(b.Id));
-            group.Inventory = new FluidInventory();
-            bool inheritedRandom = false;
-            foreach (MachineEntity member in group.Members)
-            {
-                FluidMachineState state = GetFluidState(member);
-                if (state.Chambers.TryGetValue("main", out FluidInventoryState saved))
-                {
-                    previousContents.Add(saved);
-                    if (!inheritedRandom && (state.GroupOwnerId == member.Id || saved.Components.Count > 0 || saved.Ports.Count > 0))
-                    { group.Inventory.State.RandomState = saved.RandomState; inheritedRandom = true; }
-                    // 拓扑重建只合并各载荷拥有的那一份库存，引用成员没有第二份内容。
-                    MergeFluidInventory(group.Inventory, new FluidInventory(saved), group.TotalVolume, group.MinimumGasSpace);
-                }
-                if (state.OverpressureVictimId != 0) group.OverpressureVictimId = state.OverpressureVictimId;
-                if (member.Id == group.OwnerId) group.RandomState = state.RandomState;
-                fluidInventories.Remove((member.Id, "main"));
-            }
-            if (!inheritedRandom) group.Inventory.State.RandomState = group.RandomState;
+            if (!IsFluidTankBlock(node)) continue;
+            var view = new FluidTankGroup { Inventory = GetFluidInventory(node), TotalVolume = node.Definition.Fluid.VolumeLiters,
+                MinimumGasSpace = node.Definition.Fluid.MinimumGasSpaceLiters };
+            view.Members.Add(node); fluidTankOwners.Add(node.Id, view); fluidTankGroups.Add(view);
         }
-        fluidGraph = new FluidNetworkGraph(graph.NormalizeCell);
-        fluidGraph.Rebuild(sorted);
-        if (GameNetwork.HasStateAuthority && GasArchivesReady(sorted))
-        {
-            gasGraph = new IndustrialGasNetworkGraph(fluidGraph, sorted, node => GetFluidInventory(node));
-            RestoreSavedGasNetworks(sorted);
-            scope.GasEpoch = checked(scope.GasEpoch + 1);
-            foreach (var group in gasGraph.Groups) group.Epoch = scope.GasEpoch;
-            scope.PublishGasTopologyPending = true;
-        }
-        else scope.PublishGasTopologyPending = false;
-        liquidGraph = new IndustrialLiquidNetworkGraph(fluidGraph);
-        SaveFluidGroups(true);
-        // 新网接过真实库存后撤销旧对象中的份额，旧端口引用不能继续取第二次。
-        foreach (FluidInventoryState previous in previousContents)
-            new FluidInventory(previous).Restore(new FluidInventoryState { RandomState = previous.RandomState });
-        foreach (FluidTankGroup previous in previousGroups)
-        {
-            previous.Inventory.Restore(new FluidInventoryState { RandomState = previous.Inventory.State.RandomState });
-            previous.Members.Clear(); previous.TotalVolume = 0d; previous.MinimumGasSpace = 0d; previous.Active = false;
-        }
-        fluidStepStock.Clear(); fluidStockCache.Clear(); fluidThroughputRemaining.Clear();
-        ResetGasBudgets(true);
-        scope.FluidTopologyKey = topologyKey;
-        scope.FluidTopologyCatalog = FluidCatalog.Default;
-    }
-
-    private static void MergeFluidInventory(FluidInventory target, FluidInventory source, double volume, double minimum)
-    {
-        double totalEnergy = target.State.TotalInternalEnergyJoules + source.State.TotalInternalEnergyJoules;
-        foreach (FluidBatch batch in FluidInventoryBatches(source))
-            if (!target.TryAdd(batch, volume, minimum)) throw new InvalidOperationException("组合罐合并无法容纳已有真实库存。");
-        // 端口预留包含在原库存中；核心状态的预留在合并时按稳定端口身份承接。
-        FluidIndustrialStateBridge.MergeReservations(target.State, source.State);
-        target.State.TotalInternalEnergyJoules = totalEnergy;
-    }
-
-    private static void SaveFluidGroups(bool bindInventories = false)
-    {
-        foreach (FluidTankGroup group in fluidTankGroups)
-            SaveFluidGroup(group, bindInventories);
-    }
-
-    private static void SaveFluidGroup(FluidTankGroup group, bool bindInventories = false)
-    {
-        if (!bindInventories && group.SavedVictimId == group.OverpressureVictimId && group.SavedRandomState == group.RandomState) return;
-        // 拓扑改变时绑定唯一真实库存，正常结算只同步确实改变的组级状态。
-        foreach (MachineEntity member in group.Members)
-        {
-            if (!nodes.ContainsKey(member.Id)) continue;
-            FluidMachineState state = GetFluidState(member);
-            state.GroupOwnerId = group.OwnerId;
-            state.OverpressureVictimId = group.OverpressureVictimId;
-            state.RandomState = group.RandomState;
-            if (bindInventories)
-            {
-                if (member.Id == group.OwnerId) state.Chambers["main"] = group.Inventory.State;
-                else if (!state.Chambers.TryGetValue("main", out FluidInventoryState empty) ||
-                    empty.Components.Count != 0 || empty.Ports.Count != 0 || empty.TotalInternalEnergyJoules != 0d)
-                    state.Chambers["main"] = new FluidInventoryState();
-            }
-        }
-        group.SavedVictimId = group.OverpressureVictimId; group.SavedRandomState = group.RandomState;
+        fluidGraph = new FluidNetworkGraph(graph.NormalizeCell); fluidGraph.Rebuild(sorted);
+        fluidStepStock.Clear(); fluidStockCache.Clear(); fluidThroughputRemaining.Clear(); ResetGasBudgets(true);
+        scope.FluidTopologyKey = topologyKey; scope.FluidTopologyCatalog = FluidCatalog.Default;
     }
 
     public static void CaptureFluidState(MachineEntity node)
     {
         if (node?.Definition.Fluid == null) return;
-        if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) SaveFluidGroup(group);
-        CaptureGasNetworkState(node, GetFluidState(node));
+        MachinePersistence.Write(node.Snapshot, "fluid", CreatePersistentFluidState(node));
+    }
+
+    private static FluidMachineState CreatePersistentFluidState(MachineEntity node)
+    {
+        FluidMachineState saved = MachinePersistence.Clone(GetFluidState(node));
+        foreach (FluidInventoryState chamber in saved.Chambers.Values)
+        { chamber.Ports.RemoveAll(port => port.PortId.StartsWith("engine:", StringComparison.Ordinal)); chamber.SynchronizeReservations(); }
+        return saved;
     }
 
     #region 船体作用域库存迁移
     private static FluidMachineState DetachFluidNodeForScopeTransfer(MachineEntity node)
     {
-        if (gasGraph != null && gasGraph.TryGetGroup(node, out _))
-            DetachGasNetworksToLocal();
-        if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) PartitionFluidGroupForScopeTransfer(group);
-        FluidMachineState transferred = MachinePersistence.Clone(GetFluidState(node));
-        transferred.GroupOwnerId = node.Id;
+        foreach (MachineEntity member in nodes.Values)
+            if (member.Definition.Fluid != null) FluidDeviceOperations.ReleaseReservations(member);
+        FluidMachineState transferred = CreatePersistentFluidState(node);
         MachinePersistence.Write(node.Snapshot, "fluid", transferred);
-        ForgetDetachedFluidNode(node);
-        dirty = true;
-        return transferred;
+        ForgetDetachedFluidNode(node); dirty = true; return transferred;
     }
 
     private static void ForgetDetachedFluidNode(MachineEntity node)
@@ -357,79 +209,12 @@ public static partial class MachineWorld
         { fluidStockCache.Remove(fluidInventories[key]); fluidInventories.Remove(key); }
     }
 
-    private static void PartitionFluidGroupForScopeTransfer(FluidTankGroup group)
-    {
-        if (group.Members.Count == 0 || group.Inventory == null || !FluidUnits.IsFinite(group.TotalVolume) || group.TotalVolume <= 0d)
-            throw new InvalidOperationException("船体转移前的共享储罐组无效。");
-        FluidInventoryState original = group.Inventory.State.Clone();
-        var remaining = new List<FluidComponentState>();
-        foreach (FluidComponentState component in original.Components) remaining.Add(component.Clone());
-        var shares = new Dictionary<int, FluidInventoryState>();
-        FluidInventoryState energyAdjustmentShare = null;
-        double assignedEnergy = 0d;
-        double temperature = group.Inventory.GetTemperatureKelvin();
-        for (int i = 0; i < group.Members.Count; i++)
-        {
-            MachineEntity member = group.Members[i];
-            if (!nodes.TryGetValue(member.Id, out MachineEntity current) || !ReferenceEquals(current, member))
-                throw new InvalidOperationException("船体转移前的共享储罐成员已失效：" + member.Id);
-            decimal fraction = (decimal)member.Definition.Fluid.VolumeLiters / (decimal)group.TotalVolume;
-            bool last = i == group.Members.Count - 1;
-            var share = new FluidInventoryState { RandomState = original.RandomState };
-            for (int c = 0; c < original.Components.Count; c++)
-            {
-                FluidComponentState component = original.Components[c];
-                decimal gas = last ? remaining[c].GasMoles : Math.Min(remaining[c].GasMoles, component.GasMoles * fraction);
-                decimal liquid = last ? remaining[c].LiquidMoles : Math.Min(remaining[c].LiquidMoles, component.LiquidMoles * fraction);
-                remaining[c].GasMoles -= gas; remaining[c].LiquidMoles -= liquid;
-                if (gas + liquid <= 0m) continue;
-                share.Components.Add(new FluidComponentState { FluidId = component.FluidId, GasMoles = gas, LiquidMoles = liquid });
-                share.TotalInternalEnergyJoules += group.Inventory.Catalog.Find(component.FluidId).EnergyAt(gas, liquid, temperature);
-            }
-            if (share.Components.Count > 0)
-            {
-                assignedEnergy += share.TotalInternalEnergyJoules;
-                if (energyAdjustmentShare == null || share.TotalInternalEnergyJoules > energyAdjustmentShare.TotalInternalEnergyJoules)
-                    energyAdjustmentShare = share;
-            }
-            shares.Add(member.Id, share);
-        }
-        if (energyAdjustmentShare != null) energyAdjustmentShare.TotalInternalEnergyJoules += original.TotalInternalEnergyJoules - assignedEnergy;
-        foreach (FluidOutputReservation reservation in original.Ports)
-        {
-            int separator = reservation.PortId.IndexOf(':');
-            if (separator <= 0 || !int.TryParse(reservation.PortId.Substring(0, separator), NumberStyles.Integer,
-                CultureInfo.InvariantCulture, out int memberId) || !shares.TryGetValue(memberId, out FluidInventoryState share)) continue;
-            var portion = new FluidInventory(share, group.Inventory.Catalog);
-            FluidOutputReservation local = reservation.Clone();
-            local.GasMoles = Math.Min(local.GasMoles, portion.GetAvailableMoles(local.FluidId, FluidPhase.Gas));
-            local.LiquidMoles = Math.Min(local.LiquidMoles, portion.GetAvailableMoles(local.FluidId, FluidPhase.Liquid));
-            if (local.TotalMoles > 0m) share.Ports.Add(local);
-        }
-        foreach (FluidInventoryState share in shares.Values) FluidInventory.ValidateState(share, group.Inventory.Catalog);
-        // 所有候选份额先校验，再清掉唯一旧库存，避免新旧组各自保存同一份总量。
-        foreach (MachineEntity member in group.Members)
-        {
-            FluidMachineState state = GetFluidState(member);
-            state.Chambers["main"] = shares[member.Id];
-            state.GroupOwnerId = member.Id;
-            state.OverpressureVictimId = group.OverpressureVictimId == member.Id ? member.Id : 0;
-            state.RandomState = group.RandomState;
-            fluidTankOwners.Remove(member.Id);
-            fluidInventories.Remove((member.Id, "main"));
-        }
-        fluidTankGroups.Remove(group);
-        group.Inventory.Restore(new FluidInventoryState { RandomState = original.RandomState });
-        group.Members.Clear(); group.TotalVolume = 0d; group.MinimumGasSpace = 0d; group.Active = false;
-    }
+
     #endregion
 
     private static void ResetFluidRuntime()
     {
-        fluidGraph = null; gasGraph = null; liquidGraph = null;
-        scope.GasReplica.Clear(); scope.GasEpoch = 0;
-        scope.FluidTopologyKey = null; scope.FluidTopologyCatalog = null; scope.PublishGasTopologyPending = false;
-        scope.PendingGasRestore = false;
+        fluidGraph = null; scope.FluidTopologyKey = null; scope.FluidTopologyCatalog = null;
         ResetGasBudgets(true);
         fluidStates.Clear(); fluidInventories.Clear(); fluidTankOwners.Clear(); fluidTankGroups.Clear();
         fluidStepStock.Clear(); fluidStockCache.Clear(); fluidThroughputRemaining.Clear(); fluidMechanicalPower.Clear();
@@ -444,7 +229,6 @@ public static partial class MachineWorld
         if (node.Definition.Fluid == null) return;
         FluidMachineState incoming = logicApplied && node.Logic is FluidMachineLogic logic ? logic.State :
             MachinePersistence.Read<FluidMachineState>(node.Snapshot, "fluid") ?? new FluidMachineState();
-        ApplyGasReplica(incoming);
         fluidStates[node.Id] = incoming;
         ForgetFluidNodeInventoryCaches(node.Id);
         // 设备/液体更新只替换本节点；其他节点的气网快照、热量和库存不受消息到达顺序影响。
@@ -456,12 +240,12 @@ public static partial class MachineWorld
 
     #region 整网活动与每轮库存预算
     private static readonly ProfilerMarker fluidTransportMarker = new("MachineWorld.Fluid.Complete.Transport");
-    private static readonly ProfilerMarker fluidPhaseMarker = new("MachineWorld.Fluid.Complete.Phase");
-    private static readonly ProfilerMarker fluidTankMarker = new("MachineWorld.Fluid.Complete.Tanks");
     private static readonly ProfilerMarker fluidAppearanceMarker = new("MachineWorld.Fluid.Complete.Appearance");
     private static void BeginFluidStep(float seconds)
     {
         if (fluidGraph == null) return;
+        foreach (MachineEntity node in nodes.Values)
+            if (node.Definition.Fluid != null) FluidDeviceOperations.ReleaseReservations(node);
         foreach (FluidNetworkGraph.Component component in fluidGraph.Components)
         {
             // 船内流体网随船持续模拟，不用地表玩家区块判断休眠。
@@ -495,28 +279,32 @@ public static partial class MachineWorld
             foreach (MachineEntity member in group.Members) group.Active |= member.Active;
         }
         fluidStepStock.Clear(); fluidThroughputRemaining.Clear(); fluidMechanicalPower.Clear();
+        scope.GasNodeBudget.Clear(); scope.LiquidNodeBudget.Clear();
         ResetGasBudgets();
         foreach (MachineEntity node in nodes.Values)
         {
             if (node.Definition.Fluid == null || !IsFluidActive(node)) continue;
             FluidMachineDefinition definition = node.Definition.Fluid;
+            scope.GasNodeBudget[node.Id] = scope.LiquidNodeBudget[node.Id] = GetIndustrialThroughput(node) * seconds;
+            if (GetFluidDeviceBehavior(node).IsTransit) continue;
             foreach (FluidMachinePortDefinition port in definition.Ports)
             {
                 RememberFluidBudget(node, port.Chamber, seconds);
                 RememberGasInventory(GetPhaseFluidInventory(node, port.Chamber, FluidPhase.Gas),
-                    gasGraph != null && port.Chamber == "main" && gasGraph.TryGetGroup(node, out var portGroup)
-                        ? portGroup.ThroughputLitersPerSecond : definition.ThroughputLitersPerSecond, seconds);
+                    definition.ThroughputLitersPerSecond, seconds);
             }
             RememberFluidBudget(node, "main", seconds);
-            if (!IsSharedGasNetworkMember(node)) RememberGasInventory(GetFluidInventory(node), definition.ThroughputLitersPerSecond, seconds);
-            if (gasGraph != null && gasGraph.TryGetGroup(node, out var gasGroup))
-                RememberGasBudget(gasGroup, seconds);
-            GetFluidDeviceBehavior(node).BeginStep(node, seconds);
+            RememberGasInventory(GetFluidInventory(node), definition.ThroughputLitersPerSecond, seconds);
         }
+        foreach (MachineEntity node in nodes.Values)
+            if (node.Definition.Fluid?.PullFromNetwork == true && IsFluidActive(node)) SupplyIndustrialConsumer(node, seconds);
+        // 全部真实来源冻结后再给各设备分配本轮动力和预约。
+        foreach (MachineEntity node in nodes.Values)
+            if (node.Definition.Fluid != null && IsFluidActive(node)) GetFluidDeviceBehavior(node).BeginStep(node, seconds);
     }
 
     public static bool IsFluidActive(MachineEntity node)
-        => !scope.PendingGasRestore && node != null && fluidGraph != null && fluidGraph.NodeComponents.TryGetValue(node.Id, out var component) && component.Active;
+        => node != null && fluidGraph != null && fluidGraph.NodeComponents.TryGetValue(node.Id, out var component) && component.Active;
     private static bool RequiresFluidSimulation(MechanicalNetwork network)
     {
         foreach (MachineEntity node in network.Nodes) if (IsFluidActive(node)) return true;
@@ -535,96 +323,23 @@ public static partial class MachineWorld
         fluidThroughputRemaining.Add(inventory, capacity);
     }
 
-    private static void RememberGasBudget(IndustrialGasNetworkGraph.Group group, float seconds)
-    {
-        RememberGasInventory(group.Inventory, group.ThroughputLitersPerSecond, seconds);
-    }
+
 
     private static void CompleteFluidStep(float seconds)
     {
         if (fluidGraph == null) return;
-        int gasCount = gasGraph?.Edges.Count ?? 0;
-        int liquidCount = liquidGraph?.Edges.Count ?? 0;
-        using (fluidTransportMarker.Auto())
-        {
-            for (int index = 0; index < gasCount; index++)
-            {
-                FluidNetworkGraph.Edge edge = gasGraph.Edges[(index + (int)(TransportStep % (uint)gasCount)) % gasCount];
-                if (!IsFluidActive(edge.Source) || edge.Target != null && !IsFluidActive(edge.Target)) continue;
-                TryMoveGasBoundary(edge, seconds);
-            }
-            for (int index = 0; index < liquidCount; index++)
-            {
-                FluidNetworkGraph.Edge edge = liquidGraph.Edges[(index + (int)(TransportStep % (uint)liquidCount)) % liquidCount];
-                if (!IsFluidActive(edge.Source) || edge.Target != null && !IsFluidActive(edge.Target) || !liquidGraph.CanRoute(edge)) continue;
-                TryMoveLiquidEdge(edge, seconds);
-            }
-        }
-        using (fluidPhaseMarker.Auto())
-        {
-            foreach (MachineEntity node in nodes.Values)
-            {
-                if (node.Definition.Fluid == null || !IsFluidActive(node) || GetFluidDeviceBehavior(node).IsSharedStorage) continue;
-                foreach (string chamber in GetFluidState(node).Chambers.Keys)
-                {
-                    if (chamber == "main" && gasGraph != null && gasGraph.TryGetGroup(node, out var sharedGas))
-                    {
-                        if (GetFluidInventory(node).GasMoles > 0m) IndustrialGasNetworkGraph.AbsorbGas(sharedGas, GetFluidInventory(node));
-                        continue;
-                    }
-                    FluidPhaseChangeResult phase = FluidThermodynamics.AdvancePhaseChange(GetFluidInventory(node, chamber), GetFluidVolumeLiters(node),
-                        GetFluidMinimumGasSpaceLiters(node), seconds, node.Definition.Fluid.MaximumPhaseMolesPerSecond,
-                        node.Definition.Fluid.SingleGas, node.Definition.Fluid.SingleLiquid);
-                    UpdateFluidPhaseWarning(node, chamber, phase);
-                    if (phase.ConvertedMoles > 0) StateChanged(node);
-                }
-            }
-            AdvanceGasNetworkPhaseChange(seconds);
-        }
-        using (fluidTankMarker.Auto()) AdvanceFluidTankPressure(seconds);
-        SaveFluidGroups();
+        using (fluidTransportMarker.Auto()) AdvanceIndustrialOutlets(seconds);
         using (fluidAppearanceMarker.Auto())
         foreach (MachineEntity node in nodes.Values)
         {
             if (node.Definition.Fluid == null || !IsFluidActive(node)) continue;
             FluidMachineState state = GetFluidState(node); FluidInventory contents = GetFluidInventory(node);
-            FluidInventory gasContents = GetPhaseFluidInventory(node, "main", FluidPhase.Gas);
-            double gasBuffer = node.Definition.Fluid.GasBufferStandardLiters * GetFluidVolumeLiters(node) / node.Definition.Fluid.VolumeLiters;
-            int gas = (int)Math.Clamp(FluidUnits.MolToStandardLiters(gasContents.GasMoles) / (decimal)gasBuffer * 32, 0, 32);
+            int gas = (int)Math.Clamp(FluidUnits.MolToStandardLiters(contents.GasMoles) /
+                (decimal)Math.Max(.001, node.Definition.Fluid.GasCapacityStandardLiters) * 32, 0, 32);
             int liquid = Math.Clamp((int)(contents.GetLiquidLiters() / GetFluidVolumeLiters(node) * 32), 0, 32);
-            int appearance = HashCode.Combine(gas, liquid, state.LastFlowDirection, state.LastFlowPhase, state.BlockedPorts.Count > 0,
-                state.ProbeConnected, state.ValveOpen, gasContents.GetPressureKPa(GetPhaseFluidVolumeLiters(node, FluidPhase.Gas),
-                    GetPhaseFluidMinimumGasSpaceLiters(node, FluidPhase.Gas)) > node.Definition.Fluid.MaxSafePressureKPa);
+            int appearance = HashCode.Combine(gas, liquid, state.LastFlowDirection, state.LastFlowPhase, state.BlockedPorts.Count > 0, state.ValveOpen);
             if (fluidAppearance.TryGetValue(node.Id, out int previous) && previous == appearance) continue;
             fluidAppearance[node.Id] = appearance; NotifyVisualChanged(node);
-        }
-    }
-    internal static void UpdateFluidPhaseWarning(MachineEntity node, string chamber, FluidPhaseChangeResult result)
-    {
-        string warning = result.BlockedReason;
-        if (result.UnsupportedFluidIds?.Count > 0)
-            warning = "超出首轮相变曲线，保留真实相态：" + string.Join(", ", result.UnsupportedFluidIds);
-        if (string.IsNullOrEmpty(warning)) GetFluidState(node).PhaseWarnings.Remove(chamber);
-        else GetFluidState(node).PhaseWarnings[chamber] = warning;
-    }
-
-    // 相变桥只读取整网真实分压；本地液腔没有气体不等于真空，不能逐管无条件蒸发。
-    private static void AdvanceGasNetworkPhaseChange(float seconds)
-    {
-        if (gasGraph == null) return;
-        foreach (IndustrialGasNetworkGraph.Group group in gasGraph.Groups)
-        {
-            bool active = false;
-            foreach (MachineEntity member in group.Members)
-                active |= IsFluidActive(member);
-            if (!active) continue;
-            FluidPhaseChangeResult phase = FluidGasLiquidPhaseBridge.Advance(group.Inventory, group.PhaseContacts,
-                group.TotalVolumeLiters, group.MinimumGasSpaceLiters, seconds, group.MaximumPhaseMolesPerSecond);
-            foreach (MachineEntity member in group.Members)
-            {
-                UpdateFluidPhaseWarning(member, "gas-network", phase);
-                if (phase.ConvertedMoles > 0m) StateChanged(member);
-            }
         }
     }
     #endregion

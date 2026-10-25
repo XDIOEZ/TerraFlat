@@ -77,12 +77,10 @@ public static class MachineLogicRegistry
         AddFluidDevice("receiver", new FluidReceiverBehavior());
         AddFluidDevice("gas-pump", new FluidGasPumpBehavior());
         AddFluidDevice("liquid-pump", new FluidLiquidPumpBehavior());
-        AddFluidDevice("compressor", new FluidCompressorBehavior());
-        AddFluidDevice("filter", new FluidFilterBehavior());
-        AddFluidDevice("electrolyzer", new FluidElectrolyzerBehavior());
+        AddFluidDevice("filler", new FluidFillerBehavior(false));
+        AddFluidDevice("liquid-filler", new FluidFillerBehavior(true));
         AddFluidDevice("engine", new FluidEngineBehavior());
-        AddFluidDevice("mechanical-probe", new FluidPressureProbeBehavior(false));
-        AddFluidDevice("electronic-probe", new FluidPressureProbeBehavior(true));
+        AddFluidDevice("water-engine", new FluidEngineBehavior());
     }
 
     private static void Add(string id, Type authoring, Func<MachineEntity, MachineLogic> factory)

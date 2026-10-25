@@ -13,49 +13,32 @@ public sealed partial class FluidMachineDefinition
     public string MaterialId = "iron";
     public double VolumeLiters = 1;
     public double MinimumGasSpaceLiters = .001;
-    public double MaxSafePressureKPa = 500;
     public double ThroughputLitersPerSecond = 5;
     public double BatchStandardLiters = 1;
-    public double GasBufferStandardLiters = 10;
+    public double GasCapacityStandardLiters = 100;
+    public double NaturalFillFraction = .2;
+    public bool PullFromNetwork; // 既有消费者通过正式管路补充自己的工作库存。
     public double BatchLiquidServings = 1;
-    public double MaximumPumpPressureKPa = 2000;
-    public double PumpBatchesPerSecond = 1;
-    public double WorkJoulesPerStandardLiter = 5;
-    public double CompressionEfficiency = .7;
-    public bool TrackAmbientTemperature;
-    public double MaximumPhaseMolesPerSecond = 10;
-    public double OverpressureDamagePerSecond = 5;
-    public double DefaultDisconnectPressureKPa = 450;
-    public double DefaultReconnectPressureKPa = 400;
-    public bool SingleGas = true;
-    public bool SingleLiquid = true;
-    public bool CombineAdjacent;
     public bool AllowPortableTank;
-    public bool AllowManualAirFill; // 手动充气复用真实环境气源和一标准大气压目标。
+    public bool AllowManualAirFill; // 自然补气按固定容量占比扣取真实环境组分。
     public FluidMachinePortDefinition[] Ports = Array.Empty<FluidMachinePortDefinition>();
     public FluidMachineReactionDefinition[] Reactions = Array.Empty<FluidMachineReactionDefinition>();
     public string LiquidResidueFluidId = ""; // 液体副产物保留在独立腔内，仅通过容器端口取液。
     public string LiquidResidueChamber = "byproduct";
-    public string FilterMaterialItemId = "Cloth";
-    public double FilterWorkPerItem = 100;
     public string PanelId = "UI_IndustrialFluid";
     public float? BodySizeCells; // 方块设备可声明满格机身，普通接头沿用原尺寸。
 
     public float ResolveBodySizeCells(int layer)
-        => BodySizeCells ?? (layer == 2 ? .55f : Kind is "mechanical-probe" or "electronic-probe" ? .32f : .85f);
+        => BodySizeCells ?? (layer == 2 ? .55f : .85f);
 
     public void Validate(string ownerId)
     {
         if (string.IsNullOrWhiteSpace(Kind) || string.IsNullOrWhiteSpace(MaterialId) ||
             !Positive(VolumeLiters) || !Positive(MinimumGasSpaceLiters) || MinimumGasSpaceLiters >= VolumeLiters ||
-            !Positive(MaxSafePressureKPa) || !Positive(ThroughputLitersPerSecond) ||
-            !Positive(BatchStandardLiters) || !Positive(GasBufferStandardLiters) || !Positive(BatchLiquidServings) ||
-            !Positive(MaximumPumpPressureKPa) || !Positive(PumpBatchesPerSecond) ||
-            !Positive(WorkJoulesPerStandardLiter) || !Positive(CompressionEfficiency) || CompressionEfficiency > 1 ||
-            !Positive(MaximumPhaseMolesPerSecond) ||
-            !Positive(OverpressureDamagePerSecond) || !Positive(DefaultDisconnectPressureKPa) ||
-            DefaultReconnectPressureKPa < 0 || DefaultReconnectPressureKPa >= DefaultDisconnectPressureKPa ||
-            !Positive(FilterWorkPerItem) || (BodySizeCells.HasValue && !Positive(BodySizeCells.Value)) || Ports == null || Reactions == null)
+            !double.IsFinite(ThroughputLitersPerSecond) || ThroughputLitersPerSecond < 0 ||
+            !Positive(BatchStandardLiters) || !Positive(GasCapacityStandardLiters) || !Positive(BatchLiquidServings) ||
+            !double.IsFinite(NaturalFillFraction) || NaturalFillFraction < 0 || NaturalFillFraction > 1 ||
+            (BodySizeCells.HasValue && !Positive(BodySizeCells.Value)) || Ports == null || Reactions == null)
             throw new ArgumentException("工业流体设备配置无效：" + ownerId);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (FluidMachinePortDefinition port in Ports)
@@ -69,8 +52,6 @@ public sealed partial class FluidMachineDefinition
             throw new ArgumentException("液体副产物缺少库存腔身份：" + ownerId);
         if (!string.IsNullOrEmpty(LiquidResidueFluidId) && ids.Contains(LiquidResiduePortId))
             throw new ArgumentException("工业管道口与液体副产物取液口身份冲突：" + ownerId);
-        if (CombineAdjacent && (SingleGas || SingleLiquid))
-            throw new ArgumentException("组合储罐必须允许真实混合库存：" + ownerId);
     }
     internal static bool Positive(double value) => double.IsFinite(value) && value > 0;
     #endregion
@@ -98,7 +79,7 @@ public sealed partial class FluidMachinePortDefinition
     #endregion
 }
 
-/// <summary>反应物及产物以 mol 系数描述，热量和实际供能采用同一反应预算。</summary>
+/// <summary>动力设备用明确的物料比例和单位功量结算实际消耗。</summary>
 [MemoryPack.MemoryPackable]
 [Serializable]
 public sealed partial class FluidMachineReactionDefinition
@@ -108,21 +89,14 @@ public sealed partial class FluidMachineReactionDefinition
     public FluidReactionTerm[] Inputs = Array.Empty<FluidReactionTerm>();
     public FluidReactionTerm[] Outputs = Array.Empty<FluidReactionTerm>();
     public double MolesPerSecond = 1;
-    public double RequiredJoulesPerReaction;
     public double ChemicalJoulesPerReaction;
-    public double StoredChemicalJoulesPerReaction;
     public double MechanicalEfficiency = .4;
-    public string SolidResidueItemId = "";
-    public double ResidueItemsPerReaction;
-    public bool RequiresFilter;
     public void Validate(string ownerId)
     {
-        if (string.IsNullOrWhiteSpace(Id) || Inputs == null || Inputs.Length == 0 || Outputs == null || Outputs.Length == 0 ||
-            !FluidMachineDefinition.Positive(MolesPerSecond) || !double.IsFinite(RequiredJoulesPerReaction) || RequiredJoulesPerReaction < 0 ||
+        if (string.IsNullOrWhiteSpace(Id) || Inputs == null || Inputs.Length == 0 || Outputs == null ||
+            !FluidMachineDefinition.Positive(MolesPerSecond) ||
             !double.IsFinite(ChemicalJoulesPerReaction) || ChemicalJoulesPerReaction < 0 ||
-            !double.IsFinite(StoredChemicalJoulesPerReaction) || StoredChemicalJoulesPerReaction < 0 || StoredChemicalJoulesPerReaction > RequiredJoulesPerReaction ||
-            !FluidMachineDefinition.Positive(MechanicalEfficiency) || MechanicalEfficiency >= 1 ||
-            !double.IsFinite(ResidueItemsPerReaction) || ResidueItemsPerReaction < 0)
+            !FluidMachineDefinition.Positive(MechanicalEfficiency) || MechanicalEfficiency >= 1)
             throw new ArgumentException("工业反应配方配置无效：" + ownerId);
         foreach (FluidReactionTerm term in Inputs) term.Validate(ownerId);
         foreach (FluidReactionTerm term in Outputs) term.Validate(ownerId);

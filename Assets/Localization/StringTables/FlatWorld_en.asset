@@ -2605,27 +2605,27 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474530504728
-    m_Localized: Universal Fluid Pipe
+    m_Localized: "Gas Pipe"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474530504729
-    m_Localized: Universal Fluid Pipe
+    m_Localized: "Gas Pipe"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474530504730
-    m_Localized: Fluid Valve
+    m_Localized: "Gas Valve"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474530504731
-    m_Localized: Fluid Valve
+    m_Localized: "Gas Valve"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474530504732
-    m_Localized: Fluid Outlet
+    m_Localized: "Gas Outlet"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474538893312
-    m_Localized: Fluid Outlet
+    m_Localized: "Gas Outlet"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474538893313
@@ -3617,101 +3617,67 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196496
-    m_Localized: A gas and liquid pipe laid on a separate overlay layer. It can share
-      a cell with wires and automatically connects to adjacent pipes and matching
-      equipment ports. Silver-blue pipes and teal collars identify fluid lines; pipes
-      can be stacked in the inventory.
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196497
-    m_Localized: A gas and liquid pipe laid on a separate overlay layer. It can share
-      a cell with wires and automatically connects to adjacent pipes and matching
-      equipment ports. Silver-blue pipes and teal collars identify fluid lines; pipes
-      can be stacked in the inventory.
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196498
-    m_Localized: A fluid valve. Use its configuration panel to inspect actual gas
-      and liquid contents, direction, and power. Empty equipment starts under vacuum.
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196499
-    m_Localized: A fluid valve. Use its configuration panel to inspect actual gas
-      and liquid contents, direction, and power. Empty equipment starts under vacuum.
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196500
-    m_Localized: "Releases gas or liquid from a pipe. When it points toward an adjacent
-      furnace and actually vents oxygen, it raises the maximum combustion temperature
-      by 500\xB0C. Only the higher bonus from this or mechanical bellows applies."
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196501
-    m_Localized: "Releases gas or liquid from a pipe. When it points toward an adjacent
-      furnace and actually vents oxygen, it raises the maximum combustion temperature
-      by 500\xB0C. Only the higher bonus from this or mechanical bellows applies."
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196502
-    m_Localized: A gas selector pipe. Use its configuration panel to inspect actual
-      gas and liquid contents, direction, and power. Empty equipment starts under
-      vacuum.
+    m_Localized: "Passes only the selected gas component. Other components remain at the source; substances are never converted."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196503
-    m_Localized: A gas selector pipe. Use its configuration panel to inspect actual
-      gas and liquid contents, direction, and power. Empty equipment starts under
-      vacuum.
+    m_Localized: "Passes only the selected gas component. Other components remain at the source; substances are never converted."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196504
-    m_Localized: A one-cell iron gas tank block. Adjacent blocks of the same material
-      connect into a shared tank, adding 100 L per cell. Dismantling releases that
-      cell's share of gas and liquid and returns an empty block. Empty tanks start
-      under vacuum and exchange heat with the surrounding environment.
+    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196505
-    m_Localized: A one-cell iron gas tank block. Adjacent blocks of the same material
-      connect into a shared tank, adding 100 L per cell. Dismantling releases that
-      cell's share of gas and liquid and returns an empty block. Empty tanks start
-      under vacuum and exchange heat with the surrounding environment.
+    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196506
-    m_Localized: A one-cell steel gas tank block. Adjacent blocks of the same material
-      connect into a shared tank, adding 100 L per cell. Dismantling releases that
-      cell's share of gas and liquid and returns an empty block. Empty tanks start
-      under vacuum and exchange heat with the surrounding environment.
+    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196507
-    m_Localized: A one-cell steel gas tank block. Adjacent blocks of the same material
-      connect into a shared tank, adding 100 L per cell. Dismantling releases that
-      cell's share of gas and liquid and returns an empty block. Empty tanks start
-      under vacuum and exchange heat with the surrounding environment.
+    m_Localized: "Stores 100 standard L of gas independently. Natural refill stops at 20%; a powered pump can fill it. Dismantling preserves this tank contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585088
-    m_Localized: A liquid storage tank. Use its configuration panel to inspect actual
-      gas and liquid contents, direction, and power. Empty tanks start under vacuum.
+    m_Localized: "Stores 200 L of one liquid independently. Rejects other liquids. Dismantling preserves its contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585089
-    m_Localized: A liquid storage tank. Use its configuration panel to inspect actual
-      gas and liquid contents, direction, and power. Empty tanks start under vacuum.
+    m_Localized: "Stores 200 L of one liquid independently. Rejects other liquids. Dismantling preserves its contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585090
-    m_Localized: A mechanical gas pump. Use its configuration panel to inspect actual
-      gas and liquid contents, direction, and power. Empty equipment starts under
-      vacuum.
+    m_Localized: "With mechanical power, takes actual mixed gas from the environment at 2 standard L per second and can fill tanks to capacity."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585091
-    m_Localized: A mechanical gas pump. Use its configuration panel to inspect actual
-      gas and liquid contents, direction, and power. Empty equipment starts under
-      vacuum.
+    m_Localized: "With mechanical power, takes actual mixed gas from the environment at 2 standard L per second and can fill tanks to capacity."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585092
@@ -3829,15 +3795,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585111
-    m_Localized: Starts under vacuum; fill it with filling equipment. Gas and liquid
-      share its capacity. Overpressure causes ongoing damage, and when wall durability
-      reaches zero the tank explodes at its holder's position.
+    m_Localized: "Stores 20 standard L of gas. Filling equipment can fill it completely. Natural refill stops at 20% and never vents existing contents. Placement and dismantling preserve its contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585112
-    m_Localized: Starts under vacuum; fill it with filling equipment. Gas and liquid
-      share its capacity. Overpressure causes ongoing damage, and when wall durability
-      reaches zero the tank explodes at its holder's position.
+    m_Localized: "Stores 60 standard L of gas. Filling equipment can fill it completely. Natural refill stops at 20% and never vents existing contents. Placement and dismantling preserve its contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585113
@@ -4286,6 +4248,94 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 27915475050598408
     m_Localized: Wrought Iron
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100000
+    m_Localized: "Liquid Pipe"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100001
+    m_Localized: "Liquid Pipe"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100002
+    m_Localized: "Liquid Valve"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100003
+    m_Localized: "Liquid Valve"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100004
+    m_Localized: "Liquid Outlet"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100005
+    m_Localized: "Liquid Outlet"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100006
+    m_Localized: "Gas Filling Machine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100007
+    m_Localized: "Gas Filling Machine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100008
+    m_Localized: "Liquid Filling Machine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100009
+    m_Localized: "Liquid Filling Machine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100010
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100011
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100012
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100013
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100014
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100015
+    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100016
+    m_Localized: "Fills three actual containers in slot order 0, 1, 2. Skips unsuitable or full slots. Maximum rate: 2 L per second."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100017
+    m_Localized: "Fills three actual containers in slot order 0, 1, 2. Skips unsuitable or full slots. Maximum rate: 2 L per second."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100018
+    m_Localized: "Fills three actual containers in slot order 0, 1, 2. Skips unsuitable or full slots. Maximum rate: 2 L per second."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100019
+    m_Localized: "Fills three actual containers in slot order 0, 1, 2. Skips unsuitable or full slots. Maximum rate: 2 L per second."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100020
+    m_Localized: "Stores 20 standard L of gas. Filling equipment can fill it completely. Natural refill stops at 20% and never vents existing contents. Placement and dismantling preserve its contents."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28000000000100021
+    m_Localized: "Stores 60 standard L of gas. Filling equipment can fill it completely. Natural refill stops at 20% and never vents existing contents. Placement and dismantling preserve its contents."
     m_Metadata:
       m_Items: []
   references:

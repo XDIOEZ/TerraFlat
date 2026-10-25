@@ -33,12 +33,14 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         apply = panel.GetButton("FWUI_ApplyFluidSettings"); phase = panel.GetButton("FWUI_FluidPhase"); rotate = panel.GetButton("FWUI_RotateFluid");
         if (primary == null || secondary == null || apply == null || phase == null || rotate == null)
             throw new InvalidOperationException("工业正式面板缺少配置控件。");
-        input = logic.PortableTank ?? logic.FilterMaterial; output = logic.Residue;
+        input = logic.PortableTank; output = null;
         view.SetProcessingVisible(false);
-        view.SetGasCapacityVisible(logic.Behavior.IsSharedStorage);
+        view.SetGasCapacityVisible(logic.Behavior.IsStorage && Array.Exists(logic.Definition.Ports, port => port.Phase == "gas"));
         rotate.gameObject.SetActive(!MachineWorld.IsFluidTankBlock(logic.Entity)); // 对称方块罐不提供无意义的朝向操作。
         SetSection(view.InputSlot, input != null); SetSection(view.OutputSlot, output != null);
-        Bind(input, view.InputSlot); Bind(output, view.OutputSlot);
+        foreach (ItemSlot_UI slot in panel.GetComponentsInChildren<ItemSlot_UI>(true))
+            if (slot.name.StartsWith("输入_", StringComparison.Ordinal)) slot.gameObject.SetActive(input != null);
+        BindContainers();
         view.ActionButton.onClick.AddListener(Act); view.CloseButton.onClick.AddListener(Close);
         apply.onClick.AddListener(ApplySettings); phase.onClick.AddListener(ChangePhase); rotate.onClick.AddListener(Rotate);
         panel.InitClosed(); panel.SetGameplayInputBlocking(false); panel.PrepareForGamepadNavigation(closeOnCancel: true);
@@ -57,6 +59,21 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     }
     private static void Bind(Inventory inventory, ItemSlot_UI slot)
     { if (inventory == null) return; inventory.itemSlot_UI.Clear(); inventory.BindSlotUI(slot, 0); inventory.SyncData(); }
+    private void BindContainers()
+    {
+        if (input == null) return;
+        input.itemSlot_UI.Clear();
+        for (int index = 0; index < 3; index++)
+        {
+            ItemSlot_UI slot = null;
+            foreach (ItemSlot_UI candidate in panel.GetComponentsInChildren<ItemSlot_UI>(true))
+                if (candidate.name == "输入_" + (index + 1)) { slot = candidate; break; }
+            if (slot == null) throw new InvalidOperationException("装填面板缺少真实容器槽：" + index);
+            slot.gameObject.SetActive(true);
+            input.BindSlotUI(slot, index);
+        }
+        input.SyncData();
+    }
     public void Toggle(Item player)
     {
         if (!IsAlive) return;
@@ -68,13 +85,11 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         panel.GetComponent<BuildingPanelActions>()?.BindMechanical(logic.Entity);
         if (input != null) { input.DefaultTarget_Inventory = hand; input.SyncQuickTransferTarget(panel); input.RefreshUI(); }
         if (output != null) { output.DefaultTarget_Inventory = hand; output.SyncQuickTransferTarget(panel, allowDirectionalDeposit: false); output.RefreshUI(); }
-        bool probe = logic.Definition.Kind is "mechanical-probe" or "electronic-probe";
-        bool settings = probe || logic.Definition.Kind is "selector" or "compressor";
-        primary.gameObject.SetActive(settings); secondary.gameObject.SetActive(probe); apply.gameObject.SetActive(settings);
-        primary.SetTextWithoutNotify(probe ? logic.State.DisconnectPressureKPa.ToString(CultureInfo.InvariantCulture) :
-            logic.Definition.Kind == "selector" ? logic.State.SelectedGasId : logic.State.CompressionTargetKPa.ToString(CultureInfo.InvariantCulture));
-        secondary.SetTextWithoutNotify(logic.State.ReconnectPressureKPa.ToString(CultureInfo.InvariantCulture));
-        phase.gameObject.SetActive(logic.Definition.Kind == "outlet");
+        bool settings = logic.Definition.Kind is "selector" or "outlet";
+        primary.gameObject.SetActive(settings); secondary.gameObject.SetActive(false); apply.gameObject.SetActive(settings);
+        primary.SetTextWithoutNotify(logic.Definition.Kind == "selector" ? logic.State.SelectedGasId :
+            (logic.State.OutputLitersPerSecond < 0 ? logic.Definition.ThroughputLitersPerSecond : logic.State.OutputLitersPerSecond).ToString(CultureInfo.InvariantCulture));
+        phase.gameObject.SetActive(false);
         panel.Open(); Refresh();
     }
     private void Act()
@@ -85,9 +100,8 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     }
     private void ApplySettings()
     {
-        string operation = logic.Definition.Kind is "mechanical-probe" or "electronic-probe" ? "fluid.probe" :
-            logic.Definition.Kind == "selector" ? "fluid.select" : "fluid.pressure";
-        string argument = operation == "fluid.probe" ? primary.text + "|" + secondary.text : primary.text;
+        string operation = logic.Definition.Kind == "selector" ? "fluid.select" : "fluid.rate";
+        string argument = primary.text;
         MachineWorld.RequestOperation(logic.Entity, operation, argument, actor); Refresh();
     }
     private void ChangePhase()
@@ -103,13 +117,11 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         view.Title.text = FlatWorldLocalizationService.Get(FlatWorldLocalizationService.GetItemLabelKey(logic.Entity.Definition.Id),
             logic.Entity.Definition.Content?.Definition.DisplayName ?? logic.Entity.Definition.Id);
         view.Status.text = logic.Status;
-        if (logic.Behavior.IsSharedStorage)
+        if (logic.Behavior.IsStorage && Array.Exists(logic.Definition.Ports, port => port.Phase == "gas"))
         {
-            // 组合罐使用整组库存和容积，船上读取也保持在设备所属作用域。
+            // 本罐容量只读取本罐真实气量。
             FluidInventory inventory = MachineWorld.GetFluidInventory(logic.Entity, "main");
-            double pressure = inventory.GetPressureKPa(MachineWorld.GetFluidVolumeLiters(logic.Entity),
-                MachineWorld.GetFluidMinimumGasSpaceLiters(logic.Entity));
-            view.SetGasCapacity((float)(pressure / logic.Definition.MaxSafePressureKPa));
+            view.SetGasCapacity((float)((double)FluidUnits.MolToStandardLiters(inventory.GasMoles) / logic.Definition.GasCapacityStandardLiters));
         }
         string caption = logic.ActionLabel;
         view.SetActionVisible(!string.IsNullOrEmpty(caption));
@@ -118,7 +130,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
             : logic.LiquidResiduePort == null || logic.CanTransferLiquidResidueTo(HeldLiquidVessel, actor);
         MechanicalPanelView.SetButtonCaption(view.ActionButton, caption);
         MechanicalPanelView.SetButtonCaption(phase, logic.State.OutletPhase == "gas" ? "只输出气体" : logic.State.OutletPhase == "liquid" ? "只输出液体" : "输出气体和液体");
-        rotate.interactable = !logic.State.Ruptured && string.IsNullOrEmpty(logic.State.RuptureBudgetId);
+        rotate.interactable = !logic.State.Ruptured;
     }
     private void OnOpened() { if (refresh == null) refresh = panel.StartCoroutine(RefreshReadings()); }
     private IEnumerator RefreshReadings() { var delay = new WaitForSecondsRealtime(.2f); while (IsOpen) { Refresh(); yield return delay; } refresh = null; }

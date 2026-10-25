@@ -648,7 +648,7 @@
         "mechanical_assemble",
         "mechanical_power",
         "mechanical_conveyor",
-        "mechanical_pressure_probe",
+        "mechanical_fluid_pump",
         "mechanical_control",
         "mechanical_processing",
         "mechanical_manual_millstone"
@@ -683,7 +683,7 @@
         "mechanical_assemble",
         "mechanical_power",
         "mechanical_conveyor",
-        "mechanical_pressure_probe",
+        "mechanical_fluid_pump",
         "mechanical_control",
         "mechanical_processing",
         "mechanical_manual_millstone",
@@ -775,7 +775,7 @@
         "mechanical_assemble",
         "mechanical_power",
         "mechanical_conveyor",
-        "mechanical_pressure_probe",
+        "mechanical_fluid_pump",
         "mechanical_control",
         "mechanical_processing",
         "mechanical_manual_millstone"

@@ -80,13 +80,8 @@ namespace FlatWorld.Spaceflight
                             QueueDrop(slot.itemData, ship, piece); slot.itemData = null;
                         }
                     node.State.Hp = 0f;
-                    if (MachineWorld.HandleFluidTankZeroHp(node))
-                        snapshot = FastCloner.FastCloner.DeepClone(node.Snapshot);
-                    else
-                    {
-                        DrainDestroyedFluidChambers(ship, piece, node);
-                        snapshot = MachineWorld.Remove(id);
-                    }
+                    DrainDestroyedFluidChambers(ship, piece, node);
+                    snapshot = MachineWorld.Remove(id);
                 }
             }
             ShipDeviceState device = GetDevice(piece.PieceId);

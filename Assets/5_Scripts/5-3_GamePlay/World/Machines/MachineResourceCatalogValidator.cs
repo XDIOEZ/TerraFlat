@@ -103,16 +103,9 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
                 { errors.Add("工业反应产物未注册：" + definition.Id + "/" + reaction.Id + " -> " + output.FluidId); continue; }
                 outputMass += output.Moles * substance.MolarMassKgPerMol;
             }
-            if (reaction.ResidueItemsPerReaction > 0)
-            {
-                if (!resources.TryGetItemDefinition(reaction.SolidResidueItemId, out RuntimeItemDefinition residue))
-                    errors.Add("工业反应残渣未注册：" + definition.Id + "/" + reaction.Id + " -> " + reaction.SolidResidueItemId);
-                else outputMass += reaction.ResidueItemsPerReaction * residue.CreateItemData().Stack.Weight;
-            }
-            if (Math.Abs(inputMass - outputMass) > Math.Max(.00000001, inputMass * .000002))
+            if (reaction.Outputs.Length > 0 && Math.Abs(inputMass - outputMass) > Math.Max(.00000001, inputMass * .000002))
                 errors.Add("工业反应质量不守恒：" + definition.Id + "/" + reaction.Id + " 输入kg=" + inputMass + " 输出kg=" + outputMass);
-            if (reaction.RequiresFilter && !resources.ItemDefinitions.ContainsKey(fluid.FilterMaterialItemId))
-                errors.Add("工业反应滤材未注册：" + definition.Id + " -> " + fluid.FilterMaterialItemId);
+
         }
     }
 

@@ -189,12 +189,12 @@
           "y": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 450,
               "temperatureCelsius": 20,
               "components": {
                 "core:oxygen": 0.21,
                 "core:nitrogen": 0.79
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -255,12 +255,12 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -272,12 +272,12 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -289,12 +289,12 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -306,12 +306,12 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -322,12 +322,12 @@
           "y": 4,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -338,12 +338,12 @@
           "y": 4,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -354,12 +354,12 @@
           "y": 6,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },
@@ -370,12 +370,12 @@
           "y": 6,
           "resources": {
             "gas": {
-              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
                 "core:oxygen": 0.3333333333333333
-              }
+              },
+              "standardLiters": 100
             }
           }
         },

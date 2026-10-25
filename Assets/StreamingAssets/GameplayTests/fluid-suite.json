@@ -29,7 +29,7 @@
     },
     {
       "id": "fluid_transport",
-      "name": "冻结输送与吞吐",
+      "name": "混气排放与吞吐",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_transport.lua",
       "enabled": true
     },
@@ -41,13 +41,13 @@
     },
     {
       "id": "fluid_pumps_compressors",
-      "name": "泵与压缩机",
+      "name": "动力气泵与地表水泵",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_pumps_compressors.lua",
       "enabled": true
     },
     {
       "id": "fluid_reactions",
-      "name": "过滤电解与发动机",
+      "name": "实际氢氧与液水发动机",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_reactions.lua",
       "enabled": true
     },
