@@ -27,6 +27,20 @@ namespace FlatWorld.Spaceflight
         public bool TryGetMachineEnvironment(string shipId, Vector2 localPosition, out ShipEnvironmentSnapshot environment)
             => TryResolveMachineEnvironment(shipId, localPosition, out environment, out _, out _, out _);
 
+        public bool TryGetMachineAirSource(string shipId, Vector2 localPosition, out IShipAtmosphereSource source)
+        {
+            source = null;
+            if (!TryResolveMachineEnvironment(shipId, localPosition, out _, out ShipState ship, out int x, out int y))
+                return false;
+            ShipCompartmentState room = ShipAtmosphereService.FindCompartment(ship, x, y);
+            // 有气密舱就取舱内真实库存，敞开区域沿用所属船体的外界气源。
+            source = room != null
+                ? new TankShipAtmosphereSource(ShipAtmosphereService.GetCompartmentInventory(room),
+                    room.VolumeLiters, ShipAtmosphereService.MinimumCabinGasSpaceLiters)
+                : GetMachineExteriorAt(ship, localPosition);
+            return source != null;
+        }
+
         private bool TryResolveMachineEnvironment(string shipId, Vector2 localPosition, out ShipEnvironmentSnapshot environment,
             out ShipState ship, out int x, out int y)
         {

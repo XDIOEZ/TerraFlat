@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Networking;
 using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -62,6 +63,41 @@ public static partial class MachineWorld
 
     private static SpaceSession RequireShipEnvironment()
         => SpaceSession.Current ?? throw new InvalidOperationException("船上机器缺少环境会话。");
+    #endregion
+
+    #region 储罐手动充入环境空气
+    public static bool CanFillFluidTankAir(MachineEntity node)
+    {
+        if (node?.Definition.Fluid?.AllowManualAirFill != true) return false;
+        using var nodeScope = UseNodeScope(node);
+        if (!Contains(node)) return false;
+        RebuildGraphsIfDirty();
+        FluidMachineState state = GetFluidState(node);
+        return !state.Ruptured && string.IsNullOrEmpty(state.RuptureBudgetId) &&
+            GetFluidInventory(node).GetPressureKPa(GetFluidVolumeLiters(node), GetFluidMinimumGasSpaceLiters(node)) <
+                PortableGasTankAirFilling.TargetPressureKPa - .00001d &&
+            GetFluidAmbientPressureKPa(node) >= PortableGasTankAirFilling.TargetPressureKPa;
+    }
+
+    internal static bool FillFluidTankAir(MachineEntity node)
+    {
+        if (!GameNetwork.HasStateAuthority || node == null) return false;
+        using var nodeScope = UseNodeScope(node);
+        if (!CanFillFluidTankAir(node)) return false;
+        IShipAtmosphereSource source;
+        if (TryGetLocalAtmosphereKey(node, out string atmosphereKey))
+        {
+            if (!RequireShipEnvironment().TryGetMachineAirSource(atmosphereKey, node.Position, out source)) return false;
+        }
+        else
+        {
+            AtmosphereState atmosphere = GetCurrentAtmosphere(node);
+            source = new PlanetShipAtmosphereSource(atmosphere, atmosphere.TemperatureKelvin - 273.15d);
+        }
+        // 组合罐按整组真实容积补气，保留原有气液并从所属地表或密闭舱扣量。
+        return PortableGasTankAirFilling.TryFillFromSource(source, GetFluidInventory(node),
+            GetFluidVolumeLiters(node), GetFluidMinimumGasSpaceLiters(node));
+    }
     #endregion
 
     #region 明确世界地址的地表液体事务

@@ -160,7 +160,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         }
         else if (operation == "fluid.rotate")
         {
-            if (State.Ruptured || !string.IsNullOrEmpty(State.RuptureBudgetId) || Entity.State == null) return false;
+            if (MachineWorld.IsFluidTankBlock(Entity) || State.Ruptured || !string.IsNullOrEmpty(State.RuptureBudgetId) || Entity.State == null) return false;
             Entity.State.RotationQuarterTurns = (Entity.State.RotationQuarterTurns + 1) & 3;
             MachineWorld.TopologyChanged(Entity); return true;
         }

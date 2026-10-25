@@ -31,6 +31,7 @@ public sealed partial class FluidMachineDefinition
     public bool SingleLiquid = true;
     public bool CombineAdjacent;
     public bool AllowPortableTank;
+    public bool AllowManualAirFill; // 手动充气复用真实环境气源和一标准大气压目标。
     public FluidMachinePortDefinition[] Ports = Array.Empty<FluidMachinePortDefinition>();
     public FluidMachineReactionDefinition[] Reactions = Array.Empty<FluidMachineReactionDefinition>();
     public string LiquidResidueFluidId = ""; // 液体副产物保留在独立腔内，仅通过容器端口取液。

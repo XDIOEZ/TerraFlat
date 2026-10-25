@@ -36,6 +36,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         input = logic.PortableTank ?? logic.FilterMaterial; output = logic.Residue;
         view.SetProcessingVisible(false);
         view.SetGasCapacityVisible(logic.Behavior.IsSharedStorage);
+        rotate.gameObject.SetActive(!MachineWorld.IsFluidTankBlock(logic.Entity)); // 对称方块罐不提供无意义的朝向操作。
         SetSection(view.InputSlot, input != null); SetSection(view.OutputSlot, output != null);
         Bind(input, view.InputSlot); Bind(output, view.OutputSlot);
         view.ActionButton.onClick.AddListener(Act); view.CloseButton.onClick.AddListener(Close);
@@ -112,7 +113,9 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         }
         string caption = logic.ActionLabel;
         view.SetActionVisible(!string.IsNullOrEmpty(caption));
-        view.ActionButton.interactable = logic.LiquidResiduePort == null || logic.CanTransferLiquidResidueTo(HeldLiquidVessel, actor);
+        view.ActionButton.interactable = logic.Definition.AllowManualAirFill
+            ? MachineWorld.CanFillFluidTankAir(logic.Entity)
+            : logic.LiquidResiduePort == null || logic.CanTransferLiquidResidueTo(HeldLiquidVessel, actor);
         MechanicalPanelView.SetButtonCaption(view.ActionButton, caption);
         MechanicalPanelView.SetButtonCaption(phase, logic.State.OutletPhase == "gas" ? "只输出气体" : logic.State.OutletPhase == "liquid" ? "只输出液体" : "输出气体和液体");
         rotate.interactable = !logic.State.Ruptured && string.IsNullOrEmpty(logic.State.RuptureBudgetId);

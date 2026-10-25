@@ -114,6 +114,10 @@ public sealed class FluidStorageBehavior : FluidDeviceBehavior
     #region 共享储存
     public override bool IsSharedStorage => true;
     public override bool UsesObservedTickState => true;
+    public override string ActionLabel(MachineEntity node)
+        => node.Definition.Fluid.AllowManualAirFill ? "充入空气（1 atm）" : string.Empty;
+    public override bool Execute(MachineEntity node, string operation, string argument)
+        => (operation == "work" || operation == "fluid.fill-air") && MachineWorld.FillFluidTankAir(node);
     public override void AppendDescription(MachineEntity node, StringBuilder text)
     {
         FluidMachineState state = MachineWorld.GetFluidState(node);

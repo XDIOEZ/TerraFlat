@@ -659,6 +659,56 @@ internal static class GameplayTestFluidNetworks
         };
     }
 
+    // 通过正式机器命令给真实双格共享罐补气，采样交给 Lua 判断守恒和操作资格。
+    internal static JObject CaptureTankManualAirFill(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var f = new GameplayFluidScope();
+        f.Atmosphere.CapacityMoles = f.Atmosphere.ReferenceMoles = 1000m;
+        f.Atmosphere.ReferencePressureKPa = PortableGasTankAirFilling.TargetPressureKPa * 2d;
+        f.Atmosphere.Gases = new List<AtmosphereGasAmount>
+        {
+            new() { FluidId = FluidIds.Oxygen, Moles = 210m },
+            new() { FluidId = FluidIds.Nitrogen, Moles = 790m }
+        };
+        MachineEntity a = f.Add("GasTankBlock_Iron"), b = f.Add("GasTankBlock_Iron", 1);
+        MachineEntity empty = f.Add("GasTankBlock_Iron", 4), steel = f.Add("GasTankBlock_Steel", 8);
+        f.Rebuild();
+        Fill(a, FluidIds.CarbonDioxide, .05m); Fill(a, FluidIds.PureWater, 0m, 20m);
+        FluidInventory inventory = GetFluidInventory(a);
+        decimal sourceBefore = f.Atmosphere.CurrentMoles, gasBefore = inventory.GasMoles;
+        bool available = CanFillFluidTankAir(a);
+        bool accepted = RequestOperation(b, "work", "", player);
+        decimal sourceAfter = f.Atmosphere.CurrentMoles, gasAfter = inventory.GasMoles;
+        bool repeated = RequestOperation(a, "work", "", player);
+        bool fullAvailable = CanFillFluidTankAir(a);
+        bool steelAccepted = RequestOperation(steel, "work", "", player);
+        int rotationBefore = a.RotationQuarterTurns;
+        bool rotated = RequestOperation(a, "fluid.rotate", "", player);
+        var result = new JObject
+        {
+            ["available"] = available, ["accepted"] = accepted,
+            ["shared"] = ReferenceEquals(inventory, GetFluidInventory(b)),
+            ["volume"] = GetFluidVolumeLiters(a),
+            ["pressure"] = inventory.GetPressureKPa(GetFluidVolumeLiters(a), GetFluidMinimumGasSpaceLiters(a)),
+            ["oxygen"] = inventory.GetGasMoles(FluidIds.Oxygen), ["nitrogen"] = inventory.GetGasMoles(FluidIds.Nitrogen),
+            ["carbon"] = inventory.GetGasMoles(FluidIds.CarbonDioxide), ["water"] = inventory.GetLiquidMoles(FluidIds.PureWater),
+            ["sourceTaken"] = sourceBefore - sourceAfter, ["targetAdded"] = gasAfter - gasBefore,
+            ["repeated"] = repeated, ["fullAvailable"] = fullAvailable,
+            ["retrySourceUnchanged"] = f.Atmosphere.CurrentMoles == sourceAfter,
+            ["steelAccepted"] = steelAccepted, ["steelEmpty"] = GetFluidInventory(steel).IsEmpty,
+            ["rotated"] = rotated, ["rotationBefore"] = rotationBefore, ["rotationAfter"] = a.RotationQuarterTurns
+        };
+        f.Atmosphere.ReferencePressureKPa = 50d;
+        result["thinAvailable"] = CanFillFluidTankAir(empty);
+        result["thinAccepted"] = RequestOperation(empty, "work", "", player);
+        f.Atmosphere.Gases.Clear();
+        result["vacuumAvailable"] = CanFillFluidTankAir(empty);
+        result["vacuumAccepted"] = RequestOperation(empty, "work", "", player);
+        result["emptyAfterRejections"] = GetFluidInventory(empty).IsEmpty;
+        return result;
+    }
+
     internal static JObject CaptureTankOwnership(Player player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);

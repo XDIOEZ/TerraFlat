@@ -514,6 +514,7 @@
         "MinimumGasSpaceLiters": 0.1,
         "MaxSafePressureKPa": 800,
         "CombineAdjacent": true,
+        "AllowManualAirFill": true,
         "SingleGas": false,
         "SingleLiquid": false,
         "ThroughputLitersPerSecond": 1000,

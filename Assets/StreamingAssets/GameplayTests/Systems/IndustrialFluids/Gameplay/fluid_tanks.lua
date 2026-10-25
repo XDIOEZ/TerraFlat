@@ -19,6 +19,22 @@ local function near(actual, expected, message)
         0.00000001 * math.max(1, math.abs(expected)), message)
 end
 
+test.runtime("industrial_fluids", "tank_manual_air_fill", {}, function(data)
+    assert(data.available and data.accepted and data.shared, "铁方块罐没有通过正式命令给共享库存补气")
+    near(data.volume, 200, "手动补气没有使用双格罐的总容积")
+    near(data.pressure, 101.325, "共享罐没有按真实气相空间充至一标准大气压")
+    assert(data.oxygen > 0 and data.nitrogen > 0, "充气没有保留环境空气的混合组分")
+    near(data.carbon, .05, "充气覆盖了罐内原有气体")
+    near(data.water, 20, "充气改变了罐内液体")
+    near(data.sourceTaken, data.targetAdded, "手动充气没有从真实环境扣除等量气体")
+    assert(not data.repeated and not data.fullAvailable and data.retrySourceUnchanged,
+        "已充满的罐仍能补气或继续扣除环境气体")
+    assert(not data.steelAccepted and data.steelEmpty, "未启用手动补气的钢罐接受了充气命令")
+    assert(not data.rotated and data.rotationBefore == data.rotationAfter, "对称方块罐仍能执行旋转命令")
+    assert(not data.thinAvailable and not data.thinAccepted and not data.vacuumAvailable
+        and not data.vacuumAccepted and data.emptyAfterRejections, "低压或真空环境凭空补出了标准气压")
+end, "铁方块罐手动补气、共享容量、已有气液、环境扣量与旋转拒绝")
+
 -- 直接读取正式组主身份和两份保存内容，避免把随机出生的第二个节点固定当作非主成员。
 test.runtime("industrial_fluids", "tank_ownership", {}, function(data)
     assert(data.scope == "live-isolated-world", "储罐没有使用真实隔离世界")

@@ -34,6 +34,7 @@ public static partial class GameplayTestRuntimeProbe
         ["industrial_fluids/selector_routes"] = GameplayTestFluidNetworks.CaptureSelectorRoutes,
         ["industrial_fluids/phase_preference"] = GameplayTestFluidNetworks.CapturePhasePreference,
         ["industrial_fluids/tank_ownership"] = GameplayTestFluidNetworks.CaptureTankOwnership,
+        ["industrial_fluids/tank_manual_air_fill"] = GameplayTestFluidNetworks.CaptureTankManualAirFill,
         ["industrial_fluids/ground_scope_roundtrip"] = GameplayTestFluidNetworks.CaptureGroundScopeRoundtrip,
         ["industrial_fluids/reaction_capacity"] = GameplayTestFluidDevices.CaptureReactionCapacity,
         ["industrial_fluids/device_status_feedback"] = GameplayTestFluidDevices.CaptureStatusFeedback,
