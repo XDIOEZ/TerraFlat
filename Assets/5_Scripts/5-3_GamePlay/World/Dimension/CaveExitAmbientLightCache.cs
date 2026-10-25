@@ -7,7 +7,8 @@ public sealed class CaveExitAmbientLightCache
 {
     #region 采光缓存
 
-    private const float FadeDistance = 100f;
+    // 洞口自然采光在20米内线性衰减，强度仍由昼夜系统独立决定。
+    private const float FadeDistance = 20f;
     private readonly List<Vector2> exitPositions = new();
     private GameSaveData cachedSave;
     private WorldAddress cachedAddress;

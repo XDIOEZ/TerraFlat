@@ -229,7 +229,7 @@ public static partial class GameplayTestSystemProbe
         var otherSave = CavePerformanceSave();
         Vector2 position = new(0.5f, 0.5f);
         DimensionTravelProgressStore.SetSurfaceEntranceState(firstSave, CavePerformanceSurface, position, false, true);
-        DimensionTravelProgressStore.SetSurfaceEntranceState(otherSave, CavePerformanceSurface, new Vector2(50.5f, 0.5f), false, true);
+        DimensionTravelProgressStore.SetSurfaceEntranceState(otherSave, CavePerformanceSurface, new Vector2(10.5f, 0.5f), false, true);
         var cache = new CaveExitAmbientLightCache();
         var samples = new JObject { ["firstSave"] = CaptureCavePerformanceLight(cache, firstSave, position) };
         samples["otherSave"] = CaptureCavePerformanceLight(cache, otherSave, position);

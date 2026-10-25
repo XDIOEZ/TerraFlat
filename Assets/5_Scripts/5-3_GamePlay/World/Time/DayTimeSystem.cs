@@ -499,7 +499,7 @@ private void TimeRun(string sceneName, float deltaTime)
 
     /// <summary>
     /// 洞穴自然采光只来自仍然开放的出口：出口处保持现有洞穴环境光，随后按世界距离线性衰减，
-    /// 100 米及更深处环境光归零；火把等局部光仍由 LightLayerMgr 独立叠加。
+    /// 20 米及更深处环境光归零；火把等局部光仍由 LightLayerMgr 独立叠加。
     /// </summary>
     private float ResolveCaveExitAmbientFactor(string sceneName)
     {
