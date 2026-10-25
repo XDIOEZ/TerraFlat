@@ -37,7 +37,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png",
         "rendererLocalPosition": {
           "x": 0.0,
-          "y": 0.0,
+          "y": 0.5,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
@@ -46,8 +46,8 @@
           "z": 0.0
         },
         "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
+          "x": 2.0,
+          "y": 2.0,
           "z": 1.0
         },
         "color": {
@@ -59,7 +59,21 @@
         "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
       },
       "health": {
         "hasHp": true,
@@ -70,7 +84,7 @@
         },
         "moduleLocalPosition": {
           "x": 0.0,
-          "y": 0.0,
+          "y": 0.5,
           "z": 0.0
         },
         "collider": {
@@ -82,8 +96,8 @@
             "y": 0.0
           },
           "size": {
-            "x": 1.0,
-            "y": 1.0
+            "x": 1.125,
+            "y": 2.0
           },
           "edgeRadius": 0.0
         },
