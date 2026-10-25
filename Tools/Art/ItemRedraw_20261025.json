@@ -154,7 +154,7 @@
       "guid": "a5732d1324140c40b598f12d14fbbad2",
       "originalAddress": "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
       "originalSha256": "6fbc65f6b779f1c6ffbf39060933e32acea8e799ef85451d7d5ffb7eaff1904c",
-      "outputSha256": "32afc815160e4c0070a20e1b8839770667f7a3f61568c8f023d4c4e774c419cc",
+      "outputSha256": "55e252481d2a757655aec2266bedb8b9d6c1bab1c3d44ae43442679cc0231a9f",
       "originalSize": [
         32,
         32
@@ -173,7 +173,17 @@
         "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
         "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png"
       ],
-      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: a MINER'S NOTEBOOK, small battered parchment booklet in three-quarter view, warm yellowed paper pages, folded lower corner, simple brown leather stitched spine, one broad muted charcoal pickaxe symbol on cover, a few coarse dark short scribble marks that are not readable words. A short muted brown binding strap. Handmade, slightly irregular edges. No actual text, no title, no tiny detailed writing."
+      "prompt": "Use case: style-transfer. Asset type: replacement inventory sprite for FlatWorld, a top-down 2D survival sandbox. Image 1 identifies the item; redraw it completely with a better readable silhouette. Image 2 is ONLY the style reference for coarse square pixel clusters, natural materials, and restrained shading, do not include leather. Low-saturation, slightly realistic retro pixel art, chunky hard-edged pixel clusters equivalent to a 32 by 32 logical grid. A few large continuous color shapes, upper-left lighting, one main shadow tone and modest highlights. Thin restrained dark material-colored contour where needed. Render this chunky pixel style directly at the native output resolution; preserve the large square pixel look. No fine texture, no noisy stippling, no dithering, no smooth gradients, no painterly rendering, no 3D, no heavy black sticker outline. Square canvas, exactly one isolated inventory item centered with balanced transparent margins, roughly 85 percent canvas occupancy. Truly transparent background with hard alpha edges. No background, no ground, no external cast shadow, no text, no labels, no frame or watermark. Subject: a MINER'S NOTEBOOK, small battered parchment booklet in three-quarter view, warm yellowed paper pages, folded lower corner, simple brown leather stitched spine, one broad muted charcoal pickaxe symbol on cover, a few coarse dark short scribble marks that are not readable words. A short muted brown binding strap. Handmade, slightly irregular edges. No actual text, no title, no tiny detailed writing.",
+      "edits": [
+        {
+          "date": "2026-10-25",
+          "generator": "Built-in image_gen",
+          "change": "Remove only the pickaxe emblem so the notebook art can be reused as a generic note.",
+          "previousSha256": "32afc815160e4c0070a20e1b8839770667f7a3f61568c8f023d4c4e774c419cc",
+          "outputSha256": "55e252481d2a757655aec2266bedb8b9d6c1bab1c3d44ae43442679cc0231a9f",
+          "prompt": "Use case: precise-object-edit. Edit target: the attached pixel-art notebook icon. Remove ONLY the large dark pickaxe symbol from the upper central parchment cover. Seamlessly fill the former pickaxe area with the same warm yellowed parchment and existing coarse pixel shading, leaving a plain usable blank upper cover. Keep everything else exactly unchanged: notebook outer silhouette, canvas size and framing, diagonal orientation, leather spine, three pale binding stitches, paper edges, small lower scribble marks, folded lower corner, leather closure strap, muted color palette, upper-left lighting, coarse square pixel clusters and original transparency. Do not add a new symbol, title, text, emblem or decoration. Do not redraw, resize, crop, sharpen, smooth or change any other part of the icon. Preserve the fully transparent background and native resolution."
+        }
+      ]
     },
     {
       "id": "Nail",
