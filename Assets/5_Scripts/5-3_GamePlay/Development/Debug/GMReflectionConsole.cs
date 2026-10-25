@@ -2140,10 +2140,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 RefreshAdminInvincibilityButton();
                 RefreshPlayerMoveSpeedButton();
                 RefreshPickupMultiplierControl();
+                break;
+            case GmPageId.Buff:
                 RefreshBuffDefinitions();
                 if (refreshCatalogs)
                     RefreshBuffTargetList(false);
                 RefreshBuffTargetingControls();
+                break;
+            case GmPageId.Quests:
                 if (refreshCatalogs)
                     RefreshQuestPage();
                 else
@@ -2157,15 +2161,24 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 RefreshFixedStructureOptions();
                 RefreshAnimalDebugOverlayButton();
                 RefreshHiveDebugOverlayButton();
+                break;
+            case GmPageId.Aiecs:
                 RefreshAiecsPage();
+                break;
+            case GmPageId.WorldCreatures:
+                RefreshWorldCreaturesPageIfNeeded();
                 break;
             case GmPageId.World:
                 RefreshChunkLoadSpeedControl();
                 RefreshChunkStreamingBudgetControls();
                 RefreshWorldRangeControls();
                 RefreshWorldWindControl();
+                break;
+            case GmPageId.Layers:
                 RefreshNavigationPathButton();
                 RefreshWorldLayerOverlayButtons();
+                break;
+            case GmPageId.Structures:
                 RefreshPlanetTeleportOptions();
                 if (refreshCatalogs)
                     RefreshStructureOptions();
@@ -2175,6 +2188,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 BindGameEventManager();
                 if (refreshCatalogs)
                     RebuildGameEventPage();
+                break;
+            case GmPageId.Commands:
                 if (refreshCatalogs)
                     RebuildReflectedCommands();
                 break;

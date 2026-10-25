@@ -1,3 +1,34 @@
+-- 固定二级页签与每页独立滚动，窄内容区也不能把导航挤出边界。
+for _, size in ipairs({{1120, 532}, {1000, 480}, {860, 420}, {680, 312}, {480, 420}}) do
+    test.system("ui_settings", "gm_secondary_pages", {width = size[1], height = size[2]}, function(data)
+        assert(#data.selections == 12, "GM 分页覆盖不完整")
+        for _, page in ipairs(data.selections) do
+            assert(page.visiblePages == 1 and page.selectedVisible and page.ownsScroll and page.inView,
+                "GM 必须只显示当前二级分页并使用独立滚动区：" .. page.page)
+            assert(page.contentHeight > page.viewportHeight and page.viewportHeight > 0,
+                "GM 长内容没有产生有效滚动区：" .. page.page)
+        end
+        assert(data.navigationOutsideScroll and data.navigationMovement < 0.01,
+            "GM 二级页签随内容滚动")
+        assert(data.navigationBottom >= data.viewportTop - 1 and data.deviceNavigationCount == 0,
+            "GM 二级页签遮挡内容，或单页分类重复显示导航")
+        assert(#data.navigationButtons == 3, "世界分类缺少二级分页按钮")
+        local previousRight = data.hostLeft
+        for _, button in ipairs(data.navigationButtons) do
+            assert(button.width > 0 and button.height >= 38 and button.left >= previousRight - 1
+                and button.right <= data.hostRight + 1 and button.top <= data.hostTop + 1
+                and button.bottom >= data.viewportTop - 1, "GM 二级按钮重叠、越界或点击区不足")
+            previousRight = button.right
+        end
+        assert(data.switched.visiblePages == 1 and data.switched.previousHidden
+            and not data.switched.previousInView and data.switched.newPageAtTop > 0.99,
+            "GM 切页后隐藏页仍占用内容或新页继承了旧页滚动位置")
+        assert(data.restoredOffset and data.rememberedSecondaryPage,
+            "GM 没有保留各页滚动位置或分类内的上次分页")
+        assert(data.searchTargetVisible, "GM 搜索目标无法滚入当前分页视口")
+    end, "GM 固定二级分页与独立滚动 " .. size[1] .. "×" .. size[2])
+end
+
 -- 正式存档控件与运行时绑定保持同一个身份，漏建按钮时直接暴露资产回归。
 test.system("ui_settings", "pressure_hud_display_cache", {}, function(data)
     assert(data.unchanged and data.roundingCorrect, "HUD 未按一位小数缓存稳定的气压显示状态")

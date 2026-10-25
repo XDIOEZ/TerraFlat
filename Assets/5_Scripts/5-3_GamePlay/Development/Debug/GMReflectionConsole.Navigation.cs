@@ -40,6 +40,7 @@ public sealed partial class GMReflectionConsole
         public Button TabButton;
         public ScrollRect Scroll;
         public RectTransform Content;
+        public GmPageId SelectedPageId;
     }
 
     private sealed class GmSearchEntry
@@ -360,12 +361,12 @@ public sealed partial class GMReflectionConsole
 
     private void CreateTab(Transform parent, GmPageId pageId, string label, float width)
     {
-        Button button = CreateButton(parent, label, () => SetActivePage(pageId), width, 36f);
+        Button button = CreateButton(parent, label, () => SetActivePage(gmGroups[pageId].SelectedPageId), width, 36f);
         LayoutElement layout = button.GetComponent<LayoutElement>();
         layout.minWidth = width;
         layout.preferredWidth = width;
         layout.flexibleWidth = 0f;
-        gmGroups[pageId] = new GmPageView { TabButton = button };
+        gmGroups[pageId] = new GmPageView { TabButton = button, SelectedPageId = pageId };
     }
 
     #region GM 分类页面
@@ -391,27 +392,43 @@ public sealed partial class GMReflectionConsole
         rootRect.offsetMax = Vector2.zero;
         pageRoot.AddComponent<Image>().color = GmSurfaceLow;
 
-        Transform content = ConfigureVerticalScroll(pageRoot, 10f, out ScrollRect scroll);
+        VerticalLayoutGroup groupLayout = pageRoot.AddComponent<VerticalLayoutGroup>();
+        groupLayout.padding = new RectOffset(10, 10, 10, 10);
+        groupLayout.spacing = 8f;
+        groupLayout.childControlWidth = true;
+        groupLayout.childControlHeight = true;
+        groupLayout.childForceExpandWidth = true;
+        groupLayout.childForceExpandHeight = false;
         GmPageView group = gmGroups[groupId];
         group.Root = pageRoot;
-        group.Scroll = scroll;
-        group.Content = content.GetComponent<RectTransform>();
         pageRoot.SetActive(false);
 
-        // 只有一个功能区的设备页无需再显示重复的内部导航按钮。
-        if (sections.Length <= 1)
-            return;
+        // 二级页签固定在滚动区外，单功能分类省去重复导航。
+        if (sections.Length > 1)
+        {
+            GameObject navigation = CreateUiObject("Section Navigation", pageRoot.transform);
+            LayoutElement navigationSize = navigation.AddComponent<LayoutElement>();
+            navigationSize.minHeight = navigationSize.preferredHeight = 42f;
+            HorizontalLayoutGroup layout = navigation.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = true;
+            foreach (GmPageId sectionId in sections)
+            {
+                Button tab = CreateButton(navigation.transform, GetPageLabel(sectionId),
+                    () => SetActivePage(sectionId), 150f, 38f);
+                LayoutElement tabSize = tab.GetComponent<LayoutElement>();
+                tabSize.minWidth = 0f;
+                tabSize.flexibleWidth = 1f;
+                gmPages[sectionId] = new GmPageView { TabButton = tab };
+            }
+        }
 
-        GameObject navigation = CreateUiObject("Section Navigation", content);
-        navigation.AddComponent<LayoutElement>().preferredHeight = 42f;
-        HorizontalLayoutGroup layout = navigation.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 8f;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = true;
-        foreach (GmPageId sectionId in sections)
-            CreateButton(navigation.transform, GetPageLabel(sectionId), () => ScrollToPageSection(sectionId), 150f, 38f);
+        GameObject contentHost = CreateUiObject("Section Page Host", pageRoot.transform);
+        contentHost.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        group.Content = contentHost.GetComponent<RectTransform>();
     }
 
     private GmPageView CreatePage(GmPageId pageId)
@@ -419,21 +436,19 @@ public sealed partial class GMReflectionConsole
         GmPageView group = gmGroups[GetPageGroup(pageId)];
         GameObject section = CreateUiObject(GetPageLabel(pageId) + " Section", group.Content);
         section.AddComponent<Image>().color = GmSurface;
-        VerticalLayoutGroup layout = section.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(12, 12, 12, 12);
-        layout.spacing = 9f;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        RectTransform sectionRect = section.GetComponent<RectTransform>();
+        sectionRect.anchorMin = Vector2.zero;
+        sectionRect.anchorMax = Vector2.one;
+        sectionRect.offsetMin = sectionRect.offsetMax = Vector2.zero;
+        Transform content = ConfigureVerticalScroll(section, 0f, out ScrollRect scroll);
 
-        // 所有功能区共用所属分类的滚动窗口，不再嵌套整页 ScrollRect。
-        GmPageView page = new()
-        {
-            Root = group.Root,
-            Scroll = group.Scroll,
-            Content = section.GetComponent<RectTransform>()
-        };
+        // 每个分页独立保存滚动位置，隐藏内容不再占用当前页空间。
+        if (!gmPages.TryGetValue(pageId, out GmPageView page))
+            page = new GmPageView();
+        page.Root = section;
+        page.Scroll = scroll;
+        page.Content = content.GetComponent<RectTransform>();
+        section.SetActive(false);
         gmPages[pageId] = page;
         return page;
     }
@@ -449,15 +464,6 @@ public sealed partial class GMReflectionConsole
             GmPageId.Device => GmPageId.Device,
             _ => throw new ArgumentOutOfRangeException(nameof(pageId), pageId, "GM 功能未分类")
         };
-    }
-
-    private void ScrollToPageSection(GmPageId pageId)
-    {
-        if (!gmPages.TryGetValue(pageId, out GmPageView page))
-            return;
-
-        Canvas.ForceUpdateCanvases();
-        ScrollToPageTarget(page, page.Content);
     }
 
     private static void ScrollToPageTarget(GmPageView page, RectTransform target)
@@ -476,7 +482,7 @@ public sealed partial class GMReflectionConsole
             : 1f;
     }
 
-    /// <summary>长页面仅刷新滚动视口内的动态功能区。</summary>
+    /// <summary>只刷新当前分页滚动视口内的动态功能区。</summary>
     private bool IsPageSectionInView(GmPageId pageId)
     {
         if (!gmPages.TryGetValue(pageId, out GmPageView page) ||
@@ -809,7 +815,7 @@ public sealed partial class GMReflectionConsole
     {
         if (dayTimeSlider == null || windowRoot == null || !windowRoot.activeSelf ||
             !gmPages.TryGetValue(GmPageId.World, out GmPageView page) ||
-            page.Root == null || !page.Root.activeSelf)
+            page.Root == null || !page.Root.activeInHierarchy)
         {
             CancelPendingDayTimeJump();
             return;
@@ -1676,16 +1682,32 @@ public sealed partial class GMReflectionConsole
             row.transform as RectTransform);
     }
 
+    #region GM 二级分页选择
+
     private void SetActivePage(GmPageId pageId)
     {
         if (!gmPages.TryGetValue(pageId, out GmPageView selected) || selected.Root == null)
             return;
 
         GmPageId groupId = GetPageGroup(pageId);
-        GMConsolePreferences.SetActivePageIndex((int)groupId);
-        if (groupId != GmPageId.World)
+        GMConsolePreferences.SetActivePageIndex((int)pageId);
+        if (pageId != GmPageId.Structures)
             CancelLocationSearches();
-        activeGmPage = groupId;
+
+        ApplyGmPageSelectionVisibility(pageId);
+        RefreshRuntimeData(true);
+        Canvas.ForceUpdateCanvases();
+        ResizeResponsiveGrids();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(gmGroups[groupId].Root.GetComponent<RectTransform>());
+        LayoutRebuilder.ForceRebuildLayoutImmediate(selected.Content);
+    }
+
+    /// <summary>只切换分页显示与选中样式，不触发业务刷新或修改玩家偏好。</summary>
+    private void ApplyGmPageSelectionVisibility(GmPageId pageId)
+    {
+        GmPageId groupId = GetPageGroup(pageId);
+        activeGmPage = pageId;
+        gmGroups[groupId].SelectedPageId = pageId;
 
         foreach (KeyValuePair<GmPageId, GmPageView> pair in gmGroups)
         {
@@ -1705,12 +1727,20 @@ public sealed partial class GMReflectionConsole
             }
         }
 
-        RefreshRuntimeData(true);
-        Canvas.ForceUpdateCanvases();
-        ResizeResponsiveGrids();
-        if (gmGroups[groupId].Content != null)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(gmGroups[groupId].Content);
+        foreach (KeyValuePair<GmPageId, GmPageView> pair in gmPages)
+        {
+            bool active = pair.Key == pageId;
+            if (pair.Value.Root != null)
+            {
+                if (!active)
+                    pair.Value.Scroll?.StopMovement();
+                pair.Value.Root.SetActive(active);
+            }
+            SetGmButtonVisual(pair.Value.TabButton, active ? GmSelection : GmSurfaceRaised, active);
+        }
     }
+
+    #endregion
 
     private void RegisterSearchEntry(
         GmPageId pageId,
@@ -1826,7 +1856,8 @@ public sealed partial class GMReflectionConsole
     private IEnumerator ScrollToSearchTarget(GmSearchEntry entry)
     {
         yield return null;
-        if (entry?.Target == null || !gmPages.TryGetValue(entry.PageId, out GmPageView page))
+        if (entry?.Target == null || activeGmPage != entry.PageId ||
+            !gmPages.TryGetValue(entry.PageId, out GmPageView page))
             yield break;
 
         Canvas.ForceUpdateCanvases();
