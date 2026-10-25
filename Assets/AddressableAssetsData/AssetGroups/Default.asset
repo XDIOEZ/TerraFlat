@@ -41,12 +41,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ffd05e4c2a3d434f8b7fa5d8b7a55eb6
-    m_Address: Assets/6_Art/Generated/Combat/Archery/Crossbow_Wood_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cbd56d62db234f629eeeaf0646ee22f5
     m_Address: UI_Anvil
     m_ReadOnly: 0
@@ -71,14 +65,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 138d23a66ed73dd40a547532d907ebed
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/Module_ToolCabinetStorage.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: bac28c00322c86b4f90c1714145cf98f
-    m_Address: Assets/6_Art/Generated/Building/ToolCabinet/ToolCabinet_Building.png
+  - m_GUID: ffd05e4c2a3d434f8b7fa5d8b7a55eb6
+    m_Address: Assets/6_Art/Generated/Combat/Archery/Crossbow_Wood_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -4650,6 +4638,18 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5624f4b361364ada9e201754f13c11e6
     m_Address: Assets/6_Art/Generated/InventoryCrafting/AdvancedMaterials/SiliconPlate/SiliconPlate_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 138d23a66ed73dd40a547532d907ebed
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/Module_ToolCabinetStorage.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bac28c00322c86b4f90c1714145cf98f
+    m_Address: Assets/6_Art/Generated/Building/ToolCabinet/ToolCabinet_Building.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

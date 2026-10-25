@@ -354,7 +354,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
             Animator weaponAnimator = animation?.animator;
             if (weaponAnimator != null)
             {
-                bool keepStateOnDisable = weaponAnimator.keepAnimatorControllerStateOnDisable;
+                bool keepStateOnDisable = weaponAnimator.keepAnimatorStateOnDisable;
                 bool inactiveAnimatorWarning = false;
                 Application.LogCallback onLog = (message, _, type) =>
                 {
@@ -363,7 +363,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
                 Application.logMessageReceived += onLog;
                 try
                 {
-                    weaponAnimator.keepAnimatorControllerStateOnDisable = true;
+                    weaponAnimator.keepAnimatorStateOnDisable = true;
                     result["beforeDisableActionRequested"] = animation.TryRequestAction();
                     weapon.gameObject.SetActive(false);
                     result["inactiveActionRejected"] = !animation.TryRequestAction();
@@ -382,7 +382,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
                 finally
                 {
                     Application.logMessageReceived -= onLog;
-                    if (weaponAnimator != null) weaponAnimator.keepAnimatorControllerStateOnDisable = keepStateOnDisable;
+                    if (weaponAnimator != null) weaponAnimator.keepAnimatorStateOnDisable = keepStateOnDisable;
                     result["inactiveAnimatorWarning"] = inactiveAnimatorWarning;
                 }
             }

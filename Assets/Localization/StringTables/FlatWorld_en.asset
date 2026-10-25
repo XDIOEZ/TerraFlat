@@ -19,39 +19,45 @@ MonoBehaviour:
     m_Items: []
   m_TableData:
   - m_Id: 27615045296885764
-    m_Localized: "Copper Hammer"
+    m_Localized: Copper Hammer
     m_Metadata:
       m_Items: []
   - m_Id: 27615045296885765
-    m_Localized: "A copper-headed metal hammer with a wooden handle. Use it at a metal anvil. Durability 100; each valid strike consumes 1 durability."
+    m_Localized: A copper-headed metal hammer with a wooden handle. Use it at a metal
+      anvil. Durability 100; each valid strike consumes 1 durability.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045296885766
-    m_Localized: "Iron Hammer"
+    m_Localized: Iron Hammer
     m_Metadata:
       m_Items: []
   - m_Id: 27615045296885767
-    m_Localized: "A wrought-iron hammer for repeated forging at a metal anvil. Durability 200; each valid strike consumes 1 durability."
+    m_Localized: A wrought-iron hammer for repeated forging at a metal anvil. Durability
+      200; each valid strike consumes 1 durability.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045296885768
-    m_Localized: "Steel Hammer"
+    m_Localized: Steel Hammer
     m_Metadata:
       m_Items: []
   - m_Id: 27615045296885769
-    m_Localized: "A durable steel-headed hammer for forging at a metal anvil. Durability 400; each valid strike consumes 1 durability."
+    m_Localized: A durable steel-headed hammer for forging at a metal anvil. Durability
+      400; each valid strike consumes 1 durability.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402000
-    m_Localized: "Crossbow"
+    m_Localized: Crossbow
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402001
-    m_Localized: "A wooden crossbow using ordinary arrows, with the same damage, range and charge time as a recurve bow. Hold attack to fully load, then release without firing. Press and release attack again to shoot. Stamina drains only while loading, stopping at full charge. Releasing early cancels loading."
+    m_Localized: A wooden crossbow using ordinary arrows, with the same damage, range
+      and charge time as a recurve bow. Hold attack to fully load, then release without
+      firing. Press and release attack again to shoot. Stamina drains only while
+      loading, stopping at full charge. Releasing early cancels loading.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402002
-    m_Localized: "Crossbow"
+    m_Localized: Crossbow
     m_Metadata:
       m_Items: []
   - m_Id: 4702777344
@@ -420,7 +426,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326738
-    m_Localized: Eating raw meat has a 50% chance to cause infection for 5 minutes, stacking up to 3 times. Cook before eating.
+    m_Localized: Eating raw meat has a 50% chance to cause infection for 5 minutes,
+      stacking up to 3 times. Cook before eating.
     m_Metadata:
       m_Items: []
   - m_Id: 4887326739
@@ -516,7 +523,9 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582272
-    m_Localized: "A furnace with forced airflow for high temperature metalworking. 3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input capacity."
+    m_Localized: A furnace with forced airflow for high temperature metalworking.
+      3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input
+      capacity.
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582273
@@ -613,7 +622,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278071828481
-    m_Localized: "A furnace for smelting ore. 2 input slots, a 50% material heating coefficient, and 50 kg / 50 L input capacity."
+    m_Localized: A furnace for smelting ore. 2 input slots, a 50% material heating
+      coefficient, and 50 kg / 50 L input capacity.
     m_Metadata:
       m_Items: []
   - m_Id: 357278092800000
@@ -885,7 +895,9 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915969
-    m_Localized: "A furnace with forced airflow for high temperature metalworking. 3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input capacity."
+    m_Localized: A furnace with forced airflow for high temperature metalworking.
+      3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input
+      capacity.
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915970
@@ -949,7 +961,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915985
-    m_Localized: "A furnace for smelting ore. 2 input slots, a 50% material heating coefficient, and 50 kg / 50 L input capacity."
+    m_Localized: A furnace for smelting ore. 2 input slots, a 50% material heating
+      coefficient, and 50 kg / 50 L input capacity.
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915986
@@ -1798,55 +1811,72 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715653
-    m_Localized: Creative mode power source. Connect to a copper wire in the same cell
-      for unlimited power on demand without fuel or stored charge. Voltage compatibility
+    m_Localized: Creative mode power source. Connect to a copper wire in the same
+      cell for unlimited power on demand without fuel or stored charge. Voltage compatibility
       and wire capacity limits still apply.
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715654
-    m_Localized: Creative mode power source. Connect to a copper wire in the same cell
-      for unlimited power on demand without fuel or stored charge. Voltage compatibility
+    m_Localized: Creative mode power source. Connect to a copper wire in the same
+      cell for unlimited power on demand without fuel or stored charge. Voltage compatibility
       and wire capacity limits still apply.
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715655
-    m_Localized: "Induction Stove"
+    m_Localized: Induction Stove
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715656
-    m_Localized: "Induction Stove"
+    m_Localized: Induction Stove
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715657
-    m_Localized: "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials transform at their own temperature and cool naturally after lowering the target or losing power."
+    m_Localized: 'Automatically heats materials with electricity. 3 input slots with
+      300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default
+      target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly
+      with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials
+      transform at their own temperature and cool naturally after lowering the target
+      or losing power.'
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715658
-    m_Localized: "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials transform at their own temperature and cool naturally after lowering the target or losing power."
+    m_Localized: 'Automatically heats materials with electricity. 3 input slots with
+      300 kg / 300 L capacity, 2 output slots and a 150% heating coefficient. Default
+      target 2000 C; adjustable from 20 to 3500 C at 120 V. Power rises linearly
+      with the target: 600 W at 1000 C, 1200 W at 2000 C and 2100 W at 3500 C. Materials
+      transform at their own temperature and cool naturally after lowering the target
+      or losing power.'
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715659
-    m_Localized: "Space Elevator Terminal"
+    m_Localized: Space Elevator Terminal
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715660
-    m_Localized: "Space Elevator"
+    m_Localized: Space Elevator
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715661
-    m_Localized: "Connects the ground to an expandable fixed space station. Transports cargo and players both ways. Paired terminals cannot be dismantled. This prototype does not consume power."
+    m_Localized: Connects the ground to an expandable fixed space station. Transports
+      cargo and players both ways. Paired terminals cannot be dismantled. This prototype
+      does not consume power.
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715662
-    m_Localized: "Connects the ground to an expandable fixed space station. Transports cargo and players both ways. Paired terminals cannot be dismantled. This prototype does not consume power."
+    m_Localized: Connects the ground to an expandable fixed space station. Transports
+      cargo and players both ways. Paired terminals cannot be dismantled. This prototype
+      does not consume power.
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715663
-    m_Localized: "Wooden Shield"
+    m_Localized: Wooden Shield
     m_Metadata:
       m_Items: []
   - m_Id: 23082859458715664
-    m_Localized: "A shield of lashed wooden slats. In hand: tap primary attack to bash (+5 defense during the action), or hold to guard (+10 defense, half movement speed). In the offhand slot: use Parry (Q by default) for a brief +10 defense window. Equipping alone grants no passive defense."
+    m_Localized: 'A shield of lashed wooden slats. In hand: tap primary attack to
+      bash (+5 defense during the action), or hold to guard (+10 defense, half movement
+      speed). In the offhand slot: use Parry (Q by default) for a brief +10 defense
+      window. Equipping alone grants no passive defense.'
     m_Metadata:
       m_Items: []
   - m_Id: 27596266936504320
@@ -2074,27 +2104,30 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128265
-    m_Localized: "Tungsten Ingot"
+    m_Localized: Tungsten Ingot
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128266
-    m_Localized: "A dense, heat-resistant metal ingot smelted from tungsten ore at 3422 C or above. Can be stacked and stored as an advanced material."
+    m_Localized: A dense, heat-resistant metal ingot smelted from tungsten ore at
+      3422 C or above. Can be stacked and stored as an advanced material.
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128267
-    m_Localized: "Tungsten Ore"
+    m_Localized: Tungsten Ore
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128268
-    m_Localized: "Rare tungsten-bearing ore from underground. Set an induction stove target to at least 3422 C to smelt 2 ore into 1 tungsten ingot."
+    m_Localized: Rare tungsten-bearing ore from underground. Set an induction stove
+      target to at least 3422 C to smelt 2 ore into 1 tungsten ingot.
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128269
-    m_Localized: "Tungsten Deposit"
+    m_Localized: Tungsten Deposit
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128270
-    m_Localized: "A rare tungsten vein in underground caves, harder than iron ore. Mine with a pickaxe to obtain tungsten ore."
+    m_Localized: A rare tungsten vein in underground caves, harder than iron ore.
+      Mine with a pickaxe to obtain tungsten ore.
     m_Metadata:
       m_Items: []
   - m_Id: 27615044965535744
@@ -2118,48 +2151,57 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402003
-    m_Localized: "Railway Track"
+    m_Localized: Railway Track
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402004
-    m_Localized: "A ground railway tile that connects into straights and curves. Minecarts follow it; it has no mechanical power connection."
+    m_Localized: A ground railway tile that connects into straights and curves. Minecarts
+      follow it; it has no mechanical power connection.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402005
-    m_Localized: "Railway Track"
+    m_Localized: Railway Track
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402006
-    m_Localized: "A ground railway tile that connects into straights and curves. Minecarts follow it; it has no mechanical power connection."
+    m_Localized: A ground railway tile that connects into straights and curves. Minecarts
+      follow it; it has no mechanical power connection.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402007
-    m_Localized: "Minecart"
+    m_Localized: Minecart
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402008
-    m_Localized: "Place on ground or rails and walk into the cart to push it. Ground resistance is very high; rails guide movement. One rider per cart; F boards or dismounts. Two engine slots on the left, 18 cargo slots on the right. Put water vessels and fuel in cargo and install an engine to drive with WASD. Engines only move slowly on ground. Connect nearby carts to share power."
+    m_Localized: Place on ground or rails and walk into the cart to push it. Ground
+      resistance is very high; rails guide movement. One rider per cart; F boards
+      or dismounts. Two engine slots on the left, 18 cargo slots on the right. Put
+      water vessels and fuel in cargo and install an engine to drive with WASD. Engines
+      only move slowly on ground. Connect nearby carts to share power.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402009
-    m_Localized: "Minecart"
+    m_Localized: Minecart
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402010
-    m_Localized: "Place on ground or rails and walk into the cart to push it. Ground resistance is very high; rails guide movement. One rider per cart; F boards or dismounts. Two engine slots on the left, 18 cargo slots on the right. Put water vessels and fuel in cargo and install an engine to drive with WASD. Engines only move slowly on ground. Connect nearby carts to share power."
+    m_Localized: Place on ground or rails and walk into the cart to push it. Ground
+      resistance is very high; rails guide movement. One rider per cart; F boards
+      or dismounts. Two engine slots on the left, 18 cargo slots on the right. Put
+      water vessels and fuel in cargo and install an engine to drive with WASD. Engines
+      only move slowly on ground. Connect nearby carts to share power.
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402011
-    m_Localized: "Steam Engine"
+    m_Localized: Steam Engine
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402012
-    m_Localized: "A removable steam power module. Right-click while held to configure the switch and output level. Install in an engine slot; it draws water from vessels and fuel in train cargo to power the entire train."
+    m_Localized: A removable steam power module. Right-click while held to configure
+      the switch and output level. Install in an engine slot; it draws water from
+      vessels and fuel in train cargo to power the entire train.
     m_Metadata:
       m_Items: []
-  references:
-    version: 2
-    RefIds: []
   - m_Id: 27915473976856576
     m_Localized: Hidden Wire
     m_Metadata:

@@ -114,6 +114,7 @@ public static partial class MachineWorld
         EnsureScope();
         return lease;
     }
+
     #region 销毁阶段借用现有机器作用域
     // 世界释放只切换已有机器状态，不加载目录、建图或登记新作用域。
     internal static IDisposable UseExistingScopeForOwnerRelease(string key)

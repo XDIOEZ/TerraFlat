@@ -6060,7 +6060,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001244
-    m_Key: "ui.text.58E8295C"
+    m_Key: ui.text.58E8295C
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001250
@@ -6223,17 +6223,6 @@ MonoBehaviour:
     m_Key: ui.text.689358C6
     m_Metadata:
       m_Items: []
-  m_Metadata:
-    m_Items: []
-  m_KeyGenerator:
-    rid: 443753568374358017
-  references:
-    version: 2
-    RefIds:
-    - rid: 443753568374358017
-      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
-      data:
-        m_CustomEpoch: 1790309974475
   - m_Id: 10679429661495296
     m_Key: ui.text.AE1940BA
     m_Metadata:

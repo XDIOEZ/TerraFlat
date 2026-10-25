@@ -2087,49 +2087,6 @@ MonoBehaviour:
     m_Key: item.SteamEngine.description
     m_Metadata:
       m_Items: []
-  - m_Id: 28102500000010000
-    m_Key: item.LiquidTankBlock_Iron.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 28102500000010001
-    m_Key: item.LiquidTankBlock_Iron.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 28102500000010002
-    m_Key: item.LiquidTankBlock_Iron_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 28102500000010003
-    m_Key: item.LiquidTankBlock_Iron_Summoner.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 28102500000010004
-    m_Key: item.LiquidTankBlock_Steel.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 28102500000010005
-    m_Key: item.LiquidTankBlock_Steel.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 28102500000010006
-    m_Key: item.LiquidTankBlock_Steel_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 28102500000010007
-    m_Key: item.LiquidTankBlock_Steel_Summoner.description
-    m_Metadata:
-      m_Items: []
-  m_Metadata:
-    m_Items: []
-  m_KeyGenerator:
-    rid: 1500752182028533811
-  references:
-    version: 2
-    RefIds:
-    - rid: 1500752182028533811
-      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
-      data:
-        m_CustomEpoch: 1786200316845
   - m_Id: 27915473976856576
     m_Key: item.Wire_Hidden.name
     m_Metadata:
@@ -4060,6 +4017,38 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 28000000000100021
     m_Key: item.PortableGasTank_Steel_Building.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010000
+    m_Key: item.LiquidTankBlock_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010001
+    m_Key: item.LiquidTankBlock_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010002
+    m_Key: item.LiquidTankBlock_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010003
+    m_Key: item.LiquidTankBlock_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010004
+    m_Key: item.LiquidTankBlock_Steel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010005
+    m_Key: item.LiquidTankBlock_Steel.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010006
+    m_Key: item.LiquidTankBlock_Steel_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102500000010007
+    m_Key: item.LiquidTankBlock_Steel_Summoner.description
     m_Metadata:
       m_Items: []
   m_Metadata:

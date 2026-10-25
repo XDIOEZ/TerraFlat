@@ -19,39 +19,39 @@ MonoBehaviour:
     m_Items: []
   m_TableData:
   - m_Id: 17923500000001245
-    m_Localized: "Metal Hammer"
+    m_Localized: Metal Hammer
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001246
-    m_Localized: "Dismantle"
+    m_Localized: Dismantle
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001247
-    m_Localized: "Iron Anvil"
+    m_Localized: Iron Anvil
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001248
-    m_Localized: "A suitable unbroken tool is required"
+    m_Localized: A suitable unbroken tool is required
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001249
-    m_Localized: "The workstation has insufficient durability"
+    m_Localized: The workstation has insufficient durability
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001212
-    m_Localized: "Next unit melts in: {0}"
+    m_Localized: 'Next unit melts in: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001213
-    m_Localized: "Disappears in: {0}"
+    m_Localized: 'Disappears in: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001214
-    m_Localized: "{0} (game time)"
+    m_Localized: '{0} (game time)'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001215
-    m_Localized: "Time remaining: {0}"
+    m_Localized: 'Time remaining: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 5952679936
@@ -5847,507 +5847,525 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000128
-    m_Localized: "Space Elevator"
+    m_Localized: Space Elevator
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000129
-    m_Localized: "Space Elevator Terminal"
+    m_Localized: Space Elevator Terminal
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000130
-    m_Localized: "Ground Terminal"
+    m_Localized: Ground Terminal
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000131
-    m_Localized: "Space Station"
+    m_Localized: Space Station
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000132
-    m_Localized: "Send Cargo Cabin"
+    m_Localized: Send Cargo Cabin
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000133
-    m_Localized: "Call Cargo Cabin"
+    m_Localized: Call Cargo Cabin
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000134
-    m_Localized: "Ride to Space Station"
+    m_Localized: Ride to Space Station
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000135
-    m_Localized: "Ride to {0}"
+    m_Localized: Ride to {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000136
-    m_Localized: "Switch Inventory"
+    m_Localized: Switch Inventory
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000137
-    m_Localized: "Click an item on the left to load cargo, or on the right to unload it."
+    m_Localized: Click an item on the left to load cargo, or on the right to unload
+      it.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000138
-    m_Localized: "Loaded into the cargo cabin."
+    m_Localized: Loaded into the cargo cabin.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000139
-    m_Localized: "Unloaded into the selected inventory."
+    m_Localized: Unloaded into the selected inventory.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000140
-    m_Localized: "Ride booked. Stay near the terminal; you will travel when the cabin arrives."
+    m_Localized: Ride booked. Stay near the terminal; you will travel when the cabin
+      arrives.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000141
-    m_Localized: "Cargo cabin dispatched. Unload at the other terminal after arrival."
+    m_Localized: Cargo cabin dispatched. Unload at the other terminal after arrival.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000142
-    m_Localized: "Cargo cabin called. Please wait for arrival."
+    m_Localized: Cargo cabin called. Please wait for arrival.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000143
-    m_Localized: "Cargo in transit \u00b7 {0:0.0} seconds remaining"
+    m_Localized: "Cargo in transit \xB7 {0:0.0} seconds remaining"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000144
-    m_Localized: "This terminal: {0} \u00b7 Cabin docked at: {1}"
+    m_Localized: "This terminal: {0} \xB7 Cabin docked at: {1}"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000145
-    m_Localized: "Stay near the terminal for your ride. Leaving cancels your ride while cargo continues. Expand the station with floors, walls and equipment."
+    m_Localized: Stay near the terminal for your ride. Leaving cancels your ride
+      while cargo continues. Expand the station with floors, walls and equipment.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000146
-    m_Localized: "Mass {0:0.#}/{1:0.#} kg\nVolume {2:0.#}/{3:0.#} L"
+    m_Localized: 'Mass {0:0.#}/{1:0.#} kg
+
+      Volume {2:0.#}/{3:0.#} L'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000147
-    m_Localized: "{0} \u00b7 Load cargo \u00b7 {1}/{2}"
+    m_Localized: "{0} \xB7 Load cargo \xB7 {1}/{2}"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000148
-    m_Localized: "Cabin \u00b7 Unload cargo \u00b7 {0}/{1}"
+    m_Localized: "Cabin \xB7 Unload cargo \xB7 {0}/{1}"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000149
-    m_Localized: "{0}. {1}"
+    m_Localized: '{0}. {1}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000150
-    m_Localized: "{0}. {1} \u00d7 {2:0.##}"
+    m_Localized: "{0}. {1} \xD7 {2:0.##}"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000151
-    m_Localized: "Cabin docked at ground"
+    m_Localized: Cabin docked at ground
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000152
-    m_Localized: "Cabin docked at station"
+    m_Localized: Cabin docked at station
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000153
-    m_Localized: "Travelling to station"
+    m_Localized: Travelling to station
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000154
-    m_Localized: "Returning to ground"
+    m_Localized: Returning to ground
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000155
-    m_Localized: "The elevator connection does not exist."
+    m_Localized: The elevator connection does not exist.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000156
-    m_Localized: "The cabin is in transit."
+    m_Localized: The cabin is in transit.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000157
-    m_Localized: "The elevator destination is invalid."
+    m_Localized: The elevator destination is invalid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000158
-    m_Localized: "The cabin is already at this terminal."
+    m_Localized: The cabin is already at this terminal.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000159
-    m_Localized: "The elevator travel time is invalid."
+    m_Localized: The elevator travel time is invalid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000160
-    m_Localized: "This slot has no cargo to transfer."
+    m_Localized: This slot has no cargo to transfer.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000161
-    m_Localized: "Cargo transferred."
+    m_Localized: Cargo transferred.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000162
-    m_Localized: "The destination has no available capacity or cannot accept this item."
+    m_Localized: The destination has no available capacity or cannot accept this
+      item.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000163
-    m_Localized: "This elevator prototype supports the local host only. Remote clients are not supported yet."
+    m_Localized: This elevator prototype supports the local host only. Remote clients
+      are not supported yet.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000164
-    m_Localized: "The player or elevator session is not ready."
+    m_Localized: The player or elevator session is not ready.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000165
-    m_Localized: "A world transition is in progress. Please try again shortly."
+    m_Localized: A world transition is in progress. Please try again shortly.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000166
-    m_Localized: "Move closer to this elevator terminal."
+    m_Localized: Move closer to this elevator terminal.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000167
-    m_Localized: "This terminal is not connected to an elevator yet."
+    m_Localized: This terminal is not connected to an elevator yet.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000168
-    m_Localized: "Move closer to an elevator terminal before operating it."
+    m_Localized: Move closer to an elevator terminal before operating it.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000169
-    m_Localized: "On the planet surface, move closer to an installed elevator terminal."
+    m_Localized: On the planet surface, move closer to an installed elevator terminal.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000170
-    m_Localized: "Space elevators require a registered planet surface."
+    m_Localized: Space elevators require a registered planet surface.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000171
-    m_Localized: "Connected to the existing station."
+    m_Localized: Connected to the existing station.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000172
-    m_Localized: "This prototype supports one elevator per planet. The existing ground terminal is at ({0:0.#}, {1:0.#})."
+    m_Localized: This prototype supports one elevator per planet. The existing ground
+      terminal is at ({0:0.#}, {1:0.#}).
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000173
-    m_Localized: "The ground elevator is connected to an expandable station."
+    m_Localized: The ground elevator is connected to an expandable station.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000174
-    m_Localized: "Failed to create the elevator station: {0}"
+    m_Localized: 'Failed to create the elevator station: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000175
-    m_Localized: "Paired elevator terminals anchor the connection and cannot be dismantled in this prototype. The surrounding station can be expanded freely."
+    m_Localized: Paired elevator terminals anchor the connection and cannot be dismantled
+      in this prototype. The surrounding station can be expanded freely.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000176
-    m_Localized: "The fixed station core anchor cannot be removed."
+    m_Localized: The fixed station core anchor cannot be removed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000177
-    m_Localized: "Elevator Cargo Cabin"
+    m_Localized: Elevator Cargo Cabin
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000178
-    m_Localized: "The cabin is not at this terminal. Wait for it or call it first."
+    m_Localized: The cabin is not at this terminal. Wait for it or call it first.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000179
-    m_Localized: "Cargo can only be transferred to or from your own inventory."
+    m_Localized: Cargo can only be transferred to or from your own inventory.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000180
-    m_Localized: "The cabin is not docked at this terminal."
+    m_Localized: The cabin is not docked at this terminal.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000181
-    m_Localized: "You already have a ride booked."
+    m_Localized: You already have a ride booked.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000182
-    m_Localized: "Ride booked. Stay near the terminal; leaving cancels your ride while cargo continues."
+    m_Localized: Ride booked. Stay near the terminal; leaving cancels your ride while
+      cargo continues.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000183
-    m_Localized: "The cabin has departed."
+    m_Localized: The cabin has departed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000184
-    m_Localized: "Your ride was cancelled. Cargo continues to its destination."
+    m_Localized: Your ride was cancelled. Cargo continues to its destination.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000185
-    m_Localized: "The cabin has arrived. Cargo can now be unloaded."
+    m_Localized: The cabin has arrived. Cargo can now be unloaded.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000186
-    m_Localized: "The cabin is at ground level. Cargo can now be unloaded."
+    m_Localized: The cabin is at ground level. Cargo can now be unloaded.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000187
-    m_Localized: "The cabin is at the station. Cargo can now be unloaded."
+    m_Localized: The cabin is at the station. Cargo can now be unloaded.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000188
-    m_Localized: "The station elevator terminal is no longer operational."
+    m_Localized: The station elevator terminal is no longer operational.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000189
-    m_Localized: "No safe floor is available near the station terminal. Clear a floor cell first."
+    m_Localized: No safe floor is available near the station terminal. Clear a floor
+      cell first.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000190
-    m_Localized: "The ground world is not loaded. Call the elevator from the ground first."
+    m_Localized: The ground world is not loaded. Call the elevator from the ground
+      first.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000191
-    m_Localized: "The ground terminal is destroyed. Rebuild it at the original position to reconnect."
+    m_Localized: The ground terminal is destroyed. Rebuild it at the original position
+      to reconnect.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000192
-    m_Localized: "No safe arrival position is available near the ground terminal. Clear the surrounding area first."
+    m_Localized: No safe arrival position is available near the ground terminal.
+      Clear the surrounding area first.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000193
-    m_Localized: "{0} Cargo remains in the cabin."
+    m_Localized: '{0} Cargo remains in the cabin.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000194
-    m_Localized: "Arrived. Cargo can be loaded or unloaded at this terminal."
+    m_Localized: Arrived. Cargo can be loaded or unloaded at this terminal.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000195
-    m_Localized: "The player transfer did not complete. Call the cabin and try again."
+    m_Localized: The player transfer did not complete. Call the cabin and try again.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000196
-    m_Localized: "Fixed stations do not support ship docking yet."
+    m_Localized: Fixed stations do not support ship docking yet.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000197
-    m_Localized: "The elevator terminal is anchored to the ground and cannot launch with a ship. Separate the ship floors from the elevator."
+    m_Localized: The elevator terminal is anchored to the ground and cannot launch
+      with a ship. Separate the ship floors from the elevator.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000198
-    m_Localized: "The ride was cancelled because you left the terminal during preparation."
+    m_Localized: The ride was cancelled because you left the terminal during preparation.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001199
-    m_Localized: "All categories"
+    m_Localized: All categories
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001200
-    m_Localized: "Categories ({0})"
+    m_Localized: Categories ({0})
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001201
-    m_Localized: "Match any selected category"
+    m_Localized: Match any selected category
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001202
-    m_Localized: "Clear categories"
+    m_Localized: Clear categories
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001203
-    m_Localized: "No matching items"
+    m_Localized: No matching items
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001204
-    m_Localized: "Electricity"
+    m_Localized: Electricity
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001205
-    m_Localized: "Industrial blocks"
+    m_Localized: Industrial blocks
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001206
-    m_Localized: "Pipe blocks"
+    m_Localized: Pipe blocks
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001207
-    m_Localized: "Food"
+    m_Localized: Food
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001208
-    m_Localized: "Materials"
+    m_Localized: Materials
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001209
-    m_Localized: "Building blocks"
+    m_Localized: Building blocks
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001210
-    m_Localized: "Seeds"
+    m_Localized: Seeds
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001211
-    m_Localized: "Chemistry"
+    m_Localized: Chemistry
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001216
-    m_Localized: "Offhand"
+    m_Localized: Offhand
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001217
-    m_Localized: "Offhand parry"
+    m_Localized: Offhand parry
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001218
-    m_Localized: "Furnace {0:0.#}\u00b0C"
+    m_Localized: "Furnace {0:0.#}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001219
-    m_Localized: "Target temperature {0:0.#}\u00b0C"
+    m_Localized: "Target temperature {0:0.#}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001220
-    m_Localized: "Power requested {0:0.#} W\nPower supplied {1:0.#} W"
+    m_Localized: 'Power requested {0:0.#} W
+
+      Power supplied {1:0.#} W'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001221
-    m_Localized: "Enter {0:0.#}\u2013{1:0.#}\u00b0C"
+    m_Localized: "Enter {0:0.#}\u2013{1:0.#}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001222
-    m_Localized: "Waiting for device confirmation"
+    m_Localized: Waiting for device confirmation
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001223
-    m_Localized: "Target temperature updated"
+    m_Localized: Target temperature updated
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001224
-    m_Localized: "Request not sent. Please retry."
+    m_Localized: Request not sent. Please retry.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001225
-    m_Localized: "Temperature setting rejected: {0}"
+    m_Localized: 'Temperature setting rejected: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001226
-    m_Localized: "Temperature setting unconfirmed: {0}"
+    m_Localized: 'Temperature setting unconfirmed: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001227
-    m_Localized: "Cooling naturally"
+    m_Localized: Cooling naturally
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001228
-    m_Localized: "Target temperature reached"
+    m_Localized: Target temperature reached
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001229
-    m_Localized: "The device did not accept this operation"
+    m_Localized: The device did not accept this operation
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001230
-    m_Localized: "Invalid machine operation parameters"
+    m_Localized: Invalid machine operation parameters
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001231
-    m_Localized: "The operation request expired. Please retry."
+    m_Localized: The operation request expired. Please retry.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001232
-    m_Localized: "Waiting for the server to confirm the picked-up inventory"
+    m_Localized: Waiting for the server to confirm the picked-up inventory
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001233
-    m_Localized: "The device world changed. Reopen the panel."
+    m_Localized: The device world changed. Reopen the panel.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001234
-    m_Localized: "The device is unavailable or too far away"
+    m_Localized: The device is unavailable or too far away
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001235
-    m_Localized: "The machine operation is unconfirmed. Please retry."
+    m_Localized: The machine operation is unconfirmed. Please retry.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001236
-    m_Localized: "Connection closed. The operation is unconfirmed."
+    m_Localized: Connection closed. The operation is unconfirmed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001237
-    m_Localized: "The player has not finished loading the world"
+    m_Localized: The player has not finished loading the world
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001238
-    m_Localized: "Changing worlds. Please try again shortly."
+    m_Localized: Changing worlds. Please try again shortly.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001239
-    m_Localized: "The player world is not ready"
+    m_Localized: The player world is not ready
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001240
-    m_Localized: "The world state changed. Please retry the operation"
+    m_Localized: The world state changed. Please retry the operation
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001241
-    m_Localized: "Device confirmed; waiting for state sync"
+    m_Localized: Device confirmed; waiting for state sync
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001242
-    m_Localized: "Device state has not synced. Reopen the panel to confirm."
+    m_Localized: Device state has not synced. Reopen the panel to confirm.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001243
-    m_Localized: "The first load may take a little longer. Please wait."
+    m_Localized: The first load may take a little longer. Please wait.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001244
-    m_Localized: "Eyes / Glasses"
+    m_Localized: Eyes / Glasses
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001250
-    m_Localized: "Minecart"
+    m_Localized: Minecart
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001253
-    m_Localized: "Cargo"
+    m_Localized: Cargo
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001254
-    m_Localized: "Connect Nearby Cart"
+    m_Localized: Connect Nearby Cart
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001255
-    m_Localized: "Carts connected"
+    m_Localized: Carts connected
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001256
-    m_Localized: "Cart disconnected"
+    m_Localized: Cart disconnected
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001257
-    m_Localized: "WASD to drive; F to dismount"
+    m_Localized: WASD to drive; F to dismount
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001258
-    m_Localized: "Seat empty"
+    m_Localized: Seat empty
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001259
-    m_Localized: "Seat occupied"
+    m_Localized: Seat occupied
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001260
-    m_Localized: "Board"
+    m_Localized: Board
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001261
-    m_Localized: "Dismount"
+    m_Localized: Dismount
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001262
-    m_Localized: "Train: {0} carts · {1}"
+    m_Localized: "Train: {0} carts \xB7 {1}"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001263
-    m_Localized: "Cargo {0:0.#}/{1:0.#} kg · {2:0.#}/{3:0.#} L"
+    m_Localized: "Cargo {0:0.#}/{1:0.#} kg \xB7 {2:0.#}/{3:0.#} L"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001264
-    m_Localized: "Install engines on the left. Put water and fuel in cargo on the right. You can drive with the window closed."
+    m_Localized: Install engines on the left. Put water and fuel in cargo on the
+      right. You can drive with the window closed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001265
@@ -6428,44 +6446,45 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001251
-    m_Localized: "Steam Engine Configuration"
+    m_Localized: Steam Engine Configuration
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001252
-    m_Localized: "Engine Slots"
+    m_Localized: Engine Slots
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001283
-    m_Localized: "{0} · Output level {1}/3 · Power {2:0.##}"
+    m_Localized: "{0} \xB7 Output level {1}/3 \xB7 Power {2:0.##}"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001284
-    m_Localized: "At full output: {0:0.###} water units/sec; {1:0.#} seconds per unit of fuel energy.\nPut water vessels and fuel in cargo. Installed engines draw resources automatically; lower output uses proportionally less."
+    m_Localized: 'At full output: {0:0.###} water units/sec; {1:0.#} seconds per
+      unit of fuel energy.
+
+      Put water vessels and fuel in cargo. Installed
+      engines draw resources automatically; lower output uses proportionally less.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001285
-    m_Localized: "Turn Engine Off"
+    m_Localized: Turn Engine Off
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001286
-    m_Localized: "Turn Engine On"
+    m_Localized: Turn Engine On
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001287
-    m_Localized: "Low 33%"
+    m_Localized: Low 33%
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001288
-    m_Localized: "Medium 67%"
+    m_Localized: Medium 67%
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001289
-    m_Localized: "High 100%"
+    m_Localized: High 100%
     m_Metadata:
       m_Items: []
-  references:
-    version: 2
-    RefIds: []
   - m_Id: 10679429661495296
     m_Localized: Weather Debug Panel  [{0}] Toggle
     m_Metadata:

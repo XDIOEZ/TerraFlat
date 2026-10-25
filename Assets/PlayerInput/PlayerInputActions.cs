@@ -1088,6 +1088,7 @@ namespace InputSystem
 }");
             // Win10
             m_Win10 = asset.FindActionMap("Win10", throwIfNotFound: true);
+            m_Win10_PickWorldItem = m_Win10.FindAction("PickWorldItem", throwIfNotFound: true);
             m_Win10_Move_Player = m_Win10.FindAction("Move_Player", throwIfNotFound: true);
             m_Win10_Roll = m_Win10.FindAction("Roll", throwIfNotFound: true);
             m_Win10_RotateBuilding = m_Win10.FindAction("RotateBuilding", throwIfNotFound: true);
@@ -1194,6 +1195,7 @@ namespace InputSystem
         // Win10
         private readonly InputActionMap m_Win10;
         private List<IWin10Actions> m_Win10ActionsCallbackInterfaces = new List<IWin10Actions>();
+        private readonly InputAction m_Win10_PickWorldItem;
         private readonly InputAction m_Win10_Move_Player;
         private readonly InputAction m_Win10_Roll;
         private readonly InputAction m_Win10_RotateBuilding;
@@ -1231,6 +1233,10 @@ namespace InputSystem
             /// Construct a new instance of the input action map wrapper class.
             /// </summary>
             public Win10Actions(@PlayerInputActions wrapper) { m_Wrapper = wrapper; }
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/PickWorldItem".
+            /// </summary>
+            public InputAction @PickWorldItem => m_Wrapper.m_Win10_PickWorldItem;
             /// <summary>
             /// Provides access to the underlying input action "Win10/Move_Player".
             /// </summary>
@@ -1361,6 +1367,9 @@ namespace InputSystem
             {
                 if (instance == null || m_Wrapper.m_Win10ActionsCallbackInterfaces.Contains(instance)) return;
                 m_Wrapper.m_Win10ActionsCallbackInterfaces.Add(instance);
+                @PickWorldItem.started += instance.OnPickWorldItem;
+                @PickWorldItem.performed += instance.OnPickWorldItem;
+                @PickWorldItem.canceled += instance.OnPickWorldItem;
                 @Move_Player.started += instance.OnMove_Player;
                 @Move_Player.performed += instance.OnMove_Player;
                 @Move_Player.canceled += instance.OnMove_Player;
@@ -1450,6 +1459,9 @@ namespace InputSystem
             /// <seealso cref="Win10Actions" />
             private void UnregisterCallbacks(IWin10Actions instance)
             {
+                @PickWorldItem.started -= instance.OnPickWorldItem;
+                @PickWorldItem.performed -= instance.OnPickWorldItem;
+                @PickWorldItem.canceled -= instance.OnPickWorldItem;
                 @Move_Player.started -= instance.OnMove_Player;
                 @Move_Player.performed -= instance.OnMove_Player;
                 @Move_Player.canceled -= instance.OnMove_Player;
@@ -1607,6 +1619,13 @@ namespace InputSystem
         /// <seealso cref="Win10Actions.RemoveCallbacks(IWin10Actions)" />
         public interface IWin10Actions
         {
+            /// <summary>
+            /// Method invoked when associated input action "PickWorldItem" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnPickWorldItem(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "Move_Player" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

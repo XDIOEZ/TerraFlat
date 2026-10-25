@@ -275,7 +275,7 @@ MonoBehaviour:
     ID: "\u5EFA\u7B51\u6A21\u5757"
     isRunning: 0
     Type: 0
-    BitData: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":1,"SnapshotBase64":null,"BuildingPrefabId":"Door_Wood","SummonerPrefabId":"Door_Wood_Summoner","AllowQuarterTurnPlacement":true,"FootprintWidth":1,"FootprintHeight":1}'
+    BitData: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":1,"SnapshotBase64":null,"BuildingPrefabId":"Door_Wood","SummonerPrefabId":"Door_Wood_Summoner"}'
   GhostShadow: {fileID: 0}
   boxCollider2D: {fileID: 0}
   StartInstall:
