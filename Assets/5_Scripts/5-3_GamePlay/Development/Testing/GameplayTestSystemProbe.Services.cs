@@ -880,7 +880,9 @@ public static partial class GameplayTestSystemProbe
         if (counts.Count == 0 || counts.Count > 16)
             throw new ArgumentException("下拉夹具必须提供 1 至 16 次展开的选项数量。");
         foreach (JToken count in counts)
-            if (count.Type != JTokenType.Integer || count.Value<int>() < 1 || count.Value<int>() > 32)
+            if (count.Type is not (JTokenType.Integer or JTokenType.Float) ||
+                !double.IsFinite(count.Value<double>()) || count.Value<double>() < 1d || count.Value<double>() > 32d ||
+                count.Value<double>() != Math.Truncate(count.Value<double>()))
                 throw new ArgumentException("下拉夹具选项数量必须为 1 至 32 的整数。");
 
         EventSystem originalEvents = EventSystem.current;
@@ -889,6 +891,8 @@ public static partial class GameplayTestSystemProbe
         root.SetActive(false);
         root.hideFlags = HideFlags.HideAndDontSave;
         var result = new JObject { ["kind"] = kind, ["samples"] = new JArray() };
+        GameplayTestTmpDropdownControl tmp = null;
+        GameplayTestLegacyDropdownControl legacy = null;
         try
         {
             Canvas canvas = root.AddComponent<Canvas>();
@@ -924,8 +928,8 @@ public static partial class GameplayTestSystemProbe
             item.gameObject.AddComponent<LayoutElement>().preferredHeight = 60f;
             scroll.viewport = viewport;
             scroll.content = content;
-            TMP_Dropdown tmp = kind == "tmp" ? control.gameObject.AddComponent<GameplayTestTmpDropdownControl>() : null;
-            Dropdown legacy = kind == "legacy" ? control.gameObject.AddComponent<GameplayTestLegacyDropdownControl>() : null;
+            tmp = kind == "tmp" ? control.gameObject.AddComponent<GameplayTestTmpDropdownControl>() : null;
+            legacy = kind == "legacy" ? control.gameObject.AddComponent<GameplayTestLegacyDropdownControl>() : null;
             if (tmp != null) tmp.template = template;
             if (legacy != null) legacy.template = template;
             DropdownListLayout.EnsureFor(template);
@@ -974,6 +978,9 @@ public static partial class GameplayTestSystemProbe
                 actualScroll.verticalNormalizedPosition = 0f;
                 sample["lastVisibleAtBottom"] = ServiceDropdownContains(actualScroll.viewport, last);
                 ((JArray)result["samples"]).Add(sample);
+                // 先执行原生关闭清理，再停父物体，避免激活遍历中立即销毁弹出子节点。
+                tmp?.CloseForRules();
+                legacy?.CloseForRules();
             }
             result["layoutComponentCount"] = template.GetComponents<DropdownListLayout>().Length;
         }
@@ -981,6 +988,8 @@ public static partial class GameplayTestSystemProbe
         {
             try
             {
+                tmp?.CloseForRules();
+                legacy?.CloseForRules();
                 root.SetActive(false);
                 UnityEngine.Object.DestroyImmediate(root);
             }
@@ -1248,6 +1257,7 @@ public sealed class GameplayTestTmpDropdownControl : TMP_Dropdown
     #region 独立夹具生命周期
 
     public void InitializeForRules() { alphaFadeSpeed = 0f; base.Start(); }
+    public void CloseForRules() => base.OnDisable();
     protected override void DestroyDropdownList(GameObject dropdownList) => DestroyImmediate(dropdownList);
     protected override void DestroyBlocker(GameObject blocker) => DestroyImmediate(blocker);
 
@@ -1261,6 +1271,7 @@ public sealed class GameplayTestLegacyDropdownControl : Dropdown
     #region 独立夹具生命周期
 
     public void InitializeForRules() { alphaFadeSpeed = 0f; base.Start(); }
+    public void CloseForRules() => base.OnDisable();
     protected override void DestroyDropdownList(GameObject dropdownList) => DestroyImmediate(dropdownList);
     protected override void DestroyBlocker(GameObject blocker) => DestroyImmediate(blocker);
 

@@ -108,8 +108,9 @@ public sealed class GameplayTestShowroom : IDisposable
         bool activeTestWorld = SaveDataMgr.Instance != null &&
             SaveDataMgr.Instance.TryGetActivePlanetData(out active) &&
             string.Equals(active.Name, worldName, StringComparison.Ordinal);
-        if (!activeTestWorld && !string.Equals(GameManager.Instance?.ReadyPlanetData?.Name,
-                worldName, StringComparison.Ordinal)) return profile;
+        // 已有活动星球时只按它判定，不能把出生世界的平地/无生态覆盖套到其它星球。
+        if (!activeTestWorld && (active != null || !string.Equals(GameManager.Instance?.ReadyPlanetData?.Name,
+                worldName, StringComparison.Ordinal))) return profile;
         // 先合入真实星体参数，再写测试覆盖，避免后续冻结把水文开关重新打开。
         profile = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault().ApplySurfaceProfile(
             activeTestWorld ? active.BodyId : bodyId, profile);

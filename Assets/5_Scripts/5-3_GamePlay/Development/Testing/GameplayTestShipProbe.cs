@@ -927,6 +927,13 @@ public static class GameplayTestShipProbe
             ["impurityAdded"] = impurityAdded, ["impureEligible"] = impureEligible,
             ["singleGasPrepared"] = singlePrepared, ["singleGasEligible"] = singleEligible,
             ["liquidFuelOxygenRatio"] = engine.LiquidFuelOxygenMolesPerMole,
+            ["thermalExhaustionCases"] = new JArray
+            {
+                CapturePropellantBurnSample(catalog, "hydrogen_tail", .0400000000000000000000000001m, .02m, 0m),
+                CapturePropellantBurnSample(catalog, "liquid_tail", 0m, 2m, .1000000000000000000000000001m),
+                CapturePropellantBurnSample(catalog, "odd_hydrogen", .0703443967748270505658671563m, .0351721983874135252829335782m, 0m),
+                CapturePropellantBurnSample(catalog, "vent_tail", 20m, 0m, .0000000000000000000000000001m, ventGas: true)
+            },
             ["dualFuelCases"] = new JArray
             {
                 CapturePropellantBurnSample(catalog, "hydrogen_rich", 10m, 2m, 0m),
@@ -944,7 +951,7 @@ public static class GameplayTestShipProbe
     }
 
     private static JObject CapturePropellantBurnSample(FluidCatalog catalog, string name, decimal hydrogen,
-        decimal oxygen, decimal liquid, double throttle = 1d, string liquidId = ShipFuel.LiquidFuelId)
+        decimal oxygen, decimal liquid, double throttle = 1d, string liquidId = ShipFuel.LiquidFuelId, bool ventGas = false)
     {
         var inventory = new FluidInventory(catalog: catalog);
         bool prepared = true;
@@ -953,13 +960,18 @@ public static class GameplayTestShipProbe
                 prepared &= inventory.TryAdd(FluidInventory.CreateBatch(catalog.Find(input.Item1), input.Item2, input.Item3, 293.15d), 100d, .001d);
         var engine = new ShipPartConfiguration();
         bool eligible = ShipFuel.IsEligible(inventory, engine);
+        if (ventGas) inventory.ClearGas(out _);
         double output = ShipFuel.ConsumeStoredChemicalPropellants(inventory, engine, throttle, 1d);
         decimal h = inventory.GetGasMoles(FluidIds.Hydrogen), o = inventory.GetGasMoles(FluidIds.Oxygen);
         decimal remainingLiquid = inventory.GetLiquidMoles(liquidId);
+        var restored = new FluidInventory(MachinePersistence.Clone(inventory.State), catalog);
+        double temperature = restored.GetTemperatureKelvin(), energy = restored.State.TotalInternalEnergyJoules;
         double nextOutput = ShipFuel.ConsumeStoredChemicalPropellants(inventory, engine, throttle, 1d);
         return new JObject { ["name"] = name, ["prepared"] = prepared, ["eligible"] = eligible,
             ["output"] = output, ["hydrogenAfter"] = h, ["oxygenAfter"] = o, ["liquidAfter"] = remainingLiquid,
-            ["nextOutput"] = nextOutput };
+            ["nextOutput"] = nextOutput, ["restoredTemperature"] = temperature, ["restoredEnergy"] = energy,
+            ["exactHydrogenAfter"] = restored.GetGasMoles(FluidIds.Hydrogen).ToString(CultureInfo.InvariantCulture),
+            ["exactLiquidAfter"] = restored.GetLiquidMoles(liquidId).ToString(CultureInfo.InvariantCulture) };
     }
 
     #endregion

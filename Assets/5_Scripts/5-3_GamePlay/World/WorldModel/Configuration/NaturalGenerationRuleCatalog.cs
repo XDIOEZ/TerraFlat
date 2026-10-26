@@ -158,12 +158,13 @@ internal sealed partial class NaturalEcologyRuleDefinition
     public EcologyItemCountDistribution ItemCountDistribution = EcologyItemCountDistribution.Fixed;
     [JsonProperty(Required = Required.DisallowNull)]
     public int ItemCountMin = 1;
-    public float SpawnChance;
-    public float SpawnChanceMultiplier;
+    // 概率直接保留双精度，避免多矿种累计预算在 JSON 装载时损失精度。
+    public double SpawnChance;
+    public double SpawnChanceMultiplier;
     public EcologyDistributionMode DistributionMode;
     public int PatchSpacing;
     public float PatchRadius;
-    public float PatchChance;
+    public double PatchChance;
     public int BiomeMask;
     public float MinTemperature;
     public float MaxTemperature;
@@ -194,7 +195,7 @@ internal sealed partial class NaturalEcologyRuleDefinition
     public string CompanionHostTag;
     public string RequiredChunkTag;
     public int RequiredTagChunkRadius;
-    public float CompanionSpawnChance;
+    public double CompanionSpawnChance;
     public float CompanionOffsetX;
     public float CompanionOffsetY;
     public float CompanionMinRadius;

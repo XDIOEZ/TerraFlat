@@ -25,7 +25,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - 星体地表覆盖来自 `Space/solar-system.json`；月球只用 `Tile_MoonRegolith`（独立灰白 TileBase），自然物/矿物、洞口和遗迹关闭，环形山半径 3～50 格，坑沿仍用月壤。尺寸分布复用 `SpaceSurfaceTerrain`，不靠石地外圈表现坑沿。
 - 大型矿石小行星用 `SurfaceProfile.SurfaceRadiusTiles` 固定有限环绕地表，矿物规则在 `NaturalItems/surface-asteroids.json`，复用正式 `Mine_*` 采矿与差量；`weather.enabled=0` 关闭自然天气，真空地表清空气湿度和风矢量。
 
-主链：配置 → 地形/气候/水文 → `ChunkTerrainData` → 结构/生态 → 差量 → 表现。Chunk 生命周期由 WorldModel 管理。旧地图核心 Prefab、维度物品配置和物品管理器地图缓存已移除；遗迹编辑器安装器只维护目录/示例内容，不再挂旧生成器或提供强制生成开关。
+主链：配置 → 地形/气候/水文 → `ChunkTerrainData` → 结构/生态 → 差量 → 表现。生态规则 JSON 的概率字段保持 double，与生成快照一致，避免多矿种合计预算在读取时损失精度；回归 `ecology/shared_resources`。Chunk 生命周期由 WorldModel 管理。旧地图核心 Prefab、维度物品配置和物品管理器地图缓存已移除；遗迹编辑器安装器只维护目录/示例内容，不再挂旧生成器或提供强制生成开关。
 
 生成热路径：河流每块冻结 `HydrologyOutputWindow`，宏观区域共享 `PrimaryUpstream`；湖泊按稀疏河格和湖盆范围合成。优化须保留环绕、外圈、盆地优先级和稳定取整，不能靠缩短降水影响距离提速。
 

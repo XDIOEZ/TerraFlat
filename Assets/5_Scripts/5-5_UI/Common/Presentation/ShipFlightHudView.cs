@@ -55,7 +55,8 @@ public sealed class ShipFlightHudView : MonoBehaviour
     }
 
     // 先为顶部信息和底部触控留出空间，缩放整组视觉避免刻度与提示互相挤压。
-    public void FitToSafeArea(RectTransform safeArea, float protectedTop, RectTransform lowerControl)
+    public void FitToSafeArea(RectTransform safeArea, float protectedTop, RectTransform lowerControl,
+        RectTransform statusBars = null)
     {
         if (safeArea == null) return;
         viewRect ??= GetComponent<RectTransform>();
@@ -65,9 +66,10 @@ public sealed class ShipFlightHudView : MonoBehaviour
         float scale = Mathf.Min(1f, availableHeight / referenceSize.y,
             Mathf.Max(1f, safeArea.rect.width - 32f) / referenceSize.x);
         float x = Mathf.Min(320f, Mathf.Max(16f, safeArea.rect.width - referenceSize.x * scale - 16f));
-        if (lowerControl != null && lowerControl.gameObject.activeInHierarchy)
+        void AvoidReservedControlRectangle(RectTransform reserved)
         {
-            lowerControl.GetWorldCorners(controlCorners);
+            if (reserved == null || !reserved.gameObject.activeInHierarchy) return;
+            reserved.GetWorldCorners(controlCorners);
             float minX = float.PositiveInfinity, maxX = float.NegativeInfinity, maxY = float.NegativeInfinity;
             foreach (Vector3 corner in controlCorners)
             {
@@ -86,6 +88,9 @@ public sealed class ShipFlightHudView : MonoBehaviour
                 }
             }
         }
+        // 触控与生存状态条共用真实矩形避让，移动或缩放面板后不再覆盖落地提示。
+        AvoidReservedControlRectangle(lowerControl);
+        AvoidReservedControlRectangle(statusBars);
         viewRect.anchorMin = viewRect.anchorMax = Vector2.zero;
         viewRect.pivot = new Vector2(0f, .5f);
         viewRect.sizeDelta = referenceSize;

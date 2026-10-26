@@ -370,6 +370,21 @@ do
             expected[sample.name] = nil
         end
         assert(next(expected) == nil, "双燃料样本重复或遗漏")
+        assert(#data.thermalExhaustionCases == 4, "缺少耗尽尾料与内能精度回归")
+        local tail = "0.0000000000000000000000000001"
+        local seen = {}
+        for _, sample in ipairs(data.thermalExhaustionCases) do
+            assert(sample.prepared and sample.restoredEnergy > 0 and sample.nextOutput == 0,
+                sample.name .. " 尾料产生无效内能，或缺料后仍出力")
+            near(sample.restoredTemperature, 293.15, sample.name .. " 扣料后剩余物质温度漂移")
+            if sample.name == "hydrogen_tail" or sample.name == "odd_hydrogen" then
+                assert(sample.output > 0 and sample.exactHydrogenAfter == tail, "氢气尾料被吞掉或反应向上超额舍入")
+            else
+                assert(sample.exactLiquidAfter == tail, "燃油尾料在排气或燃烧后丢失")
+            end
+            seen[sample.name] = true
+        end
+        assert(seen.hydrogen_tail and seen.liquid_tail and seen.odd_hydrogen and seen.vent_tail, "耗尽边界样本重复或遗漏")
         return "覆盖氢氧2:1、非理想混合余气停机、燃油耗尽/缺氧、双燃料切换、空载、错误液体与原子回滚。"
     end, "飞船真实氢氧燃料反应")
 end

@@ -39,6 +39,8 @@ for _, row in ipairs({
         assert(data.separateMaterialInventory, "工具不能被配方当作材料扣除")
         assert(1 == data.restoredToolCount, "工具独立库存随加工状态保存")
         assert(data.durability == data.restoredDurability, "锤耐久在状态封包往返后保留")
+        assert(math.abs(data.coldDurabilityFraction - row.remaining / 100) < .000001,
+            "冷快照应保存当前耐久相对定义上限的比例")
         assert(data.progress == data.restoredProgress, "加工进度在状态封包往返后保留")
     end, "砧工具资格、逐击磨损和状态保存")
 end

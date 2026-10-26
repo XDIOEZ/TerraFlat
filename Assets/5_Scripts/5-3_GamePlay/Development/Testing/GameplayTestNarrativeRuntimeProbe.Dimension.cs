@@ -230,7 +230,9 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             ["guid"] = player.itemData.Guid, ["instance"] = player.GetInstanceID(),
             ["networkIdentity"] = player.GetComponent("NetworkIdentity")?.GetInstanceID() ?? 0,
             ["sourceWorldRetained"] = controls == null || GameplayWorldRegistry.TryGet(controls.Surface.WorldKey, out _),
-            ["targetRuntimePresent"] = GameplayWorldRegistry.TryGet(expected.WorldKey, out _)
+            ["targetRuntimePresent"] = GameplayWorldRegistry.TryGet(expected.WorldKey, out _),
+            ["runtimeActive"] = GameplayWorldRegistry.TryGet(expected.WorldKey, out var runtime) &&
+                runtime.Chunks != null && !runtime.Chunks.IsWorldRuntimeShuttingDown
         };
     }
 
@@ -245,8 +247,14 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     {
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        double observerDistance = -1d;
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName, out var observer) == true &&
+            !observer.InSpace && observer.WorldKey == player.gameObject.scene.name)
+            observerDistance = WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(),
+                WorldLocalPresentation.ToLogical(player.transform.position));
         return new JObject
         {
+            ["observerDistance"] = observerDistance,
             ["loadingVisible"] = GameManager.Instance.IsDimensionLoadingPresentationVisible,
             ["loadingTarget"] = GameManager.Instance.ActiveDimensionLoadingTargetId,
             ["inputLocked"] = controller?.IsGameplayInputLocked == true,

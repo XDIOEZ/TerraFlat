@@ -95,9 +95,8 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     }
     private void OnEnable()
     {
-        if (!loaded || !CanInteract(null)) return;
-        ApplyDoorState(true);
-        SpatialInteractionRegistry.Register(this, 0.75f);
+        // 隐藏候选载入时尚未绑定表现，重新显示时复用安装提交的完整同步。
+        if (loaded) OnBuildingPlacementCommitted();
     }
 
     /// <summary>安装流程会统一开启建筑碰撞，提交后按门的真实状态重新同步。</summary>

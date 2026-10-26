@@ -113,6 +113,10 @@ public static partial class GameplayTestSystemProbe
         var roundtrip = new Ex_ModData_MemoryPackable();
         roundtrip.WriteData(new ManualProcessingState { Processing = state, Tool = tools.Data });
         ManualProcessingState restored = roundtrip.GetData<ManualProcessingState>();
+        ItemData coldTool = restored.Tool.GetItemSlot(0).itemData;
+        float coldDurabilityFraction = coldTool?.Durability ?? 0f;
+        // 冷快照只保存耐久比例，应用当前工具定义后才恢复实际耐久值。
+        if (coldTool != null) ItemInstanceDataFactory.ApplyCurrentDefinition(coldTool, hammer);
         ItemData wood = EntityProbeData("rule:wood", 1);
         return new JObject { ["strokes"] = strokes, ["completions"] = completions, ["progress"] = state.Progress,
             ["durability"] = tools.Data.GetItemSlot(0).itemData?.Durability ?? 0f,
@@ -123,6 +127,7 @@ public static partial class GameplayTestSystemProbe
             ["separateMaterialInventory"] = input.Data.itemSlots.Count == 1 && !ReferenceEquals(input.Data, tools.Data),
             ["restoredToolCount"] = restored.Tool.itemSlots.Count,
             ["restoredDurability"] = restored.Tool.GetItemSlot(0).itemData?.Durability ?? 0,
+            ["coldDurabilityFraction"] = coldDurabilityFraction,
             ["restoredProgress"] = restored.Processing.Progress };
     }
 
@@ -132,9 +137,9 @@ public static partial class GameplayTestSystemProbe
         var definitions = MetalCraftingDefinitions();
         foreach (string id in new[] { "CopperAnvil", "CopperAnvil_Summoner", "IronAnvil", "IronAnvil_Summoner" })
         {
-            JObject definition = JObject.FromObject(definitions[id]);
+            definitions[id].Modules.TryGetValue(Mod_ManualProcessor.ModuleId, out ItemModuleDefinitionDto module);
             items.Add(new JObject { ["id"] = id,
-                ["parameters"] = definition["modules"]?[Mod_ManualProcessor.ModuleId]?["parameters"]?.DeepClone() });
+                ["parameters"] = module?.Parameters?.DeepClone() });
         }
         return new JObject { ["items"] = items };
     }

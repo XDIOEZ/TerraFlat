@@ -216,7 +216,8 @@ public partial class ChunkMgr
                 Mathf.FloorToInt(worldPosition.x / stepX) * stepX,
                 Mathf.FloorToInt(worldPosition.y / stepY) * stepY));
         }
-        EnsureWorldRuntime();
+        // 已核对所有权的卸载阶段只用现有 Profile 换算坐标，不能重新初始化正在终止的世界。
+        if (!isReleasingOwnedWorldContext) EnsureWorldRuntime();
         ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
         int width = Math.Max(1, profile.Width);
         int height = Math.Max(1, profile.Height);
@@ -362,8 +363,8 @@ public partial class ChunkMgr
                 string worldKey = !string.IsNullOrEmpty(OwnedWorldKey) ? OwnedWorldKey : WorldRuntime?.WorldId;
                 canReleaseWorld = GameplayWorldRegistry.TryUseExistingWorldForOwnerRelease(worldKey, this, out scope) ||
                     string.IsNullOrEmpty(OwnedWorldKey) && TryUseRuntimeWorldContext(out scope);
-                isReleasingOwnedWorldContext = canReleaseWorld;
             }
+            isReleasingOwnedWorldContext = canReleaseWorld;
             ReleaseAirHumidityField();
             StopLiquidBodies();
             StopLiquidFlowExperiment();

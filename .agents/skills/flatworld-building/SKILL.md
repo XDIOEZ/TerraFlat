@@ -44,6 +44,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - 普通船地板由 Mod_ShipPart 声明独立占地层6和通行规则，可与管线/设备共格；船门复用正式 Door 模块。安装朝向来自候选数据，预览/占地按同一四向尺寸计算；Mod_Building.Orientation 补偿多格贴图和碰撞，卸载恢复，不继承手持旋转。
 - 普通建筑通过 `Building_Data.AllowQuarterTurnPlacement` 声明四向放置；本地事务、联机请求、预览和占地统一读取 `Mod_Building.PlacementQuarterTurns`，水平镜像仍由原配置独立控制。
 - 门绑定所属主 Sprite/根碰撞体，开门保留交互与占格，经 SetPassable 改通行；安装后再同步状态。模块碰撞体引用运行时绑定 Item 根，不额外叠加模块 Collider。
+- 门随隐藏候选载入时暂不显示；`OnEnable` 复用安装提交的引用绑定与完整状态同步，不能直接依赖 `OnLoad` 已绑定贴图。真实起降 Lua 同时检查恢复后的贴图、碰撞与交互。
 - PlacementLayer=Ground 占 Layer2，允许与 Layer0 共格；Trigger、不阻导航/LOS、无三类阴影。排序为 ground-building，Queue2991 位于地表覆盖后、Blocking2992 前。
 - requiredGroundSupport 为当前定义配置，各格比较有效表面 loadCapacity，等值可放；支撑覆盖优先，其次液面 worldWater，再次干地 Tile。
 - 平台/地板通过 Tile_Block.groundPlacement 写 TerrainSupportLayer，不换底层地形；平台要求有液体，地板要求 Walkable 且无液体，判断原始 LiquidDepth。有效覆盖统一供预览、导航和角色水域读取。

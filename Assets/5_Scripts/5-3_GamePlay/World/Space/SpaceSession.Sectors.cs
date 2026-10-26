@@ -112,6 +112,12 @@ namespace FlatWorld.Spaceflight
                 ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
                 return SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(x, y));
             }
+            // 本机普通地表由角色移动组件推进，权威距离读取当前位置而非上次登船缓存。
+            if (GameNetwork.HasStateAuthority && !passenger.IsInSpace && !passenger.SurfaceDescending &&
+                ItemMgr.Instance?.User_Player is Player actor && actor.ProfileName == passenger.ProfileId &&
+                actor.gameObject.scene.name == passenger.LandingWorldKey)
+                return new SpaceSectorPosition(passenger.FreeMotion.Sector,
+                    SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(actor.transform.position)));
             return SpaceSectorCoordinates.Normalize(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters);
         }
         private void UpdateProjection(SpaceSectorPosition position)

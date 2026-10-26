@@ -167,7 +167,8 @@ public sealed class FluidInventory
             if (!CanRemove(batch)) { batches.Clear(); return false; }
             batches.Add(batch);
         }
-        foreach (FluidBatch batch in batches) Remove(batch);
+        double temperature = GetTemperatureKelvin();
+        foreach (FluidBatch batch in batches) Remove(batch, temperature);
         return true;
     }
     public void ClearGas(out List<FluidBatch> batches)
@@ -178,10 +179,11 @@ public sealed class FluidInventory
         {
             if (component.GasMoles <= 0m) continue;
             var batch = CreateBatch(Catalog.Find(component.FluidId), component.GasMoles, 0m, temperature);
-            batches.Add(batch); State.TotalInternalEnergyJoules -= batch.InternalEnergyJoules; component.GasMoles = 0m;
+            batches.Add(batch); component.GasMoles = 0m;
         }
         foreach (var port in State.Ports) port.GasMoles = 0m;
         TrimEmpty();
+        PreserveRemainingMatterTemperature(temperature);
     }
     public List<FluidBatch> Drain()
     {
@@ -341,11 +343,22 @@ public sealed class FluidInventory
             (batch.LiquidMoles == 0m || component.LiquidMoles - batch.LiquidMoles != component.LiquidMoles);
     }
     private void Remove(FluidBatch batch)
+        => Remove(batch, GetTemperatureKelvin());
+
+    private void Remove(FluidBatch batch, double temperatureKelvin)
     {
         var component = FindComponent(batch.FluidId);
         component.GasMoles -= batch.GasMoles; component.LiquidMoles -= batch.LiquidMoles;
-        State.TotalInternalEnergyJoules -= batch.InternalEnergyJoules;
         TrimEmpty();
+        PreserveRemainingMatterTemperature(temperatureKelvin);
+    }
+
+    private void PreserveRemainingMatterTemperature(double temperatureKelvin)
+    {
+        if (State.Components.Count == 0) return;
+        // 按真实余量和原温度重算内能，避免大数相减把十进制尾料算成负温度。
+        GetEnergyTerms(out double capacity, out double offset);
+        State.TotalInternalEnergyJoules = offset + capacity * temperatureKelvin;
     }
     private void TrimEmpty()
     {

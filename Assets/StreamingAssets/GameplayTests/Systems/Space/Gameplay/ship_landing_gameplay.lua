@@ -1,4 +1,16 @@
 -- 落地专项只走正式 GM、起降和普通管路，不执行导航、惯性或跨星区夹具。
+local function verify_visible_height_hud_layout(snapshot)
+    local layout = snapshot.layout
+    if not layout.visible then return false end
+    assert(layout.statusVisible, "高度尺布局现场缺少真实生存状态条")
+    local h, s = layout.hud, layout.status
+    assert(h.right - h.left > 40 and h.top - h.bottom > 100,
+        "高度尺为避让状态条缩成了不可读尺寸")
+    assert(h.right <= s.left or h.left >= s.right or h.top <= s.bottom or h.bottom >= s.top,
+        "真实飞行高度尺或落地提示仍然遮挡生存状态条")
+    return true
+end
+
 test.space("ship_landing", function(data)
     assert(data.scope == "live-ship-landing" and #data.ships > 0, "没有执行真实飞船起降专项")
     local function ground(snapshot, label)
@@ -9,7 +21,12 @@ test.space("ship_landing", function(data)
                 "普通建筑 Guid 重复、丢失或快照串号：" .. label)
             assert(building.installed and building.scope == snapshot.world,
                 "普通建筑没有按正式地表作用域安装：" .. label)
-            local key = building.cell.x .. ":" .. building.cell.y .. ":" .. building.placementLayer
+            if building.itemId == "Door_Stone" or building.itemId == "Door_Wood" then
+                assert(building.door and building.door.rendererBound and building.door.colliderBound and
+                    building.door.blockingMatchesState and building.door.interactable,
+                    "普通或隐藏候选恢复的门没有绑定贴图、碰撞和交互：" .. label)
+            end
+            local key = string.format("%d:%d:%d", building.cell.x, building.cell.y, building.placementLayer)
             assert(not occupied[key] and building.placementOccupied,
                 "普通建筑同层重叠或没有登记正式占地：" .. label .. "/" .. building.itemId)
             occupied[key] = building.guid
@@ -29,7 +46,7 @@ test.space("ship_landing", function(data)
         local stackedFibers = 0
         for _, building in pairs(ids) do
             if building.itemId == "ShipFiber" and
-                occupied[building.cell.x .. ":" .. building.cell.y .. ":0"] then
+                occupied[string.format("%d:%d:%d", building.cell.x, building.cell.y, 0)] then
                 stackedFibers = stackedFibers + 1
             end
         end
@@ -70,6 +87,8 @@ test.space("ship_landing", function(data)
             return result
         end
         for _, snapshot in ipairs({preparation.ready, preparation.moved, preparation.expanded, preparation.finalReady}) do
+            assert(snapshot.worldRegistered and snapshot.presentationWorld == snapshot.world,
+                "地表迁移完成后没有重新绑定降落准备所需的世界运行时：" .. label)
             assert(snapshot.state == "ready" and snapshot.ready and snapshot.shipPresent and
                 snapshot.phase == "SurfaceDescending" and snapshot.height > 0 and
                 snapshot.groundMatches == 0 and snapshot.registeredOriginalItems == 0,
@@ -184,6 +203,9 @@ test.space("ship_landing", function(data)
         end
         local restored, restoredMachines = ground(ship.landedAgain, label .. "/落地移交")
         local hudBefore, hudAfter = ship.descending.flightHud, ship.landedAgain.flightHud
+        local beforeVisible, afterVisible = verify_visible_height_hud_layout(hudBefore), verify_visible_height_hud_layout(hudAfter)
+        assert(beforeVisible or afterVisible,
+            "真实起降没有采到高度尺与状态条布局")
         assert(hudBefore.found and hudBefore.phase == "SurfaceDescending" and hudAfter.found and
             not hudAfter.driving and hudAfter.shipId == "", "落地清船后正式 HUD 只读接口丢失乘员：" .. label)
         assert(hudAfter.receipt.valid and hudAfter.receipt.shipId == ship.lifting.id and
@@ -214,6 +236,8 @@ test.space("ship_landing", function(data)
         assert(fuel.sourceGuid ~= fuel.targetGuid and fuel.pipeGuid ~= fuel.outletGuid and
             (fuel.pipeMask == 5 or fuel.pipeMask == 10) and fuel.simulationSeconds > 0,
             "独立罐连接管路没有正式连通，或未等待真实世界固定步：" .. label)
+        assert(fuel.targetIsGasTank and fuel.sourceBefore.hydrogen > 0 and fuel.sourceBefore.oxygen > 0,
+            "独立罐边界检查缺少真实气罐或正量氢氧来源：" .. label)
         for _, id in ipairs({"hydrogen", "oxygen"}) do
             assert(math.abs(fuel.targetsAfter[id]-fuel.targetsBefore[id])<0.000001 and
                 math.abs(fuel.sourceAfter[id]-fuel.sourceBefore[id])<0.000001,
@@ -231,19 +255,36 @@ test.space("ore_asteroid_landing", function(data)
     assert(data.scope == "live-ore-asteroid-landing-mining" and #data.ships == 1,
         "大型矿石小行星专项没有复用正式起飞测试船")
     local ship = data.ships[1]
+    assert(not ship.generation.showroomOverride and ship.generation.ecologyMultiplier > 0 and ship.generation.ironMineRule,
+        "小行星地表被陈列厅无生态覆盖污染，或没有读取正式矿山生成规则")
     assert(ship.lifting.phase == "Lifting" and ship.cruising.phase == "Cruising" and ship.cruising.spaceView,
         "小行星测试船没有经过正式普通建筑点火和太空迁移")
     assert(ship.descending.phase == "SurfaceDescending" and not ship.descending.spaceView and
         ship.world == ship.expectedWorld and ship.landed.world == ship.expectedWorld and
         ship.shipRemoved and ship.flightRemoved and ship.landed.pieceCount > 0,
         "大型矿石小行星降落目标错误，或船体没有移交普通地表建筑")
-    assert(ship.landed.flightHud.landed and ship.landed.flightHud.receipt.worldKey == ship.expectedWorld and
-        not ship.landed.flightHud.receipt.water, "小行星没有留下正式岩石地面落地凭证")
+    local beforeHud, landedHud = ship.descending.flightHud, ship.landed.flightHud
+    local beforeVisible, afterVisible = verify_visible_height_hud_layout(beforeHud), verify_visible_height_hud_layout(landedHud)
+    assert(beforeVisible or afterVisible,
+        "小行星起降没有采到高度尺与状态条布局")
+    assert(beforeHud.found and beforeHud.phase == "SurfaceDescending" and landedHud.found and
+        not landedHud.driving and landedHud.shipId == "", "小行星落地移交后仍依赖活动船记录")
+    assert(landedHud.receipt.valid and landedHud.receipt.worldKey == ship.expectedWorld and
+        landedHud.receipt.shipId == ship.lifting.id and not landedHud.receipt.water and
+        landedHud.receipt.eventId ~= "" and landedHud.receipt.eventId ~= beforeHud.receipt.eventId and
+        landedHud.receipt.time >= beforeHud.simulationSeconds, "小行星没有留下本船本世界的新岩石地面落地凭证")
     assert(ship.mineFound and ship.mineId == "Mine_Iron" and ship.mineHealth > 0 and ship.miningApplied > 0 and
         ship.mineRemoved and ship.oreInventoryGain > 0,
         "小行星地表没有可开采的真实矿山，或正式矿石没有掉落入包")
+    assert(ship.generatedMine.guid == ship.mineGuid and ship.generatedMine.scannedChunks > 0 and
+        (ship.minedDropId ~= 0 or ship.automaticOrePickup),
+        "采矿目标没有来自正式生成记录，或实际实体与生成身份不一致")
     return "普通测试船起降到大型小行星、普通建筑移交、正式铁矿受击及实际矿石入包"
 end, "大型矿石小行星真实驾驶降落与矿山开采")
 
 test.check("world_ready", "大型矿石小行星专项清理后地表恢复")
 test.check("player_ready", "大型矿石小行星专项清理后玩家重绑")
+test.runtime("dimension", "restored_control", {}, function(data)
+    assert(data.runtimeActive and data.gameplayReady and not data.transitioning,
+        "落地建筑所在世界退出再恢复后，仍复用了正在销毁的区块管理器")
+end, "落地建筑随世界卸载后恢复有效区块管理器")

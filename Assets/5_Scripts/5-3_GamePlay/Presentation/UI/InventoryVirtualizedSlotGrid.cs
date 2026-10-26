@@ -148,7 +148,8 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
         content = targetContent;
         slotPrefab = targetSlotPrefab;
         visualProfile = targetVisualProfile;
-        scrollRect = content.GetComponentInParent<ScrollRect>();
+        // 关闭的面板也会绑定库存，必须保留对停用父级滚动组件的引用。
+        scrollRect = content.GetComponentInParent<ScrollRect>(true);
         viewport = scrollRect != null && scrollRect.viewport != null
             ? scrollRect.viewport
             : content.parent as RectTransform;

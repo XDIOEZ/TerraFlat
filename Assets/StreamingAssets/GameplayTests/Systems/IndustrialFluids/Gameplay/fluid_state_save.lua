@@ -11,7 +11,8 @@ test.runtime("industrial_fluids", "ownership", {}, function(d)
         "空罐桥接把不同液体合并或丢失")
     assert(d.emptyTankJoined, "排空异种液体后没有自然加入相邻组合罐")
     for _, tank in ipairs(d.combinations) do
-        assert(tank.shared and tank.capacity == 300, tank.id .. "三格未共用300L容量")
+        assert(tank.shared and tank.memberCapacity > 0 and tank.capacity == 3 * tank.memberCapacity,
+            tank.id .. "三格未累加当前定义的真实容量")
         assert(tank.leftMask == 2 and tank.middleMask == 10 and tank.rightMask == 8, "自然拼接四向掩码错误")
         assert(tank.split and tank.splitMask == 0, "拆掉中间格后仍共享或保留内部连边")
         assert(math.abs(tank.carried-50)<.000001 and math.abs(tank.leftAfterSplit-50)<.000001

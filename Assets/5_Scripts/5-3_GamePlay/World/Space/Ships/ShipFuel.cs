@@ -14,7 +14,7 @@ namespace FlatWorld.Spaceflight
         public static decimal AvailableReactionMoles(FluidInventory inventory, ShipPartConfiguration engine)
         {
             if (inventory == null || engine == null) return 0m;
-            decimal fuel = inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas) / 2m;
+            decimal fuel = GetAvailableHydrogenReactionMoles(inventory);
             decimal oxygenPerFuel = GetLiquidFuelOxygenRatio(engine);
             if (oxygenPerFuel > 0m)
                 fuel += inventory.GetAvailableMoles(LiquidFuelId, FluidPhase.Liquid) * oxygenPerFuel;
@@ -25,12 +25,20 @@ namespace FlatWorld.Spaceflight
             => float.IsFinite(engine.LiquidFuelOxygenMolesPerMole) && engine.LiquidFuelOxygenMolesPerMole > 0f
                 ? (decimal)engine.LiquidFuelOxygenMolesPerMole : 0m;
 
+        private static decimal GetAvailableHydrogenReactionMoles(FluidInventory inventory)
+        {
+            decimal hydrogen = inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas);
+            decimal reaction = hydrogen / 2m;
+            decimal roundedExcess = reaction * 2m - hydrogen;
+            // 最末位除二若向上舍入，回到可精确扣取的下界，不能多烧一份尾料。
+            return roundedExcess > 0m ? (hydrogen - roundedExcess) / 2m : reaction;
+        }
+
         public static bool TryBurn(FluidInventory inventory, ShipPartConfiguration engine, decimal oxygenMoles, out double energyJoules)
         {
             energyJoules = 0d;
             if (oxygenMoles <= 0m || AvailableReactionMoles(inventory, engine) < oxygenMoles) return false;
-            decimal hydrogenReaction = Math.Min(oxygenMoles,
-                inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas) / 2m);
+            decimal hydrogenReaction = Math.Min(oxygenMoles, GetAvailableHydrogenReactionMoles(inventory));
             decimal liquidReaction = oxygenMoles - hydrogenReaction;
             decimal liquidMoles = liquidReaction > 0m ? liquidReaction / GetLiquidFuelOxygenRatio(engine) : 0m;
             var requirements = new List<FluidRequirement>(3)

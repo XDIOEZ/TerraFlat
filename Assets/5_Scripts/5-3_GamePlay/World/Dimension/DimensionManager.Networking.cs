@@ -22,15 +22,20 @@ public sealed partial class DimensionManager
             string.IsNullOrWhiteSpace(actor.ProfileName) || string.IsNullOrWhiteSpace(targetDimension) ||
             portalGuid == 0 || SpaceMgr.IsSpaceScene(source.WorldKey)) return false;
         if (SpaceSession.Current?.TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver observer) != true ||
-            observer.InSpace || observer.WorldKey != source.WorldKey) return false;
+            observer.InSpace || observer.WorldKey != source.WorldKey)
+        { reason = "玩家的权威世界归属与维度入口不一致。"; return false; }
         Item portal = ItemMgr.Instance?.GetItemByGuid(portalGuid);
         Mod_DimensionPortal module = portal?.GetComponentInChildren<Mod_DimensionPortal>(true);
-        if (portal?.itemData == null || portal.gameObject.scene.name != source.WorldKey || module == null ||
-            !module.ValidateNetworkTransition(actor, source, targetDimension, generated)) return false;
+        if (portal?.itemData == null || portal.gameObject.scene.name != source.WorldKey || module == null)
+        { reason = "维度入口已失效或不在玩家所属世界。"; return false; }
+        if (!module.ValidateNetworkTransition(actor, source, targetDimension, generated))
+        { reason = "维度入口尚未安装、被堵住或目标维度不匹配。"; return false; }
         Vector2 logicalPortal = WorldLocalPresentation.ToLogical(portal.transform.position);
         Mod_InteractSender sender = actor.GetComponentInChildren<Mod_InteractSender>(true);
         float reach = sender != null ? sender.maxInteractDistance : Mod_InteractSender.DefaultMaxInteractDistance;
-        if (WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), logicalPortal) > reach) return false;
+        float distance = WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), logicalPortal);
+        if (distance > reach)
+        { reason = $"维度入口超出交互距离（{distance:0.##}/{reach:0.##}米）。"; return false; }
         target = source.WithDimension(targetDimension);
         if (!target.IsValid || target == source || !TryGetDefinition(target.DimensionId, out DimensionDefinition definition))
         { reason = "目标维度未注册。"; return false; }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.Spaceflight;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -13,6 +14,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ui_settings/ship_flight_hud_height", ServiceShipFlightHudHeight);
         operations.Add("ui_settings/ship_flight_hud_sequence", ServiceShipFlightHudSequence);
         operations.Add("ui_settings/ship_flight_hud_receipt_memory", ServiceShipFlightHudReceiptMemory);
+        operations.Add("ui_settings/ship_flight_hud_reserved_rectangles", CaptureShipFlightHudReservedRectangles);
     }
 
     private static double ShipFlightHudProbeHeight(JObject args)
@@ -124,5 +126,51 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
+    #endregion
+
+    #region 飞行高度尺与常驻状态条避让采样
+    private static JObject CaptureShipFlightHudReservedRectangles(JObject args)
+    {
+        var root = new GameObject("ShipFlightHudLayoutRules", typeof(RectTransform));
+        root.hideFlags = HideFlags.HideAndDontSave;
+        try
+        {
+            var safeArea = (RectTransform)root.transform;
+            safeArea.pivot = Vector2.zero;
+            safeArea.sizeDelta = new Vector2((float)Number(args, "width", 1920), (float)Number(args, "height", 1080));
+            RectTransform CreateRectangle(string name, Vector2 position, Vector2 size)
+            {
+                var rectangle = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
+                rectangle.SetParent(safeArea, false);
+                rectangle.anchorMin = rectangle.anchorMax = rectangle.pivot = Vector2.zero;
+                rectangle.anchoredPosition = position; rectangle.sizeDelta = size;
+                return rectangle;
+            }
+            var status = CreateRectangle("StatusBars", new Vector2(20f, 30f), new Vector2(350f, 250f));
+            var control = CreateRectangle("MobileControl", new Vector2(20f, 30f), new Vector2(260f, 220f));
+            control.gameObject.SetActive(Flag(args, "mobile", false));
+            var hud = CreateRectangle("FlightHud", Vector2.zero, Vector2.zero);
+            var view = hud.gameObject.AddComponent<ShipFlightHudView>();
+            float top = (float)Number(args, "protectedTop", 800d);
+            view.FitToSafeArea(safeArea, top, control, status);
+            if (Flag(args, "moved", false))
+            {
+                status.anchoredPosition = new Vector2(60f, 30f); status.sizeDelta = new Vector2(420f, 250f);
+                view.FitToSafeArea(safeArea, top, control, status);
+            }
+            JObject CaptureRectangle(RectTransform rectangle)
+            {
+                var corners = new Vector3[4]; rectangle.GetWorldCorners(corners);
+                Bounds bounds = new(safeArea.InverseTransformPoint(corners[0]), Vector3.zero);
+                foreach (Vector3 corner in corners) bounds.Encapsulate(safeArea.InverseTransformPoint(corner));
+                return new JObject { ["left"] = bounds.min.x, ["right"] = bounds.max.x,
+                    ["bottom"] = bounds.min.y, ["top"] = bounds.max.y };
+            }
+            // 只采正式布局结果，是否相交与越界由 Lua 独立断言。
+            return new JObject { ["hud"] = CaptureRectangle(hud), ["status"] = CaptureRectangle(status),
+                ["control"] = control.gameObject.activeSelf ? CaptureRectangle(control) : null };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
     #endregion
 }

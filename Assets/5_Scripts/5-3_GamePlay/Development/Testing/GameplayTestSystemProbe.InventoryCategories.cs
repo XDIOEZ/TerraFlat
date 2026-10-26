@@ -19,10 +19,10 @@ public static partial class GameplayTestSystemProbe
     {
         Register("ui_settings", "inventory_category_filter", args =>
         {
-            List<string> tags = args["tags"]?.ToObject<List<string>>();
+            List<string> tags = ReadInventoryCategoryRuleStringList(args["tags"]);
             return new JObject
             {
-                ["matches"] = InventoryCategoryFilter.MatchesAny(tags, args["selected"]?.ToObject<List<string>>()),
+                ["matches"] = InventoryCategoryFilter.MatchesAny(tags, ReadInventoryCategoryRuleStringList(args["selected"])),
                 ["category"] = InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(tags).Id
             };
         });
@@ -46,7 +46,7 @@ public static partial class GameplayTestSystemProbe
             {
                 itemData = new Data_GeneralItem
                 {
-                    IDName = source.Value<string>("id"), Tags = source["tags"].ToObject<List<string>>(),
+                    IDName = source.Value<string>("id"), Tags = ReadInventoryCategoryRuleStringList(source["tags"]),
                     Stack = new ItemStack { Amount = 1, Stackable = false }
                 }
             });
@@ -55,6 +55,12 @@ public static partial class GameplayTestSystemProbe
         var ids = new JArray();
         foreach (ItemSlot slot in inventory.itemSlots) ids.Add(slot.itemData?.IDName);
         return new JObject { ["ids"] = ids };
+    }
+
+    private static List<string> ReadInventoryCategoryRuleStringList(JToken value)
+    {
+        // Lua 空表没有数组类型，空对象在字符串列表参数中表示空列表。
+        return value is JObject empty && empty.Count == 0 ? new List<string>() : value?.ToObject<List<string>>();
     }
 
     private static JObject CaptureInventoryFilterProjection(JObject args)

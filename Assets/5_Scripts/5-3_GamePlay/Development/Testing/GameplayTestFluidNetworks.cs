@@ -87,6 +87,7 @@ internal static class GameplayTestFluidNetworks
             foreach (MachineEntity member in new[] { left, restoredMiddle, right })
                 FixedStructureResourceInitializer.Refill(member, templateResources[member.Id], filled);
             combinations.Add(new JObject { ["id"] = id, ["shared"] = allShared, ["capacity"] = totalCapacity,
+                ["memberCapacity"] = gas ? left.Definition.Fluid.GasCapacityStandardLiters : left.Definition.Fluid.VolumeLiters,
                 ["leftMask"] = leftMask, ["middleMask"] = middleMask, ["rightMask"] = rightMask,
                 ["carried"] = gas ? (double)FluidUnits.MolToStandardLiters(carried.GasMoles) : carried.GetLiquidLiters(),
                 ["leftAfterSplit"] = leftAmount, ["rightAfterSplit"] = rightAmount, ["split"] = split, ["splitMask"] = splitMask,

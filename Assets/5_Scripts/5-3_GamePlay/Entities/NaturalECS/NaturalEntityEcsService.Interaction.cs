@@ -356,7 +356,19 @@ namespace FlatWorld.NaturalEntities
             }
             int minX = Mathf.FloorToInt(center.x - extents.x), maxX = Mathf.FloorToInt(center.x + extents.x);
             int minY = Mathf.FloorToInt(center.y - extents.y), maxY = Mathf.FloorToInt(center.y + extents.y);
-            if (((long)maxX - minX + 1) * ((long)maxY - minY + 1) > 16384L) return query;
+            if (((long)maxX - minX + 1) * ((long)maxY - minY + 1) > 16384L)
+            {
+                // 大范围改遍历已激活实体，保留调用方精筛，不能因网格预算静默返回空目标。
+                foreach (Record record in records.Values)
+                {
+                    Bounds bounds = record.HitBounds;
+                    bounds.Encapsulate(record.BodyBounds); bounds.Encapsulate(record.VisualBounds);
+                    Vector2 delta = topology.ShortestDelta((Vector2)bounds.center, center);
+                    if (Mathf.Abs(delta.x) <= extents.x + bounds.extents.x &&
+                        Mathf.Abs(delta.y) <= extents.y + bounds.extents.y) result.Add(record);
+                }
+                return query;
+            }
             for (int y = minY; y <= maxY; y++)
             for (int x = minX; x <= maxX; x++)
                 if (spatialCells.TryGetValue(new Vector2Int(topology.NormalizeX(x), topology.NormalizeY(y)), out HashSet<int> bucket))

@@ -83,7 +83,12 @@ public sealed partial class GMReflectionConsole
             worldPage.Scroll.verticalNormalizedPosition = 0f;
             Canvas.ForceUpdateCanvases();
             Bounds after = RectTransformUtility.CalculateRelativeRectTransformBounds(host, navigation);
-            Bounds viewport = RectTransformUtility.CalculateRelativeRectTransformBounds(host, worldPage.Scroll.viewport);
+            // 视口只测自身矩形，递归包围盒会把已滚到外面的长内容也算进来。
+            var viewportCorners = new Vector3[4];
+            worldPage.Scroll.viewport.GetWorldCorners(viewportCorners);
+            var viewport = new Bounds(host.InverseTransformPoint(viewportCorners[0]), Vector3.zero);
+            for (int index = 1; index < viewportCorners.Length; index++)
+                viewport.Encapsulate(host.InverseTransformPoint(viewportCorners[index]));
             float savedOffset = worldPage.Content.anchoredPosition.y;
             var navigationButtons = new JArray();
             foreach (Button button in navigation.GetComponentsInChildren<Button>())

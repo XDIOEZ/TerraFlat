@@ -26,6 +26,7 @@
 - FreezeEnvironment 摘要 work 是输入数、gauge最近批规模；Profiler .Weather/.Temperature/.WriteInputs 分段；Environment.WeatherSamples/TemperatureSamples/MissingWeather/MissingTemperature/InputWrites 区分尝试/缺失/写入，计数仅GM“性能DEBUG”开时，慢摘要独立，Profiler始终可见。
 - 土壤九宫格顺序/水量事务不变，先筛真实表层水，干格/遮水不建完整Tile；SoilSamplingBatch 只复用本轮寻址/容器，TrySample/TryReadSampled 共采样，光/灌溉/水肥逐件实时算/同步提交。
 - 发布 BodyReadBatch 拷只读值，组件写/NotifyChanged/移除使对应值失效、不跨批；目标≤32且少于世界1/4时 BeginBodyReadBatch(requestedIds) 仅冻所需，否则ECS Chunk整批。几何冷编 NaturalEntitySpatialGeometry，真Bounds变才重建空间桶。
+- 空间查询覆盖超过16384格时遍历已激活实体并按环绕包围盒粗筛，再由调用方精筛；预算不能让大范围查询静默变空。真实小行星采矿以96米观察和生成Guid核对防回归。
 - 表现按Dirty/Event，几何/外观版本独立；TreeSortingVisual 用根镜像SortingGroup与玩家混排，主体不重复BRG。
 
 回归：`item_runtime/world_matter_structure`、`environment/water_current_reuse`、`ecology/{output_validation_cache,soil_liquid_prefilter,selective_body_read_batch}`。Profiler入口：NaturalEntityRuntime.FreezeNavigation/FreezeEnvironment/FreezeSoil。

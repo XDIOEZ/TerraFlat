@@ -5,6 +5,7 @@ using System.Linq;
 using FlatWorld.Combat;
 using FlatWorld.NaturalEntities;
 using FlatWorld.Spaceflight;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
@@ -118,6 +119,8 @@ public sealed partial class GameplayTestSpaceScenario
     private IEnumerator LandOwnedShipOnOreAsteroidAndMine(ShipState ship, string console, HashSet<int> ids,
         Action<JObject> completed)
     {
+        // 目标星球的冷采样和实际生成共用正式配置，此租约在本专项返回前释放。
+        using IDisposable naturalGeneration = GameplayTestShowroom.SuppressProfileOverrides();
         UniverseSimulation universe = session.GetUniverse(default);
         BodyState body = universe.State.Bodies.First(value => value.TemplateBodyId == "asteroid_iron");
         ShipFlightState flight = session.GetFlight(ship.ShipId) ?? throw new InvalidOperationException("测试船没有正式飞行状态。");
@@ -131,28 +134,49 @@ public sealed partial class GameplayTestSpaceScenario
         yield return WaitUntil(() => Ready() && session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.SurfaceDescending,
             120d, "大型矿石小行星没有进入正式地表下降。");
         JObject descending = ShipSnapshot(ship);
+        descending["flightHud"] = FlightHudSnapshot();
         yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null && GroundBuildingsRestored(ids, expectedWorld),
             180d, "大型矿石小行星下降没有完成普通建筑移交。", () => ShipSnapshot(ship).ToString(Formatting.None));
         IsMigrationExpected = false;
         JObject landed = GroundBuildingSnapshot(ids);
         landed["flightHud"] = FlightHudSnapshot();
+        var generation = ChunkMgr.Instance.ActiveGenerationProfile;
+        var generationSample = new JObject
+        {
+            ["showroomOverride"] = generation.NumericParameters.TryGetValue("testing.showroom", out double marker) && marker > 0d,
+            ["ecologyMultiplier"] = generation.EcologyGlobalMultiplier,
+            ["ironMineRule"] = generation.EcologyRules.Any(rule => rule.ItemId == "Mine_Iron")
+        };
         var targets = new List<NaturalEntityTargetObservation>();
         NaturalEntityTargetObservation mine = default;
+        JObject generatedMine = null;
+        yield return LocateAndActivateGeneratedAsteroidIronMine(value => generatedMine = value);
+        int generatedGuid = generatedMine.Value<int>("guid");
         bool found = false;
         yield return WaitUntil(() =>
         {
             NaturalEntityEcsService.QueryTargetObservations(CurrentPlayer(), 96f, targets);
             foreach (NaturalEntityTargetObservation candidate in targets)
-                if (candidate.ItemId == "Mine_Iron" && candidate.HasHealth && candidate.Health.x > 0f)
+                if (candidate.ItemId == "Mine_Iron" && candidate.Target.TargetGuid == generatedGuid &&
+                    candidate.HasHealth && candidate.Health.x > 0f)
                 { mine = candidate; found = true; return true; }
             return false;
-        }, 30d, "大型矿石小行星已落地，但加载地表没有正式铁矿山实体。");
+        }, 30d, "大型矿石小行星已落地，但加载地表没有正式铁矿山实体。", () => new JObject
+        {
+            ["generation"] = generationSample, ["generatedMine"] = generatedMine,
+            ["entityCount"] = NaturalEntityEcsService.Count, ["targetCount"] = targets.Count,
+            ["targets"] = new JArray(targets.Select(value => new JObject { ["id"] = value.ItemId,
+                ["guid"] = value.Target.TargetGuid, ["hasHealth"] = value.HasHealth, ["health"] = value.Health.x }))
+        }.ToString());
         Vector2 minePoint = mine.AimBounds.center;
         Camera camera = Camera.main ?? throw new InvalidOperationException("采矿现场缺少玩家镜头。");
         Mod_PlayerTraits traits = CurrentPlayer().itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
         if (traits == null || !traits.TryTeleportToScreenPosition(camera.WorldToScreenPoint(minePoint + Vector2.right)))
             throw new InvalidOperationException("正式GM入口不能将隔离玩家放到矿山旁。");
         float beforeOre = CountCurrentPickerInventoryItem("Ore_Iron");
+        var drops = new List<DroppedItemObservation>();
+        DroppedItemService.QueryNearbyLightweightDrops(minePoint, 8f, drops);
+        var existingDropIds = new HashSet<int>(drops.Select(value => value.Id));
         CombatIdentity source = GameplayCombatBridge.Identity(CurrentPlayer());
         var context = new CombatDamageContext
         {
@@ -163,18 +187,85 @@ public sealed partial class GameplayTestSpaceScenario
             Clock = new CombatClock { Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime }
         };
         float applied = NaturalEntityEcsService.ApplyDamage(mine.Handle, context);
-        yield return WaitUntil(() => !NaturalEntityEcsService.Contains(mine.Handle) && CountCurrentPickerInventoryItem("Ore_Iron") > beforeOre,
-            30d, "正式矿山伤害未移除矿山，或矿石没有经真实掉落拾取进入背包。");
+        yield return WaitUntil(() => !NaturalEntityEcsService.Contains(mine.Handle),
+            30d, "正式采矿伤害没有移除天然矿山。", () => new JObject
+            { ["guid"] = mine.Target.TargetGuid, ["healthBefore"] = mine.Health.x, ["applied"] = applied }.ToString());
+        int minedDropId = 0;
+        bool automaticOrePickup = false;
+        yield return WaitUntil(() =>
+        {
+            if (CountCurrentPickerInventoryItem("Ore_Iron") > beforeOre)
+            { automaticOrePickup = true; return true; }
+            DroppedItemService.QueryNearbyLightweightDrops(minePoint, 8f, drops);
+            foreach (DroppedItemObservation drop in drops)
+                if (drop.ItemId == "Ore_Iron" && drop.Pickable && !existingDropIds.Contains(drop.Id))
+                {
+                    // 战利品会随机散落，移动到真实新掉落点后由正常拾取器入包。
+                    if (!traits.TryTeleportToWorldPosition(drop.Position))
+                        throw new InvalidOperationException("正式 GM 入口不能移动到新开采矿石旁。");
+                    minedDropId = drop.Id;
+                    return true;
+                }
+            return false;
+        }, 30d, "天然矿山移除后没有产生可拾取的新铁矿石。", () => new JObject
+        { ["applied"] = applied, ["dropCount"] = DroppedItemService.Count,
+            ["nearby"] = new JArray(drops.Select(value => new JObject { ["id"] = value.Id,
+                ["itemId"] = value.ItemId, ["pickable"] = value.Pickable, ["amount"] = value.Amount })) }.ToString());
+        yield return WaitUntil(() => CountCurrentPickerInventoryItem("Ore_Iron") > beforeOre,
+            30d, "移动到真实矿石落点后，正常拾取器仍没有将矿石放入背包。");
         completed(new JObject
         {
             ["bodyId"] = body.BodyId, ["planetId"] = body.PlanetId, ["expectedWorld"] = expectedWorld,
             ["world"] = SceneManager.GetActiveScene().name, ["descending"] = descending, ["landed"] = landed,
+            ["generation"] = generationSample,
+            ["generatedMine"] = generatedMine, ["mineGuid"] = mine.Target.TargetGuid,
             ["shipRemoved"] = session.GetShip(ship.ShipId) == null, ["flightRemoved"] = session.GetFlight(ship.ShipId) == null,
             ["mineFound"] = found, ["mineId"] = mine.ItemId, ["mineHealth"] = mine.Health.x,
             ["miningApplied"] = applied, ["mineRemoved"] = !NaturalEntityEcsService.Contains(mine.Handle),
+            ["minedDropId"] = minedDropId,
+            ["automaticOrePickup"] = automaticOrePickup,
             ["oreInventoryGain"] = CountCurrentPickerInventoryItem("Ore_Iron") - beforeOre,
             ["limitations"] = "正式测试船起飞、降落及普通建筑移交，正式矿山受击与掉矿入包；不覆盖手动飞行导航、镐子动画和真实联机。"
         });
+    }
+    private IEnumerator LocateAndActivateGeneratedAsteroidIronMine(Action<JObject> completed)
+    {
+        // 只查正式区块基线并通过 GM 移动加载窗口，不创建矿山或改动生成概率。
+        ChunkMgr chunks = ChunkMgr.Instance;
+        var profile = chunks.ActiveGenerationProfile;
+        Vector2 origin = WorldLocalPresentation.ToLogical(CurrentPlayer().transform.position);
+        int seed = DimensionManager.Instance.GetActiveGenerationSeed(SaveDataMgr.Instance.SaveData.Seed);
+        var visited = new HashSet<FlatWorld.WorldModel.WorldAddress>();
+        int placements = 0;
+        for (int radius = 0; radius <= 3; radius++)
+        for (int y = -radius; y <= radius; y++)
+        for (int x = -radius; x <= radius; x++)
+        {
+            if (Math.Max(Math.Abs(x), Math.Abs(y)) != radius) continue;
+            var address = chunks.ResolveWorldAddress(origin + new Vector2(x * profile.Width, y * profile.Height));
+            if (!visited.Add(address)) continue;
+            leases.Add(chunks.AcquireChunkLease(address, ChunkLeaseKind.DataRetention));
+            var request = chunks.RequestChunkDataAsync(address, seed, profile, cancellation.Token);
+            yield return WaitUntil(() => request.IsCompleted, 30d, "小行星矿山所在区块没有完成正式生成。");
+            ChunkRuntime runtime = request.GetAwaiter().GetResult();
+            foreach (NaturalItemPlacement placement in runtime.Ecology.Placements)
+            {
+                placements++;
+                if (placement.ItemId != "Mine_Iron") continue;
+                Vector2 point = placement.SharedAnchor.HasValue
+                    ? new Vector2(placement.SharedAnchor.Value.X, placement.SharedAnchor.Value.Y)
+                    : new Vector2(address.ChunkOrigin.X + placement.LocalX, address.ChunkOrigin.Y + placement.LocalY);
+                point = WorldLocalPresentation.ToLogical(point + new Vector2(.5f + placement.OffsetX, .5f + placement.OffsetY));
+                if (WorldTopologyRuntime.Distance(point, origin) <= 12f) continue;
+                var traits = CurrentPlayer().itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
+                if (traits == null || !traits.TryTeleportToWorldPosition(WorldLocalPresentation.ProjectPosition(point + Vector2.right * 2f)))
+                    throw new InvalidOperationException("正式 GM 入口无法加载天然铁矿山所在窗口。");
+                completed(new JObject { ["guid"] = placement.Guid, ["scannedChunks"] = visited.Count,
+                    ["placements"] = placements, ["x"] = point.x, ["y"] = point.y });
+                yield break;
+            }
+        }
+        throw new InvalidOperationException($"小行星正式基线未生成可开采铁矿山：区块{visited.Count}，自然点{placements}。");
     }
     #endregion
 }

@@ -1006,7 +1006,24 @@ for _, heightMode in ipairs({"nan", "positive_infinity", "negative_infinity"}) d
 end
 
 for _, water in ipairs({false, true}) do
-    test.system("ui_settings", "ship_flight_hud_receipt_memory", {
+for _, row in ipairs({
+    {width=1920, height=1080, protectedTop=800},
+    {width=1280, height=720, protectedTop=440, mobile=true},
+    {width=720, height=1280, protectedTop=1000, mobile=true},
+    {width=720, height=1280, protectedTop=1000, moved=true},
+}) do
+    test.system("ui_settings", "ship_flight_hud_reserved_rectangles", row, function(data)
+        local h = data.hud
+        assert(h.left >= 0 and h.right <= row.width and h.bottom >= 0 and h.top <= row.protectedTop + .01,
+            "高度尺超出安全区或挤进顶部信息")
+        for _, r in pairs({data.status, data.control}) do
+            assert(h.right <= r.left or h.left >= r.right or h.top <= r.bottom or h.bottom >= r.top,
+                "高度尺或落地提示遮挡状态条或手机摇杆")
+        end
+    end, "飞行高度尺避让真实状态矩形、手机摇杆及移动后的宽状态条")
+end
+
+test.system("ui_settings", "ship_flight_hud_receipt_memory", {
         ship = "hud-memory-ship", event = "hud-memory-landing", world = "hud-memory-world", water = water, time = 123.5
     }, function(data)
         assert(data.shipCount == 0 and data.flightCount == 0 and data.passengerCount == 1 and
@@ -1179,10 +1196,16 @@ test.system("ui_settings", "text_fitting_assets", {}, function(data)
     for _, text in ipairs(data.texts) do
         local label = text.prefab .. "/" .. text.name
         if text.button then
-            for _, point in ipairs(text.button.textCorners) do
-                assert(point.x >= text.button.left - 1 and point.x <= text.button.right + 1
-                    and point.y >= text.button.bottom - 1 and point.y <= text.button.top + 1,
-                    "文字矩形本身跑出了按钮：" .. label)
+            local samples = text.buttonResolutions or {text.button}
+            if text.buttonResolutions then
+                assert(#samples == 5, "独立伸展按钮没有覆盖桌面与竖屏尺寸：" .. label)
+            end
+            for _, button in ipairs(samples) do
+                for _, point in ipairs(button.textCorners) do
+                    assert(point.x >= button.left - 1 and point.x <= button.right + 1
+                        and point.y >= button.bottom - 1 and point.y <= button.top + 1,
+                        "文字矩形本身跑出了按钮：" .. label)
+                end
             end
         end
         if text.mode == "bounded" then

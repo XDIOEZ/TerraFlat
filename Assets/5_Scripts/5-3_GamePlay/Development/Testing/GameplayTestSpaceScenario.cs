@@ -865,7 +865,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             {
                 machines.Add(new JObject { ["guid"] = node.Id, ["scope"] = node.ScopeKey,
                     ["itemId"] = node.Snapshot.IDName });
-                if (node.Definition.Fluid?.Kind != "tank") continue;
+                // 燃料可已进入引擎工作腔，总量采样必须同时覆盖船罐与消费者库存。
+                if (node.Definition.Fluid == null) continue;
                 FluidInventory inventory = MachineWorld.GetFluidInventory(node);
                 if (inventory == null || !inventories.Add(inventory)) continue;
                 hydrogen += inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas);

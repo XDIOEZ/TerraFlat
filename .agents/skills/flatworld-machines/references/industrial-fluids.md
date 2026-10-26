@@ -4,6 +4,7 @@
 - 泵和消费者工作腔独立保存物质；`CombineAdjacent` 只让四邻同定义方块罐组合，共享库存和相加的固定容量，气液/铁钢不互拼。`CombinedFluidTankInventory` 按容量保存各格份额，拆回、断桥和迁移守恒；异种液体拒绝合并，排空后重新判定。气量用标准 L、液量用 L，不结算工业压差、压缩功、换热、蒸发冷凝或超压爆炸。
 - 铁/钢液罐方块为 `LiquidTankBlock_Iron/Steel`，各800L（满格1000L扣200L壳体）、四向液体口、禁止自然补气；组合容量按成员相加，沿用通用储罐和建筑快照，标志为液滴，气罐标志为气流。
 - `IndustrialFluidTransfer` 是共用原子数量转移。普通气体按真实混合比例，过滤只取指定组分原有份额，剩余留来源。单液冲突拒绝，不转换或丢料；整液网异种检查按 `(节点, 腔体)`，不误并独立副产物腔。
+- `FluidInventory` 扣料/排气按精确十进制余量与原温度重算内能，原子配方共用扣料前温度；不以浮点大数相减或清零极小尾料维持状态。回归 `Space/fuel_reaction` 与 `Tools/Tests/ShipFuel`。
 - `CollectFluidSupplyRoutes` 逆向取源，`CollectFluidDeliveryRoutes` 正向找接收设备；`GetFluidRouteFilter` 统一读取路径筛选与端口限制。`GetFluidRouteCharge` 将筛选后净量还原为输入混气流量，所有共享路径预算按该流量扣，防多目标放大过滤能力。
 - 每步先释放上一轮运行预约、冻结全部真实来源及节点流量，再给引擎预约。空管只保轻量节点预算，不复制库存快照。引擎在动力分配前预约真实原料，实际负载结算才消耗；无负载不扣料。氢发动机必须有真实氢、氧。
 - `FuelEngine` 通过 `combustion-engine` 策略组合通用流体引擎，只从液体口接收 `core:fuel_oil`；预约和结算前都检查所属环境助燃资格，缺油、缺氧、关阀及空载不扣油。燃油物品先在坩埚转为液体，再经容器/储罐接入；规则 `fuel_oil_engine_definition`、现场 `fuel_oil_engine`。

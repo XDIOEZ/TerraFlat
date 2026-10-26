@@ -247,6 +247,13 @@ namespace FlatWorld.Spaceflight
             if (groundPreparations.TryGetValue(shipId, out GroundShipPreparation preparation))
             {
                 JObject current = DescribeGroundPreparation(preparation, preparation.Failed ? "failed" : preparation.Ready ? "ready" : "preparing");
+                current["sessionRunning"] = running;
+                current["currentSession"] = Current == this;
+                current["shipIsWreck"] = GetShip(shipId)?.IsWreck;
+                current["authority"] = GameNetwork.HasStateAuthority;
+                current["scene"] = gameObject.scene.name;
+                current["worldRegistered"] = GameplayWorldRegistry.TryGet(preparation.World, out _);
+                current["presentationWorld"] = GameplayWorldRegistry.LocalPresentationWorldKey;
                 current["lastCleanup"] = groundPreparationHistory.TryGetValue(shipId, out JObject cleanup) ? cleanup.DeepClone() : null;
                 return current;
             }
@@ -269,6 +276,8 @@ namespace FlatWorld.Spaceflight
             return new JObject
             {
                 ["state"] = state, ["shipId"] = preparation.Ship.ShipId, ["world"] = preparation.World,
+                ["cursor"] = preparation.Cursor, ["pieceCount"] = preparation.Pieces.Count,
+                ["activeSeconds"] = preparation.ActiveSeconds,
                 ["structureRevision"] = preparation.StructureRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["preparedItems"] = preparation.PreparedItems, ["candidateItems"] = candidates,
                 ["validCandidates"] = valid, ["remainingCandidates"] = candidates, ["candidates"] = candidateIdentities,

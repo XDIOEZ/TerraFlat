@@ -44,6 +44,9 @@ public sealed partial class GameplayTestSpaceScenario
             MachineEntity source, destination;
             using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId))) source = MachineWorld.GetById(pair.Key);
             using (MachineWorld.UseScope(world)) destination = MachineWorld.GetById(pair.Key);
+            // GetById 会按全局 Guid 回退查询，归属判断还必须核对节点真实作用域。
+            if (source?.ScopeKey != MachineWorld.GetShipScopeKey(ship.ShipId)) source = null;
+            if (destination?.ScopeKey != world) destination = null;
             MachineEntity current = source ?? destination;
             var baseline = pair.Value;
             bool inventoriesSame = current != null;
@@ -95,7 +98,14 @@ public sealed partial class GameplayTestSpaceScenario
                 throw new InvalidOperationException("落地候选准备失败：" + state.Value<string>("error"));
             return Ready() && session.GetShip(ship.ShipId) != null && state.Value<bool>("ready");
         }, 45d, "真实地表下降没有备齐隐藏建筑与机器表现。",
-            () => session.GroundPreparationSnapshot(ship.ShipId).ToString());
+            () => new JObject
+            {
+                ["preparation"] = session.GroundPreparationSnapshot(ship.ShipId),
+                ["sessionEnabled"] = session.enabled, ["sessionActive"] = session.gameObject.activeInHierarchy,
+                ["shipPresent"] = session.GetShip(ship.ShipId) != null,
+                ["phase"] = session.GetFlight(ship.ShipId)?.Phase.ToString(),
+                ["timeScale"] = Time.timeScale, ["worldReady"] = Ready(), ["frame"] = Time.frameCount
+            }.ToString());
     }
 
     private JObject CancelOrdinaryGroundCandidate(ShipState ship)

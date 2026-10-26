@@ -2,6 +2,8 @@
 test.check("world_ready", "地表隔离世界就绪")
 test.check("player_ready", "地表主角就绪")
 test.runtime("dimension", "cave_roundtrip", {}, function(data)
+    assert(data.beforeEnter.observerDistance >= 0 and data.beforeEnter.observerDistance < .01,
+        "普通地表角色的权威入口距离仍使用过期乘员位置")
     assert(data.sameDimensionRejected and data.concurrentRejected, "相同维度或并发迁移没有拒绝")
     assert(data.enterAccepted and data.returnAccepted, "正式维度入口或出口拒绝迁移")
     for _, residents in ipairs({data.ecsResidentsBefore, data.ecsResidentsCave, data.ecsResidentsSurface}) do
@@ -63,6 +65,7 @@ end, "真实矿洞往返与完整恢复")
 test.check("world_ready", "矿洞往返恢复后世界仍就绪")
 test.check("player_ready", "维度往返后宿主保留同一主角")
 test.runtime("dimension", "restored_control", {}, function(data)
+    assert(data.runtimeActive, "维度回程复用了正在销毁的区块管理器")
     assert(data.controllerPresent and data.gameplayReady and not data.inputExplicitlyLocked and not data.loadingGateLocked, "回程后真实加载门禁没有解除：" .. tostring(data.inputLockState))
     assert(data.externalControlPresent and data.testControlOwned and data.externalControlOwner == "GameplayTestLuaRunner", "回程后控制没有交回本轮 Lua 租约")
     assert(not data.transitioning, "回程控制采样仍处于迁移事务")

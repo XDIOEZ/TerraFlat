@@ -36,6 +36,7 @@ public sealed partial class GameplayTestSpaceScenario
             ItemData data = entry.Capture();
             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building);
             Mod_Building runtimeBuilding = entry.Item?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+            Mod_Door door = entry.Item?.itemMods?.GetMod_ByID<Mod_Door>("Door");
             int placementLayer = entry.Machine?.Definition.Layer ?? BuildingOccupancyRegistry.GetPlacementLayer(runtimeBuilding);
             bool sameLayerRejected = false;
             IBuildingPlacementExtension extension = BuildingPlacementLifecycle.GetExtension(entry.Item);
@@ -55,10 +56,17 @@ public sealed partial class GameplayTestSpaceScenario
                 ["specialData"] = data.ItemSpecialData,
                 ["itemInstanceId"] = entry.Item != null ? entry.Item.GetInstanceID() : 0,
                 ["health"] = entry.Machine?.State?.Hp ?? entry.Item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp,
-                ["inventories"] = GroundMachineInventories(entry.Machine)
+                ["inventories"] = GroundMachineInventories(entry.Machine),
+                ["door"] = door == null ? null : new JObject
+                {
+                    ["rendererBound"] = door.DoorRenderer != null && door.DoorRenderer.sprite != null,
+                    ["colliderBound"] = door.DoorCollider != null,
+                    ["blockingMatchesState"] = door.DoorCollider != null && door.DoorCollider.enabled == !door.Data.IsOpen,
+                    ["interactable"] = door.CanInteract(null)
+                }
             });
         }
-        JObject fuel = GroundFuelSnapshot(ids, tanksOnly: true);
+        JObject fuel = GroundFuelSnapshot(ids);
         return new JObject
         {
             ["phase"] = "GroundBuildings", ["world"] = world, ["spaceView"] = session.IsSpaceView,
@@ -99,6 +107,7 @@ public sealed partial class GameplayTestSpaceScenario
             ["landed"] = snapshot.HasLandedSurfaceFlight, ["shipId"] = snapshot.ShipId ?? string.Empty,
             ["phase"] = snapshot.Phase.ToString(), ["height"] = snapshot.HeightMeters,
             ["simulationSeconds"] = session.State.SimulationSeconds,
+            ["layout"] = CaptureVisibleShipFlightHudAndStatusRectangles(),
             ["receipt"] = new JObject
             {
                 ["valid"] = receipt.IsValid, ["shipId"] = receipt.ShipId ?? string.Empty,
@@ -106,6 +115,27 @@ public sealed partial class GameplayTestSpaceScenario
                 ["water"] = receipt.IsWater, ["time"] = receipt.SimulationSeconds
             }
         };
+    }
+
+    private JObject CaptureVisibleShipFlightHudAndStatusRectangles()
+    {
+        RectTransform safeArea = UIManager.ExistingInstance?.SafeAreaRoot;
+        RectTransform hud = safeArea?.Find(PlayerShipFlightHUD.ViewName) as RectTransform;
+        RectTransform status = CurrentPlayer().itemMods.GetMod_ByID<Mod_Food>(ModText.Food)?.panelUI?
+            .GetComponentInChildren<UI_Drag>(true)?.rectTransform;
+        bool visible = hud != null && hud.gameObject.activeInHierarchy;
+        bool statusVisible = status != null && status.gameObject.activeInHierarchy;
+        JObject CaptureRectangle(RectTransform rectangle)
+        {
+            var corners = new Vector3[4]; rectangle.GetWorldCorners(corners);
+            Bounds bounds = new(safeArea.InverseTransformPoint(corners[0]), Vector3.zero);
+            foreach (Vector3 corner in corners) bounds.Encapsulate(safeArea.InverseTransformPoint(corner));
+            return new JObject { ["left"] = bounds.min.x, ["right"] = bounds.max.x,
+                ["bottom"] = bounds.min.y, ["top"] = bounds.max.y };
+        }
+        return new JObject { ["visible"] = visible, ["statusVisible"] = statusVisible,
+            ["hud"] = visible ? CaptureRectangle(hud) : null,
+            ["status"] = visible && statusVisible ? CaptureRectangle(status) : null };
     }
 
     private JObject GroundViewSnapshot(ICollection<int> ids, string shipId)
@@ -246,10 +276,9 @@ public sealed partial class GameplayTestSpaceScenario
                 if (node.Definition.Fluid != null) fluidCells.Add(node.Cell);
             foreach (MachineEntity node in nodes)
             {
-                if (!shipIds.Contains(node.Id) || node.Definition.Fluid?.Kind != "tank") continue;
-                FluidInventory inventory = MachineWorld.GetFluidInventory(node);
-                if (inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas) <= 0m ||
-                    inventory.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas) <= 0m) continue;
+                // 引擎工作腔可能已吸空船罐；空的真实气罐同样是独立罐输送边界的有效接收端。
+                if (!shipIds.Contains(node.Id) || node.Definition.Fluid?.Kind != "tank" ||
+                    node.Definition.Fluid.GasCapacityStandardLiters <= 0d) continue;
                 for (int directionIndex = 0; directionIndex < directions.Length; directionIndex++)
                 {
                     Vector2Int direction = directions[directionIndex];
@@ -309,6 +338,7 @@ public sealed partial class GameplayTestSpaceScenario
             ["sourceScope"] = sourceEntry.Machine.ScopeKey, ["pipeScope"] = pipeEntry.Machine.ScopeKey,
             ["outletScope"] = outletEntry.Machine.ScopeKey,
             ["targetScope"] = endpoint.ScopeKey,
+            ["targetIsGasTank"] = endpoint.Definition.Fluid.Kind == "tank" && endpoint.Definition.Fluid.GasCapacityStandardLiters > 0d,
             ["pipeMask"] = MachineWorld.GetFluidPipeConnectionMask(pipeEntry.Machine),
             ["targetsBefore"] = targetsBefore, ["targetsAfter"] = GroundFuelSnapshot(shipIds, true),
             ["sourceBefore"] = sourceBefore, ["sourceAfter"] = GroundFuelSnapshot(sourceIds),

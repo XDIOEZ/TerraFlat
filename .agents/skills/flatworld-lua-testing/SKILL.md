@@ -37,6 +37,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 
 ## 修改后选择与补覆盖
 
+- 陈列厅平地/无生态覆盖只作用于陈列厅世界；已有活动星球时不回退使用出生世界的 ReadyPlanetData 判断。其它星球的冷采样/生成专项用 `SuppressProfileOverrides` 租约，在返回前释放，并核对正式 Profile 和真实生态实体。
 - 先把改动的正常、边界、拒绝、回滚和关键流程对应到具体Lua断言；缺少则先增强同系统Lua，必要时扩展正式白名单采样，不复制业务算法或开放反射/任意C#。
 - `test.system(system,operation,args,validator,label)` 调用独立规则；`test.runtime(...)` 只用于正式隔离世界。每个回调必须实际调用assert，无断言即失败。参数排队时冻结，回调不能追加命令。
 - 气液 PlayMode 的无库存连接图、过滤、独立罐、固定容量、三槽装填和地表泵/出口通过 `test.runtime("industrial_fluids",...)` 返回原始采样，Lua持有业务断言；既有 `test.fluid` 用于尚未迁移的子案例，新增判断不堆回C#。

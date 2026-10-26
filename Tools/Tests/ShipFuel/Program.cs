@@ -175,6 +175,29 @@ internal static class Program
         Check(restored.GetGasMoles(FluidIds.Oxygen) == local.GetGasMoles(FluidIds.Oxygen) &&
             restored.GetLiquidMoles(ShipFuel.LiquidFuelId) == local.GetLiquidMoles(ShipFuel.LiquidFuelId), "stored propellants survive inventory snapshot");
     }
+
+    private static void ExhaustionPreservesRemainingFluidTemperature()
+    {
+        const decimal tail = .0000000000000000000000000001m;
+        var configuration = new ShipPartConfiguration();
+        var gas = Fuel(.04m + tail, .02m, 0m);
+        Check(ShipFuel.TryBurn(gas, configuration, .02m, out _), "burn near-empty hydrogen oxygen fixture");
+        Check(gas.GetGasMoles(FluidIds.Hydrogen) == tail && gas.GetGasMoles(FluidIds.Oxygen) == 0m, "keep exact unpaired hydrogen tail");
+        Check(gas.State.TotalInternalEnergyJoules > 0d && Math.Abs(gas.GetTemperatureKelvin() - 293.15d) < 1e-8d,
+            "near-empty fuel keeps positive energy and unchanged temperature");
+        Check(new FluidInventory(gas.State.Clone()).GetGasMoles(FluidIds.Hydrogen) == tail, "near-empty fuel survives cold reconstruction");
+        var liquid = Fuel(0m, 2m, .1m + tail);
+        Check(ShipFuel.TryBurn(liquid, configuration, 2m, out _) && liquid.GetLiquidMoles(ShipFuel.LiquidFuelId) == tail,
+            "keep exact liquid fuel remainder");
+        Check(new FluidInventory(liquid.State.Clone()).GetTemperatureKelvin() > 0d, "near-empty liquid survives cold reconstruction");
+        var vent = Fuel(20m, 0m, tail);
+        vent.ClearGas(out _);
+        Check(vent.GetLiquidMoles(ShipFuel.LiquidFuelId) == tail && new FluidInventory(vent.State.Clone()).GetTemperatureKelvin() > 0d,
+            "venting gas preserves tiny liquid thermal state");
+        var odd = Fuel(.0703443967748270505658671563m, .0351721983874135252829335782m, 0m);
+        Check(ShipFuel.ConsumeStoredChemicalPropellants(odd, configuration, 1d, 1d) > 0d, "odd decimal hydrogen does not round recipe above real stock");
+        Check(new FluidInventory(odd.State.Clone()).GetTemperatureKelvin() > 0d, "odd decimal reaction preserves remaining thermal state");
+    }
     #endregion
 
     #region GM模板的真实端口图
@@ -216,7 +239,7 @@ internal static class Program
 
     private static void Main()
     {
-        Connectivity(); AtomicFuelAndBudgets(); DualFuelReactions(); DualPhaseRefilling(); Template();
+        Connectivity(); AtomicFuelAndBudgets(); DualFuelReactions(); DualPhaseRefilling(); ExhaustionPreservesRemainingFluidTemperature(); Template();
         Console.WriteLine($"SHIP_FUEL_OK assertions={assertions}");
     }
 }

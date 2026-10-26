@@ -415,6 +415,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         GameManager.Instance.SetDimensionTransitionLoading("正在加载目标维度…", 0.68f);
         GameManager.Instance.NotifyDimensionWorldEntered();
         state.EnterNotified = true;
+        // 离线切换也要重新注册已加载地表，让落地准备继续使用目标世界的运行时。
+        if (!toSpace) GameplayWorldRegistry.SelectLocalWorld(targetAddress.WorldKey);
 
         Player targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
         targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(targetPosition);
@@ -515,6 +517,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         playerData.transform.position = sourcePosition;
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerProfileName] = playerData;
         GameManager.Instance.NotifyDimensionWorldEntered();
+        if (!fromSpace) GameplayWorldRegistry.SelectLocalWorld(sourceAddress.WorldKey);
 
         Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
         recoveredPlayer.transform.position = WorldLocalPresentation.ProjectPosition(sourcePosition);

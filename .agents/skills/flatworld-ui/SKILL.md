@@ -29,6 +29,8 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - `SetHeldItemWorldDropAllowed` 声明丢弃，专用锁才传自身 Owner。UIManager 聚合阻断窗口/锁和真实矩形（优先 WindowRect）；未知锁/未授权窗口拦截，窗内透明区也不可落物。
 - 返回只走 `FlatWorldUI/Cancel → EventSystemGuard.CancelRequested`，`BasePanel.OnCancel` 防同帧重复；手机：顶层面板→抽屉→设置。主菜单/设置用 CancelShortcutOverride 保确认，危险确认先消费。完整点击才业务选中，手柄焦点限顶层，TMP确认再开虚拟键盘。
 - 手柄停用只解绑，保最新输入资产；Configure 替换/撤销延后到 OnEnable 恢复，不复用已销毁资产。
+- 虚拟库存可在面板关闭时绑定；查找父级 ScrollRect 必须包含停用层级，保留正式滚动回调，规则 `virtualized_inventory` 覆盖关闭绑定后滚动。
+- 飞船高度尺按生存状态面板和手机摇杆的实际矩形避让，状态面板移动/缩放后重新布局；回归 `ship_flight_hud_reserved_rectangles` 的桌面、竖屏与移动宽面板。
 - 面板先销毁也须释放锁/引用。库存/快捷栏/手部用 `Inventory.ReleaseRuntimePanel`，制作/设置在 OnUnload 清理；`DestroyPanel` 延迟销毁前先停用。卸载清失效注册/缓存，资源重载保两类根、清运行UI再重建。
 
 ## 按需参考

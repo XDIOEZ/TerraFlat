@@ -21,6 +21,8 @@ public sealed class PlayerShipFlightHUD : MonoBehaviour
     private SpaceSession boundSession;
     private ShipFlightHudView view;
     private RectTransform viewRect, coordinateHudRect, mobileMoveRect;
+    private BasePanel statusPanel;
+    private RectTransform statusBarsRect;
     private bool missingPrefabLogged;
     private double lastScaleMaximum = double.NaN;
     private string title, heightFormat, nearGroundHint, landedHint;
@@ -29,6 +31,9 @@ public sealed class PlayerShipFlightHUD : MonoBehaviour
     private Vector3 lastCoordinatePosition, lastCoordinateScale;
     private Rect lastMobileRect;
     private Vector3 lastMobilePosition, lastMobileScale;
+    private Rect lastStatusRect;
+    private Vector3 lastStatusPosition, lastStatusScale;
+    private bool lastStatusVisible;
     private bool layoutDirty = true, lastCoordinateActive, lastMobile;
     private double lastReadoutHeight = double.NaN;
     private bool lastGroundContact;
@@ -206,23 +211,39 @@ public sealed class PlayerShipFlightHUD : MonoBehaviour
         Rect moveRect = moveVisible ? mobileMoveRect.rect : default;
         Vector3 movePosition = moveVisible ? mobileMoveRect.position : default;
         Vector3 moveScale = moveVisible ? mobileMoveRect.lossyScale : default;
+        BasePanel currentStatusPanel = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food)?.panelUI;
+        if (statusPanel != currentStatusPanel || statusBarsRect == null)
+        {
+            statusPanel = currentStatusPanel;
+            statusBarsRect = statusPanel?.GetComponentInChildren<UI_Drag>(true)?.rectTransform;
+        }
+        RectTransform statusBars = statusBarsRect;
+        bool statusVisible = statusBars != null && statusBars.gameObject.activeInHierarchy;
+        Rect statusRect = statusVisible ? statusBars.rect : default;
+        Vector3 statusPosition = statusVisible ? statusBars.position : default;
+        Vector3 statusScale = statusVisible ? statusBars.lossyScale : default;
         Vector2 size = safeArea.rect.size;
         if (!layoutDirty && size == lastSafeAreaSize && coordinateActive == lastCoordinateActive &&
             coordinateRect == lastCoordinateRect && coordinatePosition == lastCoordinatePosition &&
             coordinateScale == lastCoordinateScale && moveVisible == lastMobile && moveRect == lastMobileRect &&
-            movePosition == lastMobilePosition && moveScale == lastMobileScale) return;
+            movePosition == lastMobilePosition && moveScale == lastMobileScale &&
+            statusVisible == lastStatusVisible && statusRect == lastStatusRect &&
+            statusPosition == lastStatusPosition && statusScale == lastStatusScale) return;
         layoutDirty = false;
         lastSafeAreaSize = size; lastCoordinateActive = coordinateActive; lastCoordinateRect = coordinateRect;
         lastCoordinatePosition = coordinatePosition; lastCoordinateScale = coordinateScale; lastMobile = moveVisible;
         lastMobileRect = moveRect; lastMobilePosition = movePosition; lastMobileScale = moveScale;
+        lastStatusVisible = statusVisible; lastStatusRect = statusRect;
+        lastStatusPosition = statusPosition; lastStatusScale = statusScale;
         float top = safeArea.rect.height - 16f;
         if (coordinateActive)
         {
             Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(safeArea, coordinateHudRect);
             top = Mathf.Min(top, bounds.min.y - safeArea.rect.yMin - 16f);
         }
-        // 高度尺向内避开左侧 Buff，并为手机摇杆的实际操作区保留底部边距。
-        view.FitToSafeArea(safeArea, top, moveVisible ? mobileMoveRect : null);
+        // 高度尺避开左侧状态条与 Buff，并为手机摇杆的实际操作区保留边距。
+        view.FitToSafeArea(safeArea, top, moveVisible ? mobileMoveRect : null,
+            statusVisible ? statusBars : null);
     }
 
     private void SetVisible(bool visible)

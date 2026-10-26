@@ -71,25 +71,53 @@ public static partial class GameplayTestSystemProbe
                     parent.GetComponent<LayoutGroup>() == null)
                 {
                     RectTransform buttonRect = (RectTransform)button.transform;
-                    var corners = new Vector3[4];
-                    text.rectTransform.GetWorldCorners(corners);
-                    var points = new JArray();
-                    foreach (Vector3 corner in corners)
+                    if (buttonRect.rect.width > 0f)
+                        row["button"] = CaptureButtonLocalTextRectangle(buttonRect, text.rectTransform);
+                    else
                     {
-                        Vector3 point = buttonRect.InverseTransformPoint(corner);
-                        points.Add(new JObject { ["x"] = point.x, ["y"] = point.y });
+                        // 独立伸展模板没有宿主宽度，给停用副本真实尺寸后再核对各分辨率。
+                        GameObject candidate = Object.Instantiate(button.gameObject);
+                        candidate.SetActive(false);
+                        candidate.hideFlags = HideFlags.HideAndDontSave;
+                        try
+                        {
+                            RectTransform rectangle = candidate.GetComponent<RectTransform>();
+                            RectTransform label = (RectTransform)candidate.transform.GetChild(text.transform.GetSiblingIndex());
+                            var widths = new JArray();
+                            foreach (Vector2 size in new[] { new Vector2(2560, 1440), new Vector2(1920, 1080),
+                                new Vector2(1600, 900), new Vector2(1280, 720), new Vector2(720, 1280) })
+                            {
+                                rectangle.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x);
+                                rectangle.ForceUpdateRectTransforms();
+                                JObject bounds = CaptureButtonLocalTextRectangle(rectangle, label);
+                                bounds["width"] = size.x; bounds["height"] = size.y;
+                                widths.Add(bounds);
+                            }
+                            row["button"] = widths[0].DeepClone(); row["buttonResolutions"] = widths;
+                        }
+                        finally { Object.DestroyImmediate(candidate); }
                     }
-                    row["button"] = new JObject
-                    {
-                        ["left"] = buttonRect.rect.xMin, ["right"] = buttonRect.rect.xMax,
-                        ["bottom"] = buttonRect.rect.yMin, ["top"] = buttonRect.rect.yMax,
-                        ["textCorners"] = points
-                    };
                 }
                 rows.Add(row);
             }
         }
         return new JObject { ["prefabs"] = guids.Length, ["texts"] = rows };
+    }
+
+    private static JObject CaptureButtonLocalTextRectangle(RectTransform button, RectTransform text)
+    {
+        // 按直接父级的局部变换测量，关闭动画的零缩放祖先不参与坐标逆变换。
+        Matrix4x4 local = Matrix4x4.TRS(text.localPosition, text.localRotation, text.localScale);
+        Rect rectangle = text.rect;
+        var points = new JArray();
+        foreach (Vector2 corner in new[] { rectangle.min, new Vector2(rectangle.xMin, rectangle.yMax),
+            rectangle.max, new Vector2(rectangle.xMax, rectangle.yMin) })
+        {
+            Vector3 point = local.MultiplyPoint3x4(corner);
+            points.Add(new JObject { ["x"] = point.x, ["y"] = point.y });
+        }
+        return new JObject { ["left"] = button.rect.xMin, ["right"] = button.rect.xMax,
+            ["bottom"] = button.rect.yMin, ["top"] = button.rect.yMax, ["textCorners"] = points };
     }
 
     #endregion
