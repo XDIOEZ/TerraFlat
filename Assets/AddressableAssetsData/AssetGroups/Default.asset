@@ -317,6 +317,54 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bf6f4e62a9d24d6f92da6bfdc19482c0
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 598f0c85c5cc4ed6a104972e9e7851a3
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonLeft.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0abce2c9649e41839f03413e0a1f5e06
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonRight.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e89ee2f67e1641ba9926ec08a407aa27
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2cd81af677434ebca39952af527326e1
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedCrank.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 067df91779944dbe9bbe5428c8682441
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodLeft.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 023de7b990a947b3bce68fe4e313c03d
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodRight.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c806b4d57fdb4346a94a38b201b61c5c
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedNeedle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: da9e65f0aeb41a441b1eba3deb5ccd7b
     m_Address: Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png
     m_ReadOnly: 0

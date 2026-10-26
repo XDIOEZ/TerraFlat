@@ -173,6 +173,12 @@
       "enabled": true
     },
     {
+      "id": "mechanical_articulation_rules",
+      "name": "气泵逐零件机械联动规则",
+      "luaPath": "GameplayTests/Systems/Mechanical/machine_articulation.lua",
+      "enabled": true
+    },
+    {
       "id": "electrical_rules",
       "name": "电力规则与边界",
       "luaPath": "GameplayTests/Systems/Electrical/rules.lua",

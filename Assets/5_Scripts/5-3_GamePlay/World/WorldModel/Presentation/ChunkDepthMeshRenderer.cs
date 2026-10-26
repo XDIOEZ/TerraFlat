@@ -16,6 +16,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     private readonly int? sortingLayerOverrideId;
     private readonly int sortingOrderOverride;
     private readonly int renderQueue;
+    private readonly bool useParentSortingAnchor;
     private readonly Dictionary<PartKey, Entry> entries = new();
     private readonly Dictionary<int, Row> rows = new();
     private readonly HashSet<Group> dirtyGroups = new();
@@ -31,12 +32,13 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal static event Action BeforeFlush;
 
     internal ChunkDepthMeshRenderer(Transform parent, int? sortingLayerOverrideId = null, int sortingOrderOverride = 0,
-        int renderQueue = 3000)
+        int renderQueue = 3000, bool useParentSortingAnchor = false)
     {
         this.parent = parent != null ? parent : throw new ArgumentNullException(nameof(parent));
         this.sortingLayerOverrideId = sortingLayerOverrideId;
         this.sortingOrderOverride = sortingOrderOverride;
         this.renderQueue = renderQueue;
+        this.useParentSortingAnchor = useParentSortingAnchor;
         active.Add(this);
         EnsureDispatcher();
     }
@@ -68,8 +70,8 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             if (!Finite(crop[i]) || !Finite(animation[i]) || !Finite(state[i]) || !Finite(conveyor[i]) || !Finite(tint[i]))
                 throw new ArgumentException("行合批不能提交非有限材质或动画参数。");
         // 一格一个落地实体：所属行只取根部占格，图片偏移和内部动画不改变这一行。
-        int rowIndex = Mathf.FloorToInt(anchor.y);
-        float rowY = rowIndex + .5f;
+        int rowIndex = useParentSortingAnchor ? 0 : Mathf.FloorToInt(anchor.y);
+        float rowY = useParentSortingAnchor ? 0f : rowIndex + .5f;
         local.m13 -= rowY;
         var key = new PartKey(domain, entityId, part);
         var groupKey = new GroupKey(material, sprite.texture, sprite.associatedAlphaSplitTexture, order, renderQueue);
@@ -92,7 +94,8 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             return;
         }
         if (!rows.TryGetValue(rowIndex, out Row row))
-            rows.Add(rowIndex, row = new Row(parent, rowIndex, sortingLayerOverrideId, sortingOrderOverride));
+            rows.Add(rowIndex, row = new Row(parent, rowIndex, rowY, sortingLayerOverrideId, sortingOrderOverride,
+                !useParentSortingAnchor));
         if (!row.Groups.TryGetValue(groupKey, out Group group))
         {
             try { row.Groups.Add(groupKey, group = new Group(row, groupKey)); }
@@ -214,11 +217,12 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         internal readonly Transform Root;
         internal readonly int Layer;
         internal readonly Dictionary<GroupKey, Group> Groups = new();
-        internal Row(Transform parent, int index, int? sortingLayerOverrideId, int sortingOrderOverride)
+        internal Row(Transform parent, int index, float rowY, int? sortingLayerOverrideId, int sortingOrderOverride,
+            bool sortAtRoot)
         {
             Index = index;
             Root = CreateNode("DepthRow_" + index, parent);
-            Root.localPosition = new Vector3(0f, index + .5f, 0f);
+            Root.localPosition = new Vector3(0f, rowY, 0f);
             int layer, order;
             if (sortingLayerOverrideId.HasValue)
             {
@@ -233,7 +237,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             }
             Layer = layer;
             SortingGroup sorting = Root.gameObject.AddComponent<SortingGroup>();
-            sorting.sortAtRoot = true;
+            sorting.sortAtRoot = sortAtRoot;
             sorting.sortingLayerID = layer;
             sorting.sortingOrder = order;
         }

@@ -166,7 +166,9 @@ internal sealed partial class ChunkDepthMeshRenderer
                 visual.Occluder ? 1f : 0f, visual.Highlighted ? 1f : 0f);
             // 输送带复用闲置裁剪和效果通道传递 UV 带面范围，不增加顶点流。
             bool conveyor = visual.Animation.x >= 5.5f && visual.Animation.x < 7.5f;
-            if (conveyor) { effects.x = visual.Conveyor.x; effects.y = visual.Conveyor.y; }
+            bool articulated = visual.Animation.x >= 7.5f && visual.Animation.x < 9.5f;
+            bool parameters = conveyor || articulated;
+            if (parameters) { effects.x = visual.Conveyor.x; effects.y = visual.Conveyor.y; }
             Bounds bounds = default;
             for (int i = 0; i < entry.Geometry.Vertices.Length; i++)
             {
@@ -175,7 +177,7 @@ internal sealed partial class ChunkDepthMeshRenderer
                 vertices[entry.VertexStart + i] = new Vertex
                 {
                     Position = position, SpriteBounds = localBounds, Tint = visual.Tint, Uv = entry.Geometry.Uv[i],
-                    LocalClip = new Vector4(local.x, local.y, conveyor ? visual.Conveyor.z : visual.Crop.x, visual.Crop.w),
+                    LocalClip = new Vector4(local.x, local.y, parameters ? visual.Conveyor.z : visual.Crop.x, visual.Crop.w),
                     Basis = basis, Origin = origin, Animation = visual.Animation,
                     Region = visual.Region, Effects = effects, State = visual.State
                 };
@@ -184,11 +186,11 @@ internal sealed partial class ChunkDepthMeshRenderer
             }
             // GPU 旋转/往复/风摆的最大外扩参与 CPU 裁剪，不能以扁平网格的静止范围剔除。
             int mode = Mathf.RoundToInt(visual.Animation.x);
-            if (mode == 1)
+            if (mode == 1 || mode == MachineArticulatedVisual.NeedleMode || articulated)
             {
                 Vector2 reach = new(Mathf.Max(Mathf.Abs(spriteBounds.min.x), Mathf.Abs(spriteBounds.max.x)),
                     Mathf.Max(Mathf.Abs(spriteBounds.min.y), Mathf.Abs(spriteBounds.max.y)));
-                float radius = reach.magnitude;
+                float radius = reach.magnitude + (articulated ? Mathf.Abs(visual.Animation.w) + Mathf.Abs(visual.Conveyor.y) : 0f);
                 float x = radius * Mathf.Sqrt(matrix.m00 * matrix.m00 + matrix.m01 * matrix.m01);
                 float y = radius * Mathf.Sqrt(matrix.m10 * matrix.m10 + matrix.m11 * matrix.m11);
                 bounds = new Bounds(new Vector3(matrix.m03, matrix.m13, matrix.m23), new Vector3(x * 2f, y * 2f, .1f));

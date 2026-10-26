@@ -91,6 +91,8 @@ namespace FlatWorld.Spaceflight
             if (batteryEntity != null) RefreshBatteryChargeVisual(true);
             SubscribeElectricLightVisual();
             if (lightEntity != null) RefreshElectricLightVisual();
+            SubscribeArticulatedMachineVisual();
+            RefreshArticulatedMachineVisual();
         }
         private void OnDisable()
         {
@@ -98,6 +100,7 @@ namespace FlatWorld.Spaceflight
             UnsubscribeBatteryChargeVisual();
             UnsubscribeElectricLightVisual();
             DisableElectricLightVisual();
+            SuspendArticulatedMachineVisual();
         }
         #endregion
     }

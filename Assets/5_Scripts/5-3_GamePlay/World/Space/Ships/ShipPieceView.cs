@@ -85,6 +85,7 @@ namespace FlatWorld.Spaceflight
         {
             IsInteractionHighlighted = highlighted; InteractionHighlightChanged?.Invoke(highlighted);
             RefreshTankOutline();
+            RefreshArticulatedMachineVisual();
         }
         private void RefreshTankOutline()
         {
@@ -118,6 +119,7 @@ namespace FlatWorld.Spaceflight
             cultivatorPlots.Refresh(null);
             ReleaseBatteryChargeVisual();
             ReleaseElectricLightVisual();
+            ReleaseArticulatedMachineVisual();
             ShipFiberConnectionVisual.Release(ref fiberParts);
             engineExhaust?.Bind(null, null, null);
             session = null; boundShip = null; boundPiece = null;
@@ -220,12 +222,14 @@ namespace FlatWorld.Spaceflight
                     BindBatteryChargeVisual(node);
                     BindElectricLightVisual(node);
                     SynchronizeConnectionVisual(node);
+                    BindArticulatedMachineVisual(node);
                 }
             else
             {
                 BindCultivatorVisual(null);
                 BindBatteryChargeVisual(null);
                 BindElectricLightVisual(null);
+                BindArticulatedMachineVisual(null);
             }
             if (piece.Kind == ShipPieceKind.Fiber && visual != null)
             {
@@ -415,6 +419,7 @@ namespace FlatWorld.Spaceflight
             ReleaseCultivatorVisual();
             ReleaseBatteryChargeVisual();
             ReleaseElectricLightVisual();
+            ReleaseArticulatedMachineVisual();
             ShipFiberConnectionVisual.Release(ref fiberParts);
         }
         #endregion

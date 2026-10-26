@@ -417,6 +417,14 @@ public sealed partial class ChunkTilemapRenderer
     private void SubmitFluidNode(MachineEntity node, int x, int y, RuntimeItemDefinition def, Material material, Vector3 origin, Quaternion rotation)
     {
         Sprite body = def.Sprite;
+        MachineArticulatedVisual articulation = MachineArticulatedVisual.Resolve(def);
+        if (articulation != null)
+        {
+            SubmitArticulatedMachineParts(node, x, y, def, material, origin, rotation, articulation);
+            Ports(node, x, y, 6, material, origin, rotation);
+            mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)].UpdateFacility(node);
+            return;
+        }
         bool tankBlock = MachineWorld.IsFluidTankBlock(node);
         int tankMask = tankBlock ? MachineWorld.GetFluidTankConnectionMask(node) : 0;
         FluidMachineState state = MachineWorld.GetFluidState(node);

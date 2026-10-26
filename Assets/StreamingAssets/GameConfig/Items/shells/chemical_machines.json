@@ -1387,7 +1387,17 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png",
+        "spriteStates": {
+          "articulatedBack": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png",
+          "articulatedPistonLeft": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonLeft.png",
+          "articulatedPistonRight": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonRight.png",
+          "articulatedFront": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png",
+          "articulatedCrank": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedCrank.png",
+          "articulatedRodLeft": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodLeft.png",
+          "articulatedRodRight": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodRight.png",
+          "articulatedNeedle": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedNeedle.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -1436,7 +1446,117 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "GasPump_Mechanical"
+            "DefinitionId": "GasPump_Mechanical",
+            "Articulation": {
+              "CanvasPivotPixels": {
+                "x": 627,
+                "y": 627
+              },
+              "CrankCenterPixels": {
+                "x": 630.0,
+                "y": 590.0
+              },
+              "CrankRadiusPixels": 36.0,
+              "ConnectingRodLengthPixels": 218.0,
+              "WorkingFlowPhase": "gas",
+              "NeedleIdleDegrees": -130,
+              "NeedleWorkingDegrees": 45,
+              "NeedlePulseDegrees": 3,
+              "Parts": [
+                {
+                  "SpriteState": "articulatedBack",
+                  "Motion": "static",
+                  "PivotPixels": {
+                    "x": 627,
+                    "y": 627
+                  },
+                  "Scale": 1.0,
+                  "SourceAngleRadians": 0,
+                  "Order": 0
+                },
+                {
+                  "SpriteState": "articulatedPistonLeft",
+                  "Motion": "slider",
+                  "PivotPixels": {
+                    "x": 454,
+                    "y": 480
+                  },
+                  "Scale": 0.55,
+                  "SourceAngleRadians": 0,
+                  "Order": 1,
+                  "SliderAxisPixelsX": 454
+                },
+                {
+                  "SpriteState": "articulatedPistonRight",
+                  "Motion": "slider",
+                  "PivotPixels": {
+                    "x": 806,
+                    "y": 480
+                  },
+                  "Scale": 0.55,
+                  "SourceAngleRadians": 0,
+                  "Order": 1,
+                  "SliderAxisPixelsX": 806
+                },
+                {
+                  "SpriteState": "articulatedFront",
+                  "Motion": "static",
+                  "PivotPixels": {
+                    "x": 627,
+                    "y": 627
+                  },
+                  "Scale": 1.0,
+                  "SourceAngleRadians": 0,
+                  "Order": 2
+                },
+                {
+                  "SpriteState": "articulatedCrank",
+                  "Motion": "crank",
+                  "PivotPixels": {
+                    "x": 630.0,
+                    "y": 590.0
+                  },
+                  "Scale": 0.3345906978444057,
+                  "SourceAngleRadians": 0.7393780472815937,
+                  "Order": 3
+                },
+                {
+                  "SpriteState": "articulatedRodLeft",
+                  "Motion": "rod",
+                  "PivotPixels": {
+                    "x": 630.0,
+                    "y": 590.0
+                  },
+                  "Scale": 0.5253012048192771,
+                  "SourceAngleRadians": 3.141592653589793,
+                  "Order": 4,
+                  "SliderAxisPixelsX": 454
+                },
+                {
+                  "SpriteState": "articulatedRodRight",
+                  "Motion": "rod",
+                  "PivotPixels": {
+                    "x": 630.0,
+                    "y": 590.0
+                  },
+                  "Scale": 0.5265700483091788,
+                  "SourceAngleRadians": 0.0,
+                  "Order": 4,
+                  "SliderAxisPixelsX": 806
+                },
+                {
+                  "SpriteState": "articulatedNeedle",
+                  "Motion": "needle",
+                  "PivotPixels": {
+                    "x": 624,
+                    "y": 798
+                  },
+                  "Scale": 0.5,
+                  "SourceAngleRadians": 0.7546749732159206,
+                  "Order": 5
+                }
+              ]
+            }
           }
         }
       }

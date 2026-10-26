@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "canvasSize": [
+    1254,
+    1254
+  ],
+  "sourceSheetSize": [
+    1254,
+    1254
+  ],
+  "sourceAlphaDiscardAtOrBelow": 32,
+  "pixelsPerUnit": 1475.294118,
+  "coordinateConvention": "Top-left pixel coordinates; native transparent crops. pivotSourcePixels belongs to its source sheet, pivotCanvasPixels is the assembled target. Positive sourceRestAngleUnityRadians is counter-clockwise in Unity Y-up.",
+  "sourceOriginal": "GasPump_Mechanical_Idle.png",
+  "generatedSourceBase": "Source/GasPump_ArticulatedBase_Source.png",
+  "generatedSourceParts": "Source/GasPump_ArticulatedParts_Source.png",
+  "crankAxisCanvasPixels": [
+    630.0,
+    590.0
+  ],
+  "crankRadiusPixels": 36.0,
+  "connectingRodLengthPixels": 218.0,
+  "sliderAxisCanvasPixels": [
+    454.0,
+    806.0
+  ],
+  "layerOrder": [
+    "articulatedBack",
+    "articulatedPistonLeft",
+    "articulatedPistonRight",
+    "articulatedFront",
+    "articulatedCrank",
+    "articulatedRodLeft",
+    "articulatedRodRight",
+    "articulatedNeedle"
+  ],
+  "parts": [
+    {
+      "stateKey": "articulatedBack",
+      "file": "GasPump_ArticulatedBack.png",
+      "source": "Source/GasPump_ArticulatedBase_Source.png",
+      "cropRect": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "pivotSourcePixels": [
+        627,
+        627
+      ],
+      "pivotCanvasPixels": [
+        627,
+        627
+      ],
+      "spritePivotNormalized": [
+        0.5,
+        0.5
+      ],
+      "scale": 1.0,
+      "nativeSize": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "stateKey": "articulatedFront",
+      "file": "GasPump_ArticulatedFront.png",
+      "source": "Source/GasPump_ArticulatedBase_Source.png",
+      "cropRect": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "pivotSourcePixels": [
+        627,
+        627
+      ],
+      "pivotCanvasPixels": [
+        627,
+        627
+      ],
+      "spritePivotNormalized": [
+        0.5,
+        0.5
+      ],
+      "scale": 1.0,
+      "nativeSize": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "stateKey": "articulatedPistonLeft",
+      "file": "GasPump_ArticulatedPistonLeft.png",
+      "source": "Source/GasPump_ArticulatedParts_Source.png",
+      "cropRect": [
+        80,
+        96,
+        305,
+        471
+      ],
+      "pivotSourcePixels": [
+        321,
+        489
+      ],
+      "pivotCanvasPixels": [
+        454,
+        480
+      ],
+      "spritePivotNormalized": [
+        0.7901639344262295,
+        0.16560509554140124
+      ],
+      "scale": 0.55,
+      "nativeSize": [
+        305,
+        471
+      ]
+    },
+    {
+      "stateKey": "articulatedPistonRight",
+      "file": "GasPump_ArticulatedPistonRight.png",
+      "source": "Source/GasPump_ArticulatedParts_Source.png",
+      "cropRect": [
+        450,
+        96,
+        292,
+        471
+      ],
+      "pivotSourcePixels": [
+        508,
+        489
+      ],
+      "pivotCanvasPixels": [
+        806,
+        480
+      ],
+      "spritePivotNormalized": [
+        0.19863013698630136,
+        0.16560509554140124
+      ],
+      "scale": 0.55,
+      "nativeSize": [
+        292,
+        471
+      ]
+    },
+    {
+      "stateKey": "articulatedRodLeft",
+      "file": "GasPump_ArticulatedRodLeft.png",
+      "source": "Source/GasPump_ArticulatedParts_Source.png",
+      "cropRect": [
+        40,
+        690,
+        550,
+        134
+      ],
+      "pivotSourcePixels": [
+        522,
+        758
+      ],
+      "pivotCanvasPixels": [
+        630.0,
+        590.0
+      ],
+      "spritePivotNormalized": [
+        0.8763636363636363,
+        0.4925373134328358
+      ],
+      "scale": 0.5253012048192771,
+      "nativeSize": [
+        550,
+        134
+      ],
+      "endpointSourcePixels": [
+        107,
+        758
+      ],
+      "sourceEndpointLengthPixels": 415.0,
+      "sourceRestAngleUnityRadians": 3.141592653589793
+    },
+    {
+      "stateKey": "articulatedRodRight",
+      "file": "GasPump_ArticulatedRodRight.png",
+      "source": "Source/GasPump_ArticulatedParts_Source.png",
+      "cropRect": [
+        666,
+        690,
+        548,
+        134
+      ],
+      "pivotSourcePixels": [
+        733,
+        758
+      ],
+      "pivotCanvasPixels": [
+        630.0,
+        590.0
+      ],
+      "spritePivotNormalized": [
+        0.12226277372262774,
+        0.4925373134328358
+      ],
+      "scale": 0.5265700483091788,
+      "nativeSize": [
+        548,
+        134
+      ],
+      "endpointSourcePixels": [
+        1147,
+        758
+      ],
+      "sourceEndpointLengthPixels": 414.0,
+      "sourceRestAngleUnityRadians": 0.0
+    },
+    {
+      "stateKey": "articulatedCrank",
+      "file": "GasPump_ArticulatedCrank.png",
+      "source": "Source/GasPump_ArticulatedParts_Source.png",
+      "cropRect": [
+        846,
+        171,
+        350,
+        357
+      ],
+      "pivotSourcePixels": [
+        1018,
+        357
+      ],
+      "pivotCanvasPixels": [
+        630.0,
+        590.0
+      ],
+      "spritePivotNormalized": [
+        0.49142857142857144,
+        0.4789915966386554
+      ],
+      "scale": 0.3345906978444057,
+      "nativeSize": [
+        350,
+        357
+      ],
+      "endpointSourcePixels": [
+        1097.5,
+        284.5
+      ],
+      "sourceEndpointLengthPixels": 107.59414482210451,
+      "sourceRestAngleUnityRadians": 0.7393780472815937
+    },
+    {
+      "stateKey": "articulatedNeedle",
+      "file": "GasPump_ArticulatedNeedle.png",
+      "source": "Source/GasPump_ArticulatedParts_Source.png",
+      "cropRect": [
+        566,
+        994,
+        161,
+        155
+      ],
+      "pivotSourcePixels": [
+        605,
+        1108.5
+      ],
+      "pivotCanvasPixels": [
+        624,
+        798
+      ],
+      "spritePivotNormalized": [
+        0.2422360248447205,
+        0.2612903225806451
+      ],
+      "scale": 0.5,
+      "nativeSize": [
+        161,
+        155
+      ],
+      "endpointSourcePixels": [
+        714,
+        1006
+      ],
+      "sourceEndpointLengthPixels": 149.62369464760587,
+      "sourceRestAngleUnityRadians": 0.7546749732159206
+    }
+  ]
+}

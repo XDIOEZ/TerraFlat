@@ -15,6 +15,12 @@
       "name": "铁路与通用引擎规则",
       "luaPath": "GameplayTests/Systems/Mechanical/railway.lua",
       "enabled": true
+    },
+    {
+      "id": "mechanical_articulation_rules",
+      "name": "气泵逐零件机械联动规则",
+      "luaPath": "GameplayTests/Systems/Mechanical/machine_articulation.lua",
+      "enabled": true
     }
   ]
 }

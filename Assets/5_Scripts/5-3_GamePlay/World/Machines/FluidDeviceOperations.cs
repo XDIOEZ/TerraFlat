@@ -58,6 +58,7 @@ public static class FluidDeviceOperations
     public static void AdvanceGasPump(MachineEntity node, float seconds)
     {
         var state = GetFluidState(node); double maximum = Rate(node, seconds);
+        state.LastFlowPhase = ""; // 仅真实交付成功的本轮抽气驱动机械反馈。
         if (maximum <= 0d) return;
         if (!Powered(node)) { state.Status = "没有动力"; return; }
         if (IsGasPumpWet(node)) { state.Status = "气泵遇到液体"; return; }
@@ -107,6 +108,7 @@ public static class FluidDeviceOperations
             for (; received < batches.Count; received++) source.ReleaseGas(batches[received]);
             foreach (var remainder in pending.Drain()) source.ReleaseGas(remainder);
         }
+        state.LastFlowPhase = moved > 0d ? "gas" : "";
         state.Status = moved > 0 ? "正在抽气" : "来源不足或目标不能接收";
     }
 

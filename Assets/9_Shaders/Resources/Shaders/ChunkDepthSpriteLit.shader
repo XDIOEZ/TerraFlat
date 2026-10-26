@@ -71,6 +71,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         #include "../../Shader/VegetationSway.hlsl"
         #include "../../Shader/InteractionOutlineCommon.hlsl"
         #include "../../Shader/ConveyorSurface.hlsl"
+        #include "../../Shader/MachineArticulatedMotion.hlsl"
         #include "../../Shader/SpriteSnowCommon.hlsl"
         float _PlayerOcclusionEnabled, _PlayerOcclusionRadius, _PlayerOcclusionFeather;
         float _PlayerOcclusionAlpha, _PlayerOcclusionVerticalPadding;
@@ -131,6 +132,17 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
                 float compression = 1 - (1 - cos(phase)) * .5 * saturate(input.animation.w);
                 local.y *= compression;
                 snowBasisY *= compression;
+            }
+            else if (input.animation.x > 7.5 && input.animation.x < 10.5)
+            {
+                float2 translation; float turn;
+                ResolveMachineArticulatedMotion(input.animation.x, phase, input.animation.w,
+                    float3(input.effects.xy, input.localClip.z), translation, turn);
+                float sine, cosine; sincos(turn, sine, cosine);
+                local = float2(local.x * cosine - local.y * sine, local.x * sine + local.y * cosine) + translation;
+                tangent = input.basis.xy * cosine + input.basis.zw * sine;
+                snowBasisY = -input.basis.xy * sine + input.basis.zw * cosine;
+                snowOrigin += input.basis.xy * translation.x + input.basis.zw * translation.y;
             }
             float3 positionOS = float3(input.origin.xy + input.basis.xy * local.x + input.basis.zw * local.y, input.origin.z);
             float3 positionWS = TransformObjectToWorld(positionOS);

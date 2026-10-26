@@ -213,6 +213,8 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         if (mode == 1) motion = Matrix4x4.Rotate(Quaternion.Euler(0f, 0f, phase * Mathf.Rad2Deg));
         else if (mode == 3) motion = Matrix4x4.Translate(Vector3.down * ((1f - Mathf.Cos(phase)) * .5f * part.Animation.w));
         else if (mode == 4) motion = Matrix4x4.Scale(new Vector3(1f, 1f - (1f - Mathf.Cos(phase)) * .5f * Mathf.Clamp01(part.Animation.w), 1f));
+        else if (mode >= MachineArticulatedVisual.SliderMode && mode <= MachineArticulatedVisual.NeedleMode)
+            motion = MachineArticulatedVisual.ResolveMotion(mode, part.Animation, part.Conveyor, Time.time);
         Matrix4x4 matrix = Matrix4x4.TRS(transform.position + part.Offset, part.Rotation, part.Scale) * motion;
         Vector3 local = matrix.inverse.MultiplyPoint3x4(new Vector3(point.x, point.y, transform.position.z));
         Bounds bounds = SharedSpriteMeshCache.GetGeometry(part.Sprite).Bounds;

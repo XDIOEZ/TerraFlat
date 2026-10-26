@@ -625,6 +625,7 @@
       "name": "机械动力",
       "group": "工业与能源",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Machines/MachineArticulat*.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Mechanical*",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.Facilities.cs",
@@ -644,7 +645,8 @@
       "dependsOn": [],
       "ruleCaseIds": [
         "mechanical_rules",
-        "railway_rules"
+        "railway_rules",
+        "mechanical_articulation_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Mechanical/rules-suite.json",
       "integrationSuites": [

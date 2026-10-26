@@ -2,6 +2,7 @@
 
 - 主体/运动件按脚点Y行合批；MechanicalDepthVisual 仅交互/灯光，不持有HP/库存。MechanicalShaft 连接层在主体下，端口/铁环/短管独立生成，主体只画设备。
 - Pivot/Renderer 局部变换共供预览、落地、阴影，逻辑占地不随贴图偏移；运动件同画布/PPU/Pivot，变速先积旧相位再改角速度。太阳/接触阴影独立BRG，SpatialInteractionRegistry 注册同一数据目标。
+- 多零件机器在机械模块声明 `Articulation`，`visual.spriteStates` 引用独立透明零件并登记 Addressables；锚点用原画布左上像素，零件固定比例校准，不降采样。`MachineArticulatedKinematics` 解刚性曲柄/连杆/竖直滑杆，地表与船上共用模式8/9/10和停机相位；气泵只在实际交付后置 `LastFlowPhase=gas` 驱动，表针表示运转反馈。GPU、交互、阴影与CPU包围盒同步，新数据需在 `Mod_MechanicalNode` 声明以通过严格JSON校验；回归 `mechanical/machine_articulation`。
 - 无端口设施落地批绘须读取 `visual.rendererLocalScale`，接触阴影按同一缩放测底边；不能只改预览或源 Prefab。现场回归 `building/facility_visual_scale`。
 - 降落经 MechanicalLandingPreparation 分帧预建停用外壳、灯光、部件缓冲、共享Sprite几何，不复制机器；BeginCommit 提供候选，区块接管后走正常生命周期，未消费候选随准备器释放。BeginSurfaceChangeBatch 仅在同步交接按世界/格去重，保留 CellChanged；SurfacePresentationCell(s)Changed 最终格/邻格各刷新一次，不延迟常规 Tick。
 - MachineDefinition.VisualLayer 共用管→线→设备的显示/命中顺序，GridInteractionSelector 对完整逻辑格叠层从上到下等分选择，不按窄贴图/邻格半径命中。FluidTankSelectionOutline 按 GetFluidTankMembers 的四邻连通生成组外框，切片/内容条/端口不各描边，逻辑节点不变。
