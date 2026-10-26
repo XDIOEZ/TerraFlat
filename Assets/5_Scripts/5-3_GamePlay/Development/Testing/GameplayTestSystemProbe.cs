@@ -24,6 +24,7 @@ public static partial class GameplayTestSystemProbe
         RegisterRailwayOperations(result);
         RegisterServiceOperations(result);
         result.Add("rendering/dropped_combustion_material", ServiceDroppedCombustionMaterial);
+        result.Add("rendering/combustion_shader_smoke", ServiceCombustionShaderSmoke);
         RegisterDenseFogOperations(result);
         RegisterWindStreakOperations(result);
         RegisterCharacterAppearanceOperations(result);

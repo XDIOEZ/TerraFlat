@@ -129,11 +129,19 @@ public sealed partial class MechanicalDepthVisual
                 config.Value("flameEmissionMultiplier", source.flameEmissionMultiplier),
                 config.Value("attachFlameToAnchor", source.attachFlameToAnchor),
                 false, Vector3.zero);
+            facilityCombustion.ConfigureSmokePresentation(
+                config.Value("smokeEnabled", source.smokeEnabled),
+                config.Value("smokeAnchorOffset", source.smokeAnchorOffset),
+                config.Value("smokeSize", source.smokeSize),
+                config.Value("smokeDensity", source.smokeDensity));
             facilityCombustionConfiguration = config;
             facilityCombustionSortingLayer = layerId;
         }
         facilityCombustion.SetFlamePresentationMaterialOverride(
             owner.ResolveBuildingOverlayMaterialForSubmergedSurface(facilityCombustion.FlameSourceMaterial, submerged));
+        if (facilityCombustion.SmokePresentationEnabled)
+            facilityCombustion.SetSmokePresentationMaterialOverride(
+                owner.ResolveBuildingOverlayMaterialForSubmergedSurface(facilityCombustion.SmokeSourceMaterial, submerged));
 
         Vector3 anchor = config.Value("sourceRendererAnchorOffset", source.sourceRendererAnchorOffset);
         if (config.Value("followSourceRenderer", source.followSourceRenderer))

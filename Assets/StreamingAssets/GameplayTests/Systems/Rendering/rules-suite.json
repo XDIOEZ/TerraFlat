@@ -15,6 +15,12 @@
       "name": "建筑水面覆盖：平台与液体增量规则",
       "luaPath": "GameplayTests/Systems/Rendering/building-liquid-surface.lua",
       "enabled": true
+    },
+    {
+      "id": "rendering_combustion_shader_smoke",
+      "name": "高炉 Shader 烟雾配置与生命周期",
+      "luaPath": "GameplayTests/Systems/Rendering/shader-smoke.lua",
+      "enabled": true
     }
   ]
 }

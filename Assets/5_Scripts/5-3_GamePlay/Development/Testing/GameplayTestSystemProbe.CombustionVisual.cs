@@ -112,4 +112,121 @@ public static partial class GameplayTestSystemProbe
     }
 
     #endregion
+
+    #region Shader 烟雾配置与生命周期采样
+
+    // 用正式内容参数和独立表现节点采样，不点燃玩家世界里的炉子。
+    private static JObject ServiceCombustionShaderSmoke(JObject args)
+    {
+        var root = new GameObject("Lua Shader 烟雾采样");
+        root.SetActive(false);
+        try
+        {
+            JObject document = JObject.Parse(StreamingAssetsTextLoader.ReadAllText(StreamingAssetsTextLoader.CombinePath(
+                Application.streamingAssetsPath, "GameConfig/Items/shells/building_bodies.json")));
+            JToken furnace = null;
+            var enabledItems = new JArray();
+            foreach (JToken entry in document["items"])
+            {
+                if ((string)entry["id"] == "BlastFurnace") furnace = entry;
+                if ((bool?)entry["modules"]?["combustionVisual"]?["parameters"]?["smokeEnabled"] == true)
+                    enabledItems.Add((string)entry["id"]);
+            }
+            var prototype = root.AddComponent<Mod_CombustionVisual>();
+            ModuleJsonConfigurator.Prepare(prototype, "BlastFurnace", Mod_CombustionVisual.ModuleId,
+                "Module_CombustionVisual", furnace["modules"]["combustionVisual"]["parameters"].ToString())
+                .Apply(prototype);
+
+            ShaderSmokeEffect first = CreateSmoke("烟雾一");
+            ShaderSmokeEffect second = CreateSmoke("烟雾二");
+            first.ConfigureSmokePresentation(new Vector2(2f, 3f));
+            Material material = first.Renderer.sharedMaterial;
+            Bounds bounds = first.Renderer.localBounds;
+            var properties = new MaterialPropertyBlock();
+            first.Renderer.GetPropertyBlock(properties);
+            Vector4 firstInstance = properties.GetVector(Shader.PropertyToID("_SmokeInstance"));
+            second.Renderer.GetPropertyBlock(properties);
+            Vector4 secondInstance = properties.GetVector(Shader.PropertyToID("_SmokeInstance"));
+            root.SetActive(true);
+            bool startsStopped = !first.Renderer.enabled && !second.Renderer.enabled;
+            first.SetSmokeEmitting(true);
+            bool emits = first.Renderer.enabled;
+            first.enabled = false;
+            bool disabled = !first.Renderer.enabled;
+            first.enabled = true;
+            bool reenabled = first.Renderer.enabled;
+            first.SetSmokeEmitting(false);
+            root.SetActive(false);
+            root.SetActive(true);
+            bool staysStopped = !first.Renderer.enabled;
+            first.ConfigureSmokePresentation(Vector2.one, 0f);
+            first.SetSmokeEmitting(true);
+            bool zeroDensityHidden = !first.Renderer.enabled;
+            first.ConfigureSmokePresentation(new Vector2(float.NaN, float.PositiveInfinity), float.NaN);
+            Bounds sanitized = first.Renderer.localBounds;
+
+            var adapterRoot = new GameObject("Lua 炉口烟雾适配器");
+            adapterRoot.transform.SetParent(root.transform, false);
+            adapterRoot.transform.localScale = new Vector3(2f, 2f, 1f);
+            CombustionVisualEffect adapter = adapterRoot.AddComponent<CombustionVisualEffect>();
+            adapter.BindWorldPresentation(adapter, 0, 80);
+            adapter.SetCombustionActive(true);
+            bool optIn = adapterRoot.GetComponentInChildren<ShaderSmokeEffect>(true) == null;
+            adapter.ConfigureSmokePresentation(prototype.smokeEnabled, prototype.smokeAnchorOffset,
+                prototype.smokeSize, prototype.smokeDensity);
+            ShaderSmokeEffect adapted = adapterRoot.GetComponentInChildren<ShaderSmokeEffect>(true);
+            bool adapterEmits = adapted != null && adapted.Renderer.enabled;
+            float anchorError = Vector3.Distance(adapted.transform.position,
+                adapterRoot.transform.TransformPoint(prototype.smokeAnchorOffset));
+            int order = adapted.Renderer.sortingOrder;
+            adapterRoot.transform.localRotation = Quaternion.Euler(0f, 180f, 35f);
+            adapter.ConfigureSmokePresentation(true, prototype.smokeAnchorOffset, prototype.smokeSize, 1f);
+            Vector3 upright = adapted.transform.up;
+            adapter.SetCombustionActive(false);
+            bool adapterStops = !adapted.Renderer.enabled;
+            adapter.SetCombustionActive(true);
+            adapterRoot.SetActive(false);
+            bool adapterDisabled = !adapted.Renderer.enabled;
+            adapterRoot.SetActive(true);
+            bool adapterResumes = adapted.Renderer.enabled;
+            adapter.ConfigureSmokePresentation(false, Vector3.zero, Vector2.one, 1f);
+            bool configurationStops = !adapted.Renderer.enabled;
+
+            return new JObject
+            {
+                ["enabledItems"] = enabledItems,
+                ["mouthLocalY"] = prototype.sourceRendererAnchorOffset.y + prototype.smokeAnchorOffset.y,
+                ["configuredWidth"] = prototype.smokeSize.x, ["configuredHeight"] = prototype.smokeSize.y,
+                ["shader"] = material != null && material.shader != null ? material.shader.name : null,
+                ["supported"] = material != null && material.shader != null && material.shader.isSupported,
+                ["passes"] = material != null && material.FindPass("Smoke2D") >= 0 && material.FindPass("SmokeForward") >= 0,
+                ["sharedMaterial"] = material != null && material == second.Renderer.sharedMaterial,
+                ["sharedMesh"] = first.GetComponent<MeshFilter>().sharedMesh == second.GetComponent<MeshFilter>().sharedMesh,
+                ["vertices"] = first.GetComponent<MeshFilter>().sharedMesh.vertexCount,
+                ["particles"] = root.GetComponentsInChildren<ParticleSystem>(true).Length,
+                ["independentPhase"] = firstInstance.w != secondInstance.w,
+                ["boundsWidth"] = bounds.size.x, ["boundsHeight"] = bounds.size.y,
+                ["boundsCenterY"] = bounds.center.y,
+                ["finiteBounds"] = float.IsFinite(sanitized.size.x) && float.IsFinite(sanitized.size.y),
+                ["startsStopped"] = startsStopped, ["emits"] = emits, ["disabled"] = disabled,
+                ["reenabled"] = reenabled, ["staysStopped"] = staysStopped, ["zeroDensityHidden"] = zeroDensityHidden,
+                ["optIn"] = optIn, ["adapterEmits"] = adapterEmits, ["anchorError"] = anchorError,
+                ["order"] = order, ["uprightX"] = upright.x, ["uprightY"] = upright.y,
+                ["adapterStops"] = adapterStops, ["adapterDisabled"] = adapterDisabled,
+                ["adapterResumes"] = adapterResumes, ["configurationStops"] = configurationStops
+            };
+        }
+        finally { Object.DestroyImmediate(root); }
+
+        ShaderSmokeEffect CreateSmoke(string objectName)
+        {
+            var child = new GameObject(objectName);
+            child.transform.SetParent(root.transform, false);
+            var effect = child.AddComponent<ShaderSmokeEffect>();
+            effect.ConfigureSmokePresentation(new Vector2(0.65f, 1.25f));
+            return effect;
+        }
+    }
+
+    #endregion
 }

@@ -160,6 +160,10 @@
             "flameScale": 1.5,
             "flameHeightRatio": 1.0,
             "flameEmissionMultiplier": 2.5,
+            "smokeEnabled": true,
+            "smokeAnchorOffset": { "x": 0.0, "y": 0.65, "z": 0.0 },
+            "smokeSize": { "x": 0.65, "y": 1.25 },
+            "smokeDensity": 1.0,
             "attachFlameToAnchor": true,
             "followSourceRenderer": true,
             "sourceRendererAnchorOffset": {

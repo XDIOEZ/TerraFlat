@@ -1277,7 +1277,8 @@
       ],
       "ruleCaseIds": [
         "rendering_rules",
-        "rendering_building_liquid_surface"
+        "rendering_building_liquid_surface",
+        "rendering_combustion_shader_smoke"
       ],
       "rulesSuite": "GameplayTests/Systems/Rendering/rules-suite.json",
       "integrationSuites": [

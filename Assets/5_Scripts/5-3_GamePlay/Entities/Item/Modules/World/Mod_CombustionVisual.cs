@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 通用燃烧视觉模块：把燃烧状态转发给同 Prefab 的 CombustionVisualEffect。
-/// 只负责 Shader 火焰与入水烟汽，不负责燃料、光照、伤害或温度。
+/// 只负责 Shader 火焰、可选烟雾与入水烟汽，不负责燃料、光照、伤害或温度。
 /// </summary>
 public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
 {
@@ -18,6 +18,10 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
     public bool attachFlameToAnchor;
     public bool followSourceRenderer;
     public Vector3 sourceRendererAnchorOffset;
+    public bool smokeEnabled;
+    public Vector3 smokeAnchorOffset;
+    public Vector2 smokeSize = new(0.65f, 1.25f);
+    [Min(0f)] public float smokeDensity = 1f;
     private CombustionVisualEffect effect;
     private bool combustionActive;
 
@@ -66,6 +70,7 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
         effect?.ConfigureFlamePresentation(flameScale, flameHeightRatio,
             flameEmissionMultiplier, attachFlameToAnchor,
             followSourceRenderer, sourceRendererAnchorOffset);
+        effect?.ConfigureSmokePresentation(smokeEnabled, smokeAnchorOffset, smokeSize, smokeDensity);
     }
 
     public void SetCombustionActive(bool active)

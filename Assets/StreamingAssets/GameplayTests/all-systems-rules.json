@@ -305,6 +305,12 @@
       "enabled": true
     },
     {
+      "id": "rendering_combustion_shader_smoke",
+      "name": "高炉 Shader 烟雾配置与生命周期",
+      "luaPath": "GameplayTests/Systems/Rendering/shader-smoke.lua",
+      "enabled": true
+    },
+    {
       "id": "testing_rules",
       "name": "Lua回归框架规则与边界",
       "luaPath": "GameplayTests/Systems/Testing/rules.lua",

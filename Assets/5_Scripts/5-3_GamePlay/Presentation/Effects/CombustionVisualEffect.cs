@@ -3,8 +3,8 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 通用燃烧适配器：向独立 Shader 火焰转发燃烧状态、锚点和排序。
-/// 常驻火焰不模拟粒子，只有入水熄灭时产生一次性烟汽。
+/// 通用燃烧适配器：向独立 Shader 火焰和可选烟雾转发燃烧状态、锚点和排序。
+/// 常驻表现不模拟粒子，只有入水熄灭时产生一次性烟汽。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransformEffect
@@ -12,6 +12,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     #region 常量与配置
 
     private const string FlameName = "Combustion Shader Flame";
+    private const string SmokeName = "Combustion Shader Smoke";
     private const string ExtinguishRootName = "Combustion Extinguish Burst";
     private const float ExtinguishEffectLifetime = 1.6f;
 
@@ -20,10 +21,16 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     [SerializeField] private Material particleMaterial;
 
     [SerializeField] private Material flameMaterial;
+    [SerializeField] private Material smokeMaterial;
 
     private Light2D sourceLight;
     private SpriteRenderer sourceSpriteRenderer;
     private ShaderFlameEffect flame;
+    private ShaderSmokeEffect smoke;
+    private bool smokeEnabled;
+    private Vector3 smokeAnchorOffset;
+    private Vector2 smokeSize;
+    private float smokeDensity;
     private bool effectPlaying;
     private bool combustionActive;
     private float flameScale = 1f;
@@ -38,7 +45,10 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     private int explicitSortingLayerId;
     private int explicitSortingOrder;
     private Material presentationFlameMaterialOverride;
+    private Material presentationSmokeMaterialOverride;
     public Material FlameSourceMaterial => flameMaterial != null ? flameMaterial : Resources.Load<Material>(ShaderFlameEffect.MaterialResourcePath);
+    public Material SmokeSourceMaterial => smokeMaterial != null ? smokeMaterial : Resources.Load<Material>(ShaderSmokeEffect.MaterialResourcePath);
+    public bool SmokePresentationEnabled => smokeEnabled;
 
     /// <summary>宿主按所在水面层提供共享表现材质，不改变燃烧状态或源模板。</summary>
     public void SetFlamePresentationMaterialOverride(Material material)
@@ -46,6 +56,13 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         if (presentationFlameMaterialOverride == material) return;
         presentationFlameMaterialOverride = material;
         EnsureFlame();
+    }
+
+    public void SetSmokePresentationMaterialOverride(Material material)
+    {
+        if (presentationSmokeMaterialOverride == material) return;
+        presentationSmokeMaterialOverride = material;
+        EnsureSmokePresentation();
     }
 
     #endregion
@@ -219,6 +236,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         if (!combustionActive) return;
         RefreshRendererAnchor();
         RefreshFlamePose();
+        RefreshSmokePose();
         RefreshSorting();
         RefreshPlayingState(force: false);
     }
@@ -226,6 +244,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     private void OnDisable()
     {
         flame?.SetBurning(false);
+        smoke?.SetSmokeEmitting(false);
         effectPlaying = false;
     }
 
@@ -241,10 +260,12 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
 
         particleMaterial = template.particleMaterial;
         flameMaterial = template.flameMaterial;
+        smokeMaterial = template.smokeMaterial;
         hasExplicitSorting = true;
         explicitSortingLayerId = sortingLayerId;
         explicitSortingOrder = sortingOrder;
         EnsureFlame();
+        EnsureSmokePresentation();
         RefreshSorting();
     }
 
@@ -260,6 +281,19 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         sourceRendererAnchorOffset = rendererOffset;
         ResolveReferences();
         EnsureFlame();
+        EnsureSmokePresentation();
+        RefreshPlayingState(force: true);
+    }
+
+    // 烟雾锚点相对燃烧点配置，炉口位置由内容定义而非物品类型分支决定。
+    public void ConfigureSmokePresentation(bool enabled, Vector3 anchorOffset, Vector2 dimensions, float density)
+    {
+        smokeEnabled = enabled;
+        smokeAnchorOffset = anchorOffset;
+        smokeSize = dimensions;
+        smokeDensity = density;
+        ResolveReferences();
+        EnsureSmokePresentation();
         RefreshPlayingState(force: true);
     }
 
@@ -352,6 +386,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     /// <summary>光源被关闭时同步隐藏火焰，不改变权威燃烧状态。</summary>
     private void RefreshPlayingState(bool force)
     {
+        smoke?.SetSmokeEmitting(smokeEnabled && combustionActive && isActiveAndEnabled);
         bool shouldPlay = combustionActive &&
                           isActiveAndEnabled &&
                           (sourceLight == null ||
@@ -366,6 +401,35 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     #endregion
 
     #region 网格装配与宿主同步
+
+    private void EnsureSmokePresentation()
+    {
+        if (!smokeEnabled || flameAnchor == null)
+        {
+            smoke?.SetSmokeEmitting(false);
+            return;
+        }
+        if (smoke == null)
+        {
+            var root = new GameObject(SmokeName);
+            root.layer = gameObject.layer;
+            root.transform.SetParent(flameAnchor, false);
+            smoke = root.AddComponent<ShaderSmokeEffect>();
+        }
+        if (smoke.transform.parent != flameAnchor) smoke.transform.SetParent(flameAnchor, false);
+        smoke.transform.localPosition = smokeAnchorOffset;
+        smoke.transform.localScale = Vector3.one;
+        smoke.ConfigureSmokePresentation(smokeSize, smokeDensity,
+            presentationSmokeMaterialOverride != null ? presentationSmokeMaterialOverride : smokeMaterial);
+        RefreshSmokePose();
+        RefreshSorting();
+    }
+
+    private void RefreshSmokePose()
+    {
+        if (smoke != null && smoke.transform.rotation != Quaternion.identity)
+            smoke.transform.rotation = Quaternion.identity;
+    }
 
     private void EnsureFlame()
     {
@@ -404,6 +468,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
             sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingOrder : 0;
         // 留在宿主 SortingGroup 内使用相对顺序，独立掉落火焰由其后端传入最终键。
         flame.SetSorting(layerId, order + 2);
+        smoke?.SetSmokeSorting(layerId, order + 3);
     }
 
     private static Gradient CreateGradient(

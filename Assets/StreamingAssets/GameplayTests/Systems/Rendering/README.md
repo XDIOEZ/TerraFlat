@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-10-26 高炉 Shader 烟雾：`rendering/combustion_shader_smoke` 采样正式高炉参数、顶部炉口锚点、共享 Quad/材质、错相、裁剪边界、排序、独立向上和燃烧/停用/恢复开关；仅高炉启用。独立 C# 编译与当前 D3D Shader 编译、离屏预览通过；保留用户 PlayMode，未执行 Lua 或实际高炉点火画面验收。
+
 2026-10-26 建筑水面覆盖：直接放进有液体、无平台的格时，设备、管线与普通建筑进入海床后/水面前的行网格；有平台则沿用水上排序。`rendering/building_liquid_surface` 覆盖正式液体/支撑数据的浅水、平台增删、相邻平台、批量排水/涨水通知及队列范围；尚不覆盖真实机器换批次、GO启停及最终GPU画面。快速建造规则 `building_rules` 已通过；旧 `rendering_rules` 因既有256组掩码循环导致编排超过256步，尚未执行断言。本次水面断言已独立为 `rendering_building_liquid_surface`，专用规则已通过；最终GPU画面仍待验收。
 
 2026-10-25 风条纹：`WindStreakRendererFeature/WindStreaks` 消费本地天气已平滑的风向与风力，单次 GPU 合成稀疏弧形细线，风越大越密、越快、越明显；相机移动和环绕使用连续相位，停风/换世界清理，无风不绘制。`rendering/wind_streaks` 补充风力阈值、四向/斜向、强度上限、暂停、镜头位移、非法输入与重置断言。Data/GamePlay 隔离静态编译及 JSON、资源引用和 Feature 映射检查通过；未刷新运行中的 Editor，未执行 Lua 或画面验收。
