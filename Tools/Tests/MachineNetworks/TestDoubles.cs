@@ -57,10 +57,10 @@ namespace FlatWorld.Spaceflight
 }
 
 #region 非测试目标依赖替身
-public sealed class ItemData { public TransformData transform = new(); }
+public sealed class ItemData { public TransformData transform = new(); public List<string> Tags; }
 public sealed class TransformData { public Vector3 position; }
 public sealed class RecipeProcessor { }
-public class MachineLogic { }
+public class MachineLogic { public virtual float ElectricalDemandFactor => 1f; }
 public sealed class ShipDeviceLogic : MachineLogic { public bool IsDeviceRunning = true; }
 public sealed class Mod_MechanicalNode { }
 public sealed class MachineState { public float ManualSeconds, Hp = 100f, ElectricalStoredJoules; }
@@ -79,6 +79,7 @@ public sealed class MachineDefinition
 {
     public string Kind = "shaft", Ports = "all", Source = "", PortMode = "relay";
     public bool HasMechanicalPorts = true;
+    public bool BlocksTraversal, BlocksWind;
     public int Layer;
     public float Torque, Rpm = 60, TorqueLoad, ManualDriveTorque, ManualDriveRpm = 60;
     public float TorqueLoadStep = 10f;
@@ -126,7 +127,12 @@ public sealed partial class MachineEntity
 }
 public static partial class MachineWorld
 {
-    private sealed class ScopeState { public ElectricalNetworkGraph Electrical; public int TopologyMutationDepth = 0; }
+    private sealed class ScopeState
+    {
+        public ElectricalNetworkGraph Electrical;
+        public int TopologyMutationDepth = 0, SimulationStepDepth = 0;
+        public bool FluidTopologyDirty;
+    }
     private static readonly ScopeState scope = new();
     private static MechanicalNetworkGraph graph;
     private static readonly Dictionary<int, MachineEntity> nodes = new();
@@ -148,8 +154,11 @@ public static partial class MachineWorld
     public static float GetWorkEfficiency(MachineEntity node) => node.SpeedRpm / node.Definition.Rpm;
     public static bool Contains(MachineEntity node) => nodes.ContainsKey(node.Id);
     public static void StateChanged(MachineEntity node) { }
+    private static MachineState ReadMachineState(ItemData snapshot) => new();
     private static void EnsureScope() { }
-    private static void RebuildFluidNetworks() { }
+    public static int FluidTopologyRebuildsForTest;
+    private static void RebuildFluidNetworks() { FluidTopologyRebuildsForTest++; }
+    private static void PublishCombinedFluidTankTopologyChanges() { }
     private static void RebuildCombatSearchPadding() { }
     private static void UpdateConveyorVisualSpeed(MachineEntity node) { }
     private static float GetFluidElectricalDemand(MachineEntity node) => 1f;
@@ -168,6 +177,13 @@ public static partial class MachineWorld
         dirty = true;
         RebuildGraphsIfDirty();
     }
+    public static void SetSimulationStepDepthForTest(int depth) => scope.SimulationStepDepth = depth;
+    public static void InvalidateTopologyForTest(bool fluidOnly)
+    {
+        if (fluidOnly) scope.FluidTopologyDirty = true;
+        else dirty = true;
+    }
+    public static void RefreshTopologyForTest() => RebuildGraphsIfDirty();
 
     // 保留优化前的耦合步骤作为差分参考，只替换外部Unity依赖，不复制新缓存实现。
     public static void SettleCoupledReference(float seconds)

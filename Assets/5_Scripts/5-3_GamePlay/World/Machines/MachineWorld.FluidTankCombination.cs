@@ -93,7 +93,7 @@ public static partial class MachineWorld
         // 客户端成员份额来自服务端，逐包更新期间不能用尚未齐全的组总量重新分摊。
         if (GameNetwork.HasStateAuthority) group.CombinedInventory.SynchronizeLocalShares();
         foreach (MachineEntity member in group.Members) fluidTankOwners.Remove(member.Id);
-        fluidTankGroups.Remove(group); scope.FluidTopologyKey = null; dirty = true;
+        fluidTankGroups.Remove(group); scope.FluidTopologyKey = null; scope.FluidTopologyDirty = true;
     }
 
     private static bool NotifyCombinedFluidTankGroupStateChanged(MachineEntity node)
@@ -101,14 +101,36 @@ public static partial class MachineWorld
         if (!GameNetwork.HasStateAuthority) return false;
         if (!fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) || group.CombinedInventory == null) return false;
         string liquid = GetCombinedFluidTankLiquidIdentity(group.Inventory);
-        if (liquid != group.LiquidIdentity) { group.LiquidIdentity = liquid; scope.FluidTopologyKey = null; dirty = true; }
+        if (liquid != group.LiquidIdentity)
+        { group.LiquidIdentity = liquid; scope.FluidTopologyKey = null; scope.FluidTopologyDirty = true; }
         long revision = group.Inventory.State.ContentRevision;
         if (group.PublishedContentRevision == revision) return false;
-        group.PublishedContentRevision = revision;
+        // 同一计算步的多份抽水只在收尾分摊和发布一次，读取或拆回仍可即时取得真实份额。
+        if (scope.SimulationStepDepth > 0) scope.PendingCombinedTankStateChanges.Add(group);
+        else PublishCombinedFluidTankGroupStateChanged(group);
+        return true;
+    }
+
+    private static void PublishCombinedFluidTankGroupStateChanged(FluidTankGroup group)
+    {
+        group.PublishedContentRevision = group.Inventory.State.ContentRevision;
         group.CombinedInventory.SynchronizeLocalShares();
         foreach (MachineEntity member in group.Members)
             if (Contains(member)) NodeStateChanged?.Invoke(member);
-        return true;
+    }
+
+    private static void PublishPendingCombinedFluidTankStateChanges()
+    {
+        var pending = scope.PendingCombinedTankStateChanges;
+        if (pending.Count == 0) return;
+        var work = scope.CombinedTankStateChangeWork;
+        work.Clear(); work.AddRange(pending); pending.Clear();
+        try
+        {
+            foreach (FluidTankGroup group in work)
+                PublishCombinedFluidTankGroupStateChanged(group);
+        }
+        finally { work.Clear(); }
     }
 
     private static void PublishCombinedFluidTankTopologyChanges()

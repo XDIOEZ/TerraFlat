@@ -53,15 +53,21 @@ public static partial class MachineWorld
     /// <summary>机械与电力共用同一批世界节点，拓扑变化时两张图必须在同一时刻重建。</summary>
     private static void RebuildGraphsIfDirty()
     {
-        if (scope.TopologyMutationDepth > 0) return;
-        if (!dirty) return;
+        if (scope.TopologyMutationDepth > 0 || scope.SimulationStepDepth > 0) return;
+        bool rebuildAllNetworks = dirty;
+        if (!rebuildAllNetworks && !scope.FluidTopologyDirty) return;
         using var topologySample = MachineTopologyMarker.Auto();
-        graph.Rebuild(nodes.Values);
-        electricalGraph?.Rebuild(nodes.Values);
+        if (rebuildAllNetworks)
+        {
+            graph.Rebuild(nodes.Values);
+            electricalGraph?.Rebuild(nodes.Values);
+            RebuildCombatSearchPadding();
+        }
         RebuildFluidNetworks();
-        RebuildCombatSearchPadding();
         dirty = false;
+        scope.FluidTopologyDirty = false;
         PublishCombinedFluidTankTopologyChanges();
+        if (!rebuildAllNetworks) return;
         foreach (MachineEntity conveyor in graph.ConveyorChanges)
         {
             UpdateConveyorVisualSpeed(conveyor);

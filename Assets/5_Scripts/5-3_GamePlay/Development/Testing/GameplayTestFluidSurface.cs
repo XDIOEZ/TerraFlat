@@ -17,6 +17,7 @@ internal static class GameplayTestFluidSurface
     {
         GameplayTestRuntimeProbe.Register("industrial_fluids", "connected_surface_pump", CaptureConnectedPumpFlow);
         GameplayTestRuntimeProbe.Register("industrial_fluids", "shared_surface_pump_search", CaptureSharedPumpSearchContract);
+        GameplayTestRuntimeProbe.Register("industrial_fluids", "combined_tank_pump_tick", CaptureCombinedTankPumpTickContract);
     }
 
     internal static readonly Dictionary<string, Action<Action<string, bool, string>>> Cases = new(StringComparer.Ordinal)
@@ -92,6 +93,68 @@ internal static class GameplayTestFluidSurface
     #endregion
 
     #region 简单工业真实地表采样
+    // 双泵使用真实尾量、电池和管罐跑完整Tick，覆盖首次进液时回调读图及下一步预算。
+    internal static JObject CaptureCombinedTankPumpTickContract(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var fixture = new GameplayFluidScope();
+        var pumps = new[] { fixture.Add("LiquidPump_Electric", 0, 0, 1), fixture.Add("LiquidPump_Electric", 0, 1, 1) };
+        fixture.Add("LiquidPipe", 1, 0); fixture.Add("LiquidPipe", 1, 1);
+        var tanks = new HashSet<MachineEntity>();
+        for (int y = 0; y < 3; y++)
+        for (int x = 2; x < 6; x++) tanks.Add(fixture.Add("LiquidTankBlock_Iron", x, y));
+        var batteries = new[] { fixture.Add("Battery_Basic", 0, -1), fixture.Add("Battery_Basic", -1, -1) };
+        fixture.Add("Wire_Copper", -1, -1); fixture.Add("Wire_Copper", 0, -1);
+        fixture.Add("Wire_Copper", 0, 0); fixture.Add("Wire_Copper", 0, 1);
+        fixture.Tick();
+        FluidDefinition water = FluidCatalog.Default.Find("core:dirty_water");
+        double initialLiters = 0d;
+        foreach (MachineEntity pump in pumps)
+        {
+            pump.Definition.Fluid.ThroughputLitersPerSecond = 6d;
+            Require(GetFluidInventory(pump).TryAdd(FluidInventory.CreateBatch(water, 0m,
+                FluidUnits.LiquidLitersToMol(water, 1m), 293.15d), GetFluidVolumeLiters(pump), .001d), "真实泵尾量准备");
+            initialLiters += GetFluidInventory(pump).GetLiquidLiters();
+            TopologyChanged(pump);
+        }
+        foreach (MachineEntity battery in batteries) battery.ElectricalStoredJoules = battery.Definition.Electrical.CapacityJoules;
+        fixture.Rebuild();
+        FluidNetworkGraph before = fixture.Graph;
+        MachineEntity firstTank = null;
+        foreach (MachineEntity tank in tanks) { firstTank = tank; break; }
+        int notifications = 0;
+        bool stableGraph = true, stableBudget = true;
+        void ObserveTankState(MachineEntity node)
+        {
+            if (!tanks.Contains(node)) return;
+            notifications++;
+            stableGraph &= ReferenceEquals(before, fixture.Graph);
+            stableBudget &= fixture.Budget(GetFluidInventory(node), out _, out _);
+            stableGraph &= GetFluidTankMembers(node).Count == tanks.Count;
+        }
+        NodeStateChanged += ObserveTankState;
+        double firstDelivered;
+        try
+        {
+            fixture.Tick();
+            firstDelivered = GetFluidInventory(firstTank).GetLiquidLiters();
+        }
+        finally { NodeStateChanged -= ObserveTankState; }
+        bool rebuiltBetweenSteps = !ReferenceEquals(before, fixture.Graph);
+        fixture.Tick();
+        double finalDelivered = GetFluidInventory(firstTank).GetLiquidLiters(), buffers = 0d;
+        foreach (MachineEntity pump in pumps) buffers += GetFluidInventory(pump).GetLiquidLiters();
+        return new JObject
+        {
+            ["tankCount"] = tanks.Count, ["notifications"] = notifications,
+            ["stableGraph"] = stableGraph, ["stableBudget"] = stableBudget,
+            ["rebuiltBetweenSteps"] = rebuiltBetweenSteps, ["firstDelivered"] = firstDelivered,
+            ["expectedFirstDelivered"] = 12d * fixture.Seconds,
+            ["finalDelivered"] = finalDelivered, ["buffers"] = buffers, ["initialLiters"] = initialLiters,
+            ["powered"] = pumps[0].ElectricalSuppliedWatts > 0f && pumps[1].ElectricalSuppliedWatts > 0f
+        };
+    }
+
     internal static JObject CaptureSharedPumpSearchContract(Player player, JObject args)
     {
         args = (JObject)args.DeepClone();

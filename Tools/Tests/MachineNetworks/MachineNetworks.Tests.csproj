@@ -27,6 +27,10 @@
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/ElectricalNetwork.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.MechanicalSolver.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.Electrical.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Items/Crafting/CraftedWorkEfficiencyQuality.cs" />
+    <Reference Include="MemoryPack.Core">
+      <HintPath>$(RepoRoot)Assets/Packages/MemoryPack.Core.1.21.3/lib/netstandard2.1/MemoryPack.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

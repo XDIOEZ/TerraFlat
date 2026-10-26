@@ -236,9 +236,11 @@ public static partial class MachineWorld
     private static void ResetFluidRuntime()
     {
         fluidGraph = null; scope.FluidTopologyKey = null; scope.FluidTopologyCatalog = null;
+        scope.FluidTopologyDirty = false;
         ResetGasBudgets(true);
         fluidStates.Clear(); fluidInventories.Clear(); fluidTankOwners.Clear(); fluidTankGroups.Clear();
         scope.CombinedTankNotifications.Clear();
+        scope.PendingCombinedTankStateChanges.Clear(); scope.CombinedTankStateChangeWork.Clear();
         fluidStepStock.Clear(); fluidStockCache.Clear(); fluidThroughputRemaining.Clear(); fluidMechanicalPower.Clear();
         fluidAppearance.Clear();
         combustionSources.Clear();

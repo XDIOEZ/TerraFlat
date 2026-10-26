@@ -634,59 +634,70 @@ public static partial class MachineWorld
         MachineTickMarker.AddWork(catchUpSteps);
         for (int tick = 0; tick < catchUpSteps; tick++)
         {
-            TransportStep++;
-            elapsed -= step;
-            using (MachineFluidBeginMarker.Measure(fluidGraph?.Components.Count ?? 0)) BeginFluidStep(step);
+            // 一个计算步固定三张拓扑和流量预算，设备回调只标脏，下一步再重建。
             RebuildGraphsIfDirty();
-            foreach (var network in graph.Networks)
+            ScopeState advancingScope = scope;
+            advancingScope.SimulationStepDepth++;
+            try
             {
-                bool active = KeepSimulatingWithoutPlayers || graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
-                    RequiresElectricalBridgeSimulation(network) || RequiresFluidSimulation(network);
-                if (!active)
+                TransportStep++;
+                elapsed -= step;
+                using (MachineFluidBeginMarker.Measure(fluidGraph?.Components.Count ?? 0)) BeginFluidStep(step);
+                foreach (var network in graph.Networks)
                 {
-                    if (network.Active) SleepNetwork(network);
-                    continue;
-                }
-                // 拓扑合并可能包含冷节点，全部恢复成功后才运行任何一个节点。
-                foreach (var node in network.Nodes) if (node.State == null) WakeNode(node);
-                network.Active = true;
-                foreach (var node in network.Nodes) node.Active = true;
-            }
-            // 双向电机先辨别外部输入，再按无回流的转换顺序结算本轮供能。
-            SolveElectricalNetworks(step);
-            foreach (var network in graph.Networks)
-            {
-                if (!network.Active) continue;
-                foreach (var node in network.Nodes) UpdateVisualSpeed(node);
-            }
-            // 所有网络先完成转速分配，再推进设施，风箱跨网供风不读上一轮结果。
-            using (MachineLogicMarker.Measure())
-            {
-                int simulatedNodes = 0;
-                using (MachineNodeLogicMarker.Measure())
-                {
-                    foreach (var network in graph.Networks)
+                    bool active = KeepSimulatingWithoutPlayers || graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
+                        RequiresElectricalBridgeSimulation(network) || RequiresFluidSimulation(network);
+                    if (!active)
                     {
-                        if (!network.Active) continue;
-                        foreach (var node in network.Nodes)
-                        {
-                            SimulateNode(node, step);
-                            simulatedNodes++;
-                        }
+                        if (network.Active) SleepNetwork(network);
+                        continue;
                     }
-                    MachineNodeLogicMarker.AddWork(simulatedNodes);
+                    // 拓扑合并可能包含冷节点，全部恢复成功后才运行任何一个节点。
+                    foreach (var node in network.Nodes) if (node.State == null) WakeNode(node);
+                    network.Active = true;
+                    foreach (var node in network.Nodes) node.Active = true;
                 }
-                using (MachineFacilityLogicMarker.Measure())
-                    AdvanceFacilities(step);
-                MachineLogicMarker.AddWork(simulatedNodes);
-                MachineLogicMarker.SetGauge(graph.Networks.Count);
+                // 双向电机先辨别外部输入，再按无回流的转换顺序结算本轮供能。
+                SolveElectricalNetworks(step);
+                foreach (var network in graph.Networks)
+                {
+                    if (!network.Active) continue;
+                    foreach (var node in network.Nodes) UpdateVisualSpeed(node);
+                }
+                // 所有网络先完成转速分配，再推进设施，风箱跨网供风不读上一轮结果。
+                using (MachineLogicMarker.Measure())
+                {
+                    int simulatedNodes = 0;
+                    using (MachineNodeLogicMarker.Measure())
+                    {
+                        foreach (var network in graph.Networks)
+                        {
+                            if (!network.Active) continue;
+                            foreach (var node in network.Nodes)
+                            {
+                                SimulateNode(node, step);
+                                simulatedNodes++;
+                            }
+                        }
+                        MachineNodeLogicMarker.AddWork(simulatedNodes);
+                    }
+                    using (MachineFacilityLogicMarker.Measure())
+                        AdvanceFacilities(step);
+                    MachineLogicMarker.AddWork(simulatedNodes);
+                    MachineLogicMarker.SetGauge(graph.Networks.Count);
+                }
+                using (MachineFluidCompleteMarker.Measure(fluidGraph?.Edges.Count ?? 0))
+                {
+                    CompleteFluidStep(step);
+                    MachineFluidCompleteMarker.SetGauge(fluidStepStock.Count);
+                }
+                PressureExplosionQueue.Tick(step);
             }
-            using (MachineFluidCompleteMarker.Measure(fluidGraph?.Edges.Count ?? 0))
+            finally
             {
-                CompleteFluidStep(step);
-                MachineFluidCompleteMarker.SetGauge(fluidStepStock.Count);
+                try { PublishPendingCombinedFluidTankStateChanges(); }
+                finally { advancingScope.SimulationStepDepth--; }
             }
-            PressureExplosionQueue.Tick(step);
         }
     }
 

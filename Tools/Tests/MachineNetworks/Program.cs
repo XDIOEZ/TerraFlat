@@ -23,6 +23,39 @@ void Solve(MechanicalNetwork network) => MechanicalNetworkGraph.Solve(network,
 ConveyorTests.Run(Check);
 ConveyorLoadTests.Run(Check);
 
+#region 计算步内回调不能重建正在遍历的拓扑
+var callbackFacilities = new[] { Node(950, 0), Node(951, 1), Node(952, 2) };
+foreach (MachineEntity facility in callbackFacilities) facility.Definition.HasMechanicalPorts = false;
+var callbackGraph = Graph(callbackFacilities);
+MachineWorld.SetWorld(callbackGraph, new ElectricalNetworkGraph(default), callbackFacilities);
+MachineWorld.RebuildTopologyForTest(callbackFacilities);
+int frozenFluidRebuilds = MachineWorld.FluidTopologyRebuildsForTest;
+MachineWorld.SetSimulationStepDepthForTest(1);
+try
+{
+    int visits = 0;
+    foreach (MachineEntity facility in callbackGraph.Facilities)
+    {
+        MachineWorld.InvalidateTopologyForTest(fluidOnly: false);
+        MachineWorld.RefreshTopologyForTest();
+        visits++;
+    }
+    Check(visits == callbackFacilities.Length, "设施回调重建导致遍历中断、重复或漏算");
+    Check(MachineWorld.FluidTopologyRebuildsForTest == frozenFluidRebuilds, "计算步内重建清空了冻结的流量预算");
+}
+finally { MachineWorld.SetSimulationStepDepthForTest(0); }
+MachineWorld.RefreshTopologyForTest();
+Check(MachineWorld.FluidTopologyRebuildsForTest == frozenFluidRebuilds + 1, "计算步结束后没有消费待重建拓扑");
+var stableFacilitiesEnumerator = callbackGraph.Facilities.GetEnumerator();
+Check(stableFacilitiesEnumerator.MoveNext(), "流体独立重建前没有设施");
+MachineWorld.InvalidateTopologyForTest(fluidOnly: true);
+MachineWorld.RefreshTopologyForTest();
+Check(stableFacilitiesEnumerator.MoveNext(), "液罐身份变化仍然重建机械设施列表");
+Check(MachineWorld.FluidTopologyRebuildsForTest == frozenFluidRebuilds + 2, "独立流体标脏没有重建流体图");
+MachineWorld.RefreshTopologyForTest();
+Check(MachineWorld.FluidTopologyRebuildsForTest == frozenFluidRebuilds + 2, "相同流体标脏被重复消费");
+#endregion
+
 #region 风箱拓扑索引
 // 新建、清空和增删风箱只按拓扑重建更新存在标志。
 var bellowsGraph = Graph();
