@@ -7,7 +7,7 @@ using UnityEngine.Tilemaps;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 /// <summary>
-/// 地形使用静态 Composite 合并，资源与独立建筑使用按身份复用的 BoxCollider2D。
+/// 地形使用静态 Composite，组合储罐按精确矩形合并，资源与独立建筑使用按身份复用的 BoxCollider2D。
 /// 矩形沿 Chunk 边界裁剪，共用 Blocking 的静态刚体；实体事件集中到一个物理 Tick，物理表现不持有玩法权威。
 /// </summary>
 public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
@@ -25,6 +25,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
     private readonly List<MachineWorld.MachineRenderCell> machineCells = new();
     private readonly HashSet<int> projectedMachineIds = new();
     private readonly Dictionary<int, Vector2Int> projectedMachineAnchors = new();
+    private readonly ChunkMergedObstacleRectangles mergedStorageRectangles = new();
+    private readonly HashSet<int> projectedMergedStorageRectangleIds = new();
     private readonly HashSet<Vector2Int> dirtyMachineCells = new();
     private readonly List<Vector2Int> dirtyMachineScratch = new();
     private readonly HashSet<int> currentMachineIds = new();
@@ -137,6 +139,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         dataObstaclesDirty = false;
         machineObstaclesDirty = naturalResetPending = false;
         projectedMachineAnchors.Clear();
+        mergedStorageRectangles.Clear();
+        projectedMergedStorageRectangleIds.Clear();
         dirtyMachineCells.Clear();
         dirtyMachineScratch.Clear();
         currentMachineIds.Clear();
@@ -431,12 +435,12 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
             MachineEntity node = machineCells[i].Node;
             if (node?.Definition.BlocksTraversal != true || HasPhysicalItemCollider(node) ||
                 !projectedMachineIds.Add(node.Id)) continue;
-            MachineCollisionBounds.ResolveWorldBox(node, out Vector2 center, out Vector2 halfExtents);
-            long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id);
-            changed += SyncObstacle(key, center, halfExtents);
-            if (obstacleColliders.Contains(key)) projectedMachineAnchors[node.Id] = node.Cell;
+            changed += SyncMachineObstacleRectangle(node, out bool projected);
+            if (projected) projectedMachineAnchors[node.Id] = node.Cell;
         }
+        mergedStorageRectangles.RemoveSourcesExcept(projectedMachineIds);
         changed += obstacleColliders.RemoveExcept(ChunkObstacleColliderSet.MachineKind, projectedMachineIds);
+        changed += SyncMergedStorageObstacleRectangles();
         return changed;
     }
 
@@ -470,10 +474,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
                     currentMachineIds.Remove(node.Id);
                     continue;
                 }
-                MachineCollisionBounds.ResolveWorldBox(node, out Vector2 center, out Vector2 halfExtents);
-                long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id);
-                changed += SyncObstacle(key, center, halfExtents);
-                if (obstacleColliders.Contains(key)) projectedMachineAnchors[node.Id] = cell;
+                changed += SyncMachineObstacleRectangle(node, out bool projected);
+                if (projected) projectedMachineAnchors[node.Id] = cell;
                 else currentMachineIds.Remove(node.Id);
             }
             CollectStaleMachineIds(projectedMachineAnchors, cell, currentMachineIds, staleMachineIds);
@@ -482,12 +484,57 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
                 int id = staleMachineIds[i];
                 if (obstacleColliders.Remove(ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, id)))
                     changed++;
+                mergedStorageRectangles.RemoveSourceRectangle(id);
                 projectedMachineAnchors.Remove(id);
             }
         }
         currentMachineIds.Clear();
         staleMachineIds.Clear();
         dirtyMachineScratch.Clear();
+        changed += SyncMergedStorageObstacleRectangles();
+        return changed;
+    }
+
+    /// <summary>组合资格只读取既有存储能力，不绑定水、气、材质或库存组身份。</summary>
+    internal static bool CanMergeAdjacentStorageCollision(MachineEntity node)
+        => node?.Definition?.BlocksTraversal == true && node.Definition.Fluid?.CombineAdjacent == true &&
+           MachineWorld.IsFluidTankBlock(node);
+
+    /// <summary>每个节点保留源几何，组合储罐只投影精确合并后的实体阻挡。</summary>
+    private int SyncMachineObstacleRectangle(MachineEntity node, out bool projected)
+    {
+        MachineCollisionBounds.ResolveWorldBox(node, out Vector2 worldCenter, out Vector2 halfExtents);
+        long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id);
+        projected = TryResolveLocalBox(worldCenter, halfExtents, out Vector2 center, out Vector2 size);
+        if (!projected)
+        {
+            mergedStorageRectangles.RemoveSourceRectangle(node.Id);
+            return obstacleColliders.Remove(key) ? 1 : 0;
+        }
+        if (CanMergeAdjacentStorageCollision(node))
+        {
+            mergedStorageRectangles.SetSourceRectangle(node.Id, center, size);
+            return obstacleColliders.Remove(key) ? 1 : 0;
+        }
+        mergedStorageRectangles.RemoveSourceRectangle(node.Id);
+        return obstacleColliders.Set(key, center, size, SourceCollider) ? 1 : 0;
+    }
+
+    /// <summary>本轮脏节点处理完才统一提交，库存和表现通知未改几何时直接返回。</summary>
+    private int SyncMergedStorageObstacleRectangles()
+    {
+        if (!mergedStorageRectangles.RebuildMergedRectangles()) return 0;
+        int changed = 0;
+        projectedMergedStorageRectangleIds.Clear();
+        IReadOnlyList<ChunkMergedObstacleRectangles.MergedObstacleRectangle> rectangles = mergedStorageRectangles.Rectangles;
+        for (int i = 0; i < rectangles.Count; i++)
+        {
+            ChunkMergedObstacleRectangles.MergedObstacleRectangle rectangle = rectangles[i];
+            projectedMergedStorageRectangleIds.Add(rectangle.Id);
+            long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MergedStorageKind, rectangle.Id);
+            if (obstacleColliders.Set(key, rectangle.Center, rectangle.Size, SourceCollider)) changed++;
+        }
+        changed += obstacleColliders.RemoveExcept(ChunkObstacleColliderSet.MergedStorageKind, projectedMergedStorageRectangleIds);
         return changed;
     }
 
@@ -512,12 +559,20 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>保留既有矩形与跨 Chunk 裁剪语义，不改变数据占地、导航或受击形状。</summary>
     private bool TryResolveLocalBox(Vector2 worldCenter, Vector2 halfExtents, out Vector2 center, out Vector2 size)
     {
-        center = size = default;
-        if (!(halfExtents.x > 0f && halfExtents.y > 0f)) return false;
         Vector2 origin = new(BoundChunk.Address.ChunkOrigin.X, BoundChunk.Address.ChunkOrigin.Y);
         Vector2 local = WorldTopologyRuntime.ShortestDelta(origin, worldCenter);
-        Vector2 min = Vector2.Max(Vector2.zero, local - halfExtents);
-        Vector2 max = Vector2.Min(new Vector2(BoundChunk.Terrain.Width, BoundChunk.Terrain.Height), local + halfExtents);
+        return TryClipLocalObstacleRectangle(local, halfExtents,
+            new Vector2(BoundChunk.Terrain.Width, BoundChunk.Terrain.Height), out center, out size);
+    }
+
+    /// <summary>先沿区块裁剪每个真实矩形，再合并，跨区块和周期镜像仍各自持有完整局部并集。</summary>
+    internal static bool TryClipLocalObstacleRectangle(Vector2 localCenter, Vector2 halfExtents,
+        Vector2 chunkSize, out Vector2 center, out Vector2 size)
+    {
+        center = size = default;
+        if (!(halfExtents.x > 0f && halfExtents.y > 0f)) return false;
+        Vector2 min = Vector2.Max(Vector2.zero, localCenter - halfExtents);
+        Vector2 max = Vector2.Min(chunkSize, localCenter + halfExtents);
         size = max - min;
         if (!(size.x > 0f && size.y > 0f)) return false;
         center = (min + max) * 0.5f;

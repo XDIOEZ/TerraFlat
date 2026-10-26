@@ -66,6 +66,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 墙裂读权威 `flatworld.tileBuilding.damage`；自身与邻块共享边/角变化增量刷新，Bind 重建、Unbind 退订。水面顶点含高度、四角水深与 Flow；河流为下游速度、海洋为当地风向，湖面 Flow 为零。
 - `TerrainSurfaceHeightLayer` 从原 `height` 档位、`terrain.surface.excavatedLevels/coverLevels` 推导表面高低；非 Surface 忽略生成海拔，支撑面回到基准面，液面低一档，Blocking 顶部高一档。`TerrainHeightShadowManager` 统一查询/提交低侧阴影，只借用已有维度服务，不为只读查询创建管理器；四向直边与斜邻圆角共用 BRG，未知邻格不制造边或角。订阅八邻区 Commit/Evict，变化按3×3邻域裁剪合并脏格，随 Owner 镜像、重建和解绑维护表现。
 - 地形独占 Static Rigidbody2D + Manual Composite；树/机器 `ChunkObstacleColliderSet` 复用 BoxCollider，非 Composite。正式 Item Collider 出现撤数据代理，卸载后恢复；中央脏队列按 Bind 时的真实世界分桶，`ChunkMgr.FixedUpdate` 空队列不借世界，非空借已存在且仍归己的上下文后仅消费本世界批次；解绑/重绑撤旧桶，回调重新入队保留到下一 Tick。地形与障碍通知分开，`FlatWorld.ChunkPhysics.{FixedStep,FlushObstacles,RebuildObstacles,PublishObstacles}` 区分作用域、重建和镜像通知；规则 `world_streaming/collision_dirty_queue`。
+- `CombineAdjacent` 且有储存能力的机器共用 `ChunkMergedObstacleRectangles`：先逐源沿区块裁剪，再精确拼接同模板实体矩形，保留空洞/间距；只在源几何变化重建，镜像复用合并盒。库存、交互、战斗和导航仍逐格；回归 `industrial_fluids/combined_tank_collision_*`，离线 `Tools/Tests/CombinedTankColliders/verify.py`。
 - `SharedSpriteMeshCache` 属于资源会话；Ready 前预热最终目录，普通流送不清 Mesh，Backend 重建重新注册 BatchMeshID。清理先 BRG 解绑再毁 Mesh，会话结束先禁止 Owner 重登记，逐项释放异常不阻断其余资源。
 - BRG Shader 全 Pass 使用一致 `UnityPerMaterial` 布局；AoS 寻址在 `UNITY_SETUP_INSTANCE_ID` 后用 `GetDOTSInstanceIndex()`。Owner 丢失先全量重建，单格 SetVisual 不隐式登记；卸载交换删除后修正句柄并合并上传。
 - `OwnerCullingEnabled` 默认关；开时按 Owner 可见集合重建索引，关时仍发布可见实例/绘制命令。后端在普通流送 Owner 暂空时保留，仅完整窗口关闭后释放。

@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 区块独立障碍的物理表现容器：每个实体一个可复用 BoxCollider2D，0 个独立刚体、0 个更新回调。
+/// 区块障碍的物理表现容器：独立实体或合并矩形复用 BoxCollider2D，0 个独立刚体、0 个更新回调。
 /// 子 Collider 共用父节点静态刚体，明确排除 Composite；身份键分开机器与自然物，解绑清形状但保留对象池。
 /// </summary>
 internal sealed class ChunkObstacleColliderSet
 {
     #region 身份与对象池
 
-    internal const byte MachineKind = 1, NaturalKind = 2;
+    internal const byte MachineKind = 1, NaturalKind = 2, MergedStorageKind = 3;
     private readonly Transform parent;
     private readonly Dictionary<long, BoxCollider2D> colliders = new();
     private readonly Stack<BoxCollider2D> pool = new();

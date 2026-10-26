@@ -230,3 +230,103 @@ test.system("industrial_fluids", "portable_tank_air_fill", {}, function(data)
     assert(data.tinyFilled and data.tinyConserved and data.tinyLiters <= .00002, "微小固定容量失败或超上限")
     assert(data.rollback and data.nullTankExcluded, "拒绝充装未完整回源或空物品获得能力")
 end, "便携罐20%自然补气、混合比例、有限来源、微容量与拒绝回滚")
+
+-- 组合罐碰撞合并回归：业务断言留在Lua，C#只调用正式矩形合并与物理容器。
+local function check_merged_obstacle_boxes(data, expected_count, expected_area, blocked_points, empty_points)
+    assert(data.rebuilt and not data.unchangedRebuilt and not data.unchangedSourceChanged,
+        "没有真实几何变化仍重复构建组合罐碰撞")
+    assert(#data.boxes == expected_count and #data.boxes <= data.inputCount,
+        "组合罐碰撞没有减少到预期矩形数量")
+    local area = 0
+    for _, box in ipairs(data.boxes) do
+        assert(box.width > 0 and box.height > 0, "合并产生无效碰撞矩形")
+        area = area + box.width * box.height
+    end
+    near(area, expected_area, "合并扩大或漏掉原本的罐体阻挡面积", .00001)
+    local function covered(point)
+        for _, box in ipairs(data.boxes) do
+            if point[1] > box.x and point[1] < box.x + box.width
+                and point[2] > box.y and point[2] < box.y + box.height then return true end
+        end
+        return false
+    end
+    for _, point in ipairs(blocked_points or {}) do assert(covered(point), "罐体原有阻挡消失") end
+    for _, point in ipairs(empty_points or {}) do assert(not covered(point), "合并填平了空洞、凹口或真实间隙") end
+end
+
+local tank_rectangle = {}
+for y = 0, 15 do
+    for x = 0, 31 do table.insert(tank_rectangle, {x = x, y = y, width = 1, height = 1}) end
+end
+test.system("industrial_fluids", "combined_tank_collision_geometry", {boxes = tank_rectangle}, function(data)
+    check_merged_obstacle_boxes(data, 1, 512, {{.5,.5},{31.5,15.5}}, {{-.1,.5},{32.1,.5}})
+end, "整片512格储罐只保留一个实体碰撞矩形")
+
+for _, scenario in ipairs({
+    {name = "凹形", count = 2, area = 5,
+        boxes = {{x=0,y=0,width=1,height=1},{x=1,y=0,width=1,height=1},{x=2,y=0,width=1,height=1},
+            {x=0,y=1,width=1,height=1},{x=0,y=2,width=1,height=1}},
+        blocked = {{.5,.5},{2.5,.5},{.5,2.5}}, empty = {{1.5,1.5},{2.5,2.5}}},
+    {name = "空心", count = 4, area = 8,
+        boxes = {{x=0,y=0,width=1,height=1},{x=1,y=0,width=1,height=1},{x=2,y=0,width=1,height=1},
+            {x=0,y=1,width=1,height=1},{x=2,y=1,width=1,height=1},
+            {x=0,y=2,width=1,height=1},{x=1,y=2,width=1,height=1},{x=2,y=2,width=1,height=1}},
+        blocked = {{.5,1.5},{2.5,1.5},{1.5,.5},{1.5,2.5}}, empty = {{1.5,1.5}}},
+    {name = "真实间距", count = 2, area = 1.8,
+        boxes = {{x=0,y=0,width=.9,height=1},{x=1,y=0,width=.9,height=1}},
+        blocked = {{.45,.5},{1.45,.5}}, empty = {{.95,.5}}},
+    {name = "对角接触", count = 2, area = 2,
+        boxes = {{x=0,y=0,width=1,height=1},{x=1,y=1,width=1,height=1}},
+        blocked = {{.5,.5},{1.5,1.5}}, empty = {{1.5,.5},{.5,1.5}}},
+    {name = "极小正间隙", count = 2, area = 2,
+        boxes = {{x=0,y=0,width=1,height=1},{x=1.000003814697265625,y=0,width=1,height=1}},
+        blocked = {{.5,.5},{1.5,.5}}, empty = {{1.0000019073486328125,.5}}},
+    {name = "不等高错位", count = 2, area = 3,
+        boxes = {{x=0,y=0,width=1,height=2},{x=1,y=0,width=1,height=1}},
+        blocked = {{.5,1.5},{1.5,.5}}, empty = {{1.5,1.5}}},
+}) do
+    test.system("industrial_fluids", "combined_tank_collision_geometry", {boxes = scenario.boxes}, function(data)
+        check_merged_obstacle_boxes(data, scenario.count, scenario.area, scenario.blocked, scenario.empty)
+    end, "组合罐碰撞保留" .. scenario.name .. "的真实范围")
+end
+
+local screenshot_tank_boxes = {}
+for _, row in ipairs({{0,0,7},{1,0,7},{2,5,7},{3,5,6},{4,4,6},{5,4,5}}) do
+    for x = row[2], row[3] do table.insert(screenshot_tank_boxes, {x=x,y=row[1],width=1,height=1}) end
+end
+test.system("industrial_fluids", "combined_tank_collision_geometry", {boxes=screenshot_tank_boxes}, function(data)
+    check_merged_obstacle_boxes(data, 5, 26, {{.5,.5},{7.5,1.5},{5.5,5.5}}, {{3.5,2.5},{7.5,3.5},{6.5,5.5}})
+end, "截图同形26格组合罐合并到5个矩形并保留台阶凹口")
+
+test.system("industrial_fluids", "combined_tank_collision_geometry",
+    {boxes=screenshot_tank_boxes, clip={originX=-27,originY=-17,width=32,height=32}}, function(data)
+    check_merged_obstacle_boxes(data, 2, 12, {{27.5,17.5},{31.5,22.5}}, {{30.5,19.5},{32.5,17.5}})
+end, "截图左区块裁剪后12格储罐保留2个矩形")
+test.system("industrial_fluids", "combined_tank_collision_geometry",
+    {boxes=screenshot_tank_boxes, clip={originX=5,originY=-17,width=32,height=32}}, function(data)
+    check_merged_obstacle_boxes(data, 3, 14, {{.5,17.5},{2.5,19.5},{.5,22.5}}, {{2.5,20.5},{1.5,22.5}})
+end, "截图右区块裁剪后14格储罐保留3个矩形")
+
+test.system("industrial_fluids", "combined_tank_collision_capabilities", {}, function(data)
+    assert(#data.builtInTanks == 4, "没有覆盖铁钢水罐和气罐")
+    for _, tank in ipairs(data.builtInTanks) do assert(tank.eligible, "已有罐体未走共用合并能力：" .. tank.id) end
+    assert(data.futureTank and data.futureStorageStrategy, "新增罐体或储存策略仍要硬编码名称才能合并")
+    assert(not data.disabledCombination and not data.nonBlocking and not data.pipe and not data.ordinaryMachine
+        and not data.missingNode, "普通机器、管道或未开启组合能力的设备误入罐体合并")
+end, "水气罐与未来储存能力共用碰撞合并资格")
+
+test.system("industrial_fluids", "combined_tank_collision_lifecycle", {}, function(data)
+    assert(data.initialCount == 1 and data.initialArea == 3 and data.unchangedChanges == 0,
+        "连续罐没有合并，或库存通知重复写回物理组件")
+    assert(data.splitCount == 2 and data.splitArea == 2 and not data.middleStillBlocked,
+        "拆掉中间罐后旧大碰撞体仍阻挡缺口")
+    assert(data.mirrorInitialCount == 1 and data.mirrorSplitCount == 2 and data.mirrorSourcesValid
+        and data.mirrorStableIdentity and data.mirrorEmptyCount == 0,
+        "环绕镜像没有复用、拆分、追踪真实来源或清空旧合并碰撞")
+    assert(data.independentRetained and data.emptyMergedCount == 0 and data.clearedCount == 0,
+        "合并池清理误删普通机器/自然物，或保留旧罐体碰撞")
+    assert(data.clippedCount == 1 and data.clippedArea == 2 and not data.outsideAccepted,
+        "跨区块裁剪漏边、扩大矩形或保留区块外碰撞")
+    assert(data.removedByRetain == 1 and data.retainedSource and not data.removedSource,
+        "全量重扫未撤销已卸载的罐体来源")
+end, "组合罐拆中间、原生形状复用、独立障碍保留、跨块裁剪与镜像收尾")
