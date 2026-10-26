@@ -129,6 +129,7 @@ namespace FlatWorld.Automation
         internal static bool IsExporting;
         internal static int Exports, SelectedFrame;
         internal static bool ThrowOnExport;
+        internal static Action OnExport;
         internal static string Metadata;
         internal static string ExportFrame(int frame, int radius, Func<string, string, int, string[]> extra)
         {
@@ -144,6 +145,7 @@ namespace FlatWorld.Automation
                 string[] files = extra(directory, "test-snapshot", frame + 1);
                 if (files.Length != 1 || files[0] != "auto-trigger.json") throw new Exception("Missing trigger metadata");
                 Metadata = File.ReadAllText(Path.Combine(directory, files[0]));
+                OnExport?.Invoke();
             }
             finally { Directory.Delete(directory, true); }
             return directory;

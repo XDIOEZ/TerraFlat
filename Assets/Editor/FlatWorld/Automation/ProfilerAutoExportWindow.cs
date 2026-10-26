@@ -33,7 +33,7 @@ namespace FlatWorld.Automation
             EditorGUILayout.Space(6);
             EditorGUILayout.HelpBox($"最近 {ProfilerAutoExporter.DurationSeconds:0.##} 秒内，低帧率累计至少 " +
                 $"{ProfilerAutoExporter.DurationSeconds * ProfilerAutoExporter.RequiredLowFpsRatio:0.##} 秒（80%）才触发，无需连续。\n" +
-                "完整观察窗口达标 → 暂停编辑器 → 导出触发时刻的帧和现场 → 保持暂停。\n" +
+                "完整观察窗口达标 → 暂停编辑器 → 导出窗口内最慢帧和暂停现场 → 自动继续游戏。\n" +
                 "FPS 按 Profiler 的 CPU 帧耗时换算，不受 timeScale 影响。仅监测本机 Editor 的 PlayMode，" +
                 "自动开启所需录制并恢复原开关；不会改变目标、深度分析或游戏时间缩放。", MessageType.Info);
             EditorGUILayout.LabelField("最近采样", ProfilerAutoExporter.CurrentFps > 0d

@@ -68,7 +68,7 @@ namespace FlatWorld.Automation
                         menu.menu.AppendAction("打开性能报告目录", _ => OpenReportsFolder());
                     }));
                     zone.Insert(0, button);
-                    autoToggle = new ToolbarToggle { text = "自动", tooltip = "设定时间内，低于目标 FPS 的累计时间达到 80% 时，先暂停编辑器再导出性能 JSON。" };
+                    autoToggle = new ToolbarToggle { text = "自动", tooltip = "设定时间内，低于目标 FPS 的累计时间达到 80% 时，暂停并导出窗口内最慢帧的性能 JSON，完成后自动继续游戏。" };
                     autoToggle.RegisterValueChangedCallback(evt => ProfilerAutoExporter.Enabled = evt.newValue);
                     autoSettings = new ToolbarButton(ProfilerAutoExportWindow.Open) { tooltip = "设置自动导出的 FPS 阈值、持续时间和启动缓冲时间。" };
                     autoToggle.style.flexShrink = autoSettings.style.flexShrink = 0;

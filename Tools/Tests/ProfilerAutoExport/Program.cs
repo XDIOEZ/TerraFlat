@@ -56,7 +56,7 @@ internal static class Program
             Check(ProfilerSnapshotToolbar.Exports == 1);
             using var metadata = JsonDocument.Parse(ProfilerSnapshotToolbar.Metadata);
             var root = metadata.RootElement;
-            Check(root.GetProperty("schemaVersion").GetInt32() == 2);
+            Check(root.GetProperty("schemaVersion").GetInt32() == 3);
             Check(root.GetProperty("reason").GetString() == "low-fps-time-ratio");
             Check(Near(root.GetProperty("durationSeconds").GetDouble(), 5));
             Check(Near(root.GetProperty("observedSeconds").GetDouble(), 5));
@@ -93,7 +93,8 @@ internal static class Program
             Start(); SampleFrames(80, 50); SampleFrames(100, 10); EditorApplication.FlushDelay();
             Check(ProfilerSnapshotToolbar.Exports == 1);
             using var metadata = JsonDocument.Parse(ProfilerSnapshotToolbar.Metadata);
-            Check(metadata.RootElement.GetProperty("measuredFps").GetDouble() == 100);
+            Check(metadata.RootElement.GetProperty("measuredFps").GetDouble() == 20);
+            Check(metadata.RootElement.GetProperty("triggerFrameTimeMs").GetDouble() == 10);
             Check(Near(metadata.RootElement.GetProperty("lowFpsSeconds").GetDouble(), 4));
         });
         Test("滚动窗口只算边界内的部分帧，过期慢帧不继续累计", () =>
@@ -169,14 +170,24 @@ internal static class Program
 
         #endregion
 
-        Test("先暂停，延迟回调再导出，报告记录精确触发帧", () =>
+        #region 最慢帧选择与导出后自动继续回归
+
+        Test("先暂停，延迟回调导出最慢帧，全部写完才自动继续", () =>
         {
+            bool filesWrittenWhilePaused = false;
+            ProfilerSnapshotToolbar.OnExport = () =>
+            {
+                Check(EditorApplication.isPaused && ProfilerAutoExporter.IsExportPending);
+                Check(!ProfilerDriver.enabled && !string.IsNullOrEmpty(ProfilerSnapshotToolbar.Metadata));
+                filesWrittenWhilePaused = true;
+            };
             Start(); Frame(7, 50, 1);
             Check(EditorApplication.isPaused && ProfilerAutoExporter.IsExportPending && ProfilerSnapshotToolbar.Exports == 0);
             Check(!ProfilerDriver.enabled);
             EditorApplication.FlushDelay();
             Check(ProfilerSnapshotToolbar.Exports == 1 && ProfilerSnapshotToolbar.SelectedFrame == 7);
-            Check(EditorApplication.isPaused && !ProfilerDriver.enabled && !ProfilerAutoExporter.IsExportPending);
+            Check(filesWrittenWhilePaused && !EditorApplication.isPaused && !ProfilerDriver.enabled && !ProfilerAutoExporter.IsExportPending);
+            Check(ProfilerAutoExporter.Enabled && ProfilerAutoExporter.ObservedSeconds == 0 && ProfilerAutoExporter.LowFpsSeconds == 0);
             using var metadata = JsonDocument.Parse(ProfilerSnapshotToolbar.Metadata);
             var root = metadata.RootElement;
             Check(root.GetProperty("selectedDisplayFrame").GetInt32() == 8);
@@ -186,6 +197,82 @@ internal static class Program
             for (int i = 0; i < 5; i++) { EditorApplication.Tick(i + 2); EditorApplication.FlushDelay(); }
             Check(ProfilerSnapshotToolbar.Exports == 1);
         });
+        Test("导出窗口内最高耗时帧，区分最慢帧和达标触发帧", () =>
+        {
+            ProfilerAutoExporter.DurationSeconds = 5;
+            Start(); Frame(0, 1200, 1.2); SampleFrames(28, 100); SampleFrames(100, 10);
+            Check(EditorApplication.isPaused);
+            int triggerDisplayFrame = ProfilerDriver.lastFrameIndex + 1;
+            EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.SelectedFrame == 0 && !EditorApplication.isPaused);
+            using var metadata = JsonDocument.Parse(ProfilerSnapshotToolbar.Metadata);
+            var root = metadata.RootElement;
+            Check(root.GetProperty("selection").GetString() == "slowest-retained-cpu-frame-in-observation-window");
+            Check(root.GetProperty("selectedDisplayFrame").GetInt32() == 1);
+            Check(root.GetProperty("triggerDisplayFrame").GetInt32() == triggerDisplayFrame);
+            Check(root.GetProperty("frameTimeMs").GetDouble() == 1200);
+            Check(root.GetProperty("selectedFrameStartProfilerTimeMs").GetDouble() == 0);
+            Check(root.GetProperty("triggerFrameTimeMs").GetDouble() == 10);
+            Check(Near(root.GetProperty("windowEndProfilerTimeMs").GetDouble(), 5000));
+            Check(Near(root.GetProperty("lowFpsSeconds").GetDouble(), 4));
+        });
+        Test("窗口外曾经更慢的帧不会被选中", () =>
+        {
+            ProfilerAutoExporter.DurationSeconds = 1;
+            Start(); Frame(0, 400, 0.4); SampleFrames(100, 10); SampleFrames(16, 50);
+            EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.Exports == 1 && ProfilerSnapshotToolbar.SelectedFrame == 101);
+            using var metadata = JsonDocument.Parse(ProfilerSnapshotToolbar.Metadata);
+            Check(metadata.RootElement.GetProperty("frameTimeMs").GetDouble() == 50);
+        });
+        Test("最高耗时相同时稳定选择窗口内较早一帧", () =>
+        {
+            ProfilerAutoExporter.DurationSeconds = 1;
+            Start(); SampleFrames(100, 10); SampleFrames(2, 400); EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.Exports == 1 && ProfilerSnapshotToolbar.SelectedFrame == 100);
+        });
+        Test("缓存已淘汰最高耗时帧时选择仍保留的最慢候选", () =>
+        {
+            ProfilerAutoExporter.DurationSeconds = 1;
+            Start(); Frame(0, 700, 0.7); ProfilerDriver.Frames.Remove(0);
+            ProfilerDriver.FrameStarts[1] = 700;
+            Frame(1, 100, 0.8); ProfilerDriver.FrameStarts[2] = 800;
+            Frame(2, 100, 0.9); ProfilerDriver.FrameStarts[3] = 900;
+            Frame(3, 100, 1); EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.Exports == 1 && ProfilerSnapshotToolbar.SelectedFrame == 1);
+        });
+        Test("完整报告写出后用户关闭自动模式，保留其当前暂停", () =>
+        {
+            ProfilerSnapshotToolbar.OnExport = () => ProfilerAutoExporter.Enabled = false;
+            Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.Exports == 1 && !ProfilerAutoExporter.Enabled && EditorApplication.isPaused);
+            Check(!ProfilerDriver.enabled);
+        });
+        Test("导出过程中用户手动继续再暂停，不覆盖其暂停", () =>
+        {
+            ProfilerSnapshotToolbar.OnExport = () =>
+            {
+                EditorApplication.isPaused = false;
+                EditorApplication.isPaused = true;
+            };
+            Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.Exports == 1 && EditorApplication.isPaused && !ProfilerAutoExporter.IsExportPending);
+        });
+        Test("导出过程中退出游戏，不重新进入播放", () =>
+        {
+            ProfilerSnapshotToolbar.OnExport = EditorApplication.ExitPlayMode;
+            Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.Exports == 1 && !EditorApplication.isPlaying && !ProfilerDriver.enabled);
+        });
+        Test("附加文件写盘失败时保留暂停并停止自动模式", () =>
+        {
+            ProfilerSnapshotToolbar.OnExport = () => throw new IOException("Simulated additional file failure");
+            Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
+            Check(!ProfilerAutoExporter.Enabled && EditorApplication.isPaused && !ProfilerAutoExporter.IsExportPending);
+        });
+
+        #endregion
+
         Test("不漏掉两次编辑器更新之间的慢帧", () =>
         {
             Start(); ProfilerDriver.Frames[0] = 16; ProfilerDriver.Frames[1] = 100; ProfilerDriver.Frames[2] = 16;
@@ -199,20 +286,21 @@ internal static class Program
             Frame(2, 16, 5.1); Check(!EditorApplication.isPaused);
             Frame(3, 100, 5.2); Check(EditorApplication.isPaused);
         });
-        Test("继续游戏后重新缓冲且不读取暂停前的旧帧", () =>
+        Test("自动继续后重新缓冲且不读取导出产生的慢帧", () =>
         {
+            ProfilerSnapshotToolbar.OnExport = () => ProfilerDriver.Frames[ProfilerDriver.lastFrameIndex + 1] = 10000;
             Start(2); Frame(0, 100, 3); EditorApplication.FlushDelay();
-            Check(ProfilerSnapshotToolbar.Exports == 1);
-            EditorApplication.isPaused = false; EditorApplication.Tick(10);
-            Frame(1, 100, 11); Check(!EditorApplication.isPaused);
-            Frame(2, 16, 12.1); Check(!EditorApplication.isPaused);
-            Frame(3, 100, 12.2); EditorApplication.FlushDelay();
+            Check(ProfilerSnapshotToolbar.Exports == 1 && !EditorApplication.isPaused);
+            EditorApplication.Tick(10);
+            Frame(2, 100, 11); Check(!EditorApplication.isPaused);
+            Frame(3, 16, 12.1); Check(!EditorApplication.isPaused);
+            Frame(4, 100, 12.2); EditorApplication.FlushDelay();
             Check(ProfilerSnapshotToolbar.Exports == 2);
         });
         Test("已有录制开关在导出后保持开启", () =>
         {
             ProfilerDriver.enabled = true; Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
-            Check(ProfilerDriver.enabled && EditorApplication.isPaused);
+            Check(ProfilerDriver.enabled && !EditorApplication.isPaused);
         });
         Test("关闭自动模式恢复自己开启的录制", () =>
         {
@@ -342,6 +430,7 @@ internal static class Program
         ProfilerAutoExporter.DurationSeconds = 0.01f;
         ProfilerSnapshotToolbar.Exports = 0; ProfilerSnapshotToolbar.SelectedFrame = -1;
         ProfilerSnapshotToolbar.ThrowOnExport = ProfilerSnapshotToolbar.IsExporting = false;
+        ProfilerSnapshotToolbar.OnExport = null; ProfilerSnapshotToolbar.Metadata = null;
         UnityEngine.Debug.Messages.Clear();
     }
 

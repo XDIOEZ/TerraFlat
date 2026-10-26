@@ -152,7 +152,7 @@ namespace FlatWorld.Automation
             ObservedSeconds = LowFpsSeconds = 0d;
         }
 
-        private static bool ObserveFrame(double startMilliseconds, double milliseconds)
+        private static bool ObserveFrame(int frameIndex, double startMilliseconds, double milliseconds)
         {
             double endMilliseconds = startMilliseconds + milliseconds;
             if (double.IsNaN(startMilliseconds) || double.IsInfinity(startMilliseconds) ||
@@ -176,7 +176,14 @@ namespace FlatWorld.Automation
             previousFrameEndMs = endMilliseconds;
             if (CurrentFps < thresholdFps && endMilliseconds > spanStart)
             {
-                SlowFrames.Enqueue(new SlowFrameSpan { startMs = spanStart, endMs = endMilliseconds });
+                SlowFrames.Enqueue(new SlowFrameSpan
+                {
+                    frameIndex = frameIndex,
+                    frameTimeMs = milliseconds,
+                    frameStartTimeMs = startMilliseconds,
+                    startMs = spanStart,
+                    endMs = endMilliseconds
+                });
                 slowFrameMilliseconds += endMilliseconds - spanStart;
             }
             double windowMilliseconds = durationSeconds * 1000d;
@@ -195,7 +202,22 @@ namespace FlatWorld.Automation
 
         private struct SlowFrameSpan
         {
-            internal double startMs, endMs;
+            internal int frameIndex;
+            internal double frameTimeMs, frameStartTimeMs, startMs, endMs;
+        }
+
+        private static SlowFrameSpan SelectSlowestRetainedFrameInObservationWindow(int firstRetainedFrame)
+        {
+            SlowFrameSpan slowest = default;
+            // 达标窗口的最慢帧必在低帧队列中，只在触发时比较仍保留的候选。
+            foreach (SlowFrameSpan candidate in SlowFrames)
+            {
+                if (candidate.frameIndex >= firstRetainedFrame && candidate.frameTimeMs > slowest.frameTimeMs)
+                    slowest = candidate;
+            }
+            if (slowest.frameTimeMs <= 0d)
+                throw new InvalidOperationException("观察窗口内的低帧数据已不在 Profiler 缓冲中，已取消自动导出。");
+            return slowest;
         }
 
         #endregion
@@ -283,14 +305,18 @@ namespace FlatWorld.Automation
                         continue;
                     }
                     CurrentFps = 1000d / milliseconds;
-                    if (!ObserveFrame(startMilliseconds, milliseconds)) continue;
+                    if (!ObserveFrame(frame, startMilliseconds, milliseconds)) continue;
+                    SlowFrameSpan slowest = SelectSlowestRetainedFrameInObservationWindow(first);
                     pending = new Trigger
                     {
                         triggeredAtUtc = DateTime.UtcNow.ToString("o"),
-                        selectedDisplayFrame = frame + 1,
+                        selectedDisplayFrame = slowest.frameIndex + 1,
+                        selectedFrameStartProfilerTimeMs = slowest.frameStartTimeMs,
+                        triggerDisplayFrame = frame + 1,
+                        triggerFrameTimeMs = milliseconds,
                         thresholdFps = thresholdFps,
-                        measuredFps = CurrentFps,
-                        frameTimeMs = milliseconds,
+                        measuredFps = 1000d / slowest.frameTimeMs,
+                        frameTimeMs = slowest.frameTimeMs,
                         warmupSeconds = warmupSeconds,
                         durationSeconds = durationSeconds,
                         observedSeconds = ObservedSeconds,
@@ -304,7 +330,7 @@ namespace FlatWorld.Automation
                     EditorApplication.isPaused = true;
                     expectedRecording = false;
                     ProfilerDriver.enabled = false;
-                    Status = "已请求暂停，等待确认后导出触发帧";
+                    Status = "已请求暂停，等待确认后导出观察窗口内最慢帧";
                     EditorApplication.delayCall += ExportPending;
                     return;
                 }
@@ -316,6 +342,7 @@ namespace FlatWorld.Automation
         {
             Trigger trigger = pending;
             if (trigger == null) return;
+            bool exportCompleted = false, playbackResumed = false;
             try
             {
                 // 必须在下一次编辑器回调确认暂停，不能把导出本身的卡顿误认为触发帧。
@@ -325,14 +352,14 @@ namespace FlatWorld.Automation
                     throw new InvalidOperationException("Profiler 目标已改变，已取消自动导出。");
                 int frame = trigger.selectedDisplayFrame - 1;
                 if (frame < ProfilerDriver.firstFrameIndex || frame > ProfilerDriver.lastFrameIndex)
-                    throw new InvalidOperationException("触发帧已不在 Profiler 缓冲中，未使用其他帧代替。");
+                    throw new InvalidOperationException("选中的最慢帧已不在 Profiler 缓冲中，未使用其他帧代替。");
                 if (ProfilerDriver.enabled)
                     throw new InvalidOperationException("等待导出时录制被重新开启，已取消本次取证。");
                 using (var raw = ProfilerDriver.GetRawFrameDataView(frame, 0))
                 {
                     if (!raw.valid || raw.frameTimeMs != trigger.frameTimeMs ||
-                        raw.frameStartTimeMs + raw.frameTimeMs != trigger.windowEndProfilerTimeMs)
-                        throw new InvalidOperationException("触发帧已失效或被替换，未导出其他帧。");
+                        raw.frameStartTimeMs != trigger.selectedFrameStartProfilerTimeMs)
+                        throw new InvalidOperationException("选中的最慢帧已失效或被替换，未导出其他帧。");
                 }
                 trigger.editorPausedBeforeExport = true;
                 string directory = ProfilerSnapshotToolbar.ExportFrame(frame, 30,
@@ -347,13 +374,28 @@ namespace FlatWorld.Automation
                 LastReportPath = directory;
                 SessionState.SetString(PreferenceKey + "LastReport", directory);
                 EditorGUIUtility.systemCopyBuffer = directory;
-                Status = $"已导出：最近 {trigger.durationSeconds:0.##} 秒内低帧率累计 {trigger.lowFpsSeconds:0.##} 秒；编辑器保持暂停";
-                Debug.Log($"[性能 JSON 自动] 最近 {trigger.durationSeconds:0.##} 秒内，低于 {trigger.thresholdFps:0.##} FPS " +
-                    $"累计 {trigger.lowFpsSeconds:0.##} 秒（{trigger.lowFpsRatio:P0}），" +
-                    $"已先暂停编辑器并导出第 {trigger.selectedDisplayFrame} 帧：\n{directory}\n路径已复制；检查完成后手动继续游戏。");
+                exportCompleted = true;
             }
             catch (Exception exception) { Fail(exception); }
-            finally { StopMonitoring(); }
+            finally
+            {
+                bool canResumePlayback = exportCompleted && pending == trigger && enabled &&
+                    EditorApplication.isPlaying && EditorApplication.isPaused && !EditorBusy;
+                // 全部文件发布后先清掉旧采样，再恢复本次自动暂停，下一轮从新帧重新缓冲。
+                StopMonitoring();
+                if (canResumePlayback)
+                {
+                    EditorApplication.isPaused = false;
+                    playbackResumed = true;
+                }
+            }
+            if (!exportCompleted) return;
+            string playbackStatus = playbackResumed ? "已自动继续游戏" : "播放状态由当前编辑器操作决定";
+            Status = $"已导出窗口内最慢帧 {trigger.selectedDisplayFrame}（{trigger.frameTimeMs:0.##} ms）；{playbackStatus}";
+            Debug.Log($"[性能 JSON 自动] 最近 {trigger.durationSeconds:0.##} 秒内，低于 {trigger.thresholdFps:0.##} FPS " +
+                $"累计 {trigger.lowFpsSeconds:0.##} 秒（{trigger.lowFpsRatio:P0}），" +
+                $"已先暂停编辑器并导出窗口内最慢的第 {trigger.selectedDisplayFrame} 帧（{trigger.frameTimeMs:0.##} ms）：" +
+                $"\n{LastReportPath}\n路径已复制；{playbackStatus}。");
         }
 
         private static void Fail(Exception exception)
@@ -366,16 +408,18 @@ namespace FlatWorld.Automation
         [Serializable]
         private sealed class Trigger
         {
-            public int schemaVersion = 2;
+            public int schemaVersion = 3;
             public string reason = "low-fps-time-ratio";
+            public string selection = "slowest-retained-cpu-frame-in-observation-window";
             public string snapshotId, triggeredAtUtc;
-            public int selectedDisplayFrame, targetId;
+            public int selectedDisplayFrame, triggerDisplayFrame, targetId;
+            public double selectedFrameStartProfilerTimeMs, triggerFrameTimeMs;
             public double thresholdFps, measuredFps, frameTimeMs, warmupSeconds;
             public double durationSeconds, observedSeconds, lowFpsSeconds, lowFpsRatio, requiredLowFpsRatio;
             public double windowStartProfilerTimeMs, windowEndProfilerTimeMs;
             public bool editorPausedBeforeExport;
             public string measurement = "FPS = 1000 / Profiler main-thread CPU frameTimeMs; low-FPS time is the CPU frame interval overlap with the trailing durationSeconds window, not a frame count ratio. Not GPU/presentation FPS.";
-            public string sceneScope = "World/Console/screenshot describe the paused export-time scene, not a reconstruction of the triggering historical frame.";
+            public string sceneScope = "World/Console/screenshot describe the paused export-time scene, not a reconstruction of the selected historical frame. Playback resumes after successful export.";
         }
 
         #endregion
