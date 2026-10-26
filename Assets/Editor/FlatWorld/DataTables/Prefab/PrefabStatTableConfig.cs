@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 
 [System.Serializable]
@@ -24,27 +23,9 @@ public class PrefabStatTableRow
 }
 
 /// <summary>
-/// Prefab 数值总表配置
+/// 旧 Prefab 数值表序列化格式，仅供统一数值工作台迁移历史数据。
 /// </summary>
 public class PrefabStatTableConfig : ScriptableObject
 {
-    public List<PrefabStatTableRow> Rows = new(); // 表格行
-
-    private void OnEnable()
-    {
-        Rows ??= new List<PrefabStatTableRow>();
-    }
-
-    private void OnValidate()
-    {
-        Rows ??= new List<PrefabStatTableRow>();
-    }
-
-    public void SaveNow()
-    {
-        Rows ??= new List<PrefabStatTableRow>();
-        EditorUtility.SetDirty(this);
-        AssetDatabase.SaveAssetIfDirty(this);
-        AssetDatabase.SaveAssets();
-    }
+    public List<PrefabStatTableRow> Rows = new();
 }

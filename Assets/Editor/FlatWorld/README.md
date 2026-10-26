@@ -6,8 +6,8 @@
 - `ContentTools/Items/`：物品、武器与配方内容维护。
 - `ContentTools/Migrations/`：一次性或兼容性数据迁移。
 - `ContentTools/Validation/`：只读内容校验与构建前检查。
-- `DataTables/Food/`：食物数值表、配置资源与文档。
-- `DataTables/Prefab/`：Prefab 数值表与配置资源。
+- `DataTables/Balance/`：统一数值工作台、JSON/Prefab 数据接入、实时调节与历史。
+- `DataTables/Food/` 与 `DataTables/Prefab/`：旧表序列化数据，供工作台首次迁移；不再提供重复窗口。
 - `PrefabBuilders/UI/`：UI Prefab 重建和主题迁移。
 - `PrefabBuilders/Building/`：建筑相关 Prefab 生成。
 - `Productivity/Todo/`：项目待办窗口与数据。
