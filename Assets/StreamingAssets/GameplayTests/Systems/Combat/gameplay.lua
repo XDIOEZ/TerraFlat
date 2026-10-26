@@ -1,3 +1,29 @@
+-- 在隔离临时角色上走正式丢弃事务，检查真实扣体力、拒绝和失败回退。
+test.runtime("combat", "discard_throw_stamina", {}, function(data)
+    local s = data.samples
+    assert(s.near.accepted and s.near.stamina == 98 and s.near.remaining == 4,
+        "近距离投石没有同步扣除体力和一块石头")
+    assert(s.far.accepted and s.far.stamina == 92 and s.far.remaining == 3,
+        "连续远投没有按每次实际距离扣费")
+    assert(s.stack.accepted and s.stack.stamina == 74 and s.stack.remaining == 0,
+        "整组投石未按数量扣费")
+    assert(not s.exhausted.accepted and s.exhausted.stamina == 1 and s.exhausted.remaining == 5
+        and s.exhausted.spawnCalls == 0 and data.rejections == 1,
+        "体力不足时仍扣石头、扣体力或生成掉落，或没有发送不足反馈")
+    assert(s.exact.accepted and s.exact.stamina == 0 and s.exact.remaining == 4,
+        "体力刚好足够时未完成投掷")
+    assert(not s.rollback.accepted and s.rollback.stamina == 100
+        and s.rollback.remaining == 4 and data.rollbackRemoved,
+        "生成后槽位变化未撤销掉落并返还实际消耗的体力")
+    assert(not s.paymentConflict.accepted and s.paymentConflict.stamina == 100
+        and s.paymentConflict.remaining == 4 and s.paymentConflict.spawnCalls == 0,
+        "扣体力回调改变槽位后仍生成掉落，或没有退回本次体力")
+    assert(s.free.accepted and s.free.stamina == 0 and s.free.remaining == 4,
+        "普通丢弃错误消耗体力或被体力不足阻止")
+    assert(not s.invalid.accepted and s.invalid.stamina == 100 and s.invalid.remaining == 5
+        and s.invalid.spawnCalls == 0, "无效投掷在预检前扣费或生成掉落")
+end, "投石正式事务：连续投掷、整组、体力不足、刚好足够及失败回退")
+
 -- 验证正式玩家生命状态与管理员伤害门禁；本用例不声称模拟了武器命中。
 test.check("player_ready", "真实玩家就绪")
 test.gm("enable_admin")

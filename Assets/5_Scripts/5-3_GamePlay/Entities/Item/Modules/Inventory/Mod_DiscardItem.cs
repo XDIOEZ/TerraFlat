@@ -364,8 +364,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
         if (dropCount <= 0)
             return false;
 
-        DropItemByCount(handSlot, dropCount, screenPosition);
-        return true;
+        return DropItemByCountCore(handSlot, dropCount, screenPosition, null);
     }
 
     [Button("DropItemBySlot")]
@@ -408,15 +407,15 @@ public class Mod_DiscardItem : Mod_BaseDroper
         DropItemByCountCore(slot, count, null, destination);
     }
 
-    private void DropItemByCountCore(ItemSlot slot, int count, Vector2? screenPosition, Vector2? worldPosition)
+    private bool DropItemByCountCore(ItemSlot slot, int count, Vector2? screenPosition, Vector2? worldPosition)
     {
         // 等待本机库存事务确认时不能先生成掉落，再被权威快照补回已丢弃数量。
         if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
-            return;
+            return false;
         if (count <= 0 || slot == null || slot.Amount <= 0)
         {
             Debug.LogWarning("丢弃数量非法或物品槽为空！");
-            return;
+            return false;
         }
 
         string droppedItemId = slot.itemData?.IDName;
@@ -433,6 +432,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
             BeginHeldDropAnimation(slot, droppedItemId);
 
         RefreshDiscardedSlotUI(slot);
+        return dropCommitted;
     }
 
     /// <summary>判断本次丢弃是否影响当前快捷栏正在显示的手持物。</summary>

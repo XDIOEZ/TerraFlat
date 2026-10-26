@@ -126,6 +126,11 @@
       "weight": 1.0,
       "volume": 0.7,
       "stackable": true,
+      "modules": {
+        "discardFlightDamage": {
+          "parameters": {"DiscardStaminaCostPerItem": 0.0, "DiscardStaminaCostPerMeterPerItem": 0.0}
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Clay/Clay_Icon.png",
         "color": {
@@ -144,6 +149,11 @@
       "weight": 1.0,
       "volume": 0.55,
       "stackable": true,
+      "modules": {
+        "discardFlightDamage": {
+          "parameters": {"DiscardStaminaCostPerItem": 0.0, "DiscardStaminaCostPerMeterPerItem": 0.0}
+        }
+      },
       "processing": {
         "grind": {
           "inputAmount": 1,

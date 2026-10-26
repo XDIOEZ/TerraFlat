@@ -77,6 +77,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 可回收箭保持独立 Runtime Item，以目标 Item 根局部姿态附着并 NotifyRuntimeItemMoved，目标失效保留最后世界位。损坏材料从普通配方 ExactItem 按用量加权取一份，无法确定实际 Tag 材料则无回收。
 - 命中硬目标变成别物品由具体 Mod_DiscardFlightDamage 参数启用，不由通用投射物按材质 Tag 推断。
 - Mod_DiscardFlightDamage 在真实轨迹结束后发布 FlightCompleted，HitTarget 与 DealtDamage 分开：有效零伤命中算前者，闪避/负数拒绝不算。雪球组合该模块与1点钝击，50%碎裂由 Mod_Snowball 决策；只有未命中碎裂才给落点加一层雪，不把雪球规则写进飞行伤害模块。回归 `combat/snowball_throw`。
+- 主动投掷费用由 `Mod_DiscardFlightDamage` 的 `DiscardStaminaCostPerItem/DiscardStaminaCostPerMeterPerItem` 声明，`InventoryWorldDrop` 按真实拓扑距离与数量统一支付 `flatworld.combat.discard_throw`；不足先拒绝，生成或库存提交失败返还实际扣除量。石头为每块 `1 + 距离×0.5`，黏土/硝石显式清除继承费用，其余未配置物品免费。规则及隔离事务回归 `combat/discard_throw_stamina`。
 
 ## 原生 ECS 与接触伤害
 

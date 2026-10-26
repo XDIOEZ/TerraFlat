@@ -1,3 +1,15 @@
+-- 投掷费用读取石头正式配置，距离、数量和非法参数均交给生产规则。
+test.system("combat", "discard_throw_stamina", {}, function(data)
+    assert(data.baseCost == 1 and data.costPerMeter == .5, "石头投掷体力配置错误")
+    local costs = data.costs
+    assert(costs.atFeet == 1 and costs.near == 2 and costs.far == 6,
+        "石头没有按实际投掷距离增加体力消耗")
+    assert(costs.stack == costs.far * 3 and costs.empty == 0,
+        "整组投石漏算数量，或空组仍扣体力")
+    assert(costs.free == 0 and data.otherItemsFree, "未配置投掷费用的物品被额外收费")
+    assert(data.invalidRejected, "非法距离、费用或溢出没有拒绝")
+end, "投石：距离递增、整组计费与费用边界")
+
 -- 雪球读取正式配置与投掷结果，区分有效命中和实际扣血。
 test.system("combat", "snowball_throw", {}, function(data)
     local modules, samples, throwable = data.modules, {}, false

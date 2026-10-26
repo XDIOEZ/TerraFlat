@@ -6232,7 +6232,9 @@
           "parameters": {
             "HardImpactTransformItemId": "ChippedTool",
             "HardImpactTransformChance": 0.1,
-            "HardImpactMinimumDefense": 2.0
+            "HardImpactMinimumDefense": 2.0,
+            "DiscardStaminaCostPerItem": 1.0,
+            "DiscardStaminaCostPerMeterPerItem": 0.5
           }
         }
       }

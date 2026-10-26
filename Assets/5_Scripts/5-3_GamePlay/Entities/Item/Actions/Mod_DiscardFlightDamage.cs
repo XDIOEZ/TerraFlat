@@ -37,6 +37,12 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
     [Min(0f), Tooltip("目标对应伤害类型防御达到该数值才视为足够坚硬。")]
     public float HardImpactMinimumDefense = 2f;
 
+    [Min(0f), Tooltip("主动丢弃时每件物品的基础体力费用；由丢弃事务在生成前支付。")]
+    public float DiscardStaminaCostPerItem;
+
+    [Min(0f), Tooltip("主动丢弃时每件物品每米追加的基础体力费用。")]
+    public float DiscardStaminaCostPerMeterPerItem;
+
     /// <summary>实际掉落轨迹结束后发布本次投掷结果；卸载、取消和命中转换不发布。</summary>
     public event System.Action<DiscardFlightOutcome> FlightCompleted;
 

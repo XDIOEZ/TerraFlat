@@ -111,6 +111,7 @@
       "name": "战斗与技能",
       "group": "实体与控制",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestDiscardThrowStaminaProbe.cs",
         "Assets/5_Scripts/5-0_WorldModel/DiscreteProbability.cs",
         "Assets/Resources/Config/Probability/*",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Configuration/DiscreteProbabilityConfiguration.cs",
