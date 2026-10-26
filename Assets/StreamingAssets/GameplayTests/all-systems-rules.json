@@ -353,6 +353,12 @@
       "enabled": true
     },
     {
+      "id": "rendering_combustion_visual",
+      "name": "火焰共享资源与熔炉炉口定位",
+      "luaPath": "GameplayTests/Systems/Rendering/combustion-visual.lua",
+      "enabled": true
+    },
+    {
       "id": "testing_rules",
       "name": "Lua回归框架规则与边界",
       "luaPath": "GameplayTests/Systems/Testing/rules.lua",

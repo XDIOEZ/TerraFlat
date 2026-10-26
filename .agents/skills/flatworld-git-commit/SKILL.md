@@ -9,7 +9,7 @@ description: "FlatWorld 的提交范围、中文提交说明，以及拉取、�
 
 - 提交依据当前分支、工作区、暂存区和实际 diff；只暂存本任务的明确路径，保留其他修改。`git add .`、`git add -A`、`git commit -am` 会混入无关内容，不用于本项目的范围提交。
 - Unity 资源的新增、删除、移动包含对应 `.meta`；生成目录、Python 缓存和临时文件不入提交。
-- 新建 `.meta` 的 GUID 必须是 32 位十六进制，使用 `Guid.NewGuid().ToString("N")` 生成；外部编译不会校验它，编辑态确认 `AssetDatabase.AssetPathToGUID` 非空后再判断 Unity 是否已导入脚本。
+- 新建 `.meta` 的 GUID 必须是 32 位十六进制，使用 `Guid.NewGuid().ToString("N")` 生成；文件末尾保留换行，避免 Unity YAML 解析失败。外部编译不会校验它，编辑态确认 `AssetDatabase.AssetPathToGUID` 非空后再判断 Unity 是否已导入脚本。
 - 按 `AGENTS.md`，代码、资源、配置修改在任务结束时创建本地 commit。仅 Markdown 的小幅措辞、排版、少量补充或 Skill 微调可留待集中提交；完整重要文档、多章节大改或实质性批量整理需要提交。用户明确要求提交时不受文档大小限制。
 - 普通“提交”仅指本地 commit；push、reset、rebase、amend、强推及历史改写需要用户明确授权。
 

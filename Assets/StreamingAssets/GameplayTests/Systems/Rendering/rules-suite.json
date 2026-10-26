@@ -21,6 +21,12 @@
       "name": "高炉 Shader 烟雾配置与生命周期",
       "luaPath": "GameplayTests/Systems/Rendering/shader-smoke.lua",
       "enabled": true
+    },
+    {
+      "id": "rendering_combustion_visual",
+      "name": "火焰共享资源与熔炉炉口定位",
+      "luaPath": "GameplayTests/Systems/Rendering/combustion-visual.lua",
+      "enabled": true
     }
   ]
 }

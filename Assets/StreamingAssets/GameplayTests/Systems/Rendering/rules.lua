@@ -233,31 +233,6 @@ do
     end
 end
 
-test.system("rendering", "dropped_combustion_material", {}, function(data)
-    assert(data.assigned and data.shared and data.sharedMesh, "火焰没有共享正式材质与网格")
-    assert(data.shader == "Game/Effects/ShaderFlame" and data.supported and data.passes,
-        "火焰缺少可用的 URP 2D / Forward Shader Pass")
-    assert(data.pixelsPerUnit == 32 and data.animationFPS == 12,
-        "共享火焰没有使用与人物匹配的像素密度和逐帧动画")
-    assert(data.vertices == 4 and data.particles == 0, "常驻火焰仍依赖粒子模拟或重复生成复杂网格")
-    assert(data.independentPhase, "不同火源使用相同相位，会同步跳动")
-    assert(data.width == 2 and data.height == 3 and data.boundsWidth == 2 and data.boundsHeight == 3
-        and data.boundsCenterY == 1.5, "Shader 尺寸没有同步 CPU 裁剪边界或火焰底部锚点")
-    assert(data.sortingOrder == 37 and data.adapterOrder == 82, "掉落物或设施火焰丢失宿主排序")
-    assert(data.startsStopped and data.lights and data.disabled and data.reenabled,
-        "火焰初始开关或组件启停错误")
-    assert(data.staysExtinguished and data.zeroIntensityHidden and data.finiteBounds,
-        "回池后重新点燃、零火势残留，或无效配置污染网格边界")
-    assert(data.adapterLights and data.adapterExtinguishes, "燃烧模块没有转发点燃和熄灭状态")
-    assert(math.abs(data.attachedUpX + math.sin(math.rad(75))) < .0001
-        and math.abs(data.attachedUpY - math.cos(math.rad(75))) < .0001,
-        "显式跟随锚点的火焰丢失宿主倾斜")
-    for _, prefix in ipairs({"uprightUp", "mirroredUp"}) do
-        assert(math.abs(data[prefix .. "X"]) < .0001 and math.abs(data[prefix .. "Y"] - 1) < .0001
-            and math.abs(data[prefix .. "Z"]) < .0001, "直立火焰继承了手持倾斜或左右翻面")
-    end
-end, "Shader 火焰共享资源、零常驻粒子、边界、排序与生命周期")
-
 test.system("rendering", "cave_shadow_lazy_creation", {}, function(data)
     assert(data.candidates == 1 and data.createdAtBind == 0 and data.createdWithoutLight == 0,
         "没有局部光的墙仍在绑定时创建 URP 阴影对象")

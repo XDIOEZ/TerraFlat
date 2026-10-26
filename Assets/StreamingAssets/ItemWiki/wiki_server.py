@@ -25,9 +25,10 @@ import webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 from urllib.request import urlopen
 from buff_validation import validate_catalogs as validate_buff_catalogs
+from balance_history import BalanceHistory, normalize_path, value_at
 
 
 WIKI_DIRECTORY = Path(__file__).resolve().parent
@@ -42,9 +43,12 @@ BACKUP_ROOT = PROJECT_ROOT / "Library" / "FlatWorldItemWiki" / "Backups"
 ITEM_METADATA_FILE = WIKI_DIRECTORY / "item-metadata.json"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024
 SAVE_LOCK = threading.Lock()
+BALANCE_HISTORY = BalanceHistory(PROJECT_ROOT)
 WIKI_URL_PATH = "/Assets/StreamingAssets/ItemWiki/"
 PUBLIC_WIKI_FILES = {
     "app.js",
+    "balance-tuning.js",
+    "balance-tuning.css",
     "buffs.js",
     "mechanics.js",
     "mechanics-rules.js",
@@ -432,6 +436,20 @@ def save_definition(payload: dict[str, Any], definition_kind: str) -> dict[str, 
     if target_root is None or target_index < 0:
         raise WikiConflictError(f"原 Item {item_id} 已被移动或删除，请重新读取 JSON。")
 
+    balance_change = payload.get("balanceChange")
+    if balance_change is not None and definition_kind != "item":
+        raise WikiValidationError("BUFF 不属于物品数值调节器的写入范围")
+
+    def effective_definition() -> dict[str, Any]:
+        """从所有已启用分包解析实际数值，支持继承与数组参数。"""
+        sources = {}
+        for root in roots_by_package.values():
+            for definition in root.get("items", []):
+                if isinstance(definition, dict) and definition.get("id"):
+                    sources[definition["id"].lower()] = definition
+        return resolve_items(sources)[item_id.lower()]
+
+    previous_effective = effective_definition() if balance_change is not None else None
     target_root[collection][target_index] = copy.deepcopy(source)
     if definition_kind == "buff":
         try:
@@ -440,6 +458,15 @@ def save_definition(payload: dict[str, Any], definition_kind: str) -> dict[str, 
             raise WikiValidationError(str(error)) from error
     else:
         validate_all_items(roots_by_package, packages)
+
+    tuning_data = tuning_request = None
+    if balance_change is not None:
+        try:
+            tuning_data, tuning_request = BALANCE_HISTORY.validate_change(
+                balance_change, item_id, previous_effective, effective_definition()
+            )
+        except ValueError as error:
+            raise WikiValidationError(str(error)) from error
 
     original_bytes = target_path.read_bytes()
     newline = "\r\n" if b"\r\n" in original_bytes else "\n"
@@ -470,6 +497,16 @@ def save_definition(payload: dict[str, Any], definition_kind: str) -> dict[str, 
     except Exception as error:
         print(f"[Item Wiki] metadata update failed for {item_id}: {error}", file=sys.stderr)
 
+    tuning_id = None
+    tuning_warning = None
+    if tuning_request is not None:
+        try:
+            tuning_id = BALANCE_HISTORY.committed(tuning_data, tuning_request)
+        except (OSError, ValueError) as error:
+            # 真实分包已经成功保存，不能把它当成事务回滚。
+            tuning_warning = f"物品已保存，但历史/Unity 通知失败：{error}"
+            print(f"[Item Wiki] {tuning_warning}", file=sys.stderr)
+
     return {
         "ok": True,
         "itemId": item_id,
@@ -477,6 +514,8 @@ def save_definition(payload: dict[str, Any], definition_kind: str) -> dict[str, 
         "hash": file_sha256(target_path),
         "backup": str(backup_path.relative_to(PROJECT_ROOT)).replace("\\", "/"),
         "modifiedAt": modified_at,
+        "tuningRequestId": tuning_id,
+        "tuningWarning": tuning_warning,
     }
 
 
@@ -591,13 +630,32 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                 {
                     "writable": not self.public_readonly,
                     "buffWritable": not self.public_readonly,
+                    "balanceWritable": not self.public_readonly,
                     "publicReadOnly": self.public_readonly,
                     "projectRoot": None if self.public_readonly else str(PROJECT_ROOT),
                     "service": "FlatWorldItemWiki",
                     "projectId": PROJECT_ID,
-                    "version": 3,
+                    "version": 4,
                 },
             )
+            return
+        if request_path in {"/api/balance/state", "/api/balance/live-status"}:
+            if self.public_readonly:
+                self.send_json(403, {"ok": False, "error": "公开 Wiki 不提供本机调参历史"})
+                return
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                with SAVE_LOCK:
+                    if request_path == "/api/balance/state":
+                        item_id = str(query.get("itemId", [""])[0]).strip()
+                        result = {"ok": True, "fields": BALANCE_HISTORY.item_state(item_id)}
+                    else:
+                        result = {"ok": True, **BALANCE_HISTORY.live_status(
+                            str(query.get("requestId", [""])[0])
+                        )}
+                self.send_json(200, result)
+            except (OSError, ValueError) as error:
+                self.send_json(400, {"ok": False, "error": str(error)})
             return
         if self.public_readonly:
             if request_path == "/":
@@ -614,6 +672,9 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
         if request_path == "/api/wiki/status":
             self.do_GET()
             return
+        if request_path in {"/api/balance/state", "/api/balance/live-status"}:
+            self.send_json(403 if self.public_readonly else 405, {"ok": False})
+            return
         if self.public_readonly:
             if request_path == "/":
                 self.send_wiki_redirect()
@@ -628,7 +689,18 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
         if self.public_readonly:
             self.send_json(403, {"ok": False, "error": "公开 Wiki 为只读模式，禁止写入项目数据。"})
             return
-        save_action = {"/api/items/save": save_item, "/api/buffs/save": save_buff}.get(urlparse(self.path).path)
+        # 外部网站不能利用浏览器对 localhost 发起跨站写入。
+        origin = self.headers.get("Origin")
+        parsed_origin = urlparse(origin) if origin else None
+        if parsed_origin and (parsed_origin.scheme != "http"
+                              or parsed_origin.hostname not in {"localhost", "127.0.0.1"}
+                              or parsed_origin.port != self.server.server_port):
+            self.send_json(403, {"ok": False, "error": "跨站修改 ItemWiki 被拒绝"})
+            return
+        endpoint = urlparse(self.path).path
+        save_action = {"/api/items/save": save_item, "/api/buffs/save": save_buff}.get(endpoint)
+        if endpoint == "/api/balance/step":
+            save_action = self.save_balance_step
         if save_action is None:
             self.send_json(404, {"ok": False, "error": "未知 API"})
             return
@@ -644,11 +716,31 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
             self.send_json(200, result)
         except WikiConflictError as error:
             self.send_json(409, {"ok": False, "error": str(error)})
-        except (WikiValidationError, json.JSONDecodeError, UnicodeDecodeError) as error:
+        except (WikiValidationError, ValueError, json.JSONDecodeError, UnicodeDecodeError) as error:
             self.send_json(400, {"ok": False, "error": str(error)})
         except Exception as error:  # 防止服务进程因单次保存异常退出。
             print(f"[Item Wiki] save failed: {error}", file=sys.stderr)
             self.send_json(500, {"ok": False, "error": f"保存失败：{error}"})
+
+    @staticmethod
+    def save_balance_step(payload: dict[str, Any]) -> dict[str, Any]:
+        """只有已存在的真实 Item 数值允许保存工作台步长，避免任意键膨胀。"""
+        item_id = str(payload.get("itemId") or "").strip()
+        path = normalize_path(payload.get("fieldPath"))
+        sources = {}
+        for package in load_manifest_packages():
+            root = read_json(ITEM_ROOT / package["path"])
+            for item in root.get("items", []):
+                if isinstance(item, dict) and item.get("id"):
+                    sources[item["id"].lower()] = item
+        if item_id.lower() not in sources:
+            raise WikiValidationError("物品 ID 不存在")
+        try:
+            value_at(resolve_items(sources)[item_id.lower()], path)
+        except ValueError as error:
+            raise WikiValidationError(str(error)) from error
+        result = BALANCE_HISTORY.set_step(item_id, path, payload.get("step"))
+        return {"ok": True, "step": result["step"]}
 
 
 #region 后台启动与同项目服务复用
@@ -665,6 +757,9 @@ def read_running_status(port: int) -> dict[str, Any] | None:
 def is_same_wiki(status: dict[str, Any] | None, public_readonly: bool) -> bool:
     """服务必须属于当前项目且读写模式相同，才允许启动器复用。"""
     if not status or status.get("service") != "FlatWorldItemWiki":
+        return False
+    # 新前端依赖调参状态接口；不能复用仍在内存中运行的旧版 Python 服务。
+    if int(status.get("version") or 0) < 4:
         return False
     if status.get("publicReadOnly") is not public_readonly or status.get("writable") is not (not public_readonly):
         return False
