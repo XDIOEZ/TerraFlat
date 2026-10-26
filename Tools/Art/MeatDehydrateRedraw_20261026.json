@@ -1,0 +1,55 @@
+{
+  "itemId": "Meat_Dehydrate",
+  "date": "2026-10-26",
+  "generator": "built-in image_gen",
+  "intent": "style-transfer",
+  "output": "Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png",
+  "originalSpriteAddress": "Assets/6_Art/Items/resources_basic.png[resources_basic_77]",
+  "references": [
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png",
+      "role": "生肉主体、斜向轮廓与物品身份基准"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png",
+      "role": "同级熟肉的像素块、光源与质感参考，不沿用烧烤纹理"
+    },
+    {
+      "path": "Assets/6_Art/Items/resources_basic.png",
+      "role": "原肉干图，左上原点切片范围为24,192,24,24"
+    }
+  ],
+  "prompt": "Use case: style-transfer. Asset type: one transparent 2D item sprite for FlatWorld, a top-down survival sandbox game. Primary request: redraw the dried meat / jerky item, using the RAW MEAT as the primary design reference and the cooked meat only as a secondary pixel-art style reference. Input image 1 is the primary raw-meat identity, silhouette and angle reference: a single boneless cut of meat pointing diagonally from lower left to upper right. Image 2 is cooked meat and is ONLY a style/light/pixel-cluster reference, NOT an upgrade or an ingredient: do NOT copy its grill marks or plump roasted texture. Image 3 is the original sprite atlas: the old dried-meat edit target is the tile at x=24,y=192,width=24,height=24 measured from its TOP LEFT (second tile of the ninth row); this only establishes the existing uncontained standalone dried meat subject. Output ONLY the NEW dried meat sprite. Subject: a single flattened, visibly dehydrated piece of this same cut of raw meat, with an irregular slightly curled and shrunken edge, narrow thickness, matte dark reddish-brown flesh, a few broad long fibrous ridges and deep dry creases, a restrained muted tan remnant along part of the edge. Keep meat recognizable and appetizing, not burnt charcoal, not wood or bark. Style: low-saturation naturalistic retro PIXEL ART, coarse deliberate hard-edged square pixel clusters, around 40–48 logical pixels across the silhouette rendered on a full native high-resolution transparent canvas. Use big clean connected shapes and few coherent tonal steps; NO microtexture, NO tiny noisy pixels, NO antialiasing or smoothing. Natural proportions. Soft upper-left illumination conveyed by solid pixel clusters, dark brown contour, warm russet midtones and restrained ochre highlights. Composition: one single piece centered, diagonal long axis bottom-left to top-right just like raw meat, fills about 82% of the canvas width and height, visible thickness kept shallow. All corners fully transparent, real alpha background. No ground or drop shadow, no checkerboard baked into pixels, no plate, bowl, package, string, props, seasonings, text, labels, watermark, bones, bright white raw fat, pink fresh marbling, wet sheen or black barbecue stripes. Keep the full generated source resolution; this is production sprite art, not a comparison sheet.",
+  "sourceSha256": "3f192e70858fcf999a32972cbbd96aff00240ce5a9e3019c1b72249a6efe2923",
+  "import": {
+    "guid": "e530a1ff98b94e7b8b0f1849a60294df",
+    "sourceSize": [1254, 1254],
+    "sourceAndAlphaPreserved": true,
+    "pixelsPerUnit": 1370.2857,
+    "pivot": [0.5, 0.5],
+    "filter": "Point",
+    "mipmaps": false,
+    "compression": "None",
+    "maxTextureSize": 2048,
+    "label": "ItemSprite"
+  },
+  "validation": {
+    "transparentCorners": "passed",
+    "originalBytesPreserved": "passed",
+    "shellPrefabAndAddressableReferences": "passed",
+    "allAlphaLongestWorldSize": 0.8750000091,
+    "referenceRawMeatWorldSize": [0.875, 0.71875],
+    "alpha128VisibleWorldSize": [0.8647831616, 0.7392618926],
+    "referenceSizeTolerance": 0.05,
+    "referenceSizeCheck": "passed",
+    "alphaNote": "保留生成器原始Alpha；主体主要为253，未强制二值化或缩图；另以128阈值核对主体尺寸。",
+    "editorState": "PlayMode，未暂停或退出，未强制刷新资源",
+    "editorAssetImport": "deferred_until_editor_imports_assets",
+    "gameplayLua": "not_run_playmode_active",
+    "runtimeVisualAcceptance": "pending_reload",
+    "consoleErrors": 0,
+    "consoleWarnings": 1,
+    "consoleWarningMessage": "[建筑安装] 当前机械层已占用，与肉干资源无关",
+    "skillReview": "现有绘图、导入与提交规则已覆盖本次资源替换，无需增加规则"
+  }
+}

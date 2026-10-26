@@ -5037,7 +5037,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/resources_basic.png[resources_basic_77]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

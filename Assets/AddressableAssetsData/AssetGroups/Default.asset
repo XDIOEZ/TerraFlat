@@ -29,6 +29,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e530a1ff98b94e7b8b0f1849a60294df
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8db84c435e0f4242a7aa56004df170f5
     m_Address: Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png
     m_ReadOnly: 0
