@@ -1,0 +1,435 @@
+/* 统一数值调节：嵌入 ItemWiki 右侧书页，复用纸张与铜色主题，不再运行第二套 UI。 */
+.balance-tuner {
+    margin: 19px 0 21px;
+    overflow: hidden;
+    border: 2px solid #8e6245;
+    outline: 2px solid rgba(255, 237, 195, .52);
+    border-radius: 8px;
+    color: var(--ink-900);
+    background:
+        radial-gradient(ellipse at top right, rgba(255, 254, 225, .72), transparent 53%),
+        linear-gradient(150deg, #f8dfb3 0%, #e9bf86 100%);
+    box-shadow: 0 5px 0 rgba(91, 54, 33, .2), inset 0 0 0 3px rgba(255, 252, 227, .35);
+}
+
+.balance-heading {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 18px 14px;
+    background: linear-gradient(90deg, rgba(68, 42, 32, .12), rgba(253, 245, 216, .25));
+    border-bottom: 1px dashed rgba(92, 57, 39, .44);
+}
+
+.balance-heading h3 {
+    margin: 2px 0 4px;
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: .07em;
+    color: #3b2b29;
+}
+
+.balance-heading p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #7b573e;
+}
+
+.balance-eyebrow {
+    font: 10px Consolas, monospace;
+    font-weight: 900;
+    letter-spacing: .15em;
+    color: #965734;
+}
+
+.balance-session {
+    flex: none;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .02em;
+    padding: 7px 9px;
+    color: #286348;
+    background: #d8ead0;
+    border: 1px solid #85a67d;
+    border-radius: 5px;
+}
+
+.balance-layout {
+    display: grid;
+    grid-template-columns: minmax(160px, 41%) minmax(0, 1fr);
+    min-height: 348px;
+}
+
+.balance-selector {
+    min-width: 0;
+    padding: 14px 10px 14px 13px;
+    border-right: 1px solid rgba(87, 51, 37, .25);
+    background: rgba(133, 81, 46, .055);
+}
+
+.balance-search {
+    width: 100%;
+    min-height: 34px;
+    padding: 7px 9px;
+    font-size: 11px;
+    color: #38291f;
+    background: rgba(255, 250, 229, .88);
+    border: 1px solid #b48b67;
+    border-radius: 5px;
+}
+
+.balance-search:focus,
+.balance-numeric input:focus {
+    outline: 2px solid #6083b5;
+    outline-offset: 1px;
+}
+
+.balance-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+}
+
+.balance-tab {
+    padding: 5px 7px;
+    font-size: 10px;
+    color: #855d44;
+    border: 1px solid #b89977;
+    border-radius: 4px;
+    background: #f2d4a9;
+}
+
+.balance-tab.active {
+    color: #fff1d6;
+    background: #6e4736;
+    border-color: #6e4736;
+}
+
+.balance-options {
+    max-height: 316px;
+    overflow-y: auto;
+    padding-right: 3px;
+    scrollbar-width: thin;
+    scrollbar-color: #b8956d transparent;
+}
+
+.balance-target {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    align-items: center;
+    width: 100%;
+    margin: 0 0 5px;
+    padding: 8px 7px;
+    text-align: left;
+    background: rgba(255, 248, 226, .55);
+    border: 1px solid rgba(132, 93, 65, .24);
+    border-radius: 5px;
+    color: #51382a;
+    transition: background-color .13s ease, border-color .13s ease;
+}
+
+.balance-target:hover {
+    background: #fff2d6;
+    border-color: #ae815b;
+}
+
+.balance-target.active {
+    background: #f7e8ca;
+    border-color: #8b5b3e;
+    box-shadow: inset 3px 0 #a2633d;
+}
+
+.balance-target-name {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.balance-target-name strong {
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.balance-target-name small {
+    max-width: 165px;
+    color: #98745d;
+    font-size: 9px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: Consolas, monospace;
+}
+
+.balance-target b {
+    flex: none;
+    max-width: 64px;
+    font-size: 12px;
+    color: #3f4f65;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.balance-panel {
+    min-width: 0;
+    padding: 13px 16px 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.balance-chosen {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 116px;
+}
+
+.balance-field-name {
+    margin: 0 0 3px;
+    font-size: 15px;
+    color: #483226;
+}
+
+.balance-field-path {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+    margin: 0 0 11px;
+    font-size: 10px;
+    color: #927058;
+}
+
+.balance-current-caption {
+    font-size: 9px;
+    font-family: Consolas, monospace;
+    letter-spacing: .16em;
+    color: #8b654e;
+}
+
+.balance-current-value {
+    margin-top: 2px;
+    font-size: clamp(26px, 2.8vw, 39px);
+    line-height: 1.1;
+    color: #30251f;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.05em;
+}
+
+.balance-action-row {
+    display: flex;
+    gap: 9px;
+    margin: 11px 0 8px;
+}
+
+.balance-action-row button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 45px;
+    padding: 7px 3px;
+    font-size: clamp(10px, 1.2vw, 12px);
+    font-weight: 900;
+    border-radius: 5px;
+    transition: filter .14s, transform .14s;
+}
+
+.balance-action-row button:hover:not(:disabled) {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.balance-down {
+    color: #fff0df;
+    background: linear-gradient(#a95141, #833b32);
+    border: 1px solid #6c322b;
+    box-shadow: 0 3px 0 #67332d;
+}
+
+.balance-up {
+    color: #efffeb;
+    background: linear-gradient(#467c58, #32604a);
+    border: 1px solid #2b553c;
+    box-shadow: 0 3px 0 #294e3c;
+}
+
+.balance-action-row button:disabled,
+.balance-undo:disabled {
+    cursor: not-allowed;
+    opacity: .48;
+}
+
+.balance-numeric {
+    display: flex;
+    gap: 9px;
+}
+
+.balance-numeric label {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    color: #775b48;
+    font-size: 10px;
+}
+
+.balance-numeric input {
+    width: 100%;
+    padding: 7px;
+    background: #fff1d5;
+    border: 1px solid #c39b74;
+    border-radius: 4px;
+    color: #3b2b29;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.balance-hint {
+    padding: 8px 0 4px;
+    color: #86694f;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.balance-chart {
+    position: relative;
+    min-height: 115px;
+    margin: 6px 0 7px;
+    border-radius: 5px;
+    background:
+        linear-gradient(rgba(102, 87, 67, .09) 1px, transparent 1px) 0 0/100% 26px,
+        rgba(255, 254, 230, .55);
+    border: 1px solid rgba(112, 83, 59, .23);
+}
+
+.balance-chart svg {
+    display: block;
+    width: 100%;
+    height: 98px;
+    overflow: visible;
+}
+
+.balance-curve-axis {
+    stroke: #cdb596;
+    stroke-dasharray: 5 5;
+}
+
+.balance-curve-line {
+    stroke: #356f9c;
+    stroke-width: 3.2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.balance-curve-tip {
+    fill: #326e9c;
+    stroke: #fff7e1;
+    stroke-width: 2;
+}
+
+.balance-curve-empty {
+    padding: 35px 10px;
+    font-size: 10px;
+    color: #96755d;
+    text-align: center;
+}
+
+.balance-curve-caption {
+    display: block;
+    padding: 0 9px 4px;
+    font: 9px Consolas, monospace;
+    color: #927358;
+}
+
+.balance-foot {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin: 3px 0 9px;
+}
+
+.balance-count {
+    color: #79553e;
+    font-size: 10px;
+}
+
+.balance-undo {
+    padding: 6px 10px;
+    color: #613a30;
+    background: #f6d4a8;
+    border: 1px solid #b68c65;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.balance-history {
+    padding-top: 8px;
+    border-top: 1px dashed #b28e6c;
+    color: #765944;
+    font-size: 10px;
+}
+
+.balance-history summary { cursor: pointer; }
+.balance-history-list { margin: 8px 0; }
+
+.balance-history-entry {
+    padding: 5px 0;
+    border-bottom: 1px dashed rgba(112, 80, 48, .18);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.balance-status {
+    margin-top: 10px;
+    color: #776352;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.balance-empty {
+    margin: 0;
+    padding: 10px;
+    color: #80624d;
+    font-size: 11px;
+}
+
+.balance-quick-jump {
+    flex: none;
+    margin-left: 6px;
+    border: 1px solid #a98761;
+    background: #f6e1ba;
+    color: #6c4a2d;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.balance-quick-jump:hover,
+.balance-quick-jump:focus-visible {
+    color: white;
+    background: #865f42;
+}
+
+@media (max-width: 1100px) {
+    .balance-layout { grid-template-columns: 1fr; }
+    .balance-selector { border-right: 0; border-bottom: 1px solid rgba(87, 51, 37, .25); }
+    .balance-options { max-height: 146px; }
+    .balance-target-name small { max-width: 230px; }
+    .balance-panel { padding: 15px 13px; }
+    .balance-chosen { min-height: 95px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .balance-tuner *, .balance-tuner *:hover { transition: none; transform: none; }
+}

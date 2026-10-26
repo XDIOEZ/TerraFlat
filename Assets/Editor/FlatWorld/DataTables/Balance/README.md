@@ -1,25 +1,11 @@
-# FlatWorld · 数值调节工作台
+# FlatWorld · ItemWiki 数值调节桥接
 
-统一替代旧 Prefab数值表 与 食物数值表 窗口；旧 *StatTableConfig.asset 保留供**首次无损迁移**，之后所有编辑历史与步长统一存在 BalanceTuningDatabase.asset，按来源、物品 ID 与字段索引（内存中字典检索）。
+独立的 Editor 工作台窗口已经移除；数值调节统一在 ItemWiki 的物品详情页进行。
 
-## 操作
+- BalanceTuningDatabase.cs 保留旧 Unity ScriptableObject 字段布局，历史由 ItemWiki 本地服务第一次读取旧 BalanceTuningDatabase.asset 时迁移。
+- BalanceTuningLivePreview.cs 保留物品/装备/食物模块的**运行时原位更新适配**，没有数据扫描或编辑窗口。
+- ItemWikiBalanceLiveBridge.cs 低频读取 Library/FlatWorldItemWiki/balance-live/pending 中的成功保存事件，处理已加载实例，再调用现有 GameRes.RequestResourceReload。仅 Editor Play Mode、离线时可修改正在运行的本机物品。
+- 联机会话禁止单端调参；源 JSON 仍由网页保存，正式运行态可能存在冷缓存，需要真实游戏体验复核。
+- Unity 菜单 **FlatWorld → 物品百科 → 打开 ItemWiki** 打开网页，原有 Wiki 快捷方式仍可使用。
 
-1. Unity 菜单 **FlatWorld → 数值调节工作台**（Ctrl+Shift+B），第一次打开自动扫描。
-2. 左侧搜索物品或字段并按 **武器 / 护甲 / 食物 / 战斗 / 通用** 筛选。
-3. 点击某字段“偏低，提高”或“偏高，降低”；第一次只小幅调整，连续同向逐渐加速，方向反转自动降低步长，不会锁死到固定值。
-4. 手动输入数值、修改步长/上下界、看最近的趋势线和时间记录，随时可撤销。
-5. **JSON 物品定义**：每次调整自动写回原 JSON 文件；只修改所选子物品，继承父模板的参数会生成局部覆盖。**Prefab-only**：改动先保存到工作台；退出 Play Mode 后点击“保存到 Prefab”一次写回。
-
-## Play Mode 行为
-
-- 不会要求退出场景。已加载的对应 Item 能用原模块/数据接口立即更新的字段会原位预览（例如武器物理伤害、食物营养、基础血量、防御、重量、体积、耐久和已装备防御增益）。
-- JSON 改动默认合并调度一次项目已有的 GameRes.RequestResourceReload()，由资源系统在单机世界**原位热重载**，让后续生成的物品使用新值；热重载可能是异步的，不等于每种冷数据/缓存都会即时更新。停止自动同步可取消右上角勾选。
-- 联机世界禁止单边运行态覆盖或资源热重载，以免和服务器配置版本不一致；仍可在 Editor 保存工作台记录/JSON 供下次会话使用。
-- 修改已加载实例不代表修改场外冷库存、远端实体或已有生产进度；请留意底部“当前原位更新 N 个对象”。不能原位刷新的值，以新实例或资源加载后为准。
-- 扫描不会覆盖已有调参历史与未提交的 Prefab 修改；如果外部改了 JSON 结构，再点“重新扫描”同步条目索引。
-
-## 设计边界
-
-- UI Toolkit 编辑器工具代码位于 Assets/Editor，**不注入玩家 UI，也不进入正式构建**。
-- 存量旧格式保留仅用于迁移；旧 UI 与重复扫描/保存代码已删除。
-- 参数有强耦合、非单调或受随机波动影响时，应多次测试后再点击，不把一次观察当成统计结论。
+旧 Prefab 数值表配置资产和未提交的调参数据库不会被删除；Prefab-only 内容仍以各自权威 Prefab 编辑器为准，ItemWiki 不会伪装成能修改缺少 JSON 定义的资源。
