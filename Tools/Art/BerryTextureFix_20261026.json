@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-26",
+  "generator": "Built-in image_gen",
+  "assetPath": "Assets/6_Art/Generated/Items/Berry/Item_Berry.png",
+  "identity": "浆果：三颗蓝紫色果实组成的小果串",
+  "guid": "9ac7bb4886396bf4faec3bf7d1e9fe88",
+  "source": {
+    "size": [
+      24,
+      24
+    ],
+    "pixelsPerUnit": 24,
+    "maxTextureSize": 128,
+    "sha256": "4b04d133fd45bdf0b8fd17c35e9be9ef929ee624f9790ad36ca44ac23c5556f4"
+  },
+  "result": {
+    "size": [
+      1254,
+      1254
+    ],
+    "pixelsPerUnit": 1254,
+    "maxTextureSize": 2048,
+    "sha256": "f8c37fe1d542f6929c0e894a721cf669a9ede18e5dc79abd56f54074bdf127a4",
+    "postProcessing": "None. Generated PNG copied byte-for-byte; native resolution, colors and alpha preserved.",
+    "filter": "Point",
+    "mipmaps": false,
+    "compression": "Uncompressed",
+    "canvasWorldSizeAtExistingRendererScale": [
+      0.5,
+      0.5
+    ]
+  },
+  "referenceImages": [
+    {
+      "path": "Assets/6_Art/Generated/Items/Berry/Item_Berry.png",
+      "role": "Original edit target and berry identity"
+    },
+    {
+      "path": "Assets/6_Art/Food/Item_Food_013.png",
+      "role": "Existing food pixel-art style reference"
+    }
+  ],
+  "validation": {
+    "static": "Passed native PNG/alpha, unchanged GUID and consumer references, all five import limits, point/no mipmaps/uncompressed settings and source world-size checks.",
+    "worldSizeCommand": "python Tools/Art/validate_sprite_world_size.py Assets/6_Art/Generated/Items/Berry/Item_Berry.png --shell-manifest Assets/StreamingAssets/GameConfig/Items/shells/basic_items.json --item-id Berry --alpha-threshold 128 --target-longest 0.4166666666666667 --tolerance 0.03 --json",
+    "visibleWorldSizeAtAlpha128": [
+      0.41706539074960125,
+      0.42105263157894735
+    ],
+    "oldVisibleWorldSize": [
+      0.4166666666666667,
+      0.4166666666666667
+    ],
+    "longestVisibleSizeChangePercent": 1.0526315789472829,
+    "scope": "Source/import-setting prediction only; no parent transforms, shaders, camera, UI or in-game acceptance is implied.",
+    "runtime": "User Play Mode preserved. No forced import, refresh, compilation, restart, Lua run or gameplay action. Final read-only inspection still found the cached 24x24 / 24 PPU sprite; the replacement awaits normal asset reload.",
+    "finalConsoleSnapshot": { "errors": 0, "warnings": 0 },
+    "console": "Read without clearing. Observed one diagnostic FindAllObjectsOfType invalid-type error from an earlier inspection call (corrected), and an unrelated MachineWorld.AdvanceFacilities collection-enumeration exception."
+  },
+  "prompt": "Use case: precise-object-edit / style-transfer. Asset type: replacement Berry inventory and held-item sprite for FlatWorld, a top-down 2D survival sandbox. Input image 1 is the EDIT TARGET and identity reference: preserve this compact loose cluster of THREE round blue-purple wild berries, with the recognizable little star-shaped blossom ends, short twig and tiny leaves on top. Keep the recognizable berry cluster composition, blue-purple palette and proportions, no extra berries. Input image 2 is STYLE REFERENCE ONLY for the project's recently corrected food art: restrained retro pixel art with clean square stepped edges, readable large color clusters, upper-left light and natural material shading. Do not include an apple or red fruit. Primary request: replace the old visibly crude 24x24 icon with a clean, well-resolved berry sprite that reads clearly in an 80-pixel inventory slot and when held by a small player. Produce fresh clean pixel-art edges and coherent forms, NOT just enlarge or smooth the old 24-pixel bitmap. Roughly 48-64 logical pixels across the whole cluster, with clear medium-size square clusters and restrained shading, matte dusky indigo and blueberry purple skins, muted blue-lavender highlights, deep navy blossom crowns, a tiny muted green leaf and brown-blue twig. Preserve the THREE individual fruits with readable overlaps and rounded stepped contours. Similar detail density and outline weight as the apple reference, never a heavy black sticker rim. Center a single isolated berry cluster on a square native high-resolution canvas with balanced small transparent margins and about 85 percent occupancy. Preserve native output resolution; no downscaling or dithering. Transparent background with clean alpha; no floor or external cast shadow, no container, bowl, plate, whole shrub, character, text, border, glow, watermark or additional objects. Avoid photorealism, painting, smooth vector curves, blur, airbrushed gradients, glossy plastic and noisy microtexture."
+}
