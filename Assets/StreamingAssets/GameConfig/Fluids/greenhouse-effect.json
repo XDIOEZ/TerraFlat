@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "pressureScaleKPa": 0.04,
+  "celsiusPerDoubling": 3.0,
+  "minimumOffsetCelsius": -30.0,
+  "maximumOffsetCelsius": 60.0
+}

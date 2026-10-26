@@ -41,5 +41,6 @@ public partial class SnowCellSaveData
     public float Depth;
     public float SeasonalDepth;
     public float WeatherDepth;
+    public float IceMeltProgress; // 天然冰融化进度与雪覆盖共用稀疏地表快照。
     #endregion
 }

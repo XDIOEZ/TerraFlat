@@ -61,12 +61,16 @@ public static class WorldSnowSystem
 
     public static float GetTransientDepth(ChunkTerrainData terrain, int x, int y,
         SnowCoverState seasonalSnow, float baselineOffset)
+        => Mathf.Clamp01(GetSeasonalDepth(terrain, x, y, seasonalSnow, baselineOffset) + GetWeatherDepth(terrain, x, y));
+
+    internal static float GetSeasonalDepth(ChunkTerrainData terrain, int x, int y,
+        SnowCoverState seasonalSnow, float baselineOffset)
     {
         float seasonalDepth = 0f;
         if (seasonalSnow != null &&
             terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float temperature))
             seasonalDepth = seasonalSnow.Sample(temperature + baselineOffset);
-        return Mathf.Clamp01(seasonalDepth + GetWeatherDepth(terrain, x, y));
+        return seasonalDepth;
     }
 
     public static float GetNaturalDepth(ChunkTerrainData terrain, int x, int y)
@@ -76,6 +80,10 @@ public static class WorldSnowSystem
             return 0f;
         return SnowDepthLayer.Quantize(depth);
     }
+
+    // 支撑面遮住的天然地雪不参与融雪或转成平台上的动态覆盖。
+    internal static float GetExposedNaturalDepth(ChunkTerrainData terrain, int x, int y)
+        => TerrainSupportLayer.GetTileId(terrain, x, y) == 0 ? GetNaturalDepth(terrain, x, y) : 0f;
 
     public static float GetSurfaceDepth(ChunkTerrainData terrain, int x, int y,
         SnowCoverState seasonalSnow, float baselineOffset)
@@ -104,9 +112,7 @@ public static class WorldSnowSystem
         if (surface.GroundTileId == 0)
             return 0f;
 
-        float naturalDepth = TerrainSupportLayer.GetTileId(terrain, x, y) == 0
-            ? GetNaturalDepth(terrain, x, y)
-            : 0f;
+        float naturalDepth = GetExposedNaturalDepth(terrain, x, y);
         float seasonalDepth = GetTransientDepth(terrain, x, y, seasonalSnow, baselineOffset);
 
         // 玩家编辑后只叠加区域天气雪的净变化，不能重新铺回已铲走的覆盖。

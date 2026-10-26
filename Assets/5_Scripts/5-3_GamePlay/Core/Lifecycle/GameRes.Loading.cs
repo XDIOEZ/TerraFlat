@@ -279,6 +279,7 @@ public partial class GameRes
         worldAuthoringResources.Clear();
         Clear(PlayerCreationTemplateCatalogService.Reset);
         Clear(TimeSystemConfigService.Reset);
+        Clear(AtmosphericGreenhouseConfigurationService.Reset);
         Clear(WaterCurrentPushConfigService.Reset);
         Clear(MachineCatalog.Clear);
         Clear(EquipmentDurabilityRules.Clear);

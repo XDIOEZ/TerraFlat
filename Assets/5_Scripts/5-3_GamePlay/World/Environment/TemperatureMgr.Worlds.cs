@@ -17,6 +17,12 @@ public partial class TemperatureMgr
         public LocalTemperatureField localTemperatureField;
         public LiquidTemperatureField liquidTemperatureField;
         public int fieldContextFrame = -1;
+        public AtmosphereState fieldAtmosphere;
+        public long fieldAtmosphereRevision;
+        public AtmosphericGreenhouseConfiguration fieldGreenhouseConfiguration;
+        public double fieldInitialCarbonDioxidePartialPressureKPa;
+        public decimal fieldAtmosphereReferenceMoles;
+        public double fieldAtmosphereReferencePressureKPa;
         public float ambientFieldOffset;
         public float seasonTiltOffsetAtPole;
         public float orbitalTemperatureFactor;

@@ -6,7 +6,7 @@ description: "FlatWorld 实例快照、核心存档、区块差量、资源配�
 # 数据与存档
 
 - 存档/角色改名的 `out reason` 由存档服务按真实校验与写盘阶段给出，UI原样呈现；资源重载结果区分目录发布前后，保留实际错误而不一概宣称旧资源仍在运行。
-- 当前核心封装版本为 CompactSaveEnvelope/33，角色死亡规则覆盖随模块实例保存；`SaveDataMgr.SaveData` 根属性在磁盘/网络替换时同步装配业务配置，构建失败恢复旧根，业务配置入口不反查存档或难度。
+- 当前核心封装版本为 CompactSaveEnvelope/34，天然冰融化进度随地表稀疏快照保存；`SaveDataMgr.SaveData` 根属性在磁盘/网络替换时同步装配业务配置，构建失败恢复旧根，业务配置入口不反查存档或难度。
 
 ## 代码入口
 
@@ -25,7 +25,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 - `GameManager.SaveGame` 为设置按钮和帐篷共用的手动保存入口：主线程立即采集完整快照、后台原子写盘，保存状态等待真实任务结果；自动保存单独走 `SaveGameInBackgroundCoroutine` 的分帧预算。睡眠先记重生点并保存，再应用临时时间倍率。
 
-- 当前外层 FWD6/15，直接包含 CompactSaveEnvelope/33，避免多层整档字节复制；同步、自动和网络快照共用格式。地形区块逐条冻结，生态动态块的 ChangedItems 逐物品独立冻结，不进入核心整档重捕获；载入时在主线程恢复 Item/扩展状态。格式头先校验，仅支持当前格式，拒绝的文件保留。磁盘载入失败清空当前档案和角色，完整解析与 MOD 验证成功后才替换区块差量；普通损坏仍依次尝试备份和临时文件。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
+- 当前外层 FWD6/15，直接包含 CompactSaveEnvelope/34，避免多层整档字节复制；同步、自动和网络快照共用格式。地形区块逐条冻结，生态动态块的 ChangedItems 逐物品独立冻结，不进入核心整档重捕获；载入时在主线程恢复 Item/扩展状态。格式头先校验，仅支持当前格式，拒绝的文件保留。磁盘载入失败清空当前档案和角色，完整解析与 MOD 验证成功后才替换区块差量；普通损坏仍依次尝试备份和临时文件。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
 - ItemData 的持久化边界是 InstanceSnapshot，JSON/Unity 字段是配置外壳。冷数据不查 GameRes；入世/入包先按当前定义恢复重量/标签/耐久/模块，再合并稳定模块实例状态，未知扩展负载保留。
 - ItemInstanceDataFactory 冷编译共享配置/默认状态，CloneRuntime 创建独立运行态，不经 MemoryPack 往返；同 GUID 跨槽保留 ItemData 引用，分堆分配新 GUID。活跃库存只 rebase 新冷物品，专用二进制库存由持有模块显式逐槽处理。
 - InventoryInstanceSnapshot 只保存内容/用户状态，恢复保留当前槽标签、UI、输入。不透明 BitData 的配置/进度由模块区分；IItemInstanceStateRestorer 在模块状态恢复后恢复派生属性。

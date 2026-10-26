@@ -58,7 +58,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
     #endregion
 
-    private const int CompactSaveVersion = 33; // 死亡规则新增角色覆盖状态，旧结构在反序列化前明确拒绝。
+    private const int CompactSaveVersion = 34; // 地表快照新增天然冰融化进度，仅接受当前结构。
     private const int ModdedSaveVersion = 15;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";

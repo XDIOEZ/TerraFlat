@@ -3,6 +3,8 @@
 ## 温度场与热源
 
 - 地理 temperature.celsius 固定为纬度底温+局部噪声+一次海拔修正，blendRadius 固定顺序平滑，归一化同源；TryGetGeographicTemperature 不叠季节/天气/全局调温。
+- 温室规则读取星球真实 CO₂ 分压（基准气压×CO₂ mol/基准 mol），相对 `AtmosphereState.InitialCarbonDioxidePartialPressureKPa` 算温差；初始气柱随大气创建、克隆及存档保存，不查来源目录。`GameConfig/Fluids/greenhouse-effect.json` 配有效光学量 `1+p/scale` 的对数温差，默认 scale=0.04kPa、每翻倍3℃、钳-30～60℃；初始大气零偏移，抽走其他气体不会因比例提高而增温。
+- `PlanetData.ClimateTemperatureOffset` 合并全局基准差与 `AtmosphericGreenhouseTemperatureOffset`，当前环境、历史雪基温及冷世界查询共用，只叠一次；固定地理层不改。大气库存修改必须递增 `Revision`，抽排和飞船来源均使同帧温度缓存失效，地表队列仍保留入队温度快照。
 - LocalTemperatureSource 发布目标环境温度（篝火默认40℃），ThermalInfluenceRuntime 权重 max(0,1-d²/R²)²，以当前天气环境为基准选最强升/降温，制冷独立、同类不累加。仅缓存几何距离权重，温度/功率/天气变化不重建；设备负责燃料/供电/撤销。
 - 液体用 radiantHeatRadius/radiantTargetTemperature 同模型（岩浆环境目标180℃）；LiquidTemperatureField 仅索引加载液体，按目标温度缓存各格最大权重，依 Terrain/SurfaceLiquidRevision/目录失效。接触岩浆仍用1100℃物质温度/接触伤害，不强制环境到液体温度。
 - 单格按格中心算当地源/邻区稀疏液体源，不重建全块权重；雨雪批采仍走全块。液体源只在 Terrain 身份/液体修订变时扫描，重载清源/权重，两路共用最强规则。
@@ -24,4 +26,4 @@
 - 大气按实际 Scene WorldKey 定星球，各维度共地表有限储量；创建/进世界完整校验，TryGetForWorld 仅读真状态，不逐生物全量校验；GetOrCreate/Validate 保留显式入口。
 - 抽气 decimal mol 扣，排气超容量/真空记逸散，无自然回填。FluidThermodynamics 统一内能/两相 mol 温度、压缩/环境传热/有限潜热相变；罐体温独立，组合罐共享库存一次推进。
 
-回归：`environment/thermal_point_batch`、`environment/combustion_oxygen`、`survival/thermal`、`survival/temperature_presentation*`；最终画面由用户验收。
+回归：`environment/greenhouse_temperature`、`environment/thermal_point_batch`、`environment/combustion_oxygen`、`survival/thermal`、`survival/temperature_presentation*`；最终画面由用户验收。

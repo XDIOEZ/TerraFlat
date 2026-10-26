@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 
 /// <summary>一颗星球一份有限来源；输出超额逸散，容量不会在抽排中扩大。</summary>
-public static class AtmosphereService
+public static partial class AtmosphereService
 {
     #region 精确物质量和查询
     public const decimal MinimumMoles = 0.000000001m;
@@ -86,7 +86,7 @@ public static class AtmosphereService
     {
         batch = default;
         if (!TryChoose(state, standardLiters, randomState, out var source, out var selected, out ulong nextRandom)) return false;
-        source.Moles -= selected.GasMoles; randomState = nextRandom; batch = selected;
+        source.Moles -= selected.GasMoles; state.Revision++; randomState = nextRandom; batch = selected;
         return true;
     }
     public static bool TryExtractTo(AtmosphereState state, decimal standardLiters, ref ulong randomState,
@@ -96,7 +96,7 @@ public static class AtmosphereService
         if (target == null || !TryChoose(state, standardLiters, randomState, out var source, out var selected, out ulong nextRandom) ||
             !target.CanAdd(selected, targetVolumeLiters, targetMinimumGasSpaceLiters, true, true)) return false;
         target.TryAdd(selected, targetVolumeLiters, targetMinimumGasSpaceLiters, true, true);
-        source.Moles -= selected.GasMoles; randomState = nextRandom; batch = selected;
+        source.Moles -= selected.GasMoles; state.Revision++; randomState = nextRandom; batch = selected;
         return true;
     }
     private static bool TryChoose(AtmosphereState state, decimal standardLiters, ulong randomState,
@@ -133,6 +133,7 @@ public static class AtmosphereService
             foreach (var gas in state.Gases) if (FluidInventory.Same(gas.FluidId, batch.FluidId)) { component = gas; break; }
             if (component == null) { component = new AtmosphereGasAmount { FluidId = batch.FluidId }; state.Gases.Add(component); }
             component.Moles += retained;
+            state.Revision++;
         }
         state.TotalEscapedMoles += batch.GasMoles - retained;
         return new AtmosphereEmissionResult(batch.GasMoles, retained);
@@ -162,6 +163,7 @@ public static class AtmosphereService
             state.ReferenceMoles > FluidInventory.MaximumMoles || state.TotalEscapedMoles < 0m ||
             !FluidUnits.IsFinite(state.ReferencePressureKPa) || state.ReferencePressureKPa < 0d || state.ReferencePressureKPa > 1e20d ||
             !FluidUnits.IsFinite(state.TemperatureKelvin) || state.TemperatureKelvin <= 0d ||
+            !FluidUnits.IsFinite(state.InitialCarbonDioxidePartialPressureKPa) || state.InitialCarbonDioxidePartialPressureKPa < 0d ||
             (state.CapacityMoles > 0m && (state.ReferenceMoles < MinimumMoles || state.ReferencePressureKPa < 1e-12d)))
             throw new InvalidDataException("星球大气容量、基准或温度无效");
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

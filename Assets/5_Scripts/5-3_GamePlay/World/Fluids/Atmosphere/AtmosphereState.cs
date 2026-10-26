@@ -19,8 +19,10 @@ public partial class AtmosphereState
     public decimal ReferenceMoles;
     public double ReferencePressureKPa;
     public double TemperatureKelvin;
+    public double InitialCarbonDioxidePartialPressureKPa;
     public List<AtmosphereGasAmount> Gases = new();
     public decimal TotalEscapedMoles;
+    [MemoryPackIgnore] public long Revision { get; internal set; }
     [MemoryPackIgnore] public decimal CurrentMoles
     { get { decimal result = 0m; foreach (var gas in Gases) result += gas.Moles; return result; } }
     [MemoryPackIgnore] public decimal CurrentStandardLiters => FluidUnits.MolToStandardLiters(CurrentMoles);
@@ -29,7 +31,8 @@ public partial class AtmosphereState
     {
         var result = new AtmosphereState
         { DefinitionId = DefinitionId, CapacityMoles = CapacityMoles, ReferenceMoles = ReferenceMoles,
-            ReferencePressureKPa = ReferencePressureKPa, TemperatureKelvin = TemperatureKelvin, TotalEscapedMoles = TotalEscapedMoles };
+            ReferencePressureKPa = ReferencePressureKPa, TemperatureKelvin = TemperatureKelvin,
+            InitialCarbonDioxidePartialPressureKPa = InitialCarbonDioxidePartialPressureKPa, TotalEscapedMoles = TotalEscapedMoles };
         foreach (var gas in Gases) result.Gases.Add(new AtmosphereGasAmount { FluidId = gas.FluidId, Moles = gas.Moles });
         return result;
     }

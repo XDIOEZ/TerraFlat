@@ -280,7 +280,7 @@ namespace FlatWorld.Spaceflight
             {
                 IsWater = water, GroundTileId = cell.GroundTileId, BlockingTileId = cell.BlockingTileId, SupportTileId = support,
                 LiquidId = liquidId, LiquidLevel = liquidLevel, BiomeId = cell.BiomeId, Cell = new Vector2Int(cellX, cellY),
-                TemperatureCelsius = geographicTemperature + planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature,
+                TemperatureCelsius = geographicTemperature + planet.ClimateTemperatureOffset,
                 PressureKPa = AtmosphereService.PressureKPa(planet.Atmosphere)
             };
         }
@@ -329,7 +329,7 @@ namespace FlatWorld.Spaceflight
                     temperatureSamples.Add(key, geographic);
                 }
             }
-            temperature = (float)((double)geographic + planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature);
+            temperature = (float)((double)geographic + planet.ClimateTemperatureOffset);
             return true;
         }
 

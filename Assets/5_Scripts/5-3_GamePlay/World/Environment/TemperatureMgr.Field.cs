@@ -52,8 +52,15 @@ public partial class TemperatureMgr
         string dimensionId = dimension != null && dimension.ActiveAddress.IsValid
             ? dimension.ActiveAddress.DimensionId : null;
         long epoch = world?.Epoch ?? 0;
+        TemperatureWorld state = FieldState;
+        AtmosphereState atmosphere = fieldPlanet?.Atmosphere;
         if (fieldContextFrame == Time.frameCount && ReferenceEquals(manager, fieldChunkManager) &&
-            ReferenceEquals(world, fieldWorld) && epoch == fieldWorldEpoch && dimensionId == fieldDimension)
+            ReferenceEquals(world, fieldWorld) && epoch == fieldWorldEpoch && dimensionId == fieldDimension &&
+            ReferenceEquals(state.fieldAtmosphere, atmosphere) && state.fieldAtmosphereRevision == (atmosphere?.Revision ?? 0) &&
+            ReferenceEquals(state.fieldGreenhouseConfiguration, AtmosphericGreenhouseConfigurationService.Current) &&
+            state.fieldInitialCarbonDioxidePartialPressureKPa == (atmosphere?.InitialCarbonDioxidePartialPressureKPa ?? 0d) &&
+            state.fieldAtmosphereReferenceMoles == (atmosphere?.ReferenceMoles ?? 0m) &&
+            state.fieldAtmosphereReferencePressureKPa == (atmosphere?.ReferencePressureKPa ?? 0d))
             return;
         fieldContextFrame = Time.frameCount;
 
@@ -85,8 +92,13 @@ public partial class TemperatureMgr
                 ? new LiquidTemperatureField(world, dimensionId, fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
         }
 
-        ambientFieldOffset = planet != null
-            ? planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f;
+        state.fieldAtmosphere = planet?.Atmosphere;
+        state.fieldAtmosphereRevision = state.fieldAtmosphere?.Revision ?? 0;
+        state.fieldGreenhouseConfiguration = AtmosphericGreenhouseConfigurationService.Current;
+        state.fieldInitialCarbonDioxidePartialPressureKPa = state.fieldAtmosphere?.InitialCarbonDioxidePartialPressureKPa ?? 0d;
+        state.fieldAtmosphereReferenceMoles = state.fieldAtmosphere?.ReferenceMoles ?? 0m;
+        state.fieldAtmosphereReferencePressureKPa = state.fieldAtmosphere?.ReferencePressureKPa ?? 0d;
+        ambientFieldOffset = planet?.ClimateTemperatureOffset ?? 0f;
         seasonTiltOffsetAtPole = 0f;
         orbitalTemperatureFactor = 0f;
         if (planet != null && dimension?.ActiveDefinition?.SuppressWeather != true &&
@@ -222,7 +234,7 @@ public partial class TemperatureMgr
             return true;
         Vector2Int origin = new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
         float minimum = MinimumAmbientTemperature(chunk.Terrain, ambientFieldOffset,
-            fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature, seasonTiltOffsetAtPole,
+            ambientFieldOffset, seasonTiltOffsetAtPole,
             orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt((Vector2)origin + Vector2.one * .5f) ?? 0f);
         foreach (LocalTemperatureField.Influence influence in localTemperatureField.GetChunkInfluences(origin))
             if (influence.Source.Cooling && influence.Source.Strength > 0f)
@@ -325,7 +337,7 @@ public partial class TemperatureMgr
         using var captureScope = CaptureTemperatureMarker.Measure(1);
         CaptureTemperatureMarker.SetGauge(chunk.Terrain.CellCount);
         snapshot = new AmbientChunkSnapshot(chunk, fieldBounds, ambientFieldOffset,
-            fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature, seasonTiltOffsetAtPole,
+            ambientFieldOffset, seasonTiltOffsetAtPole,
             orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(samplePosition) ?? 0f,
             localTemperatureField.GetChunkInfluences(origin), liquidTemperatureField != null
                 ? liquidTemperatureField.GetChunkInfluences(origin) : ReadOnlySpan<LiquidTemperatureField.Influence>.Empty);
@@ -426,7 +438,7 @@ public partial class TemperatureMgr
         if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height ||
             !terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
             return false;
-        climateBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
+        climateBaseline = baseline + ambientFieldOffset;
         if (includeTransient)
         {
             using (PointTemperatureMarker.Auto())
@@ -442,7 +454,7 @@ public partial class TemperatureMgr
             }
         }
         else
-            temperature = baseline + (includePlanetOffset ? fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f);
+            temperature = baseline + (includePlanetOffset ? ambientFieldOffset : 0f);
         return true;
     }
 
@@ -461,7 +473,7 @@ public partial class TemperatureMgr
     private float CalculateAmbientBaseline(Vector2 position, float baseline)
     {
         return CalculateAmbientBaseline(fieldBounds, position, baseline, ambientFieldOffset,
-            fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature, seasonTiltOffsetAtPole,
+            ambientFieldOffset, seasonTiltOffsetAtPole,
             orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f);
     }
 

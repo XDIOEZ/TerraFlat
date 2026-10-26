@@ -37,6 +37,9 @@ public partial class GameRes
                 PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
         plan.Add("time", "加载时间系统配置", 1,
             () => LoadCatalog<TimeSystemConfigCatalog>(TimeSystemConfigLoader.LoadBuiltInAsync, TimeSystemConfigService.ReplaceCatalog));
+        plan.Add("greenhouse", "加载大气温室效应配置", 1,
+            () => LoadCatalog<AtmosphericGreenhouseConfiguration>(AtmosphericGreenhouseConfigurationLoader.LoadBuiltInAsync,
+                AtmosphericGreenhouseConfigurationService.ReplaceConfiguration));
         plan.Add("water-current", "加载水流推动配置", 1,
             () => LoadCatalog<WaterCurrentPushCatalog>(WaterCurrentPushConfigLoader.LoadBuiltInAsync,
                 WaterCurrentPushConfigService.ReplaceCatalog));
@@ -89,7 +92,7 @@ public partial class GameRes
         plan.Add("world-authoring", "加载世界生成资源", 1, LoadWorldAuthoringResources, "texts");
         plan.Add("validate-built-in", "校验本体资源引用", 3,
             ValidateBuiltInResourceCatalog,
-            "players", "time", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
+            "players", "time", "greenhouse", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
             ValidateFinalResourceCatalog, "mods");

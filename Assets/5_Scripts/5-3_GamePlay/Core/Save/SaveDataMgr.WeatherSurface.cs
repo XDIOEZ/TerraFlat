@@ -83,7 +83,7 @@ public partial class SaveDataMgr
                     if (!weatherSnowIndex.TryGetValue(index, out SnowCellSaveData cell))
                         cell = new SnowCellSaveData { LocalPosition = local };
                     CaptureWeatherSnow(cell, terrain, local);
-                    if (cell.Edited || cell.WeatherDepth > 0f)
+                    if (cell.Edited || cell.WeatherDepth > 0f || cell.IceMeltProgress > 0f)
                         weatherSnowIndex[index] = cell;
                     else
                         weatherSnowIndex.Remove(index);
@@ -163,6 +163,8 @@ public partial class SaveDataMgr
             for (int y = 0; y < terrain.Height; y++)
             for (int x = 0; x < terrain.Width; x++)
             {
+                if (terrain.TryGetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, x, y, out float progress) && progress > 0f)
+                    terrain.SetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, x, y, 0f);
                 if (WorldSnowSystem.GetWeatherDepth(terrain, x, y) > 0f)
                     terrain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, x, y, 0f);
                 if (terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, out float edited) && edited > 0f)
@@ -191,6 +193,7 @@ public partial class SaveDataMgr
                 terrain.SetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, cell.Depth);
                 terrain.SetEnvironmentValue(WorldSnowInteraction.SeasonLayer, x, y, cell.SeasonalDepth);
                 terrain.SetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, cell.Edited ? 1f : 0f);
+                terrain.SetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, x, y, cell.IceMeltProgress);
             }
         }
     }
@@ -243,6 +246,7 @@ public partial class SaveDataMgr
         terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, local.x, local.y, out result.Depth);
         terrain.TryGetEnvironmentValue(WorldSnowInteraction.SeasonLayer, local.x, local.y, out result.SeasonalDepth);
         result.WeatherDepth = WorldSnowSystem.GetWeatherDepth(terrain, local.x, local.y);
+        terrain.TryGetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, local.x, local.y, out result.IceMeltProgress);
     }
 
     private static void CaptureWeatherSnow(WeatherSurfaceCellDelta result, SnowCellSaveData snow)
@@ -252,6 +256,7 @@ public partial class SaveDataMgr
         result.Edited = snow.Edited;
         result.Depth = snow.Depth;
         result.SeasonalDepth = snow.SeasonalDepth;
+        result.IceMeltProgress = snow.IceMeltProgress;
     }
 
     private static int CompareWeatherSnowPosition(SnowCellSaveData a, SnowCellSaveData b)
@@ -312,7 +317,8 @@ public partial class WeatherSurfaceDelta
                 !float.IsFinite(cell.Fertility) || cell.Fertility < 0f ||
                 !float.IsFinite(cell.WeatherDepth) || cell.WeatherDepth < 0f || cell.WeatherDepth > 1f ||
                 !float.IsFinite(cell.Depth) || cell.Depth < 0f ||
-                !float.IsFinite(cell.SeasonalDepth) || cell.SeasonalDepth < 0f || cell.SeasonalDepth > 1f)
+                !float.IsFinite(cell.SeasonalDepth) || cell.SeasonalDepth < 0f || cell.SeasonalDepth > 1f ||
+                !float.IsFinite(cell.IceMeltProgress) || cell.IceMeltProgress < 0f || cell.IceMeltProgress > 1f)
                 throw new InvalidOperationException("天气地表批次包含无效或重复格子。");
         }
     }
@@ -335,5 +341,6 @@ public partial class WeatherSurfaceCellDelta
     public bool Edited;
     public float Depth;
     public float SeasonalDepth;
+    public float IceMeltProgress;
     #endregion
 }

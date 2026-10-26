@@ -46,6 +46,8 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 ## 快照与复制
 
+- `NetworkGameplayProtocol.CurrentVersion=30`，天气地表雪格同时携带 `IceMeltProgress`；客户端仅恢复权威进度，不执行融冰。
+
 - 玩家公开快照经 `Item.ModuleSavePublicNetworkState` 调用模块保存：实现 `IPublicNetworkStateSaver` 的模块仅刷新公开字段，未实现的模块仍执行完整保存。`Mod_Inventory` 跳过私有槽位保存和装备收纳袋拆装；正式存档仍走完整 `ModuleSave`。回归 `networking/public_network_save_route`。
 
 - 私有 Host 无远端 Ready 连接时不做周期性世界物品捕获或地形差量组包；新远端入世仍由完整物品扫描与区块请求补齐。Host 不向自己请求地形快照；物品捕获、待应用状态、生成候选、扫描及地形阶段有 `FlatWorld.Network.Items.*` Profiler Marker。

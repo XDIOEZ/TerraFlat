@@ -35,7 +35,7 @@ public partial class WeatherMgr
             ?? throw new InvalidOperationException("积雪表现缺少当前星球数据。");
         snow = planet.SeasonalSnow
             ?? throw new InvalidOperationException("当前星球缺少积雪状态。");
-        baselineOffset = planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
+        baselineOffset = planet.ClimateTemperatureOffset;
         return true;
     }
 

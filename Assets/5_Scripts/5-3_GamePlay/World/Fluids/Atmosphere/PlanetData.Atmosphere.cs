@@ -12,6 +12,8 @@ public partial class PlanetData
     [MemoryPackIgnore] public double AtmosphereReferencePressureKPa => Atmosphere?.ReferencePressureKPa ?? 0d;
     [MemoryPackIgnore] public double AtmospherePressureKPa => AtmosphereService.PressureKPa(Atmosphere);
     [MemoryPackIgnore] public double AtmosphereMaxPressureKPa => AtmosphereService.MaximumPressureKPa(Atmosphere);
+    [MemoryPackIgnore] public float AtmosphericGreenhouseTemperatureOffset => AtmosphereService.GetAtmosphericGreenhouseTemperatureOffset(Atmosphere);
+    [MemoryPackIgnore] public float ClimateTemperatureOffset => GlobalTemperature - DefaultGlobalTemperature + AtmosphericGreenhouseTemperatureOffset;
     [MemoryPackIgnore] public IReadOnlyDictionary<string, decimal> AtmosphereGasVolumeByGasId
     {
         get

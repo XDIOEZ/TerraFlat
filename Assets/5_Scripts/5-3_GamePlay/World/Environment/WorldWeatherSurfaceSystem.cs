@@ -21,7 +21,8 @@ public static class WorldWeatherSurfaceSystem
         {
             this.terrain = terrain;
             if (terrain.TryGetEnvironmentLayer(WorldSnowSystem.WeatherDepthLayer, out _) ||
-                terrain.TryGetEnvironmentLayer(WorldSnowInteraction.DepthLayer, out _))
+                terrain.TryGetEnvironmentLayer(WorldSnowInteraction.DepthLayer, out _) ||
+                terrain.TryGetEnvironmentLayer(SnowDepthLayer.LayerId, out _))
                 for (int index = 0; index < terrain.CellCount; index++) Refresh(index);
             terrain.Changed += OnChanged;
         }
@@ -31,16 +32,19 @@ public static class WorldWeatherSurfaceSystem
             if (change.Kind != TerrainChangeKind.Environment ||
                 !(change.AffectsEnvironmentLayer(WorldSnowSystem.WeatherDepthLayer) ||
                   change.AffectsEnvironmentLayer(WorldSnowInteraction.DepthLayer) ||
-                  change.AffectsEnvironmentLayer(WorldSnowInteraction.EditedLayer))) return;
+                  change.AffectsEnvironmentLayer(WorldSnowInteraction.EditedLayer) ||
+                  change.AffectsEnvironmentLayer(SnowDepthLayer.LayerId) ||
+                  change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))) return;
             foreach (int index in change.GetCellIndices(terrain.Width)) Refresh(index);
         }
 
         private void Refresh(int index)
         {
             int x = index % terrain.Width, y = index / terrain.Width;
+            bool edited = terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, out float flag) && flag > 0f;
             bool hasSnow = WorldSnowSystem.GetWeatherDepth(terrain, x, y) > 0f ||
-                terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, out float edited) && edited > 0f &&
-                terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float depth) && depth > 0f;
+                (edited ? terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float depth) && depth > 0f
+                    : WorldSnowSystem.GetExposedNaturalDepth(terrain, x, y) > 0f);
             int slot = Cells.BinarySearch(index);
             if (hasSnow && slot < 0) Cells.Insert(~slot, index);
             else if (!hasSnow && slot >= 0) Cells.RemoveAt(slot);
@@ -62,6 +66,9 @@ public static class WorldWeatherSurfaceSystem
     private static SurfaceWaterSupply[] waterSupplies = Array.Empty<SurfaceWaterSupply>();
     private static EnvironmentCellUpdate[] weatherSnowUpdates = Array.Empty<EnvironmentCellUpdate>();
     private static EnvironmentCellUpdate[] playerSnowUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static EnvironmentCellUpdate[] editedSnowUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static EnvironmentCellUpdate[] seasonSnowUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static EnvironmentCellUpdate[] iceProgressUpdates = Array.Empty<EnvironmentCellUpdate>();
     #region 性能分段
     // 工作量按实际批次汇总，保留已有 Profiler 名称便于前后对照。
     private static readonly PerformanceDebugPoint AdvanceChunkMarker = new("FlatWorld.Weather.SurfaceChunk");
@@ -109,6 +116,9 @@ public static class WorldWeatherSurfaceSystem
             waterSupplies = new SurfaceWaterSupply[terrain.CellCount];
             weatherSnowUpdates = new EnvironmentCellUpdate[terrain.CellCount];
             playerSnowUpdates = new EnvironmentCellUpdate[terrain.CellCount];
+            editedSnowUpdates = new EnvironmentCellUpdate[terrain.CellCount];
+            seasonSnowUpdates = new EnvironmentCellUpdate[terrain.CellCount];
+            iceProgressUpdates = new EnvironmentCellUpdate[terrain.CellCount];
         }
         int activeCount;
         using (ExposureMarker.Measure(terrain.CellCount))
@@ -125,7 +135,9 @@ public static class WorldWeatherSurfaceSystem
         SnowChanged.Clear();
         try
         {
-            int waterSupplyCount = 0, weatherSnowCount = 0, playerSnowCount = 0;
+            int waterSupplyCount = 0, weatherSnowCount = 0, playerSnowCount = 0,
+                editedSnowCount = 0, seasonSnowCount = 0, iceProgressCount = 0;
+            weather.TryGetSnowCoverageContext(out SnowCoverState seasonalSnow, out float baselineOffset);
             using (CommitMarker.Measure(activeCount))
             {
                 for (int i = 0; i < activeCount; i++)
@@ -141,42 +153,46 @@ public static class WorldWeatherSurfaceSystem
                     if (!float.IsFinite(currentTemperature))
                         continue;
 
-                    float nextWeatherSnow = previousWeatherSnow;
-                    float waterPoints = 0f;
+                    terrain.TryGetEnvironmentValue(WorldSnowInteraction.SeasonLayer, x, y, out float baseline);
+                    float seasonalDepth = WorldSnowSystem.GetSeasonalDepth(terrain, x, y, seasonalSnow, baselineOffset);
+                    WorldSurfaceThawRules.SnowStep snow = WorldSurfaceThawRules.AdvanceSnow(
+                        WorldSnowSystem.GetExposedNaturalDepth(terrain, x, y), edited, playerDepth, baseline,
+                        seasonalDepth, previousWeatherSnow, currentTemperature, freezingTemperature, seconds,
+                        precipitationSeconds, config.AccumulationPerSecond, config.MeltPerDegreeSecond);
+                    float waterPoints = currentTemperature > freezingTemperature
+                        ? precipitationSeconds * Mathf.Max(0f, weather.SurfaceRainWaterPerSecond) +
+                          snow.Melted * Mathf.Max(0f, weather.MeltWaterPerSnowDepth) : 0f;
                     bool snowChanged = false;
-                    if (currentTemperature <= freezingTemperature)
+                    if (snow.Edited != edited)
                     {
-                        nextWeatherSnow = Mathf.Clamp01(previousWeatherSnow +
-                            precipitationSeconds * Mathf.Max(0f, config.AccumulationPerSecond));
-                    }
-                    else
-                    {
-                        waterPoints = precipitationSeconds * Mathf.Max(0f, weather.SurfaceRainWaterPerSecond);
-                        float meltBudget = (currentTemperature - freezingTemperature) *
-                            Mathf.Max(0f, config.MeltPerDegreeSecond) * seconds;
-                        nextWeatherSnow = Mathf.Max(0f, previousWeatherSnow - meltBudget);
-                        float melted = previousWeatherSnow - nextWeatherSnow;
-                        if (edited)
-                        {
-                            terrain.TryGetEnvironmentValue(WorldSnowInteraction.SeasonLayer, x, y, out float baseline);
-                            float before = Mathf.Max(0f, playerDepth + previousWeatherSnow - baseline);
-                            float after = Mathf.Max(0f, playerDepth + nextWeatherSnow - baseline);
-                            melted = before - after;
-                            float additional = Mathf.Min(after, Mathf.Max(0f, meltBudget - melted));
-                            if (additional > 0f)
-                            {
-                                playerDepth = Mathf.Max(0f, playerDepth - additional);
-                                playerSnowUpdates[playerSnowCount++] = new EnvironmentCellUpdate(index, playerDepth);
-                                snowChanged = true;
-                                melted += additional;
-                            }
-                        }
-                        waterPoints += melted * Mathf.Max(0f, weather.MeltWaterPerSnowDepth);
-                    }
-                    if (nextWeatherSnow != previousWeatherSnow)
-                    {
-                        weatherSnowUpdates[weatherSnowCount++] = new EnvironmentCellUpdate(index, nextWeatherSnow);
+                        editedSnowUpdates[editedSnowCount++] = new EnvironmentCellUpdate(index, snow.Edited ? 1f : 0f);
                         snowChanged = true;
+                    }
+                    if (snow.SeasonalBaseline != baseline)
+                    {
+                        seasonSnowUpdates[seasonSnowCount++] = new EnvironmentCellUpdate(index, snow.SeasonalBaseline);
+                        snowChanged = true;
+                    }
+                    if (snow.Depth != playerDepth)
+                    {
+                        playerSnowUpdates[playerSnowCount++] = new EnvironmentCellUpdate(index, snow.Depth);
+                        snowChanged = true;
+                    }
+                    if (snow.WeatherDepth != previousWeatherSnow)
+                    {
+                        weatherSnowUpdates[weatherSnowCount++] = new EnvironmentCellUpdate(index, snow.WeatherDepth);
+                        snowChanged = true;
+                    }
+                    if (WorldFrozenSurfaceWaterThawSystem.TryGetThawableSource(terrain, x, y, out _))
+                    {
+                        terrain.TryGetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, x, y, out float progress);
+                        float next = WorldSurfaceThawRules.AdvanceIceMeltProgress(progress, currentTemperature,
+                            seconds, config.IceMeltPerDegreeSecond);
+                        if (next != progress && (next < 1f || WorldFrozenSurfaceWaterThawSystem.TryCompleteThaw(chunk, index)))
+                        {
+                            iceProgressUpdates[iceProgressCount++] = new EnvironmentCellUpdate(index, next);
+                            snowChanged = true;
+                        }
                     }
                     if (snowChanged)
                         SnowChanged.Add(index);
@@ -185,7 +201,8 @@ public static class WorldWeatherSurfaceSystem
                 }
                 // 雨雪结果保持原顺序，在土壤补水前集中提交雪层，免除逐格通知。
                 CommitSnowChanges(terrain, weatherSnowUpdates.AsSpan(0, weatherSnowCount),
-                    playerSnowUpdates.AsSpan(0, playerSnowCount));
+                    playerSnowUpdates.AsSpan(0, playerSnowCount), editedSnowUpdates.AsSpan(0, editedSnowCount),
+                    seasonSnowUpdates.AsSpan(0, seasonSnowCount), iceProgressUpdates.AsSpan(0, iceProgressCount));
             }
             if (waterSupplyCount > 0)
                 using (WaterMarker.Measure(waterSupplyCount))
@@ -206,19 +223,29 @@ public static class WorldWeatherSurfaceSystem
 
     internal static void CommitSnowChanges(ChunkTerrainData terrain,
         ReadOnlySpan<EnvironmentCellUpdate> weather, ReadOnlySpan<EnvironmentCellUpdate> player)
+        => CommitSnowChanges(terrain, weather, player, default, default, default);
+
+    internal static void CommitSnowChanges(ChunkTerrainData terrain,
+        ReadOnlySpan<EnvironmentCellUpdate> weather, ReadOnlySpan<EnvironmentCellUpdate> player,
+        ReadOnlySpan<EnvironmentCellUpdate> edited, ReadOnlySpan<EnvironmentCellUpdate> season,
+        ReadOnlySpan<EnvironmentCellUpdate> iceProgress)
     {
+        if (!edited.IsEmpty) terrain.SetEnvironmentBatch(WorldSnowInteraction.EditedLayer, edited, true);
+        if (!season.IsEmpty) terrain.SetEnvironmentBatch(WorldSnowInteraction.SeasonLayer, season, true);
+        if (!iceProgress.IsEmpty) terrain.SetEnvironmentBatch(FrozenSurfaceWaterLayer.MeltProgressLayer, iceProgress, true);
         if (!player.IsEmpty)
             terrain.SetEnvironmentBatch(WorldSnowInteraction.DepthLayer, player, true);
         if (!weather.IsEmpty)
             terrain.SetEnvironmentBatch(WorldSnowSystem.WeatherDepthLayer, weather, true);
-        if (!player.IsEmpty || !weather.IsEmpty)
+        if (!player.IsEmpty || !weather.IsEmpty || !edited.IsEmpty || !season.IsEmpty || !iceProgress.IsEmpty)
             terrain.PublishEnvironmentBatches();
     }
 
     internal static bool HasSurfaceWork(ChunkTerrainData terrain, float precipitationSeconds,
         bool hasPending = false, bool maySnow = true) =>
         hasPending || precipitationSeconds > 0f && (maySnow || FarmlandSystem.GetFarmlandCellIndices(terrain).Count > 0) ||
-        GetSnowCellIndices(terrain).Count > 0;
+        GetSnowCellIndices(terrain).Count > 0 ||
+        WorldFrozenSurfaceWaterThawSystem.GetFrozenCellIndices(terrain).Count > 0;
 
     // 先筛选受本区块降水或已有积雪影响的地面格，不再逐格查询天气。
     private static int CollectActiveCells(ChunkRuntime chunk, float precipitationSeconds, bool maySnow)
@@ -231,15 +258,18 @@ public static class WorldWeatherSurfaceSystem
             IReadOnlyList<int> farmland = precipitationSeconds > 0f
                 ? FarmlandSystem.GetFarmlandCellIndices(terrain) : Array.Empty<int>();
             IReadOnlyList<int> snow = GetSnowCellIndices(terrain);
-            int farmSlot = 0, snowSlot = 0;
-            while (farmSlot < farmland.Count || snowSlot < snow.Count)
+            IReadOnlyList<int> ice = WorldFrozenSurfaceWaterThawSystem.GetFrozenCellIndices(terrain);
+            int farmSlot = 0, snowSlot = 0, iceSlot = 0;
+            while (farmSlot < farmland.Count || snowSlot < snow.Count || iceSlot < ice.Count)
             {
                 int farmIndex = farmSlot < farmland.Count ? farmland[farmSlot] : int.MaxValue;
                 int snowIndex = snowSlot < snow.Count ? snow[snowSlot] : int.MaxValue;
-                int index = Math.Min(farmIndex, snowIndex);
+                int iceIndex = iceSlot < ice.Count ? ice[iceSlot] : int.MaxValue;
+                int index = Math.Min(Math.Min(farmIndex, snowIndex), iceIndex);
                 bool snowCandidate = index == snowIndex;
                 if (index == farmIndex) farmSlot++;
                 if (index == snowIndex) snowSlot++;
+                if (index == iceIndex) iceSlot++;
                 int x = index % terrain.Width, y = index / terrain.Width;
                 if (!snowCandidate && TerrainSupportLayer.GetTileId(terrain, x, y) != 0) continue;
                 if (TerrainSupportLayer.GetSurfaceCell(terrain, x, y).GroundTileId != 0 &&
@@ -255,8 +285,10 @@ public static class WorldWeatherSurfaceSystem
             bool edited = terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y,
                 out float editedValue) && editedValue > 0f;
             terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float playerDepth);
-            bool hasSnow = weatherSnow > 0f || edited && playerDepth > 0f;
-            if (precipitationSeconds <= 0f && !hasSnow)
+            bool hasSnow = weatherSnow > 0f || (edited ? playerDepth > 0f :
+                WorldSnowSystem.GetExposedNaturalDepth(terrain, x, y) > 0f);
+            if (precipitationSeconds <= 0f && !hasSnow &&
+                !WorldFrozenSurfaceWaterThawSystem.TryGetThawableSource(terrain, x, y, out _))
                 continue;
             TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
             if (surface.GroundTileId == 0 || WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f)

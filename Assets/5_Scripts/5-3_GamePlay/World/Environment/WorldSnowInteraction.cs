@@ -34,9 +34,10 @@ public static class WorldSnowInteraction
         terrain.TryGetEnvironmentValue(EditedLayer, local.x, local.y, out float edited);
         terrain.TryGetEnvironmentValue(DepthLayer, local.x, local.y, out float depth);
         terrain.TryGetEnvironmentValue(SeasonLayer, local.x, local.y, out float season);
+        terrain.TryGetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, local.x, local.y, out float iceMeltProgress);
         return new SnowCellSaveData { LocalPosition = local, Edited = edited > 0f,
             Depth = depth, SeasonalDepth = season,
-            WeatherDepth = WorldSnowSystem.GetWeatherDepth(terrain, local.x, local.y) };
+            WeatherDepth = WorldSnowSystem.GetWeatherDepth(terrain, local.x, local.y), IceMeltProgress = iceMeltProgress };
     }
 
     public static void Restore(ChunkTerrainData terrain, SnowCellSaveData state)
@@ -45,12 +46,14 @@ public static class WorldSnowInteraction
         if ((uint)local.x >= (uint)terrain.Width || (uint)local.y >= (uint)terrain.Height ||
             !IsFinite(state.Depth) || state.Depth < 0f || !IsFinite(state.SeasonalDepth) ||
             state.SeasonalDepth < 0f || state.SeasonalDepth > 1f ||
-            !IsFinite(state.WeatherDepth) || state.WeatherDepth < 0f || state.WeatherDepth > 1f)
+            !IsFinite(state.WeatherDepth) || state.WeatherDepth < 0f || state.WeatherDepth > 1f ||
+            !IsFinite(state.IceMeltProgress) || state.IceMeltProgress < 0f || state.IceMeltProgress > 1f)
             throw new InvalidOperationException("积雪差量的坐标或厚度无效。");
         terrain.SetEnvironmentValue(DepthLayer, local.x, local.y, state.Depth);
         terrain.SetEnvironmentValue(SeasonLayer, local.x, local.y, state.SeasonalDepth);
         terrain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, local.x, local.y, state.WeatherDepth);
         terrain.SetEnvironmentValue(EditedLayer, local.x, local.y, state.Edited ? 1f : 0f);
+        terrain.SetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, local.x, local.y, state.IceMeltProgress);
     }
 
     private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
@@ -65,7 +68,7 @@ public static class WorldSnowInteraction
         // 编辑后的剩余雪统一归玩家层，清空天气层让新降雪继续积累。
         Restore(sample.Terrain, new SnowCellSaveData { LocalPosition = sample.LocalCell,
             Edited = true, Depth = layers * SnowDepthLayer.LayerStep, SeasonalDepth = seasonalDepth,
-            WeatherDepth = 0f });
+            WeatherDepth = 0f, IceMeltProgress = Capture(sample).IceMeltProgress });
         SaveDataMgr.Instance.RecordSnowCell(sample);
     }
 

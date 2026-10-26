@@ -60,6 +60,8 @@ public sealed class AtmosphereDefinition
         }
         if (CapacityMoles > 0m && total != 1m) throw new InvalidDataException($"大气 {Id} 初始比例之和必须等于 1");
         if (CapacityMoles == 0m && (total != 0m || InitialMoles != 0m)) throw new InvalidDataException($"真空大气 {Id} 不允许初始成分");
+        InitialCarbonDioxidePartialPressureKPa = ReferenceMoles > 0m
+            ? ReferencePressureKPa * (double)(AtmosphereService.GetMoles(CreateState(), FluidIds.CarbonDioxide) / ReferenceMoles) : 0d;
     }
     public string Id { get; }
     public decimal InitialMoles { get; }
@@ -67,10 +69,12 @@ public sealed class AtmosphereDefinition
     public decimal ReferenceMoles { get; }
     public double ReferencePressureKPa { get; }
     public double TemperatureKelvin { get; }
+    public double InitialCarbonDioxidePartialPressureKPa { get; }
     public AtmosphereState CreateState()
     {
         var state = new AtmosphereState { DefinitionId = Id, CapacityMoles = CapacityMoles, ReferenceMoles = ReferenceMoles,
-            ReferencePressureKPa = ReferencePressureKPa, TemperatureKelvin = TemperatureKelvin };
+            ReferencePressureKPa = ReferencePressureKPa, TemperatureKelvin = TemperatureKelvin,
+            InitialCarbonDioxidePartialPressureKPa = InitialCarbonDioxidePartialPressureKPa };
         decimal left = InitialMoles;
         int lastPositive = composition.FindLastIndex(value => value.Fraction > 0m);
         for (int i = 0; i < composition.Count; i++)

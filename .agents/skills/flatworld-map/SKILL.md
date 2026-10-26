@@ -56,6 +56,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - 地理气温由纬度底温、局部噪声、海拔修正合成；`climate.temperature.blendRadius` 以固定求和顺序平滑，归一化温度从同值派生。季节/天气只进入运行时温度。
 - `climate.polarBand.halfWidth` 是整条冷带占比，`position=0` 在上下边缘各占一半；冷带到温带按 `transitionTiles` 过渡。极圈边界与赤道底温使用固定种子控制点和平滑插值，共用环绕端点；`climate.equator.widthRatio` 是赤道两侧总占比。
 - 天然水体在最终 `temperature.celsius<0` 时写冰 Ground 并清 Liquid，保留水文/群系身份，岩浆除外。雪是独立 `snow.depth`；极圈资格由 `biome.snow.polar.*` 决定，极圈外另读 `biome.snow.regions/large/peak.*` 并要求零下与降水条件。天然雪十档，极圈层数 `ceil(1+clamp((-10-T)/20,0,1)*9)`。
+- 冻结前 `FrozenSurfaceWaterLayer` 记录原底床、液体类型与水量，海流/河口层继续生成；当地环境升温后由天气地表队列逐渐解冻，完成后恢复真实底床与液体，并恢复天然水域基线，原始冻结数组仍用于保存差量。
 - `PlanetData.SpatialDistanceScale` 默认 1、范围 0.25～4：空间距离同倍率、面积同平方倍率、噪声频率反算；固定步数、气候阈值、概率、液深及实体/Tile/Chunk 物理尺寸不缩放。
 - `ChunkMgr.FindSurfaceBiomeAsync` 使用当前 Profile、种子、拓扑、纪元；有限世界逐级加密，无限世界扩圈。关闭面板/换世界取消，传送前核对世界与玩家；河流/雪区读正式身份。
 

@@ -243,6 +243,7 @@ public partial class GameRes
         ActorDefinitionCatalogLoader.ConfigureResourceReload(context);
         PlayerCreationTemplateCatalogService.ConfigureResourceReload(context);
         TimeSystemConfigService.ConfigureResourceReload(context);
+        AtmosphericGreenhouseConfigurationService.ConfigureResourceReload(context);
         WaterCurrentPushConfigService.ConfigureResourceReload(context);
         SpawnerConfigCatalogService.ConfigureResourceReload(context);
         NaturalGenerationRuleCatalogService.ConfigureResourceReload(context);

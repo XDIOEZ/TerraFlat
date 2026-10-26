@@ -492,6 +492,11 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Environment/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Fluids/Atmosphere/*",
+        "Assets/StreamingAssets/GameConfig/Fluids/greenhouse-effect.json",
+        "Assets/5_Scripts/5-0_WorldModel/FrozenSurfaceWaterLayer.cs",
+        "Assets/5_Scripts/5-0_WorldModel/ChunkTerrainData.LiquidBaseline.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Greenhouse.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SurfaceThaw.cs",
         "Assets/5_Scripts/5-0_WorldModel/*Weather*",
         "Assets/5_Scripts/5-0_WorldModel/*Humidity*",
         "Assets/Resources/Config/Weather/*",
@@ -511,7 +516,9 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "environment_rules"
+        "environment_rules",
+        "environment_greenhouse",
+        "environment_surface_thaw"
       ],
       "rulesSuite": "GameplayTests/Systems/Environment/rules-suite.json",
       "integrationSuites": [

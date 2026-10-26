@@ -137,6 +137,18 @@
       "enabled": true
     },
     {
+      "id": "environment_greenhouse",
+      "name": "二氧化碳储量与世界温室增温",
+      "luaPath": "GameplayTests/Systems/Environment/greenhouse.lua",
+      "enabled": true
+    },
+    {
+      "id": "environment_surface_thaw",
+      "name": "天然雪与冰地块升温融化",
+      "luaPath": "GameplayTests/Systems/Environment/surface_thaw.lua",
+      "enabled": true
+    },
+    {
       "id": "surface_fluids_rules",
       "name": "地表水体规则与边界",
       "luaPath": "GameplayTests/Systems/SurfaceFluids/rules.lua",

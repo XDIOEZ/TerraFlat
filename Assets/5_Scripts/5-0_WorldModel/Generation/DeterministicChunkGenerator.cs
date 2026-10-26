@@ -476,6 +476,7 @@ namespace FlatWorld.WorldModel
             public int LiquidTypeIndex;
             public int LiquidLevel;
             public int NaturalDepthLevels;
+            public FrozenSurfaceWaterSource FrozenWater;
             public float SnowDepth;
             public byte Grass;
             public float Height;
@@ -503,6 +504,7 @@ namespace FlatWorld.WorldModel
         /// <summary>固定环境层布局只解析一次名称，热循环只写数组索引。</summary>
         private readonly struct SurfaceEnvironmentWriter
         {
+            private readonly ChunkTerrainBuffer terrain;
             private readonly float[] height;
             private readonly float[] temperature;
             private readonly float[] temperatureCelsius;
@@ -532,6 +534,7 @@ namespace FlatWorld.WorldModel
 
             public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain, bool hasEstuary = false, bool hasOceanCurrent = false)
             {
+                this.terrain = terrain;
                 height = terrain.GetOrCreateEnvironmentLayer("height");
                 temperature = terrain.GetOrCreateEnvironmentLayer("temperature");
                 temperatureCelsius = terrain.GetOrCreateEnvironmentLayer("temperature.celsius");
@@ -595,6 +598,7 @@ namespace FlatWorld.WorldModel
                 grass[index] = value.Grass == GrassPresent ? 1f : 0f;
                 snowDepth[index] = SnowDepthLayer.Quantize(value.SnowDepth);
                 naturalDepthLevels[index] = value.NaturalDepthLevels;
+                FrozenSurfaceWaterLayer.WriteGenerationSource(terrain, index, value.FrozenWater);
             }
         }
 
@@ -854,7 +858,6 @@ namespace FlatWorld.WorldModel
                 moisture = Math.Max(moisture, settings.OceanMoistureFloor);
             SurfaceBiomeRuleSnapshot biomeRule = ResolveSurfaceBiomeRule(settings, climate, moisture, river, temperatureCelsius);
             SurfaceBiomeKind biome = biomeRule?.Biome ?? settings.SurfaceFallbackBiome;
-            bool frozenRiver = river && temperatureCelsius < 0f;
             bool mountain = height >= settings.MountainLevel &&
                             (biome is SurfaceBiomeKind.Stone or SurfaceBiomeKind.Snow);
             bool alluvial =
@@ -880,20 +883,9 @@ namespace FlatWorld.WorldModel
             else if (biome == SurfaceBiomeKind.River)
             {
                 biomeId = (int)biome;
-                if (frozenRiver)
-                {
-                    // 河流和湖泊在零下改用冰地块并清空液体，群系和水文身份继续保留。
-                    groundTileId = settings.IceTileId;
-                    flags = TerrainCellFlags.Walkable;
-                    navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
-                }
-                else
-                {
-                    groundTileId = ResolveRiverbedTileId(settings, riverCell);
-                    // 水域只是高代价地形：有陆路时 A* 优先绕行，唯一通路是水面时仍可通过。
-                    flags = TerrainCellFlags.Walkable;
-                    // 液体导航代价由消费层单独叠加，底部 Ground 保留陆地成本。
-                }
+                groundTileId = ResolveRiverbedTileId(settings, riverCell);
+                // 先保留真实河床，最终结冰时统一保存可恢复的底材和水量。
+                flags = TerrainCellFlags.Walkable;
             }
             else if (biome == SurfaceBiomeKind.Stone)
             {
@@ -1002,10 +994,14 @@ namespace FlatWorld.WorldModel
             int naturalDepthLevels = ocean && !lavaCell
                 ? OceanShoreDistanceBathymetryKernel.ResolveNaturalOceanBedDepthLevels(initialLiquidLevel)
                 : ResolveNaturalBedDepth(initialLiquidLevel);
+            bool hasNaturalWater = !lavaCell && !oilCell && initialLiquidLevel > 0;
+            FrozenSurfaceWaterSource frozenWater = default;
 
             // 海水同样按零下基温结冰，岩浆不参加水体结冰规则。
             if (!lavaCell && !oilCell && initialLiquidLevel > 0 && temperatureCelsius < 0f)
             {
+                frozenWater = new FrozenSurfaceWaterSource(new TerrainCell(groundTileId, 0, 0, biomeId,
+                    navigationCost, flags), settings.IceTileId, ocean ? seaWater : dirtyWater, initialLiquidLevel);
                 groundTileId = settings.IceTileId;
                 initialLiquidLevel = 0;
                 snowDepth = 0f;
@@ -1042,6 +1038,7 @@ namespace FlatWorld.WorldModel
                     ? lavaCell ? lava : oilCell ? crudeOil : ocean ? seaWater : dirtyWater : 0,
                 LiquidLevel = initialLiquidLevel,
                 NaturalDepthLevels = naturalDepthLevels,
+                FrozenWater = frozenWater,
                 SnowDepth = snowDepth,
                 Grass = grass ? GrassPresent : GrassEmpty,
                 Height = (float)height,
@@ -1050,15 +1047,15 @@ namespace FlatWorld.WorldModel
                 Precipitation = (float)precipitation,
                 WindX = (float)windX,
                 WindY = (float)windY,
-                HasOceanCurrent = ocean && initialLiquidLevel > 0 && !lavaCell,
-                OceanCurrent = ocean && initialLiquidLevel > 0 && !lavaCell
+                HasOceanCurrent = ocean && hasNaturalWater,
+                OceanCurrent = ocean && hasNaturalWater
                     ? airHumidity.GetOceanCurrent(worldX, worldY, windX, windY) : default,
                 Moisture = (float)moisture,
                 Mountain = mountain ? 1f : 0f,
                 RiverFlow = river ? (float)riverCell.Flow : 0f,
                 RiverFlowX = river ? (float)riverCell.FlowDirectionX : 0f,
                 RiverFlowY = river ? (float)riverCell.FlowDirectionY : 0f,
-                Estuary = ocean && initialLiquidLevel > 0 && !lavaCell && riverMap != null
+                Estuary = ocean && hasNaturalWater && riverMap != null
                     ? riverMap.GetEstuary(worldX, worldY) : default,
                 RiverFloodplain = (float)floodplain,
                 RiverSurfaceLevel = river ? (float)riverCell.SurfaceLevel : 0f,

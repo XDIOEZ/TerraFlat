@@ -39,6 +39,8 @@ public static partial class GameplayTestSystemProbe
         RegisterInteractionOperations(result);
         RegisterNavigationOperations(result);
         RegisterEnvironmentBatchOperations(result);
+        RegisterGreenhouseOperations(result);
+        RegisterSurfaceThawOperations(result);
         RegisterLooseItemMotionOperations(result);
         RegisterTestingOperations(result);
         RegisterTerrainHeightShadowOperations(result);

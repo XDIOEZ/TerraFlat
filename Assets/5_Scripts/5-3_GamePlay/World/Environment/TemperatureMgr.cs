@@ -81,8 +81,9 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 
         float weatherOffset = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather == true
             ? 0f : WeatherMgr.CalculateWeatherTemperatureOffset(planetData);
-        return planetData.GlobalTemperature + weatherOffset +
-               DayTimeSystem.GetSeasonTemperatureOffset(1f, planetData.GlobalTemperature);
+        float climateTemperature = planetData.GlobalTemperature + planetData.AtmosphericGreenhouseTemperatureOffset;
+        return climateTemperature + weatherOffset +
+               DayTimeSystem.GetSeasonTemperatureOffset(1f, climateTemperature);
     }
 
     public void SetGlobalAmbientTemperature(float value)

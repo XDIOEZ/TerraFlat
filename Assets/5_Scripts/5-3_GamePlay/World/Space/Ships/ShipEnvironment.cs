@@ -30,6 +30,7 @@ namespace FlatWorld.Spaceflight
                 gas.Moles -= taken; remaining -= taken;
                 batches.Add(FluidInventory.CreateBatch(FluidCatalog.Default.Find(gas.FluidId), taken, 0m, atmosphere.TemperatureKelvin));
             }
+            if (remaining < amount) atmosphere.Revision++;
             return batches;
         }
         public void ReleaseGas(FluidBatch gas) { if (atmosphere != null) AtmosphereService.Emit(atmosphere, gas); }
@@ -158,7 +159,7 @@ namespace FlatWorld.Spaceflight
                 foreach (AtmosphereGasAmount gas in air.Gases)
                     if (gas.FluidId == FluidIds.Oxygen)
                     {
-                        decimal consumed = Math.Min(requested, gas.Moles); if (consumed <= 0m) return 0f; gas.Moles -= consumed;
+                        decimal consumed = Math.Min(requested, gas.Moles); if (consumed <= 0m) return 0f; gas.Moles -= consumed; air.Revision++;
                         AtmosphereService.Emit(air, FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.CarbonDioxide), consumed, 0m, air.TemperatureKelvin));
                         return (float)(consumed / AmbientMolesPerOxygenUnit);
                     }
