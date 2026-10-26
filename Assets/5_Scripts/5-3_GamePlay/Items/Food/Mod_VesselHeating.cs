@@ -39,12 +39,18 @@ public static class InventoryVesselHeating
                 if (!Mod_WaterVessel.TryRead(slot.itemData, out var currentStorage, out _)) throw new InvalidOperationException("加热容器已离开来源库存。");
                 currentStorage.WriteData(state); input.Data.NotifyItemStateChanged(slot.itemData);
             }
-            if (ProcessComponents(state, temperature, seconds, (id, amount) => PrepareOutput(output, id, amount), Persist, heatingRateMultiplier: heatingRateMultiplier)) Persist();
+            if (ProcessContainedLiquidHeat(state, output, temperature, seconds, Persist, heatingRateMultiplier)) Persist();
         }
         return handled;
     }
     public static bool ProcessWorldHeat(LiquidContainerState state, float temperature, float seconds)
         => ProcessComponents(state, temperature, seconds, null, null, ambientTransfer: true);
+    // 坩埚与普通容器复用同一液体热加工事务，产物继承实际液温。
+    public static bool ProcessContainedLiquidHeat(LiquidContainerState state, Inventory output,
+        float temperature, float seconds, Action persist, float heatingRateMultiplier = 1f)
+        => ProcessComponents(state, temperature, seconds,
+            (id, amount) => PrepareOutput(output, id, amount, state.Temperature), persist,
+            heatingRateMultiplier: heatingRateMultiplier);
     private static bool ProcessComponents(LiquidContainerState state, float temperature, float seconds, Func<string, int, CraftingTransaction> prepare, Action persist, bool ambientTransfer = false, float heatingRateMultiplier = 1f)
     {
         if (state == null || state.Amount <= Mod_WaterVessel.AmountEpsilon || !float.IsFinite(temperature) || !float.IsFinite(seconds) || seconds <= 0f) return false;
@@ -78,9 +84,22 @@ public static class InventoryVesselHeating
                 CraftingTransaction transaction = prepare(heat.OutputItemId, heat.OutputAmount);
                 if (transaction == null) continue;
                 var before = MixedLiquidContents.Clone(state);
-                if (!MixedLiquidContents.RemoveSpecies(state, id, heat.ConsumeAmount)) continue;
-                if (!transaction.Commit(out _)) { MixedLiquidContents.Restore(state, before); continue; }
-                persist?.Invoke(); transaction.Complete();
+                try
+                {
+                    if (!MixedLiquidContents.RemoveSpecies(state, id, heat.ConsumeAmount)) continue;
+                    if (!transaction.Commit(out _)) { MixedLiquidContents.Restore(state, before); continue; }
+                    persist?.Invoke(); transaction.Complete();
+                }
+                catch (Exception processingFailure)
+                {
+                    // 持久化或通知失败时同时撤回产物与液体，恢复写入失败也保留原始异常。
+                    var failures = new List<Exception> { processingFailure };
+                    try { transaction.Rollback(); } catch (Exception error) { failures.Add(error); }
+                    try { MixedLiquidContents.Restore(state, before); } catch (Exception error) { failures.Add(error); }
+                    try { persist?.Invoke(); } catch (Exception error) { failures.Add(error); }
+                    if (failures.Count > 1) throw new AggregateException("液体热加工失败且恢复时发生异常。", failures);
+                    throw;
+                }
             }
             else throw new ArgumentOutOfRangeException(nameof(heat.Mode));
             state.ComponentProcessingSeconds[id] = 0f;
@@ -91,10 +110,11 @@ public static class InventoryVesselHeating
         if (changed) { state.Revision++; MixedLiquidContents.SynchronizeAmounts(state); }
         return changed;
     }
-    private static CraftingTransaction PrepareOutput(Inventory output, string itemId, int amount)
+    private static CraftingTransaction PrepareOutput(Inventory output, string itemId, int amount, float temperature)
     {
         if (string.IsNullOrWhiteSpace(itemId) || amount <= 0 || output == null) return null;
         ItemData item = GameRes.Instance.CreateItemData(itemId); item.Stack.Amount = amount;
+        ItemMatterRuntime.EnsureInitialized(item, temperature);
         return CraftingTransaction.TryCreateGrant(output, new[] { item }, out CraftingTransaction transaction, out _) ? transaction : null;
     }
     #endregion

@@ -785,7 +785,7 @@
     "Obsidian": "Sharp black stone scattered along the shore of mountaintop lava lakes. Can be used as a handheld knife or crafted into an obsidian dagger or spear.",
     "Ore_Sulfur": "Mineral deposits scattered around mountains and mountain lava vents. Can also be obtained by mining sulfur deposits.",
     "Paper": "Adds pages to readable notes.",
-    "Plastic": "Lightweight plastic sheet material with a smooth surface that is easy to shape.",
+    "Plastic": "A lightweight plastic made from ethylene at 200 C or above with a polymerization catalyst. Water resistant and easy to shape.",
     "Rubber": "An elastic, well-insulated material used to make wires.",
     "Sand": "Place it in a crucible and heat it to the right temperature to melt it into molten glass.",
     "ShipFloor_Iron": "Four-way connections form an independent hull. A complete floor supports crew and protects them from hazardous tiles below.",
@@ -856,6 +856,16 @@
     "StoneThrowingRope": "A throwing tool made from rope and leather. Stones in the hotbar and suitable hard ores can be used as sling ammunition. Hold the attack button to charge and show the trajectory, then release to throw. Projectiles can be picked up after landing.",
     "TinPlate": "A plate forged from tin ingots.",
     "Wire_Hidden": "Carries power normally. Hold it or wear engineering goggles to see and handle it.",
-    "WoodenBarrel": "A water barrel sealed with planks, rope, and resin. Holds water and six item stacks. Add ten portions of salt to a full barrel of fresh water to make brine. Using resin glue to craft it increases maximum durability by 50%."
+    "WoodenBarrel": "A water barrel sealed with planks, rope, and resin. Holds water and six item stacks. Add ten portions of salt to a full barrel of fresh water to make brine. Using resin glue to craft it increases maximum durability by 50%.",
+    "CrudeOil": "Each portion contains 1 L of crude oil feedstock. Heat collected liquid oil to 100 C to extract it; distill four portions at 350 C into two fuel oil, one naphtha and one bitumen.",
+    "Naphtha": "The basic petrochemical feedstock obtained by distillation, 1.5 L per portion. Crack at 750 C into two ethylene and one propylene.",
+    "Ethylene": "Petrochemical feedstock from naphtha cracking. Heat to 200 C with a polymerization catalyst to produce polyethylene (PE), preserving the catalyst.",
+    "Propylene": "A basic petrochemical feedstock obtained by high temperature naphtha cracking, stored for further chemical production.",
+    "Bitumen": "A heavy petroleum fraction, 0.5 L per portion. Makes bitumen floors; at 150 C it can replace resin in adhesive crafting.",
+    "FuelOil": "Liquid fuel from petroleum distillation, 1 L per portion. Place in a crucible at 20 C or above to obtain liquid fuel oil for tanks, pipes and fuel engines.",
+    "PolymerizationCatalyst": "Must reach 200 C together with ethylene. Required for polymerization but never consumed, and can be reused.",
+    "FuelEngine": "Consumes real liquid fuel oil under mechanical load. Connect liquid pipes and a fuel tank to supply it.",
+    "FuelEngine_Summoner": "Consumes real liquid fuel oil under mechanical load. Connect liquid pipes and a fuel tank to supply it.",
+    "Floor_Bitumen_Summoner": "A dark floor made from bitumen, placed as a separate support surface."
   }
 }

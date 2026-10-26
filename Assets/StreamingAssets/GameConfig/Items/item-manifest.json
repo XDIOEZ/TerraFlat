@@ -260,6 +260,16 @@
       "id": "space_elevator",
       "path": "shells/space_elevator.json",
       "enabled": true
+    },
+    {
+      "id": "petrochemicals",
+      "path": "shells/petrochemicals.json",
+      "enabled": true
+    },
+    {
+      "id": "petroleum_utilities",
+      "path": "shells/petroleum_utilities.json",
+      "enabled": true
     }
   ]
 }

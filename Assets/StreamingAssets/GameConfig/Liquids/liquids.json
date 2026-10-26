@@ -309,6 +309,103 @@
         "deepMoveSpeedMultiplier": 0.2,
         "followWaterVisualStyle": true
       }
+    },
+    {
+      "id": "core:crude_oil",
+      "displayName": "石油",
+      "description": "天然石油，可盛装或泵送。在容器中加热至100℃后，每1升提取为一份石油原料，再进行蒸馏。",
+      "category": "petroleum",
+      "visualState": "crude_oil",
+      "primaryColor": {
+        "r": 0.1,
+        "g": 0.075,
+        "b": 0.045,
+        "a": 1
+      },
+      "viscosity": 8,
+      "litersPerServing": 0.25,
+      "drinkable": false,
+      "hydrationPerServing": 0,
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-CrudeOil-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 25000,
+        "shallowMoveSpeedMultiplier": 0.4,
+        "deepMoveSpeedMultiplier": 0.15,
+        "followWaterVisualStyle": false,
+        "waterContact": false
+      },
+      "heatProcess": {
+        "mode": "ConsumeServing",
+        "minimumTemperature": 100,
+        "seconds": 3,
+        "consumeAmount": 4,
+        "outputItemId": "CrudeOil",
+        "outputAmount": 1
+      }
+    },
+    {
+      "id": "core:fuel_oil",
+      "displayName": "燃油",
+      "description": "蒸馏得到的液体燃料，可通过液体管道供给燃油发动机。",
+      "category": "petroleum",
+      "visualState": "fuel_oil",
+      "primaryColor": {
+        "r": 0.35,
+        "g": 0.22,
+        "b": 0.08,
+        "a": 1
+      },
+      "viscosity": 3,
+      "litersPerServing": 0.25,
+      "drinkable": false,
+      "hydrationPerServing": 0,
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-CrudeOil-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 25000,
+        "shallowMoveSpeedMultiplier": 0.4,
+        "deepMoveSpeedMultiplier": 0.15,
+        "followWaterVisualStyle": false,
+        "waterContact": false
+      }
+    },
+    {
+      "id": "core:naphtha",
+      "displayName": "石脑油",
+      "description": "化工基础原料，可盛装或泵送；加热提取后继续进行高温裂解。",
+      "category": "petroleum",
+      "visualState": "naphtha",
+      "primaryColor": {
+        "r": 0.78,
+        "g": 0.67,
+        "b": 0.36,
+        "a": 1
+      },
+      "viscosity": 1,
+      "litersPerServing": 0.25,
+      "drinkable": false,
+      "hydrationPerServing": 0,
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-CrudeOil-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 25000,
+        "shallowMoveSpeedMultiplier": 0.4,
+        "deepMoveSpeedMultiplier": 0.15,
+        "followWaterVisualStyle": false,
+        "waterContact": false
+      },
+      "heatProcess": {
+        "mode": "ConsumeServing",
+        "minimumTemperature": 100,
+        "seconds": 3,
+        "consumeAmount": 6,
+        "outputItemId": "Naphtha",
+        "outputAmount": 1
+      }
     }
   ]
 }

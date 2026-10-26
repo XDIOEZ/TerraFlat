@@ -13,7 +13,8 @@ namespace FlatWorld.WorldModel
         public const string DirtyWaterId = "core:dirty_water";
         public const string SeaWaterId = "core:sea_water";
         public const string LavaId = "core:lava";
-        public static readonly LiquidTypeCatalog BuiltIn = new(new[] { DirtyWaterId, SeaWaterId, LavaId });
+        public const string CrudeOilId = "core:crude_oil";
+        public static readonly LiquidTypeCatalog BuiltIn = new(new[] { DirtyWaterId, SeaWaterId, LavaId, CrudeOilId });
         private readonly string[] ids;
         private readonly Dictionary<string, int> indices = new(StringComparer.OrdinalIgnoreCase);
 

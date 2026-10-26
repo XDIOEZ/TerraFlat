@@ -1,4 +1,34 @@
 -- 地形生成、采挖与植被工作规则，不生成当前玩家世界，也不截图。
+for _, scenario in ipairs({ "land", "wrapped", "cold", "disabled", "ocean", "lava" }) do
+    local selected = scenario
+    test.system("terrain", "petroleum_land_basins", {scenario = selected}, function(data)
+        assert(data.cellCount == 4096 and data.partitionMismatches == 0,
+            "石油地形随分块、负坐标或环绕改变")
+        assert(data.areaRatio == .2 and data.changedWetCells == 0,
+            "石油没有按岩浆湖约20%面积配置，或覆盖了已有水体/岩浆")
+        if selected == "land" then
+            local ratio = data.oilCells / data.fullAreaOilCells
+            assert(ratio >= .15 and ratio <= .25, "实际油池面积没有缩小到同轮廓原面积的约20%")
+        end
+        if selected == "disabled" or selected == "ocean" then
+            assert(data.oilCells == 0, "禁用石油生成或海洋仍出现油池")
+        else
+            assert(data.oilCells > 0 and #data.samples == data.oilCells, "陆地没有生成真实石油液体")
+        end
+        if selected == "ocean" or selected == "lava" then
+            assert(data.baselineWetCells > 0, "覆盖优先级用例没有真实水体或岩浆")
+        end
+        for _, cell in ipairs(data.samples) do
+            assert(cell.level > 0 and cell.level <= 100 and cell.level % 10 == 0,
+                "天然石油没有写入可抽取的真实液量")
+            assert(cell.previousLevel == 0 and cell.ground == cell.previousGround,
+                "石油覆盖了已有液体或替换了真实底材")
+            assert(cell.bed == (cell.level <= 50 and 2 or 3), "油池没有天然凹陷底床")
+            if selected == "cold" then assert(cell.celsius < 0, "寒冷用例没有覆盖零下石油") end
+        end
+    end, "石油独立陆地盆地、液层及底床：" .. selected)
+end
+
 test.system("terrain", "river_generation_config", {}, function(data)
     assert(data.surface["river.estuary.length"] == 18 and data.surface["river.estuary.halfAngleDegrees"] == 35,
         "正式河流JSON没有加载入海口长度或展开半角")

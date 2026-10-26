@@ -352,7 +352,7 @@ public static class ItemMatterReactionCompiler
             var ingredients = new List<RuntimeRecipeIngredient>();
             foreach (ItemReactionIngredientDto input in definition.Inputs)
             {
-                if (input == null || input.Amount < 1)
+                if (input == null || input.Amount < 0)
                     throw new InvalidDataException($"物品 {itemId} 的 reaction 包含无效输入");
                 MatchMode mode = ParseMatchMode(input.Match, itemId);
                 string exactId = input.ItemId?.Trim();
@@ -368,6 +368,9 @@ public static class ItemMatterReactionCompiler
                     amount = input.Amount
                 });
             }
+            // 零用量只保留催化物资格，反应仍必须实际消耗至少一种原料。
+            if (!ingredients.Any(ingredient => ingredient.amount > 0))
+                throw new InvalidDataException($"物品 {itemId} 的 reaction 必须包含实际消耗的原料");
 
             var outputs = new List<RuntimeRecipeResult>();
             foreach (ItemReactionOutputDto output in definition.Outputs ?? new())
@@ -893,14 +896,17 @@ public static class ItemReactionResolver
         {
             ItemSlot slot = input.Data.itemSlots[index];
             if (blockedSlots?.Contains(index) != true && slot?.itemData?.MatterState?.Initialized == true &&
+                slot.itemData.Stack?.Amount > 0f &&
                 !input.IsSlotBeingDragged(index) && reaction.TemperatureMatches(slot.itemData.MatterState.TemperatureCelsius))
                 eligible.Add(slot);
             else eligible.Add(null);
         }
         IReadOnlyList<RuntimeRecipeIngredient> ingredients = reaction.Recipe.inputs.RowItems_List;
+        if (!ingredients.Any(ingredient => ingredient.amount > 0)) return false;
         int upper = maxBatches;
         foreach (RuntimeRecipeIngredient ingredient in ingredients)
         {
+            if (ingredient.amount == 0) continue;
             double available = 0d;
             foreach (ItemSlot slot in eligible)
                 if (CraftingIngredientMatcher.MatchesIdentity(ingredient, slot?.itemData))

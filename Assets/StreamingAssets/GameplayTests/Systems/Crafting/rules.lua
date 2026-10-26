@@ -541,3 +541,45 @@ for _, row in ipairs({
         if row.args.full then assert(data.outputStillBlocked, "皮带加固覆盖输出原物") end
     end, "皮带后手加固边界：" .. row.name)
 end
+
+for _, row in ipairs({
+    {recipe = "core:petroleum_fuel_engine", output = "FuelEngine_Summoner"},
+    {recipe = "core:petroleum_bitumen_floor", output = "Floor_Bitumen_Summoner"},
+    {recipe = "core:petroleum_hot_bitumen_tool", output = "Axe_Stone", hot = true, tool = true},
+    {recipe = "core:petroleum_hot_bitumen_barrel", output = "WoodenBarrel", hot = true},
+    {recipe = "core:petroleum_hot_bitumen_trough", output = "WaterTrough", hot = true},
+    {recipe = "core:petroleum_bitumen_glue", output = "Glue", hot = true}
+}) do
+    test.system("crafting", "petroleum_utilities", {recipe = row.recipe}, function(d)
+        assert(#d.warnings == 0 and d.matched and d.committed, "石油用途正式配方未能提交：" .. row.recipe)
+        assert(d.outputAfter[1].id == row.output and d.outputAfter[1].amount == 1, "石油用途产物或数量错误")
+        for _, slot in ipairs(d.inputAfter) do assert(slot.amount == 0, "石油用途未精准消耗全部配方材料") end
+        if row.tool then
+            assert(d.reinforced and math.abs(d.maximum - 130) < 0.001 and math.abs(d.durability - 75) < 0.001,
+                "热沥青没有复用树脂的工具强化规则")
+        end
+    end, "石油用途正式制作：" .. row.recipe)
+    for _, refusal in ipairs({{missing = 0}, {full = true}}) do
+        refusal.recipe = row.recipe
+        test.system("crafting", "petroleum_utilities", refusal, function(d)
+            assert(not d.committed and d.unchanged, "石油用途缺料或满输出仍扣料/产出")
+        end, "石油用途拒绝保留库存：" .. row.recipe)
+    end
+    if row.hot then
+        for _, refusal in ipairs({{temperature = 149.9}, {uninitialized = true}, {cooledBeforeCommit = true}}) do
+            refusal.recipe = row.recipe
+            test.system("crafting", "petroleum_utilities", refusal, function(d)
+                assert(not d.committed and not d.qualifiedAtCommit and d.unchanged,
+                    "冷沥青、未初始化或提交前冷却仍被当成粘合剂")
+            end, "热沥青150度资格：" .. row.recipe)
+        end
+    end
+end
+
+test.system("crafting", "petroleum_utilities", {reinforced = true}, function(d)
+    assert(not d.committed and d.unchanged, "热沥青可以重复强化同一工具")
+end, "热沥青拒绝重复强化")
+
+test.system("crafting", "petroleum_utilities", {recipe = "core:petroleum_fuel_engine", station = "handcraft"}, function(d)
+    assert(not d.committed and d.unchanged, "燃料发动机绕过工作台资格")
+end, "燃料发动机必须在工作台制作")

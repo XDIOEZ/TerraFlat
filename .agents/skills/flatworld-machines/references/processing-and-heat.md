@@ -3,6 +3,7 @@
 - `ProvidesWorkbenchInput` 的单格储物设施在工作台相邻八格提供真实共享输入；`NodeCellChanged` 按作用域和邻格触发重连，多柜不叠加。活动工作台保留柜子库存实例，避免柜子先休眠后使用旧库存；界面用 `InventorySlotMirrorBinding` 绑定原柜库存，联机仍按真实所有者及当前连接的工作台验证距离。
 
 - ProcessCapability/Level 匹配材料 `ItemDefinition.processing` 的结果/work/等级闭区间；专用手钻用 MachineProcessDefinition，手动锻造在 `Recipes/crafting/forging.json` 选择金属板或针。RecipeProcessor 原子提交，输出满保留进度，SharedModuleIds 迁移便携载体状态。
+- 石油链来自 `Items/shells/petrochemicals.json`：容器每1L石油100℃提取1原料，4原料350℃蒸馏为2燃油、1石脑油、1沥青；石脑油750℃裂解为2乙烯与1丙烯，乙烯与催化剂200℃聚合为`Plastic`（PE）。反应`amount=0`表示催化剂必须存在且达温但不扣料；至少一种输入须实际消耗。坩埚复用`InventoryVesselHeating.ProcessContainedLiquidHeat`，多产物沿正式事务整体容纳后扣料；规则与现场见Processing/Mechanical Lua，离线入口`Tools/Tests/Petrochemicals/verify.py`。
 - `MachineCatalog.TryGetProcess` 在正式配方目录上维护按 (Station, Input) 的无分配复合键索引；持久化/热重载仍保留原字符串键，配置重载、注册配方、保留或清退旧档配方必须使索引失效。机械总工作分为 `MachineWorld.Logic.Nodes` 和 `MachineWorld.Logic.Facilities` Profiler Marker，以区分首次 JIT 和真实工作；回归 `mechanical/process_lookup_index`。
 - 手动砧共用 `ManualProcessingRuntime`，显式站点阻止混入普通手工配方，按成功产物件数消耗 `DurabilityPerProduct`；整批耐久不足不扣料。铜/铁砧500/1000耐久、10铜/熟铁锭制作；耗尽按唯一精确配方固定返50%，先交付返料和内部库存再移除世界节点，船上走正式部件事务；放置/拆回保留基础耐久比例。回归为 `crafting/{metal_tools_catalog,needle_sewing,manual_station_wear}`。
 - 燃料炉共用 FurnaceLogic，只管燃料、炉温、点火、供热、副产物；燃料资格来自 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。MaterialThermalProcessor 按材料 transitions/reactions 原子转化，以材料自身 MatterState 温度换热；先已有 Output 后 Input，防止新产物同轮重复加热。

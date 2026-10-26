@@ -255,3 +255,69 @@ test.system("processing", "cold_motion_workspace", {}, function(data)
     near(data.recoveredPosition, .5, "失败后残留工作区污染下一轮冷物推进")
     assert(data.repeatedMotionBytes == 0, "已预热的冷物推进仍逐步重建模拟器或工作列表")
 end, "冷物真实轨迹、跨世界工作区复用、浮沉结束、异常清理与热循环分配")
+
+local function petroleum_amount(slots, id)
+    local amount = 0
+    for _, slot in ipairs(slots) do
+        if slot.id == id then amount = amount + slot.amount end
+    end
+    return amount
+end
+
+test.system("processing", "petrochemical_content", {}, function(data)
+    local items, oil = data.items, data.oil
+    for _, id in ipairs({"CrudeOil", "Naphtha", "Ethylene", "Propylene", "Bitumen", "FuelOil", "Plastic", "PolymerizationCatalyst"}) do
+        local item = items[id]
+        assert(item.stackable and item.weight > 0 and item.volume > 0 and #item.gameName > 0
+            and #item.visual.spriteAddress > 0, "化工物品缺少真实定义：" .. id)
+    end
+    assert(oil.litersPerServing == .25 and oil.consumeAmount == 4 and oil.amount == 1
+        and oil.output == "CrudeOil" and oil.temperature == 100 and not oil.drinkable and not oil.waterContact,
+        "石油液体没有按一升提取为一份原料或被误当作水")
+    near(items.CrudeOil.weight * 4, items.FuelOil.weight * 2 + items.Naphtha.weight + items.Bitumen.weight,
+        "石油蒸馏物品质量不守恒")
+    near(items.CrudeOil.volume * 4, items.FuelOil.volume * 2 + items.Naphtha.volume + items.Bitumen.volume,
+        "石油蒸馏物品体积不守恒")
+    near(items.Naphtha.weight, items.Ethylene.weight * 2 + items.Propylene.weight, "石脑油裂解质量不守恒")
+    near(items.Ethylene.weight, items.Plastic.weight, "乙烯聚合质量不守恒")
+    assert(items.Ethylene.reactions[1].inputs[2].amount == 0, "聚合催化剂被配置为消耗品")
+end, "石油采集原料桥接、化工目录及质量体积守恒")
+
+for _, sample in ipairs({
+    {source = "CrudeOil", temperature = 349.99, matched = false, committed = false},
+    {source = "CrudeOil", temperature = 350, matched = true, committed = true},
+    {source = "CrudeOil", temperature = 350, amounts = {CrudeOil = 3}, matched = false, committed = false},
+    {source = "CrudeOil", temperature = 350, outputSlots = 2, matched = true, committed = false},
+    {source = "Naphtha", temperature = 749.99, matched = false, committed = false},
+    {source = "Naphtha", temperature = 750, matched = true, committed = true},
+    {source = "Naphtha", temperature = 750, outputSlots = 1, matched = true, committed = false},
+    {source = "Ethylene", temperature = 199.99, matched = false, committed = false},
+    {source = "Ethylene", temperature = 200, amounts = {Ethylene = 7}, matched = true, committed = true, batches = 7},
+    {source = "Ethylene", temperature = 200, amounts = {PolymerizationCatalyst = 0}, matched = false, committed = false},
+    {source = "Ethylene", temperature = 200, temperatures = {PolymerizationCatalyst = 199.99}, matched = false, committed = false},
+    {source = "Ethylene", temperature = 200, outputSlots = 0, matched = true, committed = false}
+}) do
+    test.system("processing", "petrochemical_reaction", sample, function(data)
+        assert(data.matched == sample.matched and data.committed == sample.committed,
+            "化工温度、催化剂或全产物容量判定错误")
+        if not sample.committed then assert(data.unchanged, "化工拒绝后仍扣料或部分出货") end
+        if sample.source == "Ethylene" then
+            local catalyst = sample.amounts and sample.amounts.PolymerizationCatalyst or 1
+            near(petroleum_amount(data.input, "PolymerizationCatalyst"), catalyst, "催化剂数量被改变")
+        end
+        if sample.committed then
+            local batches = sample.batches or 1
+            assert(data.batches == batches, "化工批量匹配错误")
+            if sample.source == "CrudeOil" then
+                near(petroleum_amount(data.output, "FuelOil"), 2, "蒸馏燃油数量错误")
+                near(petroleum_amount(data.output, "Naphtha"), 1, "蒸馏石脑油数量错误")
+                near(petroleum_amount(data.output, "Bitumen"), 1, "蒸馏沥青数量错误")
+            elseif sample.source == "Naphtha" then
+                near(petroleum_amount(data.output, "Ethylene"), 2, "裂解乙烯数量错误")
+                near(petroleum_amount(data.output, "Propylene"), 1, "裂解丙烯数量错误")
+            else
+                near(petroleum_amount(data.output, "Plastic"), batches, "乙烯没有聚合为聚乙烯")
+            end
+        end
+    end, string.format("正式化工反应事务：%s，%g℃", sample.source, sample.temperature))
+end

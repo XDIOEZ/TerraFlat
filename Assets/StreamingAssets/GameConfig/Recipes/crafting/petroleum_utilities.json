@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:petroleum_fuel_engine",
+      "displayName": "燃料发动机",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 8
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Nail",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "FuelEngine_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": [],
+      "requiredStation": "workbench"
+    },
+    {
+      "id": "core:petroleum_bitumen_floor",
+      "displayName": "沥青地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Bitumen",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Floor_Bitumen_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:petroleum_hot_bitumen_tool",
+      "displayName": "热沥青强化工具",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "tag",
+          "tag": "Tool",
+          "excludeTag": "AdhesiveReinforced",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Bitumen",
+          "amount": 1,
+          "minTemperature": 150
+        }
+      ],
+      "outputs": [
+        {
+          "copyInputTag": "Tool",
+          "reinforceWithAdhesive": true,
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:petroleum_hot_bitumen_barrel",
+      "displayName": "木桶（热沥青）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 8
+        },
+        {
+          "match": "tag",
+          "tag": "Rope",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Bitumen",
+          "amount": 4,
+          "minTemperature": 150
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "WoodenBarrel",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:petroleum_hot_bitumen_trough",
+      "displayName": "水槽（热沥青）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 12
+        },
+        {
+          "match": "tag",
+          "tag": "Rope",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Bitumen",
+          "amount": 4,
+          "minTemperature": 150
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "WaterTrough",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:petroleum_bitumen_glue",
+      "displayName": "沥青胶水",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Bitumen",
+          "amount": 1,
+          "minTemperature": 150
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Charcoal",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Glue",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

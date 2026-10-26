@@ -1,5 +1,7 @@
 # 地形纯规则回归
 
+- `petroleum_land_basins` 调用正式生成器，检查独立陆地油池的真实液量、保留底材与天然底床，覆盖负坐标、分块一致、环绕接缝、零下不冻结、禁用生成、海洋和岩浆优先级。离线入口为 `Tools/Tests/PetroleumTerrain/verify.py`；它编译当前 WorldModel 和同一探针，不进入 Unity，不能代替真实抽取、材质画面或 PlayMode Lua 验收。
+
 - `ocean_shelf_bathymetry` 检查离岸16格浅海、随后4格陡降到10级，覆盖直岸、单格岛屿、欧氏距离、环绕、全海/全陆、取消和单格/整块一致；`natural_waterbed` 同步检查海洋2～11层底床及淡水2～3层。`Tools/Tests/OceanBathymetry/verify.py` 独立编译当前WorldModel并通过10,767项检查，含simple/legacy正式生成及供湿分块一致。Unity退出PlayMode后执行地形规则（`20261025T163814029Z_c9d1ac16`）：上述5组海洋与4组底床Lua通过；全套在后续`cave_loose_resources`来源坐标断言失败，未宣称全套通过，未验收真实画面。
 
 - `river_generation_config` 直接读取正式河流 JSON，检查地表/洞穴目录加载、入海口长度/角度进入生成快照，以及缺少入海口参数、未知参数和重复参数均被拒绝。2026-10-25 单项 Lua 执行通过，共 7 项断言；未运行完整地形规则、资源会话或玩家世界。

@@ -154,9 +154,10 @@ namespace FlatWorld.WorldModel
         private sealed class LavaBasin
         {
             private readonly double2 center;
-            private readonly double radius, shoreWidth, phase;
-            public LavaBasin(double2 center, double radius, double shoreWidth, double phase)
-            { this.center = center; this.radius = radius; this.shoreWidth = shoreWidth; this.phase = phase; }
+            private readonly double radius, shoreWidth, phase, minimumSatelliteRadius;
+            public LavaBasin(double2 center, double radius, double shoreWidth, double phase, double shapeScale = 1d)
+            { this.center = center; this.radius = radius; this.shoreWidth = shoreWidth; this.phase = phase;
+                minimumSatelliteRadius = 0.65d * shapeScale; }
 
             public bool TrySample(ChunkGenerationTopologySnapshot topology, int worldX, int worldY,
                 out float depth, out float shore)
@@ -187,7 +188,7 @@ namespace FlatWorld.WorldModel
                     double radial = radius * (1.32d + 0.48d * Wave01(phase * 2.173d + i * 1.731d));
                     double satelliteAngle = phase + i * 2.399963229728653d +
                                             (Wave01(phase * 0.917d + i * 2.417d) - 0.5d) * 0.55d;
-                    double satelliteRadius = Math.Max(0.65d,
+                    double satelliteRadius = Math.Max(minimumSatelliteRadius,
                         radius * (0.14d + 0.20d * Wave01(phase * 1.619d + i * 3.113d)));
                     double2 satelliteCenter = center + new double2(Math.Cos(satelliteAngle), Math.Sin(satelliteAngle)) * radial;
                     double2 satelliteDelta = topology.ToDomain().ShortestDelta(satelliteCenter,

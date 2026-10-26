@@ -795,6 +795,45 @@
       "sourceReferences": [
         "https://edu.rsc.org/experiments/electrolysis-of-brine/735.article"
       ]
+    },
+    {
+      "id": "core:crude_oil",
+      "displayName": "石油",
+      "liquidId": "core:crude_oil",
+      "molarMassKgPerMol": 0.2,
+      "liquidDensityKgPerLiter": 0.85,
+      "gasHeatCapacityJPerMolKelvin": 200.0,
+      "liquidHeatCapacityJPerMolKelvin": 400,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": null,
+      "modelNotes": "石油馏分采用等效物质与恒定密度的游戏模型；工业管道只传递数量，不模拟混合馏分汽化。"
+    },
+    {
+      "id": "core:fuel_oil",
+      "displayName": "燃油",
+      "liquidId": "core:fuel_oil",
+      "molarMassKgPerMol": 0.2,
+      "liquidDensityKgPerLiter": 0.9,
+      "gasHeatCapacityJPerMolKelvin": 200.0,
+      "liquidHeatCapacityJPerMolKelvin": 400,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": null,
+      "modelNotes": "石油馏分采用等效物质与恒定密度的游戏模型；工业管道只传递数量，不模拟混合馏分汽化。"
+    },
+    {
+      "id": "core:naphtha",
+      "displayName": "石脑油",
+      "liquidId": "core:naphtha",
+      "molarMassKgPerMol": 0.1,
+      "liquidDensityKgPerLiter": 0.7,
+      "gasHeatCapacityJPerMolKelvin": 110.0,
+      "liquidHeatCapacityJPerMolKelvin": 220,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": null,
+      "modelNotes": "石油馏分采用等效物质与恒定密度的游戏模型；工业管道只传递数量，不模拟混合馏分汽化。"
     }
   ],
   "atmospheres": [

@@ -331,3 +331,16 @@ test.system("industrial_fluids", "combined_tank_collision_lifecycle", {}, functi
     assert(data.removedByRetain == 1 and data.retainedSource and not data.removedSource,
         "全量重扫未撤销已卸载的罐体来源")
 end, "组合罐拆中间、原生形状复用、独立障碍保留、跨块裁剪与镜像收尾")
+
+test.system("industrial_fluids", "fuel_oil_engine_definition", {}, function(d)
+    assert(d.kind == "combustion-engine" and d.ambientCombustion and d.torque > 0 and d.rpm > 0,
+        "燃料发动机没有通过环境助燃策略接入机械动力")
+    assert(#d.ports == 1 and d.ports[1].Phase == "liquid" and d.ports[1].Mode == "input"
+        and d.ports[1].FluidId == "core:fuel_oil", "燃油机未使用独立真实燃油液体口")
+    assert(#d.inputs == 1 and d.inputs[1].FluidId == "core:fuel_oil" and d.inputs[1].Phase == "liquid"
+        and d.joules == 8600000 and d.efficiency == 0.35, "燃油机反应或功量定义错误")
+    for i, pair in ipairs(d.pairs) do
+        assert(pair.role == (i == 1 and 1 or 0) and pair.body == "FuelEngine" and pair.carrier == "FuelEngine_Summoner"
+            and pair.machine == "FuelEngine" and pair.health > 0, "燃油机放置/拆回身份或受击定义缺失")
+    end
+end, "燃油机真实液体供料、环境助燃、机械动力与建筑配对")

@@ -552,6 +552,12 @@ namespace FlatWorld.WorldModel
             LavaLakeMinimumHeight = Clamp01(GetDouble(numbers, "lake.lava.minimumHeight", 0.74d));
             LavaLakeShoreWidth = ScaleDistance(GetDouble(numbers, "lake.lava.shoreWidth", 2.5d),
                 WorldSpatialDistanceScale, 0.25d, 24d);
+            // 油池沿用岩浆湖尺寸分布，半径按面积比例开方缩放。
+            OilLakeEnabled = GetBool(numbers, "lake.oil.enabled", false);
+            OilLakeRegionSize = ScaleDistance(GetInt(numbers, "lake.oil.regionSize", 192),
+                WorldSpatialDistanceScale, 16, 4096);
+            OilLakeChance = Clamp01(GetDouble(numbers, "lake.oil.chance", 0.35d));
+            OilLakeAreaRatio = Math.Max(0.01d, Clamp01(GetDouble(numbers, "lake.oil.areaRatio", 0.2d)));
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.072d));
             GrassMinimumCelsius = Finite(GetDouble(numbers, "grass.minimumCelsius", -10d), -10d);
             GrassMaximumCelsius = Math.Max(GrassMinimumCelsius,
@@ -952,6 +958,10 @@ namespace FlatWorld.WorldModel
         public double LavaLakeRareMaxRadius { get; }
         public double LavaLakeMinimumHeight { get; }
         public double LavaLakeShoreWidth { get; }
+        public bool OilLakeEnabled { get; }
+        public int OilLakeRegionSize { get; }
+        public double OilLakeChance { get; }
+        public double OilLakeAreaRatio { get; }
         /// <summary>每个纯生成器实例最多保留多少个已完成水文区域。</summary>
         public int RiverMaxCachedRegions { get; }
         /// <summary>恢复稀疏河源、成熟主河和小湖的独立参数。</summary>

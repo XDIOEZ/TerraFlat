@@ -404,7 +404,7 @@
     "OrePowder_Gold": "Gold Ore Powder",
     "Ore_Gold": "Gold Ore",
     "Peat": "Peat",
-    "Plastic": "Plastic",
+    "Plastic": "Polyethylene (PE)",
     "PortableGasTank_Iron": "Iron Portable Gas Tank",
     "PortableGasTank_Steel": "Steel Portable Gas Tank",
     "PoweredModularMinecart": "Powered Modular Minecart",
@@ -466,6 +466,16 @@
     "WoodenBarrel": "Wooden Barrel",
     "WoodenBarrel_Building": "Wooden Barrel",
     "Wool": "Wool",
-    "SteamEngine": "Steam Engine"
+    "SteamEngine": "Steam Engine",
+    "CrudeOil": "Crude Oil",
+    "Naphtha": "Naphtha",
+    "Ethylene": "Ethylene",
+    "Propylene": "Propylene",
+    "Bitumen": "Bitumen",
+    "FuelOil": "Fuel Oil",
+    "PolymerizationCatalyst": "Polymerization Catalyst",
+    "FuelEngine": "Fuel Engine",
+    "FuelEngine_Summoner": "Fuel Engine",
+    "Floor_Bitumen_Summoner": "Bitumen Floor"
   }
 }

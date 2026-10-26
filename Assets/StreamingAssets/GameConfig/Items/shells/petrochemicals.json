@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "CrudeOil",
+      "parent": "BasicItem_Base",
+      "gameName": "石油",
+      "description": "每份为1升石油原料。石油湖液体盛装后加热至100℃提取；4份在350℃蒸馏得到2份燃油、1份石脑油和1份沥青。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.85,
+      "volume": 1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+        "color": {
+          "r": 0.15,
+          "g": 0.12,
+          "b": 0.1,
+          "a": 1
+        }
+      },
+      "modules": {},
+      "reactions": [
+        {
+          "id": "core:petroleum_distillation",
+          "minTemperature": 350,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "CrudeOil",
+              "amount": 4
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "FuelOil",
+              "amount": 2
+            },
+            {
+              "itemId": "Naphtha",
+              "amount": 1
+            },
+            {
+              "itemId": "Bitumen",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Naphtha",
+      "parent": "BasicItem_Base",
+      "gameName": "石脑油",
+      "description": "石油蒸馏所得的基础化工原料，每份1.5升。750℃高温裂解为2份乙烯与1份丙烯。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1.05,
+      "volume": 1.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+        "color": {
+          "r": 0.94,
+          "g": 0.83,
+          "b": 0.52,
+          "a": 1
+        }
+      },
+      "modules": {},
+      "reactions": [
+        {
+          "id": "core:naphtha_thermal_cracking",
+          "minTemperature": 750,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Naphtha",
+              "amount": 1
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ethylene",
+              "amount": 2
+            },
+            {
+              "itemId": "Propylene",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Ethylene",
+      "parent": "BasicItem_Base",
+      "gameName": "乙烯",
+      "description": "由石脑油高温裂解取得的化工原料。与聚合催化剂一起加热至200℃制得聚乙烯（PE），催化剂保留。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.35,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
+        "color": {
+          "r": 0.72,
+          "g": 0.9,
+          "b": 0.92,
+          "a": 1
+        }
+      },
+      "modules": {},
+      "reactions": [
+        {
+          "id": "core:ethylene_polymerization",
+          "minTemperature": 200,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ethylene",
+              "amount": 1
+            },
+            {
+              "match": "exact_item",
+              "itemId": "PolymerizationCatalyst",
+              "amount": 0
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Plastic",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Propylene",
+      "parent": "BasicItem_Base",
+      "gameName": "丙烯",
+      "description": "由石脑油高温裂解取得的基础化工原料，可留存用于后续化工生产。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.35,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
+        "color": {
+          "r": 0.91,
+          "g": 0.72,
+          "b": 0.47,
+          "a": 1
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Bitumen",
+      "parent": "BasicItem_Base",
+      "gameName": "沥青",
+      "description": "石油蒸馏留下的黏稠重质材料，每份0.5升。可铺设沥青地板，达到150℃后可代替树脂参与粘合。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.55,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ResinGlue/ResinGlue_Idle.png",
+        "color": {
+          "r": 0.23,
+          "g": 0.2,
+          "b": 0.18,
+          "a": 1
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "FuelOil",
+      "parent": "BasicItem_Base",
+      "gameName": "燃油",
+      "description": "石油蒸馏取得的液体燃料，每份1升。投入温度不低于20℃的坩埚后变为液体燃油，可经储罐和管道供给燃油发动机。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.9,
+      "volume": 1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+        "color": {
+          "r": 0.61,
+          "g": 0.41,
+          "b": 0.17,
+          "a": 1
+        }
+      },
+      "modules": {},
+      "reactions": [
+        {
+          "id": "core:fuel_oil_to_liquid",
+          "minTemperature": 20,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "FuelOil",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:fuel_oil",
+            "amount": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "PolymerizationCatalyst",
+      "parent": "BasicItem_Base",
+      "gameName": "聚合催化剂",
+      "description": "在乙烯聚合时必须与原料一起达到200℃，参与反应但不消耗，可以重复使用。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Sulfur/Ore_Sulfur_Icon.png",
+        "color": {
+          "r": 0.65,
+          "g": 0.7,
+          "b": 0.72,
+          "a": 1
+        }
+      },
+      "modules": {}
+    }
+  ]
+}

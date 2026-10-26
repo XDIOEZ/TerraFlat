@@ -113,3 +113,13 @@ test.system("building", "material_provenance", { ropes = 0, straps = 0 }, functi
     assert(not data.matched and not data.prepared and not data.success, "缺少绳料仍制作出带材料记录的木箱")
     assert(data.inputsUnchanged, "缺少绳料时扣除了木板")
 end, "建筑缺料不生成虚假材料记录")
+
+test.system("building", "bitumen_floor_definition", {}, function(d)
+    assert(d.tileId == 35 and d.tileAsset == "Tile_BitumenFloor" and d.walkable and d.stackable,
+        "沥青地板缺少稳定地块、深色Tile或可堆叠召唤器")
+    assert(d.placement.RequiredSourceFlags == 1 and d.placement.LiquidRequirement == 2,
+        "沥青地板未限制普通可行走干地")
+    assert(d.placement.RefundItemId == "Floor_Bitumen_Summoner" and d.carrier == "Floor_Bitumen_Summoner"
+        and d.placementTile == "Tile_Floor_Bitumen" and d.loadCapacity == 10,
+        "沥青地板铺设、承重或拆回配对错误")
+end, "沥青地板正式内容、地面支撑与拆回定义")

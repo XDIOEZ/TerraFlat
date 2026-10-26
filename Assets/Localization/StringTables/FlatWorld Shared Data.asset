@@ -4091,6 +4091,86 @@ MonoBehaviour:
     m_Key: tag.InventoryCategory.Transport.name
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600002700000
+    m_Key: item.CrudeOil.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700001
+    m_Key: item.CrudeOil.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700002
+    m_Key: item.Naphtha.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700003
+    m_Key: item.Naphtha.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700004
+    m_Key: item.Ethylene.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700005
+    m_Key: item.Ethylene.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700006
+    m_Key: item.Propylene.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700007
+    m_Key: item.Propylene.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700008
+    m_Key: item.Bitumen.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700009
+    m_Key: item.Bitumen.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700010
+    m_Key: item.FuelOil.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700011
+    m_Key: item.FuelOil.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700012
+    m_Key: item.PolymerizationCatalyst.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700013
+    m_Key: item.PolymerizationCatalyst.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700014
+    m_Key: item.FuelEngine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700015
+    m_Key: item.FuelEngine.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700016
+    m_Key: item.FuelEngine_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700017
+    m_Key: item.FuelEngine_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700018
+    m_Key: item.Floor_Bitumen_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700019
+    m_Key: item.Floor_Bitumen_Summoner.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

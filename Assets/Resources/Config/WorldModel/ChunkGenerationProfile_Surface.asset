@@ -221,6 +221,14 @@ MonoBehaviour:
     Value: 0.74
   - Id: lake.lava.shoreWidth
     Value: 2.5
+  - Id: lake.oil.enabled
+    Value: 1
+  - Id: lake.oil.regionSize
+    Value: 192
+  - Id: lake.oil.chance
+    Value: 0.35
+  - Id: lake.oil.areaRatio
+    Value: 0.2
   - Id: grass.density
     Value: 0.072
   - Id: grass.minimumCelsius

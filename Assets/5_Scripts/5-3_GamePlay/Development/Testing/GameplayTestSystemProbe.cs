@@ -42,6 +42,7 @@ public static partial class GameplayTestSystemProbe
         RegisterLooseItemMotionOperations(result);
         RegisterTestingOperations(result);
         RegisterTerrainHeightShadowOperations(result);
+        result.Add("terrain/petroleum_land_basins", WorldPetroleumLandBasins);
         RegisterShipFlightHudOperations(result);
         RegisterSpaceElevatorOperations(result);
         RegisterOreAsteroidOperations(result);

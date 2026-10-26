@@ -43,3 +43,24 @@ for _, water in ipairs({false,true}) do
         end
     end, water and "蒸汽机三槽点火、吸收、燃料水量随负载结算与熄火保留" or "气引擎实际氢氧燃料与产水")
 end
+
+test.runtime("industrial_fluids", "fuel_oil_engine", {}, function(d)
+    assert(d.emptyPower == 0 and d.waterPower == 0 and math.abs(d.waterLeft - 1) < 0.000001,
+        "燃油机缺油或只接水仍免费供能/扣掉异种液体")
+    assert(d.blockedPower == 0 and math.abs(d.blockedFuel - 1) < 0.000001,
+        "燃油机绕过关闭阀门取料或扣掉来源")
+    assert(d.available > 0 and d.loadedPower > 0 and d.beforeOxygenLossPower > 0,
+        "真实燃油罐经液管供给时燃油机没有机械输出")
+    assert(d.idle == d.before and d.idleReservations == 0,
+        "燃油机空载/停转消耗燃油或遗留预约")
+    assert(d.oxygenStarvedPower == 0 and d.oxygenStarved == d.before and d.oxygenStarvedReservations == 0,
+        "燃油机缺氧时仍预约、消费燃油或提供动力")
+    assert(d.afterOxygenLoss == d.before and d.oxygenLossReservations == 0,
+        "燃油机预约后失氧仍消耗燃油或遗留预约")
+    assert(d.afterWork < d.before and d.afterWorkReservations == 0 and d.pipeHasNoLiquid,
+        "带载燃油机没有扣真实来源燃油，或管道错误储油")
+    assert(d.savedFuel == d.afterWork and d.savedReservations == 0,
+        "燃油罐快照丢失实际燃油或包含引擎运行预约")
+    assert(d.removedReservations == 0 and d.afterRemoval == d.afterWork,
+        "拆除燃油机遗留来源预约或删除燃油")
+end, "燃油机实际管罐供料、阀门阻挡、无负载/缺氧不扣油、带载消耗与保存清理")

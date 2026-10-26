@@ -337,3 +337,50 @@ test.await_check("mechanical_output:hammer:CopperPlate", 30, "铜锭完成机械
 test.await_check("mechanical_output:millstone:OrePowder_Copper", 30, "矿石完成机械研磨")
 test.await_check("mechanical_pump_delivered", 5, "真实水车驱动气泵并将大气送入储罐")
 test.check("mechanical_player_stationary", "机械工厂运行不应推动主角")
+
+for _, sample in ipairs({
+    {stage = "extraction", temperature = 99.99, oil = 4, crude = 0},
+    {stage = "extraction", temperature = 100, oil = 0, crude = 1},
+    {stage = "extraction", temperature = 100, full = true, oil = 4, crude = 0},
+    {stage = "distillation", temperature = 350},
+    {stage = "cracking", temperature = 750},
+    {stage = "polymerization", temperature = 200},
+    {stage = "polymerization", temperature = 200, missingCatalyst = true},
+    {stage = "fuel", temperature = 20}
+}) do
+    test.runtime("processing", "petrochemical_crucible", sample, function(data)
+        assert(data.processed, "坩埚正式加热入口未执行")
+        if sample.stage == "extraction" then
+            assert(data.oil == sample.oil and total(data.solids, "CrudeOil") == sample.crude,
+                "石油液体提取、温度门槛或满槽回滚错误")
+            if sample.crude == 1 then assert(data.solids[1].temperature == 100, "石油原料未继承液体温度") end
+        elseif sample.stage == "distillation" then
+            assert(total(data.solids, "CrudeOil") == 0 and total(data.solids, "FuelOil") == 2
+                and total(data.solids, "Naphtha") == 1 and total(data.solids, "Bitumen") == 1,
+                "坩埚石油蒸馏产物不完整")
+        elseif sample.stage == "cracking" then
+            assert(total(data.solids, "Naphtha") == 0 and total(data.solids, "Ethylene") == 2
+                and total(data.solids, "Propylene") == 1, "坩埚石脑油裂解产物错误")
+        elseif sample.stage == "polymerization" then
+            local produced = sample.missingCatalyst and 0 or 7
+            assert(total(data.solids, "Plastic") == produced
+                and total(data.solids, "Ethylene") == 7 - produced
+                and total(data.solids, "PolymerizationCatalyst") == (sample.missingCatalyst and 0 or 1),
+                "坩埚乙烯聚合缺催化剂仍生产或消耗催化剂")
+        else
+            assert(data.fuel == 4 and total(data.solids, "FuelOil") == 0,
+                "燃油物品没有转换为可供发动机的真实一升液体")
+        end
+    end, "坩埚石油化工真实入口：" .. sample.stage)
+end
+
+for _, sample in ipairs({{failures = 1}, {failures = 1, writeThenFail = true}, {failures = 2, writeThenFail = true}}) do
+    test.runtime("processing", "petrochemical_persist_rollback", sample, function(data)
+        assert(data.failed and data.persistCalls == 2 and data.originalPreserved,
+            "液体热加工持久化异常未保留原始错误或未尝试恢复写入")
+        assert(total(data.outputAfterFailure, "CrudeOil") == 0 and data.liquidAfterFailure == 4
+            and data.savedAfterFailure == 4, "持久化异常没有同时恢复产物库存和石油液体")
+        assert(total(data.retryOutput, "CrudeOil") == 1 and data.retryLiquid == 0 and data.retrySaved == 0,
+            "异常恢复后的重试丢失物料或重复产出")
+    end, "石油热加工持久化故障与双侧回滚")
+end

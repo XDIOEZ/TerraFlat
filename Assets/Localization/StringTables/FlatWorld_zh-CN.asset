@@ -2260,7 +2260,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474509533196
-    m_Localized: "\u5851\u6599"
+    m_Localized: "聚乙烯（PE）"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474513727488
@@ -3020,7 +3020,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836360
-    m_Localized: "\u8F7B\u8D28\u5851\u6599\u677F\u6599\uFF0C\u8868\u9762\u5E73\u6574\uFF0C\u4FBF\u4E8E\u52A0\u5DE5\u6210\u578B\u3002"
+    m_Localized: "乙烯在200℃以上经聚合催化剂制成的轻质塑料，具有耐水、易成型的材料特性。"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836361
@@ -4144,6 +4144,86 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 28102600000900107
     m_Localized: "交通运输"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700000
+    m_Localized: "石油"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700001
+    m_Localized: "每份为1升石油原料。石油湖液体盛装后加热至100℃提取；4份在350℃蒸馏得到2份燃油、1份石脑油和1份沥青。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700002
+    m_Localized: "石脑油"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700003
+    m_Localized: "石油蒸馏所得的基础化工原料，每份1.5升。750℃高温裂解为2份乙烯与1份丙烯。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700004
+    m_Localized: "乙烯"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700005
+    m_Localized: "由石脑油高温裂解取得的化工原料。与聚合催化剂一起加热至200℃制得聚乙烯（PE），催化剂保留。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700006
+    m_Localized: "丙烯"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700007
+    m_Localized: "由石脑油高温裂解取得的基础化工原料，可留存用于后续化工生产。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700008
+    m_Localized: "沥青"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700009
+    m_Localized: "石油蒸馏留下的黏稠重质材料，每份0.5升。可铺设沥青地板，达到150℃后可代替树脂参与粘合。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700010
+    m_Localized: "燃油"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700011
+    m_Localized: "石油蒸馏取得的液体燃料，每份1升。投入温度不低于20℃的坩埚后变为液体燃油，可经储罐和管道供给燃油发动机。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700012
+    m_Localized: "聚合催化剂"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700013
+    m_Localized: "在乙烯聚合时必须与原料一起达到200℃，参与反应但不消耗，可以重复使用。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700014
+    m_Localized: "燃料发动机-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700015
+    m_Localized: "接入液体燃油管道，在有氧环境下按实际机械负载消耗燃油并输出动力；缺油、缺氧或没有有效负载时不消耗燃油。燃油物品可先投入坩埚转为液体，再装罐供给。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700016
+    m_Localized: "燃料发动机"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700017
+    m_Localized: "接入液体燃油管道，在有氧环境下按实际机械负载消耗燃油并输出动力；缺油、缺氧或没有有效负载时不消耗燃油。燃油物品可先投入坩埚转为液体，再装罐供给。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700018
+    m_Localized: "沥青地板"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700019
+    m_Localized: "石料与沥青铺成的深色地板，可在普通陆地铺设，拆除后恢复原始地面。"
     m_Metadata:
       m_Items: []
   references:

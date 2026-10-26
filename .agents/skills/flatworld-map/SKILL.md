@@ -77,6 +77,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - 草原/森林普通矿山由 `surface-common.json` 的煤、铜、铁、金、锡、硫规则共享（`biomeMask=48`），有效概率为对应石地矿山的 10%；石头矿山用各群系原规则保持同一比例，零散石头单独配置。新增规则须登记 Surface Profile 的 `ecologyRuleIds`。
 - 巨型矿山由 `NaturalItems/giant-mines.json` 配置十一矿种、地表八条/洞穴九条规则，总候选概率预算 0.13；同一 Profile 共享单一间距网格并互斥抽矿种，生态条件只查锚点，完整生成净空仍排除水、障碍、结构和洞口安全区；生成净空可大于真实碰撞与导航占格。
 - 山顶岩浆湖由 `lake.lava.*` 和确定性山峰候选生成；`rareMaxRadius` 是长尾上限，`lava.shore` 仅标天然岸带。接触属性来自 `WorldLiquidSettings`，热源读未被平台遮挡的实际液体。
+- 独立陆地油池由 `lake.oil.enabled/regionSize/chance/areaRatio` 控制，复用岩浆湖尺寸概率与轮廓；默认面积约20%，半径按比例开方。真实 Liquid 身份为 `core:crude_oil`，保留底材与天然底床，不覆盖已有水/岩浆、不随水结冰或贡献淡水供湿。回归 `terrain/petroleum_land_basins` 与 `Tools/Tests/PetroleumTerrain/verify.py`。
 - `groundHarvest` 声明工具/等级/产物/距离/使用次数/挖后地表。`Mod_GroundHarvestToolBase → GroundTileHarvestSystem` 累积并保存进度，完成一层才生成掉落/提交地面；`GroundTileLayerSystem` 保存天然层数和覆盖栈，覆盖栈含原地块、进度、草层，开采优先弹栈。
 - 采挖 Ground 后 `RuntimeGrassClearing.Clear` 同步独立草层和差量；工具白框共用实际操作的只读校验，铲子优先积雪。平台/地板仍属于独立支撑层。
 - 每采掉天然一层都更新 `TerrainSurfaceHeightLayer` 的表面深度，独立于五层石头产量；快照/回滚/存档同时保存 `ExcavatedSurfaceLevels`。地块 JSON 的 `minimumSurfaceDepth` 声明露出底材的最低深度，基岩为 5；地板与普通地面齐平，高低阴影统一交 `TerrainHeightShadowManager`。

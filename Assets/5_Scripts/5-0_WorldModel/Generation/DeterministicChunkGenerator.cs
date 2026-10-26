@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 80;
+        public const int CurrentGenerationSignature = 81;
 
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
@@ -54,6 +54,8 @@ namespace FlatWorld.WorldModel
             oceanChunkCache.Clear();
             while (oceanChunkCacheOrder.TryDequeue(out _)) { }
             lavaBasins.Clear();
+            oilBasins.Clear();
+            while (oilBasinOrder.TryDequeue(out _)) { }
             while (lavaBasinOrder.TryDequeue(out _)) { }
             while (heightDrivenCacheOrder.TryDequeue(out _)) { }
         }
@@ -407,6 +409,8 @@ namespace FlatWorld.WorldModel
             IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(
                 ExpandGenerationRequest(request, GetHydrologyOutputPadding(request)), cancellationToken);
             int lava = volcanic.Count > 0 ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId) : 0;
+            IReadOnlyList<LavaBasin> petroleum = ResolveCrudeOilLandBasins(request, cancellationToken);
+            int crudeOil = petroleum.Count > 0 ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.CrudeOilId) : 0;
             using var airHumidity = new GeographicAirHumiditySampler(request, settings, riverMap,
                 volcanic, cancellationToken, batch.SampleCachedHeight);
             float humidityBackground = AirHumiditySettings.FromProfile(request.Profile).Background;
@@ -424,7 +428,8 @@ namespace FlatWorld.WorldModel
                     batch.Output[index] = BuildSurfaceCell(request, settings, riverMap,
                         batch.GetCore(x, y), batch, x, y,
                         request.Address.ChunkOrigin.X + x,
-                        request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater, lava, volcanic, airHumidity);
+                        request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater, lava, volcanic, airHumidity,
+                        crudeOil, petroleum);
                     hasEstuary |= batch.Output[index].Estuary.Influence > 0d;
                     hasOceanCurrent |= batch.Output[index].HasOceanCurrent;
                     batch.Output[index].AirHumidity = airHumidity.Sample(
@@ -774,12 +779,14 @@ namespace FlatWorld.WorldModel
             climate.BaseBiome = ResolveSurfaceBiome(settings, climate, baseMoisture, false);
             climate.Classified = true;
             IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(ExpandGenerationRequest(request, GetHydrologyOutputPadding(request)));
+            IReadOnlyList<LavaBasin> petroleum = ResolveCrudeOilLandBasins(request);
             using var airHumidity = new GeographicAirHumiditySampler(request, settings, riverMap, volcanic);
             SurfaceCellOutput output = BuildSurfaceCell(request, settings, riverMap,
                 climate, null, x, y, worldX, worldY,
                 types.GetIndex(LiquidTypeCatalog.SeaWaterId),
                 types.GetIndex(LiquidTypeCatalog.DirtyWaterId),
-                volcanic.Count > 0 ? types.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic, airHumidity);
+                volcanic.Count > 0 ? types.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic, airHumidity,
+                petroleum.Count > 0 ? types.GetIndex(LiquidTypeCatalog.CrudeOilId) : 0, petroleum);
             output.AirHumidity = airHumidity.Sample(worldX, worldY);
             output.AirHumidityBackground = AirHumiditySettings.FromProfile(request.Profile).Background;
             if (terrainDecorator == null) return output;
@@ -819,7 +826,9 @@ namespace FlatWorld.WorldModel
             int dirtyWater,
             int lava,
             IReadOnlyList<LavaBasin> volcanic,
-            GeographicAirHumiditySampler airHumidity)
+            GeographicAirHumiditySampler airHumidity,
+            int crudeOil,
+            IReadOnlyList<LavaBasin> petroleum)
         {
             // 如果世界会绕回另一边，先把越界坐标换回世界内，保证两侧地形能严丝合缝。
             worldX = request.Topology.NormalizeX(worldX);
@@ -973,6 +982,21 @@ namespace FlatWorld.WorldModel
                     if (!river && initialLiquidDepth <= 0f) lavaShore = Math.Max(lavaShore, shore);
                 }
             }
+            bool oilCell = false;
+            // 油只覆盖原本干燥的陆地，不替换河湖、海水与岩浆，也不参加水的结冰规则。
+            if (!lavaCell && !ocean && !river && initialLiquidDepth <= 0f && biome != SurfaceBiomeKind.Beach)
+            {
+                foreach (LavaBasin basin in petroleum)
+                {
+                    if (!basin.TrySample(request.Topology, worldX, worldY, out float depth, out _) || depth <= 0f)
+                        continue;
+                    oilCell = true;
+                    initialLiquidDepth = depth;
+                    snowDepth = 0f;
+                    lavaShore = 0f;
+                    break;
+                }
+            }
             int initialLiquidLevel = QuantizeGeneratedLiquidLevel(initialLiquidDepth);
             // 先生成真实底床再冻结液体，水被抽干或结冰后凹陷仍然保留。
             int naturalDepthLevels = ocean && !lavaCell
@@ -980,7 +1004,7 @@ namespace FlatWorld.WorldModel
                 : ResolveNaturalBedDepth(initialLiquidLevel);
 
             // 海水同样按零下基温结冰，岩浆不参加水体结冰规则。
-            if (!lavaCell && initialLiquidLevel > 0 && temperatureCelsius < 0f)
+            if (!lavaCell && !oilCell && initialLiquidLevel > 0 && temperatureCelsius < 0f)
             {
                 groundTileId = settings.IceTileId;
                 initialLiquidLevel = 0;
@@ -1015,7 +1039,7 @@ namespace FlatWorld.WorldModel
                 Cell = new TerrainCell(groundTileId, 0, 0, biomeId,
                     navigationCost, flags),
                 LiquidTypeIndex = initialLiquidLevel > 0
-                    ? lavaCell ? lava : ocean ? seaWater : dirtyWater : 0,
+                    ? lavaCell ? lava : oilCell ? crudeOil : ocean ? seaWater : dirtyWater : 0,
                 LiquidLevel = initialLiquidLevel,
                 NaturalDepthLevels = naturalDepthLevels,
                 SnowDepth = snowDepth,

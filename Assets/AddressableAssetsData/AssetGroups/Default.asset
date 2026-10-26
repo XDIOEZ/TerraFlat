@@ -4889,6 +4889,17 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b43b20b1ae6e4fa096ac1f0b7f3c07f8
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Floor_Bitumen.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8acdfc16511a4aa78459768a5a9946d9
+    m_Address: Assets/9_Shaders/Material/Tilemap-CrudeOil-Lit.mat
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

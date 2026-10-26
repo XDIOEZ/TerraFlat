@@ -2343,7 +2343,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474509533196
-    m_Localized: Plastic
+    m_Localized: "Polyethylene (PE)"
     m_Metadata:
       m_Items: []
   - m_Id: 27915474513727488
@@ -3138,8 +3138,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836360
-    m_Localized: Lightweight plastic sheet material with a smooth surface that is
-      easy to shape.
+    m_Localized: "A lightweight plastic made from ethylene at 200 C or above with a polymerization catalyst. Water resistant and easy to shape."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836361
@@ -4450,6 +4449,86 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 28102600000900107
     m_Localized: "Transportation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700000
+    m_Localized: "Crude Oil"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700001
+    m_Localized: "Each portion contains 1 L of crude oil feedstock. Heat collected liquid oil to 100 C to extract it; distill four portions at 350 C into two fuel oil, one naphtha and one bitumen."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700002
+    m_Localized: "Naphtha"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700003
+    m_Localized: "The basic petrochemical feedstock obtained by distillation, 1.5 L per portion. Crack at 750 C into two ethylene and one propylene."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700004
+    m_Localized: "Ethylene"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700005
+    m_Localized: "Petrochemical feedstock from naphtha cracking. Heat to 200 C with a polymerization catalyst to produce polyethylene (PE), preserving the catalyst."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700006
+    m_Localized: "Propylene"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700007
+    m_Localized: "A basic petrochemical feedstock obtained by high temperature naphtha cracking, stored for further chemical production."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700008
+    m_Localized: "Bitumen"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700009
+    m_Localized: "A heavy petroleum fraction, 0.5 L per portion. Makes bitumen floors; at 150 C it can replace resin in adhesive crafting."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700010
+    m_Localized: "Fuel Oil"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700011
+    m_Localized: "Liquid fuel from petroleum distillation, 1 L per portion. Place in a crucible at 20 C or above to obtain liquid fuel oil for tanks, pipes and fuel engines."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700012
+    m_Localized: "Polymerization Catalyst"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700013
+    m_Localized: "Must reach 200 C together with ethylene. Required for polymerization but never consumed, and can be reused."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700014
+    m_Localized: "Fuel Engine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700015
+    m_Localized: "Consumes real liquid fuel oil under mechanical load. Connect liquid pipes and a fuel tank to supply it."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700016
+    m_Localized: "Fuel Engine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700017
+    m_Localized: "Consumes real liquid fuel oil under mechanical load. Connect liquid pipes and a fuel tank to supply it."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700018
+    m_Localized: "Bitumen Floor"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700019
+    m_Localized: "A dark floor made from bitumen, placed as a separate support surface."
     m_Metadata:
       m_Items: []
   references:

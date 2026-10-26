@@ -301,18 +301,6 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselConte
             ? liquidState.Temperature
             : itemData.MatterState?.Initialized == true
                 ? itemData.MatterState.TemperatureCelsius : initialMaterialTemperature;
-        if (hasLiquid)
-        {
-            // 坩埚内液体按真实温差受热，不把炉温直接当成材料温度。
-            float temperatureSeconds = ThermalRuntime.ResolveHeatingSeconds(
-                liquidState.Temperature, temperature, seconds, heatingRateMultiplier);
-            liquidState.Temperature = ThermalRuntime.AdvanceTowards(liquidState.Temperature, temperature,
-                InventoryVesselHeating.TemperatureTransferPerSecond, temperatureSeconds);
-            liquidState.ProcessingSeconds = 0f;
-            liquidState.Revision++;
-            liquidStorage.WriteData(liquidState);
-        }
-
         if (GameRes.ExistingInstance == null || state.Bowl?.itemSlots == null)
             return true;
 
@@ -323,6 +311,12 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselConte
             Data = state.Bowl
         };
         materialInventory.Data.SetUnlimitedSlots(false);
+        if (hasLiquid)
+        {
+            InventoryVesselHeating.ProcessContainedLiquidHeat(liquidState, materialInventory,
+                temperature, seconds, () => liquidStorage.WriteData(liquidState), heatingRateMultiplier);
+            liquidStorage.WriteData(liquidState);
+        }
         foreach (ItemSlot materialSlot in materialInventory.Data.itemSlots)
         {
             ItemData material = materialSlot?.itemData;

@@ -81,6 +81,7 @@ public static class MachineLogicRegistry
         AddFluidDevice("liquid-filler", new FluidFillerBehavior(true));
         AddFluidDevice("engine", new FluidEngineBehavior());
         AddFluidDevice("water-engine", new FluidEngineBehavior());
+        AddFluidDevice("combustion-engine", new FluidAmbientCombustionEngineBehavior());
     }
 
     private static void Add(string id, Type authoring, Func<MachineEntity, MachineLogic> factory)

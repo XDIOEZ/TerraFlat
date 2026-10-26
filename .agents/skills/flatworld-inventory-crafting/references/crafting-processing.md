@@ -6,6 +6,7 @@
 - 通用输入适配经 Inventory.TryTransferQuantityTo 复用容量/数量/接收/机器联网事务；ItemSlot_UI.BoundInventory 定身份、虚拟槽释放清空。读取 CraftingStationView.Controller 的候选/选择/进度，选择走真实按钮事件，不从EventSystem焦点推断。
 - 查缺配方同时看 Recipes、物品processing、Mechanical Processes、matter温湿转化、便携映射；天然物/温变产物/内部或GM变体不机械补普通配方。手工目录：`Recipes/crafting/handmade_equipment.json`、`handmade_utilities.json`。
 - 普通Crafting unordered，需求按物品/Tag总量，amount=0要求工具存在但不扣量，耐久由actions独立控制；额外料不屏蔽候选，Exact/Tag重叠做全局容量分配，按选中RuntimeRecipe精确提交。热加工保留有序/镜像/网格。
+- `crafting/petroleum_utilities.json` 的沥青地板复用地表覆盖；热沥青通过既有 `ingredient.minTemperature=150` 才能加固工具、封木桶/水槽或配木炭制胶，冷沥青没有通用 `Adhesive` 标签；回归 `crafting/petroleum_utilities`。
 - 皮装与针线配方在 `Recipes/crafting/sewing.json`：棉花捻线、骨头打磨骨针；皮装通过 `SewingNeedle` 标签接受骨针/铜针/铁针，以零扣量工具配合成功后扣1耐久。三种针上限10/100/200，金属针可堆叠且逐根用坏；`forging.json` 在砧上以1铜锭/熟铁锭锻10根，固定产量不接受通用增产。
 - 多产物全部放下才提交，失败不扣料/部分产出；非堆叠逐件占槽。合法定义来自 GameRes.ItemDefinitions；旧recipeDict仅留未迁移熔炼单值索引，普通候选用CraftingRecipeCatalog。被动无配方只清预览。
 - processing不继承parent，ItemProcessingResolver转RuntimeRecipe；capability/level由设备给，minLevel/maxLevel闭区间。handcraft/workbench互认，手工台4/2、工作台5/2输入输出；落地台手势为手工70%，四舍五入至少1次。

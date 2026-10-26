@@ -142,6 +142,16 @@
       "id": "crafting/space_elevator",
       "path": "crafting/space_elevator.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/petrochemicals",
+      "path": "crafting/petrochemicals.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/petroleum_utilities",
+      "path": "crafting/petroleum_utilities.json",
+      "enabled": true
     }
   ]
 }

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:polymerization_catalyst",
+      "displayName": "聚合催化剂",
+      "recipeType": "crafting",
+      "requiredStation": "workbench",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Sulfur",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "PolymerizationCatalyst",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    }
+  ]
+}
