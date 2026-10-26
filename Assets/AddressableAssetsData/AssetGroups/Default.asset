@@ -528,6 +528,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ec5f13d9a16046de81bfd07afc2bee1a
+    m_Address: "Assets/2_Prefabs/World/Space/\u77FF\u77F3\u5C0F\u884C\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 01a9304d3ad266244b7df528f1428837
     m_Address: Assets/6_Art/Generated/Mechanical/Items/DrilledLog_Idle.png
     m_ReadOnly: 0

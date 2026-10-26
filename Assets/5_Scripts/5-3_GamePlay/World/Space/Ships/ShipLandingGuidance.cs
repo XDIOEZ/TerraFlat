@@ -42,8 +42,21 @@ namespace FlatWorld.Spaceflight
         public static double SurfaceVisualRise(double height) => Math.Max(0d, height) * .04d;
 
         public static double LandingSpeed(double elapsedSeconds, double height, double seconds, SpaceGameplaySettings settings)
+            => LandingSpeed(elapsedSeconds, height, seconds, settings, settings.EarthGravity);
+
+        public static double ResolvePoweredLandingDurationSeconds(double gravity, SpaceGameplaySettings settings)
         {
-            double progress = Math.Clamp((elapsedSeconds + seconds) / settings.LandingDurationSeconds, 0d, 1d);
+            // 三次平滑轨迹的最大向下加速度不能超过当地重力，引擎只承担制动与悬停。
+            double gravityLimitedDuration = gravity > 0d
+                ? Math.Sqrt(6d * settings.SurfaceEntryHeightMeters / gravity) : settings.LandingDurationSeconds;
+            return Math.Max(settings.LandingDurationSeconds, gravityLimitedDuration);
+        }
+
+        public static double LandingSpeed(double elapsedSeconds, double height, double seconds,
+            SpaceGameplaySettings settings, double gravity)
+        {
+            double duration = ResolvePoweredLandingDurationSeconds(gravity, settings);
+            double progress = Math.Clamp((elapsedSeconds + seconds) / duration, 0d, 1d);
             double targetHeight = settings.SurfaceEntryHeightMeters * (1d - progress * progress * (3d - 2d * progress));
             return Math.Min(0d, (targetHeight - height) / seconds);
         }

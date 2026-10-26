@@ -104,7 +104,8 @@ namespace FlatWorld.WorldModel
                 using (timing?.MeasureStage("ecology.host_tags") ?? default)
                     CacheEcologyHostTags(request, terrain, cancellationToken);
                 using (timing?.MeasureStage("terrain.weather_profile") ?? default)
-                    terrain.InitializeWeatherProfile(weatherSettings);
+                    terrain.InitializeWeatherProfile(weatherSettings,
+                        !profile.NumericParameters.TryGetValue("weather.enabled", out double weatherEnabled) || weatherEnabled > 0d);
                 ChunkEcologyData ecology;
                 using (timing?.MeasureStage("ecology") ?? default)
                 {

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "physicsActivationDistanceMeters": 512,
+  "fields": [
+    {
+      "id": "mining-clusters",
+      "centerBodyIds": ["asteroid_iron", "asteroid_copper", "asteroid_rare"],
+      "countPerBody": 36,
+      "minimumClearanceMeters": 35,
+      "maximumClearanceMeters": 240,
+      "minimumRadiusMeters": 1.2,
+      "maximumRadiusMeters": 3.2,
+      "hitPointsPerRadius": 18,
+      "stoneAmountMin": 1,
+      "stoneAmountMax": 4
+    },
+    {
+      "id": "moon-fragments",
+      "centerBodyIds": ["moon"],
+      "countPerBody": 18,
+      "minimumClearanceMeters": 60,
+      "maximumClearanceMeters": 240,
+      "minimumRadiusMeters": 0.8,
+      "maximumRadiusMeters": 2,
+      "hitPointsPerRadius": 15,
+      "stoneAmountMin": 1,
+      "stoneAmountMax": 3
+    }
+  ],
+  "compositions": [
+    { "id": "iron", "itemId": "Ore_Iron", "weight": 28, "amountMin": 3, "amountMax": 9 },
+    { "id": "copper", "itemId": "Ore_Copper", "weight": 26, "amountMin": 3, "amountMax": 9 },
+    { "id": "tin", "itemId": "Ore_Tin", "weight": 18, "amountMin": 3, "amountMax": 8 },
+    { "id": "gold", "itemId": "Ore_Gold", "weight": 12, "amountMin": 2, "amountMax": 5 },
+    { "id": "tungsten", "itemId": "Ore_Tungsten", "weight": 10, "amountMin": 2, "amountMax": 6 },
+    { "id": "diamond", "itemId": "Ore_Diamond", "weight": 6, "amountMin": 1, "amountMax": 3 }
+  ]
+}

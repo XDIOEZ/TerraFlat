@@ -176,7 +176,7 @@ namespace FlatWorld.Spaceflight
             {
                 // 自动起降只申请当前速度需要的推力，实际出力仍由供电、引擎和真实管路燃料决定。
                 double desiredSpeed = flight.PoweredDescent
-                    ? ShipLandingGuidance.LandingSpeed(flight.SurfaceStageElapsedSeconds, flight.HeightMeters, seconds, settings)
+                    ? ShipLandingGuidance.LandingSpeed(flight.SurfaceStageElapsedSeconds, flight.HeightMeters, seconds, settings, gravity)
                     : ShipLandingGuidance.TakeoffSpeed(settings);
                 // 最后半米等待隐藏建筑备齐，悬停仍由真实引擎与燃料承担。
                 if (waitingForGround) desiredSpeed = Math.Max(desiredSpeed, Math.Min(0d, (GroundPreparationHoldHeight - flight.HeightMeters) / seconds));
@@ -261,7 +261,8 @@ namespace FlatWorld.Spaceflight
             if (flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
             {
                 if (flight.PoweredDescent)
-                    return Math.Max(0d, SpaceGameplaySettings.Current.LandingDurationSeconds - flight.SurfaceStageElapsedSeconds);
+                    return Math.Max(0d, ShipLandingGuidance.ResolvePoweredLandingDurationSeconds(
+                        GetBody(flight.BodyId).SurfaceGravity, SpaceGameplaySettings.Current) - flight.SurfaceStageElapsedSeconds);
                 double g = GetBody(flight.BodyId).SurfaceGravity;
                 return g > 0d ? (flight.VerticalSpeed + Math.Sqrt(flight.VerticalSpeed * flight.VerticalSpeed + 2d * g * Math.Max(0d, flight.HeightMeters))) / g
                     : flight.VerticalSpeed < 0d ? Math.Max(0d, flight.HeightMeters / -flight.VerticalSpeed) : double.PositiveInfinity;

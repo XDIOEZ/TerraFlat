@@ -1,5 +1,7 @@
 # 宇宙与太空玩法 Lua 测试模块
 
+- 矿石小行星专项：`space_gameplay.lua` 的 `ore_asteroid_drops` 调正式会话扣血/致死，解码真实冷载荷，核对矿石/石头数量、耗尽保存、重复攻击和实际玩家自动拾取；不覆盖武器动画与命中几何。`ship_landing_gameplay.lua` 的 `ore_asteroid_landing` 复用正式普通建筑测试船点火，只预置本次测试船到大型铁矿小行星旁，随后验证正式降落、原建筑移交、真实矿山受击及矿石入包；不覆盖手动航行、镐子动画或真实联机。`universe_content.lua` 还核对独立冷地表真实多矿山、无水草风雨。2026-10-26 本轮用户正在 PlayMode，以上新增现场断言尚未执行，不记为通过。
+
 2026-10-20 大型飞船残骸拆分热点优化：`ShipWrecks.FlushDetachedWrecks` 不再对每个候选块重复分配剩余部件列表，`PiecesTouch` 对旋转后完整矩形以整数闭区间最短间隙判断重叠/四邻接，代替成对 Footprint 逐格嵌套枚举。已离线与原规则做 12,002 组差分对照，无不一致；不改变连通分组顺序、损伤/载荷/燃料事务。尚未执行 Unity 编译、PlayMode 实际多段断裂及 Profiler 对比，需后续现场验收。
 
 2026-10-20 引擎喷焰稳定态优化：ShipEngineExhaustPresenter 在源 Sprite 不变时跳过 Bounds 与局部 Transform 写入，排序层、顺序及 GameObject Layer 不变时跳过原生写入；船件换源/休眠恢复会重绑喷口并使缓存失效。实时发动机出力、停推残留和原发射配置均保持。当前 Lua 尚不覆盖真实喷焰画面和重绑后的粒子层级，本轮未运行 Unity 编译或 PlayMode，需后续现场验证。

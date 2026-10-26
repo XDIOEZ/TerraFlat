@@ -3,7 +3,7 @@ using FlatWorld.Spaceflight;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public enum PlanetSurfaceStyle { Rocky, Ocean, Banded, Stellar }
+public enum PlanetSurfaceStyle { Rocky, Ocean, Banded, Stellar, Asteroid }
 
 internal sealed class PlanetSurfacePresentation : IDisposable
 {

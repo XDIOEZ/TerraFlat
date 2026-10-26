@@ -4,7 +4,7 @@ Shader "FlatWorld/Space/PlanetSurface"
     {
         _Color("Planet Color", Color) = (1,1,1,1)
         _SurfaceAccentColor("Surface Accent", Color) = (0.5,0.5,0.5,1)
-        [Enum(Rocky,0,Ocean,1,Banded,2,Stellar,3)] _SurfaceStyle("Surface Style", Float) = 0
+        [Enum(Rocky,0,Ocean,1,Banded,2,Stellar,3,Asteroid,4)] _SurfaceStyle("Surface Style", Float) = 0
         _SurfaceDetailStrength("Surface Detail Strength", Range(0,1)) = 0.2
         _SurfaceDetailScale("Surface Detail Scale", Float) = 12
         _SurfaceExtent("Surface Extent", Float) = 1.12
@@ -57,7 +57,16 @@ Shader "FlatWorld/Space/PlanetSurface"
         float PlanetCoverage(float2 uv)
         {
             // 圆边只柔化一个屏幕像素，放大时不会继承贴图的模糊边。
-            float radius = length((uv * 2.0 - 1.0) * _SurfaceExtent);
+            float2 p = (uv * 2.0 - 1.0) * _SurfaceExtent;
+            float radius = length(p);
+            if (_SurfaceStyle > 3.5)
+            {
+                // 小行星轮廓保留大块不规则岩角，实际边界始终位于物理半径内。
+                float angle = atan2(p.y, p.x + 0.0000001) + _SurfaceRotation;
+                float boundary = 0.86 + sin(angle * 3.0 + _SurfaceSeed) * 0.065 +
+                    sin(angle * 5.0 - _SurfaceSeed * 0.71) * 0.035 + sin(angle * 9.0 + _SurfaceSeed) * 0.02;
+                radius /= boundary;
+            }
             float pixelWidth = max(fwidth(radius), 0.0000001);
             return 1.0 - smoothstep(1.0 - pixelWidth, 1.0 + pixelWidth, radius);
         }
@@ -90,12 +99,12 @@ Shader "FlatWorld/Space/PlanetSurface"
             float radius = length(p);
             float coverage = PlanetCoverage(uv);
             float3 normal = normalize(float3(p, sqrt(saturate(1.0 - dot(p, p)))));
-            float glow = _SurfaceStyle > 2.5 ? PlanetCorona(p, radius) : PlanetAtmosphere(radius, normal);
+            float glow = _SurfaceStyle > 2.5 && _SurfaceStyle < 3.5 ? PlanetCorona(p, radius) : PlanetAtmosphere(radius, normal);
             float alpha = max(coverage, glow) * _Color.a;
             clip(alpha - 0.0001);
             float3 surfaceNormal = PlanetRotate(normal, _SurfaceRotation);
             float3 coords = surfaceNormal * max(1.0, _SurfaceDetailScale) + _SurfaceSeed;
-            float coarse = _SurfaceStyle < 1.5 ? PlanetFractal(coords) : 0.5;
+            float coarse = _SurfaceStyle < 1.5 || _SurfaceStyle > 3.5 ? PlanetFractal(coords) : 0.5;
             float fine = PlanetFilteredNoise(coords * 7.3 + 91.0) - 0.5;
             float diffuse = saturate(dot(normal, normalize(_SurfaceLightDirection.xyz)));
             half3 color = _Color.rgb;
@@ -139,7 +148,7 @@ Shader "FlatWorld/Space/PlanetSurface"
                 color *= 1.0 + _SurfaceDetailStrength * ((flow - 0.5) * 0.8 + fine * 0.12);
                 color *= 0.28 + diffuse * 0.72;
             }
-            else
+            else if (_SurfaceStyle < 3.5)
             {
                 // 太阳粒状表面、热点和日冕只读 Shader 时间，不逐帧重绘 CPU 纹理。
                 float3 flowCoords = coords + float3(_Time.y * 0.06, _Time.y * 0.035, 0.0);
@@ -150,6 +159,14 @@ Shader "FlatWorld/Space/PlanetSurface"
                 color *= 0.7 + sqrt(saturate(1.0 - dot(p, p))) * 0.35;
                 color = lerp(_Color.rgb, color, _SurfaceDetailStrength);
                 color = lerp(_SurfaceAccentColor.rgb, color, coverage);
+            }
+            else
+            {
+                float fractures = 1.0 - abs(coarse * 2.0 - 1.0);
+                float ore = smoothstep(0.74, 0.87, PlanetFilteredNoise(coords * 2.1 + 37.0));
+                color *= 0.65 + fractures * 0.42 + fine * _SurfaceDetailStrength * 0.38;
+                color = lerp(color, _SurfaceAccentColor.rgb, ore * _SurfaceDetailStrength);
+                color *= 0.2 + diffuse * 0.8;
             }
             if (_SurfaceStyle < 2.5)
             {
@@ -189,7 +206,7 @@ Shader "FlatWorld/Space/PlanetSurface"
             half4 PlanetLitFragment(Varyings input) : SV_Target
             {
                 half4 color = PlanetColor(input.uv);
-                if (_SurfaceStyle > 2.5) return color;
+                if (_SurfaceStyle > 2.5 && _SurfaceStyle < 3.5) return color;
                 SurfaceData2D surfaceData;
                 InputData2D inputData;
                 InitializeSurfaceData(color.rgb, color.a, half4(1,1,1,1), surfaceData);
@@ -210,7 +227,7 @@ Shader "FlatWorld/Space/PlanetSurface"
                 float2 p = (input.uv * 2.0 - 1.0) * _SurfaceExtent;
                 float radius = length(p);
                 float3 normal = normalize(float3(p, sqrt(saturate(1.0 - dot(p, p)))));
-                float glow = _SurfaceStyle > 2.5 ? PlanetCorona(p, radius) : PlanetAtmosphere(radius, normal);
+                float glow = _SurfaceStyle > 2.5 && _SurfaceStyle < 3.5 ? PlanetCorona(p, radius) : PlanetAtmosphere(radius, normal);
                 half alpha = max(PlanetCoverage(input.uv), glow) * _Color.a;
                 clip(alpha - 0.0001);
                 return half4(0.5 * (1.0 - GetViewForwardDir()), alpha);

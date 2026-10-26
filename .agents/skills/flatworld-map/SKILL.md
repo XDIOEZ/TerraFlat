@@ -23,6 +23,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - `WorldGeneration/Hydrology/river-generation.json` 定义地表 `river.*` 与洞穴 `cave.river.*`；新增参数同步 `RiverGenerationConfigCatalog` 严格清单（包括 `river.estuary.*`），回归 `terrain/river_generation_config` 直接读取正式 JSON。Profile 加载时合入快照，预览器编辑只作用于本次预览。
 - `Structures/fixed-structures.json` 经 `FixedStructureCatalog` 展开布局；后端管理占地、能力与回滚，自动遗迹走独立 SO/确定性生成链。
 - 星体地表覆盖来自 `Space/solar-system.json`；月球只用 `Tile_MoonRegolith`（独立灰白 TileBase），自然物/矿物、洞口和遗迹关闭，环形山半径 3～50 格，坑沿仍用月壤。尺寸分布复用 `SpaceSurfaceTerrain`，不靠石地外圈表现坑沿。
+- 大型矿石小行星用 `SurfaceProfile.SurfaceRadiusTiles` 固定有限环绕地表，矿物规则在 `NaturalItems/surface-asteroids.json`，复用正式 `Mine_*` 采矿与差量；`weather.enabled=0` 关闭自然天气，真空地表清空气湿度和风矢量。
 
 主链：配置 → 地形/气候/水文 → `ChunkTerrainData` → 结构/生态 → 差量 → 表现。Chunk 生命周期由 WorldModel 管理。旧地图核心 Prefab、维度物品配置和物品管理器地图缓存已移除；遗迹编辑器安装器只维护目录/示例内容，不再挂旧生成器或提供强制生成开关。
 

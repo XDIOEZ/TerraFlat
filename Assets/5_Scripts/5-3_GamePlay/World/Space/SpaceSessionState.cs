@@ -20,6 +20,8 @@ namespace FlatWorld.Spaceflight
         public List<ShipNavigationState> Navigation = new();
         public List<ShipDockingPairState> Docking = new();
         public List<SpaceLooseItemState> LooseItems = new();
+        public List<SpaceOreAsteroidState> OreAsteroids = new();
+        public List<SpaceSectorId> GeneratedOreAsteroidSectors = new();
         public List<GroundAtmosphereState> GroundAtmospheres = new();
         public List<SpaceElevatorState> Elevators = new();
         public long NavigationSequence;

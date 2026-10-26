@@ -23,6 +23,7 @@ namespace FlatWorld.Spaceflight
                 var simulation = new UniverseSimulation(sector);
                 sectorDirectory.Add(sector.Sector, simulation);
                 RegisterGravitySources(simulation);
+                EnsureSectorOreAsteroidsGenerated(sector);
             }
             Universe = GetUniverse(default);
             State.Universe = Universe.State;
@@ -38,6 +39,7 @@ namespace FlatWorld.Spaceflight
             State.Sectors.Add(data); sectorDirectory.Add(sector, simulation);
             RegisterGravitySources(simulation);
             RegisterSectorPlanets(data, null);
+            EnsureSectorOreAsteroidsGenerated(data);
             return simulation;
         }
         private void RegisterSectorPlanets(UniverseState sector, PlanetData template)

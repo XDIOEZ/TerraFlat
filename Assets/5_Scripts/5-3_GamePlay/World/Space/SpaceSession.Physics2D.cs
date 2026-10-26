@@ -76,6 +76,7 @@ namespace FlatWorld.Spaceflight
                 }
                 ConfigureSpaceCircle(body, Math.Max(.01d, item.Motion.RadiusMeters), false);
             }
+            AddNearbyOreAsteroidPhysicsBodies(seconds);
             spacePhysics.Step(gravitySources, Math.Max(0d, State.SimulationSeconds - seconds), seconds, SpaceGameplaySettings.Current);
             foreach (SpacePhysicsBody body in spacePhysics.ActiveBodies) CommitSpacePhysicsBody(body);
             // 损伤只读取 Unity 已经解算的接触，不能再向同一批刚体追加自研碰撞冲量。

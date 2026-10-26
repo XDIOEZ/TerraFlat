@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
@@ -90,6 +91,7 @@ public static class GameplayTestUniverseProbe
     private static JObject Surface(SurfaceProfile profile) => new()
     {
         ["id"] = profile.Id, ["temperatureCelsius"] = profile.TemperatureCelsius,
+        ["surfaceRadiusTiles"] = profile.SurfaceRadiusTiles,
         ["pressureKPa"] = profile.PressureKPa, ["composition"] = Json(profile.AtmosphereComposition),
         ["numbers"] = Json(profile.NumericParameters), ["texts"] = Json(profile.TextParameters),
         ["tiles"] = Json(profile.TileParameters), ["caveNumbers"] = Json(profile.CaveNumericParameters),
@@ -107,6 +109,7 @@ public static class GameplayTestUniverseProbe
             ["id"] = planet.BodyId, ["name"] = planet.Name, ["displayName"] = planet.name,
             ["prefabId"] = planet.PrefabName, ["surfaceProfileId"] = planet.SurfaceGenerationProfileId,
             ["radius"] = planet.PhysicalRadiusMeters, ["gravity"] = planet.SurfaceGravityMetersPerSecondSquared,
+            ["mapRadius"] = planet.Radius, ["topology"] = planet.TopologyMode.ToString(),
             ["rotationDegreesPerSecond"] = planet.SelfRotateSpeed, ["globalTemperature"] = planet.GlobalTemperature,
             ["atmosphereProfileId"] = planet.AtmosphereProfileId,
             ["temperatureKelvin"] = planet.Atmosphere.TemperatureKelvin,
@@ -509,7 +512,11 @@ public static class GameplayTestUniverseProbe
                         ["ecologyMultiplier"] = profile.EcologyGlobalMultiplier,
                         ["ecologyRuleCount"] = profile.EcologyRules.Count, ["caveResourceRuleCount"] = profile.CaveResourceRules.Count },
                     ["span"] = new JObject { ["x"] = bounds.Span.x, ["y"] = bounds.Span.y },
-                    ["samples"] = first, ["repeatSamples"] = repeated
+                    ["samples"] = first, ["repeatSamples"] = repeated,
+                    ["resourceWindow"] = body.SurfaceProfileId.StartsWith("core:surface.asteroid.", StringComparison.Ordinal)
+                        ? ColdOreAsteroidResourceWindow(planet, profile, topology, seed) : null,
+                    ["repeatResourceWindow"] = body.SurfaceProfileId.StartsWith("core:surface.asteroid.", StringComparison.Ordinal)
+                        ? ColdOreAsteroidResourceWindow(planet, profile, topology, seed) : null
                 });
             }
         return new JObject { ["source"] = "isolated-cold-generation", ["bodies"] = bodies };
@@ -539,6 +546,10 @@ public static class GameplayTestUniverseProbe
                 int localX = x - originX, localY = y - originY;
                 TerrainCell cell = terrain.GetCell(localX, localY);
                 bool temperatureFound = terrain.TryGetEnvironmentValue("temperature.celsius", localX, localY, out float temperature);
+                terrain.TryGetEnvironmentValue("windX", localX, localY, out float windX);
+                terrain.TryGetEnvironmentValue("windY", localX, localY, out float windY);
+                if (!world.TryGetChunk(address, out ChunkRuntime runtime))
+                    throw new InvalidOperationException("冷地形采样缺少正式生态区块。");
                 samples.Add(new JObject
                 {
                     ["input"] = new JObject { ["x"] = point.X, ["y"] = point.Y },
@@ -548,6 +559,10 @@ public static class GameplayTestUniverseProbe
                     ["walkable"] = cell.IsWalkable, ["liquidId"] = terrain.GetLiquidId(localX, localY),
                     ["liquidDepth"] = terrain.GetLiquidDepth(localX, localY), ["temperatureFound"] = temperatureFound,
                     ["temperatureCelsius"] = temperature + planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature,
+                    ["grass"] = terrain.GetGrass(localX, localY), ["windX"] = windX, ["windY"] = windY,
+                    ["weatherElementCount"] = terrain.WeatherProfile?.Elements.Count ?? -1,
+                    ["naturalItems"] = JObject.FromObject(runtime.Ecology.Placements.GroupBy(value => value.ItemId)
+                        .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal)),
                     ["pressureKPa"] = AtmosphereService.PressureKPa(planet.Atmosphere),
                     ["terrainHash"] = terrain.ComputeStableHash().ToString(CultureInfo.InvariantCulture)
                 });
@@ -555,6 +570,45 @@ public static class GameplayTestUniverseProbe
         }
         finally { generator.BeginNewWorldHydrologyEpoch(1); }
         return samples;
+    }
+
+    private static JObject ColdOreAsteroidResourceWindow(PlanetData planet, ChunkGenerationProfileSnapshot original,
+        ChunkGenerationTopologySnapshot topology, int seed)
+    {
+        ChunkGenerationProfileSnapshot profile = original.WithChunkSize(128, 128, false);
+        using var world = new WorldRuntime(planet.Name, 1);
+        var generator = new DeterministicChunkGenerator(GameRes.RequireWorldLiquidTypes(), SpaceSurfaceTerrain.Apply);
+        try
+        {
+            var address = new RuntimeAddress(global::WorldAddress.SurfaceDimensionId, default);
+            ChunkGenerationRequest request = world.BeginChunkGeneration(address, seed, profile, topology);
+            using ChunkGenerationResult generated = generator.Generate(request, CancellationToken.None);
+            if (!world.TryCommit(generated, out string reason) || !world.TryGetChunk(address, out ChunkRuntime runtime))
+                throw new InvalidOperationException("小行星真实矿物窗口生成失败：" + reason);
+            ChunkTerrainData terrain = runtime.Terrain;
+            int waterTiles = 0, grassTiles = 0;
+            double maximumWind = 0d;
+            for (int y = 0; y < terrain.Height; y++)
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                if (terrain.GetLiquidDepth(x, y) > 0f) waterTiles++;
+                if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent) grassTiles++;
+                terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
+                terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
+                maximumWind = Math.Max(maximumWind, Math.Sqrt(windX * windX + windY * windY));
+            }
+            uint identity = 2166136261u;
+            foreach (NaturalItemPlacement placement in runtime.Ecology.Placements)
+                unchecked { identity = (identity ^ (uint)placement.Guid) * 16777619u; }
+            return new JObject { ["width"] = terrain.Width, ["height"] = terrain.Height,
+                ["terrainHash"] = terrain.ComputeStableHash().ToString(CultureInfo.InvariantCulture),
+                ["placementHash"] = identity.ToString(CultureInfo.InvariantCulture),
+                ["naturalItems"] = JObject.FromObject(runtime.Ecology.Placements.GroupBy(value => value.ItemId)
+                    .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal)),
+                ["waterTiles"] = waterTiles, ["grassTiles"] = grassTiles, ["maximumWind"] = maximumWind,
+                ["weatherElementCount"] = terrain.WeatherProfile?.Elements.Count ?? -1 };
+        }
+        finally { generator.BeginNewWorldHydrologyEpoch(1); }
     }
     #endregion
 }

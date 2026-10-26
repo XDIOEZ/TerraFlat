@@ -18,10 +18,10 @@ namespace FlatWorld.Spaceflight
         internal static void PrewarmQueryPools()
         {
             using var candidates = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor,
-                Mod_DamageReceiver Receiver)>.Get(out _);
+                Mod_DamageReceiver Receiver, SpaceOreAsteroidState Asteroid)>.Get(out _);
             using var hits = UnityEngine.Pool.ListPool<CombatColliderHit2D>.Get(out _);
             using var resolved = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece,
-                RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>.Get(out _);
+                RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, SpaceOreAsteroidState Asteroid, CombatColliderHit2D Contact)>.Get(out _);
         }
 
         private sealed class HitOrder : IComparer<CombatColliderHit2D>
@@ -64,10 +64,10 @@ namespace FlatWorld.Spaceflight
                 : default;
             // 攻击窗口内的三份临时名单统一租用池，连续挥砍不再反复分配托管数组。
             using var candidatesLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor,
-                Mod_DamageReceiver Receiver)>.Get(out var candidates);
+                Mod_DamageReceiver Receiver, SpaceOreAsteroidState Asteroid)>.Get(out var candidates);
             using var hitsLease = UnityEngine.Pool.ListPool<CombatColliderHit2D>.Get(out var hits);
             using var resolvedLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece,
-                RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>.Get(out var resolvedHits);
+                RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, SpaceOreAsteroidState Asteroid, CombatColliderHit2D Contact)>.Get(out var resolvedHits);
             using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
             {
                 foreach (ShipState ship in session.State.Ships)
@@ -107,9 +107,21 @@ namespace FlatWorld.Spaceflight
                         ShipGeometry.Rotate(local.Center.x, local.Center.y, angle, out double offsetX, out double offsetY);
                         local.Center = new float2(anchor.x + (float)offsetX, anchor.y + (float)offsetY);
                         physics.Add(candidates.Count, local, (float)(angle * 180d / Math.PI));
-                        candidates.Add((ship, piece, anchor, null));
+                        candidates.Add((ship, piece, anchor, null, null));
                     }
                 }
+                if (spaceCombat)
+                    foreach (SpaceOreAsteroidState asteroid in session.State.OreAsteroids)
+                    {
+                        if (!asteroid.IsAlive) continue;
+                        Vector2 anchor = presentationOrigin + SpaceSectorCoordinates.Difference(
+                            session.GetOreAsteroidPosition(asteroid), canonicalOrigin).ToVector2();
+                        float radius = (float)asteroid.RadiusMeters;
+                        if (Math.Abs(anchor.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + radius ||
+                            Math.Abs(anchor.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + radius) continue;
+                        physics.Add(candidates.Count, PerceptionShape2D.Circle(anchor, radius), 0f);
+                        candidates.Add((null, null, anchor, null, asteroid));
+                    }
                 if (spaceCombat && ItemMgr.Instance != null)
                     foreach (SpacePassengerState passenger in session.State.Passengers)
                     {
@@ -129,7 +141,7 @@ namespace FlatWorld.Spaceflight
                         if (Math.Abs(anchor.x + offset.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + extent.magnitude ||
                             Math.Abs(anchor.y + offset.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + extent.magnitude) continue;
                         physics.Add(candidates.Count, PerceptionShape2D.Aabb(anchor + offset, extent), Mathf.Atan2(axisX.y, axisX.x) * Mathf.Rad2Deg);
-                        candidates.Add((null, null, default, receiver));
+                        candidates.Add((null, null, default, receiver, null));
                     }
                 physics.Query(shape, hits);
             }
@@ -138,9 +150,14 @@ namespace FlatWorld.Spaceflight
             foreach (CombatColliderHit2D contact in hits)
             {
                 var target = candidates[contact.CandidateId];
+                if (target.Asteroid != null)
+                {
+                    resolvedHits.Add((null, null, null, null, target.Asteroid, contact));
+                    continue;
+                }
                 if (target.Receiver != null)
                 {
-                    resolvedHits.Add((null, null, null, target.Receiver, contact));
+                    resolvedHits.Add((null, null, null, target.Receiver, null, contact));
                     continue;
                 }
                 Vector2 delta = contact.Point - target.Anchor;
@@ -152,7 +169,7 @@ namespace FlatWorld.Spaceflight
                 {
                     if (piece.Kind == ShipPieceKind.Wire && MachineCatalog.Get(piece.ItemId)?.Electrical?.Hidden == true &&
                         !EngineeringVision.CanSee(weapon.item?.Owner)) continue;
-                    resolvedHits.Add((target.Ship, piece, definition, null, contact));
+                    resolvedHits.Add((target.Ship, piece, definition, null, null, contact));
                 }
             }
             // 命中名单在扣血前固定，先摧毁设备也不能让同一发补打刚露出的地板。
@@ -160,6 +177,21 @@ namespace FlatWorld.Spaceflight
             {
                 if (weapon.RemainingAttackTargets == 0) break;
                 CombatColliderHit2D contact = target.Contact;
+                if (target.Asteroid != null)
+                {
+                    if (!target.Asteroid.IsAlive) continue;
+                    ulong stableId = ((ulong)unchecked((uint)UniverseSectorFactory.DeriveSeed(0, target.Asteroid.AsteroidId)) << 32) |
+                        unchecked((uint)UniverseSectorFactory.DeriveSeed(1, target.Asteroid.AsteroidId));
+                    var asteroidIdentity = new CombatIdentity { Backend = CombatBackend.External, Value = stableId | (1UL << 63),
+                        World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
+                    if (!weapon.TryReserveExternalTarget(asteroidIdentity)) continue;
+                    CombatDamageContext asteroidHit = context; asteroidHit.HitPoint = contact.Point;
+                    weapon.ConsumeWeaponDurabilityForHit();
+                    float multiplier = GameplayCombatBridge.Tuning().Resolve(context.SourceIsPlayer != 0, false);
+                    float asteroidDamage = CombatRules.ResolvePhysical(math.csum(context.Damage), 0f, multiplier, 1f);
+                    weapon.PublishExternalDamage(asteroidHit, (float)session.ApplyResolvedOreAsteroidDamage(target.Asteroid, asteroidDamage));
+                    continue;
+                }
                 if (target.Receiver != null)
                 {
                     if (!weapon.TryReserveExternalTarget(GameplayCombatBridge.Identity(target.Receiver.item))) continue;

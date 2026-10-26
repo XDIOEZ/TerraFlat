@@ -1,5 +1,136 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
+test.system("space", "ore_asteroid_rules", {}, function(data)
+    local function same(a, b)
+        if type(a) ~= type(b) then return false end
+        if type(a) ~= "table" then return a == b end
+        for key, value in pairs(a) do if not same(value, b[key]) then return false end end
+        for key in pairs(b) do if a[key] == nil then return false end end
+        return true
+    end
+    assert(data.scope == "isolated-production-asteroid-domain" and #data.first > 0,
+        "缺少正式小行星领域采样")
+    assert(same(data.first, data["repeat"]) and not same(data.first, data.alternate),
+        "同种子矿带不稳定，或换种子仍完全相同")
+    assert(data.emptyCount == 0 and #data.remote == #data.first,
+        "空域凭空生成矿带，或跨星区丢失配置矿带")
+    local compositions, ids, kinds = {}, {}, {}
+    for _, composition in ipairs(data.compositions) do
+        assert(not compositions[composition.id] and composition.weight > 0 and composition.amountMin > 0 and
+            composition.amountMax >= composition.amountMin and composition.canBePickedUp and composition.stackable and
+            type(composition.spriteAddress) == "string" and #composition.spriteAddress > 0,
+            "小行星矿物没有有效、可拾取且可堆叠的正式内容")
+        compositions[composition.id] = composition
+    end
+    local count = 0
+    for _, field in ipairs(data.fields) do
+        for _, center in ipairs(field.centers) do
+            local found = 0
+            local prefix = center.id .. "/ore:" .. field.id .. ":"
+            for _, rock in ipairs(data.first) do
+                if string.sub(rock.AsteroidId, 1, #prefix) == prefix then
+                    found = found + 1
+                    assert(not ids[rock.AsteroidId] and rock.CenterBodyId == center.id,
+                        "小行星身份重复或归属错误")
+                    ids[rock.AsteroidId] = true
+                    local composition = compositions[rock.CompositionId]
+                    assert(composition, "小行星引用未知矿物")
+                    kinds[composition.itemId] = true
+                    local clearance = math.sqrt(rock.OffsetMeters.X^2 + rock.OffsetMeters.Y^2) - center.radius - rock.RadiusMeters
+                    assert(rock.RadiusMeters >= field.minRadius and rock.RadiusMeters <= field.maxRadius and
+                        clearance >= field.minClearance - 0.000001 and clearance <= field.maxClearance + 0.000001,
+                        "小行星半径或距大星体表面范围错误")
+                    assert(rock.OreAmount >= composition.amountMin and rock.OreAmount <= composition.amountMax and
+                        rock.StoneAmount >= field.stoneMin and rock.StoneAmount <= field.stoneMax,
+                        "矿石或石头产量越界")
+                    assert(not rock.Depleted and rock.HitPoints == rock.MaximumHitPoints and rock.HitPoints > 0 and
+                        math.abs(rock.HitPoints - rock.RadiusMeters * field.hitPointsPerRadius) < 0.000001,
+                        "新小行星不是完好存活状态")
+                end
+            end
+            assert(found == field.countPerBody, "矿带数量没有按中心星体配置生成")
+            count = count + found
+        end
+    end
+    assert(count == #data.first, "存在未登记矿带的小行星")
+    local kindCount = 0
+    for _ in pairs(kinds) do kindCount = kindCount + 1 end
+    assert(kindCount >= 3, "正常世界矿带没有至少三种可获取矿物")
+    for _, rock in ipairs(data.remote) do assert(not ids[rock.AsteroidId], "跨星区复用了小行星身份") end
+    local hits = {}
+    for _, hit in ipairs(data.damage) do hits[hit.label] = hit end
+    for _, label in ipairs({"zero", "negative", "nan", "infinity"}) do
+        local hit = hits[label]
+        assert(not hit.accepted and hit.applied == 0 and hit.before == hit.after and hit.alive and not hit.depleted,
+            "非法伤害改变了小行星：" .. label)
+    end
+    local partial, refused, lethal, repeated = hits.nonlethal, hits.unprepared_lethal, hits.prepared_lethal, hits.repeated_lethal
+    assert(partial.accepted and partial.after > 0 and partial.after < partial.before and not partial.depleted,
+        "非致命攻击没有只扣血")
+    assert(not refused.accepted and refused.applied == 0 and refused.after == refused.before and refused.alive,
+        "掉落准备失败仍将小行星致死")
+    assert(lethal.accepted and lethal.applied == lethal.before and lethal.after == 0 and lethal.depleted and not lethal.alive,
+        "正式致死没有夹取过量伤害或记录耗尽")
+    assert(not repeated.accepted and repeated.applied == 0 and repeated.depleted,
+        "重复破坏仍可生效")
+    assert(data.saved.Depleted and data.restored.Depleted and data.restored.HitPoints == 0 and
+        not data.restoredHit and data.restoredApplied == 0, "保存恢复后耗尽小行星重新产矿")
+    assert(#data.guards >= 9, "非法配置边界采样不完整")
+    for _, guard in ipairs(data.guards) do assert(type(guard.exception) == "string", "非法配置未拒绝：" .. guard.label) end
+    return "正式矿带、矿物、伤害原子性和耗尽保存；不表示武器几何或真实拾取通过"
+end, "矿石小行星确定性、击碎幂等与多矿种掉落规则")
+
+test.system("space", "ore_asteroid_profiles", {}, function(data)
+    assert(data.scope == "isolated-production-asteroid-profiles" and #data.asteroids >= 3,
+        "大型矿石小行星目录不完整")
+    local profiles = {}
+    for _, asteroid in ipairs(data.asteroids) do
+        assert(not profiles[asteroid.surfaceId] and asteroid.configuredRadius > 0 and asteroid.configuredRadius <= 256 and
+            asteroid.planetRadius == asteroid.configuredRadius and asteroid.topology == "Wrapped",
+            "大型小行星没有独立小尺寸环绕地表")
+        profiles[asteroid.surfaceId] = true
+        assert(asteroid.bodyRadius > 0 and asteroid.bodyRadius <= 200 and asteroid.gravity >= 0.25 and asteroid.gravity < 1 and
+            asteroid.captureRadius > asteroid.bodyRadius and asteroid.damping == 0 and asteroid.pressure == 0,
+            "大型小行星低重力、真空或真实捕获范围无效")
+        for _, key in ipairs({"river.enabled", "lake.large.enabled", "lake.lava.enabled", "grass.density",
+            "cave.portal.enabled", "structure.enabled", "weather.enabled"}) do
+            assert(asteroid.numbers[key] == 0, "小行星地表仍启用无关生态：" .. key)
+        end
+        assert(asteroid.numbers["space.uniformSurface"] == 1 and asteroid.tiles["space.uniformTileId"] == "Tile_Stone",
+            "大型小行星未使用独立岩石地表")
+        local mines, count = {}, 0
+        for _, resource in ipairs(asteroid.resources) do
+            assert(resource.spawnChance > 0 and resource.multiplier > 0 and
+                type(resource.spriteAddress) == "string" and #resource.spriteAddress > 0,
+                "小行星矿物规则没有正式资源和有效生成率")
+            if string.sub(resource.itemId, 1, 5) == "Mine_" then
+                mines[resource.itemId] = true
+                assert(#resource.loot > 0, "矿山缺少正式矿石掉落")
+                for _, drop in ipairs(resource.loot) do
+                    assert(drop.chance > 0 and drop.max >= drop.min and drop.max > 0 and drop.canBePickedUp,
+                        "矿山掉落不是可获取的正式物品")
+                end
+            else assert(resource.itemId == "Ore_Stone", "小行星混入非矿物自然物") end
+        end
+        for _ in pairs(mines) do count = count + 1 end
+        assert(count >= 2, "大型小行星没有至少两种可开采矿山")
+        assert(asteroid.nearLanding == asteroid.id and asteroid.farLanding == nil and
+            asteroid.contactBody == asteroid.id and asteroid.contactPlanet == asteroid.planetId and asteroid.relativeSpeed < 0.000001,
+            "正式降落范围或目标世界身份没有支持小行星")
+        local descent = asteroid.poweredDescent
+        assert(descent.source == "production-guidance-independent-vertical-integration" and descent.duration > 10 and
+            math.abs(descent.elapsed - descent.duration) < 0.000001 and math.abs(descent.height) < 0.000001 and
+            math.abs(descent.speed) <= 0.5 and descent.minimumRequestedThrust >= -0.00001,
+            "低重力受控下降需要不可用的向下推力，或无法安全触地")
+    end
+    assert(data.earthLandingDuration == 10, "小行星下降时长改动影响地球正常降落")
+    local rebound = data.rebind
+    assert(rebound.afterFirst == rebound.expected and rebound.afterSecond == rebound.expected and
+        rebound.originalsPreserved and math.abs(rebound.simulationSeconds - 123.45) < 0.000001,
+        "目录重绑定没有幂等补齐新星体，或改变已有星体身份、种子、初相和时钟")
+    return "三类大型矿石小行星、正式矿山及低重力降落领域；真实场景另由起降专项验证"
+end, "大型矿石小行星独立地表、矿山与正式降落规则")
+
 test.system("space", "loose_drop_rules", {}, function(data)
     assert(not data.earlyPickup and data.readyPickup and not data.invalidClock,
         "太空投掷尚未结束就被自动拾回，或拾取时钟边界错误")

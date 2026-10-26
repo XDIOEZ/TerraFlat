@@ -71,6 +71,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            ReleaseOreAsteroidPresentation();
             ResetElevatorRuntime();
             ClearGroundPreparations();
             observedNetworkRealms.Clear();
@@ -95,6 +96,7 @@ namespace FlatWorld.Spaceflight
         private void Load(GameSaveData save)
         {
             if (save == null || ReferenceEquals(owner, save)) return;
+            ReleaseOreAsteroidPresentation();
             ResetFlightAudio();
             ClearGroundPreparations();
             ResetPresentationHistory();
@@ -149,6 +151,7 @@ namespace FlatWorld.Spaceflight
             SpaceMgr.ExistingInstance?.ReleaseRetainedPresentationCache();
             if (Current == null) return;
             Current.running = false;
+            Current.ReleaseOreAsteroidPresentation();
             Current.ClearGroundPreparations();
             Current.ResetPresentationHistory();
             Current.ResetSpacePhysics();
@@ -284,6 +287,7 @@ namespace FlatWorld.Spaceflight
             RestoreLandedBuildings();
             using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();
+            SynchronizeOreAsteroidPresentation();
             PresentationSynchronized?.Invoke();
             ShipPanelSession.RefreshOpen(this);
             SpaceLandingPanelSession.Refresh(this, ItemMgr.Instance?.User_Player);

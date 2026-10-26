@@ -279,6 +279,10 @@ namespace FlatWorld.Spaceflight
                         ? SpaceSectorCoordinates.Difference(new SpaceSectorPosition(loose.Motion.Sector, loose.Motion.PositionMeters), observer.Position).Magnitude <= rangeMeters
                         : loose.WorldKey == observer.WorldKey)) snapshot.LooseItems.Add(loose);
                 foreach (ShipNavigationState task in State.Navigation) if (includedShips.Contains(task.ShipId)) snapshot.Navigation.Add(task);
+                if (observer.InSpace)
+                    foreach (SpaceOreAsteroidState asteroid in State.OreAsteroids)
+                        if (asteroid.IsAlive && SpaceSectorCoordinates.Difference(GetOreAsteroidPosition(asteroid), observer.Position).Magnitude <= rangeMeters + asteroid.RadiusMeters)
+                        { snapshot.OreAsteroids.Add(asteroid); includedSectors.Add(asteroid.Sector); }
                 foreach (ShipDockingPairState pair in State.Docking) if (includedShips.Contains(pair.ShipAId) && includedShips.Contains(pair.ShipBId)) snapshot.Docking.Add(pair);
                 foreach (SpaceSectorId sector in includedSectors) snapshot.Sectors.Add(GetUniverse(sector).State);
                 foreach (GroundAtmosphereState ground in State.GroundAtmospheres)

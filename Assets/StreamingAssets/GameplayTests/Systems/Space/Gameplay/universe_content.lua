@@ -308,6 +308,15 @@ do
             local uniform = (profile.numbers["space.uniformSurface"] or 0) > 0
             local climateOverride = uniform or (profile.numbers["space.climateOverride"] or 0) > 0
             local variation = profile.numbers["space.temperatureVariationCelsius"] or 0
+            local oreAsteroid = string.sub(surface.id, 1, #"core:surface.asteroid.") == "core:surface.asteroid."
+            local asteroidMines = {}
+            if oreAsteroid then
+                assert(body.planet.mapRadius == surface.surfaceRadiusTiles and body.planet.topology == "Wrapped" and
+                    body.span.x <= 512 and body.span.y <= 512 and body.planet.pressureKPa == 0,
+                    "矿石小行星没有使用真实独立小尺寸真空地表")
+                assert(profile.ecologyRuleCount >= 3 and profile.ecologyMultiplier > 0 and
+                    profile.numbers["weather.enabled"] == 0, "矿石小行星缺少真实矿山或仍启用天然天气")
+            end
             if surface.id == "core:surface.moon" then
                 -- 月球只保留月壤和高低起伏，坑沿、矿物和自然物不能重新混入石头。
                 assert(uniform and surface.tiles["space.uniformTileId"] == "Tile_MoonRegolith", "月球没有统一使用月壤")
@@ -350,6 +359,16 @@ do
                         assert(sample.groundTileId == profile.numbers["space.uniformTileId"], sampleLabel .. "均匀地表地块错误")
                     end
                 end
+                if oreAsteroid then
+                    assert(sample.liquidDepth == 0 and sample.grass ~= 2 and sample.windX == 0 and sample.windY == 0 and
+                        sample.weatherElementCount == 0, "矿石小行星冷地表仍有水、草或真空风雨")
+                    for itemId, amount in pairs(sample.naturalItems) do
+                        assert(amount > 0 and (itemId == "Ore_Stone" or string.sub(itemId, 1, 5) == "Mine_"),
+                            "矿石小行星真实生成了非矿物自然物：" .. itemId)
+                        assert(repeated.naturalItems[itemId] == amount, "重生成改变真实矿物数量：" .. itemId)
+                        if string.sub(itemId, 1, 5) == "Mine_" then asteroidMines[itemId] = true end
+                    end
+                end
                 sampleCount = sampleCount + 1
             end
             local origin, negative, wrapped = body.samples[1], body.samples[2], body.samples[3]
@@ -360,6 +379,22 @@ do
                 wrapped.terrainHash == origin.terrainHash, label .. "跨地表拓扑边界没有回到同一地形")
             near(wrapped.temperatureCelsius, origin.temperatureCelsius, label .. "/环绕温度")
             assert(wrapped.groundTileId == origin.groundTileId and wrapped.liquidId == origin.liquidId, label .. "环绕地形或液体不一致")
+            if oreAsteroid then
+                local count = 0
+                local window, repeated = body.resourceWindow, body.repeatResourceWindow
+                assert(window.width == 128 and window.height == 128 and window.waterTiles == 0 and window.grassTiles == 0 and
+                    window.maximumWind == 0 and window.weatherElementCount == 0,
+                    "大型小行星真实矿物窗口仍有水、草或真空风雨")
+                assert(window.terrainHash == repeated.terrainHash and window.placementHash == repeated.placementHash,
+                    "大型小行星真实地形或矿物身份重生成不稳定")
+                for itemId, amount in pairs(window.naturalItems) do
+                    assert(amount > 0 and repeated.naturalItems[itemId] == amount and
+                        (itemId == "Ore_Stone" or string.sub(itemId, 1, 5) == "Mine_"),
+                        "大型小行星真实生成了错误或不稳定的自然物")
+                    if string.sub(itemId, 1, 5) == "Mine_" then count = count + 1 end
+                end
+                assert(count >= 2, "矿石小行星正式冷地形没有生成至少两种真实矿山")
+            end
         end
         return "冷地表覆盖 " .. #data.bodies .. " 个星体、" .. sampleCount .. " 个坐标与独立重生成；不含活跃差量验收"
     end, "全星体冷地表生成、环境确定性和拓扑环绕")

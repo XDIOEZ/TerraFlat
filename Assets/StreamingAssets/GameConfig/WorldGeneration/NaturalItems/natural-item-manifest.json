@@ -27,6 +27,11 @@
       "enabled": true
     },
     {
+      "id": "surface.asteroids",
+      "path": "surface-asteroids.json",
+      "enabled": true
+    },
+    {
       "id": "surface.sulfur",
       "path": "surface-sulfur.json",
       "enabled": true

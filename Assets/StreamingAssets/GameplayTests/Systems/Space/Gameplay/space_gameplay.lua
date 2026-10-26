@@ -385,3 +385,29 @@ do
         return "真实固定步：跨星区船体相撞、冲量守恒、远区排除与自有夹具回收"
     end, "真实船体跨区接触与远区排除")
 end
+
+test.space("ore_asteroid_drops", function(data)
+    assert(data.scope == "live-authoritative-asteroid-drops-and-player-pickup", "小行星现场采样来源错误")
+    assert(data.partialApplied > 0 and data.afterPartial > 0 and data.afterPartial < data.initialHealth and
+        data.beforeDropCount == data.afterPartialDrops, "非致命攻击没有只扣血，或提前掉矿")
+    assert(data.lethalApplied == data.afterPartial and data.health == 0 and data.depleted,
+        "正式小行星击碎没有提交耗尽状态")
+    local amounts, ids = {}, {}
+    for _, drop in ipairs(data.drops) do
+        assert(not ids[drop.guid] and drop.guid ~= 0 and drop.amount > 0 and drop.pickupAllowed and
+            drop.inSpace and not drop.earlyPickup, "真实冷载荷缺失独立身份、数量或拾取冷却")
+        ids[drop.guid] = true
+        amounts[drop.itemId] = (amounts[drop.itemId] or 0) + drop.amount
+    end
+    assert(amounts[data.compositionItem] == data.oreAmount and (amounts.Ore_Stone or 0) == data.stoneAmount,
+        "冷载荷中真实矿石或石头数量与小行星库存不一致")
+    assert(data.repeatedApplied == 0 and data.beforeRepeatedDrops == data.afterRepeatedDrops and data.savedDepleted and
+        data.savedHealth == 0 and data.savedSector and data.generatedCount == data.afterReentry,
+        "重复攻击、保存恢复或星区重入重新产矿")
+    assert(data.allDropsRemoved and data.oreInventoryGain == data.oreAmount and data.stoneInventoryGain == data.stoneAmount,
+        "真实掉矿没有完整经玩家拾取器进入实际库存")
+    return "正式小行星扣血、击碎、冷载荷解码和真实玩家拾取；武器几何未覆盖"
+end, "小型矿石小行星击碎、耗尽保存与实际拾取")
+
+test.check("world_ready", "小行星掉矿专项清理后地表恢复")
+test.check("player_ready", "小行星掉矿专项清理后玩家重绑")

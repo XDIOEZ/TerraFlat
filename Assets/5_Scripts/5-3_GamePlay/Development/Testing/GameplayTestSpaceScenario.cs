@@ -61,7 +61,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         error = null;
         bool supported = GameplayTestUniverseProbe.Supports(operation) || GameplayTestShipProbe.Supports(operation) ||
             operation is "session" or "ship_templates" or "ship_flight" or "ship_landing" or "ship_collision" or "ship_damage_live" or
-                "ship_ground_combat_projection" or "sector_transition" or "space_visit";
+                "ship_ground_combat_projection" or "sector_transition" or "space_visit" or
+                "ore_asteroid_drops" or "ore_asteroid_landing";
         if (!supported) error = "未开放的太空测试操作：" + operation;
         else if (operation == "sector_transition")
         {
@@ -92,6 +93,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             "ship_templates" => ReadTemplates(value => sample = value),
             "ship_flight" => FlyTemplates(value => sample = value),
             "ship_landing" => FlyTemplates(value => sample = value, landingOnly: true),
+            "ore_asteroid_landing" => FlyTemplates(value => sample = value, asteroidMiningOnly: true),
+            "ore_asteroid_drops" => ObserveOreAsteroidDestructionAndPickup(value => sample = value),
             "ship_collision" => CollideProductionFloors(value => sample = value),
             "ship_damage_live" => DamageProductionLongShip(value => sample = value),
             "ship_ground_combat_projection" => ProbeGroundCombatProjection(value => sample = value),
@@ -446,7 +449,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     #endregion
 
     #region 模板飞船起飞与导航降落
-    private IEnumerator FlyTemplates(Action<JObject> completed, bool landingOnly = false)
+    private IEnumerator FlyTemplates(Action<JObject> completed, bool landingOnly = false, bool asteroidMiningOnly = false)
     {
         if (session.IsSpaceView) throw new InvalidOperationException("模板起飞测试必须从隔离地表世界开始。");
         ProtectPlayer();
@@ -458,6 +461,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         var ships = new List<FixedStructureDefinition>();
         foreach (FixedStructureDefinition template in templates)
             if (string.Equals(template.Kind, "ship", StringComparison.OrdinalIgnoreCase)) ships.Add(template);
+        if (asteroidMiningOnly && ships.Count > 1) ships.RemoveRange(1, ships.Count - 1);
         for (int index = 0; index < ships.Count; index++)
         {
             FixedStructureDefinition template = ships[index];
@@ -507,6 +511,16 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             JObject cruisingViews = ShipViewSnapshot(ship);
             session.ExitConsole(CurrentPlayer());
             controlledConsole = console;
+            if (asteroidMiningOnly)
+            {
+                JObject mining = null;
+                yield return LandOwnedShipOnOreAsteroidAndMine(ship, console, groundIds, value => mining = value);
+                mining["templateId"] = template.Id;
+                mining["lifting"] = lifting;
+                mining["cruising"] = cruising;
+                results.Add(mining);
+                continue;
+            }
             if (landingOnly)
             {
                 // 落地专项复用相同的正式起飞准备，省去惯性、导航和跨区的无关迁移。
@@ -574,7 +588,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             // 最后一艘保留正式降落现场，由宿主自动采集截图。
             if (index + 1 < ships.Count) yield return ReturnHome();
         }
-        completed(new JObject { ["scope"] = landingOnly ? "live-ship-landing" : "live-ship-flight", ["ships"] = results });
+        completed(new JObject { ["scope"] = asteroidMiningOnly ? "live-ore-asteroid-landing-mining" :
+            landingOnly ? "live-ship-landing" : "live-ship-flight", ["ships"] = results });
     }
 
     private JObject ShipViewSnapshot(ShipState ship)
@@ -897,6 +912,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         try { CleanupDamageFixtures(); }
         catch (Exception exception) { cleanupErrors.Add(exception); }
         try { CleanupGroundFuelFixtures(); }
+        catch (Exception exception) { cleanupErrors.Add(exception); }
+        try { CleanupOreAsteroidFixtures(); }
         catch (Exception exception) { cleanupErrors.Add(exception); }
         for (int index = contactFixtures.Count - 1; index >= 0; index--)
         {

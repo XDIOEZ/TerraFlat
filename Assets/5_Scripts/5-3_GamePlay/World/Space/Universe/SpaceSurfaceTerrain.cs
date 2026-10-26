@@ -16,6 +16,7 @@ namespace FlatWorld.Spaceflight
             bool climate = Number(profile, "space.climateOverride", 0d) > 0d || uniform;
             bool craters = Number(profile, "space.crater.enabled", 0d) > 0d;
             bool bands = Number(profile, "space.surfaceBands", 0d) > 0d;
+            bool vacuum = Number(profile, "space.surfacePressureKPa", 100d) <= 0d;
             if (!uniform && !climate && !craters && !bands) return;
             double temperature = Number(profile, "space.surfaceTemperatureCelsius", 26d);
             double variation = Number(profile, "space.temperatureVariationCelsius", 0d);
@@ -48,6 +49,14 @@ namespace FlatWorld.Spaceflight
                         terrain.SetEnvironmentValue("precipitation", x, y, 0f);
                         terrain.SetEnvironmentValue("basePrecipitation", x, y, 0f);
                         terrain.SetEnvironmentValue("moisture", x, y, 0f);
+                        if (vacuum)
+                        {
+                            // 真空地表没有空气湿度与自然风，不能继承母星的气候矢量。
+                            terrain.SetEnvironmentValue(AirHumidityKernel.GeographicLayer, x, y, 0f);
+                            terrain.SetEnvironmentValue(AirHumidityKernel.BackgroundLayer, x, y, 0f);
+                            terrain.SetEnvironmentValue("windX", x, y, 0f);
+                            terrain.SetEnvironmentValue("windY", x, y, 0f);
+                        }
                         terrain.SetEnvironmentValue(SnowDepthLayer.LayerId, x, y, 0f);
                         terrain.SetGrass(x, y, ChunkTerrainData.GrassEmpty);
                     }

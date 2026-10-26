@@ -44,6 +44,7 @@ public static partial class GameplayTestSystemProbe
         RegisterTerrainHeightShadowOperations(result);
         RegisterShipFlightHudOperations(result);
         RegisterSpaceElevatorOperations(result);
+        RegisterOreAsteroidOperations(result);
         return result;
     }
 

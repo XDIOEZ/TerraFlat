@@ -25,6 +25,7 @@ namespace FlatWorld.Spaceflight
         public List<string> EcologyRuleIds;
         public List<string> CaveResourceRuleIds;
         public double EcologyMultiplier = 1d;
+        public int SurfaceRadiusTiles;
         #endregion
     }
 
@@ -55,6 +56,7 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(surface.TemperatureCelsius) || surface.TemperatureCelsius <= -273.15d ||
                     !SpaceVector2.Finite(surface.PressureKPa) || surface.PressureKPa < 0d ||
                     !SpaceVector2.Finite(surface.EcologyMultiplier) || surface.EcologyMultiplier < 0d ||
+                    surface.SurfaceRadiusTiles < 0 ||
                     surface.NumericParameters == null || surface.TextParameters == null ||
                     surface.TileParameters == null || surface.CaveNumericParameters == null ||
                     surface.AtmosphereComposition == null)
@@ -115,7 +117,11 @@ namespace FlatWorld.Spaceflight
             completed?.Invoke(loaded);
         }
 
-        public static void Reset() => current = null;
+        public static void Reset()
+        {
+            current = null;
+            SpaceOreAsteroidCatalog.Reset();
+        }
 
         public void RebindUniverse(UniverseState state)
         {
@@ -124,10 +130,12 @@ namespace FlatWorld.Spaceflight
             state.FixedStepSeconds = config.FixedStepSeconds;
             state.MetersPerUnityUnit = config.MetersPerUnityUnit;
             state.OrbitTimeScale = config.OrbitTimeScale;
+            var presentTemplateBodyIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (BodyState body in state.Bodies)
             {
                 string localId = string.IsNullOrWhiteSpace(body.TemplateBodyId) ? body.BodyId : body.TemplateBodyId;
                 BodyState definition = FindDefinition(state.Sector, localId);
+                presentTemplateBodyIds.Add(definition.BodyId);
                 body.TemplateBodyId = definition.BodyId; body.Sector = state.Sector;
                 body.DisplayName = definition.DisplayName; body.PrefabId = definition.PrefabId;
                 body.SurfaceProfileId = definition.SurfaceProfileId;
@@ -142,6 +150,11 @@ namespace FlatWorld.Spaceflight
                 body.RotationPeriodSeconds = definition.RotationPeriodSeconds;
                 body.EquatorTiltRadians = definition.EquatorTiltRadians;
             }
+            // 目录新增星体使用原星区种子补齐，已有星体与会话时钟保持原状。
+            foreach (BodyState definition in GetDefinitions(state.Sector))
+                if (presentTemplateBodyIds.Add(definition.BodyId))
+                    state.Bodies.Add(UniverseSectorFactory.CreateBodyInstanceFromTemplate(definition,
+                        state.Seed, state.Sector, config.RandomizeBodyPlacements));
         }
 
         private static void ValidateNumbers(Dictionary<string, double> values)
@@ -217,6 +230,9 @@ namespace FlatWorld.Spaceflight
             planet.MapData_Dict = new Dictionary<string, MapSave>();
             planet.Ecology = new EcologyWorldSaveData();
             planet.SeasonalSnow = new SnowCoverState();
+            planet.RegionalWeatherStates = new List<RegionalWeatherRecord>();
+            planet.CurrentWeather = WeatherType.Clear;
+            planet.WeatherIntensity = 0f;
             planet.Atmosphere = null;
             ApplyPlanetMetadata(body, planet, true);
             return planet;
@@ -230,6 +246,16 @@ namespace FlatWorld.Spaceflight
             planet.SurfaceGenerationProfileId = body.SurfaceProfileId;
             planet.PhysicalRadiusMeters = body.RadiusMeters; planet.SurfaceGravityMetersPerSecondSquared = body.SurfaceGravity;
             planet.SelfRotateSpeed = Math.Abs(body.RotationPeriodSeconds) > 1e-12d ? (float)(360d / body.RotationPeriodSeconds) : 0f;
+            SurfaceProfile surface = GetSurfaceProfileById(body.SurfaceProfileId);
+            if (surface.SurfaceRadiusTiles > 0)
+            {
+                // 小型星体使用自己的有限地表，区块大小不再受主世界设置影响。
+                planet.Radius = surface.SurfaceRadiusTiles;
+                planet.ChunkSize = new Vector2Int(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
+                planet.TopologyMode = WorldTopologyMode.Wrapped;
+                planet.SpatialDistanceScale = PlanetData.DefaultSpatialDistanceScale;
+                planet.WindStrength = 0f;
+            }
             bool repairInvalidAtmosphere = false;
             string invalidAtmosphereDetails = null;
             if (!initializeEnvironment && planet.Atmosphere != null)
@@ -247,7 +273,6 @@ namespace FlatWorld.Spaceflight
                         $"温度={planet.Atmosphere.TemperatureKelvin}K, 成分数={planet.Atmosphere.Gases?.Count ?? -1}]";
                 }
             }
-            SurfaceProfile surface = GetSurfaceProfileById(body.SurfaceProfileId);
             // 温度真值由地理气候层提供，星球全局量保留零额外修正。
             if (!repairInvalidAtmosphere) planet.GlobalTemperature = PlanetData.DefaultGlobalTemperature;
             planet.AtmosphereProfileId = surface.Id;

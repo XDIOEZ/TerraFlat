@@ -101,7 +101,7 @@ namespace FlatWorld.WorldModel
         }
 
         #region 区块固定天气汇总
-        public void InitializeWeatherProfile(RegionalWeatherSettings settings)
+        public void InitializeWeatherProfile(RegionalWeatherSettings settings, bool enabled = true)
         {
             ThrowIfUnavailable();
             if (_weatherProfileInitialized)
@@ -132,7 +132,9 @@ namespace FlatWorld.WorldModel
                 (float)(windXSum / CellCount), (float)(windYSum / CellCount),
                 (float)(windStrengthSum / CellCount), (float)(temperatureSum / CellCount),
                 (float)(precipitationSum / CellCount));
-            WeatherProfile = settings.CreateProfile(climate);
+            // 无自然天气的地表仍保存真实气候，但不注册可触发的天气要素。
+            WeatherProfile = enabled ? settings.CreateProfile(climate) :
+                new ChunkWeatherProfile(climate, Array.Empty<WeatherElementProfile>());
         }
         #endregion
 

@@ -226,3 +226,24 @@ test.space("ship_landing", function(data)
 end, "普通建筑飞船起降与落地管路独立罐无被动输送")
 test.check("world_ready", "飞船落地专项清理后地表世界就绪")
 test.check("player_ready", "飞船落地专项清理后当前玩家重新绑定")
+
+test.space("ore_asteroid_landing", function(data)
+    assert(data.scope == "live-ore-asteroid-landing-mining" and #data.ships == 1,
+        "大型矿石小行星专项没有复用正式起飞测试船")
+    local ship = data.ships[1]
+    assert(ship.lifting.phase == "Lifting" and ship.cruising.phase == "Cruising" and ship.cruising.spaceView,
+        "小行星测试船没有经过正式普通建筑点火和太空迁移")
+    assert(ship.descending.phase == "SurfaceDescending" and not ship.descending.spaceView and
+        ship.world == ship.expectedWorld and ship.landed.world == ship.expectedWorld and
+        ship.shipRemoved and ship.flightRemoved and ship.landed.pieceCount > 0,
+        "大型矿石小行星降落目标错误，或船体没有移交普通地表建筑")
+    assert(ship.landed.flightHud.landed and ship.landed.flightHud.receipt.worldKey == ship.expectedWorld and
+        not ship.landed.flightHud.receipt.water, "小行星没有留下正式岩石地面落地凭证")
+    assert(ship.mineFound and ship.mineId == "Mine_Iron" and ship.mineHealth > 0 and ship.miningApplied > 0 and
+        ship.mineRemoved and ship.oreInventoryGain > 0,
+        "小行星地表没有可开采的真实矿山，或正式矿石没有掉落入包")
+    return "普通测试船起降到大型小行星、普通建筑移交、正式铁矿受击及实际矿石入包"
+end, "大型矿石小行星真实驾驶降落与矿山开采")
+
+test.check("world_ready", "大型矿石小行星专项清理后地表恢复")
+test.check("player_ready", "大型矿石小行星专项清理后玩家重绑")
