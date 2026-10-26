@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-26",
+  "id": "SparkMaker_Summoner",
+  "tool": "built-in image_gen",
+  "finalGeneratedSource": "C:/Users/PC/.codex/generated_images/01a1784e-d1ce-7331-ba94-d398b1875a13/exec-ea4cf359-66d8-44d4-8800-891bfb6280df.png",
+  "finalAsset": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
+  "referenceImage": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
+  "recipeInputs": [
+    "Stick_Wood x1",
+    "Log x1"
+  ],
+  "prompt": "Use case: precise-object-edit. Make a polished replacement sprite for this exact primitive bow-drill fire starter. Treat reference as subject identity, but redesign the clumsy silhouette and bright orange colors. Production game sprite on transparent alpha, with absolutely ZERO glow, ZERO shadows, ZERO ambient occlusion fog, ZERO background or ground surface. Sprite pixels are completely unlit flat solid fills with simple stepped bands of darker and lighter color. A low saturation walnut brown and tan wooden hearth-board below, a short upright spindle with a small wooden hand-pressure cap, and a thin naturally curved bow with pale flax cord wrapped around the spindle. Keep it compact and handmade, recognizably functional, all pieces connected. Perspective 3/4 elevated side view with board diagonal toward upper right. Use coarse pixel art with 40 logical pixels across longest edge, readable big square pixel clusters and a crisp 1 logical pixel dark brown outline; no thin detail, no fine texture. Give generous fully empty transparent margin around every silhouette edge. No fire/smoke/sparks, no characters/hands, no rocks/metal, no additional accessories, no text. Make an actual clean cutout: only solid opaque wood/cord/outline, all negative space fully transparent, no translucent pixels outside the solid tool silhouette. The finished image is meant to be rendered at a small size in a 2D game, so keep the structure simple and clean.",
+  "selection": "第1、2版有明显褐色半透明光晕，重新以旧图为主体生成第3版；采用第3版，保留生成原始像素和Alpha。",
+  "width": 1254,
+  "height": 1254,
+  "alphaBounds": [
+    25,
+    9,
+    1232,
+    1254
+  ],
+  "alphaMeasurementThreshold": 1,
+  "alphaPreserved": true,
+  "visibleColorsIncludingOriginalAlpha": 44816,
+  "ppu": 1778.571428571,
+  "maxTextureSize": 2048,
+  "rendererLocalScale": [
+    1,
+    1,
+    1
+  ],
+  "visibleWorldSize": [
+    0.678634538152774,
+    0.7000000000001686
+  ],
+  "pivot": [
+    0.3281499202551834,
+    0.10007974481658692
+  ],
+  "pivotMeaning": "锚在木板最底实体行中心：alpha>=128的最底行y1128，实体x387..435，像素中心(411.5,1128.5)；尺寸测量仍用默认alpha1保守边界，未裁切或阈值改写Alpha。",
+  "priorWidth": 32,
+  "priorHeight": 32,
+  "priorAlphaBounds": [
+    4,
+    5,
+    31,
+    30
+  ],
+  "priorPPU": 16.772695375,
+  "priorVisibleWorldSize": [
+    1.6097591589389966,
+    1.4905177397583302
+  ],
+  "sha256": "d472cb3106ab07d35c54f983db6a69b5b3e670656c84566d0970a175713342df",
+  "guid": "d70505a32b2b45ff92af679100ba433c",
+  "runtimeConsumers": [
+    "shells/building_summoners.json:SparkMaker_Summoner",
+    "shells/building_bodies.json:SparkMaker"
+  ],
+  "validation": "Tools/Art/validate_sprite_world_size.py --target-longest 0.70；保留原分辨率，未触发Unity导入或停止PlayMode。",
+  "referenceImageSha256BeforeReplacement": "0774b01d7453085fb1fbf04a7c3624546689f0be9aa919d5d076facef1402510"
+}

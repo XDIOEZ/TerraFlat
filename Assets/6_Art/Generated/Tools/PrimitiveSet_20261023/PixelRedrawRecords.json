@@ -2974,25 +2974,25 @@
     },
     {
       "id": "SparkMaker_Summoner",
-      "sourceImage": "Tools/Art/ToolGimpRetouch_20261024/SparkMaker_Summoner.xcf",
-      "prompt": "GIMP原生一像素铅笔沿原图整理；保留轮廓和材质，用连续木柄色带、少量清楚绑带与短金属刃光合并碎色。原图和修补图层独立保存；斧/镐仅裁透明边，不缩放可见像素并重基握柄Pivot。",
-      "width": 32,
-      "height": 32,
-      "visibleColors": 7,
-      "alpha": "0/255",
-      "gridSampling": "none; original native pixels preserved",
+      "sourceImage": "C:/Users/PC/.codex/generated_images/01a1784e-d1ce-7331-ba94-d398b1875a13/exec-ea4cf359-66d8-44d4-8800-891bfb6280df.png",
+      "prompt": "Use case: precise-object-edit. Make a polished replacement sprite for this exact primitive bow-drill fire starter. Treat reference as subject identity, but redesign the clumsy silhouette and bright orange colors. Production game sprite on transparent alpha, with absolutely ZERO glow, ZERO shadows, ZERO ambient occlusion fog, ZERO background or ground surface. Sprite pixels are completely unlit flat solid fills with simple stepped bands of darker and lighter color. A low saturation walnut brown and tan wooden hearth-board below, a short upright spindle with a small wooden hand-pressure cap, and a thin naturally curved bow with pale flax cord wrapped around the spindle. Keep it compact and handmade, recognizably functional, all pieces connected. Perspective 3/4 elevated side view with board diagonal toward upper right. Use coarse pixel art with 40 logical pixels across longest edge, readable big square pixel clusters and a crisp 1 logical pixel dark brown outline; no thin detail, no fine texture. Give generous fully empty transparent margin around every silhouette edge. No fire/smoke/sparks, no characters/hands, no rocks/metal, no additional accessories, no text. Make an actual clean cutout: only solid opaque wood/cord/outline, all negative space fully transparent, no translucent pixels outside the solid tool silhouette. The finished image is meant to be rendered at a small size in a 2D game, so keep the structure simple and clean.",
+      "width": 1254,
+      "height": 1254,
+      "visibleColors": 44816,
+      "alpha": "original generated RGBA preserved",
+      "gridSampling": "none; native generated pixels and alpha preserved",
       "alphaBounds": [
-        4,
-        5,
-        31,
-        30
+        25,
+        9,
+        1232,
+        1254
       ],
-      "ppu": 16.772695375,
+      "ppu": 1778.571428571,
       "priorWidth": 32,
       "priorHeight": 32,
       "priorPPU": 16.772695375,
-      "sha256": "0774b01d7453085fb1fbf04a7c3624546689f0be9aa919d5d076facef1402510",
-      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "sha256": "d472cb3106ab07d35c54f983db6a69b5b3e670656c84566d0970a175713342df",
+      "retouchRecord": "Tools/Art/SparkMakerRedraw_20261026.json",
       "history": [
         {
           "id": "SparkMaker_Summoner",
@@ -3059,10 +3059,37 @@
               "sha256": "ab53f4d07e7863755126fa4660885920a73cd0bde446d39ef70847a4ee7bc879"
             }
           ]
+        },
+        {
+          "id": "SparkMaker_Summoner",
+          "sourceImage": "Tools/Art/ToolGimpRetouch_20261024/SparkMaker_Summoner.xcf",
+          "prompt": "GIMP原生一像素铅笔沿原图整理；保留轮廓和材质，用连续木柄色带、少量清楚绑带与短金属刃光合并碎色。原图和修补图层独立保存；斧/镐仅裁透明边，不缩放可见像素并重基握柄Pivot。",
+          "width": 32,
+          "height": 32,
+          "visibleColors": 7,
+          "alpha": "0/255",
+          "gridSampling": "none; original native pixels preserved",
+          "alphaBounds": [
+            4,
+            5,
+            31,
+            30
+          ],
+          "ppu": 16.772695375,
+          "priorWidth": 32,
+          "priorHeight": 32,
+          "priorPPU": 16.772695375,
+          "sha256": "0774b01d7453085fb1fbf04a7c3624546689f0be9aa919d5d076facef1402510",
+          "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+          "pivotX": 0.1395534,
+          "pivotY": 0.0701754,
+          "canvasCrop": null,
+          "approvedSample": false,
+          "recordedBeforeDate": "2026-10-26"
         }
       ],
-      "pivotX": 0.1395534,
-      "pivotY": 0.0701754,
+      "pivotX": 0.3281499202551834,
+      "pivotY": 0.10007974481658692,
       "canvasCrop": null,
       "approvedSample": false
     },

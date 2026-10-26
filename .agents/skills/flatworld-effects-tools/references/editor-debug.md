@@ -11,6 +11,7 @@
 
 ## 编辑器与运行工具
 
+- 贴图世界尺寸检测：`FlatWorld/其他工具/美术/贴图世界尺寸检测` 异步调用只读 `Tools/Art/validate_sprite_world_size.py`，按可见 Alpha/PPU/缩放对照目标或参考图，提示建议 PPU 与导入降采样风险；说明 `Tools/Art/SpriteWorldSizeValidator.md`，离线回归 `Tools/Tests/SpriteWorldSize/test_validator.py`。这是源配置预测，不替代已加载 Sprite 或游戏观感验收，0.70单位仅钻木取火器样本目标。
 - PuerTS MCP 调用接收 `System.Type` 的 Unity API 时，传 `puer.$typeof(CS.类型)`，不能直接传 JS 类；如 `CS.UnityEngine.Resources.FindObjectsOfTypeAll(puer.$typeof(CS.UnityEngine.GameObject))`。对象查询类型须继承 `UnityEngine.Object`，否则出现 `FindAllObjectsOfType: Invalid Type`；`GetComponentsInChildren` 的 Type 重载同样先转换。
 - HTML 物品字典入口 `Assets/StreamingAssets/ItemWiki/打开物品Wiki.cmd`，直接读启用的 Items/Actors/Recipes/Buffs manifests；维护说明在同目录 README。启动器按项目和读写模式复用后台服务，不按端口批量杀 Python。
 - 科技树 `tech-tree-eras.json` 配展示时代/细分阶段，`tech-tree-model.js` 从当前配方、物品加工和机器/温变数据建关系；processing 不继承。新增浏览器资源或配置入口同步 `wiki_server.py` 公开白名单。
@@ -20,7 +21,7 @@
 - `GameLogManager` 业务日志用 `[WORK]`；刷盘线程池最多一个请求，共享流锁、无 Unity API，暂停/退出/错误/显式 Flush 同步落盘。
 - F3 `EnvironmentInfoDisplay` 读 WorldModel/EnvironmentLayerIds、FarmlandSystem 水肥、TemperatureMgr；隐藏停采样，拒非有限/视口外指针，无效清悬停，IMGUI 按 CalcHeight 整页滚动；F4 GM、F6 晴天。
 - `GMReflectionConsole` 等 GameRes.StartupResourcesReady，偏好由 GMConsolePreferences 持有，页签为玩家/世界/生成与AI/调试工具/设备数据。RuntimeDebugOverlay 事件开GM，日志Canvas更高；复制/磁盘保原文，缺字只在显示转码。
-- GM 二级页签固定在分类滚动区外，仅激活当前内容；每页独立滚动并保留位置，一级分类记住本次会话的子页，偏好保存实际二级页；搜索先切页再定位。规则入口 `ui_settings/gm_secondary_pages`，不启动正式 GM 或写偏好。
+- GM 两级页签复用公共 `UI_TabButton` 和 `ReusableUITabVisual`；二级行42高、按钮150×38、导航 flexibleHeight=0。页签在滚动区外，仅当前页激活，各页保滚动、分类记子页，搜索先切页再定位。规则 `ui_settings/gm_secondary_pages`，不启动正式 GM 或写偏好；完整UI约定见 [flatworld-ui](../../flatworld-ui/SKILL.md)。
 - 地块传送 `GMReflectionConsole.TileTeleport` 搜名称/ID/searchAliases，兼容粘黏/“地块”后缀；`ChunkMgr.FindGroundTileAsync` 先当前地形再后台正式生成查找，只选裸露无水可走底材，取消/关页/换世界丢弃旧结果。
 - 拾取倍增 `GMReflectionConsole.Pickup`（1～100整数，默认关闭/10倍）只设本地权威 `Mod_ItemPicker.PickupAmountMultiplier`，PickerLoaded 恢复；偏好不进存档。完整原份预检跨库存容量，仅放大可堆叠物、余物保原量。GM恢复只从 ItemMgr.Player_DIC 定向找本地档案玩家/管理模块，未入世低频等，不扫全场/创建单例。
 - `GMWorldLayerOverlay` 温度/污染互斥预算纹理，格对齐、未加载透明、关闭停采，不租区块/改地形；导航一格一Point texel，读真实流场/Job依赖，借用 Native 表不跨后端发布。

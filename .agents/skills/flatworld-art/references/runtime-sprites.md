@@ -5,6 +5,7 @@
 - 游戏统一以右（+X）为默认朝向，新增人物、动物及手持武器/工具素材按右向基线制作；AI 动物/怪物仅一套标准右向及特殊动作，朝左由运行时镜像，不混正背/上下方向。既有源图的真实朝向由 `visual.flipX` 等资源配置先校正为右向，不反转移动、瞄准或攻击方向。布局参考 `Assets/6_Art/Characters/MinifolksForestAnimals/Outline/MiniWolf.png`；其他角色方向数服从消费方。
 - 帧网格、比例、配色、光源、基线和 Pivot 一致；单帧命名 `<Name>_<State>_<Direction>.png`。普通主体 Alpha 为 0/255，玻璃、烟火等按需半透明。
 - Sprite：Point、无 Mipmap、无压缩、Alpha Transparency。PPU 按源像素/世界尺寸换算；`maxTextureSize` 缩小时 Unity 同比调整实际 PPU，不能直接填缩小后的目标像素数。
+- 大小验收用 [Unity 单位尺寸检测器](../../../../Tools/Art/SpriteWorldSizeValidator.md)，按 Alpha 可见像素、PPU 和消费方缩放计算，设置本类物品目标或对照参考；不以画布像素数判断大小统一，也不为通过检测缩图。
 - **禁止强制压缩贴图。** 默认保留用户认可原图的分辨率、色阶与 Alpha，仿粗像素风也可使用 500 多、1000 多像素原图；未经明确要求不得缩到 32×32 等尺寸、全图限色或启用有损纹理压缩，主设置与平台覆盖的 `maxTextureSize` 不得迫使原图缩小。按源尺寸换算 PPU 控制手持大小；弩 `Crossbow_Wood_Icon.png` 使用 1672×941 原图、1672 PPU。
 - 世界实体常用底中 Pivot，图标居中；工具对齐握柄，结合 Render 层级和 `visual.rendererLocalPosition` 防止重复偏移。左上像素中心 `(x,y)` 的 Pivot 为 `((x+0.5)/width,1-(y+0.5)/height)`。
 - 满格 Tile/工业方块用中心 Pivot、一格 PPU；共享 TileBase/图集的地墙按具体消费引用替换。
