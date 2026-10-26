@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using MCPForUnity.Editor.Helpers;
 
@@ -7,7 +8,7 @@ namespace MCPForUnity.Editor.Tools.Cameras
     [McpForUnityTool("manage_camera", AutoRegister = false)]
     public static class ManageCamera
     {
-        public static object HandleCommand(JObject @params)
+        public static async Task<object> HandleCommand(JObject @params)
         {
             if (@params == null)
                 return new ErrorResponse("Parameters cannot be null.");
@@ -71,7 +72,7 @@ namespace MCPForUnity.Editor.Tools.Cameras
                             shotParams["batch"] = "surround";
                             shotParams["includeImage"] = true;
                         }
-                        return ManageScene.HandleCommand(shotParams);
+                        return await ManageScene.HandleCommand(shotParams);
                     }
                 }
 

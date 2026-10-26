@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using MCPForUnity.Editor.Helpers; // For Response class
 using MCPForUnity.Runtime.Helpers; // For ScreenshotUtility
 using Newtonsoft.Json.Linq;
@@ -161,7 +162,18 @@ namespace MCPForUnity.Editor.Tools
         /// <summary>
         /// Main handler for scene management actions.
         /// </summary>
-        public static object HandleCommand(JObject @params)
+        #region 同步场景操作与异步截图调度
+
+        // 异步截图完成后才返回工具结果，其余场景操作沿用原有同步规则。
+        public static async Task<object> HandleCommand(JObject @params)
+        {
+            object result = HandleSceneCommandCore(@params);
+            return result is Task<object> pendingCapture ? await pendingCapture : result;
+        }
+
+        #endregion
+
+        private static object HandleSceneCommandCore(JObject @params)
         {
             try { McpLog.Info("[ManageScene] HandleCommand: start", always: false); } catch { }
             var cmd = ToSceneCommand(@params);
@@ -608,21 +620,10 @@ namespace MCPForUnity.Editor.Tools
                     return new SuccessResponse(message, BuildScreenshotResponseData(result, targetCamera.name, includeImage));
                 }
 
-                if (includeImage && Application.isPlaying)
+                if (includeImage && Application.isPlaying && !Application.isBatchMode)
                 {
                     if (!Application.isBatchMode) EnsureGameView();
-
-                    string folderOverride = ScreenshotPreferences.Resolve(cmd.outputFolder);
-                    ScreenshotCaptureResult result = ScreenshotUtility.CaptureComposited(
-                        fileName, resolvedSuperSize, ensureUniqueFileName: true,
-                        includeImage: true, maxResolution: maxResolution,
-                        folderOverride: folderOverride);
-
-                    if (ScreenshotUtility.IsUnderAssets(result.ProjectRelativePath))
-                        AssetDatabase.ImportAsset(result.ProjectRelativePath, ImportAssetOptions.ForceSynchronousImport);
-                    string cameraName = Camera.main != null ? Camera.main.name : "composited";
-                    string message = $"Screenshot captured to '{result.ProjectRelativePath}' (camera: {cameraName}).";
-                    return new SuccessResponse(message, BuildScreenshotResponseData(result, cameraName, includeImage: true));
+                    return CaptureCompositedGameViewScreenshotAsync(cmd, fileName, resolvedSuperSize, maxResolution);
                 }
 
                 if (includeImage)
@@ -728,6 +729,32 @@ namespace MCPForUnity.Editor.Tools
                 return new ErrorResponse($"Error capturing screenshot: {e.Message}");
             }
         }
+
+        #region 异步合成游戏画面
+
+        private static async Task<object> CaptureCompositedGameViewScreenshotAsync(
+            SceneCommand cmd, string fileName, int superSize, int maxResolution)
+        {
+            try
+            {
+                string folderOverride = ScreenshotPreferences.Resolve(cmd.outputFolder);
+                ScreenshotCaptureResult result = await ScreenshotUtility.CaptureCompositedAsync(
+                    fileName, superSize, ensureUniqueFileName: true,
+                    includeImage: true, maxResolution: maxResolution, folderOverride: folderOverride);
+                if (ScreenshotUtility.IsUnderAssets(result.ProjectRelativePath))
+                    AssetDatabase.ImportAsset(result.ProjectRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                string cameraName = Camera.main != null ? Camera.main.name : "composited";
+                return new SuccessResponse(
+                    $"Screenshot captured to '{result.ProjectRelativePath}' (camera: {cameraName}).",
+                    BuildScreenshotResponseData(result, cameraName, includeImage: true));
+            }
+            catch (Exception ex)
+            {
+                return new ErrorResponse($"Error capturing screenshot: {ex.Message}");
+            }
+        }
+
+        #endregion
 
         private static Dictionary<string, object> BuildScreenshotResponseData(
             ScreenshotCaptureResult result,

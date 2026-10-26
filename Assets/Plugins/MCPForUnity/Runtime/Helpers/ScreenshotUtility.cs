@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 
@@ -167,52 +168,51 @@ namespace MCPForUnity.Runtime.Helpers
             return result;
         }
 
-#if UNITY_EDITOR
-        // Synchronously drive a WaitForEndOfFrame ScreenshotCapturer by pumping the editor's
-        // player loop. Play-mode only; EditorApplication.Step is a no-op in edit mode.
-        private static Texture2D CaptureCompositedAfterFrame(int superSize, int timeoutSteps = 5)
+        #region 自然渲染帧截图
+
+        // 等待真实帧完成，不通过单步、暂停或嵌套执行玩家循环来制造截图。
+        private static async Task<Texture2D> CaptureCompositedAfterRenderedFrameAsync(int superSize)
         {
-            Texture2D result = null;
-            bool done = false;
-            bool callerReturned = false;
-            ScreenshotCapturer.Begin(superSize, tex =>
+#if UNITY_EDITOR
+            if (UnityEditor.EditorApplication.isPaused)
+                throw new InvalidOperationException("Composited Game View capture needs a rendered Play Mode frame. Unity is paused; its pause state was left unchanged.");
+#endif
+
+            var completion = new TaskCompletionSource<Texture2D>(TaskCreationOptions.RunContinuationsAsynchronously);
+            ScreenshotCapturer capturer = ScreenshotCapturer.Begin(superSize, tex =>
             {
-                // Late completion after the spin loop timed out: caller will never consume
-                // the texture, so destroy it here to avoid leaking a Unity object.
-                if (callerReturned)
-                {
-                    if (tex != null) DestroyTexture(tex);
-                    return;
-                }
-                result = tex;
-                done = true;
+                if (!completion.TrySetResult(tex) && tex != null) DestroyTexture(tex);
             });
-            // Step() pauses play mode as a side effect; restore the prior state so a screenshot
-            // doesn't leave a running game paused (an already-paused game stays paused).
-            bool wasPaused = UnityEditor.EditorApplication.isPaused;
+            using var timeoutCancellation = new System.Threading.CancellationTokenSource();
             try
             {
-                for (int i = 0; i < timeoutSteps && !done; i++)
-                {
-                    UnityEditor.EditorApplication.Step();
-                }
+                await Task.WhenAny(completion.Task, Task.Delay(TimeSpan.FromSeconds(10), timeoutCancellation.Token));
+                if (!completion.Task.IsCompleted)
+                    throw new TimeoutException("Game View did not render a screenshot frame within 10 seconds. Make the Game View visible; capture did not pause or step the game.");
+                Texture2D result = await completion.Task;
+                if (result == null)
+                    throw new InvalidOperationException("The rendered Game View frame could not be captured.");
+                return result;
             }
             finally
             {
-                if (!wasPaused)
-                    UnityEditor.EditorApplication.isPaused = false;
+                timeoutCancellation.Cancel();
+                if (!completion.Task.IsCompleted)
+                {
+                    completion.TrySetCanceled();
+                    if (capturer != null) capturer.CancelPendingCapture();
+                }
             }
-            callerReturned = true;
-            return result;
         }
-#endif
+
+        #endregion
 
         /// <summary>
         /// Captures a screenshot using ScreenCapture.CaptureScreenshotAsTexture, which captures the
         /// final composited frame including UI Toolkit overlays, post-processing, etc.
-        /// Falls back to camera-based capture if ScreenCapture returns null at runtime.
+        /// Waits for a natural Play Mode frame; outside Play Mode a null capture can fall back to a camera.
         /// </summary>
-        public static ScreenshotCaptureResult CaptureComposited(
+        public static async Task<ScreenshotCaptureResult> CaptureCompositedAsync(
             string fileName = null,
             int superSize = 1,
             bool ensureUniqueFileName = true,
@@ -227,15 +227,9 @@ namespace MCPForUnity.Runtime.Helpers
             int imgW = 0, imgH = 0;
             try
             {
-#if UNITY_EDITOR
-                // In play mode, inline ScreenCapture reads a backbuffer before UITK has
-                // composited; route through WaitForEndOfFrame instead.
                 tex = Application.isPlaying
-                    ? CaptureCompositedAfterFrame(result.SuperSize)
+                    ? await CaptureCompositedAfterRenderedFrameAsync(result.SuperSize)
                     : ScreenCapture.CaptureScreenshotAsTexture(result.SuperSize);
-#else
-                tex = ScreenCapture.CaptureScreenshotAsTexture(result.SuperSize);
-#endif
                 if (tex == null)
                 {
                     // Fallback to camera-based if ScreenCapture fails
@@ -771,13 +765,26 @@ namespace MCPForUnity.Runtime.Helpers
         private Action<Texture2D> _onComplete;
 
         /// <summary>Spawns a hidden GameObject, attaches a capturer, returns immediately.</summary>
-        public static void Begin(int superSize, Action<Texture2D> onComplete)
+        public static ScreenshotCapturer Begin(int superSize, Action<Texture2D> onComplete)
         {
             var go = new GameObject("__MCP_ScreenshotCapturer__") { hideFlags = HideFlags.HideAndDontSave };
             var c = go.AddComponent<ScreenshotCapturer>();
             c._superSize = Mathf.Max(1, superSize);
             c._onComplete = onComplete;
+            return c;
         }
+
+        #region 待完成截图清理
+
+        // 超时后停止待截图协程，避免隐藏窗口恢复时执行过期请求。
+        public void CancelPendingCapture()
+        {
+            StopAllCoroutines();
+            _onComplete = null;
+            Destroy(gameObject);
+        }
+
+        #endregion
 
         private System.Collections.IEnumerator Start()
         {

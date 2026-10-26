@@ -11,6 +11,7 @@
 
 ## 编辑器与运行工具
 
+- MCP 合成截图异步等待自然渲染帧，禁止通过 `EditorApplication.Step` 或修改暂停状态取图；暂停时明确拒绝，无渲染帧时 10 秒超时并清理待截图对象。截图成功须以实际文件和画面为准，传输断连不代表文件一定未生成。
 - PuerTS MCP 调用接收 `System.Type` 的 Unity API 时，传 `puer.$typeof(CS.类型)`，不能直接传 JS 类；如 `CS.UnityEngine.Resources.FindObjectsOfTypeAll(puer.$typeof(CS.UnityEngine.GameObject))`。对象查询类型须继承 `UnityEngine.Object`，否则出现 `FindAllObjectsOfType: Invalid Type`；`GetComponentsInChildren` 的 Type 重载同样先转换。
 - HTML 物品字典入口 `Assets/StreamingAssets/ItemWiki/打开物品Wiki.cmd`，直接读启用的 Items/Actors/Recipes/Buffs manifests；维护说明在同目录 README。启动器按项目和读写模式复用后台服务，不按端口批量杀 Python。
 - 科技树 `tech-tree-eras.json` 配展示时代/细分阶段，`tech-tree-model.js` 从当前配方、物品加工和机器/温变数据建关系；processing 不继承。新增浏览器资源或配置入口同步 `wiki_server.py` 公开白名单。

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>../../../Library/PackageCache/com.unity.nuget.newtonsoft-json@3.2.1/Runtime/Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Compile Include="../../../Assets/Plugins/MCPForUnity/Editor/Services/Transport/Transports/WebSocketTransportClient.cs" />
+    <Compile Include="../../../Assets/Plugins/MCPForUnity/Editor/Services/Transport/TransportState.cs" />
+    <Compile Include="../../../Assets/Plugins/MCPForUnity/Editor/Services/Transport/IMcpTransportClient.cs" />
+  </ItemGroup>
+</Project>
