@@ -1,0 +1,300 @@
+{
+  "generator": "built-in image_gen",
+  "preserveOriginalResolution": true,
+  "assets": [
+    {
+      "id": "Ingot_Titanium",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, few broad shading bands and restrained upper-left highlights, matching a coarse classic sandbox sprite. Render ONE single object centered, three-quarter isometric view, object fills about 78 percent of a square canvas, transparent background with true alpha. No letters, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photo realism, smooth gradients or dense tiny texture. Keep original output resolution; make the pixel blocks visually large without adding fine detail. Primary request: A single refined titanium ingot, long squat trapezoidal cast-metal bar with beveled edges, cool steel-silver gray with a very subtle bluish cast, broad matte metallic planes, clean strong compact form.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-e658a91c-661c-459b-9963-a35210ecf397.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Titanium/Ingot_Titanium_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        39,
+        55,
+        1236,
+        1211
+      ],
+      "ppu": 1408
+    },
+    {
+      "id": "Ingot_Aluminum",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, few broad shading bands and restrained upper-left highlights, matching a coarse classic sandbox sprite. Render ONE single object centered, three-quarter isometric view, object fills about 78 percent of a square canvas, transparent background with true alpha. No letters, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photo realism, smooth gradients or dense tiny texture. Keep original output resolution; make the pixel blocks visually large without adding fine detail. Primary request: A single refined aluminum ingot, long squat trapezoidal cast-metal bar with beveled edges, lighter pale silver gray, softly matte broad metallic planes and a crisp pale highlight along the top edge, clean low-detail form.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-394b35e2-c87b-4636-837f-8e0ac705cbe4.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Aluminum/Ingot_Aluminum_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        71,
+        1237,
+        1181
+      ],
+      "ppu": 1455
+    },
+    {
+      "id": "Ingot_Molybdenum",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, few broad shading bands and restrained upper-left highlights, matching a coarse classic sandbox sprite. Render ONE single object centered, three-quarter isometric view, object fills about 78 percent of a square canvas, transparent background with true alpha. No letters, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photo realism, smooth gradients or dense tiny texture. Keep original output resolution; make the pixel blocks visually large without adding fine detail. Primary request: A single refined molybdenum ingot, long squat trapezoidal cast-metal bar with beveled edges, distinctly dark charcoal silver gray, heavy-looking clean broad metallic planes and restrained cool edge highlights.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-0ce9e925-a26c-4753-b281-0cbd11ba69ee.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Molybdenum/Ingot_Molybdenum_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        80,
+        1254,
+        1233
+      ],
+      "ppu": 1475
+    },
+    {
+      "id": "Ingot_Nickel",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, few broad shading bands and restrained upper-left highlights, matching a coarse classic sandbox sprite. Render ONE single object centered, three-quarter isometric view, object fills about 78 percent of a square canvas, transparent background with true alpha. No letters, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photo realism, smooth gradients or dense tiny texture. Keep original output resolution; make the pixel blocks visually large without adding fine detail. Primary request: A single refined nickel ingot, long squat trapezoidal cast-metal bar with beveled edges, mid-value slightly warm silver gray, subtle muted beige tint but clearly silver metal, clean broad planes and restrained pale edge highlights.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-87f13723-42ee-488b-a859-30de72c9ccd8.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Nickel/Ingot_Nickel_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        47,
+        1239,
+        1230
+      ],
+      "ppu": 1458
+    },
+    {
+      "id": "CarbonFiber",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, a few broad shading bands and restrained upper-left highlights, coarse classic sandbox sprite. ONE material centered on square canvas, three-quarter top-down isometric view, fills about 78 percent of canvas, true transparent background alpha. No text, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photorealism, smooth gradients or dense tiny texture. Keep high output resolution but show large logical pixel blocks and restrained detail. Primary request: A small loose hank of black graphite carbon fiber tows, parallel slightly fanned strands gathered in a flat elongated bundle, charcoal black with broad soft cool-gray sheen. Show fiber texture as only a few large aligned pixel streaks. No spool, string, tie or wrapping, only raw fibers.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-70ad6ad3-ac37-475f-b091-d7f9982a8b0f.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiber/CarbonFiber_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        25,
+        47,
+        1240,
+        1254
+      ],
+      "ppu": 1429
+    },
+    {
+      "id": "CarbonFiberPlate",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, a few broad shading bands and restrained upper-left highlights, coarse classic sandbox sprite. ONE material centered on square canvas, three-quarter top-down isometric view, fills about 78 percent of canvas, true transparent background alpha. No text, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photorealism, smooth gradients or dense tiny texture. Keep high output resolution but show large logical pixel blocks and restrained detail. Primary request: A single thin rigid rectangular carbon-fiber composite sheet made from carbon fibers and resin. Clean cut straight edges, charcoal-black panel in isometric view with a restrained large-scale diagonal twill woven pattern, only a few muted dark-gray interlacing pixel clusters, smooth resin-finished upper surface, slim edge thickness.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-c4ed31a0-2968-4933-9b1d-a0a449a020c2.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiberPlate/CarbonFiberPlate_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        37,
+        1246,
+        1234
+      ],
+      "ppu": 1466
+    },
+    {
+      "id": "Ore_Mica",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, a few broad shading bands and restrained upper-left highlights, coarse classic sandbox sprite. ONE material centered on square canvas, three-quarter top-down isometric view, fills about 78 percent of canvas, true transparent background alpha. No text, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photorealism, smooth gradients or dense tiny texture. Keep high output resolution but show large logical pixel blocks and restrained detail. Primary request: A single irregular raw mica ore rock made of overlapping flaky mineral layers. Muted silver taupe and dark brown stone, visibly stepped plate-like laminae and a few broad pearly highlights. Uneven compact natural rock, clearly unprocessed and thicker than a sheet.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-279146c6-8a79-42e5-a4b5-d85603169877.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ore_Mica/Ore_Mica_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        37,
+        1239,
+        1254
+      ],
+      "ppu": 1458
+    },
+    {
+      "id": "MicaSheet",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory material sprite for a Unity 2D top-down sandbox game. Style: low-saturation, believable retro pixel art with clearly visible large hard-edged square pixel clusters, a few broad shading bands and restrained upper-left highlights, coarse classic sandbox sprite. ONE material centered on square canvas, three-quarter top-down isometric view, fills about 78 percent of canvas, true transparent background alpha. No text, numbers, symbols, labels, watermark, UI, ground plane, cast shadow, container, pedestal, glow, photorealism, smooth gradients or dense tiny texture. Keep high output resolution but show large logical pixel blocks and restrained detail. Primary request: A small neat stack of two or three very thin flat mica sheets, slightly offset to reveal layered edges. Muted pale silvery bronze, subtly translucent broad faces with a few low-contrast mineral planes, roughly rectangular gently irregular edges. Transparent mica should remain visible, cut flat sheet material, no metal frame.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-a554c2f2-5e4f-41fb-8b50-e358c47fe639.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/MicaSheet/MicaSheet_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        0,
+        1240,
+        1254
+      ],
+      "ppu": 1475
+    },
+    {
+      "id": "Phosphorus",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory sprite for Unity 2D top-down sandbox game. Low-saturation believable retro pixel art, visibly large hard square pixel clusters, a few broad flat shading bands and restrained upper-left highlights. One object only centered with generous fully transparent margins on square canvas, three-quarter top-down view, true transparent background alpha. The solid object's silhouette must stay entirely within the canvas with a clean transparent 10 percent border. No lettering, numbers, symbols, labels, watermark, UI, floor, cast shadow, background, pedestal, glow, photo realism, smooth gradients or busy microtexture. Full resolution output with coarse logical pixels, no fine decorative details. Primary request: A small irregular heap of dark brick-red phosphorus powder and several chunky fragments, muted rusty maroon material, visibly matte with broad angular red-brown shading. Only raw red phosphorus, without any container, bag, flame, vapor or hazard symbol.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-97750b80-51cd-4710-b62d-ea3797f4cc84.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Phosphorus/Phosphorus_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        53,
+        71,
+        1232,
+        1146
+      ],
+      "ppu": 1387
+    },
+    {
+      "id": "Fertilizer_Phosphate",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory sprite for Unity 2D top-down sandbox game. Low-saturation believable retro pixel art, visibly large hard square pixel clusters, a few broad flat shading bands and restrained upper-left highlights. One object only centered with generous fully transparent margins on square canvas, three-quarter top-down view, true transparent background alpha. The solid object's silhouette must stay entirely within the canvas with a clean transparent 10 percent border. No lettering, numbers, symbols, labels, watermark, UI, floor, cast shadow, background, pedestal, glow, photo realism, smooth gradients or busy microtexture. Full resolution output with coarse logical pixels, no fine decorative details. Primary request: A compact low mound of pale warm-gray phosphate fertilizer granules, a few large angular off-white pebble clusters with muted beige-gray shadows. Only loose granular fertilizer, no bag, bowl, container, plant or label.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-195f82ba-966a-4444-9fe5-5d639f3252af.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Fertilizer_Phosphate/Fertilizer_Phosphate_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        47,
+        51,
+        1192,
+        1210
+      ],
+      "ppu": 1364
+    },
+    {
+      "id": "Boron",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory sprite for Unity 2D top-down sandbox game. Low-saturation believable retro pixel art, visibly large hard square pixel clusters, a few broad flat shading bands and restrained upper-left highlights. One object only centered with generous fully transparent margins on square canvas, three-quarter top-down view, true transparent background alpha. The solid object's silhouette must stay entirely within the canvas with a clean transparent 10 percent border. No lettering, numbers, symbols, labels, watermark, UI, floor, cast shadow, background, pedestal, glow, photo realism, smooth gradients or busy microtexture. Full resolution output with coarse logical pixels, no fine decorative details. Primary request: A small cluster of raw elemental boron fragments, angular dark gray-brown chunks with very subtle reddish earthy undertones, matte hard mineral surfaces and restrained highlights, distinctive chunky irregular silhouettes, only loose material.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-5f30689d-c3f2-4f68-aac1-a18257626fcf.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Boron/Boron_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        23,
+        63,
+        1234,
+        1220
+      ],
+      "ppu": 1425
+    },
+    {
+      "id": "Quartz",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory sprite for Unity 2D top-down sandbox game. Low-saturation believable retro pixel art, visibly large hard square pixel clusters, a few broad flat shading bands and restrained upper-left highlights. One object only centered with generous fully transparent margins on square canvas, three-quarter top-down view, true transparent background alpha. The solid object's silhouette must stay entirely within the canvas with a clean transparent 10 percent border. No lettering, numbers, symbols, labels, watermark, UI, floor, cast shadow, background, pedestal, glow, photo realism, smooth gradients or busy microtexture. Full resolution output with coarse logical pixels, no fine decorative details. Primary request: A small natural quartz crystal cluster with three or four large hexagonal crystals growing together, milky off-white translucent mineral, broad pale gray and very faint cool-blue planes, pointed crystal tips, a compact natural stony base continuous with the crystals, no separate platform, no glow or jewelry.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-23a0437c-0620-4bd9-8ea3-6c89ca59fbf4.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Quartz/Quartz_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        57,
+        14,
+        1234,
+        1164
+      ],
+      "ppu": 1385
+    },
+    {
+      "id": "Lithium",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory sprite for Unity 2D top-down sandbox game. Low-saturation believable retro pixel art, visibly large hard square pixel clusters, a few broad flat shading bands and restrained upper-left highlights. One object only centered with generous fully transparent margins on square canvas, three-quarter top-down view, true transparent background alpha. The solid object's silhouette must stay entirely within the canvas with a clean transparent 10 percent border. No lettering, numbers, symbols, labels, watermark, UI, floor, cast shadow, background, pedestal, glow, photo realism, smooth gradients or busy microtexture. Full resolution output with coarse logical pixels, no fine decorative details. Primary request: A single small freshly cut lithium metal piece, irregular squat rectangular silver-white metal chunk, pale neutral silver broad surfaces with gentle gray shadows and a few clean cut edges, matte bright light metal, no bottle, oil, jar, oxide crust, glow or hazard symbol.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-6d1827e0-190c-4236-9c29-9de1c35f99a3.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Lithium/Lithium_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        41,
+        33,
+        1240,
+        1254
+      ],
+      "ppu": 1436
+    },
+    {
+      "id": "Battery_LithiumIronPhosphate",
+      "prompt": "Use case: stylized-concept. Asset type: isolated inventory sprite for Unity 2D top-down sandbox game. Low-saturation believable retro pixel art, visibly large hard square pixel clusters, a few broad flat shading bands and restrained upper-left highlights. One object only centered with generous fully transparent margins on square canvas, three-quarter top-down view, true transparent background alpha. The solid object's silhouette must stay entirely within the canvas with a clean transparent 10 percent border. No lettering, numbers, symbols, labels, watermark, UI, floor, cast shadow, background, pedestal, glow, photo realism, smooth gradients or busy microtexture. Full resolution output with coarse logical pixels, no fine decorative details. Primary request: A compact industrial lithium iron phosphate battery bank for the electronic era: three squat upright prismatic cells joined into one rectangular dark desaturated blue-gray case with a simple thin metal brace, two short red and silver metal terminal posts on top, no external cables. Closed sturdy cabinet body, slightly elevated three-quarter view, a few broad clean panels, restrained copper-colored brace details, transparent background. Only the battery, no display screen, text, symbols, labels or glow.",
+      "source": "C:\\Users\\PC\\.codex\\generated_images\\01a178af-1b14-7002-a1f3-352771338a41\\exec-657a87ce-f843-433b-82c4-16dc6c087854.png",
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        35,
+        88,
+        1222,
+        1198
+      ],
+      "ppu": 1396
+    }
+  ]
+}

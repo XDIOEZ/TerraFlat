@@ -8,7 +8,8 @@
     "https://ohiodnr.gov/discover-and-learn/rock-minerals-fossils/minerals/hematite",
     "https://rruff.info/doclib/hom/cassiterite.pdf",
     "https://commonminerals.esci.umn.edu/minerals-o-s/sulfur",
-    "https://www.itia.info/wp-content/uploads/2024/10/2024_Mining_Part_1.pdf"
+    "https://www.itia.info/wp-content/uploads/2024/10/2024_Mining_Part_1.pdf",
+    "https://www.handbookofmineralogy.org/pdfs/muscovite.pdf"
   ],
   "minerals": [
     {
@@ -94,6 +95,20 @@
       "hardness": 5,
       "toughness": 2,
       "itemIds": ["Ore_Tungsten", "Mine_Tungsten", "Mine_Tungsten_Large"]
+    },
+    {
+      "id": "mica",
+      "referenceMaterial": "白云母；沿片层方向硬度约2.5，取3；片层易解理，韧性按游戏参考分级。",
+      "hardness": 3,
+      "toughness": 1,
+      "itemIds": ["Ore_Mica", "MicaSheet"]
+    },
+    {
+      "id": "quartz",
+      "referenceMaterial": "石英；莫氏硬度7，坚硬但脆，韧性按游戏参考分级。",
+      "hardness": 7,
+      "toughness": 2,
+      "itemIds": ["Quartz"]
     }
   ]
 }

@@ -20,6 +20,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     {
         GameplayTestRuntimeProbe.Register("agriculture", "tillage_irrigation", CaptureTillage);
         GameplayTestRuntimeProbe.Register("agriculture", "planting_target", CapturePlantingTarget);
+        GameplayTestRuntimeProbe.Register("agriculture", "phosphate_fertilizer_use", CapturePhosphateFertilizerHeldUseAndRejection);
         GameplayTestRuntimeProbe.Register("agriculture", "pour_absorption", CapturePourAbsorption);
         GameplayTestRuntimeProbe.Register("building", "placement", CapturePlacement);
         GameplayTestRuntimeProbe.Register("building", "facility_visual_scale", CaptureFacilityVisualScale);
@@ -99,13 +100,13 @@ public static partial class GameplayTestWorldRuntimeProbe
         return value;
     }
 
-    private static Site FindSite(Player player, Func<RuntimeTerrainTileSample, bool> accepts)
+    private static Site FindSite(Player player, Func<RuntimeTerrainTileSample, bool> accepts, int minimumRadius = 2)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         ChunkMgr manager = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("真实区块管理器未就绪。");
         Vector3 authority = WorldLocalPresentation.ToLogical(player.transform.position);
         Vector2Int origin = Vector2Int.FloorToInt(authority);
-        for (int radius = 2; radius <= 8; radius++)
+        for (int radius = minimumRadius; radius <= 8; radius++)
         for (int dy = -radius; dy <= radius; dy++)
         for (int dx = -radius; dx <= radius; dx++)
         {

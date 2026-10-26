@@ -2,6 +2,7 @@
 
 - Mod_Plantable→CreateEntityCrop→扣真实种子，失败RollbackEntityCrop；resource作物不临时物化Item。空耕地播种不验水肥；基质范围保留播种意图，已占格/失败不回退食用，离开才由食用接管。
 - FarmlandSystem改ChunkTerrainData；锄地未完成仅会话进度，停工10秒恢复，完成才写Tile_Farmland。CommitSoil提交水肥，工具等IWeaponActionAnimation确认真实挥动。
+- Mod_FarmlandSupply 的 Act 与公开 TrySupplyFarmlandAtWorldPosition 共用权威、真实持有、整份数量和距离资格，提交有变化的土壤后才扣一份；磷肥只补肥力，满肥拒绝扣料。
 - 耕地身份只看真实 Ground `Tile_Farmland`，SourceLayer不是通用地块状态；锄成耕地时从生成 `moisture/fertility` 初始化，缺地理值读耕地定义默认。农业水肥不再反写生成地理层，普通地块不接受雨水、流水或消耗更新。
 - SoilSamplingBatch仅共享同步寻址/容器，快照借到下次读取、不可留回调/实体；耕地逐次读农业权威层、九格逐份泵水并按原顺序提交，不跨帧缓存。普通自然植物只读地理基准、不抽水不Commit；自然基质播种保留Cultivated身份，仅保存Source=0的Crop记录。
 - 耕地数值及Source/Water/双进度/Fertility全部一致才跳过重复提交，不依赖生成moisture/fertility投影；不能因“水量没变化”丢弃不足一份的累计进度。规则 `agriculture/soil_commit_unchanged`、`farmland_scope`。

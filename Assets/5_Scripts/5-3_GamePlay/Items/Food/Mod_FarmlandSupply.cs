@@ -63,21 +63,31 @@ public class Mod_FarmlandSupply : Module
         base.Act();
 
         if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
-        {
-            Debug.LogWarning("[Mod_FarmlandSupply] 补给失败：物品未被玩家持有", item);
             return;
-        }
 
         Mod_GameController controller = ResolveOwnerController();
         if (controller == null)
             return;
-        Vector3 mouseWorldPosition = controller.GetMouseWorldPosition();
-        mouseWorldPosition = WorldTopologyRuntime.NormalizePosition(mouseWorldPosition);
-        if (!TryResolveFarmland(mouseWorldPosition, out Vector2Int tilePos, out TileData_Farmland farmlandData))
+
+        TrySupplyFarmlandAtWorldPosition(controller.GetMouseWorldPosition());
+    }
+
+    // 指向使用和自动回归共用正式持有、距离、水肥提交与扣量规则。
+    public bool TrySupplyFarmlandAtWorldPosition(Vector3 worldPosition)
+    {
+        if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null ||
+            item.itemData?.Stack == null || !float.IsFinite(item.itemData.Stack.Amount) || item.itemData.Stack.Amount < 1f ||
+            !float.IsFinite(worldPosition.x) || !float.IsFinite(worldPosition.y))
+            return false;
+
+        worldPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);
+        if (!TryResolveFarmland(worldPosition, out Vector2Int tilePos, out TileData_Farmland farmlandData))
         {
-            Debug.LogWarning($"[Mod_FarmlandSupply] {mouseWorldPosition} 不是耕地，未消耗物品", item);
-            return;
+            Debug.LogWarning($"[Mod_FarmlandSupply] {worldPosition} 不是耕地，未消耗物品", item);
+            return false;
         }
+        if (!FarmlandSystem.IsWithinReach(item.Owner.transform.position, tilePos, 2f))
+            return false;
 
         farmlandData.NormalizeValues();
         int previousWater = farmlandData.waterValue;
@@ -89,11 +99,9 @@ public class Mod_FarmlandSupply : Module
             Mathf.Approximately(previousFertility, farmlandData.Fertility))
         {
             Debug.Log($"[Mod_FarmlandSupply] 地块 {tilePos} 的水分和肥力已经充足，未消耗物品", item);
-            return;
+            return false;
         }
 
-        if (!FarmlandSystem.IsWithinReach(item.Owner.transform.position, tilePos, 2f))
-            return;
         FarmlandSystem.CommitSoil(farmlandData);
         item.itemData.Stack.Amount--;
         item.OnUIRefresh?.Invoke();
@@ -104,6 +112,7 @@ public class Mod_FarmlandSupply : Module
 
         if (item.itemData.Stack.Amount <= 0)
             item.DestroySelf();
+        return true;
     }
 
     private static bool TryResolveFarmland(

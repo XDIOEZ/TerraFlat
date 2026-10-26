@@ -19,6 +19,7 @@ public static partial class GameplayTestRuntimeProbe
         Register("processing", "material_alloy_atomic", CaptureMaterialAlloyAtomic);
         Register("processing", "material_heating_coefficient", CaptureMaterialHeatingCoefficient);
         Register("processing", "material_heating_window", CaptureMaterialHeatingWindow);
+        Register("processing", "material_cutting", CaptureMaterialCuttingThroughDeclaredProcessing);
         Register("processing", "furnace_heat_only", (_, _) => MachineWorld.CaptureGameplayFurnaceHeatOnly());
         Register("processing", "induction_power", (_, args) => MachineWorld.CaptureGameplayInductionPower(args));
         Register("processing", "induction_grid", (_, args) => MachineWorld.CaptureGameplayInductionGrid(args));
@@ -59,6 +60,36 @@ public static partial class GameplayTestRuntimeProbe
         Inventory output = CreateDragInventory("lua.thermal.output", new ItemData[4]);
         MaterialThermalProcessor.Process(input, output);
         return new JObject { ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output) };
+    }
+
+    // 加工能力从正式物品定义解析，预览和产出共用生产制作事务。
+    private static JObject CaptureMaterialCuttingThroughDeclaredProcessing(Player _, JObject args)
+    {
+        string id = GameplayTestSystemProbe.Text(args, "id", "Ore_Mica");
+        float amount = (float)GameplayTestSystemProbe.Number(args, "amount", 1);
+        ItemData source = amount > 0f ? ThermalMaterial(id, amount, 20f) : null;
+        Inventory input = CreateDragInventory("lua.processing.declared.input", source);
+        Inventory output = CreateDragInventory("lua.processing.declared.output",
+            GameplayTestSystemProbe.Flag(args, "full", false) ? ThermalMaterial("StoneSlab", 1, 20f) : null);
+        JArray beforeInput = ThermalSlots(input), beforeOutput = ThermalSlots(output);
+        bool resolved = ItemProcessingResolver.TryResolve(source,
+            GameplayTestSystemProbe.Text(args, "capability", "cut"),
+            (int)GameplayTestSystemProbe.Number(args, "level", 1), out RuntimeItemProcessingDefinition processing);
+        bool preview = false, success = false;
+        if (resolved)
+        {
+            var capabilities = new CraftingCapabilities { InputSlotLimit = 1, ApplyOutputMultiplier = false };
+            preview = CraftingService.PreviewRecipe(input, output, capabilities, processing.Recipe).Success;
+            success = CraftingService.CraftRecipe(input, output, capabilities, processing.Recipe).Success;
+        }
+        return new JObject
+        {
+            ["resolved"] = resolved, ["preview"] = preview, ["success"] = success,
+            ["work"] = processing?.WorkRequired ?? 0, ["inputAmount"] = processing?.InputAmount ?? 0,
+            ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output),
+            ["unchanged"] = JToken.DeepEquals(beforeInput, ThermalSlots(input)) &&
+                JToken.DeepEquals(beforeOutput, ThermalSlots(output))
+        };
     }
 
     // 同一正式供热入口分别接受长步和小步，并在满槽后从真实快照恢复材料重试。

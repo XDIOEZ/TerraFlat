@@ -44,7 +44,7 @@
               "PanelId": "UI_Cultivator",
               "WaterLitersPerSecondPerPlot": 0.002,
               "WaterFluidIds": ["core:pure_water", "core:filtered_water", "core:drinkable_water"],
-              "FertilizerItemIds": ["Fertilizer", "Humus"],
+              "FertilizerItemIds": ["Fertilizer", "Humus", "Fertilizer_Phosphate"],
               "FertilizerSecondsPerItem": 600,
               "FertilizerGrowthMultiplier": 1.5
             }

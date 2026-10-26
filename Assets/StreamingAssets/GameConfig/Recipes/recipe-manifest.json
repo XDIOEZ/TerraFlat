@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "packages": [
+    { "id": "crafting/electronic_materials", "path": "crafting/electronic_materials.json", "enabled": true },
     { "id": "crafting/railway", "path": "crafting/railway.json", "enabled": true },
     { "id": "crafting/metal_hammers", "path": "crafting/metal_hammers.json", "enabled": true },
     { "id": "crafting/forging", "path": "crafting/forging.json", "enabled": true },

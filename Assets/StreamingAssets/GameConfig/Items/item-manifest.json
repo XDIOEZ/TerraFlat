@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "packages": [
+    { "id": "electronic_materials", "path": "shells/electronic_materials.json", "enabled": true },
     { "id": "railway", "path": "shells/railway.json", "enabled": true },
     { "id": "metal_hammers", "path": "shells/metal_hammers.json", "enabled": true },
     { "id": "metal_crafting", "path": "shells/metal_crafting.json", "enabled": true },

@@ -256,7 +256,8 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/ManualProcessing*.cs",
         "Assets/5_Scripts/5-3_GamePlay/Items/Tool/Mod_ManualProcessor.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MetalCrafting.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Anvil.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Anvil.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ElectronicMaterials.cs"
       ],
       "dependsOn": [
         "inventory"
@@ -325,6 +326,9 @@
         "Assets/StreamingAssets/GameConfig/Items/shells/cactus.json",
         "Assets/StreamingAssets/GameConfig/Items/shells/resource_nodes.json",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestCropVisualRuntimeProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_FarmlandSupply.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ElectronicMaterials.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldRuntimeProbe.Planting.cs",
         "Assets/StreamingAssets/GameplayTests/Systems/Agriculture/*"
       ],
       "dependsOn": [
@@ -681,6 +685,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/EngineeringVision.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkTilemapRenderer.EngineeringVision.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Battery*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ElectronicMaterials.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
         "Assets/StreamingAssets/GameplayTests/Systems/Electrical/*",
         "Assets/StreamingAssets/GameplayTests/mechanical-suite.json"

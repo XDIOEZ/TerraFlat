@@ -73,4 +73,79 @@ public static partial class GameplayTestWorldRuntimeProbe
     }
 
     #endregion
+
+    #region 磷肥真实手持补给与拒绝
+    private static JObject CapturePhosphateFertilizerHeldUseAndRejection(Player player, JObject args)
+    {
+        static bool SourceGround(RuntimeTerrainTileSample sample) =>
+            FarmlandSystem.GetBlockId(sample.Cell.GroundTileId) is "Tile_Grass" or "Tile_Soil";
+        Site near = FindSite(player, sample => SourceGround(sample) &&
+            FarmlandSystem.IsWithinReach(player.transform.position, sample.WorldCell, 2f), minimumRadius: 1);
+        Site distant = null;
+        Item held = null;
+        var result = new JObject();
+        try
+        {
+            distant = FindSite(player, sample => SourceGround(sample) && sample.WorldCell != near.Sample.WorldCell &&
+                !FarmlandSystem.IsWithinReach(player.transform.position, sample.WorldCell, 2f));
+            ItemData source = GameRes.ExistingInstance.CreateItemData("Fertilizer_Phosphate");
+            source.Stack.Amount = 3;
+            held = ItemMgr.Instance.InstantiateHeldItem(source, player, player.transform);
+            held.Load();
+            Mod_FarmlandSupply supply = held.GetComponentInChildren<Mod_FarmlandSupply>(true) ??
+                throw new InvalidOperationException("磷肥没有装配正式耕地补给模块。");
+            result["held"] = held.InHand && ReferenceEquals(held.Owner, player);
+            result["ordinaryAccepted"] = supply.TrySupplyFarmlandAtWorldPosition(near.Center);
+            result["ordinaryAmount"] = source.Stack.Amount;
+            TileData_Farmland Prepare(Site site)
+            {
+                if (!FarmlandSystem.TryTill(site.Center, site.Authority, 16f, 1, out bool complete) || !complete ||
+                    !FarmlandSystem.TryReadSoil(site.Sample.WorldCell, out TileData_Farmland soil))
+                    throw new InvalidOperationException("磷肥回归未能准备自有耕地。");
+                soil.waterValue = 4;
+                soil.fertilityValue = new GameValue_float(.2f);
+                FarmlandSystem.CommitSoil(soil);
+                return soil;
+            }
+            Prepare(near);
+            Prepare(distant);
+            source.Stack.Amount = 0;
+            result["emptyAccepted"] = supply.TrySupplyFarmlandAtWorldPosition(near.Center);
+            FarmlandSystem.TryReadSoil(near.Sample.WorldCell, out TileData_Farmland afterEmpty);
+            result["emptyFertility"] = afterEmpty.Fertility;
+            result["emptyAmount"] = source.Stack.Amount;
+            source.Stack.Amount = 3;
+            result["distantAccepted"] = supply.TrySupplyFarmlandAtWorldPosition(distant.Center);
+            FarmlandSystem.TryReadSoil(distant.Sample.WorldCell, out TileData_Farmland afterDistant);
+            result["distantFertility"] = afterDistant.Fertility;
+            result["distantAmount"] = source.Stack.Amount;
+            held.SetInHand(false);
+            result["notHeldAccepted"] = supply.TrySupplyFarmlandAtWorldPosition(near.Center);
+            result["notHeldAmount"] = source.Stack.Amount;
+            held.SetInHand(true);
+            result["accepted"] = supply.TrySupplyFarmlandAtWorldPosition(near.Center);
+            FarmlandSystem.TryReadSoil(near.Sample.WorldCell, out TileData_Farmland normal);
+            result["fertility"] = normal.Fertility;
+            result["water"] = normal.waterValue;
+            result["amount"] = source.Stack.Amount;
+            normal.fertilityValue = new GameValue_float(.9f);
+            FarmlandSystem.CommitSoil(normal);
+            result["nearlyFullAccepted"] = supply.TrySupplyFarmlandAtWorldPosition(near.Center);
+            FarmlandSystem.TryReadSoil(near.Sample.WorldCell, out TileData_Farmland full);
+            result["fullFertility"] = full.Fertility;
+            result["fullWater"] = full.waterValue;
+            result["nearlyFullAmount"] = source.Stack.Amount;
+            result["fullAccepted"] = supply.TrySupplyFarmlandAtWorldPosition(near.Center);
+            result["fullAmount"] = source.Stack.Amount;
+        }
+        finally
+        {
+            if (held != null) ItemMgr.Instance.DespawnItem(held, saveData: false);
+            distant?.Dispose();
+            near.Dispose();
+            result["restored"] = near.IsRestored() && (distant == null || distant.IsRestored());
+        }
+        return result;
+    }
+    #endregion
 }

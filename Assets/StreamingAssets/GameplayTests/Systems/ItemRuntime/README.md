@@ -8,7 +8,7 @@
 
 快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation、single_sprite_shell_assembly、module_assembly_identity`。
 
-矿物参考入口：`mineral-properties.lua`，操作 `item_runtime/mineral_properties`。读取正式 `GameConfig/Items/mineral-properties.json`，检查12类矿物的硬度/韧性初值、矿脉与掉落物共享、1～10边界、未知ID与非法配置拒绝；只覆盖独立参考目录，尚未接入采矿、伤害、耐久、存档或UI。2026-10-24 专项快速规则通过，报告 `Library/FlatWorldGameplayTests/Runs/20261023T194429966Z_f77d3850/report.json`；未进入 PlayMode，未验证手机端读取。
+矿物参考入口：`mineral-properties.lua`，操作 `item_runtime/mineral_properties`。读取正式 `GameConfig/Items/mineral-properties.json`，检查14类矿物的硬度/韧性初值、矿脉与掉落物共享、1～10边界、未知ID与非法配置拒绝；只覆盖独立参考目录，尚未接入采矿、伤害、耐久、存档或UI。2026-10-26 新增云母硬度3/韧性1及矿石/片共享映射、石英硬度7/韧性2及独立物品映射；本轮保持用户 PlayMode，仅补断言，未执行 Unity Lua。2026-10-24 原12类目录专项快速规则通过，报告 `Library/FlatWorldGameplayTests/Runs/20261023T194429966Z_f77d3850/report.json`；未进入 PlayMode，未验证手机端读取。
 
 2026-10-24 巨型矿山补充同一 Lua 的 `item_runtime/giant_mines`：采样正式继承目录与掉落选择接口，检查现有11类小矿山各有巨型版、20万生命、底边固定的三分之一碰撞、26格偏移占地、防种植不额外占根格、完整受击范围、原矿物参考和开采/防御/产物继承；石矿保留原巨型最终产量，其他巨矿复用小矿完整掉落表。2026-10-26 补充正式碰撞几何的排序锚点采样，断言十一种巨矿都按阻挡体中心排序、普通矿点仍用根点，贴图大小和位置保持原值。用户正在 PlayMode，本轮未触发 Unity 重新编译或执行新增 Lua；真实背后贴近时的遮挡、命中、掉落与寻路未验收。
 

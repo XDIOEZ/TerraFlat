@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:electronic_carbon_fiber_plate",
+      "displayName": "碳纤维板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "match": "exact_item", "itemId": "CarbonFiber", "amount": 1 },
+        { "match": "exact_item", "itemId": "Resin", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "CarbonFiberPlate", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:electronic_phosphate_fertilizer",
+      "displayName": "磷肥",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "match": "exact_item", "itemId": "Phosphorus", "amount": 1 },
+        { "match": "exact_item", "itemId": "Humus", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "Fertilizer_Phosphate", "amount": 2 }],
+      "actions": []
+    },
+    {
+      "id": "core:electronic_lithium_iron_phosphate_battery",
+      "displayName": "磷酸铁锂电池",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "match": "exact_item", "itemId": "Phosphorus", "amount": 1 },
+        { "match": "exact_item", "itemId": "Lithium", "amount": 1 },
+        { "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 1 },
+        { "match": "exact_item", "itemId": "CopperPlate", "amount": 1 },
+        { "match": "exact_item", "itemId": "Rubber", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "Battery_LithiumIronPhosphate_Summoner", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}

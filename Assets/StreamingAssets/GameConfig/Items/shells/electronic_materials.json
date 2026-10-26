@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "CarbonFiber",
+      "parent": "BasicItem_Base",
+      "gameName": "碳纤维",
+      "description": "轻质高强度的黑色纤维，与树脂组合可制成碳纤维板。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.1,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiber/CarbonFiber_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "CarbonFiberPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "碳纤维板",
+      "description": "由碳纤维和树脂制成的轻质复合板，具有清晰的黑灰色编织纹理。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.4,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiberPlate/CarbonFiberPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ingot_Titanium",
+      "parent": "BasicItem_Base",
+      "gameName": "钛锭",
+      "description": "钛（Ti）制成的金属锭，重量轻、强度高且耐腐蚀。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1.35,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ingot", "Metal", "Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Titanium/Ingot_Titanium_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ingot_Aluminum",
+      "parent": "BasicItem_Base",
+      "gameName": "铝锭",
+      "description": "铝（Al）制成的轻质金属锭，容易加工，加工等级需求较低。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.81,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ingot", "Metal", "Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Aluminum/Ingot_Aluminum_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ingot_Molybdenum",
+      "parent": "BasicItem_Base",
+      "gameName": "钼锭",
+      "description": "钼（Mo）制成的深灰色金属锭，可作为电子时代材料储存。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3.08,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ingot", "Metal", "Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Molybdenum/Ingot_Molybdenum_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ingot_Nickel",
+      "parent": "BasicItem_Base",
+      "gameName": "镍锭",
+      "description": "镍（Ni）制成的银灰色金属锭，可作为电子时代材料储存。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 2.67,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ingot", "Metal", "Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Nickel/Ingot_Nickel_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ore_Mica",
+      "parent": "BasicItem_Base",
+      "gameName": "云母矿石",
+      "description": "具有层状结构的云母原矿；切割加工每份可得到2片云母片。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1.2,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ore", "Mineral", "Material", "InventoryCategory.Material"],
+      "processing": {
+        "cut": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "MicaSheet", "amount": 2 }]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ore_Mica/Ore_Mica_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "MicaSheet",
+      "parent": "BasicItem_Base",
+      "gameName": "云母片",
+      "description": "从云母矿石切割得到的薄片，绝缘且耐高温。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Mineral", "Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/MicaSheet/MicaSheet_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Phosphorus",
+      "parent": "BasicItem_Base",
+      "gameName": "磷",
+      "description": "磷（P）材料，可用于制作磷肥和磷酸铁锂电池。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Phosphorus/Phosphorus_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Fertilizer_Phosphate",
+      "parent": "Fertilizer",
+      "gameName": "磷肥",
+      "description": "由磷和腐殖土配制的肥料。对准耕地使用，每份补充35%肥力；也可放入培育仓的肥料槽。",
+      "weight": 0.6,
+      "volume": 0.45,
+      "stackable": true,
+      "tags": ["Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Fertilizer_Phosphate/Fertilizer_Phosphate_Icon.png"
+      },
+      "modules": {
+        "farmlandSupply": {
+          "prefab": "Module_FarmlandSupply",
+          "id": "Mod_FarmlandSupply",
+          "enabled": true,
+          "data": {},
+          "parameters": { "waterAmount": 0, "fertilityAmount": 0.35 }
+        }
+      }
+    },
+    {
+      "id": "Lithium",
+      "parent": "BasicItem_Base",
+      "gameName": "锂",
+      "description": "锂（Li）金属材料，可与磷和铁制作磷酸铁锂电池。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.16,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Material", "InventoryCategory.Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Lithium/Lithium_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Battery_LithiumIronPhosphate",
+      "parent": "Battery_Basic",
+      "gameName": "磷酸铁锂电池-建筑",
+      "description": "以锂、磷和铁制成的蓄电池。接入铜电线后储存多余电力，并在发电不足时自动放电。",
+      "weight": 10,
+      "volume": 18,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Battery_LithiumIronPhosphate\",\"SummonerPrefabId\":\"Battery_LithiumIronPhosphate_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Battery_LithiumIronPhosphate" }
+        }
+      }
+    },
+    {
+      "id": "Battery_LithiumIronPhosphate_Summoner",
+      "parent": "Battery_Basic_Summoner",
+      "gameName": "磷酸铁锂电池",
+      "description": "以锂、磷和铁制成的蓄电池。接入铜电线后储存多余电力，并在发电不足时自动放电。",
+      "weight": 10,
+      "volume": 18,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Battery_LithiumIronPhosphate\",\"SummonerPrefabId\":\"Battery_LithiumIronPhosphate_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Battery_LithiumIronPhosphate" }
+        }
+      }
+    },
+    {
+      "id": "Boron",
+      "parent": "BasicItem_Base",
+      "gameName": "硼",
+      "description": "硼（B）材料。与2份沙子一起加热至1000℃以上，可烧制2份玻璃。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "InventoryCategory.Material"],
+      "reactions": [
+        {
+          "id": "core:electronic_boron_sand_glass",
+          "minTemperature": 1000,
+          "maxTemperature": 9999,
+          "inputs": [
+            { "match": "exact_item", "itemId": "Boron", "amount": 1 },
+            { "match": "exact_item", "itemId": "Sand", "amount": 2 }
+          ],
+          "outputs": [{ "itemId": "Glass", "amount": 2 }]
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Boron/Boron_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Quartz",
+      "parent": "BasicItem_Base",
+      "gameName": "石英",
+      "description": "石英矿物，加热至1700℃可烧制玻璃；同时加入2份煤矿石作为碳源时，优先还原制成硅板。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.8,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Mineral", "Material", "InventoryCategory.Material"],
+      "reactions": [
+        {
+          "id": "core:electronic_quartz_reduction_silicon",
+          "minTemperature": 1700,
+          "maxTemperature": 9999,
+          "inputs": [
+            { "match": "exact_item", "itemId": "Quartz", "amount": 1 },
+            { "match": "exact_item", "itemId": "Ore_Coal", "amount": 2 }
+          ],
+          "outputs": [{ "itemId": "SiliconPlate", "amount": 1 }]
+        },
+        {
+          "id": "core:electronic_quartz_glass",
+          "minTemperature": 1700,
+          "maxTemperature": 9999,
+          "inputs": [{ "match": "exact_item", "itemId": "Quartz", "amount": 1 }],
+          "outputs": [{ "itemId": "Glass", "amount": 1 }]
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Quartz/Quartz_Icon.png"
+      },
+      "modules": {}
+    }
+  ]
+}
