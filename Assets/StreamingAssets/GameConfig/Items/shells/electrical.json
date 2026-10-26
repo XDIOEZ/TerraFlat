@@ -13,7 +13,7 @@
       "volume": 0.18,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Rubber/Rubber_Icon.png",
         "color": {
@@ -43,7 +43,7 @@
       "volume": 60,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png",
         "spriteStates": {
@@ -116,7 +116,7 @@
       "volume": 24,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png",
         "spriteStates": {
@@ -186,7 +186,7 @@
       "volume": 1,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
         "color": {
@@ -272,7 +272,7 @@
       "volume": 0.5,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
         "color": {
@@ -356,7 +356,7 @@
       "volume": 45,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
         "color": {
@@ -424,7 +424,7 @@
       "volume": 18,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
         "color": {
@@ -490,7 +490,7 @@
       "volume": 45,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
         "color": {
@@ -558,7 +558,7 @@
       "volume": 18,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
         "color": {
@@ -626,7 +626,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.ElectricalPower"
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Idle]",
@@ -726,7 +727,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.ElectricalPower"
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Idle]",

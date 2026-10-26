@@ -9,7 +9,7 @@
       "stackable": false,
       "canBePickedUp": false,
       "worldDropBehavior": "passive",
-      "tags": ["Space.Wreck"],
+      "tags": ["Space.Wreck", "InventoryCategory.Transport"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },

@@ -13,7 +13,7 @@
       "volume": 0.4,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material"],
+      "tags": ["Material", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/AdvancedMaterials/Plastic/Plastic_Icon.png"
       },
@@ -31,7 +31,7 @@
       "volume": 0.2,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material"],
+      "tags": ["Material", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/AdvancedMaterials/SiliconPlate/SiliconPlate_Icon.png"
       },

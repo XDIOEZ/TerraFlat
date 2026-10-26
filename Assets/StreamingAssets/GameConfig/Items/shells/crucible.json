@@ -15,7 +15,8 @@
       "canBePickedUp": true,
       "tags": [
         "Sand",
-        "Mineral"
+        "Mineral",
+        "InventoryCategory.Material"
       ],
       "reactions": [
         {
@@ -53,7 +54,8 @@
       "canBePickedUp": true,
       "tags": [
         "Glass",
-        "Material"
+        "Material",
+        "InventoryCategory.Material"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Glass/Glass_Icon.png"
@@ -74,7 +76,8 @@
       "canBePickedUp": true,
       "tags": [
         "Container",
-        "Crucible"
+        "Crucible",
+        "InventoryCategory.Functional"
       ],
       "health": {
         "hasHp": true,
@@ -152,7 +155,8 @@
       "tags": [
         "35",
         "Container",
-        "Crucible"
+        "Crucible",
+        "InventoryCategory.Functional"
       ],
       "health": {
         "hasHp": true,

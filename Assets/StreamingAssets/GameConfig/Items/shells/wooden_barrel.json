@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "WoodenBarrel",
+      "tags": ["InventoryCategory.Tool"],
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "shellPrefab": "BuildingSummonerShell",
@@ -55,6 +56,7 @@
     },
     {
       "id": "WoodenBarrel_Building",
+      "tags": ["InventoryCategory.Tool"],
       "parent": "BuildingBody_Base",
       "gameName": "木桶-建筑",
       "description": "放置在地面的储水木桶，可装水或存物并拆回；液体、桶内物品和耐久品质都会保留。",

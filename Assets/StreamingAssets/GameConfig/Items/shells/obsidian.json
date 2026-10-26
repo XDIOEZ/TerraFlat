@@ -11,7 +11,7 @@
       "volume": 0.5,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Mineral", "Obsidian", "Knife"],
+      "tags": ["Mineral", "Obsidian", "Knife", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Obsidian/Obsidian_Icon.png",
         "rendererPath": "Render/Render_1",
@@ -88,7 +88,7 @@
       "weight": 0.55,
       "volume": 0.8,
       "stackable": false,
-      "tags": ["Knife", "Obsidian", "Modern", "Tool"],
+      "tags": ["Knife", "Obsidian", "Modern", "Tool", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
         "rendererLocalEulerAngles": {
@@ -120,7 +120,7 @@
       "weight": 1.8,
       "volume": 5,
       "stackable": false,
-      "tags": ["Spear", "Obsidian", "Modern"],
+      "tags": ["Spear", "Obsidian", "Modern", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Obsidian/Spear_Obsidian_Icon.png",
         "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },

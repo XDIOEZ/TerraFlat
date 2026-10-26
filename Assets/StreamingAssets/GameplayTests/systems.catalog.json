@@ -1140,6 +1140,8 @@
       "name": "UI与设置",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/5_Scripts/5-1_Data/CoreData/InventoryItemCategoryCatalog.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.InventoryCategories.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SaveSelectionUI.cs",
         "Assets/Editor/FlatWorld/PrefabBuilders/UI/GameSavePrefabBuilder.cs",
         "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab",

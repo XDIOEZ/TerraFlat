@@ -1,6 +1,14 @@
 {
   "schemaVersion": 1,
   "tags": [
+    {"id": "InventoryCategory.Building", "labels": [{"locale": "zh-CN", "text": "建筑装饰"}, {"locale": "en", "text": "Building & Decoration"}]},
+    {"id": "InventoryCategory.Nature", "labels": [{"locale": "zh-CN", "text": "自然植物"}, {"locale": "en", "text": "Nature & Plants"}]},
+    {"id": "InventoryCategory.Functional", "labels": [{"locale": "zh-CN", "text": "功能设施"}, {"locale": "en", "text": "Functional Blocks"}]},
+    {"id": "InventoryCategory.Tool", "labels": [{"locale": "zh-CN", "text": "工具用品"}, {"locale": "en", "text": "Tools & Utilities"}]},
+    {"id": "InventoryCategory.Equipment", "labels": [{"locale": "zh-CN", "text": "武器装备"}, {"locale": "en", "text": "Weapons & Equipment"}]},
+    {"id": "InventoryCategory.Food", "labels": [{"locale": "zh-CN", "text": "食物饮品"}, {"locale": "en", "text": "Food & Drinks"}]},
+    {"id": "InventoryCategory.Material", "labels": [{"locale": "zh-CN", "text": "材料零件"}, {"locale": "en", "text": "Materials & Parts"}]},
+    {"id": "InventoryCategory.Transport", "labels": [{"locale": "zh-CN", "text": "交通运输"}, {"locale": "en", "text": "Transportation"}]},
     { "id": "Nail", "labels": [{ "locale": "zh-CN", "text": "金属钉" }, { "locale": "en", "text": "Metal Nail" }] },
     { "id": "AnimalProduct", "labels": [{ "locale": "zh-CN", "text": "动物产品" }, { "locale": "en", "text": "Animal Product" }] },
     { "id": "Armor", "labels": [{ "locale": "zh-CN", "text": "防具" }, { "locale": "en", "text": "Armor" }] },

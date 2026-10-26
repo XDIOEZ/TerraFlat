@@ -4106,6 +4106,38 @@ MonoBehaviour:
     m_Localized: "\u540c\u7c7b\u7f50\u4f53\u76f8\u90bb\u81ea\u52a8\u7ec4\u5408\uff0c\u6bcf\u683c\u589e\u52a0100L\u5bb9\u91cf\uff0c\u5171\u4eab\u5355\u79cd\u6db2\u4f53\uff1b\u4e0d\u540c\u6db2\u4f53\u4e0d\u5408\u5e76\u3002\u56db\u9762\u53ef\u8fde\u63a5\u6db2\u4f53\u7ba1\u9053\uff0c\u62c6\u56de\u6309\u5bb9\u91cf\u5360\u6bd4\u5206\u51fa\u5185\u5bb9\u3002"
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600000900100
+    m_Localized: "建筑装饰"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900101
+    m_Localized: "自然植物"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900102
+    m_Localized: "功能设施"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900103
+    m_Localized: "工具用品"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900104
+    m_Localized: "武器装备"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900105
+    m_Localized: "食物饮品"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900106
+    m_Localized: "材料零件"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900107
+    m_Localized: "交通运输"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

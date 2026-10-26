@@ -15,7 +15,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
@@ -91,7 +92,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Building.png",
@@ -162,7 +164,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png",
@@ -239,7 +242,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Building.png",
@@ -311,7 +315,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png",
@@ -389,7 +394,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png",
@@ -460,7 +466,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
@@ -537,7 +544,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
@@ -608,7 +616,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
@@ -684,7 +693,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
@@ -755,7 +765,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
@@ -834,7 +845,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
@@ -909,7 +921,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
@@ -985,7 +998,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
@@ -1056,7 +1070,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png",
@@ -1132,7 +1147,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Horizontal.png"
@@ -1199,7 +1215,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
@@ -1271,7 +1288,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
@@ -1342,7 +1360,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Frame.png",
@@ -1416,7 +1435,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Static.png",
@@ -1487,7 +1507,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Body.png",
@@ -1560,7 +1581,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png",
@@ -1630,7 +1652,7 @@
       "volume": 120,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35", "InventoryGroup.MechanicalPower"],
+      "tags": ["35", "InventoryGroup.MechanicalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
         "spriteStates": {
@@ -1702,7 +1724,7 @@
       "volume": 48,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["35", "InventoryGroup.MechanicalPower"],
+      "tags": ["35", "InventoryGroup.MechanicalPower", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
         "spriteStates": {
@@ -1767,7 +1789,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png",
@@ -1839,7 +1862,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Building.png",
@@ -1906,7 +1930,7 @@
       "volume": 60,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35", "ManualForge"],
+      "tags": ["35", "ManualForge", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png"
       },
@@ -1967,7 +1991,7 @@
       "volume": 24,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["35", "ManualForge"],
+      "tags": ["35", "ManualForge", "InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png"
       },
@@ -2025,7 +2049,7 @@
       "volume": 60,
       "tags": [
         "35",
-        "InventoryCategory.IndustrialBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/ToolCabinet/ToolCabinet_Building.png",
@@ -2067,7 +2091,7 @@
       "volume": 60,
       "tags": [
         "35",
-        "InventoryCategory.IndustrialBlock"
+        "InventoryCategory.Functional"
       ],
       "worldDropBehavior": "interactive",
       "visual": {

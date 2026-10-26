@@ -174,7 +174,7 @@
     {
       "id": "HerbCrop",
       "parent": "WildCrop_Base",
-      "tags": ["BeeForage.Crop"],
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
       "gameName": "药草-农作物",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
       "weight": 0.4,
@@ -223,7 +223,7 @@
     {
       "id": "FoxtailCrop",
       "parent": "WildCrop_Base",
-      "tags": ["BeeForage.Crop"],
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
       "gameName": "狗尾草-农作物",
       "description": "成熟后可采收狗尾草穗；持续受寒或受热会枯萎。",
       "weight": 0.5,
@@ -430,6 +430,7 @@
     },
     {
       "id": "HerbPoultice",
+      "tags": ["47", "Fruit", "Berry", "InventoryCategory.Tool"],
       "parent": "Berry",
       "gameName": "草药包",
       "description": "30 秒内缓慢恢复最多 10% 生命上限；同类药效刷新，不叠加速度。治疗仍需要体内蛋白质，不能复活。",
@@ -582,7 +583,7 @@
       "removeModules": [ "resourceTool" ],
       "abstract": true,
       "sourcePrefab": null,
-      "tags": ["Shovel", "Tool"],
+      "tags": ["Shovel", "Tool", "InventoryCategory.Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png"
       },
@@ -1069,6 +1070,7 @@
     },
     {
       "id": "ClayJar",
+      "tags": ["Stone", "Mineral", "Throwable", "InventoryCategory.Tool"],
       "worldDropBehavior": "interactive",
       "parent": "Clay",
       "shellPrefab": "BuildingSummonerShell",
@@ -1122,7 +1124,8 @@
       "parent": "Berry",
       "gameName": "盐",
       "tags": [
-        "SaltFood"
+        "SaltFood",
+        "InventoryCategory.Food"
       ],
       "description": "蒸发海水获得。吃下后缓慢缓解缺盐，也能腌制肉类；不能代替饮水。",
       "weight": 0.1,
@@ -1253,7 +1256,8 @@
       "gameName": "腌肉",
       "tags": [
         "SaltFood",
-        "PreserveFreshness"
+        "PreserveFreshness",
+        "InventoryCategory.Food"
       ],
       "description": "腌制延长保质期，继承原料新鲜度。食用补盐；新鲜原料制成后默认可存放 9 个游戏日。",
       "weight": 0.45,
@@ -1347,7 +1351,7 @@
     {
       "id": "MinersNote",
       "parent": "Rope",
-      "tags": [],
+      "tags": ["InventoryCategory.Tool"],
       "gameName": "矿工笔记",
       "description": "铁矿先用石镐采铜、再用铜镐开采。粗铁加木柄与绳子可制粗铁铁镐；铜锡按九比一冶炼青铜。备足陶罐饮水和食物，再去洞穴寻找更深的矿脉。",
       "weight": 0.1,

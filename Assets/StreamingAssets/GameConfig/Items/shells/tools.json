@@ -16,7 +16,8 @@
       "canBePickedUp": true,
       "tags": [
         "Tool",
-        "SewingNeedle"
+        "SewingNeedle",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png"
@@ -36,7 +37,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Scissors/Scissors_Icon.png",
@@ -78,6 +80,7 @@
     },
     {
       "id": "WoodTool_Base",
+      "tags": ["InventoryCategory.Material"],
       "weight": 1.5,
       "volume": 2.5,
       "stackable": true,
@@ -102,7 +105,8 @@
       "canBePickedUp": true,
       "tags": [
         "Wood",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_408.png",
@@ -298,7 +302,8 @@
       "canBePickedUp": true,
       "tags": [
         "Wood",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStick_Idle.png"
@@ -342,7 +347,8 @@
       "canBePickedUp": true,
       "tags": [
         "Wood",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
       ],
       "processing": {
         "cut": {
@@ -571,7 +577,8 @@
       "canBePickedUp": true,
       "tags": [
         "Combustion.Tinder",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png",
@@ -790,6 +797,7 @@
     },
     {
       "id": "Axe_Base",
+      "tags": ["InventoryCategory.Tool"],
       "weight": 1.65,
       "volume": 3.0,
       "stackable": true,
@@ -826,7 +834,8 @@
       "canBePickedUp": true,
       "tags": [
         "Axe",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Stone/Axe_Stone_Icon.png",
@@ -1007,7 +1016,8 @@
       "canBePickedUp": true,
       "tags": [
         "Axe",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Flint/Axe_Flint_Icon.png",
@@ -1188,7 +1198,8 @@
       "canBePickedUp": true,
       "tags": [
         "Axe",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Copper/Axe_Copper_Icon.png",
@@ -1369,7 +1380,8 @@
       "canBePickedUp": true,
       "tags": [
         "Axe",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Bronze/Axe_Bronze_Icon.png",
@@ -1551,7 +1563,8 @@
       "canBePickedUp": true,
       "tags": [
         "Axe",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
@@ -1732,7 +1745,8 @@
       "canBePickedUp": true,
       "tags": [
         "Axe",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
@@ -1900,6 +1914,7 @@
     },
     {
       "id": "Pickaxe_Base",
+      "tags": ["InventoryCategory.Tool"],
       "weight": 2.775,
       "volume": 4.0,
       "stackable": true,
@@ -1936,7 +1951,8 @@
       "canBePickedUp": true,
       "tags": [
         "Modern",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Stone/Pickaxe_Stone_Icon.png",
@@ -2115,7 +2131,8 @@
         "Pickaxe",
         "Copper",
         "Modern",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Copper/Pickaxe_Copper_Icon.png",
@@ -2298,7 +2315,8 @@
       "canBePickedUp": true,
       "tags": [
         "36",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Bronze/Pickaxe_Bronze_Icon.png",
@@ -2483,7 +2501,8 @@
         "Pickaxe",
         "RawIron",
         "Modern",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_RawIron/Pickaxe_RawIron_Icon.png",
@@ -2668,7 +2687,8 @@
         "Pickaxe",
         "Iron",
         "Modern",
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Iron/Pickaxe_Iron_Icon.png",
@@ -2838,6 +2858,7 @@
     },
     {
       "id": "FlintStrike",
+      "tags": ["InventoryCategory.Tool"],
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/FlintStrike.prefab",
       "shellPrefab": "FlintStrike",
       "gameName": "打火石",
@@ -2875,7 +2896,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
@@ -2937,7 +2959,8 @@
     {
       "id": "StoneHammer",
       "tags": [
-        "Tool"
+        "Tool",
+        "InventoryCategory.Tool"
       ],
       "parent": "WoodHammer",
       "gameName": "石锤",

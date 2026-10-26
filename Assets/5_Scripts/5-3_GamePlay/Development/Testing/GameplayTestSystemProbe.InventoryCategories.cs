@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 public static partial class GameplayTestSystemProbe
 {
-    #region 库存分类并集与真实索引投影采样
+    #region 库存固定分类与真实索引投影采样
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void RegisterInventoryCategoriesRuntime() => RegisterInventoryCategoriesRules();
@@ -17,12 +17,44 @@ public static partial class GameplayTestSystemProbe
 #endif
     private static void RegisterInventoryCategoriesRules()
     {
-        Register("ui_settings", "inventory_category_filter", args => new JObject
+        Register("ui_settings", "inventory_category_filter", args =>
         {
-            ["matches"] = InventoryCategoryFilter.MatchesAny(
-                args["tags"]?.ToObject<List<string>>(), args["selected"]?.ToObject<List<string>>())
+            List<string> tags = args["tags"]?.ToObject<List<string>>();
+            return new JObject
+            {
+                ["matches"] = InventoryCategoryFilter.MatchesAny(tags, args["selected"]?.ToObject<List<string>>()),
+                ["category"] = InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(tags).Id
+            };
         });
+        Register("ui_settings", "inventory_category_catalog", _ =>
+        {
+            var categories = new JArray();
+            foreach (InventoryItemCategoryCatalog.Category category in InventoryItemCategoryCatalog.Categories)
+                categories.Add(new JObject { ["id"] = category.Id, ["label"] = category.Label, ["tag"] = category.Tag });
+            return new JObject { ["categories"] = categories };
+        });
+        Register("ui_settings", "inventory_category_sort", CaptureInventoryPrimaryCategorySorting);
         Register("ui_settings", "inventory_filter_projection", CaptureInventoryFilterProjection);
+    }
+
+    private static JObject CaptureInventoryPrimaryCategorySorting(JObject args)
+    {
+        // 自有库存直接调用正式排序，Lua 核对分类顺序和同类物品的稳定 ID 次序。
+        var slots = new List<ItemSlot>();
+        foreach (JObject source in (JArray)args["items"])
+            slots.Add(new ItemSlot(slots.Count)
+            {
+                itemData = new Data_GeneralItem
+                {
+                    IDName = source.Value<string>("id"), Tags = source["tags"].ToObject<List<string>>(),
+                    Stack = new ItemStack { Amount = 1, Stackable = false }
+                }
+            });
+        var inventory = new Inventory_Data(slots, "category-sort-probe");
+        inventory.Sort(InventorySortMode.Category);
+        var ids = new JArray();
+        foreach (ItemSlot slot in inventory.itemSlots) ids.Add(slot.itemData?.IDName);
+        return new JObject { ["ids"] = ids };
     }
 
     private static JObject CaptureInventoryFilterProjection(JObject args)
@@ -107,7 +139,7 @@ public static partial class GameplayTestSystemProbe
 
             grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesAny(item.Tags, new[] { "tool" }));
             Sample("tools");
-            grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesAny(item.Tags, new[] { "tool", "mechanical" }));
+            grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesAny(item.Tags, new[] { "tool", "functional" }));
             Sample("union");
             bool filterPreservedData = slots.Count == 41 && ReferenceEquals(slots[8].itemData, original8);
             slots[39].itemData = Item("Tool", "InventoryGroup.MechanicalPower");

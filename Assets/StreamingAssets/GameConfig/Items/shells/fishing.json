@@ -17,7 +17,8 @@
       "tags": [
         "Tool",
         "FishingRod",
-        "Wood"
+        "Wood",
+        "InventoryCategory.Tool"
       ],
       "worldDropBehavior": "interactive",
       "visual": {
@@ -69,7 +70,8 @@
       "tags": [
         "FishingHook",
         "Material",
-        "Bone"
+        "Bone",
+        "InventoryCategory.Material"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png"
@@ -92,7 +94,8 @@
       "tags": [
         "FishingHook",
         "Material",
-        "Iron"
+        "Iron",
+        "InventoryCategory.Material"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Iron.png"
@@ -115,7 +118,8 @@
       "tags": [
         "FishingHook",
         "Material",
-        "Gold"
+        "Gold",
+        "InventoryCategory.Material"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Gold.png"

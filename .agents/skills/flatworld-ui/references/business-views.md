@@ -10,7 +10,7 @@
 
 - 物品信息分两层：`IItemInfoProvider` 经 `ItemInfoQuery.Collect` 返回结构化秒数、模块实例槽、时间源与整堆/下一件语义，不依赖 UI，也不推进状态；基础参数与攻击力同样返回原始数值，伤害缺省参数只读已加载模板并按定义缓存；`IItemTooltipInfoProvider`/`ItemTooltipInfoFormatter` 只生成显示行。食物腐败/逐件融化读现有观察者状态，自然消失仅在状态副本上投影所属世界时钟；无时钟不猜当前玩家世界。新增能力注册数据提供者，文案在 UI 层注册；不要让其他系统解析显示字符串。`InventoryItemTooltip` 复用缓冲，每秒实时时间刷新但不以 UI 时间推进业务。回归为 `ui_settings/item_info_food、item_info_lifetime、item_info_extension、item_info_numeric`。
 
-- 背包/容器 `UI_Bag` 搜索右侧复用 `UI_MultiSelectDropdown`：不同分类按 AND 交集，与名称搜索叠加；`InventoryCategoryFilter` 只读稳定标签。普通库存隐藏非命中槽，创造库存用 `InventoryVirtualizedSlotGrid` 的显示索引映射，不能改真实数据或交互索引；拖拽期间延迟刷新。弹层通过 BasePanel 取消契约优先关闭，勾选保持展开，清除分类不清文字；新视觉同步 `RuntimeUIPrefabBuilder.InventoryFilter`。离线验证 `Tools/Tests/InventoryCategoryFilter/verify.py`，正式回归在 UISettings 的 `inventory_category_filter/inventory_filter_projection`。
+- 背包/容器 `UI_Bag` 搜索右侧复用 `UI_MultiSelectDropdown`：所选分类按 OR 并集，再与名称搜索叠加；`InventoryCategoryFilter` 复用数据层 `InventoryItemCategoryCatalog` 的八种固定用途分类，分类排序顺序一致。普通库存隐藏非命中槽，创造库存用 `InventoryVirtualizedSlotGrid` 的显示索引映射，不能改真实数据或交互索引；拖拽期间延迟刷新。弹层通过 BasePanel 取消契约优先关闭，勾选保持展开，清除分类不清文字；新视觉同步 `RuntimeUIPrefabBuilder.InventoryFilter`。离线验证 `Tools/Tests/InventoryCategoryFilter/verify.py`，正式回归在 UISettings 的 `inventory_category_catalog/filter/sort` 与 `inventory_filter_projection`。
 
 - `MachinePanelFactoryRegistry` 按LogicId租约注册；通用会话管生命周期/库存/权威请求，具体会话管专属控件。槽位按真实容量显隐、不按炉型ID分支，电磁炉复用面板隐藏燃料/点火，启用正式温控子树并读取权威目标／炉温／需求与实供功率；草稿经机器操作提交，Token 回执与目标状态都到齐才成功，传输未确认和状态同步超时分别反馈，关闭清理等待；不主动抢手机输入焦点。IInstanceUI.IsPanelOpen读真实面板，模块列表按创建/展开/操作刷新。
 - 堆肥箱/晾肉架库存滚动条在滚动区内右侧占32，Viewport预留该宽度，Content横向跟随视口、纵向PreferredSize；熔炉三格输入需270高度。正式Prefab与 `GameUIPrefabRebuilder` 同步，资产边界回归为 `ui_settings/building_panel_layout`。

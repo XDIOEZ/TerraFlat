@@ -17,7 +17,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Tool"
       ],
       "health": {
         "hasHp": true,
@@ -77,7 +78,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Tool"
       ],
       "health": {
         "hasHp": true,
@@ -136,7 +138,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Functional"
       ],
       "health": {
         "hasHp": true,

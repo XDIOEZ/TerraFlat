@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "Crop_Base",
+      "tags": ["InventoryCategory.Nature"],
       "entityRuntime": "resource",
       "abstract": true,
       "parent": "BasicItem_Base",
@@ -106,7 +107,7 @@
       "volume": 2.0,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["InventoryCategory.Nature"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RadishCrop/RadishCrop_Mature.png",
         "rendererLocalPosition": {
@@ -201,7 +202,7 @@
       "volume": 2.5,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["InventoryCategory.Nature"],
       "visual": {
         "rendererLocalPosition": {
           "x": 0.0,
@@ -413,7 +414,7 @@
       "volume": 2.5,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["InventoryCategory.Nature"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/TwineCrop/TwineCrop_Mature.png",
         "rendererLocalPosition": {
@@ -508,7 +509,7 @@
     {
       "id": "BerryCrop",
       "parent": "WildCrop_Base",
-      "tags": ["BeeForage.Crop"],
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
       "gameName": "浆果丛-农作物",
       "description": "可自然生长或种在耕地中的浆果丛；成熟后可反复采摘，果实会周期再生。",
       "weight": 1.5,
@@ -712,7 +713,7 @@
       "volume": 3.0,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": ["BeeForage.Crop"],
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Seedling.png",
         "spriteStates": {
@@ -796,7 +797,7 @@
     ,{
       "id": "CottonCrop",
       "parent": "WildCrop_Base",
-      "tags": ["BeeForage.Crop"],
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
       "gameName": "棉花",
       "description": "成熟后可以采集棉花纤维。",
       "weight": 0.7,

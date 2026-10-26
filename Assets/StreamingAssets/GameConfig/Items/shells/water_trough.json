@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "WaterTrough",
+      "tags": ["InventoryCategory.Functional"],
       "parent": "WoodenBarrel",
       "gameName": "水槽",
       "description": "可放置和拆回的木制水槽，容纳400升混合液体；不放固体物品。地表倾倒按10升整批结算，不足10升保留在槽内，仍可饮用或输送。",
@@ -29,6 +30,7 @@
     },
     {
       "id": "WaterTrough_Building",
+      "tags": ["InventoryCategory.Functional"],
       "parent": "WoodenBarrel_Building",
       "gameName": "水槽-建筑",
       "description": "放在地面的400升混合液体水槽，可接入液体泵或出气口；装拆时保留组分、温度、每口待输出批次和耐久。",

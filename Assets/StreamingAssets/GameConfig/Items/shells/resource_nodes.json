@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "WorldResource_Base",
+      "tags": ["InventoryCategory.Nature"],
       "weight": 500.0,
       "volume": 1000.0,
       "stackable": true,
@@ -147,7 +148,8 @@
       "groundCover": true,
       "tags": [
         "Plant",
-        "BeeForage.Flower"
+        "BeeForage.Flower",
+        "InventoryCategory.Nature"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Flower/Flower_Mature.png",
@@ -182,7 +184,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "Tree"
+        "Tree",
+        "InventoryCategory.Nature"
       ],
       "worldGridOccupancy": {
         "cells": [
@@ -511,7 +514,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "Tree"
+        "Tree",
+        "InventoryCategory.Nature"
       ],
       "worldGridOccupancy": {
         "cells": [
@@ -821,7 +825,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Nature"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Coal/Mine_Coal_Idle.png",
@@ -997,7 +1002,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Nature"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Copper/Mine_Copper_Idle.png",
@@ -1173,7 +1179,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Nature"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Iron/Mine_Iron_Idle.png",
@@ -1349,7 +1356,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Nature"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Stone/Mine_Stone_Idle.png",
@@ -1512,7 +1520,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Nature"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Tin/Mine_Tin_Idle.png",
@@ -1688,7 +1697,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Nature"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
@@ -1871,7 +1881,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "Tree"
+        "Tree",
+        "InventoryCategory.Nature"
       ],
       "worldGridOccupancy": {
         "cells": [

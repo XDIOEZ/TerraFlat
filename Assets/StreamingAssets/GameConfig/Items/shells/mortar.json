@@ -15,7 +15,7 @@
       "volume": 6.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["InventoryCategory.Functional"],
       "health": {
         "hasHp": true,
         "hp": 50,

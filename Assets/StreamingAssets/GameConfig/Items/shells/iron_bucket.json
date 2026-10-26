@@ -13,7 +13,7 @@
       "volume": 8,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Container", "Iron"],
+      "tags": ["Container", "Iron", "InventoryCategory.Tool"],
       "health": {
         "hasHp": true,
         "hp": 80,
@@ -57,7 +57,7 @@
       "volume": 8,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["Container", "Iron"],
+      "tags": ["Container", "Iron", "InventoryCategory.Tool"],
       "health": {
         "hasHp": true,
         "hp": 80,

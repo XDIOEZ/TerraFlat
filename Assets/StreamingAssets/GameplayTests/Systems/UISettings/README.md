@@ -80,7 +80,7 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`，与本地化系统共
 2026-10-21 界面整理新增 `log_filters`（普通/警告/错误的8种组合，异常和断言统一归错误）、`world_settings_pages`（真实基础/高级分页切换与实例保留）、`bag_hotbar_layout`（六种画布尺寸与两档缩放下真实RectTransform底边对齐）。本轮用户自行验收，未执行Lua或真实手机/手柄输入；规则不覆盖正式Prefab画面、键盘弹出、失败存档弹窗、版本HUD和实际首次动画布局。设置顶部归并为常用类别，显示/视觉进入画质，镜头进入按键绑定，语言进入界面设置；隐藏子页保留正式页面和原Provider，不丢设置。
 
 
-库存分类新增 `inventory_category_filter`（并集、精确标签、大小写、历史别名、未知分类）与 `inventory_filter_projection`（紧凑显示、真实索引、点击路由、不可见格更新、空结果、清除恢复、对象池不膨胀）。离线规则与外部编译入口为 `Tools/Tests/InventoryCategoryFilter/verify.py --build`；Unity 正在运行时不执行 Lua 或重载，新下拉框画面、触屏/键鼠输入及生命周期仍需正式编辑器验收。
+库存分类使用 `inventory_category_catalog/filter/sort` 验证固定八类、唯一主分类、显式标签优先、多选并集、未知标签材料兜底及正式库存分类排序；`inventory_filter_projection` 验证紧凑显示、真实索引、点击路由、不可见格更新、空结果、清除恢复、对象池不膨胀。离线入口 `Tools/Tests/InventoryCategoryFilter/verify.py --build` 另核对 Manifest 全部物品的分类与双语文案，预期清单为同目录 `expected-categories.json`。Unity 正在运行时不执行 Lua 或重载，下拉框画面、触屏/键鼠输入及生命周期仍需正式编辑器验收。
 
 2026-10-24 新增 `ui_settings/building_panel_layout`：直接读取堆肥箱、晾肉架、熔炉正式 Prefab，Lua 检查滚动条和视口边界、固定五列的内容宽度预算、内容跟随视口、纵向滚动及熔炉三格输入、两格输出的容器预算。该规则只检查资产布局，不代表运行时画面或多分辨率交互通过；本轮保留用户 PlayMode，未编译、未运行 Lua。
 

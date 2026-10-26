@@ -13,7 +13,7 @@
       "volume": 0.6,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Ore", "Mineral"],
+      "tags": ["Ore", "Mineral", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Diamond/Ore_Diamond_Icon.png",
         "rendererLocalScale": { "x": 0.7, "y": 0.7, "z": 1 },

@@ -6,7 +6,11 @@ using System.Text.Json;
 
 internal static class Program
 {
+    #region 固定分类、并集与配置回归
+
     private static int checks;
+    private static readonly string[] categoryIds = { "building", "nature", "functional", "tool", "equipment", "food", "material", "transport" };
+
     private static void Check(bool condition, string name)
     {
         checks++;
@@ -15,67 +19,91 @@ internal static class Program
 
     private static void Main(string[] args)
     {
+        var categories = InventoryCategoryFilter.Categories;
+        Check(categories.Select(category => category.Id).SequenceEqual(categoryIds), "Exactly eight categories in stable display/sort order");
+        Check(categories.Select(category => category.Tag).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 8, "Unique explicit category tags");
         Check(InventoryCategoryFilter.MatchesAny(null, null), "No selection is unrestricted");
-        Check(!InventoryCategoryFilter.MatchesAny(null, new[] { "tool" }), "Missing tags cannot match");
+        Check(InventoryCategoryFilter.MatchesAny(null, new[] { "material" }), "Untagged items have a visible material fallback");
         Check(!InventoryCategoryFilter.MatchesAny(new[] { "Toolsmith" }, new[] { "tool" }), "Tags are exact");
         Check(!InventoryCategoryFilter.MatchesAny(new[] { "Tool" }, new[] { "unknown" }), "Unknown categories cannot match");
-        Check(InventoryCategoryFilter.MatchesAny(new[] { "tool", "inventorygroup.mechanicalpower" }, new[] { "TOOL", "mechanical" }), "Case-insensitive stable IDs");
-        Check(InventoryCategoryFilter.MatchesAny(new[] { "InventoryGroup.Electrical" }, new[] { "electrical" }), "Electrical alias");
-        Check(InventoryCategoryFilter.MatchesAny(new[] { "InventoryGroup.Chemical" }, new[] { "chemistry" }), "Chemistry alias");
+        Check(InventoryCategoryFilter.MatchesAny(new[] { "inventorycategory.tool" }, new[] { "TOOL" }), "Case-insensitive category IDs and tags");
 
-        // 独立真值表覆盖多选并集，不调用生产代码拼接预期值。
-        string[] categoryIds = { "tool", "mechanical", "food" };
-        string[] tags = { "Tool", "InventoryGroup.MechanicalPower", "Food" };
-        for (int itemMask = 0; itemMask < 8; itemMask++)
-        for (int selectionMask = 0; selectionMask < 8; selectionMask++)
+        foreach (var row in new[]
         {
-            var itemTags = new List<string>();
-            var selected = new List<string>();
-            for (int bit = 0; bit < 3; bit++)
-            {
-                if ((itemMask & (1 << bit)) != 0) itemTags.Add(tags[bit]);
-                if ((selectionMask & (1 << bit)) != 0) selected.Add(categoryIds[bit]);
-            }
-            bool expected = selectionMask == 0 || (itemMask & selectionMask) != 0;
-            Check(InventoryCategoryFilter.MatchesAny(itemTags, selected) == expected,
-                $"OR truth table item={itemMask} selected={selectionMask}");
-        }
-
-        string[] allTags = { "35", "InventoryGroup.MechanicalPower", "InventoryGroup.ElectricalPower",
-            "InventoryCategory.PipeBlock", "Tool", "Food", "Equipment", "Material", "Seed", "InventoryGroup.Chemistry" };
-        var categories = InventoryCategoryFilter.Categories;
-        Check(categories.Select(category => category.Id).Distinct().Count() == categories.Count, "Unique category IDs");
-        for (int mask = 0; mask < (1 << categories.Count); mask++)
+            (new[] { "Seed", "Food" }, "nature"),
+            (new[] { "Equipment", "Tool", "Wood", "InventoryGroup.ElectricalPower" }, "equipment"),
+            (new[] { "Tool", "InventoryGroup.MechanicalPower" }, "tool"),
+            (new[] { "35", "InventoryGroup.Electrical" }, "functional"),
+            (new[] { "InventoryGroup.Chemical" }, "functional"),
+            (new[] { "47" }, "food"),
+            (new[] { "35", "Wood" }, "building"),
+            (new[] { "InventoryCategory.Material", "Knife", "InventoryGroup.Chemistry" }, "material"),
+            (new[] { "InventoryCategory.Transport", "35", "InventoryGroup.Chemistry" }, "transport"),
+            (new[] { "InventoryGroup.NewMachineKind", "InventoryCategory.Unregistered" }, "material"),
+            (new[] { "InventoryCategory.Tool", "InventoryCategory.Building" }, "building")
+        })
         {
-            var selected = new List<string>();
-            for (int bit = 0; bit < categories.Count; bit++)
-                if ((mask & (1 << bit)) != 0) selected.Add(categories[bit].Id);
-            Check(InventoryCategoryFilter.MatchesAny(allTags, selected), "Full-tag item supports every category union");
+            Check(InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(row.Item1).Id == row.Item2, "Primary category precedence");
+            Check(InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(row.Item1.Reverse().ToArray()).Id == row.Item2, "Tag order cannot change category");
         }
 
-        string root = args[0];
-        using JsonDocument pipes = JsonDocument.Parse(File.ReadAllText(Path.Combine(root,
-            "Assets/StreamingAssets/GameConfig/Items/shells/chemical_machines.json")));
-        foreach (JsonElement item in pipes.RootElement.GetProperty("items").EnumerateArray())
+        // 每种单一主分类都独立覆盖全部多选组合，避免分类重叠掩盖错误。
+        for (int itemIndex = 0; itemIndex < categories.Count; itemIndex++)
+        for (int selectionMask = 0; selectionMask < (1 << categories.Count); selectionMask++)
         {
-            string id = item.GetProperty("id").GetString() ?? string.Empty;
-            if (!new[] { "FluidPipe", "FluidValve", "FluidOutlet", "GasSelector", "FluidFilter" }.Any(name => id == name || id == name + "_Summoner")) continue;
-            var itemTags = item.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()!).ToArray();
-            Check(InventoryCategoryFilter.MatchesAny(itemTags, new[] { "pipe", "industrial", "chemistry" }), "Pipe definition " + id);
-            Check(!InventoryCategoryFilter.MatchesAny(itemTags, new[] { "tool", "food" }), "Pipe is not a handheld tool or food: " + id);
+            string[] selected = categoryIds.Where((_, index) => (selectionMask & (1 << index)) != 0).ToArray();
+            bool expected = selectionMask == 0 || (selectionMask & (1 << itemIndex)) != 0;
+            Check(InventoryCategoryFilter.MatchesAny(new[] { categories[itemIndex].Tag }, selected) == expected,
+                $"OR truth table item={itemIndex} selected={selectionMask}");
         }
-        foreach (string file in new[] { "building_bodies.json", "building_summoners.json" })
-        {
-            using JsonDocument buildings = JsonDocument.Parse(File.ReadAllText(Path.Combine(root,
-                "Assets/StreamingAssets/GameConfig/Items/shells", file)));
-            foreach (JsonElement item in buildings.RootElement.GetProperty("items").EnumerateArray())
-            {
-                string id = item.GetProperty("id").GetString() ?? string.Empty;
-                if (!new[] { "BlastFurnace", "Smelter", "WorkBench" }.Any(name => id == name || id == name + "_Summoner")) continue;
-                var itemTags = item.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()!).ToArray();
-                Check(InventoryCategoryFilter.MatchesAny(itemTags, new[] { "building", "industrial" }), "Industrial definition " + id);
-            }
-        }
+        for (int left = 0; left < categories.Count; left++)
+        for (int right = 0; right < categories.Count; right++)
+            Check(Math.Sign(InventoryItemCategoryCatalog.ComparePrimaryCategoryForItemTags(new[] { categories[left].Tag }, new[] { categories[right].Tag })) == Math.Sign(left - right),
+                "Category sorting follows dropdown order");
+
+        VerifyAllEnabledItemDefinitions(args[0]);
         Console.WriteLine($"PASS: {checks} category/filter/config assertions against production code.");
     }
+
+    private static void VerifyAllEnabledItemDefinitions(string root)
+    {
+        string config = Path.Combine(root, "Assets/StreamingAssets/GameConfig/Items");
+        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(config, "item-manifest.json")));
+        var sources = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (JsonElement package in manifest.RootElement.GetProperty("packages").EnumerateArray())
+        {
+            if (package.TryGetProperty("enabled", out JsonElement enabled) && !enabled.GetBoolean()) continue;
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(Path.Combine(config, package.GetProperty("path").GetString())));
+            foreach (JsonElement item in document.RootElement.GetProperty("items").EnumerateArray()) sources.Add(item.GetProperty("id").GetString(), item.Clone());
+        }
+        string[] Tags(string id)
+        {
+            JsonElement item = sources[id];
+            if (item.TryGetProperty("tags", out JsonElement tags)) return tags.EnumerateArray().Select(tag => tag.GetString()).ToArray();
+            return item.TryGetProperty("parent", out JsonElement parent) ? Tags(parent.GetString()) : Array.Empty<string>();
+        }
+
+        using JsonDocument fixture = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "Tools/Tests/InventoryCategoryFilter/expected-categories.json")));
+        var expected = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (JsonProperty category in fixture.RootElement.EnumerateObject())
+        foreach (JsonElement id in category.Value.EnumerateArray()) expected.Add(id.GetString(), category.Name);
+
+        int concrete = 0;
+        foreach (var source in sources)
+        {
+            if (source.Value.TryGetProperty("abstract", out JsonElement abstractItem) && abstractItem.GetBoolean()) continue;
+            concrete++;
+            string id = source.Key;
+            string[] tags = Tags(id);
+            Check(expected.ContainsKey(id), "New item must be assigned to an existing category: " + id);
+            Check(tags.Count(tag => tag.StartsWith("InventoryCategory.", StringComparison.OrdinalIgnoreCase)) == 1, "One explicit primary category: " + id);
+            Check(InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(tags).Id == expected[id], "Reviewed item assignment: " + id);
+            foreach (var category in InventoryCategoryFilter.Categories)
+                Check(category.Matches(tags) == (category.Id == expected[id]), "No overlapping categories: " + id + "/" + category.Id);
+        }
+        Check(concrete == expected.Count, "Fixture covers all enabled concrete items and no deleted items");
+        Console.WriteLine($"PASS: all {concrete} enabled item definitions have one reviewed category.");
+    }
+
+    #endregion
 }

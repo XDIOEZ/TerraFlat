@@ -16,7 +16,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
@@ -107,7 +107,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
@@ -197,7 +197,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
@@ -270,7 +270,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
@@ -342,7 +342,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
@@ -415,7 +415,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
@@ -487,7 +487,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
@@ -579,7 +579,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
@@ -669,7 +669,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png"
@@ -741,7 +742,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png"
@@ -812,7 +814,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
@@ -884,7 +887,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
@@ -955,7 +959,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png"
@@ -1027,7 +1032,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png"
@@ -1098,7 +1104,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png"
@@ -1170,7 +1177,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png"
@@ -1241,7 +1249,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png"
@@ -1313,7 +1322,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png"
@@ -1384,7 +1394,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png",
@@ -1576,7 +1587,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png"
@@ -1647,7 +1659,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png"
@@ -1719,7 +1732,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png"
@@ -1790,7 +1804,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Electrical"
+        "InventoryGroup.Electrical",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
@@ -1862,7 +1877,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Electrical"
+        "InventoryGroup.Electrical",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
@@ -1933,7 +1949,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
@@ -2005,7 +2022,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
@@ -2076,7 +2094,8 @@
       "canBePickedUp": true,
       "tags": [
         "Material",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Material"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png"
@@ -2098,7 +2117,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
@@ -2189,7 +2208,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
@@ -2279,7 +2298,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
@@ -2352,7 +2371,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
@@ -2424,7 +2443,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
@@ -2497,7 +2516,7 @@
       "tags": [
         "35",
         "InventoryGroup.Chemistry",
-        "InventoryCategory.PipeBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
@@ -2568,7 +2587,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
@@ -2640,7 +2660,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
@@ -2711,7 +2732,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
@@ -2783,7 +2805,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"

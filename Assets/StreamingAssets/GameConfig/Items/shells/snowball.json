@@ -18,7 +18,8 @@
       "maxDurability": 1,
       "tags": [
         "InventoryGroup.Material",
-        "Throwable"
+        "Throwable",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Snowball/Snowball_Icon.png",

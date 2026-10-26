@@ -83,7 +83,7 @@
       "volume": 4.0,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["InventoryCategory.Nature"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/ChiliTree/ChiliTree_Seedling.png",
         "spriteStates": {

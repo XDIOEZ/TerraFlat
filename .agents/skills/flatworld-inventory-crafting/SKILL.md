@@ -22,6 +22,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 所有扣量、转移、制作经正式事务；预检与提交共用容量/接收策略，多产物全部可交付才扣料。UI 槽只绑定真实库存，不拥有数据。
 - 专用容器通过 `Inventory_Data.SetItemAcceptancePolicy` 装配非序列化接收规则，数量转移、拖拽交换和整仓入库共用；临时面板用 `Inventory.RuntimeAccessGuard` 核对提交时的会话资格，过期拖拽拒绝，内部资源消费不受界面开关影响。
 - InventoryContextResolver 按 ItemData 引用/Guid 找所属库存；快捷栏按真实槽索引刷新。联机消费由服务器取真实槽，客户端 pending/ack 期间不得用旧库存覆写结果。
+- 背包分类由 Data/CoreData/InventoryItemCategoryCatalog 固定为建筑装饰、自然植物、功能设施、工具用品、武器装备、食物饮品、材料零件、交通运输；筛选和分类排序共用唯一主分类。内容复用 `InventoryCategory.*` 八种标签，不按材料、工业分支新增页签；无显式标签按语义推断，未识别归材料。改动时更新 `Tools/Tests/InventoryCategoryFilter/expected-categories.json` 并验证全 Manifest。
 - 重量kg、库存体积L、Stackable 独立；配置m³需换算。携带量对实际主背包/快捷栏/手工输入输出按引用去重，关闭面板不减载荷。
 - 共用 `UI_Bag` 的容器标题绑定 `FWUI_标题`，通过 `LocalizedTextRuntime.SetProvider` 读取所属物品的 `RuntimeItemDefinition.DisplayName`；玩家行囊保留原名，不改作存档和端口键的 `Data.Name`。
 - 制作经 Matcher→Controller→CraftingService→CraftingTransaction；Save 不解绑，Unload 才清监听。显示、输入与数据生命周期分别管理。

@@ -8,7 +8,7 @@
       "stackable": true,
       "abstract": true,
       "shellPrefab": "Seed",
-      "tags": ["Seed", "Food"],
+      "tags": ["Seed", "Food", "InventoryCategory.Nature"],
       "visual": {
         "rendererPath": "Render"
       },
@@ -44,7 +44,7 @@
       "volume": 0.05,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Seed", "Food"],
+      "tags": ["Seed", "Food", "InventoryCategory.Nature"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/AppleSeed/AppleSeed_Icon.png",
         "rendererLocalPosition": {
@@ -228,7 +228,7 @@
       "weight": 0.02,
       "volume": 0.05,
       "stackable": true,
-      "tags": ["Seed"],
+      "tags": ["Seed", "InventoryCategory.Nature"],
       "modules": {
         "plantable": {
           "parameters": {

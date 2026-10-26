@@ -15,7 +15,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "HandDrill"
+        "HandDrill",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
@@ -99,7 +100,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "HandDrill"
+        "HandDrill",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",

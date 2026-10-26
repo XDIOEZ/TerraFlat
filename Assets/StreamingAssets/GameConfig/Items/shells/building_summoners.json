@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "BuildingSummoner_Base",
+      "tags": ["InventoryCategory.Functional"],
       "weight": 10.0,
       "volume": 25.0,
       "stackable": true,
@@ -28,7 +29,7 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryCategory.IndustrialBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png",
@@ -153,7 +154,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png[Bonfire_Spent]",
@@ -280,7 +282,8 @@
       "tags": [
         "35",
         "Wood",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Chest_Wood/Chest_Wood_Closed.png",
@@ -417,7 +420,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Building"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
@@ -544,7 +548,8 @@
       "tags": [
         "35",
         "Wood",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Building"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png[Door_Wood_Close]",
@@ -681,7 +686,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Meatrack/Meatrack_Idle.png",
@@ -806,7 +812,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png",
@@ -937,7 +944,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Scarecrow/Scarecrow_Idle.png",
@@ -1063,7 +1071,7 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryCategory.IndustrialBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/Smelter/Smelter_Unlit.png[Smelter_Unlit]",
@@ -1189,7 +1197,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tent.png[Tent]",
@@ -1326,7 +1335,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Building"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
@@ -1453,7 +1463,8 @@
       "tags": [
         "35",
         "Wood",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Building"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Wall_Wood_Medium.png[Wall_Wood_Medium]",
@@ -1591,7 +1602,7 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryCategory.IndustrialBlock"
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/WorkBench/WorkBench_Idle.png",
@@ -1718,7 +1729,8 @@
       "tags": [
         "35",
         "Wood",
-        "Combustion.Fuel"
+        "Combustion.Fuel",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
@@ -1868,7 +1880,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "Modern"
+        "Modern",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
@@ -1996,7 +2009,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/堆肥桶.png[堆肥桶]",
@@ -2120,7 +2134,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Building"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Tile.png"

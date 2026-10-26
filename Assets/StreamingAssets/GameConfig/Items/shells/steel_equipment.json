@@ -13,7 +13,7 @@
       "volume": 3.5,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Head", "Material.Steel"],
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Head", "Material.Steel", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Helmet/Steel_Helmet_Icon.png",
         "spriteStates": {
@@ -53,7 +53,7 @@
       "volume": 1.5,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Hands", "Material.Steel"],
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Hands", "Material.Steel", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Gauntlets/Steel_Gauntlets_Icon.png",
         "spriteStates": {
@@ -92,7 +92,7 @@
       "volume": 4.5,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Legs", "Material.Steel"],
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.Legs", "Material.Steel", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Greaves/Steel_Greaves_Icon.png",
         "spriteStates": {
@@ -131,7 +131,7 @@
       "volume": 3,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.FeetOuter", "Material.Steel"],
+      "tags": ["36", "Equipment", "Armor", "EquipmentSlot.FeetOuter", "Material.Steel", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Steel_Boots/Steel_Boots_Icon.png",
         "spriteStates": {

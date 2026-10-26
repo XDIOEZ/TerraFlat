@@ -13,7 +13,7 @@
       "volume": 0.3,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Ingot", "Metal", "Material"],
+      "tags": ["Ingot", "Metal", "Material", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/TungstenIngot_Icon.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
@@ -39,7 +39,7 @@
       "volume": 0.75,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Ore", "Mineral", "Material"],
+      "tags": ["Ore", "Mineral", "Material", "InventoryCategory.Material"],
       "reactions": [
         {
           "id": "core:tungsten_ore_to_ingot",

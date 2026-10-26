@@ -13,7 +13,7 @@
       "volume": 2.8,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Tool", "Metal", "Copper"],
+      "tags": ["Tool", "Metal", "Copper", "InventoryCategory.Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/MetalHammers/CopperHammer_Icon.png",
         "rendererLocalPosition": {"x": 0, "y": 0, "z": 0},
@@ -48,7 +48,7 @@
       "durability": 200,
       "maxDurability": 200,
       "weight": 3.4,
-      "tags": ["Tool", "Metal", "Iron"],
+      "tags": ["Tool", "Metal", "Iron", "InventoryCategory.Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png"
       },
@@ -68,7 +68,7 @@
       "durability": 400,
       "maxDurability": 400,
       "weight": 3.2,
-      "tags": ["Tool", "Metal", "Steel"],
+      "tags": ["Tool", "Metal", "Steel", "InventoryCategory.Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Tools/MetalHammers/SteelHammer_Icon.png"
       },

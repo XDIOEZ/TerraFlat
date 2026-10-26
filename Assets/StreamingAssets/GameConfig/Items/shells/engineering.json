@@ -55,7 +55,7 @@
       "volume": 0.6,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Equipment", "EngineeringVision", "EquipmentSlot.Eyes", "InventoryGroup.ElectricalPower"],
+      "tags": ["Equipment", "EngineeringVision", "EquipmentSlot.Eyes", "InventoryGroup.ElectricalPower", "InventoryCategory.Equipment"],
       "visual": {
         "spriteStates": {
           "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png"

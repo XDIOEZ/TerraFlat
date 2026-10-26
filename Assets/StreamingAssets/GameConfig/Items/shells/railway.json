@@ -12,7 +12,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Transport"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
@@ -83,7 +84,8 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Transport"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
@@ -166,7 +168,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Transport"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Railway/Minecart.png"
@@ -237,7 +240,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryCategory.Transport"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Railway/Minecart.png",
@@ -359,7 +363,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Railway/SteamEngine.png"
@@ -431,7 +436,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Railway/SteamEngine.png"

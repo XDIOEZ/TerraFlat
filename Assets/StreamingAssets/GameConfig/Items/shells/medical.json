@@ -14,7 +14,7 @@
       "maxDurability": 1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["InventoryCategory.Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Medical/Splint.png"
       },
@@ -46,7 +46,7 @@
       "maxDurability": 1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["InventoryCategory.Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Medical/Bandage_Plant.png"
       },

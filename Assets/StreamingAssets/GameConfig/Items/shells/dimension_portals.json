@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "DimensionPortal_Base",
+      "tags": ["InventoryCategory.Functional"],
       "weight": 200.0,
       "volume": 300.0,
       "stackable": true,
@@ -25,7 +26,7 @@
       "volume": 300.0,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
         "shadows": {
@@ -160,7 +161,7 @@
       "volume": 300.0,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
         "shadows": {

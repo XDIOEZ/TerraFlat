@@ -18,7 +18,8 @@
         "FluidTank",
         "InventoryGroup.Chemical",
         "Material.Iron",
-        "Container.FluidTank"
+        "Container.FluidTank",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png",
@@ -104,7 +105,8 @@
         "FluidTank",
         "InventoryGroup.Chemical",
         "Material.Iron",
-        "Container.FluidTank"
+        "Container.FluidTank",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png",
@@ -194,7 +196,8 @@
         "FluidTank",
         "InventoryGroup.Chemical",
         "Material.Steel",
-        "Container.FluidTank"
+        "Container.FluidTank",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
@@ -282,7 +285,8 @@
         "FluidTank",
         "InventoryGroup.Chemical",
         "Material.Steel",
-        "Container.FluidTank"
+        "Container.FluidTank",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
@@ -373,7 +377,8 @@
         "Spacesuit.Head",
         "SpacesuitSet:core:spacesuit",
         "EquipmentSlot.Head",
-        "InventoryGroup.Chemical"
+        "InventoryGroup.Chemical",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteStates": {
@@ -429,7 +434,8 @@
         "Spacesuit.Torso",
         "SpacesuitSet:core:spacesuit",
         "EquipmentSlot.TorsoOuter",
-        "InventoryGroup.Chemical"
+        "InventoryGroup.Chemical",
+        "InventoryCategory.Equipment"
       ],
       "health": {
         "weakTool": 0,
@@ -540,7 +546,8 @@
         "Spacesuit.Hands",
         "SpacesuitSet:core:spacesuit",
         "EquipmentSlot.Hands",
-        "InventoryGroup.Chemical"
+        "InventoryGroup.Chemical",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteStates": {
@@ -595,7 +602,8 @@
         "Spacesuit.Legs",
         "SpacesuitSet:core:spacesuit",
         "EquipmentSlot.Legs",
-        "InventoryGroup.Chemical"
+        "InventoryGroup.Chemical",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteStates": {
@@ -650,7 +658,8 @@
         "Spacesuit.Feet",
         "SpacesuitSet:core:spacesuit",
         "EquipmentSlot.FeetOuter",
-        "InventoryGroup.Chemical"
+        "InventoryGroup.Chemical",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteStates": {

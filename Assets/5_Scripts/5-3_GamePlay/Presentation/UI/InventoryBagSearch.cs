@@ -46,7 +46,7 @@ public sealed class InventoryBagSearch : MonoBehaviour
         if (categoryDropdown != null)
         {
             var options = new List<UIMultiSelectDropdown.Option>();
-            foreach (InventoryCategoryFilter.Category category in InventoryCategoryFilter.Categories)
+            foreach (InventoryItemCategoryCatalog.Category category in InventoryCategoryFilter.Categories)
                 options.Add(new UIMultiSelectDropdown.Option(category.Id, category.Label));
             categoryDropdown.SetOptions(options);
             categoryDropdown.SelectionChanged += OnCategoriesChanged;

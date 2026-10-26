@@ -8733,6 +8733,38 @@ MonoBehaviour:
     m_Localized: "气体ID / 每秒速率（0停止）"
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600000900000
+    m_Localized: "建筑装饰"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900001
+    m_Localized: "自然植物"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900002
+    m_Localized: "功能设施"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900003
+    m_Localized: "工具用品"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900004
+    m_Localized: "武器装备"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900005
+    m_Localized: "食物饮品"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900006
+    m_Localized: "材料零件"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900007
+    m_Localized: "交通运输"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

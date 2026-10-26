@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "Equipment_Base",
+      "tags": ["InventoryCategory.Equipment"],
       "weight": 4.0,
       "volume": 10.0,
       "stackable": true,
@@ -30,7 +31,8 @@
         "Equipment",
         "Armor",
         "EquipmentSlot.TorsoOuter",
-        "Material.Steel"
+        "Material.Steel",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Chestplate_Iron/Chestplate_Iron_Icon.png",
@@ -167,7 +169,8 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.TorsoOuter"
+        "EquipmentSlot.TorsoOuter",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteStates": {
@@ -299,7 +302,8 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.TorsoOuter"
+        "EquipmentSlot.TorsoOuter",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteStates": {

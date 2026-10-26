@@ -17,7 +17,8 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.Head"
+        "EquipmentSlot.Head",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Hood/Traveler_Hood_Icon.png",
@@ -74,7 +75,8 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.TorsoOuter"
+        "EquipmentSlot.TorsoOuter",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Vest/Traveler_Vest_Icon.png",
@@ -131,7 +133,8 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.Hands"
+        "EquipmentSlot.Hands",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
@@ -188,7 +191,8 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.Legs"
+        "EquipmentSlot.Legs",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Trousers/Traveler_Trousers_Icon.png",
@@ -246,7 +250,8 @@
         "36",
         "Equipment",
         "Armor",
-        "EquipmentSlot.FeetOuter"
+        "EquipmentSlot.FeetOuter",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
@@ -304,7 +309,8 @@
         "Equipment",
         "Armor",
         "EquipmentSlot.Head",
-        "Material.Iron"
+        "Material.Iron",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png",
@@ -362,7 +368,8 @@
         "Equipment",
         "Armor",
         "EquipmentSlot.TorsoOuter",
-        "Material.Iron"
+        "Material.Iron",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png",
@@ -420,7 +427,8 @@
         "Equipment",
         "Armor",
         "EquipmentSlot.Hands",
-        "Material.Iron"
+        "Material.Iron",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png",
@@ -478,7 +486,8 @@
         "Equipment",
         "Armor",
         "EquipmentSlot.Legs",
-        "Material.Iron"
+        "Material.Iron",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Greaves/IronGuard_Greaves_Icon.png",
@@ -537,7 +546,8 @@
         "Equipment",
         "Armor",
         "EquipmentSlot.FeetOuter",
-        "Material.Iron"
+        "Material.Iron",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/IronGuard_Boots/IronGuard_Boots_Icon.png",

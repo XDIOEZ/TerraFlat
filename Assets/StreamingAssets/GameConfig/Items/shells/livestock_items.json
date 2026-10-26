@@ -12,7 +12,7 @@
       "volume": 0.4,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material", "AnimalProduct"],
+      "tags": ["Material", "AnimalProduct", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Wool/Wool_Icon.png"
       }

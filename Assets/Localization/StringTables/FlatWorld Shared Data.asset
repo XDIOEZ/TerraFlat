@@ -4051,6 +4051,38 @@ MonoBehaviour:
     m_Key: item.LiquidTankBlock_Steel_Summoner.description
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600000900100
+    m_Key: tag.InventoryCategory.Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900101
+    m_Key: tag.InventoryCategory.Nature.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900102
+    m_Key: tag.InventoryCategory.Functional.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900103
+    m_Key: tag.InventoryCategory.Tool.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900104
+    m_Key: tag.InventoryCategory.Equipment.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900105
+    m_Key: tag.InventoryCategory.Food.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900106
+    m_Key: tag.InventoryCategory.Material.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900107
+    m_Key: tag.InventoryCategory.Transport.name
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

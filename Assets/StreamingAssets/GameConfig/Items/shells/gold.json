@@ -13,7 +13,7 @@
       "volume": 0.3,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Ingot"],
+      "tags": ["Ingot", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/GoldIngot_Icon.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
@@ -39,7 +39,7 @@
       "volume": 0.75,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Ore", "Gold", "SlingAmmo"],
+      "tags": ["Ore", "Gold", "SlingAmmo", "InventoryCategory.Material"],
       "processing": {
         "grind": {
           "inputAmount": 1,
@@ -88,7 +88,7 @@
       "volume": 0.375,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material", "Powder", "Gold"],
+      "tags": ["Material", "Powder", "Gold", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Stone.png",
         "color": { "r": 1.0, "g": 0.72, "b": 0.28, "a": 1.0 }

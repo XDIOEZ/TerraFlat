@@ -20,7 +20,8 @@
         "Tool",
         "Shield",
         "Wood",
-        "EquipmentSlot.OffHand"
+        "EquipmentSlot.OffHand",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Equipment/Shield_Wood/Shield_Wood_Icon.png",

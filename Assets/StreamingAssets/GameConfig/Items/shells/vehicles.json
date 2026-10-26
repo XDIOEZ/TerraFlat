@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "Boat",
+      "tags": ["InventoryCategory.Transport"],
       "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "shellPrefab": "BuildingSummonerShell",
@@ -52,7 +53,7 @@
       "maxDurability": 1,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35"],
+      "tags": ["35", "InventoryCategory.Transport"],
       "health": {
         "hasHp": true,
         "hp": 60,

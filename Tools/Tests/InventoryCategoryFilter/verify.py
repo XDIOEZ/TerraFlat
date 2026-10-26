@@ -34,7 +34,7 @@ def assets():
     empty_rect = int(re.search(r'component: \{fileID: (\d+)\}', empty_go).group(1))
     assert f'  m_Father: {{fileID: {search_rect}}}' in blocks[empty_rect], 'Empty-result label must be a direct child of search owner'
     print('PASS: empty-result label is reachable by the runtime binding')
-    source = (ROOT / 'Assets/5_Scripts/5-3_GamePlay/Presentation/UI/InventoryCategoryFilter.cs').read_text(encoding='utf-8')
+    source = (ROOT / 'Assets/5_Scripts/5-1_Data/CoreData/InventoryItemCategoryCatalog.cs').read_text(encoding='utf-8')
     labels = re.findall(r'new\("[a-z]+", "([^"]+)"', source)
     labels += ['全部分类', '分类（{0}）', '匹配任一所选分类', '清除分类', '没有匹配物品']
     shared = (ROOT / 'Assets/Localization/StringTables/FlatWorldUI Shared Data.asset').read_text(encoding='utf-8')
@@ -48,6 +48,21 @@ def assets():
             table = (ROOT / f'Assets/Localization/StringTables/FlatWorldUI_{locale}.asset').read_text(encoding='utf-8')
             assert re.search(r'^  - m_Id: '+keys[key]+r'\n    m_Localized: \S', table, re.M), (label, locale)
     print('PASS: all filter labels exist in both formal localization tables')
+    catalog = json.loads((ROOT / 'Assets/Resources/Localization/ItemTagCatalog.json').read_text(encoding='utf-8'))
+    category_tags = re.findall(r'"(InventoryCategory\.[A-Za-z]+)"', source)
+    entries = {entry['id']: entry for entry in catalog['tags']}
+    shared = (ROOT / 'Assets/Localization/StringTables/FlatWorld Shared Data.asset').read_text(encoding='utf-8')
+    keys = {key: identity for identity, key in re.findall(r'^  - m_Id: (\d+)\n    m_Key: ([^\n]+)', shared, re.M)}
+    for tag in category_tags:
+        assert tag in entries, tag
+        key = f'tag.{tag}.name'
+        assert key in keys, key
+        translations = {entry['locale']: entry['text'] for entry in entries[tag]['labels']}
+        for locale in ['zh-CN', 'en']:
+            table = (ROOT / f'Assets/Localization/StringTables/FlatWorld_{locale}.asset').read_text(encoding='utf-8')
+            match = re.search(r'^  - m_Id: '+keys[key]+r'\n    m_Localized: (.+)', table, re.M)
+            assert match and json.loads(match.group(1)) == translations[locale], (tag, locale)
+    print('PASS: eight category tags have matching catalog and formal bilingual translations')
 
 def build_targets():
     # 播放期间 Unity 未重新导入的新脚本仅加到外部构建，不改 Unity 生成的项目文件。
@@ -90,7 +105,9 @@ def main():
     for name, value in {'OutputType':'Exe', 'TargetFramework':'net8.0', 'EnableDefaultCompileItems':'false', 'Nullable':'disable'}.items():
         ET.SubElement(props, name).text = value
     group = ET.SubElement(project, 'ItemGroup')
-    for file in [Path(__file__).with_name('Program.cs'), ROOT / 'Assets/5_Scripts/5-3_GamePlay/Presentation/UI/InventoryCategoryFilter.cs']:
+    for file in [Path(__file__).with_name('Program.cs'),
+                 ROOT / 'Assets/5_Scripts/5-1_Data/CoreData/InventoryItemCategoryCatalog.cs',
+                 ROOT / 'Assets/5_Scripts/5-3_GamePlay/Presentation/UI/InventoryCategoryFilter.cs']:
         ET.SubElement(group, 'Compile', Include=str(file))
     path = OUT / 'InventoryCategoryFilter.Tests.csproj'
     ET.ElementTree(project).write(path, encoding='utf-8', xml_declaration=True)

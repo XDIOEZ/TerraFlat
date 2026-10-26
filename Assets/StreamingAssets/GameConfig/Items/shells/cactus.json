@@ -13,7 +13,7 @@
       "volume": 0.6,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["47", "InventoryGroup.Food"],
+      "tags": ["47", "InventoryGroup.Food", "InventoryCategory.Food"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CactusPiece/CactusPiece_Icon.png",
         "rendererLocalScale": { "x": 0.45, "y": 0.45, "z": 1.0 },
@@ -59,7 +59,7 @@
       "volume": 5.0,
       "stackable": false,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["InventoryCategory.Nature"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Cactus/Cactus_Mature.png",
         "rendererLocalPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },

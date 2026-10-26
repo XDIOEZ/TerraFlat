@@ -13,7 +13,7 @@
       "volume": 0.5,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material", "Rope", "BindingDurability:1.3"],
+      "tags": ["Material", "Rope", "BindingDurability:1.3", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/LeatherStrap/LeatherStrap_Icon.png"
       },
@@ -31,7 +31,7 @@
       "volume": 0.1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material"],
+      "tags": ["Material", "InventoryCategory.Material"],
       "matter": {
         "transitions": [
           {
@@ -59,7 +59,7 @@
       "volume": 0.05,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material"],
+      "tags": ["Material", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_278.png",
         "color": { "r": 0.2, "g": 0.2, "b": 0.2, "a": 1 }
@@ -78,7 +78,7 @@
       "volume": 0.2,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material"],
+      "tags": ["Material", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cloth/Cloth_Icon.png"
       },
@@ -96,7 +96,7 @@
       "volume": 0.1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material", "Fiber"],
+      "tags": ["Material", "Fiber", "InventoryCategory.Material"],
       "processing": {
         "weave": {
           "inputAmount": 2,
@@ -121,7 +121,7 @@
       "volume": 0.1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Material"],
+      "tags": ["Material", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Silk/Silk_Icon.png"
       },

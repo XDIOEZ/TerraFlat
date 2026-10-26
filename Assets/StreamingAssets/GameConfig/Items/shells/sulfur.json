@@ -10,7 +10,7 @@
       "volume": 0.3,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Mineral", "Sulfur"],
+      "tags": ["Mineral", "Sulfur", "InventoryCategory.Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Sulfur/Ore_Sulfur_Icon.png",
         "rendererLocalScale": { "x": 0.5, "y": 0.5, "z": 1 },
@@ -25,7 +25,7 @@
       "description": "分布在山地和山地岩浆口周围的硫磺矿体。开采后掉落硫磺，镐子提供采集加成，不设工具等级门槛。",
       "canBePickedUp": false,
       "stackable": false,
-      "tags": ["35", "Mineral", "Sulfur"],
+      "tags": ["35", "Mineral", "Sulfur", "InventoryCategory.Nature"],
       "lootTableId": "Mine_Sulfur_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Sulfur/Mine_Sulfur_Idle.png",

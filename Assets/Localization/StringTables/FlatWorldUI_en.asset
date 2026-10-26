@@ -8928,6 +8928,38 @@ MonoBehaviour:
     m_Localized: "Gas ID / Rate per second (0 stops)"
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600000900000
+    m_Localized: "Building & Decoration"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900001
+    m_Localized: "Nature & Plants"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900002
+    m_Localized: "Functional Blocks"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900003
+    m_Localized: "Tools & Utilities"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900004
+    m_Localized: "Weapons & Equipment"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900005
+    m_Localized: "Food & Drinks"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900006
+    m_Localized: "Materials & Parts"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900007
+    m_Localized: "Transportation"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -15,7 +15,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Transport"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
@@ -122,7 +123,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Chemistry",
+        "InventoryCategory.Transport"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",

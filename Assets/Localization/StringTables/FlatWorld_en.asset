@@ -4412,6 +4412,38 @@ MonoBehaviour:
     m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600000900100
+    m_Localized: "Building & Decoration"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900101
+    m_Localized: "Nature & Plants"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900102
+    m_Localized: "Functional Blocks"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900103
+    m_Localized: "Tools & Utilities"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900104
+    m_Localized: "Weapons & Equipment"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900105
+    m_Localized: "Food & Drinks"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900106
+    m_Localized: "Materials & Parts"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000900107
+    m_Localized: "Transportation"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

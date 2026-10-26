@@ -15,7 +15,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png"
@@ -87,7 +88,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png"
@@ -154,7 +156,8 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png"
@@ -226,7 +229,8 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.MechanicalPower"
+        "InventoryGroup.MechanicalPower",
+        "InventoryCategory.Functional"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png"

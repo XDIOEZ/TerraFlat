@@ -12,7 +12,7 @@
       "volume": 0.8,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Knife", "Modern", "Tool"],
+      "tags": ["Knife", "Modern", "Tool", "InventoryCategory.Equipment"],
       "processingCapabilities": {
         "cut": { "level": 1 }
       },
@@ -235,6 +235,7 @@
     },
     {
       "id": "Spear_Base",
+      "tags": ["InventoryCategory.Equipment"],
       "weight": 1.925,
       "volume": 5.0,
       "stackable": true,
@@ -260,7 +261,8 @@
       "tags": [
         "Spear",
         "Stone",
-        "Modern"
+        "Modern",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
@@ -441,7 +443,8 @@
       "tags": [
         "Spear",
         "Copper",
-        "Modern"
+        "Modern",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_69]",
@@ -622,7 +625,8 @@
       "tags": [
         "Spear",
         "Iron",
-        "Modern"
+        "Modern",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_67]",
@@ -803,7 +807,8 @@
       "tags": [
         "Spear",
         "Stone",
-        "Modern"
+        "Modern",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
@@ -970,6 +975,7 @@
     },
     {
       "id": "ChippedTool",
+      "tags": ["InventoryCategory.Tool"],
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab",
       "shellPrefab": "ChippedTool",
       "gameName": "打制石器",
@@ -1035,6 +1041,7 @@
     },
     {
       "id": "Torch_Base",
+      "tags": ["InventoryCategory.Functional"],
       "worldDropBehavior": "interactive",
       "weight": 1.0,
       "volume": 2.0,
@@ -1278,6 +1285,7 @@
     },
     {
       "id": "Bow_Base",
+      "tags": ["InventoryCategory.Equipment"],
       "weight": 0.9,
       "volume": 4.0,
       "stackable": true,
@@ -1300,7 +1308,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Bow", "RangedWeapon", "Wood", "Tool"],
+      "tags": ["Bow", "RangedWeapon", "Wood", "Tool", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/WoodBow_Icon.png",
         "flipX": true
@@ -1344,7 +1352,7 @@
     },
     {
       "id": "Bow_Recurve",
-      "tags": ["Bow", "RangedWeapon", "Wood", "Tool"],
+      "tags": ["Bow", "RangedWeapon", "Wood", "Tool", "InventoryCategory.Equipment"],
       "parent": "Bow_Wood",
       "gameName": "反曲弓",
       "description": "采用反曲弓臂设计的强化弓。操作方式与木弓相同，但同等蓄力下可让箭矢造成更高伤害。",
@@ -1367,7 +1375,7 @@
       "parent": "Bow_Recurve",
       "gameName": "弩",
       "description": "使用普通箭矢的木弩，伤害、射程和上膛速度与反曲弓相同。按住左键蓄满上膛，松手不会射出；再按下并松开左键才发射。满蓄力后不再消耗体力，未蓄满就松手会取消上膛。",
-      "tags": ["Crossbow", "RangedWeapon", "Wood", "Tool"],
+      "tags": ["Crossbow", "RangedWeapon", "Wood", "Tool", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Crossbow_Wood_Icon.png",
         "flipX": false
@@ -1387,7 +1395,7 @@
       "description": "手持吹箭筒。按住攻击键蓄力并对麦克风吹气，松开后消耗同一库存中的一支箭；吹气越响，箭矢飞得越快并额外造成最多 100% 伤害。",
       "weight": 0.5,
       "volume": 2.0,
-      "tags": ["Blowgun", "RangedWeapon", "Wood", "Tool"],
+      "tags": ["Blowgun", "RangedWeapon", "Wood", "Tool", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Blowgun_Wood_Icon.png",
         "flipX": false
@@ -1444,7 +1452,7 @@
       "volume": 0.8,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": ["Sling", "RangedWeapon", "Leather", "Tool"],
+      "tags": ["Sling", "RangedWeapon", "Leather", "Tool", "InventoryCategory.Equipment"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Sling/Sling_Icon.png",
         "color": {"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0},
@@ -1480,6 +1488,7 @@
     },
     {
       "id": "Arrow_Base",
+      "tags": ["InventoryCategory.Equipment"],
       "weight": 0.08,
       "volume": 0.12,
       "stackable": true,
@@ -1532,7 +1541,8 @@
       "canBePickedUp": true,
       "tags": [
         "Arrow",
-        "Wood"
+        "Wood",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Arrow_Wood_Icon.png"
@@ -1583,7 +1593,8 @@
       "canBePickedUp": true,
       "tags": [
         "Arrow",
-        "Stone"
+        "Stone",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Arrow_Stone_Icon.png"
@@ -1634,7 +1645,8 @@
       "canBePickedUp": true,
       "tags": [
         "Arrow",
-        "Copper"
+        "Copper",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Arrow_Copper_Icon.png"
@@ -1685,7 +1697,8 @@
       "canBePickedUp": true,
       "tags": [
         "Arrow",
-        "Iron"
+        "Iron",
+        "InventoryCategory.Equipment"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Arrow_Iron_Icon.png"
