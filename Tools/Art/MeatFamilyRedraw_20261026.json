@@ -1,0 +1,189 @@
+{
+  "date": "2026-10-26",
+  "generator": "built-in image_gen",
+  "purpose": "参考生肉与用户认可的肉干，统一熟肉和腌肉的形状、像素风格与显示尺度",
+  "references": [
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png",
+      "role": "生肉切块身份、方向和尺寸基准"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png",
+      "role": "用户认可的形状、像素簇与轮廓风格基准"
+    }
+  ],
+  "assets": [
+    {
+      "itemId": "Meat_Cooked",
+      "output": "Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png",
+      "editTarget": "Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png",
+      "generatedSource": "C:/Users/PC/.codex/generated_images/01a17853-728a-7042-b52c-52b58208d217/exec-7cc9736d-d032-45ae-9544-2a5b2bcd7a20.png",
+      "sha256": "4221947c1c602a2999bec67dc7ac02145817fbb3302b3a79108d5d16e5bd0daa",
+      "guid": "8db84c435e0f4242a7aa56004df170f5",
+      "guidAndJsonAddressPreserved": true,
+      "nativeSize": [
+        1254,
+        1254
+      ],
+      "pixelsPerUnit": 1370.2857,
+      "filter": "Point",
+      "mipmaps": false,
+      "compression": "None",
+      "maxTextureSize": 2048,
+      "nativeSourceAndAlphaPreserved": true,
+      "transparentCorners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "alpha128VisibleWorldSize": [
+        0.866242711282764,
+        0.7407214422510576
+      ],
+      "allAlphaVisibleWorldSize": [
+        0.9034612271003047,
+        0.879378658041896
+      ]
+    },
+    {
+      "itemId": "Meat_Cured",
+      "output": "Assets/6_Art/Generated/InventoryCrafting/CuredMeat/CuredMeat_Icon.png",
+      "editTarget": "Assets/6_Art/Generated/InventoryCrafting/CuredMeat/CuredMeat_Icon.png",
+      "generatedSource": "C:/Users/PC/.codex/generated_images/01a17853-728a-7042-b52c-52b58208d217/exec-f8ca40e4-0db0-4891-acc1-2fc7ee4de5eb.png",
+      "sha256": "74164448209462ae4183af14d82b7524b87928347c25ae52fe906863010f7986",
+      "guid": "b4806a56d8c892148add45ca6c765561",
+      "guidAndJsonAddressPreserved": true,
+      "nativeSize": [
+        1254,
+        1254
+      ],
+      "pixelsPerUnit": 1370.2857,
+      "filter": "Point",
+      "mipmaps": false,
+      "compression": "None",
+      "maxTextureSize": 2048,
+      "nativeSourceAndAlphaPreserved": true,
+      "transparentCorners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "alpha128VisibleWorldSize": [
+        0.856025863803439,
+        0.7458298659907201
+      ],
+      "allAlphaVisibleWorldSize": [
+        0.8669724861027157,
+        0.8516472148837283
+      ]
+    }
+  ],
+  "prompts": {
+    "cooked": "Use case: style-transfer. Primary request: completely redraw COOKED MEAT to belong to the same sprite family as raw meat and the approved dried meat. Input image 1: RAW MEAT is the primary cut shape and angle reference. Input image 2: approved JERKY is the preferred pixel-art, outline, scale and silhouette reference. Input image 3: OLD COOKED MEAT is the edit target and only identifies the food category; replace its overly thick wide steak shape and black barbecue stripes with the same elongated simple cut as raw meat. Asset type: one production transparent 2D inventory / held food sprite for FlatWorld, a top-down survival sandbox. Style-transfer to match the provided RAW MEAT and USER-APPROVED JERKY, with the same simple elongated boneless meat-cut identity and bottom-left to top-right diagonal. Low-saturation naturalistic retro PIXEL ART, big deliberate connected square pixel clusters, dark warm contour, a few coherent tonal steps, clear outer silhouette, upper-left illumination. Match the approved jerky's coarse pixel scale and restrained detail: approximately 40–48 logical pixels across the silhouette, rendered at full native high resolution with crisp square cluster steps. Center one single cut, leave clean transparent margin on all sides. Genuinely transparent background, preserve alpha; no baked checkerboard, no drop shadow, no scene, plate, bowl, utensils, packaging, bone, text, watermark or extra props. Do not add tiny noisy pixels, painted microtexture, smooth gradients or wet photographic shine. Keep full native output resolution. Subject: a fully cooked, gently shrunken but still plump and tender boneless piece of meat, elongated rounded irregular oval like the raw cut, a shallow visible side edge, warm chestnut and russet-brown cooked flesh, restrained golden-brown seared outer rim, a few broad lighter brown muscle lobes and short irregular cooking creases. It must visibly read as cooked flesh: warmer and lighter than the dark dry jerky, fuller and smoother in broad clusters, without the jerky's deep long dry cracks. No raw pink/red center, no bloody marbling, no bright white raw fat, no coal-black grill stripes, no crosshatch, no burnt charcoal, no wood-grain or bread appearance. Natural shallow thickness, approximately the same length-to-width silhouette as the reference raw meat and jerky. Output only ONE finished cooked meat sprite.",
+    "cured": "Use case: style-transfer. Primary request: completely redraw SALT-CURED MEAT to belong to the same sprite family as raw meat and the approved dried meat. Input image 1: RAW MEAT is the primary cut shape and angle reference. Input image 2: approved JERKY is the preferred pixel-art, outline, scale and silhouette reference. Input image 3: OLD SALT-CURED MEAT is the edit target and only identifies the food category; replace its rectangular stacked bacon-block silhouette with a single elongated cut derived from raw meat. Asset type: one production transparent 2D inventory / held food sprite for FlatWorld, a top-down survival sandbox. Style-transfer to match the provided RAW MEAT and USER-APPROVED JERKY, with the same simple elongated boneless meat-cut identity and bottom-left to top-right diagonal. Low-saturation naturalistic retro PIXEL ART, big deliberate connected square pixel clusters, dark warm contour, a few coherent tonal steps, clear outer silhouette, upper-left illumination. Match the approved jerky's coarse pixel scale and restrained detail: approximately 40–48 logical pixels across the silhouette, rendered at full native high resolution with crisp square cluster steps. Center one single cut, leave clean transparent margin on all sides. Genuinely transparent background, preserve alpha; no baked checkerboard, no drop shadow, no scene, plate, bowl, utensils, packaging, bone, text, watermark or extra props. Do not add tiny noisy pixels, painted microtexture, smooth gradients or wet photographic shine. Keep full native output resolution. Subject: a single boneless salt-cured piece of meat made from this raw meat cut, an elongated rounded irregular oval, slightly tightened edges but still fleshy rather than dried flat. Muted deep rose / burgundy-red cured flesh, restrained pale ivory fat along only part of its perimeter and one simple muscle separation, a few tiny coarse ivory salt clusters embedded on the meat surface, 3–5 sparse clusters only, not floating seasoning props. The fat is sparse rather than stacked layered bacon; the salt should be legible and restrained. The cured meat is distinctly rose-red with pale salt/fat accents compared with warm brown cooked meat and dark wrinkled jerky. No black grill marks, no golden cooked crust, no burnt surface, no dark deep jerky cracks, no green spoilage, no sausage, no bread, no rectangular bacon slab or stacked meat strips. Same diagonal and shallow cut volume as raw reference. Output only ONE finished salt-cured meat sprite."
+  },
+  "runtimeAssembly": {
+    "shellPrefab": "Prop",
+    "sourcePrefabRole": "仅编辑器迁移来源及冗余排除；运行时不加载此字段",
+    "visualSource": "JSON visual.spriteAddress",
+    "sourceEvidence": "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Definitions/ItemDefinitionCatalogLoader.cs:209",
+    "newSourcePrefabEditsRequired": false
+  },
+  "prefabCorrection": {
+    "path": "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Dehydrate.prefab",
+    "originalCommit": "cdf090cb50d27321970b8534e7853a44f3f186b7",
+    "action": "撤回上次多余的迁移源 Sprite 引用修改，文件已逐字对照恢复至该提交之前版本",
+    "approvedJerkyPngAndJsonReferencePreserved": true
+  },
+  "validation": {
+    "transparentBackgroundAndCorners": "passed",
+    "generatedOriginalByteEquality": "passed",
+    "guidJsonAddressAndAddressableReferences": "passed",
+    "visibleWorldSizeVersusRawMeat": "passed",
+    "relativeTolerance": 0.05,
+    "rawMeatVisibleWorldSize": [
+      0.875,
+      0.71875
+    ],
+    "actualUnitySpriteImports": [
+      {
+        "path": "Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png",
+        "guid": "8db84c435e0f4242a7aa56004df170f5",
+        "width": 1254,
+        "height": 1254,
+        "ppu": 1370.28564453125,
+        "pivot": {
+          "x": 627,
+          "y": 627
+        },
+        "textureWidth": 1254,
+        "textureHeight": 1254,
+        "filterMode": "0"
+      },
+      {
+        "path": "Assets/6_Art/Generated/InventoryCrafting/CuredMeat/CuredMeat_Icon.png",
+        "guid": "b4806a56d8c892148add45ca6c765561",
+        "width": 1254,
+        "height": 1254,
+        "ppu": 1370.28564453125,
+        "pivot": {
+          "x": 627,
+          "y": 627
+        },
+        "textureWidth": 1254,
+        "textureHeight": 1254,
+        "filterMode": "0"
+      }
+    ],
+    "console": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "renderingRules": {
+      "runId": "20261026T152815217Z_b105e2ec",
+      "mode": "EditModeRules",
+      "status": "failed",
+      "passed": 1,
+      "failed": 2,
+      "report": "Library/FlatWorldGameplayTests/Runs/20261026T152815217Z_b105e2ec/report.json",
+      "cases": [
+        {
+          "id": "rendering_rules",
+          "status": "failed",
+          "reason": "System.InvalidOperationException: [string \"GameplayTestBootstrap\"]:27: 测试流程超过 256 步"
+        },
+        {
+          "id": "rendering_building_liquid_surface",
+          "status": "passed",
+          "reason": ""
+        },
+        {
+          "id": "rendering_combustion_shader_smoke",
+          "status": "failed",
+          "reason": "[string \"GameplayTestBootstrap\"]:127: 高炉烟雾没有从上方炉口按正式尺寸冒出"
+        }
+      ],
+      "smokeSample": {
+        "mouthLocalY": 0.243749976,
+        "configuredWidth": 0.65,
+        "configuredHeight": 1.25
+      },
+      "consoleErrors": 0,
+      "consoleWarnings": 0
+    },
+    "unrelatedRulesFailureAssessment": [
+      "rendering_rules 在加载测试脚本时因 256 种地形阴影掩码排队超过 256 步上限而失败，尚未执行生产采样，不涉及食物贴图。",
+      "rendering_combustion_shader_smoke 读取 building_bodies.json 的 BlastFurnace 烟雾参数：炉口 Y 实际 0.243749976，Lua 要求 0.36～0.4；此链路不读取本轮两张贴图。"
+    ],
+    "runtimeVisualAcceptance": "pending_user_review",
+    "playModeControlCommandsIssued": false,
+    "editorOperations": "初始PlayMode期间静态修改；检测到编辑态后仅定向导入两张PNG并执行EditModeRules，未启动集成或PlayMode测试",
+    "alphaNote": "保留内置生成器原始Alpha，未缩图、限色或强制二值化；以128阈值另行检查肉块主体尺寸"
+  },
+  "skillReview": {
+    "updated": ".agents/skills/flatworld-art/references/runtime-sprites.md",
+    "addition": "补充JSON物品换图不顺带修改旧迁移源Prefab的约定，并链接物品装配边界"
+  }
+}
