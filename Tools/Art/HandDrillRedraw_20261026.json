@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-26",
+  "id": "HandDrill_Summoner",
+  "tool": "built-in image_gen",
+  "finalGeneratedSource": "C:/Users/PC/.codex/generated_images/01a1784c-6dd8-7161-ae4d-478412c6ba00/exec-48549630-5872-486d-b00d-b713f4384b93.png",
+  "finalAsset": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+  "referenceImageSha256BeforeReplacement": "ea293ca420d3162dcbbd6c3fd7620dfb45d40ce4e498d920055407f3b2f55187",
+  "referenceImages": [
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+      "role": "重绘主体：保留泵式手钻、双绳横杆、灰色配重轮和底部钻尖"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
+      "role": "仅作粗像素画风、木材与纤维绳配色参考"
+    }
+  ],
+  "recipeInputs": [
+    "Stick_Wood x1",
+    "Rope x2",
+    "DrilledLog x1",
+    "Ore_Flint x1，或 Ingot x1（同一手钻产物）"
+  ],
+  "prompt": "Use case: precise-object-edit. Asset type: one transparent production sprite for the primitive hand PUMP DRILL in FlatWorld, a top-down 2D sandbox game. Input image 1 is the existing hand drill and is the subject identity and mechanical structure reference. Input image 2 is the newly redrawn fire starter and is ONLY the palette, coarse pixel language and material rendering reference; do not copy its bow or hearth-board. Redraw image 1 as an attractive compact hand PUMP DRILL, centered, upright and nearly symmetrical frontal three-quarter view, all parts visible. Preserve the mechanism: one vertical wooden spindle with a short peg at the top; a horizontal wooden crossbar sliding around the spindle; TWO taut pale plant-fiber strings attached from that top peg down to both outer crossbar ends, forming a clear triangular silhouette; a thick roughly round dark charcoal stone flywheel low on the spindle, with its central mounting clearly joined to the wood; a short chipped flint drill point at the very bottom. The crossbar and spindle are warm muted walnut/tan wood, with handmade notches, believable simple rope knots and lashings at connections. Render the dark flywheel in broad matte gray planes, not metal. Make the flint point visibly sharp and secured. This is a portable primitive drilling tool, not a fire starter and not an archery bow. Match image 2's low saturation brown, tan fiber and dark brown outline, coarse deliberate square pixel clusters, approximately 40 logical pixels across the complete tool, 2-3 flat stepped shades per material, modest upper-left lighting, robust readable silhouette at small in-game scale. Preserve a little empty transparent margin on every side. Genuine alpha-transparent background, fully transparent negative spaces inside the triangle. All tool pixels opaque solid fills with crisp hard edges. Absolutely no ground, cast shadow, glow, haze, ambient fog, gradients, tiny noisy texture, blur, text, hands, characters, wooden baseboard, extra objects, modern drill housing or electric parts. One single complete sprite, no multiple views, no labels.",
+  "width": 1254,
+  "height": 1254,
+  "alphaBounds": [
+    0,
+    41,
+    1214,
+    1214
+  ],
+  "alphaMeasurementThreshold": 1,
+  "alphaPreserved": true,
+  "ppu": 1734.2857142857144,
+  "maxTextureSize": 2048,
+  "rendererLocalScale": [
+    1,
+    1,
+    1
+  ],
+  "visibleWorldSize": [
+    0.7,
+    0.6763591433278417
+  ],
+  "pivot": [
+    0.5172665,
+    0.5147008
+  ],
+  "pivotMeaning": "保留原手钻的归一化中心握持锚点，新图对应横杆与钻轴附近；该点主体Alpha=253，未使用外围低Alpha散点定位。",
+  "priorWidth": 32,
+  "priorHeight": 32,
+  "priorAlphaBounds": [
+    3,
+    2,
+    29,
+    30
+  ],
+  "priorPPU": 39.0896609125,
+  "priorVisibleWorldSize": [
+    0.6651375170073625,
+    0.7163019413925441
+  ],
+  "sha256": "6ce7a3cb73d2c16055b4d50b6e24a8e683ec078d554106cd315dce9c43eb34d8",
+  "guid": "bf652f961d274c748370c8bd5438c938",
+  "runtimeConsumers": [
+    "shells/hand_drill.json:HandDrill_Summoner",
+    "shells/hand_drill.json:HandDrill"
+  ],
+  "validationScope": "按源图Alpha/PPU及两形态配置缩放离线检测；保持当前PlayMode，不触发Unity导入或刷新；游戏画面待自然重新加载。"
+}

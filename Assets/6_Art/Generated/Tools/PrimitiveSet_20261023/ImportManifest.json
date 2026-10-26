@@ -4277,20 +4277,20 @@
       "rotation": 0,
       "flipX": false,
       "flipY": false,
-      "width": 32,
-      "height": 32,
+      "width": 1254,
+      "height": 1254,
       "alphaBounds": [
-        3,
-        2,
-        29,
-        30
+        0,
+        41,
+        1214,
+        1214
       ],
-      "ppu": 39.0896609125,
+      "ppu": 1734.2857142857144,
       "pivotX": 0.5172665,
       "pivotY": 0.5147008,
       "guid": "bf652f961d274c748370c8bd5438c938",
       "spriteId": "eac8988be2bc4c189be870ddf12237b4",
-      "visibleColors": 12,
+      "visibleColors": 53171,
       "history": [
         {
           "date": "2026-10-24",
@@ -4363,13 +4363,62 @@
           ],
           "sha256": "040e4439dd411c9134bce62560bebca7c3a715bb02b7ccc52358f51ce489e237",
           "retouchRecord": "records-retouch-small-tools.json"
+        },
+        {
+          "id": "HandDrill_Summoner",
+          "name": "手钻",
+          "definition": "shells/hand_drill.json",
+          "sourceSprite": "Assets/6_Art/Generated/Mechanical/Items/HandDrill/HandDrill_Icon.png",
+          "newSprite": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+          "sourceRect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "sourcePPU": 32,
+          "sourcePivot": [
+            0.5,
+            0.5
+          ],
+          "sourceAlpha": [
+            4,
+            5,
+            26,
+            27
+          ],
+          "sourceWorldExtent": 0.71875,
+          "rotation": 0,
+          "flipX": false,
+          "flipY": false,
+          "width": 32,
+          "height": 32,
+          "alphaBounds": [
+            3,
+            2,
+            29,
+            30
+          ],
+          "ppu": 39.0896609125,
+          "pivotX": 0.5172665,
+          "pivotY": 0.5147008,
+          "guid": "bf652f961d274c748370c8bd5438c938",
+          "spriteId": "eac8988be2bc4c189be870ddf12237b4",
+          "visibleColors": 12,
+          "sha256": "ea293ca420d3162dcbbd6c3fd7620dfb45d40ce4e498d920055407f3b2f55187",
+          "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+          "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/HandDrill_Summoner.xcf",
+          "canvasCrop": null,
+          "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped",
+          "recordedBeforeDate": "2026-10-26"
         }
       ],
-      "sha256": "ea293ca420d3162dcbbd6c3fd7620dfb45d40ce4e498d920055407f3b2f55187",
-      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
-      "gimpSource": "Tools/Art/ToolGimpRetouch_20261024/HandDrill_Summoner.xcf",
+      "sha256": "6ce7a3cb73d2c16055b4d50b6e24a8e683ec078d554106cd315dce9c43eb34d8",
+      "retouchRecord": "Tools/Art/HandDrillRedraw_20261026.json",
       "canvasCrop": null,
-      "worldAnchor": "PPU unchanged; normalized pivot rebased only when transparent canvas cropped"
+      "worldAnchor": "保留原手钻的归一化中心握持锚点，新图对应横杆与钻轴附近；该点主体Alpha=253，未使用外围低Alpha散点定位。",
+      "generatedWith": "built-in image_gen",
+      "generationRecord": "Tools/Art/HandDrillRedraw_20261026.json"
     }
   ],
   "pixelRedrawDate": "2026-10-24",

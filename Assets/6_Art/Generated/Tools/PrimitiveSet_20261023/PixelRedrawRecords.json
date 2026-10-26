@@ -1257,25 +1257,25 @@
     },
     {
       "id": "HandDrill_Summoner",
-      "sourceImage": "Tools/Art/ToolGimpRetouch_20261024/HandDrill_Summoner.xcf",
-      "prompt": "GIMP原生一像素铅笔沿原图整理；保留轮廓和材质，用连续木柄色带、少量清楚绑带与短金属刃光合并碎色。原图和修补图层独立保存；斧/镐仅裁透明边，不缩放可见像素并重基握柄Pivot。",
-      "width": 32,
-      "height": 32,
-      "visibleColors": 12,
-      "alpha": "0/255",
-      "gridSampling": "none; original native pixels preserved",
+      "sourceImage": "C:/Users/PC/.codex/generated_images/01a1784c-6dd8-7161-ae4d-478412c6ba00/exec-48549630-5872-486d-b00d-b713f4384b93.png",
+      "prompt": "Use case: precise-object-edit. Asset type: one transparent production sprite for the primitive hand PUMP DRILL in FlatWorld, a top-down 2D sandbox game. Input image 1 is the existing hand drill and is the subject identity and mechanical structure reference. Input image 2 is the newly redrawn fire starter and is ONLY the palette, coarse pixel language and material rendering reference; do not copy its bow or hearth-board. Redraw image 1 as an attractive compact hand PUMP DRILL, centered, upright and nearly symmetrical frontal three-quarter view, all parts visible. Preserve the mechanism: one vertical wooden spindle with a short peg at the top; a horizontal wooden crossbar sliding around the spindle; TWO taut pale plant-fiber strings attached from that top peg down to both outer crossbar ends, forming a clear triangular silhouette; a thick roughly round dark charcoal stone flywheel low on the spindle, with its central mounting clearly joined to the wood; a short chipped flint drill point at the very bottom. The crossbar and spindle are warm muted walnut/tan wood, with handmade notches, believable simple rope knots and lashings at connections. Render the dark flywheel in broad matte gray planes, not metal. Make the flint point visibly sharp and secured. This is a portable primitive drilling tool, not a fire starter and not an archery bow. Match image 2's low saturation brown, tan fiber and dark brown outline, coarse deliberate square pixel clusters, approximately 40 logical pixels across the complete tool, 2-3 flat stepped shades per material, modest upper-left lighting, robust readable silhouette at small in-game scale. Preserve a little empty transparent margin on every side. Genuine alpha-transparent background, fully transparent negative spaces inside the triangle. All tool pixels opaque solid fills with crisp hard edges. Absolutely no ground, cast shadow, glow, haze, ambient fog, gradients, tiny noisy texture, blur, text, hands, characters, wooden baseboard, extra objects, modern drill housing or electric parts. One single complete sprite, no multiple views, no labels.",
+      "width": 1254,
+      "height": 1254,
+      "visibleColors": 53171,
+      "alpha": "original generated RGBA preserved",
+      "gridSampling": "none; native generated pixels and alpha preserved",
       "alphaBounds": [
-        3,
-        2,
-        29,
-        30
+        0,
+        41,
+        1214,
+        1214
       ],
-      "ppu": 39.0896609125,
+      "ppu": 1734.2857142857144,
       "priorWidth": 32,
       "priorHeight": 32,
       "priorPPU": 39.0896609125,
-      "sha256": "ea293ca420d3162dcbbd6c3fd7620dfb45d40ce4e498d920055407f3b2f55187",
-      "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+      "sha256": "6ce7a3cb73d2c16055b4d50b6e24a8e683ec078d554106cd315dce9c43eb34d8",
+      "retouchRecord": "Tools/Art/HandDrillRedraw_20261026.json",
       "history": [
         {
           "id": "HandDrill_Summoner",
@@ -1342,6 +1342,33 @@
               "sha256": "d2d9b508d558e59bf6e147ee934e05651d7a8d4456a46c6d6308634704a7d903"
             }
           ]
+        },
+        {
+          "id": "HandDrill_Summoner",
+          "sourceImage": "Tools/Art/ToolGimpRetouch_20261024/HandDrill_Summoner.xcf",
+          "prompt": "GIMP原生一像素铅笔沿原图整理；保留轮廓和材质，用连续木柄色带、少量清楚绑带与短金属刃光合并碎色。原图和修补图层独立保存；斧/镐仅裁透明边，不缩放可见像素并重基握柄Pivot。",
+          "width": 32,
+          "height": 32,
+          "visibleColors": 12,
+          "alpha": "0/255",
+          "gridSampling": "none; original native pixels preserved",
+          "alphaBounds": [
+            3,
+            2,
+            29,
+            30
+          ],
+          "ppu": 39.0896609125,
+          "priorWidth": 32,
+          "priorHeight": 32,
+          "priorPPU": 39.0896609125,
+          "sha256": "ea293ca420d3162dcbbd6c3fd7620dfb45d40ce4e498d920055407f3b2f55187",
+          "retouchRecord": "Tools/Art/ToolGimpRetouch_20261024/plan-small-tools.json",
+          "pivotX": 0.5172665,
+          "pivotY": 0.5147008,
+          "canvasCrop": null,
+          "approvedSample": false,
+          "recordedBeforeDate": "2026-10-26"
         }
       ],
       "pivotX": 0.5172665,
