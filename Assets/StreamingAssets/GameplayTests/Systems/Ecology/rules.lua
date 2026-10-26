@@ -104,7 +104,18 @@ test.system("ecology", "spatial_geometry", {}, function(data)
         "树木受击框没有覆盖真实阻挡范围")
     assert(data.compiledUnchanged and data.compiledEnabled and not data.refreshedEnabled and data.refreshedWidth == 18,
         "热路径重新解析了已编译定义，或配置重编译没有更新碰撞参数")
-end, "自然物碰撞几何冷编译保留姿态、树干覆盖与配置刷新")
+    local function near(a, b) return math.abs(a - b) < 0.00001 end
+    local sorting = data.sorting
+    assert(near(sorting.x, 12) and near(sorting.y, 20) and
+        near(sorting.rotatedX, 10) and near(sorting.rotatedY, 18),
+        "阻挡资源排序锚点未跟随碰撞偏移、缩放、旋转或镜像")
+    assert(near(sorting.triggerX, 10) and near(sorting.triggerY, 20) and
+        near(sorting.disabledX, 10) and near(sorting.disabledY, 20) and
+        near(sorting.missingX, 10) and near(sorting.missingY, 20),
+        "触发器、禁用或缺失碰撞体错误改变了非阻挡资源的根部排序")
+    assert(near(sorting.refreshedX, 18) and near(sorting.refreshedY, 14),
+        "碰撞配置重新编译后排序锚点仍使用旧偏移")
+end, "自然物碰撞几何与阻挡中心排序保留姿态、非阻挡回退和配置刷新")
 
 test.system("ecology", "soil_snapshot_reuse", {}, function(data)
     local function near(a, b) return math.abs(a - b) < 0.00001 end

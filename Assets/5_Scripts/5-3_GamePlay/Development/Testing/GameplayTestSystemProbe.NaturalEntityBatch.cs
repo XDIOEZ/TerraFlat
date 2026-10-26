@@ -169,8 +169,22 @@ public static partial class GameplayTestSystemProbe
         parameters["$collider2D"]["size"]["x"] = 9f;
         parameters["$collider2D"]["enabled"] = false;
         normal.Resolve(root, out _, out Bounds frozenHit);
+        collider.Offset = new Vector2(4f, -6f);
         NaturalEntitySpatialGeometry refreshed = NaturalEntitySpatialGeometry.Compile(collider, parameters, false);
         refreshed.Resolve(root, out _, out Bounds refreshedHit);
+        Vector3 sortingAnchor = normal.ResolveMovementBlockingSortingAnchor(root);
+        Vector3 rotatedAnchor = normal.ResolveMovementBlockingSortingAnchor(Matrix4x4.TRS(
+            new Vector3(10f, 20f), Quaternion.Euler(0f, 0f, 90f), new Vector3(-2f, 3f, 1f)));
+        Vector3 refreshedAnchor = refreshed.ResolveMovementBlockingSortingAnchor(root);
+        collider.IsTrigger = true;
+        Vector3 triggerAnchor = NaturalEntitySpatialGeometry.Compile(collider, parameters, false)
+            .ResolveMovementBlockingSortingAnchor(root);
+        collider.IsTrigger = false;
+        collider.Enabled = false;
+        Vector3 disabledAnchor = NaturalEntitySpatialGeometry.Compile(collider, parameters, false)
+            .ResolveMovementBlockingSortingAnchor(root);
+        Vector3 missingAnchor = NaturalEntitySpatialGeometry.Compile(null, parameters, false)
+            .ResolveMovementBlockingSortingAnchor(root);
         return new JObject
         {
             ["bodyX"] = body.center.x, ["bodyY"] = body.center.y, ["bodyWidth"] = body.size.x,
@@ -179,7 +193,16 @@ public static partial class GameplayTestSystemProbe
             ["treeContainsBodyMin"] = treeHit.Contains(body.min), ["treeContainsBodyMax"] = treeHit.Contains(body.max),
             ["compiledUnchanged"] = frozenHit.Equals(hit), ["compiledEnabled"] = normal.HitColliderEnabled,
             ["refreshedEnabled"] = refreshed.HitColliderEnabled, ["refreshedWidth"] = refreshedHit.size.x,
-            ["blocking"] = normal.BlocksMovement
+            ["blocking"] = normal.BlocksMovement,
+            ["sorting"] = new JObject
+            {
+                ["x"] = sortingAnchor.x, ["y"] = sortingAnchor.y,
+                ["rotatedX"] = rotatedAnchor.x, ["rotatedY"] = rotatedAnchor.y,
+                ["refreshedX"] = refreshedAnchor.x, ["refreshedY"] = refreshedAnchor.y,
+                ["triggerX"] = triggerAnchor.x, ["triggerY"] = triggerAnchor.y,
+                ["disabledX"] = disabledAnchor.x, ["disabledY"] = disabledAnchor.y,
+                ["missingX"] = missingAnchor.x, ["missingY"] = missingAnchor.y
+            }
         };
     }
 

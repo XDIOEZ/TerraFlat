@@ -41,6 +41,10 @@ namespace FlatWorld.NaturalEntities
             hit = NaturalEntityEcsService.TransformBounds(root * hitTransform, hitOffset, hitSize);
             if (tree && BlocksMovement && HitColliderEnabled) hit.Encapsulate(body);
         }
+
+        // 阻挡资源按真实碰撞中心排序，避免底部阻挡体偏离根点时让背后的角色提前穿到前景。
+        internal Vector3 ResolveMovementBlockingSortingAnchor(Matrix4x4 root)
+            => root.MultiplyPoint3x4(BlocksMovement ? (Vector3)bodyOffset : Vector3.zero);
     }
 
     #endregion

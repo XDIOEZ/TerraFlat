@@ -229,10 +229,10 @@ namespace FlatWorld.NaturalEntities
         /// <summary>成长、受害和半埋参数由同一 Entity 派生，不保存第二份植物状态。</summary>
         private static void ResolveBodyVisual(Record record, NaturalEntityBody body, out Sprite sprite,
             out Matrix4x4 matrix, out Color tint, out Vector4 crop)
-            => ResolveBodyVisual(record, body, out sprite, out matrix, out tint, out crop, out _);
+            => ResolveBodyVisual(record, body, out sprite, out matrix, out tint, out crop, out _, out _);
 
         private static void ResolveBodyVisual(Record record, NaturalEntityBody body, out Sprite sprite,
-            out Matrix4x4 matrix, out Color tint, out Vector4 crop, out Vector3 rendererScale)
+            out Matrix4x4 matrix, out Color tint, out Vector4 crop, out Vector3 rendererScale, out Matrix4x4 bodyMatrix)
         {
             var definition = record.Profile.Definition;
             var visual = definition.Visual;
@@ -266,7 +266,8 @@ namespace FlatWorld.NaturalEntities
             if (visual?.FlipX == true) scale.x = -scale.x;
             if (visual?.FlipY == true) scale.y = -scale.y;
             rendererScale = scale;
-            matrix = BodyMatrix(body) * Matrix4x4.TRS(visual?.RendererLocalPosition ?? Vector3.zero,
+            bodyMatrix = BodyMatrix(body);
+            matrix = bodyMatrix * Matrix4x4.TRS(visual?.RendererLocalPosition ?? Vector3.zero,
                 Quaternion.Euler((visual?.RendererLocalEulerAngles ?? Vector3.zero) +
                     Vector3.forward * ManualHarvestWork.ShakeAngle(Time.time - record.HarvestShakeStartedAt)), scale);
             if (record.Highlighted) tint = Color.Lerp(tint, Color.white, 0.6f);
@@ -283,18 +284,19 @@ namespace FlatWorld.NaturalEntities
             float previousShadowWidth = record.ShadowWidth;
             Vector3 previousRenderOffset = record.RenderOffset;
             ResolveBodyVisual(record, body, out Sprite sprite, out Matrix4x4 matrix, out Color tint,
-                out Vector4 crop, out Vector3 rendererScale);
+                out Vector4 crop, out Vector3 rendererScale, out Matrix4x4 bodyMatrix);
             Material material = record.Profile.Definition.Material;
             if (sprite == null || material == null)
                 throw new InvalidOperationException($"资源实体 {record.Profile.Definition.Id} 缺少已加载的 Sprite/材质。");
             Vector3 anchor = new(body.Position.x, body.Position.y);
             record.RenderOffset = WorldLocalPresentation.ProjectPosition(anchor) - anchor;
-            Vector3 localAnchor = anchor + record.RenderOffset;
+            Vector3 sortingAnchor = record.Profile.SpatialGeometry.ResolveMovementBlockingSortingAnchor(bodyMatrix);
+            Vector3 localAnchor = sortingAnchor + record.RenderOffset;
             Vector3 hitOffset = CombatHitFeedback.EvaluateShake(Time.time - record.HitShakeStartedAt,
                 record.HitShakeDuration, record.HitShakeDistance, record.HitShakeDirection);
             Matrix4x4 projectedMatrix = Matrix4x4.Translate(record.RenderOffset + hitOffset) * matrix;
             int part = 0;
-            // 主体和附属果实共用真实树根行，不再创建逐树补绘或切换两套渲染器。
+            // 主体和附属果实共用碰撞脚点行，贴图偏移及受击摇摆不改变排序。
             owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix, tint, localAnchor,
                 crop, Vector4.zero, Vector4.zero, playerOccluder: record.Profile.Definition.HasTag(Tag.Tree),
                 highlighted: record.Highlighted);
@@ -335,9 +337,9 @@ namespace FlatWorld.NaturalEntities
                 CanopyFruitState state = GetCanopy(record);
                 foreach (CanopyFruitRecord fruit in state.Fruits)
                     DrawCanopyFruit(record, fruit, CrownPosition(record, fruit.Slot) + (Vector2)hitOffset,
-                        Mathf.Lerp(record.Profile.Canopy.SmallScale, 1f, fruit.Growth01(state.Time)), anchor, ref part);
+                        Mathf.Lerp(record.Profile.Canopy.SmallScale, 1f, fruit.Growth01(state.Time)), sortingAnchor, ref part);
                 foreach (CanopyFruitRecord fruit in state.Flights)
-                    DrawCanopyFruit(record, fruit, Mod_CanopyFruit.FlightPosition(fruit, state.Time), 1f, anchor, ref part);
+                    DrawCanopyFruit(record, fruit, Mod_CanopyFruit.FlightPosition(fruit, state.Time), 1f, sortingAnchor, ref part);
             }
             for (int old = part; old < record.RenderPartCount; old++) owner.ClearNaturalEntityPart(record.Handle.Id, old);
             record.RenderPartCount = part;

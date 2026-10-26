@@ -3,6 +3,7 @@
 ## 排序、MPB 与 Shader
 
 - BRG 用材质队列：Ground/Water 2988/2989、ground-building 2991、Blocking 2992、草花 2993、地形上限 2994、旧 Item 接触阴影 2995；ECS 阴影走 Shadow。贴地设施在地面/平台上、墙下，不投接触/太阳阴影、不遮局部光。树主体用 `TreeSortingVisual` 原生 SortingGroup 混排，果实仅组内偏移，太阳投影仍用 BRG。
+- 自然资源行合批的排序点由 `NaturalEntitySpatialGeometry.ResolveMovementBlockingSortingAnchor` 取真实阻挡体中心；触发器、禁用/缺失阻挡仍用实体根点，主体与附属果实共用，贴图偏移和受击摇摆不改排序。巨矿底部碰撞偏移必须同步此脚点，回归 `item_runtime/giant_mines`、`ecology/spatial_geometry`。
 - 草花 `DepthPresentationOffset` 投影本机镜像，镜像改变同步实例/裁剪；自然物阴影已为表现坐标。BRG 提交以返回成功为准，`IRecoverableChunkViewRenderer` 核验权威格/生态与真实实例；恢复全量读取权威数据，清 Owner 整层并合并 GPU 操作，不依赖可丢失的可见索引。
 - 输送带用 FullRect Sprite，格心/尺寸读 rect、pivot、PPU；预览/合批共用 `ConveyorPresentation`。主体/侧轴在 MechanicalShaft、玩家下方，侧铁环只用于直带；视觉端口与供能端口独立。
 - `ActorStatusVisualEffectController` 按 Buff 事件维护活跃表现，无激活表现的 NPC 跳过字典遍历；重绑/换父级仍刷新来源。睡眠粒子仅排序/Transform 改变时提交，但逐帧校验池引用。

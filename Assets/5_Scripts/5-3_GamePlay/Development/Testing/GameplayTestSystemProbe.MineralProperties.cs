@@ -91,6 +91,9 @@ public static partial class GameplayTestSystemProbe
         Vector2 size = collider?.Size ?? Vector2.zero, offset = collider?.Offset ?? Vector2.zero;
         Vector3 scale = definition.Visual?.RendererLocalScale ?? Vector3.one;
         Vector3 position = definition.Visual?.RendererLocalPosition ?? Vector3.zero;
+        NaturalEntitySpatialGeometry geometry = NaturalEntitySpatialGeometry.Compile(
+            collider, definition.Modules[ModText.Hp].Parameters, false);
+        Vector3 sortingAnchor = geometry.ResolveMovementBlockingSortingAnchor(Matrix4x4.identity);
         GridCellOffset[] cells = definition.WorldGridOccupancy?.Cells?.Select(cell => new GridCellOffset(cell.X, cell.Y)).ToArray()
             ?? Array.Empty<GridCellOffset>();
         return new JObject
@@ -103,6 +106,7 @@ public static partial class GameplayTestSystemProbe
             ["body"] = new JObject { ["width"] = size.x, ["height"] = size.y,
                 ["x"] = offset.x, ["y"] = offset.y, ["isTrigger"] = collider?.IsTrigger ?? false },
             ["visual"] = new JObject { ["scaleX"] = scale.x, ["scaleY"] = scale.y, ["y"] = position.y },
+            ["sortingAnchor"] = new JObject { ["x"] = sortingAnchor.x, ["y"] = sortingAnchor.y },
             ["cells"] = new JArray(cells.Select(cell => new JObject { ["x"] = cell.X, ["y"] = cell.Y })),
             ["rootOccupied"] = NaturalEntityEcsService.OccupiesCell(cells, Vector2Int.zero, Vector2Int.zero),
             ["bottomOccupied"] = NaturalEntityEcsService.OccupiesCell(cells, Vector2Int.zero,

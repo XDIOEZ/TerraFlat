@@ -69,6 +69,12 @@ test.system("item_runtime", "giant_mines", {}, function(data)
         assert(near(body.width, 13) and near(body.height, 5 / 3) and near(body.x, 0) and
             near(body.y - body.height / 2, -2.5) and not body.isTrigger,
             "巨矿碰撞体没有固定底边并只保留底部三分之一")
+        assert(near(giant.sortingAnchor.x, body.x) and near(giant.sortingAnchor.y, body.y) and
+            giant.sortingAnchor.y < body.y + body.height / 2 and
+            giant.sortingAnchor.y > body.y - body.height / 2,
+            "巨矿排序锚点没有落在实际阻挡体中心，背后贴近时会提前显示玩家")
+        assert(near(small.sortingAnchor.x, 0) and near(small.sortingAnchor.y, 0),
+            "修正巨矿排序时改变了普通矿点的根部锚点")
         assert(#giant.cells == 26 and not giant.rootOccupied and giant.bottomOccupied and not giant.topOccupied,
             "巨矿离散占地仍阻挡已削去的上部或漏掉实际底部")
         local cells = {}
@@ -101,7 +107,7 @@ test.system("item_runtime", "giant_mines", {}, function(data)
                 "新增巨矿没有继承对应小矿山的完整掉落表")
         end
     end
-end, "十一种巨矿二十万生命、底部碰撞、继承开采特性和对应攻击/最终掉落")
+end, "十一种巨矿阻挡中心排序、二十万生命、底部碰撞和继承开采/掉落")
 
 local function entry(hardness, toughness)
     return '{"id":"probe","referenceMaterial":"测试矿物","hardness":' .. hardness ..
