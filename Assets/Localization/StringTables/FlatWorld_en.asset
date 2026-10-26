@@ -18,6 +18,14 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 28102600000120000
+    m_Localized: "Bear"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000120001
+    m_Localized: "Normally peaceful. A player remaining within 8 metres for more than 60 continuous seconds provokes the bear with 120 hatred. Hatred decays by 1 per second, and each confirmed hit adds 30 hatred toward its attacker."
+    m_Metadata:
+      m_Items: []
   - m_Id: 27615045296885764
     m_Localized: Copper Hammer
     m_Metadata:

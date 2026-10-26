@@ -2,6 +2,14 @@
   "schemaVersion": 1,
   "lootTables": [
     {
+      "id": "Bear_Default",
+      "entries": [
+        { "itemId": "Meat", "probability": 1.0, "minAmount": 5, "maxAmount": 8 },
+        { "itemId": "Bone", "probability": 1.0, "minAmount": 3, "maxAmount": 5 },
+        { "itemId": "Fat", "probability": 1.0, "minAmount": 3, "maxAmount": 6 }
+      ]
+    },
+    {
       "id": "SmallFish_Default",
       "entries": [
         { "itemId": "Meat", "probability": 1.0, "minAmount": 1, "maxAmount": 1 }

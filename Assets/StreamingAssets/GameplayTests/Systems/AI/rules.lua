@@ -633,3 +633,120 @@ test.system("ai", "debug_overlay_cache", {}, function(data)
     assert(data.permanentReused and data.cleared and data.restored,
         "永久 Buff、空列表或回池清理后重新显示仍沿用旧文字")
 end, "头顶调试按显示值复用文字，语言、Buff与池代际实时更新")
+
+-- 熊只在同一次连续驻留超过门槛时激怒一次，归零后必须离开再进入。
+test.system("ai", "bear_provocation_sequence", {steps = {
+    {deltaTime = 59, nearby = {101}},
+    {deltaTime = 1, nearby = {101}},
+    {deltaTime = .01, nearby = {101}},
+    {deltaTime = 1, nearby = {101}},
+    {deltaTime = 119, nearby = {101}},
+    {deltaTime = 90, nearby = {101}},
+    {deltaTime = 0},
+    {deltaTime = 60, nearby = {101}},
+    {deltaTime = .01, nearby = {101}}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].hatred["101"] == 0 and s[1].presence["101"] == 59,
+        "熊在玩家停留不足60秒时主动攻击")
+    assert(s[2].hatred["101"] == 0 and s[2].presence["101"] == 60,
+        "恰好60秒就激怒，规则应严格超过60秒")
+    assert(s[3].hatred["101"] == 120 and s[4].hatred["101"] == 119,
+        "超过60秒未建立120仇恨，或下一秒又重新补满仇恨")
+    assert(s[5].hatred["101"] == 0 and s[6].hatred["101"] == 0,
+        "仇恨没有每秒减少1，或同一次连续驻留在归零后立即反复激怒")
+    assert(s[7].presence["101"] == 0 and s[8].hatred["101"] == 0 and s[9].hatred["101"] == 120,
+        "离开未重置连续驻留，或重新进入后的新一轮激怒失效")
+end, "熊连续停留严格超过60秒，120仇恨按秒衰减且同轮不重置")
+
+test.system("ai", "bear_provocation_sequence", {steps = {
+    {deltaTime = 40, nearby = {101}},
+    {deltaTime = 1, nearby = {102}},
+    {deltaTime = 30, nearby = {101, 102}},
+    {deltaTime = 30, nearby = {101, 101, 102}},
+    {deltaTime = .01, nearby = {101, 102}},
+    {deltaTime = 1, nearby = {101, 102}, remove = {102}},
+    {deltaTime = 0, nearby = {102}}
+}}, function(data)
+    local s = data.samples
+    assert(s[2].presence["101"] == 0 and s[2].presence["102"] == 1,
+        "玩家离开后仍累计驻留，或另一玩家继承了前者的时间")
+    assert(s[3].presence["101"] == 30 and s[3].presence["102"] == 31,
+        "多个玩家的连续驻留互相串计时")
+    assert(s[4].presence["101"] == 60 and s[4].hatred["101"] == 0 and s[4].hatred["102"] == 120,
+        "重复感知候选多累计时间，或各玩家不能独立达到激怒门槛")
+    assert(s[5].hatred["101"] == 120 and math.abs(s[5].hatred["102"] - 119.99) < .001,
+        "新玩家激怒时重置了另一玩家的仇恨")
+    assert(s[6].hatred["102"] == 0 and s[6].presence["102"] == 0 and s[7].presence["102"] == 0,
+        "移除失效身份后仍残留仇恨或把旧驻留带给重新绑定的身份")
+end, "熊按玩家独立计时，离开清零、重复候选去重并清理失效身份")
+
+test.system("ai", "bear_provocation_sequence", {steps = {
+    {hits = {101, 101}},
+    {deltaTime = .25, nearby = {101}},
+    {deltaTime = .25, nearby = {101}, hits = {102}},
+    {deltaTime = .5, nearby = {101}, hits = {101, 102}},
+    {deltaTime = -5, nearby = {101}},
+    {invalidDelta = true, nearby = {101}},
+    {clear = true},
+    {deltaTime = 60, nearby = {101}}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].hatred["101"] == 60, "受击没有每次给实际攻击者增加30仇恨")
+    assert(s[2].hatred["101"] == 59.75 and s[3].hatred["101"] == 59.5,
+        "仇恨衰减依赖帧数，未按真实秒数累计")
+    assert(s[3].hatred["102"] == 30 and s[4].hatred["101"] == 89 and s[4].hatred["102"] == 59.5,
+        "受击仇恨相互覆盖，或不同攻击者没有独立累加和衰减")
+    assert(s[5].hatred["101"] == s[4].hatred["101"] and s[6].hatred["101"] == s[4].hatred["101"] and
+        s[6].presence["101"] == s[4].presence["101"] and s[5].deltaRejected and s[6].deltaRejected,
+        "负数或非有限时间未拒绝，或拒绝前倒推/污染熊的仇恨与驻留")
+    assert(s[7].hatred["101"] == 0 and s[7].hatred["102"] == 0 and s[7].presence["101"] == 0,
+        "卸载/回池清空后仍保留旧玩家仇恨")
+    assert(s[8].hatred["101"] == 0 and s[8].presence["101"] == 60,
+        "回池后新生命周期没有从零重新计时")
+end, "熊每次受击加30、多人仇恨独立，分帧衰减与回池清理")
+
+test.system("ai", "bear_provocation_sequence", {steps = {
+    {hits = {101, 102, 102}},
+    {ineligible = {102}},
+    {hits = {101, 101}},
+    {remove = {101}},
+    {deltaTime = 60}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].highestTarget == 102 and s[1].eligibleTarget == 102,
+        "熊没有优先选择当前仇恨最高的攻击者")
+    assert(s[2].highestTarget == 102 and s[2].eligibleTarget == 101,
+        "最高仇恨对象失效或不可感知时没有筛出其余有效目标")
+    assert(s[3].highestTarget == 101 and s[3].eligibleTarget == 101,
+        "另一攻击者仇恨反超后没有更新最高目标")
+    assert(s[4].highestTarget == 102 and s[4].hatred["101"] == 0,
+        "失效身份被移除后仍霸占攻击目标")
+    assert(s[5].highestTarget == 0 and s[5].eligibleTarget == 0,
+        "所有仇恨归零后仍选出攻击目标")
+end, "熊选择最高仇恨，过滤不可用对象并在全部归零后脱战")
+
+test.system("ai", "bear_definition_and_hit_credit", {}, function(data)
+    assert(data.moduleId == "AI" and data.prefabId == "Module_AI_Bear" and data.identityBound,
+        "正式熊没有注册独立熊AI或能力身份错误")
+    assert(data.hasDamage and not data.hasWolfAi and not data.hasWolfBite and not data.hasWolfAudio and not data.hasFood,
+        "熊缺少正式伤害模块，或意外继承了狼群、狼咬/狼叫或食物腐败行为")
+    assert(data.spriteAddress == "Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png[Bear_Idle_Right]" and not data.flipX,
+        "熊没有绑定唯一的标准右向贴图")
+    assert(data.radius == 8 and data.threshold == 60 and data.initialHatred == 120 and data.decay == 1 and data.perHit == 30,
+        "熊最终继承/模块装配后丢失了驻留与仇恨配置")
+    assert(data.peacefulState == "Idle" or data.peacefulState == "Move", "熊没有仇恨时主动进入攻击")
+    assert(data.resolvedOwner == 1900000201 and data.zeroDamageHatred == 30 and data.weaponHatred == 0 and
+        data.zeroDamageTarget == 1900000201 and data.zeroDamageState == "Chase",
+        "熊忽略有效零伤命中，或对武器实体记仇而非实际攻击角色")
+    assert(data.secondHitHatred == 60 and data.highestHatredTarget == 1900000202 and data.highestHatredState == "Attack",
+        "连续受击没有逐次增加30，或真实熊AI没有按最高仇恨选择攻击目标")
+    assert(data.changedOwnerNotBlamed and data.environmentHatred == 60 and data.staleIdentityCleared and data.staleCreditRejected,
+        "武器换持有者、环境伤害或失效代际把仇恨转移给错误对象")
+    assert(data.expiredTarget == 0 and (data.expiredState == "Idle" or data.expiredState == "Move"),
+        "真实熊AI的仇恨归零后仍然追击或攻击")
+    assert(data.hiddenFixture and data.hiddenPresence == 61 and data.hiddenHatred == 120 and data.hiddenTarget == 0,
+        "周围玩家被遮挡就中断驻留，或熊在看不见时隔墙选为攻击目标")
+    assert(data.reappearedTarget == 1900000202 and data.reappearedState == "Attack",
+        "重新可见时丢弃了已累计仇恨，或没有恢复正式攻击决策")
+end, "正式熊配置、真实受击入口、零伤归属、最高仇恨与脱战")

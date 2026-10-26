@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Bear",
+      "parent": "Wolf",
+      "removeModules": ["biteAttackSkill", "animalAudio", "food"],
+      "weight": 250.0,
+      "lootTableId": "Bear_Default",
+      "gameName": "熊",
+      "description": "平静时不会主动攻击。玩家在周围8米内连续停留超过60秒会激怒熊；初始仇恨120，每秒衰减1，每次被攻击对攻击者增加30点仇恨。",
+      "tags": ["Bear", "Animal", "Blood", "Omnivore"],
+      "ecs": { "capabilities": ["movement", "perception", "combat", "chase"] },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png[Bear_Idle_Right]",
+        "animationState": "Idle",
+        "rendererLocalPosition": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "rendererLocalScale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+        "flipX": false,
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0.0, "y": 0.3 }, "size": { "x": 1.5, "y": 0.6 }
+        }
+      },
+      "modules": {
+        "ai": {
+          "prefab": "Module_AI_Bear", "id": "AI", "enabled": true,
+          "parameters": {
+            "detectorRefreshInterval": 0.5,
+            "territorialPresenceRadius": 8.0,
+            "territorialPresenceThresholdSeconds": 60.0,
+            "territorialInitialHatred": 120.0,
+            "hatredDecayPerSecond": 1.0,
+            "hatredPerConfirmedHit": 30.0,
+            "chasePerceptionDistance": 30.0,
+            "chasePathCostLimit": 300,
+            "attackTriggerDistance": 1.8,
+            "attackCooldown": 1.8,
+            "attackDamageWindow": 0.2,
+            "attackWindupDuration": 0.4,
+            "attackRecoveryDuration": 0.3,
+            "enableWander": true,
+            "wanderRadius": 5.0
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "walkSwingAngle": 5.0,
+            "walkSwingSpeed": 8.0,
+            "walkBobAmount": 0.04,
+            "attackDashDistance": 0.3
+          }
+        },
+        "detector": { "parameters": { "detectionRadius": 30.0 } },
+        "mover": { "parameters": { "Data": { "Speed": { "BaseValue": 5.0 } } } },
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 180, "MaxHp": 180, "AccuracyLevel": 7, "SizeLevel": 8,
+              "DefenseValues": { "Physical": 4 }, "CombatBalanceVersion": 1
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+              "offset": { "x": 0.0, "y": 0.7 }, "size": { "x": 1.85, "y": 1.35 }
+            }
+          }
+        },
+        "damage": {
+          "parameters": {
+            "xOffset": 1.0,
+            "DamageValues": { "Physical": 22, "ImpactKind": 1 },
+            "$transform": { "localPosition": { "x": 1.0, "y": 0.55, "z": 0.0 } },
+            "$collider2D": {
+              "type": "BoxCollider2D", "enabled": false, "isTrigger": true,
+              "offset": { "x": 0.0, "y": 0.0 }, "size": { "x": 1.2, "y": 1.1 }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": { "Data": { "CurrentTemperature": 25.0, "SafeTemperatureMin": -15.0, "SafeTemperatureMax": 45.0 } }
+        }
+      },
+      "itemData": { "factionId": "bears" }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "bear_forest_ecology",
+    "ecologyGroup": "animals",
+    "requireGlobalDarkness": false,
+    "minSpawnDistance": 24.0,
+    "maxSpawnDistance": 55.0,
+    "playerVisibilityExclusionDistance": 22.0,
+    "playerPopulationRadius": 70.0,
+    "perPlayerAliveLimit": 2,
+    "spawnSearchRetryCount": 10,
+    "spawnCount": 1,
+    "spawnChance": 1.0,
+    "groupAliveLimit": 6,
+    "maxEcologyBudget": 6,
+    "dailyBudgetRecovery": 1,
+    "asyncSpawnInterval": 0.0,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": false,
+    "maxAllowedTileLight": 1.0,
+    "allowedBiomeNames": ["森林"],
+    "recycleDistance": 120.0,
+    "recycleGraceSeconds": 25.0,
+    "spawnEntries": [
+      { "prefabName": "Bear", "runtimeBackend": "gameObject", "probability": 0.35, "ecologyCost": 3, "speciesAliveLimit": 2 }
+    ],
+    "treeHabitat": { "enabled": false, "treesPerActor": 4, "spawnRadius": 3.0 },
+    "ignoreEcologyBudget": false
+  }
+}

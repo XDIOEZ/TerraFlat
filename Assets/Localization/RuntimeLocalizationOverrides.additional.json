@@ -644,6 +644,7 @@
     "已禁用": "Disabled"
   },
   "itemDescriptions": {
+    "Bear": "Normally peaceful. A player remaining within 8 metres for more than 60 continuous seconds provokes the bear with 120 hatred. Hatred decays by 1 per second, and each confirmed hit adds 30 hatred toward its attacker.",
     "LiquidTankBlock_Iron": "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents.",
     "LiquidTankBlock_Iron_Summoner": "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents.",
     "LiquidTankBlock_Steel": "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents.",

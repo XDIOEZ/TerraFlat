@@ -64,6 +64,8 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 行为能力与表现
 
+- 熊 `AI_BearTerritorialRetaliation` 组合独立驻留/仇恨表：枚举同世界注册玩家，8米内连续停留超过60秒初始120（遮挡不断计时，仍受通用感知半径上限）；真实命中含零伤按冻结 Credit/Owner 向生物+30。每目标每秒-1，最高有效可见仇恨优先，归零脱战，同次驻留不补120，离开再进重计；完整身份失效清表，前摇开窗前复核仇恨/视野。Bear 为森林单只 GO、单图摇摆，不继承狼咬/叫声/食物链；规则 `ai/bear_provocation_sequence`。
+
 - ECS 生物由 `AiecsSwayAnimation` 在共享首图上合成摇摆、呼吸、定向攻击和死亡翻转，BRG 主体与太阳阴影共用结果；动作按完整身份保存，联机副本用 GUID 建立本地身份。目录每状态只留首图与定义基础姿态，参数沿用正式动画模块；鸟类保留外壳状态贴图与真实高度。导出器不再读取 Animator 时间轴；规则 `ai/ecs_sway_animation`，PlayMode 中不重导或刷新。
 
 - 狼普通攻击距离2.1米、前摇0.25秒，真实命中盒按原尺寸放大50%；`biteAttackSkill` 组合通用撕咬。活动技能保留Attack状态并禁止普通攻击起手；继承狼外壳的Zombie/SnowLeopard显式移除该模块，由自身定义决定是否复用。

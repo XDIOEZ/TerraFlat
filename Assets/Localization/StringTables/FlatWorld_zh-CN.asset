@@ -18,6 +18,14 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 28102600000120000
+    m_Localized: "熊"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000120001
+    m_Localized: "平静时不会主动攻击。玩家在周围8米内连续停留超过60秒会激怒熊；初始仇恨120，每秒衰减1，每次被攻击对攻击者增加30点仇恨。"
+    m_Metadata:
+      m_Items: []
   - m_Id: 27615045296885764
     m_Localized: "\u94DC\u9524"
     m_Metadata:

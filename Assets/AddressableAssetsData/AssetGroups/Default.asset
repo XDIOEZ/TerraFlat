@@ -17,6 +17,19 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: dee43fdbfbc04d54bb5f6d9a4421c239
+    m_Address: Module_AI_Bear
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a5dca44b1f544374990dd092608d51d3
+    m_Address: Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4149e423b7f64db4b9095e4b486e0e6b
     m_Address: Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png
     m_ReadOnly: 0

@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "bear-actors",
+      "path": "definitions/bear-actors.json",
+      "enabled": true
+    },
+    {
       "id": "core-actors",
       "path": "definitions/core-actors.json",
       "enabled": true

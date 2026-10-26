@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "locale": "en",
   "names": {
+    "Bear": "Bear",
     "LiquidTankBlock_Iron": "Iron Liquid Tank Block",
     "LiquidTankBlock_Iron_Summoner": "Iron Liquid Tank Block",
     "LiquidTankBlock_Steel": "Steel Liquid Tank Block",

@@ -33,6 +33,7 @@ public static partial class GameplayTestSystemProbe
         RegisterAnimalAudioOperations(result);
         RegisterAiAnimationOperations(result);
         RegisterWolfPackOperations(result);
+        RegisterBearProvocationOperations(result);
         RegisterBiteOperations(result);
         RegisterSpawnCountdownOperations(result);
         RegisterInteractionOperations(result);

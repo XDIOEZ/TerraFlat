@@ -15,6 +15,14 @@ MonoBehaviour:
   m_TableCollectionName: FlatWorld
   m_TableCollectionNameGuidString: a6b2aa1bb32def84a8055087b25aa325
   m_Entries:
+  - m_Id: 28102600000120000
+    m_Key: item.Bear.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600000120001
+    m_Key: item.Bear.description
+    m_Metadata:
+      m_Items: []
   - m_Id: 27615045296885764
     m_Key: item.CopperHammer.name
     m_Metadata:
