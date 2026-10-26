@@ -1,0 +1,828 @@
+{
+  "schemaVersion": 1,
+  "scope": "static source asset validation; not live gameplay or visual acceptance",
+  "passed": true,
+  "assetCount": 10,
+  "results": [
+    {
+      "id": "Axe_Stone",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Stone/Axe_Stone_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "1.1223275305192406",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Stone\\Axe_Stone_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              66,
+              99,
+              1297,
+              1146
+            ],
+            "visible_pixels_size": [
+              1231,
+              1047
+            ],
+            "pixels_per_unit": 1096.82776776,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Stone\\Axe_Stone_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              1.1223275305237883,
+              0.9545710190563822
+            ],
+            "canvas_world_size": [
+              1.199823745060362,
+              1.089505604367122
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 1.1223275305192406,
+            "relative_size_error": [
+              4.052091995276896e-12
+            ],
+            "suggested_pixels_per_unit": 1096.8277677644444,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Axe_Flint",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Flint/Axe_Flint_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "0.9195011391507437",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Flint\\Axe_Flint_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              64,
+              84,
+              1295,
+              1143
+            ],
+            "visible_pixels_size": [
+              1231,
+              1059
+            ],
+            "pixels_per_unit": 1338.76941266,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Flint\\Axe_Flint_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              0.9195011391499653,
+              0.7910249442403032
+            ],
+            "canvas_world_size": [
+              0.9829922819832286,
+              0.8926107727735244
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 0.9195011391507437,
+            "relative_size_error": [
+              8.465450562766819e-13
+            ],
+            "suggested_pixels_per_unit": 1338.7694126588667,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Axe_Copper",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Copper/Axe_Copper_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "0.9441858674647103",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Copper\\Axe_Copper_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              58,
+              81,
+              1305,
+              1147
+            ],
+            "visible_pixels_size": [
+              1247,
+              1066
+            ],
+            "pixels_per_unit": 1320.71453616,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Copper\\Axe_Copper_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              0.9441858674666167,
+              0.8071388409939161
+            ],
+            "canvas_world_size": [
+              0.9964303140225081,
+              0.9048132410766696
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 0.9441858674647103,
+            "relative_size_error": [
+              2.0190515925833097e-12
+            ],
+            "suggested_pixels_per_unit": 1320.7145361626667,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Axe_Bronze",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Bronze/Axe_Bronze_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "1.4496225296507563",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Bronze\\Axe_Bronze_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              57,
+              83,
+              1295,
+              1147
+            ],
+            "visible_pixels_size": [
+              1238,
+              1064
+            ],
+            "pixels_per_unit": 854.015424483,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Bronze\\Axe_Bronze_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              1.4496225296509777,
+              1.2458791369536675
+            ],
+            "canvas_world_size": [
+              1.5409557746532203,
+              1.3992721509958954
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 1.4496225296507563,
+            "relative_size_error": [
+              1.5276668818842154e-13
+            ],
+            "suggested_pixels_per_unit": 854.0154244831305,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Axe_RawIron",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "0.9322196469926112",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_RawIron\\Axe_RawIron_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              56,
+              82,
+              1312,
+              1143
+            ],
+            "visible_pixels_size": [
+              1256,
+              1061
+            ],
+            "pixels_per_unit": 1347.32195792,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_RawIron\\Axe_RawIron_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              0.9322196469944103,
+              0.7874880935199596
+            ],
+            "canvas_world_size": [
+              0.9767524326788566,
+              0.8869446482152231
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 0.9322196469926112,
+            "relative_size_error": [
+              1.930011706008372e-12
+            ],
+            "suggested_pixels_per_unit": 1347.3219579226002,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Axe_Iron",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "1.409925996556589",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Iron\\Axe_Iron_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              56,
+              84,
+              1285,
+              1148
+            ],
+            "visible_pixels_size": [
+              1229,
+              1064
+            ],
+            "pixels_per_unit": 871.676955387,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Axe_Iron\\Axe_Iron_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              1.4099259965572437,
+              1.2206356878249855
+            ],
+            "canvas_world_size": [
+              1.5097336138887978,
+              1.3709207208184753
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 1.409925996556589,
+            "relative_size_error": [
+              4.645173135031655e-13
+            ],
+            "suggested_pixels_per_unit": 871.676955387405,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Arrow_Wood",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Combat/Archery/Arrow_Wood_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "0.875",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Wood_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              198,
+              109,
+              1242,
+              1160
+            ],
+            "visible_pixels_size": [
+              1044,
+              1051
+            ],
+            "pixels_per_unit": 1216.59259259,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Wood_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              0.8581344374104989,
+              0.8638882123739793
+            ],
+            "canvas_world_size": [
+              1.081709693134307,
+              0.9822515830512895
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 0.875,
+            "relative_size_error": [
+              0.012699185858309425
+            ],
+            "suggested_pixels_per_unit": 1201.142857142857,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Arrow_Stone",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Combat/Archery/Arrow_Stone_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "0.875",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Stone_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              175,
+              113,
+              1250,
+              1155
+            ],
+            "visible_pixels_size": [
+              1075,
+              1042
+            ],
+            "pixels_per_unit": 1222.51851852,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Stone_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              0.8793322830818233,
+              0.8523388269500093
+            ],
+            "canvas_world_size": [
+              1.076466311195981,
+              0.9774903053793292
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 0.875,
+            "relative_size_error": [
+              0.004951180664940935
+            ],
+            "suggested_pixels_per_unit": 1228.5714285714284,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Arrow_Copper",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Combat/Archery/Arrow_Copper_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "0.875",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Copper_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              191,
+              70,
+              1262,
+              1160
+            ],
+            "visible_pixels_size": [
+              1071,
+              1090
+            ],
+            "pixels_per_unit": 1259.25925926,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Copper_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              0.8504999999994998,
+              0.8655882352936085
+            ],
+            "canvas_world_size": [
+              1.0450588235287972,
+              0.948970588234736
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 0.875,
+            "relative_size_error": [
+              0.010756302521590322
+            ],
+            "suggested_pixels_per_unit": 1245.7142857142856,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "Arrow_Iron",
+      "command": [
+        "C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-X",
+        "utf8",
+        "Tools/Art/validate_sprite_world_size.py",
+        "Assets/6_Art/Generated/Combat/Archery/Arrow_Iron_Icon.png",
+        "--alpha-threshold",
+        "128",
+        "--target-longest",
+        "0.875",
+        "--tolerance",
+        "0.05",
+        "--json"
+      ],
+      "validation": {
+        "schema_version": 1,
+        "measurement_scope": "source_asset_prediction",
+        "scope_note": "源图/导入配置预测；不读取当前已加载 Sprite，不包含父级缩放、旋转、动画、Shader、相机或 UI 拉伸。",
+        "pixel_coordinates_note": "sprite_rect_pixels 为源图左下原点 X/Y/W/H；visible_bounds_pixels 为切片内左上原点 left/top/right/bottom（右下不含）。",
+        "passed": true,
+        "tolerance": 0.05,
+        "reference": null,
+        "reports": [
+          {
+            "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Iron_Icon.png",
+            "source_pixels": [
+              1316,
+              1195
+            ],
+            "sprite_rect_pixels": [
+              0,
+              0,
+              1316,
+              1195
+            ],
+            "visible_bounds_pixels": [
+              198,
+              86,
+              1267,
+              1158
+            ],
+            "visible_pixels_size": [
+              1069,
+              1072
+            ],
+            "pixels_per_unit": 1243.85185185,
+            "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Archery\\Arrow_Iron_Icon.png.meta",
+            "effective_scale": [
+              1.0,
+              1.0
+            ],
+            "visible_world_size": [
+              0.859427108148016,
+              0.8618389709398253
+            ],
+            "canvas_world_size": [
+              1.0580038113403079,
+              0.960725345404003
+            ],
+            "alpha_threshold": 128,
+            "target_world_size": null,
+            "target_longest_world_size": 0.875,
+            "relative_size_error": [
+              0.01504117606877109
+            ],
+            "suggested_pixels_per_unit": 1225.142857142857,
+            "size_matches_target": true,
+            "importer_limits": [
+              {
+                "platform": "DefaultTexturePlatform",
+                "max_texture_size": 2048
+              }
+            ],
+            "warnings": [],
+            "errors": [],
+            "passed": true
+          }
+        ]
+      }
+    }
+  ]
+}
