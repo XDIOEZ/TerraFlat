@@ -43,7 +43,7 @@
         ]
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_278.png"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Thread/Thread_Icon.png"
       },
       "modules": {}
     },

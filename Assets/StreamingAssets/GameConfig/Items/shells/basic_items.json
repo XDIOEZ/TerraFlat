@@ -5433,7 +5433,7 @@
         "InventoryCategory.Food"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Tea.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Tea/Tea_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
