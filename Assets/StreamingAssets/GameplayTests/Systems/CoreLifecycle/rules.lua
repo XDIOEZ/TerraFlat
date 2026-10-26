@@ -143,7 +143,7 @@ test.system("core_lifecycle", "startup_prefabs", {}, function(data)
     end
     assert(data.networkPanelKey == "UI_NetworkMode", "联机面板资源键偏离正式 Prefab 名称")
     for _, key in ipairs({
-        "UI_SliderControl", "UI_MainMenuSettings", "UI_MainMenuExitConfirmation",
+        "UI_SliderControl", "UI_TabButton", "UI_MainMenuSettings", "UI_MainMenuExitConfirmation",
         "UI_ModManager", "UI_InputBindingRow", "UI_WorldLoading", "UI_NetworkMode",
         "UI_MobileControls", "UI_MobileControlLayoutEditor"
     }) do

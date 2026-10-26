@@ -1,5 +1,7 @@
 # 核心生命周期与资源会话
 
+- 2026-10-26：`startup_prefabs` 补查 GM 依赖的公共 `UI_TabButton` 已在启动阶段加载；保留用户 PlayMode，本轮未运行 Lua 或冷启动验收。
+
 2026-10-24 启动资源调度优化新增 `core_lifecycle/editor_asset_loading`：在独立 ResourceManager 中核对默认 AssetDatabase 请求使用独立 Provider、原缓存不被替换、子图地址/类型/数据/依赖保留、重复请求仅注册一次、自定义 Provider 与 Bundle 位置不接管。启动 UI 与 Buff 图标复用已有四槽队列，队列并发/失败/取消的规则仍由 `resource_queue` 覆盖；真实 UI 和可选图标缺失流程尚无新增现场断言。Unity 正在 PlayMode，按用户要求未编译、未运行；实际编辑器/运行包启动耗时由用户验收。
 
 2026-10-24 全部启动 JSON 接入共享 `FlatWorld.ContentCache`：涵盖 StreamingAssets 内容目录、Resources 中的天气/概率/机械/渲染/UI/本地化/台词配置，以及 MOD 清单与配置。`core_lifecycle/json_configuration_cache` 补充统一解析边界、冷构建/热命中计数、调用方对象隔离、大小写字典、跨程序集嵌套配置、地块/MOD 参数树、结构派生成员排除、内容更新及解析异常不缓存。加载幕仅在真实重建后追加双语首次较慢提示。本轮只做静态编译/源生成器检查，未运行 Lua，未验证实际加载画面、启动耗时或 Android 真机。

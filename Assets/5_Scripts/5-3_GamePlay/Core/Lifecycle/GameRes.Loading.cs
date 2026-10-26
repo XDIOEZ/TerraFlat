@@ -94,6 +94,7 @@ public partial class GameRes
     private static readonly string[] StartupPrefabKeys =
     {
         RuntimeUIPrefabKeys.SliderControl,
+        RuntimeUIPrefabKeys.TabButton,
         RuntimeUIPrefabKeys.MainMenuSettings,
         RuntimeUIPrefabKeys.MainMenuExitConfirmation,
         RuntimeUIPrefabKeys.NetworkMode,

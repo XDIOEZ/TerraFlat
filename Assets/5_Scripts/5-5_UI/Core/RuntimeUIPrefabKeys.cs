@@ -8,6 +8,9 @@ public static class RuntimeUIPrefabKeys
     /// <summary>全局通用面板背景控件。</summary>
     public const string PanelBackground = "UI_PanelBackground";
 
+    /// <summary>通用分页按钮，运行时导航复用同一外观。</summary>
+    public const string TabButton = "UI_TabButton";
+
     /// <summary>全局可交互滑动条控件。</summary>
     public const string SliderControl = "UI_SliderControl";
 

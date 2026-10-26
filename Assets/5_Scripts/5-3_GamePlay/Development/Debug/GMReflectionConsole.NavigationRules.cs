@@ -51,6 +51,7 @@ public sealed partial class GMReflectionConsole
                 foreach (GmPageView page in console.gmPages.Values)
                     if (page.Root.activeInHierarchy) visiblePages++;
                 GmPageView selected = console.gmPages[pageId];
+                var navigation = (RectTransform)console.gmGroups[GetPageGroup(pageId)].Root.transform.Find("Section Navigation");
                 return new JObject
                 {
                     ["page"] = pageId.ToString(), ["visiblePages"] = visiblePages,
@@ -58,7 +59,11 @@ public sealed partial class GMReflectionConsole
                     ["ownsScroll"] = selected.Scroll.gameObject == selected.Root,
                     ["inView"] = console.IsPageSectionInView(pageId),
                     ["contentHeight"] = selected.Content.rect.height,
-                    ["viewportHeight"] = selected.Scroll.viewport.rect.height
+                    ["viewportHeight"] = selected.Scroll.viewport.rect.height,
+                    ["navigationHeight"] = navigation != null ? navigation.rect.height : 0f,
+                    ["navigationFlexibleHeight"] = navigation != null ? LayoutUtility.GetFlexibleHeight(navigation) : 0f,
+                    ["navigationButtonCount"] = navigation != null ? navigation.childCount : 0,
+                    ["sharedTabCount"] = navigation != null ? navigation.GetComponentsInChildren<ReusableUITabVisual>().Length : 0
                 };
             }
 
@@ -88,7 +93,9 @@ public sealed partial class GMReflectionConsole
                 {
                     ["left"] = bounds.min.x, ["right"] = bounds.max.x,
                     ["bottom"] = bounds.min.y, ["top"] = bounds.max.y,
-                    ["width"] = bounds.size.x, ["height"] = bounds.size.y
+                    ["width"] = bounds.size.x, ["height"] = bounds.size.y,
+                    ["sharedControl"] = button.GetComponent<ReusableUIControl>() != null,
+                    ["sharedTabVisual"] = button.GetComponent<ReusableUITabVisual>() != null
                 });
             }
 

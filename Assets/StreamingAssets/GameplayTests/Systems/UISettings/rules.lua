@@ -7,6 +7,14 @@ for _, size in ipairs({{1120, 532}, {1000, 480}, {860, 420}, {680, 312}, {480, 4
                 "GM 必须只显示当前二级分页并使用独立滚动区：" .. page.page)
             assert(page.contentHeight > page.viewportHeight and page.viewportHeight > 0,
                 "GM 长内容没有产生有效滚动区：" .. page.page)
+            assert(page.viewportHeight >= size[2] - 80,
+                "GM 二级导航抢占正文高度：" .. page.page)
+            if page.navigationButtonCount > 0 then
+                assert(math.abs(page.navigationHeight - 42) < 0.1 and page.navigationFlexibleHeight == 0,
+                    "GM 二级导航必须固定高度且不分配弹性空间：" .. page.page)
+                assert(page.sharedTabCount == page.navigationButtonCount,
+                    "GM 二级导航没有复用公共页签控件：" .. page.page)
+            end
         end
         assert(data.navigationOutsideScroll and data.navigationMovement < 0.01,
             "GM 二级页签随内容滚动")
@@ -15,10 +23,12 @@ for _, size in ipairs({{1120, 532}, {1000, 480}, {860, 420}, {680, 312}, {480, 4
         assert(#data.navigationButtons == 3, "世界分类缺少二级分页按钮")
         local previousRight = data.hostLeft
         for _, button in ipairs(data.navigationButtons) do
-            assert(button.width > 0 and button.height >= 38 and button.left >= previousRight - 1
+            assert(button.width > 0 and button.width <= 150.1 and math.abs(button.height - 38) < 0.1
+                and button.left >= previousRight - 1
                 and button.right <= data.hostRight + 1 and button.top <= data.hostTop + 1
                 and button.bottom >= data.viewportTop - 1, "GM 二级按钮重叠、越界或点击区不足")
             previousRight = button.right
+            assert(button.sharedControl and button.sharedTabVisual, "GM 二级按钮丢失公共控件及选中表现")
         end
         assert(data.switched.visiblePages == 1 and data.switched.previousHidden
             and not data.switched.previousInView and data.switched.newPageAtTop > 0.99,

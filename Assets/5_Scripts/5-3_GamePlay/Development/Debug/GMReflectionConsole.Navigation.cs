@@ -361,7 +361,8 @@ public sealed partial class GMReflectionConsole
 
     private void CreateTab(Transform parent, GmPageId pageId, string label, float width)
     {
-        Button button = CreateButton(parent, label, () => SetActivePage(gmGroups[pageId].SelectedPageId), width, 36f);
+        Button button = CreateSharedGmNavigationTabButton(parent, label,
+            () => SetActivePage(gmGroups[pageId].SelectedPageId), width, 36f);
         LayoutElement layout = button.GetComponent<LayoutElement>();
         layout.minWidth = width;
         layout.preferredWidth = width;
@@ -370,6 +371,35 @@ public sealed partial class GMReflectionConsole
     }
 
     #region GM 分类页面
+
+    // 页签复用正式公共控件，仅由使用处设置文案、事件与外部尺寸。
+    private static Button CreateSharedGmNavigationTabButton(
+        Transform parent, string label, UnityAction action, float width, float height)
+    {
+        GameObject prefab = null;
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                $"Assets/2_Prefabs/2-1_UI/Common/Controls/{RuntimeUIPrefabKeys.TabButton}.prefab");
+#endif
+        if (prefab == null)
+            prefab = GameRes.ExistingInstance?.GetPrefab(RuntimeUIPrefabKeys.TabButton, false);
+        if (prefab == null)
+            throw new InvalidOperationException($"GM 缺少公共页签预制体：{RuntimeUIPrefabKeys.TabButton}");
+
+        GameObject instance = Instantiate(prefab, parent, false);
+        instance.name = label;
+        Button button = instance.GetComponent<Button>();
+        button.onClick.AddListener(action);
+        SetLocalizedText(instance.GetComponentInChildren<TMP_Text>(true), label);
+        LayoutElement size = instance.GetComponent<LayoutElement>();
+        size.minWidth = 0f;
+        size.preferredWidth = width;
+        size.flexibleWidth = 0f;
+        size.minHeight = size.preferredHeight = height;
+        size.flexibleHeight = 0f;
+        return button;
+    }
 
     /// <summary>一级页签按用途分组，各功能区仍独立刷新和检索。</summary>
     private void BuildPageGroups()
@@ -409,19 +439,19 @@ public sealed partial class GMReflectionConsole
             GameObject navigation = CreateUiObject("Section Navigation", pageRoot.transform);
             LayoutElement navigationSize = navigation.AddComponent<LayoutElement>();
             navigationSize.minHeight = navigationSize.preferredHeight = 42f;
+            // 显式截断横排布局上报的弹性高度，剩余空间全部交给正文。
+            navigationSize.flexibleHeight = 0f;
             HorizontalLayoutGroup layout = navigation.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
+            layout.childForceExpandHeight = false;
             foreach (GmPageId sectionId in sections)
             {
-                Button tab = CreateButton(navigation.transform, GetPageLabel(sectionId),
+                Button tab = CreateSharedGmNavigationTabButton(navigation.transform, GetPageLabel(sectionId),
                     () => SetActivePage(sectionId), 150f, 38f);
-                LayoutElement tabSize = tab.GetComponent<LayoutElement>();
-                tabSize.minWidth = 0f;
-                tabSize.flexibleWidth = 1f;
                 gmPages[sectionId] = new GmPageView { TabButton = tab };
             }
         }
@@ -1715,16 +1745,7 @@ public sealed partial class GMReflectionConsole
             if (pair.Value.Root != null)
                 pair.Value.Root.SetActive(active);
 
-            Image tabImage = pair.Value.TabButton != null
-                ? pair.Value.TabButton.GetComponent<Image>()
-                : null;
-            if (tabImage != null)
-            {
-                SetGmButtonVisual(
-                    pair.Value.TabButton,
-                    active ? GmSelection : GmSurfaceRaised,
-                    active);
-            }
+            pair.Value.TabButton?.GetComponent<ReusableUITabVisual>()?.SetSelected(active);
         }
 
         foreach (KeyValuePair<GmPageId, GmPageView> pair in gmPages)
@@ -1736,7 +1757,7 @@ public sealed partial class GMReflectionConsole
                     pair.Value.Scroll?.StopMovement();
                 pair.Value.Root.SetActive(active);
             }
-            SetGmButtonVisual(pair.Value.TabButton, active ? GmSelection : GmSurfaceRaised, active);
+            pair.Value.TabButton?.GetComponent<ReusableUITabVisual>()?.SetSelected(active);
         }
     }
 
