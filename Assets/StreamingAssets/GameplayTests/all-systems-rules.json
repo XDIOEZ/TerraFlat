@@ -5,6 +5,30 @@
   "continueAfterFailure": true,
   "cases": [
     {
+      "id": "crafting_electronic_materials_rules",
+      "name": "电子材料目录与三条指定配方",
+      "luaPath": "GameplayTests/Systems/Crafting/electronic-materials.lua",
+      "enabled": true
+    },
+    {
+      "id": "agriculture_phosphate_fertilizer_rules",
+      "name": "磷肥配置、土壤封顶与接收资格",
+      "luaPath": "GameplayTests/Systems/Agriculture/phosphate-fertilizer.lua",
+      "enabled": true
+    },
+    {
+      "id": "electrical_lithium_iron_phosphate_rules",
+      "name": "磷酸铁锂电池正式充放电",
+      "luaPath": "GameplayTests/Systems/Electrical/lithium-iron-phosphate.lua",
+      "enabled": true
+    },
+    {
+      "id": "processing_electronic_materials_rules",
+      "name": "硼与石英的正式材料热反应",
+      "luaPath": "GameplayTests/Systems/Processing/electronic-materials.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_rules",
       "name": "AI生物规则与边界",
       "luaPath": "GameplayTests/Systems/AI/rules.lua",

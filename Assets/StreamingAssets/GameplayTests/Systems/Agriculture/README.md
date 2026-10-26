@@ -1,5 +1,7 @@
 # 农业规则与现场回归
 
+2026-10-27：磷肥规则独立为 `phosphate-fertilizer.lua` / `agriculture_phosphate_fertilizer_rules`，真实持有使用独立为 `phosphate-fertilizer-gameplay.lua` / `agriculture_phosphate_fertilizer_gameplay`；均登记原系统套件与总入口。旧大脚本移除对应断言，两个案例都无其他案例依赖，可分别定向执行；现场只修改并恢复自有地块及临时磷肥。
+
 2026-10-26：`phosphate_fertilizer` 检查磷肥组合正式施肥模块、只加0.35肥力、不补水、土壤封顶和培育仓接收配置；`phosphate_fertilizer_use` 在隔离世界实例化玩家真实手持磷肥，调用与 `Act` 共用的模块正式目标补给入口，覆盖普通地、空数量、超距和未持有拒绝，正常补肥扣一份、近满封顶扣一份、满肥不扣料及自有地块恢复。该现场不模拟鼠标或触屏点击；本轮保持用户 PlayMode，未运行新增规则与现场。
 
 2026-10-25：耕地限定为真实 `Tile_Farmland` Ground，普通地块仅保留生成地理基准，不受农业雨水/流水/消耗更新；新耕地从地理值初始化，农业不反写地理层。新增 `farmland_scope` 覆盖稀疏耕地索引、目录重映射、普通地补水拒绝、旧农业值忽略、真实雪格增减与融尽后暖雨退出；`soil_persistence_keys` 补充自然基质Crop-only记录创建/移除，`soil_commit_unchanged`改为只比较农业层，生态土壤容器断言改为只读地理。新增及调整用例本轮未编译、未运行，保留用户正在使用的PlayMode。

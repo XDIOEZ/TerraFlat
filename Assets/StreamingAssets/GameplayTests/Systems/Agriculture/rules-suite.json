@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "agriculture_phosphate_fertilizer_rules",
+      "name": "磷肥配置、土壤封顶与接收资格",
+      "luaPath": "GameplayTests/Systems/Agriculture/phosphate-fertilizer.lua",
+      "enabled": true
+    },
+    {
       "id": "agriculture_rules",
       "name": "农业种植规则与边界",
       "luaPath": "GameplayTests/Systems/Agriculture/rules.lua",

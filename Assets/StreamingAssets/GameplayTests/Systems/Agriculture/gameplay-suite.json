@@ -5,6 +5,12 @@
   "continueAfterFailure": true,
   "cases": [
     {
+      "id": "agriculture_phosphate_fertilizer_gameplay",
+      "name": "磷肥真实持有补给与拒绝",
+      "luaPath": "GameplayTests/Systems/Agriculture/phosphate-fertilizer-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "agriculture_gameplay",
       "name": "农业种植：实际流程",
       "luaPath": "GameplayTests/Systems/Agriculture/gameplay.lua",

@@ -263,6 +263,7 @@
         "inventory"
       ],
       "ruleCaseIds": [
+        "crafting_electronic_materials_rules",
         "crafting_rules",
         "anvil_ui_rules"
       ],
@@ -338,6 +339,7 @@
         "inventory"
       ],
       "ruleCaseIds": [
+        "agriculture_phosphate_fertilizer_rules",
         "agriculture_rules",
         "agriculture_external_rules"
       ],
@@ -348,6 +350,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Agriculture/README.md",
       "integrationCaseIds": [
+        "agriculture_phosphate_fertilizer_gameplay",
         "agriculture_gameplay"
       ],
       "rulesCoverage": "partial"
@@ -666,6 +669,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Mechanical/README.md",
       "integrationCaseIds": [
+        "processing_electronic_materials_gameplay",
         "mechanical_assemble",
         "mechanical_power",
         "mechanical_conveyor",
@@ -692,6 +696,7 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
+        "electrical_lithium_iron_phosphate_rules",
         "electrical_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Electrical/rules-suite.json",
@@ -702,6 +707,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Electrical/README.md",
       "integrationCaseIds": [
+        "processing_electronic_materials_gameplay",
         "mechanical_assemble",
         "mechanical_power",
         "mechanical_conveyor",
@@ -793,6 +799,7 @@
         "industrial_fluids"
       ],
       "ruleCaseIds": [
+        "processing_electronic_materials_rules",
         "processing_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Processing/rules-suite.json",
@@ -802,6 +809,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Processing/README.md",
       "integrationCaseIds": [
+        "processing_electronic_materials_gameplay",
         "mechanical_assemble",
         "mechanical_power",
         "mechanical_conveyor",

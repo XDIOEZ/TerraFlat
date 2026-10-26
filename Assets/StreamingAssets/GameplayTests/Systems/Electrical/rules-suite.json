@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "electrical_lithium_iron_phosphate_rules",
+      "name": "磷酸铁锂电池正式充放电",
+      "luaPath": "GameplayTests/Systems/Electrical/lithium-iron-phosphate.lua",
+      "enabled": true
+    },
+    {
       "id": "electrical_rules",
       "name": "电力规则与边界",
       "luaPath": "GameplayTests/Systems/Electrical/rules.lua",

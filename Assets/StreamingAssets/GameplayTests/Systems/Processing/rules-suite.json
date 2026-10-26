@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "processing_electronic_materials_rules",
+      "name": "硼与石英的正式材料热反应",
+      "luaPath": "GameplayTests/Systems/Processing/electronic-materials.lua",
+      "enabled": true
+    },
+    {
       "id": "processing_rules",
       "name": "机器加工与输送规则与边界",
       "luaPath": "GameplayTests/Systems/Processing/rules.lua",

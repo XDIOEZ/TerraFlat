@@ -1,5 +1,7 @@
 # 机器加工与材料热转化回归
 
+2026-10-27：电子热反应规则独立为 `electronic-materials.lua` / `processing_electronic_materials_rules`；冷料长步/分段供热、满输出恢复与云母切割独立为 `electronic-materials-gameplay.lua` / `processing_electronic_materials_gameplay`，登记在既有 `mechanical-suite.json` 和总现场入口。该现场只需隔离玩家与正式资源，无机械工厂前置；旧脚本已移除对应断言，定向执行不会重复运行整场工厂。
+
 2026-10-26：正式 `mineral_reaction` 采样新增硼沙制玻璃、石英制玻璃、石英加煤还原硅的最低温边界、每份材料温度、缺料和满输出不扣料。`mechanical_processing.lua` 复用正式供热入口，从20℃冷料验证长步/分段加热、有煤还原优先于单料玻璃、满输出等待及实例恢复后继续；云母走正式 `ItemProcessingResolver` 和制作事务，覆盖切割一矿两片、研磨拒绝、空料与满输出。本轮保持用户 PlayMode，未运行新增规则或现场。
 
 - 2026-10-26 石油化工：`petrochemical_content/petrochemical_reaction` 读取正式物品与液体目录，调用生产反应匹配器和库存事务，检查原油1L提取、350℃蒸馏、750℃裂解、200℃聚合、质量与蒸馏体积守恒、缺料/缺催化剂/冷催化剂拒绝、催化剂零消耗、整批和多产物满槽回滚。`mechanical_processing.lua` 的 `petrochemical_crucible` 调用正式坩埚热入口，补原油液体提取、满槽保液、产物继承液温、蒸馏/裂解/聚合与燃油物品转液体；`petrochemical_persist_rollback`注入写前/写后/恢复写入异常，检查双侧回滚、原始异常保留和重试。用户正在PlayMode，本轮未运行上述Lua；离线`Tools/Tests/Petrochemicals/verify.py`的72项正式编译器、匹配器、分配器、液体存储、热加工与完整事务断言通过，不代表真实坩埚、画面或联机验收。
