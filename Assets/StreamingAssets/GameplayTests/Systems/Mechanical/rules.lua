@@ -1,3 +1,19 @@
+test.system("mechanical", "gas_pump_placement_rotation", {}, function(data)
+    assert(data.rotatable and data.steps == 4, "机械气泵未声明四向放置")
+    assert(#data.samples == 5, "气泵旋转缺少完整一圈采样")
+    for index, expected in ipairs({0, 1, 2, 3, 0}) do
+        local sample = data.samples[index]
+        assert(sample.quarterTurns == expected, "气泵旋转未按四个朝向循环或转一圈后未复位")
+        assert(#sample.shaftConnections == 4, "气泵机械接口没有采样全部方向")
+        for direction = 0, 3 do
+            assert(sample.shaftConnections[direction + 1] == (direction == (expected + 2) % 4),
+                "气泵机械输入口未随朝向旋转，或错误连通另一侧")
+        end
+    end
+    assert(data.outletDirection == 0 and data.outletMode == "output" and data.outletPhase == "gas",
+        "气泵气体出口未保持在机械输入口的局部对侧")
+end, "机械气泵：四向放置循环、各方向机械输入与气体出口声明")
+
 test.system("mechanical", "process_lookup_index", {}, function(data)
     assert(data.rules > 0 and data.exact and data.matched == 8192,
         "机械目录按站点及材料的值类型索引遗漏正式配方或返回不同对象")

@@ -756,6 +756,7 @@
       "Id": "GasPump_Mechanical",
       "Kind": "consumer",
       "Ports": "axis",
+      "PlacementRotationSteps": 4,
       "LogicId": "fluid",
       "PlacementLayer": 0,
       "BlocksMovement": true,

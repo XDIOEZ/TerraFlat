@@ -7,6 +7,7 @@
 - 负载档位由 TorqueLoadStep 声明，默认10；木/布传送带用1点档保留每段2点消耗。分配、面板与功率都读 MachineEntity.RequiredTorque，不能再次按十点取整；动力源供给档位不变。规则 `mechanical/conveyor_loads` 覆盖拐角与真过载。
 - 效率 SpeedRpm/RequiredRpm 不封顶。齿轮箱左大轮输入 RPM×2/扭矩×0.5，右小轮反向，负载按侧倍率折算；水车 RPM 来自真实水流和半径，供给由基础扭矩决定。
 - CrossShaft 在 Layer1，需要同格 Layer0 下穿节点，但 A/B 只连相邻 Layer0。世界端口/预览/动画共用 RotationQuarterTurns；手持朝向临时保存。PlacementRotationSteps 声明2/4朝向（普通/GM引擎为4），统一 NextPlacementQuarterTurns，不按物品身份加旋转分支。
+- 机械气泵同样在目录声明 `PlacementRotationSteps=4`，避免默认两档遗漏反向；机械轴输入与气体输出保持局部相反侧，并随同一安装朝向转动。
 - 手推声明 ManualDriveTorque/Rpm/SecondsPerPress；CanManualDrive 排除手推后查整网外源，存在则禁手推，加工仍读最终 RPM。
 - 风箱朝向邻炉，经 MachineAirflowEffect 提交：20RPM满风、温度上限最多+500℃；温度取最高风量，材料升温百分点各源相加，AirflowHeatingRateBonusPercent=10（50%→60%），低速按比例、单台封顶、停转/移除即撤。RegisterAirflow 共用合并规则，FurnaceRuntimeState 同步真实 HeatingRatePercent。
 - 拓扑记录 HasBellows；无风箱时跳过四邻查询，注册扩展气流仍叠加，装拆立即刷新。规则 `mechanical/bellows_effects`。
