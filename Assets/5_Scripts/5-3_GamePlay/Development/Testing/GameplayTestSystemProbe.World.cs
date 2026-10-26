@@ -1233,9 +1233,9 @@ public static partial class GameplayTestSystemProbe
         buffer.SetCell(0, 0, new TerrainCell(17, 0, 0, 2, 5, TerrainCellFlags.Walkable));
         using ChunkTerrainData terrain = buffer.Seal();
         int water = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        bool added = terrain.SetLiquid(0, 0, water, 6);
+        bool added = terrain.SetLiquid(0, 0, water, 60);
         long wetRevision = terrain.LiquidRevision;
-        bool repeated = terrain.SetLiquid(0, 0, water, 6);
+        bool repeated = terrain.SetLiquid(0, 0, water, 60);
         bool wetChanged = terrain.IsLiquidChanged(0, 0);
         string wetId = terrain.GetLiquidId(0, 0);
         bool repeatedRevisionStable = terrain.LiquidRevision == wetRevision;
@@ -1252,6 +1252,9 @@ public static partial class GameplayTestSystemProbe
         int restoredLevel = terrain.GetLiquidLevel(0, 0);
         string restoredId = terrain.GetLiquidId(0, 0);
         terrain.SetLiquid(0, 0, water, 0);
+        var visualLevels = new JArray();
+        foreach (int level in new[] { 0, 1, 9, 10, 11, 90, 91, 99, 100 })
+            visualLevels.Add(LiquidCellValue.ToVisualLevel(level));
         return new JObject
         {
             ["added"] = added, ["repeated"] = repeated, ["repeatedRevisionStable"] = repeatedRevisionStable,
@@ -1262,13 +1265,47 @@ public static partial class GameplayTestSystemProbe
             ["restoredLevel"] = restoredLevel, ["restoredId"] = restoredId,
             ["missingId"] = missingId,
             ["negativeLevel"] = LiquidCellValue.NormalizeLevel(-1),
-            ["excessLevel"] = LiquidCellValue.NormalizeLevel(20),
+            ["excessLevel"] = LiquidCellValue.NormalizeLevel(200),
+            ["maximumLevel"] = LiquidCellValue.MaximumLevel,
+            ["litersPerUnit"] = LiquidCellValue.LitersPerUnit,
+            ["visualLevels"] = visualLevels,
             ["minimumGeneratedLevel"] = LiquidCellValue.FromGeneratedDepth(.000001),
             ["roundedGeneratedLevel"] = LiquidCellValue.FromGeneratedDepth(.21),
             ["exactGeneratedLevels"] = new JArray(LiquidCellValue.FromGeneratedDepth(.1f), LiquidCellValue.FromGeneratedDepth(.6f)),
             ["invalidGeneratedDepth"] = WorldException(() => LiquidCellValue.FromGeneratedDepth(double.NaN)),
-            ["flow"] = WorldIntegerLiquidFlow()
+            ["flow"] = WorldIntegerLiquidFlow(),
+            ["visualNotifications"] = WorldLiquidVisualNotifications()
         };
+    }
+
+    // 采样正式单格和批量通知，水量每份保存但水面只在跨档或身份变化时更新。
+    private static JObject WorldLiquidVisualNotifications()
+    {
+        using var buffer = new ChunkTerrainBuffer(3, 1);
+        int water = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        buffer.SetLiquid(0, 0, water, 100);
+        buffer.SetLiquid(1, 0, water, 20);
+        buffer.SetLiquid(2, 0, water, 1);
+        using ChunkTerrainData terrain = buffer.Seal();
+        var flags = new JArray();
+        terrain.Changed += change => { if (change.Kind == TerrainChangeKind.Liquid) flags.Add(change.AffectsLiquidVisuals); };
+        foreach (int amount in new[] { 99, 90, 89, 0 }) terrain.SetLiquid(0, 0, water, amount);
+        terrain.SetLiquid(0, 0, water, 100);
+        var batches = new JArray();
+        terrain.LiquidBatchChanged += change =>
+        {
+            var changed = new JArray();
+            var visual = new JArray();
+            foreach (int index in change.CellIndices.Span) changed.Add(index);
+            foreach (int index in change.VisualCellIndices.Span) visual.Add(index);
+            batches.Add(new JObject { ["changed"] = changed, ["visual"] = visual });
+        };
+        terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(0, water, 99),
+            new LiquidCellUpdate(1, water, 19), new LiquidCellUpdate(2, 0, 0) });
+        terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(0, water, 90),
+            new LiquidCellUpdate(1, water, 10), new LiquidCellUpdate(2, water, 1) });
+        return new JObject { ["singleFlags"] = flags, ["batches"] = batches,
+            ["remaining"] = terrain.GetLiquidLevel(0, 0) + terrain.GetLiquidLevel(1, 0) + terrain.GetLiquidLevel(2, 0) };
     }
 
     private static JObject WorldIntegerLiquidFlow()
@@ -1278,7 +1315,7 @@ public static partial class GameplayTestSystemProbe
         var solver = new LiquidFlowSolver();
         int[] neighbours = { 1, 2, 3, 4, -1, 0, -1, -1, 0, -1, -1, -1, -1, -1, -1, 0, -1, -1, 0, -1 };
         var cells = new List<LiquidFlowCell>();
-        for (int i = 0; i < 5; i++) cells.Add(new LiquidFlowCell(0f, i == 0 ? 8 : 0,
+        for (int i = 0; i < 5; i++) cells.Add(new LiquidFlowCell(0f, i == 0 ? 80 : 0,
             i == 0 ? 1 : 0, i == 0 ? "probe:water" : string.Empty, false, true));
         var samples = new JArray();
         for (int tick = 0; tick < 32; tick++)
@@ -1308,8 +1345,8 @@ public static partial class GameplayTestSystemProbe
             canalPairs.Add(new JArray(source, target,
                 WorldLiquidReplenishment.GetConnectedTransferLevel(source, target)));
         return new JObject { ["samples"] = samples, ["canalPairs"] = canalPairs,
-            ["blocked"] = Pair(10, 0, true, 1),
-            ["foreign"] = Pair(10, 2, false, 2), ["full"] = Pair(10, 10, false, 1, 1f),
+            ["blocked"] = Pair(100, 0, true, 1),
+            ["foreign"] = Pair(100, 20, false, 2), ["full"] = Pair(100, 100, false, 1, 1f),
             ["single"] = Pair(1, 0, false, 1), ["edge"] = Pair(6, 0, false, 1) };
     }
 
@@ -1317,7 +1354,7 @@ public static partial class GameplayTestSystemProbe
     {
         using var buffer = new ChunkTerrainBuffer(1, 1);
         buffer.SetCell(0, 0, new TerrainCell(17, 0, 0, 2, 25, TerrainCellFlags.None));
-        buffer.SetLiquid(0, 0, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 6);
+        buffer.SetLiquid(0, 0, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 60);
         using ChunkTerrainData terrain = buffer.Seal();
         TerrainSupportLayer.Set(terrain, 0, 0, 90, 2);
         TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, 0, 0);

@@ -54,7 +54,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
     }
 
     /// <summary>接收容器真实数据，打开时直接定位，使用过程中平滑升降。</summary>
-    public void SetWater(float amount, int capacity, LiquidDefinition liquid, bool immediate = false)
+    public void SetWater(float amount, float capacity, LiquidDefinition liquid, bool immediate = false)
     {
         float value = capacity > 0 ? Mathf.Clamp01(amount / capacity) : 0f;
         if (amount > 0f && liquid == null)

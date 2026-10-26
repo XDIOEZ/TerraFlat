@@ -75,7 +75,8 @@ public static partial class MachineWorld
         public float Seconds => MachineCatalog.Settings.TickSeconds;
         public AtmosphereState Atmosphere { get; }
 
-        public GameplayFluidScope(bool surface = false)
+        public GameplayFluidScope(bool surface = false, int surfaceWidth = 3, int surfaceHeight = 1,
+            int surfaceLeft = 0, int surfaceBottom = 0)
         {
             if (!GameNetwork.HasStateAuthority) throw new InvalidOperationException("流体测试要求权威端。");
             save = SaveDataMgr.Instance?.SaveData ?? throw new InvalidOperationException("测试世界尚未就绪。");
@@ -87,7 +88,7 @@ public static partial class MachineWorld
                 lease = UseScope(Key); previousBackground = scope.BackgroundSimulation;
                 scope.BackgroundSimulation = true; keys.Add(Key);
                 Atmosphere = GetCurrentAtmosphere();
-                try { origin = FindSurfaceCells(); }
+                try { origin = FindSurfaceCells(surfaceWidth, surfaceHeight, surfaceLeft, surfaceBottom); }
                 catch { scope.BackgroundSimulation = previousBackground; lease.Dispose(); throw; }
                 return;
             }
@@ -140,7 +141,7 @@ public static partial class MachineWorld
         public void SetEngineWork(MachineEntity node, double watts) => SetFluidMechanicalPower(node, watts);
         public void ForgetDetached(MachineEntity node) => ForgetDetachedFluidNode(node);
         public Vector2 SurfacePoint(int x = 0, int y = 0) => new(origin.x + x + .5f, origin.y + y + .5f);
-        private static Vector2Int FindSurfaceCells()
+        private static Vector2Int FindSurfaceCells(int width, int height, int left, int bottom)
         {
             Player player = ItemMgr.Instance.User_Player ?? throw new InvalidOperationException("测试玩家不存在。");
             Vector2Int center = CellOf(player.transform.position);
@@ -148,16 +149,17 @@ public static partial class MachineWorld
             for (int x = -3; x <= 3; x++)
             {
                 var first = center + new Vector2Int(x, y); bool free = true;
-                for (int offset = 0; offset < 3; offset++)
+                for (int row = bottom; row < bottom + height && free; row++)
+                for (int column = left; column < left + width; column++)
                 {
-                    Vector2Int cell = first + Vector2Int.right * offset;
+                    Vector2Int cell = first + new Vector2Int(column, row);
                     if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile((Vector2)cell + Vector2.one * .5f, out var sample) ||
                         sample.Cell.BlockingTileId != 0 || TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0 ||
                         IsOccupied(cell, 0) || IsOccupied(cell, 2) || BuildingOccupancyRegistry.IsOccupied(cell, layer: 0)) free = false;
                 }
                 if (free) return first;
             }
-            throw new InvalidOperationException("玩家附近没有已加载的三个连续测试格。");
+            throw new InvalidOperationException($"玩家附近没有已加载且无占地的{width}×{height}流体测试区域。");
         }
 
         public string NewShip()

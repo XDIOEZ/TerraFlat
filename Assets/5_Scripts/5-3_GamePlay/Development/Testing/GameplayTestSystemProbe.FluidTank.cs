@@ -147,9 +147,9 @@ public static partial class GameplayTestSystemProbe
             var source = new FluidInventory(catalog: fluidCatalog); var target = new FluidInventory(catalog: fluidCatalog); var other = new FluidInventory(catalog: fluidCatalog);
             void AddLiquid(FluidInventory inventory, string fluidId, decimal liters)
                 => inventory.TryAdd(FluidInventory.CreateBatch(fluidCatalog.Find(fluidId), 0m,
-                    FluidUnits.LiquidLitersToMol(fluidCatalog.Find(fluidId), liters), 293.15), 1000, .001);
-            AddLiquid(source, FluidIds.PureWater, 150); AddLiquid(other, FluidIds.FilteredWater, 5);
-            double filled = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Liquid, 150,
+                    FluidUnits.LiquidLitersToMol(fluidCatalog.Find(fluidId), liters), 293.15), 2000, .001);
+            AddLiquid(source, FluidIds.PureWater, 1000); AddLiquid(other, FluidIds.FilteredWater, 5);
+            double filled = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Liquid, 1000,
                 fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
             double overflow = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Liquid, 1,
                 fluid.GasCapacityStandardLiters, fluid.VolumeLiters);
@@ -166,9 +166,14 @@ public static partial class GameplayTestSystemProbe
             var restoredOther = new FluidInventory(MachinePersistence.Read<FluidMachineState>(second, "fluid").Chambers["main"], fluidCatalog);
             RuntimeRecipe recipe = recipes.Find(value => value.Id == "core:chemistry_" + id)
                 ?? throw new InvalidOperationException("缺少液罐方块配方：" + id);
+            var combined = new CombinedFluidTankInventory(fluidCatalog);
+            for (int member = 0; member < 3; member++)
+                combined.AddMember(member, fluid.VolumeLiters, fluid.GasCapacityStandardLiters,
+                    fluid.MinimumGasSpaceLiters, new FluidInventoryState());
             rows.Add(new JObject { ["id"] = id, ["kind"] = fluid.Kind, ["material"] = fluid.MaterialId,
                 ["combineAdjacent"] = fluid.CombineAdjacent,
                 ["capacity"] = fluid.VolumeLiters, ["manualAirFill"] = fluid.AllowManualAirFill,
+                ["combinedMembers"] = combined.Count, ["combinedCapacity"] = combined.VolumeLiters,
                 ["ports"] = JArray.FromObject(fluid.Ports), ["pairs"] = pairs,
                 ["stackable"] = carrier.Stackable == true && emptyStackable,
                 ["differentContentsCannotStack"] = !first.CanStackWith(second),

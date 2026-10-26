@@ -23,7 +23,8 @@ public static partial class MachineWorld
     {
         MachineEntity outlet = edge.Source; FluidMachineState state = GetFluidState(outlet);
         double rate = state.OutputLitersPerSecond < 0d ? outlet.Definition.Fluid.ThroughputLitersPerSecond : state.OutputLitersPerSecond;
-        if (rate <= 0d || !GetFluidDeviceBehavior(outlet).PortsEnabled(outlet)) return 0d;
+        if (rate <= 0d || !GetFluidDeviceBehavior(outlet).PortsEnabled(outlet))
+        { state.WorldLiquidOutputLiters.Clear(); return 0d; }
         var workspace = new FluidNetworkGraph.SupplyWorkspace(); var sources = new HashSet<FluidInventory>();
         double remaining = rate * seconds, total = 0d;
         foreach (FluidDefinition fluid in FluidCatalog.Default.Definitions.Values)
@@ -90,7 +91,7 @@ public static partial class MachineWorld
         charged = 0d; FluidMachineState state = GetFluidState(edge.Source);
         if (string.IsNullOrEmpty(fluid.LiquidId) || GameRes.ExistingInstance == null ||
             !GameRes.ExistingInstance.TryGetLiquidDefinition(fluid.LiquidId, out LiquidDefinition liquid) || liquid.WorldWater == null) return 0d;
-        decimal serving = FluidUnits.ServingsToMol(fluid, 1m);
+        decimal serving = FluidUnits.LiquidLitersToMol(fluid, FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit);
         double litersPerServing = (double)FluidUnits.MolToLiquidLiters(fluid, serving);
         string creditKey = edge.SourcePort.Id + ":" + fluid.Id;
         double carried = state.WorldLiquidOutputLiters.GetValueOrDefault(creditKey);
@@ -99,7 +100,7 @@ public static partial class MachineWorld
             Math.Floor((carried + budget + 1e-10d) / litersPerServing)));
         if (count <= 0)
         {
-            if (available < serving) return 0d;
+            if (available < serving) { state.WorldLiquidOutputLiters.Remove(creditKey); return 0d; }
             charged = Math.Min(budget, Math.Max(0d, litersPerServing - carried));
             state.WorldLiquidOutputLiters[creditKey] = carried + charged; state.Status = "累计排液量"; return 0d;
         }
@@ -107,16 +108,21 @@ public static partial class MachineWorld
         string targetWorld = worldKey; Vector2 targetPosition = destination;
         if (!TryResolveFluidSurfacePoint(destination, out targetWorld, out targetPosition) &&
             (IsShipScope || worldKey != SceneManager.GetActiveScene().name)) return 0d;
-        FluidInventoryState before = source.State.Clone();
-        if (!source.TryTakeExact(fluid.Id, FluidPhase.Liquid, serving * count, out FluidBatch extracted)) return 0d;
-        int accepted;
-        try { accepted = ReleaseFluidEnvironmentLiquid(targetWorld ?? worldKey, targetPosition, fluid.LiquidId, count); }
-        catch { source.Restore(before); throw; }
-        if (accepted <= 0)
-        { source.Restore(before); state.Status = "地表已满或液体不同，来源保留"; return 0d; }
-        if (accepted < count && !source.TryAdd(extracted.Scale((decimal)(count - accepted) / count),
-            source.GetLiquidLiters() + (count - accepted) * litersPerServing + .001d, .001d, false, true))
-            throw new InvalidOperationException("地表部分接收后无法退回未接收液体。");
+        int accepted = 0;
+        for (; accepted < count; accepted++)
+        {
+            FluidInventoryState before = source.State.Clone();
+            if (!source.TryTakeExact(fluid.Id, FluidPhase.Liquid, serving, out _)) break;
+            int added;
+            // 逐个十升提交，目标只剩一份空间时也先接满，拒收仅回滚当前一批。
+            try { added = ReleaseFluidEnvironmentLiquid(targetWorld ?? worldKey, targetPosition, fluid.LiquidId, 1); }
+            catch { source.Restore(before); throw; }
+            if (added == 1) continue;
+            source.Restore(before);
+            state.Status = "地表已满或液体不同，来源保留";
+            break;
+        }
+        if (accepted <= 0) { state.WorldLiquidOutputLiters.Remove(creditKey); return 0d; }
         double liters = accepted * litersPerServing;
         double credit = accepted == count ? Math.Min(litersPerServing, Math.Max(0d, carried + budget - liters)) : Math.Max(0d, carried - liters);
         charged = Math.Max(0d, liters + credit - carried);

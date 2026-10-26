@@ -59,6 +59,22 @@ public static class MixedLiquidContents
     }
     public static float GetAmount(LiquidContainerState state, string id)
     { Ensure(state); return id != null && state.Composition.TryGetValue(id, out float amount) ? amount : 0f; }
+    public static float GetVolumeLiters(LiquidContainerState state)
+    {
+        Ensure(state); double liters = 0d;
+        foreach (var component in state.Composition)
+            liters += component.Value * (double)(GameRes.ExistingInstance?.GetLiquidDefinition(component.Key)?.LitersPerServing
+                ?? throw new InvalidOperationException($"液体定义不存在：{component.Key}"));
+        return (float)liters;
+    }
+    public static float GetReceivableServings(LiquidContainerState state, int capacity, string liquidId, float requested)
+    {
+        LiquidDefinition liquid = GameRes.ExistingInstance?.GetLiquidDefinition(liquidId);
+        return liquid == null || !(requested > 0f) ? 0f : Mathf.Min(requested,
+            Mathf.Max(0f, WorldLiquidVolumeConversion.GetContainerCapacityLiters(capacity) - GetVolumeLiters(state)) / liquid.LitersPerServing);
+    }
+    public static float GetVolumeFraction(LiquidContainerState state, int capacity)
+        => capacity > 0 ? GetVolumeLiters(state) / WorldLiquidVolumeConversion.GetContainerCapacityLiters(capacity) : 0f;
     public static float Reserved(LiquidContainerState state, string id, string exceptPort = null)
     {
         Ensure(state); float amount = 0f;
@@ -119,17 +135,20 @@ public static class MixedLiquidContents
     #endregion
 
     #region 稳定随机批次
-    public static bool Peek(LiquidContainerState state, string portId, out LiquidTransferBatch batch, float minimumServings = 0f)
+    public static bool Peek(LiquidContainerState state, string portId, out LiquidTransferBatch batch, float minimumServings = 0f,
+        float minimumLiters = 0f)
     {
         Ensure(state); batch = default;
-        if (!float.IsFinite(minimumServings) || minimumServings < 0f || minimumServings > 1f) return false;
-        if (state.PendingOutputs.TryGetValue(portId, out LiquidPendingBatch pending) && pending.Servings >= minimumServings)
+        if (!float.IsFinite(minimumServings) || minimumServings < 0f || !float.IsFinite(minimumLiters) || minimumLiters < 0f) return false;
+        float Minimum(string id) => minimumLiters <= 0f ? minimumServings : Mathf.Max(minimumServings,
+            minimumLiters / GameRes.ExistingInstance.GetLiquidDefinition(id).LitersPerServing);
+        if (state.PendingOutputs.TryGetValue(portId, out LiquidPendingBatch pending) && pending.Servings >= Minimum(pending.LiquidId))
         { batch = new(pending.LiquidId, pending.Servings, state.Temperature); return true; }
         double total = 0d;
         foreach (var pair in state.Composition)
         {
             double available = Math.Max(0d, pair.Value - Reserved(state, pair.Key, portId));
-            if (available >= minimumServings) total += available;
+            if (available >= Minimum(pair.Key)) total += available;
         }
         if (!(total > 0d)) return false;
         uint random = Next(state.RandomState);
@@ -139,16 +158,19 @@ public static class MixedLiquidContents
         foreach (string id in ids)
         {
             double available = Math.Max(0d, GetAmount(state, id) - Reserved(state, id, portId));
-            if (available < minimumServings) continue;
+            float minimum = Minimum(id);
+            if (available < minimum) continue;
             pick -= available;
-            if (pick < 0d) { batch = new(id, (float)Math.Min(1d, available), state.Temperature); return true; }
+            if (pick < 0d) { batch = new(id, (float)Math.Min(Math.Max(1d, minimum), available), state.Temperature); return true; }
         }
         return false;
     }
-    public static bool Reserve(LiquidContainerState state, string portId, out LiquidTransferBatch batch, float minimumServings = 0f)
+    public static bool Reserve(LiquidContainerState state, string portId, out LiquidTransferBatch batch, float minimumServings = 0f,
+        float minimumLiters = 0f)
     {
-        if (!Peek(state, portId, out batch, minimumServings)) return false;
-        if (state.PendingOutputs.TryGetValue(portId, out var pending) && pending.Servings >= minimumServings) return true;
+        if (!Peek(state, portId, out batch, minimumServings, minimumLiters)) return false;
+        if (state.PendingOutputs.TryGetValue(portId, out var pending) && LiquidVesselOperations.SameLiquid(pending.LiquidId, batch.LiquidId)
+            && pending.Servings >= batch.Servings) return true;
         // 整份出口跳过不足一份的组分，只替换本口预约，不删减任何真实尾量。
         state.RandomState = Next(state.RandomState);
         state.PendingOutputs[portId] = new LiquidPendingBatch { LiquidId = batch.LiquidId, Servings = batch.Servings };

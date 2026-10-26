@@ -82,9 +82,9 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContai
         if (GameNetwork.HasStateAuthority) return LiquidVesselOperations.PourToGround(this, actor, amount);
         if (!CanOperate(actor) || !MachineDefinition.Positive(amount) || Time.unscaledTime < nextRemotePour) return 0f;
         nextRemotePour = Time.unscaledTime + .1f;
-        int value = LiquidVesselOperations.GetWholeWorldServings(amount, Data.Amount);
-        if (value == 0) return 0f;
-        return MachineWorld.RequestOperation(Entity, "vessel.pour", value.ToString(CultureInfo.InvariantCulture), actor as Player) ? value : 0f;
+        float value = Mathf.Min(amount, Data.Amount);
+        if (value <= 0f) return 0f;
+        return MachineWorld.RequestOperation(Entity, "vessel.pour", value.ToString("R", CultureInfo.InvariantCulture), actor as Player) ? value : 0f;
     }
     public bool TransferFromInventoryItem(ItemData source, Item actor, float maximumItemAmount = float.PositiveInfinity)
     {
@@ -108,7 +108,7 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContai
         if (!GameNetwork.HasStateAuthority || !CanOperate(actor)) return false;
         if (operation == "vessel.drink") return Drink(actor);
         if (operation == "vessel.pour") return float.TryParse(argument, NumberStyles.Float, CultureInfo.InvariantCulture, out float amount) &&
-            MachineDefinition.Positive(amount) && PourToGround(actor, Mathf.Min(amount, Capacity)) > 0f;
+            MachineDefinition.Positive(amount) && PourToGround(actor, Mathf.Min(amount, Data.Amount)) > 0f;
         if (operation != "vessel.fill") return false;
         VesselFillRequest request = JsonConvert.DeserializeObject<VesselFillRequest>(argument);
         if (request == null || !MachineDefinition.Positive(request.Maximum) || request.Maximum > 1000000000f ||
@@ -196,7 +196,7 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContai
         foreach (LiquidIngredientReaction reaction in CurrentLiquid.IngredientReactions)
         {
             if (reaction == null || reaction.Amount < 1 || Data.LiquidId == reaction.ResultLiquidId ||
-                reaction.RequireFullContainer && Data.Amount < Capacity - Mod_WaterVessel.AmountEpsilon ||
+                reaction.RequireFullContainer && MixedLiquidContents.GetVolumeFraction(Data, Capacity) < 1f - Mod_WaterVessel.AmountEpsilon ||
                 GameRes.Instance.GetLiquidDefinition(reaction.ResultLiquidId) == null) continue;
             var consumed = new List<CraftingConsumption>();
             int needed = reaction.Amount;

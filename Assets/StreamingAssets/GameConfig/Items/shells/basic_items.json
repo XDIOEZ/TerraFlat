@@ -3762,7 +3762,7 @@
           "enabled": true,
           "data": {},
           "parameters": {
-            "capacity": 6,
+            "capacity": 80,
             "CollectsRainwater": true
           }
         }

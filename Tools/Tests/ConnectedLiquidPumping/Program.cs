@@ -14,8 +14,8 @@ internal static class Program
         var chunk = new ChunkRuntime { Address = new("surface", new(origin, 0)) };
         for (int x = 0; x < 16; x++)
         {
-            chunk.Terrain.Baseline[16 + x] = new(type, 10);
-            chunk.Terrain.Set(x, 1, type, 10);
+            chunk.Terrain.Baseline[16 + x] = new(type, 100);
+            chunk.Terrain.Set(x, 1, type, 100);
         }
         return chunk;
     }
@@ -37,19 +37,19 @@ internal static class Program
         body.TryGetBody(new(-.5f, 1.5f), out _);
         body.Advance(); Check(owner.Requests == 0, "stable water and read-only body queries do not load neighbours");
         left.Terrain.Set(15, 1, 0, 0); DrainPending(body);
-        Check(left.Terrain.GetLiquidLevel(15, 1) > 0 && right.Terrain.GetLiquidLevel(0, 1) < 10 && Total(left, right) == 310,
+        Check(left.Terrain.GetLiquidLevel(15, 1) > 0 && right.Terrain.GetLiquidLevel(0, 1) < 100 && Total(left, right) == 3100,
             "negative-coordinate cross-chunk neighbour diffusion conserves actual water");
         Check(body.PendingDiffusionCellCount == 0, "balanced water naturally sleeps");
         var damOwner = new ChunkMgr(); using var damBody = new WorldLiquidBodySystem(damOwner, "surface");
         var blocked = River(0); damBody.Observe(blocked);
         blocked.Terrain.Wall(7, 1, true); blocked.Terrain.Set(6, 1, 0, 0); DrainPending(damBody);
-        Check(blocked.Terrain.GetLiquidLevel(8, 1) == 10 && Total(blocked) == 150,
+        Check(blocked.Terrain.GetLiquidLevel(8, 1) == 100 && Total(blocked) == 1500,
             "terrain dam blocks diffusion without changing water behind it");
         var foreignOwner = new ChunkMgr(); using var foreignBody = new WorldLiquidBodySystem(foreignOwner, "surface");
         var water = River(0); var lava = River(16, 2);
         foreignBody.Observe(water); foreignBody.Observe(lava);
         water.Terrain.Set(15, 1, 0, 0); DrainPending(foreignBody);
-        Check(Total(lava) == 160 && lava.Terrain.GetLiquidTypeIndex(0, 1) == 2,
+        Check(Total(lava) == 1600 && lava.Terrain.GetLiquidTypeIndex(0, 1) == 2,
             "foreign liquid is not borrowed across shared boundary");
         var remoteOwner = new ChunkMgr { DelayLoads = true };
         using var remoteBody = new WorldLiquidBodySystem(remoteOwner, "surface");
@@ -60,11 +60,11 @@ internal static class Program
             "edge demand starts one data-only request without simulation lease");
         int before = Total(near);
         for (int i = 0; i < 5; i++) remoteBody.Advance();
-        Check(Total(near) == before && remoteOwner.Requests == 1 && Total(far) == 160,
+        Check(Total(near) == before && remoteOwner.Requests == 1 && Total(far) == 1600,
             "missing neighbour is closed until ready and repeated edges deduplicate");
         remoteOwner.WaitingLoads[far.Address].SetResult(far); remoteOwner.DelayLoads = false;
         DrainPending(remoteBody);
-        Check(Total(near, far) == 310 && near.Terrain.GetLiquidLevel(15, 1) > 0 && Total(far) < 160,
+        Check(Total(near, far) == 3100 && near.Terrain.GetLiquidLevel(15, 1) > 0 && Total(far) < 1600,
             "ready neighbour resumes adjacent exchange rather than selecting remote pump donor");
         Check(SaveDataMgr.Instance.RestoredTerrain > 0 && SaveDataMgr.Instance.RestoredBuildings == 0,
             "cold chunks restore terrain/liquids without instantiating buildings");
@@ -80,13 +80,13 @@ internal static class Program
         var failed = River(0); failedBody.Observe(failed); failed.Terrain.Set(15, 1, 0, 0); failedBody.Advance();
         failedOwner.WaitingLoads.Values.Single().SetException(new Exception("expected test failure"));
         DrainPending(failedBody);
-        Check(Total(failed) == 150 && failedOwner.Requests == 1 && failedOwner.Leases == 0,
+        Check(Total(failed) == 1500 && failedOwner.Requests == 1 && failedOwner.Leases == 0,
             "failed neighbour load loses no water and does not retry indefinitely");
         WorldTopologyRuntime.WrapWidth = 32;
         var wrappedOwner = new ChunkMgr(); using var wrappedBody = new WorldLiquidBodySystem(wrappedOwner, "surface");
         var a = River(0); var b = River(16); wrappedBody.Observe(a); wrappedBody.Observe(b);
         a.Terrain.Set(0, 1, 0, 0); DrainPending(wrappedBody);
-        Check(b.Terrain.GetLiquidLevel(15, 1) < 10 && Total(a, b) == 310,
+        Check(b.Terrain.GetLiquidLevel(15, 1) < 100 && Total(a, b) == 3100,
             "wrapped seam exchanges with canonical adjacent cell");
         WorldTopologyRuntime.WrapWidth = 0;
         var boundedOwner = new ChunkMgr { DelayLoads = true };

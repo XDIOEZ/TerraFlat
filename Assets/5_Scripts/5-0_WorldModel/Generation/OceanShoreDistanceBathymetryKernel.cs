@@ -172,7 +172,7 @@ namespace FlatWorld.WorldModel
 
         /// <summary>天然海底随初始水量加深，取水后保留真实海底台阶。</summary>
         public static int ResolveNaturalOceanBedDepthLevels(int liquidLevel) =>
-            liquidLevel <= 0 ? 0 : 1 + Math.Clamp(liquidLevel, 1, 10);
+            liquidLevel <= 0 ? 0 : 1 + LiquidCellValue.ToVisualLevel(liquidLevel);
 
         #endregion
     }

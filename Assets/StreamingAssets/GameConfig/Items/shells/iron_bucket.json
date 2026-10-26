@@ -42,7 +42,7 @@
           "id": "Mod_WaterVessel",
           "enabled": true,
           "data": {},
-          "parameters": { "capacity": 8, "reach": 2, "CollectsRainwater": true }
+          "parameters": { "capacity": 200, "reach": 2, "CollectsRainwater": true }
         }
       }
     },
@@ -92,7 +92,7 @@
           "id": "Mod_WaterVessel",
           "enabled": true,
           "data": {},
-          "parameters": { "capacity": 8, "reach": 2, "CollectsRainwater": true }
+          "parameters": { "capacity": 200, "reach": 2, "CollectsRainwater": true }
         }
       }
     }

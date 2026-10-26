@@ -106,6 +106,10 @@ public interface IWholeLiquidOutputPort
 {
     bool ReserveWholeLiquid(out LiquidTransferBatch batch);
 }
+public interface IQuantizedLiquidTransferPort
+{
+    float QuantizeTransferServings(string liquidId, float requested);
+}
 public readonly struct ContainerTransferResult
 {
     public readonly ContainerTransferFailure Failure;

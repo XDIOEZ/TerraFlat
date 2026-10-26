@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>
-/// 液体在世界中的资源与接触规则；一份液体固定增加一个整数等级，默认寻路成本 20000。
+/// 液体在世界中的资源与接触规则；地表一份固定十升，饮用份数独立换算，默认寻路成本 20000。
 /// 容器专用液体可以不声明 worldWater；声明后的本体与 MOD 液体共用渲染和角色生存链。
 /// </summary>
 [MemoryPack.MemoryPackable]

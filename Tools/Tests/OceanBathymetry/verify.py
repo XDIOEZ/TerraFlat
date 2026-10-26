@@ -50,6 +50,7 @@ def main():
         ET.SubElement(props, key).text = value
     group = ET.SubElement(project, "ItemGroup")
     ET.SubElement(group, "Compile", Include=str(Path(__file__).with_name("Program.cs")))
+    ET.SubElement(group, "Compile", Include=str(ROOT / "Assets/5_Scripts/5-3_GamePlay/Items/Food/WorldLiquidVolumeConversion.cs"))
     paths = [OUTPUT / "FlatWorld.WorldModel.dll", engine]
     paths += [ROOT / "Library/ScriptAssemblies" / f"{name}.dll" for name in
               ("FlatWorld.WorldTopology", "Unity.Mathematics", "Unity.Burst", "Unity.Collections")]

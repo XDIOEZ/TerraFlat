@@ -11,7 +11,7 @@ public static class WorldLiquidReplenishment
     private static readonly Vector2Int[] Directions =
         { Vector2Int.left, Vector2Int.right, Vector2Int.down, Vector2Int.up };
 
-    /// <summary>原有同种水域按水量差的一半补水，差一级停稳，供水格不会被搬空。</summary>
+    /// <summary>原有同种水域按真实份数差的一半补水，差一份停稳，供水格保留至少十升。</summary>
     public static int GetTransferLevel(RuntimeTerrainTileSample source, RuntimeTerrainTileSample target)
     {
         if (!IsOpen(source) || !IsOpen(target) ||
@@ -140,7 +140,7 @@ public static class WorldLiquidReplenishment
     {
         if ((uint)sourceLevel > LiquidCellValue.MaximumLevel ||
             (uint)targetLevel > LiquidCellValue.MaximumLevel)
-            throw new ArgumentOutOfRangeException(nameof(sourceLevel), "水渠交换的水位超出零到十级。");
+            throw new ArgumentOutOfRangeException(nameof(sourceLevel), "水渠交换的水量超出零到一百份。");
         return Math.Max(0, (sourceLevel - targetLevel) / 2);
     }
     #endregion

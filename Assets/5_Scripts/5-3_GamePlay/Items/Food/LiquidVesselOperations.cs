@@ -6,7 +6,7 @@ using UnityEngine;
 public interface ILiquidVessel
 {
     LiquidContainerState Data { get; }
-    int Capacity { get; }
+    int Capacity { get; } // 容量配置按标准0.25升份表示，真实混液占用由各组分体积计算。
     LiquidDefinition CurrentLiquid { get; }
     ItemData ItemData { get; }
     Item Item { get; }
@@ -56,7 +56,7 @@ public static class LiquidVesselOperations
     public static float Add(ILiquidVessel target, string id, float amount)
     {
         if (!GameNetwork.HasStateAuthority || target == null || !float.IsFinite(amount) || amount <= 0f || GameRes.ExistingInstance?.GetLiquidDefinition(id) == null) return 0f;
-        float moved = Mathf.Min(amount, Mathf.Max(0f, target.Capacity - target.Data.Amount));
+        float moved = MixedLiquidContents.GetReceivableServings(target.Data, target.Capacity, id, amount);
         if (moved <= 0f) return 0f;
         AddState(target, id, moved, target.Data.Temperature); target.CommitVessel(); return moved;
     }
@@ -92,10 +92,12 @@ public static class LiquidVesselOperations
     public static float FillFromWorld(ILiquidVessel target, Item actor, WorldLiquidSourceTarget source)
     {
         if (target == null || !target.CanOperate(actor)) return 0f;
-        int requested = GetWholeWorldServings(target.Capacity, target.Capacity - target.Data.Amount);
-        if (requested <= 0) return 0f;
+        float space = MixedLiquidContents.GetReceivableServings(target.Data, target.Capacity, source.Liquid.Id, float.MaxValue);
+        int worldUnits = WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(space, source.Liquid.LitersPerServing);
+        float requested = WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(worldUnits, source.Liquid.LitersPerServing);
+        if (worldUnits <= 0) return 0f;
         if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "world-fill", requested, source.WorldCell) ? requested : 0f;
-        var result = ContainerTransferService.TransferLiquid(new WorldLiquidTransferPort(source, actor.gameObject.scene.handle, requested, 3f),
+        var result = ContainerTransferService.TransferLiquid(new WorldLiquidTransferPort(source, actor.gameObject.scene.handle, worldUnits, 3f),
             Port(target, ContainerPortDirection.Input), new ContainerTransferContext(actor, ContainerAccessKind.Manual, "fill-world-liquid"), requested);
         return result.LiquidServings;
     }
@@ -123,30 +125,32 @@ public static class LiquidVesselOperations
     public static float PourToGround(ILiquidVessel target, Item actor, float amount, int horizontalCellOffset, string portId = null)
     {
         if (target == null || !target.CanOperate(actor) || !float.IsFinite(amount) || amount <= 0f) return 0f;
-        int remaining = GetWholeWorldServings(amount, target.Data.Amount);
-        if (remaining == 0) return 0f;
+        float remaining = Mathf.Min(amount, target.Data.Amount);
+        if (remaining <= 0f) return 0f;
         if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "pour", remaining, horizontalCellOffset: horizontalCellOffset, portId: portId) ? remaining : 0f;
         var port = Port(target, ContainerPortDirection.Output, portId);
         if (port == null || !port.CanAccess(new ContainerTransferContext(actor, ContainerAccessKind.Manual, "pour"), out _)) return 0f;
         Vector2 position = actor.transform.position;
         if (horizontalCellOffset < 0) position += Vector2.left;
         else if (horizontalCellOffset > 0) position += Vector2.right;
-        int removed = 0;
-        while (remaining >= Mod_WaterVessel.AmountStep)
+        float removed = 0f;
+        while (remaining > 0f)
         {
             LiquidTransferBatch batch;
             bool reserved = port is IWholeLiquidOutputPort whole
                 ? whole.ReserveWholeLiquid(out batch)
                 : port.ReserveLiquid(out batch);
-            if (!reserved || batch.Servings < Mod_WaterVessel.AmountStep || !port.Configuration.AllowsLiquid(batch.LiquidId)) break;
+            if (!reserved || !port.Configuration.AllowsLiquid(batch.LiquidId)) break;
             LiquidDefinition liquid = GameRes.ExistingInstance.GetLiquidDefinition(batch.LiquidId);
             if (liquid?.WorldWater == null) break;
+            float servingStep = WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(1, liquid.LitersPerServing);
+            if (batch.Servings < servingStep || remaining < servingStep) break;
             object before = port.CaptureState();
             // 先扣容器再提交落地，地表拒收就恢复容器，吸水通知只看已扣款的真实一份。
-            if (!port.ExtractLiquid(batch, Mod_WaterVessel.AmountStep) ||
-                !WorldLiquidSystem.TryPour(position, liquid.Id, Mod_WaterVessel.AmountStep, out int added) || added != Mod_WaterVessel.AmountStep)
+            if (!port.ExtractLiquid(batch, servingStep) ||
+                !WorldLiquidSystem.TryPour(position, liquid.Id, 1, out int added) || added != 1)
             { port.RestoreState(before); break; }
-            removed += Mod_WaterVessel.AmountStep; remaining -= Mod_WaterVessel.AmountStep; port.PublishState();
+            removed += servingStep; remaining -= servingStep; port.PublishState();
         }
         return removed;
     }

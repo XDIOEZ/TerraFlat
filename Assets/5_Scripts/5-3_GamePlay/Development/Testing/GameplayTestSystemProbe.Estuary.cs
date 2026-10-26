@@ -14,7 +14,7 @@ public static partial class GameplayTestSystemProbe
         using ChunkTerrainData terrain = EnvironmentBatchFixture(1, 1);
         terrain.SetCell(0, 0, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Ocean,
             1, TerrainCellFlags.Walkable));
-        terrain.SetLiquid(0, 0, terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId), 8);
+        terrain.SetLiquid(0, 0, terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId), 80);
         terrain.SetEnvironmentValue("windX", 0, 0, -1f);
         terrain.SetEnvironmentValue(EstuaryCurrentKernel.DirectionXLayer, 0, 0, (float)plume.X);
         terrain.SetEnvironmentValue(EstuaryCurrentKernel.DirectionYLayer, 0, 0, (float)plume.Y);
@@ -23,7 +23,7 @@ public static partial class GameplayTestSystemProbe
             Vector2Int.zero, terrain.GetCell(0, 0), terrain.GetTopTileId(0, 0));
         bool active = ChunkMgr.TryResolveTerrainWaterCurrent(sample, out RuntimeWaterCurrentSample current);
         Vector2 velocity = WorldMotionSystem.CalculateWaterCurrentVelocity(current, 1f);
-        bool seawater = sample.LiquidId == LiquidTypeCatalog.SeaWaterId && sample.LiquidLevel == 8;
+        bool seawater = sample.LiquidId == LiquidTypeCatalog.SeaWaterId && sample.LiquidLevel == 80;
         terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 0, 0, 90f);
         bool covered = ChunkMgr.TryResolveTerrainWaterCurrent(sample, out _);
         terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 0, 0, 0f);

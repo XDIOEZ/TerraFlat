@@ -19,6 +19,28 @@ public static partial class GameplayTestSystemProbe
         Register("containers", "portable_vessels", EntityPortableVessels);
         Register("containers", "rainwater_quality", EntityRainwaterQuality);
         Register("containers", "contents_open_mouth", EntityContentsOpenMouth);
+        Register("containers", "capacity_liters", EntityContainerCapacityLiters);
+    }
+
+    // 从正式继承目录读取容器容量，避免手持与落地配置换算后分叉。
+    private static JObject EntityContainerCapacityLiters(JObject args)
+    {
+        List<ItemDefinitionDto> definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
+        var rows = new JArray();
+        foreach (string carrier in new[] { "Coconut_Shell", "IronBucket", "WoodenBarrel", "ClayJar", "Crucible", "WaterTrough" })
+        foreach (string id in new[] { carrier, carrier + "_Building" })
+        {
+            ItemDefinitionDto definition = definitions.Find(value => value.Id == id)
+                ?? throw new InvalidOperationException("缺少液体容器定义：" + id);
+            ItemModuleDefinitionDto vessel = null;
+            foreach (ItemModuleDefinitionDto module in definition.Modules.Values)
+                if (module.Id == Mod_WaterVessel.ModuleId && module.Enabled != false) { vessel = module; break; }
+            if (vessel == null) throw new InvalidOperationException("容器缺少正式液体模块：" + id);
+            int capacity = vessel.Parameters.Value<int>("capacity");
+            rows.Add(new JObject { ["id"] = id, ["capacity"] = capacity,
+                ["liters"] = WorldLiquidVolumeConversion.GetContainerCapacityLiters(capacity) });
+        }
+        return new JObject { ["containers"] = rows };
     }
 
     // 使用独立容器状态采样正式接雨时钟，Lua 决定水量和时间边界是否正确。

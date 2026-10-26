@@ -94,16 +94,17 @@ public static class Program
             Require(first.Components.Sum(c=>c.GasMoles)+second.Components.Sum(c=>c.GasMoles)+third.Components.Sum(c=>c.GasMoles)==exactGas,"decimal share drift");
             Require(Near(first.TotalInternalEnergyJoules+second.TotalInternalEnergyJoules+third.TotalInternalEnergyJoules,energy),"energy drift");}
           Require(Near(Liters(new FluidInventory(first)),1d/6)&&Near(Liters(new FluidInventory(third)),.5),"capacity weighting ignored"); });
-        Run("combined liquids reject incompatible neighbours and preserve 200L", () =>
+        Run("combined liquid blocks add 800L per member and conserve 1300L", () =>
         { var a=new FluidInventory();var b=new FluidInventory();var foreign=new FluidInventory();
-          a.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:a"),0,90,300),100,.001);
-          b.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:a"),0,60,300),100,.001);
+          a.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:a"),0,700,300),800,.001);
+          b.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:a"),0,600,300),800,.001);
           foreign.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:b"),0,10,300),100,.001);
-          var combined=new CombinedFluidTankInventory();combined.AddMember(1,100,100,.1,a.State);combined.AddMember(2,100,100,.1,b.State);
+          var combined=new CombinedFluidTankInventory();combined.AddMember(1,800,100,.1,a.State);combined.AddMember(2,800,100,.1,b.State);
+          Require(combined.Count==2 && Near(combined.VolumeLiters,1600),"800L block capacities did not add");
           Require(!combined.CanCombineLiquid(foreign.State),"foreign liquid merged");
-          Require(IndustrialFluidTransfer.Transfer(foreign,combined.Inventory,FluidPhase.Liquid,10,200,200)==0,"foreign liquid transferred");
-          var delivered=new FluidInventory();double moved=IndustrialFluidTransfer.Transfer(combined.Inventory,delivered,FluidPhase.Liquid,125,200,200);
-          combined.SynchronizeLocalShares();Require(Near(moved,125)&&Near(combined.Inventory.GetLiquidLiters(),25)&&Near(a.GetLiquidLiters()+b.GetLiquidLiters()+delivered.GetLiquidLiters(),150),"shared output lost material"); });
+          Require(IndustrialFluidTransfer.Transfer(foreign,combined.Inventory,FluidPhase.Liquid,10,200,1600)==0,"foreign liquid transferred");
+          var delivered=new FluidInventory();double moved=IndustrialFluidTransfer.Transfer(combined.Inventory,delivered,FluidPhase.Liquid,1250,200,1600);
+          combined.SynchronizeLocalShares();Require(Near(moved,1250)&&Near(combined.Inventory.GetLiquidLiters(),50)&&Near(a.GetLiquidLiters()+b.GetLiquidLiters()+delivered.GetLiquidLiters(),1300),"shared output lost material"); });
         Run("unchanged shared save reuses local states and strips transient reservations", () =>
         { var a=Gas(80);var b=Gas(0);var combined=new CombinedFluidTankInventory();combined.AddMember(1,100,100,.1,a.State);combined.AddMember(2,100,100,.1,b.State);
           combined.Inventory.TryReserve("engine:test",FluidPhase.Gas,FluidUnits.StandardLitersToMol(10),out _);combined.SynchronizeLocalShares();

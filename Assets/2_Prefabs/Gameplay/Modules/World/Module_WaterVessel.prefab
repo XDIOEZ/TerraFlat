@@ -55,5 +55,5 @@ MonoBehaviour:
     LiquidId:
     Amount: 0
     ProcessingSeconds: 0
-  capacity: 8
+  capacity: 200
   reach: 2

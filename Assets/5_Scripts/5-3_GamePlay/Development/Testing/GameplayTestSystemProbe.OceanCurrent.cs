@@ -20,7 +20,7 @@ public static partial class GameplayTestSystemProbe
         using ChunkTerrainData terrain = EnvironmentBatchFixture(1, 1);
         terrain.SetCell(0, 0, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Ocean,
             1, TerrainCellFlags.Walkable));
-        terrain.SetLiquid(0, 0, terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId), 8);
+        terrain.SetLiquid(0, 0, terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId), 80);
         terrain.SetEnvironmentValue(OceanShoreCurrentKernel.DirectionXLayer, 0, 0, (float)x);
         terrain.SetEnvironmentValue(OceanShoreCurrentKernel.DirectionYLayer, 0, 0, (float)y);
         terrain.SetEnvironmentValue("windX", 0, 0, 1f);

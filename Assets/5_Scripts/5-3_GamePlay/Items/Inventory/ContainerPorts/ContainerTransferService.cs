@@ -86,6 +86,8 @@ public static class ContainerTransferService
         if (!source.Configuration.AllowsLiquid(batch.LiquidId) || !target.Configuration.AllowsLiquid(batch.LiquidId)) return new(ContainerTransferFailure.FilterRejected, batch.LiquidId, unit: "servings");
         float available = Math.Min(batch.Servings, requested);
         float amount = Math.Min(available, target.GetReceivableServings(batch.LiquidId, available));
+        if (source is IQuantizedLiquidTransferPort quantizedSource) amount = quantizedSource.QuantizeTransferServings(batch.LiquidId, amount);
+        if (target is IQuantizedLiquidTransferPort quantizedTarget) amount = quantizedTarget.QuantizeTransferServings(batch.LiquidId, amount);
         if (!(amount > 0f) || (source.Configuration.WholeBatch || target.Configuration.WholeBatch) && amount < requested) return new(ContainerTransferFailure.Full, batch.LiquidId, unit: "servings");
         return new(ContainerTransferFailure.None, batch.LiquidId, servings: amount);
     }

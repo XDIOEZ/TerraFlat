@@ -19,7 +19,8 @@ test.system("industrial_fluids", "liquid_block_tanks", {}, function(data)
         local expected_id = index == 1 and "LiquidTankBlock_Iron" or "LiquidTankBlock_Steel"
         assert(tank.id == expected_id and tank.kind == "tank" and tank.combineAdjacent, "液罐没有启用自然组合储罐能力")
         assert(tank.material == (index == 1 and "iron" or "steel"), "液罐材质配置错误")
-        near(tank.capacity, 100, "液罐容量不是100L")
+        near(tank.capacity, 800, "液罐每格没有扣除外壳体积后保留800L")
+        assert(tank.combinedMembers == 3 and tank.combinedCapacity == 2400, "组合液罐没有按每块800L相加")
         assert(not tank.manualAirFill and tank.stackable, "液罐误启用补气或空罐不能堆叠")
         assert(#tank.ports == 4 and #tank.pairs == 2, "液罐接口或建筑配对缺失")
         local directions = {}
@@ -37,12 +38,12 @@ test.system("industrial_fluids", "liquid_block_tanks", {}, function(data)
             assert(pair.maxHp > 0 and pair.sprite == "Assets/6_Art/Generated/Chemistry/" .. tank.id .. "/" .. tank.id .. "_Idle.png",
                 "液罐缺少受击生命或独立液滴贴图引用")
         end
-        near(tank.filled, 100, "液罐没有按实际容量接液")
+        near(tank.filled, 800, "液罐没有按实际容量接液")
         near(tank.overflow, 0, "液罐满后仍接收液体")
         near(tank.drained, 25, "液罐不能供出实际液体")
         near(tank.mixed, 0, "液罐混入了另一种液体")
-        near(tank.sourceLeft, 50, "液罐超量扣取来源")
-        near(tank.stored, 75, "液罐保存恢复丢失内容")
+        near(tank.sourceLeft, 200, "液罐超量扣取来源")
+        near(tank.stored, 775, "液罐保存恢复丢失内容")
         near(tank.delivered, 25, "出液没有交付真实数量")
         near(tank.otherStored, 5, "拒绝混液或保存影响了另一罐")
         assert(tank.storedFluid == "core:pure_water" and tank.otherFluid == "core:filtered_water"

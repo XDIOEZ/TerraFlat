@@ -58,7 +58,7 @@
           "enabled": true,
           "data": {},
           "parameters": {
-            "capacity": 6,
+            "capacity": 80,
             "CollectsRainwater": true
           }
         }
@@ -119,7 +119,7 @@
           "id": "Mod_WaterVessel",
           "enabled": true,
           "data": {},
-          "parameters": { "CollectsRainwater": true }
+          "parameters": { "capacity": 200, "CollectsRainwater": true }
         }
       }
     },

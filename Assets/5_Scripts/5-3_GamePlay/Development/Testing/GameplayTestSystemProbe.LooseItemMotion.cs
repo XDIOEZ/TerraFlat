@@ -147,7 +147,7 @@ public static partial class GameplayTestSystemProbe
         Vector2 idlePosition = LooseItemMotion.Integrate(origin, .2f, ref idle);
         bool initialDry = !field.IsWater(origin);
         int water = first.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        first.Terrain.SetLiquid(0, 0, water, 6);
+        first.Terrain.SetLiquid(0, 0, water, 60);
         bool wet = field.IsWater(origin);
         TerrainSupportLayer.Set(first.Terrain, 0, 0, 90, 1);
         bool covered = !field.IsWater(origin);
@@ -157,14 +157,14 @@ public static partial class GameplayTestSystemProbe
         bool drained = !field.IsWater(origin);
         Vector2 neighbouringPoint = new(2.25f, .25f);
         bool nextDry = !field.IsWater(neighbouringPoint);
-        neighbour.Terrain.SetLiquid(0, 0, neighbour.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 6);
+        neighbour.Terrain.SetLiquid(0, 0, neighbour.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 60);
         bool nextWet = field.IsWater(neighbouringPoint);
         neighbour.Terrain.SetLiquid(0, 0, 0, 0);
         bool nextDrained = !field.IsWater(neighbouringPoint);
         Vector2 moved = field.Move(origin, Vector2.right * .1f);
         first.Terrain.SetCell(0, 0, new TerrainCell(1, 0, 2, 1, 1, TerrainCellFlags.Blocking));
         Vector2 blocked = field.Move(origin, Vector2.right * .1f);
-        first.Terrain.SetLiquid(0, 0, water, 6);
+        first.Terrain.SetLiquid(0, 0, water, 60);
         Vector2 wetBlockedCell = field.Move(origin, Vector2.right * .1f);
         Vector2 seam = field.Move(new Vector2(3.95f, .25f), Vector2.right * .1f);
         Vector2 seamDelta = field.Delta(new Vector2(3.95f, .25f), seam);

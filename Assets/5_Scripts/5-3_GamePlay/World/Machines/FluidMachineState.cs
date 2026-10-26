@@ -10,7 +10,7 @@ public partial class FluidMachineState
     public Dictionary<string, FluidInventoryState> Chambers = new(StringComparer.Ordinal);
     public Dictionary<string, string> BlockedPorts = new(StringComparer.Ordinal);
     public double PumpProgress;
-    public double WorldLiquidPumpLiters; // 地表抽液累计真实吞吐和做功预算，攒够一份才抽一级。
+    public double WorldLiquidPumpLiters; // 地表泵先累计十升路径吞吐额度，成批取水前不扣地表物料。
     public Dictionary<string, double> WorldLiquidOutputLiters = new(StringComparer.Ordinal); // 地表出口按端口保存已攒的吞吐预算。
     public string SelectedGasId = "";
     public string OutletPhase = "both";

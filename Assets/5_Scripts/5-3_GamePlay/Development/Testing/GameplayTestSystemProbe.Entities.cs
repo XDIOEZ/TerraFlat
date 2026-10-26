@@ -2040,14 +2040,19 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject EntityContainerWholeWorldTransfer(JObject args)
     {
-        float amount = (float)Number(args, "amount", 8d);
-        int capacity = (int)Number(args, "capacity", 8d);
+        float amount = (float)Number(args, "amount", 200d);
+        int capacity = (int)Number(args, "capacity", 200d);
         float retainedFraction = (float)Number(args, "retainedFraction", 0d);
+        float litersPerServing = WorldLiquidVolumeConversion.ReferenceServingLiters;
         return new JObject
         {
-            ["transfer"] = LiquidVesselOperations.GetWholeWorldServings((float)Number(args, "requested", 1d), amount),
-            ["spill"] = LiquidVesselOperations.GetWholeSpillServings(amount, capacity, retainedFraction),
-            ["fill"] = LiquidVesselOperations.GetWholeWorldServings(capacity, capacity - amount)
+            ["transfer"] = WorldLiquidVolumeConversion.QuantizeWholeWorldLiquidServings((float)Number(args, "requested", 40d), amount, litersPerServing),
+            ["spill"] = WorldLiquidVolumeConversion.QuantizeWholeWorldLiquidServings(amount,
+                amount - capacity * Mathf.Clamp01(retainedFraction), litersPerServing),
+            ["fill"] = WorldLiquidVolumeConversion.QuantizeWholeWorldLiquidServings(capacity, capacity - amount, litersPerServing),
+            ["servingsPerWorldUnit"] = WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(1, litersPerServing),
+            ["litersPerServing"] = litersPerServing,
+            ["capacityLiters"] = WorldLiquidVolumeConversion.GetContainerCapacityLiters(capacity)
         };
     }
 

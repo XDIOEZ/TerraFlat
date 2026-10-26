@@ -23,7 +23,7 @@ public sealed partial class Mod_WaterVessel
             return;
         }
 
-        float space = Capacity - Data.Amount;
+        float space = MixedLiquidContents.GetReceivableServings(Data, Capacity, VesselRainwaterCollection.PureWaterLiquidId, float.MaxValue);
         if (space < 1f)
         {
             Data.RainwaterProgress = 0d;
@@ -48,6 +48,7 @@ public sealed partial class Mod_WaterVessel
         string liquidId = VesselRainwaterCollection.ResolveLiquidId(contamination);
         if (liquidId == null || ResolveLiquidDefinition(liquidId, false) == null)
             return;
+        space = MixedLiquidContents.GetReceivableServings(Data, Capacity, liquidId, float.MaxValue);
 
         int collected = VesselRainwaterCollection.Advance(ref Data.RainwaterProgress, seconds, rain,
             space, RainwaterIntervalSeconds);

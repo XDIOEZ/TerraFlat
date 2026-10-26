@@ -1,3 +1,13 @@
+test.system("containers", "capacity_liters", {}, function(data)
+    assert(#data.containers == 12, "手持与落地容器容量采样不完整")
+    for _, container in ipairs(data.containers) do
+        local expected = string.find(container.id, "Coconut_Shell", 1, true) and 20
+            or string.find(container.id, "WaterTrough", 1, true) and 400 or 50
+        assert(container.liters == expected and container.capacity == expected * 4,
+            "正式容器容量没有统一升数：" .. container.id)
+    end
+end, "正式容器容量：椰子二十升、桶罐坩埚五十升、水槽四百升及装拆一致")
+
 local cases = {
     {name = "半份端口消费", args = {}, consumed = true, after = 4.5, pending = .5, quantized = 2},
     {name = "整份端口消费", args = {consume = 1}, consumed = true, after = 4, pending = 0, quantized = 2},
@@ -128,18 +138,20 @@ test.system("containers", "composition", {water = .5, oil = 0}, function(data)
 end, "小数尾量能够预约消费并完整恢复")
 
 local whole_cases = {
-    {name = "每次只倒完整一份", args = {amount = 8, requested = 1, retainedFraction = .75}, transfer = 1, spill = 2, fill = 0},
-    {name = "不足一份的倾斜不扣液", args = {amount = 8, retainedFraction = .95}, transfer = 1, spill = 0, fill = 0},
-    {name = "分数请求不落地", args = {amount = 8, requested = .5}, transfer = 0, spill = 8, fill = 0},
-    {name = "分数尾量留桶", args = {amount = .5}, transfer = 0, spill = 0, fill = 7},
-    {name = "混液空位只装整份", args = {amount = 6.5, requested = 20}, transfer = 6, spill = 6, fill = 1},
-    {name = "桶内半份空位不抽地表", args = {amount = 7.5}, transfer = 1, spill = 7, fill = 0},
-    {name = "倒置可以倒尽完整份", args = {amount = 8, retainedFraction = -1}, transfer = 1, spill = 8, fill = 0}
+    {name = "一次地表份等于40饮用份十升", args = {amount = 200, requested = 40, retainedFraction = .75}, transfer = 40, spill = 40, fill = 0},
+    {name = "不足十升的倾斜不扣液", args = {amount = 200, retainedFraction = .95}, transfer = 40, spill = 0, fill = 0},
+    {name = "少于十升请求不落地", args = {amount = 200, requested = 39.9}, transfer = 0, spill = 200, fill = 0},
+    {name = "不足十升尾量留桶", args = {amount = 39.5}, transfer = 0, spill = 0, fill = 160},
+    {name = "混液空位只装整十升", args = {amount = 166.5, requested = 200}, transfer = 160, spill = 160, fill = 0},
+    {name = "桶内不足十升空位不抽地表", args = {amount = 199.5}, transfer = 40, spill = 160, fill = 0},
+    {name = "倒置可以倒尽完整十升", args = {amount = 200, retainedFraction = -1}, transfer = 40, spill = 200, fill = 0}
 }
 for _, case in ipairs(whole_cases) do
     test.system("containers", "whole_world_transfer", case.args, function(data)
         assert(data.transfer == case.transfer and data.spill == case.spill and data.fill == case.fill,
             "地表倒液、倾角或装液产生了分数份，或丢失可移动的完整份")
+        assert(data.servingsPerWorldUnit == 40 and data.litersPerServing == .25 and data.capacityLiters == 50,
+            "地表十升、饮用四分之一升或桶五十升的单位混用")
     end, "世界容器整份边界：" .. case.name)
 end
 for _, reserved in ipairs({false, true}) do

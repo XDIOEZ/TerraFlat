@@ -172,11 +172,11 @@ public static partial class GameplayTestSystemProbe
         for (int x = 0; x < 4; x++)
             buffer.SetCell(x, y, new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable));
         int lava = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId);
-        buffer.SetLiquid(replacement ? 3 : 0, replacement ? 3 : 0, lava, 6);
+        buffer.SetLiquid(replacement ? 3 : 0, replacement ? 3 : 0, lava, 60);
         if (!replacement)
         {
-            buffer.SetLiquid(2, 0, lava, 6);
-            buffer.SetLiquid(0, 3, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 6);
+            buffer.SetLiquid(2, 0, lava, 60);
+            buffer.SetLiquid(0, 3, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 60);
         }
         return buffer.Seal();
     }

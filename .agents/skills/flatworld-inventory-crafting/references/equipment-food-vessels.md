@@ -13,15 +13,15 @@
 
 ## 容器与热量
 
-- 液体仅存在容器/机器组分和世界Liquid层，无独立库存原料。LiquidContainerState.Composition保存稳定LiquidId真实份数，MixedLiquidContents派生总量/比例；共享容量，尾量/随机态/各口PendingOutputs持久化。
+- 液体仅存在容器/机器组分和世界Liquid层，无独立库存原料。LiquidContainerState.Composition保存稳定LiquidId真实饮用/配方份数（默认0.25L），`MixedLiquidContents.GetVolumeLiters/GetReceivableServings` 按各组分真实体积校验共享容量，UI显示L；`capacity`按标准0.25L份配置：默认桶/陶罐/坩埚200=50L、椰壳80=20L、水槽1600=400L。尾量/随机态/各口PendingOutputs持久化。
 - InventoryVesselHeating.ProcessWorldHeat供落地容器/已加载坩埚按当地环境每游戏秒消除剩余温差1%；坩埚仅自身Tick一次并继续凝固，炉内ProcessHeat主动10℃/秒独立。冷库存/轻掉落不额外模拟液体内容物。
 - CollectsRainwater声明朝上接雨，仅权威落地实例按当地雨量累积：强度0.5每60秒一份、限制30～120秒，跟游戏倍速/暂停。VesselRainwaterCollection只管时钟/水质，ContaminationSystem.TryGetNormalizedLoad汇总本格全部指标，零污染纯水、正值脏水、无地格不产。满桶不积债，RainwaterProgress随共享模块装拆/保存；铁/木桶用正式建筑配对。
 - 转液走ILiquidTransferPort原子事务，ingredientReactions扣真实槽；Mod_VesselContents独立存木桶6格固体，关面板只解绑。IInventoryHeatTreatment按LiquidDefinition.HeatProcess先提交产物再耗液。
 
 ## 世界装液与倾倒
 
-- WorldLiquidSourceResolver/WorldLiquidSystem.TryPump读稳定身份，地表0～10整数级、1份=1级；空位向下取整，先世界提交再写容器。worldWater液体倒到干地/同类液面写独立Liquid层，成功只通知本格、农业自行吸水。
-- PourToGround按开口/倾角连续计时，每批严格1份、不足整份不扣；90°可倒尽完整份，混液尾量留桶，整份出口跳尾量并尊重其他口预约。先扣源再写地表，拒收恢复快照，容量不决定流速。
+- WorldLiquidSourceResolver/WorldLiquidSystem.TryPump读稳定身份，地表0～100整数份、每份10L、画面十档；`WorldLiquidVolumeConversion` 独立换算地表份与饮用份，`IQuantizedLiquidTransferPort` 让正式事务预检按来源量子取整，不把世界1份直接当饮用1份。worldWater液体倒到干地/同类液面写独立Liquid层，成功只通知本格、农业自行吸水。
+- PourToGround按开口/倾角连续计时，每批严格10L、不足整批不扣；90°可倒尽完整批，混液尾量留桶，整批出口按每种组分体积跳尾量并尊重其他口预约。先扣源再写地表，拒收恢复快照，容量不决定流速。
 - UI按独立pointerId/未旋转父坐标解释，右负Z、左正Z；WaterVesselPourGraphic连续显示、不反扣数据。
 - 固体真实槽抵达倒置开口后经 `VesselContentsOperations → InventoryWorldDrop` 出料，和玩家丢弃共用先生成后扣量/失败撤销；客户端发容器槽位及GUID意图，服务端取真实内容。坩埚装拆共享液体和Mortar库存，空锅仍打开统一容器面板。
 - 饮水只看Drinkable/余量，满水分也可主动喝，drinkEffects经LiquidDrinkEffectProcessor结算。图标由ItemDataPresentationResolverRegistry/GameRes.TryGetItemPresentation按状态重绘并保留物理轮廓；手持内部变化同时通知真实库存与Item.OnUIRefresh。

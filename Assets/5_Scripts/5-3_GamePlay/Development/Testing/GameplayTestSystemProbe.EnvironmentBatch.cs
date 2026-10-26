@@ -38,7 +38,7 @@ public static partial class GameplayTestSystemProbe
     {
         using ChunkTerrainData terrain = EnvironmentBatchFixture(4, 1);
         int water = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        for (int x = 0; x < 3; x++) terrain.SetLiquid(x, 0, water, 6);
+        for (int x = 0; x < 3; x++) terrain.SetLiquid(x, 0, water, 60);
         terrain.SetCell(1, 0, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Ocean,
             1, TerrainCellFlags.Walkable));
         terrain.SetCell(2, 0, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Ocean,
@@ -319,9 +319,9 @@ public static partial class GameplayTestSystemProbe
         int supportNoopChanges = terrain.SetEnvironmentBatch(TerrainSupportLayer.TileIdLayer, support);
         long supportNoopRevision = terrain.SurfaceLiquidRevision;
         int water = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        bool liquidChanged = terrain.SetLiquid(0, 0, water, 6);
+        bool liquidChanged = terrain.SetLiquid(0, 0, water, 60);
         long liquidRevision = terrain.SurfaceLiquidRevision;
-        bool repeatedLiquidChanged = terrain.SetLiquid(0, 0, water, 6);
+        bool repeatedLiquidChanged = terrain.SetLiquid(0, 0, water, 60);
         return new JObject
         {
             ["initialRevision"] = initialRevision, ["soilChanges"] = soilChanges, ["soilRevision"] = soilRevision,

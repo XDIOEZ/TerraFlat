@@ -31,7 +31,7 @@ public static partial class GameplayTestSystemProbe
         ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1, profile);
         using var buffer = new ChunkTerrainBuffer(16, 16);
         int lava = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId);
-        foreach (Vector2Int liquid in liquids) buffer.SetLiquid(liquid.x, liquid.y, lava, 6);
+        foreach (Vector2Int liquid in liquids) buffer.SetLiquid(liquid.x, liquid.y, lava, 60);
         using var result = new ChunkGenerationResult(request, buffer);
         if (!world.TryCommit(result, out string reason) || !world.TryGetChunk(address, out ChunkRuntime chunk))
             throw new InvalidOperationException("单点温度批次夹具创建失败：" + reason);
@@ -109,7 +109,7 @@ public static partial class GameplayTestSystemProbe
         first.Terrain.SetLiquid(0, 0, 0, 0);
         first.Terrain.SetLiquid(2, 0, 0, 0);
         result["drained"] = TemperatureBatchFreshPoint(field, definitions, Vector2Int.zero);
-        first.Terrain.SetLiquid(0, 0, first.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId), 6);
+        first.Terrain.SetLiquid(0, 0, first.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId), 60);
         using (var beforeReload = field.BeginPointSamplingBatch(definitions, 0))
         {
             result["beforeReload"] = TemperatureBatchPoint(beforeReload, Vector2Int.zero);

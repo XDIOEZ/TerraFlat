@@ -252,22 +252,24 @@ public static class PressureExplosionQueue
                 liquid.WorldWater == null) continue;
             // 不足一份的真实余量留在队列，不能拆级，也不消耗整片溢流格扫描预算。
             while (spillCellsThisFrame < SpillCellChecksPerFrame && CanAdvanceLiquidSpill(spill) &&
-                   FluidUnits.MolToServings(definition, spill.LiquidMoles) >= 1m)
+                   FluidUnits.MolToLiquidLiters(definition, spill.LiquidMoles) >= FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit)
             {
                 int index = spill.NextCellIndex++;
                 spillCellsThisFrame++;
                 Vector2Int offset = SpiralCell(index);
                 Vector2 point = index == 0 ? spill.Center : new Vector2(Mathf.Floor(spill.Center.x) + offset.x + .5f,
                     Mathf.Floor(spill.Center.y) + offset.y + .5f);
-                decimal servings = FluidUnits.MolToServings(definition, spill.LiquidMoles);
-                int level = (int)Math.Min(FlatWorld.WorldModel.LiquidCellValue.MaximumLevel, decimal.Floor(servings));
+                decimal liters = FluidUnits.MolToLiquidLiters(definition, spill.LiquidMoles);
+                int level = (int)Math.Min(FlatWorld.WorldModel.LiquidCellValue.MaximumLevel,
+                    decimal.Floor(liters / FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit));
                 int accepted = 0;
                 if (WorldAddress.FromWorldKey(spill.WorldKey).IsSurface)
                     accepted = FlatWorld.Spaceflight.SpaceSurfaceQuery.ReleaseLiquidInWorld(spill.WorldKey, point, liquid.Id, level);
                 else if (SceneManager.GetActiveScene().name == spill.WorldKey)
                     WorldLiquidSystem.TryPour(point, liquid.Id, level, out accepted);
                 if (accepted <= 0) continue;
-                decimal moles = Math.Min(spill.LiquidMoles, FluidUnits.ServingsToMol(definition, accepted));
+                decimal moles = Math.Min(spill.LiquidMoles, FluidUnits.LiquidLitersToMol(definition,
+                    accepted * FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit));
                 double fraction = (double)(moles / spill.LiquidMoles);
                 spill.LiquidMoles -= moles; spill.InternalEnergyJoules *= 1d - fraction;
             }

@@ -4,7 +4,7 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
-/// 世界液体的权威玩法入口。泵、倾倒和 MOD 均在这里修改 0～10 整数等级；
+/// 世界液体的权威玩法入口。泵、倾倒和 MOD 均在这里修改 0～100 整数份，每份十升；
 /// 修改后立即记录稳定 LiquidId 差量，地面与水文数据完全不变。
 /// </summary>
 public static class WorldLiquidSystem

@@ -242,8 +242,8 @@ public static partial class GameplayTestSystemProbe
         for (int y = 0; y < 2; y++)
         for (int x = 0; x < 4; x++)
             buffer.SetCell(x, y, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
-        buffer.SetLiquid(1, 0, water, 4);
-        buffer.SetLiquid(2, 0, water, 6);
+        buffer.SetLiquid(1, 0, water, 40);
+        buffer.SetLiquid(2, 0, water, 60);
         buffer.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 2, 0, 90f);
         using (var result = new ChunkGenerationResult(request, buffer))
             if (!world.TryCommit(result, out string reason))
@@ -257,10 +257,10 @@ public static partial class GameplayTestSystemProbe
         bool waterMatches = batch.TrySample(new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample regular) &&
             batch.TrySampleSurfaceLiquid(new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample quick) &&
             quick.WorldCell == regular.WorldCell && quick.LocalCell == regular.LocalCell &&
-            quick.LiquidLevel == regular.LiquidLevel && quick.LiquidLevel == 4 &&
+            quick.LiquidLevel == regular.LiquidLevel && quick.LiquidLevel == 40 &&
             quick.LiquidId == regular.LiquidId;
         bool covered = batch.TrySample(new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample underSupport) &&
-            underSupport.LiquidLevel == 0 && underSupport.Terrain.GetLiquidLevel(2, 0) == 6 &&
+            underSupport.LiquidLevel == 0 && underSupport.Terrain.GetLiquidLevel(2, 0) == 60 &&
             !batch.TrySampleSurfaceLiquid(new Vector2(2.5f, 0.5f), out _);
         bool actorWet = Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
             world, new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample actorSample) &&
@@ -278,10 +278,10 @@ public static partial class GameplayTestSystemProbe
             throw new InvalidOperationException("土壤液体夹具区块丢失。");
         chunk.Terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 2, 0, 0f);
         bool uncovered = batch.TrySampleSurfaceLiquid(new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample released) &&
-            released.LiquidLevel == 6;
+            released.LiquidLevel == 60;
         bool actorUncovered = Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
             world, new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample actorReleased) &&
-            actorReleased.LiquidLevel == 6;
+            actorReleased.LiquidLevel == 60;
         chunk.Terrain.SetLiquid(1, 0, 0, 0);
         bool drained = !batch.TrySampleSurfaceLiquid(new Vector2(1.5f, 0.5f), out _);
         bool actorDrained = !Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
@@ -289,7 +289,7 @@ public static partial class GameplayTestSystemProbe
         var wrapped = new ChunkMgr.RuntimeTerrainPresenceQuery(world,
             new WorldTopologyDomain(new int2(0, 0), new int2(16, 16), true), "surface", 4, 2);
         bool seam = wrapped.TrySampleSurfaceLiquid(new Vector2(18.5f, 0.5f), out RuntimeTerrainTileSample across) &&
-            across.WorldCell == new Vector2Int(2, 0) && across.LiquidLevel == 6;
+            across.WorldCell == new Vector2Int(2, 0) && across.LiquidLevel == 60;
         bool actorSeam = Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref wrapped,
             world, new Vector2(18.5f, 0.5f), out RuntimeTerrainTileSample actorAcross) &&
             actorAcross.WorldCell == across.WorldCell && actorAcross.LiquidLevel == across.LiquidLevel;

@@ -585,9 +585,9 @@ public static partial class GameplayTestSystemProbe
         for (int x = 0; x < 4; x++)
             buffer.SetCell(x, 0, new TerrainCell(17, 0, 0, 1, 12, TerrainCellFlags.Walkable));
         int liquidIndex = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        buffer.SetLiquid(0, 0, liquidIndex, 6);
-        buffer.SetLiquid(1, 0, liquidIndex, 6);
-        buffer.SetLiquid(3, 0, liquidIndex, 6);
+        buffer.SetLiquid(0, 0, liquidIndex, 60);
+        buffer.SetLiquid(1, 0, liquidIndex, 60);
+        buffer.SetLiquid(3, 0, liquidIndex, 60);
         using ChunkTerrainData terrain = buffer.Seal();
         TerrainSupportLayer.Set(terrain, 1, 0, 90, 2);
 

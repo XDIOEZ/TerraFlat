@@ -17,6 +17,10 @@ public static class FluidDeviceOperations
         public readonly Dictionary<(FluidInventory, string), decimal> Stock = new();
         public readonly List<Withdrawal> Plan = new();
         public readonly Dictionary<FluidInventory, FluidInventoryState> Before = new();
+        public readonly List<FluidNetworkGraph.Edge> LiquidPumpBudgetPath = new();
+        public readonly string[] LiquidPumpFluidIds = new string[1];
+        public FluidInventory LiquidPumpBudgetReceiver;
+        public string LiquidPumpBudgetFluidId;
         public double ReservedExtent;
     }
     private sealed class Withdrawal
@@ -108,72 +112,103 @@ public static class FluidDeviceOperations
 
     public static void AdvanceLiquidPump(MachineEntity node, float seconds)
     {
-        var state = GetFluidState(node); double remaining = Rate(node, seconds);
-        if (remaining <= 0) return;
-        if (!Powered(node)) { state.Status = "没有电"; return; }
-        var workspace = workspaces.GetOrCreateValue(node); var buffer = GetFluidInventory(node);
+        var state = GetFluidState(node); var workspace = workspaces.GetOrCreateValue(node);
+        double remaining = Rate(node, seconds);
+        if (remaining <= 0 || !Powered(node))
+        { ResetLiquidPumpBatchCredit(state, workspace); state.Status = "没有动力或流量关闭"; return; }
+        const double batchLiters = FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit;
         bool movedAny = false;
         while (remaining > 1e-9)
         {
-            FluidDefinition fluid = null; string world = null; Vector2 position = default; LiquidDefinition liquid = null;
-            WorldLiquidPumpSourceSelection sourceSelection = WorldLiquidPumpSourceSelection.LocalRemainder;
-            foreach (var component in buffer.State.Components)
-                if (component.LiquidMoles > 0) { fluid = FluidCatalog.Default.Find(component.FluidId); break; }
-            if (fluid == null)
+            Vector2 intake = (Vector2)(node.Cell + MechanicalNetworkGraph.Directions[(node.RotationQuarterTurns + 2) & 3]) + Vector2.one * .5f;
+            if (!TrySelectFluidEnvironmentPumpSource(intake, out string world, out Vector2 position, out LiquidDefinition liquid,
+                out int level, out WorldLiquidPumpSourceSelection sourceSelection) || level <= 0 ||
+                !FluidCatalog.Default.TryFromLiquidId(liquid.Id, out FluidDefinition fluid) || !fluid.AllowIndustrialTransport)
             {
-                Vector2 intake = (Vector2)(node.Cell + MechanicalNetworkGraph.Directions[(node.RotationQuarterTurns + 2) & 3]) + Vector2.one * .5f;
-                if (!TrySelectFluidEnvironmentPumpSource(intake, out world, out position, out liquid, out int level, out sourceSelection) || level <= 0 ||
-                    !FluidCatalog.Default.TryFromLiquidId(liquid.Id, out fluid) || !fluid.AllowIndustrialTransport)
-                { state.Status = movedAny ? "正在抽液体" : sourceSelection == WorldLiquidPumpSourceSelection.Searching
-                    ? "正在寻找可抽取的液体" : "入口没有可抽取的液体"; return; }
+                ResetLiquidPumpBatchCredit(state, workspace);
+                state.Status = movedAny ? "正在抽液体" : sourceSelection == WorldLiquidPumpSourceSelection.Searching
+                    ? "正在寻找可抽取的液体" : "入口没有可抽取的液体"; return;
             }
-            CollectFluidDeliveryRoutes(node, "main", FluidPhase.Liquid, new[] { fluid.Id }, workspace.Routes);
-            bool destination = false;
+            workspace.LiquidPumpFluidIds[0] = fluid.Id;
+            CollectFluidDeliveryRoutes(node, "main", FluidPhase.Liquid, workspace.LiquidPumpFluidIds, workspace.Routes);
+            int destination = -1;
             for (int i = 1; i < workspace.Routes.Nodes.Count; i++)
             {
                 var route = workspace.Routes.Nodes[i];
-                if (GetIndustrialFreeCapacity(route.Node, FluidPhase.Liquid, fluid.Id, route.Chamber) > 1e-9 &&
-                    GetFluidSupplyStandardLiters(workspace.Routes, i, seconds, true) > 1e-9) { destination = true; break; }
+                if (!GetFluidDeviceBehavior(route.Node).IsTransit &&
+                    GetIndustrialFreeCapacity(route.Node, FluidPhase.Liquid, fluid.Id, route.Chamber) + 1e-9 >= batchLiters &&
+                    GetFluidSupplyStandardLiters(workspace.Routes, i, seconds, true) > 1e-9) { destination = i; break; }
             }
-            if (!destination) { state.Status = movedAny ? "正在抽液体" : "液网异种冲突或接收空间不足"; return; }
-            if (buffer.LiquidMoles == 0)
+            if (destination < 0)
+            { ResetLiquidPumpBatchCredit(state, workspace); state.Status = movedAny ? "正在抽液体" : "液网不能接收完整十升"; return; }
+            var receiver = workspace.Routes.Nodes[destination];
+            var target = GetFluidInventory(receiver.Node, receiver.Chamber);
+            BindLiquidPumpBatchCreditPath(state, workspace, target, fluid.Id, destination);
+            // 这里只预付路径本轮吞吐额度，累计满十升之前不从地表扣任何水。
+            double credit = Math.Min(remaining, Math.Min(batchLiters - state.WorldLiquidPumpLiters,
+                GetFluidSupplyStandardLiters(workspace.Routes, destination, seconds, true)));
+            if (credit <= 1e-9) break;
+            ConsumeFluidRouteBudget(workspace.Routes, destination, credit);
+            state.WorldLiquidPumpLiters += credit; remaining -= credit;
+            if (state.WorldLiquidPumpLiters + 1e-9 < batchLiters)
+            { state.Status = "累计十升抽水量"; StateChanged(node); return; }
+
+            int reserve = sourceSelection == WorldLiquidPumpSourceSelection.Surplus ? 1 : 0;
+            if (!TryPumpFluidEnvironmentLiquid(world, position, 1, reserve, out string actualId, out int removed) || removed != 1)
+            { ResetLiquidPumpBatchCredit(state, workspace); state.Status = "来源暂时不能提供十升"; return; }
+            var buffer = GetFluidInventory(node);
+            FluidInventoryState bufferBefore = buffer.State.Clone(), targetBefore = target.State.Clone();
+            try
             {
-                int reserve = sourceSelection == WorldLiquidPumpSourceSelection.Surplus ? 1 : 0;
-                if (!TryPumpFluidEnvironmentLiquid(world, position, 1, reserve, out string actualId, out int removed) || removed <= 0) return;
-                var before = buffer.State.Clone();
-                try
-                {
-                    if (actualId != liquid.Id || !buffer.TryAdd(FluidInventory.CreateBatch(fluid, 0m,
-                        FluidUnits.ServingsToMol(fluid, removed), FluidUnits.ReferenceTemperatureKelvin),
-                        Math.Max(node.Definition.Fluid.VolumeLiters, (double)fluid.LitersPerServing) + .001d, .001d, false, true))
-                        throw new InvalidOperationException("液泵整份接收被拒绝。");
-                }
-                catch
-                {
-                    buffer.Restore(before);
-                    if (ReleaseFluidEnvironmentLiquid(world, position, actualId, removed) != removed)
-                        throw new InvalidOperationException("液泵失败回源未能恢复地表液体。");
-                    state.Status = "液体接收失败，来源已恢复"; return;
-                }
-                StateChanged(node);
+                if (actualId != liquid.Id || !buffer.TryAdd(FluidInventory.CreateBatch(fluid, 0m,
+                    FluidUnits.LiquidLitersToMol(fluid, (decimal)batchLiters), FluidUnits.ReferenceTemperatureKelvin),
+                    Math.Max(GetFluidVolumeLiters(node), batchLiters) + .001d, .001d, false, true) ||
+                    IndustrialFluidTransfer.Transfer(buffer, target, FluidPhase.Liquid, batchLiters,
+                        GetFluidGasCapacityStandardLiters(receiver.Node), GetFluidVolumeLiters(receiver.Node), fluid.Id) + 1e-9 < batchLiters)
+                    throw new InvalidOperationException("液泵十升整批接收被拒绝。");
             }
-            // 仅保存地表整份的真实尾量，每次循环必须移走物质才继续取下一份。
-            double moved = 0d;
-            for (int i = 1; i < workspace.Routes.Nodes.Count && moved < remaining; i++)
+            catch
             {
-                var route = workspace.Routes.Nodes[i]; var target = GetFluidInventory(route.Node, route.Chamber);
-                double budget = Math.Min(remaining - moved, Math.Min(GetIndustrialFreeCapacity(route.Node, FluidPhase.Liquid, fluid.Id, route.Chamber),
-                    GetFluidSupplyStandardLiters(workspace.Routes, i, seconds, true)));
-                double actual = IndustrialFluidTransfer.Transfer(buffer, target, FluidPhase.Liquid, budget,
-                    MachineWorld.GetFluidGasCapacityStandardLiters(route.Node), MachineWorld.GetFluidVolumeLiters(route.Node), fluid.Id);
-                if (actual <= 0) continue;
-                ConsumeFluidRouteBudget(workspace.Routes, i, actual);
-                StateChanged(route.Node); StateChanged(node); moved += actual;
+                buffer.Restore(bufferBefore); target.Restore(targetBefore);
+                ResetLiquidPumpBatchCredit(state, workspace);
+                if (ReleaseFluidEnvironmentLiquid(world, position, actualId, removed) != removed)
+                    throw new InvalidOperationException("液泵失败回源未能恢复地表液体。");
+                state.Status = "十升批次接收失败，来源已恢复"; return;
             }
-            if (moved <= 1e-9) break;
-            remaining -= moved; movedAny = true;
+            state.WorldLiquidPumpLiters = 0d; movedAny = true;
+            StateChanged(receiver.Node); StateChanged(node);
         }
-        state.Status = movedAny ? "正在抽液体" : "液体接收被拒绝，余量留在泵内";
+        state.Status = movedAny ? "正在抽液体" : "累计十升抽水量";
+    }
+
+    private static void ResetLiquidPumpBatchCredit(FluidMachineState state, Workspace workspace)
+    {
+        state.WorldLiquidPumpLiters = 0d; workspace.LiquidPumpBudgetReceiver = null;
+        workspace.LiquidPumpBudgetFluidId = null; workspace.LiquidPumpBudgetPath.Clear();
+    }
+    private static void BindLiquidPumpBatchCreditPath(FluidMachineState state, Workspace workspace, FluidInventory receiver,
+        string fluidId, int destination)
+    {
+        bool same = ReferenceEquals(workspace.LiquidPumpBudgetReceiver, receiver) && workspace.LiquidPumpBudgetFluidId == fluidId;
+        int length = 0;
+        for (int i = destination; i >= 0; i = workspace.Routes.Nodes[i].DownstreamIndex)
+        {
+            FluidNetworkGraph.Edge edge = workspace.Routes.Nodes[i].Boundary;
+            if (edge == null) continue;
+            if (same && length < workspace.LiquidPumpBudgetPath.Count)
+            {
+                FluidNetworkGraph.Edge saved = workspace.LiquidPumpBudgetPath[length];
+                same = ReferenceEquals(saved.Source, edge.Source) && ReferenceEquals(saved.Target, edge.Target) &&
+                    ReferenceEquals(saved.SourcePort, edge.SourcePort) && ReferenceEquals(saved.TargetPort, edge.TargetPort) && saved.Direction == edge.Direction;
+            }
+            else same = false;
+            length++;
+        }
+        if (same && length == workspace.LiquidPumpBudgetPath.Count) return;
+        ResetLiquidPumpBatchCredit(state, workspace);
+        workspace.LiquidPumpBudgetReceiver = receiver; workspace.LiquidPumpBudgetFluidId = fluidId;
+        for (int i = destination; i >= 0; i = workspace.Routes.Nodes[i].DownstreamIndex)
+            if (workspace.Routes.Nodes[i].Boundary != null) workspace.LiquidPumpBudgetPath.Add(workspace.Routes.Nodes[i].Boundary);
     }
 
     internal static string GetLiquidPumpTransferFailureStatus(ContainerTransferFailure failure, FluidInventory receiver = null,

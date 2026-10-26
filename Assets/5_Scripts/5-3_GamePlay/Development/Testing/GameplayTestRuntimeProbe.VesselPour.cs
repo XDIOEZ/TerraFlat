@@ -32,20 +32,20 @@ public static partial class GameplayTestRuntimeProbe
         try
         {
             MixedLiquidContents.Clear(vessel.Data);
-            MixedLiquidContents.Add(vessel.Data, water, 2.5f, 20f);
+            MixedLiquidContents.Add(vessel.Data, water, 100.5f, 20f);
             MixedLiquidContents.Add(vessel.Data, salt, .5f, 20f);
             vessel.CommitVessel();
-            SetVesselPourCell(sample, water, 10);
-            result["blockedRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 1f, offset);
+            SetVesselPourCell(sample, water, 100);
+            result["blockedRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 40f, offset);
             result["blocked"] = VesselPourSample(vessel, sample, water, salt);
             SetVesselPourCell(sample, water, 0);
-            result["fractionRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, .5f, offset);
+            result["fractionRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 20f, offset);
             result["fraction"] = VesselPourSample(vessel, sample, water, salt);
-            result["firstRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 1f, offset);
+            result["firstRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 40f, offset);
             result["first"] = VesselPourSample(vessel, sample, water, salt);
-            result["secondRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 2.7f, offset);
+            result["secondRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 108f, offset);
             result["second"] = VesselPourSample(vessel, sample, water, salt);
-            result["tailRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 1f, offset);
+            result["tailRemoved"] = LiquidVesselOperations.PourToGround(vessel, player, 40f, offset);
             result["tail"] = VesselPourSample(vessel, sample, water, salt);
 
             MixedLiquidContents.Clear(vessel.Data);
@@ -57,7 +57,7 @@ public static partial class GameplayTestRuntimeProbe
             result["halfSpaceFilled"] = LiquidVesselOperations.FillFromWorld(vessel, player, source);
             result["halfSpace"] = VesselPourSample(vessel, sample, water, salt);
             MixedLiquidContents.Clear(vessel.Data);
-            MixedLiquidContents.Add(vessel.Data, water, vessel.Capacity - 1.5f, 20f);
+            MixedLiquidContents.Add(vessel.Data, water, vessel.Capacity - 60f, 20f);
             vessel.CommitVessel();
             result["wholeSpaceFilled"] = LiquidVesselOperations.FillFromWorld(vessel, player, source);
             result["wholeSpace"] = VesselPourSample(vessel, sample, water, salt);

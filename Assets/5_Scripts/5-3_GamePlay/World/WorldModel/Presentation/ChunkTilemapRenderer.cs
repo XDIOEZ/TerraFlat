@@ -445,6 +445,9 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             RefreshFireVisual(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
             return;
         }
+        RefreshMechanicalSubmergedSurfaceCells(changed);
+        if (changed.Kind == TerrainChangeKind.Liquid && !changed.AffectsLiquidVisuals)
+            return;
         if ((changed.Kind == TerrainChangeKind.Liquid &&
              (hasLavaLiquid || IsLavaCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y))) ||
             (changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer) && hasLavaLiquid))
@@ -453,7 +456,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             changed.Kind != TerrainChangeKind.TileStack &&
             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
             return;
-        RefreshMechanicalSubmergedSurfaceCells(changed);
         if (changed.Kind == TerrainChangeKind.Environment && IsSoilMoistureVisualLayer(changed.EnvironmentLayerId))
         {
             RefreshSoilMoistureVisuals(changed);
@@ -573,7 +575,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 if (!IsLavaCell(terrain, x, y))
                     continue;
                 hasLavaLiquid = true;
-                float depth = WorldLiquidSystem.GetSurfaceDepth(terrain, x, y);
+                float depth = LiquidCellValue.ToVisualDepth(WorldLiquidSystem.GetSurfaceLevel(terrain, x, y));
                 if (depth <= 0f) continue;
 
                 float weight = Mathf.Max(0.1f, depth);
@@ -614,7 +616,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         ChunkTerrainData terrain = changed.Terrain;
         ReadOnlySpan<int> levels = terrain.LiquidLevel;
         ReadOnlySpan<int> types = terrain.LiquidTypeIndex;
-        foreach (int index in changed.CellIndices.Span)
+        foreach (int index in changed.VisualCellIndices.Span)
         {
             if (levels[index] > 0 && terrain.LiquidTypes.GetId(types[index]) == LiquidTypeCatalog.LavaId)
                 return true;
@@ -805,6 +807,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         }
         if (!AffectsBaseTerrainEnvironment(changed))
             return;
+        if (changed.Kind == TerrainChangeKind.Liquid && !changed.AffectsLiquidVisuals)
+            return;
 
         foreach (int index in changed.GetCellIndices(neighbourTerrain.Width))
         {
@@ -848,6 +852,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     {
         foreach (int index in changed.CellIndices.Span)
             RefreshMechanicalSubmergedSurfaceCell(index);
+        if (changed.VisualCellIndices.IsEmpty) return;
         if (hasLavaLiquid || BatchContainsLava(changed))
             liquidGlowDirty = true;
         QueueLiquidVisuals(changed, 0, 0);
@@ -872,7 +877,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     {
         if (boundChunk?.Terrain == null) return;
         ChunkTerrainData terrain = boundChunk.Terrain;
-        foreach (int index in changed.CellIndices.Span)
+        foreach (int index in changed.VisualCellIndices.Span)
         {
             int centerX = index % changed.Terrain.Width + offsetX;
             int centerY = index / changed.Terrain.Width + offsetY;
@@ -1573,7 +1578,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         return waterCount > 0 ? depthTotal / waterCount : 0f;
     }
 
-    /// <summary>读取当前格或邻区水格的权威深度。</summary>
+    /// <summary>读取当前格或邻区水格的十档视觉深度。</summary>
     private bool TryResolveLiquidDepth(ChunkTerrainData terrain, int x, int y, out float depth)
     {
         depth = 0f;
@@ -1588,10 +1593,10 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         return true;
     }
 
-    /// <summary>所有水域统一读取已生成或被玩家修改的权威液深。</summary>
+    /// <summary>每十份水共享一档水面，真实量仍由独立液体层保存。</summary>
     private static float ResolveLiquidDepth(ChunkTerrainData terrain, int x, int y)
     {
-        return terrain.GetLiquidDepth(x, y);
+        return LiquidCellValue.ToVisualDepth(terrain.GetLiquidLevel(x, y));
     }
 
     private bool IsContactNeighbour(ChunkTerrainData terrain, int x, int y, ContactKind kind)

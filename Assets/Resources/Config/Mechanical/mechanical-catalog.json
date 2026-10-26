@@ -634,7 +634,7 @@
           }
         ],
         "MaterialId": "iron",
-        "VolumeLiters": 100,
+        "VolumeLiters": 800,
         "MinimumGasSpaceLiters": 0.1,
         "AllowManualAirFill": false,
         "ThroughputLitersPerSecond": 1000,
@@ -690,7 +690,7 @@
           }
         ],
         "MaterialId": "steel",
-        "VolumeLiters": 100,
+        "VolumeLiters": 800,
         "MinimumGasSpaceLiters": 0.1,
         "ThroughputLitersPerSecond": 1000,
         "AllowManualAirFill": false,
@@ -820,7 +820,7 @@
             "FluidId": ""
           }
         ],
-        "VolumeLiters": 2,
+        "VolumeLiters": 10,
         "ThroughputLitersPerSecond": 2
       },
       "Electrical": {

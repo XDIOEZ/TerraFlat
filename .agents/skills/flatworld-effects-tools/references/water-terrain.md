@@ -2,8 +2,8 @@
 
 ## 数据与刷新
 
-- Ground/Liquid 独立合批，主路径 `ChunkGroundMeshRenderer/Chunk-Mesh-Water-Lit`，BRG 复用同一效果。外观来自 `LiquidDefinition.WorldWater`，岸线来自 LiquidDepth>0，水深四角连续插值；边界变更更新八邻共享边/角，深度 UV 用世界坐标和水层原点/边框，不用合批局部 POSITION。
-- `ChunkTilemapRenderer` 的液体/相邻液体/材质变化只重提 Water Mesh；真实地形、邻块加载、全量绑定仍刷新 Ground/Back/Blocking。无岩浆时只看变化格是否新生岩浆，不因普通水流扫描全块；真实岩浆/平台遮挡照常重建，分帧绑定不绕预算。
+- Ground/Liquid 独立合批，主路径 `ChunkGroundMeshRenderer/Chunk-Mesh-Water-Lit`，BRG 复用同一效果。外观来自 `LiquidDefinition.WorldWater`，岸线来自 LiquidDepth>0，水量0～100份由 `LiquidCellValue.ToVisualDepth` 向上归入十档后做四角连续插值；边界变更更新八邻共享边/角，深度 UV 用世界坐标和水层原点/边框，不用合批局部 POSITION。
+- `ChunkTilemapRenderer` 的液体/相邻液体/材质变化只重提 Water Mesh；同一水面档位内扣量不重提，单格看 `AffectsLiquidVisuals`、批量只看 `VisualCellIndices`，原数据通知与全部真实变化索引仍完整发布。真实地形、邻块加载、全量绑定仍刷新 Ground/Back/Blocking。无岩浆时只看变化格是否新生岩浆，不因普通水流扫描全块；真实岩浆/平台遮挡照常重建，分帧绑定不绕预算。
 - 天然水面低于同地势岸 1 层，不随 2～3 层底床起伏，抽干才露底；普通倒水仍高于底床 1 层，采挖/填土照常叠加、平台与地面基准齐平。高度层只读天然凹陷，不识别河流来源或改水量。
 - `ChunkEnvironmentRenderer` 排除有液格，抽干恢复覆盖。`ChunkSnowCoverRenderer/ChunkSupportSurfaceRenderer` 只读所属层、释放自己的表现，支撑面不画阴影；覆雪 `_SnowCoverage` 用 MPB，脚印按自身寿命消退。无雪且无旧表现只查雪层正值，有雪复用有效地表查询；高低阴影位于地面/支撑/雪上、墙下。
 

@@ -12,7 +12,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     private const float FullPourDragWidthRatio = 0.72f; // 中心附近起手时的二维线性回退距离。
     private const float MaxPourTiltDegrees = 180f; // 手势允许的最大绝对倾角。
     private const float FullEmptyTiltDegrees = 90f; // 90° 时不再限制可流出的液量，仍按时间逐步倒空。
-    private const float BasePourAmountPerSecond = 2.8f; // 默认开口、低倾角下每秒流出 2.8 份。
+    private const float BasePourLitersPerSecond = 28f; // 默认开口、低倾角每秒流出二十八升，按十升整批提交。
     private const float HorizontalPourSpeedMultiplier = 4f; // 接近水平时加快水流，保留可见的倒空过程。
     private const float PourFollowDegreesPerSecond = 540f; // 手势目标再快也只能以该角速度追随，强制保留可见倾倒过程。
     private const float PourReturnDegreesPerSecond = 180f; // 松手后恢复直立的速度。
@@ -143,7 +143,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             current.contents.Contents.SyncQuickTransferTarget(current.panel);
         }
         current.Refresh();
-        current.Liquid.SetWater(target.Data.Amount, target.Capacity, target.CurrentLiquid, true);
+        current.Liquid.SetWater(MixedLiquidContents.GetVolumeLiters(target.Data), WorldLiquidVolumeConversion.GetContainerCapacityLiters(target.Capacity), target.CurrentLiquid, true);
         current.ResetPourGesture(true);
     }
     /// <summary>绑定现有节点；界面层级只由 Prefab 决定。</summary>
@@ -205,15 +205,16 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             ? definition.DisplayName
             : FlatWorldLocalizationService.GetUiText("水容器");
         LiquidDefinition liquid = vessel.CurrentLiquid;
-        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, liquid);
-        MechanicalPanelView.SetCapacityReading(WaterCapacity, WaterPercentage, vessel.Data.Amount, vessel.Capacity);
-        contentsView.SetLiquidFraction(vessel.Capacity > 0 ? vessel.Data.Amount / vessel.Capacity : 0f);
+        float volumeLiters = MixedLiquidContents.GetVolumeLiters(vessel.Data);
+        float capacityLiters = WorldLiquidVolumeConversion.GetContainerCapacityLiters(vessel.Capacity);
+        Liquid.SetWater(volumeLiters, capacityLiters, liquid);
+        MechanicalPanelView.SetCapacityReading(WaterCapacity, WaterPercentage, volumeLiters, capacityLiters);
+        contentsView.SetLiquidFraction(capacityLiters > 0f ? volumeLiters / capacityLiters : 0f);
         string liquidName = Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount)
             ? FlatWorldLocalizationService.GetUiText("空容器")
             : FlatWorldLocalizationService.GetUiText(liquid?.DisplayName ?? vessel.Data.LiquidId);
-        status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1} / {2} 份\n加热进度：{3:0} 秒",
-            liquidName, vessel.Data.Amount.ToString("0.######"),
-            vessel.Capacity, vessel.Data.ProcessingSeconds) + "\n" + DescribeMixture(vessel.Data);
+        status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1:0.###} / {2:0.###} L\n加热进度：{3:0} 秒",
+            liquidName, volumeLiters, capacityLiters, vessel.Data.ProcessingSeconds) + "\n" + DescribeMixture(vessel.Data);
         drink.interactable = LiquidVesselOperations.CanDrink(vessel);
     }
 
@@ -226,14 +227,16 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         var ids = new List<string>(state.Composition.Keys);
         ids.Sort(StringComparer.Ordinal);
         var lines = new List<string>(ids.Count);
+        float totalLiters = MixedLiquidContents.GetVolumeLiters(state);
         foreach (string id in ids)
         {
             float amount = state.Composition[id];
             string originalName = GameRes.ExistingInstance?.GetLiquidDefinition(id)?.DisplayName ?? id;
             string name = FlatWorldLocalizationService.GetUiText(originalName);
-            float percentage = state.Amount > 0f ? amount / state.Amount * 100f : 0f;
-            lines.Add(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.###} 份（{2:0.#}%）",
-                name, amount, percentage));
+            float liters = amount * GameRes.ExistingInstance.GetLiquidDefinition(id).LitersPerServing;
+            float percentage = totalLiters > 0f ? liters / totalLiters * 100f : 0f;
+            lines.Add(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.###} L（{2:0.#}%）",
+                name, liters, percentage));
         }
         return string.Join("\n", lines);
     }
@@ -422,8 +425,9 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
 
         float physicalTilt = Mathf.Abs(Mathf.DeltaAngle(0f, vesselTiltDegrees));
         float retainedFraction = Mathf.Clamp01(1f - physicalTilt / FullEmptyTiltDegrees);
-        int maximumSpillAmount = LiquidVesselOperations.GetWholeSpillServings(vessel.Data.Amount, vessel.Capacity, retainedFraction);
-        if (maximumSpillAmount < Mod_WaterVessel.AmountStep ||
+        float maximumSpillLiters = MixedLiquidContents.GetVolumeLiters(vessel.Data) -
+            WorldLiquidVolumeConversion.GetContainerCapacityLiters(vessel.Capacity) * retainedFraction;
+        if (maximumSpillLiters < FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit ||
             activeMouthWidthMultiplier <= 0f)
         {
             pourAmountAccumulator = 0f;
@@ -434,16 +438,21 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         float tiltRatio = Mathf.Clamp01(physicalTilt / FullEmptyTiltDegrees);
         float speedMultiplier = Mathf.Lerp(1f, HorizontalPourSpeedMultiplier, tiltRatio * tiltRatio);
         LiquidDefinition liquid = vessel.CurrentLiquid;
-        float baseAmountPerSecond = BasePourAmountPerSecond * activeMouthWidthMultiplier * speedMultiplier;
+        float baseAmountPerSecond = BasePourLitersPerSecond * activeMouthWidthMultiplier * speedMultiplier;
         float amountPerSecond = baseAmountPerSecond * (liquid?.PourRateMultiplier ?? 1f);
         float normalizedFlow = Mathf.Clamp01(0.45f + 0.55f * amountPerSecond /
-            (BasePourAmountPerSecond * HorizontalPourSpeedMultiplier));
+            (BasePourLitersPerSecond * HorizontalPourSpeedMultiplier));
         pourAmountAccumulator = Mathf.Min(
-            Mod_WaterVessel.AmountStep,
+            FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit,
             pourAmountAccumulator + amountPerSecond * deltaTime);
-        const int requested = Mod_WaterVessel.AmountStep;
-        if (pourAmountAccumulator >= requested)
+        if (pourAmountAccumulator >= FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit)
         {
+            ILiquidTransferPort output = LiquidVesselOperations.Port(vessel, ContainerPortDirection.Output);
+            if (output == null || !MixedLiquidContents.Peek(vessel.Data, output.Reference.PortId, out LiquidTransferBatch nextBatch,
+                minimumLiters: FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit))
+            { pourAmountAccumulator = 0f; pourStreamCommitted = false; return; }
+            float requested = WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(1,
+                GameRes.ExistingInstance.GetLiquidDefinition(nextBatch.LiquidId).LitersPerServing);
             int horizontalCellOffset = vesselTiltDegrees > 0f ? -1 : 1;
             float removed = vessel.Item?.InHand == true
                 ? LiquidVesselOperations.PourToGround(vessel, actor, requested, horizontalCellOffset)
@@ -453,10 +462,10 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
                 pourAmountAccumulator = 0f; pourStreamCommitted = false;
                 pourGraphic.Clear(false); return;
             }
-            pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);
+            pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit);
             pourStreamCommitted = true;
             // 倒液只更新目标水位，不重置正在传播的液面波。
-            Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid);
+            Liquid.SetWater(MixedLiquidContents.GetVolumeLiters(vessel.Data), WorldLiquidVolumeConversion.GetContainerCapacityLiters(vessel.Capacity), vessel.CurrentLiquid);
         }
         if (!pourStreamCommitted) return;
         pourGraphic.Emit(normalizedFlow, Liquid.CurrentBodyColor, Liquid.CurrentSurfaceColor,

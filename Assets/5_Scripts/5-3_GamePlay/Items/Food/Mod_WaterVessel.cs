@@ -32,12 +32,12 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
     #region 数据与生命周期
 
     public const string ModuleId = "Mod_WaterVessel";
-    public const int DefaultCapacity = 8;
-    public const int AmountStep = 1; // 玩家向地表倒液只按整份结算，小数尾量留在容器内。
+    public const int DefaultCapacity = 200;
+    public const int AmountStep = 1; // 通用饮用与容器间转移的一份，地表另按十升整批换算。
     public const float AmountEpsilon = 0.0001f;
     public Ex_ModData_MemoryPackable ModData = new(); // 容器独立持久化载体。
     public LiquidContainerState Data = new(); // 液体 ID、数量、温度与加工进度。
-    public int capacity = DefaultCapacity; // 当前容器最大份数，由物品定义配置。
+    public int capacity = DefaultCapacity; // 容量按标准四分之一升份配置，混液实际占用按各组分升数校验。
     public float reach = 2f; // 装液与转移距离。
     public static event Action<Mod_WaterVessel, Item> OpenRequested; // 表现层打开容器。
     public event Action Changed; // 当前容器状态变化。
@@ -189,7 +189,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
             throw new InvalidOperationException("液体容器状态为空。");
         MixedLiquidContents.Ensure(state);
         if (containerCapacity < 1 || float.IsNaN(state.Amount) || float.IsInfinity(state.Amount) ||
-            state.Amount < -AmountEpsilon || state.Amount > containerCapacity + AmountEpsilon ||
+            state.Amount < -AmountEpsilon ||
             IsEmptyAmount(state.Amount) != string.IsNullOrWhiteSpace(state.LiquidId) ||
             float.IsNaN(state.Temperature) || float.IsInfinity(state.Temperature) || state.Temperature < -273.15f ||
             float.IsNaN(state.ProcessingSeconds) || float.IsInfinity(state.ProcessingSeconds) || state.ProcessingSeconds < 0f ||
@@ -208,6 +208,8 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         }
         if (Mathf.Abs(total - state.Amount) > AmountEpsilon)
             throw new InvalidOperationException("液体容器组分与总份数不一致。");
+        if (MixedLiquidContents.GetVolumeLiters(state) > WorldLiquidVolumeConversion.GetContainerCapacityLiters(containerCapacity) + AmountEpsilon)
+            throw new InvalidOperationException("液体容器实际升数超出容量。");
         foreach (var pending in state.PendingOutputs)
             if (string.IsNullOrWhiteSpace(pending.Key) || pending.Value == null || !IsFinitePositive(pending.Value.Servings) ||
                 MixedLiquidContents.Reserved(state, pending.Value.LiquidId) > MixedLiquidContents.GetAmount(state, pending.Value.LiquidId) + AmountEpsilon)
@@ -230,7 +232,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         if (!CanOperate(actor)) return;
         if (TryResolveCurrentWorldLiquidTarget(actor, out WorldLiquidSourceTarget target))
         {
-            if (Data.Amount >= Capacity - AmountEpsilon)
+            if (MixedLiquidContents.GetVolumeFraction(Data, Capacity) >= 1f - AmountEpsilon)
             {
                 ItemActionFeedback.Show(actor, "容器已经装满了。");
             }
@@ -314,7 +316,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         if (!GameNetwork.HasStateAuthority || amount <= 0)
             return 0;
         ResolveLiquidDefinition(liquidId, true);
-        int wholeSpace = Mathf.FloorToInt(Mathf.Max(0f, Capacity - Data.Amount) + AmountEpsilon);
+        int wholeSpace = Mathf.FloorToInt(MixedLiquidContents.GetReceivableServings(Data, Capacity, liquidId, float.MaxValue) + AmountEpsilon);
         int moved = Math.Min(amount, wholeSpace);
         if (moved <= 0)
             return 0;
@@ -354,7 +356,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         return GameNetwork.HasStateAuthority && reaction != null &&
                !IsEmptyAmount(Data.Amount) && CurrentLiquid != null && Data.Composition.Count == 1 && Data.PendingOutputs.Count == 0 &&
                !string.Equals(Data.LiquidId, reaction.ResultLiquidId, StringComparison.Ordinal) &&
-               (!reaction.RequireFullContainer || Data.Amount >= Capacity - AmountEpsilon) &&
+               (!reaction.RequireFullContainer || MixedLiquidContents.GetVolumeFraction(Data, Capacity) >= 1f - AmountEpsilon) &&
                ResolveLiquidDefinition(reaction.ResultLiquidId, false) != null;
     }
 
@@ -401,7 +403,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
             return false;
 
         int capacity = ResolveContainerCapacity(itemData);
-        return amount <= capacity - state.Amount + AmountEpsilon;
+        return amount <= MixedLiquidContents.GetReceivableServings(state, capacity, liquidId, amount) + AmountEpsilon;
     }
 
     /// <summary>把常温液体直接写回库存容器 ItemData；已有液体的温度保持不变。</summary>
@@ -418,7 +420,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
             return false;
 
         float moved = amount;
-        if (moved <= 0f || moved > ResolveContainerCapacity(itemData) - state.Amount)
+        if (moved <= 0f || moved > MixedLiquidContents.GetReceivableServings(state, ResolveContainerCapacity(itemData), liquidId, moved) + AmountEpsilon)
             return false;
         MixedLiquidContents.Add(state, liquidId.Trim(), moved, IsFinite(temperature) ? temperature : state.Temperature);
         NormalizeStoredAmount(state);
@@ -457,7 +459,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
                 definition.Sprite,
                 definition.Visual.LiquidSurface,
                 liquid.PrimaryColor,
-                Mathf.Clamp01(state.Amount / ResolveContainerCapacity(itemData)));
+                Mathf.Clamp01(MixedLiquidContents.GetVolumeFraction(state, ResolveContainerCapacity(itemData))));
             return true;
         }
 
@@ -702,7 +704,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
 
     private void AddLiquidInternal(string liquidId, float amount)
     {
-        MixedLiquidContents.Add(Data, liquidId.Trim(), Mathf.Min(amount, Capacity - Data.Amount), Data.Temperature);
+        MixedLiquidContents.Add(Data, liquidId.Trim(), MixedLiquidContents.GetReceivableServings(Data, Capacity, liquidId, amount), Data.Temperature);
     }
 
     private void ClearContentsInternal()

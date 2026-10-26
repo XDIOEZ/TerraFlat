@@ -4,25 +4,34 @@ using System.Collections.Generic;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>一格液体的纯运行时值；0～10 整数等级，一份液体就是一级。</summary>
+    /// <summary>一格液体的纯运行时值；满格一百份，每份十升，水面独立保持十档。</summary>
     public readonly struct LiquidCellValue : IEquatable<LiquidCellValue>
     {
         #region 格子值
-        public const int MaximumLevel = 10;
+        public const int MaximumLevel = 100;
+        public const int VisualLevelCount = 10;
+        public const int UnitsPerVisualLevel = MaximumLevel / VisualLevelCount;
+        public const int LitersPerUnit = 10;
         public readonly int LiquidTypeIndex;
         public readonly int LiquidLevel;
         public LiquidCellValue(int typeIndex, int level) { LiquidTypeIndex = typeIndex; LiquidLevel = level; }
         public bool Equals(LiquidCellValue other) => LiquidTypeIndex == other.LiquidTypeIndex && LiquidLevel == other.LiquidLevel;
 
         public static int NormalizeLevel(int level) => Math.Clamp(level, 0, MaximumLevel);
-        // 浮点深度只在表现和比例采样时派生，不作为第二份权威水量。
+        // 真实深度供模拟与环境采样，视觉档位不反向覆盖权威水量。
         public static float ToNormalizedDepth(int level) => NormalizeLevel(level) / (float)MaximumLevel;
+        public static int ToVisualLevel(int level) =>
+            (NormalizeLevel(level) + UnitsPerVisualLevel - 1) / UnitsPerVisualLevel;
+        public static float ToVisualDepth(int level) => ToVisualLevel(level) / (float)VisualLevelCount;
+        public static bool HasDifferentVisualState(LiquidCellValue previous, LiquidCellValue next) =>
+            previous.LiquidTypeIndex != next.LiquidTypeIndex ||
+            ToVisualLevel(previous.LiquidLevel) != ToVisualLevel(next.LiquidLevel);
         public static int FromGeneratedDepth(double depth)
         {
             if (!double.IsFinite(depth)) throw new ArgumentOutOfRangeException(nameof(depth));
-            // 生成器也会传入 float，十分位的二进制误差不能凭空多升一级。
+            // 天然水深沿用原十档再乘十，十分位浮点误差不能凭空多生成一档。
             return depth <= 0d ? 0 : Math.Clamp((int)Math.Ceiling(Math.Clamp(depth, 0d, 1d) *
-                MaximumLevel - 0.000001d), 1, MaximumLevel);
+                VisualLevelCount - 0.000001d), 1, VisualLevelCount) * UnitsPerVisualLevel;
         }
         #endregion
     }
@@ -110,7 +119,8 @@ namespace FlatWorld.WorldModel
             if (!liquidBaselines.ContainsKey(index)) liquidBaselines.Add(index, previous);
             liquid.Write(index, next);
             liquidRevision++;
-            MarkChanged(x, y, TerrainChangeKind.Liquid);
+            MarkChanged(x, y, TerrainChangeKind.Liquid,
+                affectsLiquidVisuals: LiquidCellValue.HasDifferentVisualState(previous, next));
             return true;
         }
 

@@ -49,7 +49,7 @@ namespace FlatWorld.WorldModel
     [Flags] public enum TerrainCellFlags { None = 0, Blocking = 1 }
     public readonly record struct TerrainCell(int BlockingTileId, TerrainCellFlags Flags);
     public readonly record struct LiquidCellValue(int LiquidTypeIndex, int LiquidLevel)
-    { public const int MaximumLevel = 10; }
+    { public const int MaximumLevel = 100; public const int LitersPerUnit = 10; }
     public enum TerrainChangeKind { Cell, TileStack, Liquid, Environment }
     public sealed class ChunkTerrainChanged
     {

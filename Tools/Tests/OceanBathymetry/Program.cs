@@ -17,6 +17,7 @@ internal static class Program
 
     private static void Main()
     {
+        ValidateHundredUnitWaterVolumesAndVisualNotifications();
         using (var straight = new OceanShoreDistanceBathymetryKernel(-1, -3, 40, 7, .5, 16, 4,
                    (x, y) => x <= 0 ? .75 : .25))
         {
@@ -25,9 +26,9 @@ internal static class Program
             {
                 Check(straight.GetShoreDistance(distance + 1, 3) == distance, "straight shore distance");
                 int level = LiquidCellValue.FromGeneratedDepth(straight.GetInitialLiquidDepth(distance + 1, 3));
-                Check(level == expected[distance], "shelf / slope boundary at " + distance);
+                Check(level == expected[distance] * 10, "shelf / slope boundary at " + distance);
                 Check(OceanShoreDistanceBathymetryKernel.ResolveNaturalOceanBedDepthLevels(level) ==
-                      (level > 0 ? level + 1 : 0), "ocean bed follows real water amount");
+                      (level > 0 ? expected[distance] + 1 : 0), "ocean bed keeps original ten visual levels");
             }
         }
         // 独立暴力距离只作测试判据，覆盖斜岸、零散岛屿、负坐标与分块边缘。
@@ -113,7 +114,7 @@ internal static class Program
                 terrain.TryGetEnvironmentValue("height", x, y, out float height);
                 terrain.TryGetEnvironmentValue("airHumidity", x, y, out float humidity);
                 bool ocean = height < profile.Settings.SeaLevel;
-                Check(ocean ? frozen ? level == 0 && bed >= 2 : level > 0 && bed == level + 1 : level == 0 && bed == 0,
+                Check(ocean ? frozen ? level == 0 && bed >= 2 : level > 0 && bed == LiquidCellValue.ToVisualLevel(level) + 1 : level == 0 && bed == 0,
                     "production water / bed / freeze agreement");
                 if (allOcean) Check(bed == 11, "all-ocean floor reaches full depth");
                 samples.Add(new Int2(origin.X + x, origin.Y + y), (level, bed, humidity));
@@ -121,6 +122,73 @@ internal static class Program
             return samples;
         }
         finally { generator.BeginNewWorldHydrologyEpoch(1); }
+    }
+
+    private static void ValidateHundredUnitWaterVolumesAndVisualNotifications()
+    {
+        Check(LiquidCellValue.MaximumLevel == 100 && LiquidCellValue.LitersPerUnit == 10,
+            "one full cell stores 100 units / 1000 liters");
+        Check(LiquidCellValue.NormalizeLevel(-1) == 0 && LiquidCellValue.NormalizeLevel(101) == 100,
+            "water units clamp at zero and one hundred");
+        int[] amounts = { 0, 1, 9, 10, 11, 90, 91, 99, 100 };
+        int[] visuals = { 0, 1, 1, 1, 2, 9, 10, 10, 10 };
+        for (int i = 0; i < amounts.Length; i++)
+        {
+            Check(LiquidCellValue.ToVisualLevel(amounts[i]) == visuals[i], "positive tail rounds water surface upward");
+            Check(Math.Abs(LiquidCellValue.ToNormalizedDepth(amounts[i]) - amounts[i] / 100f) < .000001f,
+                "real water depth retains hundredth precision");
+            Check(Math.Abs(LiquidCellValue.ToVisualDepth(amounts[i]) - visuals[i] / 10f) < .000001f,
+                "visual water depth retains only ten states");
+        }
+        Check(LiquidCellValue.FromGeneratedDepth(.000001) == 10 && LiquidCellValue.FromGeneratedDepth(.21) == 30 &&
+            LiquidCellValue.FromGeneratedDepth(.6f) == 60, "generation multiplies original levels by ten");
+        Check(WorldLiquidVolumeConversion.ReferenceServingLiters == .25f &&
+            WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(1, .25f) == 40,
+            "one world unit converts to forty drinking servings without changing drinking size");
+        Check(WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(1, .5f) == 20,
+            "world conversion reads each liquid serving volume");
+        Check(WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(39.999f, .25f) == 0 &&
+            WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(40, .25f) == 1,
+            "less than ten liters never consumes a world unit");
+        Check(WorldLiquidVolumeConversion.QuantizeWholeWorldLiquidServings(80, 79, .25f) == 40,
+            "partial world batches preserve every sub-ten-liter tail");
+        Check(WorldLiquidVolumeConversion.GetContainerCapacityLiters(200) == 50 &&
+            WorldLiquidVolumeConversion.GetContainerCapacityLiters(80) == 20,
+            "bucket and coconut container capacities use liters");
+        Check(WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(float.NaN, .25f) == 0 &&
+            WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(40, 0) == 0,
+            "invalid volume conversion cannot manufacture water");
+        foreach (float servingLiters in new[] { .3f, .7f, 1.3f })
+        {
+            for (int units = 1; units <= 100; units++)
+            {
+                float servings = WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(units, servingLiters);
+                Check(WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(servings, servingLiters) == units,
+                    "fractional serving volumes round-trip every world unit without losing a ten-liter batch");
+                Check(WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(MathF.BitDecrement(servings), servingLiters) < units,
+                    "one ULP below a complete fractional batch is rejected without epsilon manufacturing water");
+            }
+            float belowBatch = WorldLiquidVolumeConversion.WorldUnitsToLiquidServings(1, servingLiters) - .001f;
+            Check(WorldLiquidVolumeConversion.LiquidServingsToWholeWorldUnits(belowBatch, servingLiters) == 0,
+                "fractional serving volumes still reject an actually incomplete ten-liter batch");
+        }
+        using var buffer = new ChunkTerrainBuffer(3, 1);
+        int water = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        buffer.SetLiquid(0, 0, water, 100); buffer.SetLiquid(1, 0, water, 20); buffer.SetLiquid(2, 0, water, 1);
+        using ChunkTerrainData terrain = buffer.Seal();
+        var flags = new List<bool>();
+        terrain.Changed += change => { if (change.Kind == TerrainChangeKind.Liquid) flags.Add(change.AffectsLiquidVisuals); };
+        terrain.SetLiquid(0, 0, water, 99); terrain.SetLiquid(0, 0, water, 90);
+        terrain.SetLiquid(0, 0, water, 89); terrain.SetLiquid(0, 0, water, 0);
+        Check(flags.SequenceEqual(new[] { false, true, false, true }), "single-cell notifications distinguish water units and visual levels");
+        terrain.SetLiquid(0, 0, water, 100);
+        int changes = 0; int[] changed = null, visible = null;
+        terrain.LiquidBatchChanged += change => { changes++; changed = change.CellIndices.ToArray(); visible = change.VisualCellIndices.ToArray(); };
+        terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(0, water, 99), new LiquidCellUpdate(1, water, 19), new LiquidCellUpdate(2, 0, 0) });
+        Check(changes == 1 && changed.SequenceEqual(new[] { 0, 1, 2 }) && visible.SequenceEqual(new[] { 2 }),
+            "batch same-level subtraction preserves all data and refreshes only dry transition");
+        terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(0, water, 90), new LiquidCellUpdate(1, water, 10), new LiquidCellUpdate(2, water, 1) });
+        Check(changes == 2 && visible.SequenceEqual(new[] { 0, 1, 2 }), "batch crossings and wet transition refresh every affected surface");
     }
 
     #endregion

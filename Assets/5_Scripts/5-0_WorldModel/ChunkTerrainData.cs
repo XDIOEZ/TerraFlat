@@ -789,12 +789,14 @@ namespace FlatWorld.WorldModel
                 throw new ObjectDisposedException(nameof(ChunkTerrainData));
         }
 
-        private void MarkChanged(int x, int y, TerrainChangeKind kind, string environmentLayerId = null)
+        private void MarkChanged(int x, int y, TerrainChangeKind kind, string environmentLayerId = null,
+            bool affectsLiquidVisuals = true)
         {
             _revision++;
             if (kind == TerrainChangeKind.Liquid)
                 _surfaceLiquidRevision++;
-            Changed?.Invoke(new ChunkTerrainChanged(new Int2(x, y), kind, _revision, environmentLayerId));
+            Changed?.Invoke(new ChunkTerrainChanged(new Int2(x, y), kind, _revision, environmentLayerId,
+                affectsLiquidVisuals));
         }
 
         #region 地块核心变更
@@ -860,13 +862,14 @@ namespace FlatWorld.WorldModel
         #region 变化范围
 
         public ChunkTerrainChanged(Int2 localCell, TerrainChangeKind kind, long revision,
-            string environmentLayerId = null)
+            string environmentLayerId = null, bool affectsLiquidVisuals = true)
         {
             LocalCell = localCell;
             Kind = kind;
             Revision = revision;
             EnvironmentLayerId = kind == TerrainChangeKind.Environment ? environmentLayerId : null;
             CellIndices = default;
+            AffectsLiquidVisuals = affectsLiquidVisuals;
         }
 
         /// <summary>整个环境层的一批真实变化；格索引内存只在同步回调期间借用。</summary>
@@ -879,6 +882,7 @@ namespace FlatWorld.WorldModel
             Revision = revision;
             EnvironmentLayerId = environmentLayerId;
             CellIndices = cellIndices;
+            AffectsLiquidVisuals = true;
         }
 
         /// <summary>单格通知的局部坐标，批量通知应使用 GetCellIndices。</summary>
@@ -891,6 +895,8 @@ namespace FlatWorld.WorldModel
         public string EnvironmentLayerId { get; }
         /// <summary>批量变化的借用索引；观察者不得跨回调保存。</summary>
         public ReadOnlyMemory<int> CellIndices { get; }
+        /// <summary>液体身份或十档水面发生变化；同档水量仍通过原通知同步玩法和存档。</summary>
+        public bool AffectsLiquidVisuals { get; }
         public bool IsBatch => !CellIndices.IsEmpty;
 
         /// <summary>统一无分配遍历单格与批量变化，单格使用所在区块的真实宽度。</summary>

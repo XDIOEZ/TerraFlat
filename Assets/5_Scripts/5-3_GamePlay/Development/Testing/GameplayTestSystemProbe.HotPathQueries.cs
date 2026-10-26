@@ -54,7 +54,7 @@ public static partial class GameplayTestSystemProbe
 
         JObject initial = Sample(new Vector2(-3.75f, -1.75f));
         int liquid = first.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        first.Terrain.SetLiquid(0, 0, liquid, 6);
+        first.Terrain.SetLiquid(0, 0, liquid, 60);
         first.Terrain.SetCell(0, 0, new TerrainCell(44, 0, 0, 1, 1, TerrainCellFlags.Walkable));
         JObject changed = Sample(new Vector2(-3.75f, -1.75f));
         TerrainSupportLayer.Set(first.Terrain, 0, 0, 90, 1);

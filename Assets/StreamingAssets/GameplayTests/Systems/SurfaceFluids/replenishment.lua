@@ -8,7 +8,8 @@ local cases = {
     { level = 7, supplied = { 3, 2, 1, 0 }, remaining = 1 },
     { level = 8, supplied = { 4, 2, 1, 0 }, remaining = 1 },
     { level = 9, supplied = { 4, 2, 1, 1 }, remaining = 1 },
-    { level = 10, supplied = { 5, 2, 1, 1 }, remaining = 1 }
+    { level = 10, supplied = { 5, 2, 1, 1 }, remaining = 1 },
+    { level = 100, supplied = { 50, 25, 12, 6 }, remaining = 7 }
 }
 
 test.system("surface_fluids", "diffusion_data_retention_lease", {}, function(data)
@@ -30,11 +31,12 @@ for _, case in ipairs(cases) do
         end
         assert(total == expected.level and data.total == expected.level, "补水增减了总水量")
         assert(data.groundUnchanged, "补水修改了底部地块")
-    end, tostring(expected.level) .. "层水依次补四个空水格并保持水量守恒")
+    end, tostring(expected.level) .. "份水依次补四个空水格并保持水量守恒")
 end
 
-for source = 0, 10 do
-    for target = 0, 10 do
+local levels = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 49, 50, 51, 90, 99, 100}
+for _, source in ipairs(levels) do
+    for _, target in ipairs(levels) do
         local beforeSource, beforeTarget = source, target
         test.system("surface_fluids", "replenishment_pair",
             { sourceLevel = beforeSource, targetLevel = beforeTarget }, function(data)

@@ -29,19 +29,19 @@ public sealed class LiquidVesselTransferPort : ContainerPortBase, ILiquidTransfe
     public bool PeekLiquid(out LiquidTransferBatch batch)
     { batch = default; return IsValid && MixedLiquidContents.Peek(vessel.Data, Reference.PortId, out batch); }
     public bool ReserveLiquid(out LiquidTransferBatch batch) => ReserveLiquid(out batch, 0f);
-    public bool ReserveWholeLiquid(out LiquidTransferBatch batch) => ReserveLiquid(out batch, Mod_WaterVessel.AmountStep);
-    private bool ReserveLiquid(out LiquidTransferBatch batch, float minimumServings)
+    public bool ReserveWholeLiquid(out LiquidTransferBatch batch) => ReserveLiquid(out batch, 0f, FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit);
+    private bool ReserveLiquid(out LiquidTransferBatch batch, float minimumServings, float minimumLiters = 0f)
     {
         batch = default;
         if (!IsValid || !GameNetwork.HasStateAuthority) return false;
         long beforeRevision = vessel.Data.Revision;
-        bool result = MixedLiquidContents.Reserve(vessel.Data, Reference.PortId, out batch, minimumServings);
+        bool result = MixedLiquidContents.Reserve(vessel.Data, Reference.PortId, out batch, minimumServings, minimumLiters);
         if (result && vessel.Data.Revision != beforeRevision) vessel.CommitVessel();
         return result;
     }
     public float GetReceivableServings(string id, float requested)
         => Configuration.AllowsLiquid(id) && GameRes.ExistingInstance?.GetLiquidDefinition(id) != null
-            ? Mathf.Min(requested, Mathf.Max(0f, vessel.Capacity - vessel.Data.Amount)) : 0f;
+            ? MixedLiquidContents.GetReceivableServings(vessel.Data, vessel.Capacity, id, requested) : 0f;
     public bool ExtractLiquid(LiquidTransferBatch batch, float servings)
         => IsValid && GameNetwork.HasStateAuthority && MixedLiquidContents.ConsumeBatch(vessel.Data, Reference.PortId, batch, servings);
     public bool InsertLiquid(LiquidTransferBatch batch, float servings)

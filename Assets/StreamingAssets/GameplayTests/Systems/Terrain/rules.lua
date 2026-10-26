@@ -45,13 +45,14 @@ for _, scenario in ipairs({ "straight", "island", "wrapped", "ocean", "land" }) 
             if input == "land" then distance = 0 end
             assert(sample.distance == distance, "跨边界或环绕的离岸距离不一致")
             assert(sample.level == sample.singleLevel, "单格与整块生成水深不一致")
-            assert(sample.bed == (sample.level > 0 and sample.level + 1 or 0), "海底没有随水深下降")
+            assert(sample.level % 10 == 0, "天然生成水量没有按原等级乘10")
+            assert(sample.bed == (sample.level > 0 and sample.level / 10 + 1 or 0), "海底随100份水量错误放大")
             if distance == 0 then assert(sample.level == 0, "海洋陡降侵入陆地") end
-            if distance > 0 and distance <= 16 then assert(sample.level >= 1 and sample.level <= 3, "近岸浅水带过深") end
-            if distance == 16 then assert(sample.level == 3, "陆架边缘深度错误") end
-            if distance == 17 then assert(sample.level == 5, "离岸17格没有开始明显陡降") end
-            if distance == 18 then assert(sample.level == 7, "离岸18格没有进入深水") end
-            if distance >= 20 then assert(sample.level == 10, "离岸20格没有达到最深水量") end
+            if distance > 0 and distance <= 16 then assert(sample.level >= 10 and sample.level <= 30, "近岸浅水带过深") end
+            if distance == 16 then assert(sample.level == 30, "陆架边缘深度错误") end
+            if distance == 17 then assert(sample.level == 50, "离岸17格没有开始明显陡降") end
+            if distance == 18 then assert(sample.level == 70, "离岸18格没有进入深水") end
+            if distance >= 20 then assert(sample.level == 100, "离岸20格没有达到最深水量") end
         end
     end, "海洋离岸陆架、陡降和分块一致性：" .. input)
 end
@@ -73,7 +74,7 @@ for _, scenario in ipairs({ "ocean", "freshwater", "cave", "frozen_ocean" }) do
                     assert(sample.liquid == 0, "冻结水体仍残留液体")
                 else
                     assert(sample.liquid > 0, "未冻结的天然底床没有初始液体")
-                    assert(depth == (ocean and sample.liquid + 1 or (sample.liquid <= 5 and 2 or 3)),
+                    assert(depth == (ocean and sample.liquid / 10 + 1 or (sample.liquid <= 50 and 2 or 3)),
                         "浅深水没有生成对应底床层数")
                 end
             else

@@ -2,7 +2,7 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>一次液体写入；局部格索引按行递增，等级沿用权威层的 0～10 整数。</summary>
+    /// <summary>一次液体写入；局部格索引按行递增，水量沿用权威层的 0～100 整数份。</summary>
     public readonly struct LiquidCellUpdate
     {
         #region 写入值
@@ -20,9 +20,11 @@ namespace FlatWorld.WorldModel
         #region 借用的变化集
         public readonly ChunkTerrainData Terrain;
         public readonly ReadOnlyMemory<int> CellIndices;
+        public readonly ReadOnlyMemory<int> VisualCellIndices;
         public readonly long Revision;
-        public ChunkLiquidBatchChanged(ChunkTerrainData terrain, ReadOnlyMemory<int> indices, long revision)
-        { Terrain = terrain; CellIndices = indices; Revision = revision; }
+        public ChunkLiquidBatchChanged(ChunkTerrainData terrain, ReadOnlyMemory<int> indices,
+            ReadOnlyMemory<int> visualIndices, long revision)
+        { Terrain = terrain; CellIndices = indices; VisualCellIndices = visualIndices; Revision = revision; }
         #endregion
     }
 
@@ -31,6 +33,8 @@ namespace FlatWorld.WorldModel
         #region 液体批量写回
         private int[] liquidDirtyIndices; // 首次批写时分配，之后复用。
         private int liquidDirtyCount;
+        private int[] liquidVisualDirtyIndices; // 只缓存身份或水面档位变化的格子，批次间复用。
+        private int liquidVisualDirtyCount;
         private bool publishingLiquidBatch;
         /// <summary>批量写回专用通知；不会为每一格重复触发 Changed。</summary>
         public event Action<ChunkLiquidBatchChanged> LiquidBatchChanged;
@@ -62,6 +66,11 @@ namespace FlatWorld.WorldModel
                     liquidBaselines.Add(update.CellIndex, previous);
                 liquid.Write(update.CellIndex, next);
                 liquidDirtyIndices[liquidDirtyCount++] = update.CellIndex;
+                if (LiquidCellValue.HasDifferentVisualState(previous, next))
+                {
+                    liquidVisualDirtyIndices ??= new int[CellCount];
+                    liquidVisualDirtyIndices[liquidVisualDirtyCount++] = update.CellIndex;
+                }
             }
             int count = liquidDirtyCount;
             if (count > 0)
@@ -83,11 +92,13 @@ namespace FlatWorld.WorldModel
             try
             {
                 LiquidBatchChanged?.Invoke(new ChunkLiquidBatchChanged(this,
-                    liquidDirtyIndices.AsMemory(0, liquidDirtyCount), _revision));
+                    liquidDirtyIndices.AsMemory(0, liquidDirtyCount),
+                    liquidVisualDirtyIndices.AsMemory(0, liquidVisualDirtyCount), _revision));
             }
             finally
             {
                 liquidDirtyCount = 0;
+                liquidVisualDirtyCount = 0;
                 publishingLiquidBatch = false;
             }
         }

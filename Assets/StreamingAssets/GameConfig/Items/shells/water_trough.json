@@ -5,7 +5,7 @@
       "id": "WaterTrough",
       "parent": "WoodenBarrel",
       "gameName": "水槽",
-      "description": "可放置和拆回的木制水槽，容纳64份混合液体；不放固体物品。每次按真实比例抽取一种液体，剩余不足一份也能倒出或输送。",
+      "description": "可放置和拆回的木制水槽，容纳400升混合液体；不放固体物品。地表倾倒按10升整批结算，不足10升保留在槽内，仍可饮用或输送。",
       "weight": 8,
       "volume": 16,
       "stackable": false,
@@ -18,7 +18,7 @@
         },
         "vessel": {
           "parameters": {
-            "capacity": 64,
+            "capacity": 1600,
             "ContainerPorts": [
               { "Version": 1, "Id": "liquids", "Type": "core:liquid_vessel", "Direction": 3, "Access": 13, "Reach": 2 }
             ]
@@ -31,7 +31,7 @@
       "id": "WaterTrough_Building",
       "parent": "WoodenBarrel_Building",
       "gameName": "水槽-建筑",
-      "description": "放在地面的64份混合液体水槽，可接入液体泵或出气口；装拆时保留组分、温度、每口待输出批次和耐久。",
+      "description": "放在地面的400升混合液体水槽，可接入液体泵或出气口；装拆时保留组分、温度、每口待输出批次和耐久。",
       "weight": 8,
       "volume": 16,
       "stackable": false,
@@ -44,7 +44,7 @@
         },
         "vessel": {
           "parameters": {
-            "capacity": 64,
+            "capacity": 1600,
             "ContainerPorts": [
               { "Version": 1, "Id": "liquids", "Type": "core:liquid_vessel", "Direction": 3, "Access": 13, "Reach": 2 }
             ]

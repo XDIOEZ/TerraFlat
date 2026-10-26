@@ -44,7 +44,7 @@ public static partial class GameplayTestSystemProbe
         };
         int water = LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.DirtyWaterId);
         Sample("dry");
-        terrain.SetLiquid(0, 0, water, 5); Sample("water");
+        terrain.SetLiquid(0, 0, water, 50); Sample("water");
         TerrainSupportLayer.Set(terrain, 0, 0, 23, 1); Sample("platform");
         TerrainSupportLayer.Set(terrain, 0, 0, 0, 0); Sample("removed");
         terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(0, 0, 0) }); Sample("drained");

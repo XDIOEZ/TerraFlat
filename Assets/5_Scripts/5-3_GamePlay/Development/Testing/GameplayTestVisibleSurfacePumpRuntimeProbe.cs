@@ -43,7 +43,7 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
         {
             fixture.ChargeBatteries();
             deadline = Time.realtimeSinceStartup + 40f;
-            while (fixture.TotalLevel > 20 && Time.realtimeSinceStartup < deadline)
+            while (fixture.TotalLevel > 1990 && Time.realtimeSinceStartup < deadline)
             {
                 fixture.ObserveElectricalTick();
                 yield return null;
@@ -87,7 +87,7 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
             terrain.SetEnvironmentValue(layers[0], x, y, water ? 1 : 0);
             terrain.SetEnvironmentValue(layers[1], x, y, 0);
             terrain.SetEnvironmentValue(layers[2], x, y, 0);
-            WorldLiquidSystem.TrySet(Sample, "core:dirty_water", water ? 10 : 0);
+            WorldLiquidSystem.TrySet(Sample, "core:dirty_water", water ? LiquidCellValue.MaximumLevel : 0);
         }
         public void Restore()
         {
@@ -310,9 +310,10 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
             var tankAmounts = new JArray(tanks.Select(node => MachineWorld.GetFluidInventory(node).GetLiquidLiters()));
             return new JObject
             {
-                ["after"] = after, ["initialLevel"] = 200, ["initialLiters"] = 50,
+                ["after"] = after, ["initialLevel"] = 2000, ["initialLiters"] = 20000,
                 ["unpoweredLevel"] = unpoweredLevel, ["remainingLevel"] = TotalLevel,
                 ["waterCells"] = water.Count, ["wetCells"] = water.Count(cell => cell.Level > 0),
+                ["positiveWaterVisible"] = water.All(cell => cell.Level == 0 || LiquidCellValue.ToVisualLevel(cell.Level) >= 1),
                 ["pumpCount"] = pumps.Count, ["tankCount"] = tanks.Count,
                 ["pipeCount"] = machines.Count(node => node.Definition.Id == "LiquidPipe"),
                 ["wireCount"] = machines.Count(node => node.Definition.Id == "Wire_Copper"),
