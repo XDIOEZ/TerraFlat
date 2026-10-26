@@ -914,7 +914,7 @@
         "Combustion.Fuel"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item302.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Twine/Twine_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

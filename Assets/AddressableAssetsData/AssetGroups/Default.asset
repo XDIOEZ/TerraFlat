@@ -3855,8 +3855,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: f9a410976af5f9f45b18b1575157b348
-    m_Address: Assets/6_Art/Items/Plants/Tree/item302.png
+  - m_GUID: 67eebfb848ca4d95bd5b567e2f9f0e39
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Twine/Twine_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

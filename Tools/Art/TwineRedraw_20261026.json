@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-26",
+  "generator": "Built-in image_gen",
+  "itemId": "Twine",
+  "identity": "盘绕的天然植物藤蔓，带少量叶芽；用于制绳、藤甲和工具绑扎。",
+  "assetPath": "Assets/6_Art/Generated/InventoryCrafting/Twine/Twine_Icon.png",
+  "guid": "67eebfb848ca4d95bd5b567e2f9f0e39",
+  "source": {
+    "path": "Assets/6_Art/Items/Plants/Tree/item302.png",
+    "guid": "f9a410976af5f9f45b18b1575157b348",
+    "size": [
+      32,
+      32
+    ],
+    "pixelsPerUnit": 32,
+    "visibleBoundsAtAlpha128": [
+      2,
+      2,
+      29,
+      29
+    ],
+    "visibleWorldSizeAtRendererScale": [
+      0.6328125,
+      0.6328125
+    ],
+    "sha256": "6de5921b1c044b5d08a517adf63976f641f938496fb1d641b460fec215f797cf"
+  },
+  "result": {
+    "size": [
+      1254,
+      1254
+    ],
+    "pixelsPerUnit": 1411.555556,
+    "visibleBoundsAtAlpha128": [
+      33,
+      91,
+      1224,
+      1217
+    ],
+    "visibleWorldSizeAtRendererScale": [
+      0.6328124998007517,
+      0.5982761333128853
+    ],
+    "rendererScale": [
+      0.75,
+      0.75
+    ],
+    "maxTextureSize": 2048,
+    "filter": "Point",
+    "mipmaps": false,
+    "compression": "Uncompressed",
+    "sha256": "80657553cf3cc8407737d4c499b3ed922460817a28d8660d39103e20c308d035",
+    "postProcessing": "None. Generated PNG copied byte-for-byte; native resolution, colors and alpha preserved."
+  },
+  "referenceImages": [
+    {
+      "path": "Assets/6_Art/Items/Plants/Tree/item302.png",
+      "role": "Original edit target, coil silhouette and plant-vine identity"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/Rope/Rope_Icon.png",
+      "role": "Pixel-art style only, not material or manufactured construction"
+    }
+  ],
+  "consumerChanges": {
+    "prefab": "Assets/2_Prefabs/Gameplay/Items/Common/Twine.prefab: sprite GUID updated",
+    "shell": "Assets/StreamingAssets/GameConfig/Items/shells/basic_items.json: Twine visual.spriteAddress updated",
+    "addressableGroup": "Assets/AddressableAssetsData/AssetGroups/Default.asset: Twine entry GUID/address updated, ItemSprite label retained",
+    "gameplay": "No gameplay, recipe, collider or renderer-scale changes."
+  },
+  "validation": {
+    "worldSizeCommand": "python Tools/Art/validate_sprite_world_size.py Assets/6_Art/Generated/InventoryCrafting/Twine/Twine_Icon.png --shell-manifest Assets/StreamingAssets/GameConfig/Items/shells/basic_items.json --item-id Twine --alpha-threshold 128 --target-longest 0.6328125 --tolerance 0.01 --json",
+    "worldSize": "Passed. New longest visible size matches previous 0.6328125 Unity units; aspect ratio follows redrawn native image.",
+    "static": "Native PNG/alpha, GUID uniqueness, prefab and Addressables references, importer settings and exact source bytes checked.",
+    "runtime": "User Play Mode preserved. No forced import, refresh, compilation, restart, Lua run or gameplay action. Loaded asset inspected read-only: cached old 32x32 / 32 PPU sprite; replacement awaits normal asset reload.",
+    "consoleSnapshot": {
+      "errors": 0,
+      "warnings": 1,
+      "warningContext": "Mod_Building.Install (Mod_Building.cs:391) reported an occupied mechanical layer during the user's ongoing game; no texture/import warning was observed."
+    },
+    "skillReview": "Existing art skill already forbids forced downscaling and requires PPU-based size checks; no skill change needed."
+  },
+  "prompt": "Use case: precise-object-edit / style-transfer. Asset type: replacement Twine / raw plant vine inventory and held-item sprite for FlatWorld, a top-down 2D survival sandbox. Input image 1 is the ORIGINAL EDIT TARGET and identity reference: a harvested flexible green-brown plant vine gathered into a few loose overlapping oval coils, with a trailing curved end and small scattered green leaf buds. Preserve this recognizable loose coiled silhouette and raw plant material identity, improving it from scratch instead of magnifying the crude 32x32 bitmap. Input image 2 is STYLE REFERENCE ONLY for restrained retro pixel art and coherent material shading; do NOT copy the manufactured tan rope, its thick braided construction, or its tightly wound donut shape. Primary request: redraw the plant vine cleanly so its continuous flexible stem, separated loop openings, irregular natural bark and a few small leaves are immediately readable in an inventory slot. A single long raw olive-green vine makes two or three loose overlapping vertical/diagonal oval loops; the vine is thicker and clearly resolved enough to survive small display size, has subtle woody brown shaded sides, fresh muted olive-green upper faces, a few short offshoots and perhaps 5 to 7 modest small pointed leaves distributed sparsely, plus one curved loose tail. This is harvested plant material used to craft rope, a vine cuirass and tool bindings. Style/medium: restrained low-saturation retro PIXEL ART with natural believable structure, clear square stepped silhouette, large deliberate hard-edged pixel clusters, limited coherent shade groups, about 64 to 80 logical pixels across the subject on a native high-resolution canvas. Clear upper-left lighting, matte surfaces, dark green-brown contour and muted yellow-olive highlights. Open transparent spaces visibly separate the coils; avoid a tangled nest or wreath. Center a SINGLE isolated complete vine coil on a square native high-resolution canvas, about 85 percent occupancy with balanced small transparent margins, graceful slightly diagonal oval composition. Keep all native output pixels, colors and alpha; no forced reduction to 32x32 or 64x64, no dithering. Genuinely transparent background, clean alpha, no floor, no external cast shadow, no container, spool, base, UI, text, border, character, blossom, fruit, decorative frame or watermark. Avoid photorealism, smooth vector curves, blurred or airbrushed shading, micro-noise, heavy black sticker outlines, excessive leaf cover, artificial rope fibers and random disconnected marks."
+}
