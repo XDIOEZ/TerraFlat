@@ -17,11 +17,6 @@ namespace FlatWorld.Spaceflight
         private readonly List<ShipActuator> actuators = new();
         private readonly List<FluidInventory> fuelTanks = new();
         private readonly List<MachineEntity> machineScratch = new();
-        private readonly FluidNetworkGraph.SupplyWorkspace fuelSupplyWorkspace = new();
-        private readonly HashSet<FluidInventory> visitedFuelInventories = new();
-        private readonly Dictionary<FluidInventory, double> projectedFuelBudgets = new();
-        private readonly Dictionary<FluidInventory, decimal> projectedFuelStock = new();
-        private static readonly string[] engineFuelIds = { FluidIds.Hydrogen, FluidIds.Oxygen };
         private readonly ShipOpticalGraph.Workspace opticalWorkspace = new();
         private readonly Dictionary<string, float> engineOutputs = new(StringComparer.Ordinal);
         private readonly ShipThrustAllocation thrustAllocation = new();
@@ -129,7 +124,8 @@ namespace FlatWorld.Spaceflight
                             actuators.Add(new ShipActuator(GetDevice(piece.PieceId), machine));
                     MachineWorld.CollectNodes(machineScratch);
                     foreach (MachineEntity machine in machineScratch)
-                        if (machine.Definition.Fluid?.Kind == "tank")
+                        if (machine.Definition.Fluid?.Kind == "tank" ||
+                            machine.Logic is ShipDeviceLogic { HasChemicalPropellantStorage: true })
                         {
                             FluidInventory tank = MachineWorld.GetFluidInventory(machine);
                             if (!fuelTanks.Contains(tank)) fuelTanks.Add(tank);
@@ -148,14 +144,21 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipPieceState piece in GetShip(id).Pieces)
                     if (piece.IsAlive && piece.Kind == ShipPieceKind.Console) { consoles++; if (IsPowered(GetShip(id), piece)) powered++; }
             decimal h = 0m, o = 0m, gas = 0m;
+            double liquidFuelLiters = 0d;
             foreach (FluidInventory tank in fuelTanks)
-            { h += tank.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas); o += tank.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas); gas += tank.GasMoles; }
+            {
+                h += tank.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas);
+                o += tank.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas); gas += tank.GasMoles;
+                liquidFuelLiters += (double)FluidUnits.MolToLiquidLiters(tank.Catalog.Find(ShipFuel.LiquidFuelId),
+                    tank.GetAvailableMoles(ShipFuel.LiquidFuelId, FluidPhase.Liquid));
+            }
             var flight = GetFlight(shipId);
             double gravity = TryGetBody(flight.BodyId, out BodyState body) ? body.SurfaceGravity : 0d;
             string ratio = o > 0m ? (h / o).ToString("0.###") + ":1" : FlatWorldLocalizationService.GetUiText("缺氧气");
             string twr = gravity > 0d ? (usableThrust / Math.Max(.001d, assembly.MassKg * gravity)).ToString("0.##") : FlatWorldLocalizationService.GetUiText("失重");
             return FlatWorldLocalizationService.GetUiFormat("有效控制台 {0}/{1} · 可用引擎 {2} · 合格燃料推力 {3:0.##} N · 推重比 {4}", powered, consoles, actuators.Count, usableThrust, twr) + "\n" +
-                FlatWorldLocalizationService.GetUiFormat("真实储气 氢 {0:0.###} mol / 氧 {1:0.###} mol · 氢氧比 {2} · 杂气 {3:0.###} mol", h, o, ratio, Math.Max(0m, gas - h - o));
+                FlatWorldLocalizationService.GetUiFormat("真实储气 氢 {0:0.###} mol / 氧 {1:0.###} mol · 氢氧比 {2} · 杂气 {3:0.###} mol", h, o, ratio, Math.Max(0m, gas - h - o)) + "\n" +
+                FlatWorldLocalizationService.GetUiFormat("液体燃油 {0:0.###} L", liquidFuelLiters);
         }
 
         // 手动推力与导航制动共用真实动力授权，无输入或失去动力时保持当前速度。
@@ -273,7 +276,6 @@ namespace FlatWorld.Spaceflight
 
         private double GetAvailableEngineThrust()
         {
-            projectedFuelBudgets.Clear(); projectedFuelStock.Clear();
             double thrust = 0d;
             foreach (ShipActuator engine in actuators)
                 thrust += engine.Device.Configuration.EngineThrustNewtons * GetEngineFuelAuthority(engine);
@@ -284,64 +286,22 @@ namespace FlatWorld.Spaceflight
         {
             if (engine.Device == null || engine.Machine.Definition.Fluid == null) return 0d;
             using var nodeScope = MachineWorld.UseNodeScope(engine.Machine);
-            MachineWorld.CollectFluidSupplyRoutes(engine.Machine, "main", FluidPhase.Gas, engineFuelIds, fuelSupplyWorkspace);
             decimal required = (decimal)engine.Device.Configuration.FuelMolesPerSecond;
             if (required <= 0m) return 0d;
-            decimal supplied = 0m;
-            visitedFuelInventories.Clear();
-            for (int index = 0; index < fuelSupplyWorkspace.Nodes.Count; index++)
-            {
-                FluidNetworkGraph.SupplyNode source = fuelSupplyWorkspace.Nodes[index];
-                FluidInventory inventory = MachineWorld.GetPhaseFluidInventory(source.Node, source.Chamber, FluidPhase.Gas);
-                if (!visitedFuelInventories.Add(inventory) || !ShipFuel.IsEligible(inventory, engine.Device.Configuration)) continue;
-                if (!projectedFuelStock.TryGetValue(inventory, out decimal remaining))
-                    projectedFuelStock[inventory] = remaining = ShipFuel.AvailableReactionMoles(inventory, engine.Device.Configuration);
-                double budget = MachineWorld.GetFluidSupplyStandardLiters(fuelSupplyWorkspace, index, 1d, false, projectedFuelBudgets);
-                decimal amount = Math.Min(required - supplied, Math.Min(remaining, FluidUnits.StandardLitersToMol((decimal)budget) / 3m));
-                if (amount <= 0m) continue;
-                projectedFuelStock[inventory] = remaining - amount;
-                MachineWorld.ReserveFluidSupplyProjection(fuelSupplyWorkspace, index,
-                    (double)FluidUnits.MolToStandardLiters(amount * 3m), projectedFuelBudgets);
-                supplied += amount;
-                if (supplied >= required) break;
-            }
-            return (double)(supplied / required);
+            decimal available = ShipFuel.AvailableReactionMoles(MachineWorld.GetFluidInventory(engine.Machine), engine.Device.Configuration);
+            return (double)(Math.Min(required, available) / required);
         }
 
         private double ConsumeEngineFuel(ShipActuator actuator, double throttle, double seconds)
         {
             ShipDeviceState engine = actuator.Device;
-            ShipPartConfiguration configuration = engine.Configuration;
-            decimal request = AtmosphereService.Quantize((decimal)(configuration.FuelMolesPerSecond * throttle * seconds));
-            if (request <= 0m) return 0d;
-            decimal consumed = 0m;
             using var nodeScope = MachineWorld.UseNodeScope(actuator.Machine);
-            MachineWorld.CollectFluidSupplyRoutes(actuator.Machine, "main", FluidPhase.Gas, engineFuelIds, fuelSupplyWorkspace);
-            visitedFuelInventories.Clear();
-            for (int index = 0; index < fuelSupplyWorkspace.Nodes.Count; index++)
-            {
-                FluidNetworkGraph.SupplyNode source = fuelSupplyWorkspace.Nodes[index];
-                FluidInventory tank = MachineWorld.GetPhaseFluidInventory(source.Node, source.Chamber, FluidPhase.Gas);
-                if (!visitedFuelInventories.Add(tank)) continue;
-                decimal amount = Math.Min(request - consumed, ShipFuel.AvailableReactionMoles(tank, configuration));
-                double liters = MachineWorld.GetFluidSupplyStandardLiters(fuelSupplyWorkspace, index, seconds, true);
-                amount = Math.Min(amount, FluidUnits.StandardLitersToMol((decimal)liters) / 3m);
-                amount = Math.Min(amount, MachineWorld.GetFluidSupplyStock(fuelSupplyWorkspace, index, FluidIds.Hydrogen, FluidPhase.Gas) / 2m);
-                amount = Math.Min(amount, MachineWorld.GetFluidSupplyStock(fuelSupplyWorkspace, index, FluidIds.Oxygen, FluidPhase.Gas));
-                amount = AtmosphereService.Quantize(amount);
-                if (amount > 0m && ShipFuel.TryBurn(tank, amount, out _))
-                {
-                    // 扣真实气体后同步冻结库存与整条路径预算，不借旁船或断开的储罐补气。
-                    MachineWorld.ConsumeFluidSupplyBudget(fuelSupplyWorkspace, index, new[]
-                    { new FluidRequirement(FluidIds.Hydrogen, FluidPhase.Gas, amount * 2m),
-                      new FluidRequirement(FluidIds.Oxygen, FluidPhase.Gas, amount) });
-                    consumed += amount;
-                }
-                if (consumed >= request) break;
-            }
-            double actual = throttle * (double)(consumed / request);
+            // 管网只负责补充本机工作库存，推进只烧本机真实存料，避免跨引擎重复授权。
+            double actual = ShipFuel.ConsumeStoredChemicalPropellants(MachineWorld.GetFluidInventory(actuator.Machine),
+                engine.Configuration, throttle, seconds);
             if (actual > 0d)
             {
+                MachineWorld.StateChanged(actuator.Machine);
                 engineOutputs.TryGetValue(engine.PieceId, out float previous);
                 engineOutputs[engine.PieceId] = Mathf.Clamp01(previous + (float)actual);
             }

@@ -26,6 +26,7 @@
 
 ## 飞船与角色HUD
 
+- 化学引擎的 `ShipChemicalEnginePanelSession` 复用 `UI_IndustrialFluid`：正文左侧并排显示蓝色液量条和绿色气量条，读取本机工作库存；普通/GM、地面/已装船共用，其他船件继续沿用原面板。
 - ShipPanelSession命令/按钮共用入口，有限反馈历史不抢用户滚动；FuelInteraction只绑通用模块、标题读定义，任务/教程入口用书籍/UI_ReadableBook。命令后按PreferredInputDevice.KeyboardMouse恢复焦点，支持手机外接键盘。
 - `ShipGroundAssembly.RequestLaunch` 统一权威点火请求；机器删除至船快照到达期间保控制台，服务端成功与同次船体/乘员状态齐后才切船控/反馈。GM生成/补给走ShipFixedStructureBuilder.RequestBuild/RequestRefill，发包成功不等于业务成功。
 - PlayerShipFlightHUD读SpaceSession只读快照/正式落地凭证，UI_ShipFlightHUD与构建器同步；Tracker管驾驶/退出/重进/完成短提示，正高度不舍入零，安全区内避坐标/Buff/真实摇杆。

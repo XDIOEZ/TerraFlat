@@ -32,6 +32,8 @@ internal static class MachinePanelBuiltIns
 
     private static IMachinePanelSession CreateShipDevice(MachineEntity entity)
     {
+        if (entity.Logic is ShipDeviceLogic { HasChemicalPropellantStorage: true })
+            return new ShipChemicalEnginePanelSession(entity);
         // 地面只有控制台打开船控，其余设备沿用普通机器状态面板。
         if (entity.ScopeKey?.StartsWith("ship:", StringComparison.Ordinal) == true ||
             FlatWorld.Spaceflight.SpaceSession.ResolvePartConfiguration(entity.Snapshot)?.Kind == FlatWorld.Spaceflight.ShipPieceKind.Console)
@@ -53,6 +55,88 @@ internal static class MachinePanelBuiltIns
             () => logic.Status, () => logic.ActionLabel, () => logic.CanAct);
     }
 
+    #endregion
+}
+
+/// <summary>化学引擎复用工业正式面板，只显示本机两相库存和供电状态。</summary>
+internal sealed class ShipChemicalEnginePanelSession : MachinePanelSession
+{
+    #region 化学引擎气液读数
+    private readonly BasePanel panel;
+    private readonly MechanicalPanelView view;
+    private Coroutine readings;
+
+    public ShipChemicalEnginePanelSession(MachineEntity entity) : base(entity, bindDefaultInventories: false)
+    {
+        try
+        {
+            panel = CreatePanel(GameRes.Instance.GetPrefab("UI_IndustrialFluid"));
+            view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException("化学引擎缺少正式工业面板。");
+            ConfigureChemicalPropellantStorageLayout(view);
+            view.CloseButton.onClick.AddListener(Close);
+            panel.Closed += StopRefreshingChemicalPropellantReadings;
+        }
+        catch { Dispose(); throw; }
+    }
+
+    internal static void ConfigureChemicalPropellantStorageLayout(MechanicalPanelView view)
+    {
+        BasePanel panel = view.GetComponent<BasePanel>();
+        view.SetProcessingVisible(false);
+        view.SetBatteryVisible(false);
+        view.SetFluidLayout(true, false, false);
+        view.SetGasCapacityVisible(true);
+        view.SetActionVisible(false);
+        foreach (TMP_InputField field in panel.GetComponentsInChildren<TMP_InputField>(true)) field.gameObject.SetActive(false);
+        foreach (string id in new[] { "FWUI_ApplyFluidSettings", "FWUI_FluidPhase", "FWUI_RotateFluid" })
+            panel.GetButton(id)?.gameObject.SetActive(false);
+        // 两条容量条并排留在正文左侧，状态滚动区独占其余宽度。
+        RectTransform gas = (RectTransform)view.GasCapacity.transform;
+        RectTransform liquid = (RectTransform)view.WaterCapacity.transform;
+        gas.anchorMin = liquid.anchorMin; gas.anchorMax = liquid.anchorMax; gas.pivot = liquid.pivot;
+        gas.sizeDelta = liquid.sizeDelta; gas.anchoredPosition = liquid.anchoredPosition + new Vector2(104f, 0f);
+        RectTransform status = (RectTransform)view.StatusScroll.transform;
+        status.offsetMin = new Vector2(222f, 12f); status.offsetMax = new Vector2(-12f, -12f);
+    }
+
+    protected override void RefreshPresentation()
+    {
+        if (view == null) return;
+        using var nodeScope = MachineWorld.UseNodeScope(Entity);
+        FluidInventory contents = MachineWorld.GetFluidInventory(Entity);
+        view.Title.text = Entity.Definition.Content?.Definition.DisplayName ?? Entity.Definition.Id;
+        view.Status.text = Logic.Status;
+        view.SetWaterCapacity((float)contents.GetLiquidLiters(), (float)MachineWorld.GetFluidVolumeLiters(Entity));
+        view.SetGasCapacity((float)((double)FluidUnits.MolToStandardLiters(contents.GasMoles) /
+            MachineWorld.GetFluidGasCapacityStandardLiters(Entity)));
+    }
+
+    protected override void OnOpened()
+    {
+        StopRefreshingChemicalPropellantReadings();
+        readings = panel.StartCoroutine(RefreshChemicalPropellantReadingsWhileOpen());
+    }
+
+    private IEnumerator RefreshChemicalPropellantReadingsWhileOpen()
+    {
+        var delay = new WaitForSecondsRealtime(.2f);
+        while (IsOpen) { yield return delay; Refresh(); }
+        readings = null;
+    }
+
+    private void StopRefreshingChemicalPropellantReadings()
+    {
+        if (readings != null && panel != null) panel.StopCoroutine(readings);
+        readings = null;
+    }
+
+    protected override void DisposePresentation()
+    {
+        StopRefreshingChemicalPropellantReadings();
+        if (panel == null) return;
+        panel.Closed -= StopRefreshingChemicalPropellantReadings;
+        if (view != null) view.CloseButton.onClick.RemoveListener(Close);
+    }
     #endregion
 }
 

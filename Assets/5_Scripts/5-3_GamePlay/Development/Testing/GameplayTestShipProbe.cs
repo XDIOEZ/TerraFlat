@@ -896,22 +896,24 @@ public static class GameplayTestShipProbe
 
     #region 实际燃料库存
 
-    private static JObject CaptureFuel()
+    public static JObject CaptureFuel(FluidCatalog catalog = null)
     {
-        var fuel = new FluidInventory();
+        catalog ??= FluidCatalog.Default;
+        FluidBatch Gas(string id, decimal moles) => FluidInventory.CreateBatch(catalog.Find(id), moles, 0m, 293.15d);
+        var fuel = new FluidInventory(catalog: catalog);
         bool hydrogenAdded = fuel.TryAdd(Gas(FluidIds.Hydrogen, 20m), 10000d, .001d);
         bool oxygenAdded = fuel.TryAdd(Gas(FluidIds.Oxygen, 10m), 10000d, .001d);
         var engine = new ShipPartConfiguration();
         bool eligible = ShipFuel.IsEligible(fuel, engine);
         decimal available = ShipFuel.AvailableReactionMoles(fuel, engine);
         // 燃烧直接扣除真实氢氧库存，失败请求必须保留原来的组分数量。
-        bool burned = ShipFuel.TryBurn(fuel, 3m, out double energy);
+        bool burned = ShipFuel.TryBurn(fuel, engine, 3m, out double energy);
         decimal hydrogenAfter = fuel.GetGasMoles(FluidIds.Hydrogen), oxygenAfter = fuel.GetGasMoles(FluidIds.Oxygen);
-        bool overdraw = ShipFuel.TryBurn(fuel, 100m, out double overdrawEnergy);
+        bool overdraw = ShipFuel.TryBurn(fuel, engine, 100m, out double overdrawEnergy);
         decimal hydrogenAfterFailure = fuel.GetGasMoles(FluidIds.Hydrogen), oxygenAfterFailure = fuel.GetGasMoles(FluidIds.Oxygen);
         bool impurityAdded = fuel.TryAdd(Gas(FluidIds.Nitrogen, 10m), 10000d, .001d);
         bool impureEligible = ShipFuel.IsEligible(fuel, engine);
-        var singleGas = new FluidInventory();
+        var singleGas = new FluidInventory(catalog: catalog);
         bool singlePrepared = singleGas.TryAdd(Gas(FluidIds.Hydrogen, 20m), 10000d, .001d);
         bool singleEligible = ShipFuel.IsEligible(singleGas, engine);
         return new JObject
@@ -923,8 +925,41 @@ public static class GameplayTestShipProbe
             ["overdrawAccepted"] = overdraw, ["overdrawEnergy"] = overdrawEnergy,
             ["hydrogenAfterFailure"] = hydrogenAfterFailure, ["oxygenAfterFailure"] = oxygenAfterFailure,
             ["impurityAdded"] = impurityAdded, ["impureEligible"] = impureEligible,
-            ["singleGasPrepared"] = singlePrepared, ["singleGasEligible"] = singleEligible
+            ["singleGasPrepared"] = singlePrepared, ["singleGasEligible"] = singleEligible,
+            ["liquidFuelOxygenRatio"] = engine.LiquidFuelOxygenMolesPerMole,
+            ["dualFuelCases"] = new JArray
+            {
+                CapturePropellantBurnSample(catalog, "hydrogen_rich", 10m, 2m, 0m),
+                CapturePropellantBurnSample(catalog, "oxygen_rich", 2m, 5m, 0m),
+                CapturePropellantBurnSample(catalog, "oil_oxygen_limited", 0m, 3m, 1m),
+                CapturePropellantBurnSample(catalog, "oil_fuel_limited", 0m, 5m, .05m),
+                CapturePropellantBurnSample(catalog, "oil_without_oxygen", 0m, 0m, 1m),
+                CapturePropellantBurnSample(catalog, "oxygen_only", 0m, 5m, 0m),
+                CapturePropellantBurnSample(catalog, "hydrogen_only", 5m, 0m, 0m),
+                CapturePropellantBurnSample(catalog, "dual_fuel_switch", 2m, 3m, 1m),
+                CapturePropellantBurnSample(catalog, "idle", 2m, 3m, 1m, throttle: 0d),
+                CapturePropellantBurnSample(catalog, "wrong_liquid", 0m, 3m, 1m, liquidId: FluidIds.Nitrogen)
+            }
         };
+    }
+
+    private static JObject CapturePropellantBurnSample(FluidCatalog catalog, string name, decimal hydrogen,
+        decimal oxygen, decimal liquid, double throttle = 1d, string liquidId = ShipFuel.LiquidFuelId)
+    {
+        var inventory = new FluidInventory(catalog: catalog);
+        bool prepared = true;
+        foreach (var input in new[] { (FluidIds.Hydrogen, hydrogen, 0m), (FluidIds.Oxygen, oxygen, 0m), (liquidId, 0m, liquid) })
+            if (input.Item2 + input.Item3 > 0m)
+                prepared &= inventory.TryAdd(FluidInventory.CreateBatch(catalog.Find(input.Item1), input.Item2, input.Item3, 293.15d), 100d, .001d);
+        var engine = new ShipPartConfiguration();
+        bool eligible = ShipFuel.IsEligible(inventory, engine);
+        double output = ShipFuel.ConsumeStoredChemicalPropellants(inventory, engine, throttle, 1d);
+        decimal h = inventory.GetGasMoles(FluidIds.Hydrogen), o = inventory.GetGasMoles(FluidIds.Oxygen);
+        decimal remainingLiquid = inventory.GetLiquidMoles(liquidId);
+        double nextOutput = ShipFuel.ConsumeStoredChemicalPropellants(inventory, engine, throttle, 1d);
+        return new JObject { ["name"] = name, ["prepared"] = prepared, ["eligible"] = eligible,
+            ["output"] = output, ["hydrogenAfter"] = h, ["oxygenAfter"] = o, ["liquidAfter"] = remainingLiquid,
+            ["nextOutput"] = nextOutput };
     }
 
     #endregion

@@ -799,9 +799,34 @@ do
         near(data.overdrawEnergy, 0, "失败的反应不应产生能量")
         near(data.hydrogenAfterFailure, data.hydrogenAfter, "失败反应错误消耗了氢气")
         near(data.oxygenAfterFailure, data.oxygenAfter, "失败反应错误消耗了氧气")
-        assert(data.impurityAdded == true and data.impureEligible == false, "过量杂气燃料必须被拒绝")
+        assert(data.impurityAdded == true and data.impureEligible == true, "无关气体应留存，不能阻止已有氢氧按比例燃烧")
         assert(data.singleGasPrepared == true and data.singleGasEligible == false, "只有氢气的库存不能作为合格燃料")
-        return "覆盖真实二比一燃料、限制组分、原子扣量、能量、超额请求回滚、杂气和缺氧拒绝。"
+        near(data.liquidFuelOxygenRatio, 20, "燃油默认耗氧比应保持明确配置")
+        local expected = {
+            hydrogen_rich = {true, 2/3, 6, 0, 0, 0},
+            oxygen_rich = {true, 1/3, 0, 4, 0, 0},
+            oil_oxygen_limited = {true, 1, 0, 0, .85, 0},
+            oil_fuel_limited = {true, 1/3, 0, 4, 0, 0},
+            oil_without_oxygen = {false, 0, 0, 0, 1, 0},
+            oxygen_only = {false, 0, 0, 5, 0, 0},
+            hydrogen_only = {false, 0, 5, 0, 0, 0},
+            dual_fuel_switch = {true, 1, 0, 0, .9, 0},
+            idle = {true, 0, 2, 3, 1, 0},
+            wrong_liquid = {false, 0, 0, 3, 1, 0}
+        }
+        assert(#data.dualFuelCases == 10, "缺少化学引擎双燃料边界样本")
+        for _, sample in ipairs(data.dualFuelCases) do
+            local e = expected[sample.name]
+            assert(e and sample.prepared == true and sample.eligible == e[1], sample.name .. " 点火资格错误")
+            near(sample.output, e[2], sample.name .. " 本步实际出力错误")
+            near(sample.hydrogenAfter, e[3], sample.name .. " 氢气余量错误")
+            near(sample.oxygenAfter, e[4], sample.name .. " 氧气余量错误")
+            near(sample.liquidAfter, e[5], sample.name .. " 液体余量错误")
+            near(sample.nextOutput, e[6], sample.name .. " 缺料或空载后仍在出力")
+            expected[sample.name] = nil
+        end
+        assert(next(expected) == nil, "双燃料样本重复或遗漏")
+        return "覆盖氢氧2:1、非理想混合余气停机、燃油耗尽/缺氧、双燃料切换、空载、错误液体与原子回滚。"
     end, "飞船真实氢氧燃料反应")
 end
 
@@ -930,4 +955,20 @@ do
         end
         return "覆盖 " .. #data.scenarios .. " 个租约场景、" .. frameCount .. " 帧及多人保留/折返清退"
     end, "四向与角落预加载、多人租约、折返和极值清退")
+end
+
+-- 化学引擎调用正式布局入口，窄窗口下两条余量条仍与正文分开。
+for _, width in ipairs({720, 640, 540, 480}) do
+    test.system("ui_settings", "fluid_panel_layout", {panel = "UI_IndustrialFluid", mode = "chemical-engine", width = width}, function(data)
+        local water, gas, body, status = data.water.bounds, data.gas.bounds, data.body, data.status
+        assert(data.waterVisible and data.gas.visible and not data.fuelVisible and not data.slotRowVisible,
+            "化学引擎应只显示气液双条，不显示投料槽和固体燃料条")
+        assert(water.left >= body.left and gas.right < status.left and status.right <= body.right,
+            "化学引擎容量条越界或与正文重叠")
+        assert(water.right < gas.left and math.abs(water.height - gas.height) < .1 and status.width >= 200,
+            "化学引擎双条未并排对齐，或正文剩余宽度不足")
+        assert(data.water.color.b > data.water.color.g and data.gas.color.g > data.gas.color.b
+            and data.gas.direction == 2 and not data.gas.interactable, "气液容量条颜色、方向或只读状态错误")
+        assert(not data.actionInBody, "化学引擎拆回操作不能占用正文")
+    end, "化学引擎双容量条布局：" .. width)
 end

@@ -14,7 +14,7 @@ internal static class Program
         => new() { Id = id, Direction = direction, Mode = mode, Phase = phase };
     private static MachineEntity Node(int id, int x, int y, string kind, params FluidMachinePortDefinition[] ports)
         => new() { Id = id, Cell = new(x, y), Definition = new() { Id = kind, Layer = kind == "pipe" ? 2 : 0,
-            Fluid = new() { Kind = kind, Ports = ports, ThroughputLitersPerSecond = 1000, SingleGas = false } } };
+            Fluid = new() { Kind = kind, Ports = ports, ThroughputLitersPerSecond = 1000, GasCapacityStandardLiters = 1000, VolumeLiters = 5 } } };
     private static FluidNetworkGraph Graph(params MachineEntity[] nodes)
     {
         var graph = new FluidNetworkGraph(cell => cell); graph.Rebuild(nodes); MachineWorld.SetGraph(graph); return graph;
@@ -68,11 +68,11 @@ internal static class Program
         AddGas(inventory, FluidIds.Hydrogen, 20m); AddGas(inventory, FluidIds.Oxygen, 10m);
         var configuration = new ShipPartConfiguration();
         Check(ShipFuel.IsEligible(inventory, configuration), "2:1 real tank is qualified fuel");
-        Check(ShipFuel.TryBurn(inventory, 1m, out double energy) && energy == 483600d, "burn real fuel atomically");
+        Check(ShipFuel.TryBurn(inventory, configuration, 1m, out double energy) && energy == 483600d, "burn real fuel atomically");
         Check(inventory.GetGasMoles(FluidIds.Hydrogen) == 18m && inventory.GetGasMoles(FluidIds.Oxygen) == 9m, "burn consumes exactly 2H:1O");
-        Check(!ShipFuel.TryBurn(inventory, 10m, out _) && inventory.GetGasMoles(FluidIds.Hydrogen) == 18m, "insufficient oxygen leaves hydrogen intact");
+        Check(!ShipFuel.TryBurn(inventory, configuration, 10m, out _) && inventory.GetGasMoles(FluidIds.Hydrogen) == 18m, "insufficient oxygen leaves hydrogen intact");
         inventory.State.Ports.Add(new FluidOutputReservation { PortId = "reserved", FluidId = FluidIds.Hydrogen, GasMoles = 18m });
-        Check(!ShipFuel.TryBurn(inventory, 1m, out _), "reserved fuel cannot be burned again");
+        Check(!ShipFuel.TryBurn(inventory, configuration, 1m, out _), "reserved fuel cannot be burned again");
         inventory.State.Ports.Clear(); MachineWorld.Freeze(nodes, 1d);
         var routes = Routes(graph, engine); int source = routes.Nodes.FindIndex(value => value.Node == tank);
         Check(MachineWorld.GetFluidSupplyStandardLiters(routes, source, 1d, true) == 1000d, "whole path obeys normal throughput");
@@ -85,15 +85,95 @@ internal static class Program
         Check(MachineWorld.GetFluidSupplyStandardLiters(routes, source, 1d, true) == 50d, "prediction leaves live budgets untouched");
         pipe.Definition.Fluid.ThroughputLitersPerSecond = 1000;
         var recipe = new[] { new FluidRequirement(FluidIds.Hydrogen, FluidPhase.Gas, 2m), new FluidRequirement(FluidIds.Oxygen, FluidPhase.Gas, 1m) };
-        Check(ShipFuel.TryBurn(inventory, 1m, out _), "consume budget fixture fuel");
+        Check(ShipFuel.TryBurn(inventory, configuration, 1m, out _), "consume budget fixture fuel");
         MachineWorld.ConsumeFluidSupplyBudget(routes, source, recipe);
         double used = (double)FluidUnits.MolToStandardLiters(3m);
         Check(Math.Abs(MachineWorld.GetFluidSupplyStandardLiters(routes, source, 1d, true) - (1000d - used)) < 1e-9, "burn deducts shared budget along all nodes");
         Check(MachineWorld.GetFluidSupplyStock(routes, source, FluidIds.Oxygen, FluidPhase.Gas) == 8m, "burn deducts frozen source oxygen stock");
         AddGas(inventory, FluidIds.Hydrogen, 2m); AddGas(inventory, FluidIds.Oxygen, 1m);
         Check(MachineWorld.GetFluidSupplyStock(routes, source, FluidIds.Oxygen, FluidPhase.Gas) == 8m, "new gas does not pass frozen stock in same machine step");
-        MachineWorld.SetFluidTransferBudget(MachineWorld.GetFluidInventory(pipe), 0d);
+        MachineWorld.ConsumeFluidRouteBudget(routes, source, 1000d);
         Check(MachineWorld.GetFluidSupplyStandardLiters(routes, source, 1d, true) == 0d, "shared exhausted pipe blocks subsequent engine draws");
+    }
+    #endregion
+
+    #region 双燃料消耗和两相补充
+    private static FluidInventory Fuel(decimal hydrogen, decimal oxygen, decimal oil, string liquidId = ShipFuel.LiquidFuelId)
+    {
+        var inventory = new FluidInventory();
+        if (hydrogen > 0m) AddGas(inventory, FluidIds.Hydrogen, hydrogen);
+        if (oxygen > 0m) AddGas(inventory, FluidIds.Oxygen, oxygen);
+        if (oil > 0m) Check(inventory.TryAdd(FluidInventory.CreateBatch(inventory.Catalog.Find(liquidId), 0m, oil, 293.15d),
+            100d, .001d), "prepare liquid fuel");
+        return inventory;
+    }
+
+    private static void DualFuelReactions()
+    {
+        var configuration = new ShipPartConfiguration();
+        foreach (var sample in new[]
+        {
+            ("hydrogen rich", 10m, 2m, 0m, 2d/3d, 6m, 0m, 0m),
+            ("oxygen rich", 2m, 5m, 0m, 1d/3d, 0m, 4m, 0m),
+            ("oil oxygen limited", 0m, 3m, 1m, 1d, 0m, 0m, .85m),
+            ("oil fuel limited", 0m, 5m, .05m, 1d/3d, 0m, 4m, 0m),
+            ("oil without oxygen", 0m, 0m, 1m, 0d, 0m, 0m, 1m),
+            ("oxygen only", 0m, 5m, 0m, 0d, 0m, 5m, 0m),
+            ("hydrogen only", 5m, 0m, 0m, 0d, 5m, 0m, 0m),
+            ("dual fuel switch", 2m, 3m, 1m, 1d, 0m, 0m, .9m)
+        })
+        {
+            var inventory = Fuel(sample.Item2, sample.Item3, sample.Item4);
+            double output = ShipFuel.ConsumeStoredChemicalPropellants(inventory, configuration, 1d, 1d);
+            Check(Math.Abs(output - sample.Item5) < 1e-12d, sample.Item1 + " actual output");
+            Check(inventory.GetGasMoles(FluidIds.Hydrogen) == sample.Item6 && inventory.GetGasMoles(FluidIds.Oxygen) == sample.Item7 &&
+                inventory.GetLiquidMoles(ShipFuel.LiquidFuelId) == sample.Item8, sample.Item1 + " exact leftovers");
+            Check(ShipFuel.ConsumeStoredChemicalPropellants(inventory, configuration, 1d, 1d) == 0d, sample.Item1 + " stops on missing component");
+        }
+        var idle = Fuel(2m, 3m, 1m);
+        string before = JsonConvert.SerializeObject(idle.State);
+        Check(ShipFuel.ConsumeStoredChemicalPropellants(idle, configuration, 0d, 1d) == 0d &&
+            before == JsonConvert.SerializeObject(idle.State), "idle engine keeps every component");
+        Check(!ShipFuel.TryBurn(idle, configuration, 4m, out _) && before == JsonConvert.SerializeObject(idle.State), "overdraw rolls back both phases");
+        var impure = Fuel(10m, 3m, 0m); AddGas(impure, FluidIds.Nitrogen, 100m);
+        Check(ShipFuel.TryBurn(impure, configuration, 3m, out _) && impure.GetGasMoles(FluidIds.Nitrogen) == 100m,
+            "unrelated gas remains and does not impose a perfect mixture");
+        var wrong = Fuel(0m, 3m, 1m, FluidIds.Nitrogen);
+        Check(!ShipFuel.IsEligible(wrong, configuration) && !ShipFuel.TryBurn(wrong, configuration, 1m, out _), "nonfuel liquid cannot ignite");
+        var reserved = Fuel(0m, 3m, 1m);
+        reserved.State.Ports.Add(new FluidOutputReservation { PortId = "other-consumer", FluidId = FluidIds.Oxygen, GasMoles = 3m });
+        Check(!ShipFuel.TryBurn(reserved, configuration, 1m, out _) && reserved.GetLiquidMoles(ShipFuel.LiquidFuelId) == 1m,
+            "reserved oxygen cannot consume liquid fuel");
+        configuration.LiquidFuelOxygenMolesPerMole = 10f;
+        var configured = Fuel(0m, 1m, 1m);
+        Check(ShipFuel.TryBurn(configured, configuration, 1m, out _) && configured.GetLiquidMoles(ShipFuel.LiquidFuelId) == .9m,
+            "liquid oxygen ratio follows engine configuration");
+    }
+
+    private static void DualPhaseRefilling()
+    {
+        MachineWorld.Reset();
+        var gasPort = Port("gas", 1, "input");
+        var liquidPort = Port("liquid", 0, "input", "liquid"); liquidPort.FluidId = ShipFuel.LiquidFuelId;
+        var engine = Node(41, 0, 0, "receiver", gasPort, liquidPort);
+        var pipe = Node(42, 0, 1, "pipe", Port("down", 3), Port("up", 1));
+        var liquidPipe = Node(45, 1, 0, "pipe", Port("left", 2, phase: "liquid"), Port("right", 0, phase: "liquid"));
+        var gasTank = Node(43, 0, 2, "tank", Port("down", 3));
+        var liquidTank = Node(44, 2, 0, "tank", Port("left", 2, phase: "liquid"));
+        var nodes = new[] { engine, pipe, gasTank, liquidTank, liquidPipe };
+        Graph(nodes);
+        var gas = MachineWorld.GetFluidInventory(gasTank); AddGas(gas, FluidIds.Oxygen, 6m);
+        var liquid = MachineWorld.GetFluidInventory(liquidTank);
+        Check(liquid.TryAdd(FluidInventory.CreateBatch(liquid.Catalog.Find(ShipFuel.LiquidFuelId), 0m, 1m, 293.15d), 5d, .001d), "liquid source prepared");
+        MachineWorld.Freeze(nodes, 1d); MachineWorld.SupplyForTest(engine, 1f);
+        var local = MachineWorld.GetFluidInventory(engine);
+        Check(local.GetGasMoles(FluidIds.Oxygen) > 0m && local.GetLiquidMoles(ShipFuel.LiquidFuelId) > 0m, "formal consumer fills both phases");
+        Check(local.GetGasMoles(FluidIds.Oxygen) + gas.GetGasMoles(FluidIds.Oxygen) == 6m &&
+            local.GetLiquidMoles(ShipFuel.LiquidFuelId) + liquid.GetLiquidMoles(ShipFuel.LiquidFuelId) == 1m, "refilling conserves both real sources");
+        Check(ShipFuel.ConsumeStoredChemicalPropellants(local, new ShipPartConfiguration(), 1d, 1d) == 1d, "filled oil and oxygen provide full output");
+        var restored = new FluidInventory(JsonConvert.DeserializeObject<FluidInventoryState>(JsonConvert.SerializeObject(local.State)));
+        Check(restored.GetGasMoles(FluidIds.Oxygen) == local.GetGasMoles(FluidIds.Oxygen) &&
+            restored.GetLiquidMoles(ShipFuel.LiquidFuelId) == local.GetLiquidMoles(ShipFuel.LiquidFuelId), "stored propellants survive inventory snapshot");
     }
     #endregion
 
@@ -123,7 +203,9 @@ internal static class Program
         Check(engines.Length == 6, "GM has six receiver engines");
         foreach (var engine in engines)
         {
-            var intake = engine.Definition.Fluid.Ports.Single();
+            var intake = engine.Definition.Fluid.Ports.Single(port => port.Phase == "gas");
+            Check(engine.Definition.Fluid.PullFromNetwork && engine.Definition.Fluid.GasCapacityStandardLiters == 1000, "engine owns and refills actual gas buffer");
+            Check(engine.Definition.Fluid.Ports.Any(port => port.Phase == "liquid" && port.FluidId == ShipFuel.LiquidFuelId && port.Direction != intake.Direction), "engine uses independent cells for gas and liquid pipes");
             Vector2Int cell = engine.Cell + MechanicalNetworkGraph.Directions[(intake.Direction + engine.RotationQuarterTurns) & 3];
             Check(graph.PipeAt(cell) != null, $"engine {engine.Cell} intake has physical pipe");
             var routes = Routes(graph, engine);
@@ -134,7 +216,7 @@ internal static class Program
 
     private static void Main()
     {
-        Connectivity(); AtomicFuelAndBudgets(); Template();
+        Connectivity(); AtomicFuelAndBudgets(); DualFuelReactions(); DualPhaseRefilling(); Template();
         Console.WriteLine($"SHIP_FUEL_OK assertions={assertions}");
     }
 }

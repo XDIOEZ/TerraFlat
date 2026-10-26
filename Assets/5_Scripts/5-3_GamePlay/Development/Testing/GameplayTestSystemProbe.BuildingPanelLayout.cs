@@ -133,11 +133,26 @@ public static partial class GameplayTestSystemProbe
                 view.SetProcessingVisible(false);
                 view.SetFluidLayout(false, false, false);
                 string mode = args.Value<string>("mode") ?? "fuel";
-                view.SetFluidLayout(mode == "fuel", mode == "fuel", mode != "storage");
+                if (mode == "chemical-engine") ShipChemicalEnginePanelSession.ConfigureChemicalPropellantStorageLayout(view);
+                else view.SetFluidLayout(mode == "fuel", mode == "fuel", mode != "storage");
                 foreach (ItemSlot_UI slot in instance.GetComponentsInChildren<ItemSlot_UI>(true))
-                    if (slot.name.StartsWith("输入_", StringComparison.Ordinal)) slot.gameObject.SetActive(mode != "storage");
+                    if (slot.name.StartsWith("输入_", StringComparison.Ordinal)) slot.gameObject.SetActive(mode != "storage" && mode != "chemical-engine");
             }
+            if (args.Value<float?>("width") is float width)
+                ((RectTransform)instance.transform).SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
             JObject result = CaptureFluidPanelInstance(instance, panelName);
+            if (panelName == "UI_IndustrialFluid")
+            {
+                UnityEngine.UI.Slider gas = view.GasCapacity;
+                UnityEngine.Color color = gas.targetGraphic.color;
+                result["gas"] = new JObject
+                {
+                    ["bounds"] = CaptureBuildingRectBounds((RectTransform)gas.transform, (RectTransform)instance.transform),
+                    ["visible"] = gas.gameObject.activeSelf, ["direction"] = (int)gas.direction,
+                    ["interactable"] = gas.interactable,
+                    ["color"] = new JObject { ["r"] = color.r, ["g"] = color.g, ["b"] = color.b }
+                };
+            }
             RectTransform window = panelName == "UI_WaterVessel"
                 ? FindBuildingPanelRect(instance, "设置对话框") : (RectTransform)instance.transform;
             // 真实主题入口不能把领域容量条重新染灰或压成半条轨道。

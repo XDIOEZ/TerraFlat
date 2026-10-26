@@ -322,8 +322,9 @@ namespace FlatWorld.Spaceflight
                     throw new InvalidOperationException("管道缺少标准中枢或北向管臂。");
                 body = hub; northArm = north;
                 // 管臂在本管中枢后面，整根管仍作为一组排在地板上方。
-                if (pipeSortingGroup == null)
-                    pipeSortingGroup = visual.GetComponent<SortingGroup>() ?? visual.gameObject.AddComponent<SortingGroup>();
+                // TryGetComponent 避免缺失组件的编辑器占位引用被误当成有效排序组。
+                if (pipeSortingGroup == null && !visual.TryGetComponent(out pipeSortingGroup))
+                    pipeSortingGroup = visual.gameObject.AddComponent<SortingGroup>();
                 pipeSortingGroup.enabled = true;
                 pipeSortingGroup.sortingLayerID = visual.sortingLayerID;
                 pipeSortingGroup.sortingOrder = visual.sortingOrder;

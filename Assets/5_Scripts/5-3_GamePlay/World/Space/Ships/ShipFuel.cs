@@ -1,31 +1,58 @@
 using System;
+using System.Collections.Generic;
 
 namespace FlatWorld.Spaceflight
 {
     public static class ShipFuel
     {
-        #region 真实混合航空燃料
-        public static bool IsEligible(FluidInventory inventory, ShipPartConfiguration engine)
-        {
-            if (inventory == null || inventory.GasMoles <= 0m) return false;
-            decimal h = inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas);
-            decimal o = inventory.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas);
-            if (h <= 0m || o <= 0m) return false;
-            double ratio = (double)(h / o);
-            return Math.Abs(ratio / 2d - 1d) <= engine.FuelRatioTolerance &&
-                (double)((inventory.GasMoles - h - o) / inventory.GasMoles) <= engine.MaximumImpurityFraction;
-        }
-        public static decimal AvailableReactionMoles(FluidInventory inventory, ShipPartConfiguration engine)
-            => IsEligible(inventory, engine) ? Math.Min(inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas) / 2m,
-                inventory.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas)) : 0m;
+        #region 化学引擎两相燃料原子消耗
+        public const string LiquidFuelId = "core:fuel_oil";
 
-        public static bool TryBurn(FluidInventory inventory, decimal oxygenMoles, out double energyJoules)
+        public static bool IsEligible(FluidInventory inventory, ShipPartConfiguration engine)
+            => AvailableReactionMoles(inventory, engine) > 0m;
+
+        public static decimal AvailableReactionMoles(FluidInventory inventory, ShipPartConfiguration engine)
+        {
+            if (inventory == null || engine == null) return 0m;
+            decimal fuel = inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas) / 2m;
+            decimal oxygenPerFuel = GetLiquidFuelOxygenRatio(engine);
+            if (oxygenPerFuel > 0m)
+                fuel += inventory.GetAvailableMoles(LiquidFuelId, FluidPhase.Liquid) * oxygenPerFuel;
+            return Math.Min(inventory.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas), fuel);
+        }
+
+        private static decimal GetLiquidFuelOxygenRatio(ShipPartConfiguration engine)
+            => float.IsFinite(engine.LiquidFuelOxygenMolesPerMole) && engine.LiquidFuelOxygenMolesPerMole > 0f
+                ? (decimal)engine.LiquidFuelOxygenMolesPerMole : 0m;
+
+        public static bool TryBurn(FluidInventory inventory, ShipPartConfiguration engine, decimal oxygenMoles, out double energyJoules)
         {
             energyJoules = 0d;
-            if (oxygenMoles <= 0m || !inventory.TryTakeRecipe(new[]
-            { new FluidRequirement(FluidIds.Hydrogen, FluidPhase.Gas, oxygenMoles * 2m),
-              new FluidRequirement(FluidIds.Oxygen, FluidPhase.Gas, oxygenMoles) }, out _)) return false;
-            energyJoules = (double)oxygenMoles * 483600d; return true;
+            if (oxygenMoles <= 0m || AvailableReactionMoles(inventory, engine) < oxygenMoles) return false;
+            decimal hydrogenReaction = Math.Min(oxygenMoles,
+                inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas) / 2m);
+            decimal liquidReaction = oxygenMoles - hydrogenReaction;
+            decimal liquidMoles = liquidReaction > 0m ? liquidReaction / GetLiquidFuelOxygenRatio(engine) : 0m;
+            var requirements = new List<FluidRequirement>(3)
+            { new(FluidIds.Oxygen, FluidPhase.Gas, oxygenMoles) };
+            if (hydrogenReaction > 0m) requirements.Add(new(FluidIds.Hydrogen, FluidPhase.Gas, hydrogenReaction * 2m));
+            if (liquidMoles > 0m) requirements.Add(new(LiquidFuelId, FluidPhase.Liquid, liquidMoles));
+            // 先烧氢氧再补燃油，所有反应物一次扣除，余气和无关组分留在原库存。
+            if (!inventory.TryTakeRecipe(requirements, out _)) return false;
+            energyJoules = (double)hydrogenReaction * 483600d + (double)liquidMoles * 8600000d;
+            return true;
+        }
+
+        public static double ConsumeStoredChemicalPropellants(FluidInventory inventory, ShipPartConfiguration engine,
+            double throttle, double seconds)
+        {
+            if (engine == null || !float.IsFinite(engine.FuelMolesPerSecond) || engine.FuelMolesPerSecond <= 0f ||
+                !double.IsFinite(throttle) || !double.IsFinite(seconds) || throttle <= 0d || seconds <= 0d) return 0d;
+            throttle = Math.Min(1d, throttle);
+            decimal requested = (decimal)(engine.FuelMolesPerSecond * throttle * seconds);
+            decimal available = Math.Min(requested, AvailableReactionMoles(inventory, engine));
+            return available > 0m && TryBurn(inventory, engine, available, out _)
+                ? throttle * (double)(available / requested) : 0d;
         }
         #endregion
     }

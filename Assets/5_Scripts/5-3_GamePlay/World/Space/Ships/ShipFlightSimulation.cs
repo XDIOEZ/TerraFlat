@@ -94,7 +94,7 @@ namespace FlatWorld.Spaceflight
             double thrust, double mass, double gravity) => failure switch
         {
             ShipIgnitionThrustFailure.NoFuel => FlatWorldLocalizationService.GetUiText(
-                "点火失败：引擎没有可用燃料，请检查燃料配比、管路和阀门。"),
+                "点火失败：引擎需要氢气和氧气，或燃油和氧气；请检查本机余量、管路和阀门。"),
             ShipIgnitionThrustFailure.Overweight => FlatWorldLocalizationService.GetUiFormat(
                 "点火失败：飞船超重。当前总质量 {0:0.##} kg，现有推力在当前重力下最多支撑 {1:0.##} kg，请减载或增加可用推力。",
                 mass, gravity > 0d ? thrust / gravity : 0d),

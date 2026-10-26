@@ -12,7 +12,7 @@
 - `NaturalFillFraction` 默认 .2，只限制自然补气目标，不排已有超量。动力泵可达到 `GasCapacityStandardLiters`。铁/钢便携罐沿同一固定容量规则，不因充满运行旧超压逻辑。
 - 气/液装填设备各有三个真实容器槽，按0→1→2装，满槽或不适合槽可跳过；实际物品和权威库存走原有库存命令。液体通过 `ILiquidTransferPort` 装实际液体容器。
 - 出口 `OutputLitersPerSecond` 支持0关闭，负初值使用定义默认速率。气体按组分比例排入所属环境；液体按 `(出口,物质)` 累积10L额度，单步可排多整份，通过正式地表接口接收；拒绝保留来源，部分接收退回余量。爆罐溢液同样每1份扣10L，不足10L保留队列。
-- `PullFromNetwork` 用于既有供气器/培育器等消费者，从可达来源补充自己的工作腔；普通储罐不启用。外部船舱、呼吸、天气仍复用共用物质定义和热力学，工业不再调用那些求解器。
+- `PullFromNetwork` 用于供气器/培育器及船用化学引擎等消费者，从可达来源补充自己的工作腔；普通储罐不启用。外部船舱、呼吸、天气仍复用共用物质定义和热力学，工业不再调用那些求解器。
 - 保存、联机、拆回只带各设备本地库存或组合罐的单格份额；客户端逐包合入权威份额，不重新分摊尚未收齐的总量。快照排除 `engine:` 运行预约。迁移先撤运行预约再整批交接；销毁仅释放本格份额，失败保留未完成部分。模板补给按各成员定义累加一次。
 - 固定结构工业模板用 `gas.standardLiters` 与固定容量校验；`CabinGas` 继续原有气压初始化。线协议随序列化结构变化升版，不做旧存档兼容。
 - 离线生产回归：`dotnet run --project Tools/Tests/IndustrialGasNetworks/IndustrialGasNetworks.Tests.csproj --configuration Release`。正式Lua按 IndustrialFluids 清单执行；离线不等于Unity玩法或真实双端验收。用户PlayMode时不刷新、暂停、退出或切场景。

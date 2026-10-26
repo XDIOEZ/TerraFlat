@@ -2263,34 +2263,14 @@ public static partial class GameplayTestSystemProbe
     {
         var catalog = new FluidCatalog();
         var definitions = new List<FluidDefinition>();
-        foreach (string id in new[] { FluidIds.Hydrogen, FluidIds.Oxygen, FluidIds.Nitrogen })
+        foreach (string id in new[] { FluidIds.Hydrogen, FluidIds.Oxygen, FluidIds.Nitrogen, ShipFuel.LiquidFuelId })
             definitions.Add(new FluidDefinition(new FluidDefinitionDto { Id = id, MolarMassKgPerMol = .02d,
                 LiquidDensityKgPerLiter = 1d, GasHeatCapacityJPerMolKelvin = 20d,
                 LiquidHeatCapacityJPerMolKelvin = 40d, LitersPerServing = .1m }));
         catalog.Register(definitions);
-        FluidBatch Gas(string id, decimal moles) => FluidInventory.CreateBatch(catalog.Find(id), moles, 0m, 293.15d);
-        var fuel = new FluidInventory(catalog: catalog);
-        bool hydrogenAdded = fuel.TryAdd(Gas(FluidIds.Hydrogen, 20m), 10000d, .001d);
-        bool oxygenAdded = fuel.TryAdd(Gas(FluidIds.Oxygen, 10m), 10000d, .001d);
-        var engine = new ShipPartConfiguration();
-        bool eligible = ShipFuel.IsEligible(fuel, engine);
-        decimal available = ShipFuel.AvailableReactionMoles(fuel, engine);
-        bool burned = ShipFuel.TryBurn(fuel, 3m, out double energy);
-        decimal hydrogenAfter = fuel.GetGasMoles(FluidIds.Hydrogen), oxygenAfter = fuel.GetGasMoles(FluidIds.Oxygen);
-        bool overdraw = ShipFuel.TryBurn(fuel, 100m, out double overdrawEnergy);
-        decimal hydrogenAfterFailure = fuel.GetGasMoles(FluidIds.Hydrogen), oxygenAfterFailure = fuel.GetGasMoles(FluidIds.Oxygen);
-        bool impurityAdded = fuel.TryAdd(Gas(FluidIds.Nitrogen, 10m), 10000d, .001d);
-        bool impureEligible = ShipFuel.IsEligible(fuel, engine);
-        var single = new FluidInventory(catalog: catalog);
-        bool singlePrepared = single.TryAdd(Gas(FluidIds.Hydrogen, 20m), 10000d, .001d);
-        return new JObject { ["scope"] = "production-domain", ["operation"] = "ship_fuel",
-            ["hydrogenAdded"] = hydrogenAdded, ["oxygenAdded"] = oxygenAdded, ["eligible"] = eligible,
-            ["availableReactionMoles"] = (double)available, ["burnAccepted"] = burned,
-            ["burnRequestedOxygen"] = 3d, ["energyJoules"] = energy, ["hydrogenAfter"] = (double)hydrogenAfter,
-            ["oxygenAfter"] = (double)oxygenAfter, ["overdrawAccepted"] = overdraw, ["overdrawEnergy"] = overdrawEnergy,
-            ["hydrogenAfterFailure"] = (double)hydrogenAfterFailure, ["oxygenAfterFailure"] = (double)oxygenAfterFailure,
-            ["impurityAdded"] = impurityAdded, ["impureEligible"] = impureEligible,
-            ["singleGasPrepared"] = singlePrepared, ["singleGasEligible"] = ShipFuel.IsEligible(single, engine) };
+        JObject result = GameplayTestShipProbe.CaptureFuel(catalog);
+        result["scope"] = "production-domain"; result["operation"] = "ship_fuel";
+        return result;
     }
     #endregion
 }

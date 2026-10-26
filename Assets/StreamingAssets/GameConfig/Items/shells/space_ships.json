@@ -1296,7 +1296,7 @@
       "id": "ShipChemicalEngine",
       "parent": "BuildingBody_Base",
       "gameName": "化学燃料引擎-建筑",
-      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、进气口朝上，安装时 R 旋转。进气口需通过管道接通氢氧燃料罐，同时接通电线。",
+      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方无遮挡。默认喷口朝下、气体输入口朝上、燃油输入口朝右，安装时 R 旋转，同时需要电力。可储存1000标准升气体和5升燃油，经对应管道补充。优先按2:1消耗氢气和氧气，也可消耗燃油和氧气；缺少所需反应物即停机，多余成分保留。",
       "durability": 240,
       "maxDurability": 240,
       "amount": 1,
@@ -1381,8 +1381,7 @@
               "SupplyMolesPerSecond": 0,
               "EngineThrustNewtons": 60000,
               "FuelMolesPerSecond": 3,
-              "FuelRatioTolerance": 0.1,
-              "MaximumImpurityFraction": 0.05
+              "LiquidFuelOxygenMolesPerMole": 20
             }
           }
         },
@@ -1404,7 +1403,7 @@
       "id": "ShipChemicalEngine_GM",
       "parent": "ShipChemicalEngine",
       "gameName": "GM重载测试引擎-建筑",
-      "description": "GM测试飞船专用，提供600000 N推力，使用真实氢氧燃料和电力，方便携带大量测试物资起飞。",
+      "description": "GM测试飞船专用，提供600000 N推力，需要电力。支持氢氧气体或燃油加氧气，真实存料、消耗与普通化学引擎一致。",
       "modules": {
         "建筑模块": {
           "data": {
@@ -1429,7 +1428,7 @@
       "id": "ShipChemicalEngine_GM_Summoner",
       "parent": "ShipChemicalEngine_Summoner",
       "gameName": "GM重载测试引擎",
-      "description": "GM测试飞船专用，提供600000 N推力，使用真实氢氧燃料和电力，方便携带大量测试物资起飞。",
+      "description": "GM测试飞船专用，提供600000 N推力，需要电力。支持氢氧气体或燃油加氧气，真实存料、消耗与普通化学引擎一致。",
       "modules": {
         "建筑模块": {
           "data": {
@@ -1455,7 +1454,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "化学燃料引擎",
-      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、进气口朝上，安装时 R 旋转。进气口需通过管道接通氢氧燃料罐，同时接通电线。",
+      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方无遮挡。默认喷口朝下、气体输入口朝上、燃油输入口朝右，安装时 R 旋转，同时需要电力。可储存1000标准升气体和5升燃油，经对应管道补充。优先按2:1消耗氢气和氧气，也可消耗燃油和氧气；缺少所需反应物即停机，多余成分保留。",
       "durability": 240,
       "maxDurability": 240,
       "amount": 1,
@@ -1552,8 +1551,7 @@
               "SupplyMolesPerSecond": 0,
               "EngineThrustNewtons": 60000,
               "FuelMolesPerSecond": 3,
-              "FuelRatioTolerance": 0.1,
-              "MaximumImpurityFraction": 0.05
+              "LiquidFuelOxygenMolesPerMole": 20
             }
           }
         }

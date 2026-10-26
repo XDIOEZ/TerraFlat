@@ -11,12 +11,14 @@
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/FluidNetworkGraph.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/FluidMachineDefinition.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.FluidSupply.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/IndustrialFluidTransfer.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidState.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidInventory.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidRequirement.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidUnits.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Catalog/FluidDefinition.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/ShipFuel.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/ShipPartConfiguration.cs" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>$(MSBuildSDKsPath)/../Newtonsoft.Json.dll</HintPath>
     </Reference>

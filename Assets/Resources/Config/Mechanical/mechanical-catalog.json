@@ -1094,6 +1094,8 @@
         "MinimumGasSpaceLiters": 1,
         "ThroughputLitersPerSecond": 1000,
         "BatchStandardLiters": 10,
+        "GasCapacityStandardLiters": 1000,
+        "PullFromNetwork": true,
         "SingleGas": false,
         "Ports": [
           {
@@ -1102,6 +1104,14 @@
             "Direction": 1,
             "Mode": "input",
             "Phase": "gas"
+          },
+          {
+            "Id": "liquid-fuel",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "input",
+            "Phase": "liquid",
+            "FluidId": "core:fuel_oil"
           }
         ]
       },
@@ -1126,6 +1136,8 @@
         "MinimumGasSpaceLiters": 1,
         "ThroughputLitersPerSecond": 1000,
         "BatchStandardLiters": 10,
+        "GasCapacityStandardLiters": 1000,
+        "PullFromNetwork": true,
         "SingleGas": false,
         "Ports": [
           {
@@ -1134,6 +1146,14 @@
             "Direction": 1,
             "Mode": "input",
             "Phase": "gas"
+          },
+          {
+            "Id": "liquid-fuel",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "input",
+            "Phase": "liquid",
+            "FluidId": "core:fuel_oil"
           }
         ]
       },

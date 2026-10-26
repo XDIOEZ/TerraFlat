@@ -29,3 +29,5 @@
 
 - PlayMode `space_gameplay.lua` 真实跨星区只沿 `right` 一次越界并返回，保留租约、场景、相机、角色、时钟及光照完整断言；其它方向仍由快速规则 `sector_rules.lua` 覆盖，避免同一现场重复迁移。单方向集成不能等价于所有方向的实景覆盖。
 - `presentation_interpolation` 只调用正式 `SpacePresentationPose` / `SpacePresentationTrack`，Lua 断言前后端点、中点、越界限制、跨正负 π 最短旋转、极大星区跨界精度、质量中心变化时船格原点稳定、船件/乘员/镜头共同局部变换和重置不拖尾。物理固定步仍为每秒 50 次；本轮已运行 Lua 规则与登记的 PlayMode 回归，实际飞行画面由用户验收。
+
+- `ship_fuel` 的规则与 PlayMode 领域断言共用生产采样：氢氧2:1扣量、氢/氧过量后的残留停机、燃油缺氧/耗尽、双燃料接续、空载、异种液体和原子失败。化学引擎两相管网、本机库存及快照另由离线 `Tools/Tests/ShipFuel` 覆盖；领域断言与离线通过不替代真实起降或面板视觉验收。

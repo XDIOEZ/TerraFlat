@@ -10,6 +10,8 @@ public sealed class ShipDeviceLogic : MachineLogic
     public ShipDeviceLogic(MachineEntity entity) : base(entity)
         => pieceId = entity.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
     public float RatedPowerWatts => Entity.Definition.Electrical?.PowerWatts ?? 0f;
+    public bool HasChemicalPropellantStorage => Entity.Definition.Fluid?.PullFromNetwork == true &&
+        System.Array.Exists(Entity.Definition.Fluid.Ports, port => port.Phase == "liquid" && port.FluidId == ShipFuel.LiquidFuelId);
     public float CurrentPowerWatts => IsDeviceRunning && Entity.ElectricalPowerRatio > 0f
         ? UnityEngine.Mathf.Clamp(UnityEngine.Mathf.Min(Entity.ElectricalSuppliedWatts, Entity.ElectricalRequestedWatts), 0f, RatedPowerWatts) : 0f;
     public bool IsDeviceRunning
@@ -30,7 +32,14 @@ public sealed class ShipDeviceLogic : MachineLogic
             if (session != null && session.FindPiece(pieceId, out _, out ShipPieceState piece) && !piece.IsOperational)
                 return DescribePower("已瘫痪", false);
             bool running = IsDeviceRunning;
-            return DescribePower(!running ? "已停机" : Entity.ElectricalPowerRatio >= .999f ? "已供电" : "缺少电力", running);
+            string power = DescribePower(!running ? "已停机" : Entity.ElectricalPowerRatio >= .999f ? "已供电" : "缺少电力", running);
+            if (!HasChemicalPropellantStorage) return power;
+            using var nodeScope = MachineWorld.UseNodeScope(Entity);
+            FluidInventory contents = MachineWorld.GetFluidInventory(Entity);
+            return power + "\n" + FlatWorld.Localization.FlatWorldLocalizationService.GetUiFormat(
+                "氢气 {0:0.###} mol / 氧气 {1:0.###} mol\n燃油 {2:0.###} L\n氢氧按 2:1 消耗，或使用燃油和氧气；缺少反应物即停机。",
+                contents.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas),
+                contents.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas), contents.GetLiquidLiters());
         }
     }
     private string DescribePower(string state, bool operational)
