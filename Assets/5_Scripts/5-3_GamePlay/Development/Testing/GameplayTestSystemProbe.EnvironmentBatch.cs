@@ -15,6 +15,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/environment_batch_revision", EnvironmentBatchRevision);
         operations.Add("environment/water_current_reuse", EnvironmentWaterCurrentReuse);
         operations.Add("environment/estuary_current", EnvironmentEstuaryCurrent);
+        operations.Add("environment/ocean_shore_current", EnvironmentOceanShoreCurrent);
+        operations.Add("environment/ocean_shore_geometry", EnvironmentOceanShoreGeometry);
         operations.Add("environment/surface_work_queue", EnvironmentSurfaceWorkQueue);
         operations.Add("environment/surface_broadcast_gate", EnvironmentSurfaceBroadcastGate);
         operations.Add("environment/surface_snow_batch", EnvironmentSurfaceSnowBatch);

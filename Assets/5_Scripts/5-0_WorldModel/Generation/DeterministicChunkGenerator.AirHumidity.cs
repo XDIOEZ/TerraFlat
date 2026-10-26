@@ -62,20 +62,32 @@ namespace FlatWorld.WorldModel
             // 海水生成与供湿共用一个带邻域的离岸窗口，避免每个水源重新扫描岸线。
             public float GetOceanInitialLiquidDepth(int worldX, int worldY)
             {
+                GetOceanBathymetryCoordinates(worldX, worldY, out int x, out int y);
+                return oceanBathymetry.GetInitialLiquidDepth(x, y);
+            }
+
+            public OceanShoreCurrentSample GetOceanCurrent(int worldX, int worldY, double windX, double windY)
+            {
+                GetOceanBathymetryCoordinates(worldX, worldY, out int x, out int y);
+                return oceanBathymetry.GetOceanCurrent(x, y, windX, windY);
+            }
+
+            private void GetOceanBathymetryCoordinates(int worldX, int worldY, out int x, out int y)
+            {
                 int padding = (int)Math.Ceiling(humiditySettings.RadiusTiles);
                 oceanBathymetry ??= new OceanShoreDistanceBathymetryKernel(
                     request.Address.ChunkOrigin.X - padding, request.Address.ChunkOrigin.Y - padding,
                     request.Profile.Width + padding * 2, request.Profile.Height + padding * 2,
                     settings.SeaLevel, settings.OceanShelfWidthTiles, settings.OceanSlopeWidthTiles,
-                    sampleHeight, cancellation);
-                int x = worldX - request.Address.ChunkOrigin.X + padding;
-                int y = worldY - request.Address.ChunkOrigin.Y + padding;
+                    sampleHeight, cancellation, settings.OceanCurrentSearchDistanceTiles,
+                    settings.OceanCurrentTransitionWidthTiles);
+                x = worldX - request.Address.ChunkOrigin.X + padding;
+                y = worldY - request.Address.ChunkOrigin.Y + padding;
                 if (request.Topology.IsWrapped)
                 {
                     x = PositiveMod(x, request.Topology.Span.X);
                     y = PositiveMod(y, request.Topology.Span.Y);
                 }
-                return oceanBathymetry.GetInitialLiquidDepth(x, y);
             }
 
             public void Dispose() => oceanBathymetry?.Dispose();

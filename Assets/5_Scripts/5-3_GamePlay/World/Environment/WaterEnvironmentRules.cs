@@ -40,23 +40,42 @@ public static class WaterEnvironmentRules
         return 2f * (positiveFlow / (1f + positiveFlow));
     }
 
-    /// <summary>海洋表层流向由世界风场决定，物理和水面表现共用此单位方向。</summary>
+    /// <summary>只有缺少海岸流场的数据才使用背景风向。</summary>
     public static Vector2 ResolveOceanCurrentDirection(Vector2 windDirection) =>
         windDirection.sqrMagnitude > 0.000001f ? windDirection.normalized : Vector2.zero;
 
-    /// <summary>运行时、冷区块与海面表现共用河口扇流；不改变海水身份和推动规则。</summary>
-    public static Vector2 ResolveOceanCurrentDirection(ChunkTerrainData terrain, int x, int y)
+    /// <summary>海岸分带和河口共用带强度向量，弱流区不会因归一化恢复满速。</summary>
+    public static Vector2 ResolveOceanCurrentVector(ChunkTerrainData terrain, int x, int y)
     {
-        terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
-        terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
+        bool hasCurrentX = terrain.TryGetEnvironmentValue(OceanShoreCurrentKernel.DirectionXLayer, x, y, out float currentX);
+        bool hasCurrentY = terrain.TryGetEnvironmentValue(OceanShoreCurrentKernel.DirectionYLayer, x, y, out float currentY);
+        Vector2 oceanCurrent;
+        if (hasCurrentX && hasCurrentY)
+            oceanCurrent = Vector2.ClampMagnitude(new Vector2(currentX, currentY), 1f);
+        else
+        {
+            terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
+            terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
+            oceanCurrent = ResolveOceanCurrentDirection(new Vector2(windX, windY));
+        }
+
         terrain.TryGetEnvironmentValue(EstuaryCurrentKernel.InfluenceLayer, x, y, out float influence);
-        if (influence <= 0f) return ResolveOceanCurrentDirection(new Vector2(windX, windY));
+        if (influence <= 0f) return oceanCurrent;
         terrain.TryGetEnvironmentValue(EstuaryCurrentKernel.DirectionXLayer, x, y, out float plumeX);
         terrain.TryGetEnvironmentValue(EstuaryCurrentKernel.DirectionYLayer, x, y, out float plumeY);
-        EstuaryCurrentKernel.ResolveDirection(windX, windY,
-            new EstuaryCurrentSample(plumeX, plumeY, influence), out double flowX, out double flowY);
-        return new Vector2((float)flowX, (float)flowY);
+        if (new Vector2(plumeX, plumeY).sqrMagnitude <= 0.000001f) return oceanCurrent;
+        float plumeInfluence = Mathf.Clamp01(influence);
+        float strength = Mathf.Lerp(oceanCurrent.magnitude, 1f, plumeInfluence);
+        // 底流趋零时由河口接管方向，避免弱流分界两侧出现有限速度的突然转向。
+        float directionalInfluence = strength > 0f ? plumeInfluence / strength : 1f;
+        EstuaryCurrentKernel.ResolveDirection(oceanCurrent.x, oceanCurrent.y,
+            new EstuaryCurrentSample(plumeX, plumeY, directionalInfluence), out double flowX, out double flowY);
+        return new Vector2((float)flowX, (float)flowY) * strength;
     }
+
+    /// <summary>仅方向的消费者保留此入口，实际推速必须读取完整流向量。</summary>
+    public static Vector2 ResolveOceanCurrentDirection(ChunkTerrainData terrain, int x, int y) =>
+        ResolveOceanCurrentVector(terrain, x, y).normalized;
 
     /// <summary>风力只控制海浪速度、振幅和白沫，不参与潮汐相位。</summary>
     public static Vector3 ResolveOceanWaveFactors(float windStrength)

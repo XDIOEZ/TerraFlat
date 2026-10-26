@@ -37,7 +37,7 @@ public readonly struct RuntimeTerrainTileSample
     public int LiquidTypeIndex => Terrain?.GetLiquidTypeIndex(LocalCell.x, LocalCell.y) ?? 0;
 }
 
-/// <summary>运行时水面流动类型；河流使用水文下游方向，海洋使用世界风场方向。</summary>
+/// <summary>运行时水面流动类型；河流读取下游方向，海洋读取海岸分带与河口流场。</summary>
 public enum RuntimeWaterCurrentKind : byte
 {
     None = 0,
@@ -46,7 +46,7 @@ public enum RuntimeWaterCurrentKind : byte
     ExperimentalLiquid = 3
 }
 
-/// <summary>世界水格的单位流向和原始流量，供漂浮物等玩法统一读取。</summary>
+/// <summary>世界水格的单位流向和流量；海洋 Flow 是零到一的强度，供玩法统一读取。</summary>
 public readonly struct RuntimeWaterCurrentSample
 {
     public RuntimeWaterCurrentSample(RuntimeWaterCurrentKind kind, Vector2 direction, float flow)
@@ -421,7 +421,7 @@ public partial class ChunkMgr
 
     /// <summary>
     /// 读取当前水格的表层流向。河流使用生成阶段保存的真实下游方向；
-    /// 海洋在入海口延续扇形下游流场，其余使用地形风场方向，湖泊保持静止。
+    /// 海洋读取近岸回推与外海离岸流，入海口优先延续下游，湖泊保持静止。
     /// </summary>
     public bool TryGetRuntimeWaterCurrent(Vector2 worldPosition,
         out RuntimeWaterCurrentSample current)
@@ -476,12 +476,12 @@ public partial class ChunkMgr
         if (kind != RuntimeWaterCurrentKind.Ocean)
             return false;
 
-        Vector2 oceanDirection = WaterEnvironmentRules.ResolveOceanCurrentDirection(terrain, local.x, local.y);
-        if (oceanDirection == Vector2.zero)
+        Vector2 oceanCurrent = WaterEnvironmentRules.ResolveOceanCurrentVector(terrain, local.x, local.y);
+        if (oceanCurrent == Vector2.zero)
             return false;
 
         current = new RuntimeWaterCurrentSample(
-            RuntimeWaterCurrentKind.Ocean, oceanDirection, 1f);
+            RuntimeWaterCurrentKind.Ocean, oceanCurrent, oceanCurrent.magnitude);
         return true;
     }
 

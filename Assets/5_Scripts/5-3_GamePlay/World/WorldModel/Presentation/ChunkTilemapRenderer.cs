@@ -486,6 +486,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         changed.AffectsEnvironmentLayer("riverFlowX") || changed.AffectsEnvironmentLayer("riverFlowY") ||
         changed.AffectsEnvironmentLayer("riverFlow") || changed.AffectsEnvironmentLayer("windX") ||
         changed.AffectsEnvironmentLayer("windY") ||
+        changed.AffectsEnvironmentLayer(OceanShoreCurrentKernel.DirectionXLayer) ||
+        changed.AffectsEnvironmentLayer(OceanShoreCurrentKernel.DirectionYLayer) ||
         changed.AffectsEnvironmentLayer(EstuaryCurrentKernel.DirectionXLayer) ||
         changed.AffectsEnvironmentLayer(EstuaryCurrentKernel.DirectionYLayer) ||
         changed.AffectsEnvironmentLayer(EstuaryCurrentKernel.InfluenceLayer);
@@ -1444,13 +1446,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         // 湖泊仅在河口读取邻河的表面扰动，绝不写回权威水流或推动漂浮物。
         if (kind == RuntimeWaterCurrentKind.Ocean)
         {
-            terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
-            terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
-            Vector2 fallback = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
-            Vector2 oceanBottomLeft = ResolveOceanCornerDirection(terrain, x - 1, y - 1, fallback);
-            Vector2 oceanBottomRight = ResolveOceanCornerDirection(terrain, x, y - 1, fallback);
-            Vector2 oceanTopLeft = ResolveOceanCornerDirection(terrain, x - 1, y, fallback);
-            Vector2 oceanTopRight = ResolveOceanCornerDirection(terrain, x, y, fallback);
+            Vector2 fallback = WaterEnvironmentRules.ResolveOceanCurrentVector(terrain, x, y);
+            Vector2 oceanBottomLeft = ResolveOceanCornerCurrentVector(terrain, x - 1, y - 1, fallback);
+            Vector2 oceanBottomRight = ResolveOceanCornerCurrentVector(terrain, x, y - 1, fallback);
+            Vector2 oceanTopLeft = ResolveOceanCornerCurrentVector(terrain, x - 1, y, fallback);
+            Vector2 oceanTopRight = ResolveOceanCornerCurrentVector(terrain, x, y, fallback);
             instanceData.FlowX = new Vector4(oceanBottomLeft.x, oceanBottomRight.x, oceanTopLeft.x, oceanTopRight.x);
             instanceData.FlowY = new Vector4(oceanBottomLeft.y, oceanBottomRight.y, oceanTopLeft.y, oceanTopRight.y);
             return;
@@ -1500,8 +1500,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         return count > 0 ? velocity / count : Vector2.zero;
     }
 
-    /// <summary>海面流向按共享格角平均，入海口波纹与物品漂流读取同一扇面。</summary>
-    private Vector2 ResolveOceanCornerDirection(ChunkTerrainData terrain, int left, int bottom, Vector2 fallback)
+    /// <summary>共享格角保留海流强度，零流格也参与平均以平滑分界弱流区。</summary>
+    private Vector2 ResolveOceanCornerCurrentVector(ChunkTerrainData terrain, int left, int bottom, Vector2 fallback)
     {
         Vector2 direction = Vector2.zero;
         int count = 0;
@@ -1516,16 +1516,16 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                     (SurfaceBiomeKind)cell.BiomeId != SurfaceBiomeKind.Ocean)
                     continue;
 
-                Vector2 sample = WaterEnvironmentRules.ResolveOceanCurrentDirection(source, localX, localY);
-                if (sample.sqrMagnitude <= 0.000001f)
+                source.TryGetEnvironmentValue("riverKind", localX, localY, out float riverKind);
+                if (WaterEnvironmentRules.ResolveCurrentKind(Mathf.RoundToInt(riverKind), true) != RuntimeWaterCurrentKind.Ocean)
                     continue;
 
-                direction += sample;
+                direction += WaterEnvironmentRules.ResolveOceanCurrentVector(source, localX, localY);
                 count++;
             }
         }
 
-        return count > 0 ? direction.normalized : fallback;
+        return count > 0 ? direction / count : fallback;
     }
 
     /// <summary>RGBA 分别记录左、右、下、上岸线方向。</summary>

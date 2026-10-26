@@ -13,9 +13,9 @@ def main():
     response = max((ROOT / "Library/Bee").rglob("FlatWorld.WorldModel.rsp"),
                    key=lambda path: path.stat().st_mtime)
     text = response.read_text(encoding="utf-8-sig")
-    # PlayMode may defer import; include the new production files explicitly.
-    for name in ("EstuaryCurrentKernel.cs", "DeterministicChunkGenerator.Estuary.cs"):
-        source = f"Assets/5_Scripts/5-0_WorldModel/Generation/{name}"
+    # PlayMode may defer import; compile every current production dependency.
+    for path in (ROOT / "Assets/5_Scripts/5-0_WorldModel").rglob("*.cs"):
+        source = path.relative_to(ROOT).as_posix()
         if f'"{source}"' not in text:
             text += f'\n"{source}"\n'
     refs = [Path(p) if Path(p).is_absolute() else ROOT / p

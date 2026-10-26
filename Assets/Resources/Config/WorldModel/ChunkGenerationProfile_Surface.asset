@@ -51,6 +51,10 @@ MonoBehaviour:
     Value: 16
   - Id: terrain.ocean.slopeWidthTiles
     Value: 4
+  - Id: terrain.ocean.current.searchDistanceTiles
+    Value: 32
+  - Id: terrain.ocean.current.transitionWidthTiles
+    Value: 3
   - Id: terrain.beachLevel
     Value: 0.51
   - Id: terrain.mountainLevel

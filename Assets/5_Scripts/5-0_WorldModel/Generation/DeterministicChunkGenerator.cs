@@ -410,6 +410,7 @@ namespace FlatWorld.WorldModel
                 volcanic, cancellationToken, batch.SampleCachedHeight);
             float humidityBackground = AirHumiditySettings.FromProfile(request.Profile).Background;
             bool hasEstuary = false;
+            bool hasOceanCurrent = false;
             using (timing?.MeasureStage("terrain.biome") ?? default)
             {
                 batch.ClassifyCore(cancellationToken);
@@ -424,6 +425,7 @@ namespace FlatWorld.WorldModel
                         request.Address.ChunkOrigin.X + x,
                         request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater, lava, volcanic, airHumidity);
                     hasEstuary |= batch.Output[index].Estuary.Influence > 0d;
+                    hasOceanCurrent |= batch.Output[index].HasOceanCurrent;
                     batch.Output[index].AirHumidity = airHumidity.Sample(
                         request.Address.ChunkOrigin.X + x, request.Address.ChunkOrigin.Y + y);
                     batch.Output[index].AirHumidityBackground = humidityBackground;
@@ -431,7 +433,7 @@ namespace FlatWorld.WorldModel
             }
             using (timing?.MeasureStage("terrain.environment_write") ?? default)
             {
-                var layers = new SurfaceEnvironmentWriter(terrain, hasEstuary);
+                var layers = new SurfaceEnvironmentWriter(terrain, hasEstuary, hasOceanCurrent);
                 for (int y = 0; y < terrain.Height; y++)
                 for (int x = 0; x < terrain.Width; x++)
                 {
@@ -476,6 +478,8 @@ namespace FlatWorld.WorldModel
             public float Precipitation;
             public float WindX;
             public float WindY;
+            public bool HasOceanCurrent;
+            public OceanShoreCurrentSample OceanCurrent;
             public float Moisture;
             public float AirHumidity;
             public float AirHumidityBackground;
@@ -499,6 +503,8 @@ namespace FlatWorld.WorldModel
             private readonly float[] precipitation;
             private readonly float[] windX;
             private readonly float[] windY;
+            private readonly float[] oceanCurrentX;
+            private readonly float[] oceanCurrentY;
             private readonly float[] moisture;
             private readonly float[] airHumidity;
             private readonly float[] airHumidityBackground;
@@ -518,7 +524,7 @@ namespace FlatWorld.WorldModel
             private readonly float[] snowDepth;
             private readonly float[] naturalDepthLevels;
 
-            public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain, bool hasEstuary = false)
+            public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain, bool hasEstuary = false, bool hasOceanCurrent = false)
             {
                 height = terrain.GetOrCreateEnvironmentLayer("height");
                 temperature = terrain.GetOrCreateEnvironmentLayer("temperature");
@@ -526,6 +532,8 @@ namespace FlatWorld.WorldModel
                 precipitation = terrain.GetOrCreateEnvironmentLayer("precipitation");
                 windX = terrain.GetOrCreateEnvironmentLayer("windX");
                 windY = terrain.GetOrCreateEnvironmentLayer("windY");
+                oceanCurrentX = hasOceanCurrent ? terrain.GetOrCreateEnvironmentLayer(OceanShoreCurrentKernel.DirectionXLayer) : null;
+                oceanCurrentY = hasOceanCurrent ? terrain.GetOrCreateEnvironmentLayer(OceanShoreCurrentKernel.DirectionYLayer) : null;
                 moisture = terrain.GetOrCreateEnvironmentLayer("moisture");
                 airHumidity = terrain.GetOrCreateEnvironmentLayer(AirHumidityKernel.GeographicLayer);
                 airHumidityBackground = terrain.GetOrCreateEnvironmentLayer(AirHumidityKernel.BackgroundLayer);
@@ -555,6 +563,11 @@ namespace FlatWorld.WorldModel
                 precipitation[index] = value.Precipitation;
                 windX[index] = value.WindX;
                 windY[index] = value.WindY;
+                if (oceanCurrentX != null)
+                {
+                    oceanCurrentX[index] = (float)value.OceanCurrent.X;
+                    oceanCurrentY[index] = (float)value.OceanCurrent.Y;
+                }
                 moisture[index] = value.Moisture;
                 airHumidity[index] = value.AirHumidity;
                 airHumidityBackground[index] = value.AirHumidityBackground;
@@ -773,7 +786,7 @@ namespace FlatWorld.WorldModel
             using var sample = new ChunkTerrainBuffer(1, 1, types);
             sample.SetCell(0, 0, output.Cell); sample.SetLiquid(0, 0, output.LiquidTypeIndex, output.LiquidLevel);
             sample.SetGrass(0, 0, output.Grass);
-            new SurfaceEnvironmentWriter(sample, output.Estuary.Influence > 0d).Write(0, output);
+            new SurfaceEnvironmentWriter(sample, output.Estuary.Influence > 0d, output.HasOceanCurrent).Write(0, output);
             var cellRequest = new ChunkGenerationRequest(request.WorldEpoch,
                 new WorldAddress(request.Address.DimensionId, new Int2(worldX, worldY)), request.WorldSeed,
                 request.RequestVersion, request.Profile, request.Topology);
@@ -1012,6 +1025,9 @@ namespace FlatWorld.WorldModel
                 Precipitation = (float)precipitation,
                 WindX = (float)windX,
                 WindY = (float)windY,
+                HasOceanCurrent = ocean && initialLiquidLevel > 0 && !lavaCell,
+                OceanCurrent = ocean && initialLiquidLevel > 0 && !lavaCell
+                    ? airHumidity.GetOceanCurrent(worldX, worldY, windX, windY) : default,
                 Moisture = (float)moisture,
                 Mountain = mountain ? 1f : 0f,
                 RiverFlow = river ? (float)riverCell.Flow : 0f,

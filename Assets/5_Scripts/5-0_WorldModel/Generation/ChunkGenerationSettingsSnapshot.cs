@@ -286,6 +286,10 @@ namespace FlatWorld.WorldModel
                 WorldSpatialDistanceScale, 1, 128);
             OceanSlopeWidthTiles = ScaleDistance(GetInt(numbers, "terrain.ocean.slopeWidthTiles", 4),
                 WorldSpatialDistanceScale, 1, 64);
+            OceanCurrentSearchDistanceTiles = ScaleDistance(GetInt(numbers, "terrain.ocean.current.searchDistanceTiles", 32),
+                WorldSpatialDistanceScale, 8, 512);
+            OceanCurrentTransitionWidthTiles = ScaleDistance(GetDouble(numbers, "terrain.ocean.current.transitionWidthTiles", 3d),
+                WorldSpatialDistanceScale, 0.25d, 64d);
             OceanSandMinimumHeight = Math.Min(SeaLevel,
                 Clamp01(GetDouble(numbers, "terrain.oceanSandMinimumHeight", 0.498d)));
             BeachLevel = Clamp01(GetDouble(numbers, "terrain.beachLevel", SeaLevel + 0.055d));
@@ -792,6 +796,8 @@ namespace FlatWorld.WorldModel
         public double SeaLevel { get; }
         public int OceanShelfWidthTiles { get; }
         public int OceanSlopeWidthTiles { get; }
+        public int OceanCurrentSearchDistanceTiles { get; }
+        public double OceanCurrentTransitionWidthTiles { get; }
         /// <summary>海洋格达到这个高度后才使用沙底，更深处统一使用石底。</summary>
         public double OceanSandMinimumHeight { get; }
         /// <summary>高于海面但低于这个数时生成沙滩。</summary>

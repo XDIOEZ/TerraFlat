@@ -408,9 +408,9 @@ namespace FlatWorld.Spaceflight
                 current = new RuntimeWaterCurrentSample(kind, direction, flow); return true;
             }
             if (kind != RuntimeWaterCurrentKind.Ocean) return false;
-            Vector2 ocean = WaterEnvironmentRules.ResolveOceanCurrentDirection(terrain, local.x, local.y);
+            Vector2 ocean = WaterEnvironmentRules.ResolveOceanCurrentVector(terrain, local.x, local.y);
             if (ocean == Vector2.zero) return false;
-            current = new RuntimeWaterCurrentSample(kind, ocean, 1f); return true;
+            current = new RuntimeWaterCurrentSample(kind, ocean, ocean.magnitude); return true;
         }
 
         private static bool TryGetColdSample(string worldKey, Vector2 position, out LandingSurfaceSample sample,

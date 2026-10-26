@@ -15,7 +15,7 @@ struct WaterMotionData
     float ocean;
 };
 
-// 海面输入是风向，河流及实验液流输入是实际速度；波浪传播与带动物品的水流分开。
+// 海面输入保留分带强度，河流及实验液流输入实际速度；独立风浪仍由天气控制。
 WaterMotionData ResolveWaterMotion(float2 current, float waterKind)
 {
     WaterMotionData motion = (WaterMotionData)0;
@@ -30,7 +30,7 @@ WaterMotionData ResolveWaterMotion(float2 current, float waterKind)
     motion.waveDirection = dot(_WaveDirection.xy, _WaveDirection.xy) > 0.000001
         ? ResolveWaterFlowAxis(_WaveDirection.xy) : currentAxis;
     // 湖口邻河只提供波浪扰动，静水不会画出单向漂移；实验液流 kind=3 始终顺流。
-    motion.velocity = lerp(current * (1.0 - stillWater), ResolveWaterFlowAxis(current) * 0.15, ocean)
+    motion.velocity = current * lerp(1.0 - stillWater, 0.15, ocean)
         * max(_FlowSpeed, 0.0);
     motion.currentStrength = saturate(length(motion.velocity) / 0.45);
     motion.waveTime = lerp(_Time.y, _OceanWaveTime, ocean) * max(_WaveSpeed, 0.0);
@@ -38,7 +38,7 @@ WaterMotionData ResolveWaterMotion(float2 current, float waterKind)
         max(_OceanWaveFactors.y, 0.05), ocean);
     motion.foamActivity = lerp(lerp(0.15, 1.15, motion.currentStrength),
         max(_OceanWaveFactors.z, 0.0), ocean);
-    motion.tideOffset = ResolveWaterFlowAxis(current)
+    motion.tideOffset = current
         * ResolveTideFlowPhase(0.15) * ocean * 0.045;
     return motion;
 }

@@ -63,8 +63,11 @@ public static class EnvironmentWaterDiagnostics
         Check(WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.River, 0.4f) <
             WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.River, 4f), "流量增大漂移加速");
         Near(WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.None, 99f), 0f, "湖泊静止");
-        Near(WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.Ocean, 0f),
-            WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.Ocean, 99f), "洋流不使用河流流量");
+        Near(WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.Ocean, 0f), 0f, "洋流分界弱流可以静止");
+        Near(WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.Ocean, .5f),
+            WorldItemWaterRules.OceanDriftSpeed * .5f, "洋流保留海岸分带强度");
+        Near(WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.Ocean, 99f),
+            WorldItemWaterRules.OceanDriftSpeed, "洋流强度钳制上限");
         Check(WaterEnvironmentRules.ResolveCurrentKind(1, true) == RuntimeWaterCurrentKind.River, "河口保留河流类型");
         Check(WaterEnvironmentRules.ResolveCurrentKind(2, true) == RuntimeWaterCurrentKind.None, "湖泊优先于海洋群系");
         Check(WaterEnvironmentRules.ResolveCurrentKind(0, true) == RuntimeWaterCurrentKind.Ocean, "海洋独立");

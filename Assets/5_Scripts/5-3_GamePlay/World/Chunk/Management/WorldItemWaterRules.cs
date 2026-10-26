@@ -71,7 +71,7 @@ public static class WorldItemWaterRules
     public static float ResolveDriftSpeed(RuntimeWaterCurrentKind kind, float flow) => kind switch
     {
         RuntimeWaterCurrentKind.River => RiverDriftSpeed * WaterEnvironmentRules.ResolveRiverStrength(flow),
-        RuntimeWaterCurrentKind.Ocean => OceanDriftSpeed,
+        RuntimeWaterCurrentKind.Ocean => OceanDriftSpeed * Mathf.Clamp01(flow),
         RuntimeWaterCurrentKind.ExperimentalLiquid => Mathf.Min(flow, 1f),
         _ => 0f
     };

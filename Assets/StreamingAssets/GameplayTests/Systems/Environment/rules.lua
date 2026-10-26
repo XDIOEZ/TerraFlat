@@ -738,15 +738,128 @@ end, "土壤环境批写、真实变化格、延迟合并通知与单格兼容")
 
 test.system("environment", "water_current_reuse", {}, function(data)
     assert(data.river and data.ocean and data.lakeAndDry,
-        "重复利用的水体样本丢失河流流量、海洋风场，或把湖泊及干格识别为流动")
+        "重复利用的水体样本丢失河流流量、缺层背景洋流，或把湖泊及干格识别为流动")
     assert(data.covered and data.uncovered and data.stoppedRiver and data.drained,
         "水体样本在支撑面变化、河流停流或抽干后没有实时读取权威数据")
     assert(math.abs(data.riverVelocityX - 1.0285714) < .0001 and
         math.abs(data.riverVelocityY - 1.3714286) < .0001 and
         math.abs(data.oceanVelocityX - 1.2) < .0001 and
         math.abs(data.oceanVelocityY - 1.6) < .0001 and data.zeroSpeedVelocity == 0,
-        "水流速度复用后河流流量曲线、海洋定速或零推速规则改变")
+        "水流速度复用后河流流量曲线、背景洋流或零推速规则改变")
 end, "掉落物水流同批复用地块样本，保持流向和液体变化语义")
+
+for _, input in ipairs({
+    {distance = 4, sign = -1}, {distance = 8, sign = -1},
+    {distance = 15.5, sign = -1, weak = true},
+    {distance = 16, sign = 0, weak = true},
+    {distance = 16.5, sign = 1, weak = true},
+    {distance = 24, sign = 1}
+}) do
+    test.system("environment", "ocean_shore_current", input, function(data)
+        local normal_speed = data.x
+        assert(data.strength >= 0 and data.strength <= 1.000001,
+            "海岸洋流超出零到一的强度范围")
+        if input.sign == 0 then
+            assert(data.strength < .000001 and not data.active and data.drift == 0,
+                "分界的零流被背景风或归一化恢复成非零推力")
+        else
+            assert(normal_speed * input.sign > 0 and data.active,
+                "近岸没有朝岸，或外侧没有朝海")
+        end
+        if input.weak then
+            assert(data.strength < .3, "反向过渡区没有保留弱流")
+        end
+        assert(math.abs(data.flow - data.strength) < .000001 and
+            math.abs(data.actorX - data.x * 2) < .00001 and
+            math.abs(data.actorY - data.y * 2) < .00001 and
+            math.abs(data.drift - data.oceanDriftSpeed * data.strength) < .000001,
+            "玩家、漂浮物与水面共用采样时丢失洋流强度")
+        assert(data.mouthX > .999 and math.abs(data.mouthY) < .000001,
+            "河口核心被近岸回流或分界弱流顶回岸边")
+        assert(not data.covered and not data.lake and not data.dry,
+            "海岸洋流越过平台、湖泊或干格限制")
+    end, "海岸洋流方向、弱流与统一推动 距岸=" .. input.distance)
+end
+
+for _, normal in ipairs({{x = -1, y = 0}, {x = 0, y = 1}, {x = 0, y = -1}}) do
+    for _, distance in ipairs({8, 24}) do
+        local input = {distance = distance, normalX = normal.x, normalY = normal.y,
+            windX = normal.y, windY = -normal.x}
+        test.system("environment", "ocean_shore_current", input, function(data)
+            local outward = data.x * normal.x + data.y * normal.y
+            assert(distance < 16 and outward < 0 or distance > 16 and outward > 0,
+                "旋转岸线后洋流仍沿固定世界方向推动")
+        end, "岸线旋转保持向岸与离岸规则 " .. distance .. ":" .. normal.x .. "," .. normal.y)
+    end
+end
+
+for _, distance in ipairs({8, 16, 24}) do
+    test.system("environment", "ocean_shore_current", {distance = distance, normalX = 0, normalY = 0}, function(data)
+        assert(data.strength < .000001 and not data.active,
+            "海岸等距脊线的零法线被补成背景风推力")
+    end, "海岸零法线保留弱流 " .. distance)
+end
+
+for _, normal_y in ipairs({-.00001, .00001}) do
+    test.system("environment", "ocean_shore_current", {distance = 56, normalX = -1, normalY = normal_y,
+        windX = 1, windY = 0}, function(data)
+        assert(math.abs(data.x) < .001 and math.abs(data.y) < .001,
+            "反向背景洋流在方向接缝突然跳转")
+    end, "远洋反向混合的小扰动连续 " .. normal_y)
+end
+
+for _, distance in ipairs({19.999, 20}) do
+    test.system("environment", "ocean_shore_current", {distance = distance, normalX = -1,
+        normalY = 0, windX = 1, windY = 0, transition = 64, reach = 20}, function(data)
+        assert(math.abs(data.x - 1) < .001 and math.abs(data.y) < .001,
+            "超宽反向带在搜索范围末端跳变")
+    end, "洋流极值配置的远海衔接连续 " .. distance)
+end
+
+for _, base in ipairs({-.0001, 0, .0001}) do
+    test.system("environment", "ocean_shore_current", {baseX = base, baseY = 0, plumeInfluence = .2}, function(data)
+        assert(math.abs(data.x - .2) < .001 and math.abs(data.y) < .001,
+            "基础洋流越过零点时河口方向突然跳转")
+    end, "河口跨越海岸弱流保持连续 " .. base)
+end
+
+for _, scenario in ipairs({"straight", "diagonal", "island", "wrapped", "ocean", "land", "strait20", "strait40", "symmetric_islands"}) do
+    test.system("environment", "ocean_shore_geometry", {scenario = scenario}, function(data)
+        assert(#data.samples == 9, "岸线采样数量不完整")
+        for _, sample in ipairs(data.samples) do
+            assert(math.abs(sample.x - sample.singleX) < .0000001 and
+                math.abs(sample.y - sample.singleY) < .0000001,
+                "单格与整块生成的洋流不同 " .. scenario .. ":" .. sample.cellX)
+            assert(sample.x * sample.x + sample.y * sample.y <= 1.000001,
+                "岸线法线混合生成了超上限流速")
+            if scenario == "straight" then
+                assert(math.abs(sample.distance - sample.cellX) < .000001 and
+                    math.abs(sample.bedDistance - math.min(sample.cellX, 20)) < .000001,
+                    "洋流扩大搜索改变海底距离，或远海仍被二十格截断")
+                if sample.cellX < 48 then
+                    assert(sample.normalX > .99 and math.abs(sample.normalY) < .000001,
+                        "直岸法线抖动或在海底陡降后消失")
+                end
+            elseif scenario == "diagonal" and sample.cellX < 48 then
+                assert(sample.normalX > .5 and sample.normalY > .5,
+                    "斜岸没有按整体岸线计算朝海方向")
+            elseif scenario == "island" and sample.cellX < 48 then
+                assert(sample.normalX > .9, "岛屿外海没有背离岛屿")
+            elseif scenario == "strait20" or scenario == "strait40" or scenario == "symmetric_islands" then
+                local center = scenario == "strait20" and 10 or scenario == "strait40" and 20 or 0
+                if sample.cellX == center then
+                    assert(math.abs(sample.x) < .000001 and math.abs(sample.y) < .000001,
+                        "等距双岸或双岛中线被任意背景风恢复成满流速")
+                end
+            elseif scenario == "land" then
+                assert(sample.x == 0 and sample.y == 0, "陆地生成了海岸洋流")
+            elseif scenario == "ocean" then
+                assert(math.abs(sample.x) < .000001 and sample.y > .99,
+                    "无岸深海没有稳定回到背景流向")
+            end
+        end
+    end, "海岸几何、远海与跨块一致 " .. scenario)
+end
 
 test.system("environment", "estuary_current", {x = 4, y = 0}, function(data)
     assert(data.inside and data.active and data.kind == "Ocean" and data.x > .99,

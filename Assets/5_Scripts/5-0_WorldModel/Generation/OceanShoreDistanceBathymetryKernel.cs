@@ -4,71 +4,104 @@ using System.Threading;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>按真实离岸距离生成浅海陆架和短距离陡降，不改变大陆高度与海岸轮廓。</summary>
+    /// <summary>共享真实离岸距离生成海床与分带洋流，不改变大陆高度与海岸轮廓。</summary>
     public sealed class OceanShoreDistanceBathymetryKernel : IDisposable
     {
         #region 离岸距离窗口
 
-        private readonly int width;
+        private readonly int stride;
         private readonly double shelfWidth;
         private readonly double slopeWidth;
+        private readonly double currentReach;
+        private readonly double currentTransitionWidth;
         private float[] shoreDistances;
 
         public OceanShoreDistanceBathymetryKernel(int originX, int originY, int width, int height,
             double seaLevel, double shelfWidth, double slopeWidth,
-            Func<int, int, double> sampleHeight, CancellationToken cancellationToken = default)
+            Func<int, int, double> sampleHeight, CancellationToken cancellationToken = default,
+            double currentSearchDistance = 0d, double currentTransitionWidth = 0d)
         {
             if (width <= 0 || height <= 0) throw new ArgumentOutOfRangeException(nameof(width));
             if (!double.IsFinite(shelfWidth) || shelfWidth < 1d ||
-                !double.IsFinite(slopeWidth) || slopeWidth < 1d)
+                !double.IsFinite(slopeWidth) || slopeWidth < 1d ||
+                !double.IsFinite(currentSearchDistance) || currentSearchDistance < 0d ||
+                !double.IsFinite(currentTransitionWidth) || currentTransitionWidth < 0d)
                 throw new ArgumentOutOfRangeException(nameof(shelfWidth));
-            this.width = width;
+            if (sampleHeight == null) throw new ArgumentNullException(nameof(sampleHeight));
+            cancellationToken.ThrowIfCancellationRequested();
+            stride = checked(width + 2);
             this.shelfWidth = shelfWidth;
             this.slopeWidth = slopeWidth;
-            int radius = checked((int)Math.Ceiling(shelfWidth + slopeWidth));
-            int stride = checked(width + radius * 2);
-            int rows = checked(height + radius * 2);
-            int[] verticalDistances = ArrayPool<int>.Shared.Rent(checked(stride * rows));
-            shoreDistances = ArrayPool<float>.Shared.Rent(checked(width * height));
+            currentReach = Math.Max(shelfWidth + slopeWidth, currentSearchDistance);
+            this.currentTransitionWidth = currentTransitionWidth > 0d
+                ? currentTransitionWidth : Math.Max(1d, shelfWidth * (3d / 16d));
+            int radius = checked((int)Math.Ceiling(currentReach));
+            int sourceStride = checked(stride + radius * 2);
+            int sourceRows = checked(height + 2 + radius * 2);
+            int[] verticalDistances = null;
+            int[] envelopeSites = null;
+            double[] envelopeBoundaries = null;
             try
             {
-                bool hasLand = false;
-                // 纵向先求最近陆地，横向只算输出格，精确欧氏距离跨区块保持一致。
-                for (int x = 0; x < stride; x++)
+                verticalDistances = ArrayPool<int>.Shared.Rent(checked(sourceStride * sourceRows));
+                envelopeSites = ArrayPool<int>.Shared.Rent(sourceStride);
+                envelopeBoundaries = ArrayPool<double>.Shared.Rent(sourceStride + 1);
+                shoreDistances = ArrayPool<float>.Shared.Rent(checked(stride * (height + 2)));
+                for (int x = 0; x < sourceStride; x++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     int distance = radius;
-                    for (int y = 0; y < rows; y++)
+                    for (int y = 0; y < sourceRows; y++)
                     {
-                        bool land = sampleHeight(originX + x - radius, originY + y - radius) >= seaLevel;
-                        hasLand |= land;
+                        bool land = sampleHeight(originX + x - radius - 1, originY + y - radius - 1) >= seaLevel;
                         distance = land ? 0 : Math.Min(radius, distance + 1);
-                        verticalDistances[y * stride + x] = distance;
+                        verticalDistances[y * sourceStride + x] = distance;
                     }
                     distance = radius;
-                    for (int y = rows - 1; y >= 0; y--)
+                    for (int y = sourceRows - 1; y >= 0; y--)
                     {
-                        int index = y * stride + x;
+                        int index = y * sourceStride + x;
                         distance = Math.Min(verticalDistances[index], Math.Min(radius, distance + 1));
                         verticalDistances[index] = distance;
                     }
                 }
-                for (int y = 0; y < height; y++)
+                // 抛物线下包络在线性时间恢复精确欧氏距离，海床和流向不再逐格横扫搜索半径。
+                for (int y = 0; y < height + 2; y++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    int row = (y + radius) * stride;
-                    for (int x = 0; x < width; x++)
+                    int row = (y + radius) * sourceStride;
+                    int lastSite = 0;
+                    envelopeSites[0] = 0;
+                    envelopeBoundaries[0] = double.NegativeInfinity;
+                    envelopeBoundaries[1] = double.PositiveInfinity;
+                    for (int x = 1; x < sourceStride; x++)
                     {
-                        int nearestSquared = radius * radius;
-                        if (hasLand)
+                        double boundary;
+                        while (true)
                         {
-                            for (int dx = -radius; dx <= radius; dx++)
-                            {
-                                int dy = verticalDistances[row + x + radius + dx];
-                                nearestSquared = Math.Min(nearestSquared, dx * dx + dy * dy);
-                            }
+                            int previous = envelopeSites[lastSite];
+                            double value = verticalDistances[row + x];
+                            double previousValue = verticalDistances[row + previous];
+                            boundary = ((double)x * x + value * value -
+                                ((double)previous * previous + previousValue * previousValue)) /
+                                (2d * (x - previous));
+                            if (boundary > envelopeBoundaries[lastSite]) break;
+                            lastSite--;
                         }
-                        shoreDistances[y * width + x] = (float)Math.Sqrt(nearestSquared);
+                        envelopeSites[++lastSite] = x;
+                        envelopeBoundaries[lastSite] = boundary;
+                        envelopeBoundaries[lastSite + 1] = double.PositiveInfinity;
+                    }
+                    int siteIndex = 0;
+                    for (int x = 0; x < stride; x++)
+                    {
+                        int targetX = x + radius;
+                        while (envelopeBoundaries[siteIndex + 1] < targetX) siteIndex++;
+                        int sourceX = envelopeSites[siteIndex];
+                        double dx = targetX - sourceX;
+                        double dy = verticalDistances[row + sourceX];
+                        shoreDistances[y * stride + x] = (float)Math.Min(currentReach,
+                            Math.Sqrt(dx * dx + dy * dy));
                     }
                 }
             }
@@ -77,13 +110,44 @@ namespace FlatWorld.WorldModel
                 Dispose();
                 throw;
             }
-            finally { ArrayPool<int>.Shared.Return(verticalDistances); }
+            finally
+            {
+                if (verticalDistances != null) ArrayPool<int>.Shared.Return(verticalDistances);
+                if (envelopeSites != null) ArrayPool<int>.Shared.Return(envelopeSites);
+                if (envelopeBoundaries != null) ArrayPool<double>.Shared.Return(envelopeBoundaries);
+            }
         }
 
-        public double GetShoreDistance(int x, int y) => shoreDistances[y * width + x];
+        public double GetShoreDistance(int x, int y) =>
+            Math.Min(shelfWidth + slopeWidth, GetCurrentShoreDistance(x, y));
+
+        public double GetCurrentShoreDistance(int x, int y) => shoreDistances[(y + 1) * stride + x + 1];
 
         public float GetInitialLiquidDepth(int x, int y) =>
             ResolveInitialLiquidDepth(GetShoreDistance(x, y), shelfWidth, slopeWidth);
+
+        public void GetOutwardShoreDirection(int x, int y, out double outwardX, out double outwardY)
+        {
+            int index = (y + 1) * stride + x + 1;
+            outwardX = shoreDistances[index - stride + 1] + 2d * shoreDistances[index + 1] +
+                shoreDistances[index + stride + 1] - shoreDistances[index - stride - 1] -
+                2d * shoreDistances[index - 1] - shoreDistances[index + stride - 1];
+            outwardY = shoreDistances[index + stride - 1] + 2d * shoreDistances[index + stride] +
+                shoreDistances[index + stride + 1] - shoreDistances[index - stride - 1] -
+                2d * shoreDistances[index - stride] - shoreDistances[index - stride + 1];
+            double length = Math.Sqrt(outwardX * outwardX + outwardY * outwardY);
+            double normalization = Math.Max(8d, length);
+            outwardX /= normalization;
+            outwardY /= normalization;
+        }
+
+        public OceanShoreCurrentSample GetOceanCurrent(int x, int y, double windX, double windY)
+        {
+            GetOutwardShoreDirection(x, y, out double outwardX, out double outwardY);
+            OceanShoreCurrentKernel.ResolveCurrentVector(outwardX, outwardY, GetCurrentShoreDistance(x, y),
+                shelfWidth, currentTransitionWidth, currentReach, windX, windY, out double currentX, out double currentY);
+            return new OceanShoreCurrentSample(currentX, currentY);
+        }
 
         public void Dispose()
         {
