@@ -574,7 +574,7 @@
         "Combustion.Fuel"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/火种.png[火种]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -583,7 +583,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 315.0
+          "z": 0.0
         },
         "rendererLocalScale": {
           "x": 1.0,

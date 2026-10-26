@@ -588,7 +588,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08868ceb1c31f6341a0be7a5d3d8bf50
-    m_Address: "Assets/6_Art/Items/Plants/\u706B\u79CD.png"
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
