@@ -15,6 +15,12 @@
       "name": "建筑水面覆盖：平台与液体增量规则",
       "luaPath": "GameplayTests/Systems/Rendering/building-liquid-surface.lua",
       "enabled": true
+    },
+    {
+      "id": "rendering_combustion_visual",
+      "name": "火焰共享资源与熔炉炉口定位",
+      "luaPath": "GameplayTests/Systems/Rendering/combustion-visual.lua",
+      "enabled": true
     }
   ]
 }

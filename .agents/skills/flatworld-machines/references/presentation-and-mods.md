@@ -7,7 +7,7 @@
 - MachineDefinition.VisualLayer 共用管→线→设备的显示/命中顺序，GridInteractionSelector 对完整逻辑格叠层从上到下等分选择，不按窄贴图/邻格半径命中。FluidTankSelectionOutline 按 GetFluidTankMembers 的四邻连通生成组外框，切片/内容条/端口不各描边，逻辑节点不变。
 - Lighting 复用 electric-light，以实供 ElectricalSuppliedWatts 控制亮度/powered贴图，断电/休眠撤光；地表/船共用 MachineLightPresentation。保留玻璃Alpha，专用自发光按脚点排序、不提亮底座；灯泡120V/60W、半径16格，火把8格。
 - BatteryChargePresentation 三格门槛33%/66%/99%，BatteryIndicator.Cells 用原图左上像素矩形；地表 MechanicalDepthVisual.Battery 合入脚点行，船 ShipPieceView.Battery 跟主体变换。档位变化才更新，未亮保留底图，精确值看面板。
-- 非模态面板：电池读数/竖向填充/居中百分比每0.2秒非缩放刷新，关闭停止、文字变化才写；比例为节点 ElectricalStoredJoules/CapacityJoules，离网仍显示，UI不改能量。燃烧灯光不跟加工进度，Mod_CombustionVisual 与主体共读燃烧状态、复用粒子/脚点排序，停用/拆除清空。
+- 非模态面板：电池读数/竖向填充/居中百分比每0.2秒非缩放刷新，关闭停止、文字变化才写；比例为节点 ElectricalStoredJoules/CapacityJoules，离网仍显示，UI不改能量。燃烧灯光不跟加工进度，Mod_CombustionVisual 共读燃烧状态、复用 Shader 火焰/脚点排序，停用/拆除清空；炉体锚点由 `building_bodies.json` 的 `combustionVisual.parameters.sourceRendererAnchorOffset` 相对主体原点配置，锚在火焰底部。
 - ConveyorPath 同时管运输/推动/显示；ConveyorMode 0自动、1–12手动，自动传播优先手动段。DroppedItemRuntime/TransportItemBacked 用局部索引每轮搬一次，末端 ContainerTransferService 按成功量扣地面物。
 - 传送带侧轴伸缩读 ConveyorConnectedDriveMask：正式图边构建完成后，与路径变化合并进 ConveyorChanges 通知本格刷新，不按 RPM 判断或逐帧扫邻格；直带连接时木芯与铁环伸至半格边界，断开收回，拐角仍隐藏侧轴图。
 - MachineLogicRegistry 租约可乱序释放，link.xml 保留托管入口；ModRuntimeManager.Managed/ModManagedAssemblyStore 在启动加载已启用且清单声明的程序集。C# MOD 仅桌面Mono：Initialize 注册、ContentReady 用内容、Dispose 撤本MOD资源；IL2CPP 拒绝托管DLL。

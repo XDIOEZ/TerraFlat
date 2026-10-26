@@ -1,3 +1,4 @@
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -65,6 +66,14 @@ public static partial class GameplayTestSystemProbe
             adapter.ConfigureFlamePresentation(2f, 1.5f, 3f, false, false, Vector3.zero);
             Vector3 mirroredUp = adapted != null ? adapted.transform.up : Vector3.zero;
 
+            // 直接采样正式熔炉配置，炉口底面像素位置由 Lua 断言。
+            string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath,
+                "GameConfig/Items/shells/building_bodies.json");
+            JObject smelter = JObject.Parse(StreamingAssetsTextLoader.ReadAllText(path))["items"]
+                .OfType<JObject>().Single(value => (string)value["id"] == "Smelter");
+            JObject smelterFlame = (JObject)smelter["modules"]["combustionVisual"];
+            JObject smelterParameters = (JObject)smelterFlame["parameters"];
+
             return new JObject
             {
                 ["assigned"] = material != null && other != null,
@@ -102,7 +111,14 @@ public static partial class GameplayTestSystemProbe
                 ["uprightUpZ"] = uprightUp.z,
                 ["mirroredUpX"] = mirroredUp.x,
                 ["mirroredUpY"] = mirroredUp.y,
-                ["mirroredUpZ"] = mirroredUp.z
+                ["mirroredUpZ"] = mirroredUp.z,
+                ["smelter"] = new JObject
+                {
+                    ["spriteAddress"] = (string)smelter["visual"]["spriteAddress"],
+                    ["enabled"] = (bool)smelterFlame["enabled"],
+                    ["followRenderer"] = (bool)smelterParameters["followSourceRenderer"],
+                    ["anchor"] = smelterParameters["sourceRendererAnchorOffset"].DeepClone()
+                }
             };
         }
         finally

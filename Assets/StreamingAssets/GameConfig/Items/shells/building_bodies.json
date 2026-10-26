@@ -1300,7 +1300,7 @@
             "followSourceRenderer": true,
             "sourceRendererAnchorOffset": {
               "x": 0.0,
-              "y": -0.34375,
+              "y": -0.375,
               "z": 0.0
             }
           }
