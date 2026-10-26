@@ -164,7 +164,7 @@
             "followSourceRenderer": true,
             "sourceRendererAnchorOffset": {
               "x": 0.0,
-              "y": -0.28125,
+              "y": -0.40625,
               "z": 0.0
             }
           }
