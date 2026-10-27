@@ -256,6 +256,27 @@
           }
         }
       ]
+    },
+    {
+      "id": "flatworld:new_player_survival_guide",
+      "definitionVersion": 1,
+      "title": "新手生存引导",
+      "hiddenFromJournal": true,
+      "trackFutureStageSignals": true,
+      "acceptMode": "manual",
+      "turnInMode": "auto",
+      "conditions": [],
+      "stages": [
+        { "id": "OpenInventory", "objectives": [{ "id": "inventory-opened", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "inventory-opened" } }] },
+        { "id": "GatherSurvivalMaterials", "objectives": [{ "id": "survival-materials-gathered", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "survival-materials-gathered" } }] },
+        { "id": "CraftSparkMaker", "objectives": [{ "id": "spark-maker-crafted", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "spark-maker-crafted" } }] },
+        { "id": "PlaceSparkMaker", "objectives": [{ "id": "spark-maker-placed", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "spark-maker-placed" } }] },
+        { "id": "CreateFireSeed", "objectives": [{ "id": "fire-seed-created", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "fire-seed-created" } }] },
+        { "id": "CraftBonfire", "objectives": [{ "id": "bonfire-crafted", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "bonfire-crafted" } }] },
+        { "id": "PlaceBonfire", "objectives": [{ "id": "bonfire-placed", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "bonfire-placed" } }] },
+        { "id": "IgniteBonfire", "objectives": [{ "id": "bonfire-ignited", "type": "signal.count", "parameters": { "eventType": "flatworld.guide.milestone", "targetId": "bonfire-ignited" } }] }
+      ],
+      "rewards": []
     }
   ]
 }

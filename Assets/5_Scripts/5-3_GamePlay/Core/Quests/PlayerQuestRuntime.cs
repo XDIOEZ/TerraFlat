@@ -21,6 +21,7 @@ namespace FlatWorld.Gameplay.Quests
         private bool processingSignals;
 
         public Player Player => player;
+        public Data_Player PlayerData { get; private set; }
         public bool IsEnabled { get; private set; }
         public event Action<QuestSnapshot> QuestChanged;
 
@@ -49,6 +50,7 @@ namespace FlatWorld.Gameplay.Quests
 
             try
             {
+                PlayerData = player.Data;
                 document = QuestProgressStore.Load(player.Data);
                 bool changed = NormalizeKnownRecords();
                 var changedQuestIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -65,6 +67,7 @@ namespace FlatWorld.Gameplay.Quests
             catch (Exception exception)
             {
                 IsEnabled = false;
+                PlayerData = null;
                 error = exception.Message;
                 Debug.LogError($"[Quest] 玩家任务进度初始化失败，已禁用该玩家任务运行时：{exception.Message}");
                 Debug.LogException(exception);
@@ -75,6 +78,7 @@ namespace FlatWorld.Gameplay.Quests
         public void Dispose()
         {
             IsEnabled = false;
+            PlayerData = null;
             pendingSignals.Clear();
             QuestChanged = null;
         }
@@ -208,6 +212,20 @@ namespace FlatWorld.Gameplay.Quests
             return true;
         }
 
+        /// <summary>读取当前阶段与状态，避免高频显示查询复制完整目标字典。</summary>
+        public bool TryGetQuestStageState(string questId, out QuestStatus status, out string stageId)
+        {
+            status = default;
+            stageId = null;
+            if (string.IsNullOrWhiteSpace(questId) || document?.Quests == null ||
+                !document.Quests.TryGetValue(questId, out QuestProgressSaveRecord record) || record == null)
+                return false;
+
+            status = record.Status;
+            stageId = record.CurrentStageId;
+            return true;
+        }
+
         public IReadOnlyList<QuestSnapshot> GetSnapshots()
         {
             if (document?.Quests == null)
@@ -216,7 +234,8 @@ namespace FlatWorld.Gameplay.Quests
             var snapshots = new List<QuestSnapshot>();
             foreach (QuestDefinition definition in QuestCatalog.All.OrderBy(value => value.Id, StringComparer.OrdinalIgnoreCase))
             {
-                if (document.Quests.TryGetValue(definition.Id, out QuestProgressSaveRecord record) && record != null)
+                if (!definition.HiddenFromJournal &&
+                    document.Quests.TryGetValue(definition.Id, out QuestProgressSaveRecord record) && record != null)
                     snapshots.Add(CreateSnapshot(definition, record));
             }
 
@@ -243,21 +262,14 @@ namespace FlatWorld.Gameplay.Quests
                     continue;
                 }
 
-                foreach (QuestObjectiveDefinition objective in stage.Objectives)
+                bool questChanged = ApplySignalToStageObjectives(stage, record, signal);
+                if (definition.TrackFutureStageSignals)
                 {
-                    if (!QuestExtensionRegistry.TryGetObjective(objective.Type, out IQuestObjectiveHandler handler) ||
-                        handler.IsStateBased)
-                    {
-                        continue;
-                    }
-
-                    string key = GetObjectiveKey(stage.Id, objective.Id);
-                    record.ObjectiveProgress.TryGetValue(key, out float current);
-                    float next = Mathf.Clamp(handler.ApplySignal(objective, current, signal), 0f, objective.Required);
-                    if (Mathf.Approximately(current, next))
-                        continue;
-
-                    record.ObjectiveProgress[key] = next;
+                    for (int index = definition.Stages.IndexOf(stage) + 1; index < definition.Stages.Count; index++)
+                        questChanged |= ApplySignalToStageObjectives(definition.Stages[index], record, signal);
+                }
+                if (questChanged)
+                {
                     changed = true;
                     changedQuestIds.Add(definition.Id);
                 }
@@ -270,6 +282,30 @@ namespace FlatWorld.Gameplay.Quests
             QuestProgressStore.Save(player.Data, document);
             NotifyChanged(changedQuestIds);
             PublishDeferredSignals(deferredSignals);
+        }
+
+        private static bool ApplySignalToStageObjectives(
+            QuestStageDefinition stage,
+            QuestProgressSaveRecord record,
+            GameplayProgressSignal signal)
+        {
+            bool changed = false;
+            foreach (QuestObjectiveDefinition objective in stage.Objectives)
+            {
+                if (!QuestExtensionRegistry.TryGetObjective(objective.Type, out IQuestObjectiveHandler handler) ||
+                    handler.IsStateBased)
+                    continue;
+
+                string key = GetObjectiveKey(stage.Id, objective.Id);
+                record.ObjectiveProgress.TryGetValue(key, out float current);
+                float next = Mathf.Clamp(handler.ApplySignal(objective, current, signal), 0f, objective.Required);
+                if (Mathf.Approximately(current, next))
+                    continue;
+
+                record.ObjectiveProgress[key] = next;
+                changed = true;
+            }
+            return changed;
         }
 
         private bool Stabilize(

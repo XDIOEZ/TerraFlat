@@ -4,7 +4,9 @@
     "references": [
         "Data",
         "GamePlay",
-        "FlatWorld.Dialogue"
+        "FlatWorld.Dialogue",
+        "FlatWorld.Utilities",
+        "UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

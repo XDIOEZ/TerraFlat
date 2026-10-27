@@ -1,7 +1,7 @@
 namespace FlatWorld.Guide
 {
     /// <summary>
-    /// 新玩家生存引导当前应提示的阶段；阶段始终由幂等里程碑归一化推导。
+    /// 新玩家生存引导当前应提示的任务阶段。
     /// </summary>
     public enum NewPlayerGuideStage
     {
@@ -21,6 +21,13 @@ namespace FlatWorld.Guide
     /// </summary>
     public static class NewPlayerGuideIds
     {
+        #region 任务
+
+        public const string QuestId = "flatworld:new_player_survival_guide";
+        public const string MilestoneSignal = "flatworld.guide.milestone";
+
+        #endregion
+
         #region 物品与建筑
 
         public const string StickWood = "Stick_Wood";

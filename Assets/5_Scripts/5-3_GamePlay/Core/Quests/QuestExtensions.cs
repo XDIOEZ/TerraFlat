@@ -395,9 +395,12 @@ namespace FlatWorld.Gameplay.Quests
     #region 库存适配
 
     /// <summary>任务系统访问玩家背包的集中适配层，避免目标与奖励处理器各自猜测库存结构。</summary>
-    internal static class QuestInventoryAccess
+    public static class QuestInventoryAccess
     {
-        public static float CountItem(Player player, string itemId)
+        public static float CountItem(
+            Player player,
+            string itemId,
+            StringComparison comparison = StringComparison.OrdinalIgnoreCase)
         {
             if (player?.itemMods == null || string.IsNullOrWhiteSpace(itemId))
                 return 0f;
@@ -408,11 +411,11 @@ namespace FlatWorld.Gameplay.Quests
             if (bag?.InventoryInstances != null)
             {
                 foreach (Inventory inventory in bag.InventoryInstances)
-                    total += CountItem(inventory, itemId, visited);
+                    total += CountItem(inventory, itemId, comparison, visited);
             }
 
             Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-            total += CountItem(hotbar?.RuntimeInventory, itemId, visited);
+            total += CountItem(hotbar?.RuntimeInventory, itemId, comparison, visited);
             return total;
         }
 
@@ -438,9 +441,10 @@ namespace FlatWorld.Gameplay.Quests
         private static float CountItem(
             Inventory inventory,
             string itemId,
+            StringComparison comparison,
             ISet<Inventory_Data> visited)
         {
-            if (!IsUsable(inventory) || !visited.Add(inventory.Data))
+            if (inventory?.Data?.itemSlots == null || !visited.Add(inventory.Data))
                 return 0f;
 
             float total = 0f;
@@ -448,9 +452,9 @@ namespace FlatWorld.Gameplay.Quests
             {
                 ItemData itemData = slot?.itemData;
                 if (itemData?.Stack != null &&
-                    string.Equals(itemData.IDName, itemId, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(itemData.IDName, itemId, comparison))
                 {
-                    total += itemData.Stack.Amount;
+                    total += Mathf.Max(0f, itemData.Stack.Amount);
                 }
             }
 

@@ -113,19 +113,22 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     private sealed class QuestScope : IDisposable
     {
         private readonly Player player;
-        private readonly QuestProgressSaveDocument original;
+        private readonly string questId;
+        private readonly QuestProgressSaveRecord original;
+        private readonly bool hadOriginal;
         public readonly PlayerQuestRuntime Runtime;
         private bool disposed;
         public QuestScope(Player player, string questId)
         {
             this.player = player;
+            this.questId = questId;
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             QuestManager manager = UnityEngine.Object.FindObjectOfType<QuestManager>();
             if (manager == null || !manager.TryGetRuntime(player, out PlayerQuestRuntime runtime) || !runtime.IsEnabled)
                 throw new InvalidOperationException("主角没有在正式任务管理器中登记已启动运行时。");
             Runtime = runtime;
-            original = QuestProgressStore.Load(player.Data);
             QuestProgressSaveDocument staged = QuestProgressStore.Load(player.Data);
+            hadOriginal = staged.Quests.TryGetValue(questId, out original);
             staged.Quests.Remove(questId);
             QuestProgressStore.Save(player.Data, staged);
             try
@@ -138,7 +141,10 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         {
             if (disposed) return;
             disposed = true;
-            QuestProgressStore.Save(player.Data, original);
+            QuestProgressSaveDocument current = QuestProgressStore.Load(player.Data);
+            if (hadOriginal) current.Quests[questId] = original;
+            else current.Quests.Remove(questId);
+            QuestProgressStore.Save(player.Data, current);
             if (!Runtime.Initialize(out string reason))
                 throw new InvalidOperationException("任务自有前置条件无法恢复：" + reason);
         }

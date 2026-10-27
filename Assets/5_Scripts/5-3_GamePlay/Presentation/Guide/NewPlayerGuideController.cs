@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Dialogue;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Gameplay.Quests;
 using UnityEngine;
 
 namespace FlatWorld.Guide
@@ -17,15 +18,31 @@ namespace FlatWorld.Guide
 
         private Player actor;
         private Data_Player loadedPlayerData;
-        private NewPlayerGuideProgressStore progress;
+        private string loadedProfileId;
+        private QuestManager questManager;
+        private PlayerQuestRuntime questRuntime;
+        private readonly HashSet<string> pendingMilestones = new(StringComparer.Ordinal);
         private bool isActiveForPlayer;
         private const string TrueFact = "True";
         private const string FalseFact = "False";
 
         public int ContextOrder => 200;
         public bool IsTutorialActive => isActiveForPlayer;
-        public bool IsTutorialCompleted => progress?.IsCompleted == true;
-        public NewPlayerGuideStage CurrentStage => progress?.CurrentStage ?? NewPlayerGuideStage.OpenInventory;
+        public bool IsTutorialCompleted => isActiveForPlayer && CurrentStage == NewPlayerGuideStage.Completed;
+        public NewPlayerGuideStage CurrentStage
+        {
+            get
+            {
+                if (questRuntime == null || !questRuntime.IsEnabled ||
+                    !questRuntime.TryGetQuestStageState(NewPlayerGuideIds.QuestId, out QuestStatus status, out string stageId))
+                    return NewPlayerGuideStage.OpenInventory;
+                if (status == QuestStatus.Completed || status == QuestStatus.ReadyToClaim)
+                    return NewPlayerGuideStage.Completed;
+                return Enum.TryParse(stageId, out NewPlayerGuideStage stage)
+                    ? stage
+                    : NewPlayerGuideStage.OpenInventory;
+            }
+        }
 
         #endregion
 
@@ -41,6 +58,13 @@ namespace FlatWorld.Guide
             ResolveActor();
             if (actor != null)
                 actor.ProfileContextChanged += HandleProfileContextChanged;
+
+            questManager = QuestManager.Instance;
+            if (questManager != null)
+            {
+                questManager.RuntimeReady += HandleQuestRuntimeReady;
+                questManager.RuntimeRemoving += HandleQuestRuntimeRemoving;
+            }
 
             GameplayProgressEvents.InventoryOpened += HandleInventoryOpened;
             GameplayProgressEvents.PickupSucceeded += HandlePickupSucceeded;
@@ -60,6 +84,14 @@ namespace FlatWorld.Guide
         {
             if (actor != null)
                 actor.ProfileContextChanged -= HandleProfileContextChanged;
+
+            if (questManager != null)
+            {
+                questManager.RuntimeReady -= HandleQuestRuntimeReady;
+                questManager.RuntimeRemoving -= HandleQuestRuntimeRemoving;
+            }
+            questManager = null;
+            questRuntime = null;
 
             GameplayProgressEvents.InventoryOpened -= HandleInventoryOpened;
             GameplayProgressEvents.PickupSucceeded -= HandlePickupSucceeded;
@@ -174,6 +206,21 @@ namespace FlatWorld.Guide
             RefreshEligibility();
         }
 
+        private void HandleQuestRuntimeReady(Player player, PlayerQuestRuntime runtime)
+        {
+            if (ReferenceEquals(actor, player))
+            {
+                RefreshEligibility();
+                RefreshMaterialMilestone();
+            }
+        }
+
+        private void HandleQuestRuntimeRemoving(Player player)
+        {
+            if (ReferenceEquals(actor, player))
+                questRuntime = null;
+        }
+
         private void ResolveActor()
         {
             actor ??= GetComponentInParent<Player>();
@@ -182,30 +229,64 @@ namespace FlatWorld.Guide
         private void RefreshEligibility()
         {
             ResolveActor();
-            bool runtimeNewProfile = actor != null && actor.IsNewProfile;
-            bool persistedEligibility = actor?.Data != null &&
-                                        NewPlayerGuideProgressStore.HasEligibility(actor.Data);
-            bool shouldBeActive = actor != null &&
-                                  actor.IsLocalProfile &&
-                                  actor.Data != null &&
-                                  (runtimeNewProfile || persistedEligibility);
-            if (!shouldBeActive)
+            if (actor == null || !actor.IsLocalProfile || actor.Data == null)
             {
                 isActiveForPlayer = false;
-                progress = null;
+                questRuntime = null;
                 loadedPlayerData = null;
+                loadedProfileId = null;
+                pendingMilestones.Clear();
                 return;
             }
 
-            isActiveForPlayer = true;
-            if (!ReferenceEquals(loadedPlayerData, actor.Data))
+            bool profileChanged = !ReferenceEquals(loadedPlayerData, actor.Data) ||
+                                  !string.Equals(loadedProfileId, actor.ProfileId, StringComparison.Ordinal);
+            if (profileChanged || !isActiveForPlayer)
             {
+                pendingMilestones.Clear();
+                questRuntime = null;
+                isActiveForPlayer = actor.IsNewProfile || NewPlayerGuideProgressStore.HasEligibility(actor.Data);
+                if (!isActiveForPlayer)
+                {
+                    loadedPlayerData = null;
+                    loadedProfileId = null;
+                    return;
+                }
+
                 loadedPlayerData = actor.Data;
-                progress = new NewPlayerGuideProgressStore(
-                    actor.Data,
-                    establishEligibility: runtimeNewProfile);
+                loadedProfileId = actor.ProfileId;
+                if (actor.IsNewProfile)
+                    NewPlayerGuideProgressStore.EstablishEligibility(actor.Data);
+                BindQuestRuntimeWhenReady();
                 RefreshMaterialMilestone();
+                return;
             }
+
+            BindQuestRuntimeWhenReady();
+        }
+
+        // 只绑定管理器已有的运行时，等待期间的里程碑仅暂存于当前角色。
+        private void BindQuestRuntimeWhenReady()
+        {
+            if (questRuntime != null && questRuntime.IsEnabled &&
+                ReferenceEquals(questRuntime.PlayerData, loadedPlayerData))
+                return;
+            questRuntime = null;
+            if (questManager == null || !questManager.TryGetRuntime(actor, out PlayerQuestRuntime runtime) ||
+                !runtime.IsEnabled || !ReferenceEquals(runtime.PlayerData, loadedPlayerData))
+                return;
+
+            if (!runtime.TryGetQuestStageState(NewPlayerGuideIds.QuestId, out _, out _) &&
+                !runtime.AcceptQuest(NewPlayerGuideIds.QuestId, out string error))
+            {
+                Debug.LogError($"[Guide] 无法启动教程任务：{error}");
+                return;
+            }
+
+            questRuntime = runtime;
+            foreach (string milestone in pendingMilestones)
+                PublishMilestoneToQuestRuntime(milestone);
+            pendingMilestones.Clear();
         }
 
         private bool CanHandle(Player eventActor)
@@ -216,7 +297,18 @@ namespace FlatWorld.Guide
 
         private void MarkMilestone(string milestoneId)
         {
-            progress?.MarkMilestone(milestoneId);
+            if (questRuntime?.IsCompleted(NewPlayerGuideIds.QuestId) == true)
+                return;
+            if (questRuntime == null)
+                pendingMilestones.Add(milestoneId);
+            else
+                PublishMilestoneToQuestRuntime(milestoneId);
+        }
+
+        private void PublishMilestoneToQuestRuntime(string milestoneId)
+        {
+            questRuntime.HandleSignal(new GameplayProgressSignal(
+                actor, NewPlayerGuideIds.MilestoneSignal, milestoneId, 1f));
         }
 
         #endregion
@@ -225,59 +317,19 @@ namespace FlatWorld.Guide
 
         private void RefreshMaterialMilestone()
         {
-            if (!isActiveForPlayer || progress == null || actor?.itemMods == null)
+            if (!isActiveForPlayer || actor?.itemMods == null ||
+                questRuntime?.IsCompleted(NewPlayerGuideIds.QuestId) == true)
                 return;
 
-            float stickAmount = CountInventoryItem(NewPlayerGuideIds.StickWood);
-            float logAmount = CountInventoryItem(NewPlayerGuideIds.Log);
-            float leafAmount = CountInventoryItem(NewPlayerGuideIds.Leaf);
+            float stickAmount = QuestInventoryAccess.CountItem(actor, NewPlayerGuideIds.StickWood, StringComparison.Ordinal);
+            float logAmount = QuestInventoryAccess.CountItem(actor, NewPlayerGuideIds.Log, StringComparison.Ordinal);
+            float leafAmount = QuestInventoryAccess.CountItem(actor, NewPlayerGuideIds.Leaf, StringComparison.Ordinal);
             if (stickAmount >= NewPlayerGuideIds.RequiredStickAmount &&
                 logAmount >= NewPlayerGuideIds.RequiredLogAmount &&
                 leafAmount >= NewPlayerGuideIds.RequiredLeafAmount)
             {
-                progress.MarkMilestone(NewPlayerGuideIds.SurvivalMaterialsGathered);
+                MarkMilestone(NewPlayerGuideIds.SurvivalMaterialsGathered);
             }
-        }
-
-        private float CountInventoryItem(string itemId)
-        {
-            float total = 0f;
-            HashSet<Inventory_Data> visited = new();
-
-            Mod_Inventory bag = actor.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag);
-            if (bag?.InventoryInstances != null)
-            {
-                for (int i = 0; i < bag.InventoryInstances.Count; i++)
-                    total += CountInventoryItem(bag.InventoryInstances[i], itemId, visited);
-            }
-
-            Mod_HotBar hotbar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-            total += CountInventoryItem(hotbar?.RuntimeInventory, itemId, visited);
-            return total;
-        }
-
-        private static float CountInventoryItem(
-            Inventory inventory,
-            string itemId,
-            HashSet<Inventory_Data> visited)
-        {
-            if (inventory?.Data?.itemSlots == null || !visited.Add(inventory.Data))
-                return 0f;
-
-            float total = 0f;
-            for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
-            {
-                ItemData itemData = inventory.Data.itemSlots[i]?.itemData;
-                if (itemData?.Stack == null ||
-                    !string.Equals(itemData.IDName, itemId, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                total += Mathf.Max(0f, itemData.Stack.Amount);
-            }
-
-            return total;
         }
 
         private static bool IsSurvivalResource(string itemId)

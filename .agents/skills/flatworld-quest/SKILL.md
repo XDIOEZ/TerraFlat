@@ -21,4 +21,5 @@ description: "FlatWorld 任务目录、玩家进度、玩法信号、阶段目�
 - 类型通过 Handler 注册并在 Finalize 校验；信号 Actor 为实际本地玩家、Amount>0，仅在玩法事务成功后发布，监听异常不回滚玩法。
 - 奖励在同一库存快照中全部可放才原子提交；满包保留 ReadyToClaim。进度存于 `ItemSpecialData.flatworld.quests`，保持其它命名空间；未知任务/字段保留，高于支持版本时停止运行与写回。
 - 远程副本不建本地 Runtime；目录、GameRes、MOD 共同 Ready 前入世请求排队，最终内容就绪后补启动。
+- `trackFutureStageSignals` 默认关闭；开启后事件型目标可提前记录，状态型目标仍只刷新当前阶段。`hiddenFromJournal` 隐藏列表条目，不影响直接查询。
 - 阅读入口为书籍物品；显示层只读 Snapshot、订阅 QuestChanged，独立于可写运行态。

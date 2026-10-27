@@ -21,6 +21,10 @@ namespace FlatWorld.Gameplay.Quests
         public string Description;
         /// <summary>仅供开发者工具显式开启；稳定化流程永远不会自动接取。</summary>
         public bool DebugOnly;
+        /// <summary>隐藏内部任务，不改变任务自身的运行与查询。</summary>
+        public bool HiddenFromJournal;
+        /// <summary>允许信号提前记录后续阶段的事件型目标。</summary>
+        public bool TrackFutureStageSignals;
         public string AcceptMode = QuestModes.Manual;
         public string TurnInMode = QuestModes.Manual;
         public List<QuestConditionDefinition> Conditions = new();

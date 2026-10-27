@@ -14,3 +14,22 @@ test.runtime("guide", "inventory_quest", {}, function(data)
     assert(data.guideAfter.facts["tutorial.enabled"] == "True" and data.guideAfter.facts["tutorial.stage"] == data.guideAfter.stage, "教程没有向实际对话上下文贡献当前阶段")
     assert(data.panelRestored, "测试改变了原主背包开关状态")
 end, "实际开包贯穿任务和新手引导")
+
+test.runtime("guide", "quest_progress", {}, function(data)
+    assert(data.accepted and data.ordinaryAccepted, "教程或普通任务未接取")
+    assert(data.futureTracking and data.hidden and data.emptyRewards, "教程任务没有启用乱序记录、隐藏或空奖励")
+    assert(not data.ordinaryFutureTracking and data.ordinaryStageAfterCraft == "place_building" and data.ordinaryStatusAfterBuild == "ReadyToClaim", "普通任务提前记录了后续阶段")
+    assert(data.early.stage == "OpenInventory" and #data.early.milestones == 1 and data.early.milestones[1] == "bonfire-ignited", "提前完成的里程碑丢失或跳过前置步骤")
+    assert(data.earlyValue == 1 and data.objectiveCount == 8 and data.completionCount == 1, "重复或未知信号改变了教程目标或完成次数")
+    assert(data.restored.stage == "Completed" and data.restored.savedStage == "Completed" and data.restored.completed and #data.restored.milestones == 8, "任务重载后教程完成记录丢失")
+    local stages = { "GatherSurvivalMaterials", "CraftSparkMaker", "PlaceSparkMaker", "CreateFireSeed", "CraftBonfire", "PlaceBonfire", "IgniteBonfire", "Completed" }
+    for index, stage in ipairs(stages) do assert(data.orderedStages[index] == stage, "按顺序推进时阶段不正确：" .. stage) end
+    assert(data.emittedSignals == 0, "无奖励教程意外发布了完成或奖励信号")
+end, "教程任务乱序、幂等、恢复及普通任务默认规则")
+
+test.runtime("guide", "material_threshold", {}, function(data)
+    assert(data.pickedAll, "真实拾取未能准备材料现场")
+    assert(not data.sticksOnly.materialsGathered and not data.nonSimultaneous.materialsGathered and not data.partial.materialsGathered, "非同时持有或不足数量错误达成材料目标")
+    assert(data.enough.materialsGathered and data.enough.stage == "OpenInventory", "同时持有 3 木棍、3 原木和 1 树叶没有提前记录材料目标")
+    assert(data.afterConsumed.materialsGathered and data.afterConsumed.stage == "CraftSparkMaker", "材料用掉后未保留里程碑或开包后未跳过已完成目标")
+end, "教程材料要求同时持有并永久记录")
