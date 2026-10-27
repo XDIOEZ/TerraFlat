@@ -171,7 +171,7 @@ public partial class Mod_Grow
         Data.environmentInitialized = true;
         Data.environmentGrowthMultiplier = 1f;
         ConfigureCultivatedClimateDrive();
-        Data.simulationInitialized = TryReadCultivatedWorldClock(out _, out double now);
+        Data.simulationInitialized = PlantGrowthEnvironment.TryReadWorldClock(out _, out double now);
         Data.lastSimulatedTime = now;
         Data.waterSimulationInitialized = Data.simulationInitialized;
         Data.lastWaterSimulationTime = now;
@@ -211,7 +211,7 @@ public partial class Mod_Grow
     {
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || Data == null ||
             !Data.isCultivatedCrop || Data.isHarvested ||
-            !TryReadCultivatedWorldClock(out TimeData clock, out double now))
+            !PlantGrowthEnvironment.TryReadWorldClock(out TimeData clock, out double now))
             return;
 
         if (!Data.waterSimulationInitialized)
@@ -228,17 +228,6 @@ public partial class Mod_Grow
         if (!PlantClimateTimeline.Advance(item, clock, now, ref Data.lastSimulatedTime,
                 environmentConditions, AdvanceCultivatedGrowth, out _))
             item.DestroySelf();
-    }
-
-    /// <summary>只读活动维度的绝对游戏秒，避免现实时间影响农业。</summary>
-    private static bool TryReadCultivatedWorldClock(out TimeData clock, out double now)
-    {
-        clock = null;
-        now = 0d;
-        if (DayTimeSystem.Instance == null || !DayTimeSystem.Instance.TryGetActiveTimeData(out clock))
-            return false;
-        now = clock.TotalDays * (double)clock.DayLength + clock.CurrentTime;
-        return true;
     }
 
     /// <summary>气候和其它独立成长限制各结算一次。</summary>
@@ -271,7 +260,7 @@ public partial class Mod_Grow
 
     /// <summary>历史补算完成前不开放耕地植株收获。</summary>
     private bool HasPendingCultivatedGrowth() =>
-        TryReadCultivatedWorldClock(out _, out double now) &&
+        PlantGrowthEnvironment.TryReadWorldClock(out _, out double now) &&
         (!Data.simulationInitialized || now - Data.lastSimulatedTime > 1d);
 
     private void UpdateAuthoritativeGrowth(float deltaTime, bool historical)
@@ -312,11 +301,11 @@ public partial class Mod_Grow
             return;
         }
 
-        float farmlandMultiplier = CalculateFarmlandGrowthMultiplier(farmlandData,
+        float farmlandMultiplier = PlantGrowthEnvironment.CalculateFarmlandGrowthMultiplier(farmlandData,
             minimumWaterGrowthMultiplier, minimumFertilityGrowthMultiplier);
         if (!Data.isCultivatedCrop) farmlandMultiplier *= Mathf.Max(0f, Data.environmentGrowthMultiplier);
-        float growthDelta = CalculateGrowthDelta(Data.GrowSpeed, farmlandMultiplier,
-            historical ? 1f : ResolveWeatherGrowthMultiplier(),
+        float growthDelta = PlantGrowthEnvironment.CalculateGrowthDelta(Data.GrowSpeed, farmlandMultiplier,
+            historical ? 1f : PlantGrowthEnvironment.ResolveWeatherGrowthMultiplier(item, rainGrowthBonus),
             GameRuleConfiguration.Current.Production.CropGrowthMultiplier, deltaTime);
 
         if (growthDelta <= 0f)
@@ -332,39 +321,6 @@ public partial class Mod_Grow
             MarkMature();
     }
 
-    public static float CalculateGrowthDelta(
-        float baseSpeed,
-        float farmlandMultiplier,
-        float weatherMultiplier,
-        float growthMultiplier,
-        float deltaTime)
-    {
-        return Mathf.Max(0f, baseSpeed) *
-               Mathf.Max(0f, farmlandMultiplier) *
-               Mathf.Max(0f, weatherMultiplier) *
-               Mathf.Max(0f, growthMultiplier) *
-               Mathf.Max(0f, deltaTime);
-    }
-
-    public static float CalculateFarmlandGrowthMultiplier(
-        TileData_Farmland farmlandData,
-        float minimumWaterMultiplier = 0.5f,
-        float minimumFertilityMultiplier = 0.5f)
-    {
-        if (farmlandData == null)
-            throw new ArgumentNullException(nameof(farmlandData));
-
-        farmlandData.NormalizeValues();
-        if (farmlandData.waterValue <= 0f || farmlandData.Fertility <= 0f)
-            return 0f;
-
-        float waterRatio = Mathf.Clamp01((float)farmlandData.waterValue / farmlandData.maxWater);
-        float fertilityRatio = Mathf.Clamp01(farmlandData.Fertility / farmlandData.maxFertility);
-        float waterMultiplier = Mathf.Lerp(Mathf.Clamp01(minimumWaterMultiplier), 1f, waterRatio);
-        float fertilityMultiplier = Mathf.Lerp(Mathf.Clamp01(minimumFertilityMultiplier), 1f, fertilityRatio);
-        return waterMultiplier * fertilityMultiplier;
-    }
-
     private Vector2Int CurrentSoilCell() => Data.isCultivatedCrop ? Data.plantedTilePos : Vector2Int.FloorToInt(item.transform.position);
 
     private void AdvanceDailyWater() => PlantGrowthEnvironment.AdvanceWater(CurrentSoilCell(), waterConsumptionMultiplier,
@@ -372,19 +328,6 @@ public partial class Mod_Grow
 
     private bool TryResolveFarmland(out TileData_Farmland farmlandData) =>
         FarmlandSystem.TryReadSoil(CurrentSoilCell(), out farmlandData, out _, allowNaturalSoil: !Data.isCultivatedCrop);
-
-    private float ResolveWeatherGrowthMultiplier()
-    {
-        WeatherMgr weather = WeatherMgr.ExistingInstance;
-        if (weather == null || item == null || !weather.TryGetWeatherAt(item.transform.position, out var localWeather))
-            return 1f;
-
-        // 云、强风和降雨分别作用，雨水补给由区域地表系统统一结算。
-        float rainIntensity = weather.TryGetPrecipitationAt(item.transform.position, out float rain, out _) ? rain : 0f;
-        return FlatWorld.AIECS.EntityWeatherInput.ResolveGrowthMultiplier(
-            rainIntensity, localWeather.CloudCoverage, localWeather.WindStrength) *
-            (1f + Mathf.Clamp01(rainIntensity) * rainGrowthBonus);
-    }
 
     private void MarkMature()
     {

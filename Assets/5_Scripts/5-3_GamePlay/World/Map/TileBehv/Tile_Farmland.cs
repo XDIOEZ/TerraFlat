@@ -38,7 +38,7 @@ public class Tile_Farmland : TileBlockBehaviour
         if (!CanGrow(tileData))
             return 0f;
 
-        return Mod_Grow.CalculateFarmlandGrowthMultiplier(
+        return PlantGrowthEnvironment.CalculateFarmlandGrowthMultiplier(
             farmlandData,
             Mathf.Clamp01(waterMultiplierMin),
             Mathf.Clamp01(waterMultiplierMin));
@@ -68,7 +68,7 @@ public class Tile_Farmland : TileBlockBehaviour
 
     public override void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
     {
-        // 正式农作物的天气、水肥、耕地与难度倍率只允许在 Mod_Grow 中结算一次。
+        // 植物模块统一读取共享成长规则，此地块回调不重复推进成长或消耗水肥。
         // 此行为保留为旧资源/API 兼容层，不再直接修改作物进度或地块资源。
     }
 
@@ -85,34 +85,6 @@ public class Tile_Farmland : TileBlockBehaviour
             throw new System.InvalidCastException($"Tile_Farmland 需要 TileData_Farmland，当前类型={tileData.GetType().Name}");
 
         return farmlandData;
-    }
-
-    private static bool CanGrow(TileData_Farmland farmlandData)
-    {
-        farmlandData.NormalizeValues();
-        return farmlandData.waterValue > 0f && farmlandData.Fertility > 0f;
-    }
-
-    private float GetGrowSpeedMultiplier(TileData_Farmland farmlandData)
-    {
-        if (farmlandData.maxWater <= 0f)
-            throw new System.ArgumentOutOfRangeException(nameof(farmlandData.maxWater), "耕地 maxWater 必须大于 0");
-
-        if (!CanGrow(farmlandData))
-            return 0f;
-
-        return Mod_Grow.CalculateFarmlandGrowthMultiplier(
-            farmlandData,
-            Mathf.Clamp01(waterMultiplierMin),
-            Mathf.Clamp01(waterMultiplierMin));
-    }
-
-    private static void ConsumeWater(TileData_Farmland farmlandData, int waterAmount)
-    {
-        if (waterAmount < 0f)
-            throw new System.ArgumentOutOfRangeException(nameof(waterAmount), "消耗水量不能小于 0");
-
-        farmlandData.ConsumeWater(waterAmount);
     }
 
 #endregion

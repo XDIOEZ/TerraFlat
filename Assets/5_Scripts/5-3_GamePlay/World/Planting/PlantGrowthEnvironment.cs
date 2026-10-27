@@ -2,9 +2,48 @@ using System;
 using FlatWorld.AIECS;
 using UnityEngine;
 
-/// <summary>植物共用地块光照查询与独立世界时钟耗水，具体植物只配置门槛和倍率。</summary>
+/// <summary>植物共用环境查询与成长数值，具体植物只保留阶段和收获能力。</summary>
 public static class PlantGrowthEnvironment
 {
+    #region 世界时钟与成长倍率
+
+    public static bool TryReadWorldClock(out TimeData clock, out double now)
+    {
+        clock = null;
+        now = 0d;
+        if (DayTimeSystem.Instance == null || !DayTimeSystem.Instance.TryGetActiveTimeData(out clock))
+            return false;
+        now = (double)clock.TotalDays * clock.DayLength + clock.CurrentTime;
+        return true;
+    }
+
+    public static float CalculateGrowthDelta(float baseSpeed, float farmlandMultiplier,
+        float weatherMultiplier, float growthMultiplier, float deltaTime) =>
+        Mathf.Max(0f, baseSpeed) * Mathf.Max(0f, farmlandMultiplier) *
+        Mathf.Max(0f, weatherMultiplier) * Mathf.Max(0f, growthMultiplier) * Mathf.Max(0f, deltaTime);
+
+    public static float CalculateFarmlandGrowthMultiplier(TileData_Farmland soil,
+        float minimumWaterMultiplier = 0.5f, float minimumFertilityMultiplier = 0.5f)
+    {
+        if (soil == null) throw new ArgumentNullException(nameof(soil));
+        soil.NormalizeValues();
+        return EntityPlantRules.CalculateSoilGrowthMultiplier(soil.waterValue, soil.maxWater,
+            soil.Fertility, soil.maxFertility, minimumWaterMultiplier, minimumFertilityMultiplier);
+    }
+
+    public static float ResolveWeatherGrowthMultiplier(Item item, float rainGrowthBonus)
+    {
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
+        if (weather == null || item == null || !weather.TryGetWeatherAt(item.transform.position, out var localWeather))
+            return 1f;
+        // 雨水补给交给地表系统，植物只结算当前天气对成长的影响。
+        float rainIntensity = weather.TryGetPrecipitationAt(item.transform.position, out float rain, out _) ? rain : 0f;
+        return EntityWeatherInput.ResolveGrowthMultiplier(rainIntensity, localWeather.CloudCoverage, localWeather.WindStrength) *
+            (1f + Mathf.Clamp01(rainIntensity) * rainGrowthBonus);
+    }
+
+    #endregion
+
     #region 地块光照与每日耗水
 
     public static bool HasSufficientLight(Vector2Int cell, float minimum)

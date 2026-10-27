@@ -1,5 +1,7 @@
 # 农业规则与现场回归
 
+2026-10-27：`agriculture/soil` 增补共用植物成长数值断言，覆盖满水满肥、半肥、缺水/缺肥停长、成长倍率只乘一次、零倍率停长、负时间不成长和缺天气中性倍率；`plant_growth` 原有光照、气候、全天耗水和成熟耗水仍运行正式 ECS Job。树木四阶段与农作物两阶段、一次性树木产物和可持续采果保留独立行为；规则不代替真实收获与画面验收。
+
 2026-10-27：磷肥规则独立为 `phosphate-fertilizer.lua` / `agriculture_phosphate_fertilizer_rules`，真实持有使用独立为 `phosphate-fertilizer-gameplay.lua` / `agriculture_phosphate_fertilizer_gameplay`；均登记原系统套件与总入口。旧大脚本移除对应断言，两个案例都无其他案例依赖，可分别定向执行；现场只修改并恢复自有地块及临时磷肥。
 
 2026-10-26：`phosphate_fertilizer` 检查磷肥组合正式施肥模块、只加0.35肥力、不补水、土壤封顶和培育仓接收配置；`phosphate_fertilizer_use` 在隔离世界实例化玩家真实手持磷肥，调用与 `Act` 共用的模块正式目标补给入口，覆盖普通地、空数量、超距和未持有拒绝，正常补肥扣一份、近满封顶扣一份、满肥不扣料及自有地块恢复。该现场不模拟鼠标或触屏点击；本轮保持用户 PlayMode，未运行新增规则与现场。

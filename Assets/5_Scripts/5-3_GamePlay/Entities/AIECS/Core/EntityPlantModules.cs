@@ -71,6 +71,13 @@ namespace FlatWorld.AIECS
         public static bool HasSufficientLight(float intensity, float minimum) =>
             math.isfinite(intensity) && math.isfinite(minimum) && intensity > 0f && intensity >= math.max(0f, minimum);
 
+        /// <summary>树木、农作物和原生植物共用水肥倍率，任一资源耗尽即停长。</summary>
+        public static float CalculateSoilGrowthMultiplier(int water, int maxWater, float fertility,
+            float maxFertility, float minimumWaterMultiplier, float minimumFertilityMultiplier) =>
+            water <= 0 || fertility <= 0f ? 0f :
+            math.lerp(math.saturate(minimumWaterMultiplier), 1f, math.saturate((float)water / math.max(1, maxWater))) *
+            math.lerp(math.saturate(minimumFertilityMultiplier), 1f, math.saturate(fertility / math.max(0.01f, maxFertility)));
+
         /// <summary>水分独立于光照、温度、肥力与成熟状态持续消耗。</summary>
         public static void ConsumeWater(ref EntityPlantSoil soil, float seconds, float dayLength)
         {
@@ -246,8 +253,8 @@ namespace FlatWorld.AIECS
                     if (suitability <= 0f) { plant.Status = EntityPlantGrowthStatus.TemperatureStress; continue; }
                     if (waterForGrowth <= 0) { plant.Status = EntityPlantGrowthStatus.NeedsWater; continue; }
                     if (soil.Fertility <= 0f) { plant.Status = EntityPlantGrowthStatus.NeedsFertility; continue; }
-                    float multiplier = math.lerp(soil.MinimumWaterMultiplier, 1f, math.saturate((float)waterForGrowth / math.max(1, soil.MaxWater))) *
-                        math.lerp(soil.MinimumFertilityMultiplier, 1f, math.saturate(soil.Fertility / math.max(0.01f, soil.MaxFertility)));
+                    float multiplier = EntityPlantRules.CalculateSoilGrowthMultiplier(waterForGrowth, soil.MaxWater,
+                        soil.Fertility, soil.MaxFertility, soil.MinimumWaterMultiplier, soil.MinimumFertilityMultiplier);
                     float weather = historical ? 1f : localWeather.GrowthMultiplier *
                         (1f + localWeather.RainIntensity * growth.RainGrowthBonus);
                     float increment = seconds * growth.Speed * multiplier * suitability * weather * math.max(0f, GrowthMultiplier);

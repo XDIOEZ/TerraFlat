@@ -1628,8 +1628,20 @@ public static partial class GameplayTestSystemProbe
             ["emptyConsumptionRemainder"] = progress.waterConsumptionRemainder,
             ["frozenConsumptionBudget"] = FlatWorld.AIECS.EntityPlantRules.CalculateWaterConsumption(2, .75f, 100f, 30f),
             ["emptyConsumptionBudget"] = FlatWorld.AIECS.EntityPlantRules.CalculateWaterConsumption(0, 0f, 100f, 30f),
-            ["halfWaterMultiplier"] = Mod_Grow.CalculateFarmlandGrowthMultiplier(
+            ["halfWaterMultiplier"] = PlantGrowthEnvironment.CalculateFarmlandGrowthMultiplier(
                 new TileData_Farmland { waterValue = 5, fertilityValue = new GameValue_float(1f) }, 0f, 0f),
+            ["fullSoilMultiplier"] = PlantGrowthEnvironment.CalculateFarmlandGrowthMultiplier(
+                new TileData_Farmland { waterValue = 10, fertilityValue = new GameValue_float(1f) }),
+            ["halfFertilityMultiplier"] = PlantGrowthEnvironment.CalculateFarmlandGrowthMultiplier(
+                new TileData_Farmland { waterValue = 10, fertilityValue = new GameValue_float(.5f) }),
+            ["drySoilMultiplier"] = PlantGrowthEnvironment.CalculateFarmlandGrowthMultiplier(
+                new TileData_Farmland { waterValue = 0, fertilityValue = new GameValue_float(1f) }),
+            ["emptyFertilityMultiplier"] = PlantGrowthEnvironment.CalculateFarmlandGrowthMultiplier(
+                new TileData_Farmland { waterValue = 10, fertilityValue = new GameValue_float(0f) }),
+            ["growthDelta"] = PlantGrowthEnvironment.CalculateGrowthDelta(2f, .75f, 1.5f, 3f, .5f),
+            ["pausedGrowthDelta"] = PlantGrowthEnvironment.CalculateGrowthDelta(2f, .75f, 1.5f, 0f, .5f),
+            ["negativeTimeGrowthDelta"] = PlantGrowthEnvironment.CalculateGrowthDelta(2f, .75f, 1.5f, 3f, -.5f),
+            ["missingWeatherMultiplier"] = PlantGrowthEnvironment.ResolveWeatherGrowthMultiplier(null, .15f),
             ["negativeAddWater"] = WorldException(() => soil.AddWater(-1)),
             ["negativeConsumeWater"] = WorldException(() => soil.ConsumeWater(-1)),
             ["negativeAddFertility"] = WorldException(() => soil.AddFertility(-1f)),

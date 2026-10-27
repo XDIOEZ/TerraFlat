@@ -144,6 +144,13 @@ test.system("agriculture", "soil", {}, function(data)
     assert(data.frozenConsumptionBudget == 1.25 and data.emptyConsumptionBudget == 0,
         "作物大时间片的耗水超过冻结预算，会吞掉后续补入的水")
     assert(data.halfWaterMultiplier == 0.5, "五级水分计算成长倍率时发生了整数除法")
+    assert(data.fullSoilMultiplier == 1 and data.halfFertilityMultiplier == 0.75,
+        "树木与农作物共用水肥倍率时满资源或半肥结果改变")
+    assert(data.drySoilMultiplier == 0 and data.emptyFertilityMultiplier == 0,
+        "共用水肥倍率必须在任一资源耗尽时停长")
+    assert(data.growthDelta == 3.375 and data.pausedGrowthDelta == 0 and data.negativeTimeGrowthDelta == 0,
+        "共用成长乘积重复套用倍率，或停长和时间回拨仍增加进度")
+    assert(data.missingWeatherMultiplier == 1, "无天气上下文的植物没有使用中性成长倍率")
 end, "耕地水肥上下限、消耗与副本隔离")
 
 for _, row in ipairs({
