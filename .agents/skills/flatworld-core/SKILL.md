@@ -21,7 +21,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 ## 世界生命周期
 
-- 业务只读 `GameRuleConfiguration.Current` 或订阅 `Changed`，不查询难度；外部通过 `SetModifier(source, callback, priority)` / `RemoveModifier` 修改候选。每次从独立基础值重建，来源按优先级和首次注册顺序执行；失败不替换来源或快照，通知期不允许重入写入。难度为优先级 -1000 的来源，机制可由后续外部来源或业务自身公开开关覆盖。`SaveDataMgr.SaveData` 换根时由 `GameWorldRuleSession` 一次装配，退出设空档撤销会话来源；新建难度写入完成后再发布。
+- 业务只读 `GameRuleConfiguration.Current` 或订阅 `Changed`，不查询难度；外部通过 `SetModifier(source, callback, priority)` / `RemoveModifier` 修改候选。每次从独立基础值重建，来源按优先级和首次注册顺序执行；失败不替换来源或快照，通知期不允许重入写入。难度为优先级 -1000 的来源，机制可由后续外部来源或业务自身公开开关覆盖。难度定义复用分域只读 RuleSet 复制倍率，草稿、规则候选和最终发布各自独立。`SaveDataMgr.SaveData` 换根时由 `GameWorldRuleSession` 一次装配，退出设空档撤销会话来源；新建难度写入完成后再发布。
 
 - GameManager 是新建、继续、运行、退出的权威。动态维度以 WorldKey 创建 Scene 并复用 RunWorld，不入 Build Settings；离线太空恢复使用静态 SpaceScene 引导，再按 SpaceSector__X__Y 创建星区场景。
 - `SaveAndRestart → BackToHelloScene_Coroutine(requireSuccessfulSave:true)` 在撤除世界/网络前同步写盘，失败保留会话；成功清理后由等待旧 PID 退出的助手重开 Windows/Linux 运行包。MOD 菜单复用 `TryRestartApplication`；Editor/其它平台明确不支持自动重启，不能把角色死亡当重启。

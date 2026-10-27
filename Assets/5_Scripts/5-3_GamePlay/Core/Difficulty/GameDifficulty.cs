@@ -29,106 +29,6 @@ public enum GameDifficultyId
     Custom = 100
 }
 
-public sealed class PlayerDeathDifficultyRules
-{
-    public bool DropAllCarriedItems { get; }
-
-    public PlayerDeathDifficultyRules(bool dropAllCarriedItems)
-    {
-        DropAllCarriedItems = dropAllCarriedItems;
-    }
-}
-
-/// <summary>玩家生存消耗、恢复与环境威胁规则。</summary>
-public sealed class PlayerSurvivalDifficultyRules
-{
-    public float HungerDrainMultiplier { get; }
-    public float StaminaConsumptionMultiplier { get; }
-    public float StaminaRecoveryMultiplier { get; }
-    public float HealingMultiplier { get; }
-    public float EnvironmentalDamageMultiplier { get; }
-
-    public PlayerSurvivalDifficultyRules(
-        float hungerDrainMultiplier,
-        float staminaConsumptionMultiplier,
-        float staminaRecoveryMultiplier,
-        float healingMultiplier,
-        float environmentalDamageMultiplier)
-    {
-        HungerDrainMultiplier = hungerDrainMultiplier;
-        StaminaConsumptionMultiplier = staminaConsumptionMultiplier;
-        StaminaRecoveryMultiplier = staminaRecoveryMultiplier;
-        HealingMultiplier = healingMultiplier;
-        EnvironmentalDamageMultiplier = environmentalDamageMultiplier;
-    }
-}
-
-/// <summary>
-/// 难度预设的战斗参数，只用于装配业务配置来源。
-/// </summary>
-public sealed class CreatureCombatDifficultyRules
-{
-    #region 生物战斗倍率
-
-    public float PlayerAttackMultiplier { get; }
-    public float AttackMultiplier { get; }
-    public float MaxHealthMultiplier { get; }
-    public float PlayerDamageTakenMultiplier { get; }
-
-    public CreatureCombatDifficultyRules(
-        float playerAttackMultiplier,
-        float attackMultiplier,
-        float maxHealthMultiplier,
-        float playerDamageTakenMultiplier = 1f)
-    {
-        PlayerAttackMultiplier = playerAttackMultiplier;
-        AttackMultiplier = attackMultiplier;
-        MaxHealthMultiplier = maxHealthMultiplier;
-        PlayerDamageTakenMultiplier = playerDamageTakenMultiplier;
-    }
-
-    #endregion
-}
-
-/// <summary>昼夜推进、生物生态与战利品规则。</summary>
-public sealed class WorldDifficultyRules
-{
-    public float TimeSpeedMultiplier { get; }
-    public float SpawnFrequencyMultiplier { get; }
-    public float SpawnPopulationMultiplier { get; }
-    public float LootAmountMultiplier { get; }
-
-    public WorldDifficultyRules(
-        float timeSpeedMultiplier,
-        float spawnFrequencyMultiplier,
-        float spawnPopulationMultiplier,
-        float lootAmountMultiplier)
-    {
-        TimeSpeedMultiplier = timeSpeedMultiplier;
-        SpawnFrequencyMultiplier = spawnFrequencyMultiplier;
-        SpawnPopulationMultiplier = spawnPopulationMultiplier;
-        LootAmountMultiplier = lootAmountMultiplier;
-    }
-}
-
-/// <summary>种植、燃料与制作产出规则。</summary>
-public sealed class ProductionDifficultyRules
-{
-    public float CropGrowthMultiplier { get; }
-    public float FuelConsumptionMultiplier { get; }
-    public float CraftingOutputMultiplier { get; }
-
-    public ProductionDifficultyRules(
-        float cropGrowthMultiplier,
-        float fuelConsumptionMultiplier,
-        float craftingOutputMultiplier)
-    {
-        CropGrowthMultiplier = cropGrowthMultiplier;
-        FuelConsumptionMultiplier = fuelConsumptionMultiplier;
-        CraftingOutputMultiplier = craftingOutputMultiplier;
-    }
-}
-
 /// <summary>
 /// 自定义难度的可编辑值对象。它本身不进入 MemoryPack，存档仍由 GameSaveData 的基础字段承担。
 /// </summary>
@@ -186,34 +86,35 @@ public sealed class GameDifficultyRuleValues
 
 public sealed class GameDifficultyDefinition
 {
+    #region 分域来源倍率
+
     public GameDifficultyId Id { get; }
     public string DisplayName { get; }
     public string Description { get; }
-    public PlayerDeathDifficultyRules PlayerDeath { get; }
-    public PlayerSurvivalDifficultyRules PlayerSurvival { get; }
-    public CreatureCombatDifficultyRules CreatureCombat { get; }
-    public WorldDifficultyRules World { get; }
-    public ProductionDifficultyRules Production { get; }
+    public PlayerDeathRuleSet PlayerDeath { get; }
+    public PlayerSurvivalRuleSet PlayerSurvival { get; }
+    public CreatureCombatRuleSet CreatureCombat { get; }
+    public WorldRuleSet World { get; }
+    public ProductionRuleSet Production { get; }
 
     public GameDifficultyDefinition(
         GameDifficultyId id,
         string displayName,
         string description,
-        PlayerDeathDifficultyRules playerDeath,
-        PlayerSurvivalDifficultyRules playerSurvival,
-        CreatureCombatDifficultyRules creatureCombat,
-        WorldDifficultyRules world,
-        ProductionDifficultyRules production)
+        GameRuleValues values)
     {
         Id = id;
         DisplayName = displayName;
         Description = description;
-        PlayerDeath = playerDeath;
-        PlayerSurvival = playerSurvival;
-        CreatureCombat = creatureCombat;
-        World = world;
-        Production = production;
+        // 难度定义只冻结来源倍率，不持有可写候选或已发布的业务快照。
+        PlayerDeath = new PlayerDeathRuleSet(values);
+        PlayerSurvival = new PlayerSurvivalRuleSet(values);
+        CreatureCombat = new CreatureCombatRuleSet(values);
+        World = new WorldRuleSet(values);
+        Production = new ProductionRuleSet(values);
     }
+
+    #endregion
 }
 
 public static class GameDifficultyCatalog
@@ -271,27 +172,26 @@ public static class GameDifficultyCatalog
             (GameDifficultyId)level,
             $"难度 {level}",
             GetLevelDescription(level),
-            new PlayerDeathDifficultyRules(dropAllCarriedItems: level >= 10),
-            new PlayerSurvivalDifficultyRules(
-                level == 0 ? 0.5f : Mathf.Lerp(1f, 1.8f, t),
-                Mathf.Lerp(1f, 1.7f, t),
-                Mathf.Lerp(1f, 0.65f, t),
-                Mathf.Lerp(1f, 0.70f, t),
-                Mathf.Lerp(1f, 1.8f, t)),
-            new CreatureCombatDifficultyRules(
-                Mathf.Lerp(1f, 0.65f, t),
-                Mathf.Lerp(1f, 2.2f, t),
-                Mathf.Lerp(1f, 2.5f, t),
-                playerDamageTakenMultiplier: level == 0 ? 0.5f : 1f),
-            new WorldDifficultyRules(
-                Mathf.Lerp(1f, 1.25f, t),
-                Mathf.Lerp(1f, 1.8f, t),
-                Mathf.Lerp(1f, 1.7f, t),
-                Mathf.Lerp(1f, 0.65f, t)),
-            new ProductionDifficultyRules(
-                Mathf.Lerp(1f, 0.70f, t),
-                Mathf.Lerp(1f, 1.6f, t),
-                Mathf.Lerp(1f, 0.80f, t)));
+            new GameRuleValues
+            {
+                DropAllCarriedItems = level >= 10,
+                HungerDrainMultiplier = level == 0 ? 0.5f : Mathf.Lerp(1f, 1.8f, t),
+                StaminaConsumptionMultiplier = Mathf.Lerp(1f, 1.7f, t),
+                StaminaRecoveryMultiplier = Mathf.Lerp(1f, 0.65f, t),
+                HealingMultiplier = Mathf.Lerp(1f, 0.70f, t),
+                EnvironmentalDamageMultiplier = Mathf.Lerp(1f, 1.8f, t),
+                PlayerAttackMultiplier = Mathf.Lerp(1f, 0.65f, t),
+                CreatureAttackMultiplier = Mathf.Lerp(1f, 2.2f, t),
+                CreatureHealthMultiplier = Mathf.Lerp(1f, 2.5f, t),
+                PlayerDamageTakenMultiplier = level == 0 ? 0.5f : 1f,
+                TimeSpeedMultiplier = Mathf.Lerp(1f, 1.25f, t),
+                SpawnFrequencyMultiplier = Mathf.Lerp(1f, 1.8f, t),
+                SpawnPopulationMultiplier = Mathf.Lerp(1f, 1.7f, t),
+                LootAmountMultiplier = Mathf.Lerp(1f, 0.65f, t),
+                CropGrowthMultiplier = Mathf.Lerp(1f, 0.70f, t),
+                FuelConsumptionMultiplier = Mathf.Lerp(1f, 1.6f, t),
+                CraftingOutputMultiplier = Mathf.Lerp(1f, 0.80f, t)
+            });
     }
 
     private static string GetLevelDescription(int level)
@@ -326,26 +226,26 @@ public static class GameDifficultyCatalog
             GameDifficultyId.Custom,
             "自定义",
             description,
-            new PlayerDeathDifficultyRules(values.DropAllCarriedItems),
-            new PlayerSurvivalDifficultyRules(
-                values.HungerDrainMultiplier,
-                values.StaminaConsumptionMultiplier,
-                values.StaminaRecoveryMultiplier,
-                values.HealingMultiplier,
-                values.EnvironmentalDamageMultiplier),
-            new CreatureCombatDifficultyRules(
-                values.PlayerAttackMultiplier,
-                values.CreatureAttackMultiplier,
-                values.CreatureHealthMultiplier),
-            new WorldDifficultyRules(
-                values.TimeSpeedMultiplier,
-                values.SpawnFrequencyMultiplier,
-                values.SpawnPopulationMultiplier,
-                values.LootAmountMultiplier),
-            new ProductionDifficultyRules(
-                values.CropGrowthMultiplier,
-                values.FuelConsumptionMultiplier,
-                values.CraftingOutputMultiplier));
+            new GameRuleValues
+            {
+                DropAllCarriedItems = values.DropAllCarriedItems,
+                HungerDrainMultiplier = values.HungerDrainMultiplier,
+                StaminaConsumptionMultiplier = values.StaminaConsumptionMultiplier,
+                StaminaRecoveryMultiplier = values.StaminaRecoveryMultiplier,
+                HealingMultiplier = values.HealingMultiplier,
+                EnvironmentalDamageMultiplier = values.EnvironmentalDamageMultiplier,
+                PlayerAttackMultiplier = values.PlayerAttackMultiplier,
+                CreatureAttackMultiplier = values.CreatureAttackMultiplier,
+                CreatureHealthMultiplier = values.CreatureHealthMultiplier,
+                PlayerDamageTakenMultiplier = 1f,
+                TimeSpeedMultiplier = values.TimeSpeedMultiplier,
+                SpawnFrequencyMultiplier = values.SpawnFrequencyMultiplier,
+                SpawnPopulationMultiplier = values.SpawnPopulationMultiplier,
+                LootAmountMultiplier = values.LootAmountMultiplier,
+                CropGrowthMultiplier = values.CropGrowthMultiplier,
+                FuelConsumptionMultiplier = values.FuelConsumptionMultiplier,
+                CraftingOutputMultiplier = values.CraftingOutputMultiplier
+            });
     }
 
     public static GameDifficultyRuleValues ReadCustomRules(GameSaveData saveData)

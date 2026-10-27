@@ -58,9 +58,51 @@ for level = 0, 20 do
         near(data.environmentalDamage, 1 + level * .04, "环境伤害倍率保持原规则")
         near(data.creatureAttack, 1 + level * .06, "怪物自身攻击倍率保持原规则")
         near(data.playerAttack, 1 - level * .0175, "玩家攻击倍率保持原规则")
+        near(data.creatureHealth, 1 + level * .075, "怪物生命倍率")
+        near(data.playerDamageTaken, expectedReceived, "玩家受伤倍率")
+        near(data.staminaConsumption, 1 + level * .035, "体力消耗倍率")
+        near(data.staminaRecovery, 1 - level * .0175, "体力恢复倍率")
+        near(data.healing, 1 - level * .015, "治疗倍率")
+        near(data.timeSpeed, 1 + level * .0125, "时间倍率")
+        near(data.spawnFrequency, 1 + level * .04, "生成频率倍率")
+        near(data.spawnPopulation, 1 + level * .035, "生成数量倍率")
+        near(data.lootAmount, 1 - level * .0175, "战利品倍率")
+        near(data.cropGrowth, 1 - level * .015, "作物生长倍率")
+        near(data.fuelConsumption, 1 + level * .03, "燃料消耗倍率")
+        near(data.craftingOutput, 1 - level * .01, "制作产出倍率")
+        assert(data.deathDrop == (level >= 10), "死亡掉落门槛改变")
         near(data.damage, 7 * expectedReceived, "受伤减半在扣除防御之后")
     end, "预设难度生存与战斗倍率：" .. level)
 end
+
+test.system("core_lifecycle", "difficulty_rules", { custom = true, customValues = {
+    DropAllCarriedItems = true, PlayerAttackMultiplier = .2, CreatureAttackMultiplier = 1.3,
+    CreatureHealthMultiplier = 0, HungerDrainMultiplier = 5, StaminaConsumptionMultiplier = -1,
+    StaminaRecoveryMultiplier = .8, HealingMultiplier = 1.6, EnvironmentalDamageMultiplier = 1.9,
+    TimeSpeedMultiplier = 2.1, SpawnFrequencyMultiplier = 2.2, SpawnPopulationMultiplier = 0,
+    LootAmountMultiplier = 2.4, CropGrowthMultiplier = 2.5, FuelConsumptionMultiplier = 2.6,
+    CraftingOutputMultiplier = 0
+} }, function(data)
+    for key, expected in pairs({ playerAttack = .2, creatureAttack = 1.3, creatureHealth = .1,
+        hungerDrain = 4, staminaConsumption = 0, staminaRecovery = .8, healing = 1.6,
+        environmentalDamage = 1.9, timeSpeed = 2.1, spawnFrequency = 2.2, spawnPopulation = .25,
+        lootAmount = 2.4, cropGrowth = 2.5, fuelConsumption = 2.6, craftingOutput = .25,
+        playerDamageTaken = 1 }) do
+        near(data[key], expected, "自定义难度规则 " .. key)
+    end
+    assert(data.deathDrop and data.customInputUnchanged and data.definitionIsolated,
+        "自定义难度掉落或输入/定义隔离改变")
+    near(data.frozenAttack, 1.25, "难度定义战斗值的独立副本")
+    near(data.frozenTime, 1.5, "难度定义世界值的独立副本")
+    assert(data.frozenDrop, "更改可写规则候选污染了难度定义")
+end, "自定义难度：完整倍率、上下限与定义隔离")
+
+test.system("core_lifecycle", "difficulty_rules", { custom = true, nonFiniteCustom = true }, function(data)
+    near(data.playerAttack, 1, "自定义 NaN 回退")
+    near(data.creatureHealth, 1, "自定义负无穷回退")
+    near(data.spawnPopulation, 1, "自定义正无穷回退")
+    assert(data.definitionIsolated, "自定义异常值或源对象修改污染难度定义")
+end, "自定义难度：非有限值回退")
 
 for _, case in ipairs({
     {name = "玩家攻击", args = {sourcePlayer = true}, damage = 7, received = 1},

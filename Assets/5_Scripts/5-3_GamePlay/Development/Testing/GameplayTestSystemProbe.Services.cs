@@ -186,9 +186,27 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject ServiceDifficultyRules(JObject args)
     {
-        GameDifficultyDefinition definition = Flag(args, "custom", false)
-            ? GameDifficultyCatalog.CreateCustom(new GameDifficultyRuleValues())
+        GameDifficultyRuleValues custom = Flag(args, "custom", false)
+            ? (args["customValues"] is JObject patch ? patch.ToObject<GameDifficultyRuleValues>() : new GameDifficultyRuleValues())
+            : null;
+        if (custom != null && Flag(args, "nonFiniteCustom", false))
+        {
+            custom.PlayerAttackMultiplier = float.NaN;
+            custom.CreatureHealthMultiplier = float.NegativeInfinity;
+            custom.SpawnPopulationMultiplier = float.PositiveInfinity;
+        }
+        float originalHunger = custom?.HungerDrainMultiplier ?? 1f;
+        GameDifficultyDefinition definition = custom != null
+            ? GameDifficultyCatalog.CreateCustom(custom)
             : GameDifficultyCatalog.Get((GameDifficultyId)(int)Number(args, "level", 0d));
+        bool customInputUnchanged = custom == null || custom.HungerDrainMultiplier == originalHunger;
+        float definitionAttack = definition.CreatureCombat.PlayerAttackMultiplier;
+        if (custom != null) custom.PlayerAttackMultiplier = 99f;
+        bool definitionIsolated = definition.CreatureCombat.PlayerAttackMultiplier == definitionAttack;
+        var seed = new GameRuleValues { PlayerAttackMultiplier = 1.25f, TimeSpeedMultiplier = 1.5f, DropAllCarriedItems = true };
+        var frozenDefinition = new GameDifficultyDefinition(GameDifficultyId.Custom, "probe", "", seed);
+        seed.PlayerAttackMultiplier = seed.TimeSpeedMultiplier = 9f;
+        seed.DropAllCarriedItems = false;
         var values = new GameRuleValues();
         GameDifficultyService.ApplyRuleModifier(values, definition);
         var rules = new GameRuleSnapshot(values);
@@ -197,9 +215,27 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["hungerDrain"] = rules.PlayerSurvival.HungerDrainMultiplier,
+            ["staminaConsumption"] = rules.PlayerSurvival.StaminaConsumptionMultiplier,
+            ["staminaRecovery"] = rules.PlayerSurvival.StaminaRecoveryMultiplier,
+            ["healing"] = rules.PlayerSurvival.HealingMultiplier,
             ["environmentalDamage"] = rules.PlayerSurvival.EnvironmentalDamageMultiplier,
             ["creatureAttack"] = rules.CreatureCombat.AttackMultiplier,
+            ["creatureHealth"] = rules.CreatureCombat.MaxHealthMultiplier,
             ["playerAttack"] = rules.CreatureCombat.PlayerAttackMultiplier,
+            ["playerDamageTaken"] = rules.CreatureCombat.PlayerDamageTakenMultiplier,
+            ["timeSpeed"] = rules.World.TimeSpeedMultiplier,
+            ["spawnFrequency"] = rules.World.SpawnFrequencyMultiplier,
+            ["spawnPopulation"] = rules.World.SpawnPopulationMultiplier,
+            ["lootAmount"] = rules.World.LootAmountMultiplier,
+            ["cropGrowth"] = rules.Production.CropGrowthMultiplier,
+            ["fuelConsumption"] = rules.Production.FuelConsumptionMultiplier,
+            ["craftingOutput"] = rules.Production.CraftingOutputMultiplier,
+            ["deathDrop"] = rules.PlayerDeath.DropAllCarriedItems,
+            ["customInputUnchanged"] = customInputUnchanged,
+            ["definitionIsolated"] = definitionIsolated,
+            ["frozenAttack"] = frozenDefinition.CreatureCombat.PlayerAttackMultiplier,
+            ["frozenTime"] = frozenDefinition.World.TimeSpeedMultiplier,
+            ["frozenDrop"] = frozenDefinition.PlayerDeath.DropAllCarriedItems,
             ["received"] = received,
             ["damage"] = FlatWorld.Combat.CombatRules.ResolvePhysical(
                 (float)Number(args, "attack", 10d), (float)Number(args, "defense", 3d), 1f, received)
