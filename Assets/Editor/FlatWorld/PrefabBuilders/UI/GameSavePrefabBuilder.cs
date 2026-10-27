@@ -119,10 +119,12 @@ public static class GameSavePrefabBuilder
     {
         Image shadow = CreateImage("存档主卡投影", root, new Color(0f, 0f, 0f, 0.42f));
         SetRect(shadow.rectTransform, new Vector2(14f, -16f), FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
+        shadow.rectTransform.localScale = FlatWorldUIPanelMetrics.SharedModalCardLocalScale;
         shadow.raycastTarget = false;
 
         Image card = CreateImage("存档主卡", root, Ink);
         SetRect(card.rectTransform, Vector2.zero, FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
+        card.rectTransform.localScale = FlatWorldUIPanelMetrics.SharedModalCardLocalScale;
 
         Outline outline = card.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.34f);

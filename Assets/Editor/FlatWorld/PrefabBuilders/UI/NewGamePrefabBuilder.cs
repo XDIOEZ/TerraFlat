@@ -191,6 +191,13 @@ public static class NewGamePrefabBuilder
         RectTransform difficultyDialog)
     {
         RectTransform shadow = root.transform.Find("新世界主卡投影") as RectTransform;
+        // 主卡、投影和难度窗口必须具有相同的视觉基准，避免页面切换时尺寸跳变。
+        Vector3 baseScale = FlatWorldUIPanelMetrics.SharedModalCardLocalScale;
+        if (shadow != null)
+            shadow.localScale = baseScale;
+        card.localScale = baseScale;
+        if (difficultyDialog != null)
+            difficultyDialog.localScale = baseScale;
         SafeAreaScaleGroup scaleGroup = root.GetComponent<SafeAreaScaleGroup>();
         if (scaleGroup == null)
             scaleGroup = root.AddComponent<SafeAreaScaleGroup>();

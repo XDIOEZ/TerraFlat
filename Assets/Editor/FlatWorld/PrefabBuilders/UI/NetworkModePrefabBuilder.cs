@@ -93,10 +93,12 @@ public static class NetworkModePrefabBuilder
 
         Image shadow = CreateImage("面板投影", root, new Color(0f, 0f, 0f, 0.38f));
         SetRect(shadow.rectTransform, new Vector2(12f, -14f), FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
+        shadow.rectTransform.localScale = FlatWorldUIPanelMetrics.SharedModalCardLocalScale;
         shadow.raycastTarget = false;
 
         Image card = CreateImage("联机主卡片", root, Ink);
         SetRect(card.rectTransform, Vector2.zero, FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
+        card.rectTransform.localScale = FlatWorldUIPanelMetrics.SharedModalCardLocalScale;
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
         cardOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.32f);

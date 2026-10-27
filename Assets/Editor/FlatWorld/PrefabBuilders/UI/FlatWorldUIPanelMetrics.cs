@@ -10,5 +10,10 @@ internal static class FlatWorldUIPanelMetrics
 
     public static readonly Vector2 SharedModalCardSize = new Vector2(1480f, 840f);
 
+    // 四个主菜单卡片保留完整内部布局，缩小视觉基准后再交给全局 UI 缩放与安全区限幅。
+    public const float SharedModalCardBaseScale = 0.6f;
+    public static Vector3 SharedModalCardLocalScale =>
+        new Vector3(SharedModalCardBaseScale, SharedModalCardBaseScale, 1f);
+
     #endregion
 }

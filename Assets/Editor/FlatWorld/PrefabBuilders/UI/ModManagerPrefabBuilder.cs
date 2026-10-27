@@ -20,6 +20,7 @@ public static class ModManagerPrefabBuilder
             root.SetActive(false);
             var card = (RectTransform)root.transform.Find("MOD管理卡片");
             if (card == null) throw new InvalidOperationException("MOD 管理页缺少内容卡片。");
+            card.localScale = FlatWorldUIPanelMetrics.SharedModalCardLocalScale;
             Remove(card, "上移");
             Remove(card, "下移");
             Remove(card, "代码授权");

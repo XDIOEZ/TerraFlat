@@ -1224,6 +1224,43 @@ for _, size in ipairs({{1920,1080},{1280,720},{720,1280}}) do
     end
 end
 
+-- 从四个正式面板 Prefab 采样卡片基准和真实安全区缩放组件，验证放大/缩小不是被限幅抵消。
+for _, modal in ipairs({{"save",2},{"new_game",3},{"network",2},{"mods",1}}) do
+    for _, size in ipairs({{1920,1080},{1280,720},{720,1280}}) do
+        local previous, baseline
+        for _, scale in ipairs({0.25,0.5,1,1.5,2,3.25}) do
+            test.system("ui_settings", "main_menu_modal_scale_layout",
+                {panel = modal[1], width = size[1], height = size[2], scale = scale}, function(data)
+                assert(data.panel == modal[1] and data.targets == modal[2] and data.containsBounds,
+                    "主菜单面板缺少共同缩放目标：" .. modal[1])
+                assert(data.presentationScale == 1 and data.insideSafeArea,
+                    "面板叠乘表现倍率或超出安全区：" .. modal[1])
+                assert(data.widthPixels > 0 and data.heightPixels > 0,
+                    "面板没有有效显示尺寸：" .. modal[1])
+                -- 200% 以内优先保留用户倍率；极端放大后安全边距本身也会变宽，只核验不越界。
+                if previous and scale <= 2 then
+                    assert(data.widthPixels >= previous.widthPixels - 0.2 and
+                        data.heightPixels >= previous.heightPixels - 0.2,
+                        "提高全局 UI 倍率时主菜单面板反而缩小：" .. modal[1])
+                end
+                if scale == 1 then baseline = data end
+                if scale == 1.5 then
+                    assert(math.abs(data.widthPixels - baseline.widthPixels * 1.5) < 0.5 and
+                        math.abs(data.heightPixels - baseline.heightPixels * 1.5) < 0.5,
+                        "主菜单面板从100%调至150%时未整体放大：" .. modal[1])
+                end
+                if scale == 3.25 then
+                    assert(data.widthPixels > baseline.widthPixels and
+                        data.heightPixels > baseline.heightPixels,
+                        "高倍率时主菜单面板不应恢复到默认尺寸：" .. modal[1])
+                end
+                previous = data
+            end, "主菜单 " .. modal[1] .. " 面板缩放 " ..
+                size[1] .. "x" .. size[2] .. " / " .. scale)
+        end
+    end
+end
+
 -- 扫描包含嵌套控件的正式资产，防止关闭自动缩放、过高下限或 Overflow 再次让长翻译出框。
 test.system("ui_settings", "text_fitting_assets", {}, function(data)
     assert(data.prefabs >= 80 and #data.texts >= 800, "正式 UI 文字扫描范围异常缩小")

@@ -24,10 +24,95 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "pressure_hud_display_cache", CapturePressureHudDisplayCache);
 #if UNITY_EDITOR
         Register("ui_settings", "main_menu_scale_layout", CaptureMainMenuScaleLayout);
+        Register("ui_settings", "main_menu_modal_scale_layout", CaptureMainMenuModalScaleLayout);
 #endif
     }
 
 #if UNITY_EDITOR
+    /// <summary>读取四个正式主菜单面板的基准卡片，用真实安全区组件验证用户倍率。</summary>
+    private static JObject CaptureMainMenuModalScaleLayout(JObject args)
+    {
+        string panel = Text(args, "panel", "save");
+        string path = panel switch
+        {
+            "save" => "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab",
+            "new_game" => "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab",
+            "network" => "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab",
+            "mods" => "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab",
+            _ => throw new System.ArgumentException("未知的主菜单面板：" + panel)
+        };
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        SafeAreaScaleGroup sourceGroup = prefab != null ? prefab.GetComponent<SafeAreaScaleGroup>() : null;
+        if (sourceGroup == null)
+            throw new System.InvalidOperationException("主菜单面板缺少安全区缩放组件：" + path);
+        SerializedObject serialized = new SerializedObject(sourceGroup);
+        RectTransform sourceBounds = serialized.FindProperty("boundsTarget").objectReferenceValue as RectTransform;
+        SerializedProperty targets = serialized.FindProperty("scaledTargets");
+        if (sourceBounds == null || targets == null || targets.arraySize == 0)
+            throw new System.InvalidOperationException("主菜单面板缺少完整的缩放目标：" + path);
+
+        bool allTargetsConsistent = false;
+        for (int i = 0; i < targets.arraySize; i++)
+        {
+            RectTransform sourceTarget = targets.GetArrayElementAtIndex(i).objectReferenceValue as RectTransform;
+            if (sourceTarget == null)
+                throw new System.InvalidOperationException("主菜单面板存在空缩放目标：" + path);
+            Vector3 baseScale = sourceTarget.localScale;
+            bool matchesDesign = Mathf.Abs(baseScale.x - 0.6f) < 0.001f &&
+                                 Mathf.Abs(baseScale.y - 0.6f) < 0.001f &&
+                                 Mathf.Abs(baseScale.z - 1f) < 0.001f;
+            if (!matchesDesign)
+                throw new System.InvalidOperationException("主菜单面板的基准比例不同步：" + sourceTarget.name);
+            if (sourceTarget == sourceBounds)
+                allTargetsConsistent = true;
+        }
+
+        float width = (float)Number(args, "width", 1920);
+        float height = (float)Number(args, "height", 1080);
+        float scale = (float)Number(args, "scale", 1f);
+        if (width <= 0f || height <= 0f ||
+            scale < UIUserSettings.MinimumScale || scale > UIUserSettings.MaximumScale)
+            throw new System.ArgumentOutOfRangeException(nameof(args), "主菜单测试的分辨率或倍率非法。");
+
+        // 模拟正式 UIRoot 的 Expand 参考分辨率，只用临时 UI，不触碰玩家的真实设置。
+        float canvasScale = Mathf.Min(width / 1920f, height / 1080f) * scale;
+        GameObject fixture = new GameObject("[LuaMainMenuModalScale]", typeof(RectTransform));
+        fixture.SetActive(false);
+        try
+        {
+            RectTransform root = fixture.GetComponent<RectTransform>();
+            root.sizeDelta = new Vector2(width / canvasScale, height / canvasScale);
+            RectTransform card = new GameObject("FormalCardBounds", typeof(RectTransform))
+                .GetComponent<RectTransform>();
+            card.SetParent(root, false);
+            card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
+            card.sizeDelta = sourceBounds.rect.size;
+            card.localScale = sourceBounds.localScale;
+
+            Vector2 margin = serialized.FindProperty("safeMargin").vector2Value;
+            float presentationScale = serialized.FindProperty("presentationScale").floatValue;
+            SafeAreaScaleGroup group = fixture.AddComponent<SafeAreaScaleGroup>();
+            group.Configure(card, new[] { card }, margin, presentationScale);
+            fixture.SetActive(true);
+            group.ApplyScale();
+
+            float displayedWidth = card.rect.width * card.localScale.x * canvasScale;
+            float displayedHeight = card.rect.height * card.localScale.y * canvasScale;
+            return new JObject
+            {
+                ["panel"] = panel,
+                ["targets"] = targets.arraySize,
+                ["containsBounds"] = allTargetsConsistent,
+                ["presentationScale"] = presentationScale,
+                ["widthPixels"] = displayedWidth,
+                ["heightPixels"] = displayedHeight,
+                ["insideSafeArea"] = displayedWidth <= width - 2f * margin.x * canvasScale + 0.2f &&
+                    displayedHeight <= height - 2f * margin.y * canvasScale + 0.2f
+            };
+        }
+        finally { Object.DestroyImmediate(fixture); }
+    }
+
     /// <summary>从正式主菜单 Prefab 取得尺寸，并在独立布局中检查不同用户倍率的响应。</summary>
     private static JObject CaptureMainMenuScaleLayout(JObject args)
     {
