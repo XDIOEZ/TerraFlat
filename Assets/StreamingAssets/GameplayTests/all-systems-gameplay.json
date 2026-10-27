@@ -299,6 +299,12 @@
       "enabled": true
     },
     {
+      "id": "world_physics_proxy_gameplay",
+      "name": "JSON物理代理与正式实体运动回写",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/proxy-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "save_gameplay",
       "name": "存档与恢复真实关键流程",
       "luaPath": "GameplayTests/Systems/Save/gameplay.lua",

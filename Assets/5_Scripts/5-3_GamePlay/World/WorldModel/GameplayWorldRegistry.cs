@@ -37,6 +37,7 @@ public static partial class GameplayWorldRegistry
     private static readonly List<WorldPhysicsService2D> physicsDispatch = new();
     private static readonly List<GameplayWorldRuntime> releaseDispatch = new();
     private static readonly HashSet<PhysicsScene2D> physicsScenes = new();
+    internal static bool IsPhysicsDispatchInProgress { get; private set; }
     private static bool sceneCacheBound;
     private static Scene localScene;
     private static string localSceneKey;
@@ -182,17 +183,114 @@ public static partial class GameplayWorldRegistry
     // 世界账本负责统一交接，其他运行索引只消费归属变化通知。
     public static void AssignItemToWorld(Item item, string worldKey)
     {
+        if (ReferenceEquals(item, null)) return;
         ItemMgr manager = ItemMgr.GetExistingInstance();
-        if (item != null && manager != null && manager.IsRuntimeItemRegistered(item) &&
-            !string.IsNullOrEmpty(worldKey) && !string.Equals(GetItemWorldKey(item), worldKey, StringComparison.Ordinal))
-            RequireAssignedItemPhysicsWorld(worldKey);
-        if (ReferenceEquals(item, null) || !worldItems.AssignItemToWorld(item, worldKey)) return;
-        if (manager == null || !manager.IsRuntimeItemRegistered(item)) return;
+        bool registered = item != null && manager != null && manager.IsRuntimeItemRegistered(item);
+        string sourceWorld = GetItemWorldKey(item);
+        if (string.Equals(sourceWorld, worldKey, StringComparison.Ordinal)) return;
+        if (registered && !string.IsNullOrEmpty(sourceWorld) &&
+            (IsPhysicsDispatchInProgress ||
+             TryGetPhysics(sourceWorld, out var simulatingSource) && simulatingSource.IsSimulating ||
+             TryGetPhysics(worldKey, out var simulatingTarget) && simulatingTarget.IsSimulating))
+            throw new InvalidOperationException("物理模拟分发期间不能迁移物品，请在本轮结束后重试。");
+        if (!registered) { worldItems.AssignItemToWorld(item, worldKey); return; }
+        if (!string.IsNullOrEmpty(worldKey)) RequireAssignedItemPhysicsWorld(worldKey);
+
+        Scene sourceScene = item.gameObject.scene;
+        Transform sourceParent = item.transform.parent;
+        Vector3 sourceLocalPosition = item.transform.localPosition;
+        Quaternion sourceLocalRotation = item.transform.localRotation;
+        Vector3 sourceLocalScale = item.transform.localScale;
+        Vector3 sourceWorldPosition = item.transform.position;
+        Quaternion sourceWorldRotation = item.transform.rotation;
+        ItemData originalData = item.itemData;
+        Rigidbody2D sourceBody = item.GetComponent<Rigidbody2D>();
+        WorldPhysicsItemBodyRepresentation2D sourceRepresentation = sourceBody != null
+            ? WorldPhysicsService2D.CaptureItemBodyRepresentation(sourceBody) : default;
+        Vector2 sourceVelocity = sourceBody != null ? sourceBody.velocity : Vector2.zero;
+        float sourceAngularVelocity = sourceBody != null ? sourceBody.angularVelocity : 0f;
+        bool hadSourceProxy = TryGetPhysics(sourceWorld, out var sourcePhysics) &&
+            sourcePhysics.TryGetItemProxy(item, out _);
+        Vector3 snapshotPosition = originalData?.transform?.position ?? sourceWorldPosition;
+        Quaternion snapshotRotation = originalData?.transform?.rotation ?? sourceWorldRotation;
+        Vector3 snapshotScale = originalData?.transform?.scale ?? sourceLocalScale;
+        bool hadPhysicsState = originalData?.PhysicsState != null;
+        Vector2 snapshotVelocity = originalData?.PhysicsState?.Velocity ?? Vector2.zero;
+        float snapshotAngularVelocity = originalData?.PhysicsState?.AngularVelocity ?? 0f;
         GameplayWorldPresentationOwner presentation = item.GetComponent<GameplayWorldPresentationOwner>();
-        if (presentation != null) presentation.Release();
-        RegisterItemPhysics(item);
-        manager.NotifyRuntimeItemMoved(item);
-        RegisterItemPresentation(item);
+        try
+        {
+            using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : null)
+                WorldPhysicsService2D.ReleaseItem(item, preserveNativeMotion: true);
+            if (item == null || !manager.IsRuntimeItemRegistered(item) || !ReferenceEquals(item.itemData, originalData)) return;
+            snapshotPosition = originalData?.transform?.position ?? sourceWorldPosition;
+            snapshotRotation = originalData?.transform?.rotation ?? sourceWorldRotation;
+            snapshotScale = originalData?.transform?.scale ?? sourceLocalScale;
+            hadPhysicsState = originalData?.PhysicsState != null;
+            snapshotVelocity = originalData?.PhysicsState?.Velocity ?? Vector2.zero;
+            snapshotAngularVelocity = originalData?.PhysicsState?.AngularVelocity ?? 0f;
+            if (!worldItems.AssignItemToWorld(item, worldKey)) return;
+            if (presentation != null) presentation.Release();
+            RegisterItemPhysics(item);
+            manager.NotifyRuntimeItemMoved(item);
+            RegisterItemPresentation(item);
+        }
+        catch (Exception failure)
+        {
+            string failedWorld = GetItemWorldKey(item);
+            if (item == null || !manager.IsRuntimeItemRegistered(item) || !ReferenceEquals(item.itemData, originalData) ||
+                !string.Equals(failedWorld, worldKey, StringComparison.Ordinal) &&
+                !string.Equals(failedWorld, sourceWorld, StringComparison.Ordinal)) throw;
+            try
+            {
+                WorldPhysicsService2D.ReleaseItem(item, preserveNativeMotion: true);
+                worldItems.AssignItemToWorld(item, sourceWorld);
+                item.transform.SetParent(null, true);
+                if (sourceScene.IsValid() && sourceScene.isLoaded && item.gameObject.scene != sourceScene)
+                    SceneManager.MoveGameObjectToScene(item.gameObject, sourceScene);
+                if (sourceParent != null && sourceParent.gameObject.scene == sourceScene)
+                {
+                    item.transform.SetParent(sourceParent, false);
+                    item.transform.SetLocalPositionAndRotation(sourceLocalPosition, sourceLocalRotation);
+                    item.transform.localScale = sourceLocalScale;
+                }
+                else
+                {
+                    item.transform.SetPositionAndRotation(sourceWorldPosition, sourceWorldRotation);
+                    item.transform.localScale = sourceLocalScale;
+                }
+                if (originalData?.transform != null)
+                {
+                    originalData.transform.position = snapshotPosition;
+                    originalData.transform.rotation = snapshotRotation;
+                    originalData.transform.scale = snapshotScale;
+                }
+                if (hadPhysicsState)
+                {
+                    originalData.PhysicsState ??= new ItemPhysicsRuntimeState();
+                    originalData.PhysicsState.Velocity = snapshotVelocity;
+                    originalData.PhysicsState.AngularVelocity = snapshotAngularVelocity;
+                }
+                else if (originalData != null) originalData.PhysicsState = null;
+                using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : null)
+                {
+                    if (hadSourceProxy) RegisterItemPhysics(item);
+                    if (sourceBody != null)
+                    {
+                        WorldPhysicsService2D.RestoreItemBodyRepresentation(item, sourceBody, sourceRepresentation);
+                        if (sourceBody.bodyType != RigidbodyType2D.Static)
+                        { sourceBody.velocity = sourceVelocity; sourceBody.angularVelocity = sourceAngularVelocity; }
+                    }
+                    manager.NotifyRuntimeItemMoved(item);
+                    RegisterItemPresentation(item);
+                }
+            }
+            catch (Exception rollback)
+            {
+                throw new AggregateException("物品世界迁移失败，恢复源世界也失败。", failure, rollback);
+            }
+            throw;
+        }
     }
 
     // 旧入口仅在注册时根据明确上下文或唯一场景绑定确定一次归属。
@@ -525,22 +623,30 @@ public static partial class GameplayWorldRegistry
     internal static void SimulatePhysics()
     {
         if (Time.timeScale <= 0f) return;
-        physicsDispatch.Clear(); physicsDispatch.AddRange(worldPhysics.Values); physicsScenes.Clear();
-        foreach (WorldPhysicsService2D physics in physicsDispatch)
+        if (IsPhysicsDispatchInProgress)
+            throw new InvalidOperationException("不能重入世界物理模拟分发。");
+        IsPhysicsDispatchInProgress = true;
+        try
         {
-            if (!physics.IsValid || !physicsScenes.Add(physics.PrimarySpace.PhysicsScene)) continue;
-            GameplayWorldRuntime next = worlds.TryGetValue(physics.WorldKey, out var world) ? world :
-                spaceContexts.TryGetValue(physics.WorldKey, out var space) ? space :
-                (physics.ExecutionContext ??= new GameplayWorldRuntime { WorldKey = physics.WorldKey, Scene = physics.PrimarySpace.Scene });
-            GameplayWorldRuntime previous = execution;
-            execution = next;
-            try
+            // 整轮分发期间禁止跨世界迁移，避免实体在两个场景各推进一次。
+            physicsDispatch.Clear(); physicsDispatch.AddRange(worldPhysics.Values); physicsScenes.Clear();
+            foreach (WorldPhysicsService2D physics in physicsDispatch)
             {
-                using var machines = next.Chunks != null ? MachineWorld.UseScope(physics.WorldKey) : default;
-                physics.Simulate(Time.fixedDeltaTime);
+                if (!physics.IsValid || !physicsScenes.Add(physics.PrimarySpace.PhysicsScene)) continue;
+                GameplayWorldRuntime next = worlds.TryGetValue(physics.WorldKey, out var world) ? world :
+                    spaceContexts.TryGetValue(physics.WorldKey, out var space) ? space :
+                    (physics.ExecutionContext ??= new GameplayWorldRuntime { WorldKey = physics.WorldKey, Scene = physics.PrimarySpace.Scene });
+                GameplayWorldRuntime previous = execution;
+                execution = next;
+                try
+                {
+                    using var machines = next.Chunks != null ? MachineWorld.UseScope(physics.WorldKey) : default;
+                    physics.Simulate(Time.fixedDeltaTime);
+                }
+                finally { execution = previous; }
             }
-            finally { execution = previous; }
         }
+        finally { IsPhysicsDispatchInProgress = false; }
     }
 
     public static void RegisterPresentation(GameObject root)

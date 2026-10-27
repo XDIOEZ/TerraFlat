@@ -15,6 +15,12 @@
       "name": "世界物理原生场景与物品区域契约",
       "luaPath": "GameplayTests/Systems/WorldStreaming/physics.lua",
       "enabled": true
+    },
+    {
+      "id": "world_physics_proxy_gameplay",
+      "name": "JSON物理代理与正式实体运动回写",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/proxy-gameplay.lua",
+      "enabled": true
     }
   ]
 }

@@ -56,6 +56,8 @@ public partial class ChunkMgr
 
     internal void RegisterRuntimeBuilding(Item item)
     {
+        if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item))
+        { runtimeBuildings.Remove(item); return; }
         if (!IsWorldModelRuntimeActive || item == null || item.DestructionHandled || item.IsInPool ||
             item.InHand || item.PersistenceOwner != null || item.gameObject.scene != GameplayWorldRegistry.CurrentScene)
             return;

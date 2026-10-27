@@ -16,6 +16,9 @@ namespace FlatWorld.NaturalEntities
             public WorldState(string key) { WorldKey = key; Module = new RuntimeModule(key); }
             public NaturalEntitySimulation simulation;
             public readonly Dictionary<int, Record> records = new();
+            public readonly Dictionary<(string World, int X, int Y, int Guid), Record> generatedNaturalSources = new();
+            public readonly Dictionary<(string World, int X, int Y, int Guid), Record> independentPhysicsSources = new();
+            public readonly Dictionary<string, RuntimeItemDefinition> deferredPhysicsModeWarnings = new(StringComparer.Ordinal);
             public readonly HashSet<Record> environmentInputRecords = new();
             public readonly HashSet<Record> soilInputRecords = new();
             public readonly HashSet<Record> navigationInputRecords = new();
@@ -95,7 +98,7 @@ namespace FlatWorld.NaturalEntities
                 position = observer.Position.LocalMeters.ToVector2();
                 return !observer.InSpace && observer.WorldKey == world;
             }
-            if (actor.gameObject.scene.name != world) return false;
+            if (GameplayWorldRegistry.GetItemWorldKey(actor) != world) return false;
             position = WorldLocalPresentation.ToLogical(actor.transform.position);
             return true;
         }

@@ -302,6 +302,12 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         Vector2 targetPosition = LooseItemMotion.AdvanceWater(GameplayWorldRegistry.GetItemWorldKey(waterItem), waterItem.itemData,
             currentPosition, velocity, deltaTime, !IsSubmerged);
         if (!LooseItemMotion.CommitItemPosition(waterItem, targetPosition)) return;
+        if (WorldPhysicsService2D.GetConfiguredItemPhysics(waterItem) != null)
+        {
+            driftInterpolation = default;
+            if (driftVisual != null) driftVisual.localPosition = originalDriftVisualPosition;
+            return;
+        }
         driftInterpolation.RecordMovement(
             WorldTopologyRuntime.ShortestDelta(currentPosition, targetPosition), deltaTime, Time.timeAsDouble);
     }

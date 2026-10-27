@@ -1063,7 +1063,9 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Chunk/*",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/*",
         "Assets/5_Scripts/5-0_WorldModel/*",
-        "Assets/StreamingAssets/GameplayTests/Systems/WorldStreaming/*"
+        "Assets/StreamingAssets/GameplayTests/Systems/WorldStreaming/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldPhysicsProxyRuntimeProbe*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldPhysics*.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1079,7 +1081,8 @@
       "coverageDocument": "GameplayTests/Systems/WorldStreaming/README.md",
       "integrationCaseIds": [
         "world_streaming_gameplay",
-        "world_physics_gameplay"
+        "world_physics_gameplay",
+        "world_physics_proxy_gameplay"
       ],
       "rulesCoverage": "partial"
     },

@@ -37,3 +37,24 @@ test.system("world_streaming", "world_physics_definition", {}, function(data)
     assert(data.gapSolids == 0 and data.leftGeometryPreserved,
         "多个阻挡区域被宽相包围盒填实空洞，或具体形状没有进入正式物理空间")
 end, "普通Item JSON多区域、精确接收与重复配置回池基线")
+
+test.system("world_streaming", "world_physics_proxy_modes", {}, function(data)
+    assert(data.fixedMode == "WorldFixed" and data.dynamicMode == "IndependentDynamic"
+        and data.massSource == "ItemStack" and data.rotationCanMove and data.unityModeRejected,
+        "物理配置没有表达游戏代理模式、唯一质量来源或旋转约束，或直接接受Unity刚体类型")
+    assert(data.defaultFixed == "WorldFixed" and data.fixedGridDynamicRejected,
+        "固定格数据机器将独立可动配置静默回退为固定模式")
+    assert(data.blockingCanBatch and data.damageCannotBatch and data.triggerCannotBatch
+        and data.receiverCannotBatch and data.dynamicCannotBatch,
+        "物理合批忽略用途、事件接收者或运动模式边界")
+    assert(data.immutableFixedBoxAccepted and data.immutableDynamicBoxRejected and data.immutableModuleBoxRejected,
+        "共享区块体接纳了动态或可变形状，或拒绝了固定根级不可变阻挡Box")
+    local interaction = data.defaultInteraction
+    assert(interaction and interaction.compiled and interaction.regionCount == 2
+        and interaction.blockingRegionPreserved and interaction.hasInteractionPurpose and interaction.isTrigger,
+        "自然资源默认交互区域冷编失败，或丢失阻挡/交互职责")
+    assert(interaction.localPositionError < 0.0001 and interaction.localRotationError < 0.001
+        and interaction.localScaleError < 0.0001
+        and interaction.boundsOffsetError < 0.0001 and interaction.boundsSizeError < 0.0001,
+        "自然资源默认交互区域没有保留非零渲染TRS或准确Sprite边界几何")
+end, "JSON游戏代理模式、固定格约束与共享合批资格")

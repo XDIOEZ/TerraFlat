@@ -37,6 +37,9 @@ namespace FlatWorld.Spaceflight
         public bool StartsGroundCombat;
         public double X, Y;
         public SpaceSectorId Sector;
+        public bool HasNaturalSource;
+        public string NaturalSourceWorldKey;
+        public int NaturalSourceChunkX, NaturalSourceChunkY;
     }
 
     public static class SpaceNetworkBridge

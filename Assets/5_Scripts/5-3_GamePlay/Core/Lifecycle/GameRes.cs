@@ -222,9 +222,40 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public GameObject InstantiatePrefab(string prefab, Vector3? position = null, Quaternion? rotation = null, Vector3? scale = null, Transform parent = null)
         => InstantiatePrefabInternal(prefab, position, rotation, scale, parent, configureItem: true);
 
+    private Transform itemShellStagingRoot;
+
     // ItemMgr 已持有最终实例数据，冷创建只提供外壳，避免先用临时数据重复装配全部模块。
     internal GameObject InstantiateItemShell(string itemId, Transform parent = null)
-        => InstantiatePrefabInternal(itemId, null, null, null, parent, configureItem: false);
+    {
+        if (!AllPrefabs.TryGetValue(itemId, out GameObject prefab))
+        {
+            Debug.LogError($"预制件不存在:{itemId}");
+            return null;
+        }
+        if (itemShellStagingRoot == null)
+        {
+            var staging = new GameObject("Item Shell Preparation") { hideFlags = HideFlags.DontSave };
+            staging.SetActive(false);
+            staging.transform.SetParent(transform, false);
+            itemShellStagingRoot = staging.transform;
+        }
+        GameObject shell = null;
+        try
+        {
+            // 冷壳在停用层级内创建，最终世界确定后才允许激活。
+            shell = Instantiate(prefab, itemShellStagingRoot);
+            shell.SetActive(false);
+            shell.transform.SetParent(parent, false);
+            shell.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            shell.transform.localScale = Vector3.one;
+            return shell;
+        }
+        catch
+        {
+            if (shell != null) Destroy(shell);
+            throw;
+        }
+    }
 
     private GameObject InstantiatePrefabInternal(string prefab, Vector3? position, Quaternion? rotation,
         Vector3? scale, Transform parent, bool configureItem)

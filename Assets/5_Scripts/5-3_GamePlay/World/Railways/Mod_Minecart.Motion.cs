@@ -14,8 +14,7 @@ public sealed partial class Mod_Minecart
 
     public void ActivateCarrier(Mod_Carrier carrier, Rigidbody2D body)
     {
-        body.bodyType = RigidbodyType2D.Dynamic;
-        body.drag = 0f;
+        WorldPhysicsService2D.ApplyLegacyItemLinearDamping(item, body, 0f);
         body.useFullKinematicContacts = false;
     }
 

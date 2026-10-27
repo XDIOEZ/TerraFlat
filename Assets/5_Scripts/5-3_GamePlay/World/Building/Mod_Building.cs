@@ -41,7 +41,7 @@ public enum BuildingPlacementLayer
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule, IBuildingPreviewRotation, ILocalItemUseRequestHandler
+public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule, IBuildingPreviewRotation, ILocalItemUseRequestHandler, IItemWorldPhysicsPoseReceiver2D
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -2191,6 +2191,26 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         Mod_Door door = item.itemMods?.GetMod_ByID<Mod_Door>("Door");
         if (door != null) BuildingOccupancyRegistry.SetPassable(this, door.Data.IsOpen);
     }
+
+    #region 物理运动占地同步
+    private bool hasPhysicsOccupancyPose;
+    private Vector2Int physicsOccupancyCell;
+    private int physicsOccupancyQuarterTurns;
+    private string physicsOccupancyWorld;
+
+    public void OnWorldPhysicsPoseCommitted(Item owner, WorldPhysicsEntityPose2D pose)
+    {
+        if (owner != item || !_isLoaded) return;
+        Vector2Int cell = GetPlacementCell(item.transform.position);
+        int quarterTurns = Mathf.RoundToInt(pose.RotationDegrees / 90f) & 3;
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
+        if (hasPhysicsOccupancyPose && cell == physicsOccupancyCell && quarterTurns == physicsOccupancyQuarterTurns &&
+            worldKey == physicsOccupancyWorld) return;
+        physicsOccupancyCell = cell; physicsOccupancyQuarterTurns = quarterTurns; physicsOccupancyWorld = worldKey;
+        hasPhysicsOccupancyPose = true;
+        SyncNavigationOccupancy();
+    }
+    #endregion
 
     #region 离散建筑占地
 

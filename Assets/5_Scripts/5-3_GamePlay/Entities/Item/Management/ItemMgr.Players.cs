@@ -289,7 +289,7 @@ public partial class ItemMgr
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null)
         {
-            body.bodyType = RigidbodyType2D.Dynamic;
+            WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(player, body);
             body.velocity = Vector2.zero;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
         }
@@ -332,7 +332,7 @@ public partial class ItemMgr
             controller.SetGameplayInputLocked(false);
         }
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-        if (body != null) { body.bodyType = RigidbodyType2D.Kinematic; body.simulated = true; body.velocity = Vector2.zero; }
+        if (body != null) WorldPhysicsService2D.ConfigureItemBodyForNetworkRepresentation(player, body, true);
         Mod_ItemPicker picker = player.GetComponentInChildren<Mod_ItemPicker>(true);
         if (picker != null)
         {
@@ -375,7 +375,7 @@ public partial class ItemMgr
         {
             body.position = presentationSpawnPosition;
             body.velocity = Vector2.zero;
-            body.bodyType = RigidbodyType2D.Kinematic;
+            WorldPhysicsService2D.ConfigureItemBodyForNetworkRepresentation(player, body, body.simulated);
             // 网络层已经按每帧生成平滑视觉坐标，关闭物理插值避免再次插值造成节拍抖动。
             body.interpolation = RigidbodyInterpolation2D.None;
         }

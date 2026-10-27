@@ -1235,14 +1235,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             throw new InvalidOperationException("鸟的生命模块缺少专用 BoxCollider2D 受击盒。");
         flightHitboxOriginalOffset = flightHitbox.offset;
         flightHitboxOriginalSize = flightHitbox.size;
-        flightHitboxBody = health.GetComponent<Rigidbody2D>();
-        if (flightHitboxBody == null)
-            flightHitboxBody = health.gameObject.AddComponent<Rigidbody2D>();
-        flightHitboxBody.bodyType = RigidbodyType2D.Kinematic;
-        flightHitboxBody.gravityScale = 0f;
-        flightHitboxBody.constraints = RigidbodyConstraints2D.FreezeRotation;
-        flightHitboxBody.simulated = true;
         CombatPhysicsChannels.AssignDamageReceiver(health);
+        flightHitboxBody = WorldPhysicsService2D.ConfigureItemAttachedDamageSensorBody(item, flightHitbox, health);
     }
 
     /// <summary>动画更新后再对齐一次，让翅膀轮廓、镜像和升降高度都进入受击几何。</summary>
@@ -1326,7 +1320,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         hasFlightGeometry = false;
         lastFlightGeometrySprite = null;
-        if (flightHitboxBody != null) flightHitboxBody.simulated = false;
+        WorldPhysicsService2D.SetItemBodySimulationEnabled(flightHitboxBody, false);
         if (flightHitbox != null)
         {
             flightHitbox.offset = flightHitboxOriginalOffset;

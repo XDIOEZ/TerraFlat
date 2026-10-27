@@ -62,9 +62,20 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
                 throw new InvalidOperationException($"共享资源 {definition.Id} 注册失败。");
             entry = new Entry { Address = address, Anchor = anchor, Guid = placement.Guid,
                 ItemId = definition.Id, Handle = handle };
-            entries.Add(key, entry);
-            Entry captured = entry;
-            NaturalEntityEcsService.BindRemovalHandler(handle, _ => OnEntityDied(captured));
+            try
+            {
+                entries.Add(key, entry);
+                NaturalEntityEcsService.SetGeneratedNaturalEntitySourceIdentity(handle, worldKey,
+                    address.ChunkOrigin.X, address.ChunkOrigin.Y);
+                Entry captured = entry;
+                NaturalEntityEcsService.BindRemovalHandler(handle, _ => OnEntityDied(captured));
+            }
+            catch
+            {
+                if (entries.TryGetValue(key, out Entry current) && ReferenceEquals(current, entry)) entries.Remove(key);
+                NaturalEntityEcsService.Remove(handle);
+                throw;
+            }
         }
         else if (!entry.Anchor.Equals(anchor) || entry.ItemId != definition.Id)
             throw new InvalidOperationException($"共享自然物身份冲突：{placement.Guid}，禁止覆盖另一实体。");

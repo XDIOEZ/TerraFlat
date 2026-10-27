@@ -62,7 +62,7 @@ public abstract partial class ItemData
 
     #region 运行时物理反馈
 
-    // 物理结果只在当前世界内存中回写，存档仍由现有位置与模块数据负责。
+    // 速度随实例快照保存，接触事实只在当前生命周期内保留。
     [NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
     public ItemPhysicsRuntimeState PhysicsState = new();
 
@@ -258,6 +258,7 @@ public partial class ItemMatterState
 /// <summary>Physics2D 回写给实体数据的瞬时结果，不承载战斗裁决。</summary>
 public sealed class ItemPhysicsRuntimeState
 {
+    public bool PersistentWorldResident;
     public Vector2 Velocity;
     public float AngularVelocity;
     public Vector2 LastContactPoint;

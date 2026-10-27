@@ -26,7 +26,7 @@ public interface IAquaticPredatorThreat
 }
 
 /// <summary>逐条鱼使用现有状态机、营养、Buff、受伤与 Item 生命周期；不建立鱼群模拟器。</summary>
-public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder, ITemperatureSafetyMovement,
+public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder, ITemperatureSafetyMovement, IItemIndependentWorldMotionCapability2D,
     IAquaticPredatorCarryTarget, IFishingLineCatchTarget
 {
     #region 配置与持久化
@@ -87,7 +87,9 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private Mod_DamageReceiver health;
     private Mod_ItemDetector threatDetector;
     private Rigidbody2D body;
-    private RigidbodyType2D originalBodyType;
+    private WorldPhysicsItemBodyRepresentation2D originalBodyRepresentation;
+    private bool canUseIndependentMotion;
+    public bool RequiresIndependentWorldMotion => true;
     private Collider2D[] colliders;
     private bool[] originalColliderEnabled;
     private readonly AIStateMachine<Behaviour> machine = new();
@@ -142,16 +144,18 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         if (!float.IsFinite(state.DryElapsed) || state.DryElapsed < 0f) state.DryElapsed = 0f;
         body = item.GetComponent<Rigidbody2D>();
         if (body == null) throw new InvalidOperationException("小鱼外壳缺少位置同步刚体。");
-        originalBodyType = body.bodyType;
-        body.velocity = Vector2.zero;
-        body.bodyType = RigidbodyType2D.Kinematic;
-        colliders = item.GetComponentsInChildren<Collider2D>(true);
-        originalColliderEnabled = new bool[colliders.Length];
-        for (int index = 0; index < colliders.Length; index++)
+        originalBodyRepresentation = WorldPhysicsService2D.CaptureItemBodyRepresentation(body);
+        canUseIndependentMotion = WorldPhysicsService2D.ConfigureItemBodyForExternallyPositionedMotion(item, body);
+        if (WorldPhysicsService2D.UsesLegacyItemPhysicsDefaults(item))
         {
-            originalColliderEnabled[index] = colliders[index].enabled;
-            // 只保留受击等 Trigger，不和玩家、船只发生实体碰撞。
-            if (!colliders[index].isTrigger) colliders[index].enabled = false;
+            colliders = item.GetComponentsInChildren<Collider2D>(true);
+            originalColliderEnabled = new bool[colliders.Length];
+            for (int index = 0; index < colliders.Length; index++)
+            {
+                originalColliderEnabled[index] = colliders[index].enabled;
+                // 旧鱼保留受击 Trigger，新配置的物理形状由世界服务决定。
+                if (!colliders[index].isTrigger) colliders[index].enabled = false;
+            }
         }
         presentation = new AquaticActorPresentation(item, fishRenderer);
         target = default;
@@ -208,7 +212,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         machine.Reset();
         ResetStrandedMotion();
         buffs?.SetWaterStackExposure(false);
-        if (body != null) { body.velocity = Vector2.zero; body.bodyType = originalBodyType; }
+        if (body != null) WorldPhysicsService2D.RestoreItemBodyRepresentation(item, body, originalBodyRepresentation, clearVelocity: true);
+        canUseIndependentMotion = false;
         if (colliders != null)
             for (int index = 0; index < colliders.Length; index++)
                 if (colliders[index] != null) colliders[index].enabled = originalColliderEnabled[index];
@@ -394,10 +399,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
 
     private void MovePosition(Vector2 position)
     {
-        body.velocity = Vector2.zero;
-        body.position = position;
-        item.transform.position = new Vector3(position.x, position.y, item.transform.position.z);
-        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+        if (!canUseIndependentMotion) return;
+        WorldPhysicsService2D.RequestItemMovementTowardsLogicalPosition(item, body, position);
     }
 
     #region 离水蹦跳与回水

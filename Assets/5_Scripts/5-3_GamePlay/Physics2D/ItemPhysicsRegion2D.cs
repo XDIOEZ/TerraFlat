@@ -8,13 +8,16 @@ public sealed class ItemPhysicsRegion2D : MonoBehaviour
     public string RegionId { get; private set; }
     public WorldPhysicsPurpose2D Purpose { get; private set; }
     public Component Receiver { get; private set; }
+    public bool ImmutableWorldFixedBlocking { get; private set; }
     private Collider2D shape;
 
-    public void BindRegion(string regionId, WorldPhysicsPurpose2D purpose, Component receiver)
+    public void BindRegion(string regionId, WorldPhysicsPurpose2D purpose, Component receiver,
+        bool immutableWorldFixedBlocking = false)
     {
         RegionId = regionId;
         Purpose = purpose;
         Receiver = receiver;
+        ImmutableWorldFixedBlocking = immutableWorldFixedBlocking;
     }
 
     internal bool ReplacesCollider(Collider2D collider)
@@ -40,7 +43,7 @@ public sealed class ItemPhysicsRegion2D : MonoBehaviour
 
     private void ForwardContact(string message, object contact)
     {
-        if (Receiver == null || Receiver.gameObject == gameObject ||
+        if (ImmutableWorldFixedBlocking || Receiver == null || Receiver.gameObject == gameObject ||
             Receiver is Module module && !module.IsRuntimeLoaded) return;
         if (shape == null) shape = GetComponent<Collider2D>();
         if (shape != null && shape.attachedRigidbody != null &&

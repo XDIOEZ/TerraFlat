@@ -364,6 +364,7 @@ public static partial class MachineWorld
                 {
                     MachineEntity node = candidate.Node;
                     MachineScopePlacement target = restoreOriginal ? candidate.Original : candidate.Placement;
+                    ResolveRequiredWorldFixedMachineProxyMode(node.Definition.Id);
                     node.ScopeKey = worldKey;
                     node.Cell = target.Cell;
                     node.Snapshot.transform.position = target.Position;

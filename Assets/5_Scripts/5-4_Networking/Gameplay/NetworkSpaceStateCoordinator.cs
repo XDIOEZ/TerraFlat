@@ -62,6 +62,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkSpaceInput>(OnInput, true);
             NetworkServer.RegisterHandler<NetworkSpaceIntentRequest>(OnIntent, true);
             FlatWorld.NaturalEntities.NaturalEntityEcsService.NetworkStateCommitted += OnNaturalHarvestCommitted;
+            FlatWorld.NaturalEntities.NaturalEntityEcsService.IndependentPhysicsStateCommitted += OnIndependentNaturalStateCommitted;
             StartDimensionServerBridge();
             serverStarted = true;
             nextServerSnapshot = 0f;
@@ -76,6 +77,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkSpaceProjectilePoses>(OnProjectilePoses, true);
             NetworkClient.RegisterHandler<NetworkEcologySnapshotPart>(OnEcologySnapshot, true);
             NetworkClient.RegisterHandler<NetworkNaturalHarvestState>(OnNaturalHarvestState, true);
+            NetworkClient.RegisterHandler<NetworkNaturalPhysicsPoseBatch>(OnIndependentNaturalPhysicsPoseBatch, true);
             SpaceNetworkBridge.InputSender = SendInput;
             SpaceNetworkBridge.IntentSender = SendIntent;
             SpaceNetworkBridge.IntentWithReplySender = SendIntentWithReply;
@@ -96,10 +98,12 @@ namespace FlatWorld.Networking.Gameplay
                 SpaceSession.Current?.EndNetworkAttack(state.Profile);
             }
             connections.Clear();
+            knownIndependentPhysicsSources.Clear();
             NetworkServer.UnregisterHandler<NetworkSpaceSnapshotRequest>();
             NetworkServer.UnregisterHandler<NetworkSpaceInput>();
             NetworkServer.UnregisterHandler<NetworkSpaceIntentRequest>();
             FlatWorld.NaturalEntities.NaturalEntityEcsService.NetworkStateCommitted -= OnNaturalHarvestCommitted;
+            FlatWorld.NaturalEntities.NaturalEntityEcsService.IndependentPhysicsStateCommitted -= OnIndependentNaturalStateCommitted;
             StopDimensionServerBridge();
             serverStarted = false;
         }
@@ -113,6 +117,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkSpaceProjectilePoses>();
             NetworkClient.UnregisterHandler<NetworkEcologySnapshotPart>();
             NetworkClient.UnregisterHandler<NetworkNaturalHarvestState>();
+            NetworkClient.UnregisterHandler<NetworkNaturalPhysicsPoseBatch>();
             ClearEcologySnapshots();
             ClearProjectileViews();
             SpaceSession.ClearClientNetworkCombat();
@@ -136,6 +141,7 @@ namespace FlatWorld.Networking.Gameplay
             SpaceSession.Current?.RemoveNetworkPassengerInput(state.Profile);
             SpaceSession.Current?.EndNetworkAttack(state.Profile);
             connections.Remove(connection.connectionId);
+            knownIndependentPhysicsSources.Remove(connection);
         }
         private bool ResolveConnection(NetworkConnectionToClient connection, out ConnectionState state, out NetworkWorldPlayer player)
         {

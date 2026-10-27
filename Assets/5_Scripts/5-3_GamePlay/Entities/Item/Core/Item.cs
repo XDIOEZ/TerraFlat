@@ -930,6 +930,7 @@ public abstract class Item : MonoBehaviour
 
     private void RegisterModuleForLoad(Module module, ModuleData data, string prefabId, List<Module> toInitialize, bool? enabled = null)
     {
+        module.RestoreBoundRuntimeIdentity();
         if (data == null || data.GetType() != module._Data?.GetType() ||
             !string.Equals(data.ModuleId, module.ResolvedModuleId, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"物品 {name} 的模块 {module.StableName} 状态类型或能力身份不匹配。");

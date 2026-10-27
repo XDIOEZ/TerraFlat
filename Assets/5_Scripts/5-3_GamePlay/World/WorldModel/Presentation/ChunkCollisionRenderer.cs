@@ -3,6 +3,7 @@ using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Pool;
 using UnityEngine.Tilemaps;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
@@ -37,7 +38,6 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     private bool naturalResetPending;
     private readonly List<Collider2D> colliderScratch = new();
     private static readonly ObstacleDirtyQueue dirtyRenderers = new();
-    private static readonly List<ChunkCollisionRenderer> dirtyRendererScratch = new();
     private static readonly ProfilerMarker FlushObstacleMarker = new("FlatWorld.ChunkPhysics.FlushObstacles");
     private static readonly ProfilerMarker RebuildObstacleMarker = new("FlatWorld.ChunkPhysics.RebuildObstacles");
     private static readonly ProfilerMarker PublishObstacleMarker = new("FlatWorld.ChunkPhysics.PublishObstacles");
@@ -54,7 +54,6 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     private Vector2Int machineCellSample;
     private int visualRevisionGuidSample;
     private string visualRevisionDefinitionSample;
-    private static readonly int[] flushReasonCounts = new int[(int)DirtyReason.Count];
     private const double SlowPhysicsRebuildMilliseconds = 8d;
     private const int MaxPhysicsRebuildLogsPerWindow = 12;
     private const float PhysicsRebuildLogWindowSeconds = 30f;
@@ -76,9 +75,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         PresentationChanged = null;
         ObstaclePresentationChanged = null;
         dirtyRenderers.Clear();
-        dirtyRendererScratch.Clear();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        System.Array.Clear(flushReasonCounts, 0, flushReasonCounts.Length);
         directPhysicsRebuildLogCount = 0;
         dataPhysicsRebuildLogCount = 0;
         physicsRebuildLogWindowStart = 0f;
@@ -312,9 +309,11 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         bool hasMachineSample = false;
         int visualGuidSample = 0;
         string visualDefinitionSample = null;
-        System.Array.Clear(flushReasonCounts, 0, flushReasonCounts.Length);
+        System.Span<int> flushReasonCounts = stackalloc int[(int)DirtyReason.Count];
+        flushReasonCounts.Clear();
 #endif
-        // 先取出本世界当前批次，回调中新产生的脏通知继续留给下一次物理 Tick。
+        // 嵌套迁移可重入刷新，每次独占遍历缓冲。
+        using var scratchScope = ListPool<ChunkCollisionRenderer>.Get(out var dirtyRendererScratch);
         dirtyRenderers.Take(worldKey, dirtyRendererScratch);
         for (int i = 0; i < dirtyRendererScratch.Count; i++)
         {
@@ -365,7 +364,6 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
             presentationTicks += Stopwatch.GetTimestamp() - rebuildFinished;
 #endif
         }
-        dirtyRendererScratch.Clear();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         double totalMs = ElapsedMilliseconds(flushStarted, Stopwatch.GetTimestamp());
         if (rebuilt > 0 && (totalMs >= SlowPhysicsRebuildMilliseconds || rebuilt >= 16) && CanLogPhysicsRebuild(true))
@@ -425,7 +423,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     {
         long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.NaturalKind, body.RuntimeId);
         return exists ? SyncObstacle(key, body.Bounds.center, body.Bounds.extents,
-                NaturalEntityEcsService.GetBlockingDamageTarget(body.RuntimeId))
+                entity: body.Entity)
             : obstacleColliders.Remove(key) ? 1 : 0;
     }
 
@@ -506,11 +504,12 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     /// <summary>组合资格只读取既有存储能力，不绑定水、气、材质或库存组身份。</summary>
     internal static bool CanMergeAdjacentStorageCollision(MachineEntity node)
         => node?.Definition?.BlocksTraversal == true && node.Definition.Fluid?.CombineAdjacent == true &&
-           MachineWorld.IsFluidTankBlock(node);
+           MachineWorld.IsFluidTankBlock(node) && MachineWorld.CanBatchWorldFixedMachineBlockingRegions(node);
 
     /// <summary>每个节点保留源几何，组合储罐只投影精确合并后的实体阻挡。</summary>
     private int SyncMachineObstacleRectangle(MachineEntity node, out bool projected)
     {
+        MachineWorld.ResolveRequiredWorldFixedMachineProxyMode(node);
         MachineCollisionBounds.ResolveWorldBox(node, out Vector2 worldCenter, out Vector2 halfExtents);
         long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id);
         projected = TryResolveLocalBox(worldCenter, halfExtents, out Vector2 center, out Vector2 size);
@@ -557,11 +556,11 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     }
 
     private int SyncObstacle(long key, Vector2 worldCenter, Vector2 halfExtents,
-        IGameplayPhysicsDamageTarget damageTarget = null)
+        IGameplayPhysicsDamageTarget damageTarget = null, object entity = null)
     {
         if (!TryResolveLocalBox(worldCenter, halfExtents, out Vector2 center, out Vector2 size))
             return obstacleColliders.Remove(key) ? 1 : 0;
-        return obstacleColliders.Set(key, center, size, SourceCollider, damageTarget: damageTarget) ? 1 : 0;
+        return obstacleColliders.Set(key, center, size, SourceCollider, damageTarget: damageTarget, entity: entity) ? 1 : 0;
     }
 
     /// <summary>保留既有矩形与跨 Chunk 裁剪语义，不改变数据占地、导航或受击形状。</summary>

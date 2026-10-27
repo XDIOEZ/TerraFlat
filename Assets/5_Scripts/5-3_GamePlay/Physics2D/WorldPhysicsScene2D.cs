@@ -44,6 +44,14 @@ public sealed partial class WorldPhysicsScene2D : IDisposable
 
     partial void DisposeTransientQueries();
 
+    #region 原生物理唯一推进入口
+    public bool Simulate(float seconds)
+    {
+        if (!IsValid || !float.IsFinite(seconds) || seconds <= 0f) return false;
+        return PhysicsScene.Simulate(seconds);
+    }
+    #endregion
+
     public void Dispose()
     {
         if (disposed) return;

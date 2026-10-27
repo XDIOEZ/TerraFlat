@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using FlatWorld.NaturalEntities;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
@@ -177,6 +178,8 @@ public partial class ChunkMgr
         if (!GameNetwork.HasStateAuthority || activeRuntimeBindings == null)
             return;
 
+        independentNaturalEntities?.CaptureAll();
+
         foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
             binding?.View?.CaptureNaturalItemState();
     }
@@ -186,6 +189,8 @@ public partial class ChunkMgr
     {
         if (!GameNetwork.HasStateAuthority || activeRuntimeBindings == null)
             yield break;
+
+        independentNaturalEntities?.CaptureAll();
 
         budget ??= new AutoSaveWorkBudget();
         List<ChunkView> views = new List<ChunkView>();
@@ -249,9 +254,19 @@ public partial class ChunkMgr
 
     /// <summary>一次性写入自然物删除差量；已经移除或世界不可写时不重复提交。</summary>
     public bool TryRemoveNaturalItem(RuntimeWorldAddress address, int guid)
+        => TryCommitNaturalItemRemoval(address, guid, false);
+
+    internal bool TryRemoveNaturalItemForWorldTransfer(RuntimeWorldAddress address, int guid)
+        => TryCommitNaturalItemRemoval(address, guid, true);
+
+    private bool TryCommitNaturalItemRemoval(RuntimeWorldAddress address, int guid, bool allowReserved)
     {
         if (!GameNetwork.HasStateAuthority || guid == 0 || SaveDataMgr.Instance == null)
             return false;
+
+        // 普通删除不能抢占正在交接或采集的天然来源。
+        if (!allowReserved && NaturalEntityEcsService.IsGeneratedNaturalEntitySourceReserved(
+            GameplayWorldRegistry.ExecutionWorldKey, address.ChunkOrigin.X, address.ChunkOrigin.Y, guid)) return false;
 
         if (!SaveDataMgr.Instance.TryGetActivePlanetData(out PlanetData planet))
             return false;
@@ -260,8 +275,17 @@ public partial class ChunkMgr
         if (planet.Ecology.IsRemoved(address.ChunkOrigin.X, address.ChunkOrigin.Y, guid))
             return false;
         planet.Ecology.MarkRemoved(address.ChunkOrigin.X, address.ChunkOrigin.Y, guid);
-        NaturalItemRemoved?.Invoke(address, guid);
+        NotifyNaturalItemRemovedToWorldOwners(address, guid);
         return true;
+    }
+
+    internal void NotifyNaturalItemRemovedToWorldOwners(RuntimeWorldAddress address, int guid)
+    {
+        // 已提交删除后逐个通知，单个监听异常不能阻断其他归属清理。
+        if (NaturalItemRemoved != null)
+            foreach (Action<RuntimeWorldAddress, int> callback in NaturalItemRemoved.GetInvocationList())
+                try { callback(address, guid); }
+                catch (Exception exception) { UnityEngine.Debug.LogException(exception); }
     }
 
     /// <summary>保存一个自然物的 ItemData 状态覆盖。</summary>

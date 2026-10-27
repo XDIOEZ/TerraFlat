@@ -7,20 +7,21 @@ public partial class Mod_Mover
     #region 太空运动仲裁
     private InputAction spaceTurnAction;
     private bool spaceMotionOwned;
-    private RigidbodyType2D beforeSpaceBodyType;
+    private WorldPhysicsItemBodyRepresentation2D beforeSpaceBodyRepresentation;
     private bool IsSpaceRunningDisabled => item is Player && SpaceSession.Current?.IsSpaceView == true;
     private bool spaceUpright;
     private bool beforeSpaceSimulated;
 
     public void SetSpaceUpright(bool enabled)
     {
+        if (enabled && !physicsAllowsIndependentMotion) return;
         if (spaceUpright != enabled)
         {
             spaceUpright = enabled;
             if (rb != null)
             {
-                if (enabled) { beforeSpaceSimulated = rb.simulated; rb.simulated = false; }
-                else rb.simulated = beforeSpaceSimulated;
+                if (enabled) { beforeSpaceSimulated = rb.simulated; WorldPhysicsService2D.SetItemBodySimulationEnabled(rb, false); }
+                else WorldPhysicsService2D.SetItemBodySimulationEnabled(rb, beforeSpaceSimulated);
             }
             // 模式切换时才同步镜头设置，避免普通地面移动每帧重复查找相机模块。
             item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(true);
@@ -46,6 +47,7 @@ public partial class Mod_Mover
             SetSpaceUpright(false);
             return false;
         }
+        if (!physicsAllowsIndependentMotion) return false;
         if (IsSpaceRunningDisabled) SetRunState(false);
         Mod_GameController controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         Vector2 input = controller != null && !controller.IsGameplayInputLocked ? controller.ReadMoveInput(moveAction) : Vector2.zero;
@@ -61,9 +63,15 @@ public partial class Mod_Mover
         bool controlled = SpaceSession.Current.HandlePassengerInput(player, this, controller, input, turn, seconds);
         if (controlled)
         {
-            if (!spaceMotionOwned) { beforeSpaceBodyType = rb.bodyType; spaceMotionOwned = true; }
-            rb.bodyType = RigidbodyType2D.Kinematic;
-            rb.gravityScale = 0f; rb.drag = 0f; rb.angularDrag = 0f;
+            if (!spaceMotionOwned)
+            {
+                beforeSpaceBodyRepresentation = WorldPhysicsService2D.CaptureItemBodyRepresentation(rb);
+                spaceMotionOwned = true;
+                WorldPhysicsService2D.ConfigureItemBodyForNetworkRepresentation(item, rb, rb.simulated);
+                rb.gravityScale = 0f;
+                WorldPhysicsService2D.ApplyLegacyItemLinearDamping(item, rb, 0f);
+                WorldPhysicsService2D.ApplyLegacyItemAngularDamping(item, rb, 0f);
+            }
             RequestedMoveInput = input;
             DrivenVelocity = input * Speed.Value;
             ExternalVelocity = Vector2.zero;
@@ -75,7 +83,8 @@ public partial class Mod_Mover
             SetSpaceUpright(false);
             if (spaceMotionOwned)
             {
-                rb.bodyType = beforeSpaceBodyType; spaceMotionOwned = false;
+                WorldPhysicsService2D.RestoreItemBodyRepresentationType(item, rb, beforeSpaceBodyRepresentation);
+                spaceMotionOwned = false;
                 DrivenVelocity = ExternalVelocity = Vector2.zero;
             }
         }
@@ -124,7 +133,7 @@ public partial class Mod_Mover
     {
         SetSpaceUpright(false);
         spaceTurnAction?.Disable(); spaceTurnAction?.Dispose(); spaceTurnAction = null;
-        if (spaceMotionOwned && rb != null) rb.bodyType = beforeSpaceBodyType;
+        if (spaceMotionOwned && rb != null) WorldPhysicsService2D.RestoreItemBodyRepresentationType(item, rb, beforeSpaceBodyRepresentation);
         spaceMotionOwned = false;
     }
     #endregion

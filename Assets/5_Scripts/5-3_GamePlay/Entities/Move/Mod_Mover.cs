@@ -7,7 +7,7 @@ using FlatWorld.Spaceflight;
 /// <summary>
 /// Mod_Mover —— 处理游戏对象的移动逻辑
 /// </summary>
-public partial class Mod_Mover : Module
+public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
 {
     #region 保存数据类
     [System.Serializable]
@@ -79,6 +79,8 @@ public partial class Mod_Mover : Module
     private readonly List<IWindMotionOwner> windMotionOwners = new();
     private int windSuppressionLeases;
     public Rigidbody2D rb;
+    private bool physicsAllowsIndependentMotion = true;
+    public bool RequiresIndependentWorldMotion => true;
 
     // 输入判定、到达判定与过渡时间的稳定下限。
     private const float InputMoveThresholdSqr = 0.001f;
@@ -206,6 +208,7 @@ public partial class Mod_Mover : Module
         Data.isRunning = false;
 
         rb = ItemPhysicsProjection2D.EnsureMovable(item);
+        physicsAllowsIndependentMotion = WorldPhysicsService2D.CanItemUseIndependentMotion(item);
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         _wasMoving = IsMoving = false;
         ResetWorldUnitTracking();
@@ -322,6 +325,7 @@ public partial class Mod_Mover : Module
     public override void ModUpdate(float deltaTime)
     {
         if (!Enabled || !isActiveAndEnabled || resettingMotion || !float.IsFinite(deltaTime) || deltaTime <= 0f) return;
+        if (!physicsAllowsIndependentMotion) { hungerActionInstance?.SetMovementState(false, false); return; }
         if (networkAuthorityMovement) { TickNetworkMovementCosts(deltaTime); return; }
         if (HasDrivenMotion)
         {
@@ -502,7 +506,7 @@ public partial class Mod_Mover : Module
 
     public virtual void Move(Vector2 targetPosition, float deltaTime)
     {
-        if (resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
+        if (!physicsAllowsIndependentMotion || resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
         if (IsLock || !FiniteVelocity(targetPosition) || !float.IsFinite(deltaTime))
         { StopImmediately(); return; }
         if (rb == null)
@@ -527,7 +531,7 @@ public partial class Mod_Mover : Module
     /// <summary>按二维输入幅度驱动移动；水流是额外的表层漂移，不计作主动奔跑或体力消耗。</summary>
     public void MoveByInput(Vector2 input, float deltaTime)
     {
-        if (resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
+        if (!physicsAllowsIndependentMotion || resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
         if (IsLock || !FiniteVelocity(input) || !float.IsFinite(deltaTime))
         { StopImmediately(); return; }
         if (rb == null)
@@ -554,7 +558,7 @@ public partial class Mod_Mover : Module
     /// <summary>导航移动与水流分别结算，动物静止时也会被推动而不会播放行走动画。</summary>
     public void ApplyNavigationVelocity(Vector2 targetVelocity, float deltaTime)
     {
-        if (resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
+        if (!physicsAllowsIndependentMotion || resettingMotion || HasDrivenMotion || CarrierSource != null || spaceMotionOwned) return;
         if (IsLock || !FiniteVelocity(targetVelocity) || !float.IsFinite(deltaTime))
         { StopImmediately(); return; }
         if (rb == null)

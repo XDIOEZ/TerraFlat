@@ -194,6 +194,9 @@ public static class ItemInstanceDataFactory
         private readonly string factionId;
         private readonly ItemTransform transform;
         private readonly ItemMatterState matter;
+        private readonly Vector2 physicsVelocity;
+        private readonly float physicsAngularVelocity;
+        private readonly bool persistentWorldResident;
         private readonly string[] tags;
         private readonly string[] addedTags;
         private readonly string[] removedTags;
@@ -212,6 +215,9 @@ public static class ItemInstanceDataFactory
             factionId = source.FactionId;
             transform = CloneTransform(source.transform);
             matter = CloneMatter(source.MatterState);
+            physicsVelocity = source.PhysicsState?.Velocity ?? Vector2.zero;
+            physicsAngularVelocity = source.PhysicsState?.AngularVelocity ?? 0f;
+            persistentWorldResident = source.PhysicsState?.PersistentWorldResident ?? false;
             tags = source.Tags?.ToArray() ?? Array.Empty<string>();
             addedTags = source.PreservedAddedTags == null ? null : (string[])source.PreservedAddedTags.Clone();
             removedTags = source.PreservedRemovedTags == null ? null : (string[])source.PreservedRemovedTags.Clone();
@@ -236,6 +242,8 @@ public static class ItemInstanceDataFactory
             target.FactionId = factionId;
             if (transform != null) target.transform = CloneTransform(transform);
             target.MatterState = CloneMatter(matter);
+            target.PhysicsState = new ItemPhysicsRuntimeState { Velocity = physicsVelocity, AngularVelocity = physicsAngularVelocity,
+                PersistentWorldResident = persistentWorldResident };
             target.Tags.Clear();
             target.Tags.AddRange(tags);
             target.PreservedAddedTags = addedTags == null ? null : (string[])addedTags.Clone();

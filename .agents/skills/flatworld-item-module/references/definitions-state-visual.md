@@ -11,7 +11,8 @@
 - F5 RefreshLiveConfiguration 原位更新显式参数和仍受定义控制的视觉，不换 ItemData/模块或重 Load；结构与删参数后的默认值供新实例。ApplyResourceConfiguration/OnResourcesReloaded 保进度、刷新缓存/订阅；发布清闲池、禁活旧实例回池。
 - GameRes.ResourceAssets 持 Sprite/材质/动画/壳句柄；Sprite Pivot 排序，子装饰用根 SortingGroup，池材质恢复定义或壳默认。占位图 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，ItemSprite 标签。
 - 普通 Item 可在 `physics.regions` 声明 `{id,purposes,module?,path?,collider}`；`purposes` 使用 `Blocking, Interaction` 等 flags 字符串。装配在模块绑定后、池层级基线前创建独立区域，`ItemPhysicsRegion2D` 保留区域和明确接收组件；受击/交互/触发须指定接收模块槽或其组件路径，交互接收者必须实现 `IInteractable`；阻挡与受击/触发分区。现有 `visual.collider/health.collider/$collider2D` 继续使用同一参数应用器。
-- `physics.regions` 当前只供完整 Item 使用，自然 Resource Entity 与数据机器明确拒绝；普通自动设施可沿用 `UseGameObjectBackend` 选择完整 Item，显式机械节点仍走原数据后端。数据后端现有形状已统一物理登记，新多区域需后续扩展几何编译；`ResolveBlockingLocalBounds` 只是候选宽相，不能填实区域空洞。区域结构随新实例生效，F5 不重建活体层级。
+- `physics.mode` 是游戏代理模式 `WorldFixed/IndependentDynamic`：相对所属世界固定，或在所属世界内独立运动；合批是固定模式内部实现。普通 Item 与自然 Resource Entity 在正式生成/恢复时交所属 `WorldPhysicsService2D` 分配，不配置 Unity 刚体类型。`massSource: ItemStack` 唯一读取既有总重，形状默认复用 `visual.collider/health.collider/$collider2D`；`freezeRotation/linearDamping/angularDamping` 由模式内部应用。
+- Resource Entity 支持 `physics.regions`，保留数据后端和唯一受击模块，交互区域显式引用真实生长/作物/储量采集槽，不能用 GO 路径或重复健康能力冒充接收者。独立 `Trigger` 必须引用具有 `ResourceEntityCapability.PhysicsTrigger` 回调的具体扩展槽，原生 Enter/Stay/Exit 保留区域、模块、实体和另一 Collider，释放前清接收者。受击/交互形状仍是原生 Trigger Collider，用途与 Unity 的 isTrigger 分开。原生区域与玩法精筛共用准确形状，联合 Bounds 仅用于候选查询。数据机器保留固定格与管电网约束，明确拒绝 `IndependentDynamic` 和新多区域；组合能力建筑可用 `UseGameObjectBackend` 保留完整 Item。区域结构随新实例生效，F5 不重建活体层级。
 
 ## 动画
 

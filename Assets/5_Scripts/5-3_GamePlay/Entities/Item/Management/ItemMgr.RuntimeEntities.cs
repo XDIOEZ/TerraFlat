@@ -79,6 +79,53 @@ internal static class RuntimeAiEntityUtility
     #endregion
 }
 
+/// <summary>可跨区块保存的实体包含 AI 和领取独立物理代理的普通物品。</summary>
+internal static class RuntimeWorldResidentEntityUtility
+{
+    #region 通用世界居民资格
+    internal static bool IsIndependentPhysicsItemData(ItemData data)
+        => data != null && !data.inHand && GameRes.ExistingInstance != null &&
+           GameRes.ExistingInstance.TryGetItemDefinition(data.IDName, out var definition) &&
+           !definition.UsesResourceEntities &&
+           definition.Physics?.Mode == WorldPhysicsProxyMode2D.IndependentDynamic;
+
+    internal static bool IsPersistentWorldEntityData(ItemData data)
+        => RuntimeAiEntityUtility.IsAiData(data) || IsIndependentPhysicsItemData(data) ||
+           data != null && !data.inHand && data.PhysicsState?.PersistentWorldResident == true;
+
+    internal static bool AllowsIndependentWorldResidentPersistence(Item item)
+    {
+        if (item == null || item is Player || item is Map || item.itemData == null || item.itemData.inHand ||
+            item.PersistenceOwner != null) return false;
+        using var scratch = ListPool<MonoBehaviour>.Get(out var behaviours);
+        item.GetComponentsInChildren(true, behaviours);
+        foreach (MonoBehaviour behaviour in behaviours)
+            if (behaviour is IRuntimeAiPersistencePolicy policy && behaviour.GetComponentInParent<Item>(true) == item &&
+                !policy.PersistRuntimeAi) return false;
+        return true;
+    }
+
+    internal static bool IsIndependentPhysicsItem(Item item)
+    {
+        if (!AllowsIndependentWorldResidentPersistence(item)) return false;
+        return HasRegisteredIndependentPhysicsProxy(item);
+    }
+
+    private static bool HasRegisteredIndependentPhysicsProxy(Item item)
+    {
+        ItemPhysicsDefinitionDto definition = WorldPhysicsService2D.GetConfiguredItemPhysics(item);
+        if (definition != null && definition.Mode != WorldPhysicsProxyMode2D.IndependentDynamic) return false;
+        return WorldPhysicsService2D.TryGetRegisteredItemProxy(item, out var proxy) &&
+               proxy.Mode == WorldPhysicsProxyMode2D.IndependentDynamic;
+    }
+
+    internal static bool IsPersistentWorldEntity(Item item)
+        => item != null && item is not Player && item is not Map &&
+           (RuntimeAiEntityUtility.IsAiEntity(item) || AllowsIndependentWorldResidentPersistence(item) &&
+            (IsPersistentWorldEntityData(item.itemData) || HasRegisteredIndependentPhysicsProxy(item)));
+    #endregion
+}
+
 #region 运行时 AI 持久化契约
 /// <summary>由宿主模块声明运行时 AI 是否拥有独立存档，供临时巢群等所有权模型使用。</summary>
 public interface IRuntimeAiPersistencePolicy
@@ -88,7 +135,7 @@ public interface IRuntimeAiPersistencePolicy
 #endregion
 
 /// <summary>
-/// ItemMgr 的 AI 实体区块索引。索引键为纯 WorldModel.WorldAddress，
+/// ItemMgr 的世界居民区块索引。索引键为纯 WorldModel.WorldAddress，
 /// 实体统一挂在场景级 RuntimeEntities 根节点，不再成为 ChunkView 或旧 Chunk 的子对象。
 /// </summary>
 public partial class ItemMgr
@@ -147,6 +194,61 @@ public partial class ItemMgr
     /// <summary>判断 Item 是否属于新运行时实体 AI。</summary>
     public bool IsRuntimeAiEntity(Item item) => RuntimeAiEntityUtility.IsAiEntity(item);
 
+    public bool IsRuntimePersistentWorldEntity(Item item) => RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item);
+
+    /// <summary>自然来源迁出后沿用通用居民存档，不再归出生区块回收。</summary>
+    public void RegisterIndependentPhysicsNaturalItemPersistenceOwnership(Item item)
+    {
+        if (!RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item) ||
+            !ReferenceEquals(GetItemByGuid(item.itemData.Guid), item))
+            throw new InvalidOperationException("独立物理自然物必须先完成正式 Item 登记。");
+        TryRegisterRuntimePersistentWorldEntity(item);
+        ItemWorldPlacement.AttachRuntimeWorldResident(item, item.gameObject);
+    }
+
+    internal void TryParkIndependentPhysicsWorldResidentOutsidePresentedChunks(Item item)
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || item == null || !item.IsInitialized ||
+            item.itemData?.PhysicsState?.PersistentWorldResident != true || RuntimeAiEntityUtility.IsAiEntity(item) ||
+            !RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item)) return;
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        if (chunks == null || !chunks.IsWorldModelRuntimeActive ||
+            chunks.IsRuntimeEntityPresentationReady(item.transform.position)) return;
+        SaveDataMgr.Instance?.TryParkRuntimeAi(item);
+    }
+
+    internal void TryParkIndependentPhysicsResidentsForChunk(RuntimeWorldAddress address)
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return;
+        using var scratch = ListPool<Item>.Get(out var items);
+        CopyRuntimePersistentWorldItems(address, items);
+        foreach (Item item in items)
+            if (item != null && !RuntimeAiEntityUtility.IsAiEntity(item) && item.IsInitialized)
+                SaveDataMgr.Instance?.TryParkRuntimeAi(item);
+    }
+
+    internal void RefreshPhysicsWorldResidentOwnership(Item item)
+    {
+        if (item == null || item.itemData == null || !IsRuntimeItemRegistered(item) || item is Player || item is Map)
+            return;
+        bool independent = RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item);
+        if (independent)
+        {
+            item.itemData.PhysicsState ??= new ItemPhysicsRuntimeState();
+            item.itemData.PhysicsState.PersistentWorldResident = true;
+        }
+        bool persistent = RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item);
+        if (!persistent && !RuntimeAiEntityUtility.IsAiEntity(item))
+        {
+            if (item.itemData.PhysicsState != null) item.itemData.PhysicsState.PersistentWorldResident = false;
+            RemoveRuntimeAiEntity(item);
+            return;
+        }
+        bool wasRegistered = runtimeAiOwnership.ContainsKey(item);
+        if (!wasRegistered && TryRegisterRuntimePersistentWorldEntity(item))
+            ItemWorldPlacement.AttachRuntimeWorldResident(item, item.gameObject);
+    }
+
     /// <summary>取得当前动态世界场景内的中性实体根节点。</summary>
     internal Transform GetRuntimeEntityRoot(Scene preferredScene)
     {
@@ -170,9 +272,14 @@ public partial class ItemMgr
     #region WorldAddress 索引
 
     /// <summary>在 Item 注册时完成一次 AI 分类，并缓存结果供高频 Tick 使用。</summary>
-    private bool TryRegisterRuntimeAiEntity(Item item)
+    private bool TryRegisterRuntimePersistentWorldEntity(Item item)
     {
-        if (item == null || item.itemData == null || !RuntimeAiEntityUtility.IsAiEntity(item)) return false;
+        if (item == null || item.itemData == null || !RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item)) return false;
+        if (RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item))
+        {
+            item.itemData.PhysicsState ??= new ItemPhysicsRuntimeState();
+            item.itemData.PhysicsState.PersistentWorldResident = true;
+        }
         BindRuntimeAiLogicalOwnership(item, GameplayWorldRegistry.GetItemWorldKey(item), item.itemData.Guid, markDirty: true);
         RefreshRuntimeAiAddress(item);
         return runtimeAiOwnership.TryGetValue(item, out RuntimeAiOwnership owner) &&
@@ -209,20 +316,31 @@ public partial class ItemMgr
 
         foreach (Item item in items)
         {
-            if (item != null && item.itemData != null && ShouldPersistRuntimeAi(item))
+            if (item != null && item.itemData != null && RuntimeAiEntityUtility.IsAiEntity(item) && ShouldPersistRuntimeAi(item))
                 output.Add(item);
         }
+    }
+
+    /// <summary>通用存档读取同一地址索引，AI 专用消费者仍只取得 AI。</summary>
+    public void CopyRuntimePersistentWorldItems(RuntimeWorldAddress address, List<Item> output)
+    {
+        if (output == null) throw new ArgumentNullException(nameof(output));
+        output.Clear();
+        EnsureRuntimeAiWorldScope();
+        if (!_runtimeAiItemsByAddress.TryGetValue(address, out HashSet<Item> items)) return;
+        foreach (Item item in items)
+            if (item != null && item.itemData != null && ShouldPersistRuntimeAi(item)) output.Add(item);
     }
 
     /// <summary>具有宿主所有权的实体由宿主恢复，不再另存一份自由 AI。</summary>
     private static bool ShouldPersistRuntimeAi(Item item)
     {
-        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int index = 0; index < behaviours.Length; index++)
-        {
-            if (behaviours[index] is IRuntimeAiPersistencePolicy policy && !policy.PersistRuntimeAi)
-                return false;
-        }
+        if (item == null || item.PersistenceOwner != null) return false;
+        using var scratch = ListPool<MonoBehaviour>.Get(out var behaviours);
+        item.GetComponentsInChildren(true, behaviours);
+        foreach (MonoBehaviour behaviour in behaviours)
+            if (behaviour is IRuntimeAiPersistencePolicy policy && behaviour.GetComponentInParent<Item>(true) == item &&
+                !policy.PersistRuntimeAi) return false;
         return true;
     }
 
@@ -388,7 +506,7 @@ public partial class ItemMgr
         foreach (Item item in RuntimeItems)
         {
             if (!string.IsNullOrEmpty(currentWorld) && item != null && item.itemData != null &&
-                GameplayWorldRegistry.GetItemWorldKey(item) == currentWorld && RuntimeAiEntityUtility.IsAiEntity(item))
+                GameplayWorldRegistry.GetItemWorldKey(item) == currentWorld && RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item))
             {
                 BindRuntimeAiLogicalOwnership(item, GameplayWorldRegistry.GetItemWorldKey(item), item.itemData.Guid, markDirty: true);
                 RefreshRuntimeAiAddress(item, markDirty: false);

@@ -1870,6 +1870,11 @@
     {
       "id": "Tree_Pine",
       "entityRuntime": "resource",
+      "physics": {
+        "mode": "WorldFixed",
+        "massSource": "ItemStack",
+        "freezeRotation": true
+      },
       "parent": "WorldResource_Base",
       "gameName": "松树",
       "description": "森林中生长的松树，砍伐后可获得原木和树脂；所在地越温暖，树脂产量越高。",

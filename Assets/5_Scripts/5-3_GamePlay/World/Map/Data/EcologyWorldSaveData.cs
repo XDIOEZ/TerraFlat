@@ -24,6 +24,7 @@ public partial class EcologyWorldSaveData
     [MemoryPackInclude] public double GlobalMultiplier = 1d;
     [MemoryPackInclude] public List<EcologyRuleSaveData> Rules = new();
     [MemoryPackInclude] public List<EcologyChunkSaveData> Chunks = new();
+    [MemoryPackInclude] public List<IndependentNaturalEntitySaveData> IndependentEntities = new();
     // 冻结洞穴布局、矿脉和地表入口参数。
     [MemoryPackInclude] public WorldGenerationProfileSaveData Generation = new();
 
@@ -218,6 +219,18 @@ public partial class EcologyWorldSaveData
         }
     }
 
+    #endregion
+}
+
+/// <summary>出生身份与当前位置分别保存，可动物自然资源不再被出生区块重复生成。</summary>
+[MemoryPackable]
+[Serializable]
+public partial class IndependentNaturalEntitySaveData
+{
+    #region 独立自然实体所有权
+    public string SourceWorldKey;
+    public int SourceChunkX, SourceChunkY, Guid;
+    public ItemData Snapshot;
     #endregion
 }
 

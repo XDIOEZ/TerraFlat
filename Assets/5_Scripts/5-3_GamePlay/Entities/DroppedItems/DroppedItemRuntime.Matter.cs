@@ -91,8 +91,29 @@ internal sealed partial class DroppedItemRuntime
         {
             if (!WorldItemMatterRules.TryCreateTransitionOutputs(data, out IReadOnlyList<ItemData> outputs)) return false;
             ItemData replacement = outputs[0];
-            if (!GameRes.ExistingInstance.TryGetItemDefinition(replacement.IDName, out RuntimeItemDefinition target) ||
-                !target.UsesLightweightWorldDrop) return false;
+            if (!GameRes.ExistingInstance.TryGetItemDefinition(replacement.IDName, out RuntimeItemDefinition target))
+                return false;
+            if (target.Physics != null)
+            {
+                var transferred = new List<DroppedItemHandle>();
+                try
+                {
+                    foreach (ItemData output in outputs)
+                    {
+                        DroppedItemHandle handle = DroppedItemService.Spawn(output, body.Position, body.Position);
+                        if (!handle.IsValid) throw new System.InvalidOperationException("物理材料转化产物未成功落地。");
+                        transferred.Add(handle);
+                    }
+                    Remove(id);
+                    return true;
+                }
+                catch
+                {
+                    foreach (DroppedItemHandle handle in transferred) DroppedItemService.Remove(handle);
+                    throw;
+                }
+            }
+            if (!target.UsesLightweightWorldDrop) return false;
             var replacementVisual = ResolveVisual(replacement);
             var originalVisual = visuals[id];
             LightweightDroppedBody originalBody = body;

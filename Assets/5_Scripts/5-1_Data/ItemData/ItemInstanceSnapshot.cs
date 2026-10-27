@@ -30,6 +30,9 @@ public sealed partial class ItemInstanceSnapshot
     [MemoryPackInclude] private string[] addedTags;
     [MemoryPackInclude] private string[] removedTags;
     [MemoryPackInclude] private byte[] kindPayload;
+    [MemoryPackInclude] private Vector2 physicsVelocity;
+    [MemoryPackInclude] private float physicsAngularVelocity;
+    [MemoryPackInclude] private bool persistentWorldResident;
 
     [MemoryPackIgnore] public string DefinitionId => definitionId;
     [MemoryPackIgnore] public int Guid => guid;
@@ -57,7 +60,10 @@ public sealed partial class ItemInstanceSnapshot
             position = includeTransform && data.transform != null ? data.transform.position : Vector3.zero,
             rotation = includeTransform && data.transform != null ? data.transform.rotation : Quaternion.identity,
             scale = includeTransform && data.transform != null ? data.transform.scale : Vector3.one,
-            matterPayload = ItemSnapshotSerialization.SerializePayload(data.MatterState ?? new ItemMatterState())
+            matterPayload = ItemSnapshotSerialization.SerializePayload(data.MatterState ?? new ItemMatterState()),
+            physicsVelocity = includeTransform && !data.inHand ? data.PhysicsState?.Velocity ?? Vector2.zero : Vector2.zero,
+            physicsAngularVelocity = includeTransform && !data.inHand ? data.PhysicsState?.AngularVelocity ?? 0f : 0f,
+            persistentWorldResident = includeTransform && !data.inHand && data.PhysicsState?.PersistentWorldResident == true
         };
 
         var captured = new SortedDictionary<string, ModuleInstanceSnapshot>(StringComparer.Ordinal);
@@ -118,6 +124,9 @@ public sealed partial class ItemInstanceSnapshot
         }
         if (hasTransform && !preserveTransform)
             current.transform = new ItemTransform { position = position, rotation = rotation, scale = scale };
+        if (!preserveTransform)
+            current.PhysicsState = new ItemPhysicsRuntimeState
+            { Velocity = physicsVelocity, AngularVelocity = physicsAngularVelocity, PersistentWorldResident = persistentWorldResident };
         RestoreTagOverrides(current);
 
         var unbound = new List<ModuleInstanceSnapshot>();
@@ -217,6 +226,7 @@ public sealed partial class ItemInstanceSnapshot
         if (string.IsNullOrWhiteSpace(definitionId) || !Enum.IsDefined(typeof(ItemInstanceKind), kind) ||
             !IsFinite(amount) || amount < 0f || !IsFinite(durabilityFraction) || durabilityFraction < 0f || durabilityFraction > 1f ||
             !IsFinite(craftedDurabilityMultiplier) || craftedDurabilityMultiplier <= 0f || matterPayload == null ||
+            !IsFinite(physicsVelocity.x) || !IsFinite(physicsVelocity.y) || !IsFinite(physicsAngularVelocity) ||
             (kind != ItemInstanceKind.Block && kindPayload == null) ||
             (hasTransform && (!IsFinite(position.x) || !IsFinite(position.y) || !IsFinite(position.z) ||
                 !IsFinite(rotation.x) || !IsFinite(rotation.y) || !IsFinite(rotation.z) || !IsFinite(rotation.w) ||

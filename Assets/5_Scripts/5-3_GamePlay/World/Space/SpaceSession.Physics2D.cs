@@ -71,10 +71,16 @@ namespace FlatWorld.Spaceflight
                     ItemData data = live != null ? live.itemData : Decode(item.Snapshot);
                     looseData[item.Id] = data;
                     contactMassReader.Reset();
-                    body.MassKg = Math.Max(.001d, contactMassReader.ReadItem(data, live, 0));
+                    ItemPhysicsDefinitionDto physics = GameRes.ExistingInstance != null &&
+                        GameRes.ExistingInstance.TryGetItemDefinition(data.IDName, out var definition) ? definition.Physics : null;
+                    body.MassKg = physics != null ? WorldPhysicsService2D.ResolveEntityMass(data) :
+                        Math.Max(.001d, contactMassReader.ReadItem(data, live, 0));
+                    body.LinearDamping = physics?.LinearDamping ?? 0f;
+                    body.AngularDamping = physics?.AngularDamping ?? 0f;
+                    body.FreezeRotation = physics?.FreezeRotation ?? false;
                     body.MassSnapshot = item.Snapshot;
                 }
-                ConfigureSpaceCircle(body, Math.Max(.01d, item.Motion.RadiusMeters), false);
+                ConfigureSpaceCircle(body, Math.Max(.01d, item.Motion.RadiusMeters), body.FreezeRotation);
             }
             AddNearbyOreAsteroidPhysicsBodies(seconds);
             spacePhysics.Step(gravitySources, Math.Max(0d, State.SimulationSeconds - seconds), seconds, SpaceGameplaySettings.Current);

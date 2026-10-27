@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -178,7 +178,7 @@ public partial class SaveDataMgr
             if (!CaptureRuntimeTerrainStates()) return false;
             if (manager == null) return GameplayWorldRegistry.GetWorldItemCount(worldKey) == 0;
             foreach (Item item in manager.WorldRunTimeItems.Values)
-                if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey && manager.IsRuntimeAiEntity(item))
+                if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey && manager.IsRuntimePersistentWorldEntity(item))
                     return false;
             return true;
         }
@@ -192,7 +192,7 @@ public partial class SaveDataMgr
             // 修复刚接管世界时仍未进入地址桶的已登记生物。
             var runtimeItems = new List<Item>(manager.WorldRunTimeItems.Values);
             foreach (Item item in runtimeItems)
-                if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey && manager.IsRuntimeAiEntity(item))
+                if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey && manager.IsRuntimePersistentWorldEntity(item))
                     manager.NotifyRuntimeItemMoved(item);
             var captures = new List<RuntimeAiSceneUnbindingCapture>();
             if (!CaptureRuntimeAiEntityStates(captures)) return false;
@@ -245,7 +245,7 @@ public partial class SaveDataMgr
             if (existing != null)
             {
                 if (GameplayWorldRegistry.GetItemWorldKey(existing) == GameplayWorldRegistry.ExecutionWorldKey &&
-                    manager.IsRuntimeAiEntity(existing)) RemoveParkedRuntimeAi(guid);
+                    manager.IsRuntimePersistentWorldEntity(existing)) RemoveParkedRuntimeAi(guid);
                 continue;
             }
             if (TryWakeParkedRuntimeAi(capture.Snapshot)) continue;
@@ -280,6 +280,7 @@ public partial class SaveDataMgr
 
         EnsureRuntimeAiRestoreScope();
         item.Save();
+        WorldPhysicsService2D.CaptureItemPhysicsMotionForPersistence(item);
         ItemData snapshot = CloneItemData(item.itemData);
         if (snapshot?.transform == null)
             throw new InvalidOperationException($"生物 {item.name} 的休眠快照缺少位置。");
@@ -359,8 +360,19 @@ public partial class SaveDataMgr
         try
         {
             ItemData runtimeData = CloneAndRebaseItemData(snapshot);
-            MonsterSpawnerManager spawner = MonsterSpawnerManager.ExistingInstance;
-            if (spawner == null || !spawner.TryRestoreCreature(runtimeData, out restored)) return false;
+            if (!RuntimeAiEntityUtility.IsAiData(runtimeData) &&
+                RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData(runtimeData))
+            {
+                ItemTransform pose = runtimeData.transform ?? new ItemTransform();
+                restored = ItemMgr.Instance.InstantiateItem(runtimeData, pose.position, pose.rotation, pose.scale);
+                if (restored == null) return false;
+                restored.Load();
+            }
+            else
+            {
+                MonsterSpawnerManager spawner = MonsterSpawnerManager.ExistingInstance;
+                if (spawner == null || !spawner.TryRestoreCreature(runtimeData, out restored)) return false;
+            }
             RemoveRuntimeAiRecord(address, snapshot.Guid);
             RemoveParkedRuntimeAi(snapshot.Guid);
             return true;
@@ -373,6 +385,17 @@ public partial class SaveDataMgr
             Debug.LogException(exception);
             return false;
         }
+    }
+
+    internal void RestoreParkedIndependentPhysicsWorldEntitiesForChunk(RuntimeWorldAddress address)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null || ItemMgr.GetExistingInstance() == null) return;
+        EnsureRuntimeAiRestoreScope();
+        if (!parkedRuntimeAiByAddress.TryGetValue(address, out List<ItemData> parked)) return;
+        var snapshots = new List<ItemData>(parked);
+        foreach (ItemData snapshot in snapshots)
+            if (!RuntimeAiEntityUtility.IsAiData(snapshot) && RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData(snapshot))
+                TryWakeParkedRuntimeAi(snapshot);
     }
 
     private void AddParkedRuntimeAi(RuntimeWorldAddress address, ItemData snapshot)

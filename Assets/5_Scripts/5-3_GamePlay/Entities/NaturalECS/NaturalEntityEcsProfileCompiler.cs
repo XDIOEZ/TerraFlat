@@ -31,6 +31,7 @@ namespace FlatWorld.NaturalEntities
         // 同一份编译配置的产物契约只校验一次，配置重编译会得到新实例。
         internal bool OutputDefinitionsValidated;
         public NaturalEntitySpatialGeometry SpatialGeometry;
+        public List<WorldPhysicsEntityRegion2D> PhysicsRegions;
         public readonly List<CompiledResourceCapability> Extensions = new();
         public bool HasGrowth => (Capabilities & NaturalEntityCapability.Growth) != 0;
         public bool HasClimate => (Capabilities & NaturalEntityCapability.Climate) != 0;
@@ -161,6 +162,15 @@ namespace FlatWorld.NaturalEntities
             if (!BuildComponentTypes(result, out reason)) return false;
             result.SpatialGeometry = NaturalEntitySpatialGeometry.Compile(definition.Visual?.Collider,
                 result.HealthParameters, definition.HasTag(Tag.Tree));
+            try
+            {
+                result.PhysicsRegions = NaturalEntityEcsService.CompileNaturalEntityPhysicsRegions(result);
+            }
+            catch (Exception exception)
+            {
+                reason = exception.Message;
+                return false;
+            }
             result.RegistryRevision = ResourceEntityCapabilityRegistry.Revision;
             profile = result;
             return true;

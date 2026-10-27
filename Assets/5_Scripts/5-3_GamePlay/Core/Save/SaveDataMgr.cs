@@ -2064,6 +2064,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static bool IsRuntimeBuildingItem(Item item, out Mod_Building building)
     {
         building = null;
+        if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item)) return false;
         if (item?.PersistenceOwner != null || MachineWorld.OwnsWorldItem(item?.itemData)) return false;
         if (item == null || item is Player || item is Map || item.itemData == null)
             return false;
@@ -2091,6 +2092,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>判断建筑 SaveData 是否属于动态世界建筑，供差量替换和清理使用。</summary>
     private static bool IsRuntimeBuildingData(ItemData data)
     {
+        if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData(data)) return false;
         try
         {
             return data != null && Mod_Building.TryReadBuildingData(
@@ -2108,6 +2110,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>判断建筑 SaveData 是否可以在世界加载时重新实例化。</summary>
     private static bool IsRestorableRuntimeBuildingData(ItemData data)
     {
+        if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData(data)) return false;
         if (MachineWorld.OwnsWorldItem(data)) return true;
         try
         {
@@ -2336,7 +2339,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         foreach (RuntimeWorldAddress address in addresses)
         {
-            itemManager.CopyRuntimeAiItems(address, runtimeItems);
+            itemManager.CopyRuntimePersistentWorldItems(address, runtimeItems);
             savedItems.Clear();
             addressCaptures?.Clear();
             bool captureSucceeded = true;
@@ -2346,6 +2349,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 try
                 {
                     item.Save();
+                    WorldPhysicsService2D.CaptureItemPhysicsMotionForPersistence(item);
                     ItemData snapshot = CloneItemData(item.itemData);
                     if (snapshot?.transform == null)
                         throw new InvalidDataException($"生物 {item.name} 的快照缺少位置。");
@@ -2411,7 +2415,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             bool copiedItems = true;
             try
             {
-                itemManager.CopyRuntimeAiItems(address, runtimeItems);
+                itemManager.CopyRuntimePersistentWorldItems(address, runtimeItems);
             }
             catch (Exception exception)
             {
@@ -2432,6 +2436,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 try
                 {
                     item.Save();
+                    WorldPhysicsService2D.CaptureItemPhysicsMotionForPersistence(item);
                     savedItems.Add(CloneItemData(item.itemData));
                 }
                 catch (Exception exception)
@@ -2494,14 +2499,14 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             Item existing = ItemMgr.Instance.GetItemByGuid(savedData.Guid);
             if (existing != null)
             {
-                if (RuntimeAiEntityUtility.IsAiEntity(existing) &&
+                if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(existing) &&
                     GameplayWorldRegistry.GetItemWorldKey(existing) == planetName)
                 {
                     try
                     {
                         if (!existing.IsInitialized) { succeeded = false; continue; }
                         ItemWorldPlacement.AttachRuntimeAi(existing, existing.gameObject);
-                        if (ParkedWorld.SceneDetachedLiveGuids.Contains(savedData.Guid))
+                        if (parkedRuntimeAiAddressByGuid.ContainsKey(savedData.Guid))
                             RemoveParkedRuntimeAi(savedData.Guid);
                     }
                     catch (Exception exception) { succeeded = false; Debug.LogException(exception); }
@@ -2533,7 +2538,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 if (restored != null)
                 {
                     restored.Load();
-                    if (ParkedWorld.SceneDetachedLiveGuids.Contains(savedData.Guid))
+                    if (parkedRuntimeAiAddressByGuid.ContainsKey(savedData.Guid))
                         RemoveParkedRuntimeAi(savedData.Guid);
                 }
                 else succeeded = false;
@@ -2573,7 +2578,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
 
         record.ChangedItems ??= new List<ItemData>();
-        record.ChangedItems.RemoveAll(RuntimeAiEntityUtility.IsAiData);
+        record.ChangedItems.RemoveAll(RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData);
         // 休眠实体已经卸载 GameObject，保存活动实体时仍须保留同一区块中的休眠快照。
         if (parkedRuntimeAiByAddress.TryGetValue(address, out List<ItemData> parkedItems))
             for (int i = 0; i < parkedItems.Count; i++)
@@ -2594,7 +2599,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return;
         foreach (ItemData data in source)
         {
-            if (RuntimeAiEntityUtility.IsAiData(data))
+            if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData(data))
                 output.Add(data);
         }
     }

@@ -1,6 +1,7 @@
 using MemoryPack;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class RuntimeSkill
 {
@@ -41,10 +42,42 @@ public class RuntimeSkill
                 continue;
             }
 
-            Skill actionInstance = GameObject.Instantiate(action, castingPoint.position, Quaternion.identity);
-            actionInstance.runtimeSkill = this;
-            skillInstanceDict.Add(action.name, actionInstance);
-            actionInstance.Load();
+            GameObject staging = new GameObject("Skill Physics Preparation") { hideFlags = HideFlags.DontSave };
+            staging.SetActive(false);
+            Skill actionInstance = null;
+            bool added = false;
+            try
+            {
+                Scene scene = skillSender != null ? skillSender.gameObject.scene : castingPoint.gameObject.scene;
+                if (scene.IsValid() && scene.isLoaded) SceneManager.MoveGameObjectToScene(staging, scene);
+                // 停用外壳先进入施放者场景，避免物理体在错误世界中生效。
+                actionInstance = GameObject.Instantiate(action, castingPoint.position, Quaternion.identity, staging.transform);
+                actionInstance.gameObject.SetActive(false);
+                actionInstance.transform.SetParent(null, true);
+                actionInstance.runtimeSkill = this;
+                skillInstanceDict.Add(action.name, actionInstance);
+                added = true;
+                string worldKey = GameplayWorldRegistry.GetItemWorldKey(skillSender);
+                using (GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : null)
+                    actionInstance.Load();
+                actionInstance.gameObject.SetActive(action.gameObject.activeSelf);
+            }
+            catch (System.Exception failure)
+            {
+                if (added) skillInstanceDict.Remove(action.name);
+                if (actionInstance != null)
+                {
+                    try { actionInstance.Unload(); }
+                    catch (System.Exception cleanup)
+                    {
+                        GameObject.Destroy(actionInstance.gameObject);
+                        throw new System.AggregateException("技能准备失败且物理清理失败。", failure, cleanup);
+                    }
+                    GameObject.Destroy(actionInstance.gameObject);
+                }
+                throw;
+            }
+            finally { GameObject.Destroy(staging); }
         }
     }
 

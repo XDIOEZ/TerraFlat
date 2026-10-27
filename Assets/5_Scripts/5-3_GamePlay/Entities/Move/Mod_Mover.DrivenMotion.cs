@@ -6,7 +6,7 @@ public partial class Mod_Mover
     #region 临时主动移动租约
     private DrivenMotionLease drivenMotionLease;
     public bool HasDrivenMotion => drivenMotionLease != null;
-    public bool IsSurfaceMotionContextAvailable => !resettingMotion && Enabled && isActiveAndEnabled &&
+    public bool IsSurfaceMotionContextAvailable => physicsAllowsIndependentMotion && !resettingMotion && Enabled && isActiveAndEnabled &&
         item != null && !item.DestructionHandled && CarrierSource == null && !spaceMotionOwned &&
         !SpaceMgr.IsSpaceScene(item.gameObject.scene.name);
     public bool IsSurfaceMotionAvailable => IsSurfaceMotionContextAvailable && !IsLock;
@@ -18,6 +18,7 @@ public partial class Mod_Mover
             throw new ArgumentException("主动移动需要本物品已有的刚体。", nameof(body));
         if (!IsRuntimeLoaded) ModDataMemoryPack.ReadData(ref Data);
         rb = body;
+        physicsAllowsIndependentMotion = WorldPhysicsService2D.CanItemUseIndependentMotion(item);
     }
 
     public float WalkingSpeed => GetWalkingSpeedValue() *

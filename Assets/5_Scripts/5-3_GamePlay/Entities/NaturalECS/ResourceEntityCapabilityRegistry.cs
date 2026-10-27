@@ -17,6 +17,17 @@ namespace FlatWorld.NaturalEntities
         internal readonly Dictionary<string, object> Modules = new(StringComparer.Ordinal);
     }
 
+    public readonly struct ResourceEntityPhysicsTriggerEvent
+    {
+        public readonly string RegionId, ReceiverModule;
+        public readonly WorldPhysicsPurpose2D Purpose;
+        public readonly Collider2D OtherCollider;
+        public readonly WorldPhysicsTriggerPhase2D Phase;
+        public ResourceEntityPhysicsTriggerEvent(string regionId, string receiverModule,
+            WorldPhysicsPurpose2D purpose, Collider2D otherCollider, WorldPhysicsTriggerPhase2D phase)
+        { RegionId = regionId; ReceiverModule = receiverModule; Purpose = purpose; OtherCollider = otherCollider; Phase = phase; }
+    }
+
     /// <summary>编译结果只保存组件组合和生命周期回调，批量玩法由共享 World 的运行器执行。</summary>
     public sealed class ResourceEntityCapability
     {
@@ -25,11 +36,13 @@ namespace FlatWorld.NaturalEntities
         public Action<ResourceEntityCapabilityContext> Initialize { get; }
         public Action<ResourceEntityCapabilityContext> Capture { get; }
         public Action<ResourceEntityCapabilityContext> Release { get; }
+        public Action<ResourceEntityCapabilityContext, ResourceEntityPhysicsTriggerEvent> PhysicsTrigger { get; }
 
         public ResourceEntityCapability(ComponentType[] componentTypes,
             Action<ResourceEntityCapabilityContext> initialize,
             Action<ResourceEntityCapabilityContext> capture = null,
-            Action<ResourceEntityCapabilityContext> release = null)
+            Action<ResourceEntityCapabilityContext> release = null,
+            Action<ResourceEntityCapabilityContext, ResourceEntityPhysicsTriggerEvent> physicsTrigger = null)
         {
             if (componentTypes == null) throw new ArgumentNullException(nameof(componentTypes));
             Types = (ComponentType[])componentTypes.Clone();
@@ -37,12 +50,14 @@ namespace FlatWorld.NaturalEntities
             Initialize = initialize ?? throw new ArgumentNullException(nameof(initialize));
             Capture = capture;
             Release = release;
+            PhysicsTrigger = physicsTrigger;
         }
 
         public ResourceEntityCapability(Action<ResourceEntityCapabilityContext> initialize,
             Action<ResourceEntityCapabilityContext> capture = null,
-            Action<ResourceEntityCapabilityContext> release = null)
-            : this(Array.Empty<ComponentType>(), initialize, capture, release) { }
+            Action<ResourceEntityCapabilityContext> release = null,
+            Action<ResourceEntityCapabilityContext, ResourceEntityPhysicsTriggerEvent> physicsTrigger = null)
+            : this(Array.Empty<ComponentType>(), initialize, capture, release, physicsTrigger) { }
     }
 
     /// <summary>初始化和保存都使用同一实体及模块快照，扩展不能额外创建资源 World。</summary>

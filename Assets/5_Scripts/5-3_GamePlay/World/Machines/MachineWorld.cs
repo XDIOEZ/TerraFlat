@@ -114,6 +114,7 @@ public static partial class MachineWorld
         var definition = MachineCatalog.Get(snapshot.IDName);
         // 缺失 MOD 内容不丢弃存档，恢复目录后仍能重新载入。
         if (definition == null) return;
+        ResolveRequiredWorldFixedMachineProxyMode(definition.Id);
         ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, snapshot);
         var state = ReadMachineState(snapshot);
         if (state.Hp < 0f) state.Hp = ResolveMaximumHp(snapshot);
@@ -133,6 +134,7 @@ public static partial class MachineWorld
     {
         if (!GameNetwork.HasStateAuthority) return null;
         EnsureScope();
+        ResolveRequiredWorldFixedMachineProxyMode(view.Definition.Id);
         int id = view.item.itemData.Guid;
         bool added = false;
         if (!nodes.TryGetValue(id, out var node))
@@ -163,6 +165,7 @@ public static partial class MachineWorld
         EnsureScope();
         MachineDefinition definition = MachineCatalog.Get(snapshot.IDName)
             ?? throw new InvalidOperationException("机械定义不存在：" + snapshot.IDName);
+        ResolveRequiredWorldFixedMachineProxyMode(definition.Id);
         Vector2Int cell = CellOf(snapshot.transform.position);
         if (!ValidatePlacement(definition, cell, false, out string reason))
             throw new InvalidOperationException(reason);
@@ -302,6 +305,7 @@ public static partial class MachineWorld
         EnsureScope();
         MachineDefinition definition = MachineCatalog.Get(snapshot.IDName) ??
             throw new InvalidOperationException("联机机械定义缺失：" + snapshot.IDName);
+        ResolveRequiredWorldFixedMachineProxyMode(definition.Id);
         Vector2Int previousCell = default;
         bool moved = false;
         bool sameDefinition = false;
@@ -969,6 +973,8 @@ public static partial class MachineWorld
     {
         EnsureScope();
         reason = null;
+        try { ResolveRequiredWorldFixedMachineProxyMode(definition.Id); }
+        catch (InvalidOperationException error) { reason = error.Message; return false; }
         if (IsOccupied(cell, definition.Layer)) { reason = "当前机械层已占用"; return false; }
         if (BuildingOccupancyRegistry.IsOccupied(cell, layer: definition.Layer))
         { reason = "当前建筑层已占用"; return false; }

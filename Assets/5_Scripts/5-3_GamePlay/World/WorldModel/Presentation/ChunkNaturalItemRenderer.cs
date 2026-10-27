@@ -68,7 +68,8 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
     }
 
     public int SpawnedItemCount => spawnedItems.Count;
-    public int EcsEntityCount => staticEntities.Count + PrimarySharedEntityCount;
+    public int EcsEntityCount => staticEntities.Count + PrimarySharedEntityCount +
+        (chunkManager != null ? chunkManager.IndependentNaturalEntities.CountPresentedIn(boundChunk) : 0);
     public int EcsOnlyEntityCount => EcsEntityCount;
 
     /// <summary>按稳定 GUID 查询当前区块已经实例化的自然物。</summary>
@@ -169,11 +170,14 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         itemManager = ItemMgr.GetInstance();
         chunkManager = ChunkMgr.ExistingInstance;
         boundChunk = chunk;
+        SaveDataMgr.Instance?.RestoreParkedIndependentPhysicsWorldEntitiesForChunk(boundChunk.Address);
         terrainOwner = GetComponentInParent<ChunkView>()?.GetComponentInChildren<ChunkTilemapRenderer>(true);
         if (terrainOwner != null)
             terrainOwner.BatchPresentationRebuilt += RefreshStaticVisuals;
         if (chunkManager != null)
             chunkManager.NaturalItemRemoved += HandleStaticRemoved;
+        if (chunkManager != null && terrainOwner != null)
+            chunkManager.IndependentNaturalEntities.BindChunk(chunk, terrainOwner);
         initialBindingInProgress = true;
         initialCompanionPlacements.Clear();
 
@@ -268,6 +272,8 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         unbinding = true;
         try
         {
+            if (boundChunk != null)
+                itemManager?.TryParkIndependentPhysicsResidentsForChunk(boundChunk.Address);
             if (chunkManager != null)
                 chunkManager.NaturalItemRemoved -= HandleStaticRemoved;
             if (terrainOwner != null)
@@ -303,6 +309,8 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         }
         finally
         {
+            if (chunkManager != null)
+                chunkManager.IndependentNaturalEntities.UnbindChunk(boundChunk, terrainOwner);
             ReleaseSharedEntities();
             unbindItems.Clear();
             unbindItemSet.Clear();
@@ -478,7 +486,9 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         if (staticEntities.ContainsKey(placement.Guid)) return true;
         if (terrainOwner == null || chunkManager == null)
             throw new InvalidOperationException("资源实体需要有效的区块表现与世界上下文。");
-        if (placement.IsShared) return BindSharedEntity(placement, definition);
+        if (chunkManager.IndependentNaturalEntities.ContainsGeneratedSourceIdentity(boundChunk.Address, placement)) return true;
+        bool independentPhysics = NaturalEntityEcsService.UsesIndependentPhysicsProxy(definition);
+        if (placement.IsShared && !independentPhysics) return BindSharedEntity(placement, definition);
         if (!CanSpawnCompanionForHost(placement)) return true;
 
         RuntimeWorldAddress address = boundChunk.Address;
@@ -490,6 +500,13 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         boundChunk.Terrain.TryGetEnvironmentValue("precipitation", placement.LocalX, placement.LocalY, out float precipitation);
         Vector3 position = new(address.ChunkOrigin.X + placement.LocalX + 0.5f + placement.OffsetX,
             address.ChunkOrigin.Y + placement.LocalY + 0.5f + placement.OffsetY);
+        if (independentPhysics)
+        {
+            chunkManager.IndependentNaturalEntities.AcquireGeneratedEntity(placement, definition, address, position,
+                baseline, precipitation, changedData);
+            if (renewing) chunkManager.CompleteNaturalRenewal(address, placement.Guid);
+            return true;
+        }
         if (!NaturalEntityEcsService.TryRegister(definition, placement.Guid, position, baseline, precipitation,
                 address.DimensionId, changedData, out NaturalEntityHandle handle))
             throw new InvalidOperationException($"资源实体 {placement.ItemId} 未能建立，禁止退回 GameObject。");
@@ -497,13 +514,16 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         try
         {
             staticEntities.Add(placement.Guid, runtime);
+            NaturalEntityEcsService.SetGeneratedNaturalEntitySourceIdentity(handle, GameplayWorldRegistry.ExecutionWorldKey,
+                address.ChunkOrigin.X, address.ChunkOrigin.Y);
             NaturalEntityEcsService.BindRemovalHandler(handle, HandleEntityRemoved);
             NaturalEntityEcsService.BindPresentation(handle, terrainOwner);
             if (renewing) chunkManager.CompleteNaturalRenewal(address, placement.Guid);
         }
         catch
         {
-            staticEntities.Remove(placement.Guid);
+            if (staticEntities.TryGetValue(placement.Guid, out StaticNaturalRuntime current) &&
+                ReferenceEquals(current, runtime)) staticEntities.Remove(placement.Guid);
             NaturalEntityEcsService.Remove(handle);
             throw;
         }
@@ -514,6 +534,7 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
     private void RefreshStaticVisuals()
     {
         RefreshSharedEntities();
+        if (chunkManager != null) chunkManager.IndependentNaturalEntities.RefreshPresentedEntitiesIn(boundChunk);
         foreach (StaticNaturalRuntime runtime in staticEntities.Values)
         {
             if (GameRes.ExistingInstance == null ||
@@ -693,7 +714,12 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
                 initializer.InitializeNaturalResource(unchecked((uint)placement.Guid));
             item.Initialize_Env(environmentLayers,
                 new Vector2Int(placement.LocalX, placement.LocalY));
-            RegisterNaturalItem(item);
+            if (RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item))
+            {
+                itemManager.RegisterIndependentPhysicsNaturalItemPersistenceOwnership(item);
+                chunkManager.MarkNaturalItemRemoved(address, placement.Guid);
+            }
+            else RegisterNaturalItem(item);
             if (renewing) chunkManager.CompleteNaturalRenewal(address, placement.Guid);
             return true;
         }

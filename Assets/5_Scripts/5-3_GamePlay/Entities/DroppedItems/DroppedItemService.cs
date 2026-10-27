@@ -286,8 +286,10 @@ public static partial class DroppedItemService
             ? rotation + UnityEngine.Random.Range(-DropRotationJitterDegrees, DropRotationJitterDegrees)
             : rotation;
         var context = new DroppedItemSpawnContext(spawnReason, sourceItem, spawnPosition, destination ?? spawnPosition, duration);
+        if (definition.Physics != null && definition.UsesResourceEntities)
+            throw new InvalidOperationException($"资源实体 {source.IDName} 暂不支持作为独立掉落物生成。");
         if (TrySpawnWithProvider(source, context, finalRotation, finalScale, out DroppedItemHandle supplied)) return supplied;
-        if (!definition.UsesLightweightWorldDrop || !UsesLightweightDrops)
+        if (definition.Physics != null || !definition.UsesLightweightWorldDrop || !UsesLightweightDrops)
             return SpawnItemBacked(source, spawnPosition, destination, duration, finalRotation,
                 bezierOffset, arcHeight, rotationSpeed, spawnReason, sourceItem);
         EnsureContext();
@@ -370,7 +372,7 @@ public static partial class DroppedItemService
         GameRes resources = GameRes.ExistingInstance;
         return resources != null &&
                resources.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition) &&
-               definition.UsesLightweightWorldDrop;
+               definition.Physics == null && definition.UsesLightweightWorldDrop;
     }
 
     /// <summary>回滚未提交的生成，或删除已被完全拾取的实体。</summary>
@@ -409,7 +411,11 @@ public static partial class DroppedItemService
             RuntimeAiEntityUtility.IsAiEntity(item))
             return false;
         var context = new DroppedItemSpawnContext(DroppedItemSpawnReason.Generic, item, start, end, duration);
-        if (FindSpawnProvider(context) == null && !ShouldUseLightweightDrop(item.itemData)) return false;
+        if (FindSpawnProvider(context) == null)
+        {
+            if (WorldPhysicsService2D.StartConfiguredItemDropMotion(item, start, end, duration)) return true;
+            if (!ShouldUseLightweightDrop(item.itemData)) return false;
+        }
         item.itemData.Stack.CanBePickedUp = false;
         legacyPlans[item] = new LegacyDropPlan
         { Start = start, End = end, Duration = duration, Bezier = bezierOffset, Arc = arcHeight, Spin = rotationSpeed };
@@ -425,6 +431,7 @@ public static partial class DroppedItemService
         using var scope = worldScope;
         if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) || definition.IsActor) return false;
         var context = new DroppedItemSpawnContext(DroppedItemSpawnReason.Generic, item, item.transform.position, item.transform.position, 0f);
+        if (definition.Physics != null && FindSpawnProvider(context) == null) return false;
         if (FindSpawnProvider(context) == null && !ShouldUseLightweightDrop(item.itemData)) return false;
         DroppedItemHandle handle = default;
         try
@@ -481,6 +488,7 @@ public static partial class DroppedItemService
         DroppedItemSpawnReason spawnReason, Item sourceItem)
     {
         ItemData data = FastCloner.FastCloner.DeepClone(source); data.inHand = false;
+        RemoveLegacyDropData(data);
         // 新掉落物由登记入口分配身份，不能复用仍由手持物或来源实体占用的 GUID。
         data.Guid = 0;
         data.Stack.CanBePickedUp = duration <= 0f;
@@ -490,7 +498,8 @@ public static partial class DroppedItemService
             item = ItemMgr.Instance.InstantiateItem(data, position, Quaternion.Euler(0, 0, rotation),
                 ResolveDefaultWorldDropScale(data));
             item.Load(); item.SetInHand(false);
-            if (duration > 0f) Mod_BaseDroper.StaticDropItem_Pos(item, position, destination ?? position, duration,
+            bool hasPhysicalMotion = WorldPhysicsService2D.StartConfiguredItemDropMotion(item, position, destination ?? position, duration);
+            if (!hasPhysicalMotion && duration > 0f) Mod_BaseDroper.StaticDropItem_Pos(item, position, destination ?? position, duration,
                 Mod_BaseDroper.MoveMode.BezierCurve, bezier, arc, spin, spin);
             NotifySpawnContext(item, new DroppedItemSpawnContext(
                 spawnReason, sourceItem, position, destination ?? position, duration));

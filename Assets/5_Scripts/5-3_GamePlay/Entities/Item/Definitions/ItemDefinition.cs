@@ -363,6 +363,21 @@ public sealed partial class ItemColliderDefinitionDto
 public sealed partial class ItemPhysicsDefinitionDto
 {
     #region 物品物理区域
+    [JsonProperty("mode"), JsonConverter(typeof(StringEnumConverter))]
+    public WorldPhysicsProxyMode2D Mode = WorldPhysicsProxyMode2D.WorldFixed;
+
+    [JsonProperty("massSource"), JsonConverter(typeof(StringEnumConverter))]
+    public WorldPhysicsMassSource2D MassSource = WorldPhysicsMassSource2D.ItemStack;
+
+    [JsonProperty("freezeRotation")]
+    public bool FreezeRotation = true;
+
+    [JsonProperty("linearDamping")]
+    public float LinearDamping = 1f;
+
+    [JsonProperty("angularDamping")]
+    public float AngularDamping = 1f;
+
     [JsonProperty("regions")]
     public List<ItemPhysicsRegionDefinitionDto> Regions = new();
 
@@ -389,6 +404,10 @@ public sealed partial class ItemPhysicsRegionDefinitionDto
     /// <summary>区域锚点相对 Item 的路径；缺省跟随指定模块或物品根。</summary>
     [JsonProperty("path", NullValueHandling = NullValueHandling.Ignore)]
     public string Path;
+
+    // 不可变区域只提供纯阻挡几何，可由世界共享静态刚体。
+    [JsonProperty("immutable")]
+    public bool Immutable;
 
     [JsonProperty("collider")]
     public ItemColliderDefinitionDto Collider;

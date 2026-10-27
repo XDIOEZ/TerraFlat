@@ -12,6 +12,7 @@ namespace FlatWorld.Spaceflight
         public SpaceSectorPosition Position;
         public SpaceVector2 Velocity;
         public double AngleRadians, AngularVelocityRadians, MassKg, InertiaKgM2, RadiusMeters, InputRetention;
+        public float LinearDamping, AngularDamping;
         public bool FreeCircle, FreezeRotation, Active;
         public bool Kinematic;
         public SpaceSectorPosition KinematicTarget;
@@ -297,6 +298,7 @@ namespace FlatWorld.Spaceflight
             RigidbodyType2D bodyType = body.Kinematic ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
             if (rigidbody.bodyType != bodyType) rigidbody.bodyType = bodyType;
             rigidbody.constraints = body.FreezeRotation ? RigidbodyConstraints2D.FreezeRotation : RigidbodyConstraints2D.None;
+            rigidbody.drag = body.LinearDamping;
             rigidbody.useAutoMass = false;
             rigidbody.mass = (float)Math.Max(.001d, body.MassKg);
             rigidbody.centerOfMass = Vector2.zero;
@@ -416,7 +418,7 @@ namespace FlatWorld.Spaceflight
                     SampleGravity(sources, clock, step);
                     foreach (SpacePhysicsBody body in active) ApplyForces(body, sources.Count, clock, step, settings);
                     foreach (SpacePhysicsIsland island in claimed)
-                        if (!island.Physics.Simulate((float)step)) throw new InvalidOperationException("独立太空 2D 物理场景未能推进。");
+                        if (!island.Context.Simulate((float)step)) throw new InvalidOperationException("独立太空 2D 物理场景未能推进。");
                 }
             }
             finally
@@ -456,7 +458,7 @@ namespace FlatWorld.Spaceflight
             var point = new SpaceSectorPosition(body.Position.Sector, body.Position.LocalMeters + delta);
             GravityFrame gravity = FindGravity(point, sourceCount);
             SpaceVector2 acceleration = -frameAcceleration;
-            body.Rigidbody.angularDrag = gravity == null ? 0f : (float)gravity.Source.DampingPerSecond;
+            body.Rigidbody.angularDrag = body.AngularDamping + (gravity == null ? 0f : (float)gravity.Source.DampingPerSecond);
             if (gravity != null)
             {
                 SpaceVector2 relativePosition = SpaceSectorCoordinates.Relative(point.Sector, point.LocalMeters, gravity.Source.Body.Sector) - gravity.Position;

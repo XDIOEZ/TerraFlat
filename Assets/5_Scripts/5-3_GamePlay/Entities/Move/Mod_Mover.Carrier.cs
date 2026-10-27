@@ -11,15 +11,15 @@ public partial class Mod_Mover
     private Mod_DamageReceiver carrierHealth;
     private GameManager carrierGame;
     private Vector2 carrierSafePosition, carrierLastPosition;
-    private RigidbodyType2D carrierBodyType;
-    private bool carrierSimulated;
+    private WorldPhysicsItemBodyRepresentation2D carrierBodyRepresentation;
     private ChunkLease carrierSafeChunkLease; // 保留安全登船地块的数据，不触发生成。
 
     /// <summary>只有本地且拥有状态权威的玩家可取得座位，远程玩家不能读取本机输入。</summary>
     public bool TryAttachCarrier(ICarrierMotionSource source, Vector2 safePosition)
     {
         if (resettingMotion || CarrierSource != null || source == null || !source.IsAvailable || rb == null ||
-            !GameNetwork.HasStateAuthority || item is not Player player || !player.IsLocalProfile)
+            !GameNetwork.HasStateAuthority || !physicsAllowsIndependentMotion ||
+            item is not Player player || !player.IsLocalProfile)
             return false;
         carrierTileEffects = item.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
         carrierHealth = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
@@ -31,8 +31,7 @@ public partial class Mod_Mover
             carrier.TryFindDismount(out Vector2 shorePosition)) safePosition = shorePosition;
         carrierSafeChunkLease = manager.AcquireChunkLease(manager.ResolveWorldAddress(safePosition), ChunkLeaseKind.Simulation);
         carrierSafePosition = WorldTopologyRuntime.NormalizePosition(safePosition);
-        carrierBodyType = rb.bodyType;
-        carrierSimulated = rb.simulated;
+        carrierBodyRepresentation = WorldPhysicsService2D.CaptureItemBodyRepresentation(rb);
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         CarrierSource = source;
         ResetSwimmingAudio();
@@ -42,7 +41,7 @@ public partial class Mod_Mover
         if (carrierGame != null) carrierGame.Event_GameWorldExit += HandleCarrierWorldExit;
         rb.velocity = Vector2.zero;
         rb.angularVelocity = 0f;
-        rb.simulated = false;
+        WorldPhysicsService2D.SetItemBodySimulationEnabled(rb, false);
         UpdateMovementState();
         ApplyCarrierPosition(source.SeatPosition);
         return true;
@@ -144,11 +143,8 @@ public partial class Mod_Mover
         if (rb != null)
         {
             if (destination.HasValue) ApplyCarrierPosition(destination.Value);
-            rb.bodyType = carrierBodyType;
             // 上船前的速度不是下船冲量，不能在长时间乘船后重新施加旧速度。
-            rb.velocity = Vector2.zero;
-            rb.angularVelocity = 0f;
-            rb.simulated = carrierSimulated;
+            WorldPhysicsService2D.RestoreItemBodyRepresentation(item, rb, carrierBodyRepresentation, clearVelocity: true);
         }
         if (carrierTileEffects != null) carrierTileEffects.SetEffectsSuppressed(this, false);
         carrierTileEffects = null;

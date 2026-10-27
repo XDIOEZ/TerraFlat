@@ -104,8 +104,16 @@ namespace FlatWorld.NaturalEntities
             public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
             {
                 if (weapon?.item == null) return;
-                string sourceWorld = FlatWorld.Spaceflight.SpaceSession.TryGetCombatWorldKey(weapon.item, out string world)
-                    ? world : weapon.item.gameObject.scene.name;
+                string sourceWorld = weapon.item.GetComponentInChildren<Mod_Projectile>(true)?.NetworkSurfaceWorldKey;
+                sourceWorld ??= GameplayWorldRegistry.GetItemWorldKey(weapon.item);
+                sourceWorld ??= GameplayWorldRegistry.GetItemWorldKey(weapon.item.Owner);
+                if (sourceWorld == null && GameplayWorldRegistry.TryResolveUnambiguousWorldKeyForScene(
+                    weapon.item.gameObject.scene, out string uniqueWorld))
+                {
+                    sourceWorld = uniqueWorld;
+                    if (ItemMgr.GetExistingInstance()?.IsRuntimeItemRegistered(weapon.item) == true)
+                        GameplayWorldRegistry.AssignItemToWorld(weapon.item, uniqueWorld);
+                }
                 if (sourceWorld != worldKey) return;
                 using var scope = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : null;
                 QueryWeapon(weapon, shape, context);
@@ -218,11 +226,15 @@ namespace FlatWorld.NaturalEntities
             GameplayCombatBridge.Unregister(runtimeModule);
             foreach (Record record in records.Values)
             {
+                ReleaseNaturalEntityPhysicsProxy(record);
                 ReleaseExtensionModules(record);
                 UnregisterNavigation(record);
                 ReleasePresentation(record);
             }
             records.Clear();
+            State.generatedNaturalSources.Clear();
+            State.independentPhysicsSources.Clear();
+            State.deferredPhysicsModeWarnings.Clear();
             environmentInputRecords.Clear();
             soilInputRecords.Clear();
             navigationInputRecords.Clear();
@@ -249,6 +261,18 @@ namespace FlatWorld.NaturalEntities
         public static bool TryRegister(RuntimeItemDefinition definition, int naturalGuid,
             Vector3 defaultPosition, float baselineCelsius, float precipitation, string dimensionId, ItemData persistedData,
             out NaturalEntityHandle handle, Vector2Int? plantedCell = null)
+            => TryRegisterNaturalEntityInternal(definition, naturalGuid, defaultPosition, baselineCelsius,
+                precipitation, dimensionId, persistedData, out handle, plantedCell, false);
+
+        internal static bool TryRegisterTransferredNaturalEntity(RuntimeItemDefinition definition, int naturalGuid,
+            Vector3 position, float baselineCelsius, float precipitation, string dimensionId, ItemData snapshot,
+            out NaturalEntityHandle handle)
+            => TryRegisterNaturalEntityInternal(definition, naturalGuid, position, baselineCelsius,
+                precipitation, dimensionId, snapshot, out handle, null, true);
+
+        private static bool TryRegisterNaturalEntityInternal(RuntimeItemDefinition definition, int naturalGuid,
+            Vector3 defaultPosition, float baselineCelsius, float precipitation, string dimensionId, ItemData persistedData,
+            out NaturalEntityHandle handle, Vector2Int? plantedCell, bool holdForWorldTransfer)
         {
             handle = default;
             if (definition?.UsesResourceEntities != true) return false;
@@ -261,7 +285,7 @@ namespace FlatWorld.NaturalEntities
             ItemData snapshot = persistedData == null
                 ? definition.CreateItemData()
                 : ItemDefinitionRuntime.RebasePersistedData(
-                    GameRes.ExistingInstance, FastCloner.FastCloner.DeepClone(persistedData));
+                    GameRes.ExistingInstance, CloneNaturalEntitySnapshotPreservingMotion(persistedData));
             if (snapshot == null)
                 return false;
             snapshot.Guid = naturalGuid;
@@ -296,6 +320,7 @@ namespace FlatWorld.NaturalEntities
                 Snapshot = snapshot,
                 Precipitation = precipitation,
                 DimensionId = dimensionId,
+                Busy = holdForWorldTransfer,
                 ObstacleId = (1L << 32) | (uint)runtimeId // 与 Unity 有符号 32 位 InstanceID 分开。
             };
 
@@ -318,13 +343,14 @@ namespace FlatWorld.NaturalEntities
                 FreezeEnvironment(record);
                 FreezeSoil(record);
                 TryRegisterNavigation(record);
+                AllocateNaturalEntityPhysicsProxy(record);
                 RegisterSpatial(record);
                 QueuePublication(runtimeId);
                 return true;
             }
             catch
             {
-                if (records.ContainsKey(runtimeId)) Remove(handle);
+                if (records.ContainsKey(runtimeId)) RemoveNaturalEntityReservedForWorldTransfer(handle);
                 else simulation.Remove(runtimeId);
                 handle = default;
                 throw;
@@ -338,14 +364,22 @@ namespace FlatWorld.NaturalEntities
                 simulation?.Contains(handle.Id) == true;
         }
 
-        public static void Remove(NaturalEntityHandle handle)
+        public static void Remove(NaturalEntityHandle handle) => RemoveNaturalEntity(handle, false);
+
+        // 事务自身可释放占用中的实体，外部重入不能提前结束其生命周期。
+        internal static void RemoveNaturalEntityReservedForWorldTransfer(NaturalEntityHandle handle)
+            => RemoveNaturalEntity(handle, true);
+
+        private static void RemoveNaturalEntity(NaturalEntityHandle handle, bool allowReserved)
         {
             using var handleScope = UseHandle(handle);
-            if (!Contains(handle) || !records.TryGetValue(handle.Id, out Record record))
+            if (!Contains(handle) || !records.TryGetValue(handle.Id, out Record record) ||
+                record.Busy && !allowReserved)
                 return;
             ReleaseExtensionModules(record);
             UnregisterNavigation(record);
             UnregisterSpatial(record);
+            ReleaseNaturalEntityPhysicsProxy(record);
             RemoveContactDamageSource(record);
             canopySources.Remove(record);
             pendingPublications.Remove(handle.Id);
@@ -357,6 +391,7 @@ namespace FlatWorld.NaturalEntities
                 if (cultivatedCells.TryGetValue(cell, out int occupant) && occupant == handle.Id) cultivatedCells.Remove(cell);
             }
             habitatTreeRecords.Remove(record);
+            ForgetIndependentPhysicsSourceIdentity(record);
             records.Remove(handle.Id);
             simulation?.Remove(handle.Id);
         }
@@ -369,6 +404,7 @@ namespace FlatWorld.NaturalEntities
             if (!Contains(handle) || snapshot == null)
                 return;
             Record record = records[handle.Id];
+            if (record.Busy) throw new InvalidOperationException("自然资源正在执行事务，不能同时替换快照。");
             if (record.Snapshot.Guid != snapshot.Guid || !string.Equals(record.Profile.Definition.Id, snapshot.IDName, StringComparison.Ordinal))
                 throw new InvalidOperationException("配置刷新不能替换植物的实体身份。");
             AiecsVital previousVital = default;
@@ -377,6 +413,7 @@ namespace FlatWorld.NaturalEntities
                 cultivatedCells.Remove(WorldTopologyRuntime.NormalizeCell(new Vector2Int(previousPlant.SoilCell.x, previousPlant.SoilCell.y)));
             UnregisterNavigation(record);
             UnregisterSpatial(record, PhysicsBodyChangeReason.SnapshotRefresh);
+            ReleaseNaturalEntityPhysicsProxy(record);
             if (record.Profile.HasClimate &&
                 (float.IsNaN(baselineCelsius) || float.IsInfinity(baselineCelsius)) &&
                 simulation.TryGet(handle.Id, out NaturalEntityClimate currentClimate))
@@ -384,8 +421,8 @@ namespace FlatWorld.NaturalEntities
                 baselineCelsius = currentClimate.BaselineCelsius;
             }
             record.Snapshot = rebaseCurrentDefinition
-                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, FastCloner.FastCloner.DeepClone(snapshot))
-                : FastCloner.FastCloner.DeepClone(snapshot);
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, CloneNaturalEntitySnapshotPreservingMotion(snapshot))
+                : CloneNaturalEntitySnapshotPreservingMotion(snapshot);
 
             BuildComponents(record, baselineCelsius,
                 out NaturalEntityBody nextBody,
@@ -419,11 +456,16 @@ namespace FlatWorld.NaturalEntities
             RefreshInputIndexes(record);
             MarkPresentationDirty(record);
 
-            if (nextBody.Suspended == 0)
+            AllocateNaturalEntityPhysicsProxy(record);
+
+            if (nextBody.Dead == 0)
             {
-                TryRegisterNavigation(record);
-                FreezeEnvironment(record);
-                FreezeSoil(record);
+                if (nextBody.Suspended == 0)
+                {
+                    TryRegisterNavigation(record);
+                    FreezeEnvironment(record);
+                    FreezeSoil(record);
+                }
                 RegisterSpatial(record, PhysicsBodyChangeReason.SnapshotRefresh);
             }
         }
@@ -434,6 +476,9 @@ namespace FlatWorld.NaturalEntities
             using var handleScope = UseHandle(handle);
             if (!Contains(handle)) return false;
             Record record = records[handle.Id];
+            if (record.Busy) return false;
+            WorldPhysicsProxyMode2D currentMode = record.PhysicsProxy?.Mode ?? WorldPhysicsProxyMode2D.WorldFixed;
+            WorldPhysicsProxyMode2D requestedMode = definition?.Physics?.Mode ?? WorldPhysicsProxyMode2D.WorldFixed;
             if (ReferenceEquals(record.Profile.Definition, definition) &&
                 record.Profile.RegistryRevision == ResourceEntityCapabilityRegistry.Revision) return true;
             if (!TryGetProfile(definition, out NaturalEntityEcsProfile replacement, out _)) return false;
@@ -441,17 +486,26 @@ namespace FlatWorld.NaturalEntities
             if (!TryCapture(handle, out ItemData snapshot)) return false;
             float baseline = simulation.TryGet(handle.Id, out NaturalEntityClimate climate) ? climate.BaselineCelsius : 0f;
             NaturalEntityEcsProfile previous = record.Profile;
+            WorldPhysicsProxyMode2D? previousRetainedMode = record.RetainedPhysicsModeUntilNextSpawn;
+            record.RetainedPhysicsModeUntilNextSpawn = currentMode == requestedMode ? null : currentMode;
             record.Profile = replacement;
             try
             {
                 ApplySnapshot(handle, snapshot, baseline);
                 UpdateTreeHabitatIndex(record);
                 profiles.Remove(previous.Definition);
+                if (currentMode != requestedMode &&
+                    (!State.deferredPhysicsModeWarnings.TryGetValue(definition.Id, out var warned) || !ReferenceEquals(warned, definition)))
+                {
+                    State.deferredPhysicsModeWarnings[definition.Id] = definition;
+                    Debug.LogWarning($"资源实体 {definition.Id} 的物理模式将在下次正式生成或恢复时生效，当前实例保留原模式。");
+                }
                 return true;
             }
             catch (Exception exception)
             {
                 record.Profile = previous;
+                record.RetainedPhysicsModeUntilNextSpawn = previousRetainedMode;
                 UpdateTreeHabitatIndex(record);
                 ApplySnapshot(handle, snapshot, baseline, rebaseCurrentDefinition: false);
                 Debug.LogError($"[NaturalEntities] {definition.Id} 刷新失败，已恢复原实体状态：{exception}");
@@ -498,7 +552,7 @@ namespace FlatWorld.NaturalEntities
             WriteHotState(record, record.Snapshot);
             WritePlantState(record, record.Snapshot);
             CaptureExtensionModules(record);
-            snapshot = FastCloner.FastCloner.DeepClone(record.Snapshot);
+            snapshot = CloneNaturalEntitySnapshotPreservingMotion(record.Snapshot);
             return true;
         }
 
@@ -511,7 +565,7 @@ namespace FlatWorld.NaturalEntities
             if (simulation?.IsCreated != true) return;
             foreach (Record record in records.Values)
             {
-                ItemData snapshot = FastCloner.FastCloner.DeepClone(record.Snapshot);
+                ItemData snapshot = CloneNaturalEntitySnapshotPreservingMotion(record.Snapshot);
                 WriteHotState(record, snapshot);
                 WritePlantState(record, snapshot);
                 NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
@@ -525,11 +579,11 @@ namespace FlatWorld.NaturalEntities
         {
             using var handleScope = UseHandle(handle);
             snapshot = null;
-            if (!Contains(handle))
+            if (!Contains(handle) || records[handle.Id].Busy)
                 return false;
 
             PrepareForCapture(handle);
-            if (!Contains(handle))
+            if (!Contains(handle) || records[handle.Id].Busy)
                 return false;
 
             Record record = records[handle.Id];

@@ -137,6 +137,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 {
     public abstract ModuleData _Data { get; set; }
 
+    [NonSerialized] private string runtimeBoundModuleId;
     [NonSerialized] private string runtimePrefabId;
     [NonSerialized] private GameObject runtimeOwnedRoot;
     [NonSerialized] private RuntimeLifecycleState lifecycleState;
@@ -150,7 +151,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     internal float RuntimeLoadedAt { get; private set; }
 
     public string StableName => _Data?.StableName;
-    public string ResolvedModuleId => _Data?.ModuleId;
+    public string ResolvedModuleId => runtimeBoundModuleId ?? _Data?.ModuleId;
     public string PrefabId => runtimePrefabId;
     public bool Enabled => _Data?.Enabled == true;
 
@@ -178,7 +179,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
         string candidate = persistedId.Trim();
         return string.Equals(candidate, CanonicalModuleId, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(candidate, _Data?.ModuleId?.Trim(), StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate, ResolvedModuleId?.Trim(), StringComparison.OrdinalIgnoreCase) ||
                string.Equals(candidate, runtimePrefabId, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(candidate, gameObject.name, StringComparison.OrdinalIgnoreCase);
     }
@@ -206,7 +207,14 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
     public virtual void Awake()
     {
-        // 具体模块经常在 Awake 中补 ModuleId；统一身份延后到注册阶段建立。
+        RestoreBoundRuntimeIdentity();
+    }
+
+    // 已绑定的定义身份优先于模块 Awake 写入的默认身份。
+    internal void RestoreBoundRuntimeIdentity()
+    {
+        if (runtimeBoundModuleId != null && _Data != null)
+            _Data.BindRuntimeModuleIdentity(runtimeBoundModuleId);
     }
 
     /// <summary>建立模块参与运行时索引所需的非空稳定身份。</summary>
@@ -215,7 +223,9 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (_Data == null)
             throw new InvalidOperationException($"模块 {gameObject.name} 缺少 ModuleData。");
 
-        string moduleId = string.IsNullOrWhiteSpace(runtimePrefabId) ? CanonicalModuleId : _Data.ModuleId;
+        RestoreBoundRuntimeIdentity();
+        string moduleId = runtimeBoundModuleId ??
+            (string.IsNullOrWhiteSpace(runtimePrefabId) ? CanonicalModuleId : _Data.ModuleId);
         if (string.IsNullOrWhiteSpace(moduleId))
             throw new InvalidOperationException($"模块 {gameObject.name} 缺少稳定 ID。");
 
@@ -340,7 +350,8 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
             throw new ArgumentException("PrefabId 不能为空。", nameof(prefabId));
 
         _Data.StableName = stableName.Trim();
-        _Data.ModuleId = moduleId.Trim();
+        runtimeBoundModuleId = moduleId.Trim();
+        _Data.BindRuntimeModuleIdentity(runtimeBoundModuleId);
         runtimePrefabId = prefabId.Trim();
     }
 
@@ -378,6 +389,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         }
 
         EnsureRuntimeIdentity();
+        _Data.BindRuntimeModuleIdentity(_Data.ModuleId);
 
         // 绑定只读取已存在的资源目录，静态装配检查不能创建全局管理器。
         GameRes.ExistingInstance?.ApplyItemModuleConfiguration(
@@ -398,6 +410,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
             throw new InvalidOperationException($"模块 {StableName} 快照绑定必须保持所属物品、类型及身份。");
         if (IsRuntimeTransitioning)
             throw new InvalidOperationException($"模块 {StableName} 正在切换生命周期，不能绑定快照。");
+        data.BindRuntimeModuleIdentity(data.ModuleId);
         _Data = data;
         Item_Data = ownerData;
         owner.itemData.ModuleDataDic[data.StableName] = data;
@@ -446,6 +459,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (item == null || Item_Data == null || _Data == null)
             throw new InvalidOperationException($"模块 {StableName} 必须先通过 ModuleInit 绑定，再加载。");
 
+        RestoreBoundRuntimeIdentity();
         lifecycleState = RuntimeLifecycleState.Loading;
         unloadAfterLoading = false;
         RuntimeLoadedAt = Time.time;

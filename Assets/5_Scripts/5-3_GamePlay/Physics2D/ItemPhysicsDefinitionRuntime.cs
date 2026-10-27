@@ -47,7 +47,7 @@ public static class ItemPhysicsDefinitionRuntime
             { collider.enabled = false; break; }
     }
 
-    private static Type ResolveColliderType(string type) => type switch
+    internal static Type ResolveColliderType(string type) => type switch
     {
         nameof(BoxCollider2D) => typeof(BoxCollider2D),
         nameof(CircleCollider2D) => typeof(CircleCollider2D),
@@ -60,9 +60,14 @@ public static class ItemPhysicsDefinitionRuntime
     #region 定义校验与区域装配
     public static void ValidatePhysicsDefinition(RuntimeItemDefinition definition)
     {
-        if (definition.Physics?.HasRegions != true) return;
-        if (definition.UsesResourceEntities)
-            throw new InvalidDataException($"物品 {definition.Id} 的自然实体后端尚不支持 physics.regions，请使用普通 Item 定义。");
+        if (definition.Physics == null) return;
+        ItemPhysicsDefinitionDto physics = definition.Physics;
+        if (!Enum.IsDefined(typeof(WorldPhysicsProxyMode2D), physics.Mode) ||
+            !Enum.IsDefined(typeof(WorldPhysicsMassSource2D), physics.MassSource) ||
+            !float.IsFinite(physics.LinearDamping) || physics.LinearDamping < 0f ||
+            !float.IsFinite(physics.AngularDamping) || physics.AngularDamping < 0f)
+            throw new InvalidDataException($"物品 {definition.Id} 的物理代理模式、质量来源或阻尼配置无效。");
+        if (!physics.HasRegions) return;
         if (MachineLogicRegistry.UsesRegisteredDataBackend(definition))
             throw new InvalidDataException($"物品 {definition.Id} 的数据机器后端尚不支持 physics.regions，请沿用现有碰撞定义。");
         var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -74,6 +79,10 @@ public static class ItemPhysicsDefinitionRuntime
                 (region.Purposes & ~(WorldPhysicsPurpose2D.Blocking | WorldPhysicsPurpose2D.Damage |
                   WorldPhysicsPurpose2D.Interaction | WorldPhysicsPurpose2D.Trigger)) != 0)
                 throw new InvalidDataException($"物品 {definition.Id} 的物理区域 {region.Id} 缺少形状或用途。");
+            if (region.Immutable && (physics.Mode != WorldPhysicsProxyMode2D.WorldFixed ||
+                region.Purposes != WorldPhysicsPurpose2D.Blocking || !string.IsNullOrEmpty(region.Module) ||
+                !string.IsNullOrEmpty(region.Path) || region.Collider.Type != nameof(BoxCollider2D)))
+                throw new InvalidDataException($"物品 {definition.Id} 的不可变区域 {region.Id} 必须是根节点上的固定纯阻挡 Box。");
             ResolveColliderType(region.Collider.Type);
             if (!string.IsNullOrEmpty(region.Module))
             {
@@ -149,7 +158,7 @@ public static class ItemPhysicsDefinitionRuntime
             marker.gameObject.layer = (region.Purposes & WorldPhysicsPurpose2D.Damage) != 0
                 ? CombatPhysicsChannels.DamageReceiverLayer : (region.Purposes & WorldPhysicsPurpose2D.Blocking) != 0
                     ? item.gameObject.layer : anchor.gameObject.layer;
-            marker.BindRegion(region.Id, region.Purposes, target);
+            marker.BindRegion(region.Id, region.Purposes, target, region.Immutable);
             configured.Add(marker);
             Type type = ResolveColliderType(region.Collider.Type);
             Collider2D shape = marker.GetComponent<Collider2D>();

@@ -128,9 +128,6 @@ public partial class ItemMgr
                 : WorldLocalPresentation.ProjectPosition(logicalPosition);
             itemObj.transform.rotation = rotation;
             itemObj.transform.localScale = scale;
-            itemObj.SetActive(true);
-            item.FlushPendingInitialAnimatorState();
-
             // 注册通知必须已经具有最终世界归属，不能让池中旧场景污染生态索引。
             Scene targetScene = parent != null ? parent.scene : GameplayWorldRegistry.CurrentScene;
             if (targetScene.IsValid() && targetScene.isLoaded && itemObj.scene != targetScene)
@@ -138,6 +135,8 @@ public partial class ItemMgr
                 itemObj.transform.SetParent(null, true);
                 SceneManager.MoveGameObjectToScene(itemObj, targetScene);
             }
+            itemObj.SetActive(true);
+            item.FlushPendingInitialAnimatorState();
 
             using (SpawnRegisterDebug.Measure(1, itemData.IDName))
                 RegisterRuntimeItem(item, itemData.IDName, out registrationToken);
@@ -365,8 +364,8 @@ public partial class ItemMgr
             RefreshItemSpatialIndex(item);
             RefreshPerceptionTarget(item);
             _tickScheduler.Register(item);
-            if (TryRegisterRuntimeAiEntity(item))
-                ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
+            if (TryRegisterRuntimePersistentWorldEntity(item))
+                ItemWorldPlacement.AttachRuntimeWorldResident(item, item.gameObject);
 
             RuntimeItemRegistered?.Invoke(item);
             EnsureSpawnRegistrationCurrent(item, registeredData, registrationToken);

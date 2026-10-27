@@ -36,6 +36,8 @@ namespace FlatWorld.NaturalEntities
             public readonly List<Vector2Int> SpatialCells = new();
             public ulong LastSpatialQuery;
             public Bounds HitBounds, BodyBounds, VisualBounds;
+            public Bounds InteractionBounds;
+            public bool HasConfiguredInteractionBounds;
             public bool BlocksMovement;
             public bool HitColliderEnabled;
             public int ManualHarvestProgress;
@@ -79,24 +81,21 @@ namespace FlatWorld.NaturalEntities
             public readonly string DefinitionId;
             public readonly string WorldKey;
             public readonly Bounds Bounds;
-            public BlockingBodySnapshot(int runtimeId, int guid, string definitionId, Bounds bounds, string worldKey = null)
-            { RuntimeId = runtimeId; Guid = guid; DefinitionId = definitionId; Bounds = bounds; WorldKey = worldKey; }
+            public readonly object Entity;
+            public BlockingBodySnapshot(int runtimeId, int guid, string definitionId, Bounds bounds, string worldKey = null,
+                object entity = null)
+            { RuntimeId = runtimeId; Guid = guid; DefinitionId = definitionId; Bounds = bounds; WorldKey = worldKey; Entity = entity; }
         }
 
         private static BlockingBodySnapshot CaptureBlockingBody(Record record)
-            => new(record.Handle.Id, record.Snapshot.Guid, record.Profile.Definition.Id, record.BodyBounds, record.WorldKey);
-
-        /// <summary>树木受击已覆盖树干阻挡，复用现有区块 Collider 转接；其它资源仍用独立受击形状。</summary>
-        internal static IGameplayPhysicsDamageTarget GetBlockingDamageTarget(int runtimeId)
-            => records.TryGetValue(runtimeId, out Record record) && record.IsValid && record.BlocksMovement &&
-               record.HitColliderEnabled && record.Profile.HealthModuleName != null &&
-               record.Profile.Definition.HasTag(Tag.Tree) ? record : null;
+            => new(record.Handle.Id, record.Snapshot.Guid, record.Profile.Definition.Id, record.BodyBounds, record.WorldKey, record);
 
         private static void PublishPhysicsBodyChanged(Record record, PhysicsBodyChangeReason reason, bool exists)
         {
             PhysicsBodyChanged?.Invoke(record.BodyBounds);
             PhysicsBodyChangedWithReason?.Invoke(record.BodyBounds, reason, record.Snapshot.Guid, record.Profile.Definition.Id);
-            BlockingBodyChanged?.Invoke(CaptureBlockingBody(record), exists, reason);
+            if (UsesChunkBlockingProjection(record))
+                BlockingBodyChanged?.Invoke(CaptureBlockingBody(record), exists, reason);
         }
 
         private readonly struct ResourceQuery : IDisposable
@@ -256,7 +255,10 @@ namespace FlatWorld.NaturalEntities
             record.BlocksMovement = geometry.BlocksMovement;
             record.HitColliderEnabled = geometry.HitColliderEnabled;
             geometry.Resolve(root, out record.BodyBounds, out record.HitBounds);
-            ResolveBodyVisual(record, body, out Sprite sprite, out Matrix4x4 matrix, out _, out _);
+            ResolveBodyVisual(record, body, out Sprite sprite, out Matrix4x4 matrix, out _, out _,
+                out Vector3 rendererScale, out _);
+            RefreshDefaultNaturalInteractionRegionGeometry(record, sprite, rendererScale);
+            ResolveConfiguredPhysicsBounds(record);
             record.VisualBounds = sprite != null ? TransformBounds(matrix, sprite.bounds.center, sprite.bounds.size) : record.HitBounds;
             record.IndexedRevision = body.VisualVersion;
         }
@@ -265,20 +267,22 @@ namespace FlatWorld.NaturalEntities
         private static void RefreshSpatial(Record record, NaturalEntityBody body)
         {
             Bounds previousBody = record.BodyBounds, previousHit = record.HitBounds, previousVisual = record.VisualBounds;
+            Bounds previousInteraction = record.InteractionBounds;
             bool previousBlocking = record.BlocksMovement;
             ResolveSpatialBounds(record, body);
             if (previousBody.Equals(record.BodyBounds) && previousHit.Equals(record.HitBounds) &&
-                previousVisual.Equals(record.VisualBounds) && previousBlocking == record.BlocksMovement) return;
+                previousVisual.Equals(record.VisualBounds) && previousInteraction.Equals(record.InteractionBounds) &&
+                previousBlocking == record.BlocksMovement) return;
             UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
             RegisterSpatialCells(record);
             if (previousBlocking == record.BlocksMovement && previousBody.Equals(record.BodyBounds)) return;
-            if (previousBlocking)
+            if (previousBlocking && UsesChunkBlockingProjection(record))
             {
                 PhysicsBodyChanged?.Invoke(previousBody);
                 PhysicsBodyChangedWithReason?.Invoke(previousBody, PhysicsBodyChangeReason.VisualRevision,
                     record.Snapshot.Guid, record.Profile.Definition.Id);
                 BlockingBodyChanged?.Invoke(new BlockingBodySnapshot(record.Handle.Id, record.Snapshot.Guid,
-                    record.Profile.Definition.Id, previousBody), false, PhysicsBodyChangeReason.VisualRevision);
+                    record.Profile.Definition.Id, previousBody, record.WorldKey, record), false, PhysicsBodyChangeReason.VisualRevision);
             }
             if (record.BlocksMovement) PublishPhysicsBodyChanged(record, PhysicsBodyChangeReason.VisualRevision, true);
         }
@@ -287,6 +291,7 @@ namespace FlatWorld.NaturalEntities
         {
             Bounds bounds = record.HitBounds;
             bounds.Encapsulate(record.BodyBounds); bounds.Encapsulate(record.VisualBounds);
+            if (record.HasConfiguredInteractionBounds) bounds.Encapsulate(record.InteractionBounds);
             int firstX = Mathf.FloorToInt(bounds.min.x), lastX = Mathf.FloorToInt(bounds.max.x);
             int firstY = Mathf.FloorToInt(bounds.min.y), lastY = Mathf.FloorToInt(bounds.max.y);
             if ((long)(lastX - firstX + 1) * (lastY - firstY + 1) > 16384L)
@@ -337,7 +342,8 @@ namespace FlatWorld.NaturalEntities
             Vector2 extents = new(area.size.x * 0.5f, area.size.y * 0.5f);
             using ResourceQuery query = QueryBounds(center, extents);
             foreach (Record record in query)
-                if (record.BlocksMovement && record.IsValid) output.Add(CaptureBlockingBody(record));
+                if (record.BlocksMovement && record.IsValid && UsesChunkBlockingProjection(record))
+                    output.Add(CaptureBlockingBody(record));
         }
 
         private static ResourceQuery QueryBounds(Vector2 center, Vector2 extents)
@@ -363,6 +369,7 @@ namespace FlatWorld.NaturalEntities
                 {
                     Bounds bounds = record.HitBounds;
                     bounds.Encapsulate(record.BodyBounds); bounds.Encapsulate(record.VisualBounds);
+                    if (record.HasConfiguredInteractionBounds) bounds.Encapsulate(record.InteractionBounds);
                     Vector2 delta = topology.ShortestDelta((Vector2)bounds.center, center);
                     if (Mathf.Abs(delta.x) <= extents.x + bounds.extents.x &&
                         Mathf.Abs(delta.y) <= extents.y + bounds.extents.y) result.Add(record);
@@ -447,6 +454,8 @@ namespace FlatWorld.NaturalEntities
 
         private static bool ContainsPoint(Record record, Vector2 pointer, WorldTopologyDomain topology)
         {
+            if (record.PhysicsProxy?.IsValid == true)
+                return ContainsConfiguredPhysicsPoint(record, pointer, WorldPhysicsPurpose2D.Interaction);
             Vector2 delta = topology.ShortestDelta((Vector2)record.VisualBounds.center, pointer);
             return Mathf.Abs(delta.x) <= record.VisualBounds.extents.x && Mathf.Abs(delta.y) <= record.VisualBounds.extents.y;
         }
@@ -488,7 +497,8 @@ namespace FlatWorld.NaturalEntities
                     using ResourceQuery candidates = QueryBounds(shape.BoundsCenter, shape.BoundsExtents);
                     foreach (Record record in candidates)
                     {
-                        if (record.Profile.HealthModuleName == null || !record.HitColliderEnabled || !record.IsValid) continue;
+                        if (record.Profile.HealthModuleName == null || !record.HitColliderEnabled || !record.IsValid ||
+                            record.PhysicsProxy?.IsValid == true) continue;
                         Vector2 center = WorldTopologyRuntime.NearestImagePosition((Vector2)shape.BoundsCenter,
                             record.HitBounds.center);
                         physics.Add(recordsByCollider.Count, PerceptionShape2D.Aabb(center,
@@ -498,6 +508,7 @@ namespace FlatWorld.NaturalEntities
                     physics.Query(shape, colliderHits);
                 }
                 var candidatesByDistance = buffers.Candidates;
+                AppendConfiguredPhysicsWeaponCandidates(shape, candidatesByDistance);
                 for (int i = 0; i < colliderHits.Count; i++)
                 {
                     CombatColliderHit2D hit = colliderHits[i];
@@ -521,7 +532,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>受击盒查询与真实物理接触共用资格、窗口预约和 ECS 生命提交，禁止重复扣血。</summary>
         private static void ApplyWeaponHit(Record record, Mod_Damage weapon, in CombatDamageContext context)
         {
-            if (!GameNetwork.HasStateAuthority || weapon == null || !record.IsValid ||
+            if (!GameNetwork.HasStateAuthority || weapon == null || record.Busy || !record.IsValid ||
                 !record.HitColliderEnabled || record.Profile.HealthModuleName == null ||
                 WorldEntityRuntime.DimensionId != record.DimensionId ||
                 (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
@@ -616,13 +627,49 @@ namespace FlatWorld.NaturalEntities
         }
 
         // 网络请求只定位服务端本世界的真实实体，采集规则和掉落仍复用同一入口。
-        public static event Action<string, int, Vector2> NetworkStateCommitted;
-        private static void PublishNetworkStateCommitted(Record record)
+        public static event Action<string, int, Vector2, string, int, int, ItemData> NetworkStateCommitted;
+        public static event Action<string, string, int, int, int, Vector2, ItemData> IndependentPhysicsStateCommitted;
+
+        // 休眠前交付最后快照，删除和迁出则明确发送空状态。
+        internal static void PublishIndependentPhysicsStateSnapshot(NaturalEntityHandle handle, ItemData snapshot)
+        {
+            using var scope = UseHandle(handle);
+            if (Contains(handle) && records[handle.Id].HasIndependentPhysicsSource)
+                PublishIndependentPhysicsState(records[handle.Id], snapshot);
+        }
+
+        private static void PublishIndependentPhysicsState(Record record, ItemData snapshot)
+            => PublishIndependentPhysicsState(record.WorldKey, record.PhysicsSourceWorldKey,
+                record.PhysicsSourceChunkX, record.PhysicsSourceChunkY, record.Snapshot.Guid,
+                record.Snapshot.transform.position, snapshot);
+
+        internal static void PublishIndependentPhysicsState(string worldKey, string sourceWorldKey,
+            int sourceX, int sourceY, int guid, Vector2 position, ItemData snapshot)
+        {
+            if (IndependentPhysicsStateCommitted == null) return;
+            foreach (Action<string, string, int, int, int, Vector2, ItemData> callback in IndependentPhysicsStateCommitted.GetInvocationList())
+                try { callback(worldKey, sourceWorldKey, sourceX, sourceY, guid, position, snapshot); }
+                catch (Exception exception) { Debug.LogException(exception); }
+        }
+
+        private static void PublishNaturalStateForNetwork(Record record, ItemData snapshot)
         {
             if (NetworkStateCommitted == null) return;
-            foreach (Action<string, int, Vector2> callback in NetworkStateCommitted.GetInvocationList())
-                try { callback(record.WorldKey, record.Snapshot.Guid, record.Snapshot.transform.position); }
+            foreach (Action<string, int, Vector2, string, int, int, ItemData> callback in NetworkStateCommitted.GetInvocationList())
+                try { callback(record.WorldKey, record.Snapshot.Guid, record.Snapshot.transform.position,
+                    record.HasGeneratedNaturalSource ? record.PhysicsSourceWorldKey : null,
+                    record.PhysicsSourceChunkX, record.PhysicsSourceChunkY, snapshot); }
                 catch (Exception exception) { Debug.LogException(exception); }
+        }
+
+        private static void PublishNetworkStateCommitted(Record record)
+        {
+            if (!record.HasIndependentPhysicsSource && NetworkStateCommitted == null) return;
+            ItemData snapshot = null;
+            if (Contains(record.Handle) && !TryCapture(record.Handle, out snapshot)) return;
+            if (record.HasIndependentPhysicsSource)
+                PublishIndependentPhysicsState(record, snapshot);
+            else PublishNaturalStateForNetwork(record, snapshot);
         }
         public static bool TryCaptureNetworkState(string worldKey, int guid, Vector2 position, out ItemData snapshot)
         {
@@ -630,26 +677,39 @@ namespace FlatWorld.NaturalEntities
             if (!GameNetwork.HasStateAuthority || !GameplayWorldRegistry.TryGet(worldKey, out _) ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
             using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
-            Record record = FindNetworkRecord(guid, position);
+            Record record = FindNetworkRecord(guid, position, out _);
             return record != null && TryCapture(record.Handle, out snapshot);
         }
 
         // 客户端同步正式生态差量，卸载后再次生成仍沿用同一删除和库存状态。
-        public static void ApplyNetworkState(string worldKey, int guid, Vector2 position, ItemData snapshot)
+        public static void ApplyNetworkState(string worldKey, int guid, Vector2 position, ItemData snapshot,
+            string sourceWorldKey = null, int sourceChunkX = 0, int sourceChunkY = 0)
         {
             if (GameNetwork.HasStateAuthority || guid == 0 || !GameplayWorldRegistry.TryGet(worldKey, out _) ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y) ||
                 snapshot != null && (snapshot.Guid != guid || snapshot.transform == null)) return;
+            if (sourceWorldKey != null && (string.IsNullOrWhiteSpace(sourceWorldKey) || sourceWorldKey != worldKey)) return;
             using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
             ChunkMgr chunks = ChunkMgr.ExistingInstance;
             PlanetData planet = SaveDataMgr.Instance?.Active_PlanetData;
             if (chunks == null || planet == null) return;
-            var address = chunks.ResolveWorldAddress(position);
+            var address = sourceWorldKey != null
+                ? new FlatWorld.WorldModel.WorldAddress(global::WorldAddress.FromWorldKey(worldKey).DimensionId,
+                    new Int2(sourceChunkX, sourceChunkY))
+                : chunks.ResolveWorldAddress(position);
             planet.Ecology ??= new EcologyWorldSaveData();
-            Record record = FindNetworkRecord(guid, position);
+            Record record;
+            if (sourceWorldKey != null)
+                State.generatedNaturalSources.TryGetValue((sourceWorldKey, sourceChunkX, sourceChunkY, guid), out record);
+            else
+            {
+                record = FindNetworkRecord(guid, position, out bool ambiguous);
+                if (ambiguous) return;
+            }
             if (snapshot == null)
             {
                 planet.Ecology.MarkRemoved(address.ChunkOrigin.X, address.ChunkOrigin.Y, guid);
+                chunks.NotifyNaturalItemRemovedToWorldOwners(address, guid);
                 if (record != null) Remove(record.Handle);
                 return;
             }
@@ -660,29 +720,46 @@ namespace FlatWorld.NaturalEntities
             ApplySnapshot(record.Handle, snapshot, baseline);
         }
 
-        private static Record FindNetworkRecord(int guid, Vector2 position)
+        private static Record FindNetworkRecord(int guid, Vector2 position, out bool ambiguous)
         {
+            ambiguous = false;
             if (simulation == null) return null;
             // 客户端挂起实体也要接收状态，不能借只包含活跃对象的交互空间索引。
+            Record match = null;
             foreach (Record record in records.Values)
                 if (record.Snapshot.Guid == guid &&
-                    WorldTopologyRuntime.Distance(position, record.Snapshot.transform.position) < .01f) return record;
-            return null;
+                    WorldTopologyRuntime.Distance(position, record.Snapshot.transform.position) < .01f)
+                {
+                    if (match != null) { ambiguous = true; return null; }
+                    match = record;
+                }
+            return match;
         }
 
-        public static bool TryHarvestNetwork(Player actor, string worldKey, int guid, Vector2 position)
+        public static bool TryHarvestNetwork(Player actor, string worldKey, int guid, Vector2 position,
+            string sourceWorldKey = null, int sourceChunkX = 0, int sourceChunkY = 0)
         {
-            if (!GameNetwork.HasStateAuthority || actor == null ||
+            if (!GameNetwork.HasStateAuthority || actor == null || guid == 0 ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y) ||
                 !GameplayWorldRegistry.TryGet(worldKey, out _)) return false;
             using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
             if (!TryGetActorPosition(actor, worldKey, out _) || simulation == null) return false;
-            using ResourceQuery query = QueryBounds(position, Vector2.one);
-            foreach (Record record in query)
+            if (sourceWorldKey != null)
+            {
+                if (string.IsNullOrWhiteSpace(sourceWorldKey) ||
+                    !State.generatedNaturalSources.TryGetValue((sourceWorldKey, sourceChunkX, sourceChunkY, guid), out Record source) ||
+                    !source.IsValid || source.WorldKey != worldKey) return false;
+                return TryHarvest(source.Handle, actor);
+            }
+            Record match = null;
+            foreach (Record record in records.Values)
                 if (record.Snapshot.Guid == guid && record.IsValid && record.WorldKey == worldKey &&
                     WorldTopologyRuntime.Distance(position, record.Snapshot.transform.position) < .01f)
-                    return TryHarvest(record.Handle, actor);
-            return false;
+                {
+                    if (match != null) return false;
+                    match = record;
+                }
+            return match != null && TryHarvest(match.Handle, actor);
         }
 
         /// <summary>产出先成功生成再提交库存或收获状态，失败时回滚本次生成，避免丢物或重复扣库存。</summary>
@@ -693,7 +770,9 @@ namespace FlatWorld.NaturalEntities
             Record record = records[handle.Id];
             if (!GameNetwork.HasStateAuthority)
                 return actor is Player player && NaturalInteractionNetworkBridge.RequestHarvest(player,
-                    record.WorldKey, record.Snapshot.Guid, record.Snapshot.transform.position);
+                    record.WorldKey, record.Snapshot.Guid, record.Snapshot.transform.position,
+                    record.HasGeneratedNaturalSource ? record.PhysicsSourceWorldKey : null,
+                    record.PhysicsSourceChunkX, record.PhysicsSourceChunkY);
             if (!CanHarvest(handle)) return false;
             if (!TryGetActorPosition(actor, record.WorldKey, out Vector2 actorPosition)) return false;
             ChunkMgr chunks = ChunkMgr.ExistingInstance;

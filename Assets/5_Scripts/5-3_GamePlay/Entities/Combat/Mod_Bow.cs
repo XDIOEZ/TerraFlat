@@ -363,6 +363,12 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             return;
         }
 
+        if (!WorldPhysicsService2D.CanItemUseIndependentMotion(projectileItem))
+        {
+            ItemMgr.Instance.DespawnItem(projectileItem, saveData: false);
+            _sourceInventory = null;
+            return;
+        }
         Item shooter = item.Owner;
         Mod_HotBar hotbar = shooter.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (!_sourceInventory.Data.TryConsumeFromSlot(ammoSlot, 1, out _))

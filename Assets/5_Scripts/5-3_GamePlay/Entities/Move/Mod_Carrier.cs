@@ -8,7 +8,7 @@ using UnityEngine;
 /// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
@@ -38,7 +38,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         ? pushedVelocity : Vector2.zero;
     public Vector2 PushHalfExtents => Vector2.Scale(HullSize * 0.5f,
         new Vector2(Mathf.Abs(item.transform.lossyScale.x), Mathf.Abs(item.transform.lossyScale.y)));
-    public bool IsAvailable => loaded && isActiveAndEnabled && item != null && !item.DestructionHandled &&
+    public bool IsAvailable => loaded && motionAllowed && isActiveAndEnabled && item != null && !item.DestructionHandled &&
         health != null && health.Hp > 0f && building != null && building.IsInstalled();
     public Mod_Mover Rider { get; private set; } // 源持有的唯一乘员。
     private Mod_Building building;
@@ -53,7 +53,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     private bool requestedControlsLocked;
     private bool requestedBoost;
     private Vector2 lastPhysicsPosition;
-    private bool loaded, activated;
+    private bool loaded, activated, motionAllowed;
     private Vector2 pushedVelocity;
     private Vector2 facingHeading = Vector2.up; // 船头只由操作者划行输入改变，推动、水流和滑行都保留朝向。
     private float pushValidUntil;
@@ -61,6 +61,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     private ICarrierMotionDriver motionDriver;
     public bool AllowsRiderBoost => motionDriver == null || motionDriver.AllowsRiderBoost;
     public Rigidbody2D Body => body;
+    public bool RequiresIndependentWorldMotion => true;
     #endregion
 
     #region 生命周期
@@ -96,6 +97,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         physicalCollider = item.GetComponent<BoxCollider2D>();
         if (body == null || physicalCollider == null)
             throw new InvalidOperationException("载具外壳必须提供根 Rigidbody2D 与船体 Collider2D。");
+        motionAllowed = WorldPhysicsService2D.CanItemUseIndependentMotion(item);
         requestedInput = Vector2.zero;
         requestedControlsLocked = true;
         requestedBoost = false;
@@ -118,6 +120,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     {
         SuspendRuntimeSources();
         loaded = false;
+        motionAllowed = false;
     }
 
     private void SuspendRuntimeSources()
@@ -178,14 +181,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     private void ActivateInstalledCarrier()
     {
         if (activated || !IsAvailable) return;
+        if (!WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(item, body)) return;
         physicalCollider.enabled = true;
-        body.bodyType = RigidbodyType2D.Dynamic;
-        body.simulated = true;
-        body.gravityScale = 0f;
-        body.mass = Mathf.Max(0.01f, item.itemData.Stack.CurrentWeight);
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
-        body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-        body.constraints = RigidbodyConstraints2D.FreezeRotation;
         motionDriver?.ActivateCarrier(this, body);
         lastPhysicsPosition = body.position;
         building.ReleasePlacementOccupancy();

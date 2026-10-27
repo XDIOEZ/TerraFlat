@@ -18,10 +18,21 @@ public class Skill_FireBall : Skill
     private Vector2 fireballDirection = Vector2.zero;
     private Vector3 startPoint;
     private Rigidbody2D physicsBody;
+    private WorldPhysicsTransientBodyLease2D physicsLease;
 
     #endregion
 
     #region 物理投影与技能模块
+
+    public override void Load()
+    {
+        physicsBody = GetComponent<Rigidbody2D>();
+        if (physicsBody == null) throw new MissingComponentException("火球缺少 Rigidbody2D。");
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(runtimeSkill?.skillSender);
+        if (!GameplayWorldRegistry.TryGetPhysics(worldKey, out var physics))
+            throw new System.InvalidOperationException("火球施放者没有已绑定的世界物理服务。");
+        physicsLease = physics.RegisterTransientIndependentBody(this, physicsBody);
+    }
 
     public void Start()
     {
@@ -65,13 +76,8 @@ public class Skill_FireBall : Skill
             {
                 mod.Load();
             }
-            physicsBody = GetComponent<Rigidbody2D>();
-            if (physicsBody == null)
-                throw new MissingComponentException("火球缺少 Rigidbody2D。");
-            physicsBody.bodyType = RigidbodyType2D.Dynamic;
-            physicsBody.gravityScale = 0f;
-            physicsBody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            physicsBody.velocity = fireballDirection * runtimeSkill.skillData.speed;
+            physicsBody.velocity = FlatWorld.Networking.GameNetwork.HasStateAuthority
+                ? fireballDirection * runtimeSkill.skillData.speed : Vector2.zero;
         }
     }
 
@@ -101,6 +107,14 @@ public class Skill_FireBall : Skill
             mod.Save();
         }
     }
+
+    public override void Unload()
+    {
+        physicsLease?.Dispose();
+        physicsLease = null;
+    }
+
+    private void OnDestroy() => Unload();
 
     #endregion
 }

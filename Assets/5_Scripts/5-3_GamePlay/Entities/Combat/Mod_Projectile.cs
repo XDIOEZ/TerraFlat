@@ -5,7 +5,7 @@ using UnityEngine;
 /// 通用物品投射模块：负责把带 Mod_Damage 的物品以刚体方式发射、按蓄力缩放速度与伤害，
 /// 用碰撞体扫掠补足高速 Trigger 的帧间穿透，并以轻微空气阻力和虚拟抛物线高度决定落地停止。
 /// </summary>
-public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, ICombatDamageContextModifier, IDeathCauseSnapshotSource
+public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, ICombatDamageContextModifier, IDeathCauseSnapshotSource, IItemIndependentWorldMotionCapability2D, IRuntimeAiPersistencePolicy
 {
     public const string PersistedModuleId = "Mod_Projectile";
 
@@ -110,6 +110,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     private float _bounceSpinDirection = 1f;
     private float _bounceSpinReferenceSpeed;
     private bool _isFlying;
+    private bool _isPreparingFlight;
+    public bool RequiresIndependentWorldMotion => _isPreparingFlight || _isFlying;
+    public bool PersistRuntimeAi => !_isPreparingFlight && !_isFlying && !_endingFlight;
     private bool _endingFlight;
     private FlatWorld.Spaceflight.SpaceCombatFrame spaceFrame;
     public Vector2 SpaceFlightVelocity => _arcVelocity;
@@ -165,6 +168,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         RestoreFlightCollisions();
         ConfigureBodyForRest();
         _isFlying = false;
+        _isPreparingFlight = false;
         _endingFlight = false;
         _flightRemain = 0f;
         _flightElapsed = 0f;
@@ -257,6 +261,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             _damage.SetExplicitProjectileSweep(false);
         }
         _isFlying = false;
+        _isPreparingFlight = false;
         _endingFlight = false;
         _flightRemain = 0f;
         _flightElapsed = 0f;
@@ -356,94 +361,104 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     {
         if (item == null || _damage == null || direction.sqrMagnitude < 0.0001f)
             throw new System.InvalidOperationException($"{name} 无法发射：投射物尚未正确初始化或方向无效。");
+        if (!WorldPhysicsService2D.CanItemUseIndependentMotion(item)) return;
 
-        float normalizedCharge = Mathf.Clamp01(charge01);
-        float speed = ResolveLaunchSpeed(normalizedCharge, sourceSpeedMultiplier);
-        float damageMultiplier = Mathf.Lerp(
-            Mathf.Max(0f, MinDamageMultiplier),
-            Mathf.Max(0f, MaxDamageMultiplier),
-            normalizedCharge);
-        damageMultiplier *= Mathf.Max(0f, sourceDamageMultiplier);
-        Vector2 normalizedDirection = direction.normalized;
-
-        item.Owner = shooter;
-        _damage.LaunchedWeaponDurabilityOwner = sourceWeapon;
-        _damage.LaunchedWeaponDurabilityData = sourceWeapon?.itemData;
-        _damage.LaunchedWeaponInventoryOwner = shooter;
-        // 发射时记住真实射手和武器，之后切换手持物也不会改变这支箭的来源。
-        launchDeathCause = DeathCauseRecord.CaptureAttack(sourceWeapon != null ? sourceWeapon : item, shooter);
-        item.SetInHand(false);
-        item.itemData.Stack.Amount = 1f;
-        item.itemData.Stack.CanBePickedUp = false;
-        ClearEmbeddedState();
-
-        EnsureBody();
-        EnsureSolidCollider();
-        _body.simulated = true;
-        _body.bodyType = RigidbodyType2D.Dynamic;
-        _body.gravityScale = 0f;
-        _body.mass = Mathf.Max(0.01f, item.itemData.Stack.CurrentWeight);
-        // 可见抛物线必须保持匀速地面位移，否则向下投掷时阻力会把曲线扭成非二次曲线。
-        _body.drag = UseVisibleArc ? 0f : Mathf.Max(0f, FlightLinearDrag);
-        _body.constraints = RigidbodyConstraints2D.FreezeRotation;
-        _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-        _body.interpolation = RigidbodyInterpolation2D.Interpolate;
-        _arcVelocity = normalizedDirection * speed;
-        _groundFlightPosition = _body.position;
-        _body.velocity = _arcVelocity;
-        _solidCollider.enabled = true;
-        IgnoreShooterCollisions(shooter);
-        UpdateArcPresentation(0f);
-        if (_arcVisual != null) _arcVisual.localRotation = _arcVisualBaseRotation;
-
-        float angle = Mathf.Atan2(normalizedDirection.y, normalizedDirection.x) * Mathf.Rad2Deg;
-        item.transform.rotation = Quaternion.Euler(0f, 0f, angle - SpriteForwardAngleDegrees);
-
-        _damage.SetDamageValues(_baseDamage.Scaled(damageMultiplier));
-        _damage.MaxAttackTargets = 1;
-
-        // 飞行时长与蓄力保持同一比例：轻点只飞很短一段，满蓄力才使用完整持续时间。
-        float flightSeconds = ResolveFlightDuration(normalizedCharge);
-        _flightDuration = flightSeconds;
-        float virtualGravity = Mathf.Max(0.01f, VirtualGravity);
-        _flightRemain = flightSeconds;
-        _flightElapsed = 0f;
-        _virtualLaunchVerticalSpeed = 0.5f * virtualGravity * flightSeconds;
-        _virtualHeight = 0f;
-        _lastFlightPosition = _body.position;
-        _lastSensorPosition = ResolveSensorPosition();
-        _endingFlight = false;
-        ResetBounceSpin();
-        _isFlying = true;
-
-        _damage.SetExplicitProjectileSweep(true);
-        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(shooter, out FlatWorld.Spaceflight.SpaceSectorPosition origin, out Vector2 presentation))
+        _isPreparingFlight = true;
+        try
         {
-            spaceFrame = item.GetComponent<FlatWorld.Spaceflight.SpaceCombatFrame>() ?? item.gameObject.AddComponent<FlatWorld.Spaceflight.SpaceCombatFrame>();
-            spaceFrame.Initialize(item, origin, presentation);
-            _body.simulated = false;
-            if (_solidCollider != null) _solidCollider.enabled = false;
-        }
-        else if (FlatWorld.Networking.GameNetwork.IsOnline && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
-            FlatWorld.Spaceflight.SpaceSession.TryGetCombatWorldKey(shooter, out string surfaceWorld))
-        {
-            NetworkSurfaceWorldKey = surfaceWorld;
-            NetworkSurfacePresentationOrigin = shooter.transform.position;
-            Player sourcePlayer = FlatWorld.Spaceflight.SpaceSession.CombatPlayer(shooter);
-            NetworkSurfaceCanonicalOrigin = sourcePlayer != null && FlatWorld.Spaceflight.SpaceSession.Current != null && FlatWorld.Spaceflight.SpaceSession.Current.TryGetNetworkObserver(sourcePlayer.ProfileName, out var observer)
-                ? observer.Position.LocalMeters.ToVector2() : WorldLocalPresentation.ToLogical(shooter.transform.position);
-            IsNetworkSurfaceQueryOnly = surfaceWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if (IsNetworkSurfaceQueryOnly)
+            item.NotifyRuntimeStructureChanged();
+            float normalizedCharge = Mathf.Clamp01(charge01);
+            float speed = ResolveLaunchSpeed(normalizedCharge, sourceSpeedMultiplier);
+            float damageMultiplier = Mathf.Lerp(
+                Mathf.Max(0f, MinDamageMultiplier),
+                Mathf.Max(0f, MaxDamageMultiplier),
+                normalizedCharge);
+            damageMultiplier *= Mathf.Max(0f, sourceDamageMultiplier);
+            Vector2 normalizedDirection = direction.normalized;
+
+            item.Owner = shooter;
+            _damage.LaunchedWeaponDurabilityOwner = sourceWeapon;
+            _damage.LaunchedWeaponDurabilityData = sourceWeapon?.itemData;
+            _damage.LaunchedWeaponInventoryOwner = shooter;
+            // 发射时记住真实射手和武器，之后切换手持物也不会改变这支箭的来源。
+            launchDeathCause = DeathCauseRecord.CaptureAttack(sourceWeapon != null ? sourceWeapon : item, shooter);
+            item.SetInHand(false);
+            item.itemData.Stack.Amount = 1f;
+            item.itemData.Stack.CanBePickedUp = false;
+            ClearEmbeddedState();
+
+            EnsureBody();
+            EnsureSolidCollider();
+            if (!WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(item, _body)) return;
+            // 可见抛物线必须保持匀速地面位移，否则向下投掷时阻力会把曲线扭成非二次曲线。
+            WorldPhysicsService2D.ApplyLegacyItemLinearDamping(item, _body, UseVisibleArc ? 0f : FlightLinearDrag);
+            _body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            _arcVelocity = normalizedDirection * speed;
+            _groundFlightPosition = _body.position;
+            _body.velocity = FlatWorld.Networking.GameNetwork.HasStateAuthority ? _arcVelocity : Vector2.zero;
+            _solidCollider.enabled = true;
+            IgnoreShooterCollisions(shooter);
+            UpdateArcPresentation(0f);
+            if (_arcVisual != null) _arcVisual.localRotation = _arcVisualBaseRotation;
+
+            float angle = Mathf.Atan2(normalizedDirection.y, normalizedDirection.x) * Mathf.Rad2Deg;
+            item.transform.rotation = Quaternion.Euler(0f, 0f, angle - SpriteForwardAngleDegrees);
+
+            _damage.SetDamageValues(_baseDamage.Scaled(damageMultiplier));
+            _damage.MaxAttackTargets = 1;
+
+            // 飞行时长与蓄力保持同一比例：轻点只飞很短一段，满蓄力才使用完整持续时间。
+            float flightSeconds = ResolveFlightDuration(normalizedCharge);
+            _flightDuration = flightSeconds;
+            float virtualGravity = Mathf.Max(0.01f, VirtualGravity);
+            _flightRemain = flightSeconds;
+            _flightElapsed = 0f;
+            _virtualLaunchVerticalSpeed = 0.5f * virtualGravity * flightSeconds;
+            _virtualHeight = 0f;
+            _lastFlightPosition = _body.position;
+            _lastSensorPosition = ResolveSensorPosition();
+            _endingFlight = false;
+            ResetBounceSpin();
+            _isFlying = true;
+
+            _damage.SetExplicitProjectileSweep(true);
+            if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(shooter, out FlatWorld.Spaceflight.SpaceSectorPosition origin, out Vector2 presentation))
             {
-                _body.simulated = false; _solidCollider.enabled = false;
-                foreach (Renderer renderer in item.GetComponentsInChildren<Renderer>(true)) renderer.enabled = false;
+                spaceFrame = item.GetComponent<FlatWorld.Spaceflight.SpaceCombatFrame>() ?? item.gameObject.AddComponent<FlatWorld.Spaceflight.SpaceCombatFrame>();
+                spaceFrame.Initialize(item, origin, presentation);
+                WorldPhysicsService2D.SetItemBodySimulationEnabled(_body, false);
+                if (_solidCollider != null) _solidCollider.enabled = false;
             }
-            NetworkSurfaceProjectiles.Add(this);
-        }
-        SetFlightDeliveryCapabilities();
+            else if (FlatWorld.Networking.GameNetwork.IsOnline && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
+                FlatWorld.Spaceflight.SpaceSession.TryGetCombatWorldKey(shooter, out string surfaceWorld))
+            {
+                NetworkSurfaceWorldKey = surfaceWorld;
+                NetworkSurfacePresentationOrigin = shooter.transform.position;
+                Player sourcePlayer = FlatWorld.Spaceflight.SpaceSession.CombatPlayer(shooter);
+                NetworkSurfaceCanonicalOrigin = sourcePlayer != null && FlatWorld.Spaceflight.SpaceSession.Current != null && FlatWorld.Spaceflight.SpaceSession.Current.TryGetNetworkObserver(sourcePlayer.ProfileName, out var observer)
+                    ? observer.Position.LocalMeters.ToVector2() : WorldLocalPresentation.ToLogical(shooter.transform.position);
+                IsNetworkSurfaceQueryOnly = surfaceWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                if (IsNetworkSurfaceQueryOnly)
+                {
+                    WorldPhysicsService2D.SetItemBodySimulationEnabled(_body, false); _solidCollider.enabled = false;
+                    foreach (Renderer renderer in item.GetComponentsInChildren<Renderer>(true)) renderer.enabled = false;
+                }
+                NetworkSurfaceProjectiles.Add(this);
+            }
+            SetFlightDeliveryCapabilities();
 
-        // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
-        _damage.StartAttack();
+            // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
+            _damage.StartAttack();
+        }
+        finally
+        {
+            _isPreparingFlight = false;
+            if (!_isFlying && !_endingFlight && item != null && !item.DestructionHandled)
+            {
+                if (_body != null) WorldPhysicsService2D.ConfigureItemBodyForRestingPose(item, _body);
+                item.NotifyRuntimeStructureChanged();
+            }
+        }
     }
 
     /// <summary>实体命中时把刚体放到 Physics2D 检出的接触点。</summary>
@@ -926,10 +941,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
         if (_body != null)
         {
-            _body.velocity = Vector2.zero;
-            _body.angularVelocity = 0f;
-            _body.drag = 0f;
-            _body.bodyType = RigidbodyType2D.Kinematic;
+            WorldPhysicsService2D.ConfigureItemBodyForRestingPose(item, _body);
         }
         if (_solidCollider != null) _solidCollider.enabled = false;
 
@@ -979,6 +991,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             WorldItemWaterSystem.ScheduleSpawnCheck(item);
 
         _endingFlight = false;
+        item.NotifyRuntimeStructureChanged();
     }
 
     /// <summary>记录命中瞬间相对受击实体的局部姿态，使可回收投射物继续附着在移动目标上。</summary>
@@ -1138,13 +1151,17 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     /// <summary>攻击 Trigger 只负责发现候选，另用实体碰撞盒交给 Physics2D 计算墙面反弹。</summary>
     private void EnsureSolidCollider()
     {
+        bool addedCollider = false;
         if (_solidCollider == null)
         {
             BoxCollider2D[] colliders = item.GetComponents<BoxCollider2D>();
             for (int i = 0; i < colliders.Length; i++)
                 if (!colliders[i].isTrigger) { _solidCollider = colliders[i]; break; }
             if (_solidCollider == null)
+            {
                 _solidCollider = item.gameObject.AddComponent<BoxCollider2D>();
+                addedCollider = true;
+            }
         }
         if (_damage.DamageCollider is BoxCollider2D hitbox)
             _solidCollider.size = hitbox.size * Mathf.Clamp(SolidColliderSizeMultiplier, 0.1f, 1f);
@@ -1162,6 +1179,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         if (contactRelay == null)
             contactRelay = item.gameObject.AddComponent<ProjectilePhysicsContact2D>();
         contactRelay.Bind(this);
+        if (addedCollider) item.NotifyRuntimeStructureChanged();
     }
 
     /// <summary>发射点可能还在射手身体内，飞行期间只排除这一组实体碰撞。</summary>
@@ -1235,12 +1253,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     private void ConfigureBodyForRest()
     {
         EnsureBody();
-        _body.bodyType = RigidbodyType2D.Kinematic;
-        _body.gravityScale = 0f;
-        _body.drag = 0f;
-        _body.velocity = Vector2.zero;
-        _body.angularVelocity = 0f;
-        _body.constraints = RigidbodyConstraints2D.FreezeRotation;
+        WorldPhysicsService2D.ConfigureItemBodyForRestingPose(item, _body);
         _body.interpolation = RigidbodyInterpolation2D.None;
         if (_solidCollider != null) _solidCollider.enabled = false;
     }

@@ -57,6 +57,7 @@ public static partial class GameplayWorldRegistry
         Scene scene = worlds.TryGetValue(key, out var world) ? world.Scene :
             spaceContexts.TryGetValue(key, out var space) ? space.Scene : SceneManager.GetSceneByName(key);
         if (!scene.IsValid() || !scene.isLoaded) scene = item.gameObject.scene;
+        using var scope = TryGet(key, out _) ? UseWorld(key) : null;
         GetOrCreatePhysics(key, scene).RegisterItem(item);
     }
 

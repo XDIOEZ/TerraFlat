@@ -15,9 +15,9 @@ internal static class ItemWorldPlacement
             itemObject.transform.SetParent(null, true);
             SceneManager.MoveGameObjectToScene(itemObject, target);
         }
-        if (RuntimeAiEntityUtility.IsAiEntity(item))
+        if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item))
         {
-            AttachRuntimeAi(item, itemObject);
+            AttachRuntimeWorldResident(item, itemObject);
             return;
         }
 
@@ -66,6 +66,11 @@ internal static class ItemWorldPlacement
     {
         if (item == null || item.PersistenceOwner != null || item.gameObject == null)
             return false;
+        if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item))
+        {
+            AttachRuntimeWorldResident(item, item.gameObject);
+            return true;
+        }
 
         ChunkNaturalItemRenderer existingOwner =
             item.GetComponentInParent<ChunkNaturalItemRenderer>(true);
@@ -90,6 +95,9 @@ internal static class ItemWorldPlacement
 
     /// <summary>将实体 AI 从旧 Chunk 所有权中摘除并挂到场景中性根节点。</summary>
     internal static void AttachRuntimeAi(Item item, GameObject itemObject)
+        => AttachRuntimeWorldResident(item, itemObject);
+
+    internal static void AttachRuntimeWorldResident(Item item, GameObject itemObject)
     {
         if (item == null || itemObject == null)
             return;

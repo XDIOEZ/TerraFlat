@@ -536,6 +536,7 @@ public partial class ChunkMgr
                 try
                 {
                     runtimeBuildings.Clear();
+                    ReleaseIndependentNaturalEntities();
                     ReleaseSharedNaturalEntities();
                 }
                 finally { sightBlockingChunkCommittedSubscription?.Dispose(); }

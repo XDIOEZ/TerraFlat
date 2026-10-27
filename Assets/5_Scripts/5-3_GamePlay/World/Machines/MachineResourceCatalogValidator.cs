@@ -40,6 +40,7 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
                 MachineDefinition definition = MachineCatalog.Get(pair.Key);
                 if (definition == null) continue;
                 definition.Validate();
+                MachineWorld.ResolveRequiredWorldFixedMachineProxyMode(pair.Key, resources);
                 if (definition.Fluid != null) ValidateFluidDefinition(resources, definition, errors);
                 if (definition.Heating != null)
                 {

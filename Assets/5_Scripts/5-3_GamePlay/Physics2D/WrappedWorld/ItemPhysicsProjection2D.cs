@@ -1,4 +1,5 @@
 using FlatWorld.Networking;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>把实体质量交给 Physics2D，并只回写允许的运行时物理结果。</summary>
@@ -11,6 +12,8 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     private Rigidbody2D body;
     private Vector2Int lastCell;
     private bool hasLastCell;
+    private float lastRotationDegrees;
+    private readonly List<IItemWorldPhysicsPoseReceiver2D> poseReceivers = new();
 
     /// <summary>移动模块统一补齐动态刚体与实体外形，原有攻击 Trigger 独立保留。</summary>
     public static Rigidbody2D EnsureMovable(Item target)
@@ -38,6 +41,9 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
         projection.hasLastCell = false;
         projection.enabled = true;
         projection.ApplyMass();
+        projection.poseReceivers.Clear();
+        foreach (Module module in target.Mods.Values)
+            if (module is IItemWorldPhysicsPoseReceiver2D receiver) projection.poseReceivers.Add(receiver);
     }
 
     private void Awake()
@@ -57,23 +63,37 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     private void LateUpdate()
     {
         if (!CanWriteBack()) return;
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
+        if (GameplayWorldRegistry.TryGetPhysics(worldKey, out var owner) && owner.TryGetItemProxy(item, out _)) return;
         ApplyMass();
+        ApplyWorldPhysicsPose(new WorldPhysicsEntityPose2D(body.position, body.rotation, body.velocity, body.angularVelocity));
+    }
+
+    internal void ApplyWorldPhysicsPose(WorldPhysicsEntityPose2D pose)
+    {
+        if (!CanWriteBack()) return;
         ItemData data = item.itemData;
         data.PhysicsState ??= new ItemPhysicsRuntimeState();
-        data.PhysicsState.Velocity = body.velocity;
-        data.PhysicsState.AngularVelocity = body.angularVelocity;
-        Vector2 logical = WorldTopologyRuntime.NormalizePosition(body.position);
+        data.PhysicsState.Velocity = pose.Velocity;
+        data.PhysicsState.AngularVelocity = pose.AngularVelocity;
+        Vector2 logical = WorldLocalPresentation.ToLogical(pose.Position);
+        logical = WorldTopologyRuntime.NormalizePosition(logical);
         if (data.transform != null)
         {
             Vector3 previous = data.transform.position;
             data.transform.position = new Vector3(logical.x, logical.y, previous.z);
-            data.transform.rotation = transform.rotation;
+            data.transform.rotation = Quaternion.Euler(0f, 0f, pose.RotationDegrees);
         }
         Vector2Int cell = new(Mathf.FloorToInt(logical.x), Mathf.FloorToInt(logical.y));
-        if (hasLastCell && cell != lastCell)
+        bool addressChanged = !hasLastCell || cell != lastCell;
+        bool orientationChanged = !hasLastCell || !Mathf.Approximately(lastRotationDegrees, pose.RotationDegrees);
+        for (int i = 0; i < poseReceivers.Count; i++) poseReceivers[i].OnWorldPhysicsPoseCommitted(item, pose);
+        if (addressChanged || orientationChanged)
             ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
         lastCell = cell;
+        lastRotationDegrees = pose.RotationDegrees;
         hasLastCell = true;
+        if (addressChanged) ItemMgr.Instance?.TryParkIndependentPhysicsWorldResidentOutsidePresentedChunks(item);
     }
 
     private bool CanWriteBack() =>

@@ -47,12 +47,20 @@ namespace FlatWorld.Spaceflight
             if (!float.IsFinite(context.Start.x) || !float.IsFinite(context.Start.y) ||
                 !float.IsFinite(context.End.x) || !float.IsFinite(context.End.y) || !float.IsFinite(rotation))
                 throw new ArgumentException("太空掉落的起点、终点和朝向必须是有限数。");
+            ItemPhysicsDefinitionDto physics = GameRes.ExistingInstance != null &&
+                GameRes.ExistingInstance.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition)
+                    ? definition.Physics : null;
+            if (physics != null && (physics.Mode != WorldPhysicsProxyMode2D.IndependentDynamic || physics.HasRegions))
+                throw new InvalidOperationException("太空掉落暂不支持固定模式或自定义物理区域。");
             if (ReferenceEquals(context.SourceItem?.itemData, source)) context.SourceItem.ModuleSave();
             ItemData payload = FastCloner.FastCloner.DeepClone(source);
             payload.Guid = AllocateSessionDropGuid(source.Guid);
             payload.inHand = false; payload.Stack.CanBePickedUp = true;
             DroppedItemService.RemoveLegacyDropData(payload);
             SpaceLooseItemState state = CreateSessionDropMotion(context, rotation, scale);
+            if (physics != null && (!state.InSpace || !string.IsNullOrEmpty(state.SupportShipId)))
+                throw new InvalidOperationException("配置物理的掉落物暂不支持飞船支撑或地表过渡。");
+            if (physics?.FreezeRotation == true) state.AngularVelocityDegreesPerSecond = 0d;
             // 与普通掉落一样，投掷未完成时不能立刻被原地自动捡回。
             state.PickupAfterSimulationSeconds = State.SimulationSeconds + Math.Max(.5d, context.Duration);
             state.Snapshot = Encode(payload);

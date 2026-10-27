@@ -132,7 +132,9 @@ namespace FlatWorld.Spaceflight
                         System.Globalization.CultureInfo.InvariantCulture, out int guid))
                     return RejectShipOperation("采集目标身份无效。", out reason);
                 bool harvested = FlatWorld.NaturalEntities.NaturalEntityEcsService.TryHarvestNetwork(
-                    FindNetworkPlayer(profile), observer.WorldKey, guid, new Vector2((float)intent.X, (float)intent.Y));
+                    FindNetworkPlayer(profile), observer.WorldKey, guid, new Vector2((float)intent.X, (float)intent.Y),
+                    intent.HasNaturalSource ? intent.NaturalSourceWorldKey ?? string.Empty : null,
+                    intent.NaturalSourceChunkX, intent.NaturalSourceChunkY);
                 if (!harvested) return RejectShipOperation("采集目标已失效或当前无法采集。", out reason);
                 reason = null;
                 return true;

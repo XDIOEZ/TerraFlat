@@ -22,6 +22,20 @@ public abstract partial class ModuleData
     [Tooltip("模块能力 ID；同一能力允许由不同 Prefab 实现。")]
     public string ModuleId;
 
+    #region 运行时身份
+    [NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
+    private bool runtimeIdentityBound;
+
+    // 正式绑定后旧 ID 别名只提供模板默认值，不能覆盖当前定义身份。
+    public void BindRuntimeModuleIdentity(string moduleId)
+    {
+        if (string.IsNullOrWhiteSpace(moduleId))
+            throw new ArgumentException("ModuleId 不能为空。", nameof(moduleId));
+        ModuleId = moduleId.Trim();
+        runtimeIdentityBound = true;
+    }
+    #endregion
+
     [Tooltip("模块是否启用；由 Module 框架统一控制运行态与 Tick。")]
     [SerializeField, FormerlySerializedAs("Enabled"), MemoryPackIgnore, JsonIgnore]
     private bool enabled = true;
@@ -45,12 +59,12 @@ public abstract partial class ModuleData
     public void NotifyPayloadChanged() => PayloadChanged?.Invoke(this);
     public ModuleType Type;
 
-    // 旧代码别名仅转发到唯一字段，不再形成第二套模块身份。
+    // 旧代码别名只为未绑定的模板提供默认身份。
     [MemoryPackIgnore, JsonIgnore]
     public string Name { get => StableName; set => StableName = value; }
 
     [MemoryPackIgnore, JsonIgnore]
-    public string ID { get => ModuleId; set => ModuleId = value; }
+    public string ID { get => ModuleId; set { if (!runtimeIdentityBound) ModuleId = value; } }
 
     [MemoryPackIgnore, JsonIgnore]
     public bool isRunning { get => Enabled; set => Enabled = value; }

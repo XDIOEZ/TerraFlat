@@ -20,6 +20,10 @@
 ## 自然实体
 
 - 原生AI用完整Item；entityRuntime: resource 的树/矿/作物冷编译进共享 WorldEntityRuntime，无资源Item/Module Tick。通用配置集合 Replace，ResourceEntityCapabilityRegistry 扩能力，DLL用 context.SetState/GetState。
+- 显式 `physics.mode` 由世界服务分配代理；独立可动资源的原生结果回写原 Entity、区域、导航、空间桶、表现和保存运动状态。`IndependentNaturalEntityRegistry` 按来源身份保存，区块只借当前位置表现；跨块不换主体，出生块解绑不回收已移走资源。重载先识别已存来源再判断当前模式，保存后改为固定模式也只恢复一个实体。
+- 自然资源出生身份由 `SourceWorldKey + SourceChunkX/Y + Guid` 确定，当前世界与当前位置区块分别归属；目标世界只认本地出生身份。`WorldFixed` 和 `IndependentDynamic` 经 `TryTransferNaturalEntityToWorld` 迁移：两端需独立 PhysicsScene，目标世界、目标位置的表现与区块物理后端先准备；事务暂停源、准备目标，失败恢复同一 handle/proxy，成功才提交源删除，不触发死亡或掉落。
+- 迁移事务期间源与候选目标均 Busy：拒绝采集、伤害、刷新、公开 Remove/TryTakeSnapshotAndRemove 和普通源删除重入；允许捕获快照，最终删除走迁移专用提交入口。源删除通知逐订阅者隔离异常。休眠前发送最后完整权威快照；客户端保存权威速度但不预测。
+- 网络采集与生成资源状态回包携带出生身份；缺少身份且 UID/位置匹配多个实体时必须拒绝歧义请求。F5 只延迟当前实例的模式切换，其他有效配置仍刷新。
 - 产物目录首次注册校验，同配置复用，失败不缓存；资源重载清编译缓存，新配置/能力版本重编后重验。
 - 独立导航/空间交互/接触几何，命中 GameplayCombatBridge；植物仅 EntityPlantModuleSystem 推。区块解绑保存释放、死亡/一次收获才删来源；终端解绑移快照所有权，仍运行才克隆，句柄带World代际。客户端不推进权威植物Job，采集/增量独立接入；旧 DroppedItems/Core ECS 仅Editor参考。
 - NaturalEntityEcsService 的天气/耐候、已种土壤、导航占地索引随注册/卸载/恢复/刷新增量维护。FreezeEnvironment 同批只冻服务引用/PointSamplingContext，邻热源每目标块一次，天气/温度逐件实时、缺样本沿正式回退，同步结束释放，保原0.25秒/距离规则。

@@ -163,6 +163,8 @@ public static partial class LooseItemMotion
     internal static bool CommitItemPosition(Item item, Vector2 position)
     {
         if (item == null || item.DestructionHandled || !Finite(position)) return false;
+        if (WorldPhysicsService2D.GetConfiguredItemPhysics(item) != null)
+            return WorldPhysicsService2D.RequestItemMovementTowardsLogicalPosition(item, item.GetComponent<Rigidbody2D>(), position);
         string world = item.gameObject.scene.name;
         Vector2 before = item.transform.position;
         Vector2 movement = PressureExplosionQueue.DeltaInWorld(world, before, position);
