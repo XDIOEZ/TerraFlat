@@ -39,6 +39,7 @@ public static class FlatWorldUITheme
     public static Color Danger => ThemeColor("danger");
     public static Color StatusBarBackground => ThemeColor("statusBarBackground");
     public static Color StatusBarDefault => ThemeColor("statusBarDefault");
+    public static Color StatusBarFoodHud => ThemeColor("statusBarFoodHud");
     public static Color StatusBarHealth => ThemeColor("statusBarHealth");
     public static Color SaveItemNormal => ThemeColor("saveNormal");
     public static Color SaveItemSelected => ThemeColor("saveSelected");
@@ -230,7 +231,16 @@ public static class FlatWorldUITheme
 
             Image fill = slider.fillRect.GetComponent<Image>();
             if (fill != null)
-                fill.color = IsHealthName(BuildPath(slider.transform)) ? StatusBarHealth : StatusBarDefault;
+                fill.color = IsHealthName(BuildPath(slider.transform)) ? StatusBarHealth :
+                    IsFoodStatusHud(root.name) ? StatusBarFoodHud : StatusBarDefault;
+        }
+
+        if (IsFoodStatusHud(root.name))
+        {
+            // 运行时也刷新旧 Prefab 的生存状态文字颜色。
+            foreach (TextMeshProUGUI text in root.GetComponentsInChildren<TextMeshProUGUI>(true))
+                if (text != null && !UIVisualOwner.OwnsVisuals(text) && text.GetComponentInParent<UnityEngine.UI.Button>() == null)
+                    text.color = TextPrimary;
         }
     }
 
@@ -964,7 +974,8 @@ public static class FlatWorldUITheme
                 Image fill = slider.fillRect.GetComponent<Image>();
                 if (fill != null)
                 {
-                    fill.color = IsHealthName(slider.name) ? StatusBarHealth : StatusBarDefault;
+                    fill.color = IsHealthName(slider.name) ? StatusBarHealth :
+                        IsFoodStatusHud(root.name) ? StatusBarFoodHud : StatusBarDefault;
                     fill.sprite = null;
                     fill.type = Image.Type.Simple;
                     fill.preserveAspect = false;
@@ -1089,7 +1100,8 @@ public static class FlatWorldUITheme
 
             bool stackLevel = ContainsAny(text.name, "层数文本", "StackCount", "StackLevel");
             bool heading = text.fontSize >= 24f || ContainsAny(text.name, "标题", "信息", "Title", "Header");
-            text.color = stackLevel || heading ? TextPrimary : TextSecondary;
+            // 生存状态条的文字与填充保持清晰对比。
+            text.color = stackLevel || heading || IsFoodStatusHud(root.name) ? TextPrimary : TextSecondary;
             if (heading)
                 text.fontStyle |= FontStyles.Bold;
             text.raycastTarget = false;
@@ -1508,6 +1520,10 @@ public static class FlatWorldUITheme
 
         return false;
     }
+
+    private static bool IsFoodStatusHud(string rootName) =>
+        string.Equals(rootName, "UI_Food", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(rootName, "UI_Food(Clone)", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsHud(string rootName)
     {

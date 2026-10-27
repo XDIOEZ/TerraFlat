@@ -19,7 +19,9 @@ namespace FlatWorld.Spaceflight
             decimal total = atmosphere?.CurrentMoles ?? 0m;
             if (total <= 0m || maximumMoles <= 0m) return Array.Empty<FluidBatch>();
             var batches = new List<FluidBatch>();
-            decimal amount = Math.Min(maximumMoles, total);
+            // 大气库存使用固定摩尔量子，先截取总请求再按组分分配，避免尾项写入非量子余量。
+            decimal amount = AtmosphereService.Quantize(Math.Min(maximumMoles, total));
+            if (amount <= 0m) return Array.Empty<FluidBatch>();
             decimal remaining = amount;
             for (int index = 0; index < atmosphere.Gases.Count; index++)
             {

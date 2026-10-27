@@ -371,7 +371,10 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         ItemMgr.Instance.SavePlayer();
 
         GameManager.Instance.SetDimensionTransitionLoading("正在保存当前维度…", 0.22f);
-        GameManager.Instance.NotifyDimensionWorldExiting();
+        // 先在原世界上下文解绑区块，再为单机太空往返保留可复用的表现壳。
+        using (GameplayWorldRegistry.PreserveLocalChunkManagerForSpaceTransition(
+                   SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(targetAddress.WorldKey)))
+            GameManager.Instance.NotifyDimensionWorldExiting();
         state.ExitNotified = true;
         SaveDataMgr.Instance.Save_And_WriteToDisk();
 
@@ -485,7 +488,11 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         }
 
         if (enterNotified)
-            GameManager.Instance.NotifyDimensionWorldExiting();
+        {
+            using (GameplayWorldRegistry.PreserveLocalChunkManagerForSpaceTransition(
+                       SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name)))
+                GameManager.Instance.NotifyDimensionWorldExiting();
+        }
 
         if (currentPlayer != null)
             ItemMgr.Instance.ReleasePlayerForWorldTransition(currentPlayer);

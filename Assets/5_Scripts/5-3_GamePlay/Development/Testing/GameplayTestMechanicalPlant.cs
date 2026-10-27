@@ -56,9 +56,12 @@ public static class GameplayTestMechanicalPlant
         new("hammer_crank", "HandCrank", 0, 9),
         new("hammer_shaft", "Shaft_Wood", 1, 9),
         new("hammer", "MechanicalHammer", 2, 9),
-        new("compressor_crank", "HandCrank", 0, 11),
-        new("compressor_shaft", "Shaft_Wood", 1, 11),
-        new("compressor", "GasCompressor_Mechanical", 2, 11)
+        new("fuel_engine", "FuelEngine", 0, 11),
+        new("fuel_engine_shaft", "Shaft_Wood", 1, 11),
+        new("fuel_engine_load", "MechanicalBellows", 2, 11),
+        new("steam_engine", "SteamEngine_Body", 0, 13),
+        new("steam_engine_shaft", "Shaft_Wood", 1, 13),
+        new("steam_engine_load", "MechanicalBellows", 2, 13)
     };
 
     private static readonly Dictionary<string, MachineEntity> parts = new(StringComparer.Ordinal);
@@ -78,6 +81,9 @@ public static class GameplayTestMechanicalPlant
     private static string lastError;
     private static DroppedItemHandle conveyorDrop;
     private static Vector2 conveyorDropStart;
+    private static decimal initialPumpTankGasMoles;
+    private static decimal initialFuelEngineOilMoles;
+    private static decimal initialSteamEngineWaterMoles;
 
     public static bool TryBuild(Player player, out string message)
     {
@@ -109,12 +115,13 @@ public static class GameplayTestMechanicalPlant
                 windChanged = true;
             }
             foreach (Part part in Layout) Place(part);
+            initialPumpTankGasMoles = MachineWorld.GetFluidInventory(parts["pump_tank"]).GasMoles;
             FuelEngine();
+            PrepareIndependentFuelAndSteamEngines();
             AddInput("millstone", "Ore_Copper", 2);
             AddInput("loom", "Cotton", 4);
             AddInput("sawmill", "Log", 2);
             AddInput("hammer", "Ingot_Copper", 2);
-            AddGas(parts["compressor"], "main", FluidIds.Nitrogen, 0.2m);
             built = true;
             message = $"GM 工厂建造完成：{owned.Count} 个真实节点，涵盖 {parts.Values.Select(n => n.Definition.Id).Distinct().Count()} 种机械与附属设备；水车使用真实液层河流，风机使用权威天气。";
             return true;
@@ -214,6 +221,37 @@ public static class GameplayTestMechanicalPlant
             throw new InvalidOperationException("GM 无法注入真实气体：" + fluidId);
     }
 
+    // 使用正式库存和点火命令准备独立发动机，由世界调度完成燃料吸收和动力结算。
+    private static void PrepareIndependentFuelAndSteamEngines()
+    {
+        MachineEntity fuelEngine = parts["fuel_engine"];
+        MachineEntity steamEngine = parts["steam_engine"];
+        initialFuelEngineOilMoles = AddEngineLiquidForMechanicalPowerTest(fuelEngine, "core:fuel_oil", 2m);
+        initialSteamEngineWaterMoles = AddEngineLiquidForMechanicalPowerTest(steamEngine, FluidIds.PureWater, .5m);
+        if (steamEngine.Logic is not FluidMachineLogic steam || steam.FuelInventory == null ||
+            GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetItemDefinition("FireSeed", out RuntimeItemDefinition tinder))
+            throw new InvalidOperationException("蒸汽机缺少正式燃料槽或火种定义。");
+        ItemData ignitionItem = tinder.CreateItemData();
+        ignitionItem.Stack.Amount = 2;
+        steam.FuelInventory.Data.SetOne_ItemData(0, ignitionItem);
+        if (!ReferenceEquals(steam.FuelInventory.Data.GetItemSlot(0)?.itemData, ignitionItem) ||
+            !MachineWorld.Execute(steamEngine, "work", null, owner))
+            throw new InvalidOperationException("蒸汽机无法通过正式燃料槽和点火命令启动。");
+    }
+
+    private static decimal AddEngineLiquidForMechanicalPowerTest(MachineEntity engine, string fluidId, decimal liters)
+    {
+        FluidDefinition fluid = FluidCatalog.Default.Find(fluidId);
+        FluidInventory inventory = MachineWorld.GetFluidInventory(engine);
+        if (fluid == null || !inventory.TryAdd(FluidInventory.CreateBatch(fluid, 0m,
+                FluidUnits.LiquidLitersToMol(fluid, liters), 293.15),
+                MachineWorld.GetFluidVolumeLiters(engine), MachineWorld.GetFluidMinimumGasSpaceLiters(engine)))
+            throw new InvalidOperationException("机械测试引擎无法装入真实液体：" + fluidId);
+        MachineWorld.StateChanged(engine);
+        return inventory.GetLiquidMoles(fluidId);
+    }
+
     private static void AddInput(string alias, string id, float amount)
     {
         MachineEntity node = parts[alias];
@@ -248,6 +286,7 @@ public static class GameplayTestMechanicalPlant
             WeatherMgr.ExistingInstance.SetWindStrength(originalWind);
         ownerWindShield?.Dispose(); ownerWindShield = null;
         owner = null; ownerStart = default; built = false; windChanged = false; environmentChanged = false;
+        initialPumpTankGasMoles = 0m; initialFuelEngineOilMoles = 0m; initialSteamEngineWaterMoles = 0m;
         lastError = string.Empty;
     }
 
@@ -262,7 +301,7 @@ public static class GameplayTestMechanicalPlant
         switch (operation)
         {
             case "mechanical_start":
-                foreach (string alias in new[] { "vertical_crank", "hammer_crank", "compressor_crank", "belt_crank" })
+                foreach (string alias in new[] { "vertical_crank", "hammer_crank", "belt_crank" })
                 {
                     MachineEntity crank = parts[alias];
                     if (!MachineWorld.Execute(crank, "crank", null, owner))
@@ -271,7 +310,7 @@ public static class GameplayTestMechanicalPlant
                     crank.State.ManualSeconds = 85f;
                     MachineWorld.StateChanged(crank);
                 }
-                message = "GM 已启动四条真实手摇动力支路。";
+                message = "GM 已启动三条真实手摇动力支路。";
                 return true;
             case "mechanical_clutch_off":
             case "mechanical_clutch_on":
@@ -387,11 +426,42 @@ public static class GameplayTestMechanicalPlant
                     DroppedItemService.TryGetPickablePosition(conveyorDrop, out Vector2 moved) &&
                     WorldTopologyRuntime.ShortestDelta(conveyorDropStart, moved).magnitude > .05f;
                 return true;
-            case "mechanical_compressor_output":
-                passed = MachineWorld.GetFluidInventory(parts["compressor"], "output").GasMoles > 0m;
+            case "mechanical_waterwheel_pump_power_chain":
+                MechanicalNetwork waterNetwork = parts["water"].Network;
+                passed = waterNetwork != null &&
+                    ReferenceEquals(waterNetwork, parts["water_shaft"].Network) &&
+                    ReferenceEquals(waterNetwork, parts["cross"].Network) &&
+                    ReferenceEquals(waterNetwork, parts["pump"].Network) &&
+                    parts["water"].SpeedRpm > 0f && parts["pump"].SpeedRpm > 0f && parts["pump"].LoadSatisfied;
                 return true;
             case "mechanical_pump_delivered":
-                passed = MachineWorld.GetFluidInventory(parts["pump_tank"]).GasMoles > 0m;
+                passed = parts["pump"].SpeedRpm > 0f && parts["pump"].LoadSatisfied &&
+                    MachineWorld.GetFluidInventory(parts["pump_tank"]).GasMoles > initialPumpTankGasMoles;
+                return true;
+            case "mechanical_fuel_engine_running":
+                MachineEntity fuelEngine = parts["fuel_engine"];
+                MachineEntity fuelLoad = parts["fuel_engine_load"];
+                passed = fuelEngine.Network != null && ReferenceEquals(fuelEngine.Network, fuelLoad.Network) &&
+                    fuelEngine.SpeedRpm > 0f && fuelLoad.SpeedRpm > 0f && fuelLoad.LoadSatisfied &&
+                    MachineWorld.GetFluidInventory(fuelEngine).GetLiquidMoles("core:fuel_oil") < initialFuelEngineOilMoles;
+                return true;
+            case "mechanical_steam_engine_running":
+                MachineEntity steamEngine = parts["steam_engine"];
+                MachineEntity steamLoad = parts["steam_engine_load"];
+                passed = steamEngine.Network != null && ReferenceEquals(steamEngine.Network, steamLoad.Network) &&
+                    steamEngine.Logic is FluidMachineLogic steam && steam.IsBurning &&
+                    steamEngine.SpeedRpm > 0f && steamLoad.SpeedRpm > 0f && steamLoad.LoadSatisfied &&
+                    MachineWorld.GetFluidInventory(steamEngine).GetLiquidMoles(FluidIds.PureWater) < initialSteamEngineWaterMoles;
+                return true;
+            case "mechanical_engine_networks_independent":
+                MechanicalNetwork hydrogenNetwork = parts["engine"].Network;
+                MechanicalNetwork fuelNetwork = parts["fuel_engine"].Network;
+                MechanicalNetwork steamNetwork = parts["steam_engine"].Network;
+                MechanicalNetwork wheelNetwork = parts["water"].Network;
+                passed = hydrogenNetwork != null && fuelNetwork != null && steamNetwork != null && wheelNetwork != null &&
+                    !ReferenceEquals(hydrogenNetwork, fuelNetwork) && !ReferenceEquals(hydrogenNetwork, steamNetwork) &&
+                    !ReferenceEquals(hydrogenNetwork, wheelNetwork) && !ReferenceEquals(fuelNetwork, steamNetwork) &&
+                    !ReferenceEquals(fuelNetwork, wheelNetwork) && !ReferenceEquals(steamNetwork, wheelNetwork);
                 return true;
             case "mechanical_stone_external_off":
                 passed = parts["millstone"].SpeedRpm < .01f;

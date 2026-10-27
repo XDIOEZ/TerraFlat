@@ -7,6 +7,53 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 using XLua;
 
+/// <summary>Editor 提供性能采集后端，Lua 只使用受控的采集租约。</summary>
+public interface IGameplayTestProfilerBackend
+{
+    JObject StartCapture(double seconds);
+    JObject StopCapture(string jobId, string marker);
+    void CancelCapture(string jobId);
+}
+
+public static class GameplayTestProfilerBridge
+{
+    public static IGameplayTestProfilerBackend Backend { get; set; }
+}
+
+/// <summary>为测试框架提供跨真实帧出现的性能标记。</summary>
+public sealed class GameplayTestProfilerEvidenceBehaviour : MonoBehaviour
+{
+    #region 性能导出自检现场
+    public const string MarkerName = "FlatWorld.GameplayTest.ProfilerEvidence";
+    private static readonly Unity.Profiling.ProfilerMarker marker = new(MarkerName);
+
+    private void Update()
+    {
+        using (marker.Auto()) { }
+    }
+
+    internal static JObject Create(Player player, JObject args)
+    {
+        var root = new GameObject("Lua性能导出标记");
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
+        root.AddComponent<GameplayTestProfilerEvidenceBehaviour>();
+        GameplayTestRuntimeProbe.RegisterCleanup(new EvidenceLease(root));
+        return new JObject { ["created"] = true, ["marker"] = MarkerName };
+    }
+
+    private sealed class EvidenceLease : IDisposable
+    {
+        private GameObject root;
+        internal EvidenceLease(GameObject root) { this.root = root; }
+        public void Dispose()
+        {
+            if (root != null) UnityEngine.Object.Destroy(root);
+            root = null;
+        }
+    }
+    #endregion
+}
+
 /// <summary>Lua 只编排测试步骤，玩家操作始终通过正式玩法接口逐帧执行。</summary>
 public sealed class GameplayTestLuaRunner : IDisposable
 {
@@ -20,6 +67,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private readonly Func<string, bool> check;
     private readonly Action<string, string, bool, string> record;
     private GameplayTestSpaceScenario activeSpaceScenario;
+    private ProfilerCaptureLease activeProfilerCapture;
     private Mod_GameController controller;
     private Mod_Mover mover;
     private Mod_GameMCP_LLM navigation;
@@ -51,6 +99,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         public float X;
         public float Y;
         public float Seconds;
+        public float CaptureSeconds;
         public float Tolerance;
         public int Index;
         public bool Success;
@@ -122,6 +171,18 @@ public sealed class GameplayTestLuaRunner : IDisposable
         end
         function test.wait(seconds)
             enqueue({name='wait', seconds=duration(seconds)})
+        end
+        function test.profiler_start(seconds, label)
+            seconds = seconds == nil and 120 or finite(seconds, 'profiler seconds')
+            assert(seconds >= 1 and seconds <= 120, '性能采集时长必须在 1 至 120 秒之间')
+            enqueue({name='profiler_start', captureSeconds=seconds,
+                label=label == nil and '开始性能采集' or text(label, 'label')})
+        end
+        function test.profiler_stop(marker, validator, label)
+            if marker ~= nil then marker = text(marker, 'profiler marker') end
+            assert(validator == nil or type(validator) == 'function', '性能结果回调必须是函数')
+            enqueue({name='profiler_stop', text=marker, validator=validator,
+                label=label == nil and '导出性能采集' or text(label, 'label')})
         end
         function test.await_check(name, timeout, label)
             name = text(name, 'check name')
@@ -260,6 +321,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
             finally { DisposeLuaResults(result); }
 
             float totalSeconds = 0f;
+            bool profilerOpen = false;
             for (int index = 1; index <= MaximumSteps + 1; index++)
             {
                 queue.Get(index, out LuaTable queuedStep);
@@ -275,6 +337,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     X = ReadNumber(step, "x"),
                     Y = ReadNumber(step, "y"),
                     Seconds = ReadNumber(step, "seconds"),
+                    CaptureSeconds = ReadNumber(step, "captureSeconds"),
                     Tolerance = ReadNumber(step, "tolerance"),
                     Index = checked((int)ReadNumber(step, "index"))
                 };
@@ -287,6 +350,18 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     throw new InvalidOperationException(gmError);
                 if (command.Name == "fluid" && !GameplayTestFluids.IsScenario(command.Text))
                     throw new InvalidOperationException("未知流体测试案例：" + command.Text);
+                if (command.Name == "profiler_start")
+                {
+                    if (profilerOpen) throw new InvalidOperationException("性能采集不能重复开始。");
+                    profilerOpen = true;
+                }
+                if (command.Name == "profiler_stop")
+                {
+                    if (!profilerOpen) throw new InvalidOperationException("性能采集必须先开始再导出。");
+                    profilerOpen = false;
+                    command.Validator = step.Get<LuaFunction>("validator");
+                    if (command.Validator != null) callbacks.Add(command.Validator);
+                }
                 if (command.Name is "space" or "system" or "runtime")
                 {
                     if (command.Name == "space" &&
@@ -309,6 +384,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 }
                 commands.Add(command);
             }
+            if (profilerOpen) throw new InvalidOperationException("性能采集必须在同一 Lua 中安排导出。");
             if (commands.Count == 0) throw new InvalidOperationException("测试 Lua 没有安排任何步骤。");
             return true;
         }
@@ -467,9 +543,27 @@ public sealed class GameplayTestLuaRunner : IDisposable
             finally
             {
                 try { ReleaseControl(); }
+                catch (Exception exception)
+                {
+                    Succeeded = false;
+                    record("runtime_cleanup", "释放玩家控制租约失败", false, exception.ToString());
+                }
                 finally
                 {
-                    try { activeSpaceScenario?.Dispose(); }
+                    try
+                    {
+                        if (activeSpaceScenario != null)
+                        {
+                            Succeeded = false;
+                            record("space_cleanup", "恢复太空测试现场", false, "执行中断，太空测试现场未完成恢复。");
+                            activeSpaceScenario.Dispose();
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        Succeeded = false;
+                        record("space_cleanup", "释放太空测试现场失败", false, exception.ToString());
+                    }
                     finally
                     {
                         activeSpaceScenario = null;
@@ -591,6 +685,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
             case "runtime":
                 yield return RunRuntimeCommand(command);
                 break;
+            case "profiler_start":
+                StartProfilerCapture(command);
+                break;
+            case "profiler_stop":
+                StopProfilerCapture(command);
+                break;
             case "log":
                 Debug.Log($"[GameplayTest Lua] {command.Text}");
                 command.Success = true;
@@ -658,6 +758,59 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 break;
         }
     }
+
+    #region Lua 性能采集租约
+    private sealed class ProfilerCaptureLease : IDisposable
+    {
+        private readonly IGameplayTestProfilerBackend backend;
+        internal readonly string JobId;
+        private bool finished;
+        internal ProfilerCaptureLease(IGameplayTestProfilerBackend backend, string jobId)
+        { this.backend = backend; JobId = jobId; }
+        internal JObject Stop(string marker)
+        {
+            JObject sample = backend.StopCapture(JobId, marker);
+            finished = true;
+            return sample;
+        }
+        public void Dispose()
+        {
+            if (finished) return;
+            finished = true;
+            backend.CancelCapture(JobId);
+        }
+    }
+
+    private void StartProfilerCapture(Command command)
+    {
+        IGameplayTestProfilerBackend backend = GameplayTestProfilerBridge.Backend ??
+            throw new InvalidOperationException("性能 JSON 采集需要 Unity Editor 的测试后端。");
+        if (activeProfilerCapture != null) throw new InvalidOperationException("当前 Lua 已有性能采集。");
+        JObject sample = backend.StartCapture(command.CaptureSeconds);
+        string jobId = sample?["jobId"]?.Value<string>();
+        if (string.IsNullOrEmpty(jobId)) throw new InvalidOperationException("性能采集没有返回任务身份。");
+        var capture = new ProfilerCaptureLease(backend, jobId);
+        try { GameplayTestRuntimeProbe.RegisterCleanup(capture); }
+        catch { capture.Dispose(); throw; }
+        activeProfilerCapture = capture;
+        command.Success = true;
+        command.Message = sample.ToString(Newtonsoft.Json.Formatting.None);
+    }
+
+    private void StopProfilerCapture(Command command)
+    {
+        ProfilerCaptureLease capture = activeProfilerCapture ?? throw new InvalidOperationException("当前 Lua 没有性能采集。");
+        JObject sample = capture.Stop(command.Text);
+        activeProfilerCapture = null;
+        record("profiler_sample", command.Label + "（实际采样）", true, sample.ToString(Newtonsoft.Json.Formatting.None));
+        if (command.Validator != null) ValidateSystemSample(command, sample);
+        else
+        {
+            command.Success = true;
+            command.Message = sample.ToString(Newtonsoft.Json.Formatting.None);
+        }
+    }
+    #endregion
 
     #region 太空数据与 Lua 断言
     private void RunSystemCommand(Command command)

@@ -261,19 +261,36 @@ public static partial class GameplayTestPresentationRuntimeProbe
                      })
             {
                 bool loaded = service.TryGetCue(cueId, out AudioCue cue);
-                bool isFootstep = cueId.StartsWith("player.footstep.", StringComparison.Ordinal);
+                // 采样正式资源原值，脚步与钓鱼的不同配置由 Lua 分别检查。
+                JObject configuration = loaded ? JObject.Parse(JsonUtility.ToJson(cue)) : new JObject();
+                JArray clips = new JArray();
+                if (loaded)
+                    foreach (AudioClip clip in cue.Clips)
+                        clips.Add(new JObject
+                        {
+                            ["loaded"] = clip != null,
+                            ["instanceId"] = clip != null ? clip.GetInstanceID() : 0,
+                            ["channels"] = clip != null ? clip.channels : 0,
+                            ["frequency"] = clip != null ? clip.frequency : 0,
+                            ["samples"] = clip != null ? clip.samples : 0,
+                            ["preload"] = clip != null && clip.preloadAudioData,
+                            ["audioDataLoaded"] = clip != null && clip.loadState == AudioDataLoadState.Loaded
+                        });
                 movementCues.Add(new JObject
                 {
-                    ["id"] = cueId,
-                    ["loaded"] = loaded,
-                    ["expectedVariants"] = isFootstep ? 3 : 2,
-                    ["variants"] = loaded ? cue.Clips.Count : 0,
-                    ["validClips"] = loaded && cue.Clips.All(
-                        clip => clip != null && clip.channels == 1 &&
-                                clip.frequency == 48000 && clip.samples > 0),
-                    ["spatial"] = loaded && cue.SpatialBlend == 1f &&
-                                   cue.Bus == AudioBus.Sfx && cue.Cooldown > 0f &&
-                                   cue.MaxInstances == (isFootstep ? 2 : 3)
+                    ["id"] = loaded ? cue.Id : cueId, ["loaded"] = loaded,
+                    ["playbackEnabled"] = loaded && cue.PlaybackEnabled,
+                    ["bus"] = loaded ? cue.Bus.ToString() : string.Empty,
+                    ["spatialBlend"] = loaded ? cue.SpatialBlend : -1f,
+                    ["rolloff"] = loaded ? cue.RolloffMode.ToString() : string.Empty,
+                    ["loop"] = loaded && cue.Loop,
+                    ["minDistance"] = loaded ? cue.MinDistance : 0f,
+                    ["maxDistance"] = loaded ? cue.MaxDistance : 0f,
+                    ["cooldown"] = loaded ? cue.Cooldown : -1f,
+                    ["maxInstances"] = loaded ? cue.MaxInstances : 0,
+                    ["selection"] = configuration.Value<int?>("selection") ?? -1,
+                    ["noRepeatHistory"] = configuration.Value<int?>("noRepeatHistory") ?? 0,
+                    ["clips"] = clips
                 });
             }
             JArray swimmingCues = new JArray();

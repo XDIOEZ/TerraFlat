@@ -165,14 +165,31 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["inactive"] = Count(center, 1f);
             sample.gameObject.SetActive(true);
 
-            WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
-            result["wrapped"] = topology.IsWrapped;
-            if (!topology.IsWrapped) throw new InvalidOperationException("接缝查询回归需要正式循环地表世界。");
-            Vector2 seamOrigin = new(topology.Min.x + .25f, topology.Min.y + 1.5f);
-            Move(new Vector2(topology.Min.x + topology.Span.x - .25f, seamOrigin.y));
-            result["seamBoundary"] = Count(seamOrigin, .5f);
-            result["seamOutside"] = Count(seamOrigin, .49f);
-            result["seamDeduplicated"] = Count(seamOrigin, .75f);
+            if (!SaveDataMgr.Instance.TryGetActivePlanetData(out PlanetData activePlanet))
+            {
+                throw new InvalidOperationException("接缝查询回归缺少当前地表星球：" +
+                    $"活动场景={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}，" +
+                    $"执行场景={GameplayWorldRegistry.CurrentScene.name}，执行世界={GameplayWorldRegistry.ExecutionWorldKey}，" +
+                    $"存在执行上下文={GameplayWorldRegistry.HasExecutionContext}，玩家场景={player.gameObject.scene.name}，" +
+                    $"玩家存档世界={player.Data?.CurrentSceneName}。");
+            }
+            WorldTopologyMode originalTopology = activePlanet.TopologyMode;
+            try
+            {
+                // 陈列厅默认无限地表，仅在本次同步查询内启用真实循环拓扑并立即归还。
+                activePlanet.TopologyMode = WorldTopologyMode.Wrapped;
+                WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+                result["wrapped"] = topology.IsWrapped;
+                if (!topology.IsWrapped) throw new InvalidOperationException("接缝查询无法建立循环地表边界。");
+                Vector2 seamOrigin = new(topology.Min.x + .25f, topology.Min.y + 1.5f);
+                Move(new Vector2(topology.Min.x + topology.Span.x - .25f, seamOrigin.y));
+                result["seamBoundary"] = Count(seamOrigin, .5f);
+                result["seamOutside"] = Count(seamOrigin, .49f);
+                result["seamDeduplicated"] = Count(seamOrigin, .75f);
+            }
+            finally { activePlanet.TopologyMode = originalTopology; }
+            result["topologyRestored"] = activePlanet.TopologyMode == originalTopology &&
+                WorldTopologyRuntime.GetActiveDomain().IsWrapped == (originalTopology == WorldTopologyMode.Wrapped);
 
             // 同一正式大气查询预热后采样分配量，避免每个生物重复建立全量校验集合。
             string worldKey = player.gameObject.scene.name;
@@ -316,6 +333,13 @@ public static class GameplayTestItemPipelineRuntimeProbe
                 result["rendererPath"] = definition.RendererPath;
                 result["hasKnifeTag"] = definition.HasTag("Knife");
             }
+            // 直接采样实际实例与正式配方匹配，防止分类标签覆盖既有工具能力。
+            result["heldTags"] = JArray.FromObject(weapon.itemData.Tags ?? new List<string>());
+            result["heldPrimaryCategory"] = InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(weapon.itemData.Tags).Id;
+            result["heldMatchesKnifeIngredient"] = CraftingIngredientMatcher.MatchesIdentity(
+                new RuntimeRecipeIngredient { matchMode = MatchMode.ByTag, Tag = "Knife", amount = 0 }, weapon.itemData);
+            result["heldMatchesSpearIngredient"] = CraftingIngredientMatcher.MatchesIdentity(
+                new RuntimeRecipeIngredient { matchMode = MatchMode.ByTag, Tag = "Spear", amount = 0 }, weapon.itemData);
             result["held"] = State(weapon, player);
             result["animationRegistered"] = animation != null;
             result["animationLoaded"] = animation != null && animation.IsRuntimeLoaded;

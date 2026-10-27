@@ -64,10 +64,39 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
         assert(cue.loaded and cue.variants == 2 and cue.validClips and cue.spatial,
             cue.id .. " 没有正确导入双变体单声道空间 Cue")
     end
-    assert(#data.movementCues == 9, "未读取全部脚步与钓鱼反馈 Cue")
+    local movementCueKinds = {
+        ["player.footstep.dirt"] = "footstep", ["player.footstep.grass"] = "footstep",
+        ["player.footstep.sand"] = "footstep", ["player.footstep.stone"] = "footstep",
+        ["player.footstep.wood"] = "footstep", ["player.footstep.snow"] = "footstep",
+        ["player.footstep.water"] = "footstep", ["fishing.cast"] = "fishing",
+        ["fishing.hook"] = "fishing", ["fishing.reel"] = "fishing"
+    }
+    assert(#data.movementCues == 10, "未读取七种脚步和三种钓鱼反馈 Cue")
     for _, cue in ipairs(data.movementCues) do
-        assert(cue.loaded and cue.variants == cue.expectedVariants and cue.validClips and cue.spatial,
-            cue.id .. " 未正确导入 LMMS 音频或缺少声源限流")
+        local kind = movementCueKinds[cue.id]
+        assert(kind ~= nil, "脚步或钓鱼 Cue 重复或出现未知 ID：" .. tostring(cue.id))
+        movementCueKinds[cue.id] = nil
+        assert(cue.loaded and cue.playbackEnabled and cue.bus == "Sfx" and not cue.loop
+            and cue.spatialBlend == 1 and cue.rolloff == "Linear"
+            and cue.minDistance == 1.5 and cue.maxDistance == 14,
+            cue.id .. " 没有使用启用的单次世界音效和正确空间衰减")
+        if kind == "footstep" then
+            assert(#cue.clips == 8 and cue.cooldown == 0 and cue.maxInstances == 16
+                and cue.selection == 0 and cue.noRepeatHistory == 3,
+                cue.id .. " 的八变体、独立步距限流或最近三声不重复配置错误")
+        else
+            assert(#cue.clips == 2 and cue.cooldown > 0 and cue.maxInstances == 3
+                and cue.selection == 0 and cue.noRepeatHistory == 1,
+                cue.id .. " 的双变体或单次播放限流配置错误")
+        end
+        local clipIds = {}
+        for _, clip in ipairs(cue.clips) do
+            assert(clip.loaded and clip.instanceId ~= 0 and not clipIds[clip.instanceId]
+                and clip.channels == 1 and clip.frequency == 48000 and clip.samples > 0
+                and clip.preload and clip.audioDataLoaded,
+                cue.id .. " 缺少不同的已预加载 48kHz 单声道录音")
+            clipIds[clip.instanceId] = true
+        end
     end
     assert(#data.swimmingCues == 3, "未读取全部入水、划水和出水 Cue")
     local swimmingIds = { ["player.swim.enter"] = true, ["player.swim.stroke"] = true, ["player.swim.exit"] = true }

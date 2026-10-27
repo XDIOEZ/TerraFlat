@@ -15,6 +15,15 @@ test.runtime("industrial_fluids", "pump", {}, function(d)
     assert(math.abs(d.sourceTaken-d.full)<.000001, "气泵未扣真实气源")
     assert(math.abs(d.oxygen/d.nitrogen-21/79)<.000001, "气泵把空气改成单气体")
 end, "动力气泵充满固定容量、混气与守恒")
+test.runtime("industrial_fluids", "atmosphere_quantized_source", {}, function(d)
+    assert(d.requestWasNonQuantized and d.drawn == d.expectedDrawn,
+        "非量子请求没有先按大气量子截取总抽取量")
+    assert(d.batchCount == 2 and d.oxygenDrawn > 0 and d.nitrogenDrawn > 0 and d.batchesQuantized,
+        "实际混合气批次缺组分或仍含非量子摩尔量")
+    assert(d.validAfter, "抽取后星球大气不能通过正式 Validate")
+    assert(d.conserved and math.abs(d.remaining + d.drawn - 100) < .000000001,
+        "抽取批次与剩余大气的总摩尔量不守恒")
+end, "气泵非量子请求按最小大气单位抽取并守恒")
 test.runtime("industrial_fluids", "surface_pump", {}, function(d)
     assert(d.unpoweredLevel==100, "无电水泵扣了地表水")
     assert(d.stepsPerBatch > 1 and d.beforeBatchLevel == 100 and d.beforeBatchLiters == 0,

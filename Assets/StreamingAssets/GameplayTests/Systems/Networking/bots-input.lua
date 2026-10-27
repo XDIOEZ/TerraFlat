@@ -64,6 +64,7 @@ test.runtime("networking", "bots_teleport", {}, function(data)
     local function assert_position(sample, x, y, label)
         assert(near(sample.x, x) and near(sample.y, y), label .. "服务器位置错误")
         assert(near(sample.bodyX, x) and near(sample.bodyY, y), label .. "角色本体没有同步落点")
+        assert(near(sample.physicsX, x) and near(sample.physicsY, y), label .. "角色刚体没有同步落点")
         assert(near(sample.savedX, x) and near(sample.savedY, y), label .. "角色数据仍是旧位置")
         assert(near(sample.observerX, x) and near(sample.observerY, y), label .. "区块观察者仍是旧位置")
     end

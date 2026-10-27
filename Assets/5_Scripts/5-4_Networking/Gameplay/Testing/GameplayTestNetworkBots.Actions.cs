@@ -283,7 +283,7 @@ namespace FlatWorld.Networking.Gameplay
             writer.WriteVector2(velocity);
             writer.WriteBool(false);
             writer.Write(new NetworkPlayerVisualState { IsMoving = velocity.sqrMagnitude > 0f });
-            writer.WriteUInt(actor.RealmRevision);
+            writer.WriteVarUInt(actor.RealmRevision);
             return world.Transport.Receive(botId, new CommandMessage
             {
                 netId = actor.netId, componentIndex = actor.ComponentIndex,

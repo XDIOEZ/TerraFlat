@@ -38,9 +38,17 @@ namespace FlatWorld.Spaceflight
             SetTerrainSuppression(player, false);
             player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
             State.Passengers.RemoveAll(value => value.ProfileId == player.ProfileName);
-            // 迁移前仍会刷新视图，保留中立记录可防止被重新识别成太空漂浮乘员。
-            State.Passengers.Add(new SpacePassengerState { ProfileId = player.ProfileName, LandingResolved = true,
-                RealmRevision = previous?.RealmRevision ?? 0 });
+            string world = player.Data?.CurrentSceneName;
+            Vector2 position = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
+            // 中立乘员仍保留地表归属和位置，避免后续联机保存覆盖玩家世界。
+            State.Passengers.Add(new SpacePassengerState
+            {
+                ProfileId = player.ProfileName, LandingResolved = true,
+                RealmRevision = previous?.RealmRevision ?? 0,
+                LandingWorldKey = SpaceMgr.IsSpaceScene(world) ? null : world,
+                LandingX = position.x, LandingY = position.y,
+                FreeMotion = new SpaceMotionState { PositionMeters = SpaceVector2.FromVector2(position) }
+            });
         }
 
         private IEnumerator FinishRespawnTransition(SpaceSessionState sessionState, string profileId,

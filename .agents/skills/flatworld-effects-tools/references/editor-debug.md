@@ -7,6 +7,7 @@
 - 先读根共享说明（instructionsFile 用 `../`；模板在 PuerTS 包根 ProfilerAnalysisGuide.md）。schema 4 additionalFiles 关联现场，保留 Top100、完整线程树、附近帧耗时、>50ms最慢3帧树与 Registry 累计快照。改导出结构同步模板。
 - `WorldSceneSnapshotExporter` 只读已加载 GO/自然ECS/掉落/机器/可选ECS居民与剩余生成基线，以 GUID 合并实体、dataRef 索引库存；不触发保存/扩展回调，二进制模块保留 Base64。现场/累计/日志/截图属于本地导出时刻，不能当作历史选中帧或远程 Player；非PlayMode明确不可用，不改Play/Pause/录制或主动刷新资源。
 - 性能点用 Utilities 的 `PerformanceDebugPoint/Registry`，GM「设备数据」按需开统计/慢摘要/阈值。固定 Marker、struct 不跨 yield；后台只记有界数字，主线程合并日志。单位与 Total/Self 见 [点位说明](../../../../开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md)。
+- PlayMode Lua 可用 `test.profiler_start` 与 `test.profiler_stop` 在动作前后复用同一采集和导出；按需指定 Marker 选择最近命中帧，报告步骤记录 JSON 路径。选中帧不代表完整时段，普通采样也不覆盖所有 C# 方法。
 - MCP 录制入口 `gameplay(operation=profiler, arguments={action:"start",seconds:10})` 非阻塞、自动导出；status/stop/cancel/export 见 [GamePlayMCP](../../flatworld-gameplay-mcp/SKILL.md)。`GameplayProfilerTool` 恢复原开关，与菜单共用 ExportFrame/pending 发布，不依赖弹窗/剪贴板；帧摘要仅本轮有效保留帧，累计统计附起始快照。
 
 ## 编辑器与运行工具

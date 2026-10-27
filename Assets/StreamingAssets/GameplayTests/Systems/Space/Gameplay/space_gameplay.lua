@@ -356,7 +356,15 @@ for _, value in ipairs({"right"}) do
                 "跨区丢失统一时间或采光登记：" .. direction)
             assert(math.abs(state.lighting - state.clockLighting) < 0.001, "跨区光照改变了时钟来源：" .. direction)
         end
-        assert(data.before.realmRevision == data.crossed.realmRevision and data.crossed.realmRevision == data.settled.realmRevision, "普通星区过渡错误地改变维度版本")
+        for _, state in ipairs({data.before, data.crossed, data.settled, data.returned}) do
+            assert(state.observerReady and state.observerInSpace and state.observerWorldKey == state.scene and
+                state.observerRealmRevision == state.realmRevision, "跨区网络观察者没有同步当前星区和版本")
+        end
+        local nextRevision = function(value) return (value + 1) % 4294967296 end
+        assert(data.crossed.realmRevision == nextRevision(data.before.realmRevision) and
+            data.settled.realmRevision == data.crossed.realmRevision and
+            data.returned.realmRevision == nextRevision(data.crossed.realmRevision),
+            "星区跨界、保持和折返没有正确更新世界归属版本")
         assert(not data.crossed.dimensionTransitioning and not data.returned.dimensionTransitioning, "普通星区跨界触发了维度加载")
         assert(data.returned.seconds > data.before.seconds, "过渡期间宇宙时钟没有继续推进")
         return direction .. "：真实越界、双侧场景、租约清退、玩家连续性与折返"
@@ -392,11 +400,13 @@ test.space("ore_asteroid_drops", function(data)
         data.beforeDropCount == data.afterPartialDrops, "非致命攻击没有只扣血，或提前掉矿")
     assert(data.lethalApplied == data.afterPartial and data.health == 0 and data.depleted,
         "正式小行星击碎没有提交耗尽状态")
-    local amounts, ids = {}, {}
+    local amounts, ids, dropsById, dropItems = {}, {}, {}, {}
     for _, drop in ipairs(data.drops) do
         assert(not ids[drop.guid] and drop.guid ~= 0 and drop.amount > 0 and drop.pickupAllowed and
             drop.inSpace and not drop.earlyPickup, "真实冷载荷缺失独立身份、数量或拾取冷却")
+        assert(not dropsById[drop.id] and not dropItems[drop.itemId], "小行星掉落身份或种类重复，无法核对各堆库存")
         ids[drop.guid] = true
+        dropsById[drop.id], dropItems[drop.itemId] = drop, true
         amounts[drop.itemId] = (amounts[drop.itemId] or 0) + drop.amount
     end
     assert(amounts[data.compositionItem] == data.oreAmount and (amounts.Ore_Stone or 0) == data.stoneAmount,
@@ -404,6 +414,37 @@ test.space("ore_asteroid_drops", function(data)
     assert(data.repeatedApplied == 0 and data.beforeRepeatedDrops == data.afterRepeatedDrops and data.savedDepleted and
         data.savedHealth == 0 and data.savedSector and data.generatedCount == data.afterReentry,
         "重复攻击、保存恢复或星区重入重新产矿")
+    assert(#data.pickupResults == #data.drops, "没有逐堆记录真实拾取结果")
+    local pickupIds = {}
+    local function sum_inventory_slots(slots)
+        local amount = 0
+        for _, slot in ipairs(slots) do
+            assert(slot.inventoryIndex >= 0 and slot.slotIndex >= 0 and slot.amount > 0,
+                "拾取目标库存或槽位采样无效")
+            amount = amount + slot.amount
+        end
+        return amount
+    end
+    for _, pickup in ipairs(data.pickupResults) do
+        local drop = dropsById[pickup.id]
+        assert(drop and not pickupIds[pickup.id] and pickup.itemId == drop.itemId and pickup.removedFromSpace,
+            "拾取结果没有对应真实掉落，或掉落仍留在太空")
+        pickupIds[pickup.id] = true
+        assert(pickup.alreadyPicked ~= pickup.approached, "逐堆接近与提前拾取的记录冲突")
+        if pickup.approached then
+            assert(pickup.distanceBeforeApproach >= 0 and pickup.distanceAfterApproach >= 0,
+                "缺少接近前后真实距离")
+            if pickup.presentAtArrival then
+                assert(pickup.distanceAfterApproach <= 1, "接近后玩家没有到真实掉落附近")
+            end
+        end
+        assert(pickup.inventoryBeforeDamage == sum_inventory_slots(pickup.inventorySlotsBeforeDamage) and
+            pickup.inventoryAfterPickup == sum_inventory_slots(pickup.inventorySlotsAfterPickup) and
+            pickup.inventoryGain == drop.amount and
+            pickup.inventoryAfterPickup - pickup.inventoryBeforeDamage == drop.amount and
+            pickup.inventoryGainDuringApproach == pickup.inventoryAfterPickup - pickup.inventoryBeforeApproach,
+            "真实掉落的数量没有完整进入玩家拾取器的具体库存槽位")
+    end
     assert(data.allDropsRemoved and data.oreInventoryGain == data.oreAmount and data.stoneInventoryGain == data.stoneAmount,
         "真实掉矿没有完整经玩家拾取器进入实际库存")
     return "正式小行星扣血、击碎、冷载荷解码和真实玩家拾取；武器几何未覆盖"

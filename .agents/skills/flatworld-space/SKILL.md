@@ -36,6 +36,7 @@ description: "FlatWorld 太空会话、星区物理、船体航行/起降、对�
 - 客户端只提交模板/控制台身份。测试船、补给、点火及船控操作均走正式权威事务；服务器按连接绑定玩家/世界校验位置、占地与资源，客户端等待正式回执再更新 UI。
 - 点火 `ToggleIgnition(..., out reason)` 与 `RequestToggleIgnition` 传真实原因；超重含当前质量和可支撑质量。驾驶/退出/导航/降落/对接/目标气压走 `RequestShipOperation`，失败回原面板；对接区分等待双方与已连通，不能发包即成功或统一改成距离/缺电提示。
 - 结构事务调用 `NotifyStructureChanged`：支撑、舱室、对接与几何以 StructureRevision 失效。Ships/Flights/Devices 的 `SpaceStateCollection` 权威版本与 ID 索引同步维护，加入前确定身份，恢复/卸载释放索引；只读乘员查询用 `FindPassenger`，不触发补建。
+- 太空传送替换乘员状态时保留 `RealmRevision`；跨星区后正式观察者随世界身份递增版本，区内保持稳定。重置地表乘员须保留当前世界和位置，供联机观察与保存使用。现场回归 `space_gameplay`、`presentation_cache`。
 - 太空电梯见 `SpaceSession.Elevators` / `SpaceElevatorState`：地面放置使用星球正式赤道地理带，地表 X 映射星球画面的倾斜赤道位置；站台锚点随星球平移、保持自身位置与朝向。两端独立仓库复用正式库存插槽，打包后货物归在途库存，到站自动入目的仓库；满仓余货保留在目的端接收缓冲，`CargoDestination` 独立于客运方向，待入库不阻断召回/乘坐，新批货待余货清空再发。快速回归 `Systems/Space/elevator_rules.lua`。
 
 ## 内容与回归入口

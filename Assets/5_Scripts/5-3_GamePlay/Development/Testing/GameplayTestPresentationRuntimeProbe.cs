@@ -24,9 +24,36 @@ public static partial class GameplayTestPresentationRuntimeProbe
     {
         GameplayTestRuntimeProbe.RegisterAsync("ui_settings", "settings_locale_open", CaptureSettings);
         GameplayTestRuntimeProbe.Register("ui_settings", "settings_locale_close", CloseSettings);
+        GameplayTestRuntimeProbe.Register("ui_settings", "status_hud_readability", CaptureStatusHudReadability);
         GameplayTestRuntimeProbe.RegisterAsync("audio", "voice_lifecycle", CaptureAudio);
         GameplayTestRuntimeProbe.RegisterAsync("rendering", "player_external_effects", CaptureRendering);
         GameplayTestRuntimeProbe.Register("rendering", "combat_effect_prewarm", CaptureCombatEffectPrewarm);
+    }
+    #endregion
+
+    #region 生存状态条现场采样
+    private static JObject CaptureStatusHudReadability(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        BasePanel panel = UnityEngine.Object.FindObjectsOfType<BasePanel>()
+            .FirstOrDefault(candidate => candidate != null &&
+                (candidate.name == "UI_Food" || candidate.name == "UI_Food(Clone)"));
+        if (panel == null) throw new InvalidOperationException("没有找到本地玩家的生存状态面板。");
+        UnityEngine.UI.Slider[] sliders = panel.GetComponentsInChildren<UnityEngine.UI.Slider>(true);
+        var bars = new JArray();
+        foreach (string name in new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" })
+        {
+            UnityEngine.UI.Slider slider = Array.Find(sliders, value => value != null && value.name == name);
+            UnityEngine.UI.Graphic fill = slider != null && slider.fillRect != null ? slider.fillRect.GetComponent<UnityEngine.UI.Graphic>() : null;
+            panel.TryGetText("DataText_" + name, out TextMeshProUGUI text);
+            Color fillColor = fill != null ? fill.color : Color.clear;
+            Color textColor = text != null ? text.color : Color.clear;
+            bars.Add(new JObject { ["name"] = name,
+                ["visible"] = slider != null && slider.gameObject.activeInHierarchy && fill != null && text != null && text.gameObject.activeInHierarchy,
+                ["fill"] = new JArray(fillColor.r, fillColor.g, fillColor.b, fillColor.a),
+                ["text"] = new JArray(textColor.r, textColor.g, textColor.b, textColor.a) });
+        }
+        return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars };
     }
     #endregion
 

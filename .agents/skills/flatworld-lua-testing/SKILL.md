@@ -46,6 +46,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - `gameplay` 清单若跨 Lua 依赖前置现场，在案例上声明 `dependsOn`（只引用更早且启用的用例）；多选/单选自动补齐前置，不能依赖列表相邻的隐含状态。
 - 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；不要用固定 `test.wait` 代替实际结果断言。
 - 高耦合系统共用一份现场清单（AI/导航、地形/生态、任务/事件/对话/引导、UI/本地化、物品/MOD Lua/网络副本），在各系统 `integrationSuites` 指向同一路径；总入口按案例 ID 去重，不复制清单。
+- 需要观察真实动作的调用时，在动作前后排 `test.profiler_start` / `test.profiler_stop`，详见 [Lua 接口与性能采集](../../../Assets/StreamingAssets/GameplayTests/README.md#lua-编写接口)；默认导出最慢保留帧，也可指定 Marker 找最近命中帧。调用树仅是选中帧，不等于整个采集区间或全部 C# 方法。
 - 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同档案、同 Data_Player 的隔离角色。
 - 新主题更新本系统清单和README后运行 `python Tools/GameplayTesting/sync_catalog.py` 同步总清单与映射；新系统登记sourcePaths/dependsOn。Lua组合无需编译，新增C#操作仍需编译。
 - `--systems` 精确选择；`--changed` 根据源码归属包含使用它的系统，未登记路径报错，测试框架改动选全部规则。影响实际链路再加 `--integration`，现场子集一次建世界。没有现场入口返回4；已有入口也须检查README中的缺口。
@@ -81,6 +82,7 @@ python Tools/GameplayTesting/run_suite.py --list-systems
 - 一份 Lua 一个沙箱与控制租约，世界、背包和玩家位置通常延续；前置条件自行准备。隔离保存租约覆盖首次、自动和退出保存，退出写盘并返回菜单后才恢复正式存档目录，不写正式玩家档案。
 - 太空迁移恢复会重建玩家；宿主的`player_ready`按本轮同档案和隔离存档边界重绑ItemMgr当前本地玩家。下一条玩法命令前恢复现场，再显式检查world/player，保证后续Lua不因旧对象引用被跳过。
 - 失败先看首个失败步骤、原始采样及堆栈，再修复并重跑相关范围；用户要求循环时逐轮推进，不以删除、禁用或放宽断言换取通过。未执行、环境阻塞和视觉/联机未验收应如实区分。
+- 跨帧、太空或同步现场清理失败后，后续案例统一标为 skipped 并注明来源，不在可能受污染的世界中继续执行。
 - 编辑态 UI 夹具用临时 ExecuteAlways 子类实际登记 EventSystem/Raycaster，清理时仅恢复存活的原事件系统；下拉模板必须先激活再调用布局入口，否则 LayoutUtility 会忽略隐藏行的首选高度，产生并非正式展开行为的假失败。
 - 现场 UI 夹具手动添加 `UIWindowDragSurface` 等 `MaskableGraphic` 时须同时挂 `CanvasRenderer`；`RectMask2D` 会实际裁剪，不能用只有 `RectTransform` 的裸节点代替。
 - 空地夹具按 ChunkTerrainData.GrassPresent 判断有草；GrassEmpty 为 1，不能把非零全部当作有草。冷生成等同步长步骤计入整场超时；应按预算拆分专项现场，记录未执行案例，不能把超时后的跳过计作通过。

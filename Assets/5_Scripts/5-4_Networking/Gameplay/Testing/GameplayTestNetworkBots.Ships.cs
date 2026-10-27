@@ -86,9 +86,13 @@ namespace FlatWorld.Networking.Gameplay
             result["createdBuildings"] = entries.Count;
             ShipGroundBuildingStore.Entry console = entries.FirstOrDefault(value => Mod_ShipPart.Read(value.Data)?.Kind == ShipPieceKind.Console);
             if (console?.Machine == null) throw new InvalidOperationException("联机生成的真实地面船缺少机器控制台。");
-            SendBotTeleport(world, 94, actor, 1, console.Data.transform.position);
+            bool consoleTeleportSent = SendBotTeleport(world, 94, actor, 1, console.Data.transform.position);
+            string consoleTeleportImmediately = DescribeBotCommandAuthority(world, 94, actor, TeleportCommandName, "lastServerTeleportRequest");
             yield return Wait(() => ShipGroundAssembly.TryGetGroundConsole(actor.CorePlayer, console.Guid, out MachineEntity node) &&
-                node.ElectricalPowerRatio >= .999f, "正式联机角色靠近并给控制台供电", 15d);
+                node.ElectricalPowerRatio >= .999f, "正式联机角色靠近并给控制台供电", 15d, () =>
+                    $"已发包={consoleTeleportSent}，控制台={console.Data.transform.position}，电力比例={console.Machine.ElectricalPowerRatio}，" +
+                    $"发送时：{consoleTeleportImmediately}；当前：" +
+                    DescribeBotCommandAuthority(world, 94, actor, TeleportCommandName, "lastServerTeleportRequest"));
             actor.TryGetSpaceObserver(out observer);
             request.Token = 5; request.Refill = true; request.TemplateId = string.Empty;
             request.RealmRevision = observer.RealmRevision; request.WorldKey = observer.WorldKey;

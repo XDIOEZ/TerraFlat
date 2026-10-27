@@ -21,8 +21,6 @@ public static class GameplayTestGm
             case "mechanical_clutch_off":
             case "mechanical_clutch_on":
             case "mechanical_clear":
-            case "mechanical_probe_high":
-            case "mechanical_probe_low":
             case "mechanical_conveyor_drop":
             case "mechanical_diagnose":
             case "mechanical_stone_disconnect":

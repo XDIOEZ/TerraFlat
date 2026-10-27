@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Collections;
+using System.Reflection;
 using Mirror;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -29,17 +30,17 @@ namespace FlatWorld.Networking.Gameplay
             uint request, Vector2 direction, byte[] baseline, uint? realm = null)
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
-            writer.WriteUInt(request);
+            writer.WriteVarUInt(request);
             writer.WriteVector2(direction);
             writer.WriteBytesAndSize(baseline);
-            writer.WriteUInt(realm ?? actor.RealmRevision);
+            writer.WriteVarUInt(realm ?? actor.RealmRevision);
             return SendRollCommandBytes(world, actor, botId, RollCommandName, writer);
         }
 
         private static bool SendRollStaminaAck(BotWorld world, NetworkWorldPlayer actor, int botId, uint request, float remaining)
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
-            writer.WriteUInt(request);
+            writer.WriteVarUInt(request);
             writer.WriteFloat(remaining);
             return SendRollCommandBytes(world, actor, botId, RollStaminaAckCommandName, writer);
         }
@@ -48,7 +49,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
             writer.WriteBytesAndSize(payload);
-            writer.WriteUInt(actor.RealmRevision);
+            writer.WriteVarUInt(actor.RealmRevision);
             return SendRollCommandBytes(world, actor, botId, ItemStateCommandName, writer);
         }
 
@@ -77,6 +78,9 @@ namespace FlatWorld.Networking.Gameplay
             stamina.CurrentValue = stamina.MaxValue;
             stamina.modData.WriteData(stamina.Data);
             byte[] beforeRoll = ItemNetworkStateSerialization.Capture(player, true);
+            bool baselineReadable = ItemNetworkStateSerialization.TryDeserializeItemData(beforeRoll, out ItemData baselineData);
+            bool baselineIdentity = baselineData is Data_Player && baselineData.Guid == player.itemData.Guid &&
+                baselineData.IDName == player.itemData.IDName;
             float before = stamina.CurrentValue, hpBefore = health.Hp;
             RigidbodyType2D originalBodyType = body.bodyType;
             bool originalSimulation = body.simulated, originalMoveLock = mover.IsLock;
@@ -88,8 +92,16 @@ namespace FlatWorld.Networking.Gameplay
             result["oldRealmRejected"] = !roll.IsRolling && stamina.CurrentValue == before &&
                 !health.IsTemporarilyInvulnerable;
 
-            SendRollCommand(world, actor, botId, 1, Vector2.right, beforeRoll);
-            yield return Wait(() => roll.IsRolling, "正式请求启动服务器翻滚", 2d);
+            bool rollSent = SendRollCommand(world, actor, botId, 1, Vector2.right, beforeRoll);
+            bool canStartImmediately = (bool)typeof(Mod_Roll).GetMethod("CanStartRoll", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(roll, null);
+            string rollImmediately = DescribeBotCommandAuthority(world, botId, actor, RollCommandName, "lastServerRollRequestId");
+            yield return Wait(() => roll.IsRolling, "正式请求启动服务器翻滚", 2d, () =>
+                $"已发包={rollSent}，发送时允许启动={canStartImmediately}，启用={roll.Enabled}，组件活动={roll.isActiveAndEnabled}，" +
+                $"模块加载={roll.IsRuntimeLoaded}，体力={stamina.CurrentValue}/{stamina.MaxValue}，生命={health.Hp}，" +
+                $"地表移动可用={mover.IsSurfaceMotionContextAvailable}，基线可读={baselineReadable}，基线身份匹配={baselineIdentity}，" +
+                $"基线类型={baselineData?.GetType().Name}，基线物品={baselineData?.IDName}，角色物品={player.itemData.IDName}，" +
+                $"发送时：{rollImmediately}；当前：" +
+                DescribeBotCommandAuthority(world, botId, actor, RollCommandName, "lastServerRollRequestId"));
             result["started"] = roll.IsRolling;
             result["invulnerable"] = health.IsTemporarilyInvulnerable;
             result["paidStamina"] = stamina.CurrentValue;
@@ -132,8 +144,11 @@ namespace FlatWorld.Networking.Gameplay
             actor.enabled = false;
             actor.enabled = true;
             yield return null;
+            // 扣费后正常恢复可能跨帧推进，记录旧包发出前的真实权威体力。
+            result["rebindBeforeStaleSnapshot"] = stamina.CurrentValue;
             SendRollItemState(world, actor, botId, nextBaseline);
             result["rebindProtectedStamina"] = stamina.modData.GetData<Mod_Stamina.StaminaData>().CurrentStamina;
+            result["rebindRuntimeStamina"] = stamina.CurrentValue;
             result["rebindInvulnerabilityCleared"] = !health.IsTemporarilyInvulnerable;
             SendRollStaminaAck(world, actor, botId, 4, secondPaid);
             world.Transport.ServerDisconnect(botId);

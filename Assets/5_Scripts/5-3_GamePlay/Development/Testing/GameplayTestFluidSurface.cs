@@ -329,7 +329,9 @@ internal static class GameplayTestFluidSurface
         using var f=new GameplayFluidScope(surface:true);using var cell=new LiquidCell(f.SurfacePoint(2));
         cell.Set(0);var tank=f.Add("LiquidStorageTank");var outlet=f.Add("LiquidOutlet",1);
         var water=FluidCatalog.Default.Find("core:dirty_water");var stock=GetFluidInventory(tank);
-        stock.TryAdd(FluidInventory.CreateBatch(water,0,FluidUnits.LiquidLitersToMol(water,25),293.15),201,.001);
+        Require(stock.TryAdd(FluidInventory.CreateBatch(water,0,FluidUnits.LiquidLitersToMol(water,25),293.15),201,.001),
+            "出口回归初始装料");
+        double initialLiters = stock.GetLiquidLiters();
         GetFluidDeviceBehavior(outlet).Execute(outlet,"fluid.rate","0");f.Step();int stopped=cell.Level;
         GetFluidDeviceBehavior(outlet).Execute(outlet,"fluid.rate","2");
         int steps = (int)Math.Ceiling(10d / (2d * f.Seconds) - .000001d);
@@ -343,16 +345,27 @@ internal static class GameplayTestFluidSurface
         Require(stock.TryAdd(FluidInventory.CreateBatch(water, 0m,
             FluidUnits.LiquidLitersToMol(water, 25m), 293.15), 201d, .001d), "末格容量边界装料");
         cell.Set(99);
+        int singleFreeInitialLevel = cell.Level;
         GetFluidState(outlet).WorldLiquidOutputLiters.Clear();
         double singleFreeBefore = stock.GetLiquidLiters();
-        GetFluidDeviceBehavior(outlet).Execute(outlet, "fluid.rate",
-            (20d / f.Seconds).ToString("R", System.Globalization.CultureInfo.InvariantCulture));
-        f.Step();
+        // 仅提高测试储罐的路径流量，确保本步确实有二十升预算。
+        tank.Definition.Fluid.ThroughputLitersPerSecond = 20d / f.Seconds;
+        Require(GetFluidDeviceBehavior(outlet).Execute(outlet, "fluid.rate",
+            (20d / f.Seconds).ToString("R", System.Globalization.CultureInfo.InvariantCulture)),
+            "设置末格容量边界的出口速率");
+        f.Begin();
+        var routes = new FluidNetworkGraph.SupplyWorkspace();
+        CollectFluidSupplyRoutes(outlet, "main", FluidPhase.Liquid, new[] { water.Id }, routes);
+        int sourceIndex = routes.Nodes.FindIndex(candidate => candidate.Node == tank);
+        Require(sourceIndex > 0, "末格容量边界的实际来源路径");
+        double singleFreeBudgetLiters = GetFluidSupplyStandardLiters(routes, sourceIndex, f.Seconds, true);
+        f.Complete();
         return new JObject { ["stoppedLevel"]=stopped,["emittedLevel"]=emitted,["sourceAfter"]=after,
             ["partialLevel"] = partialLevel, ["partialSource"] = partialSource, ["litersPerUnit"] = LiquidCellValue.LitersPerUnit,
-            ["singleFreeBudgetLiters"] = 20d, ["singleFreeInitialLevel"] = 99, ["singleFreeFinalLevel"] = cell.Level,
+            ["singleFreeBudgetLiters"] = singleFreeBudgetLiters, ["singleFreeInitialLevel"] = singleFreeInitialLevel,
+            ["singleFreeFinalLevel"] = cell.Level,
             ["singleFreeSourceBefore"] = singleFreeBefore, ["singleFreeSourceAfter"] = stock.GetLiquidLiters(),
-            ["initialLiters"]=25,["fullSourceBefore"]=beforeFull,["fullSourceAfter"]=afterFull,["seconds"]=f.Seconds };
+            ["initialLiters"]=initialLiters,["fullSourceBefore"]=beforeFull,["fullSourceAfter"]=afterFull,["seconds"]=f.Seconds };
     }
     #endregion
 }

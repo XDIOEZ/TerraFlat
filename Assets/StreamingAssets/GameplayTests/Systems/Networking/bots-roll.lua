@@ -16,7 +16,10 @@ test.runtime("networking", "bots_roll", {}, function(data)
     assert(data.physicalOwnershipUnchanged, "服务器翻滚改变远端移动锁或物理模拟归属")
     assert(data.nonFiniteRejected and data.emptyStaminaRejected, "非法方向或体力不足时仍发动翻滚")
     assert(data.secondStarted and data.secondPaidStamina < data.paidStamina, "上一轮结束后无法立即翻滚或未再次扣费")
-    assert(data.rebindProtectedStamina == data.secondPaidStamina and data.rebindInvulnerabilityCleared,
+    assert(data.rebindBeforeStaleSnapshot >= data.secondPaidStamina and
+        data.rebindBeforeStaleSnapshot < data.paidStamina and
+        data.rebindProtectedStamina == data.rebindBeforeStaleSnapshot and
+        data.rebindRuntimeStamina == data.rebindBeforeStaleSnapshot and data.rebindInvulnerabilityCleared,
         "动作组件解绑丢失扣费保护，或遗留临时无敌")
     assert(data.disconnectedRuntimeRemoved, "翻滚中断线遗留远端玩家运行实例")
     local c = data.cleanup

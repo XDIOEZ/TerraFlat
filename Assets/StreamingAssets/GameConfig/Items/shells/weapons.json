@@ -975,7 +975,7 @@
     },
     {
       "id": "ChippedTool",
-      "tags": ["InventoryCategory.Tool"],
+      "tags": ["Knife", "Modern", "InventoryCategory.Tool"],
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab",
       "shellPrefab": "ChippedTool",
       "gameName": "打制石器",

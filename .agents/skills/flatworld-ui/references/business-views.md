@@ -31,6 +31,7 @@
 - `ShipGroundAssembly.RequestLaunch` 统一权威点火请求；机器删除至船快照到达期间保控制台，服务端成功与同次船体/乘员状态齐后才切船控/反馈。GM生成/补给走ShipFixedStructureBuilder.RequestBuild/RequestRefill，发包成功不等于业务成功。
 - PlayerShipFlightHUD读SpaceSession只读快照/正式落地凭证，UI_ShipFlightHUD与构建器同步；Tracker管驾驶/退出/重进/完成短提示，正高度不舍入零，安全区内避坐标/Buff/真实摇杆。
 - PlayerWorldCoordinateHUD地表读WorldLocalPresentation逻辑坐标，太空读乘员双精度宇宙位置（支撑船姿态+本地位置或FreeMotion），公里/米精度不随ViewOrigin变化；坐标宽560，温压/季节独立。温度采样不依赖移动；气压按显示小数、安全等级与头盔密封状态复用文本，语言变更刷新翻译模板，规则 `ui_settings/pressure_hud_display_cache`；FoodUIModule仅本地档案玩家持HUD。
+- 生存状态 HUD 使用独立深灰填充和亮文字，运行时同步旧 Prefab；`ui_settings/status_hud_readability` 检查真实颜色，截图复核实际可读性。
 - PlayerBuffStatusHUD重建先清旧行，卸载撤绑定，不在Buff清理回调重建；安全区最多6行、溢出只视口滚动；图标同步读预载Sprite、缺图名称首字，底板/层数徽标独立。
 - `UI_Death` 动态标题由Mod_PlayerDeathState.DeathMessage消费DeathCauseRecord，经DeathMessageCatalog与GameConfig/Combat/death-messages.json组合；不编缺失来源，禁静态Binder、换语言保Variant，多行布局与BuildDeathScreen同步。MOD行拖动归共同父节点、来源为文件夹身份，跨页复用保来源，预览无射线、关闭取消。
 

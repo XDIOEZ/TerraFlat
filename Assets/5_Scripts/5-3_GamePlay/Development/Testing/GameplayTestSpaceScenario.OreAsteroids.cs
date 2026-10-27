@@ -44,10 +44,13 @@ public sealed partial class GameplayTestSpaceScenario
         double lethal = session.ApplyResolvedOreAsteroidDamage(asteroid, initialHealth * 2d);
         List<SpaceLooseItemState> drops = session.State.LooseItems.Where(value => !oldIds.Contains(value.Id)).ToList();
         var rows = new JArray();
+        var inventoryBeforeDamage = new Dictionary<string, JArray>(StringComparer.Ordinal);
         foreach (SpaceLooseItemState drop in drops)
         {
             oreFixtureDropIds.Add(drop.Id);
             ItemData item = SpaceSession.Decode(drop.Snapshot);
+            if (!inventoryBeforeDamage.ContainsKey(item.IDName))
+                inventoryBeforeDamage.Add(item.IDName, CaptureCurrentPickerInventoryItemSlots(item.IDName));
             rows.Add(new JObject { ["id"] = drop.Id, ["itemId"] = item.IDName,
                 ["guid"] = item.Guid, ["amount"] = item.Stack.Amount,
                 ["pickupAllowed"] = item.Stack.CanBePickedUp, ["inSpace"] = drop.InSpace,
@@ -63,12 +66,47 @@ public sealed partial class GameplayTestSpaceScenario
         session.GetUniverse(asteroid.Sector);
         int afterReentry = session.State.OreAsteroids.Count;
         if (drops.Count == 0) throw new InvalidOperationException("正式小行星致死没有提交任何真实冷载荷。");
-        SpaceLooseItemState oreDrop = drops.First(value => SpaceSession.Decode(value.Snapshot).IDName == composition.ItemId);
-        yield return Teleport(new SpaceMotionState { Sector = oreDrop.Motion.Sector,
-            PositionMeters = oreDrop.Motion.PositionMeters,
-            VelocityMetersPerSecond = oreDrop.Motion.VelocityMetersPerSecond, RadiusMeters = .3d });
-        yield return WaitUntil(() => drops.All(value => !session.State.LooseItems.Contains(value)), 20d,
-            "真实小行星掉矿没有被玩家自动拾取器完整放入库存。");
+        var pickupResults = new JArray();
+        for (int index = 0; index < drops.Count; index++)
+        {
+            SpaceLooseItemState drop = drops[index];
+            JObject dropRow = (JObject)rows[index];
+            string itemId = dropRow.Value<string>("itemId");
+            bool alreadyPicked = !session.State.LooseItems.Contains(drop);
+            float inventoryBeforeApproach = CountCurrentPickerInventoryItem(itemId);
+            double? distanceBeforeApproach = null, distanceAfterApproach = null;
+            bool presentAtArrival = false;
+            if (!alreadyPicked)
+            {
+                // 掉落各自漂移，逐堆接近其当前权威位置并保持正式拾取事务。
+                distanceBeforeApproach = DistanceFromPlayerToSpaceDrop(drop);
+                yield return Teleport(new SpaceMotionState { Sector = drop.Motion.Sector,
+                    PositionMeters = drop.Motion.PositionMeters,
+                    VelocityMetersPerSecond = drop.Motion.VelocityMetersPerSecond, RadiusMeters = .3d });
+                presentAtArrival = session.State.LooseItems.Contains(drop);
+                distanceAfterApproach = DistanceFromPlayerToSpaceDrop(drop);
+                yield return WaitUntil(() => !session.State.LooseItems.Contains(drop), 20d,
+                    "真实小行星掉矿没有被玩家自动拾取器完整放入库存。",
+                    () => DescribeOreAsteroidPickupFailure(drop, itemId, distanceBeforeApproach, distanceAfterApproach,
+                        inventoryBeforeApproach, inventoryBeforeDamage[itemId], pickupResults));
+            }
+            JArray beforeSlots = inventoryBeforeDamage[itemId];
+            JArray afterSlots = CaptureCurrentPickerInventoryItemSlots(itemId);
+            float beforeCount = SumCapturedPickerInventoryItemSlots(beforeSlots);
+            float afterCount = SumCapturedPickerInventoryItemSlots(afterSlots);
+            pickupResults.Add(new JObject
+            {
+                ["id"] = drop.Id, ["itemId"] = itemId, ["alreadyPicked"] = alreadyPicked,
+                ["approached"] = !alreadyPicked, ["presentAtArrival"] = presentAtArrival,
+                ["distanceBeforeApproach"] = distanceBeforeApproach, ["distanceAfterApproach"] = distanceAfterApproach,
+                ["removedFromSpace"] = !session.State.LooseItems.Contains(drop),
+                ["inventoryBeforeApproach"] = inventoryBeforeApproach,
+                ["inventoryBeforeDamage"] = beforeCount, ["inventoryAfterPickup"] = afterCount,
+                ["inventoryGainDuringApproach"] = afterCount - inventoryBeforeApproach,
+                ["inventoryGain"] = afterCount - beforeCount,
+                ["inventorySlotsBeforeDamage"] = beforeSlots.DeepClone(), ["inventorySlotsAfterPickup"] = afterSlots
+            });
+        }
         completed(new JObject
         {
             ["scope"] = "live-authoritative-asteroid-drops-and-player-pickup",
@@ -77,7 +115,7 @@ public sealed partial class GameplayTestSpaceScenario
             ["initialHealth"] = initialHealth, ["partialApplied"] = partial, ["afterPartial"] = afterPartial,
             ["beforeDropCount"] = beforeDropCount, ["afterPartialDrops"] = afterPartialDrops,
             ["lethalApplied"] = lethal, ["health"] = asteroid.HitPoints, ["depleted"] = asteroid.Depleted,
-            ["drops"] = rows, ["repeatedApplied"] = repeated,
+            ["drops"] = rows, ["pickupResults"] = pickupResults, ["repeatedApplied"] = repeated,
             ["beforeRepeatedDrops"] = beforeRepeated, ["afterRepeatedDrops"] = afterRepeated,
             ["savedDepleted"] = saved.Depleted, ["savedHealth"] = saved.HitPoints, ["savedSector"] = savedSector,
             ["generatedCount"] = generatedCount, ["afterReentry"] = afterReentry,
@@ -86,6 +124,70 @@ public sealed partial class GameplayTestSpaceScenario
             ["allDropsRemoved"] = drops.All(value => !session.State.LooseItems.Contains(value)),
             ["limitations"] = "正式会话结算、真实冷载荷和玩家库存拾取；不覆盖武器动画及命中几何。"
         });
+    }
+
+    private double DistanceFromPlayerToSpaceDrop(SpaceLooseItemState drop)
+    {
+        SpaceSectorPosition player = session.GetPassengerPosition(session.GetPassenger(CurrentPlayer()));
+        return SpaceSectorCoordinates.Difference(new SpaceSectorPosition(drop.Motion.Sector, drop.Motion.PositionMeters), player).Magnitude;
+    }
+
+    private JArray CaptureCurrentPickerInventoryItemSlots(string itemId)
+    {
+        Mod_ItemPicker picker = CurrentPlayer().itemMods.GetMod_ByID<Mod_ItemPicker>(ModText.Picker) ??
+            throw new InvalidOperationException("当前测试玩家缺少正式物品拾取器。");
+        var slots = new JArray();
+        var visited = new HashSet<Inventory_Data>();
+        for (int inventoryIndex = 0; inventoryIndex < picker.AddTargetInventories.Count; inventoryIndex++)
+        {
+            Inventory_Data inventory = picker.AddTargetInventories[inventoryIndex]?.GetDefaultTargetInventory()?.Data;
+            if (inventory == null || !visited.Add(inventory)) continue;
+            for (int slotIndex = 0; slotIndex < inventory.itemSlots.Count; slotIndex++)
+            {
+                ItemData item = inventory.itemSlots[slotIndex].itemData;
+                if (item?.IDName != itemId) continue;
+                slots.Add(new JObject { ["inventoryIndex"] = inventoryIndex, ["inventoryName"] = inventory.Name,
+                    ["slotIndex"] = slotIndex, ["guid"] = item.Guid, ["amount"] = item.Stack.Amount });
+            }
+        }
+        return slots;
+    }
+
+    private static float SumCapturedPickerInventoryItemSlots(JArray slots)
+        => slots.Sum(value => value.Value<float>("amount"));
+
+    private string DescribeOreAsteroidPickupFailure(SpaceLooseItemState drop, string itemId,
+        double? distanceBeforeApproach, double? distanceAfterApproach, float inventoryBeforeApproach,
+        JArray beforeSlots, JArray completedPickups)
+    {
+        Player player = CurrentPlayer();
+        SpacePassengerState passenger = session.GetPassenger(player);
+        Mod_ItemPicker picker = player.itemMods.GetMod_ByID<Mod_ItemPicker>(ModText.Picker);
+        Vector2 point = session.ProjectPosition(new SpaceSectorPosition(drop.Motion.Sector, drop.Motion.PositionMeters));
+        Bounds bounds = default;
+        bool hasBounds = picker != null && picker.TryGetDroppedPickupBounds(out bounds);
+        return new JObject
+        {
+            ["dropId"] = drop.Id, ["itemId"] = itemId, ["remaining"] = SpaceSession.Decode(drop.Snapshot).Stack.Amount,
+            ["dropWorld"] = drop.WorldKey, ["dropSector"] = drop.Motion.Sector.ToString(),
+            ["dropX"] = drop.Motion.PositionMeters.X, ["dropY"] = drop.Motion.PositionMeters.Y,
+            ["dropVelocityX"] = drop.Motion.VelocityMetersPerSecond.X, ["dropVelocityY"] = drop.Motion.VelocityMetersPerSecond.Y,
+            ["playerScene"] = player.gameObject.scene.name, ["activeScene"] = SceneManager.GetActiveScene().name,
+            ["executionWorld"] = GameplayWorldRegistry.ExecutionWorldKey, ["spaceView"] = session.IsSpaceView,
+            ["playerVelocityX"] = passenger.FreeMotion.VelocityMetersPerSecond.X,
+            ["playerVelocityY"] = passenger.FreeMotion.VelocityMetersPerSecond.Y,
+            ["distanceBeforeApproach"] = distanceBeforeApproach, ["distanceAfterApproach"] = distanceAfterApproach,
+            ["distance"] = DistanceFromPlayerToSpaceDrop(drop), ["projectedX"] = point.x, ["projectedY"] = point.y,
+            ["pickerFound"] = picker != null, ["pickerScene"] = picker != null ? picker.gameObject.scene.name : null,
+            ["pickerCanPickUp"] = picker != null && picker.CanPickUp, ["pickerHasBounds"] = hasBounds,
+            ["inPickerBounds"] = hasBounds && bounds.Contains(new Vector3(point.x, point.y, bounds.center.z)),
+            ["pickerCanReach"] = picker != null && picker.CanReachDroppedPoint(point),
+            ["pickupCooldownElapsed"] = drop.CanBePickedUpAt(session.State.SimulationSeconds),
+            ["inventoryBeforeApproach"] = inventoryBeforeApproach,
+            ["inventorySlotsBeforeDamage"] = beforeSlots.DeepClone(),
+            ["inventorySlotsNow"] = picker != null ? CaptureCurrentPickerInventoryItemSlots(itemId) : new JArray(),
+            ["completedPickups"] = completedPickups.DeepClone()
+        }.ToString(Formatting.None);
     }
 
     private float CountCurrentPickerInventoryItem(string itemId)

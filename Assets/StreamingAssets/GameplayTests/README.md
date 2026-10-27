@@ -141,8 +141,21 @@ end, "隔离存档写入和读回")
 | `test.space(operation,validator,label,argument)` | 原太空规则及真实会话 |
 | `test.move(x,y,seconds)` / `test.move_to(x,y,timeout,tolerance)` | 实际玩家移动/正式导航 |
 | `test.look_at(x,y)` / `test.interact()` / `test.select_hotbar(index)` / `test.use()` | 正式交互与手持入口，具体效果仍须断言 |
+| `test.profiler_start(seconds,label)` / `test.profiler_stop(marker,validator,label)` | Editor PlayMode 中开始录制，执行后续测试动作，再导出调用树；参数可省略 |
 | `test.wait(seconds)` | 真实时间等待，规则模式禁止 |
 | `test.await_check(name,timeout,label)` | 在真实世界轮询既有白名单检查，达标即结束，超时失败；规则模式禁止 |
+
+性能采集示例：
+
+```lua
+test.profiler_start(30, "开始采集")
+test.move(1, 0, 1)
+test.profiler_stop("FlatWorld.MonsterSpawner.Tick", function(data)
+    assert(data.selectedMarkerCalls > 0, "选中帧没有目标 Marker")
+end, "导出指定 Marker")
+```
+
+`profiler_start` 默认最长 120 秒，采集期间后续命令继续执行；`profiler_stop()` 默认导出本轮保留帧中最慢一帧，指定 Marker 时导出包含该 Marker 的最近一帧，找不到则失败。结果写入用例步骤 `profiler_sample`，含 `analysisPath`、`captureSessionPath`、`instructionsFile`、选帧/淘汰帧和调用次数；报告位于 `Logs/ProfileData/`。调用树只属于选中的一帧，附近帧有耗时摘要；普通 Profiler 只显示引擎及显式插桩的调用，不保证全部 C# 方法。采集不暂停游戏、不改变目标或 Deep Profile，结束、失败和中断恢复本用例持有的录制开关；Player 构建不支持该 Editor 导出。
 
 Lua 沙箱不开放 `CS`、`require`、文件或网络；单次编排/断言有100万条指令预算。每Lua最多256个展开步骤，单步等待/移动最多30秒，累计动作180秒。超过限制会拒绝或失败，不能靠无界循环等条件。
 

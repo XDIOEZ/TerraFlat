@@ -76,6 +76,13 @@ for _, weaponCase in ipairs({
         assert(data.reactivatedActionRequested and data.reactivatedAttackState, case.name .. "再次启用后无法正常攻击")
         assert(data.inactiveAnimatorWarning == false, case.name .. "停用时仍对失活 Animator 播放动画")
         if case.id == "ChippedTool" then
+            local tags = {}
+            for _, tag in ipairs(data.heldTags) do tags[tag] = true end
+            assert(tags.Knife and tags.Modern and tags["InventoryCategory.Tool"],
+                "打制石器实例丢失原有刀具标签或工具分类")
+            assert(data.heldPrimaryCategory == "tool", "打制石器分类标签未优先于刀具语义")
+            assert(data.heldMatchesKnifeIngredient and not data.heldMatchesSpearIngredient,
+                "打制石器实例未正确匹配刀具配方或错误匹配长矛配方")
             referenceWeapon = data
         elseif case.id == "Obsidian" then
             assert(referenceWeapon ~= nil, "缺少打制石器的真实参考采样")

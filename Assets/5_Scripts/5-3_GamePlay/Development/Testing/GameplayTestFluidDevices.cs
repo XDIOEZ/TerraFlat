@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using FlatWorld.Spaceflight;
 using Newtonsoft.Json.Linq;
 using static MachineWorld;
 
@@ -27,6 +29,45 @@ internal static class GameplayTestFluidDevices
             ["sourceTaken"]=(double)FluidUnits.MolToStandardLiters(initial-f.Atmosphere.CurrentMoles),
             ["oxygen"]=(double)FluidUnits.MolToStandardLiters(GetFluidInventory(tank).GetGasMoles(FluidIds.Oxygen)),
             ["nitrogen"]=(double)FluidUnits.MolToStandardLiters(GetFluidInventory(tank).GetGasMoles(FluidIds.Nitrogen)) };
+    }
+    internal static JObject CaptureAtmosphereQuantizedSource(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var f = new GameplayFluidScope();
+        f.Atmosphere.Gases.Clear();
+        f.Atmosphere.Gases.Add(new AtmosphereGasAmount { FluidId = FluidIds.Oxygen, Moles = 20m });
+        f.Atmosphere.Gases.Add(new AtmosphereGasAmount { FluidId = FluidIds.Nitrogen, Moles = 80m });
+        decimal before = f.Atmosphere.CurrentMoles;
+        decimal requested = FluidUnits.StandardLitersToMol(.04m);
+        var source = new PlanetShipAtmosphereSource(f.Atmosphere, 20d);
+        IReadOnlyList<FluidBatch> batches = source.TakeGas(requested);
+        decimal drawn = 0m, oxygen = 0m, nitrogen = 0m;
+        bool batchesQuantized = true;
+        foreach (FluidBatch batch in batches)
+        {
+            drawn += batch.GasMoles;
+            batchesQuantized &= AtmosphereService.Quantize(batch.GasMoles) == batch.GasMoles;
+            if (FluidInventory.Same(batch.FluidId, FluidIds.Oxygen)) oxygen += batch.GasMoles;
+            if (FluidInventory.Same(batch.FluidId, FluidIds.Nitrogen)) nitrogen += batch.GasMoles;
+        }
+        bool validAfter = true;
+        try { AtmosphereService.Validate(f.Atmosphere, FluidCatalog.Default); }
+        catch (InvalidDataException) { validAfter = false; }
+        decimal after = f.Atmosphere.CurrentMoles;
+        return new JObject
+        {
+            ["requestWasNonQuantized"] = AtmosphereService.Quantize(requested) != requested,
+            ["requested"] = (double)requested,
+            ["drawn"] = (double)drawn,
+            ["expectedDrawn"] = (double)AtmosphereService.Quantize(requested),
+            ["batchCount"] = batches.Count,
+            ["batchesQuantized"] = batchesQuantized,
+            ["oxygenDrawn"] = (double)oxygen,
+            ["nitrogenDrawn"] = (double)nitrogen,
+            ["remaining"] = (double)after,
+            ["validAfter"] = validAfter,
+            ["conserved"] = before == after + drawn
+        };
     }
     internal static JObject CaptureFiller(Player player,JObject args)
     {

@@ -79,15 +79,19 @@ public static partial class GameplayTestWorldRuntimeProbe
     {
         static bool SourceGround(RuntimeTerrainTileSample sample) =>
             FarmlandSystem.GetBlockId(sample.Cell.GroundTileId) is "Tile_Grass" or "Tile_Soil";
-        Site near = FindSite(player, sample => SourceGround(sample) &&
-            FarmlandSystem.IsWithinReach(player.transform.position, sample.WorldCell, 2f), minimumRadius: 1);
+        Vector3 originalPlayerPosition = player.transform.position;
+        Site near = FindSite(player, SourceGround);
         Site distant = null;
         Item held = null;
         var result = new JObject();
         try
         {
+            // 陈列厅出生点可能处于大片石地，先在自有草土旁准备隔离玩家位置。
+            player.transform.position = WorldLocalPresentation.ProjectPosition((Vector2)near.Center);
             distant = FindSite(player, sample => SourceGround(sample) && sample.WorldCell != near.Sample.WorldCell &&
                 !FarmlandSystem.IsWithinReach(player.transform.position, sample.WorldCell, 2f));
+            result["nearWithinReach"] = FarmlandSystem.IsWithinReach(player.transform.position, near.Sample.WorldCell, 2f);
+            result["distantWithinReach"] = FarmlandSystem.IsWithinReach(player.transform.position, distant.Sample.WorldCell, 2f);
             ItemData source = GameRes.ExistingInstance.CreateItemData("Fertilizer_Phosphate");
             source.Stack.Amount = 3;
             held = ItemMgr.Instance.InstantiateHeldItem(source, player, player.transform);
@@ -140,10 +144,22 @@ public static partial class GameplayTestWorldRuntimeProbe
         }
         finally
         {
-            if (held != null) ItemMgr.Instance.DespawnItem(held, saveData: false);
-            distant?.Dispose();
-            near.Dispose();
+            try
+            {
+                if (held != null) ItemMgr.Instance.DespawnItem(held, saveData: false);
+            }
+            finally
+            {
+                try { distant?.Dispose(); }
+                finally
+                {
+                    try { near.Dispose(); }
+                    finally { player.transform.position = originalPlayerPosition; }
+                }
+            }
             result["restored"] = near.IsRestored() && (distant == null || distant.IsRestored());
+            result["playerRestored"] = Vector3.Distance(player.transform.position, originalPlayerPosition) < .001f;
+            result["fertilizerReleased"] = held == null || held.IsInPool || held.DestructionHandled;
         }
         return result;
     }

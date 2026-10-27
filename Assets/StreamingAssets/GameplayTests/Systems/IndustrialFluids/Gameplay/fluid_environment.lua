@@ -2,12 +2,14 @@ test.check("world_ready")
 test.fluid("surface_liquid_transactions", "共用正式地表抽排拒绝与回滚")
 test.runtime("industrial_fluids", "surface_outlet", {}, function(d)
     assert(d.stoppedLevel==0, "液体出口零速率仍排放")
-    assert(d.partialLevel == 0 and d.partialSource == d.initialLiters, "出口不足十升时提前扣料或增加地表水")
+    assert(math.abs(d.initialLiters - 25) < .000001 and d.partialLevel == 0
+        and math.abs(d.partialSource - d.initialLiters) < .000001,
+        "出口不足十升时提前扣料或增加地表水")
     assert(d.emittedLevel == 1 and d.litersPerUnit == 10 and math.abs(d.sourceAfter - 15) < .000001,
         "液体出口没有一次排十升到正式地表水层")
     assert(math.abs(d.sourceAfter+d.emittedLevel*10-d.initialLiters)<.000001, "液体输出破坏物质量")
-    assert(d.fullSourceBefore==d.fullSourceAfter, "满水格拒绝时丢掉来源液体")
-    assert(d.singleFreeInitialLevel == 99 and d.singleFreeBudgetLiters == 20 and d.singleFreeFinalLevel == 100,
+    assert(math.abs(d.fullSourceBefore - d.fullSourceAfter) < .000001, "满水格拒绝时丢掉来源液体")
+    assert(d.singleFreeInitialLevel == 99 and math.abs(d.singleFreeBudgetLiters - 20) < .000001 and d.singleFreeFinalLevel == 100,
         "出口有二十升预算时没有填满仅余十升容量的末格")
     assert(math.abs(d.singleFreeSourceBefore - d.singleFreeSourceAfter - 10) < .000001,
         "末格只接收十升时出口扣了整批二十升，或未接收余量没有保留在来源")

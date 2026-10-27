@@ -53,6 +53,7 @@ namespace FlatWorld.GameplayMCP
 
         static GameplayProfilerTool()
         {
+            GameplayTestProfilerBridge.Backend = new LuaProfilerBackend();
             string saved = SessionState.GetString(ResultKey, "");
             if (!string.IsNullOrEmpty(saved))
             {
@@ -123,6 +124,58 @@ namespace FlatWorld.GameplayMCP
         private static object ResultResponse() => result?["state"]?.ToString() == "failed"
             ? new ErrorResponse(result["error"]?.ToString(), Status())
             : new SuccessResponse("Profiler evidence exported.", Status());
+
+        private sealed class LuaProfilerBackend : IGameplayTestProfilerBackend
+        {
+            public JObject StartCapture(double seconds)
+            {
+                object response = Start(new JObject { ["seconds"] = seconds, ["contextFrameRadius"] = 30 });
+                if (response is ErrorResponse error) throw new InvalidOperationException(error.Error);
+                return Status();
+            }
+
+            public JObject StopCapture(string jobId, string marker)
+            {
+                if (active == null || active.Id != jobId)
+                    throw new InvalidOperationException("性能采集已提前结束或不属于本 Lua：" +
+                        (result?["error"]?.ToString() ?? "请在采集时限内执行 profiler_stop。"));
+                Capture job = active;
+                Finish(marker);
+                if (result?["state"]?.ToString() != "completed")
+                    throw new InvalidOperationException("性能采集导出失败：" + result?["error"]);
+
+                JObject sample = Status();
+                string directory = sample["reportPath"]?.Value<string>();
+                string analysisPath = Path.Combine(directory, "profiler-analysis.json");
+                string capturePath = Path.Combine(directory, "capture-session.json");
+                JObject analysis = JObject.Parse(File.ReadAllText(analysisPath));
+                int nodes = 0, markerCalls = 0;
+                foreach (JToken thread in analysis["callTrees"] as JArray ?? new JArray())
+                foreach (JToken node in thread["nodes"] as JArray ?? new JArray())
+                {
+                    nodes++;
+                    if (!string.IsNullOrEmpty(marker) && node["name"]?.Value<string>() == marker)
+                        markerCalls += node["calls"]?.Value<int>() ?? 0;
+                }
+                if (nodes == 0 || !File.Exists(capturePath) || (!string.IsNullOrEmpty(marker) && markerCalls == 0))
+                    throw new InvalidOperationException("性能 JSON 未包含所选帧的完整调用树或指定标记。");
+                sample["analysisPath"] = analysisPath;
+                sample["captureSessionPath"] = capturePath;
+                sample["selectedTreeNodeCount"] = nodes;
+                sample["selectedMarkerCalls"] = markerCalls;
+                sample["callTreeScope"] = "selected-frame-only";
+                sample["settingsRestored"] = ProfilerDriver.enabled == job.RecordingBefore &&
+                    PerformanceDebugRegistry.StatisticsEnabled == job.StatisticsBefore &&
+                    ProfilerDriver.deepProfiling == job.DeepProfiling && ProfilerDriver.profileEditor == job.ProfileEditor && Target == job.Target;
+                return sample;
+            }
+
+            public void CancelCapture(string jobId)
+            {
+                if (active != null && active.Id == jobId)
+                    Interrupt("lua_case_ended: Lua 用例结束，已取消本用例的性能采集。");
+            }
+        }
 
         #endregion
 
@@ -212,7 +265,7 @@ namespace FlatWorld.GameplayMCP
             finally { SaveResult(); }
         }
 
-        private static void Finish()
+        private static void Finish(string requiredMarker = null)
         {
             Capture job = active;
             result = CaptureStatus(job, "exporting");
@@ -225,7 +278,11 @@ namespace FlatWorld.GameplayMCP
                 int first = Math.Max(job.FirstFrame, ProfilerDriver.firstFrameIndex);
                 int last = ProfilerDriver.lastFrameIndex;
                 JObject summary = Summarize(first, last, out int selected);
+                if (!string.IsNullOrEmpty(requiredMarker)) selected = FindNewestFrameContainingMarker(first, last, requiredMarker);
                 result["summary"] = summary;
+                result["selectionMode"] = string.IsNullOrEmpty(requiredMarker) ? "slowest-retained-frame" : "newest-frame-containing-marker";
+                result["requestedMarker"] = requiredMarker;
+                result["callTreeScope"] = "selected-frame-only";
                 result["selectedDisplayFrame"] = selected + 1;
                 result["evictedFrameCount"] = Math.Max(0, first - job.FirstFrame);
                 var metadata = (JObject)result.DeepClone();
@@ -336,6 +393,22 @@ namespace FlatWorld.GameplayMCP
                 ["firstDisplayFrame"] = first + 1, ["lastDisplayFrame"] = last + 1,
                 ["meanFrameMs"] = total / count, ["maxFrameMs"] = maximum
             };
+        }
+
+        // 指定标记时从新到旧查保留帧，导出该标记实际出现的最近一帧。
+        private static int FindNewestFrameContainingMarker(int first, int last, string marker)
+        {
+            for (int frame = last; frame >= first; frame--)
+            for (int thread = 0; ; thread++)
+            {
+                using var raw = ProfilerDriver.GetRawFrameDataView(frame, thread);
+                if (!raw.valid) break;
+                int markerId = raw.GetMarkerId(marker);
+                if (markerId < 0) continue;
+                for (int index = 0; index < raw.sampleCount; index++)
+                    if (raw.GetSampleMarkerId(index) == markerId) return frame;
+            }
+            throw new InvalidOperationException("profiler_marker_not_recorded: 本次保留帧没有标记 " + marker);
         }
 
         private static int ReadRadius(JObject args)

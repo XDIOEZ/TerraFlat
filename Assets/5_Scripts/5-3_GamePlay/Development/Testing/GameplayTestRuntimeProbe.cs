@@ -15,6 +15,7 @@ public static partial class GameplayTestRuntimeProbe
     private static readonly Dictionary<string, Func<Player, JObject, JObject>> operations = new(StringComparer.Ordinal)
     {
         ["testing/resource_cache"] = (_, _) => GameplayTestResourceCache.Sample(),
+        ["testing/profiler_marker"] = GameplayTestProfilerEvidenceBehaviour.Create,
         ["core_lifecycle/live_entry"] = CaptureLiveEntry,
         ["player/interaction_input_reenable"] = CaptureInteractionInputReenable,
         ["inventory/creative_snapshot"] = CaptureCreativeInventory,
@@ -36,6 +37,7 @@ public static partial class GameplayTestRuntimeProbe
         ["industrial_fluids/natural_fill"] = GameplayTestFluidNetworks.CaptureNaturalFill,
         ["industrial_fluids/outlet"] = GameplayTestFluidNetworks.CaptureOutlet,
         ["industrial_fluids/pump"] = GameplayTestFluidDevices.CapturePump,
+        ["industrial_fluids/atmosphere_quantized_source"] = GameplayTestFluidDevices.CaptureAtmosphereQuantizedSource,
         ["industrial_fluids/filler"] = GameplayTestFluidDevices.CaptureFiller,
         ["industrial_fluids/engine"] = GameplayTestFluidDevices.CaptureEngine,
         ["industrial_fluids/surface_pump"] = GameplayTestFluidSurface.CapturePumpFlow,

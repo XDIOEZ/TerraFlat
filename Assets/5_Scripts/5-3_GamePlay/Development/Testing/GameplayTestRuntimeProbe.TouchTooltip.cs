@@ -63,11 +63,28 @@ public static partial class GameplayTestRuntimeProbe
             panel.Open();
             yield return null;
             var mouse = new PointerEventData(EventSystem.current) { position = new Vector2(Screen.width * .4f, Screen.height * .6f) };
+            double hoverStarted = Time.unscaledTimeAsDouble;
             scope.Slot.OnPointerEnter(mouse);
             InventoryItemTooltip tooltip = UIManager.ExistingInstance.SafeAreaRoot.GetComponentInChildren<InventoryItemTooltip>(true);
             Canvas tooltipCanvas = tooltip != null ? tooltip.GetComponent<Canvas>() : null;
+            CanvasGroup tooltipGroup = tooltip != null ? tooltip.GetComponent<CanvasGroup>() : null;
             Canvas sourceCanvas = scope.Slot.GetComponentInParent<Canvas>();
-            bool hoverOpened = tooltip != null && tooltip.GetComponent<CanvasGroup>().alpha > .99f;
+            bool hoverEarlyHidden = tooltipGroup != null && tooltipGroup.alpha <= .001f;
+            double hoverShownElapsed = -1d;
+            if (tooltipGroup != null && (!string.IsNullOrEmpty(panelPrefab) || mode == "inspect"))
+            {
+                // 逐帧采样正式悬停延迟，超时仍保留失败结果。
+                while (Time.unscaledTimeAsDouble - hoverStarted <= 1.15d)
+                {
+                    if (tooltipGroup.alpha > .99f)
+                    {
+                        hoverShownElapsed = Time.unscaledTimeAsDouble - hoverStarted;
+                        break;
+                    }
+                    yield return null;
+                }
+            }
+            bool hoverOpened = tooltipGroup != null && tooltipGroup.alpha > .99f;
             bool tooltipAbovePanel = tooltipCanvas != null && tooltipCanvas.overrideSorting &&
                 tooltipCanvas.sortingLayerID == sourceCanvas.sortingLayerID && tooltipCanvas.sortingOrder > sourceCanvas.sortingOrder;
             bool tooltipInputTransparent = tooltip != null && !tooltip.GetComponent<CanvasGroup>().blocksRaycasts &&
@@ -102,7 +119,13 @@ public static partial class GameplayTestRuntimeProbe
             }
             if (mode == "early_release") scope.Slot.OnPointerUp(pointer);
             if (mode == "disabled") scope.Root.SetActive(false);
-            while (Time.unscaledTimeAsDouble - started < 1.15d) yield return null;
+            double touchShownElapsed = -1d;
+            while (Time.unscaledTimeAsDouble - started < 1.15d)
+            {
+                if (touchShownElapsed < 0d && InventoryItemTooltip.IsTouchPinned(scope.Slot))
+                    touchShownElapsed = Time.unscaledTimeAsDouble - started;
+                yield return null;
+            }
             bool opened = InventoryItemTooltip.IsTouchPinned(scope.Slot);
             if (mode == "inspect") scope.Slot.OnBeginDrag(pointer);
             scope.Slot.OnPointerUp(pointer);
@@ -112,7 +135,9 @@ public static partial class GameplayTestRuntimeProbe
             bool closedWithPanel = !InventoryItemTooltip.IsTouchPinned(scope.Slot);
             InventoryItemTooltip.DismissTouchAt(new Vector2(-1000f, -1000f));
             result = new JObject { ["visibleEarly"] = visibleEarly, ["opened"] = opened,
+                ["hoverEarlyHidden"] = hoverEarlyHidden, ["hoverShownElapsed"] = hoverShownElapsed,
                 ["hoverOpened"] = hoverOpened, ["hoverClosedWithPanel"] = hoverClosedWithPanel,
+                ["touchShownElapsed"] = touchShownElapsed,
                 ["tooltipAbovePanel"] = tooltipAbovePanel, ["tooltipInputTransparent"] = tooltipInputTransparent,
                 ["persistedAfterRelease"] = persisted, ["dismissedByOutsidePress"] = !InventoryItemTooltip.IsTouchPinned(scope.Slot),
                 ["closedWithPanel"] = closedWithPanel,

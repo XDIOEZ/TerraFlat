@@ -27,6 +27,7 @@ public static class GameplayWorldRegistry
     private static readonly Dictionary<string, GameplayWorldRuntime> spaceContexts = new(StringComparer.Ordinal);
     private static GameplayWorldRegistryHost host;
     private static bool releasing;
+    private static bool preserveLocalChunkManagerForSpaceTransition;
     private static readonly List<GameplayWorldRuntime> physicsDispatch = new();
     private static readonly List<GameplayWorldRuntime> releaseDispatch = new();
     private static readonly HashSet<PhysicsScene2D> physicsScenes = new();
@@ -56,7 +57,7 @@ public static class GameplayWorldRegistry
     {
         if (TryGet(worldKey, out GameplayWorldRuntime existing)) return existing;
         if (releasing || string.IsNullOrWhiteSpace(worldKey) || SpaceMgr.IsSpaceScene(worldKey))
-            throw new InvalidOperationException("地表运行时必须使用有效的星球维度地址。");
+            throw new InvalidOperationException($"地表运行时必须使用有效的星球维度地址：世界={worldKey}，释放中={releasing}。");
         WorldAddress address = WorldAddress.FromWorldKey(worldKey);
         if (!address.IsValid) throw new ArgumentException("世界地址无效。", nameof(worldKey));
         DimensionManager.Instance.EnsureWorldData(address);
@@ -134,6 +135,30 @@ public static class GameplayWorldRegistry
 
     public static void ReleaseSpaceContext(string worldKey) => spaceContexts.Remove(worldKey);
 
+    // 单机太空迁移只保留本机管理器与已解绑的表现壳，世界注册仍按原规则释放。
+    internal static IDisposable PreserveLocalChunkManagerForSpaceTransition(bool preserve)
+    {
+        return new LocalChunkManagerTransitionScope(preserve && !GameNetwork.IsOnline);
+    }
+
+    private sealed class LocalChunkManagerTransitionScope : IDisposable
+    {
+        private readonly bool previous = preserveLocalChunkManagerForSpaceTransition;
+        private bool disposed;
+
+        public LocalChunkManagerTransitionScope(bool preserve)
+        {
+            preserveLocalChunkManagerForSpaceTransition = preserve;
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            preserveLocalChunkManagerForSpaceTransition = previous;
+        }
+    }
+
     private sealed class WorldScope : IDisposable
     {
         private readonly GameplayWorldRuntime previous;
@@ -198,13 +223,21 @@ public static class GameplayWorldRegistry
         try
         {
             execution = null;
+            ChunkMgr preservedLocal = preserveLocalChunkManagerForSpaceTransition && !GameNetwork.IsOnline
+                ? ChunkMgr.LocalInstance : null;
             releaseDispatch.Clear(); releaseDispatch.AddRange(worlds.Values);
             WeatherMgr.ReleaseAll();
             MonsterSpawnerManager.ReleaseAll();
             // 管理器在注册表仍可查询时按自己的世界同步释放，延迟OnDestroy只执行已关闭分支。
             foreach (GameplayWorldRuntime world in releaseDispatch)
             {
-                using (UseWorld(world.WorldKey)) world.Chunks?.ReleaseRegisteredWorld();
+                using (UseWorld(world.WorldKey))
+                {
+                    if (world.Chunks != null && world.Chunks == preservedLocal)
+                        world.Chunks.OnSceneChange(retainPresentationPool: true);
+                    else
+                        world.Chunks?.ReleaseRegisteredWorld();
+                }
             }
             WorldEntityRuntime.ReleaseAll();
             FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();
@@ -215,11 +248,13 @@ public static class GameplayWorldRegistry
                 AiRuntimeBackendService.ReleaseWorldEcology(world.WorldKey);
                 WorldNavigationManager.ReleaseWorld(world.WorldKey);
                 foreach (var pair in world.Renderers) if (pair.Key != null) pair.Key.forceRenderingOff = pair.Value;
-                if (world.Chunks != null) UnityEngine.Object.Destroy(world.Chunks.gameObject);
+                if (world.Chunks != null && world.Chunks != preservedLocal)
+                    UnityEngine.Object.Destroy(world.Chunks.gameObject);
                 if (world.OwnsPhysics && world.Scene.IsValid() && world.Scene.isLoaded)
                     SceneManager.UnloadSceneAsync(world.Scene);
             }
-            ChunkMgr.ClearLocalNetworkWorld();
+            if (preservedLocal != null) preservedLocal.BindNetworkWorld(null);
+            else ChunkMgr.ClearLocalNetworkWorld();
             worlds.Clear(); releaseDispatch.Clear(); spaceContexts.Clear(); PresentationOwners.Clear();
             if (host != null) UnityEngine.Object.Destroy(host.gameObject);
             host = null;

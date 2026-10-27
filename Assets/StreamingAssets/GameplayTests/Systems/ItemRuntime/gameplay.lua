@@ -23,6 +23,7 @@ test.runtime("item_runtime", "center_spatial_query", {}, function(d)
     assert(d.negativeRadius == 0 and d.invalidRadius == 0, "非法半径进入空间桶遍历")
     assert(d.wrapped and d.seamBoundary == 1 and d.seamOutside == 0 and d.seamDeduplicated == 1,
         "循环接缝遗漏真实物品、超范围命中或重复返回镜像")
+    assert(d.topologyRestored, "循环接缝测试没有恢复原地表拓扑")
     assert(d.atmosphereIdentityPreserved and d.atmosphereReadBytes <= 32768,
         "只读大气查询未复用真实状态或仍反复分配完整校验集合")
 end, "真实物品中心查询、半径边界、循环去重及大气只读分配")

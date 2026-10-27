@@ -17,6 +17,7 @@
     { "id": "danger", "hex": "8A6662FF" },
     { "id": "statusBarBackground", "hex": "3D3D3DFA" },
     { "id": "statusBarDefault", "hex": "D7D7D7FF" },
+    { "id": "statusBarFoodHud", "hex": "696969FF" },
     { "id": "statusBarHealth", "hex": "8A6662FF" },
 
     { "id": "overlay", "hex": "242424B8" },

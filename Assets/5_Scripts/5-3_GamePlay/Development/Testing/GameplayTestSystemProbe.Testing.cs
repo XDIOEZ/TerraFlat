@@ -12,6 +12,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("testing/lua_contract", TestingLuaContract);
         operations.Add("testing/selection", TestingSelection);
         operations.Add("testing/cleanup_callback", TestingRunnerBeforeCleanupCallback);
+        operations.Add("testing/cleanup_failure_stop", TestingCleanupFailureStopsFollowingCases);
     }
 
     private static string TestingFailure(Action action)
@@ -55,6 +56,10 @@ public static partial class GameplayTestSystemProbe
             "unknown" => "test.system('not_registered','unknown',{},function(d) assert(true) end)",
             "log_only" => "test.log('不能冒充规则')",
             "live_in_rules" => "test.wait(0.1)",
+            "profiler_unclosed" => "test.profiler_start()",
+            "profiler_stop_only" => "test.profiler_stop()",
+            "profiler_double_start" => "test.profiler_start(); test.profiler_start(); test.profiler_stop()",
+            "profiler_in_rules" => "test.profiler_start(); test.profiler_stop()",
             _ => throw new ArgumentException("未知 Lua 保护夹具。")
         };
         int failed = 0, samples = 0, commands = 0;
@@ -79,28 +84,59 @@ public static partial class GameplayTestSystemProbe
             ["emptyRejected"] = !string.IsNullOrEmpty(TestingFailure(() => GameplayTestSelection.FilterCases(Parse(), Array.Empty<string>()))) };
     }
 
+    // 用真实报告步骤检查跨帧、同步与太空恢复失败的后续用例门禁。
+    private static JObject TestingCleanupFailureStopsFollowingCases(JObject args)
+    {
+        string Reason(string command, bool success)
+        {
+            var testCase = new GameplayTestCaseReport { Id = "dirty_case" };
+            testCase.Steps.Add(new GameplayTestStepRecord { Command = command, Label = "恢复现场", Success = success });
+            return GameplayTestScene.ResolveSkipReasonAfterUnrecoveredCleanup(testCase);
+        }
+
+        return new JObject
+        {
+            ["asyncReason"] = Reason("runtime_cleanup", false),
+            ["spaceReason"] = Reason("space_cleanup", false),
+            ["syncReason"] = Reason("cleanup", false),
+            ["successfulCleanupContinues"] = Reason("runtime_cleanup", true) == null,
+            ["ordinaryFailureContinues"] = Reason("runtime", false) == null,
+            ["screenshotFailureContinues"] = Reason("before_runtime_cleanup", false) == null
+        };
+    }
+
     private sealed class RunnerBeforeCleanupLeaseProbe : IDisposable
     {
         public bool CallbackStarted, CallbackCompleted, CallbackPreservedLease, AsyncCleaned, SyncCleaned;
         public bool AsyncCleanupBeforeSync;
-        public void Dispose() { SyncCleaned = true; }
+        public bool FailSyncCleanup;
+        public void Dispose()
+        {
+            SyncCleaned = true;
+            if (FailSyncCleanup) throw new InvalidOperationException("预期的同步清理失败。");
+        }
     }
 
     // 使用真实执行器验证收尾回调跨帧及异常时仍先异步后同步清理。
     private static JObject TestingRunnerBeforeCleanupCallback(JObject args)
     {
         string mode = Text(args, "mode", "success");
-        if (mode is not ("success" or "create_failure" or "advance_failure"))
+        if (mode is not ("success" or "create_failure" or "advance_failure" or "async_cleanup_failure" or "sync_cleanup_failure"))
             throw new ArgumentException("未知清理回调夹具。");
-        var lease = new RunnerBeforeCleanupLeaseProbe();
+        var lease = new RunnerBeforeCleanupLeaseProbe { FailSyncCleanup = mode == "sync_cleanup_failure" };
+        var report = new GameplayTestCaseReport { Id = "cleanup_regression" };
         int callbackFailures = 0;
         using var runner = new GameplayTestLuaRunner(null, _ => false, (command, label, success, message) =>
-        { if (command == "before_runtime_cleanup" && !success) callbackFailures++; });
+        {
+            if (command == "before_runtime_cleanup" && !success) callbackFailures++;
+            report.Steps.Add(new GameplayTestStepRecord { Command = command, Label = label, Success = success, Message = message });
+        });
         IEnumerator CleanupAsync()
         {
             yield return null;
             lease.AsyncCleanupBeforeSync = lease.CallbackStarted && !lease.SyncCleaned;
             lease.AsyncCleaned = true;
+            if (mode == "async_cleanup_failure") throw new InvalidOperationException("预期的跨帧清理失败。");
         }
         IEnumerator BeforeCleanup()
         {
@@ -125,7 +161,8 @@ public static partial class GameplayTestSystemProbe
         return new JObject { ["started"] = lease.CallbackStarted, ["completed"] = lease.CallbackCompleted,
             ["preservedLease"] = lease.CallbackPreservedLease, ["asyncCleaned"] = lease.AsyncCleaned,
             ["syncCleaned"] = lease.SyncCleaned, ["asyncBeforeSync"] = lease.AsyncCleanupBeforeSync,
-            ["callbackFailures"] = callbackFailures };
+            ["callbackFailures"] = callbackFailures,
+            ["followingSkipped"] = GameplayTestScene.ResolveSkipReasonAfterUnrecoveredCleanup(report) != null };
     }
     #endregion
 }

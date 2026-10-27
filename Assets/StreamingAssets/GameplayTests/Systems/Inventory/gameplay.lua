@@ -38,7 +38,13 @@ for _, mode in ipairs({"inspect", "closed_after_show", "empty", "held", "hand_ch
     test.runtime("inventory", "touch_tooltip", {mode = mode}, function(data)
         if mode == "inspect" or mode == "closed_after_show" then
             assert(not data.visibleEarly and data.opened and data.persistedAfterRelease,
-                "空手长按未满一秒就显示，或一秒后未复用悬浮窗并在松手后保留")
+                "空手长按过早显示，或未复用悬浮窗并在松手后保留")
+            assert(data.touchShownElapsed >= .5 and data.touchShownElapsed <= 1,
+                "空手长按没有在0.5秒后显示物品介绍")
+            if mode == "inspect" then
+                assert(data.hoverEarlyHidden and data.hoverOpened and data.hoverShownElapsed >= .3 and data.hoverShownElapsed <= 1,
+                    "鼠标悬浮未等待0.3秒或未及时显示")
+            end
             assert(data.dismissedByOutsidePress, "再次点击其他位置没有关闭物品介绍")
             assert(data.taps == 0 and data.longPresses == 0 and data.drags == 0,
                 "查看物品介绍后又触发取放或拖拽")
@@ -69,9 +75,13 @@ for _, panel in ipairs({
         }, function(data)
             assert(data.hoverOpened and data.tooltipAbovePanel and data.tooltipInputTransparent,
                 "正式面板的悬浮介绍未显示、被窗口遮挡或拦截输入")
+            assert(data.hoverEarlyHidden and data.hoverShownElapsed >= .3 and data.hoverShownElapsed <= 1,
+                "正式面板悬浮介绍未等待0.3秒或未及时显示")
             assert(data.hoverClosedWithPanel, "关闭正式面板后鼠标悬浮介绍仍残留")
             assert(not data.visibleEarly and data.opened and data.persistedAfterRelease,
-                "正式槽位未在长按一秒后显示同一介绍窗，或松手后没有保留")
+                "正式槽位未显示同一介绍窗，或松手后没有保留")
+            assert(data.touchShownElapsed >= .5 and data.touchShownElapsed <= 1,
+                "正式槽位长按没有在0.5秒后显示物品介绍")
             assert(data.closedWithPanel and data.dismissedByOutsidePress,
                 "关闭正式面板后长按介绍仍残留")
             assert(data.taps == 0 and data.longPresses == 0 and data.drags == 0 and data.sourceAmount == 6,

@@ -27,9 +27,10 @@ namespace FlatWorld.Networking.Gameplay
         private static bool SendBotTeleport(BotWorld world, int botId, NetworkWorldPlayer actor, uint request, Vector3 target, uint? realm = null)
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
-            writer.WriteUInt(request);
+            // 与 Mirror Weaver 的变长整型编码保持一致，避免后续坐标错位。
+            writer.WriteVarUInt(request);
             writer.WriteVector3(target);
-            writer.WriteUInt(realm ?? actor.RealmRevision);
+            writer.WriteVarUInt(realm ?? actor.RealmRevision);
             return world.Transport.Receive(botId, new CommandMessage
             {
                 netId = actor.netId, componentIndex = actor.ComponentIndex,
@@ -37,19 +38,51 @@ namespace FlatWorld.Networking.Gameplay
             });
         }
 
+        // 超时时保留连接和世界门禁的真实状态，便于区分发包与服务端拒绝。
+        private static string DescribeBotCommandAuthority(BotWorld world, int botId, NetworkWorldPlayer actor,
+            string command, string serverSequenceField)
+        {
+            bool observed = actor.TryGetSpaceObserver(out SpaceNetworkObserver observer);
+            NetworkServer.connections.TryGetValue(botId, out NetworkConnectionToClient connection);
+            object sequence = typeof(NetworkWorldPlayer).GetField(serverSequenceField,
+                BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(actor);
+            var handler = Mirror.RemoteCalls.RemoteProcedureCalls.GetDelegate(command.GetStableHashCode16());
+            string worldKey = actor.CorePlayer?.Data?.CurrentSceneName;
+            string transferReason = null;
+            bool transferable = world.Session != null && world.Session.CanTransferToNetworkSurface(worldKey, out transferReason);
+            SpacePassengerState passenger = world.Session?.State?.Passengers.Find(value => value.ProfileId == actor.DisplayName);
+            string passengerState = passenger == null ? "不存在" :
+                $"支撑={passenger.Supported}，已落地={passenger.LandingResolved}，自由坐标={passenger.FreeMotion.PositionMeters.X},{passenger.FreeMotion.PositionMeters.Y}";
+            return $"连接={botId}，已连接={world.Transport.IsBotConnected(botId)}，就绪={connection?.isReady}，" +
+                $"已认证={connection?.isAuthenticated}，身份匹配={connection?.identity == actor.netIdentity}，" +
+                $"命令处理器={handler?.Method.Name}，服务端={actor.isServer}，玩家世界={worldKey}，" +
+                $"玩家场景={actor.CorePlayer?.gameObject.scene.name}，观察者存在={observed}，" +
+                $"观察世界={observer.WorldKey}，观察太空={observer.InSpace}，观察代际={observer.RealmRevision}，" +
+                $"角色太空={actor.IsInSpace}，角色代际={actor.RealmRevision}，迁移中={actor.IsWorldTransferPending}，" +
+                $"地表可用={transferable}，地表原因={transferReason}，已处理序号={sequence}，" +
+                $"权威位置={actor.AuthoritativeLogicalPosition}，观察坐标={observer.Position.LocalMeters.X},{observer.Position.LocalMeters.Y}，" +
+                $"角色物理坐标={actor.CorePlayer?.transform.position}，存档坐标={actor.CorePlayer?.Data?.transform.position}，" +
+                $"乘员={passengerState}，会话一致={ReferenceEquals(world.Session, SpaceSession.Current)}，" +
+                $"网络在线={FlatWorld.Networking.GameNetwork.IsOnline}，角色={FlatWorld.Networking.GameNetwork.Session.Role}，" +
+                $"游戏就绪={GameManager.ExistingInstance?.IsGameplayReady}";
+        }
+
         private static JObject TeleportSample(NetworkWorldPlayer actor)
         {
             Vector3 position = actor.AuthoritativeLogicalPosition;
             Vector3 body = WorldLocalPresentation.ToLogical(actor.CorePlayer.transform.position);
+            Rigidbody2D rigidbody = actor.CorePlayer.GetComponent<Rigidbody2D>();
+            Vector2 physics = WorldLocalPresentation.ToLogical(rigidbody.position);
             Vector3 saved = actor.CorePlayer.Data.transform.position;
             SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver observer);
             return new JObject
             {
                 ["x"] = position.x, ["y"] = position.y, ["bodyX"] = body.x, ["bodyY"] = body.y,
+                ["physicsX"] = physics.x, ["physicsY"] = physics.y,
                 ["savedX"] = saved.x, ["savedY"] = saved.y,
                 ["observerX"] = observer.Position.LocalMeters.X, ["observerY"] = observer.Position.LocalMeters.Y,
                 ["revision"] = observer.RealmRevision, ["shipId"] = observer.ShipId,
-                ["velocity"] = actor.CorePlayer.GetComponent<Rigidbody2D>().velocity.magnitude
+                ["velocity"] = rigidbody.velocity.magnitude
             };
         }
 
@@ -74,9 +107,11 @@ namespace FlatWorld.Networking.Gameplay
             yield return null;
             result["ordinaryMove"] = TeleportSample(actor);
             result["ordinaryStep"] = WorldTopologyRuntime.ShortestDelta(start, actor.AuthoritativeLogicalPosition).magnitude;
-            SendBotTeleport(world, 92, actor, 1, destination);
+            bool teleportSent = SendBotTeleport(world, 92, actor, 1, destination);
+            string teleportImmediately = DescribeBotCommandAuthority(world, 92, actor, TeleportCommandName, "lastServerTeleportRequest");
             yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, destination).sqrMagnitude < .00001f,
-                "GM 传送更新权威坐标");
+                "GM 传送更新权威坐标", 12d, () => $"已发包={teleportSent}，目标={destination}；发送时：{teleportImmediately}；当前：" +
+                    DescribeBotCommandAuthority(world, 92, actor, TeleportCommandName, "lastServerTeleportRequest"));
             result["teleported"] = TeleportSample(actor);
 
             Vector3 other = WorldTopologyRuntime.NormalizePosition(destination + Vector3.up * 12f);
@@ -100,9 +135,12 @@ namespace FlatWorld.Networking.Gameplay
 
             Vector3 next = WorldTopologyRuntime.NormalizePosition(other + Vector3.right * .25f);
             SendBotMotion(world, 92, actor, next, Vector2.zero);
+            // 真正的物理同步完成后再比较角色位置，避免把同帧 Transform 延迟误判为移动失败。
             yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, next).sqrMagnitude < .00001f &&
                 SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver moved) &&
-                WorldTopologyRuntime.ShortestDelta(moved.Position.LocalMeters.ToVector2(), next).sqrMagnitude < .00001f,
+                WorldTopologyRuntime.ShortestDelta(moved.Position.LocalMeters.ToVector2(), next).sqrMagnitude < .00001f &&
+                WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(actor.CorePlayer.transform.position), next).sqrMagnitude < .00001f &&
+                WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(actor.CorePlayer.GetComponent<Rigidbody2D>().position), next).sqrMagnitude < .00001f,
                 "传送后的普通移动沿新落点继续");
             result["nextX"] = next.x;
             result["nextY"] = next.y;

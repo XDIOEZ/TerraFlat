@@ -266,7 +266,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
             writer.WriteBytesAndSize(payload);
-            writer.WriteUInt(actor.RealmRevision);
+            writer.WriteVarUInt(actor.RealmRevision);
             const string command = "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdSubmitItemState(System.Byte[],System.UInt32)";
             return world.Transport.Receive(botId, new CommandMessage
             {

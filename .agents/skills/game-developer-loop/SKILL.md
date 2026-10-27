@@ -14,6 +14,7 @@ description: "GameDeveloperLoop：默认真实游玩调试；同时要求 Lua �
 
 1. 阅读 [Lua 测试 Skill](../flatworld-lua-testing/SKILL.md) 和 `Assets/StreamingAssets/GameplayTests/systems.catalog.json`，选受影响系统的规则测试；涉及真实游戏流程时补跑 `--integration`。缺少有效断言先补 Lua 测试。
 2. 通过 `python Tools/GameplayTesting/run_suite.py --systems <系统名>`（或 `--changed <代码路径>`、测试中心、测试流水线）启动测试，读取实际报告、首个失败步骤及相关 Console 日志；跳过、未执行、环境阻塞不得算通过。
+   需要追踪方法或性能时，在关键 Lua 动作前后调用 `test.profiler_start` / `test.profiler_stop`，用法见 [Lua 测试接口](../../../Assets/StreamingAssets/GameplayTests/README.md#lua-编写接口)；只把选中帧中实际采样到的 Marker 当作调用证据，不能推断整个区间或全部方法。
 3. 按证据修复正式代码中的 Bug，并增强对应 Lua 断言，覆盖复现条件、正常流程及必要的边界/异常/回滚；不能靠删除、禁用或放宽测试掩盖问题。
 4. 重跑失败用例和关联回归；即使已有用例全绿，也要检查测试盲区、补强必要断言后重跑。持续 **发现 Bug → 修根因 → 加强 Lua 测试 → 重测**，直到本轮目标范围的测试全部通过、相关报错消除，已修复问题有断言防回归。不能据此宣称整个游戏绝对没有 Bug；如有未覆盖或无法执行的范围须明确报告。
 

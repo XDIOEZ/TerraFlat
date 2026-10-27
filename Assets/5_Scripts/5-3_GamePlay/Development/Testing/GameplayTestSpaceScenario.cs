@@ -687,7 +687,13 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     }
 
     // 联机假人与单人起飞测试复用同一真实区块租约前置。
-    public IEnumerator PrepareTemplateSite(FixedStructureDefinition template) => PrepareSite(template);
+    public IEnumerator PrepareTemplateSite(FixedStructureDefinition template)
+    {
+        // 联机用例直接准备场地时也要绑定正式宇宙时钟。
+        session = SpaceSession.EnsureLoaded();
+        if (session?.State == null) throw new InvalidOperationException("正式太空会话没有载入。");
+        yield return PrepareSite(template);
+    }
 
     private IEnumerator PrepareSite(FixedStructureDefinition template)
     {
@@ -812,6 +818,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         Player player = CurrentPlayer();
         SpacePassengerState passenger = session.GetPassenger(player);
+        // 采样正式网络观察者，确保跨区后的世界身份与版本已同步。
+        bool observerReady = session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer);
         Camera camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ControllerCamera;
         GameObject uiRoot = GameObject.Find("PanelRoot");
         UIManager ui = UIManager.ExistingInstance;
@@ -847,7 +855,11 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["clockLighting"] = time?.GetLighting("SpaceScene"),
             ["globalLighting"] = time?.GlobalLight?.intensity,
             ["position"] = Vector(position.LocalMeters), ["velocity"] = Vector(passenger.FreeMotion.VelocityMetersPerSecond),
-            ["realmRevision"] = passenger.RealmRevision, ["required"] = required, ["loadedScenes"] = scenes,
+            ["realmRevision"] = passenger.RealmRevision, ["observerReady"] = observerReady,
+            ["observerInSpace"] = observerReady && observer.InSpace,
+            ["observerWorldKey"] = observerReady ? observer.WorldKey : null,
+            ["observerRealmRevision"] = observerReady ? observer.RealmRevision : 0,
+            ["required"] = required, ["loadedScenes"] = scenes,
             ["dimensionTransitioning"] = DimensionManager.Instance.IsTransitioning };
     }
 

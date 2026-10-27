@@ -370,6 +370,7 @@ public sealed class GameplayTestScene : MonoBehaviour
     private IEnumerator RunCases()
     {
         bool stopped = false;
+        string cleanupFailureSkipReason = null;
         foreach (GameplayTestCaseReport testCase in report.Cases)
         {
             if (finished || interruptionRequested) yield break;
@@ -380,17 +381,32 @@ public sealed class GameplayTestScene : MonoBehaviour
                 stopped |= !suite.ContinueAfterFailure && report.FailedCaseCount > 0;
             }
             if (testCase.Status == "disabled") continue;
-            if (stopped || !Check("world_ready") || !Check("player_ready"))
+            if (cleanupFailureSkipReason != null || stopped || !Check("world_ready") || !Check("player_ready"))
             {
                 testCase.Status = "skipped";
-                testCase.Reason = stopped ? "前面的用例失败，清单已配置失败即停。" : "世界或玩家不再就绪。";
+                testCase.Reason = cleanupFailureSkipReason ??
+                    (stopped ? "前面的用例失败，清单已配置失败即停。" : "世界或玩家不再就绪。");
                 testCase.FinishedUtc = DateTime.UtcNow.ToString("O");
                 failedStep = true;
                 continue;
             }
             yield return RunCase(testCase);
+            cleanupFailureSkipReason ??= ResolveSkipReasonAfterUnrecoveredCleanup(testCase);
             stopped |= testCase.Status != "passed" && !suite.ContinueAfterFailure;
         }
+    }
+
+    // 清理失败后即使玩家看似就绪，也不能把被污染的后续现场记为通过。
+    internal static string ResolveSkipReasonAfterUnrecoveredCleanup(GameplayTestCaseReport completedCase)
+    {
+        if (completedCase?.Steps == null) return null;
+        foreach (GameplayTestStepRecord step in completedCase.Steps)
+        {
+            if (step == null || step.Success ||
+                step.Command is not ("runtime_cleanup" or "space_cleanup" or "cleanup")) continue;
+            return $"前序用例 {completedCase.Id} 的现场清理失败（{step.Label}），后续用例未执行。";
+        }
+        return null;
     }
 
     private IEnumerator RunCase(GameplayTestCaseReport testCase)

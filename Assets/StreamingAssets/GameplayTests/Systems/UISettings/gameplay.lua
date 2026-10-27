@@ -1,3 +1,20 @@
+-- 检查正式生存 HUD 的实际填充与数值文字在不同状态下均可区分。
+test.runtime("ui_settings", "status_hud_readability", {}, function(data)
+    local function linear(channel)
+        return channel <= .04045 and channel / 12.92 or ((channel + .055) / 1.055) ^ 2.4
+    end
+    local function luminance(color)
+        return .2126 * linear(color[1]) + .7152 * linear(color[2]) + .0722 * linear(color[3])
+    end
+    assert(data.panelVisible and #data.bars == 7, "本地玩家的生存状态条不完整")
+    for _, bar in ipairs(data.bars) do
+        local fill, text = luminance(bar.fill), luminance(bar.text)
+        local contrast = (math.max(fill, text) + .05) / (math.min(fill, text) + .05)
+        assert(bar.visible and bar.fill[4] > .99 and bar.text[4] > .99 and contrast >= 4,
+            bar.name .. "状态条的填充遮住数值文字")
+    end
+end, "真实生存状态条文字与填充可读性")
+
 -- 从正式 GameManager 入口打开真实设置窗口，用现有下拉、滑块和保存按钮完成事务。
 test.runtime("ui_settings", "settings_locale_open", {}, function(data)
     assert(data.scope == "live-isolated-world" and data.formalWindow and data.registered and data.open, "正式窗口没有创建、绑定或登记")

@@ -214,10 +214,19 @@ public static class GameplayTestSceneCacheRuntimeProbe
             yield return WaitUntil(Ready, 120d, "恢复地表前隔离玩家未就绪。");
             if (SceneManager.GetActiveScene().name != home.WorldKey)
             {
-                if (!session.TryBeginRespawnTransition(CurrentPlayer(), home, homePosition, () => { }))
+                // 活着的测试玩家通过正式落地事务回程，不能借用死亡重生入口。
+                Player traveller = CurrentPlayer();
+                SpacePassengerState passenger = session.GetPassenger(traveller);
+                bool wasInSpace = passenger.IsInSpace;
+                passenger.IsInSpace = false;
+                if (!DimensionManager.Instance.TryBeginPlanetLanding(traveller, home, homePosition))
+                {
+                    passenger.IsInSpace = wasInSpace;
                     throw new InvalidOperationException("正式回地表迁移被拒绝。");
+                }
                 yield return WaitUntil(() => Ready() && SceneManager.GetActiveScene().name == home.WorldKey,
                     120d, "正式回地表或隔离玩家重绑超时。");
+                session.ResetPassengerForRespawn(CurrentPlayer());
             }
             else
             {
@@ -318,6 +327,10 @@ public static class GameplayTestSceneCacheRuntimeProbe
             }
             bool priorRuntimeReused = ReferenceEquals(previousWorldRuntime, world);
             previousWorldRuntime = world;
+            bool registeredCurrentManager = GameplayWorldRegistry.TryGet(home.WorldKey, out GameplayWorldRuntime registered) &&
+                ReferenceEquals(registered.Chunks, chunks);
+            bool observerFound = session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer);
+            Vector2 logicalPosition = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             return new JObject
             {
                 ["scene"] = SceneManager.GetActiveScene().name,
@@ -327,6 +340,11 @@ public static class GameplayTestSceneCacheRuntimeProbe
                 ["sameSessionState"] = ReferenceEquals(session.State, sessionState),
                 ["gameplayReady"] = GameManager.Instance.IsGameplayReady,
                 ["worldActive"] = chunks.IsWorldModelRuntimeActive,
+                ["chunkManagerId"] = chunks.GetInstanceID(),
+                ["registeredCurrentManager"] = registeredCurrentManager,
+                ["observerFound"] = observerFound, ["observerInSpace"] = observer.InSpace,
+                ["observerWorld"] = observer.WorldKey,
+                ["observerPositionError"] = Vector2.Distance(logicalPosition, observer.Position.LocalMeters.ToVector2()),
                 ["worldId"] = world.WorldId, ["worldEpoch"] = world.Epoch,
                 ["priorRuntimeReused"] = priorRuntimeReused,
                 ["windowReady"] = chunks.AreRuntimeWindowPresentationsReady,
@@ -376,6 +394,9 @@ public static class GameplayTestSceneCacheRuntimeProbe
                 ["sameSessionState"] = ReferenceEquals(session.State, sessionState),
                 ["gameplayReady"] = GameManager.Instance.IsGameplayReady,
                 ["spaceView"] = session.IsSpaceView,
+                ["chunkManagerId"] = chunks.GetInstanceID(),
+                ["chunkManagerHasWorldRuntime"] = chunks.WorldRuntime != null,
+                ["registeredSurfaceWorldCount"] = GameplayWorldRegistry.Worlds.Count,
                 ["sectorFound"] = sectorFound, ["sectorRetained"] = retained,
                 ["sectorActive"] = active, ["sectorRootId"] = sectorRootId,
                 ["planetInstanceId"] = planet == null ? 0 : planet.GetInstanceID(),

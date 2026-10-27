@@ -44,7 +44,9 @@ namespace FlatWorld.Spaceflight
                 ProfileId = previous.ProfileId,
                 IsInSpace = true,
                 FreeMotion = motion,
-                SavedCameraSize = previous.SavedCameraSize
+                SavedCameraSize = previous.SavedCameraSize,
+                // 传送更换乘员状态时保留世界归属版本，避免回退到旧请求的版本。
+                RealmRevision = previous.RealmRevision
             };
             bool succeeded = false;
             bool migrationStarted = false;

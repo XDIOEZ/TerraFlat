@@ -24,6 +24,10 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = false }, 
         space.sectorFound and space.sectorActive and not space.sectorRetained and
         space.planetBodyId == data.bodyId and space.planetInstanceId ~= 0,
         "控制轮没有进入同档案的正式太空和星区")
+    assert(first.chunkManagerId ~= 0 and space.chunkManagerId == first.chunkManagerId and
+        surface.chunkManagerId == first.chunkManagerId, "控制轮迁移错误销毁或替换了本机区块管理器")
+    assert(not space.chunkManagerHasWorldRuntime and space.registeredSurfaceWorldCount == 0 and
+        surface.registeredCurrentManager, "控制轮没有释放旧地表世界或重登当前管理器")
     assert(space.chunkRetained == 0 and #space.cachedViews == 0 and
         space.sectorRetainedCount == 0 and space.chunkHits == first.chunkHits and
         space.sectorHits == first.sectorHits and space.sectorCreated > first.sectorCreated,
@@ -61,6 +65,11 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = true }, f
 
     local function surfaceReady(surface, earlier, label)
         assert(surface.scene == data.initial.scene, label .. "没有回到起始地表场景")
+        assert(surface.chunkManagerId == data.initial.chunkManagerId and surface.chunkManagerId ~= 0,
+            label .. "替换或销毁了本机区块管理器")
+        assert(surface.registeredCurrentManager, label .. "没有重新登记当前地表管理器")
+        assert(surface.observerFound and not surface.observerInSpace and surface.observerWorld == surface.scene and
+            surface.observerPositionError < .001, label .. "乘员观察者没有恢复当前地表世界和真实坐标")
         assert(surface.profile == data.profile and surface.samePlayerData and surface.sameSaveData,
             label .. "没有绑定本轮同档案玩家与数据")
         assert(surface.sameSessionState and surface.gameplayReady and surface.worldActive and surface.windowReady,
@@ -81,6 +90,10 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = true }, f
         assert(space.spaceView and space.gameplayReady and space.samePlayerData and
             space.sameSaveData and space.sameSessionState and space.profile == data.profile,
             label .. "未进入同档案的就绪太空")
+        assert(space.chunkManagerId == data.initial.chunkManagerId and space.chunkManagerId ~= 0,
+            label .. "替换或销毁了本机区块管理器")
+        assert(not space.chunkManagerHasWorldRuntime and space.registeredSurfaceWorldCount == 0,
+            label .. "仍保留旧地表运行态或世界注册")
         assert(space.sectorFound and not space.sectorRetained and space.sectorActive and
             space.sectorRootId ~= 0 and space.planetBodyId == data.bodyId and space.planetInstanceId ~= 0,
             label .. "正式星区或星体表现未激活")

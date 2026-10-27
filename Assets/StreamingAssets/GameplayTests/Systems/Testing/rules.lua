@@ -17,11 +17,22 @@ test.system("testing", "selection", {}, function(data)
     assert(data.unknownRejected and data.emptyRejected, "无效选择误退回全量测试")
 end, "用例选择与未知范围拒绝")
 
+test.system("testing", "cleanup_failure_stop", {}, function(data)
+    for _, key in ipairs({"asyncReason", "spaceReason", "syncReason"}) do
+        local reason = data[key]
+        assert(type(reason) == "string" and string.find(reason, "dirty_case", 1, true),
+            "现场清理失败后没有标明来源并停止后续用例")
+    end
+    assert(data.successfulCleanupContinues and data.ordinaryFailureContinues and data.screenshotFailureContinues,
+        "成功清理或非现场恢复失败错误地中断了后续用例")
+end, "清理失败禁止污染后续用例")
+
 for _, mode in ipairs({"success", "create_failure", "advance_failure"}) do
     local expected = mode
     test.system("testing", "cleanup_callback", {mode = expected}, function(data)
         assert(data.started and data.asyncCleaned and data.syncCleaned and data.asyncBeforeSync,
             "清理前回调未执行，或失败后没有按异步/同步顺序清理")
+        assert(not data.followingSkipped, "截图回调失败但现场恢复成功时错误跳过后续用例")
         if expected == "create_failure" then
             assert(not data.completed and data.callbackFailures == 1, "回调创建异常未记失败")
         else
@@ -29,6 +40,15 @@ for _, mode in ipairs({"success", "create_failure", "advance_failure"}) do
             assert(data.callbackFailures == (expected == "advance_failure" and 1 or 0), "回调迭代异常未准确记失败")
         end
     end, "结束截图回调与异常清理：" .. expected)
+end
+
+for _, mode in ipairs({"async_cleanup_failure", "sync_cleanup_failure"}) do
+    test.system("testing", "cleanup_callback", {mode = mode}, function(data)
+        assert(data.started and data.completed and data.asyncCleaned and data.syncCleaned and data.asyncBeforeSync,
+            "失败清理没有继续执行其余现场收尾")
+        assert(data.callbackFailures == 0 and data.followingSkipped,
+            "真实执行器清理失败没有阻止后续案例")
+    end, "真实清理失败中断后续案例：" .. mode)
 end
 
 test.system("testing", "gm_preference_player", {}, function(data)

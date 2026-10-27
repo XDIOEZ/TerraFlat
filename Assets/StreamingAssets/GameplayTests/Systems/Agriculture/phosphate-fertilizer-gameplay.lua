@@ -1,6 +1,7 @@
 -- 在隔离世界检查真实手持磷肥的补给、扣料和拒绝，结束后恢复自有地块。
 test.check("player_ready", "磷肥现场玩家就绪")
 test.runtime("agriculture", "phosphate_fertilizer_use", {}, function(data)
+    assert(data.nearWithinReach and not data.distantWithinReach, "磷肥测试未准备真实近距离与超距离目标")
     assert(data.held and not data.ordinaryAccepted and data.ordinaryAmount == 3,
         "真实磷肥未被玩家持有，或对准普通地面仍消耗材料")
     assert(not data.emptyAccepted and data.emptyAmount == 0 and math.abs(data.emptyFertility - .2) < .00001,
@@ -13,5 +14,6 @@ test.runtime("agriculture", "phosphate_fertilizer_use", {}, function(data)
     assert(data.nearlyFullAccepted and data.nearlyFullAmount == 1 and data.fullWater == 4
         and data.fullFertility == 1, "真实磷肥没有按肥力上限封顶并只扣一份")
     assert(not data.fullAccepted and data.fullAmount == 1, "满肥耕地仍消耗了真实磷肥")
-    assert(data.restored, "磷肥现场没有恢复自有地块与手持物")
+    assert(data.restored and data.playerRestored and data.fertilizerReleased,
+        "磷肥现场没有恢复自有地块、玩家位置与临时手持物")
 end, "真实磷肥手持使用：普通地、空数量、超距、未持有、补肥扣料与满肥拒绝")
