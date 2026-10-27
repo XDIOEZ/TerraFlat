@@ -1170,6 +1170,16 @@ public static partial class GameplayTestSystemProbe
     {
         GameObject prefab = Resources.Load<GameObject>("Weather/RainEffect");
         MeshRenderer renderer = prefab != null ? prefab.GetComponent<MeshRenderer>() : null;
+        Mesh mesh = RainEffectController.BuildMesh();
+        JObject meshSamples;
+        try
+        {
+            meshSamples = CaptureWeatherMeshRawSamples(mesh, RainEffectController.MaximumDrops, 78041);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(mesh);
+        }
         Vector4 field = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, 1f, .5f);
         Vector4 half = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, .5f, .5f);
         Vector4 clear = RainEffectController.ResolveFieldSettings(new Vector2(20f, 10f), 1.1f, 1.5f, 0f, .5f);
@@ -1196,6 +1206,7 @@ public static partial class GameplayTestSystemProbe
             ["invalidWidth"] = invalid.x, ["invalidHeight"] = invalid.y, ["invalidDensity"] = invalid.z,
             ["negativeDensity"] = negative.z, ["clampedDensity"] = clamped.z,
             ["maximumDrops"] = RainEffectController.MaximumDrops, ["shaderBudget"] = field.w,
+            ["mesh"] = meshSamples,
             ["driftX"] = drift.x, ["driftY"] = drift.y, ["wrappedX"] = wrapped.x, ["wrappedY"] = wrapped.y,
             ["minX"] = window.xMin, ["maxX"] = window.xMax,
             ["minY"] = window.yMin, ["maxY"] = window.yMax,

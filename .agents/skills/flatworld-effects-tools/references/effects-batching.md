@@ -3,8 +3,7 @@
 ## 粒子与反馈
 
 - ParticleSystem 显式持 URP 材质，Velocity 三轴 MinMax 模式一致；EmitParams.rotation 为度，2D 方向取 `-SignedAngle(up,direction)`。
-- 降雨走 `RainEffectController` 与 Resources/Weather/RainEffect：单个2048雨丝固定网格、共享 RainStreak 材质，顶点 Shader 推进三档远近雨丝与随风倾斜；CPU 仅同步镜头/平滑雨量/整层风位移，差异提交 MPB，覆盖与 localBounds 包含最长雨丝。落地水花独立保留；规则 `environment/rain_visual_batch` 不代表画面或帧率已验证。
-- 降雪走 `SnowEffectController` 与 Resources/Weather/SnowEffect：单个1500雪花固定网格、共享 Snowflake 材质，顶点 Shader 负责下落/摆动/视口外环绕；CPU 仅同步相机、平滑天气强度和整层风位移，参数变化才交 MPB，覆盖变化同步 Renderer.localBounds，销毁释放自有 Mesh。禁止重新生成雪花 ParticleSystem；规则 `environment/shader_snow` 不代表画面或帧率已验证。
+- 雨雪分别由 `RainEffectController`/`SnowEffectController` 配参数并共用 `ShaderPrecipitationEffectControllerBase` 的固定网格、相机覆盖、风/镜头位移、MPB 与生命周期；2048雨丝仍用 seed 78041、UV3.x 阈值和 `_RainWind`，1500雪花仍用 seed 65021、每点额外雪摆相位和 UV3.y 阈值。雨的材质余边与雪固定0.3覆盖分别保留；规则 `environment/rain_visual_batch` / `environment/shader_snow` 不代表画面或帧率已验证。
 - 常驻燃烧统一走 `ShaderFlameEffect`：借用内置 Quad、共享 Resources/Combustion_Flame 材质，`_Time` 驱动火舌/火星，无逐帧动画脚本；实例尺寸/火势/相位用 MPB，仅变化或重启时提交，同时更新 Renderer.localBounds。通用入口 `Assets/2_Prefabs/Effects/VFX_ShaderFlame.prefab`，自定义颜色/速度/风向/像素感可另建材质。
 - 可选常驻烟雾走 `ShaderSmokeEffect` 与 Resources/Combustion_Smoke：共享 Quad，Shader 推进八个错相烟团，无 CPU 粒子；`Mod_CombustionVisual.smokeEnabled/smokeAnchorOffset/smokeSize/smokeDensity` 配置，锚点相对火焰点，当前仅高炉开启。`CombustionVisualEffect` 桥接真实燃烧/排序/启停，规则 `rendering/combustion_shader_smoke` 覆盖配置与表现生命周期，不代替实际点火画面验收。
 - 火焰默认 32 PPU 世界尺寸方格、四色硬边和单像素火星，GPU 时间按 12 FPS 分帧；只改 Shader 动画采样，不降低宿主位置/排序同步频率。手持火把定义旋转 315° 对齐本地 +X，燃烧头仍跟随 Sprite；手持/放置火把设 `attachFlameToAnchor=false` 保持世界向上。

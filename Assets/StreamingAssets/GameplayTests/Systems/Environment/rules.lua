@@ -2,6 +2,49 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+local function assert_precipitation_mesh(mesh, sampleCount, hasSwayPhase, label)
+    assert(mesh.vertexCount == sampleCount * 4 and mesh.indexCount == sampleCount * 6,
+        label .. "固定网格顶点或索引数改变")
+    assert(#mesh.samples == 3 and mesh.samples[1].index == 0 and mesh.samples[2].index == 1
+        and mesh.samples[3].index == sampleCount - 1, label .. "没有返回首两组和末组真实网格样本")
+    local function check_corners(sample, message)
+        assert(#sample.corners == 4, message .. "四边形角点数量改变")
+        local first = sample.corners[1]
+        assert(#first.seed == 4 and #first.uv3 == 2, message .. "采样通道缺失")
+        for corner = 2, 4 do
+            for channel = 1, 4 do
+                near(sample.corners[corner].seed[channel], first.seed[channel], message .. "同组顶点种子不一致")
+            end
+            for channel = 1, 2 do
+                near(sample.corners[corner].uv3[channel], first.uv3[channel], message .. "同组顶点UV3不一致")
+            end
+        end
+        return first
+    end
+    local first = check_corners(mesh.samples[1], label .. "首组")
+    local second = check_corners(mesh.samples[2], label .. "次组")
+    local last = check_corners(mesh.samples[3], label .. "末组")
+    local random = mesh.randomPrefix
+    assert(#random == 10, label .. "随机流基准样本缺失")
+    for channel = 1, 4 do
+        near(first.seed[channel], random[channel], label .. "首组随机种子消耗顺序改变")
+        near(second.seed[channel], random[channel + (hasSwayPhase and 5 or 4)],
+            label .. "次组随机种子消耗顺序改变")
+    end
+    local thresholdChannel = hasSwayPhase and 2 or 1
+    near(first.uv3[thresholdChannel], 0.5 / sampleCount, label .. "首组可见阈值通道改变")
+    near(second.uv3[thresholdChannel], 1.5 / sampleCount, label .. "次组可见阈值通道改变")
+    near(last.uv3[thresholdChannel], (sampleCount - 0.5) / sampleCount, label .. "末组可见阈值通道改变")
+    if hasSwayPhase then
+        near(first.uv3[1], random[5] * math.pi * 2, label .. "首组雪花摆动相位消耗顺序改变")
+        near(second.uv3[1], random[10] * math.pi * 2, label .. "次组雪花摆动相位消耗顺序改变")
+    else
+        near(first.uv3[2], 0, label .. "雨丝阈值之外的UV3通道改变")
+        near(second.uv3[2], 0, label .. "雨丝阈值之外的UV3通道改变")
+        near(last.uv3[2], 0, label .. "雨丝阈值之外的UV3通道改变")
+    end
+end
+
 test.system("environment", "atmosphere_measurement", {}, function(data)
     assert(data.before.status == "Measured" and data.before.worldKey == "probe_first"
         and data.before.planetName == "第一星球", "检测仪没有读取指定星球的真实大气")
@@ -105,6 +148,8 @@ test.system("environment", "shader_snow", {}, function(data)
     near(data.clearDensity, 0, "停雪后仍保留可见雪花")
     near(data.largeDensity, 1, "超大视野没有限制GPU雪花数量")
     assert(data.maximumFlakes == 1500, "固定雪花预算被意外更改")
+    assert(data.shaderBudget == 0, "雪效Field.w不再固定为0")
+    assert_precipitation_mesh(data.mesh, 1500, true, "降雪")
     near(data.invalidWidth, 0.31, "非法宽度没有保留安全覆盖")
     near(data.invalidHeight, 0.31, "非法高度没有保留安全覆盖")
     near(data.invalidDensity, 0, "负密度没有归零")
@@ -128,6 +173,7 @@ test.system("environment", "rain_visual_batch", {}, function(data)
     near(data.largeDensity, 1, "超大视野没有限制GPU雨丝数量")
     assert(data.maximumDrops == 2048 and data.shaderBudget == data.maximumDrops,
         "固定雨丝预算改变，或Shader与控制器的预算不一致")
+    assert_precipitation_mesh(data.mesh, 2048, false, "降雨")
     near(data.invalidWidth, 0.03, "非法宽度没有保留安全覆盖")
     near(data.invalidHeight, 0.03, "非法高度没有保留安全覆盖")
     near(data.invalidDensity, 0, "负密度没有停雨")

@@ -22,8 +22,8 @@
 
 - 雨雪用完整 _precipitationTransitionSeconds（默认12秒）SmoothStep，风/云光 _weatherTransitionSeconds 默认3秒；跨块从当前表现续接，不按低强度缩短。降水必须有本区真实快照，不能把仅有邻区混合风场当成有效零雨量；缺样保留上一目标。雨丝/水花跟随镜头表现，雨声独立读取本机玩家逻辑位置并保持同长度过渡；停雨后已有地面水花继续播完。
 - SetPrecipitationIntensity(intensity,durationSeconds=60,transitionSeconds=-1) 只改本块：0强度停、0过渡立即、-1默认；普通客户端 false。PresentedRainIntensity/PresentedSnowIntensity 供表现，浇水/雪仍读真实天气。
-- 降雨由 `RainEffectController` 单个2048样本固定网格与 `RainStreak` 顶点 Shader 绘制，无落雨 ParticleSystem；三档远近雨丝消费平滑雨量和风，整层风/镜头位移双精度积分，变化才交 MPB；覆盖与 CPU 裁剪框包含最长倾斜雨丝余量，停雨/换世界隐藏，销毁释放网格。同帧地面水花仍共用视口框/WeatherMgr，保留逐点天气/地形判断。
-- 落雪由 `SnowEffectController` 单网格顶点 Shader 绘制，不创建 ParticleSystem；消费同一平滑雪强度与风方向/强度，静态样本仅初始化一次，镜头范围与风偏移用 MPB，停雪/换世界隐藏，销毁释放网格。雪量控制可见样本密度，缩放覆盖更新 CPU 裁剪框；积雪积分和温度分流仍走天气正式规则。
+- 雨雪控制器共用 `ShaderPrecipitationEffectControllerBase` 的固定四边形网格、相机覆盖、风/镜头位移积分、MPB 与启停释放；材质字段、覆盖余边及每物种随机/UV3约定仍由控制器提供。降雨为2048个78041种子样本，四次随机后把阈值写 `uv3.x`，`RainStreak` Shader 绘制三档远近雨丝并消费 `_RainWind`；裁剪框包含最长倾斜雨丝余量。无落雨 ParticleSystem；同帧地面水花仍独立共用视口框/WeatherMgr，保留逐点天气/地形判断。
+- 落雪保留1500个65021种子样本，每点四次随机后再抽雪花摆动相位，阈值写 `uv3.y`；覆盖固定增加0.3并更新 CPU 裁剪框，Shader 消费平滑雪强度与风偏移，不创建 ParticleSystem。停雨/停雪及换世界隐藏，销毁释放网格；积雪积分和温度分流仍走天气正式规则。
 - thunder 期间按强度产新序号，默认最短20游戏秒，384格内共享间隔，事件开始先等；近期记录从存档恢复，距离用环绕最短值。权威保存/复制落点/强度，LightningStrikeSystem 同事件伤害一次；F12/StrikeLightningAt 可立即走真伤害链。
 - 雷束/电弧/闪屏共用近远雷 Cue MinDistance/MaxDistance 线性衰减（8格全、192格零），主束向上24格、Shader程序折线/分叉/光晕；雷声延迟照旧。
 - DenseFogRendererFeature 按玩家逻辑位置合成本地主相机，清晰半径 clearRadius/强度、柔边默认20格、外全遮。DenseFogPresentationTransition 从屏幕最远角外以完整30真实秒收拢/散开，浓度改变续当前边界；零强度散尽关，玩家/世界/Scene变重建，退出/抑制维度清理。
