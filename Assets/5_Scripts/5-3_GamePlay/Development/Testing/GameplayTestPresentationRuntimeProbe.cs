@@ -24,6 +24,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     {
         GameplayTestRuntimeProbe.RegisterAsync("ui_settings", "settings_locale_open", CaptureSettings);
         GameplayTestRuntimeProbe.Register("ui_settings", "settings_locale_close", CloseSettings);
+        GameplayTestRuntimeProbe.Register("ui_settings", "local_float_preference_persistence", CaptureLocalFloatPreferencePersistence);
         GameplayTestRuntimeProbe.Register("ui_settings", "status_hud_readability", CaptureStatusHudReadability);
         GameplayTestRuntimeProbe.RegisterAsync("audio", "voice_lifecycle", CaptureAudio);
         GameplayTestRuntimeProbe.RegisterAsync("rendering", "player_external_effects", CaptureRendering);
@@ -139,6 +140,81 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 (!changeRequested || received) && text.text == expectedText;
         }
         finally { FlatWorldLocalizationService.LanguageChanged -= onChanged; }
+    }
+    #endregion
+
+    #region 本地浮点偏好写入采样
+    // 通过正式Provider采样缓存、持久值和分域通知，每项结束恢复原键及缓存。
+    private static JObject CaptureLocalFloatPreferencePersistence(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var specifications = new[]
+        {
+            (CameraUserSettings.SettingsProvider, CameraUserSettings.LookaheadSettingKey, "FlatWorld.Camera.Lookahead"),
+            (CameraUserSettings.SettingsProvider, CameraUserSettings.LookaheadSmoothingSettingKey, "FlatWorld.Camera.LookaheadSmoothing"),
+            (CameraUserSettings.SettingsProvider, CameraUserSettings.LookaheadZoomInfluenceSettingKey, "FlatWorld.Camera.LookaheadZoomInfluence"),
+            (UIUserSettings.SettingsProvider, UIUserSettings.ScaleSettingKey, "FlatWorld.UI.Scale"),
+            (UIUserSettings.SettingsProvider, UIUserSettings.HotbarBottomSpacingSettingKey, "FlatWorld.UI.HotbarBottomSpacing"),
+            (UIUserSettings.SettingsProvider, UIUserSettings.TouchControlsOpacitySettingKey, "FlatWorld.Mobile.TouchControlsOpacity"),
+            (UIUserSettings.SettingsProvider, UIUserSettings.PinchZoomSensitivitySettingKey, "FlatWorld.Mobile.PinchZoomSensitivity"),
+            (UIUserSettings.SettingsProvider, UIUserSettings.LeftControlZoneRatioSettingKey, "FlatWorld.Mobile.LeftControlZoneRatio"),
+            (UIUserSettings.SettingsProvider, UIUserSettings.RightControlZoneRatioSettingKey, "FlatWorld.Mobile.RightControlZoneRatio")
+        };
+        var counts = new Dictionary<string, int> { ["camera"] = 0, ["ui"] = 0, ["hotbar"] = 0, ["touch"] = 0, ["mobile"] = 0 };
+        Action onCamera = () => counts["camera"]++;
+        Action onUi = () => counts["ui"]++;
+        Action onHotbar = () => counts["hotbar"]++;
+        Action onTouch = () => counts["touch"]++;
+        Action onMobile = () => counts["mobile"]++;
+        CameraUserSettings.Changed += onCamera;
+        UIUserSettings.Changed += onUi;
+        UIUserSettings.HotbarLayoutChanged += onHotbar;
+        UIUserSettings.TouchControlsOpacityChanged += onTouch;
+        UIUserSettings.MobileControlsChanged += onMobile;
+        var observations = new JArray();
+        try
+        {
+            foreach (var specification in specifications)
+            {
+                ISettingsSlider control = specification.Item1.SliderSettings.Single(value => value.Descriptor.Key == specification.Item2);
+                float original = control.Value;
+                var preference = new SavedPreference(specification.Item3, 0f);
+                var sample = new JObject { ["key"] = control.Descriptor.Key, ["beforeEvents"] = JObject.FromObject(counts) };
+                try
+                {
+                    float target = Mathf.Approximately(original, control.MinValue) ? control.MaxValue : control.MinValue;
+                    control.SetValue(target);
+                    sample["target"] = target;
+                    sample["cached"] = control.Value;
+                    sample["stored"] = PlayerPrefs.GetFloat(specification.Item3);
+                    sample["changedEvents"] = JObject.FromObject(counts);
+                    // 独立标记检测相同缓存值是否仍覆写PlayerPrefs，不把它当成Save次数统计。
+                    PlayerPrefs.SetFloat(specification.Item3, -987654f);
+                    control.SetValue(target);
+                    sample["noOpCached"] = control.Value;
+                    sample["noOpStored"] = PlayerPrefs.GetFloat(specification.Item3);
+                    sample["noOpEvents"] = JObject.FromObject(counts);
+                }
+                finally
+                {
+                    try { control.SetValue(original); }
+                    finally { preference.Restore(); PlayerPrefs.Save(); }
+                }
+                sample["preferenceRestored"] = preference.IsRestored();
+                sample["original"] = original;
+                sample["restoredCache"] = control.Value;
+                observations.Add(sample);
+            }
+        }
+        finally
+        {
+            CameraUserSettings.Changed -= onCamera;
+            UIUserSettings.Changed -= onUi;
+            UIUserSettings.HotbarLayoutChanged -= onHotbar;
+            UIUserSettings.TouchControlsOpacityChanged -= onTouch;
+            UIUserSettings.MobileControlsChanged -= onMobile;
+        }
+        return new JObject { ["preferences"] = observations };
     }
     #endregion
 

@@ -258,14 +258,10 @@ public static class UIUserSettings
     {
         EnsureInitialized();
         float sanitized = SanitizeScale(value);
-        if (Mathf.Approximately(cachedScale, sanitized))
-            return cachedScale;
-
-        cachedScale = sanitized;
-        PlayerPrefs.SetFloat(ScaleKey, sanitized);
-        PlayerPrefs.Save();
-        Changed?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedScale, ScaleKey, sanitized, out bool changed);
+        if (changed) Changed?.Invoke();
+        return result;
     }
 
     /// <summary>保存 UI 动画播放倍率，并立即应用到当前由 UIAnimationManager 管理的过渡。</summary>
@@ -291,14 +287,10 @@ public static class UIUserSettings
     {
         EnsureInitialized();
         float sanitized = SanitizeHotbarBottomSpacing(value);
-        if (Mathf.Approximately(cachedHotbarBottomSpacing, sanitized))
-            return cachedHotbarBottomSpacing;
-
-        cachedHotbarBottomSpacing = sanitized;
-        PlayerPrefs.SetFloat(HotbarBottomSpacingKey, sanitized);
-        PlayerPrefs.Save();
-        HotbarLayoutChanged?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedHotbarBottomSpacing, HotbarBottomSpacingKey, sanitized, out bool changed);
+        if (changed) HotbarLayoutChanged?.Invoke();
+        return result;
     }
 
     /// <summary>保存每个滚轮刻度对应的列表行数。</summary>
@@ -345,14 +337,10 @@ public static class UIUserSettings
     {
         EnsureInitialized();
         float sanitized = SanitizeTouchControlsOpacityPercent(value);
-        if (Mathf.Approximately(cachedTouchControlsOpacityPercent, sanitized))
-            return cachedTouchControlsOpacityPercent;
-
-        cachedTouchControlsOpacityPercent = sanitized;
-        PlayerPrefs.SetFloat(TouchControlsOpacityKey, sanitized);
-        PlayerPrefs.Save();
-        TouchControlsOpacityChanged?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedTouchControlsOpacityPercent, TouchControlsOpacityKey, sanitized, out bool changed);
+        if (changed) TouchControlsOpacityChanged?.Invoke();
+        return result;
     }
 
     /// <summary>保存双指缩放灵敏度；0 表示关闭。</summary>
@@ -360,13 +348,8 @@ public static class UIUserSettings
     {
         EnsureInitialized();
         float sanitized = SanitizePinchZoomSensitivity(value);
-        if (Mathf.Approximately(cachedPinchZoomSensitivity, sanitized))
-            return cachedPinchZoomSensitivity;
-
-        cachedPinchZoomSensitivity = sanitized;
-        PlayerPrefs.SetFloat(PinchZoomSensitivityKey, sanitized);
-        PlayerPrefs.Save();
-        return sanitized;
+        return PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedPinchZoomSensitivity, PinchZoomSensitivityKey, sanitized, out _);
     }
 
     /// <summary>保存左侧移动摇杆触控区比例并即时刷新手机 HUD。</summary>
@@ -374,14 +357,10 @@ public static class UIUserSettings
     {
         EnsureInitialized();
         float sanitized = SanitizeControlZoneRatio(value);
-        if (Mathf.Approximately(cachedLeftControlZoneRatio, sanitized))
-            return cachedLeftControlZoneRatio;
-
-        cachedLeftControlZoneRatio = sanitized;
-        PlayerPrefs.SetFloat(LeftControlZoneRatioKey, sanitized);
-        PlayerPrefs.Save();
-        MobileControlsChanged?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedLeftControlZoneRatio, LeftControlZoneRatioKey, sanitized, out bool changed);
+        if (changed) MobileControlsChanged?.Invoke();
+        return result;
     }
 
     /// <summary>保存右侧普通指向触控区比例并即时刷新手机 HUD。</summary>
@@ -389,14 +368,10 @@ public static class UIUserSettings
     {
         EnsureInitialized();
         float sanitized = SanitizeControlZoneRatio(value);
-        if (Mathf.Approximately(cachedRightControlZoneRatio, sanitized))
-            return cachedRightControlZoneRatio;
-
-        cachedRightControlZoneRatio = sanitized;
-        PlayerPrefs.SetFloat(RightControlZoneRatioKey, sanitized);
-        PlayerPrefs.Save();
-        MobileControlsChanged?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedRightControlZoneRatio, RightControlZoneRatioKey, sanitized, out bool changed);
+        if (changed) MobileControlsChanged?.Invoke();
+        return result;
     }
 
     /// <summary>读取一个内置触屏玩法控件保存的安全区归一化中心位置。</summary>

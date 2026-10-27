@@ -90,14 +90,10 @@ public static class CameraUserSettings
     {
         EnsureInitialized();
         float sanitized = Sanitize(value, MinimumLookahead, MaximumLookahead, LookaheadStep, DefaultLookahead);
-        if (Mathf.Approximately(cachedLookahead, sanitized))
-            return cachedLookahead;
-
-        cachedLookahead = sanitized;
-        PlayerPrefs.SetFloat(LookaheadKey, sanitized);
-        PlayerPrefs.Save();
-        Changed?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedLookahead, LookaheadKey, sanitized, out bool changed);
+        if (changed) Changed?.Invoke();
+        return result;
     }
 
     /// <summary>保存前探平滑值；数值越大越稳，但会增加预测响应延迟。</summary>
@@ -110,14 +106,10 @@ public static class CameraUserSettings
             MaximumLookaheadSmoothing,
             LookaheadSmoothingStep,
             DefaultLookaheadSmoothing);
-        if (Mathf.Approximately(cachedLookaheadSmoothing, sanitized))
-            return cachedLookaheadSmoothing;
-
-        cachedLookaheadSmoothing = sanitized;
-        PlayerPrefs.SetFloat(LookaheadSmoothingKey, sanitized);
-        PlayerPrefs.Save();
-        Changed?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedLookaheadSmoothing, LookaheadSmoothingKey, sanitized, out bool changed);
+        if (changed) Changed?.Invoke();
+        return result;
     }
 
     /// <summary>保存镜头拉远时对前探或惯性的影响系数；负值减弱，正值增强。</summary>
@@ -130,14 +122,10 @@ public static class CameraUserSettings
             MaximumLookaheadZoomInfluence,
             LookaheadZoomInfluenceStep,
             DefaultLookaheadZoomInfluence);
-        if (Mathf.Approximately(cachedLookaheadZoomInfluence, sanitized))
-            return cachedLookaheadZoomInfluence;
-
-        cachedLookaheadZoomInfluence = sanitized;
-        PlayerPrefs.SetFloat(LookaheadZoomInfluenceKey, sanitized);
-        PlayerPrefs.Save();
-        Changed?.Invoke();
-        return sanitized;
+        float result = PlayerPrefsFloatValueCommitter.PersistChangedCachedFloatPreference(
+            ref cachedLookaheadZoomInfluence, LookaheadZoomInfluenceKey, sanitized, out bool changed);
+        if (changed) Changed?.Invoke();
+        return result;
     }
 
     /// <summary>恢复镜头前探、预判平滑与缩放影响系数默认值。</summary>

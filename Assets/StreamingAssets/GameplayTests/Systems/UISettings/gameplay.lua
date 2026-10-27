@@ -1,3 +1,31 @@
+-- 正式设置Provider持有领域校验，写入只在缓存变化时持久化并发出对应通知。
+test.runtime("ui_settings", "local_float_preference_persistence", {}, function(data)
+    local expected = { ["camera.lookahead"] = "camera", ["camera.lookaheadSmoothing"] = "camera",
+        ["camera.lookaheadZoomInfluence"] = "camera", ["ui.scale"] = "ui",
+        ["ui.hotbarBottomSpacing"] = "hotbar", ["ui.touchControlsOpacity"] = "touch",
+        ["ui.pinchZoomSensitivity"] = "none", ["ui.leftControlZoneRatio"] = "mobile",
+        ["ui.rightControlZoneRatio"] = "mobile" }
+    assert(#data.preferences == 9, "本地浮点偏好采样不完整")
+    for _, preference in ipairs(data.preferences) do
+        local event = expected[preference.key]
+        assert(event, "偏好缺失或重复：" .. preference.key)
+        expected[preference.key] = nil
+        assert(math.abs(preference.cached - preference.target) < .0001
+            and math.abs(preference.stored - preference.target) < .0001,
+            preference.key .. "没有同步缓存及持久值")
+        for _, name in ipairs({ "camera", "ui", "hotbar", "touch", "mobile" }) do
+            assert(preference.changedEvents[name] - preference.beforeEvents[name] == (name == event and 1 or 0),
+                preference.key .. "通知次数或所属领域改变")
+            assert(preference.noOpEvents[name] == preference.changedEvents[name], preference.key .. "无变化仍发通知")
+        end
+        assert(preference.noOpStored == -987654 and math.abs(preference.noOpCached - preference.target) < .0001,
+            preference.key .. "相同缓存值仍覆写PlayerPrefs或从磁盘重读")
+        assert(preference.preferenceRestored and math.abs(preference.restoredCache - preference.original) < .0001,
+            preference.key .. "没有恢复用户偏好原值或缓存")
+    end
+    assert(next(expected) == nil, "遗漏本地浮点设置")
+end, "九项本地浮点偏好的持久化、无变化跳过、通知归属及原值恢复")
+
 -- 检查正式生存 HUD 的实际填充与数值文字在不同状态下均可区分。
 test.runtime("ui_settings", "status_hud_readability", {}, function(data)
     local function linear(channel)
