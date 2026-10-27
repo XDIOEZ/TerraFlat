@@ -88,6 +88,7 @@ public static class ItemDefinitionRuntime
         // 只按定义显式声明的模块装配能力，普通实体不会自动获得装备交互。
         using (ConfigureModulesDebug.Measure(definition.ModuleAssemblies?.Count ?? 0, definition.Id))
             EnsureModuleComponents(gameRes, definition, item, itemData);
+        ItemPhysicsDefinitionRuntime.ConfigureItemPhysicsRegions(item, definition.Physics);
     }
 
     /// <summary>
@@ -291,30 +292,7 @@ public static class ItemDefinitionRuntime
             throw new MissingComponentException(
                 $"物品 {item.itemData?.IDName} 的外壳缺少碰撞体 {definition.Type}（{definition.Path}）");
 
-        if (definition.Enabled.HasValue) collider.enabled = definition.Enabled.Value;
-        if (definition.IsTrigger.HasValue) collider.isTrigger = definition.IsTrigger.Value;
-        if (definition.Offset.HasValue) collider.offset = definition.Offset.Value;
-
-        switch (collider)
-        {
-            case BoxCollider2D box when definition.Size.HasValue:
-                box.size = definition.Size.Value;
-                if (definition.EdgeRadius.HasValue)
-                    box.edgeRadius = definition.EdgeRadius.Value;
-                break;
-            case CircleCollider2D circle when definition.Radius.HasValue:
-                circle.radius = definition.Radius.Value;
-                break;
-            case CapsuleCollider2D capsule:
-                if (definition.Size.HasValue) capsule.size = definition.Size.Value;
-                if (definition.Direction.HasValue)
-                    capsule.direction = (CapsuleDirection2D)definition.Direction.Value;
-                break;
-            case PolygonCollider2D polygon when definition.Points != null:
-                polygon.pathCount = 1;
-                polygon.SetPath(0, definition.Points);
-                break;
-        }
+        ItemPhysicsDefinitionRuntime.ApplyColliderParameters(collider, definition);
     }
 
     #region 模块装配

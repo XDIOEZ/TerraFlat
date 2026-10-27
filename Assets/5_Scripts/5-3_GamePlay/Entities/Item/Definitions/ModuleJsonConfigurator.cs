@@ -76,13 +76,13 @@ public static class ModuleJsonConfigurator
         private readonly string moduleId;
         private readonly JObject regular;
         private readonly JObject transform;
-        private readonly JObject collider;
+        private readonly ItemColliderDefinitionDto collider;
         private readonly JsonSerializer serializer;
         private readonly Type colliderType;
         private readonly JObject customValidationParameters;
 
         internal PreparedParameters(Type moduleType, string itemId, string moduleName, string moduleId,
-            JObject regular, JObject transform, JObject collider, Type colliderType, JObject customValidationParameters)
+            JObject regular, JObject transform, ItemColliderDefinitionDto collider, Type colliderType, JObject customValidationParameters)
         {
             this.moduleType = moduleType;
             this.itemId = itemId;
@@ -154,7 +154,7 @@ public static class ModuleJsonConfigurator
             parameters.Remove("$transform");
             parameters.Remove("$collider2D");
             return new PreparedParameters(module.GetType(), itemId, moduleName, moduleId,
-                parameters, transform, collider, colliderType, customValidationParameters);
+                parameters, transform, collider?.ToObject<ItemColliderDefinitionDto>(), colliderType, customValidationParameters);
         }
         catch (Exception exception)
         {
@@ -292,7 +292,7 @@ public static class ModuleJsonConfigurator
         }
     }
 
-    private static void ApplySpecialParameters(Module module, JObject transformObject, JObject colliderObject)
+    private static void ApplySpecialParameters(Module module, JObject transformObject, ItemColliderDefinitionDto colliderObject)
     {
         if (transformObject != null)
         {
@@ -306,7 +306,7 @@ public static class ModuleJsonConfigurator
         }
 
         if (colliderObject != null)
-            ApplyCollider(module, colliderObject);
+            ItemPhysicsDefinitionRuntime.ApplyColliderParameters(module.GetComponent<Collider2D>(), colliderObject);
     }
 
     /// <summary>把 JSON 整数或字符串安全转换为 Unity LayerMask。</summary>
@@ -344,38 +344,6 @@ public static class ModuleJsonConfigurator
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             writer.WriteValue(((LayerMask)value).value);
-        }
-    }
-
-    private static void ApplyCollider(Module module, JObject data)
-    {
-        Collider2D collider = module.GetComponent<Collider2D>();
-        if (collider == null)
-            throw new MissingComponentException($"模块 {module.GetType().Name} 缺少 JSON 所需的 Collider2D");
-
-        if (data["enabled"] != null) collider.enabled = data.Value<bool>("enabled");
-        if (data["isTrigger"] != null) collider.isTrigger = data.Value<bool>("isTrigger");
-        if (data["offset"] != null) collider.offset = data["offset"].ToObject<Vector2>();
-
-        switch (collider)
-        {
-            case BoxCollider2D box when data["size"] != null:
-                box.size = data["size"].ToObject<Vector2>();
-                if (data["edgeRadius"] != null)
-                    box.edgeRadius = data.Value<float>("edgeRadius");
-                break;
-            case CircleCollider2D circle when data["radius"] != null:
-                circle.radius = data.Value<float>("radius");
-                break;
-            case CapsuleCollider2D capsule:
-                if (data["size"] != null) capsule.size = data["size"].ToObject<Vector2>();
-                if (data["direction"] != null)
-                    capsule.direction = (CapsuleDirection2D)data.Value<int>("direction");
-                break;
-            case PolygonCollider2D polygon when data["points"] is JArray points:
-                polygon.pathCount = 1;
-                polygon.SetPath(0, points.ToObject<Vector2[]>());
-                break;
         }
     }
 

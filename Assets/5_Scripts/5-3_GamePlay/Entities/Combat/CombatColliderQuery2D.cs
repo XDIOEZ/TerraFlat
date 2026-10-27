@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using FlatWorld.Geometry;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>一次攻击窗口内的 Collider2D 查询结果，身份仍由调用方的数据索引解释。</summary>
 public readonly struct CombatColliderHit2D
 {
+    #region 接触候选
     public readonly int CandidateId;
     public readonly float Fraction;
     public readonly Vector2 Point;
@@ -17,6 +19,7 @@ public readonly struct CombatColliderHit2D
         Fraction = fraction;
         Point = point;
     }
+    #endregion
 }
 
 /// <summary>把少量纯数据候选临时投影为 Collider2D，命中几何只由 Physics2D 查询。</summary>
@@ -31,15 +34,18 @@ public sealed class CombatColliderQuery2D : IDisposable
         public readonly CircleCollider2D Circle;
         public Collider2D ActiveCollider;
 
-        public Projection(int layer)
+        public Projection(int layer, WorldPhysicsScene2D space)
         {
             Root = new GameObject("Combat Collider Query") { hideFlags = HideFlags.HideInHierarchy, layer = layer };
+            Root.SetActive(false);
+            SceneManager.MoveGameObjectToScene(Root, space.Scene);
             Box = Root.AddComponent<BoxCollider2D>();
             Box.isTrigger = true;
             Box.enabled = false;
             Circle = Root.AddComponent<CircleCollider2D>();
             Circle.isTrigger = true;
             Circle.enabled = false;
+            Root.SetActive(true);
         }
 
         public void Bind(PerceptionShape2D shape)
@@ -67,8 +73,7 @@ public sealed class CombatColliderQuery2D : IDisposable
         }
     }
 
-    private static readonly Stack<CombatColliderQuery2D> Available = new();
-    private static readonly List<CombatColliderQuery2D> All = new();
+    private readonly WorldPhysicsScene2D space;
     private readonly List<Projection> projections = new();
     private readonly Dictionary<Collider2D, int> candidateIds = new();
     private readonly List<Collider2D> overlaps = new();
@@ -76,33 +81,31 @@ public sealed class CombatColliderQuery2D : IDisposable
     private int activeCount;
     private bool rented;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetPool()
+    internal CombatColliderQuery2D(WorldPhysicsScene2D space) => this.space = space;
+
+    internal void ReleaseOwnedProjections()
     {
-        for (int i = 0; i < All.Count; i++)
+        Clear();
+        for (int i = 0; i < projections.Count; i++)
         {
-            CombatColliderQuery2D query = All[i];
-            query.Clear();
-            for (int j = 0; j < query.projections.Count; j++)
-            {
-                GameObject root = query.projections[j].Root;
-                if (root == null) continue;
-                if (Application.isPlaying) UnityEngine.Object.Destroy(root);
-                else UnityEngine.Object.DestroyImmediate(root);
-            }
-            query.projections.Clear();
+            GameObject root = projections[i].Root;
+            if (root == null) continue;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(root);
+            else UnityEngine.Object.DestroyImmediate(root);
         }
-        Available.Clear();
-        All.Clear();
+        projections.Clear();
     }
 
     public static CombatColliderQuery2D Rent()
+        => Rent(GameplayWorldRegistry.CurrentPhysics.PrimarySpace);
+
+    public static CombatColliderQuery2D Rent(WorldPhysicsScene2D space)
     {
+        if (space == null || !space.IsValid) throw new InvalidOperationException("战斗查询的物理场景尚未绑定。");
         CombatPhysicsChannels.EnsureConfigured();
         if (CombatPhysicsChannels.DamageReceiverLayer < 0)
             throw new InvalidOperationException("战斗受击层缺失，无法建立 Collider2D 查询投影。");
-        CombatColliderQuery2D query = Available.Count > 0 ? Available.Pop() : new CombatColliderQuery2D();
-        if (!All.Contains(query)) All.Add(query);
+        CombatColliderQuery2D query = space.RentCombatQuery();
         query.rented = true;
         return query;
     }
@@ -111,13 +114,14 @@ public sealed class CombatColliderQuery2D : IDisposable
     public void Add(int candidateId, PerceptionShape2D shape, float rotationDegrees = 0f)
     {
         if (!rented) throw new InvalidOperationException("Collider 查询必须先取得租约。");
+        if (!space.IsValid) throw new ObjectDisposedException(nameof(WorldPhysicsScene2D));
         if (!math.all(math.isfinite(new float4(shape.Center, shape.Extents))) ||
             !math.isfinite(shape.Radius))
             throw new InvalidOperationException("受击范围包含无效坐标或尺寸。");
         if (activeCount == projections.Count)
-            projections.Add(new Projection(CombatPhysicsChannels.DamageReceiverLayer));
+            projections.Add(new Projection(CombatPhysicsChannels.DamageReceiverLayer, space));
         else if (projections[activeCount].Root == null)
-            projections[activeCount] = new Projection(CombatPhysicsChannels.DamageReceiverLayer);
+            projections[activeCount] = new Projection(CombatPhysicsChannels.DamageReceiverLayer, space);
         Projection projection = projections[activeCount++];
         projection.Bind(shape);
         projection.Root.transform.rotation = Quaternion.Euler(0f, 0f, rotationDegrees);
@@ -138,7 +142,7 @@ public sealed class CombatColliderQuery2D : IDisposable
     {
         if (!rented) return;
         Clear();
-        Available.Push(this);
+        space.ReturnCombatQuery(this);
     }
 
     #endregion
@@ -149,6 +153,7 @@ public sealed class CombatColliderQuery2D : IDisposable
     public void Query(AttackShape2D attack, List<CombatColliderHit2D> results)
     {
         if (!rented) throw new InvalidOperationException("Collider 查询必须先取得租约。");
+        if (!space.IsValid) throw new ObjectDisposedException(nameof(WorldPhysicsScene2D));
         if (results == null) throw new ArgumentNullException(nameof(results));
         results.Clear();
         if (activeCount == 0) return;
@@ -168,7 +173,7 @@ public sealed class CombatColliderQuery2D : IDisposable
         if (distance <= 0.0001f)
         {
             overlaps.Clear();
-            GameplayPhysics2D.OverlapBox((Vector2)attack.Center, size, angle, filter, overlaps);
+            GameplayPhysics2D.OverlapBox(space, (Vector2)attack.Center, size, angle, filter, overlaps);
             for (int i = 0; i < overlaps.Count; i++)
             {
                 Collider2D collider = overlaps[i];
@@ -180,7 +185,7 @@ public sealed class CombatColliderQuery2D : IDisposable
 
         casts.Clear();
         Vector2 start = (Vector2)(attack.Center - attack.SweepDelta);
-        GameplayPhysics2D.BoxCast(start, size, angle, travel / distance, filter, casts, distance);
+        GameplayPhysics2D.BoxCast(space, start, size, angle, travel / distance, filter, casts, distance);
         for (int i = 0; i < casts.Count; i++)
         {
             RaycastHit2D hit = casts[i];
@@ -190,5 +195,31 @@ public sealed class CombatColliderQuery2D : IDisposable
         }
     }
 
+    #endregion
+}
+
+public sealed partial class WorldPhysicsScene2D
+{
+    #region 物理场景拥有的临时战斗投影
+    private readonly Stack<CombatColliderQuery2D> availableCombatQueries = new();
+    private readonly List<CombatColliderQuery2D> ownedCombatQueries = new();
+
+    internal CombatColliderQuery2D RentCombatQuery()
+    {
+        if (availableCombatQueries.Count > 0) return availableCombatQueries.Pop();
+        var query = new CombatColliderQuery2D(this);
+        ownedCombatQueries.Add(query);
+        return query;
+    }
+
+    internal void ReturnCombatQuery(CombatColliderQuery2D query) => availableCombatQueries.Push(query);
+
+    // 临时代理随真实物理场景释放，停用的世界不再被全局池保留。
+    partial void DisposeTransientQueries()
+    {
+        foreach (CombatColliderQuery2D query in ownedCombatQueries) query.ReleaseOwnedProjections();
+        ownedCombatQueries.Clear();
+        availableCombatQueries.Clear();
+    }
     #endregion
 }

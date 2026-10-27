@@ -101,15 +101,20 @@ public static partial class GameplayTestSystemProbe
     // 独立停用根实走正式碰撞容器，清理时同时撤销物理归属，不借用或修改用户世界。
     private static JObject CaptureCombinedStorageObstacleLifecycle(JObject args)
     {
+        using var space = WorldPhysicsScene2D.CreateIsolated("Storage collision probe " + Guid.NewGuid().ToString("N"));
+        using var physics = new WorldPhysicsService2D(space.Scene.name, space);
         var sourceRoot = new GameObject("Combined storage collision source probe");
         var mirrorRoot = new GameObject("Combined storage collision mirror probe");
         sourceRoot.SetActive(false); mirrorRoot.SetActive(false);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(sourceRoot, space.Scene);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(mirrorRoot, space.Scene);
         sourceRoot.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
         mirrorRoot.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
         BoxCollider2D template = sourceRoot.AddComponent<BoxCollider2D>();
         template.enabled = false;
         var source = new ChunkObstacleColliderSet(sourceRoot.transform);
         var mirror = new ChunkObstacleColliderSet(mirrorRoot.transform);
+        source.BindWorldPhysics(physics);
         var merged = new ChunkMergedObstacleRectangles();
         var retainedIds = new HashSet<int>();
         int Publish()

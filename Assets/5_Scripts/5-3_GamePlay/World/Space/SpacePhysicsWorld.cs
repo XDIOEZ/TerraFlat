@@ -53,8 +53,9 @@ namespace FlatWorld.Spaceflight
     internal sealed class SpacePhysicsIsland
     {
         #region 独立物理场景与局部参考系
-        public Scene Scene;
-        public PhysicsScene2D Physics;
+        public WorldPhysicsScene2D Context;
+        public Scene Scene => Context?.Scene ?? default;
+        public PhysicsScene2D Physics => Context?.PhysicsScene ?? default;
         public SpaceSectorPosition Origin;
         public SpaceVector2 OriginDelta, StartVelocity, EndVelocity;
         public SpaceGravitySource? Frame;
@@ -113,8 +114,7 @@ namespace FlatWorld.Spaceflight
         public void Dispose()
         {
             foreach (SpacePhysicsBody body in bodies.Values) DestroyBody(body);
-            foreach (SpacePhysicsIsland island in islands)
-                if (island.Scene.IsValid() && island.Scene.isLoaded) SceneManager.UnloadSceneAsync(island.Scene);
+            foreach (SpacePhysicsIsland island in islands) island.Context?.Dispose();
             UnityEngine.Object.Destroy(material);
             bodies.Clear(); active.Clear(); islands.Clear(); groups.Clear(); claimed.Clear(); cells.Clear();
             Impacts.Clear(); gravityFrames.Clear(); gravityById.Clear();
@@ -131,14 +131,12 @@ namespace FlatWorld.Spaceflight
 
         private void EnsureIslandScene(SpacePhysicsIsland island)
         {
-            if (island.Scene.IsValid() && island.Scene.isLoaded && island.Physics.IsValid()) return;
+            if (island.Context?.IsValid == true) return;
             // 会话能跨场景保留，已卸载的计算场景及代理必须从权威业务状态重新建立。
             foreach (SpacePhysicsBody body in bodies.Values)
                 if (body.Island == island) DestroyBody(body);
-            if (island.Scene.IsValid() && island.Scene.isLoaded) SceneManager.UnloadSceneAsync(island.Scene);
-            Scene scene = SceneManager.CreateScene($"SpacePhysics_{ownerId}_{++sceneNumber}",
-                new CreateSceneParameters(LocalPhysicsMode.Physics2D));
-            island.Scene = scene; island.Physics = scene.GetPhysicsScene2D();
+            island.Context?.Dispose();
+            island.Context = WorldPhysicsScene2D.CreateIsolated($"SpacePhysics_{ownerId}_{++sceneNumber}");
             filtersDirty = true;
         }
         #endregion
@@ -218,9 +216,7 @@ namespace FlatWorld.Spaceflight
                             if (!claimed.Contains(candidate)) { island = candidate; break; }
                     if (island == null)
                     {
-                        Scene scene = SceneManager.CreateScene($"SpacePhysics_{ownerId}_{++sceneNumber}",
-                            new CreateSceneParameters(LocalPhysicsMode.Physics2D));
-                        island = new SpacePhysicsIsland { Scene = scene, Physics = scene.GetPhysicsScene2D() };
+                        island = new SpacePhysicsIsland();
                         islands.Add(island);
                     }
                     EnsureIslandScene(island);

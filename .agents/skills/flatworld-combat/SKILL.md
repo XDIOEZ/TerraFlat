@@ -56,7 +56,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 武器自身 Source 与 Owner Credit 分开，防自伤在候选/扫描/结算排 Owner，不改 IDamageSender.attacker；上下文携 generation/world/dimension 和 double 模拟 Tick/Time。
 - 太空联机经 `SpaceSession.CombatNetworking` 校验真实连接玩家并驱动原武器输入、体力及弹药事务；`ShipCombatBridge` 在攻击者规范坐标系查询船体和乘员，远端船不依赖 Host 视野。太空 `Mod_Projectile` 不参与地表 Physics2D，固定规范坐标扫掠命中，回收交 `SpaceLooseItemState`；客户端投射物仅复制表现。
 - 窗口打开主动扫已重叠目标；动画武器在 Animator 后 LateUpdate 逐帧采样，窗口预约集跨帧保留、关窗清空，DamageInterval 不限制姿态采样；持续伤害用 Pulse。默认 MaxAttackTargets=3，可被 Prefab/JSON 覆盖。
-- AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
+- AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何，投影池归所属 WorldPhysicsScene2D，租约固定查询场景。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
 - 机械武器 Pulse 的候选/去重/命中列表通过 Unity CollectionPool 租约在调用结束归还，支持重入；命中先按扫掠时间再按到接触点的距离排序，预先计算距离并复用静态比较器，不在排序时捕获当前攻击中心。分段 Marker 为 `FlatWorld.Combat.MachineCandidates/MachinePhysicsQuery/MachineApplyHits`；规则 `mechanical/machine_pulse_order`。
 - DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 自带同节点专用 Trigger，身体/拾取阻挡分开。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
 - 动画武器伤害盒跟随实际 Sprite 局部姿态/flip，用物理轮廓或紧致网格，缺失才 bounds；TightSprite 默认，右上工具可配 UpperRightQuadrant。

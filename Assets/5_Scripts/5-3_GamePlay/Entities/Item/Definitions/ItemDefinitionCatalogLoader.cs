@@ -1244,7 +1244,8 @@ public static class ItemDefinitionCatalogLoader
             ItemMatterReactionCompiler.CompileMatter(dto.Matter, dto.Tags, id),
             ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id),
             gameRes,
-            prototypeCache);
+            prototypeCache,
+            dto.Physics);
     }
 
     private static Dictionary<string, int> ResolveProcessingCapabilityLevels(

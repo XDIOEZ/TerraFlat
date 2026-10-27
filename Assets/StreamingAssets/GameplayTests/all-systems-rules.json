@@ -311,6 +311,12 @@
       "enabled": true
     },
     {
+      "id": "world_physics_rules",
+      "name": "世界物理空间与物品区域契约",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/physics.lua",
+      "enabled": true
+    },
+    {
       "id": "save_rules",
       "name": "存档与恢复规则与边界",
       "luaPath": "GameplayTests/Systems/Save/rules.lua",

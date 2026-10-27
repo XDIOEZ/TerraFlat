@@ -15,6 +15,12 @@
       "name": "世界模型逻辑身份",
       "luaPath": "GameplayTests/Systems/WorldStreaming/runtime-owner-rules.lua",
       "enabled": true
+    },
+    {
+      "id": "world_physics_rules",
+      "name": "世界物理空间与物品区域契约",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/physics.lua",
+      "enabled": true
     }
   ]
 }

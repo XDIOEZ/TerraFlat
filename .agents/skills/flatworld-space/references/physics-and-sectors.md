@@ -11,7 +11,7 @@
 
 ## 物理所有权
 
-- SpacePhysicsWorld 以真实 Dynamic Rigidbody2D/Collider2D 在独立 PhysicsScene2D 推进船、残骸、自由玩家和散物，读回业务状态；禁止叠加自研积分、扫掠、冲量。原生回报只结算损伤，不再次施加反作用；视图刚体只显示。
+- SpacePhysicsWorld 以真实 Dynamic Rigidbody2D/Collider2D 在独立 PhysicsScene2D 推进船、残骸、自由玩家和散物，读回业务状态；岛场景生命周期复用 WorldPhysicsScene2D，精度与分组仍归 SpacePhysicsWorld。禁止叠加自研积分、扫掠、冲量。原生回报只结算损伤，不再次施加反作用；视图刚体只显示。
 - 稀疏网格分配可复用局部物理岛，近物共场景，代理不依赖美术。支撑乘员圆归整船且质量已计入；自由玩家/散物不重复计船重。地板等非阻挡件忽略自由圆，舱壁/关舱门仍阻挡。
 - ShipColliderGeometry 按格去重、阻挡优先，合并同类连续矩形并保留洞/分离区域；结构修订或门状态才重建。整船用阻挡/非阻挡两个 CustomCollider2D，乘员圆归阻挡组，几何未变不提交；地表数学接触不走该合批链。
 - 船/对接成员/残骸 FreezeRotation，地表接触逆惯量零；散物仍可旋转。使用 Unity 2022.3 velocity/drag API，计算单位米；读回原生位移差保留 double 余量，同引力源的岛以星体公转作平移参考。

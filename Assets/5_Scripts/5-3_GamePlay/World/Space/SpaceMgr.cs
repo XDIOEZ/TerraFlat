@@ -111,7 +111,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         UniverseSimulation data = session.GetUniverse(sector);
         string key = SpaceSectorCoordinates.SceneKey(sector);
         Scene scene = SceneManager.GetSceneByName(key);
-        if (!scene.IsValid() || !scene.isLoaded) scene = SceneManager.CreateScene(key);
+        if (!scene.IsValid() || !scene.isLoaded) scene = WorldPhysicsScene2D.CreateIsolatedScene(key);
         if (TryRestoreRetainedSector(session, sector, scene, out SectorView restored))
         {
             sectors.Add(sector, restored);

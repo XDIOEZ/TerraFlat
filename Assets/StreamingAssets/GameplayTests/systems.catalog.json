@@ -1051,6 +1051,7 @@
       "name": "世界模型与区块流送",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Physics2D/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Chunk/*",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/*",
         "Assets/5_Scripts/5-0_WorldModel/*",
@@ -1059,7 +1060,8 @@
       "dependsOn": [],
       "ruleCaseIds": [
         "world_streaming_rules",
-        "world_runtime_owner_rules"
+        "world_runtime_owner_rules",
+        "world_physics_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/WorldStreaming/rules-suite.json",
       "integrationSuites": [
@@ -1068,7 +1070,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/WorldStreaming/README.md",
       "integrationCaseIds": [
-        "world_streaming_gameplay"
+        "world_streaming_gameplay",
+        "world_physics_gameplay"
       ],
       "rulesCoverage": "partial"
     },

@@ -10,6 +10,8 @@
 - 本体/最终目录复查通过装配计划复用已解析的参数，字段类型仅在 Prepare 严格检查一次；复查仍验证当前原型类型、所需 Collider2D 类型及模块自有校验，不把复用变成跳过校验。回归 `item_runtime/compiled_module_parameters`。
 - F5 RefreshLiveConfiguration 原位更新显式参数和仍受定义控制的视觉，不换 ItemData/模块或重 Load；结构与删参数后的默认值供新实例。ApplyResourceConfiguration/OnResourcesReloaded 保进度、刷新缓存/订阅；发布清闲池、禁活旧实例回池。
 - GameRes.ResourceAssets 持 Sprite/材质/动画/壳句柄；Sprite Pivot 排序，子装饰用根 SortingGroup，池材质恢复定义或壳默认。占位图 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，ItemSprite 标签。
+- 普通 Item 可在 `physics.regions` 声明 `{id,purposes,module?,path?,collider}`；`purposes` 使用 `Blocking, Interaction` 等 flags 字符串。装配在模块绑定后、池层级基线前创建独立区域，`ItemPhysicsRegion2D` 保留区域和明确接收组件；受击/交互/触发须指定接收模块槽或其组件路径，交互接收者必须实现 `IInteractable`；阻挡与受击/触发分区。现有 `visual.collider/health.collider/$collider2D` 继续使用同一参数应用器。
+- `physics.regions` 当前只供完整 Item 使用，自然 Resource Entity 与数据机器明确拒绝；普通自动设施可沿用 `UseGameObjectBackend` 选择完整 Item，显式机械节点仍走原数据后端。数据后端现有形状已统一物理登记，新多区域需后续扩展几何编译；`ResolveBlockingLocalBounds` 只是候选宽相，不能填实区域空洞。区域结构随新实例生效，F5 不重建活体层级。
 
 ## 动画
 

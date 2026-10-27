@@ -793,7 +793,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         string OldSceneName = SceneManager.GetActiveScene().name;
         // 2. 立刻创建并激活空场景
-        Scene newScene = SceneManager.CreateScene(NewScenename, new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        Scene newScene = WorldPhysicsScene2D.CreateIsolatedScene(NewScenename);
         SceneManager.SetActiveScene(newScene);
         DimensionManager.Instance.ActivateWorld(worldAddress);
         _ = GameplayWorldRegistry.GetOrCreate(worldAddress.WorldKey);
@@ -930,7 +930,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         ///////////////////////////上面都是对旧场景的处理////////////////////
         // 创建新场景
-        Scene newScene = SceneManager.CreateScene(NextSceneName, new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        Scene newScene = WorldPhysicsScene2D.CreateIsolatedScene(NextSceneName);
 
         // 卸载旧场景
         Scene startScene = SceneManager.GetActiveScene();

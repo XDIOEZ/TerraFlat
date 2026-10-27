@@ -6,7 +6,7 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public sealed class GameplayWorldRuntime
+public sealed partial class GameplayWorldRuntime
 {
     #region 世界资源所有权
     public string WorldKey { get; internal set; }
@@ -19,7 +19,7 @@ public sealed class GameplayWorldRuntime
     #endregion
 }
 
-public static class GameplayWorldRegistry
+public static partial class GameplayWorldRegistry
 {
     #region 世界注册与同步上下文
     private static readonly Dictionary<string, GameplayWorldRuntime> worlds = new(StringComparer.Ordinal);
@@ -34,7 +34,7 @@ public static class GameplayWorldRegistry
     private static GameplayWorldRegistryHost host;
     private static bool releasing;
     private static bool preserveLocalChunkManagerForSpaceTransition;
-    private static readonly List<GameplayWorldRuntime> physicsDispatch = new();
+    private static readonly List<WorldPhysicsService2D> physicsDispatch = new();
     private static readonly List<GameplayWorldRuntime> releaseDispatch = new();
     private static readonly HashSet<PhysicsScene2D> physicsScenes = new();
     private static bool sceneCacheBound;
@@ -55,6 +55,7 @@ public static class GameplayWorldRegistry
     // 卸载只解除仍属于该场景的真实拥有者，旧上下文不能撤销已替换的绑定。
     private static void OnSceneUnloaded(Scene scene)
     {
+        ReleasePhysicsForScene(scene);
         DroppedItemService.DetachScenePresentation(scene);
         foreach (GameplayWorldRuntime world in worlds.Values)
             if (world.Scene == scene) worldSceneBindings.UnbindWorldFromScene(scene.handle, world.WorldKey, world);
@@ -181,11 +182,15 @@ public static class GameplayWorldRegistry
     // 世界账本负责统一交接，其他运行索引只消费归属变化通知。
     public static void AssignItemToWorld(Item item, string worldKey)
     {
-        if (ReferenceEquals(item, null) || !worldItems.AssignItemToWorld(item, worldKey)) return;
         ItemMgr manager = ItemMgr.GetExistingInstance();
+        if (item != null && manager != null && manager.IsRuntimeItemRegistered(item) &&
+            !string.IsNullOrEmpty(worldKey) && !string.Equals(GetItemWorldKey(item), worldKey, StringComparison.Ordinal))
+            RequireAssignedItemPhysicsWorld(worldKey);
+        if (ReferenceEquals(item, null) || !worldItems.AssignItemToWorld(item, worldKey)) return;
         if (manager == null || !manager.IsRuntimeItemRegistered(item)) return;
         GameplayWorldPresentationOwner presentation = item.GetComponent<GameplayWorldPresentationOwner>();
         if (presentation != null) presentation.Release();
+        RegisterItemPhysics(item);
         manager.NotifyRuntimeItemMoved(item);
         RegisterItemPresentation(item);
     }
@@ -265,7 +270,7 @@ public static class GameplayWorldRegistry
         }
         Scene scene = SceneManager.GetSceneByName(worldKey);
         bool created = !scene.IsValid() || !scene.isLoaded;
-        if (created) scene = SceneManager.CreateScene(worldKey, new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        if (created) scene = WorldPhysicsScene2D.CreateIsolatedScene(worldKey);
         var world = new GameplayWorldRuntime { WorldKey = worldKey, Scene = scene, OwnsPhysics = created };
         if (existing != null)
             worldSceneBindings.UnbindWorldFromScene(existing.Scene.handle, existing.WorldKey, existing);
@@ -274,6 +279,7 @@ public static class GameplayWorldRegistry
         worldIdentities.GetOrCreateRuntimeWorldIdentity(worldKey);
         try
         {
+            _ = world.Physics;
             ChunkMgr local = ChunkMgr.LocalInstance;
             if (local != null && (local.WorldRuntime?.WorldId == worldKey ||
                 local.WorldRuntime == null && SceneManager.GetActiveScene() == scene &&
@@ -291,6 +297,7 @@ public static class GameplayWorldRegistry
         }
         catch
         {
+            ReleaseWorldPhysics(worldKey);
             worldSceneBindings.UnbindWorldFromScene(scene.handle, worldKey, world);
             worlds.Remove(worldKey);
             if (world.Chunks != null && world.Chunks != ChunkMgr.LocalInstance) UnityEngine.Object.Destroy(world.Chunks.gameObject);
@@ -338,6 +345,7 @@ public static class GameplayWorldRegistry
             if (context != null)
                 worldSceneBindings.UnbindWorldFromScene(context.Scene.handle, context.WorldKey, context);
             spaceContexts[worldKey] = context = new GameplayWorldRuntime { WorldKey = worldKey, Scene = scene };
+            _ = context.Physics;
             worldSceneBindings.BindWorldToScene(scene.handle, worldKey, context);
             worldIdentities.GetOrCreateRuntimeWorldIdentity(worldKey);
             RefreshLocalWorldAfterSceneBindingChange(scene);
@@ -349,6 +357,7 @@ public static class GameplayWorldRegistry
     public static void ReleaseSpaceContext(string worldKey)
     {
         if (!spaceContexts.Remove(worldKey, out GameplayWorldRuntime context)) return;
+        ReleaseWorldPhysics(worldKey);
         worldSceneBindings.UnbindWorldFromScene(context.Scene.handle, context.WorldKey, context);
         RefreshLocalWorldAfterSceneBindingChange(context.Scene);
     }
@@ -501,6 +510,7 @@ public static class GameplayWorldRegistry
             }
             if (preservedLocal != null) preservedLocal.BindNetworkWorld(null);
             else ChunkMgr.ClearLocalNetworkWorld();
+            ReleaseAllWorldPhysics();
             worlds.Clear(); releaseDispatch.Clear(); spaceContexts.Clear(); PresentationOwners.Clear();
             worldSceneBindings.Clear(); selectedLocalWorldKey = null;
             if (sceneCacheBound) localSceneKey = ResolveLocalWorldKey(localScene);
@@ -515,15 +525,21 @@ public static class GameplayWorldRegistry
     internal static void SimulatePhysics()
     {
         if (Time.timeScale <= 0f) return;
-        physicsDispatch.Clear(); physicsDispatch.AddRange(worlds.Values); physicsScenes.Clear();
-        foreach (GameplayWorldRuntime world in physicsDispatch)
+        physicsDispatch.Clear(); physicsDispatch.AddRange(worldPhysics.Values); physicsScenes.Clear();
+        foreach (WorldPhysicsService2D physics in physicsDispatch)
         {
-            if (!world.Scene.IsValid() || !world.Scene.isLoaded || !TryGet(world.WorldKey, out GameplayWorldRuntime current) || current != world) continue;
-            using (UseWorld(world.WorldKey))
+            if (!physics.IsValid || !physicsScenes.Add(physics.PrimarySpace.PhysicsScene)) continue;
+            GameplayWorldRuntime next = worlds.TryGetValue(physics.WorldKey, out var world) ? world :
+                spaceContexts.TryGetValue(physics.WorldKey, out var space) ? space :
+                (physics.ExecutionContext ??= new GameplayWorldRuntime { WorldKey = physics.WorldKey, Scene = physics.PrimarySpace.Scene });
+            GameplayWorldRuntime previous = execution;
+            execution = next;
+            try
             {
-                PhysicsScene2D physics = world.Scene.GetPhysicsScene2D();
-                if (physics.IsValid() && physicsScenes.Add(physics)) physics.Simulate(Time.fixedDeltaTime);
+                using var machines = next.Chunks != null ? MachineWorld.UseScope(physics.WorldKey) : default;
+                physics.Simulate(Time.fixedDeltaTime);
             }
+            finally { execution = previous; }
         }
     }
 

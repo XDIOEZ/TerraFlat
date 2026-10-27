@@ -36,6 +36,7 @@ internal static class WrappedWorldPhysicsAdapter
     {
         ItemPhysicsProjection2D.Ensure(item);
         WrappedRigidbody2DAdapter.Ensure(item);
+        GameplayWorldRegistry.RegisterItemPhysics(item);
     }
 
     private static void RefreshItemStructure(Item item)
@@ -44,12 +45,14 @@ internal static class WrappedWorldPhysicsAdapter
             return;
         ItemPhysicsProjection2D.Ensure(item);
         WrappedRigidbody2DAdapter.Ensure(item);
+        GameplayWorldRegistry.RegisterItemPhysics(item);
     }
 
     private static void UnregisterItem(Item item)
     {
         if (item == null)
             return;
+        WorldPhysicsService2D.ReleaseItem(item);
         item.GetComponent<ItemPhysicsProjection2D>()?.Suspend();
         item.GetComponent<WrappedRigidbody2DAdapter>()?.Suspend();
         item.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();

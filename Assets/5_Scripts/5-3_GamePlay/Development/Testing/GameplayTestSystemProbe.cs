@@ -29,6 +29,7 @@ public static partial class GameplayTestSystemProbe
         RegisterWindStreakOperations(result);
         RegisterCharacterAppearanceOperations(result);
         RegisterChunkPresentationOperations(result);
+        RegisterWorldPhysicsOperations(result);
         RegisterSwimmingAudioOperations(result);
         RegisterAnimalAudioOperations(result);
         RegisterAiAnimationOperations(result);

@@ -12,7 +12,7 @@ internal sealed class ChunkObstacleColliderSet
     internal const byte MachineKind = 1, NaturalKind = 2, MergedStorageKind = 3;
     private readonly Transform parent;
     private readonly Dictionary<long, BoxCollider2D> colliders = new();
-    private readonly Stack<BoxCollider2D> pool = new();
+    private WorldPhysicsService2D physics;
     private readonly Dictionary<long, ulong> revisions = new();
     private readonly Dictionary<long, CopyState> copiedStates = new();
     private ulong nextRevision;
@@ -20,28 +20,15 @@ internal sealed class ChunkObstacleColliderSet
     private readonly HashSet<long> copiedKeys = new();
 
     internal ChunkObstacleColliderSet(Transform parent) => this.parent = parent;
+    internal void BindWorldPhysics(WorldPhysicsService2D next)
+    {
+        if (ReferenceEquals(physics, next)) return;
+        Clear();
+        physics = next;
+    }
     internal int Count => colliders.Count;
     internal static long Key(byte kind, int id) => ((long)kind << 32) | (uint)id;
     internal bool Contains(long key) => colliders.ContainsKey(key);
-
-    /// <summary>复用组件后先保持禁用，设置完整形状再启用，避免默认尺寸参加一次物理合成。</summary>
-    private BoxCollider2D Rent()
-    {
-        while (pool.Count > 0)
-        {
-            BoxCollider2D cached = pool.Pop();
-            if (cached != null) return cached;
-        }
-        var root = new GameObject("Data Obstacle Box");
-        root.hideFlags = HideFlags.DontSave;
-        root.SetActive(false);
-        root.transform.SetParent(parent, false);
-        BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
-        collider.enabled = false;
-        collider.usedByComposite = false;
-        root.SetActive(true);
-        return collider;
-    }
 
     internal bool Remove(long key)
     {
@@ -51,9 +38,7 @@ internal sealed class ChunkObstacleColliderSet
         copiedStates.Remove(key);
         if (collider != null)
         {
-            GameplayCombatBridge.BindPhysicsDamageTarget(collider, null);
-            collider.enabled = false;
-            pool.Push(collider);
+            physics.ReturnObstacleBox(collider);
         }
         return true;
     }
@@ -87,9 +72,7 @@ internal sealed class ChunkObstacleColliderSet
         foreach (BoxCollider2D collider in colliders.Values)
             if (collider != null)
             {
-                GameplayCombatBridge.BindPhysicsDamageTarget(collider, null);
-                collider.enabled = false;
-                pool.Push(collider);
+                physics.ReturnObstacleBox(collider);
             }
         colliders.Clear();
         revisions.Clear();
@@ -100,11 +83,7 @@ internal sealed class ChunkObstacleColliderSet
     internal void Dispose()
     {
         Clear();
-        while (pool.Count > 0)
-        {
-            BoxCollider2D collider = pool.Pop();
-            if (collider != null) Object.Destroy(collider.gameObject);
-        }
+        physics = null;
     }
 
     #endregion
@@ -113,12 +92,13 @@ internal sealed class ChunkObstacleColliderSet
 
     /// <summary>只写实际变化的物理属性；纯视觉、库存和其它状态变化不重建原生形状。</summary>
     internal bool Set(long key, Vector2 center, Vector2 size, Collider2D template,
-        Collider2D source = null, Vector2 imageOffset = default, IGameplayPhysicsDamageTarget damageTarget = null)
+        Collider2D source = null, Vector2 imageOffset = default, IGameplayPhysicsDamageTarget damageTarget = null,
+        object entity = null)
     {
         bool changed = false;
         if (!colliders.TryGetValue(key, out BoxCollider2D collider) || collider == null)
         {
-            collider = Rent();
+            collider = physics.RentObstacleBox(parent);
             colliders[key] = collider;
             changed = true;
         }
@@ -156,7 +136,8 @@ internal sealed class ChunkObstacleColliderSet
             { marker.Bind(source, imageOffset); changed = true; }
             GameplayCombatBridge.TryGetPhysicsDamageTarget(source, out damageTarget);
         }
-        if (GameplayCombatBridge.BindPhysicsDamageTarget(collider, damageTarget)) changed = true;
+        if (physics.RegisterCollider(collider, regionId: null, purpose: WorldPhysicsPurpose2D.Blocking,
+            entity: entity ?? damageTarget, damageTarget: damageTarget)) changed = true;
         if (!collider.enabled) { collider.enabled = true; changed = true; }
         if (changed) revisions[key] = ++nextRevision;
         return changed;
@@ -165,6 +146,7 @@ internal sealed class ChunkObstacleColliderSet
     /// <summary>镜像保留源身份和独立矩形，不复制 Polygon 路径或调用 Composite.GenerateGeometry。</summary>
     internal void CopyTo(ChunkObstacleColliderSet target, Vector2 imageOffset)
     {
+        target.BindWorldPhysics(physics);
         target.copiedKeys.Clear();
         foreach (var pair in colliders)
         {

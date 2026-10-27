@@ -13,7 +13,12 @@ internal sealed class PerceptionColliderBridge
     /// <summary>冻结旧对象的碰撞体成员集合。</summary>
     internal PerceptionColliderBridge(Item item)
     {
-        colliders = item.GetComponents<Collider2D>();
+        // 声明式交互区域位于独立节点，冻结时仍严格排除子物品的形状。
+        using var scratch = UnityEngine.Pool.ListPool<Collider2D>.Get(out var shapes);
+        item.GetComponentsInChildren(true, shapes);
+        shapes.RemoveAll(collider => collider.GetComponentInParent<Item>(true) != item ||
+            collider.transform != item.transform && collider.GetComponent<ItemPhysicsRegion2D>() == null);
+        colliders = shapes.ToArray();
     }
 
     /// <summary>为旧对象构建本批次粗筛范围。</summary>

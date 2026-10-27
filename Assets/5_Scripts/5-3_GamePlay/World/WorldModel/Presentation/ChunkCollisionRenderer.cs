@@ -10,7 +10,7 @@ using Stopwatch = System.Diagnostics.Stopwatch;
 /// 地形使用静态 Composite，组合储罐按精确矩形合并，资源与独立建筑使用按身份复用的 BoxCollider2D。
 /// 矩形沿 Chunk 边界裁剪，共用 Blocking 的静态刚体；实体事件集中到一个物理 Tick，物理表现不持有玩法权威。
 /// </summary>
-public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
+public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
     #region 碰撞映射
 
@@ -42,6 +42,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
     private static readonly ProfilerMarker RebuildObstacleMarker = new("FlatWorld.ChunkPhysics.RebuildObstacles");
     private static readonly ProfilerMarker PublishObstacleMarker = new("FlatWorld.ChunkPhysics.PublishObstacles");
     private string boundWorldKey;
+    private WorldRuntime ownerWorld;
+    private WorldPhysicsService2D physics;
     private bool dataObstaclesDirty;
     private int obstacleColliderCount;
 
@@ -116,7 +118,11 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
             throw new System.ArgumentNullException(nameof(chunk));
         Unbind();
         BoundChunk = chunk;
-        boundWorldKey = gameObject.scene.name;
+        boundWorldKey = ownerWorld?.WorldId ?? GameplayWorldRegistry.ExecutionWorldKey;
+        physics = GameplayWorldRegistry.TryGetPhysics(boundWorldKey, out var registeredPhysics)
+            ? registeredPhysics : GameplayWorldRegistry.GetOrCreatePhysics(boundWorldKey, gameObject.scene);
+        obstacleColliders.BindWorldPhysics(physics);
+        physics.RegisterCollider(SourceCollider, regionId: null, entity: chunk);
         if (chunk.Terrain != null)
             chunk.Terrain.Changed += HandleTerrainChanged;
         MachineWorld.CellChanged += HandleMachineCellChanged;
@@ -130,6 +136,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
 
     public void Unbind()
     {
+        physics?.UnregisterCollider(SourceCollider);
         if (BoundChunk?.Terrain != null)
             BoundChunk.Terrain.Changed -= HandleTerrainChanged;
         MachineWorld.CellChanged -= HandleMachineCellChanged;
@@ -147,6 +154,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         staleMachineIds.Clear();
         pendingNaturalBodies.Clear();
         obstacleColliders?.Clear();
+        physics = null;
         obstacleColliderCount = 0;
         dirtyRenderers.Remove(boundWorldKey, this);
         boundWorldKey = null;
@@ -219,6 +227,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region 纯数据实体投影
 
+    public void SetWorld(WorldRuntime worldRuntime) => ownerWorld = worldRuntime;
+
     private void HandleMachineCellChanged(Vector2Int cell)
     {
         if (MachineWorld.WorldKey == boundWorldKey) MarkDataObstaclesDirty(cell);
@@ -286,9 +296,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         dirtyRenderers.Add(boundWorldKey, this);
     }
 
-    internal static bool HasDirtyDataObstacles(string worldKey) => dirtyRenderers.HasPending(worldKey);
-
-    /// <summary>由 ChunkMgr 的单一物理 Tick 批量处理脏区块，同一 Chunk 在一次刷新前只入队一次。</summary>
+    /// <summary>由世界物理服务在原生模拟前处理脏区块，同一 Chunk 在一次刷新前只入队一次。</summary>
     internal static void FlushDirtyDataObstacles(string worldKey)
     {
         if (!dirtyRenderers.HasPending(worldKey)) return;
@@ -517,7 +525,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
             return obstacleColliders.Remove(key) ? 1 : 0;
         }
         mergedStorageRectangles.RemoveSourceRectangle(node.Id);
-        return obstacleColliders.Set(key, center, size, SourceCollider) ? 1 : 0;
+        return obstacleColliders.Set(key, center, size, SourceCollider, entity: node) ? 1 : 0;
     }
 
     /// <summary>本轮脏节点处理完才统一提交，库存和表现通知未改几何时直接返回。</summary>

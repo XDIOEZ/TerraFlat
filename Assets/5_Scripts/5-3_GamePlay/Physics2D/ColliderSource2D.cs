@@ -7,6 +7,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class ColliderSource2D : MonoBehaviour
 {
+    #region 镜像来源绑定
     public Collider2D SourceCollider { get; private set; }
     public Vector2 ImageOffset { get; private set; }
 
@@ -14,15 +15,32 @@ public sealed class ColliderSource2D : MonoBehaviour
     {
         SourceCollider = source;
         ImageOffset = imageOffset;
+        enabled = true;
     }
+
+    internal void ClearBinding()
+    {
+        SourceCollider = null;
+        ImageOffset = Vector2.zero;
+        enabled = false;
+    }
+    #endregion
 
     #region 碰撞源解析
     public static Collider2D Resolve(Collider2D collider)
     {
-        if (collider == null)
-            return null;
-        // 普通碰撞体没有镜像标记时直接返回，避免缺失组件诊断分配。
-        return collider.TryGetComponent(out ColliderSource2D source) ? source.SourceCollider : collider;
+        Collider2D slow = collider;
+        bool advanceSlow = false;
+        // 多层镜像逐级还原，已释放的源和循环引用都不能变成新的命中目标。
+        while (collider != null && collider.TryGetComponent(out ColliderSource2D source) && source.enabled)
+        {
+            collider = source.SourceCollider;
+            if (advanceSlow && slow != null && slow.TryGetComponent(out ColliderSource2D slowSource) && slowSource.enabled)
+                slow = slowSource.SourceCollider;
+            advanceSlow = !advanceSlow;
+            if (collider != null && collider == slow) return null;
+        }
+        return collider;
     }
     #endregion
 }

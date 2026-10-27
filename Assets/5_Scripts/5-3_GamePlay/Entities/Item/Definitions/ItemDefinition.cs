@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Converters;
 using UnityEngine;
 using FlatWorld.Localization;
 using FlatWorld.WorldModel;
@@ -163,6 +164,10 @@ public sealed partial class ItemDefinitionDto
 
     [JsonProperty("visual")]
     public ItemVisualDefinitionDto Visual;
+
+    /// <summary>同一普通物品可组合多个独立用途的物理区域。</summary>
+    [JsonProperty("physics", NullValueHandling = NullValueHandling.Ignore)]
+    public ItemPhysicsDefinitionDto Physics;
 
     /// <summary>可受伤对象的声明式配置；运行时会自动复用 Module_DamageReciver。</summary>
     [JsonProperty("health", NullValueHandling = NullValueHandling.Ignore)]
@@ -355,6 +360,43 @@ public sealed partial class ItemColliderDefinitionDto
 
 [Serializable]
 [MemoryPackable]
+public sealed partial class ItemPhysicsDefinitionDto
+{
+    #region 物品物理区域
+    [JsonProperty("regions")]
+    public List<ItemPhysicsRegionDefinitionDto> Regions = new();
+
+    [JsonIgnore, MemoryPackIgnore]
+    public bool HasRegions => Regions?.Count > 0;
+    #endregion
+}
+
+[Serializable]
+[MemoryPackable]
+public sealed partial class ItemPhysicsRegionDefinitionDto
+{
+    #region 区域身份与几何
+    [JsonProperty("id")]
+    public string Id;
+
+    [JsonProperty("purposes"), JsonConverter(typeof(StringEnumConverter))]
+    public WorldPhysicsPurpose2D Purposes;
+
+    /// <summary>明确接收碰撞事件的模块稳定槽，受击区域必须指向生命模块。</summary>
+    [JsonProperty("module", NullValueHandling = NullValueHandling.Ignore)]
+    public string Module;
+
+    /// <summary>区域锚点相对 Item 的路径；缺省跟随指定模块或物品根。</summary>
+    [JsonProperty("path", NullValueHandling = NullValueHandling.Ignore)]
+    public string Path;
+
+    [JsonProperty("collider")]
+    public ItemColliderDefinitionDto Collider;
+    #endregion
+}
+
+[Serializable]
+[MemoryPackable]
 public sealed partial class ItemHealthDefinitionDto
 {
     [JsonProperty("hasHp")]
@@ -500,6 +542,7 @@ public sealed class RuntimeItemDefinition
     public string ShellPrefabId { get; }
     public GameObject ShellPrefab { get; }
     public ItemVisualDefinitionDto Visual { get; }
+    public ItemPhysicsDefinitionDto Physics { get; }
     public ItemHealthDefinitionDto Health { get; }
     public string LootTableId { get; }
     public string WaterEntryTransformItemId { get; }
@@ -599,7 +642,8 @@ public sealed class RuntimeItemDefinition
         RuntimeItemMatterDefinition matter = null,
         IReadOnlyList<RuntimeItemReactionDefinition> reactions = null,
         GameRes moduleResources = null,
-        ItemModulePrototypeCache modulePrototypeCache = null)
+        ItemModulePrototypeCache modulePrototypeCache = null,
+        ItemPhysicsDefinitionDto physics = null)
     {
         Id = id;
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -614,6 +658,7 @@ public sealed class RuntimeItemDefinition
         templateData = itemData;
         createInstanceData = ItemInstanceDataFactory.Compile(itemData);
         Visual = visual;
+        Physics = physics;
         Health = health;
         LootTableId = lootTableId;
         WaterEntryTransformItemId = string.IsNullOrWhiteSpace(waterEntryTransformItemId)
@@ -678,6 +723,7 @@ public sealed class RuntimeItemDefinition
         moduleAssembliesByName = new Dictionary<string, RuntimeItemModuleAssemblyPlan>(ModuleAssemblies.Count, StringComparer.Ordinal);
         foreach (RuntimeItemModuleAssemblyPlan assembly in ModuleAssemblies)
             moduleAssembliesByName.Add(assembly.StableName, assembly);
+        ItemPhysicsDefinitionRuntime.ValidatePhysicsDefinition(this);
         CompileModuleDataRules();
     }
 

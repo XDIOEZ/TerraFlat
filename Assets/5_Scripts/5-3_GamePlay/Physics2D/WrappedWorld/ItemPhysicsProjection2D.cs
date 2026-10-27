@@ -16,32 +16,9 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     public static Rigidbody2D EnsureMovable(Item target)
     {
         if (target == null) return null;
-        Rigidbody2D rigidbody = target.GetComponent<Rigidbody2D>();
-        if (rigidbody == null)
-            rigidbody = target.gameObject.AddComponent<Rigidbody2D>();
-        rigidbody.bodyType = RigidbodyType2D.Dynamic;
-        rigidbody.gravityScale = 0f;
-        rigidbody.constraints |= RigidbodyConstraints2D.FreezeRotation;
-        rigidbody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-        bool hasSolid = false;
-        BoxCollider2D triggerShape = null;
-        Collider2D[] rootColliders = target.GetComponents<Collider2D>();
-        for (int i = 0; i < rootColliders.Length; i++)
-        {
-            Collider2D collider = rootColliders[i];
-            if (collider.enabled && !collider.isTrigger) hasSolid = true;
-            if (triggerShape == null && collider is BoxCollider2D box && box.enabled && box.isTrigger)
-                triggerShape = box;
-        }
-        if (!hasSolid && triggerShape != null)
-        {
-            BoxCollider2D physical = target.gameObject.AddComponent<BoxCollider2D>();
-            physical.offset = triggerShape.offset;
-            physical.size = triggerShape.size;
-            physical.isTrigger = false;
-        }
-        Ensure(target);
-        return rigidbody;
+        WorldPhysicsService2D physics = GameplayWorldRegistry.TryGetPhysics(GameplayWorldRegistry.GetItemWorldKey(target), out var owner)
+            ? owner : GameplayWorldRegistry.CurrentPhysics;
+        return physics.EnsureMovableItemBody(target);
     }
 
     public static void Ensure(Item target)
@@ -68,6 +45,8 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
         item = GetComponent<Item>();
         body = GetComponent<Rigidbody2D>();
     }
+
+    private void OnDestroy() => WorldPhysicsService2D.ReleaseItem(item);
 
     internal void Suspend()
     {
@@ -123,7 +102,7 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     {
         if (!CanWriteBack() || collision.contactCount == 0) return;
         ContactPoint2D contact = collision.GetContact(0);
-        Item other = collision.collider != null ? collision.collider.GetComponentInParent<Item>() : null;
+        Item other = GameplayPhysics2D.ResolveComponent<Item>(collision.collider);
         ItemPhysicsRuntimeState state = item.itemData.PhysicsState ??= new ItemPhysicsRuntimeState();
         // 接触事件只记录事实，目标资格与伤害仍由战斗数据逻辑裁定。
         state.LastContactPoint = contact.point;

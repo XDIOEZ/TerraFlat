@@ -379,7 +379,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             targetScene = SceneManager.GetActiveScene();
         }
         else if (!targetScene.IsValid() || !targetScene.isLoaded)
-            targetScene = SceneManager.CreateScene(targetAddress.WorldKey);
+            targetScene = WorldPhysicsScene2D.CreateIsolatedScene(targetAddress.WorldKey);
 
         SceneManager.SetActiveScene(targetScene);
         if (!toSpace) ActivateWorld(targetAddress);
@@ -485,7 +485,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             sourceScene = SceneManager.GetActiveScene();
         }
         else if (!sourceScene.IsValid() || !sourceScene.isLoaded)
-            sourceScene = SceneManager.CreateScene(sourceAddress.WorldKey);
+            sourceScene = WorldPhysicsScene2D.CreateIsolatedScene(sourceAddress.WorldKey);
         SceneManager.SetActiveScene(sourceScene);
         if (!fromSpace) ActivateWorld(sourceAddress);
 

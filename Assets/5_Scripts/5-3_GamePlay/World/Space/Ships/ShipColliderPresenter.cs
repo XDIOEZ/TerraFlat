@@ -13,6 +13,7 @@ namespace FlatWorld.Spaceflight
         private readonly ShipColliderGeometry geometry = new();
         private readonly PhysicsShapeGroup2D shapes = new();
         private double cellSize;
+        private WorldPhysicsService2D physics;
         public bool WholeShipBody { get; private set; }
         public int ActiveBodyCount => body != null && body.simulated && body.gameObject.activeInHierarchy ? 1 : 0;
         public int ActiveBlockerCount => blocker != null && blocker.enabled && ActiveBodyCount > 0 ? 1 : 0;
@@ -61,6 +62,18 @@ namespace FlatWorld.Spaceflight
         public bool OwnsCollider(Collider2D collider) => collider != null && Root != null &&
             collider.transform.IsChildOf(Root.transform);
 
+        internal void BindWorldPhysics(ShipState ship)
+        {
+            physics?.UnregisterCollider(blocker);
+            if (!GameplayWorldRegistry.TryResolveUnambiguousWorldKeyForScene(Root.scene, out string worldKey))
+                throw new InvalidOperationException("整船碰撞必须先确定所属世界。");
+            physics = GameplayWorldRegistry.TryGetPhysics(worldKey, out var existing)
+                ? existing : GameplayWorldRegistry.GetOrCreatePhysics(worldKey, Root.scene);
+            physics.AssignPhysicsRootToPrimarySpace(Root);
+            // 整船合批只代表阻挡，逐部件受击仍交给原有战斗桥。
+            physics.RegisterCollider(blocker, entity: ship);
+        }
+
         /// <summary>整船只同步一次升空排序和共享阻挡体，不随部件数量重复查询组件。</summary>
         public void SynchronizeSurfaceState(ShipFlightState flight, Vector2 visualRise)
         {
@@ -72,12 +85,15 @@ namespace FlatWorld.Spaceflight
 
         public void Dispose()
         {
+            physics?.UnregisterCollider(blocker);
             if (body != null) body.simulated = false;
             if (Root != null) { Root.SetActive(false); UnityEngine.Object.Destroy(Root); }
         }
 
         public void Suspend(Transform owner)
         {
+            physics?.UnregisterCollider(blocker);
+            physics = null;
             body.simulated = false;
             Root.SetActive(false);
             Root.transform.SetParent(owner, false);
@@ -100,8 +116,10 @@ namespace FlatWorld.Spaceflight
 
         private ShipColliderPresenter SynchronizeShipColliderPresenter(ShipState ship, float angle)
         {
+            bool needsPhysicsBinding = false;
             if (!shipColliderPresenters.TryGetValue(ship.ShipId, out ShipColliderPresenter presenter) || presenter.Root == null)
             {
+                needsPhysicsBinding = true;
                 presenter?.Dispose();
                 if (!TryRestoreShipColliderPresenter(ship.ShipId, out presenter))
                 {
@@ -111,13 +129,14 @@ namespace FlatWorld.Spaceflight
                 shipColliderPresenters[ship.ShipId] = presenter;
             }
             visibleShipColliderPresenters.Add(ship.ShipId);
+            var previousScene = presenter.Root.scene;
             if (shipViewPoolRoot != null && presenter.Root.transform.parent == shipViewPoolRoot)
                 presenter.Root.transform.SetParent(null, false);
             if (IsSpaceView)
             {
                 SpaceMgr.ExistingInstance?.MovePresentationToSector(presenter.Root, ship.Sector);
                 // 相邻星区尚未准备时先归当前加载场景，不能让醒来的碰撞体留在持久场景。
-                UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                UnityEngine.SceneManagement.Scene scene = GameplayWorldRegistry.CurrentPhysics.PrimarySpace.Scene;
                 if (presenter.Root.scene == gameObject.scene && scene.IsValid() && scene.isLoaded)
                 {
                     presenter.Root.transform.SetParent(null, false);
@@ -126,13 +145,14 @@ namespace FlatWorld.Spaceflight
             }
             else
             {
-                UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                UnityEngine.SceneManagement.Scene scene = GameplayWorldRegistry.CurrentPhysics.PrimarySpace.Scene;
                 if (scene.IsValid() && scene.isLoaded && presenter.Root.scene != scene)
                 {
                     presenter.Root.transform.SetParent(null, false);
                     UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(presenter.Root, scene);
                 }
             }
+            if (needsPhysicsBinding || previousScene != presenter.Root.scene) presenter.BindWorldPhysics(ship);
             presenter.Synchronize(ship, GetFlight(ship.ShipId), DisplayPresentationPoint(ship, 0d, 0d), angle);
             presenter.Resume();
             return presenter;

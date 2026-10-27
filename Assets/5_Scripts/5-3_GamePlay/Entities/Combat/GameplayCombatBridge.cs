@@ -43,24 +43,13 @@ public static class GameplayCombatBridge
 
     #region 物理碰撞目标映射
 
-    // 只登记已有物理投影，不为 ECS 实体额外创建刚体或逐帧回调。
-    private static readonly Dictionary<Collider2D, IGameplayPhysicsDamageTarget> PhysicsTargets = new();
-
-    /// <summary>物理投影装卸和池复用时绑定身份，返回身份变化以驱动镜像同步。</summary>
-    internal static bool BindPhysicsDamageTarget(Collider2D collider, IGameplayPhysicsDamageTarget target)
-    {
-        if (collider == null) return false;
-        if (target == null) return PhysicsTargets.Remove(collider);
-        if (PhysicsTargets.TryGetValue(collider, out var previous) && ReferenceEquals(previous, target)) return false;
-        PhysicsTargets[collider] = target;
-        return true;
-    }
-
     /// <summary>按 Unity 返回的具体 Collider 读取目标，不按接触点猜测附近实体。</summary>
     internal static bool TryGetPhysicsDamageTarget(Collider2D collider, out IGameplayPhysicsDamageTarget target)
     {
         target = null;
-        return collider != null && PhysicsTargets.TryGetValue(collider, out target);
+        if (!WorldPhysicsService2D.TryResolveCollider(collider, out WorldPhysicsColliderBinding2D binding)) return false;
+        target = binding.DamageTarget;
+        return target != null;
     }
 
     #endregion
@@ -76,7 +65,6 @@ public static class GameplayCombatBridge
     private static void Reset()
     {
         Bridges.Clear();
-        PhysicsTargets.Clear();
     }
 
     /// <summary>优先读取后端世界身份，旧后端独立运行时仍保存 UID 和对象代际。</summary>

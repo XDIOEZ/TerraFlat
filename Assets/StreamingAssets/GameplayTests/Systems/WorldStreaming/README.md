@@ -4,6 +4,14 @@
 
 快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows、collision_dirty_queue`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
 
+物理契约共用 `physics.lua` 的同一组断言：编辑态案例 `world_physics_rules` 使用独立 Preview PhysicsScene2D；PlayMode 案例 `world_physics_gameplay` 使用正式创建的独立原生场景。两者都覆盖以下物理归属、JSON 区域和临时查询，不复制断言。
+
+`world_physics_ownership` 在两个自有原生物理场景中测同坐标查询隔离、动态体跨过其他世界的墙和被本世界的墙阻挡，并检查区域 ID、用途、原物品/实体、准确接收模块、多级镜像、注销重绑和世界释放。它不创建正式游戏世界，不能替代区块流送、多人客户端或太空物理岛的现场验证。
+
+同组还实测 `CombatColliderQuery2D` 将临时形状固定到租约空间：另一场景的同坐标候选与默认 Scene 切换不改变 Overlap/扫掠结果，复租清空旧候选，空间释放使在用租约失效且撤销投影。
+
+`world_physics_definition` 从普通 Item JSON 装配五个区域，检查两个独立生命模块的准确归属、阻挡/交互不作为受击目标、同职责旧 Collider 清退、重复装配复用原节点与恢复形状、对象池层级基线，以及分离阻挡间的空洞没有被宽相包围盒填实。它不加载资源目录或执行真实武器/模块触发流程。
+
 2026-10-24 新增但未执行：`collision_dirty_queue` 使用独立的正式碰撞队列与停用身份组件，覆盖空世界查询、多世界隔离、同对象去重、取批次后的再次入队、解绑换世界、销毁清理、世界重置及预热后1024轮零分配。正式固定步在查到本世界脏队列后才借现有世界上下文；细分标记覆盖上下文释放、障碍更新及镜像通知。此夹具不创建物理几何，不证明真实碰撞、跨世界受击或卡顿改善；本轮保留用户PlayMode，仅静态修改。
 
 2026-10-23 新增但未执行：`world_streaming/incremental_world_scope` 在活动场景仍为地表时调用正式洞穴准备，等待完整窗口和真实 ChunkView 绑定；随后把自有续步租约交给同一 ChunkMgr 正式协程，实际跨两帧注册自然实体，并由 Lua 核对每步的世界、Scene、管理器、独立 ECS、yield 后上下文恢复及正常/取消的唯一 Dispose。同步失效夹具临时给自有续步指定未登记世界或其他管理器拥有的世界，检查拒绝推进和解绑且不补建世界。夹具只回收自己的资源/占位 View，不切换活动场景；不代表洞穴画面、真实入口交互或联机迁移已验收。外部 `GamePlay.csproj` 定向编译检查通过（0 错误、39 警告），Unity 控制台结果由本轮主代理最终确认；未运行 Lua 或 PlayMode 测试。

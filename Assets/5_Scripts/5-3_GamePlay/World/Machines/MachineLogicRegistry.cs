@@ -158,6 +158,29 @@ public static class MachineLogicRegistry
         return entry.Factory(entity) ?? throw new InvalidOperationException("机器领域工厂返回空对象：" + entry.Id);
     }
 
+    /// <summary>只读复用已注册模块与建筑后端声明，供尚未支持的数据能力提前拒绝配置。</summary>
+    public static bool UsesRegisteredDataBackend(RuntimeItemDefinition source)
+    {
+        EnsureBuiltIns();
+        if (!Mod_Building.TryReadBuildingData(source.CreateItemData(), out _, out var building) ||
+            building.Role != BuildingRole.PlacedBuilding) return false;
+        if (source.HasModule(Mod_MechanicalNode.ModuleId)) return true;
+        foreach (RuntimeItemModuleAssemblyPlan module in source.ModuleAssemblies)
+        {
+            if (module.ModuleType == null || !typeof(Mod_Building).IsAssignableFrom(module.ModuleType)) continue;
+            var prototype = (Mod_Building)module.ResolveImplementationPrototype(source.ShellPrefab.transform);
+            bool useItem = prototype.UseGameObjectBackend;
+            if (source.TryGetModuleParameters(module.StableName, out string json) && !string.IsNullOrWhiteSpace(json))
+                useItem = JsonConfigurationCache.ParseObject(json).Value<bool?>(nameof(Mod_Building.UseGameObjectBackend)) ?? useItem;
+            if (useItem) return false;
+        }
+        foreach (Registration entry in registrations.Values)
+            foreach (RuntimeItemModuleAssemblyPlan module in source.ModuleAssemblies)
+                if (entry.AuthoringType != null && module.Definition.Enabled && module.ModuleType != null &&
+                    entry.AuthoringType.IsAssignableFrom(module.ModuleType)) return true;
+        return false;
+    }
+
     /// <summary>仅对已配置为落地建筑的内容编译，不把玩家背包或手持工具注册进机器世界。</summary>
     public static MachineDefinition ResolveContentDefinition(string id)
     {

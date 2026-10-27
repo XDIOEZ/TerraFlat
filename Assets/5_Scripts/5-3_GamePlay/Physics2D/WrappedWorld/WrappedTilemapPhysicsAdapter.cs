@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 /// <summary>
@@ -104,6 +105,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         SetAllActive(false);
         for (int i = 0; i < records.Count; i++)
         {
+            records[i].ObstacleColliders?.Dispose();
             if (records[i].Root != null)
                 Destroy(records[i].Root);
         }
@@ -219,6 +221,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             ProxyRecord record = records[i];
             if (record.Source == null || record.SourceCollider == null)
             {
+                record.ObstacleColliders?.Dispose();
                 record.Root.SetActive(false);
                 Destroy(record.Root);
                 records.RemoveAt(i);
@@ -254,6 +257,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             if (record.Generation == refreshGeneration && record.Source != null && record.SourceCollider != null)
                 continue;
             record.Root.SetActive(false);
+            record.ObstacleColliders?.Dispose();
             Destroy(record.Root);
             records.RemoveAt(i);
         }
@@ -268,10 +272,16 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             if (existing.Source == source && existing.SourceCollider == sourceCollider &&
                 existing.SourceComposite == sourceComposite && existing.SourceDataCollider == sourceDataCollider &&
                 existing.Offset == offset)
+            {
+                if (existing.Root.scene != source.gameObject.scene)
+                    SceneManager.MoveGameObjectToScene(existing.Root, source.gameObject.scene);
                 return existing;
+            }
         }
 
         var root = new GameObject($"Topology Tilemap Proxy - {source.name}");
+        root.SetActive(false);
+        SceneManager.MoveGameObjectToScene(root, source.gameObject.scene);
         root.hideFlags = HideFlags.DontSave;
         root.layer = source.gameObject.layer;
 
