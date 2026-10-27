@@ -1,5 +1,7 @@
 # 农业规则与现场回归
 
+2026-10-27：修正旧生命断言：普通作物维持20点，仙人掌按既有显式配置保留45点；不为通过测试改写品种数值。
+
 2026-10-27：`agriculture/soil` 增补共用植物成长数值断言，覆盖满水满肥、半肥、缺水/缺肥停长、成长倍率只乘一次、零倍率停长、负时间不成长和缺天气中性倍率；`plant_growth` 原有光照、气候、全天耗水和成熟耗水仍运行正式 ECS Job。树木四阶段与农作物两阶段、一次性树木产物和可持续采果保留独立行为；规则不代替真实收获与画面验收。
 
 2026-10-27：磷肥规则独立为 `phosphate-fertilizer.lua` / `agriculture_phosphate_fertilizer_rules`，真实持有使用独立为 `phosphate-fertilizer-gameplay.lua` / `agriculture_phosphate_fertilizer_gameplay`；均登记原系统套件与总入口。旧大脚本移除对应断言，两个案例都无其他案例依赖，可分别定向执行；现场只修改并恢复自有地块及临时磷肥。

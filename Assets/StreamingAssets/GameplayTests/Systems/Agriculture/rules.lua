@@ -62,9 +62,11 @@ end, "农业差量坐标键复用、世界隔离与热提交零分配")
 test.system("agriculture", "crop_health_catalog", {}, function(data)
     assert(#data.crops > 0, "未读取到正式作物定义")
     for _, crop in ipairs(data.crops) do
-        assert(crop.hp == 20 and crop.maximum == 20, "作物基础生命未统一为20：" .. crop.id)
+        local expectedHealth = crop.id == "Cactus" and 45 or 20
+        assert(crop.hp == expectedHealth and crop.maximum == expectedHealth,
+            "作物基础生命与已有品种配置不符：" .. crop.id)
     end
-end, "作物最终继承定义统一20点生命")
+end, "作物最终继承定义：普通作物20点，仙人掌保留45点生命")
 
 test.system("agriculture", "tilling_visual_schedule", {}, function(data)
     assert(data.noEarlyRefresh and data.idleFramesSkipped == 600 and data.startsOnTime,
