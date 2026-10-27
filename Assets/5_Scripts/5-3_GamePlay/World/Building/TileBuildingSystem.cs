@@ -64,6 +64,31 @@ public readonly struct TileBuildingHitCandidate
     public float ForwardDistance { get; }
     public float LateralDistance { get; }
     public float AttackDistance { get; }
+
+    #region 命中候选排序
+
+    // 按前向、横向、攻击距离及格坐标稳定排序，两个地形后端共用。
+    public bool HasHigherHitPriorityThan(TileBuildingHitCandidate current)
+    {
+        const float epsilon = 0.0001f;
+        if (ForwardDistance < current.ForwardDistance - epsilon)
+            return true;
+        if (ForwardDistance > current.ForwardDistance + epsilon)
+            return false;
+        if (LateralDistance < current.LateralDistance - epsilon)
+            return true;
+        if (LateralDistance > current.LateralDistance + epsilon)
+            return false;
+        if (AttackDistance < current.AttackDistance - epsilon)
+            return true;
+        if (AttackDistance > current.AttackDistance + epsilon)
+            return false;
+        if (Cell.x != current.Cell.x)
+            return Cell.x < current.Cell.x;
+        return Cell.y < current.Cell.y;
+    }
+
+    #endregion
 }
 
 public readonly struct TileBuildingDamageResult
@@ -465,7 +490,7 @@ public static partial class TileBuildingSystem
                 continue;
             }
 
-            if (!found || IsBetterCandidate(candidate, best))
+            if (!found || candidate.HasHigherHitPriorityThan(best))
             {
                 found = true;
                 best = candidate;
@@ -747,7 +772,7 @@ public static partial class TileBuildingSystem
                     lateral,
                     distance);
 
-                if (!found || IsBetterCandidate(current, best))
+                if (!found || current.HasHigherHitPriorityThan(best))
                 {
                     found = true;
                     best = current;
@@ -1060,25 +1085,4 @@ public static partial class TileBuildingSystem
         return fallback - (Vector2)sender.transform.right;
     }
 
-    private static bool IsBetterCandidate(
-        TileBuildingHitCandidate candidate,
-        TileBuildingHitCandidate current)
-    {
-        const float epsilon = 0.0001f;
-        if (candidate.ForwardDistance < current.ForwardDistance - epsilon)
-            return true;
-        if (candidate.ForwardDistance > current.ForwardDistance + epsilon)
-            return false;
-        if (candidate.LateralDistance < current.LateralDistance - epsilon)
-            return true;
-        if (candidate.LateralDistance > current.LateralDistance + epsilon)
-            return false;
-        if (candidate.AttackDistance < current.AttackDistance - epsilon)
-            return true;
-        if (candidate.AttackDistance > current.AttackDistance + epsilon)
-            return false;
-        if (candidate.Cell.x != current.Cell.x)
-            return candidate.Cell.x < current.Cell.x;
-        return candidate.Cell.y < current.Cell.y;
-    }
 }

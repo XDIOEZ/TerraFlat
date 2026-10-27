@@ -9,7 +9,22 @@ public static partial class GameplayTestSystemProbe
 {
     #region 建筑区块归属规则
     private static void RegisterBuildingStreamingOperations(Dictionary<string, Func<JObject, JObject>> result)
-        => result.Add("building/chunk_residency", _ => CaptureBuildingChunkResidency());
+    {
+        result.Add("building/chunk_residency", _ => CaptureBuildingChunkResidency());
+        result.Add("building/hit_candidate_order", CaptureTileBuildingHitCandidateOrder);
+    }
+
+    // 只构造正式候选并采样公共排序，优先级与误差边界交给 Lua。
+    private static JObject CaptureTileBuildingHitCandidateOrder(JObject args)
+    {
+        var candidate = new TileBuildingHitCandidate(
+            new TileBuildingCell(null, new Vector2Int((int)Number(args, "x", 0), (int)Number(args, "y", 0))),
+            Vector2.zero, (float)Number(args, "forward", 1), (float)Number(args, "lateral", 1),
+            (float)Number(args, "distance", 1));
+        var current = new TileBuildingHitCandidate(new TileBuildingCell(null, Vector2Int.zero),
+            Vector2.zero, 1f, 1f, 1f);
+        return new JObject { ["better"] = candidate.HasHigherHitPriorityThan(current) };
+    }
 
     private static JObject CaptureBuildingChunkResidency()
     {

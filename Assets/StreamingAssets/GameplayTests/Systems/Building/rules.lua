@@ -1,3 +1,25 @@
+for _, sample in ipairs({
+    { label = "前向距离优先", forward = .5, lateral = 10, distance = 10, better = true },
+    { label = "更远前向不抢占", forward = 2, lateral = 0, distance = 0, better = false },
+    { label = "横向距离优先", lateral = .5, distance = 10, better = true },
+    { label = "更远横向不抢占", lateral = 2, distance = 0, better = false },
+    { label = "攻击距离优先", distance = .5, better = true },
+    { label = "更远攻击距离不抢占", distance = 2, better = false },
+    { label = "前向误差内继续横向比较", forward = 1.00005, lateral = .5, better = true },
+    { label = "前向误差外先拒绝", forward = 1.0002, lateral = .5, better = false },
+    { label = "横向误差内继续攻击距离比较", lateral = 1.00005, distance = .5, better = true },
+    { label = "攻击距离误差内继续坐标比较", distance = 1.00005, x = -1, better = true },
+    { label = "等距离按X再Y稳定排序", x = -1, y = 100, better = true },
+    { label = "较大X不能靠Y抢占", x = 1, y = -100, better = false },
+    { label = "X相同时按Y稳定排序", y = -1, better = true },
+    { label = "完全相同候选不替换", better = false }
+}) do
+    local expected = sample.better
+    test.system("building", "hit_candidate_order", sample, function(data)
+        assert(data.better == expected, "格子建筑命中候选排序改变")
+    end, "格子命中排序：" .. sample.label)
+end
+
 test.system("building", "portable_building_health", {}, function(data)
     local expected = { Coconut_Shell_Building = 20, ClayJar_Building = 40, StoneMortar_Building = 50, WoodenBarrel_Building = 60 }
     assert(#data.buildings == 4, "可放置容器的正式定义覆盖不完整")

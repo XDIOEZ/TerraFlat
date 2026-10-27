@@ -35,6 +35,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 
 ## 占地、碰撞与支撑
 
+- `TileBuildingHitCandidate.HasHigherHitPriorityThan` 是格子命中的排序真源；TileBuildingSystem 与 TilemapDamageReceiver 共用前向/横向/攻击距离及坐标排序，误差保持0.0001。
 - 占地来自 FootprintWidth/Height，吸附格为左下锚点；逐格按拓扑归一化并登记/注销。visual.collider 是实体物理范围，health.collider 是独立受击范围，均不决定建造/导航格。
 - BuildingOccupancyRegistry 是放置、通行、移速和动态 LOS 来源；Revision/CellChanged 驱动脏区，视线刷新不只看最终可走值。相邻格 Collider 接触不互斥，同格按层拒绝。
 - 完整建筑用 `Mod_Building.BlocksWindWhenPlaced` 显式声明挡风（默认关闭，木门/石门目录已开启），机器定义投影同配置；地板、可通行状态不挡风。占地增删和门 `SetPassable` 维护按世界隔离的挡风格，同格各来源合并，不借视线位把普通设施也当风墙；实际背风区由 `WorldMotionSystem/WindShelterRules` 统一采样。

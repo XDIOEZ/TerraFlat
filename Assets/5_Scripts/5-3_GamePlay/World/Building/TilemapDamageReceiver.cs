@@ -71,7 +71,7 @@ public sealed class TilemapDamageReceiver : MonoBehaviour
                     lateral,
                     distance);
 
-                if (!found || IsBetterCandidate(current, best))
+                if (!found || current.HasHigherHitPriorityThan(best))
                 {
                     found = true;
                     best = current;
@@ -106,25 +106,4 @@ public sealed class TilemapDamageReceiver : MonoBehaviour
                hitPoint.y <= maxY + epsilon;
     }
 
-    private static bool IsBetterCandidate(
-        TileBuildingHitCandidate candidate,
-        TileBuildingHitCandidate current)
-    {
-        const float epsilon = 0.0001f;
-        if (candidate.ForwardDistance < current.ForwardDistance - epsilon)
-            return true;
-        if (candidate.ForwardDistance > current.ForwardDistance + epsilon)
-            return false;
-        if (candidate.LateralDistance < current.LateralDistance - epsilon)
-            return true;
-        if (candidate.LateralDistance > current.LateralDistance + epsilon)
-            return false;
-        if (candidate.AttackDistance < current.AttackDistance - epsilon)
-            return true;
-        if (candidate.AttackDistance > current.AttackDistance + epsilon)
-            return false;
-        if (candidate.Cell.x != current.Cell.x)
-            return candidate.Cell.x < current.Cell.x;
-        return candidate.Cell.y < current.Cell.y;
-    }
 }
