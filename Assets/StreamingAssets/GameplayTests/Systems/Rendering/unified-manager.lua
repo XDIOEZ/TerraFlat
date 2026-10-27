@@ -56,3 +56,16 @@ test.system("rendering", "unified_manager", {}, function(data)
             "注销、回池或直接销毁残留高亮请求：" .. step)
     end
 end, "统一渲染管理器：排序分发、阴影水态、双来源描边、幂等和池生命周期")
+
+test.system("rendering", "weather_screen_context", {}, function(data)
+    assert(not data.missingPlayer and not data.inactivePlayer and not data.remotePlayer and data.localPlayer,
+        "天气效果没有正确识别当前活动本地玩家")
+    assert(data.missingModule and data.resolvedCamera and data.changedCamera,
+        "天气效果没有获取玩家相机或跟踪相机替换")
+    assert(not data.missingCamera and data.orthographicCamera and not data.perspectiveCamera
+        and not data.disabledCamera and not data.inactiveCamera,
+        "天气效果没有正确识别可用正交相机")
+    assert(data.ownCamera and data.stackCamera and not data.nonFinalCamera and not data.unrelatedCamera
+        and not data.overlaySource and not data.removedCamera,
+        "天气效果没有正确识别本地相机栈的最终目标")
+end, "天气效果：本地玩家与最终相机栈")

@@ -68,16 +68,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         if (cameraData.cameraType != CameraType.Game)
             return;
 
-        WeatherMgr weather = WeatherMgr.ExistingInstance;
-        if (weather == null || !weather.isActiveAndEnabled ||
-            WeatherMgr.IsWeatherSuppressedInDimension(DimensionManager.Instance.ActiveDefinition))
-        {
-            ResetPresentation();
-            return;
-        }
-
-        Player player = ItemMgr.GetInstance()?.User_Player;
-        if (player == null || !player.IsLocalProfile || !player.gameObject.activeInHierarchy)
+        if (!WeatherScreenRenderingContext.TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Player player))
         {
             ResetPresentation();
             return;
@@ -89,16 +80,14 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             localPlayer = player;
             worldSceneHandle = player.gameObject.scene.handle;
         }
-        if (cameraModule == null)
-            cameraModule = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+        Camera sourceCamera = WeatherScreenRenderingContext.GetPlayerCamera(player, ref cameraModule);
         if (chunkLoader == null)
             chunkLoader = player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
         if (chunkLoader == null || !chunkLoader.TryGetLoadingWindowBounds(out Rect activeBounds, out Rect presentationBounds))
             return;
 
-        Camera sourceCamera = cameraModule != null ? cameraModule.ControllerCamera : null;
-        if (sourceCamera == null || !sourceCamera.isActiveAndEnabled || !sourceCamera.orthographic ||
-            !cameraData.resolveFinalTarget || !IsLocalStackCamera(sourceCamera, cameraData.camera))
+        if (!WeatherScreenRenderingContext.IsUsableCamera(sourceCamera) ||
+            !WeatherScreenRenderingContext.IsFinalLocalStackCamera(sourceCamera, ref cameraData))
             return;
 
         using var setupScope = PassSetupMarker.Measure(1);
@@ -143,15 +132,6 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         pass.Setup(material, sourceCamera, player.transform.position, cloudWorldCenter,
             cloudOffset, activeBounds, presentationBounds, config, useStarfield);
         renderer.EnqueuePass(pass);
-    }
-
-    private static bool IsLocalStackCamera(Camera source, Camera candidate)
-    {
-        if (source == candidate)
-            return true;
-        return source.TryGetComponent(out UniversalAdditionalCameraData data) &&
-               data.renderType == CameraRenderType.Base && data.cameraStack != null &&
-               data.cameraStack.Contains(candidate);
     }
 
     protected override void Dispose(bool disposing)

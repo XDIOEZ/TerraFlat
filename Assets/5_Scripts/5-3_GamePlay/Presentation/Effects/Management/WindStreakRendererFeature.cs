@@ -58,7 +58,7 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
 
         Player player = ItemMgr.GetExistingInstance()?.User_Player;
         WeatherMgr weather = player != null ? WeatherMgr.GetForWorld(player.gameObject.scene.name, false) : null;
-        if (player == null || !player.IsLocalProfile || !player.gameObject.activeInHierarchy ||
+        if (!WeatherScreenRenderingContext.IsLocalPlayer(player) ||
             weather == null || !weather.isActiveAndEnabled || !weather.IsLocalWeatherWorld)
         {
             ResetPresentation();
@@ -71,15 +71,13 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
             localPlayer = player;
             worldSceneHandle = player.gameObject.scene.handle;
         }
-        if (cameraModule == null)
-            cameraModule = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
-        Camera source = cameraModule != null ? cameraModule.ControllerCamera : null;
-        if (source == null || !source.isActiveAndEnabled || !source.orthographic)
+        Camera source = WeatherScreenRenderingContext.GetPlayerCamera(player, ref cameraModule);
+        if (!WeatherScreenRenderingContext.IsUsableCamera(source))
         {
             ResetPresentation();
             return;
         }
-        if (!cameraData.resolveFinalTarget || !IsLocalStackCamera(source, cameraData.camera))
+        if (!WeatherScreenRenderingContext.IsFinalLocalStackCamera(source, ref cameraData))
             return;
         if (sourceCamera != source)
         {
@@ -105,15 +103,6 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
 
         pass.Setup(material, source, presentation, config);
         renderer.EnqueuePass(pass);
-    }
-
-    private static bool IsLocalStackCamera(Camera source, Camera candidate)
-    {
-        if (source == candidate)
-            return true;
-        return source.TryGetComponent(out UniversalAdditionalCameraData data) &&
-               data.renderType == CameraRenderType.Base && data.cameraStack != null &&
-               data.cameraStack.Contains(candidate);
     }
 
     protected override void Dispose(bool disposing)

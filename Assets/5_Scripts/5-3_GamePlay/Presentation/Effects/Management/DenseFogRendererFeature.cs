@@ -57,16 +57,7 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
         if (cameraData.cameraType != CameraType.Game)
             return;
 
-        WeatherMgr weather = WeatherMgr.ExistingInstance;
-        if (weather == null || !weather.isActiveAndEnabled ||
-            WeatherMgr.IsWeatherSuppressedInDimension(DimensionManager.Instance.ActiveDefinition))
-        {
-            ResetPresentation();
-            return;
-        }
-
-        Player player = ItemMgr.GetInstance()?.User_Player;
-        if (player == null || !player.IsLocalProfile || !player.gameObject.activeInHierarchy)
+        if (!WeatherScreenRenderingContext.TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Player player))
         {
             ResetPresentation();
             return;
@@ -87,12 +78,9 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             presentationWorld = world;
             presentationEpoch = world.Epoch;
         }
-        if (cameraModule == null)
-            cameraModule = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
-
-        Camera sourceCamera = cameraModule != null ? cameraModule.ControllerCamera : null;
-        if (sourceCamera == null || !sourceCamera.isActiveAndEnabled || !sourceCamera.orthographic ||
-            !cameraData.resolveFinalTarget || !IsLocalStackCamera(sourceCamera, cameraData.camera))
+        Camera sourceCamera = WeatherScreenRenderingContext.GetPlayerCamera(player, ref cameraModule);
+        if (!WeatherScreenRenderingContext.IsUsableCamera(sourceCamera) ||
+            !WeatherScreenRenderingContext.IsFinalLocalStackCamera(sourceCamera, ref cameraData))
             return;
 
         // 雾独立读取玩家所在地浓度，允许与雨雪和强风同时存在。
@@ -116,17 +104,6 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
         right = inverse.MultiplyPoint(new Vector3(1f, -1f, 0f)) - bottomLeft;
         up = inverse.MultiplyPoint(new Vector3(-1f, 1f, 0f)) - bottomLeft;
         origin = bottomLeft - playerPosition;
-    }
-
-    private static bool IsLocalStackCamera(Camera source, Camera candidate)
-    {
-        if (source == candidate)
-            return true;
-
-        // 环绕地图的最后一台补绘相机负责合成，但可见圆心和投影仍属于本地主相机。
-        return source.TryGetComponent(out UniversalAdditionalCameraData data) &&
-               data.renderType == CameraRenderType.Base && data.cameraStack != null &&
-               data.cameraStack.Contains(candidate);
     }
 
     protected override void Dispose(bool disposing)
