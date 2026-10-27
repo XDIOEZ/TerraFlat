@@ -58,8 +58,8 @@ public static partial class GameplayTestSystemProbe
             if (sourceTarget == null)
                 throw new System.InvalidOperationException("主菜单面板存在空缩放目标：" + path);
             Vector3 baseScale = sourceTarget.localScale;
-            bool matchesDesign = Mathf.Abs(baseScale.x - 0.6f) < 0.001f &&
-                                 Mathf.Abs(baseScale.y - 0.6f) < 0.001f &&
+            bool matchesDesign = Mathf.Abs(baseScale.x - sourceBounds.localScale.x) < 0.001f &&
+                                 Mathf.Abs(baseScale.y - sourceBounds.localScale.y) < 0.001f &&
                                  Mathf.Abs(baseScale.z - 1f) < 0.001f;
             if (!matchesDesign)
                 throw new System.InvalidOperationException("主菜单面板的基准比例不同步：" + sourceTarget.name);
@@ -103,6 +103,8 @@ public static partial class GameplayTestSystemProbe
                 ["panel"] = panel,
                 ["targets"] = targets.arraySize,
                 ["containsBounds"] = allTargetsConsistent,
+                ["baseScaleX"] = sourceBounds.localScale.x,
+                ["baseScaleY"] = sourceBounds.localScale.y,
                 ["presentationScale"] = presentationScale,
                 ["widthPixels"] = displayedWidth,
                 ["heightPixels"] = displayedHeight,
@@ -188,6 +190,8 @@ public static partial class GameplayTestSystemProbe
                 ["topMarginPixels"] = -brand.anchoredPosition.y * canvasScale,
                 ["layoutFactor"] = brand.localScale.y,
                 ["menuToBrandRatio"] = card.localScale.y / brand.localScale.y,
+                ["menuPrefabScaleX"] = cardSource.localScale.x,
+                ["menuPrefabScaleY"] = cardSource.localScale.y,
                 ["insideSafeArea"] = MainMenuRectInside(root, brand) &&
                     MainMenuRectInside(root, card) && MainMenuRectInside(root, settings),
                 ["brandCardSeparated"] = brandBottom >= cardTop - 0.1f,

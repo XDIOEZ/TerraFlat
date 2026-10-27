@@ -1190,16 +1190,18 @@ for _, size in ipairs({{2560,1440},{1920,1080},{1600,900},{1280,720},{960,720},{
 end
 
 -- 主菜单四个入口与其它 UI 共用根画布倍率；自适应仅在空间不足时限幅。
-for _, size in ipairs({{1920,1080},{1280,720},{720,1280}}) do
-    local previous, normal
+for _, size in ipairs({{2560,1440},{1920,1080},{1600,900},{1280,720},{960,720},{720,1280}}) do
+    local previous, halfScale
     for _, scale in ipairs({0.25,0.5,1,1.5,2,2.5,3.25}) do
         test.system("ui_settings", "main_menu_scale_layout",
             {width = size[1], height = size[2], scale = scale}, function(data)
             assert(data.buttons == 4, "正式主菜单缺少旅程入口")
             assert(data.insideSafeArea and data.brandCardSeparated and data.brandSettingsSeparated,
                 "主菜单缩放后出现越界或标题与按钮重叠")
-            assert(math.abs(data.menuToBrandRatio - 0.6) < 0.001,
-                "四个主菜单按钮未采用统一紧凑比例")
+            assert(math.abs(data.menuToBrandRatio - 0.9) < 0.001 and
+                math.abs(data.menuPrefabScaleX - 0.9) < 0.001 and
+                math.abs(data.menuPrefabScaleY - 0.9) < 0.001,
+                "四个主菜单按钮未在原0.6基准上放大50%或Prefab不同步")
             if previous then
                 for _, key in ipairs({"buttonPixels","brandPixels","settingsPixels",
                     "leftMarginPixels","topMarginPixels"}) do
@@ -1207,16 +1209,16 @@ for _, size in ipairs({{1920,1080},{1280,720},{720,1280}}) do
                         "提高用户界面倍率却使主菜单局部变小：" .. key)
                 end
             end
-            if scale == 1 then normal = data end
-            if scale == 1.5 then
+            if scale == 0.5 then halfScale = data end
+            if scale == 1 then
                 for _, key in ipairs({"buttonPixels","brandPixels","settingsPixels",
                     "leftMarginPixels","topMarginPixels"}) do
-                    assert(math.abs(data[key] - normal[key] * 1.5) < 0.3,
-                        "从 100% 到 150% 时主菜单没有整体同步缩放：" .. key)
+                    assert(math.abs(data[key] - halfScale[key] * 2) < 0.3,
+                        "空间足够时主菜单没有跟随用户倍率整体缩放：" .. key)
                 end
                 if size[1] == 1920 then
-                    assert(data.buttonPixels >= 85 and data.buttonPixels <= 100,
-                        "1920x1080 主菜单入口仍显著大于普通按钮")
+                    assert(math.abs(data.buttonPixels - 93.6) < 0.1,
+                        "1920x1080、100% UI倍率下主菜单入口高度未从62.4放大50%")
                 end
             end
             previous = data
@@ -1226,28 +1228,38 @@ end
 
 -- 从四个正式面板 Prefab 采样卡片基准和真实安全区缩放组件，验证放大/缩小不是被限幅抵消。
 for _, modal in ipairs({{"save",2},{"new_game",3},{"network",2},{"mods",1}}) do
-    for _, size in ipairs({{1920,1080},{1280,720},{720,1280}}) do
-        local previous, baseline
+    for _, size in ipairs({{2560,1440},{1920,1080},{1600,900},{1280,720},{960,720},{720,1280}}) do
+        local previous, halfScale, baseline
         for _, scale in ipairs({0.25,0.5,1,1.5,2,3.25}) do
             test.system("ui_settings", "main_menu_modal_scale_layout",
                 {panel = modal[1], width = size[1], height = size[2], scale = scale}, function(data)
                 assert(data.panel == modal[1] and data.targets == modal[2] and data.containsBounds,
                     "主菜单面板缺少共同缩放目标：" .. modal[1])
+                assert(math.abs(data.baseScaleX - 0.9) < 0.001 and
+                    math.abs(data.baseScaleY - 0.9) < 0.001,
+                    "主菜单面板未在原0.6基准上放大50%：" .. modal[1])
                 assert(data.presentationScale == 1 and data.insideSafeArea,
                     "面板叠乘表现倍率或超出安全区：" .. modal[1])
                 assert(data.widthPixels > 0 and data.heightPixels > 0,
                     "面板没有有效显示尺寸：" .. modal[1])
-                -- 200% 以内优先保留用户倍率；极端放大后安全边距本身也会变宽，只核验不越界。
-                if previous and scale <= 2 then
+                -- 放大后较早触及安全区上限；极端倍率下边距也会变宽，只核验不越界。
+                if previous and scale <= 1.5 then
                     assert(data.widthPixels >= previous.widthPixels - 0.2 and
                         data.heightPixels >= previous.heightPixels - 0.2,
                         "提高全局 UI 倍率时主菜单面板反而缩小：" .. modal[1])
                 end
-                if scale == 1 then baseline = data end
-                if scale == 1.5 then
-                    assert(math.abs(data.widthPixels - baseline.widthPixels * 1.5) < 0.5 and
-                        math.abs(data.heightPixels - baseline.heightPixels * 1.5) < 0.5,
-                        "主菜单面板从100%调至150%时未整体放大：" .. modal[1])
+                if scale == 0.5 then halfScale = data end
+                if scale == 1 then
+                    baseline = data
+                    assert(math.abs(data.widthPixels - halfScale.widthPixels * 2) < 0.5 and
+                        math.abs(data.heightPixels - halfScale.heightPixels * 2) < 0.5,
+                        "空间足够时主菜单面板未跟随用户倍率放大：" .. modal[1])
+                    if size[1] == 1920 then
+                        local expectedWidth = modal[1] == "new_game" and 1350 or 1332
+                        assert(math.abs(data.widthPixels - expectedWidth) < 0.5 and
+                            math.abs(data.heightPixels - 756) < 0.5,
+                            "1920x1080、100% UI倍率下面板基准尺寸未放大50%：" .. modal[1])
+                    end
                 end
                 if scale == 3.25 then
                     assert(data.widthPixels > baseline.widthPixels and

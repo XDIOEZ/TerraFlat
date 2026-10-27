@@ -259,6 +259,8 @@ public static class MainMenuPrefabBuilder
         cardRect.pivot = Vector2.zero;
         cardRect.anchoredPosition = new Vector2(76f, 76f);
         cardRect.sizeDelta = new Vector2(560f, 524f);
+        cardRect.localScale = new Vector3(MainMenuResponsiveLayout.JourneyCardDesignScale,
+            MainMenuResponsiveLayout.JourneyCardDesignScale, 1f);
         card.raycastTarget = true;
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();

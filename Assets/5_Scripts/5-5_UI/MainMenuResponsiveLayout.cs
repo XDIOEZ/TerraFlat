@@ -11,7 +11,7 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
     #region 参考排版
 
     private const float MinimumGap = 32f;
-    private const float JourneyCardDesignScale = 0.6f;
+    public const float JourneyCardDesignScale = 0.9f;
 
     [SerializeField] private RectTransform brand; // 标题与分隔线的共同缩放根。
     [SerializeField] private RectTransform menuCard; // 四个旅程按钮的共同缩放根。
@@ -111,7 +111,7 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
 
             Vector3 uniformScale = new Vector3(layoutScale, layoutScale, 1f);
             brand.localScale = uniformScale;
-            // 旅程卡保留紧凑设计尺寸，但三个内容组始终使用同一个自适应系数。
+            // 旅程卡按设计比例显示，三个内容组共用自适应系数。
             menuCard.localScale = new Vector3(layoutScale * JourneyCardDesignScale,
                 layoutScale * JourneyCardDesignScale, 1f);
             settingsButton.localScale = uniformScale;
