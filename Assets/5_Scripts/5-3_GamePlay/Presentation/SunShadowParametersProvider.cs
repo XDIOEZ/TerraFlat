@@ -95,7 +95,8 @@ public static class SunShadowParametersProvider
             return false;
         if (definition.SunShadows == DimensionSunShadowMode.Enabled) return true;
         if (definition.SunShadows == DimensionSunShadowMode.Disabled) return false;
-        return definition.GenerationMode == DimensionGenerationMode.Surface && !definition.UseFixedLighting;
+        return (definition.GenerationProfile?.GenerationMode ?? FlatWorld.WorldModel.ChunkGenerationMode.Surface) ==
+            FlatWorld.WorldModel.ChunkGenerationMode.Surface && !definition.UseFixedLighting;
     }
 
     #endregion

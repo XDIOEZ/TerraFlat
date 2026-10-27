@@ -48,6 +48,18 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
     public int GenerationSignature => generationSignature;
     public int ChunkWidth => chunkWidth;
     public int ChunkHeight => chunkHeight;
+    // 表现与生成共用 terrain.mode，不再单独维护维度类型。
+    public ChunkGenerationMode GenerationMode
+    {
+        get
+        {
+            foreach (TextParameter parameter in textParameters)
+                if (parameter.Id == "terrain.mode")
+                    return string.Equals(parameter.Value, "cave", StringComparison.OrdinalIgnoreCase)
+                        ? ChunkGenerationMode.Cave : ChunkGenerationMode.Surface;
+            return ChunkGenerationMode.Surface;
+        }
+    }
     public float EcologyGlobalMultiplier => ecologyGlobalMultiplier;
     public IReadOnlyList<string> EcologyRuleIds => ecologyRuleIds;
     public IReadOnlyList<string> CaveResourceRuleIds => caveResourceRuleIds;

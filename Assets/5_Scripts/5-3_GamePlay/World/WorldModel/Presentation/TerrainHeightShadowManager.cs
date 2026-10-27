@@ -120,7 +120,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         DimensionManager dimensions = DimensionManager.ExistingInstance;
         if (dimensions != null &&
             dimensions.TryGetDefinition(dimensionId, out DimensionDefinition definition))
-            return definition.GenerationMode == DimensionGenerationMode.Surface;
+            return (definition.GenerationProfile?.GenerationMode ?? ChunkGenerationMode.Surface) == ChunkGenerationMode.Surface;
         return string.Equals(dimensionId, global::WorldAddress.SurfaceDimensionId, StringComparison.OrdinalIgnoreCase);
     }
 

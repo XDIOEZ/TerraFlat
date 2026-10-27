@@ -14,7 +14,8 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 
 ## 地址与切换
 
-- `WorldAddress` 生成键：地表为 `PlanetId`，其他为 `PlanetId__dimension__DimensionId`；各键独享 Planet/Map/Chunk 差量。新维度继承地表拓扑、半径、ChunkSize，运行态独立。
+- `WorldAddress` 生成键：根世界为 `RootWorldKey`，其他为 `RootWorldKey__dimension__DimensionId`；根键不要求星球或 Scene，星球归属沿用数据的 `BodyId`。`GameSaveData.GetOrCreateWorldInstanceData` 只继承生成几何与环境配置，Map/生态/积雪/天气进度独立；重复进入保留原实例和状态。
+- 地表与矿洞共用世界/区块运行流程；类型只从生成 Profile 的 `terrain.mode` 派生，环境差异走目录配置，洞口差异走入口配对。离线太空落地只接精确坐标，不再经过旧矿洞出口分支或 PortalOffset。
 - 单人和联机复用 `DimensionTransitionService` 的权威解析/准备/提交；网络桥只负责远端请求、身份与回执。玩家可独立进出维度，`GameplayWorldRegistry` 按 WorldKey 保留 Scene、ChunkMgr、独立物理和运行态，同步 `UseWorld` 租约不能跨 yield。
 - 个人最后位置保存在 `ItemSpecialData.flatworld.dimensions`；手工锚点、入口状态和天然出口索引属于 `GameSaveData.DimensionStateJson`，多人共享，不扫描其他玩家存档建立配对。权威解析只读预览，准备成功才提交锚点。
 - `ApplyNetworkPresentation` 保留同一个 Player/NetworkIdentity，只锁本机输入；目标完整窗口、出口/地块效果、物理同步就绪后发送 presentation-ready，服务器再放行新 realm 的移动/库存。不能全局 WorldExit、ReleasePlayer、暂停全服或创建空 Scene 冒充就绪；失败不发送 ready，允许后续快照重试呈现。

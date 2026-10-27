@@ -1399,56 +1399,22 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         dimensionId = string.Empty;
         failureReason = string.Empty;
 
-        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
-        if (saveDataMgr?.SaveData?.PlanetData_Dict == null)
+        if (SaveDataMgr.Instance?.TryGetActivePlanetData(out PlanetData worldData) != true ||
+            ChunkMgr.Instance == null || DimensionManager.Instance?.ActiveDefinition?.GenerationProfile == null)
         {
-            failureReason = "当前星球存档数据未就绪。";
+            failureReason = "当前世界的生成数据尚未就绪。";
             return false;
         }
 
-        PlanetData planetData = saveDataMgr.GetCurrentPlanetData();
-        if (planetData == null)
-        {
-            failureReason = "当前场景未找到对应的星球生成数据。";
-            return false;
-        }
-
-        DimensionManager dimensionManager = DimensionManager.Instance;
-        if (dimensionManager == null)
-        {
-            failureReason = "维度管理器未就绪。";
-            return false;
-        }
-
-        if (dimensionManager.ActiveDefinition?.GenerationMode == DimensionGenerationMode.Cave)
+        // 出生搜索与正式流送共享尺寸、冻结参数和运行时覆盖。
+        profile = ChunkMgr.Instance.PrepareActiveGenerationSnapshot(out _);
+        if (profile.Settings.Mode != FlatWorld.WorldModel.ChunkGenerationMode.Surface)
         {
             failureReason = "矿洞维度不使用地表陆地出生采样。";
             return false;
         }
-
-        ChunkGenerationProfileSO profileAsset = dimensionManager.GetActiveGenerationProfile();
-        if (profileAsset == null)
-        {
-            failureReason = "当前维度缺少区块生成 Profile。";
-            return false;
-        }
-
-        float spatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(
-            planetData.SpatialDistanceScale);
-        profile = profileAsset.CreateSnapshot().WithNumericParameter(
-            "world.spatialDistanceScale", spatialDistanceScale);
-        // 出生搜索与 ChunkMgr 后台生成必须经过同一运行时覆盖，避免选中的陆地生成后变成水。
-        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
-        dimensionId = dimensionManager.ActiveDefinition?.DimensionId;
-        if (string.IsNullOrWhiteSpace(dimensionId))
-            dimensionId = WorldAddress.SurfaceDimensionId;
-
-        if (WorldTopologyBounds.TryCreate(planetData, out WorldTopologyBounds bounds))
-        {
-            topology = new FlatWorld.WorldModel.ChunkGenerationTopologySnapshot(
-                new FlatWorld.WorldModel.Int2(bounds.Min.x, bounds.Min.y),
-                new FlatWorld.WorldModel.Int2(bounds.Span.x, bounds.Span.y));
-        }
+        dimensionId = DimensionManager.Instance.ActiveAddress.DimensionId;
+        topology = ChunkMgr.ResolveGenerationTopology(worldData);
 
         return true;
     }

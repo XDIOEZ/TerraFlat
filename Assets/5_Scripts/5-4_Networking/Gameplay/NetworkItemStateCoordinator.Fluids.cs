@@ -156,7 +156,7 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active || string.IsNullOrWhiteSpace(message.WorldKey) || message.WorldKey.Length > 128 ||
                 message.State == null || message.State.Length > 256 * 1024) return;
             var save = SaveDataMgr.Instance?.SaveData;
-            if (save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(WorldAddress.FromWorldKey(message.WorldKey).PlanetId, out PlanetData planet)) return;
+            if (save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(WorldAddress.FromWorldKey(message.WorldKey).RootWorldKey, out PlanetData planet)) return;
             AtmosphereState state = MemoryPackSerializer.Deserialize<AtmosphereState>(message.State);
             AtmosphereService.Validate(state, FluidCatalog.Default);
             planet.Atmosphere = state;

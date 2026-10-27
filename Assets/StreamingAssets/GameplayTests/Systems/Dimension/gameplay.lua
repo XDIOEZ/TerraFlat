@@ -45,6 +45,12 @@ test.runtime("dimension", "cave_roundtrip", {}, function(data)
         "维度迁移替换了本机网络身份")
     assert(data.cave.sourceWorldRetained and data.cave.targetRuntimePresent and data.surface.targetRuntimePresent,
         "迁移卸载了其他玩家仍可使用的源世界，或目标缺少正式世界运行时")
+    assert(data.cave.modelWorldKey == data.cave.address and data.cave.generationMode == "Cave" and
+        not data.cave.originalRuntime and not data.cave.originalData and data.cave.sourceDataRetained,
+        "矿洞没有使用同一运行体系下的独立世界实例与数据")
+    assert(data.surface.modelWorldKey == data.originalSurface and data.surface.generationMode == "Surface" and
+        data.surface.originalRuntime and data.surface.originalData and data.surface.sourceDataRetained,
+        "回地表没有复用原世界实例、区块数据和生成规则")
     assert(data.cave.initialized and data.cave.windowReady and not data.cave.transitioning, "洞穴只创建了场景却没有完成主角和区块窗口准备")
     assert(data.cave.controllerPresent and data.cave.gameplayReady and not data.cave.inputExplicitlyLocked and not data.cave.loadingGateLocked, "洞穴迁移没有解除显式加载锁或恢复可玩状态：" .. tostring(data.cave.inputLockState))
     assert(data.cave.suppressWeather, "洞穴没有应用维度天气覆盖")

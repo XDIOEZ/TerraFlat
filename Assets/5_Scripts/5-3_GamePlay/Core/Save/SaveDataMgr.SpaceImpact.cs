@@ -31,7 +31,7 @@ public partial class SaveDataMgr
         if (!float.IsFinite(radius) || radius <= 0f || !float.IsFinite(structuralDamage) || structuralDamage < 0f ||
             !float.IsFinite(center.x) || !float.IsFinite(center.y)) throw new ArgumentOutOfRangeException(nameof(radius));
         if (!SaveData.PlanetData_Dict.TryGetValue(address.WorldKey, out PlanetData planet))
-            throw new KeyNotFoundException("结构冲击目标星球尚未创建：" + address.PlanetId);
+            throw new KeyNotFoundException("结构冲击目标星球尚未创建：" + address.RootWorldKey);
         WorldTopologyDomain domain = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
         float2 canonicalCenter = domain.Normalize(new float2(center.x, center.y));
         center = new Vector2(canonicalCenter.x, canonicalCenter.y);

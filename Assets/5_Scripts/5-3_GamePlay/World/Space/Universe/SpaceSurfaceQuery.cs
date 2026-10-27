@@ -83,7 +83,7 @@ namespace FlatWorld.Spaceflight
             manager = ChunkMgr.ExistingInstance;
             DimensionManager dimension = DimensionManager.ExistingInstance;
             return manager != null && dimension != null && dimension.ActiveAddress.IsSurface &&
-                dimension.ActiveAddress.PlanetId == worldKey && SpaceSession.Current?.IsSpaceView != true;
+                dimension.ActiveAddress.RootWorldKey == worldKey && SpaceSession.Current?.IsSpaceView != true;
         }
 
         private static void InvalidateActivePumpSearchAfterColdLiquidWrite(string worldKey, Vector2Int cell)
@@ -301,7 +301,7 @@ namespace FlatWorld.Spaceflight
             if (string.IsNullOrWhiteSpace(worldKey) || !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
             global::WorldAddress world = global::WorldAddress.FromWorldKey(worldKey);
             GameSaveData save = SaveDataMgr.Instance?.SaveData;
-            if (!world.IsSurface || save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(world.PlanetId, out PlanetData planet)) return false;
+            if (!world.IsSurface || save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(world.RootWorldKey, out PlanetData planet)) return false;
             if (!ReferenceEquals(owner, save)) { Reset(); owner = save; }
             BindResourceReload();
             ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
@@ -311,9 +311,9 @@ namespace FlatWorld.Spaceflight
             int originX = (int)Math.Floor(cellX / (double)profile.Width) * profile.Width;
             int originY = (int)Math.Floor(cellY / (double)profile.Height) * profile.Height;
             var address = new RuntimeAddress(WorldAddress.SurfaceDimensionId, new Int2(originX, originY));
-            ChunkTerrainData terrain = GetLoadedTerrain(world.PlanetId, address);
-            int seed = GetGenerationSeed(save.Seed, world.PlanetId);
-            if (terrain == null && caches.TryGetValue(world.PlanetId, out SurfaceCache cache) &&
+            ChunkTerrainData terrain = GetLoadedTerrain(world.RootWorldKey, address);
+            int seed = GetGenerationSeed(save.Seed, world.RootWorldKey);
+            if (terrain == null && caches.TryGetValue(world.RootWorldKey, out SurfaceCache cache) &&
                 cache.Fingerprint == profile.GenerationFingerprint && cache.Seed == seed)
                 cache.World.TryGetChunkTerrain(address, out terrain);
             float geographic;
@@ -367,7 +367,7 @@ namespace FlatWorld.Spaceflight
             global::WorldAddress world = global::WorldAddress.FromWorldKey(worldKey);
             GameSaveData save = SaveDataMgr.Instance?.SaveData;
             if (!world.IsSurface || !ReferenceEquals(owner, save) || save?.PlanetData_Dict == null ||
-                !save.PlanetData_Dict.TryGetValue(world.PlanetId, out PlanetData planet)) return false;
+                !save.PlanetData_Dict.TryGetValue(world.RootWorldKey, out PlanetData planet)) return false;
 
             ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
             ChunkGenerationTopologySnapshot topology = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
@@ -377,16 +377,16 @@ namespace FlatWorld.Spaceflight
             int originX = (int)Math.Floor(cellX / (double)profile.Width) * profile.Width;
             int originY = (int)Math.Floor(cellY / (double)profile.Height) * profile.Height;
             var address = new RuntimeAddress(WorldAddress.SurfaceDimensionId, new Int2(originX, originY));
-            ChunkTerrainData loaded = GetLoadedTerrain(world.PlanetId, address);
+            ChunkTerrainData loaded = GetLoadedTerrain(world.RootWorldKey, address);
             if (loaded != null)
             {
                 if (loaded.WeatherProfile == null) return false;
                 value = loaded.WeatherProfile.Climate.WindStrength;
                 return true;
             }
-            return caches.TryGetValue(world.PlanetId, out SurfaceCache cache) &&
+            return caches.TryGetValue(world.RootWorldKey, out SurfaceCache cache) &&
                    cache.Fingerprint == profile.GenerationFingerprint &&
-                   cache.Seed == GetGenerationSeed(save.Seed, world.PlanetId) &&
+                   cache.Seed == GetGenerationSeed(save.Seed, world.RootWorldKey) &&
                    cache.WindStrength.TryGet(address.ChunkOrigin, out value);
         }
 
@@ -419,15 +419,15 @@ namespace FlatWorld.Spaceflight
             sample = default; terrain = null; local = default;
             if (string.IsNullOrWhiteSpace(worldKey) || !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
             global::WorldAddress address = global::WorldAddress.FromWorldKey(worldKey);
-            if (!address.IsSurface || SaveDataMgr.Instance?.SaveData?.PlanetData_Dict?.ContainsKey(address.PlanetId) != true) return false;
-            sample = GetLandingSurface(address.PlanetId, position, out terrain, out local); return true;
+            if (!address.IsSurface || SaveDataMgr.Instance?.SaveData?.PlanetData_Dict?.ContainsKey(address.RootWorldKey) != true) return false;
+            sample = GetLandingSurface(address.RootWorldKey, position, out terrain, out local); return true;
         }
 
         private static ChunkTerrainData GetLoadedTerrain(string planetId, RuntimeAddress address)
         {
             DimensionManager dimension = DimensionManager.ExistingInstance;
             ChunkMgr manager = ChunkMgr.ExistingInstance;
-            if (dimension == null || !dimension.ActiveAddress.IsSurface || dimension.ActiveAddress.PlanetId != planetId ||
+            if (dimension == null || !dimension.ActiveAddress.IsSurface || dimension.ActiveAddress.RootWorldKey != planetId ||
                 SpaceSession.Current?.IsSpaceView == true || manager?.WorldRuntime == null) return null;
             return manager.WorldRuntime.TryGetChunkTerrain(address, out ChunkTerrainData terrain) ? terrain : null;
         }

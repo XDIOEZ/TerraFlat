@@ -136,42 +136,15 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>为新角色创建与显示名无关的持久身份键。</summary>
     public static string CreatePlayerProfileId() => "player:" + Guid.NewGuid().ToString("N");
     
-    /// <summary>
-    /// 获取当前活跃星球数据（快捷属性）
-    /// </summary>
-    public PlanetData Active_PlanetData
-    {
-        get => GetActivePlanetData();
-    }
+    #region 逻辑世界数据查询
+    public PlanetData Active_PlanetData => GetCurrentPlanetData();
 
-    /// <summary>
-    /// 获取当前活跃星球数据的内部方法
-    /// </summary>
-    private PlanetData GetActivePlanetData()
-    {
-        if (TryGetActivePlanetData(out PlanetData planetData))
-            return planetData;
-
-        if (SaveData?.PlanetData_Dict == null)
-        {
-            Debug.LogWarning("⚠️ SaveData或PlanetData_Dict为null");
-            return null;
-        }
-
-        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
-        Debug.LogWarning($"⚠️ 未找到世界 {worldKey} 的星球数据");
-        return null;
-    }
-
-    /// <summary>移动、导航和距离检查的无日志拓扑查询；无世界数据时沿用无限世界语义。</summary>
     public bool TryGetActivePlanetData(out PlanetData planetData)
     {
-        planetData = null;
-        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
-        return worldKey != null && SaveData?.PlanetData_Dict != null &&
-               SaveData.PlanetData_Dict.TryGetValue(worldKey, out planetData) &&
-               planetData != null;
+        planetData = SaveData?.CurrentPlanetData;
+        return planetData != null;
     }
+    #endregion
 
     protected override void Awake()
     {

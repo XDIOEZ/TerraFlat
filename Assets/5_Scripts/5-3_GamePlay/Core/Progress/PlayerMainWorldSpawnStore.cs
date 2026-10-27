@@ -89,7 +89,7 @@ public static class PlayerMainWorldSpawnStore
         if (string.IsNullOrWhiteSpace(worldKey))
             return string.Empty;
 
-        return WorldAddress.FromWorldKey(worldKey).PlanetId;
+        return WorldAddress.FromWorldKey(worldKey).RootWorldKey;
     }
 
     private static bool TryReadPosition(JObject positionData, out Vector3 position)

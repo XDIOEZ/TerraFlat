@@ -2,12 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum DimensionGenerationMode
-{
-    Surface,
-    Cave
-}
-
 /// <summary>太阳长投影的维度策略；自动按地表/地下及固定光照规则选择。</summary>
 public enum DimensionSunShadowMode { Automatic, Enabled, Disabled }
 
@@ -50,15 +44,12 @@ public sealed class DimensionDefinition
     public string DisplayName = "地表";
     [Tooltip("维度名称在 FlatWorldUI 表中的稳定键；业务维度 ID 不参与显示翻译。")]
     public string DisplayNameLocalizationKey = "dimension.surface.name";
-    public DimensionGenerationMode GenerationMode = DimensionGenerationMode.Surface;
     [Tooltip("主线程创建的纯数据生成配置快照来源。")]
     public ChunkGenerationProfileSO GenerationProfile;
     [Tooltip("区块表现租约使用的纯表现 Prefab。")]
     public ChunkView ChunkViewPrefab;
     public int SeedSalt;
     public Vector3 DefaultSpawnPosition = new Vector3(0.5f, 0.5f, 0f);
-    [Tooltip("Legacy catalog compatibility only; 1:1 dimension travel no longer applies this offset.")]
-    public Vector3 PortalOffset = Vector3.zero;
     public string PortalTargetDimensionId;
     [Tooltip("启用维度光照上限；实际亮度仍跟随引用世界的昼夜变化。")]
     public bool UseFixedLighting;
@@ -79,10 +70,8 @@ public sealed class DimensionDefinition
             DimensionId = WorldAddress.SurfaceDimensionId,
             DisplayName = "地表",
             DisplayNameLocalizationKey = "dimension.surface.name",
-            GenerationMode = DimensionGenerationMode.Surface,
             GenerationProfile = Resources.Load<ChunkGenerationProfileSO>(
                 "Config/WorldModel/ChunkGenerationProfile_Surface"),
-            PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.CaveDimensionId,
             EnableMonsterSpawning = true,
             LoadingTheme = new DimensionLoadingTheme
@@ -100,11 +89,9 @@ public sealed class DimensionDefinition
             DimensionId = WorldAddress.CaveDimensionId,
             DisplayName = "地下矿洞",
             DisplayNameLocalizationKey = "dimension.cave.name",
-            GenerationMode = DimensionGenerationMode.Cave,
             GenerationProfile = Resources.Load<ChunkGenerationProfileSO>(
                 "Config/WorldModel/ChunkGenerationProfile_Cave"),
             SeedSalt = 7919,
-            PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.SurfaceDimensionId,
             UseFixedLighting = true,
             FixedLighting = 0.2f,

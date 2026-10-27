@@ -214,20 +214,7 @@ public partial class ChunkMgr
             return;
         }
 
-        ChunkGenerationProfileSO profileAsset = DimensionManager.Instance?.GetActiveGenerationProfile();
-        if (profileAsset == null)
-            return;
-
-        ChunkGenerationProfileSnapshot profile = ApplyWorldChunkSize(
-            profileAsset.CreateSnapshot());
-        profile = ApplyWorldSpatialDistanceScale(profile);
-        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
-        profile = ApplyPersistedEcologyConfiguration(profile);
-        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
-        if (baseSeed == 0)
-            baseSeed = 1;
-        profile = profile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
-        activeGenerationSnapshot = AttachCavePortalPairing(profile, baseSeed);
+        PrepareActiveGenerationSnapshot(out _);
     }
 
     #endregion

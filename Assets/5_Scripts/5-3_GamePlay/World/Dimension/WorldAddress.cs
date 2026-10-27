@@ -1,24 +1,26 @@
 using System;
 
 [Serializable]
-public struct WorldAddress : IEquatable<WorldAddress>
+public readonly struct WorldAddress : IEquatable<WorldAddress>
 {
+    #region 逻辑世界身份
     public const string SurfaceDimensionId = "surface";
     public const string CaveDimensionId = "cave";
     public const string Separator = "__dimension__";
 
-    public string PlanetId;
-    public string DimensionId;
+    // 根键用于关联一组世界，星球归属由世界数据的 BodyId 表达。
+    public readonly string RootWorldKey;
+    public readonly string DimensionId;
 
-    public WorldAddress(string planetId, string dimensionId)
+    public WorldAddress(string rootWorldKey, string dimensionId)
     {
-        PlanetId = NormalizePlanetId(planetId);
+        RootWorldKey = NormalizeRootWorldKey(rootWorldKey);
         DimensionId = NormalizeDimensionId(dimensionId);
     }
 
     public bool IsSurface => DimensionId == SurfaceDimensionId;
-    public bool IsValid => !string.IsNullOrWhiteSpace(PlanetId) && !string.IsNullOrWhiteSpace(DimensionId);
-    public string WorldKey => IsSurface ? PlanetId : $"{PlanetId}{Separator}{DimensionId}";
+    public bool IsValid => !string.IsNullOrWhiteSpace(RootWorldKey) && !string.IsNullOrWhiteSpace(DimensionId);
+    public string WorldKey => IsSurface ? RootWorldKey : $"{RootWorldKey}{Separator}{DimensionId}";
 
     public static WorldAddress FromWorldKey(string worldKey)
     {
@@ -27,52 +29,36 @@ public struct WorldAddress : IEquatable<WorldAddress>
         if (separatorIndex < 0)
             return new WorldAddress(normalized, SurfaceDimensionId);
 
-        string planetId = normalized.Substring(0, separatorIndex);
-        string dimensionId = normalized.Substring(separatorIndex + Separator.Length);
-        return new WorldAddress(planetId, dimensionId);
+        return new WorldAddress(normalized.Substring(0, separatorIndex),
+            normalized.Substring(separatorIndex + Separator.Length));
     }
 
-    public WorldAddress WithDimension(string dimensionId)
-    {
-        return new WorldAddress(PlanetId, dimensionId);
-    }
+    public WorldAddress WithDimension(string dimensionId) => new(RootWorldKey, dimensionId);
 
     public bool Equals(WorldAddress other)
     {
-        return string.Equals(PlanetId, other.PlanetId, StringComparison.Ordinal) &&
+        return string.Equals(RootWorldKey, other.RootWorldKey, StringComparison.Ordinal) &&
                string.Equals(DimensionId, other.DimensionId, StringComparison.Ordinal);
     }
 
-    public override bool Equals(object obj)
-    {
-        return obj is WorldAddress other && Equals(other);
-    }
+    public override bool Equals(object obj) => obj is WorldAddress other && Equals(other);
 
     public override int GetHashCode()
     {
         unchecked
         {
-            return ((PlanetId != null ? PlanetId.GetHashCode() : 0) * 397) ^
+            return ((RootWorldKey != null ? RootWorldKey.GetHashCode() : 0) * 397) ^
                    (DimensionId != null ? DimensionId.GetHashCode() : 0);
         }
     }
 
-    public override string ToString()
-    {
-        return WorldKey;
-    }
+    public override string ToString() => WorldKey;
 
-    public static bool operator ==(WorldAddress left, WorldAddress right)
-    {
-        return left.Equals(right);
-    }
+    public static bool operator ==(WorldAddress left, WorldAddress right) => left.Equals(right);
 
-    public static bool operator !=(WorldAddress left, WorldAddress right)
-    {
-        return !left.Equals(right);
-    }
+    public static bool operator !=(WorldAddress left, WorldAddress right) => !left.Equals(right);
 
-    private static string NormalizePlanetId(string value)
+    private static string NormalizeRootWorldKey(string value)
     {
         string normalized = string.IsNullOrWhiteSpace(value) ? "地球" : value.Trim();
         return normalized.Replace(Separator, "_");
@@ -82,4 +68,5 @@ public struct WorldAddress : IEquatable<WorldAddress>
     {
         return string.IsNullOrWhiteSpace(value) ? SurfaceDimensionId : value.Trim().ToLowerInvariant();
     }
+    #endregion
 }

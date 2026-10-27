@@ -17,7 +17,7 @@ namespace FlatWorld.Spaceflight
         public BodyState FindSurfaceBody(string worldKey)
         {
             if (Universe == null) return null;
-            string planetId = WorldAddress.FromWorldKey(worldKey).PlanetId;
+            string planetId = WorldAddress.FromWorldKey(worldKey).RootWorldKey;
             foreach (UniverseSimulation simulation in sectorDirectory.Values)
                 foreach (BodyState body in simulation.State.Bodies) if (body.PlanetId == planetId) return body;
             return null;

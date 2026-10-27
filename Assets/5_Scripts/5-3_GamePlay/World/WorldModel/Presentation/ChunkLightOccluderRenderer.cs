@@ -195,7 +195,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
             return true;
         DimensionManager manager = DimensionManager.ExistingInstance;
         return manager != null && manager.TryGetDefinition(dimensionId, out DimensionDefinition definition) &&
-               definition.GenerationMode == DimensionGenerationMode.Cave;
+               definition.GenerationProfile?.GenerationMode == ChunkGenerationMode.Cave;
     }
 
     /// <summary>View 从对象池取出时取消旧裁剪计划，避免绑定途中误删可复用槽。</summary>

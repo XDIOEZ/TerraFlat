@@ -643,7 +643,7 @@ public partial class ChunkMgr
     }
 
     /// <summary>将指定维度保存的有限世界范围转换为后台生成器可用的纯拓扑快照。</summary>
-    private static ChunkGenerationTopologySnapshot ResolveGenerationTopology(PlanetData planet)
+    internal static ChunkGenerationTopologySnapshot ResolveGenerationTopology(PlanetData planet)
     {
         return WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
             ? new ChunkGenerationTopologySnapshot(

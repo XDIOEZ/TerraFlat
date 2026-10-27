@@ -72,7 +72,7 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
             SpaceMgr.IsSpaceScene(player.gameObject.scene.name)) return false;
         var save = SaveDataMgr.Instance?.SaveData;
         return save?.PlanetData_Dict != null &&
-               save.PlanetData_Dict.TryGetValue(dimensions.ActiveAddress.PlanetId, out PlanetData planet) &&
+               save.PlanetData_Dict.TryGetValue(dimensions.ActiveAddress.RootWorldKey, out PlanetData planet) &&
                session.TryGetBody(planet.BodyId, out body);
     }
 

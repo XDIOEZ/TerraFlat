@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using FastCloner;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -202,9 +201,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         }
         if (!targetAddress.IsSurface ||
             !(toSpace ? GameManager.Instance.BeginSpaceTransitionLoading() : GameManager.Instance.BeginDimensionTransitionLoading(definition))) return false;
-        var context = new PortalTransitionContext { TargetPortalPosition = position, UseExactTargetPosition = true };
         StartCoroutine(TransitionCoroutine(player, WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name),
-            targetAddress, definition, context));
+            targetAddress, position));
         return true;
     }
     #endregion
@@ -215,7 +213,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         // 已提交但呈现失败的租约只供快照重试，不能被当成新的入口请求重复使用。
         if (IsTransitioning || localDimensionPresentation != null || player == null || player != ItemMgr.Instance?.User_Player || sourcePortalItem?.itemData == null ||
             !TryGetDefinition(targetDimensionId, out DimensionDefinition definition)) return false;
-        WorldAddress source = WorldAddress.FromWorldKey(player.gameObject.scene.name);
+        WorldAddress source = WorldAddress.FromWorldKey(GameplayWorldRegistry.GetItemWorldKey(player));
         if (!source.IsValid || source.DimensionId == targetDimensionId) return false;
         Mod_DimensionPortal portal = sourcePortalItem.GetComponentInChildren<Mod_DimensionPortal>(true);
         if (portal == null || !portal.ValidateNetworkTransition(player, source, targetDimensionId, generatedWorldPortal)) return false;
@@ -256,18 +254,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             return;
 
         string worldKey = address.WorldKey;
-        if (!saveData.PlanetData_Dict.TryGetValue(worldKey, out PlanetData worldData) || worldData == null)
-        {
-            PlanetData source = ResolveSurfaceData(saveData, address.PlanetId);
-            worldData = source != null
-                ? FastCloner.FastCloner.DeepClone(source)
-                : new PlanetData { Name = address.PlanetId };
-            worldData.Name = worldKey;
-            worldData.MapData_Dict = new Dictionary<string, MapSave>();
-            worldData.CurrentWeather = WeatherType.Clear;
-            worldData.WeatherIntensity = 0f;
-            saveData.PlanetData_Dict[worldKey] = worldData;
-        }
+        saveData.GetOrCreateWorldInstanceData(address, GameManager.Instance?.ReadyPlanetData);
 
         if (!address.IsSurface)
             EnsureWorldTimeData(saveData, address.WithDimension(WorldAddress.SurfaceDimensionId));
@@ -277,7 +264,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         if (GameManager.Instance?.IsInGameWorld == true && DayTimeSystem.Instance is { } dayTime)
         {
             if (!address.IsSurface)
-                dayTime.EnsureRuntimeSceneTimeData(address.PlanetId, saveData.DayTimeData);
+                dayTime.EnsureRuntimeSceneTimeData(address.RootWorldKey, saveData.DayTimeData);
             dayTime.EnsureRuntimeSceneTimeData(worldKey, saveData.DayTimeData);
         }
     }
@@ -286,8 +273,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Player sourcePlayer,
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
-        DimensionDefinition targetDefinition,
-        PortalTransitionContext portalContext)
+        Vector3 targetPosition)
     {
         isTransitioning = true;
         Data_Player playerData = sourcePlayer.Data;
@@ -323,8 +309,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             sourcePlayer,
             sourceAddress,
             targetAddress,
-            targetDefinition,
-            portalContext,
+            targetPosition,
             state);
         Exception failure = null;
 
@@ -358,8 +343,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Player sourcePlayer,
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
-        DimensionDefinition targetDefinition,
-        PortalTransitionContext portalContext,
+        Vector3 targetPosition,
         TransitionState state)
     {
         Data_Player playerData = sourcePlayer.Data;
@@ -407,7 +391,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
                 yield return null;
         }
 
-        Vector3 targetPosition = ResolveTargetPosition(playerData, targetAddress, targetDefinition, portalContext);
         playerData.CurrentSceneName = targetAddress.WorldKey;
         playerData.transform.position = targetPosition;
         playerData.transform.rotation = Quaternion.identity;
@@ -431,12 +414,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         GameManager.Instance.SetDimensionTransitionLoading("正在生成目标区块…", 0.78f);
         if (toSpace) yield return SpaceMgr.Instance.PreparePresentationForCamera();
         else yield return WaitForRuntimeChunkPresentation(targetAddress, targetPosition, targetPlayer);
-
-        if (portalContext?.EnsureCaveExit == true)
-        {
-            GameManager.Instance.SetDimensionTransitionLoading("正在固定矿洞出口…", 0.88f);
-            yield return EnsureCaveExitCoroutine(playerData, targetPlayer, targetDefinition, portalContext);
-        }
 
         yield return null;
         targetPlayer.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
@@ -464,7 +441,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         public DimensionPortalAnchor Anchor;
         public Vector3 TargetPortalPosition;
         public bool EnsureCaveExit;
-        public bool UseExactTargetPosition;
     }
 
     private IEnumerator RecoverAfterTransitionFailureCoroutine(
@@ -571,7 +547,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     }
 
     private static PortalTransitionContext ResolvePortalTransition(
-        Data_Player playerData,
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
         DimensionDefinition targetDefinition,
@@ -643,16 +618,9 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         DimensionDefinition targetDefinition,
         PortalTransitionContext portalContext)
     {
-        if (portalContext != null)
-        {
-            return portalContext.UseExactTargetPosition
-                ? portalContext.TargetPortalPosition
-                : portalContext.TargetPortalPosition + targetDefinition.PortalOffset;
-        }
-
-        return DimensionTravelProgressStore.TryGetLastPosition(playerData, targetAddress, out Vector3 savedPosition)
-            ? savedPosition
-            : targetDefinition.DefaultSpawnPosition;
+        return portalContext?.TargetPortalPosition ??
+            (DimensionTravelProgressStore.TryGetLastPosition(playerData, targetAddress, out Vector3 savedPosition)
+                ? savedPosition : targetDefinition.DefaultSpawnPosition);
     }
 
     /// <summary>检查跨世界目标坐标是否可安全写入存档。</summary>
@@ -726,24 +694,11 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         yield return new WaitForFixedUpdate();
     }
 
-    private static IEnumerator EnsureCaveExitCoroutine(
-        Data_Player playerData, Player targetPlayer, DimensionDefinition targetDefinition,
-        PortalTransitionContext portalContext)
-    {
-        Vector3 safePosition = EnsureCaveExitForWorld(portalContext, targetDefinition, SceneManager.GetActiveScene());
-        targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(safePosition);
-        targetPlayer.Data.transform.position = safePosition;
-        playerData.transform.position = safePosition;
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[targetPlayer.ProfileName] = playerData;
-        yield break;
-    }
-
     // 出口归目标世界所有，准备出口不会移动任何玩家或改变主机活动场景。
-    private static Vector3 EnsureCaveExitForWorld(PortalTransitionContext context,
-        DimensionDefinition definition, Scene targetScene)
+    private static void EnsureCaveExitForWorld(PortalTransitionContext context, Scene targetScene)
     {
         if (context?.Anchor == null || !targetScene.IsValid() || !targetScene.isLoaded ||
-            targetScene.name != context.Anchor.CaveWorldKey)
+            GameplayWorldRegistry.ExecutionWorldKey != context.Anchor.CaveWorldKey)
             throw new InvalidOperationException("矿洞出口的目标世界不匹配。");
         Vector3 desiredPosition = context.TargetPortalPosition;
         EnsureCaveExitArea(desiredPosition);
@@ -770,7 +725,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         manager.NotifyRuntimeItemMoved(exit);
         context.TargetPortalPosition = desiredPosition;
         DimensionTravelProgressStore.UpdateCaveExit(SaveDataMgr.Instance.SaveData, context.Anchor, exit);
-        return desiredPosition + definition.PortalOffset;
     }
 
     /// <summary>
@@ -851,17 +805,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             catalog.ResetToDefaults();
     }
 
-    private static PlanetData ResolveSurfaceData(GameSaveData saveData, string planetId)
-    {
-        if (saveData.PlanetData_Dict.TryGetValue(planetId, out PlanetData surfaceData) && surfaceData != null)
-            return surfaceData;
-
-        PlanetData readyPlanet = GameManager.Instance?.ReadyPlanetData;
-        return readyPlanet != null && string.Equals(readyPlanet.Name, planetId, StringComparison.Ordinal)
-            ? readyPlanet
-            : null;
-    }
-
     private static void EnsureWorldTimeData(GameSaveData saveData, WorldAddress address)
     {
         saveData.DayTimeData ??= new DayTimeSaveData();
@@ -871,11 +814,11 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         string worldKey = address.WorldKey;
         if (!saveData.DayTimeData.WorldTimeDict.ContainsKey(worldKey))
         {
-            if (!address.IsSurface && saveData.DayTimeData.WorldTimeDict.TryGetValue(address.PlanetId, out SerializableTimeData surfaceTime))
+            if (!address.IsSurface && saveData.DayTimeData.WorldTimeDict.TryGetValue(address.RootWorldKey, out SerializableTimeData surfaceTime))
             {
                 SerializableTimeData dimensionTime = new SerializableTimeData(surfaceTime.ToTimeData())
                 {
-                    ReferenceScene = address.PlanetId
+                    ReferenceScene = address.RootWorldKey
                 };
                 saveData.DayTimeData.WorldTimeDict[worldKey] = dimensionTime;
             }
@@ -883,15 +826,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             {
                 saveData.DayTimeData.WorldTimeDict[worldKey] = new SerializableTimeData(GameManager.Instance.ReadyTimeData ?? new TimeData());
             }
-        }
-
-        // 兼容已经创建过的旧矿洞存档：旧数据可能因固定光照从未写入地表时间引用。
-        if (!address.IsSurface &&
-            saveData.DayTimeData.WorldTimeDict.TryGetValue(worldKey, out SerializableTimeData existingDimensionTime) &&
-            existingDimensionTime != null &&
-            string.IsNullOrEmpty(existingDimensionTime.ReferenceScene))
-        {
-            existingDimensionTime.ReferenceScene = address.PlanetId;
         }
 
         if (!saveData.DayTimeData.SceneLightingRateDict.ContainsKey(worldKey))

@@ -26,7 +26,7 @@ public sealed partial class DimensionManager
         { reason = "玩家的权威世界归属与维度入口不一致。"; return false; }
         Item portal = ItemMgr.Instance?.GetItemByGuid(portalGuid);
         Mod_DimensionPortal module = portal?.GetComponentInChildren<Mod_DimensionPortal>(true);
-        if (portal?.itemData == null || portal.gameObject.scene.name != source.WorldKey || module == null)
+        if (portal?.itemData == null || GameplayWorldRegistry.GetItemWorldKey(portal) != source.WorldKey || module == null)
         { reason = "维度入口已失效或不在玩家所属世界。"; return false; }
         if (!module.ValidateNetworkTransition(actor, source, targetDimension, generated))
         { reason = "维度入口尚未安装、被堵住或目标维度不匹配。"; return false; }
@@ -40,7 +40,7 @@ public sealed partial class DimensionManager
         if (!target.IsValid || target == source || !TryGetDefinition(target.DimensionId, out DimensionDefinition definition))
         { reason = "目标维度未注册。"; return false; }
         PortalTransitionContext context = generated ? ResolveGeneratedPortalTransition(portal) :
-            ResolvePortalTransition(actor.Data, source, target, definition, portal, commitAnchor: false);
+            ResolvePortalTransition(source, target, definition, portal, commitAnchor: false);
         if (context == null && (generated || IsMinePortalTransition(source, target)))
         { reason = "矿洞入口锚点无效，无法切换维度。"; return false; }
         position = ResolveTargetPosition(actor.Data, target, definition, context);
@@ -63,11 +63,9 @@ public sealed partial class DimensionManager
             !networkPortalContexts.Remove(actor.ProfileName, out PortalTransitionContext context))
         { reason = "维度旅行没有有效的入口事务。"; return false; }
         if (context?.EnsureCaveExit != true) return true;
-        if (!TryGetDefinition(target.DimensionId, out DimensionDefinition definition))
-        { reason = "目标维度未注册。"; return false; }
         try
         {
-            EnsureCaveExitForWorld(context, definition, GameplayWorldRegistry.GetOrCreate(target.WorldKey).Scene);
+            EnsureCaveExitForWorld(context, GameplayWorldRegistry.GetOrCreate(target.WorldKey).Scene);
             return true;
         }
         catch (Exception error)

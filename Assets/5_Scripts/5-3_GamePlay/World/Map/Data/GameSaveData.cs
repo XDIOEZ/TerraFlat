@@ -2,7 +2,6 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 [MemoryPackable]
 [System.Serializable]
@@ -36,20 +35,8 @@ public partial class GameSaveData
     public DayTimeSaveData DayTimeData = new();
 
     [MemoryPackIgnore]
-    public PlanetData CurrentPlanetData
-    {
-        get
-        {
-            if (PlanetData_Dict == null)
-                return null;
-            
-            string sceneName = GameplayWorldRegistry.ExecutionWorldKey;
-            PlanetData planetData;
-            if (PlanetData_Dict.TryGetValue(sceneName, out planetData))
-                return planetData;
-            return null;
-        }
-    }
+    public PlanetData CurrentPlanetData => PlanetData_Dict != null && PlanetData_Dict.TryGetValue(
+        GameplayWorldRegistry.ExecutionWorldKey ?? string.Empty, out PlanetData worldData) ? worldData : null;
 
     // ===== 构造函数 =====
     public GameSaveData()

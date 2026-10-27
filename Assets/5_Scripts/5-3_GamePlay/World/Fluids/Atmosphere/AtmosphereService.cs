@@ -27,7 +27,7 @@ public static partial class AtmosphereService
         var saves = SaveDataMgr.Instance?.SaveData;
         if (saves?.PlanetData_Dict == null) return false;
         var address = WorldAddress.FromWorldKey(worldKey);
-        if (!saves.PlanetData_Dict.TryGetValue(address.PlanetId, out var planet) || planet == null) return false;
+        if (!saves.PlanetData_Dict.TryGetValue(address.RootWorldKey, out var planet) || planet == null) return false;
         // 进入世界时已校验大气，逐个生物采样只读真实库存，不重复建立完整校验集合。
         state = planet.Atmosphere ?? GetOrCreate(planet); return true;
     }

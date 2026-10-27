@@ -51,7 +51,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 差量在基础绑定前恢复，同一 Runtime 不因窗口刷新重复恢复。外圈预取只等待可见数据/基础地形，不等全部后续表现。
 - `WorldManager.prefab` 序列化提交/基础/后续预算覆盖源码默认值。GM 可调数量与毫秒上限；`StreamingDiagnostics` 分开记录排队、生成、提交、恢复、renderer 步骤与等待，读取诊断不推进世界。
 - 水文缓存键包含 Epoch、维度、种子、配置和稳定 Region。同组只算一次；单 Chunk 取消不终止仍有需求的共享河网，全部需求消失/世界结束才取消。Region/Halo 只扩大采样，结果只提交核心区域；世界退出清水文/海洋距离降水/海洋水源区块/火山缓存。
-- 地表出生查询复用正式 Profile、单格规则与水文缓存，只检查可走地形/液深，不生成完整生态。`WorldAirHumidityField` 只读差量恢复后的 Ready 区块，依 Terrain/LiquidRevision/Epoch 失效，缺影响邻区返回 false，不触发生成。
+- 出生搜索、正式流送和联机生态冻结共用 `ChunkMgr.PrepareActiveGenerationSnapshot`，统一尺寸、空间倍率、运行时覆盖和保存配置；出生只检查可走地形/液深，不生成完整生态。`WorldAirHumidityField` 只读差量恢复后的 Ready 区块，依 Terrain/LiquidRevision/Epoch 失效，缺影响邻区返回 false，不触发生成。
 - `WorldGenerationRuntimeHooks` 的 Profile Hook 在主线程冻结参数；`WorldModelTerrainDecorator` 在生成器创建时捕获委托，正式流送与出生查询共用。地形回调只能读请求中的冻结值并修改纯地形缓冲，不访问 Unity 对象或当前单例；测试平地等临时规则由订阅者退出时撤销。
 - Tile 外观查询优先 JSON 的 `runtimeTileId/tileAsset`，再回退 Palette；地形身份按冻结 Profile → 当前 Profile → JSON 目录解析，玩家新建筑用当前目录，稳定数字 ID 与冻结映射不冲突。
 - 流送计时是单调墙钟，父子阶段重叠不能相加；暂停跨越请求单独记录。宏观 Lazy 执行时间归实际执行者，get 包含等待，local_refine 只计本块。

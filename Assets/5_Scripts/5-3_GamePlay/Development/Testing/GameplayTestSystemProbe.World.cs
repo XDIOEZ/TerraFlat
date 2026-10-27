@@ -45,6 +45,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("surface_fluids/notification_dispatch", WorldLiquidNotificationDispatch);
         operations.Add("surface_fluids/buoyancy", WorldLiquidBuoyancy);
         operations.Add("dimension/address", WorldDimensionAddress);
+        operations.Add("dimension/world_instances", WorldIndependentDimensionInstances);
         operations.Add("dimension/destroyed_portal_callback", WorldDestroyedPortalCallback);
         RegisterCavePerformanceOperations(operations);
         RegisterColdDropProbes(operations);
@@ -1450,13 +1451,68 @@ public static partial class GameplayTestSystemProbe
         var separator = new global::WorldAddress("A__dimension__B", "cave");
         return new JObject
         {
-            ["planet"] = address.PlanetId, ["dimension"] = address.DimensionId, ["key"] = address.WorldKey,
+            ["planet"] = address.RootWorldKey, ["dimension"] = address.DimensionId, ["key"] = address.WorldKey,
             ["roundTripEquals"] = roundTrip == address, ["surfaceKey"] = surface.WorldKey,
             ["surface"] = surface.IsSurface, ["valid"] = address.IsValid,
             ["fallbackKey"] = fallback.WorldKey, ["fallbackDimension"] = fallback.DimensionId,
-            ["sanitizedPlanet"] = separator.PlanetId,
+            ["sanitizedPlanet"] = separator.RootWorldKey,
             ["differentDimensionsEqual"] = address == surface
         };
+    }
+
+    // 只调用正式世界创建入口，Lua 验证配置继承与各世界运行状态的隔离。
+    private static JObject WorldIndependentDimensionInstances(JObject args)
+    {
+        var save = new GameSaveData();
+        var surfaceAddress = new global::WorldAddress("fixture:planet", "surface");
+        PlanetData surface = save.GetOrCreateWorldInstanceData(surfaceAddress);
+        surface.BodyId = "fixture-body";
+        surface.Radius = 768; surface.ChunkSize = new Vector2Int(24, 12);
+        surface.TopologyMode = WorldTopologyMode.Wrapped; surface.SpatialDistanceScale = 2f;
+        surface.AutoGenerateMap = false; surface.GlobalTemperature = 17f;
+        surface.WindStrength = .7f; surface.RainTemperatureOffset = -8f;
+        surface.Atmosphere = new AtmosphereState { InitialCarbonDioxidePartialPressureKPa = .4d };
+        surface.CurrentWeather = WeatherType.Storm; surface.WeatherIntensity = .9f;
+        surface.WeatherDataVersion = 12; surface.WeatherEventSequence = 9;
+        surface.MapData_Dict["surface-only"] = new MapSave();
+        surface.Ecology.DataVersion = EcologyWorldSaveData.CurrentDataVersion;
+        surface.Ecology.ProfileId = "surface.frozen";
+        var caveAddress = surfaceAddress.WithDimension("cave");
+        PlanetData cave = save.GetOrCreateWorldInstanceData(caveAddress);
+        PlanetData other = save.GetOrCreateWorldInstanceData(new global::WorldAddress("fixture:other", "cave"));
+        var standaloneAddress = new global::WorldAddress("standalone:workshop", "workshop");
+        PlanetData standalone = save.GetOrCreateWorldInstanceData(standaloneAddress);
+        var sample = new JObject
+        {
+            ["surfaceKey"] = surface.Name, ["caveKey"] = cave.Name, ["bodyId"] = cave.BodyId,
+            ["rootKey"] = caveAddress.RootWorldKey, ["radius"] = cave.Radius,
+            ["width"] = cave.ChunkSize.x, ["height"] = cave.ChunkSize.y,
+            ["topology"] = cave.TopologyMode.ToString(), ["spatialScale"] = cave.SpatialDistanceScale,
+            ["autoGenerate"] = cave.AutoGenerateMap, ["temperature"] = cave.GlobalTemperature,
+            ["wind"] = cave.WindStrength, ["rainOffset"] = cave.RainTemperatureOffset,
+            ["atmosphereCarbonDioxide"] = cave.Atmosphere?.InitialCarbonDioxidePartialPressureKPa,
+            ["separateAtmosphere"] = !ReferenceEquals(surface.Atmosphere, cave.Atmosphere),
+            ["mapCount"] = cave.MapData_Dict.Count, ["ecologyProfile"] = cave.Ecology.ProfileId,
+            ["weather"] = cave.CurrentWeather.ToString(), ["weatherIntensity"] = cave.WeatherIntensity,
+            ["weatherVersion"] = cave.WeatherDataVersion, ["weatherSequence"] = cave.WeatherEventSequence,
+            ["separateData"] = !ReferenceEquals(surface, cave) && !ReferenceEquals(cave, other),
+            ["separateMaps"] = !ReferenceEquals(surface.MapData_Dict, cave.MapData_Dict),
+            ["separateEcology"] = !ReferenceEquals(surface.Ecology, cave.Ecology),
+            ["separateSnow"] = !ReferenceEquals(surface.SeasonalSnow, cave.SeasonalSnow),
+            ["separateWeather"] = !ReferenceEquals(surface.RegionalWeatherStates, cave.RegionalWeatherStates),
+            ["standaloneKey"] = standalone.Name, ["standaloneBody"] = standalone.BodyId,
+            ["standaloneRoundtrip"] = global::WorldAddress.FromWorldKey(standalone.Name) == standaloneAddress,
+            ["otherBody"] = other.BodyId
+        };
+        cave.CurrentWeather = WeatherType.Rain;
+        cave.MapData_Dict["cave-only"] = new MapSave();
+        sample["sameInstanceOnRepeat"] = ReferenceEquals(cave, save.GetOrCreateWorldInstanceData(caveAddress));
+        sample["repeatMapCount"] = cave.MapData_Dict.Count;
+        sample["repeatWeather"] = cave.CurrentWeather.ToString();
+        sample["surfaceMapCount"] = surface.MapData_Dict.Count;
+        sample["surfaceWeather"] = surface.CurrentWeather.ToString();
+        sample["otherMapCount"] = other.MapData_Dict.Count;
+        return sample;
     }
 
     /// <summary>隔离 Entity World 运行正式植物 Job，Lua 持有光照和全天耗水断言。</summary>

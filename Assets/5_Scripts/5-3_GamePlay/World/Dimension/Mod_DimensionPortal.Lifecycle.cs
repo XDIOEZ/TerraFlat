@@ -71,9 +71,9 @@ public sealed partial class Mod_DimensionPortal
                 unblockedTint.b * 0.45f, unblockedTint.a) : unblockedTint;
     }
 
-    // 入口归属读取自己的场景，远端世界不借用主机当前观察的维度。
+    // 入口读取所属逻辑世界，同场景中的其它世界不能借用入口。
     private WorldAddress ResolvePortalAddress() => portalItem != null
-        ? WorldAddress.FromWorldKey(portalItem.gameObject.scene.name)
+        ? WorldAddress.FromWorldKey(GameplayWorldRegistry.GetItemWorldKey(portalItem))
         : WorldAddress.FromWorldKey(GameplayWorldRegistry.ExecutionWorldKey);
 
     #endregion

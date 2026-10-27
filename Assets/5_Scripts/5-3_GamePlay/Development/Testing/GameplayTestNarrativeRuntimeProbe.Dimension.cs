@@ -24,6 +24,8 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     {
         public readonly WorldAddress Surface;
         public readonly WorldAddress Cave;
+        public readonly FlatWorld.WorldModel.WorldRuntime SurfaceRuntime;
+        public readonly PlanetData SurfaceData;
         public readonly Data_Player Data;
         public readonly string Profile;
         public readonly Vector3 Position;
@@ -46,6 +48,8 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             if (!Surface.IsSurface || manager.IsTransitioning)
                 throw new InvalidOperationException("矿洞现场要求已完成入世的真实地表。");
             Cave = Surface.WithDimension(WorldAddress.CaveDimensionId);
+            SurfaceRuntime = ChunkMgr.ExistingInstance.WorldRuntime;
+            SurfaceData = SaveDataMgr.Instance.GetCurrentPlanetData();
             Data = player.Data; Profile = player.ProfileName;
             Position = WorldLocalPresentation.ToLogical(player.transform.position);
             OriginalPlayerGuid = player.itemData.Guid;
@@ -208,9 +212,17 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     {
         DimensionManager manager = DimensionManager.ExistingInstance;
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
+        PlanetData currentData = SaveDataMgr.Instance.GetCurrentPlanetData();
+        FlatWorld.WorldModel.WorldRuntime currentRuntime = ChunkMgr.ExistingInstance?.WorldRuntime;
         return new JObject
         {
             ["address"] = manager.ActiveAddress.WorldKey, ["expected"] = expected.WorldKey,
+            ["modelWorldKey"] = currentRuntime?.WorldId,
+            ["generationMode"] = ChunkMgr.ExistingInstance?.ActiveGenerationProfile?.Settings.Mode.ToString(),
+            ["originalRuntime"] = controls != null && ReferenceEquals(currentRuntime, controls.SurfaceRuntime),
+            ["originalData"] = controls != null && ReferenceEquals(currentData, controls.SurfaceData),
+            ["sourceDataRetained"] = controls != null && ReferenceEquals(controls.SurfaceData,
+                SaveDataMgr.Instance.SaveData.PlanetData_Dict[controls.Surface.WorldKey]),
             ["scene"] = SceneManager.GetActiveScene().name, ["savedScene"] = player.Data.CurrentSceneName,
             ["profile"] = player.ProfileName, ["initialized"] = player.IsInitialized,
             ["windowReady"] = ChunkMgr.ExistingInstance?.AreRuntimeWindowPresentationsReady == true,

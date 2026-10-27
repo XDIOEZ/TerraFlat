@@ -10,7 +10,7 @@ public static partial class MachineWorld
     {
         if (key == null || key.StartsWith("ship:", StringComparison.Ordinal) || save?.PlanetData_Dict == null) return null;
         if (save.PlanetData_Dict.TryGetValue(key, out PlanetData planet)) return planet;
-        return save.PlanetData_Dict.TryGetValue(WorldAddress.FromWorldKey(key).PlanetId, out planet) ? planet : null;
+        return save.PlanetData_Dict.TryGetValue(WorldAddress.FromWorldKey(key).RootWorldKey, out planet) ? planet : null;
     }
 
     private static WorldTopologyDomain ResolveScopedTopology(PlanetData planet)

@@ -490,7 +490,7 @@ private void TimeRun(string sceneName, float deltaTime)
             dimension.UseFixedLighting)
         {
             lighting = Mathf.Min(lighting, Mathf.Clamp01(dimension.FixedLighting));
-            if (dimension.GenerationMode == DimensionGenerationMode.Cave)
+            if (dimension.GenerationProfile?.GenerationMode == FlatWorld.WorldModel.ChunkGenerationMode.Cave)
                 lighting *= ResolveCaveExitAmbientFactor(sceneName);
         }
 

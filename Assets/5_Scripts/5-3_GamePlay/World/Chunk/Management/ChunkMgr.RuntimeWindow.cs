@@ -576,8 +576,9 @@ public partial class ChunkMgr
     }
 
     /// <summary>统一准备出生搜索与区块流送的生成快照，保证二者共享水文缓存键。</summary>
-    private ChunkGenerationProfileSnapshot PrepareActiveGenerationSnapshot(out int baseSeed)
+    internal ChunkGenerationProfileSnapshot PrepareActiveGenerationSnapshot(out int baseSeed)
     {
+        EnsureWorldRuntime();
         ChunkGenerationProfileSO profileAsset = DimensionManager.Instance?.GetActiveGenerationProfile();
         ChunkGenerationProfileSnapshot profile = profileAsset != null
             ? profileAsset.CreateSnapshot()

@@ -257,7 +257,7 @@ public static partial class DroppedItemService
         var planets = SaveDataMgr.Instance?.SaveData?.PlanetData_Dict;
         if (planets == null || string.IsNullOrWhiteSpace(world) || world.StartsWith("ship:", StringComparison.Ordinal)) return default;
         if (!planets.TryGetValue(world, out PlanetData planet))
-            planets.TryGetValue(WorldAddress.FromWorldKey(world).PlanetId, out planet);
+            planets.TryGetValue(WorldAddress.FromWorldKey(world).RootWorldKey, out planet);
         return WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
     }
 

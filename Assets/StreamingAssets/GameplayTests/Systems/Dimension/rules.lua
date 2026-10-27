@@ -7,6 +7,26 @@ test.system("dimension", "address", {planet = " 火星 ", dimension = " CAVE "},
     assert(data.sanitizedPlanet == "A_B", "星球名中的保留分隔符没有转义")
 end, "维度地址规范化、独立身份与键往返")
 
+test.system("dimension", "world_instances", {}, function(data)
+    assert(data.surfaceKey == "fixture:planet" and data.caveKey == "fixture:planet__dimension__cave" and
+        data.rootKey == "fixture:planet" and data.bodyId == "fixture-body", "矿洞没有保留世界身份与星球归属")
+    assert(data.radius == 768 and data.width == 24 and data.height == 12 and data.topology == "Wrapped" and
+        data.spatialScale == 2 and not data.autoGenerate, "新世界没有继承根世界的生成几何")
+    assert(data.temperature == 17 and math.abs(data.wind - .7) < .0001 and data.rainOffset == -8 and
+        data.atmosphereCarbonDioxide == .4 and data.separateAtmosphere, "新世界丢失环境配置或复用可变大气副本")
+    assert(data.separateData and data.separateMaps and data.separateEcology and data.separateSnow and data.separateWeather,
+        "地表、矿洞和另一个根世界共用了运行状态对象")
+    assert(data.mapCount == 0 and (data.ecologyProfile == nil or data.ecologyProfile == "") and
+        data.weather == "Clear" and data.weatherIntensity == 0 and data.weatherVersion == 0 and data.weatherSequence == 0,
+        "新矿洞复制了地表区块、冻结生态或天气进度")
+    assert(data.standaloneKey == "standalone:workshop__dimension__workshop" and data.standaloneRoundtrip and
+        data.standaloneBody == nil and data.otherBody == nil, "独立世界身份被强制绑定到星球")
+    assert(data.sameInstanceOnRepeat and data.repeatMapCount == 1 and data.repeatWeather == "Rain",
+        "重复进入重建世界或重置了区块和天气状态")
+    assert(data.surfaceMapCount == 1 and data.surfaceWeather == "Storm" and data.otherMapCount == 0,
+        "矿洞修改污染了地表或另一个世界")
+end, "共用世界实例入口、生成环境继承、独立状态与无星球世界身份")
+
 test.system("dimension", "destroyed_portal_callback", {}, function(data)
     assert(data.aliveBeforeDestroy and data.unityNullAfterDestroy and data.managedReferenceRemains,
         "测试未模拟到Unity对象已销毁但托管引用仍存在的场景")

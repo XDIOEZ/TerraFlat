@@ -145,7 +145,7 @@ public static class PressureExplosionQueue
         bounds = default;
         var planets = SaveDataMgr.Instance?.SaveData?.PlanetData_Dict;
         return planets != null && !string.IsNullOrWhiteSpace(world) &&
-            planets.TryGetValue(WorldAddress.FromWorldKey(world).PlanetId, out PlanetData planet) && WorldTopologyBounds.TryCreate(planet, out bounds);
+            planets.TryGetValue(WorldAddress.FromWorldKey(world).RootWorldKey, out PlanetData planet) && WorldTopologyBounds.TryCreate(planet, out bounds);
     }
     private static void AddMaterials(PressureExplosionEvent entry, List<FluidBatch> batches)
     {
