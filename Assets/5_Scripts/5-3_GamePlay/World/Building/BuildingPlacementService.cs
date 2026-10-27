@@ -154,6 +154,9 @@ namespace FlatWorld.Gameplay.Building
             reason = null;
             bool materialMutationStarted = false;
             float originalAmount = request?.SourceData?.Stack?.Amount ?? 0f;
+            string actorWorld = GameplayWorldRegistry.GetItemWorldKey(request?.Actor);
+            using var worldScope = GameplayWorldRegistry.TryGet(actorWorld, out _)
+                ? GameplayWorldRegistry.UseWorld(actorWorld) : null;
             try
             {
                 if (request == null || !GameNetwork.HasStateAuthority)
@@ -180,7 +183,7 @@ namespace FlatWorld.Gameplay.Building
                     Mathf.FloorToInt(request.Position.x), Mathf.FloorToInt(request.Position.y)));
                 bool validShipPlacement = false;
                 bool shipPlacement = FlatWorld.Spaceflight.SpaceSession.Current?.TryValidatePlacement(request.SourceData, request.Position,
-                    request.RotationQuarterTurns ?? 0, out validShipPlacement, out reason) == true;
+                    request.RotationQuarterTurns ?? 0, out validShipPlacement, out reason, request.Actor) == true;
                 if (shipPlacement)
                 { if (!validShipPlacement) throw new InvalidOperationException(reason); }
                 else if (request.Extension != null && !request.Extension.ValidatePlacement(cell, out reason))

@@ -25,6 +25,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     }
 
     public DoorStateData Data = new DoorStateData();
+    public event System.Action<Mod_Door, bool> StateChanged;
     #endregion
 
     #region 门配置
@@ -46,6 +47,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     private Sprite itemClosedSprite;
     private DoorSlideVisual slideVisual;
     private Coroutine slideRoutine;
+    private readonly List<Collider2D> doorwayOverlaps = new();
     #endregion
 
     #region 生命周期
@@ -71,6 +73,14 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         itemClosedSprite = UseItemSprite ? DoorRenderer?.sprite : null;
         ApplyDoorState(true);
         SpatialInteractionRegistry.Register(this, 0.75f);
+    }
+
+    // 网络状态改变也向依赖门状态的普通系统发布同一事件。
+    public override void ApplyNetworkData(ModuleData data)
+    {
+        bool previous = Data.IsOpen;
+        base.ApplyNetworkData(data);
+        if (loaded && previous != Data.IsOpen) StateChanged?.Invoke(this, Data.IsOpen);
     }
 
     /// <summary>门打开后实体碰撞会关闭，交互范围仍由独立空间注册保留。</summary>
@@ -141,10 +151,13 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         if (!CanInteract(playerItem)) return;
         if (DoorRenderer == null || DoorCollider == null)
             CacheReferences();
+        if (Data.IsOpen && IsDoorwayOccupied()) return;
 
         Data.IsOpen = !Data.IsOpen;
         ApplyDoorState();
         Save();
+        StateChanged?.Invoke(this, Data.IsOpen);
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         AudioService.Instance?.PlayAt(
             Data.IsOpen ? AudioEventIds.DoorOpen : AudioEventIds.DoorClose,
             transform.position);
@@ -156,6 +169,25 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     #endregion
 
     #region 内部方法
+    // 关门只检查同一物理世界中的活动实体，不推开站在门口的人。
+    private bool IsDoorwayOccupied()
+    {
+        if (DoorCollider == null || item == null) return false;
+        string world = GameplayWorldRegistry.GetItemWorldKey(item);
+        using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+        Vector3 scale = DoorCollider.transform.lossyScale;
+        Vector2 size = Vector2.Scale(DoorCollider.size, new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y))) * .95f;
+        Vector2 center = DoorCollider.transform.TransformPoint(DoorCollider.offset);
+        doorwayOverlaps.Clear();
+        GameplayPhysics2D.OverlapBox(center, size, DoorCollider.transform.eulerAngles.z,
+            new ContactFilter2D { useTriggers = false }, doorwayOverlaps);
+        foreach (Collider2D collider in doorwayOverlaps)
+            if (collider != null && collider.attachedRigidbody != null &&
+                collider.attachedRigidbody.bodyType != RigidbodyType2D.Static &&
+                collider.GetComponentInParent<Item>() != item) return true;
+        return false;
+    }
+
     private void EnsureData()
     {
         if (DoorData == null)

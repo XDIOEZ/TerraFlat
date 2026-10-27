@@ -348,6 +348,7 @@ public partial class Mod_GameController : Module
 
     public void LeftClickAction(InputAction.CallbackContext obj) /// 左键按下
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         UpdateCurrentInputDevice(obj);
         if (!IsGameplayInputAllowed(obj))
         {
@@ -378,6 +379,7 @@ public partial class Mod_GameController : Module
 
     public void LeftClickUpAction(InputAction.CallbackContext obj) /// 左键抬起
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         UpdateCurrentInputDevice(obj);
         if (!IsGameplayInputAllowed(obj))
         {
@@ -404,6 +406,7 @@ public partial class Mod_GameController : Module
 
     public void RightClickAction(InputAction.CallbackContext obj) /// 右键按下
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         UpdateCurrentInputDevice(obj);
         bool isMobileUse = obj.control?.device is FlatWorldMobileDevice;
         if (!IsGameplayInputAllowed(obj))
@@ -438,6 +441,7 @@ public partial class Mod_GameController : Module
 
     public void RightClickUpAction(InputAction.CallbackContext obj) /// 右键抬起
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         UpdateCurrentInputDevice(obj);
         _rightClickHeld = false;
         if (!IsGameplayInputAllowed(obj))
@@ -591,13 +595,13 @@ public partial class Mod_GameController : Module
     {
         if (TryGetExternalAimWorldPosition(out Vector3 externalAimWorldPosition))
         {
-            worldPosition = externalAimWorldPosition;
+            worldPosition = _externalAimUsesItemWorld ? externalAimWorldPosition : ConvertDisplayedPointerToItemWorld(externalAimWorldPosition);
             return true;
         }
 
         if (_preferredInputDevice == InputDeviceType.Mobile && _mobileCursorWorldPositionInitialized)
         {
-            worldPosition = _mobileCursorWorldPosition;
+            worldPosition = ConvertDisplayedPointerToItemWorld(_mobileCursorWorldPosition);
             return true;
         }
 
@@ -622,7 +626,7 @@ public partial class Mod_GameController : Module
 
         Vector3 worldPos = _mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, Mathf.Abs(_mainCamera.transform.position.z)));
         worldPos.z = 0f;
-        worldPosition = FlatWorld.Spaceflight.SpaceSession.Current?.IsSpaceView == true ? worldPos : WorldTopologyRuntime.NormalizePosition(worldPos);
+        worldPosition = ConvertDisplayedPointerToItemWorld(worldPos);
         return true;
     }
 
@@ -635,13 +639,21 @@ public partial class Mod_GameController : Module
             Debug.LogWarning("[Mod_GameController] 主相机尚未就绪，暂时使用玩家位置作为指针坐标", this);
         }
 
-        return WorldTopologyRuntime.NormalizePosition(new Vector3(transform.position.x, transform.position.y, 0f));
+        return FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(item as Player) == true
+            ? new Vector3(transform.position.x, transform.position.y, 0f)
+            : WorldTopologyRuntime.NormalizePosition(new Vector3(transform.position.x, transform.position.y, 0f));
     }
 
     /// <summary>获取当前准星世界位置，并按调用方提供的玩法距离统一裁剪。</summary>
     public Vector3 GetAimWorldPosition(float maxWorldDistance)
     {
         if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _))
+        {
+            Vector3 target = GetMouseWorldPosition();
+            Vector2 delta = (Vector2)(target - transform.position);
+            return transform.position + (Vector3)(maxWorldDistance > 0f ? Vector2.ClampMagnitude(delta, maxWorldDistance) : delta);
+        }
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(item as Player) == true)
         {
             Vector3 target = GetMouseWorldPosition();
             Vector2 delta = (Vector2)(target - transform.position);
@@ -1095,9 +1107,13 @@ public partial class Mod_GameController : Module
             return;
         }
 
-        // 每帧以玩家当前坐标重新投影，避免准线停留在玩家移动前的旧世界位置。
+        // 每帧以玩家当前显示位置重新投影，避免准线停留在旧位置。
+        Vector3 cursorOrigin = transform.position;
+        FlatWorld.Spaceflight.SpaceSession spaceSession = FlatWorld.Spaceflight.SpaceSession.Current;
+        if (spaceSession != null && spaceSession.TryGetShipInteriorPresentationPosition(item as Player, out Vector2 projectedPlayer))
+            cursorOrigin = projectedPlayer;
         Vector3 mobileCursorWorldPosition = _aimCursor.CalculateRadialWorldPosition(
-            transform.position,
+            cursorOrigin,
             direction,
             mobileAimStrength,
             MobileCursorMinWorldDistance,
@@ -1176,6 +1192,7 @@ public partial class Mod_GameController : Module
     /// <summary>按输入源汇总攻击按住状态，避免一个来源抬起误释放另一个来源。</summary>
     private void SetAttackSourceHeld(AttackInputSource source, bool held)
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         bool wasHeld = _keyboardMouseAttackHeld || _gamepadAttackHeld || _mobileAttackInputHeld;
         switch (source)
         {
@@ -1200,6 +1217,7 @@ public partial class Mod_GameController : Module
     /// <summary>释放输入锁、暂停和失焦等场景的持续输入，保留最后有效瞄准，杜绝移动或攻击卡住。</summary>
     public void CancelActiveAttackAndMobileInput()
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         MobileInputRuntime.ResetAll();
         DeactivateGamepadInput();
         EventSystemGuard.SetMobileAimCursorVisible(false);

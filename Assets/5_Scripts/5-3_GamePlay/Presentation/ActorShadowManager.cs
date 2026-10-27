@@ -63,8 +63,10 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
                     continue;
                 }
 
-                if (item.gameObject.scene.handle != localScene) continue;
-                UpdateBinding(item, binding);
+                bool projected = WorldPresentationTransformRegistry.TryGet(
+                    GameplayWorldRegistry.GetItemWorldKey(item), out Matrix4x4 transform, out bool visible);
+                if (projected ? !visible : item.gameObject.scene.handle != localScene) continue;
+                UpdateBinding(item, binding, projected, transform);
             }
 
             for (int i = 0; i < cleanupBindings.Count; i++)
@@ -168,17 +170,20 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         WorldRenderingConfig.ContactShadow defaults = Defaults;
         foreach (MechanicalShadowRegistry.Entry entry in MechanicalShadowRegistry.Entries)
         {
-            if (!entry.Active || !entry.Scene.IsValid() || !entry.Scene.isLoaded || entry.Scene.handle != localScene ||
-                entry.ContactWidth <= 0f) continue;
-            float opacity = GetShadowOpacity(entry.Scene);
+            if (!entry.Active || !entry.Scene.IsValid() || !entry.Scene.isLoaded || entry.ContactWidth <= 0f) continue;
+            bool projected = WorldPresentationTransformRegistry.TryGet(entry.Scene.name, out Matrix4x4 transform, out bool visible);
+            if (projected ? !visible : entry.Scene.handle != localScene) continue;
+            float opacity = GetShadowOpacity(projected ? SceneManager.GetActiveScene() : entry.Scene);
             if (opacity <= 0.001f) continue;
-            mechanicalShadowBatch.Append(new Vector2(entry.Foot.x, entry.Foot.y + defaults.groundOffset),
-                entry.ContactWidth, entry.ContactWidth * defaults.heightRatio, opacity);
+            Vector3 foot = projected ? transform.MultiplyPoint3x4(entry.Foot) : entry.Foot;
+            float width = projected ? entry.ContactWidth * transform.MultiplyVector(Vector3.right).magnitude : entry.ContactWidth;
+            mechanicalShadowBatch.Append(new Vector2(foot.x, foot.y + defaults.groundOffset),
+                width, width * defaults.heightRatio, opacity);
         }
     }
 
     /// <summary>同步单个实体的脚底位置、贴图占地尺寸和当前光照透明度。</summary>
-    private void UpdateBinding(Item item, ShadowBinding binding)
+    private void UpdateBinding(Item item, ShadowBinding binding, bool projected, Matrix4x4 projection)
     {
         // 太空玩家不画地面阴影，舱内人工重力也不改变这条表现规则。
         if (item is Player && SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
@@ -192,7 +197,9 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         }
 
         if (sourceRenderer == null || sourceRenderer.sprite == null ||
-            !sourceRenderer.enabled || (sourceRenderer.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(sourceRenderer)) ||
+            !sourceRenderer.enabled || (projected
+                ? GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sourceRenderer)
+                : sourceRenderer.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(sourceRenderer)) ||
             !sourceRenderer.gameObject.activeInHierarchy)
             return;
 
@@ -203,7 +210,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         if (contactWidth > 0f && (item.InHand || item.Owner != null))
             return;
 
-        float alpha = GetShadowOpacity(item.gameObject.scene);
+        float alpha = GetShadowOpacity(projected ? SceneManager.GetActiveScene() : item.gameObject.scene);
         float visualOpacity = sourceRenderer.color.a * alpha;
         if (binding.InWater || visualOpacity <= 0.001f)
             return;
@@ -239,9 +246,11 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
                 Defaults.minimumWidth, Defaults.maximumWidth);
         }
 
+        if (projected) footprintAnchor = projection.MultiplyPoint3x4(footprintAnchor);
+        float projectedWidth = projected ? binding.ShadowWidth * projection.MultiplyVector(Vector3.right).magnitude : binding.ShadowWidth;
         shadowBatch.Append(new Vector2(footprintAnchor.x,
                 footprintAnchor.y + Defaults.groundOffset),
-            binding.ShadowWidth, binding.ShadowWidth * Defaults.heightRatio,
+            projectedWidth, projectedWidth * Defaults.heightRatio,
             visualOpacity);
     }
 

@@ -20,6 +20,7 @@ public static class ItemNetworkStateSerialization
     public static Func<Mod_Building, Vector3, bool> TryBeginNetworkBuilding;
     public static Func<Mod_Building, bool> TryBeginNetworkBuildingDismantle;
     public static Func<MachineEntity, bool> TryBeginNetworkMechanicalDismantle;
+    public static Func<Item, bool> IsRemoteItemStateCurrent;
 
     public static void NotifyRuntimeStateChanged(Item item)
     {
@@ -29,6 +30,9 @@ public static class ItemNetworkStateSerialization
 
     public static bool DeferLocalDestruction()
         => ShouldDeferLocalDestruction?.Invoke() == true;
+
+    // 已实际应用的逐物品权威状态优先于其他世界快照。
+    public static bool HasCurrentRemoteAuthority(Item item) => IsRemoteItemStateCurrent?.Invoke(item) == true;
 
     // 原生库存入口统一查询网络事务状态，不需要依赖传输层或具体事务类型。
     public static bool HasPendingLocalInventoryTransaction()
@@ -62,13 +66,14 @@ public static class ItemNetworkStateSerialization
 
         ItemData data = item.itemData;
         uint generation = item.RuntimeGeneration;
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(item);
         // 玩家公开快照不需要重存私有背包，其他模块仍按正式保存入口执行。
         if (item is Player) item.ModuleSavePublicNetworkState();
         else item.ModuleSave();
-        if (!IsCurrentItem(item, data, generation)) return default;
+        if (!IsCurrentItem(item, data, generation) || GameplayWorldRegistry.GetItemWorldRevision(item) != worldRevision) return default;
         // OnSave 仍刷新模块内部状态，未变化的纯数据直接复用冻结负载。
         ItemNetworkCaptureCache.CaptureResult result = ItemNetworkCaptureCache.Capture(item, ignoreTransform);
-        if (IsCurrentItem(item, data, generation)) return result;
+        if (IsCurrentItem(item, data, generation) && GameplayWorldRegistry.GetItemWorldRevision(item) == worldRevision) return result;
         ItemNetworkCaptureCache.Invalidate(item);
         return default;
     }
@@ -151,12 +156,12 @@ public static class ItemNetworkStateSerialization
 
     public static bool Apply(Item target, byte[] payload, bool reloadRuntimeModules, bool requireMatchingGuid)
     {
-        if (!TryMergeSnapshot(target, payload, requireMatchingGuid, out ItemData current,
+        if (!TryMergeSnapshot(target, payload, requireMatchingGuid, out _,
                 out RuntimeStateBaseline baseline))
             return false;
         if (!ApplyMergedRuntimeStates(target, baseline, reloadRuntimeModules)) return false;
         target.OnUIRefresh?.Invoke();
-        return IsCurrentItem(target, current, baseline.ItemGeneration);
+        return IsCurrentBaseline(target, baseline);
     }
 
     /// <summary>
@@ -179,6 +184,7 @@ public static class ItemNetworkStateSerialization
         internal readonly Item Item;
         internal readonly ItemData Data;
         internal readonly uint ItemGeneration;
+        internal readonly ulong WorldRevision;
         internal readonly List<(Module Module, uint Generation, ModuleInstanceSnapshot State)> Modules = new();
 
         internal RuntimeStateBaseline(Item item)
@@ -186,6 +192,7 @@ public static class ItemNetworkStateSerialization
             Item = item;
             Data = item.itemData;
             ItemGeneration = item.RuntimeGeneration;
+            WorldRevision = GameplayWorldRegistry.GetItemWorldRevision(item);
             foreach (Module module in item.Mods.Values)
                 if (module != null && module._Data != null)
                     Modules.Add((module, module.RuntimeGeneration, ModuleInstanceSnapshot.Capture(module._Data)));
@@ -200,10 +207,10 @@ public static class ItemNetworkStateSerialization
         bool reloadRuntimeModules, Action<Module, ModuleData> runtimeApplier = null)
     {
         if (baseline == null || !ReferenceEquals(target, baseline.Item) ||
-            !IsCurrentItem(target, baseline.Data, baseline.ItemGeneration)) return false;
+            !IsCurrentBaseline(target, baseline)) return false;
         foreach (var entry in baseline.Modules)
         {
-            if (!IsCurrentItem(target, baseline.Data, baseline.ItemGeneration)) return false;
+            if (!IsCurrentBaseline(target, baseline)) return false;
             Module module = entry.Module;
             if (!IsCurrentModule(target, module, entry.Generation)) continue;
             ModuleData state = FindModuleState(baseline.Data.ModuleDataDic, module.StableName);
@@ -216,7 +223,7 @@ public static class ItemNetworkStateSerialization
             else if (reloadRuntimeModules) module.ApplyNetworkData(state);
             else module.BindSnapshotData(target, state, baseline.Data);
         }
-        return IsCurrentItem(target, baseline.Data, baseline.ItemGeneration);
+        return IsCurrentBaseline(target, baseline);
     }
 
     public static uint CalculateHash(byte[] payload)
@@ -349,6 +356,10 @@ public static class ItemNetworkStateSerialization
 
     private static bool IsCurrentItem(Item target, ItemData data, uint generation) => target != null &&
         !target.DestructionHandled && !target.IsInPool && target.RuntimeGeneration == generation && ReferenceEquals(target.itemData, data);
+
+    private static bool IsCurrentBaseline(Item target, RuntimeStateBaseline baseline) => baseline != null &&
+        IsCurrentItem(target, baseline.Data, baseline.ItemGeneration) &&
+        GameplayWorldRegistry.GetItemWorldRevision(target) == baseline.WorldRevision;
 
     private static bool IsCurrentModule(Item target, Module module, uint generation) => module != null &&
         module.RuntimeGeneration == generation && !string.IsNullOrWhiteSpace(module.StableName) &&

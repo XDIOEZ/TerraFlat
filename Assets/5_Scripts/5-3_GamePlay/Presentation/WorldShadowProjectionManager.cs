@@ -472,6 +472,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         foreach (MechanicalShadowRegistry.Entry entry in MechanicalShadowRegistry.Entries)
         {
             if (!entry.Active || !entry.Scene.IsValid() || !entry.Scene.isLoaded) continue;
+            bool projectedWorld = WorldPresentationTransformRegistry.TryGet(entry.Scene.name,
+                out Matrix4x4 projection, out bool visible);
             foreach (MechanicalShadowRegistry.Part part in entry.Parts)
             {
                 if (part == null || !part.Active || part.Sprite == null) continue;
@@ -481,8 +483,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
                     mechanicalBindings.Add(part, binding);
                 }
                 binding.Seen = true;
-                if (Time.unscaledTime >= binding.NextCheck)
-                    using (MechanicalSyncMarker.Auto()) SynchronizeMechanicalCaster(part, binding);
+                if (projectedWorld && !visible || Time.unscaledTime >= binding.NextCheck)
+                    using (MechanicalSyncMarker.Auto()) SynchronizeMechanicalCaster(part, binding, projectedWorld, projection, visible);
                 if (binding.Proxy != null && binding.Proxy.gameObject != null && binding.Proxy.enabled) VisibleCount++;
             }
         }
@@ -497,12 +499,27 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     }
 
     /// <summary>同一 Sprite 投影 Shader 处理机械静态主体和旋转部件，视口外不租用代理。</summary>
-    private void SynchronizeMechanicalCaster(MechanicalShadowRegistry.Part part, MechanicalBinding binding)
+    private void SynchronizeMechanicalCaster(MechanicalShadowRegistry.Part part, MechanicalBinding binding,
+        bool hasProjection, Matrix4x4 projection, bool visible)
     {
+        if (hasProjection && !visible)
+        {
+            ReleaseMechanicalProxy(binding, true);
+            binding.NextCheck = 0f;
+            return;
+        }
         part.ResolveTransform(out Vector3 position, out Quaternion rotation);
-        Matrix4x4 matrix = Matrix4x4.TRS(position, rotation, part.Scale);
-        Bounds sourceBounds = SharedSpriteMeshCache.GetSunShadowWorldBounds(part.Sprite, matrix);
+        Vector3 scale = part.Scale;
         float footY = part.Owner.Foot.y;
+        if (hasProjection)
+        {
+            position = projection.MultiplyPoint3x4(position);
+            rotation = projection.rotation * rotation;
+            scale = Vector3.Scale(projection.lossyScale, scale);
+            footY = projection.MultiplyPoint3x4(part.Owner.Foot).y;
+        }
+        Matrix4x4 matrix = Matrix4x4.TRS(position, rotation, scale);
+        Bounds sourceBounds = SharedSpriteMeshCache.GetSunShadowWorldBounds(part.Sprite, matrix);
         if (!TryCalculateProjectedBounds(sourceBounds, footY, 1f, out float height, out Bounds projected))
         {
             ReportInvalidGeometry(ref binding.InvalidGeometryReported, part.Sprite, sourceBounds, footY, 1f);
@@ -520,7 +537,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         if (binding.Proxy == null || binding.Proxy.gameObject == null)
             binding.Proxy = AcquireProxy(part.Owner.Scene, part.Owner.Layer);
         ShadowProxy proxy = binding.Proxy;
-        if (!part.Animated && binding.Revision == part.Revision)
+        if (!hasProjection && !part.Animated && binding.Revision == part.Revision)
         {
             proxy.bounds = projected;
             proxy.enabled = true;
@@ -528,7 +545,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             return;
         }
         proxy.SetSource(part.Sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
-        proxy.SetPose(position, rotation, part.Scale);
+        proxy.SetPose(position, rotation, scale);
         proxy.UpdateProperties(properties, new Vector4(footY, 1f, height, 1f), GetSpriteUvBounds(part.Sprite));
         proxy.bounds = projected;
         proxy.enabled = true;
@@ -570,12 +587,22 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
 
         SunShadowCaster authoring = binding.Authoring;
+        bool hasProjection = WorldPresentationTransformRegistry.TryGet(
+            GameplayWorldRegistry.GetItemWorldKey(owner), out Matrix4x4 projection, out bool visible);
+        if (hasProjection && !visible)
+        {
+            ReleaseProxy(binding);
+            binding.NextCheck = 0f;
+            return;
+        }
         if (authoring != null && authoring.Source != null) binding.Source = authoring.Source;
         else if (owner.Sprite != null) binding.Source = owner.Sprite;
         SpriteRenderer source = binding.Source;
         float heightScale = authoring != null ? Mathf.Max(0f, authoring.HeightMultiplier) : 1f;
         if (!owner.gameObject.activeInHierarchy || owner.InHand || source == null || source.sprite == null ||
-            !source.enabled || (source.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(source)) || !source.gameObject.activeInHierarchy ||
+            !source.enabled || (hasProjection
+                ? GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(source)
+                : source.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(source)) || !source.gameObject.activeInHierarchy ||
             (authoring != null && !authoring.CastShadow) || heightScale <= 0f ||
             (binding.Building != null && (!binding.Building.IsInstalled() || binding.Building.IsGroundFacility || !binding.Building.CastSunShadow)))
         {
@@ -592,6 +619,17 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             ? SharedSpriteMeshCache.GetSunShadowWorldBounds(source.sprite, source.transform.localToWorldMatrix,
                 source.flipX, source.flipY) : source.bounds;
         sourceBounds.center -= visualOffset;
+        Vector3 position = source.transform.position - visualOffset;
+        Quaternion rotation = source.transform.rotation;
+        Vector3 scale = source.transform.lossyScale;
+        if (hasProjection)
+        {
+            footY = projection.MultiplyPoint3x4(new Vector3(footprint.center.x, footY, footprint.center.z)).y;
+            sourceBounds = ProjectWorldBounds(sourceBounds, projection);
+            position = projection.MultiplyPoint3x4(position);
+            rotation = projection.rotation * rotation;
+            scale = Vector3.Scale(projection.lossyScale, scale);
+        }
         if (!TryCalculateProjectedBounds(sourceBounds, footY, heightScale, out float height, out Bounds projected))
         {
             ReportInvalidGeometry(ref binding.InvalidGeometryReported, source, sourceBounds, footY, heightScale);
@@ -609,13 +647,26 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         if (binding.Proxy == null || binding.Proxy.gameObject == null) binding.Proxy = AcquireProxy(binding);
         ShadowProxy proxy = binding.Proxy;
         proxy.SetSource(source.sprite, source.drawMode, source.size, source.flipX, source.flipY, source.color.a);
-        proxy.SetPose(source.transform.position - visualOffset, source.transform.rotation, source.transform.lossyScale);
+        proxy.SetPose(position, rotation, scale);
         proxy.UpdateProperties(properties, new Vector4(footY, heightScale, height, 1f),
             GetSpriteUvBounds(source.sprite));
         // Shader 顶点投影超出原始 Sprite，显式扩大世界包围盒以免相机提前裁掉长阴影。
         proxy.bounds = projected;
         proxy.enabled = true;
         binding.NextCheck = 0f;
+    }
+
+    // 按同一显示矩阵转换包围盒，避免移动世界被源物理坐标提前裁剪。
+    private static Bounds ProjectWorldBounds(Bounds bounds, Matrix4x4 projection)
+    {
+        Vector3 extents = bounds.extents;
+        Vector3 x = projection.MultiplyVector(new Vector3(extents.x, 0f, 0f));
+        Vector3 y = projection.MultiplyVector(new Vector3(0f, extents.y, 0f));
+        Vector3 z = projection.MultiplyVector(new Vector3(0f, 0f, extents.z));
+        Vector3 size = new(Mathf.Abs(x.x) + Mathf.Abs(y.x) + Mathf.Abs(z.x),
+            Mathf.Abs(x.y) + Mathf.Abs(y.y) + Mathf.Abs(z.y),
+            Mathf.Abs(x.z) + Mathf.Abs(y.z) + Mathf.Abs(z.z));
+        return new Bounds(projection.MultiplyPoint3x4(bounds.center), size * 2f);
     }
 
     /// <summary>所有游戏相机共用代理，包含环绕世界镜像相机；不依赖主体 isVisible。</summary>

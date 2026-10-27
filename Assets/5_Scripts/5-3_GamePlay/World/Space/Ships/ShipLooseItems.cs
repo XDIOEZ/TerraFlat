@@ -13,6 +13,124 @@ namespace FlatWorld.Spaceflight
         private readonly Dictionary<Item, (SpriteRenderer Renderer, Vector3 LocalPosition)> looseHeightVisuals = new(ItemReferenceComparer.Instance);
         private bool releasingLooseViews;
         private float loosePickupElapsed;
+        private readonly struct ShipPieceDropHandle
+        {
+            internal readonly string World;
+            internal readonly DroppedItemHandle Interior;
+            internal readonly SpaceLooseItemState Exterior;
+            internal ShipPieceDropHandle(string world, DroppedItemHandle interior, SpaceLooseItemState exterior)
+            { World = world; Interior = interior; Exterior = exterior; }
+        }
+
+        #region 无支撑船内掉落移交
+        internal sealed class ShipInteriorDropEjection : IDisposable
+        {
+            private readonly SpaceSession session;
+            private readonly DroppedItemService.WorldTransfer ground;
+            private readonly DroppedItemService.WorldExtraction interior;
+            private readonly List<SpaceLooseItemState> exterior;
+            private bool finished;
+
+            internal ShipInteriorDropEjection(SpaceSession session, DroppedItemService.WorldTransfer ground,
+                DroppedItemService.WorldExtraction interior, List<SpaceLooseItemState> exterior)
+            { this.session = session; this.ground = ground; this.interior = interior; this.exterior = exterior; }
+
+            public void Commit()
+            {
+                if (finished) throw new InvalidOperationException("船内掉落移交已结束。");
+                if (ground != null) ground.Commit();
+                else
+                {
+                    session.State.LooseItems.AddRange(exterior);
+                    try { interior.Commit(); }
+                    catch
+                    {
+                        foreach (SpaceLooseItemState state in exterior) session.State.LooseItems.Remove(state);
+                        throw;
+                    }
+                }
+                finished = true;
+            }
+
+            public void Dispose()
+            {
+                ground?.Dispose();
+                interior?.Dispose();
+                finished = true;
+            }
+        }
+
+        // 失去船体时保留库存身份、飞船点速度和掉落中的真实运动。
+        internal ShipInteriorDropEjection BeginShipInteriorDropEjection(ShipState ship)
+        {
+            if (ship == null || State == null) throw new InvalidOperationException("船体或会话已失效。");
+            ShipFlightState flight = GetFlight(ship.ShipId)
+                ?? throw new InvalidOperationException("失去支撑的船体缺少飞行状态。");
+            string source = MachineWorld.GetShipScopeKey(ship.ShipId);
+            bool inSpace = flight.Phase == ShipFlightPhase.Cruising;
+            bool airborne = flight.HeightMeters > 0d &&
+                flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
+            if (!inSpace && !airborne)
+            {
+                if (string.IsNullOrWhiteSpace(flight.SurfaceWorldKey))
+                    throw new InvalidOperationException("落地船体缺少地表世界。");
+                GameplayWorldRegistry.GetOrCreate(flight.SurfaceWorldKey);
+                var moved = DroppedItemService.TransferWorldItems(source, flight.SurfaceWorldKey, _ => true,
+                    point =>
+                    {
+                        ShipGeometry.LocalToWorld(ship, point.x, point.y, out double x, out double y);
+                        return new Vector2((float)x, (float)y);
+                    },
+                    point =>
+                    {
+                        ShipGeometry.WorldToLocal(ship, point.x, point.y, out double x, out double y);
+                        return new Vector2((float)x, (float)y);
+                    }, (float)(ship.AngleRadians * Mathf.Rad2Deg));
+                return new ShipInteriorDropEjection(this, moved, null, null);
+            }
+
+            DroppedItemService.WorldExtraction extracted = DroppedItemService.ExtractWorldItems(source);
+            try
+            {
+                var states = new List<SpaceLooseItemState>(extracted.Records.Count);
+                foreach (DroppedItemSaveRecord record in extracted.Records)
+                {
+                    if (record?.Data?.Stack == null || record.Data.Guid == 0)
+                        throw new InvalidOperationException("船内掉落快照缺少有效身份。");
+                    ShipGeometry.LocalToWorld(ship, record.Position.x, record.Position.y, out double x, out double y);
+                    ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
+                    if (record.HasFlight && record.FlightDuration > 0f)
+                    {
+                        Vector2 velocity = (record.FlightEnd - record.FlightStart) / record.FlightDuration;
+                        ShipGeometry.Rotate(velocity.x, velocity.y, ship.AngleRadians, out double dx, out double dy);
+                        vx += dx; vy += dy;
+                    }
+                    var state = new SpaceLooseItemState
+                    {
+                        Snapshot = Encode(record.Data), InSpace = inSpace, WorldKey = flight.SurfaceWorldKey,
+                        RotationDegrees = ship.AngleRadians * Mathf.Rad2Deg + record.Rotation,
+                        AngularVelocityDegreesPerSecond = ship.AngularVelocityRadiansPerSecond * Mathf.Rad2Deg +
+                            (record.HasFlight ? record.RotationSpeed : 0f),
+                        Scale = new Vector3(record.Scale.x, record.Scale.y, 1f),
+                        PickupAfterSimulationSeconds = State.SimulationSeconds +
+                            (record.HasFlight ? Math.Max(0f, record.FlightDuration - record.FlightElapsed) : 0f),
+                        SurfaceHeight = inSpace ? 0d : Math.Max(0d, flight.HeightMeters),
+                        SurfaceVerticalSpeed = inSpace ? 0d : flight.VerticalSpeed,
+                        Motion = new SpaceMotionState { Sector = ship.Sector, PositionMeters = new SpaceVector2(x, y),
+                            VelocityMetersPerSecond = new SpaceVector2(vx, vy), RadiusMeters = .15d }
+                    };
+                    if (inSpace)
+                    {
+                        SpaceSectorCoordinates.Normalize(ref state.Motion.Sector, ref state.Motion.PositionMeters);
+                        state.WorldKey = SpaceSectorCoordinates.SceneKey(state.Motion.Sector);
+                    }
+                    states.Add(state);
+                }
+                return new ShipInteriorDropEjection(this, null, extracted, states);
+            }
+            catch { extracted.Dispose(); throw; }
+        }
+        #endregion
         private void OnLooseItemDespawning(Item item)
         {
             RestoreLooseItemHeightVisual(item);
@@ -29,8 +147,17 @@ namespace FlatWorld.Spaceflight
             try { if (item != null) ItemMgr.Instance?.DespawnItem(item, false); }
             finally { releasingLooseViews = false; }
         }
-        private SpaceLooseItemState QueueDrop(ItemData data, ShipState ship, ShipPieceState piece)
+        private ShipPieceDropHandle QueueDrop(ItemData data, ShipState ship, ShipPieceState piece)
         {
+            if (!ship.IsWreck)
+            {
+                var world = EnsureShipInteriorWorld(ship);
+                Vector2 position = ShipInteriorPiecePosition(ship, piece);
+                using var scope = GameplayWorldRegistry.UseWorld(world.WorldKey);
+                DroppedItemHandle handle = DroppedItemService.Spawn(data, position, position,
+                    rotation: piece.QuarterTurns * 90f, randomizeRotation: false);
+                return new ShipPieceDropHandle(world.WorldKey, handle, null);
+            }
             ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
                 (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
             ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
@@ -59,7 +186,15 @@ namespace FlatWorld.Spaceflight
                 drop.WorldKey = SpaceSectorCoordinates.SceneKey(drop.Motion.Sector);
             }
             State.LooseItems.Add(drop);
-            return drop;
+            return new ShipPieceDropHandle(null, default, drop);
+        }
+
+        private void CancelQueuedShipPieceDrop(ShipPieceDropHandle drop)
+        {
+            if (drop.Exterior != null) { State.LooseItems.Remove(drop.Exterior); return; }
+            if (string.IsNullOrEmpty(drop.World) || !GameplayWorldRegistry.TryGet(drop.World, out _)) return;
+            using var scope = GameplayWorldRegistry.UseWorld(drop.World);
+            DroppedItemService.Remove(drop.Interior);
         }
         private void StepLooseItems(double seconds)
         {

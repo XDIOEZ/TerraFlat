@@ -413,7 +413,8 @@ namespace FlatWorld.Spaceflight
         }
 
         public static bool StepStructureEnvironment(ShipState ship, double pressureKPa, double temperatureCelsius,
-            double seconds, Action<ShipState, ShipPieceState, string> onDestroyed = null)
+            double seconds, Action<ShipState, ShipPieceState, string> onDestroyed = null,
+            Func<ShipState, ShipPieceState, double, string, double?> applyOwnedDamage = null)
         {
             if (ship == null || !FluidUnits.IsFinite(seconds) || seconds <= 0d || !FluidUnits.IsFinite(pressureKPa) || pressureKPa < 0d ||
                 !FluidUnits.IsFinite(temperatureCelsius)) return false;
@@ -450,7 +451,7 @@ namespace FlatWorld.Spaceflight
                 {
                     string reason = pressureDamage > 0d && temperatureDamage > 0d ? "outside-temperature-pressure"
                         : pressureDamage > 0d ? "outside-pressure" : "outside-temperature";
-                    changed |= ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, onDestroyed);
+                    changed |= ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, onDestroyed, applyOwnedDamage);
                 }
             }
             return changed;

@@ -885,7 +885,11 @@ namespace FlatWorld.NaturalEntities
         {
             var rule = record.Profile.TemperatureYield;
             if (rule == null || !string.Equals(rule.OutputItemId, itemId, StringComparison.OrdinalIgnoreCase)) return 1f;
-            if (!TemperatureMgr.Instance.TryGetAmbientTemperature(record.Snapshot.transform.position, out float temperature))
+            float temperature;
+            if (ItemEnvironmentSources.TryGet(record.WorldKey, record.Snapshot.transform.position, out ItemEnvironmentSample environment))
+                temperature = (float)environment.TemperatureCelsius;
+            else if (TemperatureMgr.Instance == null ||
+                !TemperatureMgr.Instance.TryGetAmbientTemperature(record.Snapshot.transform.position, out temperature))
                 throw new InvalidOperationException("资源所在地温度未就绪，不能结算温度产量。");
             return Mathf.Lerp(rule.ColdMultiplier, rule.WarmMultiplier,
                 Mathf.InverseLerp(rule.ColdTemperatureCelsius, rule.WarmTemperatureCelsius, temperature));

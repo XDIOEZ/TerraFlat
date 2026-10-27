@@ -3,7 +3,7 @@ using FlatWorld.Spaceflight;
 using Newtonsoft.Json;
 using UnityEngine;
 
-public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildingTraversalPolicy, IBuildingPlacementCommitted, IBuildingDismantlePolicy
+public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildingTraversalPolicy, IBuildingPlacementCommitted, IBuildingDismantlePolicy, IInteractable
 {
     #region 显式船体能力
     public const string ModuleId = "船体部件模块";
@@ -17,9 +17,17 @@ public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildin
         get => ModData;
         set => ModData = value as Ex_ModData_MemoryPackable ?? throw new ArgumentException("船体部件数据类型错误。");
     }
-    protected override void OnLoad() => ShipGroundOpticalPresentation.Register(this);
+    protected override void OnLoad()
+    {
+        ShipGroundOpticalPresentation.Register(this);
+        if (Configuration.Kind == ShipPieceKind.DockingPort) SpatialInteractionRegistry.Register(this, .75f);
+    }
     protected override void OnSave() { }
-    protected override void OnUnload() => ShipGroundOpticalPresentation.Unregister(this);
+    protected override void OnUnload()
+    {
+        SpatialInteractionRegistry.Unregister(this);
+        ShipGroundOpticalPresentation.Unregister(this);
+    }
     public void OnBuildingPlacementCommitted() => ShipGroundOpticalPresentation.Refresh(this);
     public bool CanDismantle(out string reason)
     {
@@ -28,6 +36,18 @@ public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildin
             SpaceSession.Current.CanDismantleShipPiece(item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out reason);
     }
     public override void OnResourcesReloaded() => ShipGroundOpticalPresentation.Refresh(this);
+
+    public bool CanInteract(Item actor) => Configuration.Kind == ShipPieceKind.DockingPort &&
+        item?.itemData != null && SpaceSession.Current?.FindPiece(
+            item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out _, out _) == true;
+    public void OnInteractStart(Item actor)
+    {
+        if (actor is not Player player || !CanInteract(actor)) return;
+        string pieceId = item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (SpaceSession.Current.FindPiece(pieceId, out ShipState ship, out _))
+            ShipPanelSession.Open(SpaceSession.Current, player, ship.ShipId, pieceId);
+    }
+    public void OnInteractCancel(Item actor) { }
 
     // 地面地板使用独立占地层，普通设备和管电线路仍归各自的正式建筑层。
     public int OccupancyLayer => ResolveGroundOccupancyLayer(Configuration.Kind, Configuration.Layer,

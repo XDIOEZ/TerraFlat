@@ -51,6 +51,30 @@ namespace FlatWorld.Networking.Gameplay
                     if (poses.Count == 128)
                     { connection.Send(new NetworkSpaceProjectilePoses { Sequence = ++projectileSequence, Poses = poses.ToArray() }); poses.Clear(); }
                 }
+            foreach (Mod_Projectile projectile in Mod_Projectile.LocalWorldProjectiles)
+            {
+                Item item = projectile != null ? projectile.item : null;
+                SpaceSectorPosition position = default;
+                Vector2 velocity = default;
+                float rotation = 0f;
+                string surfaceWorld = null;
+                if (item?.itemData == null || !session.TryGetLocalWorldProjectilePose(projectile, out position,
+                    out velocity, out rotation, out surfaceWorld) ||
+                    observer.InSpace != string.IsNullOrEmpty(surfaceWorld) ||
+                    !observer.InSpace && surfaceWorld != observer.WorldKey) continue;
+                if (!observer.InSpace)
+                    position = new SpaceSectorPosition(default, SpaceVector2.FromVector2(
+                        PressureExplosionQueue.NormalizeInWorld(surfaceWorld, position.LocalMeters.ToVector2())));
+                double distance = observer.InSpace ? SpaceSectorCoordinates.Difference(position, observer.Position).Magnitude :
+                    PressureExplosionQueue.DeltaInWorld(surfaceWorld, observer.Position.LocalMeters.ToVector2(), position.LocalMeters.ToVector2()).magnitude;
+                if (distance > ObserverRangeMeters) continue;
+                poses.Add(new NetworkSpaceProjectilePose { Guid = item.itemData.Guid, ItemId = item.itemData.IDName,
+                    Position = position, SurfaceWorldKey = surfaceWorld, Velocity = SpaceVector2.FromVector2(velocity),
+                    Rotation = rotation, VisualHeight = projectile.NetworkSurfaceVisualHeight,
+                    VisualRotation = projectile.NetworkSurfaceVisualRotation });
+                if (poses.Count == 128)
+                { connection.Send(new NetworkSpaceProjectilePoses { Sequence = ++projectileSequence, Poses = poses.ToArray() }); poses.Clear(); }
+            }
             connection.Send(new NetworkSpaceProjectilePoses { Sequence = ++projectileSequence, Poses = poses.ToArray() });
         }
         private void OnProjectilePoses(NetworkSpaceProjectilePoses message)

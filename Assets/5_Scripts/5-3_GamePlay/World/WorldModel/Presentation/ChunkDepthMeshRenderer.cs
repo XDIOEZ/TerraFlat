@@ -31,6 +31,27 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal int DrawGroupCount { get; private set; }
     internal static event Action BeforeFlush;
 
+    // 过渡快照读取已提交的普通行网格数据，不创建业务对象。
+    internal void CollectVisualSnapshots(Matrix4x4 worldToDisplay, List<WorldVisualSnapshot> destination)
+    {
+        if (IsDisposed) return;
+        foreach (Entry entry in entries.Values)
+        {
+            Visual visual = entry.Visual;
+            float phase = visual.Animation.z + Time.time * visual.Animation.y;
+            int mode = Mathf.RoundToInt(visual.Animation.x);
+            Matrix4x4 motion = Matrix4x4.identity;
+            if (mode == 1) motion = Matrix4x4.Rotate(Quaternion.Euler(0f, 0f, phase * Mathf.Rad2Deg));
+            else if (mode == 3) motion = Matrix4x4.Translate(Vector3.down * ((1f - Mathf.Cos(phase)) * .5f * visual.Animation.w));
+            else if (mode == 4) motion = Matrix4x4.Scale(new Vector3(1f, 1f - (1f - Mathf.Cos(phase)) * .5f * Mathf.Clamp01(visual.Animation.w), 1f));
+            else if (mode >= MachineArticulatedVisual.SliderMode && mode <= MachineArticulatedVisual.NeedleMode)
+                motion = MachineArticulatedVisual.ResolveMotion(mode, visual.Animation, visual.Conveyor, Time.time);
+            Matrix4x4 row = worldToDisplay * entry.Group.Row.Root.localToWorldMatrix;
+            destination.Add(new WorldVisualSnapshot(visual.Sprite, row * visual.Matrix * motion, visual.Tint,
+                SortingLayer.GetLayerValueFromID(entry.Group.Row.Layer), entry.Group.Key.Order, row.m13));
+        }
+    }
+
     internal ChunkDepthMeshRenderer(Transform parent, int? sortingLayerOverrideId = null, int sortingOrderOverride = 0,
         int renderQueue = 3000, bool useParentSortingAnchor = false)
     {

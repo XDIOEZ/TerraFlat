@@ -24,7 +24,6 @@ namespace FlatWorld.Spaceflight
         private IDisposable placementRegistration;
         private IDisposable dropRegistration;
         private readonly Dictionary<string, ItemData> contents = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, ShipPieceView> views = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ShipControlRequest> controlRequests = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (ShipState Ship, ShipPieceState Piece)> pieceIndex = new(StringComparer.Ordinal);
         private bool pieceIndexDirty;
@@ -65,12 +64,21 @@ namespace FlatWorld.Spaceflight
             PressureExplosionQueue.SnapshotHandler = CaptureShipExplosionContext;
             PressureExplosionQueue.PresentationHandler = PresentShipExplosion;
             ItemMgr.RuntimeItemDespawning += OnLooseItemDespawning;
+            ItemMgr.RuntimeItemDespawning += QueueRetainedWorldRetirementForItem;
+            ItemMgr.RuntimeItemMoved += QueueInteriorItemMove;
+            SaveDataMgr.RuntimeCropStateChanged += QueueRetainedWorldRetirementForCrop;
+            DroppedItemService.WorldItemsChanged += QueueRetainedWorldRetirementForDrops;
             dropRegistration = RegisterDroppedItemProvider();
             placementRegistration = FlatWorld.Gameplay.Building.BuildingPlacementService.Register(
                 "ship-local-grid", new ShipBuildingPlacementBackend(), 300);
         }
         private void OnDestroy()
         {
+            CaptureShipInteriorWorldStates();
+            ReleaseAllShipInteriorPresentations();
+            MoveAllPassengersOutOfShipInteriorWorlds();
+            ReleaseAllShipInteriorItems();
+            ReleaseAllShipInteriorWorlds();
             ReleaseOreAsteroidPresentation();
             ResetElevatorRuntime();
             ClearGroundPreparations();
@@ -85,6 +93,10 @@ namespace FlatWorld.Spaceflight
             placementRegistration?.Dispose();
             dropRegistration?.Dispose();
             ItemMgr.RuntimeItemDespawning -= OnLooseItemDespawning;
+            ItemMgr.RuntimeItemDespawning -= QueueRetainedWorldRetirementForItem;
+            ItemMgr.RuntimeItemMoved -= QueueInteriorItemMove;
+            SaveDataMgr.RuntimeCropStateChanged -= QueueRetainedWorldRetirementForCrop;
+            DroppedItemService.WorldItemsChanged -= QueueRetainedWorldRetirementForDrops;
             ItemEnvironmentSources.Unregister(this);
             MachineWorld.CellChanged -= InvalidateGroundAtmosphere;
             GameplayCombatBridge.Unregister(ShipCombatBridge.Instance);
@@ -96,12 +108,17 @@ namespace FlatWorld.Spaceflight
         private void Load(GameSaveData save)
         {
             if (save == null || ReferenceEquals(owner, save)) return;
+            CaptureShipInteriorWorldStates();
             ReleaseOreAsteroidPresentation();
             ResetFlightAudio();
             ClearGroundPreparations();
             ResetPresentationHistory();
             ResetSpacePhysics();
             ReleaseViews();
+            ReleaseAllShipInteriorPresentations();
+            MoveAllPassengersOutOfShipInteriorWorlds();
+            ReleaseAllShipInteriorItems();
+            ReleaseAllShipInteriorWorlds();
             ResetElevatorRuntime();
             contents.Clear(); controlRequests.Clear();
             ClearQueryIndexes();
@@ -132,6 +149,18 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && !string.IsNullOrWhiteSpace(piece.SnapshotJson)) contents[piece.PieceId] = Decode(piece.SnapshotJson);
             RebuildPieceIndex();
+            foreach (ShipState ship in State.Ships)
+                if (!ship.IsWreck || ship.RetainsInteriorWorld)
+                {
+                    ShipInteriorWorldRuntime world = EnsureShipInteriorWorld(ship);
+                    if (ship.RetainsWorldWithoutStructure || ship.RetainsInteriorWorld)
+                    {
+                        retainedShipWorlds.Add(ship.ShipId);
+                        world.ObserveRetainedWorldContents(() => retainedWorldsNeedRetirementCheck = true);
+                    }
+                }
+            retainedWorldsNeedRetirementCheck = retainedShipWorlds.Count > 0;
+            RestoreAllShipInteriorItems();
             running = true;
             ViewOrigin = default;
             ViewSector = default;
@@ -141,6 +170,7 @@ namespace FlatWorld.Spaceflight
         {
             if (Current == null || !ReferenceEquals(Current.owner, save)) return;
             Current.CaptureContents();
+            Current.CaptureShipInteriorWorldStates();
             Current.CaptureLooseItems();
             Current.CapturePassengerAuthoritativePositions();
             Current.CaptureElevatorCargo();
@@ -151,12 +181,17 @@ namespace FlatWorld.Spaceflight
             SpaceMgr.ExistingInstance?.ReleaseRetainedPresentationCache();
             if (Current == null) return;
             Current.running = false;
+            Current.CaptureShipInteriorWorldStates();
             Current.ReleaseOreAsteroidPresentation();
             Current.ClearGroundPreparations();
             Current.ResetPresentationHistory();
             Current.ResetSpacePhysics();
             Current.ResetElevatorRuntime();
             Current.ReleaseViews();
+            Current.ReleaseAllShipInteriorPresentations();
+            Current.MoveAllPassengersOutOfShipInteriorWorlds();
+            Current.ReleaseAllShipInteriorItems();
+            Current.ReleaseAllShipInteriorWorlds();
             Current.DestroyDrivingCameraTarget();
             Current.owner = null;
             Current.groundAtmosphereIndex.Clear(); Current.groundGeometryWorld = null;
@@ -191,14 +226,16 @@ namespace FlatWorld.Spaceflight
         private void CaptureContents()
         {
             foreach (ShipState ship in State.Ships)
-            using (MachineWorld.UseScope("ship:" + ship.ShipId))
+            using (IDisposable scope = TryGetShipInteriorWorld(ship.ShipId, out var world)
+                ? GameplayWorldRegistry.UseWorld(world.WorldKey)
+                : MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (!piece.IsAlive) continue;
                 if (int.TryParse(piece.PieceId, out int id) && MachineWorld.GetById(id) is MachineEntity node)
                     contents[piece.PieceId] = MachineWorld.CaptureSnapshot(node);
-                else if (views.TryGetValue(piece.PieceId, out ShipPieceView view) && view.Item != null)
-                { view.Item.Save(); contents[piece.PieceId] = view.Item.itemData; }
+                else if (TryGetShipInteriorItem(piece.PieceId, out Item item))
+                { item.Save(); contents[piece.PieceId] = item.itemData; }
                 if (contents.TryGetValue(piece.PieceId, out ItemData data)) piece.SnapshotJson = Encode(data);
             }
         }
@@ -264,7 +301,8 @@ namespace FlatWorld.Spaceflight
                     {
                         if (ship.IsWreck) continue;
                         var outside = GetOutside(ship);
-                        ShipAtmosphereService.StepStructureEnvironment(ship, outside.PressureKPa, outside.TemperatureCelsius, elapsed, DestroyPiece);
+                        ShipAtmosphereService.StepStructureEnvironment(ship, outside.PressureKPa, outside.TemperatureCelsius,
+                            elapsed, DestroyPiece, TryApplyShipInteriorItemDamage);
                         RefillCompartments(ship, elapsed);
                     }
                     ProcessStructureChanges();
@@ -276,6 +314,8 @@ namespace FlatWorld.Spaceflight
         private void LateUpdate()
         {
             if (!running || State == null) return;
+            CommitInteriorItemMoves();
+            RetireEmptyRetainedShipWorlds();
             UpdatePresentationClock();
             UpdateViewOrigin();
             UpdateSectorStreaming();

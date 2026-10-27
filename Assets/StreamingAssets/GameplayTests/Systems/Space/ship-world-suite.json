@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "ship_interior_world_gameplay",
+      "name": "船内独立世界、物理与普通物品归属",
+      "luaPath": "GameplayTests/Systems/Space/ship_world.lua",
+      "enabled": true
+    }
+  ]
+}

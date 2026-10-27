@@ -86,6 +86,7 @@ internal static class BuildingDepthMeshBridge
         internal readonly SpriteRenderer Renderer;
         internal readonly Transform Transform;
         internal readonly bool OriginalForceOff;
+        internal readonly bool LogicalForceOff;
         internal readonly int Part;
         internal bool Submitted, Highlighted;
         internal Sprite LastSprite;
@@ -94,7 +95,10 @@ internal static class BuildingDepthMeshBridge
         internal ShaderKind FrameShader;
         internal ChunkDepthMeshRenderer SubmittedRenderer;
         internal Source(SpriteRenderer renderer, int part)
-        { Renderer = renderer; Transform = renderer.transform; OriginalForceOff = renderer.forceRenderingOff; Part = part; }
+        {
+            Renderer = renderer; Transform = renderer.transform; OriginalForceOff = renderer.forceRenderingOff;
+            LogicalForceOff = GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(renderer); Part = part;
+        }
     }
 
     private sealed class Binding
@@ -130,6 +134,8 @@ internal static class BuildingDepthMeshBridge
 
         internal void Present()
         {
+            string worldKey = GameplayWorldRegistry.GetItemWorldKey(Item);
+            using var world = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : null;
             Vector3 anchor = Item.transform.position;
             if (building == null || !Item.isActiveAndEnabled || Item.InHand || !building.IsInstalled() ||
                 ChunkMgr.ExistingInstance == null ||
@@ -156,7 +162,7 @@ internal static class BuildingDepthMeshBridge
                 source.FrameSprite = null;
                 source.FrameMaterial = null;
                 SpriteRenderer renderer = source.Renderer;
-                if (renderer == null || !renderer.enabled || source.OriginalForceOff) continue;
+                if (renderer == null || !renderer.enabled || source.LogicalForceOff) continue;
                 Sprite sprite = renderer.sprite;
                 if (sprite == null) continue;
                 Material material = renderer.sharedMaterial;
@@ -229,7 +235,9 @@ internal static class BuildingDepthMeshBridge
             owner?.RemoveBuildingDepthPart(entityId, source.Part);
             if (connectionLine) owner?.RemoveBuildingConnectionDepthPart(entityId, source.Part);
             projected.Remove(source.Renderer);
-            if (source.Renderer != null) source.Renderer.forceRenderingOff = source.OriginalForceOff;
+            if (source.Renderer != null)
+                source.Renderer.forceRenderingOff = WorldPresentationProjection.IsSourceProjected(source.Renderer) ||
+                    GameplayWorldRegistry.GetPresentationRequiredForceRenderingOff(source.Renderer, source.OriginalForceOff);
             source.Submitted = false;
             source.SubmittedRenderer = null;
             source.Highlighted = false;

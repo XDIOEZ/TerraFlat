@@ -16,7 +16,7 @@ namespace FlatWorld.Spaceflight
         private readonly List<(ShipPieceState Piece, SpriteRenderer Renderer)> fragmentSprites = new();
         private double appliedCellSize, appliedCenterX, appliedCenterY;
         private Vector2 appliedVisualLift;
-        private bool layoutApplied;
+        private bool layoutApplied, appliedRetainedInterior;
 
         public void Initialize(SpaceSession session, ShipState ship)
         {
@@ -45,14 +45,15 @@ namespace FlatWorld.Spaceflight
             bool topologyChanged = geometry.Synchronize(ship);
             bool layoutChanged = !layoutApplied || appliedCellSize != ship.CellSizeMeters ||
                 appliedCenterX != ship.CenterOfMassLocalX || appliedCenterY != ship.CenterOfMassLocalY;
-            if (topologyChanged) RebuildFragmentSprites(ship);
+            bool visualChanged = topologyChanged || appliedRetainedInterior != ship.RetainsInteriorWorld;
+            if (visualChanged) RebuildFragmentSprites(ship);
             if (topologyChanged || layoutChanged) RebuildBlockingShape(ship);
 
             ShipFlightState flight = session.GetFlight(ship.ShipId);
             double rise = ShipSurfaceState.VisualRise(flight);
             float radians = degrees * Mathf.Deg2Rad;
             Vector2 visualLift = new(Mathf.Sin(radians) * (float)rise, Mathf.Cos(radians) * (float)rise);
-            if (topologyChanged || layoutChanged || appliedVisualLift != visualLift)
+            if (visualChanged || layoutChanged || appliedVisualLift != visualLift)
             {
                 foreach (var fragment in fragmentSprites)
                 {
@@ -87,6 +88,10 @@ namespace FlatWorld.Spaceflight
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (!piece.IsAlive || !GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition)) continue;
+                ItemData data = session.GetPieceData(piece);
+                if (ship.RetainsInteriorWorld && piece.Kind != ShipPieceKind.Floor && data != null &&
+                    Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) &&
+                    !string.IsNullOrWhiteSpace(building.TileBlockId)) continue;
                 GameObject child = new("FragmentSprite_" + piece.ItemId);
                 child.transform.SetParent(transform, false);
                 child.transform.localRotation = Quaternion.Euler(0, 0, piece.QuarterTurns * 90f);
@@ -100,6 +105,7 @@ namespace FlatWorld.Spaceflight
                 Sprite ??= renderer;
                 fragmentSprites.Add((piece, renderer));
             }
+            appliedRetainedInterior = ship.RetainsInteriorWorld;
             // 整块只挂一个 Item，子对象只有贴图，没有原机器、管网和建筑模块。
         }
 

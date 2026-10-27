@@ -853,19 +853,25 @@ namespace FlatWorld.NaturalEntities
             TemperatureMgr.PointSamplingContext temperatures, WeatherMgr weather, ref EnvironmentWork work)
         {
             Vector3 position = record.Snapshot.transform.position;
+            bool localEnvironment = ItemEnvironmentSources.TryGet(record.WorldKey, position, out ItemEnvironmentSample environment);
             RegionalWeatherSnapshot localWeather = default;
             bool hasWeather = false;
             if (record.Profile.HasGrowth)
             {
                 using var sample = EnvironmentWeatherMarker.Auto();
                 work.WeatherSamples++;
-                hasWeather = weather != null && weather.TryGetWeatherAt(position, out localWeather);
-                if (!hasWeather) work.MissingWeather++;
+                hasWeather = !localEnvironment && weather != null && weather.TryGetWeatherAt(position, out localWeather);
+                if (!hasWeather && !localEnvironment) work.MissingWeather++;
             }
             float ambient = 0f, baseline = 0f;
             // 同一自然物的生长、降水和耐候复用一份地表温度采样。
             bool hasTemperature = false;
-            if (hasWeather || record.Profile.HasClimate)
+            if (localEnvironment)
+            {
+                ambient = baseline = (float)environment.TemperatureCelsius;
+                hasTemperature = true;
+            }
+            else if (hasWeather || record.Profile.HasClimate)
             {
                 using var sample = EnvironmentTemperatureMarker.Auto();
                 work.TemperatureSamples++;
@@ -889,7 +895,7 @@ namespace FlatWorld.NaturalEntities
             if (!record.Profile.HasClimate ||
                 !simulation.TryGet(record.Handle.Id, out NaturalEntityClimate climate)) return;
             climate.EnvironmentReady = 0;
-            climate.SeasonPoleProximity = hasBounds ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position)
+            climate.SeasonPoleProximity = localEnvironment ? 0f : hasBounds ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position)
                 : 1f;
             if (hasTemperature)
             {

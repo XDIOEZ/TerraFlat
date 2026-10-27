@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
+using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -14,6 +15,8 @@ namespace FlatWorld.Spaceflight
             public Item Item;
             public MachineEntity Machine;
             public ItemData Data;
+            public TileBuildingCell? Tile;
+            public string WorldKey;
             public Vector2Int Cell;
             public int QuarterTurns;
             public int Guid => Data.Guid;
@@ -21,7 +24,11 @@ namespace FlatWorld.Spaceflight
             // 收集只保留真实引用，被选中的成员才捕获完整库存与模块快照。
             public ItemData Capture()
             {
-                if (Machine != null)
+                if (Tile.HasValue)
+                {
+                    CaptureTileBuildingHealth(Data, Tile.Value);
+                }
+                else if (Machine != null)
                 {
                     Data = MachineWorld.CaptureSnapshot(Machine) ??
                         throw new InvalidOperationException("待装配机器已离开地面世界。");
@@ -56,7 +63,7 @@ namespace FlatWorld.Spaceflight
                         item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.IsInstalled() != true ||
                         MachineWorld.OwnsWorldItem(item.itemData)) continue;
                     Vector2 position = WorldLocalPresentation.ToLogical((Vector2)item.transform.position);
-                    result.Add(new Entry { Item = item, Data = item.itemData,
+                    result.Add(new Entry { Item = item, Data = item.itemData, WorldKey = worldKey,
                         Cell = new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)),
                         QuarterTurns = Mathf.RoundToInt(item.transform.eulerAngles.z / 90f) & 3 });
                 }
@@ -65,10 +72,97 @@ namespace FlatWorld.Spaceflight
                 var machines = new List<MachineEntity>();
                 MachineWorld.CollectNodes(machines);
                 foreach (MachineEntity machine in machines)
-                    result.Add(new Entry { Machine = machine, Data = machine.Snapshot,
+                    result.Add(new Entry { Machine = machine, Data = machine.Snapshot, WorldKey = worldKey,
                         Cell = machine.Cell, QuarterTurns = machine.RotationQuarterTurns });
             }
             return result;
+        }
+
+        // 普通格墙只捕获冷载荷，装船和落地都不为它生成完整 Item。
+        public static List<Entry> CollectGroundTileBuildings(string worldKey, IEnumerable<Vector2Int> supportedCells,
+            ISet<int> capturedIds = null)
+        {
+            using var scope = GameplayWorldRegistry.UseWorld(worldKey);
+            var result = new List<Entry>();
+            capturedIds ??= new HashSet<int>();
+            ChunkMgr chunks = ChunkMgr.ExistingInstance;
+            foreach (Vector2Int cell in supportedCells)
+            {
+                if (chunks == null || !chunks.TryGetRuntimeTerrainTile(new Vector2(cell.x + .5f, cell.y + .5f), out var sample) ||
+                    sample.Cell.BlockingTileId == 0 || !GameRes.ExistingInstance.TryGetTileDefinition(sample.Cell.BlockingTileId, out var definition) ||
+                    string.IsNullOrWhiteSpace(definition.damageProfile?.DropItemId) ||
+                    !chunks.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk)) continue;
+                if (TryCreateGroundTileEntry(worldKey, cell, sample, chunk, definition,
+                        definition.damageProfile.DropItemId, false, capturedIds, out Entry entry)) result.Add(entry);
+            }
+            return result;
+        }
+
+        internal static bool TryGetGroundSupportTileBuilding(string worldKey, Vector2Int cell,
+            ISet<int> capturedIds, out Entry entry)
+        {
+            entry = null;
+            ChunkMgr chunks = ChunkMgr.ExistingInstance;
+            if (chunks == null || !chunks.TryGetRuntimeTerrainTile((Vector2)cell + Vector2.one * .5f, out var sample))
+                return false;
+            int id = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
+            if (id == 0 || !GameRes.ExistingInstance.TryGetTileDefinition(id, out var definition) ||
+                definition.GroundPlacement == null || string.IsNullOrWhiteSpace(definition.GroundPlacement.RefundItemId) ||
+                !chunks.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk)) return false;
+            return TryCreateGroundTileEntry(worldKey, cell, sample, chunk, definition,
+                definition.GroundPlacement.RefundItemId, true, capturedIds, out entry);
+        }
+
+        private static bool TryCreateGroundTileEntry(string worldKey, Vector2Int cell, RuntimeTerrainTileSample sample,
+            ChunkRuntime chunk, RuntimeTileDefinition definition, string itemId, bool support, ISet<int> capturedIds, out Entry entry)
+        {
+            entry = null;
+            ItemData data = GameRes.ExistingInstance.CreateItemData(itemId);
+            if (!Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) ||
+                building.TileBlockId != definition.Id) return false;
+            data.Guid = Guid.NewGuid().GetHashCode() & int.MaxValue;
+            while (data.Guid == 0 || ItemMgr.GetExistingInstance()?.GetItemByGuid(data.Guid) != null ||
+                   SpaceSession.Current?.Owns(data.Guid) == true || !capturedIds.Add(data.Guid))
+                data.Guid = Guid.NewGuid().GetHashCode() & int.MaxValue;
+            data.transform.position = new Vector3(cell.x + .5f, cell.y + .5f);
+            var tile = new TileBuildingCell(chunk, cell, sample.LocalCell, definition.RuntimeTileId, definition.Id,
+                support ? (TerrainCell?)sample.Cell : null);
+            CaptureTileBuildingHealth(data, tile);
+            entry = new Entry { Data = data, Cell = cell, Tile = tile, WorldKey = worldKey };
+            return true;
+        }
+
+        private static void CaptureTileBuildingHealth(ItemData data, TileBuildingCell tile)
+        {
+            if (tile.ReplacedGroundCell.HasValue) return;
+            float remaining = TileBuildingSystem.TryGetRuntimeDamageFraction(tile.RuntimeChunk, tile.LocalPosition, out float damage)
+                ? 1f - damage : 1f;
+            foreach (ModuleData module in data.ModuleDataDic.Values)
+                if (module.ID == ModText.Hp && module is Ex_ModData storage)
+                {
+                    var health = storage.GetData<Mod_DamageReceiver.DamageReceiver_SaveData>();
+                    if (health == null) continue;
+                    health.Hp = health.MaxHp * remaining;
+                    storage.WriteData(health);
+                    break;
+                }
+        }
+
+        private static void RestoreTileBuildingHealth(ItemData data, TileBuildingCell tile)
+        {
+            if (tile.ReplacedGroundCell.HasValue) return;
+            float remaining = 1f;
+            foreach (ModuleData module in data.ModuleDataDic.Values)
+                if (module.ID == ModText.Hp && module is Ex_ModData storage)
+                {
+                    var health = storage.GetData<Mod_DamageReceiver.DamageReceiver_SaveData>();
+                    if (health?.MaxHp > 0f) remaining = Mathf.Clamp01(health.Hp / health.MaxHp);
+                    break;
+                }
+            float maximum = GameRes.ExistingInstance.GetTileBlock(tile.TileBlockId)?.damageProfile?.MaxHealth ?? 0f;
+            tile.RuntimeChunk.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
+                tile.LocalPosition.x, tile.LocalPosition.y, maximum * (1f - remaining));
+            SaveDataMgr.Instance?.RecordRuntimeTerrainChange(tile);
         }
         #endregion
 
@@ -77,8 +171,10 @@ namespace FlatWorld.Spaceflight
 
         public static void PublishCreated(IReadOnlyList<Entry> entries)
         {
+            var runtimeEntries = new List<Entry>(entries.Count);
+            foreach (Entry entry in entries) if (!entry.Tile.HasValue) runtimeEntries.Add(entry);
             if (GameNetwork.IsOnline && GameNetwork.HasStateAuthority &&
-                NetworkPublisher?.Invoke(entries) != true)
+                runtimeEntries.Count > 0 && NetworkPublisher?.Invoke(runtimeEntries) != true)
                 throw new InvalidOperationException("地面建筑的联机发布器尚未就绪。");
         }
 
@@ -109,11 +205,19 @@ namespace FlatWorld.Spaceflight
             data.inHand = false;
             if (data.Stack != null) { data.Stack.Amount = 1f; data.Stack.CanBePickedUp = false; }
             Mod_Building.SetInstalledDataState(data);
-            var entry = new Entry { Data = data, Cell = cell, QuarterTurns = quarterTurns };
+            var entry = new Entry { Data = data, Cell = cell, QuarterTurns = quarterTurns, WorldKey = worldKey };
             try
             {
                 using var scope = MachineWorld.UseScope(worldKey);
-                if (machine)
+                if (Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data tileBuilding) &&
+                    !string.IsNullOrWhiteSpace(tileBuilding.TileBlockId))
+                {
+                    if (!TileBuildingSystem.TryPlace(logical, tileBuilding.TileBlockId, out TileBuildingCell tile, out string reason))
+                        throw new InvalidOperationException("格墙落地失败：" + reason);
+                    entry.Tile = tile;
+                    RestoreTileBuildingHealth(data, tile);
+                }
+                else if (machine)
                 {
                     if (MachineWorld.GetById(data.Guid) != null)
                         throw new InvalidOperationException("落地机器身份已经被使用：" + data.Guid);
@@ -166,6 +270,13 @@ namespace FlatWorld.Spaceflight
         public static void RemoveItem(Entry entry)
         {
             if (entry?.Machine != null) throw new InvalidOperationException("机器必须通过作用域迁移移交，不能按建筑卸载。");
+            if (entry?.Tile is TileBuildingCell tile)
+            {
+                using var tileScope = GameplayWorldRegistry.UseWorld(entry.WorldKey);
+                if (!TileBuildingSystem.TryRemove(tile, false, out string reason))
+                    throw new InvalidOperationException("格墙移交失败：" + reason);
+                return;
+            }
             if (entry?.Item == null || entry.Item.DestructionHandled) return;
             Item item = entry.Item;
             using var worldScope = GameplayWorldRegistry.UseWorld(item.gameObject.scene.name);

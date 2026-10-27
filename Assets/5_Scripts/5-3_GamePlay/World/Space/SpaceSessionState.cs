@@ -24,7 +24,16 @@ namespace FlatWorld.Spaceflight
         public List<SpaceSectorId> GeneratedOreAsteroidSectors = new();
         public List<GroundAtmosphereState> GroundAtmospheres = new();
         public List<SpaceElevatorState> Elevators = new();
+        public List<SpaceLocalWorldNetworkState> LocalWorldStates = new();
         public long NavigationSequence;
+    }
+
+    [Serializable]
+    public sealed class SpaceLocalWorldNetworkState
+    {
+        public string WorldKey;
+        public ulong Revision;
+        public byte[] Payload;
     }
 
     [Serializable]
@@ -117,6 +126,8 @@ namespace FlatWorld.Spaceflight
         public ShipPartConfiguration Configuration = new();
         public bool Enabled = true;
         public double TargetPressureKPa = 101.325;
+        public float Rpm;
+        public int EntryDirection = -1;
     }
     [Serializable]
     public sealed class SpacePassengerState

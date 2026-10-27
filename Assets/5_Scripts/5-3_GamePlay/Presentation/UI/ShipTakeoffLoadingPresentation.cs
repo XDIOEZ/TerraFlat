@@ -20,16 +20,14 @@ public sealed class ShipTakeoffLoadingPresentation : IDisposable
         public Color Color;
         public Vector2 Center, Size;
         public float Angle;
+        public float SortY;
+        public int Layer, Order;
         public bool FlipX, FlipY;
     }
 
-    public static ShipTakeoffLoadingPresentation Capture(List<SpriteRenderer> renderers, float speed)
+    internal static ShipTakeoffLoadingPresentation Capture(List<SpriteRenderer> renderers,
+        List<WorldVisualSnapshot> snapshots, float speed)
     {
-        renderers.Sort((left, right) =>
-        {
-            int layer = SortingLayer.GetLayerValueFromID(left.sortingLayerID).CompareTo(SortingLayer.GetLayerValueFromID(right.sortingLayerID));
-            return layer != 0 ? layer : left.sortingOrder.CompareTo(right.sortingOrder);
-        });
         var result = new ShipTakeoffLoadingPresentation { scrollSpeed = speed };
         foreach (SpriteRenderer renderer in renderers)
         {
@@ -44,9 +42,33 @@ public sealed class ShipTakeoffLoadingPresentation : IDisposable
                 Center = renderer.transform.TransformPoint(center),
                 Size = new Vector2(renderer.sprite.bounds.size.x * Mathf.Abs(scale.x), renderer.sprite.bounds.size.y * Mathf.Abs(scale.y)),
                 Angle = renderer.transform.eulerAngles.z,
+                Layer = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID), Order = renderer.sortingOrder,
+                SortY = renderer.transform.position.y,
                 FlipX = renderer.flipX ^ scale.x < 0f, FlipY = renderer.flipY ^ scale.y < 0f
             });
         }
+        foreach (WorldVisualSnapshot snapshot in snapshots)
+        {
+            if (snapshot.Sprite == null || snapshot.Color.a <= 0f) continue;
+            Matrix4x4 matrix = snapshot.Matrix;
+            Vector3 axisX = matrix.MultiplyVector(Vector3.right), axisY = matrix.MultiplyVector(Vector3.up);
+            float determinant = matrix.m00 * matrix.m11 - matrix.m01 * matrix.m10;
+            result.sprites.Add(new SpritePose
+            {
+                Sprite = snapshot.Sprite, Color = snapshot.Color,
+                Center = matrix.MultiplyPoint3x4(snapshot.Sprite.bounds.center),
+                Size = new Vector2(snapshot.Sprite.bounds.size.x * axisX.magnitude, snapshot.Sprite.bounds.size.y * axisY.magnitude),
+                Angle = Mathf.Atan2(axisX.y, axisX.x) * Mathf.Rad2Deg,
+                Layer = snapshot.Layer, Order = snapshot.Order, SortY = snapshot.SortY, FlipY = determinant < 0f
+            });
+        }
+        result.sprites.Sort((left, right) =>
+        {
+            int layer = left.Layer.CompareTo(right.Layer);
+            if (layer != 0) return layer;
+            int order = left.Order.CompareTo(right.Order);
+            return order != 0 ? order : right.SortY.CompareTo(left.SortY);
+        });
         return result.sprites.Count > 0 ? result : null;
     }
     #endregion

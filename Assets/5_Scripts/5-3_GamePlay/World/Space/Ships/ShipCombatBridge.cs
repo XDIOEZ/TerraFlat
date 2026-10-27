@@ -56,6 +56,13 @@ namespace FlatWorld.Spaceflight
             SpaceSession session = SpaceSession.Current;
             if (!GameNetwork.HasStateAuthority || session?.State == null || weapon == null || weapon.RemainingAttackTargets == 0) return;
             bool spaceCombat = SpaceSession.TryGetCombatFrame(weapon.item, out SpaceSectorPosition canonicalOrigin, out Vector2 presentationOrigin);
+            Player attacker = SpaceSession.CombatPlayer(weapon.item);
+            SpaceCombatFrame frame = weapon.item != null ? weapon.item.GetComponent<SpaceCombatFrame>() : null;
+            bool externalProjectile = frame != null && frame.Active;
+            string attackerWorld = GameplayWorldRegistry.GetItemWorldKey(
+                externalProjectile || attacker == null ? weapon.item : attacker);
+            ShipState attackerShip = attackerWorld?.StartsWith("ship:", StringComparison.Ordinal) == true
+                ? session.GetShip(attackerWorld.Substring(5)) : null;
             string surfaceWorld = null;
             bool hasSurfaceWorld = !spaceCombat && SpaceSession.TryGetCombatWorldKey(weapon.item, out surfaceWorld);
             if (!spaceCombat && !hasSurfaceWorld) return;
@@ -72,6 +79,9 @@ namespace FlatWorld.Spaceflight
             {
                 foreach (ShipState ship in session.State.Ships)
                 {
+                    // 同一世界已有正式物品、机器与地块受击查询，不再重复结算本船结构。
+                    if (attackerWorld == MachineWorld.GetShipScopeKey(ship.ShipId) ||
+                        externalProjectile && frame.DepartingShipId == ship.ShipId) continue;
                     ShipFlightState flight = session.GetFlight(ship.ShipId);
                     if (spaceCombat ? flight?.Phase != ShipFlightPhase.Cruising :
                         !hasSurfaceWorld || flight == null || flight.Phase == ShipFlightPhase.Cruising ||
@@ -88,8 +98,23 @@ namespace FlatWorld.Spaceflight
                         Vector2 anchor;
                         if (spaceCombat)
                         {
-                            anchor = presentationOrigin + SpaceSectorCoordinates.Difference(
+                            Vector2 relative = SpaceSectorCoordinates.Difference(
                                 new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y)), canonicalOrigin).ToVector2();
+                            if (attackerShip != null)
+                            {
+                                ShipGeometry.Rotate(relative.x, relative.y, -attackerShip.AngleRadians, out double rx, out double ry);
+                                relative = new Vector2((float)rx, (float)ry);
+                            }
+                            anchor = presentationOrigin + relative;
+                        }
+                        else if (attackerShip != null)
+                        {
+                            Vector2 start = new((float)attackerShip.PositionX, (float)attackerShip.PositionY);
+                            Vector2 relative = PressureExplosionQueue.DeltaInWorld(surfaceWorld, start, new Vector2((float)x, (float)y));
+                            relative.y += (float)(ShipSurfaceState.VisualRise(flight) -
+                                ShipSurfaceState.VisualRise(session.GetFlight(attackerShip.ShipId)));
+                            ShipGeometry.WorldToLocal(attackerShip, start.x + relative.x, start.y + relative.y, out double lx, out double ly);
+                            anchor = new Vector2((float)lx, (float)ly);
                         }
                         else
                         {
@@ -103,7 +128,7 @@ namespace FlatWorld.Spaceflight
                             Math.Abs(anchor.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + radius) continue;
                         // 物品定义只在实际接触后读取，避免每次挥砍对同一部件重复查表。
                         PerceptionShape2D local = PerceptionShape2D.Aabb(new float2((width - (float)ship.CellSizeMeters) * .5f, (height - (float)ship.CellSizeMeters) * .5f), new float2(width * .5f, height * .5f));
-                        double angle = ship.AngleRadians;
+                        double angle = ship.AngleRadians - (attackerShip?.AngleRadians ?? 0d);
                         ShipGeometry.Rotate(local.Center.x, local.Center.y, angle, out double offsetX, out double offsetY);
                         local.Center = new float2(anchor.x + (float)offsetX, anchor.y + (float)offsetY);
                         physics.Add(candidates.Count, local, (float)(angle * 180d / Math.PI));
@@ -116,6 +141,12 @@ namespace FlatWorld.Spaceflight
                         if (!asteroid.IsAlive) continue;
                         Vector2 anchor = presentationOrigin + SpaceSectorCoordinates.Difference(
                             session.GetOreAsteroidPosition(asteroid), canonicalOrigin).ToVector2();
+                        if (attackerShip != null)
+                        {
+                            Vector2 relative = anchor - presentationOrigin;
+                            ShipGeometry.Rotate(relative.x, relative.y, -attackerShip.AngleRadians, out double rx, out double ry);
+                            anchor = presentationOrigin + new Vector2((float)rx, (float)ry);
+                        }
                         float radius = (float)asteroid.RadiusMeters;
                         if (Math.Abs(anchor.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + radius ||
                             Math.Abs(anchor.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + radius) continue;
@@ -127,6 +158,9 @@ namespace FlatWorld.Spaceflight
                     {
                         if (!session.TryGetNetworkObserver(passenger.ProfileId, out SpaceNetworkObserver observer) || !observer.InSpace ||
                             !ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player) || player == null) continue;
+                        string targetWorld = GameplayWorldRegistry.GetItemWorldKey(player);
+                        if (attackerShip != null && targetWorld == attackerWorld || externalProjectile &&
+                            frame.DepartingShipId != null && targetWorld == MachineWorld.GetShipScopeKey(frame.DepartingShipId)) continue;
                         CombatIdentity identity = GameplayCombatBridge.Identity(player);
                         if (identity == context.Credit || identity == context.Attack.Source) continue;
                         Mod_DamageReceiver receiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
@@ -134,9 +168,22 @@ namespace FlatWorld.Spaceflight
                         BoxCollider2D collider = receiver.GetComponent<BoxCollider2D>();
                         if (collider == null) continue;
                         Vector2 relative = SpaceSectorCoordinates.Difference(observer.Position, canonicalOrigin).ToVector2();
+                        if (attackerShip != null)
+                        {
+                            ShipGeometry.Rotate(relative.x, relative.y, -attackerShip.AngleRadians, out double rx, out double ry);
+                            relative = new Vector2((float)rx, (float)ry);
+                        }
                         Vector2 anchor = presentationOrigin + relative;
                         Vector2 offset = (Vector2)collider.transform.TransformPoint(collider.offset) - (Vector2)player.transform.position;
                         Vector3 axisX = collider.transform.TransformVector(Vector3.right), axisY = collider.transform.TransformVector(Vector3.up);
+                        ShipState targetShip = targetWorld?.StartsWith("ship:", StringComparison.Ordinal) == true
+                            ? session.GetShip(targetWorld.Substring(5)) : null;
+                        double relativeAngle = (targetShip?.AngleRadians ?? 0d) - (attackerShip?.AngleRadians ?? 0d);
+                        if (relativeAngle != 0d)
+                        {
+                            Quaternion turn = Quaternion.Euler(0f, 0f, (float)(relativeAngle * Mathf.Rad2Deg));
+                            offset = turn * offset; axisX = turn * axisX; axisY = turn * axisY;
+                        }
                         Vector2 extent = new(collider.size.x * axisX.magnitude * .5f, collider.size.y * axisY.magnitude * .5f);
                         if (Math.Abs(anchor.x + offset.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + extent.magnitude ||
                             Math.Abs(anchor.y + offset.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + extent.magnitude) continue;
@@ -161,7 +208,8 @@ namespace FlatWorld.Spaceflight
                     continue;
                 }
                 Vector2 delta = contact.Point - target.Anchor;
-                ShipGeometry.Rotate(delta.x, delta.y, -target.Ship.AngleRadians, out double dx, out double dy);
+                ShipGeometry.Rotate(delta.x, delta.y, -target.Ship.AngleRadians + (attackerShip?.AngleRadians ?? 0d),
+                    out double dx, out double dy);
                 ShipPieceState piece = ShipDamageTargeting.SelectAtContact(target.Ship, target.Piece,
                     (target.Piece.CellX + .5d) * target.Ship.CellSizeMeters + dx,
                     (target.Piece.CellY + .5d) * target.Ship.CellSizeMeters + dy);
@@ -195,9 +243,36 @@ namespace FlatWorld.Spaceflight
                 if (target.Receiver != null)
                 {
                     if (!weapon.TryReserveExternalTarget(GameplayCombatBridge.Identity(target.Receiver.item))) continue;
-                    CombatDamageContext playerHit = context; playerHit.HitPoint = contact.Point;
+                    CombatDamageContext playerHit = context;
+                    Vector2 relative = contact.Point - presentationOrigin;
+                    if (attackerShip != null)
+                    {
+                        ShipGeometry.Rotate(relative.x, relative.y, attackerShip.AngleRadians, out double rx, out double ry);
+                        relative = new Vector2((float)rx, (float)ry);
+                    }
+                    SpaceSectorPosition hitPosition = SpaceSectorCoordinates.Normalize(canonicalOrigin.Sector,
+                        canonicalOrigin.LocalMeters + SpaceVector2.FromVector2(relative));
+                    string targetWorld = GameplayWorldRegistry.GetItemWorldKey(target.Receiver.item);
+                    ShipState targetShip = targetWorld?.StartsWith("ship:", StringComparison.Ordinal) == true
+                        ? session.GetShip(targetWorld.Substring(5)) : null;
+                    if (targetShip != null)
+                    {
+                        ShipGeometry.WorldToLocal(targetShip, hitPosition.Sector, hitPosition.LocalMeters.X, hitPosition.LocalMeters.Y,
+                            out double hx, out double hy);
+                        playerHit.HitPoint = new float2((float)hx, (float)hy);
+                    }
+                    else if (target.Receiver.item is Player targetPlayer &&
+                        session.TryGetNetworkObserver(targetPlayer.ProfileName, out SpaceNetworkObserver targetObserver))
+                        playerHit.HitPoint = (float2)((Vector2)targetPlayer.transform.position +
+                            SpaceSectorCoordinates.Difference(hitPosition, targetObserver.Position).ToVector2());
+                    else playerHit.HitPoint = contact.Point;
                     weapon.ConsumeWeaponDurabilityForHit();
-                    weapon.PublishExternalDamage(playerHit, target.Receiver.Hurt(playerHit));
+                    float received;
+                    using (GameplayWorldRegistry.TryGet(targetWorld, out _)
+                        ? GameplayWorldRegistry.UseWorld(targetWorld) : null)
+                        received = target.Receiver.Hurt(playerHit);
+                    CombatDamageContext sourceHit = context; sourceHit.HitPoint = contact.Point;
+                    weapon.PublishExternalDamage(sourceHit, received);
                     continue;
                 }
                 if (!target.Piece.IsAlive || !int.TryParse(target.Piece.PieceId, out int guid)) continue;

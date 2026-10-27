@@ -2005,8 +2005,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         var savedItemsByKey = new Dictionary<string, List<ItemData>>(StringComparer.Ordinal);
         var addressesByKey = new Dictionary<string, RuntimeWorldAddress>(StringComparer.Ordinal);
         var failedKeys = new HashSet<string>(StringComparer.Ordinal);
+        using var itemList = UnityEngine.Pool.ListPool<Item>.Get(out var worldItems);
+        GameplayWorldRegistry.CopyWorldItems(planetName, worldItems);
 
-        foreach (Item item in ItemMgr.Instance.WorldRunTimeItems.Values)
+        foreach (Item item in worldItems)
         {
             if (!IsRuntimeBuildingItemInWorld(item, planetName))
                 continue;
@@ -2517,6 +2519,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             // 运行中进入新区块时先登记休眠快照，由生态调度器在镜头外分帧恢复。
             if (!ParkedWorld.SceneDetachedLiveGuids.Contains(savedData.Guid) &&
+                !GameplayWorldRegistry.SimulatesWithoutObservers(planetName) &&
                 GameManager.Instance != null && GameManager.Instance.IsGameplayReady &&
                 MonsterManager.IsRegisteredSpeciesId(savedData.IDName))
             {

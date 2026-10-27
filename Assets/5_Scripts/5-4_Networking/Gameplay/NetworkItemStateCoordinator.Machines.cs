@@ -167,6 +167,8 @@ namespace FlatWorld.Networking.Gameplay
             NetworkWorldPlayer player = connection.identity.GetComponent<NetworkWorldPlayer>();
             if (MachineWorld.IsShipScope)
             {
+                if (GameplayWorldRegistry.GetItemWorldKey(actor) == MachineWorld.WorldKey)
+                    return WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), entity.Position) <= range + .05f;
                 if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true) return false;
                 ShipState ship = SpaceSession.Current?.GetShip(MachineWorld.WorldKey.Substring(5));
                 if (ship == null || !ship.Pieces.Exists(piece => piece.IsAlive && piece.PieceId == id.ToString())) return false;
@@ -433,16 +435,28 @@ namespace FlatWorld.Networking.Gameplay
 
         // 船上机器依旧使用原命令和库存事务，只显式选中所属船的数据作用域。
         private static string CurrentRequestShipId()
-            => MachineWorld.IsShipScope ? MachineWorld.WorldKey.Substring(5) : string.Empty;
+        {
+            Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            string world = GameplayWorldRegistry.GetItemWorldKey(actor);
+            if (world?.StartsWith("ship:", StringComparison.Ordinal) == true) return world.Substring(5);
+            return MachineWorld.IsShipScope ? MachineWorld.WorldKey.Substring(5) : string.Empty;
+        }
         private static bool TryEnterMachineRequestScope(NetworkConnectionToClient connection, string shipId, out IDisposable scope)
         {
             scope = null;
             NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
             if (player?.CorePlayer == null || (shipId?.Length ?? 0) > 128) return false;
+            string actorWorld = GameplayWorldRegistry.GetItemWorldKey(player.CorePlayer);
+            if (GameplayWorldRegistry.UsesLocalCoordinates(actorWorld))
+            {
+                if (!string.IsNullOrEmpty(shipId) && actorWorld != "ship:" + shipId) return false;
+                scope = MachineWorld.UseScope(actorWorld);
+                return true;
+            }
             if (string.IsNullOrEmpty(shipId))
             {
                 if (player.IsInSpace) return false;
-                scope = MachineWorld.UseScope(player.CorePlayer.Data.CurrentSceneName);
+                scope = MachineWorld.UseScope(actorWorld ?? player.CorePlayer.Data.CurrentSceneName);
                 return true;
             }
             if (!player.TryGetSpaceObserver(out SpaceNetworkObserver observer) || !observer.InSpace || SpaceSession.Current?.GetShip(shipId) == null) return false;

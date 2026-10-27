@@ -11,7 +11,20 @@ namespace FlatWorld.Spaceflight
         public bool TrySampleCombustion(string worldKey, Vector2 position, out bool canBurn)
         {
             canBurn = false;
-            if (!running || State == null || worldKey != SceneManager.GetActiveScene().name) return false;
+            if (!running || State == null) return false;
+            if (TryResolveShipInteriorEnvironment(worldKey, position, out ShipState interior, out Vector2 localPosition))
+            {
+                if (interior.RetainsWorldWithoutStructure) return true;
+                EnsureMachineCompartmentGeometry(interior);
+                int x = (int)Math.Floor(localPosition.x / interior.CellSizeMeters);
+                int y = (int)Math.Floor(localPosition.y / interior.CellSizeMeters);
+                ShipEnvironmentSnapshot environment = ShipAtmosphereService.GetEnvironment(interior, x, y);
+                canBurn = environment.IsSealed
+                    ? AtmosphereService.CanSustainCombustion(environment.PressureKPa, environment.OxygenPartialPressureKPa)
+                    : AtmosphereService.CanSustainCombustion(GetMachineOutsideAtmosphere(interior));
+                return true;
+            }
+            if (worldKey != SceneManager.GetActiveScene().name) return false;
             if (TryGetSupport(position, out ShipState ship, out _, out Vector2 local))
             {
                 int x = (int)Math.Floor(local.x / ship.CellSizeMeters);

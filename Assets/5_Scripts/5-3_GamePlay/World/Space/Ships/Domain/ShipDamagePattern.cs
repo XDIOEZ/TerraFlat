@@ -64,7 +64,8 @@ namespace FlatWorld.Spaceflight
 
         public static double ApplyLineDamage(ShipState ship, in ShipDamageLine line, double damageBudget,
             string reason, Action<ShipState, ShipPieceState, string> onDestroyed = null,
-            Predicate<ShipPieceState> eligible = null)
+            Predicate<ShipPieceState> eligible = null,
+            Func<ShipState, ShipPieceState, double, string, double?> applyOwnedDamage = null)
         {
             if (!SpaceVector2.Finite(damageBudget) || damageBudget <= 0d) return 0d;
             List<ShipPieceState> hit = SelectPieces(ship, line, eligible);
@@ -74,7 +75,7 @@ namespace FlatWorld.Spaceflight
             foreach (ShipPieceState piece in hit)
             {
                 double before = piece.Health;
-                ShipStructureService.ApplyPhysicalDamage(ship, piece.PieceId, share, reason, onDestroyed);
+                ShipStructureService.ApplyPhysicalDamage(ship, piece.PieceId, share, reason, onDestroyed, applyOwnedDamage);
                 actualLoss += Math.Max(0d, before - piece.Health);
             }
             return actualLoss;

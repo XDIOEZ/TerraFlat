@@ -53,7 +53,7 @@ namespace FlatWorld.WorldModel
                 (uint)y >= (uint)terrain.Height)
                 return false;
             TerrainCell cell = terrain.GetCell(x, y);
-            bool support = TerrainSupportLayer.GetTileId(terrain, x, y) != 0;
+            bool support = TerrainSupportLayer.GetExposedTileId(terrain, x, y) != 0;
             bool liquid = !support && terrain.GetLiquidLevel(x, y) > 0;
             bool blocking = cell.BlockingTileId != 0 && (cell.Flags & TerrainCellFlags.Blocking) != 0;
             if (cell.GroundTileId == 0 && !support && !liquid && !blocking)

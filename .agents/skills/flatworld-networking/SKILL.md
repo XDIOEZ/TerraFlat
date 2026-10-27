@@ -41,7 +41,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 单人也是正式私有Host；本机连接不启动KCP listener，公开房间才按所选端口启动监听，关闭公开只断远端并停止监听。每玩家独立维度/重生走共享权威服务、目标9区块准备、限额分片世界资料、RealmRevision与presentation-ready；入世核对生成指纹和MOD集合。
 - 太空用 `SpaceSectorPosition` 的编号+区内 double 米坐标，观察、拾取、机器和攻击按规范距离判断，跨边界不按 Scene 名隔离。迁移只切本机呈现，不用 `ServerChangeScene` 停掉其它玩家；`RealmRevision` 使同地表复活也重定位。
 - 太空船与乘员表现共用 SpaceSession.Presentation 的样本和进度；客户端按本地收包时钟插值，NetworkWorldPlayer 在 PresentationSynchronized 后只同步显示坐标，普通 Update 只推进一次朝向/动画。支撑乘员的太空归属读船体 Flight，不能仅用 IsInSpace；显示坐标不写回权威位置。
-- 太空桥只接受连接绑定的 profile 与输入/意图；服务器玩家加载结算和真实库存，客户端只提交选中槽位，生命、体力和数量由服务器 `authoritativeItemState` 回传。断线清输入及攻击；地表保留原复制流程，普通地表物品包不发太空观察者，返回地表补拉。
+- 太空桥只接受连接绑定的 profile 与输入/意图；服务器玩家加载结算和真实库存，客户端只提交选中槽位，生命、体力和数量由服务器 `authoritativeItemState` 回传。断线清输入及攻击；普通物品按玩家实际 WorldKey 与代次补拉，船件状态复用普通物品通道，占地移动和删除由船结构快照处理。
 - 普通地表和太空统一服务器武器/Use结算：起始同步真实库存基线，意图只带瞄准与选槽；结算期间整理库存/制作按忙碌拒绝。玩家生存模块以IPlayerStateAuthorityModule声明服务器结算，客户端只合并权威状态并呈现；武器停下后以已发送快照hash回执结束库存交接，生存状态流继续推进。
 - 地表投射物姿态带 WorldKey、地表坐标与弧线表现；服务器不在该世界时只查询该世界船体，不借当前场景物理造成串世界伤害。船体高度与空地攻击资格读权威 Flight，不能由客户端 Collider/排序层反推。
 

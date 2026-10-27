@@ -128,6 +128,8 @@ namespace FlatWorld.Spaceflight
                 foreach (SpacePassengerState passenger in State.Passengers)
                 {
                     if (!passenger.Supported || passenger.ShipId != id) continue;
+                    Player player = FindNetworkPlayer(passenger.ProfileId);
+                    if (player != null && GameplayWorldRegistry.GetItemWorldKey(player) == MachineWorld.GetShipScopeKey(id)) continue;
                     // 支撑乘员的质量已计入整船，碰撞圆也归同一个原生刚体，避免重复计重。
                     body.Shapes.Add(new SpacePhysicsShape(SpacePhysicsShipOffset(ship, passenger.LocalX, passenger.LocalY, assembly, member),
                         new Vector2(.3f, .3f), circle: true));

@@ -65,22 +65,34 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>基础地形建立后接入机械数据变化和表现重建通知。</summary>
     private void BindMechanicalPresentation()
     {
-        MachineWorld.SurfacePresentationCellChanged += HandleMechanicalCellChanged;
-        MachineWorld.SurfacePresentationCellsChanged += HandleMechanicalCellsChanged;
+        MachineWorld.WorldPresentationCellChanged += HandleWorldMechanicalCellChanged;
+        MachineWorld.WorldPresentationCellsChanged += HandleWorldMechanicalCellsChanged;
         BatchPresentationRebuilt += RefreshMechanicalPresentation;
     }
 
     /// <summary>区块卸载时解除事件，回收行网格部件、交互和阴影注册。</summary>
     private void UnbindMechanicalPresentation()
     {
-        MachineWorld.SurfacePresentationCellChanged -= HandleMechanicalCellChanged;
-        MachineWorld.SurfacePresentationCellsChanged -= HandleMechanicalCellsChanged;
+        MachineWorld.WorldPresentationCellChanged -= HandleWorldMechanicalCellChanged;
+        MachineWorld.WorldPresentationCellsChanged -= HandleWorldMechanicalCellsChanged;
         BatchPresentationRebuilt -= RefreshMechanicalPresentation;
         mechanicalVisualNodes.Clear();
         ClearMechanicalDepthVisuals();
         MechanicalShadowRegistry.RemoveOwner(this);
         submittedMechanicalCells.Clear();
         submittedMechanicalHighestLayer = -1;
+    }
+
+    private void HandleWorldMechanicalCellChanged(string worldKey, Vector2Int cell)
+    {
+        if (boundWorld?.WorldId != worldKey || !GameplayWorldRegistry.TryGet(worldKey, out _)) return;
+        using (GameplayWorldRegistry.UseWorld(worldKey)) HandleMechanicalCellChanged(cell);
+    }
+
+    private void HandleWorldMechanicalCellsChanged(string worldKey, IReadOnlyList<Vector2Int> cells)
+    {
+        if (boundWorld?.WorldId != worldKey || !GameplayWorldRegistry.TryGet(worldKey, out _)) return;
+        using (GameplayWorldRegistry.UseWorld(worldKey)) HandleMechanicalCellsChanged(cells);
     }
 
     /// <summary>从权威机械数据重建当前区块所有图层。</summary>

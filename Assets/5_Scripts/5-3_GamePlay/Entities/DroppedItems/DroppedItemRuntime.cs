@@ -35,7 +35,8 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             domain = WorldTopologyRuntime.GetActiveDomain();
             if (records != null)
                 foreach (DroppedItemSaveRecord record in records) Restore(record);
-            MachineWorld.CellChanged += RefreshTransportCell;
+            MachineWorld.WorldPresentationCellChanged += OnTransportCellChanged;
+            MachineWorld.WorldPresentationCellsChanged += OnTransportCellsChanged;
         }
         catch
         {
@@ -86,6 +87,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             if (!flight.HasValue) QueueEnvironment(body.Id);
         }
         catch { Remove(body.Id); throw; }
+        DroppedItemService.NotifyWorldItemsChanged(matterWorldKey);
     }
 
     public void Remove(int id)
@@ -103,6 +105,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         wetItems.Remove(id); pendingEnvironmentSet.Remove(id);
         lastMatterTimes.Remove(id);
         visuals.Remove(id); payloads.Remove(id); simulation.Remove(id);
+        DroppedItemService.NotifyWorldItemsChanged(matterWorldKey);
     }
 
     private static Vector2Int SpatialCell(Vector2 position) => new(
@@ -186,11 +189,11 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         previous?.Dispose();
     }
 
-    public void Present(Camera camera)
+    public void Present(Camera camera, Matrix4x4? worldToDisplay = null)
     {
         if (presentation != null && (!presentationScene.IsValid() || !presentationScene.isLoaded))
             DetachScenePresentation();
-        presentation?.Present(camera, domain, spatial, SpatialCellSize);
+        presentation?.Present(camera, domain, spatial, SpatialCellSize, worldToDisplay ?? Matrix4x4.identity);
     }
 
     public List<DroppedItemSaveRecord> Capture(bool includeUnresolved = true)
@@ -237,7 +240,8 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     public void Dispose()
     {
-        MachineWorld.CellChanged -= RefreshTransportCell;
+        MachineWorld.WorldPresentationCellChanged -= OnTransportCellChanged;
+        MachineWorld.WorldPresentationCellsChanged -= OnTransportCellsChanged;
         transportItems.Clear(); transportScratch.Clear();
         environmentMotionOwners.Clear();
         ClearTerrainSubscriptions();
@@ -271,9 +275,24 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     }
 
     /// <summary>放置、拆除或转速改变时只检查这个格附近的空间桶，静止地面物不逐帧查带。</summary>
+    private void OnTransportCellChanged(string worldKey, Vector2Int cell)
+    {
+        if (worldKey != matterWorldKey) return;
+        using IDisposable scope = GameplayWorldRegistry.TryGet(worldKey, out _)
+            ? GameplayWorldRegistry.UseWorld(worldKey) : MachineWorld.UseScope(worldKey);
+        RefreshTransportCell(cell);
+    }
+
+    private void OnTransportCellsChanged(string worldKey, IReadOnlyList<Vector2Int> cells)
+    {
+        if (worldKey != matterWorldKey) return;
+        using IDisposable scope = GameplayWorldRegistry.TryGet(worldKey, out _)
+            ? GameplayWorldRegistry.UseWorld(worldKey) : MachineWorld.UseScope(worldKey);
+        foreach (Vector2Int cell in cells) RefreshTransportCell(cell);
+    }
+
     private void RefreshTransportCell(Vector2Int cell)
     {
-        if (MachineWorld.WorldKey != matterWorldKey) return;
         Vector2 center = (Vector2)cell + Vector2.one * .5f;
         if (!spatial.TryGetValue(SpatialCell(center), out HashSet<int> bucket)) return;
         foreach (int id in bucket)

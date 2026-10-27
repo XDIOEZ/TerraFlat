@@ -180,6 +180,17 @@ public partial class Mod_Grow
         UpdateVisualAndBehavior();
     }
 
+    public void RelocatePlantedCrop(Vector2Int tilePosition)
+    {
+        if (Data?.isCultivatedCrop == true) Data.plantedTilePos = tilePosition;
+    }
+
+    public void RelocatePlantedCropSnapshot(ModuleData state, Vector2Int tilePosition)
+    {
+        if (state is Ex_ModData_MemoryPackable data && data.GetData<GrowData>() is GrowData growth && growth.isCultivatedCrop)
+        { growth.plantedTilePos = tilePosition; data.WriteData(growth); }
+    }
+
     private void InitializeNaturalEnvironment(EnvironmentLayers layers, Vector2Int localPos)
     {
         if (Data.isCultivatedCrop || Data.environmentInitialized || layers == null || !layers.Contains(localPos.x, localPos.y))

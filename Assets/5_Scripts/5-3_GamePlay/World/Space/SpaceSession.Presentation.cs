@@ -183,6 +183,11 @@ namespace FlatWorld.Spaceflight
 
         private SpaceSectorPosition GetAuthoritativePassengerActionPoint(Player player, SpacePassengerState passenger, Vector2 display)
         {
+            if (IsPlayerInShipInteriorWorld(player, out ShipState ship, out _))
+            {
+                ShipGeometry.LocalToWorld(ship, display.x, display.y, out double x, out double y);
+                return SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(x, y));
+            }
             SpaceSectorPosition position = GetPassengerPosition(passenger);
             return SpaceSectorCoordinates.Normalize(position.Sector,
                 position.LocalMeters + SpaceVector2.FromVector2(display - (Vector2)player.transform.position));

@@ -56,6 +56,16 @@ namespace FlatWorld.WorldModel
         public ulong GetWorldOwnershipRevision(string worldKey)
             => worldKey != null && worlds.TryGetValue(worldKey, out WorldItems world) ? world.Revision : 0UL;
 
+        // 生命周期事务只复制所属世界的成员，迁移期间不遍历会被修改的全局物品表。
+        public void CopyWorldItems(string worldKey, ICollection<T> destination)
+        {
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            if (worldKey != null && worlds.TryGetValue(worldKey, out WorldItems world))
+                foreach (T item in world.Items) destination.Add(item);
+        }
+
+
         // 迁移先移出旧世界再加入新世界，版本使在途感知结果不能复用旧归属。
         public bool AssignItemToWorld(T item, string worldKey)
         {

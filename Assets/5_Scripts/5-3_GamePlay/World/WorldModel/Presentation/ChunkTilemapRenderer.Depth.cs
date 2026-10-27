@@ -38,6 +38,14 @@ public sealed partial class ChunkTilemapRenderer
     public int DepthMeshRowCount => (depthMesh?.RowCount ?? 0) + (mechanicalConnectorDepthMesh?.RowCount ?? 0) + (submergedBuildingDepthMesh?.RowCount ?? 0);
     public int DepthMeshDrawGroupCount => (depthMesh?.DrawGroupCount ?? 0) + (mechanicalConnectorDepthMesh?.DrawGroupCount ?? 0) + (submergedBuildingDepthMesh?.DrawGroupCount ?? 0);
 
+    internal void CollectVisualSnapshots(Matrix4x4 worldToDisplay, System.Collections.Generic.List<WorldVisualSnapshot> destination)
+    {
+        ChunkBatchRendererGroupService.CollectVisualSnapshots(this, destination);
+        depthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
+        mechanicalConnectorDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
+        submergedBuildingDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
+    }
+
     /// <summary>只用于视觉矩阵；区块逻辑地址、机械格和存档不跟随本机世界镜像移动。</summary>
     internal Vector3 DepthPresentationOffset => boundChunk == null ? Vector3.zero : transform.position -
         new Vector3(boundChunk.Address.ChunkOrigin.X, boundChunk.Address.ChunkOrigin.Y, 0f);

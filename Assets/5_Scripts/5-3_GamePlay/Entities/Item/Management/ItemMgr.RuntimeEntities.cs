@@ -210,7 +210,8 @@ public partial class ItemMgr
     {
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || item == null || !item.IsInitialized ||
             item.itemData?.PhysicsState?.PersistentWorldResident != true || RuntimeAiEntityUtility.IsAiEntity(item) ||
-            !RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item)) return;
+            !RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item) ||
+            GameplayWorldRegistry.SimulatesWithoutObservers(GameplayWorldRegistry.GetItemWorldKey(item))) return;
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
         if (chunks == null || !chunks.IsWorldModelRuntimeActive ||
             chunks.IsRuntimeEntityPresentationReady(item.transform.position)) return;
@@ -247,6 +248,15 @@ public partial class ItemMgr
         bool wasRegistered = runtimeAiOwnership.ContainsKey(item);
         if (!wasRegistered && TryRegisterRuntimePersistentWorldEntity(item))
             ItemWorldPlacement.AttachRuntimeWorldResident(item, item.gameObject);
+    }
+
+    // 完整世界物品可显式加入既有居民存档，并同步更新世界地址索引。
+    public void SetRuntimeWorldResidentPersistence(Item item, bool enabled)
+    {
+        if (item?.itemData == null) throw new ArgumentException("世界居民物品无效。", nameof(item));
+        item.itemData.PhysicsState ??= new ItemPhysicsRuntimeState();
+        item.itemData.PhysicsState.PersistentWorldResident = enabled;
+        RefreshPhysicsWorldResidentOwnership(item);
     }
 
     /// <summary>取得当前动态世界场景内的中性实体根节点。</summary>

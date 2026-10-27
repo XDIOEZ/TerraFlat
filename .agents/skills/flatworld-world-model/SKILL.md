@@ -20,7 +20,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 权威、所有权与坐标
 
-- `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。`GameplayWorldRegistry` 按 WorldKey 持有纯 `WorldRuntime`，一个区块管理器借用调度；切场景先保存/解绑再关闭调度器，世界模型留到会话结束或网络快照替换，飞船独立世界尚未接入。
+- `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。`GameplayWorldRegistry` 按 WorldKey 持有纯 `WorldRuntime`，一个区块管理器借用调度；飞船 `ship:<id>` 经 `CreateLocalWorld` 拥有独立 Scene/PhysicsScene2D、16×16 空区块和普通 ChunkView。`UsesLocalCoordinates` 禁止星球环绕，`SimulateWithoutObservers` 保持无人船运行；切地表/太空只撤投影，正式结束才清退世界。
 - `ChunkRuntime + ChunkTerrainData` 是权威；Tilemap/Collider/Renderer 是投影。后台与 Burst 只接收冻结值，不访问 Unity 对象；`RuntimeTileDefinition/Behaviour` 留在主线程资源层。
 - 提交核对世界 Epoch 和请求版本；取消/失败/逐出释放生成结果及租约。`Seal` 将池化 Liquid 深度/类型和环境数组唯一所有权交给区块，Dispose 归还；`height` 随区块存活，只作原生成高度。生成结束一次汇总固定湿度/两层降水/风力，`ChunkTerrainData.WeatherProfile` 持有不可变天气概率/强度/持续时间，运行时不随环境层差量重算。
 - Liquid 的会话索引来自冻结 `LiquidTypeCatalog`；哈希/持久化使用稳定 LiquidId。Ground 与 Liquid 分开，`SetLiquid` 不写 Ground。Liquid 权威数组、批次、快照与存档均使用 `int LiquidLevel` 0～10，一份一级；`LiquidCellValue.NormalizeLevel` 限级并在零级清类型，`GetLiquidDepth` 只派生 0～1 比例。整数流动同量扣源和增目标，不能分别取整写回造水。
@@ -68,6 +68,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 墙裂读权威 `flatworld.tileBuilding.damage`；自身与邻块共享边/角变化增量刷新，Bind 重建、Unbind 退订。水面顶点含高度、四角水深与 Flow；河流为下游速度、海洋为当地风向，湖面 Flow 为零。
 - `TerrainSurfaceHeightLayer` 从原 `height` 档位、`terrain.surface.excavatedLevels/coverLevels` 推导表面高低；非 Surface 忽略生成海拔，支撑面回到基准面，液面低一档，Blocking 顶部高一档。`TerrainHeightShadowManager` 统一查询/提交低侧阴影，只借用已有维度服务，不为只读查询创建管理器；四向直边与斜邻圆角共用 BRG，未知邻格不制造边或角。订阅八邻区 Commit/Evict，变化按3×3邻域裁剪合并脏格，随 Owner 镜像、重建和解绑维护表现。
 - `GameplayWorldRuntime.Physics` 持有 `WorldPhysicsService2D`；原生空间由 `WorldPhysicsScene2D` 创建/借用，世界身份不再直接充当查询场景。物理代理公共模式为 `WorldFixed`（相对所属世界固定）和 `IndependentDynamic`（在所属世界内独立运动）；Unity 刚体类型、唯一原生模拟入口和生命周期由世界服务管理，区块合批是固定模式的内部实现。不同世界使用独立原生场景，物品只在登记、结构变化、迁移、卸载时更新物理归属，不逐帧扫描。规则 `world_streaming/world_physics_ownership`、`world_physics_definition` 覆盖原生接触隔离、精确区域、临时查询池和回收。
+- `TerrainSupportLayer` 分开标记结构所有权与外部显示：`ExternalOwnershipLayer` 防止结构地板随普通土层事务再移交，`ExternalVisualLayer` 只防重画；普通 Tile 地板仍由 ChunkView 显示。支撑上的玩家填土通过 `GetExposedTileId/GetSurfaceCell` 进入普通农业与采挖，迁移作物使用 `IPlantableCrop` 的活体/冷状态坐标接口，不按具体作物 ID 分支。
 - 地形独占 Static Rigidbody2D + Manual Composite；树/机器 `ChunkObstacleColliderSet` 从世界服务借 BoxCollider，非 Composite。正式 Item Collider 出现撤数据代理，卸载后恢复；中央脏队列按 Bind 时的真实世界分桶，由世界物理服务在 Simulate 前提交；解绑/重绑撤旧桶，回调重新入队保留到下一 Tick。地形与障碍通知分开，`FlatWorld.ChunkPhysics.{FlushObstacles,RebuildObstacles,PublishObstacles}` 区分重建和镜像通知；规则 `world_streaming/collision_dirty_queue`。
 - `CombineAdjacent` 且有储存能力的机器共用 `ChunkMergedObstacleRectangles`：先逐源沿区块裁剪，再精确拼接同模板实体矩形，保留空洞/间距；只在源几何变化重建，镜像复用合并盒。库存、交互、战斗和导航仍逐格；回归 `industrial_fluids/combined_tank_collision_*`，离线 `Tools/Tests/CombinedTankColliders/verify.py`。
 - `SharedSpriteMeshCache` 属于资源会话；Ready 前预热最终目录，普通流送不清 Mesh，Backend 重建重新注册 BatchMeshID。清理先 BRG 解绑再毁 Mesh，会话结束先禁止 Owner 重登记，逐项释放异常不阻断其余资源。

@@ -367,6 +367,36 @@ public abstract class Item : MonoBehaviour
     /// <summary>同步与分帧共用同一条加载链，未全部完成前不进入正式 Tick。</summary>
     internal IEnumerator<int> LoadInSteps()
     {
+        IEnumerator<int> steps = LoadInOwnedWorldSteps();
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(this);
+        try
+        {
+            while (true)
+            {
+                bool next;
+                int value;
+                using (UseOwnedWorldForItemCallbacks())
+                {
+                    if (GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision)
+                        throw new InvalidOperationException($"物品 {name} 加载期间世界归属发生变化。");
+                    next = steps.MoveNext();
+                    if (GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision)
+                        throw new InvalidOperationException($"物品 {name} 加载期间世界归属发生变化。");
+                    value = next ? steps.Current : 0;
+                }
+                if (!next) yield break;
+                yield return value;
+            }
+        }
+        finally
+        {
+            using (UseOwnedWorldForItemCallbacks()) steps.Dispose();
+        }
+    }
+
+    // 分帧加载只在每步执行期间借用世界，不能跨帧保留全局上下文。
+    private IEnumerator<int> LoadInOwnedWorldSteps()
+    {
         if (IsPreparedCandidate)
             throw new InvalidOperationException($"物品 {name} 仍是停用候选，不能提前加载运行态。");
         if (lifecycleTransition || modulesLoading || modulesUnloading || IsInitialized || destructionHandled) yield break;
@@ -410,6 +440,7 @@ public abstract class Item : MonoBehaviour
     /// <summary>物品转换回滚时恢复原模块布局，保留运行时显式添加的能力。</summary>
     internal void ResumeRuntimeAfterReplacement()
     {
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         if (destructionHandled || lifecycleTransition || modulesLoading || modulesUnloading || itemData == null)
             throw new InvalidOperationException($"物品 {name} 当前不能恢复运行态。");
         if (IsInitialized) return;
@@ -498,8 +529,10 @@ public abstract class Item : MonoBehaviour
         if (!IsInitialized)
             return;
 
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         EnsureModuleSchedule();
         uint generation = RuntimeGeneration;
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(this);
         // 回调可以移除、启停甚至回收本 Item，本轮只执行进入时捕获的模块代际。
         using var scope = ListPool<ScheduledModuleTick>.Get(out var snapshot);
         using var fixedScope = ListPool<ScheduledModuleTick>.Get(out var fixedSnapshot);
@@ -507,13 +540,14 @@ public abstract class Item : MonoBehaviour
         fixedSnapshot.AddRange(scheduledModules);
         for (int i = 0; i < snapshot.Count; i++)
         {
-            if (!IsInitialized || RuntimeGeneration != generation) return;
+            if (!IsInitialized || RuntimeGeneration != generation ||
+                GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
             ScheduledModuleTick clock = snapshot[i];
             if (IsScheduledModuleValid(clock))
                 clock.Module.TickWithProfiler(GetModuleDelta(clock, deltaTime));
         }
-        if (IsInitialized && RuntimeGeneration == generation)
-            TickScheduledModules(deltaTime, generation, fixedSnapshot);
+        if (IsInitialized && RuntimeGeneration == generation && GameplayWorldRegistry.GetItemWorldRevision(this) == worldRevision)
+            TickScheduledModules(deltaTime, generation, worldRevision, fixedSnapshot);
     }
 
     internal void TickScheduled(float currentTime)
@@ -521,6 +555,7 @@ public abstract class Item : MonoBehaviour
         if (!IsInitialized)
             return;
 
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         EnsureModuleSchedule();
 
         if (lastScheduledTickTime < 0f)
@@ -533,7 +568,7 @@ public abstract class Item : MonoBehaviour
         lastScheduledTickTime = currentTime;
         using var scope = ListPool<ScheduledModuleTick>.Get(out var snapshot);
         snapshot.AddRange(scheduledModules);
-        TickScheduledModules(elapsed, RuntimeGeneration, snapshot);
+        TickScheduledModules(elapsed, RuntimeGeneration, GameplayWorldRegistry.GetItemWorldRevision(this), snapshot);
     }
 
     /// <summary>
@@ -763,6 +798,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void ModuleLoad()
     {
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         if (IsPreparedCandidate)
             throw new InvalidOperationException($"物品 {name} 仍是停用候选，不能提前加载模块运行态。");
         if (modulesLoading || modulesUnloading || destructionHandled)
@@ -961,15 +997,21 @@ public abstract class Item : MonoBehaviour
 
     private void SaveModules(bool publicNetworkStateOnly)
     {
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         using var scope = ListPool<Module>.Get(out var snapshot);
         CopyModulesTo(snapshot);
         uint generation = RuntimeGeneration;
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(this);
         foreach (Module module in snapshot)
         {
             if (!modulesLoaded || RuntimeGeneration != generation) return;
+            if (GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision)
+                throw new InvalidOperationException($"物品 {name} 保存期间世界归属发生变化。");
             if (module == null || !itemMods.HasMod(module)) continue;
             if (publicNetworkStateOnly) module.SavePublicNetworkRuntime();
             else module.SaveRuntime();
+            if (GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision)
+                throw new InvalidOperationException($"物品 {name} 保存期间世界归属发生变化。");
         }
     }
 
@@ -978,6 +1020,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void ModuleUnload()
     {
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         moduleLayoutPrepared = false;
         if (modulesUnloading || (!modulesLoaded && itemMods.Mods.Count == 0))
             return;
@@ -1069,6 +1112,7 @@ public abstract class Item : MonoBehaviour
     [Button("保存模块")]
     public virtual void Save()
     {
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         itemData.transform.position = itemData.inHand
             ? transform.position
             : WorldLocalPresentation.ToLogical(transform.position);
@@ -1229,7 +1273,16 @@ public abstract class Item : MonoBehaviour
     /// <summary>玩家、全局管理实体或 MOD 可覆写此入口以保持完整更新。</summary>
     public virtual bool ShouldUseSimulationRange()
     {
-        return itemData != null && !InHand;
+        return itemData != null && !InHand &&
+            !GameplayWorldRegistry.SimulatesWithoutObservers(GameplayWorldRegistry.GetItemWorldKey(this));
+    }
+
+    internal IDisposable UseOwnedWorldForItemCallbacks()
+    {
+        string world = GameplayWorldRegistry.GetItemWorldKey(this);
+        if (string.IsNullOrEmpty(world) || world == GameplayWorldRegistry.ExecutionWorldKey) return null;
+        if (GameplayWorldRegistry.TryGet(world, out _)) return GameplayWorldRegistry.UseWorld(world);
+        return SpaceMgr.IsSpaceScene(world) ? GameplayWorldRegistry.UseSpaceScene(world) : null;
     }
 
     /// <summary>只在跨越三级边界时切换模块和根刚体，范围外不保留物理速度。</summary>
@@ -1238,8 +1291,10 @@ public abstract class Item : MonoBehaviour
         if (!IsInitialized || simulationRangePaused == paused)
             return;
 
+        using var worldScope = UseOwnedWorldForItemCallbacks();
         simulationRangePaused = paused;
         uint generation = RuntimeGeneration;
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(this);
         using var scope = ListPool<(Module Module, uint Generation)>.Get(out var snapshot);
         foreach (Module module in Mods.Values)
             if (module != null && module.IsRuntimeLoaded && module is ISimulationRangeAware)
@@ -1247,7 +1302,8 @@ public abstract class Item : MonoBehaviour
         if (!paused) RestoreSimulationBody();
         foreach (var entry in snapshot)
         {
-            if (!IsInitialized || RuntimeGeneration != generation || simulationRangePaused != paused) return;
+            if (!IsInitialized || RuntimeGeneration != generation || simulationRangePaused != paused ||
+                GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
             Module module = entry.Module;
             if (module == null || !module.IsRuntimeLoaded || module.RuntimeGeneration != entry.Generation ||
                 !itemMods.HasMod(module)) continue;
@@ -1375,11 +1431,12 @@ public abstract class Item : MonoBehaviour
             "请覆写 TickMode，或在 ModuleTickPolicyCatalog 中声明本体迁移策略。");
     }
 
-    private void TickScheduledModules(float deltaTime, uint generation, IReadOnlyList<ScheduledModuleTick> snapshot)
+    private void TickScheduledModules(float deltaTime, uint generation, ulong worldRevision, IReadOnlyList<ScheduledModuleTick> snapshot)
     {
         for (int i = 0; i < snapshot.Count; i++)
         {
-            if (!IsInitialized || RuntimeGeneration != generation) return;
+            if (!IsInitialized || RuntimeGeneration != generation ||
+                GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
             ScheduledModuleTick clock = snapshot[i];
             if (!IsScheduledModuleValid(clock)) continue;
             clock.Elapsed += GetModuleDelta(clock, deltaTime);

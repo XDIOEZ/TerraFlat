@@ -251,6 +251,8 @@ public static class WorldTopologyRuntime
 
     public static bool TryGetActiveBounds(out WorldTopologyBounds bounds)
     {
+        if (GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey))
+        { bounds = default; return false; }
         SaveDataMgr saveDataManager = SaveDataMgr.Instance;
         PlanetData activePlanet = saveDataManager != null &&
                                   saveDataManager.TryGetActivePlanetData(out PlanetData planet)

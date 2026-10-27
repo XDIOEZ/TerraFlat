@@ -275,6 +275,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>松开攻击时按配置完成上膛或消费同库存的一支箭发射。</summary>
     private void ReleaseCharge()
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) { CancelCharge(); return; }
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 1, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (!_chargeCycle.IsActive)

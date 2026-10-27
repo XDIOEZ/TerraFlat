@@ -39,6 +39,7 @@ namespace FlatWorld.Networking.Gameplay
             public byte[] Payload;
             public bool SubmissionPending;
             public bool SpawnIfMissing;
+            public bool Applied;
             public Vector3 Position;
             public Quaternion Rotation;
             public Vector3 Scale;
@@ -108,6 +109,10 @@ namespace FlatWorld.Networking.Gameplay
         private bool clientHandlersRegistered;
         private bool runtimeBridgeRegistered;
         private bool requestedInitialState;
+        private string requestedItemWorld;
+        private uint requestedItemRealm;
+        private string requestedSurfaceMechanicalWorld;
+        private uint requestedSurfaceMechanicalRealm;
         private uint nextPickupReservationToken;
         private uint nextPickupRequestToken;
         private uint nextBuildingRequestToken;
@@ -157,6 +162,8 @@ namespace FlatWorld.Networking.Gameplay
             StartTerrainClientBridge();
             clientHandlersRegistered = true;
             requestedInitialState = false;
+            requestedItemWorld = null;
+            requestedSurfaceMechanicalWorld = null;
             UpdateRuntimeBridgeRegistration();
         }
 
@@ -213,6 +220,7 @@ namespace FlatWorld.Networking.Gameplay
             RejectAllPendingBuildings("网络连接已关闭");
             RejectAllPendingDismantles("网络连接已关闭");
             requestedInitialState = false;
+            requestedItemWorld = null;
             ClearScheduledScan();
             UpdateRuntimeBridgeRegistration();
         }
@@ -234,11 +242,35 @@ namespace FlatWorld.Networking.Gameplay
                 FlushMechanicalStates();
             }
 
-            if (clientHandlersRegistered && !requestedInitialState &&
-                NetworkGameplayWorldScope.TryGetReadyLocalSurface(out uint readyRealmRevision))
+            if (clientHandlersRegistered && NetworkGameplayWorldScope.TryGetReadyLocalItemWorld(
+                out uint readyRealmRevision, out string readyItemWorld))
             {
-                requestedInitialState = true;
-                NetworkClient.Send(new NetworkItemStateRequest { RealmRevision = readyRealmRevision });
+                if (requestedItemWorld != readyItemWorld || requestedItemRealm != readyRealmRevision)
+                {
+                    requestedItemWorld = readyItemWorld; requestedItemRealm = readyRealmRevision;
+                    requestedInitialState = false;
+                    clientStates.Clear(); pendingClientStates.Clear();
+                }
+                if (!requestedInitialState)
+                {
+                    requestedInitialState = true;
+                    NetworkClient.Send(new NetworkItemStateRequest { RealmRevision = readyRealmRevision });
+                    if (NetworkGameplayWorldScope.TryGetReadyLocalSurface(out uint initialSurfaceRealm))
+                    {
+                        requestedSurfaceMechanicalWorld = GameplayWorldRegistry.LocalPresentationWorldKey;
+                        requestedSurfaceMechanicalRealm = initialSurfaceRealm;
+                    }
+                }
+                else if (GameplayWorldRegistry.UsesLocalCoordinates(readyItemWorld) &&
+                    NetworkGameplayWorldScope.TryGetReadyLocalSurface(out uint readySurfaceRealm) &&
+                    (requestedSurfaceMechanicalWorld != GameplayWorldRegistry.LocalPresentationWorldKey ||
+                     requestedSurfaceMechanicalRealm != readySurfaceRealm))
+                {
+                    // 局部世界比外部地表先就绪时，地表机器在视窗就绪后补拉。
+                    requestedSurfaceMechanicalWorld = GameplayWorldRegistry.LocalPresentationWorldKey;
+                    requestedSurfaceMechanicalRealm = readySurfaceRealm;
+                    NetworkClient.Send(new NetworkItemStateRequest { RealmRevision = readyRealmRevision });
+                }
             }
 
             ApplyPendingClientStates();
@@ -320,8 +352,9 @@ namespace FlatWorld.Networking.Gameplay
 
         private void ProcessServerItem(Item item)
         {
-            using IDisposable worldScope = item != null && GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _)
-                ? GameplayWorldRegistry.UseWorld(item.gameObject.scene.name) : null;
+            string itemWorld = GameplayWorldRegistry.GetItemWorldKey(item);
+            using IDisposable worldScope = GameplayWorldRegistry.TryGet(itemWorld, out _)
+                ? GameplayWorldRegistry.UseWorld(itemWorld) : null;
             if (!ShouldSynchronize(item))
                 return;
 
@@ -332,14 +365,17 @@ namespace FlatWorld.Networking.Gameplay
             int guid = item.itemData.Guid;
             serverStates.TryGetValue(guid, out StateRecord state);
             state ??= new StateRecord { ItemId = item.itemData.IDName };
+            string previousWorld = state.WorldKey;
             bool poseChanged = CapturePose(item, state);
+            bool worldChanged = !string.IsNullOrEmpty(previousWorld) && previousWorld != state.WorldKey;
+            if (worldChanged) SendItemDespawn(guid, state.ItemId, previousWorld);
             if (IsSameCapturedState(state, payload, captureVersion, hash))
             {
-                if (poseChanged) BroadcastServerPose(guid, state);
+                if (worldChanged) { state.Revision++; BroadcastServerState(guid, state); }
+                else if (poseChanged) BroadcastServerPose(guid, state);
                 return;
             }
             state.ItemId = item.itemData.IDName;
-            state.WorldKey = item.gameObject.scene.name;
             state.Revision++;
             state.Hash = hash;
             state.Payload = payload;
@@ -355,9 +391,13 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             int guid = item.itemData.Guid;
-            if (!clientStates.TryGetValue(guid, out StateRecord state) || state.SubmissionPending)
+            if (!clientStates.TryGetValue(guid, out StateRecord state) || !state.Applied || state.SubmissionPending ||
+                requestedItemRealm != NetworkGameplayWorldScope.LocalRevision ||
+                state.WorldKey != requestedItemWorld || GameplayWorldRegistry.GetItemWorldKey(item) != requestedItemWorld)
                 return;
 
+            using IDisposable worldScope = GameplayWorldRegistry.TryGet(state.WorldKey, out _)
+                ? GameplayWorldRegistry.UseWorld(state.WorldKey) : null;
             byte[] payload = CaptureSafely(item, out ulong captureVersion, out uint hash);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
@@ -382,10 +422,22 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnServerStateRequest(NetworkConnectionToClient connection, NetworkItemStateRequest request)
         {
-            if (connection?.identity?.GetComponent<NetworkWorldPlayer>()?.IsInSpace == true) return;
             ScanServerItems();
             foreach (KeyValuePair<int, StateRecord> pair in serverStates)
                 if (pair.Value.WorldKey == GameplayWorldRegistry.ExecutionWorldKey) connection.Send(CreateMessage(pair.Key, pair.Value));
+            if (GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey))
+            {
+                NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
+                if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true || observer.InSpace ||
+                    !GameplayWorldRegistry.TryGet(observer.WorldKey, out _)) return;
+                using (GameplayWorldRegistry.UseWorld(observer.WorldKey)) SendSurfaceMechanicalBaseline(connection);
+                return;
+            }
+            SendSurfaceMechanicalBaseline(connection);
+        }
+
+        private void SendSurfaceMechanicalBaseline(NetworkConnectionToClient connection)
+        {
             connection.Send(new NetworkMechanicalNodeMessage { Reset = true, WorldKey = GameplayWorldRegistry.ExecutionWorldKey });
             MachineWorld.CollectNodes(mechanicalSyncNodes);
             foreach (MachineEntity node in mechanicalSyncNodes)
@@ -405,7 +457,7 @@ namespace FlatWorld.Networking.Gameplay
             dirtyMechanicalNodes.Remove(id); dirtyMechanicalWorlds.Remove(id);
             if (MachineWorld.IsShipScope) return;
             if (NetworkServer.active)
-                SendToGroundObservers(new NetworkMechanicalNodeMessage { NodeGuid = id, Removed = true, WorldKey = MachineWorld.WorldKey });
+                SendToGroundObservers(new NetworkMechanicalNodeMessage { NodeGuid = id, Removed = true, WorldKey = MachineWorld.WorldKey }, observerWorld: true);
         }
 
         /// <summary>动力解算只发转速变化，不重复发送整份加工库存。</summary>
@@ -415,7 +467,7 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active && node != null)
                 SendToGroundObservers(new NetworkMechanicalNodeMessage
                 { NodeGuid = node.Id, WorldKey = node.ScopeKey, SpeedOnly = true, Rpm = node.Rpm,
-                    EntryDirection = node.EntryDirection });
+                    EntryDirection = node.EntryDirection }, observerWorld: true);
         }
 
         /// <summary>把本帧变化节点合并为每半秒一次的权威快照。</summary>
@@ -452,20 +504,21 @@ namespace FlatWorld.Networking.Gameplay
             => connection.Send(CreateMechanicalSnapshot(node));
 
         private static void BroadcastMechanicalSnapshot(MachineEntity node)
-        { if (!MachineWorld.IsShipScope) SendToGroundObservers(CreateMechanicalSnapshot(node), node.ScopeKey); }
+        { if (!MachineWorld.IsShipScope) SendToGroundObservers(CreateMechanicalSnapshot(node), node.ScopeKey, observerWorld: true); }
 
         /// <summary>客户端把服务器快照还原为数据节点并通知区块 BRG。</summary>
         private void OnClientMechanicalNode(NetworkMechanicalNodeMessage message)
         {
-            if (!(message.WorldKey?.StartsWith("ship:", StringComparison.Ordinal) == true) && !AcceptLocalWorld(message.WorldKey)) return;
             if (NetworkServer.active) return;
             if (!string.IsNullOrEmpty(message.WorldKey) && message.WorldKey.StartsWith("ship:", StringComparison.Ordinal))
             {
                 using (MachineWorld.UseScope(message.WorldKey)) ApplyClientMechanicalNode(message);
                 return;
             }
-            if (NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.IsInSpace == true) return;
-            ApplyClientMechanicalNode(message);
+            if (!NetworkGameplayWorldScope.TryGetReadyLocalSurface(out _) ||
+                message.WorldKey != GameplayWorldRegistry.LocalPresentationWorldKey ||
+                !GameplayWorldRegistry.TryGet(message.WorldKey, out _)) return;
+            using (GameplayWorldRegistry.UseWorld(message.WorldKey)) ApplyClientMechanicalNode(message);
         }
         private void ApplyClientMechanicalNode(NetworkMechanicalNodeMessage message)
         {
@@ -531,11 +584,23 @@ namespace FlatWorld.Networking.Gameplay
             if (!ItemNetworkStateSerialization.IsValidPayload(message.Payload))
                 return;
 
-            if (clientStates.TryGetValue(message.ItemGuid, out StateRecord known) && message.Revision < known.Revision)
+            clientStates.TryGetValue(message.ItemGuid, out StateRecord known);
+            if (known != null && known.WorldKey != message.WorldKey) known = null;
+            if (known != null && message.Revision < known.Revision)
                 return;
+            if (known != null && known.Applied && !known.SubmissionPending && known.Revision == message.Revision &&
+                known.Hash == message.PayloadHash && known.ItemId == message.ItemId)
+            {
+                OnClientPoseMessage(new NetworkItemPoseMessage { ItemGuid = message.ItemGuid, ItemId = message.ItemId,
+                    WorldKey = message.WorldKey, StateRevision = message.Revision, PoseRevision = message.PoseRevision,
+                    Position = message.Position, Rotation = message.Rotation, Scale = message.Scale });
+                return;
+            }
 
             StateRecord state = known ?? new StateRecord();
             state.ItemId = message.ItemId;
+            state.WorldKey = message.WorldKey;
+            state.Applied = false;
             state.Revision = message.Revision;
             state.Hash = message.PayloadHash;
             state.Payload = message.Payload;
@@ -576,11 +641,17 @@ namespace FlatWorld.Networking.Gameplay
 
             Item item = ItemMgr.Instance?.GetItemByGuid(message.ItemGuid);
             if (item == null || item.itemData == null ||
+                GameplayWorldRegistry.GetItemWorldKey(item) != message.WorldKey ||
                 !string.Equals(item.itemData.IDName, message.ItemId, StringComparison.Ordinal))
             {
                 return;
             }
 
+            // 局部世界的船件和作物由各自的权威快照负责卸载与迁移。
+            if (GameplayWorldRegistry.UsesLocalCoordinates(message.WorldKey) &&
+                item.PersistenceOwner is SpaceSession or ChunkAgricultureRenderer) return;
+            using IDisposable worldScope = GameplayWorldRegistry.TryGet(message.WorldKey, out _)
+                ? GameplayWorldRegistry.UseWorld(message.WorldKey) : null;
             ItemMgr.Instance.DespawnItem(item, saveData: false);
         }
 
@@ -611,7 +682,11 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active)
                 return true;
 
+            if (!AcceptLocalWorld(message.WorldKey) || !GameplayWorldRegistry.TryGet(message.WorldKey, out _)) return false;
+            using var scope = GameplayWorldRegistry.UseWorld(message.WorldKey);
             Item item = ItemMgr.Instance?.GetItemByGuid(message.ItemGuid);
+            if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) != message.WorldKey) return false;
+            bool created = item == null && message.SpawnIfMissing;
             if (item == null && message.SpawnIfMissing)
             {
                 item = InstantiateClientItem(
@@ -630,8 +705,10 @@ namespace FlatWorld.Networking.Gameplay
             if (!ShouldSynchronize(item) || !string.Equals(item.itemData.IDName, message.ItemId, StringComparison.Ordinal))
                 return false;
 
-            if (!ItemNetworkStateSerialization.Apply(item, message.Payload, true, true)) return false;
+            if (!created && !ItemNetworkStateSerialization.Apply(item, message.Payload, true, true)) return false;
             ApplyClientPose(item, message.Position, message.Rotation, message.Scale);
+            if (clientStates.TryGetValue(message.ItemGuid, out StateRecord state) && state.WorldKey == message.WorldKey)
+                state.Applied = true;
             return true;
         }
 
@@ -642,16 +719,36 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         private static bool AcceptLocalWorld(string worldKey)
-            => !string.IsNullOrWhiteSpace(worldKey) && worldKey == ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName;
+        {
+            Player player = ItemMgr.Instance?.User_Player;
+            string ownedWorld = GameplayWorldRegistry.GetItemWorldKey(player) ?? player?.Data?.CurrentSceneName;
+            return !string.IsNullOrWhiteSpace(worldKey) && worldKey == ownedWorld;
+        }
 
-        private static void SendToGroundObservers<T>(T message, string worldKey = null) where T : struct, NetworkMessage
+        private static void SendToGroundObservers<T>(T message, string worldKey = null, bool observerWorld = false) where T : struct, NetworkMessage
         {
             worldKey ??= GameplayWorldRegistry.ExecutionWorldKey;
             foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
                 if (connection != null && connection.isAuthenticated && connection.isReady &&
-                    connection.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer observer &&
-                    observer.TryGetSpaceObserver(out SpaceNetworkObserver realm) && !realm.InSpace && realm.WorldKey == worldKey)
-                    connection.Send(message);
+                    connection.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer observer)
+                {
+                    if (observerWorld)
+                    {
+                        if (observer.TryGetSpaceObserver(out SpaceNetworkObserver surface) && !surface.InSpace && surface.WorldKey == worldKey)
+                            connection.Send(message);
+                        continue;
+                    }
+                    string ownedWorld = GameplayWorldRegistry.GetItemWorldKey(observer.CorePlayer);
+                    if (string.IsNullOrEmpty(ownedWorld) && observer.TryGetSpaceObserver(out SpaceNetworkObserver realm) && !realm.InSpace)
+                        ownedWorld = realm.WorldKey;
+                    if (ownedWorld == worldKey) connection.Send(message);
+                }
+        }
+
+        private static void SendItemDespawn(int guid, string itemId, string worldKey)
+        {
+            if (string.IsNullOrEmpty(worldKey)) return;
+            SendToGroundObservers(new NetworkItemDespawnMessage { ItemGuid = guid, ItemId = itemId, WorldKey = worldKey }, worldKey);
         }
 
         private void BroadcastDespawn(Item item)
@@ -659,12 +756,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!NetworkServer.active || item?.itemData == null)
                 return;
 
-            SendToGroundObservers(new NetworkItemDespawnMessage
-            {
-                ItemGuid = item.itemData.Guid,
-                ItemId = item.itemData.IDName,
-                WorldKey = item.gameObject.scene.name
-            }, item.gameObject.scene.name);
+            SendItemDespawn(item.itemData.Guid, item.itemData.IDName, GameplayWorldRegistry.GetItemWorldKey(item));
 
             serverStates.Remove(item.itemData.Guid);
         }
@@ -691,7 +783,8 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active && serverStates.TryGetValue(guid, out StateRecord state))
             {
                 Mod_DamageReceiver receiver = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-                if (state.SpawnIfMissing || receiver != null && receiver.Hp <= 0f)
+                if (state.SpawnIfMissing || GameplayWorldRegistry.UsesLocalCoordinates(state.WorldKey) ||
+                    receiver != null && receiver.Hp <= 0f)
                     BroadcastDespawn(item);
             }
         }
@@ -730,6 +823,9 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (!CanSynchronizeWorldItem(item) || item.PersistenceOwner is SpaceSession || requestedClientSpawns.Contains(item.itemData.Guid))
                 return;
+
+            string world = GameplayWorldRegistry.GetItemWorldKey(item);
+            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
 
             byte[] payload = CaptureSafely(item);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
@@ -795,8 +891,9 @@ namespace FlatWorld.Networking.Gameplay
         private bool PublishServerSpawn(Item item, Vector2 start, Vector2 end, float duration, bool animateDrop,
             byte[] preparedPayload = null)
         {
-            using IDisposable worldScope = item != null && GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _)
-                ? GameplayWorldRegistry.UseWorld(item.gameObject.scene.name) : null;
+            string itemWorld = GameplayWorldRegistry.GetItemWorldKey(item);
+            using IDisposable worldScope = GameplayWorldRegistry.TryGet(itemWorld, out _)
+                ? GameplayWorldRegistry.UseWorld(itemWorld) : null;
             if (!NetworkServer.active || !CanSynchronizeWorldItem(item) || item.PersistenceOwner is SpaceSession)
                 return false;
 
@@ -810,7 +907,7 @@ namespace FlatWorld.Networking.Gameplay
             serverStates.TryGetValue(guid, out StateRecord state);
             state ??= new StateRecord();
             state.ItemId = item.itemData.IDName;
-            state.WorldKey = item.gameObject.scene.name;
+            state.WorldKey = itemWorld;
             state.Revision++;
             state.Hash = ItemNetworkStateSerialization.CalculateHash(payload);
             state.Payload = payload;
@@ -843,12 +940,24 @@ namespace FlatWorld.Networking.Gameplay
             if (!AcceptLocalWorld(message.WorldKey)) return;
             if (NetworkServer.active || !ItemNetworkStateSerialization.IsValidPayload(message.Payload))
                 return;
+            if (!GameplayWorldRegistry.TryGet(message.WorldKey, out _))
+            {
+                QueueClientSpawnState(message);
+                return;
+            }
+            using var worldScope = GameplayWorldRegistry.UseWorld(message.WorldKey);
             if (clientStates.TryGetValue(message.ItemGuid, out StateRecord known) &&
                 (message.Revision < known.Revision ||
                  (message.Revision == known.Revision && message.PoseRevision < known.PoseRevision))) return;
 
             bool predictedLocally = requestedClientSpawns.Remove(message.ItemGuid);
             Item item = ItemMgr.Instance?.GetItemByGuid(message.ItemGuid);
+            if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) != message.WorldKey)
+            {
+                QueueClientSpawnState(message);
+                return;
+            }
+            bool created = item == null;
             if (item == null)
             {
                 item = InstantiateClientItem(
@@ -871,7 +980,7 @@ namespace FlatWorld.Networking.Gameplay
             if (item == null)
                 return;
 
-            ItemNetworkStateSerialization.Apply(item, message.Payload, true, true);
+            if (!created && !ItemNetworkStateSerialization.Apply(item, message.Payload, true, true)) return;
             if (!message.AnimateDrop)
                 ApplyClientPose(item, message.Position, message.Rotation, message.Scale);
             if (!predictedLocally)
@@ -880,17 +989,27 @@ namespace FlatWorld.Networking.Gameplay
             StateRecord state = new StateRecord
             {
                 ItemId = message.ItemId,
+                WorldKey = message.WorldKey,
                 Revision = message.Revision,
                 PoseRevision = message.PoseRevision,
                 Hash = message.PayloadHash,
                 Payload = message.Payload,
                 SpawnIfMissing = true,
+                Applied = true,
                 Position = GetLogicalItemPosition(item),
                 Rotation = item.transform.rotation,
                 Scale = item.transform.localScale
             };
             clientStates[message.ItemGuid] = state;
             pendingClientStates.Remove(message.ItemGuid);
+        }
+
+        private void QueueClientSpawnState(NetworkItemSpawnMessage message)
+        {
+            OnClientStateMessage(new NetworkItemStateMessage { ItemGuid = message.ItemGuid, ItemId = message.ItemId,
+                WorldKey = message.WorldKey, Revision = message.Revision, PoseRevision = message.PoseRevision,
+                PayloadHash = message.PayloadHash, Payload = message.Payload, SpawnIfMissing = true,
+                Position = message.Position, Rotation = message.Rotation, Scale = message.Scale });
         }
 
         private Item InstantiateClientItem(
@@ -1251,6 +1370,15 @@ namespace FlatWorld.Networking.Gameplay
                     if (WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection),
                             WorldTopologyRuntime.NormalizePosition(mechanical.Snapshot.transform.position)) > MaxPickupDistance)
                         throw new InvalidOperationException("机械建筑超出拆除距离");
+                    if (MachineWorld.IsShipScope)
+                    {
+                        if (!Mod_Building.TryDismantleMechanical(mechanical, out _, out string shipReason))
+                            throw new InvalidOperationException(shipReason);
+                        response.Accepted = true;
+                        response.Reason = string.Empty;
+                        connection.Send(response);
+                        return;
+                    }
                     if (!Mod_Building.TryPrepareMechanicalDismantle(mechanical, out summoner, out string mechanicalReason))
                         throw new InvalidOperationException(mechanicalReason);
                     Vector3 dropPosition = GetLogicalItemPosition(summoner);
@@ -1488,6 +1616,9 @@ namespace FlatWorld.Networking.Gameplay
             if (!CanSynchronizeWorldItem(item))
                 return false;
 
+            string world = GameplayWorldRegistry.GetItemWorldKey(item);
+            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+
             Mod_Droping dropping = item.GetComponentInChildren<Mod_Droping>(true);
             if (dropping?.drop == null)
                 return false;
@@ -1514,7 +1645,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private static bool CapturePose(Item item, StateRecord state)
         {
-            state.WorldKey = item.gameObject.scene.name;
+            state.WorldKey = GameplayWorldRegistry.GetItemWorldKey(item);
             Vector3 position = GetLogicalItemPosition(item);
             Quaternion rotation = item.transform.rotation;
             Vector3 scale = SanitizeScale(item.transform.localScale);
@@ -1558,13 +1689,17 @@ namespace FlatWorld.Networking.Gameplay
                 return default;
 
             NetworkWorldPlayer networkPlayer = connection.identity.GetComponent<NetworkWorldPlayer>();
+            Player player = networkPlayer?.CorePlayer;
+            if (player != null && GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(player)))
+                return player.transform.position;
             return networkPlayer != null
                 ? networkPlayer.AuthoritativeLogicalPosition
                 : WorldTopologyRuntime.NormalizePosition(connection.identity.transform.position);
         }
 
         private static Vector3 GetLogicalItemPosition(Item item)
-            => item == null ? default : WorldTopologyRuntime.NormalizePosition(item.transform.position);
+            => item == null ? default : GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(item))
+                ? item.transform.position : WorldTopologyRuntime.NormalizePosition(item.transform.position);
 
         private void OnRuntimeStateChanged(Item item)
         {
@@ -1600,6 +1735,7 @@ namespace FlatWorld.Networking.Gameplay
                     TryBeginNetworkBuildingDismantle;
                 ItemNetworkStateSerialization.TryBeginNetworkMechanicalDismantle =
                     TryBeginClientMechanicalDismantle;
+                ItemNetworkStateSerialization.IsRemoteItemStateCurrent = HasCurrentRemoteItemState;
                 runtimeBridgeRegistered = true;
             }
             else if (!shouldRegister && runtimeBridgeRegistered)
@@ -1613,6 +1749,7 @@ namespace FlatWorld.Networking.Gameplay
                 ItemNetworkStateSerialization.TryBeginNetworkBuilding = null;
                 ItemNetworkStateSerialization.TryBeginNetworkBuildingDismantle = null;
                 ItemNetworkStateSerialization.TryBeginNetworkMechanicalDismantle = null;
+                ItemNetworkStateSerialization.IsRemoteItemStateCurrent = null;
                 runtimeBridgeRegistered = false;
             }
         }
@@ -1657,10 +1794,23 @@ namespace FlatWorld.Networking.Gameplay
 
         private static bool ShouldSynchronize(Item item)
         {
-            if (item != null && SpaceSession.TryGetCombatFrame(item, out _, out _)) return false;
+            string world = GameplayWorldRegistry.GetItemWorldKey(item);
+            bool local = GameplayWorldRegistry.UsesLocalCoordinates(world);
+            if (!local && item != null && SpaceSession.TryGetCombatFrame(item, out _, out _)) return false;
             return CanSynchronizeWorldItem(item) &&
-                   !(item.PersistenceOwner is SpaceSession) &&
+                   (local || !(item.PersistenceOwner is SpaceSession)) &&
                    item.itemData.ModuleDataDic != null && item.itemData.ModuleDataDic.Count > 0;
+        }
+
+        private bool HasCurrentRemoteItemState(Item item)
+        {
+            if (!NetworkClient.active || NetworkServer.active || item?.itemData == null ||
+                !clientStates.TryGetValue(item.itemData.Guid, out StateRecord state) || !state.Applied ||
+                state.ItemId != item.itemData.IDName || requestedItemRealm != NetworkGameplayWorldScope.LocalRevision) return false;
+            string world = GameplayWorldRegistry.GetItemWorldKey(item);
+            Player player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            return !string.IsNullOrEmpty(world) && state.WorldKey == world && requestedItemWorld == world &&
+                GameplayWorldRegistry.GetItemWorldKey(player) == world;
         }
 
         private static bool CanSynchronizeWorldItem(Item item)

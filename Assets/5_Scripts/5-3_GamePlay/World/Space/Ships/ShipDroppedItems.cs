@@ -23,6 +23,8 @@ namespace FlatWorld.Spaceflight
             if (!running || State == null || Universe == null || !ReferenceEquals(Current, this) ||
                 !ReferenceEquals(owner, SaveDataMgr.Instance?.SaveData)) return false;
             Item source = context.SourceItem;
+            string sourceWorld = source != null ? GameplayWorldRegistry.GetItemWorldKey(source) : GameplayWorldRegistry.ExecutionWorldKey;
+            if (sourceWorld?.StartsWith("ship:", StringComparison.Ordinal) == true) return false;
             if (source != null && source.PersistenceOwner != null && !ReferenceEquals(source.PersistenceOwner, this)) return false;
             if (source != null && SpaceMgr.IsSpaceScene(source.gameObject.scene.name)) return true;
             if (source == null && IsSpaceView) return true;

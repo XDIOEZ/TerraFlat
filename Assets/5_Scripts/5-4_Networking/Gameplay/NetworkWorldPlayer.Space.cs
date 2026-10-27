@@ -85,6 +85,10 @@ namespace FlatWorld.Networking.Gameplay
                 authoritativeVisualState = CaptureOwnedVisualState(observer.Velocity.ToVector2());
             }
         }
+        private bool remoteInteriorPhysicsActive;
+        private bool remoteInteriorPreviousMovementLock;
+        private RigidbodyType2D remoteInteriorPreviousBodyType;
+
         private void SynchronizeAuthorityScene(SpaceNetworkObserver observer)
         {
             if (corePlayer == null || coreAvatarIsLocal) return;
@@ -100,6 +104,32 @@ namespace FlatWorld.Networking.Gameplay
                 key = observer.WorldKey;
                 SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(displayName);
                 target = GameplayWorldRegistry.GetOrCreate(key).Scene;
+            }
+            // 船内玩家保持本地物理世界，外部观察者仍管理地表和星区流送。
+            if (SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) == true)
+            {
+                if (!remoteInteriorPhysicsActive)
+                {
+                    remoteInteriorPhysicsActive = true;
+                    if (coreMover != null)
+                    {
+                        remoteInteriorPreviousMovementLock = coreMover.IsLock;
+                        coreMover.IsLock = false;
+                    }
+                    if (coreBody != null)
+                    {
+                        remoteInteriorPreviousBodyType = coreBody.bodyType;
+                        coreBody.bodyType = RigidbodyType2D.Dynamic;
+                    }
+                }
+                if (coreBody != null) coreBody.simulated = true;
+                return;
+            }
+            if (remoteInteriorPhysicsActive)
+            {
+                remoteInteriorPhysicsActive = false;
+                if (coreMover != null && !coreMover.IsLock) coreMover.IsLock = remoteInteriorPreviousMovementLock;
+                if (coreBody != null) coreBody.bodyType = remoteInteriorPreviousBodyType;
             }
             if (!target.IsValid() || !target.isLoaded) return;
             bool sceneChanged = corePlayer.gameObject.scene != target;
@@ -344,7 +374,8 @@ namespace FlatWorld.Networking.Gameplay
             {
                 transform.position = projected;
                 SyncCorePlayerPosition(projected);
-                if (corePlayer != null) corePlayer.transform.position = projected;
+                if (corePlayer != null && SpaceSessionForNetwork.IsPlayerInShipInteriorWorld(corePlayer) != true)
+                    corePlayer.transform.position = projected;
                 if (!isServer)
                 {
                     ApplyRemoteFacing(authoritativeFacingLeft);
@@ -354,7 +385,8 @@ namespace FlatWorld.Networking.Gameplay
             }
             else if (corePlayer != null)
             {
-                transform.position = corePlayer.transform.position;
+                transform.position = SpaceSessionForNetwork.TryGetShipInteriorPresentationPosition(corePlayer, out Vector2 interior)
+                    ? (Vector3)interior : corePlayer.transform.position;
             }
         }
 
@@ -373,7 +405,9 @@ namespace FlatWorld.Networking.Gameplay
             if (!networkVisible || spacePresentationSession == null) return;
             if (isOwned)
             {
-                if (corePlayer != null) transform.position = corePlayer.transform.position;
+                if (corePlayer != null)
+                    transform.position = spacePresentationSession.TryGetShipInteriorPresentationPosition(corePlayer, out Vector2 interior)
+                        ? (Vector3)interior : corePlayer.transform.position;
                 return;
             }
             Vector2 projected;
@@ -383,7 +417,8 @@ namespace FlatWorld.Networking.Gameplay
             if (!float.IsFinite(projected.x) || !float.IsFinite(projected.y)) return;
             transform.position = projected;
             SyncCorePlayerPosition(projected);
-            if (corePlayer != null) corePlayer.transform.position = projected;
+            if (corePlayer != null && !spacePresentationSession.IsPlayerInShipInteriorWorld(corePlayer))
+                corePlayer.transform.position = projected;
         }
 
         private void OnDisable()

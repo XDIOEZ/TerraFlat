@@ -297,21 +297,25 @@ namespace FlatWorld.Spaceflight
             return Math.Max(0d, rawDamage - defense);
         }
         public static bool ApplyPhysicalDamage(ShipState ship, string pieceId, double rawDamage, string reason,
-            Action<ShipState, ShipPieceState, string> onDestroyed = null)
+            Action<ShipState, ShipPieceState, string> onDestroyed = null,
+            Func<ShipState, ShipPieceState, double, string, double?> applyOwnedDamage = null)
         {
             if (ship == null) return false;
             foreach (ShipPieceState piece in ship.Pieces)
                 if (piece?.PieceId == pieceId)
-                    return ApplyDamage(ship, pieceId, ResolvePhysicalDamage(piece, rawDamage), reason, onDestroyed);
+                    return ApplyDamage(ship, pieceId, ResolvePhysicalDamage(piece, rawDamage), reason, onDestroyed, applyOwnedDamage);
             return false;
         }
         public static bool ApplyDamage(ShipState ship, string pieceId, double damage, string reason,
-            Action<ShipState, ShipPieceState, string> onDestroyed = null)
+            Action<ShipState, ShipPieceState, string> onDestroyed = null,
+            Func<ShipState, ShipPieceState, double, string, double?> applyOwnedDamage = null)
         {
             if (ship == null || !FluidUnits.IsFinite(damage) || damage <= 0d) return false;
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (piece == null || piece.PieceId != pieceId || !piece.IsAlive || piece.ProtectedAnchor) continue;
+                double? ownedLoss = applyOwnedDamage?.Invoke(ship, piece, damage, reason);
+                if (ownedLoss.HasValue) return ownedLoss.Value > 0d;
                 double previousHealth = piece.Health;
                 if (piece.MaxDisableHealth > 0d) piece.DisableHealth -= damage;
                 piece.Health = Math.Max(0d, piece.Health - damage);

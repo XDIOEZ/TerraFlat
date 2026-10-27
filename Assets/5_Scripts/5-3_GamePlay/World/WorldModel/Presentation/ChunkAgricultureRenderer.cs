@@ -33,6 +33,8 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
     private readonly Dictionary<Vector2Int, Item> crops = new();
     private readonly Dictionary<Vector2Int, NaturalEntityHandle> entityCrops = new();
     private readonly Dictionary<int, Vector2Int> entityCropCells = new();
+    private readonly Dictionary<int, int> entityCropGuids = new();
+    private static readonly Dictionary<int, (ChunkAgricultureRenderer Owner, Vector2Int Local)> cropOwners = new();
     private readonly List<KeyValuePair<Vector2Int, NaturalEntityHandle>> entityCropCaptureBuffer = new();
     private ChunkTilemapRenderer terrainOwner;
     private static readonly ProfilerMarker CropCaptureMarker =
@@ -52,6 +54,23 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
     private ItemMgr itemManager;
     private SaveDataMgr saveManager;
     private ChunkMgr chunkManager;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetCropOwners() => cropOwners.Clear();
+
+    private void TrackCropOwner(int guid, Vector2Int local)
+    {
+        if (guid == 0 || cropOwners.TryGetValue(guid, out var existing) &&
+            (existing.Owner != this || existing.Local != local))
+            throw new InvalidOperationException("作物身份已由其他农业区块持有。" + guid);
+        cropOwners[guid] = (this, local);
+    }
+
+    private void ForgetCropOwner(int guid, Vector2Int local)
+    {
+        if (cropOwners.TryGetValue(guid, out var owner) && owner.Owner == this && owner.Local == local)
+            cropOwners.Remove(guid);
+    }
 
     #endregion
 
@@ -103,30 +122,261 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
         foreach (var saved in saveManager.GetAgricultureCells(chunk.Address))
         {
-            if (saved.Crop == null)
-                continue;
-            ItemData data = MemoryPack.MemoryPackSerializer.Deserialize<ItemData>(
-                MemoryPack.MemoryPackSerializer.Serialize(saved.Crop));
-            Vector2Int worldCell = saved.LocalPosition + Origin;
-            if (GameRes.ExistingInstance.TryGetItemDefinition(data.IDName, out var definition) && definition.UsesResourceEntities)
-            {
-                RestoreEntityCrop(worldCell, definition, data, false);
-                continue;
-            }
-            Item crop = itemManager.InstantiateItem(data,
-                new Vector3(worldCell.x + 0.5f, worldCell.y + 0.5f), parent: gameObject);
-            crop.Load();
-            RegisterCrop(saved.LocalPosition + Origin, crop);
-            // 作物已登记销毁回调，补算期间枯萎也会清除对应农业快照。
-            foreach (Module module in crop.Mods.Values)
-            {
-                if (crop.DestructionHandled)
-                    break;
-                if (module is IWorldTimePlant plant)
-                    plant.CatchUpToWorldTime();
-            }
+            if (saved.Crop != null) RestoreSavedCrop(saved, GameNetwork.HasStateAuthority);
         }
     }
+
+    private void RestoreSavedCrop(AgricultureCellSaveData saved, bool catchUp)
+    {
+        ItemData data = MemoryPack.MemoryPackSerializer.Deserialize<ItemData>(
+            MemoryPack.MemoryPackSerializer.Serialize(saved.Crop));
+        Vector2Int worldCell = saved.LocalPosition + Origin;
+        CropWorldRelocation.RelocateSavedCrop(data, worldCell);
+        if (!GameNetwork.HasStateAuthority && cropOwners.TryGetValue(data.Guid, out var owner) &&
+            (owner.Owner != this || owner.Local != saved.LocalPosition))
+        {
+            if (owner.Owner.GetBoundCropDefinition(owner.Local) != data.IDName)
+                throw new InvalidOperationException("农业快照与原作物定义不一致。" + data.Guid);
+            if (!owner.Owner.TransferCropTo(owner.Local, this, saved.LocalPosition))
+                throw new InvalidOperationException("已登记作物的源区块无法移交。" + data.Guid);
+            ApplyAuthoritativeCropSnapshotAt(saved.LocalPosition, data);
+            return;
+        }
+        if (GameRes.ExistingInstance.TryGetItemDefinition(data.IDName, out var definition) && definition.UsesResourceEntities)
+        {
+            RestoreEntityCrop(worldCell, definition, data, false);
+            return;
+        }
+        Item crop = itemManager.InstantiateItem(data,
+            new Vector3(worldCell.x + .5f, worldCell.y + .5f), parent: gameObject);
+        crop.Load();
+        RegisterCrop(worldCell, crop);
+        if (!catchUp) return;
+        foreach (Module module in crop.Mods.Values)
+        {
+            if (crop.DestructionHandled) break;
+            if (module is IWorldTimePlant plant) plant.CatchUpToWorldTime();
+        }
+    }
+
+    #region 普通农业权威快照应用
+    private sealed class ReplicaCropMove
+    {
+        internal ChunkAgricultureRenderer Source, Target;
+        internal Vector2Int SourceLocal, TargetLocal;
+        internal Item Item;
+        internal ItemData EntityData;
+        internal RuntimeItemDefinition EntityDefinition;
+        internal Vector3 OriginalPosition, OriginalSavedPosition;
+        internal bool Attached;
+    }
+
+    internal static bool HasBoundCrop(int guid) => cropOwners.ContainsKey(guid);
+
+    private string GetBoundCropDefinition(Vector2Int local)
+        => crops.TryGetValue(local, out Item item) ? item?.itemData?.IDName :
+            entityCrops.TryGetValue(local, out NaturalEntityHandle handle) &&
+            NaturalEntityEcsService.TryGetDefinition(handle, out RuntimeItemDefinition definition) ? definition.Id : null;
+
+    // 同一批权威区块先迁移既有作物，再按各区块删除或创建，避免快照顺序改变身份。
+    internal static void ApplyAuthoritativeCropSnapshotBatch(
+        IReadOnlyList<(ChunkAgricultureRenderer Renderer, IReadOnlyList<AgricultureCellSaveData> Cells)> batches)
+    {
+        if (batches == null || batches.Count == 0) return;
+        var desired = new Dictionary<int, (ChunkAgricultureRenderer Owner, Vector2Int Local, ItemData Data)>();
+        foreach (var batch in batches)
+        {
+            if (batch.Renderer == null || batch.Renderer.chunk == null || batch.Renderer.unbinding)
+                throw new InvalidOperationException("农业快照的区块尚未绑定。");
+            var occupied = new HashSet<Vector2Int>();
+            foreach (AgricultureCellSaveData cell in batch.Cells)
+                if (cell.Crop != null && ((uint)cell.LocalPosition.x >= (uint)batch.Renderer.chunk.Terrain.Width ||
+                    (uint)cell.LocalPosition.y >= (uint)batch.Renderer.chunk.Terrain.Height ||
+                    !occupied.Add(cell.LocalPosition) || cell.Crop.Guid == 0 ||
+                    !desired.TryAdd(cell.Crop.Guid, (batch.Renderer, cell.LocalPosition, cell.Crop))))
+                    throw new InvalidOperationException("农业快照包含无效或重复的作物身份与坐标。");
+        }
+        var moves = new List<ReplicaCropMove>();
+        foreach (var pair in desired)
+        {
+            if (!cropOwners.TryGetValue(pair.Key, out var owner) ||
+                owner.Owner == pair.Value.Owner && owner.Local == pair.Value.Local) continue;
+            string definition = owner.Owner.GetBoundCropDefinition(owner.Local);
+            if (definition != pair.Value.Data.IDName)
+                throw new InvalidOperationException("农业快照与原作物定义不一致。" + pair.Key);
+            moves.Add(new ReplicaCropMove { Source = owner.Owner, SourceLocal = owner.Local,
+                Target = pair.Value.Owner, TargetLocal = pair.Value.Local });
+        }
+        try
+        {
+            foreach (ReplicaCropMove move in moves) move.Source.DetachReplicaCropForTransfer(move);
+            foreach (var batch in batches)
+            {
+                var wanted = new Dictionary<Vector2Int, int>();
+                foreach (AgricultureCellSaveData cell in batch.Cells)
+                    if (cell.Crop != null) wanted.Add(cell.LocalPosition, cell.Crop.Guid);
+                using var scratch = UnityEngine.Pool.ListPool<Vector2Int>.Get(out var removed);
+                foreach (var pair in batch.Renderer.crops)
+                    if (!wanted.TryGetValue(pair.Key, out int guid) || pair.Value == null ||
+                        pair.Value.itemData == null || pair.Value.itemData.Guid != guid)
+                        removed.Add(pair.Key);
+                foreach (Vector2Int local in removed) batch.Renderer.RemoveReplicaCropAt(local);
+                removed.Clear();
+                foreach (var pair in batch.Renderer.entityCrops)
+                    if (!wanted.TryGetValue(pair.Key, out int guid) ||
+                        !batch.Renderer.entityCropGuids.TryGetValue(pair.Value.Id, out int current) || current != guid)
+                        removed.Add(pair.Key);
+                foreach (Vector2Int local in removed) batch.Renderer.RemoveReplicaCropAt(local);
+            }
+            foreach (ReplicaCropMove move in moves)
+            {
+                move.Target.AttachReplicaCropForTransfer(move, restoreSource: false);
+            }
+        }
+        catch (Exception failure)
+        {
+            try
+            {
+                for (int i = moves.Count - 1; i >= 0; i--)
+                    if (moves[i].Attached) moves[i].Target.DetachReplicaCropForTransfer(moves[i], fromTarget: true);
+                for (int i = moves.Count - 1; i >= 0; i--)
+                    if (moves[i].Item != null || moves[i].EntityData != null)
+                        moves[i].Source.AttachReplicaCropForTransfer(moves[i], restoreSource: true);
+            }
+            catch (Exception rollback) { throw new AggregateException("农业快照移交及回滚失败。", failure, rollback); }
+            throw;
+        }
+        foreach (var batch in batches) batch.Renderer.ApplyAuthoritativeCropSnapshots(batch.Cells);
+    }
+
+    private void DetachReplicaCropForTransfer(ReplicaCropMove move, bool fromTarget = false)
+    {
+        Vector2Int local = fromTarget ? move.TargetLocal : move.SourceLocal;
+        if (crops.Remove(local, out Item item) && item != null)
+        {
+            if (!fromTarget)
+            {
+                move.Item = item;
+                move.OriginalPosition = item.transform.position;
+                move.OriginalSavedPosition = item.itemData.transform.position;
+            }
+            ForgetCropOwner(item.itemData.Guid, local);
+            item.OnItemDestroy -= HandleCropDestroyed;
+            item.transform.SetParent(null, true);
+            return;
+        }
+        if (!entityCrops.TryGetValue(local, out NaturalEntityHandle handle) ||
+            !NaturalEntityEcsService.TryGetDefinition(handle, out RuntimeItemDefinition definition) ||
+            !NaturalEntityEcsService.TryTakeSnapshotAndRemove(handle, out ItemData data))
+            throw new InvalidOperationException("农业快照的源作物无法移交。");
+        entityCrops.Remove(local);
+        entityCropCells.Remove(handle.Id);
+        entityCropGuids.Remove(handle.Id);
+        ForgetCropOwner(data.Guid, local);
+        if (!fromTarget)
+        {
+            move.EntityDefinition = definition;
+            move.EntityData = data;
+            move.OriginalSavedPosition = data.transform.position;
+        }
+    }
+
+    private void AttachReplicaCropForTransfer(ReplicaCropMove move, bool restoreSource)
+    {
+        Vector2Int local = restoreSource ? move.SourceLocal : move.TargetLocal;
+        if (crops.ContainsKey(local) || entityCrops.ContainsKey(local))
+            throw new InvalidOperationException("农业快照移交目标已有作物。");
+        Vector2Int cell = Origin + local;
+        Vector3 position = new(cell.x + .5f, cell.y + .5f);
+        using var scope = GameplayWorldRegistry.UseWorld(chunkManager.WorldRuntime.WorldId);
+        if (move.Item != null)
+        {
+            GameplayWorldRegistry.AssignItemToWorld(move.Item, chunkManager.WorldRuntime.WorldId);
+            move.Item.transform.position = restoreSource ? move.OriginalPosition : WorldLocalPresentation.ProjectPosition(position);
+            move.Item.itemData.transform.position = restoreSource ? move.OriginalSavedPosition : position;
+            CropWorldRelocation.RelocateLiveCrop(move.Item, cell);
+            RegisterCrop(cell, move.Item);
+            move.Attached = true;
+            itemManager.NotifyRuntimeItemMoved(move.Item);
+        }
+        else
+        {
+            move.EntityData.transform.position = restoreSource ? move.OriginalSavedPosition : position;
+            CropWorldRelocation.RelocateSavedCrop(move.EntityData, cell);
+            RestoreEntityCrop(cell, move.EntityDefinition, move.EntityData, false);
+            move.Attached = true;
+        }
+    }
+
+    // 网络只更新原有作物身份和状态，不解绑整块世界或重建相同植株。
+    internal void ApplyAuthoritativeCropSnapshots(IReadOnlyList<AgricultureCellSaveData> cells)
+    {
+        if (GameNetwork.HasStateAuthority || chunk == null || unbinding) return;
+        string worldKey = chunkManager?.WorldRuntime?.WorldId;
+        if (string.IsNullOrWhiteSpace(worldKey)) throw new InvalidOperationException("农业快照缺少所属世界。");
+        using var scope = GameplayWorldRegistry.UseWorld(worldKey);
+        var wanted = new Dictionary<Vector2Int, ItemData>();
+        foreach (AgricultureCellSaveData saved in cells)
+        {
+            if ((uint)saved.LocalPosition.x >= (uint)chunk.Terrain.Width ||
+                (uint)saved.LocalPosition.y >= (uint)chunk.Terrain.Height)
+                throw new ArgumentException("农业快照坐标越过所属区块。");
+            if (saved.Crop != null && !wanted.TryAdd(saved.LocalPosition, saved.Crop))
+                throw new ArgumentException("农业快照包含重复作物格。");
+        }
+        using (UnityEngine.Pool.ListPool<Vector2Int>.Get(out var removed))
+        {
+            foreach (var pair in crops)
+                if (!wanted.TryGetValue(pair.Key, out ItemData data) || pair.Value == null ||
+                    pair.Value.itemData.Guid != data.Guid || pair.Value.itemData.IDName != data.IDName) removed.Add(pair.Key);
+            foreach (Vector2Int local in removed) RemoveReplicaCropAt(local);
+            removed.Clear();
+            foreach (var pair in entityCrops)
+                if (!wanted.TryGetValue(pair.Key, out ItemData data) ||
+                    !NaturalEntityEcsService.TryCapture(pair.Value, out ItemData current) ||
+                    current.Guid != data.Guid || current.IDName != data.IDName) removed.Add(pair.Key);
+            foreach (Vector2Int local in removed) RemoveReplicaCropAt(local);
+        }
+        foreach (AgricultureCellSaveData saved in cells)
+        {
+            ItemData data = saved.Crop;
+            if (data == null) continue;
+            Vector2Int local = saved.LocalPosition;
+            if (crops.ContainsKey(local) || entityCrops.ContainsKey(local)) ApplyAuthoritativeCropSnapshotAt(local, data);
+            else RestoreSavedCrop(saved, false);
+        }
+    }
+
+    private void ApplyAuthoritativeCropSnapshotAt(Vector2Int local, ItemData data)
+    {
+        if (crops.TryGetValue(local, out Item crop))
+        {
+            if (ItemNetworkStateSerialization.HasCurrentRemoteAuthority(crop)) return;
+            CropWorldRelocation.RelocateSavedCrop(data, Origin + local);
+            if (!ItemNetworkStateSerialization.TrySerializeItemData(data, out byte[] payload) ||
+                !ItemNetworkStateSerialization.Apply(crop, payload, true, true))
+                throw new InvalidOperationException("普通作物快照未能原位应用：" + data.IDName);
+        }
+        else if (entityCrops.TryGetValue(local, out NaturalEntityHandle handle))
+        {
+            CropWorldRelocation.RelocateSavedCrop(data, Origin + local);
+            chunk.Terrain.TryGetEnvironmentValue("temperature.celsius", local.x, local.y, out float temperature);
+            NaturalEntityEcsService.ApplySnapshot(handle, data, temperature);
+        }
+    }
+
+    private void RemoveReplicaCropAt(Vector2Int local)
+    {
+        using var scope = GameplayWorldRegistry.UseWorld(chunkManager.WorldRuntime.WorldId);
+        if (crops.Remove(local, out Item crop) && crop != null)
+        {
+            ForgetCropOwner(crop.itemData.Guid, local);
+            crop.OnItemDestroy -= HandleCropDestroyed;
+            itemManager.DespawnItem(crop, false);
+        }
+        if (entityCrops.TryGetValue(local, out NaturalEntityHandle handle)) RollbackEntityCrop(handle);
+    }
+    #endregion
 
     public void Unbind()
     {
@@ -145,6 +395,8 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             {
                 if (crop == null)
                     continue;
+                if (crop.itemData != null && cropOwners.TryGetValue(crop.itemData.Guid, out var owner) && owner.Owner == this)
+                    cropOwners.Remove(crop.itemData.Guid);
                 crop.OnItemDestroy -= HandleCropDestroyed;
                 if (itemManager != null)
                     itemManager.DespawnItem(crop, saveData: false);
@@ -152,8 +404,11 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         }
         crops.Clear();
         foreach (NaturalEntityHandle handle in entityCrops.Values) NaturalEntityEcsService.Remove(handle);
+        foreach (var pair in entityCropGuids)
+            if (entityCropCells.TryGetValue(pair.Key, out Vector2Int local)) ForgetCropOwner(pair.Value, local);
         entityCrops.Clear();
         entityCropCells.Clear();
+        entityCropGuids.Clear();
         terrainOwner = null;
         using (OverlayClearMarker.Auto())
         {
@@ -228,10 +483,44 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
     public void RegisterCrop(Vector2Int worldCell, Item crop)
     {
         Vector2Int local = worldCell - Origin;
-        crops.Add(local, crop);
+        if (crops.ContainsKey(local) || entityCrops.ContainsKey(local))
+            throw new InvalidOperationException("种植格已经有作物。");
+        TrackCropOwner(crop.itemData.Guid, local);
+        try { crops.Add(local, crop); }
+        catch { ForgetCropOwner(crop.itemData.Guid, local); throw; }
+        crop.PersistenceOwner = this;
         crop.transform.SetParent(transform, true);
         crop.OnItemDestroy += HandleCropDestroyed;
     }
+
+    #region 普通作物跨世界移交
+    // 普通植株迁移真实 Item，数据植株沿原 Entity 后端移交快照，不产生收获或死亡。
+    internal bool TransferCropTo(Vector2Int local, ChunkAgricultureRenderer destination, Vector2Int targetLocal)
+    {
+        if (destination == null || destination.chunk == null || destination.unbinding || chunk == null || unbinding)
+            throw new InvalidOperationException("作物移交两端的区块尚未就绪。");
+        if (destination.crops.ContainsKey(targetLocal) || destination.entityCrops.ContainsKey(targetLocal))
+            throw new InvalidOperationException("目标地格已有作物。");
+        if (!crops.ContainsKey(local) && !entityCrops.ContainsKey(local)) return false;
+        var move = new ReplicaCropMove { Source = this, SourceLocal = local, Target = destination, TargetLocal = targetLocal };
+        try
+        {
+            DetachReplicaCropForTransfer(move);
+            destination.AttachReplicaCropForTransfer(move, restoreSource: false);
+        }
+        catch (Exception failure)
+        {
+            try
+            {
+                if (move.Attached) destination.DetachReplicaCropForTransfer(move, fromTarget: true);
+                if (move.Item != null || move.EntityData != null) AttachReplicaCropForTransfer(move, restoreSource: true);
+            }
+            catch (Exception rollback) { throw new AggregateException("作物移交及回滚失败。", failure, rollback); }
+            throw;
+        }
+        return true;
+    }
+    #endregion
 
     private Vector2Int Origin => new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
 
@@ -269,15 +558,18 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             throw new InvalidOperationException($"作物 {definition.Id} 未能建立 Entity，禁止回退 Item。");
         try
         {
+            TrackCropOwner(data.Guid, local);
             entityCrops.Add(local, handle);
             entityCropCells.Add(handle.Id, local);
+            entityCropGuids.Add(handle.Id, data.Guid);
             NaturalEntityEcsService.BindRemovalHandler(handle, HandleEntityCropRemoved);
             NaturalEntityEcsService.BindPresentation(handle, terrainOwner);
             return handle;
         }
         catch
         {
-            entityCrops.Remove(local); entityCropCells.Remove(handle.Id);
+            entityCrops.Remove(local); entityCropCells.Remove(handle.Id); entityCropGuids.Remove(handle.Id);
+            ForgetCropOwner(data.Guid, local);
             NaturalEntityEcsService.Remove(handle);
             throw;
         }
@@ -285,7 +577,11 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     public void RollbackEntityCrop(NaturalEntityHandle handle)
     {
-        if (entityCropCells.Remove(handle.Id, out Vector2Int local)) entityCrops.Remove(local);
+        if (entityCropCells.Remove(handle.Id, out Vector2Int local))
+        {
+            entityCrops.Remove(local);
+            if (entityCropGuids.Remove(handle.Id, out int guid)) ForgetCropOwner(guid, local);
+        }
         NaturalEntityEcsService.Remove(handle);
     }
 
@@ -302,6 +598,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             !entityCropCells.TryGetValue(handle.Id, out Vector2Int local) ||
             !entityCrops.TryGetValue(local, out var current) || current != handle) return;
         saveManager.RecordCultivatedCropData(chunk.Address, local, null);
+        if (entityCropGuids.Remove(handle.Id, out int guid)) ForgetCropOwner(guid, local);
         entityCropCells.Remove(handle.Id); entityCrops.Remove(local);
     }
 
@@ -331,6 +628,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             return;
         crop.OnItemDestroy -= HandleCropDestroyed;
         crops.Remove(found.Value);
+        if (crop.itemData != null) ForgetCropOwner(crop.itemData.Guid, found.Value);
         saveManager.RecordCultivatedCrop(chunk.Address, found.Value, null);
     }
 
@@ -354,6 +652,10 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void OnDestroy()
     {
+        foreach (var pair in crops)
+            if (pair.Value != null && pair.Value.itemData != null) ForgetCropOwner(pair.Value.itemData.Guid, pair.Key);
+        foreach (var pair in entityCropGuids)
+            if (entityCropCells.TryGetValue(pair.Key, out Vector2Int local)) ForgetCropOwner(pair.Value, local);
         FarmlandSystem.TillingVisualChanged -= HandleTillingVisualChanged;
         ClearTillingProgressForOwnedRuntimeChunk();
     }

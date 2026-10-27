@@ -465,6 +465,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         for (int index = 0; index < ships.Count; index++)
         {
             FixedStructureDefinition template = ships[index];
+            ResetGroundOrdinaryItemBaseline();
             yield return PrepareSite(template);
             string groundWorld = SceneManager.GetActiveScene().name;
             JObject beforeBuild = GroundBuildingSnapshot(Array.Empty<int>());
@@ -491,6 +492,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                     out MachineEntity node) && node.ElectricalPowerRatio >= .999f,
                 10d, "普通地面控制台未获得供电。");
             JObject landed = GroundBuildingSnapshot(groundIds);
+            CaptureGroundOrdinaryItemStage(groundIds, groundWorld, "surface-before-launch", captureBaseline: true);
             JObject surfaceViews = GroundViewSnapshot(groundIds, null);
             if (!ShipFixedStructureBuilder.TryRefill(CurrentPlayer(), templates, out reason))
                 throw new InvalidOperationException(reason);
@@ -502,6 +504,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             if (!entered) throw new InvalidOperationException("正式控制台拒绝进入已装配飞船的驾驶位。");
             JObject lifting = ShipSnapshot(ship);
             JObject liftingGround = GroundBuildingSnapshot(groundIds);
+            CaptureGroundOrdinaryItemStage(groundIds, MachineWorld.GetShipScopeKey(ship.ShipId), "ship-after-launch");
             yield return WaitUntil(() => session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising && Ready(),
                 90d, "飞船没有完成正式起飞和太空迁移。");
             IsMigrationExpected = false;
@@ -509,6 +512,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             yield return WaitUntil(() => ShipPresentationReady(ship), 15d, "起飞后的整船与部件表现没有完成场景绑定。");
             JObject cruising = ShipSnapshot(ship);
             JObject cruisingViews = ShipViewSnapshot(ship);
+            CaptureGroundOrdinaryItemStage(groundIds, MachineWorld.GetShipScopeKey(ship.ShipId), "space-flight");
             session.ExitConsole(CurrentPlayer());
             controlledConsole = console;
             if (asteroidMiningOnly)
@@ -603,18 +607,21 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         if (ship == null || !session.IsVisible(ship)) return false;
         JObject view = ShipViewSnapshot(ship);
-        int aliveCount = 0;
-        foreach (ShipPieceState piece in ship.Pieces) if (piece.IsAlive) aliveCount++;
-        var pieces = (JArray)view["pieces"];
         var presenters = (JArray)view["presenters"];
-        if (pieces.Count != aliveCount || presenters.Count == 0) return false;
+        var items = (JArray)view["itemProjections"];
+        var chunks = (JArray)view["chunkProjections"];
+        if (presenters.Count != 1 || items.Count == 0 || chunks.Count == 0) return false;
         string scene = SceneManager.GetActiveScene().name;
-        foreach (JObject piece in pieces)
-            if (piece.Value<bool>("pooled") || !piece.Value<bool>("active") || piece.Value<string>("scene") != scene)
-                return false;
         foreach (JObject presenter in presenters)
-            if (presenter.Value<bool>("pooled") || !presenter.Value<bool>("active") || presenter.Value<string>("scene") != scene)
+            if (presenter.Value<bool>("pooled") || !presenter.Value<bool>("active") ||
+                !presenter.Value<bool>("wholeShipBody") || presenter.Value<int>("activeBodies") != 1 ||
+                presenter.Value<string>("scene") != scene)
                 return false;
+        foreach (JObject projection in items)
+            if (!projection.Value<bool>("active") || projection.Value<string>("worldKey") != MachineWorld.GetShipScopeKey(ship.ShipId) ||
+                projection.Value<string>("scene") != scene) return false;
+        foreach (JObject projection in chunks)
+            if (!projection.Value<bool>("active") || projection.Value<string>("scene") != scene) return false;
         return true;
     }
 

@@ -114,7 +114,8 @@ namespace FlatWorld.Spaceflight
             if (!SpaceVector2.Finite(damageBudget) || damageBudget <= 0d) return;
             if (!ShipDamagePattern.TryCreateLine(ship, UnityEngine.Random.value, UnityEngine.Random.value,
                     out ShipDamageLine line)) return;
-            ShipDamagePattern.ApplyLineDamage(ship, line, damageBudget, reason, DestroyPiece);
+            ShipDamagePattern.ApplyLineDamage(ship, line, damageBudget, reason, DestroyPiece,
+                applyOwnedDamage: TryApplyShipInteriorItemDamage);
         }
         #endregion
     }

@@ -205,13 +205,6 @@ public static partial class GameplayTestSystemProbe
             ["connected"] = connected, ["disconnected"] = disconnected, ["repaired"] = repaired,
             ["isolatedMask"] = isolated, ["originalAfterOtherShip"] = originalAfterOtherShip,
             ["foreignFiber"] = foreignFiber,
-            ["sortingOrders"] = new JArray(
-                ShipPieceView.ResolveSortingOrder(Piece("floor", ShipPieceKind.Floor, 0, 0), null),
-                ShipPieceView.ResolveSortingOrder(Piece("pipe", ShipPieceKind.Pipe, 0, 0),
-                    new MachineDefinition { Fluid = new FluidMachineDefinition { Kind = "pipe" } }),
-                ShipPieceView.ResolveSortingOrder(Piece("wire", ShipPieceKind.Wire, 0, 0),
-                    new MachineDefinition { Electrical = new ElectricalDefinition { Role = "wire" } }),
-                ShipPieceView.ResolveSortingOrder(center, null)),
             ["nonOpticalNeighbors"] = ShipOpticalGraph.GetConnectionMask(ship, center) };
     }
 

@@ -337,9 +337,10 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (reservation.SpaceData != null)
                 return reservation.Actor?.TryGetSpaceObserver(out SpaceNetworkObserver observer) == true && observer.InSpace &&
+                    !GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(reservation.Actor.CorePlayer)) &&
                     SpaceSession.Current?.TryGetNetworkLooseItem(reservation.SourceData.Guid, out _, out SpaceSectorPosition position) == true &&
                     SpaceSectorCoordinates.Difference(position, observer.Position).Magnitude <= MaxPickupDistance;
-            return reservation.Actor?.IsInSpace != true && reservation.Item != null &&
+            return reservation.Item != null && NetworkGameplayWorldScope.OwnsItem(reservation.Connection, reservation.Item) &&
                 WorldItemWaterSystem.CanPickUpAt(reservation.Item, GetConnectionLogicalPosition(reservation.Connection)) &&
                 WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(reservation.Connection),
                     GetLogicalItemPosition(reservation.Item)) <= MaxPickupDistance;
@@ -352,7 +353,8 @@ namespace FlatWorld.Networking.Gameplay
                 ItemMgr.Instance == null) return false;
             NetworkWorldPlayer actor = connection.identity.GetComponent<NetworkWorldPlayer>();
             if (actor?.GroundCombatPending == true) return false;
-            if (actor?.TryGetSpaceObserver(out SpaceNetworkObserver observer) == true && observer.InSpace)
+            bool localWorld = GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(actor?.CorePlayer));
+            if (!localWorld && actor?.TryGetSpaceObserver(out SpaceNetworkObserver observer) == true && observer.InSpace)
             {
                 if (SpaceSession.Current?.TryGetNetworkLooseItem(itemGuid, out ItemData data, out SpaceSectorPosition position) != true ||
                     data.Stack?.CanBePickedUp != true ||

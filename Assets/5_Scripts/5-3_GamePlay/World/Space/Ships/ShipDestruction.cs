@@ -13,6 +13,7 @@ namespace FlatWorld.Spaceflight
         #region 结构伤害、库存移交与唯一爆炸
         public void SynchronizePieceHealth(ShipState ship, ShipPieceState piece)
         {
+            SynchronizeShipInteriorTileHealth(ship, piece);
             if (ship?.IsWreck == true)
             {
                 ItemData snapshot = GetPieceData(piece);
@@ -42,7 +43,7 @@ namespace FlatWorld.Spaceflight
             if (!GameNetwork.HasStateAuthority || ship == null || piece?.IsAlive != true ||
                 GetShip(ship.ShipId) != ship || !FluidUnits.IsFinite(damage) || damage <= 0d) return 0d;
             double before = piece.Health;
-            ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, DestroyPiece);
+            ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, DestroyPiece, TryApplyShipInteriorItemDamage);
             SynchronizePieceHealth(ship, piece);
             return Math.Max(0d, before - piece.Health);
         }
@@ -52,6 +53,7 @@ namespace FlatWorld.Spaceflight
         }
         private void HandleDestroyedInventory(ShipState ship, ShipPieceState piece, string reason)
         {
+            ReleaseShipInteriorItem(piece, capture: true);
             ItemData snapshot = GetPieceData(piece);
             if (ship.IsWreck)
             {
@@ -173,7 +175,8 @@ namespace FlatWorld.Spaceflight
             double share = structureBudget / Math.Max(1, structureHits.Count);
             foreach (var hit in structureHits)
             {
-                ShipStructureService.ApplyPhysicalDamage(hit.Ship, hit.Piece.PieceId, share, "燃料与压力爆炸", DestroyPiece);
+                ShipStructureService.ApplyPhysicalDamage(hit.Ship, hit.Piece.PieceId, share, "燃料与压力爆炸", DestroyPiece,
+                    TryApplyShipInteriorItemDamage);
                 SynchronizePieceHealth(hit.Ship, hit.Piece);
             }
             ApplyExplosionActorDamage(entry, explosion, radius, peak);

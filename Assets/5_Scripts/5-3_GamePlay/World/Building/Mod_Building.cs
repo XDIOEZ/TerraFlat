@@ -1198,7 +1198,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     {
         reason = null;
         failureReason = BuildingPlacementFailureReason.InvalidPosition;
-        position = NormalizeRequestedPlacement(position);
+        position = NormalizeRequestedPlacement(position, placementActor);
 
         if (!IsFinite(position) || !IsFinite(authorityPosition))
         {
@@ -1228,7 +1228,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         }
 
         Vector2Int placementCell = GetPlacementCell(position);
-        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryValidatePlacement(item.itemData, position, PlacementQuarterTurns, out bool shipValid, out reason) == true)
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryValidatePlacement(item.itemData, position, PlacementQuarterTurns,
+                out bool shipValid, out reason, placementActor != null ? placementActor : ResolvePlacementActor()) == true)
             return shipValid;
         IBuildingPlacementExtension placementExtension = BuildingPlacementLifecycle.GetExtension(item);
         if (placementExtension != null && !placementExtension.ValidatePlacement(placementCell, out reason))
@@ -1826,13 +1827,16 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
                 return;
         }
 
-        GhostShadow.transform.position = WorldLocalPresentation.ProjectPosition(mouse);
+        FlatWorld.Spaceflight.SpaceSession session = FlatWorld.Spaceflight.SpaceSession.Current;
+        Player actor = ResolvePlacementActor();
+        GhostShadow.transform.position = session != null && session.TryGetPlacementWorldShip(actor, out FlatWorld.Spaceflight.ShipState ship)
+            ? (Vector3)session.ProjectShipInteriorPosition(ship, mouse) : WorldLocalPresentation.ProjectPosition(mouse);
         GhostShadow.UpdateAlpha(1f);
         IBuildingPlacementExtension extension = BuildingPlacementLifecycle.GetExtension(item);
         extension?.ApplyPreview(GhostShadow);
         int quarterTurns = PlacementQuarterTurns;
         float angle = quarterTurns * 90f;
-        if (FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item.itemData, mouse, quarterTurns, out _, out float snappedAngle) == true)
+        if (session?.TrySnapPlacement(item.itemData, mouse, quarterTurns, out _, out float snappedAngle, actor) == true)
             angle = snappedAngle;
         // 机械扩展负责子图层安装角，预览根只承担船角；无船体时也清除上一帧的船角。
         GhostShadow.transform.rotation = BuildingShadow.ResolvePlacementRootRotation(angle,
@@ -2423,8 +2427,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     private int GetLocalPlacementQuarterTurns()
         => item?.GetComponentInChildren<Mod_MechanicalNode>(true)?.PlacementQuarterTurns ?? _placementQuarterTurns;
 
-    private Vector3 NormalizeRequestedPlacement(Vector3 position)
-        => FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item?.itemData, position, PlacementQuarterTurns, out Vector2 snapped, out _) == true
+    private Vector3 NormalizeRequestedPlacement(Vector3 position, Player actor = null)
+        => FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item?.itemData, position, PlacementQuarterTurns,
+                out Vector2 snapped, out _, actor != null ? actor : ResolvePlacementActor()) == true
             ? new Vector3(snapped.x, snapped.y, 0f) : NormalizePlacement(position);
 
     /// <summary>建筑只保留 XY 平面旋转，避免无效四元数或三维倾斜污染 2D 世界。</summary>

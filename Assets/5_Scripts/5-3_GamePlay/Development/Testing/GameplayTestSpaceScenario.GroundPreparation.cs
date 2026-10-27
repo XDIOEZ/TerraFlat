@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using FlatWorld.Spaceflight;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -9,6 +10,119 @@ using UnityEngine;
 public sealed partial class GameplayTestSpaceScenario
 {
     #region 降落准备的正式流程采样
+
+    private readonly Dictionary<int, Item> groundOrdinaryItemInstances = new();
+    private readonly Dictionary<int, List<Inventory>> groundOrdinaryInventories = new();
+    private readonly Dictionary<int, string> groundOrdinaryInventoryPayloads = new();
+    private readonly Dictionary<int, float> groundOrdinaryHealth = new();
+    private readonly List<JObject> groundOrdinaryItemStages = new();
+
+    private void ResetGroundOrdinaryItemBaseline()
+    {
+        groundOrdinaryItemInstances.Clear();
+        groundOrdinaryInventories.Clear();
+        groundOrdinaryInventoryPayloads.Clear();
+        groundOrdinaryHealth.Clear();
+        groundOrdinaryItemStages.Clear();
+    }
+
+    private JObject CaptureGroundOrdinaryItemStage(ICollection<int> ids, string worldKey,
+        string stage, bool captureBaseline = false)
+    {
+        if (captureBaseline)
+        {
+            ResetGroundOrdinaryItemBaseline();
+            var entries = new Dictionary<int, ShipGroundBuildingStore.Entry>();
+            foreach (ShipGroundBuildingStore.Entry entry in ShipGroundBuildingStore.Collect(worldKey))
+                if (ids.Contains(entry.Guid) && entry.Item != null) entries[entry.Guid] = entry;
+            foreach (var pair in entries)
+            {
+                Item item = pair.Value.Item;
+                groundOrdinaryItemInstances.Add(pair.Key, item);
+                List<Inventory> inventories = CaptureItemInventories(item);
+                groundOrdinaryInventories.Add(pair.Key, inventories);
+                groundOrdinaryInventoryPayloads.Add(pair.Key, InventoryPayloadSignature(inventories));
+                Mod_DamageReceiver health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+                if (health != null) groundOrdinaryHealth.Add(pair.Key, health.Hp);
+            }
+            if (groundOrdinaryItemInstances.Count == 0)
+                throw new InvalidOperationException("起降夹具没有可追踪的真实普通 Item。");
+        }
+
+        var rows = new JArray();
+        int sameInstances = 0, sameInventories = 0, sameHealth = 0;
+        foreach (var baseline in groundOrdinaryItemInstances)
+        {
+            // Item 已随起降迁入船域时仍按全局正式运行时账本查同一实例。
+            Item item = null;
+            bool found = ItemMgr.Instance != null && ItemMgr.Instance.WorldRunTimeItems.TryGetValue(baseline.Key, out item);
+            bool runtimeRegistered = item != null && ItemMgr.Instance.IsRuntimeItemRegistered(item) &&
+                ItemMgr.Instance.WorldRunTimeItems.TryGetValue(baseline.Key, out Item indexed) && ReferenceEquals(indexed, item);
+            string itemWorld = item != null ? GameplayWorldRegistry.GetItemWorldKey(item) : null;
+            bool sameInstance = ReferenceEquals(item, baseline.Value) && runtimeRegistered && itemWorld == worldKey;
+            List<Inventory> inventories = item != null ? CaptureItemInventories(item) : new List<Inventory>();
+            List<Inventory> expectedInventories = groundOrdinaryInventories[baseline.Key];
+            bool sameInventoryObjects = inventories.Count == expectedInventories.Count;
+            for (int i = 0; sameInventoryObjects && i < inventories.Count; i++)
+                sameInventoryObjects &= ReferenceEquals(inventories[i], expectedInventories[i]);
+            string payload = InventoryPayloadSignature(inventories);
+            bool sameInventoryPayload = payload == groundOrdinaryInventoryPayloads[baseline.Key];
+            Mod_DamageReceiver health = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            bool sameItemHealth = !groundOrdinaryHealth.TryGetValue(baseline.Key, out float oldHealth) ||
+                health != null && Math.Abs(health.Hp - oldHealth) < .0001f;
+            if (sameInstance) sameInstances++;
+            if (sameInventoryObjects && sameInventoryPayload) sameInventories++;
+            if (sameItemHealth) sameHealth++;
+            rows.Add(new JObject
+            {
+                ["guid"] = baseline.Key, ["itemId"] = item?.itemData?.IDName,
+                ["instanceId"] = item != null ? item.GetInstanceID() : 0,
+                ["itemWorldKey"] = itemWorld, ["runtimeRegistered"] = runtimeRegistered,
+                ["sameRuntimeInstance"] = sameInstance,
+                ["inventoryCount"] = inventories.Count, ["sameInventoryInstances"] = sameInventoryObjects,
+                ["sameInventoryPayload"] = sameInventoryPayload,
+                ["health"] = health?.Hp, ["sameHealth"] = sameItemHealth
+            });
+        }
+        var result = new JObject
+        {
+            ["stage"] = stage, ["worldKey"] = worldKey,
+            ["expectedItemCount"] = groundOrdinaryItemInstances.Count,
+            ["sameInstanceCount"] = sameInstances, ["sameInventoryCount"] = sameInventories,
+            ["sameHealthCount"] = sameHealth, ["items"] = rows
+        };
+        groundOrdinaryItemStages.Add((JObject)result.DeepClone());
+        return result;
+    }
+
+    private static List<Inventory> CaptureItemInventories(Item item)
+    {
+        var result = new List<Inventory>();
+        if (item?.itemMods?.Mods == null) return result;
+        foreach (Module module in item.itemMods.Mods.Values)
+            if (module is Mod_Inventory storage && storage.InventoryInstances != null)
+                foreach (Inventory inventory in storage.InventoryInstances)
+                    if (inventory != null) result.Add(inventory);
+        return result;
+    }
+
+    private static string InventoryPayloadSignature(IReadOnlyList<Inventory> inventories)
+    {
+        var signature = new StringBuilder();
+        foreach (Inventory inventory in inventories)
+        {
+            signature.Append(inventory.Data?.Name).Append('|');
+            if (inventory.Data?.itemSlots == null) continue;
+            foreach (ItemSlot slot in inventory.Data.itemSlots)
+            {
+                ItemData data = slot?.itemData;
+                signature.Append(data?.Guid ?? 0).Append(':').Append(data?.IDName).Append(':')
+                    .Append((data?.Stack?.Amount ?? 0f).ToString("R", CultureInfo.InvariantCulture)).Append(';');
+            }
+            signature.Append('|');
+        }
+        return signature.ToString();
+    }
 
     private sealed class GroundMachinePreparationBaseline
     {
@@ -75,16 +189,16 @@ public sealed partial class GameplayTestSpaceScenario
         Dictionary<int, GroundMachinePreparationBaseline> baselines, string world)
     {
         JObject result = session.GroundPreparationSnapshot(ship.ShipId);
-        int groundMatches = 0, registeredOriginalItems = 0;
+        int groundMatches = 0;
         foreach (ShipGroundBuildingStore.Entry entry in ShipGroundBuildingStore.Collect(world))
             if (ids.Contains(entry.Guid)) groundMatches++;
-        foreach (int id in ids)
-            if (ItemMgr.Instance.WorldRunTimeItems.ContainsKey(id)) registeredOriginalItems++;
         ShipFlightState flight = session.GetFlight(ship.ShipId);
         result["shipPresent"] = ReferenceEquals(session.GetShip(ship.ShipId), ship);
         result["phase"] = flight?.Phase.ToString(); result["height"] = flight?.HeightMeters;
         result["position"] = Vector(new SpaceVector2(ship.PositionX, ship.PositionY));
-        result["groundMatches"] = groundMatches; result["registeredOriginalItems"] = registeredOriginalItems;
+        result["groundMatches"] = groundMatches;
+        result["ordinaryItems"] = CaptureGroundOrdinaryItemStage(ids,
+            MachineWorld.GetShipScopeKey(ship.ShipId), "surface-descending");
         result["machines"] = GroundPreparationMachineReadings(ship, baselines, world);
         return result;
     }
@@ -108,55 +222,12 @@ public sealed partial class GameplayTestSpaceScenario
             }.ToString());
     }
 
-    private JObject CancelOrdinaryGroundCandidate(ShipState ship)
-    {
-        ShipPieceState floor = FindGroundPreparationFloor(ship);
-        ItemData source = GameRes.ExistingInstance.CreateItemData(floor.ItemId);
-        int sourceGuid = source.Guid;
-        using ItemMgr.PreparedItemHandle candidate = ItemMgr.Instance.PrepareItem(source);
-        int instanceId = candidate.InstanceId;
-        Item prepared = null;
-        foreach (Item item in UnityEngine.Object.FindObjectsOfType<Item>(true))
-            if (item.GetInstanceID() == instanceId) { prepared = item; break; }
-        var before = new JObject { ["valid"] = candidate.IsValid, ["active"] = candidate.IsActive,
-            ["registered"] = candidate.IsRegistered, ["guid"] = candidate.Guid, ["instanceId"] = instanceId,
-            ["found"] = prepared != null };
-        candidate.Dispose();
-        candidate.Dispose();
-        return new JObject { ["before"] = before, ["validAfter"] = candidate.IsValid,
-            ["instanceAfter"] = candidate.InstanceId, ["sourceGuidBefore"] = sourceGuid, ["sourceGuidAfter"] = source.Guid,
-            ["retired"] = prepared == null || prepared.IsInPool || prepared.DestructionHandled,
-            ["activeAfter"] = prepared != null && prepared.gameObject.activeInHierarchy,
-            ["registeredAfter"] = prepared != null && ItemMgr.Instance.IsRuntimeItemRegistered(prepared) };
-    }
-
     private static ShipPieceState FindGroundPreparationFloor(ShipState ship)
     {
         foreach (ShipPieceState piece in ship.Pieces)
             if (piece.IsAlive && piece.Kind == ShipPieceKind.Floor && piece.Width == 1 && piece.Height == 1 && piece.Health > 2d)
                 return piece;
         throw new InvalidOperationException("测试船没有可单独取样的健康一格地板。");
-    }
-
-    private static JArray GroundCandidateRetirementReadings(JObject previous, JObject current)
-    {
-        var previousIds = new HashSet<int>();
-        var currentIds = new HashSet<int>();
-        foreach (JObject row in (JArray)previous["candidates"]) previousIds.Add(row.Value<int>("instanceId"));
-        foreach (JObject row in (JArray)current["candidates"]) currentIds.Add(row.Value<int>("instanceId"));
-        var found = new Dictionary<int, Item>();
-        foreach (Item item in UnityEngine.Object.FindObjectsOfType<Item>(true))
-            if (previousIds.Contains(item.GetInstanceID())) found.Add(item.GetInstanceID(), item);
-        var result = new JArray();
-        foreach (int id in previousIds)
-        {
-            found.TryGetValue(id, out Item item);
-            result.Add(new JObject { ["instanceId"] = id, ["currentCandidate"] = currentIds.Contains(id),
-                ["retired"] = item == null || item.IsInPool || item.DestructionHandled,
-                ["active"] = item != null && item.gameObject.activeInHierarchy,
-                ["registered"] = item != null && ItemMgr.Instance.IsRuntimeItemRegistered(item) });
-        }
-        return result;
     }
 
     private ShipPieceState AddGroundPreparationFloor(ShipState ship)
@@ -190,7 +261,6 @@ public sealed partial class GameplayTestSpaceScenario
     private IEnumerator ExerciseGroundPreparation(ShipState ship, string console, HashSet<int> ids, string world,
         Dictionary<int, GroundMachinePreparationBaseline> baselines, Action<JObject> completed)
     {
-        JObject cancellation = CancelOrdinaryGroundCandidate(ship);
         yield return WaitForPreparedGroundShip(ship);
         JObject ready = GroundPreparationLiveSnapshot(ship, ids, baselines, world);
         session.SetControl(console, Vector2.right * .1f, 0f);
@@ -207,7 +277,6 @@ public sealed partial class GameplayTestSpaceScenario
                     moved.Value<int>("invalidations"), 15d, "正式加装地板没有使旧准备布局失效。");
             yield return WaitForPreparedGroundShip(ship);
             expanded = GroundPreparationLiveSnapshot(ship, ids, baselines, world);
-            expanded["previousCandidates"] = GroundCandidateRetirementReadings(moved, expanded);
         }
         finally
         {
@@ -218,14 +287,16 @@ public sealed partial class GameplayTestSpaceScenario
                 expanded.Value<int>("invalidations"), 15d, "正式撤销测试地板没有使扩展准备布局失效。");
         yield return WaitForPreparedGroundShip(ship);
         JObject finalReady = GroundPreparationLiveSnapshot(ship, ids, baselines, world);
-        finalReady["previousCandidates"] = GroundCandidateRetirementReadings(expanded, finalReady);
         ShipPieceState wounded = FindGroundPreparationFloor(ship);
         double healthBefore = wounded.Health;
-        bool accepted = session.ApplyPieceDamage(int.Parse(wounded.PieceId, CultureInfo.InvariantCulture),
+        int woundedId = int.Parse(wounded.PieceId, CultureInfo.InvariantCulture);
+        bool accepted = session.ApplyPieceDamage(woundedId,
             (float)Math.Min(1d, healthBefore * .01d), "隔离下降候选的最新健康值取样");
-        var health = new JObject { ["guid"] = int.Parse(wounded.PieceId, CultureInfo.InvariantCulture),
+        if (accepted && groundOrdinaryHealth.ContainsKey(woundedId))
+            groundOrdinaryHealth[woundedId] = (float)wounded.Health;
+        var health = new JObject { ["guid"] = woundedId,
             ["accepted"] = accepted, ["before"] = healthBefore, ["after"] = wounded.Health };
-        completed(new JObject { ["cancellation"] = cancellation, ["ready"] = ready, ["moved"] = moved,
+        completed(new JObject { ["ready"] = ready, ["moved"] = moved,
             ["expanded"] = expanded, ["finalReady"] = finalReady, ["addedId"] = addedId,
             ["addedPieceStillPresent"] = session.FindPiece(addedId, out _, out _), ["healthChange"] = health });
     }

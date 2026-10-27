@@ -286,6 +286,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!ResolveConnection(connection, out ConnectionState state, out _) || Time.unscaledTime < state.NextRequest) return;
             state.NextRequest = Time.unscaledTime + .5f;
             state.MetadataWorldKey = null;
+            SpaceSession.Current?.ResetNetworkLocalWorldSnapshotCache(state.Profile);
             SendSnapshot(connection, state.Profile);
         }
         private void SendSnapshot(NetworkConnectionToClient connection, string profile)
@@ -344,6 +345,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             SnapshotFragmentPoint.SetGauge(parts);
             SnapshotBytesPoint.SetGauge(compressed.LongLength);
+            SpaceSession.Current?.ConfirmNetworkLocalWorldSnapshotSent(profile);
         }
         private void OnSnapshotBegin(NetworkSpaceSnapshotBegin header)
         {

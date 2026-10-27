@@ -101,9 +101,17 @@ namespace FlatWorld.Networking.Gameplay
             : WorldTopologyRuntime.NormalizePosition(transform.position);
 
         /// <summary>区块观察者使用的逻辑位置；本机拥有者可使用尚未发包的最新预测位置。</summary>
-        public Vector3 ObserverLogicalPosition => IsInSpace ? AuthoritativeLogicalPosition : isOwned && corePlayer != null
-            ? WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position)
-            : AuthoritativeLogicalPosition;
+        public Vector3 ObserverLogicalPosition
+        {
+            get
+            {
+                if (IsInSpace || !isOwned || corePlayer == null) return AuthoritativeLogicalPosition;
+                if (SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) == true)
+                    return SpaceSessionForNetwork.TryGetPassengerSurfacePosition(displayName, out Vector2 surface)
+                        ? (Vector3)WorldTopologyRuntime.NormalizePosition(WorldLocalPresentation.ToLogical(surface)) : AuthoritativeLogicalPosition;
+                return WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
+            }
+        }
 
         [Server]
         public void InitializeOnServer(string playerName, int playerIndex)
@@ -239,6 +247,13 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (authoritativeForcedFollowing) return;
             if (pendingTeleportRequest != 0 || authoritativeWorldTransferPending) return;
+            if (SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) == true)
+            {
+                UpdateSpaceMovement();
+                if (SpaceSessionForNetwork.TryGetShipInteriorPresentationPosition(corePlayer, out Vector2 position))
+                    transform.position = position;
+                return;
+            }
             if (IsInSpace)
             {
                 UpdateSpaceMovement();
@@ -284,7 +299,8 @@ namespace FlatWorld.Networking.Gameplay
 
             if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return;
 
-            if (!IsInSpace && corePlayer.Data?.transform != null)
+            if (!IsInSpace && corePlayer.Data?.transform != null &&
+                SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) != true)
                 corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(
                     ShipSurfacePresentation.GroundPosition(corePlayer.gameObject, corePlayer.transform.position));
 
@@ -744,15 +760,17 @@ namespace FlatWorld.Networking.Gameplay
 
         private void LateUpdate()
         {
-            if (!isOwned || followCamera == null)
-                return;
+            if (!isOwned) return;
 
-            if (corePlayer != null && IsValidPosition(corePlayer.transform.position))
+            if (SpaceSessionForNetwork?.TryGetShipInteriorPresentationPosition(corePlayer, out Vector2 interiorPosition) == true)
+                transform.position = interiorPosition;
+            else if (corePlayer != null && IsValidPosition(corePlayer.transform.position))
                 transform.position = IsInSpace ? corePlayer.transform.position : WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
 
-            if (manualCameraFollow)
+            if (manualCameraFollow && followCamera != null)
             {
-                Vector3 playerPosition = corePlayer != null ? corePlayer.transform.position : transform.position;
+                Vector3 playerPosition = SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) == true
+                    ? transform.position : corePlayer != null ? corePlayer.transform.position : transform.position;
                 followCamera.transform.position = new Vector3(playerPosition.x, playerPosition.y, -10f);
             }
         }
@@ -921,6 +939,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (corePlayer == null || !IsValidPosition(position))
                 return;
+            if (SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) == true) return;
 
             if (!coreAvatarIsLocal || forceLocal)
             {

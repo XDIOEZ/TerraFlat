@@ -7,11 +7,25 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 本地格建造预览
-        public bool TrySnapPlacement(ItemData source, Vector2 point, int quarterTurns, out Vector2 snapped, out float angle)
+        public bool TryGetPlacementWorldShip(Player actor, out ShipState ship)
+        {
+            string key = actor != null ? GameplayWorldRegistry.GetItemWorldKey(actor) : GameplayWorldRegistry.ExecutionWorldKey;
+            if (key?.StartsWith("ship:", StringComparison.Ordinal) == true)
+            {
+                string shipId = key.Substring(5);
+                if (TryGetShipInteriorWorld(shipId, out _) && (ship = GetShip(shipId)) != null && !ship.IsWreck) return true;
+            }
+            ship = null;
+            return false;
+        }
+        public bool TrySnapPlacement(ItemData source, Vector2 point, int quarterTurns, out Vector2 snapped, out float angle,
+            Player actor = null)
         {
             snapped = point; angle = 0f;
-            ShipPartConfiguration config = Mod_ShipPart.Read(source);
-            TryGetSupport(point, out ShipState ship, out _, out Vector2 local);
+            ShipPartConfiguration config = ResolvePartConfiguration(source);
+            bool localWorld = TryGetPlacementWorldShip(actor, out ShipState ship);
+            Vector2 local = point;
+            if (!localWorld) TryGetSupport(point, out ship, out _, out local);
             if (ship == null && config?.Kind == ShipPieceKind.Floor)
                 ship = FindAdjacentShip(point, config.FootprintWidth, config.FootprintHeight, quarterTurns, out local);
             if (ship == null)
@@ -23,17 +37,26 @@ namespace FlatWorld.Spaceflight
             }
             double x = (Math.Floor(local.x / ship.CellSizeMeters) + .5d) * ship.CellSizeMeters;
             double y = (Math.Floor(local.y / ship.CellSizeMeters) + .5d) * ship.CellSizeMeters;
+            if (localWorld)
+            {
+                snapped = new Vector2((float)x, (float)y);
+                angle = (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI) + quarterTurns * 90f;
+                return true;
+            }
             snapped = DisplayPresentationPoint(ship, x, y);
             if (!IsSpaceView) snapped.y += (float)ShipSurfaceState.VisualRise(GetFlight(ship.ShipId));
             if (!IsSpaceView) snapped = WorldLocalPresentation.ToLogical(snapped);
             angle = (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI) + quarterTurns * 90f;
             return true;
         }
-        public bool TryValidatePlacement(ItemData source, Vector2 point, int quarterTurns, out bool valid, out string reason)
+        public bool TryValidatePlacement(ItemData source, Vector2 point, int quarterTurns, out bool valid, out string reason,
+            Player actor = null)
         {
             reason = null; valid = false;
-            ShipPartConfiguration config = Mod_ShipPart.Read(source);
-            TryGetSupport(point, out ShipState ship, out _, out Vector2 local);
+            ShipPartConfiguration config = ResolvePartConfiguration(source);
+            bool localWorld = TryGetPlacementWorldShip(actor, out ShipState ship);
+            Vector2 local = point;
+            if (!localWorld) TryGetSupport(point, out ship, out _, out local);
             if (ship == null && config?.Kind == ShipPieceKind.Floor)
                 ship = FindAdjacentShip(point, config.FootprintWidth, config.FootprintHeight, quarterTurns, out local);
             if (ship == null)

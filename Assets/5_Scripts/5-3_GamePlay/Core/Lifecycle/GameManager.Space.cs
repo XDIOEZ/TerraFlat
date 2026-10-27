@@ -42,6 +42,12 @@ public partial class GameManager
         pendingLocalSpacePlayer = player; pendingLocalSpaceObserver = observer;
         string key = observer.InSpace ? SpaceSectorCoordinates.SceneKey(observer.Position.Sector) : observer.WorldKey;
         if (string.IsNullOrWhiteSpace(key)) return;
+        if (SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true)
+        {
+            if ((networkLocalWorldKey != key || networkLocalRealmRevision != observer.RealmRevision) && networkLocalRealmRoutine == null)
+                networkLocalRealmRoutine = StartCoroutine(ApplyNetworkLocalRealm());
+            return;
+        }
         if (!observer.InSpace && !localSpacePresentationActive && key == networkLocalWorldKey &&
             SceneManager.GetActiveScene().name == key)
         {
@@ -70,6 +76,11 @@ public partial class GameManager
                 SpaceNetworkObserver observer = pendingLocalSpaceObserver;
                 string key = observer.InSpace ? SpaceSectorCoordinates.SceneKey(observer.Position.Sector) : observer.WorldKey;
                 if (string.IsNullOrWhiteSpace(key) || key == networkLocalWorldKey && observer.RealmRevision == networkLocalRealmRevision) break;
+                if (SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true)
+                {
+                    yield return ApplyShipInteriorNetworkObserver(player, observer, key);
+                    continue;
+                }
                 bool enteringSpace = observer.InSpace && !localSpacePresentationActive;
                 if (observer.InSpace)
                 {
@@ -125,6 +136,34 @@ public partial class GameManager
             }
         }
         finally { networkLocalRealmRoutine = null; }
+    }
+
+    private IEnumerator ApplyShipInteriorNetworkObserver(Player player, SpaceNetworkObserver observer, string key)
+    {
+        if (observer.InSpace)
+        {
+            localSpacePresentationActive = true;
+            SetNetworkSurfaceVisibility(false);
+            yield return SpaceMgr.Instance.ActivateLocalSector(observer.Position.Sector);
+        }
+        else
+        {
+            Vector3 point = new((float)observer.Position.LocalMeters.X, (float)observer.Position.LocalMeters.Y);
+            yield return GameplayWorldRegistry.PrepareWorld(key, point);
+            if (player == null || SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) != true) yield break;
+            DimensionManager.Instance.ActivateWorld(WorldAddress.FromWorldKey(key));
+            GameplayWorldRuntime world = GameplayWorldRegistry.GetOrCreate(key);
+            GameplayWorldRegistry.SelectLocalWorld(key);
+            SceneManager.SetActiveScene(world.Scene);
+            localSpacePresentationActive = false;
+            SetNetworkSurfaceVisibility(true);
+        }
+
+        if (player == null || SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) != true) yield break;
+        player.Data.CurrentSceneName = key;
+        networkLocalWorldKey = key;
+        networkLocalRealmRevision = observer.RealmRevision;
+        NetworkDimensionBridge.NotifyPresentationReady(player, key);
     }
 
     private void ApplyNetworkLocalSurface(Player player, SpaceNetworkObserver observer, string key)
@@ -205,7 +244,7 @@ public partial class GameManager
             foreach (GameObject root in scene.GetRootGameObjects())
             foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
             {
-                if (renderer.GetComponentInParent<Player>() != null || renderer.GetComponentInParent<ShipPieceView>() != null) continue;
+                if (renderer.GetComponentInParent<Player>() != null || renderer.GetComponentInParent<WorldPresentationProjection>() != null) continue;
                 if (!hiddenNetworkSurfaceRenderers.ContainsKey(renderer)) hiddenNetworkSurfaceRenderers.Add(renderer, renderer.forceRenderingOff);
                 renderer.forceRenderingOff = true;
             }
@@ -218,10 +257,10 @@ public partial class GameManager
         ClearShipTakeoffPresentation();
         if (player == null) return;
         var renderers = new System.Collections.Generic.List<SpriteRenderer>();
-        session.CollectAssemblyPresentationRenderers(session.GetPassenger(player).ShipId, renderers);
-        renderers.AddRange(player.GetComponentsInChildren<SpriteRenderer>());
+        var snapshots = new System.Collections.Generic.List<WorldVisualSnapshot>();
+        session.CollectAssemblyPresentationRenderers(session.GetPassenger(player).ShipId, renderers, snapshots);
         renderers.RemoveAll(value => value == null);
-        shipTakeoffPresentation = ShipTakeoffLoadingPresentation.Capture(renderers,
+        shipTakeoffPresentation = ShipTakeoffLoadingPresentation.Capture(renderers, snapshots,
             (float)ShipLandingGuidance.TakeoffSpeed(SpaceGameplaySettings.Current) * 5f);
     }
 

@@ -68,6 +68,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     public override void ModUpdate(float deltaTime)
     {
+        using var worldScope = UseActorInteractionWorld();
         PruneDestroyedInteractionTargets();
         if (!IsLocalInteractionOwner())
         {
@@ -187,6 +188,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>复用正式交互发送器的全部准入规则，供结构化观察和非物理输入源判断目标当前是否可交互。</summary>
     public bool CanInteractTarget(IInteractable receiver)
     {
+        using var worldScope = UseActorInteractionWorld();
         if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
             return false;
 
@@ -196,7 +198,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
             return false;
-        float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
+        float distance = MeasureActorInteractionDistance(item.transform.position, targetPosition);
         return distance <= maxInteractDistance;
     }
 
@@ -247,6 +249,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private IInteractable FindReceiverAtPointerCore(Vector2 pointerWorld, bool requirePointerPermission,
         bool previewOnly, WorldTopologyDomain topology)
     {
+        using var worldScope = UseActorInteractionWorld();
         using var queryScope = PointerQueryMarker.Auto();
         Physics2D.SyncTransforms();
         int count = GameplayPhysics2D.OverlapPointNonAlloc(pointerWorld, interactionOverlapBuffer, InteractionQueryLayerMask);
@@ -272,7 +275,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (!IsInteractionCandidate(candidate, candidate as Component) ||
                 (requirePointerPermission && !candidate.CanPointerInteract(item)) ||
                 !TryGetInteractionPosition(candidate, out Vector3 position) ||
-                topology.Distance((Vector2)origin, (Vector2)position) > maxInteractDistance)
+                MeasureActorInteractionDistance(origin, position) > maxInteractDistance)
                 spatialCandidates.RemoveAt(i);
         }
         gridInteractionSelector.FilterPointerTargets(spatialCandidates, pointerWorld, topology);
@@ -281,7 +284,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         foreach (IInteractable candidate in spatialCandidates)
         {
             if (!TryGetInteractionPosition(candidate, out Vector3 targetPosition)) continue;
-            float distance = topology.Distance((Vector2)origin, (Vector2)targetPosition);
+            float distance = MeasureActorInteractionDistance(origin, targetPosition);
             if (distance >= closestDistance) continue;
             closestDistance = distance;
             selectedReceiver = candidate;
@@ -354,6 +357,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>扫描交互半径，按当前指向优先、距离规则兜底。</summary>
     private IInteractable FindClosestReceiverAtCurrentPosition(bool collectReceivers)
     {
+        using var worldScope = UseActorInteractionWorld();
         if (item == null || !item.gameObject.activeInHierarchy)
             return null;
 
@@ -414,7 +418,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
             if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
                 continue;
-            float distance = topology.Distance((Vector2)item.transform.position, (Vector2)targetPosition);
+            float distance = MeasureActorInteractionDistance(item.transform.position, targetPosition);
             if (distance > maxInteractDistance)
                 continue;
 
@@ -429,8 +433,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (!hasInteractionDirection)
                 continue;
 
-            Vector2 receiverOffset = topology.ShortestDelta(
-                (Vector2)item.transform.position, (Vector2)targetPosition);
+            Vector2 receiverOffset = IsShipInteriorInteractionOwner
+                ? (Vector2)targetPosition - (Vector2)item.transform.position
+                : topology.ShortestDelta((Vector2)item.transform.position, (Vector2)targetPosition);
             if (receiverOffset.sqrMagnitude < 0.0001f)
                 continue;
 
@@ -476,7 +481,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private bool CanPointAtEnvironmentWater()
     {
         if (!TryGetInteractionPointer(out Vector2 pointer) || item == null ||
-            WorldTopologyRuntime.Distance(item.transform.position, pointer) > maxInteractDistance ||
+            MeasureActorInteractionDistance(item.transform.position, pointer) > maxInteractDistance ||
             !IsPointerOverWater(pointer)) return false;
         return FindReceiverAtPointer(pointer) == null;
     }
@@ -495,8 +500,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (!gameController.TryGetMouseWorldPosition(out Vector3 pointerWorld))
                 return false;
 
-            Vector2 pointerOffset = topology.ShortestDelta(
-                (Vector2)item.transform.position, (Vector2)pointerWorld);
+            Vector2 pointerOffset = IsShipInteriorInteractionOwner
+                ? (Vector2)pointerWorld - (Vector2)item.transform.position
+                : topology.ShortestDelta((Vector2)item.transform.position, (Vector2)pointerWorld);
             if (pointerOffset.sqrMagnitude < 0.0001f)
                 return false;
 
@@ -572,6 +578,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             Item receiverItem = receiverComponent.GetComponentInParent<Item>();
             if (receiverItem == item || (receiverItem != null && receiverItem.InHand))
                 return false;
+            string actorWorld = GameplayWorldRegistry.GetItemWorldKey(item);
+            if (!string.IsNullOrEmpty(actorWorld))
+            {
+                if (receiverItem != null && GameplayWorldRegistry.GetItemWorldKey(receiverItem) != actorWorld)
+                    return false;
+                if (receiverItem == null && receiver is not IWorldInteractionTarget &&
+                    receiverComponent.gameObject.scene != item.gameObject.scene)
+                    return false;
+            }
         }
         if (receiver is IWorldInteractionTarget worldTarget)
             return worldTarget.IsValid && receiver.CanInteract(item);
@@ -651,6 +666,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private bool StartInteraction(IInteractable receiver)
     {
+        using var worldScope = UseActorInteractionWorld();
         if (!IsInteractionReceiverAlive(receiver))
             return false;
 
@@ -741,6 +757,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void ValidateCurrentInteractionDistance()
     {
+        using var worldScope = UseActorInteractionWorld();
         if (currentReceiver == null)
             return;
 
@@ -751,7 +768,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
         }
 
-        float currentDistance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
+        float currentDistance = MeasureActorInteractionDistance(item.transform.position, targetPosition);
         if (currentDistance <= maxInteractDistance)
             return;
 

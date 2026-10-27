@@ -1249,6 +1249,9 @@
       "Ports": "none",
       "LogicId": "ship-device",
       "BlocksMovement": true,
+      "PowerIndicator": {
+        "PixelRect": { "x": 26, "y": 11, "z": 12, "w": 3 }
+      },
       "Electrical": {
         "Role": "consumer",
         "Connection": "cell",

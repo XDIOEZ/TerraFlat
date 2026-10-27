@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Spaceflight
 {
@@ -13,27 +12,29 @@ namespace FlatWorld.Spaceflight
         {
             internal Mod_ShipPart Module;
             internal Item Item;
-            internal int Scene;
+            internal string World;
             internal Vector2Int Cell;
             internal SpriteRenderer[] Parts;
             internal Sprite Source;
             internal int Mask = -1;
         }
         private static readonly Dictionary<Mod_ShipPart, Entry> entries = new();
-        private static readonly Dictionary<(int Scene, Vector2Int Cell), List<Entry>> cells = new();
-        private static readonly Dictionary<int, Scene> scenes = new();
+        private static readonly Dictionary<(string World, Vector2Int Cell), List<Entry>> cells = new();
         private static readonly Dictionary<RuntimeItemDefinition, bool> endpointDefinitions = new();
         private static readonly Dictionary<string, IDisposable> occupancySubscriptions = new(StringComparer.Ordinal);
+        private static readonly Dictionary<string, int> occupancySubscriptionUsers = new(StringComparer.Ordinal);
         static ShipGroundOpticalPresentation() => SharedSpriteMeshCache.Clearing += endpointDefinitions.Clear;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Reset()
         {
             Item.RuntimeStructureChanged -= OnItemChanged;
+            ItemMgr.RuntimeItemMoved -= OnItemChanged;
             ClearOccupancySubscriptions();
-            MachineWorld.CellChanged -= OnCellChanged;
+            MachineWorld.WorldPresentationCellChanged -= OnMachineCellChanged;
+            MachineWorld.WorldPresentationCellsChanged -= OnMachineCellsChanged;
             foreach (Entry entry in entries.Values) ShipFiberConnectionVisual.Release(ref entry.Parts);
-            entries.Clear(); cells.Clear(); scenes.Clear(); endpointDefinitions.Clear();
+            entries.Clear(); cells.Clear(); endpointDefinitions.Clear();
         }
 
         internal static void Register(Mod_ShipPart module)
@@ -44,19 +45,27 @@ namespace FlatWorld.Spaceflight
             // 重复订阅先撤后加，同时覆盖关闭域重载的静态事件初始化顺序。
             Item.RuntimeStructureChanged -= OnItemChanged;
             Item.RuntimeStructureChanged += OnItemChanged;
-            string world = module.item.gameObject.scene.name;
-            if (!occupancySubscriptions.ContainsKey(world))
-            {
-                using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
-                occupancySubscriptions.Add(world, BuildingOccupancyRegistry.SubscribeCells(OnCellChanged));
-            }
-            MachineWorld.CellChanged -= OnCellChanged;
-            MachineWorld.CellChanged += OnCellChanged;
+            ItemMgr.RuntimeItemMoved -= OnItemChanged;
+            ItemMgr.RuntimeItemMoved += OnItemChanged;
+            MachineWorld.WorldPresentationCellChanged -= OnMachineCellChanged;
+            MachineWorld.WorldPresentationCellChanged += OnMachineCellChanged;
+            MachineWorld.WorldPresentationCellsChanged -= OnMachineCellsChanged;
+            MachineWorld.WorldPresentationCellsChanged += OnMachineCellsChanged;
             if (entries.ContainsKey(module)) { Refresh(module); return; }
             var entry = new Entry { Module = module, Item = module.item };
             entries.Add(module, entry);
             AddCell(entry);
-            RefreshNeighborhood(entry.Scene, entry.Cell);
+            RefreshNeighborhood(entry.World, entry.Cell);
+        }
+
+        private static void EnsureWorldSubscription(string world)
+        {
+            if (string.IsNullOrEmpty(world)) return;
+            if (!occupancySubscriptions.ContainsKey(world))
+            {
+                using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+                occupancySubscriptions.Add(world, BuildingOccupancyRegistry.SubscribeCells(cell => RefreshNeighborhood(world, cell)));
+            }
         }
 
         internal static void Unregister(Mod_ShipPart module)
@@ -64,11 +73,13 @@ namespace FlatWorld.Spaceflight
             if (module == null || !entries.Remove(module, out Entry entry)) return;
             RemoveCell(entry);
             ShipFiberConnectionVisual.Release(ref entry.Parts);
-            RefreshNeighborhood(entry.Scene, entry.Cell);
+            RefreshNeighborhood(entry.World, entry.Cell);
             if (entries.Count != 0) return;
             Item.RuntimeStructureChanged -= OnItemChanged;
+            ItemMgr.RuntimeItemMoved -= OnItemChanged;
             ClearOccupancySubscriptions();
-            MachineWorld.CellChanged -= OnCellChanged;
+            MachineWorld.WorldPresentationCellChanged -= OnMachineCellChanged;
+            MachineWorld.WorldPresentationCellsChanged -= OnMachineCellsChanged;
         }
 
         internal static void Refresh(Mod_ShipPart module)
@@ -78,29 +89,36 @@ namespace FlatWorld.Spaceflight
             { Unregister(module); return; }
             if (module.Configuration.Kind != ShipPieceKind.Fiber) ShipFiberConnectionVisual.Release(ref entry.Parts);
             entry.Mask = -1;
-            int oldScene = entry.Scene; Vector2Int oldCell = entry.Cell;
+            string oldWorld = entry.World; Vector2Int oldCell = entry.Cell;
             RemoveCell(entry); AddCell(entry);
-            if (oldScene != entry.Scene || oldCell != entry.Cell) RefreshNeighborhood(oldScene, oldCell);
-            RefreshNeighborhood(entry.Scene, entry.Cell);
+            if (oldWorld != entry.World || oldCell != entry.Cell) RefreshNeighborhood(oldWorld, oldCell);
+            RefreshNeighborhood(entry.World, entry.Cell);
         }
 
         private static void AddCell(Entry entry)
         {
-            entry.Scene = entry.Item.gameObject.scene.handle;
-            scenes[entry.Scene] = entry.Item.gameObject.scene;
+            entry.World = GameplayWorldRegistry.GetItemWorldKey(entry.Item) ?? entry.Item.gameObject.scene.name;
+            using var scope = GameplayWorldRegistry.TryGet(entry.World, out _) ? GameplayWorldRegistry.UseWorld(entry.World) : null;
             Vector2 logical = WorldLocalPresentation.ToLogical((Vector2)entry.Item.transform.position);
             entry.Cell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(Mathf.FloorToInt(logical.x), Mathf.FloorToInt(logical.y)));
-            var key = (entry.Scene, entry.Cell);
+            var key = (entry.World, entry.Cell);
             if (!cells.TryGetValue(key, out List<Entry> values)) cells.Add(key, values = new List<Entry>(2));
             values.Add(entry);
+            EnsureWorldSubscription(entry.World);
+            occupancySubscriptionUsers.TryGetValue(entry.World, out int users);
+            occupancySubscriptionUsers[entry.World] = users + 1;
         }
 
         private static void RemoveCell(Entry entry)
         {
-            var key = (entry.Scene, entry.Cell);
+            var key = (entry.World, entry.Cell);
             if (!cells.TryGetValue(key, out List<Entry> values)) return;
-            values.Remove(entry);
+            if (!values.Remove(entry)) return;
             if (values.Count == 0) cells.Remove(key);
+            if (!occupancySubscriptionUsers.TryGetValue(entry.World, out int users)) return;
+            if (users > 1) { occupancySubscriptionUsers[entry.World] = users - 1; return; }
+            occupancySubscriptionUsers.Remove(entry.World);
+            if (occupancySubscriptions.Remove(entry.World, out IDisposable subscription)) subscription.Dispose();
         }
 
         private static void OnItemChanged(Item item)
@@ -113,24 +131,23 @@ namespace FlatWorld.Spaceflight
         {
             foreach (IDisposable subscription in occupancySubscriptions.Values) subscription.Dispose();
             occupancySubscriptions.Clear();
+            occupancySubscriptionUsers.Clear();
         }
 
         // 占地事件携带同步世界上下文，后台地表和本机画面刷新各自的光纤。
-        private static void OnCellChanged(Vector2Int cell)
-        {
-            if (MachineWorld.IsShipScope) return;
-            Scene scene = SceneManager.GetSceneByName(MachineWorld.WorldKey);
-            if (!scene.IsValid()) scene = GameplayWorldRegistry.CurrentScene;
-            RefreshNeighborhood(scene.handle, cell);
-        }
+        private static void OnMachineCellChanged(string world, Vector2Int cell) => RefreshNeighborhood(world, cell);
+        private static void OnMachineCellsChanged(string world, IReadOnlyList<Vector2Int> changed)
+        { foreach (Vector2Int cell in changed) RefreshNeighborhood(world, cell); }
 
-        private static void RefreshNeighborhood(int scene, Vector2Int cell)
+        private static void RefreshNeighborhood(string world, Vector2Int cell)
         {
-            RefreshCell(scene, cell);
-            RefreshCell(scene, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.up));
-            RefreshCell(scene, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.right));
-            RefreshCell(scene, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.down));
-            RefreshCell(scene, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.left));
+            if (string.IsNullOrEmpty(world) || !GameplayWorldRegistry.TryGet(world, out _)) return;
+            using var scope = GameplayWorldRegistry.UseWorld(world);
+            RefreshCell(world, cell);
+            RefreshCell(world, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.up));
+            RefreshCell(world, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.right));
+            RefreshCell(world, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.down));
+            RefreshCell(world, WorldTopologyRuntime.NormalizeCell(cell + Vector2Int.left));
         }
         #endregion
 
@@ -138,7 +155,6 @@ namespace FlatWorld.Spaceflight
         private static bool IsInstalled(Entry entry)
             => entry.Module != null && entry.Item != null && !entry.Item.DestructionHandled &&
                entry.Module.Enabled && entry.Item.gameObject.activeInHierarchy &&
-               SpaceSession.Current?.Owns(entry.Item.itemData.Guid) != true &&
                entry.Item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.IsInstalled() == true;
 
         public static int GetConnectionMask(Item fiber)
@@ -147,21 +163,20 @@ namespace FlatWorld.Spaceflight
             if (module == null || module.Configuration.Kind != ShipPieceKind.Fiber ||
                 !entries.TryGetValue(module, out Entry entry) || !IsInstalled(entry)) return 0;
             int mask = 0;
-            if (HasNode(entry.Scene, entry.Cell + Vector2Int.up)) mask |= 1;
-            if (HasNode(entry.Scene, entry.Cell + Vector2Int.right)) mask |= 2;
-            if (HasNode(entry.Scene, entry.Cell + Vector2Int.down)) mask |= 4;
-            if (HasNode(entry.Scene, entry.Cell + Vector2Int.left)) mask |= 8;
+            using var scope = GameplayWorldRegistry.TryGet(entry.World, out _) ? GameplayWorldRegistry.UseWorld(entry.World) : null;
+            if (HasNode(entry.World, entry.Cell + Vector2Int.up)) mask |= 1;
+            if (HasNode(entry.World, entry.Cell + Vector2Int.right)) mask |= 2;
+            if (HasNode(entry.World, entry.Cell + Vector2Int.down)) mask |= 4;
+            if (HasNode(entry.World, entry.Cell + Vector2Int.left)) mask |= 8;
             return mask;
         }
 
-        private static bool HasNode(int scene, Vector2Int cell)
+        private static bool HasNode(string world, Vector2Int cell)
         {
             cell = WorldTopologyRuntime.NormalizeCell(cell);
-            if (cells.TryGetValue((scene, cell), out List<Entry> values))
+            if (cells.TryGetValue((world, cell), out List<Entry> values))
                 foreach (Entry entry in values) if (IsInstalled(entry)) return true;
-            if (!scenes.TryGetValue(scene, out Scene target)) return false;
-            if (!target.IsValid() || !target.isLoaded) return false;
-            using var world = MachineWorld.UseScope(target.name);
+            using var machine = MachineWorld.UseScope(world);
             MachineEntity node = MachineWorld.GetAtCurrentWorld(cell, 0);
             if (node == null || node.Cell != cell || GameRes.ExistingInstance == null ||
                 !GameRes.ExistingInstance.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition)) return false;
@@ -174,9 +189,9 @@ namespace FlatWorld.Spaceflight
             return endpoint;
         }
 
-        private static void RefreshCell(int scene, Vector2Int cell)
+        private static void RefreshCell(string world, Vector2Int cell)
         {
-            if (!cells.TryGetValue((scene, cell), out List<Entry> values)) return;
+            if (!cells.TryGetValue((world, cell), out List<Entry> values)) return;
             foreach (Entry entry in values)
             {
                 if (entry.Module.Configuration.Kind != ShipPieceKind.Fiber) continue;

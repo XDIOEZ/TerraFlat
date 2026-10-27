@@ -67,6 +67,31 @@ public partial class MonsterSpawnerManager
             if (manager != null) manager.CaptureSaveData(save);
     }
 
+    // 世界释放前先保存并销毁该世界的 AI 调度器和可选后端。
+    public static void ReleaseWorld(string world)
+    {
+        if (string.IsNullOrWhiteSpace(world)) return;
+        if (!worldManagers.TryGetValue(world, out MonsterSpawnerManager manager) || manager == null)
+        {
+            worldManagers.Remove(world);
+            AiRuntimeBackendService.ReleaseWorldEcology(world);
+            return;
+        }
+
+        using (manager.EnterOwnedWorld())
+        {
+            if (manager._worldInitialized) manager.OnGameWorldExit();
+            AiRuntimeBackendService.ReleaseWorldEcology(world);
+            manager._monsterManager?.ResetWorld();
+            manager._monsterManager?.UnbindWorld();
+        }
+        worldManagers.Remove(world);
+        manager._worldInitialized = false;
+        manager._ownedWorld = null;
+        manager.enabled = false;
+        if (manager != templateManager) Destroy(manager.gameObject);
+    }
+
     // 游戏总退出才清理所有生态实例，普通玩家迁移保留其它世界的居民和计划。
     public static void ReleaseAll()
     {

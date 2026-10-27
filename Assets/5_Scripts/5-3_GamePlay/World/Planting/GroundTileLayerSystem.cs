@@ -73,7 +73,7 @@ public static class GroundTileLayerSystem
         if (!GameNetwork.HasStateAuthority || SaveDataMgr.Instance?.SaveData == null ||
             sample.Terrain == null || sample.Terrain.IsDisposed || target == null || target.RuntimeTileId <= 0 ||
             !target.TileDataTemplate.IsWalkable || BlockingTilemapLayer.IsBlockingTile(target.TileDataTemplate) ||
-            !FarmlandSystem.IsOpen(sample) || FarmlandSystem.HasWorldPlant(sample.WorldCell) ||
+            !FarmlandSystem.IsOpen(sample, allowCoveringSupport: true) || FarmlandSystem.HasWorldPlant(sample.WorldCell) ||
             ChunkMgr.ExistingInstance == null ||
             !ChunkMgr.ExistingInstance.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk))
         {
@@ -102,7 +102,7 @@ public static class GroundTileLayerSystem
             sample.Terrain.SetGrass(local.x, local.y, 0);
             sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, local.x, local.y, 0f);
             sample.Terrain.SetCell(local.x, local.y, new TerrainCell(target.RuntimeTileId, 0, 0,
-                previous.BiomeId, previous.NavigationCost, previous.Flags));
+                previous.BiomeId, sample.Cell.NavigationCost, previous.Flags | TerrainCellFlags.Walkable));
             SaveDataMgr.Instance.RecordGroundLayerCell(sample);
             SaveDataMgr.Instance.RecordRuntimeTerrainChange(new TileBuildingCell(chunk, sample.WorldCell, local,
                 target.RuntimeTileId, target.Id));
@@ -152,6 +152,7 @@ public static class GroundTileLayerSystem
         {
             foreach (var layer in snapshot.Covers)
                 if (layer?.UnderlyingCell == null || layer.UnderlyingCell.LocalPosition != local ||
+                    layer.UnderlyingCell.GroundTileId != 0 &&
                     !GameRes.ExistingInstance.TryGetTileDefinition(layer.UnderlyingCell.GroundTileId, out _))
                     throw new InvalidOperationException("覆盖层下方的地块快照缺失或未登记。");
         }

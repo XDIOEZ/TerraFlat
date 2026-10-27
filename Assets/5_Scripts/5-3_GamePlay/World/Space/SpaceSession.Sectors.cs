@@ -136,9 +136,14 @@ namespace FlatWorld.Spaceflight
             Player player = ItemMgr.Instance?.User_Player;
             if (player != null)
             {
-                player.transform.position += (Vector3)shift;
-                Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-                if (body != null) body.position = player.transform.position;
+                if (!IsPlayerInShipInteriorWorld(player))
+                {
+                    player.transform.position += (Vector3)shift;
+                    Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+                    if (body != null) body.position = player.transform.position;
+                }
+                else if (passengerProjections.TryGetValue(player, out WorldPresentationProjection projection) && projection != null)
+                    projection.transform.position += (Vector3)shift;
                 if (drivingCameraTarget != null) drivingCameraTarget.position += (Vector3)shift;
                 player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ShiftSpacePresentation(shift);
             }

@@ -739,6 +739,9 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public static Vector2 GetChunkSize()
     {
         var worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        if (GameplayWorldRegistry.UsesLocalCoordinates(worldKey) &&
+            GameplayWorldRegistry.ExecutionChunks?.ActiveGenerationProfile is { } localProfile)
+            return new Vector2(localProfile.Width, localProfile.Height);
         if (SpaceMgr.IsSpaceScene(worldKey)) return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
 
         // 添加null检查，防止出现NullReferenceException

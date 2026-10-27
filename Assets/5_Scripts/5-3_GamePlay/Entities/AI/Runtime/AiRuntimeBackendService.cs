@@ -198,7 +198,7 @@ public static class AiRuntimeBackendService
     public static bool TrySpawnDirect(string speciesId, Vector3 position, int requestedGuid, out int actorGuid)
     {
         actorGuid = 0;
-        MonsterSpawnerManager manager = MonsterSpawnerManager.ExistingInstance;
+        MonsterSpawnerManager manager = MonsterSpawnerManager.GetForWorld(GameplayWorldRegistry.ExecutionWorldKey);
         return manager != null && manager.TrySpawnCreature(speciesId, position, requestedGuid, out actorGuid);
     }
 

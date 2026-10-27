@@ -131,7 +131,7 @@ public static class ChunkRuntimeTileEffectResolver
 
         int tileId = terrain.GetTopTileId(localCell.x, localCell.y);
         TerrainCell effective = TerrainSupportLayer.GetSurfaceCell(terrain, localCell.x, localCell.y);
-        int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
+        int supportId = TerrainSupportLayer.GetExposedTileId(terrain, localCell.x, localCell.y);
         if (supportId != 0 && effective.BlockingTileId == 0 && effective.BackTileId == 0)
             tileId = supportId;
         if (tileId == 0 ||
@@ -289,7 +289,7 @@ public partial class ChunkMgr
         {
             ChunkTerrainData terrain = cachedChunk.Terrain;
             TerrainCell cell = TerrainSupportLayer.GetSurfaceCell(terrain, localCell.x, localCell.y);
-            int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
+            int supportId = TerrainSupportLayer.GetExposedTileId(terrain, localCell.x, localCell.y);
             return new RuntimeTerrainTileSample(cachedChunk.Address, terrain, worldCell, localCell, cell,
                 supportId != 0 && cell.BlockingTileId == 0 && cell.BackTileId == 0
                     ? supportId : terrain.GetTopTileId(localCell.x, localCell.y));
@@ -343,7 +343,6 @@ public partial class ChunkMgr
     internal bool TryCreateTerrainPresenceQuery(out RuntimeTerrainPresenceQuery query)
     {
         query = default;
-        if (!IsSurfaceStreamingScene) return false;
         ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
         if (runtimeChunkManager == null || profile == null)
             return false;
@@ -360,7 +359,7 @@ public partial class ChunkMgr
     public bool TryGetRuntimeTerrainTile(Vector2 worldPosition, out RuntimeTerrainTileSample sample)
     {
         sample = default;
-        if (runtimeChunkManager == null || !IsSurfaceStreamingScene)
+        if (runtimeChunkManager == null)
             return false;
 
         Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);
@@ -379,7 +378,7 @@ public partial class ChunkMgr
             return false;
 
         TerrainCell cell = TerrainSupportLayer.GetSurfaceCell(terrain, localCell.x, localCell.y);
-        int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
+        int supportId = TerrainSupportLayer.GetExposedTileId(terrain, localCell.x, localCell.y);
         sample = new RuntimeTerrainTileSample(address, terrain, worldCell, localCell, cell,
             supportId != 0 && cell.BlockingTileId == 0 && cell.BackTileId == 0
                 ? supportId : terrain.GetTopTileId(localCell.x, localCell.y));
@@ -509,7 +508,7 @@ public partial class ChunkMgr
         out RuntimeTerrainTileSample sample)
     {
         sample = default;
-        if (runtimeChunkManager == null || searchRadius < 0f || !IsSurfaceStreamingScene)
+        if (runtimeChunkManager == null || searchRadius < 0f)
             return false;
 
         Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);

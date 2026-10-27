@@ -289,6 +289,7 @@ namespace FlatWorld.Spaceflight
         {
             Player player = ItemMgr.Instance?.User_Player;
             if (player == null) return false;
+            if (IsPlayerInShipInteriorWorld(player)) return false;
             SpacePassengerState passenger = GetPassenger(player);
             string expected = GetPassengerWorld(passenger);
             if (string.IsNullOrWhiteSpace(expected) || expected == SceneManager.GetActiveScene().name) return false;

@@ -44,7 +44,9 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
 
     private void HandleChanged(ChunkTerrainChanged change)
     {
-        if (!change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer)) return;
+        if (change.Kind != TerrainChangeKind.Cell && !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer) &&
+            !change.AffectsEnvironmentLayer(TerrainSupportLayer.ExternalVisualLayer) &&
+            !change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.CoverLevelsLayerId)) return;
         int width = chunk.Terrain.Width;
         foreach (int index in change.GetCellIndices(width)) Refresh(index % width, index / width);
     }
@@ -64,8 +66,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
 
     private void Refresh(int x, int y)
     {
-        int id = TerrainSupportLayer.GetTileId(chunk.Terrain, x, y);
-        if (id == 0 || !palette.TryGetVisual(id, out Sprite sprite, out Color color, out Matrix4x4 transform))
+        int id = TerrainSupportLayer.GetExposedTileId(chunk.Terrain, x, y);
+        bool hasEntityVisual = chunk.Terrain.TryGetEnvironmentValue(TerrainSupportLayer.ExternalVisualLayer,
+            x, y, out float externalVisual) && externalVisual != 0f;
+        if (id == 0 || hasEntityVisual || !palette.TryGetVisual(id, out Sprite sprite, out Color color, out Matrix4x4 transform))
         {
             owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
             return;

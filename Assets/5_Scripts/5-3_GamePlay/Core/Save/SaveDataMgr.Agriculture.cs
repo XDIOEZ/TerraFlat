@@ -12,6 +12,8 @@ public partial class SaveDataMgr
 {
     #region 农业差量
 
+    public static event Action<string, RuntimeWorldAddress> RuntimeCropStateChanged;
+
     private static readonly ProfilerMarker AgricultureRecordMarker = new("NaturalEntityRuntime.Soil.Commit.Persist");
 
     private ChunkSaveRecord GetRuntimeChunkRecord(RuntimeWorldAddress address, bool create)
@@ -81,6 +83,7 @@ public partial class SaveDataMgr
         cell.Crop = crop == null ? null : CloneItemData(crop);
         if (cell.Crop == null && cell.SourceTileId == 0)
             record.AgricultureCells.Remove(cell);
+        RuntimeCropStateChanged?.Invoke(GameplayWorldRegistry.ExecutionWorldKey, address);
     }
 
     /// <summary>自然基质上的玩家作物只登记植株，不创建地块水肥。</summary>

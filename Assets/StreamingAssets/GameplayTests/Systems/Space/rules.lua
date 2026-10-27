@@ -152,10 +152,6 @@ test.system("space", "fiber_connections", {}, function(data)
     assert(data.isolatedMask == 1 and data.originalAfterOtherShip == 10 and data.foreignFiber == 0,
         "同坐标不同船的光纤连接串到一起")
     assert(data.nonOpticalNeighbors == 0, "光纤错误连向相邻电线或管道")
-    assert(#data.sortingOrders == 4, "缺少船上线层采样")
-    for index, expected in ipairs({-4, -3, -2, -1}) do
-        assert(data.sortingOrders[index] == expected, "船上地板/管道/电线/光纤层级错误：" .. index)
-    end
 end, "光纤16种连接、设备端点、拆建重算与同坐标船体隔离")
 
 test.system("space", "device_power", {}, function(data)

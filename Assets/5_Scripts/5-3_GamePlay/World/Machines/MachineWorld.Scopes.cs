@@ -87,10 +87,14 @@ public static partial class MachineWorld
     private static bool KeepSimulatingWithoutPlayers => IsShipScope || scope.BackgroundSimulation;
 
     private static void NotifySurfaceMechanicalChanged(Vector2Int cell)
-    { if (!IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey) PublishSurfaceMechanicalChange(cell); }
+    {
+        if (worldKey == GameplayWorldRegistry.ExecutionWorldKey ||
+            GameplayWorldRegistry.TryGet(worldKey, out _)) PublishSurfaceMechanicalChange(cell);
+    }
     private static void NotifySurfaceCellChanged(Vector2Int cell)
     {
         NodeCellChanged?.Invoke(worldKey, cell);
+        PublishWorldPresentationCellChange(cell);
         if (!IsShipScope && worldKey == GameplayWorldRegistry.ExecutionWorldKey) PublishSurfaceCellChange(cell);
     }
 

@@ -115,8 +115,10 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     public bool PersistRuntimeAi => !_isPreparingFlight && !_isFlying && !_endingFlight;
     private bool _endingFlight;
     private FlatWorld.Spaceflight.SpaceCombatFrame spaceFrame;
+    private int _lastFlightUpdateFrame = -1;
     public Vector2 SpaceFlightVelocity => _arcVelocity;
     public static readonly HashSet<Mod_Projectile> NetworkSurfaceProjectiles = new();
+    public static readonly HashSet<Mod_Projectile> LocalWorldProjectiles = new();
     public string NetworkSurfaceWorldKey { get; private set; }
     public Vector2 NetworkSurfaceCanonicalOrigin { get; private set; }
     public Vector2 NetworkSurfacePresentationOrigin { get; private set; }
@@ -170,6 +172,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         _isFlying = false;
         _isPreparingFlight = false;
         _endingFlight = false;
+        _lastFlightUpdateFrame = -1;
         _flightRemain = 0f;
         _flightElapsed = 0f;
         _virtualLaunchVerticalSpeed = 0f;
@@ -199,19 +202,29 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         if (!_isFlying)
             return;
 
+        // 物品本帧迁入另一个调度组时不能再推进一次。
+        if (_lastFlightUpdateFrame == Time.frameCount) return;
+        _lastFlightUpdateFrame = Time.frameCount;
+
         float step = Mathf.Min(Mathf.Max(0f, deltaTime), Mathf.Max(0f, _flightRemain));
         _flightElapsed += step;
         _flightRemain -= step;
 
         if (spaceFrame?.Active == true)
         {
-            RefreshSpaceProjectilePresentation();
+            if (!spaceFrame.SectorLocal) RefreshSpaceProjectilePresentation();
             // 太空投射物使用权威直线位移和规范坐标扫掠，不接触本机地表物理世界。
             Vector2 next = (Vector2)item.transform.position + _arcVelocity * step;
             SetProjectilePosition(next);
             _virtualHeight = 0f;
             UpdateArcPresentation(0f);
             SweepFlightPath();
+            if (_isFlying && spaceFrame.SectorLocal)
+            {
+                spaceFrame.DepartingShipId = null;
+                if (spaceFrame.RebaseSectorIfNeeded(out Vector2 shift))
+                { _lastFlightPosition += shift; _lastSensorPosition += shift; _groundFlightPosition += shift; }
+            }
             if (_isFlying && _flightRemain <= 0f) FinishFlight();
             return;
         }
@@ -238,8 +251,46 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         }
 
         UpdateBounceSpin(step);
+        var session = FlatWorld.Spaceflight.SpaceSession.Current;
+        Vector2 end = _body != null ? _body.position : (Vector2)item.transform.position;
+        Vector2 start = _lastFlightPosition;
+        FlatWorld.Spaceflight.ShipState exitShip = null;
+        float exitFraction = 0f;
+        bool exitsShip = FlatWorld.Networking.GameNetwork.HasStateAuthority && session != null &&
+            session.TryFindProjectileShipExit(item, start, end, out exitShip, out exitFraction);
+        if (exitsShip) SetProjectilePosition(Vector2.Lerp(start, end, exitFraction));
         SweepFlightPath();
         if (!_isFlying) return;
+        if (_resolvedBounceThisSweep) exitsShip = false;
+        if (exitsShip)
+        {
+            Vector2 localBoundary = item.transform.position;
+            if (TransferProjectileOutOfShipInterior(session, exitShip, localBoundary, out string targetWorld))
+            {
+                FlatWorld.Spaceflight.ShipGeometry.Rotate(end.x - localBoundary.x, end.y - localBoundary.y,
+                    exitShip.AngleRadians, out double dx, out double dy);
+                _lastFlightPosition = item.transform.position;
+                _lastSensorPosition = ResolveSensorPosition();
+                SetProjectilePosition((Vector2)item.transform.position + new Vector2((float)dx, (float)dy));
+                if (spaceFrame?.SectorLocal == true)
+                {
+                    using (GameplayWorldRegistry.UseSpaceScene(targetWorld)) SweepFlightPath();
+                    if (_isFlying)
+                    {
+                        if (dx != 0d || dy != 0d) spaceFrame.DepartingShipId = null;
+                        if (spaceFrame.RebaseSectorIfNeeded(out Vector2 shift))
+                        { _lastFlightPosition += shift; _lastSensorPosition += shift; _groundFlightPosition += shift; }
+                    }
+                }
+                else
+                {
+                    using (GameplayWorldRegistry.UseWorld(targetWorld)) SweepFlightPath();
+                }
+            }
+            if (_isFlying && (_flightRemain <= 0f || spaceFrame?.Active != true && _flightElapsed > 0f && _virtualHeight <= 0f))
+                FinishFlight();
+            return;
+        }
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
 
         if ((_flightElapsed > 0f && _virtualHeight <= 0f) || _flightRemain <= 0f)
@@ -250,7 +301,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     protected override void OnUnload()
     {
         spaceFrame?.Finish();
-        NetworkSurfaceProjectiles.Remove(this); NetworkSurfaceWorldKey = null; IsNetworkSurfaceQueryOnly = false;
+        NetworkSurfaceProjectiles.Remove(this); LocalWorldProjectiles.Remove(this);
+        NetworkSurfaceWorldKey = null; IsNetworkSurfaceQueryOnly = false;
         launchDeathCause = null;
         _damage?.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
         if (_damage != null)
@@ -422,14 +474,16 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             _isFlying = true;
 
             _damage.SetExplicitProjectileSweep(true);
-            if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(shooter, out FlatWorld.Spaceflight.SpaceSectorPosition origin, out Vector2 presentation))
+            bool localWorld = GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(item));
+            if (localWorld) LocalWorldProjectiles.Add(this);
+            if (!localWorld && FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(shooter, out FlatWorld.Spaceflight.SpaceSectorPosition origin, out Vector2 presentation))
             {
                 spaceFrame = item.GetComponent<FlatWorld.Spaceflight.SpaceCombatFrame>() ?? item.gameObject.AddComponent<FlatWorld.Spaceflight.SpaceCombatFrame>();
                 spaceFrame.Initialize(item, origin, presentation);
                 WorldPhysicsService2D.SetItemBodySimulationEnabled(_body, false);
                 if (_solidCollider != null) _solidCollider.enabled = false;
             }
-            else if (FlatWorld.Networking.GameNetwork.IsOnline && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
+            else if (!localWorld && FlatWorld.Networking.GameNetwork.IsOnline && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
                 FlatWorld.Spaceflight.SpaceSession.TryGetCombatWorldKey(shooter, out string surfaceWorld))
             {
                 NetworkSurfaceWorldKey = surfaceWorld;
@@ -466,6 +520,63 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     {
         _body.position = position;
         item.transform.position = new Vector3(position.x, position.y, item.transform.position.z);
+    }
+
+    // 船内刚体完成扫掠后移交真实外部世界，不在同一帧重复推进。
+    private bool TransferProjectileOutOfShipInterior(FlatWorld.Spaceflight.SpaceSession session,
+        FlatWorld.Spaceflight.ShipState ship, Vector2 local, out string targetWorld)
+    {
+        targetWorld = null;
+        if (ship == null || _body == null) return false;
+        FlatWorld.Spaceflight.ShipGeometry.LocalToWorld(ship, local.x, local.y, out double x, out double y);
+        FlatWorld.Spaceflight.ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
+        Vector2 currentVelocity = _body.velocity;
+        FlatWorld.Spaceflight.ShipGeometry.Rotate(currentVelocity.x, currentVelocity.y, ship.AngleRadians, out double wx, out double wy);
+        Vector2 velocity = new((float)(vx + wx), (float)(vy + wy));
+        float rotation = item.transform.eulerAngles.z + (float)(ship.AngleRadians * Mathf.Rad2Deg);
+        var flight = session.GetFlight(ship.ShipId);
+        if (flight?.Phase == FlatWorld.Spaceflight.ShipFlightPhase.Cruising)
+        {
+            var position = FlatWorld.Spaceflight.SpaceSectorCoordinates.Normalize(ship.Sector,
+                new FlatWorld.Spaceflight.SpaceVector2(x, y));
+            spaceFrame = item.GetComponent<FlatWorld.Spaceflight.SpaceCombatFrame>() ?? item.gameObject.AddComponent<FlatWorld.Spaceflight.SpaceCombatFrame>();
+            if (!spaceFrame.TryEnterSectorLocal(item, position, ship.ShipId)) return false;
+            targetWorld = FlatWorld.Spaceflight.SpaceSectorCoordinates.SceneKey(position.Sector);
+            SetProjectilePosition(position.LocalMeters.ToVector2());
+            item.transform.rotation = Quaternion.Euler(0f, 0f, rotation);
+            _body.rotation = rotation;
+            _body.velocity = velocity;
+            _arcVelocity = velocity;
+            WorldPhysicsService2D.SetItemBodySimulationEnabled(_body, false);
+            if (_solidCollider != null) _solidCollider.enabled = false;
+        }
+        else
+        {
+            targetWorld = flight?.SurfaceWorldKey ?? ship.WorldAddress;
+            if (string.IsNullOrWhiteSpace(targetWorld) || SpaceMgr.IsSpaceScene(targetWorld)) return false;
+            using var scope = GameplayWorldRegistry.UseWorld(targetWorld);
+            GameplayWorldRegistry.AssignItemToWorld(item, targetWorld);
+            if (GameplayWorldRegistry.GetItemWorldKey(item) != targetWorld) return false;
+            Vector2 point = WorldLocalPresentation.ProjectPosition(new Vector2((float)x, (float)y));
+            point.y += (float)FlatWorld.Spaceflight.ShipSurfaceState.VisualRise(flight);
+            SetProjectilePosition(point);
+            item.transform.rotation = Quaternion.Euler(0f, 0f, rotation);
+            _body.rotation = rotation;
+            _body.velocity = velocity;
+            _arcVelocity = velocity;
+            if (FlatWorld.Networking.GameNetwork.IsOnline)
+            {
+                NetworkSurfaceWorldKey = targetWorld;
+                NetworkSurfacePresentationOrigin = point;
+                NetworkSurfaceCanonicalOrigin = WorldLocalPresentation.ToLogical(point);
+                NetworkSurfaceProjectiles.Add(this);
+            }
+        }
+        LocalWorldProjectiles.Remove(this);
+        _groundFlightPosition = item.transform.position;
+        SetFlightDeliveryCapabilities();
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+        return true;
     }
 
     private void RefreshSpaceProjectilePresentation()
@@ -932,6 +1043,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         _endingFlight = true;
         _isFlying = false;
         NetworkSurfaceProjectiles.Remove(this);
+        LocalWorldProjectiles.Remove(this);
         float remainingHeight = Mathf.Max(0f, _virtualHeight);
         _damage.StopAttack();
         _damage.SetExplicitProjectileSweep(false);

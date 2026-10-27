@@ -854,11 +854,18 @@
       "group": "太空",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Space/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.LocalWorld*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.WorldTerrainTransfer.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Environment/ItemEnvironmentSources.cs",
         "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.Space*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AI/Spawning/MonsterSpawnerManager.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AI/Spawning/MonsterSpawnerManager.Worlds.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AI/Runtime/AiRuntimeBackendService.cs",
         "Assets/Resources/Config/Space/*",
         "Assets/StreamingAssets/GameConfig/Space/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Space/*",
-        "Assets/StreamingAssets/GameplayTests/universe-suite.json"
+        "Assets/StreamingAssets/GameplayTests/universe-suite.json",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestShipInteriorWorldRuntimeProbe.cs"
       ],
       "dependsOn": [
         "mechanical",
@@ -873,7 +880,8 @@
       ],
       "rulesSuite": "GameplayTests/Systems/Space/rules-suite.json",
       "integrationSuites": [
-        "GameplayTests/universe-suite.json"
+        "GameplayTests/universe-suite.json",
+        "GameplayTests/Systems/Space/ship-world-suite.json"
       ],
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Space/README.md",
@@ -884,7 +892,8 @@
         "space_gameplay",
         "ship_landing_gameplay",
         "ship_damage_gameplay",
-        "presentation_cache"
+        "presentation_cache",
+        "ship_interior_world_gameplay"
       ],
       "rulesCoverage": "partial"
     },
@@ -1080,8 +1089,15 @@
         "Assets/5_Scripts/5-3_GamePlay/Physics2D/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Chunk/*",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.LocalWorld*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.WorldTerrainTransfer.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Environment/ItemEnvironmentSources.cs",
         "Assets/5_Scripts/5-0_WorldModel/*",
         "Assets/StreamingAssets/GameplayTests/Systems/WorldStreaming/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestShipInteriorWorldRuntimeProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/ShipPassengers.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Cam.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldPhysicsProxyRuntimeProbe*.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldPhysics*.cs"
       ],
@@ -1093,14 +1109,16 @@
       ],
       "rulesSuite": "GameplayTests/Systems/WorldStreaming/rules-suite.json",
       "integrationSuites": [
-        "GameplayTests/Systems/WorldStreaming/gameplay-suite.json"
+        "GameplayTests/Systems/WorldStreaming/gameplay-suite.json",
+        "GameplayTests/Systems/Space/ship-world-suite.json"
       ],
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/WorldStreaming/README.md",
       "integrationCaseIds": [
         "world_streaming_gameplay",
         "world_physics_gameplay",
-        "world_physics_proxy_gameplay"
+        "world_physics_proxy_gameplay",
+        "ship_interior_world_gameplay"
       ],
       "rulesCoverage": "partial"
     },

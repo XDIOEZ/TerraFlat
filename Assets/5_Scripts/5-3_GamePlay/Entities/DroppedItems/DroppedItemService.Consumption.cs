@@ -113,7 +113,7 @@ public static partial class DroppedItemService
             position = handle.Legacy.transform.position;
             return true;
         }
-        return handle.Epoch == Epoch && runtime != null && runtime.TryGetPickablePosition(handle.Id, out position);
+        return ResolveHandleEpoch(handle) == Epoch && runtime != null && runtime.TryGetPickablePosition(handle.Id, out position);
     }
 
     /// <summary>实际使用前取得独立冷载荷；调用者不能通过此快照修改世界中的库存数量。</summary>
@@ -141,7 +141,7 @@ public static partial class DroppedItemService
             else source.OnUIRefresh?.Invoke();
             return true;
         }
-        return handle.Epoch == Epoch && runtime != null && runtime.TryConsumeTagged(handle.Id, tag, amount);
+        return ResolveHandleEpoch(handle) == Epoch && runtime != null && runtime.TryConsumeTagged(handle.Id, tag, amount);
     }
 
     private static bool IsLoosePickable(Item item) => item != null && !item.DestructionHandled && !item.InHand &&

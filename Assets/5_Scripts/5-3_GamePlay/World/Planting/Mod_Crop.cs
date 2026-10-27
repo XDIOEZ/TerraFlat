@@ -239,6 +239,17 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         GrowthChanged?.Invoke(this, 0f);
     }
 
+    public void RelocatePlantedCrop(Vector2Int tilePosition)
+    {
+        if (Data?.isPlanted == true) Data.plantedTilePosition = tilePosition;
+    }
+
+    public void RelocatePlantedCropSnapshot(ModuleData state, Vector2Int tilePosition)
+    {
+        if (state is Ex_ModData_MemoryPackable data && data.GetData<CropRuntimeData>() is CropRuntimeData crop && crop.isPlanted)
+        { crop.plantedTilePosition = tilePosition; data.WriteData(crop); }
+    }
+
     /// <summary>供后续农业机制或调试工具显式切换权威阶段。</summary>
     public void SetStage(CropStage stage)
     {

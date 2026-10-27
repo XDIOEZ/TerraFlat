@@ -24,6 +24,38 @@ public enum CropGrowthStatus
 public interface IPlantableCrop
 {
     void InitializePlantedCrop(Vector2Int tilePosition);
+    void RelocatePlantedCrop(Vector2Int tilePosition);
+    void RelocatePlantedCropSnapshot(ModuleData data, Vector2Int tilePosition);
+}
+
+public static class CropWorldRelocation
+{
+    #region 作物土壤归属
+    public static void RelocateLiveCrop(Item item, Vector2Int cell)
+    {
+        if (item?.Mods == null) return;
+        foreach (Module module in item.Mods.Values)
+            if (module is IPlantableCrop crop) crop.RelocatePlantedCrop(cell);
+    }
+
+    public static void RelocateSavedCrop(ItemData item, Vector2Int cell)
+    {
+        if (item?.ModuleDataDic == null) return;
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.TryGetItemDefinition(item.IDName, out RuntimeItemDefinition definition))
+            throw new System.InvalidOperationException("作物移交缺少物品定义：" + item.IDName);
+        bool relocated = false;
+        foreach (RuntimeItemModuleDefinition module in definition.ModuleDefinitions)
+        {
+            if (!module.Enabled || !item.ModuleDataDic.TryGetValue(module.StableName, out ModuleData state)) continue;
+            GameObject prefab = resources.GetPrefab(module.PrefabId, false);
+            if (prefab == null) continue;
+            foreach (IPlantableCrop crop in prefab.GetComponentsInChildren<IPlantableCrop>(true))
+            { crop.RelocatePlantedCropSnapshot(state, cell); relocated = true; }
+        }
+        if (!relocated) throw new System.InvalidOperationException("作物定义缺少可移交的种植模块：" + item.IDName);
+    }
+    #endregion
 }
 
 /// <summary>已恢复的种植作物按当前世界时间补算离区期间的成长。</summary>

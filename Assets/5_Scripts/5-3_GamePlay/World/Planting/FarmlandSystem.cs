@@ -56,13 +56,15 @@ public static partial class FarmlandSystem
             Mathf.Max(0f, Mathf.Abs(offset.y) - 0.5f)).sqrMagnitude <= range * range;
     }
 
-    public static bool IsOpen(RuntimeTerrainTileSample sample) =>
-        TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) == 0 &&
+    public static bool IsOpen(RuntimeTerrainTileSample sample, bool allowCoveringSupport = false) =>
+        (allowCoveringSupport || TerrainSupportLayer.GetExposedTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) == 0) &&
         sample.Cell.GroundTileId != 0 && sample.Cell.BackTileId == 0 && sample.Cell.BlockingTileId == 0 &&
         sample.LiquidDepth <= 0f &&
         (sample.Cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
-        sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) == 1 &&
-        !BuildingOccupancyRegistry.IsOccupied(sample.WorldCell);
+        (sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) == 1 ||
+            allowCoveringSupport && TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0 &&
+            sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) == 0) &&
+        !BuildingOccupancyRegistry.IsOccupied(sample.WorldCell, ignoreGroundBuildings: true);
 
     /// <summary>活着的植株和资源节点占格；普通掉落物与玩家不阻止农业操作。</summary>
     public static bool HasWorldPlant(Vector2Int cell)
@@ -78,7 +80,8 @@ public static partial class FarmlandSystem
             {
                 if (candidate == null || candidate is Player || candidate is Map || candidate.InHand ||
                     candidate.Owner != null || candidate.DestructionHandled || candidate.itemData?.Stack == null ||
-                    candidate.itemData.Stack.CanBePickedUp)
+                    candidate.itemData.Stack.CanBePickedUp ||
+                    candidate.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.IsGroundFacility == true)
                     continue;
                 Vector3 pos = WorldTopologyRuntime.NormalizePosition(candidate.transform.position);
                 if (new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y)) == cell)

@@ -34,12 +34,46 @@ namespace FlatWorld.Networking.Gameplay
             realmRevision = observer.RealmRevision;
             return true;
         }
+        public static bool TryGetReadyLocalItemWorld(out uint realmRevision, out string worldKey)
+        {
+            worldKey = null;
+            realmRevision = 0;
+            if (!NetworkClient.active || NetworkServer.active || !NetworkClient.ready ||
+                GameManager.ExistingInstance?.IsInGameWorld != true) return false;
+            NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
+            string ownerWorld = GameplayWorldRegistry.GetItemWorldKey(player?.CorePlayer);
+            if (!GameplayWorldRegistry.UsesLocalCoordinates(ownerWorld))
+            {
+                if (!TryGetReadyLocalSurface(out realmRevision)) return false;
+                worldKey = GameplayWorldRegistry.LocalPresentationWorldKey;
+                return true;
+            }
+            SpaceSession session = SpaceSession.Current;
+            if (player?.CorePlayer?.IsInitialized != true || player.IsWorldTransferPending ||
+                !player.TryGetSpaceObserver(out SpaceNetworkObserver observer) || player.RealmRevision != observer.RealmRevision ||
+                session == null || !session.IsPlayerInShipInteriorWorld(player.CorePlayer, out ShipState ship, out ShipInteriorWorldRuntime world) ||
+                observer.ShipId != ship.ShipId || player.CorePlayer.gameObject.scene != world.Scene ||
+                !GameplayWorldRegistry.TryGet(world.WorldKey, out _)) return false;
+            realmRevision = observer.RealmRevision;
+            worldKey = world.WorldKey;
+            return true;
+        }
         public static bool OwnsItem(NetworkConnectionToClient connection, Item item)
-            => item != null && connection?.identity?.GetComponent<NetworkWorldPlayer>()?.TryGetSpaceObserver(out SpaceNetworkObserver observer) == true &&
-                !observer.InSpace && item.gameObject.scene.name == observer.WorldKey;
+        {
+            NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
+            if (item == null || player == null || !player.TryGetSpaceObserver(out SpaceNetworkObserver observer)) return false;
+            string playerWorld = GameplayWorldRegistry.GetItemWorldKey(player.CorePlayer);
+            string itemWorld = GameplayWorldRegistry.GetItemWorldKey(item);
+            if (!string.IsNullOrEmpty(playerWorld) || !string.IsNullOrEmpty(itemWorld))
+                return !string.IsNullOrEmpty(playerWorld) && string.Equals(playerWorld, itemWorld, StringComparison.Ordinal);
+            return !observer.InSpace && item.gameObject.scene.name == observer.WorldKey;
+        }
         public static IDisposable Use(NetworkWorldPlayer player)
         {
             if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true) return null;
+            string playerWorld = GameplayWorldRegistry.GetItemWorldKey(player.CorePlayer);
+            if (GameplayWorldRegistry.UsesLocalCoordinates(playerWorld) && GameplayWorldRegistry.TryGet(playerWorld, out _))
+                return GameplayWorldRegistry.UseWorld(playerWorld);
             return Use(observer);
         }
         private static IDisposable Use(SpaceNetworkObserver observer)
@@ -59,7 +93,7 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         public static Action<NetworkConnectionToClient, T> Wrap<T>(Action<NetworkConnectionToClient, T> handler,
-            Action<NetworkConnectionToClient, T, string> rejected = null) where T : struct, NetworkMessage
+            Action<NetworkConnectionToClient, T, string> rejected = null, bool observerWorld = false) where T : struct, NetworkMessage
             => (connection, message) =>
             {
                 NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
@@ -75,7 +109,7 @@ namespace FlatWorld.Networking.Gameplay
                     rejected?.Invoke(connection, message, reason);
                     return;
                 }
-                using (Use(observer)) handler(connection, message);
+                using (observerWorld ? Use(observer) : Use(player)) handler(connection, message);
             };
         #endregion
     }

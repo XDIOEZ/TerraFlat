@@ -200,8 +200,8 @@ public partial class ChunkMgr
     /// 本地 WorldModel 区块窗口已经启用。掉落物等运行时实体在此状态下不得再触发旧 Chunk 加载。
     /// </summary>
     public bool IsWorldModelRuntimeActive =>
-        IsSurfaceStreamingScene && runtimeChunkManager != null &&
-        (runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count > 0);
+        runtimeChunkManager != null && (GameplayWorldRegistry.UsesLocalCoordinates(OwnedWorldKey) ||
+        IsSurfaceStreamingScene && (runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count > 0));
 
     /// <summary>
     /// 当前活动视野内的区块是否都已经完成数据提交和 ChunkView 表现绑定。
@@ -276,6 +276,45 @@ public partial class ChunkMgr
             return false;
         view = binding.View;
         return view != null && view.IsBound;
+    }
+
+    // 正式跨世界事务需要实体宿主时同步完成同一条区块绑定流程。
+    internal ChunkView EnsureRuntimeChunkViewBoundForStateTransfer(RuntimeWorldAddress address)
+    {
+        using var scope = RequireRuntimeWorldContext();
+        if (!TryGetChunkRuntime(address, out ChunkRuntime chunk) || chunk.DataStatus != ChunkDataStatus.Ready || chunk.Terrain == null)
+            throw new InvalidOperationException("地格移交所需的区块尚未就绪：" + address);
+        if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+            activeRuntimeBindings.Add(address, binding = new RuntimeChunkBinding());
+        binding.WantsPresentation = true;
+        runtimeWindowTargets.Add(address);
+        if (!RestoreRuntimeChunkState(address, binding, chunk) || !ReferenceEquals(binding.RestoredEntitiesChunk, chunk))
+            throw new InvalidOperationException("地格移交所需的区块居民尚未恢复：" + address);
+        pendingLocalChunkRestorations.Remove(address);
+        runtimePresentationQueue.Remove(address);
+        runtimePresentationContinuationQueue.Remove(address);
+        binding.PresentationQueued = false;
+        if (binding.View != null && binding.View.Model != null && !ReferenceEquals(binding.View.Model, chunk))
+        {
+            FinishRuntimeChunkPresentation(binding);
+            RecycleRuntimeChunkView(binding);
+        }
+        if (binding.View == null || !binding.View.IsBound)
+        {
+            if (!binding.PresentationInProgress)
+            {
+                binding.PendingChunk = chunk;
+                StartRuntimeChunkPresentation(address);
+                runtimePresentationContinuationQueue.Remove(address);
+            }
+            while (binding.PresentationInProgress)
+                AdvanceRuntimeChunkPresentation(address);
+        }
+        runtimePresentationQueue.Remove(address);
+        runtimePresentationContinuationQueue.Remove(address);
+        if (binding.View == null || !binding.View.IsBound)
+            throw new InvalidOperationException("地格移交所需的区块表现绑定失败：" + address);
+        return binding.View;
     }
 
     /// <summary>读取已经开始绑定的 ChunkView；允许返回仍在补草地、导航、自然物等后续表现的 View。</summary>
@@ -963,7 +1002,11 @@ public partial class ChunkMgr
             WorldRuntime.StreamingDiagnostics.Record("view.queue_wait",
                 ChunkStreamingDiagnostics.ElapsedMs(binding.DiagnosticQueuedAt));
         RecycleRuntimeChunkView(binding);
-        ChunkView prefab = DimensionManager.Instance?.GetActiveChunkViewPrefab();
+        DimensionManager dimensionManager = DimensionManager.Instance;
+        ChunkView prefab = dimensionManager?.GetActiveChunkViewPrefab();
+        if (prefab == null && GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey) &&
+            dimensionManager != null && dimensionManager.TryGetDefinition(global::WorldAddress.SurfaceDimensionId, out var definition))
+            prefab = definition.ChunkViewPrefab;
         if (prefab == null)
         {
             WorldRuntime.StreamingDiagnostics.Count("view.missing_prefab");
@@ -1403,7 +1446,8 @@ public partial class ChunkMgr
         using var scope = binding.RestoredTerrainChunk != null || binding.PresentationRoutine != null ||
                           binding.View?.Model != null ? RequireRuntimeWorldContext() : null;
         // 建筑与地形共同离开表现窗；快照失败时保留绑定，不能留下无地形的半艘船。
-        if (SaveDataMgr.Instance != null && !SaveDataMgr.Instance.TryUnloadRuntimeBuildingsForChunk(address))
+        if (!GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey) &&
+            SaveDataMgr.Instance != null && !SaveDataMgr.Instance.TryUnloadRuntimeBuildingsForChunk(address))
         {
             retiringRuntimeBindings.Add(address);
             return;

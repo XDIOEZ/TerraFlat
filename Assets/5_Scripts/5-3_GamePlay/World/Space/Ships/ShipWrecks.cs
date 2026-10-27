@@ -21,6 +21,7 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
                     if (!piece.IsAlive) continue;
+                    ReleaseShipInteriorItem(piece, capture: true);
                     ItemData data = GetPieceData(piece);
                     if (int.TryParse(piece.PieceId, out int id) && MachineWorld.GetById(id) is MachineEntity node)
                         data = MachineWorld.RemoveShipPieceForRecovery(node);
@@ -38,6 +39,7 @@ namespace FlatWorld.Spaceflight
             State.Navigation.RemoveAll(value => value.ShipId == ship.ShipId);
             State.Docking.RemoveAll(value => ship.Pieces.Exists(piece =>
                 piece.PieceId == value.PortAId || piece.PieceId == value.PortBId));
+            PreserveWreckInteriorWorldIfNeeded(ship);
         }
 
         private void QueueDetachedWreck(ShipState ship, ShipPieceState piece)

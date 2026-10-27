@@ -37,12 +37,12 @@ public static partial class FarmlandSystem
     private static bool CanUseSoilCell(ChunkTerrainData terrain, int x, int y, TerrainCell cell,
         Vector2Int worldCell, bool normalizedWorldCell) =>
         terrain != null && !terrain.IsDisposed &&
-        TerrainSupportLayer.GetTileId(terrain, x, y) == 0 &&
+        TerrainSupportLayer.GetExposedTileId(terrain, x, y) == 0 &&
         cell.GroundTileId != 0 && cell.BackTileId == 0 && cell.BlockingTileId == 0 &&
         (cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
         terrain.GetTileLayerCount(x, y) == 1 &&
-        !(normalizedWorldCell ? BuildingOccupancyRegistry.IsOccupiedNormalized(worldCell) :
-            BuildingOccupancyRegistry.IsOccupied(worldCell));
+        !(normalizedWorldCell ? BuildingOccupancyRegistry.IsOccupiedNormalized(worldCell, ignoreGroundBuildings: true) :
+            BuildingOccupancyRegistry.IsOccupied(worldCell, ignoreGroundBuildings: true));
 
     /// <summary>只有真实耕地读取动态水肥，普通地块始终只读生成地理基准。</summary>
     public static TileData_Farmland ReadSoilSnapshot(RuntimeTerrainTileSample sample)

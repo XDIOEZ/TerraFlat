@@ -4,6 +4,8 @@ using System.Globalization;
 using FlatWorld.Gameplay.Progress;
 using FlatWorld.Networking;
 using FlatWorld.Structures;
+using FlatWorld.WorldModel;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -100,7 +102,8 @@ namespace FlatWorld.Spaceflight
             using var worldScope = GameplayWorldRegistry.UseWorld(world);
             var selected = new List<ShipGroundBuildingStore.Entry>();
             var pieces = new List<ShipPieceState>();
-            var removedItems = new List<ShipGroundBuildingStore.Entry>();
+            var movedItems = new List<(ShipGroundBuildingStore.Entry Entry, ShipPieceState Piece)>();
+            var removedTiles = new List<ShipGroundBuildingStore.Entry>();
             var originalData = new Dictionary<int, ItemData>();
             var originalPlacement = new Dictionary<int, MachineScopePlacement>();
             var machineIds = new List<int>();
@@ -108,6 +111,9 @@ namespace FlatWorld.Spaceflight
             foreach (ShipState existing in State.Ships) existingShips.Add(existing.ShipId);
             bool transferred = false;
             bool atmosphereTransferred = false;
+            DroppedItemService.WorldTransfer movedDrops = null;
+            InteriorEntityTransfer movedLooseItems = null;
+            SaveDataMgr.WorldTerrainTransfer movedTerrain = null;
             try
             {
                 selected = CollectGroundAssembly(world, console.Id);
@@ -155,21 +161,107 @@ namespace FlatWorld.Spaceflight
                 ShipAtmosphereService.RebuildCompartments(ship, GetOutside(ship));
                 if (!ToggleIgnition(console.Id.ToString(CultureInfo.InvariantCulture), out string ignitionReason))
                     throw new InvalidOperationException(ignitionReason);
-                foreach (ShipGroundBuildingStore.Entry entry in selected)
-                    if (entry.Item != null)
-                    { removedItems.Add(entry); ShipGroundBuildingStore.RemoveItem(entry); }
+                for (int i = 0; i < selected.Count; i++)
+                    if (selected[i].Tile.HasValue && !selected[i].Tile.Value.ReplacedGroundCell.HasValue)
+                    {
+                        removedTiles.Add(selected[i]);
+                        ShipGroundBuildingStore.RemoveItem(selected[i]);
+                    }
+                    else if (selected[i].Item != null)
+                    {
+                        TransferExistingItemToShipInterior(ship, pieces[i], selected[i].Item);
+                        movedItems.Add((selected[i], pieces[i]));
+                    }
+                for (int i = 0; i < selected.Count; i++)
+                    if (selected[i].Tile.HasValue && selected[i].Tile.Value.ReplacedGroundCell.HasValue)
+                    {
+                        removedTiles.Add(selected[i]);
+                        ShipGroundBuildingStore.RemoveItem(selected[i]);
+                    }
+                Vector2 ToLocal(Vector2 point)
+                {
+                    point = WorldLocalPresentation.ProjectPosition(point, new Vector2((float)candidate.PositionX, (float)candidate.PositionY));
+                    ShipGeometry.WorldToLocal(candidate, point.x, point.y, out double x, out double y);
+                    return new Vector2((float)x, (float)y);
+                }
+                Vector2 ToGround(Vector2 point)
+                {
+                    ShipGeometry.LocalToWorld(candidate, point.x, point.y, out double x, out double y);
+                    return new Vector2((float)x, (float)y);
+                }
+                movedDrops = DroppedItemService.TransferWorldItems(world, MachineWorld.GetShipScopeKey(ship.ShipId),
+                    point => { Vector2 local = ToLocal(point); return ShipGeometry.HasFloor(candidate,
+                        Mathf.FloorToInt(local.x / (float)candidate.CellSizeMeters), Mathf.FloorToInt(local.y / (float)candidate.CellSizeMeters)); },
+                    ToLocal, ToGround, -(float)(candidate.AngleRadians * 180d / Math.PI));
+                movedLooseItems = new InteriorEntityTransfer(world, MachineWorld.GetShipScopeKey(ship.ShipId),
+                    point => { Vector2 local = ToLocal(point); return ShipGeometry.HasFloor(candidate,
+                        Mathf.FloorToInt(local.x / (float)candidate.CellSizeMeters), Mathf.FloorToInt(local.y / (float)candidate.CellSizeMeters)); },
+                    ToLocal, -(float)(candidate.AngleRadians * 180d / Math.PI));
+                movedTerrain = SaveDataMgr.Instance.TransferWorldTerrain(world, MachineWorld.GetShipScopeKey(ship.ShipId),
+                    point => { Vector2 local = ToLocal(point); return ShipGeometry.HasFloor(candidate,
+                        Mathf.FloorToInt(local.x / (float)candidate.CellSizeMeters), Mathf.FloorToInt(local.y / (float)candidate.CellSizeMeters)); }, ToLocal);
                 InitializeTemplateCabin(ship, console.Id);
                 foreach (ShipPieceState piece in pieces)
                     if (MachineCatalog.Get(piece.ItemId) != null)
                         using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(candidate.ShipId)))
                             CaptureMachinePieceSnapshot(piece, MachineWorld.GetById(int.Parse(piece.PieceId, CultureInfo.InvariantCulture)));
                 CommitPiece(ship, pieces[pieces.Count - 1]);
+                movedDrops.Commit();
+                movedLooseItems.Commit();
+                movedTerrain.Commit();
                 reason = "地面建筑已装配，飞船开始起飞。"; return true;
             }
             catch (Exception error)
             {
                 if (ship != null)
                 {
+                    try { movedTerrain?.Dispose(); }
+                    catch (Exception rollback)
+                    {
+                        reason = "起飞移交中断，已保留船体数据等待恢复：" + error.Message + "；" + rollback.Message;
+                        Debug.LogException(rollback); return false;
+                    }
+                    try { movedLooseItems?.Dispose(); }
+                    catch (Exception rollback)
+                    {
+                        reason = "起飞移交中断，已保留船体数据等待恢复：" + error.Message + "；" + rollback.Message;
+                        Debug.LogException(rollback); return false;
+                    }
+                    try { movedDrops?.Dispose(); }
+                    catch (Exception rollback)
+                    {
+                        reason = "起飞移交中断，已保留船体数据等待恢复：" + error.Message + "；" + rollback.Message;
+                        Debug.LogException(rollback); return false;
+                    }
+                    for (int i = removedTiles.Count - 1; i >= 0; i--)
+                    {
+                        ShipGroundBuildingStore.Entry entry = removedTiles[i];
+                        TileBuildingCell tile = entry.Tile.Value;
+                        try
+                        {
+                            if (tile.RuntimeChunk?.Terrain == null) throw new InvalidOperationException("地面区块已失效。");
+                            int present = tile.ReplacedGroundCell.HasValue
+                                ? TerrainSupportLayer.GetTileId(tile.RuntimeChunk.Terrain, tile.LocalPosition.x, tile.LocalPosition.y)
+                                : tile.RuntimeChunk.Terrain.GetCell(tile.LocalPosition.x, tile.LocalPosition.y).BlockingTileId;
+                            if (present == tile.RuntimeTileId) continue;
+                            ShipGroundBuildingStore.Place(originalData[entry.Guid], entry.Cell, entry.QuarterTurns, world);
+                        }
+                        catch (Exception rollback)
+                        {
+                            reason = "起飞移交中断，已保留船体数据等待恢复：" + error.Message + "；" + rollback.Message;
+                            Debug.LogException(rollback); return false;
+                        }
+                    }
+                    for (int i = movedItems.Count - 1; i >= 0; i--)
+                    {
+                        var moved = movedItems[i];
+                        try { TransferShipInteriorItemToWorld(ship, moved.Piece, world, moved.Entry.Cell, moved.Entry.QuarterTurns); }
+                        catch (Exception rollback)
+                        {
+                            reason = "起飞移交中断，已保留船体数据等待恢复：" + error.Message + "；" + rollback.Message;
+                            Debug.LogException(rollback); return false;
+                        }
+                    }
                     if (transferred)
                     {
                         try { MachineWorld.TransferScopeNodes(MachineWorld.GetShipScopeKey(ship.ShipId), world, machineIds, node =>
@@ -187,24 +279,24 @@ namespace FlatWorld.Spaceflight
                     for (int i = pieces.Count - 1; i >= 0; i--) RollbackPiece(ship, pieces[i]);
                     if (shipColliderPresenters.Remove(ship.ShipId, out ShipColliderPresenter presenter)) CompleteGroundCleanup(presenter.Dispose);
                 }
-                var restored = new List<ShipGroundBuildingStore.Entry>();
-                foreach (ShipGroundBuildingStore.Entry entry in removedItems)
-                    if (entry.Item == null || entry.Item.DestructionHandled)
-                        restored.Add(ShipGroundBuildingStore.Place(originalData[entry.Guid], entry.Cell, entry.QuarterTurns, world));
-                ShipGroundBuildingStore.PublishCreated(restored);
                 ship = null; reason = "无法起飞：" + error.Message; return false;
             }
         }
 
         private static List<ShipGroundBuildingStore.Entry> CollectGroundAssembly(string world, int consoleGuid)
         {
+            using var scope = GameplayWorldRegistry.UseWorld(world);
             List<ShipGroundBuildingStore.Entry> available = ShipGroundBuildingStore.Collect(world);
             ShipGroundBuildingStore.Entry console = available.Find(entry => entry.Guid == consoleGuid);
             if (console == null) throw new InvalidOperationException("地面控制台已失效。");
             var floors = new Dictionary<Vector2Int, ShipGroundBuildingStore.Entry>();
+            var capturedIds = new HashSet<int>();
             foreach (ShipGroundBuildingStore.Entry entry in available)
+            {
+                capturedIds.Add(entry.Guid);
                 if (ResolvePartConfiguration(entry.Data)?.Kind == ShipPieceKind.Floor)
                     foreach (Vector2Int cell in GroundFootprint(entry)) floors[cell] = entry;
+            }
             var cells = new HashSet<Vector2Int>();
             var floorIds = new HashSet<int>();
             var queue = new Queue<Vector2Int>();
@@ -213,7 +305,9 @@ namespace FlatWorld.Spaceflight
             while (queue.Count > 0)
             {
                 Vector2Int cell = WorldTopologyRuntime.NormalizeCell(queue.Dequeue());
-                if (cells.Contains(cell) || !floors.TryGetValue(cell, out ShipGroundBuildingStore.Entry floor)) continue;
+                if (cells.Contains(cell)) continue;
+                if (!floors.TryGetValue(cell, out ShipGroundBuildingStore.Entry floor) &&
+                    !ShipGroundBuildingStore.TryGetGroundSupportTileBuilding(world, cell, capturedIds, out floor)) continue;
                 cells.Add(cell);
                 if (floorIds.Add(floor.Guid)) selected.Add(floor);
                 queue.Enqueue(cell + Vector2Int.left); queue.Enqueue(cell + Vector2Int.right);
@@ -230,6 +324,7 @@ namespace FlatWorld.Spaceflight
                 if (!supported) throw new InvalidOperationException("建筑跨出了船体地板，请先完整承载或移开：" + entry.Data.IDName);
                 selected.Add(entry);
             }
+            selected.AddRange(ShipGroundBuildingStore.CollectGroundTileBuildings(world, cells, capturedIds));
             return selected;
         }
 
@@ -285,6 +380,10 @@ namespace FlatWorld.Spaceflight
             public readonly Dictionary<int, ShipPieceState> Pieces = new();
             public readonly List<int> MachineIds = new();
             public readonly List<ShipGroundBuildingStore.Entry> Created = new();
+            public readonly List<(ShipPieceState Piece, Item Item)> TransferredItems = new();
+            public DroppedItemService.WorldTransfer TransferredDrops;
+            public InteriorEntityTransfer TransferredLooseItems;
+            public SaveDataMgr.WorldTerrainTransfer TransferredTerrain;
         }
 
         private void RestoreLandedBuildings()
@@ -295,7 +394,7 @@ namespace FlatWorld.Spaceflight
             {
                 if (groundRestoreHandled.Contains(ship.ShipId)) continue;
                 ShipFlightState flight = GetFlight(ship.ShipId);
-                if (ship.IsWreck || flight == null || !GameplayWorldRegistry.TryGet(flight.SurfaceWorldKey, out _) ||
+                if (ship.IsWreck || ship.RetainsWorldWithoutStructure || flight == null || !GameplayWorldRegistry.TryGet(flight.SurfaceWorldKey, out _) ||
                     flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating)) continue;
                 string world = flight.SurfaceWorldKey;
                 using var worldScope = GameplayWorldRegistry.UseWorld(world);
@@ -361,6 +460,11 @@ namespace FlatWorld.Spaceflight
                         if (BuildingOccupancyRegistry.IsOccupiedNormalized(at, layer: layer))
                             throw new InvalidOperationException($"落点的地面建筑层已被占用：格({at.x},{at.y})，层{layer}，" +
                                 $"待落地部件{piece.ItemId}[{piece.PieceId}]，请清理落点。");
+                        if (ChunkMgr.ExistingInstance == null ||
+                            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(new Vector2(at.x + .5f, at.y + .5f), out var terrain))
+                            throw new InvalidOperationException($"落点地形尚未准备：格({at.x},{at.y})。");
+                        if (terrain.Cell.BlockingTileId != 0)
+                            throw new InvalidOperationException($"落点已有阻挡地块：格({at.x},{at.y})。");
                     }
             }
             return plan;
@@ -384,8 +488,8 @@ namespace FlatWorld.Spaceflight
                     continue;
                 }
                 ItemData latest = GetPieceData(piece);
-                if (views.TryGetValue(piece.PieceId, out ShipPieceView view) && view?.Item != null)
-                { view.Item.Save(); latest = view.Item.itemData; }
+                if (TryGetShipInteriorItem(piece.PieceId, out Item item))
+                { item.Save(); latest = item.itemData; }
                 ItemData snapshot = FastCloner.FastCloner.DeepClone(latest);
                 if (snapshot == null) throw new InvalidOperationException("船部件快照缺失：" + piece.ItemId);
                 CaptureRecoveredPieceHealth(snapshot, piece);
@@ -426,15 +530,24 @@ namespace FlatWorld.Spaceflight
                             if (!plan.Preparation.Failed && plan.Preparation.MachinePresentation != null)
                                 presentationLeases.Add(plan.Preparation.MachinePresentation.BeginCommit());
                         foreach (GroundRestorePlan plan in plans)
+                            for (int phase = 0; phase < 2; phase++)
                             foreach (var pair in plan.Snapshots)
                             {
                                 MachineScopePlacement target = plan.Placements[pair.Key];
-                                ItemMgr.PreparedItemHandle candidate = null;
-                                if (!plan.Preparation.Failed && plan.Preparation.ItemsById.TryGetValue(pair.Key, out GroundPiecePreparation prepared))
-                                    candidate = prepared.Item;
-                                if (candidate != null && !candidate.IsValid) throw new InvalidOperationException("地面建筑准备已失效，请重新准备。");
-                                plan.Created.Add(ShipGroundBuildingStore.PlacePrepared(pair.Value, target.Cell, target.QuarterTurns, world, candidate));
-                                if (candidate != null) plan.Preparation.CommittedItems++;
+                                ShipPieceState piece = plan.Pieces[pair.Key];
+                                if ((piece.Kind == ShipPieceKind.Floor) != (phase == 0)) continue;
+                                if (TryGetShipInteriorItem(piece.PieceId, out _))
+                                {
+                                    Item moved = TransferShipInteriorItemToWorld(plan.Ship, piece, world, target.Cell, target.QuarterTurns);
+                                    plan.TransferredItems.Add((piece, moved));
+                                    plan.Created.Add(new ShipGroundBuildingStore.Entry { Item = moved, Data = moved.itemData,
+                                        Cell = target.Cell, QuarterTurns = target.QuarterTurns });
+                                    continue;
+                                }
+                                if (!Mod_Building.TryReadBuildingData(pair.Value, out _, out Mod_Building.Building_Data tile) ||
+                                    string.IsNullOrWhiteSpace(tile.TileBlockId))
+                                    throw new InvalidOperationException("待落地建筑缺少船内真实实例：" + piece.ItemId);
+                                plan.Created.Add(ShipGroundBuildingStore.PlacePrepared(pair.Value, target.Cell, target.QuarterTurns, world, null));
                             }
                         foreach (GroundRestorePlan plan in plans)
                         {
@@ -455,7 +568,34 @@ namespace FlatWorld.Spaceflight
                                     SaveGroundPartState(node.Snapshot, plan.Pieces[id]);
                                 }
                         }
+                        foreach (GroundRestorePlan plan in plans)
+                        {
+                            Vector2 ToGround(Vector2 local)
+                            {
+                                ShipGeometry.Rotate(local.x, local.y, plan.Turns * Math.PI * .5d, out double x, out double y);
+                                return new Vector2(plan.Origin.x + (float)x, plan.Origin.y + (float)y);
+                            }
+                            Vector2 ToLocal(Vector2 point)
+                            {
+                                ShipGeometry.Rotate(point.x - plan.Origin.x, point.y - plan.Origin.y,
+                                    -plan.Turns * Math.PI * .5d, out double x, out double y);
+                                return new Vector2((float)x, (float)y);
+                            }
+                            plan.TransferredDrops = DroppedItemService.TransferWorldItems(
+                                MachineWorld.GetShipScopeKey(plan.Ship.ShipId), world, _ => true, ToGround, ToLocal,
+                                plan.Turns * 90f);
+                            plan.TransferredLooseItems = new InteriorEntityTransfer(
+                                MachineWorld.GetShipScopeKey(plan.Ship.ShipId), world, _ => true, ToGround, plan.Turns * 90f);
+                            plan.TransferredTerrain = SaveDataMgr.Instance.TransferWorldTerrain(
+                                MachineWorld.GetShipScopeKey(plan.Ship.ShipId), world, _ => true, ToGround);
+                        }
+                        foreach (GroundRestorePlan plan in plans)
+                            if (HasUntransferredGroundWorldContents(plan.Ship))
+                                throw new InvalidOperationException("船内仍有未能安全移交的居民或作物，不能完成落地。");
+                        TransferGroundPassengersBeforeRetiringShipWorlds(plans);
                         handedOff = true;
+                        foreach (GroundRestorePlan plan in plans)
+                        { plan.TransferredDrops.Commit(); plan.TransferredLooseItems.Commit(); plan.TransferredTerrain.Commit(); }
                         try
                         {
                             foreach (GroundRestorePlan plan in plans) DetachGroundShipOwnership(plan, world);
@@ -463,7 +603,7 @@ namespace FlatWorld.Spaceflight
                         finally
                         {
                             foreach (GroundRestorePlan plan in plans)
-                                CompleteGroundCleanup(() => FinishGroundShipPresentation(plan.Ship, world));
+                                CompleteGroundCleanup(() => FinishGroundShipPresentation(plan.Ship));
                             foreach (GroundRestorePlan plan in plans)
                                 foreach (ShipGroundBuildingStore.Entry entry in plan.Created)
                                     CompleteGroundCleanup(() => ShipGroundBuildingStore.RevealPrepared(entry));
@@ -492,13 +632,26 @@ namespace FlatWorld.Spaceflight
                         for (int i = plans.Count - 1; i >= 0; i--)
                         {
                             GroundRestorePlan plan = plans[i];
+                            try { plan.TransferredTerrain?.Dispose(); }
+                            catch (Exception rollback) { failures.Add(rollback); }
+                            try { plan.TransferredLooseItems?.Dispose(); }
+                            catch (Exception rollback) { failures.Add(rollback); }
+                            try { plan.TransferredDrops?.Dispose(); }
+                            catch (Exception rollback) { failures.Add(rollback); }
                             if (plan.MachinesTransferred)
                                 try { MachineWorld.TransferScopeNodes(world, MachineWorld.GetShipScopeKey(plan.Ship.ShipId),
                                     plan.MachineIds, node => plan.OriginalMachines[node.Id]); }
                                 catch (Exception rollback) { failures.Add(rollback); }
+                            for (int item = plan.TransferredItems.Count - 1; item >= 0; item--)
+                                try { TransferExistingItemToShipInterior(plan.Ship, plan.TransferredItems[item].Piece,
+                                    plan.TransferredItems[item].Item); }
+                                catch (Exception rollback) { failures.Add(rollback); }
                             for (int item = plan.Created.Count - 1; item >= 0; item--)
+                            {
+                                if (plan.TransferredItems.Exists(value => ReferenceEquals(value.Item, plan.Created[item].Item))) continue;
                                 try { ShipGroundBuildingStore.RollbackCreated(plan.Created[item]); }
                                 catch (Exception rollback) { failures.Add(rollback); }
+                            }
                             FailGroundPreparation(plan.Preparation, error);
                         }
                     if (failures.Count > 1) throw new AggregateException("飞船落地回滚未完全恢复，已保留原船记录。", failures);
@@ -508,6 +661,81 @@ namespace FlatWorld.Spaceflight
                     plan.Preparation.Dispose(); RememberGroundPreparation(plan.Preparation, "committed");
                     groundPreparations.Remove(plan.Ship.ShipId);
                 }
+                throw;
+            }
+        }
+
+        private bool HasUntransferredGroundWorldContents(ShipState ship)
+        {
+            string worldKey = MachineWorld.GetShipScopeKey(ship.ShipId);
+            var items = new List<Item>();
+            GameplayWorldRegistry.CopyWorldItems(worldKey, items);
+            foreach (Item item in items)
+            {
+                if (item == null || item is Player || item.GetComponentInParent<Player>(true) != null) continue;
+                Item ownerItem = item.Owner;
+                int depth = 0;
+                while (ownerItem != null && ownerItem is not Player && depth++ < 64) ownerItem = ownerItem.Owner;
+                if (ownerItem is not Player) return true;
+            }
+            if (!TryGetShipInteriorWorld(ship.ShipId, out var world)) return false;
+            using var scope = GameplayWorldRegistry.UseWorld(worldKey);
+            foreach (var address in world.ChunkAddresses)
+                foreach (AgricultureCellSaveData cell in SaveDataMgr.Instance.GetAgricultureCells(address))
+                    if (cell?.Crop != null) return true;
+            return false;
+        }
+
+        private void TransferGroundPassengersBeforeRetiringShipWorlds(IReadOnlyList<GroundRestorePlan> plans)
+        {
+            var saved = new List<(string Profile, string Snapshot)>();
+            try
+            {
+                foreach (GroundRestorePlan plan in plans)
+                {
+                    ShipState ship = plan.Ship;
+                    double oldX = ship.PositionX, oldY = ship.PositionY, oldAngle = ship.AngleRadians;
+                    ship.AngleRadians = plan.Turns * Math.PI * .5d;
+                    ShipGeometry.Rotate(ship.CenterOfMassLocalX, ship.CenterOfMassLocalY, ship.AngleRadians,
+                        out double centerX, out double centerY);
+                    ship.PositionX = plan.Origin.x + centerX;
+                    ship.PositionY = plan.Origin.y + centerY;
+                    try
+                    {
+                        foreach (SpacePassengerState passenger in State.Passengers)
+                        {
+                            if (passenger.ShipId != ship.ShipId) continue;
+                            Player player = FindNetworkPlayer(passenger.ProfileId);
+                            Mod_Mover mover = player?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+                            if (player != null && GameplayWorldRegistry.GetItemWorldKey(player) == MachineWorld.GetShipScopeKey(ship.ShipId) && mover?.rb != null)
+                            { passenger.LocalX = mover.rb.position.x; passenger.LocalY = mover.rb.position.y; }
+                            saved.Add((passenger.ProfileId, JsonConvert.SerializeObject(passenger)));
+                            if (!TryReleasePassenger(passenger, ship))
+                                throw new InvalidOperationException("落地乘员未能安全移交目标世界：" + passenger.ProfileId);
+                            if (player != null && GameplayWorldRegistry.GetItemWorldKey(player) == MachineWorld.GetShipScopeKey(ship.ShipId))
+                                throw new InvalidOperationException("落地乘员仍属于船内世界：" + passenger.ProfileId);
+                            passenger.SurfaceDescending = false;
+                            passenger.LandingResolved = true;
+                            passenger.LandingWorldKey = plan.Preparation.World;
+                            passenger.LandingX = passenger.FreeMotion.PositionMeters.X;
+                            passenger.LandingY = passenger.FreeMotion.PositionMeters.Y;
+                        }
+                    }
+                    finally { ship.PositionX = oldX; ship.PositionY = oldY; ship.AngleRadians = oldAngle; }
+                }
+            }
+            catch (Exception failure)
+            {
+                try
+                {
+                    foreach (var entry in saved)
+                    {
+                        int index = State.Passengers.FindIndex(value => value.ProfileId == entry.Profile);
+                        if (index >= 0) State.Passengers[index] = JsonConvert.DeserializeObject<SpacePassengerState>(entry.Snapshot);
+                    }
+                    RebindPassengersToShipInteriorWorlds();
+                }
+                catch (Exception rollback) { throw new AggregateException("落地乘员移交及回滚失败。", failure, rollback); }
                 throw;
             }
         }
@@ -533,27 +761,8 @@ namespace FlatWorld.Spaceflight
             CompleteGroundCleanup(() => RecordShipLandingCompletion(ship, completedFlight, world));
         }
 
-        private void FinishGroundShipPresentation(ShipState ship, string world)
+        private void FinishGroundShipPresentation(ShipState ship)
         {
-            foreach (SpacePassengerState passenger in State.Passengers)
-            {
-                if (passenger.ShipId != ship.ShipId) continue;
-                Vector2 display = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
-                CompleteGroundCleanup(() => ReleasePassenger(passenger, ship));
-                passenger.Supported = false; passenger.ShipId = null; passenger.ConsolePieceId = null;
-                passenger.IsInSpace = false; passenger.SurfaceDescending = false; passenger.LandingResolved = true;
-                passenger.LandingWorldKey = world; passenger.LandingX = display.x; passenger.LandingY = display.y;
-                if (ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player) && player != null)
-                {
-                    CompleteGroundCleanup(() =>
-                    {
-                        RestorePassengerSurface(player);
-                        player.transform.position = display;
-                        Mod_Mover mover = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-                        if (mover?.rb != null) { mover.rb.position = display; mover.rb.velocity = Vector2.zero; }
-                    });
-                }
-            }
             foreach (ShipPieceState piece in ship.Pieces)
                 CompleteGroundCleanup(() => RemovePieceView(piece.PieceId));
             if (shipColliderPresenters.Remove(ship.ShipId, out ShipColliderPresenter presenter)) CompleteGroundCleanup(presenter.Dispose);

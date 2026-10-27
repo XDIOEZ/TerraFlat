@@ -15,6 +15,10 @@ public interface IItemEnvironmentSource
     bool TrySampleCombustion(string worldKey, UnityEngine.Vector2 position, out bool canBurn);
     float SupplyAmbientOxygen(Item item, float maximumAmount);
 }
+public interface IWorldPositionEnvironmentSource
+{
+    bool TrySample(string worldKey, UnityEngine.Vector2 position, out ItemEnvironmentSample sample);
+}
 
 // 环境提供方主动声明覆盖范围，生物模块无需认识船舱、装备或具体供气设施。
 public static class ItemEnvironmentSources
@@ -25,6 +29,12 @@ public static class ItemEnvironmentSources
     public static bool TryGet(Item item, out ItemEnvironmentSample sample)
     {
         for (int i = sources.Count - 1; i >= 0; i--) if (sources[i].TrySample(item, out sample)) return true;
+        sample = default; return false;
+    }
+    public static bool TryGet(string worldKey, UnityEngine.Vector2 position, out ItemEnvironmentSample sample)
+    {
+        for (int i = sources.Count - 1; i >= 0; i--)
+            if (sources[i] is IWorldPositionEnvironmentSource points && points.TrySample(worldKey, position, out sample)) return true;
         sample = default; return false;
     }
     public static float SupplyAmbientOxygen(Item item, float maximumAmount)
@@ -45,7 +55,8 @@ public static class ItemEnvironmentSources
     {
         if (item == null) return false;
         while (item.Owner != null) item = item.Owner;
-        return CanSustainCombustion(item.gameObject.scene.name, item.transform.position);
+        return CanSustainCombustion(GameplayWorldRegistry.GetItemWorldKey(item) ?? item.gameObject.scene.name,
+            item.transform.position);
     }
 }
 #endregion

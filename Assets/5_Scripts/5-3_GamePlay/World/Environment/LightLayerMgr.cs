@@ -121,6 +121,7 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         private readonly Light2D timeSource;
         private readonly float timeValue;
         private readonly bool hasTimeValue;
+        private readonly int worldSceneHandle;
 
         internal PointSamplingBatch(LightLayerMgr owner)
         {
@@ -129,13 +130,14 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
             timeSource = owner._timeGlobalLight;
             timeValue = owner._timeLightValue;
             hasTimeValue = owner._hasTimeLightValue;
+            worldSceneHandle = GameplayWorldRegistry.CurrentScene.handle;
         }
 
         internal float Sample(RuntimeTerrainTileSample sample)
         {
             if (lights == null || sample.Terrain == null || sample.Terrain.IsDisposed) return CompletelyDarkValue;
             float value = EvaluateLights(lights, new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f),
-                hasTimeValue, timeSource, timeValue, domain);
+                hasTimeValue, timeSource, timeValue, domain, worldSceneHandle);
             sample.Terrain.SetEnvironmentValue(RuntimeLightLayerId, sample.LocalCell.x, sample.LocalCell.y, value);
             return value;
         }
@@ -150,7 +152,7 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
 
     // 同次查询只读取一份拓扑域，光源启停、位置、半径和亮度仍实时参与计算。
     internal static float EvaluateLights(IReadOnlyList<Light2D> lights, Vector2 worldPos,
-        bool hasTimeValue, Light2D timeSource, float timeValue, WorldTopologyDomain domain)
+        bool hasTimeValue, Light2D timeSource, float timeValue, WorldTopologyDomain domain, int worldSceneHandle = 0)
     {
         using var scope = SampleMarker.Auto();
         float value = hasTimeValue ? timeValue : 0f;
@@ -164,6 +166,8 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
                 (hasTimeValue && type == Light2D.LightType.Global && light == timeSource) ||
                 !light.isActiveAndEnabled || light.intensity <= 0f || !WorldLightRegistry.IsGameplaySource(light))
                 continue;
+            if (type == Light2D.LightType.Point && worldSceneHandle != 0 &&
+                light.gameObject.scene.handle != worldSceneHandle) continue;
             if (type == Light2D.LightType.Global)
                 value += GetColorBrightness(light.color) * Mathf.Max(0f, light.intensity);
             else

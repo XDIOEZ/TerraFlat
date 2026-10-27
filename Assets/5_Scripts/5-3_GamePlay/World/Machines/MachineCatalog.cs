@@ -274,6 +274,7 @@ public sealed partial class MachineDefinition
     public MachineLightDefinition Lighting; // 通用照明参数与具体灯泡外观分离。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
     public BatteryChargeIndicatorDefinition BatteryIndicator; // 指示灯布局独立于电池充放电规则。
+    public MachinePowerIndicatorDefinition PowerIndicator; // 可选供电状态贴图覆盖。
     [MemoryPack.MemoryPackIgnore]
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
     [MemoryPack.MemoryPackIgnore]

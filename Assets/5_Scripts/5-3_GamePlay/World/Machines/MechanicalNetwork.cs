@@ -103,6 +103,7 @@ public sealed partial class MachineEntity
     internal bool HasFluidElectricalDemand;
     internal float FluidElectricalDemand;
     internal float SampledElectricalGeneration;
+    internal bool PowerIndicatorWasPowered;
     public float LoadTorque => Definition.IsConverter
         ? ConversionMode == ElectricalConversionMode.Generator ? Definition.TorqueLoad : 0f
         : Definition.TorqueLoad;

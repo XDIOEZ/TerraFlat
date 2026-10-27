@@ -27,23 +27,29 @@ namespace FlatWorld.Spaceflight
             Player local = ItemMgr.Instance?.User_Player;
             foreach (SpacePassengerState passenger in State.Passengers)
             {
-                if (local?.ProfileName == passenger.ProfileId || !passenger.Supported || passenger.ConsolePieceId != null ||
-                    !passengerInputs.TryGetValue(passenger.ProfileId, out SpacePassengerInput input)) continue;
+                if (local?.ProfileName == passenger.ProfileId || !passenger.Supported || passenger.ConsolePieceId != null) continue;
                 ShipState ship = GetShip(passenger.ShipId);
                 if (ship == null) continue;
-                Mod_Mover mover = FindNetworkPlayer(passenger.ProfileId)?.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+                Player player = FindNetworkPlayer(passenger.ProfileId);
+                if (player == null || !TryEnterShipInteriorWorld(player, passenger, ship,
+                        new Vector2((float)passenger.LocalX, (float)passenger.LocalY))) continue;
+                Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
                 if (mover == null) continue;
-                if (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising && !HasArtificialGravity(ship, passenger.LocalX, passenger.LocalY))
-                { ReleasePassenger(passenger, ship); continue; }
+                mover.SetSpaceUpright(false);
+                if (mover.rb == null) continue;
+                passenger.LocalX = mover.rb.position.x;
+                passenger.LocalY = mover.rb.position.y;
+                if (!passengerInputs.TryGetValue(passenger.ProfileId, out SpacePassengerInput input))
+                {
+                    if (mover.rb.bodyType == RigidbodyType2D.Dynamic) mover.rb.velocity = Vector2.zero;
+                    continue;
+                }
                 ShipGeometry.Rotate(input.MoveX, input.MoveY, -ship.AngleRadians, out double dx, out double dy);
-                double speed = mover.Speed.Value;
-                passenger.WalkVelocityX = dx * speed; passenger.WalkVelocityY = dy * speed;
-                double x = passenger.LocalX + dx * speed * seconds, y = passenger.LocalY + dy * speed * seconds;
-                int cellX = (int)Math.Floor(x / ship.CellSizeMeters), cellY = (int)Math.Floor(y / ship.CellSizeMeters);
-                bool blocked = ship.Pieces.Exists(piece => piece.IsAlive && piece.BlocksPassage &&
-                    System.Linq.Enumerable.Contains(ShipGeometry.Footprint(piece), new ShipCell(cellX, cellY)));
-                if (!blocked) { passenger.LocalX = x; passenger.LocalY = y; }
-                if (!ShipAtmosphereService.HasFloor(ship, cellX, cellY)) ReleasePassenger(passenger, ship);
+                Vector2 targetVelocity = new((float)(dx * mover.Speed.Value), (float)(dy * mover.Speed.Value));
+                mover.ApplyNavigationVelocity(targetVelocity, (float)Math.Max(0d, seconds));
+                bool hasFloor = ShipAtmosphereService.HasFloor(ship,
+                    (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters), (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters));
+                if (!hasFloor) ReleasePassenger(passenger, ship);
             }
         }
         public void EnsureNetworkPassenger(Player player)
@@ -79,6 +85,7 @@ namespace FlatWorld.Spaceflight
         public void RemoveNetworkPassengerInput(string profile)
         {
             passengerInputs.Remove(profile);
+            ResetNetworkLocalWorldSnapshotCache(profile);
             SpacePassengerState passenger = FindPassenger(profile);
             if (passenger?.ConsolePieceId != null) ClearControl(passenger.ConsolePieceId);
         }
@@ -112,7 +119,11 @@ namespace FlatWorld.Spaceflight
 
             if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem or SpaceNetworkIntentKind.OffhandParry)
             {
-                if (!observer.InSpace && intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.TargetId != observer.WorldKey)
+                Player actor = FindNetworkPlayer(profile);
+                string physicalWorld = GameplayWorldRegistry.GetItemWorldKey(actor);
+                bool localWorld = GameplayWorldRegistry.UsesLocalCoordinates(physicalWorld);
+                if (intent.Kind != SpaceNetworkIntentKind.AttackEnd &&
+                    (localWorld ? intent.TargetId != physicalWorld : !observer.InSpace && intent.TargetId != observer.WorldKey))
                     return RejectShipOperation("动作来自其他世界，当前玩家无法执行。", out reason);
                 Mod_HotBar combatHotbar = FindNetworkPlayer(profile)?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
                 if (intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.Kind != SpaceNetworkIntentKind.OffhandParry)
@@ -126,13 +137,15 @@ namespace FlatWorld.Spaceflight
             }
             if (intent.Kind == SpaceNetworkIntentKind.HarvestNatural)
             {
-                if (observer.InSpace || intent.TargetId != observer.WorldKey)
-                    return RejectShipOperation("采集目标不在玩家当前地表世界。", out reason);
+                Player actor = FindNetworkPlayer(profile);
+                string physicalWorld = GameplayWorldRegistry.GetItemWorldKey(actor);
+                if (intent.TargetId != physicalWorld || !GameplayWorldRegistry.TryGet(physicalWorld, out _))
+                    return RejectShipOperation("采集目标不在玩家当前实体世界。", out reason);
                 if (!int.TryParse(intent.PieceId, System.Globalization.NumberStyles.Integer,
                         System.Globalization.CultureInfo.InvariantCulture, out int guid))
                     return RejectShipOperation("采集目标身份无效。", out reason);
                 bool harvested = FlatWorld.NaturalEntities.NaturalEntityEcsService.TryHarvestNetwork(
-                    FindNetworkPlayer(profile), observer.WorldKey, guid, new Vector2((float)intent.X, (float)intent.Y),
+                    actor, physicalWorld, guid, new Vector2((float)intent.X, (float)intent.Y),
                     intent.HasNaturalSource ? intent.NaturalSourceWorldKey ?? string.Empty : null,
                     intent.NaturalSourceChunkX, intent.NaturalSourceChunkY);
                 if (!harvested) return RejectShipOperation("采集目标已失效或当前无法采集。", out reason);
@@ -269,7 +282,20 @@ namespace FlatWorld.Spaceflight
                         snapshot.Ships.Add(ship); snapshot.Flights.Add(GetFlight(ship.ShipId)); includedSectors.Add(ship.Sector);
                         foreach (ShipPieceState piece in ship.Pieces) includedPieces.Add(piece.PieceId);
                     }
-                foreach (ShipDeviceState device in State.Devices) if (includedPieces.Contains(device.PieceId)) snapshot.Devices.Add(device);
+                var machineMotion = new Dictionary<string, (float Rpm, int Entry)>(StringComparer.Ordinal);
+                foreach (ShipState ship in snapshot.Ships)
+                    using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
+                        foreach (ShipPieceState piece in ship.Pieces)
+                            if (int.TryParse(piece.PieceId, out int id) && MachineWorld.GetById(id) is MachineEntity node)
+                                machineMotion[piece.PieceId] = (node.Rpm, node.EntryDirection);
+                foreach (ShipDeviceState device in State.Devices)
+                {
+                    if (!includedPieces.Contains(device.PieceId)) continue;
+                    machineMotion.TryGetValue(device.PieceId, out var motion);
+                    snapshot.Devices.Add(new ShipDeviceState { PieceId = device.PieceId, Configuration = device.Configuration,
+                        Enabled = device.Enabled, TargetPressureKPa = device.TargetPressureKPa,
+                        Rpm = motion.Rpm, EntryDirection = machineMotion.ContainsKey(device.PieceId) ? motion.Entry : -1 });
+                }
                 foreach (SpacePassengerState passenger in State.Passengers)
                     if (passenger.ProfileId == profile || TryGetNetworkObserver(passenger.ProfileId, out SpaceNetworkObserver remote) &&
                         remote.InSpace == observer.InSpace && (observer.InSpace
@@ -289,6 +315,7 @@ namespace FlatWorld.Spaceflight
                 foreach (SpaceSectorId sector in includedSectors) snapshot.Sectors.Add(GetUniverse(sector).State);
                 foreach (GroundAtmosphereState ground in State.GroundAtmospheres)
                     if (ground.WorldKey == observer.WorldKey) snapshot.GroundAtmospheres.Add(ground);
+                CaptureNetworkLocalWorldStates(profile, snapshot);
                 NetworkFilterPoint.SetGauge(includedShips.Count);
             }
             using (NetworkJsonPoint.Measure(snapshot.Ships.Count + snapshot.Devices.Count +
@@ -305,7 +332,9 @@ namespace FlatWorld.Spaceflight
             SpaceSessionState received = SaveDataMgr.DeserializeSpaceState(json);
             if (State != null && received.SimulationSeconds < State.SimulationSeconds) return;
             double presentationSeconds = State == null ? Time.fixedDeltaTime : received.SimulationSeconds - State.SimulationSeconds;
+            InteriorNetworkSnapshot interior = PrepareInteriorNetworkSnapshot(received);
             CapturePresentationState(false);
+            RemoveObsoleteInteriorNetworkItems(interior);
             State = received;
             groundAtmosphereIndex.Clear(); groundGeometryWorld = null; groundMachinesDirty = true;
             RebuildSectorDirectory();
@@ -313,9 +342,9 @@ namespace FlatWorld.Spaceflight
             contents.Clear(); ClearQueryIndexes();
             foreach (ShipState ship in State.Ships)
                 foreach (ShipPieceState piece in ship.Pieces)
-                    if (piece.IsAlive && !string.IsNullOrWhiteSpace(piece.SnapshotJson)) contents[piece.PieceId] = Decode(piece.SnapshotJson);
-            destroyed.Clear(); foreach (string id in views.Keys) if (!contents.ContainsKey(id)) destroyed.Add(id);
-            foreach (string id in destroyed) RemovePieceView(id);
+                    if (piece.IsAlive && !string.IsNullOrWhiteSpace(piece.SnapshotJson))
+                        contents[piece.PieceId] = interior.Incoming.TryGetValue(piece.PieceId, out var incoming)
+                            ? incoming.Data : Decode(piece.SnapshotJson);
             destroyed.Clear(); foreach (string id in wreckViews.Keys) destroyed.Add(id);
             foreach (string id in destroyed) RemoveWreckView(id);
             var looseIds = new HashSet<string>(StringComparer.Ordinal);
@@ -329,6 +358,7 @@ namespace FlatWorld.Spaceflight
             destroyed.Clear(); foreach (string id in looseViews.Keys) if (!looseIds.Contains(id)) destroyed.Add(id);
             foreach (string id in destroyed) { DespawnLooseView(looseViews[id]); looseViews.Remove(id); looseData.Remove(id); }
             RebuildPieceIndex(); viewBindingsDirty = true;
+            ApplyInteriorNetworkSnapshot(interior);
             queryAssemblies.Clear(); simulationAssemblies.Clear(); freeContactAssemblies.Clear();
             Player player = ItemMgr.Instance?.User_Player;
             if (player != null && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !string.IsNullOrEmpty(observer.WorldKey))

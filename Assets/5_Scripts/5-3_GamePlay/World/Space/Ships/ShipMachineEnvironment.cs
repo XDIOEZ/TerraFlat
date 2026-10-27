@@ -162,6 +162,7 @@ namespace FlatWorld.Spaceflight
 
         private AtmosphereState GetMachineOutsideAtmosphere(ShipState ship)
         {
+            if (ship.RetainsWorldWithoutStructure) return null;
             if (IsGroundAtmosphere(ship))
                 return AtmosphereService.TryGetForWorld(ship.WorldAddress, out AtmosphereState groundAir) ? groundAir : null;
             ShipFlightState flight = GetFlight(ship.ShipId);
@@ -176,6 +177,7 @@ namespace FlatWorld.Spaceflight
         }
         private IShipAtmosphereSource GetMachineExteriorAt(ShipState ship, Vector2 localPosition)
         {
+            if (ship.RetainsWorldWithoutStructure) return PlanetShipAtmosphereSource.Vacuum;
             if (IsGroundAtmosphere(ship)) return GetGroundOutside(ship.WorldAddress);
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight == null || flight.Phase is ShipFlightPhase.Cruising)

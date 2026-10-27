@@ -26,6 +26,7 @@ public sealed partial class MechanicalDepthVisual
         else tankOutline?.Hide();
         UpdateCultivatorSprites(entity);
         UpdateBatterySprites(entity);
+        UpdatePowerIndicator(entity);
         UpdatePoweredLight(entity);
         bool burning = IsFacilityBurning(entity);
         UpdateFacilityAudio(entity);

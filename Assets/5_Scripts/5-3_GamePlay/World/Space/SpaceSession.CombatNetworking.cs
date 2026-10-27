@@ -80,7 +80,7 @@ namespace FlatWorld.Spaceflight
             reason = "玩家或手持武器尚未准备好";
             Player player = FindNetworkPlayer(profile);
             if (!GameNetwork.HasStateAuthority || player == null || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return false;
-            using var worldScope = observer.InSpace ? default(IDisposable) : GameplayWorldRegistry.UseWorld(observer.WorldKey);
+            using var worldScope = player.UseOwnedWorldForItemCallbacks();
             Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
             Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
@@ -96,7 +96,13 @@ namespace FlatWorld.Spaceflight
                 : SpaceVector2.FromVector2(PressureExplosionQueue.DeltaInWorld(observer.WorldKey, observer.Position.LocalMeters.ToVector2(), aim.LocalMeters.ToVector2()));
             if (!delta.IsFinite || delta.Magnitude > 8192d) { reason = "瞄准位置超出范围"; return false; }
             if (!controller.TryAcquireExternalGameplayControl(networkCombatControl)) return false;
-            controller.TrySetExternalAimWorldPosition(networkCombatControl, player.transform.position + (Vector3)delta.ToVector2());
+            Vector2 aimOffset = delta.ToVector2();
+            if (IsPlayerInShipInteriorWorld(player, out ShipState carrier, out _))
+            {
+                ShipGeometry.Rotate(delta.X, delta.Y, -carrier.AngleRadians, out double x, out double y);
+                aimOffset = new Vector2((float)x, (float)y);
+            }
+            controller.TrySetExternalAimWorldPosition(networkCombatControl, player.transform.position + (Vector3)aimOffset, inItemWorld: true);
             player.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint)?.PlayerTakeItem_FaceMouse(.1f);
             if (action == 3)
             {
@@ -145,13 +151,21 @@ namespace FlatWorld.Spaceflight
             if (startsGroundCombat && SpaceNetworkBridge.CombatPreparationSender?.Invoke(player.ProfileName) != true) return true;
             if (action == 0 || action == 1) ClientAttackHeld = action == 0;
             if (!observer.InSpace) ClientGroundCombatPending = true;
+            string actionWorld = null;
             SpaceSectorPosition aim = observer.InSpace ? session.UnprojectSectorPosition(worldAim)
                 : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(worldAim)));
+            if (session.IsPlayerInShipInteriorWorld(player, out ShipState ship, out _))
+            {
+                actionWorld = MachineWorld.GetShipScopeKey(ship.ShipId);
+                ShipGeometry.LocalToWorld(ship, worldAim.x, worldAim.y, out double x, out double y);
+                aim = observer.InSpace ? SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(x, y))
+                    : new SpaceSectorPosition(default, new SpaceVector2(x, y));
+            }
             bool sent = SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent
             {
                 Kind = action == 3 ? SpaceNetworkIntentKind.OffhandParry : useItem ? SpaceNetworkIntentKind.UsePlayerItem : action == 0 ? SpaceNetworkIntentKind.Attack : action == 1 || action == 4 ? SpaceNetworkIntentKind.AttackEnd : SpaceNetworkIntentKind.UseSkill,
                 Action = action == 4 ? 4 : 0,
-                Sector = aim.Sector, X = aim.LocalMeters.X, Y = aim.LocalMeters.Y, TargetId = observer.InSpace ? null : observer.WorldKey,
+                Sector = aim.Sector, X = aim.LocalMeters.X, Y = aim.LocalMeters.Y, TargetId = actionWorld ?? (observer.InSpace ? null : observer.WorldKey),
                 SelectedSlot = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurrentIndex ?? -1, StartsGroundCombat = startsGroundCombat
             });
             if (!sent) ClearClientNetworkCombat();
@@ -176,6 +190,62 @@ namespace FlatWorld.Spaceflight
             return null;
         }
 
+        // 首次离开地板边界时分割扫掠，避免高速投射跳过船体空隙。
+        internal bool TryFindProjectileShipExit(Item item, Vector2 start, Vector2 end, out ShipState ship, out float fraction)
+        {
+            ship = null; fraction = 0f;
+            string world = GameplayWorldRegistry.GetItemWorldKey(item);
+            if (world?.StartsWith("ship:", StringComparison.Ordinal) != true ||
+                (ship = GetShip(world.Substring(5))) == null || ship.CellSizeMeters <= 0d) return false;
+            float size = (float)ship.CellSizeMeters;
+            int x = Mathf.FloorToInt(start.x / size), y = Mathf.FloorToInt(start.y / size);
+            if (!ShipAtmosphereService.HasFloor(ship, x, y)) return true;
+            Vector2 delta = end - start;
+            int sx = Math.Sign(delta.x), sy = Math.Sign(delta.y);
+            float tx = sx == 0 ? float.PositiveInfinity : ((sx > 0 ? x + 1 : x) * size - start.x) / delta.x;
+            float ty = sy == 0 ? float.PositiveInfinity : ((sy > 0 ? y + 1 : y) * size - start.y) / delta.y;
+            float dx = sx == 0 ? float.PositiveInfinity : size / Math.Abs(delta.x);
+            float dy = sy == 0 ? float.PositiveInfinity : size / Math.Abs(delta.y);
+            while (true)
+            {
+                float crossing = Mathf.Min(tx, ty);
+                if (crossing > 1f || float.IsInfinity(crossing)) return false;
+                if (tx <= crossing) { x += sx; tx += dx; }
+                if (ty <= crossing) { y += sy; ty += dy; }
+                if (ShipAtmosphereService.HasFloor(ship, x, y)) continue;
+                fraction = Mathf.Clamp01(crossing);
+                return true;
+            }
+        }
+
+        // 物理留在船内时，联机只广播换算后的真实位置与速度。
+        public bool TryGetLocalWorldProjectilePose(Mod_Projectile projectile, out SpaceSectorPosition position,
+            out Vector2 velocity, out float rotation, out string surfaceWorld)
+        {
+            position = default; velocity = default; rotation = 0f; surfaceWorld = null;
+            Item item = projectile != null ? projectile.item : null;
+            string world = GameplayWorldRegistry.GetItemWorldKey(item);
+            ShipState ship = world?.StartsWith("ship:", StringComparison.Ordinal) == true ? GetShip(world.Substring(5)) : null;
+            ShipFlightState flight = ship != null ? GetFlight(ship.ShipId) : null;
+            if (item == null || ship == null || flight == null) return false;
+            Vector2 local = item.transform.position;
+            ShipGeometry.LocalToWorld(ship, local.x, local.y, out double x, out double y);
+            ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
+            Vector2 sourceVelocity = projectile.NetworkSurfaceVelocity;
+            ShipGeometry.Rotate(sourceVelocity.x, sourceVelocity.y, ship.AngleRadians, out double wx, out double wy);
+            velocity = new Vector2((float)(vx + wx), (float)(vy + wy));
+            rotation = item.transform.eulerAngles.z + (float)(ship.AngleRadians * Mathf.Rad2Deg);
+            if (flight.Phase == ShipFlightPhase.Cruising)
+                position = SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(x, y));
+            else
+            {
+                surfaceWorld = flight.SurfaceWorldKey;
+                if (string.IsNullOrWhiteSpace(surfaceWorld)) return false;
+                position = new SpaceSectorPosition(default, new SpaceVector2(x, y + ShipSurfaceState.VisualRise(flight)));
+            }
+            return true;
+        }
+
         public static bool TryGetCombatFrame(Item source, out SpaceSectorPosition canonical, out Vector2 presentation)
         {
             canonical = default; presentation = default;
@@ -193,6 +263,13 @@ namespace FlatWorld.Spaceflight
         public static bool TryGetCombatPosition(Item item, Vector2 worldPosition, out SpaceSectorPosition canonical)
         {
             canonical = default;
+            Player player = CombatPlayer(item);
+            if (Current != null && player != null && Current.IsPlayerInShipInteriorWorld(player, out ShipState ship, out _))
+            {
+                ShipGeometry.LocalToWorld(ship, worldPosition.x, worldPosition.y, out double x, out double y);
+                canonical = SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(x, y));
+                return true;
+            }
             if (!TryGetCombatFrame(item, out SpaceSectorPosition origin, out Vector2 presentation)) return false;
             canonical = SpaceSectorCoordinates.Normalize(origin.Sector,
                 origin.LocalMeters + SpaceVector2.FromVector2(worldPosition - presentation));
@@ -226,6 +303,7 @@ namespace FlatWorld.Spaceflight
         #endregion
     }
 
+    [DefaultExecutionOrder(10001)]
     public sealed class SpaceCombatFrame : MonoBehaviour
     {
         #region 投射物固定规范坐标系
@@ -234,9 +312,93 @@ namespace FlatWorld.Spaceflight
         public Vector2 PresentationOrigin;
         public bool Active;
         public Item Projectile;
+        public bool SectorLocal { get; private set; }
+        internal string DepartingShipId { get; set; }
+        private string sectorLease;
+        private WorldPresentationProjection display;
         public void Initialize(Item projectile, SpaceSectorPosition origin, Vector2 presentation)
         { Projectile = projectile; CanonicalOrigin = origin; PresentationOrigin = presentation; Active = true; ActiveFrames.Add(this); }
-        public void Finish() { Active = false; ActiveFrames.Remove(this); }
+
+        // 真实星区持有投射物，显示副本独立跟随当前浮动原点。
+        internal bool TryEnterSectorLocal(Item projectile, SpaceSectorPosition position, string departingShipId)
+        {
+            SpaceMgr manager = SpaceMgr.ExistingInstance;
+            SpaceSession session = SpaceSession.Current;
+            if (manager == null || session == null || projectile == null) return false;
+            string lease = $"projectile:{GetInstanceID()}:0";
+            var scene = manager.BindAuthoritySector(lease, position.Sector);
+            if (!scene.IsValid() || !scene.isLoaded) { manager.ReleaseAuthoritySector(lease); return false; }
+            string world = SpaceSectorCoordinates.SceneKey(position.Sector);
+            try
+            {
+                using var scope = GameplayWorldRegistry.UseSpaceScene(world);
+                if (scope == null) { manager.ReleaseAuthoritySector(lease); return false; }
+                GameplayWorldRegistry.AssignItemToWorld(projectile, world);
+                if (GameplayWorldRegistry.GetItemWorldKey(projectile) != world)
+                    throw new InvalidOperationException("投射物星区移交未完成。" );
+            }
+            catch { manager.ReleaseAuthoritySector(lease); throw; }
+            Initialize(projectile, position, position.LocalMeters.ToVector2());
+            SectorLocal = true; sectorLease = lease; DepartingShipId = departingShipId;
+            display = WorldPresentationProjection.Create(projectile.transform, session.transform);
+            return true;
+        }
+
+        internal void SynchronizeSectorPresentation()
+        {
+            if (!SectorLocal || display == null || Projectile == null) return;
+            SpaceSession session = SpaceSession.Current;
+            Player local = ItemMgr.Instance?.User_Player;
+            bool hasPosition = SpaceSession.TryGetCombatPosition(Projectile, Projectile.transform.position, out SpaceSectorPosition point);
+            bool visible = session != null && session.IsSpaceView && local != null && hasPosition &&
+                session.TryGetNetworkObserver(local.ProfileName, out var observer) && observer.InSpace &&
+                SpaceSectorCoordinates.Difference(point, observer.Position).Magnitude <= 8192d;
+            Vector2 offset = hasPosition && session != null ? session.ProjectPosition(point) - (Vector2)Projectile.transform.position : Vector2.zero;
+            display.Synchronize(Matrix4x4.Translate(offset), visible);
+        }
+
+        internal bool RebaseSectorIfNeeded(out Vector2 shift)
+        {
+            shift = Vector2.zero;
+            if (!SectorLocal || Projectile == null || !SpaceSession.TryGetCombatPosition(Projectile, Projectile.transform.position, out var point) ||
+                point.Sector == CanonicalOrigin.Sector) return false;
+            SpaceMgr manager = SpaceMgr.ExistingInstance;
+            if (manager == null) return false;
+            string nextLease = sectorLease.EndsWith(":0", StringComparison.Ordinal)
+                ? sectorLease.Substring(0, sectorLease.Length - 1) + "1" : sectorLease.Substring(0, sectorLease.Length - 1) + "0";
+            var scene = manager.BindAuthoritySector(nextLease, point.Sector);
+            if (!scene.IsValid() || !scene.isLoaded) { manager.ReleaseAuthoritySector(nextLease); return false; }
+            string world = SpaceSectorCoordinates.SceneKey(point.Sector);
+            try
+            {
+                using var scope = GameplayWorldRegistry.UseSpaceScene(world);
+                if (scope == null) { manager.ReleaseAuthoritySector(nextLease); return false; }
+                GameplayWorldRegistry.AssignItemToWorld(Projectile, world);
+                if (GameplayWorldRegistry.GetItemWorldKey(Projectile) != world)
+                    throw new InvalidOperationException("投射物跨星区移交未完成。" );
+            }
+            catch { manager.ReleaseAuthoritySector(nextLease); throw; }
+            Vector2 old = Projectile.transform.position;
+            Vector2 next = point.LocalMeters.ToVector2();
+            shift = next - old;
+            Projectile.transform.position = new Vector3(next.x, next.y, Projectile.transform.position.z);
+            Rigidbody2D body = Projectile.GetComponent<Rigidbody2D>();
+            if (body != null) { body.position = next; WorldPhysicsService2D.SetItemBodySimulationEnabled(body, false); }
+            CanonicalOrigin = point; PresentationOrigin = next;
+            manager.ReleaseAuthoritySector(sectorLease); sectorLease = nextLease;
+            ItemMgr.Instance?.NotifyRuntimeItemMoved(Projectile);
+            return true;
+        }
+
+        public void Finish()
+        {
+            Active = false; ActiveFrames.Remove(this); SectorLocal = false; DepartingShipId = null;
+            if (display != null) Destroy(display.gameObject);
+            display = null;
+            if (sectorLease != null) SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(sectorLease);
+            sectorLease = null;
+        }
+        private void LateUpdate() => SynchronizeSectorPresentation();
         private void OnDestroy() => Finish();
         #endregion
     }

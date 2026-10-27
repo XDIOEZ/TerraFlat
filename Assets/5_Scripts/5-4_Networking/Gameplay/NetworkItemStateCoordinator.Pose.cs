@@ -34,8 +34,10 @@ namespace FlatWorld.Networking.Gameplay
         private void OnClientPoseMessage(NetworkItemPoseMessage message)
         {
             if (!AcceptLocalWorld(message.WorldKey)) return;
+            if (!GameplayWorldRegistry.TryGet(message.WorldKey, out _)) return;
+            using var scope = GameplayWorldRegistry.UseWorld(message.WorldKey);
             if (NetworkServer.active || !clientStates.TryGetValue(message.ItemGuid, out StateRecord state) ||
-                !string.Equals(state.ItemId, message.ItemId, StringComparison.Ordinal) ||
+                state.WorldKey != message.WorldKey || !string.Equals(state.ItemId, message.ItemId, StringComparison.Ordinal) ||
                 message.StateRevision != state.Revision || message.PoseRevision <= state.PoseRevision ||
                 !IsFinite(message.Position) || !IsFinite(message.Rotation) || !IsFinite(message.Scale)) return;
             state.PoseRevision = message.PoseRevision;
@@ -51,7 +53,8 @@ namespace FlatWorld.Networking.Gameplay
                 pendingClientStates[message.ItemGuid] = pending;
             }
             Item item = ItemMgr.Instance?.GetItemByGuid(message.ItemGuid);
-            if (ShouldSynchronize(item) && string.Equals(item.itemData.IDName, message.ItemId, StringComparison.Ordinal))
+            if (ShouldSynchronize(item) && GameplayWorldRegistry.GetItemWorldKey(item) == message.WorldKey &&
+                string.Equals(item.itemData.IDName, message.ItemId, StringComparison.Ordinal))
                 ApplyClientPose(item, state.Position, state.Rotation, state.Scale);
         }
 
@@ -59,6 +62,10 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (item == null || !IsFinite(position) || !IsFinite(rotation) || !IsFinite(scale) ||
                 Mod_Droping.IsDropInProgress(item)) return;
+            // 局部世界建筑和作物的位置由对应的占地事务更新。
+            if (GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(item)) &&
+                (item.PersistenceOwner is FlatWorld.Spaceflight.SpaceSession or ChunkAgricultureRenderer ||
+                 item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.Data?.Role == BuildingRole.PlacedBuilding)) return;
             Vector3 logical = WorldTopologyRuntime.NormalizePosition(position);
             Vector3 safeScale = SanitizeScale(scale);
             item.transform.SetPositionAndRotation(WorldLocalPresentation.ProjectPosition(logical), rotation);

@@ -13,6 +13,7 @@ namespace FlatWorld.Spaceflight
         public int FootprintWidth = 1, FootprintHeight = 1;
         public bool? BlocksMovement;
         public string MaterialId;
+        public string SupportTileBlockId; // 地板向普通世界查询提供实际材料的支撑规则，外观仍由原物品负责。
         public float StructuralMassKg = 20f, Health = 250f;
         // 防御抵消每次物理伤害，零功能耐久上限表示该部件没有单独瘫痪规则。
         public float? PhysicalDefense;

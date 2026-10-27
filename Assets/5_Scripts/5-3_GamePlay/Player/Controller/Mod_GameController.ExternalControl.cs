@@ -16,6 +16,7 @@ public partial class Mod_GameController
     private Vector2 _externalMoveInput; // Agent 注入的二维移动输入。
     private Vector3 _externalAimWorldPosition; // Agent 注入的世界瞄准点。
     private bool _externalAimWorldPositionInitialized; // 是否已有有效 Agent 瞄准点。
+    private bool _externalAimUsesItemWorld; // 服务器可直接提交实体世界坐标，避免显示坐标被二次反投影。
     private bool _externalAttackHeld; // Agent 攻击键是否处于按住状态。
 
     /// <summary>当前是否由外部 Agent 接管玩法输入。</summary>
@@ -46,9 +47,14 @@ public partial class Mod_GameController
             CancelActiveAttackAndMobileInput();
             _externalGameplayControlOwner = owner;
             _externalMoveInput = Vector2.zero;
-            _externalAimWorldPosition = transform.position + Vector3.right;
+            Vector3 aimOrigin = transform.position;
+            if (item is Player player && FlatWorld.Spaceflight.SpaceSession.Current != null &&
+                FlatWorld.Spaceflight.SpaceSession.Current.TryGetShipInteriorPresentationPosition(player, out Vector2 projected))
+                aimOrigin = projected;
+            _externalAimWorldPosition = aimOrigin + Vector3.right;
             _externalAimWorldPosition.z = 0f;
             _externalAimWorldPositionInitialized = true;
+            _externalAimUsesItemWorld = false;
             _externalAttackHeld = false;
         }
 
@@ -92,7 +98,7 @@ public partial class Mod_GameController
     }
 
     /// <summary>由租约持有者写入世界瞄准点。</summary>
-    public bool TrySetExternalAimWorldPosition(object owner, Vector3 worldPosition)
+    public bool TrySetExternalAimWorldPosition(object owner, Vector3 worldPosition, bool inItemWorld = false)
     {
         if (!IsExternalGameplayControlOwner(owner))
             return false;
@@ -104,15 +110,19 @@ public partial class Mod_GameController
         }
 
         worldPosition.z = 0f;
-        _externalAimWorldPosition = FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
+        bool shipInterior = item is Player player &&
+            FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true;
+        _externalAimWorldPosition = shipInterior || FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
             ? worldPosition : WorldTopologyRuntime.NormalizePosition(worldPosition);
         _externalAimWorldPositionInitialized = true;
+        _externalAimUsesItemWorld = inItemWorld;
         return true;
     }
 
     /// <summary>由租约持有者提交攻击按下或松开语义，继续复用现有武器事件链。</summary>
     public bool TrySetExternalAttackHeld(object owner, bool held)
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         if (!IsExternalGameplayControlOwner(owner))
             return false;
 
@@ -154,12 +164,14 @@ public partial class Mod_GameController
     /// <summary>无条件清理外部控制状态，供禁用、销毁和租约释放共用。</summary>
     private void ResetExternalGameplayControl()
     {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         if (_externalAttackHeld)
             AttackEnded?.Invoke();
 
         _externalAttackHeld = false;
         _externalMoveInput = Vector2.zero;
         _externalAimWorldPositionInitialized = false;
+        _externalAimUsesItemWorld = false;
         _externalGameplayControlOwner = null;
     }
 

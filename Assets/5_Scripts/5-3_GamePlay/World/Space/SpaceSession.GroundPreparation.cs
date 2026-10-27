@@ -24,25 +24,6 @@ namespace FlatWorld.Spaceflight
         private readonly List<GroundShipPreparation> groundPreparationWork = new();
         private int groundPreparationNext;
 
-        private sealed class GroundPiecePreparation
-        {
-            public readonly ShipPieceState Piece;
-            public readonly string PieceId, ItemId;
-            public readonly int CellX, CellY, Width, Height, QuarterTurns;
-            public readonly bool Alive;
-            public ItemMgr.PreparedItemHandle Item;
-
-            public GroundPiecePreparation(ShipPieceState piece)
-            {
-                Piece = piece; PieceId = piece.PieceId; ItemId = piece.ItemId; CellX = piece.CellX; CellY = piece.CellY;
-                Width = piece.Width; Height = piece.Height; QuarterTurns = piece.QuarterTurns; Alive = piece.IsAlive;
-            }
-
-            public bool Matches(ShipPieceState piece) => ReferenceEquals(Piece, piece) && PieceId == piece.PieceId && ItemId == piece.ItemId &&
-                CellX == piece.CellX && CellY == piece.CellY && Width == piece.Width && Height == piece.Height &&
-                QuarterTurns == piece.QuarterTurns && Alive == piece.IsAlive;
-        }
-
         private sealed class GroundShipPreparation : IDisposable
         {
             public readonly ShipState Ship;
@@ -51,42 +32,35 @@ namespace FlatWorld.Spaceflight
             public readonly GameRes Resources;
             public readonly ulong DefinitionRevision, StructureRevision;
             public readonly int ResourceRevision;
-            public readonly ItemMgr Items;
-            public readonly List<GroundPiecePreparation> Pieces = new();
-            public readonly Dictionary<int, GroundPiecePreparation> ItemsById = new();
             public readonly List<MachineEntity> Machines = new();
             public ChunkTilemapRenderer.MechanicalLandingPreparation MachinePresentation;
-            public int Cursor, PreparedItems, CommittedItems, HoldSteps, Invalidations;
+            public int Cursor, HoldSteps, Invalidations;
             public int PreparedMachines, ConsumedMachines;
             public float ActiveSeconds;
             public bool Failed, ReadyAtCommit;
             public string Error;
-            public bool Ready => !Failed && Cursor == Pieces.Count && MachinePresentation?.IsReady == true;
+            public bool Ready => !Failed && Cursor == Ship.Pieces.Count && MachinePresentation?.IsReady == true;
 
             public GroundShipPreparation(ShipState ship, string world, int invalidations = 0)
             {
-                Ship = ship; World = world; Resources = GameRes.ExistingInstance; Items = ItemMgr.Instance;
+                Ship = ship; World = world; Resources = GameRes.ExistingInstance;
                 DefinitionRevision = Resources != null ? Resources.ItemDefinitionRevision : 0;
                 ResourceRevision = Resources != null ? Resources.ResourceReloadVersion : 0;
                 StructureRevision = ship.StructureRevision; Invalidations = invalidations;
-                foreach (ShipPieceState piece in ship.Pieces) Pieces.Add(new GroundPiecePreparation(piece));
             }
 
             public bool Matches(ShipState ship, string world)
             {
                 GameRes resources = GameRes.ExistingInstance;
                 if (!ReferenceEquals(Ship, ship) || World != world || !ReferenceEquals(Resources, resources) ||
-                    !ReferenceEquals(Items, ItemMgr.Instance) || StructureRevision != ship.StructureRevision ||
+                    StructureRevision != ship.StructureRevision ||
                     DefinitionRevision != (resources != null ? resources.ItemDefinitionRevision : 0) ||
-                    ResourceRevision != (resources != null ? resources.ResourceReloadVersion : 0) || Pieces.Count != ship.Pieces.Count) return false;
-                for (int i = 0; i < Pieces.Count; i++)
-                    if (!Pieces[i].Matches(ship.Pieces[i]) || !Failed && Pieces[i].Item != null && !Pieces[i].Item.IsValid) return false;
+                    ResourceRevision != (resources != null ? resources.ResourceReloadVersion : 0)) return false;
                 return true;
             }
 
             public void Dispose()
             {
-                foreach (GroundPiecePreparation piece in Pieces) { piece.Item?.Dispose(); piece.Item = null; }
                 if (MachinePresentation != null)
                 { PreparedMachines = MachinePresentation.PreparedCount; ConsumedMachines = MachinePresentation.ConsumedCount; }
                 MachinePresentation?.Dispose(); MachinePresentation = null;
@@ -175,24 +149,16 @@ namespace FlatWorld.Spaceflight
 
         private void StepGroundPreparation(GroundShipPreparation preparation, double milliseconds)
         {
-            if (preparation.Cursor < preparation.Pieces.Count)
+            if (preparation.Cursor < preparation.Ship.Pieces.Count)
             {
-                GroundPiecePreparation prepared = preparation.Pieces[preparation.Cursor++];
-                if (!prepared.Alive) return;
-                ShipPieceState piece = prepared.Piece;
+                ShipPieceState piece = preparation.Ship.Pieces[preparation.Cursor++];
+                if (!piece.IsAlive) return;
                 int id = int.Parse(piece.PieceId, System.Globalization.CultureInfo.InvariantCulture);
                 if (MachineCatalog.Get(piece.ItemId) != null)
                 {
                     using var scope = MachineWorld.UseScope(MachineWorld.GetShipScopeKey(preparation.Ship.ShipId));
                     MachineEntity node = MachineWorld.GetById(id) ?? throw new InvalidOperationException("待落地机器已离开船体：" + piece.ItemId);
                     preparation.Machines.Add(node);
-                }
-                else
-                {
-                    ItemData data = GetPieceData(piece) ?? throw new InvalidOperationException("待落地建筑缺少数据：" + piece.ItemId);
-                    prepared.Item = preparation.Items.PrepareItem(data);
-                    preparation.ItemsById.Add(id, prepared);
-                    preparation.PreparedItems++;
                 }
                 return;
             }
@@ -262,31 +228,17 @@ namespace FlatWorld.Spaceflight
 
         private static JObject DescribeGroundPreparation(GroundShipPreparation preparation, string state)
         {
-            int active = 0, registered = 0, candidates = 0, valid = 0;
-            var candidateIdentities = new JArray();
-            foreach (GroundPiecePreparation piece in preparation.Pieces)
-            {
-                if (piece.Item == null || piece.Item.InstanceId == 0) continue;
-                candidates++; if (piece.Item.IsActive) active++; if (piece.Item.IsRegistered) registered++;
-                if (piece.Item.IsValid) valid++;
-                candidateIdentities.Add(new JObject { ["pieceId"] = piece.Piece.PieceId,
-                    ["instanceId"] = piece.Item.InstanceId, ["guid"] = piece.Item.Guid,
-                    ["active"] = piece.Item.IsActive, ["registered"] = piece.Item.IsRegistered, ["valid"] = piece.Item.IsValid });
-            }
             return new JObject
             {
                 ["state"] = state, ["shipId"] = preparation.Ship.ShipId, ["world"] = preparation.World,
-                ["cursor"] = preparation.Cursor, ["pieceCount"] = preparation.Pieces.Count,
+                ["cursor"] = preparation.Cursor, ["pieceCount"] = preparation.Ship.Pieces.Count,
                 ["activeSeconds"] = preparation.ActiveSeconds,
                 ["structureRevision"] = preparation.StructureRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["preparedItems"] = preparation.PreparedItems, ["candidateItems"] = candidates,
-                ["validCandidates"] = valid, ["remainingCandidates"] = candidates, ["candidates"] = candidateIdentities,
-                ["activeCandidates"] = active, ["registeredCandidates"] = registered,
                 ["preparedMachines"] = preparation.MachinePresentation?.PreparedCount ?? preparation.PreparedMachines,
                 ["consumedMachines"] = preparation.MachinePresentation?.ConsumedCount ?? preparation.ConsumedMachines,
                 ["hiddenMachines"] = preparation.MachinePresentation?.HiddenCount ?? 0,
                 ["remainingMachines"] = preparation.MachinePresentation?.AvailableCount ?? 0,
-                ["machineCount"] = preparation.Machines.Count, ["committedItems"] = preparation.CommittedItems,
+                ["machineCount"] = preparation.Machines.Count,
                 ["holdSteps"] = preparation.HoldSteps, ["invalidations"] = preparation.Invalidations,
                 ["ready"] = preparation.Ready || preparation.ReadyAtCommit, ["error"] = preparation.Error
             };

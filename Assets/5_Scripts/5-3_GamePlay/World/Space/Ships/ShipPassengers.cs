@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using FlatWorld.WorldModel;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace FlatWorld.Spaceflight
@@ -35,8 +38,11 @@ namespace FlatWorld.Spaceflight
             Vector2 screenInput, float turn, float seconds)
         {
             if (State == null || transitionRunning) return false;
-            mover.SetSpaceUpright(IsSpaceView);
             SpacePassengerState passenger = GetPassenger(player);
+            if (IsPlayerInShipInteriorWorld(player, out ShipState interiorShip, out _))
+                return HandleShipInteriorPassengerInput(player, passenger, mover, controller, screenInput, turn, interiorShip);
+
+            mover.SetSpaceUpright(IsSpaceView);
             if (!FlatWorld.Networking.GameNetwork.HasStateAuthority && (passenger.IsInSpace || passenger.Supported))
             {
                 Vector2 command = !string.IsNullOrEmpty(passenger.ConsolePieceId) || controller?._mainCamera == null
@@ -49,6 +55,9 @@ namespace FlatWorld.Spaceflight
                 return true;
             }
             ShipState ship = GetShip(passenger.ShipId);
+            if (passenger.Supported && ship != null && TryEnterShipInteriorWorld(player, passenger,
+                    ship, new Vector2((float)passenger.LocalX, (float)passenger.LocalY)))
+                return HandleShipInteriorPassengerInput(player, passenger, mover, controller, screenInput, turn, ship);
             UpdateDescentControl(player, passenger, ship);
             if (passenger.SurfaceDescending)
             {
@@ -76,39 +85,16 @@ namespace FlatWorld.Spaceflight
             bool floor = passenger.Supported && ship != null && ShipAtmosphereService.HasFloor(ship,
                 (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters), (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters));
             if (!floor) floor = TryGetSupport(GetPlayerAuthoritativeDisplayPosition(player), out floorShip, out _, out local, false);
-            bool gravity = floor && HasArtificialGravity(floorShip, local.x, local.y);
-            ShipFlightState floorFlight = floor ? GetFlight(floorShip.ShipId) : null;
-            bool ground = floorFlight != null && floorFlight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
-            if (floor && (gravity || ground))
+            if (floor)
             {
-                if (passenger.ShipId != floorShip.ShipId || !passenger.Supported)
-                {
-                    passenger.ShipId = floorShip.ShipId; passenger.LocalX = local.x; passenger.LocalY = local.y;
-                }
-                passenger.Supported = true; ship = floorShip;
-                ShipGeometry.Rotate(worldInput.x, worldInput.y, -ship.AngleRadians, out double x, out double y);
-                SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
-                double walkingGravity = gravity ? settings.EarthGravity : GetBody(floorFlight.BodyId).SurfaceGravity;
-                double multiplier = settings.WalkingMultiplier(walkingGravity);
-                Vector2 targetVelocity = new((float)(x * mover.Speed.Value * multiplier), (float)(y * mover.Speed.Value * multiplier));
-                // 无人工重力的地表船内也保留惯性，普通重力和人工重力沿用直接步行。
-                Vector2 walkingVelocity = walkingGravity < settings.EarthGravity
-                    ? mover.SmoothSurfaceVelocity(new Vector2((float)passenger.WalkVelocityX, (float)passenger.WalkVelocityY),
-                        targetVelocity, (float)seconds, walkingGravity)
-                    : targetVelocity;
-                passenger.WalkVelocityX = walkingVelocity.x; passenger.WalkVelocityY = walkingVelocity.y;
-                double nextX = passenger.LocalX + walkingVelocity.x * seconds, nextY = passenger.LocalY + walkingVelocity.y * seconds;
-                int cx = (int)Math.Floor(nextX / ship.CellSizeMeters), cy = (int)Math.Floor(nextY / ship.CellSizeMeters);
-                bool wall = ship.Pieces.Exists(piece => piece.IsAlive && piece.BlocksPassage &&
-                    System.Linq.Enumerable.Contains(ShipGeometry.Footprint(piece), new ShipCell(cx, cy)));
-                if (!wall) { passenger.LocalX = nextX; passenger.LocalY = nextY; }
-                else passenger.WalkVelocityX = passenger.WalkVelocityY = 0d;
-                PlacePassenger(player, passenger, ship);
-                if (!ShipAtmosphereService.HasFloor(ship, (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters),
-                        (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters)))
-                { ReleasePassenger(passenger, ship); SetTerrainSuppression(player, false); }
-                else SetTerrainSuppression(player, true);
-                return true;
+                passenger.ShipId = floorShip.ShipId;
+                passenger.Supported = true;
+                passenger.LocalX = local.x;
+                passenger.LocalY = local.y;
+                passenger.IsInSpace = IsSpaceView;
+                ship = floorShip;
+                if (TryEnterShipInteriorWorld(player, passenger, ship, local))
+                    return HandleShipInteriorPassengerInput(player, passenger, mover, controller, screenInput, turn, ship);
             }
             if (!IsSpaceView)
             {
@@ -120,6 +106,227 @@ namespace FlatWorld.Spaceflight
             if (passenger.Supported && ship != null) ReleasePassenger(passenger, ship);
             SetTerrainSuppression(player, floor);
             return true;
+        }
+
+        private bool HandleShipInteriorPassengerInput(Player player, SpacePassengerState passenger, Mod_Mover mover,
+            Mod_GameController controller, Vector2 screenInput, float turn, ShipState ship)
+        {
+            mover.SetSpaceUpright(false);
+            if (ship == null || mover.rb == null) return false;
+            passenger.LocalX = mover.rb.position.x;
+            passenger.LocalY = mover.rb.position.y;
+            Vector2 local = mover.rb.position;
+            bool floor = ShipAtmosphereService.HasFloor(ship,
+                (int)Math.Floor(local.x / ship.CellSizeMeters), (int)Math.Floor(local.y / ship.CellSizeMeters));
+            // 客户端发送显示坐标输入，同时让普通刚体保留本地预测。
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority && player.IsLocalProfile)
+            {
+                Vector2 command = controller?._mainCamera != null
+                    ? (Vector2)controller._mainCamera.transform.TransformDirection(screenInput)
+                    : screenInput;
+                SpaceNetworkBridge.SubmitInput(player.ProfileName,
+                    new SpacePassengerInput { MoveX = command.x, MoveY = command.y, Turn = turn });
+            }
+            if (!floor)
+            {
+                if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return false;
+                ReleasePassenger(passenger, ship);
+                SetTerrainSuppression(player, false);
+                return IsSpaceView;
+            }
+
+            UpdateDescentControl(player, passenger, ship);
+            if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
+            {
+                if (!FindPiece(passenger.ConsolePieceId, out ShipState consoleShip, out ShipPieceState console) ||
+                    consoleShip != ship || !console.IsOperational || console.Kind != ShipPieceKind.Console ||
+                    !passenger.DescentDriving && !IsPowered(ship, console))
+                    ExitConsole(player);
+                else
+                {
+                    SetControl(console.PieceId, screenInput, turn);
+                    passenger.Supported = floor;
+                    SynchronizePassengerInteriorProjection(player, ship);
+                    UpdateDrivingCamera(player, passenger, ship);
+                    return true;
+                }
+            }
+
+            passenger.Supported = true;
+            passenger.ShipId = ship.ShipId;
+            passenger.IsInSpace = IsSpaceView;
+            SetTerrainSuppression(player, true);
+            SynchronizePassengerInteriorProjection(player, ship);
+            UpdateDrivingCamera(player, passenger, ship);
+            return false;
+        }
+
+        public bool IsPlayerInShipInteriorWorld(Player player)
+            => IsPlayerInShipInteriorWorld(player, out _, out _);
+
+        public bool IsPlayerInShipInteriorWorld(Player player, out ShipState ship, out ShipInteriorWorldRuntime world)
+        {
+            ship = null;
+            world = null;
+            if (player == null || State == null) return false;
+            string key = GameplayWorldRegistry.GetItemWorldKey(player);
+            if (string.IsNullOrEmpty(key)) return false;
+            SpacePassengerState passenger = FindPassenger(player.ProfileName);
+            if (passenger == null || string.IsNullOrWhiteSpace(passenger.ShipId)) return false;
+            ShipState candidate = GetShip(passenger.ShipId);
+            if (candidate == null || candidate.IsWreck || MachineWorld.GetShipScopeKey(candidate.ShipId) != key ||
+                !TryGetShipInteriorWorld(candidate.ShipId, out world)) return false;
+            ship = candidate;
+            return true;
+        }
+
+        public Vector2 TransformPassengerInputToShipLocal(Player player, Vector2 displayedWorldDirection)
+        {
+            if (!IsPlayerInShipInteriorWorld(player, out ShipState ship, out _)) return displayedWorldDirection;
+            ShipGeometry.Rotate(displayedWorldDirection.x, displayedWorldDirection.y, -ship.AngleRadians,
+                out double localX, out double localY);
+            return new Vector2((float)localX, (float)localY);
+        }
+
+        public bool TryGetShipInteriorPresentationPosition(Player player, out Vector2 position)
+        {
+            position = default;
+            if (!IsPlayerInShipInteriorWorld(player, out ShipState ship, out _)) return false;
+            Mod_Mover mover = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            Vector2 local = mover?.rb != null ? mover.rb.position : (Vector2)player.transform.position;
+            position = ProjectShipInteriorPosition(ship, local);
+            return true;
+        }
+
+        public double GetShipInteriorWalkingGravity(ShipState ship, Vector2 localPosition)
+        {
+            return ship != null && HasArtificialGravity(ship, localPosition.x, localPosition.y)
+                ? SpaceGameplaySettings.Current.EarthGravity
+                : 0d;
+        }
+
+        private bool TryEnterShipInteriorWorld(Player player, SpacePassengerState passenger, ShipState ship, Vector2 local)
+        {
+            if (player == null || passenger == null || ship == null) return false;
+            ShipInteriorWorldRuntime world = EnsureShipInteriorWorld(ship);
+            if (GameplayWorldRegistry.GetItemWorldKey(player) == world.WorldKey)
+            {
+                passenger.ShipId = ship.ShipId;
+                passenger.LocalX = local.x;
+                passenger.LocalY = local.y;
+                SynchronizePassengerInteriorProjection(player, ship);
+                return true;
+            }
+            Mod_Mover mover = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            RestorePassengerSurface(player);
+            Vector3 position = new(local.x, local.y, 0f);
+            player.transform.SetPositionAndRotation(position, Quaternion.identity);
+            if (mover?.rb != null)
+            {
+                mover.rb.position = local;
+                mover.rb.rotation = 0f;
+                mover.rb.velocity = Vector2.zero;
+                mover.rb.angularVelocity = 0f;
+            }
+            player.itemData.transform.position = position;
+            player.itemData.transform.rotation = Quaternion.identity;
+            if (GameplayWorldRegistry.GetItemWorldKey(player) != world.WorldKey)
+                GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, world.WorldKey);
+            passenger.ShipId = ship.ShipId;
+            passenger.LocalX = local.x;
+            passenger.LocalY = local.y;
+            passenger.Supported = true;
+            passenger.IsInSpace = IsSpaceView;
+            SynchronizePassengerInteriorProjection(player, ship);
+            return true;
+        }
+
+        internal bool TryTransferPassengerToShipInteriorWorld(Player player, SpacePassengerState passenger, ShipState ship)
+            => player != null && passenger != null && ship != null &&
+                TryEnterShipInteriorWorld(player, passenger, ship,
+                    new Vector2((float)passenger.LocalX, (float)passenger.LocalY));
+
+        private void SynchronizePassengerInteriorProjection(Player player, ShipState ship)
+        {
+            if (player == null || ship == null || !IsPlayerInShipInteriorWorld(player, out ShipState owner, out _) || owner != ship)
+                return;
+            passengerProjections.TryGetValue(player, out WorldPresentationProjection projection);
+            if (projection == null)
+                passengerProjections[player] = projection = WorldPresentationProjection.Create(player.transform);
+            SpacePresentationPose pose = GetShipPresentationPose(ship);
+            Vector2 origin = ProjectShipInteriorPosition(ship, Vector2.zero);
+            float angle = (float)(IsSpaceView ? pose.AngleRadians : ship.AngleRadians) * Mathf.Rad2Deg;
+            Matrix4x4 worldToDisplay = Matrix4x4.TRS(origin, Quaternion.Euler(0f, 0f, angle), Vector3.one);
+            projection.Synchronize(worldToDisplay, IsVisible(ship));
+        }
+
+        private readonly System.Collections.Generic.Dictionary<Player, WorldPresentationProjection> passengerProjections = new();
+
+        private void ReleasePassengerInteriorProjection(Player player)
+        {
+            if (player == null || !passengerProjections.Remove(player, out WorldPresentationProjection projection) || projection == null)
+                return;
+            player.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ClearFollowOverride(projection.transform);
+            projection.Synchronize(Matrix4x4.identity, false);
+            Destroy(projection.gameObject);
+        }
+
+        public void MoveAllPassengersOutOfShipInteriorWorlds()
+        {
+            ItemMgr manager = ItemMgr.GetExistingInstance();
+            if (manager == null) return;
+            foreach (Player player in new List<Player>(manager.Player_DIC.Values))
+            {
+                string worldKey = GameplayWorldRegistry.GetItemWorldKey(player);
+                if (string.IsNullOrEmpty(worldKey) || !worldKey.StartsWith("ship:", StringComparison.Ordinal)) continue;
+                SpacePassengerState passenger = State != null ? FindPassenger(player.ProfileName) : null;
+                ShipState ship = passenger != null ? GetShip(passenger.ShipId) : GetShip(worldKey.Substring(5));
+                if (passenger?.Supported == true && ship != null) ReleasePassenger(passenger, ship);
+                else TransferPassengerOutOfShipInterior(player, passenger ?? CreatePassengerExitFallback(player), ship,
+                    passenger?.IsInSpace == true ? null : player.Data?.CurrentSceneName);
+            }
+        }
+
+        public void MovePassengersOutOfRemovedShipInteriorWorlds(ISet<string> retainedShipIds)
+        {
+            if (State == null) return;
+            foreach (SpacePassengerState passenger in State.Passengers)
+            {
+                Player player = FindNetworkPlayer(passenger.ProfileId);
+                if (player == null) continue;
+                string worldKey = GameplayWorldRegistry.GetItemWorldKey(player);
+                if (string.IsNullOrEmpty(worldKey) || !worldKey.StartsWith("ship:", StringComparison.Ordinal)) continue;
+                string shipId = worldKey.Substring(5);
+                if (retainedShipIds != null && retainedShipIds.Contains(shipId)) continue;
+                ShipState ship = GetShip(shipId);
+                if (passenger.Supported && ship != null) ReleasePassenger(passenger, ship);
+                else TransferPassengerOutOfShipInterior(player, passenger, ship,
+                    passenger.IsInSpace ? null : player.Data?.CurrentSceneName);
+            }
+        }
+
+        public void RebindPassengersToShipInteriorWorlds()
+        {
+            if (State == null) return;
+            foreach (SpacePassengerState passenger in State.Passengers)
+            {
+                Player player = FindNetworkPlayer(passenger.ProfileId);
+                if (player == null) continue;
+                ShipState ship = passenger.Supported ? GetShip(passenger.ShipId) : null;
+                if (ship != null && ShipAtmosphereService.HasFloor(ship,
+                        (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters), (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters)))
+                {
+                    ShipInteriorWorldRuntime world = EnsureShipInteriorWorld(ship);
+                    Vector2 local = new((float)passenger.LocalX, (float)passenger.LocalY);
+                    SetPassengerItemLocalPose(player, local);
+                    if (GameplayWorldRegistry.GetItemWorldKey(player) != world.WorldKey)
+                        GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, world.WorldKey);
+                    SynchronizePassengerInteriorProjection(player, ship);
+                }
+                else if (GameplayWorldRegistry.GetItemWorldKey(player) is string worldKey &&
+                    worldKey.StartsWith("ship:", StringComparison.Ordinal))
+                    TransferPassengerOutOfShipInterior(player, passenger, GetShip(worldKey.Substring(5)), GetPassengerWorld(passenger));
+            }
         }
 
         public bool HasArtificialGravity(ShipState ship, double x, double y)
@@ -139,30 +346,198 @@ namespace FlatWorld.Spaceflight
         }
         public void ReleasePassenger(SpacePassengerState passenger, ShipState ship)
         {
-            Player localPlayer = ItemMgr.Instance?.User_Player;
-            if (localPlayer != null && passenger.ProfileId == localPlayer.ProfileName) ExitConsole(localPlayer);
-            ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
+            if (!TryReleasePassenger(passenger, ship))
+                throw new InvalidOperationException("船内乘员移交目标世界未就绪，保留船内权威状态。");
+        }
+
+        // 先验证目标作用域再提交乘员状态，失败时恢复船内物理归属。
+        public bool TryReleasePassenger(SpacePassengerState passenger, ShipState ship)
+        {
+            if (passenger == null || ship == null) return false;
+            Player passengerPlayer = FindNetworkPlayer(passenger.ProfileId);
+            string originalState = JsonConvert.SerializeObject(passenger);
+            SpacePassengerState released = JsonConvert.DeserializeObject<SpacePassengerState>(originalState);
+            if (released == null) return false;
+            if (passengerPlayer != null && GameplayWorldRegistry.GetItemWorldKey(passengerPlayer) ==
+                MachineWorld.GetShipScopeKey(ship.ShipId))
+            {
+                Mod_Mover mover = passengerPlayer.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+                if (mover?.rb != null)
+                {
+                    released.LocalX = mover.rb.position.x;
+                    released.LocalY = mover.rb.position.y;
+                    released.WalkVelocityX = mover.rb.velocity.x;
+                    released.WalkVelocityY = mover.rb.velocity.y;
+                }
+            }
+
+            ShipGeometry.LocalToWorld(ship, released.LocalX, released.LocalY, out double x, out double y);
             ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
-            passenger.FreeMotion.Sector = ship.Sector;
-            passenger.FreeMotion.PositionMeters = new SpaceVector2(x, y);
-            ShipGeometry.Rotate(passenger.WalkVelocityX, passenger.WalkVelocityY, ship.AngleRadians, out double wx, out double wy);
-            passenger.FreeMotion.VelocityMetersPerSecond = new SpaceVector2(vx + wx, vy + wy);
-            passenger.FreeWalkVelocity = new SpaceVector2(wx, wy);
-            passenger.WalkVelocityX = passenger.WalkVelocityY = 0d;
+            released.FreeMotion.Sector = ship.Sector;
+            released.FreeMotion.PositionMeters = new SpaceVector2(x, y);
+            ShipGeometry.Rotate(released.WalkVelocityX, released.WalkVelocityY, ship.AngleRadians, out double wx, out double wy);
+            released.FreeMotion.VelocityMetersPerSecond = new SpaceVector2(vx + wx, vy + wy);
+            released.FreeWalkVelocity = new SpaceVector2(wx, wy);
+            released.WalkVelocityX = released.WalkVelocityY = 0d;
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight is { HeightMeters: > 0d } && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
             {
-                passenger.SurfaceDescending = true; passenger.IsInSpace = false; passenger.LandingResolved = false;
-                passenger.LandingBodyId = flight.BodyId; passenger.LandingWorldKey = flight.SurfaceWorldKey;
-                passenger.SurfaceHeight = flight.HeightMeters; passenger.SurfaceVerticalSpeed = flight.VerticalSpeed;
-                passenger.SurfaceHorizontalSpeed = flight.EntrySurfaceVelocity.X + wx;
-                passenger.LandingOriginX = passenger.LandingX = x; passenger.LandingOriginY = passenger.LandingY = y;
-                passenger.LandingSelected = false;
+                released.SurfaceDescending = true; released.IsInSpace = false; released.LandingResolved = false;
+                released.LandingBodyId = flight.BodyId; released.LandingWorldKey = flight.SurfaceWorldKey;
+                released.SurfaceHeight = flight.HeightMeters; released.SurfaceVerticalSpeed = flight.VerticalSpeed;
+                released.SurfaceHorizontalSpeed = flight.EntrySurfaceVelocity.X + wx;
+                released.LandingOriginX = released.LandingX = x; released.LandingOriginY = released.LandingY = y;
+                released.LandingSelected = false;
             }
-            passenger.Supported = false; passenger.ShipId = null; passenger.ConsolePieceId = null;
+            else if (flight?.Phase == ShipFlightPhase.Cruising)
+                released.IsInSpace = true;
+            else if (flight != null)
+            {
+                released.IsInSpace = false;
+                released.LandingWorldKey = flight.SurfaceWorldKey;
+            }
+            released.Supported = false; released.ShipId = null; released.ConsolePieceId = null;
+
+            try
+            {
+                if (passengerPlayer != null && !TransferPassengerOutOfShipInterior(passengerPlayer, released, ship, null))
+                    return false;
+                Player localPlayer = ItemMgr.Instance?.User_Player;
+                if (localPlayer != null && passenger.ProfileId == localPlayer.ProfileName) ExitConsole(localPlayer);
+            }
+            catch (Exception error)
+            {
+                Debug.LogWarning("船内乘员移交失败，保留原船内状态：" + error.Message);
+                try
+                {
+                    JsonConvert.PopulateObject(originalState, passenger);
+                    if (passenger.Supported && passenger.ShipId == ship.ShipId)
+                    {
+                        if (passengerPlayer != null)
+                            GameManager.AssignRegisteredPlayerAndChildItemsToWorld(passengerPlayer,
+                                MachineWorld.GetShipScopeKey(ship.ShipId));
+                        RebindPassengersToShipInteriorWorlds();
+                    }
+                }
+                catch (Exception rollbackError) { Debug.LogException(rollbackError); }
+                return false;
+            }
+            JsonConvert.PopulateObject(JsonConvert.SerializeObject(released), passenger);
+            return true;
+        }
+
+        private bool TransferPassengerOutOfShipInterior(Player player, SpacePassengerState passenger, ShipState ship,
+            string preferredWorld)
+        {
+            if (player == null) return true;
+            string sourceWorld = GameplayWorldRegistry.GetItemWorldKey(player);
+            if (string.IsNullOrEmpty(sourceWorld) || !sourceWorld.StartsWith("ship:", StringComparison.Ordinal)) return true;
+            passenger ??= CreatePassengerExitFallback(player);
+            string targetWorld = preferredWorld;
+            if (string.IsNullOrWhiteSpace(targetWorld))
+            {
+                if (passenger.SurfaceDescending) targetWorld = passenger.LandingWorldKey;
+                else if (passenger.IsInSpace)
+                    targetWorld = SpaceSectorCoordinates.SceneKey(passenger.FreeMotion.Sector);
+                else targetWorld = GetFlight(ship?.ShipId)?.SurfaceWorldKey ?? passenger.LandingWorldKey;
+            }
+            if (string.IsNullOrWhiteSpace(targetWorld)) targetWorld = player.Data?.CurrentSceneName;
+            if (string.IsNullOrWhiteSpace(targetWorld))
+                throw new InvalidOperationException("船内乘员没有可移交的地表或星区世界。");
+            Vector2 displayPosition, itemPosition;
+            Vector2 velocity = passenger.FreeMotion.VelocityMetersPerSecond.ToVector2();
+
+            if (SpaceMgr.IsSpaceScene(targetWorld))
+            {
+                bool boundForTransfer = false;
+                if (!GameplayWorldRegistry.TryGet(targetWorld, out _))
+                {
+                    if (!SpaceSectorCoordinates.TryParseSceneKey(targetWorld, out SpaceSectorId sector) || SpaceMgr.ExistingInstance == null)
+                        throw new InvalidOperationException("目标星区尚未建立正式物理场景：" + targetWorld);
+                    UnityEngine.SceneManagement.Scene scene = SpaceMgr.ExistingInstance.BindAuthoritySector(player.ProfileName, sector);
+                    boundForTransfer = true;
+                    if (!scene.IsValid() || !scene.isLoaded)
+                    {
+                        SpaceMgr.ExistingInstance.ReleaseAuthoritySector(player.ProfileName);
+                        throw new InvalidOperationException("目标星区尚未加载：" + targetWorld);
+                    }
+                }
+                try
+                {
+                    using (GameplayWorldRegistry.UseSpaceScene(targetWorld))
+                    {
+                        displayPosition = ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector,
+                            passenger.FreeMotion.PositionMeters));
+                        itemPosition = displayPosition;
+                    }
+                }
+                catch
+                {
+                    if (boundForTransfer) SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(player.ProfileName);
+                    throw;
+                }
+            }
+            else
+            {
+                using (GameplayWorldRegistry.UseWorld(targetWorld))
+                {
+                    double x = passenger.SurfaceDescending ? passenger.LandingX : passenger.FreeMotion.PositionMeters.X;
+                    double y = passenger.SurfaceDescending ? passenger.LandingY : passenger.FreeMotion.PositionMeters.Y;
+                    displayPosition = WorldLocalPresentation.ProjectPosition(new Vector2((float)x, (float)y));
+                    itemPosition = WorldLocalPresentation.ToLogical(displayPosition);
+                }
+            }
+            RestorePassengerSurface(player);
+            ReleasePassengerInteriorProjection(player);
+            player.itemData.transform ??= new ItemTransform();
+            player.itemData.transform.position = itemPosition;
+            player.transform.SetPositionAndRotation(displayPosition, Quaternion.identity);
+            Mod_Mover mover = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            if (mover?.rb != null)
+            {
+                mover.rb.position = displayPosition;
+                mover.rb.rotation = 0f;
+                mover.rb.velocity = velocity;
+                mover.rb.angularVelocity = 0f;
+            }
+            GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, targetWorld);
+            if (SpaceMgr.IsSpaceScene(targetWorld)) SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(player.ProfileName);
+            return true;
+        }
+
+        private static SpacePassengerState CreatePassengerExitFallback(Player player)
+        {
+            Vector2 position = player != null ? (Vector2)player.transform.position : Vector2.zero;
+            return new SpacePassengerState
+            {
+                ProfileId = player?.ProfileName,
+                IsInSpace = SpaceMgr.IsSpaceScene(player?.Data?.CurrentSceneName),
+                LandingWorldKey = player?.Data?.CurrentSceneName,
+                FreeMotion = new SpaceMotionState { PositionMeters = SpaceVector2.FromVector2(position), RadiusMeters = .3d }
+            };
+        }
+
+        private static void SetPassengerItemLocalPose(Player player, Vector2 local)
+        {
+            Mod_Mover mover = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            Vector3 position = new(local.x, local.y, 0f);
+            player.transform.position = position;
+            if (mover?.rb != null)
+            {
+                mover.rb.position = local;
+                mover.rb.rotation = 0f;
+            }
+            player.itemData.transform ??= new ItemTransform();
+            player.itemData.transform.position = position;
+            player.itemData.transform.rotation = Quaternion.identity;
         }
         private void PlacePassenger(Player player, SpacePassengerState passenger, ShipState ship, bool presentation = false)
         {
+            if (IsPlayerInShipInteriorWorld(player, out ShipState interiorShip, out _) && interiorShip == ship)
+            {
+                SynchronizePassengerInteriorProjection(player, ship);
+                return;
+            }
             Vector2 authoritativePosition = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
             Vector2 position = presentation ? GetPassengerPresentationPosition(passenger, ship) : authoritativePosition;
             const float heading = 0f;
@@ -196,6 +571,7 @@ namespace FlatWorld.Spaceflight
             SpaceSectorPosition position = IsSpaceView ? GetPassengerPosition(passenger)
                 : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(GetPlayerAuthoritativeDisplayPosition(player))));
             BindConsoleControl(passenger, ship, piece, position, IsSpaceView);
+            TryEnterShipInteriorWorld(player, passenger, ship, new Vector2((float)passenger.LocalX, (float)passenger.LocalY));
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
                 passenger.DescentControlEntered = passenger.DescentDriving = true;
@@ -274,6 +650,18 @@ namespace FlatWorld.Spaceflight
 
         private void UpdateDrivingCamera(Player player, SpacePassengerState passenger, ShipState ship)
         {
+            if (passenger.Supported && ship != null && IsPlayerInShipInteriorWorld(player, out ShipState interiorShip, out _) && interiorShip == ship)
+            {
+                SynchronizePassengerInteriorProjection(player, ship);
+                Mod_Cam interiorCamera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+                if (string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
+                {
+                    ReleaseDrivingCamera();
+                    if (interiorCamera != null && passengerProjections.TryGetValue(player, out WorldPresentationProjection projection) && projection != null)
+                        interiorCamera.SetFollowOverride(projection.transform);
+                    return;
+                }
+            }
             if (!passenger.Supported || !IsInPresentationWorld(ship) || string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
             {
                 ReleaseDrivingCamera();

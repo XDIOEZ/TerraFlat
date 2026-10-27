@@ -64,16 +64,35 @@ namespace FlatWorld.Spaceflight
         public void ReleaseGas(FluidBatch gas) { if (!inventory.TryAdd(gas, volume, minimumVolume)) throw new InvalidOperationException("供气回滚失败。"); }
         #endregion
     }
-    public sealed partial class SpaceSession
+    public sealed partial class SpaceSession : IWorldPositionEnvironmentSource
     {
         #region 局部环境与主动供氧
+        // 船内实体直接使用账本世界与物理本地坐标，地表实体才按显示位置查支撑。
+        private bool TryResolveItemShipEnvironment(Item item, out ShipState ship, out Vector2 local)
+        {
+            string world = GameplayWorldRegistry.GetItemWorldKey(item) ?? item.gameObject.scene.name;
+            if (TryResolveShipInteriorEnvironment(world, item.transform.position, out ship, out local)) return true;
+            if (world.StartsWith("ship:", StringComparison.Ordinal) ||
+                !SpaceMgr.IsSpaceScene(world) && world != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
+                return false;
+            return TryGetSupport(item.transform.position, out ship, out _, out local);
+        }
+
+        private bool TryResolveShipInteriorEnvironment(string world, Vector2 position, out ShipState ship, out Vector2 local)
+        {
+            ship = world?.StartsWith("ship:", StringComparison.Ordinal) == true ? GetShip(world.Substring(5)) : null;
+            local = position;
+            return ship != null;
+        }
+
         // 气罐优先从所在密闭舱扣真实气体，敞开环境才使用星球大气。
         public bool TryGetPortableTankAirSource(Item tank, out IShipAtmosphereSource source)
         {
             source = null;
             if (tank == null) return false;
-            if (TryGetSupport(tank.transform.position, out ShipState ship, out _, out Vector2 local))
+            if (TryResolveItemShipEnvironment(tank, out ShipState ship, out Vector2 local))
             {
+                if (ship.RetainsWorldWithoutStructure) { source = PlanetShipAtmosphereSource.Vacuum; return true; }
                 EnsureMachineCompartmentGeometry(ship);
                 int x = (int)Math.Floor(local.x / ship.CellSizeMeters);
                 int y = (int)Math.Floor(local.y / ship.CellSizeMeters);
@@ -84,8 +103,8 @@ namespace FlatWorld.Spaceflight
                     : GetOutside(ship);
                 return source != null;
             }
-            if (IsSpaceView) return false;
-            string world = tank.gameObject.scene.name;
+            string world = GameplayWorldRegistry.GetItemWorldKey(tank) ?? tank.gameObject.scene.name;
+            if (SpaceMgr.IsSpaceScene(world) || world.StartsWith("ship:", StringComparison.Ordinal)) return false;
             Vector2 point = PressureExplosionQueue.NormalizeInWorld(world,
                 WorldLocalPresentation.ToLogical((Vector2)tank.transform.position));
             if (TryGetGroundEnvironment(world, point, out _))
@@ -107,6 +126,7 @@ namespace FlatWorld.Spaceflight
         private const decimal AmbientMolesPerOxygenUnit = .0005m;
         public IShipAtmosphereSource GetOutside(ShipState ship)
         {
+            if (ship.RetainsWorldWithoutStructure) return PlanetShipAtmosphereSource.Vacuum;
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight == null || flight.Phase is ShipFlightPhase.Cruising)
                 return PlanetShipAtmosphereSource.Vacuum;
@@ -124,40 +144,60 @@ namespace FlatWorld.Spaceflight
         {
             sample = default;
             if (!running || item == null || State == null) return false;
-            if (TryGetSupport(item.transform.position, out ShipState ship, out _, out Vector2 local))
+            if (TryResolveItemShipEnvironment(item, out ShipState ship, out Vector2 local))
             {
-                int x = (int)Math.Floor(local.x / ship.CellSizeMeters), y = (int)Math.Floor(local.y / ship.CellSizeMeters);
-                ShipEnvironmentSnapshot environment = ShipAtmosphereService.GetEnvironment(ship, x, y);
-                if (!environment.IsSealed)
-                    environment = environment.WithOutside(GetOutside(ship));
-                bool breathe = environment.CanBreathe;
-                if (!environment.IsSealed && !IsSpaceView && AtmosphereService.TryGetForWorld(item.gameObject.scene.name, out AtmosphereState atmosphere))
-                    breathe = AtmosphereService.CanBreathe(atmosphere);
-                sample = new ItemEnvironmentSample(environment.PressureKPa, environment.TemperatureCelsius, breathe,
-                    environment.HasFloorSupport, HasArtificialGravity(ship, local.x, local.y));
+                sample = SampleShipInteriorEnvironment(ship, local);
                 return true;
             }
-            if (IsSpaceView) { sample = new ItemEnvironmentSample(0d, -270d, false, false, false); return true; }
+            string world = GameplayWorldRegistry.GetItemWorldKey(item) ?? item.gameObject.scene.name;
+            if (SpaceMgr.IsSpaceScene(world) || world.StartsWith("ship:", StringComparison.Ordinal))
+            { sample = new ItemEnvironmentSample(0d, -270d, false, false, false); return true; }
             return TrySampleGround(item, out sample);
+        }
+
+        // 数据实体与普通 Item 共用同一环境提供方，不为温度采样临时创建物品。
+        public bool TrySample(string worldKey, Vector2 position, out ItemEnvironmentSample sample)
+        {
+            sample = default;
+            if (!running || State == null) return false;
+            if (TryResolveShipInteriorEnvironment(worldKey, position, out ShipState ship, out Vector2 local))
+            { sample = SampleShipInteriorEnvironment(ship, local); return true; }
+            if (!SpaceMgr.IsSpaceScene(worldKey)) return false;
+            sample = new ItemEnvironmentSample(0, -270, false, false, false);
+            return true;
+        }
+
+        private ItemEnvironmentSample SampleShipInteriorEnvironment(ShipState ship, Vector2 local)
+        {
+            if (ship.RetainsWorldWithoutStructure) return new ItemEnvironmentSample(0, -270, false, false, false);
+            EnsureMachineCompartmentGeometry(ship);
+            int x = (int)Math.Floor(local.x / ship.CellSizeMeters), y = (int)Math.Floor(local.y / ship.CellSizeMeters);
+            ShipEnvironmentSnapshot environment = ShipAtmosphereService.GetEnvironment(ship, x, y);
+            if (!environment.IsSealed) environment = environment.WithOutside(GetOutside(ship));
+            bool breathe = environment.IsSealed ? environment.CanBreathe : AtmosphereService.CanBreathe(GetMachineOutsideAtmosphere(ship));
+            return new ItemEnvironmentSample(environment.PressureKPa, environment.TemperatureCelsius, breathe,
+                environment.HasFloorSupport, HasArtificialGravity(ship, local.x, local.y));
         }
         public float SupplyAmbientOxygen(Item item, float maximumAmount)
         {
             if (maximumAmount <= 0f || item == null) return 0f;
-            if (!TryGetSupport(item.transform.position, out ShipState ship, out _, out Vector2 local))
+            if (!TryResolveItemShipEnvironment(item, out ShipState ship, out Vector2 local))
             {
-                local = PressureExplosionQueue.NormalizeInWorld(item.gameObject.scene.name,
+                string world = GameplayWorldRegistry.GetItemWorldKey(item) ?? item.gameObject.scene.name;
+                if (world.StartsWith("ship:", StringComparison.Ordinal)) return 0f;
+                local = PressureExplosionQueue.NormalizeInWorld(world,
                     WorldLocalPresentation.ToLogical((Vector2)item.transform.position));
-                if (!TryGetGroundEnvironment(item.gameObject.scene.name, local, out _)) return 0f;
-                ship = GetGroundAtmosphere(item.gameObject.scene.name);
+                if (!TryGetGroundEnvironment(world, local, out _)) return 0f;
+                ship = GetGroundAtmosphere(world);
             }
+            if (ship.RetainsWorldWithoutStructure) return 0f;
             int x = (int)Math.Floor(local.x / ship.CellSizeMeters), y = (int)Math.Floor(local.y / ship.CellSizeMeters);
             ShipCompartmentState room = ShipAtmosphereService.FindCompartment(ship, x, y);
             decimal requested = AtmosphereService.Quantize((decimal)maximumAmount * AmbientMolesPerOxygenUnit);
             if (room == null)
             {
-                ShipFlightState flight = GetFlight(ship.ShipId);
-                if (IsSpaceView || !owner.PlanetData_Dict.TryGetValue(flight.SurfaceWorldKey, out PlanetData planet)) return 0f;
-                AtmosphereState air = AtmosphereService.GetOrCreate(planet);
+                AtmosphereState air = GetMachineOutsideAtmosphere(ship);
+                if (air == null) return 0f;
                 foreach (AtmosphereGasAmount gas in air.Gases)
                     if (gas.FluidId == FluidIds.Oxygen)
                     {

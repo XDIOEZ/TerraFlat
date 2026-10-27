@@ -124,6 +124,8 @@ namespace FlatWorld.Spaceflight
         public string WorldAddress;
         public ShipPlatformKind PlatformKind;
         public bool IsWreck;
+        public bool RetainsWorldWithoutStructure;
+        public bool RetainsInteriorWorld;
         public int WreckGuid;
         public double CellSizeMeters = 1d;
         public double CabinHeightMeters = 2.5d;

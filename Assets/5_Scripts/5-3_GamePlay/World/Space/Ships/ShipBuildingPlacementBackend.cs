@@ -15,8 +15,9 @@ namespace FlatWorld.Spaceflight
         public bool CanHandle(BuildingPlacementRequest request)
         {
             SpaceSession session = SpaceSession.Current;
-            ShipPartConfiguration config = Mod_ShipPart.Read(request.SourceData);
-            return session != null && (session.IsSpaceView && config?.Kind is (ShipPieceKind.Floor or ShipPieceKind.Engine) ||
+            ShipPartConfiguration config = SpaceSession.ResolvePartConfiguration(request.SourceData);
+            return session != null && (session.TryGetPlacementWorldShip(request.Actor, out _) ||
+                session.IsSpaceView && config?.Kind is (ShipPieceKind.Floor or ShipPieceKind.Engine) ||
                 session.TryGetSupport(request.Position, out _, out _, out _));
         }
         public BuildingPlacementResult Place(BuildingPlacementRequest request)
@@ -36,7 +37,9 @@ namespace FlatWorld.Spaceflight
             }
             else data = BuildingPlacementCandidate.Create(request, out _);
             Mod_Building.SetInstalledDataState(data);
-            ShipPieceState piece = session.AddPiece(data, request.Position, request.RotationQuarterTurns ?? 0, out ShipState ship);
+            session.TryGetPlacementWorldShip(request.Actor, out ShipState targetShip);
+            ShipPieceState piece = session.AddPiece(data, request.Position, request.RotationQuarterTurns ?? 0,
+                out ShipState ship, targetShip: targetShip);
             return new BuildingPlacementResult(data.IDName,
                 () => session.RollbackPiece(ship, piece),
                 () => session.CommitPiece(ship, piece), placedData: data, shipId: ship.ShipId);
@@ -79,11 +82,10 @@ namespace FlatWorld.Spaceflight
             if (targetShip != null) { ship = targetShip; local = displayPosition; }
             else if (surfaceWorldKey == null) TryGetSupport(displayPosition, out ship, out _, out local);
             else TryGetGroundAssemblySupport(surfaceWorldKey, displayPosition, out ship, out local);
-            bool created = false;
             if (ship == null && config.Kind == ShipPieceKind.Floor)
             {
                 ship = FindAdjacentShip(displayPosition, width, height, quarterTurns, out local, surfaceWorldKey);
-                if (ship == null) { ship = CreateShip(displayPosition, out local, surfaceWorldKey); created = true; }
+                if (ship == null) ship = CreateShip(displayPosition, out local, surfaceWorldKey);
             }
             if (ship == null) throw new InvalidOperationException("设备需要完整的飞船地板支撑。");
             int cellX = Mathf.FloorToInt(local.x / (float)ship.CellSizeMeters), cellY = Mathf.FloorToInt(local.y / (float)ship.CellSizeMeters);
@@ -107,6 +109,7 @@ namespace FlatWorld.Spaceflight
             };
             try
             {
+                EnsureShipInteriorWorld(ship);
                 if (!ShipEnginePlacement.TryValidateAddition(ship, piece, out string engineReason))
                     throw new InvalidOperationException(engineReason);
                 var footprint = new HashSet<ShipCell>(ShipGeometry.Footprint(piece));
@@ -145,13 +148,14 @@ namespace FlatWorld.Spaceflight
                 ship.NotifyStructureChanged();
                 RegisterPieceIndex(ship, piece);
                 State.Devices.Add(new ShipDeviceState { PieceId = piece.PieceId, Configuration = config, TargetPressureKPa = config.TargetPressureKPa });
+                EnsureShipInteriorWorld(ship);
+                if (registerMachine) EnsureShipInteriorItem(ship, piece, data);
                 ShipStructureService.RecalculateMass(ship);
                 return piece;
             }
             catch
             {
                 RollbackPiece(ship, piece);
-                if (created && ship.Pieces.Count == 0) RemoveEmptyShip(ship);
                 throw;
             }
         }
@@ -274,15 +278,16 @@ namespace FlatWorld.Spaceflight
                 ? GameRes.ExistingInstance.GetTileBlock(building.TileBlockId) : null;
             bool door = definition?.HasModule("门模块") == true;
             bool wall = tile != null && BlockingTilemapLayer.IsBlockingTile(tile.TileDataTemplate);
+            bool floor = tile?.GroundPlacement != null;
             int layer = machine?.Layer ?? ReadBuildingPlacementLayer(definition);
             double health = tile?.DamageProfile?.MaxHealth ?? definition?.Health?.MaxHp ?? 250f;
             return new ShipPartConfiguration
             {
                 // 线路按真实能力归类，避免管道和电线被当成阻挡喷口的设备。
-                Kind = door ? ShipPieceKind.Door : wall ? ShipPieceKind.Wall :
+                Kind = door ? ShipPieceKind.Door : floor ? ShipPieceKind.Floor : wall ? ShipPieceKind.Wall :
                     machine?.Electrical?.IsWire == true ? ShipPieceKind.Wire :
                     machine?.IsFluidPipeSegment == true ? ShipPieceKind.Pipe : ShipPieceKind.Equipment,
-                Layer = layer,
+                Layer = layer, SupportTileBlockId = floor ? tile.Id : null,
                 SealsAtmosphere = door || wall, StructuralMassKg = data.Stack?.CurrentWeight ?? 20f,
                 BlocksMovement = door || wall || (machine?.BlocksTraversal ?? (layer == (int)BuildingPlacementLayer.Structure && tile == null)),
                 FootprintWidth = Math.Max(1, building?.FootprintWidth ?? 1), FootprintHeight = Math.Max(1, building?.FootprintHeight ?? 1),
@@ -307,8 +312,9 @@ namespace FlatWorld.Spaceflight
             }
             return (int)BuildingPlacementLayer.Structure;
         }
-        public bool RollbackPiece(ShipState ship, ShipPieceState piece)
+        public bool RollbackPiece(ShipState ship, ShipPieceState piece, bool deferEmptyWorldRetirement = false)
         {
+            ReleaseShipInteriorItem(piece, capture: false);
             if (int.TryParse(piece.PieceId, out int id) && MachineCatalog.Get(piece.ItemId) != null)
                 using (MachineWorld.UseScope("ship:" + ship.ShipId)) MachineWorld.DiscardPlacementCandidate(id);
             ship.Pieces.Remove(piece); contents.Remove(piece.PieceId);
@@ -317,13 +323,30 @@ namespace FlatWorld.Spaceflight
             State.Devices.RemoveAll(value => value.PieceId == piece.PieceId);
             RemovePieceView(piece.PieceId);
             viewBindingsDirty = true;
-            if (ship.Pieces.Count == 0) RemoveEmptyShip(ship);
-            else ShipStructureService.RecalculateMass(ship);
+            if (ship.Pieces.Count == 0)
+            {
+                if (!deferEmptyWorldRetirement) RemoveEmptyShip(ship);
+                else
+                {
+                    ship.IsWreck = false;
+                    ship.RetainsWorldWithoutStructure = true;
+                    retainedShipWorlds.Add(ship.ShipId);
+                    if (TryGetShipInteriorWorld(ship.ShipId, out var world))
+                        world.ObserveRetainedWorldContents(() => retainedWorldsNeedRetirementCheck = true);
+                    retainedWorldsNeedRetirementCheck = true;
+                }
+            }
+            else
+            {
+                EnsureShipInteriorWorld(ship);
+                ShipStructureService.RecalculateMass(ship);
+            }
             return true;
         }
         public void CommitPiece(ShipState ship, ShipPieceState piece)
         {
             ship.NotifyStructureChanged();
+            EnsureShipInteriorWorld(ship);
             ShipAtmosphereService.RebuildCompartments(ship, GetOutside(ship));
             SynchronizeViews(refreshBindings: true);
         }
@@ -346,12 +369,12 @@ namespace FlatWorld.Spaceflight
                 reason = "机械节点已失效";
                 return false;
             }
-            SpaceLooseItemState drop = QueueDrop(returned, ship, piece);
+            ShipPieceDropHandle drop = QueueDrop(returned, ship, piece);
             try
             {
                 if (MachineWorld.Remove(node.Id) == null)
                 {
-                    State.LooseItems.Remove(drop);
+                    CancelQueuedShipPieceDrop(drop);
                     reason = "机械节点已失效";
                     return false;
                 }
@@ -360,7 +383,7 @@ namespace FlatWorld.Spaceflight
             {
                 if (MachineWorld.Contains(node))
                 {
-                    State.LooseItems.Remove(drop);
+                    CancelQueuedShipPieceDrop(drop);
                     throw;
                 }
                 // 节点已删除后的通知异常不能撤掉返还物，船部件仍需完成提交。
@@ -411,6 +434,7 @@ namespace FlatWorld.Spaceflight
                 List<ShipState> fragments = ShipStructureService.RebuildAndSplit(ship, GetOutside(ship), RecoverUnsupportedPiece);
                 foreach (ShipState fragment in fragments)
                 {
+                    EnsureShipInteriorWorld(fragment);
                     ShipFlightState flight = previous;
                     if (fragment.ShipId != ship.ShipId)
                     {
@@ -422,6 +446,26 @@ namespace FlatWorld.Spaceflight
                         foreach (ShipPieceState member in fragment.Pieces)
                             if (int.TryParse(member.PieceId, out int id)) transferMassPieceIds.Add(id);
                         MachineWorld.TransferShipNodes(ship.ShipId, fragment.ShipId, transferMassPieceIds);
+                        TransferShipInteriorItemsToFragment(ship, fragment);
+                        using var drops = DroppedItemService.TransferWorldItems(
+                            MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
+                            point => ShipGeometry.HasFloor(fragment,
+                                Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
+                                Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)),
+                            point => point, point => point);
+                        using var looseItems = new InteriorEntityTransfer(
+                            MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
+                            point => ShipGeometry.HasFloor(fragment,
+                                Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
+                                Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)), point => point, 0f);
+                        using var terrain = SaveDataMgr.Instance.TransferWorldTerrain(
+                            MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
+                            point => ShipGeometry.HasFloor(fragment,
+                                Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
+                                Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)), point => point);
+                        drops.Commit();
+                        looseItems.Commit();
+                        terrain.Commit();
                     }
                     flight.Motion.Sector = fragment.Sector;
                     flight.Motion.PositionMeters = new SpaceVector2(fragment.PositionX, fragment.PositionY);
@@ -441,7 +485,12 @@ namespace FlatWorld.Spaceflight
                         else { ClearControl(passenger.ConsolePieceId); passenger.ConsolePieceId = null; }
                     }
                     if (support == null) ReleasePassenger(passenger, oldPose);
-                    else passenger.ShipId = support.ShipId;
+                    else
+                    {
+                        passenger.ShipId = support.ShipId;
+                        if (ItemMgr.Instance != null && ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player))
+                            TryTransferPassengerToShipInteriorWorld(player, passenger, support);
+                    }
                 }
                 foreach (ShipNavigationState navigation in State.Navigation)
                 {
@@ -470,6 +519,59 @@ namespace FlatWorld.Spaceflight
 
         private void RemoveEmptyShip(ShipState ship)
         {
+            string worldKey = MachineWorld.GetShipScopeKey(ship.ShipId);
+            ShipFlightState flight = GetFlight(ship.ShipId);
+            if (flight != null)
+                foreach (SpacePassengerState passenger in State.Passengers)
+                    if (passenger.ShipId == ship.ShipId) ReleasePassenger(passenger, ship);
+            if (HasRetainedShipWorldContents(ship.ShipId) &&
+                (flight == null || flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating)))
+            {
+                RetainShipWorldWithoutStructure(ship);
+                return;
+            }
+            ShipInteriorDropEjection dropTransfer = null;
+            try
+            {
+                if (flight != null && DroppedItemService.HasRetainedWorldItems(worldKey, owner))
+                    dropTransfer = BeginShipInteriorDropEjection(ship);
+            }
+            catch (Exception error)
+            {
+                RetainShipWorldWithoutStructure(ship);
+                Debug.LogWarning("船内内容暂时无法移交，保留原世界：" + error.Message);
+                return;
+            }
+            using var drops = dropTransfer;
+            InteriorEntityTransfer residents = null;
+            try
+            {
+                if (GameplayWorldRegistry.GetWorldItemCount(worldKey) > 0 && flight != null &&
+                    flight.Phase is (ShipFlightPhase.Landed or ShipFlightPhase.Floating) &&
+                    !string.IsNullOrWhiteSpace(flight.SurfaceWorldKey))
+                {
+                    GameplayWorldRegistry.GetOrCreate(flight.SurfaceWorldKey);
+                    Vector2 ToGround(Vector2 local)
+                    {
+                        ShipGeometry.LocalToWorld(ship, local.x, local.y, out double x, out double y);
+                        return new Vector2((float)x, (float)y);
+                    }
+                    residents = new InteriorEntityTransfer(worldKey, flight.SurfaceWorldKey, _ => true,
+                        ToGround, (float)(ship.AngleRadians * Mathf.Rad2Deg));
+                }
+                if (HasRetainedShipWorldContents(ship.ShipId))
+                {
+                    residents?.Dispose();
+                    residents = null;
+                    RetainShipWorldWithoutStructure(ship);
+                    return;
+                }
+                drops?.Commit();
+                residents?.Commit();
+                RetireShipInteriorWorld(ship.ShipId);
+            }
+            finally { residents?.Dispose(); }
+            retainedShipWorlds.Remove(ship.ShipId);
             if (shipMassCaches.TryGetValue(ship, out ShipMassRuntimeCache massCache)) { massCache.Dispose(); shipMassCaches.Remove(ship); }
             RemoveWreckView(ship.ShipId);
             MachineWorld.ReleaseShipScope(ship.ShipId);
@@ -477,6 +579,18 @@ namespace FlatWorld.Spaceflight
             State.Flights.RemoveAll(value => value.ShipId == ship.ShipId);
             State.Navigation.RemoveAll(value => value.ShipId == ship.ShipId);
             State.Docking.RemoveAll(value => value.ShipAId == ship.ShipId || value.ShipBId == ship.ShipId);
+        }
+
+        private void RetainShipWorldWithoutStructure(ShipState ship)
+        {
+            ship.IsWreck = false;
+            ship.RetainsWorldWithoutStructure = true;
+            ship.NotifyStructureChanged();
+            EnsureShipInteriorWorld(ship);
+            retainedShipWorlds.Add(ship.ShipId);
+            if (TryGetShipInteriorWorld(ship.ShipId, out var world))
+                world.ObserveRetainedWorldContents(() => retainedWorldsNeedRetirementCheck = true);
+            pieceIndexDirty = viewBindingsDirty = true;
         }
         #endregion
 
@@ -573,7 +687,7 @@ namespace FlatWorld.Spaceflight
         }
         private ItemData GetMassPieceData(ShipPieceState piece, out Item live)
         {
-            live = views.TryGetValue(piece.PieceId, out ShipPieceView view) && view != null ? view.Item : null;
+            TryGetShipInteriorItem(piece.PieceId, out live);
             return live != null ? live.itemData : GetPieceData(piece);
         }
         private ShipMassContribution AddMassContribution(ShipState ship, string prefix, string identity, int ownerId = 0)

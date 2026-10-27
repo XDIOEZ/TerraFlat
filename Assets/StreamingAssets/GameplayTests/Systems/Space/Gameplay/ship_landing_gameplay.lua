@@ -54,12 +54,12 @@ test.space("ship_landing", function(data)
         return ids, machines
     end
     local function ground_view(snapshot, label)
-        assert(#snapshot.presenters == 0 and #snapshot.pieces == 0 and snapshot.parkedPieces == 0,
-            "普通建筑残留 ShipView、船件缓存或 ParkedPieces：" .. label)
+        assert(#snapshot.presenters == 0 and #snapshot.itemProjections == 0 and #snapshot.chunkProjections == 0,
+            "普通建筑残留整船、物品或区块投影：" .. label)
     end
     local function whole_view(snapshot, count, label)
-        assert(#snapshot.presenters == 1 and #snapshot.pieces == count and snapshot.parkedPieces == 0,
-            "飞行或下降没有唯一整船与完整部件：" .. label)
+        assert(#snapshot.presenters == 1 and #snapshot.itemProjections > 0 and #snapshot.chunkProjections > 0,
+            "飞行或下降没有唯一整船及真实普通物品/区块投影：" .. label)
         local body = snapshot.presenters[1]
         assert(body.wholeShipBody and body.activeBodies == 1 and body.activeBlockers == 1 and
             body.active and not body.pooled and body.scene == snapshot.scene,
@@ -67,22 +67,18 @@ test.space("ship_landing", function(data)
     end
     local function ground_preparation(ship, restored, machineCount, label)
         local preparation = ship.preparation
-        local cancelled = preparation.cancellation
-        assert(cancelled.before.valid and cancelled.before.found and cancelled.before.instanceId ~= 0 and cancelled.before.guid == 0 and
-            not cancelled.before.active and not cancelled.before.registered,
-            "普通候选准备时提前拥有正式身份或表现：" .. label)
-        assert(not cancelled.validAfter and cancelled.instanceAfter == 0 and cancelled.retired and
-            not cancelled.activeAfter and not cancelled.registeredAfter and
-            cancelled.sourceGuidBefore == cancelled.sourceGuidAfter,
-            "重复取消没有安全回收候选，或修改了来源数据：" .. label)
-        local function candidates(snapshot)
+        local function ordinary_items(snapshot)
+            local state = snapshot.ordinaryItems
+            assert(state.expectedItemCount > 0 and #state.items == state.expectedItemCount and
+                state.sameInstanceCount == state.expectedItemCount and state.sameHealthCount == state.expectedItemCount,
+                "下降期间普通 Item 身份或生命状态发生变化：" .. label)
             local result = {}
-            for _, candidate in ipairs(snapshot.candidates) do
-                local guid = tonumber(candidate.pieceId)
-                assert(candidate.valid and candidate.instanceId ~= 0 and candidate.guid == 0 and
-                    not candidate.active and not candidate.registered and not result[guid],
-                    "隐藏候选身份、激活或注册状态错误：" .. label)
-                result[guid] = candidate.instanceId
+            for _, item in ipairs(state.items) do
+                assert(item.guid ~= 0 and item.instanceId ~= 0 and item.runtimeRegistered and
+                    item.sameRuntimeInstance and item.itemWorldKey == state.worldKey and not result[item.guid],
+                    "下降期间重建或错放普通 Item：" .. label)
+                if item.health ~= nil then assert(item.sameHealth, "下降期间普通 Item 生命值改变：" .. label) end
+                result[item.guid] = item.instanceId
             end
             return result
         end
@@ -91,16 +87,12 @@ test.space("ship_landing", function(data)
                 "地表迁移完成后没有重新绑定降落准备所需的世界运行时：" .. label)
             assert(snapshot.state == "ready" and snapshot.ready and snapshot.shipPresent and
                 snapshot.phase == "SurfaceDescending" and snapshot.height > 0 and
-                snapshot.groundMatches == 0 and snapshot.registeredOriginalItems == 0,
+                snapshot.groundMatches == 0,
                 "准备完成前提前移交地面，或丢失真实下降船体：" .. label)
-            assert(snapshot.preparedItems > 0 and snapshot.preparedItems == snapshot.candidateItems and
-                snapshot.validCandidates == snapshot.candidateItems and snapshot.activeCandidates == 0 and
-                snapshot.registeredCandidates == 0 and #snapshot.candidates == snapshot.candidateItems,
-                "没有真正备齐停用且未登记的普通建筑：" .. label)
             assert(snapshot.machineCount == machineCount and snapshot.preparedMachines == machineCount and
                 snapshot.hiddenMachines == snapshot.preparedMachines and snapshot.consumedMachines == 0,
-                "机器表现未提前备齐，或在真实交接前就被激活或消费：" .. label)
-            candidates(snapshot)
+                "机器显示准备状态错误，或在真实交接前就被消费：" .. label)
+            ordinary_items(snapshot)
             assert(#snapshot.machines == machineCount, "准备期间机器采样丢失：" .. label)
             for _, machine in ipairs(snapshot.machines) do
                 assert(machine.shipRegistered and not machine.surfaceRegistered and machine.sameMachine and
@@ -109,44 +101,33 @@ test.space("ship_landing", function(data)
                     "准备期间克隆或提前移交了运行机器、库存或流体：" .. label)
             end
         end
-        local beforeMove, afterMove = candidates(preparation.ready), candidates(preparation.moved)
+        local beforeMove, afterMove = ordinary_items(preparation.ready), ordinary_items(preparation.moved)
         local dx = preparation.moved.position.x - preparation.ready.position.x
         local dy = preparation.moved.position.y - preparation.ready.position.y
         assert(dx * dx + dy * dy > 0.00000001 and
             preparation.ready.invalidations == preparation.moved.invalidations,
-            "正式下降操纵没有改变落点，或只改变落点就重建准备布局：" .. label)
+            "正式下降操纵没有改变落点，或只改变落点就重建结构准备：" .. label)
         for guid, instance in pairs(beforeMove) do
-            assert(afterMove[guid] == instance, "移动落点没有复用已准备的建筑：" .. label)
+            assert(afterMove[guid] == instance, "移动落点时普通 Item 实例发生变化：" .. label)
         end
         assert(preparation.expanded.invalidations > preparation.moved.invalidations and
             preparation.finalReady.invalidations > preparation.expanded.invalidations and
-            preparation.expanded.preparedItems == preparation.moved.preparedItems + 1 and
-            preparation.finalReady.preparedItems == preparation.moved.preparedItems and
             not preparation.addedPieceStillPresent,
-            "真实加装或撤销地板没有使准备布局重新对齐当前结构：" .. label)
+            "真实加装或撤销地板没有使结构准备重新对齐：" .. label)
         for _, snapshot in ipairs({preparation.expanded, preparation.finalReady}) do
-            assert(snapshot.lastCleanup.state == "invalidated" and snapshot.lastCleanup.remainingCandidates == 0 and
-                snapshot.lastCleanup.remainingMachines == 0,
-                "结构失效后残留旧候选或旧机器表现：" .. label)
-            assert(#snapshot.previousCandidates > 0, "结构失效没有采到旧候选：" .. label)
-            for _, candidate in ipairs(snapshot.previousCandidates) do
-                assert(not candidate.active and not candidate.registered and
-                    (candidate.retired or candidate.currentCandidate),
-                    "结构失效后旧候选既未回收也未合法复用：" .. label)
-            end
+            assert(snapshot.lastCleanup.state == "invalidated" and snapshot.lastCleanup.remainingMachines == 0,
+                "结构失效后残留旧机器表现：" .. label)
         end
-        local finalCandidates = candidates(preparation.finalReady)
-        for guid, instance in pairs(finalCandidates) do
+        local finalItems = ordinary_items(preparation.finalReady)
+        for guid, instance in pairs(finalItems) do
             assert(restored[guid] and not restored[guid].machine and restored[guid].itemInstanceId == instance,
-                "正式落地重新实例化了已经准备好的普通建筑：" .. label)
+                "正式落地没有保留原普通 Item 实例：" .. label)
         end
         local committed = preparation.committed
         assert(committed.state == "committed" and committed.ready and committed.error == nil and
-            committed.committedItems == preparation.finalReady.preparedItems and
-            committed.preparedItems == committed.committedItems and committed.remainingCandidates == 0 and
             committed.remainingMachines == 0 and committed.preparedMachines == machineCount and
             committed.consumedMachines > 0 and committed.consumedMachines <= committed.preparedMachines,
-            "落地没有一次消费已准备对象或清理剩余表现：" .. label)
+            "落地没有完成机器表现移交：" .. label)
         assert(#preparation.landedMachines == machineCount, "落地机器身份采样丢失：" .. label)
         for _, machine in ipairs(preparation.landedMachines) do
             assert(not machine.shipRegistered and machine.surfaceRegistered and machine.sameMachine and
@@ -164,6 +145,35 @@ test.space("ship_landing", function(data)
             assert(ship.landedAgain[id] <= preparation.latestBeforeCommit[id] + 0.0000001 and
                 preparation.latestBeforeCommit[id] < ship.cruising[id],
                 "准备或移交复制了燃料，或下降未消耗真实燃料：" .. label)
+        end
+    end
+
+    local function verify_ordinary_item_migration(stages, landed, label)
+        assert(#stages >= 4, "没有采到普通 Item 起降迁移全阶段：" .. label)
+        local initial, last = nil, nil
+        local sawShip, sawFlight, sawLandedHealth = false, false, false
+        for _, stage in ipairs(stages) do
+            assert(stage.expectedItemCount > 0 and #stage.items == stage.expectedItemCount and
+                stage.sameInstanceCount == stage.expectedItemCount and stage.sameHealthCount == stage.expectedItemCount,
+                "普通 Item 未以同一实例和生命状态经过阶段 " .. tostring(stage.stage) .. ": " .. label)
+            local map = {}
+            for _, item in ipairs(stage.items) do
+                assert(item.guid ~= 0 and item.instanceId ~= 0 and item.runtimeRegistered and
+                    item.sameRuntimeInstance and item.itemWorldKey == stage.worldKey and not map[item.guid],
+                    "普通 Item 账本身份或世界归属错误：" .. label)
+                if item.health ~= nil then sawLandedHealth = true end
+                map[item.guid] = item.instanceId
+            end
+            if stage.stage == "surface-before-launch" then initial = map end
+            if stage.stage == "ship-after-launch" then sawShip = true end
+            if stage.stage == "space-flight" then sawFlight = true end
+            if stage.stage == "surface-after-landing" then last = map end
+        end
+        assert(initial and last and sawShip and sawFlight and sawLandedHealth,
+            "普通 Item 起飞、飞行、落地或生命采样缺失：" .. label)
+        for guid, instance in pairs(initial) do
+            assert(last[guid] == instance and landed[guid] and landed[guid].itemInstanceId == instance,
+                "普通 Item 落地时更换实例或 Guid：" .. label)
         end
     end
     for _, ship in ipairs(data.ships) do
@@ -224,6 +234,7 @@ test.space("ship_landing", function(data)
             assert(restored[guid].quarterTurns == building.quarterTurns, "起降改变了建筑安装朝向：" .. label)
         end
         ground_preparation(ship, restored, machineCount, label)
+        verify_ordinary_item_migration(ship.ordinaryItemStages, restored, label)
         ground_view(ship.viewCache.surface, label .. "/GM 创建")
         whole_view(ship.viewCache.space, ship.landed.pieceCount, label .. "/太空")
         whole_view(ship.viewCache.descending, ship.landed.pieceCount, label .. "/下降")

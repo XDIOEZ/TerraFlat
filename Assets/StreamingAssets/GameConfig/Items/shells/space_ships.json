@@ -70,6 +70,7 @@
           "parameters": {
             "Configuration": {
               "Kind": "Floor",
+              "SupportTileBlockId": "Tile_Floor_Iron",
               "Layer": -1,
               "StructuralMassKg": 15,
               "Health": 220,
@@ -159,6 +160,7 @@
           "parameters": {
             "Configuration": {
               "Kind": "Floor",
+              "SupportTileBlockId": "Tile_Floor_Iron",
               "Layer": -1,
               "StructuralMassKg": 15,
               "Health": 220,
@@ -247,6 +249,7 @@
           "parameters": {
             "Configuration": {
               "Kind": "Floor",
+              "SupportTileBlockId": "Tile_Floor_Stone",
               "Layer": -1,
               "StructuralMassKg": 30,
               "Health": 500,
@@ -336,6 +339,7 @@
           "parameters": {
             "Configuration": {
               "Kind": "Floor",
+              "SupportTileBlockId": "Tile_Floor_Stone",
               "Layer": -1,
               "StructuralMassKg": 30,
               "Health": 500,

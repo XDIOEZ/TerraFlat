@@ -122,7 +122,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         physics.RegisterCollider(SourceCollider, regionId: null, entity: chunk);
         if (chunk.Terrain != null)
             chunk.Terrain.Changed += HandleTerrainChanged;
-        MachineWorld.CellChanged += HandleMachineCellChanged;
+        MachineWorld.WorldPresentationCellChanged += HandleWorldMachineCellChanged;
+        MachineWorld.WorldPresentationCellsChanged += HandleWorldMachineCellsChanged;
         NaturalEntityEcsService.BlockingBodyChanged += HandleNaturalBodyChanged;
         NaturalEntityEcsService.PhysicsBodiesReset += HandlePhysicsBodiesReset;
         tilemapCollider.enabled = true;
@@ -136,7 +137,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         physics?.UnregisterCollider(SourceCollider);
         if (BoundChunk?.Terrain != null)
             BoundChunk.Terrain.Changed -= HandleTerrainChanged;
-        MachineWorld.CellChanged -= HandleMachineCellChanged;
+        MachineWorld.WorldPresentationCellChanged -= HandleWorldMachineCellChanged;
+        MachineWorld.WorldPresentationCellsChanged -= HandleWorldMachineCellsChanged;
         NaturalEntityEcsService.BlockingBodyChanged -= HandleNaturalBodyChanged;
         NaturalEntityEcsService.PhysicsBodiesReset -= HandlePhysicsBodiesReset;
         BoundChunk = null;
@@ -226,9 +228,17 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
 
     public void SetWorld(WorldRuntime worldRuntime) => ownerWorld = worldRuntime;
 
-    private void HandleMachineCellChanged(Vector2Int cell)
+    private void HandleWorldMachineCellChanged(string worldKey, Vector2Int cell)
     {
-        if (MachineWorld.WorldKey == boundWorldKey) MarkDataObstaclesDirty(cell);
+        if (worldKey != boundWorldKey || !GameplayWorldRegistry.TryGet(worldKey, out _)) return;
+        using (GameplayWorldRegistry.UseWorld(worldKey)) MarkDataObstaclesDirty(cell);
+    }
+
+    private void HandleWorldMachineCellsChanged(string worldKey, IReadOnlyList<Vector2Int> cells)
+    {
+        if (worldKey != boundWorldKey || cells == null || !GameplayWorldRegistry.TryGet(worldKey, out _)) return;
+        using (GameplayWorldRegistry.UseWorld(worldKey))
+            foreach (Vector2Int cell in cells) MarkDataObstaclesDirty(cell);
     }
 
     /// <summary>记录最终实体状态，旧/新位置通知在同一物理 Tick 合并，不扫描其它树。</summary>

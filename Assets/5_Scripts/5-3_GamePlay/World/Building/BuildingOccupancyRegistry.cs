@@ -104,11 +104,11 @@ public static class BuildingOccupancyRegistry
 
     #region 占地查询
 
-    public static bool IsOccupied(Vector2Int cell, Mod_Building except = null, int layer = -1)
-        => IsOccupiedNormalized(WorldTopologyRuntime.NormalizeCell(cell), except, layer);
+    public static bool IsOccupied(Vector2Int cell, Mod_Building except = null, int layer = -1, bool ignoreGroundBuildings = false)
+        => IsOccupiedNormalized(WorldTopologyRuntime.NormalizeCell(cell), except, layer, ignoreGroundBuildings);
 
     /// <summary>批量读取已按当前世界归一化的格子，避免每格重新查询存档与场景。</summary>
-    public static bool IsOccupiedNormalized(Vector2Int cell, Mod_Building except = null, int layer = -1)
+    public static bool IsOccupiedNormalized(Vector2Int cell, Mod_Building except = null, int layer = -1, bool ignoreGroundBuildings = false)
     {
         bool mechanicalOccupied = layer < 0
             ? MachineWorld.IsOccupiedOnPlacementLayersNormalized(cell)
@@ -119,7 +119,8 @@ public static class BuildingOccupancyRegistry
         occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());
         foreach (Mod_Building building in occupants)
         {
-            if (building != except && (layer < 0 || GetPlacementLayer(building) == layer))
+            if (building != except && (!ignoreGroundBuildings || !BuildingTraversalRules.IsGroundLayer(GetPlacementLayer(building))) &&
+                (layer < 0 || GetPlacementLayer(building) == layer))
                 return true;
         }
 

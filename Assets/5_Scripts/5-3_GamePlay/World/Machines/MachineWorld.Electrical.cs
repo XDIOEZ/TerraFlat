@@ -178,8 +178,18 @@ public static partial class MachineWorld
     {
         using var electricalSample = (commitStorage ? ElectricalCommitMarker : ElectricalProbeMarker).Auto();
         foreach (ElectricalNetwork network in electricalGraph.Networks)
+        {
             ElectricalNetworkGraph.Solve(network, seconds,
                 ElectricalGeneratorFactorDelegate, ElectricalDemandFactorDelegate, ElectricalBatteryChangedDelegate, commitStorage);
+            if (!commitStorage) continue;
+            foreach (MachineEntity node in network.PowerIndicatorNodes)
+            {
+                bool powered = node.ElectricalSuppliedWatts > 0f;
+                if (node.PowerIndicatorWasPowered == powered) continue;
+                node.PowerIndicatorWasPowered = powered;
+                NotifyVisualChanged(node);
+            }
+        }
     }
 
     /// <summary>发电机和马达跨越机械网与电网，首版保持其机械网全局求解，避免远端输电因休眠断能。</summary>

@@ -33,7 +33,7 @@ namespace FlatWorld.Networking.Gameplay
         private void StartTerrainServerBridge()
         {
             NetworkServer.RegisterHandler<NetworkTerrainChunkRequest>(
-                NetworkGameplayWorldScope.Wrap<NetworkTerrainChunkRequest>(OnServerTerrainChunkRequest), true);
+                NetworkGameplayWorldScope.Wrap<NetworkTerrainChunkRequest>(OnServerTerrainChunkRequest, observerWorld: true), true);
             SaveDataMgr.AuthoritativeTerrainCellChanged += QueueTerrainCell;
         }
 

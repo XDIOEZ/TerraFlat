@@ -8,6 +8,7 @@ public sealed class ElectricalNetwork
 {
     #region 运行状态
     public readonly List<MachineEntity> Nodes = new();
+    internal readonly List<MachineEntity> PowerIndicatorNodes = new();
     public float Voltage;
     public float GeneratedWatts;
     public float DemandWatts;
@@ -150,6 +151,10 @@ public sealed class ElectricalNetworkGraph
             network.Nodes.Add(endpoint);
             Networks.Add(network);
         }
+        // 只在拓扑重建时索引需要监听供电切换的表现。
+        foreach (ElectricalNetwork network in Networks)
+            foreach (MachineEntity node in network.Nodes)
+                if (node.Definition.PowerIndicator != null) network.PowerIndicatorNodes.Add(node);
     }
     #endregion
 

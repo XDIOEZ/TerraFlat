@@ -127,6 +127,9 @@ internal static class ChunkBatchRendererGroupService
     internal static void RefreshOwnerProjection(ChunkTilemapRenderer owner)
         => backend?.RefreshOwnerProjection(owner);
 
+    internal static void SetOwnerExternalProjection(ChunkTilemapRenderer owner, Matrix4x4 worldToDisplay, bool visible)
+        => backend?.SetOwnerExternalProjection(owner, worldToDisplay, visible);
+
     /// <summary>地形 Mesh 与扩展 BRG 使用相同队列，阴影始终位于覆盖面和雪之上、墙体之下。</summary>
     internal static int GetLayerRenderQueue(VisualLayer layer)
     {
@@ -155,6 +158,9 @@ internal static class ChunkBatchRendererGroupService
         // 否则一次脏格刷新就可能制造“只登记了局部实例”的伪完整 Owner。
         return backend?.SetVisual(owner, slotKey, visual) == true;
     }
+
+    internal static void CollectVisualSnapshots(ChunkTilemapRenderer owner, List<WorldVisualSnapshot> destination)
+        => backend?.CollectVisualSnapshots(owner, destination);
 
     /// <summary>按真实后端实例核对扩展图层，避免只相信表现器自己的提交缓存。</summary>
     internal static int GetOwnerLayerVisualCount(ChunkTilemapRenderer owner, VisualLayer layer)
@@ -307,7 +313,8 @@ internal static class ChunkBatchRendererGroupService
                 int ownerId = owner.GetInstanceID();
                 RegisterOwnerCullingState(ownerId, worldBounds, owner.DepthPresentationOffset, owner.gameObject.scene.name);
                 RefreshOwnerProjection(owner);
-                ownerCullingById[ownerId].Bounds = worldBounds;
+                OwnerCullingState state = ownerCullingById[ownerId];
+                state.Bounds = state.HasExternalProjection ? TransformBounds(worldBounds, state.ExternalProjection) : worldBounds;
                 warnedMissingOwnerIds.Remove(ownerId);
             }
         }
@@ -344,6 +351,7 @@ internal static class ChunkBatchRendererGroupService
                 Vector3 delta = offset - state.ProjectionOffset;
                 if (delta == Vector3.zero) return;
                 state.ProjectionOffset = offset;
+                if (state.HasExternalProjection) delta = state.ExternalProjection.MultiplyVector(delta);
                 Bounds bounds = state.Bounds;
                 bounds.center += delta;
                 state.Bounds = bounds;
@@ -361,6 +369,57 @@ internal static class ChunkBatchRendererGroupService
                 }
                 finally { EndBulkSubmit(); }
             }
+        }
+
+        // 外部世界只改变绘制矩阵与裁剪边界，不移动区块的物理根。
+        public void SetOwnerExternalProjection(ChunkTilemapRenderer owner, Matrix4x4 worldToDisplay, bool visible)
+        {
+            lock (syncRoot)
+            {
+                if (owner == null || !ownerHandles.TryGetValue(owner, out var handles) ||
+                    !ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state)) return;
+                Matrix4x4 previous = state.HasExternalProjection ? state.ExternalProjection : Matrix4x4.identity;
+                state.HasExternalProjection = true;
+                state.ExternalVisible = visible;
+                if (previous == worldToDisplay) return;
+                Matrix4x4 delta = worldToDisplay * previous.inverse;
+                state.ExternalProjection = worldToDisplay;
+                state.Bounds = TransformBounds(state.Bounds, delta);
+                visibleInstanceListsDirty = true;
+                BeginBulkSubmit();
+                try
+                {
+                    foreach (InstanceHandle handle in handles.Values)
+                    {
+                        handle.Batch.Transform(handle.Index, delta);
+                        bulkSubmitBatches.Add(handle.Batch);
+                    }
+                }
+                finally { EndBulkSubmit(); }
+            }
+        }
+
+        private static Bounds TransformBounds(Bounds bounds, Matrix4x4 matrix)
+        {
+            Vector3 extents = bounds.extents;
+            Vector3 x = matrix.MultiplyVector(new Vector3(extents.x, 0f, 0f));
+            Vector3 y = matrix.MultiplyVector(new Vector3(0f, extents.y, 0f));
+            Vector3 z = matrix.MultiplyVector(new Vector3(0f, 0f, extents.z));
+            return new Bounds(matrix.MultiplyPoint3x4(bounds.center), new Vector3(
+                Mathf.Abs(x.x) + Mathf.Abs(y.x) + Mathf.Abs(z.x),
+                Mathf.Abs(x.y) + Mathf.Abs(y.y) + Mathf.Abs(z.y),
+                Mathf.Abs(x.z) + Mathf.Abs(y.z) + Mathf.Abs(z.z)) * 2f);
+        }
+
+        private static InstanceData TransformInstance(InstanceData data, Matrix4x4 matrix)
+        {
+            Vector4 x = data.Transform0, y = data.Transform1;
+            data.Transform0 = new Vector4(matrix.m00 * x.x + matrix.m01 * y.x,
+                matrix.m00 * x.y + matrix.m01 * y.y, matrix.m00 * x.z + matrix.m01 * y.z + matrix.m03, x.w);
+            data.Transform1 = new Vector4(matrix.m10 * x.x + matrix.m11 * y.x,
+                matrix.m10 * x.y + matrix.m11 * y.y, matrix.m10 * x.z + matrix.m11 * y.z + matrix.m13,
+                matrix.m22 * y.w + matrix.m23);
+            return data;
         }
 
         private static bool UsesOwnerProjection(VisualLayer layer)
@@ -548,6 +607,11 @@ internal static class ChunkBatchRendererGroupService
                     data.Transform1.w += cullingState.ProjectionOffset.z;
                     sortingPosition += cullingState.ProjectionOffset;
                 }
+                if (cullingState.HasExternalProjection)
+                {
+                    data = TransformInstance(data, cullingState.ExternalProjection);
+                    sortingPosition = cullingState.ExternalProjection.MultiplyPoint3x4(sortingPosition);
+                }
                 VisualKey key = new(visual.Layer, visual.Sprite, visual.SourceMaterial);
                 if (handles.TryGetValue(slotKey, out InstanceHandle current))
                 {
@@ -567,6 +631,27 @@ internal static class ChunkBatchRendererGroupService
                 handles[slotKey] = new InstanceHandle(batch, index);
                 visibleInstanceListsDirty = true;
                 return true;
+            }
+        }
+
+        // 直接读取已提交的实例矩阵和素材，保留批处理的真实视觉来源。
+        public void CollectVisualSnapshots(ChunkTilemapRenderer owner, List<WorldVisualSnapshot> destination)
+        {
+            lock (syncRoot)
+            {
+                if (owner == null || !ownerHandles.TryGetValue(owner, out var handles)) return;
+                int layer = SortingLayer.GetLayerValueFromID(SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer));
+                foreach (InstanceHandle handle in handles.Values)
+                {
+                    if (handle.Batch.Key.Layer is VisualLayer.NaturalShadow or VisualLayer.TerrainHeightShadow) continue;
+                    InstanceData data = handle.Batch.GetData(handle.Index);
+                    Matrix4x4 matrix = Matrix4x4.identity;
+                    matrix.m00 = data.Transform0.x; matrix.m01 = data.Transform0.y; matrix.m03 = data.Transform0.z;
+                    matrix.m10 = data.Transform1.x; matrix.m11 = data.Transform1.y; matrix.m13 = data.Transform1.z;
+                    matrix.m23 = data.Transform1.w;
+                    destination.Add(new WorldVisualSnapshot(handle.Batch.Sprite, matrix, (Color)data.Tint,
+                        layer, handle.Batch.Priority, matrix.m13));
+                }
             }
         }
 
@@ -623,7 +708,7 @@ internal static class ChunkBatchRendererGroupService
             MeshRegistration mesh = GetOrCreateMesh(visual.Sprite, visual.Layer == VisualLayer.NaturalShadow);
             MaterialRegistration material = GetOrCreateMaterial(visual.Layer, visual.Sprite.texture,
                 visual.SourceMaterial);
-            var batch = new TileBatch(this, key, mesh.Id, material.Id, ResolvePriority(visual.Layer),
+            var batch = new TileBatch(this, key, visual.Sprite, mesh.Id, material.Id, ResolvePriority(visual.Layer),
                 visual.DepthSorted, InitialCapacity);
             batches.Add(key, batch);
             orderedBatches.Add(batch);
@@ -890,7 +975,8 @@ internal static class ChunkBatchRendererGroupService
             for (int i = 0; i < activeOwnerCullingStates.Count; i++)
             {
                 OwnerCullingState state = activeOwnerCullingStates[i];
-                bool visible = state.WorldKey == GameplayWorldRegistry.LocalPresentationWorldKey &&
+                bool visible = (state.HasExternalProjection ? state.ExternalVisible :
+                    state.WorldKey == GameplayWorldRegistry.LocalPresentationWorldKey) &&
                     (!WorldStreamingPreferences.OwnerCullingEnabled || IsOwnerVisible(state.Bounds, planes));
                 if (state.Visible != visible)
                 {
@@ -1062,11 +1148,12 @@ internal static class ChunkBatchRendererGroupService
             private readonly List<int> bulkDirtyIndices = new();
             private readonly List<int> bulkSubmitIndices = new();
 
-            public TileBatch(Backend backend, VisualKey key, BatchMeshID meshId,
+            public TileBatch(Backend backend, VisualKey key, Sprite sprite, BatchMeshID meshId,
                 BatchMaterialID materialId, int priority, bool depthSorted, int capacity)
             {
                 this.backend = backend;
                 Key = key;
+                Sprite = sprite;
                 MeshId = meshId;
                 MaterialId = materialId;
                 Priority = priority;
@@ -1075,12 +1162,14 @@ internal static class ChunkBatchRendererGroupService
             }
 
             public VisualKey Key { get; }
+            public Sprite Sprite { get; }
             public BatchMeshID MeshId { get; }
             public BatchMaterialID MaterialId { get; }
             public int Priority { get; }
             public bool DepthSorted { get; }
             public BatchID BatchId { get; private set; }
             public int Count => gpuData.Count;
+            public InstanceData GetData(int index) => gpuData[index];
             public Vector3 GetSortingPosition(int index) => sortingPositions[index];
 
             /// <summary>只在可见区块集合变化时扫描本批次，平常复用上次的索引。</summary>
@@ -1127,6 +1216,9 @@ internal static class ChunkBatchRendererGroupService
                 data.Transform1.w += delta.z;
                 Update(index, data, sortingPositions[index] + delta);
             }
+
+            public void Transform(int index, Matrix4x4 matrix)
+                => Update(index, TransformInstance(gpuData[index], matrix), matrix.MultiplyPoint3x4(sortingPositions[index]));
 
             public void FlushBulkSubmit()
             {
@@ -1295,6 +1387,9 @@ internal static class ChunkBatchRendererGroupService
             public string WorldKey { get; set; }
             public Bounds Bounds { get; set; }
             public Vector3 ProjectionOffset { get; set; }
+            public Matrix4x4 ExternalProjection { get; set; } = Matrix4x4.identity;
+            public bool HasExternalProjection { get; set; }
+            public bool ExternalVisible { get; set; }
             public int Index { get; set; }
             public bool Visible { get; set; }
         }

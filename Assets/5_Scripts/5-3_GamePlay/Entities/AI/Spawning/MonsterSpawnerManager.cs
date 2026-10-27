@@ -817,6 +817,12 @@ public partial class MonsterSpawnerManager : MonoBehaviour
 
         foreach (Player player in _itemManager.Player_DIC.Values)
         {
+            if (player == null) continue;
+            if (string.Equals(GameplayWorldRegistry.GetItemWorldKey(player), sceneName, StringComparison.Ordinal))
+            {
+                AddPlayerPosition(player.transform.position);
+                continue;
+            }
             if (player != null && GameNetwork.IsOnline && FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(
                 player.ProfileName, out FlatWorld.Spaceflight.SpaceNetworkObserver observer) == true)
             {
@@ -836,7 +842,8 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         }
 
         if (_playerPositions.Count == 0 && _itemManager.UserPlayerTransform != null &&
-            _itemManager.User_Player?.Data?.CurrentSceneName == sceneName)
+            (string.Equals(GameplayWorldRegistry.GetItemWorldKey(_itemManager.User_Player), sceneName, StringComparison.Ordinal) ||
+             _itemManager.User_Player?.Data?.CurrentSceneName == sceneName))
             AddPlayerPosition(_itemManager.UserPlayerTransform.position);
     }
 
@@ -1079,6 +1086,8 @@ public partial class MonsterSpawnerManager : MonoBehaviour
     {
         SaveDataMgr saveManager = SaveDataMgr.Instance;
         if (saveManager == null || saveManager.SaveData == null || _monsterManager == null)
+            return false;
+        if (GameplayWorldRegistry.SimulatesWithoutObservers(_ownedWorld) && _playerPositions.Count == 0)
             return false;
 
         RefreshMonsterSnapshot();

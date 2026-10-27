@@ -287,7 +287,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         if (WorldUnitChanged == null)
             return;
 
-        Vector2 position = WorldTopologyRuntime.NormalizePosition(
+        Vector2 position = ResolveWorldUnitPosition(
             FlatWorld.Spaceflight.ShipSurfacePresentation.GroundPosition(item.gameObject, rb.position));
         var currentWorldUnit = new Vector2Int(
             Mathf.FloorToInt(position.x),
@@ -315,12 +315,16 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
             return;
         }
 
-        Vector2 position = WorldTopologyRuntime.NormalizePosition(rb.position);
+        Vector2 position = ResolveWorldUnitPosition(rb.position);
         _lastWorldUnit = new Vector2Int(
             Mathf.FloorToInt(position.x),
             Mathf.FloorToInt(position.y));
         _hasTrackedWorldUnit = true;
     }
+
+    private Vector2 ResolveWorldUnitPosition(Vector2 position)
+        => item is Player player && FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true
+            ? position : WorldTopologyRuntime.NormalizePosition(position);
 
     public override void ModUpdate(float deltaTime)
     {
@@ -364,6 +368,8 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         input = ResolveMobileMoveInput(input, isMobileMoveInput);
         if (item is Player && inputController?._mainCamera != null)
             input = inputController._mainCamera.transform.TransformDirection(input);
+        if (item is Player passenger && FlatWorld.Spaceflight.SpaceSession.Current is SpaceSession session)
+            input = session.TransformPassengerInputToShipLocal(passenger, input);
         input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
         if (!FiniteVelocity(input))
         {
@@ -522,7 +528,10 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
             ? Vector2.zero
             : delta.normalized * moveSpeed;
-        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
+        DrivenVelocity = IsShipInteriorZeroGravity(gravity)
+            ? SmoothSpaceVelocity(DrivenVelocity, deltaTime,
+                Speed.Value > 0f ? Vector2.ClampMagnitude(targetVelocity / Speed.Value, 1f) : Vector2.zero)
+            : SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
         ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
         UpdateMovementState();
@@ -549,7 +558,9 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
             ? clampedInput * moveSpeed
             : Vector2.zero;
         // 主动速度独立缓动，不能把上帧水流当作下帧主动移动的初速度。
-        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
+        DrivenVelocity = IsShipInteriorZeroGravity(gravity)
+            ? SmoothSpaceVelocity(DrivenVelocity, deltaTime, clampedInput)
+            : SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
         ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
         UpdateMovementState();
@@ -571,7 +582,11 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
             return;
         }
 
-        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
+        double gravity = ResolveSurfaceGravity();
+        DrivenVelocity = IsShipInteriorZeroGravity(gravity)
+            ? SmoothSpaceVelocity(DrivenVelocity, deltaTime,
+                Speed.Value > 0f ? Vector2.ClampMagnitude(targetVelocity / Speed.Value, 1f) : Vector2.zero)
+            : SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
         ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
         UpdateMovementState();

@@ -163,43 +163,6 @@ namespace FlatWorld.Spaceflight
         #endregion
     }
 
-    public sealed partial class ShipPieceView
-    {
-        #region 船件升空兼容入口
-        private Collider2D surfaceCollider;
-        private int surfaceOrderOffset;
-        private bool surfaceSortingBound;
-
-        private void SynchronizeSurfacePresentation(Vector3 visualLiftOffset)
-        {
-            // 整船根同时管理停泊和飞行表现，船件不再通过父刚体猜测归属。
-            if (session?.HasShipColliderPresenter(shipId) == true) return;
-            if (surfaceCollider == null)
-            {
-                Rigidbody2D rigidbody = GetComponentInParent<Rigidbody2D>();
-                if (rigidbody != null) surfaceCollider = rigidbody.GetComponent<Collider2D>();
-            }
-            bool wholeShip = surfaceCollider != null && surfaceCollider.transform != transform;
-            // 共享整船碰撞体由 ShipColliderPresenter 每船更新一次，船件只处理自己的表现。
-            if (wholeShip) return;
-            ShipFlightState flight = session?.GetFlight(shipId);
-            if (visual != null)
-            {
-                if (!surfaceSortingBound)
-                {
-                    WorldRenderingManager.Instance.GetSortingKey(WorldSortingManager.VehicleCategory, out _, out int order);
-                    surfaceOrderOffset = visual.sortingOrder - order; surfaceSortingBound = true;
-                }
-                ShipSurfacePresentation.SetElevated(visual.gameObject,
-                    ShipSurfaceState.IsElevated(flight), ShipSurfacePresentation.VehicleCategory, surfaceOrderOffset);
-            }
-            if (surfaceCollider == null) return;
-            ShipSurfacePresentation.SetColliderState(surfaceCollider, (Vector2)visualLiftOffset,
-                ShipSurfaceState.IsAirborne(flight), boundPiece?.BlocksPassage == true);
-        }
-        #endregion
-    }
-
     public sealed partial class SpaceSession
     {
         #region 乘员整体高度与排序恢复

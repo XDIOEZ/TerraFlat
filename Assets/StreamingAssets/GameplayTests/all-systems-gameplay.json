@@ -266,6 +266,12 @@
       "enabled": true
     },
     {
+      "id": "ship_interior_world_gameplay",
+      "name": "船内独立世界、物理与普通物品归属",
+      "luaPath": "GameplayTests/Systems/Space/ship_world.lua",
+      "enabled": true
+    },
+    {
       "id": "ship_damage_gameplay",
       "name": "真实长船局部截断与冷残骸继续破碎",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_damage_gameplay.lua",

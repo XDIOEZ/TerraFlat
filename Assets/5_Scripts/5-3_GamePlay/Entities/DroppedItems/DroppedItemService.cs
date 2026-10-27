@@ -111,7 +111,7 @@ public static partial class DroppedItemService
 
     internal static bool IsHandleValid(DroppedItemHandle handle)
     {
-        if (handle.Legacy == null) return handle.Id != 0 && handle.Epoch == Epoch && Contains(handle.Id);
+        if (handle.Legacy == null) return handle.Id != 0 && ResolveHandleEpoch(handle) == Epoch && Contains(handle.Id);
         if (handle.Legacy.DestructionHandled || handle.Legacy.itemData?.Guid != handle.Id) return false;
         string worldKey = GameplayWorldRegistry.GetItemWorldKey(handle.Legacy);
         return !string.IsNullOrEmpty(worldKey) ? worldKey == GameplayWorldRegistry.ExecutionWorldKey :
@@ -386,7 +386,7 @@ public static partial class DroppedItemService
             ItemMgr.Instance?.DespawnItem(handle.Legacy, saveData: false);
             return;
         }
-        if (epochOwners.TryGetValue(handle.Epoch, out DropWorld owner)) owner.Runtime?.Remove(handle.Id);
+        if (epochOwners.TryGetValue(ResolveHandleEpoch(handle), out DropWorld owner)) owner.Runtime?.Remove(handle.Id);
     }
 
     /// <summary>只删除旧抛掷模块数据；容器、耐久、建筑快照等库存状态保持原样。</summary>
@@ -489,6 +489,9 @@ public static partial class DroppedItemService
     {
         ItemData data = FastCloner.FastCloner.DeepClone(source); data.inHand = false;
         RemoveLegacyDropData(data);
+        // 完整掉落与其他世界居民共用区块存档。
+        data.PhysicsState ??= new ItemPhysicsRuntimeState();
+        data.PhysicsState.PersistentWorldResident = true;
         // 新掉落物由登记入口分配身份，不能复用仍由手持物或来源实体占用的 GUID。
         data.Guid = 0;
         data.Stack.CanBePickedUp = duration <= 0f;
@@ -605,7 +608,11 @@ public static partial class DroppedItemService
     {
         string local = GameplayWorldRegistry.LocalPresentationWorldKey;
         foreach (DropWorld world in worlds.Values)
-            world.Runtime?.Present(UsesLightweightDrops && world.Key == local ? Camera.main : null);
+        {
+            bool projected = WorldPresentationTransformRegistry.TryGet(world.Key, out Matrix4x4 matrix, out bool visible);
+            bool show = UsesLightweightDrops && (projected ? visible : world.Key == local);
+            world.Runtime?.Present(show ? Camera.main : null, projected ? matrix : Matrix4x4.identity);
+        }
     }
 
     /// <summary>必须在退出保存之后释放；GameWorldExit 通知发生在保存之前，不能提前回收掉落物。</summary>
@@ -656,7 +663,7 @@ public static partial class DroppedItemService
             }
             world.Runtime?.Dispose(); world.Runtime = null;
         }
-        worlds.Clear(); epochOwners.Clear(); tickWorldKeys.Clear(); cachedState = null; cachedWorld = null;
+        worlds.Clear(); epochOwners.Clear(); movedHandles.Clear(); tickWorldKeys.Clear(); cachedState = null; cachedWorld = null;
         legacyPlans.Clear(); legacyScratch.Clear(); pickers.Clear();
     }
 

@@ -9,11 +9,14 @@ public static partial class MachineWorld
     // 同步借用格列表，表现消费者在整批数据就位后只处理一次最终状态。
     public static event Action<Vector2Int> SurfacePresentationCellChanged;
     public static event Action<IReadOnlyList<Vector2Int>> SurfacePresentationCellsChanged;
+    public static event Action<string, Vector2Int> WorldPresentationCellChanged;
+    public static event Action<string, IReadOnlyList<Vector2Int>> WorldPresentationCellsChanged;
 
     private sealed class SurfaceChanges
     {
         internal readonly HashSet<Vector2Int> Mechanical = new();
         internal readonly HashSet<Vector2Int> Visual = new();
+        internal readonly HashSet<Vector2Int> WorldVisual = new();
     }
 
     private sealed class SurfaceChangeBatch : IDisposable
@@ -43,12 +46,20 @@ public static partial class MachineWorld
 
     private static void FlushSurfaceChanges(string key, SurfaceChanges changes)
     {
-        if (key != SceneManager.GetActiveScene().name) return;
         try
         {
-            using var world = UseScope(key);
-            foreach (Vector2Int cell in changes.Mechanical)
-                NotifyScopeTransferChange(() => BuildingOccupancyRegistry.NotifyMechanicalChanged(cell));
+            bool hasWorld = GameplayWorldRegistry.TryGet(key, out _);
+            bool canRefreshOccupancy = hasWorld || key == GameplayWorldRegistry.ExecutionWorldKey;
+            using var world = hasWorld ? GameplayWorldRegistry.UseWorld(key) : null;
+            using var machine = UseScope(key);
+            if (canRefreshOccupancy)
+                foreach (Vector2Int cell in changes.Mechanical)
+                    NotifyScopeTransferChange(() => BuildingOccupancyRegistry.NotifyMechanicalChanged(cell));
+            var worldCells = new List<Vector2Int>(changes.WorldVisual);
+            if (worldCells.Count > 0 && WorldPresentationCellsChanged != null)
+                foreach (Action<string, IReadOnlyList<Vector2Int>> handler in WorldPresentationCellsChanged.GetInvocationList())
+                    NotifyScopeTransferChange(() => handler(key, worldCells));
+            if (key != SceneManager.GetActiveScene().name) return;
             var cells = new List<Vector2Int>(changes.Visual);
             Delegate[] cellHandlers = CellChanged?.GetInvocationList();
             foreach (Vector2Int cell in cells)
@@ -78,13 +89,25 @@ public static partial class MachineWorld
 
     private static void PublishSurfaceMechanicalChange(Vector2Int cell)
     {
-        if (surfaceChangeBatch != null) CurrentSurfaceChanges().Mechanical.Add(WorldTopologyRuntime.NormalizeCell(cell));
-        else BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
+        if (surfaceChangeBatch != null) CurrentSurfaceChanges().Mechanical.Add(cell);
+        else
+        {
+            using var world = GameplayWorldRegistry.TryGet(worldKey, out _)
+                ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+            BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
+        }
+    }
+
+    // 各世界的表现监听独立身份，后台或移动世界也能收到机器变化。
+    private static void PublishWorldPresentationCellChange(Vector2Int cell)
+    {
+        if (surfaceChangeBatch != null) CurrentSurfaceChanges().WorldVisual.Add(cell);
+        else WorldPresentationCellChanged?.Invoke(worldKey, cell);
     }
 
     private static void PublishSurfaceCellChange(Vector2Int cell)
     {
-        if (surfaceChangeBatch != null) CurrentSurfaceChanges().Visual.Add(WorldTopologyRuntime.NormalizeCell(cell));
+        if (surfaceChangeBatch != null) CurrentSurfaceChanges().Visual.Add(cell);
         else
         {
             CellChanged?.Invoke(cell);
@@ -97,6 +120,8 @@ public static partial class MachineWorld
         surfaceChangeBatch = null;
         SurfacePresentationCellChanged = null;
         SurfacePresentationCellsChanged = null;
+        WorldPresentationCellChanged = null;
+        WorldPresentationCellsChanged = null;
     }
     #endregion
 }

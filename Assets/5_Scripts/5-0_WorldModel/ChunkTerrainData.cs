@@ -376,7 +376,7 @@ namespace FlatWorld.WorldModel
         /// </summary>
         public bool IsWalkable(int x, int y)
         {
-            return GetCell(x, y).IsWalkable;
+            return TerrainSupportLayer.GetSurfaceCell(this, x, y).IsWalkable;
         }
 
         /// <summary>看看这个格子从下到上一共叠了几层非空地块。</summary>

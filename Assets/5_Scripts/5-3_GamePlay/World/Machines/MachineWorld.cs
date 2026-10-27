@@ -292,7 +292,7 @@ public static partial class MachineWorld
         dirty = true;
         foreach (Vector2Int cell in changedCells)
         {
-            if (!IsShipScope) NotifySurfaceMechanicalChanged(cell);
+            NotifySurfaceMechanicalChanged(cell);
             NotifySurfaceCellChanged(cell);
         }
     }

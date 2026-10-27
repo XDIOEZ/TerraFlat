@@ -80,7 +80,8 @@ public partial class SaveDataMgr
         string worldPrefix = planetName + "\u001f";
         foreach (var pair in runtimeBuildingDirtyAddresses)
             if (pair.Key.StartsWith(worldPrefix, StringComparison.Ordinal)) addresses.Add(pair.Key, pair.Value);
-        var snapshot = new List<Item>(items.WorldRunTimeItems.Values);
+        var snapshot = new List<Item>();
+        GameplayWorldRegistry.CopyWorldItems(planetName, snapshot);
         foreach (Item item in snapshot)
         {
             if (IsRuntimeBuildingItemInWorld(item, planetName))
@@ -95,8 +96,7 @@ public partial class SaveDataMgr
         var savedItems = new List<ItemData>();
         foreach (var pair in addresses)
         {
-            snapshot.Clear();
-            snapshot.AddRange(items.WorldRunTimeItems.Values);
+            GameplayWorldRegistry.CopyWorldItems(planetName, snapshot);
             savedItems.Clear();
             bool succeeded = true;
             // 同区块建筑的捕获与合并不跨帧，避免拆除后把旧建筑快照重新写回来。

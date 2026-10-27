@@ -75,6 +75,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         public DroppedItemVisual Visual;
         public LightweightDroppedBody LastBody;
         public Vector2 LastNearestPosition;
+        public Matrix4x4 LastProjection;
         public WorldItemWaterRules.DriftInterpolation WaterDrift;
         public ShaderFlameEffect CombustionFlame;
         public bool LastBurning;
@@ -146,7 +147,8 @@ internal sealed class DroppedItemPresentation : IDisposable
         Camera camera,
         WorldTopologyDomain domain,
         Dictionary<Vector2Int, HashSet<int>> spatial,
-        float spatialCellSize)
+        float spatialCellSize,
+        Matrix4x4 worldToDisplay)
     {
         if (disposed) return;
         if (camera == null)
@@ -155,11 +157,14 @@ internal sealed class DroppedItemPresentation : IDisposable
             return;
         }
 
-        Vector2 cameraCenter = camera.transform.position;
+        Matrix4x4 displayToWorld = worldToDisplay.inverse;
+        Vector2 cameraCenter = displayToWorld.MultiplyPoint3x4(camera.transform.position);
         float halfHeight = camera.orthographic ? camera.orthographicSize : 50f;
         float halfWidth = halfHeight * Mathf.Max(0.1f, camera.aspect);
-        float xRadius = halfWidth + CullingMargin;
-        float yRadius = halfHeight + CullingMargin;
+        Vector3 horizontal = displayToWorld.MultiplyVector(new Vector3(halfWidth, 0f));
+        Vector3 vertical = displayToWorld.MultiplyVector(new Vector3(0f, halfHeight));
+        float xRadius = Mathf.Abs(horizontal.x) + Mathf.Abs(vertical.x) + CullingMargin;
+        float yRadius = Mathf.Abs(horizontal.y) + Mathf.Abs(vertical.y) + CullingMargin;
 
         CollectCandidates(cameraCenter, xRadius, yRadius, domain, spatial, spatialCellSize, candidates);
         visible.Clear();
@@ -190,7 +195,7 @@ internal sealed class DroppedItemPresentation : IDisposable
                 view = Acquire();
                 active.Add(id, view);
             }
-            Apply(view, id, visual, body, nearest);
+            Apply(view, id, visual, body, nearest, worldToDisplay);
         }
 
         releaseScratch.Clear();
@@ -301,7 +306,8 @@ internal sealed class DroppedItemPresentation : IDisposable
         int id,
         DroppedItemVisual visual,
         LightweightDroppedBody body,
-        float2 nearestPosition)
+        float2 nearestPosition,
+        Matrix4x4 worldToDisplay)
     {
         if (!ReferenceEquals(view.Visual, visual))
         {
@@ -318,7 +324,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         Vector2 nearest = new(nearestPosition.x, nearestPosition.y);
         bool burning = payloads.TryGetValue(id, out ItemData data) && data.MatterState?.IsBurning == true;
         if (view.HasState && SamePresentationState(view.LastBody, body) &&
-            view.LastNearestPosition == nearest && view.LastBurning == burning)
+            view.LastNearestPosition == nearest && view.LastBurning == burning && view.LastProjection == worldToDisplay)
             return;
 
         float submergedScale = WorldItemWaterRules.ResolveSubmergedScale(body.SubmergedProgress);
@@ -326,9 +332,9 @@ internal sealed class DroppedItemPresentation : IDisposable
         Quaternion bodyRotation = Quaternion.Euler(0f, 0f, body.Rotation);
         Vector3 basePosition = new(nearestPosition.x, nearestPosition.y + body.VisualHeight, 0f);
         view.Root.transform.SetPositionAndRotation(
-            basePosition + bodyRotation * Vector3.Scale(visual.LocalPosition, bodyScale),
-            bodyRotation * visual.LocalRotation);
-        view.Root.transform.localScale = Vector3.Scale(bodyScale, visual.LocalScale);
+            worldToDisplay.MultiplyPoint3x4(basePosition + bodyRotation * Vector3.Scale(visual.LocalPosition, bodyScale)),
+            worldToDisplay.rotation * bodyRotation * visual.LocalRotation);
+        view.Root.transform.localScale = Vector3.Scale(worldToDisplay.lossyScale, Vector3.Scale(bodyScale, visual.LocalScale));
 
         Bounds bounds = view.Renderer.bounds;
         float height = Mathf.Max(0.0001f, bounds.size.y);
@@ -346,6 +352,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         SetCombustionPlaying(view, burning, visual.Layer, visual.Order + 2);
         view.LastBody = body;
         view.LastNearestPosition = nearest;
+        view.LastProjection = worldToDisplay;
         view.LastBurning = burning;
         view.HasState = true;
     }

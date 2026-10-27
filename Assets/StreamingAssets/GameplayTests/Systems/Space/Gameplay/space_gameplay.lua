@@ -278,29 +278,32 @@ do
             same_ground_members(ship.landed, ship.landedAgain, label .. "/落地")
             local cache = ship.viewCache
             local function ground_views(snapshot, stage)
-                assert(#snapshot.presenters == 0 and #snapshot.pieces == 0 and snapshot.parkedPieces == 0,
-                    "普通地面建筑残留 ShipView、船件表现缓存或 ParkedPieces：" .. label .. "/" .. stage)
+                assert(#snapshot.presenters == 0 and #snapshot.itemProjections == 0 and #snapshot.chunkProjections == 0,
+                    "普通地面建筑残留整船、物品或区块投影：" .. label .. "/" .. stage)
             end
             ground_views(cache.surface, "GM 生成后")
             ground_views(cache.returned, "落地移交后")
             do
                 local snapshot = cache.space
-                assert(#snapshot.presenters == 1 and #snapshot.pieces == ship.landed.pieceCount and snapshot.parkedPieces == 0,
-                    "空中船体缺少唯一整体或完整部件：" .. label)
+                assert(#snapshot.presenters == 1 and #snapshot.itemProjections > 0 and #snapshot.chunkProjections > 0,
+                    "空中船体缺少唯一整体或真实物品/区块投影：" .. label)
                 local view = snapshot.presenters[1]
                 assert(view.wholeShipBody and view.activeBodies == 1 and view.activeBlockers == 1 and
                     view.active and not view.pooled and view.scene == snapshot.scene,
                     "空中没有使用唯一启用的整船刚体与阻挡：" .. label)
             end
             for _, snapshot in ipairs({cache.surface, cache.space, cache.returned}) do
-                assert(snapshot.presenterPoolCount <= snapshot.presenterLimit and
-                    snapshot.piecePoolCount <= snapshot.pieceLimit, "船表现缓存超过容量：" .. label)
-                for _, view in ipairs(snapshot.pieces) do
-                    if view.active and not view.pooled then
-                        assert(view.machineScope == "ship:" .. ship.cruising.id and
-                            view.targetGuid == (tonumber(view.id) or 0),
-                            "船件恢复或换场景后机器作用域/GUID 缓存错误：" .. label)
-                    end
+                assert(snapshot.presenterPoolCount <= snapshot.presenterLimit,
+                    "整船碰撞表现缓存超过容量：" .. label)
+                for _, projection in ipairs(snapshot.itemProjections) do
+                    assert(projection.active and projection.worldKey == "ship:" .. ship.cruising.id and
+                        projection.scene == snapshot.scene,
+                        "普通 Item 投影脱离船内账本或显示场景：" .. label)
+                end
+                for _, projection in ipairs(snapshot.chunkProjections) do
+                    assert(projection.active and projection.id:sub(1, #("ship:" .. ship.cruising.id) + 1) ==
+                        "ship:" .. ship.cruising.id .. ":" and projection.scene == snapshot.scene,
+                        "普通区块投影脱离船内世界或显示场景：" .. label)
                 end
             end
             local refuel = ship.autoRefuel

@@ -141,21 +141,24 @@ public sealed partial class GameplayTestSpaceScenario
     private JObject GroundViewSnapshot(ICollection<int> ids, string shipId)
     {
         JObject result = session.ShipViewCacheSnapshot();
-        var pieces = new JArray();
-        var parentIds = new HashSet<int>();
-        foreach (JObject row in (JArray)result["pieces"])
-            if (int.TryParse(row.Value<string>("id"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int id) && ids.Contains(id))
-            { pieces.Add(row.DeepClone()); parentIds.Add(row.Value<int>("parentId")); }
+        string worldKey = string.IsNullOrEmpty(shipId) ? null : MachineWorld.GetShipScopeKey(shipId);
         var presenters = new JArray();
         foreach (JObject row in (JArray)result["presenters"])
-            if (row.Value<string>("id") == shipId || parentIds.Contains(row.Value<int>("instanceId")))
+            if (!string.IsNullOrEmpty(shipId) && row.Value<string>("id") == shipId)
                 presenters.Add(row.DeepClone());
-        int parkedPieces = 0;
-        foreach (Transform value in UnityEngine.Object.FindObjectsOfType<Transform>(true))
-            if (value.name == "ParkedPieces") parkedPieces++;
-        result["pieces"] = pieces;
+        var items = new JArray();
+        foreach (JObject row in (JArray)result["itemProjections"])
+            if (int.TryParse(row.Value<string>("id"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int guid) &&
+                ids.Contains(guid) && row.Value<string>("worldKey") == worldKey)
+                items.Add(row.DeepClone());
+        var chunks = new JArray();
+        foreach (JObject row in (JArray)result["chunkProjections"])
+            if (!string.IsNullOrEmpty(worldKey) && row.Value<string>("id")?.StartsWith(worldKey + ":", StringComparison.Ordinal) == true)
+                chunks.Add(row.DeepClone());
         result["presenters"] = presenters;
-        result["parkedPieces"] = parkedPieces;
+        result["itemProjections"] = items;
+        result["chunkProjections"] = chunks;
+        result["worldKey"] = worldKey ?? string.Empty;
         result["scene"] = SceneManager.GetActiveScene().name;
         return result;
     }
@@ -238,6 +241,7 @@ public sealed partial class GameplayTestSpaceScenario
                 }.ToString(Newtonsoft.Json.Formatting.None));
         IsMigrationExpected = false;
         JObject landed = GroundBuildingSnapshot(ids);
+        CaptureGroundOrdinaryItemStage(ids, expectedWorld, "surface-after-landing");
         landed["flightRemoved"] = session.GetFlight(ship.ShipId) == null;
         landed["shipRemoved"] = session.GetShip(ship.ShipId) == null;
         landed["supported"] = session.GetPassenger(CurrentPlayer()).Supported;
@@ -252,7 +256,8 @@ public sealed partial class GameplayTestSpaceScenario
         yield return RefuelLandedBuildings(ids, value => refuel = value);
         completed(new JObject { ["landingAccepted"] = accepted, ["descending"] = descending,
             ["descendingViews"] = descendingViews, ["landedAgain"] = landed,
-            ["returnedViews"] = returnedViews, ["autoRefuel"] = refuel, ["preparation"] = preparation });
+            ["returnedViews"] = returnedViews, ["autoRefuel"] = refuel, ["preparation"] = preparation,
+            ["ordinaryItemStages"] = JArray.FromObject(groundOrdinaryItemStages) });
     }
 
     private IEnumerator RefuelLandedBuildings(HashSet<int> shipIds, Action<JObject> completed)

@@ -13,6 +13,8 @@ public sealed partial class GameplayWorldRuntime
     public Scene Scene { get; internal set; }
     public ChunkMgr Chunks { get; internal set; }
     public WorldNavigationManager Navigation { get; internal set; }
+    public bool UsesLocalCoordinates { get; internal set; }
+    public bool SimulateWithoutObservers { get; internal set; }
     internal bool OwnsPhysics;
     public int PreparationCount { get; internal set; }
     internal readonly Dictionary<Renderer, bool> Renderers = new();
@@ -442,7 +444,7 @@ public static partial class GameplayWorldRegistry
         {
             if (context != null)
                 worldSceneBindings.UnbindWorldFromScene(context.Scene.handle, context.WorldKey, context);
-            spaceContexts[worldKey] = context = new GameplayWorldRuntime { WorldKey = worldKey, Scene = scene };
+            spaceContexts[worldKey] = context = new GameplayWorldRuntime { WorldKey = worldKey, Scene = scene, SimulateWithoutObservers = true };
             _ = context.Physics;
             worldSceneBindings.BindWorldToScene(scene.handle, worldKey, context);
             worldIdentities.GetOrCreateRuntimeWorldIdentity(worldKey);
@@ -554,7 +556,11 @@ public static partial class GameplayWorldRegistry
             execution = null;
             ChunkMgr preservedLocal = preserveLocalChunkManagerForSpaceTransition && !GameNetwork.IsOnline
                 ? ChunkMgr.LocalInstance : null;
-            releaseDispatch.Clear(); releaseDispatch.AddRange(worlds.Values);
+            releaseDispatch.Clear();
+            bool preserveLocalWorlds = false;
+            foreach (GameplayWorldRuntime world in worlds.Values)
+                if (world.UsesLocalCoordinates) preserveLocalWorlds = true;
+                else releaseDispatch.Add(world);
             WeatherMgr.ReleaseAll();
             MonsterSpawnerManager.ReleaseAll();
             var releasedChunkManagers = new HashSet<ChunkMgr>();
@@ -592,28 +598,54 @@ public static partial class GameplayWorldRegistry
                 }
                 if (manager != null && ReferenceEquals(world.Chunks, manager)) releasedChunkManagers.Add(manager);
             }
-            WorldEntityRuntime.ReleaseAll();
-            FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();
-            BuildingOccupancyRegistry.ReleaseAll();
-            WorldLiquidFlowObstacles.ReleaseAll();
+            if (!preserveLocalWorlds)
+            {
+                WorldEntityRuntime.ReleaseAll();
+                FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();
+                BuildingOccupancyRegistry.ReleaseAll();
+                WorldLiquidFlowObstacles.ReleaseAll();
+            }
             foreach (GameplayWorldRuntime world in releaseDispatch)
             {
+                if (preserveLocalWorlds)
+                {
+                    WorldEntityRuntime.ReleaseWorld(world.WorldKey);
+                    BuildingOccupancyRegistry.ReleaseWorld(world.WorldKey);
+                }
                 AiRuntimeBackendService.ReleaseWorldEcology(world.WorldKey);
                 WorldNavigationManager.ReleaseWorld(world.WorldKey);
-                foreach (var pair in world.Renderers) if (pair.Key != null) pair.Key.forceRenderingOff = pair.Value;
+                foreach (var pair in world.Renderers)
+                {
+                    if (pair.Key != null) pair.Key.forceRenderingOff = pair.Value;
+                    PresentationOwners.Remove(pair.Key);
+                }
                 if (world.Chunks != null && world.Chunks != preservedLocal && releasedChunkManagers.Remove(world.Chunks))
                     UnityEngine.Object.Destroy(world.Chunks.gameObject);
+                ReleaseWorldPhysics(world.WorldKey);
+                worldSceneBindings.UnbindWorldFromScene(world.Scene.handle, world.WorldKey, world);
+                worlds.Remove(world.WorldKey);
                 if (world.OwnsPhysics && world.Scene.IsValid() && world.Scene.isLoaded)
                     SceneManager.UnloadSceneAsync(world.Scene);
             }
             if (preservedLocal != null) preservedLocal.BindNetworkWorld(null);
             else ChunkMgr.ClearLocalNetworkWorld();
-            ReleaseAllWorldPhysics();
-            worlds.Clear(); releaseDispatch.Clear(); spaceContexts.Clear(); PresentationOwners.Clear();
-            worldSceneBindings.Clear(); selectedLocalWorldKey = null;
+            foreach (GameplayWorldRuntime context in spaceContexts.Values)
+            {
+                ReleaseWorldPhysics(context.WorldKey);
+                worldSceneBindings.UnbindWorldFromScene(context.Scene.handle, context.WorldKey, context);
+            }
+            spaceContexts.Clear(); releaseDispatch.Clear(); selectedLocalWorldKey = null;
+            if (!preserveLocalWorlds)
+            {
+                ReleaseAllWorldPhysics();
+                worlds.Clear(); PresentationOwners.Clear(); worldSceneBindings.Clear();
+            }
             if (sceneCacheBound) localSceneKey = ResolveLocalWorldKey(localScene);
-            if (host != null) UnityEngine.Object.Destroy(host.gameObject);
-            host = null;
+            if (!preserveLocalWorlds)
+            {
+                if (host != null) UnityEngine.Object.Destroy(host.gameObject);
+                host = null;
+            }
         }
         finally { releasing = false; }
     }
@@ -676,6 +708,10 @@ public static partial class GameplayWorldRegistry
     internal static void RegisterItemPresentation(Item item)
     { if (item != null) RegisterPresentation(item.gameObject); }
 
+    public static bool GetPresentationOriginalForceRenderingOff(Renderer renderer)
+        => renderer != null && PresentationOwners.TryGetValue(renderer, out var owner) && owner != null
+            ? owner.GetOriginalForceRenderingOff(renderer) : renderer != null && renderer.forceRenderingOff;
+
     internal static void RefreshVisibility() => RefreshVisibility(ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName ?? localSceneKey);
     private static void RefreshVisibility(string localWorld)
     {
@@ -694,6 +730,8 @@ internal sealed class GameplayWorldPresentationOwner : MonoBehaviour
     private GameplayWorldRuntime world;
     private Renderer[] renderers;
     private bool initialized;
+    internal bool GetOriginalForceRenderingOff(Renderer renderer)
+        => world != null && world.Renderers.TryGetValue(renderer, out bool original) ? original : renderer.forceRenderingOff;
     public void Bind(GameplayWorldRuntime next, Renderer[] nextRenderers)
     { Release(); world = next; renderers = nextRenderers; initialized = true; }
     private void OnEnable() { if (initialized) GameplayWorldRegistry.RegisterPresentation(gameObject); }
