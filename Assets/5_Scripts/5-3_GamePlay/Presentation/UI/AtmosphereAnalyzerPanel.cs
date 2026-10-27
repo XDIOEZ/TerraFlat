@@ -165,7 +165,7 @@ public sealed class AtmosphereAnalyzerPanel : MonoBehaviour
     }
 
     public static string FormatAtmosphereAmount(decimal amount) => amount.ToString(
-        amount >= 1000000000m || amount > 0m && amount < .001m ? "0.###E+0" : "#,0.###", CultureInfo.CurrentCulture);
+        amount > 0m && amount < .001m ? "0.############################" : "#,0.###", CultureInfo.InvariantCulture);
     private static string Ui(string source) => FlatWorldLocalizationService.GetUiText(source);
     internal static void SetDynamicText(TMP_Text target, string value)
     {

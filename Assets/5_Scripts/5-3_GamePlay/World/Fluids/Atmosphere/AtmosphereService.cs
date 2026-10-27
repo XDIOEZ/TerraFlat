@@ -14,7 +14,7 @@ public static partial class AtmosphereService
         if (planet.Atmosphere == null)
         {
             string id = profileId ?? planet.AtmosphereProfileId ?? AtmosphereCatalog.DefaultProfileId;
-            planet.Atmosphere = AtmosphereCatalog.Default.Find(id).CreateState();
+            planet.Atmosphere = AtmosphereCatalog.Default.Find(id).CreateState(planet);
             planet.AtmosphereProfileId = id;
         }
         Validate(planet.Atmosphere, FluidCatalog.Default);

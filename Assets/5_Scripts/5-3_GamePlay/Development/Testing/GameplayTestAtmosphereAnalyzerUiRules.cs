@@ -115,6 +115,8 @@ public static class GameplayTestAtmosphereAnalyzerUiRules
                 ["count"] = view.VisibleComponentCount, ["rows"] = rowSamples,
                 ["planet"] = RequireText(screen, "FWUI_PlanetName").text,
                 ["total"] = RequireText(screen, "FWUI_TotalValue").text,
+                ["fullInteger"] = AtmosphereAnalyzerPanel.FormatAtmosphereAmount(1000000000000000m),
+                ["fullSmallAmount"] = AtmosphereAnalyzerPanel.FormatAtmosphereAmount(.000000001m),
                 ["status"] = RequireText(screen, "FWUI_AnalyzerStatus").text,
                 ["expectedStatus"] = FlatWorldLocalizationService.GetUiText("实时测量 · 标准体积 / 摩尔占比")
             };

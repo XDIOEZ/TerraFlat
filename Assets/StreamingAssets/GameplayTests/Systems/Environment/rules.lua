@@ -73,6 +73,28 @@ test.system("environment", "atmosphere_measurement", {}, function(data)
         and data.vacuum.pressureKPa == 0 and #data.vacuum.components == 0, "抽空后仍显示成分或除零")
     assert(#data.trace.components == 2 and data.trace.components[2].moles > 0
         and data.trace.components[2].fraction > 0, "最小mol单位的微量气体被吞掉")
+    local sizing = data.planetSizing
+    near(sizing.earth.standardCubicMeters, 108371340712.102, "初始大气没有按玩家半径1000与真实气体摩尔质量计算", .2)
+    near(sizing.earth.standardCubicMeters / (4 * math.pi * 1000 * 1000), 8623.9172819,
+        "100kPa地球气压对应的每平方米气柱总量错误")
+    near(sizing.earth.pressureKPa, 100, "按半径重算总量改变了初始气压")
+    near(sizing.larger.standardCubicMeters / sizing.earth.standardCubicMeters, 4, "半径翻倍没有按球面面积扩大四倍")
+    near(sizing.larger.pressureKPa, 100, "大星球初始气压未保留")
+    near(sizing.strongerGravity.standardCubicMeters / sizing.earth.standardCubicMeters, .5, "重力翻倍没有减半所需气体")
+    near(sizing.higherPressure.standardCubicMeters / sizing.earth.standardCubicMeters, 2, "气压翻倍没有增加一倍气体")
+    near(sizing.higherPressure.pressureKPa, 200, "高气压星球的基准错误")
+    near(sizing.warmer.standardCubicMeters / sizing.earth.standardCubicMeters, 1, "现场温度改变了标准体积的气柱换算")
+    near(sizing.pureOxygen.standardCubicMeters / sizing.earth.standardCubicMeters, .02881048 / .0319988,
+        "不同气体成分没有按摩尔质量换算相同气柱质量")
+    near(sizing.partial.totalMoles / sizing.earth.totalMoles, .5, "缩放丢失配置的初始充满比例")
+    near(sizing.partial.capacityMoles / sizing.partial.referenceMoles, 2, "缩放丢失固定容量与基准的比例")
+    near(sizing.partial.pressureKPa, 50, "半份初始大气没有产生半份气压")
+    near(sizing.withCarbon.initialCarbonDioxideKPa, 1, "半径缩放后的温室基准没有按实际CO2库存建立")
+    assert(sizing.vacuum.status == "Vacuum" and sizing.vacuum.totalMoles == 0 and sizing.vacuum.capacityMoles == 0,
+        "无重力真空星球产生了气体或除零")
+    for _, key in ipairs({"invalidRadius", "invalidGravity", "nonfiniteGravity", "outsideRange"}) do
+        assert(sizing[key] == "InvalidDataException", "非法气柱参数没有拒绝：" .. key)
+    end
 end, "大气检测仪真实库存、比例、标准体积、多星球来源、微量与真空边界")
 
 test.system("environment", "fog_perception", {}, function(data)

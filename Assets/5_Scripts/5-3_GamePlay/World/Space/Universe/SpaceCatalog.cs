@@ -282,13 +282,13 @@ namespace FlatWorld.Spaceflight
             var gases = new List<AtmosphereCompositionDto>();
             foreach (var gas in surface.AtmosphereComposition)
                 gases.Add(new AtmosphereCompositionDto { FluidId = gas.Key, Fraction = gas.Value });
-            decimal capacity = surface.PressureKPa > 0d ? 1000000000000000m : 0m;
+            decimal capacity = surface.PressureKPa > 0d ? 1m : 0m;
             AtmosphereState initialAtmosphere = new AtmosphereDefinition(new AtmosphereDefinitionDto
             {
                 Id = surface.Id, InitialStandardCubicMeters = capacity, CapacityStandardCubicMeters = capacity,
                 ReferenceStandardCubicMeters = capacity, ReferencePressureKPa = surface.PressureKPa,
                 TemperatureKelvin = surface.TemperatureCelsius + 273.15d, Composition = gases
-            }, FluidCatalog.Default).CreateState();
+            }, FluidCatalog.Default).CreateState(planet);
             if (!repairInvalidAtmosphere)
             {
                 planet.Atmosphere = initialAtmosphere;

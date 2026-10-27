@@ -35,7 +35,9 @@ for _, size in ipairs({
             "多种气体不能滚动查看：" .. resolution)
         assert(data.count == 16 and #data.rows == 16 and data.planet == "蓝星",
             "检测仪遗漏成分或星球名称")
-        assert(data.status == data.expectedStatus and data.total:find("E%+"),
+        assert(data.status == data.expectedStatus and not data.total:find("[eE]")
+            and data.total:find(",") and data.fullInteger == "1,000,000,000,000,000"
+            and data.fullSmallAmount == "0.000000001",
             "实时状态或大数读数显示错误")
         assert(data.rows[1].fraction > .77 and data.rows[1].fraction < .79,
             "主要气体比例错误")

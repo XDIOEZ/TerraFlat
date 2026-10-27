@@ -28,6 +28,7 @@ public sealed class AtmosphereDefinition
 {
     #region 不可变大气初值
     private readonly List<AtmosphereCompositionDto> composition = new();
+    private readonly double meanMolarMassKgPerMol;
     public AtmosphereDefinition(AtmosphereDefinitionDto dto, FluidCatalog fluids)
     {
         if (dto == null) throw new InvalidDataException("大气定义不能为空");
@@ -44,7 +45,7 @@ public sealed class AtmosphereDefinition
         FluidDefinition.Positive(dto.TemperatureKelvin, "atmosphere.temperatureKelvin");
         InitialMoles = AtmosphereService.Quantize(FluidUnits.StandardLitersToMol(dto.InitialStandardCubicMeters * 1000m));
         CapacityMoles = AtmosphereService.Quantize(FluidUnits.StandardLitersToMol(dto.CapacityStandardCubicMeters * 1000m));
-        ReferenceMoles = FluidUnits.StandardLitersToMol(dto.ReferenceStandardCubicMeters * 1000m);
+        ReferenceMoles = AtmosphereService.Quantize(FluidUnits.StandardLitersToMol(dto.ReferenceStandardCubicMeters * 1000m));
         ReferencePressureKPa = dto.ReferencePressureKPa; TemperatureKelvin = dto.TemperatureKelvin;
         if (CapacityMoles > FluidInventory.MaximumMoles || ReferenceMoles > FluidInventory.MaximumMoles ||
             dto.CapacityStandardCubicMeters > 0m &&
@@ -53,15 +54,14 @@ public sealed class AtmosphereDefinition
         decimal total = 0m; var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var component in dto.Composition ?? throw new InvalidDataException($"大气 {Id} 缺少 composition"))
         {
-            if (component == null || !fluids.TryGet(component.FluidId, out _) || component.Fraction < 0m || component.Fraction > 1m ||
+            if (component == null || !fluids.TryGet(component.FluidId, out var fluid) || component.Fraction < 0m || component.Fraction > 1m ||
                 !ids.Add(component.FluidId)) throw new InvalidDataException($"大气 {Id} 成分重复、未知或比例错误");
             total += component.Fraction;
+            meanMolarMassKgPerMol += (double)component.Fraction * fluid.MolarMassKgPerMol;
             composition.Add(new AtmosphereCompositionDto { FluidId = component.FluidId, Fraction = component.Fraction });
         }
         if (CapacityMoles > 0m && total != 1m) throw new InvalidDataException($"大气 {Id} 初始比例之和必须等于 1");
         if (CapacityMoles == 0m && (total != 0m || InitialMoles != 0m)) throw new InvalidDataException($"真空大气 {Id} 不允许初始成分");
-        InitialCarbonDioxidePartialPressureKPa = ReferenceMoles > 0m
-            ? ReferencePressureKPa * (double)(AtmosphereService.GetMoles(CreateState(), FluidIds.CarbonDioxide) / ReferenceMoles) : 0d;
     }
     public string Id { get; }
     public decimal InitialMoles { get; }
@@ -69,21 +69,40 @@ public sealed class AtmosphereDefinition
     public decimal ReferenceMoles { get; }
     public double ReferencePressureKPa { get; }
     public double TemperatureKelvin { get; }
-    public double InitialCarbonDioxidePartialPressureKPa { get; }
-    public AtmosphereState CreateState()
+    public AtmosphereState CreateState(PlanetData planet = null)
     {
-        var state = new AtmosphereState { DefinitionId = Id, CapacityMoles = CapacityMoles, ReferenceMoles = ReferenceMoles,
-            ReferencePressureKPa = ReferencePressureKPa, TemperatureKelvin = TemperatureKelvin,
-            InitialCarbonDioxidePartialPressureKPa = InitialCarbonDioxidePartialPressureKPa };
-        decimal left = InitialMoles;
+        bool scaleToPlanet = planet != null && CapacityMoles > 0m;
+        decimal reference = scaleToPlanet ? CalculateReferenceMolesFromSelectedPlanetSurface(planet) : ReferenceMoles;
+        decimal capacity = scaleToPlanet ? AtmosphereService.Quantize(reference * (CapacityMoles / ReferenceMoles)) : CapacityMoles;
+        decimal initial = scaleToPlanet ? AtmosphereService.Quantize(reference * (InitialMoles / ReferenceMoles)) : InitialMoles;
+        var state = new AtmosphereState { DefinitionId = Id, CapacityMoles = capacity, ReferenceMoles = reference,
+            ReferencePressureKPa = ReferencePressureKPa, TemperatureKelvin = TemperatureKelvin };
+        decimal left = initial;
         int lastPositive = composition.FindLastIndex(value => value.Fraction > 0m);
         for (int i = 0; i < composition.Count; i++)
         {
-            decimal amount = i == lastPositive ? left : AtmosphereService.Quantize(InitialMoles * composition[i].Fraction);
+            decimal amount = i == lastPositive ? left : AtmosphereService.Quantize(initial * composition[i].Fraction);
             left -= amount;
             state.Gases.Add(new AtmosphereGasAmount { FluidId = composition[i].FluidId, Moles = amount });
         }
+        state.InitialCarbonDioxidePartialPressureKPa = reference > 0m
+            ? ReferencePressureKPa * (double)(AtmosphereService.GetMoles(state, FluidIds.CarbonDioxide) / reference) : 0d;
         return state;
+    }
+
+    private decimal CalculateReferenceMolesFromSelectedPlanetSurface(PlanetData planet)
+    {
+        double gravity = planet.SurfaceGravityMetersPerSecondSquared;
+        if (planet.Radius <= 0 || !FluidUnits.IsFinite(gravity) || gravity <= 0d)
+            throw new InvalidDataException($"大气 {Id} 需要正的世界半径和有限正重力");
+        // 每平方米气柱质量为气压除以重力，按玩家选择的半径计算球面总量，一格按一米。
+        double moles = 4d * Math.PI * planet.Radius * planet.Radius * ReferencePressureKPa * 1000d /
+            gravity / meanMolarMassKgPerMol;
+        if (!FluidUnits.IsFinite(moles) || moles < (double)AtmosphereService.MinimumMoles ||
+            moles > (double)FluidInventory.MaximumMoles ||
+            moles * (double)(CapacityMoles / ReferenceMoles) > (double)FluidInventory.MaximumMoles)
+            throw new InvalidDataException($"大气 {Id} 按世界半径计算的气体总量超出精确库存范围");
+        return AtmosphereService.Quantize((decimal)moles);
     }
     #endregion
 }

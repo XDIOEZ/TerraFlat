@@ -839,9 +839,9 @@
   "atmospheres": [
     {
       "id": "core:temperate",
-      "initialStandardCubicMeters": 1000000000000000,
-      "capacityStandardCubicMeters": 1000000000000000,
-      "referenceStandardCubicMeters": 1000000000000000,
+      "initialStandardCubicMeters": 1,
+      "capacityStandardCubicMeters": 1,
+      "referenceStandardCubicMeters": 1,
       "referencePressureKPa": 100,
       "temperatureKelvin": 293.15,
       "composition": [

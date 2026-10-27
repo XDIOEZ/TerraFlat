@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -77,6 +78,75 @@ public static class GameplayTestAtmosphereMeasurementRules
             }
         };
         result["trace"] = Snapshot(AtmosphereMeasurementService.Capture(trace));
+        result["planetSizing"] = CaptureAtmosphereSizingFromSelectedPlanetRadius();
+        return result;
+    }
+
+    private static JObject CaptureAtmosphereSizingFromSelectedPlanetRadius()
+    {
+        var fluids = new FluidCatalog();
+        foreach (var gas in new[] { (FluidIds.Nitrogen, .0280134d), (FluidIds.Oxygen, .0319988d),
+                     (FluidIds.CarbonDioxide, .0440095d) })
+            fluids.Register(new[] { new FluidDefinition(new FluidDefinitionDto
+            {
+                Id = gas.Item1, MolarMassKgPerMol = gas.Item2, LiquidDensityKgPerLiter = 1d,
+                GasHeatCapacityJPerMolKelvin = 20d, LiquidHeatCapacityJPerMolKelvin = 40d
+            }) });
+        var configuration = new AtmosphereDefinitionDto
+        {
+            Id = "probe:planet_sized_atmosphere", InitialStandardCubicMeters = 1m,
+            CapacityStandardCubicMeters = 1m, ReferenceStandardCubicMeters = 1m,
+            ReferencePressureKPa = 100d, TemperatureKelvin = 293.15d,
+            Composition = new List<AtmosphereCompositionDto>
+            {
+                new() { FluidId = FluidIds.Nitrogen, Fraction = .8m },
+                new() { FluidId = FluidIds.Oxygen, Fraction = .2m }
+            }
+        };
+        var definition = new AtmosphereDefinition(configuration, fluids);
+        var planet = new PlanetData { Radius = 1000, PhysicalRadiusMeters = 99999d };
+        JObject Sample(AtmosphereDefinition source)
+        {
+            AtmosphereState state = source.CreateState(planet);
+            AtmosphereService.Validate(state, fluids);
+            JObject sample = Snapshot(AtmosphereMeasurementService.Capture(state));
+            sample["capacityMoles"] = state.CapacityMoles;
+            sample["referenceMoles"] = state.ReferenceMoles;
+            sample["initialCarbonDioxideKPa"] = state.InitialCarbonDioxidePartialPressureKPa;
+            return sample;
+        }
+        var result = new JObject { ["earth"] = Sample(definition) };
+        planet.Radius = 2000;
+        result["larger"] = Sample(definition);
+        planet.Radius = 1000; planet.SurfaceGravityMetersPerSecondSquared = 19.62d;
+        result["strongerGravity"] = Sample(definition);
+        planet.SurfaceGravityMetersPerSecondSquared = 9.81d;
+        configuration.ReferencePressureKPa = 200d;
+        result["higherPressure"] = Sample(new AtmosphereDefinition(configuration, fluids));
+        configuration.ReferencePressureKPa = 100d; configuration.TemperatureKelvin = 400d;
+        result["warmer"] = Sample(new AtmosphereDefinition(configuration, fluids));
+        configuration.TemperatureKelvin = 293.15d;
+        configuration.InitialStandardCubicMeters = .5m; configuration.CapacityStandardCubicMeters = 2m;
+        result["partial"] = Sample(new AtmosphereDefinition(configuration, fluids));
+        configuration.InitialStandardCubicMeters = configuration.CapacityStandardCubicMeters = 1m;
+        configuration.Composition[0].Fraction = .79m;
+        configuration.Composition.Add(new AtmosphereCompositionDto { FluidId = FluidIds.CarbonDioxide, Fraction = .01m });
+        result["withCarbon"] = Sample(new AtmosphereDefinition(configuration, fluids));
+        configuration.Composition = new List<AtmosphereCompositionDto> { new() { FluidId = FluidIds.Oxygen, Fraction = 1m } };
+        result["pureOxygen"] = Sample(new AtmosphereDefinition(configuration, fluids));
+        configuration.InitialStandardCubicMeters = configuration.CapacityStandardCubicMeters = configuration.ReferenceStandardCubicMeters = 0m;
+        configuration.ReferencePressureKPa = 0d; configuration.Composition.Clear();
+        planet.Radius = 0; planet.SurfaceGravityMetersPerSecondSquared = 0d;
+        result["vacuum"] = Sample(new AtmosphereDefinition(configuration, fluids));
+        string Rejected(PlanetData invalid)
+        {
+            try { definition.CreateState(invalid); return null; }
+            catch (InvalidDataException exception) { return exception.GetType().Name; }
+        }
+        result["invalidRadius"] = Rejected(new PlanetData { Radius = 0 });
+        result["invalidGravity"] = Rejected(new PlanetData { SurfaceGravityMetersPerSecondSquared = 0d });
+        result["nonfiniteGravity"] = Rejected(new PlanetData { SurfaceGravityMetersPerSecondSquared = double.NaN });
+        result["outsideRange"] = Rejected(new PlanetData { Radius = int.MaxValue });
         return result;
     }
 
