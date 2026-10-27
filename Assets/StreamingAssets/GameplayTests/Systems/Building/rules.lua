@@ -114,6 +114,7 @@ test.system("building", "material_provenance", { ropes = 0, straps = 0 }, functi
     assert(data.inputsUnchanged, "缺少绳料时扣除了木板")
 end, "建筑缺料不生成虚假材料记录")
 
+
 test.system("building", "bitumen_floor_definition", {}, function(d)
     assert(d.tileId == 35 and d.tileAsset == "Tile_BitumenFloor" and d.walkable and d.stackable,
         "沥青地板缺少稳定地块、深色Tile或可堆叠召唤器")

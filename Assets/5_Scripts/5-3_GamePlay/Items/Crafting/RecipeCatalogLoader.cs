@@ -116,13 +116,17 @@ public static class RecipeCatalogLoader
         var loadedRecipes = new List<RuntimeRecipe>();
         // 后台配方工厂只读取稳定 ID 快照，不读取 Unity 对象或正在交换的资源目录。
         var knownItems = new HashSet<string>(gameRes.AllPrefabs.Keys, gameRes.AllPrefabs.Comparer);
-        int loadedPackageCount = 0;
-        foreach (RecipePackageDto package in manifest.Packages.Where(package => package.Enabled))
+        var enabledPackages = manifest.Packages.Where(package => package.Enabled).ToArray();
+        List<(RecipePackageDto Package, List<RuntimeRecipe> Recipes, List<string> Warnings)> preparedPackages = null;
+
+        // 本地分包合并为一次后台读盘与解析，避免几十个小文件各自等待主线程下一帧。
+        if (!StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
         {
-            string packagePath;
+            var paths = new string[enabledPackages.Length];
             try
             {
-                packagePath = ResolvePackagePath(recipeRoot, package.Path);
+                for (int i = 0; i < enabledPackages.Length; i++)
+                    paths[i] = ResolvePackagePath(recipeRoot, enabledPackages[i].Path);
             }
             catch (Exception exception)
             {
@@ -130,36 +134,66 @@ public static class RecipeCatalogLoader
                 yield break;
             }
 
-            string packageJson = null;
             readError = null;
-            yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-                packagePath,
-                text => packageJson = text,
-                exception => readError = exception);
-
-            if (readError != null)
-            {
-                onFailed?.Invoke(new IOException(
-                    $"配方分包 {package.Id} 读取失败：{packagePath}",
-                    readError));
-                yield break;
-            }
-
-            List<RuntimeRecipe> recipes = null;
-            List<string> warnings = null;
             yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
             {
-                RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(packageJson);
-                return RecipeRuntimeFactory.BuildCatalog(catalog, knownItems.Contains, out warnings);
-            }, value => recipes = value, exception => readError = exception);
+                var results = new List<(RecipePackageDto, List<RuntimeRecipe>, List<string>)>(enabledPackages.Length);
+                for (int i = 0; i < enabledPackages.Length; i++)
+                {
+                    string json;
+                    try { json = File.ReadAllText(paths[i]); }
+                    catch (Exception exception)
+                    {
+                        throw new IOException($"配方分包 {enabledPackages[i].Id} 读取失败：{paths[i]}", exception);
+                    }
+                    RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(json);
+                    List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(catalog, knownItems.Contains,
+                        out List<string> warnings);
+                    results.Add((enabledPackages[i], recipes, warnings));
+                }
+                return results;
+            }, value => preparedPackages = value, exception => readError = exception);
             if (readError != null) { onFailed?.Invoke(readError); yield break; }
-
-            foreach (string warning in warnings)
+        }
+        else
+        {
+            preparedPackages = new List<(RecipePackageDto, List<RuntimeRecipe>, List<string>)>(enabledPackages.Length);
+            foreach (RecipePackageDto package in enabledPackages)
             {
-                Debug.LogWarning($"[RecipeCatalog:{package.Id}] {warning}");
+                string packagePath;
+                try { packagePath = ResolvePackagePath(recipeRoot, package.Path); }
+                catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
+
+                string packageJson = null;
+                readError = null;
+                yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+                    packagePath, value => packageJson = value, exception => readError = exception);
+                if (readError != null)
+                {
+                    onFailed?.Invoke(new IOException($"配方分包 {package.Id} 读取失败：{packagePath}", readError));
+                    yield break;
+                }
+
+                List<RuntimeRecipe> recipes = null;
+                List<string> warnings = null;
+                yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
+                {
+                    RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(packageJson);
+                    return RecipeRuntimeFactory.BuildCatalog(catalog, knownItems.Contains, out warnings);
+                }, value => recipes = value, exception => readError = exception);
+                if (readError != null) { onFailed?.Invoke(readError); yield break; }
+                preparedPackages.Add((package, recipes, warnings));
+            }
+        }
+
+        foreach (var package in preparedPackages)
+        {
+            foreach (string warning in package.Warnings)
+            {
+                Debug.LogWarning($"[RecipeCatalog:{package.Package.Id}] {warning}");
                 if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
-            foreach (RuntimeRecipe recipe in recipes)
+            foreach (RuntimeRecipe recipe in package.Recipes)
             {
                 if (!recipeIds.Add(recipe.Id))
                 {
@@ -169,7 +203,6 @@ public static class RecipeCatalogLoader
                 loadedRecipes.Add(recipe);
                 if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
-            loadedPackageCount++;
         }
 
         foreach (RuntimeRecipe recipe in loadedRecipes)
@@ -181,7 +214,7 @@ public static class RecipeCatalogLoader
 
         try
         {
-            Debug.Log($"[RecipeCatalog] 已从 {loadedPackageCount} 个业务分包加载 {loadedRecipes.Count} 条配方：{manifestPath}");
+            Debug.Log($"[RecipeCatalog] 已从 {preparedPackages.Count} 个业务分包加载 {loadedRecipes.Count} 条配方：{manifestPath}");
             onCompleted?.Invoke(loadedRecipes.Count);
         }
         catch (Exception exception)

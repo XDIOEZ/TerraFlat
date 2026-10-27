@@ -1,14 +1,46 @@
 {
   "schemaVersion": 1,
   "packages": [
-    { "id": "crafting/electronic_materials", "path": "crafting/electronic_materials.json", "enabled": true },
-    { "id": "crafting/railway", "path": "crafting/railway.json", "enabled": true },
-    { "id": "crafting/metal_hammers", "path": "crafting/metal_hammers.json", "enabled": true },
-    { "id": "crafting/forging", "path": "crafting/forging.json", "enabled": true },
-    { "id": "crafting/sewing", "path": "crafting/sewing.json", "enabled": true },
-    {"id": "crafting/shields", "path": "crafting/shields.json", "enabled": true},
-    { "id": "crafting/engineering", "path": "crafting/engineering.json", "enabled": true },
-    { "id": "crafting/tool_reinforcement", "path": "crafting/tool_reinforcement.json", "enabled": true },
+    {
+      "id": "crafting/railway",
+      "path": "crafting/railway.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/metal_hammers",
+      "path": "crafting/metal_hammers.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/forging",
+      "path": "crafting/forging.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/electronic_materials",
+      "path": "crafting/electronic_materials.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/sewing",
+      "path": "crafting/sewing.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/shields",
+      "path": "crafting/shields.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/engineering",
+      "path": "crafting/engineering.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/tool_reinforcement",
+      "path": "crafting/tool_reinforcement.json",
+      "enabled": true
+    },
     {
       "id": "crafting/induction_stove",
       "path": "crafting/induction_stove.json",

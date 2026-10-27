@@ -3,12 +3,7 @@
   "continueAfterFailure": true,
   "buildShowroom": false,
   "cases": [
-    {
-      "id": "processing_electronic_materials_gameplay",
-      "name": "电子材料冷料供热、满输出恢复与云母切割",
-      "luaPath": "GameplayTests/Systems/Processing/electronic-materials-gameplay.lua",
-      "enabled": true
-    },
+    {"id":"processing_electronic_materials_gameplay","name":"电子材料冷料供热、满输出恢复与云母切割","luaPath":"GameplayTests/Systems/Processing/electronic-materials-gameplay.lua","enabled":true},
     {"id":"mechanical_assemble","name":"GM 创建全组件机械工厂","luaPath":"GameplayTests/Systems/Mechanical/mechanical_assemble.lua","enabled":true},
     {"id":"mechanical_power","name":"多动力源、传动与用力器","luaPath":"GameplayTests/Systems/Mechanical/mechanical_power.lua","enabled":true},
     {"id":"mechanical_conveyor","name":"动力输送带实际搬运物品","luaPath":"GameplayTests/Systems/Mechanical/mechanical_conveyor.lua","enabled":true},

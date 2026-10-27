@@ -5,18 +5,6 @@
   "continueAfterFailure": true,
   "cases": [
     {
-      "id": "agriculture_phosphate_fertilizer_gameplay",
-      "name": "磷肥真实持有补给与拒绝",
-      "luaPath": "GameplayTests/Systems/Agriculture/phosphate-fertilizer-gameplay.lua",
-      "enabled": true
-    },
-    {
-      "id": "processing_electronic_materials_gameplay",
-      "name": "电子材料冷料供热、满输出恢复与云母切割",
-      "luaPath": "GameplayTests/Systems/Processing/electronic-materials-gameplay.lua",
-      "enabled": true
-    },
-    {
       "id": "ai_creature_creation_gameplay",
       "name": "统一生物出生：身份、回滚与居民恢复",
       "luaPath": "GameplayTests/Systems/AI/creature-creation.lua",
@@ -125,6 +113,12 @@
       "enabled": true
     },
     {
+      "id": "agriculture_phosphate_fertilizer_gameplay",
+      "name": "磷肥真实持有补给与拒绝",
+      "luaPath": "GameplayTests/Systems/Agriculture/phosphate-fertilizer-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "agriculture_gameplay",
       "name": "农业种植：实际流程",
       "luaPath": "GameplayTests/Systems/Agriculture/gameplay.lua",
@@ -158,6 +152,12 @@
       "id": "building_gameplay",
       "name": "建造与拆除：实际流程",
       "luaPath": "GameplayTests/Systems/Building/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "processing_electronic_materials_gameplay",
+      "name": "电子材料冷料供热、满输出恢复与云母切割",
+      "luaPath": "GameplayTests/Systems/Processing/electronic-materials-gameplay.lua",
       "enabled": true
     },
     {

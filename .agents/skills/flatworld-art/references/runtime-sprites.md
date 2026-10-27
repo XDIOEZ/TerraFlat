@@ -12,6 +12,7 @@
 
 ## 引用与遮光
 
+- JSON 物品换图以 `visual.spriteAddress` 和 Addressables 为准；`sourcePrefab` 仅是编辑器迁移来源，通用壳装配的物品不顺带同步旧源 Prefab 的 Sprite，装配边界见 [定义和热刷新](../../flatworld-item-module/references/definitions-state-visual.md#定义和热刷新)。
 - 建筑遮光轮廓用 `spriteGenerateFallbackPhysicsShape: 1`；Ground、`LightOcclusionMode=None` 不遮光。物理轮廓、JSON Collider、占地分别配置。
 - `visual.spriteAddress` 可覆盖外壳，`visual.color`、继承缩放也影响成图。Addressables 地址、子 Sprite、`ItemSprite` 标签须匹配引用；外改分组 YAML 后重导入刷新 Fast Mode Locator。诊断：`FlatWorld/诊断/检查 Addressables 目录`。
 - 占位图：`Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，384×384、全幅、中心 Pivot、384 PPU、`ItemSprite`。正式图替换具体引用并保留独立 GUID；同步构建器为仅导入/配置/注册，避免重绘占位图。

@@ -140,6 +140,44 @@ public static class ItemDefinitionCatalogLoader
         ItemDefinitionPackageDto[] enabledPackages = manifest.Packages
             .Where(package => package.Enabled)
             .ToArray();
+
+        // 本地分包一次后台读取、合并与继承解析，避免每个文件反复跨帧派发线程任务。
+        if (!StreamingAssetsTextLoader.RequiresWebRequest(BuiltInItemRoot))
+        {
+            var packagePaths = new string[enabledPackages.Length];
+            try
+            {
+                for (int i = 0; i < enabledPackages.Length; i++)
+                    packagePaths[i] = ResolvePackagePath(BuiltInItemRoot, enabledPackages[i].Path);
+            }
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+
+            List<ItemDefinitionDto> localDefinitions = null;
+            readError = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
+            {
+                var packages = new List<LoadedItemPackage>(enabledPackages.Length);
+                for (int i = 0; i < enabledPackages.Length; i++)
+                {
+                    string packageJson;
+                    try { packageJson = cache.ReadText(packagePaths[i]); }
+                    catch (Exception exception)
+                    {
+                        throw new IOException($"物品分包 {enabledPackages[i].Id} 读取失败：{packagePaths[i]}", exception);
+                    }
+                    packages.Add(new LoadedItemPackage(enabledPackages[i], packageJson));
+                }
+                return ResolveLoadedPackages(packages);
+            }, value => localDefinitions = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+
+            progress?.Invoke(0.2f);
+            yield return cache.StoreAsync(localDefinitions);
+            cache.Report("物品", localDefinitions.Count);
+            completed(localDefinitions);
+            yield break;
+        }
+
         var loadedPackages = new List<LoadedItemPackage>(enabledPackages.Length);
         for (int i = 0; i < enabledPackages.Length; i++)
         {
@@ -253,8 +291,12 @@ public static class ItemDefinitionCatalogLoader
         sectionTimer.Restart();
         var prototypeCache = new ItemModulePrototypeCache();
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
+        double compilationWorkMilliseconds = 0;
+        double slowestDefinitionMilliseconds = 0;
+        string slowestDefinitionId = null;
         foreach (ItemDefinitionDto dto in dtos)
         {
+            long definitionStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             try
             {
                 if (!dto.Abstract)
@@ -267,6 +309,14 @@ public static class ItemDefinitionCatalogLoader
                         prototypeCache: prototypeCache));
             }
             catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            double definitionMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - definitionStarted) *
+                                            1000d / System.Diagnostics.Stopwatch.Frequency;
+            compilationWorkMilliseconds += definitionMilliseconds;
+            if (definitionMilliseconds > slowestDefinitionMilliseconds)
+            {
+                slowestDefinitionMilliseconds = definitionMilliseconds;
+                slowestDefinitionId = dto.Id;
+            }
             if (gameRes.ShouldYieldResourceWork()) yield return null;
         }
         long compilationMilliseconds = sectionTimer.ElapsedMilliseconds;
@@ -284,7 +334,8 @@ public static class ItemDefinitionCatalogLoader
                   $"{definitions.Count} 个物品：{BuiltInManifestPath}；" +
                   $"外壳 {shells.Length} 个/{shellMilliseconds} ms，Sprite {sprites.Count} 个/{spriteMilliseconds} ms，" +
                   $"材质 {materials.Count} 个/{materialMilliseconds} ms，控制器 {controllers.Count} 个/{controllerMilliseconds} ms，" +
-                  $"定义编译 {compilationMilliseconds} ms，注册 {registrationMilliseconds} ms");
+                  $"定义编译 {compilationMilliseconds} ms（实际工作 {compilationWorkMilliseconds:F1} ms，" +
+                  $"最慢 {slowestDefinitionId}/{slowestDefinitionMilliseconds:F1} ms），注册 {registrationMilliseconds} ms");
         completed?.Invoke(definitions.Count);
     }
 

@@ -926,6 +926,59 @@
       }
     },
     {
+      "Id": "FuelEngine",
+      "Kind": "source",
+      "Ports": "axis",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "combustion-engine",
+        "VolumeLiters": 10,
+        "ThroughputLitersPerSecond": 5,
+        "Ports": [
+          {
+            "Id": "fuel-in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid",
+            "FluidId": "core:fuel_oil"
+          }
+        ],
+        "Reactions": [
+          {
+            "Id": "core:fuel_oil_engine",
+            "Inputs": [
+              {
+                "FluidId": "core:fuel_oil",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [],
+            "MolesPerSecond": 0.1,
+            "ChemicalJoulesPerReaction": 8600000,
+            "MechanicalEfficiency": 0.35
+          }
+        ]
+      },
+      "Source": "fluid-engine",
+      "Torque": 60,
+      "Rpm": 30,
+      "AxlePorts": [
+        "right"
+      ],
+      "AxisPortVisual": {
+        "Count": 1,
+        "StartX": 0.25,
+        "Y": 0
+      }
+    },
+    {
       "Id": "GasEngine",
       "Kind": "source",
       "Ports": "axis",
@@ -1430,59 +1483,6 @@
           }
         ],
         "VolumeLiters": 1
-      }
-    },
-    {
-      "Id": "FuelEngine",
-      "Kind": "source",
-      "Ports": "axis",
-      "LogicId": "fluid",
-      "PlacementLayer": 0,
-      "PlacementRotationSteps": 4,
-      "BlocksMovement": true,
-      "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "combustion-engine",
-        "VolumeLiters": 10,
-        "ThroughputLitersPerSecond": 5,
-        "Ports": [
-          {
-            "Id": "fuel-in",
-            "Chamber": "main",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "liquid",
-            "FluidId": "core:fuel_oil"
-          }
-        ],
-        "Reactions": [
-          {
-            "Id": "core:fuel_oil_engine",
-            "Inputs": [
-              {
-                "FluidId": "core:fuel_oil",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [],
-            "MolesPerSecond": 0.1,
-            "ChemicalJoulesPerReaction": 8600000,
-            "MechanicalEfficiency": 0.35
-          }
-        ]
-      },
-      "Source": "fluid-engine",
-      "Torque": 60,
-      "Rpm": 30,
-      "AxlePorts": [
-        "right"
-      ],
-      "AxisPortVisual": {
-        "Count": 1,
-        "StartX": 0.25,
-        "Y": 0
       }
     }
   ],

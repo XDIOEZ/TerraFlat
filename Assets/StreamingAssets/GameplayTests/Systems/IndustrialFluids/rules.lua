@@ -332,6 +332,7 @@ test.system("industrial_fluids", "combined_tank_collision_lifecycle", {}, functi
         "全量重扫未撤销已卸载的罐体来源")
 end, "组合罐拆中间、原生形状复用、独立障碍保留、跨块裁剪与镜像收尾")
 
+
 test.system("industrial_fluids", "fuel_oil_engine_definition", {}, function(d)
     assert(d.kind == "combustion-engine" and d.ambientCombustion and d.torque > 0 and d.rpm > 0,
         "燃料发动机没有通过环境助燃策略接入机械动力")

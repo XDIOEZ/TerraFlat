@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "locale": "en",
   "names": {
+    "Bear": "Bear",
     "CarbonFiber": "Carbon Fiber",
     "CarbonFiberPlate": "Carbon Fiber Plate",
     "Ingot_Titanium": "Titanium Ingot",
@@ -17,7 +18,6 @@
     "Battery_LithiumIronPhosphate_Summoner": "Lithium Iron Phosphate Battery",
     "Boron": "Boron",
     "Quartz": "Quartz",
-    "Bear": "Bear",
     "LiquidTankBlock_Iron": "Iron Liquid Tank Block",
     "LiquidTankBlock_Iron_Summoner": "Iron Liquid Tank Block",
     "LiquidTankBlock_Steel": "Steel Liquid Tank Block",

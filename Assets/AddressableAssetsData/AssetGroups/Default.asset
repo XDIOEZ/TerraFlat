@@ -17,90 +17,6 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
-  - m_GUID: 9837132e150442b98301e5cb453efde6
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Titanium/Ingot_Titanium_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 38cb41787e884f84ad72a70d9206b9ae
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Aluminum/Ingot_Aluminum_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 12787396311b487fb841e180644da55a
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Molybdenum/Ingot_Molybdenum_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 1c66a51346ed4f6dbf2d6b325ae20a9e
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Nickel/Ingot_Nickel_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b11967dd27bf4a0dbf46644d436e336a
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiber/CarbonFiber_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e4b12adddd93494ea5c556ca29ce3b32
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiberPlate/CarbonFiberPlate_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a85d241ecc7647098c153e7468e98645
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ore_Mica/Ore_Mica_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: cf785d50a3fd4a6cb74db824686951b1
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/MicaSheet/MicaSheet_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 2c253515814d413db71c01b8b4fe5fbf
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Phosphorus/Phosphorus_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 40eae45bd2f84b9f9061bd715bf0b7a8
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Fertilizer_Phosphate/Fertilizer_Phosphate_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 223620dbeba041de9da16761ff1578f9
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Boron/Boron_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 37031e56726a46aba1f3b8b650f93d5f
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Quartz/Quartz_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 76b62b2eed0e4ae98bd8b695b1e76165
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Lithium/Lithium_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 312ab8b8d6244db987ad765512b0f132
-    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 67e20d87a6524ce0a6c096dc729ffeac
     m_Address: Assets/6_Art/Generated/InventoryCrafting/Tea/Tea_Icon.png
     m_ReadOnly: 0
@@ -4983,6 +4899,90 @@ MonoBehaviour:
     m_Address: Assets/9_Shaders/Material/Tilemap-CrudeOil-Lit.mat
     m_ReadOnly: 0
     m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9837132e150442b98301e5cb453efde6
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Titanium/Ingot_Titanium_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 38cb41787e884f84ad72a70d9206b9ae
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Aluminum/Ingot_Aluminum_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 12787396311b487fb841e180644da55a
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Molybdenum/Ingot_Molybdenum_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1c66a51346ed4f6dbf2d6b325ae20a9e
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Nickel/Ingot_Nickel_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b11967dd27bf4a0dbf46644d436e336a
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiber/CarbonFiber_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e4b12adddd93494ea5c556ca29ce3b32
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiberPlate/CarbonFiberPlate_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a85d241ecc7647098c153e7468e98645
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ore_Mica/Ore_Mica_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cf785d50a3fd4a6cb74db824686951b1
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/MicaSheet/MicaSheet_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2c253515814d413db71c01b8b4fe5fbf
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Phosphorus/Phosphorus_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 40eae45bd2f84b9f9061bd715bf0b7a8
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Fertilizer_Phosphate/Fertilizer_Phosphate_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 223620dbeba041de9da16761ff1578f9
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Boron/Boron_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 37031e56726a46aba1f3b8b650f93d5f
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Quartz/Quartz_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 76b62b2eed0e4ae98bd8b695b1e76165
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Lithium/Lithium_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 312ab8b8d6244db987ad765512b0f132
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

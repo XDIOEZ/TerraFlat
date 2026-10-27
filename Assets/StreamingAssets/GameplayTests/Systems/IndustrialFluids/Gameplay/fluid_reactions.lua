@@ -44,6 +44,7 @@ for _, water in ipairs({false,true}) do
     end, water and "蒸汽机三槽点火、吸收、燃料水量随负载结算与熄火保留" or "气引擎实际氢氧燃料与产水")
 end
 
+
 test.runtime("industrial_fluids", "fuel_oil_engine", {}, function(d)
     assert(d.emptyPower == 0 and d.waterPower == 0 and math.abs(d.waterLeft - 1) < 0.000001,
         "燃油机缺油或只接水仍免费供能/扣掉异种液体")

@@ -256,6 +256,7 @@ test.system("processing", "cold_motion_workspace", {}, function(data)
     assert(data.repeatedMotionBytes == 0, "已预热的冷物推进仍逐步重建模拟器或工作列表")
 end, "冷物真实轨迹、跨世界工作区复用、浮沉结束、异常清理与热循环分配")
 
+
 local function petroleum_amount(slots, id)
     local amount = 0
     for _, slot in ipairs(slots) do

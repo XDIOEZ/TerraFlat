@@ -36,6 +36,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 ## 资源会话
 
 - LoadPlan 声明阶段和依赖，嵌套 IEnumerator 受 ResourceLoadPipeline 统一异常/超时/取消管理。菜单后台阶段每帧协作预算1ms；PureDataAsync 仅处理私有字符串/DTO/ID，Unity 对象和目录发布仍在主线程。
+- 本地 Items/Recipes 分包先在主线程校验文件路径，再交给单次 PureDataAsync 批量读盘与解析；Android/WebGL 保留逐包 UnityWebRequest，避免小文件反复跨帧等待。
 - `audio` 阶段通过 AudioService.PreloadAsync 在 startup-ui/startup-ready 前预热音库。通用资源和物品视觉由 ResourceLoadQueue 保持最多4个在途请求、完成即补槽，按原索引收结果，仅预算耗尽或请求未完成时让出。编辑器 Sprite 冷加载在每个槽位通过 AssetDatabase.LoadObjectAsync 读取 TextureImporter 主纹理，完成即严格校验子图并接续 ResourceAssetScope 请求，同图集共享主纹理操作；不能只延迟同步 AssetDatabase 调用就当成异步，也不能跨 yield 持有 ProfilerMarker 作用域。
 - 本体先校验、MOD 合并后再 validate-final；领域引用通过 IResourceCatalogValidator/增量版本扩展。正式世界生成资源用 worldAuthoringResourcePaths，完整会话在 Ready 前预热最终 BRG Sprite Mesh。
 - 具体资源请求立即归 ResourceAssetScope，失败/取消释放；Addressables 初始化句柄归 GameRes、跨会话保留。卸载顺序为 MOD/池、表现/共享 Mesh、目录、源资源；销毁清理使用现有引用。
