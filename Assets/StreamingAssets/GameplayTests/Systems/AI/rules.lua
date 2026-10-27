@@ -34,6 +34,16 @@ for _, case in ipairs({
     end, "追近与动作距离解耦：" .. case.range)
 end
 
+-- 共用觅食器没有有效检测目标时停车并清目标，不移动或摄食。
+test.system("ai", "animal_foraging_empty_targets", {}, function(data)
+    assert(data.noFoodTarget and data.noGrassTarget and data.foodTargetEmptyAfterClear,
+        "无食物/无草时仍留下觅食目标")
+    assert(data.refreshCalls == 1 and data.stopCalls == 2,
+        "觅食态没有刷新一次检测，或缺目标时没有按状态停车")
+    assert(data.movementCalls == 0 and data.grassConsumptionCalls == 0,
+        "缺目标时仍提交移动或触发草食消费")
+end, "鸡/野猪共用觅食器无目标时停车并清理")
+
 -- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
 test.system("ai", "wolf_formation_topology", {}, function(data)
     assert(data.cases == 7 and data.wrappedDeltas and data.infiniteDeltas,

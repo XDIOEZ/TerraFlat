@@ -24,6 +24,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/state_machine", EntityAiStateMachine);
         operations.Add("ai/advance_target", EntityAiAdvance);
         operations.Add("ai/approach_ranges", EntityAiApproachRanges);
+        operations.Add("ai/animal_foraging_empty_targets", EntityAiForagingEmptyTargets);
         operations.Add("ai/attack_window", EntityAiAttackWindow);
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);

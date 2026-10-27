@@ -82,6 +82,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 鸟/海鸥的单图状态经 `Mod_AI_Bird.ResolveAnimationStateName` 选择 Ground/Walk/TakingOff/Flying/Landing，具体 Sprite 配在外壳动画模块的 `singleSpriteStates`，使用各状态 `_0` 首帧并继续程序摇摆；`BirdActorAssetBuilder` 重建时保留同一映射。飞行 AI 只发状态，不在通用动画中识别物种。
 - 动物环境短音由可组合 `Mod_AnimalAmbientAudio` 承担；AI 仅通过 `IAnimalAmbientAudioActivity.AllowsAmbientAudio` 暴露平静待机、游荡或觅食资格，睡眠、战斗、逃离及鱼被携带/钓住时抑制。`AI_Base.IsAmbientAudioState` 与移动动画分类分开，行为图按 `wander/forage/idle` 节点语义判定；物种 Cue 与间隔写 Actor JSON，Zombie 显式移除从 Wolf 继承的 `animalAudio`。
 - 食性使用稳定数据 Tag `Carnivore/Herbivore/Omnivore`；玩家独立为威胁。当前动物继承 `Module_Temperature`，安全范围在 Actor 配置；`ITemperatureSafetyMovement` 优先于追击/觅食/游荡，陆地由 Mod_Mover_AI、鸟/鱼由自定义移动实现。
+- 鸡与野猪共用 `AIAnimalForaging` 的草格/掉落食物目标、接近、摄食和清理；饥饿阈值、食物 Tag、草食时长及营养策略仍由物种配置和 AI 保持。
 - 温度避险不记录/回退安全点；记最多 8 个危险锚点 30 秒，以危险点指向角色的向量引导分段随机离开。陆地普通目标保留距离衰减偏置，线路接近危险记录则保持强偏置并走局部随机段；同一段目标缓存。安全环境持续 2 秒且距危险记录至少 3 格后才解除强制避险，体温未恢复则等待。
 - 雪地专属白兔/雪豹在 `snow-actors.json` 配置初始体表 -10℃，安全范围分别 -30～20℃/-30～25℃。新增物种按栖息地与玩法定位配安全范围与初始体温，不在通用温度模块堆物种特例。
 - 小鱼在 `fish-actors.json` 单独配置安全体表 -26.5～63.5℃，以初始 36.5℃ 为基准将冷热容差都翻倍；不改变其他动物的通用温度规则。

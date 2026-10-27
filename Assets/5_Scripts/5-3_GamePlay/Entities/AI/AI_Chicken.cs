@@ -48,26 +48,13 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#endregion
 
 	#region RuntimeState - Chicken 特有
-	[SerializeField, ReadOnly]
-	private Item _currentFoodTarget;
+	private AIAnimalForaging _foraging;
 
 	[SerializeField, ReadOnly]
 	private Item _currentThreat;
 
-	[SerializeField, ReadOnly]
-	private Vector2Int _currentGrassTarget;
-
-	[SerializeField, ReadOnly]
-	private bool _hasGrassTarget;
-
-	// 新版权威草层目标；不创建或查找草 Item 实体。
-	private ChunkTerrainData _currentGrassRuntimeTerrain;
-	private Vector2Int _currentGrassRuntimeLocal;
-	private bool _hasRuntimeGrassTarget;
-
 	private float _mateRequestRemain;
 	private float _sleepCooldownTimer;
-	private float _grassSearchCooldown;
 	private bool _layEggTriggered;
 	private DayTimeSystem _eggTimeSystem;
 	private string _eggTimeSceneName;
@@ -234,6 +221,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		UnbindEggWorldTime();
 		_worldSceneHandle = int.MinValue;
 		_worldSceneName = null;
+		_foraging?.ClearTargets();
 		base.OnUnload();
 	}
 
@@ -249,11 +237,9 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		_mateRequestRemain = 0f;
 		_sleepCooldownTimer = 0f;
-		_grassSearchCooldown = 0f;
 		_layEggTriggered = false;
-		_currentFoodTarget = null;
+		_foraging?.Reset();
 		_currentThreat = null;
-		ClearGrassTarget();
 	}
 
 	protected override void OnDamageThreatUpdated(DamageReceiverDamageInfo damageInfo)
@@ -287,6 +273,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		item.itemMods.GetMod_ByID(ModText.Food, out Mod_Food food);
 		_food = food;
+		_foraging = new AIAnimalForaging(
+			transform, _detector, _food, TryRefreshDetector, MoveToInteractionTarget, DistanceTo, StopMove, ConsumeGrass);
 		InitializeGrassSustenance();
 
 		if (_detector != null)
@@ -311,7 +299,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		EnsureEggWorldTimeBinding();
 		_mateRequestRemain = DecrementTimer(_mateRequestRemain, deltaTime);
 		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
-		_grassSearchCooldown = DecrementTimer(_grassSearchCooldown, deltaTime);
+		_foraging?.TickSearchCooldown(deltaTime);
 		if (enableGrassForaging && Data.GrassSustenanceInitialized)
 		{
 			Data.GrassSustenanceRemaining = DecrementTimer(
@@ -327,10 +315,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		// 离开觅食/进食状态时清除食物目标
 		if (next != ChickenState.Forage && next != ChickenState.Eat)
-		{
-			_currentFoodTarget = null;
-			ClearGrassTarget();
-		}
+			_foraging?.ClearTargets();
 
 		// 离开逃跑状态时清除威胁目标
 		if (next != ChickenState.Flee)
@@ -404,60 +389,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#region Tick - Chicken 特有状态
 	private void TickForage()
 	{
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-		{
-			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
-			return;
-		}
-
-		TryRefreshDetector();
-		if (_currentFoodTarget == null)
-		{
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) { StopMove(); return; }
-		}
-		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
+		_foraging.TickForage(
+			IsGrassMealDue(), edibleTags, eatDistance, grassSearchRadius, detectorRefreshInterval);
 	}
 
 	private void TickEat(float deltaTime)
 	{
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-		{
-			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
-			if (GetGrassTargetDistance() > eatDistance || _stateElapsed < grassEatDuration)
-				return;
-
-			Vector2Int grassPosition = _currentGrassTarget;
-			ClearGrassTarget();
-
-			ChunkMgr chunkManager = ChunkMgr.Instance;
-			bool consumed = chunkManager != null &&
-				chunkManager.TryConsumeRuntimeGrass(grassPosition);
-
-			if (consumed)
-				ConsumeGrass(grassPosition);
-			StopMove();
-			return;
-		}
-
-		if (_currentFoodTarget == null)
-		{
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) { StopMove(); return; }
-		}
-
-		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
-		if (DistanceTo(_currentFoodTarget.transform) > eatDistance) return;
-
-		Mod_Food targetFood = _currentFoodTarget.GetComponentInChildren<Mod_Food>();
-		if (targetFood == null) { _currentFoodTarget = null; StopMove(); return; }
-
-		_food.Eat(targetFood);
-		if (_currentFoodTarget == null || _currentFoodTarget.itemData == null || _currentFoodTarget.itemData.Stack.Amount <= 0)
-		{
-			_currentFoodTarget = null;
-			StopMove();
-		}
+		_foraging.TickEat(
+			IsGrassMealDue(), edibleTags, eatDistance, grassSearchRadius, detectorRefreshInterval,
+			grassEatDuration, _stateElapsed);
 	}
 
 	private void TickSleep(float deltaTime)
@@ -517,29 +457,21 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private bool ShouldEat()
 	{
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-			return GetGrassTargetDistance() <= eatDistance;
+		if (_foraging.TryAcquireGrassTarget(
+				IsGrassMealDue(), eatDistance, grassSearchRadius, detectorRefreshInterval))
+			return _foraging.GrassTargetDistance <= eatDistance;
 
 		float hungerRate = _food.Data.nutrition.GetFoodRate();
 		if (_currentState == ChickenState.Eat)
 		{
 			if (hungerRate >= eatExitHungerRate) return false;
-			if (_currentFoodTarget == null)
-			{
-				_currentFoodTarget = FindClosestEdibleItem();
-				if (_currentFoodTarget == null) return false;
-			}
-			return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
+			if (!_foraging.TryFindFoodTarget(edibleTags)) return false;
+			return _foraging.FoodTargetDistance <= eatDistance;
 		}
 
 		if (hungerRate > eatEnterHungerRate) return false;
-		if (_currentFoodTarget == null)
-		{
-			TryRefreshDetector();
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) return false;
-		}
-		return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
+		if (!_foraging.TryFindFoodTarget(edibleTags, refreshDetector: true)) return false;
+		return _foraging.FoodTargetDistance <= eatDistance;
 	}
 
 	private bool ShouldSleep()
@@ -576,19 +508,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private bool ShouldForage()
 	{
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-			return GetGrassTargetDistance() > eatDistance;
+		if (IsGrassMealDue() && _foraging.TryAcquireGrassTarget(
+				true, eatDistance, grassSearchRadius, detectorRefreshInterval))
+			return _foraging.GrassTargetDistance > eatDistance;
 
 		float hungerRate = _food.Data.nutrition.GetFoodRate();
 		if (hungerRate > eatEnterHungerRate) return false;
 
-		if (_currentFoodTarget == null)
-		{
-			TryRefreshDetector();
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) return false;
-		}
-		return DistanceTo(_currentFoodTarget.transform) > eatDistance;
+		if (!_foraging.TryFindFoodTarget(edibleTags, refreshDetector: true)) return false;
+		return _foraging.FoodTargetDistance > eatDistance;
 	}
 	#endregion
 
@@ -657,11 +585,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			includePlayerEntities: fleeFromPlayer);
 	}
 
-	private Item FindClosestEdibleItem()
-	{
-		return _detector.FindClosestItemByTags(edibleTags, transform.position);
-	}
-
 	private void InitializeGrassSustenance()
 	{
 		if (_food == null)
@@ -690,80 +613,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		return enableGrassForaging &&
 		       Data.GrassSustenanceInitialized &&
 		       Data.GrassSustenanceRemaining <= 0f;
-	}
-
-	private bool TryAcquireGrassTarget()
-	{
-		if (!IsGrassMealDue())
-			return false;
-
-		if (HasValidGrassTarget())
-			return true;
-
-		ClearGrassTarget();
-		if (_grassSearchCooldown > 0f)
-			return false;
-
-		_grassSearchCooldown = Mathf.Max(0.05f, detectorRefreshInterval);
-
-		ChunkMgr chunkManager = ChunkMgr.Instance;
-		Vector2 origin = transform.position;
-		float radius = Mathf.Max(eatDistance, grassSearchRadius);
-		if (chunkManager != null &&
-			chunkManager.TryFindRuntimeGrassNear(origin, radius,
-				out RuntimeTerrainTileSample runtimeGrass))
-		{
-			_currentGrassRuntimeTerrain = runtimeGrass.Terrain;
-			_currentGrassRuntimeLocal = runtimeGrass.LocalCell;
-			_currentGrassTarget = runtimeGrass.WorldCell;
-			_hasGrassTarget = true;
-			_hasRuntimeGrassTarget = true;
-			_currentFoodTarget = null;
-			return true;
-		}
-
-		return false;
-	}
-
-	private bool HasValidGrassTarget()
-	{
-		if (!_hasGrassTarget)
-			return false;
-
-		if (_hasRuntimeGrassTarget)
-		{
-			return _currentGrassRuntimeTerrain != null &&
-			       !_currentGrassRuntimeTerrain.IsDisposed &&
-			       _currentGrassRuntimeTerrain.GetGrass(
-				       _currentGrassRuntimeLocal.x, _currentGrassRuntimeLocal.y) ==
-				       ChunkTerrainData.GrassPresent;
-		}
-
-		return false;
-	}
-
-	private void ClearGrassTarget()
-	{
-		_currentGrassTarget = default;
-		_hasGrassTarget = false;
-		_currentGrassRuntimeTerrain = null;
-		_currentGrassRuntimeLocal = default;
-		_hasRuntimeGrassTarget = false;
-	}
-
-	private float GetGrassTargetDistance()
-	{
-		return WorldTopologyRuntime.Distance(transform.position, GetGrassTargetWorldPosition());
-	}
-
-	private Vector2 GetGrassTargetWorldPosition()
-	{
-		return GetGrassWorldPosition(_currentGrassTarget);
-	}
-
-	private static Vector2 GetGrassWorldPosition(Vector2Int grassPosition)
-	{
-		return new Vector2(grassPosition.x + 0.5f, grassPosition.y + 0.5f);
 	}
 
 	private void ConsumeGrass(Vector2Int grassPosition)

@@ -50,22 +50,10 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#endregion
 
 	#region RuntimeState - WildBoar 特有
-	[SerializeField, ReadOnly]
-	private Item _currentFoodTarget;
+	private AIAnimalForaging _foraging;
 
 	[SerializeField, ReadOnly]
 	private Item _currentThreat;
-
-	[SerializeField, ReadOnly]
-	private Vector2Int _currentGrassTarget;
-
-	[SerializeField, ReadOnly]
-	private bool _hasGrassTarget;
-
-	// 运行时权威草层目标，不创建草 Item 实体。
-	private ChunkTerrainData _currentGrassRuntimeTerrain;
-	private Vector2Int _currentGrassRuntimeLocal;
-	private bool _hasRuntimeGrassTarget;
 
 	[SerializeField, ReadOnly]
 	private Vector3 _attackPositionTarget;
@@ -77,7 +65,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	private bool _hasAttackPositionTarget;
 
 	private float _sleepCooldownTimer;
-	private float _grassSearchCooldown;
 	private Vector3 _chaseTarget;
 	private Item _retaliationTarget; // 狂暴期间锁定的玩家。
 	private AI_AttackController _attack = new AI_AttackController();
@@ -266,19 +253,23 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			Data.RetaliationTargetGuid = _retaliationTarget.itemData?.Guid ?? 0;
 		ModData.WriteData(Data);
 	}
+
+	protected override void OnUnload()
+	{
+		_foraging?.ClearTargets();
+		base.OnUnload();
+	}
 	#endregion
 
 	#region Base Overrides - Hooks
 	protected override void OnResetRuntimeState()
 	{
 		_sleepCooldownTimer = 0f;
-		_grassSearchCooldown = 0f;
-		_currentFoodTarget = null;
+		_foraging?.Reset();
 		_currentThreat = null;
 		_retaliationTarget = null;
 		Data.RetaliationTimeRemaining = Mathf.Max(0f, Data.RetaliationTimeRemaining);
 		Data.RageLevel = GetRetaliationProgress();
-		ClearGrassTarget();
 		ClearAttackPosition();
 		_attack.Reset();
 		_attack.Cooldown = attackCooldown;
@@ -291,6 +282,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		item.itemMods.GetMod_ByID(ModText.Food, out Mod_Food food);
 		_food = food;
+		_foraging = new AIAnimalForaging(
+			transform, _detector, _food, TryRefreshDetector, MoveToInteractionTarget, DistanceTo, StopMove, ConsumeGrass);
 		InitializeGrassSustenance();
 		if (_detector != null)
 		{
@@ -319,7 +312,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	protected override void UpdateExtraTimers(float deltaTime)
 	{
 		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
-		_grassSearchCooldown = DecrementTimer(_grassSearchCooldown, deltaTime);
+		_foraging?.TickSearchCooldown(deltaTime);
 		if (enableGrassForaging && Data.GrassSustenanceInitialized)
 		{
 			Data.GrassSustenanceRemaining = DecrementTimer(
@@ -350,10 +343,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		// 离开觅食/进食状态时清除食物目标
 		if (next != WildBoarState.Forage && next != WildBoarState.Eat)
-		{
-			_currentFoodTarget = null;
-			ClearGrassTarget();
-		}
+			_foraging?.ClearTargets();
 
 		// 只有追击和攻击阶段保留玩家左右站位，脱战后必须重新选边。
 		if (next != WildBoarState.Chase && next != WildBoarState.Attack)
@@ -454,60 +444,15 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#region Tick - WildBoar 特有状态
 	private void TickForage()
 	{
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-		{
-			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
-			return;
-		}
-
-		TryRefreshDetector();
-		if (_currentFoodTarget == null)
-		{
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) { StopMove(); return; }
-		}
-		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
+		_foraging.TickForage(
+			IsGrassMealDue(), edibleTags, eatDistance, grassSearchRadius, detectorRefreshInterval);
 	}
 
 	private void TickEat(float deltaTime)
 	{
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-		{
-			MoveToInteractionTarget(GetGrassTargetWorldPosition(), eatDistance);
-			if (GetGrassTargetDistance() > eatDistance || _stateElapsed < grassEatDuration)
-				return;
-
-			Vector2Int grassPosition = _currentGrassTarget;
-			ClearGrassTarget();
-
-			ChunkMgr chunkManager = ChunkMgr.Instance;
-			bool consumed = chunkManager != null &&
-				chunkManager.TryConsumeRuntimeGrass(grassPosition);
-
-			if (consumed)
-				ConsumeGrass(grassPosition);
-			StopMove();
-			return;
-		}
-
-		if (_currentFoodTarget == null)
-		{
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) { StopMove(); return; }
-		}
-
-		MoveToInteractionTarget(_currentFoodTarget.transform.position, eatDistance);
-		if (DistanceTo(_currentFoodTarget.transform) > eatDistance) return;
-
-		Mod_Food targetFood = _currentFoodTarget.GetComponentInChildren<Mod_Food>();
-		if (targetFood == null) { _currentFoodTarget = null; StopMove(); return; }
-
-		_food.Eat(targetFood);
-		if (_currentFoodTarget == null || _currentFoodTarget.itemData == null || _currentFoodTarget.itemData.Stack.Amount <= 0)
-		{
-			_currentFoodTarget = null;
-			StopMove();
-		}
+		_foraging.TickEat(
+			IsGrassMealDue(), edibleTags, eatDistance, grassSearchRadius, detectorRefreshInterval,
+			grassEatDuration, _stateElapsed);
 	}
 
 	private void TickSleep(float deltaTime)
@@ -686,43 +631,31 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (_currentState == WildBoarState.Eat)
 		{
 			if (hungerRate >= eatExitHungerRate) return false;
-			if (IsGrassMealDue() && TryAcquireGrassTarget())
-				return GetGrassTargetDistance() <= eatDistance;
-			if (_currentFoodTarget == null)
-			{
-				TryRefreshDetector();
-				_currentFoodTarget = FindClosestEdibleItem();
-				if (_currentFoodTarget == null) return false;
-			}
-			return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
+			if (_foraging.TryAcquireGrassTarget(
+					IsGrassMealDue(), eatDistance, grassSearchRadius, detectorRefreshInterval))
+				return _foraging.GrassTargetDistance <= eatDistance;
+			if (!_foraging.TryFindFoodTarget(edibleTags, refreshDetector: true)) return false;
+			return _foraging.FoodTargetDistance <= eatDistance;
 		}
 
 		if (hungerRate > eatEnterHungerRate) return false;
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-			return GetGrassTargetDistance() <= eatDistance;
-		if (_currentFoodTarget == null)
-		{
-			TryRefreshDetector();
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) return false;
-		}
-		return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
+		if (_foraging.TryAcquireGrassTarget(
+				IsGrassMealDue(), eatDistance, grassSearchRadius, detectorRefreshInterval))
+			return _foraging.GrassTargetDistance <= eatDistance;
+		if (!_foraging.TryFindFoodTarget(edibleTags, refreshDetector: true)) return false;
+		return _foraging.FoodTargetDistance <= eatDistance;
 	}
 
 	private bool ShouldForage()
 	{
 		float hungerRate = _food.Data.nutrition.GetFoodRate();
 		if (hungerRate > eatEnterHungerRate) return false;
-		if (IsGrassMealDue() && TryAcquireGrassTarget())
-			return GetGrassTargetDistance() > eatDistance;
+		if (IsGrassMealDue() && _foraging.TryAcquireGrassTarget(
+				true, eatDistance, grassSearchRadius, detectorRefreshInterval))
+			return _foraging.GrassTargetDistance > eatDistance;
 
-		if (_currentFoodTarget == null)
-		{
-			TryRefreshDetector();
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null) return false;
-		}
-		return DistanceTo(_currentFoodTarget.transform) > eatDistance;
+		if (!_foraging.TryFindFoodTarget(edibleTags, refreshDetector: true)) return false;
+		return _foraging.FoodTargetDistance > eatDistance;
 	}
 	#endregion
 
@@ -936,11 +869,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		return _detector.FindClosestItemByTags(chaseThreatTags, transform.position, chasePlayer);
 	}
 
-	private Item FindClosestEdibleItem()
-	{
-		return _detector.FindClosestItemByTags(edibleTags, transform.position);
-	}
-
 	/// <summary>初始化野猪草食冷却；野猪是杂食动物，不暂停肉食营养消耗。</summary>
 	private void InitializeGrassSustenance()
 	{
@@ -961,80 +889,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		return enableGrassForaging &&
 		       Data.GrassSustenanceInitialized &&
 		       Data.GrassSustenanceRemaining <= 0f;
-	}
-
-	/// <summary>从权威运行时地形中寻找最近的一格草。</summary>
-	private bool TryAcquireGrassTarget()
-	{
-		if (!IsGrassMealDue())
-			return false;
-
-		if (HasValidGrassTarget())
-			return true;
-
-		ClearGrassTarget();
-		if (_grassSearchCooldown > 0f)
-			return false;
-
-		_grassSearchCooldown = Mathf.Max(0.05f, detectorRefreshInterval);
-
-		ChunkMgr chunkManager = ChunkMgr.Instance;
-		Vector2 origin = transform.position;
-		float radius = Mathf.Max(eatDistance, grassSearchRadius);
-		if (chunkManager != null &&
-			chunkManager.TryFindRuntimeGrassNear(origin, radius,
-				out RuntimeTerrainTileSample runtimeGrass))
-		{
-			_currentGrassRuntimeTerrain = runtimeGrass.Terrain;
-			_currentGrassRuntimeLocal = runtimeGrass.LocalCell;
-			_currentGrassTarget = runtimeGrass.WorldCell;
-			_hasGrassTarget = true;
-			_hasRuntimeGrassTarget = true;
-			_currentFoodTarget = null;
-			return true;
-		}
-
-		return false;
-	}
-
-	/// <summary>检查草目标仍属于未销毁且保留草状态的运行时地形。</summary>
-	private bool HasValidGrassTarget()
-	{
-		if (!_hasGrassTarget || !_hasRuntimeGrassTarget)
-			return false;
-
-		return _currentGrassRuntimeTerrain != null &&
-		       !_currentGrassRuntimeTerrain.IsDisposed &&
-		       _currentGrassRuntimeTerrain.GetGrass(
-			       _currentGrassRuntimeLocal.x,
-			       _currentGrassRuntimeLocal.y) == ChunkTerrainData.GrassPresent;
-	}
-
-	/// <summary>清除当前草目标及其运行时地形引用。</summary>
-	private void ClearGrassTarget()
-	{
-		_currentGrassTarget = default;
-		_hasGrassTarget = false;
-		_currentGrassRuntimeTerrain = null;
-		_currentGrassRuntimeLocal = default;
-		_hasRuntimeGrassTarget = false;
-	}
-
-	/// <summary>计算到草目标的拓扑距离。</summary>
-	private float GetGrassTargetDistance()
-	{
-		return WorldTopologyRuntime.Distance(transform.position, GetGrassTargetWorldPosition());
-	}
-
-	/// <summary>获取草格中心的世界坐标。</summary>
-	private Vector2 GetGrassTargetWorldPosition()
-	{
-		return GetGrassWorldPosition(_currentGrassTarget);
-	}
-
-	private static Vector2 GetGrassWorldPosition(Vector2Int grassPosition)
-	{
-		return new Vector2(grassPosition.x + 0.5f, grassPosition.y + 0.5f);
 	}
 
 	/// <summary>消耗一格草并恢复饱食度，随后开始下一次草食冷却。</summary>
