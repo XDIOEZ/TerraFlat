@@ -80,18 +80,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         return definition != null;
     }
 
-    public ChunkGenerationProfileSO GetActiveGenerationProfile()
-    {
-        return ActiveDefinition?.GenerationProfile;
-    }
-
-    /// <summary>读取指定维度的生成 Profile；矿洞复核地表入口时使用，不返回 Unity 资源给后台线程。</summary>
-    public ChunkGenerationProfileSO GetGenerationProfile(string dimensionId)
-    {
-        LoadCatalog();
-        return catalog?.Find(dimensionId)?.GenerationProfile;
-    }
-
     public ChunkView GetActiveChunkViewPrefab()
     {
         return ActiveDefinition?.ChunkViewPrefab;
@@ -254,7 +242,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             return;
 
         string worldKey = address.WorldKey;
-        saveData.GetOrCreateWorldInstanceData(address, GameManager.Instance?.ReadyPlanetData);
+        saveData.GetOrCreateWorldInstanceData(address, GameManager.Instance?.ReadyPlanetData,
+            catalog.Find(address.DimensionId)?.GenerationProfile?.ProfileId ?? "surface.default");
 
         if (!address.IsSurface)
             EnsureWorldTimeData(saveData, address.WithDimension(WorldAddress.SurfaceDimensionId));
@@ -739,9 +728,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         FlatWorld.WorldModel.ChunkGenerationSettingsSnapshot settings =
             chunkManager.ActiveGenerationProfile.Settings;
-        if (settings.Mode != FlatWorld.WorldModel.ChunkGenerationMode.Cave)
-            throw new InvalidOperationException("只能在洞穴 WorldModel 中整理矿洞出口区域。");
-
         Vector2Int centerCell = new(
             Mathf.FloorToInt(desiredPosition.x),
             Mathf.FloorToInt(desiredPosition.y));
@@ -760,14 +746,15 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
                 }
 
                 TerrainCell current = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
-                bool isNaturalCaveWall = current.BlockingTileId == settings.CaveWallTileId;
+                bool isNaturalCaveWall = settings.Mode == FlatWorld.WorldModel.ChunkGenerationMode.Cave &&
+                    current.BlockingTileId == settings.CaveWallTileId;
                 bool isGroundwater = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y) > 0f;
                 bool isPlayerOccupied = (current.Flags & TerrainCellFlags.Occupied) != 0;
                 if (isPlayerOccupied || (!isNaturalCaveWall && !isGroundwater))
                     continue;
 
                 TerrainCell carved = new(
-                    settings.CaveFloorTileId,
+                    isNaturalCaveWall ? settings.CaveFloorTileId : current.GroundTileId,
                     0,
                     0,
                     current.BiomeId,

@@ -90,7 +90,6 @@ do
                 end
                 near(actualFraction, surface.pressureKPa > 0 and 1 or 0, label .. "/实际组分之和")
                 for key, value in pairs(surface.numbers) do finite(value, label .. "/生成参数:" .. key) end
-                for key, value in pairs(surface.caveNumbers) do finite(value, label .. "/洞穴参数:" .. key) end
                 count = count + 1
             end
         end

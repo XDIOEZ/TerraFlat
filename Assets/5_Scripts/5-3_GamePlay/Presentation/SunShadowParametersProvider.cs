@@ -87,7 +87,7 @@ public static class SunShadowParametersProvider
         return MaximumOpacity * Mathf.Clamp01(sunlight);
     }
 
-    /// <summary>自动规则禁止地下及固定光照维度；作者可显式覆盖。</summary>
+    /// <summary>自动规则按维度光照环境启用，作者可显式覆盖。</summary>
     public static bool AllowsSunShadows(string worldKey)
     {
         DimensionManager dimensions = DimensionManager.ExistingInstance;
@@ -95,8 +95,7 @@ public static class SunShadowParametersProvider
             return false;
         if (definition.SunShadows == DimensionSunShadowMode.Enabled) return true;
         if (definition.SunShadows == DimensionSunShadowMode.Disabled) return false;
-        return (definition.GenerationProfile?.GenerationMode ?? FlatWorld.WorldModel.ChunkGenerationMode.Surface) ==
-            FlatWorld.WorldModel.ChunkGenerationMode.Surface && !definition.UseFixedLighting;
+        return !definition.UseFixedLighting;
     }
 
     #endregion

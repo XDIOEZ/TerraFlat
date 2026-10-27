@@ -17,6 +17,8 @@ MonoBehaviour:
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
+  - Id: cave.portal.pairedExit
+    Value: 1
   - Id: terrain.groundTileId
     Value: 4
   - Id: terrain.stoneTileId

@@ -14,100 +14,62 @@ public partial class ChunkMgr
     /// <summary>自然生成点被实际移除后的通知；图层观察者按地址和 GUID 增量刷新。</summary>
     public event Action<RuntimeWorldAddress, int> NaturalItemRemoved;
 
-    #region 配置冻结
+    #region 世界生成配置冻结
 
-    // 后台落点查询与真正进入地表共用冻结参数入口，不另造一套生成配置。
-    public static ChunkGenerationProfileSnapshot CreateFrozenSurfaceProfile(PlanetData planet)
+    // 冷采样、出生查询与正式流送共用世界实例的最终生成配置。
+    public static ChunkGenerationProfileSnapshot CreateFrozenWorldGenerationProfile(PlanetData planet) =>
+        CreateFrozenWorldGenerationProfile(planet, out _);
+
+    private static ChunkGenerationProfileSnapshot CreateFrozenWorldGenerationProfile(PlanetData planet,
+        out ChunkGenerationProfileSnapshot currentTileCatalog)
     {
         if (planet == null) throw new ArgumentNullException(nameof(planet));
-        ChunkGenerationProfileSO asset = UnityEngine.Resources.Load<ChunkGenerationProfileSO>("Config/WorldModel/ChunkGenerationProfile_Surface");
-        if (asset == null) throw new System.IO.InvalidDataException("缺少地表生成基础 Profile");
-        ChunkGenerationProfileSnapshot profile = ApplyWorldChunkSize(asset.CreateSnapshot(), planet);
+        DimensionManager.Instance.TryGetDefinitionForWorldKey(planet.Name, out DimensionDefinition definition);
+        string presetId = string.IsNullOrWhiteSpace(planet.GenerationPresetId)
+            ? "surface.default" : planet.GenerationPresetId;
+        ChunkGenerationProfileSnapshot profile = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault()
+            .CreateGenerationProfile(presetId);
+        profile = ApplyWorldChunkSize(profile, planet);
         profile = ApplyWorldSpatialDistanceScale(profile, planet);
         profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
+        currentTileCatalog = profile;
         profile = ApplyPersistedEcologyConfiguration(profile, planet);
+        // 实例覆盖优先于冻结预设，入口连接取世界定义而不从地形算法推断。
+        var numbers = new Dictionary<string, double>(profile.NumericParameters, StringComparer.Ordinal);
+        var texts = new Dictionary<string, string>(profile.TextParameters, StringComparer.Ordinal);
+        if (planet.GenerationNumericOverrides != null)
+            foreach (var pair in planet.GenerationNumericOverrides) numbers[pair.Key] = pair.Value;
+        if (planet.GenerationTextOverrides != null)
+            foreach (var pair in planet.GenerationTextOverrides) texts[pair.Key] = pair.Value;
+        if (definition != null)
+        {
+            numbers["cave.portal.pairedExit"] = definition.PairPortalsWithTargetWorld ? 1d : 0d;
+            texts["cave.portal.itemId"] = definition.PortalItemId;
+            texts["cave.portal.targetDimensionId"] = definition.PortalTargetDimensionId;
+        }
+        profile = profile.WithGenerationConfiguration(numbers, texts, null);
         int seed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         return profile.WithNumericParameter("cave.portal.baseSeed", seed == 0 ? 1 : seed);
     }
 
-    /// <summary>把当前 Profile 的生态配置冻结到 PlanetData，并恢复已保存配置。</summary>
-    private static ChunkGenerationProfileSnapshot ApplyPersistedEcologyConfiguration(
-        ChunkGenerationProfileSnapshot profile)
-    {
-        if (profile == null)
-            return profile;
-
-        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
-        if (saveDataMgr == null || !saveDataMgr.TryGetActivePlanetData(out PlanetData planet))
-            return profile;
-
-        return ApplyPersistedEcologyConfiguration(profile, planet);
-    }
-
-    /// <summary>按指定维度世界的数据恢复 Profile；矿洞复核地表入口时也复用同一份冻结配置。</summary>
+    // 冻结配置按预设身份隔离，切换预设不覆盖区块和自然物差量。
     private static ChunkGenerationProfileSnapshot ApplyPersistedEcologyConfiguration(
         ChunkGenerationProfileSnapshot profile, PlanetData planet)
     {
-        if (profile == null || planet == null)
+        if (SaveDataMgr.Instance?.SaveData?.UsesFrozenWorldGenerationConfiguration == false)
             return profile;
-
-        // 星体覆盖先进入冻结快照，后台任务只读取快照里的独立参数。
-        profile = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault().ApplySurfaceProfile(planet.BodyId, profile);
-        GameSaveData saveData = SaveDataMgr.Instance?.SaveData;
-        if (saveData != null && !saveData.UsesFrozenWorldGenerationConfiguration)
-            return profile;
-
         planet.Ecology ??= new EcologyWorldSaveData();
         planet.Ecology.EnsureCompatibleVersion();
-
-        // 完整 Profile 同样需要冻结：矿洞的房间/隧道、矿脉和入口参数不能随 SO 后续改动重排。
-        profile = ApplyPersistedGenerationConfiguration(profile, planet);
-
-        if (profile.Settings.Mode != ChunkGenerationMode.Surface)
-            return profile;
-
-        if (!planet.Ecology.HasConfiguration)
+        if (!planet.Ecology.HasConfiguration || planet.Ecology.ProfileId != profile.ProfileId)
         {
-            // 客户端等待主机快照提供冻结配置，不在本地写入生态状态。
-            if (GameNetwork.HasStateAuthority)
-                planet.Ecology.CaptureConfiguration(profile);
+            if (GameNetwork.HasStateAuthority) planet.Ecology.CaptureConfiguration(profile);
             return profile;
         }
-
-        ChunkGenerationProfileSnapshot persistedProfile = profile.WithEcology(
-            planet.Ecology.GlobalMultiplier,
-            planet.Ecology.CreateRuleSnapshots());
-        // 同步冻结规则指纹，供联机校验。
-        planet.Ecology.ConfigurationFingerprint = persistedProfile.EcologyFingerprint;
-        return persistedProfile;
-    }
-
-    /// <summary>只恢复完整生成参数；地表配对复核不需要重建生态 Item，却必须读取相同地形和结构配置。</summary>
-    private static ChunkGenerationProfileSnapshot ApplyPersistedGenerationConfiguration(
-        ChunkGenerationProfileSnapshot profile, PlanetData planet)
-    {
-        if (profile == null || planet == null)
-            return profile;
-
-        planet.Ecology ??= new EcologyWorldSaveData();
-        if (!planet.Ecology.HasGenerationConfiguration ||
-            !planet.Ecology.Generation.Matches(profile))
-        {
-            if (GameNetwork.HasStateAuthority)
-                planet.Ecology.CaptureGenerationConfiguration(profile);
-            return profile;
-        }
-
-        planet.Ecology.Generation.MigrateHeightDrivenRiverDefaults(profile);
-
-        if (!planet.Ecology.TryApplyGenerationConfiguration(profile,
-                out ChunkGenerationProfileSnapshot restoredProfile))
-        {
-            return profile;
-        }
-
-        planet.Ecology.Generation.GenerationFingerprint = restoredProfile.GenerationFingerprint;
-        return restoredProfile;
+        if (planet.Ecology.TryApplyGenerationConfiguration(profile, out var restored)) profile = restored;
+        profile = profile.WithEcology(planet.Ecology.GlobalMultiplier, planet.Ecology.CreateRuleSnapshots());
+        planet.Ecology.ConfigurationFingerprint = profile.EcologyFingerprint;
+        planet.Ecology.Generation.GenerationFingerprint = profile.GenerationFingerprint;
+        return profile;
     }
 
     /// <summary>
@@ -115,45 +77,33 @@ public partial class ChunkMgr
     /// 传送门与高度影响都以地表参数、种子和拓扑为唯一真源，不读取已生成或已加载的地表区块，
     /// 从而保证任意区块加载顺序下都能复算同一份地表结果。
     /// </summary>
-    private static ChunkGenerationProfileSnapshot AttachCavePortalPairing(
+    private ChunkGenerationProfileSnapshot AttachCavePortalPairing(
         ChunkGenerationProfileSnapshot profile, int baseSeed)
     {
-        if (profile == null || profile.Settings.Mode != ChunkGenerationMode.Cave)
-            return profile;
-
         DimensionManager dimensionManager = DimensionManager.Instance;
-        string sourceDimensionId = profile.Settings.CavePortalTargetDimensionId;
-        ChunkGenerationProfileSO sourceAsset = dimensionManager?.GetGenerationProfile(
-            sourceDimensionId);
-        if (sourceAsset == null)
+        if (profile == null || !dimensionManager.TryGetDefinitionForWorldKey(
+                SaveDataMgr.Instance?.GetCurrentPlanetData()?.Name, out DimensionDefinition definition) ||
+            !definition.PairPortalsWithTargetWorld)
             return profile;
 
+        string sourceDimensionId = definition.PortalTargetDimensionId;
         PlanetData sourcePlanet = GetPortalSourcePlanetData(dimensionManager, sourceDimensionId);
-        ChunkGenerationProfileSnapshot sourceProfile = ApplyWorldChunkSize(
-            sourceAsset.CreateSnapshot(), sourcePlanet);
-        sourceProfile = ApplyWorldSpatialDistanceScale(sourceProfile, sourcePlanet);
-        sourceProfile = ApplyPersistedEcologyConfiguration(sourceProfile, sourcePlanet);
-        sourceProfile = sourceProfile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
-        if (sourceProfile.Settings.Mode != ChunkGenerationMode.Surface)
-            return profile;
+        if (sourcePlanet == null) return profile;
+        ChunkGenerationProfileSnapshot sourceProfile = CreateFrozenWorldGenerationProfile(sourcePlanet);
 
         ChunkGenerationSettingsSnapshot sourceSettings = sourceProfile.Settings;
-        // 即使旧矿洞存档还保留较早的入口参数，也要以它对应地表的冻结参数为准。
-        profile = profile
-            .WithNumericParameter("world.spatialDistanceScale", sourceSettings.WorldSpatialDistanceScale)
-            .WithNumericParameter("cave.portal.enabled", sourceSettings.CavePortalEnabled ? 1d : 0d)
-            .WithNumericParameter("cave.portal.chunkChance", sourceSettings.CavePortalChunkChance)
-            .WithNumericParameter("cave.portal.safeRadius", sourceSettings.CavePortalSafeRadius)
-            .WithNumericParameter("cave.portal.chunkWidth",
-                sourceSettings.CavePortalChunkWidth > 0
-                    ? sourceSettings.CavePortalChunkWidth
-                    : sourceProfile.Width)
-            .WithNumericParameter("cave.portal.chunkHeight",
-                sourceSettings.CavePortalChunkHeight > 0
-                    ? sourceSettings.CavePortalChunkHeight
-                    : sourceProfile.Height)
-            .WithNumericParameter("cave.portal.seedSalt", sourceSettings.CavePortalSeedSalt)
-            .WithNumericParameter("cave.portal.baseSeed", baseSeed);
+        // 两端共享门户候选格，地形和空间倍率仍由各自世界配置决定。
+        var numbers = new Dictionary<string, double>(profile.NumericParameters, StringComparer.Ordinal)
+        {
+            ["cave.portal.enabled"] = sourceSettings.CavePortalEnabled ? 1d : 0d,
+            ["cave.portal.chunkChance"] = sourceSettings.CavePortalChunkChance,
+            ["cave.portal.safeRadius"] = sourceSettings.CavePortalSafeRadius / profile.Settings.WorldSpatialDistanceScale,
+            ["cave.portal.chunkWidth"] = sourceSettings.CavePortalChunkWidth > 0 ? sourceSettings.CavePortalChunkWidth : sourceProfile.Width,
+            ["cave.portal.chunkHeight"] = sourceSettings.CavePortalChunkHeight > 0 ? sourceSettings.CavePortalChunkHeight : sourceProfile.Height,
+            ["cave.portal.seedSalt"] = sourceSettings.CavePortalSeedSalt,
+            ["cave.portal.baseSeed"] = baseSeed
+        };
+        profile = profile.WithGenerationConfiguration(numbers, null, null);
 
         int sourceSeed = dimensionManager != null
             ? dimensionManager.GetGenerationSeedForDimension(baseSeed, sourceDimensionId)
@@ -162,7 +112,7 @@ public partial class ChunkMgr
             sourceDimensionId,
             sourceSeed,
             sourceProfile,
-            ResolveGenerationTopology(sourcePlanet));
+            ResolveGenerationTopology(sourcePlanet), runtimeGenerator);
         return profile.WithCavePortalPairing(pairing);
     }
 

@@ -46,6 +46,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("surface_fluids/buoyancy", WorldLiquidBuoyancy);
         operations.Add("dimension/address", WorldDimensionAddress);
         operations.Add("dimension/world_instances", WorldIndependentDimensionInstances);
+        operations.Add("dimension/generation_presets", WorldGenerationPresetSelection);
         operations.Add("dimension/destroyed_portal_callback", WorldDestroyedPortalCallback);
         RegisterCavePerformanceOperations(operations);
         RegisterColdDropProbes(operations);

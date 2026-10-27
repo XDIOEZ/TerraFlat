@@ -37,21 +37,24 @@ namespace FlatWorld.WorldModel
         private readonly struct SurfacePortalSelectionKey :
             IEquatable<SurfacePortalSelectionKey>
         {
-            public SurfacePortalSelectionKey(ulong pairingFingerprint, int portalSeed,
+            public SurfacePortalSelectionKey(ulong pairingFingerprint, long sourceGeneratorId, int portalSeed,
                 Int2 portalChunkOrigin)
             {
                 PairingFingerprint = pairingFingerprint;
+                SourceGeneratorId = sourceGeneratorId;
                 PortalSeed = portalSeed;
                 PortalChunkOrigin = portalChunkOrigin;
             }
 
             private ulong PairingFingerprint { get; }
+            private long SourceGeneratorId { get; }
             private int PortalSeed { get; }
             private Int2 PortalChunkOrigin { get; }
 
             public bool Equals(SurfacePortalSelectionKey other)
             {
                 return PairingFingerprint == other.PairingFingerprint &&
+                       SourceGeneratorId == other.SourceGeneratorId &&
                        PortalSeed == other.PortalSeed &&
                        PortalChunkOrigin.Equals(other.PortalChunkOrigin);
             }
@@ -65,6 +68,7 @@ namespace FlatWorld.WorldModel
                 {
                     int hash = (int)PairingFingerprint ^
                                (int)(PairingFingerprint >> 32);
+                    hash = hash * 397 ^ SourceGeneratorId.GetHashCode();
                     hash = hash * 397 ^ PortalSeed;
                     hash = hash * 397 ^ PortalChunkOrigin.GetHashCode();
                     return hash;
@@ -100,7 +104,7 @@ namespace FlatWorld.WorldModel
             var placements = new List<NaturalItemPlacement>();
             var claimedGuids = new HashSet<int>();
             var portalCells = new HashSet<int>();
-            AddCavePortals(request, terrain, settings, placements, claimedGuids, portalCells,
+            AddWorldPortals(request, terrain, settings, placements, claimedGuids, portalCells,
                 cancellationToken);
             var occupiedCells = new HashSet<int>(portalCells);
             AddConfiguredCaveFlora(request, terrain, settings, placements, claimedGuids,
@@ -151,29 +155,19 @@ namespace FlatWorld.WorldModel
             return placements.Count == 0 ? ChunkEcologyData.Empty : new ChunkEcologyData(placements);
         }
 
-        /// <summary>共享大资源只读取正式入口落点，不额外生成入口周围灌木。</summary>
-        public static ChunkEcologyData GenerateSurfacePortalPlacements(ChunkGenerationRequest request,
-            ChunkTerrainBuffer terrain)
-        {
-            var placements = new List<NaturalItemPlacement>();
-            AddSurfacePortals(request, terrain, request.Profile.Settings, placements,
-                new HashSet<int>(), new HashSet<int>());
-            return new ChunkEcologyData(placements);
-        }
-
-        /// <summary>共享矿体复用正式洞穴出口选择，避免遮住返回地表的配对入口。</summary>
-        public static ChunkEcologyData GenerateCavePortalPlacements(ChunkGenerationRequest request,
+        /// <summary>共享资源复用世界正式门户选择，不按地形模式另分入口实现。</summary>
+        public static ChunkEcologyData GenerateWorldPortalPlacements(ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain, CancellationToken cancellationToken)
         {
             var placements = new List<NaturalItemPlacement>();
-            AddCavePortals(request, terrain, request.Profile.Settings, placements,
+            AddWorldPortals(request, terrain, request.Profile.Settings, placements,
                 new HashSet<int>(), new HashSet<int>(), cancellationToken);
             return new ChunkEcologyData(placements);
         }
 
         /// <summary>把地表生态结果叠加天然矿洞入口，并让入口格优先于生态物品。</summary>
-        public static ChunkEcologyData AppendSurfacePortals(ChunkGenerationRequest request,
-            ChunkTerrainBuffer terrain, ChunkEcologyData ecology)
+        public static ChunkEcologyData AppendWorldPortals(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, ChunkEcologyData ecology, CancellationToken cancellationToken)
         {
             if (terrain == null)
                 throw new ArgumentNullException(nameof(terrain));
@@ -182,11 +176,12 @@ namespace FlatWorld.WorldModel
             var portalPlacements = new List<NaturalItemPlacement>();
             var claimedGuids = new HashSet<int>();
             var portalCells = new HashSet<int>();
-            AddSurfacePortals(request, terrain, settings, portalPlacements, claimedGuids,
-                portalCells);
+            AddWorldPortals(request, terrain, settings, portalPlacements, claimedGuids,
+                portalCells, cancellationToken);
             var shrubPlacements = new List<NaturalItemPlacement>();
-            AddSurfacePortalShrubs(request, terrain, settings, ecology, portalPlacements,
-                shrubPlacements, claimedGuids);
+            if (!UsesPairedPortalExits(request))
+                AddSurfacePortalShrubs(request, terrain, settings, ecology, portalPlacements,
+                    shrubPlacements, claimedGuids);
             if (portalPlacements.Count == 0 && shrubPlacements.Count == 0)
                 return ecology ?? ChunkEcologyData.Empty;
 
@@ -398,6 +393,21 @@ namespace FlatWorld.WorldModel
 
         #region 天然传送门
 
+        private static bool UsesPairedPortalExits(ChunkGenerationRequest request) =>
+            request.Profile.PortalPairing != null ||
+            request.Profile.NumericParameters.TryGetValue("cave.portal.pairedExit", out double enabled) && enabled > 0d;
+
+        private static void AddWorldPortals(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, ChunkGenerationSettingsSnapshot settings,
+            List<NaturalItemPlacement> placements, HashSet<int> claimedGuids,
+            HashSet<int> portalCells, CancellationToken cancellationToken)
+        {
+            if (UsesPairedPortalExits(request))
+                AddCavePortals(request, terrain, settings, placements, claimedGuids, portalCells, cancellationToken);
+            else
+                AddSurfacePortals(request, terrain, settings, placements, claimedGuids, portalCells);
+        }
+
         private static void AddSurfacePortals(ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain, ChunkGenerationSettingsSnapshot settings,
             List<NaturalItemPlacement> placements, HashSet<int> claimedGuids,
@@ -509,9 +519,17 @@ namespace FlatWorld.WorldModel
                 return;
             }
 
-            TerrainCell cell = terrain.GetCell(localX, localY);
-            if ((cell.Flags & TerrainCellFlags.Walkable) == 0)
-                return;
+            // 配对出口的安全区独立于地形模式，地球式地下也能在原入口坐标安全返回。
+            int radius = Math.Max(1, (int)Math.Ceiling(settings.CavePortalSafeRadius));
+            for (int y = Math.Max(0, localY - radius); y <= Math.Min(terrain.Height - 1, localY + radius); y++)
+            for (int x = Math.Max(0, localX - radius); x <= Math.Min(terrain.Width - 1, localX + radius); x++)
+            {
+                TerrainCell ground = terrain.GetCell(x, y);
+                terrain.SetCell(x, y, new TerrainCell(ground.GroundTileId, ground.BackTileId, 0,
+                    ground.BiomeId, settings.DefaultNavigationCost, TerrainCellFlags.Walkable));
+                terrain.SetLiquid(x, y, 0, 0);
+                portalCells.Add(y * terrain.Width + x);
+            }
 
             int guid = CaveLayoutKernel.CreatePlacementGuid(request, selection.Cell.X,
                 selection.Cell.Y, "cave.portal.cave", selection.CandidateIndex);
@@ -539,7 +557,8 @@ namespace FlatWorld.WorldModel
                 : portalChunkOrigin;
             ChunkGenerationRequest surfacePortalRequest = pairing.CreateSurfaceRequest(
                 request, normalizedOrigin);
-            var key = new SurfacePortalSelectionKey(pairing.Fingerprint,
+            DeterministicChunkGenerator sourceGenerator = pairing.SourceTerrainGenerator ?? SurfacePortalTerrainGenerator;
+            var key = new SurfacePortalSelectionKey(pairing.Fingerprint, sourceGenerator.GenerationCacheInstanceId,
                 CaveLayoutKernel.GetPortalSeed(surfacePortalRequest,
                     pairing.SurfaceProfile.Settings), normalizedOrigin);
             if (SurfacePortalSelections.Count >= MaxSurfacePortalSelectionCacheEntries)
@@ -547,7 +566,7 @@ namespace FlatWorld.WorldModel
 
             Lazy<SurfacePortalSelection> lazy = SurfacePortalSelections.GetOrAdd(key,
                 _ => new Lazy<SurfacePortalSelection>(() => ResolvePairedSurfacePortal(
-                        surfacePortalRequest),
+                        surfacePortalRequest, sourceGenerator),
                     LazyThreadSafetyMode.ExecutionAndPublication));
             selection = lazy.Value;
             return selection.HasValue;
@@ -555,7 +574,7 @@ namespace FlatWorld.WorldModel
 
         /// <summary>生成一个小型地表纯数据区块，严格复用地表入口的可放置判断。</summary>
         private static SurfacePortalSelection ResolvePairedSurfacePortal(
-            ChunkGenerationRequest surfacePortalRequest)
+            ChunkGenerationRequest surfacePortalRequest, DeterministicChunkGenerator generator)
         {
             ChunkGenerationProfileSnapshot sourceProfile = surfacePortalRequest.Profile;
             ChunkGenerationSettingsSnapshot sourceSettings = sourceProfile.Settings;
@@ -570,7 +589,7 @@ namespace FlatWorld.WorldModel
             ChunkGenerationRequest surfaceRequest = CreateSurfacePortalRequest(
                 surfacePortalRequest, surfaceProfile,
                 surfacePortalRequest.Address.ChunkOrigin);
-            using ChunkGenerationResult result = SurfacePortalTerrainGenerator.Generate(
+            using ChunkGenerationResult result = generator.Generate(
                 surfaceRequest, CancellationToken.None);
             using ChunkTerrainData surfaceTerrain = result.ConsumeTerrain();
 

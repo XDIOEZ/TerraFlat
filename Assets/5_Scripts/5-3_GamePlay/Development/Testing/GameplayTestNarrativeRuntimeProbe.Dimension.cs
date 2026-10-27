@@ -35,6 +35,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         public DimensionPortalAnchor Anchor;
         private readonly JToken originalNamespace;
         private readonly string originalWorldDimensionState;
+        private readonly bool originalInvincibility;
         private int entranceGuid;
         private bool disposed;
         private readonly List<Mod_GameController> migrationControllers = new();
@@ -57,6 +58,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             OriginalNetworkIdentity = player.GetComponent("NetworkIdentity")?.GetInstanceID() ?? 0;
             originalNamespace = ItemSpecialDataJsonStore.ReadRoot(Data.ItemSpecialData)["flatworld.dimensions"]?.DeepClone();
             originalWorldDimensionState = SaveDataMgr.Instance.SaveData.DimensionStateJson;
+            originalInvincibility = player.GetComponentInChildren<Mod_PlayerAdminController>(true)?.IsAdminInvincibilityEnabled == true;
         }
 
         public void ProtectActorControl(Player actor)
@@ -82,7 +84,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             (controller.IsExternalGameplayControlOwner(this) ||
              controller.HasExternalGameplayControl && controller.ExternalGameplayControlOwnerName == typeof(GameplayTestLuaRunner).FullName);
 
-        private void ReleaseActorControl()
+        public void ReleaseActorControl()
         {
             foreach (Mod_GameController controller in migrationControllers)
                 if (controller != null && controller.IsExternalGameplayControlOwner(this))
@@ -110,6 +112,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
 
         public IEnumerator Restore()
         {
+            if (disposed) yield break;
             DimensionManager manager = DimensionManager.ExistingInstance;
             if (manager == null) throw new InvalidOperationException("恢复维度时正式管理器已丢失。");
             double deadline = Time.realtimeSinceStartupAsDouble + 150d;
@@ -162,6 +165,8 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             else root["flatworld.dimensions"] = originalNamespace.DeepClone();
             Data.ItemSpecialData = root.ToString(Formatting.None);
             SaveDataMgr.Instance.SaveData.DimensionStateJson = originalWorldDimensionState;
+            ItemMgr.Instance.User_Player?.GetComponentInChildren<Mod_PlayerAdminController>(true)
+                ?.TrySetAdminInvincibilityEnabled(originalInvincibility);
         }
     }
     #endregion
@@ -311,6 +316,12 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             Player cavePlayer = ItemMgr.Instance.User_Player;
             result["cave"] = DimensionSample(cavePlayer, scope.Cave, scope);
             result["afterEnter"] = DimensionRequestProtectionSample(cavePlayer);
+            if (args.Value<bool?>("generationPresetAudit") == true)
+            {
+                result["presetAudit"] = CaptureLiveGenerationPresetOwnership(cavePlayer, scope);
+                // 完整就绪后留出一次自动截图窗口，不用于掩盖迁移或地形等待。
+                yield return new WaitForSecondsRealtime(11f);
+            }
             result["sameDataInCave"] = ReferenceEquals(cavePlayer.Data, scope.Data);
             result["ecsResidentsCave"] = GameplayTestRuntimeProbe.Capture(cavePlayer, "dimension", "ecs_residents_sample", new JObject());
             Item exit = ItemMgr.Instance.GetItemByGuid(scope.Anchor.CaveExitGuid);
@@ -349,6 +360,153 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(restored.transform.position), scope.Position).sqrMagnitude < .0001f;
         result["migrationReleased"] = !GameplayTestSpaceScenario.IsMigrationExpected;
         completed(result);
+    }
+    #endregion
+
+    #region 火星地下引用共享地表预设的真实往返
+    private static IEnumerator CaptureMarsGenerationPresetRoundtrip(Player player, JObject args,
+        Action<JObject> completed)
+    {
+        var home = new DimensionScope(player);
+        GameplayTestRuntimeProbe.RegisterCleanup(home);
+        GameplayTestRuntimeProbe.RegisterAsyncCleanup(home.Restore);
+        if (!GameplayTestGm.TryExecute(player, "enable_invincibility", null, out string message))
+            throw new InvalidOperationException("火星环境现场无法开启正式管理员保护：" + message);
+        var catalog = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault();
+        var marsAddress = WorldAddress.FromWorldKey(catalog.GetBodyDefinition("mars").PlanetId);
+        var result = new JObject { ["homeWorld"] = home.Surface.WorldKey, ["marsWorld"] = marsAddress.WorldKey };
+        Exception failure = null;
+        IEnumerator Journey()
+        {
+            DimensionManager manager = DimensionManager.ExistingInstance;
+            using (GameplayTestSpaceScenario.BeginExpectedMigration(player))
+            {
+                if (!manager.TryBeginPlanetLanding(player, marsAddress, new Vector2(.5f, .5f)))
+                    throw new InvalidOperationException("火星正式落地事务拒绝测试入场。");
+                yield return WaitForDimension(marsAddress, home.Profile, home);
+            }
+            Player marsPlayer = ItemMgr.Instance.User_Player;
+            PlanetData mars = SaveDataMgr.Instance.GetCurrentPlanetData();
+            result["marsBodyBefore"] = mars.BodyId;
+            result["marsPresetBefore"] = mars.GenerationPresetId;
+            manager.EnsureWorldData(marsAddress.WithDimension(WorldAddress.CaveDimensionId));
+            PlanetData underground = SaveDataMgr.Instance.SaveData.PlanetData_Dict[
+                marsAddress.WithDimension(WorldAddress.CaveDimensionId).WorldKey];
+            if (underground.Ecology.HasGenerationConfiguration)
+                throw new InvalidOperationException("火星地下预设现场要求尚未生成的本轮独立世界。");
+            underground.GenerationPresetId = "core:surface.earth";
+            underground.GenerationNumericOverrides["testing.presetNumber"] = .375d;
+            underground.GenerationTextOverrides["testing.presetLabel"] = "火星地下地球地形";
+            home.ReleaseActorControl();
+            yield return CaptureDimension(marsPlayer, new JObject { ["generationPresetAudit"] = true },
+                sample => result["journey"] = sample);
+            result["marsBodyAfter"] = mars.BodyId;
+            result["marsPresetAfter"] = mars.GenerationPresetId;
+            result["undergroundRetained"] = ReferenceEquals(underground,
+                SaveDataMgr.Instance.SaveData.PlanetData_Dict[underground.Name]);
+            PlanetData loaded = MemoryPack.MemoryPackSerializer.Deserialize<PlanetData>(
+                MemoryPack.MemoryPackSerializer.Serialize(underground));
+            result["savedWorld"] = loaded.Name;
+            result["savedBody"] = loaded.BodyId;
+            result["savedPreset"] = loaded.GenerationPresetId;
+            result["savedNumber"] = loaded.GenerationNumericOverrides["testing.presetNumber"];
+            result["savedText"] = loaded.GenerationTextOverrides["testing.presetLabel"];
+            result["savedFrozenProfile"] = loaded.Ecology.Generation.ProfileId;
+            result["savedFrozenConfiguration"] = loaded.Ecology.HasGenerationConfiguration;
+            result["savedMapCount"] = loaded.MapData_Dict.Count;
+            result["undergroundMapCount"] = underground.MapData_Dict.Count;
+        }
+        yield return GameManager.RunWorldTransitionSteps(Journey(), error => failure = error);
+        Exception recoveryFailure = null;
+        yield return GameManager.RunWorldTransitionSteps(home.Restore(), error => recoveryFailure = error);
+        if (recoveryFailure != null)
+            throw failure == null ? recoveryFailure : new AggregateException("火星现场及原世界恢复都失败。", failure, recoveryFailure);
+        if (failure != null) throw failure;
+        result["restoredHome"] = DimensionManager.ExistingInstance.ActiveAddress == home.Surface;
+        completed(result);
+    }
+
+    private static JObject CaptureLiveGenerationPresetOwnership(Player player, DimensionScope scope)
+    {
+        PlanetData world = SaveDataMgr.Instance.GetCurrentPlanetData();
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        FlatWorld.WorldModel.ChunkGenerationProfileSnapshot profile = chunks.ActiveGenerationProfile;
+        FlatWorld.WorldModel.ChunkGenerationProfileSnapshot earth = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault()
+            .CreateGenerationProfile("core:surface.earth");
+        if (!chunks.TryGetRuntimeTerrainTile(player.transform.position, out RuntimeTerrainTileSample sample))
+            throw new InvalidOperationException("火星地下完整窗口没有真实脚下区块。");
+        DayTimeSystem.Instance.WorldTimeDict.TryGetValue(scope.Cave.WorldKey, out TimeData clock);
+        DimensionManager manager = DimensionManager.ExistingInstance;
+        return new JObject
+        {
+            ["world"] = world.Name, ["bodyId"] = world.BodyId,
+            ["presetId"] = world.GenerationPresetId, ["profileId"] = profile.ProfileId,
+            ["atmosphereProfileId"] = world.AtmosphereProfileId,
+            ["pressureKPa"] = AtmosphereService.PressureKPa(world.Atmosphere),
+            ["sourcePressureKPa"] = AtmosphereService.PressureKPa(scope.SurfaceData.Atmosphere),
+            ["profileTemperature"] = profile.NumericParameters["space.surfaceTemperatureCelsius"],
+            ["earthTemperature"] = earth.NumericParameters["space.surfaceTemperatureCelsius"],
+            ["groundTileId"] = profile.Settings.GroundTileId, ["earthGroundTileId"] = earth.Settings.GroundTileId,
+            ["overrideNumber"] = profile.NumericParameters["testing.presetNumber"],
+            ["overrideText"] = profile.TextParameters["testing.presetLabel"],
+            ["sourceHasOverride"] = scope.SurfaceData.GenerationNumericOverrides.ContainsKey("testing.presetNumber") ||
+                scope.SurfaceData.GenerationTextOverrides.ContainsKey("testing.presetLabel"),
+            ["seed"] = manager.GetGenerationSeed(SaveDataMgr.Instance.SaveData.Seed, scope.Cave),
+            ["sourceSeed"] = manager.GetGenerationSeed(SaveDataMgr.Instance.SaveData.Seed, scope.Surface),
+            ["chunkDimension"] = sample.Address.DimensionId,
+            ["terrainMode"] = sample.Terrain.GenerationMode.ToString(),
+            ["caveLayerPresent"] = sample.Terrain.TryGetEnvironmentValue("caveDirtGround", sample.LocalCell.x,
+                sample.LocalCell.y, out _),
+            ["terrainHash"] = sample.Terrain.ComputeStableHash().ToString(),
+            ["independentMaps"] = !ReferenceEquals(world.MapData_Dict, scope.SurfaceData.MapData_Dict),
+            ["independentEcology"] = !ReferenceEquals(world.Ecology, scope.SurfaceData.Ecology),
+            ["independentAtmosphere"] = !ReferenceEquals(world.Atmosphere, scope.SurfaceData.Atmosphere),
+            ["timeReference"] = clock?.ReferenceScene,
+            ["lightingFromPortals"] = manager.ActiveDefinition.FadeLightingFromPortals,
+            ["fixedLighting"] = manager.ActiveDefinition.UseFixedLighting,
+            ["lightingCap"] = manager.ActiveDefinition.FixedLighting,
+            ["suppressWeather"] = manager.ActiveDefinition.SuppressWeather,
+            ["frozenOverrides"] = CaptureFrozenWorldPresetParameterOverrides(earth)
+        };
+    }
+
+    private static JObject CaptureFrozenWorldPresetParameterOverrides(
+        FlatWorld.WorldModel.ChunkGenerationProfileSnapshot sharedEarth)
+    {
+        var data = new PlanetData { Name = "standalone:preset-overrides__dimension__cave",
+            GenerationPresetId = "core:surface.earth", ChunkSize = new Vector2Int(4, 4) };
+        data.GenerationNumericOverrides["river.enabled"] = 0d;
+        data.GenerationNumericOverrides["lake.large.enabled"] = 0d;
+        data.GenerationNumericOverrides["lake.lava.enabled"] = 0d;
+        data.GenerationNumericOverrides["structure.enabled"] = 0d;
+        data.GenerationNumericOverrides["cave.portal.enabled"] = 0d;
+        data.GenerationNumericOverrides["climate.distance.oceanRadiusChunks"] = 1d;
+        data.GenerationNumericOverrides["climate.distance.freshwaterRadiusChunks"] = 1d;
+        data.GenerationNumericOverrides["airHumidity.radiusTiles"] = 1d;
+        data.GenerationNumericOverrides["terrain.seaLevel"] = .31d;
+        data.GenerationTextOverrides["terrain.mode"] = "surface";
+        var first = ChunkMgr.CreateFrozenWorldGenerationProfile(data);
+        bool frozenAfterFirst = data.Ecology.HasGenerationConfiguration;
+        data.GenerationNumericOverrides["terrain.seaLevel"] = .43d;
+        data.GenerationTextOverrides["terrain.mode"] = "cave";
+        var changed = ChunkMgr.CreateFrozenWorldGenerationProfile(data);
+        var generator = new FlatWorld.WorldModel.DeterministicChunkGenerator(GameRes.RequireWorldLiquidTypes());
+        try
+        {
+            return new JObject
+            {
+                ["frozenAfterFirst"] = frozenAfterFirst,
+                ["firstPreset"] = first.ProfileId, ["changedPreset"] = changed.ProfileId,
+                ["firstSeaLevel"] = first.NumericParameters["terrain.seaLevel"],
+                ["changedSeaLevel"] = changed.NumericParameters["terrain.seaLevel"],
+                ["firstMode"] = first.Settings.Mode.ToString(), ["changedMode"] = changed.Settings.Mode.ToString(),
+                ["firstTerrain"] = GameplayTestSystemProbe.CaptureGenerationPresetTerrain(generator, first, "cave-after-freeze"),
+                ["changedTerrain"] = GameplayTestSystemProbe.CaptureGenerationPresetTerrain(generator, changed, "garden-after-freeze"),
+                ["sharedPresetUnchanged"] = sharedEarth.GenerationFingerprint == FlatWorld.Spaceflight.SpaceCatalog.LoadDefault()
+                    .CreateGenerationProfile("core:surface.earth").GenerationFingerprint
+            };
+        }
+        finally { generator.BeginNewWorldHydrologyEpoch(1); }
     }
     #endregion
 }

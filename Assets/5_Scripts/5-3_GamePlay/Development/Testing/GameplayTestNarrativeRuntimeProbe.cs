@@ -24,6 +24,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         GameplayTestRuntimeProbe.Register("time", "live_clock", CaptureClock);
         GameplayTestRuntimeProbe.Register("game_events", "signal_lifecycle", CaptureEvent);
         GameplayTestRuntimeProbe.RegisterAsync("dimension", "cave_roundtrip", CaptureDimension);
+        GameplayTestRuntimeProbe.RegisterAsync("dimension", "generation_preset_roundtrip", CaptureMarsGenerationPresetRoundtrip);
     }
     #endregion
 

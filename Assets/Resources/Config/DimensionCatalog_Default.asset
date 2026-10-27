@@ -21,8 +21,12 @@ MonoBehaviour:
     SeedSalt: 0
     DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
     PortalTargetDimensionId: cave
+    PortalItemId: MineEntrance
+    PairPortalsWithTargetWorld: 0
     UseFixedLighting: 0
     FixedLighting: 1
+    FadeLightingFromPortals: 0
+    SuppressTerrainWallShadows: 0
     SuppressWeather: 0
     EnableMonsterSpawning: 1
     LoadingTheme:
@@ -40,8 +44,12 @@ MonoBehaviour:
     SeedSalt: 7919
     DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
     PortalTargetDimensionId: surface
+    PortalItemId: CaveExit
+    PairPortalsWithTargetWorld: 1
     UseFixedLighting: 1
     FixedLighting: 0.2
+    FadeLightingFromPortals: 1
+    SuppressTerrainWallShadows: 1
     SuppressWeather: 1
     EnableMonsterSpawning: 0
     LoadingTheme:

@@ -94,7 +94,7 @@ public static class GameplayTestUniverseProbe
         ["surfaceRadiusTiles"] = profile.SurfaceRadiusTiles,
         ["pressureKPa"] = profile.PressureKPa, ["composition"] = Json(profile.AtmosphereComposition),
         ["numbers"] = Json(profile.NumericParameters), ["texts"] = Json(profile.TextParameters),
-        ["tiles"] = Json(profile.TileParameters), ["caveNumbers"] = Json(profile.CaveNumericParameters),
+        ["tiles"] = Json(profile.TileParameters),
         ["ecologyRules"] = Json(profile.EcologyRuleIds), ["caveResourceRules"] = Json(profile.CaveResourceRuleIds),
         ["ecologyMultiplier"] = profile.EcologyMultiplier
     };
@@ -107,7 +107,7 @@ public static class GameplayTestUniverseProbe
         return new JObject
         {
             ["id"] = planet.BodyId, ["name"] = planet.Name, ["displayName"] = planet.name,
-            ["prefabId"] = planet.PrefabName, ["surfaceProfileId"] = planet.SurfaceGenerationProfileId,
+            ["prefabId"] = planet.PrefabName, ["surfaceProfileId"] = planet.GenerationPresetId,
             ["radius"] = planet.PhysicalRadiusMeters, ["gravity"] = planet.SurfaceGravityMetersPerSecondSquared,
             ["mapRadius"] = planet.Radius, ["topology"] = planet.TopologyMode.ToString(),
             ["rotationDegreesPerSecond"] = planet.SelfRotateSpeed, ["globalTemperature"] = planet.GlobalTemperature,
@@ -495,7 +495,7 @@ public static class GameplayTestUniverseProbe
                 planet.TopologyMode = WorldTopologyMode.Wrapped;
                 ChunkGenerationProfileSnapshot profile;
                 using (GameplayTestShowroom.SuppressProfileOverrides())
-                    profile = ChunkMgr.CreateFrozenSurfaceProfile(planet);
+                    profile = ChunkMgr.CreateFrozenWorldGenerationProfile(planet);
                 if (!WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds))
                     throw new InvalidOperationException("测试星球的环绕边界无效：" + body.BodyId);
                 var topology = new ChunkGenerationTopologySnapshot(new Int2(bounds.Min.x, bounds.Min.y), new Int2(bounds.Span.x, bounds.Span.y));

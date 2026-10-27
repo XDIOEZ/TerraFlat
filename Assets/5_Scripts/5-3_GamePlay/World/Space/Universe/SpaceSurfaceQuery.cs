@@ -158,7 +158,7 @@ namespace FlatWorld.Spaceflight
         private const int MaximumCachedChunksPerPlanet = 32;
         private static GameSaveData owner;
         private static readonly Dictionary<string, SurfaceCache> caches = new(StringComparer.Ordinal);
-        private static readonly Dictionary<PlanetData, ChunkGenerationProfileSnapshot> frozenProfiles = new();
+        private static readonly Dictionary<PlanetData, (int Key, ChunkGenerationProfileSnapshot Profile)> frozenProfiles = new();
         private static GameRes resourceOwner;
         private static DimensionCatalogSO generationCatalog;
         private static readonly Dictionary<(ChunkGenerationProfileSnapshot Profile, int Seed, int X, int Y,
@@ -434,13 +434,18 @@ namespace FlatWorld.Spaceflight
 
         private static ChunkGenerationProfileSnapshot GetFrozenProfile(PlanetData planet)
         {
-            // 冻结生成配置只随世界和资源会话变化，不在每次地表采样时重新构造。
-            if (!frozenProfiles.TryGetValue(planet, out ChunkGenerationProfileSnapshot profile))
+            // 只比较世界配置，未修改时复用快照，选择预设或实例覆盖后立即失效。
+            int key = HashCode.Combine(planet.GenerationPresetId, planet.ChunkSize, planet.SpatialDistanceScale);
+            if (planet.GenerationNumericOverrides != null)
+                foreach (var pair in planet.GenerationNumericOverrides) key = HashCode.Combine(key, pair.Key, pair.Value);
+            if (planet.GenerationTextOverrides != null)
+                foreach (var pair in planet.GenerationTextOverrides) key = HashCode.Combine(key, pair.Key, pair.Value);
+            if (!frozenProfiles.TryGetValue(planet, out var cached) || cached.Key != key)
             {
-                profile = ChunkMgr.CreateFrozenSurfaceProfile(planet);
-                frozenProfiles.Add(planet, profile);
+                cached = (key, ChunkMgr.CreateFrozenWorldGenerationProfile(planet));
+                frozenProfiles[planet] = cached;
             }
-            return profile;
+            return cached.Profile;
         }
 
         // 只采样冻结地理规则，不为放置预览生成区块或加载场景。

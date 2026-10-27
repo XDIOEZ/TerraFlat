@@ -51,10 +51,18 @@ public sealed class DimensionDefinition
     public int SeedSalt;
     public Vector3 DefaultSpawnPosition = new Vector3(0.5f, 0.5f, 0f);
     public string PortalTargetDimensionId;
+    [Tooltip("天然入口使用的物品，与生成地形模式无关。")]
+    public string PortalItemId = "MineEntrance";
+    [Tooltip("天然出口复算目标世界的入口候选格。")]
+    public bool PairPortalsWithTargetWorld;
     [Tooltip("启用维度光照上限；实际亮度仍跟随引用世界的昼夜变化。")]
     public bool UseFixedLighting;
     [Tooltip("维度允许的最高全局光照强度，不作为最低亮度或恒定亮度。")]
     [Range(0f, 1f)] public float FixedLighting = 1f;
+    [Tooltip("环境光按距开放出口的距离衰减，不由生成预设决定。")]
+    public bool FadeLightingFromPortals;
+    [Tooltip("关闭静态地形墙体的投影遮罩，作为维度环境策略。")]
+    public bool SuppressTerrainWallShadows;
     public bool SuppressWeather;
     [Tooltip("太阳长投影：自动仅允许非固定光照的地表，特殊维度可显式覆盖。")]
     public DimensionSunShadowMode SunShadows;
@@ -93,8 +101,12 @@ public sealed class DimensionDefinition
                 "Config/WorldModel/ChunkGenerationProfile_Cave"),
             SeedSalt = 7919,
             PortalTargetDimensionId = WorldAddress.SurfaceDimensionId,
+            PortalItemId = "CaveExit",
+            PairPortalsWithTargetWorld = true,
             UseFixedLighting = true,
             FixedLighting = 0.2f,
+            FadeLightingFromPortals = true,
+            SuppressTerrainWallShadows = true,
             SuppressWeather = true,
             EnableMonsterSpawning = false,
             LoadingTheme = new DimensionLoadingTheme

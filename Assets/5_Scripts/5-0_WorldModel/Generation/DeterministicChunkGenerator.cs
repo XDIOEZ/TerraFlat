@@ -15,9 +15,14 @@ namespace FlatWorld.WorldModel
     public sealed partial class DeterministicChunkGenerator : IChunkPureGenerator,
         IChunkEcologyNeighborhoodTagResolver
     {
+        #region 生成配置与缓存身份
+
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
         public const int CurrentGenerationSignature = 81;
 
+        private static long nextGenerationCacheInstanceId;
+        // 缓存用实例编号区分冻结扩展，不把生成器强引用留在共享缓存里。
+        internal long GenerationCacheInstanceId { get; } = Interlocked.Increment(ref nextGenerationCacheInstanceId);
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
         private readonly RegionalWeatherSettings weatherSettings;
@@ -30,6 +35,8 @@ namespace FlatWorld.WorldModel
             this.terrainDecorator = terrainDecorator;
             this.weatherSettings = (weatherSettings ?? new RegionalWeatherSettings()).Snapshot();
         }
+
+        #endregion
 
         #region 水文区域共享缓存与调度
 
@@ -67,9 +74,7 @@ namespace FlatWorld.WorldModel
         public object GetPendingGenerationGroupKey(ChunkGenerationRequest request)
         {
             ChunkGenerationSettingsSnapshot settings = request.Profile.Settings;
-            if (!settings.RiverEnabled ||
-                settings.Mode == ChunkGenerationMode.Cave ||
-                request.Address.DimensionId.IndexOf("cave", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (!settings.RiverEnabled || settings.Mode == ChunkGenerationMode.Cave)
                 return null;
 
             HeightDrivenRegionDescriptor region = ResolveHeightDrivenRegion(request, settings);
@@ -125,8 +130,8 @@ namespace FlatWorld.WorldModel
                                 request, terrain, profile.EcologyGlobalMultiplier,
                                 profile.EcologyRules, cancellationToken, this);
                         // 天然矿洞入口优先占用候选格，避免与树木、灌木等生态物重叠。
-                        ecology = CaveGenerationFeatureGenerator.AppendSurfacePortals(
-                            request, terrain, surfaceEcology);
+                        ecology = CaveGenerationFeatureGenerator.AppendWorldPortals(
+                            request, terrain, surfaceEcology, cancellationToken);
                     }
                 }
                 using (timing?.MeasureStage("ecology.shared_resources") ?? default)
@@ -187,6 +192,7 @@ namespace FlatWorld.WorldModel
             ChunkGenerationTiming timing)
         {
             ChunkGenerationProfileSnapshot profile = request.Profile;
+            terrain.GenerationMode = profile.Settings.Mode;
             ChunkGenerationSettingsSnapshot settings = profile.Settings;
             GeneratedHydrologyMap riverMap = cave ? null :
                 BuildSurfaceHydrologyMap(request, settings, cancellationToken, timing);
@@ -217,10 +223,9 @@ namespace FlatWorld.WorldModel
             terrainDecorator?.Invoke(request, terrain, cancellationToken);
         }
 
-        /// <summary>洞穴由 Profile 模式或维度标识决定，与正式区块生成保持同一判断。</summary>
+        /// <summary>生成算法只由最终预设模式决定。</summary>
         private static bool IsCaveGeneration(ChunkGenerationRequest request) =>
-            request.Profile.Settings.Mode == ChunkGenerationMode.Cave ||
-            request.Address.DimensionId.IndexOf("cave", StringComparison.OrdinalIgnoreCase) >= 0;
+            request.Profile.Settings.Mode == ChunkGenerationMode.Cave;
 
         #endregion
 

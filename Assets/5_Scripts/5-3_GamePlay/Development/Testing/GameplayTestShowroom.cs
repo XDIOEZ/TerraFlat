@@ -62,7 +62,6 @@ public sealed class GameplayTestShowroom : IDisposable
     private readonly List<ResourceExhibit> resources = new();
     private readonly CancellationTokenSource cancellation = new();
     private string worldName;
-    private string bodyId;
     private bool configured;
     private bool building;
     private bool disposed;
@@ -93,7 +92,6 @@ public sealed class GameplayTestShowroom : IDisposable
         if (planet == null || string.IsNullOrWhiteSpace(planet.Name))
             throw new ArgumentException("陈列厅必须指定有效的测试世界。", nameof(planet));
         worldName = planet.Name;
-        bodyId = string.IsNullOrWhiteSpace(planet.BodyId) ? "earth" : planet.BodyId;
         if (GameRes.ExistingInstance != null)
             slotSize = ResolveSlotSize(CollectDefinitions(GameRes.ExistingInstance));
         WorldGenerationRuntimeHooks.BeforeWorldModelGeneration += ConfigureProfile;
@@ -111,9 +109,7 @@ public sealed class GameplayTestShowroom : IDisposable
         // 已有活动星球时只按它判定，不能把出生世界的平地/无生态覆盖套到其它星球。
         if (!activeTestWorld && (active != null || !string.Equals(GameManager.Instance?.ReadyPlanetData?.Name,
                 worldName, StringComparison.Ordinal))) return profile;
-        // 先合入真实星体参数，再写测试覆盖，避免后续冻结把水文开关重新打开。
-        profile = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault().ApplySurfaceProfile(
-            activeTestWorld ? active.BodyId : bodyId, profile);
+        // 正式入口已经解析世界预设，测试只覆盖本轮陈列条件。
         var numbers = new Dictionary<string, double>(StringComparer.Ordinal);
         foreach (var pair in profile.NumericParameters) numbers.Add(pair.Key, pair.Value);
         numbers[ProfileMarker] = 1d;

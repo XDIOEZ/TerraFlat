@@ -11,7 +11,7 @@ namespace FlatWorld.Spaceflight
         public static void Apply(ChunkGenerationRequest request, ChunkTerrainBuffer terrain, CancellationToken cancellation)
         {
             ChunkGenerationProfileSnapshot profile = request.Profile;
-            if (profile.Settings.Mode != ChunkGenerationMode.Surface || !profile.TextParameters.ContainsKey("space.bodyId")) return;
+            if (profile.Settings.Mode != ChunkGenerationMode.Surface) return;
             bool uniform = Number(profile, "space.uniformSurface", 0d) > 0d;
             bool climate = Number(profile, "space.climateOverride", 0d) > 0d || uniform;
             bool craters = Number(profile, "space.crater.enabled", 0d) > 0d;
@@ -85,7 +85,7 @@ namespace FlatWorld.Spaceflight
         {
             celsius = 0f; normalized = 0f;
             ChunkGenerationProfileSnapshot profile = request.Profile;
-            if (profile.Settings.Mode != ChunkGenerationMode.Surface || !profile.TextParameters.ContainsKey("space.bodyId") ||
+            if (profile.Settings.Mode != ChunkGenerationMode.Surface ||
                 Number(profile, "space.climateOverride", 0d) <= 0d && Number(profile, "space.uniformSurface", 0d) <= 0d) return false;
             SampleTemperature(request, worldX, worldY, Number(profile, "space.surfaceTemperatureCelsius", 26d),
                 Number(profile, "space.temperatureVariationCelsius", 0d), out celsius, out normalized);

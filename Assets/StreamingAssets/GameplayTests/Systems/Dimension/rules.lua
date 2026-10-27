@@ -27,6 +27,42 @@ test.system("dimension", "world_instances", {}, function(data)
         "矿洞修改污染了地表或另一个世界")
 end, "共用世界实例入口、生成环境继承、独立状态与无星球世界身份")
 
+test.system("dimension", "generation_presets", {}, function(data)
+    assert(data.defaultUndergroundPreset == "cave.default", "默认地下世界没有选普通矿洞预设")
+    assert(data.worldKey == "火星__dimension__cave" and data.bodyId == "mars" and
+        data.presetId == "core:surface.earth" and data.atmosphereProfileId == "core:surface.mars",
+        "选择地球地形改变了火星地下身份、归属或大气来源")
+    assert(data.independentOverrides and data.rootPreset == "core:surface.mars" and
+        data.rootNumber == 7 and data.rootText == "root" and data.rootMapCount == 0,
+        "地下世界继承了根预设覆盖、共享了覆盖字典或污染了根地图")
+    assert(data.repeatSameInstance and data.loadedWorldKey == data.worldKey and
+        data.loadedBodyId == "mars" and data.loadedPreset == "core:surface.earth" and
+        data.loadedNumber == .31 and data.loadedText == "地下地球地形" and
+        data.loadedMapCount == 1 and data.loadedOverridesIndependent,
+        "正式 MemoryPack 往返没有保留独立世界、共享预设引用或本世界参数覆盖")
+    assert((data.standaloneBodyId == nil or data.standaloneBodyId == "") and data.standalonePreset == "cave.default",
+        "无星球归属的世界无法选择生成预设")
+    assert(data.genericDefaultPreset == "surface.default", "未指定预设的普通世界仍被维度名称强制选成矿洞")
+    local portals = data.portalExtensions
+    assert(portals.samePairingFingerprint and portals.blockedSource.portalCount == 0 and portals.openSource.portalCount == 1,
+        "源世界天然入口没有使用正式地形扩展后的可放置结果")
+    assert(portals.blockedDestination.portalCount == 0 and portals.openDestination.portalCount == 1,
+        "配对出口没有复用正式地形扩展，或缓存串用了另一生成器的入口选择")
+    assert(data.surfaceNamedCave.terrainMode == "Surface" and data.surfaceNamedSurface.terrainMode == "Surface" and
+        not data.surfaceNamedCave.caveLayer and not data.surfaceNamedSurface.caveLayer and
+        data.surfaceNamedCave.hash == data.surfaceNamedSurface.hash,
+        "维度名含 cave 时强制切换洞穴算法或改变同种地形")
+    assert(data.caveNamedGarden.terrainMode == "Cave" and data.caveNamedGarden.caveLayer and
+        data.caveNamedGarden.width == 4 and data.caveNamedGarden.height == 4,
+        "名称不含 cave 的世界没有按最终预设生成矿洞")
+    assert(data.surfaceRiverGroupPresent and data.caveRiverGroupAbsent,
+        "水文生成调度仍按维度名称而不是最终生成模式选择")
+    for _, terrain in ipairs({data.surfaceNamedCave, data.surfaceNamedSurface, data.caveNamedGarden}) do
+        assert(terrain.heightLevel == terrain.heightLevelOtherName,
+            "同一块真实地形的高度表现仍由外部维度名称决定")
+    end
+end, "世界归属、共享生成预设、参数覆盖、独立存档与任意名称的实际地形")
+
 test.system("dimension", "destroyed_portal_callback", {}, function(data)
     assert(data.aliveBeforeDestroy and data.unityNullAfterDestroy and data.managedReferenceRemains,
         "测试未模拟到Unity对象已销毁但托管引用仍存在的场景")

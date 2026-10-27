@@ -603,7 +603,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Dimension/README.md",
       "integrationCaseIds": [
-        "dimension_cave_roundtrip"
+        "dimension_cave_roundtrip",
+        "dimension_generation_presets"
       ],
       "rulesCoverage": "partial"
     },

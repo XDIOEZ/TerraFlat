@@ -1,8 +1,9 @@
 public partial class GameSaveData
 {
     #region 世界实例数据
-    // 世界只继承根世界的生成与环境配置，区块和运行进度从空状态开始。
-    public PlanetData GetOrCreateWorldInstanceData(WorldAddress address, PlanetData initialRootData = null)
+    // 世界只继承根世界的几何与环境，生成默认值由创建方明确传入。
+    public PlanetData GetOrCreateWorldInstanceData(WorldAddress address, PlanetData initialRootData = null,
+        string generationPresetId = null)
     {
         string worldKey = address.WorldKey;
         if (PlanetData_Dict.TryGetValue(worldKey, out PlanetData existing) && existing != null) return existing;
@@ -16,11 +17,12 @@ public partial class GameSaveData
             RainTemperatureOffset = root.RainTemperatureOffset, CloudyTemperatureOffset = root.CloudyTemperatureOffset,
             StormTemperatureOffset = root.StormTemperatureOffset, BodyId = root.BodyId, name = root.name,
             PrefabName = root.PrefabName, SelfRotateSpeed = root.SelfRotateSpeed,
-            SurfaceGenerationProfileId = root.SurfaceGenerationProfileId, PhysicalRadiusMeters = root.PhysicalRadiusMeters,
+            PhysicalRadiusMeters = root.PhysicalRadiusMeters,
             SurfaceGravityMetersPerSecondSquared = root.SurfaceGravityMetersPerSecondSquared,
             AtmosphereProfileId = root.AtmosphereProfileId, Atmosphere = root.Atmosphere?.Clone()
         };
         world.Name = worldKey;
+        world.GenerationPresetId = generationPresetId ?? "surface.default";
         return PlanetData_Dict[worldKey] = world;
     }
     #endregion

@@ -37,7 +37,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         owner = GetComponent<ChunkTilemapRenderer>();
         if (chunk.Terrain == null || owner == null || material == null)
             throw new InvalidOperationException("地表高低阴影缺少权威地形、BRG Owner 或共享材质。");
-        useGeneratedHeight = UsesGeneratedHeight(chunk.Address.DimensionId);
+        useGeneratedHeight = chunk.Terrain.GenerationMode == ChunkGenerationMode.Surface;
         dirty.Reset(chunk.Terrain.Width * chunk.Terrain.Height);
         chunk.Terrain.Changed += HandleChanged;
         chunk.Terrain.LiquidBatchChanged += HandleLiquidChanged;
@@ -89,7 +89,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
     /// <summary>所有消费者可读取同一份有效表面层级，生成高度仍保持原值。</summary>
     public static bool TryGetSurfaceHeight(ChunkTerrainData terrain, int x, int y, string dimensionId,
         out TerrainSurfaceHeight surface) =>
-        ReadSurface(terrain, x, y, UsesGeneratedHeight(dimensionId), out surface);
+        ReadSurface(terrain, x, y, terrain?.GenerationMode == ChunkGenerationMode.Surface, out surface);
 
     private static bool ReadSurface(ChunkTerrainData terrain, int x, int y, bool useGeneratedHeight,
         out TerrainSurfaceHeight surface)
@@ -111,17 +111,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         surface = default;
         return world != null && world.TryGetChunkTerrain(address, out ChunkTerrainData terrain) &&
             TryResolveSurface(world, address, terrain, local.X, local.Y,
-                UsesGeneratedHeight(address.DimensionId), out surface);
-    }
-
-    private static bool UsesGeneratedHeight(string dimensionId)
-    {
-        // 高度查询只借用已存在的维度服务，不能为读取数据创建游戏管理器。
-        DimensionManager dimensions = DimensionManager.ExistingInstance;
-        if (dimensions != null &&
-            dimensions.TryGetDefinition(dimensionId, out DimensionDefinition definition))
-            return (definition.GenerationProfile?.GenerationMode ?? ChunkGenerationMode.Surface) == ChunkGenerationMode.Surface;
-        return string.Equals(dimensionId, global::WorldAddress.SurfaceDimensionId, StringComparison.OrdinalIgnoreCase);
+                terrain.GenerationMode == ChunkGenerationMode.Surface, out surface);
     }
 
     private void FlushDirty()

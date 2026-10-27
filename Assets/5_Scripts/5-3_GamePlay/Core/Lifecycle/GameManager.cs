@@ -1401,7 +1401,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         failureReason = string.Empty;
 
         if (SaveDataMgr.Instance?.TryGetActivePlanetData(out PlanetData worldData) != true ||
-            ChunkMgr.Instance == null || DimensionManager.Instance?.ActiveDefinition?.GenerationProfile == null)
+            ChunkMgr.Instance == null || DimensionManager.Instance == null)
         {
             failureReason = "当前世界的生成数据尚未就绪。";
             return false;

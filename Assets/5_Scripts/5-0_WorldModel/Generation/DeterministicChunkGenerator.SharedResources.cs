@@ -76,9 +76,8 @@ namespace FlatWorld.WorldModel
                     if (!portals.TryGetValue(origin, out var entrances))
                     {
                         // 入口优先：复用同一正式选择器，不让大矿山覆盖入口及其安全范围。
-                        entrances = cave
-                            ? CaveGenerationFeatureGenerator.GenerateCavePortalPlacements(RequestAt(origin), data, cancellationToken)
-                            : CaveGenerationFeatureGenerator.GenerateSurfacePortalPlacements(RequestAt(origin), data);
+                        entrances = CaveGenerationFeatureGenerator.GenerateWorldPortalPlacements(
+                            RequestAt(origin), data, cancellationToken);
                         portals.Add(origin, entrances);
                     }
                     foreach (var entrance in entrances.Placements)

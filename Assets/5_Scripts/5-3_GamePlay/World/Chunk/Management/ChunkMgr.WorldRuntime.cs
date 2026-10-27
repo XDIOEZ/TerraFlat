@@ -590,16 +590,6 @@ public partial class ChunkMgr
             numbers);
     }
 
-    /// <summary>把存档中的空间距离倍率写入纯生成快照，后台线程不再读取 Unity 单例。</summary>
-    private static ChunkGenerationProfileSnapshot ApplyWorldSpatialDistanceScale(
-        ChunkGenerationProfileSnapshot profile)
-    {
-        if (profile == null)
-            throw new ArgumentNullException(nameof(profile));
-        PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
-        return ApplyWorldSpatialDistanceScale(profile, planet);
-    }
-
     /// <summary>把存档中的区块尺寸覆盖到生成 Profile，避免资源 Profile 与世界网格出现双真源。</summary>
     private static ChunkGenerationProfileSnapshot ApplyWorldChunkSize(
         ChunkGenerationProfileSnapshot profile, PlanetData planet = null)

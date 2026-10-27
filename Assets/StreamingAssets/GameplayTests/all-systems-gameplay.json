@@ -155,6 +155,12 @@
       "enabled": true
     },
     {
+      "id": "dimension_generation_presets",
+      "name": "火星地下引用地球地表预设、独立保存与正式出口返回火星",
+      "luaPath": "GameplayTests/Systems/Dimension/generation-presets.lua",
+      "enabled": true
+    },
+    {
       "id": "processing_electronic_materials_gameplay",
       "name": "电子材料冷料供热、满输出恢复与云母切割",
       "luaPath": "GameplayTests/Systems/Processing/electronic-materials-gameplay.lua",

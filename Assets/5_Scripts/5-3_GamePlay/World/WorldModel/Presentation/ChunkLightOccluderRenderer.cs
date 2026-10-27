@@ -136,7 +136,10 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         rebuildRequested = false;
         CancelPendingTrim();
         boundChunk = chunk;
-        caveOcclusionSuppressed = IsCaveDimension(chunk.Address.DimensionId);
+        DimensionManager dimensions = DimensionManager.ExistingInstance;
+        caveOcclusionSuppressed = dimensions != null &&
+            dimensions.TryGetDefinition(chunk.Address.DimensionId, out DimensionDefinition definition) &&
+            definition.SuppressTerrainWallShadows;
         if (caveOcclusionSuppressed)
         {
             // 洞穴不再使用墙体阴影充当视野遮罩，保留地形、碰撞和正常光照。
@@ -187,15 +190,6 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         }
 
         rebuildRequested = true;
-    }
-
-    private static bool IsCaveDimension(string dimensionId)
-    {
-        if (string.Equals(dimensionId, global::WorldAddress.CaveDimensionId, StringComparison.OrdinalIgnoreCase))
-            return true;
-        DimensionManager manager = DimensionManager.ExistingInstance;
-        return manager != null && manager.TryGetDefinition(dimensionId, out DimensionDefinition definition) &&
-               definition.GenerationProfile?.GenerationMode == ChunkGenerationMode.Cave;
     }
 
     /// <summary>View 从对象池取出时取消旧裁剪计划，避免绑定途中误删可复用槽。</summary>

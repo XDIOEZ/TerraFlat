@@ -20,6 +20,8 @@ namespace FlatWorld.WorldModel
 
         /// <summary>区块创建时固定一次的天气参数；没有气候层的人工草稿可以不带天气。</summary>
         public ChunkWeatherProfile WeatherProfile { get; private set; }
+        // 地形结果携带实际生成模式，表现查询不再从世界名称推断。
+        public ChunkGenerationMode GenerationMode { get; set; }
 
         public ChunkTerrainBuffer(int width, int height, LiquidTypeCatalog liquidTypes = null)
         {
@@ -176,7 +178,7 @@ namespace FlatWorld.WorldModel
             // 保留生成时的 height 供地表高度分层读取，随区块统一释放；液体只认独立整数 LiquidLevel。
             _sealed = true;
             var result = new ChunkTerrainData(Width, Height, _cells, _environmentLayers, _grass,
-                _extendedTileStacks, liquid, WeatherProfile);
+                _extendedTileStacks, liquid, WeatherProfile, GenerationMode);
             liquid = null;
             _cells = null;
             _environmentLayers = null;
@@ -275,7 +277,7 @@ namespace FlatWorld.WorldModel
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
             Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null,
-            ChunkWeatherProfile weatherProfile = null)
+            ChunkWeatherProfile weatherProfile = null, ChunkGenerationMode generationMode = ChunkGenerationMode.Surface)
         {
             Width = width;
             Height = height;
@@ -293,6 +295,7 @@ namespace FlatWorld.WorldModel
                 new Dictionary<string, float[]>(StringComparer.Ordinal);
             _extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
             WeatherProfile = weatherProfile;
+            GenerationMode = generationMode;
             _grass = grass ?? ArrayPool<byte>.Shared.Rent(CellCount);
             if (grass == null)
                 Array.Clear(_grass, 0, CellCount);
@@ -306,6 +309,7 @@ namespace FlatWorld.WorldModel
         public int CellCount { get; }
         /// <summary>创建区块时固定的气候与天气要素，不随单格环境修改而重新计算。</summary>
         public ChunkWeatherProfile WeatherProfile { get; }
+        public ChunkGenerationMode GenerationMode { get; }
         /// <summary>这份地形是否已经释放，不能再用了。</summary>
         public bool IsDisposed => _cells == null;
         /// <summary>生成完成后又被修改了多少次；刚生成时是 0。</summary>

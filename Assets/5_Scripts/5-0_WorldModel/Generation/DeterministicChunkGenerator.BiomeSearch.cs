@@ -45,8 +45,7 @@ namespace FlatWorld.WorldModel
             if (!Enum.IsDefined(typeof(SurfaceBiomeKind), biome))
                 throw new ArgumentOutOfRangeException(nameof(biome));
             dimensionId = string.IsNullOrWhiteSpace(dimensionId) ? "surface" : dimensionId;
-            if (profile.Settings.Mode != ChunkGenerationMode.Surface ||
-                dimensionId.IndexOf("cave", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (profile.Settings.Mode != ChunkGenerationMode.Surface)
             {
                 progress?.Report("当前维度不是地表", 0, 0);
                 return new BiomeSearchResult(false, anchor, 0);

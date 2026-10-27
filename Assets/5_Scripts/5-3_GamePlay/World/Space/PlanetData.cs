@@ -5,7 +5,10 @@ public partial class PlanetData
     public string BodyId;
     public string PrefabName;
     public float SelfRotateSpeed = 20f;
-    public string SurfaceGenerationProfileId;
+    // 生成预设与参数覆盖属于世界实例，不参与星球归属或大气选择。
+    public string GenerationPresetId;
+    public System.Collections.Generic.Dictionary<string, double> GenerationNumericOverrides = new(System.StringComparer.Ordinal);
+    public System.Collections.Generic.Dictionary<string, string> GenerationTextOverrides = new(System.StringComparer.Ordinal);
     public double PhysicalRadiusMeters = 2000d;
     public double SurfaceGravityMetersPerSecondSquared = 9.81d;
 

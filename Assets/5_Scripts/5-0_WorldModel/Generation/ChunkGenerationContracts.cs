@@ -93,7 +93,8 @@ namespace FlatWorld.WorldModel
     {
         public CavePortalPairingSnapshot(string surfaceDimensionId, int surfaceWorldSeed,
             ChunkGenerationProfileSnapshot surfaceProfile,
-            ChunkGenerationTopologySnapshot surfaceTopology = default)
+            ChunkGenerationTopologySnapshot surfaceTopology = default,
+            DeterministicChunkGenerator sourceTerrainGenerator = null)
         {
             if (string.IsNullOrWhiteSpace(surfaceDimensionId))
             {
@@ -105,6 +106,7 @@ namespace FlatWorld.WorldModel
             SurfaceWorldSeed = surfaceWorldSeed == 0 ? 1 : surfaceWorldSeed;
             SurfaceProfile = surfaceProfile ?? throw new ArgumentNullException(nameof(surfaceProfile));
             SurfaceTopology = surfaceTopology;
+            SourceTerrainGenerator = sourceTerrainGenerator;
             Fingerprint = CalculateFingerprint();
         }
 
@@ -116,6 +118,8 @@ namespace FlatWorld.WorldModel
         public ChunkGenerationProfileSnapshot SurfaceProfile { get; }
         /// <summary>地表的有限世界拓扑。</summary>
         public ChunkGenerationTopologySnapshot SurfaceTopology { get; }
+        // 正式配对复用已捕获扩展的生成器，纯规则样本可省略。
+        public DeterministicChunkGenerator SourceTerrainGenerator { get; }
         /// <summary>纳入矿洞生成设置哈希的稳定配对指纹。</summary>
         public ulong Fingerprint { get; }
 

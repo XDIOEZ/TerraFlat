@@ -579,21 +579,15 @@ public partial class ChunkMgr
     internal ChunkGenerationProfileSnapshot PrepareActiveGenerationSnapshot(out int baseSeed)
     {
         EnsureWorldRuntime();
-        ChunkGenerationProfileSO profileAsset = DimensionManager.Instance?.GetActiveGenerationProfile();
-        ChunkGenerationProfileSnapshot profile = profileAsset != null
-            ? profileAsset.CreateSnapshot()
-            : defaultGenerationSnapshot;
-        profile = ApplyWorldChunkSize(profile);
-        profile = ApplyWorldSpatialDistanceScale(profile);
-        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         // 玩家可建造 Tile 属于当前内容目录，不应被旧存档冻结的世界生成参数锁死。
-        runtimeTileCatalogSnapshot = profile;
-        profile = ApplyPersistedEcologyConfiguration(profile);
+        runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
+        PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
+        ChunkGenerationProfileSnapshot profile = planet != null
+            ? CreateFrozenWorldGenerationProfile(planet, out runtimeTileCatalogSnapshot) : defaultGenerationSnapshot;
         baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         if (baseSeed == 0)
             baseSeed = 1;
         // 地表入口与矿洞出口共享门户随机种子；矿洞还需配对冻结后的地表 Profile。
-        profile = profile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
         profile = AttachCavePortalPairing(profile, baseSeed);
         activeGenerationSnapshot = profile;
         return profile;

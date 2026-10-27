@@ -689,7 +689,7 @@ namespace FlatWorld.WorldModel
             CavePortalTargetDimensionId = GetText(
                 texts,
                 "cave.portal.targetDimensionId",
-                Mode == ChunkGenerationMode.Cave ? "surface" : "cave");
+                string.Empty);
             DefaultNavigationCost = (short)Clamp(GetInt(numbers,
                 "navigation.defaultCost", 1), 1, short.MaxValue);
             SurfaceBiomeRules = CreateSurfaceBiomeRules(numbers);

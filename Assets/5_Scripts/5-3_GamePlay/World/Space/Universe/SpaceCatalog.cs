@@ -21,7 +21,6 @@ namespace FlatWorld.Spaceflight
         public Dictionary<string, double> NumericParameters = new(StringComparer.Ordinal);
         public Dictionary<string, string> TextParameters = new(StringComparer.Ordinal);
         public Dictionary<string, string> TileParameters = new(StringComparer.Ordinal);
-        public Dictionary<string, double> CaveNumericParameters = new(StringComparer.Ordinal);
         public List<string> EcologyRuleIds;
         public List<string> CaveResourceRuleIds;
         public double EcologyMultiplier = 1d;
@@ -37,6 +36,7 @@ namespace FlatWorld.Spaceflight
         private readonly SpaceCatalogConfig config;
         private readonly Dictionary<string, BodyState> bodies = new(StringComparer.Ordinal);
         private readonly Dictionary<string, SurfaceProfile> surfaces = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, ChunkGenerationProfileSO> generationProfiles = new(StringComparer.Ordinal);
         private readonly Dictionary<SpaceSectorId, SpaceSectorSystemDefinition> systems = new();
         private readonly List<SpaceSectorId> configuredSectors = new() { default };
         public string TemplateId => config.TemplateId;
@@ -58,7 +58,7 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(surface.EcologyMultiplier) || surface.EcologyMultiplier < 0d ||
                     surface.SurfaceRadiusTiles < 0 ||
                     surface.NumericParameters == null || surface.TextParameters == null ||
-                    surface.TileParameters == null || surface.CaveNumericParameters == null ||
+                    surface.TileParameters == null ||
                     surface.AtmosphereComposition == null)
                     throw new InvalidDataException("星体地表、气压或温度配置无效");
                 decimal fraction = 0m;
@@ -70,7 +70,7 @@ namespace FlatWorld.Spaceflight
                 }
                 if (surface.PressureKPa > 0d ? fraction != 1m : fraction != 0m)
                     throw new InvalidDataException($"星体大气组分之和无效：{surface.Id}");
-                ValidateNumbers(surface.NumericParameters); ValidateNumbers(surface.CaveNumericParameters);
+                ValidateNumbers(surface.NumericParameters);
             }
             var validation = new UniverseSimulation(new UniverseState
             {
@@ -228,6 +228,8 @@ namespace FlatWorld.Spaceflight
             PlanetData planet = earthTemplate == null ? new PlanetData() : FastCloner.FastCloner.DeepClone(earthTemplate);
             // 新星体只继承用户的世界尺寸，地图、生态和大气都独立创建。
             planet.MapData_Dict = new Dictionary<string, MapSave>();
+            planet.GenerationNumericOverrides = new(StringComparer.Ordinal);
+            planet.GenerationTextOverrides = new(StringComparer.Ordinal);
             planet.Ecology = new EcologyWorldSaveData();
             planet.SeasonalSnow = new SnowCoverState();
             planet.RegionalWeatherStates = new List<RegionalWeatherRecord>();
@@ -243,7 +245,8 @@ namespace FlatWorld.Spaceflight
             if (body == null || planet == null) throw new ArgumentNullException(nameof(planet));
             planet.BodyId = body.BodyId; planet.Name = body.PlanetId; planet.name = body.DisplayName;
             planet.PrefabName = body.PrefabId;
-            planet.SurfaceGenerationProfileId = body.SurfaceProfileId;
+            if (initializeEnvironment || string.IsNullOrWhiteSpace(planet.GenerationPresetId))
+                planet.GenerationPresetId = body.SurfaceProfileId;
             planet.PhysicalRadiusMeters = body.RadiusMeters; planet.SurfaceGravityMetersPerSecondSquared = body.SurfaceGravity;
             planet.SelfRotateSpeed = Math.Abs(body.RotationPeriodSeconds) > 1e-12d ? (float)(360d / body.RotationPeriodSeconds) : 0f;
             SurfaceProfile surface = GetSurfaceProfileById(body.SurfaceProfileId);
@@ -300,39 +303,38 @@ namespace FlatWorld.Spaceflight
         }
         #endregion
 
-        #region 冻结星体生成 Profile
-        public ChunkGenerationProfileSnapshot ApplySurfaceProfile(string bodyId, ChunkGenerationProfileSnapshot original)
+        #region 共享世界生成预设
+        // 预设按显式 ID 选择；所属星球只提供新地表的默认值。
+        public ChunkGenerationProfileSnapshot CreateGenerationProfile(string presetId)
         {
-            if (original == null) throw new ArgumentNullException(nameof(original));
-            if (string.IsNullOrWhiteSpace(bodyId) || !TryGetBodyDefinition(bodyId, out _)) return original;
-            if (original.TextParameters.TryGetValue("space.bodyId", out string applied) && applied == bodyId) return original;
-            SurfaceProfile surface = GetSurfaceProfile(bodyId);
-            bool cave = original.Settings.Mode == ChunkGenerationMode.Cave;
+            if (generationProfiles.Count == 0)
+                foreach (ChunkGenerationProfileSO asset in Resources.LoadAll<ChunkGenerationProfileSO>("Config/WorldModel"))
+                    generationProfiles.Add(asset.ProfileId, asset);
+            bool sharedSurface = surfaces.TryGetValue(presetId ?? string.Empty, out SurfaceProfile surface);
+            string baseId = sharedSurface ? "surface.default" : presetId;
+            if (!generationProfiles.TryGetValue(baseId ?? string.Empty, out ChunkGenerationProfileSO source))
+                throw new InvalidDataException($"世界生成预设不存在：{presetId}");
+            ChunkGenerationProfileSnapshot original = source.CreateSnapshot();
+            if (!sharedSurface) return original;
             var numbers = new Dictionary<string, double>(original.NumericParameters, StringComparer.Ordinal);
             var texts = new Dictionary<string, string>(original.TextParameters, StringComparer.Ordinal);
-            foreach (var value in cave ? surface.CaveNumericParameters : surface.NumericParameters) numbers[value.Key] = value.Value;
-            if (!cave)
+            foreach (var value in surface.NumericParameters) numbers[value.Key] = value.Value;
+            foreach (var value in surface.TextParameters) texts[value.Key] = value.Value;
+            foreach (var value in surface.TileParameters)
             {
-                foreach (var value in surface.TextParameters) texts[value.Key] = value.Value;
-                foreach (var value in surface.TileParameters)
-                {
-                    GameRes resources = GameRes.ExistingInstance;
-                    if (resources == null || !resources.TileBlockDict.TryGetValue(value.Value, out RuntimeTileDefinition tile))
-                        throw new InvalidDataException($"星体 {bodyId} 引用未知地块：{value.Value}");
-                    numbers[value.Key] = tile.RuntimeTileId;
-                    texts[$"tile.block.{tile.RuntimeTileId}"] = tile.Id;
-                }
+                GameRes resources = GameRes.ExistingInstance;
+                if (resources == null || !resources.TileBlockDict.TryGetValue(value.Value, out RuntimeTileDefinition tile))
+                    throw new InvalidDataException($"生成预设 {presetId} 引用未知地块：{value.Value}");
+                numbers[value.Key] = tile.RuntimeTileId;
+                texts[$"tile.block.{tile.RuntimeTileId}"] = tile.Id;
             }
-            texts["space.bodyId"] = bodyId;
-            texts["space.surfaceProfileId"] = surface.Id;
-            texts["space.surfaceSeedScope"] = bodyId;
             numbers["space.surfaceTemperatureCelsius"] = surface.TemperatureCelsius;
             numbers["space.surfacePressureKPa"] = surface.PressureKPa;
-            var ecology = surface.EcologyRuleIds == null || cave ? new List<EcologySpawnRuleSnapshot>(original.EcologyRules) :
+            var ecology = surface.EcologyRuleIds == null ? new List<EcologySpawnRuleSnapshot>(original.EcologyRules) :
                 ResolveEcology(surface.EcologyRuleIds);
             var minerals = surface.CaveResourceRuleIds == null ? new List<CaveResourceRuleSnapshot>(original.CaveResourceRules) :
                 ResolveMinerals(surface.CaveResourceRuleIds);
-            return new ChunkGenerationProfileSnapshot(cave ? original.ProfileId + "." + bodyId : surface.Id,
+            return new ChunkGenerationProfileSnapshot(surface.Id,
                 original.Signature + 1000, original.Width, original.Height, numbers, texts,
                 original.EcologyGlobalMultiplier * surface.EcologyMultiplier, ecology, minerals, original.PortalPairing);
         }
