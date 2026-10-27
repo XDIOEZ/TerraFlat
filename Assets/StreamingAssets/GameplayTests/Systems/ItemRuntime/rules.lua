@@ -1,3 +1,18 @@
+test.system("item_runtime", "drop_trajectory", {}, function(data)
+    assert(data.linearControlX == 2 and data.linearControlY == 1,
+        "直线掉落控制点偏离起终点中点")
+    assert(data.curveControlX == 2 and data.curveControlY == 3,
+        "曲线掉落没有保留独立的贝塞尔高度")
+    local expected = { start = {0, 0}, finish = {4, 2}, curve = {2, 3},
+        curve_without_arc = {2, 2}, linear_with_arc = {2, 2} }
+    assert(#data.samples == 5, "没有采样完整的掉落轨迹边界")
+    for _, sample in ipairs(data.samples) do
+        local point = expected[sample.name]
+        assert(point and math.abs(sample.x - point[1]) < .0001 and math.abs(sample.y - point[2]) < .0001,
+            "共享掉落轨迹的起终点、曲线或正弦弧高改变：" .. sample.name)
+    end
+end, "掉落轨迹起终点与独立曲线/弧高")
+
 -- 同时覆盖轻量掉落物的稀疏/密集热路径和环绕视野边界。
 test.system("item_runtime", "drop_visibility_broadphase", {}, function(data)
     assert(data.sparseCorrect and data.denseCorrect,

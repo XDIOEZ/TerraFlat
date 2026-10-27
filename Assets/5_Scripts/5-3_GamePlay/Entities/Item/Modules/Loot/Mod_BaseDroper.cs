@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class Mod_BaseDroper : Module
 {
+    #region 配置与数据
+
     /// <summary>
     /// 物品移动模式
     /// </summary>
@@ -30,9 +32,9 @@ public class Mod_BaseDroper : Module
     [Tooltip("垂直方向最大高度（与之前一致）")]
     public float arcHeight = 1f;             // 垂直方向最大高度（与之前一致）
 
-    /* ----------------------------------------------------------
-     * 丢弃物品（自动随机终点）
-     * ----------------------------------------------------------*/
+    #endregion
+
+    #region 掉落入口
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -85,9 +87,10 @@ public class Mod_BaseDroper : Module
         Vector2 logicalEndImage = WorldTopologyRuntime.NearestImagePosition(startPos, logicalEnd);
         item.transform.position = WorldLocalPresentation.ProjectPosition(startPos);
 
-        // 根据移动模式计算控制点
-        Vector2 controlPos = WorldTopologyRuntime.NormalizePosition(
-            CalculateControlPoint(startPos, logicalEndImage, mode, bezierOffset));
+        Vector2 controlPos = mode == MoveMode.StraightLine
+            ? Mod_Droping.CreateLinearControlPoint(startPos, logicalEndImage)
+            : Mod_Droping.CreateParabolicControlPoint(startPos, logicalEndImage, bezierOffset);
+        controlPos = WorldTopologyRuntime.NormalizePosition(controlPos);
 
         Mod_BaseDroper.Drop drop = new Mod_BaseDroper.Drop
         {
@@ -107,34 +110,9 @@ public class Mod_BaseDroper : Module
         itemDrop.arcHeight = arcHeight; // 传递弧高参数
     }
     
-    /// <summary>
-    /// 根据移动模式计算控制点
-    /// </summary>
-    /// <param name="startPos">起点</param>
-    /// <param name="endPos">终点</param>
-    /// <param name="mode">移动模式</param>
-    /// <param name="bezierOffset">贝塞尔偏移量</param>
-    /// <returns>控制点位置</returns>
-    private static Vector2 CalculateControlPoint(Vector2 startPos, Vector2 endPos, MoveMode mode, float bezierOffset = 1f)
-    {
-        Vector2 mid = (startPos + endPos) * 0.5f;
-        
-        switch (mode)
-        {
-            case MoveMode.StraightLine:
-                // 直线模式，控制点就在中点上，形成直线
-                return mid;
-            case MoveMode.BezierCurve:
-            default:
-                // 贝塞尔曲线模式，控制点向上偏移
-                mid.y += bezierOffset;
-                return mid;
-        }
-    }
-    
-    /* ----------------------------------------------------------
-     * 每帧更新
-     * ----------------------------------------------------------*/
+    #endregion
+
+    #region 轨迹推进
     [Tooltip("每帧更新丢弃动画")]
     public override void ModUpdate(float deltaTime)
     {
@@ -149,15 +127,7 @@ public class Mod_BaseDroper : Module
             drop.progressTime += deltaTime;
             float t = Mathf.Clamp01(drop.progressTime / drop.time);
 
-            Vector2 presentationStart = WorldLocalPresentation.ProjectPosition(drop.startPos);
-            Vector2 presentationEnd = presentationStart +
-                                      WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.endPos);
-            Vector2 presentationControl = presentationStart +
-                                          WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.controlPos);
-            // Drop 存档只保存规范逻辑坐标，当前客户端每帧重建连续的局部轨迹。
-            Vector2 pos = Bezier2(presentationStart, presentationControl, presentationEnd, t);
-            // 垂直方向叠加正弦高度
-            pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
+            Vector2 pos = Mod_Droping.EvaluateProjectedDropTrajectoryPosition(drop, t, arcHeight);
 
             drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
             drop.item.transform.Rotate(Vector3.forward * 360f * deltaTime);
@@ -169,19 +139,9 @@ public class Mod_BaseDroper : Module
         }
     }
 
-    /* ----------------------------------------------------------
-     * 二阶贝塞尔曲线
-     * ----------------------------------------------------------*/
-    [Tooltip("计算二阶贝塞尔曲线上的点")]
-    private static Vector2 Bezier2(Vector2 p0, Vector2 p1, Vector2 p2, float t)
-    {
-        float mt = 1f - t;
-        return mt * mt * p0 + 2f * mt * t * p1 + t * t * p2;
-    }
+    #endregion
 
-    /* ----------------------------------------------------------
-     * 序列化/反序列化
-     * ----------------------------------------------------------*/
+    #region 轨迹持久化
     [Tooltip("加载丢弃数据")]
     protected override void OnLoad()
     {
@@ -210,9 +170,9 @@ public class Mod_BaseDroper : Module
         modData.WriteData(drops);
     }
 
-    /* ----------------------------------------------------------
-     * 数据结构
-     * ----------------------------------------------------------*/
+    #endregion
+
+    #region 掉落轨迹数据
     [System.Serializable]
     public class Drop
     {
@@ -281,4 +241,6 @@ public class Mod_BaseDroper : Module
             set { controlX = value.x; controlY = value.y; }
         }
     }
+
+    #endregion
 }

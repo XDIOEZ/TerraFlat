@@ -11,6 +11,7 @@ public static partial class GameplayTestSystemProbe
 
     private static void RegisterWorldMatterOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
+        operations.Add("item_runtime/drop_trajectory", DropTrajectory);
         operations.Add("item_runtime/world_matter_structure", WorldMatterStructure);
         operations.Add("item_runtime/natural_replacement_ownership", NaturalReplacementOwnership);
         operations.Add("item_runtime/ai_entity_live_query", AiEntityLiveQuery);
@@ -22,6 +23,32 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/food_spoilage_moisture", FoodSpoilageMoisture);
         operations.Add("environment/combustion_oxygen", CombustionOxygen);
     }
+
+    #region 共用掉落轨迹采样
+
+    // 采样正式曲线工具，轨迹端点和独立弧高由 Lua 断言。
+    private static JObject DropTrajectory(JObject args)
+    {
+        var start = Vector2.zero;
+        var end = new Vector2(4f, 2f);
+        Vector2 linear = Mod_Droping.CreateLinearControlPoint(start, end);
+        Vector2 curved = Mod_Droping.CreateParabolicControlPoint(start, end, 2f);
+        JObject Sample(string name, Vector2 control, float progress, float arc)
+        {
+            Vector2 point = Mod_Droping.EvaluateDropCurvePositionWithArcHeight(start, control, end, progress, arc);
+            return new JObject { ["name"] = name, ["x"] = point.x, ["y"] = point.y };
+        }
+        return new JObject
+        {
+            ["linearControlX"] = linear.x, ["linearControlY"] = linear.y,
+            ["curveControlX"] = curved.x, ["curveControlY"] = curved.y,
+            ["samples"] = new JArray(Sample("start", curved, 0f, 1f), Sample("finish", curved, 1f, 1f),
+                Sample("curve", curved, .5f, 1f), Sample("curve_without_arc", curved, .5f, 0f),
+                Sample("linear_with_arc", linear, .5f, 1f))
+        };
+    }
+
+    #endregion
 
     // 隔离停用实例调用正式生态交接，旧壳销毁不能删除候选的自然生成点。
     private static JObject NaturalReplacementOwnership(JObject args) => WithEntityProbeItem(original =>

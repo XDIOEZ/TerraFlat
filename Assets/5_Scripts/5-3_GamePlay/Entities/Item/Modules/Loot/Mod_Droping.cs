@@ -113,13 +113,7 @@ public class Mod_Droping : Module
             ItemWorldPlacement.TryAttachWorldModelTransientItem(drop.item, ownershipPos);
         }
 
-        Vector2 presentationStart = WorldLocalPresentation.ProjectPosition(drop.startPos);
-        Vector2 presentationEnd = presentationStart +
-                                  WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.endPos);
-        Vector2 presentationControl = presentationStart +
-                                      WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.controlPos);
-        Vector2 pos = Bezier2(presentationStart, presentationControl, presentationEnd, t);
-        pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
+        Vector2 pos = EvaluateProjectedDropTrajectoryPosition(drop, t, arcHeight);
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0f);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
@@ -170,6 +164,23 @@ public class Mod_Droping : Module
 
     #region 轨迹工具
 
+    // 规范坐标统一投影到本机连续轨迹，归属和落水处理仍由调用方负责。
+    internal static Vector2 EvaluateProjectedDropTrajectoryPosition(Mod_BaseDroper.Drop trajectory, float progress, float arcHeight)
+    {
+        Vector2 start = WorldLocalPresentation.ProjectPosition(trajectory.startPos);
+        Vector2 end = start + WorldTopologyRuntime.ShortestDelta(trajectory.startPos, trajectory.endPos);
+        Vector2 control = start + WorldTopologyRuntime.ShortestDelta(trajectory.startPos, trajectory.controlPos);
+        return EvaluateDropCurvePositionWithArcHeight(start, control, end, progress, arcHeight);
+    }
+
+    internal static Vector2 EvaluateDropCurvePositionWithArcHeight(Vector2 start, Vector2 control, Vector2 end,
+        float progress, float arcHeight)
+    {
+        Vector2 position = Bezier2(start, control, end, progress);
+        position.y += Mathf.Sin(progress * Mathf.PI) * arcHeight;
+        return position;
+    }
+
     /// <summary>二阶贝塞尔曲线计算。</summary>
     public static Vector2 Bezier2(Vector2 p0, Vector2 p1, Vector2 p2, float t)
     {
@@ -206,35 +217,9 @@ public class Mod_Droping : Module
         float minRotationSpeed = 360f,
         float maxRotationSpeed = 1080f)
     {
-        if (DroppedItemService.ScheduleLegacyDrop(item, startPos, endPos, time,
-            isLinear ? 0f : bezierOffset, arcHeight, Random.Range(minRotationSpeed, maxRotationSpeed))) return;
-        startPos = WorldTopologyRuntime.NormalizePosition(startPos);
-        Vector2 logicalEnd = WorldTopologyRuntime.NormalizePosition(endPos);
-        Vector2 logicalEndImage = WorldTopologyRuntime.NearestImagePosition(startPos, logicalEnd);
-        item.transform.position = WorldLocalPresentation.ProjectPosition(startPos);
-
-        Vector2 controlPos = isLinear
-            ? CreateLinearControlPoint(startPos, logicalEndImage)
-            : CreateParabolicControlPoint(startPos, logicalEndImage, bezierOffset);
-        controlPos = WorldTopologyRuntime.NormalizePosition(controlPos);
-
-        Mod_BaseDroper.Drop drop = new Mod_BaseDroper.Drop
-        {
-            itemGuid = item.itemData.Guid,
-            startPos = startPos,
-            endPos = logicalEnd,
-            controlPos = controlPos,
-            time = time,
-            progressTime = 0f,
-            rotationSpeed = Random.Range(minRotationSpeed, maxRotationSpeed),
-            item = item
-        };
-
-        item.itemData.Stack.CanBePickedUp = false;
-        Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
-        itemDrop.Load();
-        itemDrop.drop = drop;
-        itemDrop.arcHeight = arcHeight;
+        Mod_BaseDroper.StaticDropItem_Pos(item, startPos, endPos, time,
+            isLinear ? Mod_BaseDroper.MoveMode.StraightLine : Mod_BaseDroper.MoveMode.BezierCurve,
+            bezierOffset, arcHeight, minRotationSpeed, maxRotationSpeed);
     }
 
     /// <summary>静态丢弃物品（在指定半径范围内随机位置）。</summary>

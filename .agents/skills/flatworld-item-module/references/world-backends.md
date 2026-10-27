@@ -2,6 +2,7 @@
 
 ## 掉落与物质推进
 
+- `Mod_BaseDroper.StaticDropItem_Pos` 是旧入口的唯一装配流程，先交 `DroppedItemService.ScheduleLegacyDrop`，拒绝后才用完整 Item 轨迹；`Mod_Droping` 共用入口及曲线/本机投影计算，归属、旋转和落水生命周期仍由各调用方维护。
 - 单机 DroppedItemService.Spawn/SpawnLoot：passive 为纯C#载荷+近镜头池Sprite，interactive 为完整 Item，需飞行模块效果用后者+IDroppedItemSpawnContextReceiver。两者复制独立载荷/新GUID，完整Item注册前清载荷GUID，不改来源身份。普通掉落缩放0.5、destination定精确点；联机仍Item权威链。
 - 太空 SpaceSession 接管，SpaceDropView 仅冷载荷/Sprite，不 Load/ModuleInit 或实例化原建筑设备。ShipWreck 一个无设备模块Item存组成，回收后才释载荷；拾取走正式库存事务。
 - 两后端共 WorldItemMatterRules/ThermalRuntime.AdvanceAmbient，完整Item注册/加载建立基线、逐件累计间隔分帧。高温液体接触读物质 temperature/contactHeatingPerSecond，到 matter.ignitionTemperature 才点燃，设备可显式速率；airExposure 仅普通干燥。已有 Mod_Combustion 复用且不再扣材料堆，两后端共火焰粒子。
