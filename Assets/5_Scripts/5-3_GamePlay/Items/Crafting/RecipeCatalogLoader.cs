@@ -15,6 +15,43 @@ public static class RecipeCatalogLoader
     public const string ManifestFileName = "recipe-manifest.json";
     public const string RelativeManifestPath = RelativeRecipeRoot + "/" + ManifestFileName;
 
+    #region 玩家 JSON 与二进制配置包
+
+    private static BinaryContentCache CreateBinaryCache(string root, string manifestPath)
+        => BinaryContentCache.ForBuiltIn<RecipeBinaryCatalog>("recipes", root, manifestPath, 1);
+
+    private static RecipeBinaryCatalog ReadLocalCatalog(BinaryContentCache cache, string root, string manifestPath)
+    {
+        RecipeManifestDto manifest = DeserializeManifest(cache.ReadText(manifestPath));
+        ValidateManifest(manifest);
+        var result = new RecipeBinaryCatalog { Manifest = manifest };
+        foreach (RecipePackageDto package in manifest.Packages.Where(value => value.Enabled))
+            result.Catalogs.Add(RecipeRuntimeFactory.Deserialize(cache.ReadText(ResolvePackagePath(root, package.Path))));
+        return result;
+    }
+
+    private static List<(RecipePackageDto Package, List<RuntimeRecipe> Recipes, List<string> Warnings)> PreparePackages(
+        RecipeBinaryCatalog catalog, Func<string, bool> itemExists)
+    {
+        ValidateManifest(catalog?.Manifest);
+        RecipePackageDto[] enabled = catalog.Manifest.Packages.Where(value => value.Enabled).ToArray();
+        if (catalog.Catalogs == null || enabled.Length != catalog.Catalogs.Count)
+            throw new InvalidDataException("配方二进制包与 JSON 清单的启用分包不一致");
+        var results = new List<(RecipePackageDto, List<RuntimeRecipe>, List<string>)>(enabled.Length);
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int index = 0; index < enabled.Length; index++)
+        {
+            List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(catalog.Catalogs[index], itemExists,
+                out List<string> warnings);
+            foreach (RuntimeRecipe recipe in recipes)
+                if (!ids.Add(recipe.Id)) throw new InvalidDataException($"跨分包存在重复配方 ID：{recipe.Id}");
+            results.Add((enabled[index], recipes, warnings));
+        }
+        return results;
+    }
+
+    #endregion
+
     public static int LoadBuiltIn(GameRes gameRes)
     {
         if (gameRes == null)
@@ -24,40 +61,20 @@ public static class RecipeCatalogLoader
             Application.streamingAssetsPath,
             RelativeRecipeRoot);
         string manifestPath = StreamingAssetsTextLoader.CombinePath(recipeRoot, ManifestFileName);
-        RecipeManifestDto manifest = DeserializeManifest(
-            StreamingAssetsTextLoader.ReadAllText(manifestPath));
-        ValidateManifest(manifest);
-
-        var recipeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var loadedRecipes = new List<RuntimeRecipe>();
-        int loadedPackageCount = 0;
-        foreach (RecipePackageDto package in manifest.Packages.Where(package => package.Enabled))
+        BinaryContentCache cache = CreateBinaryCache(recipeRoot, manifestPath);
+        bool hit = cache.TryRead(out RecipeBinaryCatalog catalog);
+        if (!hit) catalog = ReadLocalCatalog(cache, recipeRoot, manifestPath);
+        var prepared = PreparePackages(catalog, gameRes.AllPrefabs.ContainsKey);
+        if (!hit) cache.Store(catalog);
+        int count = 0;
+        foreach (var package in prepared)
         {
-            string packagePath = ResolvePackagePath(recipeRoot, package.Path);
-            RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(
-                StreamingAssetsTextLoader.ReadAllText(packagePath));
-            List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(
-                catalog,
-                itemId => gameRes.AllPrefabs.ContainsKey(itemId),
-                out List<string> warnings);
-
-            foreach (string warning in warnings)
-                Debug.LogWarning($"[RecipeCatalog:{package.Id}] {warning}");
-            foreach (RuntimeRecipe recipe in recipes)
-            {
-                if (!recipeIds.Add(recipe.Id))
-                    throw new InvalidDataException($"跨分包存在重复配方 ID：{recipe.Id}");
-                loadedRecipes.Add(recipe);
-            }
-
-            loadedPackageCount++;
+            foreach (string warning in package.Warnings) Debug.LogWarning($"[RecipeCatalog:{package.Package.Id}] {warning}");
+            foreach (RuntimeRecipe recipe in package.Recipes) { gameRes.RegisterRecipe(recipe, true); count++; }
         }
-
-        foreach (RuntimeRecipe recipe in loadedRecipes)
-            gameRes.RegisterRecipe(recipe, true);
-
-        Debug.Log($"[RecipeCatalog] 已从 {loadedPackageCount} 个业务分包加载 {loadedRecipes.Count} 条配方：{manifestPath}");
-        return loadedRecipes.Count;
+        cache.Report("配方", count);
+        Debug.Log($"[RecipeCatalog] 已从 {prepared.Count} 个业务分包加载 {count} 条配方：{manifestPath}");
+        return count;
     }
 
     /// <summary>跨平台协程入口；Android/WebGL 使用 UnityWebRequest 读取包内文件。</summary>
@@ -87,105 +104,75 @@ public static class RecipeCatalogLoader
             yield break;
         }
 
-        string manifestJson = null;
+        BinaryContentCache cache = CreateBinaryCache(recipeRoot, manifestPath);
+        RecipeBinaryCatalog binary = null;
+        yield return cache.TryReadAsync<RecipeBinaryCatalog>(value => binary = value);
+        bool hit = binary != null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-            manifestPath,
-            text => manifestJson = text,
-            exception => readError = exception);
-
-        if (readError != null)
+        if (!hit && !StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
         {
-            onFailed?.Invoke(readError);
-            yield break;
-        }
-
-        RecipeManifestDto manifest;
-        try
-        {
-            manifest = DeserializeManifest(manifestJson);
-            ValidateManifest(manifest);
-        }
-        catch (Exception exception)
-        {
-            onFailed?.Invoke(exception);
-            yield break;
-        }
-
-        var recipeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var loadedRecipes = new List<RuntimeRecipe>();
-        // 后台配方工厂只读取稳定 ID 快照，不读取 Unity 对象或正在交换的资源目录。
-        var knownItems = new HashSet<string>(gameRes.AllPrefabs.Keys, gameRes.AllPrefabs.Comparer);
-        var enabledPackages = manifest.Packages.Where(package => package.Enabled).ToArray();
-        List<(RecipePackageDto Package, List<RuntimeRecipe> Recipes, List<string> Warnings)> preparedPackages = null;
-
-        // 本地分包合并为一次后台读盘与解析，避免几十个小文件各自等待主线程下一帧。
-        if (!StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
-        {
-            var paths = new string[enabledPackages.Length];
+            string manifestJson = null;
+            yield return cache.ReadTextAsync(manifestPath, value => manifestJson = value, exception => readError = exception);
+            if (readError != null) { onFailed?.Invoke(readError); yield break; }
+            RecipeManifestDto manifest;
+            string[] paths;
             try
             {
-                for (int i = 0; i < enabledPackages.Length; i++)
-                    paths[i] = ResolvePackagePath(recipeRoot, enabledPackages[i].Path);
+                manifest = DeserializeManifest(manifestJson);
+                ValidateManifest(manifest);
+                // 配置路径在主线程统一校验，后台只读取已确认的文件。
+                paths = manifest.Packages.Where(value => value.Enabled)
+                    .Select(package => ResolvePackagePath(recipeRoot, package.Path)).ToArray();
             }
-            catch (Exception exception)
-            {
-                onFailed?.Invoke(exception);
-                yield break;
-            }
+            catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
 
-            readError = null;
-            yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
-            {
-                var results = new List<(RecipePackageDto, List<RuntimeRecipe>, List<string>)>(enabledPackages.Length);
-                for (int i = 0; i < enabledPackages.Length; i++)
+            // 首次启动在后台合并读取分包 JSON，之后只恢复二进制 DTO。
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () =>
                 {
-                    string json;
-                    try { json = File.ReadAllText(paths[i]); }
-                    catch (Exception exception)
-                    {
-                        throw new IOException($"配方分包 {enabledPackages[i].Id} 读取失败：{paths[i]}", exception);
-                    }
-                    RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(json);
-                    List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(catalog, knownItems.Contains,
-                        out List<string> warnings);
-                    results.Add((enabledPackages[i], recipes, warnings));
-                }
-                return results;
-            }, value => preparedPackages = value, exception => readError = exception);
-            if (readError != null) { onFailed?.Invoke(readError); yield break; }
+                    var result = new RecipeBinaryCatalog { Manifest = manifest };
+                    foreach (string path in paths)
+                        result.Catalogs.Add(RecipeRuntimeFactory.Deserialize(cache.ReadText(path)));
+                    return result;
+                },
+                value => binary = value, exception => readError = exception);
         }
-        else
+        else if (!hit)
         {
-            preparedPackages = new List<(RecipePackageDto, List<RuntimeRecipe>, List<string>)>(enabledPackages.Length);
-            foreach (RecipePackageDto package in enabledPackages)
+            string manifestJson = null;
+            yield return cache.ReadTextAsync(manifestPath, value => manifestJson = value, exception => readError = exception);
+            if (readError != null) { onFailed?.Invoke(readError); yield break; }
+            RecipeManifestDto manifest;
+            try { manifest = DeserializeManifest(manifestJson); ValidateManifest(manifest); }
+            catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
+            binary = new RecipeBinaryCatalog { Manifest = manifest };
+            foreach (RecipePackageDto package in manifest.Packages.Where(value => value.Enabled))
             {
                 string packagePath;
                 try { packagePath = ResolvePackagePath(recipeRoot, package.Path); }
                 catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
-
-                string packageJson = null;
-                readError = null;
-                yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-                    packagePath, value => packageJson = value, exception => readError = exception);
-                if (readError != null)
-                {
-                    onFailed?.Invoke(new IOException($"配方分包 {package.Id} 读取失败：{packagePath}", readError));
-                    yield break;
-                }
-
-                List<RuntimeRecipe> recipes = null;
-                List<string> warnings = null;
-                yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
-                {
-                    RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(packageJson);
-                    return RecipeRuntimeFactory.BuildCatalog(catalog, knownItems.Contains, out warnings);
-                }, value => recipes = value, exception => readError = exception);
+                string json = null;
+                yield return cache.ReadTextAsync(packagePath, value => json = value, exception => readError = exception);
                 if (readError != null) { onFailed?.Invoke(readError); yield break; }
-                preparedPackages.Add((package, recipes, warnings));
+                RecipeCatalogDto parsed = null;
+                yield return StreamingAssetsTextLoader.RunPureDataAsync(() => RecipeRuntimeFactory.Deserialize(json),
+                    value => parsed = value, exception => readError = exception);
+                if (readError != null) { onFailed?.Invoke(readError); yield break; }
+                binary.Catalogs.Add(parsed);
             }
         }
+        if (readError != null) { onFailed?.Invoke(readError); yield break; }
 
+        // 物品引用与规则每轮按最新目录重新校验，不缓存运行时对象。
+        var knownItems = new HashSet<string>(gameRes.AllPrefabs.Keys, gameRes.AllPrefabs.Comparer);
+        List<(RecipePackageDto Package, List<RuntimeRecipe> Recipes, List<string> Warnings)> preparedPackages = null;
+        yield return StreamingAssetsTextLoader.RunPureDataAsync(
+            () => PreparePackages(binary, knownItems.Contains),
+            value => preparedPackages = value, exception => readError = exception);
+        if (readError != null) { onFailed?.Invoke(readError); yield break; }
+        if (!hit) yield return cache.StoreAsync(binary);
+
+        int count = 0;
         foreach (var package in preparedPackages)
         {
             foreach (string warning in package.Warnings)
@@ -195,27 +182,17 @@ public static class RecipeCatalogLoader
             }
             foreach (RuntimeRecipe recipe in package.Recipes)
             {
-                if (!recipeIds.Add(recipe.Id))
-                {
-                    onFailed?.Invoke(new InvalidDataException($"跨分包存在重复配方 ID：{recipe.Id}"));
-                    yield break;
-                }
-                loadedRecipes.Add(recipe);
+                try { gameRes.RegisterRecipe(recipe, true); count++; }
+                catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
                 if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
         }
 
-        foreach (RuntimeRecipe recipe in loadedRecipes)
-        {
-            try { gameRes.RegisterRecipe(recipe, true); }
-            catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
-            if (gameRes.ShouldYieldResourceWork()) yield return null;
-        }
-
         try
         {
-            Debug.Log($"[RecipeCatalog] 已从 {preparedPackages.Count} 个业务分包加载 {loadedRecipes.Count} 条配方：{manifestPath}");
-            onCompleted?.Invoke(loadedRecipes.Count);
+            cache.Report("配方", count);
+            Debug.Log($"[RecipeCatalog] 已从 {preparedPackages.Count} 个业务分包加载 {count} 条配方：{manifestPath}");
+            onCompleted?.Invoke(count);
         }
         catch (Exception exception)
         {
@@ -281,4 +258,12 @@ public static class RecipeCatalogLoader
             throw new InvalidDataException($"配方分包路径越出 Recipes 目录：{relativePath}");
         return fullPath;
     }
+}
+
+/// <summary>首次运行从 JSON 生成；玩家修改清单或分包后由来源哈希触发重建。</summary>
+[MemoryPack.MemoryPackable]
+public sealed partial class RecipeBinaryCatalog
+{
+    public RecipeManifestDto Manifest;
+    public List<RecipeCatalogDto> Catalogs = new();
 }

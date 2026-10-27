@@ -1,5 +1,7 @@
 # 核心生命周期与资源会话
 
+- 2026-10-27：Recipes/Buffs 首次启动按 JSON 清单生成独立 MemoryPack 配置包，后续命中直接恢复 DTO；JSON 更新使对应包失效。补充配置包往返和来源变更断言，`core_lifecycle` 快速规则通过；未测真实冷/热启动耗时及 Android 包内加载。
+
 - 2026-10-26：`startup_prefabs` 补查 GM 依赖的公共 `UI_TabButton` 已在启动阶段加载；保留用户 PlayMode，本轮未运行 Lua 或冷启动验收。
 
 2026-10-24 启动资源调度优化新增 `core_lifecycle/editor_asset_loading`：在独立 ResourceManager 中核对默认 AssetDatabase 请求使用独立 Provider、原缓存不被替换、子图地址/类型/数据/依赖保留、重复请求仅注册一次、自定义 Provider 与 Bundle 位置不接管。启动 UI 与 Buff 图标复用已有四槽队列，队列并发/失败/取消的规则仍由 `resource_queue` 覆盖；真实 UI 和可选图标缺失流程尚无新增现场断言。Unity 正在 PlayMode，按用户要求未编译、未运行；实际编辑器/运行包启动耗时由用户验收。

@@ -23,6 +23,9 @@ test.system("core_lifecycle", "binary_content_cache", {}, function(data)
     near(data.surfaceWidth, .3, "液面矩形")
     near(data.transitionTemperature, 100, "物质变化配置")
     assert(data.independentInteger == "9007199254740993", "修改恢复对象污染了下次读取或整数精度丢失")
+    assert(data.recipePackWritten and data.recipePackRestored and data.buffPackWritten and data.buffPackRestored,
+        "配方或 Buff 首次二进制配置包未生成，或跨会话无法恢复与正常构建")
+    assert(data.recipeChangedMiss and data.buffChangedMiss, "玩家修改配方或 Buff JSON 后仍使用旧二进制配置包")
     assert(data.contractMiss and data.sameLengthChangedMiss and data.manifestMiss and data.missingSourceMiss,
         "代码、同大小同时间戳 JSON、清单或缺失依赖未使缓存失效")
     assert(data.rebuilt and data.updatedWeight == 4, "父定义更新后仍恢复旧继承结果")

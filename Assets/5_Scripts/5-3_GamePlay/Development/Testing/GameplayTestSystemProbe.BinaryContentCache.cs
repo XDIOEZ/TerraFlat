@@ -79,6 +79,56 @@ public static partial class GameplayTestSystemProbe
             ActorDefinitionInputs actorRestored = MemoryPackSerializer.Deserialize<ActorDefinitionInputs>(MemoryPackSerializer.Serialize(actor));
             result["actorSourcesEqual"] = JToken.DeepEquals(actor.Sources[0], actorRestored.Sources[0]);
             result["actorDefinitions"] = actorRestored.Definitions.Count;
+
+            // 配方与 Buff 同样以可编辑 JSON 为来源，首次生成独立二进制包。
+            BinaryContentCache RecipeSession() => new(Path.Combine(root, "recipes.fwbin"), "recipe-fixture-v1", root, manifest);
+            var recipePack = new RecipeBinaryCatalog
+            {
+                Manifest = new RecipeManifestDto
+                {
+                    Packages = new List<RecipePackageDto> { new() { Id = "sample", Path = "parent.json" } }
+                },
+                Catalogs = new List<RecipeCatalogDto>
+                {
+                    new()
+                    {
+                        Recipes = new List<RecipeDto>
+                        {
+                            new() { Id = "fixture-recipe",
+                                Inputs = new List<RecipeIngredientDto> { new() { ItemId = "wood", Amount = 1 } },
+                                Outputs = new List<RecipeOutputDto> { new() { ItemId = "wood", Amount = 1 } } }
+                        }
+                    }
+                }
+            };
+            BinaryContentCache recipeCold = RecipeSession();
+            recipeCold.ReadText(manifest);
+            recipeCold.ReadText(parent);
+            result["recipePackWritten"] = recipeCold.Store(recipePack);
+            result["recipePackRestored"] = RecipeSession().TryRead(out RecipeBinaryCatalog recipeWarm) &&
+                recipeWarm.Manifest.Packages[0].Id == "sample" &&
+                RecipeRuntimeFactory.BuildCatalog(recipeWarm.Catalogs[0], _ => true, out _)[0].Id == "fixture-recipe";
+
+            BinaryContentCache BuffSession() => new(Path.Combine(root, "buffs.fwbin"), "buff-fixture-v1", root, manifest);
+            var buffPack = new BuffBinaryCatalog
+            {
+                Manifest = new BuffManifestDto
+                {
+                    Packages = new List<BuffPackageDto> { new() { Id = "sample", Path = "parent.json" } }
+                },
+                Catalogs = new List<BuffCatalogDto>
+                {
+                    new() { Buffs = new List<BuffDefinitionDto> { new() { Id = "fixture-buff" } } }
+                }
+            };
+            BinaryContentCache buffCold = BuffSession();
+            buffCold.ReadText(manifest);
+            buffCold.ReadText(parent);
+            result["buffPackWritten"] = buffCold.Store(buffPack);
+            result["buffPackRestored"] = BuffSession().TryRead(out BuffBinaryCatalog buffWarm) &&
+                buffWarm.Manifest.Packages[0].Id == "sample" &&
+                BuffDefinitionFactory.BuildCatalog(buffWarm.Catalogs[0])[0].Id == "fixture-buff";
+
             result["contractMiss"] = !Session("fixture-v2").TryRead<List<ItemDefinitionDto>>(out _);
 
             string originalParent = File.ReadAllText(parent);
@@ -86,6 +136,8 @@ public static partial class GameplayTestSystemProbe
             File.WriteAllText(parent, originalParent.Replace("\"weight\":3", "\"weight\":4"));
             File.SetLastWriteTimeUtc(parent, originalTime);
             result["sameLengthChangedMiss"] = !Session().TryRead<List<ItemDefinitionDto>>(out _);
+            result["recipeChangedMiss"] = !RecipeSession().TryRead<RecipeBinaryCatalog>(out _);
+            result["buffChangedMiss"] = !BuffSession().TryRead<BuffBinaryCatalog>(out _);
             BinaryContentCache changed = Session();
             List<ItemDefinitionDto> updated = Parse(changed);
             result["rebuilt"] = changed.Store(updated);
