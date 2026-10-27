@@ -84,6 +84,18 @@ for _, input in ipairs({
     end, string.format("打火石独立概率与端点：抽样值 %g", input.roll))
 end
 
+for _, kind in ipairs({ "drill", "flint" }) do
+    local expectedKind = kind
+    test.system("processing", "fire_tool_lifecycle", { kind = expectedKind }, function(data)
+        assert(data.loaded and data.reloaded, "取火模块加载或重载失败")
+        near(data.tickInterval, expectedKind == "drill" and 0.1 or 1, "取火模块调度间隔改变")
+        assert(data.inputSlots == (expectedKind == "drill" and 2 or 1) and data.outputSlots == 1, "输入或输出槽初始化改变")
+        assert(data.configuredRaw and data.configuredInventory and data.configuredToolValue, "模块正式配置未写入原字段")
+        assert(data.bound and data.unbound and data.rebound, "交互事件或右键事件加载、卸载、重载错误")
+        assert(data.saved and data.idPreserved, "模块保存格式或身份发生改变")
+    end, "取火工具库存、配置与生命周期：" .. expectedKind)
+end
+
 test.system("processing", "recipe_selection", {}, function(data)
     near(data.sameProgress, 4, "重复绑定同配方清除了真实加工进度")
     near(data.sameRatio, 0.4, "加工进度比例错误")

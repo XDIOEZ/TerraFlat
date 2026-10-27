@@ -7,6 +7,22 @@ local function total(slots, id)
     return amount
 end
 
+for _, kind in ipairs({ "drill", "flint" }) do
+    local expectedKind = kind
+    test.runtime("processing", "fire_tool_panel", { kind = expectedKind }, function(data)
+        assert(data.prefabFields and data.opened and data.slotBindings and data.transferTargets and data.preview and data.previewEvents,
+            "原 Prefab 字段、取火槽位、手部目标或预览监听错误")
+        assert(data.closedByCancel and data.reopened and data.closedByToggle, "取火面板关闭或重复交互错误")
+        assert(data.closedTargetsCleared and data.eventDetached and data.panelReleased, "取火面板卸载没有清理转移目标、事件或面板")
+        if expectedKind == "drill" then
+            assert(data.inputAmount == 1 and math.abs(data.temperature - 30) < .001 and data.outputId == "", "钻木按钮没有只加热一次材料")
+        else
+            assert(data.inputAmount == 1 and data.outputId == "FireSeed" and data.outputAmount == 1, "打火石按钮没有只消费一次材料并产出火种")
+            assert(data.blockedInputAmount == 1 and data.blockedOutputId == "Log", "满输出时打火石错误扣料或替换产物")
+        end
+    end, "取火工具真实面板与库存事务：" .. expectedKind)
+end
+
 for _, input in ipairs({
     { amount = 1, charcoal = 0, ash = 1 },
     { amount = 2, charcoal = 0, ash = 2 },
