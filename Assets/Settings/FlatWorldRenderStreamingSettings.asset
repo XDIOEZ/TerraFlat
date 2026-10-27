@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc8ba17751ad4107a50fa1415017b6b1, type: 3}
   m_Name: FlatWorldRenderStreamingSettings
   m_EditorClassIdentifier: 
-  automaticStreaming: 1
+  automaticStreaming: 0
   signalingSettings:
-    rid: 1795993466571325440
+    rid: 1369639117503070236
   references:
     version: 2
     RefIds:
-    - rid: 1795993466571325440
+    - rid: 1369639117503070236
       type: {class: WebSocketSignalingSettings, ns: Unity.RenderStreaming, asm: Unity.RenderStreaming}
       data:
-        m_url: ws://127.0.0.1:8081
+        m_url: ws://127.0.0.1:8080
         m_iceServers:
         - m_urls:
           - stun:stun.l.google.com:19302
