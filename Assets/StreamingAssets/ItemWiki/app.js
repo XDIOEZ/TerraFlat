@@ -16,6 +16,9 @@
     const SYSTEM_MAP_MAX_ZOOM = 1.8;
     const WIKI_STATUS_API = "/api/wiki/status";
     const ITEM_SAVE_API = "/api/items/save";
+    const BALANCE_STATE_API = "/api/balance/state";
+    const BALANCE_STEP_API = "/api/balance/step";
+    const BALANCE_LIVE_STATUS_API = "/api/balance/live-status";
     const BUFF_CONFIG_ROOT = "../GameConfig/Buffs/";
     const BUFF_SAVE_API = "/api/buffs/save";
 
@@ -47,8 +50,15 @@
         sourcePrefab: "源 Prefab",
         durability: "当前耐久",
         maxDurability: "最大耐久",
+        weight: "单件重量",
         amount: "初始数量",
         volume: "单个体积",
+        Physical: "物理数值",
+        DamageValues: "攻击伤害",
+        DefenseBonus: "护甲防御",
+        DamageInterval: "伤害间隔",
+        Max_EatingProgress: "进食次数",
+        nutritionConsumeSpeed: "营养消耗速度",
         canBePickedUp: "允许拾取",
         abstract: "抽象模板",
         lootTableId: "战利品表",
@@ -90,6 +100,8 @@
         buffPackages: new Map(),
         buffHashes: new Map(),
         buffWritable: false,
+        balanceWritable: false,
+        balanceController: null,
         resolvedById: new Map(),
         lootTables: new Map(),
         moduleGlossary: { modules: {}, fields: {}, fieldHelp: {} },
@@ -545,11 +557,13 @@
             const payload = response.ok ? await response.json() : null;
             state.writable = payload?.writable === true;
             state.buffWritable = payload?.buffWritable === true;
+            state.balanceWritable = payload?.balanceWritable === true;
             state.publicReadOnly = payload?.publicReadOnly === true;
             state.projectRoot = typeof payload?.projectRoot === "string" ? payload.projectRoot : "";
         } catch {
             state.writable = false;
             state.buffWritable = false;
+            state.balanceWritable = false;
             state.publicReadOnly = false;
             state.projectRoot = "";
         }
@@ -1789,6 +1803,22 @@
             els.detailContent.appendChild(renderStatGrid(buildHealthStats(entry.final.health), entry));
         }
 
+        // 完整编辑器不再单独维护物品目录，直接挂在对应 Item 的档案页中。
+        state.balanceController = null;
+        if (entry.kind === "item" && !entry.final.abstract && window.ItemBalanceTuner) {
+            const tuner = document.createElement("section");
+            tuner.id = "itemBalanceTuner";
+            els.detailContent.appendChild(tuner);
+            state.balanceController = ItemBalanceTuner.mount(tuner, entry, {
+                writable: state.writable && state.balanceWritable,
+                describe: humanizePath,
+                loadState: loadBalanceState,
+                save: saveBalancedItem,
+                saveStep: saveBalanceStep,
+                onError: error => setStatus("error", "调参未保存：" + error.message)
+            });
+        }
+
         appendSectionTitle("继承关系");
         els.detailContent.appendChild(renderInheritance(entry));
 
@@ -2073,6 +2103,7 @@
             card.append(labelElement, valueRow);
             if (entry && editTarget) {
                 attachInlineEditor(card, entry, { ...editTarget, value, label });
+                if (typeof value === "number") attachBalanceJump(valueRow, entry, editTarget);
             }
             if (entry && editTarget?.path === "visual.spriteAddress") {
                 appendAtlasQuickView(valueRow, entry, value);
@@ -2246,6 +2277,9 @@
                 value,
                 label: humanizePath(path)
             });
+            if (typeof value === "number") attachBalanceJump(card, entry, {
+                sourceType: "module", sourceName: stableName, sectionName, path
+            });
             grid.appendChild(card);
         }
         return grid;
@@ -2395,6 +2429,82 @@
         });
     }
 
+    // 现有基础数值与模块卡片直接跳转到对应调参项，避免重复查找字段。
+    function attachBalanceJump(host, entry, target) {
+        if (entry.kind !== "item" || entry.final.abstract || !window.ItemBalanceTuner) return;
+        const path = target.sourceType === "module"
+            ? "modules." + target.sourceName + "." + target.sectionName + "." + target.path
+            : target.sourceType === "health" ? "health." + target.path : target.path;
+        if (!ItemBalanceTuner.collect(entry).some(row => row.fieldPath === path)) return;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "balance-quick-jump";
+        button.textContent = "↕ 微调";
+        button.title = "直接在本物品的数值调节区修改";
+        button.addEventListener("click", event => {
+            event.stopPropagation();
+            state.balanceController?.focus(path);
+        });
+        button.addEventListener("dblclick", event => event.stopPropagation());
+        host.append(button);
+    }
+
+    // 步长和历史直接查询本机服务，不公开到静态资源目录。
+    async function loadBalanceState(itemId) {
+        const response = await fetch(BALANCE_STATE_API + "?itemId=" + encodeURIComponent(itemId), { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) throw new Error(payload.error || "无法读取调参历史");
+        return payload;
+    }
+
+    async function saveBalanceStep(target, step) {
+        const response = await fetch(BALANCE_STEP_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ itemId: state.selectedId, fieldPath: target.fieldPath, step })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) throw new Error(payload.error || "保存步长失败");
+        return payload;
+    }
+
+    // 调参复用 ItemWiki 的保存事务，继承数组用局部克隆，防止改错父定义。
+    async function saveBalancedItem(target, change) {
+        const entry = findItemEntry(state.selectedId);
+        if (!entry || entry.kind !== "item") throw new Error("目标物品已经切换");
+        const source = deepClone(entry.source);
+        ItemBalanceTuner.patchInheritedField(source, entry.final, target.parts, change.after);
+        const scrollTop = els.detailContent.scrollTop;
+        const payload = await saveItemSourceRequest(entry, source, { balanceChange: change });
+        applySavedItemSource(entry, source, payload.hash, payload.modifiedAt, scrollTop);
+        setStatus("ready", entry.displayName + " · " + target.label + " 已保存");
+        if (payload.tuningRequestId) watchBalanceLiveStatus(payload.tuningRequestId);
+        return payload;
+    }
+
+    // 热更新由 Unity Editor 桥接器回报状态，页面不把“提交”误当成“已生效”。
+    async function watchBalanceLiveStatus(requestId, attempt = 0) {
+        try {
+            const response = await fetch(BALANCE_LIVE_STATUS_API + "?requestId=" +
+                encodeURIComponent(requestId), { cache: "no-store" });
+            if (!response.ok) return;
+            const status = await response.json();
+            if (status.state === "applied") {
+                setStatus("ready", "数值已保存 · Unity 实时应用 " +
+                    (status.appliedCount ?? 0) + " 个实例" +
+                    (status.reloadStarted ? " · 已触发资源热重载" : ""));
+                return;
+            }
+            if (status.state === "blocked") {
+                setStatus("ready", "JSON 已保存；" + (status.reason || "Unity 当前无法实时更新"));
+                return;
+            }
+            if (attempt < 6) setTimeout(() => watchBalanceLiveStatus(requestId, attempt + 1), 750);
+        } catch {
+            // Unity 未运行时没有运行态确认，但本次 JSON 保存已成功。
+        }
+    }
+
     // 进入内联编辑态；Enter/失焦保存，Esc 取消，复杂 JSON 使用 Ctrl+Enter 保存。
     async function beginInlineEdit(host, entry, target) {
         if (entry.kind === "actor") return;
@@ -2466,8 +2576,22 @@
             try {
                 const source = deepClone(currentEntry.source);
                 applyInlineValueToSource(source, target, nextValue);
-                const payload = await saveItemSourceRequest(currentEntry, source);
+                // 双击直接输入同样计入数值历史；非数值字段继续按原来的流程保存。
+                let extra = null;
+                if (entry.kind === "item" && typeof originalValue === "number" && window.ItemBalanceTuner) {
+                    const path = target.sourceType === "module"
+                        ? "modules." + target.sourceName + "." + target.sectionName + "." + target.path
+                        : target.sourceType === "health" ? "health." + target.path : target.path;
+                    const field = ItemBalanceTuner.collect(currentEntry).find(row => row.fieldPath === path);
+                    if (field) {
+                        const history = await loadBalanceState(entry.id);
+                        const change = ItemBalanceTuner.manual(field, history.fields?.[path], nextValue);
+                        if (change) extra = { balanceChange: change };
+                    }
+                }
+                const payload = await saveItemSourceRequest(currentEntry, source, extra);
                 applySavedItemSource(currentEntry, source, payload.hash, payload.modifiedAt, scrollTop);
+                if (payload.tuningRequestId) watchBalanceLiveStatus(payload.tuningRequestId);
                 setStatus("ready", `${target.label || target.path} 已保存到 ${currentEntry.package.path}。`);
             } catch (error) {
                 settled = false;
@@ -2589,7 +2713,7 @@
     }
 
     // 发送受限 Item 写入请求；调用方决定保存后的界面行为。
-    async function saveItemSourceRequest(entry, source) {
+    async function saveItemSourceRequest(entry, source, extra = null) {
         if (entry.kind !== "item" && entry.kind !== "buff") throw new Error("生物定义只读，不能通过 Item 接口保存。");
         const isBuff = entry.kind === "buff";
         const expectedHash = (isBuff ? state.buffHashes : state.packageHashes).get(entry.package.id);
@@ -2602,7 +2726,8 @@
                 definitionKind: entry.kind,
                 packagePath: entry.package.path,
                 expectedHash,
-                source
+                source,
+                ...(extra || {})
             })
         });
         const payload = await response.json().catch(() => ({}));

@@ -46,6 +46,8 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
         private Task _receiveTask;
         private Task _keepAliveTask;
         private readonly SemaphoreSlim _sendLock = new(1, 1);
+        private readonly object _commandQueueLock = new();
+        private Task _pendingCommandTask = Task.CompletedTask;
 
         private Uri _endpointUri;
         private string _sessionId;
@@ -363,6 +365,13 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
                 }
             }
 
+            if (awaitTasks)
+            {
+                Task pendingCommands;
+                lock (_commandQueueLock) pendingCommands = _pendingCommandTask;
+                await pendingCommands.ConfigureAwait(false);
+            }
+
             if (_connectionCts != null)
             {
                 _connectionCts.Dispose();
@@ -377,6 +386,7 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
                 return;
             }
 
+            lock (_commandQueueLock) _pendingCommandTask = Task.CompletedTask;
             _receiveTask = Task.Run(() => ReceiveLoopAsync(token), CancellationToken.None);
             _keepAliveTask = Task.Run(() => KeepAliveLoopAsync(token), CancellationToken.None);
         }
@@ -481,10 +491,10 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
                     ApplyWelcome(payload);
                     break;
                 case "registered":
-                    await HandleRegisteredAsync(payload, token).ConfigureAwait(false);
+                    QueueConnectionWorkWithoutBlockingWebSocketReceive(() => HandleRegisteredAsync(payload, token), token);
                     break;
                 case "execute":
-                    await HandleExecuteAsync(payload, token).ConfigureAwait(false);
+                    QueueConnectionWorkWithoutBlockingWebSocketReceive(() => HandleExecuteAsync(payload, token), token);
                     break;
                 case "ping":
                     await SendPongAsync(token).ConfigureAwait(false);
@@ -602,6 +612,41 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
             }
         }
 
+        #region 命令排队与连接隔离
+
+        // 注册与长命令保持原有执行顺序，接收循环继续处理协议心跳与关闭消息。
+        private void QueueConnectionWorkWithoutBlockingWebSocketReceive(Func<Task> work, CancellationToken token)
+        {
+            lock (_commandQueueLock)
+            {
+                _pendingCommandTask = ExecuteQueuedConnectionWorkAndObserveFailureAsync(
+                    _pendingCommandTask, work, _socket, token);
+            }
+        }
+
+        private async Task ExecuteQueuedConnectionWorkAndObserveFailureAsync(
+            Task previousCommand, Func<Task> work, ClientWebSocket connectionSocket, CancellationToken token)
+        {
+            try
+            {
+                await previousCommand.ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                await work().ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // 已结束连接的命令不重放，也不向重连后的会话发送旧结果。
+            }
+            catch (Exception ex)
+            {
+                if (token.IsCancellationRequested || !ReferenceEquals(connectionSocket, _socket)) return;
+                McpLog.Warn($"[WebSocket] Queued connection work failed: {ex.Message}");
+                await HandleSocketClosureAsync(ex.Message).ConfigureAwait(false);
+            }
+        }
+
+        #endregion
+
         private async Task HandleExecuteAsync(JObject payload, CancellationToken token)
         {
             string commandId = payload.Value<string>("id");
@@ -645,6 +690,7 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
                 });
             }
 
+            token.ThrowIfCancellationRequested();
             JToken resultToken;
             try
             {
@@ -722,7 +768,8 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
 
         private async Task SendJsonAsync(JObject payload, CancellationToken token)
         {
-            if (_socket == null)
+            ClientWebSocket connectionSocket = _socket;
+            if (connectionSocket == null)
             {
                 throw new InvalidOperationException("WebSocket is not initialised");
             }
@@ -734,12 +781,13 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
             await _sendLock.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                if (_socket.State != WebSocketState.Open)
+                token.ThrowIfCancellationRequested();
+                if (connectionSocket.State != WebSocketState.Open)
                 {
                     throw new InvalidOperationException("WebSocket is not open");
                 }
 
-                await _socket.SendAsync(buffer, WebSocketMessageType.Text, true, token).ConfigureAwait(false);
+                await connectionSocket.SendAsync(buffer, WebSocketMessageType.Text, true, token).ConfigureAwait(false);
             }
             finally
             {

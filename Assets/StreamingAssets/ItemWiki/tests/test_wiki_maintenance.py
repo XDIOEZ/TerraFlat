@@ -24,8 +24,9 @@ class WikiMaintenanceTests(unittest.TestCase):
         self.assertIn("processing", sources["base"])
 
     def test_existing_project_can_be_reused(self):
-        old = {"service": "FlatWorldItemWiki", "publicReadOnly": False, "writable": True, "projectRoot": str(wiki.PROJECT_ROOT), "version": 2}
+        old = {"service": "FlatWorldItemWiki", "publicReadOnly": False, "writable": True, "projectRoot": str(wiki.PROJECT_ROOT), "version": 4}
         self.assertTrue(wiki.is_same_wiki(old, False))
+        self.assertFalse(wiki.is_same_wiki({**old, "version": 3}, False))
         self.assertFalse(wiki.is_same_wiki({**old, "projectRoot": "other-project"}, False))
         self.assertFalse(wiki.is_same_wiki(old, True))
         self.assertTrue(wiki.is_same_wiki({**old, "publicReadOnly": True, "writable": False, "projectId": wiki.PROJECT_ID, "projectRoot": None}, True))
@@ -66,6 +67,21 @@ class WikiMaintenanceTests(unittest.TestCase):
                 response = connection.getresponse()
                 self.assertEqual(200, response.status, request_path)
                 response.read()
+            for request_path in ["/Assets/StreamingAssets/ItemWiki/balance-tuning.js", "/Assets/StreamingAssets/ItemWiki/balance-tuning.css"]:
+                connection.request("GET", request_path)
+                response = connection.getresponse()
+                self.assertEqual(200, response.status, request_path)
+                response.read()
+            connection.request("GET", "/api/balance/state?itemId=Knife_Test")
+            response = connection.getresponse()
+            self.assertEqual(403, response.status, "公开 Wiki 不能读取本机调参历史")
+            response.read()
+            connection.request("POST", "/api/balance/step",
+                               body='{"itemId":"Knife_Test","fieldPath":"weight","step":1}',
+                               headers={"Content-Type": "application/json"})
+            response = connection.getresponse()
+            self.assertEqual(403, response.status, "公开 Wiki 不允许保存调参设置")
+            response.read()
             for request_path in ["/.git/config", "/Assets/StreamingAssets/ItemWiki/wiki_server.py", "/Assets/StreamingAssets/GameConfig/Items/not-in-manifest.json"]:
                 connection.request("GET", request_path)
                 response = connection.getresponse()

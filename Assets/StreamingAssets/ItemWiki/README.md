@@ -2,6 +2,19 @@
 
 这是直接读取当前项目配置的 HTML 工具，无需安装前端依赖或导出一份物品副本。
 
+## 内置数值调节
+
+档案浏览页选择物品后，在基础数值下方直接使用「数值调节」面板。点字段旁边的「↕ 微调」可直接跳转定位，也可以在调参器内搜索/按武器、护甲、食物等分组筛选。
+
+- 按「偏强 · 减小」「偏弱 · 增大」每次小幅调整；连续相同方向逐渐加速，反馈反转时减小步长，不会像二分查找一样最终锁死。
+- 每项独立保存步长、方向、历史趋势，支持手动数值输入及撤销最近一次调整。原有字段双击输入数值仍然可用，并计入调参历史。
+- 所有数值写入都复用原有 Item JSON 的**指纹冲突检测、配置校验、备份和原子保存**，只覆盖当前子物品对应字段，不修改父级模板。
+- 历史记录保存于项目 Library/FlatWorldItemWiki/balance-history.json，第一次使用时自动尝试迁移旧 Unity 工作台 BalanceTuningDatabase.asset 中的 JSON 物品调参记录，**不会修改、删除旧文件**。历史不进入游戏资源与公开分享。
+- 编辑器正在单机 Play Mode 时，ItemWikiBalanceLiveBridge 会接收本机成功保存事件，直接更新允许原位更新的已加载 Item，并合并触发已有的 GameRes.RequestResourceReload()；已冷缓存的内容可能需要资源重载或重新生成实例。网页显示 Unity 的实际回执，不把“已保存”当成“已实时生效”。联机期间拒绝单边运行态修改。
+- 公开分享继续只读；**Prefab-only 条目没有 JSON 权威定义，不经 ItemWiki 写入**。
+
+Unity 内亦可由菜单「FlatWorld → 物品百科 → 打开 ItemWiki」启动。本地网页是编辑器，游戏运行包不会包含 Python 服务和编辑器桥接脚本。
+
 科技树画布上方的「铺满网页」会隐藏导航、筛选和详情，只保留可拖拽、缩放的画布。按 Esc 或点击右上角「退出铺满」返回，浏览位置和选择会保留。
 
 ## 启动
@@ -71,8 +84,10 @@ python -B Assets/StreamingAssets/ItemWiki/wiki_server.py --port 8765 --ensure-ru
 
 ```powershell
 node Assets/StreamingAssets/ItemWiki/tests/maintenance.test.js
+node --test Assets/StreamingAssets/ItemWiki/tests/balance-tuning.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-model.test.js
 python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_wiki_maintenance.py
+python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_balance_tuning.py
 ```
 
 增加浏览器脚本或新的数据源时，同时检查 `wiki_server.py` 的公开白名单；公开模式不能因为新页面而开放整个项目目录。
