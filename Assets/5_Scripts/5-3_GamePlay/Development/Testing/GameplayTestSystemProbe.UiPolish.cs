@@ -79,6 +79,7 @@ public static partial class GameplayTestSystemProbe
             MainMenuResponsiveLayout layout = fixture.AddComponent<MainMenuResponsiveLayout>();
             layout.Configure(brand, card, settings);
             fixture.SetActive(true);
+            layout.RefreshLayout();
             root.ForceUpdateRectTransforms();
 
             Vector3[] brandCorners = new Vector3[4];
@@ -96,6 +97,11 @@ public static partial class GameplayTestSystemProbe
             {
                 ["buttons"] = buttonNames.Length,
                 ["buttonPixels"] = buttonHeight * card.localScale.y * canvasScale,
+                ["brandPixels"] = brand.rect.height * brand.localScale.y * canvasScale,
+                ["settingsPixels"] = settings.rect.height * settings.localScale.y * canvasScale,
+                ["leftMarginPixels"] = brand.anchoredPosition.x * canvasScale,
+                ["topMarginPixels"] = -brand.anchoredPosition.y * canvasScale,
+                ["layoutFactor"] = brand.localScale.y,
                 ["menuToBrandRatio"] = card.localScale.y / brand.localScale.y,
                 ["insideSafeArea"] = MainMenuRectInside(root, brand) &&
                     MainMenuRectInside(root, card) && MainMenuRectInside(root, settings),

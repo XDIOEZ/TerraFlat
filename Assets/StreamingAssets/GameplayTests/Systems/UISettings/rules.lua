@@ -1191,8 +1191,8 @@ end
 
 -- 主菜单四个入口与其它 UI 共用根画布倍率；自适应仅在空间不足时限幅。
 for _, size in ipairs({{1920,1080},{1280,720},{720,1280}}) do
-    local previousPixels, normalPixels
-    for _, scale in ipairs({0.5,1,1.5,2.5,3.25}) do
+    local previous, normal
+    for _, scale in ipairs({0.25,0.5,1,1.5,2,2.5,3.25}) do
         test.system("ui_settings", "main_menu_scale_layout",
             {width = size[1], height = size[2], scale = scale}, function(data)
             assert(data.buttons == 4, "正式主菜单缺少旅程入口")
@@ -1200,21 +1200,27 @@ for _, size in ipairs({{1920,1080},{1280,720},{720,1280}}) do
                 "主菜单缩放后出现越界或标题与按钮重叠")
             assert(math.abs(data.menuToBrandRatio - 0.6) < 0.001,
                 "四个主菜单按钮未采用统一紧凑比例")
-            if previousPixels then
-                assert(data.buttonPixels >= previousPixels - 0.2,
-                    "提高用户界面倍率却使主菜单按钮变小")
+            if previous then
+                for _, key in ipairs({"buttonPixels","brandPixels","settingsPixels",
+                    "leftMarginPixels","topMarginPixels"}) do
+                    assert(data[key] >= previous[key] - 0.2,
+                        "提高用户界面倍率却使主菜单局部变小：" .. key)
+                end
             end
-            if scale == 1 then normalPixels = data.buttonPixels end
+            if scale == 1 then normal = data end
             if scale == 1.5 then
-                assert(data.buttonPixels >= normalPixels * 1.45,
-                    "从 100% 到 150% 时主菜单尺寸没有跟随用户缩放")
+                for _, key in ipairs({"buttonPixels","brandPixels","settingsPixels",
+                    "leftMarginPixels","topMarginPixels"}) do
+                    assert(math.abs(data[key] - normal[key] * 1.5) < 0.3,
+                        "从 100% 到 150% 时主菜单没有整体同步缩放：" .. key)
+                end
                 if size[1] == 1920 then
                     assert(data.buttonPixels >= 85 and data.buttonPixels <= 100,
                         "1920x1080 主菜单入口仍显著大于普通按钮")
                 end
             end
-            previousPixels = data.buttonPixels
-        end, "主菜单四入口缩放 " .. size[1] .. "x" .. size[2] .. " / " .. scale)
+            previous = data
+        end, "主菜单整体缩放 " .. size[1] .. "x" .. size[2] .. " / " .. scale)
     end
 end
 

@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 按主菜单安全区的可用宽高收放标题、四个旅程按钮和设置入口。
-/// 旅程按钮采用紧凑的设计比例，用户界面倍率仍由根 CanvasScaler 统一控制。
+/// 在统一 UI 缩放后的安全区中排列主菜单，只有内容真正放不下时才一起等比限幅。
+/// 标题、四个旅程按钮和设置入口都保留根 CanvasScaler 提供的用户缩放倍率。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(RectTransform))]
@@ -10,8 +10,6 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
 {
     #region 参考排版
 
-    private const float ReferenceWidth = 1920f;
-    private const float ReferenceHeight = 1080f;
     private const float MinimumGap = 32f;
     private const float JourneyCardDesignScale = 0.6f;
 
@@ -48,15 +46,15 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
 
     private void OnEnable()
     {
-        UIUserSettings.Changed -= ApplyLayout;
-        UIUserSettings.Changed += ApplyLayout;
+        UIUserSettings.Changed -= RefreshLayout;
+        UIUserSettings.Changed += RefreshLayout;
         CaptureReferencePositions();
-        ApplyLayout();
+        RefreshLayout();
     }
 
     private void OnDisable()
     {
-        UIUserSettings.Changed -= ApplyLayout;
+        UIUserSettings.Changed -= RefreshLayout;
     }
 
     private void OnRectTransformDimensionsChange()
@@ -69,6 +67,13 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
 
     #region 自适应排版
 
+    /// <summary>按当前根画布和安全区重新排列主菜单，供缩放事件和布局验证共用。</summary>
+    public void RefreshLayout()
+    {
+        CaptureReferencePositions();
+        ApplyLayout();
+    }
+
     /// <summary>只在屏幕、安全区或用户界面缩放发生变化时计算布局。</summary>
     private void ApplyLayout()
     {
@@ -79,32 +84,36 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
         if (size.x <= 0f || size.y <= 0f)
             return;
 
-        // 边距也按较紧的屏幕维度缩小，避免高 UI 缩放时边距反而占去大部分画面。
-        float edgeScale = Mathf.Min(1f, Mathf.Min(size.x / ReferenceWidth, size.y / ReferenceHeight));
-        float left = brandReferencePosition.x * edgeScale;
-        float right = -settingsReferencePosition.x * edgeScale;
-        float top = -brandReferencePosition.y * edgeScale;
-        float bottom = menuReferencePosition.y * edgeScale;
-        float gap = MinimumGap * edgeScale;
+        float brandLeft = brandReferencePosition.x;
+        float cardLeft = menuReferencePosition.x;
+        float right = -settingsReferencePosition.x;
+        float brandTop = -brandReferencePosition.y;
+        float settingsTop = -settingsReferencePosition.y;
+        float bottom = menuReferencePosition.y;
 
-        float verticalScale = (size.y - top - bottom - gap) /
-                              (brand.rect.height + menuCard.rect.height * JourneyCardDesignScale);
-        float horizontalScale = (size.x - left - right - gap) / (brand.rect.width + settingsButton.rect.width);
-        float cardWidthScale = (size.x - left - right) / (menuCard.rect.width * JourneyCardDesignScale);
-        float scale = Mathf.Clamp(Mathf.Min(verticalScale, Mathf.Min(horizontalScale, cardWidthScale)), 0.01f, 1f);
+        // 以 Prefab 的完整设计尺寸计算占屏预算，不能随 Canvas 变小再次缩减边距并抵消用户倍率。
+        float cardWidth = menuCard.rect.width * JourneyCardDesignScale;
+        float cardHeight = menuCard.rect.height * JourneyCardDesignScale;
+        float contentWidth = Mathf.Max(
+            brandLeft + brand.rect.width + MinimumGap + settingsButton.rect.width + right,
+            cardLeft + cardWidth + right);
+        float contentHeight = Mathf.Max(brandTop + brand.rect.height,
+            settingsTop + settingsButton.rect.height) + MinimumGap + cardHeight + bottom;
+        float layoutScale = Mathf.Clamp(Mathf.Min(1f,
+            Mathf.Min(size.x / contentWidth, size.y / contentHeight)), 0.01f, 1f);
 
         isApplying = true;
         try
         {
-            brand.anchoredPosition = new Vector2(left, -top);
-            menuCard.anchoredPosition = new Vector2(left, bottom);
-            settingsButton.anchoredPosition = new Vector2(-right, settingsReferencePosition.y * edgeScale);
+            brand.anchoredPosition = brandReferencePosition * layoutScale;
+            menuCard.anchoredPosition = menuReferencePosition * layoutScale;
+            settingsButton.anchoredPosition = settingsReferencePosition * layoutScale;
 
-            Vector3 uniformScale = new Vector3(scale, scale, 1f);
+            Vector3 uniformScale = new Vector3(layoutScale, layoutScale, 1f);
             brand.localScale = uniformScale;
-            // 仅收紧四个主菜单入口，不对根画布的用户缩放倍率重复加权。
-            menuCard.localScale = new Vector3(scale * JourneyCardDesignScale,
-                scale * JourneyCardDesignScale, 1f);
+            // 旅程卡保留紧凑设计尺寸，但三个内容组始终使用同一个自适应系数。
+            menuCard.localScale = new Vector3(layoutScale * JourneyCardDesignScale,
+                layoutScale * JourneyCardDesignScale, 1f);
             settingsButton.localScale = uniformScale;
         }
         finally
