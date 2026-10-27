@@ -166,7 +166,7 @@ public sealed partial class DimensionManager
         actor.transform.position = WorldLocalPresentation.ProjectPosition(position);
         ResetNetworkActorPose(actor);
         actor.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ShiftSpacePresentation(actor.transform.position - before);
-        ItemMgr.Instance.NotifyRuntimeItemMoved(actor);
+        GameManager.AssignRegisteredPlayerAndChildItemsToWorld(actor, target.WorldKey);
         GameManager.Instance.ReportNetworkDimensionLoading("正在绘制目标区域…", .75f);
         yield return WaitForRuntimeChunkPresentation(target, position, actor);
         if (!stillValid() || actor == null)

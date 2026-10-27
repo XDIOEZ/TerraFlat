@@ -1,3 +1,24 @@
+test.system("world_streaming", "world_scene_binding", {}, function(data)
+    assert(not data.unknownResolved and data.firstAdded and data.singleWorld == "probe:world-a",
+        "独立世界没有按绑定读取 WorldKey，或未绑定场景返回了世界")
+    assert(not data.duplicateChanged, "重复注册同一拥有者改变了绑定")
+    assert(data.secondAdded and not data.ambiguousResolved and data.explicitA == "probe:world-a"
+        and data.explicitB == "probe:world-b" and not data.wrongExplicitResolved,
+        "同场景多世界没有拒绝歧义，或显式世界被回退成其他归属")
+    assert(data.replacementChanged and not data.staleOwnerRemoved and not data.staleContextResolved
+        and data.replacementContext == "probe:world-a" and data.replacementOwns,
+        "旧世界拥有者解除绑定时破坏了新拥有者")
+    assert(data.replacementRemoved and data.remainingWorld == "probe:world-b"
+        and data.lastRemoved and not data.emptyHasBindings,
+        "解绑没有保留其他世界，或最后一个世界释放后仍有绑定")
+    assert(data.sameWorldSecondScene and not data.clearSceneA and not data.clearSceneB,
+        "跨场景绑定或会话清理未保留正确的绑定关系")
+    assert(data.firstIdentity > 0 and data.firstIdentity == data.sameIdentity
+        and data.secondIdentity ~= data.firstIdentity and not data.clearedIdentityStillFound
+        and data.identityAfterClear > data.secondIdentity,
+        "运行时世界身份不稳定、发生冲突，或清理后复用了旧任务的身份")
+end, "逻辑世界与场景绑定、歧义拒绝和会话身份")
+
 -- 独立 WorldRuntime 不生成地形，只测运行、表现和寻路租约的所有权。
 test.system("world_streaming", "collision_dirty_queue", {}, function(data)
     assert(data.emptyInitially and data.bothPending and data.deduplicated and data.isolated,

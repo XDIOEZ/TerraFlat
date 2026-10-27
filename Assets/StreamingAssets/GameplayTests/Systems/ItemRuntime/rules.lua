@@ -31,6 +31,39 @@ test.system("item_runtime", "simulation_membership_cache", {}, function(data)
         "环绕世界接缝或等价镜像坐标移动时错误复用了旧的模拟区域")
 end, "物品模拟区域身份缓存、移动/玩家/手持失效与零分配")
 
+test.system("item_runtime", "logical_world_simulation_perception", {}, function(data)
+    assert(data.sameScene and data.distinctWorlds and data.differentWorldStopped,
+        "同一场景里的不同逻辑世界被当作同一个模拟范围")
+    assert(data.differentWorldCandidates == 1,
+        "感知任务在同坐标不同逻辑世界中选入了其他世界的实体")
+    assert(data.unknownWorldCandidates == 0 and data.unknownWorldRejected,
+        "缺失世界身份的检测任务或旧结果被当作有效的共同世界")
+    assert(data.sameWorldIdentity and data.sameWorldNear and data.differentSceneSameWorld,
+        "同一逻辑世界的实体和观察者因场景不同被错误隔离")
+    assert(data.sameWorldCandidates == 3,
+        "同一逻辑世界的跨场景感知没有返回全部候选")
+    assert(data.snapshotInitiallyCurrent and data.changedWorldStopped and data.snapshotRejectedAfterMove,
+        "实体迁移后没有刷新模拟范围或拒绝原世界感知结果")
+    assert(data.returnedNear and data.roundTripRejected and data.freshSnapshotAccepted,
+        "往返同一逻辑世界后旧感知结果仍有效，或新结果被错误拒绝")
+    assert(data.infiniteCrossWorldRejected and data.crossWorldResultRejected and data.sameWorldDetected,
+        "直接锁定或无限感知范围未遵守逻辑世界隔离")
+    assert(data.movedCacheCleared and data.targetRoundTripCleared and data.observerRoundTripCleared and
+        data.unknownTargetRejected and data.unknownObserverRejected,
+        "物品或观察者迁移后旧目标和标签列表未失效，或未知世界参与了模拟")
+    assert(data.cachedReadAllocated == 0, "感知缓存稳定读取产生了额外分配")
+end, "模拟范围和感知按逻辑世界隔离、跨场景共享及迁移失效")
+
+test.system("item_runtime", "logical_world_tick", {}, function(data)
+    assert(data.sameScene and data.separateGroups and data.sameSceneTransfer,
+        "同场景不同逻辑世界没有分组，或世界迁移后没有转入新调度组")
+    assert(data.differentSceneSameGroup,
+        "同一逻辑世界的物品因场景不同被拆分到其他调度组")
+    assert(data.allocatedBytes == 0, "逻辑世界稳定时重复移动登记产生托管分配")
+    assert(data.poolClearedWorld and data.pooledRebind and data.cleared,
+        "物品回池后仍保留原世界，或重新绑定和注销没有正确更新调度组")
+end, "物品调度按逻辑世界分组、迁移、回池及稳态零分配")
+
 for _, actorId in ipairs({"SmallFish", "Bird"}) do
     local expectedActorId = actorId
     test.system("item_runtime", "initial_animator_activation", {actorId = actorId}, function(data)

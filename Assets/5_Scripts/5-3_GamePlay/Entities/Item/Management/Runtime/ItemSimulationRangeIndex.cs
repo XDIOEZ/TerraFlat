@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
-/// <summary>按场景和逻辑区域维护模拟资格，只有距离边界逐实体精算，中远档按原有时钟取出到期成员。</summary>
+/// <summary>按逻辑世界和区域维护模拟资格，只有距离边界逐实体精算，中远档按原有时钟取出到期成员。</summary>
 internal sealed class ItemSimulationRangeIndex
 {
     #region 区域与成员状态
@@ -15,39 +15,42 @@ internal sealed class ItemSimulationRangeIndex
 
     private readonly struct RegionKey : IEquatable<RegionKey>
     {
-        public readonly int Scene;
+        public readonly int WorldIdentity;
         public readonly int X;
         public readonly int Y;
 
-        public RegionKey(int scene, float2 position)
+        public RegionKey(int worldIdentity, float2 position)
         {
-            Scene = scene;
+            WorldIdentity = worldIdentity;
             X = (int)math.floor(position.x / RegionSize);
             Y = (int)math.floor(position.y / RegionSize);
         }
 
-        public bool Equals(RegionKey other) => Scene == other.Scene && X == other.X && Y == other.Y;
+        public bool Equals(RegionKey other) => WorldIdentity == other.WorldIdentity && X == other.X && Y == other.Y;
         public override bool Equals(object obj) => obj is RegionKey other && Equals(other);
-        public override int GetHashCode() => unchecked((Scene * 397 ^ X) * 397 ^ Y);
+        public override int GetHashCode() => unchecked((WorldIdentity * 397 ^ X) * 397 ^ Y);
         public float2 Center => new((X + 0.5f) * RegionSize, (Y + 0.5f) * RegionSize);
     }
 
     private readonly struct PlayerPosition
     {
         public readonly Transform Transform;
-        public readonly int Scene;
+        public readonly int WorldIdentity;
         public readonly float2 Position;
 
         public PlayerPosition(Transform player, WorldTopologyDomain topology)
         {
             Transform = player;
-            Scene = player.gameObject.scene.handle;
+            Item playerItem = player.GetComponent<Item>();
+            WorldIdentity = playerItem != null ? GameplayWorldRegistry.GetItemWorldIdentity(playerItem) :
+                GameplayWorldRegistry.TryResolveUnambiguousWorldKeyForScene(player.gameObject.scene, out string worldKey)
+                    ? GameplayWorldRegistry.GetOrCreateRuntimeWorldIdentity(worldKey) : 0;
             Vector3 position = player.position;
             Position = topology.Normalize(new float2(position.x, position.y));
         }
 
         public bool Equals(PlayerPosition other) => ReferenceEquals(Transform, other.Transform) &&
-            Scene == other.Scene && math.all(Position == other.Position);
+            WorldIdentity == other.WorldIdentity && math.all(Position == other.Position);
     }
 
     private sealed class Region
@@ -75,12 +78,12 @@ internal sealed class ItemSimulationRangeIndex
         public SimulationRangeTier Tier;
         public float DueAt;
         // 一次 ResolveTier 之后的真实位置快照。区域版本由 BeginFrame 统一更新，
-        // 只有同区域、同位置、同场景且距离资格没有改变，才能跳过重复寻址。
+        // 只有同区域、同位置、同逻辑世界且距离资格没有改变，才能跳过重复寻址。
         public bool HasMembershipSnapshot;
         public bool WasRangeRestricted;
         // 距离和区域寻址只使用 XY；渲染层级的 Z 变化不应该使模拟身份缓存失效。
         public float2 LastPosition;
-        public int LastScene;
+        public int LastWorldIdentity;
     }
 
     internal readonly struct Transition
@@ -171,6 +174,14 @@ internal sealed class ItemSimulationRangeIndex
     private void RefreshMembership(Member member)
     {
         Item item = member.Entry.Item;
+        int worldIdentity = GameplayWorldRegistry.GetItemWorldIdentity(item);
+        if (worldIdentity == 0)
+        {
+            RemoveFromRegion(member);
+            SetTier(member, SimulationRangeTier.Stopped);
+            member.HasMembershipSnapshot = false;
+            return;
+        }
         bool restricted = item.ShouldUseSimulationRange();
         if (!restricted)
         {
@@ -198,10 +209,9 @@ internal sealed class ItemSimulationRangeIndex
         // 玩家移动时 BeginFrame 已更新 Region.Version 和需要变化的成员档位。
         Vector3 position = item.transform.position;
         float2 positionXY = new(position.x, position.y);
-        int scene = item.gameObject.scene.handle;
         if (member.HasMembershipSnapshot && member.WasRangeRestricted &&
             member.Region != null && member.Region.Version == contextVersion &&
-            member.HasTier && math.all(member.LastPosition == positionXY) && member.LastScene == scene)
+            member.HasTier && math.all(member.LastPosition == positionXY) && member.LastWorldIdentity == worldIdentity)
         {
             RestoreMissingActiveSlot(member);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -210,7 +220,7 @@ internal sealed class ItemSimulationRangeIndex
             return;
         }
 
-        RegionKey key = new(scene, topology.Normalize(positionXY));
+        RegionKey key = new(worldIdentity, topology.Normalize(positionXY));
         if (member.Region == null || !member.Region.Key.Equals(key))
         {
             RemoveFromRegion(member);
@@ -227,11 +237,11 @@ internal sealed class ItemSimulationRangeIndex
 
         Region current = member.Region;
         RefreshRegion(current);
-        SetTier(member, current.Boundary ? ResolveExact(position, scene) : current.Tier);
+        SetTier(member, current.Boundary ? ResolveExact(position, worldIdentity) : current.Tier);
         member.HasMembershipSnapshot = true;
         member.WasRangeRestricted = true;
         member.LastPosition = positionXY;
-        member.LastScene = scene;
+        member.LastWorldIdentity = worldIdentity;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         MembershipRecalculations++;
 #endif
@@ -284,7 +294,10 @@ internal sealed class ItemSimulationRangeIndex
         if (playerTransforms != null)
             for (int i = 0; i < playerTransforms.Count; i++)
                 if (playerTransforms[i] != null)
-                    nextPlayers.Add(new PlayerPosition(playerTransforms[i], topology));
+                {
+                    var player = new PlayerPosition(playerTransforms[i], topology);
+                    if (player.WorldIdentity != 0) nextPlayers.Add(player);
+                }
 
         bool changed = !contextReady || contextInvalidated || topologyChanged || players.Count != nextPlayers.Count;
         for (int i = 0; !changed && i < players.Count; i++)
@@ -348,7 +361,7 @@ internal sealed class ItemSimulationRangeIndex
 
         float nearestCenter = float.PositiveInfinity;
         for (int i = 0; i < players.Count; i++)
-            if (players[i].Scene == region.Key.Scene)
+            if (players[i].WorldIdentity == region.Key.WorldIdentity)
                 nearestCenter = math.min(nearestCenter, topology.SqrDistance(region.Key.Center, players[i].Position));
         // 明显位于近档或最远档外的整块区域直接判定，边界沿用原始开平方精算。
         if (TryResolveUnambiguousRegionTier(nearestCenter, nearRadius, farRadius, out SimulationRangeTier settled))
@@ -401,19 +414,20 @@ internal sealed class ItemSimulationRangeIndex
 
     private SimulationRangeTier ResolveExact(Item item)
     {
+        int worldIdentity = GameplayWorldRegistry.GetItemWorldIdentity(item);
+        if (worldIdentity == 0) return SimulationRangeTier.Stopped;
         if (!item.ShouldUseSimulationRange() || players.Count == 0) return SimulationRangeTier.Near;
         Vector3 position = item.transform.position;
-        int scene = item.gameObject.scene.handle;
-        return ResolveExact(position, scene);
+        return ResolveExact(position, worldIdentity);
     }
 
-    private SimulationRangeTier ResolveExact(Vector3 position, int scene)
+    private SimulationRangeTier ResolveExact(Vector3 position, int worldIdentity)
     {
         if (players.Count == 0) return SimulationRangeTier.Near;
         float2 entityPosition = new(position.x, position.y);
         float distanceSquared = float.PositiveInfinity;
         for (int i = 0; i < players.Count; i++)
-            if (players[i].Scene == scene)
+            if (players[i].WorldIdentity == worldIdentity)
                 distanceSquared = math.min(distanceSquared, topology.SqrDistance(entityPosition, players[i].Position));
         return ResolveDistance(distanceSquared);
     }

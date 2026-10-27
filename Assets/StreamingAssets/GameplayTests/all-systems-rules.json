@@ -17,6 +17,12 @@
       "enabled": true
     },
     {
+      "id": "ai_world_ownership_rules",
+      "name": "AI逻辑世界归属",
+      "luaPath": "GameplayTests/Systems/AI/world-ownership.lua",
+      "enabled": true
+    },
+    {
       "id": "navigation_rules",
       "name": "导航寻路规则与边界",
       "luaPath": "GameplayTests/Systems/Navigation/rules.lua",
@@ -296,6 +302,12 @@
       "id": "world_streaming_rules",
       "name": "世界模型与区块流送规则与边界",
       "luaPath": "GameplayTests/Systems/WorldStreaming/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "world_runtime_owner_rules",
+      "name": "世界模型逻辑身份",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/runtime-owner-rules.lua",
       "enabled": true
     },
     {

@@ -28,14 +28,23 @@ public class Mod_ItemDetector : Module
 
     [Tooltip("string为tag,Item列表为Value的字典")]
     [ShowInInspector]
-    public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>(); // 标签与物品列表的映射字典
+    public Dictionary<string, List<Item>> Type_Tag_Item_Dict
+    {
+        get { EnsureCachedTargetsMatchLogicalWorld(); return _typeTagItems; }
+    }
 
+    private readonly Dictionary<string, List<Item>> _typeTagItems = new Dictionary<string, List<Item>>();
+    private readonly Dictionary<Item, ulong> _detectedWorldRevisions = new Dictionary<Item, ulong>();
     private readonly HashSet<Item> _currentItemSet = new HashSet<Item>();
     private readonly HashSet<Item> _previousItemSet = new HashSet<Item>();
     private readonly List<Item> _emptyItems = new List<Item>(0);
     private readonly List<Item> _rangeFilteredItems = new();
     private long _requestedVersion;
     private long _appliedVersion;
+    private ulong _validatedOwnershipRevision = ulong.MaxValue;
+    private string _validatedWorldKey;
+    private int _validatedWorldIdentity;
+    private ulong _validatedDetectorWorldRevision;
     private readonly GridLineOfSightQuery _lineOfSightQuery = new();
 
     public long RequestedVersion => _requestedVersion;
@@ -47,8 +56,26 @@ public class Mod_ItemDetector : Module
 
     public List<Item> CurrentItemsInArea // 当前区域内的物品列表属性
     {
-        get => currentItemsInArea;
-        set => currentItemsInArea = value;
+        get { EnsureCachedTargetsMatchLogicalWorld(); return currentItemsInArea; }
+        set
+        {
+            currentItemsInArea = value ?? new List<Item>();
+            _currentItemSet.Clear();
+            _detectedWorldRevisions.Clear();
+            for (int i = 0; i < currentItemsInArea.Count; i++)
+            {
+                Item target = currentItemsInArea[i];
+                if (target != null)
+                {
+                    _currentItemSet.Add(target);
+                    _detectedWorldRevisions[target] = GameplayWorldRegistry.GetItemWorldRevision(target);
+                }
+            }
+            _validatedWorldIdentity = GetDetectorLogicalWorldIdentity();
+            _validatedDetectorWorldRevision = item != null ? GameplayWorldRegistry.GetItemWorldRevision(item) : 0UL;
+            _validatedWorldKey = GetDetectorLogicalWorldKey();
+            _validatedOwnershipRevision = ulong.MaxValue;
+        }
     }
 
     public float DetectionRadius // 检测半径属性
@@ -164,34 +191,40 @@ public class Mod_ItemDetector : Module
             }
         }
 
-        CurrentItemsInArea.Clear();
+        currentItemsInArea.Clear();
         _currentItemSet.Clear();
+        _detectedWorldRevisions.Clear();
+        int detectorWorld = GetDetectorLogicalWorldIdentity();
         if (detectedItems != null)
         {
             for (int i = 0; i < detectedItems.Count; i++)
             {
                 Item detectedItem = detectedItems[i];
-                if (detectedItem != null && _currentItemSet.Add(detectedItem))
-                    CurrentItemsInArea.Add(detectedItem);
+                if (detectorWorld != 0 && detectedItem != null && GameplayWorldRegistry.GetItemWorldIdentity(detectedItem) == detectorWorld &&
+                    _currentItemSet.Add(detectedItem))
+                {
+                    currentItemsInArea.Add(detectedItem);
+                    _detectedWorldRevisions[detectedItem] = GameplayWorldRegistry.GetItemWorldRevision(detectedItem);
+                }
             }
         }
 
-        foreach (List<Item> taggedItems in Type_Tag_Item_Dict.Values)
+        foreach (List<Item> taggedItems in _typeTagItems.Values)
             taggedItems.Clear();
 
         // 重建标签映射字典
-        for (int itemIndex = 0; itemIndex < CurrentItemsInArea.Count; itemIndex++)
+        for (int itemIndex = 0; itemIndex < currentItemsInArea.Count; itemIndex++)
         {
-            Item detectedItem = CurrentItemsInArea[itemIndex];
+            Item detectedItem = currentItemsInArea[itemIndex];
             List<string> tags = detectedItem.itemData.Tags;
             for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
             {
                 string tag = tags[tagIndex];
                 // 如果标签不存在，创建新的列表
-                if (!Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> taggedItems))
+                if (!_typeTagItems.TryGetValue(tag, out List<Item> taggedItems))
                 {
                     taggedItems = new List<Item>(4);
-                    Type_Tag_Item_Dict[tag] = taggedItems;
+                    _typeTagItems[tag] = taggedItems;
                 }
                 // 将物品添加到对应标签的列表中
                 taggedItems.Add(detectedItem);
@@ -199,6 +232,10 @@ public class Mod_ItemDetector : Module
         }
 
         // 仅 Debug 模式对比进入/离开变化，正常模式只保留正式目标和标签结果。
+        _validatedWorldKey = GetDetectorLogicalWorldKey();
+        _validatedOwnershipRevision = GameplayWorldRegistry.GetWorldItemOwnershipRevision(_validatedWorldKey);
+        _validatedWorldIdentity = detectorWorld;
+        _validatedDetectorWorldRevision = item != null ? GameplayWorldRegistry.GetItemWorldRevision(item) : 0UL;
         if (DebugMode)
             CheckItemEntries();
         _appliedVersion = requestVersion;
@@ -417,10 +454,59 @@ public class Mod_ItemDetector : Module
 
     #region 视线遮挡
 
+    // 只有拥有同一个有效逻辑世界的目标才能进入检测结果。
+    private int GetDetectorLogicalWorldIdentity()
+        => item != null ? GameplayWorldRegistry.GetItemWorldIdentity(item) : GameplayWorldRegistry.ExecutionWorldIdentity;
+
+    private string GetDetectorLogicalWorldKey()
+        => item != null ? GameplayWorldRegistry.GetItemWorldKey(item) : GameplayWorldRegistry.ExecutionWorldKey;
+
+    internal bool IsTargetInDetectorLogicalWorld(Item target)
+    {
+        int worldIdentity = GetDetectorLogicalWorldIdentity();
+        return worldIdentity != 0 && target != null && GameplayWorldRegistry.GetItemWorldIdentity(target) == worldIdentity;
+    }
+
+    // 归属发生变化时原位清除旧目标及标签，避免改变外部持有的列表引用。
+    private void EnsureCachedTargetsMatchLogicalWorld()
+    {
+        string worldKey = GetDetectorLogicalWorldKey();
+        ulong revision = GameplayWorldRegistry.GetWorldItemOwnershipRevision(worldKey);
+        if (_validatedOwnershipRevision == revision && _validatedWorldKey == worldKey) return;
+        int worldIdentity = GetDetectorLogicalWorldIdentity();
+        ulong detectorRevision = item != null ? GameplayWorldRegistry.GetItemWorldRevision(item) : 0UL;
+        bool detectorChanged = _validatedWorldIdentity != worldIdentity || _validatedDetectorWorldRevision != detectorRevision;
+        _validatedOwnershipRevision = revision;
+        _validatedWorldKey = worldKey;
+        _validatedWorldIdentity = worldIdentity;
+        _validatedDetectorWorldRevision = detectorRevision;
+        bool changed = false;
+        for (int i = currentItemsInArea.Count - 1; i >= 0; i--)
+        {
+            Item target = currentItemsInArea[i];
+            if (!detectorChanged && target != null && worldIdentity != 0 &&
+                GameplayWorldRegistry.TryGetItemWorldOwnership(target, out var owner) && owner.WorldIdentity == worldIdentity &&
+                _detectedWorldRevisions.TryGetValue(target, out ulong targetRevision) &&
+                owner.Revision == targetRevision) continue;
+            currentItemsInArea.RemoveAt(i);
+            if (!ReferenceEquals(target, null)) { _currentItemSet.Remove(target); _detectedWorldRevisions.Remove(target); }
+            changed = true;
+        }
+        if (!changed) return;
+        foreach (List<Item> targets in _typeTagItems.Values)
+        {
+            for (int i = targets.Count - 1; i >= 0; i--)
+            {
+                Item target = targets[i];
+                if (target == null || !_currentItemSet.Contains(target)) targets.RemoveAt(i);
+            }
+        }
+    }
+
     // 已锁定目标和旧检测结果也受通用上限约束，关闭墙体遮挡不会绕过它。
     internal bool IsWithinPerceptionRadiusLimit(Item target)
     {
-        if (target == null) return false;
+        if (!IsTargetInDetectorLogicalWorld(target)) return false;
         float radius = MaximumDetectionRadius;
         if (float.IsPositiveInfinity(radius)) return true;
         ItemMgr manager = ItemMgr.GetExistingInstance();
@@ -564,6 +650,11 @@ public class Mod_ItemDetector : Module
     protected override void OnUnload()
     {
         if (item != null) item.PerceptionRadiusLimitChanged -= HandlePerceptionRadiusLimitChanged;
+        currentItemsInArea.Clear();
+        _currentItemSet.Clear();
+        _detectedWorldRevisions.Clear();
+        foreach (List<Item> targets in _typeTagItems.Values) targets.Clear();
+        _validatedOwnershipRevision = ulong.MaxValue;
         _rangeFilteredItems.Clear();
         _lineOfSightQuery.Dispose();
     }

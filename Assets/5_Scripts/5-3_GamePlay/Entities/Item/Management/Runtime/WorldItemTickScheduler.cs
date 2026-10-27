@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,10 +12,13 @@ internal sealed class WorldItemTickScheduler
         public readonly List<Item> Items = new();
     }
     private readonly Dictionary<string, Group> groups = new(StringComparer.Ordinal);
-    private readonly Dictionary<Item, (string Key, int Scene)> owners = new();
+    private readonly Dictionary<Item, (string Key, ulong Revision)> owners = new();
     private readonly List<Group> dispatch = new();
     private readonly List<Item> removed = new();
+    private readonly List<(Transform Player, string WorldKey)> playerWorlds = new();
     public int RegisteredCount => owners.Count;
+    internal int GetRegisteredCountForWorld(string key) =>
+        key != null && groups.TryGetValue(key, out Group group) ? group.Items.Count : 0;
     public int EveryFrameCount { get { int total = 0; foreach (Group group in groups.Values) total += group.Scheduler.EveryFrameCount; return total; } }
     public int FastCount { get { int total = 0; foreach (Group group in groups.Values) total += group.Scheduler.FastCount; return total; } }
     public int NormalCount { get { int total = 0; foreach (Group group in groups.Values) total += group.Scheduler.NormalCount; return total; } }
@@ -24,20 +27,21 @@ internal sealed class WorldItemTickScheduler
     public void Register(Item item)
     {
         if (item == null) return;
-        var scene = item.gameObject.scene;
-        string key = scene.name;
+        if (!GameplayWorldRegistry.TryGetItemWorldOwnership(item, out var world)) { Remove(item); return; }
+        string key = world.WorldKey;
+        ulong revision = world.Revision;
         if (owners.TryGetValue(item, out var previous))
         {
             if (previous.Key == key)
             {
-                owners[item] = (key, scene.handle);
+                owners[item] = (key, revision);
                 groups[key].Scheduler.Register(item);
                 return;
             }
             groups[previous.Key].Scheduler.Remove(item); groups[previous.Key].Items.Remove(item);
         }
         if (!groups.TryGetValue(key, out Group group)) groups.Add(key, group = new Group());
-        owners[item] = (key, scene.handle); group.Items.Add(item); group.Scheduler.Register(item);
+        owners[item] = (key, revision); group.Items.Add(item); group.Scheduler.Register(item);
     }
     public void Remove(Item item)
     {
@@ -45,15 +49,15 @@ internal sealed class WorldItemTickScheduler
         groups[owner.Key].Scheduler.Remove(item); groups[owner.Key].Items.Remove(item);
     }
     public void NotifyChanged(Item item)
-    { if (item == null) return; Register(item); groups[owners[item].Key].Scheduler.NotifyChanged(item); }
+    { if (item == null) return; Register(item); if (owners.TryGetValue(item, out var owner)) groups[owner.Key].Scheduler.NotifyChanged(item); }
     public void NotifyMoved(Item item)
     {
         if (item == null) return;
-        // 场景句柄不变时复用登记的世界名，移动热路径不再从原生层复制场景字符串。
-        if (!owners.TryGetValue(item, out var owner) || owner.Scene != item.gameObject.scene.handle)
+        // 逻辑世界变更即使没有切换场景也要重新进入所属调度组。
+        if (!owners.TryGetValue(item, out var owner) || owner.Revision != GameplayWorldRegistry.GetItemWorldRevision(item))
         {
             Register(item);
-            owner = owners[item];
+            if (!owners.TryGetValue(item, out owner)) return;
         }
         groups[owner.Key].Scheduler.NotifyMoved(item);
     }
@@ -70,14 +74,24 @@ internal sealed class WorldItemTickScheduler
     // 同坐标的其它维度玩家不扩大本世界的模拟范围，也不借用本机地表拓扑。
     public void Update(float deltaTime, Action<Item> beforeTick, IReadOnlyList<Transform> players, WorldTopologyDomain fallback)
     {
+        playerWorlds.Clear();
+        for (int i = 0; i < players.Count; i++)
+        {
+            Transform player = players[i];
+            if (player == null) continue;
+            Item item = player.GetComponent<Item>();
+            string world = item != null ? GameplayWorldRegistry.GetItemWorldKey(item) :
+                GameplayWorldRegistry.TryResolveUnambiguousWorldKeyForScene(player.gameObject.scene, out string key) ? key : null;
+            if (!string.IsNullOrEmpty(world)) playerWorlds.Add((player, world));
+        }
         dispatch.Clear(); dispatch.AddRange(groups.Values);
         foreach (Group group in dispatch)
         {
             if (group.Items.Count == 0) continue;
             string key = owners[group.Items[0]].Key;
             group.Players.Clear();
-            for (int i = 0; i < players.Count; i++)
-                if (players[i] != null && players[i].gameObject.scene.name == key) group.Players.Add(players[i]);
+            for (int i = 0; i < playerWorlds.Count; i++)
+                if (playerWorlds[i].WorldKey == key) group.Players.Add(playerWorlds[i].Player);
             if (GameplayWorldRegistry.TryGet(key, out _))
             {
                 using (GameplayWorldRegistry.UseWorld(key))

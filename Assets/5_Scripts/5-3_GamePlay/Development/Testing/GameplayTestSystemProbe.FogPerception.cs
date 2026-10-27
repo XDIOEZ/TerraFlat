@@ -14,6 +14,8 @@ public static partial class GameplayTestSystemProbe
         {
             creature.BindData(EntityProbeData("test:fog_creature", 1));
             target.BindData(new Data_Player { PerceptionRadiusMultiplier = 3f });
+            GameplayWorldRegistry.AssignItemToWorld(creature, "probe:fog-perception");
+            GameplayWorldRegistry.AssignItemToWorld(target, "probe:fog-perception");
             var detector = creature.gameObject.AddComponent<Mod_ItemDetector>();
             detector.ModuleInit(creature, new Ex_ModData_MemoryPackable { ID = ModText.Detector, Enabled = true });
             creature.itemMods.AddMod(detector);

@@ -116,6 +116,7 @@ public static partial class GameplayTestSystemProbe
             bearData.FactionId = definition.ItemData.Value<string>("factionId");
             bearData.Tags = new List<string> { "Bear", "Animal", "Omnivore" };
             bear.BindData(bearData);
+            GameplayWorldRegistry.AssignItemToWorld(bear, "probe:bear-perception");
             bear.itemMods.BindOwner(bear);
             var ai = host.AddComponent<GameplayTestBearTerritorialProbeAI>();
             RegisterModule("ai", ai);
@@ -221,6 +222,7 @@ public static partial class GameplayTestSystemProbe
                 Data_GeneralItem data = EntityProbeData("test:bear_" + name, 1f);
                 data.Guid = guid;
                 instance.BindData(data);
+                GameplayWorldRegistry.AssignItemToWorld(instance, "probe:bear-perception");
                 instance.itemMods.BindOwner(instance);
                 return instance;
             }
@@ -249,7 +251,11 @@ public static partial class GameplayTestSystemProbe
                 }
             };
         }
-        finally { UnityEngine.Object.DestroyImmediate(root); }
+        finally
+        {
+            foreach (Item item in root.GetComponentsInChildren<Item>(true)) GameplayWorldRegistry.AssignItemToWorld(item, null);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     #endregion

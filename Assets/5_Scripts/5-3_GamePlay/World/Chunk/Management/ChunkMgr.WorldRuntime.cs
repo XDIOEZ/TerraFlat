@@ -299,9 +299,7 @@ public partial class ChunkMgr
         defaultGenerationSnapshot = ApplyWorldChunkSize(defaultGenerationSnapshot);
         runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
         activeGenerationSnapshot = defaultGenerationSnapshot;
-        string worldId = GameplayWorldRegistry.CurrentScene.name;
-        if (string.IsNullOrWhiteSpace(worldId))
-            worldId = "world";
+        string worldId = ResolveOwnedWorldRuntimeIdentity(OwnedWorldKey, GameplayWorldRegistry.ExecutionWorldKey);
         var world = new WorldRuntime(worldId, runtimeEpoch);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         slowChunkLogCount = 0;
@@ -316,6 +314,13 @@ public partial class ChunkMgr
         sightBlockingChunkCommittedSubscription =
             world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
         liquidBodies = new WorldLiquidBodySystem(this, ResolveCurrentDimensionId());
+    }
+
+    // 世界模型优先沿用管理器已绑定的逻辑身份，场景只作为未绑定时的上下文来源。
+    internal static string ResolveOwnedWorldRuntimeIdentity(string ownedWorldKey, string executionWorldKey)
+    {
+        if (!string.IsNullOrWhiteSpace(ownedWorldKey)) return ownedWorldKey;
+        return string.IsNullOrWhiteSpace(executionWorldKey) ? "world" : executionWorldKey;
     }
 
     #region 视线遮挡层接入

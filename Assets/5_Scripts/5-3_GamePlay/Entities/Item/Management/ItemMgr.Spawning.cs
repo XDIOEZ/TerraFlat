@@ -361,6 +361,7 @@ public partial class ItemMgr
         ItemData registeredData = item.itemData;
         try
         {
+            GameplayWorldRegistry.RegisterItemToInitialWorld(item);
             RefreshItemSpatialIndex(item);
             RefreshPerceptionTarget(item);
             _tickScheduler.Register(item);
@@ -425,6 +426,7 @@ public partial class ItemMgr
         if (!_runtimeRegistry.TryGetRegisteredGuid(item, out int registeredGuid) || !_runtimeRegistry.Remove(item))
             return;
 
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(item);
         _tickScheduler.Remove(item);
         try
         {
@@ -432,9 +434,17 @@ public partial class ItemMgr
         }
         finally
         {
-            RemoveItemFromSpatialIndex(item);
-            _perceptionTargets.Remove(item);
-            RuntimeItemUnregistered?.Invoke(item);
+            try
+            {
+                RemoveItemFromSpatialIndex(item);
+                _perceptionTargets.Remove(item);
+                RuntimeItemUnregistered?.Invoke(item);
+            }
+            finally
+            {
+                if (!_runtimeRegistry.Contains(item))
+                    GameplayWorldRegistry.DetachItemFromWorld(item, worldRevision);
+            }
         }
     }
 

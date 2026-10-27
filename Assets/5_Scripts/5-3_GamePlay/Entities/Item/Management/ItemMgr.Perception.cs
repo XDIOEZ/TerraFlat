@@ -39,8 +39,18 @@ public partial class ItemMgr
     }
 
     private const float PerceptionCellSize = 8f;
-    private readonly Dictionary<long, PerceptionCell> _perceptionCells = new();
-    private readonly Dictionary<Item, long> _itemPerceptionCells = new();
+    // 不同逻辑世界的同坐标使用独立桶，避免混扫其他世界的实体。
+    internal readonly struct PerceptionCellKey : IEquatable<PerceptionCellKey>
+    {
+        public readonly int WorldId;
+        public readonly long PositionKey;
+        public PerceptionCellKey(int worldId, long positionKey) { WorldId = worldId; PositionKey = positionKey; }
+        public bool Equals(PerceptionCellKey other) => WorldId == other.WorldId && PositionKey == other.PositionKey;
+        public override bool Equals(object other) => other is PerceptionCellKey key && Equals(key);
+        public override int GetHashCode() => unchecked(((WorldId * 397) ^ (int)PositionKey) * 397 ^ (int)(PositionKey >> 32));
+    }
+    private readonly Dictionary<PerceptionCellKey, PerceptionCell> _perceptionCells = new();
+    private readonly Dictionary<Item, PerceptionCellKey> _itemPerceptionCells = new();
     private readonly Stack<PerceptionCell> _perceptionCellPool = new();
     private uint _perceptionVisitBatch;
 
@@ -85,7 +95,7 @@ public partial class ItemMgr
     private NativeList<PerceptionItemSnapshot> _inFlightItemSnapshots;
     private NativeList<PerceptionShape2D> _inFlightShapes;
     private NativeList<DetectorQuerySnapshot> _inFlightQueries;
-    private NativeParallelMultiHashMap<long, int> _inFlightSpatialMap;
+    private NativeParallelMultiHashMap<PerceptionCellKey, int> _inFlightSpatialMap;
     private NativeStream _inFlightResults;
     private JobHandle _perceptionJobHandle;
     private bool _perceptionJobScheduled;
@@ -108,12 +118,13 @@ public partial class ItemMgr
         }
     }
 
-    private struct PerceptionItemSnapshot
+    internal struct PerceptionItemSnapshot
     {
-        public long CellKey;
+        public PerceptionCellKey CellKey;
         public int Guid;
         public int InstanceId;
         public int WorldId;
+        public ulong WorldRevision;
         public int LayerBit;
         public float PerceptionRadiusMultiplier;
         public float2 BoundsCenter;
@@ -123,7 +134,7 @@ public partial class ItemMgr
         public uint Revision;
     }
 
-    private struct DetectorQuerySnapshot
+    internal struct DetectorQuerySnapshot
     {
         public float2 Center;
         public float DetectionRadius;
@@ -132,16 +143,17 @@ public partial class ItemMgr
         public int LayerMask;
         public int ExcludedInstanceId;
         public int WorldId;
+        public ulong WorldRevision;
         public WorldTopologyDomain Topology;
     }
 
     [BurstCompile]
-    private struct BatchedPerceptionQueryJob : IJobParallelFor
+    internal struct BatchedPerceptionQueryJob : IJobParallelFor
     {
         [Unity.Collections.ReadOnly] public NativeArray<PerceptionItemSnapshot> Items;
         [Unity.Collections.ReadOnly] public NativeArray<PerceptionShape2D> Shapes;
         [Unity.Collections.ReadOnly] public NativeArray<DetectorQuerySnapshot> Queries;
-        [Unity.Collections.ReadOnly] public NativeParallelMultiHashMap<long, int> SpatialMap;
+        [Unity.Collections.ReadOnly] public NativeParallelMultiHashMap<PerceptionCellKey, int> SpatialMap;
         public NativeStream.Writer Results;
 
         /// <summary>空间格粗筛后在 Burst 内完成 Actor 圆形/AABB 的最终几何判断。</summary>
@@ -150,6 +162,7 @@ public partial class ItemMgr
             DetectorQuerySnapshot query = Queries[queryIndex];
             NativeStream.Writer writer = Results;
             writer.BeginForEachIndex(queryIndex);
+            if (query.WorldId == 0) { writer.EndForEachIndex(); return; }
 
             int minImage = query.Topology.IsWrapped ? -1 : 0;
             int maxImage = query.Topology.IsWrapped ? 1 : 0;
@@ -168,8 +181,8 @@ public partial class ItemMgr
                     {
                         for (int cellY = minCellY; cellY <= maxCellY; cellY++)
                         {
-                            long cellKey = PackCell(cellX, cellY);
-                            if (!SpatialMap.TryGetFirstValue(cellKey, out int itemIndex, out NativeParallelMultiHashMapIterator<long> iterator))
+                            PerceptionCellKey cellKey = new(query.WorldId, PackCell(cellX, cellY));
+                            if (!SpatialMap.TryGetFirstValue(cellKey, out int itemIndex, out NativeParallelMultiHashMapIterator<PerceptionCellKey> iterator))
                                 continue;
 
                             do
@@ -269,6 +282,12 @@ public partial class ItemMgr
             PendingDetectorRequest request = _pendingDetectorRequests[i];
             if (request.Detector == null)
                 continue;
+            Item detectorItem = request.Detector.item;
+            if ((detectorItem != null ? GameplayWorldRegistry.GetItemWorldIdentity(detectorItem) : GameplayWorldRegistry.ExecutionWorldIdentity) == 0)
+            {
+                request.Detector.ApplyDetectorResults(request.Version, null);
+                continue;
+            }
 
             _inFlightDetectors.Add(request.Detector);
             _inFlightDetectorVersions.Add(request.Version);
@@ -344,7 +363,7 @@ public partial class ItemMgr
         }
 
         if (!_inFlightSpatialMap.IsCreated)
-            _inFlightSpatialMap = new NativeParallelMultiHashMap<long, int>(requiredItemCapacity, Allocator.Persistent);
+            _inFlightSpatialMap = new NativeParallelMultiHashMap<PerceptionCellKey, int>(requiredItemCapacity, Allocator.Persistent);
         else
         {
             _inFlightSpatialMap.Clear();
@@ -367,9 +386,11 @@ public partial class ItemMgr
             Mod_ItemDetector detector = _inFlightDetectors[i];
             Item excludedItem = detector.item;
             Vector3 detectorPosition = detector.transform.position;
-            if (GameplayWorldRegistry.TryGet(detector.gameObject.scene.name, out _))
-                using (GameplayWorldRegistry.UseWorld(detector.gameObject.scene.name)) topology = WorldTopologyRuntime.GetActiveDomain();
-            else topology = WorldTopologyRuntime.GetActiveDomain();
+            string worldKey = excludedItem != null ? GameplayWorldRegistry.GetItemWorldKey(excludedItem) : GameplayWorldRegistry.ExecutionWorldKey;
+            if (GameplayWorldRegistry.TryGet(worldKey, out _))
+                using (GameplayWorldRegistry.UseWorld(worldKey)) topology = WorldTopologyRuntime.GetActiveDomain();
+            else topology = string.Equals(worldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal)
+                ? WorldTopologyRuntime.GetActiveDomain() : default;
             float detectionRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
                 detector.DetectionRadius,
                 1f);
@@ -382,7 +403,8 @@ public partial class ItemMgr
                     detectionRadius * maximumTargetPerceptionMultiplier) + maximumShapeReach,
                 LayerMask = detector.itemLayer.value,
                 ExcludedInstanceId = excludedItem != null ? excludedItem.GetInstanceID() : 0,
-                WorldId = detector.gameObject.scene.handle,
+                WorldId = excludedItem != null ? GameplayWorldRegistry.GetItemWorldIdentity(excludedItem) : GameplayWorldRegistry.ExecutionWorldIdentity,
+                WorldRevision = excludedItem != null ? GameplayWorldRegistry.GetItemWorldRevision(excludedItem) : 0UL,
                 Topology = topology
             });
         }
@@ -416,7 +438,7 @@ public partial class ItemMgr
                     {
                         for (int cellY = minCellY; cellY <= maxCellY; cellY++)
                         {
-                            long cellKey = PackPerceptionCell(cellX, cellY);
+                            PerceptionCellKey cellKey = new(query.WorldId, PackPerceptionCell(cellX, cellY));
                             if (!_perceptionCells.TryGetValue(cellKey, out PerceptionCell cell) ||
                                 cell.LastVisitedBatch == visitBatch)
                             {
@@ -451,6 +473,7 @@ public partial class ItemMgr
     private void TryAddPerceptionSnapshot(Item candidate)
     {
         if (candidate == null || candidate.itemData == null ||
+            !GameplayWorldRegistry.TryGetItemWorldOwnership(candidate, out var world) ||
             !candidate.gameObject.activeInHierarchy || candidate.DestructionHandled ||
             !_perceptionSnapshotItemSet.Add(candidate))
         {
@@ -467,10 +490,11 @@ public partial class ItemMgr
         _perceptionSnapshotItems.Add(candidate);
         _perceptionSnapshotData.Add(new PerceptionItemSnapshot
         {
-            CellKey = GetPerceptionCellKey(position),
+            CellKey = GetPerceptionCellKey(world.WorldIdentity, position),
             Guid = candidate.itemData.Guid,
             InstanceId = candidate.GetInstanceID(),
-            WorldId = candidate.gameObject.scene.handle,
+            WorldId = world.WorldIdentity,
+            WorldRevision = world.Revision,
             LayerBit = 1 << candidate.gameObject.layer,
             PerceptionRadiusMultiplier = candidate.GetPerceptionRadiusMultiplier(),
             BoundsCenter = new float2(boundsCenter.x, boundsCenter.y),
@@ -596,7 +620,7 @@ public partial class ItemMgr
                 _perceptionResultItemSet.Clear();
 
                 if (IsPerceptionDetectorRequestStale(detector, _inFlightDetectorVersions[queryIndex]) ||
-                    detector != null && detector.gameObject.scene.handle != _inFlightQueries[queryIndex].WorldId)
+                    detector != null && !IsPerceptionDetectorWorldCurrent(detector, _inFlightQueries[queryIndex]))
                 {
                     // 过期结果不能回写，但 NativeStream 必须读完本组后才能继续下一组。
                     DiscardPerceptionCandidateIndices(ref reader, candidateCount);
@@ -606,8 +630,9 @@ public partial class ItemMgr
                 }
 
                 DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
-                using IDisposable worldScope = detector != null && GameplayWorldRegistry.TryGet(detector.gameObject.scene.name, out _)
-                    ? GameplayWorldRegistry.UseWorld(detector.gameObject.scene.name) : null;
+                string worldKey = detector?.item != null ? GameplayWorldRegistry.GetItemWorldKey(detector.item) : GameplayWorldRegistry.ExecutionWorldKey;
+                using IDisposable worldScope = GameplayWorldRegistry.TryGet(worldKey, out _)
+                    ? GameplayWorldRegistry.UseWorld(worldKey) : null;
                 using (PerceptionFilterCandidatesMarker.Measure(candidateCount))
                 {
                     using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
@@ -662,12 +687,13 @@ public partial class ItemMgr
                 }
 
                 reader.EndForEachIndex();
-                if (detector != null)
+                if (detector != null && IsPerceptionDetectorWorldCurrent(detector, query))
                 {
                     if (detector.RequestedVersion != _inFlightDetectorVersions[queryIndex]) staleDetector++;
                     using (PerceptionDetectorApplyMarker.Measure(_detectorApplyBuffer.Count))
                         detector.ApplyDetectorResults(_inFlightDetectorVersions[queryIndex], _detectorApplyBuffer);
                 }
+                else if (detector != null) staleDetector++;
             }
         }
         finally
@@ -692,6 +718,19 @@ public partial class ItemMgr
     internal static bool IsPerceptionDetectorRequestStale(Mod_ItemDetector detector, long submittedVersion)
         => detector != null && detector.RequestedVersion != submittedVersion;
 
+    // 同一实例在不同世界之间往返后仍必须拒绝迁移前的异步感知结果。
+    internal static bool IsPerceptionItemWorldCurrent(Item item, int worldId, ulong worldRevision)
+        => worldId != 0 && (item != null
+            ? GameplayWorldRegistry.TryGetItemWorldOwnership(item, out var owner) && owner.WorldIdentity == worldId && owner.Revision == worldRevision
+            : GameplayWorldRegistry.ExecutionWorldIdentity == worldId && worldRevision == 0UL);
+
+    private static bool IsPerceptionDetectorWorldCurrent(Mod_ItemDetector detector, DetectorQuerySnapshot query)
+    {
+        Item owner = detector.item;
+        return (owner != null ? owner.GetInstanceID() : 0) == query.ExcludedInstanceId &&
+            IsPerceptionItemWorldCurrent(owner, query.WorldId, query.WorldRevision);
+    }
+
     /// <summary>逐项消费本组原始索引，避免后续结果流发生未读数据残留。</summary>
     internal static void DiscardPerceptionCandidateIndices(ref NativeStream.Reader reader, int count)
     {
@@ -706,7 +745,8 @@ public partial class ItemMgr
     {
         if (candidate == null || candidate.itemData == null || candidate.DestructionHandled ||
             !candidate.gameObject.activeInHierarchy || candidate.itemData.Guid != snapshot.Guid ||
-            candidate.GetInstanceID() != snapshot.InstanceId || candidate.gameObject.scene.handle != snapshot.WorldId ||
+            candidate.GetInstanceID() != snapshot.InstanceId ||
+            !IsPerceptionItemWorldCurrent(candidate, snapshot.WorldId, snapshot.WorldRevision) ||
             !_perceptionTargets.TryGetValue(candidate, out PerceptionTarget target) || target.Revision != snapshot.Revision ||
             ((1 << candidate.gameObject.layer) & snapshot.LayerBit) == 0)
         {
@@ -795,12 +835,13 @@ public partial class ItemMgr
             throw new ArgumentNullException(nameof(results));
         if (dedupe == null)
             throw new ArgumentNullException(nameof(dedupe));
-        string world = excludedItem != null ? excludedItem.gameObject.scene.name : GameplayWorldRegistry.ExecutionWorldKey;
-        using var worldScope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
-        int worldId = excludedItem != null ? excludedItem.gameObject.scene.handle : GameplayWorldRegistry.CurrentScene.handle;
-
         results.Clear();
         dedupe.Clear();
+        string world = excludedItem != null ? GameplayWorldRegistry.GetItemWorldKey(excludedItem) : GameplayWorldRegistry.ExecutionWorldKey;
+        int worldId = excludedItem != null ? GameplayWorldRegistry.GetItemWorldIdentity(excludedItem) : GameplayWorldRegistry.ExecutionWorldIdentity;
+        if (worldId == 0) return;
+        bool hasWorld = GameplayWorldRegistry.TryGet(world, out _);
+        using var worldScope = hasWorld ? GameplayWorldRegistry.UseWorld(world) : null;
         if (!float.IsFinite(radius) || radius < 0f || !float.IsFinite(center.x) || !float.IsFinite(center.y))
             return;
 
@@ -810,7 +851,8 @@ public partial class ItemMgr
             float multiplier = GetMaximumTargetPerceptionMultiplier(out float maximumShapeReach);
             broadphaseRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(radius, multiplier) + maximumShapeReach;
         }
-        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        WorldTopologyDomain topology = hasWorld || string.Equals(world, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal)
+            ? WorldTopologyRuntime.GetActiveDomain() : default;
         int minImage = topology.IsWrapped ? -1 : 0;
         int maxImage = topology.IsWrapped ? 1 : 0;
         for (int imageX = minImage; imageX <= maxImage; imageX++)
@@ -826,13 +868,13 @@ public partial class ItemMgr
                 {
                     for (int cellY = minCellY; cellY <= maxCellY; cellY++)
                     {
-                        long cellKey = PackPerceptionCell(cellX, cellY);
+                        PerceptionCellKey cellKey = new(worldId, PackPerceptionCell(cellX, cellY));
                         if (!_perceptionCells.TryGetValue(cellKey, out PerceptionCell cell))
                             continue;
 
                         foreach (Item candidate in cell.Items)
                         {
-                            if (candidate == null || candidate.gameObject.scene.handle != worldId) continue;
+                            if (candidate == null || GameplayWorldRegistry.GetItemWorldIdentity(candidate) != worldId) continue;
                             if (useTargetGeometry)
                                 TryAddSpatialCandidate(candidate, imageCenter, radius, layerMask, excludedItem, results, dedupe);
                             else
@@ -862,10 +904,12 @@ public partial class ItemMgr
         if (item == null || item.itemData == null)
             return;
 
-        long newCellKey = GetPerceptionCellKey(item.transform.position);
-        if (_itemPerceptionCells.TryGetValue(item, out long currentCellKey))
+        int worldIdentity = GameplayWorldRegistry.GetItemWorldIdentity(item);
+        if (worldIdentity == 0) { RemoveItemFromSpatialIndex(item); return; }
+        PerceptionCellKey newCellKey = GetPerceptionCellKey(worldIdentity, item.transform.position);
+        if (_itemPerceptionCells.TryGetValue(item, out PerceptionCellKey currentCellKey))
         {
-            if (currentCellKey == newCellKey)
+            if (currentCellKey.Equals(newCellKey))
                 return;
 
             RemoveItemFromPerceptionCell(item, currentCellKey);
@@ -887,14 +931,14 @@ public partial class ItemMgr
     /// <summary>从已登记的感知格中注销实体。</summary>
     private void RemoveItemFromSpatialIndex(Item item)
     {
-        if (ReferenceEquals(item, null) || !_itemPerceptionCells.TryGetValue(item, out long cellKey))
+        if (ReferenceEquals(item, null) || !_itemPerceptionCells.TryGetValue(item, out PerceptionCellKey cellKey))
             return;
 
         RemoveItemFromPerceptionCell(item, cellKey);
     }
 
     /// <summary>移除格内成员并回收空格集合。</summary>
-    private void RemoveItemFromPerceptionCell(Item item, long cellKey)
+    private void RemoveItemFromPerceptionCell(Item item, PerceptionCellKey cellKey)
     {
         _itemPerceptionCells.Remove(item);
         if (!_perceptionCells.TryGetValue(cellKey, out PerceptionCell cell))
@@ -941,11 +985,11 @@ public partial class ItemMgr
     }
 
     /// <summary>取得实体中心所在的感知格键。</summary>
-    private static long GetPerceptionCellKey(Vector2 position)
+    private static PerceptionCellKey GetPerceptionCellKey(int worldId, Vector2 position)
     {
-        return PackPerceptionCell(
+        return new PerceptionCellKey(worldId, PackPerceptionCell(
             WorldToPerceptionCell(position.x),
-            WorldToPerceptionCell(position.y));
+            WorldToPerceptionCell(position.y)));
     }
 
     /// <summary>无碰撞编码两个有符号格坐标。</summary>
@@ -962,7 +1006,7 @@ public partial class ItemMgr
         for (int i = 0; i < RuntimeItems.Count; i++)
         {
             Item candidate = RuntimeItems[i];
-            if (candidate == null || candidate.itemData == null ||
+            if (candidate == null || candidate.itemData == null || GameplayWorldRegistry.GetItemWorldIdentity(candidate) == 0 ||
                 !candidate.gameObject.activeInHierarchy || candidate.DestructionHandled)
             {
                 continue;

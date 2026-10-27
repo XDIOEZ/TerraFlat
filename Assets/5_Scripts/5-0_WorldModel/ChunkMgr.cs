@@ -172,9 +172,11 @@ namespace FlatWorld.WorldModel
             new List<WorldAddress>().AsReadOnly();
         private readonly ConcurrentQueue<GenerationCompletion> _completed =
             new ConcurrentQueue<GenerationCompletion>();
+        private readonly object _completionLifecycleGate = new object();
         private readonly ChunkGenerationScheduler _scheduler;
         private readonly IWorldAddressNormalizer _normalizer;
         private bool _disposed;
+        private bool _completionCleanupFinished;
 
         public ChunkMgr(WorldRuntime world, IChunkPureGenerator generator,
             int maxGenerationConcurrency = 2, IWorldAddressNormalizer normalizer = null)
@@ -280,11 +282,30 @@ namespace FlatWorld.WorldModel
             Task<ChunkGenerationResult> task = _scheduler.ScheduleAsync(request, linked.Token, pending.Timing);
             _generationTasks.Add(task);
             // 后台线程不直接修改世界数据，只放一张完成通知；主线程之后再来安全处理。
-            task.ContinueWith(completed => _completed.Enqueue(
+            task.ContinueWith(completed => EnqueueOrReleaseGenerationCompletion(
                     new GenerationCompletion(address, pending, completed)),
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
             return pending.Completion.Task;
+        }
+
+        // 调度器释放后迟到的完成通知只归还载荷，不再进入已关闭的世界队列。
+        private void EnqueueOrReleaseGenerationCompletion(GenerationCompletion completion)
+        {
+            lock (_completionLifecycleGate)
+            {
+                if (_completionCleanupFinished) ReleaseUnclaimedGenerationCompletion(completion);
+                else _completed.Enqueue(completion);
+            }
+        }
+
+        private static void ReleaseUnclaimedGenerationCompletion(GenerationCompletion completion)
+        {
+            if (completion.Task.Status == TaskStatus.RanToCompletion)
+                completion.Task.Result?.Dispose();
+            else if (completion.Task.IsFaulted)
+                _ = completion.Task.Exception;
+            completion.Pending.Cancellation.Dispose();
         }
 
         /// <summary>根据一个玩家或观察者的位置，更新周围要加载的区块。</summary>
@@ -523,8 +544,8 @@ namespace FlatWorld.WorldModel
                         {
                             // 调度器完成为取消时也必须把 WorldRuntime 的 Generating 状态收口。
                             // 否则窗口仍需要该区块时会留下“没有任务的 Generating”死状态，加载页永远等不到地形。
-                            World.CancelChunkGeneration(completion.Address);
-                            retryWindowRequest = _windowDataDemand.Contains(completion.Address);
+                            retryWindowRequest = World.CancelChunkGeneration(completion.Pending.Request) &&
+                                _windowDataDemand.Contains(completion.Address);
                         }
                         completion.Pending.Completion.TrySetCanceled();
                         diagnosticOutcome = current ? "cancelled" : "stale";
@@ -549,8 +570,8 @@ namespace FlatWorld.WorldModel
                 {
                     if (current)
                     {
-                        World.CancelChunkGeneration(completion.Address);
-                        retryWindowRequest = _windowDataDemand.Contains(completion.Address);
+                        retryWindowRequest = World.CancelChunkGeneration(completion.Pending.Request) &&
+                            _windowDataDemand.Contains(completion.Address);
                     }
                     completion.Pending.Completion.TrySetCanceled();
                     diagnosticOutcome = "cancelled";
@@ -560,10 +581,12 @@ namespace FlatWorld.WorldModel
                     // 只有当前任务的失败才写进区块；等待的人仍然会收到真正的错误原因。
                     Exception failure = completion.Task.Exception?.GetBaseException() ??
                                         new InvalidOperationException("Chunk generation failed.");
-                    if (current)
+                    bool ownsWorldRequest = current && World.IsCurrentChunkGeneration(completion.Pending.Request);
+                    if (ownsWorldRequest)
                         World.RejectFailedGeneration(completion.Pending.Request, failure);
                     completion.Pending.Completion.TrySetException(failure);
-                    World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
+                    if (ownsWorldRequest)
+                        World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
                 }
                 completion.Pending.Cancellation.Dispose();
                 World.StreamingDiagnostics.Complete(completion.Pending.Timing, diagnosticOutcome);
@@ -605,10 +628,10 @@ namespace FlatWorld.WorldModel
         {
             ThrowIfDisposed();
             address = _normalizer.Normalize(address);
-            bool invalidated = World.CancelChunkGeneration(address);
             if (!_pending.TryGetValue(address, out PendingGeneration pending))
-                return invalidated;
+                return false;
             _pending.Remove(address);
+            World.CancelChunkGeneration(pending.Request);
             pending.Timing?.Cancel();
             World.StreamingDiagnostics.Count("generation.cancel_requested");
             pending.Cancellation.Cancel();
@@ -696,22 +719,27 @@ namespace FlatWorld.WorldModel
             foreach (ChunkLease lease in _simulationLeases.Values)
                 lease.Dispose();
             _simulationLeases.Clear();
-            foreach (PendingGeneration pending in _pending.Values)
+            var pendingRequests = new List<PendingGeneration>(_pending.Values);
+            _pending.Clear();
+            foreach (PendingGeneration pending in pendingRequests)
             {
+                World.CancelChunkGeneration(pending.Request);
                 pending.Cancellation.Cancel();
                 pending.Completion.TrySetCanceled();
             }
-            _pending.Clear();
             _generationTasks.Clear();
             _presentationDemand.Clear();
             _windowDataDemand.Clear();
             _windowDataCancellationBuffer.Clear();
-            _scheduler.Dispose();
-            while (_completed.TryDequeue(out GenerationCompletion completion))
+            try { _scheduler.Dispose(); }
+            finally
             {
-                if (completion.Task.Status == TaskStatus.RanToCompletion)
-                    completion.Task.Result?.Dispose();
-                completion.Pending.Cancellation.Dispose();
+                lock (_completionLifecycleGate)
+                {
+                    _completionCleanupFinished = true;
+                    while (_completed.TryDequeue(out GenerationCompletion completion))
+                        ReleaseUnclaimedGenerationCompletion(completion);
+                }
             }
         }
 

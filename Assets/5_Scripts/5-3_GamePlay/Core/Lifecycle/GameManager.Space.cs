@@ -117,6 +117,7 @@ public partial class GameManager
                         if (body != null) { body.position = player.transform.position; body.velocity = Vector2.zero; }
                         SpaceSession.Current?.RestorePassengerPose(player);
                     }
+                    AssignRegisteredPlayerAndChildItemsToWorld(player, key);
                 }
                 networkLocalWorldKey = key;
                 networkLocalRealmRevision = observer.RealmRevision;
@@ -154,9 +155,25 @@ public partial class GameManager
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null) { body.position = player.transform.position; body.velocity = Vector2.zero; }
         player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ShiftSpacePresentation(player.transform.position - before);
-        ItemMgr.Instance.NotifyRuntimeItemMoved(player);
+        AssignRegisteredPlayerAndChildItemsToWorld(player, key);
         networkLocalWorldKey = key; networkLocalRealmRevision = observer.RealmRevision;
         NetworkDimensionBridge.NotifyPresentationReady(player, key);
+    }
+
+    // 玩家及已登记的手持物一起交给目标世界，位置变化仍刷新现有空间索引。
+    public static void AssignRegisteredPlayerAndChildItemsToWorld(Player player, string worldKey)
+    {
+        ItemMgr manager = ItemMgr.GetExistingInstance();
+        if (player == null || manager == null || string.IsNullOrWhiteSpace(worldKey)) return;
+        foreach (Item item in player.GetComponentsInChildren<Item>(true))
+        {
+            if (item == null || item.itemData == null ||
+                !manager.WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) || registered != item)
+                continue;
+            bool unchanged = string.Equals(GameplayWorldRegistry.GetItemWorldKey(item), worldKey, StringComparison.Ordinal);
+            GameplayWorldRegistry.AssignItemToWorld(item, worldKey);
+            if (unchanged) manager.NotifyRuntimeItemMoved(item);
+        }
     }
 
     private void ResetNetworkLocalRealm()

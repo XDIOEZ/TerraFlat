@@ -1200,7 +1200,8 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	/// <summary>按观察者基础距离与目标被感知倍率判断是否处于有效感知范围。</summary>
 	protected bool IsWithinEffectivePerceptionRange(Item target, float baseDistance)
 	{
-		if (target == null)
+		if (item == null || target == null || GameplayWorldRegistry.GetItemWorldIdentity(item) == 0 ||
+			GameplayWorldRegistry.GetItemWorldIdentity(item) != GameplayWorldRegistry.GetItemWorldIdentity(target))
 			return false;
 
 		float effectiveDistance = Mod_ItemDetector.CalculateEffectiveDetectionRadius(

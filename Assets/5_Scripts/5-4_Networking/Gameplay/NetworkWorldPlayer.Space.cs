@@ -102,13 +102,20 @@ namespace FlatWorld.Networking.Gameplay
                 target = GameplayWorldRegistry.GetOrCreate(key).Scene;
             }
             if (!target.IsValid() || !target.isLoaded) return;
+            bool sceneChanged = corePlayer.gameObject.scene != target;
+            bool worldChanged = !string.Equals(corePlayer.Data.CurrentSceneName, key, StringComparison.Ordinal);
+            ItemMgr manager = ItemMgr.GetExistingInstance();
+            bool registeredWorldChanged = manager != null && corePlayer.itemData != null &&
+                manager.WorldRunTimeItems.TryGetValue(corePlayer.itemData.Guid, out Item registered) && registered == corePlayer &&
+                !string.Equals(GameplayWorldRegistry.GetItemWorldKey(corePlayer), key, StringComparison.Ordinal);
             corePlayer.Data.CurrentSceneName = key;
-            if (corePlayer.gameObject.scene != target)
+            if (sceneChanged)
             {
                 corePlayer.transform.SetParent(null, true);
                 SceneManager.MoveGameObjectToScene(corePlayer.gameObject, target);
-                foreach (Item item in corePlayer.GetComponentsInChildren<Item>(true)) ItemMgr.Instance.NotifyRuntimeItemMoved(item);
             }
+            if (sceneChanged || worldChanged || registeredWorldChanged)
+                GameManager.AssignRegisteredPlayerAndChildItemsToWorld(corePlayer, key);
             if (coreBody != null) coreBody.simulated = !observer.InSpace;
         }
         [Server]

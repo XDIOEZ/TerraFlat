@@ -23,7 +23,8 @@
       ],
       "ruleCaseIds": [
         "ai_rules",
-        "ai_spawn_countdown_rules"
+        "ai_spawn_countdown_rules",
+        "ai_world_ownership_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/AI/rules-suite.json",
       "integrationSuites": [
@@ -1057,7 +1058,8 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "world_streaming_rules"
+        "world_streaming_rules",
+        "world_runtime_owner_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/WorldStreaming/rules-suite.json",
       "integrationSuites": [

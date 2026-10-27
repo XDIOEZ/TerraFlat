@@ -40,6 +40,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/module_structure", ServiceModuleStructure);
         operations.Add("item_runtime/clone_runtime", ServiceCloneRuntime);
         operations.Add("item_runtime/cleanup_lookup", ServiceItemCleanupLookup);
+        operations.Add("world_streaming/world_scene_binding", ServiceWorldSceneBinding);
         operations.Add("world_streaming/chunk_leases", ServiceChunkLeases);
         operations.Add("world_streaming/generation_lifecycle", ServiceGenerationLifecycle);
         operations.Add("world_streaming/commit_snapshot", ServiceCommitSnapshot);
@@ -380,6 +381,58 @@ public static partial class GameplayTestSystemProbe
             ["sourceHasAddedTag"] = source.Tags.Contains("probe.added"), ["sourceWeight"] = source.Stack.CurrentWeight,
             ["sourceVolume"] = source.Stack.CurrentVolume
         };
+    }
+
+    #endregion
+
+    #region 世界身份与场景绑定
+
+    private static JObject ServiceWorldSceneBinding(JObject args)
+    {
+        const int sceneA = 401, sceneB = 902;
+        const string worldA = "probe:world-a", worldB = "probe:world-b";
+        var ownerA = new object();
+        var replacementA = new object();
+        var ownerB = new object();
+        var bindings = new WorldSceneBindingIndex();
+        var identities = new RuntimeWorldIdentityIndex();
+        var result = new JObject();
+        result["unknownResolved"] = bindings.TryResolveWorldKeyForScene(sceneA, null, out _);
+        result["firstAdded"] = bindings.BindWorldToScene(sceneA, worldA, ownerA);
+        bindings.TryResolveWorldKeyForScene(sceneA, null, out string unique);
+        result["singleWorld"] = unique;
+        result["duplicateChanged"] = bindings.BindWorldToScene(sceneA, worldA, ownerA);
+        result["secondAdded"] = bindings.BindWorldToScene(sceneA, worldB, ownerB);
+        result["ambiguousResolved"] = bindings.TryResolveWorldKeyForScene(sceneA, null, out _);
+        result["explicitA"] = bindings.TryResolveWorldKeyForScene(sceneA, worldA, out string explicitA) ? explicitA : null;
+        result["explicitB"] = bindings.TryResolveWorldKeyForScene(sceneA, worldB, out string explicitB) ? explicitB : null;
+        result["wrongExplicitResolved"] = bindings.TryResolveWorldKeyForScene(sceneA, "probe:other", out _);
+        result["replacementChanged"] = bindings.BindWorldToScene(sceneA, worldA, replacementA);
+        result["staleOwnerRemoved"] = bindings.UnbindWorldFromScene(sceneA, worldA, ownerA);
+        result["staleContextResolved"] = bindings.TryResolveWorldKeyForOwner(sceneA, worldA, ownerA, out _);
+        result["replacementContext"] = bindings.TryResolveWorldKeyForOwner(sceneA, worldA, replacementA,
+            out string replacementContext) ? replacementContext : null;
+        result["replacementOwns"] = bindings.IsCurrentWorldOwner(sceneA, worldA, replacementA);
+        result["replacementRemoved"] = bindings.UnbindWorldFromScene(sceneA, worldA, replacementA);
+        bindings.TryResolveWorldKeyForScene(sceneA, null, out string remaining);
+        result["remainingWorld"] = remaining;
+        result["lastRemoved"] = bindings.UnbindWorldFromScene(sceneA, worldB, ownerB);
+        result["emptyHasBindings"] = bindings.HasWorldsForScene(sceneA);
+        bindings.BindWorldToScene(sceneA, worldA, ownerA);
+        bindings.BindWorldToScene(sceneB, worldA, ownerA);
+        result["sameWorldSecondScene"] = bindings.TryResolveWorldKeyForScene(sceneB, worldA, out _);
+        bindings.Clear();
+        result["clearSceneA"] = bindings.HasWorldsForScene(sceneA);
+        result["clearSceneB"] = bindings.HasWorldsForScene(sceneB);
+        int firstId = identities.GetOrCreateRuntimeWorldIdentity(worldA);
+        int secondId = identities.GetOrCreateRuntimeWorldIdentity(worldB);
+        result["firstIdentity"] = firstId;
+        result["sameIdentity"] = identities.GetOrCreateRuntimeWorldIdentity(new string(worldA.ToCharArray()));
+        result["secondIdentity"] = secondId;
+        identities.Clear();
+        result["clearedIdentityStillFound"] = identities.TryGetRuntimeWorldIdentity(worldA, out _);
+        result["identityAfterClear"] = identities.GetOrCreateRuntimeWorldIdentity(worldA);
+        return result;
     }
 
     #endregion

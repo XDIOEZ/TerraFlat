@@ -9,6 +9,12 @@
       "name": "世界模型与区块流送规则与边界",
       "luaPath": "GameplayTests/Systems/WorldStreaming/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "world_runtime_owner_rules",
+      "name": "世界模型逻辑身份",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/runtime-owner-rules.lua",
+      "enabled": true
     }
   ]
 }

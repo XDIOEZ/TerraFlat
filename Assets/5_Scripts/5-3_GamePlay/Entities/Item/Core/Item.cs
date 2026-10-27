@@ -585,6 +585,7 @@ public abstract class Item : MonoBehaviour
     {
         ClearPendingInitialAnimatorState();
         PersistenceOwner = null;
+        GameplayWorldRegistry.AssignItemToWorld(this, null);
         ModuleUnload();
         ClearPerceptionRadiusLimits();
         StopAllCoroutines();

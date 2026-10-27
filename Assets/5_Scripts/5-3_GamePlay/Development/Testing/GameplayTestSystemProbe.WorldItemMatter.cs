@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -14,6 +15,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/natural_replacement_ownership", NaturalReplacementOwnership);
         operations.Add("item_runtime/ai_entity_live_query", AiEntityLiveQuery);
         operations.Add("item_runtime/world_tick_move_query", WorldTickMoveQuery);
+        operations.Add("item_runtime/logical_world_tick", LogicalWorldTick);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
         operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
         operations.Add("item_runtime/matter_moisture_info", MatterMoistureInfo);
@@ -111,6 +113,7 @@ public static partial class GameplayTestSystemProbe
     private static JObject WorldTickMoveQuery(JObject args) => WithEntityProbeItem(item =>
     {
         item.BindData(EntityProbeData("probe:world-tick-move", 1));
+        GameplayWorldRegistry.AssignItemToWorld(item, "probe:world-tick-move");
         var scheduler = new WorldItemTickScheduler();
         scheduler.NotifyMoved(item);
         bool firstMoveRegistered = scheduler.RegisteredCount == 1;
@@ -133,6 +136,65 @@ public static partial class GameplayTestSystemProbe
             ["removedAgain"] = scheduler.RegisteredCount == 0
         };
     });
+
+    // 真正的世界调度组应随逻辑世界迁移，不能把场景作为身份。
+    private static JObject LogicalWorldTick(JObject args) => WithEntityProbeItem(first => WithEntityProbeItem(second =>
+    {
+        const string worldA = "probe:tick-world-a", worldB = "probe:tick-world-b";
+        first.BindData(EntityProbeData("probe:tick-first", 1));
+        second.BindData(EntityProbeData("probe:tick-second", 1));
+        GameplayWorldRegistry.AssignItemToWorld(first, worldA);
+        GameplayWorldRegistry.AssignItemToWorld(second, worldB);
+        var scheduler = new WorldItemTickScheduler();
+        scheduler.Register(first);
+        scheduler.Register(second);
+        bool sameScene = first.gameObject.scene == second.gameObject.scene;
+        bool separateGroups = scheduler.GetRegisteredCountForWorld(worldA) == 1 &&
+            scheduler.GetRegisteredCountForWorld(worldB) == 1 &&
+            GameplayWorldRegistry.GetWorldItemCount(worldA) == 1 && GameplayWorldRegistry.GetWorldItemCount(worldB) == 1;
+
+        GameplayWorldRegistry.AssignItemToWorld(second, worldA);
+        scheduler.NotifyMoved(second);
+        bool sameSceneTransfer = scheduler.GetRegisteredCountForWorld(worldA) == 2 &&
+            scheduler.GetRegisteredCountForWorld(worldB) == 0 &&
+            GameplayWorldRegistry.GetWorldItemCount(worldA) == 2 && GameplayWorldRegistry.GetWorldItemCount(worldB) == 0;
+        Scene initialScene = second.gameObject.scene;
+        Scene otherScene = WindShelterProbeScene("[LogicalWorldTickProbe]");
+        try
+        {
+            SceneManager.MoveGameObjectToScene(second.gameObject, otherScene);
+            scheduler.NotifyMoved(second);
+            bool differentSceneSameGroup = first.gameObject.scene != second.gameObject.scene &&
+                scheduler.GetRegisteredCountForWorld(worldA) == 2;
+            for (int i = 0; i < 16; i++) scheduler.NotifyMoved(second);
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 256; i++) scheduler.NotifyMoved(second);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            scheduler.Remove(second);
+            second.PrepareForPoolReuse();
+            bool poolClearedWorld = GameplayWorldRegistry.GetItemWorldKey(second) != worldA;
+            GameplayWorldRegistry.AssignItemToWorld(second, worldB);
+            scheduler.Register(second);
+            bool pooledRebind = scheduler.GetRegisteredCountForWorld(worldA) == 1 &&
+                scheduler.GetRegisteredCountForWorld(worldB) == 1;
+            scheduler.Remove(first);
+            scheduler.Remove(second);
+            return new JObject
+            {
+                ["sameScene"] = sameScene, ["separateGroups"] = separateGroups,
+                ["sameSceneTransfer"] = sameSceneTransfer, ["differentSceneSameGroup"] = differentSceneSameGroup,
+                ["allocatedBytes"] = allocated, ["poolClearedWorld"] = poolClearedWorld,
+                ["pooledRebind"] = pooledRebind, ["cleared"] = scheduler.RegisteredCount == 0
+            };
+        }
+        finally
+        {
+            if (second != null && initialScene.IsValid() && initialScene.isLoaded && second.gameObject.scene != initialScene)
+                SceneManager.MoveGameObjectToScene(second.gameObject, initialScene);
+            CloseWindShelterProbeScene(otherScene);
+        }
+    }));
 
     // 独立停用宿主只读取正式资格缓存，不创建世界、拾取器或完整物品管理器。
     private static JObject WorldMatterStructure(JObject args) => WithEntityProbeItem(item =>

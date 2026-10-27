@@ -8,8 +8,10 @@ using FlatWorld.Gameplay.Progress;
 using FlatWorld.Gameplay.Quests;
 using Newtonsoft.Json.Linq;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -42,6 +44,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/initial_animator_activation", EntityInitialAnimatorActivation);
         operations.Add("item_runtime/simulation_region_shortcut", EntitySimulationRegionShortcut);
         operations.Add("item_runtime/simulation_membership_cache", EntitySimulationMembershipCache);
+        operations.Add("item_runtime/logical_world_simulation_perception", EntityLogicalWorldSimulationPerception);
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
@@ -306,6 +309,10 @@ public static partial class GameplayTestSystemProbe
         try
         {
             Mod_ItemDetector detector = root.AddComponent<Mod_ItemDetector>();
+            GameItem observer = root.AddComponent<GameItem>();
+            observer.BindData(EntityProbeData("probe:detector-observer", 1f));
+            GameplayWorldRegistry.AssignItemToWorld(observer, "probe:detector-fixture");
+            detector.item = observer;
             Item Create(string id, params string[] tags)
             {
                 var host = new GameObject(id);
@@ -314,6 +321,7 @@ public static partial class GameplayTestSystemProbe
                 Data_GeneralItem data = EntityProbeData(id, 1f);
                 data.Tags = new List<string>(tags);
                 item.BindData(data);
+                GameplayWorldRegistry.AssignItemToWorld(item, "probe:detector-fixture");
                 return item;
             }
 
@@ -367,7 +375,11 @@ public static partial class GameplayTestSystemProbe
                 ["cleared"] = cleared
             };
         }
-        finally { UnityEngine.Object.DestroyImmediate(root); }
+        finally
+        {
+            foreach (Item item in root.GetComponentsInChildren<Item>(true)) GameplayWorldRegistry.AssignItemToWorld(item, null);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     // 使用真实检测器和未加载物品，核对最近目标筛选的环绕、过滤与实时位置。
@@ -378,6 +390,10 @@ public static partial class GameplayTestSystemProbe
         try
         {
             Mod_ItemDetector detector = root.AddComponent<Mod_ItemDetector>();
+            GameItem observer = root.AddComponent<GameItem>();
+            observer.BindData(EntityProbeData("probe:closest-observer", 1f));
+            GameplayWorldRegistry.AssignItemToWorld(observer, "probe:closest-fixture");
+            detector.item = observer;
             Item Create(string id, float x, string tag)
             {
                 var host = new GameObject(id);
@@ -386,6 +402,7 @@ public static partial class GameplayTestSystemProbe
                 Data_GeneralItem data = EntityProbeData(id, 1f);
                 data.Tags = new List<string> { tag };
                 item.BindData(data);
+                GameplayWorldRegistry.AssignItemToWorld(item, "probe:closest-fixture");
                 host.transform.position = new Vector3(x, 0.5f);
                 return item;
             }
@@ -424,7 +441,11 @@ public static partial class GameplayTestSystemProbe
                 ["runtimeEntryConsistent"] = runtimeEntryConsistent
             };
         }
-        finally { UnityEngine.Object.DestroyImmediate(root); }
+        finally
+        {
+            foreach (Item item in root.GetComponentsInChildren<Item>(true)) GameplayWorldRegistry.AssignItemToWorld(item, null);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     // 两种形状共用正式仿射变换，检查负缩放、旋转、原列表前缀与包围盒。
@@ -640,12 +661,16 @@ public static partial class GameplayTestSystemProbe
     {
         var playerObject = new GameObject("[LuaSimulationRangePlayer]") { hideFlags = HideFlags.HideAndDontSave };
         playerObject.SetActive(false);
+        GameItem playerItem = playerObject.AddComponent<GameItem>();
+        playerItem.BindData(EntityProbeData("probe:range-player", 1f));
+        GameplayWorldRegistry.AssignItemToWorld(playerItem, "probe:range-cache");
         try
         {
             return WithEntityProbeItem(item =>
             {
                 Data_GeneralItem data = EntityProbeData("probe:range-cache", 1f);
                 item.BindData(data);
+                GameplayWorldRegistry.AssignItemToWorld(item, "probe:range-cache");
                 item.transform.position = Vector3.zero;
                 playerObject.transform.position = Vector3.zero;
                 var index = new ItemSimulationRangeIndex();
@@ -739,7 +764,164 @@ public static partial class GameplayTestSystemProbe
                 };
             });
         }
-        finally { UnityEngine.Object.DestroyImmediate(playerObject); }
+        finally
+        {
+            GameplayWorldRegistry.AssignItemToWorld(playerItem, null);
+            UnityEngine.Object.DestroyImmediate(playerObject);
+        }
+    }
+
+    // 使用真实区域索引和感知 Job 采样同场景异世界及异场景同世界。
+    private static JObject EntityLogicalWorldSimulationPerception(JObject args) =>
+        WithEntityProbeItem(target => WithEntityProbeItem(observer =>
+        {
+            target.BindData(EntityProbeData("probe:logical-world-target", 1f));
+            observer.BindData(EntityProbeData("probe:logical-world-observer", 1f));
+            target.itemData.Tags = new List<string> { "Probe" };
+            GameplayWorldRegistry.AssignItemToWorld(target, "probe:logical-world-a");
+            GameplayWorldRegistry.AssignItemToWorld(observer, "probe:logical-world-b");
+            target.transform.position = observer.transform.position = Vector3.zero;
+            Mod_ItemDetector detector = observer.gameObject.AddComponent<Mod_ItemDetector>();
+            detector.item = observer;
+            detector.wallsBlockPerception = false;
+            bool infiniteCrossWorldRejected = float.IsPositiveInfinity(detector.MaximumDetectionRadius) &&
+                !detector.IsWithinPerceptionRadiusLimit(target);
+            detector.ApplyDetectorResults(0, new List<Item> { target });
+            bool crossWorldResultRejected = detector.CurrentItemsInArea.Count == 0;
+
+            var index = new ItemSimulationRangeIndex();
+            index.Register(new ItemTickScheduler.ScheduledEntry(target, 1), everyFrame: true);
+            var players = new[] { observer.transform };
+            index.BeginFrame(players, default);
+            int worldA = GameplayWorldRegistry.GetItemWorldIdentity(target), worldB = GameplayWorldRegistry.GetItemWorldIdentity(observer);
+            bool sameScene = target.gameObject.scene == observer.gameObject.scene;
+            bool differentWorldStopped = index.ResolveTier(target) == SimulationRangeTier.Stopped;
+            int differentWorldCandidates = SampleLogicalWorldPerceptionCandidates(target, observer, worldA);
+            int unknownWorldCandidates = SampleLogicalWorldPerceptionCandidates(target, observer, 0);
+            bool unknownWorldRejected = !ItemMgr.IsPerceptionItemWorldCurrent(target, 0, 0UL);
+
+            GameplayWorldRegistry.AssignItemToWorld(observer, "probe:logical-world-a");
+            detector.ApplyDetectorResults(0, new List<Item> { target });
+            List<Item> taggedTargets = detector.GetItemsByTag("Probe");
+            bool sameWorldDetected = detector.IsWithinPerceptionRadiusLimit(target) &&
+                detector.CurrentItemsInArea.Count == 1 && taggedTargets.Count == 1;
+            for (int i = 0; i < 16; i++) _ = detector.CurrentItemsInArea.Count;
+            long beforeRead = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 256; i++) _ = detector.CurrentItemsInArea.Count;
+            long cachedReadAllocated = GC.GetAllocatedBytesForCurrentThread() - beforeRead;
+            index.BeginFrame(players, default);
+            bool sameWorldNear = index.ResolveTier(target) == SimulationRangeTier.Near;
+            bool sameWorldIdentity = GameplayWorldRegistry.GetItemWorldIdentity(target) == GameplayWorldRegistry.GetItemWorldIdentity(observer);
+            Scene initialScene = target.gameObject.scene;
+            Scene otherScene = WindShelterProbeScene("[LogicalWorldPerceptionProbe]");
+            try
+            {
+                SceneManager.MoveGameObjectToScene(target.gameObject, otherScene);
+                index.NotifyMoved(target);
+                index.BeginFrame(players, default);
+                bool differentSceneSameWorld = target.gameObject.scene != observer.gameObject.scene &&
+                    index.ResolveTier(target) == SimulationRangeTier.Near;
+                int sameWorldCandidates = SampleLogicalWorldPerceptionCandidates(target, observer, worldA);
+
+                ulong originalRevision = GameplayWorldRegistry.GetItemWorldRevision(target);
+                bool snapshotInitiallyCurrent = ItemMgr.IsPerceptionItemWorldCurrent(target, worldA, originalRevision);
+                GameplayWorldRegistry.AssignItemToWorld(target, "probe:logical-world-b");
+                index.NotifyMoved(target);
+                bool changedWorldStopped = index.ResolveTier(target) == SimulationRangeTier.Stopped;
+                bool movedCacheCleared = detector.CurrentItemsInArea.Count == 0 && taggedTargets.Count == 0 &&
+                    !detector.IsWithinPerceptionRadiusLimit(target);
+                bool snapshotRejectedAfterMove = !ItemMgr.IsPerceptionItemWorldCurrent(target, worldA, originalRevision);
+                GameplayWorldRegistry.AssignItemToWorld(target, "probe:logical-world-a");
+                index.NotifyMoved(target);
+                bool returnedNear = index.ResolveTier(target) == SimulationRangeTier.Near;
+                bool roundTripRejected = !ItemMgr.IsPerceptionItemWorldCurrent(target, worldA, originalRevision);
+                bool freshSnapshotAccepted = ItemMgr.IsPerceptionItemWorldCurrent(target,
+                    GameplayWorldRegistry.GetItemWorldIdentity(target), GameplayWorldRegistry.GetItemWorldRevision(target));
+                detector.ApplyDetectorResults(0, new List<Item> { target });
+                GameplayWorldRegistry.AssignItemToWorld(target, "probe:logical-world-b");
+                GameplayWorldRegistry.AssignItemToWorld(target, "probe:logical-world-a");
+                bool targetRoundTripCleared = detector.CurrentItemsInArea.Count == 0 && taggedTargets.Count == 0;
+                detector.ApplyDetectorResults(0, new List<Item> { target });
+                GameplayWorldRegistry.AssignItemToWorld(observer, "probe:logical-world-b");
+                GameplayWorldRegistry.AssignItemToWorld(observer, "probe:logical-world-a");
+                bool observerRoundTripCleared = detector.CurrentItemsInArea.Count == 0 && taggedTargets.Count == 0;
+                detector.ApplyDetectorResults(0, new List<Item> { target });
+                GameplayWorldRegistry.AssignItemToWorld(target, null);
+                index.NotifyMoved(target);
+                bool unknownTargetRejected = GameplayWorldRegistry.GetItemWorldIdentity(target) == 0 &&
+                    !detector.IsWithinPerceptionRadiusLimit(target) && detector.CurrentItemsInArea.Count == 0 &&
+                    taggedTargets.Count == 0 && index.ResolveTier(target) == SimulationRangeTier.Stopped;
+                GameplayWorldRegistry.AssignItemToWorld(target, "probe:logical-world-a");
+                GameplayWorldRegistry.AssignItemToWorld(observer, null);
+                bool unknownObserverRejected = GameplayWorldRegistry.GetItemWorldIdentity(observer) == 0 &&
+                    !detector.IsWithinPerceptionRadiusLimit(target);
+                index.Remove(target);
+
+                return new JObject
+                {
+                    ["sameScene"] = sameScene, ["distinctWorlds"] = worldA != worldB,
+                    ["differentWorldStopped"] = differentWorldStopped,
+                    ["differentWorldCandidates"] = differentWorldCandidates,
+                    ["unknownWorldCandidates"] = unknownWorldCandidates, ["unknownWorldRejected"] = unknownWorldRejected,
+                    ["sameWorldIdentity"] = sameWorldIdentity, ["sameWorldNear"] = sameWorldNear,
+                    ["differentSceneSameWorld"] = differentSceneSameWorld, ["sameWorldCandidates"] = sameWorldCandidates,
+                    ["snapshotInitiallyCurrent"] = snapshotInitiallyCurrent,
+                    ["changedWorldStopped"] = changedWorldStopped, ["snapshotRejectedAfterMove"] = snapshotRejectedAfterMove,
+                    ["returnedNear"] = returnedNear, ["roundTripRejected"] = roundTripRejected,
+                    ["freshSnapshotAccepted"] = freshSnapshotAccepted,
+                    ["infiniteCrossWorldRejected"] = infiniteCrossWorldRejected,
+                    ["crossWorldResultRejected"] = crossWorldResultRejected, ["sameWorldDetected"] = sameWorldDetected,
+                    ["movedCacheCleared"] = movedCacheCleared, ["targetRoundTripCleared"] = targetRoundTripCleared,
+                    ["observerRoundTripCleared"] = observerRoundTripCleared,
+                    ["unknownTargetRejected"] = unknownTargetRejected, ["unknownObserverRejected"] = unknownObserverRejected,
+                    ["cachedReadAllocated"] = cachedReadAllocated
+                };
+            }
+            finally
+            {
+                if (target != null && initialScene.IsValid() && initialScene.isLoaded && target.gameObject.scene != initialScene)
+                    SceneManager.MoveGameObjectToScene(target.gameObject, initialScene);
+                CloseWindShelterProbeScene(otherScene);
+            }
+        }));
+
+    // 输入由真实 Item 的身份构造，候选过滤由正式并行感知任务执行。
+    private static int SampleLogicalWorldPerceptionCandidates(Item first, Item second, int queryWorldId)
+    {
+        var items = new NativeArray<ItemMgr.PerceptionItemSnapshot>(2, Allocator.TempJob);
+        using var disposeItems = items;
+        var queries = new NativeArray<ItemMgr.DetectorQuerySnapshot>(1, Allocator.TempJob);
+        using var disposeQueries = queries;
+        using var shapes = new NativeArray<PerceptionShape2D>(0, Allocator.TempJob);
+        using var cells = new NativeParallelMultiHashMap<ItemMgr.PerceptionCellKey, int>(2, Allocator.TempJob);
+        using var results = new NativeStream(1, Allocator.TempJob);
+        Item[] candidates = { first, second };
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            Item candidate = candidates[i];
+            var key = new ItemMgr.PerceptionCellKey(GameplayWorldRegistry.GetItemWorldIdentity(candidate), 0L);
+            items[i] = new ItemMgr.PerceptionItemSnapshot
+            {
+                CellKey = key, WorldId = GameplayWorldRegistry.GetItemWorldIdentity(candidate),
+                WorldRevision = GameplayWorldRegistry.GetItemWorldRevision(candidate), InstanceId = candidate.GetInstanceID(),
+                LayerBit = 1, PerceptionRadiusMultiplier = 1f, BoundsCenter = float2.zero,
+                BoundsExtents = new float2(.5f, .5f)
+            };
+            cells.Add(key, i);
+        }
+        queries[0] = new ItemMgr.DetectorQuerySnapshot
+        {
+            Center = float2.zero, DetectionRadius = 1f, MaximumDetectionRadius = 1f,
+            BroadphaseRadius = 1f, LayerMask = 1, WorldId = queryWorldId
+        };
+        var job = new ItemMgr.BatchedPerceptionQueryJob
+        { Items = items, Shapes = shapes, Queries = queries, SpatialMap = cells, Results = results.AsWriter() };
+        job.Schedule(1, 1).Complete();
+        NativeStream.Reader reader = results.AsReader();
+        int count = reader.BeginForEachIndex(0), mask = 0;
+        for (int i = 0; i < count; i++) mask |= 1 << reader.Read<int>();
+        reader.EndForEachIndex();
+        return mask;
     }
 
     #endregion
@@ -2292,7 +2474,7 @@ public static partial class GameplayTestSystemProbe
         finally
         {
             try { item.PrepareForDespawn(saveData: false); }
-            finally { UnityEngine.Object.DestroyImmediate(root); }
+            finally { GameplayWorldRegistry.AssignItemToWorld(item, null); UnityEngine.Object.DestroyImmediate(root); }
         }
     }
 
@@ -2305,7 +2487,7 @@ public static partial class GameplayTestSystemProbe
         finally
         {
             try { player.PrepareForDespawn(saveData: false); }
-            finally { UnityEngine.Object.DestroyImmediate(root); }
+            finally { GameplayWorldRegistry.AssignItemToWorld(player, null); UnityEngine.Object.DestroyImmediate(root); }
         }
     }
 

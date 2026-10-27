@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -98,23 +98,35 @@ public partial class ItemMgr
     private sealed class RuntimeAiWorldState
     {
         public readonly Dictionary<RuntimeWorldAddress, HashSet<Item>> ByAddress = new();
-        public readonly Dictionary<Item, RuntimeWorldAddress> ByItem = new();
+        public readonly Dictionary<Item, RuntimeWorldAddress> ByItem = new(ItemReferenceComparer.Instance);
         public readonly Dictionary<int, RuntimeWorldAddress> ByGuid = new();
-        public readonly HashSet<Item> Entities = new();
+        public readonly HashSet<Item> Entities = new(ItemReferenceComparer.Instance);
         public readonly HashSet<RuntimeWorldAddress> Dirty = new();
         public readonly List<Item> Cleanup = new();
         public Transform Root;
         public WorldRuntime World;
         public long Epoch = long.MinValue;
     }
+    private sealed class RuntimeAiOwnership
+    {
+        public string WorldKey;
+        public int Guid;
+    }
     private readonly Dictionary<string, RuntimeAiWorldState> runtimeAiWorldStates = new(StringComparer.Ordinal);
+    private readonly Dictionary<Item, RuntimeAiOwnership> runtimeAiOwnership = new(ItemReferenceComparer.Instance);
+    private readonly RuntimeAiWorldState runtimeAiUnboundWorld = new();
+    private RuntimeAiWorldState GetRuntimeAiWorldState(string key)
+    {
+        if (!runtimeAiWorldStates.TryGetValue(key, out RuntimeAiWorldState value))
+            runtimeAiWorldStates.Add(key, value = new RuntimeAiWorldState());
+        return value;
+    }
     private RuntimeAiWorldState AiWorld
     {
         get
         {
             string key = GameplayWorldRegistry.ExecutionWorldKey;
-            if (!runtimeAiWorldStates.TryGetValue(key, out RuntimeAiWorldState value)) runtimeAiWorldStates.Add(key, value = new RuntimeAiWorldState());
-            return value;
+            return string.IsNullOrEmpty(key) ? runtimeAiUnboundWorld : GetRuntimeAiWorldState(key);
         }
     }
     private Dictionary<RuntimeWorldAddress, HashSet<Item>> _runtimeAiItemsByAddress => AiWorld.ByAddress;
@@ -138,9 +150,9 @@ public partial class ItemMgr
     /// <summary>取得当前动态世界场景内的中性实体根节点。</summary>
     internal Transform GetRuntimeEntityRoot(Scene preferredScene)
     {
-        Scene scene = GameplayWorldRegistry.CurrentScene;
+        Scene scene = preferredScene;
         if (!scene.IsValid() || !scene.isLoaded)
-            scene = preferredScene;
+            scene = GameplayWorldRegistry.CurrentScene;
         if (!scene.IsValid() || !scene.isLoaded)
             return null;
 
@@ -160,21 +172,13 @@ public partial class ItemMgr
     /// <summary>在 Item 注册时完成一次 AI 分类，并缓存结果供高频 Tick 使用。</summary>
     private bool TryRegisterRuntimeAiEntity(Item item)
     {
-        if (item != null && item.gameObject.scene.name != GameplayWorldRegistry.ExecutionWorldKey &&
-            GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _))
-        {
-            using (GameplayWorldRegistry.UseWorld(item.gameObject.scene.name)) return TryRegisterRuntimeAiEntity(item);
-        }
-
-        if (item == null || !EnsureRuntimeAiWorldScope() ||
-            !RuntimeAiEntityUtility.IsAiEntity(item))
-        {
-            return false;
-        }
-
-        _runtimeAiEntities.Add(item);
+        if (item == null || item.itemData == null || !RuntimeAiEntityUtility.IsAiEntity(item)) return false;
+        BindRuntimeAiLogicalOwnership(item, GameplayWorldRegistry.GetItemWorldKey(item), item.itemData.Guid, markDirty: true);
         RefreshRuntimeAiAddress(item);
-        return true;
+        return runtimeAiOwnership.TryGetValue(item, out RuntimeAiOwnership owner) &&
+               !string.IsNullOrEmpty(owner.WorldKey) &&
+               runtimeAiWorldStates.TryGetValue(owner.WorldKey, out RuntimeAiWorldState state) &&
+               state.ByItem.ContainsKey(item);
     }
 
     /// <summary>读取实体当前所属的新版区块地址。</summary>
@@ -248,113 +252,145 @@ public partial class ItemMgr
     /// <summary>注册或刷新 AI 的 WorldAddress；即使目标区块尚未加载也会记录地址。</summary>
     private void RefreshRuntimeAiAddress(Item item, bool markDirty = true)
     {
-        if (item != null && item.gameObject.scene.name != GameplayWorldRegistry.ExecutionWorldKey &&
-            GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _))
+        // 仅处理注册时已识别的 AI；逻辑世界迁移先移除旧桶，未就绪的目标保留待定位。
+        if (item == null || item.itemData == null || !runtimeAiOwnership.TryGetValue(item, out RuntimeAiOwnership owner)) return;
+        string targetWorld = GameplayWorldRegistry.GetItemWorldKey(item);
+        bool movedWorld = BindRuntimeAiLogicalOwnership(item, targetWorld, owner.Guid, markDirty: true);
+        if (!TryUseRuntimeAiWorld(targetWorld, out IDisposable scope)) return;
+        using (scope)
         {
-            using (GameplayWorldRegistry.UseWorld(item.gameObject.scene.name)) { RefreshRuntimeAiAddress(item, markDirty); return; }
-        }
-
-        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
-        if (item == null || item.itemData == null ||
-            !EnsureRuntimeAiWorldScope() || chunkManager == null)
-        {
-            return;
-        }
-
-        // 分类只在 Item 注册/维护时执行；常规 Tick 不扫描非 AI 的子组件树。
-        if (!_runtimeAiEntities.Contains(item))
-            return;
-
-        RuntimeWorldAddress next = chunkManager.ResolveWorldAddress(item.transform.position);
-        if (_runtimeAiAddressByItem.TryGetValue(item, out RuntimeWorldAddress previous))
-        {
-            if (previous == next)
+            ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+            if (!EnsureRuntimeAiWorldScope() || chunkManager == null) return;
+            _runtimeAiEntities.Add(item);
+            RuntimeWorldAddress next = chunkManager.ResolveWorldAddress(item.transform.position);
+            if (_runtimeAiAddressByItem.TryGetValue(item, out RuntimeWorldAddress previous))
             {
-                _runtimeAiAddressByGuid[item.itemData.Guid] = next;
-                return;
+                if (previous == next)
+                {
+                    _runtimeAiAddressByGuid[owner.Guid] = next;
+                    return;
+                }
+
+                RemoveRuntimeAiFromAddress(AiWorld, item, previous);
+                if (markDirty || movedWorld) _runtimeAiDirtyAddresses.Add(previous);
             }
 
-            RemoveRuntimeAiFromAddress(item, previous);
-            if (markDirty)
-                _runtimeAiDirtyAddresses.Add(previous);
-        }
+            if (!_runtimeAiItemsByAddress.TryGetValue(next, out HashSet<Item> items))
+            {
+                items = new HashSet<Item>(ItemReferenceComparer.Instance);
+                _runtimeAiItemsByAddress[next] = items;
+            }
 
-        if (!_runtimeAiItemsByAddress.TryGetValue(next, out HashSet<Item> items))
-        {
-            items = new HashSet<Item>();
-            _runtimeAiItemsByAddress[next] = items;
+            items.Add(item);
+            _runtimeAiAddressByItem[item] = next;
+            _runtimeAiAddressByGuid[owner.Guid] = next;
+            if (markDirty || movedWorld) _runtimeAiDirtyAddresses.Add(next);
+            RuntimeAiAddressChanged?.Invoke(item);
         }
-
-        items.Add(item);
-        _runtimeAiAddressByItem[item] = next;
-        _runtimeAiAddressByGuid[item.itemData.Guid] = next;
-        if (markDirty)
-            _runtimeAiDirtyAddresses.Add(next);
-        RuntimeAiAddressChanged?.Invoke(item);
     }
 
     /// <summary>从新版实体索引移除 Item，并把原地址标记为需要保存。</summary>
     private void RemoveRuntimeAiEntity(Item item, bool markDirty = true, int? registeredGuid = null)
     {
-        if (item != null && item.gameObject.scene.name != GameplayWorldRegistry.ExecutionWorldKey &&
-            GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _))
-        {
-            using (GameplayWorldRegistry.UseWorld(item.gameObject.scene.name)) { RemoveRuntimeAiEntity(item, markDirty, registeredGuid); return; }
-        }
-
-        if (ReferenceEquals(item, null))
-            return;
-
-        EnsureRuntimeAiWorldScope();
-        _runtimeAiEntities.Remove(item);
-        if (!_runtimeAiAddressByItem.TryGetValue(item, out RuntimeWorldAddress previous))
-            return;
-
-        RemoveRuntimeAiFromAddress(item, previous);
-        if (registeredGuid.HasValue)
-            _runtimeAiAddressByGuid.Remove(registeredGuid.Value);
-        else if (item != null && item.itemData != null)
-            _runtimeAiAddressByGuid.Remove(item.itemData.Guid);
-        if (markDirty)
-            _runtimeAiDirtyAddresses.Add(previous);
+        if (ReferenceEquals(item, null) || !runtimeAiOwnership.Remove(item, out RuntimeAiOwnership owner)) return;
+        RemoveRuntimeAiFromOwnedWorld(item, owner.WorldKey, registeredGuid ?? owner.Guid, markDirty);
     }
 
-    private void RemoveRuntimeAiFromAddress(Item item, RuntimeWorldAddress address)
+    private static void RemoveRuntimeAiFromAddress(RuntimeAiWorldState world, Item item, RuntimeWorldAddress address)
     {
-        _runtimeAiAddressByItem.Remove(item);
-        if (!_runtimeAiItemsByAddress.TryGetValue(address, out HashSet<Item> items))
+        world.ByItem.Remove(item);
+        if (!world.ByAddress.TryGetValue(address, out HashSet<Item> items))
             return;
 
         items.Remove(item);
         if (items.Count == 0)
-            _runtimeAiItemsByAddress.Remove(address);
+            world.ByAddress.Remove(address);
+    }
+
+    // 旧索引直接按登记时的所有者移除，不创建已卸载世界或借用当前场景。
+    private void RemoveRuntimeAiFromOwnedWorld(Item item, string worldKey, int guid, bool markDirty)
+    {
+        if (string.IsNullOrEmpty(worldKey) || !runtimeAiWorldStates.TryGetValue(worldKey, out RuntimeAiWorldState world)) return;
+        world.Entities.Remove(item);
+        world.ByGuid.Remove(guid);
+        if (!world.ByItem.TryGetValue(item, out RuntimeWorldAddress previous)) return;
+        RemoveRuntimeAiFromAddress(world, item, previous);
+        if (markDirty) world.Dirty.Add(previous);
+    }
+
+    private bool BindRuntimeAiLogicalOwnership(Item item, string worldKey, int guid, bool markDirty)
+    {
+        if (string.IsNullOrWhiteSpace(worldKey)) worldKey = null;
+        if (!runtimeAiOwnership.TryGetValue(item, out RuntimeAiOwnership owner))
+            runtimeAiOwnership.Add(item, owner = new RuntimeAiOwnership { WorldKey = worldKey, Guid = guid });
+        else if (!string.Equals(owner.WorldKey, worldKey, StringComparison.Ordinal) || owner.Guid != guid)
+        {
+            RemoveRuntimeAiFromOwnedWorld(item, owner.WorldKey, owner.Guid, markDirty);
+            owner.WorldKey = worldKey;
+            owner.Guid = guid;
+            if (worldKey != null) GetRuntimeAiWorldState(worldKey).Entities.Add(item);
+            return true;
+        }
+        if (worldKey != null) GetRuntimeAiWorldState(worldKey).Entities.Add(item);
+        return false;
+    }
+
+    private static bool TryUseRuntimeAiWorld(string worldKey, out IDisposable scope)
+    {
+        scope = null;
+        if (string.IsNullOrEmpty(worldKey)) return false;
+        if (string.Equals(worldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal))
+            return !GameplayWorldRegistry.HasExecutionContext || GameplayWorldRegistry.ExecutionChunks != null;
+        if (!GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world) || world.Chunks == null) return false;
+        scope = GameplayWorldRegistry.UseWorld(worldKey);
+        return true;
     }
 
     /// <summary>清理场景卸载产生的伪空引用，并补齐仍有效 AI 的地址。</summary>
     private void CleanupRuntimeAiIndex()
     {
+        // 场景卸载可能先清理注册表，反向索引也要跨世界清理伪空对象。
+        using (ListPool<Item>.Get(out var staleOwners))
+        {
+            foreach (Item indexed in runtimeAiOwnership.Keys)
+                if (indexed == null || indexed.itemData == null ||
+                    !WorldRunTimeItems.TryGetValue(indexed.itemData.Guid, out Item registered) ||
+                    !ReferenceEquals(registered, indexed))
+                    staleOwners.Add(indexed);
+            foreach (Item indexed in staleOwners)
+                RemoveRuntimeAiEntity(indexed, markDirty: false);
+        }
+
         EnsureRuntimeAiWorldScope();
         _runtimeAiCleanupBuffer.Clear();
         foreach (Item indexed in _runtimeAiAddressByItem.Keys)
         {
             if (indexed == null || indexed.itemData == null ||
                 !WorldRunTimeItems.TryGetValue(indexed.itemData.Guid, out Item registered) ||
-                registered != indexed)
+                registered != indexed || GameplayWorldRegistry.GetItemWorldKey(indexed) != GameplayWorldRegistry.ExecutionWorldKey)
             {
                 _runtimeAiCleanupBuffer.Add(indexed);
             }
         }
 
         for (int i = 0; i < _runtimeAiCleanupBuffer.Count; i++)
-            RemoveRuntimeAiEntity(_runtimeAiCleanupBuffer[i], markDirty: false);
+        {
+            Item item = _runtimeAiCleanupBuffer[i];
+            if (item != null && item.itemData != null &&
+                WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) && registered == item)
+                RefreshRuntimeAiAddress(item, markDirty: false);
+            else RemoveRuntimeAiEntity(item, markDirty: false);
+        }
 
         _runtimeAiAddressByGuid.Clear();
 
+        string currentWorld = GameplayWorldRegistry.ExecutionWorldKey;
         foreach (Item item in RuntimeItems)
         {
-            if (item != null && item.gameObject.scene.name == GameplayWorldRegistry.ExecutionWorldKey && RuntimeAiEntityUtility.IsAiEntity(item))
+            if (!string.IsNullOrEmpty(currentWorld) && item != null && item.itemData != null &&
+                GameplayWorldRegistry.GetItemWorldKey(item) == currentWorld && RuntimeAiEntityUtility.IsAiEntity(item))
             {
-                _runtimeAiEntities.Add(item);
+                BindRuntimeAiLogicalOwnership(item, GameplayWorldRegistry.GetItemWorldKey(item), item.itemData.Guid, markDirty: true);
                 RefreshRuntimeAiAddress(item, markDirty: false);
             }
         }
@@ -364,7 +400,9 @@ public partial class ItemMgr
     /// <summary>世界对象或纪元变化时丢弃旧场景索引，禁止跨世界误用同一地址。</summary>
     private bool EnsureRuntimeAiWorldScope()
     {
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
         WorldRuntime world = ChunkMgr.ExistingInstance?.WorldRuntime;
+        if (world != null && !string.Equals(world.WorldId, worldKey, StringComparison.Ordinal)) world = null;
         long epoch = world?.Epoch ?? long.MinValue;
         if (ReferenceEquals(world, _runtimeAiWorld) && epoch == _runtimeAiWorldEpoch)
             return world != null;
@@ -373,6 +411,9 @@ public partial class ItemMgr
         _runtimeAiAddressByItem.Clear();
         _runtimeAiAddressByGuid.Clear();
         _runtimeAiEntities.Clear();
+        foreach (var entry in runtimeAiOwnership)
+            if (entry.Key != null && string.Equals(entry.Value.WorldKey, worldKey, StringComparison.Ordinal))
+                _runtimeAiEntities.Add(entry.Key);
         _runtimeAiDirtyAddresses.Clear();
         _runtimeEntityRoot = null;
         _runtimeAiWorld = world;

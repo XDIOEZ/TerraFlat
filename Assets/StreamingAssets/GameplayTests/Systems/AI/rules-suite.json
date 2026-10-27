@@ -15,6 +15,12 @@
       "name": "自然动物连续倒计时",
       "luaPath": "GameplayTests/Systems/AI/spawn-countdown.lua",
       "enabled": true
+    },
+    {
+      "id": "ai_world_ownership_rules",
+      "name": "AI逻辑世界归属",
+      "luaPath": "GameplayTests/Systems/AI/world-ownership.lua",
+      "enabled": true
     }
   ]
 }

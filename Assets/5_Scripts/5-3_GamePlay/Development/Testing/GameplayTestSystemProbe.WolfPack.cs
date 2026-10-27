@@ -107,6 +107,7 @@ public static partial class GameplayTestSystemProbe
                 data.FactionId = definition.ItemData.Value<string>("factionId");
                 data.Tags = new List<string> { "Wolf", "Animal" };
                 item.BindData(data);
+                GameplayWorldRegistry.AssignItemToWorld(item, "probe:wolf-pack");
                 item.itemMods.BindOwner(item);
                 var ai = host.AddComponent<GameplayTestWolfPackProbeAI>();
                 var detector = host.AddComponent<Mod_ItemDetector>();
@@ -160,6 +161,7 @@ public static partial class GameplayTestSystemProbe
             playerData.FactionId = FactionRelationService.PlayerFactionId;
             playerData.Tags = new List<string> { "Player" };
             player.BindData(playerData);
+            GameplayWorldRegistry.AssignItemToWorld(player, "probe:wolf-pack");
             playerHost.transform.position = new Vector3((float)Number(args, "playerX", 15d), 0f);
             if (probeCombat) root.SetActive(true);
             for (int index = 0; index < count; index++)
@@ -204,7 +206,11 @@ public static partial class GameplayTestSystemProbe
                 ["detectorRadius"] = detectors[0].DetectionRadius
             };
         }
-        finally { UnityEngine.Object.DestroyImmediate(root); }
+        finally
+        {
+            foreach (Item item in root.GetComponentsInChildren<Item>(true)) GameplayWorldRegistry.AssignItemToWorld(item, null);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     // 直接推进正式攻击节点，采样偏离站位、刹车漂移、恢复追击和冷却连续性。

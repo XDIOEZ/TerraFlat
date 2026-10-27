@@ -766,6 +766,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         exit.itemData.transform.scale = Vector3.one;
         exit.itemData.Stack.CanBePickedUp = false;
         if (!exit.IsInitialized) exit.Load();
+        GameplayWorldRegistry.AssignItemToWorld(exit, context.Anchor.CaveWorldKey);
         manager.NotifyRuntimeItemMoved(exit);
         context.TargetPortalPosition = desiredPosition;
         DimensionTravelProgressStore.UpdateCaveExit(SaveDataMgr.Instance.SaveData, context.Anchor, exit);

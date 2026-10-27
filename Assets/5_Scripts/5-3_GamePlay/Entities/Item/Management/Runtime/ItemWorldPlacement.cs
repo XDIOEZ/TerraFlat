@@ -97,6 +97,9 @@ internal static class ItemWorldPlacement
         Chunk legacyOwner = item.GetComponentInParent<Chunk>();
         legacyOwner?.RemoveItem(item);
 
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
+        using var worldScope = GameplayWorldRegistry.TryGet(worldKey, out _)
+            ? GameplayWorldRegistry.UseWorld(worldKey) : null;
         Transform root = ItemMgr.Instance?.GetRuntimeEntityRoot(itemObject.scene);
         itemObject.transform.SetParent(root, true);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);

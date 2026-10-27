@@ -119,6 +119,22 @@ namespace FlatWorld.WorldModel
                    CancelChunkGeneration(chunk);
         }
 
+        // 调度器只能撤销自己持有的任务，不能覆盖新调度器已经接管的同址请求。
+        internal bool IsCurrentChunkGeneration(ChunkGenerationRequest request)
+        {
+            ThrowIfDisposed();
+            return request.WorldEpoch == Epoch &&
+                   chunks.TryGetValue(request.Address, out ChunkRuntime chunk) &&
+                   request.RequestVersion == chunk.GenerationVersion &&
+                   chunk.DataStatus == ChunkDataStatus.Generating;
+        }
+
+        internal bool CancelChunkGeneration(ChunkGenerationRequest request)
+        {
+            if (!IsCurrentChunkGeneration(request)) return false;
+            return CancelChunkGeneration(chunks[request.Address]);
+        }
+
         /// <summary>领取一张区块使用票；区块还不存在时会先创建一个空壳。</summary>
         public ChunkLease AcquireChunkLease(WorldAddress address, ChunkLeaseKind kind)
         {

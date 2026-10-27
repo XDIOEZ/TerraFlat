@@ -20,6 +20,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 权威、所有权与坐标
 
+- `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。纯 `WorldRuntime` 可在生成调度器关闭后由新调度器接管，迟到结果按请求版本释放；当前 Unity 地表 `ChunkMgr` 退出时仍释放世界，飞船独立世界尚未接入。
 - `ChunkRuntime + ChunkTerrainData` 是权威；Tilemap/Collider/Renderer 是投影。后台与 Burst 只接收冻结值，不访问 Unity 对象；`RuntimeTileDefinition/Behaviour` 留在主线程资源层。
 - 提交核对世界 Epoch 和请求版本；取消/失败/逐出释放生成结果及租约。`Seal` 将池化 Liquid 深度/类型和环境数组唯一所有权交给区块，Dispose 归还；`height` 随区块存活，只作原生成高度。生成结束一次汇总固定湿度/两层降水/风力，`ChunkTerrainData.WeatherProfile` 持有不可变天气概率/强度/持续时间，运行时不随环境层差量重算。
 - Liquid 的会话索引来自冻结 `LiquidTypeCatalog`；哈希/持久化使用稳定 LiquidId。Ground 与 Liquid 分开，`SetLiquid` 不写 Ground。Liquid 权威数组、批次、快照与存档均使用 `int LiquidLevel` 0～10，一份一级；`LiquidCellValue.NormalizeLevel` 限级并在零级清类型，`GetLiquidDepth` 只派生 0～1 比例。整数流动同量扣源和增目标，不能分别取整写回造水。
