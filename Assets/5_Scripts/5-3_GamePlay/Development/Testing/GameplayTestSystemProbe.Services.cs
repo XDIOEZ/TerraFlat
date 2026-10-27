@@ -27,6 +27,7 @@ public static partial class GameplayTestSystemProbe
 
     private static void RegisterServiceOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
+        operations.Add("quests/catalog_package_path", ServiceCatalogPackagePath);
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
         operations.Add("core_lifecycle/resource_queue", ServiceResourceQueue);
         operations.Add("core_lifecycle/editor_asset_loading", ServiceEditorAssetLoading);
@@ -222,6 +223,37 @@ public static partial class GameplayTestSystemProbe
             ["networkPanelKey"] = RuntimeUIPrefabKeys.NetworkMode
         };
     }
+
+    #region 任务与配方分包路径采样
+
+    // 只调用正式目录入口并返回路径或异常，不访问文件内容。
+    private static JObject ServiceCatalogPackagePath(JObject args)
+    {
+        bool quest = Text(args, "kind", "quest") == "quest";
+        string scenario = Text(args, "scenario", "normal");
+        string folder = quest ? "Quests" : "Recipes";
+        string root = Path.GetFullPath(Path.Combine(Application.temporaryCachePath, "CatalogPathProbe", folder));
+        string relative = "nested/starter.json";
+        if (scenario == "dot") relative = "nested/../starter.json";
+        if (scenario == "escape" || scenario == "url_escape") relative = "../outside.json";
+        if (scenario == "absolute") relative = Path.GetFullPath(Path.Combine(Application.temporaryCachePath, "outside.json"));
+        if (scenario == "empty") relative = "";
+        if (scenario == "empty_root") root = "";
+        if (scenario == "url" || scenario == "url_escape") root = "https://example.invalid/GameConfig/" + folder;
+        string resolved = "";
+        Exception error = null;
+        try
+        {
+            resolved = quest ? FlatWorld.Gameplay.Quests.QuestCatalogLoader.ResolvePackagePath(root, relative)
+                : RecipeCatalogLoader.ResolvePackagePath(root, relative);
+        }
+        catch (Exception exception) { error = exception; }
+        return new JObject { ["root"] = root.Replace('\\', '/'), ["resolved"] = resolved.Replace('\\', '/'),
+            ["web"] = StreamingAssetsTextLoader.RequiresWebRequest(root), ["error"] = error?.GetType().Name ?? "",
+            ["message"] = error?.Message ?? "", ["parameter"] = (error as ArgumentException)?.ParamName ?? "" };
+    }
+
+    #endregion
 
     private static JObject ServiceResourcePlan(JObject args)
     {

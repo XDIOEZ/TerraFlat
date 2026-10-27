@@ -245,18 +245,7 @@ public static class RecipeCatalogLoader
     {
         if (string.IsNullOrWhiteSpace(recipeRoot))
             throw new ArgumentException("配方根目录不能为空", nameof(recipeRoot));
-        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
-            throw new InvalidDataException($"配方分包路径无效：{relativePath}");
-
-        if (StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
-            return StreamingAssetsTextLoader.CombinePath(recipeRoot, relativePath);
-
-        string normalizedRoot = Path.GetFullPath(recipeRoot)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        string fullPath = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
-        if (!fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"配方分包路径越出 Recipes 目录：{relativePath}");
-        return fullPath;
+        return StreamingAssetsTextLoader.ResolveCatalogPackagePathWithinRoot(recipeRoot, relativePath, "配方", "Recipes");
     }
 }
 

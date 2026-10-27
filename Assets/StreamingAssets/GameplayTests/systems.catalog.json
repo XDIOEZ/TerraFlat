@@ -893,6 +893,8 @@
       "name": "任务与玩家进度",
       "group": "任务与叙事",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Items/Crafting/RecipeCatalogLoader.cs",
+        "Assets/5_Scripts/Shared/ContentCache/StreamingAssetsTextLoader.cs",
         "Assets/5_Scripts/5-3_GamePlay/Core/Quests/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/Progress/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Quests/*"

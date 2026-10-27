@@ -17,6 +17,7 @@ description: "FlatWorld 任务目录、玩家进度、玩法信号、阶段目�
 
 ## 契约
 
+- 任务与配方分包路径共用 StreamingAssetsTextLoader.ResolveCatalogPackagePathWithinRoot；清单校验、任务原子发布与配方二进制缓存仍各自负责。
 - 本体 ID 使用 `flatworld:`，MOD 使用 `modId:`；阶段/目标/奖励 ID 在各自作用域唯一。`debugOnly` 不自动接取，`definitionVersion` 标识语义版本，已完成记录不重复奖励。
 - 类型通过 Handler 注册并在 Finalize 校验；信号 Actor 为实际本地玩家、Amount>0，仅在玩法事务成功后发布，监听异常不回滚玩法。
 - 奖励在同一库存快照中全部可放才原子提交；满包保留 ReadyToClaim。进度存于 `ItemSpecialData.flatworld.quests`，保持其它命名空间；未知任务/字段保留，高于支持版本时停止运行与写回。

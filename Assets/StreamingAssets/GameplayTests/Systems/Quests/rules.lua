@@ -1,3 +1,33 @@
+-- 分包路径同时检查任务与配方的正式入口，不读取或写入文件。
+for _, kind in ipairs({"quest", "recipe"}) do
+    for _, scenario in ipairs({"normal", "dot", "escape", "absolute", "empty", "empty_root", "url", "url_escape"}) do
+        local selectedKind, selectedScenario = kind, scenario
+        test.system("quests", "catalog_package_path", {kind = selectedKind, scenario = selectedScenario}, function(data)
+            local name = selectedKind == "quest" and "任务" or "配方"
+            local folder = selectedKind == "quest" and "Quests" or "Recipes"
+            if selectedScenario == "normal" or selectedScenario == "url" then
+                assert(data.error == "" and data.resolved == data.root .. "/nested/starter.json", "正常分包路径改变")
+            elseif selectedScenario == "dot" and not data.web then
+                assert(data.error == "" and data.resolved == data.root .. "/starter.json", "本地目录内规范化改变")
+            elseif selectedScenario == "empty_root" then
+                assert(data.error == "ArgumentException" and data.parameter == (selectedKind == "quest" and "questRoot" or "recipeRoot"),
+                    "空根目录的错误类型或参数名改变")
+            else
+                local prefix
+                if selectedScenario == "dot" or selectedScenario == "url_escape" or (selectedScenario == "escape" and data.web) then
+                    prefix = "StreamingAssets 相对路径无效："
+                elseif selectedScenario == "escape" then
+                    prefix = name .. "分包路径越出 " .. folder .. " 目录："
+                else
+                    prefix = name .. "分包路径无效："
+                end
+                assert(data.error == "InvalidDataException" and string.find(data.message, prefix, 1, true) == 1,
+                    "分包路径拒绝或原错误上下文改变：" .. selectedScenario)
+            end
+        end, "分包路径：" .. selectedKind .. "/" .. selectedScenario)
+    end
+end
+
 local cases = {
     {name = "信号推进并钳制目标", args = {}, first = 2, second = 3, valid = true},
     {name = "不同信号类型不推进", args = {signalType = "craft.succeeded"}, first = 0, second = 0, valid = true},

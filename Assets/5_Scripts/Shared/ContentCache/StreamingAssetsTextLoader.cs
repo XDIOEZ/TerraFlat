@@ -21,6 +21,22 @@ public static class StreamingAssetsTextLoader
         return root.TrimEnd('/', '\\') + "/" + normalizedRelativePath;
     }
 
+    /// <summary>共用分包的跨平台路径和越界校验；调用方保留自己的根参数错误。</summary>
+    public static string ResolveCatalogPackagePathWithinRoot(string root, string relativePath,
+        string catalogName, string rootFolderName)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+            throw new InvalidDataException($"{catalogName}分包路径无效：{relativePath}");
+        if (RequiresWebRequest(root))
+            return CombinePath(root, relativePath);
+        string normalizedRoot = Path.GetFullPath(root)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string fullPath = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"{catalogName}分包路径越出 {rootFolderName} 目录：{relativePath}");
+        return fullPath;
+    }
+
     public static string ReadAllText(string path)
     {
         if (RequiresWebRequest(path))

@@ -229,19 +229,7 @@ namespace FlatWorld.Gameplay.Quests
         {
             if (string.IsNullOrWhiteSpace(questRoot))
                 throw new ArgumentException("任务根目录不能为空", nameof(questRoot));
-            if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
-                throw new InvalidDataException($"任务分包路径无效：{relativePath}");
-
-            if (StreamingAssetsTextLoader.RequiresWebRequest(questRoot))
-                return StreamingAssetsTextLoader.CombinePath(questRoot, relativePath);
-
-            string normalizedRoot = Path.GetFullPath(questRoot)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            string fullPath = Path.GetFullPath(
-                Path.Combine(normalizedRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"任务分包路径越出 Quests 目录：{relativePath}");
-            return fullPath;
+            return StreamingAssetsTextLoader.ResolveCatalogPackagePathWithinRoot(questRoot, relativePath, "任务", "Quests");
         }
 
         #endregion
