@@ -6,6 +6,7 @@
 - 启动缓存重建时 `GameRes.LoadStatusText` 追加首次较慢提示，加载幕/抢跑入世共用，缓存命中不提示；提示进入双语表。
 - UIRoot 用 UIScaleController、1920×1080基准，UIUserSettings 为默认/范围权威；SafeAreaRoot 仅约束交互，FullScreenRectController 反向扩视觉背景，CanvasScaler 不乘安全区比例。安全区先验当前屏幕再归一化，绘制前补更新；SafeAreaScaleGroup 固定卡片只缩不放，之后才用 presentationScale。负快捷栏底距可保存，最终矩形仍避强制手势区。
 - 主菜单模态共用 SharedModalCardSize；MainMenuResponsiveLayout 按原位置/安全区限幅，移动交互高≥60、正文≥17逻辑像素，增长内容进ScrollRect。设置不拖动；背包无保存位置时等首个可见动画布局结束，按真实快捷栏上沿定位一次，人工拖动后让位。
+- 主菜单四个旅程入口通过 MainMenuResponsiveLayout 采用 0.6 倍设计比例（只作用于旅程菜单卡），并用实际紧凑宽高计算安全区限幅；实际用户倍率只由 UIRoot 的 UIScaleController 应用，不在子节点重复叠乘。
 - 列表 `ItemStepScrollRect` 按 scrollDeltaPerTick 还原刻度，再按条目/网格行滚动；长文本用 fixedWheelStep。显式迁移只换 MonoScript GUID，保 fileID/引用。
 - `InventoryVirtualizedSlotGrid` 用数据索引/环形池，仅重绑新进入格；回调读取当前 slotIndex，同库存走 RebindVirtualSlotUI，搜索只改变化格，拖动时延迟重绑，重建池重建回调归属。
 - `InventoryBagSearch.Bind` 在同一 `Inventory_Data` 扩缩槽重绑时保留滚动；切换数据或更改搜索/分类才回顶，未提交的筛选回顶请求继续保留，列表缩短时由虚拟网格夹紧到有效范围。

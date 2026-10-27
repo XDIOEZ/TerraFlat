@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 按主菜单安全区的可用宽高等比收放标题、三个旅程按钮和设置入口。
-/// 以 1920×1080 的 Prefab 排版为基准；空间不足时连同边距一起缩小，始终给标题与按钮、标题与设置入口留出间隔。
+/// 按主菜单安全区的可用宽高收放标题、四个旅程按钮和设置入口。
+/// 旅程按钮采用紧凑的设计比例，用户界面倍率仍由根 CanvasScaler 统一控制。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(RectTransform))]
@@ -13,9 +13,10 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
     private const float ReferenceWidth = 1920f;
     private const float ReferenceHeight = 1080f;
     private const float MinimumGap = 32f;
+    private const float JourneyCardDesignScale = 0.6f;
 
     [SerializeField] private RectTransform brand; // 标题与分隔线的共同缩放根。
-    [SerializeField] private RectTransform menuCard; // 三个旅程按钮的共同缩放根。
+    [SerializeField] private RectTransform menuCard; // 四个旅程按钮的共同缩放根。
     [SerializeField] private RectTransform settingsButton; // 右上角设置入口。
 
     private Vector2 brandReferencePosition;
@@ -86,9 +87,10 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
         float bottom = menuReferencePosition.y * edgeScale;
         float gap = MinimumGap * edgeScale;
 
-        float verticalScale = (size.y - top - bottom - gap) / (brand.rect.height + menuCard.rect.height);
+        float verticalScale = (size.y - top - bottom - gap) /
+                              (brand.rect.height + menuCard.rect.height * JourneyCardDesignScale);
         float horizontalScale = (size.x - left - right - gap) / (brand.rect.width + settingsButton.rect.width);
-        float cardWidthScale = (size.x - left - right) / menuCard.rect.width;
+        float cardWidthScale = (size.x - left - right) / (menuCard.rect.width * JourneyCardDesignScale);
         float scale = Mathf.Clamp(Mathf.Min(verticalScale, Mathf.Min(horizontalScale, cardWidthScale)), 0.01f, 1f);
 
         isApplying = true;
@@ -100,7 +102,9 @@ public sealed class MainMenuResponsiveLayout : MonoBehaviour
 
             Vector3 uniformScale = new Vector3(scale, scale, 1f);
             brand.localScale = uniformScale;
-            menuCard.localScale = uniformScale;
+            // 仅收紧四个主菜单入口，不对根画布的用户缩放倍率重复加权。
+            menuCard.localScale = new Vector3(scale * JourneyCardDesignScale,
+                scale * JourneyCardDesignScale, 1f);
             settingsButton.localScale = uniformScale;
         }
         finally

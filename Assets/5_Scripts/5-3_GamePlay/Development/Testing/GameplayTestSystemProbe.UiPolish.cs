@@ -2,6 +2,9 @@
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public static partial class GameplayTestSystemProbe
 {
@@ -19,7 +22,116 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "bag_hotbar_layout", CaptureBagHotbarLayout);
         Register("ui_settings", "hover_and_mod_selection", CaptureHoverAndModSelection);
         Register("ui_settings", "pressure_hud_display_cache", CapturePressureHudDisplayCache);
+#if UNITY_EDITOR
+        Register("ui_settings", "main_menu_scale_layout", CaptureMainMenuScaleLayout);
+#endif
     }
+
+#if UNITY_EDITOR
+    /// <summary>从正式主菜单 Prefab 取得尺寸，并在独立布局中检查不同用户倍率的响应。</summary>
+    private static JObject CaptureMainMenuScaleLayout(JObject args)
+    {
+        const string prefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        RectTransform brandSource = prefab != null
+            ? prefab.transform.Find("品牌区") as RectTransform : null;
+        RectTransform cardSource = prefab != null
+            ? prefab.transform.Find("旅程菜单卡") as RectTransform : null;
+        RectTransform settingsSource = prefab != null
+            ? prefab.transform.Find(GameManager.MainMenuSettingsButtonKey) as RectTransform : null;
+        if (prefab == null || prefab.GetComponent<MainMenuResponsiveLayout>() == null ||
+            brandSource == null || cardSource == null || settingsSource == null)
+            throw new System.InvalidOperationException("正式主菜单的响应式布局或节点引用缺失。");
+
+        string[] buttonNames =
+        {
+            GameManager.MainMenuContinueButtonKey, GameManager.MainMenuNewGameButtonKey,
+            GameManager.MainMenuMultiplayerButtonKey, GameManager.MainMenuModsButtonKey
+        };
+        float buttonHeight = -1f;
+        foreach (string name in buttonNames)
+        {
+            RectTransform button = cardSource.Find(name) as RectTransform;
+            if (button == null || button.GetComponent<Button>() == null || button.rect.height <= 0f)
+                throw new System.InvalidOperationException("主菜单缺少旅程入口：" + name);
+            if (buttonHeight > 0f && !Mathf.Approximately(buttonHeight, button.rect.height))
+                throw new System.InvalidOperationException("主菜单四个旅程入口高度不一致。");
+            buttonHeight = button.rect.height;
+        }
+
+        float width = (float)Number(args, "width", 1920);
+        float height = (float)Number(args, "height", 1080);
+        float userScale = (float)Number(args, "scale", UIUserSettings.DefaultScale);
+        if (width <= 0f || height <= 0f ||
+            userScale < UIUserSettings.MinimumScale || userScale > UIUserSettings.MaximumScale)
+            throw new System.ArgumentOutOfRangeException(nameof(args), "主菜单测试的分辨率或倍率非法。");
+
+        GameObject fixture = new GameObject("[LuaMainMenuScaleLayout]", typeof(RectTransform));
+        fixture.SetActive(false);
+        try
+        {
+            RectTransform root = fixture.GetComponent<RectTransform>();
+            float canvasScale = Mathf.Min(width / 1920f, height / 1080f) * userScale;
+            root.sizeDelta = new Vector2(width / canvasScale, height / canvasScale);
+            RectTransform brand = CreateMainMenuReferenceRect(root, brandSource);
+            RectTransform card = CreateMainMenuReferenceRect(root, cardSource);
+            RectTransform settings = CreateMainMenuReferenceRect(root, settingsSource);
+            MainMenuResponsiveLayout layout = fixture.AddComponent<MainMenuResponsiveLayout>();
+            layout.Configure(brand, card, settings);
+            fixture.SetActive(true);
+            root.ForceUpdateRectTransforms();
+
+            Vector3[] brandCorners = new Vector3[4];
+            Vector3[] cardCorners = new Vector3[4];
+            Vector3[] settingsCorners = new Vector3[4];
+            brand.GetWorldCorners(brandCorners);
+            card.GetWorldCorners(cardCorners);
+            settings.GetWorldCorners(settingsCorners);
+            float brandBottom = root.InverseTransformPoint(brandCorners[0]).y;
+            float cardTop = root.InverseTransformPoint(cardCorners[2]).y;
+            float brandRight = root.InverseTransformPoint(brandCorners[2]).x;
+            float settingsLeft = root.InverseTransformPoint(settingsCorners[0]).x;
+
+            return new JObject
+            {
+                ["buttons"] = buttonNames.Length,
+                ["buttonPixels"] = buttonHeight * card.localScale.y * canvasScale,
+                ["menuToBrandRatio"] = card.localScale.y / brand.localScale.y,
+                ["insideSafeArea"] = MainMenuRectInside(root, brand) &&
+                    MainMenuRectInside(root, card) && MainMenuRectInside(root, settings),
+                ["brandCardSeparated"] = brandBottom >= cardTop - 0.1f,
+                ["brandSettingsSeparated"] = settingsLeft >= brandRight - 0.1f
+            };
+        }
+        finally { Object.DestroyImmediate(fixture); }
+    }
+
+    private static RectTransform CreateMainMenuReferenceRect(RectTransform root, RectTransform source)
+    {
+        RectTransform rect = new GameObject(source.name, typeof(RectTransform)).GetComponent<RectTransform>();
+        rect.SetParent(root, false);
+        rect.anchorMin = source.anchorMin;
+        rect.anchorMax = source.anchorMax;
+        rect.pivot = source.pivot;
+        rect.anchoredPosition = source.anchoredPosition;
+        rect.sizeDelta = source.sizeDelta;
+        return rect;
+    }
+
+    private static bool MainMenuRectInside(RectTransform root, RectTransform child)
+    {
+        Vector3[] corners = new Vector3[4];
+        child.GetWorldCorners(corners);
+        foreach (Vector3 point in corners)
+        {
+            Vector3 local = root.InverseTransformPoint(point);
+            if (local.x < root.rect.xMin - 0.1f || local.x > root.rect.xMax + 0.1f ||
+                local.y < root.rect.yMin - 0.1f || local.y > root.rect.yMax + 0.1f)
+                return false;
+        }
+        return true;
+    }
+#endif
 
     private static JObject CapturePressureHudDisplayCache(JObject args)
     {
