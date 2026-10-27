@@ -526,7 +526,7 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
             AudioEventIds.FoodDrink,
             AudioPlayOptions.Attached(actor.transform, 0.75f, 1f));
 
-        VisualEffectManager manager = VisualEffectManager.Instance;
+        WorldRenderingManager manager = WorldRenderingManager.Instance;
         if (manager == null)
             return;
 

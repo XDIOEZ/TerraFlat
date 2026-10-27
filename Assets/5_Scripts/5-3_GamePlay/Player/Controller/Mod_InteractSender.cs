@@ -323,12 +323,12 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
         }
 
-        if (receiver is IWorldInteractionPreview entityPreview)
+        if (receiver is IWorldInteractionPreview)
         {
             if (previewReceiver == receiver) return;
             ClearInteractionPreview();
             previewReceiver = receiver;
-            entityPreview.SetInteractionHighlighted(true);
+            WorldRenderingManager.Instance?.SetWorldInteractionTargetHighlight(receiver, true);
             return;
         }
 
@@ -340,18 +340,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         if (previewReceiver == receiver &&
             previewReceiverComponent == receiverComponent &&
-            previewOutline != null)
+            previewOutline != null && previewOutline.IsHighlighted)
         {
-            previewOutline.SetHighlighted(true);
             return;
         }
 
         ClearInteractionPreview();
         previewReceiver = receiver;
         previewReceiverComponent = receiverComponent;
-        previewOutline = InteractionTargetOutline.GetOrCreate(receiverComponent);
-        if (previewOutline != null)
-            previewOutline.SetHighlighted(true);
+        previewOutline = WorldRenderingManager.Instance?.SetInteractionTargetHighlight(receiverComponent, true);
     }
 
     /// <summary>扫描交互半径，按当前指向优先、距离规则兜底。</summary>
@@ -618,14 +615,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void ClearInteractionPreview()
     {
         IInteractable clearedReceiver = previewReceiver;
+        Component clearedComponent = previewReceiverComponent;
         InteractionTargetOutline clearedOutline = previewOutline;
         previewReceiver = null;
         previewReceiverComponent = null;
         previewOutline = null;
-        if (IsInteractionReceiverAlive(clearedReceiver) && clearedReceiver is IWorldInteractionPreview entityPreview)
-            entityPreview.SetInteractionHighlighted(false);
+        if (IsInteractionReceiverAlive(clearedReceiver) && clearedReceiver is IWorldInteractionPreview)
+            WorldRenderingManager.ExistingInstance?.SetWorldInteractionTargetHighlight(clearedReceiver, false);
         if (clearedOutline != null)
-            clearedOutline.SetHighlighted(false);
+            WorldRenderingManager.ExistingInstance?.ReleaseInteractionHighlightRequest(clearedOutline, clearedComponent);
     }
 
     private void OnEnable()

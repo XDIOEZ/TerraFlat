@@ -546,7 +546,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
         renderer.sprite = sprite;
         renderer.sharedMaterial = progressMaterial;
-        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundMarkCategory);
+        WorldRenderingManager.Instance.ApplyRendererSorting(renderer, WorldSortingManager.GroundMarkCategory);
         renderer.spriteSortPoint = SpriteSortPoint.Center;
         renderer.color = new Color(color.r, color.g, color.b, 0f);
         return new ProgressOverlay { Renderer = renderer };

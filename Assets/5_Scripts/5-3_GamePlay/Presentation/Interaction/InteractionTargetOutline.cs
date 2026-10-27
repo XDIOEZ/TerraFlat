@@ -27,9 +27,13 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     private readonly HashSet<SpriteRenderer> activeSourceRenderers = new();
     private MaterialPropertyBlock sourcePropertyBlock;
     private MaterialPropertyBlock outlinePropertyBlock;
+    private readonly HashSet<Component> interactionHighlightSources = new();
+    private bool manuallyHighlighted;
     private bool highlighted;
 
     public bool IsHighlighted => highlighted;
+    public bool IsManuallyHighlighted => manuallyHighlighted;
+    public int InteractionHighlightRequestCount => interactionHighlightSources.Count;
 
     #endregion
 
@@ -38,8 +42,13 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     /// <summary>在 Unity 生命周期内创建原生渲染参数容器。</summary>
     private void Awake()
     {
-        sourcePropertyBlock = new MaterialPropertyBlock();
-        outlinePropertyBlock = new MaterialPropertyBlock();
+        EnsureOutlinePropertyBlocks();
+    }
+
+    private void EnsureOutlinePropertyBlocks()
+    {
+        sourcePropertyBlock ??= new MaterialPropertyBlock();
+        outlinePropertyBlock ??= new MaterialPropertyBlock();
     }
 
     #endregion
@@ -52,16 +61,27 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         if (interactable == null)
             return null;
 
-        Item targetItem = interactable.GetComponentInParent<Item>();
-        GameObject targetObject = targetItem != null
-            ? targetItem.gameObject
-            : ResolveVisualRoot(interactable);
+        GameObject targetObject = ResolveTargetObject(interactable);
 
         if (targetObject == null)
             return null;
 
         return targetObject.GetComponent<InteractionTargetOutline>() ??
             targetObject.AddComponent<InteractionTargetOutline>();
+    }
+
+    /// <summary>取消请求时只查现有控制器，不为清理操作创建组件。</summary>
+    public static InteractionTargetOutline GetExisting(Component target)
+    {
+        if (target == null) return null;
+        GameObject targetObject = ResolveTargetObject(target);
+        return targetObject != null ? targetObject.GetComponent<InteractionTargetOutline>() : null;
+    }
+
+    private static GameObject ResolveTargetObject(Component target)
+    {
+        Item item = target.GetComponentInParent<Item>();
+        return item != null ? item.gameObject : ResolveVisualRoot(target);
     }
 
     /// <summary>无 Item 外壳时，向上找到最近的可见 Sprite 根节点。</summary>
@@ -82,19 +102,52 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     /// <summary>开启或关闭当前目标的本地白色描边。</summary>
     public void SetHighlighted(bool value)
     {
-        if (highlighted == value)
-            return;
+        manuallyHighlighted = value;
+        ApplyCombinedHighlightRequests();
+    }
 
+    /// <summary>交互来源各自登记，取消其中一个不会清掉其它高亮请求。</summary>
+    public void SetInteractionHighlighted(Component source, bool value)
+    {
+        if (ReferenceEquals(source, null) || (value && source == null)) return;
+        if (value) interactionHighlightSources.Add(source);
+        else interactionHighlightSources.Remove(source);
+        ApplyCombinedHighlightRequests();
+    }
+
+    internal void ClearHighlightRequests()
+    {
+        manuallyHighlighted = false;
+        interactionHighlightSources.Clear();
+        ApplyCombinedHighlightRequests();
+    }
+
+    private void ApplyCombinedHighlightRequests()
+    {
+        bool value = manuallyHighlighted || interactionHighlightSources.Count > 0;
+        if (highlighted == value) return;
         highlighted = value;
         if (highlighted)
         {
-            // 再次选中时重交裁剪参数，兼容外部资源重载后的代理状态恢复。
-            for (int i = 0; i < outlineEntries.Count; i++)
-                outlineEntries[i].HasClipState = false;
-            RefreshOutlineRenderers();
+            enabled = true;
+            RefreshHighlightedRenderers();
         }
         else
+        {
             DisableOutlineRenderers();
+            WorldRenderingManager.ExistingInstance?.ForgetHighlightController(this);
+            enabled = false;
+        }
+    }
+
+    internal void RefreshHighlightedRenderers()
+    {
+        interactionHighlightSources.RemoveWhere(static source => source == null);
+        ApplyCombinedHighlightRequests();
+        if (!highlighted) return;
+        // 再次选中或结构重绑时重交裁剪参数，兼容资源重载后的代理恢复。
+        for (int i = 0; i < outlineEntries.Count; i++) outlineEntries[i].HasClipState = false;
+        RefreshOutlineRenderers();
     }
 
     #endregion
@@ -103,18 +156,24 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (interactionHighlightSources.RemoveWhere(static source => source == null) > 0)
+            ApplyCombinedHighlightRequests();
         if (highlighted)
             RefreshOutlineRenderers();
     }
 
     private void OnDisable()
     {
+        manuallyHighlighted = false;
+        interactionHighlightSources.Clear();
         highlighted = false;
         DisableOutlineRenderers();
+        WorldRenderingManager.ExistingInstance?.ForgetHighlightController(this);
     }
 
     private void RefreshOutlineRenderers()
     {
+        EnsureOutlinePropertyBlocks();
         if (!InteractionOutlineSettings.Enabled)
         {
             DisableOutlineRenderers();

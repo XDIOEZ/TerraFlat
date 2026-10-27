@@ -199,7 +199,7 @@ public class WorldLiquidBehaviour
             effect.SetActorImmersionState(immersionLevel, inWater);
 
         // 水下看不到脚底阴影，阴影状态与水体视觉状态保持同一入口更新。
-        ActorShadowManager.GetInstance()?.SetActorInWater(item, inWater);
+        WorldRenderingManager.ExistingInstance?.SetItemInWater(item, inWater);
     }
 
     #endregion

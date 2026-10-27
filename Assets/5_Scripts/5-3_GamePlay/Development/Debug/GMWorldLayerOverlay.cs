@@ -338,7 +338,7 @@ internal sealed partial class GMWorldLayerOverlay : MonoBehaviour
         renderRoot.GetComponent<MeshFilter>().sharedMesh = mesh;
         overlayRenderer = renderRoot.GetComponent<MeshRenderer>();
         overlayRenderer.sharedMaterial = material;
-        WorldSortingManager.GetInstance().ApplyRenderer(overlayRenderer, WorldSortingManager.WorldEffectCategory, 32750);
+        WorldRenderingManager.Instance.ApplyRendererSorting(overlayRenderer, WorldSortingManager.WorldEffectCategory, 32750);
         overlayRenderer.shadowCastingMode = ShadowCastingMode.Off;
         overlayRenderer.receiveShadows = false;
         overlayRenderer.enabled = false;

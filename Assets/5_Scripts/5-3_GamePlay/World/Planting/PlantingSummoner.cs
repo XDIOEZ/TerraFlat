@@ -18,7 +18,7 @@ public sealed class PlantingSummoner
         previewObject.hideFlags = HideFlags.DontSave;
         previewRenderer = previewObject.AddComponent<SpriteRenderer>();
         previewRenderer.sprite = sprite;
-        WorldSortingManager.GetInstance().ApplyRenderer(previewRenderer, WorldSortingManager.GroundPreviewCategory);
+        WorldRenderingManager.Instance.ApplyRendererSorting(previewRenderer, WorldSortingManager.GroundPreviewCategory);
         previewRenderer.enabled = true;
     }
 

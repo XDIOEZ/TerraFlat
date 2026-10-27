@@ -13,6 +13,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         public readonly ItemMgr Items;
         public readonly ActorRenderEffectController Controller;
         public readonly VisualEffectManager Effects;
+        public readonly WorldRenderingManager Rendering;
         public Item WorldItem;
         public Item Item;
         public GameObject Attachment;
@@ -26,6 +27,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
             Controller = player.GetComponentInChildren<ActorRenderEffectController>(true) ??
                 throw new InvalidOperationException("已入世玩家没有正式角色渲染控制器。");
             Effects = VisualEffectManager.Instance;
+            Rendering = WorldRenderingManager.ExistingInstance ??
+                throw new InvalidOperationException("真实世界没有统一渲染管理器。");
         }
 
         public void Dispose()
@@ -38,11 +41,11 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 {
                     if (Item != null)
                     {
-                        try { Effects.StopOwnerEffect(Item.transform, "WetStatusEffect"); }
+                        try { Rendering.StopOwnerEffect(Item.transform, "WetStatusEffect"); }
                         finally { Controller.UnregisterExternalRenderers(Item.transform); }
                     }
                 }
-                finally { if (Effect != null) Effects.ReturnEffectToPool("WetStatusEffect", Effect); }
+                finally { if (Effect != null) Rendering.ReturnEffectToPool("WetStatusEffect", Effect); }
             }
             finally
             {
@@ -79,7 +82,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 throw new InvalidOperationException("正式物品激活后没有接入世界排序。");
             WorldSortingManager sorting = UnityEngine.Object.FindObjectOfType<WorldSortingManager>() ??
                 throw new InvalidOperationException("真实世界没有排序管理器。");
-            sorting.GetSortingKey(member.Category, out int expectedLayer, out int expectedOrder);
+            fixture.Rendering.GetSortingKey(member.Category, out int expectedLayer, out int expectedOrder);
             SortingGroup group = worldSprite.GetComponentsInParent<SortingGroup>(true).LastOrDefault(value => value.enabled &&
                 (value.transform == fixture.WorldItem.transform || value.transform.IsChildOf(fixture.WorldItem.transform)));
             bool sortingMatches = (group != null ? group.sortingLayerID : worldSprite.sortingLayerID) == expectedLayer &&
@@ -136,16 +139,16 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool materialRestored = external.sharedMaterials.SequenceEqual(originalMaterials);
             bool bindingReleased = !fixture.Controller.Renderers.Contains(external);
 
-            fixture.Effect = fixture.Effects.PlayEffect(fixture.Item.transform, "WetStatusEffect",
+            fixture.Effect = fixture.Rendering.PlayEffect(fixture.Item.transform, "WetStatusEffect",
                 fixture.Item.transform, Vector3.up * .4f, -1f, EffectStackMode.NonStackable);
             if (fixture.Effect == null) throw new InvalidOperationException("正式资源目录无法创建 WetStatusEffect。");
             Vector3 initialScale = fixture.Effect.transform.localScale;
-            GameObject repeated = fixture.Effects.PlayEffect(fixture.Item.transform, "WetStatusEffect",
+            GameObject repeated = fixture.Rendering.PlayEffect(fixture.Item.transform, "WetStatusEffect",
                 fixture.Item.transform, Vector3.up * .4f, -1f, EffectStackMode.NonStackable);
             ParticleSystem[] particles = fixture.Effect.GetComponentsInChildren<ParticleSystem>(true);
             yield return null;
             yield return null;
-            bool ownerBound = fixture.Effects.HasEffect(fixture.Item.transform, "WetStatusEffect");
+            bool ownerBound = fixture.Rendering.HasEffect(fixture.Item.transform, "WetStatusEffect");
             int duringEffects = ActiveWetEffects(fixture.Effects);
             int ownRegistrations = fixture.Effects.activeEffects.TryGetValue("WetStatusEffect", out var activeWet)
                 ? activeWet.Count(value => value == fixture.Effect) : 0;
@@ -153,12 +156,12 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool particleMaterials = particles.Length > 0 && particles.All(value =>
                 value.GetComponent<ParticleSystemRenderer>()?.sharedMaterial != null);
             fixture.Effect.transform.localScale = initialScale * 3f;
-            fixture.Effects.StopOwnerEffect(fixture.Item.transform, "WetStatusEffect");
-            bool ownerReleased = !fixture.Effects.HasEffect(fixture.Item.transform, "WetStatusEffect");
+            fixture.Rendering.StopOwnerEffect(fixture.Item.transform, "WetStatusEffect");
+            bool ownerReleased = !fixture.Rendering.HasEffect(fixture.Item.transform, "WetStatusEffect");
             bool pooledInactive = !fixture.Effect.activeSelf;
             bool particlesCleared = particles.All(value => value.particleCount == 0 && !value.isPlaying);
             bool poseRestored = fixture.Effect.transform.localScale == initialScale;
-            fixture.Effects.ReturnEffectToPool("WetStatusEffect", fixture.Effect);
+            fixture.Rendering.ReturnEffectToPool("WetStatusEffect", fixture.Effect);
             int afterDoubleReturn = ActiveWetEffects(fixture.Effects);
             bool ownRegistrationReleased = !fixture.Effects.activeEffects.TryGetValue("WetStatusEffect", out var remainingWet) ||
                 !remainingWet.Contains(fixture.Effect);
@@ -190,6 +193,34 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["poseRestored"] = poseRestored, ["afterDoubleReturn"] = afterDoubleReturn,
                 ["ownRegistrationReleased"] = ownRegistrationReleased
             };
+
+            GameObject firstStack = fixture.Rendering.PlayEffect(fixture.Item.transform, "WetStatusEffect",
+                fixture.Item.transform, Vector3.zero, -1f, EffectStackMode.Stackable);
+            GameObject secondStack = fixture.Rendering.PlayEffect(fixture.Item.transform, "WetStatusEffect",
+                fixture.Item.transform, Vector3.up * .2f, -1f, EffectStackMode.Stackable);
+            result["stackedEffectsActive"] = firstStack != null && secondStack != null &&
+                firstStack != secondStack && firstStack.activeInHierarchy && secondStack.activeInHierarchy;
+            fixture.Rendering.UnregisterItemRendering(fixture.Item);
+            result["stackedOwnerReleased"] = !fixture.Rendering.HasEffect(fixture.Item.transform, "WetStatusEffect");
+            result["allStackedEffectsPooled"] = firstStack != null && secondStack != null &&
+                !firstStack.activeSelf && !secondStack.activeSelf;
+            result["stackedParticlesCleared"] = new[] { firstStack, secondStack }.All(effect => effect != null &&
+                effect.GetComponentsInChildren<ParticleSystem>(true).All(value => value.particleCount == 0 && !value.isPlaying));
+            fixture.Rendering.RegisterItemRendering(fixture.Item);
+            fixture.Effect = fixture.Rendering.PlayItemVisualEffect(fixture.Item, "WetStatusEffect");
+            result["newLeaseOwnerBound"] = fixture.Effect != null && fixture.Effect.activeInHierarchy &&
+                fixture.Rendering.GetOwnerEffect(fixture.Item.transform, "WetStatusEffect") == fixture.Effect;
+            fixture.Rendering.StopItemVisualEffect(fixture.Item, "WetStatusEffect");
+            result["newLeaseReturned"] = fixture.Effect != null && !fixture.Effect.activeSelf;
+            fixture.Rendering.UnregisterItemRendering(fixture.Item);
+            result["unregisteredBeforeDirectFeatureCalls"] = !fixture.Rendering.IsItemRenderingRegistered(fixture.Item);
+            fixture.Rendering.SetItemHighlight(fixture.Item, true);
+            fixture.Effect = fixture.Rendering.PlayItemVisualEffect(fixture.Item, "WetStatusEffect");
+            result["directFeatureCallsActive"] = fixture.Rendering.IsItemHighlighted(fixture.Item) &&
+                fixture.Effect != null && fixture.Effect.activeInHierarchy;
+            fixture.Items.DespawnItem(fixture.Item, false);
+            result["directFeatureLifecycleCleaned"] = !fixture.Rendering.IsItemRenderingRegistered(fixture.Item) &&
+                !fixture.Rendering.IsItemHighlighted(fixture.Item) && fixture.Effect != null && !fixture.Effect.activeSelf;
         }
         finally { fixture.Dispose(); }
         result["itemReleased"] = fixture.Item == null || fixture.Item.IsInPool || fixture.Item.DestructionHandled;

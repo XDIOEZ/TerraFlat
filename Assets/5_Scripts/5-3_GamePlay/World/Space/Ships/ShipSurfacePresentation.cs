@@ -43,7 +43,7 @@ namespace FlatWorld.Spaceflight
                 originalEnabled = sortingGroup.enabled; originalSortAtRoot = sortingGroup.sortAtRoot;
                 sortingApplied = true;
             }
-            WorldSortingManager.GetInstance().GetSortingKey(category, out int layer, out int order);
+            WorldRenderingManager.Instance.GetSortingKey(category, out int layer, out int order);
             if (!sortingGroup.enabled) sortingGroup.enabled = true;
             if (!sortingGroup.sortAtRoot) sortingGroup.sortAtRoot = true;
             if (sortingGroup.sortingLayerID != layer) sortingGroup.sortingLayerID = layer;
@@ -187,7 +187,7 @@ namespace FlatWorld.Spaceflight
             {
                 if (!surfaceSortingBound)
                 {
-                    WorldSortingManager.GetInstance().GetSortingKey(WorldSortingManager.VehicleCategory, out _, out int order);
+                    WorldRenderingManager.Instance.GetSortingKey(WorldSortingManager.VehicleCategory, out _, out int order);
                     surfaceOrderOffset = visual.sortingOrder - order; surfaceSortingBound = true;
                 }
                 ShipSurfacePresentation.SetElevated(visual.gameObject,

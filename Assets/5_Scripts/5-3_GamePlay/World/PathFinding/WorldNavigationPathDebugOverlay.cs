@@ -121,7 +121,7 @@ public sealed class WorldNavigationPathDebugOverlay : MonoBehaviour
         filter.sharedMesh = routeMesh;
 
         routeRenderer = gameObject.AddComponent<MeshRenderer>();
-        WorldSortingManager.GetInstance().ApplyRenderer(routeRenderer, WorldSortingManager.WorldEffectCategory, DebugSortingOrder);
+        WorldRenderingManager.Instance.ApplyRendererSorting(routeRenderer, WorldSortingManager.WorldEffectCategory, DebugSortingOrder);
         routeRenderer.shadowCastingMode = ShadowCastingMode.Off;
         routeRenderer.receiveShadows = false;
         routeRenderer.lightProbeUsage = LightProbeUsage.Off;

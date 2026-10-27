@@ -10,7 +10,7 @@ namespace FlatWorld.Spaceflight
         {
             if (spaceSorting == inSpace || Sprite == null) return;
             spaceSorting = inSpace;
-            WorldSortingManager.GetInstance().ApplyRenderer(Sprite, WorldSortingManager.WorldItemCategory, inSpace ? 2 : 0);
+            WorldRenderingManager.Instance.ApplyRendererSorting(Sprite, WorldSortingManager.WorldItemCategory, inSpace ? 2 : 0);
         }
         public void Initialize(ItemData payload, object owner)
         {

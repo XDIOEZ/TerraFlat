@@ -9,7 +9,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>正式世界与开发入口共用同一生物和地表阴影排序键。</summary>
         public static AiecsWorldSortingKeys Resolve()
         {
-            WorldSortingManager manager = WorldSortingManager.GetInstance();
+            WorldRenderingManager manager = WorldRenderingManager.Instance;
             if (manager == null)
                 throw new InvalidOperationException("AIECS 表现缺少世界排序管理器。");
             manager.GetSortingKey(WorldSortingManager.CreatureCategory,

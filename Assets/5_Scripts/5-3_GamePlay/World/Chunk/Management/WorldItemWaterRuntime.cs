@@ -542,7 +542,7 @@ internal static class WorldItemWaterEntrySplashEffect
         {
             splashRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             splashRenderer.sharedMaterial = splashMaterial;
-            WorldSortingManager.GetInstance().ApplyRenderer(splashRenderer, WorldSortingManager.GroundSplashCategory);
+            WorldRenderingManager.Instance.ApplyRendererSorting(splashRenderer, WorldSortingManager.GroundSplashCategory);
             splashRenderer.enableGPUInstancing = true;
         }
 

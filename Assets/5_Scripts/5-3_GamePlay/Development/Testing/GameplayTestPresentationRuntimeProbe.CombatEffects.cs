@@ -25,7 +25,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
         Collect(definition.ShellPrefab);
         foreach (RuntimeItemModuleAssemblyPlan module in definition.ModuleAssemblies) Collect(module.ModulePrefab);
 
-        VisualEffectManager manager = VisualEffectManager.Instance;
+        WorldRenderingManager manager = WorldRenderingManager.ExistingInstance ??
+            throw new InvalidOperationException("真实世界没有统一渲染管理器。");
         var samples = new JArray();
         UnityEngine.Random.State beforeRandom = UnityEngine.Random.state;
         foreach (GameEffect prefab in prefabs)

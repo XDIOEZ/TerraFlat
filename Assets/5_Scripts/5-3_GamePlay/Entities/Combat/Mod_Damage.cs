@@ -830,7 +830,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private void SpawnEffect(Vector2 hitPoint, float damage)
     {
         using var marker = HitEffectsMarker.Auto();
-        VisualEffectManager effectManager = VisualEffectManager.Instance;
+        WorldRenderingManager effectManager = WorldRenderingManager.Instance;
         CombatDamageKind kind = ResolveDamageValues().DominantKind;
         if (impactEffectSet != null)
             PlayHitEffect(impactEffectSet.GetPrefab(kind), effectManager, hitPoint, damage, kind);
@@ -843,7 +843,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>从现有对象池播放命中特效，类型动画与数字共用相同的命中坐标。</summary>
-    private void PlayHitEffect(GameEffect prefab, VisualEffectManager manager, Vector2 hitPoint,
+    private void PlayHitEffect(GameEffect prefab, WorldRenderingManager manager, Vector2 hitPoint,
         float damage, CombatDamageKind kind)
     {
         if (prefab == null)

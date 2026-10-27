@@ -297,7 +297,11 @@ public abstract class Item : MonoBehaviour
         pendingInitialAnimatorStateName = null;
     }
 
-    private void OnEnable() => FlushPendingInitialAnimatorState();
+    private void OnEnable()
+    {
+        FlushPendingInitialAnimatorState();
+        WorldRenderingManager.ExistingInstance?.RefreshItemRendering(this);
+    }
 
     #endregion
 
@@ -563,6 +567,8 @@ public abstract class Item : MonoBehaviour
         bool wasInitialized = IsInitialized;
         isInitialized = false;
         using var scope = ListPool<Exception>.Get(out var errors);
+        try { WorldRenderingManager.ExistingInstance?.UnregisterItemRendering(this); }
+        catch (Exception error) { errors.Add(error); }
         try { OnItemDestroy.Invoke(this); }
         catch (Exception error) { errors.Add(error); }
         try

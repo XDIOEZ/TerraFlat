@@ -188,7 +188,7 @@ namespace FlatWorld.NaturalEntities
         private static void UpdateContactShadowOpacity()
         {
             if (contactShadows == null) return;
-            ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
+            WorldRenderingManager shadowManager = WorldRenderingManager.GetInstance();
             float opacity = shadowManager != null && contactShadowScene.IsValid() && contactShadowScene.isLoaded
                 ? shadowManager.GetShadowOpacity(contactShadowScene)
                 : 0f;

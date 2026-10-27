@@ -107,7 +107,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (camera == null) { replicaRenderer.DrawRecords(replicaRecords, null, default); return; }
             WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
             if (navigation?.IsNavigationReady != true) { replicaRenderer.DrawRecords(replicaRecords, null, default); return; }
-            ActorShadowManager shadows = ActorShadowManager.GetInstance();
+            WorldRenderingManager shadows = WorldRenderingManager.GetInstance();
             replicaRenderer.ShadowOpacity = shadows != null ? shadows.GetShadowOpacity(player.gameObject.scene) : .4f;
             WorldTopologyDomain domain = navigation.GetSharedNavigation().Read().Domain;
             float elapsed = Mathf.Max(0f, Time.unscaledTime - replicaReceivedAt);

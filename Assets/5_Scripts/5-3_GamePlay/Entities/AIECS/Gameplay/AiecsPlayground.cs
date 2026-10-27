@@ -109,7 +109,7 @@ namespace FlatWorld.AIECS.Gameplay
             { display.Draw(bridge.Simulation, null, default); targetCamera = null; return; }
             using var worldScope = GameplayWorldRegistry.UseWorld(bridge.WorldKey);
             if (targetCamera == null || !targetCamera.isActiveAndEnabled) targetCamera = Camera.main;
-            ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
+            WorldRenderingManager shadowManager = WorldRenderingManager.GetInstance();
             display.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(player.gameObject.scene) : 0.4f;
             display.ShadowsEnabled = ShowFootShadows;
             display.Draw(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain, IsScenarioPresentationReady);

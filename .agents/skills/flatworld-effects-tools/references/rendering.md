@@ -1,5 +1,11 @@
 # 渲染与光影
 
+## 统一物品渲染入口
+
+- `WorldRenderingManager.Instance` 提供排序、阴影、水态、手动高亮与特效接口，partial 文件按功能拆分并复用原后端；启动由 GameManager 安装，清理只读 ExistingInstance。物品注册、结构刷新、回池/销毁与世界退出统一维护，正常显示不要求每帧重新注册。
+- `SetItemShadowEnabled/SetItemInWater` 只改表现请求，结构刷新保留、注销和池复用清空；`SetItemHighlight` 与按 Component 身份合并的交互高亮独立。Owner 同名叠加特效必须全部纳入回收，归池与资源代际切换不能遗留旧请求。
+- 回归 `rendering/unified_manager` 与真实 `player_external_effects/combat_effect_prewarm`；组件状态正确不等于 GPU 画面或帧率通过。
+
 ## 排序、MPB 与 Shader
 
 - BRG 用材质队列：Ground/Water 2988/2989、ground-building 2991、Blocking 2992、草花 2993、地形上限 2994、旧 Item 接触阴影 2995；ECS 阴影走 Shadow。贴地设施在地面/平台上、墙下，不投接触/太阳阴影、不遮局部光。树主体用 `TreeSortingVisual` 原生 SortingGroup 混排，果实仅组内偏移，太阳投影仍用 BRG。

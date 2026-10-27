@@ -265,12 +265,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         properties = new MaterialPropertyBlock();
         SharedSpriteMeshCache.Clearing += ReleaseSharedGeometry;
         gameManager = GetComponentInChildren<GameManager>(true);
-        if (gameManager == null) gameManager = GameManager.Instance;
-        if (gameManager != null)
-        {
-            gameManager.Event_GameWorldEnter += RegisterExistingItems;
-            gameManager.Event_GameWorldExit += ClearWorld;
-        }
+        if (gameManager == null) gameManager = FindFirstObjectByType<GameManager>();
     }
 
     /// <summary>只在功能开启时监听实体；重启从权威注册表补齐，不扫描场景。</summary>
@@ -280,14 +275,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         SunShadowSettings.Changed -= ApplyPreference;
         SunShadowSettings.Changed += ApplyPreference;
         if (!SunShadowSettings.Enabled) { enabled = false; return; }
-        ItemMgr.RuntimeItemRegistered += RegisterCaster;
-        ItemMgr.RuntimeItemUnregistered += UnregisterCaster;
-        Item.RuntimeStructureChanged += RefreshCaster;
-        RegisterExistingItems();
+        WorldRenderingManager.ExistingInstance?.AttachSunShadowRenderingBackend(this);
     }
-
-    /// <summary>在各管理器 Awake 完成后补齐启动前已注册的对象。</summary>
-    private void Start() => RegisterExistingItems();
 
     /// <summary>开关关闭时停止 Unity 更新回调，代理解绑由 OnDisable 完成。</summary>
     private void ApplyPreference() => enabled = SunShadowSettings.Enabled;
@@ -336,9 +325,6 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     /// <summary>禁用时释放注册、GPU 状态与代理；不会改动脚底或局部灯光阴影。</summary>
     private void OnDisable()
     {
-        ItemMgr.RuntimeItemRegistered -= RegisterCaster;
-        ItemMgr.RuntimeItemUnregistered -= UnregisterCaster;
-        Item.RuntimeStructureChanged -= RefreshCaster;
         // OnDisable 可能发生在场景/父节点停用过程中，此时不能把子代理重挂到其它父节点。
         ClearWorld(false);
     }
@@ -348,11 +334,6 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     {
         SunShadowSettings.Changed -= ApplyPreference;
         SharedSpriteMeshCache.Clearing -= ReleaseSharedGeometry;
-        if (gameManager != null)
-        {
-            gameManager.Event_GameWorldEnter -= RegisterExistingItems;
-            gameManager.Event_GameWorldExit -= ClearWorld;
-        }
         while (pool.Count > 0)
         {
             ShadowProxy proxy = pool.Pop();
@@ -370,7 +351,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         if (!isActiveAndEnabled || item == null || item is Map || item.itemData == null || bindings.ContainsKey(item)) return;
         SunShadowCaster authoring = item.GetComponent<SunShadowCaster>();
         ItemShadowVisualDefinitionDto shadowVisual = null;
-        GameRes resources = GameRes.Instance;
+        GameRes resources = GameRes.ExistingInstance;
         if (resources != null &&
             resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
             shadowVisual = definition.Visual?.Shadows;
@@ -402,27 +383,10 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         bindings.Remove(item);
     }
 
-    /// <summary>模块/视觉结构重建后重新解析，只处理已经进入权威运行表的实例。</summary>
-    private void RefreshCaster(Item item)
-    {
-        ItemMgr items = ItemMgr.GetInstance();
-        if (item == null || item.itemData == null || items == null ||
-            !items.WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) || registered != item) return;
-        UnregisterCaster(item);
-        RegisterCaster(item);
-    }
+    internal bool IsItemShadowBound(Item item) => item != null && bindings.ContainsKey(item);
 
-    /// <summary>启用及进入世界时进行一次权威注册表补登记。</summary>
-    private void RegisterExistingItems()
-    {
-        if (!isActiveAndEnabled) return;
-        ItemMgr items = ItemMgr.GetInstance();
-        if (items == null) return;
-        foreach (Item item in items.WorldRunTimeItems.Values) RegisterCaster(item);
-    }
-
-    /// <summary>退出世界立即清空绑定；只保留有上限的停用代理池。</summary>
-    private void ClearWorld() => ClearWorld(true);
+    /// <summary>退出世界时统一入口清理机械代理和全局参数。</summary>
+    internal void ClearWorldRendering() => ClearWorld(true);
 
     /// <summary>清空当前世界；组件停用期间禁用归池重挂，避免 Unity 层级激活/停用时序冲突。</summary>
     private void ClearWorld(bool allowPooling)

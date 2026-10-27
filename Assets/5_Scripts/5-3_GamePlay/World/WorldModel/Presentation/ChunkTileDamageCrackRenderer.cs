@@ -165,7 +165,7 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
     {
         renderer.sprite = crackSprite;
         renderer.sharedMaterial = tilemapRenderer.BlockingMaterial;
-        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundMarkCategory);
+        WorldRenderingManager.Instance.ApplyRendererSorting(renderer, WorldSortingManager.GroundMarkCategory);
     }
 
     private void HideCrack(Vector2Int localCell)

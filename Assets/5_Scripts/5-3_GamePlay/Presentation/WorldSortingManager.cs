@@ -45,22 +45,10 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
         ConfigureDynamicAxis();
     }
 
-    /// <summary>监听新实体，并纳入已比管理器更早注册的实体。</summary>
+    /// <summary>物品生命周期由统一入口分发，后端启用时只补齐自己的绑定。</summary>
     private void OnEnable()
     {
-        ItemMgr.RuntimeItemRegistered += RegisterItem;
-        Item.RuntimeStructureChanged += RefreshRegisteredItem;
-        ItemMgr itemManager = ItemMgr.GetInstance();
-        if (itemManager == null) return;
-        foreach (Item item in itemManager.WorldRunTimeItems.Values)
-            RegisterItem(item);
-    }
-
-    /// <summary>取消事件订阅。</summary>
-    private void OnDisable()
-    {
-        ItemMgr.RuntimeItemRegistered -= RegisterItem;
-        Item.RuntimeStructureChanged -= RefreshRegisteredItem;
+        WorldRenderingManager.ExistingInstance?.AttachSortingRenderingBackend(this);
     }
     #endregion
 
@@ -179,6 +167,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     /// <summary>向批量表现与 MOD 提供类别的唯一图层和顺序来源。</summary>
     public void GetSortingKey(string category, out int sortingLayerId, out int sortingOrder)
     {
+        if (profiles.Count == 0) LoadProfiles();
         if (string.IsNullOrWhiteSpace(category) || !profiles.TryGetValue(category, out WorldSortingProfile profile))
             throw new InvalidOperationException($"世界排序类别 {category} 未注册。");
 
@@ -234,7 +223,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     }
 
     /// <summary>从实体类型选类别并绑定主体；不修改阴影、特效或 Tilemap 的独立排序。</summary>
-    private void RegisterItem(Item item)
+    internal void RegisterItemRendering(Item item)
     {
         if (item == null || item is Map) return;
 
@@ -257,15 +246,6 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
             member = item.gameObject.AddComponent<WorldSortingMember>();
         member.Bind(category, renderer, item);
         BuildingDepthMeshBridge.Register(item);
-    }
-
-    /// <summary>已登记实体原位切换地板层时同步类别，模块装配期间不提前绑定。</summary>
-    private void RefreshRegisteredItem(Item item)
-    {
-        ItemMgr manager = ItemMgr.GetInstance();
-        if (item?.itemData == null || manager == null ||
-            !manager.WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) || registered != item) return;
-        RegisterItem(item);
     }
 
     /// <summary>优先使用 Item 的主体引用，尚未赋值时选非 Canvas 的有效世界精灵。</summary>

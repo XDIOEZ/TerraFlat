@@ -156,6 +156,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     protected override void Awake()
     {
         base.Awake();
+        WorldRenderingManager.EnsureForOwner(this);
         Item.RuntimeStructureChanged += OnPerceptionStructureChanged;
         Item.RuntimeStructureChanged += TrackWorldItemMatter;
         RuntimeItemRegistered += TrackWorldItemMatter;

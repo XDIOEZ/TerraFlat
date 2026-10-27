@@ -8,7 +8,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 ## 入口与职责
 
 - 渲染资源：`Assets/9_Shaders/{Shader,Material,Volume,Resources}/`；保留 Resources 逻辑路径和移动资产的 GUID，第三方资源独立存放。
-- 表现代码：`Assets/5_Scripts/5-3_GamePlay/Presentation/`。`Effects/Management/VisualEffectManager` 管池，`Effects/Runtime/` 为独立 Effect.asmdef；`ActorRenderEffectController` 合成角色 MPB；`WorldSortingManager/WorldSortingMember` 管排序；`ActorShadowManager/WorldShadowProjectionManager` 管接触/太阳阴影。
+- 表现代码：`Assets/5_Scripts/5-3_GamePlay/Presentation/`。物品统一调用 `WorldRenderingManager`，内部按 Sorting/Shadows/Outlines/Effects 拆分；现有后端继续负责具体实现。`Effects/Management/VisualEffectManager` 管池，`Effects/Runtime/` 为独立 Effect.asmdef；`ActorRenderEffectController` 合成角色 MPB；`WorldSortingManager/WorldSortingMember` 管排序；`ActorShadowManager/WorldShadowProjectionManager` 管接触/太阳阴影。
 - 默认值：`Assets/Resources/GameConfig/Rendering/default-rendering.json`；Prefab 持有资源与逐物体外观，PlayerPrefs 持有本机偏好。表现只消费权威状态，不结算伤害、液量、引擎耗油或角色迁移。
 - AIECS：`Entities/AIECS/Presentation/`；开发工具：`Assets/5_Scripts/5-3_GamePlay/Development/{Debug,Diagnostics}/`；编辑器：`Assets/Editor/FlatWorld/`，内容工坊在 `ContentTools/ContentWorkshop/`。
 - 低帧率自动取证：`Automation/ProfilerAutoExporter` 与 `ProfilerAutoExportWindow`；顶栏「自动」/「<FPS」设置，默认关闭、30 FPS、启动/继续缓冲5秒、持续时间5秒。缓冲后按新 Profiler CPU 帧时间区间滚动统计，观察满窗口且低帧累计至少80%（5秒内累计4秒，无需连续，不按帧数）才暂停并导出窗口内仍保留的最慢帧；全部文件发布后自动继续，重新缓冲；失败保留暂停并关闭自动模式。暂停/继续、改设置或数据丢失清窗口。`auto-trigger.json` schema 3 区分最慢选中帧与达标触发帧，附累计秒数/比例/窗口边界；现场仍是暂停导出时刻。不改变手动/MCP无暂停契约。离线回归见 `Tools/Tests/ProfilerAutoExport/`。

@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// 通用角色状态视觉控制器。
-/// 监听角色 Mod_BuffManager 的添加、移除和续期事件，为状态提供附着式 Sprite 序列、低强度光晕或 VisualEffectManager 池化特效；当前燃烧使用八帧火焰，
+/// 监听角色 Mod_BuffManager 的添加、移除和续期事件，为状态提供附着式 Sprite 序列、低强度光晕或 WorldRenderingManager 池化特效；当前燃烧使用八帧火焰，
 /// 出血1/2/3复用一个持续循环的红色血滴粒子，光耀复用圆形精灵叠加轻微呼吸光。后续中毒、冰冻等状态只需在 Animator 模块 Prefab 追加配置，无需侵入 Buff 的伤害或 Tick 逻辑。
 /// </summary>
 [DisallowMultipleComponent]
@@ -60,7 +60,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         [Tooltip("与 BuffDefinition.Id 一致；多个 ID 可用 | 分隔并共用一个粒子特效。")]
         [SerializeField] private string buffId;
 
-        [Tooltip("交给 VisualEffectManager 对象池解析的特效预制体名称。")]
+        [Tooltip("交给 WorldRenderingManager 对象池解析的特效预制体名称。")]
         [SerializeField] private string effectName;
 
         [Tooltip("相对角色 Sprite 高度的水平偏移。")]
@@ -179,7 +179,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     [Tooltip("Buff ID 到附着精灵序列的映射；每个 ID 最多一条。")]
     [SerializeField] private StatusSpriteSequence[] statusEffects = Array.Empty<StatusSpriteSequence>();
 
-    [Tooltip("Buff ID 到 VisualEffectManager 池化粒子特效的映射；多个 ID 可用 | 合并为一个持续表现。")]
+    [Tooltip("Buff ID 到 WorldRenderingManager 池化粒子特效的映射；多个 ID 可用 | 合并为一个持续表现。")]
     [SerializeField] private StatusParticleEffect[] particleEffects = Array.Empty<StatusParticleEffect>();
 
     [Tooltip("Buff ID 到低强度、可呼吸光晕的映射；适合光耀等持续状态。")]
@@ -1012,7 +1012,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
 
     #region Pooled Particle Effects
 
-    /// <summary>通过现有 VisualEffectManager 播放绑定角色的非叠加池化粒子。</summary>
+    /// <summary>通过现有 WorldRenderingManager 播放绑定角色的非叠加池化粒子。</summary>
     private void SetParticleVisualActive(RuntimeStatusParticleVisual visual, bool active)
     {
         if (visual == null || visual.Effect == null)
@@ -1023,7 +1023,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             visual.IsActive = false;
             if (visual.EffectObject != null)
             {
-                VisualEffectManager manager = VisualEffectManager.Instance;
+                WorldRenderingManager manager = WorldRenderingManager.ExistingInstance;
                 if (manager != null)
                     manager.StopOwnerEffect(transform, visual.Effect.EffectName);
                 else
@@ -1038,7 +1038,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         if (visual.IsActive && visual.EffectObject != null && visual.EffectObject.activeInHierarchy)
             return;
 
-        VisualEffectManager visualEffectManager = VisualEffectManager.Instance;
+        WorldRenderingManager visualEffectManager = WorldRenderingManager.Instance;
         if (visualEffectManager == null)
         {
             visual.IsActive = false;
@@ -1048,7 +1048,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         if (visual.EffectObject != null)
             visualEffectManager.ReturnEffectToPool(visual.Effect.EffectName, visual.EffectObject);
 
-        Transform effectRoot = visualEffectManager.transform;
+        Transform effectRoot = visualEffectManager.VisualEffectRoot;
         Vector3 worldPosition = transform.TransformPoint(GetParticleLocalPosition(visual.Effect));
         GameObject effectObject = visualEffectManager.PlayEffect(
             transform,

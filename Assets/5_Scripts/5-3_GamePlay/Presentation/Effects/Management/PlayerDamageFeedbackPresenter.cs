@@ -122,7 +122,7 @@ public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
 
     private void SpawnText(Vector3 position, DamageTextEffectData data)
     {
-        VisualEffectManager effectManager = VisualEffectManager.Instance;
+        WorldRenderingManager effectManager = WorldRenderingManager.Instance;
         GameEffect effect = effectManager != null
             ? effectManager.GetGameEffectFromPool(damageTextPrefab)
             : Instantiate(damageTextPrefab);

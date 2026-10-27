@@ -579,7 +579,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         line.receiveShadows = false;
         line.lightProbeUsage = LightProbeUsage.Off;
         line.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        WorldSortingManager.GetInstance().ApplyRenderer(line, WorldSortingManager.WorldEffectCategory, 32000);
+        WorldRenderingManager.Instance.ApplyRendererSorting(line, WorldSortingManager.WorldEffectCategory, 32000);
         line.enabled = false;
         return line;
     }

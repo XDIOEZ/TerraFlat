@@ -1314,6 +1314,7 @@
         "environment"
       ],
       "ruleCaseIds": [
+        "rendering_unified_manager",
         "rendering_rules",
         "rendering_building_liquid_surface",
         "rendering_combustion_shader_smoke",

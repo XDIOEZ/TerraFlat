@@ -192,7 +192,7 @@ public sealed class SnowFootprintTrail : MonoBehaviour
 
         footprintRenderer.renderMode = ParticleSystemRenderMode.Billboard;
         footprintRenderer.alignment = ParticleSystemRenderSpace.View;
-        WorldSortingManager.GetInstance().ApplyRenderer(footprintRenderer, WorldSortingManager.GroundMarkCategory);
+        WorldRenderingManager.Instance.ApplyRendererSorting(footprintRenderer, WorldSortingManager.GroundMarkCategory);
         footprintRenderer.enableGPUInstancing = true;
         footprintRenderer.sharedMaterial = ResolveFootprintMaterial();
     }

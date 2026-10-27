@@ -36,7 +36,7 @@ namespace FlatWorld.Spaceflight
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
-            WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundShadowCategory);
+            WorldRenderingManager.Instance.ApplyRendererSorting(renderer, WorldSortingManager.GroundShadowCategory);
             properties.SetVector(UvTransformId, new Vector4(1f, 1f, 0f, 0f));
         }
         #endregion
@@ -56,7 +56,7 @@ namespace FlatWorld.Spaceflight
             root.transform.SetPositionAndRotation(session.DisplayPoint(ship, centerX, centerY),
                 Quaternion.Euler(0f, 0f, (float)(ship.AngleRadians * Mathf.Rad2Deg)));
             root.transform.localScale = new Vector3(scale, scale, 1f);
-            float opacity = ActorShadowManager.GetInstance().GetShadowOpacity(SceneManager.GetActiveScene())
+            float opacity = WorldRenderingManager.Instance.GetShadowOpacity(SceneManager.GetActiveScene())
                 * heightFade * heightFade;
             renderer.enabled = opacity > .001f;
             if (lastOpacity != opacity)

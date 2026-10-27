@@ -42,7 +42,7 @@ internal sealed class DroppedItemVisual
         if (visual?.FlipX ?? (source != null && source.flipX)) scale.x *= -1f;
         if (visual?.FlipY ?? (source != null && source.flipY)) scale.y *= -1f;
 
-        WorldSortingManager sorting = WorldSortingManager.GetInstance();
+        WorldRenderingManager sorting = WorldRenderingManager.Instance;
         if (sorting == null)
             throw new InvalidOperationException("掉落物缺少世界排序管理器。");
         sorting.GetSortingKey(WorldSortingManager.WorldItemCategory, out int sortingLayerId, out int sortingOrder);

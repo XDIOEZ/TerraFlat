@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-10-27 统一渲染入口：`rendering_unified_manager` 独立案例通过正式 `WorldRenderingManager` 采样排序分发、重复注册、阴影开关与水态传递、结构刷新、手动/多来源交互描边独立、注销/回池/复用/销毁清理。真实 `player_external_effects` 改经统一入口调用排序与特效，增加同 Owner 同名两次 Stackable 效果注销全回收、重租、未显式注册物品直接高亮/特效后正式 Despawn 清理；`combat_effect_prewarm` 同样使用统一池入口。首轮规则在共享编译刷新期间中断，新操作当时尚未加载；随后按用户最新要求暂停主动编译和测试，新增规则与现场验收均未完成，不记为通过。这些组件/池状态断言不覆盖最终 GPU 画面和性能。旧 `rendering_rules` 的超过256步编排问题见下方历史记录，新增案例单独执行以免被其预检阻塞。
+
 2026-10-26 高炉 Shader 烟雾：`rendering/combustion_shader_smoke` 采样正式高炉参数、顶部炉口锚点、共享 Quad/材质、错相、裁剪边界、排序、独立向上和燃烧/停用/恢复开关；仅高炉启用。独立 C# 编译与当前 D3D Shader 编译、离屏预览通过；保留用户 PlayMode，未执行 Lua 或实际高炉点火画面验收。
 
 2026-10-26 熔炉火焰定位：正式 Smelter JSON 的 Y 偏移调整为 -0.375，火焰底部贴齐炉口内底面（16×16、16PPU中心原点贴图的底部Y=2像素）。现有火焰检查移至独立 `combustion-visual.lua`，案例 `rendering_combustion_visual` 的17项资源、朝向、生命周期与正式配置断言已通过，绕开旧渲染规则的步骤上限。Unity 正式组件的隔离预览已核对，控制台无错误或警告；未进入 PlayMode，未验收真实机器后端现场。

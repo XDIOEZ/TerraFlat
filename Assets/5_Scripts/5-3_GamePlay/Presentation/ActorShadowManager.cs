@@ -29,23 +29,11 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
     #region Unity 生命周期
 
-    /// <summary>订阅 Item 生命周期事件；场景中已有实体和植物由 Start 补注册。</summary>
+    /// <summary>统一入口分发物品生命周期，启用时恢复接触阴影模块。</summary>
     private void OnEnable()
     {
-        ItemMgr.RuntimeItemRegistered -= RegisterActor;
-        ItemMgr.RuntimeItemRegistered += RegisterActor;
-        ItemMgr.RuntimeItemUnregistered -= UnregisterActor;
-        ItemMgr.RuntimeItemUnregistered += UnregisterActor;
-        Item.RuntimeStructureChanged -= RefreshActor;
-        Item.RuntimeStructureChanged += RefreshActor;
         SunShadowParametersProvider.PublishContactAppearance();
-        RegisterRuntimeActors();
-    }
-
-    /// <summary>补注册管理器启动前已经存在的玩家、生物与植物。</summary>
-    private void Start()
-    {
-        RegisterExistingActors();
+        WorldRenderingManager.ExistingInstance?.AttachContactShadowRenderingBackend(this);
     }
 
     /// <summary>每帧末尾同步阴影位置、尺寸和光照透明度。</summary>
@@ -101,9 +89,6 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>解除事件并释放 BRG 原生资源。</summary>
     protected override void OnDestroy()
     {
-        ItemMgr.RuntimeItemRegistered -= RegisterActor;
-        ItemMgr.RuntimeItemUnregistered -= UnregisterActor;
-        Item.RuntimeStructureChanged -= RefreshActor;
         ClearBindings();
         ReleaseBatches();
 
@@ -113,9 +98,6 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>脚本重载可能不调用 OnDestroy，停用时必须释放原生 BRG 而不是只隐藏。</summary>
     private void OnDisable()
     {
-        ItemMgr.RuntimeItemRegistered -= RegisterActor;
-        ItemMgr.RuntimeItemUnregistered -= UnregisterActor;
-        Item.RuntimeStructureChanged -= RefreshActor;
         ClearBindings();
         ReleaseBatches();
     }
@@ -168,6 +150,12 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
         binding.InWater = inWater;
     }
+
+    internal bool IsItemShadowBound(Item item) => item != null && bindings.ContainsKey(item);
+    internal bool IsItemInWater(Item item) =>
+        item != null && bindings.TryGetValue(item, out ShadowBinding binding) && binding.InWater;
+
+    internal void ClearWorldRendering() => ClearBindings();
 
     #endregion
 
@@ -339,39 +327,6 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
     #region 注册与清理
 
-    /// <summary>扫描当前场景，补齐管理器启用前已经生成的实体。</summary>
-    private void RegisterExistingActors()
-    {
-        RegisterRuntimeActors();
-
-        Item[] items = FindObjectsOfType<Item>(true);
-        for (int i = 0; i < items.Length; i++)
-            RegisterActor(items[i]);
-    }
-
-    /// <summary>从 ItemMgr 的权威运行时注册表补登记漏过事件的角色与植物。</summary>
-    private void RegisterRuntimeActors()
-    {
-        ItemMgr itemMgr = ItemMgr.GetInstance();
-        if (itemMgr == null)
-            return;
-
-        foreach (Item item in itemMgr.WorldRunTimeItems.Values)
-            RegisterActor(item);
-    }
-
-    /// <summary>物品视觉定义刷新后重建对应阴影绑定。</summary>
-    private void RefreshActor(Item item)
-    {
-        ItemMgr itemMgr = ItemMgr.GetInstance();
-        if (item == null || item.itemData == null || itemMgr == null ||
-            !itemMgr.WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) || registered != item)
-            return;
-
-        UnregisterActor(item);
-        RegisterActor(item);
-    }
-
     /// <summary>识别角色、根植植物或显式声明底座阴影的世界物品。</summary>
     private static bool TryClassifyShadowCaster(Item item, out bool isRootedPlant,
         out ItemShadowVisualDefinitionDto shadowVisual)
@@ -383,7 +338,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         if (item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.IsGroundFacility == true)
             return false;
 
-        GameRes resources = GameRes.Instance;
+        GameRes resources = GameRes.ExistingInstance;
         if (resources != null && item.itemData != null &&
             resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
             shadowVisual = definition.Visual?.Shadows;

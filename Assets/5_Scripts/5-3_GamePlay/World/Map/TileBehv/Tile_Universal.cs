@@ -32,7 +32,7 @@ public class Tile_Universal : TileBlockBehaviour
         // 通用进入特效（如果配置了名称）
         if (validItem && !string.IsNullOrEmpty(enterEffectName))
         {
-            GameObject effectObj = VisualEffectManager.Instance.PlayEffect(
+            GameObject effectObj = WorldRenderingManager.Instance.PlayEffect(
                 owner: item.transform,
                 effectName: enterEffectName,
                 parent: item.transform
@@ -63,7 +63,7 @@ public class Tile_Universal : TileBlockBehaviour
         // 停止特效（如果配置了名称）
         if (!string.IsNullOrEmpty(exitEffectName))
         {
-            VisualEffectManager.Instance.StopOwnerEffect(
+            WorldRenderingManager.ExistingInstance?.StopOwnerEffect(
                 owner: item.transform,
                 effectName: exitEffectName
             );
@@ -71,7 +71,7 @@ public class Tile_Universal : TileBlockBehaviour
         else if (!string.IsNullOrEmpty(enterEffectName))
         {
             // 如果未单独配置退出特效名，则默认尝试停止进入特效名
-            VisualEffectManager.Instance.StopOwnerEffect(
+            WorldRenderingManager.ExistingInstance?.StopOwnerEffect(
                 owner: item.transform,
                 effectName: enterEffectName
             );

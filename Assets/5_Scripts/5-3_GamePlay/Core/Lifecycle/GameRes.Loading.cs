@@ -272,7 +272,7 @@ public partial class GameRes
         void Clear(Action action) { try { action(); } catch (Exception exception) { errors.Add(exception); } }
         // 先让使用者释放 BRG 注册/材质，再销毁共享 Mesh，最后卸载源 Sprite/Tile/MOD。
         Clear(SharedSpriteMeshCache.Clear);
-        Clear(() => VisualEffectManager.ExistingInstance?.ClearPool());
+        Clear(() => WorldRenderingManager.ClearExistingVisualEffectPool());
         Clear(() => ModRuntimeManager.Instance?.UnloadForResourceReload());
         Clear(ReleaseRetiredResourceSessions);
         Clear(ClearAllDictionaries);

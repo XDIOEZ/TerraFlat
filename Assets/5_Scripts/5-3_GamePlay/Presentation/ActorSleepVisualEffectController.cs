@@ -12,7 +12,7 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
     #region Config
 
     [SerializeField]
-    [Tooltip("交给 VisualEffectManager 解析的睡眠粒子预制体名称。")]
+    [Tooltip("交给 WorldRenderingManager 解析的睡眠粒子预制体名称。")]
     private string effectName = "SleepZZZEffect";
 
     [SerializeField]
@@ -23,7 +23,7 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
 
     #region Runtime State
 
-    private VisualEffectManager _effectManager;
+    private WorldRenderingManager _effectManager;
     private Transform _actorRoot;
     private GameObject _rendererOwner;
     private readonly List<ParticleSystemRenderer> _effectRenderers = new(2);
@@ -74,7 +74,7 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
             CacheEffectRenderers(effectObject);
             if (_effectRenderers.Count != 0)
             {
-                WorldSortingManager sorting = WorldSortingManager.GetInstance();
+                WorldRenderingManager sorting = WorldRenderingManager.Instance;
                 sorting.GetSortingKey(WorldSortingManager.WorldEffectCategory, out int layerId, out int order);
                 order = checked(order + 10);
                 for (int i = 0; i < _effectRenderers.Count; i++)
@@ -113,8 +113,8 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
     /// <summary>Owner 仅用于登记；粒子由特效管理器持有，避免随角色的激活过程修改层级。</summary>
     private void PlayEffect()
     {
-        _effectManager = VisualEffectManager.Instance;
-        Transform effectRoot = _effectManager.transform;
+        _effectManager = WorldRenderingManager.Instance;
+        Transform effectRoot = _effectManager.VisualEffectRoot;
         Vector3 position = _actorRoot.TransformPoint(localOffset);
         GameObject effectObject = _effectManager.PlayEffect(
             _actorRoot,

@@ -42,6 +42,7 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
     [ShowInInspector]
     private readonly Dictionary<Transform, Dictionary<string, GameObject>> ownerEffects =
         new Dictionary<Transform, Dictionary<string, GameObject>>();
+    private readonly Dictionary<Transform, HashSet<GameObject>> ownerEffectInstances = new();
 
     private readonly Dictionary<GameObject, string> activeEffectNames =
         new Dictionary<GameObject, string>();
@@ -331,8 +332,15 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
         if (stackMode == EffectStackMode.NonStackable && ownerDictionary.TryGetValue(effectName, out GameObject oldEffect))
             ReturnEffectToPool(effectName, oldEffect);
 
+        ownerEffects[owner] = ownerDictionary;
         ownerDictionary[effectName] = effectObject;
         effectOwners[effectObject] = owner;
+        if (!ownerEffectInstances.TryGetValue(owner, out HashSet<GameObject> instances))
+        {
+            instances = new HashSet<GameObject>();
+            ownerEffectInstances.Add(owner, instances);
+        }
+        instances.Add(effectObject);
     }
 
     /// <summary>判断 Owner 是否拥有仍在激活的特效。</summary>
@@ -354,7 +362,7 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
     /// <summary>停止 Owner 的指定特效。</summary>
     public void StopOwnerEffect(Transform owner, string effectName)
     {
-        if (owner == null || !ownerEffects.TryGetValue(owner, out Dictionary<string, GameObject> ownerDictionary))
+        if (ReferenceEquals(owner, null) || !ownerEffects.TryGetValue(owner, out Dictionary<string, GameObject> ownerDictionary))
             return;
 
         if (ownerDictionary.TryGetValue(effectName, out GameObject effectObject))
@@ -366,21 +374,19 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
     /// <summary>停止 Owner 的全部特效。</summary>
     public void StopOwnerAllEffects(Transform owner)
     {
-        if (owner == null || !ownerEffects.TryGetValue(owner, out Dictionary<string, GameObject> ownerDictionary))
+        if (ReferenceEquals(owner, null) || !ownerEffectInstances.TryGetValue(owner, out HashSet<GameObject> instances))
             return;
 
-        KeyValuePair<string, GameObject>[] effects = new KeyValuePair<string, GameObject>[ownerDictionary.Count];
-        int index = 0;
-        foreach (KeyValuePair<string, GameObject> pair in ownerDictionary)
-            effects[index++] = pair;
-
+        // 叠加特效也全部归属于宿主，不能只回收每个名称最后一次播放的实例。
+        GameObject[] effects = new GameObject[instances.Count];
+        instances.CopyTo(effects);
         for (int i = 0; i < effects.Length; i++)
         {
-            if (effects[i].Value != null)
-                ReturnEffectToPool(effects[i].Key, effects[i].Value);
+            if (effects[i] != null && activeEffectNames.TryGetValue(effects[i], out string effectName))
+                ReturnEffectToPool(effectName, effects[i]);
         }
-
-        ownerDictionary.Clear();
+        ownerEffects.Remove(owner);
+        ownerEffectInstances.Remove(owner);
     }
 
     #endregion
@@ -421,6 +427,7 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
         }
 
         ownerEffects.Clear();
+        ownerEffectInstances.Clear();
     }
 
     #endregion
@@ -548,10 +555,16 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
             return;
 
         effectOwners.Remove(effectObject);
-        if (owner != null && ownerEffects.TryGetValue(owner, out Dictionary<string, GameObject> ownerDictionary) &&
+        if (!ReferenceEquals(owner, null) && ownerEffectInstances.TryGetValue(owner, out HashSet<GameObject> instances))
+        {
+            instances.Remove(effectObject);
+            if (instances.Count == 0) ownerEffectInstances.Remove(owner);
+        }
+        if (!ReferenceEquals(owner, null) && ownerEffects.TryGetValue(owner, out Dictionary<string, GameObject> ownerDictionary) &&
             ownerDictionary.TryGetValue(effectName, out GameObject registeredEffect) && registeredEffect == effectObject)
         {
             ownerDictionary.Remove(effectName);
+            if (ownerDictionary.Count == 0) ownerEffects.Remove(owner);
         }
     }
 
@@ -615,6 +628,7 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
         activeEffects.Clear();
         activeEffectNames.Clear();
         ownerEffects.Clear();
+        ownerEffectInstances.Clear();
         effectOwners.Clear();
         visualStates.Clear();
         pendingReturns.Clear();

@@ -95,7 +95,7 @@ namespace FlatWorld.Spaceflight
                 renderer.sprite = definition.Sprite;
                 renderer.color = (definition.Visual?.Color ?? Color.white) * new Color(.8f, .8f, .8f, 1f);
                 renderer.sharedMaterial = definition.Material;
-                WorldSortingManager.GetInstance().ApplyRenderer(renderer, piece.Kind == ShipPieceKind.Floor
+                WorldRenderingManager.Instance.ApplyRendererSorting(renderer, piece.Kind == ShipPieceKind.Floor
                     ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory, piece.Kind == ShipPieceKind.Floor ? -2 : 0);
                 Sprite ??= renderer;
                 fragmentSprites.Add((piece, renderer));

@@ -52,7 +52,7 @@ public class BuildingShadow : MonoBehaviour
         if (ShadowRenderer.sharedMaterial == null)
             throw new MissingComponentException("BuildingShadow 缺少可用 Sprite 材质");
 
-        WorldSortingManager.GetInstance().ApplyRenderer(ShadowRenderer, WorldSortingManager.GroundPreviewCategory);
+        WorldRenderingManager.Instance.ApplyRendererSorting(ShadowRenderer, WorldSortingManager.GroundPreviewCategory);
         ShadowRenderer.flipX = sourceRenderer.flipX;
         ShadowRenderer.flipY = sourceRenderer.flipY;
         ShadowRenderer.drawMode = sourceRenderer.drawMode;

@@ -288,8 +288,8 @@ public sealed class LightningEffectController : MonoBehaviour
         renderer.receiveShadows = false;
         renderer.lightProbeUsage = LightProbeUsage.Off;
         renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        WorldSortingManager sorting = WorldSortingManager.GetInstance();
-        if (sorting != null) sorting.ApplyRenderer(renderer, sortingCategory);
+        WorldRenderingManager sorting = WorldRenderingManager.GetInstance();
+        if (sorting != null) sorting.ApplyRendererSorting(renderer, sortingCategory);
         else
         {
             WorldSortingManager.GetResourceSortingKey(sortingCategory, out int layerId, out int order);

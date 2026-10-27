@@ -231,7 +231,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             }
             else
             {
-                WorldSortingManager manager = WorldSortingManager.GetInstance();
+                WorldRenderingManager manager = WorldRenderingManager.GetInstance();
                 if (manager != null) manager.GetSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
                 else WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
             }

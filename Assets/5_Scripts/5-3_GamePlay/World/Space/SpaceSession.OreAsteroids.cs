@@ -146,7 +146,7 @@ namespace FlatWorld.Spaceflight
                     SceneManager.MoveGameObjectToScene(root, gameObject.scene);
                     renderer = root.AddComponent<SpriteRenderer>();
                     renderer.sprite = visual.Sprite; renderer.color = visual.Color; renderer.sharedMaterial = visual.SpriteMaterial;
-                    WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.WorldItemCategory, 0);
+                    WorldRenderingManager.Instance.ApplyRendererSorting(renderer, WorldSortingManager.WorldItemCategory, 0);
                     float diameter = Mathf.Max(visual.Sprite.bounds.size.x, visual.Sprite.bounds.size.y);
                     renderer.transform.localScale = Vector3.one * (float)(asteroid.RadiusMeters * 2d / Math.Max(.001d, diameter));
                     renderer.transform.rotation = Quaternion.Euler(0f, 0f,

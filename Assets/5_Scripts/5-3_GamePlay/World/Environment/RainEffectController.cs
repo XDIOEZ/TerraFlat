@@ -48,7 +48,7 @@ public sealed class RainEffectController : MonoBehaviour
         meshRenderer.receiveShadows = false;
         meshRenderer.lightProbeUsage = LightProbeUsage.Off;
         meshRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        WorldSortingManager.GetInstance().ApplyRenderer(meshRenderer, WorldSortingManager.WorldEffectCategory);
+        WorldRenderingManager.Instance.ApplyRendererSorting(meshRenderer, WorldSortingManager.WorldEffectCategory);
         properties = new MaterialPropertyBlock();
         RefreshStreakMargin();
         mesh = BuildMesh();

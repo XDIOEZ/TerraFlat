@@ -17,6 +17,7 @@ public sealed class WorldSortingMember : MonoBehaviour
     private int originalOrder;
     private SpriteSortPoint originalSortPoint;
     private bool hasOriginalSorting;
+    private bool itemRegistrationReleased;
 
     /// <summary>配置类别。</summary>
     public string Category => category;
@@ -32,10 +33,10 @@ public sealed class WorldSortingMember : MonoBehaviour
     /// <summary>Prefab 或 MOD 显式声明的成员在激活时接入管理器。</summary>
     private void OnEnable()
     {
-        if (!string.IsNullOrEmpty(category) && IsWorldVisible)
+        if (!itemRegistrationReleased && !string.IsNullOrEmpty(category) && IsWorldVisible)
         {
             targetGroup = ResolveSortingGroup(targetRenderer, owner);
-            WorldSortingManager.GetInstance()?.Register(this);
+            WorldRenderingManager.RegisterAvailableSortingMember(this);
         }
     }
 
@@ -48,6 +49,7 @@ public sealed class WorldSortingMember : MonoBehaviour
     /// <summary>实体注册后绑定主体；对象池复用时允许重新指定类别和渲染器。</summary>
     public void Bind(string sortingCategory, SpriteRenderer spriteRenderer, Item item = null)
     {
+        itemRegistrationReleased = false;
         if (owner != item)
         {
             if (owner != null) owner.OnInHandChanged -= HandleInHandChanged;
@@ -63,8 +65,18 @@ public sealed class WorldSortingMember : MonoBehaviour
         category = sortingCategory;
         targetRenderer = spriteRenderer;
         targetGroup = sortingGroup;
-        if (IsWorldVisible) WorldSortingManager.GetInstance()?.Register(this);
+        if (IsWorldVisible) WorldRenderingManager.RegisterAvailableSortingMember(this);
         else RestoreSorting();
+    }
+
+    /// <summary>统一注销时还原最外层排序并断开物品事件，池复用不能继承旧绑定。</summary>
+    internal void UnbindWorldItemRendering()
+    {
+        RestoreSorting();
+        if (owner != null) owner.OnInHandChanged -= HandleInHandChanged;
+        owner = null;
+        hasOriginalSorting = false;
+        itemRegistrationReleased = true;
     }
 
     /// <summary>按配置设置静态排序键；动态对象只把 Pivot 作为 Y 轴脚点。</summary>
@@ -116,7 +128,7 @@ public sealed class WorldSortingMember : MonoBehaviour
     private void HandleInHandChanged(bool inHand)
     {
         if (inHand) RestoreSorting();
-        else WorldSortingManager.GetInstance()?.Register(this);
+        else WorldRenderingManager.RegisterAvailableSortingMember(this);
     }
 
     /// <summary>恢复绑定前的排序键。</summary>

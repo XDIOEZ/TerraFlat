@@ -27,6 +27,7 @@ public static partial class GameplayTestSystemProbe
         result.Add("rendering/combustion_shader_smoke", ServiceCombustionShaderSmoke);
         RegisterDenseFogOperations(result);
         RegisterWindStreakOperations(result);
+        RegisterUnifiedRenderingOperations(result);
         RegisterCharacterAppearanceOperations(result);
         RegisterChunkPresentationOperations(result);
         RegisterWorldPhysicsOperations(result);

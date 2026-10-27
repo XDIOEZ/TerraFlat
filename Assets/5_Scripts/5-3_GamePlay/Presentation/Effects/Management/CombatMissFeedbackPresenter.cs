@@ -59,7 +59,7 @@ public sealed class CombatMissFeedbackPresenter : MonoBehaviour
             TextWidthMultiplier = textWidthMultiplier
         };
 
-        VisualEffectManager effectManager = VisualEffectManager.Instance;
+        WorldRenderingManager effectManager = WorldRenderingManager.Instance;
         GameEffect effect = effectManager != null
             ? effectManager.GetGameEffectFromPool(damageTextPrefab)
             : Instantiate(damageTextPrefab);

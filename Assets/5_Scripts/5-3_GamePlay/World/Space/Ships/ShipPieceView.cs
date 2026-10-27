@@ -147,7 +147,7 @@ namespace FlatWorld.Spaceflight
             MachineDefinition machine = MachineCatalog.Get(piece.ItemId);
             if (machine?.IsFluidPipeSegment != true && pipeSortingGroup != null) pipeSortingGroup.enabled = false;
             bool connectionLine = machine?.IsConnectionLine == true || piece.Kind == ShipPieceKind.Fiber;
-            WorldSortingManager.GetInstance().ApplyRenderer(visual,
+            WorldRenderingManager.Instance.ApplyRendererSorting(visual,
                 piece.Kind == ShipPieceKind.Floor || connectionLine
                     ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory,
                 ResolveSortingOrder(piece, machine));
@@ -576,7 +576,7 @@ namespace FlatWorld.Spaceflight
                             // 船体线路复用地表层级顺序，统一压在机器和乘员下面。
                             MachineDefinition machineDefinition = MachineCatalog.Get(piece.ItemId);
                             bool connectionLine = machineDefinition?.IsConnectionLine == true || piece.Kind == ShipPieceKind.Fiber;
-                            WorldSortingManager.GetInstance().ApplyRenderer(renderer,
+                            WorldRenderingManager.Instance.ApplyRendererSorting(renderer,
                                 piece.Kind == ShipPieceKind.Floor || connectionLine
                                     ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory,
                                 ShipPieceView.ResolveSortingOrder(piece, machineDefinition));

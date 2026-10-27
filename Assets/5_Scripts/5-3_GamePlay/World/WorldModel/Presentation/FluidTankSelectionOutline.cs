@@ -51,7 +51,7 @@ public sealed class FluidTankSelectionOutline : IDisposable
             line.sharedMaterial = material;
             line.useWorldSpace = false; line.positionCount = 2;
             line.startColor = line.endColor = Color.white;
-            WorldSortingManager.GetInstance().ApplyRenderer(line, WorldSortingManager.WorldEffectCategory, 100);
+            WorldRenderingManager.Instance.ApplyRendererSorting(line, WorldSortingManager.WorldEffectCategory, 100);
             edges.Add(line);
         }
         else line = edges[used];

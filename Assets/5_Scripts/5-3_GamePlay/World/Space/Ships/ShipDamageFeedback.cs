@@ -89,7 +89,7 @@ namespace FlatWorld.Spaceflight
                     TextOverride = DamageReasonText(feedback.Reason) + " -" + feedback.Amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
                     ScaleMultiplier = .7f, TextWidthMultiplier = 5f
                 };
-                GameEffect effect = VisualEffectManager.Instance.GetGameEffectFromPool(template);
+                GameEffect effect = WorldRenderingManager.Instance.GetGameEffectFromPool(template);
                 if (effect == null) continue;
                 effect.transform.position = point;
                 effect.Effect(null, data); presented++;

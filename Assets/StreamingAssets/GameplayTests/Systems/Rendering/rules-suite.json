@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "rendering_unified_manager",
+      "name": "统一渲染入口：排序、阴影、描边与生命周期",
+      "luaPath": "GameplayTests/Systems/Rendering/unified-manager.lua",
+      "enabled": true
+    },
+    {
       "id": "rendering_rules",
       "name": "渲染光影与特效规则与边界",
       "luaPath": "GameplayTests/Systems/Rendering/rules.lua",

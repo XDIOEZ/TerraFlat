@@ -39,7 +39,7 @@ public partial class GameRes
             if (ShouldYieldResourceWork()) yield return null;
         }
 
-        VisualEffectManager manager = VisualEffectManager.Instance;
+        WorldRenderingManager manager = WorldRenderingManager.Instance;
         int completed = 0;
         foreach (GameEffect prefab in effects)
         {

@@ -212,7 +212,7 @@ public sealed class RainGroundSplashController : MonoBehaviour
         {
             _splashRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             _splashRenderer.sharedMaterial = _splashMaterial;
-            WorldSortingManager.GetInstance().ApplyRenderer(_splashRenderer, WorldSortingManager.GroundSplashCategory);
+            WorldRenderingManager.Instance.ApplyRendererSorting(_splashRenderer, WorldSortingManager.GroundSplashCategory);
             _splashRenderer.enableGPUInstancing = true;
         }
 

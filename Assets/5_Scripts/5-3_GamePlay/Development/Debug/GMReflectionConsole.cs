@@ -3541,7 +3541,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
         renderer.sprite = dropMarkerSprite;
         renderer.color = new Color(1f, 0.65f, 0.2f, 0.92f);
-        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.WorldEffectCategory, short.MaxValue);
+        WorldRenderingManager.Instance.ApplyRendererSorting(renderer, WorldSortingManager.WorldEffectCategory, short.MaxValue);
         return marker;
     }
 

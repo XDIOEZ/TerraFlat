@@ -11,6 +11,12 @@ test.runtime("rendering", "player_external_effects", {}, function(data)
     assert(data.effectActive and data.sameNonStackableEffect and data.ownerBound and data.ownRegistrations == 1, "正式特效没有启动或非叠加调用创建了重复实例")
     assert(data.particleMaterialsReady and data.ownerReleased and data.pooledInactive and data.particlesCleared, "正式粒子材质、Owner 解绑或回池清空错误")
     assert(data.poseRestored and data.ownRegistrationReleased, "特效回池没有恢复缩放，或重复回收破坏激活登记")
+    assert(data.stackedEffectsActive and data.stackedOwnerReleased and data.allStackedEffectsPooled and data.stackedParticlesCleared,
+        "统一注销漏掉同 Owner 同名的叠加特效，或回池粒子没有清空")
+    assert(data.newLeaseOwnerBound and data.newLeaseReturned,
+        "注销后重新租用特效继承了旧 Owner 或不能正常停止")
+    assert(data.unregisteredBeforeDirectFeatureCalls and data.directFeatureCallsActive and data.directFeatureLifecycleCleaned,
+        "未显式注册物品调用高亮/特效后，正式回收没有清理请求和效果")
     assert(data.itemReleased and data.ownEffectReleased and data.attachmentReleased, "真实物品、特效或独立自有挂点留下了未清理现场")
 end, "真实排序、角色 MPB 跨帧提交/解除、正式湿润粒子与回池恢复")
 -- 结果提交前已回收自有物品和粒子，内部 MPB/池状态不拍空地截图。

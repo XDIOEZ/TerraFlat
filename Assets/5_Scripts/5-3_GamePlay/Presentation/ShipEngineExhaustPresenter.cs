@@ -186,7 +186,7 @@ namespace FlatWorld.Spaceflight
                 }
             }
             // 喷焰排在船地板、管道和电线后面，停推后的残留粒子也保持同一层级。
-            WorldSortingManager.GetInstance().GetSortingKey(WorldSortingManager.VehicleCategory,
+            WorldRenderingManager.Instance.GetSortingKey(WorldSortingManager.VehicleCategory,
                 out int layerId, out int order);
             if (particleRenderer.sortingLayerID != layerId)
                 particleRenderer.sortingLayerID = layerId;

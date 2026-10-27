@@ -368,8 +368,6 @@ public partial class ItemMgr
             if (TryRegisterRuntimeAiEntity(item))
                 ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
 
-            // 实体注册完成后创建独立阴影；阴影不进入 Item 或 RuntimeEntities 层级。
-            ActorShadowManager.GetInstance()?.RegisterActor(item);
             RuntimeItemRegistered?.Invoke(item);
             EnsureSpawnRegistrationCurrent(item, registeredData, registrationToken);
             return registrationToken;

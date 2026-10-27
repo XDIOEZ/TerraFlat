@@ -305,9 +305,9 @@ public static class PressureExplosionQueue
         Vector3 viewport = camera.WorldToViewportPoint(new Vector3(center.x, center.y, 0f));
         float margin = camera.orthographic ? Mathf.Clamp(radius, .4f, 8f) / Mathf.Max(1f, camera.orthographicSize * 2f) : .1f;
         if (viewport.z <= 0f || viewport.x < -margin || viewport.x > 1f + margin || viewport.y < -margin || viewport.y > 1f + margin) return;
-        if (VisualEffectManager.Instance != null)
+        if (WorldRenderingManager.Instance != null)
         {
-            GameObject visual = VisualEffectManager.Instance.PlayEffect("Particle_Hit", center, .6f);
+            GameObject visual = WorldRenderingManager.Instance.PlayEffect("Particle_Hit", center, .6f);
             if (visual != null)
             {
                 visual.transform.localScale = Vector3.one;

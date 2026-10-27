@@ -350,7 +350,7 @@ public partial class GameRes
         ItemMgr.GetInstance()?.ClearResourcePools();
         SharedSpriteMeshCache.Clear();
         // 旧代 Prefab 释放前清掉持久特效池，避免跨世界保留旧资源引用。
-        VisualEffectManager.ExistingInstance?.ClearPool();
+        WorldRenderingManager.ClearExistingVisualEffectPool();
         ReleaseRetiredResourceSessions();
     }
 

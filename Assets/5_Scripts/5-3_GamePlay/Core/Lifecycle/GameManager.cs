@@ -124,6 +124,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
+        WorldRenderingManager.EnsureForOwner(this);
         InitializeWorldEntryPresentation();
         AutoSaveController.Ensure(this);
         _ = DimensionManager.Instance;
