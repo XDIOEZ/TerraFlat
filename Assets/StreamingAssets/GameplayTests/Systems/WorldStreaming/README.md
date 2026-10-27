@@ -1,5 +1,11 @@
 # 世界模型与区块流送
 
+2026-10-27 世界物理统一：`WorldPhysicsService2D` 按世界管理原生空间、物品/数据代理登记、障碍池和查询租约；创建或迁移时分配空间，模拟前刷新本世界碰撞。整船落地曾因沿用活动场景进入错误物理空间，现统一按世界服务迁移，起降复测通过。
+
+本轮验证：9 组相关规则通过（`20261027T121722932Z_139272ef`）；29 项编辑态前置通过；正式流送和物理契约两案例通过（`20261027T122032161Z_cd2f0248`），起降和物品生命周期两案例通过（`20261027T122254993Z_a4b6eb8f`）。此前同轮战斗、洞穴往返、太空玩法也通过，已逐页看截图。扩大规则仍有 5 项未解决：`player_rules` 营养消耗、`combat_probability_rules` 枯树掉叶、`combat_rules` 受击抖动清理、`mechanical_rules` 载荷复制、`item_runtime_rules` Animator 延迟播放；只有最后一项已在更早报告确认同样失败，不把其余四项直接认定为既有问题。
+
+边界：普通完整 Item 已支持 JSON 多区域；数据机器和自然实体继续使用现有几何定义，新多区域声明明确拒绝。阻挡合批不代替逐实体受击/交互，未实现完整飞船区块世界，也未做双端联机验证。同一表现 Scene 承载多个世界时，调用方仍需提前提供独立原生物理空间，登记会拒绝不同世界共用同一 PhysicsScene2D。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows、collision_dirty_queue`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
