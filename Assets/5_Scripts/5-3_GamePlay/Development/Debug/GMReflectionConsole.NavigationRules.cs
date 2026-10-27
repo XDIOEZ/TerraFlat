@@ -128,6 +128,27 @@ public sealed partial class GMReflectionConsole
             GameObject catalogHost = CreateUiObject("Catalog scroll rules host", host);
             Transform catalogContent = CreateCatalogScrollGrid(catalogHost.transform, "Catalog scroll");
             ScrollRect catalogScroll = catalogHost.transform.Find("Catalog scroll").GetComponent<ScrollRect>();
+            Transform reflectedContent = CreateScrollGrid(host);
+            ScrollRect reflectedScroll = reflectedContent.parent.parent.GetComponent<ScrollRect>();
+            var scrollContentGeometry = new JArray();
+            foreach (ScrollRect scroll in new[] { buffScroll, catalogScroll, reflectedScroll })
+            {
+                RectTransform content = scroll.content;
+                RectTransform scrollViewport = scroll.viewport;
+                scrollContentGeometry.Add(new JObject
+                {
+                    ["root"] = scroll.name,
+                    ["viewportName"] = scrollViewport.name, ["contentName"] = content.name,
+                    ["parentLinks"] = content.parent == scrollViewport && scrollViewport.parent == scroll.transform,
+                    ["viewportMasked"] = scrollViewport.GetComponent<RectMask2D>() != null,
+                    ["viewportAnchorMin"] = new JArray(scrollViewport.anchorMin.x, scrollViewport.anchorMin.y),
+                    ["viewportAnchorMax"] = new JArray(scrollViewport.anchorMax.x, scrollViewport.anchorMax.y),
+                    ["contentAnchorMin"] = new JArray(content.anchorMin.x, content.anchorMin.y),
+                    ["contentAnchorMax"] = new JArray(content.anchorMax.x, content.anchorMax.y),
+                    ["contentPivot"] = new JArray(content.pivot.x, content.pivot.y),
+                    ["contentPosition"] = new JArray(content.anchoredPosition.x, content.anchoredPosition.y)
+                });
+            }
             return new JObject
             {
                 ["selections"] = selections, ["switched"] = switched,
@@ -142,7 +163,8 @@ public sealed partial class GMReflectionConsole
                 ["searchTargetVisible"] = target.min.y >= worldPage.Scroll.viewport.rect.yMin - 1f &&
                     target.max.y <= worldPage.Scroll.viewport.rect.yMax + 1f,
                 ["buffTargetScroll"] = CaptureGmScrollConfiguration(buffScroll, buffContent),
-                ["catalogScroll"] = CaptureGmScrollConfiguration(catalogScroll, catalogContent)
+                ["catalogScroll"] = CaptureGmScrollConfiguration(catalogScroll, catalogContent),
+                ["scrollContentGeometry"] = scrollContentGeometry
             };
         }
         finally

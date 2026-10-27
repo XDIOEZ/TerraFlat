@@ -14,6 +14,24 @@ local function assert_gm_scroll_base(scroll, label)
 end
 
 local function assert_gm_scroll_contracts(data)
+    assert(#data.scrollContentGeometry == 3, "GM三类滚动容器采样不完整")
+    local roots = { ["Buff scroll rules root"] = true, ["Catalog scroll"] = true, ["Reflected Command Scroll"] = true }
+    for _, geometry in ipairs(data.scrollContentGeometry) do
+        assert(roots[geometry.root] and geometry.parentLinks and geometry.viewportMasked
+            and geometry.viewportName == "Viewport" and geometry.contentName == "Content",
+            "GM视口/内容层级、遮罩或节点身份改变")
+        roots[geometry.root] = nil
+        for _, axis in ipairs({ 1, 2 }) do
+            assert(geometry.viewportAnchorMin[axis] == 0 and geometry.viewportAnchorMax[axis] == 1,
+                "GM视口未保持撑满父级")
+            assert(geometry.contentPosition[axis] == 0, "GM内容初始位置改变")
+        end
+        assert(geometry.contentAnchorMin[1] == 0 and geometry.contentAnchorMin[2] == 1
+            and geometry.contentAnchorMax[1] == 1 and geometry.contentAnchorMax[2] == 1
+            and geometry.contentPivot[1] == .5 and geometry.contentPivot[2] == 1,
+            "GM内容顶部拉伸锚点或轴心改变")
+    end
+    assert(next(roots) == nil, "GM滚动容器遗漏或重复")
     local buff, catalog = data.buffTargetScroll, data.catalogScroll
     assert_gm_scroll_base(buff, "Buff目标列表")
     assert_gm_scroll_base(catalog, "目录网格")

@@ -531,20 +531,16 @@ public sealed partial class GMReflectionConsole
 
     #region GM 纵向滚动容器
 
-    private static Transform ConfigureVerticalScroll(GameObject root, float inset, out ScrollRect scroll)
+    // 只共用视口与内容节点骨架，各列表继续配置自己的边距、布局和滚动行为。
+    private static GameObject CreateScrollViewportWithTopAnchoredContent(
+        GameObject scrollRoot, ScrollRect scroll, Vector2 offsetMin, Vector2 offsetMax)
     {
-        scroll = root.AddComponent<ItemStepScrollRect>();
-        scroll.horizontal = false;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = 28f;
-
-        GameObject viewport = CreateUiObject("Viewport", root.transform);
+        GameObject viewport = CreateUiObject("Viewport", scrollRoot.transform);
         RectTransform viewportRect = viewport.GetComponent<RectTransform>();
         viewportRect.anchorMin = Vector2.zero;
         viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = new Vector2(inset, inset);
-        viewportRect.offsetMax = new Vector2(-inset, -inset);
+        viewportRect.offsetMin = offsetMin;
+        viewportRect.offsetMax = offsetMax;
         viewport.AddComponent<RectMask2D>();
         scroll.viewport = viewportRect;
 
@@ -554,6 +550,20 @@ public sealed partial class GMReflectionConsole
         contentRect.anchorMax = new Vector2(1f, 1f);
         contentRect.pivot = new Vector2(0.5f, 1f);
         contentRect.anchoredPosition = Vector2.zero;
+        return content;
+    }
+
+    private static Transform ConfigureVerticalScroll(GameObject root, float inset, out ScrollRect scroll)
+    {
+        scroll = root.AddComponent<ItemStepScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 28f;
+
+        GameObject content = CreateScrollViewportWithTopAnchoredContent(root, scroll,
+            new Vector2(inset, inset), new Vector2(-inset, -inset));
+        RectTransform contentRect = content.GetComponent<RectTransform>();
         contentRect.sizeDelta = Vector2.zero;
 
         VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();

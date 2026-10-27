@@ -1604,21 +1604,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         scroll.vertical = true;
         scroll.scrollSensitivity = 38f;
 
-        GameObject viewport = CreateUiObject("Viewport", scrollObject.transform);
-        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = new Vector2(10f, 10f);
-        viewportRect.offsetMax = new Vector2(-24f, -10f);
-        viewport.AddComponent<RectMask2D>();
-        scroll.viewport = viewportRect;
-
-        GameObject content = CreateUiObject("Content", viewport.transform);
+        GameObject content = CreateScrollViewportWithTopAnchoredContent(scrollObject, scroll,
+            new Vector2(10f, 10f), new Vector2(-24f, -10f));
         RectTransform contentRect = content.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.anchoredPosition = Vector2.zero;
         GridLayoutGroup grid = content.AddComponent<GridLayoutGroup>();
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = 8;
@@ -1894,21 +1882,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         ScrollRect scroll = scrollObject.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = false;
 
-        GameObject viewport = CreateUiObject("Viewport", scrollObject.transform);
-        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = new Vector2(7f, 7f);
-        viewportRect.offsetMax = new Vector2(-7f, -7f);
-        viewport.AddComponent<RectMask2D>();
-        scroll.viewport = viewportRect;
-
-        GameObject content = CreateUiObject("Content", viewport.transform);
+        GameObject content = CreateScrollViewportWithTopAnchoredContent(scrollObject, scroll,
+            new Vector2(7f, 7f), new Vector2(-7f, -7f));
         RectTransform contentRect = content.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.anchoredPosition = Vector2.zero;
         GridLayoutGroup grid = content.AddComponent<GridLayoutGroup>();
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = 2;
