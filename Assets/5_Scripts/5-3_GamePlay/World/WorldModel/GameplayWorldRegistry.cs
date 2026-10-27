@@ -23,6 +23,8 @@ public static class GameplayWorldRegistry
 {
     #region 世界注册与同步上下文
     private static readonly Dictionary<string, GameplayWorldRuntime> worlds = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, WorldRuntime> ownedWorldModels = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, ChunkMgr> ownedWorldModelManagers = new(StringComparer.Ordinal);
     private static readonly WorldSceneBindingIndex worldSceneBindings = new();
     private static readonly RuntimeWorldIdentityIndex worldIdentities = new();
     private static readonly WorldItemOwnershipIndex<Item> worldItems = new(worldIdentities);
@@ -53,6 +55,7 @@ public static class GameplayWorldRegistry
     // 卸载只解除仍属于该场景的真实拥有者，旧上下文不能撤销已替换的绑定。
     private static void OnSceneUnloaded(Scene scene)
     {
+        DroppedItemService.DetachScenePresentation(scene);
         foreach (GameplayWorldRuntime world in worlds.Values)
             if (world.Scene == scene) worldSceneBindings.UnbindWorldFromScene(scene.handle, world.WorldKey, world);
         foreach (GameplayWorldRuntime world in spaceContexts.Values)
@@ -102,6 +105,68 @@ public static class GameplayWorldRegistry
 
     public static int GetOrCreateRuntimeWorldIdentity(string worldKey)
         => worldIdentities.GetOrCreateRuntimeWorldIdentity(worldKey);
+
+    // 纯世界数据随游戏会话保存，场景和表现管理器可以独立重建。
+    internal static WorldRuntime GetOrCreateOwnedWorldModel(string worldKey, long epoch)
+    {
+        if (string.IsNullOrWhiteSpace(worldKey)) throw new ArgumentException("世界身份为空。", nameof(worldKey));
+        if (!ownedWorldModels.TryGetValue(worldKey, out WorldRuntime world))
+            ownedWorldModels.Add(worldKey, world = new WorldRuntime(worldKey, epoch));
+        return world;
+    }
+
+    internal static bool TryGetOwnedWorldModel(string worldKey, out WorldRuntime world)
+        => ownedWorldModels.TryGetValue(worldKey ?? string.Empty, out world);
+
+    // 一个世界同时只能交给一个区块管理器推进，旧管理器完成解绑前不能抢占。
+    internal static void ClaimOwnedWorldModel(string worldKey, WorldRuntime expectedWorld, ChunkMgr manager)
+    {
+        if (ReferenceEquals(manager, null) || expectedWorld == null ||
+            !TryGetOwnedWorldModel(worldKey, out WorldRuntime current) || !ReferenceEquals(current, expectedWorld))
+            throw new InvalidOperationException("不能附着未登记或已替换的世界模型。");
+        if (ownedWorldModelManagers.TryGetValue(worldKey, out ChunkMgr owner))
+        {
+            if (!ReferenceEquals(owner, manager)) throw new InvalidOperationException("世界模型已有活动区块管理器。");
+            return;
+        }
+        ownedWorldModelManagers.Add(worldKey, manager);
+    }
+
+    internal static bool DetachOwnedWorldModel(string worldKey, WorldRuntime expectedWorld, ChunkMgr manager)
+    {
+        if (ReferenceEquals(manager, null) || expectedWorld == null ||
+            !TryGetOwnedWorldModel(worldKey, out WorldRuntime current) || !ReferenceEquals(current, expectedWorld) ||
+            !ownedWorldModelManagers.TryGetValue(worldKey, out ChunkMgr owner) || !ReferenceEquals(owner, manager))
+            return false;
+        return ownedWorldModelManagers.Remove(worldKey);
+    }
+
+    internal static bool ReleaseOwnedWorldModel(string worldKey, WorldRuntime expectedWorld)
+    {
+        if (worldKey == null || expectedWorld == null ||
+            !ownedWorldModels.TryGetValue(worldKey, out WorldRuntime current) || !ReferenceEquals(current, expectedWorld) ||
+            ownedWorldModelManagers.ContainsKey(worldKey))
+            return false;
+        ownedWorldModels.Remove(worldKey);
+        current.Dispose();
+        return true;
+    }
+
+    internal static void ReleaseAllOwnedWorldModels()
+    {
+        if (ownedWorldModelManagers.Count != 0)
+            throw new InvalidOperationException("仍有区块管理器附着，不能释放会话世界模型。");
+        foreach (WorldRuntime world in ownedWorldModels.Values) world.Dispose();
+        ownedWorldModels.Clear();
+    }
+
+    // 会话最后一次保存和物品注销完成后才清理归属，场景退出通知本身不能提前丢失账本。
+    internal static void ClearSessionWorldOwnership()
+    {
+        worldItems.Clear();
+        worldIdentities.Clear();
+    }
+
     public static string GetItemWorldKey(Item item)
         => worldItems.TryGetOwnership(item, out var owner) ? owner.WorldKey : null;
     public static int GetItemWorldIdentity(Item item)
@@ -169,6 +234,29 @@ public static class GameplayWorldRegistry
         WorldAddress address = WorldAddress.FromWorldKey(worldKey);
         if (!address.IsValid) throw new ArgumentException("世界地址无效。", nameof(worldKey));
         DimensionManager.Instance.EnsureWorldData(address);
+        if (existing != null && (!existing.Scene.IsValid() || !existing.Scene.isLoaded))
+        {
+            ChunkMgr previousManager = existing.Chunks;
+            string previousOwnerKey = previousManager != null && !string.IsNullOrEmpty(previousManager.OwnedWorldKey)
+                ? previousManager.OwnedWorldKey : previousManager != null ? previousManager.WorldRuntime?.WorldId : null;
+            if (previousManager != null && string.Equals(previousOwnerKey, worldKey, StringComparison.Ordinal))
+            {
+                // 旧场景失效后先结束原调度器，旧管理器不能与重建的管理器同时持有世界。
+                previousManager.DetachAfterPresentationSceneUnloaded();
+                if (!worlds.TryGetValue(worldKey, out GameplayWorldRuntime current) || !ReferenceEquals(current, existing))
+                {
+                    if (TryGet(worldKey, out GameplayWorldRuntime replacement)) return replacement;
+                    throw new InvalidOperationException("旧世界解绑期间世界注册已变化。");
+                }
+                if (!ReferenceEquals(current.Chunks, previousManager) || previousManager.WorldRuntime != null ||
+                    !string.IsNullOrEmpty(previousManager.OwnedWorldKey) &&
+                    !string.Equals(previousManager.OwnedWorldKey, worldKey, StringComparison.Ordinal))
+                    throw new InvalidOperationException("旧世界解绑期间区块管理器已变化。");
+                if (ReferenceEquals(ChunkMgr.LocalInstance, previousManager)) ChunkMgr.ClearLocalNetworkWorld();
+                current.Chunks = null;
+                UnityEngine.Object.Destroy(previousManager.gameObject);
+            }
+        }
         if (host == null)
         {
             var root = new GameObject("GameplayWorldRegistry");
@@ -362,16 +450,40 @@ public static class GameplayWorldRegistry
             releaseDispatch.Clear(); releaseDispatch.AddRange(worlds.Values);
             WeatherMgr.ReleaseAll();
             MonsterSpawnerManager.ReleaseAll();
+            var releasedChunkManagers = new HashSet<ChunkMgr>();
             // 管理器在注册表仍可查询时按自己的世界同步释放，延迟OnDestroy只执行已关闭分支。
             foreach (GameplayWorldRuntime world in releaseDispatch)
             {
+                ChunkMgr manager = world.Chunks;
+                if (manager != null && releasedChunkManagers.Contains(manager)) continue;
+                if (!world.Scene.IsValid() || !world.Scene.isLoaded ||
+                    !worldSceneBindings.IsCurrentWorldOwner(world.Scene.handle, world.WorldKey, world))
+                {
+                    string managerWorldKey = manager != null && !string.IsNullOrEmpty(manager.OwnedWorldKey)
+                        ? manager.OwnedWorldKey : manager != null ? manager.WorldRuntime?.WorldId : null;
+                    if (manager != null && string.Equals(managerWorldKey, world.WorldKey, StringComparison.Ordinal))
+                    {
+                        manager.DetachAfterPresentationSceneUnloaded();
+                        if (ReferenceEquals(world.Chunks, manager))
+                        {
+                            releasedChunkManagers.Add(manager);
+                            if (ReferenceEquals(preservedLocal, manager))
+                            {
+                                if (ReferenceEquals(ChunkMgr.LocalInstance, manager)) ChunkMgr.ClearLocalNetworkWorld();
+                                preservedLocal = null;
+                            }
+                        }
+                    }
+                    continue;
+                }
                 using (UseWorld(world.WorldKey))
                 {
-                    if (world.Chunks != null && world.Chunks == preservedLocal)
-                        world.Chunks.OnSceneChange(retainPresentationPool: true);
+                    if (manager != null && manager == preservedLocal)
+                        manager.OnSceneChange(retainPresentationPool: true);
                     else
-                        world.Chunks?.ReleaseRegisteredWorld();
+                        manager?.ReleaseRegisteredWorld();
                 }
+                if (manager != null && ReferenceEquals(world.Chunks, manager)) releasedChunkManagers.Add(manager);
             }
             WorldEntityRuntime.ReleaseAll();
             FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();
@@ -382,7 +494,7 @@ public static class GameplayWorldRegistry
                 AiRuntimeBackendService.ReleaseWorldEcology(world.WorldKey);
                 WorldNavigationManager.ReleaseWorld(world.WorldKey);
                 foreach (var pair in world.Renderers) if (pair.Key != null) pair.Key.forceRenderingOff = pair.Value;
-                if (world.Chunks != null && world.Chunks != preservedLocal)
+                if (world.Chunks != null && world.Chunks != preservedLocal && releasedChunkManagers.Remove(world.Chunks))
                     UnityEngine.Object.Destroy(world.Chunks.gameObject);
                 if (world.OwnsPhysics && world.Scene.IsValid() && world.Scene.isLoaded)
                     SceneManager.UnloadSceneAsync(world.Scene);
@@ -391,8 +503,6 @@ public static class GameplayWorldRegistry
             else ChunkMgr.ClearLocalNetworkWorld();
             worlds.Clear(); releaseDispatch.Clear(); spaceContexts.Clear(); PresentationOwners.Clear();
             worldSceneBindings.Clear(); selectedLocalWorldKey = null;
-            if (GameManager.ExistingInstance?.IsInGameWorld != true)
-            { worldItems.Clear(); worldIdentities.Clear(); }
             if (sceneCacheBound) localSceneKey = ResolveLocalWorldKey(localScene);
             if (host != null) UnityEngine.Object.Destroy(host.gameObject);
             host = null;

@@ -128,7 +128,7 @@ public partial class ItemMgr
             throw new MissingReferenceException($"[ItemMgr] F5 重载玩家失败：最新资源目录中的 {prefabId} Prefab 缺少 Player。");
 
         previousPlayer.Save();
-        playerData.CurrentSceneName = GameplayWorldRegistry.CurrentScene.name;
+        playerData.CurrentSceneName = GameplayWorldRegistry.GetItemWorldKey(previousPlayer) ?? GameplayWorldRegistry.ExecutionWorldKey;
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = playerData;
 
         ReleasePlayerForWorldTransition(previousPlayer);
@@ -145,7 +145,7 @@ public partial class ItemMgr
         Player_DIC[profileName] = reloadedPlayer;
         reloadedPlayer.Load();
 
-        reloadedPlayer.Data.CurrentSceneName = GameplayWorldRegistry.CurrentScene.name;
+        reloadedPlayer.Data.CurrentSceneName = GameplayWorldRegistry.GetItemWorldKey(reloadedPlayer) ?? GameplayWorldRegistry.ExecutionWorldKey;
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = reloadedPlayer.Data;
 
         GameManager.NotifyLocalPlayerRuntimeReloaded(reloadedPlayer);
@@ -209,7 +209,7 @@ public partial class ItemMgr
         if (!hasSavedData)
             playerData.Name_User = playerName;
         if (!hasSavedData || string.IsNullOrEmpty(playerData.CurrentSceneName))
-            playerData.CurrentSceneName = GameplayWorldRegistry.CurrentScene.name;
+            playerData.CurrentSceneName = GameplayWorldRegistry.ExecutionWorldKey;
         if (!SpaceMgr.IsSpaceScene(playerData.CurrentSceneName))
             playerData.transform.position = WorldLocalPresentation.ToLogical(spawnPosition);
         playerData.transform.rotation = Quaternion.identity;

@@ -40,7 +40,8 @@ internal sealed partial class DroppedItemRuntime
         pickerScratch.Clear(); pickerScratch.AddRange(pickers);
         foreach (Mod_ItemPicker picker in pickerScratch)
         {
-            if (picker == null || picker.gameObject.scene.name != matterWorldKey ||
+            if (picker == null || GameplayWorldRegistry.GetItemWorldKey(picker.item) != matterWorldKey ||
+                presentation == null || picker.gameObject.scene != presentationScene ||
                 !picker.TryGetDroppedPickupBounds(out Bounds bounds)) continue;
             if (!pickupAttempts.TryGetValue(picker, out HashSet<int> attempted))
                 pickupAttempts.Add(picker, attempted = new HashSet<int>());

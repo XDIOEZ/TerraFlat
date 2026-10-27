@@ -18,7 +18,6 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using FlatWorld.Diagnostics;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using FlatWorld.Networking;
@@ -159,54 +158,30 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return null;
         }
 
-        string activeSceneName = GameplayWorldRegistry.CurrentScene.name;
-        Debug.LogWarning($"⚠️ 未找到场景 {activeSceneName} 的星球数据");
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        Debug.LogWarning($"⚠️ 未找到世界 {worldKey} 的星球数据");
         return null;
     }
-
-    // 场景句柄索引避免每次拓扑查询都从原生层分配场景名；不缓存可替换的存档对象。
-    private int _activePlanetSceneHandle = int.MinValue;
-    private string _activePlanetSceneName;
 
     /// <summary>移动、导航和距离检查的无日志拓扑查询；无世界数据时沿用无限世界语义。</summary>
     public bool TryGetActivePlanetData(out PlanetData planetData)
     {
         planetData = null;
-        if (SaveData?.PlanetData_Dict == null)
-            return false;
-
-        Scene scene = GameplayWorldRegistry.CurrentScene;
-        if (_activePlanetSceneHandle != scene.handle)
-        {
-            _activePlanetSceneHandle = scene.handle;
-            _activePlanetSceneName = scene.name;
-        }
-        // 仅缓存原生场景名字符串；每次仍查询当前 SaveData，不能跨重进世界缓存 PlanetData。
-        return SaveData.PlanetData_Dict.TryGetValue(_activePlanetSceneName, out planetData) &&
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        return worldKey != null && SaveData?.PlanetData_Dict != null &&
+               SaveData.PlanetData_Dict.TryGetValue(worldKey, out planetData) &&
                planetData != null;
     }
 
     protected override void Awake()
     {
         base.Awake();
-        if (ReferenceEquals(instance, this))
-        {
-            SceneManager.activeSceneChanged += InvalidateActivePlanetScene;
-            GameWorldRuleSession.Bind(currentSaveData);
-        }
+        if (ReferenceEquals(instance, this)) GameWorldRuleSession.Bind(currentSaveData);
         InitializeUserSavePath();
-    }
-
-    /// <summary>即使新世界复用了旧场景句柄，也必须丢弃旧场景名。</summary>
-    private void InvalidateActivePlanetScene(Scene previous, Scene next)
-    {
-        _activePlanetSceneHandle = int.MinValue;
-        _activePlanetSceneName = null;
     }
 
     protected override void OnDestroy()
     {
-        SceneManager.activeSceneChanged -= InvalidateActivePlanetScene;
         if (ReferenceEquals(instance, this)) GameWorldRuleSession.Bind(null);
         base.OnDestroy();
     }
@@ -695,51 +670,33 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>
-    /// 获取当前活动场景的地图保存数据（静态版本）
+    /// 获取当前逻辑世界的地图保存数据（静态版本）
     /// </summary>
     /// <returns>地图保存数据</returns>
     public static MapSave GetCurrentMapStatic()
     {
         return new MapSave
         {
-            Name = GameplayWorldRegistry.CurrentScene.name,
+            Name = GameplayWorldRegistry.ExecutionWorldKey,
             items = GetActiveSceneAllItemData_Static()
         };
     }
 
     public PlanetData GetCurrentPlanetData()
-    {
-        string activeSceneName = GameplayWorldRegistry.CurrentScene.name;
-        if (SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out PlanetData planetData))
-        {
-            return planetData;
-        }
-        return null;
-    }
+        => TryGetActivePlanetData(out PlanetData planetData) ? planetData : null;
     
     /// <summary>
-    /// 获取当前活动场景中所有物品的数据（静态版本）
+    /// 获取当前逻辑世界中所有活动物品的数据（静态版本）
     /// </summary>
     /// <returns>物品数据字典</returns>
     public static Dictionary<string, HashSet<ItemData>> GetActiveSceneAllItemData_Static()
     {
-        Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
-        
-        // 先处理所有物品保存
-        SaveAllItems(allItems);
-        
-        // 再收集所有活动物品数据
-        return CollectActiveItemData(allItems);
-    }
-
-    /// <summary>
-    /// 保存所有物品数据
-    /// </summary>
-    private static void SaveAllItems(Item[] items)
-    {
-        foreach (Item item in items)
+        var itemDataDict = new Dictionary<string, HashSet<ItemData>>();
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrEmpty(worldKey)) return itemDataDict;
+        foreach (Item item in FindObjectsOfType<Item>(includeInactive: false))
         {
-            if (item == null) continue;
+            if (item == null || GameplayWorldRegistry.GetItemWorldKey(item) != worldKey) continue;
 
             try
             {
@@ -750,21 +707,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 Debug.LogError($"❌ 保存物品失败: {item.name}", item);
                 Debug.LogException(ex);
             }
-        }
-    }
-
-    /// <summary>
-    /// 收集活跃物品数据
-    /// </summary>
-    private static Dictionary<string, HashSet<ItemData>> CollectActiveItemData(Item[] items)
-    {
-        Dictionary<string, HashSet<ItemData>> itemDataDict = new Dictionary<string, HashSet<ItemData>>();
-
-        foreach (Item item in items)
-        {
-            if (item == null || item.transform == null || item.gameObject == null)
-                continue;
-
             if (!item.gameObject.activeInHierarchy)
                 continue;
 
@@ -1218,9 +1160,14 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return false;
         }
 
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrEmpty(planetName))
+        {
+            failureReason = "区块缺少逻辑世界身份。";
+            return false;
+        }
         try
         {
-            string planetName = GameplayWorldRegistry.CurrentScene.name;
             string key = BuildChunkKey(planetName, chunk.MapSave.Name);
             chunkBaselines[key] = CaptureChunkBaseline(chunk);
 
@@ -1230,7 +1177,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
         catch (Exception exception)
         {
-            string planetName = GameplayWorldRegistry.CurrentScene.name;
             chunkBaselines.Remove(BuildChunkKey(planetName, chunk.MapSave.Name));
             failureReason = exception.Message;
             Debug.LogError($"[SaveDataMgr] 程序化区块最终化失败：{chunk.name}\n{exception}", chunk);
@@ -1243,7 +1189,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (chunk?.MapSave == null)
             return;
 
-        string planetName = GameplayWorldRegistry.CurrentScene.name;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrEmpty(planetName)) return;
         chunkBaselines.Remove(BuildChunkKey(planetName, chunk.MapSave.Name));
     }
 
@@ -1255,7 +1202,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (chunk?.MapSave == null || chunk.Map?.Data == null)
             return false;
 
-        string planetName = GameplayWorldRegistry.CurrentScene.name;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrEmpty(planetName)) return false;
         string key = BuildChunkKey(planetName, chunk.MapSave.Name);
         if (!chunkBaselines.TryGetValue(key, out ChunkBaseline baseline))
             return false;
@@ -1332,7 +1280,12 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             yield break;
         }
 
-        string planetName = GameplayWorldRegistry.CurrentScene.name;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrEmpty(planetName))
+        {
+            onCompleted?.Invoke(false, null);
+            yield break;
+        }
         string key = BuildChunkKey(planetName, chunk.MapSave.Name);
         if (!chunkBaselines.TryGetValue(key, out ChunkBaseline baseline))
         {
@@ -1595,38 +1548,69 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         NotifyAuthoritativeTerrainCellChanged(chunk, placedCell.LocalPosition);
     }
 
-    /// <summary>保存前复核本次变脏的运行时区块，避免只依赖单格通知留下半成品差量。</summary>
-    private void CaptureRuntimeTerrainStates()
+    // 场景表现解绑会结清天气批处理，世界模型交接前再次保存实际地形变化。
+    internal bool CaptureRuntimeTerrainAfterSceneViewUnbinding(string worldKey)
     {
-        if (!GameNetwork.HasStateAuthority || SaveData == null ||
-            runtimeTerrainDirtyChunks.Count == 0 || ChunkMgr.Instance?.Chunks == null)
+        if (string.IsNullOrEmpty(worldKey) ||
+            !string.Equals(worldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal)) return false;
+        try { return CaptureRuntimeTerrainStates(); }
+        catch (Exception exception)
         {
-            return;
+            Debug.LogError($"[SaveDataMgr] 场景解绑后采集地形失败：{worldKey}，{exception}");
+            return false;
         }
+    }
 
-        IReadOnlyDictionary<RuntimeWorldAddress, ChunkRuntime> chunks = ChunkMgr.Instance.Chunks;
+    /// <summary>保存前复核本次变脏的运行时区块，避免只依赖单格通知留下半成品差量。</summary>
+    private bool CaptureRuntimeTerrainStates()
+    {
+        if (!GameNetwork.HasStateAuthority || runtimeTerrainDirtyChunks.Count == 0) return true;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrWhiteSpace(planetName)) return false;
+        string prefix = planetName + "\u001f";
+        bool hasWorldChanges = false;
+        foreach (string dirtyKey in runtimeTerrainDirtyChunks)
+            if (dirtyKey.StartsWith(prefix, StringComparison.Ordinal)) { hasWorldChanges = true; break; }
+        if (!hasWorldChanges) return true;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (SaveData == null || manager?.WorldRuntime == null || manager.WorldRuntime.WorldId != planetName)
+            return false;
+
+        bool succeeded = true;
+        IReadOnlyDictionary<RuntimeWorldAddress, ChunkRuntime> chunks = manager.Chunks;
         foreach (KeyValuePair<RuntimeWorldAddress, ChunkRuntime> pair in chunks)
         {
+            string key = BuildChunkKey(planetName, ToChunkName(pair.Key));
+            if (!runtimeTerrainDirtyChunks.Contains(key)) continue;
             ChunkRuntime chunk = pair.Value;
             if (chunk == null || chunk.DataStatus != ChunkDataStatus.Ready ||
                 chunk.Terrain == null || chunk.Terrain.IsDisposed)
             {
+                succeeded = false;
                 continue;
             }
 
-            string planetName = ResolveRuntimePlanetName();
-            string chunkName = ToChunkName(pair.Key);
-            string key = BuildChunkKey(planetName, chunkName);
-            if (!runtimeTerrainDirtyChunks.Contains(key) ||
-                !TryEnsureRuntimeChunkBaseline(key, chunk, out RuntimeChunkBaseline baseline))
+            if (!TryEnsureRuntimeChunkBaseline(key, chunk, out RuntimeChunkBaseline baseline))
             {
+                succeeded = false;
                 continue;
             }
 
-            RefreshRuntimeChunkDelta(key, planetName, pair.Key, chunk, baseline);
+            // 采集前撤标记；采集期间新变化会重新标脏，失败则恢复标记。
+            runtimeTerrainDirtyChunks.Remove(key);
+            try
+            {
+                RefreshRuntimeChunkDelta(key, planetName, pair.Key, chunk, baseline);
+                if (runtimeTerrainDirtyChunks.Contains(key)) succeeded = false;
+            }
+            catch (Exception exception)
+            {
+                runtimeTerrainDirtyChunks.Add(key);
+                succeeded = false;
+                Debug.LogError($"[SaveDataMgr] 采集世界地形失败：{key}，{exception}");
+            }
         }
-
-        runtimeTerrainDirtyChunks.Clear();
+        return succeeded;
     }
 
     /// <summary>为当前运行时区块建立完整地形与互斥的建筑损伤、地表采挖进度基线。</summary>
@@ -1712,7 +1696,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         ChunkTerrainData terrain = chunk.Terrain;
         chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta);
-        delta?.RuntimeTileDeltas?.Clear();
 
         List<RuntimeTileCellSaveDelta> changes = new List<RuntimeTileCellSaveDelta>();
         for (int x = 0; x < terrain.Width; x++)
@@ -1736,6 +1719,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         if (changes.Count == 0)
         {
+            delta?.RuntimeTileDeltas?.Clear();
             if (delta != null && !delta.HasChanges)
                 chunkDeltas.Remove(key);
             return;
@@ -1810,8 +1794,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private static string ResolveRuntimePlanetName()
     {
-        string sceneName = GameplayWorldRegistry.CurrentScene.name;
-        return string.IsNullOrWhiteSpace(sceneName) ? "world" : sceneName;
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        return string.IsNullOrWhiteSpace(worldKey) ? "world" : worldKey;
     }
 
     #endregion
@@ -1841,7 +1825,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         SaveCapturePoint.SetGauge(chunkDeltas.Count);
         WeatherMgr.FlushAllSurfaceWork();
         DroppedItemService.PrepareForSave();
-        CaptureRuntimeTerrainStates();
+        if (!CaptureRuntimeTerrainStates())
+            throw new InvalidOperationException("当前世界的地形快照采集失败，无法安全保存。");
         // 新 WorldModel 的自然物挂在 ChunkView，不属于旧 Chunk.RunTimeItems；先捕获其状态。
         ChunkMgr.Instance?.CaptureRuntimeNaturalItemStates();
         if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
@@ -2050,7 +2035,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         foreach (Item item in ItemMgr.Instance.WorldRunTimeItems.Values)
         {
-            if (!IsRuntimeBuildingItem(item, out _))
+            if (!IsRuntimeBuildingItemInWorld(item, planetName))
                 continue;
 
             RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(item.transform.position);
@@ -2079,7 +2064,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             }
         }
 
-        var keysToCapture = new HashSet<string>(runtimeBuildingDirtyChunks, StringComparer.Ordinal);
+        var keysToCapture = new HashSet<string>(StringComparer.Ordinal);
+        string worldPrefix = planetName + "\u001f";
+        foreach (string dirtyKey in runtimeBuildingDirtyChunks)
+            if (dirtyKey.StartsWith(worldPrefix, StringComparison.Ordinal)) keysToCapture.Add(dirtyKey);
         keysToCapture.UnionWith(savedItemsByKey.Keys);
         foreach (string key in keysToCapture)
         {
@@ -2121,6 +2109,11 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return building.Data.Role == BuildingRole.Summoner &&
                !item.InHand && item.Owner == null && !item.DestructionHandled;
     }
+
+    // 建筑快照只采集当前世界，不能把同坐标的其他世界实例写入当前区块。
+    private static bool IsRuntimeBuildingItemInWorld(Item item, string worldKey)
+        => item != null && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey &&
+           IsRuntimeBuildingItem(item, out _);
 
     /// <summary>判断建筑 SaveData 是否属于动态世界建筑，供差量替换和清理使用。</summary>
     private static bool IsRuntimeBuildingData(ItemData data)
@@ -2218,17 +2211,17 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>新版区块就绪时恢复该区块的全部动态建筑，包括建筑模块状态和耐久。</summary>
-    public void RestoreRuntimeBuildingsForChunk(RuntimeWorldAddress address)
+    public bool RestoreRuntimeBuildingsForChunk(RuntimeWorldAddress address)
     {
-        if (!GameNetwork.HasStateAuthority || SaveData == null || ItemMgr.Instance == null)
-            return;
+        if (!GameNetwork.HasStateAuthority) return true;
+        if (SaveData == null || ItemMgr.Instance == null) return false;
 
         EnsureRuntimeBuildingRestoreScope();
         string planetName = ResolveRuntimePlanetName();
         string chunkName = ToChunkName(address);
         string restoreKey = $"{BuildChunkKey(planetName, chunkName)}\u001f{address.DimensionId}";
         if (!restoredRuntimeBuildingChunks.Add(restoreKey))
-            return;
+            return true;
 
         string chunkKey = BuildChunkKey(planetName, chunkName);
         var candidates = new List<ItemData>();
@@ -2241,6 +2234,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
 
         var restoredGuids = new HashSet<int>();
+        bool succeeded = true;
         for (int i = 0; i < candidates.Count; i++)
         {
             ItemData savedData = candidates[i];
@@ -2250,35 +2244,54 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 continue;
             }
 
-            if (ItemMgr.Instance.GetItemByGuid(savedData.Guid) != null)
+            Item existing = ItemMgr.Instance.GetItemByGuid(savedData.Guid);
+            if (existing != null)
+            {
+                if (GameplayWorldRegistry.GetItemWorldKey(existing) != planetName ||
+                    !existing.IsInitialized || !IsRuntimeBuildingItem(existing, out _)) succeeded = false;
                 continue;
+            }
 
+            Item restored = null;
             try
             {
                 ItemData runtimeData = CloneAndRebaseItemData(savedData);
                 ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
                 if (MachineWorld.OwnsWorldItem(runtimeData))
                 {
-                    MachineWorld.RestoreMachine(runtimeData);
+                    if (MachineWorld.RestoreMachine(runtimeData) == null)
+                    {
+                        succeeded = false;
+                        continue;
+                    }
                     // 机器快照接管成功后删除旧区块 Item 来源，避免拆除后旧差量再次恢复同一台设施。
                     delta?.ChangedItems?.RemoveAll(item => item?.Guid == runtimeData.Guid);
                     continue;
                 }
-                Item restored = ItemMgr.Instance.InstantiateItem(
+                restored = ItemMgr.Instance.InstantiateItem(
                     runtimeData,
                     transformData.position,
                     transformData.rotation,
                     transformData.scale);
-                restored?.Load();
-                if (restored != null) RecordRuntimeBuildingChange(restored);
+                if (restored == null) { succeeded = false; continue; }
+                restored.Load();
+                RecordRuntimeBuildingChange(restored);
             }
             catch (Exception exception)
             {
+                succeeded = false;
+                if (restored != null && !restored.DestructionHandled)
+                {
+                    try { ItemMgr.Instance.DespawnItem(restored, saveData: false); }
+                    catch (Exception cleanup) { Debug.LogException(cleanup); }
+                }
                 Debug.LogError(
                     $"[SaveDataMgr] 恢复运行时建筑失败：{savedData.IDName}, Guid={savedData.Guid}");
                 Debug.LogException(exception);
             }
         }
+        if (!succeeded) restoredRuntimeBuildingChunks.Remove(restoreKey);
+        return succeeded;
     }
 
     public void CollectArchivedRuntimeBuildings(string worldKey, Dictionary<int, ItemData> output)
@@ -2288,7 +2301,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         {
             if (record?.PlanetName != worldKey || record.ChangedItems == null) continue;
             string restoredKey = $"{BuildChunkKey(worldKey, record.ChunkName)}\u001f{WorldAddress.FromWorldKey(worldKey).DimensionId}";
-            if (worldKey == GameplayWorldRegistry.CurrentScene.name && restoredRuntimeBuildingChunks.Contains(restoredKey)) continue;
+            if (worldKey == GameplayWorldRegistry.ExecutionWorldKey && restoredRuntimeBuildingChunks.Contains(restoredKey)) continue;
             foreach (ItemData data in record.ChangedItems)
                 if (data != null && record.RemovedItemGuids?.Contains(data.Guid) != true &&
                     !MachineWorld.OwnsWorldItem(data) && IsRestorableRuntimeBuildingData(data) &&
@@ -2332,23 +2345,27 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     #region Runtime AI persistence
 
     /// <summary>从 ItemMgr 的 WorldAddress 索引采集 AI，并写入当前区块差量。</summary>
-    private void CaptureRuntimeAiEntityStates()
+    private bool CaptureRuntimeAiEntityStates(List<RuntimeAiSceneUnbindingCapture> unbindingCaptures = null)
     {
         ItemMgr itemManager = ItemMgr.Instance;
         if (itemManager == null || SaveData == null)
-            return;
+            return false;
 
-        string planetName = GameplayWorldRegistry.CurrentScene.name;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrWhiteSpace(planetName)) return false;
         var addresses = new HashSet<RuntimeWorldAddress>();
         var capturedAddresses = new HashSet<RuntimeWorldAddress>();
         var runtimeItems = new List<Item>();
         var savedItems = new List<ItemData>();
+        var addressCaptures = unbindingCaptures != null ? new List<RuntimeAiSceneUnbindingCapture>() : null;
+        bool allSucceeded = true;
         itemManager.CopyRuntimeAiSaveAddresses(addresses);
 
         foreach (RuntimeWorldAddress address in addresses)
         {
             itemManager.CopyRuntimeAiItems(address, runtimeItems);
             savedItems.Clear();
+            addressCaptures?.Clear();
             bool captureSucceeded = true;
             for (int i = 0; i < runtimeItems.Count; i++)
             {
@@ -2356,7 +2373,11 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 try
                 {
                     item.Save();
-                    savedItems.Add(CloneItemData(item.itemData));
+                    ItemData snapshot = CloneItemData(item.itemData);
+                    if (snapshot?.transform == null)
+                        throw new InvalidDataException($"生物 {item.name} 的快照缺少位置。");
+                    savedItems.Add(snapshot);
+                    addressCaptures?.Add(new RuntimeAiSceneUnbindingCapture(item, snapshot, address));
                 }
                 catch (Exception exception)
                 {
@@ -2368,13 +2389,18 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             }
 
             if (!captureSucceeded)
+            {
+                allSucceeded = false;
                 continue;
+            }
 
             MergeRuntimeAiItems(planetName, address, savedItems);
             capturedAddresses.Add(address);
+            if (addressCaptures != null) unbindingCaptures.AddRange(addressCaptures);
         }
 
         itemManager.AcknowledgeRuntimeAiSave(capturedAddresses);
+        return allSucceeded;
     }
 
     /// <summary>自动保存专用的 AI 分帧快照；每帧限制 Item.Save 与数据克隆的累计耗时。</summary>
@@ -2384,7 +2410,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (itemManager == null || SaveData == null)
             yield break;
 
-        string planetName = GameplayWorldRegistry.CurrentScene.name;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
         var addresses = new HashSet<RuntimeWorldAddress>();
         bool copiedAddresses = true;
         try
@@ -2466,17 +2492,18 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>在新版区块数据就绪时恢复该地址的 AI，不再等待旧 Chunk 实例化。</summary>
-    public void RestoreRuntimeAiEntitiesForChunk(RuntimeWorldAddress address)
+    public bool RestoreRuntimeAiEntitiesForChunk(RuntimeWorldAddress address)
     {
-        if (!GameNetwork.HasStateAuthority || SaveData == null || ItemMgr.Instance == null)
-            return;
+        if (!GameNetwork.HasStateAuthority) return true;
+        if (SaveData == null || ItemMgr.Instance == null) return false;
 
         EnsureRuntimeAiRestoreScope();
-        string planetName = GameplayWorldRegistry.CurrentScene.name;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrWhiteSpace(planetName)) return false;
         string chunkName = ToChunkName(address);
         string restoreKey = $"{BuildChunkKey(planetName, chunkName)}\u001f{address.DimensionId}";
         if (!restoredRuntimeAiChunks.Add(restoreKey))
-            return;
+            return true;
 
         var candidates = new List<ItemData>();
         string chunkKey = BuildChunkKey(planetName, chunkName);
@@ -2484,6 +2511,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             CollectRuntimeAiData(delta?.ChangedItems, candidates);
 
         var restoredGuids = new HashSet<int>();
+        bool succeeded = true;
         for (int i = 0; i < candidates.Count; i++)
         {
             ItemData savedData = candidates[i];
@@ -2493,37 +2521,65 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             Item existing = ItemMgr.Instance.GetItemByGuid(savedData.Guid);
             if (existing != null)
             {
-                if (RuntimeAiEntityUtility.IsAiEntity(existing))
-                    ItemWorldPlacement.AttachRuntimeAi(existing, existing.gameObject);
+                if (RuntimeAiEntityUtility.IsAiEntity(existing) &&
+                    GameplayWorldRegistry.GetItemWorldKey(existing) == planetName)
+                {
+                    try
+                    {
+                        if (!existing.IsInitialized) { succeeded = false; continue; }
+                        ItemWorldPlacement.AttachRuntimeAi(existing, existing.gameObject);
+                        if (ParkedWorld.SceneDetachedLiveGuids.Contains(savedData.Guid))
+                            RemoveParkedRuntimeAi(savedData.Guid);
+                    }
+                    catch (Exception exception) { succeeded = false; Debug.LogException(exception); }
+                }
+                else succeeded = false;
                 continue;
             }
 
             // 运行中进入新区块时先登记休眠快照，由生态调度器在镜头外分帧恢复。
-            if (GameManager.Instance != null && GameManager.Instance.IsGameplayReady &&
+            if (!ParkedWorld.SceneDetachedLiveGuids.Contains(savedData.Guid) &&
+                GameManager.Instance != null && GameManager.Instance.IsGameplayReady &&
                 MonsterManager.IsRegisteredSpeciesId(savedData.IDName))
             {
-                AddParkedRuntimeAi(address, CloneItemData(savedData));
+                try { AddParkedRuntimeAi(address, CloneItemData(savedData)); }
+                catch (Exception exception) { succeeded = false; Debug.LogException(exception); }
                 continue;
             }
 
+            Item restored = null;
             try
             {
                 ItemData runtimeData = CloneAndRebaseItemData(savedData);
                 ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
-                Item restored = ItemMgr.Instance.InstantiateItem(
+                restored = ItemMgr.Instance.InstantiateItem(
                     runtimeData,
                     transformData.position,
                     transformData.rotation,
                     transformData.scale);
-                restored?.Load();
+                if (restored != null)
+                {
+                    restored.Load();
+                    if (ParkedWorld.SceneDetachedLiveGuids.Contains(savedData.Guid))
+                        RemoveParkedRuntimeAi(savedData.Guid);
+                }
+                else succeeded = false;
             }
             catch (Exception exception)
             {
+                succeeded = false;
+                if (restored != null && !restored.DestructionHandled)
+                {
+                    try { ItemMgr.Instance.DespawnItem(restored, saveData: false); }
+                    catch (Exception cleanup) { Debug.LogException(cleanup); }
+                }
                 Debug.LogError(
                     $"[SaveDataMgr] 恢复运行时 AI 失败：{savedData.IDName}, Guid={savedData.Guid}");
                 Debug.LogException(exception);
             }
         }
+        if (!succeeded) restoredRuntimeAiChunks.Remove(restoreKey);
+        return succeeded;
     }
 
     private void MergeRuntimeAiItems(

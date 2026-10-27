@@ -41,18 +41,7 @@ public partial class ChunkMgr
     /// <summary>管理器进入终止阶段后，不再保存生态快照或重新创建世界运行时。</summary>
     internal bool IsWorldRuntimeShuttingDown { get; private set; }
     // 太空坐标不能拿来激活地表区块或生成一颗临时星球。
-    public static bool IsSurfaceStreamingScene => !SpaceMgr.IsSpaceScene(GetActiveStreamingSceneName());
-
-    #region 活动场景查询
-
-    // 环境高频查询复用昼夜系统的场景名称缓存，避免每个采样点创建字符串。
-    private static string GetActiveStreamingSceneName()
-    {
-        DayTimeSystem timeSystem = DayTimeSystem.GetInstance();
-        return timeSystem != null ? timeSystem.GetCurrentActiveSceneName() : GameplayWorldRegistry.CurrentScene.name;
-    }
-
-    #endregion
+    public static bool IsSurfaceStreamingScene => !SpaceMgr.IsSpaceScene(GameplayWorldRegistry.ExecutionWorldKey);
 
     public WorldRuntime WorldRuntime => runtimeChunkManager?.World;
     public IReadOnlyDictionary<RuntimeWorldAddress, ChunkRuntime> Chunks =>
@@ -300,20 +289,67 @@ public partial class ChunkMgr
         runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
         activeGenerationSnapshot = defaultGenerationSnapshot;
         string worldId = ResolveOwnedWorldRuntimeIdentity(OwnedWorldKey, GameplayWorldRegistry.ExecutionWorldKey);
-        var world = new WorldRuntime(worldId, runtimeEpoch);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        slowChunkLogCount = 0;
-        slowChunkLogWindowStart = Time.realtimeSinceStartup;
-        world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
-#endif
-        runtimeGenerator = new DeterministicChunkGenerator(liquidTypes,
+        WorldRuntime world = GameplayWorldRegistry.GetOrCreateOwnedWorldModel(worldId, runtimeEpoch);
+        var generator = new DeterministicChunkGenerator(liquidTypes,
             WorldGenerationRuntimeHooks.CaptureWorldModelTerrainDecorator(
                 FlatWorld.Spaceflight.SpaceSurfaceTerrain.Apply), ChunkWeatherConfiguration.Load());
-        runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
-            EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
-        sightBlockingChunkCommittedSubscription =
-            world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
-        liquidBodies = new WorldLiquidBodySystem(this, ResolveCurrentDimensionId());
+        AttachOwnedWorldRuntime(world, generator);
+        try
+        {
+            // 重绑已有数据时不会再发布生成完成事件，主动重建当前世界的遮挡层。
+            foreach (ChunkRuntime chunk in world.Chunks.Values)
+                BuildingOccupancyRegistry.InitializeSightBlockingForChunk(chunk);
+            liquidBodies = new WorldLiquidBodySystem(this, ResolveCurrentDimensionId());
+        }
+        catch
+        {
+            DetachWorldRuntimeFromScene();
+            throw;
+        }
+    }
+
+    // 管理器只借用会话世界；重新附着时始终使用新的生成器与调度器。
+    internal void AttachOwnedWorldRuntime(WorldRuntime world, DeterministicChunkGenerator generator)
+    {
+        if (world == null || generator == null) throw new ArgumentNullException(world == null ? nameof(world) : nameof(generator));
+        if (IsWorldRuntimeShuttingDown) throw new ObjectDisposedException(nameof(ChunkMgr));
+        if (runtimeChunkManager != null) throw new InvalidOperationException("区块管理器已经附着世界模型。");
+        if (!string.IsNullOrEmpty(OwnedWorldKey) && !string.Equals(OwnedWorldKey, world.WorldId, StringComparison.Ordinal))
+            throw new InvalidOperationException("区块管理器与世界模型身份不一致。");
+        GameplayWorldRegistry.ClaimOwnedWorldModel(world.WorldId, world, this);
+        runtimeEpoch = world.Epoch;
+        try
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            slowChunkLogCount = 0;
+            slowChunkLogWindowStart = Time.realtimeSinceStartup;
+            world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
+#endif
+            runtimeGenerator = generator;
+            runtimeChunkManager = new RuntimeChunkMgr(world, generator,
+                EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
+            sightBlockingChunkCommittedSubscription =
+                world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
+        }
+        catch
+        {
+            try
+            {
+                try { sightBlockingChunkCommittedSubscription?.Dispose(); }
+                finally { runtimeChunkManager?.Dispose(); }
+            }
+            finally
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
+#endif
+                runtimeChunkManager = null;
+                runtimeGenerator = null;
+                sightBlockingChunkCommittedSubscription = null;
+                GameplayWorldRegistry.DetachOwnedWorldModel(world.WorldId, world, this);
+            }
+            throw;
+        }
     }
 
     // 世界模型优先沿用管理器已绑定的逻辑身份，场景只作为未绑定时的上下文来源。
@@ -334,83 +370,176 @@ public partial class ChunkMgr
 
     #endregion
 
-    /// <summary>切换场景时释放旧生成器，下次进入按当前资源会话创建新世界。</summary>
+    // 先保存并休眠生物，失败时保留原世界和场景，避免下一次进入丢失实体。
+    private void PrepareRuntimeSceneUnbinding()
+    {
+        string worldKey = runtimeChunkManager?.World.WorldId;
+        if (string.IsNullOrEmpty(worldKey)) worldKey = OwnedWorldKey;
+        if (string.IsNullOrEmpty(worldKey)) worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrEmpty(worldKey)) return;
+        SaveDataMgr saveData = SaveDataMgr.Instance;
+        if (saveData == null || !saveData.PrepareRuntimeWorldForSceneUnbinding(worldKey))
+            throw new InvalidOperationException("[ChunkMgr] 世界实体保存失败，不能解绑场景。");
+    }
+
+    private void EnsureRuntimeSceneBindingsWereReleased()
+    {
+        if (activeRuntimeBindings.Count != 0)
+            throw new InvalidOperationException("[ChunkMgr] 建筑快照或区块解绑失败，不能切换场景。");
+    }
+
+    private void CaptureTerrainAfterSceneUnbindingWork()
+    {
+        // View 解绑会结清天气地表工作，必须在世界管理器仍附着时再次采集地形。
+        if (runtimeChunkManager != null &&
+            !SaveDataMgr.Instance.CaptureRuntimeTerrainAfterSceneViewUnbinding(runtimeChunkManager.World.WorldId))
+            throw new InvalidOperationException("[ChunkMgr] 地形快照失败，不能解绑场景。");
+    }
+
+    // 切换失败时让旧窗口重新恢复已经休眠的实体和液体观察。
+    private void RestoreRuntimeSceneAfterUnbindingFailure()
+    {
+        foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
+        {
+            binding.RestoredEntitiesChunk = null;
+            binding.ObservedLiquidChunk = null;
+            binding.FailedRestoreChunk = null;
+        }
+        if (runtimeChunkManager == null || liquidBodies != null) return;
+        try { liquidBodies = new WorldLiquidBodySystem(this, ResolveCurrentDimensionId()); }
+        catch (Exception exception) { Debug.LogException(exception, this); }
+    }
+
+    /// <summary>切换场景时释放表现和生成器，世界数据继续由游戏会话持有。</summary>
     private void ResetWorldRuntimeForSceneChange(bool retainPresentationPool = false)
     {
-        StopLiquidBodies();
-        StopLiquidFlowExperiment();
+        using var scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
+        try
+        {
+            PrepareRuntimeSceneUnbinding();
+            ClearRuntimeWindowBindings(retainPresentationPool);
+            EnsureRuntimeSceneBindingsWereReleased();
+            StopLiquidBodies();
+            StopLiquidFlowExperiment();
+            CaptureTerrainAfterSceneUnbindingWork();
+        }
+        catch
+        {
+            RestoreRuntimeSceneAfterUnbindingFailure();
+            throw;
+        }
         WorldLiquidFlowObstacles.ClearWorld();
-        ClearRuntimeWindowBindings(retainPresentationPool);
         WorldEntityRuntime.ReleaseWorld();
         ReleaseAirHumidityField();
         runtimeChunkManager?.ClearWindow();
         runtimeChunkManager?.CancelAllRequests();
         runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
         runtimeChunkManager?.CommitCompleted();
-        DisposeWorldRuntime();
+        DetachWorldRuntimeFromScene();
     }
 
-    /// <summary>彻底关闭世界运行时，释放区块、任务和事件资源。</summary>
-    private void ShutdownWorldRuntime(bool destroyingOwner = false)
+    /// <summary>关闭场景侧管理器，纯世界由会话继续持有。</summary>
+    private void ShutdownWorldRuntime(bool destroyingOwner = false, bool presentationSceneUnloaded = false)
     {
         if (IsWorldRuntimeShuttingDown)
             return;
 
         IDisposable scope = null;
         bool canReleaseWorld = !destroyingOwner;
-        if (!destroyingOwner)
-            scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
-        IsWorldRuntimeShuttingDown = true;
         try
         {
-            if (destroyingOwner)
+            if (!destroyingOwner)
+                scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
+            else if (!presentationSceneUnloaded)
             {
                 string worldKey = !string.IsNullOrEmpty(OwnedWorldKey) ? OwnedWorldKey : WorldRuntime?.WorldId;
                 canReleaseWorld = GameplayWorldRegistry.TryUseExistingWorldForOwnerRelease(worldKey, this, out scope) ||
                     string.IsNullOrEmpty(OwnedWorldKey) && TryUseRuntimeWorldContext(out scope);
+                if (canReleaseWorld)
+                {
+                    Scene scene = GameplayWorldRegistry.CurrentScene;
+                    canReleaseWorld = scene.IsValid() && scene.isLoaded;
+                }
             }
+
             isReleasingOwnedWorldContext = canReleaseWorld;
-            ReleaseAirHumidityField();
-            StopLiquidBodies();
-            StopLiquidFlowExperiment();
-            if (runtimeHost != null)
-                runtimeHost.Bind(null);
-            runtimeChunkManager?.CancelAllRequests();
-            runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
             if (canReleaseWorld)
             {
-                WorldLiquidFlowObstacles.ClearWorld();
-                ClearRuntimeWindowBindings();
+                try
+                {
+                    PrepareRuntimeSceneUnbinding();
+                    ClearRuntimeWindowBindings();
+                    EnsureRuntimeSceneBindingsWereReleased();
+                    StopLiquidBodies();
+                    StopLiquidFlowExperiment();
+                    CaptureTerrainAfterSceneUnbindingWork();
+                }
+                catch (Exception exception)
+                {
+                    if (!destroyingOwner)
+                    {
+                        RestoreRuntimeSceneAfterUnbindingFailure();
+                        throw;
+                    }
+                    // Unity 已开始销毁宿主时无法取消销毁，保留纯数据并只回收宿主自己的对象。
+                    Debug.LogException(exception, this);
+                    canReleaseWorld = false;
+                    isReleasingOwnedWorldContext = false;
+                }
             }
-            else
-                ReleaseOrphanedRuntimeWindowBindings();
-        }
-        finally
-        {
+
+            IsWorldRuntimeShuttingDown = true;
             try
             {
-                // 世界已被替换时不碰其它世界，任何解绑异常都必须继续释放自有纯数据。
-                try { if (canReleaseWorld) WorldEntityRuntime.ReleaseWorld(); }
-                finally { DisposeWorldRuntime(); }
+                ReleaseAirHumidityField();
+                if (!canReleaseWorld)
+                {
+                    StopLiquidBodies();
+                    StopLiquidFlowExperiment();
+                }
+                if (runtimeHost != null)
+                    runtimeHost.Bind(null);
+                runtimeChunkManager?.CancelAllRequests();
+                runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
+                if (canReleaseWorld)
+                    WorldLiquidFlowObstacles.ClearWorld();
+                else
+                    ReleaseOrphanedRuntimeWindowBindings();
             }
             finally
             {
-                isReleasingOwnedWorldContext = false;
-                scope?.Dispose();
+                // 即使表现清理异常，也必须让旧调度器停止并归还会话中的模型。
+                try { if (canReleaseWorld) WorldEntityRuntime.ReleaseWorld(); }
+                finally { DetachWorldRuntimeFromScene(); }
             }
+        }
+        finally
+        {
+            isReleasingOwnedWorldContext = false;
+            scope?.Dispose();
         }
     }
 
-    /// <summary>完整卸载世界与终止管理器共用释放顺序，不保留上一资源会话的液体编号表。</summary>
-    private void DisposeWorldRuntime()
+    // Scene 已消失时仅清理旧管理器拥有的对象，不补建场景也不销毁会话世界。
+    internal void DetachAfterPresentationSceneUnloaded()
+        => ShutdownWorldRuntime(destroyingOwner: true, presentationSceneUnloaded: true);
+
+    /// <summary>释放场景侧索引和调度器，模型由会话在真正退出时释放。</summary>
+    private void DetachWorldRuntimeFromScene()
     {
         RuntimeChunkMgr manager = runtimeChunkManager;
         try
         {
-            StopLiquidBodies();
-            runtimeBuildings.Clear();
-            ReleaseSharedNaturalEntities();
-            sightBlockingChunkCommittedSubscription?.Dispose();
+            try { StopLiquidBodies(); }
+            finally
+            {
+                try
+                {
+                    runtimeBuildings.Clear();
+                    ReleaseSharedNaturalEntities();
+                }
+                finally { sightBlockingChunkCommittedSubscription?.Dispose(); }
+            }
         }
         finally
         {
@@ -430,7 +559,7 @@ public partial class ChunkMgr
 #endif
                     manager.Dispose();
                 }
-                finally { world.Dispose(); }
+                finally { GameplayWorldRegistry.DetachOwnedWorldModel(world.WorldId, world, this); }
             }
         }
     }
@@ -496,14 +625,14 @@ public partial class ChunkMgr
         return profile.WithNumericParameter("world.spatialDistanceScale", spatialDistanceScale);
     }
 
-    /// <summary>获取当前活动维度编号；没有维度管理器时退回使用场景名。</summary>
+    /// <summary>获取当前活动维度编号；没有维度管理器时退回逻辑世界身份。</summary>
     private static string ResolveCurrentDimensionId()
     {
         DimensionManager dimensionManager = DimensionManager.Instance;
         if (dimensionManager != null && dimensionManager.ActiveAddress.IsValid)
             return dimensionManager.ActiveAddress.DimensionId;
-        string scene = GetActiveStreamingSceneName();
-        return string.IsNullOrWhiteSpace(scene) ? "surface" : scene;
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        return string.IsNullOrWhiteSpace(worldKey) ? "surface" : worldKey;
     }
 
     /// <summary>读取当前有限世界边界，并转换成纯生成器可用的拓扑快照。</summary>

@@ -69,7 +69,7 @@ internal sealed partial class DroppedItemRuntime
                 changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact,
                     ItemEnvironmentSources.CanSustainCombustion(matterWorldKey, body.Position), out consumedAll);
             if (changed)
-                presentation.Changed(id);
+                presentation?.Changed(id);
             if (consumedAll)
             {
                 Remove(id);
@@ -114,7 +114,7 @@ internal sealed partial class DroppedItemRuntime
                 body.Amount = replacement.Stack.Amount;
                 simulation.Set(body);
                 UpdatePlacement(id);
-                presentation.Changed(id);
+                presentation?.Changed(id);
                 return true;
             }
             catch
@@ -126,7 +126,7 @@ internal sealed partial class DroppedItemRuntime
                     body = originalBody;
                     simulation.Set(body);
                     UpdatePlacement(id);
-                    presentation.Changed(id);
+                    presentation?.Changed(id);
                 }
                 finally
                 {

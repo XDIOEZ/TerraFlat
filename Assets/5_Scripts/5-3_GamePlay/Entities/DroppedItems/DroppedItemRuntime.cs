@@ -17,21 +17,22 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     private readonly Dictionary<int, Vector2Int> spatialOwners = new();
     private readonly List<LightweightDroppedChange> changes = new();
     private readonly List<DroppedItemSaveRecord> unresolved = new();
-    private readonly DroppedItemPresentation presentation;
+    private DroppedItemPresentation presentation;
+    private Scene presentationScene;
     private WorldTopologyDomain domain;
     private readonly string matterWorldKey;
     public int Count => simulation.Count;
     public bool IsCreated => simulation.IsCreated;
-    public int VisibleViewCount => presentation.VisibleViewCount;
+    public int VisibleViewCount => presentation?.VisibleViewCount ?? 0;
     public bool Contains(int id) => simulation.Contains(id);
 
-    public DroppedItemRuntime(Scene scene, List<DroppedItemSaveRecord> records)
+    public DroppedItemRuntime(string worldKey, List<DroppedItemSaveRecord> records)
     {
-        matterWorldKey = scene.name;
+        if (string.IsNullOrWhiteSpace(worldKey)) throw new ArgumentException("掉落物世界身份为空。", nameof(worldKey));
+        matterWorldKey = worldKey;
         try
         {
             domain = WorldTopologyRuntime.GetActiveDomain();
-            presentation = new DroppedItemPresentation(scene, simulation, visuals, payloads);
             if (records != null)
                 foreach (DroppedItemSaveRecord record in records) Restore(record);
             MachineWorld.CellChanged += RefreshTransportCell;
@@ -41,6 +42,20 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             presentation?.Dispose(); simulation.Dispose();
             throw;
         }
+    }
+
+    public DroppedItemRuntime(Scene scene, List<DroppedItemSaveRecord> records)
+        : this(ResolveSceneWorldKey(scene), records)
+    {
+        try { BindScenePresentation(scene); }
+        catch { Dispose(); throw; }
+    }
+
+    private static string ResolveSceneWorldKey(Scene scene)
+    {
+        if (!GameplayWorldRegistry.TryResolveWorldKeyForScene(scene, out string worldKey))
+            throw new InvalidOperationException("掉落物场景没有明确的世界归属。");
+        return worldKey;
     }
 
     #region 冷载荷与空间登记
@@ -76,7 +91,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     public void Remove(int id)
     {
         if (!simulation.Contains(id)) return;
-        presentation.Remove(id);
+        presentation?.Remove(id);
         if (spatialOwners.TryGetValue(id, out Vector2Int cell))
         {
             HashSet<int> bucket = spatial[cell]; bucket.Remove(id);
@@ -107,7 +122,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             if (!spatial.TryGetValue(cell, out HashSet<int> bucket)) spatial.Add(cell, bucket = new HashSet<int>());
             bucket.Add(id); spatialOwners[id] = cell;
         }
-        presentation.Changed(id);
+        presentation?.Changed(id);
         if (MachineWorld.GetTransportAt(body.Position) != null) transportItems.Add(id);
         else transportItems.Remove(id);
     }
@@ -148,7 +163,35 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         using (PickupTickMarker.Auto()) TickPickup(deltaTime, pickers);
     }
 
-    public void Present(Camera camera) => presentation.Present(camera, domain, spatial, SpatialCellSize);
+    // 视图只绑定有效的世界场景，重绑不改变掉落物模拟与句柄。
+    public void BindScenePresentation(Scene scene)
+    {
+        if (!scene.IsValid() || !scene.isLoaded) { DetachScenePresentation(); return; }
+        if (presentation != null && presentationScene == scene) return;
+        DetachScenePresentation();
+        presentation = new DroppedItemPresentation(scene, simulation, visuals, payloads);
+        presentationScene = scene;
+    }
+
+    public void DetachScenePresentation(Scene scene)
+    {
+        if (presentation != null && presentationScene == scene) DetachScenePresentation();
+    }
+
+    private void DetachScenePresentation()
+    {
+        DroppedItemPresentation previous = presentation;
+        presentation = null;
+        presentationScene = default;
+        previous?.Dispose();
+    }
+
+    public void Present(Camera camera)
+    {
+        if (presentation != null && (!presentationScene.IsValid() || !presentationScene.isLoaded))
+            DetachScenePresentation();
+        presentation?.Present(camera, domain, spatial, SpatialCellSize);
+    }
 
     public List<DroppedItemSaveRecord> Capture(bool includeUnresolved = true)
     {
@@ -198,7 +241,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         transportItems.Clear(); transportScratch.Clear();
         environmentMotionOwners.Clear();
         ClearTerrainSubscriptions();
-        presentation.Dispose(); simulation.Dispose();
+        DetachScenePresentation(); simulation.Dispose();
         payloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
         pickupAttempts.Clear();
         pickupAttemptCapacityRevisions.Clear();
@@ -219,7 +262,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         LightweightDroppedBody body = simulation.Get(id);
         Vector2 movement = domain.ShortestDelta(body.Position, position);
         if (movement.sqrMagnitude <= .00000001f) return false;
-        if (interpolationSeconds > 0f) presentation.RecordWaterDrift(id, movement, interpolationSeconds);
+        if (interpolationSeconds > 0f) presentation?.RecordWaterDrift(id, movement, interpolationSeconds);
         body.Position = position;
         simulation.Set(body);
         UpdatePlacement(id);

@@ -20,7 +20,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 权威、所有权与坐标
 
-- `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。纯 `WorldRuntime` 可在生成调度器关闭后由新调度器接管，迟到结果按请求版本释放；当前 Unity 地表 `ChunkMgr` 退出时仍释放世界，飞船独立世界尚未接入。
+- `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。`GameplayWorldRegistry` 按 WorldKey 持有纯 `WorldRuntime`，一个区块管理器借用调度；切场景先保存/解绑再关闭调度器，世界模型留到会话结束或网络快照替换，飞船独立世界尚未接入。
 - `ChunkRuntime + ChunkTerrainData` 是权威；Tilemap/Collider/Renderer 是投影。后台与 Burst 只接收冻结值，不访问 Unity 对象；`RuntimeTileDefinition/Behaviour` 留在主线程资源层。
 - 提交核对世界 Epoch 和请求版本；取消/失败/逐出释放生成结果及租约。`Seal` 将池化 Liquid 深度/类型和环境数组唯一所有权交给区块，Dispose 归还；`height` 随区块存活，只作原生成高度。生成结束一次汇总固定湿度/两层降水/风力，`ChunkTerrainData.WeatherProfile` 持有不可变天气概率/强度/持续时间，运行时不随环境层差量重算。
 - Liquid 的会话索引来自冻结 `LiquidTypeCatalog`；哈希/持久化使用稳定 LiquidId。Ground 与 Liquid 分开，`SetLiquid` 不写 Ground。Liquid 权威数组、批次、快照与存档均使用 `int LiquidLevel` 0～10，一份一级；`LiquidCellValue.NormalizeLevel` 限级并在零级清类型，`GetLiquidDepth` 只派生 0～1 比例。整数流动同量扣源和增目标，不能分别取整写回造水。
@@ -46,7 +46,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 离开窗口的 pending/后台请求取消，已有地面的旧 View/表现租约保留到平滑雾窗外才解绑；重入目标复用，换维度/关闭窗口清理。折返、连续跨块不重置到旧边界，规则见 Rendering/zoom_cloud_transition。保留请求按玩家现位置重排，同区块移动只改优先级；Mod_ChunkLoader 与 RetargetRuntimePresentationQueue 共用预加载距离。
 - 基础地形跨 Chunk 优先，草/碰撞/导航/自然物后续轮转；续步骤先取基础未完成块，再按当前距离选择，单块每帧最多一步。`ChunkTilemapRenderer` 初绑每步最多64格，网格批写跨步、每层上传分别让帧，全部完成才发布基础就绪/重建事件；绑定间的地形/邻区脏格合并重扫，资源变化重启扫描，取消按绑定版本释放。`IIncrementalChunkViewRenderer` 扫描跳过项也计预算，自然物先宿主后伴生；宿主扫描时同时缓存伴生候选，第二阶段只扫候选，保持相对顺序和原每步预算并在解绑/取消时清理。规则 `ecology/companion_bind_candidates`。完成初绑后再季节补位。单项装配仍可能超时。
 - `ChunkMgr.ProcessRuntimePresentationFrame` 每帧借用管理器实际所属世界，返回后才让帧；取消、解绑与天气收尾同样按归属执行。已注销或被替代的管理器不推进、不补建世界；已解绑池壳可直接销毁。
-- `ChunkMgr.OnDestroy` 先终止再借现有 owner 释放上下文；记录缺失/已换 owner 时只清自身 View、协程、池与纯数据，不按世界地址卸载建筑或清新世界全局状态；纯数据 Dispose 由 finally 保证。正常流送解绑仍严格核对加载与归属。
+- `ChunkMgr.OnDestroy` 先终止再借现有 owner 释放上下文；记录缺失/已换 owner 时只清自身 View、协程、池及调度器，不按世界地址清新世界，也不销毁会话世界模型。意外卸载已销毁且未快照的活体无法补回；无场景时当前居民休眠，不能视为持续模拟。
 - 正常注销和 OnDestroy 共用已核对的释放上下文；建筑收尾的坐标换算只读尚未释放的 Profile，不调用 EnsureWorldRuntime。释放结束后仍拒绝重新访问已终止管理器；回归真实起降后再离开地表。
 - 差量在基础绑定前恢复，同一 Runtime 不因窗口刷新重复恢复。外圈预取只等待可见数据/基础地形，不等全部后续表现。
 - `WorldManager.prefab` 序列化提交/基础/后续预算覆盖源码默认值。GM 可调数量与毫秒上限；`StreamingDiagnostics` 分开记录排队、生成、提交、恢复、renderer 步骤与等待，读取诊断不推进世界。

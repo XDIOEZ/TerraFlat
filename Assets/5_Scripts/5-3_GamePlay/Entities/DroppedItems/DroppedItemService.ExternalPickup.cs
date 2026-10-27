@@ -11,11 +11,14 @@ public static partial class DroppedItemService
     {
         remaining = payload?.Stack?.Amount ?? 0f;
         if (remaining <= 0f || payload.Stack.CanBePickedUp != true) return false;
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrEmpty(worldKey)) return false;
         using var pickerLease = UnityEngine.Pool.ListPool<Mod_ItemPicker>.Get(out List<Mod_ItemPicker> scratch);
         scratch.AddRange(pickers);
         foreach (Mod_ItemPicker picker in scratch)
         {
-            if (picker == null || picker.gameObject.scene.name != GameplayWorldRegistry.ExecutionWorldKey ||
+            if (picker == null || GameplayWorldRegistry.GetItemWorldKey(picker.item) != worldKey ||
+                picker.gameObject.scene != GameplayWorldRegistry.CurrentScene ||
                 !picker.CanPickUp || !picker.TryGetDroppedPickupBounds(out Bounds bounds) ||
                 !bounds.Contains(new Vector3(point.x, point.y, bounds.center.z)) || !picker.CanReachDroppedPoint(point)) continue;
             ItemData candidate = FastCloner.FastCloner.DeepClone(payload);

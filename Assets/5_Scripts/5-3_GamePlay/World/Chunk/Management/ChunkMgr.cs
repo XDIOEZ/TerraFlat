@@ -738,8 +738,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     public static Vector2 GetChunkSize()
     {
-        var sceneName = GameplayWorldRegistry.CurrentScene.name;
-        if (SpaceMgr.IsSpaceScene(sceneName)) return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
+        var worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        if (SpaceMgr.IsSpaceScene(worldKey)) return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
 
         // 添加null检查，防止出现NullReferenceException
         if (SaveDataMgr.Instance == null)
@@ -763,7 +763,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         var dict = SaveDataMgr.Instance.SaveData.PlanetData_Dict;
 
-        if (dict != null && dict.TryGetValue(sceneName, out var planetData))
+        if (dict != null && !string.IsNullOrEmpty(worldKey) && dict.TryGetValue(worldKey, out var planetData))
         {
             Vector2Int chunkSize = PlanetData.NormalizeChunkSize(planetData.ChunkSize);
             return chunkSize;

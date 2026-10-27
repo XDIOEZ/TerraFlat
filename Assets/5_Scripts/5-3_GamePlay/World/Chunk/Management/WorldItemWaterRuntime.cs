@@ -74,8 +74,11 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         if (!IsActive)
             return;
 
-        using var worldScope = GameplayWorldRegistry.TryGet(gameObject.scene.name, out _)
-            ? GameplayWorldRegistry.UseWorld(gameObject.scene.name) : null;
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(waterItem);
+        if (string.IsNullOrEmpty(worldKey)) return;
+        bool hasWorld = GameplayWorldRegistry.TryGet(worldKey, out _);
+        if (!hasWorld && worldKey != GameplayWorldRegistry.ExecutionWorldKey) return;
+        using var worldScope = hasWorld ? GameplayWorldRegistry.UseWorld(worldKey) : null;
         UpdateWaterState(Mathf.Max(0f, Time.deltaTime));
         ApplyDriftVisualPosition();
     }
@@ -296,7 +299,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         if (chunkMgr != null && chunkMgr.TryGetRuntimeWaterCurrent(waterItem.transform.position, out RuntimeWaterCurrentSample current))
             velocity = current.Direction * ResolveDriftSpeed(current.Kind, current.Flow, waterItem.itemData.Stack);
         Vector2 currentPosition = waterItem.transform.position;
-        Vector2 targetPosition = LooseItemMotion.AdvanceWater(gameObject.scene.name, waterItem.itemData,
+        Vector2 targetPosition = LooseItemMotion.AdvanceWater(GameplayWorldRegistry.GetItemWorldKey(waterItem), waterItem.itemData,
             currentPosition, velocity, deltaTime, !IsSubmerged);
         if (!LooseItemMotion.CommitItemPosition(waterItem, targetPosition)) return;
         driftInterpolation.RecordMovement(

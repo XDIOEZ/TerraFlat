@@ -292,6 +292,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 只调用 ClearAllChunk 会遗漏运行时区块，退出后迟到的回调可能再次激活已销毁对象。
         Debug.Log("[ExitGame] 开始清理区块...");
         ChunkMgr.Instance.OnSceneChange();
+        GameplayWorldRegistry.ReleaseAllOwnedWorldModels();
 
         // Chunk 对象池会在帧末销毁旧 Item，确认完成后再重建索引，
         // 避免下次 Event_GameWorldEnter 读取到已销毁的 GameItem。
@@ -329,6 +330,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 场景卸载后再清理一次，覆盖不归属 Chunk 的运行时 Item。
         ItemMgr.Instance?.CleanupNullItems();
+        GameplayWorldRegistry.ClearSessionWorldOwnership();
 
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 5：收尾阶段

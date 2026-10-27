@@ -17,6 +17,7 @@ namespace FlatWorld.Tests.EditMode
         private const BindingFlags PrivateStatic = BindingFlags.Static | BindingFlags.NonPublic;
         private readonly List<GameObject> roots = new();
         private readonly List<string> worldKeys = new();
+        private readonly List<WorldRuntime> unownedWorlds = new();
         private object previousExecution;
         private object previousMachineScope;
         private object previousMachineOverride;
@@ -41,6 +42,19 @@ namespace FlatWorld.Tests.EditMode
         {
             SetExecution(previousExecution);
             foreach (string key in worldKeys) Registry.Remove(key);
+            foreach (GameObject root in roots)
+            {
+                ChunkMgr manager = root != null ? root.GetComponent<ChunkMgr>() : null;
+                if (manager != null && manager.RuntimeChunks != null)
+                    Invoke(manager, "DetachAfterPresentationSceneUnloaded");
+            }
+            foreach (string key in worldKeys)
+            {
+                var args = new object[] { key, null };
+                if ((bool)InvokeRegistry("TryGetOwnedWorldModel", args))
+                    InvokeRegistry("ReleaseOwnedWorldModel", key, args[1]);
+            }
+            foreach (WorldRuntime world in unownedWorlds) world.Dispose();
             foreach (GameObject root in roots) if (root != null) UnityEngine.Object.DestroyImmediate(root);
             foreach (string key in worldKeys) MachineScopes.Remove(key);
             typeof(MachineWorld).GetField("scope", PrivateStatic).SetValue(null, previousMachineScope);
@@ -48,6 +62,7 @@ namespace FlatWorld.Tests.EditMode
             typeof(SingletonAutoMono<SaveDataMgr>).GetField("instance", PrivateStatic).SetValue(null, previousSaveDataManager);
             roots.Clear();
             worldKeys.Clear();
+            unownedWorlds.Clear();
         }
 
         [TestCase(false)]
@@ -90,7 +105,7 @@ namespace FlatWorld.Tests.EditMode
         }
 
         [Test]
-        public void ChunkOwnerDestroy_UnloadedRegisteredSceneReleasesPureWorldWithoutRecreation()
+        public void ChunkOwnerDestroy_UnloadedSceneDetachesButSessionRetainsPureWorld()
         {
             string key = NewWorldKey();
             ChunkMgr manager = NewInactiveComponent<ChunkMgr>();
@@ -101,9 +116,59 @@ namespace FlatWorld.Tests.EditMode
             Assert.That(GameplayWorldRegistry.TryGet(key, out _), Is.False);
             Assert.DoesNotThrow(() => Invoke(manager, "OnDestroy"));
             Assert.That(manager.RuntimeChunks, Is.Null);
-            Assert.Throws<ObjectDisposedException>(() => world.Tick(0));
+            Assert.DoesNotThrow(() => world.Tick(0));
             Assert.That(Registry[key], Is.SameAs(record));
             Assert.That((bool)GetField(manager, "<IsWorldRuntimeShuttingDown>k__BackingField"), Is.True);
+            Assert.That((bool)InvokeRegistry("ReleaseOwnedWorldModel", key, world), Is.True);
+            Assert.Throws<ObjectDisposedException>(() => world.Tick(0));
+        }
+
+        [Test]
+        public void ChunkOwnerSceneDetach_SameWorldIsReattachedUntilSessionExplicitlyReleasesIt()
+        {
+            string key = NewWorldKey();
+            var world = (WorldRuntime)InvokeRegistry("GetOrCreateOwnedWorldModel", key, 7L);
+            var address = new ModelWorldAddress("surface", new Int2(0, 0));
+            var profile = new ChunkGenerationProfileSnapshot("owner-scene-test", 1, 2, 2);
+            ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1, profile);
+            using var buffer = new ChunkTerrainBuffer(2, 2);
+            buffer.SetCell(0, 0, new TerrainCell(23, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+            using var result = new ChunkGenerationResult(request, buffer);
+            Assert.That(world.TryCommit(result, out _), Is.True);
+            world.TryGetChunk(address, out ChunkRuntime originalChunk);
+            ChunkLease retention = world.AcquireChunkLease(address, ChunkLeaseKind.DataRetention);
+            try
+            {
+                ChunkMgr first = NewInactiveComponent<ChunkMgr>();
+                ChunkMgr second = NewInactiveComponent<ChunkMgr>();
+                first.BindNetworkWorld(key);
+                second.BindNetworkWorld(key);
+                Assert.That(AttachPureWorld(first, key), Is.SameAs(world));
+                ChunkView view = AttachOwnViewWithLease(first, world);
+                Assert.Throws<InvalidOperationException>(() => AttachPureWorld(second, key));
+                Assert.That((bool)InvokeRegistry("ReleaseOwnedWorldModel", key, world), Is.False);
+
+                Invoke(first, "DetachAfterPresentationSceneUnloaded");
+                Assert.That(first.RuntimeChunks, Is.Null);
+                Assert.That(view == null, Is.True);
+                Assert.That(originalChunk.DataRetentionLeaseCount, Is.EqualTo(1));
+                Assert.That(AttachPureWorld(second, key), Is.SameAs(world));
+                Assert.That(world.Epoch, Is.EqualTo(7));
+                Assert.That(world.TryGetChunk(address, out ChunkRuntime restored), Is.True);
+                Assert.That(restored, Is.SameAs(originalChunk));
+                Assert.That(restored.Terrain.GetCell(0, 0).GroundTileId, Is.EqualTo(23));
+                Invoke(first, "DetachAfterPresentationSceneUnloaded");
+                Assert.That(second.WorldRuntime, Is.SameAs(world));
+                Invoke(second, "DetachAfterPresentationSceneUnloaded");
+                retention.Dispose();
+                Assert.That((bool)InvokeRegistry("ReleaseOwnedWorldModel", key, world), Is.True);
+                Assert.Throws<ObjectDisposedException>(() => world.Tick(0));
+                var replacement = (WorldRuntime)InvokeRegistry("GetOrCreateOwnedWorldModel", key, 8L);
+                Assert.That((bool)InvokeRegistry("ReleaseOwnedWorldModel", key, world), Is.False);
+                Assert.DoesNotThrow(() => replacement.Tick(0));
+                Assert.That((bool)InvokeRegistry("ReleaseOwnedWorldModel", key, replacement), Is.True);
+            }
+            finally { retention.Dispose(); }
         }
 
         [TestCase(false)]
@@ -114,7 +179,7 @@ namespace FlatWorld.Tests.EditMode
             string currentKey = replaceOwner ? key : NewWorldKey();
             ChunkMgr oldOwner = NewInactiveComponent<ChunkMgr>();
             oldOwner.BindNetworkWorld(key);
-            var oldWorld = AttachPureWorld(oldOwner, key);
+            var oldWorld = AttachUnownedPureWorld(oldOwner, key);
             ChunkMgr currentOwner = NewInactiveComponent<ChunkMgr>();
             currentOwner.BindNetworkWorld(currentKey);
             var currentWorld = AttachPureWorld(currentOwner, currentKey);
@@ -129,7 +194,7 @@ namespace FlatWorld.Tests.EditMode
                 Assert.That(ownView == null, Is.True, "旧管理器自有 View 必须销毁");
                 Assert.That(((IDictionary)GetField(oldOwner, "activeRuntimeBindings")).Count, Is.Zero);
                 Assert.That(oldOwner.RuntimeChunks, Is.Null);
-                Assert.Throws<ObjectDisposedException>(() => oldWorld.Tick(0));
+                Assert.DoesNotThrow(() => oldWorld.Tick(0));
                 Assert.DoesNotThrow(() => currentWorld.Tick(0));
                 Assert.That(WorldLiquidFlowObstacles.IsBlocked(Vector2Int.zero), Is.True, "不得清理当前世界的阻挡");
                 Assert.That(Registry[currentKey], Is.SameAs(currentRecord));
@@ -154,11 +219,13 @@ namespace FlatWorld.Tests.EditMode
             Assert.Throws<InvalidOperationException>(() => oldOwner.ReleaseRegisteredWorld());
             Assert.That(oldOwner.RuntimeChunks, Is.Not.Null);
             Invoke(oldOwner, "OnDestroy");
+            Assert.DoesNotThrow(() => world.Tick(0));
+            Assert.That((bool)InvokeRegistry("ReleaseOwnedWorldModel", key, world), Is.True);
             Assert.Throws<ObjectDisposedException>(() => world.Tick(0));
         }
 
         [Test]
-        public void ChunkOwnerDestroy_SubscriptionCleanupFailureStillDisposesPureWorld()
+        public void ChunkOwnerDestroy_SubscriptionCleanupFailureStillReturnsWorldToSession()
         {
             string key = NewWorldKey();
             ChunkMgr owner = NewInactiveComponent<ChunkMgr>();
@@ -167,6 +234,8 @@ namespace FlatWorld.Tests.EditMode
             SetField(owner, "sightBlockingChunkCommittedSubscription", new FailingCleanupSubscription());
             Assert.Throws<InvalidOperationException>(() => Invoke(owner, "OnDestroy"));
             Assert.That(owner.RuntimeChunks, Is.Null);
+            Assert.DoesNotThrow(() => world.Tick(0));
+            Assert.That((bool)InvokeRegistry("ReleaseOwnedWorldModel", key, world), Is.True);
             Assert.Throws<ObjectDisposedException>(() => world.Tick(0));
         }
 
@@ -179,10 +248,10 @@ namespace FlatWorld.Tests.EditMode
             string key = NewWorldKey();
             ChunkMgr oldOwner = NewInactiveComponent<ChunkMgr>();
             oldOwner.BindNetworkWorld(key);
-            WorldRuntime oldWorld = AttachPureWorld(oldOwner, key);
+            WorldRuntime oldWorld = replaceOwner ? AttachUnownedPureWorld(oldOwner, key) : AttachPureWorld(oldOwner, key);
             ChunkMgr newOwner = NewInactiveComponent<ChunkMgr>();
             newOwner.BindNetworkWorld(key);
-            WorldRuntime newWorld = AttachPureWorld(newOwner, key);
+            WorldRuntime newWorld = replaceOwner ? AttachPureWorld(newOwner, key) : AttachUnownedPureWorld(newOwner, key);
             RegisterWorld(key, replaceOwner ? newOwner : oldOwner, null);
             var address = new ModelWorldAddress("cleanup-tilling-" + Guid.NewGuid().ToString("N"), new Int2(0, 0));
             using ChunkLease oldLease = oldWorld.AcquireChunkLease(address, ChunkLeaseKind.Presentation);
@@ -283,7 +352,15 @@ namespace FlatWorld.Tests.EditMode
 
         private static WorldRuntime AttachPureWorld(ChunkMgr manager, string key)
         {
+            var world = (WorldRuntime)InvokeRegistry("GetOrCreateOwnedWorldModel", key, 1L);
+            Invoke(manager, "AttachOwnedWorldRuntime", world, new DeterministicChunkGenerator());
+            return world;
+        }
+
+        private WorldRuntime AttachUnownedPureWorld(ChunkMgr manager, string key)
+        {
             var world = new WorldRuntime(key, 1);
+            unownedWorlds.Add(world);
             SetField(manager, "runtimeChunkManager", new ModelChunkMgr(world, new DeterministicChunkGenerator()));
             return world;
         }
@@ -319,6 +396,12 @@ namespace FlatWorld.Tests.EditMode
             => target.GetType().GetField(name, PrivateInstance).GetValue(target);
         private static void SetField(object target, string name, object value)
             => target.GetType().GetField(name, PrivateInstance).SetValue(target, value);
+        private static object InvokeRegistry(string method, params object[] args)
+        {
+            try { return typeof(GameplayWorldRegistry).GetMethod(method, PrivateStatic).Invoke(null, args); }
+            catch (TargetInvocationException exception) when (exception.InnerException != null)
+            { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception.InnerException).Throw(); throw; }
+        }
         private static void Invoke(object target, string method, params object[] args)
         {
             try { target.GetType().GetMethod(method, PrivateInstance).Invoke(target, args); }

@@ -19,6 +19,7 @@ public static class GameplayTestOwnedWorldRuntimeProbe
     {
         GameplayTestSystemProbe.Register("world_streaming", "runtime_owner_identity", Capture);
         GameplayTestSystemProbe.Register("world_streaming", "runtime_owner_handoff", CaptureHandoff);
+        GameplayTestSystemProbe.Register("world_streaming", "runtime_scene_detach", CaptureSceneDetachAndReattach);
     }
 
     private static JObject Capture(JObject arguments)
@@ -75,6 +76,83 @@ public static class GameplayTestOwnedWorldRuntimeProbe
             ["retentionCount"] = found ? after.DataRetentionLeaseCount : -1,
             ["newSchedulerTick"] = world.TickIndex == 1
         };
+    }
+
+    // 调用正式会话登记和 ChunkMgr 附着接口，验证场景宿主释放后同一世界仍可被重新接管。
+    private static JObject CaptureSceneDetachAndReattach(JObject arguments)
+    {
+        string key = "probe:world-owner-" + Guid.NewGuid().ToString("N");
+        var firstRoot = new GameObject("GameplayTest World Owner A") { hideFlags = HideFlags.HideAndDontSave };
+        var secondRoot = new GameObject("GameplayTest World Owner B") { hideFlags = HideFlags.HideAndDontSave };
+        firstRoot.SetActive(false);
+        secondRoot.SetActive(false);
+        ChunkMgr first = firstRoot.AddComponent<ChunkMgr>();
+        ChunkMgr second = secondRoot.AddComponent<ChunkMgr>();
+        first.BindNetworkWorld(key);
+        second.BindNetworkWorld(key);
+        WorldRuntime world = null;
+        WorldRuntime replacement = null;
+        try
+        {
+            world = GameplayWorldRegistry.GetOrCreateOwnedWorldModel(key, 7);
+            var address = new RuntimeWorldAddress("probe", new Int2(0, 0));
+            var profile = new ChunkGenerationProfileSnapshot("owner-scene-probe", 1, 2, 2);
+            ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1, profile);
+            using var buffer = new ChunkTerrainBuffer(2, 2);
+            buffer.SetCell(0, 0, new TerrainCell(23, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+            using var generated = new ChunkGenerationResult(request, buffer);
+            bool committed = world.TryCommit(generated, out _);
+            world.TryGetChunk(address, out ChunkRuntime before);
+            first.AttachOwnedWorldRuntime(world, new DeterministicChunkGenerator());
+            bool competingOwnerRejected = false;
+            try { second.AttachOwnedWorldRuntime(world, new DeterministicChunkGenerator()); }
+            catch (InvalidOperationException) { competingOwnerRejected = true; }
+            bool attachedReleaseRejected = !GameplayWorldRegistry.ReleaseOwnedWorldModel(key, world);
+            first.DetachAfterPresentationSceneUnloaded();
+            bool oldSchedulerDetached = first.RuntimeChunks == null;
+            WorldRuntime returned = GameplayWorldRegistry.GetOrCreateOwnedWorldModel(key, 99);
+            second.AttachOwnedWorldRuntime(returned, new DeterministicChunkGenerator());
+            first.DetachAfterPresentationSceneUnloaded();
+            bool found = returned.TryGetChunk(address, out ChunkRuntime after);
+            bool sameData = ReferenceEquals(world, returned) && ReferenceEquals(before, after) && found &&
+                            after.Terrain != null && after.Terrain.GetCell(0, 0).GroundTileId == 23;
+            bool epochPreserved = returned.Epoch == 7;
+            bool newOwnerIntact = ReferenceEquals(second.WorldRuntime, returned);
+            second.DetachAfterPresentationSceneUnloaded();
+            bool explicitlyReleased = GameplayWorldRegistry.ReleaseOwnedWorldModel(key, returned);
+            bool disposed = false;
+            try { returned.Tick(0); }
+            catch (ObjectDisposedException) { disposed = true; }
+            replacement = GameplayWorldRegistry.GetOrCreateOwnedWorldModel(key, 8);
+            bool staleReleaseRejected = !GameplayWorldRegistry.ReleaseOwnedWorldModel(key, returned);
+            replacement.Tick(0);
+            bool replacementIntact = replacement.TickIndex == 1;
+            bool replacementReleased = GameplayWorldRegistry.ReleaseOwnedWorldModel(key, replacement);
+            return new JObject
+            {
+                ["committed"] = committed,
+                ["competingOwnerRejected"] = competingOwnerRejected,
+                ["attachedReleaseRejected"] = attachedReleaseRejected,
+                ["oldSchedulerDetached"] = oldSchedulerDetached,
+                ["sameData"] = sameData,
+                ["epochPreserved"] = epochPreserved,
+                ["newOwnerIntact"] = newOwnerIntact,
+                ["explicitlyReleased"] = explicitlyReleased,
+                ["disposed"] = disposed,
+                ["staleReleaseRejected"] = staleReleaseRejected,
+                ["replacementIntact"] = replacementIntact,
+                ["replacementReleased"] = replacementReleased
+            };
+        }
+        finally
+        {
+            if (first.RuntimeChunks != null) first.DetachAfterPresentationSceneUnloaded();
+            if (second.RuntimeChunks != null) second.DetachAfterPresentationSceneUnloaded();
+            if (replacement != null) GameplayWorldRegistry.ReleaseOwnedWorldModel(key, replacement);
+            if (world != null) GameplayWorldRegistry.ReleaseOwnedWorldModel(key, world);
+            UnityEngine.Object.DestroyImmediate(firstRoot);
+            UnityEngine.Object.DestroyImmediate(secondRoot);
+        }
     }
 
     #endregion

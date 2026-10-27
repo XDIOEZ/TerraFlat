@@ -1248,10 +1248,14 @@ public partial class ChunkMgr
 
         if (!ReferenceEquals(binding.RestoredEntitiesChunk, chunk) && ItemMgr.Instance != null)
         {
+            bool restoredBuildings;
             using (WorldRuntime.StreamingDiagnostics.Measure("restore.buildings"))
-                saveData.RestoreRuntimeBuildingsForChunk(address);
+                restoredBuildings = saveData.RestoreRuntimeBuildingsForChunk(address);
+            if (!restoredBuildings) return false;
+            bool restoredAi;
             using (WorldRuntime.StreamingDiagnostics.Measure("restore.entities"))
-                saveData.RestoreRuntimeAiEntitiesForChunk(address);
+                restoredAi = saveData.RestoreRuntimeAiEntitiesForChunk(address);
+            if (!restoredAi) return false;
             binding.RestoredEntitiesChunk = chunk;
         }
 

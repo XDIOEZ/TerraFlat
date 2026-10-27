@@ -50,7 +50,7 @@ public partial class SaveDataMgr
             foreach (Item item in candidates)
             {
                 if (!IsRuntimeBuildingItem(item, out _) || item.DestructionHandled || item.IsInPool ||
-                    item.gameObject.scene != GameplayWorldRegistry.CurrentScene ||
+                    GameplayWorldRegistry.GetItemWorldKey(item) != planet ||
                     FlatWorld.Spaceflight.SpaceSession.Current?.Owns(item.itemData.Guid) == true)
                 {
                     chunks.UnregisterRuntimeBuilding(item);

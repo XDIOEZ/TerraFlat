@@ -67,12 +67,23 @@ public partial class SaveDataMgr
         foreach (string key in snapshot.Machines.Worlds.Keys)
             if (key != snapshot.WorldKey) throw new InvalidDataException("机器资料越过目标世界边界。");
         RestoreEcologyChunks(subset, snapshot.Ecology);
+        GameplayWorldRegistry.TryGetOwnedWorldModel(snapshot.WorldKey, out var previousWorld);
         if (GameplayWorldRegistry.TryGet(snapshot.WorldKey, out GameplayWorldRuntime runtime))
         {
-            using (GameplayWorldRegistry.UseWorld(snapshot.WorldKey)) runtime.Chunks.OnSceneChange();
-            MachineWorld.ReleaseNetworkScope(snapshot.WorldKey);
-            worldRestoreStates.Remove(snapshot.WorldKey); parkedWorldStates.Remove(snapshot.WorldKey);
+            if (!ChunkManagerBelongsToSnapshotWorld(runtime.Chunks, snapshot.WorldKey, allowUnowned: true))
+                throw new InvalidOperationException("旧场景管理器已属于其他世界，不能替换目标快照。");
+            using (GameplayWorldRegistry.UseWorld(snapshot.WorldKey)) runtime.Chunks?.OnSceneChange();
         }
+        else if (GameplayWorldRegistry.Worlds.TryGetValue(snapshot.WorldKey, out GameplayWorldRuntime staleRuntime) &&
+                 ChunkManagerBelongsToSnapshotWorld(staleRuntime.Chunks, snapshot.WorldKey))
+            staleRuntime.Chunks?.DetachAfterPresentationSceneUnloaded();
+
+        // 网络快照明确替换旧模型；场景解绑不能把之前的区块数据带入新快照。
+        if (previousWorld != null && !GameplayWorldRegistry.ReleaseOwnedWorldModel(snapshot.WorldKey, previousWorld))
+            throw new InvalidOperationException("目标世界仍被旧区块管理器占用，不能应用网络快照。");
+        MachineWorld.ReleaseNetworkScope(snapshot.WorldKey);
+        worldRestoreStates.Remove(snapshot.WorldKey);
+        parkedWorldStates.Remove(snapshot.WorldKey);
         SaveData.PlanetData_Dict[snapshot.WorldKey] = planet;
         SaveData.DimensionStateJson = subset.DimensionStateJson;
         if (subset.MonsterSpawnerWorlds?.TryGetValue(snapshot.WorldKey, out MonsterSpawnerSaveData spawner) == true)
@@ -92,6 +103,14 @@ public partial class SaveDataMgr
         foreach (string key in removeKeys) chunkDeltas.Remove(key);
         foreach (ChunkSaveRecord record in records) chunkDeltas[BuildChunkKey(snapshot.WorldKey, record.ChunkName)] = record;
         return snapshot.WorldKey;
+    }
+
+    // 旧注册记录不能停止已经转交给另一个世界的区块管理器。
+    private static bool ChunkManagerBelongsToSnapshotWorld(ChunkMgr manager, string worldKey, bool allowUnowned = false)
+    {
+        if (manager == null) return true;
+        string owner = !string.IsNullOrEmpty(manager.OwnedWorldKey) ? manager.OwnedWorldKey : manager.WorldRuntime?.WorldId;
+        return string.IsNullOrEmpty(owner) ? allowUnowned : string.Equals(owner, worldKey, StringComparison.Ordinal);
     }
     #endregion
 }

@@ -22,6 +22,7 @@ public partial class SaveDataMgr
         public readonly List<RuntimeWorldAddress> Addresses = new();
         public readonly Dictionary<RuntimeWorldAddress, int> Indices = new();
         public readonly HashSet<RuntimeWorldAddress> QueryAddresses = new();
+        public readonly HashSet<int> SceneDetachedLiveGuids = new();
     }
     private readonly Dictionary<string, ParkedWorldState> parkedWorldStates = new(StringComparer.Ordinal);
     private ParkedWorldState ParkedWorld
@@ -155,6 +156,121 @@ public partial class SaveDataMgr
     private int ecologySnapshotReaders;
     public bool IsEcologySnapshotInProgress => ecologySnapshotReaders > 0;
 
+    private readonly struct RuntimeAiSceneUnbindingCapture
+    {
+        public readonly Item Item;
+        public readonly ItemData Snapshot;
+        public readonly RuntimeWorldAddress Address;
+        public RuntimeAiSceneUnbindingCapture(Item item, ItemData snapshot, RuntimeWorldAddress address)
+        { Item = item; Snapshot = snapshot; Address = address; }
+    }
+
+    // 场景解绑前先完整捕获世界居民，再休眠实例并允许同一世界重新恢复。
+    internal bool PrepareRuntimeWorldForSceneUnbinding(string worldKey)
+    {
+        if (!GameNetwork.HasStateAuthority) return true;
+        if (string.IsNullOrEmpty(worldKey) ||
+            !string.Equals(worldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal)) return false;
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        ItemMgr manager = ItemMgr.GetExistingInstance();
+        if (chunks?.WorldRuntime == null)
+        {
+            if (!CaptureRuntimeTerrainStates()) return false;
+            if (manager == null) return GameplayWorldRegistry.GetWorldItemCount(worldKey) == 0;
+            foreach (Item item in manager.WorldRunTimeItems.Values)
+                if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey && manager.IsRuntimeAiEntity(item))
+                    return false;
+            return true;
+        }
+        if (SaveData == null || IsEcologySnapshotInProgress || chunks.WorldRuntime.WorldId != worldKey) return false;
+        var attempted = new List<RuntimeAiSceneUnbindingCapture>();
+        try
+        {
+            if (!CaptureRuntimeTerrainStates()) return false;
+            if (manager == null) return GameplayWorldRegistry.GetWorldItemCount(worldKey) == 0;
+            EnsureRuntimeAiRestoreScope();
+            // 修复刚接管世界时仍未进入地址桶的已登记生物。
+            var runtimeItems = new List<Item>(manager.WorldRunTimeItems.Values);
+            foreach (Item item in runtimeItems)
+                if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey && manager.IsRuntimeAiEntity(item))
+                    manager.NotifyRuntimeItemMoved(item);
+            var captures = new List<RuntimeAiSceneUnbindingCapture>();
+            if (!CaptureRuntimeAiEntityStates(captures)) return false;
+            foreach (RuntimeAiSceneUnbindingCapture capture in captures)
+            {
+                Item item = capture.Item;
+                if (item == null || item.itemData == null || item.itemData.Guid != capture.Snapshot.Guid ||
+                    GameplayWorldRegistry.GetItemWorldKey(item) != worldKey ||
+                    !ReferenceEquals(manager.GetItemByGuid(capture.Snapshot.Guid), item)) return false;
+            }
+            foreach (RuntimeAiSceneUnbindingCapture capture in captures)
+            {
+                Item item = capture.Item;
+                if (item == null || item.itemData == null || item.itemData.Guid != capture.Snapshot.Guid ||
+                    GameplayWorldRegistry.GetItemWorldKey(item) != worldKey ||
+                    !ReferenceEquals(manager.GetItemByGuid(capture.Snapshot.Guid), item))
+                {
+                    RestoreSceneUnbindingAiAfterFailure(manager, attempted);
+                    return false;
+                }
+                attempted.Add(capture);
+                if (!TryParkRuntimeAiSnapshot(item, capture.Snapshot, capture.Address))
+                {
+                    RestoreSceneUnbindingAiAfterFailure(manager, attempted);
+                    return false;
+                }
+                ParkedWorld.SceneDetachedLiveGuids.Add(capture.Snapshot.Guid);
+            }
+            restoredRuntimeAiChunks.Clear();
+            return true;
+        }
+        catch (Exception exception)
+        {
+            RestoreSceneUnbindingAiAfterFailure(manager, attempted);
+            Debug.LogError($"[SaveDataMgr] 世界居民解绑失败，保留场景：{worldKey}，{exception}");
+            return false;
+        }
+    }
+
+    // 中途失败时立即恢复已休眠居民；恢复失败的快照仍留在世界仓库供后续重试。
+    private void RestoreSceneUnbindingAiAfterFailure(ItemMgr manager, List<RuntimeAiSceneUnbindingCapture> attempted)
+    {
+        if (attempted.Count == 0) return;
+        restoredRuntimeAiChunks.Clear();
+        foreach (RuntimeAiSceneUnbindingCapture capture in attempted)
+        {
+            int guid = capture.Snapshot.Guid;
+            if (!parkedRuntimeAiAddressByGuid.ContainsKey(guid)) continue;
+            Item existing = manager.GetItemByGuid(guid);
+            if (existing != null)
+            {
+                if (GameplayWorldRegistry.GetItemWorldKey(existing) == GameplayWorldRegistry.ExecutionWorldKey &&
+                    manager.IsRuntimeAiEntity(existing)) RemoveParkedRuntimeAi(guid);
+                continue;
+            }
+            if (TryWakeParkedRuntimeAi(capture.Snapshot)) continue;
+            Item restored = null;
+            try
+            {
+                ItemData data = CloneAndRebaseItemData(capture.Snapshot);
+                ItemTransform pose = data.transform;
+                restored = manager.InstantiateItem(data, pose.position, pose.rotation, pose.scale);
+                if (restored == null) continue;
+                restored.Load();
+                RemoveParkedRuntimeAi(guid);
+            }
+            catch (Exception exception)
+            {
+                if (restored != null && !restored.DestructionHandled)
+                {
+                    try { manager.DespawnItem(restored, saveData: false); }
+                    catch (Exception cleanup) { Debug.LogException(cleanup); }
+                }
+                Debug.LogError($"[SaveDataMgr] 解绑回滚暂未恢复生物：{capture.Snapshot.IDName}, Guid={guid}，{exception}");
+            }
+        }
+    }
+
     /// <summary>捕获活体状态并从运行时卸载；写入区块差量后才能销毁实体。</summary>
     public bool TryParkRuntimeAi(Item item)
     {
@@ -168,11 +284,21 @@ public partial class SaveDataMgr
         if (snapshot?.transform == null)
             throw new InvalidOperationException($"生物 {item.name} 的休眠快照缺少位置。");
         RuntimeWorldAddress address = ChunkMgr.ExistingInstance.ResolveWorldAddress(item.transform.position);
+        return TryParkRuntimeAiSnapshot(item, snapshot, address);
+    }
+
+    private bool TryParkRuntimeAiSnapshot(Item item, ItemData snapshot, RuntimeWorldAddress address)
+    {
         AddParkedRuntimeAi(address, snapshot);
         try
         {
             UpsertRuntimeAiRecord(address, snapshot);
             ItemMgr.Instance.DespawnItem(item, saveData: false);
+            if (ReferenceEquals(ItemMgr.Instance.GetItemByGuid(snapshot.Guid), item))
+            {
+                RemoveParkedRuntimeAi(snapshot.Guid);
+                return false;
+            }
             return true;
         }
         catch
@@ -268,6 +394,7 @@ public partial class SaveDataMgr
 
     private void RemoveParkedRuntimeAi(int guid)
     {
+        ParkedWorld.SceneDetachedLiveGuids.Remove(guid);
         if (!parkedRuntimeAiAddressByGuid.TryGetValue(guid, out RuntimeWorldAddress address))
             return;
         parkedRuntimeAiAddressByGuid.Remove(guid);
@@ -307,6 +434,7 @@ public partial class SaveDataMgr
         parkedRuntimeAiAddresses.Clear();
         parkedRuntimeAiAddressIndices.Clear();
         parkedRuntimeAiQueryAddresses.Clear();
+        ParkedWorld.SceneDetachedLiveGuids.Clear();
     }
 
     #endregion
@@ -315,7 +443,7 @@ public partial class SaveDataMgr
 
     private void UpsertRuntimeAiRecord(RuntimeWorldAddress address, ItemData snapshot)
     {
-        string planetName = GameplayWorldRegistry.CurrentScene.name;
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
@@ -335,7 +463,7 @@ public partial class SaveDataMgr
 
     private void RemoveRuntimeAiRecord(RuntimeWorldAddress address, int guid)
     {
-        string key = BuildChunkKey(GameplayWorldRegistry.CurrentScene.name, ToChunkName(address));
+        string key = BuildChunkKey(GameplayWorldRegistry.ExecutionWorldKey, ToChunkName(address));
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record?.ChangedItems == null)
             return;
         record.ChangedItems.RemoveAll(data => data != null && data.Guid == guid);

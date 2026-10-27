@@ -22,7 +22,7 @@ public static partial class DroppedItemService
         { World = world; Record = record; Legacy = legacy; sourceRecords = records; recordIndex = index; }
         public ItemData Data => Legacy != null ? Legacy.itemData : Record?.Data;
         public Vector2 Position => Legacy != null ? Legacy.itemData.transform.position : Record.Position;
-        public bool Valid => Legacy != null ? IsLoosePickable(Legacy) : Record?.Data?.Stack?.Amount >= 1f &&
+        public bool Valid => Legacy != null ? GameplayWorldRegistry.GetItemWorldKey(Legacy) == World && IsLoosePickable(Legacy) : Record?.Data?.Stack?.Amount >= 1f &&
             Record.Data.Stack.CanBePickedUp && !Record.HasFlight && IsCurrentRecord(WorldRecords(World));
 
         // 原下标仍匹配时直接确认身份，扩展回调移动列表后才回退查找。
@@ -162,7 +162,7 @@ public static partial class DroppedItemService
         worldDrops.Clear(); worldDropIdentities.Clear();
         if (ItemMgr.Instance != null)
             foreach (Item item in ItemMgr.Instance.WorldRunTimeItems.Values)
-                if (item != null && item.gameObject.scene.name == world && IsLoosePickable(item) && worldDropIdentities.Add(item.itemData.Guid))
+                if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) == world && IsLoosePickable(item) && worldDropIdentities.Add(item.itemData.Guid))
                     worldDrops.Add(new WorldDrop(world, null, item));
         // 活动轻量世界由原运行体持有，档案只是上次捕获，不能双读双扣。
         if (HasLiveWorld(world)) return;
@@ -211,7 +211,7 @@ public static partial class DroppedItemService
         if (ItemMgr.Instance != null)
             foreach (Item item in ItemMgr.Instance.WorldRunTimeItems.Values)
             {
-                if (item == null || item.gameObject.scene.name != world || !IsLoosePickable(item) ||
+                if (item == null || GameplayWorldRegistry.GetItemWorldKey(item) != world || !IsLoosePickable(item) ||
                     !worldDropIdentities.Add(item.itemData.Guid)) continue;
                 Vector2 position = item.itemData.transform.position;
                 if (ColdFuelCell(position, topology) == cell)

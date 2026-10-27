@@ -35,9 +35,13 @@ public sealed class WorldRuntimeHost : MonoBehaviour
         if (owner == null) return;
         if (!string.IsNullOrEmpty(owner.OwnedWorldKey))
         {
+            // 已解绑的场景不能让旧宿主自动创建世界或继续推进新拥有者的数据。
+            if (!GameplayWorldRegistry.TryGet(owner.OwnedWorldKey, out GameplayWorldRuntime world) ||
+                !ReferenceEquals(world.Chunks, owner)) return;
             using (GameplayWorldRegistry.UseWorld(owner.OwnedWorldKey)) owner.AdvanceWorldRuntime(Time.deltaTime);
         }
-        else owner.AdvanceWorldRuntime(Time.deltaTime);
+        else if (owner.WorldRuntime == null || owner.WorldRuntime.WorldId == GameplayWorldRegistry.ExecutionWorldKey)
+            owner.AdvanceWorldRuntime(Time.deltaTime);
     }
 
     private void OnDestroy()

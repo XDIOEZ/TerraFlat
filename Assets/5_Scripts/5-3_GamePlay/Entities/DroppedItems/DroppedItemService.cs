@@ -110,9 +110,39 @@ public static partial class DroppedItemService
         => key != null && worlds.TryGetValue(key, out DropWorld state) && state.Runtime?.IsCreated == true;
 
     internal static bool IsHandleValid(DroppedItemHandle handle)
-        => handle.Legacy != null ? !handle.Legacy.DestructionHandled &&
-            handle.Legacy.gameObject.scene.name == GameplayWorldRegistry.ExecutionWorldKey
-            : handle.Id != 0 && handle.Epoch == Epoch && Contains(handle.Id);
+    {
+        if (handle.Legacy == null) return handle.Id != 0 && handle.Epoch == Epoch && Contains(handle.Id);
+        if (handle.Legacy.DestructionHandled || handle.Legacy.itemData?.Guid != handle.Id) return false;
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(handle.Legacy);
+        return !string.IsNullOrEmpty(worldKey) ? worldKey == GameplayWorldRegistry.ExecutionWorldKey :
+            IsUnregisteredLegacyPresentationInCurrentScene(handle.Legacy);
+    }
+
+    private static bool IsUnregisteredLegacyPresentationInCurrentScene(Item item)
+    {
+        if (item == null || item.IsInitialized || ItemMgr.GetExistingInstance()?.IsRuntimeItemRegistered(item) == true)
+            return false;
+        Scene scene = item.gameObject.scene;
+        return scene.IsValid() && scene.isLoaded && scene == GameplayWorldRegistry.CurrentScene;
+    }
+
+    // 完整掉落物的账本归属决定操作上下文，未登记或已卸载的其他世界不能借用当前世界。
+    private static bool TryUseLegacyItemWorld(Item item, out IDisposable scope, bool allowUnregisteredPresentation = false)
+    {
+        scope = null;
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
+        if (string.IsNullOrEmpty(worldKey))
+            return allowUnregisteredPresentation && IsUnregisteredLegacyPresentationInCurrentScene(item);
+        if (GameplayWorldRegistry.TryGet(worldKey, out _))
+        {
+            scope = GameplayWorldRegistry.UseWorld(worldKey);
+            return true;
+        }
+        if (worldKey == GameplayWorldRegistry.ExecutionWorldKey) return true;
+        if (!SpaceMgr.IsSpaceScene(worldKey)) return false;
+        scope = GameplayWorldRegistry.UseSpaceScene(worldKey);
+        return scope != null;
+    }
     #endregion
     private static readonly HashSet<Mod_ItemPicker> pickers = new();
     private static readonly Dictionary<Item, LegacyDropPlan> legacyPlans = new();
@@ -215,12 +245,16 @@ public static partial class DroppedItemService
     internal static void TryPickupBottomItem(Item target)
     {
         if (target?.itemData?.Stack?.CanBePickedUp != true) return;
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(target);
+        if (string.IsNullOrEmpty(worldKey)) return;
         uint generation = target.RuntimeGeneration;
         using var pickerLease = UnityEngine.Pool.ListPool<Mod_ItemPicker>.Get(out List<Mod_ItemPicker> snapshot);
         snapshot.AddRange(pickers);
         foreach (Mod_ItemPicker picker in snapshot)
         {
-            if (picker == null || !picker.isActiveAndEnabled || picker.gameObject.scene != target.gameObject.scene) continue;
+            if (picker == null || !picker.isActiveAndEnabled ||
+                GameplayWorldRegistry.GetItemWorldKey(picker.item) != worldKey ||
+                picker.gameObject.scene != target.gameObject.scene) continue;
             picker.TryPickupBottomItem(target);
             if (target == null || target.RuntimeGeneration != generation || target.DestructionHandled ||
                 target.itemData.Stack.CanBePickedUp != true) break;
@@ -344,8 +378,9 @@ public static partial class DroppedItemService
     {
         if (handle.Legacy != null)
         {
-            using var scope = GameplayWorldRegistry.TryGet(handle.Legacy.gameObject.scene.name, out _)
-                ? GameplayWorldRegistry.UseWorld(handle.Legacy.gameObject.scene.name) : null;
+            if (handle.Legacy.DestructionHandled || handle.Legacy.itemData?.Guid != handle.Id ||
+                !TryUseLegacyItemWorld(handle.Legacy, out IDisposable scope, allowUnregisteredPresentation: true)) return;
+            using (scope)
             ItemMgr.Instance?.DespawnItem(handle.Legacy, saveData: false);
             return;
         }
@@ -386,8 +421,8 @@ public static partial class DroppedItemService
     {
         if (item == null || item.PersistenceOwner != null || item.Owner != null || item.InHand || item.DestructionHandled || item.itemData == null ||
             legacyPlans.ContainsKey(item)) return false;
-        using var worldScope = GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _)
-            ? GameplayWorldRegistry.UseWorld(item.gameObject.scene.name) : null;
+        if (!TryUseLegacyItemWorld(item, out IDisposable worldScope)) return false;
+        using var scope = worldScope;
         if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) || definition.IsActor) return false;
         var context = new DroppedItemSpawnContext(DroppedItemSpawnReason.Generic, item, item.transform.position, item.transform.position, 0f);
         if (FindSpawnProvider(context) == null && !ShouldUseLightweightDrop(item.itemData)) return false;
@@ -416,8 +451,12 @@ public static partial class DroppedItemService
         {
             Item item = pair.Key; LegacyDropPlan plan = pair.Value;
             if (item == null || item.DestructionHandled) continue;
-            using var worldScope = GameplayWorldRegistry.TryGet(item.gameObject.scene.name, out _)
-                ? GameplayWorldRegistry.UseWorld(item.gameObject.scene.name) : null;
+            if (!TryUseLegacyItemWorld(item, out IDisposable worldScope))
+            {
+                if (item.itemData?.Stack != null) item.itemData.Stack.CanBePickedUp = true;
+                continue;
+            }
+            using var scope = worldScope;
             DroppedItemHandle spawned = default;
             try
             {
@@ -482,17 +521,36 @@ public static partial class DroppedItemService
     private static void EnsureContext()
     {
         GameSaveData save = SaveDataMgr.Instance.SaveData;
-        Scene scene = GameplayWorldRegistry.CurrentScene;
-        if (save == null || !scene.IsValid() || !scene.isLoaded)
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        if (save == null || string.IsNullOrWhiteSpace(worldKey))
             throw new InvalidOperationException("掉落物世界尚未准备好。");
-        // 维度使用各自的世界场景名，与 PlanetData/自然物持久化的地址约定一致。
-        if (runtime != null && ReferenceEquals(ownerSave, save) && ownerWorld == scene.name) return;
+        Scene scene = ResolvePresentationSceneForWorld(worldKey);
+        if (runtime != null && ReferenceEquals(ownerSave, save))
+        {
+            runtime.BindScenePresentation(scene);
+            return;
+        }
         // 初次绑定时不能清掉本帧旧生产者刚登记的轨迹；只有明确退出才取消待转换请求。
         ReleaseWorld(clearPending: false); ownerSave = save;
         save.DroppedItems ??= new DroppedItemArchive();
         save.DroppedItems.Worlds.TryGetValue(ownerWorld, out List<DroppedItemSaveRecord> records);
-        runtime = new DroppedItemRuntime(scene, records);
+        runtime = new DroppedItemRuntime(worldKey, records);
         epochOwners[Epoch] = State;
+        runtime.BindScenePresentation(scene);
+    }
+
+    private static Scene ResolvePresentationSceneForWorld(string worldKey)
+    {
+        Scene scene = GameplayWorldRegistry.CurrentScene;
+        return scene.IsValid() && scene.isLoaded &&
+            GameplayWorldRegistry.TryResolveWorldKeyForScene(scene, out string sceneWorld) && sceneWorld == worldKey
+            ? scene : default;
+    }
+
+    // 场景卸载只回收对应的显示对象，世界掉落物数据和句柄继续保留。
+    public static void DetachScenePresentation(Scene scene)
+    {
+        foreach (DropWorld world in worlds.Values) world.Runtime?.DetachScenePresentation(scene);
     }
 
     public static void RegisterPicker(Mod_ItemPicker picker) { if (picker != null) pickers.Add(picker); }
@@ -507,13 +565,18 @@ public static partial class DroppedItemService
     {
         ProcessLegacyPlans();
         if (!UsesLightweightDrops) return;
-        if (!SpaceMgr.IsSpaceScene(GameplayWorldRegistry.ExecutionWorldKey)) EnsureContext();
+        string currentWorld = GameplayWorldRegistry.ExecutionWorldKey;
+        if (!string.IsNullOrEmpty(currentWorld) && !SpaceMgr.IsSpaceScene(currentWorld)) EnsureContext();
         tickWorldKeys.Clear();
         foreach (var pair in worlds) if (pair.Value.Runtime?.IsCreated == true) tickWorldKeys.Add(pair.Key);
         foreach (string key in tickWorldKeys)
         {
             using var scope = GameplayWorldRegistry.TryGet(key, out _) ? GameplayWorldRegistry.UseWorld(key) : null;
-            if (GameplayWorldRegistry.ExecutionWorldKey == key) worlds[key].Runtime.Tick(deltaTime, pickers);
+            if (GameplayWorldRegistry.ExecutionWorldKey == key)
+            {
+                worlds[key].Runtime.BindScenePresentation(ResolvePresentationSceneForWorld(key));
+                worlds[key].Runtime.Tick(deltaTime, pickers);
+            }
         }
     }
 
@@ -531,7 +594,7 @@ public static partial class DroppedItemService
 
     public static void Present()
     {
-        string local = GameplayWorldRegistry.ExecutionWorldKey;
+        string local = GameplayWorldRegistry.LocalPresentationWorldKey;
         foreach (DropWorld world in worlds.Values)
             world.Runtime?.Present(UsesLightweightDrops && world.Key == local ? Camera.main : null);
     }

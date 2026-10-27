@@ -76,11 +76,14 @@ public partial class SaveDataMgr
             yield break;
 
         string planetName = ResolveRuntimePlanetName();
-        var addresses = new Dictionary<string, RuntimeWorldAddress>(runtimeBuildingDirtyAddresses, StringComparer.Ordinal);
+        var addresses = new Dictionary<string, RuntimeWorldAddress>(StringComparer.Ordinal);
+        string worldPrefix = planetName + "\u001f";
+        foreach (var pair in runtimeBuildingDirtyAddresses)
+            if (pair.Key.StartsWith(worldPrefix, StringComparison.Ordinal)) addresses.Add(pair.Key, pair.Value);
         var snapshot = new List<Item>(items.WorldRunTimeItems.Values);
         foreach (Item item in snapshot)
         {
-            if (IsRuntimeBuildingItem(item, out _))
+            if (IsRuntimeBuildingItemInWorld(item, planetName))
             {
                 RuntimeWorldAddress address = chunks.ResolveWorldAddress(item.transform.position);
                 addresses[BuildChunkKey(planetName, ToChunkName(address))] = address;
@@ -99,7 +102,7 @@ public partial class SaveDataMgr
             // 同区块建筑的捕获与合并不跨帧，避免拆除后把旧建筑快照重新写回来。
             foreach (Item item in snapshot)
             {
-                if (!IsRuntimeBuildingItem(item, out _)) continue;
+                if (!IsRuntimeBuildingItemInWorld(item, planetName)) continue;
                 RuntimeWorldAddress address = chunks.ResolveWorldAddress(item.transform.position);
                 if (!string.Equals(BuildChunkKey(planetName, ToChunkName(address)), pair.Key, StringComparison.Ordinal)) continue;
                 try

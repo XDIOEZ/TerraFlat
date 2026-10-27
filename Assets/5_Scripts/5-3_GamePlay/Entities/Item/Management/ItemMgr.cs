@@ -106,7 +106,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
                 return playerData.CurrentSceneName;
             }
 
-            return GameplayWorldRegistry.CurrentScene.name;
+            return GameplayWorldRegistry.ExecutionWorldKey;
         }
     }
 

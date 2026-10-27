@@ -54,7 +54,7 @@ public partial class ChunkMgr
         DeterministicChunkGenerator generator = runtimeGenerator;
         var rejected = new HashSet<Int2>();
         WorldRuntime world = WorldRuntime;
-        string scene = GameplayWorldRegistry.CurrentScene.name;
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
         long sampled = 0;
         while (true)
         {
@@ -62,14 +62,14 @@ public partial class ChunkMgr
                 anchor, tileId, cancellationToken, epoch, progress, excluded, rejected), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (this == null || !ReferenceEquals(WorldRuntime, world) || world.Epoch != epoch ||
-                ResolveCurrentDimensionId() != dimension || GameplayWorldRegistry.CurrentScene.name != scene)
+                ResolveCurrentDimensionId() != dimension || GameplayWorldRegistry.ExecutionWorldKey != worldKey)
                 throw new System.OperationCanceledException(cancellationToken);
             sampled += result.SampledCount;
             if (!result.Found) return new DeterministicChunkGenerator.BiomeSearchResult(false, anchor, sampled);
             // 后台不读取活动存档；回到主线程后排除已挖走、铺盖或灌水的旧生成位置。
             Int2 origin = ResolveWorldAddress(new Vector2(result.Cell.X + .5f, result.Cell.Y + .5f)).ChunkOrigin;
             SaveDataMgr save = SaveDataMgr.Instance;
-            if (save != null && save.TryGetChunkDelta(scene, new Vector2Int(origin.X, origin.Y), out ChunkSaveRecord record))
+            if (save != null && save.TryGetChunkDelta(worldKey, new Vector2Int(origin.X, origin.Y), out ChunkSaveRecord record))
             {
                 foreach (var cell in record.RuntimeTileDeltas)
                     if (!DeterministicChunkGenerator.IsGroundTileDestination(cell.ToTerrainCell(), 0, tileId))

@@ -222,8 +222,11 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
         {
             if (observed.ContainsKey(address) || !owner.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
                 chunk.DataStatus != ChunkDataStatus.Ready) continue;
-            SaveDataMgr.Instance?.RestoreRuntimeTerrainForChunk(address, chunk);
-            SaveDataMgr.Instance?.RestoreRuntimeBuildingsForChunk(address);
+            SaveDataMgr save = SaveDataMgr.Instance;
+            if (save == null) { ready.Add(address); continue; }
+            save.RestoreRuntimeTerrainForChunk(address, chunk);
+            // 建筑未恢复时保留待处理地址，不能让液体绕过障碍物开始模拟。
+            if (!save.RestoreRuntimeBuildingsForChunk(address)) { ready.Add(address); continue; }
             Observe(chunk);
         }
     }
@@ -252,15 +255,20 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
         try
         {
             ChunkRuntime chunk = await owner.RequestLiquidFlowChunkAsync(address, cancellation.Token);
-            if (disposed || world.Epoch != epoch) return;
-            SaveDataMgr.Instance?.RestoreRuntimeTerrainForChunk(address, chunk);
-            SaveDataMgr.Instance?.RestoreRuntimeBuildingsForChunk(address);
-            loading.Remove(address);
-            Observe(chunk);
-            // 就绪后同时唤醒共享边两侧，恢复此前因为数据缺失而休眠的来源格。
-            for (int i = 0; i < chunk.Terrain.CellCount; i++)
-                WakeCross(new Vector2Int(address.ChunkOrigin.X + i % chunk.Terrain.Width,
-                    address.ChunkOrigin.Y + i / chunk.Terrain.Width));
+            if (!TryUseOwnerWorldAfterAwait(out IDisposable scope)) return;
+            using (scope)
+            {
+                SaveDataMgr save = SaveDataMgr.Instance;
+                if (save == null) { queued.Add(address); return; }
+                save.RestoreRuntimeTerrainForChunk(address, chunk);
+                if (!save.RestoreRuntimeBuildingsForChunk(address)) { queued.Add(address); return; }
+                loading.Remove(address);
+                Observe(chunk);
+                // 就绪后同时唤醒共享边两侧，恢复此前因为数据缺失而休眠的来源格。
+                for (int i = 0; i < chunk.Terrain.CellCount; i++)
+                    WakeCross(new Vector2Int(address.ChunkOrigin.X + i % chunk.Terrain.Width,
+                        address.ChunkOrigin.Y + i / chunk.Terrain.Width));
+            }
         }
         catch (OperationCanceledException) { if (!disposed) queued.Add(address); }
         catch (Exception exception)
@@ -269,6 +277,24 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
             Debug.LogError($"[LiquidFlow] 邻区准备失败 {address}：{exception.Message}");
         }
         finally { loading.Remove(address); lease.Dispose(); }
+    }
+
+    // 异步完成后只借用仍属于原管理器的世界，不从旧请求补建场景。
+    private bool TryUseOwnerWorldAfterAwait(out IDisposable scope)
+    {
+        scope = null;
+        if (disposed || owner == null || owner.IsWorldRuntimeShuttingDown || world.Epoch != epoch ||
+            !ReferenceEquals(owner.WorldRuntime, world)) return false;
+        if (GameplayWorldRegistry.TryGet(world.WorldId, out GameplayWorldRuntime registered))
+        {
+            if (!ReferenceEquals(registered.Chunks, owner)) return false;
+            scope = GameplayWorldRegistry.UseWorld(world.WorldId);
+            return true;
+        }
+        return !GameplayWorldRegistry.Worlds.ContainsKey(world.WorldId) &&
+            string.IsNullOrEmpty(owner.OwnedWorldKey) && ReferenceEquals(ChunkMgr.LocalInstance, owner) &&
+            string.Equals(GameplayWorldRegistry.ExecutionWorldKey, world.WorldId, StringComparison.Ordinal) &&
+            (!GameplayWorldRegistry.HasExecutionContext || ReferenceEquals(GameplayWorldRegistry.ExecutionChunks, owner));
     }
 
     private void WakeCross(Vector2Int cell)

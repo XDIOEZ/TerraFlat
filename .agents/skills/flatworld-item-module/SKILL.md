@@ -29,6 +29,7 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 ## 身份与模块边界
 
 - 运行时物品归属由 `GameplayWorldRegistry` 的世界物品账本和反向索引统一维护，Item 不缓存世界身份；注册入口按拥有者或明确世界上下文登记，旧场景入口仅在唯一绑定时解析一次。世界交接同步刷新调度和感知索引；机器、存档和网络尚未完成任意跨世界迁移。
+- 轻量掉落模拟按 WorldKey 持有，Scene 解绑只释放显示，重绑沿用原载荷与句柄；未加载场景的世界目前不能保证继续推进模拟。
 - 能力由 Prefab/JSON 显式组合。StableName 是 Item 内唯一实例槽键；ModuleId 是可共享能力 ID；PrefabId/JSON prefab 是实现地址，不进存档。JSON 键定 StableName，Prefab-only 用确定性对象名；同能力多实现的内嵌节点显式填与 JSON 一致的 StableName。
 - 默认能力通过 CanonicalModuleId 由统一绑定入口写入，不在 Awake 改空模板 ID。JSON 显式 ID 仍符合依赖契约；来源模板与当前定义身份的编译约束见定义参考。
 - 编译/绑定/额外组件清退只归最近 Item，不穿子物品；独立模块 Prefab 不含 Item。独立模块拥有 Prefab 根，内嵌模块只拥有组件。
