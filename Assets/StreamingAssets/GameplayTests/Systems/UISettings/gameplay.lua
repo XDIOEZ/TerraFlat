@@ -18,6 +18,16 @@ end, "真实生存状态条文字与填充可读性")
 -- 从正式 GameManager 入口打开真实设置窗口，用现有下拉、滑块和保存按钮完成事务。
 test.runtime("ui_settings", "settings_locale_open", {}, function(data)
     assert(data.scope == "live-isolated-world" and data.formalWindow and data.registered and data.open, "正式窗口没有创建、绑定或登记")
+    local expectedPages = { AudioSettingsPanelLauncher = true, UISettingsPanelLauncher = true,
+        LanguageSettingsPanelLauncher = true, CameraControlSettingsPanelLauncher = true,
+        CoordinateDisplaySettingsPanelLauncher = true, RuntimeDebugSettingsPanelLauncher = true }
+    assert(#data.commonPageControllers == 6, "设置面板没有装配完整的六个共用本地页")
+    for _, page in ipairs(data.commonPageControllers) do
+        assert(expectedPages[page.controller] and page.beforeCount == 1 and page.afterCount == 1
+            and page.instanceRetained and page.expectedPageRoot, "共用设置页缺失、重复装配或绑定到错误页面")
+        expectedPages[page.controller] = nil
+    end
+    assert(next(expectedPages) == nil, "共用设置页漏装配")
     assert(data.blocking and data.managerBlocking and data.navigationPrepared and data.interactive, "打开设置后没有接管玩法交互或可取消导航")
     assert(data.debugWorldLabelsSuppressed, "打开正常设置窗口时，头顶 AI 调试标签仍会覆盖可交互控件")
     assert(data.expectedChinese == "保存" and data.observedChinese == data.expectedChinese, "正式中文字符串表或 TMP Binder 没有刷新")

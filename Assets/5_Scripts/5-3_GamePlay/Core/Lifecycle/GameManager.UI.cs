@@ -921,18 +921,7 @@ public partial class GameManager
             SettingsActionListPagination.Ensure(
                 panel.transform,
                 SettingsPanelContext.MainMenu);
-        AudioSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.AudioPageName));
-        UISettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.InterfacePageName));
-        LanguageSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.LanguagePageName));
-        CameraControlSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
-        CoordinateDisplaySettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.DisplayPageName));
-        RuntimeDebugSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.DebugPageName));
+        pagination?.EnsureCommonClientSettingsPageControllers();
         InputBindingPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.InputBindingPageName),
             panel,

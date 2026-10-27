@@ -220,6 +220,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             if (!fixture.Ui.TryGetPanel(GameManager.MainMenuSettingsPanelKey, out fixture.Panel))
                 throw new InvalidOperationException("正式设置入口没有创建窗口。");
             BasePanel panel = fixture.Panel;
+            JArray commonPageControllers = CaptureCommonClientSettingsPageControllerBindings(panel);
             var saveButton = panel.GetButton(SettingsEditSessionController.SaveButtonName);
             var saveText = saveButton != null ? saveButton.GetComponentInChildren<TMP_Text>(true) : null;
             var binder = saveText != null ? saveText.GetComponent<LocalizedTextBinder>() : null;
@@ -279,6 +280,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             var result = new JObject
             {
                 ["formalWindow"] = panel.GetComponent<SettingsEditSessionController>() != null,
+                ["commonPageControllers"] = commonPageControllers,
                 ["registered"] = fixture.Ui.GetAllPanelsOfType(GameManager.MainMenuSettingsPanelKey).Contains(panel),
                 ["open"] = panel.IsOpen(), ["blocking"] = panel.IsGameplayInputBlocking,
                 ["managerBlocking"] = fixture.Ui.HasOpenGameplayInputBlockingPanel(),
@@ -310,6 +312,34 @@ public static partial class GameplayTestPresentationRuntimeProbe
             complete(result);
         }
         finally { if (!retained) fixture.Dispose(); }
+    }
+
+    // 从正式窗口采样共用页并再次装配，Lua 检查唯一组件、原实例和页面归属。
+    private static JArray CaptureCommonClientSettingsPageControllerBindings(BasePanel panel)
+    {
+        var definitions = new (Type Controller, string Page)[]
+        {
+            (typeof(AudioSettingsPanelLauncher), SettingsActionListPagination.AudioPageName),
+            (typeof(UISettingsPanelLauncher), SettingsActionListPagination.InterfacePageName),
+            (typeof(LanguageSettingsPanelLauncher), SettingsActionListPagination.LanguagePageName),
+            (typeof(CameraControlSettingsPanelLauncher), SettingsActionListPagination.CameraPageName),
+            (typeof(CoordinateDisplaySettingsPanelLauncher), SettingsActionListPagination.DisplayPageName),
+            (typeof(RuntimeDebugSettingsPanelLauncher), SettingsActionListPagination.DebugPageName)
+        };
+        var before = definitions.Select(row => panel.GetComponentsInChildren(row.Controller, true)).ToArray();
+        var pagination = panel.GetComponent<SettingsActionListPagination>();
+        pagination.EnsureCommonClientSettingsPageControllers();
+        return new JArray(definitions.Select((row, index) =>
+        {
+            Component[] after = panel.GetComponentsInChildren(row.Controller, true);
+            return new JObject
+            {
+                ["controller"] = row.Controller.Name, ["beforeCount"] = before[index].Length,
+                ["afterCount"] = after.Length,
+                ["instanceRetained"] = before[index].Length == 1 && after.Length == 1 && before[index][0] == after[0],
+                ["expectedPageRoot"] = after.Length == 1 && after[0].transform == pagination.GetPageRoot(row.Page)
+            };
+        }));
     }
 
     private static JObject CloseSettings(Player player, JObject args)

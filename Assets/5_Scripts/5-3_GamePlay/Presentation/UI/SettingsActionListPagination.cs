@@ -194,6 +194,17 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         return pager;
     }
 
+    /// <summary>装配主菜单与游戏内共用的本地设置页，世界会话页由各入口补充。</summary>
+    public void EnsureCommonClientSettingsPageControllers()
+    {
+        AudioSettingsPanelLauncher.Ensure(GetPageRoot(AudioPageName));
+        UISettingsPanelLauncher.Ensure(GetPageRoot(InterfacePageName));
+        LanguageSettingsPanelLauncher.Ensure(GetPageRoot(LanguagePageName));
+        CameraControlSettingsPanelLauncher.Ensure(GetPageRoot(CameraPageName));
+        CoordinateDisplaySettingsPanelLauncher.Ensure(GetPageRoot(DisplayPageName));
+        RuntimeDebugSettingsPanelLauncher.Ensure(GetPageRoot(DebugPageName));
+    }
+
     /// <summary>解析 Prefab 命名契约并建立顶部页签与世界子页入口。</summary>
     private void Configure()
     {

@@ -141,18 +141,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         SettingsActionListPagination pagination =
             SettingsActionListPagination.Ensure(basePanel.transform);
         Transform worldPage = pagination?.GetPageRoot(SettingsActionListPagination.WorldPageName);
-        AudioSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.AudioPageName));
-        UISettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.InterfacePageName));
-        LanguageSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.LanguagePageName));
-        CameraControlSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
-        CoordinateDisplaySettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.DisplayPageName));
-        RuntimeDebugSettingsPanelLauncher.Ensure(
-            pagination?.GetPageRoot(SettingsActionListPagination.DebugPageName));
+        pagination?.EnsureCommonClientSettingsPageControllers();
         AutoSaveSettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.AutoSavePageName),
             pagination);

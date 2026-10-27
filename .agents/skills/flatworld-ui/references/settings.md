@@ -1,5 +1,6 @@
 # 设置会话
 
+- 主菜单与游戏内通过 `SettingsActionListPagination.EnsureCommonClientSettingsPageControllers` 装配音频、界面、语言、镜头、坐标及调试页；画质页已由分页器共用，按键绑定顺序及世界/会话专属操作仍留各入口。
 - Data契约只含元数据/读写能力；功能管理器实现 `ISettingsProvider` 与 Toggle/Slider/Dropdown/Switch能力并在自身生命周期注册。UI按稳定 ProviderId/Key 绑定，选项身份为 SettingOption.Id，写入返回校验结果；Provider不创建视觉。
 - `SettingsEditSessionController` 持保存基线，非控件偏好用 `ISettingsEditSessionParticipant` 快照/还原，按键独立会话，分页器收集 `ISettingsPageLifecycle`。关闭只恢复偏离基线值，扩展状态用 `ISettingsEditSessionChangeTracker` 跳过无变化恢复（未实现者仍恢复）；仅可能写回时保存。按键放弃仅在覆盖改变时重载/通知，避免无改动关闭重建输入/画质/写盘。
 - 主菜单设置底部的保存按钮固定节点名 `SettingsEditSessionController.SaveButtonName`（`保存设置`）、文案“保存”；正式 `UI_MainMenuSettings.prefab` 与 `ConfigureMainMenuSettingsActionList` 同步维护，并给保存、恢复默认和提示文案预留互不重叠的空间。
