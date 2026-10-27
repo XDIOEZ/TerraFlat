@@ -6,6 +6,10 @@ for _, scenario in ipairs({ "land", "wrapped", "cold", "disabled", "ocean", "lav
             "石油地形随分块、负坐标或环绕改变")
         assert(data.areaRatio == .2 and data.changedWetCells == 0,
             "石油没有按岩浆湖约20%面积配置，或覆盖了已有水体/岩浆")
+        if selected == "land" or selected == "lava" or selected == "wrapped" then
+            assert(data.cacheChecked and data.cacheMismatches == 0 and data.epochMismatches == 0,
+                "同生成器逆序复用缓存或切换世界纪元后地形改变")
+        end
         if selected == "land" then
             local ratio = data.oilCells / data.fullAreaOilCells
             assert(ratio >= .15 and ratio <= .25, "实际油池面积没有缩小到同轮廓原面积的约20%")

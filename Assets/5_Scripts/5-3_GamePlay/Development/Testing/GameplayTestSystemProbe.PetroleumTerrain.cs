@@ -31,15 +31,18 @@ public static partial class GameplayTestSystemProbe
         };
         var texts = new Dictionary<string, string> { ["climate.algorithm"] = "simple" };
         var output = new Dictionary<(int, int), (int Liquid, int Level, int Ground, float Celsius, int Bed)>();
-        void Capture(int size, int origin, bool oil, Dictionary<(int, int), (int, int, int, float, int)> target)
+        void Capture(int size, int origin, bool oil, Dictionary<(int, int), (int, int, int, float, int)> target,
+            DeterministicChunkGenerator generator = null, long epoch = 1, bool reverse = false)
         {
             var selected = new Dictionary<string, double>(numbers) { ["lake.oil.enabled"] = oil ? 1d : 0d };
             var profile = new ChunkGenerationProfileSnapshot("probe:petroleum", 81, size, size, selected, texts);
-            var generator = new DeterministicChunkGenerator();
-            using var world = new WorldRuntime("probe:petroleum", 1);
-            for (int originY = origin; originY < origin + 64; originY += size)
-            for (int originX = origin; originX < origin + 64; originX += size)
+            generator ??= new DeterministicChunkGenerator();
+            using var world = new WorldRuntime("probe:petroleum", epoch);
+            for (int row = 0; row < 64; row += size)
+            for (int column = 0; column < 64; column += size)
             {
+                int originY = origin + (reverse ? 64 - size - row : row);
+                int originX = origin + (reverse ? 64 - size - column : column);
                 var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(originX, originY));
                 ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1729, profile, topology);
                 using var result = generator.Generate(request, CancellationToken.None);
@@ -62,9 +65,19 @@ public static partial class GameplayTestSystemProbe
         }
         int start = wrapped ? 0 : -64;
         bool enabled = scenario != "disabled";
-        Capture(16, start, enabled, output);
+        var sharedGenerator = new DeterministicChunkGenerator();
+        Capture(16, start, enabled, output, sharedGenerator);
         var repeated = new Dictionary<(int, int), (int, int, int, float, int)>();
-        Capture(32, wrapped ? 64 : start, enabled, repeated);
+        Capture(32, wrapped ? 64 : start, enabled, repeated, sharedGenerator);
+        bool checkCache = scenario is "land" or "lava" or "wrapped";
+        var reverseOrder = new Dictionary<(int, int), (int, int, int, float, int)>();
+        var nextEpoch = new Dictionary<(int, int), (int, int, int, float, int)>();
+        if (checkCache)
+        {
+            Capture(16, wrapped ? 64 : start, enabled, reverseOrder, sharedGenerator, reverse: true);
+            sharedGenerator.BeginNewWorldHydrologyEpoch(1);
+            Capture(16, start, enabled, nextEpoch, sharedGenerator, epoch: 2);
+        }
         var baseline = new Dictionary<(int, int), (int, int, int, float, int)>();
         Capture(16, start, false, baseline);
         int fullAreaOilCells = 0;
@@ -77,12 +90,14 @@ public static partial class GameplayTestSystemProbe
                 if (value.Item1 == LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.CrudeOilId)) fullAreaOilCells++;
             numbers["lake.oil.areaRatio"] = .2d;
         }
-        int mismatches = 0, oilCells = 0, baselineWetCells = 0, changedWetCells = 0;
+        int mismatches = 0, cacheMismatches = 0, epochMismatches = 0, oilCells = 0, baselineWetCells = 0, changedWetCells = 0;
         int oilIndex = LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.CrudeOilId);
         var rows = new JArray();
         foreach (var cell in output)
         {
             if (!repeated.TryGetValue(cell.Key, out var other) || !other.Equals(cell.Value)) mismatches++;
+            if (checkCache && (!reverseOrder.TryGetValue(cell.Key, out var cached) || !cached.Equals(cell.Value))) cacheMismatches++;
+            if (checkCache && (!nextEpoch.TryGetValue(cell.Key, out var reset) || !reset.Equals(cell.Value))) epochMismatches++;
             var before = baseline[cell.Key];
             if (before.Item2 > 0)
             {
@@ -99,6 +114,7 @@ public static partial class GameplayTestSystemProbe
         return new JObject { ["areaRatio"] = settings.OilLakeAreaRatio, ["cellCount"] = output.Count,
             ["fullAreaOilCells"] = fullAreaOilCells,
             ["oilCells"] = oilCells, ["partitionMismatches"] = mismatches,
+            ["cacheChecked"] = checkCache, ["cacheMismatches"] = cacheMismatches, ["epochMismatches"] = epochMismatches,
             ["baselineWetCells"] = baselineWetCells, ["changedWetCells"] = changedWetCells,
             ["samples"] = rows };
     }

@@ -18,19 +18,39 @@ namespace FlatWorld.WorldModel
         private readonly ConcurrentQueue<(long, string, int, ulong, ChunkGenerationTopologySnapshot, Int2)>
             lavaBasinOrder = new();
 
+        private delegate bool PrepareRegionalBasinCandidate(in ChunkGenerationRequest request, Int2 region,
+            in WorldTopologyDomain domain, double2 anchor, double2 span, double2 query, out double radius);
+        private delegate LavaBasin FindRegionalBasinCandidate(ChunkGenerationRequest request, Int2 region,
+            double2 origin, double2 span, double radius);
+        private static readonly PrepareRegionalBasinCandidate PrepareLavaBasin = TryPrepareLavaBasinCandidate;
+        private static readonly FindRegionalBasinCandidate FindLavaBasin = FindLavaPeak;
+        private static readonly FindRegionalBasinCandidate FindOilBasin = FindCrudeOilLandBasin;
+
         private IReadOnlyList<LavaBasin> ResolveLavaBasins(ChunkGenerationRequest request,
             CancellationToken cancellation = default)
         {
             var settings = request.Profile.Settings;
             if (!settings.LavaLakeEnabled || settings.LavaLakeChance <= 0d)
                 return Array.Empty<LavaBasin>();
+            return ResolveRegionalBasins(request, cancellation, settings.LavaLakeRegionSize, settings.LavaLakeChance,
+                0x1a7ab451u, lavaBasins, lavaBasinOrder, PrepareLavaBasin, FindLavaBasin);
+        }
+
+        // 两种盆地共用区域顺序和缓存，候选资格与选址仍由各自规则决定。
+        private static IReadOnlyList<LavaBasin> ResolveRegionalBasins(ChunkGenerationRequest request,
+            CancellationToken cancellation, int regionSize, double chance, uint chanceSalt,
+            ConcurrentDictionary<(long, string, int, ulong, ChunkGenerationTopologySnapshot, Int2), Lazy<LavaBasin>> basins,
+            ConcurrentQueue<(long, string, int, ulong, ChunkGenerationTopologySnapshot, Int2)> order,
+            PrepareRegionalBasinCandidate prepare, FindRegionalBasinCandidate find)
+        {
             var result = new List<LavaBasin>(4);
             var domain = request.Topology.ToDomain();
             bool wrapped = request.Topology.IsWrapped;
-            int countX = wrapped ? Math.Max(1, request.Topology.Span.X / settings.LavaLakeRegionSize) : 0;
-            int countY = wrapped ? Math.Max(1, request.Topology.Span.Y / settings.LavaLakeRegionSize) : 0;
-            double stepX = wrapped ? request.Topology.Span.X / (double)countX : settings.LavaLakeRegionSize;
-            double stepY = wrapped ? request.Topology.Span.Y / (double)countY : settings.LavaLakeRegionSize;
+            int countX = wrapped ? Math.Max(1, request.Topology.Span.X / regionSize) : 0;
+            int countY = wrapped ? Math.Max(1, request.Topology.Span.Y / regionSize) : 0;
+            double stepX = wrapped ? request.Topology.Span.X / (double)countX : regionSize;
+            double stepY = wrapped ? request.Topology.Span.Y / (double)countY : regionSize;
+            double2 span = new double2(stepX, stepY);
             double2 anchor = wrapped ? new double2(request.Topology.Min.X, request.Topology.Min.Y) : default;
             double2 query = domain.Normalize(new double2(request.Address.ChunkOrigin.X + request.Profile.Width * 0.5d,
                 request.Address.ChunkOrigin.Y + request.Profile.Height * 0.5d));
@@ -46,33 +66,41 @@ namespace FlatWorld.WorldModel
                 int rx = wrapped ? ((baseX + dx) % countX + countX) % countX : baseX + dx;
                 int ry = wrapped ? ((baseY + dy) % countY + countY) % countY : baseY + dy;
                 var region = new Int2(rx, ry);
-                if (!visited.Add(region) || Hash01(request.WorldSeed, rx, ry, 0x1a7ab451u) >= settings.LavaLakeChance)
+                if (!visited.Add(region) || Hash01(request.WorldSeed, rx, ry, chanceSalt) >= chance)
                     continue;
-                double regionalRareMaxRadius = Math.Min(settings.LavaLakeRareMaxRadius,
-                    Math.Min(stepX, stepY) * 0.29d);
-                double radius = ResolveLavaRadius(request.WorldSeed, region, settings, regionalRareMaxRadius);
-                double2 regionCenter = anchor + new double2((rx + 0.5d) * stepX, (ry + 0.5d) * stepY);
-                double2 delta = domain.ShortestDelta(query, regionCenter);
-                double reach = radius * LavaBasinMaxReachFactor + settings.LavaLakeShoreWidth;
-                if (Math.Abs(delta.x) > (stepX + request.Profile.Width) * 0.5d + reach ||
-                    Math.Abs(delta.y) > (stepY + request.Profile.Height) * 0.5d + reach) continue;
+                double radius = 0d;
+                if (prepare != null && !prepare(in request, region, in domain, anchor, span, query, out radius))
+                    continue;
                 var key = (request.WorldEpoch, request.Address.DimensionId, request.WorldSeed,
                     request.Profile.GenerationFingerprint, request.Topology, region);
-                if (!lavaBasins.TryGetValue(key, out var candidate))
+                if (!basins.TryGetValue(key, out var candidate))
                 {
-                    var created = new Lazy<LavaBasin>(() => FindLavaPeak(request, region,
-                        anchor + new double2(rx * stepX, ry * stepY), new double2(stepX, stepY), radius),
+                    var created = new Lazy<LavaBasin>(() => find(request, region,
+                        anchor + new double2(rx * stepX, ry * stepY), span, radius),
                         LazyThreadSafetyMode.ExecutionAndPublication);
-                    candidate = lavaBasins.GetOrAdd(key, created);
-                    if (ReferenceEquals(candidate, created)) lavaBasinOrder.Enqueue(key);
-                    while (lavaBasins.Count > 256 && lavaBasinOrder.TryDequeue(out var oldest))
-                        lavaBasins.TryRemove(oldest, out _);
+                    candidate = basins.GetOrAdd(key, created);
+                    if (ReferenceEquals(candidate, created)) order.Enqueue(key);
+                    while (basins.Count > 256 && order.TryDequeue(out var oldest))
+                        basins.TryRemove(oldest, out _);
                 }
                 // 单个候选最多进行固定数量采样，不绑定任意一个区块的取消令牌。
                 LavaBasin basin = candidate.Value;
                 if (basin != null) result.Add(basin);
             }
             return result;
+        }
+
+        private static bool TryPrepareLavaBasinCandidate(in ChunkGenerationRequest request, Int2 region,
+            in WorldTopologyDomain domain, double2 anchor, double2 span, double2 query, out double radius)
+        {
+            var settings = request.Profile.Settings;
+            double regionalRareMaxRadius = Math.Min(settings.LavaLakeRareMaxRadius, Math.Min(span.x, span.y) * 0.29d);
+            radius = ResolveLavaRadius(request.WorldSeed, region, settings, regionalRareMaxRadius);
+            double2 regionCenter = anchor + new double2((region.X + 0.5d) * span.x, (region.Y + 0.5d) * span.y);
+            double2 delta = domain.ShortestDelta(query, regionCenter);
+            double reach = radius * LavaBasinMaxReachFactor + settings.LavaLakeShoreWidth;
+            return !(Math.Abs(delta.x) > (span.x + request.Profile.Width) * 0.5d + reach ||
+                     Math.Abs(delta.y) > (span.y + request.Profile.Height) * 0.5d + reach);
         }
 
         private static LavaBasin FindLavaPeak(ChunkGenerationRequest request, Int2 region,

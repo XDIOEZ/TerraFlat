@@ -22,49 +22,12 @@ namespace FlatWorld.WorldModel
             var settings = request.Profile.Settings;
             if (!settings.OilLakeEnabled || settings.OilLakeChance <= 0d)
                 return Array.Empty<LavaBasin>();
-            var result = new List<LavaBasin>(4);
-            bool wrapped = request.Topology.IsWrapped;
-            int countX = wrapped ? Math.Max(1, request.Topology.Span.X / settings.OilLakeRegionSize) : 0;
-            int countY = wrapped ? Math.Max(1, request.Topology.Span.Y / settings.OilLakeRegionSize) : 0;
-            double stepX = wrapped ? request.Topology.Span.X / (double)countX : settings.OilLakeRegionSize;
-            double stepY = wrapped ? request.Topology.Span.Y / (double)countY : settings.OilLakeRegionSize;
-            double2 anchor = wrapped ? new double2(request.Topology.Min.X, request.Topology.Min.Y) : default;
-            double2 query = request.Topology.ToDomain().Normalize(new double2(
-                request.Address.ChunkOrigin.X + request.Profile.Width * 0.5d,
-                request.Address.ChunkOrigin.Y + request.Profile.Height * 0.5d));
-            int baseX = (int)Math.Floor((query.x - anchor.x) / stepX);
-            int baseY = (int)Math.Floor((query.y - anchor.y) / stepY);
-            int rangeX = 1 + (int)Math.Ceiling(request.Profile.Width * 0.5d / stepX);
-            int rangeY = 1 + (int)Math.Ceiling(request.Profile.Height * 0.5d / stepY);
-            var visited = new HashSet<Int2>();
-            for (int dy = -rangeY; dy <= rangeY; dy++)
-            for (int dx = -rangeX; dx <= rangeX; dx++)
-            {
-                cancellation.ThrowIfCancellationRequested();
-                int rx = wrapped ? ((baseX + dx) % countX + countX) % countX : baseX + dx;
-                int ry = wrapped ? ((baseY + dy) % countY + countY) % countY : baseY + dy;
-                var region = new Int2(rx, ry);
-                if (!visited.Add(region) || Hash01(request.WorldSeed, rx, ry, 0x0a114501u) >= settings.OilLakeChance)
-                    continue;
-                var key = (request.WorldEpoch, request.Address.DimensionId, request.WorldSeed,
-                    request.Profile.GenerationFingerprint, request.Topology, region);
-                if (!oilBasins.TryGetValue(key, out var candidate))
-                {
-                    var created = new Lazy<LavaBasin>(() => FindCrudeOilLandBasin(request, region,
-                        anchor + new double2(rx * stepX, ry * stepY), new double2(stepX, stepY)),
-                        LazyThreadSafetyMode.ExecutionAndPublication);
-                    candidate = oilBasins.GetOrAdd(key, created);
-                    if (ReferenceEquals(candidate, created)) oilBasinOrder.Enqueue(key);
-                    while (oilBasins.Count > 256 && oilBasinOrder.TryDequeue(out var oldest))
-                        oilBasins.TryRemove(oldest, out _);
-                }
-                if (candidate.Value is { } basin) result.Add(basin);
-            }
-            return result;
+            return ResolveRegionalBasins(request, cancellation, settings.OilLakeRegionSize, settings.OilLakeChance,
+                0x0a114501u, oilBasins, oilBasinOrder, null, FindOilBasin);
         }
 
         private static LavaBasin FindCrudeOilLandBasin(ChunkGenerationRequest request, Int2 region,
-            double2 origin, double2 span)
+            double2 origin, double2 span, double _)
         {
             var settings = request.Profile.Settings;
             double radiusScale = Math.Sqrt(settings.OilLakeAreaRatio);
