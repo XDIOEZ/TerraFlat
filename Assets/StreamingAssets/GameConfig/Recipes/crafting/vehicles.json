@@ -25,6 +25,37 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:bicycle",
+      "displayName": "自行车",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rubber",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Leather",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Bicycle",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

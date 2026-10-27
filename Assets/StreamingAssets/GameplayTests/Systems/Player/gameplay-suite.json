@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "player_bicycle",
+      "name": "自行车骑行、涉水与实际推动",
+      "luaPath": "GameplayTests/Systems/Player/bicycle.lua",
+      "enabled": true
+    },
+    {
       "id": "player_gameplay",
       "name": "玩家控制与交互真实关键流程",
       "luaPath": "GameplayTests/Systems/Player/gameplay.lua",

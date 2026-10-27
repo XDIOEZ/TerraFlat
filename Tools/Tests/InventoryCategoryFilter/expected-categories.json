@@ -448,6 +448,8 @@
     "Wool"
   ],
   "transport": [
+    "Bicycle",
+    "Bicycle_Building",
     "Boat",
     "Boat_Building",
     "Minecart",

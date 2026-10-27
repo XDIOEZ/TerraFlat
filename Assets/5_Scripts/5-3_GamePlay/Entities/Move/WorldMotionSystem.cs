@@ -253,8 +253,8 @@ public static class WorldMotionSystem
 
     #region 主动推动意图
     /// <summary>推动取推动者的当前环境移速，和乘船自身的划行限速是两套独立配置。</summary>
-    public static Vector2 CalculatePushVelocity(Vector2 currentMoveVelocity, bool sourceInWater, float landMultiplier)
-        => currentMoveVelocity * (sourceInWater ? 1f : landMultiplier);
+    public static Vector2 CalculatePushVelocity(Vector2 currentMoveVelocity, bool sourceInWater, float landMultiplier, float waterMultiplier = 1f)
+        => currentMoveVelocity * (sourceInWater ? waterMultiplier : landMultiplier);
 
     #endregion
 }

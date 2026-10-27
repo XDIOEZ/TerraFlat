@@ -119,6 +119,152 @@
           }
         }
       }
+    },
+    {
+      "id": "Bicycle",
+      "tags": [
+        "InventoryCategory.Transport"
+      ],
+      "worldDropBehavior": "interactive",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "BuildingSummonerShell",
+      "gameName": "自行车",
+      "description": "在工作台用6块铁锭、2份橡胶和1份皮革制作。放置后可以推动；光标指向自行车按F上下车，方向键或摇杆骑行，Shift加速。水中速度只有陆地的10%，起步和松手都有轻微惯性。",
+      "weight": 18,
+      "volume": 80,
+      "amount": 1,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": true,
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 10
+        },
+        "weakTool": 0,
+        "combatBalanceVersion": 1
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Bicycle_Building\",\"SummonerPrefabId\":\"Bicycle\",\"SharedModuleIds\":[]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": false
+          }
+        }
+      }
+    },
+    {
+      "id": "Bicycle_Building",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "BicycleBodyShell",
+      "gameName": "自行车",
+      "description": "在工作台用6块铁锭、2份橡胶和1份皮革制作。放置后可以推动；光标指向自行车按F上下车，方向键或摇杆骑行，Shift加速。水中速度只有陆地的10%，起步和松手都有轻微惯性。",
+      "weight": 18,
+      "volume": 80,
+      "amount": 1,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryCategory.Transport"
+      ],
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 10
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": -0.22
+          },
+          "size": {
+            "x": 2,
+            "y": 0.65
+          }
+        },
+        "weakTool": 0,
+        "combatBalanceVersion": 1
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": -0.22
+          },
+          "size": {
+            "x": 2,
+            "y": 0.65
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"Bicycle_Building\",\"SummonerPrefabId\":\"Bicycle\",\"SharedModuleIds\":[]}",
+            "Type": 0
+          }
+        },
+        "carrier": {
+          "prefab": "Module_Carrier",
+          "id": "Mod_Carrier",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "MaxSpeed": 6,
+            "BoostSpeedMultiplier": 1.5,
+            "Acceleration": 18,
+            "Braking": 24,
+            "FacingTurnSpeed": 360,
+            "Radius": 0.3,
+            "LandSpeedMultiplier": 1,
+            "WaterSpeedMultiplier": 0.1,
+            "LandPushSpeedMultiplier": 1,
+            "WaterPushSpeedMultiplier": 0.1,
+            "WaterCurrentSpeed": 0,
+            "HullSize": {
+              "x": 2,
+              "y": 0.65
+            },
+            "SeatOffset": {
+              "x": -0.05,
+              "y": -0.12
+            },
+            "AllowsWater": true,
+            "RotateVisualWithHeading": false,
+            "EmitWaterWake": false
+          }
+        }
+      }
     }
   ]
 }

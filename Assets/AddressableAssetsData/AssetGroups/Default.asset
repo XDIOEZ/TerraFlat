@@ -17,6 +17,30 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: d98929cafb9d4173aa6ec17a03c01aed
+    m_Address: BicycleBodyShell
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d85727a937994a79820c21fed96ee97c
+    m_Address: Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Frame.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b845776ac2ed4a49a86ce16b95efe678
+    m_Address: Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Wheel.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b45f4700e52e4693ac9bb68eced19e32
+    m_Address: Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2e7793a2b86e4695aa10a95712d1c2a2
     m_Address: Assets/6_Art/Generated/Atmosphere/AtmosphereAnalyzer/AtmosphereAnalyzer.png
     m_ReadOnly: 0

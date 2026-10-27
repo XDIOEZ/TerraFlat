@@ -87,7 +87,11 @@
         "Assets/5_Scripts/5-3_GamePlay/Core/ItemActionFeedback.cs",
         "Assets/5_Scripts/Shared/Utilities/Geometry/AttackShape2D.cs",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Input/*",
-        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PrefabForPlayer.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PrefabForPlayer.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Bicycle.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestBicycleRuntimeProbe.cs",
+        "Assets/2_Prefabs/Gameplay/Items/Common/BicycleBodyShell.prefab",
+        "Assets/6_Art/Generated/Vehicles/Bicycle/*"
       ],
       "dependsOn": [
         "navigation",
@@ -103,6 +107,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Player/README.md",
       "integrationCaseIds": [
+        "player_bicycle",
         "player_gameplay"
       ],
       "rulesCoverage": "partial"

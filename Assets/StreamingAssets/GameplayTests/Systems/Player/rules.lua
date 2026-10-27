@@ -1,3 +1,37 @@
+-- 自行车和木筏共用生产移动规则；独立表现按实际距离转轮，停住不空转。
+test.system("player", "bicycle_carrier", {}, function(data)
+    local bike, boat = data.Bicycle_Building, data.Boat_Building
+    local function near(a, b, label) assert(math.abs(a - b) < .0001, label) end
+    near(bike.land, 6, "自行车陆地速度错误")
+    near(bike.water / bike.land, .1, "自行车水中速度不是陆地的10%")
+    near(bike.boostWater / bike.boostLand, .1, "加速后丢失水中10%倍率")
+    assert(bike.start > 0 and bike.start < bike.land, "自行车起步没有轻微惯性")
+    near(bike.diagonal, bike.land, "斜向骑行突破速度上限")
+    assert(bike.coast > 0 and bike.coast < bike.diagonal, "松手没有减速滑行")
+    near(bike.stopped, 0, "松手后无法最终停住")
+    near(bike.settledWater, bike.water, "从陆地驶入水中后未收敛到限速")
+    near(bike.zeroTime, bike.diagonal, "零时间仍改变速度")
+    near(bike.landPush, 6, "自行车陆地推动意图丢失")
+    near(bike.waterPush, .6, "自行车水中推动阻力失效")
+    assert(not bike.wake and not bike.rotateFrame, "自行车错误沿用船尾流或旋转整幅车架")
+    near(boat.land, .5, "木筏陆地速度回归")
+    near(boat.water, 5, "木筏水面速度回归")
+    near(boat.landPush, 1.2, "木筏陆地推动阻力回归")
+    near(boat.waterPush, 6, "木筏水中推动回归")
+    assert(boat.wake and boat.rotateFrame, "木筏原有表现被改变")
+    assert(data.wheels.rightAngle > 0 and data.wheels.still, "移动不转轮或静止仍转轮")
+    assert(data.wheels.mirrored and data.wheels.rearMirrored and data.wheels.sameRotation, "转向后轮轴或前后轮不同步")
+    near(data.wheels.frameAngle, 0, "轮子转动带着车架转圈")
+    near(data.wheels.fullTurn, -360, "滚动一周不是转动360度")
+    assert(data.summonerBody == "Bicycle_Building" and data.prefabReady, "自行车放置映射或完整外壳缺失")
+    local recipe = data.recipe
+    assert(recipe.requiredStation == "workbench" and recipe.outputs[1].itemId == "Bicycle" and recipe.outputs[1].amount == 1,
+        "自行车未接入工作台制作")
+    local materials = {}
+    for _, input in ipairs(recipe.inputs) do materials[input.itemId] = input.amount end
+    assert(materials.Ingot_RawIron == 6 and materials.Rubber == 2 and materials.Leather == 1, "自行车制作原料错误")
+end, "自行车：水中10%、轻惯性、推动、滚轮、配方与木筏回归")
+
 -- 同格从上到下按显示层级等分，查询顺序、重复视觉和边界不能改变结果。
 for _, case in ipairs({
     {layers = {-1, 0}, height = .9, selected = 1},

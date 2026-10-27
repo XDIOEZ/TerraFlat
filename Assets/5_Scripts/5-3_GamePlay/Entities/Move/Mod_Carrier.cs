@@ -20,7 +20,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     [Min(1f)] public float FacingTurnSpeed = 30f; // 船上操作者划行时的固定船头转速（度/秒），与平移速度无关。
     [Min(0.05f)] public float Radius = 0.35f; // 交互与下船安全半径。
     [Range(0.01f, 1f)] public float LandSpeedMultiplier = 0.1f; // 陆地最高速度相对水面的倍率。
+    [Range(0.01f, 1f)] public float WaterSpeedMultiplier = 1f; // 水中最高速度相对基础速度的倍率。
     [Range(0.01f, 1f)] public float LandPushSpeedMultiplier = 0.2f; // 陆地推动按推动者当前速度的五分之一。
+    [Range(0.01f, 1f)] public float WaterPushSpeedMultiplier = 1f; // 水中推动阻力独立于乘坐速度。
+    public bool RotateVisualWithHeading = true; // 侧视车辆保持直立，由独立表现控制翻面。
+    public bool EmitWaterWake = true; // 只有适合水面航行的载具生成尾流。
     [Min(0f)] public float WaterCurrentSpeed = 0.18f; // 水流经载具继续传递到乘员。
     public Vector2 HullSize = new(1.5f, 1f); // 作者定义的船体尺寸与下船净空。
     public Vector2 SeatOffset = new(0, 0.25f); // 座位相对船中心。
@@ -80,7 +84,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     {
         if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && Radius > 0) ||
             !(LandSpeedMultiplier > 0f && LandSpeedMultiplier <= 1f) ||
+            !(WaterSpeedMultiplier > 0f && WaterSpeedMultiplier <= 1f) ||
             !(LandPushSpeedMultiplier > 0f && LandPushSpeedMultiplier <= 1f) ||
+            !(WaterPushSpeedMultiplier > 0f && WaterPushSpeedMultiplier <= 1f) ||
             !(HullSize.x > 0f && HullSize.y > 0f) ||
             float.IsInfinity(MaxSpeed + BoostSpeedMultiplier + Acceleration + Braking + FacingTurnSpeed + Radius) ||
             float.IsNaN(SeatOffset.sqrMagnitude) || float.IsInfinity(SeatOffset.sqrMagnitude))
@@ -103,7 +109,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         requestedBoost = false;
         lastPhysicsPosition = body.position;
         BindVisualTransform();
-        if (motionDriver == null)
+        if (motionDriver == null && EmitWaterWake)
         {
             waterWake = item.GetComponent<CarrierWaterWake>() ?? item.gameObject.AddComponent<CarrierWaterWake>();
             waterWake.Bind(this, visualRenderer);
@@ -340,10 +346,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
             motionDriver.StepCarrierMotion(this, input, requestedControlsLocked, deltaTime);
             return;
         }
-        float speedLimit = ResolveSurfaceSpeedLimit(body.position);
-        if (Rider != null && requestedBoost)
-            speedLimit *= BoostSpeedMultiplier;
-        Vector2 desiredVelocity = input * speedLimit;
         if (PushSource != null)
         {
             // 推动速度直接来自推动者当前环境移速，不再乘木筏自身的海上速度。
@@ -351,8 +353,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         }
         else
         {
-            float rate = desiredVelocity.sqrMagnitude > 0.0001f ? Acceleration : Braking;
-            DrivenVelocity = Vector2.MoveTowards(DrivenVelocity, desiredVelocity, rate * deltaTime);
+            DrivenVelocity = SmoothDrivenVelocity(DrivenVelocity, input,
+                IsWaterSurface(body.position), Rider != null && requestedBoost, deltaTime);
         }
         ExternalVelocity = WorldMotionSystem.SampleWaterVelocity(body.position, WaterCurrentSpeed);
         ExternalVelocity += WorldMotionSystem.SampleWindVelocity(body.position,
@@ -404,7 +406,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         PushSource = source;
         pushedVelocity = motionDriver is ICarrierPushMotionPolicy policy
             ? policy.ResolveCarrierPush(velocity, inWater)
-            : WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier);
+            : WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier, WaterPushSpeedMultiplier);
         pushValidUntil = Time.time + Mathf.Max(0.1f, deltaTime * 2f);
         return pushedVelocity;
     }
@@ -517,17 +519,22 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     /// <summary>视觉只跟随操作者控制的船头，不能从刚体实际速度反推朝向。</summary>
     private void UpdateVisualFacing()
     {
-        if (visualTransform == null || facingHeading.sqrMagnitude <= 0.0001f) return;
+        if (!RotateVisualWithHeading || visualTransform == null || facingHeading.sqrMagnitude <= 0.0001f) return;
         float angle = Mathf.Atan2(facingHeading.y, facingHeading.x) * Mathf.Rad2Deg - 90f;
         visualTransform.localRotation = visualBaseLocalRotation * Quaternion.Euler(0f, 0f, angle);
     }
 
-    /// <summary>水面使用完整 MaxSpeed；非水面统一降为水面速度的指定倍率。</summary>
-    private float ResolveSurfaceSpeedLimit(Vector2 position)
+    /// <summary>水陆分别声明倍率，船和陆上车辆共用同一限速规则。</summary>
+    public float ResolveSurfaceSpeedLimit(bool inWater, bool boostRequested = false)
+        => MaxSpeed * (inWater ? WaterSpeedMultiplier : LandSpeedMultiplier) *
+           (boostRequested ? BoostSpeedMultiplier : 1f);
+
+    /// <summary>乘坐与松手滑行共用有限加减速，不改变环境推动速度。</summary>
+    public Vector2 SmoothDrivenVelocity(Vector2 current, Vector2 input, bool inWater, bool boostRequested, float deltaTime)
     {
-        if (IsWaterSurface(position))
-            return MaxSpeed;
-        return MaxSpeed * LandSpeedMultiplier;
+        Vector2 desired = Vector2.ClampMagnitude(input, 1f) * ResolveSurfaceSpeedLimit(inWater, boostRequested);
+        float rate = desired.sqrMagnitude > 0.0001f ? Acceleration : Braking;
+        return Vector2.MoveTowards(current, desired, rate * Mathf.Max(0f, deltaTime));
     }
 
     /// <summary>统一读取载具当前位置是否处于真实水面，只影响平移限速。</summary>
