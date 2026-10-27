@@ -121,15 +121,7 @@ namespace FlatWorld.AIECS
                     new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
                     new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
                     new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 4));
-                ushort[] indices = new ushort[MaxSprites * 6];
-                for (int i = 0; i < MaxSprites; i++)
-                {
-                    int v = i * 4, t = i * 6;
-                    indices[t] = (ushort)v; indices[t + 1] = (ushort)(v + 1); indices[t + 2] = (ushort)(v + 2);
-                    indices[t + 3] = (ushort)v; indices[t + 4] = (ushort)(v + 2); indices[t + 5] = (ushort)(v + 3);
-                }
-                mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(indices, 0, 0, indices.Length);
+                AiecsShadowRenderer.InitializeQuadBatchTriangleIndexBuffer(mesh, MaxSprites);
                 mesh.subMeshCount = 1;
                 root.AddComponent<MeshFilter>().sharedMesh = mesh;
                 renderer = root.AddComponent<MeshRenderer>();

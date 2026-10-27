@@ -69,3 +69,18 @@ test.system("rendering", "weather_screen_context", {}, function(data)
         and not data.overlaySource and not data.removedCamera,
         "天气效果没有正确识别本地相机栈的最终目标")
 end, "天气效果：本地玩家与最终相机栈")
+
+for _, quads in ipairs({1, 2, 4096}) do
+    local count = quads
+    test.system("rendering", "shadow_quad_indices", {quads = count}, function(data)
+        assert(data.vertexCount == count * 4 and data.indexCount == count * 6 and data.uint16,
+            "阴影四边形批次容量或16位格式改变")
+        local pattern = {0, 1, 2, 0, 2, 3}
+        local lastBase = (count - 1) * 4
+        assert(#data.first == 6 and #data.last == 6, "阴影批次没有返回完整首尾三角形")
+        for index, vertex in ipairs(pattern) do
+            assert(data.first[index] == vertex and data.last[index] == lastBase + vertex,
+                "阴影四边形绕序、首尾偏移或16位边界改变")
+        end
+    end, "阴影四边形索引：" .. count)
+end

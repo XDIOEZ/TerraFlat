@@ -15,6 +15,7 @@
 
 ## AIECS、掉落与 BRG
 
+- 两种 AIECS 阴影共用 `AiecsShadowRenderer.InitializeQuadBatchTriangleIndexBuffer` 初始化16位Quad索引，材质、顶点、批次容量与生命周期仍各自负责。
 - `AiecsWorldRenderer` 只读模拟后 Display，按排序后连续批次走原生 Universal2D/NormalsRendering，主体/阴影独立统计。AIECSRuntime 层默认只在 SceneView 隐藏。
 - `AiecsShadowRenderer` 每批≤4096、16位索引/24字节顶点，复用可见表与 Display 水态；太阳阴影读全局太阳/当前图集。缺相机/空帧/关闭/退出时隐藏或回收。
 - AIECS 从真实 Actor 首图、外壳状态贴图和动画模块参数导出单图目录，保留三角形/UV、尺寸/Pivot/PPU；程序摇摆结果同时供 BRG、裁剪和太阳阴影使用。重导仅显式菜单并保 GUID，PlayMode 不重导。`AiecsLegacySortScope` 用于单相机完整 Sprite 场景。

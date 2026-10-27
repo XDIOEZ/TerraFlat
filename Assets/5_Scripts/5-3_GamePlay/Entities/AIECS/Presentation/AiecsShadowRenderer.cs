@@ -37,6 +37,20 @@ namespace FlatWorld.AIECS
                 throw new InvalidOperationException("缺少 AIECS/ActorBlobShadow 阴影材质。");
         }
 
+        /// <summary>两类阴影共用16位四边形索引的生成与首次上传。</summary>
+        public static void InitializeQuadBatchTriangleIndexBuffer(Mesh mesh, int quadCount)
+        {
+            var indices = new ushort[quadCount * 6];
+            for (int i = 0; i < quadCount; i++)
+            {
+                int v = i * 4, t = i * 6;
+                indices[t] = (ushort)v; indices[t + 1] = (ushort)(v + 1); indices[t + 2] = (ushort)(v + 2);
+                indices[t + 3] = (ushort)v; indices[t + 4] = (ushort)(v + 2); indices[t + 5] = (ushort)(v + 3);
+            }
+            mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt16);
+            mesh.SetIndexBufferData(indices, 0, 0, indices.Length);
+        }
+
         /// <summary>开始新帧；上一帧未再使用的批次在 End 中关闭。</summary>
         public void Begin() { ShadowCount = 0; BatchCount = 0; }
 
@@ -140,15 +154,7 @@ namespace FlatWorld.AIECS
                     new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                     new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
                     new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2));
-                var indices = new ushort[MaxShadowsPerBatch * 6];
-                for (int i = 0; i < MaxShadowsPerBatch; i++)
-                {
-                    int v = i * 4, t = i * 6;
-                    indices[t] = (ushort)v; indices[t + 1] = (ushort)(v + 1); indices[t + 2] = (ushort)(v + 2);
-                    indices[t + 3] = (ushort)v; indices[t + 4] = (ushort)(v + 2); indices[t + 5] = (ushort)(v + 3);
-                }
-                mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(indices, 0, 0, indices.Length);
+                InitializeQuadBatchTriangleIndexBuffer(mesh, MaxShadowsPerBatch);
                 mesh.subMeshCount = 1;
                 root.AddComponent<MeshFilter>().sharedMesh = mesh;
                 renderer = root.AddComponent<MeshRenderer>();

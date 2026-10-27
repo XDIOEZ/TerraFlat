@@ -12,6 +12,7 @@ public static partial class GameplayTestSystemProbe
 
     private static void RegisterShadowPerformanceOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
+        operations.Add("rendering/shadow_quad_indices", ShadowQuadIndices);
         operations.Add("rendering/shadow_proxy_changes", ShadowProxyChanges);
         operations.Add("rendering/shadow_proxy_blur_scale", ShadowProxyBlurScale);
         operations.Add("rendering/shadow_footprint_matrix", ShadowFootprintMatrix);
@@ -22,6 +23,37 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/snow_sparse_refresh", SnowSparseRefresh);
         operations.Add("rendering/sprite_snow_bounds", SpriteSnowBounds);
     }
+
+    #region 阴影批次索引采样
+
+    // 读取正式初始化流程上传的网格索引，绕序和边界交给 Lua 检查。
+    private static JObject ShadowQuadIndices(JObject args)
+    {
+        int quads = (int)Number(args, "quads", 1);
+        var mesh = new Mesh { name = "[LuaShadowQuadIndices]", hideFlags = HideFlags.HideAndDontSave };
+        try
+        {
+            mesh.SetVertexBufferParams(quads * 4,
+                new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position,
+                    UnityEngine.Rendering.VertexAttributeFormat.Float32, 3));
+            FlatWorld.AIECS.AiecsShadowRenderer.InitializeQuadBatchTriangleIndexBuffer(mesh, quads);
+            using var data = Mesh.AcquireReadOnlyMeshData(mesh);
+            var indices = data[0].GetIndexData<ushort>();
+            var first = new JArray();
+            var last = new JArray();
+            for (int index = 0; index < 6; index++)
+            {
+                first.Add(indices[index]);
+                last.Add(indices[indices.Length - 6 + index]);
+            }
+            return new JObject { ["vertexCount"] = data[0].vertexCount, ["indexCount"] = indices.Length,
+                ["uint16"] = mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16,
+                ["first"] = first, ["last"] = last };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(mesh); }
+    }
+
+    #endregion
 
     // 读取正式控制器的 MPB，覆盖偏心原点、连续翻面、换图和静态免重传。
     private static JObject SpriteSnowBounds(JObject args)
