@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "AtmosphereAnalyzer",
+      "parent": "BasicItem_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "大气检测仪",
+      "description": "手持使用可打开仪器屏幕，实时测量所在星球的气体成分比例、大气总量和气压。总量以标准立方米显示。",
+      "durability": 100,
+      "maxDurability": 100,
+      "amount": 1,
+      "weight": 1.2,
+      "volume": 1.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["Tool", "AtmosphereAnalyzer", "InventoryCategory.Tool"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Atmosphere/AtmosphereAnalyzer/AtmosphereAnalyzer.png"
+      },
+      "modules": {
+        "atmosphereAnalyzer": {
+          "prefab": "Module_AtmosphereAnalyzer",
+          "id": "Mod_AtmosphereAnalyzer",
+          "enabled": true,
+          "data": { "BitData": "", "Type": 0 },
+          "parameters": {}
+        }
+      }
+    }
+  ]
+}

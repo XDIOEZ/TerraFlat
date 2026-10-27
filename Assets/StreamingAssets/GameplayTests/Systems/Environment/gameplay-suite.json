@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "atmosphere_analyzer_gameplay",
+      "name": "大气检测仪真实手持、仪器屏幕与离手关闭",
+      "luaPath": "GameplayTests/Systems/Environment/atmosphere-analyzer-gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

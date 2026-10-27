@@ -17,6 +17,30 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 2e7793a2b86e4695aa10a95712d1c2a2
+    m_Address: Assets/6_Art/Generated/Atmosphere/AtmosphereAnalyzer/AtmosphereAnalyzer.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: faa2a241e08c41658bf05cea9273e7b4
+    m_Address: Assets/6_Art/Generated/Atmosphere/AtmosphereAnalyzer/AtmosphereAnalyzer_Panel.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 35837daa9fb944ebbdfd082901273275
+    m_Address: UI_AtmosphereAnalyzer
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 97541380f346496eb3edff5a11438a26
+    m_Address: Module_AtmosphereAnalyzer
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 67e20d87a6524ce0a6c096dc729ffeac
     m_Address: Assets/6_Art/Generated/InventoryCrafting/Tea/Tea_Icon.png
     m_ReadOnly: 0

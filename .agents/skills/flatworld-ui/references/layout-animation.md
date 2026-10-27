@@ -15,6 +15,8 @@
 - 新游戏由 `UI_NewGame`、`UI_NewGameWorldContent/UI_NewGameDifficultyContent` 三Prefab与 NewGamePrefabBuilder 共持；隐藏页按需建一次，创建请求直接读未开页默认值。世界参数分页仅改显隐，难度覆盖层透明，加载存档失败弹正式确认并停止角色选择。
 - `DropdownListLayout` 展开前用真实行高，≤5项全显、更多最多5行；BasePanel/公共构建器同步接入。条目/Content归原生Dropdown，模板禁竞争LayoutGroup/ContentSizeFitter，Viewport无垂直内缩。交互滑块与只读进度条分资产；纯色无Sprite进度用纵缩放，不能Filled。
 
+- 大气检测仪屏幕由正式贴图、可滚动气体行和 SafeAreaScaleGroup 组成；预览与规则按 1920×1080 Expand 和 UI 倍率换算画布，桌面与竖屏都检查。
+
 ## 动画与覆盖层
 
 - `BasePanel → BaseUIAnimation → UIAnimationManager → JSON` 单向依赖，单面板≤1动画，Opened/Closed同步。ScaleUIAnimation/panel.scale 绕 MotionRoot可见中心，不争写布局/安全区；Duration/相对Offset/Scale/Ease存配置，全局倍率仅本系统根Tween，热重载保行程快照，反向保进度，结束/禁用复姿态。

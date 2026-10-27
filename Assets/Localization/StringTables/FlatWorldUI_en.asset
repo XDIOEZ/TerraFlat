@@ -18,6 +18,50 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 28102700009000001
+    m_Localized: "Atmosphere Analyzer"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000002
+    m_Localized: "TOTAL ATMOSPHERE · STANDARD m³"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000003
+    m_Localized: "GAS COMPOSITION / SHARE"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000004
+    m_Localized: "NO PLANET SIGNAL"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000005
+    m_Localized: "PLANET PRESSURE  {0:0.###} kPa"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000006
+    m_Localized: "PLANET PRESSURE  {0} kPa"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000007
+    m_Localized: "LIVE · STANDARD VOLUME / MOLAR SHARE"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000008
+    m_Localized: "THIS PLANET HAS NO ATMOSPHERE"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000009
+    m_Localized: "PLANET ATMOSPHERE UNAVAILABLE HERE"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000010
+    m_Localized: "NO DETECTABLE GAS"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000011
+    m_Localized: "USE THE ANALYZER ON A PLANET"
+    m_Metadata:
+      m_Items: []
   - m_Id: 17923500000001245
     m_Localized: Metal Hammer
     m_Metadata:

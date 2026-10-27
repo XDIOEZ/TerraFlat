@@ -18,6 +18,50 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 28102700009000001
+    m_Localized: "大气检测仪"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000002
+    m_Localized: "星球大气总量 · 标准 m³"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000003
+    m_Localized: "气体成分 / 占比"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000004
+    m_Localized: "未连接星球"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000005
+    m_Localized: "星球气压  {0:0.###} kPa"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000006
+    m_Localized: "星球气压  {0} kPa"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000007
+    m_Localized: "实时测量 · 标准体积 / 摩尔占比"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000008
+    m_Localized: "当前星球没有大气"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000009
+    m_Localized: "当前区域无法测量星球大气"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000010
+    m_Localized: "无可检出的气体"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000011
+    m_Localized: "请在星球上使用检测仪"
+    m_Metadata:
+      m_Items: []
   - m_Id: 17923500000001245
     m_Localized: "\u91D1\u5C5E\u9524"
     m_Metadata:

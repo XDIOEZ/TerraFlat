@@ -143,6 +143,12 @@
       "enabled": true
     },
     {
+      "id": "atmosphere_analyzer_gameplay",
+      "name": "大气检测仪真实手持、仪器屏幕与离手关闭",
+      "luaPath": "GameplayTests/Systems/Environment/atmosphere-analyzer-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "dimension_cave_roundtrip",
       "name": "真实矿洞入口配对、完整迁移与返回地表",
       "luaPath": "GameplayTests/Systems/Dimension/gameplay.lua",

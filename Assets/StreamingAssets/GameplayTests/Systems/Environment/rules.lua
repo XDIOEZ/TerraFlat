@@ -2,6 +2,36 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+test.system("environment", "atmosphere_measurement", {}, function(data)
+    assert(data.before.status == "Measured" and data.before.worldKey == "probe_first"
+        and data.before.planetName == "第一星球", "检测仪没有读取指定星球的真实大气")
+    near(data.before.totalMoles, 100, "检测仪大气总mol错误")
+    near(data.before.standardCubicMeters, 2.43738471641152, "大气总量没有按标准升换算为标准m³")
+    near(data.before.pressureKPa, 100, "检测仪气压没有使用真实星球余量")
+    assert(#data.before.components == 2 and data.before.components[1].id == "core:nitrogen"
+        and data.before.components[2].id == "core:oxygen", "成分没有按含量排序或显示了零库存气体")
+    near(data.before.components[1].fraction, 0.79, "氮气比例错误")
+    near(data.before.components[2].fraction, 0.21, "氧气比例错误")
+    near(data.cave.totalMoles, data.before.totalMoles, "洞穴没有读取所属星球共用的大气")
+    assert(data.cave.worldKey == "probe_first__dimension__cave", "洞穴读数丢失实际世界身份")
+    assert(data.other.planetName == "第二星球" and #data.other.components == 1
+        and data.other.components[1].id == "core:carbon_dioxide", "第一星球读数串入第二星球")
+    assert(data.readDidNotChangeInventory and data.uninitializedPreserved, "测量修改库存或创建了尚未就绪的大气")
+    for _, state in ipairs({data.missingWorld, data.emptyWorld, data.missingPlanets, data.uninitialized}) do
+        assert(state.status == "Unavailable" and #state.components == 0, "未知世界错误回退到其他星球")
+    end
+    near(data.afterChange.totalMoles, 50, "来源变化后仍显示旧大气总量")
+    near(data.afterChange.pressureKPa, 50, "抽气后的真实气压没有变化")
+    near(data.afterChange.components[1].fraction, 0.8, "气体变化后比例没有更新")
+    assert(data.afterChange.revision > data.before.revision, "测量快照没有带入大气修订号")
+    near(data.oldSnapshot.totalMoles, 100, "旧读数被来源后续写入篡改")
+    near(data.oldSnapshot.components[2].moles, 21, "测量快照仍然引用可变成分库存")
+    assert(data.vacuum.status == "Vacuum" and data.vacuum.totalMoles == 0
+        and data.vacuum.pressureKPa == 0 and #data.vacuum.components == 0, "抽空后仍显示成分或除零")
+    assert(#data.trace.components == 2 and data.trace.components[2].moles > 0
+        and data.trace.components[2].fraction > 0, "最小mol单位的微量气体被吞掉")
+end, "大气检测仪真实库存、比例、标准体积、多星球来源、微量与真空边界")
+
 test.system("environment", "fog_perception", {}, function(data)
     near(data.beforeFog, 60, "无雾时目标体型倍率没有保留")
     near(data.denseRadius, 5, "浓雾没有主动将最终感知限制到清晰内圈")

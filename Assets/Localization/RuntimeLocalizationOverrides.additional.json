@@ -1,5 +1,16 @@
 {
   "ui": {
+    "大气检测仪": "Atmosphere Analyzer",
+    "星球大气总量 · 标准 m³": "TOTAL ATMOSPHERE · STANDARD m³",
+    "气体成分 / 占比": "GAS COMPOSITION / SHARE",
+    "未连接星球": "NO PLANET SIGNAL",
+    "星球气压  {0:0.###} kPa": "PLANET PRESSURE  {0:0.###} kPa",
+    "星球气压  {0} kPa": "PLANET PRESSURE  {0} kPa",
+    "实时测量 · 标准体积 / 摩尔占比": "LIVE · STANDARD VOLUME / MOLAR SHARE",
+    "当前星球没有大气": "THIS PLANET HAS NO ATMOSPHERE",
+    "当前区域无法测量星球大气": "PLANET ATMOSPHERE UNAVAILABLE HERE",
+    "无可检出的气体": "NO DETECTABLE GAS",
+    "请在星球上使用检测仪": "USE THE ANALYZER ON A PLANET",
     "气体ID / 每秒速率（0停止）": "Gas ID / Rate per second (0 stops)",
     "{0}：{1:0.###} 标准 L": "{0}: {1:0.###} standard L",
     "自然补气上限 {0:0.#}% · 动力充装可充满": "Natural refill limit {0:0.#}% · Powered filling can reach full capacity",
@@ -644,6 +655,7 @@
     "已禁用": "Disabled"
   },
   "itemDescriptions": {
+    "AtmosphereAnalyzer": "Use while held to open the instrument screen and measure the current planet's atmospheric composition, total gas quantity and pressure in real time. Total gas is shown in standard cubic meters.",
     "Bear": "Normally peaceful. A player remaining within 8 metres for more than 60 continuous seconds provokes the bear with 120 hatred. Hatred decays by 1 per second, and each confirmed hit adds 30 hatred toward its attacker.",
     "LiquidTankBlock_Iron": "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents.",
     "LiquidTankBlock_Iron_Summoner": "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents.",

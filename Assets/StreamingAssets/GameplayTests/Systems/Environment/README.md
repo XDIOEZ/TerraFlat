@@ -1,4 +1,6 @@
-# 环境纯规则回归
+# 环境规则与真实流程回归
+
+- 大气检测仪 `environment/atmosphere_measurement` 直接读取正式快照，检查真实库存比例、标准 m³ 换算、排序、微量气体、真空、未就绪拒绝、多星球与洞穴来源，以及旧快照不被后续库存修改。`gameplay-suite.json` 的 `atmosphere_analyzer_gameplay` 走正式手持道具使用、重复开关、离手关闭/拒绝及模块卸载重载，结束截图前保留仪器屏幕；覆盖不替代多人联机与所有分辨率验收。
 
 - 2026-10-26 新增独立 `greenhouse.lua`、`surface_thaw.lua`：覆盖真实 CO₂ 气柱与初始基准、温度偏移回落及边界、天然/玩家/季节雪的连续融化和质量守恒、暖融后不复活、冰融进度与咸淡水/底床身份恢复。离线入口 `Tools/Tests/GreenhouseThaw/verify.py` 直接编译正式规则和 WorldModel，检查已解冻天然水可继续补水且保存仍对原始冻结液体去重。保留用户 PlayMode，本轮未执行 Unity Lua、真实天气队列、磁盘保存/联机与画面验收；离线结果不代替这些验收。
 

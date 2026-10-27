@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "locale": "en",
   "names": {
+    "AtmosphereAnalyzer": "Atmosphere Analyzer",
     "Bear": "Bear",
     "CarbonFiber": "Carbon Fiber",
     "CarbonFiberPlate": "Carbon Fiber Plate",

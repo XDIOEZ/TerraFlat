@@ -24,6 +24,7 @@
 - SpacesuitSupport 查当前插槽气罐，先扣真氧后 Supply；IAmbientOxygenBlocker 报密封，空罐仍隔离。耐压按来源注册，Mod_Pressure 不识装备；低压/高压/缺氧各自伤害时钟，安全/死亡清债务。
 - AtmosphereService.CanSustainCombustion 要真氧占比≥5%，真空/未知拒绝；ItemEnvironmentSources 燃烧点允许密闭舱气覆星球气，组分实时读。
 - 大气按实际 Scene WorldKey 定星球，各维度共地表有限储量；创建/进世界完整校验，TryGetForWorld 仅读真状态，不逐生物全量校验；GetOrCreate/Validate 保留显式入口。
+- 手持大气检测仪 `Mod_AtmosphereAnalyzer` 通过 `AtmosphereMeasurementService` 只读拥有者实际 WorldKey 对应的已有大气；快照按真实 mol 计算比例、标准 m³ 总量和气压，库存修订未变复用快照，不创建来源或读取其他星球。拟物窗口和真实手持生命周期回归为 `environment/atmosphere_measurement、atmosphere_analyzer_lifecycle`。
 - 抽气 decimal mol 扣，排气超容量/真空记逸散，无自然回填。FluidThermodynamics 统一内能/两相 mol 温度、压缩/环境传热/有限潜热相变；罐体温独立，组合罐共享库存一次推进。
 
 回归：`environment/greenhouse_temperature`、`environment/thermal_point_batch`、`environment/combustion_oxygen`、`survival/thermal`、`survival/temperature_presentation*`；最终画面由用户验收。

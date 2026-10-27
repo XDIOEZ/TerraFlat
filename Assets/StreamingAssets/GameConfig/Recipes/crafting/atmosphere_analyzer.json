@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:atmosphere_analyzer",
+      "displayName": "大气检测仪",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 2 },
+        { "match": "exact_item", "itemId": "CopperPlate", "amount": 1 },
+        { "match": "exact_item", "itemId": "Glass", "amount": 1 },
+        { "match": "exact_item", "itemId": "Rubber", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "AtmosphereAnalyzer", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}

@@ -213,6 +213,7 @@
     "WorkBench_Summoner"
   ],
   "tool": [
+    "AtmosphereAnalyzer",
     "Axe_Bronze",
     "Axe_Copper",
     "Axe_Flint",

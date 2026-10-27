@@ -500,6 +500,11 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Environment/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Fluids/Atmosphere/*",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Mod_AtmosphereAnalyzer.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAtmosphereMeasurementRules.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAtmosphereAnalyzerRuntimeProbe.cs",
+        "Assets/StreamingAssets/GameConfig/Items/shells/atmosphere_analyzer.json",
+        "Assets/StreamingAssets/GameConfig/Recipes/crafting/atmosphere_analyzer.json",
         "Assets/StreamingAssets/GameConfig/Fluids/greenhouse-effect.json",
         "Assets/5_Scripts/5-0_WorldModel/FrozenSurfaceWaterLayer.cs",
         "Assets/5_Scripts/5-0_WorldModel/ChunkTerrainData.LiquidBaseline.cs",
@@ -530,12 +535,14 @@
       ],
       "rulesSuite": "GameplayTests/Systems/Environment/rules-suite.json",
       "integrationSuites": [
+        "GameplayTests/Systems/Environment/gameplay-suite.json",
         "GameplayTests/fluid-suite.json",
         "GameplayTests/Systems/Player/gameplay-suite.json"
       ],
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Environment/README.md",
       "integrationCaseIds": [
+        "atmosphere_analyzer_gameplay",
         "fluid_inventory",
         "fluid_thermodynamics",
         "fluid_state_save",
@@ -1170,6 +1177,9 @@
       "group": "共享支撑",
       "sourcePaths": [
         "Assets/5_Scripts/5-1_Data/CoreData/InventoryItemCategoryCatalog.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAtmosphereAnalyzerUiRules.cs",
+        "Assets/Editor/FlatWorld/PrefabBuilders/UI/AtmosphereAnalyzerPanelAssetBuilder.cs",
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Screens/UI_AtmosphereAnalyzer*.prefab",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.InventoryCategories.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SaveSelectionUI.cs",
         "Assets/Editor/FlatWorld/PrefabBuilders/UI/GameSavePrefabBuilder.cs",
@@ -1214,7 +1224,8 @@
       ],
       "ruleCaseIds": [
         "ui_settings_rules",
-        "anvil_ui_rules"
+        "anvil_ui_rules",
+        "atmosphere_analyzer_ui_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/UISettings/rules-suite.json",
       "integrationSuites": [

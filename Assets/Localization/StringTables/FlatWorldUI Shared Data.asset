@@ -15,6 +15,50 @@ MonoBehaviour:
   m_TableCollectionName: FlatWorldUI
   m_TableCollectionNameGuidString: 97b6da030a122b84bafa606b8b1b64db
   m_Entries:
+  - m_Id: 28102700009000001
+    m_Key: ui.text.0F352BB3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000002
+    m_Key: ui.text.F7C0FB8C
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000003
+    m_Key: ui.text.A2935645
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000004
+    m_Key: ui.text.E81914B6
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000005
+    m_Key: ui.text.C113DF5B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000006
+    m_Key: ui.text.91837B1E
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000007
+    m_Key: ui.text.BABDEAD1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000008
+    m_Key: ui.text.B478A1BA
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000009
+    m_Key: ui.text.0219ED22
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000010
+    m_Key: ui.text.C273BEA7
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102700009000011
+    m_Key: ui.text.96E1A2F2
+    m_Metadata:
+      m_Items: []
   - m_Id: 17923500000001245
     m_Key: ui.text.C417F406
     m_Metadata:

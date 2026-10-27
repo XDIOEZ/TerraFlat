@@ -15,6 +15,12 @@
       "name": "砧工具与制作布局规则",
       "luaPath": "GameplayTests/Systems/UISettings/anvil.lua",
       "enabled": true
+    },
+    {
+      "id": "atmosphere_analyzer_ui_rules",
+      "name": "大气检测仪屏幕布局与读数",
+      "luaPath": "GameplayTests/Systems/UISettings/atmosphere-analyzer.lua",
+      "enabled": true
     }
   ]
 }
