@@ -492,6 +492,8 @@
     "PolymerizationCatalyst": "Polymerization Catalyst",
     "FuelEngine": "Fuel Engine",
     "FuelEngine_Summoner": "Fuel Engine",
-    "Floor_Bitumen_Summoner": "Bitumen Floor"
+    "Floor_Bitumen_Summoner": "Bitumen Floor",
+    "Wheelbarrow": "Wooden Wheelbarrow",
+    "Wheelbarrow_Building": "Wooden Wheelbarrow"
   }
 }

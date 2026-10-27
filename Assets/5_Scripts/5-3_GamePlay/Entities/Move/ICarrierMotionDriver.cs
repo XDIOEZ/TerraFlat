@@ -24,3 +24,9 @@ public interface ICarrierPushMotionPolicy
     Vector2 ResolveCarrierPush(Vector2 velocity, bool sourceInWater);
     Vector2 ResolvePusherLimit(Vector2 velocity);
 }
+
+/// <summary>载具在施加推动与阻力之前自行判断来源是否符合条件。</summary>
+public interface ICarrierPushEligibilityPolicy
+{
+    bool CanReceiveCarrierPush(Mod_Mover source);
+}

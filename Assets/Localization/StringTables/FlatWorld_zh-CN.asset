@@ -4226,6 +4226,22 @@ MonoBehaviour:
     m_Localized: "石料与沥青铺成的深色地板，可在普通陆地铺设，拆除后恢复原始地面。"
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600002700020
+    m_Localized: "木制独轮手推车"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700021
+    m_Localized: "全木制的手推车，放置后从车斗后方推动。按 F 打开车斗库存，可装 12 格物品。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700022
+    m_Localized: "木制独轮手推车"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700023
+    m_Localized: "全木制的手推车，站在车斗后方推动。按 F 打开车斗库存，可装 12 格物品。"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -878,6 +878,8 @@
     "PolymerizationCatalyst": "Must reach 200 C together with ethylene. Required for polymerization but never consumed, and can be reused.",
     "FuelEngine": "Consumes real liquid fuel oil under mechanical load. Connect liquid pipes and a fuel tank to supply it.",
     "FuelEngine_Summoner": "Consumes real liquid fuel oil under mechanical load. Connect liquid pipes and a fuel tank to supply it.",
-    "Floor_Bitumen_Summoner": "A dark floor made from bitumen, placed as a separate support surface."
+    "Floor_Bitumen_Summoner": "A dark floor made from bitumen, placed as a separate support surface.",
+    "Wheelbarrow": "A hand-built all-wood wheelbarrow. Place it, push from behind, and press F to access its 12-slot cargo inventory.",
+    "Wheelbarrow_Building": "A hand-built all-wood wheelbarrow. Push it from behind and press F to access its 12-slot cargo inventory."
   }
 }

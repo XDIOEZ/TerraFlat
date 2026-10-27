@@ -4871,6 +4871,18 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a00fe8330fb4420699fad25de0ba95c7
+    m_Address: Module_Wheelbarrow
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6c1e484b23b64e509c91c1ee69ecf20f
+    m_Address: Module_WheelbarrowInventory
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cc9a09e432e04508923997a7be2930c7
     m_Address: Module_MinecartPlacement
     m_ReadOnly: 0
@@ -4903,6 +4915,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6427da63dc62412f8ddcd99cd1295f24
     m_Address: Assets/6_Art/Generated/Railway/Minecart.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 328d604a915bf4f47bf8390755e710c0
+    m_Address: Assets/6_Art/Generated/Transport/Wheelbarrow/Wheelbarrow.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

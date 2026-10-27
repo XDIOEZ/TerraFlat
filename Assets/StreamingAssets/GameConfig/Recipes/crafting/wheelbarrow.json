@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:wooden_wheelbarrow",
+      "displayName": "木制独轮手推车",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 4
+        },
+        {
+          "match": "tag",
+          "tag": "Rope",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Wheelbarrow",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

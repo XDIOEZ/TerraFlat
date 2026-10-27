@@ -379,7 +379,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     /// <summary>当前有效玩家输入才可推动；已乘坐同一载具的乘员不能形成循环作用链。</summary>
     public bool CanReceivePush(Mod_Mover source)
         => (motionDriver == null || motionDriver is ICarrierPushMotionPolicy) && IsAvailable && GameNetwork.HasStateAuthority && source != null && source != Rider &&
-           source.CarrierSource == null && source.RequestedMoveInput.sqrMagnitude > 0.001f;
+           source.CarrierSource == null && source.RequestedMoveInput.sqrMagnitude > 0.001f &&
+           (motionDriver is not ICarrierPushEligibilityPolicy eligibility || eligibility.CanReceiveCarrierPush(source));
 
     internal void HandlePhysicalContact(Collision2D collision)
     {

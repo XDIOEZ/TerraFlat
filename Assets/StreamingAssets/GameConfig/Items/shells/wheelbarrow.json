@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Wheelbarrow",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "BuildingSummonerShell",
+      "requiredGroundSupport": 3,
+      "gameName": "木制独轮手推车",
+      "description": "全木制的手推车，放置后从车斗后方推动。按 F 打开车斗库存，可装 12 格物品。",
+      "amount": 1,
+      "weight": 45,
+      "volume": 120,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryCategory.Transport"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Transport/Wheelbarrow/Wheelbarrow.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 80,
+        "maxHp": 80,
+        "defense": {
+          "physical": 8
+        },
+        "combatBalanceVersion": 1,
+        "weakTool": 4
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Wheelbarrow_Building\",\"SummonerPrefabId\":\"Wheelbarrow\",\"SharedModuleIds\":[\"Mod_WheelbarrowInventory\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": false,
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "wheelbarrowInventory": {
+          "prefab": "Module_WheelbarrowInventory",
+          "id": "Mod_WheelbarrowInventory",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "CargoSlots": 12,
+            "MaxCargoWeightKg": 120,
+            "MaxCargoVolumeCubicMeters": 0.3
+          }
+        }
+      },
+      "worldDropBehavior": "interactive"
+    },
+    {
+      "id": "Wheelbarrow_Building",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "CarrierBodyShell",
+      "requiredGroundSupport": 3,
+      "gameName": "木制独轮手推车",
+      "description": "全木制的手推车，站在车斗后方推动。按 F 打开车斗库存，可装 12 格物品。",
+      "amount": 1,
+      "weight": 45,
+      "volume": 120,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryCategory.Transport"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Transport/Wheelbarrow/Wheelbarrow.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "size": {
+            "x": 1.1,
+            "y": 1.0
+          }
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 80,
+        "maxHp": 80,
+        "defense": {
+          "physical": 8
+        },
+        "combatBalanceVersion": 1,
+        "weakTool": 4,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": {
+            "x": 1.1,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":2,\"Role\":1,\"BuildingPrefabId\":\"Wheelbarrow_Building\",\"SummonerPrefabId\":\"Wheelbarrow\",\"SharedModuleIds\":[\"Mod_WheelbarrowInventory\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": false,
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "wheelbarrowInventory": {
+          "prefab": "Module_WheelbarrowInventory",
+          "id": "Mod_WheelbarrowInventory",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "CargoSlots": 12,
+            "MaxCargoWeightKg": 120,
+            "MaxCargoVolumeCubicMeters": 0.3
+          }
+        },
+        "wheelbarrow": {
+          "prefab": "Module_Wheelbarrow",
+          "id": "Mod_Wheelbarrow",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "PushSpeedMultiplier": 0.65
+          }
+        },
+        "carrier": {
+          "prefab": "Module_Carrier",
+          "id": "Mod_Carrier",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "MaxSpeed": 5,
+            "BoostSpeedMultiplier": 1,
+            "Acceleration": 3,
+            "Braking": 6,
+            "FacingTurnSpeed": 90,
+            "Radius": 0.35,
+            "LandSpeedMultiplier": 1,
+            "LandPushSpeedMultiplier": 1,
+            "WaterCurrentSpeed": 0,
+            "HullSize": {
+              "x": 1.1,
+              "y": 1.0
+            },
+            "SeatOffset": {
+              "x": 0,
+              "y": 0
+            },
+            "AllowsWater": false
+          }
+        }
+      }
+    }
+  ]
+}

@@ -79,6 +79,8 @@
         "Assets/StreamingAssets/GameplayTests/Systems/Player/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Tent.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldItemQuickPick.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTest*Wheelbarrow*.cs",
+        "Assets/StreamingAssets/GameConfig/Items/shells/wheelbarrow.json",
         "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/WorldItemQuickPickService.cs",
         "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_HotBar.WorldItemQuickPick.cs",
         "Assets/PlayerInput/*",
@@ -98,7 +100,8 @@
         "survival"
       ],
       "ruleCaseIds": [
-        "player_rules"
+        "player_rules",
+        "wheelbarrow_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Player/rules-suite.json",
       "integrationSuites": [
@@ -108,7 +111,9 @@
       "coverageDocument": "GameplayTests/Systems/Player/README.md",
       "integrationCaseIds": [
         "player_bicycle",
-        "player_gameplay"
+        "player_gameplay",
+        "wheelbarrow_gameplay",
+        "wheelbarrow_cleanup_gameplay"
       ],
       "rulesCoverage": "partial"
     },
@@ -229,6 +234,9 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Bag*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_HotBar*",
         "Assets/StreamingAssets/GameplayTests/Systems/Inventory/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_WheelbarrowInventory.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTest*Wheelbarrow*.cs",
+        "Assets/StreamingAssets/GameConfig/Items/shells/wheelbarrow.json",
         "Assets/5_Scripts/5-1_Data/CoreData/Inventory*",
         "Assets/5_Scripts/5-1_Data/CoreData/ItemSlot.cs",
         "Assets/5_Scripts/5-1_Data/CoreData/ItemStack.cs",
@@ -236,7 +244,8 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "inventory_rules"
+        "inventory_rules",
+        "wheelbarrow_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Inventory/rules-suite.json",
       "integrationSuites": [
@@ -245,7 +254,9 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Inventory/README.md",
       "integrationCaseIds": [
-        "inventory_gameplay"
+        "inventory_gameplay",
+        "wheelbarrow_gameplay",
+        "wheelbarrow_cleanup_gameplay"
       ],
       "rulesCoverage": "partial"
     },

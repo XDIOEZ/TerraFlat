@@ -484,6 +484,8 @@
     "ShipWall_Refractory_Summoner",
     "ShipWreck",
     "SpaceElevatorTerminal",
-    "SpaceElevatorTerminal_Summoner"
+    "SpaceElevatorTerminal_Summoner",
+    "Wheelbarrow",
+    "Wheelbarrow_Building"
   ]
 }

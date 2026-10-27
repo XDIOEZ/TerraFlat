@@ -12,6 +12,11 @@
       "enabled": true
     },
     {
+      "id": "crafting/wheelbarrow",
+      "path": "crafting/wheelbarrow.json",
+      "enabled": true
+    },
+    {
       "id": "crafting/metal_hammers",
       "path": "crafting/metal_hammers.json",
       "enabled": true

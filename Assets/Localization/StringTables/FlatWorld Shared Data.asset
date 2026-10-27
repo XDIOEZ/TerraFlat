@@ -4171,6 +4171,22 @@ MonoBehaviour:
     m_Key: item.Floor_Bitumen_Summoner.description
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600002700020
+    m_Key: item.Wheelbarrow.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700021
+    m_Key: item.Wheelbarrow.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700022
+    m_Key: item.Wheelbarrow_Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700023
+    m_Key: item.Wheelbarrow_Building.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

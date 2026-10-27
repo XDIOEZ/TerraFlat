@@ -12,6 +12,11 @@
       "enabled": true
     },
     {
+      "id": "wheelbarrow",
+      "path": "shells/wheelbarrow.json",
+      "enabled": true
+    },
+    {
       "id": "metal_hammers",
       "path": "shells/metal_hammers.json",
       "enabled": true

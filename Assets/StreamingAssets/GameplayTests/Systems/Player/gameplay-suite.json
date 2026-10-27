@@ -15,6 +15,21 @@
       "name": "玩家控制与交互真实关键流程",
       "luaPath": "GameplayTests/Systems/Player/gameplay.lua",
       "enabled": true
+    },
+    {
+      "id": "wheelbarrow_gameplay",
+      "name": "木制独轮车真实推动、交互与库存恢复",
+      "luaPath": "GameplayTests/Systems/Player/wheelbarrow-gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "wheelbarrow_cleanup_gameplay",
+      "name": "木制独轮车现场自动清理",
+      "luaPath": "GameplayTests/Systems/Player/wheelbarrow-cleanup.lua",
+      "enabled": true,
+      "dependsOn": [
+        "wheelbarrow_gameplay"
+      ]
     }
   ]
 }

@@ -4531,6 +4531,22 @@ MonoBehaviour:
     m_Localized: "A dark floor made from bitumen, placed as a separate support surface."
     m_Metadata:
       m_Items: []
+  - m_Id: 28102600002700020
+    m_Localized: "Wooden Wheelbarrow"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700021
+    m_Localized: "A hand-built all-wood wheelbarrow. Place it, push from behind, and press F to access its 12-slot cargo inventory."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700022
+    m_Localized: "Wooden Wheelbarrow"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102600002700023
+    m_Localized: "A hand-built all-wood wheelbarrow. Push it from behind and press F to access its 12-slot cargo inventory."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -35,6 +35,12 @@
       "enabled": true
     },
     {
+      "id": "wheelbarrow_rules",
+      "name": "木制独轮车配置、配方和推动规则",
+      "luaPath": "GameplayTests/Systems/Player/wheelbarrow-rules.lua",
+      "enabled": true
+    },
+    {
       "id": "combat_shield_rules",
       "name": "木盾单击长按、弹反窗口与副手索引",
       "luaPath": "GameplayTests/Systems/Combat/shield-rules.lua",
