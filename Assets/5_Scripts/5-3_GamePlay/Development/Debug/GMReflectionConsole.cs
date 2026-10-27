@@ -1629,38 +1629,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scroll.content = contentRect;
 
-        GameObject scrollbarObject = CreateUiObject("Scrollbar", scrollObject.transform);
-        RectTransform scrollbarRect = scrollbarObject.GetComponent<RectTransform>();
-        scrollbarRect.anchorMin = new Vector2(1f, 0f);
-        scrollbarRect.anchorMax = new Vector2(1f, 1f);
-        scrollbarRect.pivot = new Vector2(1f, 0.5f);
-        scrollbarRect.offsetMin = new Vector2(-16f, 10f);
-        scrollbarRect.offsetMax = new Vector2(-6f, -10f);
-        Image scrollbarBackground = scrollbarObject.AddComponent<Image>();
-        scrollbarBackground.color = GmSurfaceLow;
-
-        GameObject slidingArea = CreateUiObject("Sliding Area", scrollbarObject.transform);
-        RectTransform slidingRect = slidingArea.GetComponent<RectTransform>();
-        slidingRect.anchorMin = Vector2.zero;
-        slidingRect.anchorMax = Vector2.one;
-        slidingRect.offsetMin = new Vector2(2f, 2f);
-        slidingRect.offsetMax = new Vector2(-2f, -2f);
-
-        GameObject handle = CreateUiObject("Handle", slidingArea.transform);
-        RectTransform handleRect = handle.GetComponent<RectTransform>();
-        handleRect.anchorMin = Vector2.zero;
-        handleRect.anchorMax = Vector2.one;
-        handleRect.offsetMin = Vector2.zero;
-        handleRect.offsetMax = Vector2.zero;
-        Image handleImage = handle.AddComponent<Image>();
-        handleImage.color = GmSelection;
-
-        Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
-        scrollbar.handleRect = handleRect;
-        scrollbar.targetGraphic = handleImage;
-        scrollbar.direction = Scrollbar.Direction.BottomToTop;
-        scroll.verticalScrollbar = scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        CreateVerticalAutoHideScrollbar(scrollObject, scroll,
+            new Vector2(-16f, 10f), new Vector2(-6f, -10f));
         return content.transform;
     }
 

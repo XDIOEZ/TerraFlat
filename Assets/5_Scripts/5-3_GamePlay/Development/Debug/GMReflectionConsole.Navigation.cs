@@ -529,6 +529,8 @@ public sealed partial class GMReflectionConsole
 
     #endregion
 
+    #region GM 纵向滚动容器
+
     private static Transform ConfigureVerticalScroll(GameObject root, float inset, out ScrollRect scroll)
     {
         scroll = root.AddComponent<ItemStepScrollRect>();
@@ -567,6 +569,49 @@ public sealed partial class GMReflectionConsole
         scroll.content = contentRect;
         return content.transform;
     }
+
+    // 多个调试列表共用自动隐藏的纵向滚动条外观。
+    private static Scrollbar CreateVerticalAutoHideScrollbar(
+        GameObject root,
+        ScrollRect scroll,
+        Vector2 offsetMin,
+        Vector2 offsetMax)
+    {
+        GameObject scrollbarObject = CreateUiObject("Scrollbar", root.transform);
+        RectTransform scrollbarRect = scrollbarObject.GetComponent<RectTransform>();
+        scrollbarRect.anchorMin = new Vector2(1f, 0f);
+        scrollbarRect.anchorMax = new Vector2(1f, 1f);
+        scrollbarRect.pivot = new Vector2(1f, 0.5f);
+        scrollbarRect.offsetMin = offsetMin;
+        scrollbarRect.offsetMax = offsetMax;
+        scrollbarObject.AddComponent<Image>().color = GmSurfaceLow;
+
+        GameObject slidingArea = CreateUiObject("Sliding Area", scrollbarObject.transform);
+        RectTransform slidingRect = slidingArea.GetComponent<RectTransform>();
+        slidingRect.anchorMin = Vector2.zero;
+        slidingRect.anchorMax = Vector2.one;
+        slidingRect.offsetMin = new Vector2(2f, 2f);
+        slidingRect.offsetMax = new Vector2(-2f, -2f);
+
+        GameObject handle = CreateUiObject("Handle", slidingArea.transform);
+        RectTransform handleRect = handle.GetComponent<RectTransform>();
+        handleRect.anchorMin = Vector2.zero;
+        handleRect.anchorMax = Vector2.one;
+        handleRect.offsetMin = Vector2.zero;
+        handleRect.offsetMax = Vector2.zero;
+        Image handleImage = handle.AddComponent<Image>();
+        handleImage.color = GmSelection;
+
+        Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
+        scrollbar.handleRect = handleRect;
+        scrollbar.targetGraphic = handleImage;
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        return scrollbar;
+    }
+
+    #endregion
 
     private void BuildPlayerPage()
     {

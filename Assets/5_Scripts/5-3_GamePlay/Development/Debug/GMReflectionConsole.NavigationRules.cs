@@ -123,6 +123,11 @@ public sealed partial class GMReflectionConsole
             Rebuild(GmPageId.World);
             ScrollToPageTarget(worldPage, searchTarget.GetComponent<RectTransform>());
             Bounds target = RectTransformUtility.CalculateRelativeRectTransformBounds(worldPage.Scroll.viewport, searchTarget.transform);
+            GameObject buffScrollRoot = CreateUiObject("Buff scroll rules root", host);
+            Transform buffContent = ConfigureBuffTargetScroll(buffScrollRoot, 7f, out ScrollRect buffScroll);
+            GameObject catalogHost = CreateUiObject("Catalog scroll rules host", host);
+            Transform catalogContent = CreateCatalogScrollGrid(catalogHost.transform, "Catalog scroll");
+            ScrollRect catalogScroll = catalogHost.transform.Find("Catalog scroll").GetComponent<ScrollRect>();
             return new JObject
             {
                 ["selections"] = selections, ["switched"] = switched,
@@ -135,7 +140,9 @@ public sealed partial class GMReflectionConsole
                 ["rememberedSecondaryPage"] = rememberedSecondaryPage,
                 ["deviceNavigationCount"] = console.gmGroups[GmPageId.Device].Root.GetComponentsInChildren<Button>(true).Length,
                 ["searchTargetVisible"] = target.min.y >= worldPage.Scroll.viewport.rect.yMin - 1f &&
-                    target.max.y <= worldPage.Scroll.viewport.rect.yMax + 1f
+                    target.max.y <= worldPage.Scroll.viewport.rect.yMax + 1f,
+                ["buffTargetScroll"] = CaptureGmScrollConfiguration(buffScroll, buffContent),
+                ["catalogScroll"] = CaptureGmScrollConfiguration(catalogScroll, catalogContent)
             };
         }
         finally
@@ -143,6 +150,59 @@ public sealed partial class GMReflectionConsole
             DestroyImmediate(canvasRoot);
             DestroyImmediate(controllerRoot);
         }
+    }
+
+    private static JObject CaptureGmScrollConfiguration(ScrollRect scroll, Transform content)
+    {
+        RectTransform scrollbarRect = scroll.verticalScrollbar.GetComponent<RectTransform>();
+        RectTransform slidingRect = scrollbarRect.Find("Sliding Area").GetComponent<RectTransform>();
+        RectTransform handleRect = scroll.verticalScrollbar.handleRect;
+        Image track = scrollbarRect.GetComponent<Image>();
+        Image handle = handleRect.GetComponent<Image>();
+        VerticalLayoutGroup vertical = content.GetComponent<VerticalLayoutGroup>();
+        GridLayoutGroup grid = content.GetComponent<GridLayoutGroup>();
+        ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
+        return new JObject
+        {
+            ["itemStepScrollRect"] = scroll is ItemStepScrollRect,
+            ["horizontal"] = scroll.horizontal, ["vertical"] = scroll.vertical,
+            ["clamped"] = scroll.movementType == ScrollRect.MovementType.Clamped,
+            ["elastic"] = scroll.movementType == ScrollRect.MovementType.Elastic,
+            ["inertia"] = scroll.inertia, ["sensitivity"] = scroll.scrollSensitivity,
+            ["viewportMasked"] = scroll.viewport.GetComponent<RectMask2D>() != null,
+            ["viewportMinX"] = scroll.viewport.offsetMin.x, ["viewportMinY"] = scroll.viewport.offsetMin.y,
+            ["viewportMaxX"] = scroll.viewport.offsetMax.x, ["viewportMaxY"] = scroll.viewport.offsetMax.y,
+            ["verticalLayout"] = vertical != null, ["layoutSpacing"] = vertical != null ? vertical.spacing : -1f,
+            ["paddingLeft"] = vertical != null ? vertical.padding.left : -1,
+            ["paddingRight"] = vertical != null ? vertical.padding.right : -1,
+            ["paddingTop"] = vertical != null ? vertical.padding.top : -1,
+            ["paddingBottom"] = vertical != null ? vertical.padding.bottom : -1,
+            ["expandHeight"] = vertical != null && vertical.childForceExpandHeight,
+            ["gridLayout"] = grid != null,
+            ["gridFixedColumns"] = grid != null && grid.constraint == GridLayoutGroup.Constraint.FixedColumnCount,
+            ["gridColumns"] = grid != null ? grid.constraintCount : -1,
+            ["gridCellX"] = grid != null ? grid.cellSize.x : -1f,
+            ["gridCellY"] = grid != null ? grid.cellSize.y : -1f,
+            ["gridSpacingX"] = grid != null ? grid.spacing.x : -1f,
+            ["gridSpacingY"] = grid != null ? grid.spacing.y : -1f,
+            ["gridPaddingLeft"] = grid != null ? grid.padding.left : -1,
+            ["gridPaddingRight"] = grid != null ? grid.padding.right : -1,
+            ["gridPaddingTop"] = grid != null ? grid.padding.top : -1,
+            ["gridPaddingBottom"] = grid != null ? grid.padding.bottom : -1,
+            ["preferredHeightFit"] = fitter.verticalFit == ContentSizeFitter.FitMode.PreferredSize,
+            ["scrollbarAutoHide"] = scroll.verticalScrollbarVisibility == ScrollRect.ScrollbarVisibility.AutoHide,
+            ["scrollbarBottomToTop"] = scroll.verticalScrollbar.direction == Scrollbar.Direction.BottomToTop,
+            ["scrollbarNodesPreserved"] = scrollbarRect.name == "Scrollbar" && slidingRect.name == "Sliding Area" &&
+                handleRect.name == "Handle" && scroll.verticalScrollbar.targetGraphic == handle,
+            ["slidingInsetPreserved"] = slidingRect.offsetMin == new Vector2(2f, 2f) &&
+                slidingRect.offsetMax == new Vector2(-2f, -2f),
+            ["handleAnchorsPreserved"] = handleRect.anchorMin == Vector2.zero && handleRect.anchorMax == Vector2.one &&
+                handleRect.offsetMin == Vector2.zero && handleRect.offsetMax == Vector2.zero,
+            ["scrollbarMinX"] = scrollbarRect.offsetMin.x, ["scrollbarMinY"] = scrollbarRect.offsetMin.y,
+            ["scrollbarMaxX"] = scrollbarRect.offsetMax.x, ["scrollbarMaxY"] = scrollbarRect.offsetMax.y,
+            ["trackColor"] = new JArray(track.color.r, track.color.g, track.color.b, track.color.a),
+            ["handleColor"] = new JArray(handle.color.r, handle.color.g, handle.color.b, handle.color.a)
+        };
     }
 
     #endregion

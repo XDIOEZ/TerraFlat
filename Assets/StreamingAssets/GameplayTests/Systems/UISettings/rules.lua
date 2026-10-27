@@ -1,6 +1,65 @@
 -- 固定二级页签与每页独立滚动，窄内容区也不能把导航挤出边界。
+local function scroll_near(actual, expected, message)
+    assert(type(actual) == "number" and math.abs(actual - expected) < 0.001, message)
+end
+
+local function assert_gm_scroll_base(scroll, label)
+    assert(scroll.itemStepScrollRect and not scroll.horizontal and scroll.vertical and scroll.inertia,
+        label .. "滚动组件或横纵方向改变")
+    assert(scroll.viewportMasked and scroll.preferredHeightFit,
+        label .. "视口遮罩或内容高度布局丢失")
+    assert(scroll.scrollbarAutoHide and scroll.scrollbarBottomToTop and scroll.scrollbarNodesPreserved
+        and scroll.slidingInsetPreserved and scroll.handleAnchorsPreserved,
+        label .. "自动隐藏滚动条结构或方向改变")
+end
+
+local function assert_gm_scroll_contracts(data)
+    local buff, catalog = data.buffTargetScroll, data.catalogScroll
+    assert_gm_scroll_base(buff, "Buff目标列表")
+    assert_gm_scroll_base(catalog, "目录网格")
+    assert(buff.clamped and not buff.elastic and buff.verticalLayout and not buff.gridLayout and not buff.expandHeight,
+        "Buff目标列表滚动行为或纵向内容布局改变")
+    scroll_near(buff.sensitivity, 28, "Buff目标列表滚动灵敏度改变")
+    scroll_near(buff.viewportMinX, 7, "Buff视口左预留改变")
+    scroll_near(buff.viewportMinY, 7, "Buff视口底预留改变")
+    scroll_near(buff.viewportMaxX, -25, "Buff视口滚动条预留改变")
+    scroll_near(buff.viewportMaxY, -7, "Buff视口顶预留改变")
+    scroll_near(buff.layoutSpacing, 6, "Buff目标行距改变")
+    assert(buff.paddingLeft == 0 and buff.paddingRight == 0 and buff.paddingTop == 0 and buff.paddingBottom == 4,
+        "Buff目标内容内边距改变")
+    scroll_near(buff.scrollbarMinX, -14, "Buff滚动条左边界改变")
+    scroll_near(buff.scrollbarMinY, 7, "Buff滚动条底边界改变")
+    scroll_near(buff.scrollbarMaxX, -4, "Buff滚动条右边界改变")
+    scroll_near(buff.scrollbarMaxY, -7, "Buff滚动条顶边界改变")
+
+    assert(catalog.elastic and not catalog.clamped and catalog.gridLayout and not catalog.verticalLayout,
+        "目录网格滚动行为或网格内容布局改变")
+    scroll_near(catalog.sensitivity, 38, "目录网格滚动灵敏度改变")
+    scroll_near(catalog.viewportMinX, 10, "目录视口左预留改变")
+    scroll_near(catalog.viewportMinY, 10, "目录视口底预留改变")
+    scroll_near(catalog.viewportMaxX, -24, "目录视口滚动条预留改变")
+    scroll_near(catalog.viewportMaxY, -10, "目录视口顶预留改变")
+    assert(catalog.gridFixedColumns and catalog.gridColumns == 8
+        and catalog.gridPaddingLeft == 2 and catalog.gridPaddingRight == 2
+        and catalog.gridPaddingTop == 2 and catalog.gridPaddingBottom == 8,
+        "目录网格列数或内边距改变")
+    scroll_near(catalog.gridCellX, 118, "目录网格单元宽度改变")
+    scroll_near(catalog.gridCellY, 118, "目录网格单元高度改变")
+    scroll_near(catalog.gridSpacingX, 8, "目录网格横向间距改变")
+    scroll_near(catalog.gridSpacingY, 8, "目录网格纵向间距改变")
+    scroll_near(catalog.scrollbarMinX, -16, "目录滚动条左边界改变")
+    scroll_near(catalog.scrollbarMinY, 10, "目录滚动条底边界改变")
+    scroll_near(catalog.scrollbarMaxX, -6, "目录滚动条右边界改变")
+    scroll_near(catalog.scrollbarMaxY, -10, "目录滚动条顶边界改变")
+    for channel = 1, 4 do
+        scroll_near(buff.trackColor[channel], catalog.trackColor[channel], "共享滚动条底色出现差异")
+        scroll_near(buff.handleColor[channel], catalog.handleColor[channel], "共享滚动条滑块颜色出现差异")
+    end
+end
+
 for _, size in ipairs({{1120, 532}, {1000, 480}, {860, 420}, {680, 312}, {480, 420}}) do
     test.system("ui_settings", "gm_secondary_pages", {width = size[1], height = size[2]}, function(data)
+        assert_gm_scroll_contracts(data)
         assert(#data.selections == 12, "GM 分页覆盖不完整")
         for _, page in ipairs(data.selections) do
             assert(page.visiblePages == 1 and page.selectedVisible and page.ownsScroll and page.inView,

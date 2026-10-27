@@ -183,73 +183,13 @@ public sealed partial class GMReflectionConsole
         float inset,
         out ScrollRect scroll)
     {
-        scroll = root.AddComponent<ItemStepScrollRect>();
-        scroll.horizontal = false;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = 28f;
-
-        GameObject viewport = CreateUiObject("Viewport", root.transform);
-        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = new Vector2(inset, inset);
-        viewportRect.offsetMax = new Vector2(-inset - 18f, -inset);
-        viewport.AddComponent<RectMask2D>();
-        scroll.viewport = viewportRect;
-
-        GameObject content = CreateUiObject("Content", viewport.transform);
-        RectTransform contentRect = content.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.anchoredPosition = Vector2.zero;
-        contentRect.sizeDelta = Vector2.zero;
-
-        VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
+        Transform content = ConfigureVerticalScroll(root, inset, out scroll);
+        scroll.viewport.offsetMax = new Vector2(-inset - 18f, -inset);
+        VerticalLayoutGroup contentLayout = content.GetComponent<VerticalLayoutGroup>();
         contentLayout.padding = new RectOffset(0, 0, 0, 4);
         contentLayout.spacing = 6f;
-        contentLayout.childControlWidth = true;
-        contentLayout.childControlHeight = true;
-        contentLayout.childForceExpandWidth = true;
-        contentLayout.childForceExpandHeight = false;
-
-        ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        scroll.content = contentRect;
-
-        GameObject scrollbarObject = CreateUiObject("Scrollbar", root.transform);
-        RectTransform scrollbarRect = scrollbarObject.GetComponent<RectTransform>();
-        scrollbarRect.anchorMin = new Vector2(1f, 0f);
-        scrollbarRect.anchorMax = new Vector2(1f, 1f);
-        scrollbarRect.pivot = new Vector2(1f, 0.5f);
-        scrollbarRect.offsetMin = new Vector2(-14f, inset);
-        scrollbarRect.offsetMax = new Vector2(-4f, -inset);
-        Image scrollbarBackground = scrollbarObject.AddComponent<Image>();
-        scrollbarBackground.color = GmSurfaceLow;
-
-        GameObject slidingArea = CreateUiObject("Sliding Area", scrollbarObject.transform);
-        RectTransform slidingRect = slidingArea.GetComponent<RectTransform>();
-        slidingRect.anchorMin = Vector2.zero;
-        slidingRect.anchorMax = Vector2.one;
-        slidingRect.offsetMin = new Vector2(2f, 2f);
-        slidingRect.offsetMax = new Vector2(-2f, -2f);
-
-        GameObject handle = CreateUiObject("Handle", slidingArea.transform);
-        RectTransform handleRect = handle.GetComponent<RectTransform>();
-        handleRect.anchorMin = Vector2.zero;
-        handleRect.anchorMax = Vector2.one;
-        handleRect.offsetMin = Vector2.zero;
-        handleRect.offsetMax = Vector2.zero;
-        Image handleImage = handle.AddComponent<Image>();
-        handleImage.color = GmSelection;
-
-        Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
-        scrollbar.handleRect = handleRect;
-        scrollbar.targetGraphic = handleImage;
-        scrollbar.direction = Scrollbar.Direction.BottomToTop;
-        scroll.verticalScrollbar = scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        CreateVerticalAutoHideScrollbar(root, scroll,
+            new Vector2(-14f, inset), new Vector2(-4f, -inset));
         return content.transform;
     }
 
