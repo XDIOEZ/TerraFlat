@@ -5,6 +5,7 @@
 - ShipGroundAtmosphere 按 WorldKey 独立保存普通地面船件的气密几何/舱气，不加入 Ships/Flights；结构/资源修订才刷新，复用 ShipAtmosphereService。ShipDeviceLogic 正常 Tick 供压，机器/生物读同房间；起落按格移交真气体及已围合历史，模板初气仅地面首次密闭落账。
 - 闭合墙+完整内部地板决定密闭；停供保气，正常舱门不泄压，破口随外界，补洞不返旧气。密闭正常舱温，补舱只复温，气体仍需供给。
 - 环境索引一次查地板/房间；敞舱 WithOutside 取真实外温压，真空源复用不可变单例。结构结算前更新外压，舱气库存包装仅在 Gas/材料目录改变时重绑；Cabin FluidInventory 下限用 MinimumCabinGasSpaceLiters。
+- 船舱与机器外界复用 `GetMachineExteriorAt`，按真实地表世界键取大气；已加载世界在自身上下文取局部温度，不能要求地表名称匹配星体目录。
 - `PlanetShipAtmosphereSource.TakeGas` 先按 `AtmosphereService.MinimumMoles` 量化总请求，再按混合比例分配，末项接收量化后的余量，保持大气库存精确。
 - 墙耐压比较船外压力，真空占位温度不造成气体传热伤害；密闭设备读舱温，有气外界按材料耐温。生物与结构伤害分责，可登陆性由材料耐受决定。
 

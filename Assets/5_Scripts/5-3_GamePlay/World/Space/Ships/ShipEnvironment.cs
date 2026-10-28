@@ -124,22 +124,7 @@ namespace FlatWorld.Spaceflight
         }
 
         private const decimal AmbientMolesPerOxygenUnit = .0005m;
-        public IShipAtmosphereSource GetOutside(ShipState ship)
-        {
-            if (ship.RetainsWorldWithoutStructure) return PlanetShipAtmosphereSource.Vacuum;
-            ShipFlightState flight = GetFlight(ship.ShipId);
-            if (flight == null || flight.Phase is ShipFlightPhase.Cruising)
-                return PlanetShipAtmosphereSource.Vacuum;
-            BodyState body = FindSurfaceBody(flight.SurfaceWorldKey);
-            if (body == null || !owner.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet))
-                return PlanetShipAtmosphereSource.Vacuum;
-            Vector2 position = new((float)ship.PositionX, (float)ship.PositionY);
-            // 本地地表读实时温度，冷世界只采单格温度，避免完整区块生成。
-            double temperature = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == flight.SurfaceWorldKey &&
-                TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float ambient)
-                ? ambient : SpaceSurfaceQuery.GetAmbientTemperature(body.PlanetId, position);
-            return new PlanetShipAtmosphereSource(AtmosphereService.GetOrCreate(planet), temperature);
-        }
+        public IShipAtmosphereSource GetOutside(ShipState ship) => GetMachineExteriorAt(ship, Vector2.zero);
         public bool TrySample(Item item, out ItemEnvironmentSample sample)
         {
             sample = default;

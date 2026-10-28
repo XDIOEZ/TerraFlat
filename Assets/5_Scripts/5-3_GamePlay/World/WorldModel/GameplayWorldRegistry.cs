@@ -690,7 +690,7 @@ public static partial class GameplayWorldRegistry
         else if (!TryResolveWorldKeyForScene(root.scene, out worldKey)) return;
         if (string.IsNullOrEmpty(worldKey) || !TryGet(worldKey, out GameplayWorldRuntime world) ||
             world.Scene != root.scene) return;
-        bool visible = world.WorldKey == (ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName ?? localSceneKey);
+        bool visible = world.WorldKey == LocalPresentationWorldKey;
         GameplayWorldPresentationOwner owner = root.GetComponent<GameplayWorldPresentationOwner>();
         if (owner == null) owner = root.AddComponent<GameplayWorldPresentationOwner>();
         Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);

@@ -185,7 +185,10 @@ namespace FlatWorld.Spaceflight
             string world = flight.SurfaceWorldKey ?? ship.WorldAddress;
             ShipGeometry.LocalToWorld(ship, localPosition.x, localPosition.y, out double x, out double y);
             Vector2 position = PressureExplosionQueue.NormalizeInWorld(world, new Vector2((float)x, (float)y));
-            double temperature = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == world &&
+            // 已加载地表按真实世界上下文取局部温度，冷地表复用单格采样。
+            bool loaded = GameplayWorldRegistry.TryGet(world, out _);
+            using var worldScope = loaded ? GameplayWorldRegistry.UseWorld(world) : null;
+            double temperature = loaded &&
                 TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float actual)
                 ? actual : SpaceSurfaceQuery.GetAmbientTemperature(world, position);
             return new PlanetShipAtmosphereSource(GetMachineOutsideAtmosphere(ship), temperature);

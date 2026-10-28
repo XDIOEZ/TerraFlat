@@ -4,6 +4,7 @@ test.runtime("space", "ship_interior_world", {}, function(data)
     assert(data.unlandedAssembliesRetained, "尚未完成降落的组装船不能被落地恢复提前移交")
     assert(data.localWorldClocksAdvance, "船内普通农业与生物必须能读取持续推进的世界时钟")
     assert(data.localWorldHasNoPlanetaryWeather, "船内局部世界不能创建或借用星球天气")
+    assert(data.openShipUsesSurfaceAtmosphere, "露天船舱必须读取真实地表大气并恢复调用方的世界上下文")
 
     local first, second = data.ships[1], data.ships[2]
     assert(first.shipId ~= second.shipId and first.worldKey ~= second.worldKey,

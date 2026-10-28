@@ -34,6 +34,9 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         SpaceSession session = SpaceSession.Current ?? SpaceSession.EnsureLoaded();
         var fixture = new ShipInteriorFixture(session, player);
         GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        if (!AtmosphereService.TryGetForWorld(GameplayWorldRegistry.GetItemWorldKey(player), out AtmosphereState surfaceAir))
+            throw new InvalidOperationException("船内环境采样缺少起始地表大气。");
+        double surfacePressure = AtmosphereService.PressureKPa(surfaceAir);
         var surfacePresentation = new GameObject("船内测试的外部世界显示登记");
         SceneManager.MoveGameObjectToScene(surfacePresentation, player.gameObject.scene);
         SpriteRenderer surfaceRenderer = surfacePresentation.AddComponent<SpriteRenderer>();
@@ -174,6 +177,18 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             player.gameObject.scene == firstWorld.Scene && mover.rb.gameObject.scene == firstWorld.Scene &&
             GameplayWorldRegistry.GetItemWorldKey(player) == firstWorld.WorldKey && mover.rb.simulated;
         result["passengerChildrenMoved"] = RegisteredPlayerChildrenUseWorld(player, firstWorld.WorldKey);
+        using (GameplayWorldRegistry.UseWorld(firstWorld.WorldKey))
+        {
+            double outsidePressure = session.GetOutside(firstShip).PressureKPa;
+            bool sampled = session.TrySample(player, out ItemEnvironmentSample environment);
+            result["openShipUsesSurfaceAtmosphere"] = sampled && surfacePressure > 0d &&
+                Math.Abs(outsidePressure - surfacePressure) < .001d &&
+                Math.Abs(environment.PressureKPa - surfacePressure) < .001d &&
+                GameplayWorldRegistry.ExecutionWorldKey == firstWorld.WorldKey;
+            result["openShipAtmosphere"] = new JObject { ["surfacePressureKPa"] = surfacePressure,
+                ["outsidePressureKPa"] = outsidePressure, ["playerPressureKPa"] = environment.PressureKPa,
+                ["temperatureCelsius"] = environment.TemperatureCelsius };
+        }
 
         bool movementDelegated = false;
         if (entered && mover?.rb != null && controller != null)
@@ -189,8 +204,10 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             session.HandlePassengerInput(player, mover, controller, Vector2.zero, 0f, Time.fixedDeltaTime);
             yield return new WaitForFixedUpdate();
             yield return null;
+            GameplayWorldRegistry.RegisterPresentation(surfacePresentation);
+            bool registeredSurfaceVisible = !surfaceRenderer.forceRenderingOff;
             GameplayWorldRegistry.RefreshVisibility();
-            result["surfacePresentationRemainsVisible"] = !surfaceRenderer.forceRenderingOff &&
+            result["surfacePresentationRemainsVisible"] = registeredSurfaceVisible && !surfaceRenderer.forceRenderingOff &&
                 !GameplayWorldRegistry.GetPresentationRequiredForceRenderingOff(surfaceRenderer);
             result["cameraFollowsProjectedPassenger"] = CameraFollowsProjection(player,
                 session.ProjectShipInteriorPosition(firstShip, mover.rb.position));
