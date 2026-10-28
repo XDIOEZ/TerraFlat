@@ -7,41 +7,41 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _MaskTex("灯光遮罩", 2D) = "white" {}
         [NoScaleOffset] _LavaPatternTex("岩浆RGBA图(R主体/G扰动/B-A高光)", 2D) = "gray" {}
         [Header(Ocean Surface)]
-        _DeepColor("深海颜色", Color) = (0.02, 0.09, 0.36, 1)
-        _ShallowColor("浅海颜色", Color) = (0.42, 0.72, 0.98, 1)
+        _DeepColor("深海颜色", Color) = (0.075, 0.22, 0.255, 1)
+        _ShallowColor("浅海颜色", Color) = (0.32, 0.58, 0.57, 1)
         _SurfaceTint("海水染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
-        _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
-        _WaveSpeed("波浪传播速度", Range(0, 3)) = 0.42
-        _WaveDistortion("海流扭曲", Range(0, 4)) = 0.8
-        _NormalStrength("表面起伏", Range(0, 0.8)) = 0.44
+        _DetailScale("细浪尺度", Range(0.5, 12)) = 3.2
+        _WaveSpeed("波浪传播速度", Range(0, 3)) = 0.28
+        _WaveDistortion("海流扭曲", Range(0, 4)) = 0.35
+        _NormalStrength("表面起伏", Range(0, 0.8)) = 0.3
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
-        _WaveDirection("波浪传播方向（零为跟随水流/风向）", Vector) = (0, 0, 0, 0)
+        _WaveDirection("波浪传播方向（零为跟随水流/风向）", Vector) = (0.18, 1, 0, 0)
         _FlowSpeed("水流平移倍率", Range(0, 4)) = 1
         _FlowCycleSeconds("流动交接周期（秒）", Range(2, 16)) = 8
         _FlowDirection("静水默认波向", Vector) = (1, 0.35, 0, 0)
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
-        _RippleColor("浪脊颜色", Color) = (0.3, 0.57, 0.98, 1)
-        _RippleStrength("浪脊强度", Range(0, 1)) = 0.12
-        _RippleScale("浪纹尺度", Range(0.25, 6)) = 2.8
-        _RippleWidth("浪脊宽度", Range(0.04, 0.45)) = 0.18
-        _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.06
+        _RippleColor("浪脊颜色", Color) = (0.58, 0.72, 0.65, 1)
+        _RippleStrength("浪脊强度", Range(0, 1)) = 0.16
+        _RippleScale("浪纹尺度", Range(0.25, 6)) = 2.1
+        _RippleWidth("浪脊宽度", Range(0.04, 0.45)) = 0.08
+        _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.04
         [Header(Reflection And Foam)]
-        _ReflectionColor("镜面反射颜色", Color) = (0.38, 0.57, 0.9, 1)
-        _ReflectionStrength("镜面反射强度", Range(0, 1)) = 0.65
-        _ReflectionSmoothness("镜面反射平滑度", Range(0, 1)) = 0.68
+        _ReflectionColor("镜面反射颜色", Color) = (0.43, 0.61, 0.6, 1)
+        _ReflectionStrength("镜面反射强度", Range(0, 1)) = 0.24
+        _ReflectionSmoothness("镜面反射平滑度", Range(0, 1)) = 0.5
         _ReflectionDirection("镜面环境方向", Vector) = (-0.35, 0.18, 0.92, 0)
-        _SpecularColor("太阳高光", Color) = (1, 0.97, 0.88, 1)
-        _SpecularStrength("太阳高光强度", Range(0, 1)) = 0.34
-        _SpecularPower("太阳高光锐度", Range(4, 96)) = 72
+        _SpecularColor("太阳高光", Color) = (0.92, 0.9, 0.78, 1)
+        _SpecularStrength("太阳高光强度", Range(0, 1)) = 0.18
+        _SpecularPower("太阳高光锐度", Range(4, 96)) = 52
         _SunDirection("太阳方向", Vector) = (0.28, 0.42, 0.86, 0)
-        _CausticColor("焦散颜色", Color) = (0.35, 0.58, 0.96, 1)
+        _CausticColor("焦散颜色", Color) = (0.5, 0.67, 0.58, 1)
         _CausticStrength("焦散强度", Range(0, 1)) = 0.025
-        _FoamColor("泡沫颜色", Color) = (0.75, 0.87, 1, 1)
-        _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.12
+        _FoamColor("泡沫颜色", Color) = (0.83, 0.86, 0.78, 1)
+        _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.09
         [Header(River Current)]
         [NoScaleOffset] _RiverPatternTex("河流RGBA图(RG斜率/B碎光/A泡沫)", 2D) = "gray" {}
-        _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.18
+        _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.12
         [Header(Unity Stylized Water)]
         [NoScaleOffset] _UnityWaterPatternTex("四向波纹RGBA图(RG法线/B泡沫/A浅水亮度)", 2D) = "gray" {}
         [NoScaleOffset] _UnityWaterDetailTex("碎光法线图", 2D) = "gray" {}
@@ -60,11 +60,11 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _MoonTrailLength("月光带长度", Range(0.01, 0.7)) = 0.34
         _MoonTrailWidth("月光带宽度", Range(0.005, 0.2)) = 0.065
         [Header(Shore)]
-        _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.22
+        _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.18
         _CornerStrength("转角叠加强度", Range(0, 1)) = 0.18
-        _ShoreColor("岸线亮部", Color) = (0.32, 0.56, 0.92, 1)
-        _ShoreStrength("岸线亮部强度", Range(0, 1)) = 0.035
-        _ShoreFoamStrength("岸边泡沫强度", Range(0, 1)) = 0.3
+        _ShoreColor("岸线亮部", Color) = (0.5, 0.67, 0.58, 1)
+        _ShoreStrength("岸线亮部强度", Range(0, 1)) = 0.05
+        _ShoreFoamStrength("岸边泡沫强度", Range(0, 1)) = 0.18
         _FoamSpeed("岸边泡沫速度", Range(0, 3)) = 0.52
         [Header(Lava)]
         [HDR] _LavaCrustColor("冷却壳颜色", Color) = (0.12, 0.012, 0.004, 1)

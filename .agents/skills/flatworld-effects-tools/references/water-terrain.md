@@ -12,6 +12,7 @@
 - 耕地干湿由 `ChunkTilemapRenderer.SoilMoisture` 只读农业水量（无农业差量时回退生成湿润度/定义默认），写入既有 Ground `Contact.xy`（含水比例/启用标记）。`Chunk-Mesh-Contact-Lit` 两个 Pass、单 Quad Cell Buffer 与逐格顶点路径共用干湿着色；UsePass 包装同步暴露干土颜色/强度、湿土 Tint。水分事件只上传本格参数，重复值不上传，不刷新邻格/水层，不调用带灌溉的农业查询。
 
 - `WaterSurfaceCommon.hlsl` 共用深度/岸线/月光；UsePass 包装同步暴露新增属性。月光在 Light2D 后合成，月亮出现与月相亮度分开；写实连续水色、风格化十档，所有风格 `ResolveWaterSurfaceAlpha` 随深度 0.30→0.50且封顶0.50。岩浆使用 `LavaSurfaceCommon/LavaMode/LavaPatternTex` 独立分支。
+- 默认写实水用灰青深浅色，四组解析波共用法线和短亮纹，不叠独立碎波/GGX；材质显式波向让亮纹接近横向，零方向仍可跟随水流。写实/风格化岸线染色与泡沫共用断续遮罩；Unity 风格和低配岸线保持各自实现。`rendering/water_surface_palette` 读取 Tilemap/Mesh/BRG 正式材质，检查配色、反光强度、两条光照 Pass 与三路径一致性；不替代真实场景画面验收。
 - `WaterSurfaceFlow.hlsl` 共用完整输入：河流/实验 FlowX/Y 为四角实际速度，海洋为四角带强度海岸/河口流向；格角包含零流样本并保留幅度，只有 kind=2 标 ocean，kind=1/3 走河流。双相平流用世界坐标/二维噪声交接，海洋速度与潮汐偏移不归一化弱流；unity-voronoi-water 的 MIT-0 许可在 ThirdPartyNotices。
 - `RiverSurface.hlsl`：Mochie FlowUV 与 Scrawk 格角局部方向混合，独立纹理法线/稀疏泡沫，不恢复噪声中值闭环描边；未量化世界坐标显式梯度避免格边 Mipmap 错采，泡沫先阈值后混透明。`RiverPattern_RGBA` 为线性 Repeat/Mipmap、不压缩数据图（RG斜率/B碎光/A泡沫），生成器 `Tools/Rendering/generate_river_surface_pattern.py`，许可 `RiverSurface-LICENSE.txt`。
 - `_FlowSpeed` 仅流速倍率；`_WaveSpeed/_WaveDirection` 独立传播（零方向跟随水/风），`_FlowCycleSeconds` 为交接周期。湖泊无定向漂移但保留细波；潮汐 `_GlobalGameDay/_TideCyclesPerDay`，海风浪 `_OceanWaveTime/_OceanWaveFactors`。三种海洋风格禁噪声等值线/网状焦散，写实禁噪声扭曲。

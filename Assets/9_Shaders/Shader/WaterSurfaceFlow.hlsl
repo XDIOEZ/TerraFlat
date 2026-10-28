@@ -139,11 +139,11 @@ half3 ApplyFlowingWaterShore(half3 sourceColor, half recess, float2 positionWS, 
         float washTime = _Time.y * max(_FoamSpeed, 0.0);
         float wash = 0.5 + 0.5 * sin(washTime * 1.7 + foamNoise * 5.0);
         float shoreBand = saturate(recess * (1.0 - recess) * 4.0);
-        float coverage = smoothstep(0.32, 0.78, foamNoise + wash * 0.24);
+        float coverage = smoothstep(0.48, 0.82, foamNoise + wash * 0.2);
         float foam = shoreBand * coverage * _ShoreFoamStrength * _FoamColor.a
-            * lerp(0.5, 1.0, saturate(motion.foamActivity));
+            * lerp(0.15, 1.0, saturate(motion.foamActivity));
         sourceColor = lerp(sourceColor, _ShoreColor.rgb,
-            shoreBand * _ShoreStrength * _ShoreColor.a);
+            shoreBand * coverage * _ShoreStrength * _ShoreColor.a);
         sourceColor = lerp(sourceColor, _FoamColor.rgb, saturate(foam));
     }
     return sourceColor;

@@ -107,10 +107,10 @@ WaterSurfaceData CalculateRiverSurface(float2 positionWS, float2 screenUV, half 
         * rsqrt(max(dot(_ReflectionDirection.xyz, _ReflectionDirection.xyz), 0.0001));
     float reflectionLobe = pow(saturate(dot(reflect(float3(0.0, 0.0, -1.0), normalWS), mirrorDirection)),
         lerp(3.0, 24.0, saturate(_ReflectionSmoothness)));
-    float sparkle = smoothstep(0.52, 0.86, pattern.z);
+    float sparkle = smoothstep(0.65, 0.92, pattern.z);
     surface.liquidDepth = saturate(depth);
     surface.depthBlend = 1.0h - surface.liquidDepth;
-    surface.reflection = reflectionLobe * _ReflectionStrength * _ReflectionColor.a * 0.35;
+    surface.reflection = reflectionLobe * _ReflectionStrength * _ReflectionColor.a * 0.12;
     surface.specular = pow(saturate(dot(normalWS, halfDirection)), max(_SpecularPower, 4.0))
         * sparkle * _SpecularStrength * _SpecularColor.a;
     float rippleWidth = clamp(_RippleWidth, 0.02, 0.45);

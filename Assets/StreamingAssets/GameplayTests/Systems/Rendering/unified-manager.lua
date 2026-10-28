@@ -84,3 +84,33 @@ for _, quads in ipairs({1, 2, 4096}) do
         end
     end, "阴影四边形索引：" .. count)
 end
+
+test.system("rendering", "water_surface_palette", {}, function(data)
+    assert(#data.materials == 3, "缺少 Tilemap、Mesh 或 BRG 正式水面材质")
+    local limits = { _ReflectionStrength = 0.35, _SpecularStrength = 0.30, _RippleStrength = 0.28,
+        _WhitecapStrength = 0.18, _ShoreFoamStrength = 0.30 }
+    for _, material in ipairs(data.materials) do
+        local colors, strengths = material.colors, material.strengths
+        local deep, shallow, foam = colors._DeepColor, colors._ShallowColor, colors._FoamColor
+        assert(material.shaderSupported and material.passCount >= 2 and material.litPass >= 0 and material.forwardPass >= 0,
+            "水面 Shader 不可用或缺少光照 Pass：" .. material.name)
+        assert(deep[1] < deep[2] and deep[3] > deep[2] * 0.7 and deep[3] < deep[2] * 1.35,
+            "深水没有保持自然灰青色：" .. material.name)
+        assert(shallow[1] < shallow[2] and math.abs(shallow[3] - shallow[2]) < 0.16 and
+            shallow[1] + shallow[2] + shallow[3] > deep[1] + deep[2] + deep[3] + 0.2,
+            "浅水没有比深水更亮或偏色过强：" .. material.name)
+        assert(math.min(foam[1], foam[2], foam[3]) > 0.65 and
+            math.max(foam[1], foam[2], foam[3]) - math.min(foam[1], foam[2], foam[3]) < 0.16,
+            "泡沫偏色过强或过暗：" .. material.name)
+        for property, limit in pairs(limits) do
+            assert(strengths[property] > 0 and strengths[property] <= limit,
+                "水面反光或泡沫过强：" .. material.name .. property)
+            assert(math.abs(strengths[property] - data.materials[1].strengths[property]) < 0.00001,
+                "三条水面路径强度不一致：" .. property)
+        end
+        for property, color in pairs(colors) do
+            for channel = 1, 3 do assert(math.abs(color[channel] - data.materials[1].colors[property][channel]) < 0.00001,
+                "三条水面路径颜色不一致：" .. property) end
+        end
+    end
+end, "水面材质：灰青深浅色、中性泡沫、克制波光与三路径一致")

@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-10-28 默认写实水面改为灰青水色、四组共用波光和断续岸沫，河流降低整片反射；`water_surface_palette` 已加入 `unified-manager.lua`。本轮单独执行原 Lua 水面段，70 项断言通过；三材质的两个正式 Pass 编译及湖泊/河流/海岸离屏 GPU 预览通过。完整 `rendering_unified_manager` 在既有 `destroyed` 注销清理断言失败，未覆盖真实游玩水岸、夜景及 Android 后端。
+
 2026-10-28 阴影索引整合：`shadow_quad_indices` 读取正式初始化后Mesh的首尾索引，Lua检查1/2/4096个Quad的容量、绕序与16位格式，放在独立unified-manager案例；先补断言后改生产，未运行。真实两类阴影提交和GPU画面仍待验收。
 
 2026-10-28 天气画面上下文整合：`rendering/weather_screen_context` 使用独立玩家、相机和真实相机栈采样正式查询，Lua 检查玩家资格、相机替换和最终栈筛选；断言放在可单独选择的 `rendering_unified_manager` 案例，避免既有 `rendering_rules` 超过 256 步而在预检失败。本轮只写入源码，未编译或运行；天气所属世界切换、维度禁用、各效果清理时机和最终画面仍待现场验收。

@@ -9,7 +9,41 @@ public static partial class GameplayTestSystemProbe
     #region 统一渲染入口规则采样
 
     private static void RegisterUnifiedRenderingOperations(Dictionary<string, Func<JObject, JObject>> operations)
-        => operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
+    {
+        operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
+        operations.Add("rendering/water_surface_palette", CaptureSharedWaterSurfaceMaterialPalette);
+    }
+
+    // 读取三条正式水面材质，颜色关系由 Lua 判断，不复算 Shader。
+    private static JObject CaptureSharedWaterSurfaceMaterialPalette(JObject args)
+    {
+        var materials = new List<Material>
+        {
+            Resources.Load<Material>("Config/WorldModel/BRG/ChunkMesh-Water-Lit"),
+            Resources.Load<Material>("Config/WorldModel/BRG/ChunkBRG-Water-Lit")
+        };
+#if UNITY_EDITOR
+        materials.Insert(0, UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(
+            "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat"));
+#endif
+        var samples = new JArray();
+        foreach (Material material in materials)
+        {
+            var colors = new JObject();
+            foreach (string property in new[] { "_DeepColor", "_ShallowColor", "_FoamColor" })
+            {
+                Color color = material.GetColor(property);
+                colors[property] = new JArray(color.r, color.g, color.b);
+            }
+            var strengths = new JObject();
+            foreach (string property in new[] { "_ReflectionStrength", "_SpecularStrength", "_RippleStrength",
+                "_WhitecapStrength", "_ShoreFoamStrength" }) strengths[property] = material.GetFloat(property);
+            samples.Add(new JObject { ["name"] = material.name, ["colors"] = colors, ["strengths"] = strengths,
+                ["shaderSupported"] = material.shader.isSupported, ["passCount"] = material.passCount,
+                ["litPass"] = material.FindPass("Universal2D"), ["forwardPass"] = material.FindPass("UniversalForward") });
+        }
+        return new JObject { ["materials"] = samples };
+    }
 
     // 独立物品只调用正式表现入口，采样真实绑定与资源状态，不进入世界模拟。
     private static JObject CaptureUnifiedItemRenderingManager(JObject args)
