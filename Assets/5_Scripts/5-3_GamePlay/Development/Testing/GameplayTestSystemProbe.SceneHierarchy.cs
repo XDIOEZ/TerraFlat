@@ -22,11 +22,8 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceSceneObjectHierarchy(JObject args)
     {
 #if UNITY_EDITOR
-        Scene previous = SceneManager.GetActiveScene();
-        Scene first = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
-            UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
-        Scene second = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
-            UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+        Scene first = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+        Scene second = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
         try
         {
             Transform items = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(first, RuntimeSceneObjectCategory.Items);
@@ -79,9 +76,8 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
-            SceneManager.SetActiveScene(previous);
-            UnityEditor.SceneManagement.EditorSceneManager.CloseScene(first, true);
-            UnityEditor.SceneManagement.EditorSceneManager.CloseScene(second, true);
+            UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(first);
+            UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(second);
         }
 #else
         return new JObject { ["available"] = false };
