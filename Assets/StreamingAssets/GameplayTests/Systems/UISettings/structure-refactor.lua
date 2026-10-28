@@ -1,0 +1,11 @@
+test.system("ui_settings", "gm_inspector_ownership", {}, function(data)
+    assert(data.separateText and data.separateBuffers, "悬停观察器拆分后串用了目标或查询/文本缓冲")
+    assert(data.clearOnlyOwner, "清理一个观察器破坏了另一个观察器的目标和文本")
+    assert(data.sharedFieldCache and data.formatUnchanged, "独立观察器没有复用字段缓存，或改变了原文本格式")
+end, "GM悬停观察器独立状态与共享反射缓存")
+
+test.system("ui_settings", "gm_catalog_layout", {}, function(data)
+    assert(data.sameFrame and data.startClosed, "两种目录没有共用正式窗口布局或初始显隐发生变化")
+    assert(data.independentInputs and data.amountDefaults and data.searchSize, "共用目录布局串用了搜索/数量控件或改变默认值")
+    assert(data.sameGridAlignment and data.separateContents, "目录的网格对齐或内容归属发生变化")
+end, "GM空投和生物目录共享布局但保留独立控件")

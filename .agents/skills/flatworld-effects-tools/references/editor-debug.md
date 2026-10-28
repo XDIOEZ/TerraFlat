@@ -30,3 +30,6 @@
 - `GMWorldLayerOverlay` 温度/污染互斥预算纹理，格对齐、未加载透明、关闭停采，不租区块/改地形；导航一格一Point texel，读真实流场/Job依赖，借用 Native 表不跨后端发布。
 - Render Streaming 用项目设置/WebApp，普通Play不自动串流；显式入口统一持有偏好/端口/URL/自启PID，回收核对缓存webserver.exe身份，编码按目标协商。
 - 本地 Android：`Automation/CodexAndroidBuildRunner` 消费 Library/CodexRunAndroidBuild.request，Library与APK同名 .build.json 记录结果。wallDurationSeconds 含 Addressables、Player durationSeconds 不含前置、大小读 apkSizeBytes；Addressables 1.22.3 临时关报告弹窗、finally恢复，保留报告且严格拦截资源失败。
+# GM 结构导航
+
+`GMReflectionConsole.cs` 保留启动、生命周期与页面刷新，`Navigation` 管分页外壳；世界控件、AIECS、事件、搜索、管理命令和目录各在同名职责文件。`CatalogLayout` 共用两类内容目录骨架；`GmHoverPropertyInspector` 独立持有 F6 的命中/文本/目标状态，只共享反射字段缓存。规则为 `ui_settings/gm_inspector_ownership`、`gm_catalog_layout`。
