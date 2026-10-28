@@ -19,6 +19,22 @@ for _, case in ipairs(durability_cases) do
     end, "基类耐久：" .. case.name)
 end
 
+test.system("inventory", "slot_binding_reuse", {}, function(data)
+    assert(data.clicks == 1 and data.submits == 1 and data.taps == 1 and data.desktopTaps == 1,
+        "固定槽与虚拟槽反复重绑留下重复或缺失的输入监听")
+    assert(data.lastIndex == 0 and data.correctData and data.getterReused,
+        "虚拟槽复用回调后仍指向旧索引或重建了槽位取数委托")
+end, "库存固定与虚拟槽共用绑定、去重监听和索引复用")
+
+test.system("inventory", "pointer_query_reuse", {}, function(data)
+    assert(data.slotMatched and data.dropMatched and data.blocked,
+        "共享指针命中丢失库存槽、玩法目标或 UI 阻挡")
+    assert(data.disabledRejected and data.outsideRejected,
+        "停用或未覆盖松手位置的玩法目标被当作可接收目标")
+    assert(data.firstPasses == 1 and data.totalPasses == 2 and data.cleared,
+        "同次指针回调重复扫描 UI，或新一次扫描残留旧命中")
+end, "库存指针一次扫描复用槽位、玩法目标和世界阻挡结果")
+
 local durability_transfers = {
     {args = {}, moved = true, count = 1, source = 4, sourceDurability = 20, target = 1, targetDurability = 7},
     {args = {hand = true}, moved = true, count = 1, source = 4, sourceDurability = 20, target = 1, targetDurability = 7},
