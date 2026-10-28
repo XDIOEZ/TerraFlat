@@ -120,6 +120,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public void Update()
     {
         AdvanceStartupAudioReadiness();
+        RefreshResourceLoadingPriorityForCurrentInteraction();
         RefreshResourceLoadingPresentation();
 
         // Alt+R 在主菜单重建资源会话，在世界内准备候选目录并原位发布，不触发保存或退出。

@@ -44,8 +44,8 @@ internal sealed partial class ResourceAssetScope
 
     private sealed class FastEditorAssetDatabaseProvider : AssetDatabaseProvider
     {
-        // 仍由 Addressables 异步完成和释放，四槽队列与主线程预算继续限制接入工作。
-        public FastEditorAssetDatabaseProvider() : base(0f) { }
+        // 负延迟立即接入已预热资产，避免零延迟仍排到下一次更新；目录队列继续控制主线程预算。
+        public FastEditorAssetDatabaseProvider() : base(-1f) { }
     }
 
     #endregion

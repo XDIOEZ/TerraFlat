@@ -22,6 +22,8 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 后端与生命周期
 
+- Actor目录的外壳与动画控制器共用 `ResourceLoadQueue` 四槽队列，完成即补槽；发出/异步失败仍归原Actor错误字典，热更新保留逐定义回滚。单轮定义编译共用 `ItemModulePrototypeCache`，不跨资源会话；回归 `core_lifecycle/resource_queue`、`item_runtime/module_assembly_identity`。
+
 - 显式 `AiRuntimeBackendService.TrySpawnDirect` 按当前世界懒建普通生成管理器；玩家位置优先读 Item 世界账本，局部世界使用本地物理坐标。`SimulateWithoutObservers` 不因无人观察休眠居民，世界退役通过 `MonsterSpawnerManager.ReleaseWorld` 统一保存、撤服务和后端；新增普通物种不增加船用生成分支。船内现场入口为 `Space/ship-world-suite.json`，未执行不能视作验收。
 
 - F4 → 生成与 AI → 世界生物信息读取 `MonsterSpawnerManager.Monitoring.cs` 快照；按本地玩家世界查询现有管理器/后端，不补建调度状态。倒计时/上限为真实游戏秒，调度/重试/最近尝试年龄为现实秒；生物合计含当前世界存活 GO、ECS 和已索引休眠居民，排除玩家/尸体/创建候选。仅可见时采样，真实生成分支只记录最近结果，不重新选点或抽概率；只读计时回归 `ai/spawn_monitor`。

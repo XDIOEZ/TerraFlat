@@ -86,6 +86,16 @@ public static partial class GameplayTestSystemProbe
 
     #endregion
 
+    #region 启动资源前后台策略
+
+    private static JObject ServiceStartupResourceLoadingPriority(JObject args) => new()
+    {
+        ["background"] = GameRes.ShouldKeepStartupResourceLoadingInBackground(
+            Flag(args, "startupReady", false), Flag(args, "enteringWorld", false))
+    };
+
+    #endregion
+
     #region 编辑器资源入口规则采样
 
     private static JObject ServiceEditorAssetLoading(JObject args)
@@ -104,8 +114,19 @@ public static partial class GameplayTestSystemProbe
         IResourceLocation second = ResourceAssetScope.RemapEditorLoadLocation(manager, source, typeof(Sprite));
         var custom = new ResourceLocationBase("custom", "custom", customProvider.ProviderId, typeof(Sprite));
         var unknown = new ResourceLocationBase("bundle", "bundle", "AssetBundleProvider", typeof(Sprite));
+        const string readyPrefabPath = "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab";
+        var readyPrefabLocation = new ResourceLocationBase("ready-prefab", readyPrefabPath,
+            originalProvider.ProviderId, typeof(GameObject));
+        var readyPrefab = manager.ProvideResource<GameObject>(
+            ResourceAssetScope.RemapEditorLoadLocation(manager, readyPrefabLocation, typeof(GameObject)));
+        bool completedImmediately = readyPrefab.IsDone;
+        bool loadedExpectedPrefab = readyPrefab.Status == AsyncOperationStatus.Succeeded &&
+            readyPrefab.Result != null && UnityEditor.AssetDatabase.GetAssetPath(readyPrefab.Result) == readyPrefabPath;
+        manager.Release(readyPrefab);
         return new JObject
         {
+            ["completedImmediately"] = completedImmediately, ["loadedExpectedPrefab"] = loadedExpectedPrefab,
+            ["immediateRequestReleased"] = !readyPrefab.IsValid(),
             ["available"] = true,
             ["sourceUnchanged"] = source.ProviderId == originalProvider.ProviderId && ReferenceEquals(warmedProvider, originalProvider),
             ["separateProvider"] = mapped.ProviderId != source.ProviderId &&

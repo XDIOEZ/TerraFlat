@@ -26,7 +26,8 @@ public partial class GameRes
 
             loadingText = title;
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
-        }, () => IsStartupReady || preparingInPlaceReload, () => GameplayTestResourceCache.Active ? 8d : (double?)null);
+        }, () => preparingInPlaceReload || ShouldKeepCurrentResourceLoadingInBackground,
+            () => GameplayTestResourceCache.Active ? 8d : (double?)null);
         List<ItemDefinitionDto> itemSources = null;
         // 音库独立发出异步请求，目录构建期间持续接入，最终校验前再统一等待。
         plan.Add("audio-request", "异步预加载音库", 0.5f,

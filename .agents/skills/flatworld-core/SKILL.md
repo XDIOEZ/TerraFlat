@@ -37,12 +37,12 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 ## 资源会话
 
-- LoadPlan 声明阶段和依赖，嵌套 IEnumerator 受 ResourceLoadPipeline 统一异常/超时/取消管理。菜单后台阶段每帧协作预算1ms；PureDataAsync 仅处理私有字符串/DTO/ID，Unity 对象和目录发布仍在主线程。
+- LoadPlan 声明阶段和依赖，嵌套 IEnumerator 受 ResourceLoadPipeline 统一异常/超时/取消管理。正式启动默认每帧4ms，菜单交互时后台1ms；等待进入世界的加载页恢复前台预算与原资源接入/上传设置，取消进入再回后台。原位更新仍用交互预算，Lua缓存测试保留8ms覆盖；规则 `core_lifecycle/resource_loading_priority`。PureDataAsync 仅处理私有字符串/DTO/ID，Unity 对象和目录发布仍在主线程。
 - 本地 Items/Recipes 分包先在主线程校验文件路径，再交给单次 PureDataAsync 批量读盘与解析；Android/WebGL 保留逐包 UnityWebRequest，避免小文件反复跨帧等待。
 - `audio-request` 先发出音库请求，与 UI/内容目录重叠加载；主菜单依赖就绪后由 Update 非阻塞接入音库并只发布一次，`audio` 阶段在最终校验前收齐。帧间失败同样终止会话，原位更新隔离菜单依赖标记。通用资源和物品视觉由 ResourceLoadQueue 保持最多4个在途请求、完成即补槽，按原索引收结果，仅预算耗尽或请求未完成时让出。编辑器 Sprite 冷加载在每个槽位通过 AssetDatabase.LoadObjectAsync 读取 TextureImporter 主纹理，完成即严格校验子图并接续 ResourceAssetScope 请求，同图集共享主纹理操作；不能只延迟同步 AssetDatabase 调用就当成异步，也不能跨 yield 持有 ProfilerMarker 作用域。
 - 本体先校验、MOD 合并后再 validate-final；领域引用通过 IResourceCatalogValidator/增量版本扩展。正式世界生成资源用 worldAuthoringResourcePaths，完整会话在 Ready 前预热最终 BRG Sprite Mesh。
 - 具体资源请求立即归 ResourceAssetScope，失败/取消释放；Addressables 初始化句柄归 GameRes、跨会话保留。卸载顺序为 MOD/池、表现/共享 Mesh、目录、源资源；销毁清理使用现有引用。
-- Editor Fast Mode 的默认 AssetDatabase 请求由 Scope 映射到独立零模拟延迟 Provider，保留子资源、依赖、数据与句柄所有权；不替换原 Provider/缓存，不接管自定义 Provider 或 Bundle。启动 UI 也复用四槽队列。目录复查复用模块严格编译结果，仍检查原型类型、碰撞体和模块自有约束；回归 `core_lifecycle/editor_asset_loading`、`item_runtime/compiled_module_parameters`。
+- Editor Fast Mode 的默认 AssetDatabase 请求由 Scope 映射到独立即时 Provider（SDK延迟 -1；0仍排延迟回调），保留子资源、依赖、数据与句柄所有权；不替换原 Provider/缓存，不接管自定义 Provider 或 Bundle。启动 UI 也复用四槽队列。目录复查复用模块严格编译结果，仍检查原型类型、碰撞体和模块自有约束；回归 `core_lifecycle/editor_asset_loading`（真实Prefab立即完成与释放）、`item_runtime/compiled_module_parameters`。
 - 启动 JSON 由共享程序集 `Shared/ContentCache/` 自动缓存到 `persistentDataPath/ContentCache/`，玩家仍编辑 `StreamingAssets/GameConfig/` 原始 JSON。Item/Actor/Tile/Recipes/Buffs 按 Manifest 与启用分包生成各自 MemoryPack 二进制包，逐文件 SHA-256 核对后命中跳过 JSON 解析；动物技能按来源摘要复用 DTO；强类型配置经 `JsonConfigurationCache.Deserialize/FromUnityJson/FromToken/Parse` 按原文/参数树摘要恢复 DTO，小 JObject 参数已随整包保存，直接解析，不再逐树落盘。新增配置模型需支持 MemoryPack，派生值/Unity 引用/运行态排除，字典比较器须保留；配置校验、当前物品引用及资源绑定每轮重新执行，缓存损坏或写盘失败回退原解析器。Actor 保留原始继承来源，世界内逐个容错重载绕过整目录缓存。真实重建通过 BuildRevision 让加载页补充首次较慢提示，命中不提示；回归 `core_lifecycle/binary_content_cache、json_configuration_cache`。
 - 编辑器 FullPlayModeReloadPolicy 保持 Domain/Scene Reload 开启；Prefab 标签空结果在 GameRes 入口失败。TimeSystem JSON 在允许新世界前完成，玩家覆盖配置无效时保留内建。
 - Lua 测试入口可通过 `GameplayTestResourceCache` 恢复 Editor 持久源资产和物品 DTO；每轮新建 Scope/句柄、运行时模板和当前 C# 绑定，仅 Ready 后写缓存，失败/取消撤销暂存。缓存清理及诊断见 [Lua 测试](../flatworld-lua-testing/SKILL.md)。

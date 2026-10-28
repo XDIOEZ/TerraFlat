@@ -66,8 +66,23 @@ public partial class GameRes
     private ThreadPriority previousLoadingPriority;
     private int previousUploadTimeSlice;
 
+    internal static bool ShouldKeepStartupResourceLoadingInBackground(bool startupReady, bool enteringWorld)
+        => startupReady && !enteringWorld;
+
+    private bool ShouldKeepCurrentResourceLoadingInBackground =>
+        ShouldKeepStartupResourceLoadingInBackground(IsStartupReady,
+            GameManager.ExistingInstance?.IsWorldEntryInProgress == true);
+
     /// <summary>定义构建和请求发出使用统一帧预算，不能让同帧的多个阶段各自重新计时。</summary>
     internal bool ShouldYieldResourceWork() => loadPipeline?.ShouldYield() == true;
+
+    // 加载页接管交互后恢复正常接入和上传预算，回到菜单再启用后台限制。
+    private void RefreshResourceLoadingPriorityForCurrentInteraction()
+    {
+        if (LoadState != ResourceLoadState.Loading || preparingInPlaceReload) return;
+        if (ShouldKeepCurrentResourceLoadingInBackground) BeginMenuBackgroundLoading();
+        else RestoreBackgroundLoadingPolicy();
+    }
 
     /// <summary>菜单开放期间收紧 Player 的资源接入和 GPU 上传时间，结束会话后恢复原设置。</summary>
     private void BeginMenuBackgroundLoading()

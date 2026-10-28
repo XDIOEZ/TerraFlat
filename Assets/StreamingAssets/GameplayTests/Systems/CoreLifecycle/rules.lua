@@ -21,7 +21,20 @@ test.system("core_lifecycle", "editor_asset_loading", {}, function(data)
     assert(data.identityPreserved and data.dependenciesPreserved, "加速位置丢失资源身份、子图、数据或依赖")
     assert(data.oneProvider, "重复请求重复注册编辑器 Provider")
     assert(data.customPreserved and data.bundlePreserved, "编辑器入口接管了自定义 Provider 或 Bundle 资源")
+    assert(data.completedImmediately and data.loadedExpectedPrefab and data.immediateRequestReleased,
+        "编辑器已准备资源仍额外排队等待、加载错误 Prefab，或释放后遗留请求")
 end, "编辑器默认资源请求路由、缓存隔离和依赖保留")
+
+for _, row in ipairs({
+    {startupReady = false, enteringWorld = false, background = false},
+    {startupReady = true, enteringWorld = false, background = true},
+    {startupReady = true, enteringWorld = true, background = false},
+    {startupReady = false, enteringWorld = true, background = false}
+}) do
+    test.system("core_lifecycle", "resource_loading_priority", row, function(data)
+        assert(data.background == row.background, "加载页仍使用菜单后台预算，或菜单没有恢复后台限制")
+    end, "启动、菜单和等待进入世界的资源前后台预算")
+end
 
 test.system("core_lifecycle", "binary_content_cache", {}, function(data)
     assert(data.coldMiss and data.stored and data.warmHit and data.count == 2, "首次解析没有生成可跨会话恢复的二进制对象")

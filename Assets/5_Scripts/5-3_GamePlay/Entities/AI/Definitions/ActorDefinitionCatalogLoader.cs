@@ -247,39 +247,36 @@ public static class ActorDefinitionCatalogLoader
         var controllerHandles = new Dictionary<string, AsyncOperationHandle<RuntimeAnimatorController>>(StringComparer.OrdinalIgnoreCase);
         var shellErrors = new Dictionary<string, Exception>(StringComparer.OrdinalIgnoreCase);
         var controllerErrors = new Dictionary<string, Exception>(StringComparer.OrdinalIgnoreCase);
-        foreach (KeyValuePair<string, string> pair in shellAddresses)
+        var shells = shellAddresses.ToArray();
+        var controllers = controllerAddresses.ToArray();
+        AsyncOperationHandle? BeginActorShellOrAnimatorControllerRequest(int index)
         {
-            try { shellHandles.Add(pair.Key, gameRes.ResourceAssets.Load<GameObject>(pair.Value)); }
-            catch (Exception exception) { shellErrors.Add(pair.Key, exception); }
-            if (gameRes.ShouldYieldResourceWork()) yield return null;
-            if (shellHandles.Count % 4 == 0)
+            bool isShell = index < shells.Length;
+            string key = isShell ? shells[index].Key : controllers[index - shells.Length];
+            try
             {
-                while (shellHandles.Values.Any(handle => !handle.IsDone)) yield return null;
-                yield return null;
+                if (isShell)
+                {
+                    AsyncOperationHandle<GameObject> handle = gameRes.ResourceAssets.Load<GameObject>(shells[index].Value);
+                    shellHandles.Add(key, handle);
+                    return handle;
+                }
+                AsyncOperationHandle<RuntimeAnimatorController> controller = gameRes.ResourceAssets.Load<RuntimeAnimatorController>(key);
+                controllerHandles.Add(key, controller);
+                return controller;
+            }
+            catch (Exception exception)
+            {
+                (isShell ? shellErrors : controllerErrors).Add(key, exception);
+                return null;
             }
         }
-        foreach (string address in controllerAddresses)
-        {
-            try { controllerHandles.Add(address, gameRes.ResourceAssets.Load<RuntimeAnimatorController>(address)); }
-            catch (Exception exception) { controllerErrors.Add(address, exception); }
-            if (gameRes.ShouldYieldResourceWork()) yield return null;
-            if ((shellHandles.Count + controllerHandles.Count) % 4 == 0)
-            {
-                while (shellHandles.Values.Any(handle => !handle.IsDone) ||
-                       controllerHandles.Values.Any(handle => !handle.IsDone)) yield return null;
-                yield return null;
-            }
-        }
-
-        while (shellHandles.Values.Any(handle => !handle.IsDone) ||
-               controllerHandles.Values.Any(handle => !handle.IsDone))
-        {
-            int total = shellHandles.Count + controllerHandles.Count;
-            int done = shellHandles.Values.Count(handle => handle.IsDone) +
-                       controllerHandles.Values.Count(handle => handle.IsDone);
-            progress?.Invoke(total == 0 ? 0.85f : 0.15f + 0.7f * done / total);
-            yield return null;
-        }
+        // 外壳和控制器共用四个在途槽位，失败仍交给对应 Actor 的发布事务处理。
+        int assetCount = shells.Length + controllers.Length;
+        yield return ResourceLoadQueue.Run<AsyncOperationHandle?>(assetCount,
+            BeginActorShellOrAnimatorControllerRequest, handle => !handle.HasValue || handle.Value.IsDone,
+            (_, _) => { }, gameRes.ShouldYieldResourceWork,
+            done => progress?.Invoke(0.15f + 0.7f * done / assetCount));
 
         var loadedSprites = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
         var spriteErrors = new Dictionary<string, Exception>(StringComparer.OrdinalIgnoreCase);
@@ -324,6 +321,7 @@ public static class ActorDefinitionCatalogLoader
             }
 
             var selected = new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
+            var prototypeCache = new ItemModulePrototypeCache();
             foreach (ItemDefinitionDto definition in candidates)
             {
                 string id = definition.Id.Trim();
@@ -342,7 +340,7 @@ public static class ActorDefinitionCatalogLoader
                     }
                     selected.Add(id, ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
                         gameRes, definition, loadedSprites, LoadedControllers,
-                        isActor: true, preloadedShells: loadedShells));
+                        isActor: true, preloadedShells: loadedShells, prototypeCache: prototypeCache));
                 }
                 catch (Exception exception)
                 {
