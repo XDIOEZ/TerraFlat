@@ -27,7 +27,6 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     private const string ShaftRingsObjectName = "MechanicalShaftEndRings";
     private const string CrossShaftLeftCoreObjectName = "MechanicalCrossShaftLeftCore";
     private const string CrossShaftRightCoreObjectName = "MechanicalCrossShaftRightCore";
-    private const string MechanicalShaftSortingLayerName = "MechanicalShaft";
     private const float ShaftCoreWorldWidth = 116f / 128f;
     private const float ShaftCoreWorldHeight = 28f / 128f;
     private const float CrossShaftCoreWorldWidth = 24f / 128f; // 轴承窗口中露出的滚动木芯长度。
@@ -71,10 +70,11 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     private SortingGroup buildingSortingGroup; // 建筑根节点的整体深度排序组。
     private bool hasOriginalBuildingSortingGroup;
     private bool originalBuildingSortingGroupEnabled;
-    private int originalBuildingSortingLayer;
+    private int originalBuildingSortingLayer, originalBuildingSortingOrder;
     private bool mechanicalShaftSortingLayerApplied;
     private bool mechanicalShaftSortingLayerResolved;
-    private int mechanicalShaftSortingLayerId;
+    private int mechanicalShaftSortingLayerId, mechanicalShaftSortingOrder;
+    private ItemVisualDefinitionDto mechanicalShaftVisualDefinition;
     private Quaternion originalRotation;
     private Vector3 originalSpriteLocalPosition;
     private Vector3 originalSpriteLocalScale;
@@ -142,6 +142,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         {
             originalBuildingSortingGroupEnabled = buildingSortingGroup.enabled;
             originalBuildingSortingLayer = buildingSortingGroup.sortingLayerID;
+            originalBuildingSortingOrder = buildingSortingGroup.sortingOrder;
         }
         gearboxLargeGearAngleDegrees = 0f;
         gearboxSmallGearAngleDegrees = GearboxMeshPhaseDegrees;
@@ -192,6 +193,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         buildingSortingGroup = null;
         hasOriginalBuildingSortingGroup = false;
         mechanicalShaftSortingLayerResolved = false;
+        mechanicalShaftVisualDefinition = null;
         inputShaftSprite = null;
         inputShaftRenderer = null;
         gearboxGearSprite = null;
@@ -567,6 +569,8 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         int sortingLayerId = GetMechanicalShaftSortingLayerId();
         if (buildingSortingGroup.sortingLayerID != sortingLayerId)
             buildingSortingGroup.sortingLayerID = sortingLayerId;
+        if (buildingSortingGroup.sortingOrder != mechanicalShaftSortingOrder)
+            buildingSortingGroup.sortingOrder = mechanicalShaftSortingOrder;
         if (!buildingSortingGroup.enabled)
             buildingSortingGroup.enabled = true;
         mechanicalShaftSortingLayerApplied = true;
@@ -580,17 +584,16 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     /// <summary>按项目排序层配置解析专属层，缺失时明确报错而不退回默认层。</summary>
     private int GetMechanicalShaftSortingLayerId()
     {
-        if (mechanicalShaftSortingLayerResolved) return mechanicalShaftSortingLayerId;
-
-        foreach (SortingLayer sortingLayer in SortingLayer.layers)
-        {
-            if (sortingLayer.name != MechanicalShaftSortingLayerName) continue;
-            mechanicalShaftSortingLayerId = sortingLayer.id;
-            mechanicalShaftSortingLayerResolved = true;
+        if (mechanicalShaftSortingLayerResolved && ReferenceEquals(mechanicalShaftVisualDefinition, item.VisualDefinition))
             return mechanicalShaftSortingLayerId;
-        }
 
-        throw new InvalidOperationException("项目缺少 Sorting Layer：" + MechanicalShaftSortingLayerName);
+        WorldSortingManager.GetResourceSortingKey(WorldSortingManager.MechanicalConnectorCategory,
+            out mechanicalShaftSortingLayerId, out mechanicalShaftSortingOrder);
+        WorldSortingManager.ResolveItemVisualSortingKey(item.VisualDefinition, mechanicalShaftSortingLayerId,
+            mechanicalShaftSortingOrder, out mechanicalShaftSortingLayerId, out mechanicalShaftSortingOrder);
+        mechanicalShaftVisualDefinition = item.VisualDefinition;
+        mechanicalShaftSortingLayerResolved = true;
+        return mechanicalShaftSortingLayerId;
     }
 
     /// <summary>卸载或离开传动轴状态时恢复根排序组的原始层与启用状态。</summary>
@@ -600,6 +603,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         if (buildingSortingGroup != null)
         {
             buildingSortingGroup.sortingLayerID = originalBuildingSortingLayer;
+            buildingSortingGroup.sortingOrder = originalBuildingSortingOrder;
             buildingSortingGroup.enabled = originalBuildingSortingGroupEnabled;
         }
         mechanicalShaftSortingLayerApplied = false;

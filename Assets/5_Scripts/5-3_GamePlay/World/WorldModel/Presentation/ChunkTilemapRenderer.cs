@@ -1191,14 +1191,15 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     internal void SetNaturalEntityPart(int entityId, int part, Sprite sprite, Material material,
         Matrix4x4 localToWorld, Color tint, Vector3 sortingPosition,
         Vector4 crop, Vector4 uvRegion, Vector4 shadow, bool sunShadow = false,
-        bool playerOccluder = false, bool highlighted = false)
+        bool playerOccluder = false, bool highlighted = false, int? sortingLayerId = null, int sortingOrder = 0)
     {
         if (entityId <= 0 || part < 0) throw new ArgumentOutOfRangeException(nameof(entityId));
         if (boundChunk?.Terrain == null) throw new InvalidOperationException("自然物提交前必须绑定区块。");
         if (!sunShadow)
         {
             DepthMesh.Set(ChunkDepthMeshRenderer.NaturalDomain, entityId, part, sprite, material,
-                localToWorld, sortingPosition, part, tint, crop, occluder: playerOccluder, highlighted: highlighted);
+                localToWorld, sortingPosition, part, tint, crop, occluder: playerOccluder, highlighted: highlighted,
+                sortingLayerId: sortingLayerId, sortingOrder: sortingOrder);
             return;
         }
         var key = (entityId, part);

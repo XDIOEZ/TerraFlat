@@ -21,6 +21,8 @@
         "Prey"
       ],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Generated/AI/SmallFish/SmallFish.png",
         "rendererPath": "FishVisual",
         "animatorPath": "FishVisual",

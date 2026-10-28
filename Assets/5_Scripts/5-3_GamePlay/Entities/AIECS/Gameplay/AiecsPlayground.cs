@@ -156,8 +156,7 @@ namespace FlatWorld.AIECS.Gameplay
                 bridge.Simulation.LocalAvoidanceEnabled = LocalAvoidanceEnabled;
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
                 SynchronizeScenarioPlayers();
-                display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene,
-                    AiecsWorldSortingResolver.Resolve());
+                display = AiecsWorldSortingResolver.CreateRenderer(Catalog, ids, player.gameObject.scene);
                 simulationTime = Time.timeAsDouble;
                 float2 center = (Vector2)player.transform.position;
                 if (requested == AiecsPlaygroundMode.Armies)
@@ -299,6 +298,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         /// <summary>当前实际显示批次数，不能把累计生成数量当成实际绘制数量。</summary>
         public int VisibleBatchCount => display == null ? 0 : display.BatchCount;
+        public int VisibleUploadedBytes => display == null ? 0 : display.UploadedBytes;
 
         /// <summary>实际脚底阴影数量与批次；与主体绘制计数分开验收。</summary>
         public int VisibleShadowCount => display == null ? 0 : display.ShadowCount;

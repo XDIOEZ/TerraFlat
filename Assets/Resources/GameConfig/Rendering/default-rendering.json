@@ -176,6 +176,7 @@
       { "visualLayer": "MechanicalUpperFront", "batchOrder": 14, "renderQueueOffset": 7 }
     ],
     "profiles": [
+      { "category": "world-background", "sortingLayer": "Tilemap", "order": -32768 },
       { "category": "underwater-creature", "sortingLayer": "Default", "order": 0 },
       { "category": "player", "sortingLayer": "Player", "order": 100 },
       { "category": "creature", "sortingLayer": "Player", "order": 100 },
@@ -189,6 +190,8 @@
       { "category": "ground-mark", "sortingLayer": "Shadow", "order": 1 },
       { "category": "ground-splash", "sortingLayer": "Shadow", "order": 40 },
       { "category": "ground-preview", "sortingLayer": "Shadow", "order": 1000 },
+      { "category": "mechanical-connector", "sortingLayer": "MechanicalShaft", "order": 0 },
+      { "category": "held-food", "sortingLayer": "HeldFood", "order": 0 },
       { "category": "world-effect", "sortingLayer": "Paticle", "order": 0 }
     ]
   }

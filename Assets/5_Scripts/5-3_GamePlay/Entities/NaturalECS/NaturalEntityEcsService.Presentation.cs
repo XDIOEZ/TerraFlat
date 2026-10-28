@@ -299,7 +299,8 @@ namespace FlatWorld.NaturalEntities
             // 主体和附属果实共用碰撞脚点行，贴图偏移及受击摇摆不改变排序。
             owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix, tint, localAnchor,
                 crop, Vector4.zero, Vector4.zero, playerOccluder: record.Profile.Definition.HasTag(Tag.Tree),
-                highlighted: record.Highlighted);
+                highlighted: record.Highlighted, sortingLayerId: record.Profile.SortingLayerId,
+                sortingOrder: record.Profile.SortingOrder);
 
             Bounds visible = ShadowFootprintResolver.MeasureVisibleWorldBounds(sprite, matrix);
             Bounds renderBounds = visible;
@@ -329,7 +330,8 @@ namespace FlatWorld.NaturalEntities
                         Quaternion.identity, Vector3.one * collection.IndicatorScale);
                     owner.SetNaturalEntityPart(record.Handle.Id, part++, fruitDefinition.Sprite, fruitDefinition.Material,
                         fruitMatrix, Color.white, localAnchor,
-                        Vector4.zero, Vector4.zero, Vector4.zero);
+                        Vector4.zero, Vector4.zero, Vector4.zero, sortingLayerId: record.Profile.SortingLayerId,
+                        sortingOrder: record.Profile.SortingOrder);
                 }
             }
             if (record.Profile.Canopy != null)
@@ -362,7 +364,8 @@ namespace FlatWorld.NaturalEntities
             float scale = record.Profile.Canopy.FruitWidth * growth / Mathf.Max(0.0001f, definition.Sprite.bounds.size.x);
             record.PresentationOwner.SetNaturalEntityPart(record.Handle.Id, part++, definition.Sprite, definition.Material,
                 Matrix4x4.TRS((Vector3)position + record.RenderOffset, Quaternion.identity, new Vector3(scale, scale, 1f)), Color.white,
-                anchor + record.RenderOffset, Vector4.zero, Vector4.zero, Vector4.zero);
+                anchor + record.RenderOffset, Vector4.zero, Vector4.zero, Vector4.zero,
+                sortingLayerId: record.Profile.SortingLayerId, sortingOrder: record.Profile.SortingOrder);
         }
 
         #endregion

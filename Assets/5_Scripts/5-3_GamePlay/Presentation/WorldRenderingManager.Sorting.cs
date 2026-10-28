@@ -35,6 +35,20 @@ public sealed partial class WorldRenderingManager
         renderer.sortingOrder = checked(order + orderOffset);
     }
 
+    /// <summary>启动前使用已存在的后端或正式资源，不创建排序管理器。</summary>
+    public static void ApplyAvailableRendererSorting(Renderer renderer, string category)
+    {
+        if (renderer == null) throw new ArgumentNullException(nameof(renderer));
+        WorldRenderingManager manager = ExistingInstance;
+        if (manager != null) { manager.ApplyRendererSorting(renderer, category); return; }
+        WorldSortingManager sorting = WorldSortingManager.GetExistingInstance();
+        int liveLayer, liveOrder;
+        if (sorting != null) sorting.GetSortingKey(category, out liveLayer, out liveOrder);
+        else WorldSortingManager.GetResourceSortingKey(category, out liveLayer, out liveOrder);
+        renderer.sortingLayerID = liveLayer;
+        renderer.sortingOrder = liveOrder;
+    }
+
     public void RegisterSortingMember(WorldSortingMember member)
     {
         if (sortingRenderingBackend == null) sortingRenderingBackend = WorldSortingManager.GetInstance();

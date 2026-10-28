@@ -20,8 +20,7 @@ public sealed class ShipTakeoffLoadingPresentation : IDisposable
         public Color Color;
         public Vector2 Center, Size;
         public float Angle;
-        public float SortY;
-        public int Layer, Order;
+        public WorldVisualSortingKey SortingKey;
         public bool FlipX, FlipY;
     }
 
@@ -42,8 +41,7 @@ public sealed class ShipTakeoffLoadingPresentation : IDisposable
                 Center = renderer.transform.TransformPoint(center),
                 Size = new Vector2(renderer.sprite.bounds.size.x * Mathf.Abs(scale.x), renderer.sprite.bounds.size.y * Mathf.Abs(scale.y)),
                 Angle = renderer.transform.eulerAngles.z,
-                Layer = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID), Order = renderer.sortingOrder,
-                SortY = renderer.transform.position.y,
+                SortingKey = WorldVisualSortingKey.FromRenderer(renderer),
                 FlipX = renderer.flipX ^ scale.x < 0f, FlipY = renderer.flipY ^ scale.y < 0f
             });
         }
@@ -59,16 +57,10 @@ public sealed class ShipTakeoffLoadingPresentation : IDisposable
                 Center = matrix.MultiplyPoint3x4(snapshot.Sprite.bounds.center),
                 Size = new Vector2(snapshot.Sprite.bounds.size.x * axisX.magnitude, snapshot.Sprite.bounds.size.y * axisY.magnitude),
                 Angle = Mathf.Atan2(axisX.y, axisX.x) * Mathf.Rad2Deg,
-                Layer = snapshot.Layer, Order = snapshot.Order, SortY = snapshot.SortY, FlipY = determinant < 0f
+                SortingKey = snapshot.SortingKey, FlipY = determinant < 0f
             });
         }
-        result.sprites.Sort((left, right) =>
-        {
-            int layer = left.Layer.CompareTo(right.Layer);
-            if (layer != 0) return layer;
-            int order = left.Order.CompareTo(right.Order);
-            return order != 0 ? order : right.SortY.CompareTo(left.SortY);
-        });
+        result.sprites.Sort((left, right) => left.SortingKey.CompareTo(right.SortingKey));
         return result.sprites.Count > 0 ? result : null;
     }
     #endregion

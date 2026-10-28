@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.AIECS;
+using FlatWorld.Combat;
+using FlatWorld.NaturalEntities;
 using Newtonsoft.Json.Linq;
+using Unity.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -63,6 +68,23 @@ public static partial class GameplayTestSystemProbe
         Sample("grouped_floor");
         bool relativeOrderPreserved = fixture.Sprite.sortingOrder == 7;
         Refresh(new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = 147 }, "custom_order");
+        using (var aquatic = new AquaticActorPresentation(item, fixture.Sprite))
+        {
+            aquatic.SetUnderwater(true);
+            Sample("aquatic_submerged");
+            rendering.RefreshItemRendering(item);
+            Sample("aquatic_refreshed");
+            aquatic.SetCarried(true, .5f);
+            aquatic.Tick(true, 0f);
+            Sample("aquatic_carried");
+            aquatic.SetCarried(false, 0f);
+            aquatic.Tick(true, 0f);
+            Sample("aquatic_returned");
+            aquatic.SetUnderwater(false);
+            Sample("aquatic_resurfaced");
+        }
+        // 水生表现清理后恢复原测试夹具的建筑类别。
+        item.GetComponent<WorldSortingMember>().Bind(WorldSortingManager.BuildingCategory, fixture.Sprite, item);
         item.SetInHand(true);
         bool heldRestored = group.sortingOrder != 147;
         item.SetInHand(false);
@@ -76,7 +98,20 @@ public static partial class GameplayTestSystemProbe
         bool removedConfigurationCleared = item.VisualDefinition == null;
         Refresh(new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = short.MinValue }, "minimum_order");
         Refresh(new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = short.MaxValue }, "maximum_order");
-        rendering.UnregisterItemRendering(item);
+        var despawnAquatic = new AquaticActorPresentation(item, fixture.Sprite);
+        despawnAquatic.SetUnderwater(true);
+        item.PrepareForDespawn(false);
+        WorldSortingManager.ReadExternalRendererKey(fixture.Sprite, out int despawnLayer, out int despawnOrder);
+        item.GetComponent<WorldSortingMember>().SetEnvironmentSortingOverride(AquaticActorPresentation.SortingCategory);
+        WorldSortingManager.ReadExternalRendererKey(fixture.Sprite, out int afterLateLayer, out int afterLateOrder);
+        despawnAquatic.Dispose();
+        WorldSortingManager.ReadExternalRendererKey(fixture.Sprite, out int afterDisposeLayer, out int afterDisposeOrder);
+        fixture.Root.SetActive(false);
+        fixture.Root.SetActive(true);
+        WorldSortingManager.ReadExternalRendererKey(fixture.Sprite, out int afterEnableLayer, out int afterEnableOrder);
+        bool aquaticDespawnReleased = despawnLayer == afterDisposeLayer && despawnOrder == afterDisposeOrder &&
+            despawnLayer == afterLateLayer && despawnOrder == afterLateOrder && despawnLayer == afterEnableLayer &&
+            despawnOrder == afterEnableOrder && !rendering.IsItemRenderingRegistered(item);
         fixture.Root.SetActive(false);
         item.PrepareForPoolReuse();
         bool pooledConfigurationCleared = item.VisualDefinition == null;
@@ -104,14 +139,44 @@ public static partial class GameplayTestSystemProbe
             catch (System.IO.InvalidDataException) { return true; }
             return false;
         }
+        bool GroundCoverAccepts(ItemVisualDefinitionDto visual)
+        {
+            try { ItemDefinitionCatalogLoader.ValidateGroundCoverWorldSortingConfiguration("probe:ground_cover", visual); }
+            catch (System.IO.InvalidDataException) { return false; }
+            return true;
+        }
+        bool NaturalSortingMatches(ItemVisualDefinitionDto visual, string layer, int order)
+        {
+            var definition = new RuntimeItemDefinition(item.itemData.IDName, "", null, item.itemData, visual,
+                null, null, null, fixture.Sprite.sprite, null, null, null, null,
+                material: Resources.Load<Material>("Config/WorldModel/BRG/ChunkMesh-Water-Lit"), entityRuntime: "resource");
+            if (!NaturalEntityEcsProfileCompiler.TryCompile(definition, out NaturalEntityEcsProfile profile, out string reason))
+                throw new InvalidOperationException("自然物排序采样无法编译：" + reason);
+            return SortingLayer.IDToName(profile.SortingLayerId) == layer && profile.SortingOrder == order;
+        }
         var catalog = new JArray();
         foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
             if (definition.Id is "ShipFloor_Iron" or "ShipFloor_Refractory" or "ShipFloor_Iron_Summoner" or "Stick_Wood" or "RailTrack")
                 catalog.Add(new JObject { ["id"] = definition.Id, ["layer"] = definition.Visual?.SortingLayerName,
                     ["order"] = definition.Visual?.SortingOrder, ["material"] = definition.Visual?.MaterialAddress });
+        var actors = new JArray();
+        foreach (ItemDefinitionDto definition in ActorDefinitionCatalogLoader.LoadBuiltInDefinitions())
+            if (!definition.Abstract)
+                actors.Add(new JObject { ["id"] = definition.Id, ["layer"] = definition.Visual?.SortingLayerName,
+                    ["order"] = definition.Visual?.SortingOrder });
         rendering.GetSortingKey("player", out int playerLayer, out int playerOrder);
-        return new JObject { ["samples"] = samples, ["catalog"] = catalog, ["definitionBound"] = definitionBound,
+        return new JObject { ["samples"] = samples, ["catalog"] = catalog, ["actors"] = actors, ["definitionBound"] = definitionBound,
+            ["depthRows"] = CaptureDepthBatchConfiguredSorting(fixture.Sprite.sprite, playerLayer, playerOrder),
+            ["nestedSorting"] = CaptureNestedSortingGroupPriority(playerLayer, playerOrder),
+            ["aiecs"] = CaptureAiecsConfiguredSorting(playerLayer, playerOrder),
+            ["groundCoverDefault"] = GroundCoverAccepts(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 0 }),
+            ["groundCoverFallback"] = GroundCoverAccepts(null),
+            ["groundCoverWrongLayerRejected"] = !GroundCoverAccepts(new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = 100 }),
+            ["groundCoverWrongOrderRejected"] = !GroundCoverAccepts(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 1 }),
+            ["naturalCustom"] = NaturalSortingMatches(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 37 }, "Default", 37),
+            ["naturalFallback"] = NaturalSortingMatches(null, "Player", 100),
             ["relativeOrderPreserved"] = relativeOrderPreserved, ["heldRestored"] = heldRestored,
+            ["aquaticDespawnReleased"] = aquaticDespawnReleased,
             ["removedConfigurationCleared"] = removedConfigurationCleared, ["pooledConfigurationCleared"] = pooledConfigurationCleared,
             ["droppedLayer"] = SortingLayer.IDToName(dropped.Layer), ["droppedOrder"] = dropped.Order,
             ["playerLayerValue"] = SortingLayer.GetLayerValueFromID(playerLayer), ["playerOrder"] = playerOrder,
@@ -119,6 +184,215 @@ public static partial class GameplayTestSystemProbe
             ["rejectsEmptyLayer"] = Rejects(new ItemVisualDefinitionDto { SortingLayerName = "" }),
             ["rejectsOrderUnderflow"] = Rejects(new ItemVisualDefinitionDto { SortingOrder = short.MinValue - 1 }),
             ["rejectsOrderOverflow"] = Rejects(new ItemVisualDefinitionDto { SortingOrder = short.MaxValue + 1 }) };
+    }
+
+    /// <summary>真实嵌套分组先比较子组，再比较子组内精灵，并遵守独立根。</summary>
+    private static JObject CaptureNestedSortingGroupPriority(int playerLayer, int playerOrder)
+    {
+        var root = new GameObject("[LuaNestedSorting]") { hideFlags = HideFlags.HideAndDontSave };
+        try
+        {
+            SortingGroup outer = root.AddComponent<SortingGroup>();
+            outer.sortingLayerID = playerLayer; outer.sortingOrder = playerOrder;
+            var first = new GameObject("FirstGroup"); first.transform.SetParent(root.transform, false);
+            var second = new GameObject("SecondGroup"); second.transform.SetParent(root.transform, false);
+            SortingGroup firstGroup = first.AddComponent<SortingGroup>();
+            SortingGroup secondGroup = second.AddComponent<SortingGroup>();
+            firstGroup.sortingOrder = -4; secondGroup.sortingOrder = 4;
+            SpriteRenderer firstSprite = first.AddComponent<SpriteRenderer>(); firstSprite.sortingOrder = 100;
+            SpriteRenderer secondSprite = second.AddComponent<SpriteRenderer>(); secondSprite.sortingOrder = -100;
+            var same = new GameObject("SameGroupSprite"); same.transform.SetParent(first.transform, false);
+            SpriteRenderer sameSprite = same.AddComponent<SpriteRenderer>(); sameSprite.sortingOrder = 101;
+            WorldVisualSortingKey firstKey = WorldVisualSortingKey.FromRenderer(firstSprite);
+            WorldVisualSortingKey secondKey = WorldVisualSortingKey.FromRenderer(secondSprite);
+            WorldVisualSortingKey sameKey = WorldVisualSortingKey.FromRenderer(sameSprite);
+            bool nestedGroups = firstKey.CompareTo(secondKey) < 0;
+            bool sameGroup = firstKey.CompareTo(sameKey) < 0;
+            secondGroup.sortingOrder = firstGroup.sortingOrder;
+            secondKey = WorldVisualSortingKey.FromRenderer(secondSprite);
+            int firstComparedToSecond = firstKey.CompareTo(secondKey);
+            int sameComparedToSecond = sameKey.CompareTo(secondKey);
+            bool groupsStayTogether = firstComparedToSecond != 0 &&
+                Math.Sign(firstComparedToSecond) == Math.Sign(sameComparedToSecond);
+            secondGroup.sortAtRoot = true;
+            WorldSortingManager.ReadExternalRendererKey(secondSprite, out int layer, out int order);
+            bool rootRead = layer == secondGroup.sortingLayerID && order == secondGroup.sortingOrder &&
+                WorldVisualSortingKey.FromRenderer(secondSprite).Group == secondGroup.GetInstanceID();
+            firstGroup.sortAtRoot = true;
+            outer.sortingOrder = 333;
+            first.AddComponent<WorldSortingMember>().Bind(WorldSortingManager.BuildingCategory, firstSprite);
+            bool rootApply = firstGroup.sortingLayerID == playerLayer && firstGroup.sortingOrder == playerOrder &&
+                outer.sortingOrder == 333;
+            return new JObject { ["nestedGroups"] = nestedGroups, ["sameGroup"] = sameGroup,
+                ["groupsStayTogether"] = groupsStayTogether,
+                ["rootRead"] = rootRead, ["rootApply"] = rootApply };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    /// <summary>提交少量正式生物帧，采样原生 Renderer 排序键、脚点和池复用。</summary>
+    private static JObject CaptureAiecsConfiguredSorting(int playerLayer, int playerOrder)
+    {
+#if UNITY_EDITOR
+        var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<AiecsAnimationCatalog>(
+            "Assets/6_Art/Generated/Actors/AIECS/生物动画目录.asset") ??
+            throw new InvalidOperationException("AIECS 排序采样缺少正式动画目录。");
+        var cameraObject = new GameObject("[LuaAiecsSortingCamera]") { hideFlags = HideFlags.HideAndDontSave };
+        var scene = cameraObject.scene;
+        var existing = new HashSet<int>();
+        foreach (GameObject previous in scene.GetRootGameObjects()) existing.Add(previous.GetInstanceID());
+        Camera camera = cameraObject.AddComponent<Camera>();
+        camera.orthographic = true; camera.orthographicSize = 10f; camera.aspect = 1f;
+        var actorIds = new[] { "Wolf", "Chicken" };
+        WorldSortingManager.ResolveItemVisualSortingKey(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 37 },
+            playerLayer, playerOrder, out int customLayer, out int customOrder);
+        var keys = new[] { new AiecsActorSortingKey(playerLayer, playerOrder), new AiecsActorSortingKey(customLayer, customOrder) };
+        WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundShadowCategory, out int shadowLayer, out int shadowOrder);
+        AiecsWorldRenderer display = null;
+        var records = new NativeArray<AiecsDisplayRecord>(4, Allocator.Temp);
+        try
+        {
+            display = new AiecsWorldRenderer(catalog, actorIds, scene, new AiecsWorldSortingKeys(keys, shadowLayer, shadowOrder));
+            display.ShadowsEnabled = false;
+            for (int i = 0; i < records.Length; i++)
+                records[i] = new AiecsDisplayRecord
+                {
+                    Key = new CombatIdentity { Backend = CombatBackend.Entity, Value = (ulong)(i + 1), Generation = 1 },
+                    Definition = i == 3 ? 1 : 0,
+                    Position = new float2(i == 0 ? -1f : i == 1 ? 1f : 0f, i == 2 ? 3f : 1f),
+                    Facing = new float2(1f, 0f), Hp = 1f, MaxHp = 1f
+                };
+            List<MeshRenderer> Renderers()
+            {
+                var result = new List<MeshRenderer>();
+                foreach (GameObject node in scene.GetRootGameObjects())
+                    if (!existing.Contains(node.GetInstanceID()) && node.name == "AIECS 连续绘制批次")
+                    {
+                        MeshRenderer value = node.GetComponent<MeshRenderer>();
+                        if (value != null) result.Add(value);
+                    }
+                return result;
+            }
+            display.DrawRecords(records, camera, default);
+            List<MeshRenderer> first = Renderers();
+            bool sharedYBatch = false, otherYBatch = false, customBatch = false;
+            foreach (MeshRenderer value in first)
+            {
+                int vertices = value.GetComponent<MeshFilter>().sharedMesh.vertexCount;
+                sharedYBatch |= value.enabled && value.sortingLayerID == playerLayer && value.sortingOrder == playerOrder &&
+                    Mathf.Abs(value.bounds.center.y - 1f) < .0001f && vertices == 8;
+                otherYBatch |= value.enabled && value.sortingLayerID == playerLayer && value.sortingOrder == playerOrder &&
+                    Mathf.Abs(value.bounds.center.y - 3f) < .0001f && vertices == 4;
+                customBatch |= value.enabled && value.sortingLayerID == customLayer && value.sortingOrder == customOrder &&
+                    Mathf.Abs(value.bounds.center.y - 1f) < .0001f && vertices == 4;
+            }
+            int initialBatches = display.BatchCount;
+            int initialBytes = display.UploadedBytes;
+            var firstIds = new HashSet<int>();
+            foreach (MeshRenderer value in first) firstIds.Add(value.GetInstanceID());
+            keys[1] = new AiecsActorSortingKey(playerLayer, 147);
+            display.SetActorSortingKeys(keys);
+            display.DrawRecords(records, camera, default);
+            List<MeshRenderer> refreshed = Renderers();
+            bool updated = false, reused = refreshed.Count == first.Count;
+            foreach (MeshRenderer value in refreshed)
+            {
+                reused &= firstIds.Contains(value.GetInstanceID());
+                updated |= value.enabled && value.sortingLayerID == playerLayer && value.sortingOrder == 147 &&
+                    Mathf.Abs(value.bounds.center.y - 1f) < .0001f;
+            }
+            AiecsDisplayRecord offscreen = records[2]; offscreen.Position = new float2(0f, 100f); records[2] = offscreen;
+            display.DrawRecords(records, camera, default);
+            int culledBatches = display.BatchCount;
+            int activeAfterCull = 0;
+            foreach (MeshRenderer value in refreshed) if (value.enabled) activeAfterCull++;
+            display.DrawRecords(records, null, default);
+            bool hidden = display.BatchCount == 0;
+            foreach (MeshRenderer value in refreshed) hidden &= !value.enabled;
+            return new JObject { ["batches"] = initialBatches, ["uploadedBytes"] = initialBytes, ["sharedYBatch"] = sharedYBatch,
+                ["otherYBatch"] = otherYBatch, ["customBatch"] = customBatch,
+                ["updated"] = updated, ["reused"] = reused, ["culledBatches"] = culledBatches,
+                ["activeAfterCull"] = activeAfterCull, ["hidden"] = hidden };
+        }
+        finally
+        {
+            display?.Dispose();
+            records.Dispose();
+            UnityEngine.Object.DestroyImmediate(cameraObject);
+        }
+#else
+        throw new InvalidOperationException("AIECS 配置规则采样需要 Unity Editor 中的动画目录。");
+#endif
+    }
+
+    /// <summary>以正式行网格提交验证外层配置分组与组内部件顺序。</summary>
+    private static JObject CaptureDepthBatchConfiguredSorting(Sprite sprite, int playerLayer, int playerOrder)
+    {
+#if UNITY_EDITOR
+        // 共享网格缓存持有 Sprite，规则使用正式资源而非测试结束即销毁的临时 Sprite。
+        sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Food/Tea.png") ??
+            throw new InvalidOperationException("排序采样缺少正式 Sprite。");
+#endif
+        var root = new GameObject("[LuaDepthSorting]") { hideFlags = HideFlags.HideAndDontSave };
+        Material material = Resources.Load<Material>("Config/WorldModel/BRG/ChunkMesh-Water-Lit") ??
+            throw new InvalidOperationException("排序采样缺少正式行网格材质。");
+        try
+        {
+            using var depth = new ChunkDepthMeshRenderer(root.transform);
+            void Set(int entity, int part, int innerOrder, int layer, int order) => depth.Set(
+                ChunkDepthMeshRenderer.BuildingDomain, entity, part, sprite, material,
+                Matrix4x4.identity, Vector3.zero, innerOrder, Color.white, sortingLayerId: layer, sortingOrder: order);
+            Set(1, 0, 0, playerLayer, playerOrder);
+            Set(1, 1, 1, playerLayer, playerOrder);
+            Set(2, 0, 0, playerLayer, playerOrder + 1);
+            Set(3, 0, 0, SortingLayer.NameToID("Default"), 0);
+            depth.Flush();
+            Transform body = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 1, 0);
+            Transform attachment = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 1, 1);
+            Transform otherOrder = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 2, 0);
+            Transform ground = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 3, 0);
+            bool separateKeys = otherOrder != null && ground != null && otherOrder != body && ground != body && otherOrder != ground;
+            SortingGroup group = body != null ? body.GetComponent<SortingGroup>() : null;
+            bool innerZero = false, innerOne = false;
+            if (body != null)
+                foreach (MeshRenderer part in body.GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    innerZero |= part.sortingOrder == 0;
+                    innerOne |= part.sortingOrder == 1;
+                }
+            int initialRows = depth.RowCount;
+            var snapshots = new List<WorldVisualSnapshot>();
+            depth.CollectVisualSnapshots(Matrix4x4.identity, snapshots);
+            int playerLayerValue = SortingLayer.GetLayerValueFromID(playerLayer);
+            int expectedGroup = body.GetInstanceID();
+            bool snapshotBody = false, snapshotAttachment = false, snapshotOther = false;
+            foreach (WorldVisualSnapshot snapshot in snapshots)
+            {
+                WorldVisualSortingKey key = snapshot.SortingKey;
+                snapshotBody |= key.Layer == playerLayerValue && key.Order == playerOrder && key.Group == expectedGroup && key.InternalOrder == 0;
+                snapshotAttachment |= key.Layer == playerLayerValue && key.Order == playerOrder && key.Group == expectedGroup && key.InternalOrder == 1;
+                snapshotOther |= key.Layer == playerLayerValue && key.Order == playerOrder + 1 && key.Group == otherOrder.GetInstanceID();
+            }
+            bool outerBeforeY = new WorldVisualSortingKey(playerLayerValue, 100, -100f, 1, 10)
+                .CompareTo(new WorldVisualSortingKey(playerLayerValue, 101, 100f, 2, -10)) < 0;
+            bool yBeforeInner = new WorldVisualSortingKey(playerLayerValue, 100, 5f, 1, 10)
+                .CompareTo(new WorldVisualSortingKey(playerLayerValue, 100, -5f, 1, -10)) < 0;
+            bool sameGroupInnerOrder = new WorldVisualSortingKey(playerLayerValue, 100, 0f, 1, 0)
+                .CompareTo(new WorldVisualSortingKey(playerLayerValue, 100, 0f, 1, 1)) < 0;
+            Set(2, 0, 0, playerLayer, playerOrder);
+            bool rekeyed = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 2, 0) == body;
+            return new JObject
+            {
+                ["sameRoot"] = body != null && body == attachment,
+                ["separateKeys"] = separateKeys,
+                ["outerKey"] = group != null && group.sortingLayerID == playerLayer && group.sortingOrder == playerOrder,
+                ["innerOrders"] = innerZero && innerOne,
+                ["initialRows"] = initialRows, ["remainingRows"] = depth.RowCount, ["rekeyed"] = rekeyed,
+                ["snapshots"] = snapshotBody && snapshotAttachment && snapshotOther,
+                ["snapshotOrdering"] = outerBeforeY && yBeforeInner && sameGroupInnerOrder
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
     // 读取三条正式水面材质，颜色关系由 Lua 判断，不复算 Shader。

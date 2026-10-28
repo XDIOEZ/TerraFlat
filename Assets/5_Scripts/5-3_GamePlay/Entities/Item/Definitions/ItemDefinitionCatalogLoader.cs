@@ -21,6 +21,17 @@ public static class ItemDefinitionCatalogLoader
     public const string RelativeItemRoot = "GameConfig/Items";
     public const string ManifestFileName = "item-manifest.json";
 
+    #region 地表植被排序契约
+    // 地表植被由固定的地形 BRG 绘制，只接受其真实世界排序键。
+    internal static void ValidateGroundCoverWorldSortingConfiguration(string itemId, ItemVisualDefinitionDto visual)
+    {
+        int terrainLayer = SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer);
+        WorldSortingManager.ResolveItemVisualSortingKey(visual, terrainLayer, 0, out int layer, out int order);
+        if (layer != terrainLayer || order != 0)
+            throw new InvalidDataException($"地表植被 {itemId} 必须使用地形 Sorting Layer 和 Order 0。");
+    }
+    #endregion
+
     /// <summary>角色与 AI 仍内嵌的模块随宿主加载，不再单独进入通用 Prefab 注册表。</summary>
     private static readonly string[] EmbeddedModulePrefabPathsExcludedFromGenericCatalog =
     {
@@ -1207,6 +1218,7 @@ public static class ItemDefinitionCatalogLoader
             preloadedControllers);
         if (dto.GroundCover && (isActor || sprite == null || template.Stack?.CanBePickedUp != true))
             throw new InvalidDataException($"地表植被 {id} 必须提供 Sprite，并定义为可拾取的普通物品。");
+        if (dto.GroundCover) ValidateGroundCoverWorldSortingConfiguration(id, dto.Visual);
         return new RuntimeItemDefinition(
             id,
             shellId,

@@ -11,6 +11,7 @@ namespace FlatWorld.NaturalEntities
     internal sealed partial class NaturalEntityEcsProfile
     {
         public RuntimeItemDefinition Definition;
+        public int SortingLayerId, SortingOrder;
         public NaturalEntityCapability Capabilities;
         public string HealthModuleName;
         public string GrowthModuleName;
@@ -116,6 +117,9 @@ namespace FlatWorld.NaturalEntities
             }
 
             var result = new NaturalEntityEcsProfile { Definition = definition };
+            WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldItemCategory, out int sortingLayer, out int sortingOrder);
+            WorldSortingManager.ResolveItemVisualSortingKey(definition.Visual, sortingLayer, sortingOrder,
+                out result.SortingLayerId, out result.SortingOrder);
             IReadOnlyList<RuntimeItemModuleDefinition> modules = definition.ModuleDefinitions;
             for (int i = 0; i < modules.Count; i++)
             {

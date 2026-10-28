@@ -1,6 +1,6 @@
 # 表现、面板与 C# MOD
 
-- 主体/运动件按脚点Y行合批；MechanicalDepthVisual 仅交互/灯光，不持有HP/库存。MechanicalShaft 连接层在主体下，端口/铁环/短管独立生成，主体只画设备。
+- 主体/运动件按脚点Y行和物品一级排序键合批；MechanicalDepthVisual 仅交互/灯光，不持有HP/库存。独立轴端用 mechanical-connector 类别，轴及传送带主体读取自身配置；地面管线使用 Default/0 和支撑面队列，水下继续压在设施主体下面。
 - Pivot/Renderer 局部变换共供预览、落地、阴影，逻辑占地不随贴图偏移；运动件同画布/PPU/Pivot，变速先积旧相位再改角速度。太阳/接触阴影独立BRG，SpatialInteractionRegistry 注册同一数据目标。
 - 多零件机器在机械模块声明 `Articulation`，`visual.spriteStates` 引用独立透明零件并登记 Addressables；锚点用原画布左上像素，零件固定比例校准，不降采样。`MachineArticulatedKinematics` 解刚性曲柄/连杆/竖直滑杆，地表与船上共用模式8/9/10和停机相位；气泵只在实际交付后置 `LastFlowPhase=gas` 驱动，表针表示运转反馈。GPU、交互、阴影与CPU包围盒同步，新数据需在 `Mod_MechanicalNode` 声明以通过严格JSON校验；回归 `mechanical/machine_articulation`。
 - 无端口设施落地批绘须读取 `visual.rendererLocalScale`，接触阴影按同一缩放测底边；不能只改预览或源 Prefab。现场回归 `building/facility_visual_scale`。

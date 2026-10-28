@@ -1,6 +1,6 @@
 # 渲染、光照与特效
 
-物品排序由 `visual.sortingLayerName`（一级图层）和 `sortingOrder`（同层二级顺序）决定，同层同序才按 Y 排序；普通物品继承 `Player/100`，船板与铁轨显式使用 `Default/0` 和贴地材质。`rendering_item_sorting_configuration` 独立规则覆盖正式装配、分组、上下位置、原位更新、手持/显示切换、池复用、轻量掉落物、合批资格及配置校验；不代表实际 GPU 画面验收。
+物品与生物静态排序由 `visual.sortingLayerName` 和 `sortingOrder` 决定，同层同序才按 Y 排序；普通物品和生物使用 `Player/100`，船板与铁轨使用 `Default/0` 和贴地材质。水生表现入水时临时使用水下类别，携带或离水后恢复定义排序。`rendering_item_sorting_configuration` 覆盖正式配置、分组、上下位置、原位更新、手持/显示切换、池复用、轻量掉落物、合批和水生切换；实际 GPU 画面需现场验收。
 
 2026-10-28 本轮专项规则 28 项断言通过；`20261028T151214478Z_15c3e9a0` 的 29 项 EditMode 和真实渲染案例通过，两种船板跨帧保留 `Default/0`、未进动态合批，结束截图已复核角色完整显示在船板前方，控制台无错误和警告。扩大规则回归仍在暂停刚体与 `destroyed` 注册清理断言失败，未记为本轮通过项。
 

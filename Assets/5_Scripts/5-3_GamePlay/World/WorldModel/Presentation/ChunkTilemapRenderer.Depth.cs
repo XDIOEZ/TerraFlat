@@ -4,11 +4,11 @@ using FlatWorld.WorldModel;
 public sealed partial class ChunkTilemapRenderer
 {
     #region 深度行网格所有权
-    private const string MechanicalConnectorSortingLayerName = "MechanicalShaft";
     private ChunkDepthMeshRenderer depthMesh;
     private ChunkDepthMeshRenderer mechanicalConnectorDepthMesh;
+    private ChunkDepthMeshRenderer groundBuildingDepthMesh;
     private ChunkDepthMeshRenderer submergedBuildingDepthMesh;
-    private readonly System.Collections.Generic.Dictionary<Material, Material> submergedBuildingOverlayMaterials = new();
+    private readonly System.Collections.Generic.Dictionary<(Material Source, int Queue), Material> buildingOverlayMaterials = new();
     internal ChunkDepthMeshRenderer DepthMesh
     {
         get
@@ -28,21 +28,24 @@ public sealed partial class ChunkTilemapRenderer
             if (boundChunk?.Terrain == null)
                 throw new System.InvalidOperationException("传动杆合批必须先绑定区块数据。");
             if (mechanicalConnectorDepthMesh == null || mechanicalConnectorDepthMesh.IsDisposed)
-                mechanicalConnectorDepthMesh = new ChunkDepthMeshRenderer(transform,
-                    ResolveMechanicalConnectorSortingLayerId(), 0);
+            {
+                WorldSortingManager.GetResourceSortingKey(WorldSortingManager.MechanicalConnectorCategory, out int layer, out int order);
+                mechanicalConnectorDepthMesh = new ChunkDepthMeshRenderer(transform, layer, order);
+            }
             return mechanicalConnectorDepthMesh;
         }
     }
 
-    public int DepthMeshPartCount => (depthMesh?.PartCount ?? 0) + (mechanicalConnectorDepthMesh?.PartCount ?? 0) + (submergedBuildingDepthMesh?.PartCount ?? 0);
-    public int DepthMeshRowCount => (depthMesh?.RowCount ?? 0) + (mechanicalConnectorDepthMesh?.RowCount ?? 0) + (submergedBuildingDepthMesh?.RowCount ?? 0);
-    public int DepthMeshDrawGroupCount => (depthMesh?.DrawGroupCount ?? 0) + (mechanicalConnectorDepthMesh?.DrawGroupCount ?? 0) + (submergedBuildingDepthMesh?.DrawGroupCount ?? 0);
+    public int DepthMeshPartCount => (depthMesh?.PartCount ?? 0) + (mechanicalConnectorDepthMesh?.PartCount ?? 0) + (groundBuildingDepthMesh?.PartCount ?? 0) + (submergedBuildingDepthMesh?.PartCount ?? 0);
+    public int DepthMeshRowCount => (depthMesh?.RowCount ?? 0) + (mechanicalConnectorDepthMesh?.RowCount ?? 0) + (groundBuildingDepthMesh?.RowCount ?? 0) + (submergedBuildingDepthMesh?.RowCount ?? 0);
+    public int DepthMeshDrawGroupCount => (depthMesh?.DrawGroupCount ?? 0) + (mechanicalConnectorDepthMesh?.DrawGroupCount ?? 0) + (groundBuildingDepthMesh?.DrawGroupCount ?? 0) + (submergedBuildingDepthMesh?.DrawGroupCount ?? 0);
 
     internal void CollectVisualSnapshots(Matrix4x4 worldToDisplay, System.Collections.Generic.List<WorldVisualSnapshot> destination)
     {
         ChunkBatchRendererGroupService.CollectVisualSnapshots(this, destination);
         depthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         mechanicalConnectorDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
+        groundBuildingDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         submergedBuildingDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
     }
 
@@ -57,31 +60,36 @@ public sealed partial class ChunkTilemapRenderer
     {
         depthMesh?.Dispose();
         mechanicalConnectorDepthMesh?.Dispose();
+        groundBuildingDepthMesh?.Dispose();
         submergedBuildingDepthMesh?.Dispose();
         depthMesh = null;
         mechanicalConnectorDepthMesh = null;
+        groundBuildingDepthMesh = null;
         submergedBuildingDepthMesh = null;
-        foreach (Material material in submergedBuildingOverlayMaterials.Values)
+        foreach (Material material in buildingOverlayMaterials.Values)
             if (Application.isPlaying) Destroy(material); else DestroyImmediate(material);
-        submergedBuildingOverlayMaterials.Clear();
+        buildingOverlayMaterials.Clear();
     }
 
     private void ClearDepthPresentation()
     {
         depthMesh?.Clear();
         mechanicalConnectorDepthMesh?.Clear();
+        groundBuildingDepthMesh?.Clear();
         submergedBuildingDepthMesh?.Clear();
     }
     internal void RemoveMachineDepthPart(int entityId, int part)
     {
         depthMesh?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part);
         mechanicalConnectorDepthMesh?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part);
+        groundBuildingDepthMesh?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part);
         submergedBuildingDepthMesh?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part);
     }
     internal void RemoveMachineDepthEntity(int entityId)
     {
         depthMesh?.RemoveEntity(ChunkDepthMeshRenderer.MachineDomain, entityId);
         mechanicalConnectorDepthMesh?.RemoveEntity(ChunkDepthMeshRenderer.MachineDomain, entityId);
+        groundBuildingDepthMesh?.RemoveEntity(ChunkDepthMeshRenderer.MachineDomain, entityId);
         submergedBuildingDepthMesh?.RemoveEntity(ChunkDepthMeshRenderer.MachineDomain, entityId);
     }
     internal void RemoveBuildingDepthPart(int entityId, int part)
@@ -98,12 +106,6 @@ public sealed partial class ChunkTilemapRenderer
         if (batchPresentationComplete) RefreshMechanicalPresentation();
     }
 
-    private static int ResolveMechanicalConnectorSortingLayerId()
-    {
-        foreach (SortingLayer layer in SortingLayer.layers)
-            if (layer.name == MechanicalConnectorSortingLayerName) return layer.id;
-        throw new System.InvalidOperationException("项目缺少 Sorting Layer：" + MechanicalConnectorSortingLayerName);
-    }
     #endregion
 
     #region 建筑水面覆盖
@@ -119,9 +121,20 @@ public sealed partial class ChunkTilemapRenderer
     }
 
     /// <summary>直接复用真实水面的半透明覆盖，水下批次与海床使用同一排序层。</summary>
-    internal ChunkDepthMeshRenderer GetBuildingDepthRenderer(bool submerged, bool connectionLine = false)
+    internal ChunkDepthMeshRenderer GetBuildingDepthRenderer(bool submerged, bool connectionLine = false, bool groundSorting = false)
     {
-        if (!submerged) return connectionLine ? MechanicalConnectorDepthMesh : DepthMesh;
+        if (!submerged)
+        {
+            if (connectionLine) return MechanicalConnectorDepthMesh;
+            if (!groundSorting) return DepthMesh;
+            if (groundBuildingDepthMesh == null || groundBuildingDepthMesh.IsDisposed)
+            {
+                WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory, out int layer, out int order);
+                groundBuildingDepthMesh = new ChunkDepthMeshRenderer(transform, layer, order,
+                    ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.Support));
+            }
+            return groundBuildingDepthMesh;
+        }
         if (submergedBuildingDepthMesh == null || submergedBuildingDepthMesh.IsDisposed)
         {
             int layer = SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer);
@@ -138,15 +151,18 @@ public sealed partial class ChunkTilemapRenderer
         throw new System.InvalidOperationException("世界渲染配置缺少 Water 批次。");
     }
 
-    /// <summary>发光与火焰借用区块共享副本，随主体放到水面之前且不修改源材质。</summary>
-    internal Material ResolveBuildingOverlayMaterialForSubmergedSurface(Material source, bool submerged)
+    /// <summary>发光与火焰复用区块材质副本，保持主体的地面或水下队列。</summary>
+    internal Material ResolveBuildingOverlayMaterial(Material source, bool submerged, bool groundSorting = false)
     {
-        if (!submerged || source == null) return source;
-        if (!submergedBuildingOverlayMaterials.TryGetValue(source, out Material material))
+        if ((!submerged && !groundSorting) || source == null) return source;
+        int queue = submerged ? ResolveSubmergedBuildingRenderQueue() :
+            ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.Support);
+        var key = (source, queue);
+        if (!buildingOverlayMaterials.TryGetValue(key, out Material material))
         {
-            material = new Material(source) { name = source.name + "_SubmergedBuilding",
-                hideFlags = HideFlags.HideAndDontSave, renderQueue = ResolveSubmergedBuildingRenderQueue() };
-            submergedBuildingOverlayMaterials.Add(source, material);
+            material = new Material(source) { name = source.name + "_GroundBuilding",
+                hideFlags = HideFlags.HideAndDontSave, renderQueue = queue };
+            buildingOverlayMaterials.Add(key, material);
         }
         return material;
     }

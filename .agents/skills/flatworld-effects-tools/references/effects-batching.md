@@ -16,9 +16,9 @@
 ## AIECS、掉落与 BRG
 
 - 两种 AIECS 阴影共用 `AiecsShadowRenderer.InitializeQuadBatchTriangleIndexBuffer` 初始化16位Quad索引，材质、顶点、批次容量与生命周期仍各自负责。
-- `AiecsWorldRenderer` 只读模拟后 Display，按排序后连续批次走原生 Universal2D/NormalsRendering，主体/阴影独立统计。AIECSRuntime 层默认只在 SceneView 隐藏。
+- `AiecsWorldRenderer` 只读模拟后 Display，按物种定义的图层、顺序和相同脚点 Y 复用原生 MeshRenderer，跨 Y 不能合批；真实脚点是网格包围盒中心，资源发布时更新物种排序。主体/阴影独立统计，`BatchCount/UploadedBytes` 记录本帧主体批数与顶点索引提交量，AIECSRuntime 层默认只在 SceneView 隐藏；可见生物多且 Y 各异时绘制批次增加，实机性能仍需验证。
 - `AiecsShadowRenderer` 每批≤4096、16位索引/24字节顶点，复用可见表与 Display 水态；太阳阴影读全局太阳/当前图集。缺相机/空帧/关闭/退出时隐藏或回收。
-- AIECS 从真实 Actor 首图、外壳状态贴图和动画模块参数导出单图目录，保留三角形/UV、尺寸/Pivot/PPU；程序摇摆结果同时供 BRG、裁剪和太阳阴影使用。重导仅显式菜单并保 GUID，PlayMode 不重导。`AiecsLegacySortScope` 用于单相机完整 Sprite 场景。
+- AIECS 从真实 Actor 首图、外壳状态贴图和动画模块参数导出单图目录，保留三角形/UV、尺寸/Pivot/PPU；程序摇摆结果同时供主体网格、裁剪和太阳阴影使用。重导仅显式菜单并保 GUID，PlayMode 不重导。`AiecsLegacySortScope` 用于单相机完整 Sprite 场景。
 - `DroppedItemPresentation` 按空间行/贴图/层增量合并真实 Sprite，静止不重传、离视野释放；类别 world-item，材质 `Assets/9_Shaders/Resources/DroppedItems`，水线为规范坐标，用默认零 `_WaterLineOffset` 补镜像。
 - DOTS 实例读取用 `DOTSInstanceData_Load4` 兼容 GLES 常量缓冲；各 Pass 自行引入使用的二维调试类型。
 

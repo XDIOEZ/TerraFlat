@@ -188,6 +188,8 @@
       "canBePickedUp": false,
       "tags": ["35", "InventoryGroup.ElectricalPower", "InventoryCategory.Functional"],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
         "color": {
           "r": 1,

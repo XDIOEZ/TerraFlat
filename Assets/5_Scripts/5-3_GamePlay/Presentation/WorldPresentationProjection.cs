@@ -6,15 +6,79 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 #region 普通世界绘制快照
+internal readonly struct WorldVisualSortingKey : IComparable<WorldVisualSortingKey>
+{
+    internal readonly int Layer, Order, Group, InternalOrder;
+    internal readonly float SortY;
+    private readonly int[] nestedSortingPath;
+
+    internal WorldVisualSortingKey(int layer, int order, float sortY, int group = 0, int internalOrder = 0)
+        : this(layer, order, sortY, group, internalOrder, null) { }
+
+    private WorldVisualSortingKey(int layer, int order, float sortY, int group, int internalOrder, int[] nestedSortingPath)
+    { Layer = layer; Order = order; SortY = sortY; Group = group; InternalOrder = internalOrder; this.nestedSortingPath = nestedSortingPath; }
+
+    public int CompareTo(WorldVisualSortingKey other)
+    {
+        int result = Layer.CompareTo(other.Layer);
+        if (result != 0) return result;
+        result = Order.CompareTo(other.Order);
+        if (result != 0) return result;
+        result = other.SortY.CompareTo(SortY);
+        if (result != 0) return result;
+        result = Group.CompareTo(other.Group);
+        if (result != 0) return result;
+        int length = nestedSortingPath?.Length ?? 3, otherLength = other.nestedSortingPath?.Length ?? 3;
+        for (int i = 0; i < Math.Min(length, otherLength); i++)
+        {
+            int left = nestedSortingPath != null ? nestedSortingPath[i] : i == 0 ? Layer : i == 1 ? InternalOrder : 0;
+            int right = other.nestedSortingPath != null ? other.nestedSortingPath[i] : i == 0 ? other.Layer : i == 1 ? other.InternalOrder : 0;
+            result = left.CompareTo(right);
+            if (result != 0) return result;
+        }
+        return length.CompareTo(otherLength);
+    }
+
+    internal static WorldVisualSortingKey FromRenderer(Renderer renderer)
+    {
+        var groups = new List<SortingGroup>();
+        for (Transform current = renderer.transform; current != null; current = current.parent)
+        {
+            SortingGroup sorting = current.GetComponent<SortingGroup>();
+            if (sorting == null || !sorting.enabled) continue;
+            groups.Add(sorting);
+            if (sorting.sortAtRoot) break;
+        }
+        if (groups.Count == 0)
+            return new WorldVisualSortingKey(SortingLayer.GetLayerValueFromID(renderer.sortingLayerID), renderer.sortingOrder,
+                renderer.transform.position.y, renderer.GetInstanceID());
+
+        SortingGroup outer = groups[groups.Count - 1];
+        int[] path = new int[groups.Count * 3];
+        int cursor = 0;
+        for (int i = groups.Count - 2; i >= 0; i--)
+        {
+            path[cursor++] = SortingLayer.GetLayerValueFromID(groups[i].sortingLayerID);
+            path[cursor++] = groups[i].sortingOrder;
+            path[cursor++] = groups[i].GetInstanceID();
+        }
+        path[cursor++] = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
+        path[cursor++] = renderer.sortingOrder;
+        path[cursor] = 0;
+        return new WorldVisualSortingKey(SortingLayer.GetLayerValueFromID(outer.sortingLayerID), outer.sortingOrder,
+            outer.transform.position.y, outer.GetInstanceID(), renderer.sortingOrder, path);
+    }
+}
+
 internal readonly struct WorldVisualSnapshot
 {
     internal readonly Sprite Sprite;
     internal readonly Matrix4x4 Matrix;
     internal readonly Color Color;
-    internal readonly int Layer, Order;
-    internal readonly float SortY;
-    internal WorldVisualSnapshot(Sprite sprite, Matrix4x4 matrix, Color color, int layer, int order, float sortY)
-    { Sprite = sprite; Matrix = matrix; Color = color; Layer = layer; Order = order; SortY = sortY; }
+    internal readonly WorldVisualSortingKey SortingKey;
+    internal WorldVisualSnapshot(Sprite sprite, Matrix4x4 matrix, Color color, int layer, int order, float sortY,
+        int group = 0, int internalOrder = 0)
+    { Sprite = sprite; Matrix = matrix; Color = color; SortingKey = new WorldVisualSortingKey(layer, order, sortY, group, internalOrder); }
 }
 #endregion
 

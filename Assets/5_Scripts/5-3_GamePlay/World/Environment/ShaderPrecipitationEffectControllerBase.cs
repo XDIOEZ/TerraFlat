@@ -46,7 +46,7 @@ public abstract class ShaderPrecipitationEffectControllerBase : MonoBehaviour
         EffectRenderer.receiveShadows = false;
         EffectRenderer.lightProbeUsage = LightProbeUsage.Off;
         EffectRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        WorldRenderingManager.Instance.ApplyRendererSorting(EffectRenderer, WorldSortingManager.WorldEffectCategory);
+        WorldRenderingManager.ApplyAvailableRendererSorting(EffectRenderer, WorldSortingManager.WorldEffectCategory);
         properties = new MaterialPropertyBlock();
         PrepareEffectMesh();
         effectMesh = BuildEffectMesh();

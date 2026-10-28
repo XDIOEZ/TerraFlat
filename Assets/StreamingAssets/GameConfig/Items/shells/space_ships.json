@@ -2184,6 +2184,9 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "spriteAddress": "Assets/6_Art/Generated/Space/ShipFiber/ShipFiber_Idle.png",
         "color": {
           "r": 1.0,

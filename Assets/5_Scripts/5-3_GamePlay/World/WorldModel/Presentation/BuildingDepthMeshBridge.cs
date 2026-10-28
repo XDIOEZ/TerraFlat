@@ -37,7 +37,6 @@ internal static class BuildingDepthMeshBridge
         if (building?.Data?.Role != BuildingRole.PlacedBuilding || item.Sprite == null) return;
         // 移动车辆不是静态格子建筑，继续由自己的动态表现控制。
         if (item.GetComponentInChildren<Mod_Carrier>(true) != null) return;
-        if (!TryResolveConfiguredDepthSorting(item.Sprite, out bool groundSorting)) return;
         if (!hooked)
         {
             hooked = true;
@@ -46,19 +45,17 @@ internal static class BuildingDepthMeshBridge
             ChunkDepthMeshRenderer.BeforeFlush += Present;
         }
         ChunkDepthMeshRenderer.EnsureDispatcher();
-        bindings.Add(item, new Binding(item, building, groundSorting));
+        bindings.Add(item, new Binding(item, building));
     }
 
-    // 合批只接管能完整保留排序键的主体，其余配置继续使用原生 Renderer。
+    // 贴地设施沿用原材质队列，其余排序键可由行网格保留。
     internal static bool TryResolveConfiguredDepthSorting(SpriteRenderer renderer, out bool groundSorting)
     {
         WorldSortingManager.ReadExternalRendererKey(renderer, out int layer, out int order);
         WorldRenderingManager rendering = WorldRenderingManager.Instance;
         rendering.GetSortingKey(WorldSortingManager.GroundBuildingCategory, out int groundLayer, out int groundOrder);
         groundSorting = layer == groundLayer && order == groundOrder;
-        if (groundSorting) return true;
-        rendering.GetSortingKey(WorldSortingManager.BuildingCategory, out int buildingLayer, out int buildingOrder);
-        return layer == buildingLayer && order == buildingOrder;
+        return true;
     }
 
     private static void Unregister(Item item)
@@ -119,10 +116,12 @@ internal static class BuildingDepthMeshBridge
         internal readonly Item Item;
         private readonly Mod_Building building;
         private readonly List<Source> sources = new();
+        private readonly HashSet<SortingGroup> nestedSortingGroups = new();
+        private readonly SortingGroup rootSortingGroup;
         private readonly MaterialPropertyBlock properties = new();
         private readonly int entityId;
+        private readonly int groundLayer, groundOrder;
         private readonly bool connectionLine;
-        private readonly bool groundSorting;
         private ChunkView view;
         private ChunkTilemapRenderer owner;
         private bool hasSubmittedSources;
@@ -131,10 +130,11 @@ internal static class BuildingDepthMeshBridge
         private bool ownsCombustionSortingGroup, combustionSortingOverridden, originalCombustionSortingEnabled;
         private int originalCombustionSortingLayer, originalCombustionSortingOrder;
 
-        internal Binding(Item item, Mod_Building building, bool groundSorting)
+        internal Binding(Item item, Mod_Building building)
         {
             Item = item; this.building = building; entityId = item.GetInstanceID();
-            this.groundSorting = groundSorting;
+            rootSortingGroup = item.GetComponent<SortingGroup>();
+            WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory, out groundLayer, out groundOrder);
             combustionEffects = item.GetComponentsInChildren<CombustionVisualEffect>(true);
             connectionLine = item.GetComponentInChildren<Mod_ShipPart>(true)?.Configuration.Kind == FlatWorld.Spaceflight.ShipPieceKind.Fiber;
             var renderers = new List<SpriteRenderer>();
@@ -144,6 +144,11 @@ internal static class BuildingDepthMeshBridge
                 if (renderer.gameObject.name == "Interaction Outline" ||
                     renderer.GetComponentInParent<Item>() != item || renderer.GetComponentInParent<Canvas>() != null) continue;
                 sources.Add(new Source(renderer, sources.Count));
+                for (Transform current = renderer.transform; current != null && current != item.transform; current = current.parent)
+                {
+                    SortingGroup group = current.GetComponent<SortingGroup>();
+                    if (group != null) nestedSortingGroups.Add(group);
+                }
             }
         }
 
@@ -165,12 +170,22 @@ internal static class BuildingDepthMeshBridge
             if (owner == null || !owner.IsBatchPresentationRegistered) { Release(); return; }
             bool submerged = FlatWorld.Spaceflight.SpaceSession.Current?.Owns(Item.itemData.Guid) != true &&
                 owner.IsBuildingSubmergedAtWorldAnchor(anchor);
-            if (groundSorting && !submerged)
+            if (!submerged)
+            {
+                // 嵌套排序组不能被一层行网格表达，整件保留原生层级。
+                if (RequiresNativeSortingHierarchy())
+                {
+                    if (hasSubmittedSources) ReleaseSources();
+                    return;
+                }
+            }
+            UpdateCombustionWaterSurfacePresentation(submerged);
+            WorldSortingManager.ReadExternalRendererKey(Item.Sprite, out int sortingLayerId, out int sortingOrder);
+            if (sortingLayerId == groundLayer && sortingOrder == groundOrder && !submerged)
             {
                 if (hasSubmittedSources) ReleaseSources();
                 return;
             }
-            UpdateCombustionWaterSurfacePresentation(submerged);
             // 多部件建筑整件选择后端，不能把一个未知 MOD 图层和主体拆到两个同深度排序单元。
             foreach (Source source in sources)
             {
@@ -220,14 +235,15 @@ internal static class BuildingDepthMeshBridge
                 Vector4 state = new(Float(material, HitFlashId, 0f), Float(material, SnowId, 0f),
                     Float(material, DissolveId, 0f), 1f);
                 Vector3 flip = new(renderer.flipX ? -1f : 1f, renderer.flipY ? -1f : 1f, 1f);
-                ChunkDepthMeshRenderer rendererBackend = owner.GetBuildingDepthRenderer(submerged, connectionLine);
+                ChunkDepthMeshRenderer rendererBackend = owner.GetBuildingDepthRenderer(submerged, connectionLine && submerged);
                 if (source.SubmittedRenderer != rendererBackend)
                     source.SubmittedRenderer?.Remove(ChunkDepthMeshRenderer.BuildingDomain, entityId, source.Part);
                 source.SubmittedRenderer = rendererBackend;
                 rendererBackend.Set(ChunkDepthMeshRenderer.BuildingDomain, entityId, source.Part,
                     sprite, material, source.Transform.localToWorldMatrix * Matrix4x4.Scale(flip),
                     anchor, renderer.sortingOrder - baseOrder - (submerged && connectionLine ? 1024 : 0), renderer.color, crop,
-                    occluder: Float(material, OccluderId, 0f) > .5f, highlighted: source.Highlighted, state: state);
+                    occluder: Float(material, OccluderId, 0f) > .5f, highlighted: source.Highlighted, state: state,
+                    sortingLayerId: submerged ? null : sortingLayerId, sortingOrder: sortingOrder);
                 if (renderer == mainSprite && (!source.Submitted || source.LastSprite != sprite)) shadowChanged = true;
                 source.LastSprite = sprite;
                 source.Submitted = true;
@@ -236,6 +252,22 @@ internal static class BuildingDepthMeshBridge
                 renderer.forceRenderingOff = true;
             }
             if (shadowChanged) building.RefreshLightOcclusion();
+        }
+
+        private bool RequiresNativeSortingHierarchy()
+        {
+            SortingGroup single = null;
+            foreach (SortingGroup group in nestedSortingGroups)
+            {
+                if (group == null || !group.enabled || !group.gameObject.activeInHierarchy) continue;
+                if (single != null || rootSortingGroup != null && rootSortingGroup.enabled) return true;
+                single = group;
+            }
+            if (single == null) return false;
+            foreach (Source source in sources)
+                if (source.Renderer != null && source.Renderer.enabled && !source.LogicalForceOff &&
+                    source.Renderer.gameObject.activeInHierarchy && !source.Transform.IsChildOf(single.transform)) return true;
+            return false;
         }
 
         private float Float(Material material, int id, float fallback)
@@ -306,7 +338,7 @@ internal static class BuildingDepthMeshBridge
             }
             foreach (CombustionVisualEffect effect in combustionEffects)
                 if (effect != null) effect.SetFlamePresentationMaterialOverride(submerged && owner != null
-                    ? owner.ResolveBuildingOverlayMaterialForSubmergedSurface(effect.FlameSourceMaterial, true) : null);
+                    ? owner.ResolveBuildingOverlayMaterial(effect.FlameSourceMaterial, true) : null);
         }
     }
 

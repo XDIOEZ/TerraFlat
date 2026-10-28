@@ -470,6 +470,8 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
+        "sortingLayerName": "MechanicalShaft",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
         "spriteStates": {
           "shaftRollingCore": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_RollingCore.png",
@@ -1074,6 +1076,8 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
+        "sortingLayerName": "MechanicalShaft",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png",
         "spriteStates": {
           "shaftRollingCore": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_RollingCore.png",

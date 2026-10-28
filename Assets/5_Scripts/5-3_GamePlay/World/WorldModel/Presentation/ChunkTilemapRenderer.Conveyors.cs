@@ -28,10 +28,10 @@ public sealed partial class ChunkTilemapRenderer
                 Vector3.one, 0, 0f, drawBelowMechanical: true);
         }
         Vector3 scale = ConveyorPresentation.Scale(def.Sprite, route, visual);
-        // 传送带贴地绘制，与侧轴一起固定在玩家和机械主体下层。
+        // 带面使用自身排序配置，侧轴继续使用连接件层。
         Part(node, x, y, 8, def.Sprite, material, origin, Quaternion.Euler(0f, 0f, route.Rotation * 90f),
             ConveyorPresentation.Offset(def.Sprite, scale), scale, route.Curved ? 7 : 6, 1f,
-            track: 3, stroke: visual.CanvasHeight, drawBelowMechanical: true,
+            track: 3, stroke: visual.CanvasHeight,
             conveyorSurface: ConveyorPresentation.Surface(def.Sprite, visual));
     }
     #endregion

@@ -18,6 +18,7 @@ public sealed class WorldSortingMember : MonoBehaviour
     private SpriteSortPoint originalSortPoint;
     private bool hasOriginalSorting;
     private bool itemRegistrationReleased;
+    private string environmentSortingCategory;
 
     /// <summary>配置类别。</summary>
     public string Category => category;
@@ -26,6 +27,8 @@ public sealed class WorldSortingMember : MonoBehaviour
     public SpriteRenderer TargetRenderer => targetRenderer;
 
     internal ItemVisualDefinitionDto VisualDefinition => owner?.VisualDefinition;
+    internal bool HasEnvironmentSortingOverride => !string.IsNullOrEmpty(environmentSortingCategory);
+    internal string EffectiveCategory => HasEnvironmentSortingOverride ? environmentSortingCategory : category;
 
     /// <summary>手持物使用手持链自己的排序配置。</summary>
     public bool IsWorldVisible => owner == null || !owner.InHand;
@@ -54,6 +57,7 @@ public sealed class WorldSortingMember : MonoBehaviour
         itemRegistrationReleased = false;
         if (owner != item)
         {
+            environmentSortingCategory = null;
             if (owner != null) owner.OnInHandChanged -= HandleInHandChanged;
             owner = item;
             if (owner != null) owner.OnInHandChanged += HandleInHandChanged;
@@ -71,12 +75,23 @@ public sealed class WorldSortingMember : MonoBehaviour
         else RestoreSorting();
     }
 
+    /// <summary>水下等环境临时接管排序，结束后恢复物品本身的视觉配置。</summary>
+    public void SetEnvironmentSortingOverride(string sortingCategory)
+    {
+        if (itemRegistrationReleased) return;
+        string next = string.IsNullOrWhiteSpace(sortingCategory) ? null : sortingCategory;
+        if (environmentSortingCategory == next) return;
+        environmentSortingCategory = next;
+        if (IsWorldVisible) WorldRenderingManager.RegisterAvailableSortingMember(this);
+    }
+
     /// <summary>统一注销时还原最外层排序并断开物品事件，池复用不能继承旧绑定。</summary>
     internal void UnbindWorldItemRendering()
     {
         RestoreSorting();
         if (owner != null) owner.OnInHandChanged -= HandleInHandChanged;
         owner = null;
+        environmentSortingCategory = null;
         hasOriginalSorting = false;
         itemRegistrationReleased = true;
     }
@@ -122,6 +137,7 @@ public sealed class WorldSortingMember : MonoBehaviour
             if (item != null && group.transform != item.transform &&
                 !group.transform.IsChildOf(item.transform)) continue;
             selected = group;
+            if (group.sortAtRoot) break;
         }
         return selected;
     }

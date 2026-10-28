@@ -154,6 +154,8 @@
         "InventoryCategory.Nature"
       ],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Flower/Flower_Mature.png",
         "collider": {
           "type": "BoxCollider2D",

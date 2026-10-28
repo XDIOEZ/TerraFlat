@@ -20,8 +20,10 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     private readonly PartVisual[] parts = new PartVisual[16];
     private ChunkTilemapRenderer owner;
     private int entityId, occupancy;
+    private int sortingLayerId, sortingOrder;
     private bool highlighted, disposed;
-    private bool submerged;
+    private bool submerged, groundSorting, connectorSorting, groundConnection, sortingConfigured;
+    private ItemVisualDefinitionDto configuredVisual;
     internal bool RequiresSubmergedSurfaceRefresh => owner != null && submerged != owner.IsBuildingSubmergedAtWorldAnchor(transform.position);
     private MachineEntity tankEntity;
     private FluidTankSelectionOutline tankOutline;
@@ -36,10 +38,22 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         return visual;
     }
 
-    internal void BeginUpdate(Vector3 position)
+    internal void BeginUpdate(Vector3 position, ItemVisualDefinitionDto visual, bool isGroundConnection)
     {
         transform.position = position;
         submerged = owner.IsBuildingSubmergedAtWorldAnchor(position);
+        groundConnection = isGroundConnection;
+        if (!sortingConfigured || !ReferenceEquals(configuredVisual, visual))
+        {
+            WorldSortingManager.GetResourceSortingKey(WorldSortingManager.BuildingCategory, out int layer, out int order);
+            WorldSortingManager.ResolveItemVisualSortingKey(visual, layer, order, out sortingLayerId, out sortingOrder);
+            WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory, out layer, out order);
+            groundSorting = sortingLayerId == layer && sortingOrder == order;
+            WorldSortingManager.GetResourceSortingKey(WorldSortingManager.MechanicalConnectorCategory, out layer, out order);
+            connectorSorting = sortingLayerId == layer && sortingOrder == order;
+            configuredVisual = visual;
+            sortingConfigured = true;
+        }
         foreach (PartVisual part in parts) if (part != null) part.Touched = false;
         foreach (PartVisual part in facilityParts) if (part != null) part.Touched = false;
         if (facilityLight != null) facilityLight.enabled = false;
@@ -81,16 +95,21 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     private void Submit(PartVisual part)
     {
         if (owner == null || disposed || !part.Visible || !owner.IsBatchPresentationRegistered) return;
-        ChunkDepthMeshRenderer renderer = owner.GetBuildingDepthRenderer(submerged, part.DrawBelowMechanical);
+        bool connector = part.DrawBelowMechanical || connectorSorting;
+        ChunkDepthMeshRenderer renderer = owner.GetBuildingDepthRenderer(submerged, connector, groundSorting);
         if (part.SubmittedRenderer != renderer)
             part.SubmittedRenderer?.Remove(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id);
         part.SubmittedRenderer = renderer;
         renderer.Set(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id,
             part.Sprite, part.Material,
             Matrix4x4.TRS(transform.position + part.Offset, part.Rotation, part.Scale),
-            transform.position, part.Order - (submerged && part.DrawBelowMechanical ? 1024 : 0), part.Tint, animation: part.Animation,
-            highlighted: highlighted && tankEntity == null, conveyor: part.Conveyor);
+            transform.position, GetSubmittedPartOrder(part), part.Tint, animation: part.Animation,
+            highlighted: highlighted && tankEntity == null, conveyor: part.Conveyor,
+            sortingLayerId: submerged || part.DrawBelowMechanical ? null : sortingLayerId, sortingOrder: sortingOrder);
     }
+
+    private int GetSubmittedPartOrder(PartVisual part) => part.Order -
+        (submerged && (part.DrawBelowMechanical || connectorSorting || groundConnection) ? 1024 : 0);
 
     private void RemoveUntouched(PartVisual part)
     {

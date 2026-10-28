@@ -7,8 +7,8 @@ using UnityEngine.SceneManagement;
 namespace FlatWorld.AIECS
 {
     /// <summary>
-    /// 一个透明顺序连续区间的复用网格；不跨旧 Renderer 合批，不为每只生物创建 GameObject。
-    /// P1 先验证原生 Renderer2D 的排序和光照接入，CPU 顶点上传成本仍需后续测量。
+    /// 一个透明顺序连续区间的复用网格，正式主体按相同脚点与排序键合批。
+    /// 使用原生 Renderer2D 的排序和光照；可见主体的上传与批次数需实机测量。
     /// </summary>
     internal sealed class AiecsRenderBatch : IDisposable
     {
@@ -92,7 +92,7 @@ namespace FlatWorld.AIECS
         }
 
         /// <summary>提交同一图层内的精确序号，保留原生 Renderer2D 的颜色及法线绘制上下文。</summary>
-        internal int Submit(int layer, int order)
+        internal int Submit(int layer, int order, float? worldSortingY = null)
         {
             mesh.Clear();
             mesh.SetVertices(positions);
@@ -100,6 +100,16 @@ namespace FlatWorld.AIECS
             mesh.SetColors(colors);
             mesh.SetUVs(1, water);
             mesh.SetTriangles(indices, 0, true);
+            if (worldSortingY.HasValue && positions.Count != 0)
+            {
+                // 扩大包围盒并把中心固定在脚点，保留 Unity 透明排序与裁剪。
+                Bounds bounds = mesh.bounds;
+                float extent = Mathf.Max(Mathf.Abs(bounds.min.y - worldSortingY.Value),
+                    Mathf.Abs(bounds.max.y - worldSortingY.Value));
+                bounds.center = new Vector3(bounds.center.x, worldSortingY.Value, bounds.center.z);
+                bounds.extents = new Vector3(bounds.extents.x, extent, bounds.extents.z);
+                mesh.bounds = bounds;
+            }
             renderer.sortingLayerID = layer;
             renderer.sortingOrder = order;
             renderer.enabled = positions.Count != 0;
@@ -109,7 +119,7 @@ namespace FlatWorld.AIECS
         /// <summary>隐藏本帧没有使用的池化批次。</summary>
         internal void Hide()
         {
-            renderer.enabled = false;
+            if (renderer != null) renderer.enabled = false;
         }
 
         /// <summary>释放本原型创建的网格与节点，不修改共享材质。</summary>

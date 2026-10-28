@@ -19,6 +19,8 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
         "spriteStates": {
           "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",
@@ -2120,6 +2122,8 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
         "spriteStates": {
           "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",

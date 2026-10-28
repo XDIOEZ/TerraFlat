@@ -19,6 +19,8 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
+        "sortingLayerName": "MechanicalShaft",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png"
       },
       "health": {
@@ -160,6 +162,8 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
+        "sortingLayerName": "MechanicalShaft",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png"
       },
       "health": {

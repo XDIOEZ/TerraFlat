@@ -27,6 +27,8 @@
         "Herbivore"
       ],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Characters/Hana Caraka - Livestock & Fish Sample/Chicken/Chicken.png[Chicken_0]",
         "rendererPath": "Module_Animator_AI",
         "animationState": "Stand",
@@ -764,6 +766,8 @@
         "Omnivore"
       ],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Idle_4]",
         "rendererPath": "Module_Animator_AI",
         "animationState": "Stand",
@@ -1537,6 +1541,8 @@
         "Carnivore"
       ],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_0]",
         "rendererPath": "AI动画模块",
         "animationState": "Idle",
@@ -2279,6 +2285,8 @@
         "Ghost"
       ],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_0]",
         "rendererPath": "Visual",
         "animationState": "Idle",

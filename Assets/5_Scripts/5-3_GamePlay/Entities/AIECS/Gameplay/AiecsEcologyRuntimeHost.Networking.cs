@@ -59,8 +59,7 @@ namespace FlatWorld.AIECS.Gameplay
                 var ids = new string[owner._catalog.Actors.Length];
                 for (int i = 0; i < ids.Length; i++)
                 { ids[i] = owner._catalog.Actors[i].Id; owner.replicaDefinitions[ids[i]] = i; }
-                owner.replicaRenderer = new AiecsWorldRenderer(owner._catalog, ids, GameplayWorldRegistry.CurrentScene,
-                    AiecsWorldSortingResolver.Resolve());
+                owner.replicaRenderer = AiecsWorldSortingResolver.CreateRenderer(owner._catalog, ids, GameplayWorldRegistry.CurrentScene);
             }
             owner.replicaPositions.Clear();
             if (owner.replicaRecords.IsCreated)

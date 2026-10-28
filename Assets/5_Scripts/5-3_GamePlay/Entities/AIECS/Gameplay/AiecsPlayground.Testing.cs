@@ -37,11 +37,51 @@ namespace FlatWorld.AIECS.Gameplay
         {
             GameplayTestRuntimeProbe.Register("dimension", "ecs_residents_begin", BeginDimensionResidentProbe);
             GameplayTestRuntimeProbe.Register("dimension", "ecs_residents_sample", SampleDimensionResidents);
+            GameplayTestSystemProbe.Register("rendering", "aiecs_sorting_bridge", CaptureActorDefinitionSortingBridge);
         }
 #if UNITY_EDITOR
         [UnityEditor.InitializeOnLoadMethod]
         private static void RegisterEditorDimensionResidentProbe() => RegisterDimensionResidentProbe();
 #endif
+
+        // 从资源定义解析不同物种的排序，发布新定义后再次读取相同的桥接入口。
+        private static JObject CaptureActorDefinitionSortingBridge(JObject args)
+        {
+            var root = new GameObject("[LuaAiecsSortingBridge]") { hideFlags = HideFlags.HideAndDontSave };
+            GameRes resources = GameRes.ExistingInstance ?? root.AddComponent<GameRes>();
+            const string firstId = "probe:aiecs_sort_first", secondId = "probe:aiecs_sort_second";
+            bool hadFirst = resources.ItemDefinitions.TryGetValue(firstId, out RuntimeItemDefinition firstPrevious);
+            bool hadSecond = resources.ItemDefinitions.TryGetValue(secondId, out RuntimeItemDefinition secondPrevious);
+            try
+            {
+                WorldRenderingManager.EnsureForOwner(root.transform);
+                RuntimeItemDefinition Definition(string id, ItemVisualDefinitionDto visual) => new(
+                    id, "", root, new Data_GeneralItem { IDName = id, Stack = new ItemStack { Amount = 1f } },
+                    visual, null, null, null, null, null, null, null, null, isActor: true);
+                resources.ItemDefinitions[firstId] = Definition(firstId,
+                    new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 37 });
+                resources.ItemDefinitions[secondId] = Definition(secondId, new ItemVisualDefinitionDto { SortingOrder = 147 });
+                string[] ids = { firstId, secondId };
+                AiecsActorSortingKey[] initial = AiecsWorldSortingResolver.ResolveActorSortingKeys(resources, ids);
+                resources.ItemDefinitions[firstId] = Definition(firstId,
+                    new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = 222 });
+                AiecsActorSortingKey[] refreshed = AiecsWorldSortingResolver.ResolveActorSortingKeys(resources, ids);
+                return new JObject
+                {
+                    ["firstLayer"] = SortingLayer.IDToName(initial[0].Layer), ["firstOrder"] = initial[0].Order,
+                    ["secondLayer"] = SortingLayer.IDToName(initial[1].Layer), ["secondOrder"] = initial[1].Order,
+                    ["refreshedLayer"] = SortingLayer.IDToName(refreshed[0].Layer), ["refreshedOrder"] = refreshed[0].Order
+                };
+            }
+            finally
+            {
+                if (hadFirst) resources.ItemDefinitions[firstId] = firstPrevious;
+                else resources.ItemDefinitions.Remove(firstId);
+                if (hadSecond) resources.ItemDefinitions[secondId] = secondPrevious;
+                else resources.ItemDefinitions.Remove(secondId);
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
 
         // 隔离现场创建一批无玩家敌意的真实开发居民，Lua在洞穴和回程检查同一实体身份。
         private static JObject BeginDimensionResidentProbe(Player player, JObject args)

@@ -365,8 +365,7 @@ namespace FlatWorld.AIECS.Gameplay
                     _actorFactions.ToArray(),
                     0f,
                     _fleeFromHostiles.ToArray(), sharedWorld: entityWorld);
-                _renderer = new AiecsWorldRenderer(_catalog, ids, _player.gameObject.scene,
-                    AiecsWorldSortingResolver.Resolve());
+                _renderer = AiecsWorldSortingResolver.CreateRenderer(_catalog, ids, _player.gameObject.scene);
                 RestoreResidentSnapshots();
                 _simulationTime = Time.timeAsDouble;
                 WorldEntityRuntime.Register(entityWorld, this);
@@ -398,7 +397,7 @@ namespace FlatWorld.AIECS.Gameplay
                     });
                 }
 
-                // 先断开可重入引用，各资源独立清理，快照失败不能让 BRG 和 Native 内存泄漏。
+                // 先断开可重入引用，各资源独立清理，快照失败不能让网格和 Native 内存泄漏。
                 AiecsGameplayBridge bridge = _bridge;
                 AiecsWorldRenderer renderer = _renderer;
                 _bridge = null;
@@ -936,7 +935,7 @@ namespace FlatWorld.AIECS.Gameplay
             return false;
         }
 
-        /// <summary>GM 目录从正式 BRG 动画图集读取物种静止帧，避免借用旧外壳的图片。</summary>
+        /// <summary>GM 目录从正式动画图集读取物种静止帧，避免借用旧外壳的图片。</summary>
         public bool TryGetCatalogIcon(string speciesId, out Texture texture, out Rect uv)
         {
             texture = _catalog?.Material?.mainTexture;

@@ -274,7 +274,7 @@ public sealed partial class ChunkTilemapRenderer
             MechanicalShadowRegistry.BeginNode(this, key, gameObject.scene, def.Sprite,
                 origin + rotation * facilityBodyOffset, rotation, facilityBodyScale, def.Visual?.Shadows);
         else MechanicalShadowRegistry.Remove(this, key);
-        PrepareMechanicalDepthVisual(node, x, y, origin);
+        PrepareMechanicalDepthVisual(node, x, y, origin, def.Visual);
         MechanicalDepthVisual depthVisual = mechanicalDepthVisuals[key];
         try
         {
@@ -306,9 +306,9 @@ public sealed partial class ChunkTilemapRenderer
         {
             Sprite core = State(def, "shaftRollingCore");
             Part(node, x, y, 0, core, material, origin, rotation, Vector3.zero,
-                Fit(core, 116f / 128f, 28f / 128f), 2, 1f, drawBelowMechanical: true);
+                Fit(core, 116f / 128f, 28f / 128f), 2, 1f);
             Part(node, x, y, 3, State(def, "shaftEndRings"), material, origin, rotation,
-                Vector3.zero, Vector3.one, 0, 0f, drawBelowMechanical: true);
+                Vector3.zero, Vector3.one, 0, 0f);
             return;
         }
         if (kind == "gear")
@@ -337,13 +337,13 @@ public sealed partial class ChunkTilemapRenderer
             Sprite core = State(def, "shaftRollingCore");
             Vector3 scale = Fit(core, 24f / 128f, 28f / 128f);
             Part(node, x, y, 0, core, material, origin, rotation,
-                new Vector3(-44f / 128f, 0f), scale, 2, 1f, drawBelowMechanical: true);
+                new Vector3(-44f / 128f, 0f), scale, 2, 1f);
             Part(node, x, y, 1, core, material, origin, rotation,
-                new Vector3(44f / 128f, 0f), scale, 2, 1f, drawBelowMechanical: true);
+                new Vector3(44f / 128f, 0f), scale, 2, 1f);
             Part(node, x, y, 2, def.Sprite, material, origin, rotation,
-                Vector3.zero, Vector3.one, 0, 0f, drawBelowMechanical: true);
+                Vector3.zero, Vector3.one, 0, 0f);
             Part(node, x, y, 3, State(def, "shaftEndRings"), material, origin, rotation,
-                Vector3.zero, Vector3.one, 0, 0f, drawBelowMechanical: true);
+                Vector3.zero, Vector3.one, 0, 0f);
             return;
         }
 
@@ -378,9 +378,10 @@ public sealed partial class ChunkTilemapRenderer
             if (def.TryGetVisualStateSprite("electricalPort", out Sprite cablePort))
                 Part(node, x, y, part++, cablePort, material, origin, rotation,
                     config.ElectricalPortLocalPosition, Vector3.one, 0, 0f);
-            Part(node, x, y, part++, def.Sprite, material, origin, rotation,
+            int bodyPart = part++;
+            Part(node, x, y, bodyPart, def.Sprite, material, origin, rotation,
                 Vector3.zero, Vector3.one, 0, 0f);
-            depthVisual.UpdateFacility(node);
+            depthVisual.UpdateFacility(node, bodyPart);
             return;
         }
 
@@ -419,8 +420,8 @@ public sealed partial class ChunkTilemapRenderer
         if (node.Definition.LogicId == "vessel" && Mod_WaterVessel.TryResolvePresentationSprite(node.Snapshot, out Sprite vessel)) body = vessel;
         // 落地设施沿用预览的偏移和缩放，阴影与火焰共同读取这份主体变换。
         int facilityPart = Ports(node, x, y, 0, material, origin, rotation);
-        Part(node, x, y, facilityPart++, body, material, origin, rotation, facilityBodyOffset, facilityBodyScale, 0, 0f);
-        depthVisual.UpdateFacility(node);
+        Part(node, x, y, facilityPart, body, material, origin, rotation, facilityBodyOffset, facilityBodyScale, 0, 0f);
+        depthVisual.UpdateFacility(node, facilityPart);
         }
         finally { depthVisual.EndUpdate(); }
     }
@@ -539,7 +540,6 @@ public sealed partial class ChunkTilemapRenderer
         int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f,
         bool drawBelowMechanical = false, Vector4 conveyorSurface = default, int partOrder = -1)
     {
-        drawBelowMechanical |= node.Definition.IsConnectionLine;
         // 电机反向只做水平镜像，避免 180 度旋转把支脚和顶部结构倒置。
         if (node.Definition.IsConverter && (node.RotationQuarterTurns & 3) == 2)
         {
@@ -565,7 +565,7 @@ public sealed partial class ChunkTilemapRenderer
     }
 
     /// <summary>每台机械只保留交互与必要灯光；图像通过共享行网格绘制。</summary>
-    private void PrepareMechanicalDepthVisual(MachineEntity node, int x, int y, Vector3 origin)
+    private void PrepareMechanicalDepthVisual(MachineEntity node, int x, int y, Vector3 origin, ItemVisualDefinitionDto itemVisual)
     {
         Vector3Int key = new(x, y, node.Definition.Layer);
         if (!mechanicalDepthVisuals.TryGetValue(key, out MechanicalDepthVisual visual) || visual == null)
@@ -577,7 +577,7 @@ public sealed partial class ChunkTilemapRenderer
             mechanicalDepthVisuals[key] = visual;
         }
         visual.BindSelectionEntity(node);
-        visual.BeginUpdate(origin);
+        visual.BeginUpdate(origin, itemVisual, node.Definition.IsConnectionLine);
         visual.BindInteraction(MachineWorld.GetOrCreateInteractionTarget(node));
     }
 

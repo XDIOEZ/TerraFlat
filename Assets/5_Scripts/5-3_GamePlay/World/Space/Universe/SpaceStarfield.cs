@@ -44,7 +44,8 @@ namespace FlatWorld.Spaceflight
             starPlane = plane.transform; starPlane.SetParent(transform, false);
             plane.GetComponent<MeshFilter>().sharedMesh = mesh;
             MeshRenderer renderer = plane.GetComponent<MeshRenderer>();
-            renderer.sharedMaterial = material; renderer.sortingOrder = short.MinValue;
+            renderer.sharedMaterial = material;
+            WorldRenderingManager.ApplyAvailableRendererSorting(renderer, WorldSortingManager.WorldBackgroundCategory);
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;

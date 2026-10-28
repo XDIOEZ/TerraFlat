@@ -18,6 +18,7 @@ namespace FlatWorld.AIECS.Gameplay
         public bool LocalAvoidanceEnabled;
         public string Mode, Status;
         public int RequestedPerWave, Spawned, Alive, Visible, Batches;
+        public int UploadedBytes;
         public int Targets, Chase, Wander, Flee, Attack, Deaths, Drops, PlayerHits, WeaponHits;
         public int PerceptionRequests, Candidates, Los, HotBucket;
         public int SharedGoalCount, CachedChunkCount;
@@ -47,7 +48,7 @@ namespace FlatWorld.AIECS.Gameplay
                 Active = bridge != null, LocalAvoidanceEnabled = LocalAvoidanceEnabled,
                 Mode = mode.ToString(), Status = Status,
                 RequestedPerWave = ReinforcementUnitCount, Spawned = spawned, Alive = AliveUnitCount,
-                Visible = VisibleUnitCount, Batches = VisibleBatchCount,
+                Visible = VisibleUnitCount, Batches = VisibleBatchCount, UploadedBytes = VisibleUploadedBytes,
                 Tick = CompletedSimulationTicks, BacklogSeconds = SimulationBacklogSeconds
             };
             if (bridge == null) return snapshot;

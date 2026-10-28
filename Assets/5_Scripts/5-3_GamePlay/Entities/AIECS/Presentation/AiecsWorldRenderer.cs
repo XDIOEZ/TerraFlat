@@ -7,25 +7,31 @@ using UnityEngine;
 
 namespace FlatWorld.AIECS
 {
+    /// <summary>当前物种视觉定义的 Unity 排序键。</summary>
+    public readonly struct AiecsActorSortingKey
+    {
+        public readonly int Layer;
+        public readonly int Order;
+        public AiecsActorSortingKey(int layer, int order) { Layer = layer; Order = order; }
+    }
+
     /// <summary>由世界排序管理器注入的生物主体及地表阴影排序键，不读取导出资源中的旧层级。</summary>
     public readonly struct AiecsWorldSortingKeys
     {
-        public readonly int ActorLayer;
-        public readonly int ActorOrder;
+        public readonly AiecsActorSortingKey[] Actors;
         public readonly int ShadowLayer;
         public readonly int ShadowOrder;
 
-        public AiecsWorldSortingKeys(int actorLayer, int actorOrder, int shadowLayer, int shadowOrder)
+        public AiecsWorldSortingKeys(AiecsActorSortingKey[] actors, int shadowLayer, int shadowOrder)
         {
-            ActorLayer = actorLayer;
-            ActorOrder = actorOrder;
+            Actors = actors;
             ShadowLayer = shadowLayer;
             ShadowOrder = shadowOrder;
         }
     }
 
     /// <summary>
-    /// 正式模拟的只读批量表现；主体交给独立 BRG，共享图集、网格和实例缓冲。
+    /// 正式模拟的只读批量表现；主体按真实排序键和共同脚点合并网格。
     /// </summary>
     public sealed class AiecsWorldRenderer : IDisposable
     {
@@ -37,17 +43,16 @@ namespace FlatWorld.AIECS
         }
         private struct DrawItem
         {
-            public int Index, Visual, Row, Layer, Order; public float Y;
+            public int Index, Visual, Layer, LayerValue, Order; public float Y;
         }
         private sealed class DrawComparer : IComparer<DrawItem>
         {
             public static readonly DrawComparer Instance = new DrawComparer();
-            /// <summary>图层、行和 Y 排序保持同屏对象的可解释前后关系。</summary>
+            /// <summary>图层、顺序和脚点 Y 保持同屏对象的前后关系。</summary>
             public int Compare(DrawItem a, DrawItem b)
             {
-                int result = a.Layer.CompareTo(b.Layer);
+                int result = a.LayerValue.CompareTo(b.LayerValue);
                 if (result == 0) result = a.Order.CompareTo(b.Order);
-                if (result == 0) result = b.Row.CompareTo(a.Row);
                 if (result == 0) result = b.Y.CompareTo(a.Y);
                 return result == 0 ? a.Index.CompareTo(b.Index) : result;
             }
@@ -58,12 +63,13 @@ namespace FlatWorld.AIECS
         private readonly Dictionary<CombatIdentity, SwayEntry> animationStates = new();
         private readonly List<CombatIdentity> expiredStates = new();
         private int drawSequence;
-        private readonly AiecsBatchRendererGroup batch;
+        private readonly List<AiecsRenderBatch> batches = new();
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
         private readonly AiecsShadowRenderer shadows;
         private readonly AiecsSunShadowRenderer sunShadows;
-        private readonly AiecsWorldSortingKeys sortingKeys;
+        private readonly AiecsActorSortingKey[] actorSortingKeys;
+        private readonly int[] actorSortingLayerValues;
         private readonly float[] sunShadowHeights; // 每物种高度覆盖，0 关闭；不进入模拟或存档。
         private readonly Vector4[] shadowFootprints;
         public bool ShadowsEnabled { get; set; } = true; // 表现开关，不影响模拟。
@@ -74,14 +80,20 @@ namespace FlatWorld.AIECS
         public int SunShadowBatchCount => sunShadows.BatchCount;
         public int VisibleCount => visible.Count;
         public int BatchCount { get; private set; }
+        public int UploadedBytes { get; private set; }
+        public event Action Disposed;
+        private bool disposed;
 
         /// <summary>一次匹配当前定义与实际导出动画；缺少动画目录时明确报告，不回退为每只生物 SpriteRenderer。</summary>
         public AiecsWorldRenderer(AiecsAnimationCatalog catalog, string[] actorIds,
             UnityEngine.SceneManagement.Scene scene, AiecsWorldSortingKeys sortingKeys)
         {
-            this.catalog = catalog; this.scene = scene; this.sortingKeys = sortingKeys;
+            this.catalog = catalog; this.scene = scene;
             if (catalog == null || catalog.Material == null) throw new InvalidOperationException("请先导出 AIECS 动画目录。");
             visuals = new int[actorIds.Length];
+            actorSortingKeys = new AiecsActorSortingKey[actorIds.Length];
+            actorSortingLayerValues = new int[actorIds.Length];
+            SetActorSortingKeys(sortingKeys.Actors);
             animations = new AiecsSwayAnimation[actorIds.Length];
             shadowFootprints = new Vector4[actorIds.Length];
             sunShadowHeights = new float[actorIds.Length];
@@ -98,7 +110,18 @@ namespace FlatWorld.AIECS
             shadows = new AiecsShadowRenderer(scene, sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
             sunShadows = new AiecsSunShadowRenderer(scene, catalog.Material.mainTexture,
                 sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
-            batch = new AiecsBatchRendererGroup(catalog.Material);
+        }
+
+        /// <summary>资源发布时一次更新各物种排序，不在绘制循环读取定义目录。</summary>
+        public void SetActorSortingKeys(AiecsActorSortingKey[] keys)
+        {
+            if (keys == null || keys.Length != actorSortingKeys.Length)
+                throw new ArgumentException("AIECS 物种排序键必须与当前物种目录一一对应。", nameof(keys));
+            for (int i = 0; i < keys.Length; i++)
+            {
+                actorSortingKeys[i] = keys[i];
+                actorSortingLayerValues[i] = SortingLayer.GetLayerValueFromID(keys[i].Layer);
+            }
         }
 
         /// <summary>MOD 可按当前定义索引调整太阳投影高度，0 表示关闭该物种投影。</summary>
@@ -120,8 +143,8 @@ namespace FlatWorld.AIECS
         {
             if (camera == null || !records.IsCreated)
             {
-                visible.Clear(); BatchCount = 0; shadows.Hide(); sunShadows.Hide();
-                batch.Hide();
+                visible.Clear(); BatchCount = UploadedBytes = 0; shadows.Hide(); sunShadows.Hide();
+                foreach (AiecsRenderBatch old in batches) old.Hide();
                 animationStates.Clear();
                 return;
             }
@@ -142,16 +165,27 @@ namespace FlatWorld.AIECS
                     !presentationReady(new Vector2(record.Position.x, record.Position.y)))
                     continue;
                 int visual = visuals[record.Definition];
-                int row = math.clamp((int)((delta.y + halfHeight) / math.max(0.01f, halfHeight * 2f) * 24), 0, 23);
-                visible.Add(new DrawItem { Index = i, Visual = visual, Row = row, Y = delta.y,
-                    Layer = sortingKeys.ActorLayer, Order = sortingKeys.ActorOrder });
+                AiecsActorSortingKey key = actorSortingKeys[record.Definition];
+                visible.Add(new DrawItem { Index = i, Visual = visual, Y = center.y + delta.y,
+                    Layer = key.Layer, LayerValue = actorSortingLayerValues[record.Definition], Order = key.Order });
             }
             visible.Sort(DrawComparer.Instance);
-            batch.Begin();
+            AiecsRenderBatch batch = null;
+            DrawItem batchKey = default;
+            int batchItems = 0, batchCount = 0;
+            int uploadedBytes = 0;
             drawSequence++;
             for (int i = 0; i < visible.Count; i++)
             {
                 var item = visible[i]; var record = records[item.Index]; var definition = catalog.Actors[item.Visual];
+                if (batch == null || batchItems == AiecsRenderBatch.MaxSprites || batchKey.Layer != item.Layer ||
+                    batchKey.Order != item.Order || batchKey.Y != item.Y)
+                {
+                    if (batch != null) uploadedBytes += batch.Submit(batchKey.Layer, batchKey.Order, batchKey.Y);
+                    if (batchCount == batches.Count) batches.Add(new AiecsRenderBatch(scene, catalog.Material));
+                    batch = batches[batchCount++];
+                    batch.Begin(); batchKey = item; batchItems = 0;
+                }
                 if (!animationStates.TryGetValue(record.Key, out SwayEntry entry))
                     animationStates.Add(record.Key, entry = new SwayEntry());
                 entry.LastDraw = drawSequence;
@@ -177,14 +211,17 @@ namespace FlatWorld.AIECS
                         sunShadowHeights[record.Definition]);
                 batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
                     pose.Mirror, color);
+                batchItems++;
             }
             // 离开可见列表就释放实体动作，身份换槽不会继承别的生物的姿态。
             expiredStates.Clear();
             foreach (var pair in animationStates)
                 if (pair.Value.LastDraw != drawSequence) expiredStates.Add(pair.Key);
             foreach (CombatIdentity key in expiredStates) animationStates.Remove(key);
-            batch.Submit();
-            BatchCount = batch.Count > 0 ? 1 : 0;
+            if (batch != null) uploadedBytes += batch.Submit(batchKey.Layer, batchKey.Order, batchKey.Y);
+            for (int i = batchCount; i < batches.Count; i++) batches[i].Hide();
+            BatchCount = batchCount;
+            UploadedBytes = uploadedBytes;
             shadows.End();
             sunShadows.End();
         }
@@ -213,16 +250,25 @@ namespace FlatWorld.AIECS
         /// <summary>释放该表现入口创建的批次，保留共享内容资源。</summary>
         public void Dispose()
         {
-            // 阴影节点清理失败也必须释放 BRG，避免脚本域重载时遗失原生句柄。
+            if (disposed) return;
+            disposed = true;
+            // 阴影节点清理失败也必须释放主体网格与排序订阅。
             try { shadows.Dispose(); }
             finally
             {
                 try { sunShadows.Dispose(); }
                 finally
                 {
-                    batch.Dispose();
-                    animationStates.Clear(); expiredStates.Clear();
-                    visible.Clear(); BatchCount = 0;
+                    try { foreach (AiecsRenderBatch batch in batches) batch.Dispose(); }
+                    finally
+                    {
+                        batches.Clear();
+                        animationStates.Clear(); expiredStates.Clear();
+                        visible.Clear(); BatchCount = UploadedBytes = 0;
+                        Action onDisposed = Disposed;
+                        Disposed = null;
+                        onDisposed?.Invoke();
+                    }
                 }
             }
         }

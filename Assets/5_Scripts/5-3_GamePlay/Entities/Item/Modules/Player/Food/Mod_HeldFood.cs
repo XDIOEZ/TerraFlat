@@ -9,9 +9,6 @@ public sealed class Mod_HeldFood : Module, IFoodMechanic, IFoodStateObserver
     /// <summary>模块注册 ID。</summary>
     public const string ModuleId = "手上食物模块";
 
-    /// <summary>确保运行时 SpriteMask 只影响手持食物。</summary>
-    private const string HeldFoodSortingLayerName = "HeldFood";
-
     /// <summary>进食进度比较容差。</summary>
     private const float ProgressEpsilon = 0.0001f;
 
@@ -193,7 +190,7 @@ public sealed class Mod_HeldFood : Module, IFoodMechanic, IFoodStateObserver
         originalSortingLayerID = renderer.sortingLayerID;
         originalSortingOrder = renderer.sortingOrder;
         hasOriginalSorting = true;
-        renderer.sortingLayerName = HeldFoodSortingLayerName;
+        WorldRenderingManager.ApplyAvailableRendererSorting(renderer, WorldSortingManager.HeldFoodCategory);
         renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
 
         biteMaskGenerator = new FoodBiteMaskGenerator(renderer.sprite, maximumBites);

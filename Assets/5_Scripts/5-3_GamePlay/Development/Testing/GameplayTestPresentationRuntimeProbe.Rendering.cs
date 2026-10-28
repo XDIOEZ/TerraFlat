@@ -111,6 +111,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
             WorldSortingManager sorting = UnityEngine.Object.FindObjectOfType<WorldSortingManager>() ??
                 throw new InvalidOperationException("真实世界没有排序管理器。");
             fixture.Rendering.GetSortingKey(member.Category, out int expectedLayer, out int expectedOrder);
+            WorldSortingManager.ResolveItemVisualSortingKey(fixture.WorldItem.VisualDefinition, expectedLayer, expectedOrder,
+                out expectedLayer, out expectedOrder);
             SortingGroup group = worldSprite.GetComponentsInParent<SortingGroup>(true).LastOrDefault(value => value.enabled &&
                 (value.transform == fixture.WorldItem.transform || value.transform.IsChildOf(fixture.WorldItem.transform)));
             bool sortingMatches = (group != null ? group.sortingLayerID : worldSprite.sortingLayerID) == expectedLayer &&

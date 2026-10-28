@@ -3,7 +3,8 @@
 ## 本体目录
 
 - 唯一入口：`actor-manifest.json`。
-- 当前正式 Actor：`Chicken`、`WildBoar`、`Wolf`、`Ghost`。
+- 当前启用 Manifest 含 13 条有效 Actor 定义；根定义为 `Chicken`、`WildBoar`、`Wolf`、`Ghost`、`SmallFish`，其余定义通过 `parent` 继承。
+- Actor 静态排序使用 `visual.sortingLayerName/sortingOrder`：根定义为 `Player/100`，子定义继承；`SmallFish` 入水时由运行时覆盖为 `underwater-creature`，离水后恢复静态排序。
 - `Chicken_Tree`、`WildBoar_Tree` 是不实现现代 `IAIActor` 契约的旧 Kiwi 行为树兼容资源，继续保留给历史内容，但不进入正式 Actor 目录。
 - `shellPrefab` 是逻辑外壳 ID；`shellAddress`、`spriteAddress`、`animatorControllerAddress` 是稳定 Addressables 地址。
 - `sourcePrefab` 只供编辑器迁移和人工定位，运行时禁止依赖资源路径。

@@ -13,12 +13,12 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal const int BuildingDomain = 2;
     internal const int FireDomain = 3;
     private readonly Transform parent;
-    private readonly int? sortingLayerOverrideId;
-    private readonly int sortingOrderOverride;
+    private readonly int defaultSortingLayerId;
+    private readonly int defaultSortingOrder;
     private readonly int renderQueue;
     private readonly bool useParentSortingAnchor;
     private readonly Dictionary<PartKey, Entry> entries = new();
-    private readonly Dictionary<int, Row> rows = new();
+    private readonly Dictionary<(int Index, int Layer, int Order), Row> rows = new();
     private readonly HashSet<Group> dirtyGroups = new();
     private readonly List<PartKey> removalScratch = new();
     private static readonly HashSet<ChunkDepthMeshRenderer> active = new();
@@ -48,7 +48,8 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
                 motion = MachineArticulatedVisual.ResolveMotion(mode, visual.Animation, visual.Conveyor, Time.time);
             Matrix4x4 row = worldToDisplay * entry.Group.Row.Root.localToWorldMatrix;
             destination.Add(new WorldVisualSnapshot(visual.Sprite, row * visual.Matrix * motion, visual.Tint,
-                SortingLayer.GetLayerValueFromID(entry.Group.Row.Layer), entry.Group.Key.Order, row.m13));
+                SortingLayer.GetLayerValueFromID(entry.Group.Row.Layer), entry.Group.Row.Key.Order, row.m13,
+                entry.Group.Row.Root.GetInstanceID(), entry.Group.Key.Order));
         }
     }
 
@@ -56,8 +57,17 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         int renderQueue = 3000, bool useParentSortingAnchor = false)
     {
         this.parent = parent != null ? parent : throw new ArgumentNullException(nameof(parent));
-        this.sortingLayerOverrideId = sortingLayerOverrideId;
-        this.sortingOrderOverride = sortingOrderOverride;
+        if (sortingLayerOverrideId.HasValue)
+        {
+            defaultSortingLayerId = sortingLayerOverrideId.Value;
+            defaultSortingOrder = sortingOrderOverride;
+        }
+        else
+        {
+            WorldRenderingManager manager = WorldRenderingManager.GetInstance();
+            if (manager != null) manager.GetSortingKey(WorldSortingManager.WorldItemCategory, out defaultSortingLayerId, out defaultSortingOrder);
+            else WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldItemCategory, out defaultSortingLayerId, out defaultSortingOrder);
+        }
         this.renderQueue = renderQueue;
         this.useParentSortingAnchor = useParentSortingAnchor;
         active.Add(this);
@@ -76,7 +86,8 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal void Set(int domain, int entityId, int part, Sprite sprite, Material material,
         Matrix4x4 worldMatrix, Vector3 worldAnchor, int order, Color tint,
         Vector4 crop = default, Vector4 animation = default,
-        bool occluder = false, bool highlighted = false, Vector4 state = default, Vector4 conveyor = default)
+        bool occluder = false, bool highlighted = false, Vector4 state = default, Vector4 conveyor = default,
+        int? sortingLayerId = null, int sortingOrder = 0)
     {
         if (IsDisposed) throw new ObjectDisposedException(nameof(ChunkDepthMeshRenderer));
         if (sprite == null || material == null) throw new ArgumentException("行合批缺少 Sprite 或共享材质。");
@@ -95,9 +106,13 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         float rowY = useParentSortingAnchor ? 0f : rowIndex + .5f;
         local.m13 -= rowY;
         var key = new PartKey(domain, entityId, part);
+        var rowKey = (Index: rowIndex, Layer: sortingLayerId ?? defaultSortingLayerId,
+            Order: sortingLayerId.HasValue ? sortingOrder : defaultSortingOrder);
+        if (rowKey.Order < short.MinValue || rowKey.Order > short.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(sortingOrder));
         var groupKey = new GroupKey(material, sprite.texture, sprite.associatedAlphaSplitTexture, order, renderQueue);
         if (entries.TryGetValue(key, out Entry previous) &&
-            (previous.Group.Row.Index != rowIndex || !previous.Group.Key.Equals(groupKey)))
+            (previous.Group.Row.Key != rowKey || !previous.Group.Key.Equals(groupKey)))
         {
             Remove(domain, entityId, part);
             previous = null;
@@ -114,8 +129,8 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             dirtyGroups.Add(previous.Group);
             return;
         }
-        if (!rows.TryGetValue(rowIndex, out Row row))
-            rows.Add(rowIndex, row = new Row(parent, rowIndex, rowY, sortingLayerOverrideId, sortingOrderOverride,
+        if (!rows.TryGetValue(rowKey, out Row row))
+            rows.Add(rowKey, row = new Row(parent, rowKey, rowY,
                 !useParentSortingAnchor));
         if (!row.Groups.TryGetValue(groupKey, out Group group))
         {
@@ -124,7 +139,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             {
                 if (row.Groups.Count == 0)
                 {
-                    rows.Remove(rowIndex);
+                    rows.Remove(rowKey);
                     DestroyObject(row.Root != null ? row.Root.gameObject : null);
                 }
                 throw;
@@ -151,7 +166,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         DrawGroupCount--;
         if (group.Row.Groups.Count == 0)
         {
-            rows.Remove(group.Row.Index);
+            rows.Remove(group.Row.Key);
             DestroyObject(group.Row.Root != null ? group.Row.Root.gameObject : null);
         }
     }
@@ -234,33 +249,20 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
 
     private sealed class Row
     {
-        internal readonly int Index;
+        internal readonly (int Index, int Layer, int Order) Key;
         internal readonly Transform Root;
-        internal readonly int Layer;
+        internal int Layer => Key.Layer;
         internal readonly Dictionary<GroupKey, Group> Groups = new();
-        internal Row(Transform parent, int index, float rowY, int? sortingLayerOverrideId, int sortingOrderOverride,
+        internal Row(Transform parent, (int Index, int Layer, int Order) key, float rowY,
             bool sortAtRoot)
         {
-            Index = index;
-            Root = CreateNode("DepthRow_" + index, parent);
+            Key = key;
+            Root = CreateNode("DepthRow_" + key.Index, parent);
             Root.localPosition = new Vector3(0f, rowY, 0f);
-            int layer, order;
-            if (sortingLayerOverrideId.HasValue)
-            {
-                layer = sortingLayerOverrideId.Value;
-                order = sortingOrderOverride;
-            }
-            else
-            {
-                WorldRenderingManager manager = WorldRenderingManager.GetInstance();
-                if (manager != null) manager.GetSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
-                else WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
-            }
-            Layer = layer;
             SortingGroup sorting = Root.gameObject.AddComponent<SortingGroup>();
             sorting.sortAtRoot = sortAtRoot;
-            sorting.sortingLayerID = layer;
-            sorting.sortingOrder = order;
+            sorting.sortingLayerID = key.Layer;
+            sorting.sortingOrder = key.Order;
         }
     }
 

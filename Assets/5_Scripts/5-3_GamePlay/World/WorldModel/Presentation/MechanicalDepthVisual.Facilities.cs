@@ -11,12 +11,13 @@ public sealed partial class MechanicalDepthVisual
     private Light2D facilityLight;
     private CombustionVisualEffect facilityCombustion;
     private MachineModuleConfiguration facilityCombustionConfiguration;
-    private int facilityCombustionSortingLayer;
+    private int facilityCombustionSortingLayer, facilityCombustionOrder, facilityBodyPart;
     private bool facilityCombustionTouched;
 
     /// <summary>灯光保留 Unity 专用代理，晾架内容与主体一起合入脚点行。</summary>
-    internal void UpdateFacility(MachineEntity entity)
+    internal void UpdateFacility(MachineEntity entity, int bodyPart = 0)
     {
+        facilityBodyPart = bodyPart;
         BindSelectionEntity(entity);
         if (tankEntity != null && highlighted)
         {
@@ -93,14 +94,14 @@ public sealed partial class MechanicalDepthVisual
     {
         facilityCombustionTouched = true;
         MachineModuleConfiguration config = entity.Definition.Content?.Find<Mod_CombustionVisual>();
-        if (config?.Authoring is not Mod_CombustionVisual source || parts[0] == null)
+        if (config?.Authoring is not Mod_CombustionVisual source || parts[facilityBodyPart] == null)
         {
             facilityCombustion?.SetCombustionActive(false);
             return;
         }
 
-        PartVisual body = parts[0];
-        Transform sortingRoot = owner?.GetBuildingDepthRenderer(submerged).GetPartSortingRoot(
+        PartVisual body = parts[facilityBodyPart];
+        Transform sortingRoot = body.SubmittedRenderer?.GetPartSortingRoot(
             ChunkDepthMeshRenderer.MachineDomain, entityId, body.Id);
         if (sortingRoot == null)
         {
@@ -120,10 +121,12 @@ public sealed partial class MechanicalDepthVisual
         facilityCombustion.transform.SetParent(sortingRoot, true);
 
         int layerId = sortingRoot.GetComponent<SortingGroup>().sortingLayerID;
-        if (!ReferenceEquals(facilityCombustionConfiguration, config) || facilityCombustionSortingLayer != layerId)
+        int bodyOrder = GetSubmittedPartOrder(body);
+        if (!ReferenceEquals(facilityCombustionConfiguration, config) || facilityCombustionSortingLayer != layerId ||
+            facilityCombustionOrder != bodyOrder)
         {
             CombustionVisualEffect template = source.GetComponent<CombustionVisualEffect>();
-            facilityCombustion.BindWorldPresentation(template, layerId, body.Order);
+            facilityCombustion.BindWorldPresentation(template, layerId, bodyOrder);
             facilityCombustion.ConfigureFlamePresentation(
                 config.Value("flameScale", source.flameScale),
                 config.Value("flameHeightRatio", source.flameHeightRatio),
@@ -137,12 +140,13 @@ public sealed partial class MechanicalDepthVisual
                 config.Value("smokeDensity", source.smokeDensity));
             facilityCombustionConfiguration = config;
             facilityCombustionSortingLayer = layerId;
+            facilityCombustionOrder = bodyOrder;
         }
         facilityCombustion.SetFlamePresentationMaterialOverride(
-            owner.ResolveBuildingOverlayMaterialForSubmergedSurface(facilityCombustion.FlameSourceMaterial, submerged));
+            owner.ResolveBuildingOverlayMaterial(facilityCombustion.FlameSourceMaterial, submerged, groundSorting));
         if (facilityCombustion.SmokePresentationEnabled)
             facilityCombustion.SetSmokePresentationMaterialOverride(
-                owner.ResolveBuildingOverlayMaterialForSubmergedSurface(facilityCombustion.SmokeSourceMaterial, submerged));
+                owner.ResolveBuildingOverlayMaterial(facilityCombustion.SmokeSourceMaterial, submerged, groundSorting));
 
         Vector3 anchor = config.Value("sourceRendererAnchorOffset", source.sourceRendererAnchorOffset);
         if (config.Value("followSourceRenderer", source.followSourceRenderer))

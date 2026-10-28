@@ -111,7 +111,8 @@ public sealed class AquaticActorPresentation : IDisposable
         if (isUnderwater == value || renderer == null) return;
         isUnderwater = value;
         renderer.sharedMaterial = value ? underwaterMaterial : originalMaterial;
-        sorting.Bind(value ? SortingCategory : WorldSortingManager.CreatureCategory, renderer, owner);
+        sorting.Bind(WorldSortingManager.CreatureCategory, renderer, owner);
+        sorting.SetEnvironmentSortingOverride(value ? SortingCategory : null);
     }
 
     private void UpdateSwimMotion(bool underwater, float deltaTime)
@@ -166,7 +167,11 @@ public sealed class AquaticActorPresentation : IDisposable
             visualTransform.localRotation = originalLocalRotation;
             visualTransform.localPosition = originalLocalPosition;
         }
-        if (sorting != null && renderer != null) sorting.Bind(WorldSortingManager.CreatureCategory, renderer, owner);
+        if (sorting != null && renderer != null && owner != null && !owner.DestructionHandled)
+        {
+            sorting.SetEnvironmentSortingOverride(null);
+            sorting.Bind(WorldSortingManager.CreatureCategory, renderer, owner);
+        }
         if (underwaterMaterial != null)
         {
             if (Application.isPlaying) UnityEngine.Object.Destroy(underwaterMaterial);
