@@ -286,8 +286,11 @@ public sealed partial class WorldPhysicsService2D
         body.mass = ResolveEntityMass(snapshot);
         body.interpolation = RigidbodyInterpolation2D.None;
         body.collisionDetectionMode = dynamic ? CollisionDetectionMode2D.Continuous : CollisionDetectionMode2D.Discrete;
-        body.velocity = Vector2.zero;
-        body.angularVelocity = 0f;
+        if (body.bodyType != RigidbodyType2D.Static)
+        {
+            body.velocity = Vector2.zero;
+            body.angularVelocity = 0f;
+        }
         body.simulated = true;
     }
 
@@ -329,7 +332,7 @@ public sealed partial class WorldPhysicsService2D
             if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
             return;
         }
-        if (!shell.SharedFixedBody)
+        if (!shell.SharedFixedBody && shell.Body.bodyType != RigidbodyType2D.Static)
         {
             shell.Body.velocity = Vector2.zero;
             shell.Body.angularVelocity = 0f;
@@ -343,6 +346,13 @@ public sealed partial class WorldPhysicsService2D
         shell.Root.gameObject.SetActive(false);
         if (shell.SharedFixedBody)
         {
+            // 世界关闭时直接释放代理，不能在卸载中的场景重建回收池。
+            if (disposed)
+            {
+                DestroyPhysicsObject(shell.Root.gameObject);
+                ReleaseWorldFixedChunkBody(shell.Body);
+                return;
+            }
             shell.Root.SetParent(GetPhysicsPoolRoot(), false);
             ReleaseWorldFixedChunkBody(shell.Body);
         }

@@ -74,6 +74,40 @@ test.system("item_runtime", "simulation_membership_cache", {}, function(data)
         "环绕世界接缝或等价镜像坐标移动时错误复用了旧的模拟区域")
 end, "物品模拟区域身份缓存、移动/玩家/手持失效与零分配")
 
+test.system("item_runtime", "simulation_range_rigidbody_pause", {}, function(data)
+    assert(#data.samples == 6, "物品距离暂停没有覆盖三种刚体与两种 simulated 初态")
+    local seen = {}
+    for _, sample in ipairs(data.samples) do
+        local key = sample.bodyType .. ":" .. tostring(sample.initiallySimulated)
+        assert(not seen[key], "物品距离暂停重复采样了刚体状态：" .. key)
+        seen[key] = true
+        assert(sample.initialized, "刚体暂停采样没有正式加载物品：" .. key)
+        assert(sample.pauseIssueCount == 0 and sample.resumeIssueCount == 0,
+            "暂停或恢复 Rigidbody2D 时产生了警告/错误：" .. key)
+        assert(sample.poolReuseIssueCount == 0,
+            "回池复位 Rigidbody2D 时未完成或产生了警告/错误：" .. key)
+        if sample.bodyType ~= "Static" then
+            assert(sample.poolReuseVelocitiesCleared, "回池复位没有清除运动刚体速度：" .. key)
+            if sample.initiallySimulated then
+                assert(sample.poolReuseVelocitySeeded, "回池复位前运动刚体没有非零速度：" .. key)
+            end
+        end
+        assert(sample.pausedSimulationDisabled and sample.simulationRestored,
+            "暂停后 simulated 未关闭，或恢复时未还原原始状态：" .. key)
+        if sample.bodyType ~= "Static" then
+            assert(sample.velocitiesCleared, "运动刚体暂停时未清零速度：" .. key)
+            if sample.initiallySimulated then
+                assert(sample.velocitySeeded, "运动刚体没有以非零速度进入暂停：" .. key)
+            end
+        end
+    end
+    for _, bodyType in ipairs({"Static", "Kinematic", "Dynamic"}) do
+        for _, simulated in ipairs({true, false}) do
+            assert(seen[bodyType .. ":" .. tostring(simulated)], "缺少刚体暂停状态采样")
+        end
+    end
+end, "远距离暂停静态/运动/动态刚体无告警并恢复 simulated 原值")
+
 test.system("item_runtime", "logical_world_simulation_perception", {}, function(data)
     assert(data.sameScene and data.distinctWorlds and data.differentWorldStopped,
         "同一场景里的不同逻辑世界被当作同一个模拟范围")
@@ -431,12 +465,14 @@ end, "单图组件停用拒绝攻击跳跃受击且恢复身体Animator")
 
 for _, lifecycle in ipairs({"despawn", "destroy_component", "destroy_owner"}) do
     test.system("item_runtime", "single_sprite_animation", {
-        nestedVisual = true, withAdditionalVisual = true, finalLifecycle = lifecycle,
+        nestedVisual = true, withAdditionalVisual = true, withAnimator = true,
+        withAnimatorController = true, finalLifecycle = lifecycle,
         steps = {{attack = true, jump = true, externalY = 180, deltaTime = .06}}
     }, function(data)
         checkAnimationBoundary(data)
         local final = data.lifecycle
         assert(#final.errors == 0, "单图生命周期产生 Unity 错误：" .. table.concat(final.errors, "；"))
+        assert(not final.animatorEnabledBefore, "单图表现没有先停用原 Animator")
         assert(final.poseReleased and final.additionalPoseReleased,
             "动画收尾没有释放身体或附加视觉的临时父层")
         if lifecycle == "destroy_owner" then
@@ -447,6 +483,7 @@ for _, lifecycle in ipairs({"despawn", "destroy_component", "destroy_owner"}) do
         else
             assert(not final.ownerDestructionStarted and not final.ownerDestroyed and not final.visualDestroyed and not final.additionalDestroyed,
                 "普通回收或单独删除动画组件误判为宿主销毁")
+            assert(final.animatorEnabledAfter, "普通回收或单独删除模块没有恢复原 Animator")
             assert(final.parentRestored and final.additionalParentRestored and final.additionalSiblingRestored and final.localFacingX < -.9,
                 "存活宿主的身体或附加视觉没有恢复真实父级和同级顺序，或最新翻面被覆盖")
             assert(final.localPositionError < .00001 and final.localScaleError < .00001,
@@ -454,6 +491,26 @@ for _, lifecycle in ipairs({"despawn", "destroy_component", "destroy_owner"}) do
         end
     end, "单图宿主销毁、模块删除与回收层级边界：" .. lifecycle)
 end
+
+test.system("item_runtime", "single_sprite_animation", {
+    withAnimator = true, withAnimatorController = true, finalLifecycle = "begin_owner_destroy",
+    steps = {{attack = true, deltaTime = .06}}
+}, function(data)
+    local final = data.lifecycle
+    assert(not final.animatorEnabledBefore, "单图表现没有先停用原 Animator")
+    assert(final.ownerDestructionStarted and not final.animatorEnabledAfter,
+        "物品销毁期间不应重新启用原 Animator")
+    assert(#final.errors == 0, "单图销毁产生 Unity 错误：" .. table.concat(final.errors, "；"))
+end, "单图物品销毁时不重启 Animator")
+
+test.system("item_runtime", "single_sprite_animation", {
+    withAnimator = true, withAnimatorController = true,
+    steps = {{deltaTime = 0}, {lifecycle = "pool_reuse", deltaTime = 0}, {mode = "Animator", deltaTime = 0}}
+}, function(data)
+    assert(not data.samples[1].bodyAnimatorEnabled and not data.samples[2].bodyAnimatorEnabled,
+        "回池复用后单图表现没有停用原 Animator")
+    assert(data.samples[3].bodyAnimatorEnabled, "回池复用后切回动画控制器没有恢复原 Animator")
+end, "单图物品回池复用后可切回 Animator")
 
 local motionSteps = {{moving = true, source = {y = .3, roll = 12},
     legacyState = "Walk", legacyMove = true, deltaTime = .08}}

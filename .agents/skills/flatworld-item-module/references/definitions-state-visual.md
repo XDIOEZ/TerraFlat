@@ -22,7 +22,7 @@
 - 初始 Animator 状态由 Item 待播；停用冷壳不查 layerCount/HasState 或 Play/Update，激活初始化后才验播；首帧仍未初始化的待播状态由动画模块后续帧补交。单图正式禁 Animator、回池/重装配时清待播引用。
 - `Mod_AnimatorController` 的参数缓存同样只在 Animator 激活、持有 Controller 且已初始化后读取；冷加载时的 Bool 写入保留最新值并在激活后恢复。SingleSprite 不读取 Animator 参数；真缺控制器则在活跃态保留明确诊断。
 - singleSpriteStates 配具体壳状态名/Sprite，PlayAnimation/TryPlayAnimation 切图；TrySetSprite 支持跨图集且不启身体 Animator。空图/未知态拒，复位/停用/卸载/换模式还原原图。
-- 单图动作仅独立父层，不改原视觉 localPose、Item根或刚体；附加视觉禁刚体/碰撞，手持武器仍正式命中链。切模式/卸载还父级/同级顺序并保最新翻面，停组件拒新动作、停GO先归零，正式卸载再拆层。OnDestroy 的 IsBeingDestroyed 只释引用不向销毁宿主挂节点；单移组件/正常回池仍还原层级。
+- 单图动作仅独立父层，不改原视觉 localPose、Item根或刚体；附加视觉禁刚体/碰撞，手持武器仍正式命中链。切模式/卸载还父级/同级顺序并保最新翻面，停组件拒新动作、停GO先归零，正式卸载再拆层。宿主 OnDestroy 只释引用，不重挂层级或重启原 Animator；单移组件/正常回池仍还原层级和 Animator。
 
 ## 物质、燃烧与产出
 

@@ -773,6 +773,8 @@ internal sealed class GameplayWorldRegistryHost : MonoBehaviour
         ItemMgr.RuntimeItemRegistered -= GameplayWorldRegistry.RegisterItemPresentation;
         Item.RuntimeStructureChanged -= GameplayWorldRegistry.RegisterItemPresentation;
     }
+    // 退出进程或 PlayMode 时，在 Unity 卸载场景前释放世界物理代理。
+    private void OnApplicationQuit() => GameplayWorldRegistry.ReleaseAllWorldPhysics();
     private void FixedUpdate() => GameplayWorldRegistry.SimulatePhysics();
     #endregion
 }

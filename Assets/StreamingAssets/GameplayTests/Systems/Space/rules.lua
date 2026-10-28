@@ -1028,3 +1028,7 @@ for _, width in ipairs({720, 640, 540, 480}) do
         assert(not data.actionInBody, "化学引擎拆回操作不能占用正文")
     end, "化学引擎双容量条布局：" .. width)
 end
+test.system("space", "native_physics_island_shutdown", {}, function(data)
+    assert(data.nativeBodyCreated and data.ownerReleasedBody and data.editorSceneClosed and data.worldDestroyErrors == 0,
+        "太空物理岛拥有者关闭时必须先释放真实原生刚体，再关闭编辑态场景")
+end, "太空物理岛拥有者关闭与刚体清理")

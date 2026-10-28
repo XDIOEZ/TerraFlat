@@ -317,6 +317,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         var before = SessionSnapshot();
         yield return Wait(0.25d);
+        JObject contextShutdown = null;
+        yield return GameplayTestSpacePresentationProbe.CaptureSpaceContextShutdown(value => contextShutdown = value);
         SpaceSession.Capture(SaveDataMgr.Instance.SaveData);
         SpaceSessionState restored = SaveDataMgr.DeserializeSpaceState(SaveDataMgr.Instance.SaveData.SpaceStateJson);
         completed(new JObject { ["scope"] = "live-session", ["before"] = before,
@@ -324,7 +326,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["savedTime"] = restored.SimulationSeconds, ["savedSectorCount"] = restored.Sectors.Count,
             ["cameraOverride"] = GameplayTestSpacePresentationProbe.CaptureCameraOverride(CurrentPlayer()),
             ["passengerPose"] = GameplayTestSpacePresentationProbe.CapturePassengerPose(CurrentPlayer()),
-            ["physicsShutdown"] = GameplayTestSpacePresentationProbe.CaptureNativePhysicsWorldShutdown() });
+            ["physicsShutdown"] = GameplayTestSpacePresentationProbe.CaptureNativePhysicsWorldShutdown(),
+            ["contextShutdown"] = contextShutdown });
     }
 
     private IEnumerator ReadTemplates(Action<JObject> completed)
@@ -442,6 +445,13 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             15d, "玩家没有按真实速度越过目标星区边界。");
         JObject crossed = SessionSnapshot();
         yield return WaitUntil(() => !Contains(session.RequiredSectors, source), 20d, "越过过渡带后源星区租约未释放。");
+        string sourceWorldKey = SpaceSectorCoordinates.SceneKey(source);
+        yield return WaitUntil(() =>
+        {
+            Scene oldScene = SceneManager.GetSceneByName(sourceWorldKey);
+            return !oldScene.IsValid() || !oldScene.isLoaded;
+        }, 20d, "源星区物理场景未完成卸载。");
+        bool oldPhysicsReleased = !GameplayWorldRegistry.TryGetPhysics(sourceWorldKey, out _);
         JObject settled = SessionSnapshot();
         yield return Teleport(new SpaceMotionState { Sector = destination,
             PositionMeters = new SpaceVector2(-dx * edge, -dy * edge), VelocityMetersPerSecond = velocity * -1d, RadiusMeters = .3d });
@@ -452,6 +462,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         completed(new JObject { ["scope"] = "live-sector-transition", ["direction"] = direction,
             ["source"] = Sector(source), ["destination"] = Sector(destination), ["before"] = before,
             ["crossed"] = crossed, ["settled"] = settled, ["returned"] = returned,
+            ["oldPhysicsReleasedAfterUnload"] = oldPhysicsReleased,
             ["realmRevisionBefore"] = revision });
     }
 

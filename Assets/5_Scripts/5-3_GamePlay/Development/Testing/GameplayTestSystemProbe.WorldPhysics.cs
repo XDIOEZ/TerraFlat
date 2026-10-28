@@ -23,8 +23,8 @@ public static partial class GameplayTestSystemProbe
         string suffix = Guid.NewGuid().ToString("N");
         using var firstSpace = WorldPhysicsScene2D.CreateIsolated("Physics probe A " + suffix);
         using var secondSpace = WorldPhysicsScene2D.CreateIsolated("Physics probe B " + suffix);
-        using var first = new WorldPhysicsService2D("probe:physics-a:" + suffix, firstSpace);
-        using var second = new WorldPhysicsService2D("probe:physics-b:" + suffix, secondSpace);
+        using var first = new WorldPhysicsService2D("probe:physics-a:" + suffix, WorldPhysicsScene2D.Borrow(firstSpace.Scene));
+        using var second = new WorldPhysicsService2D("probe:physics-b:" + suffix, WorldPhysicsScene2D.Borrow(secondSpace.Scene));
         bool separateNativeScenes = firstSpace.PhysicsScene != secondSpace.PhysicsScene;
         var roots = new List<GameObject>();
         try
@@ -88,6 +88,8 @@ public static partial class GameplayTestSystemProbe
             JObject ownership = CaptureWorldPhysicsRegionOwnership(first, second, firstSpace, secondSpace, roots);
             JObject combatQueries = CaptureWorldPhysicsCombatQueries(firstSpace, secondSpace);
             first.Dispose();
+            bool borrowedSpacePreserved = firstSpace.IsValid && movingBody != null &&
+                !firstSpace.PhysicsScene.IsEmpty();
             bool disposedIndexCleared = !WorldPhysicsService2D.TryResolveCollider(firstMarker, out _) &&
                 !WorldPhysicsService2D.TryResolveCollider(ownWall, out _) && first.ColliderCount == 0;
             bool otherWorldSurvived = WorldPhysicsService2D.TryResolveCollider(secondMarker, out var surviving) &&
@@ -102,6 +104,7 @@ public static partial class GameplayTestSystemProbe
                 ["passedOtherWorldWallX"] = passedOtherWorldWallX, ["otherWorldContact"] = otherWorldContact,
                 ["stoppedAtOwnWallX"] = stoppedAtOwnWallX, ["ownWorldContact"] = ownWorldContact,
                 ["ownership"] = ownership, ["disposedIndexCleared"] = disposedIndexCleared,
+                ["borrowedSpacePreserved"] = borrowedSpacePreserved,
                 ["otherWorldSurvived"] = otherWorldSurvived, ["combatQueries"] = combatQueries
             };
         }

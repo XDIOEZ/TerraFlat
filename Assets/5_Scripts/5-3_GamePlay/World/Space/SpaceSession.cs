@@ -105,6 +105,8 @@ namespace FlatWorld.Spaceflight
             if (PressureExplosionQueue.PresentationHandler == PresentShipExplosion) PressureExplosionQueue.PresentationHandler = null;
             if (Current == this) Current = null;
         }
+        // 退出时先完成太空会话移交，随后由世界宿主统一释放剩余物理服务。
+        private void OnApplicationQuit() => EndSession();
         private void Load(GameSaveData save)
         {
             if (save == null || ReferenceEquals(owner, save)) return;

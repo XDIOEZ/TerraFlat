@@ -258,6 +258,8 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
             view.Planets.Clear();
             if (view.Root != null) Destroy(view.Root.gameObject);
         }
+        // 原生世界卸载前先释放本星区持有的物理代理。
+        GameplayWorldRegistry.ReleaseSpaceContext(SpaceSectorCoordinates.SceneKey(view.Sector));
         if (view.Scene.IsValid() && view.Scene.isLoaded)
         {
             AsyncOperation unload = SceneManager.UnloadSceneAsync(view.Scene);
@@ -265,7 +267,6 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         }
         if (sectors.TryGetValue(view.Sector, out SectorView current) && ReferenceEquals(current, view))
             sectors.Remove(view.Sector);
-        GameplayWorldRegistry.ReleaseSpaceContext(SpaceSectorCoordinates.SceneKey(view.Sector));
         view.Unloading = false;
         view.Scene = default;
     }

@@ -1,23 +1,122 @@
 using System;
+using System.Collections;
 using System.Globalization;
 using Cinemachine;
 using FlatWorld.Spaceflight;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>独立姿态样本只调用正式表现插值，断言由 Lua 负责。</summary>
 public static class GameplayTestSpacePresentationProbe
 {
     #region 原生物理世界关闭采样
+    public static JObject CaptureNativePhysicsIslandShutdown()
+    {
+        var world = new SpacePhysicsWorld(0);
+        int worldDestroyErrors = 0;
+        void CaptureLog(string message, string trace, LogType type)
+        { if (message.Contains("Cannot destroy 2D physics world")) worldDestroyErrors++; }
+        Application.logMessageReceived += CaptureLog;
+        try
+        {
+            world.BeginFrame();
+            SpacePhysicsBody body = world.Acquire("shutdown-probe");
+            body.MassKg = body.InertiaKgM2 = body.RadiusMeters = 1d;
+            body.Shapes.Add(new SpacePhysicsShape(Vector2.zero, Vector2.one));
+            world.Step(Array.Empty<SpaceGravitySource>(), 0d, .02d, new SpaceGameplaySettings());
+            Scene scene = body.Island.Scene;
+            GameObject root = body.Root;
+            bool created = root != null && body.Rigidbody != null && body.Rigidbody.simulated &&
+                !body.Island.Physics.IsEmpty();
+            world.Dispose();
+            world = null;
+            return new JObject
+            {
+                ["nativeBodyCreated"] = created,
+                ["ownerReleasedBody"] = root == null || !root.activeSelf,
+                ["editorSceneClosed"] = Application.isPlaying || !scene.IsValid() || !scene.isLoaded,
+                ["worldDestroyErrors"] = worldDestroyErrors
+            };
+        }
+        finally
+        {
+            world?.Dispose();
+            Application.logMessageReceived -= CaptureLog;
+        }
+    }
+
+    public static IEnumerator CaptureSpaceContextShutdown(Action<JObject> completed)
+    {
+        string key = SpaceSectorCoordinates.SceneKey(new SpaceSectorId(BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0), long.MinValue));
+        Scene scene = WorldPhysicsScene2D.CreateIsolatedScene(key);
+        var errors = new JArray();
+        AsyncOperation unload = null;
+        void CaptureLog(string message, string trace, LogType type)
+        { if (message.Contains("Cannot destroy 2D physics world")) errors.Add(message); }
+        Application.logMessageReceived += CaptureLog;
+        try
+        {
+            WorldPhysicsService2D physics;
+            WorldPhysicsEntityProxy2D fixedProxy, movingProxy;
+            var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
+                new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one },
+                chunkBlockingProjection: false) };
+            using (IDisposable scope = GameplayWorldRegistry.UseSpaceScene(key) ??
+                throw new InvalidOperationException("独立星区场景未能登记物理上下文。"))
+            {
+                physics = GameplayWorldRegistry.CurrentPhysics;
+                ItemData snapshot = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
+                fixedProxy = physics.AllocateEntityProxy(new object(), snapshot, new ItemPhysicsDefinitionDto(), regions, null);
+                movingProxy = physics.AllocateEntityProxy(new object(), snapshot,
+                    new ItemPhysicsDefinitionDto { Mode = WorldPhysicsProxyMode2D.IndependentDynamic }, regions, null);
+            }
+            PhysicsScene2D native = scene.GetPhysicsScene2D();
+            GameObject fixedRoot = fixedProxy.Body.gameObject, movingRoot = movingProxy.Body.gameObject;
+            bool bodiesCreated = fixedProxy.Body.simulated && movingProxy.Body.simulated && !native.IsEmpty();
+            int rootsBeforeRelease = scene.rootCount;
+            GameplayWorldRegistry.ReleaseSpaceContext(key);
+            var result = new JObject
+            {
+                ["nativeBodiesCreated"] = bodiesCreated,
+                ["sceneStillLoaded"] = scene.IsValid() && scene.isLoaded,
+                ["contextReleased"] = !GameplayWorldRegistry.TryGetPhysics(key, out _),
+                ["ownedBodiesDeactivated"] = (fixedRoot == null || !fixedRoot.activeSelf) &&
+                    (movingRoot == null || !movingRoot.activeSelf),
+                ["emptyBeforeSceneUnload"] = native.IsValid() && native.IsEmpty(),
+                ["noPoolCreatedDuringRelease"] = scene.rootCount <= rootsBeforeRelease
+            };
+            unload = SceneManager.UnloadSceneAsync(scene);
+            if (unload != null) yield return unload;
+            result["sceneUnloaded"] = !scene.IsValid() || !scene.isLoaded;
+            result["worldDestroyErrors"] = errors;
+            completed(result);
+        }
+        finally
+        {
+            GameplayWorldRegistry.ReleaseSpaceContext(key);
+            if (unload == null && scene.IsValid() && scene.isLoaded) SceneManager.UnloadSceneAsync(scene);
+            Application.logMessageReceived -= CaptureLog;
+        }
+    }
+
     public static JObject CaptureNativePhysicsWorldShutdown()
     {
         using var isolated = WorldPhysicsScene2D.CreateIsolated("太空测试的原生物理关闭现场");
         using var physics = new WorldPhysicsService2D("space-test:shutdown", WorldPhysicsScene2D.Borrow(isolated.Scene));
         var restingSamples = new JArray();
         var registrationSamples = new JArray();
-        GameItem registeredItem = null;
+        var configuredSamples = new JArray();
+        GameItem registeredItem = null, configuredItem = null;
         var restingRoot = new GameObject("静止姿态原生刚体采样");
+        GameObject configuredRoot = null;
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(restingRoot, isolated.Scene);
+        ItemData snapshot = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
+        var definition = new ItemPhysicsDefinitionDto();
+        var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
+            new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one },
+            chunkBlockingProjection: false) };
+        bool staticIndependentProxyReleased = false;
         int staticBodyWarnings = 0;
         Application.LogCallback countStaticBodyWarnings = (message, trace, type) =>
         {
@@ -57,19 +156,37 @@ public static class GameplayTestSpacePresentationProbe
                     ["angularVelocity"] = restingBody.angularVelocity,
                     ["nativeBodyPresent"] = !isolated.PhysicsScene.IsEmpty() && restingBody.gameObject.activeInHierarchy });
             }
+            // 固定定义的普通 Item 必须覆盖真实刚体的首次及重复登记。
+            configuredRoot = new GameObject("固定配置物品原生刚体采样");
+            SceneManager.MoveGameObjectToScene(configuredRoot, isolated.Scene);
+            Rigidbody2D configuredBody = configuredRoot.AddComponent<Rigidbody2D>();
+            configuredRoot.AddComponent<BoxCollider2D>();
+            configuredItem = configuredRoot.AddComponent<GameItem>();
+            configuredItem.BindData(GameRes.ExistingInstance.CreateItemData("Tree_Pine"));
+            for (int registration = 0; registration < 2; registration++)
+            {
+                physics.RegisterItem(configuredItem);
+                bool registered = physics.TryGetItemProxy(configuredItem, out WorldPhysicsEntityProxy2D proxy);
+                configuredSamples.Add(new JObject { ["configured"] = !WorldPhysicsService2D.UsesLegacyItemPhysicsDefaults(configuredItem),
+                    ["proxyRegistered"] = registered, ["proxyMode"] = registered ? proxy.Mode.ToString() : null,
+                    ["bodyType"] = configuredBody.bodyType.ToString(), ["speedSqr"] = configuredBody.velocity.sqrMagnitude,
+                    ["angularVelocity"] = configuredBody.angularVelocity });
+            }
+            WorldPhysicsEntityProxy2D independent = physics.AllocateEntityProxy(new object(), snapshot,
+                new ItemPhysicsDefinitionDto { Mode = WorldPhysicsProxyMode2D.IndependentDynamic }, regions, null);
+            independent.Body.bodyType = RigidbodyType2D.Static;
+            independent.Dispose();
+            staticIndependentProxyReleased = !independent.IsValid;
         }
         finally
         {
+            WorldPhysicsService2D.ReleaseItem(configuredItem);
             WorldPhysicsService2D.ReleaseItem(registeredItem);
             Application.logMessageReceived -= countStaticBodyWarnings;
+            if (configuredRoot != null) { configuredRoot.SetActive(false); UnityEngine.Object.Destroy(configuredRoot); }
             restingRoot.SetActive(false);
             UnityEngine.Object.Destroy(restingRoot);
         }
-        ItemData snapshot = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
-        var definition = new ItemPhysicsDefinitionDto();
-        var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
-            new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one },
-            chunkBlockingProjection: false) };
         var first = physics.AllocateEntityProxy(new object(), snapshot, definition, regions, null);
         GameObject releasedRoot = first.Body.gameObject;
         bool nativeBodyCreated = !isolated.PhysicsScene.IsEmpty() && releasedRoot.activeSelf;
@@ -78,6 +195,8 @@ public static class GameplayTestSpacePresentationProbe
         {
             ["restingPose"] = restingSamples, ["restingPoseStaticBodyWarnings"] = staticBodyWarnings,
             ["itemRegistration"] = registrationSamples,
+            ["configuredFixedItemRegistration"] = configuredSamples,
+            ["staticIndependentProxyReleased"] = staticIndependentProxyReleased,
             ["nativeBodyCreated"] = nativeBodyCreated,
             ["lastReferenceReleaseDeactivatedRoot"] = !releasedRoot.activeSelf,
             ["emptyAfterLastReferenceRelease"] = isolated.PhysicsScene.IsEmpty()

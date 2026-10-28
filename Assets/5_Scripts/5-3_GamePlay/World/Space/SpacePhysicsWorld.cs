@@ -116,7 +116,8 @@ namespace FlatWorld.Spaceflight
         {
             foreach (SpacePhysicsBody body in bodies.Values) DestroyBody(body);
             foreach (SpacePhysicsIsland island in islands) island.Context?.Dispose();
-            UnityEngine.Object.Destroy(material);
+            if (Application.isPlaying) UnityEngine.Object.Destroy(material);
+            else UnityEngine.Object.DestroyImmediate(material);
             bodies.Clear(); active.Clear(); islands.Clear(); groups.Clear(); claimed.Clear(); cells.Clear();
             Impacts.Clear(); gravityFrames.Clear(); gravityById.Clear();
         }
@@ -124,11 +125,7 @@ namespace FlatWorld.Spaceflight
         private static void DestroyBody(SpacePhysicsBody body)
         {
             if (body.Rigidbody != null) body.Rigidbody.simulated = false;
-            if (body.Root != null)
-            {
-                body.Root.SetActive(false);
-                UnityEngine.Object.Destroy(body.Root);
-            }
+            if (body.Root != null) WorldPhysicsService2D.DestroyPhysicsObject(body.Root);
             body.Root = null; body.Rigidbody = null; body.Colliders.Clear();
             body.AppliedShapes.Clear(); body.BlockingShapes.Clear(); body.NonBlockingShapes.Clear();
             body.ShapesApplied = false;

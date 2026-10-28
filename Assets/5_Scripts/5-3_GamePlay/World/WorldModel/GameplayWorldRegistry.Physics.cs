@@ -78,7 +78,7 @@ public static partial class GameplayWorldRegistry
         if (worldPhysics.Remove(worldKey, out var service)) service.Dispose();
     }
 
-    private static void ReleaseAllWorldPhysics()
+    internal static void ReleaseAllWorldPhysics()
     {
         foreach (var service in worldPhysics.Values) service.Dispose();
         worldPhysics.Clear();

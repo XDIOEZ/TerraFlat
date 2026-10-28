@@ -168,6 +168,18 @@ public static partial class GameplayTestSystemProbe
                 }
             }
             Animator sourceAnimator = Flag(args, "withAnimator", false) ? root.AddComponent<Animator>() : null;
+            if (sourceAnimator != null && Flag(args, "withAnimatorController", false))
+            {
+#if UNITY_EDITOR
+                sourceAnimator.runtimeAnimatorController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                    "Assets/8_Animations/Character/SmallFish.controller");
+#else
+                sourceAnimator.runtimeAnimatorController = GameRes.ExistingInstance?.GetPrefab("SmallFish", false)
+                    ?.GetComponentInChildren<Animator>(true)?.runtimeAnimatorController;
+#endif
+                if (sourceAnimator.runtimeAnimatorController == null)
+                    throw new InvalidOperationException("单图动画回归缺少 SmallFish 控制器。");
+            }
             animation.animator = sourceAnimator;
             root.SetActive(true);
             if (motionSource != null) motionSource.Load();
@@ -378,10 +390,13 @@ public static partial class GameplayTestSystemProbe
             {
                 Transform poseRoot = visual.transform.parent;
                 Transform additionalPoseRoot = additionalVisual != null ? additionalVisual.parent : null;
+                bool animatorEnabledBeforeLifecycle = sourceAnimator != null && sourceAnimator.enabled;
+                bool animatorGraphBeforeLifecycle = sourceAnimator != null && sourceAnimator.playableGraph.IsValid();
                 var errors = new JArray();
                 void CaptureLifecycleLog(string message, string stackTrace, LogType type)
                 {
-                    if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+                    if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert ||
+                        message.Contains("PlayableGraph was not destroyed"))
                         errors.Add(message);
                 }
                 // 直接调用正式生命周期并保留 Unity 日志，让 Lua 同时检查销毁和存活宿主的恢复边界。
@@ -393,6 +408,7 @@ public static partial class GameplayTestSystemProbe
                         case "destroy_owner": UnityEngine.Object.DestroyImmediate(root); break;
                         case "destroy_component": UnityEngine.Object.DestroyImmediate(animation); break;
                         case "despawn": item.PrepareForDespawn(saveData: false); break;
+                        case "begin_owner_destroy": item.OnDestroy(); break;
                         default: throw new ArgumentException("单图动画收尾生命周期操作未登记：" + finalLifecycle);
                     }
                 }
@@ -402,6 +418,11 @@ public static partial class GameplayTestSystemProbe
                     ["errors"] = errors,
                     ["ownerDestructionStarted"] = item.IsBeingDestroyed,
                     ["ownerDestroyed"] = root == null,
+                    ["animatorEnabledBefore"] = animatorEnabledBeforeLifecycle,
+                    ["animatorEnabledAfter"] = sourceAnimator != null && sourceAnimator.enabled,
+                    ["animatorGraphBefore"] = animatorGraphBeforeLifecycle,
+                    ["animatorGraphAfter"] = sourceAnimator != null && sourceAnimator.playableGraph.IsValid(),
+                    ["animatorInitializedAfter"] = sourceAnimator != null && sourceAnimator.isInitialized,
                     ["visualDestroyed"] = visual == null,
                     ["poseDestroyed"] = poseRoot == null,
                     ["poseReleased"] = poseRoot == null || (poseRoot.parent == null && poseRoot.childCount == 0),

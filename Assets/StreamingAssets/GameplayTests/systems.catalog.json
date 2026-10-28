@@ -1067,7 +1067,8 @@
         "Assets/5_Scripts/5-1_Data/CoreData/ItemTransform.cs",
         "Assets/5_Scripts/5-1_Data/CoreData/ListTagExtensions.cs",
         "Assets/5_Scripts/5-1_Data/EnumData/*",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.BasicItemCatalog.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.BasicItemCatalog.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ItemSimulationRange.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [

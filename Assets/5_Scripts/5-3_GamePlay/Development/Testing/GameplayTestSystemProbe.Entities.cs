@@ -112,6 +112,8 @@ public static partial class GameplayTestSystemProbe
             item.FlushPendingInitialAnimatorState();
             bool stillQueued = item.HasPendingInitialAnimatorState;
             root.SetActive(true);
+            // 编辑态不派发普通脚本的激活回调，夹具显式推进正式入口。
+            item.FlushPendingInitialAnimatorState();
             bool disabledNotPlayed = !item.HasPendingInitialAnimatorState;
             item.ClearPendingInitialAnimatorState();
             bool cancelClears = !item.HasPendingInitialAnimatorState;
@@ -158,6 +160,7 @@ public static partial class GameplayTestSystemProbe
             ItemDefinitionRuntime.ApplyAnimator(item, "Visual", controller, stateName);
             animator.enabled = false;
             root.SetActive(true);
+            item.FlushPendingInitialAnimatorState();
             bool singleSpriteDiscarded = !item.HasPendingInitialAnimatorState;
             JObject coldController = SampleColdAnimatorController(controller, actorId == "Bird");
             JObject coldSingleSprite = SampleColdAnimatorController(controller, false, true);
@@ -223,6 +226,7 @@ public static partial class GameplayTestSystemProbe
                 bool warningsDuringColdLoad = animatorWarnings > 0;
 
                 root.SetActive(true);
+                animation.AdvancePresentation(0f);
                 bool animatorSuppressed = singleSpriteMode && !animator.enabled;
                 if (!singleSpriteMode && !animator.isInitialized) animator.Rebind();
                 bool activeInitialized = singleSpriteMode ? animatorSuppressed : animator.isInitialized;

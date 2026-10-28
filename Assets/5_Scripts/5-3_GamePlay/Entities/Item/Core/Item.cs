@@ -653,6 +653,7 @@ public abstract class Item : MonoBehaviour
         GetComponentsInChildren(true, rigidbodies);
         for (int i = 0; i < rigidbodies.Count; i++)
         {
+            if (rigidbodies[i].bodyType == RigidbodyType2D.Static) continue;
             rigidbodies[i].velocity = Vector2.zero;
             rigidbodies[i].angularVelocity = 0f;
         }
@@ -1327,8 +1328,11 @@ public abstract class Item : MonoBehaviour
         TryGetComponent(out pausedSimulationBody);
         if (pausedSimulationBody == null) return;
         pausedBodyWasSimulated = pausedSimulationBody.simulated;
-        pausedSimulationBody.velocity = Vector2.zero;
-        pausedSimulationBody.angularVelocity = 0f;
+        if (pausedSimulationBody.bodyType != RigidbodyType2D.Static)
+        {
+            pausedSimulationBody.velocity = Vector2.zero;
+            pausedSimulationBody.angularVelocity = 0f;
+        }
         pausedSimulationBody.simulated = false;
     }
 

@@ -457,7 +457,8 @@ public partial class Mod_AnimatorController
             _additionalLayers.Clear();
             _bodyLayer?.Dispose(restoreHierarchy);
             _bodyLayer = null;
-            if (_suppressedAnimator != null)
+            // 宿主正在销毁时不能重启原 Animator，否则会在清理期间重新初始化动画图。
+            if (_suppressedAnimator != null && restoreHierarchy)
             {
                 _suppressedAnimator.enabled = _animatorWasEnabled;
                 if (!IsSingleSpriteMode && _suppressedAnimator == animator)

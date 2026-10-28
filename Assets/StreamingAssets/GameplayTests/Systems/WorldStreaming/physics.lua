@@ -17,8 +17,9 @@ test.system("world_streaming", "world_physics_ownership", {}, function(data)
     assert(owner.clearedImageReusable and owner.reboundImageSource and owner.sourceCycleRejected
         and owner.sourceCyclePrefixRejected,
         "镜像回池仍残留旧来源、重绑失效，或循环来源被错误当成可命中实体")
-    assert(owner.destroyedSourceRejected and data.disposedIndexCleared and data.otherWorldSurvived,
-        "源碰撞销毁或世界释放后仍可命中旧目标，或清理破坏了另一世界")
+    assert(owner.destroyedSourceRejected and data.disposedIndexCleared and data.borrowedSpacePreserved
+        and data.otherWorldSurvived,
+        "源碰撞销毁或世界释放后仍可命中旧目标，或服务释放错误关闭了借用场景")
     local query = data.combatQueries
     assert(query.defaultSceneChanged and query.fixedSpaceHit and query.separateCandidateHit and query.fixedSpaceSweep,
         "战斗临时投影未固定到租用时的物理空间，或切换默认世界后查询发生漂移")

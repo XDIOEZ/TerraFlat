@@ -18,6 +18,8 @@
 
 `initial_animator_activation` 使用真实 SmallFish/Bird 控制器经过正式 `ApplyAnimator`：停用冷外壳只登记状态名，激活并初始化后再检查状态层和短名/完整路径；非法状态仍拒绝，单图接管、取消和回池清除待播。另使用真实控制器运行停用外壳的 `Mod_AnimatorController.Load`，捕捉原生未播放控制器警告，并检查冷态 Move 参数在激活后的恢复。未运行的真实自然出生和画面仍需单独验证。
 
+`single_sprite_animation` 使用真实 SmallFish 控制器检查宿主销毁时不重启 Animator，以及普通回收、独立移除模块和回池复用后正常恢复；退出 PlayMode 的原生动画图清理由现场验证。
+
 `cleanup_lookup` 检查批量回收时的单例只读路径稳定且零分配；不模拟完整场景卸载与 Unity GC 回收。
 
 2026-10-18 平均帧优化补充 `world_matter_structure/world_matter_contact`：正式层级资格缓存检查模块增删、载荷替换、加载换代、自定义 AI 排除与稳态零分配；正式物质入口检查复用液体定义后的岩浆加热、遇水接触、零时长拒绝与数量不变。掉落物同步驱动复用 `ChunkMgr.RuntimeTerrainPresenceQuery`，其地形实时变化、环绕、卸载和世界代际边界复用 `terrain/contact_query_context` 规则。Unity 正在 PlayMode，本轮只静态修改，未编译或运行；真实平均帧和玩法由用户验收。

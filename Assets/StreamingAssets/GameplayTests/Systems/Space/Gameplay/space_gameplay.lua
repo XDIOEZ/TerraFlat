@@ -8,6 +8,11 @@ do
         assert(shutdown.nativeBodyCreated and shutdown.lastReferenceReleaseDeactivatedRoot and
             shutdown.emptyAfterLastReferenceRelease and shutdown.worldShutdownDeactivatedRoot and
             shutdown.emptyBeforeSceneUnload, "物理代理必须在最后引用释放及场景卸载前同步清空原生刚体")
+        local context = data.contextShutdown
+        assert(context.nativeBodiesCreated and context.sceneStillLoaded and context.contextReleased and
+            context.ownedBodiesDeactivated and context.emptyBeforeSceneUnload and context.noPoolCreatedDuringRelease and
+            context.sceneUnloaded and #context.worldDestroyErrors == 0,
+            "星区关闭必须在场景卸载前释放真实固定与动态刚体，且不能重建物理池")
         assert(#shutdown.restingPose == 3 and shutdown.restingPoseStaticBodyWarnings == 0,
             "静止姿态与重复物品登记不能向静态刚体赋速或产生静态刚体警告")
         local restingSources = {"Dynamic", "Kinematic", "Static"}
@@ -26,6 +31,13 @@ do
             assert(sample.legacyDefaults and sample.proxyRegistered and sample.proxyMode == "WorldFixed" and
                 sample.bodyType == "Static" and sample.speedSqr == 0 and sample.angularVelocity == 0 and sample.nativeBodyPresent,
                 "无配置物品重复登记没有保留真实静态刚体和世界代理")
+        end
+        assert(#shutdown.configuredFixedItemRegistration == 2 and shutdown.staticIndependentProxyReleased,
+            "缺少配置固定物品的重复登记或静态可动代理释放采样")
+        for _, sample in ipairs(shutdown.configuredFixedItemRegistration) do
+            assert(sample.configured and sample.proxyRegistered and sample.proxyMode == "WorldFixed" and
+                sample.bodyType == "Static" and sample.speedSqr == 0 and sample.angularVelocity == 0,
+                "配置固定物品的真实刚体没有按静态规则登记")
         end
         assert(data.before.version == 3 and data.after.version == 3, "会话版本不正确")
         assert(data.after.seconds > data.before.seconds, "真实固定步没有推进宇宙时钟")
@@ -377,6 +389,7 @@ for _, value in ipairs({"right"}) do
         assert(contains(data.crossed.required, data.source) and contains(data.crossed.required, data.destination), "过渡带没有保留两侧租约")
         assert(contains(data.crossed.loadedScenes, data.source) and contains(data.crossed.loadedScenes, data.destination), "过渡两侧实际场景缺失")
         assert(same(data.settled.sector, data.destination) and not contains(data.settled.required, data.source), "离开过渡带后源星区没有释放")
+        assert(data.oldPhysicsReleasedAfterUnload, "源星区卸载后仍有物理服务")
         assert(same(data.returned.sector, data.source), "玩家无法自然折返")
         assert(contains(data.returned.required, data.destination), "折返时没有保留目标侧过渡场景")
         assert(data.before.playerInstance == data.crossed.playerInstance and data.crossed.playerInstance == data.returned.playerInstance, "普通星区越界重建了玩家")
