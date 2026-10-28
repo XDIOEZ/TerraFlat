@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -22,6 +23,8 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "bag_hotbar_layout", CaptureBagHotbarLayout);
         Register("ui_settings", "hover_and_mod_selection", CaptureHoverAndModSelection);
         Register("ui_settings", "pressure_hud_display_cache", CapturePressureHudDisplayCache);
+        Register("ui_settings", "window_drag_bounds", CaptureWindowDragBounds);
+        Register("ui_settings", "window_resize_pointer", CaptureWindowResizePointer);
 #if UNITY_EDITOR
         Register("ui_settings", "main_menu_scale_layout", CaptureMainMenuScaleLayout);
         Register("ui_settings", "main_menu_modal_scale_layout", CaptureMainMenuModalScaleLayout);
@@ -384,6 +387,177 @@ public static partial class GameplayTestSystemProbe
             };
         }
         finally { Object.DestroyImmediate(root); }
+    }
+    #endregion
+
+    #region 窗口拖动与缩放几何采样
+    private static JObject CaptureWindowDragBounds(JObject args)
+    {
+        int previousOrder = BasePanel.CurrentOrder;
+        GameObject root = new GameObject("[LuaWindowDrag]", typeof(RectTransform), typeof(Canvas));
+        root.SetActive(false);
+        root.GetComponent<Canvas>().enabled = false;
+        try
+        {
+            RectTransform parent = new GameObject("SafeBounds", typeof(RectTransform)).GetComponent<RectTransform>();
+            parent.SetParent(root.transform, false);
+            parent.sizeDelta = new Vector2(1200, 900);
+            parent.localScale = Vector3.one * (float)Number(args, "parentScale", 1);
+            RectTransform target = new GameObject("WindowRoot", typeof(RectTransform), typeof(Image))
+                .GetComponent<RectTransform>();
+            target.SetParent(parent, false);
+            target.sizeDelta = new Vector2(360, 240);
+            target.pivot = new Vector2(.2f, .8f);
+            target.anchorMin = target.anchorMax = new Vector2(.25f, .7f);
+            RectTransform window = target;
+            if (Flag(args, "childWindow", false))
+            {
+                target.anchorMin = Vector2.zero;
+                target.anchorMax = Vector2.one;
+                target.sizeDelta = Vector2.zero;
+                window = new GameObject("VisibleWindow", typeof(RectTransform)).GetComponent<RectTransform>();
+                window.SetParent(target, false);
+                window.sizeDelta = new Vector2(360, 240);
+                window.localScale = new Vector3(.7f, .8f, 1);
+                RectTransform hit = new GameObject("DragSurface", typeof(RectTransform)).GetComponent<RectTransform>();
+                hit.SetParent(target, false);
+                hit.gameObject.AddComponent<UIWindowDragSurface>().Configure(window);
+            }
+            UI_Drag drag = target.gameObject.AddComponent<UI_Drag>();
+            drag.draggableImage = target.GetComponent<Image>();
+            root.SetActive(true);
+            if (!Application.isPlaying) drag.Awake();
+            drag.KeepVisibleWindowInsideParentBounds();
+            JObject before = CaptureUiWindowBounds(window, parent);
+            Vector2 start = RectTransformUtility.WorldToScreenPoint(null,
+                window.TransformPoint(new Vector3(window.rect.center.x, window.rect.yMax - 2, 0)));
+            var pointer = new PointerEventData(EventSystem.current)
+            {
+                button = PointerEventData.InputButton.Left,
+                position = start,
+                pointerCurrentRaycast = new RaycastResult { gameObject = drag.draggableImage.gameObject }
+            };
+            drag.OnPointerDown(pointer);
+            drag.OnBeginDrag(pointer);
+            JArray samples = new JArray();
+            foreach (JObject step in (JArray)args["steps"])
+            {
+                Vector3 movement = parent.TransformVector(new Vector3(
+                    (float)Number(step, "x", 0), (float)Number(step, "y", 0), 0));
+                pointer.position = start + (Vector2)movement;
+                drag.OnDrag(pointer);
+                samples.Add(CaptureUiWindowBounds(window, parent));
+            }
+            drag.OnEndDrag(pointer);
+            JObject animation = null;
+            if (!Flag(args, "childWindow", false))
+            {
+                target.gameObject.AddComponent<CanvasGroup>();
+                BasePanel panel = target.gameObject.AddComponent<BasePanel>();
+                panel.Dragger = drag;
+                panel.Open();
+                SafeAreaScaleGroup scale = target.gameObject.AddComponent<SafeAreaScaleGroup>();
+                scale.Configure(target, new[] { target }, Vector2.zero);
+                var animationScale = typeof(SafeAreaScaleGroup).GetMethod("SetAnimationScale",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                animationScale.Invoke(scale, new object[] { .82f });
+                pointer.position = RectTransformUtility.WorldToScreenPoint(null,
+                    target.TransformPoint(new Vector3(target.rect.center.x, target.rect.yMax - 2, 0)));
+                drag.OnPointerDown(pointer);
+                drag.OnBeginDrag(pointer);
+                pointer.position += (Vector2)parent.TransformVector(new Vector3(2000, 0, 0));
+                drag.OnDrag(pointer);
+                drag.OnEndDrag(pointer);
+                animationScale.Invoke(scale, new object[] { 1f });
+                bool grewOutside = !CaptureUiWindowBounds(window, parent)["inside"].Value<bool>();
+                // 固定调用正式动画终态回调，验证放大完成后的再次限界。
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                object revision = typeof(BasePanel).GetField("visualTransitionRevision", flags).GetValue(panel);
+                typeof(BasePanel).GetMethod("CompleteVisualTransition", flags).Invoke(panel, new[] { revision });
+                animation = new JObject { ["grewOutside"] = grewOutside, ["ended"] = CaptureUiWindowBounds(window, parent) };
+            }
+            parent.sizeDelta = new Vector2(640, 360);
+            drag.KeepVisibleWindowInsideParentBounds();
+            return new JObject { ["before"] = before, ["samples"] = samples,
+                ["resized"] = CaptureUiWindowBounds(window, parent),
+                ["animation"] = animation,
+                ["released"] = !drag.IsDragging, ["revision"] = drag.PositionRevision };
+        }
+        finally { Object.DestroyImmediate(root); BasePanel.CurrentOrder = previousOrder; }
+    }
+
+    private static JObject CaptureWindowResizePointer(JObject args)
+    {
+        GameObject root = new GameObject("[LuaWindowResize]", typeof(RectTransform));
+        root.SetActive(false);
+        EventSystem eventSystem = EventSystem.current;
+        GameObject previousSelection = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
+        try
+        {
+            RectTransform parent = root.GetComponent<RectTransform>();
+            parent.sizeDelta = new Vector2(1200, 900);
+            parent.localScale = new Vector3(.65f, 1.2f, 1);
+            RectTransform target = new GameObject("Resizable", typeof(RectTransform)).GetComponent<RectTransform>();
+            target.SetParent(parent, false);
+            target.pivot = new Vector2((float)Number(args, "pivotX", .5), (float)Number(args, "pivotY", .5));
+            if (Flag(args, "stretch", false))
+            {
+                target.anchorMin = new Vector2(.2f, .25f);
+                target.anchorMax = new Vector2(.8f, .75f);
+            }
+            target.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 360);
+            target.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 240);
+            target.localScale = new Vector3(.6f, .8f, 1);
+            UIDragResizer resize = target.gameObject.AddComponent<UIDragResizer>();
+            resize.minWidth = 160; resize.maxWidth = 600;
+            resize.minHeight = 100; resize.maxHeight = 450;
+            root.SetActive(true);
+            // 编辑态不自动执行普通 MonoBehaviour 的 Awake，只补齐固定组件的正式初始化。
+            if (!Application.isPlaying)
+                typeof(UIDragResizer).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic).Invoke(resize, null);
+            JObject before = CaptureUiWindowBounds(target, parent);
+            int x = (int)Number(args, "edgeX", 1), y = (int)Number(args, "edgeY", 0);
+            Vector2 start = RectTransformUtility.WorldToScreenPoint(null, target.TransformPoint(new Vector3(
+                x == 0 ? target.rect.center.x : x < 0 ? target.rect.xMin + 1 : target.rect.xMax - 1,
+                y == 0 ? target.rect.center.y : y < 0 ? target.rect.yMin + 1 : target.rect.yMax - 1, 0)));
+            Matrix4x4 localToWorld = target.localToWorldMatrix;
+            var pointer = new PointerEventData(eventSystem)
+                { button = PointerEventData.InputButton.Right, position = start };
+            resize.OnBeginDrag(pointer);
+            JArray samples = new JArray();
+            foreach (JObject step in (JArray)args["steps"])
+            {
+                Vector3 movement = localToWorld.MultiplyVector(new Vector3(
+                    (float)Number(step, "x", 0), (float)Number(step, "y", 0), 0));
+                pointer.position = start + (Vector2)movement;
+                resize.OnDrag(pointer);
+                samples.Add(CaptureUiWindowBounds(target, parent));
+            }
+            resize.OnEndDrag(pointer);
+            return new JObject { ["before"] = before, ["samples"] = samples };
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+            if (eventSystem != null) eventSystem.SetSelectedGameObject(previousSelection);
+        }
+    }
+
+    private static JObject CaptureUiWindowBounds(RectTransform window, RectTransform parent)
+    {
+        Vector3[] corners = new Vector3[4];
+        window.GetWorldCorners(corners);
+        Vector2 min = parent.InverseTransformPoint(corners[0]), max = min;
+        for (int i = 1; i < corners.Length; i++)
+        {
+            Vector2 point = parent.InverseTransformPoint(corners[i]);
+            min = Vector2.Min(min, point); max = Vector2.Max(max, point);
+        }
+        return new JObject { ["left"] = min.x, ["right"] = max.x, ["bottom"] = min.y, ["top"] = max.y,
+            ["width"] = window.rect.width, ["height"] = window.rect.height,
+            ["inside"] = min.x >= parent.rect.xMin - .1f && max.x <= parent.rect.xMax + .1f &&
+                min.y >= parent.rect.yMin - .1f && max.y <= parent.rect.yMax + .1f };
     }
     #endregion
 }

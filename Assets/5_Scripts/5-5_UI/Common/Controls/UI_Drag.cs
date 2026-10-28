@@ -53,6 +53,9 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
     /// <summary>独立子节点上的窗口拖动命中面。</summary>
     private UIWindowDragSurface dragSurface;
+    private RectTransform dragParent;
+    private UIManager subscribedUIManager;
+    private readonly Vector3[] windowCorners = new Vector3[4];
     
     #endregion
 
@@ -70,6 +73,19 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
             // 尝试从父物体获取Canvas引用
             canvas = gameObject.transform.parent.GetComponentInParent<Canvas>();
         }
+    }
+
+    private void OnEnable()
+    {
+        subscribedUIManager = UIManager.ExistingInstance;
+        if (subscribedUIManager != null)
+            subscribedUIManager.InteractionSurfaceChanged += KeepVisibleWindowInsideParentBounds;
+    }
+
+    private void OnRectTransformDimensionsChange()
+    {
+        if (isActiveAndEnabled && canvas != null)
+            KeepVisibleWindowInsideParentBounds();
     }
 
     /// <summary>
@@ -97,6 +113,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
         {
             draggableImage = GetComponentInChildren<Image>();
         }
+        KeepVisibleWindowInsideParentBounds();
     }
 
     /// <summary>
@@ -106,7 +123,9 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     {        
         // 重置拖拽状态
         IsDragging = false;
-        // 注意：如需保存状态，可在此添加保存逻辑
+        if (!ReferenceEquals(subscribedUIManager, null))
+            subscribedUIManager.InteractionSurfaceChanged -= KeepVisibleWindowInsideParentBounds;
+        subscribedUIManager = null;
     }
 
     //TODO 自动获取所有的需要的字段
@@ -144,16 +163,16 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
         if (!IsPointerOverDraggableImage(eventData))
             return;
 
-        // 计算鼠标点击位置与UI位置的偏移量
+        // 指针和锚点位置统一使用直接父级，嵌套缩放时也保持同速移动。
+        dragParent = rectTransform.parent as RectTransform;
         Vector2 clickPosInCanvas;
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvas.transform as RectTransform,
+        if (dragParent == null || !RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            dragParent,
             eventData.position,
             eventData.pressEventCamera,
             out clickPosInCanvas))
-        {
-            offset = rectTransform.anchoredPosition - clickPosInCanvas;
-        }
+            return;
+        offset = rectTransform.anchoredPosition - clickPosInCanvas;
 
         // 提升层级以显示在最上层
         BasePanel.BringToFront(rectTransform);
@@ -192,23 +211,22 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
             return;
         }
         
-        if (!IsDragging || canvas == null)
+        if (!IsDragging || dragParent == null)
             return;
 
         // 计算新位置并更新UI
         Vector2 localPointerPosition;
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvas.transform as RectTransform,
+            dragParent,
             eventData.position,
             eventData.pressEventCamera,
             out localPointerPosition))
         {
-            Vector2 position = localPointerPosition + offset;
-            if (rectTransform.anchoredPosition != position)
-            {
-                rectTransform.anchoredPosition = position;
+            Vector2 previous = rectTransform.anchoredPosition;
+            rectTransform.anchoredPosition = localPointerPosition + offset;
+            KeepVisibleWindowInsideParentBounds();
+            if (rectTransform.anchoredPosition != previous)
                 PositionRevision++;
-            }
         }
     }
 
@@ -230,7 +248,30 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
     #region 辅助方法
 
-
+    /// <summary>按可见窗口四角限制位置，大于父级的窗口仍保留可操作的顶部。</summary>
+    public void KeepVisibleWindowInsideParentBounds()
+    {
+        if (rectTransform == null || rectTransform.parent is not RectTransform parent)
+            return;
+        RectTransform window = dragSurface != null && dragSurface.WindowRect != null
+            ? dragSurface.WindowRect : rectTransform;
+        window.GetWorldCorners(windowCorners);
+        Vector2 min = parent.InverseTransformPoint(windowCorners[0]);
+        Vector2 max = min;
+        for (int i = 1; i < windowCorners.Length; i++)
+        {
+            Vector2 point = parent.InverseTransformPoint(windowCorners[i]);
+            min = Vector2.Min(min, point);
+            max = Vector2.Max(max, point);
+        }
+        Rect bounds = parent.rect;
+        Vector2 shift = new Vector2(
+            max.x - min.x > bounds.width ? bounds.center.x - (min.x + max.x) * 0.5f
+                : Mathf.Clamp(0f, bounds.xMin - min.x, bounds.xMax - max.x),
+            max.y - min.y > bounds.height ? bounds.yMax - max.y
+                : Mathf.Clamp(0f, bounds.yMin - min.y, bounds.yMax - max.y));
+        rectTransform.anchoredPosition += shift;
+    }
 
     /// <summary>
     /// 检查鼠标点击是否在可拖拽图片上

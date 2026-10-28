@@ -2,6 +2,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using static FlatWorldEditorUiLayout;
 
 /// <summary>视觉特效设置的正式 Prefab 构建入口，只更新本页及设置主面板的页签。</summary>
 public static partial class RuntimeUIPrefabBuilder

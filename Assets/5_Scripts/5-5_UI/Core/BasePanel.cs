@@ -573,6 +573,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     {
         if (canvasGroup != null)
             canvasGroup.alpha = isOpen ? openVisualAlpha : 0f;
+        if (isOpen)
+            Dragger?.KeepVisibleWindowInsideParentBounds();
         // 父级正在停用/销毁时 Unity 禁止改兄弟顺序；此时只提交透明度并清理请求。
         if (!isOpen && isActiveAndEnabled)
             BringToBack(rectTransform);

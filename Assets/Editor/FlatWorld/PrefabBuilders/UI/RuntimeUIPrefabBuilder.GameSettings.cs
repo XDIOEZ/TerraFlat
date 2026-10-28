@@ -3,6 +3,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using static FlatWorldEditorUiLayout;
 
 public static partial class RuntimeUIPrefabBuilder
 {
@@ -12,12 +13,8 @@ public static partial class RuntimeUIPrefabBuilder
     [MenuItem("FlatWorld/其他工具/UI/Rebuild Game Settings UI")]
     public static void RebuildGameSettingsUI()
     {
-        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-        if (font == null)
-        {
-            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+        if (!TryLoadRequiredPrefabBuilderFont(FontPath, "Runtime UI", out font))
             return;
-        }
 
         SaveGameSettingsPrefab();
         UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", EnsureGameSettingsPage);

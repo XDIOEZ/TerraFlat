@@ -35,11 +35,14 @@ public class UIDragResizer : MonoBehaviour,
     public bool useCustomCursor = false;
 
     private RectTransform rt;
+    private UI_Drag windowDragger;
     private ResizeDir currentHover = ResizeDir.None;
     private ResizeDir lockedDir = ResizeDir.None;
     private bool isDragging = false;
 
-    // 保存开始拖拽时状态（基于 RectTransform 本地空间）
+    // 固定拖动开始时的坐标系，避免窗口移动或缩放后反过来改变鼠标增量。
+    private Matrix4x4 startWorldToLocal;
+    private Vector3 startLocalScale;
     private Vector2 startLocalPoint;
     private Vector2 startSize;
     private Vector2 startAnchoredPos;
@@ -53,6 +56,7 @@ public class UIDragResizer : MonoBehaviour,
     private void Awake()
     {
         rt = GetComponent<RectTransform>();
+        windowDragger = GetComponent<UI_Drag>();
     }
 
     private void OnDisable()
@@ -94,10 +98,11 @@ public class UIDragResizer : MonoBehaviour,
         lockedDir = currentHover;
         isDragging = true;
 
-        // 记录开始时在本地坐标系的鼠标位置（非常关键）
+        startWorldToLocal = rt.worldToLocalMatrix;
+        startLocalScale = rt.localScale;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, eventData.position, eventData.pressEventCamera, out startLocalPoint);
 
-        startSize = rt.sizeDelta;
+        startSize = rt.rect.size;
         startAnchoredPos = rt.anchoredPosition;
 
         // 选中，避免其它 UI 打断
@@ -110,61 +115,26 @@ public class UIDragResizer : MonoBehaviour,
         if (!isDragging || eventData.button != PointerEventData.InputButton.Right) return;
         if (lockedDir == ResizeDir.None) return;
 
-        // 当前鼠标在本地坐标
-        Vector2 currLocal;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, eventData.position, eventData.pressEventCamera, out currLocal);
-
-        Vector2 localDelta = currLocal - startLocalPoint; // localDelta.x -> 宽相关, localDelta.y -> 高相关
-
-        // 先计算“未限制”的新 size（基于 startSize + delta）
-        float newWidth = startSize.x;
-        float newHeight = startSize.y;
-
-        // 判断左右（互斥）
+        if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                rt, eventData.position, eventData.pressEventCamera, out Vector3 worldPoint)) return;
+        Vector2 localDelta = (Vector2)startWorldToLocal.MultiplyPoint3x4(worldPoint) - startLocalPoint;
         bool isLeft = lockedDir == ResizeDir.Left || lockedDir == ResizeDir.TopLeft || lockedDir == ResizeDir.BottomLeft;
         bool isRight = lockedDir == ResizeDir.Right || lockedDir == ResizeDir.TopRight || lockedDir == ResizeDir.BottomRight;
         bool isTop = lockedDir == ResizeDir.Top || lockedDir == ResizeDir.TopLeft || lockedDir == ResizeDir.TopRight;
         bool isBottom = lockedDir == ResizeDir.Bottom || lockedDir == ResizeDir.BottomLeft || lockedDir == ResizeDir.BottomRight;
 
-        // 对应的 size 变化（注意 localDelta 的符号）
-        if (isLeft) newWidth = startSize.x - localDelta.x;     // 向左拉（local.x 增大 -> 宽变小）
-        if (isRight) newWidth = startSize.x + localDelta.x;    // 向右拉
-
-        if (isTop) newHeight = startSize.y + localDelta.y;     // 向上拉（local.y 增大）
-        if (isBottom) newHeight = startSize.y - localDelta.y;  // 向下拉
-
-        // clamp
-        float clampedW = Mathf.Clamp(newWidth, minWidth, maxWidth);
-        float clampedH = Mathf.Clamp(newHeight, minHeight, maxHeight);
-
-        // 计算最终位置补偿（使用 startSize 与 clamped size，保证当 clamp 发生时位置也能对应）
-        Vector2 finalAnchored = startAnchoredPos;
-        float pivotX = rt.pivot.x;
-        float pivotY = rt.pivot.y;
-
-        // 当左边被抓住时，width 变化会让 anchoredPosition.x 移动：用 (startSize.x - clampedW) * (1 - pivotX)
-        // 当右边被抓住时，使用 (startSize.x - clampedW) * (-pivotX)
-        if (isLeft)
-        {
-            finalAnchored.x = startAnchoredPos.x + (startSize.x - clampedW) * (1 - pivotX);
-        }
-        else if (isRight)
-        {
-            finalAnchored.x = startAnchoredPos.x + (startSize.x - clampedW) * (-pivotX);
-        }
-
-        if (isBottom)
-        {
-            finalAnchored.y = startAnchoredPos.y + (startSize.y - clampedH) * (1 - pivotY);
-        }
-        else if (isTop)
-        {
-            finalAnchored.y = startAnchoredPos.y + (startSize.y - clampedH) * (-pivotY);
-        }
-
-        // 应用
-        rt.sizeDelta = new Vector2(clampedW, clampedH);
-        rt.anchoredPosition = finalAnchored;
+        Vector2 size = new Vector2(
+            Mathf.Clamp(startSize.x + (isRight ? localDelta.x : isLeft ? -localDelta.x : 0f), minWidth, maxWidth),
+            Mathf.Clamp(startSize.y + (isTop ? localDelta.y : isBottom ? -localDelta.y : 0f), minHeight, maxHeight));
+        Vector2 change = size - startSize;
+        Vector3 compensation = new Vector3(
+            change.x * (isRight ? rt.pivot.x : isLeft ? rt.pivot.x - 1f : 0f),
+            change.y * (isTop ? rt.pivot.y : isBottom ? rt.pivot.y - 1f : 0f), 0f);
+        compensation = rt.localRotation * Vector3.Scale(compensation, startLocalScale);
+        rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x);
+        rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size.y);
+        rt.anchoredPosition = startAnchoredPos + (Vector2)compensation;
+        windowDragger?.KeepVisibleWindowInsideParentBounds();
     }
 
     public void OnEndDrag(PointerEventData eventData)

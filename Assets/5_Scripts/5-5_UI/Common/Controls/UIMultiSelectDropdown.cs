@@ -32,6 +32,10 @@ public sealed class UIMultiSelectDropdown : MonoBehaviour
     private readonly List<string> selected = new();
     private readonly List<Toggle> rows = new();
     private readonly Vector3[] corners = new Vector3[4];
+    private Vector2 popupReferenceSize;
+    private Vector3 popupReferenceScale;
+    private UIManager subscribedUIManager;
+    private bool applyingPopupLayout;
     private BasePanel owner;
     private Func<bool> previousShortcut;
     private Func<BaseEventData, bool> previousCancel;
@@ -43,12 +47,22 @@ public sealed class UIMultiSelectDropdown : MonoBehaviour
 
     #region 生命周期与业务绑定
 
+    private void Awake()
+    {
+        popupReferenceSize = popup.rect.size;
+        popupReferenceScale = popup.localScale;
+    }
+
     private void OnEnable()
     {
         trigger.onClick.AddListener(ToggleExpanded);
         clearButton.onClick.AddListener(ClearSelection);
         dismissArea.onClick.AddListener(Close);
         FlatWorldLocalizationService.LanguageChanged += OnLanguageChanged;
+        UIUserSettings.Changed += RefreshExpandedPopupLayoutWithinSafeArea;
+        subscribedUIManager = UIManager.ExistingInstance;
+        if (subscribedUIManager != null)
+            subscribedUIManager.InteractionSurfaceChanged += RefreshExpandedPopupLayoutWithinSafeArea;
         owner = GetComponentInParent<BasePanel>();
         if (owner != null)
         {
@@ -68,6 +82,10 @@ public sealed class UIMultiSelectDropdown : MonoBehaviour
         if (clearButton != null) clearButton.onClick.RemoveListener(ClearSelection);
         if (dismissArea != null) dismissArea.onClick.RemoveListener(Close);
         FlatWorldLocalizationService.LanguageChanged -= OnLanguageChanged;
+        UIUserSettings.Changed -= RefreshExpandedPopupLayoutWithinSafeArea;
+        if (!ReferenceEquals(subscribedUIManager, null))
+            subscribedUIManager.InteractionSurfaceChanged -= RefreshExpandedPopupLayoutWithinSafeArea;
+        subscribedUIManager = null;
         if (owner != null)
         {
             owner.Closed -= Close;
@@ -76,6 +94,8 @@ public sealed class UIMultiSelectDropdown : MonoBehaviour
         }
         owner = null;
     }
+
+    private void OnRectTransformDimensionsChange() => RefreshExpandedPopupLayoutWithinSafeArea();
 
     public void SetOptions(IReadOnlyList<Option> values)
     {
@@ -147,7 +167,7 @@ public sealed class UIMultiSelectDropdown : MonoBehaviour
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas == null || options.Count == 0) return;
         canvas = canvas.rootCanvas;
-        RectTransform host = (RectTransform)canvas.transform;
+        RectTransform host = canvas.transform.Find("SafeAreaRoot") as RectTransform ?? (RectTransform)canvas.transform;
 
         // 弹层脱离窗口裁剪区，透明遮罩只在展开时拦截外部点击。
         RectTransform dismiss = (RectTransform)dismissArea.transform;
@@ -161,19 +181,42 @@ public sealed class UIMultiSelectDropdown : MonoBehaviour
         popup.SetParent(host, true);
         popup.anchorMin = popup.anchorMax = new Vector2(0.5f, 0.5f);
         popup.pivot = new Vector2(1f, 1f);
-        ((RectTransform)trigger.transform).GetWorldCorners(corners);
-        Vector3 target = host.InverseTransformPoint(corners[3]);
-        float width = popup.rect.width * Mathf.Abs(popup.localScale.x);
-        float height = popup.rect.height * Mathf.Abs(popup.localScale.y);
-        target.x = Mathf.Clamp(target.x, host.rect.xMin + width + 8f, host.rect.xMax - 8f);
-        target.y = Mathf.Clamp(target.y - 8f, host.rect.yMin + height + 8f, host.rect.yMax - 8f);
-        popup.localPosition = new Vector3(target.x, target.y, 0f);
+        popup.sizeDelta = popupReferenceSize;
         popup.gameObject.SetActive(true);
-        popup.SetAsLastSibling();
+        RefreshExpandedPopupLayoutWithinSafeArea();
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
         scroll.verticalNormalizedPosition = 1f;
         if (rows.Count > 0) rows[0].Select();
+    }
+
+    /// <summary>弹层继承控件实际比例，并在安全区放不下时整体限幅，列表继续使用自身滚动。</summary>
+    public void RefreshExpandedPopupLayoutWithinSafeArea()
+    {
+        if (!IsExpanded || applyingPopupLayout || popup.parent is not RectTransform host) return;
+        applyingPopupLayout = true;
+        try
+        {
+            float scaleX = host.InverseTransformVector(transform.TransformVector(
+                Vector3.right * popupReferenceScale.x)).magnitude;
+            float scaleY = host.InverseTransformVector(transform.TransformVector(
+                Vector3.up * popupReferenceScale.y)).magnitude;
+            Vector2 available = host.rect.size - Vector2.one * 16f;
+            float fit = Mathf.Min(1f, Mathf.Max(0f, available.x) / (popupReferenceSize.x * scaleX),
+                Mathf.Max(0f, available.y) / (popupReferenceSize.y * scaleY));
+            popup.localScale = new Vector3(scaleX * fit, scaleY * fit, popupReferenceScale.z);
+
+            ((RectTransform)trigger.transform).GetWorldCorners(corners);
+            Vector3 target = host.InverseTransformPoint(corners[3]);
+            float width = popupReferenceSize.x * popup.localScale.x;
+            float height = popupReferenceSize.y * popup.localScale.y;
+            target.x = Mathf.Clamp(target.x, host.rect.xMin + width + 8f, host.rect.xMax - 8f);
+            target.y = Mathf.Clamp(target.y - 8f, host.rect.yMin + height + 8f, host.rect.yMax - 8f);
+            popup.localPosition = new Vector3(target.x, target.y, 0f);
+            dismissArea.transform.SetAsLastSibling();
+            popup.SetAsLastSibling();
+        }
+        finally { applyingPopupLayout = false; }
     }
 
     public void Close()
@@ -183,7 +226,7 @@ public sealed class UIMultiSelectDropdown : MonoBehaviour
         popup.gameObject.SetActive(false);
         dismissArea.gameObject.SetActive(false);
         popup.SetParent(transform, false);
-        popup.localScale = Vector3.one;
+        popup.localScale = popupReferenceScale;
         dismissArea.transform.SetParent(transform, false);
         if (wasOpen && isActiveAndEnabled && trigger != null) trigger.Select();
     }

@@ -412,7 +412,7 @@ namespace FlatWorld.GameplayMCP
                         StringComparison.Ordinal));
                 if (!alreadyAllowed)
                 {
-                    InputSystem.AddDeviceUsage(mobileDevice, Mod_GameController.ExternalGameplayInputDeviceUsage);
+                    UnityEngine.InputSystem.InputSystem.AddDeviceUsage(mobileDevice, Mod_GameController.ExternalGameplayInputDeviceUsage);
                     temporaryAgentUsage = true;
                 }
             }
@@ -484,7 +484,7 @@ namespace FlatWorld.GameplayMCP
             finally
             {
                 if (temporaryAgentUsage && mobileDevice != null && mobileDevice.added)
-                    InputSystem.RemoveDeviceUsage(mobileDevice, Mod_GameController.ExternalGameplayInputDeviceUsage);
+                    UnityEngine.InputSystem.InputSystem.RemoveDeviceUsage(mobileDevice, Mod_GameController.ExternalGameplayInputDeviceUsage);
             }
         }
 
