@@ -77,6 +77,8 @@ namespace FlatWorld.WorldModel
         private static double OceanNode(ChunkGenerationRequest request, ChunkGenerationSettingsSnapshot settings,
             PrecipitationLattice lattice, int x, int y)
         {
+            // 高度始终不小于零，零海平面必定无海洋，直接使用最小海洋降水。
+            if (settings.SeaLevel <= 0d) return settings.PrecipitationMinimum;
             Int2 center = lattice.Position(x, y);
             var key = PrecipitationKey(request, center);
             if (precipitationCache.TryGetValue(key, out Lazy<double> existing)) return existing.Value;
@@ -115,6 +117,7 @@ namespace FlatWorld.WorldModel
         private static double FindOceanDistance(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, PrecipitationLattice lattice, int x, int y)
         {
+            ChunkGenerationTiming.CurrentOnThread?.RecordStageCount("climate.ocean_distance.searches", 1, accumulate: true);
             Int2 target = lattice.Position(x, y);
             double best = settings.PrecipitationOceanRadius * settings.PrecipitationOceanRadius;
             int rings = (int)Math.Ceiling(settings.PrecipitationOceanRadius / Math.Min(lattice.StepX, lattice.StepY) + 1d);

@@ -336,7 +336,7 @@ do
         end
         assert(data.source == "isolated-cold-generation", "冷地表采样来源不明确")
         assert(type(data.bodies) == "table" and #data.bodies > 0, "缺少星体冷地表采样")
-        local ids, sampleCount = {}, 0
+        local ids, sampleCount, wetOceanSearches = {}, 0, 0
         for _, body in ipairs(data.bodies) do
             local label = body.id
             assert(type(label) == "string" and #label > 0 and not ids[label], "冷地表星体缺失或重复:" .. tostring(label))
@@ -382,6 +382,14 @@ do
             for index, sample in ipairs(body.samples) do
                 local repeated = body.repeatSamples[index]
                 local sampleLabel = label .. "/第" .. index .. "个地表样本"
+                assert(sample.oceanDistanceSearchesMeasured and repeated.oceanDistanceSearchesMeasured,
+                    sampleLabel .. "没有启用实际海距搜索计数")
+                if profile.numbers["terrain.seaLevel"] == 0 then
+                    assert(sample.oceanDistanceSearches == 0 and repeated.oceanDistanceSearches == 0,
+                        sampleLabel .. "零海平面仍在搜索不可能存在的海洋")
+                else
+                    wetOceanSearches = wetOceanSearches + sample.oceanDistanceSearches
+                end
                 assert(sample.temperatureFound == true, sampleLabel .. "没有真实温度层")
                 finite(sample.temperatureCelsius, sampleLabel .. "/温度")
                 finite(sample.liquidDepth, sampleLabel .. "/液体深度")
@@ -444,6 +452,7 @@ do
                 assert(count >= 2, "矿石小行星正式冷地形没有生成至少两种真实矿山")
             end
         end
-        return "冷地表覆盖 " .. #data.bodies .. " 个星体、" .. sampleCount .. " 个坐标与独立重生成；不含活跃差量验收"
+        assert(wetOceanSearches > 0, "有海洋星体缺少实际海距搜索的正对照")
+        return "冷地表覆盖 " .. #data.bodies .. " 个星体、" .. sampleCount .. " 个坐标与独立重生成；零海平面不扫海"
     end, "全星体冷地表生成、环境确定性和拓扑环绕")
 end

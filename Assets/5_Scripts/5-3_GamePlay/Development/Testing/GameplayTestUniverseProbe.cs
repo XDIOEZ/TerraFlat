@@ -580,6 +580,8 @@ public static class GameplayTestUniverseProbe
         using var world = new WorldRuntime(planet.Name, 1);
         var generator = new DeterministicChunkGenerator(GameRes.RequireWorldLiquidTypes(), SpaceSurfaceTerrain.Apply);
         var samples = new JArray();
+        var diagnostics = new ChunkStreamingDiagnostics();
+        var oceanSearchCounts = new Dictionary<Int2, long>();
         try
         {
             foreach (Int2 point in new[] { new Int2(0, 0), new Int2(-1, -1), new Int2(topology.Span.X, topology.Span.Y) })
@@ -591,7 +593,11 @@ public static class GameplayTestUniverseProbe
                 if (!world.TryGetChunkTerrain(address, out ChunkTerrainData terrain))
                 {
                     ChunkGenerationRequest request = world.BeginChunkGeneration(address, seed, profile, topology);
-                    using ChunkGenerationResult generated = generator.Generate(request, CancellationToken.None);
+                    ChunkGenerationTiming timing = diagnostics.BeginRequest(request);
+                    using ChunkGenerationResult generated = generator.Generate(request, CancellationToken.None, timing);
+                    long oceanSearches = 0;
+                    timing?.Capture().GenerationCounts.TryGetValue("climate.ocean_distance.searches", out oceanSearches);
+                    oceanSearchCounts[address.ChunkOrigin] = oceanSearches;
                     if (!world.TryCommit(generated, out string reason)) throw new InvalidOperationException("冷地形提交失败：" + reason);
                     if (!world.TryGetChunkTerrain(address, out terrain)) throw new InvalidOperationException("冷地形提交后缺少区块。");
                 }
@@ -615,6 +621,8 @@ public static class GameplayTestUniverseProbe
                     ["weatherElementCount"] = terrain.WeatherProfile?.Elements.Count ?? -1,
                     ["naturalItems"] = JObject.FromObject(runtime.Ecology.Placements.GroupBy(value => value.ItemId)
                         .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal)),
+                    ["oceanDistanceSearches"] = oceanSearchCounts[address.ChunkOrigin],
+                    ["oceanDistanceSearchesMeasured"] = diagnostics.Enabled,
                     ["pressureKPa"] = AtmosphereService.PressureKPa(planet.Atmosphere),
                     ["terrainHash"] = terrain.ComputeStableHash().ToString(CultureInfo.InvariantCulture)
                 });
