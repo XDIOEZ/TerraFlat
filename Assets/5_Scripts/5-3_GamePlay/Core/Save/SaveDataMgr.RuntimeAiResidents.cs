@@ -1,16 +1,315 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using FlatWorld.Networking;
+using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
-/// <summary>
-/// 运行时 AI 的休眠快照仓库。活体远离玩家时把完整 ItemData 留在原区块差量中，
-/// 只卸载昂贵的 GameObject；再次靠近时以同一 GUID 和模块状态恢复。
-/// </summary>
+/// <summary>AI居民的同步或分帧捕获、休眠索引与恢复。</summary>
 public partial class SaveDataMgr
 {
+    #region AI实体捕获与恢复
+    private bool CaptureRuntimeAiEntityStates(List<RuntimeAiSceneUnbindingCapture> unbindingCaptures = null)
+    {
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager == null || SaveData == null)
+            return false;
+
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrWhiteSpace(planetName)) return false;
+        var addresses = new HashSet<RuntimeWorldAddress>();
+        var capturedAddresses = new HashSet<RuntimeWorldAddress>();
+        var runtimeItems = new List<Item>();
+        var savedItems = new List<ItemData>();
+        var addressCaptures = unbindingCaptures != null ? new List<RuntimeAiSceneUnbindingCapture>() : null;
+        bool allSucceeded = true;
+        itemManager.CopyRuntimeAiSaveAddresses(addresses);
+
+        foreach (RuntimeWorldAddress address in addresses)
+        {
+            itemManager.CopyRuntimePersistentWorldItems(address, runtimeItems);
+            savedItems.Clear();
+            addressCaptures?.Clear();
+            bool captureSucceeded = true;
+            for (int i = 0; i < runtimeItems.Count; i++)
+            {
+                Item item = runtimeItems[i];
+                try
+                {
+                    item.Save();
+                    WorldPhysicsService2D.CaptureItemPhysicsMotionForPersistence(item);
+                    ItemData snapshot = CloneItemData(item.itemData);
+                    if (snapshot?.transform == null)
+                        throw new InvalidDataException($"生物 {item.name} 的快照缺少位置。");
+                    savedItems.Add(snapshot);
+                    addressCaptures?.Add(new RuntimeAiSceneUnbindingCapture(item, snapshot, address));
+                }
+                catch (Exception exception)
+                {
+                    captureSucceeded = false;
+                    Debug.LogError($"[SaveDataMgr] 保存运行时 AI 失败：{item.name}", item);
+                    Debug.LogException(exception);
+                    break;
+                }
+            }
+
+            if (!captureSucceeded)
+            {
+                allSucceeded = false;
+                continue;
+            }
+
+            MergeRuntimeAiItems(planetName, address, savedItems);
+            capturedAddresses.Add(address);
+            if (addressCaptures != null) unbindingCaptures.AddRange(addressCaptures);
+        }
+
+        itemManager.AcknowledgeRuntimeAiSave(capturedAddresses);
+        return allSucceeded;
+    }
+
+    /// <summary>自动保存专用的 AI 分帧快照；每帧限制 Item.Save 与数据克隆的累计耗时。</summary>
+    private IEnumerator CaptureRuntimeAiEntityStatesCoroutine(AutoSaveWorkBudget budget)
+    {
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager == null || SaveData == null)
+            yield break;
+
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        var addresses = new HashSet<RuntimeWorldAddress>();
+        bool copiedAddresses = true;
+        try
+        {
+            itemManager.CopyRuntimeAiSaveAddresses(addresses);
+        }
+        catch (Exception exception)
+        {
+            copiedAddresses = false;
+            Debug.LogError("[SaveDataMgr] 复制运行时 AI 地址失败");
+            Debug.LogException(exception);
+        }
+
+        if (!copiedAddresses)
+            yield break;
+
+        List<RuntimeWorldAddress> addressSnapshot = new List<RuntimeWorldAddress>(addresses);
+        var capturedAddresses = new HashSet<RuntimeWorldAddress>();
+        var runtimeItems = new List<Item>();
+        var savedItems = new List<ItemData>();
+
+        for (int addressIndex = 0; addressIndex < addressSnapshot.Count; addressIndex++)
+        {
+            RuntimeWorldAddress address = addressSnapshot[addressIndex];
+            bool copiedItems = true;
+            try
+            {
+                itemManager.CopyRuntimePersistentWorldItems(address, runtimeItems);
+            }
+            catch (Exception exception)
+            {
+                copiedItems = false;
+                Debug.LogError($"[SaveDataMgr] 复制运行时 AI 失败：{address}");
+                Debug.LogException(exception);
+            }
+
+            if (!copiedItems)
+                continue;
+
+            savedItems.Clear();
+            bool captureSucceeded = true;
+            for (int itemIndex = 0; itemIndex < runtimeItems.Count; itemIndex++)
+            {
+                Item item = runtimeItems[itemIndex];
+                Exception itemFailure = null;
+                try
+                {
+                    item.Save();
+                    WorldPhysicsService2D.CaptureItemPhysicsMotionForPersistence(item);
+                    savedItems.Add(CloneItemData(item.itemData));
+                }
+                catch (Exception exception)
+                {
+                    itemFailure = exception;
+                    Debug.LogError($"[SaveDataMgr] 分帧保存运行时 AI 失败：{item.name}", item);
+                    Debug.LogException(exception);
+                }
+
+                if (itemFailure != null)
+                {
+                    captureSucceeded = false;
+                    break;
+                }
+
+                if (budget.ShouldYield())
+                    yield return budget.WaitForNextSlice();
+            }
+
+            if (captureSucceeded)
+            {
+                MergeRuntimeAiItems(planetName, address, savedItems);
+                capturedAddresses.Add(address);
+            }
+
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
+        }
+
+        itemManager.AcknowledgeRuntimeAiSave(capturedAddresses);
+    }
+
+    /// <summary>在新版区块数据就绪时恢复该地址的 AI，不再等待旧 Chunk 实例化。</summary>
+    public bool RestoreRuntimeAiEntitiesForChunk(RuntimeWorldAddress address)
+    {
+        if (!GameNetwork.HasStateAuthority) return true;
+        if (SaveData == null || ItemMgr.Instance == null) return false;
+
+        EnsureRuntimeAiRestoreScope();
+        string planetName = GameplayWorldRegistry.ExecutionWorldKey;
+        if (string.IsNullOrWhiteSpace(planetName)) return false;
+        string chunkName = ToChunkName(address);
+        string restoreKey = $"{BuildChunkKey(planetName, chunkName)}\u001f{address.DimensionId}";
+        if (!restoredRuntimeAiChunks.Add(restoreKey))
+            return true;
+
+        var candidates = new List<ItemData>();
+        string chunkKey = BuildChunkKey(planetName, chunkName);
+        if (chunkDeltas.TryGetValue(chunkKey, out ChunkSaveRecord delta))
+            CollectRuntimeAiData(delta?.ChangedItems, candidates);
+
+        var restoredGuids = new HashSet<int>();
+        bool succeeded = true;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            ItemData savedData = candidates[i];
+            if (savedData == null || !restoredGuids.Add(savedData.Guid))
+                continue;
+
+            Item existing = ItemMgr.Instance.GetItemByGuid(savedData.Guid);
+            if (existing != null)
+            {
+                if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(existing) &&
+                    GameplayWorldRegistry.GetItemWorldKey(existing) == planetName)
+                {
+                    try
+                    {
+                        if (!existing.IsInitialized) { succeeded = false; continue; }
+                        ItemWorldPlacement.AttachRuntimeAi(existing, existing.gameObject);
+                        if (parkedRuntimeAiAddressByGuid.ContainsKey(savedData.Guid))
+                            RemoveParkedRuntimeAi(savedData.Guid);
+                    }
+                    catch (Exception exception) { succeeded = false; Debug.LogException(exception); }
+                }
+                else succeeded = false;
+                continue;
+            }
+
+            // 运行中进入新区块时先登记休眠快照，由生态调度器在镜头外分帧恢复。
+            if (!ParkedWorld.SceneDetachedLiveGuids.Contains(savedData.Guid) &&
+                !GameplayWorldRegistry.SimulatesWithoutObservers(planetName) &&
+                GameManager.Instance != null && GameManager.Instance.IsGameplayReady &&
+                MonsterManager.IsRegisteredSpeciesId(savedData.IDName))
+            {
+                try { AddParkedRuntimeAi(address, CloneItemData(savedData)); }
+                catch (Exception exception) { succeeded = false; Debug.LogException(exception); }
+                continue;
+            }
+
+            Item restored = null;
+            try
+            {
+                ItemData runtimeData = CloneAndRebaseItemData(savedData);
+                ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
+                restored = ItemMgr.Instance.InstantiateItem(
+                    runtimeData,
+                    transformData.position,
+                    transformData.rotation,
+                    transformData.scale);
+                if (restored != null)
+                {
+                    restored.Load();
+                    if (parkedRuntimeAiAddressByGuid.ContainsKey(savedData.Guid))
+                        RemoveParkedRuntimeAi(savedData.Guid);
+                }
+                else succeeded = false;
+            }
+            catch (Exception exception)
+            {
+                succeeded = false;
+                if (restored != null && !restored.DestructionHandled)
+                {
+                    try { ItemMgr.Instance.DespawnItem(restored, saveData: false); }
+                    catch (Exception cleanup) { Debug.LogException(cleanup); }
+                }
+                Debug.LogError(
+                    $"[SaveDataMgr] 恢复运行时 AI 失败：{savedData.IDName}, Guid={savedData.Guid}");
+                Debug.LogException(exception);
+            }
+        }
+        if (!succeeded) restoredRuntimeAiChunks.Remove(restoreKey);
+        return succeeded;
+    }
+
+    private void MergeRuntimeAiItems(
+        string planetName,
+        RuntimeWorldAddress address,
+        List<ItemData> savedItems)
+    {
+        string chunkName = ToChunkName(address);
+        string key = BuildChunkKey(planetName, chunkName);
+        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
+        {
+            record = new ChunkSaveRecord
+            {
+                PlanetName = planetName,
+                ChunkName = chunkName,
+                ChunkPosition = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y)
+            };
+        }
+
+        record.ChangedItems ??= new List<ItemData>();
+        record.ChangedItems.RemoveAll(RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData);
+        // 休眠实体已经卸载 GameObject，保存活动实体时仍须保留同一区块中的休眠快照。
+        if (parkedRuntimeAiByAddress.TryGetValue(address, out List<ItemData> parkedItems))
+            for (int i = 0; i < parkedItems.Count; i++)
+                record.ChangedItems.Add(parkedItems[i]);
+        for (int i = 0; i < savedItems.Count; i++)
+            record.ChangedItems.Add(savedItems[i]);
+        record.ChangedItems.Sort((left, right) => (left?.Guid ?? 0).CompareTo(right?.Guid ?? 0));
+
+        if (record.HasChanges)
+            chunkDeltas[key] = record;
+        else
+            chunkDeltas.Remove(key);
+    }
+
+    private static void CollectRuntimeAiData(IEnumerable<ItemData> source, List<ItemData> output)
+    {
+        if (source == null)
+            return;
+        foreach (ItemData data in source)
+        {
+            if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntityData(data))
+                output.Add(data);
+        }
+    }
+
+    private void EnsureRuntimeAiRestoreScope()
+    {
+        WorldRuntime world = ChunkMgr.ExistingInstance?.WorldRuntime;
+        long epoch = world?.Epoch ?? long.MinValue;
+        if (ReferenceEquals(restoredRuntimeAiWorld, world) && restoredRuntimeAiEpoch == epoch)
+            return;
+
+        restoredRuntimeAiChunks.Clear();
+        ClearParkedRuntimeAi();
+        restoredRuntimeAiWorld = world;
+        restoredRuntimeAiEpoch = epoch;
+    }
+    #endregion
+
     #region 休眠索引
 
     private sealed class ParkedWorldState

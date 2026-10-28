@@ -7,7 +7,7 @@ using UnityEngine;
 using Unity.Profiling;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
-/// <summary>农业独立差量：同一格只保存水肥及作物；未完成耕作属于临时视觉，不进入存档。</summary>
+/// <summary>农业水肥、作物差量与农业格索引。</summary>
 public partial class SaveDataMgr
 {
     #region 农业差量
@@ -15,26 +15,6 @@ public partial class SaveDataMgr
     public static event Action<string, RuntimeWorldAddress> RuntimeCropStateChanged;
 
     private static readonly ProfilerMarker AgricultureRecordMarker = new("NaturalEntityRuntime.Soil.Commit.Persist");
-
-    private ChunkSaveRecord GetRuntimeChunkRecord(RuntimeWorldAddress address, bool create)
-    {
-        // 世界上下文已缓存名称；热查询复用坐标键，只在首次创建差量时格式化存档键。
-        string planet = GameplayWorldRegistry.ExecutionWorldKey;
-        if (string.IsNullOrWhiteSpace(planet)) planet = ResolveRuntimePlanetName();
-        return GetRuntimeChunkRecord(planet, address, create);
-    }
-
-    private ChunkSaveRecord GetRuntimeChunkRecord(string planet, RuntimeWorldAddress address, bool create)
-    {
-        var origin = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y);
-        if (TryGetChunkDelta(planet, origin, out var record))
-            return record;
-        if (!create)
-            return null;
-        record = CreateRuntimeChunkDelta(planet, address);
-        chunkDeltas.Add(BuildChunkKey(planet, ToChunkName(address)), record);
-        return record;
-    }
 
     /// <summary>只记录需要持久化的水肥状态；未完成耕作不会调用这里。</summary>
     public void RecordAgricultureCell(RuntimeTerrainTileSample sample)

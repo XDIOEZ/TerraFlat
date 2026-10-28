@@ -19,6 +19,8 @@ description: "FlatWorld 实例快照、核心存档、区块差量、资源配�
 | `World/Fluids/Core/`、`Atmosphere/` | FluidState、AtmosphereState、PlanetData.Atmosphere：两相库存/大气 |
 | `World/Space/`、`World/Machines/` | SpaceSessionState、MachineArchive：太空与机器独立载荷 |
 
+`SaveDataMgr.cs` 只协调生命周期和保存入口；`DiskStorage` 管原子写盘，`AutoSaveCapture/SnapshotPayload` 管分帧协调与统一编解码，`ChunkDifferences/RuntimeTerrain/TerrainLayers` 管区块和地形差量，`Agriculture/WeatherSurface` 管农业与天气地表，`RuntimeBuildings/RuntimeBuildingStreaming/RuntimeAiResidents` 管实体捕获、流送收尾与恢复，`Worlds` 管完整及局部世界快照。通用区块记录查询位于 `RuntimeTerrain`，测试 partial 留在 `Development/Testing`。
+
 Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容在 `Assets/StreamingAssets/GameConfig/`，Addressables 在 `Assets/AddressableAssetsData/`。
 
 ## 快照与磁盘边界

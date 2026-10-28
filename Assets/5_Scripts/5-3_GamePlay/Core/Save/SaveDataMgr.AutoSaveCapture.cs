@@ -1,17 +1,13 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
+/// <summary>自动保存的世界身份冻结与分段采集协调。</summary>
 public partial class SaveDataMgr
 {
-    #region 自动保存的世界分段采集
-
+    #region 自动保存的世界身份与分段协调
     internal readonly struct AutoSaveWorldScope
     {
         private readonly SaveDataMgr manager;
@@ -39,94 +35,114 @@ public partial class SaveDataMgr
     // 维度切换沿用同一存档对象，因此同时冻结场景和世界运行体身份。
     internal AutoSaveWorldScope CaptureAutoSaveWorldScope() => new(this);
 
-    private IEnumerator CaptureRuntimeTerrainStatesCoroutine(AutoSaveWorkBudget budget)
-    {
-        ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (!GameNetwork.HasStateAuthority || SaveData == null ||
-            runtimeTerrainDirtyChunks.Count == 0 || manager?.Chunks == null)
-            yield break;
 
-        var chunks = new List<KeyValuePair<RuntimeWorldAddress, ChunkRuntime>>(manager.Chunks);
-        string planetName = ResolveRuntimePlanetName();
-        foreach (var pair in chunks)
+    /// <summary>自动保存将自然物、旧 Chunk、差异扫描和 AI 快照按单帧预算分散执行。</summary>
+    private IEnumerator PrepareLoadedChunksForAutoSaveCoroutine(Action<Exception> onFailure, AutoSaveWorkBudget budget)
+    {
+        DroppedItemService.PrepareForSave();
+        yield return budget.WaitForNextSlice();
+        IEnumerator terrainRoutine = CaptureRuntimeTerrainStatesCoroutine(budget);
+        while (terrainRoutine.MoveNext())
+            yield return terrainRoutine.Current;
+        yield return budget.WaitForNextSlice();
+        if (ChunkMgr.Instance != null)
         {
-            ChunkRuntime chunk = pair.Value;
-            string key = BuildChunkKey(planetName, ToChunkName(pair.Key));
-            if (chunk != null && chunk.DataStatus == ChunkDataStatus.Ready &&
-                chunk.Terrain != null && !chunk.Terrain.IsDisposed &&
-                runtimeTerrainDirtyChunks.Contains(key) &&
-                TryEnsureRuntimeChunkBaseline(key, chunk, out RuntimeChunkBaseline baseline))
+            // 自然物也要分帧克隆，避免表现窗口内大量 Item 在同一帧序列化。
+            Exception naturalFailure = null;
+            IEnumerator naturalRoutine = ForwardAutoSaveRoutine(
+                ChunkMgr.Instance.CaptureRuntimeNaturalItemStatesCoroutine(budget),
+                exception => naturalFailure = exception);
+            while (naturalRoutine.MoveNext())
+                yield return naturalRoutine.Current;
+            if (naturalFailure != null)
             {
-                // 每区块原子采集，随后发生的新地形修改继续保留脏标记。
-                runtimeTerrainDirtyChunks.Remove(key);
-                try { RefreshRuntimeChunkDelta(key, planetName, pair.Key, chunk, baseline); }
-                catch { runtimeTerrainDirtyChunks.Add(key); throw; }
+                onFailure?.Invoke(naturalFailure);
+                yield break;
             }
-            if (budget.ShouldYield())
-                yield return budget.WaitForNextSlice();
         }
+
+        if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
+        {
+            List<Chunk> chunks = new List<Chunk>(ChunkMgr.Instance.Chunk_Dic_ByPos.Values);
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                Chunk chunk = chunks[i];
+                if (chunk != null)
+                {
+                    Exception chunkSaveFailure = null;
+                    IEnumerator chunkRoutine = ForwardAutoSaveRoutine(
+                        chunk.SaveChunkCoroutine(exception => chunkSaveFailure = exception, budget),
+                        exception =>
+                        {
+                            if (chunkSaveFailure == null)
+                                chunkSaveFailure = exception;
+                        });
+                    while (chunkRoutine.MoveNext())
+                        yield return chunkRoutine.Current;
+
+                    if (chunkSaveFailure != null)
+                    {
+                        onFailure?.Invoke(chunkSaveFailure);
+                        yield break;
+                    }
+                }
+
+                // 即使当前 Chunk 很小，也让区块之间错开一帧，给输入与物理留出更新机会。
+                yield return budget.WaitForNextSlice();
+            }
+        }
+
+        // 旧 Chunk 写入结束后再合并新版建筑和 AI，避免旧差量记录覆盖新版实体快照。
+        IEnumerator buildingRoutine = CaptureRuntimeBuildingStatesCoroutine(budget);
+        while (buildingRoutine.MoveNext())
+            yield return buildingRoutine.Current;
+        yield return budget.WaitForNextSlice();
+        Exception aiFailure = null;
+        IEnumerator aiRoutine = ForwardAutoSaveRoutine(
+            CaptureRuntimeAiEntityStatesCoroutine(budget),
+            exception => aiFailure = exception);
+        while (aiRoutine.MoveNext())
+            yield return aiRoutine.Current;
+        if (aiFailure != null)
+            onFailure?.Invoke(aiFailure);
     }
 
-    private IEnumerator CaptureRuntimeBuildingStatesCoroutine(AutoSaveWorkBudget budget)
+    /// <summary>安全转发自动保存子协程，避免异常中断后让保存状态永久停留。</summary>
+    private static IEnumerator ForwardAutoSaveRoutine(
+        IEnumerator routine,
+        Action<Exception> onFailure)
     {
-        ItemMgr items = ItemMgr.GetInstance();
-        ChunkMgr chunks = ChunkMgr.ExistingInstance;
-        if (!GameNetwork.HasStateAuthority || SaveData == null || items == null ||
-            chunks == null || !chunks.IsWorldModelRuntimeActive)
+        if (routine == null)
             yield break;
 
-        string planetName = ResolveRuntimePlanetName();
-        var addresses = new Dictionary<string, RuntimeWorldAddress>(StringComparer.Ordinal);
-        string worldPrefix = planetName + "\u001f";
-        foreach (var pair in runtimeBuildingDirtyAddresses)
-            if (pair.Key.StartsWith(worldPrefix, StringComparison.Ordinal)) addresses.Add(pair.Key, pair.Value);
-        var snapshot = new List<Item>();
-        GameplayWorldRegistry.CopyWorldItems(planetName, snapshot);
-        foreach (Item item in snapshot)
+        try
         {
-            if (IsRuntimeBuildingItemInWorld(item, planetName))
+            while (true)
             {
-                RuntimeWorldAddress address = chunks.ResolveWorldAddress(item.transform.position);
-                addresses[BuildChunkKey(planetName, ToChunkName(address))] = address;
-            }
-            if (budget.ShouldYield())
-                yield return budget.WaitForNextSlice();
-        }
-
-        var savedItems = new List<ItemData>();
-        foreach (var pair in addresses)
-        {
-            GameplayWorldRegistry.CopyWorldItems(planetName, snapshot);
-            savedItems.Clear();
-            bool succeeded = true;
-            // 同区块建筑的捕获与合并不跨帧，避免拆除后把旧建筑快照重新写回来。
-            foreach (Item item in snapshot)
-            {
-                if (!IsRuntimeBuildingItemInWorld(item, planetName)) continue;
-                RuntimeWorldAddress address = chunks.ResolveWorldAddress(item.transform.position);
-                if (!string.Equals(BuildChunkKey(planetName, ToChunkName(address)), pair.Key, StringComparison.Ordinal)) continue;
+                bool moved = false;
+                Exception failure = null;
                 try
                 {
-                    item.Save();
-                    if (item.itemData == null) throw new InvalidDataException($"建筑 {item.name} 的 ItemData 为空");
-                    savedItems.Add(CloneItemData(item.itemData));
+                    moved = routine.MoveNext();
                 }
                 catch (Exception exception)
                 {
-                    succeeded = false;
-                    Debug.LogError($"[SaveDataMgr] 分帧保存运行时建筑失败：{item.name}", item);
-                    Debug.LogException(exception);
+                    failure = exception;
                 }
-            }
-            if (succeeded)
-            {
-                MergeRuntimeBuildingItems(planetName, pair.Value, savedItems);
-                runtimeBuildingDirtyChunks.Remove(pair.Key);
-                runtimeBuildingDirtyAddresses.Remove(pair.Key);
-            }
-            yield return budget.WaitForNextSlice();
-        }
-    }
 
+                if (failure != null)
+                {
+                    onFailure?.Invoke(failure);
+                    yield break;
+                }
+
+                if (!moved)
+                    yield break;
+
+                yield return routine.Current;
+            }
+        }
+        finally { (routine as IDisposable)?.Dispose(); }
+    }
     #endregion
 }

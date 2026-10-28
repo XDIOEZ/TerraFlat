@@ -854,7 +854,7 @@
       "group": "太空",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Space/*",
-        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.LocalWorld*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.Worlds.cs",
         "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.WorldTerrainTransfer.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Environment/ItemEnvironmentSources.cs",
         "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.Space*",
@@ -1089,7 +1089,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Physics2D/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Chunk/*",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/*",
-        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.LocalWorld*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.Worlds.cs",
         "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.WorldTerrainTransfer.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Environment/ItemEnvironmentSources.cs",
         "Assets/5_Scripts/5-0_WorldModel/*",
@@ -1283,8 +1283,7 @@
       "group": "共享支撑",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/*",
-        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Mover.FootstepAudio.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Mover.SwimmingAudio.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Mover.Audio.cs",
         "Assets/5_Scripts/5-6_Audio/*",
         "Assets/Audio/*",
         "Assets/Resources/Audio/*",

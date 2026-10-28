@@ -12,6 +12,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - `Entities/Item/Player/Player.cs`：玩家；数据为 `Assets/5_Scripts/5-1_Data/ItemData/Data_Player.cs`。
 - `Player/Controller/`：`Mod_GameController` 输入，`InputBindingService` 重绑定，`PlayerAimCursorSystem` 指针，`Mod_InteractSender/Mod_InteractReciver` 交互，`Mod_PlayerAdminController` 权限。
 - `Entities/Move/`：移动、相机、焦点；相机 Prefab 为 `Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab`。
+- `Mod_Mover` 按核心、`MotionControl`（主动移动/手机输入/网络消耗）、`Carrier`（承载/推动）、`Space`、`Audio` 五份组织；同一职责优先并入对应文件。
 - Action 源/生成包装：`Assets/PlayerInput/PlayerInputActions.{inputactions,cs}`。
 - 创建模板：`Assets/StreamingAssets/GameConfig/Players/player-creation-manifest.json`；环境推动：`GameConfig/Movement/water-current.json`。
 
