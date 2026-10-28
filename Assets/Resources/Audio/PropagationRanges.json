@@ -1,18 +1,18 @@
 {
-  "_说明": "传播等级 1～5 分别对应 levels 中的格数；在 cues 中为任意空间声音指定等级。修改后重新启动游戏生效。",
-  "levels": [4, 8, 16, 32, 64],
+  "_说明": "传播等级 1～10 分别对应 levels 中的格数，范围为 1～512 格；在 cues 中为任意空间声音指定等级。修改后重新启动游戏生效。",
+  "levels": [1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
   "cues": [
-    { "id": "ambient.foliage.rustle.loop", "level": 4 },
-    { "id": "ambient.river.flow.loop", "level": 4 },
-    { "id": "animal.chicken.idle", "level": 3 },
-    { "id": "animal.wildboar.idle", "level": 3 },
-    { "id": "animal.wolf.idle", "level": 5 },
-    { "id": "animal.bird.idle", "level": 5 },
-    { "id": "animal.seagull.idle", "level": 5 },
-    { "id": "animal.bee.idle", "level": 3 },
-    { "id": "animal.sheep.idle", "level": 4 },
-    { "id": "animal.rabbit.idle", "level": 3 },
-    { "id": "animal.snowleopard.idle", "level": 4 },
-    { "id": "animal.smallfish.idle", "level": 2 }
+    { "id": "ambient.foliage.rustle.loop", "level": 6 },
+    { "id": "ambient.river.flow.loop", "level": 6 },
+    { "id": "animal.chicken.idle", "level": 5 },
+    { "id": "animal.wildboar.idle", "level": 5 },
+    { "id": "animal.wolf.idle", "level": 7 },
+    { "id": "animal.bird.idle", "level": 7 },
+    { "id": "animal.seagull.idle", "level": 7 },
+    { "id": "animal.bee.idle", "level": 5 },
+    { "id": "animal.sheep.idle", "level": 6 },
+    { "id": "animal.rabbit.idle", "level": 5 },
+    { "id": "animal.snowleopard.idle", "level": 6 },
+    { "id": "animal.smallfish.idle", "level": 4 }
   ]
 }

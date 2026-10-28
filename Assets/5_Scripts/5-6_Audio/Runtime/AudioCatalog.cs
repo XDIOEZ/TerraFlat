@@ -37,7 +37,7 @@ namespace FlatWorld.Audio
             propagationMaxDistanceByCueId.Clear();
             if (propagationRanges == null) return;
             PropagationConfiguration configuration = JsonUtility.FromJson<PropagationConfiguration>(propagationRanges.text);
-            // 档位从 1 开始，事件仅声明档位，距离统一由五档配置持有。
+            // 档位从 1 开始，事件仅声明档位，距离统一由 JSON 配置持有。
             foreach (CuePropagationLevel cue in configuration.cues)
                 propagationMaxDistanceByCueId.Add(cue.id.Trim(), configuration.levels[cue.level - 1]);
         }

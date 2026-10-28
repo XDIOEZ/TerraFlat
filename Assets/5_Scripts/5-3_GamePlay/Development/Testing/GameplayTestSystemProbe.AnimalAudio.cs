@@ -45,11 +45,13 @@ public static partial class GameplayTestSystemProbe
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(document), catalog);
             catalog.RebuildIndex();
             float firstMaxDistance = first.MaxDistance, secondMaxDistance = second.MaxDistance;
+            JToken propagationLevels = JObject.Parse(document.propagationRanges.text)["levels"];
             document.propagationRanges = null;
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(document), catalog);
             catalog.RebuildIndex();
             return new JObject
             {
+                ["propagationLevels"] = propagationLevels,
                 ["firstMaxDistance"] = firstMaxDistance, ["secondMaxDistance"] = secondMaxDistance,
                 ["firstResetMaxDistance"] = first.MaxDistance, ["secondResetMaxDistance"] = second.MaxDistance
             };

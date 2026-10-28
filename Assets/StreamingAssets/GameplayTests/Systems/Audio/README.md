@@ -24,9 +24,11 @@
 
 快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、propagation_ranges、nature_ambience_sequence、foliage_ambience_volume、nature_foliage_config、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
 
-传播配置：`Assets/Resources/Audio/PropagationRanges.json` 的 `levels` 定义 1～5 档距离（默认 4/8/16/32/64 格），`cues` 按声音 ID 选择 `level`，重新启动游戏后生效。狼、鸟、海鸥为 64 格，蜂、野猪、鸡、兔为 16 格，羊、雪豹为 32 格，小鱼为 8 格。`propagation_ranges` 直接驱动正式目录覆盖五档、修改距离、未绑定声音及移除配置后的重建；`voice_lifecycle` 读取十种动物的实际 Cue，并采样狼/鸟/蜂/野猪在距离内、边界及距离外的真实声源分配和线性衰减。听感仍需实际试听。
+传播配置：`Assets/Resources/Audio/PropagationRanges.json` 的 `levels` 定义 1～10 档距离（默认 1/2/4/8/16/32/64/128/256/512 格），`cues` 按声音 ID 选择 `level`，重新启动游戏后生效。狼、鸟、海鸥为七档 64 格，蜂、野猪、鸡、兔为五档 16 格，羊、雪豹及树叶/河流为六档 32 格，小鱼为四档 8 格。`propagation_ranges` 直接驱动正式目录覆盖全部十档（含 1/512 格端点）、正式 JSON 档位与现有声音距离、修改距离、未绑定声音及移除配置后的重建；`voice_lifecycle` 读取十种动物的实际 Cue，并采样狼/鸟/蜂/野猪在距离内、边界及距离外的真实声源分配和线性衰减。听感仍需实际试听。
 
-2026-10-28 最新验证：音频快速 Lua 278 步、EditMode 29 项和 PlayMode 音频用例通过，现场零错误/警告；16/64 格边界、树叶/河流正式循环播放及回收、原生松树/枯树计数与清理均已覆盖。实际查看本轮截图，主角、HUD、光照可见，未出现黑屏或整屏遮挡。关联七系统规则为 11 份通过、2 份失败，失败在翻滚禁用清理和 SmallFish 冷外壳 Animator 用例，音频、生态、农业、世界流送及本地化规则通过。规则运行 `20261028T050116455Z_ed4fc453`，现场运行 `20261028T051119560Z_173f30a9`。随后将两段录音的循环交叠改为等功率，并补充正式导入 Clip 的百毫秒能量断言；离线重建/校验通过，最小窗口 RMS 分别为整段 RMS 的 31.636% 和 87.494%。最终音频和新增能量断言尚待 Unity 重跑，当前编辑器正在重新载入；不把此前播放接线通过当作最终版本已全部验收。
+2026-10-28 十档扩展：JSON 静态检查通过，确认恰好十档、上下限 1/512 格，全部 12 个现有声音的实际距离保持不变。已补充十档及正式配置 Lua 断言；本轮 `--systems audio` 请求等待 30 秒未被 Editor 接单并已撤回，Unity MCP 接口拒绝连接，尚未完成本轮编译、Lua 和控制台复查。
+
+2026-10-28 自然声景验证：音频快速 Lua 278 步、EditMode 29 项和 PlayMode 音频用例通过，现场零错误/警告；16/64 格边界、树叶/河流正式循环播放及回收、原生松树/枯树计数与清理均已覆盖。实际查看本轮截图，主角、HUD、光照可见，未出现黑屏或整屏遮挡。关联七系统规则为 11 份通过、2 份失败，失败在翻滚禁用清理和 SmallFish 冷外壳 Animator 用例，音频、生态、农业、世界流送及本地化规则通过。规则运行 `20261028T050116455Z_ed4fc453`，现场运行 `20261028T051119560Z_173f30a9`。随后将两段录音的循环交叠改为等功率，并补充正式导入 Clip 的百毫秒能量断言；离线重建/校验通过，最小窗口 RMS 分别为整段 RMS 的 31.636% 和 87.494%。最终音频和新增能量断言尚待 Unity 重跑；不把此前播放接线通过当作最终版本已全部验收。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 

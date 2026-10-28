@@ -1,7 +1,8 @@
 -- 检查音量数据与空间播放参数，不播放声音、不修改用户音量。
-for level, distance in ipairs({ 4, 8, 16, 32, 64 }) do
+local propagationLevels = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 }
+for level, distance in ipairs(propagationLevels) do
     test.system("audio", "propagation_ranges", {
-        propagation = { levels = { 4, 8, 16, 32, 64 }, cues = { { id = "PROBE.FIRST", level = level } } }
+        propagation = { levels = propagationLevels, cues = { { id = "PROBE.FIRST", level = level } } }
     }, function(data)
         assert(data.firstMaxDistance == distance, "JSON 传播档位未实际应用：" .. level)
         assert(data.secondMaxDistance == 20, "未配置的事件丢失自身距离")
@@ -11,23 +12,28 @@ for level, distance in ipairs({ 4, 8, 16, 32, 64 }) do
 end
 
 test.system("audio", "propagation_ranges", {
-    propagation = { levels = { 5, 10, 24, 48, 96 }, cues = {
-        { id = "probe.first", level = 3 }, { id = "probe.second", level = 5 }
+    propagation = { levels = { 1, 2, 4, 8, 16, 24, 64, 128, 256, 500 }, cues = {
+        { id = "probe.first", level = 6 }, { id = "probe.second", level = 10 }
     } }
 }, function(data)
-    assert(data.firstMaxDistance == 24 and data.secondMaxDistance == 96,
+    assert(data.firstMaxDistance == 24 and data.secondMaxDistance == 500,
         "修改 JSON 档位距离没有同时作用于对应声音")
 end, "传播档位距离支持直接修改")
 
 for _, row in ipairs({
     { first = "animal.wolf.idle", second = "animal.bird.idle", expectedFirst = 64, expectedSecond = 64 },
     { first = "animal.bee.idle", second = "animal.wildboar.idle", expectedFirst = 16, expectedSecond = 16 },
-    { first = "animal.seagull.idle", second = "animal.smallfish.idle", expectedFirst = 64, expectedSecond = 8 }
+    { first = "animal.seagull.idle", second = "animal.smallfish.idle", expectedFirst = 64, expectedSecond = 8 },
+    { first = "ambient.foliage.rustle.loop", second = "ambient.river.flow.loop", expectedFirst = 32, expectedSecond = 32 }
 }) do
     test.system("audio", "propagation_ranges", row, function(data)
+        assert(#data.propagationLevels == #propagationLevels, "正式 JSON 必须声明十个传播档位")
+        for level, distance in ipairs(propagationLevels) do
+            assert(data.propagationLevels[level] == distance, "正式传播档位距离错误：" .. level)
+        end
         assert(data.firstMaxDistance == row.expectedFirst and data.secondMaxDistance == row.expectedSecond,
-            "正式 JSON 未正确声明动物叫声传播距离")
-    end, "正式动物传播配置：" .. row.first .. " / " .. row.second)
+            "正式 JSON 未保留动物与自然声的传播距离")
+    end, "正式声音传播配置：" .. row.first .. " / " .. row.second)
 end
 
 for _, row in ipairs({ { volume = -1, master = -1, expected = 0 }, { volume = 0.25, master = 0.25, expected = 0.25 }, { volume = 3, master = 3, expected = 1 } }) do
