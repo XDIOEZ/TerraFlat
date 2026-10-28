@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Apple",
+      "parent": "BasicFood_Base",
+      "gameName": "苹果",
+      "description": "一天一苹果,医生远离我",
+      "weight": 0.2,
+      "volume": 0.25,
+      "tags": [
+        "47",
+        "Fruit",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_013.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 40.0,
+                "Max_Carbohydrates": 40.0,
+                "Fat": 1.0,
+                "Max_Fat": 1.0,
+                "Protein": 1.0,
+                "Max_Protein": 1.0,
+                "Water": 55.0,
+                "Max_Water": 55.0,
+                "Vitamins": 20.0,
+                "Max_Vitamins": 20.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Peach",
+      "parent": "Apple",
+      "gameName": "桃子",
+      "description": "香甜多汁的桃子，以碳水和维生素为主；完整吃完后可立即恢复 5 点生命。",
+      "weight": 0.18,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30.0,
+                "Max_Carbohydrates": 30.0,
+                "Fat": 0.5,
+                "Max_Fat": 0.5,
+                "Protein": 0.5,
+                "Max_Protein": 0.5,
+                "Water": 35.0,
+                "Max_Water": 35.0,
+                "Vitamins": 25.0,
+                "Max_Vitamins": 25.0
+              },
+              "Max_EatingProgress": 2.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Orange",
+      "parent": "Apple",
+      "gameName": "橘子",
+      "description": "酸甜多汁的柑橘类水果，富含水分和维生素。",
+      "weight": 0.22,
+      "volume": 0.3,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Orange/Orange_Idle.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 25.0,
+                "Max_Carbohydrates": 25.0,
+                "Fat": 0.3,
+                "Max_Fat": 0.3,
+                "Protein": 0.5,
+                "Max_Protein": 0.5,
+                "Water": 45.0,
+                "Max_Water": 45.0,
+                "Vitamins": 35.0,
+                "Max_Vitamins": 35.0
+              },
+              "Max_EatingProgress": 2.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Berry",
+      "parent": "BasicFood_Base",
+      "gameName": "浆果",
+      "description": "一种从浆果丛上采得的小型果实，食用后可恢复少量饥饿值",
+      "weight": 0.04,
+      "volume": 0.06,
+      "tags": [
+        "47",
+        "Fruit",
+        "Berry",
+        "InventoryCategory.Food"
+      ],
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "Jam",
+              "amount": 1
+            }
+          ]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Items/Berry/Item_Berry.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 3.0,
+                "Max_Carbohydrates": 3.0,
+                "Fat": 0.2,
+                "Max_Fat": 0.2,
+                "Protein": 0.2,
+                "Max_Protein": 0.2,
+                "Water": 4.0,
+                "Max_Water": 4.0,
+                "Vitamins": 2.4,
+                "Max_Vitamins": 2.4
+              },
+              "Max_EatingProgress": 1.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Radish",
+      "parent": "Apple",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "萝卜",
+      "description": "根部鲜脆、叶片翠绿的萝卜，可以直接食用，也可以由种植收获。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Radish.png",
+        "collider": {
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 22.0,
+                "Max_Carbohydrates": 22.0,
+                "Fat": 0.5,
+                "Max_Fat": 0.5,
+                "Water": 35.0,
+                "Max_Water": 35.0,
+                "Vitamins": 30.0,
+                "Max_Vitamins": 30.0
+              },
+              "Max_EatingProgress": 1.5
+            }
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Mushroom",
+      "parent": "Radish",
+      "gameName": "蘑菇",
+      "description": "生长在地下洞穴中的食用蘑菇，可以直接食用，也可以用孢子种植。",
+      "weight": 0.08,
+      "volume": 0.12,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Mushroom/Item_Mushroom.png",
+        "collider": {
+          "size": {
+            "x": 0.75,
+            "y": 0.7
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 12.0,
+                "Max_Carbohydrates": 12.0,
+                "Protein": 5.0,
+                "Max_Protein": 5.0,
+                "Water": 24.0,
+                "Max_Water": 24.0,
+                "Vitamins": 12.0,
+                "Max_Vitamins": 12.0
+              },
+              "Max_EatingProgress": 1.2
+            }
+          }
+        }
+      }
+    }
+  ]
+}

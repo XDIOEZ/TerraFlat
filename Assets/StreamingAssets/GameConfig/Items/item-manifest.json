@@ -87,6 +87,51 @@
       "enabled": true
     },
     {
+      "id": "basic_materials",
+      "path": "shells/basic_materials.json",
+      "enabled": true
+    },
+    {
+      "id": "ground_wood_materials",
+      "path": "shells/ground_wood_materials.json",
+      "enabled": true
+    },
+    {
+      "id": "metal_materials",
+      "path": "shells/metal_materials.json",
+      "enabled": true
+    },
+    {
+      "id": "ore_materials",
+      "path": "shells/ore_materials.json",
+      "enabled": true
+    },
+    {
+      "id": "mineral_materials",
+      "path": "shells/mineral_materials.json",
+      "enabled": true
+    },
+    {
+      "id": "fruit_foods",
+      "path": "shells/fruit_foods.json",
+      "enabled": true
+    },
+    {
+      "id": "coconut_foods",
+      "path": "shells/coconut_foods.json",
+      "enabled": true
+    },
+    {
+      "id": "grain_drink_foods",
+      "path": "shells/grain_drink_foods.json",
+      "enabled": true
+    },
+    {
+      "id": "protein_foods",
+      "path": "shells/protein_foods.json",
+      "enabled": true
+    },
+    {
       "id": "bird_egg",
       "path": "shells/bird_egg.json",
       "enabled": true

@@ -1,0 +1,440 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Earth",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "泥土",
+      "description": "常见的泥土，可用于基础种植与建造。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.0,
+      "canBePickedUp": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_231.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Leaf",
+      "parent": "BasicFood_Base",
+      "gameName": "树叶",
+      "description": "柔韧的树叶，可作为火绒或基础制作材料。",
+      "weight": 0.03,
+      "volume": 0.15,
+      "tags": [
+        "47",
+        "InventoryCategory.Nature"
+      ],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "heat:leaf-ember",
+            "minTemperature": 100,
+            "outputItemId": "FireSeed"
+          }
+        ]
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Leaf/Leaf_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 1.0,
+                "Max_Carbohydrates": 1.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 1.0,
+                "Max_Water": 1.0,
+                "Vitamins": 2.0,
+                "Max_Vitamins": 2.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Plank",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "木板",
+      "description": "加工后的木板，是建筑和制作的常用材料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.0,
+      "volume": 4.0,
+      "canBePickedUp": true,
+      "tags": [
+        "Wood",
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item299.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Humus",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "腐殖土",
+      "description": "富含有机质的腐殖土，适合改善种植环境。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.0,
+      "volume": 0.8,
+      "canBePickedUp": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/腐植.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "DrilledLog",
+      "parent": "BasicItem_Base",
+      "gameName": "钻孔原木",
+      "description": "用火种缓慢炭烧出孔洞的原木，是制作木锤的锤头坯料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.8,
+      "volume": 12.0,
+      "canBePickedUp": true,
+      "tags": [
+        "Wood",
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledLog_Idle.png"
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
+    },
+    {
+      "id": "DrilledPlank",
+      "parent": "BasicItem_Base",
+      "gameName": "钻孔木板",
+      "description": "在木板上加工出贯穿孔的机械木料，主要用于机械扭矩装置的结构与连接。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.0,
+      "volume": 4.0,
+      "canBePickedUp": true,
+      "tags": [
+        "Wood",
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledPlank_Idle.png"
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
+    },
+    {
+      "id": "WoodAsh",
+      "parent": "BasicItem_Base",
+      "gameName": "草木灰",
+      "description": "草木燃烧后留下的灰烬，是一种轻质的基础加工材料。",
+      "weight": 0.08,
+      "volume": 0.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodAsh/WoodAsh_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Paper",
+      "parent": "BasicItem_Base",
+      "gameName": "纸张",
+      "description": "可用于扩充可阅读笔记的页数。",
+      "weight": 0.02,
+      "volume": 0.02,
+      "canBePickedUp": true,
+      "tags": [
+        "readable.paper",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Paper/Paper_Icon.png"
+      },
+      "modules": {}
+    }
+  ]
+}

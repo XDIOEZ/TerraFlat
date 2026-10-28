@@ -443,11 +443,8 @@ public static partial class GameplayTestSystemProbe
     // 读取正式生肉配置，采样共用时钟、临界含水量和世界环境步进，不修改真实库存。
     private static JObject FoodSpoilageMoisture(JObject args)
     {
-        string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath,
-            "GameConfig/Items/shells/basic_items.json");
-        JToken meat = JObject.Parse(StreamingAssetsTextLoader.ReadAllText(path))["items"]
-            .First(value => (string)value["id"] == "Meat");
-        var food = meat["modules"]["food"]["data"].ToObject<ModData_FoodData>();
+        ItemDefinitionDto meat = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions().Single(value => value.Id == "Meat");
+        var food = meat.Modules["food"].Data.ToObject<ModData_FoodData>();
         food.StableName = "food";
         food.ModuleId = ModText.Food;
         var item = EntityProbeData("Meat", 3);
@@ -458,7 +455,7 @@ public static partial class GameplayTestSystemProbe
             Moisture = Flag(args, "invalidMoisture", false) ? float.NaN : (float)Number(args, "moisture", .8)
         };
         RuntimeItemMatterDefinition matter = ItemMatterReactionCompiler.CompileMatter(
-            meat["matter"].ToObject<ItemMatterDefinitionDto>(), item.Tags, item.IDName);
+            meat.Matter, item.Tags, item.IDName);
         var definition = new RuntimeItemDefinition(item.IDName, "", null, item, null, null, null,
             null, null, null, null, null, null, matter: matter);
         FoodSpoilageObserverData state = FoodSpoilageObserverData.Load(food);
@@ -478,7 +475,7 @@ public static partial class GameplayTestSystemProbe
         bool restoredReady = restored.TryGetExpiredTarget(item, out string restoredTarget, definition);
         bool advancedAgain = restored.Advance(0f, food);
 
-        var worldFood = meat["modules"]["food"]["data"].ToObject<ModData_FoodData>();
+        var worldFood = meat.Modules["food"].Data.ToObject<ModData_FoodData>();
         worldFood.StableName = "food";
         worldFood.ModuleId = ModText.Food;
         var worldItem = EntityProbeData("Meat", 2);

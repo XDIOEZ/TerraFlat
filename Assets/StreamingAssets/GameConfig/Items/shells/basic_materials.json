@@ -1,0 +1,683 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Bone",
+      "parent": "BasicItemVisual_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "骨头",
+      "description": "动物遗留的骨头，可用于制作简易工具与武器。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.45,
+      "volume": 0.6,
+      "canBePickedUp": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_327.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Leather",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "鞣制皮革",
+      "description": "处理后的鞣制皮革，可缝制皮装，也可用切割能力将每份皮革切成4根皮革皮带。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.8,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "processing": {
+        "cut": {
+          "inputAmount": 1,
+          "work": 2,
+          "outputs": [
+            {
+              "itemId": "LeatherStrap",
+              "amount": 4
+            }
+          ]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Leather/Leather_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false,
+            "$transform": {
+              "localPosition": {
+                "x": 34.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 2.0,
+                "y": 2.0,
+                "z": 2.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "RawHide",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "生皮",
+      "description": "尚未鞣制的生皮，可进一步加工为鞣制皮革。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.2,
+      "volume": 3.0,
+      "canBePickedUp": true,
+      "tags": [
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "dry:hide",
+            "maxMoisture": 0.2,
+            "outputItemId": "Leather"
+          }
+        ]
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/RawHide.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false,
+            "$transform": {
+              "localPosition": {
+                "x": 34.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 2.0,
+                "y": 2.0,
+                "z": 2.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Rope",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "绳子",
+      "description": "结实的绳索，可用于制作工具、建筑和装备。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.0,
+      "volume": 1.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Rope",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Rope/Rope_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Twine",
+      "parent": "BasicItem_Base",
+      "gameName": "藤蔓",
+      "description": "柔韧的植物藤蔓，可用于编织绳索和基础工具。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.1,
+      "volume": 0.15,
+      "canBePickedUp": true,
+      "tags": [
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Twine/Twine_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.75,
+          "y": 0.75,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.75,
+            "y": 0.75
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 10.0,
+                "y": 10.0
+              },
+              "MaxTemperature": 400.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Fiber",
+      "parent": "BasicItem_Base",
+      "gameName": "纤维",
+      "description": "从植物外皮中剥离出的粗纤维，可作为绳索和其他生存物品的基础材料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.1,
+      "volume": 0.15,
+      "canBePickedUp": true,
+      "processing": {
+        "weave": {
+          "inputAmount": 3,
+          "work": 3,
+          "outputs": [
+            {
+              "itemId": "Rope",
+              "amount": 1
+            }
+          ]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Fiber/Fiber_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.75,
+          "y": 0.75,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.75,
+            "y": 0.75
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Resin",
+      "parent": "BasicItem_Base",
+      "gameName": "树脂",
+      "description": "砍伐松树获得的黏稠树脂，可与木炭混合制作树脂胶水。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.2,
+      "volume": 0.18,
+      "canBePickedUp": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.6,
+            "y": 0.6
+          }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Glue",
+      "parent": "BasicItem_Base",
+      "gameName": "树脂胶水",
+      "description": "由松脂和木炭混合制成的黑色黏稠胶体，可用于黏合材料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.3,
+      "volume": 0.25,
+      "canBePickedUp": true,
+      "tags": [
+        "Adhesive",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ResinGlue/ResinGlue_Idle.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.6,
+            "y": 0.6
+          }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Cotton",
+      "parent": "BasicItem_Base",
+      "gameName": "棉花",
+      "description": "易于引燃的天然纤维，可作为取火材料，也可捻成线或通过纺织加工制成布。",
+      "weight": 0.1,
+      "volume": 0.2,
+      "tags": [
+        "Material",
+        "Fiber",
+        "Material.Tinder",
+        "InventoryCategory.Material"
+      ],
+      "matter": {
+        "transitions": [
+          {
+            "id": "heat:cotton-ember",
+            "minTemperature": 100,
+            "outputItemId": "FireSeed"
+          }
+        ]
+      },
+      "processing": {
+        "weave": {
+          "inputAmount": 2,
+          "work": 2,
+          "outputs": [
+            {
+              "itemId": "Cloth",
+              "amount": 1
+            }
+          ]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cotton/Cotton_Icon.png"
+      }
+    },
+    {
+      "id": "Beeswax",
+      "parent": "Apple",
+      "gameName": "蜂蜡",
+      "description": "由蜂巢产出的金黄色天然蜂蜡，可以直接食用；富含碳水化合物和维生素，但会降低 5 点水分。",
+      "weight": 0.1,
+      "volume": 0.12,
+      "tags": [
+        "Food",
+        "Material",
+        "AnimalProduct",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Beeswax/Beeswax_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 55.0,
+                "Max_Carbohydrates": 55.0,
+                "Fat": 2.0,
+                "Max_Fat": 2.0,
+                "Water": -5.0,
+                "Max_Water": 5.0,
+                "Vitamins": 25.0,
+                "Max_Vitamins": 25.0
+              },
+              "Max_EatingProgress": 1.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 0.0,
+                  "SpoilageTargetItemID": ""
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

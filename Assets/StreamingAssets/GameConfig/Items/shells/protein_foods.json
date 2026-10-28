@@ -1,0 +1,927 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Egg",
+      "parent": "BasicFood_Base",
+      "gameName": "鸡蛋",
+      "description": "母鸡产下的蛋，可食用、烹饪或用于孵化。",
+      "weight": 0.06,
+      "volume": 0.08,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "reactions": [
+        {
+          "id": "core:鸡蛋=煎鸡蛋",
+          "minTemperature": 150.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Egg"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Egg_Cooked",
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_115.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.025,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.25,
+          "y": 0.25,
+          "z": 0.25
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.00164681673,
+            "y": 0.09310749
+          },
+          "path": "",
+          "size": {
+            "x": 0.204313278,
+            "y": 0.270090818
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 2.0,
+                "Max_Carbohydrates": 2.0,
+                "Fat": 15.0,
+                "Max_Fat": 15.0,
+                "Protein": 25.0,
+                "Max_Protein": 25.0,
+                "Water": 10.0,
+                "Max_Water": 10.0,
+                "Vitamins": 8.0,
+                "Max_Vitamins": 8.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        },
+        "生产模块": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Chicken",
+                "itemCountMin": 1,
+                "itemCountMax": 1,
+                "MaxProductionTime": 100.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": 1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": false,
+                "DestroySelf": true,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": {
+                  "x": 0.0,
+                  "y": 1000.0
+                }
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Egg_Cooked",
+      "parent": "BasicFood_Base",
+      "gameName": "熟蛋",
+      "description": "经过烹饪的鸡蛋，可以安全食用。",
+      "weight": 0.055,
+      "volume": 0.08,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Fried_Egg.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 2.0,
+                "Max_Carbohydrates": 2.0,
+                "Fat": 18.0,
+                "Max_Fat": 18.0,
+                "Protein": 35.0,
+                "Max_Protein": 35.0,
+                "Water": 7.0,
+                "Max_Water": 7.0,
+                "Vitamins": 10.0,
+                "Max_Vitamins": 10.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Fat",
+      "parent": "BasicFood_Base",
+      "gameName": "脂肪",
+      "description": "从动物组织取得的脂肪，可作为燃料或烹饪材料。",
+      "weight": 0.25,
+      "volume": 0.3,
+      "tags": [
+        "47",
+        "Combustion.Fuel",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Fat/Fat_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        },
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 100.0,
+                "Max_Fat": 100.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 0.0,
+                "Max_Water": 0.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Meat",
+      "parent": "BasicFood_Base",
+      "gameName": "生肉",
+      "description": "未经烹饪的生肉，直接食用有50%概率感染5分钟，重复感染最多叠加3层，应加热后再食用。",
+      "weight": 0.65,
+      "tags": [
+        "47",
+        "Meat",
+        "InventoryCategory.Food"
+      ],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "cook:meat",
+            "minTemperature": 200.0,
+            "outputItemId": "Meat_Cooked"
+          },
+          {
+            "id": "dry:meat",
+            "maxTemperature": 199.99,
+            "maxMoisture": 0.2,
+            "outputItemId": "Meat_Dehydrate"
+          }
+        ]
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 25.0,
+                "Max_Fat": 25.0,
+                "Protein": 55.0,
+                "Max_Protein": 55.0,
+                "Water": 15.0,
+                "Max_Water": 15.0,
+                "Vitamins": 5.0,
+                "Max_Vitamins": 5.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten",
+                  "DryingMaxMoisture": 0.2,
+                  "DryingTargetItemID": "Meat_Dehydrate"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Meat_Cooked",
+      "parent": "BasicFood_Base",
+      "gameName": "熟肉",
+      "description": "经过烹饪的熟肉，可以恢复饱食度。",
+      "weight": 0.55,
+      "volume": 0.65,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 30.0,
+                "Max_Fat": 30.0,
+                "Protein": 80.0,
+                "Max_Protein": 80.0,
+                "Water": 8.0,
+                "Max_Water": 8.0,
+                "Vitamins": 7.0,
+                "Max_Vitamins": 7.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Meat_Dehydrate",
+      "parent": "BasicFood_Base",
+      "gameName": "肉干",
+      "description": "脱水保存的肉干，便于长时间携带。",
+      "weight": 0.3,
+      "volume": 0.4,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 30.0,
+                "Max_Fat": 30.0,
+                "Protein": 100.0,
+                "Max_Protein": 100.0,
+                "Water": 2.0,
+                "Max_Water": 2.0,
+                "Vitamins": 5.0,
+                "Max_Vitamins": 5.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Meat_Rotten",
+      "parent": "BasicFood_Base",
+      "gameName": "腐肉",
+      "description": "已经腐败的肉，食用会带来风险。",
+      "weight": 0.6,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/pixelate (1).png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 5.0,
+                "Max_Fat": 5.0,
+                "Protein": 10.0,
+                "Max_Protein": 10.0,
+                "Water": 0.0,
+                "Max_Water": 0.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -20,6 +20,8 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 
 数据：`Assets/5_Scripts/5-1_Data/{ItemData/ItemData,ModData/ModuleData}.cs`；清单：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；编辑器：`Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`。Actor 独立内容目录，复用装配/池化。
 
+基础物品按材料、地面木材、金属、矿石/矿物、水果、椰子、谷物饮料、肉蛋分包；`shells/basic_items.json` 仅存基础/公共外观/食物模板。运行时与测试按 Manifest/稳定 ID 查找，不再将业务物品绑定旧大文件；公共姿态只给明确适用的定义继承。回归 `item_runtime/basic_item_catalog`。
+
 仅按当前任务读参考，不批量加载：
 
 - Tick、距离档、感知、空间/环绕：[scheduling-and-space.md](references/scheduling-and-space.md)。

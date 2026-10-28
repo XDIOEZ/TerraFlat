@@ -864,23 +864,27 @@ namespace FlatWorld.Editor.ContentWorkshop
         private static WorkshopItemCategory InferCategory(string packageId, ItemDefinitionDto definition)
         {
             string package = packageId ?? string.Empty;
-            if (package.IndexOf("weapon", StringComparison.OrdinalIgnoreCase) >= 0)
+            // 分包只组织内容，明确的库存标签继续提供与文件名无关的分类。
+            bool HasInventoryCategoryTag(string category) => definition.Tags?.Any(tag => string.Equals(
+                tag, "InventoryCategory." + category, StringComparison.OrdinalIgnoreCase)) == true;
+            if (package.IndexOf("weapon", StringComparison.OrdinalIgnoreCase) >= 0 || HasInventoryCategoryTag("Weapon"))
                 return WorkshopItemCategory.Weapon;
-            if (package.IndexOf("tool", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (package.IndexOf("tool", StringComparison.OrdinalIgnoreCase) >= 0 || HasInventoryCategoryTag("Tool"))
                 return WorkshopItemCategory.Tool;
-            if (package.IndexOf("equipment", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (package.IndexOf("equipment", StringComparison.OrdinalIgnoreCase) >= 0 || HasInventoryCategoryTag("Equipment"))
                 return WorkshopItemCategory.Equipment;
-            if (package.IndexOf("seed", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (package.IndexOf("seed", StringComparison.OrdinalIgnoreCase) >= 0 || HasInventoryCategoryTag("Seed"))
                 return WorkshopItemCategory.Seed;
-            if (package.IndexOf("building", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (package.IndexOf("building", StringComparison.OrdinalIgnoreCase) >= 0 || HasInventoryCategoryTag("Building"))
                 return WorkshopItemCategory.Building;
             if (definition.Modules?.Keys.Any(key =>
                     key.IndexOf("food", StringComparison.OrdinalIgnoreCase) >= 0 || key.Contains("食物")) == true ||
-                definition.Tags?.Any(tag => string.Equals(tag, "Food", StringComparison.OrdinalIgnoreCase)) == true)
+                definition.Tags?.Any(tag => string.Equals(tag, "Food", StringComparison.OrdinalIgnoreCase)) == true ||
+                HasInventoryCategoryTag("Food"))
             {
                 return WorkshopItemCategory.Food;
             }
-            if (string.Equals(packageId, "basic_items", StringComparison.OrdinalIgnoreCase))
+            if (HasInventoryCategoryTag("Material"))
                 return WorkshopItemCategory.Material;
             return WorkshopItemCategory.Other;
         }

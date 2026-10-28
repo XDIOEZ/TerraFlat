@@ -1,0 +1,752 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Ore_Coal",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "煤矿石",
+      "description": "可燃的煤炭，既能提供高温，也能参与炼钢。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.0,
+      "volume": 1.1,
+      "canBePickedUp": true,
+      "tags": [
+        "readable.writing.ink",
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "OrePowder_Coal",
+              "amount": 2
+            }
+          ]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 100.2,
+                "y": 100.2
+              },
+              "MaxTemperature": 1800.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false,
+            "$transform": {
+              "localPosition": {
+                "x": 34.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 2.0,
+                "y": 2.0,
+                "z": 2.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "SlingAmmo_Base",
+      "parent": "BasicItem_Base",
+      "abstract": true,
+      "tags": [
+        "SlingAmmo",
+        "InventoryCategory.Material"
+      ],
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {
+              "Physical": 6.0,
+              "ImpactKind": 4
+            },
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 1,
+            "EnableHitSlowdown": true,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.35,
+                "y": 0.35
+              }
+            }
+          }
+        },
+        "projectile": {
+          "prefab": "Mod_Projectile",
+          "id": "Mod_Projectile",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "UseVisibleArc": true,
+            "GroundImpactFraction": 0.15,
+            "SpinDegreesPerSecond": 480.0,
+            "MinSpeed": 3.0,
+            "MaxSpeed": 8.0,
+            "FlightLinearDrag": 0.0,
+            "VirtualGravity": 8.0,
+            "MinDamageMultiplier": 0.35,
+            "MaxDamageMultiplier": 1.0,
+            "MaxFlightSeconds": 1.5,
+            "RecoveryChance": 1.0,
+            "EmbedOnDamageReceiverWhenRecovered": false,
+            "BrokenSalvageChance": 0.0,
+            "SpriteForwardAngleDegrees": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "Ore_Copper",
+      "parent": "SlingAmmo_Base",
+      "gameName": "孔雀石",
+      "description": "含铜的矿石，可在熔炉中冶炼为铜锭。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.2,
+      "canBePickedUp": true,
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "OrePowder_Copper",
+              "amount": 2
+            }
+          ]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:铜矿=铜",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Copper"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Copper",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铜+锡=青铜 1",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 9,
+              "itemId": "Ore_Copper"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Bronze",
+              "amount": 5
+            }
+          ]
+        },
+        {
+          "id": "core:铜矿石=熔融铜",
+          "minTemperature": 1085.0,
+          "maxTemperature": 1600.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Copper"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_copper",
+            "amount": 1.0
+          }
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_399.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Flint",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "燧石",
+      "description": "坚硬而锋利的燧石，可用于打火和制作石器。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.35,
+      "volume": 0.18,
+      "canBePickedUp": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Flint/Flint_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Iron",
+      "parent": "SlingAmmo_Base",
+      "gameName": "铁矿石",
+      "description": "含铁的矿石，可在熔炉中冶炼为粗铁锭。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.5,
+      "canBePickedUp": true,
+      "tags": [
+        "Ore",
+        "Iron",
+        "SlingAmmo",
+        "InventoryCategory.Material"
+      ],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "OrePowder_Iron",
+              "amount": 2
+            }
+          ]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:铁矿=粗铁锭",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_RawIron",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿=铁锭",
+          "minTemperature": 1489.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_WroughtIron",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿+碳=钢",
+          "minTemperature": 1489.0,
+          "maxTemperature": 9999.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Coal"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Coal"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Steel",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿石=熔融铁",
+          "minTemperature": 1538.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_iron",
+            "amount": 1.0
+          }
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_391.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Tin",
+      "parent": "SlingAmmo_Base",
+      "gameName": "锡矿石",
+      "description": "含锡的矿石，可在熔炉中冶炼为锡锭。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.8,
+      "volume": 0.7,
+      "canBePickedUp": true,
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "OrePowder_Tin",
+              "amount": 2
+            }
+          ]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:锡矿=锡",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Tin",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:锡矿石=熔融锡",
+          "minTemperature": 232.0,
+          "maxTemperature": 1200.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_tin",
+            "amount": 1.0
+          }
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_393.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Stone",
+      "parent": "SlingAmmo_Base",
+      "gameName": "石头",
+      "description": "可用于制作和建造。按 F 丢出时会在飞行阶段造成钝击伤害，落地后恢复为普通可拾取石头。",
+      "worldDropBehavior": "interactive",
+      "weight": 1.5,
+      "volume": 0.7,
+      "tags": [
+        "Stone",
+        "Mineral",
+        "Throwable",
+        "InventoryCategory.Material"
+      ],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "OrePowder_Stone",
+              "amount": 2
+            }
+          ]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png"
+      },
+      "modules": {
+        "damage": {
+          "id": "Mod_Damage",
+          "parameters": {
+            "DamageValues": {
+              "Physical": 12.0
+            },
+            "$collider2D": {
+              "size": {
+                "x": 0.4375,
+                "y": 0.4375
+              }
+            }
+          }
+        },
+        "discardFlightDamage": {
+          "prefab": "Mod_DiscardFlightDamage",
+          "id": "Mod_DiscardFlightDamage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "HardImpactTransformItemId": "ChippedTool",
+            "HardImpactTransformChance": 0.1,
+            "HardImpactMinimumDefense": 2.0,
+            "DiscardStaminaCostPerItem": 1.0,
+            "DiscardStaminaCostPerMeterPerItem": 0.5
+          }
+        }
+      }
+    }
+  ]
+}

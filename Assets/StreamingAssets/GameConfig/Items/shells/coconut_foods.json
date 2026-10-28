@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Coconut_Green",
+      "worldDropBehavior": "interactive",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "青椰子",
+      "description": "尚未处理的青椰子，内部保存着椰肉和椰汁。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.5,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "health": {
+        "hasHp": true,
+        "hp": 20.0,
+        "maxHp": 20.0,
+        "defense": {
+          "physical": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
+      },
+      "lootTableId": "Coconut_Green_Default",
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_165.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Half",
+      "worldDropBehavior": "interactive",
+      "parent": "BasicFood_Base",
+      "gameName": "半个椰子",
+      "description": "劈开的半边椰子，可继续取出椰肉和椰壳。",
+      "weight": 0.75,
+      "volume": 1.0,
+      "health": {
+        "hasHp": true,
+        "hp": 20.0,
+        "maxHp": 20.0,
+        "defense": {
+          "physical": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
+      },
+      "lootTableId": "Coconut_Half_Default",
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_009.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30.0,
+                "Max_Carbohydrates": 30.0,
+                "Fat": 60.0,
+                "Max_Fat": 60.0,
+                "Protein": 8.0,
+                "Max_Protein": 8.0,
+                "Water": 25.0,
+                "Max_Water": 25.0,
+                "Vitamins": 8.0,
+                "Max_Vitamins": 8.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Coconut_Nude",
+      "worldDropBehavior": "interactive",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "去皮椰子",
+      "description": "去除外层纤维的椰子，可以进一步劈开。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.8,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "health": {
+        "hasHp": true,
+        "hp": 20.0,
+        "maxHp": 20.0,
+        "defense": {
+          "physical": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
+      },
+      "lootTableId": "Coconut_Nude_Default",
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_98]",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Shell",
+      "worldDropBehavior": "interactive",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "椰壳",
+      "description": "坚硬的椰壳，可像陶罐一样装水、饮水、倒空与转水，也可作为制作材料。可在容器面板中放到地上，放下后可交互使用或拆回，水量保留。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.25,
+      "volume": 0.7,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "InventoryCategory.Tool"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png",
+        "liquidSurface": {
+          "bounds": {
+            "x": 0.0625,
+            "y": 0.36,
+            "width": 0.875,
+            "height": 0.56
+          },
+          "maxSourceChannel": 100
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Coconut_Shell_Building\",\"SummonerPrefabId\":\"Coconut_Shell\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
+        },
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "capacity": 80,
+            "CollectsRainwater": true
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "CoconutMeat",
+      "parent": "BasicFood_Base",
+      "gameName": "椰肉",
+      "description": "椰肉",
+      "weight": 0.3,
+      "volume": 0.4,
+      "tags": [
+        "47",
+        "Fruit",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰肉.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30.0,
+                "Max_Carbohydrates": 30.0,
+                "Fat": 60.0,
+                "Max_Fat": 60.0,
+                "Protein": 8.0,
+                "Max_Protein": 8.0,
+                "Water": 25.0,
+                "Max_Water": 25.0,
+                "Vitamins": 8.0,
+                "Max_Vitamins": 8.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    }
+  ]
+}

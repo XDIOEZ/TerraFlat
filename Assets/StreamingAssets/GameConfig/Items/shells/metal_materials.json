@@ -1,0 +1,653 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Ingot_Bronze",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "青铜锭",
+      "description": "铜与锡冶炼得到的青铜锭，可用于制作青铜器具。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.2,
+      "volume": 0.3,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "DrillDurability:140",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/BronzeIngot_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_Copper",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "铜锭",
+      "description": "铜（Copper）是一种过渡金属元素，化学符号为Cu，原子序数为29。铜是人类最早使用的金属之一，早在史前时代，人们就开始采掘露天铜矿，并用获取的铜制造武器、工具和其他器皿",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.0,
+      "volume": 0.3,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "DrillDurability:100",
+        "InventoryCategory.Material"
+      ],
+      "reactions": [
+        {
+          "id": "core:铜+锡=青铜",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 9,
+              "itemId": "Ingot_Copper"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Bronze",
+              "amount": 10
+            }
+          ]
+        },
+        {
+          "id": "matter:melt:Ingot_Copper",
+          "minTemperature": 1085,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_Copper",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_copper",
+            "amount": 1.0
+          }
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/CopperIngot_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_RawIron",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "生铁锭",
+      "description": "铁矿初步冶炼得到的粗铁锭，可用于制作第一批金属工具。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.4,
+      "volume": 0.3,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "Iron",
+        "RawIron",
+        "DrillDurability:160",
+        "InventoryCategory.Material"
+      ],
+      "reactions": [
+        {
+          "id": "core:生铁锭+碳=钢",
+          "minTemperature": 1489.0,
+          "maxTemperature": 9999.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ingot_RawIron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Coal"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Steel",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:粗铁锭=铁锭",
+          "minTemperature": 1489.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_RawIron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_RawIron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_WroughtIron",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "matter:melt:Ingot_RawIron",
+          "minTemperature": 1538,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_RawIron",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_iron",
+            "amount": 1.0
+          }
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/RawIronIngot_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_Steel",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "钢锭",
+      "description": "铁与碳高温冶炼得到的钢锭，可用于制作高强度防具。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.6,
+      "volume": 0.3,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "Steel",
+        "DrillDurability:300",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/SteelIngot_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_Tin",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "锡锭",
+      "description": "锡矿冶炼得到的锡锭，是制作青铜的合金材料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.7,
+      "volume": 0.3,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "DrillDurability:80",
+        "InventoryCategory.Material"
+      ],
+      "reactions": [
+        {
+          "id": "matter:melt:Ingot_Tin",
+          "minTemperature": 232,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_Tin",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_tin",
+            "amount": 1.0
+          }
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/TinIngot_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_WroughtIron",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "熟铁锭",
+      "description": "进一步提炼粗铁得到的熟铁锭，可用于制作更坚固的铁制工具。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.5,
+      "volume": 0.3,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "Iron",
+        "WroughtIron",
+        "DrillDurability:220",
+        "InventoryCategory.Material"
+      ],
+      "reactions": [
+        {
+          "id": "core:熟铁锭+碳=钢",
+          "minTemperature": 1489.0,
+          "maxTemperature": 9999.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ingot_WroughtIron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Coal"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Steel",
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/WroughtIronIngot_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Nail",
+      "parent": "BasicItem_Base",
+      "gameName": "熟铁钉",
+      "description": "由熟铁锭锻打制成的金属钉，用于固定木料和机械结构。",
+      "weight": 0.02,
+      "volume": 0.02,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "Metal",
+        "Iron",
+        "WroughtIron",
+        "Nail",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "IronPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "铁板",
+      "description": "由熟铁锭锻打制成的铁板，可用于后续金属制作。",
+      "weight": 2.5,
+      "volume": 0.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Metal",
+        "Iron",
+        "WroughtIron",
+        "IronPlate",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/IronPlate/IronPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "RawIronPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "生铁板",
+      "description": "由生铁锭手工锻打制成的板材。",
+      "weight": 2.4,
+      "volume": 0.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Metal",
+        "Iron",
+        "RawIron",
+        "RawIronPlate",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/RawIronPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "CopperPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "铜板",
+      "description": "由铜锭锻打制成的板材。",
+      "weight": 2.0,
+      "volume": 0.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Metal",
+        "Copper",
+        "CopperPlate",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/CopperPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "BronzePlate",
+      "parent": "BasicItem_Base",
+      "gameName": "青铜板",
+      "description": "由青铜锭锻打制成的板材。",
+      "weight": 2.2,
+      "volume": 0.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Metal",
+        "Bronze",
+        "BronzePlate",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/BronzePlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "TinPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "锡板",
+      "description": "由锡锭锻打制成的板材。",
+      "weight": 1.7,
+      "volume": 0.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Metal",
+        "Tin",
+        "TinPlate",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/TinPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "SteelPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "钢板",
+      "description": "由钢锭锻打制成的板材。",
+      "weight": 2.6,
+      "volume": 0.2,
+      "canBePickedUp": true,
+      "tags": [
+        "Metal",
+        "Steel",
+        "SteelPlate",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/SteelPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "SteelNail",
+      "parent": "Nail",
+      "gameName": "钢钉",
+      "description": "由钢锭锻打制成的金属钉。和钢板一起制作机械锻锤或锯木机时，成品工作效率提高20%。",
+      "tags": [
+        "Material",
+        "Metal",
+        "Steel",
+        "Nail",
+        "InventoryCategory.Material"
+      ]
+    }
+  ]
+}

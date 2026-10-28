@@ -1,0 +1,414 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "CharredMatter",
+      "parent": "BasicItemVisual_Base",
+      "gameName": "炭化物",
+      "description": "高温处理失败后留下的烧焦物，价值有限。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.25,
+      "volume": 0.5,
+      "canBePickedUp": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/resources_basic.png[resources_basic_4]",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "IceBlock",
+      "parent": "BasicFood_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "冰块",
+      "description": "从冰山中采集的冰块，可以食用以补充 10 点水分，但会使体温降低 5℃。",
+      "weight": 2.0,
+      "volume": 2.0,
+      "tags": [
+        "47",
+        "InventoryCategory.Nature"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/IceBlock/IceBlock_Icon.png"
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 10.0,
+                "Max_Water": 10.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 0.0,
+                  "SpoilageTargetItemID": ""
+                }
+              },
+              {
+                "StateKey": "food.melting",
+                "Data": {
+                  "EnableMelting": true,
+                  "MeltingElapsedSeconds": 0.0,
+                  "MeltingIntervalSeconds": 300.0
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "ConsumptionEnabled": true,
+            "ConsumeCompleteReplacementItemID": "",
+            "StaminaState": {
+              "StaminaRecoverSpeed": 0.0,
+              "StaminaConsumeSpeed": 0.0
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 0.0,
+              "WaterSelfHurt": 0.0,
+              "ProteinSelfHurt": 0.0,
+              "VitaminSelfHurt": 0.0,
+              "HealNeedRatio": 0.0
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat"
+            },
+            "ConsumeKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "StoneSlab",
+      "parent": "BasicItem_Base",
+      "gameName": "石板",
+      "description": "从较大的石矿或矿洞入口开采出的厚重石板。",
+      "weight": 12.0,
+      "volume": 7.0,
+      "tags": [
+        "Stone",
+        "Mineral",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneSlab.png"
+      }
+    },
+    {
+      "id": "Charcoal",
+      "parent": "BasicItem_Base",
+      "gameName": "木炭",
+      "description": "原木烧制而成的木炭，可作为燃料，也可与树脂制作树脂胶水。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.2,
+      "volume": 0.45,
+      "canBePickedUp": true,
+      "tags": [
+        "readable.writing.ink",
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "matter": {
+        "transitions": [
+          {
+            "id": "charcoal.ash",
+            "minTemperature": 1000,
+            "outputItemId": "WoodAsh",
+            "outputAmountMultiplier": 1
+          }
+        ]
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Charcoal/Charcoal_Icon.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.6,
+            "y": 0.6
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 100.2,
+                "y": 100.2
+              },
+              "MaxTemperature": 1800.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
+    },
+    {
+      "id": "Peat",
+      "parent": "Charcoal",
+      "gameName": "泥炭",
+      "description": "从湿地挖出的可燃有机土，可作为低温燃料。",
+      "weight": 0.6,
+      "volume": 0.8,
+      "tags": [
+        "Combustion.Fuel",
+        "InventoryCategory.Material"
+      ],
+      "matter": {
+        "transitions": []
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Peat/Peat_Icon.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50,
+                "y": 50
+              },
+              "MaxTemperature": 800
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "DrilledStoneSlab",
+      "parent": "BasicItem_Base",
+      "gameName": "钻孔石板",
+      "description": "在石板上加工出贯穿孔的机械石料，主要用于机械扭矩装置的结构与连接。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 12.0,
+      "volume": 7.0,
+      "canBePickedUp": true,
+      "tags": [
+        "Stone",
+        "Mineral",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStoneSlab_Idle.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "DrilledStone",
+      "parent": "BasicItem_Base",
+      "gameName": "钻孔石头",
+      "description": "在石头上加工出贯穿孔的机械石料，可用于机械扭矩装置。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 1.5,
+      "volume": 0.7,
+      "canBePickedUp": true,
+      "tags": [
+        "Stone",
+        "Mineral",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStone_Idle.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Coal",
+      "parent": "BasicItem_Base",
+      "gameName": "煤粉",
+      "description": "用石臼捣碎煤矿石得到的细煤粉，可用于后续材料加工。",
+      "volume": 0.55,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "Powder",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Coal.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Copper",
+      "parent": "BasicItem_Base",
+      "gameName": "孔雀石粉",
+      "description": "用石臼捣碎孔雀石得到的矿粉，可用于后续材料加工。",
+      "weight": 1.1,
+      "volume": 0.375,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "Powder",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Copper.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Iron",
+      "parent": "BasicItem_Base",
+      "gameName": "铁矿粉",
+      "description": "用石臼捣碎铁矿石得到的铁矿粉，可用于后续材料加工。",
+      "weight": 1.25,
+      "volume": 0.375,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "Powder",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Iron.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Tin",
+      "parent": "BasicItem_Base",
+      "gameName": "锡矿粉",
+      "description": "用石臼捣碎锡矿石得到的锡矿粉，可用于后续材料加工。",
+      "weight": 0.9,
+      "volume": 0.35,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "Powder",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Tin.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Stone",
+      "parent": "BasicItem_Base",
+      "gameName": "石粉",
+      "description": "用石臼捣碎石头得到的石粉，可用于后续材料加工。",
+      "weight": 0.75,
+      "volume": 0.35,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "Powder",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Stone.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Niter",
+      "parent": "BasicItem_Base",
+      "gameName": "硝石粉",
+      "description": "用石臼捣碎硝石得到的细粉，可用于制作肥料。",
+      "volume": 0.275,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "Powder",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Niter.png"
+      },
+      "modules": {}
+    }
+  ]
+}

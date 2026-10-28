@@ -1,0 +1,532 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "RiceGrain",
+      "parent": "BasicItem_Base",
+      "gameName": "稻谷",
+      "description": "带壳的稻谷，不可直接食用；需要脱壳加工后得到大米，同时可作为水稻的播种材料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.03,
+      "volume": 0.04,
+      "canBePickedUp": true,
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 3,
+          "outputs": [
+            {
+              "itemId": "Rice",
+              "amount": 1
+            }
+          ]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png",
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.45
+          }
+        }
+      },
+      "modules": {
+        "plantable": {
+          "prefab": "Module_Plantable",
+          "id": "Mod_Plantable",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "cropItemId": "RiceCrop",
+            "maxPlantingDistance": 2.0,
+            "previewAlpha": 0.7
+          }
+        }
+      }
+    },
+    {
+      "id": "Rice",
+      "parent": "Apple",
+      "gameName": "大米",
+      "description": "去壳后的生大米，可以直接食用，主要补充碳水和少量蛋白质。",
+      "weight": 0.1,
+      "volume": 0.15,
+      "reactions": [
+        {
+          "id": "core:大米=米饭",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Rice"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "CookedRice",
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/Rice_Icon.png",
+        "collider": {
+          "size": {
+            "x": 0.9,
+            "y": 0.65
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 20.0,
+                "Max_Carbohydrates": 20.0,
+                "Protein": 2.0,
+                "Max_Protein": 2.0,
+                "Water": 1.0,
+                "Max_Water": 1.0,
+                "Vitamins": 2.0,
+                "Max_Vitamins": 2.0
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 7200.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "CookedRice",
+      "parent": "Apple",
+      "gameName": "米饭",
+      "description": "煮熟后聚成一团的米饭，以碳水和蛋白质为主要营养，并补充少量维生素。",
+      "weight": 0.25,
+      "volume": 0.35,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CookedRice/CookedRice_Icon.png",
+        "collider": {
+          "size": {
+            "x": 0.7,
+            "y": 0.48
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 55.0,
+                "Max_Carbohydrates": 55.0,
+                "Protein": 15.0,
+                "Max_Protein": 15.0,
+                "Water": 12.0,
+                "Max_Water": 12.0,
+                "Vitamins": 4.0,
+                "Max_Vitamins": 4.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Tea",
+      "parent": "BasicFood_Base",
+      "gameName": "茶",
+      "description": "泡茶喝",
+      "weight": 0.08,
+      "volume": 0.2,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Tea/Tea_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 120.0,
+                "Max_Water": 120.0,
+                "Vitamins": 6.0,
+                "Max_Vitamins": 6.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.drink"
+            },
+            "ConsumeKind": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "WildDogMilk",
+      "parent": "BasicFood_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "野生狗奶",
+      "description": "永远喝不完的野生狗奶；连续使用三次后会进入灰色休眠状态。",
+      "weight": 1.0,
+      "volume": 1.0,
+      "stackable": false,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_WildDogMilk.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 50.0,
+                "Max_Fat": 50.0,
+                "Protein": 100.0,
+                "Max_Protein": 100.0,
+                "Water": 200.0,
+                "Max_Water": 200.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 720.0,
+                  "SpoilageTargetItemID": "WildDogMilk_Gray"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "ConsumptionEnabled": true,
+            "ConsumeCompleteReplacementItemID": "WildDogMilk_Gray",
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.drink"
+            },
+            "ConsumeKind": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "WildDogMilk_Gray",
+      "parent": "BasicFood_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "野生狗奶",
+      "description": "进入休眠状态的灰色野生狗奶，十二分钟后恢复。",
+      "weight": 1.0,
+      "volume": 1.0,
+      "stackable": false,
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_WildDogMilk_Gray.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "heldFood": {
+          "id": "手上食物模块",
+          "parameters": {}
+        },
+        "food": {
+          "id": "食物模块",
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 0.0,
+                "Max_Water": 0.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 720.0,
+                  "SpoilageTargetItemID": "WildDogMilk"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          },
+          "parameters": {
+            "ConsumptionEnabled": false,
+            "ConsumeCompleteReplacementItemID": "",
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": false,
+              "CueId": "food.drink"
+            },
+            "ConsumeKind": 1
+          }
+        }
+      }
+    }
+  ]
+}

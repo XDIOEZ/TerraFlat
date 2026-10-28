@@ -1,3 +1,31 @@
+-- 分包以后继续沿正式目录校验跨文件继承，避免公共模板改变未声明的姿态或覆盖食物配方。
+test.system("item_runtime", "basic_item_catalog", {
+    ids = {"Bone", "Leaf", "Cotton", "Apple", "Rice", "CookedRice", "Meat", "Ore_Iron", "SteelNail"}
+}, function(data)
+    assert(data.visualTemplateAbstract and data.foodTemplateAbstract,
+        "公共外观或食物模板意外成为可生成物品")
+    local packages = {}
+    for _, name in ipairs(data.packages) do packages[name] = true end
+    for _, name in ipairs({"basic_items", "basic_materials", "ground_wood_materials", "metal_materials",
+        "ore_materials", "mineral_materials", "fruit_foods", "coconut_foods", "grain_drink_foods", "protein_foods"}) do
+        assert(packages[name], "基础物品主题分包没有接入正式 Manifest：" .. name)
+    end
+    local items = data.items
+    assert(items.Bone.shell == "Prop" and math.abs(items.Bone.weight - .45) < .0001,
+        "材料分包丢失外壳或独立重量")
+    assert(items.Bone.scaleX == 1 and items.Bone.scaleY == 1 and items.Bone.scaleZ == 1 and
+        items.Meat.scaleX == 1 and items.Leaf.scaleX == .5,
+        "公共外观模板没有保留普通材料、食物和树叶的独立缩放")
+    assert(not items.Cotton.positionDeclared and not items.SteelNail.positionDeclared,
+        "公共模板给原本依赖壳预制体的物品强加了零位移")
+    assert(items.Apple.nutrition.Carbohydrates == 40 and items.Rice.nutrition.Carbohydrates == 20 and
+        items.CookedRice.nutrition.Carbohydrates == 55 and items.Meat.nutrition.Protein == 55,
+        "跨分包食物继承串用了另一种食物的营养值")
+    assert(items.Cotton.processing.weave.outputs[1].itemId == "Cloth" and
+        items.Ore_Iron.processing.grind.outputs[1].itemId == "OrePowder_Iron",
+        "材料或矿石的独立加工产物在提取模板后改变")
+end, "基础物品主题分包、跨文件继承与公共模板边界")
+
 test.system("item_runtime", "drop_trajectory", {}, function(data)
     assert(data.linearControlX == 2 and data.linearControlY == 1,
         "直线掉落控制点偏离起终点中点")
