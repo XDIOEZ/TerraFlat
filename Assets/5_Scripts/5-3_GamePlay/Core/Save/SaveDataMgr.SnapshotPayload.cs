@@ -10,7 +10,7 @@ using UnityEngine;
 public partial class SaveDataMgr
 {
     #region 存档封装格式
-    private const int CompactSaveVersion = 34; // 地表快照新增天然冰融化进度，仅接受当前结构。
+    private const int CompactSaveVersion = 35; // 星球数据去掉预制体身份，外观改由 JSON 模板保存。
     private const int ModdedSaveVersion = 15;
     // 实例状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'6' };
@@ -217,7 +217,7 @@ public partial class SaveDataMgr
         Newtonsoft.Json.Linq.JToken version = document[nameof(FlatWorld.Spaceflight.SpaceSessionState.Version)];
         if (version?.Type != Newtonsoft.Json.Linq.JTokenType.Integer)
             throw new InvalidDataException("太空存档缺少有效的格式版本。");
-        EnsureCurrentSaveVersion("太空星区存档", version.ToObject<int>(), 2);
+        EnsureCurrentSaveVersion("太空星区存档", version.ToObject<int>(), FlatWorld.Spaceflight.SpaceSessionState.CurrentVersion);
         var state = document.ToObject<FlatWorld.Spaceflight.SpaceSessionState>();
         if (state == null || state.Sectors == null || state.Sectors.Count == 0 || state.Ships == null ||
             state.Flights == null || state.Devices == null || state.Passengers == null || state.Navigation == null ||

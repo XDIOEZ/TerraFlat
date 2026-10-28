@@ -4,7 +4,7 @@ do
     -- 检查真实会话时钟和正式快照入口，不手动推进当前宇宙。
     test.space("session", function(data)
         assert(data.scope == "live-session", "没有采样真实太空会话")
-        assert(data.before.version == 2 and data.after.version == 2, "会话版本不正确")
+        assert(data.before.version == 3 and data.after.version == 3, "会话版本不正确")
         assert(data.after.seconds > data.before.seconds, "真实固定步没有推进宇宙时钟")
         assert(data.after.playerProfile == data.before.playerProfile, "观察期间测试玩家改变")
         assert(data.savedVersion == data.after.version, "正式捕获的快照版本不一致")

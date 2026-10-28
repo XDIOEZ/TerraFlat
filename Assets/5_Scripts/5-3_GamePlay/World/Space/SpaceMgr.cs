@@ -322,11 +322,8 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     private void AddPlanet(PlanetData planet, SectorView view)
     {
         if (runtimePlanetDict.TryGetValue(planet.BodyId, out Planet existing) && existing != null) return;
-        GameObject instance = GameRes.Instance.InstantiatePrefab(string.IsNullOrWhiteSpace(planet.PrefabName) ? planet.RuntimePlanetName : planet.PrefabName, parent: view.Root);
-        if (instance == null) throw new InvalidOperationException("星体外观未加载：" + planet.PrefabName);
-        Planet runtime = instance.GetComponent<Planet>();
-        if (runtime == null) { Destroy(instance); throw new InvalidOperationException("星体预制体缺少 Planet。"); }
-        runtime.planetData = planet; runtime.name = planet.RuntimePlanetName;
+        BodyState body = SpaceSession.Current.GetBody(planet.BodyId);
+        Planet runtime = GameRes.Instance.InstantiatePlanetFromBodyConfiguration(body, planet, view.Root);
         RuntimePlanets.Add(runtime); view.Planets.Add(runtime); runtimePlanetDict[planet.BodyId] = runtime;
     }
     public Planet FindPlanetByBodyId(string id) => id != null && runtimePlanetDict.TryGetValue(id, out Planet planet) ? planet : null;

@@ -48,7 +48,7 @@ namespace FlatWorld.Spaceflight
             foreach (BodyState body in sector.Bodies)
             {
                 if (!owner.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet))
-                    owner.PlanetData_Dict[body.PlanetId] = planet = catalog.CreatePlanetData(body.BodyId, template);
+                    owner.PlanetData_Dict[body.PlanetId] = planet = catalog.CreatePlanetData(body, template);
                 catalog.ApplyPlanetMetadata(body, planet);
                 planet.BodyId = body.BodyId; planet.Name = body.PlanetId;
             }

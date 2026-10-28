@@ -3,8 +3,6 @@ using FlatWorld.Spaceflight;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public enum PlanetSurfaceStyle { Rocky, Ocean, Banded, Stellar, Asteroid }
-
 internal sealed class PlanetSurfacePresentation : IDisposable
 {
     #region 星球专用表现资源
@@ -37,8 +35,7 @@ internal sealed class PlanetSurfacePresentation : IDisposable
         sourceWasEnabled = source.enabled;
     }
 
-    public static PlanetSurfacePresentation Create(SpriteRenderer source, PlanetSurfaceStyle style,
-        Color accent, float strength, float scale)
+    public static PlanetSurfacePresentation Create(SpriteRenderer source, PlanetVisualConfiguration visual)
     {
         if (source == null || source.sprite == null) return null;
         Material material = Resources.Load<Material>(MaterialPath);
@@ -47,7 +44,7 @@ internal sealed class PlanetSurfacePresentation : IDisposable
         var presentation = new PlanetSurfacePresentation(source);
         try
         {
-            presentation.Initialize(material, style, accent, strength, scale);
+            presentation.Initialize(material, visual);
             return presentation;
         }
         catch
@@ -57,11 +54,11 @@ internal sealed class PlanetSurfacePresentation : IDisposable
         }
     }
 
-    private void Initialize(Material material, PlanetSurfaceStyle style, Color accent, float strength, float scale)
+    private void Initialize(Material material, PlanetVisualConfiguration visual)
     {
         // 留出大气和日冕边缘，星体实际半径仍保持原精灵大小。
-        this.style = style;
-        float extent = style == PlanetSurfaceStyle.Stellar ? 1.3f : 1.12f;
+        style = visual.Style;
+        float extent = visual.SurfaceExtent;
         Bounds bounds = source.sprite.bounds;
         float minX = bounds.center.x - bounds.extents.x * extent, maxX = bounds.center.x + bounds.extents.x * extent;
         float minY = bounds.center.y - bounds.extents.y * extent, maxY = bounds.center.y + bounds.extents.y * extent;
@@ -87,15 +84,21 @@ internal sealed class PlanetSurfacePresentation : IDisposable
         renderer.renderingLayerMask = source.renderingLayerMask;
         renderer.shadowCastingMode = ShadowCastingMode.Off;
         renderer.receiveShadows = false;
-        properties.SetColor(ColorId, source.color);
-        properties.SetColor(AccentId, accent);
-        properties.SetFloat(StyleId, (float)style);
-        properties.SetFloat(StrengthId, Mathf.Clamp01(strength));
-        properties.SetFloat(ScaleId, Mathf.Max(1f, scale));
-        properties.SetFloat(ExtentId, extent);
+        ApplyVisualProperties(properties, visual);
         properties.SetVector(LightId, new Vector4(.65f, .35f, .8f, 0f));
         renderer.SetPropertyBlock(properties);
         source.enabled = false;
+    }
+
+    // 太空实体与地表远景直接共用 JSON 外观，不读取专属预制体或按星球名分支。
+    public static void ApplyVisualProperties(MaterialPropertyBlock properties, PlanetVisualConfiguration visual)
+    {
+        properties.SetColor(ColorId, new Color(visual.BaseColor[0], visual.BaseColor[1], visual.BaseColor[2]));
+        properties.SetColor(AccentId, new Color(visual.AccentColor[0], visual.AccentColor[1], visual.AccentColor[2]));
+        properties.SetFloat(StyleId, (float)visual.Style);
+        properties.SetFloat(StrengthId, visual.DetailStrength);
+        properties.SetFloat(ScaleId, visual.DetailScale);
+        properties.SetFloat(ExtentId, visual.SurfaceExtent);
     }
     #endregion
 

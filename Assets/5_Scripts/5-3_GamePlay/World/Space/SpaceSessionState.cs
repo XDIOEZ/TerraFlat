@@ -9,7 +9,8 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceSessionState
     {
-        public int Version = 2;
+        public const int CurrentVersion = 3;
+        public int Version = CurrentVersion;
         [JsonIgnore] public UniverseState Universe;
         public List<UniverseState> Sectors = new();
         public double SimulationSeconds;

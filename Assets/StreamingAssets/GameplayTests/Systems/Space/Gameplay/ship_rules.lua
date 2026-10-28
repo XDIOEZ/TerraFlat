@@ -235,7 +235,7 @@ do
     end
     test.space("ship_snapshots", function(data)
         assert(data.operation == "ship_snapshots" and data.scope == "production-domain", "缺少正式快照领域结果")
-        assert(data.version == 2 and data.stableRepeatSnapshot == true, "会话快照版本或重复往返不稳定")
+        assert(data.version == 3 and data.stableRepeatSnapshot == true, "会话快照版本或重复往返不稳定")
         near(data.simulationSeconds, 123.5, "会话时钟往返丢失")
         assert(data.shipCount == 1 and data.flightCount == 1 and data.navigationCount == 1 and data.looseCount == 1,
             "快照往返丢失船体、飞行、导航或散落物")

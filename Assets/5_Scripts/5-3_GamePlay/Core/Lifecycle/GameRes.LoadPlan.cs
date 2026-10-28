@@ -81,8 +81,9 @@ public partial class GameRes
             () => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("fluids", "加载工业流体与星球大气", 1,
             () => LoadCatalog<int>((done, fail) => FluidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "liquids");
-        plan.Add("space", "加载星系与独立地表", 1,
-            () => LoadCatalog<FlatWorld.Spaceflight.SpaceCatalog>(FlatWorld.Spaceflight.SpaceCatalog.LoadDefaultAsync, _ => { }), "fluids", "items");
+        plan.Add("space", "构建 JSON 星球模板与独立地表", 1,
+            () => LoadCatalog<FlatWorld.Spaceflight.SpaceCatalog>(FlatWorld.Spaceflight.SpaceCatalog.LoadDefaultAsync,
+                BuildPlanetRuntimeTemplates), "fluids", "items", "prefabs");
         plan.Add("contamination", "加载污染层定义", 1,
             () => LoadCatalog<int>((done, fail) => ContaminationCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }));
         plan.Add("quests", "加载任务目录", 2,
@@ -92,7 +93,7 @@ public partial class GameRes
         plan.Add("world-authoring", "加载世界生成资源", 1, LoadWorldAuthoringResources, "texts");
         plan.Add("validate-built-in", "校验本体资源引用", 3,
             ValidateBuiltInResourceCatalog,
-            "players", "time", "greenhouse", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
+            "players", "time", "greenhouse", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "space", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
             ValidateFinalResourceCatalog, "mods");

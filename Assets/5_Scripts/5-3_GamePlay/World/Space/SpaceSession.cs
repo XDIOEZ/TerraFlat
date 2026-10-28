@@ -136,7 +136,7 @@ namespace FlatWorld.Spaceflight
             State = string.IsNullOrWhiteSpace(save.SpaceStateJson)
                 ? new SpaceSessionState { Sectors = new List<UniverseState> { SpaceCatalog.LoadDefault().GenerateSector(save.Seed, default) } }
                 : SaveDataMgr.DeserializeSpaceState(save.SpaceStateJson);
-            if (State == null || State.Version != 2 || State.Sectors == null || State.Sectors.Count == 0)
+            if (State == null || State.Version != SpaceSessionState.CurrentVersion || State.Sectors == null || State.Sectors.Count == 0)
                 throw new InvalidOperationException("太空存档格式无效。");
             SynchronizeFlightAudio();
             RebuildSectorDirectory();

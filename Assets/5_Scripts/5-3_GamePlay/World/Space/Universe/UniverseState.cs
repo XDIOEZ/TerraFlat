@@ -62,7 +62,7 @@ namespace FlatWorld.Spaceflight
         public SpaceSectorId Sector;
         public string PlanetId;
         public string DisplayName;
-        public string PrefabId;
+        public PlanetVisualConfiguration Visual;
         public string ParentBodyId;
         public string SurfaceProfileId;
         public int Seed;
@@ -84,6 +84,44 @@ namespace FlatWorld.Spaceflight
         [JsonIgnore] public SpaceVector2 VelocityMetersPerSecond;
         [MemoryPack.MemoryPackIgnore]
         [JsonIgnore] public WorldAddress SurfaceAddress => new(PlanetId, WorldAddress.SurfaceDimensionId);
+        #endregion
+    }
+
+    [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+    public enum PlanetSurfaceStyle { Rocky, Ocean, Banded, Stellar, Asteroid }
+
+    [MemoryPack.MemoryPackable]
+    [Serializable]
+    public sealed partial class PlanetVisualConfiguration
+    {
+        #region 星球模板外观参数
+        public PlanetSurfaceStyle Style;
+        public float[] BaseColor;
+        public float[] AccentColor;
+        public float DetailStrength;
+        public float DetailScale;
+        [MemoryPack.MemoryPackIgnore, JsonIgnore]
+        public float SurfaceExtent => Style == PlanetSurfaceStyle.Stellar ? 1.3f : 1.12f;
+
+        public void Validate(string bodyId)
+        {
+            if (!Enum.IsDefined(typeof(PlanetSurfaceStyle), Style) || !ValidColor(BaseColor) || !ValidColor(AccentColor) ||
+                !SpaceVector2.Finite(DetailStrength) || DetailStrength < 0f || DetailStrength > 1f ||
+                !SpaceVector2.Finite(DetailScale) || DetailScale < 1f)
+                throw new System.IO.InvalidDataException($"星球外观配置无效：{bodyId}");
+        }
+
+        private static bool ValidColor(float[] color) => color?.Length == 3 &&
+            SpaceVector2.Finite(color[0]) && color[0] >= 0f && color[0] <= 1f &&
+            SpaceVector2.Finite(color[1]) && color[1] >= 0f && color[1] <= 1f &&
+            SpaceVector2.Finite(color[2]) && color[2] >= 0f && color[2] <= 1f;
+
+        // 每颗生成星球独占外观数据，修改随机实例不会染到模板或其它星球。
+        public PlanetVisualConfiguration Clone() => new()
+        {
+            Style = Style, BaseColor = (float[])BaseColor.Clone(), AccentColor = (float[])AccentColor.Clone(),
+            DetailStrength = DetailStrength, DetailScale = DetailScale
+        };
         #endregion
     }
 

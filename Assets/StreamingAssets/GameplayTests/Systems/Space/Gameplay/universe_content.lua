@@ -1,5 +1,43 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
+local function verify_planet_visual(actual, expected, label)
+    assert(type(actual) == "table" and type(expected) == "table", label .. "缺少 JSON 外观")
+    local styles = {Rocky = 0, Ocean = 1, Banded = 2, Stellar = 3, Asteroid = 4}
+    assert(styles[actual.style] == actual.styleIndex and actual.style == expected.style, label .. "星球类型错误")
+    for _, field in ipairs({"baseColor", "accentColor"}) do
+        assert(type(actual[field]) == "table" and #actual[field] == 3, label .. "颜色不是 RGB 三通道")
+        for index = 1, 3 do
+            local value = actual[field][index]
+            assert(type(value) == "number" and value >= 0 and value <= 1 and
+                math.abs(value - expected[field][index]) < .000001, label .. "/" .. field .. "/" .. index .. "颜色不一致")
+        end
+    end
+    for _, field in ipairs({"detailStrength", "detailScale"}) do
+        assert(type(actual[field]) == "number" and math.abs(actual[field] - expected[field]) < .000001,
+            label .. "/" .. field .. "不一致")
+    end
+    assert(actual.detailStrength >= 0 and actual.detailStrength <= 1 and actual.detailScale >= 1,
+        label .. "表面细节越界")
+end
+
+local function verify_built_planet_template(sample, expected, require_template, label)
+    assert(type(sample) == "table" and sample.templateReady == require_template and sample.spriteReady and
+        sample.samePlanetData and sample.sameRuntimeName, label .. "没有通过正式公模工厂建立完整星球")
+    verify_planet_visual(sample.visual, expected, label .. "/实例外观")
+    if require_template then verify_planet_visual(sample.templateVisual, expected, label .. "/启动模板") end
+    for index = 1, 3 do
+        assert(math.abs(sample.spriteColor[index] - expected.baseColor[index]) < .000001,
+            label .. "公模仍保留其它星球的底色")
+        assert(math.abs(sample.properties.baseColor[index] - expected.baseColor[index]) < .000001 and
+            math.abs(sample.properties.accentColor[index] - expected.accentColor[index]) < .000001,
+            label .. "两端绘制参数没有使用 JSON 颜色")
+    end
+    assert(sample.properties.styleIndex == expected.styleIndex and
+        math.abs(sample.properties.detailStrength - expected.detailStrength) < .000001 and
+        math.abs(sample.properties.detailScale - expected.detailScale) < .000001,
+        label .. "两端绘制参数没有使用 JSON 表面类型或细节")
+end
+
 do
     -- 最小世界测试不创建全物品陈列。
     test.check("world_ready", "正式游戏世界就绪")
@@ -39,7 +77,8 @@ do
                 assert(label == "sector:" .. sectorId .. "/body:" .. body.templateId, label .. "实例身份作用域错误")
                 assert(body.sector.x == sector.sector.x and body.sector.y == sector.sector.y, label .. "所属星区错误")
                 assert(body.definitionId == body.templateId and body.resolvedPlanetId == label, label .. "目录映射错误")
-                assert(type(body.prefabId) == "string" and #body.prefabId > 0, label .. "缺少表现资源身份")
+                verify_planet_visual(body.visual, body.visual, label .. "/JSON外观")
+                verify_built_planet_template(body.runtimeTemplate, body.visual, true, label)
                 for _, key in ipairs({"radius", "gravity", "axis", "phase", "periodSeconds", "eccentricity",
                     "periapsisRadians", "rotationPeriodSeconds", "rotationInitialRadians"}) do finite(body[key], label .. "/" .. key) end
                 assert(body.radius > 0 and body.gravity >= 0 and body.axis >= 0 and body.periodSeconds >= 0 and
@@ -58,12 +97,14 @@ do
                     repeated.phase == body.phase and repeated.rotationInitialRadians == body.rotationInitialRadians,
                     label .. "相同种子生成不稳定")
                 assert(alternate.id == label and alternate.seed ~= body.seed, label .. "不同世界种子未隔离")
+                verify_planet_visual(repeated.visual, body.visual, label .. "/同种子外观")
+                verify_planet_visual(alternate.visual, body.visual, label .. "/不同种子模板外观")
                 local surface, planet = body.surface, body.planet
                 assert(type(surface) == "table" and type(planet) == "table", label .. "缺少地表或星球采样")
                 assert(surface.id == body.surfaceProfileId and planet.surfaceProfileId == surface.id and
                     planet.atmosphereProfileId == surface.id, label .. "地表与大气配置映射错误")
-                assert(planet.id == label and planet.name == body.planetId and planet.displayName == body.displayName and
-                    planet.prefabId == body.prefabId, label .. "星球元数据没有使用实例身份")
+                assert(planet.id == label and planet.name == body.planetId and planet.displayName == body.displayName,
+                    label .. "星球元数据没有使用实例身份")
                 near(planet.radius, body.radius, label .. "/星球半径")
                 near(planet.gravity, body.gravity, label .. "/星球重力")
                 near(planet.rotationDegreesPerSecond,
@@ -95,6 +136,13 @@ do
         end
         assert(count > 0, "配置星区没有任何星体")
         assert(data.templateBefore == data.templateAfter, "生成过程修改了原始太阳系模板")
+        verify_built_planet_template(data.dynamicPlanet, data.dynamicPlanet.expected, false, "无专属预制体的随机星球")
+        assert(data.dynamicPlanet.visual.style == "Rocky" and math.abs(data.dynamicPlanet.visual.baseColor[1] - .13) < .000001 and
+            math.abs(data.dynamicPlanet.visual.detailStrength - .42) < .000001 and data.dynamicPlanet.visual.detailScale == 23,
+            "运行中随机星球没有使用自己的外观")
+        assert(data.dynamicPlanetData.id == data.dynamicBody.id and data.dynamicPlanetData.name == data.dynamicBody.planetId and
+            data.dynamicPlanetData.surfaceProfileId == data.dynamicBody.surfaceProfileId and data.dynamicPlanetData.mapCount == 0,
+            "未登记的随机星球没有通过正式入口创建自己的地表数据")
         assert(type(data.empty) == "table" and data.empty.templateId == "core:empty-space" and
             #data.empty.bodies == 0, "非配置星区没有保持真实空域")
         return "目录覆盖 " .. #data.sectors .. " 个星区、" .. count .. " 个星体及独立大气"
@@ -211,7 +259,7 @@ do
         end
         local function compare(before, after, label)
             assert(type(before) == "table" and type(after) == "table", label .. "快照缺失")
-            assert(before.version == 2 and after.version == before.version and after.navigationSequence == before.navigationSequence,
+            assert(before.version == 3 and after.version == before.version and after.navigationSequence == before.navigationSequence,
                 label .. "版本或导航序号改变")
             near(after.time, before.time, label .. "/全局时钟")
             for _, key in ipairs({"ships", "flights", "devices", "passengers", "navigation", "docking", "looseItems"}) do
@@ -232,9 +280,10 @@ do
                 for bodyIndex, body in ipairs(original.bodies) do
                     local result = restored.bodies[bodyIndex]
                     local bodyLabel = label .. "/" .. body.id
-                    for _, key in ipairs({"id", "templateId", "planetId", "parentId", "surfaceProfileId", "displayName", "prefabId", "seed"}) do
+                    for _, key in ipairs({"id", "templateId", "planetId", "parentId", "surfaceProfileId", "displayName", "seed"}) do
                         assert(result[key] == body[key], bodyLabel .. "/字段改变:" .. key)
                     end
+                    verify_planet_visual(result.visual, body.visual, bodyLabel .. "/外观保存")
                     for _, key in ipairs({"radius", "gravity", "axis", "phase", "periodSeconds", "eccentricity",
                         "periapsisRadians", "rotationPeriodSeconds", "rotationInitialRadians"}) do
                         near(result[key], body[key], bodyLabel .. "/" .. key)

@@ -1,5 +1,7 @@
 # 太空纯规则回归
 
+2026-10-28 星球 JSON 模板：`space/planet_visual_templates` 覆盖完整目录外观、RGB/类型/细节参数、公模唯一、生成/克隆/重绑独立性、MemoryPack 与随机身份的 v3 快照恢复。`universe_content` 检查启动构建模板及未知身份的正式公模工厂。当前离线生产编译与小行星 7 组回归通过；Unity MCP 未响应，本轮新增 Lua 与真实画面未执行。
+
 2026-10-28 新增独立现场清单 `ship-world-suite.json`：`ship_world.lua` 从正式船件事务建立两艘飞船，检查独立 `WorldRuntime`/已提交区块/原生 `PhysicsScene2D`，普通 Item 和机器归属、土层/作物 GUID/三级水事务回滚与反向清理、真实武器单次伤害、零重力乘员刚体移动、投影、门交互及表现卸载后的权威模拟。Lua 持有业务断言；探针只调用正式运行时入口并返回真实采样。该专项尚待主代理在 Unity 中编译并执行。起飞/落地回归保留在 `universe-suite.json` 的 `ship_landing_gameplay`，新专项不代替该流程。
 
 - 2026-10-26 矿石小行星：`rules.lua` 增加 `ore_asteroid_rules`（确定性矿带、正式多矿种、非法配置、非致命/致命原子性、重复击碎与耗尽保存）和 `ore_asteroid_profiles`（三类独立小尺寸真空地表、正式矿山及掉矿、真实引力/降落范围、低重力下降时长和目录重绑定幂等）。`Tools/Tests/OreAsteroids/verify.py` 直接编译生产领域源码的 7 组离线回归通过；它不代表 Unity 原生碰撞、武器命中、真实拾取或驾驶降落通过。本轮 Unity 正在 PlayMode，只做静态修改，未运行规则 Lua、玩法 Lua 或视觉验收。

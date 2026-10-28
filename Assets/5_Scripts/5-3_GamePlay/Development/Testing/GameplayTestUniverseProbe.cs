@@ -7,6 +7,7 @@ using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 using RuntimeAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>宇宙测试采样只调用生产规则，Lua 负责判断结果。</summary>
@@ -56,7 +57,7 @@ public static class GameplayTestUniverseProbe
     {
         ["id"] = body.BodyId, ["templateId"] = body.TemplateBodyId,
         ["sector"] = Sector(body.Sector), ["planetId"] = body.PlanetId,
-        ["displayName"] = body.DisplayName, ["prefabId"] = body.PrefabId,
+        ["displayName"] = body.DisplayName, ["visual"] = GameplayTestSystemProbe.CapturePlanetVisualConfiguration(body.Visual),
         ["parentId"] = body.ParentBodyId, ["surfaceProfileId"] = body.SurfaceProfileId,
         ["seed"] = body.Seed, ["radius"] = body.RadiusMeters, ["gravity"] = body.SurfaceGravity,
         ["axis"] = body.PlacementDistanceMeters, ["phase"] = body.PlacementAngleRadians,
@@ -107,7 +108,7 @@ public static class GameplayTestUniverseProbe
         return new JObject
         {
             ["id"] = planet.BodyId, ["name"] = planet.Name, ["displayName"] = planet.name,
-            ["prefabId"] = planet.PrefabName, ["surfaceProfileId"] = planet.GenerationPresetId,
+            ["surfaceProfileId"] = planet.GenerationPresetId,
             ["radius"] = planet.PhysicalRadiusMeters, ["gravity"] = planet.SurfaceGravityMetersPerSecondSquared,
             ["mapRadius"] = planet.Radius, ["topology"] = planet.TopologyMode.ToString(),
             ["rotationDegreesPerSecond"] = planet.SelfRotateSpeed, ["globalTemperature"] = planet.GlobalTemperature,
@@ -134,7 +135,9 @@ public static class GameplayTestUniverseProbe
             {
                 BodyState body = simulation.GetBody((string)row["id"]);
                 row["surface"] = Surface(catalog.GetSurfaceProfile(body.BodyId));
-                row["planet"] = Planet(CreatePlanet(catalog, body));
+                PlanetData planet = CreatePlanet(catalog, body);
+                row["planet"] = Planet(planet);
+                row["runtimeTemplate"] = CaptureBuiltPlanetRuntimeTemplate(body, planet);
                 row["resolvedPlanetId"] = catalog.ResolveBodyId(body.PlanetId);
                 row["definitionId"] = catalog.GetBodyDefinition(body.BodyId).BodyId;
             }
@@ -142,11 +145,56 @@ public static class GameplayTestUniverseProbe
         }
         SpaceSectorId emptySector = new(123456789, -987654321);
         while (ContainsSector(catalog.ConfiguredSectors, emptySector)) emptySector.X++;
+        BodyState dynamicBody = Clone(catalog.Bodies[0]);
+        dynamicBody.BodyId = "probe:dynamic-planet-without-prefab";
+        dynamicBody.PlanetId = "probe:dynamic-world";
+        dynamicBody.DisplayName = "临时随机星球";
+        dynamicBody.Visual = new PlanetVisualConfiguration
+        {
+            Style = PlanetSurfaceStyle.Rocky, BaseColor = new[] { .13f, .25f, .41f },
+            AccentColor = new[] { .71f, .37f, .19f }, DetailStrength = .42f, DetailScale = 23f
+        };
+        PlanetData dynamicPlanet = catalog.CreatePlanetData(dynamicBody);
         return new JObject
         {
             ["sectors"] = sectors, ["empty"] = Universe(catalog.GenerateSector(Seed, emptySector)),
+            ["dynamicPlanet"] = CaptureBuiltPlanetRuntimeTemplate(dynamicBody, dynamicPlanet),
+            ["dynamicPlanetData"] = Planet(dynamicPlanet), ["dynamicBody"] = Body(dynamicBody),
             ["templateBefore"] = templateBefore, ["templateAfter"] = JsonConvert.SerializeObject(catalog.Bodies)
         };
+    }
+
+    private static JObject CaptureBuiltPlanetRuntimeTemplate(BodyState body, PlanetData planet)
+    {
+        // 通过正式工厂检查启动模板和未知星体公模分支，临时外观不进入活动场景画面。
+        var root = new GameObject("星球模板回归临时根") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            GameRes resources = GameRes.ExistingInstance;
+            global::Planet template = resources.GetPlanetRuntimeTemplate(body.BodyId);
+            global::Planet runtime = resources.InstantiatePlanetFromBodyConfiguration(body, planet, root.transform);
+            SpriteRenderer sprite = runtime.GetComponentInChildren<SpriteRenderer>(true);
+            var properties = new MaterialPropertyBlock();
+            global::Planet.ApplySurfaceProperties(properties, runtime.VisualConfiguration);
+            return new JObject
+            {
+                ["templateReady"] = template != null,
+                ["templateVisual"] = template == null ? null : GameplayTestSystemProbe.CapturePlanetVisualConfiguration(template.VisualConfiguration),
+                ["expected"] = GameplayTestSystemProbe.CapturePlanetVisualConfiguration(body.Visual),
+                ["visual"] = GameplayTestSystemProbe.CapturePlanetVisualConfiguration(runtime.VisualConfiguration),
+                ["properties"] = GameplayTestSystemProbe.CapturePlanetSurfaceProperties(properties),
+                ["spriteReady"] = sprite != null && sprite.sprite != null,
+                ["spriteColor"] = sprite == null ? null : new JArray(sprite.color.r, sprite.color.g, sprite.color.b),
+                ["samePlanetData"] = ReferenceEquals(runtime.planetData, planet),
+                ["sameRuntimeName"] = runtime.name == body.DisplayName
+            };
+        }
+        finally
+        {
+            if (Application.isPlaying) UnityEngine.Object.Destroy(root);
+            else UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     private static bool ContainsSector(IReadOnlyList<SpaceSectorId> sectors, SpaceSectorId target)
@@ -459,6 +507,7 @@ public static class GameplayTestUniverseProbe
                 body.RadiusMeters = 1d; body.SurfaceGravity = 0d; body.DisplayName = "待重新绑定";
                 body.PlacementDistanceMeters = 1d; body.OrbitalPeriodSeconds = 1d;
                 body.OrbitalEccentricity = 0d; body.OrbitalPeriapsisRadians = 0d; body.RotationPeriodSeconds = 1d;
+                body.Visual.DetailScale += 1f;
             }
         }
         JObject stale = SessionSnapshot(restored);

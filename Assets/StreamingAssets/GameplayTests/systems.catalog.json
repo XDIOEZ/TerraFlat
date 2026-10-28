@@ -854,6 +854,8 @@
       "group": "太空",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Space/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameRes.Planets.cs",
+        "Assets/2_Prefabs/World/Space/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.Worlds.cs",
         "Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.WorldTerrainTransfer.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Environment/ItemEnvironmentSources.cs",

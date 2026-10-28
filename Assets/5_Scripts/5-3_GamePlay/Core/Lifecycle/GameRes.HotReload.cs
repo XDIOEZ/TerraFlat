@@ -251,6 +251,8 @@ public partial class GameRes
         AnimalSkillCatalogService.ConfigureResourceReload(context);
         FluidCatalog.ConfigureResourceReload(context);
         AtmosphereCatalog.ConfigureResourceReload(context);
+        context.Add(() => FlatWorld.Spaceflight.SpaceCatalog.Current,
+            value => FlatWorld.Spaceflight.SpaceCatalog.Current = value, null);
         QuestCatalog.ConfigureResourceReload(context);
         MachineCatalog.ConfigureResourceReload(context);
         EquipmentDurabilityRules.ConfigureResourceReload(context);

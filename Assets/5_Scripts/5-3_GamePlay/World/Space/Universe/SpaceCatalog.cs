@@ -33,6 +33,7 @@ namespace FlatWorld.Spaceflight
         #region 星系配置读取
         public const string DefaultConfigPath = "GameConfig/Space/solar-system.json";
         private static SpaceCatalog current;
+        internal static SpaceCatalog Current { get => current; set => current = value; }
         private readonly SpaceCatalogConfig config;
         private readonly Dictionary<string, BodyState> bodies = new(StringComparer.Ordinal);
         private readonly Dictionary<string, SurfaceProfile> surfaces = new(StringComparer.Ordinal);
@@ -48,7 +49,7 @@ namespace FlatWorld.Spaceflight
             config = JsonConfigurationCache.Deserialize<SpaceCatalogConfig>(json,
                 new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }) ??
                 throw new InvalidDataException("星系配置为空");
-            if (config.SchemaVersion != 1 || string.IsNullOrWhiteSpace(config.TemplateId) || config.Surfaces == null || config.SectorSystems == null)
+            if (config.SchemaVersion != 2 || string.IsNullOrWhiteSpace(config.TemplateId) || config.Surfaces == null || config.SectorSystems == null)
                 throw new InvalidDataException("星系模板版本、身份或地表列表无效");
             foreach (SurfaceProfile surface in config.Surfaces)
             {
@@ -79,6 +80,7 @@ namespace FlatWorld.Spaceflight
             });
             foreach (BodyState body in validation.State.Bodies)
             {
+                ValidatePlanetVisualTemplate(body);
                 if (string.IsNullOrWhiteSpace(body.SurfaceProfileId) || !surfaces.ContainsKey(body.SurfaceProfileId))
                     throw new InvalidDataException($"星体缺少独立地表配置：{body.BodyId}");
                 bodies.Add(body.BodyId, body);
@@ -91,8 +93,11 @@ namespace FlatWorld.Spaceflight
                 _ = new UniverseSimulation(new UniverseState { Sector = system.Sector, Bodies = system.Bodies });
                 configuredSectors.Add(system.Sector);
                 foreach (BodyState body in system.Bodies)
+                {
+                    ValidatePlanetVisualTemplate(body);
                     if (string.IsNullOrWhiteSpace(body.SurfaceProfileId) || !surfaces.ContainsKey(body.SurfaceProfileId))
                         throw new InvalidDataException($"星区 {system.Sector} 的星体缺少地表配置：{body.BodyId}");
+                }
             }
         }
 
@@ -105,7 +110,6 @@ namespace FlatWorld.Spaceflight
 
         public static IEnumerator LoadDefaultAsync(Action<SpaceCatalog> completed, Action<Exception> failed)
         {
-            if (current != null) { completed?.Invoke(current); yield break; }
             string json = null; Exception error = null;
             string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, DefaultConfigPath);
             yield return StreamingAssetsTextLoader.ReadAllTextAsync(path, value => json = value, value => error = value);
@@ -123,6 +127,12 @@ namespace FlatWorld.Spaceflight
             SpaceOreAsteroidCatalog.Reset();
         }
 
+        private static void ValidatePlanetVisualTemplate(BodyState body)
+        {
+            if (body.Visual == null) throw new InvalidDataException($"星体缺少 JSON 外观模板：{body.BodyId}");
+            body.Visual.Validate(body.BodyId);
+        }
+
         public void RebindUniverse(UniverseState state)
         {
             if (state?.Bodies == null) throw new ArgumentNullException(nameof(state));
@@ -133,11 +143,16 @@ namespace FlatWorld.Spaceflight
             var presentTemplateBodyIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (BodyState body in state.Bodies)
             {
-                string localId = string.IsNullOrWhiteSpace(body.TemplateBodyId) ? body.BodyId : body.TemplateBodyId;
-                BodyState definition = FindDefinition(state.Sector, localId);
+                if (!TryGetBodyDefinition(body.BodyId, out BodyState definition))
+                {
+                    // 随机生成星球保存自己的完整模板，不要求内容目录预先列出每个实例。
+                    ValidatePlanetVisualTemplate(body);
+                    body.Sector = state.Sector;
+                    continue;
+                }
                 presentTemplateBodyIds.Add(definition.BodyId);
                 body.TemplateBodyId = definition.BodyId; body.Sector = state.Sector;
-                body.DisplayName = definition.DisplayName; body.PrefabId = definition.PrefabId;
+                body.DisplayName = definition.DisplayName; body.Visual = definition.Visual.Clone();
                 body.SurfaceProfileId = definition.SurfaceProfileId;
                 body.ParentBodyId = string.IsNullOrWhiteSpace(definition.ParentBodyId) ? string.Empty :
                     SpaceSectorCoordinates.BodyId(state.Sector, definition.ParentBodyId);
@@ -197,6 +212,7 @@ namespace FlatWorld.Spaceflight
         private IReadOnlyList<BodyState> GetDefinitions(SpaceSectorId sector)
             => sector == default ? config.Bodies : systems.TryGetValue(sector, out SpaceSectorSystemDefinition system) ?
                 system.Bodies : Array.Empty<BodyState>();
+        public IReadOnlyList<BodyState> GetBodyTemplates(SpaceSectorId sector) => GetDefinitions(sector);
         private BodyState FindDefinition(SpaceSectorId sector, string localId)
         {
             foreach (BodyState body in GetDefinitions(sector)) if (body.BodyId == localId) return body;
@@ -223,8 +239,10 @@ namespace FlatWorld.Spaceflight
 
         #region 星球持久数据与真实大气
         public PlanetData CreatePlanetData(string bodyId, PlanetData earthTemplate = null)
+            => CreatePlanetData(GetBodyDefinition(bodyId), earthTemplate);
+
+        public PlanetData CreatePlanetData(BodyState body, PlanetData earthTemplate = null)
         {
-            BodyState body = GetBodyDefinition(bodyId);
             PlanetData planet = earthTemplate == null ? new PlanetData() : FastCloner.FastCloner.DeepClone(earthTemplate);
             // 新星体只继承用户的世界尺寸，地图、生态和大气都独立创建。
             planet.MapData_Dict = new Dictionary<string, MapSave>();
@@ -244,7 +262,6 @@ namespace FlatWorld.Spaceflight
         {
             if (body == null || planet == null) throw new ArgumentNullException(nameof(planet));
             planet.BodyId = body.BodyId; planet.Name = body.PlanetId; planet.name = body.DisplayName;
-            planet.PrefabName = body.PrefabId;
             if (initializeEnvironment || string.IsNullOrWhiteSpace(planet.GenerationPresetId))
                 planet.GenerationPresetId = body.SurfaceProfileId;
             planet.PhysicalRadiusMeters = body.RadiusMeters; planet.SurfaceGravityMetersPerSecondSquared = body.SurfaceGravity;

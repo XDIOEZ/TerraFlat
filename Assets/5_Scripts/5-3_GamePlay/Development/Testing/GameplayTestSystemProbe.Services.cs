@@ -693,7 +693,7 @@ public static partial class GameplayTestSystemProbe
         string missingVersion = ServiceException(() => SaveDataMgr.DeserializeSpaceState(document.ToString()));
         document["Version"] = 1;
         string wrongVersion = ServiceException(() => SaveDataMgr.DeserializeSpaceState(document.ToString()));
-        document["Version"] = 2;
+        document["Version"] = SpaceSessionState.CurrentVersion;
         document["SimulationSeconds"] = -1;
         string invalidClock = ServiceException(() => SaveDataMgr.DeserializeSpaceState(document.ToString()));
         return new JObject

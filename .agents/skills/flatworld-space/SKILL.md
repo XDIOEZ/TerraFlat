@@ -43,8 +43,9 @@ description: "FlatWorld 太空会话、星区物理、船体航行/起降、对�
 
 ## 内容与回归入口
 
-- `Assets/StreamingAssets/GameConfig/Space/solar-system.json`：主目录 (0,0)，`sectorSystems` 扩展星区，默认 (-1,0) 天狼星，其余为空域。
-- 大型矿石小行星 `asteroid_iron/copper/rare` 复用正式起降和星球地表，`SurfaceRadiusTiles=128/112/96` 固定有限环绕范围，矿山规则在 `NaturalItems/surface-asteroids.json`；专用 Prefab `矿石小行星` 使用 `PlanetSurfaceStyle.Asteroid`。真空地表以 `weather.enabled=0` 关闭自然天气，低重力下降沿正式轨迹延长至重力允许的时长。
+- `Assets/StreamingAssets/GameConfig/Space/solar-system.json`（schema 2）：每个 BodyState 是完整星球模板，`visual` 声明类型、RGB 主/辅色和细节参数；主目录 (0,0)，`sectorSystems` 扩展星区，默认 (-1,0) 天狼星，其余为空域。
+- 唯一资源公模为 `通用星体.prefab`；GameRes 的 space 阶段按 JSON 构建资源会话持有的运行时模板。SpaceMgr 通过 `InstantiatePlanetFromBodyConfiguration` 注入实例 Visual；未知生成身份也直接使用公模，不按星球名找 Prefab。远景与实体共用 `Planet.ApplySurfaceProperties`，随机实例独占可保存的外观，恢复不要求目录预先列出该身份。回归 `space/planet_visual_templates`、`universe_content`。
+- 大型矿石小行星 `asteroid_iron/copper/rare` 复用正式起降和星球地表，`SurfaceRadiusTiles=128/112/96` 固定有限环绕范围，矿山规则在 `NaturalItems/surface-asteroids.json`；JSON 外观使用 `PlanetSurfaceStyle.Asteroid`。真空地表以 `weather.enabled=0` 关闭自然天气，低重力下降沿正式轨迹延长至重力允许的时长。
 - 小型矿石由 `SpaceOreAsteroidCatalog` 读取 `Resources/Config/Space/ore-asteroids.json`，按中心星体与稳定身份确定矿簇、矿种及数量；`SpaceSessionState.OreAsteroids/GeneratedOreAsteroidSectors` 保留伤害和耗尽，不能随卸载重生。`ShipCombatBridge` 将岩石与船体/乘员统一排序，`SpaceSession.OreAsteroids` 先备齐冷矿物载荷再提交击碎，掉落复用 `SpaceLooseItemState` 拾取；碰撞仅用近身独立原生物理代理，外观复用矿石贴图。
 - 小行星规则在 `Systems/Space/rules.lua` 的 `ore_asteroid_rules/ore_asteroid_profiles`，离线回归 `Tools/Tests/OreAsteroids/verify.py`；真实掉矿/拾取和大型降落采矿分别由太空玩法的 `ore_asteroid_drops/ore_asteroid_landing` 采样，规则或外部编译不能替代现场验收。
 - `Assets/Resources/Config/Space/space-gameplay.json`：玩法；`Items/shells/space_ships.json`、`space_devices.json`：部件设备；`GameConfig/Structures/fixed-structures.json`：固定船型。ShipFixedStructureBuilder 经 ShipGroundBuildingStore 生成普通建筑。

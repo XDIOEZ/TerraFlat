@@ -582,18 +582,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 018ed509539fc28468cb88879c9f8966
-    m_Address: "Assets/2_Prefabs/World/Space/\u6C34\u661F.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ec5f13d9a16046de81bfd07afc2bee1a
-    m_Address: "Assets/2_Prefabs/World/Space/\u77FF\u77F3\u5C0F\u884C\u661F.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 01a9304d3ad266244b7df528f1428837
     m_Address: Assets/6_Art/Generated/Mechanical/Items/DrilledLog_Idle.png
     m_ReadOnly: 0
@@ -899,12 +887,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 165cdd179ecf95240a837f111f66d1d5
-    m_Address: "Assets/2_Prefabs/World/Space/\u571F\u661F.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 16f38f33714285247b623a2423e14c90
     m_Address: Assets/2_Prefabs/Core/Managers/WorldManager.prefab
@@ -1338,12 +1320,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 36f0b47149ae978459b4bb8863638d94
-    m_Address: "Assets/2_Prefabs/World/Space/\u91D1\u661F.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 376d214e3a0145eeace49abb23167d8a
     m_Address: Module_ManualProcessor
     m_ReadOnly: 0
@@ -1434,12 +1410,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3dd470cc7fe3a724db6e455263253c29
-    m_Address: "Assets/2_Prefabs/World/Space/\u5730\u7403.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3e32f389c0c274b4288fdff15830c523
     m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab
     m_ReadOnly: 0
@@ -1484,12 +1454,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 42acff50be302dc4d99613be14b0844e
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 42b6479597bb7e04083b8dcf245e3f71
-    m_Address: "Assets/2_Prefabs/World/Space/\u5929\u738B\u661F.prefab"
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -2528,12 +2492,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 8b4619eba9808f64f92359a091d87a46
-    m_Address: "Assets/2_Prefabs/World/Space/\u592A\u9633.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8b76d67405d201944b84dc9fcb9ee544
     m_Address: Assets/8_Animations/Character/Birds/Seagull/Flying_1.png
     m_ReadOnly: 0
@@ -2865,12 +2823,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a11b372bb3f1f2947973949c650b7f4b
-    m_Address: "Assets/2_Prefabs/World/Space/\u6728\u661F.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a13e6d6d4e3f4e7aa9ce9d78f0d26a01
     m_Address: flatworld.actor.animator.zombie
     m_ReadOnly: 0
@@ -3020,12 +2972,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - TileBlock
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: abd82adf4391d7c4aad84ee431f16c2e
-    m_Address: "Assets/2_Prefabs/World/Space/\u6D77\u738B\u661F.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: adb1d3bd32e145c587df73b2990dc00d
     m_Address: Assets/6_Art/Generated/Environment/Mine_Gold/Mine_Gold_Idle.png
@@ -3237,12 +3183,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: bd889e1a71d862d46b871cce3b4e4f45
-    m_Address: "Assets/2_Prefabs/World/Space/\u6708\u4EAE.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: be2baeaf723df76448f5ab8b658d9d3b
     m_Address: Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Picker.prefab
@@ -3957,12 +3897,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: f6c78a2c3efe0264c8c88828280695cf
-    m_Address: "Assets/2_Prefabs/World/Space/\u706B\u661F.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f75861c6e3f25eb4eb01b03f0816e913
     m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Toggle.prefab

@@ -1,5 +1,50 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
+test.system("space", "planet_visual_templates", {}, function(data)
+    local function near(value, expected, label)
+        assert(type(value) == "number" and math.abs(value - expected) < .000001, label .. "不一致")
+    end
+    local function same(actual, expected, label)
+        assert(type(actual) == type(expected), label .. "类型不一致")
+        if type(expected) == "table" then
+            for key, value in pairs(expected) do same(actual[key], value, label .. "/" .. key) end
+        elseif type(expected) == "number" then near(actual, expected, label)
+        else assert(actual == expected, label .. "不一致") end
+    end
+    assert(data.scope == "isolated-json-planet-templates" and #data.templates > 0, "缺少独立 JSON 星球模板采样")
+    for _, sample in ipairs(data.templates) do
+        local label, visual, properties = sample.bodyId, sample.generated, sample.properties
+        assert(sample.independentConfiguration, label .. "外观配置与模板共享可变对象")
+        same(visual, sample.definition, label .. "/生成外观")
+        for _, field in ipairs({"styleIndex", "baseColor", "accentColor", "detailStrength", "detailScale"}) do
+            same(properties[field], visual[field], label .. "/着色参数:" .. field)
+        end
+        near(properties.extent, visual.style == "Stellar" and 1.3 or 1.12, label .. "/星球边缘")
+    end
+    assert(data.dynamicBodyId == "probe-random-planet" and data.stableIdentity and data.alternateSeed,
+        "任意 JSON 星球身份未正确生成，或随机种子未隔离")
+    assert(data.expected.style == "Ocean" and data.expected.detailScale == 19, "JSON 外观类型或细节未生效")
+    near(data.expected.baseColor[1], .12, "JSON 自定义底色")
+    near(data.expected.accentColor[2], .43, "JSON 自定义强调色")
+    near(data.expected.detailStrength, .37, "JSON 自定义细节强度")
+    for _, field in ipairs({"repeated", "binary", "rebound", "definitionAfterMutation", "sourceAfterCloneMutation"}) do
+        same(data[field], data.expected, "独立外观/" .. field)
+    end
+    near(data.cloned.baseColor[1], .98, "克隆底色")
+    near(data.cloned.accentColor[2], .97, "克隆强调色")
+    assert(data.unknownBody.version == 3 and data.unknownBody.count == 1, "随机星球快照版本错误或恢复后增删了星球")
+    same(data.unknownBody.restored, data.unknownBody.before, "目录未登记的随机星球保存和重绑")
+    assert(#data.invalidConfigurations == 2, "缺少错误 JSON 样本")
+    for _, invalid in ipairs(data.invalidConfigurations) do
+        assert(type(invalid.exception) == "string" and #invalid.exception > 0,
+            "缺失或损坏的外观配置被接受：" .. invalid.label)
+    end
+    if data.planetPrefabs then
+        assert(#data.planetPrefabs == 1 and data.planetPrefabs[1].name == data.commonPrefabId and
+            data.planetPrefabs[1].spriteReady, "星球公模缺失或仍保留专属星球预制体")
+    end
+end, "JSON星球外观、公模复用、随机实例隔离与保存往返")
+
 test.system("space", "ore_asteroid_rules", {}, function(data)
     local function same(a, b)
         if type(a) ~= type(b) then return false end
@@ -687,7 +732,7 @@ do
     end
     test.system("space", "ship_snapshots", {}, function(data)
         assert(data.operation == "ship_snapshots" and data.scope == "production-domain", "缺少正式快照领域结果")
-        assert(data.version == 2 and data.stableRepeatSnapshot == true, "会话快照版本或重复往返不稳定")
+        assert(data.version == 3 and data.stableRepeatSnapshot == true, "会话快照版本或重复往返不稳定")
         near(data.simulationSeconds, 123.5, "会话时钟往返丢失")
         assert(data.shipCount == 1 and data.flightCount == 1 and data.navigationCount == 1 and data.looseCount == 1,
             "快照往返丢失船体、飞行、导航或散落物")

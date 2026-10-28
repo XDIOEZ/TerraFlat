@@ -39,7 +39,7 @@ python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --ca
 
 | 主题用例 / Lua 文件 | 包含的子检查 |
 | --- | --- |
-| `universe_content` / `universe_content.lua` | 入场、全部星体目录、公转自转、宇宙快照、全部冷地表 |
+| `universe_content` / `universe_content.lua` | 入场、全部星体目录、启动 JSON 外观模板及随机身份公模构建、公转自转、含外观的 v3 宇宙快照、全部冷地表 |
 | `sector_rules` / `sector_rules.lua` | 双精度坐标、跨界接触、四向/角落租约、折返、多观察者 |
 | `ship_rules` / `ship_rules.lua` | 结构、对接、气密、质量、推进、接触、快照、引擎安装、燃料、光纤 |
 | `space_gameplay` / `space_gameplay.lua` | 真实会话、模板、星体表现、起飞导航降落、向右越界折返、船体接触 |

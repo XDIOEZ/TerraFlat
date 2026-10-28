@@ -93,6 +93,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("space/cabin_topology", WorldCabinTopology);
         operations.Add("space/ship_fuel", WorldShipFuel);
         operations.Add("space/coordinates", _ => GameplayTestUniverseProbe.Capture("coordinates"));
+        operations.Add("space/planet_visual_templates", WorldPlanetVisualTemplates);
         operations.Add("space/streaming", _ => GameplayTestUniverseProbe.Capture("streaming"));
         operations.Add("space/ship_surface_state", _ => GameplayTestShipSurfaceProbe.Capture());
         operations.Add("space/presentation_interpolation", _ => GameplayTestSpacePresentationProbe.Capture());

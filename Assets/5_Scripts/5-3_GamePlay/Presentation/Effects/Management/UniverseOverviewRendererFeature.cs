@@ -160,7 +160,6 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
         private readonly Mesh quad;
         private readonly ProfilingSampler sampler = new("FlatWorld Universe Overview");
         private readonly Dictionary<string, MaterialPropertyBlock> appearances = new(StringComparer.Ordinal);
-        private readonly HashSet<string> missingPrefabs = new(StringComparer.Ordinal);
         private readonly Dictionary<SpaceSectorId, UniverseSimulation> previews = new();
         private readonly HashSet<SpaceSectorId> drawnSectors = new();
         private RTHandle texture;
@@ -192,7 +191,7 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
         public void Reset()
         {
             ReleaseTexture();
-            appearances.Clear(); missingPrefabs.Clear(); previews.Clear(); drawnSectors.Clear();
+            appearances.Clear(); previews.Clear(); drawnSectors.Clear();
             session = null; anchor = null;
         }
         public void Dispose() { Reset(); CoreUtils.Destroy(quad); }
@@ -264,19 +263,11 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
                 double radius = Math.Max(body.RadiusMeters / halfHeight, minimumPixels * 2d / Math.Max(1, pixelHeight));
                 double extent = radius * 1.3d;
                 if (Math.Abs(x) > aspect + extent || Math.Abs(y) > 1d + extent) continue;
-                if (!appearances.TryGetValue(body.PrefabId, out MaterialPropertyBlock properties))
+                if (!appearances.TryGetValue(body.BodyId, out MaterialPropertyBlock properties))
                 {
-                    GameObject prefab = GameRes.ExistingInstance?.GetPrefab(body.PrefabId, false);
-                    Planet planet = prefab != null ? prefab.GetComponent<Planet>() : null;
-                    if (planet == null)
-                    {
-                        if (missingPrefabs.Add(body.PrefabId)) Debug.LogError("[UniverseView] 星体外观未加载：" + body.PrefabId);
-                        continue;
-                    }
                     properties = new MaterialPropertyBlock();
-                    planet.ApplySurfaceProperties(properties);
-                    appearances.Add(body.PrefabId, properties);
-                    missingPrefabs.Remove(body.PrefabId);
+                    Planet.ApplySurfaceProperties(properties, body.Visual);
+                    appearances.Add(body.BodyId, properties);
                 }
                 double angle = body.RotationInitialRadians + (Math.Abs(body.RotationPeriodSeconds) > 1e-12d
                     ? state.SimulationSeconds * Math.PI * 2d / body.RotationPeriodSeconds : 0d);

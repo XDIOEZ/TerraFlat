@@ -313,6 +313,7 @@ public partial class GameRes
         LiquidTypes = null;
         FluidCatalog.Reset();
         AtmosphereCatalog.Reset();
+        FlatWorld.Spaceflight.SpaceCatalog.Reset();
         AnimalSkillCatalogService.Reset();
         QuestCatalog.Reset();
         textLibraryService = TextLibraryService.Empty;

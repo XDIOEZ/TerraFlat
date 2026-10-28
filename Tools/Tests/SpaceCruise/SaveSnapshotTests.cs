@@ -48,7 +48,7 @@ internal static partial class Program
         for (int cycle = 0; cycle < 3; cycle++)
         {
             state = JsonConvert.DeserializeObject<SpaceSessionState>(JsonConvert.SerializeObject(state));
-            Check(state.Version == 2 && state.NavigationSequence == 17 && state.LooseItems.Count == 2,
+            Check(state.Version == 3 && state.NavigationSequence == 17 && state.LooseItems.Count == 2,
                 "session version, navigation sequence and loose item count must survive repeated saves");
             Check(state.Sectors[0].TemplateId == "save-fixture" && state.Sectors[0].Seed == 42,
                 "universe identity must survive saves containing loose items");

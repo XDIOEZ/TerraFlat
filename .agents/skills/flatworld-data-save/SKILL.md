@@ -6,7 +6,7 @@ description: "FlatWorld 实例快照、核心存档、区块差量、资源配�
 # 数据与存档
 
 - 存档/角色改名的 `out reason` 由存档服务按真实校验与写盘阶段给出，UI原样呈现；资源重载结果区分目录发布前后，保留实际错误而不一概宣称旧资源仍在运行。
-- 当前核心封装版本为 CompactSaveEnvelope/34，天然冰融化进度随地表稀疏快照保存；`SaveDataMgr.SaveData` 根属性在磁盘/网络替换时同步装配业务配置，构建失败恢复旧根，业务配置入口不反查存档或难度。
+- 当前核心封装版本为 CompactSaveEnvelope/35，PlanetData 不再保存 Prefab 身份；`SaveDataMgr.SaveData` 根属性在磁盘/网络替换时同步装配业务配置，构建失败恢复旧根，业务配置入口不反查存档或难度。
 
 ## 代码入口
 
@@ -27,7 +27,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 - `GameManager.SaveGame` 为设置按钮和帐篷共用的手动保存入口：主线程立即采集完整快照、后台原子写盘，保存状态等待真实任务结果；自动保存单独走 `SaveGameInBackgroundCoroutine` 的分帧预算。睡眠先记重生点并保存，再应用临时时间倍率。
 
-- 当前外层 FWD6/15，直接包含 CompactSaveEnvelope/34，避免多层整档字节复制；同步、自动和网络快照共用格式。地形区块逐条冻结，生态动态块的 ChangedItems 逐物品独立冻结，不进入核心整档重捕获；载入时在主线程恢复 Item/扩展状态。格式头先校验，仅支持当前格式，拒绝的文件保留。磁盘载入失败清空当前档案和角色，完整解析与 MOD 验证成功后才替换区块差量；普通损坏仍依次尝试备份和临时文件。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
+- 当前外层 FWD6/15，直接包含 CompactSaveEnvelope/35，避免多层整档字节复制；同步、自动和网络快照共用格式。地形区块逐条冻结，生态动态块的 ChangedItems 逐物品独立冻结，不进入核心整档重捕获；载入时在主线程恢复 Item/扩展状态。格式头先校验，仅支持当前格式，拒绝的文件保留。磁盘载入失败清空当前档案和角色，完整解析与 MOD 验证成功后才替换区块差量；普通损坏仍依次尝试备份和临时文件。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
 - ItemData 的持久化边界是 InstanceSnapshot，JSON/Unity 字段是配置外壳。冷数据不查 GameRes；入世/入包先按当前定义恢复重量/标签/耐久/模块，再合并稳定模块实例状态，未知扩展负载保留。
 - ItemInstanceDataFactory 冷编译共享配置/默认状态，CloneRuntime 创建独立运行态，不经 MemoryPack 往返；同 GUID 跨槽保留 ItemData 引用，分堆分配新 GUID。活跃库存只 rebase 新冷物品，专用二进制库存由持有模块显式逐槽处理。
 - InventoryInstanceSnapshot 只保存内容/用户状态，恢复保留当前槽标签、UI、输入。不透明 BitData 的配置/进度由模块区分；IItemInstanceStateRestorer 在模块状态恢复后恢复派生属性。
@@ -58,7 +58,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 - CompactSaveEnvelope.MechanicalNetworks 保存 MachineArchive；GameSaveData.Mechanical 为 MemoryPackIgnore。落地机器不在 Item 档双写，冷 ItemData 不创建运行 Item，缺失 MOD 机器保留原快照；专用加工库存恢复当前定义。
 - 外层 DroppedItems 保存独立版本掉落快照，GameSaveData.DroppedItems 为 MemoryPackIgnore；按实际维度 WorldKey 隔离，存稳定 ID/库存/轨迹，不存 Entity 地址或显示对象，缺失定义保留记录。
-- SpaceStateJson v2 在核心封装前捕获星区目录、唯一模拟时钟、船/接口身份、局部乘员、实际 ItemInstanceSnapshot、船作用域 MachineArchive、舱气、导航/下降阶段及未结算预算。恢复先校验版本和星区身份，按乘员真实星区/飞行阶段选场景；游戏运行中无人星区继续推进纯数据，离线/加载不补模拟。冷地表撞击读取目标冻结地形与最新差量，按 GUID 去重。
+- SpaceStateJson v3 在核心封装前捕获星区目录、星球 Visual、唯一模拟时钟、船/接口身份、局部乘员、实际 ItemInstanceSnapshot、船作用域 MachineArchive、舱气、导航/下降阶段及未结算预算。恢复先校验版本和星区身份，按乘员真实星区/飞行阶段选场景；游戏运行中无人星区继续推进纯数据，离线/加载不补模拟。冷地表撞击读取目标冻结地形与最新差量，按 GUID 去重。
 - SpaceLooseItemState 是独立散落物保存模型；Scale 用字段专属 JSON 转换器只读写 x/y/z，不能直接展开 Unity Vector3 的计算属性。SpaceCruise 离线回归覆盖缩放及完整会话快照往返，不操作 Play Mode。
 - LiquidContainerState.Composition 保存真实份数、尾量、PendingOutputs/随机态；FluidInventoryState 保存 decimal 气液 mol、内能和各口预留，预留已计入库存，温压/比例派生。
 - PlanetData.Atmosphere 仅首次按 Profile 初始化，保存固定容量与实际余量，同星球维度共用；PressureExplosionQueue 和组合罐待释放预算进入机器档案。

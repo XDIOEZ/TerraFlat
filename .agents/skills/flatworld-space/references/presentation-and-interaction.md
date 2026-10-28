@@ -7,8 +7,8 @@
 - 太空驾驶 Mod_Cam.PresentationLocked 跟同一插值中心、固定 LateUpdate、无额外 XY 阻尼/前探；地表驾驶沿用偏好，释放恢复原更新方式和最新设置。DrivingCameraMaxSize=120000，滚轮倍率 1.25，退出还原尺寸。
 - UIManager 持久 UI 根；星区卸载不毁 HUD。单机 PresentationCache 最多留 2 个已装配星区根，禁用移持久根，旧 Scene 卸完才恢复；State/资源代际/EndSession 清理。ViewCache 只留最多 16 个整船碰撞表现，舱内普通区块与 Item 继续由独立世界持有，不再缓存第二套船件对象。
 - 星球/星空只在太空 Scene；星区租约分帧准备，地表初入太空等 PreparePresentationForCamera 预建并完成一帧。SpaceStarfield 以 SectorPosition 差算视差，固定 420 点单网格+Resources/Space/Starfield Shader，拉远不增对象/重抽。
-- PlanetSurfacePresentation 每体四顶点、共享 Resources/Space/PlanetSurface 材质，MPB 传种子/太阳方向，GPU 球面/云/气体/日冕，导数淡远细节；太阳自发光，其他 URP 2D 光照，外观在各 Prefab。
-- 地表 UniverseOverviewRendererFeature 仅观察；SurfaceZoomTransition 在 60～90 直接淡变，云圈固定玩家世界半径，90 时视高=星球直径30%。未进星区只建表现目录副本，读真实星体时钟/位置及 Prefab，不取权威 GetUniverse、不租 Scene/迁移；驾驶覆盖/洞穴禁用。
+- PlanetSurfacePresentation 每体四顶点、共享 Resources/Space/PlanetSurface 材质，MPB 传种子/太阳方向，GPU 球面/云/气体/日冕，导数淡远细节；太阳自发光，其他 URP 2D 光照，外观由 BodyState.Visual 的 JSON 模板提供，实体/远景共用参数装配。
+- 地表 UniverseOverviewRendererFeature 仅观察；SurfaceZoomTransition 在 60～90 直接淡变，云圈固定玩家世界半径，90 时视高=星球直径30%。未进星区只建表现目录副本，读真实星体时钟/位置及 Visual，不取权威 GetUniverse、不租 Scene/迁移；驾驶覆盖/洞穴禁用。
 
 ## 起降与船件渲染
 
