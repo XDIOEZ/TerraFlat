@@ -40,6 +40,7 @@ public static partial class GameplayTestSystemProbe
         RegisterSpawnCountdownOperations(result);
         RegisterInteractionOperations(result);
         RegisterNavigationOperations(result);
+        result.Add("terrain/generation_stage_ownership", WorldGenerationStageOwnership);
         RegisterEnvironmentBatchOperations(result);
         RegisterGreenhouseOperations(result);
         RegisterSurfaceThawOperations(result);

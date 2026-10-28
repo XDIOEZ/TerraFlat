@@ -120,3 +120,12 @@ test.system("world_streaming", "base_presentation_steps", {}, function(data)
     assert(data.waterSkippedLavaScan and data.lavaRemovalPreserved,
         "无岩浆的水流错误触发全区块发光扫描，或新增/排空岩浆没有请求更新")
 end, "基础地形分步预算、脏格重扫和取消所有权")
+
+test.system("world_streaming", "map_generation_plan", {}, function(data)
+    assert(data.ordered and data.originalUnchanged and data.separatePlans and data.successReasonEmpty,
+        "地图生成阶段排序、同阶段声明顺序或独立计划被改变")
+    assert(data.rejectEmpty and data.rejectNullStage and data.rejectMissingTerrain,
+        "空管线、空生成器或缺失地形阶段没有被正式计划拒绝")
+    assert(data.rejectDuplicateTerrain and data.rejectUndefinedStage,
+        "重复地形或非法阶段被接受，导致生成生命周期含糊")
+end, "地图生成计划保持稳定阶段顺序并明确拒绝非法声明")

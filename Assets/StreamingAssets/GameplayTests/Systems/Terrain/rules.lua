@@ -446,6 +446,19 @@ for _, case in ipairs({
     end, "河湖正式生成的冷暖缓存、独立实例与顺序稳定：" .. case.label)
 end
 
+test.system("terrain", "generation_stage_ownership", {}, function(data)
+    assert(data.pendingCold and not data.pendingWarm and data.warmAfterCancel and data.pendingAfterReset,
+        "区域水文缓存没有独立持有冷暖状态、单请求取消或纪元失效")
+    assert(data.cancelledRejected and data.retiredRejected and data.cancelledDecoratorCalls == 0,
+        "取消或旧纪元请求仍进入地形扩展阶段")
+    assert(data.firstHash == data.nextHash and data.firstHash ~= data.caveHash,
+        "纪元重建改变同种子地形，或洞穴没有使用独立阶段")
+    assert(data.decoratorCalls == 3 and data.surfaceStructures > 0 and data.caveStructures == 0,
+        "结构覆盖与地形扩展顺序错误，或洞穴误应用地表结构")
+    assert(data.surfaceMarker == 777 and data.caveMarker == 777,
+        "流水线没有提交地表或洞穴扩展修改后的最终地形")
+end, "生成阶段：结构先于扩展、独立洞穴、缓存取消与纪元重建")
+
 test.system("terrain", "river_diagnostic_aggregation", {}, function(data)
     local prefix = "river.local_refine."
     assert(data.firstCounts[prefix .. "invocations"] == 1 and

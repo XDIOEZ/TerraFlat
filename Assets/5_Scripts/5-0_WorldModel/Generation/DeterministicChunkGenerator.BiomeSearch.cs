@@ -53,16 +53,9 @@ namespace FlatWorld.WorldModel
 
             // 定位复用已完成的河网，但新计算独立取消，不能留下搜索专用预热任务。
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken, sharedHydrologyCancellation.Token);
+                cancellationToken, hydrologyRegions.LifetimeToken);
             var queryGenerator = new DeterministicChunkGenerator(liquidTypes, terrainDecorator) { isBiomeSearchGenerator = true };
-            queryGenerator.sharedHydrologyCancellation.Dispose();
-            queryGenerator.sharedHydrologyCancellation = lifetime;
-            foreach (KeyValuePair<HeightDrivenRegionKey, Lazy<MacroHydrologyRegion>> pair in heightDrivenRegionCache)
-            {
-                if (!pair.Value.IsValueCreated) continue;
-                queryGenerator.heightDrivenRegionCache.TryAdd(pair.Key, pair.Value);
-                queryGenerator.heightDrivenCacheOrder.Enqueue(pair.Key);
-            }
+            queryGenerator.hydrologyRegions.UseSearchLifetimeAndCompletedRegions(lifetime, hydrologyRegions);
             return new BiomeLocator(queryGenerator, dimensionId, worldSeed == 0 ? 1 : worldSeed,
                 profile, topology, anchor, biome, lifetime.Token, worldEpoch, progress).Run();
         }
@@ -317,7 +310,7 @@ namespace FlatWorld.WorldModel
                     var request = Request(new Int2((int)x, (int)y));
                     sampledCount++;
                     Report(true);
-                    MacroHydrologyRegion macro = generator.GetHeightDrivenMacroRegion(request, settings, token);
+                    MacroHydrologyRegion macro = generator.hydrologyRegions.GetOrGenerateRegion(request, settings, token);
                     var nodes = new List<int>();
                     for (int i = 0; i < macro.Count; i++)
                         if (macro.Visible[i] && macro.Downstream[i] >= 0) nodes.Add(i);

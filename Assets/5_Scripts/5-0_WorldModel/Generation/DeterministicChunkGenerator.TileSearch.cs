@@ -20,16 +20,9 @@ namespace FlatWorld.WorldModel
             if (worldEpoch <= 0) throw new ArgumentOutOfRangeException(nameof(worldEpoch));
             dimensionId = string.IsNullOrWhiteSpace(dimensionId) ? "surface" : dimensionId;
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken, sharedHydrologyCancellation.Token);
+                cancellationToken, hydrologyRegions.LifetimeToken);
             var query = new DeterministicChunkGenerator(liquidTypes, terrainDecorator) { isBiomeSearchGenerator = true };
-            query.sharedHydrologyCancellation.Dispose();
-            query.sharedHydrologyCancellation = lifetime;
-            foreach (var pair in heightDrivenRegionCache)
-            {
-                if (!pair.Value.IsValueCreated) continue;
-                query.heightDrivenRegionCache.TryAdd(pair.Key, pair.Value);
-                query.heightDrivenCacheOrder.Enqueue(pair.Key);
-            }
+            query.hydrologyRegions.UseSearchLifetimeAndCompletedRegions(lifetime, hydrologyRegions);
             var excluded = excludedChunks == null ? new HashSet<Int2>() : new HashSet<Int2>(excludedChunks);
             var rejected = excludedCells == null ? new HashSet<Int2>() : new HashSet<Int2>(excludedCells);
             int startX = topology.IsWrapped ? topology.Min.X : 0;

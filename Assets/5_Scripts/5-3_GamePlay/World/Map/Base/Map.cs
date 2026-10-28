@@ -32,15 +32,7 @@ public partial class Map : Item
 
     // 协程引用管理，避免协程叠加
     public Coroutine loadTileMapCoroutine;
-    public Coroutine backTilePenaltyCoroutine;
     public Coroutine loadOrGenerateCoroutine;
-
-    [Header("寻路权重烘焙配置")]
-    [SerializeField, Min(1)]
-    private int backTilePenaltyTilesPerYield = 200;
-
-    [SerializeField, Min(0f)]
-    private float backTilePenaltyYieldSeconds = 0f;
 
     [Header("Tilemap加载分帧配置")]
     [SerializeField, Min(16)]
@@ -70,29 +62,15 @@ public partial class Map : Item
     public int ScaledTilemapLoadBatchSize =>
         ChunkMgr.ScaleCurrentChunkLoadItemBudget(TilemapLoadBatchSize, 16);
 
-    private float backTilePenaltyWaitSeconds = -1f;
-    private WaitForSeconds backTilePenaltyWait;
-    private float lastBackTilePenaltyTime = -999f;
-    private bool backTilePenaltyPending;
     private bool backTilePenaltyForceFull = true;
     [NonSerialized] private bool tilemapVisualReady;
-    private static Map activeProceduralGenerationMap;
-    [NonSerialized] private bool ownsProceduralGenerationSlot;
-    [NonSerialized] private MapGenerationContext activeGenerationContext;
-    [NonSerialized] private string lastGenerationFailure;
-    [NonSerialized] private TileBase[] groundTileRowBuffer;
-    [NonSerialized] private TileBase[] blockingTileRowBuffer;
-    [NonSerialized] private int lastInitialRenderBatchCount;
-    [NonSerialized] private int lastInitialRenderTileCount;
     private readonly HashSet<Vector2Int> backTilePenaltyDirtyCells = new HashSet<Vector2Int>();
-    private readonly List<Vector2Int> backTilePenaltyDirtySnapshot = new List<Vector2Int>(128);
+
+    private readonly MapTilemapRowPresenter tilemapPresenter = new MapTilemapRowPresenter();
 
     [SerializeReference]
     public List<ChunkGeneratorBase> mapGenerators = new List<ChunkGeneratorBase>();
 
-    /// <summary>
-    /// 兼容调试/显示：通常 0 号位放 ChunkGenerator_Land。
-    /// </summary>
     public ChunkGenerator_Land LandGenerator => GetGenerator<ChunkGenerator_Land>();
 
     public bool IsReadyForChunkLifecycle =>
@@ -107,8 +85,8 @@ public partial class Map : Item
     public bool HasGenerationFailed => !string.IsNullOrEmpty(lastGenerationFailure);
     public string LastGenerationFailure => lastGenerationFailure;
     public MapGenerationContext ActiveGenerationContext => activeGenerationContext;
-    public int LastInitialRenderBatchCount => lastInitialRenderBatchCount;
-    public int LastInitialRenderTileCount => lastInitialRenderTileCount;
+    public int LastInitialRenderBatchCount => tilemapPresenter.BatchCount;
+    public int LastInitialRenderTileCount => tilemapPresenter.TileCount;
     public event Action<Map, string> OnGenerationFailed;
 
     /// <summary>Tilemap 就绪、失效、增量刷新及启停的通用表现通知；不依赖 Item 实例化路径。</summary>
@@ -235,12 +213,6 @@ public partial class Map : Item
             loadTileMapCoroutine = null;
         }
 
-        if (backTilePenaltyCoroutine != null)
-        {
-            StopCoroutine(backTilePenaltyCoroutine);
-            backTilePenaltyCoroutine = null;
-        }
-
         if (loadOrGenerateCoroutine != null)
         {
             StopCoroutine(loadOrGenerateCoroutine);
@@ -248,39 +220,8 @@ public partial class Map : Item
         }
 
         ReleaseProceduralGenerationSlot();
-        backTilePenaltyPending = false;
+
         activeGenerationContext = null;
-    }
-
-    private void CancelPendingGeneratorWork()
-    {
-        if (mapGenerators == null)
-            return;
-
-        for (int i = 0; i < mapGenerators.Count; i++)
-            mapGenerators[i]?.CancelPendingWork();
-    }
-
-    private IEnumerator WaitForProceduralGenerationSlot()
-    {
-        while (activeProceduralGenerationMap != null &&
-               activeProceduralGenerationMap != this)
-        {
-            yield return null;
-        }
-
-        activeProceduralGenerationMap = this;
-        ownsProceduralGenerationSlot = true;
-    }
-
-    private void ReleaseProceduralGenerationSlot()
-    {
-        if (!ownsProceduralGenerationSlot)
-            return;
-
-        ownsProceduralGenerationSlot = false;
-        if (activeProceduralGenerationMap == this)
-            activeProceduralGenerationMap = null;
     }
 
     public void EnsureTilemapVisualReady()
@@ -322,257 +263,6 @@ public partial class Map : Item
 
         Debug.LogError("[Map.Load] tileMap 为空，无法加载/生成地图", this);
         return false;
-    }
-
-    private object GetBackTilePenaltyYieldToken()
-    {
-        float seconds = backTilePenaltyYieldSeconds;
-        if (seconds <= 0f)
-            return null;
-
-        if (backTilePenaltyWait == null || !Mathf.Approximately(backTilePenaltyWaitSeconds, seconds))
-        {
-            backTilePenaltyWaitSeconds = seconds;
-            backTilePenaltyWait = new WaitForSeconds(seconds);
-        }
-
-        return backTilePenaltyWait;
-    }
-
-    private void InitMapGenerators()
-    {
-        for (int i = 0; i < mapGenerators.Count; i++)
-        {
-            ChunkGeneratorBase generator = mapGenerators[i];
-            if (generator == null)
-            {
-                Debug.LogError($"[Map.InitMapGenerators] mapGenerators[{i}] 为空", this);
-                continue;
-            }
-
-            generator.Init(this);
-        }
-
-    }
-
-    public T GetGenerator<T>() where T : ChunkGeneratorBase
-    {
-        if (mapGenerators == null)
-            return null;
-
-        for (int i = 0; i < mapGenerators.Count; i++)
-        {
-            if (mapGenerators[i] is T typed)
-                return typed;
-        }
-
-        return null;
-    }
-
-    private IEnumerator GenerateByPipelineCoroutine(PlanetData planetData)
-    {
-        if (!TryBuildOrderedPipeline(out List<ChunkGeneratorBase> orderedGenerators, out string validationError))
-        {
-            FailGeneration(null, validationError, null);
-            yield break;
-        }
-
-        data ??= new Data_TileMap();
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        Data.EnsureTileStorage(
-            Mathf.Max(1, Mathf.RoundToInt(chunkSize.x)),
-            Mathf.Max(1, Mathf.RoundToInt(chunkSize.y)));
-        Data.TileLoaded = false;
-
-        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
-        DimensionManager dimensionManager = DimensionManager.Instance;
-        int worldSeed = dimensionManager != null
-            ? dimensionManager.GetActiveGenerationSeed(baseSeed)
-            : baseSeed;
-        WorldAddress worldAddress = dimensionManager != null
-            ? dimensionManager.ActiveAddress
-            : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
-        var context = new MapGenerationContext(
-            this,
-            planetData,
-            worldSeed,
-            worldAddress,
-            dimensionManager != null ? dimensionManager.ActiveDefinition : null,
-            WrappedWorldGenerationDomain.Create(planetData));
-        activeGenerationContext = context;
-
-        GenerationStage? activeStage = null;
-        for (int i = 0; i < orderedGenerators.Count; i++)
-        {
-            ChunkGeneratorBase generator = orderedGenerators[i];
-
-            IEnumerator generatorRoutine;
-            try
-            {
-                generator.Init(this);
-                if (activeStage != generator.Stage)
-                {
-                    context.BeginStage(generator.Stage);
-                    activeStage = generator.Stage;
-                }
-                generatorRoutine = generator.GenerateAsync(
-                    context,
-                    ProceduralGenerationCellsPerFrame);
-            }
-            catch (Exception exception)
-            {
-                FailGeneration(
-                    context,
-                    $"阶段 {generator.Stage} 初始化失败：{generator.GetType().Name}",
-                    exception);
-                yield break;
-            }
-
-            bool generatorFailed = false;
-            Exception generatorException = null;
-            while (generatorRoutine != null)
-            {
-                bool hasNext;
-                object current = null;
-                try
-                {
-                    hasNext = generatorRoutine.MoveNext();
-                    if (hasNext)
-                        current = generatorRoutine.Current;
-                }
-                catch (Exception exception)
-                {
-                    generatorFailed = true;
-                    generatorException = exception;
-                    break;
-                }
-
-                if (!hasNext)
-                    break;
-
-                yield return current;
-            }
-
-            try
-            {
-                (generatorRoutine as IDisposable)?.Dispose();
-            }
-            catch (Exception exception)
-            {
-                generatorFailed = true;
-                generatorException ??= exception;
-            }
-            if (context.IsCancellationRequested)
-                yield break;
-            if (generatorFailed)
-            {
-                FailGeneration(
-                    context,
-                    $"阶段 {generator.Stage} 执行失败：{generator.GetType().Name}",
-                    generatorException);
-                yield break;
-            }
-
-            bool stageCompleted = i == orderedGenerators.Count - 1 ||
-                                  orderedGenerators[i + 1].Stage != generator.Stage;
-            if (!stageCompleted)
-                continue;
-
-            try
-            {
-                context.CompleteStage(generator.Stage);
-                activeStage = null;
-            }
-            catch (Exception exception)
-            {
-                FailGeneration(
-                    context,
-                    $"阶段 {generator.Stage} 完成状态提交失败：{generator.GetType().Name}",
-                    exception);
-                yield break;
-            }
-            yield return null;
-        }
-
-        if (SaveDataMgr.Instance != null &&
-            !SaveDataMgr.Instance.TryFinalizeProceduralChunk(chunk, out string persistenceFailure))
-        {
-            FailGeneration(context, $"程序化区块基线或差量应用失败：{persistenceFailure}", null);
-            yield break;
-        }
-
-        // TileLoaded and Succeeded are committed only after batched Tilemap finalization succeeds.
-    }
-
-    private bool TryBuildOrderedPipeline(
-        out List<ChunkGeneratorBase> orderedGenerators,
-        out string failureReason)
-    {
-        orderedGenerators = new List<ChunkGeneratorBase>();
-        failureReason = null;
-        if (mapGenerators == null || mapGenerators.Count == 0)
-        {
-            failureReason = "mapGenerators 为空。";
-            return false;
-        }
-
-        var entries = new List<(ChunkGeneratorBase Generator, int SerializedIndex)>(mapGenerators.Count);
-        int baseTerrainCount = 0;
-        for (int i = 0; i < mapGenerators.Count; i++)
-        {
-            ChunkGeneratorBase generator = mapGenerators[i];
-            if (generator == null)
-            {
-                failureReason = $"mapGenerators[{i}] 为空。";
-                return false;
-            }
-
-            if (!Enum.IsDefined(typeof(GenerationStage), generator.Stage))
-            {
-                failureReason = $"mapGenerators[{i}] 使用了非法生成阶段 {(int)generator.Stage}。";
-                return false;
-            }
-
-            if (generator.Stage == GenerationStage.BaseTerrain)
-                baseTerrainCount++;
-            entries.Add((generator, i));
-        }
-
-        if (baseTerrainCount != 1)
-        {
-            failureReason = $"生成管线必须恰好包含一个 BaseTerrain，当前为 {baseTerrainCount}。";
-            return false;
-        }
-
-        entries.Sort((left, right) =>
-        {
-            int stageOrder = left.Generator.Stage.CompareTo(right.Generator.Stage);
-            return stageOrder != 0 ? stageOrder : left.SerializedIndex.CompareTo(right.SerializedIndex);
-        });
-        for (int i = 0; i < entries.Count; i++)
-            orderedGenerators.Add(entries[i].Generator);
-        return true;
-    }
-
-    private void FailGeneration(MapGenerationContext context, string reason, Exception exception)
-    {
-        string message = string.IsNullOrWhiteSpace(reason) ? "地图生成失败" : reason;
-        context?.Fail(message, exception);
-        if (Data != null)
-            Data.TileLoaded = false;
-        tilemapVisualReady = false;
-        tileMap?.ClearAllTiles();
-        TilemapPresentationChanged?.Invoke(this);
-        BlockingTilemapLayer.ClearMap(this);
-        SaveDataMgr.Instance?.DiscardProceduralChunkBaseline(chunk);
-        lastGenerationFailure = exception == null ? message : $"{message}: {exception.Message}";
-        Debug.LogError($"[Map.GenerateByPipeline] {lastGenerationFailure}\n{exception}", this);
-        OnGenerationFailed?.Invoke(this, lastGenerationFailure);
-        chunk?.MarkFailed(lastGenerationFailure);
-    }
-
-    private void OnGUI()
-    {
     }
 
     public override ItemData itemData => data;
@@ -654,55 +344,6 @@ public partial class Map : Item
         LoadTileData_To_TileMap_Ansync();
     }
 
-
-    private IEnumerator GenerateThenLoadTilemapCoroutine()
-    {
-        yield return WaitForProceduralGenerationSlot();
-        try
-        {
-            try
-            {
-                OnMapGenerated_Start.Invoke();
-            }
-            catch (Exception exception)
-            {
-                FailGeneration(null, "地图生成开始回调失败", exception);
-            }
-
-            if (HasGenerationFailed)
-                yield break;
-
-            PlanetData planetData = SaveDataMgr.Instance != null
-                ? SaveDataMgr.Instance.GetCurrentPlanetData()
-                : null;
-            yield return GenerateByPipelineCoroutine(planetData);
-        }
-        finally
-        {
-            ReleaseProceduralGenerationSlot();
-        }
-
-        bool generationSucceeded =
-            activeGenerationContext != null &&
-            !activeGenerationContext.HasFailed &&
-            !activeGenerationContext.IsCancellationRequested &&
-            !HasGenerationFailed;
-        if (!generationSucceeded)
-        {
-            activeGenerationContext = null;
-            loadOrGenerateCoroutine = null;
-            yield break;
-        }
-
-        chunk?.NotifyItemsLoaded();
-
-        tileMap.ClearAllTiles();
-        loadOrGenerateCoroutine = null;
-        LoadTileData_To_TileMap_Ansync();
-        // NotifyChunkReady 由 LoadTileData_To_TileMapCoroutine 结束时的 FinalizeTilemapLoad 触发
-    }
-
-
     //不需要保存数据 因为游戏中的所有对地图的行为 直接影响背后数据
     [Button("保存地图到数据")]
     public override void Save()
@@ -713,202 +354,6 @@ public partial class Map : Item
             SaveTileMap_TO_TileData();
         }
         base.Save();
-    }
-    #endregion
-
-    #region TileMap加载方法
-    public void LoadTileData_To_TileMap_Sync()
-    {
-        tilemapVisualReady = false;
-        TilemapPresentationChanged?.Invoke(this);
-        lastInitialRenderBatchCount = 0;
-        lastInitialRenderTileCount = 0;
-        tileMap.ClearAllTiles();
-        BlockingTilemapLayer blockingLayer = BlockingTilemapLayer.BeginBatch(this);
-        if (Data == null || Data.CountNonEmptyCells() == 0)
-        {
-            Debug.LogWarning("TileData is empty. Nothing to load.");
-            CompleteInitialTilemapBatch(blockingLayer);
-            FinalizeTilemapLoad();
-            return;
-        }
-
-        EnsureTilemapRowBuffers(Data.Width);
-        for (int localY = 0; localY < Data.Height; localY++)
-        {
-            if (!TryRenderTilemapRow(localY, ref blockingLayer, out string failureReason))
-            {
-                FailGeneration(activeGenerationContext, failureReason, null);
-                activeGenerationContext = null;
-                return;
-            }
-        }
-
-        CompleteInitialTilemapBatch(blockingLayer);
-        FinalizeTilemapLoad();
-    }
-
-    public void LoadTileData_To_TileMap_Ansync()
-    {
-        tilemapVisualReady = false;
-        TilemapPresentationChanged?.Invoke(this);
-        // 如果已有协程在运行，先停止它
-        if (loadTileMapCoroutine != null)
-        {
-            StopCoroutine(loadTileMapCoroutine);
-        }
-
-        // 启动新的协程
-        loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
-    }
-
-    private IEnumerator LoadTileData_To_TileMapCoroutine()
-    {
-        lastInitialRenderBatchCount = 0;
-        lastInitialRenderTileCount = 0;
-        tileMap.ClearAllTiles();
-        BlockingTilemapLayer blockingLayer = BlockingTilemapLayer.BeginBatch(this);
-        if (Data == null || Data.CountNonEmptyCells() == 0)
-        {
-            Debug.LogWarning("TileData is empty. Nothing to load.");
-            if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
-                Debug.LogWarning($"[WorldNav][Map] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
-            CompleteInitialTilemapBatch(blockingLayer);
-            loadTileMapCoroutine = null;
-            FinalizeTilemapLoad();
-            yield break;
-        }
-
-        EnsureTilemapRowBuffers(Data.Width);
-        int batchSize = ScaledTilemapLoadBatchSize;
-        int processedCount = 0;
-        int processedThisFrame = 0;
-        double frameBudgetMilliseconds = TilemapLoadFrameBudgetMilliseconds;
-        double ticksPerMillisecond = System.Diagnostics.Stopwatch.Frequency / 1000d;
-        long frameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
-
-        for (int localY = 0; localY < Data.Height; localY++)
-        {
-            int previousTileCount = lastInitialRenderTileCount;
-            if (!TryRenderTilemapRow(localY, ref blockingLayer, out string failureReason))
-            {
-                CompleteInitialTilemapBatch(blockingLayer);
-                loadTileMapCoroutine = null;
-                FailGeneration(activeGenerationContext, failureReason, null);
-                activeGenerationContext = null;
-                yield break;
-            }
-            int renderedInRow = lastInitialRenderTileCount - previousTileCount;
-            processedCount += renderedInRow;
-            processedThisFrame += Data.Width;
-
-            double elapsedMilliseconds =
-                (System.Diagnostics.Stopwatch.GetTimestamp() - frameStartTimestamp) / ticksPerMillisecond;
-            if (processedThisFrame >= batchSize || elapsedMilliseconds >= frameBudgetMilliseconds)
-            {
-                processedThisFrame = 0;
-                yield return null;
-                frameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
-            }
-        }
-
-        CompleteInitialTilemapBatch(blockingLayer);
-        yield return null;
-        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
-        {
-            Debug.Log($"✅ 完成加载 {processedCount} 个Tile到Tilemap");
-            Debug.Log($"[WorldNav][Map] Tilemap加载完成 | {processedCount} 个Tile | Ready={WorldNavigationManager.Instance?.IsNavigationReady} | Map={name}");
-        }
-        loadTileMapCoroutine = null;
-        FinalizeTilemapLoad();
-    }
-
-    private void EnsureTilemapRowBuffers(int width)
-    {
-        int safeWidth = Mathf.Max(1, width);
-        if (groundTileRowBuffer == null || groundTileRowBuffer.Length != safeWidth)
-            groundTileRowBuffer = new TileBase[safeWidth];
-        if (blockingTileRowBuffer == null || blockingTileRowBuffer.Length != safeWidth)
-            blockingTileRowBuffer = new TileBase[safeWidth];
-    }
-
-    private void CompleteInitialTilemapBatch(BlockingTilemapLayer blockingLayer)
-    {
-        tileMap?.RefreshAllTiles();
-        blockingLayer?.BlockingTilemap?.RefreshAllTiles();
-
-        TilemapCollider2D groundCollider = tileMap != null
-            ? tileMap.GetComponent<TilemapCollider2D>()
-            : null;
-        if (groundCollider != null && groundCollider.hasTilemapChanges)
-            groundCollider.ProcessTilemapChanges();
-
-        blockingLayer?.CompleteBatch();
-    }
-
-    private bool TryRenderTilemapRow(
-        int localY,
-        ref BlockingTilemapLayer blockingLayer,
-        out string failureReason)
-    {
-        failureReason = null;
-        Array.Clear(groundTileRowBuffer, 0, groundTileRowBuffer.Length);
-        Array.Clear(blockingTileRowBuffer, 0, blockingTileRowBuffer.Length);
-        bool hasBlockingTile = false;
-
-        for (int localX = 0; localX < Data.Width; localX++)
-        {
-            Vector2Int worldPosition = Data.position + new Vector2Int(localX, localY);
-            if (!Data.TryGetStackView(worldPosition, out TileStackView stack) || stack.Count == 0)
-                continue;
-
-            TileData groundData = BlockingTilemapLayer.ResolveGroundTile(stack);
-            if (groundData != null)
-            {
-                TileBase groundTile = GameRes.Instance?.GetTileBase(groundData.ID);
-                if (groundTile == null)
-                {
-                    failureReason = $"Tilemap 最终化失败：找不到地面 TileBase '{groundData.ID}'，位置 {worldPosition}。";
-                    return false;
-                }
-
-                groundTileRowBuffer[localX] = groundTile;
-                lastInitialRenderTileCount++;
-            }
-
-            TileData topData = stack[^1];
-            if (!BlockingTilemapLayer.IsBlockingTile(topData))
-                continue;
-
-            TileBase blockingTile = GameRes.Instance?.GetTileBase(topData.ID);
-            if (blockingTile == null)
-            {
-                failureReason = $"Tilemap 最终化失败：找不到阻挡 TileBase '{topData.ID}'，位置 {worldPosition}。";
-                return false;
-            }
-
-            blockingTileRowBuffer[localX] = blockingTile;
-            hasBlockingTile = true;
-        }
-
-        tileMap.SetTilesBlock(
-            new BoundsInt(Data.position.x, Data.position.y + localY, 0, Data.Width, 1, 1),
-            groundTileRowBuffer);
-        lastInitialRenderBatchCount++;
-
-        if (!hasBlockingTile)
-            return true;
-
-        blockingLayer ??= BlockingTilemapLayer.EnsureBatchLayer(this);
-        if (blockingLayer == null)
-        {
-            failureReason = "Tilemap 最终化失败：无法创建顶部阻挡层。";
-            return false;
-        }
-
-        blockingLayer.WriteBatchRow(Data.position, localY, blockingTileRowBuffer);
-        lastInitialRenderBatchCount++;
-        return true;
     }
     #endregion
 
@@ -940,152 +385,16 @@ public partial class Map : Item
 
             backTilePenaltyForceFull = false;
             backTilePenaltyDirtyCells.Clear();
-            backTilePenaltyPending = false;
+
             return;
         }
 
         navigation.QueueNavigationCells(backTilePenaltyDirtyCells);
 
         backTilePenaltyDirtyCells.Clear();
-        backTilePenaltyPending = false;
+
     }
 
-    private void BakePenaltyForAllTilesSync()
-    {
-        WorldNavigationManager navigation = WorldNavigationManager.Instance;
-        if (navigation == null)
-        {
-            Debug.LogError($"[WorldNav][Map] BakePenaltyForAllTilesSync 中止: manager=null | Map={name}");
-            return;
-        }
-
-        // 处理所有节点数据 这个是根据地块数据进行烘焙的
-        foreach (var (worldPos, tileDataList) in Data.EnumerateOccupiedCells())
-        {
-            // 获取最顶层 TileData（倒数第一个）
-            TileData topTile = tileDataList[^1];
-            bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
-
-            navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
-        }
-
-        Debug.Log($"✅ 完成同步烘焙 {Data.CountNonEmptyCells()} 个地块的寻路权重");
-    }
-
-    private void BakePenaltyForDirtyCellsSync()
-    {
-        WorldNavigationManager navigation = WorldNavigationManager.Instance;
-        if (navigation == null)
-            return;
-
-        foreach (var worldPos in backTilePenaltyDirtyCells)
-        {
-            TileData topTile = GetTopTile(worldPos);
-            if (topTile == null)
-            {
-                continue;
-            }
-            bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
-
-            navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
-        }
-    }
-
-    /// <summary>
-    /// 使用协程优化的烘焙地块寻路权重方法
-    /// </summary>
-    private IEnumerator BackTilePenaltyCoroutine()
-    {
-        WorldNavigationManager navigation = WorldNavigationManager.Instance;
-        if (navigation == null)
-        {
-            Debug.LogError($"[WorldNav][Map] BackTilePenaltyCoroutine 中止: manager=null | Map={name}");
-            backTilePenaltyCoroutine = null;
-            yield break;
-        }
-
-        if (tileMap == null)
-        {
-            Debug.LogError("[Map.BackTilePenaltyCoroutine] tileMap 为空，无法执行烘焙", this);
-            backTilePenaltyCoroutine = null;
-            yield break;
-        }
-
-        if (Data == null)
-        {
-            Debug.LogError("[Map.BackTilePenaltyCoroutine] Data 为空，无法执行烘焙", this);
-            backTilePenaltyCoroutine = null;
-            yield break;
-        }
-
-        int batchSize = Mathf.Max(1, backTilePenaltyTilesPerYield);
-        object yieldToken = GetBackTilePenaltyYieldToken();
-        int processed = 0;
-
-        if (backTilePenaltyForceFull)
-        {
-            foreach (var (worldPos, tileDataList) in Data.EnumerateOccupiedCells())
-            {
-                TileData topTile = tileDataList[^1];
-                bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
-
-                navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
-
-                processed++;
-                if (processed % batchSize == 0)
-                {
-                    yield return yieldToken;
-                }
-            }
-
-            backTilePenaltyForceFull = false;
-            backTilePenaltyDirtyCells.Clear();
-        }
-        else if (backTilePenaltyDirtyCells.Count > 0)
-        {
-            backTilePenaltyDirtySnapshot.Clear();
-            foreach (var dirtyPos in backTilePenaltyDirtyCells)
-            {
-                backTilePenaltyDirtySnapshot.Add(dirtyPos);
-            }
-            backTilePenaltyDirtyCells.Clear();
-
-            for (int i = 0; i < backTilePenaltyDirtySnapshot.Count; i++)
-            {
-                Vector2Int worldPos = backTilePenaltyDirtySnapshot[i];
-                TileData topTile = GetTopTile(worldPos);
-                if (topTile == null)
-                {
-                    continue;
-                }
-                bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
-
-                navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
-
-                processed++;
-                if (processed % batchSize == 0)
-                {
-                    yield return yieldToken;
-                }
-            }
-        }
-
-        //        Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");
-
-        backTilePenaltyCoroutine = null;
-
-//        Debug.Log($"[WorldNav][Map] BackTilePenaltyCoroutine 完成 | 烘焙了 {processed} 个地块 | pending={backTilePenaltyPending} forceFull={backTilePenaltyForceFull} | Map={name}");
-
-        // 合并短时间内的重复请求：当前批次结束后补跑一次
-        if (backTilePenaltyPending)
-        {
-            backTilePenaltyPending = false;
-            MarkPenaltyDirtyFull();
-            lastBackTilePenaltyTime = Time.unscaledTime;
-            Debug.Log($"[WorldNav][Map] BackTilePenaltyCoroutine 检测到pending请求，立即重启协程 | Map={name}");
-            backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
-        }
-    }
     #endregion
 
     #region 地块数据烘焙
@@ -1124,8 +433,6 @@ public partial class Map : Item
 
         BackTilePenalty_Async();
     }
-
-
 
     /// <summary>
     /// 烘焙单个地块的寻路权重（强制设为不可通行）

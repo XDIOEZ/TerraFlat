@@ -368,7 +368,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
         }
 
-        // 如果正在进行地图加载或权重烘焙，先停止协程
+        // 区块回池前停止地图加载，导航变更由统一队列维护。
         if (chunk.Map != null)
         {
             // 停止地图加载协程
@@ -378,12 +378,6 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 chunk.Map.loadTileMapCoroutine = null;
             }
 
-            // 停止权重烘焙协程
-            if (chunk.Map.backTilePenaltyCoroutine != null)
-            {
-                chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
-                chunk.Map.backTilePenaltyCoroutine = null;
-            }
         }
 
         ReleaseChunkToPool(chunk);
@@ -530,13 +524,6 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 {
                     Debug.LogError($"❌ Chunk {ChunkNameFromPos(chunkPos)} 的 GameObject 丢失了");
                     return;
-                }
-
-                // 如果正在进行权重烘焙，停止协程
-                if (chunk.Map != null && chunk.Map.backTilePenaltyCoroutine != null)
-                {
-                    chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
-                    chunk.Map.backTilePenaltyCoroutine = null;
                 }
 
                 SetChunkActive(chunk, false);

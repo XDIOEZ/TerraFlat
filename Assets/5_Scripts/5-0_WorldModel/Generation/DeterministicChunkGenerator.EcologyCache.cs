@@ -49,7 +49,7 @@ namespace FlatWorld.WorldModel
             lock (ecologyHostTagCacheGate)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (key.Epoch <= Volatile.Read(ref retiredWorldEpoch))
+                if (key.Epoch <= hydrologyRegions.RetiredEpoch)
                     throw new OperationCanceledException("旧世界的生态请求已经失效。");
                 if (!ecologyHostTagCache.TryAdd(key, found))
                     return;
@@ -70,7 +70,7 @@ namespace FlatWorld.WorldModel
 
         private void ThrowIfEcologyEpochRetired(ChunkGenerationRequest request)
         {
-            if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
+            if (request.WorldEpoch <= hydrologyRegions.RetiredEpoch)
                 throw new OperationCanceledException("旧世界的生态请求已经失效。");
         }
 

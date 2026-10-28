@@ -36,6 +36,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 流送与生成
 
+- `DeterministicChunkGenerator` 主文件只组织流水线；`SurfaceTerrain/TerrainStages` 管地表、洞穴与结构，`HydrologySampling` 管纯采样，`HydrologyRegions` 独占区域缓存/纪元取消/预热与定位借用。热缓存命中不创建 Lazy；结构先于地形扩展，扩展后再编译生态，规则 `terrain/generation_stage_ownership`。
+
 - 多格静态资源通过 `EcologySpawnRuleSnapshot.SharedRadius/FootprintWidth/FootprintHeight` 声明：`EcologyGeneration.Shared` 用稀疏周期网格和负 GUID 独立复算所有覆盖区块，`DeterministicChunkGenerator.SharedResources` 验证完整占地及入口安全区并过滤内部普通生态。`SharedAnchor` 始终是规范坐标，代理 `LocalX/Y` 可以在当前区块之外，禁止直接拿它索引地形。
 - `ChunkMgr.SharedNaturalEntities` 的会话注册表只创建一个 Resource Entity；各 `ChunkNaturalItemRenderer.Shared` 持有引用，唯一表现宿主可交接，最后引用释放才捕获/移除。状态和删除标记只写锚点所属区块，死亡不再捕获，退出世界清理注册表。区块碰撞继续复用 `ChunkCollisionRenderer` 按范围裁剪同一 runtimeId，寻路使用完整 `worldGridOccupancy`，不得为每块重建独立生命。
 - 大矿山示例为 `Mine_Stone_Large`，覆盖半径包含贴图和受击范围而非仅阻挡框；资源目录校验器验证三者一致。纯规则 `ecology/shared_resources`；编辑器外回归 `python Tools/Tests/SharedNaturalResources/verify.py`，只在 Temp 中移除原生 Profiler 初始化，不能替代真实 Unity 碰撞/保存回归。

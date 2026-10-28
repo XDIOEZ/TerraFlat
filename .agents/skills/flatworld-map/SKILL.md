@@ -27,6 +27,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 主链：配置 → 地形/气候/水文 → `ChunkTerrainData` → 结构/生态 → 差量 → 表现。生态规则 JSON 的概率字段保持 double，与生成快照一致，避免多矿种合计预算在读取时损失精度；回归 `ecology/shared_resources`。Chunk 生命周期由 WorldModel 管理。旧地图核心 Prefab、维度物品配置和物品管理器地图缓存已移除；遗迹编辑器安装器只维护目录/示例内容，不再挂旧生成器或提供强制生成开关。
 
+旧 `Map` 组件的生命周期与数据入口留在 `Map.cs`，阶段调度在 `Map.GenerationPipeline.cs`，纯排序规则由 `MapGenerationPipelinePlan` 管理，逐行缓冲与批写由每个 Map 独有的 `MapTilemapRowPresenter` 持有；同步/分帧入口在 `Map.TilemapPresentation.cs`。导航只走统一脏格队列，不再保留旧烘焙协程；计划规则为 `world_streaming/map_generation_plan`。
+
 生成热路径：河流每块冻结 `HydrologyOutputWindow`，宏观区域共享 `PrimaryUpstream`；湖泊按稀疏河格和湖盆范围合成。优化须保留环绕、外圈、盆地优先级和稳定取整，不能靠缩短降水影响距离提速。
 
 河流慢生成先读 `[ChunkGenSlow]` 的 `river.local_refine.*`：centerline、render（含 channel_fill/floodplain）、terminal_lakes、height_compute（交叉子集），结合调用次数、候选/局部唯一格累计、最近输出 padding 和缓存命中数区分规模与真实采样；同一请求的邻区细化累计，父子耗时不能相加。Profiler 固定入口为 `FlatWorld.Generation.River.{LocalRefine,Centerline,Render,TerminalLakes}`。数字跟随现有请求诊断，后台只记数，由主线程统一输出；详见 `开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md`。
