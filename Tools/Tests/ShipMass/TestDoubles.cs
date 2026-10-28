@@ -250,7 +250,13 @@ public static class Mod_Cultivator { public const string ModuleId = "cultivator"
 public sealed class CultivatorState { public InventoryInstanceSnapshot Seeds, Harvest, Fertilizer; }
 public sealed class VesselContentsState { public InventoryInstanceSnapshot Items; }
 public sealed class MachineEntity { public MachineLogic Logic; public MachineProcessor Processor; public MachineDefinition Definition = new(); public FluidMachineState FluidState = new() { Chambers = new() }; }
-public sealed class MachineDefinition { public object Fluid; }
+public sealed class MachineDefinition { public FluidMachineDefinition Fluid; }
+public sealed class FluidMachineDefinition { public Dictionary<string, double> InfiniteGasComposition; }
+public static class MachineCatalog
+{
+    public static readonly Dictionary<string, MachineDefinition> Definitions = new();
+    public static MachineDefinition Get(string id) => Definitions.GetValueOrDefault(id);
+}
 public static class MachineWorld
 {
     public static FluidMachineState GetFluidState(MachineEntity machine) => machine.FluidState;

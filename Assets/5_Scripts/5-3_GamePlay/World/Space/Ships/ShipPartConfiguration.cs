@@ -23,6 +23,7 @@ namespace FlatWorld.Spaceflight
         public float MinimumTemperatureCelsius = -250f, MaximumTemperatureCelsius = 500f;
         public float TemperatureDamagePerCelsiusSecond = .02f;
         public float EngineThrustNewtons = 60000f, FuelMolesPerSecond = 3f;
+        public bool UnlimitedFuel; // 无限燃料只提供推进授权，不创建或消耗流体库存。
         public float LiquidFuelOxygenMolesPerMole = 20f; // 燃油使用可配置的游戏耗氧比，氢氧始终按二比一消耗。
         public float PowerWatts = 20f, TargetPressureKPa = 101.325f, SupplyMolesPerSecond;
         public float GravityRadiusCells = 8f;

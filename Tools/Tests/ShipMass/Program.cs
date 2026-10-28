@@ -22,6 +22,7 @@ internal static partial class Program
         Run("运行机器库存和容器优先于冷载荷", LiveMachine);
         Run("嵌套库存、循环和重复 GUID 去重", NestedIdentity);
         Run("共享气罐和液体引用去重", SharedFluid);
+        Run("无限气源样本不计重，真实液体和其他腔仍计重", InfiniteGasSampleMass);
         Run("运行装备包优先于冷载荷", EquipmentPriority);
         Run("资源版本和资源实例变更清理缓存", ResourceChanges);
         Run("递归运行模块集合保持隔离", NestedLiveModules);
@@ -247,6 +248,48 @@ internal static partial class Program
         reader.Reset(); Near(9d, reader.ReadItem(Cargo(3, 1d), live), "shared liquid state is counted once");
         liquid.Composition["test-liquid"] = 2d;
         reader.Reset(); Near(5d, reader.ReadItem(Cargo(3, 1d), live), "live liquid changes update mass");
+    }
+    private static void InfiniteGasSampleMass()
+    {
+        var creative = new MachineDefinition { Fluid = new FluidMachineDefinition
+        { InfiniteGasComposition = new() { ["test-gas"] = 1d } } };
+        var ordinary = new MachineDefinition { Fluid = new FluidMachineDefinition() };
+        MachineCatalog.Definitions["test-infinite"] = creative;
+        MachineCatalog.Definitions["test-finite"] = ordinary;
+        FluidMachineState Contents() => new() { Chambers = new()
+        {
+            ["main"] = new FluidInventoryState { Components = new()
+                { new FluidComponentState { FluidId = "test-gas", GasMoles = 100d, LiquidMoles = 4d } } },
+            ["byproduct"] = new FluidInventoryState { Components = new()
+                { new FluidComponentState { FluidId = "test-gas", GasMoles = 6d, LiquidMoles = 8d } } }
+        } };
+        ItemData coldInfinite = Cargo(101, 0d), coldFinite = Cargo(102, 0d);
+        coldInfinite.IDName = "test-infinite"; coldFinite.IDName = "test-finite";
+        MachinePersistence.Write(coldInfinite, "fluid", Contents());
+        MachinePersistence.Write(coldFinite, "fluid", Contents());
+        var coldReader = new Reader();
+        coldReader.Reset(); Near(9d, coldReader.ReadContents(coldInfinite), "cold infinite sample is excluded");
+        coldReader.Reset(); Near(59d, coldReader.ReadContents(coldFinite), "cold finite gas retains its mass");
+
+        var liveInfinite = new MachineEntity { Definition = creative, FluidState = Contents() };
+        var liveFinite = new MachineEntity { Definition = ordinary, FluidState = Contents() };
+        var liveReader = new Reader();
+        void ReadLive(double expectedInfinite)
+        {
+            for (int pass = 0; pass < 2; pass++)
+            {
+                liveReader.BeginIncremental();
+                Near(expectedInfinite, liveReader.CachedContents("infinite", coldInfinite, machine: liveInfinite), "live infinite gas sample mass");
+                Near(59d, liveReader.CachedContents("finite", coldFinite, machine: liveFinite), "live finite gas mass");
+                if (!liveReader.EndIncremental()) break;
+            }
+        }
+        ReadLive(9d);
+        FluidInventoryState main = liveInfinite.FluidState.Chambers["main"];
+        main.Components[0].GasMoles += 200d; main.NotifyMassChanged(); ReadLive(9d);
+        main.Components[0].LiquidMoles += 1d; main.NotifyMassChanged(); ReadLive(9.5d);
+        FluidInventoryState other = liveInfinite.FluidState.Chambers["byproduct"];
+        other.Components[0].GasMoles += 1d; other.NotifyMassChanged(); ReadLive(10d);
     }
     private static void EquipmentPriority()
     {

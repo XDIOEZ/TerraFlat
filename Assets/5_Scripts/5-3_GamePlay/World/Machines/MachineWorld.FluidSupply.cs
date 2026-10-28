@@ -175,7 +175,9 @@ public static partial class MachineWorld
     {
         FluidNetworkGraph.SupplyNode source = workspace.Nodes[sourceIndex];
         FluidInventory inventory = GetPhaseFluidInventory(source.Node, source.Chamber, phase);
-        if (!TryGetPhaseSupplyBudget(inventory, phase, out FluidInventoryState stock, out _)) return 0m;
+        if (!TryGetPhaseSupplyBudget(inventory, phase, out FluidInventoryState stock, out double liters)) return 0m;
+        if (phase == FluidPhase.Gas && inventory.SuppliesInfiniteGas(fluidId))
+            return FluidUnits.StandardLitersToMol((decimal)Math.Max(0d, liters));
         FluidComponentState component = stock.Components.Find(value => value.FluidId == fluidId);
         decimal amount = component == null ? 0m : phase == FluidPhase.Gas ? component.GasMoles : component.LiquidMoles;
         return Math.Min(amount, inventory.GetAvailableMoles(fluidId, phase));

@@ -82,6 +82,10 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
         foreach (FluidMachinePortDefinition port in fluid.Ports)
             if (!string.IsNullOrEmpty(port.FluidId) && !FluidCatalog.Default.TryGet(port.FluidId, out _))
                 errors.Add("工业端口物质未注册：" + definition.Id + "/" + port.Id + " -> " + port.FluidId);
+        if (fluid.InfiniteGasComposition != null)
+            foreach (var gas in fluid.InfiniteGasComposition)
+                if (!FluidCatalog.Default.TryGet(gas.Key, out FluidDefinition configuredGas) || !configuredGas.AllowIndustrialTransport)
+                    errors.Add("无限气源物质未注册或不可工业输送：" + definition.Id + " -> " + gas.Key);
         if (!string.IsNullOrEmpty(fluid.LiquidResidueFluidId))
         {
             if (!FluidCatalog.Default.TryGet(fluid.LiquidResidueFluidId, out FluidDefinition residueFluid) ||

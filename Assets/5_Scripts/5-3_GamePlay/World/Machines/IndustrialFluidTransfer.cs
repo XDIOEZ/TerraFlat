@@ -29,7 +29,10 @@ public static class IndustrialFluidTransfer
         if (total <= 0m) return 0d;
         decimal fraction;
         if (phase == FluidPhase.Gas)
-            fraction = Math.Min(1m, FluidUnits.StandardLitersToMol((decimal)maximumLiters) / total);
+        {
+            fraction = FluidUnits.StandardLitersToMol((decimal)maximumLiters) / total;
+            if (!source.HasInfiniteGasSupply) fraction = Math.Min(1m, fraction);
+        }
         else
         {
             string liquid = null;
@@ -44,7 +47,8 @@ public static class IndustrialFluidTransfer
         }
         if (phase == FluidPhase.Gas)
             foreach (FluidComponentState component in source.State.Components)
-                if (component.GasMoles > 0m && (allowedFluidId == null || FluidInventory.Same(component.FluidId, allowedFluidId)))
+                if (component.GasMoles > 0m && !source.SuppliesInfiniteGas(component.FluidId) &&
+                    (allowedFluidId == null || FluidInventory.Same(component.FluidId, allowedFluidId)))
                     fraction = Math.Min(fraction, source.GetAvailableMoles(component.FluidId, phase) / component.GasMoles);
         double proposedLiters = 0d;
         string selectedLiquid = null;

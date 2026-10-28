@@ -22,6 +22,8 @@ public sealed partial class FluidMachineDefinition
     public bool AllowPortableTank;
     public bool AllowManualAirFill; // 自然补气按固定容量占比扣取真实环境组分。
     public bool CombineAdjacent; // 相邻同定义罐体共享库存和总容量，管道仍不持有库存。
+    public Dictionary<string, double> InfiniteGasComposition; // 非空时主腔按比例持续提供气体。
+    public double InfiniteGasTemperatureKelvin = 293.15;
     public float SolidFuelCapacity; // 显式启用三槽燃料炉，零容量设备不持有固体燃烧能力。
     public float SolidFuelAbsorptionSeconds = 3f;
     public FluidMachinePortDefinition[] Ports = Array.Empty<FluidMachinePortDefinition>();
@@ -56,6 +58,20 @@ public sealed partial class FluidMachineDefinition
             throw new ArgumentException("液体副产物缺少库存腔身份：" + ownerId);
         if (!string.IsNullOrEmpty(LiquidResidueFluidId) && ids.Contains(LiquidResiduePortId))
             throw new ArgumentException("工业管道口与液体副产物取液口身份冲突：" + ownerId);
+        if (InfiniteGasComposition != null && InfiniteGasComposition.Count > 0)
+        {
+            if (CombineAdjacent || !Positive(InfiniteGasTemperatureKelvin))
+                throw new ArgumentException("无限气源不能组合储罐且必须指定有效温度：" + ownerId);
+            double total = 0d;
+            var gases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var component in InfiniteGasComposition)
+            {
+                if (string.IsNullOrWhiteSpace(component.Key) || !gases.Add(component.Key) || !Positive(component.Value))
+                    throw new ArgumentException("无限气源组分或比例无效：" + ownerId);
+                total += component.Value;
+            }
+            if (!double.IsFinite(total)) throw new ArgumentException("无限气源组分比例超出范围：" + ownerId);
+        }
     }
     internal static bool Positive(double value) => double.IsFinite(value) && value > 0;
     #endregion

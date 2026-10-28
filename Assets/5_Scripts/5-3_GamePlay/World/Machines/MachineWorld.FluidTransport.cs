@@ -62,7 +62,8 @@ public static partial class MachineWorld
                         }
                         catch
                         {
-                            if (!source.TryAdd(actual, GetFluidVolumeLiters(route.Node) + .001d, .001d))
+                            if (!source.SuppliesInfiniteGas(actual.FluidId) &&
+                                !source.TryAdd(actual, GetFluidVolumeLiters(route.Node) + .001d, .001d))
                                 throw new InvalidOperationException("出口失败回滚无法恢复来源。");
                             throw;
                         }

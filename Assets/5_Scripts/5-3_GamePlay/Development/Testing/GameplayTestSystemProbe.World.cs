@@ -76,6 +76,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("space/pipe_geometry", WorldPipeGeometry);
         operations.Add("space/loose_drop_rules", WorldLooseDropRules);
         operations.Add("industrial_fluids/reservations", WorldFluidReservations);
+        operations.Add("industrial_fluids/infinite_gas_supply", WorldInfiniteGasSupply);
         operations.Add("industrial_fluids/atomic_recipe", WorldFluidRecipe);
         operations.Add("industrial_fluids/heat", WorldFluidHeat);
         operations.Add("industrial_fluids/ambient_heat", WorldFluidAmbientHeat);
@@ -2079,6 +2080,63 @@ public static partial class GameplayTestSystemProbe
             ["reservedRemainder"] = (double)remainder,
             ["availableAfterRelease"] = (double)source.GetAvailableMoles("system-probe:fluid", FluidPhase.Gas),
             ["portsAfterRelease"] = source.State.Ports.Count
+        };
+    }
+
+    // 采样正式无限气源、转移和预约，具体数量由 Lua 断言。
+    private static JObject WorldInfiniteGasSupply(JObject args)
+    {
+        FluidCatalog catalog = WorldFluidCatalog();
+        var composition = new Dictionary<string, double> { ["system-probe:fluid"] = 2d, ["system-probe:other"] = 1d };
+        var source = new FluidInventory(catalog: catalog);
+        source.TryAdd(FluidInventory.CreateBatch(catalog.Find("system-probe:fluid"), 0m, 2m, 300d), 100d, .001d);
+        source.ConfigureInfiniteGasSupply(composition, 320d, 100d);
+        var target = new FluidInventory(catalog: catalog);
+        var sample = source.State.Clone();
+        double first = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Gas, 250d, 750d, 100d);
+        double second = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Gas, 250d, 750d, 100d);
+        double third = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Gas, 250d, 750d, 100d);
+        double full = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Gas, 1d, 750d, 100d);
+        var filtered = new FluidInventory(catalog: catalog);
+        double filteredLiters = IndustrialFluidTransfer.Transfer(source, filtered, FluidPhase.Gas, 90d, 300d, 100d, "system-probe:other");
+        decimal amount = FluidUnits.StandardLitersToMol(200m);
+        bool reservedA = source.TryReserve("a", FluidPhase.Gas, amount, id => id == "system-probe:fluid", out FluidBatch a);
+        bool reservedB = source.TryReserve("b", FluidPhase.Gas, amount, id => id == "system-probe:fluid", out FluidBatch b);
+        bool reservedTake = source.TryTakeReserved("a", amount, out FluidBatch taken);
+        source.ReleaseReservation("b");
+        bool rejected = !source.TryTakeRecipe(new[] { new FluidRequirement("system-probe:fluid", FluidPhase.Gas, amount),
+            new FluidRequirement("system-probe:missing", FluidPhase.Gas, 1m) }, out _);
+        bool liquidTaken = source.TryTakeExact("system-probe:fluid", FluidPhase.Liquid, 1m, out _);
+        var restored = new FluidInventory(sample, catalog);
+        bool initiallyFinite = !restored.HasInfiniteGasSupply;
+        restored.ConfigureInfiniteGasSupply(composition, 320d, 100d);
+        bool pending = restored.TryReserve("restore", FluidPhase.Gas, amount, id => id == "system-probe:fluid", out _);
+        restored.Restore(new FluidInventoryState());
+        double emptyRestoreSample = (double)FluidUnits.MolToStandardLiters(restored.GasMoles);
+        var liquidOnly = new FluidInventory(catalog: catalog);
+        liquidOnly.TryAdd(FluidInventory.CreateBatch(catalog.Find("system-probe:other"), 0m, 2m, 280d), 100d, .001d);
+        restored.Restore(liquidOnly.State);
+        double liquidRestoreSample = (double)FluidUnits.MolToStandardLiters(restored.GasMoles);
+        double liquidRestoreShare = (double)(restored.GetGasMoles("system-probe:fluid") / restored.GasMoles);
+        bool pendingAfterRestore = pending && restored.TryTakeReserved("restore", amount, out _);
+        double restoredDelivery = IndustrialFluidTransfer.Transfer(restored, new FluidInventory(catalog: catalog),
+            FluidPhase.Gas, 200d, 500d, 100d);
+        return new JObject {
+            ["sample"] = (double)FluidUnits.MolToStandardLiters(source.GasMoles),
+            ["sourceHydrogenShare"] = (double)(source.GetGasMoles("system-probe:fluid") / source.GasMoles),
+            ["first"] = first, ["second"] = second, ["third"] = third, ["full"] = full,
+            ["target"] = (double)FluidUnits.MolToStandardLiters(target.GasMoles),
+            ["targetFirstGas"] = (double)FluidUnits.MolToStandardLiters(target.GetGasMoles("system-probe:fluid")),
+            ["targetTemperature"] = target.GetTemperatureKelvin(), ["filtered"] = filteredLiters,
+            ["filterRejectedGas"] = (double)filtered.GetGasMoles("system-probe:fluid"),
+            ["reservations"] = reservedA && reservedB && reservedTake && a.GasMoles == amount &&
+                b.GasMoles == amount && taken.GasMoles == amount && source.GetReservation("b") == null,
+            ["storedReservations"] = source.State.Ports.Count, ["rejected"] = rejected,
+            ["liquidTaken"] = liquidTaken, ["liquidLeft"] = (double)source.LiquidMoles,
+            ["initiallyFinite"] = initiallyFinite, ["restoredInfinite"] = restored.HasInfiniteGasSupply,
+            ["restoredDelivery"] = restoredDelivery, ["emptyRestoreSample"] = emptyRestoreSample,
+            ["liquidRestoreSample"] = liquidRestoreSample, ["liquidRestoreShare"] = liquidRestoreShare,
+            ["liquidRestoreAmount"] = (double)restored.LiquidMoles, ["pendingAfterRestore"] = pendingAfterRestore
         };
     }
 

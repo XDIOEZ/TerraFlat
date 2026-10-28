@@ -825,7 +825,7 @@ public static class GameplayTestShipProbe
         if (asset == null) throw new InvalidOperationException("缺少机械目录，无法采样引擎旋转。");
         MachineCatalogDocument catalog = JsonConvert.DeserializeObject<MachineCatalogDocument>(asset.text);
         var engines = new JArray();
-        foreach (string id in new[] { "ShipChemicalEngine", "ShipChemicalEngine_GM" })
+        foreach (string id in new[] { "ShipChemicalEngine", "ShipChemicalEngine_GM", "Creative_Ship_Engine" })
         {
             MachineDefinition definition = catalog.Nodes.Find(value => value?.Id == id)
                 ?? throw new InvalidOperationException("机械目录缺少引擎：" + id);
@@ -926,6 +926,7 @@ public static class GameplayTestShipProbe
             ["hydrogenAfterFailure"] = hydrogenAfterFailure, ["oxygenAfterFailure"] = oxygenAfterFailure,
             ["impurityAdded"] = impurityAdded, ["impureEligible"] = impureEligible,
             ["singleGasPrepared"] = singlePrepared, ["singleGasEligible"] = singleEligible,
+            ["unlimitedFuel"] = CaptureUnlimitedFuelOutput(catalog),
             ["liquidFuelOxygenRatio"] = engine.LiquidFuelOxygenMolesPerMole,
             ["thermalExhaustionCases"] = new JArray
             {
@@ -947,6 +948,37 @@ public static class GameplayTestShipProbe
                 CapturePropellantBurnSample(catalog, "idle", 2m, 3m, 1m, throttle: 0d),
                 CapturePropellantBurnSample(catalog, "wrong_liquid", 0m, 3m, 1m, liquidId: FluidIds.Nitrogen)
             }
+        };
+    }
+
+    private static JObject CaptureUnlimitedFuelOutput(FluidCatalog catalog)
+    {
+        var engine = new ShipPartConfiguration { UnlimitedFuel = true, FuelMolesPerSecond = 0f };
+        var inventory = new FluidInventory(catalog: catalog);
+        bool stocked = inventory.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Hydrogen), 2m, 0m, 293.15d), 100d, .001d) &&
+            inventory.TryAdd(FluidInventory.CreateBatch(catalog.Find(FluidIds.Oxygen), 1m, 0m, 293.15d), 100d, .001d);
+        string before = JsonConvert.SerializeObject(inventory.State);
+        double accumulated = 0d;
+        for (int i = 0; i < 1000; i++) accumulated += ShipFuel.ConsumeStoredChemicalPropellants(inventory, engine, .25d, .02d);
+        return new JObject
+        {
+            ["stockPrepared"] = stocked, ["inventoryUnchanged"] = before == JsonConvert.SerializeObject(inventory.State),
+            ["eligibleWithoutInventory"] = ShipFuel.IsEligible(null, engine),
+            ["authorityWithoutInventory"] = ShipFuel.GetPropellantAuthority(null, engine),
+            ["finiteEngineAuthority"] = ShipFuel.GetPropellantAuthority(inventory, new ShipPartConfiguration()),
+            ["invalidFiniteEngineAuthority"] = ShipFuel.GetPropellantAuthority(inventory,
+                new ShipPartConfiguration { FuelMolesPerSecond = float.NaN }),
+            ["actualStockWithoutInventory"] = ShipFuel.AvailableReactionMoles(null, engine),
+            ["outputWithoutInventory"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, .5d, 1d),
+            ["clampedOutput"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, 3d, 1d),
+            ["repeatedOutput"] = accumulated,
+            ["zeroThrottle"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, 0d, 1d),
+            ["zeroSeconds"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, 1d, 0d),
+            ["negativeSeconds"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, 1d, -1d),
+            ["invalidSeconds"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, 1d, double.NaN),
+            ["infiniteSeconds"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, 1d, double.PositiveInfinity),
+            ["invalidThrottle"] = ShipFuel.ConsumeStoredChemicalPropellants(null, engine, double.NaN, 1d),
+            ["finiteEngineWithoutInventory"] = ShipFuel.ConsumeStoredChemicalPropellants(null, new ShipPartConfiguration(), 1d, 1d)
         };
     }
 

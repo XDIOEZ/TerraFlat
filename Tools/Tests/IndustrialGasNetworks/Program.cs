@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using MemoryPack;
@@ -47,6 +48,45 @@ public static class Program
         { var source=Gas(100,.5); var target=Gas(0); source.TryReserve("reserved",FluidPhase.Gas,FluidUnits.StandardLitersToMol(25),out _);
           IndustrialFluidTransfer.Transfer(source,target,FluidPhase.Gas,100,100,100);
           Require(Near((double)target.GetGasMoles("test:a"),(double)target.GetGasMoles("test:b")),"reservation changed unfiltered ratio"); });
+        Run("infinite gas delivers above its finite sample repeatedly", () =>
+        { var source=Gas(0);source.ConfigureInfiniteGasSupply(new Dictionary<string,double>{{"test:a",2},{"test:b",1}},300,100);
+          var target=Gas(0);var sample=source.State.Clone();
+          for(int i=0;i<3;i++)Require(Near(IndustrialFluidTransfer.Transfer(source,target,FluidPhase.Gas,250,750,100),250),"throughput limited by sample");
+          Require(Near(Liters(source),100)&&Near(Liters(target),750)&&Near((double)FluidUnits.MolToStandardLiters(target.GetGasMoles("test:a")),500),"supply altered source or composition");
+          Require(source.State.TotalInternalEnergyJoules==sample.TotalInternalEnergyJoules&&IndustrialFluidTransfer.Transfer(source,target,FluidPhase.Gas,1,750,100)==0,"source changed or full target accepted gas");
+          var restored=new FluidInventory(source.State.Clone());restored.ConfigureInfiniteGasSupply(new Dictionary<string,double>{{"test:a",2},{"test:b",1}},300,100);
+          Require(restored.HasInfiniteGasSupply&&Near(IndustrialFluidTransfer.Transfer(restored,Gas(0),FluidPhase.Gas,200,500,100),200),"definition did not rebuild source"); });
+        Run("infinite filtered supply and reservations stay bounded and transient", () =>
+        { var source=Gas(0);source.ConfigureInfiniteGasSupply(new Dictionary<string,double>{{"test:a",2},{"test:b",1}},320,100);var target=Gas(0);
+          Require(Near(IndustrialFluidTransfer.Transfer(source,target,FluidPhase.Gas,90,300,100,"test:b"),30)&&Near(Liters(source),100),"filter or source composition changed");
+          decimal amount=FluidUnits.StandardLitersToMol(200);
+          Require(source.TryReserve("a",FluidPhase.Gas,amount,id=>id=="test:a",out var a)&&a.GasMoles==amount,"first reservation clipped");
+          Require(source.TryReserve("b",FluidPhase.Gas,amount,id=>id=="test:a",out var b)&&b.GasMoles==amount,"second reservation clipped");
+          Require(source.State.Ports.Count==0&&source.TryTakeReserved("a",amount,out var taken)&&taken.GasMoles==amount,"transient reservation or extraction failed");
+          source.ReleaseReservation("b");Require(source.GetReservation("b")==null&&Near(Liters(source),100),"release or extraction modified sample");
+          Require(!source.TryTakeRecipe(new[]{new FluidRequirement("test:a",FluidPhase.Gas,amount),new FluidRequirement("test:missing",FluidPhase.Gas,1)},out _)&&Near(Liters(source),100),"missing recipe was not atomic");
+          source.ClearGas(out var removed);Require(removed.Count==0&&Near(Liters(source),100)&&source.Drain().Count==0&&Near(Liters(source),100),"virtual sample escaped during cleanup"); });
+        Run("infinite sample survives empty and liquid-only restores", () =>
+        { var source=Gas(0);source.ConfigureInfiniteGasSupply(new Dictionary<string,double>{{"test:a",2},{"test:b",1}},320,100);
+          decimal amount=FluidUnits.StandardLitersToMol(200);
+          Require(source.TryReserve("pending",FluidPhase.Gas,amount,id=>id=="test:a",out _),"reservation failed");
+          source.Restore(new FluidInventoryState());Require(Near(Liters(source),100),"empty restore removed sample");
+          var liquid=Gas(0);Require(liquid.TryAdd(FluidInventory.CreateBatch(FluidCatalog.Default.Find("test:b"),0,2,280),100,.001),"liquid setup failed");
+          source.Restore(liquid.State);
+          Require(source.LiquidMoles==2&&Near(Liters(source),100)&&Near((double)(source.GetGasMoles("test:a")/source.GasMoles),2d/3d),"liquid restore changed composition or lost liquid");
+          var before=source.State.Clone();source.Restore(before);
+          Require(source.State.TotalInternalEnergyJoules==before.TotalInternalEnergyJoules,"matching restore changed energy");
+          Require(source.TryTakeReserved("pending",amount,out _)&&Near(IndustrialFluidTransfer.Transfer(source,Gas(0),FluidPhase.Gas,200,500,100),200),"restore lost reservation or supply");
+          source.Restore(Gas(40,0).State);Require(Near(Liters(source),100)&&Near((double)(source.GetGasMoles("test:a")/source.GasMoles),2d/3d),"foreign sample overrode definition");
+          var finite=Gas(20);finite.Restore(new FluidInventoryState());Require(finite.IsEmpty,"ordinary restore changed"); });
+        Run("four output-only source ports retain directed routes", () =>
+        { for(int direction=0;direction<4;direction++) { var source=Node(1,0,"device");var target=Node(2,0,"device");
+          var delta=MechanicalNetworkGraph.Directions[direction];target.Cell=delta;
+          source.Definition.Fluid.Ports=Enumerable.Range(0,4).Select(i=>new FluidMachinePortDefinition{Id="o"+i,Direction=i,Mode="output",Phase="gas"}).ToArray();
+          target.Definition.Fluid.Ports=new[]{new FluidMachinePortDefinition{Id="in",Direction=(direction+2)%4,Mode="input",Phase="gas"}};
+          var graph=new FluidNetworkGraph(c=>c);graph.Rebuild(new[]{source,target});var routes=new FluidNetworkGraph.SupplyWorkspace();
+          graph.CollectSupplyRoutes(target,"main",FluidPhase.Gas,new[]{"test:a"},routes);
+          Require(routes.Nodes.Any(n=>n.Node==source),"missing direction "+direction); } });
         Run("sequential quantity transfers never oversell source", () =>
         { var source=Gas(100,.21); var a=Gas(0); var b=Gas(0);
           IndustrialFluidTransfer.Transfer(source,a,FluidPhase.Gas,80,100,100); IndustrialFluidTransfer.Transfer(source,b,FluidPhase.Gas,80,100,100);

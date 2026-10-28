@@ -538,6 +538,71 @@
       }
     },
     {
+      "Id": "Creative_Gas_Tank",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "tank",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "MaterialId": "steel",
+        "VolumeLiters": 100,
+        "MinimumGasSpaceLiters": 0.1,
+        "SingleGas": false,
+        "SingleLiquid": false,
+        "ThroughputLitersPerSecond": 1000,
+        "GasCapacityStandardLiters": 100,
+        "NaturalFillFraction": 0.2,
+        "AllowManualAirFill": false,
+        "CombineAdjacent": false,
+        "InfiniteGasComposition": {
+          "core:hydrogen": 2,
+          "core:oxygen": 1
+        },
+        "InfiniteGasTemperatureKelvin": 293.15
+      }
+    },
+    {
       "Id": "GasTankBlock_Steel",
       "Kind": "shaft",
       "Ports": "none",
@@ -1168,6 +1233,20 @@
           }
         ]
       },
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 30,
+        "NominalVoltage": 120
+      }
+    },
+    {
+      "Id": "Creative_Ship_Engine",
+      "Kind": "consumer",
+      "PlacementRotationSteps": 4,
+      "Ports": "none",
+      "LogicId": "ship-device",
+      "BlocksMovement": true,
       "Electrical": {
         "Role": "consumer",
         "Connection": "cell",

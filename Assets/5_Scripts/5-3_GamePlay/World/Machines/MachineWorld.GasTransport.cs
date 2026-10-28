@@ -20,6 +20,7 @@ public static partial class MachineWorld
         => gasThroughputRemaining[inventory] = Math.Max(0d, remaining);
     private static void ConsumeGasStepStock(FluidInventory inventory, string fluidId, decimal moles)
     {
+        if (inventory.SuppliesInfiniteGas(fluidId)) return;
         if (!gasStepStock.TryGetValue(inventory, out var stock)) return;
         FluidComponentState component = stock.Components.Find(value => FluidInventory.Same(value.FluidId, fluidId));
         if (component != null) component.GasMoles = Math.Max(0m, component.GasMoles - moles);

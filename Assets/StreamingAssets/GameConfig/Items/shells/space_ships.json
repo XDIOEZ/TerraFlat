@@ -1410,6 +1410,58 @@
       }
     },
     {
+      "id": "Creative_Ship_Engine",
+      "parent": "ShipChemicalEngine_GM",
+      "gameName": "创造引擎-建筑",
+      "description": "创造模式专用，提供600000 N推力，无需气体或液体燃料。仍需电力，遵守普通引擎的船体外缘、旋转、喷口净空和启停规则。",
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"Creative_Ship_Engine\",\"SummonerPrefabId\":\"Creative_Ship_Engine_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+          }
+        },
+        "ship-part": {
+          "parameters": {
+            "Configuration": {
+              "EngineThrustNewtons": 600000,
+              "UnlimitedFuel": true
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "parameters": {
+            "DefinitionId": "Creative_Ship_Engine"
+          }
+        }
+      }
+    },
+    {
+      "id": "Creative_Ship_Engine_Summoner",
+      "parent": "ShipChemicalEngine_GM_Summoner",
+      "gameName": "创造引擎",
+      "description": "创造模式专用，提供600000 N推力，无需气体或液体燃料。仍需电力，遵守普通引擎的船体外缘、旋转、喷口净空和启停规则。",
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Creative_Ship_Engine\",\"SummonerPrefabId\":\"Creative_Ship_Engine_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+          }
+        },
+        "ship-part": {
+          "parameters": {
+            "Configuration": {
+              "EngineThrustNewtons": 600000,
+              "UnlimitedFuel": true
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "parameters": {
+            "DefinitionId": "Creative_Ship_Engine"
+          }
+        }
+      }
+    },
+    {
       "id": "ShipChemicalEngine_GM",
       "parent": "ShipChemicalEngine",
       "gameName": "GM重载测试引擎-建筑",

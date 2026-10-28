@@ -64,7 +64,7 @@ internal static partial class Program
     private static void IncrementalMachineReplacement()
     {
         var reader = new Reader(); var shell = Cargo(1, 0d);
-        var machine = new MachineEntity { Definition = new() { Fluid = new object() }, Logic = new() { Inventories = new() { new Inventory { Data = Inventory(Cargo(2, 3d)) } } } };
+        var machine = new MachineEntity { Definition = new() { Fluid = new() }, Logic = new() { Inventories = new() { new Inventory { Data = Inventory(Cargo(2, 3d)) } } } };
         machine.FluidState.Chambers["main"] = new FluidInventoryState
         { Components = new() { new FluidComponentState { FluidId = "test-gas", GasMoles = 4d } } };
         void Read(double expected)

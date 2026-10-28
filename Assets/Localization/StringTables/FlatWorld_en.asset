@@ -4547,6 +4547,38 @@ MonoBehaviour:
     m_Localized: "A hand-built all-wood wheelbarrow. Push it from behind and press F to access its 12-slot cargo inventory."
     m_Metadata:
       m_Items: []
+  - m_Id: 28102900001000000
+    m_Localized: "Creative Ship Engine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000001
+    m_Localized: "Creative mode only. Delivers 600,000 N of thrust without gas or liquid propellants. Requires power and follows the normal engine rules for hull edges, rotation, nozzle clearance and operating state."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000002
+    m_Localized: "Creative Ship Engine"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000003
+    m_Localized: "Creative mode only. Delivers 600,000 N of thrust without gas or liquid propellants. Requires power and follows the normal engine rules for hull edges, rotation, nozzle clearance and operating state."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000004
+    m_Localized: "Creative Gas Tank"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000005
+    m_Localized: "Creative mode only. Continuously supplies a 2:1 hydrogen-oxygen mix. The 100 standard L shown is a composition sample. Four output-only gas ports still follow pipe throughput, filters and receiving capacity; it does not combine with ordinary tanks."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000006
+    m_Localized: "Creative Gas Tank"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000007
+    m_Localized: "Creative mode only. Continuously supplies a 2:1 hydrogen-oxygen mix. The 100 standard L shown is a composition sample. Four output-only gas ports still follow pipe throughput, filters and receiving capacity; it does not combine with ordinary tanks."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

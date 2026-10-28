@@ -4187,6 +4187,38 @@ MonoBehaviour:
     m_Key: item.Wheelbarrow_Building.description
     m_Metadata:
       m_Items: []
+  - m_Id: 28102900001000000
+    m_Key: item.Creative_Ship_Engine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000001
+    m_Key: item.Creative_Ship_Engine.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000002
+    m_Key: item.Creative_Ship_Engine_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000003
+    m_Key: item.Creative_Ship_Engine_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000004
+    m_Key: item.Creative_Gas_Tank.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000005
+    m_Key: item.Creative_Gas_Tank.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000006
+    m_Key: item.Creative_Gas_Tank_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000007
+    m_Key: item.Creative_Gas_Tank_Summoner.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

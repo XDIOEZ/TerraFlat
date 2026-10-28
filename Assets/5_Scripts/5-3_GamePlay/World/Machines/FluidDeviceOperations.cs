@@ -309,11 +309,12 @@ public static class FluidDeviceOperations
                 {
                     var route = routes.Nodes[i]; var inventory = GetFluidInventory(route.Node, route.Chamber);
                     var key = (inventory, id);
-                    if (!workspace.Stock.TryGetValue(key, out decimal stock))
-                        stock = useBudget ? GetFluidSupplyStock(routes, i, id, phase) : inventory.GetAvailableMoles(id, phase);
                     double budget = GetFluidSupplyStandardLiters(routes, i, seconds, useBudget, workspace.Budgets);
                     decimal capacity = phase == FluidPhase.Gas ? FluidUnits.StandardLitersToMol((decimal)budget) :
                         FluidUnits.LiquidLitersToMol(FluidCatalog.Default.Find(id), (decimal)budget);
+                    if (!workspace.Stock.TryGetValue(key, out decimal stock))
+                        stock = useBudget ? GetFluidSupplyStock(routes, i, id, phase) :
+                            phase == FluidPhase.Gas && inventory.SuppliesInfiniteGas(id) ? capacity : inventory.GetAvailableMoles(id, phase);
                     decimal amount = Math.Min(remaining, Math.Min(stock, capacity)); if (amount <= 0) continue;
                     workspace.Plan.Add(new Withdrawal { Inventory = inventory, Route = routes, Index = i,
                         Requirement = new FluidRequirement(id, phase, amount) });

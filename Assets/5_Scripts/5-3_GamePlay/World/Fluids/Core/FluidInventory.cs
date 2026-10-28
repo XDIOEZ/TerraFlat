@@ -16,6 +16,11 @@ public sealed class FluidInventory
     }
     public FluidInventoryState State { get; }
     public FluidCatalog Catalog { get; }
+    private Dictionary<string, decimal> infiniteGasComponents;
+    private Dictionary<string, FluidOutputReservation> infiniteGasReservations;
+    private double infiniteGasTemperatureKelvin;
+    public bool HasInfiniteGasSupply => infiniteGasComponents != null;
+    public bool SuppliesInfiniteGas(string id) => id != null && infiniteGasComponents?.ContainsKey(id) == true;
     private long derivedRevision = -1;
     private decimal gasMoles, liquidMoles;
     private double liquidLiters, heatCapacity, energyOffset;
@@ -84,6 +89,45 @@ public sealed class FluidInventory
             throw new ArgumentOutOfRangeException(nameof(temperatureKelvin));
         return new FluidBatch(definition.Id, gasMoles, liquidMoles, definition.EnergyAt(gasMoles, liquidMoles, temperatureKelvin));
     }
+
+    // 供气能力只随运行时定义重建，库存中仅保留有限的配比样本。
+    public void ConfigureInfiniteGasSupply(IReadOnlyDictionary<string, double> composition, double temperatureKelvin,
+        double sampleStandardLiters)
+    {
+        if (composition == null || composition.Count == 0 || !FluidUnits.IsFinite(temperatureKelvin) || temperatureKelvin <= 0d ||
+            !FluidUnits.IsFinite(sampleStandardLiters) || sampleStandardLiters <= 0d || sampleStandardLiters > 1e12d)
+            throw new ArgumentException("无限气源必须指定有效组分、温度和有限样本。");
+        var gases = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        double total = 0d;
+        foreach (var component in composition)
+        {
+            if (!Catalog.TryGet(component.Key, out var fluid) || !fluid.AllowIndustrialTransport ||
+                !FluidUnits.IsFinite(component.Value) || component.Value <= 0d || !gases.TryAdd(fluid.Id, 0m))
+                throw new ArgumentException("无限气源包含未知气体或无效比例。");
+            total += component.Value;
+        }
+        if (!FluidUnits.IsFinite(total)) throw new ArgumentException("无限气源组分比例超出范围。");
+        var previous = State.Clone();
+        var previousComponents = infiniteGasComponents;
+        try
+        {
+            infiniteGasComponents = null;
+            ClearGas(out _);
+            foreach (var component in composition)
+            {
+                decimal moles = FluidUnits.StandardLitersToMol((decimal)(sampleStandardLiters * (component.Value / total)));
+                FluidDefinition fluid = Catalog.Find(component.Key);
+                if (moles <= 0m || !TryAdd(CreateBatch(fluid, moles, 0m, temperatureKelvin),
+                        1e12d, .001d))
+                    throw new ArgumentException("无限气源组分无法生成有限样本。");
+                gases[fluid.Id] = moles;
+            }
+            infiniteGasComponents = gases;
+            infiniteGasTemperatureKelvin = temperatureKelvin;
+            infiniteGasReservations?.Clear();
+        }
+        catch { State.CopyFrom(previous); infiniteGasComponents = previousComponents; throw; }
+    }
     #endregion
 
     #region 接收与真实提取
@@ -95,6 +139,7 @@ public sealed class FluidInventory
     {
         pressure = 0d;
         ValidateGeometry(volumeLiters, minimumGasSpaceLiters);
+        if (HasInfiniteGasSupply && batch.GasMoles > 0m) return false;
         if (!IsValidBatch(batch) || !Catalog.TryGet(batch.FluidId, out var definition)) return false;
         double batchCapacity = (double)batch.GasMoles * definition.GasHeatCapacityJPerMolKelvin +
                                (double)batch.LiquidMoles * definition.LiquidHeatCapacityJPerMolKelvin;
@@ -137,7 +182,8 @@ public sealed class FluidInventory
     public bool TryTakeExact(string id, FluidPhase phase, decimal moles, out FluidBatch batch)
     {
         batch = default;
-        if ((phase != FluidPhase.Gas && phase != FluidPhase.Liquid) || moles <= 0m || GetAvailableMoles(id, phase) < moles) return false;
+        if ((phase != FluidPhase.Gas && phase != FluidPhase.Liquid) || moles <= 0m ||
+            !(phase == FluidPhase.Gas && SuppliesInfiniteGas(id)) && GetAvailableMoles(id, phase) < moles) return false;
         var component = FindComponent(id);
         batch = CurrentBatch(component.FluidId, phase == FluidPhase.Gas ? moles : 0m,
             phase == FluidPhase.Liquid ? moles : 0m);
@@ -160,7 +206,8 @@ public sealed class FluidInventory
         }
         foreach (var requirement in totals)
         {
-            if (GetAvailableMoles(requirement.Key.Item1, requirement.Key.Item2) < requirement.Value) { batches.Clear(); return false; }
+            if (!(requirement.Key.Item2 == FluidPhase.Gas && SuppliesInfiniteGas(requirement.Key.Item1)) &&
+                GetAvailableMoles(requirement.Key.Item1, requirement.Key.Item2) < requirement.Value) { batches.Clear(); return false; }
             FluidBatch batch = CurrentBatch(requirement.Key.Item1,
                 requirement.Key.Item2 == FluidPhase.Gas ? requirement.Value : 0m,
                 requirement.Key.Item2 == FluidPhase.Liquid ? requirement.Value : 0m);
@@ -177,7 +224,7 @@ public sealed class FluidInventory
         double temperature = GetTemperatureKelvin();
         foreach (var component in State.Components)
         {
-            if (component.GasMoles <= 0m) continue;
+            if (component.GasMoles <= 0m || SuppliesInfiniteGas(component.FluidId)) continue;
             var batch = CreateBatch(Catalog.Find(component.FluidId), component.GasMoles, 0m, temperature);
             batches.Add(batch); component.GasMoles = 0m;
         }
@@ -189,6 +236,19 @@ public sealed class FluidInventory
     {
         var batches = new List<FluidBatch>();
         double temperature = GetTemperatureKelvin();
+        if (HasInfiniteGasSupply)
+        {
+            foreach (var component in State.Components)
+            {
+                decimal gas = SuppliesInfiniteGas(component.FluidId) ? 0m : component.GasMoles;
+                if (gas + component.LiquidMoles > 0m)
+                    batches.Add(CreateBatch(Catalog.Find(component.FluidId), gas, component.LiquidMoles, temperature));
+                component.GasMoles -= gas; component.LiquidMoles = 0m;
+            }
+            State.Ports.Clear(); infiniteGasReservations?.Clear();
+            TrimEmpty(); PreserveRemainingMatterTemperature(temperature);
+            return batches;
+        }
         foreach (var component in State.Components)
             if (component.GasMoles + component.LiquidMoles > 0m)
                 batches.Add(CreateBatch(Catalog.Find(component.FluidId), component.GasMoles, component.LiquidMoles, temperature));
@@ -198,6 +258,28 @@ public sealed class FluidInventory
     public void Restore(FluidInventoryState snapshot)
     {
         ValidateState(snapshot, Catalog);
+        if (HasInfiniteGasSupply)
+        {
+            int matches = 0;
+            foreach (FluidComponentState component in snapshot.Components)
+            {
+                if (component.GasMoles <= 0m) continue;
+                if (!infiniteGasComponents.TryGetValue(component.FluidId, out decimal sample) || component.GasMoles != sample)
+                { matches = -1; break; }
+                matches++;
+            }
+            if (matches != infiniteGasComponents.Count)
+            {
+                // 恢复真实液体时重建定义中的样本，事务失败回滚则保留原样本和内能。
+                var restored = new FluidInventory(snapshot.Clone(), Catalog);
+                restored.ClearGas(out _);
+                foreach (var sample in infiniteGasComponents)
+                    if (!restored.TryAdd(CreateBatch(Catalog.Find(sample.Key), sample.Value, 0m, infiniteGasTemperatureKelvin),
+                            1e12d, .001d))
+                        throw new InvalidDataException("恢复流体后无法重建无限气源样本。");
+                snapshot = restored.State;
+            }
+        }
         State.CopyFrom(snapshot);
     }
     #endregion
@@ -237,20 +319,28 @@ public sealed class FluidInventory
             roll -= weight;
         }
         if (chosen == null) return false;
-        decimal reserved = Math.Min(maximumMoles, GetAvailableMoles(chosen.FluidId, phase));
+        bool infinite = phase == FluidPhase.Gas && SuppliesInfiniteGas(chosen.FluidId);
+        decimal reserved = infinite ? Math.Min(maximumMoles, MaximumMoles) : Math.Min(maximumMoles, GetAvailableMoles(chosen.FluidId, phase));
         var port = new FluidOutputReservation
         { PortId = portId, FluidId = chosen.FluidId, GasMoles = phase == FluidPhase.Gas ? reserved : 0m,
             LiquidMoles = phase == FluidPhase.Liquid ? reserved : 0m };
-        State.Ports.Add(port); State.SynchronizeReservations(); State.RandomState = random;
-        batch = CurrentBatch(port.FluidId, port.GasMoles, port.LiquidMoles); return true;
+        batch = CurrentBatch(port.FluidId, port.GasMoles, port.LiquidMoles);
+        if (!IsValidBatch(batch)) { batch = default; return false; }
+        if (infinite) (infiniteGasReservations ??= new Dictionary<string, FluidOutputReservation>(StringComparer.Ordinal)).Add(portId, port);
+        else { State.Ports.Add(port); State.SynchronizeReservations(); }
+        State.RandomState = random; return true;
     }
     public FluidOutputReservation GetReservation(string portId)
     {
+        if (string.IsNullOrEmpty(portId)) return null;
+        if (infiniteGasReservations != null && infiniteGasReservations.TryGetValue(portId, out var infinite)) return infinite;
         foreach (var port in State.Ports) if (string.Equals(port.PortId, portId, StringComparison.Ordinal)) return port;
         return null;
     }
     public void ReleaseReservation(string portId)
     {
+        if (string.IsNullOrEmpty(portId)) return;
+        if (infiniteGasReservations?.Remove(portId) == true) return;
         var port = GetReservation(portId);
         if (port != null) { State.Ports.Remove(port); State.SynchronizeReservations(); }
     }
@@ -278,6 +368,7 @@ public sealed class FluidInventory
             !target.CanAdd(batch, targetVolumeLiters, targetMinimumGasSpaceLiters, singleGas, singleLiquid)) return false;
         target.TryAdd(batch, targetVolumeLiters, targetMinimumGasSpaceLiters, singleGas, singleLiquid);
         port.GasMoles -= batch.GasMoles; port.LiquidMoles -= batch.LiquidMoles;
+        if (port.TotalMoles == 0m) infiniteGasReservations?.Remove(portId);
         Remove(batch); transferred = batch; return true;
     }
     public bool TryTakeReserved(string portId, decimal maximumMoles, out FluidBatch batch)
@@ -288,6 +379,7 @@ public sealed class FluidInventory
         batch = CurrentBatch(port.FluidId, port.GasMoles, port.LiquidMoles).Scale(Math.Min(1m, maximumMoles / port.TotalMoles));
         if (!CanRemove(batch)) { batch = default; return false; }
         port.GasMoles -= batch.GasMoles; port.LiquidMoles -= batch.LiquidMoles;
+        if (port.TotalMoles == 0m) infiniteGasReservations?.Remove(portId);
         Remove(batch); return true;
     }
     #endregion
@@ -332,14 +424,16 @@ public sealed class FluidInventory
         return null;
     }
     private FluidBatch CurrentBatch(string id, decimal gas, decimal liquid) =>
-        CreateBatch(Catalog.Find(id), gas, liquid, GetTemperatureKelvin());
+        CreateBatch(Catalog.Find(id), gas, liquid,
+            gas > 0m && SuppliesInfiniteGas(id) ? infiniteGasTemperatureKelvin : GetTemperatureKelvin());
     private bool CanRemove(FluidBatch batch)
     {
         // 数量小到无法改变真实库存时拒绝提交，不能只搬热量或生成免费物料。
-        if (batch.IsEmpty) return false;
+        if (!IsValidBatch(batch)) return false;
         var component = FindComponent(batch.FluidId);
-        return component != null && component.GasMoles >= batch.GasMoles && component.LiquidMoles >= batch.LiquidMoles &&
-            (batch.GasMoles == 0m || component.GasMoles - batch.GasMoles != component.GasMoles) &&
+        bool infiniteGas = SuppliesInfiniteGas(batch.FluidId);
+        return component != null && (infiniteGas || component.GasMoles >= batch.GasMoles) && component.LiquidMoles >= batch.LiquidMoles &&
+            (infiniteGas || batch.GasMoles == 0m || component.GasMoles - batch.GasMoles != component.GasMoles) &&
             (batch.LiquidMoles == 0m || component.LiquidMoles - batch.LiquidMoles != component.LiquidMoles);
     }
     private void Remove(FluidBatch batch)
@@ -348,7 +442,8 @@ public sealed class FluidInventory
     private void Remove(FluidBatch batch, double temperatureKelvin)
     {
         var component = FindComponent(batch.FluidId);
-        component.GasMoles -= batch.GasMoles; component.LiquidMoles -= batch.LiquidMoles;
+        if (!SuppliesInfiniteGas(batch.FluidId)) component.GasMoles -= batch.GasMoles;
+        component.LiquidMoles -= batch.LiquidMoles;
         TrimEmpty();
         PreserveRemainingMatterTemperature(temperatureKelvin);
     }

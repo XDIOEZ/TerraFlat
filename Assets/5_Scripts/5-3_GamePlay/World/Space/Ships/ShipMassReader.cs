@@ -145,13 +145,15 @@ namespace FlatWorld.Spaceflight
             }
             private double ReadSnapshot(InventoryInstanceSnapshot snapshot, int depth)
                 => snapshot == null ? 0d : ReadInventory(snapshotInventories.GetValue(snapshot, value => value.CreateColdData()), depth + 1);
-            public double ReadFluidMass(FluidInventoryState state)
+            public double ReadFluidMass(FluidInventoryState state, bool excludeVirtualGas = false)
             {
                 WatchFluid(state);
                 if (state?.Components == null || !fluids.Add(state) || !Own(state)) return 0d;
                 double mass = 0d;
+                // 无限气源的主腔气相是配比样本，真实液体仍计入质量。
                 foreach (FluidComponentState component in state.Components)
-                    mass += (double)(component.GasMoles + component.LiquidMoles) * FluidCatalog.Default.Find(component.FluidId).MolarMassKgPerMol;
+                    mass += (double)((excludeVirtualGas ? 0 : component.GasMoles) + component.LiquidMoles) *
+                        FluidCatalog.Default.Find(component.FluidId).MolarMassKgPerMol;
                 return mass;
             }
             private double ReadLiquidMass(LiquidContainerState state)
@@ -296,7 +298,12 @@ namespace FlatWorld.Spaceflight
                 mass += ReadInventory(saved.Compost?.Inventory, depth + 1);
                 mass += ReadInventory(saved.Drying?.Inventory, depth + 1);
                 FluidMachineState fluid = saved.Fluid;
-                if (fluid?.Chambers != null) foreach (FluidInventoryState chamber in fluid.Chambers.Values) mass += ReadFluidMass(chamber);
+                if (fluid?.Chambers != null)
+                {
+                    bool infiniteGas = MachineCatalog.Get(data.IDName)?.Fluid?.InfiniteGasComposition?.Count > 0;
+                    foreach (var chamber in fluid.Chambers)
+                        mass += ReadFluidMass(chamber.Value, infiniteGas && chamber.Key == "main");
+                }
                 mass += ReadInventory(fluid?.PortableTank, depth + 1);
                 return mass;
             }

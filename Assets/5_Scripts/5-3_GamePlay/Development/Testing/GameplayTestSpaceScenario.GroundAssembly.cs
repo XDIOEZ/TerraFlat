@@ -29,6 +29,7 @@ public sealed partial class GameplayTestSpaceScenario
         List<ShipGroundBuildingStore.Entry> entries = ShipGroundBuildingStore.Collect(world);
         var selected = new JArray();
         int machineCount = 0, itemCount = 0;
+        int unlimitedFuelEngineCount = 0;
         foreach (ShipGroundBuildingStore.Entry entry in entries)
         {
             if (entry.Machine != null) machineCount++; else itemCount++;
@@ -37,6 +38,9 @@ public sealed partial class GameplayTestSpaceScenario
             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building);
             Mod_Building runtimeBuilding = entry.Item?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
             Mod_Door door = entry.Item?.itemMods?.GetMod_ByID<Mod_Door>("Door");
+            ShipPartConfiguration partConfiguration = entry.Machine == null ? null : SpaceSession.ResolvePartConfiguration(data);
+            bool unlimitedFuel = partConfiguration?.Kind == ShipPieceKind.Engine && partConfiguration.UnlimitedFuel;
+            if (unlimitedFuel) unlimitedFuelEngineCount++;
             int placementLayer = entry.Machine?.Definition.Layer ?? BuildingOccupancyRegistry.GetPlacementLayer(runtimeBuilding);
             bool sameLayerRejected = false;
             IBuildingPlacementExtension extension = BuildingPlacementLifecycle.GetExtension(entry.Item);
@@ -45,6 +49,7 @@ public sealed partial class GameplayTestSpaceScenario
             {
                 ["id"] = entry.Guid.ToString(CultureInfo.InvariantCulture), ["guid"] = entry.Guid,
                 ["itemId"] = data.IDName, ["machine"] = entry.Machine != null,
+                ["unlimitedFuel"] = unlimitedFuel,
                 ["scope"] = entry.Machine?.ScopeKey ?? entry.Item?.gameObject.scene.name,
                 ["installed"] = building?.Role == BuildingRole.PlacedBuilding &&
                     building.State is BuildingState.Installed or BuildingState.Damaged,
@@ -73,8 +78,11 @@ public sealed partial class GameplayTestSpaceScenario
             ["activeShipCount"] = session.State.Ships.Count, ["totalBuildings"] = entries.Count,
             ["totalMachines"] = machineCount, ["totalItems"] = itemCount,
             ["pieceCount"] = selected.Count, ["buildings"] = selected,
+            ["unlimitedFuelEngineCount"] = unlimitedFuelEngineCount,
             ["hydrogen"] = fuel["hydrogen"], ["oxygen"] = fuel["oxygen"],
-            ["fluidInventories"] = fuel["inventories"]
+            ["fluidInventories"] = fuel["inventories"],
+            ["infiniteGasSources"] = fuel["infiniteGasSources"],
+            ["infiniteGasSourceCount"] = fuel["infiniteGasSourceCount"]
         };
     }
 
@@ -171,6 +179,7 @@ public sealed partial class GameplayTestSpaceScenario
         decimal hydrogen = 0m, oxygen = 0m;
         var seen = new HashSet<FluidInventory>();
         var inventories = new JArray();
+        var infiniteGasSources = new JArray();
         using (MachineWorld.UseScope(world))
         {
             foreach (int id in ids)
@@ -183,13 +192,33 @@ public sealed partial class GameplayTestSpaceScenario
                 decimal h = inventory.GetGasMoles(FluidIds.Hydrogen);
                 decimal o = inventory.GetGasMoles(FluidIds.Oxygen);
                 hydrogen += h; oxygen += o;
+                JObject infiniteSource = InfiniteGasSourceSnapshot(node, inventory);
+                if (infiniteSource != null)
+                    infiniteGasSources.Add(infiniteSource);
                 inventories.Add(new JObject { ["guid"] = node.Id, ["scope"] = node.ScopeKey,
                     ["kind"] = node.Definition.Fluid.Kind, ["hydrogen"] = (double)h, ["oxygen"] = (double)o,
                     ["pressureKPa"] = inventory.GetPressureKPa(MachineWorld.GetFluidVolumeLiters(node),
-                        MachineWorld.GetFluidMinimumGasSpaceLiters(node)) });
+                        MachineWorld.GetFluidMinimumGasSpaceLiters(node)),
+                    ["infiniteGasSource"] = infiniteSource != null });
             }
         }
-        return new JObject { ["hydrogen"] = (double)hydrogen, ["oxygen"] = (double)oxygen, ["inventories"] = inventories };
+        return new JObject { ["hydrogen"] = (double)hydrogen, ["oxygen"] = (double)oxygen,
+            ["inventories"] = inventories, ["infiniteGasSources"] = infiniteGasSources,
+            ["infiniteGasSourceCount"] = infiniteGasSources.Count };
+    }
+
+    private static JObject InfiniteGasSourceSnapshot(MachineEntity node, FluidInventory inventory)
+    {
+        var composition = node?.Definition.Fluid?.InfiniteGasComposition;
+        if (composition == null || composition.Count == 0 || inventory?.HasInfiniteGasSupply != true) return null;
+        return new JObject
+        {
+            ["guid"] = node.Id, ["infiniteGasSource"] = true,
+            ["composition"] = JObject.FromObject(composition),
+            ["hydrogen"] = (double)inventory.GetGasMoles(FluidIds.Hydrogen),
+            ["oxygen"] = (double)inventory.GetGasMoles(FluidIds.Oxygen),
+            ["totalMoles"] = (double)inventory.GasMoles
+        };
     }
     #endregion
 
@@ -270,8 +299,9 @@ public sealed partial class GameplayTestSpaceScenario
     {
         string world = SceneManager.GetActiveScene().name;
         MachineEntity endpoint = null;
-        Vector2Int pipeCell = default, sourceCell = default, outletCell = default;
+        Vector2Int targetCell = default, pipeCell = default, sourceCell = default, outletCell = default;
         int outletQuarterTurns = 0;
+        bool targetIsFixture = false;
         MachineDefinition pipeDefinition = MachineCatalog.Get("FluidPipe");
         MachineDefinition sourceDefinition = MachineCatalog.Get("GasTankBlock_Steel");
         MachineDefinition outletDefinition = MachineCatalog.Get("FluidPipe");
@@ -279,45 +309,80 @@ public sealed partial class GameplayTestSpaceScenario
             throw new InvalidOperationException("普通自动加油夹具缺少正式管道、出气口或源气罐定义。");
         var nodes = new List<MachineEntity>();
         Vector2Int[] directions = MechanicalNetworkGraph.Directions;
+        var fluidCells = new HashSet<Vector2Int>();
+        bool TryFindRoute(Vector2Int target, bool targetExists)
+        {
+            if (!targetExists && (BuildingOccupancyRegistry.IsOccupied(target, layer: sourceDefinition.Layer) ||
+                fluidCells.Contains(target))) return false;
+            for (int directionIndex = 0; directionIndex < directions.Length; directionIndex++)
+            {
+                Vector2Int direction = directions[directionIndex];
+                Vector2Int outlet = WorldTopologyRuntime.NormalizeCell(target + direction);
+                Vector2Int pipe = WorldTopologyRuntime.NormalizeCell(outlet + direction);
+                Vector2Int source = WorldTopologyRuntime.NormalizeCell(pipe + direction);
+                if (fluidCells.Contains(outlet) || fluidCells.Contains(pipe) || fluidCells.Contains(source) ||
+                    BuildingOccupancyRegistry.IsOccupied(outlet, layer: outletDefinition.Layer) ||
+                    BuildingOccupancyRegistry.IsOccupied(pipe, layer: pipeDefinition.Layer) ||
+                    BuildingOccupancyRegistry.IsOccupied(source, layer: sourceDefinition.Layer)) continue;
+                bool isolated = true;
+                foreach (Vector2Int neighbor in directions)
+                {
+                    Vector2Int besideOutlet = WorldTopologyRuntime.NormalizeCell(outlet + neighbor);
+                    Vector2Int besidePipe = WorldTopologyRuntime.NormalizeCell(pipe + neighbor);
+                    Vector2Int besideSource = WorldTopologyRuntime.NormalizeCell(source + neighbor);
+                    if (besideOutlet != target && fluidCells.Contains(besideOutlet) ||
+                        fluidCells.Contains(besidePipe) || fluidCells.Contains(besideSource))
+                    { isolated = false; break; }
+                }
+                if (!isolated) continue;
+                targetCell = target; outletCell = outlet; pipeCell = pipe; sourceCell = source;
+                outletQuarterTurns = (directionIndex + 2) & 3;
+                return true;
+            }
+            return false;
+        }
         using (MachineWorld.UseScope(world))
         {
             MachineWorld.CollectNodes(nodes);
-            var fluidCells = new HashSet<Vector2Int>();
             foreach (MachineEntity node in nodes)
                 if (node.Definition.Fluid != null) fluidCells.Add(node.Cell);
             foreach (MachineEntity node in nodes)
             {
-                // 引擎工作腔可能已吸空船罐；空的真实气罐同样是独立罐输送边界的有效接收端。
+                FluidMachineDefinition fluid = node.Definition.Fluid;
+                FluidInventory inventory = fluid == null ? null : MachineWorld.GetFluidInventory(node);
+                // 无限气源的展示样本不能作为落地管路接收端。
                 if (!shipIds.Contains(node.Id) || node.Definition.Fluid?.Kind != "tank" ||
-                    node.Definition.Fluid.GasCapacityStandardLiters <= 0d) continue;
-                for (int directionIndex = 0; directionIndex < directions.Length; directionIndex++)
+                    fluid.GasCapacityStandardLiters <= 0d || fluid.InfiniteGasComposition?.Count > 0 ||
+                    inventory?.HasInfiniteGasSupply == true || MachineWorld.GetIndustrialFreeCapacity(node, FluidPhase.Gas) <= 0d) continue;
+                if (TryFindRoute(node.Cell, targetExists: true))
                 {
-                    Vector2Int direction = directions[directionIndex];
-                    Vector2Int outlet = WorldTopologyRuntime.NormalizeCell(node.Cell + direction);
-                    Vector2Int pipe = WorldTopologyRuntime.NormalizeCell(outlet + direction);
-                    Vector2Int source = WorldTopologyRuntime.NormalizeCell(pipe + direction);
-                    if (fluidCells.Contains(outlet) || fluidCells.Contains(pipe) || fluidCells.Contains(source) ||
-                        BuildingOccupancyRegistry.IsOccupied(outlet, layer: outletDefinition.Layer) ||
-                        BuildingOccupancyRegistry.IsOccupied(pipe, layer: pipeDefinition.Layer) ||
-                        BuildingOccupancyRegistry.IsOccupied(source, layer: sourceDefinition.Layer)) continue;
-                    bool isolated = true;
-                    foreach (Vector2Int neighbor in directions)
-                    {
-                        Vector2Int besideOutlet = WorldTopologyRuntime.NormalizeCell(outlet + neighbor);
-                        Vector2Int besidePipe = WorldTopologyRuntime.NormalizeCell(pipe + neighbor);
-                        Vector2Int besideSource = WorldTopologyRuntime.NormalizeCell(source + neighbor);
-                        if (besideOutlet != node.Cell && fluidCells.Contains(besideOutlet) ||
-                            fluidCells.Contains(besidePipe) || fluidCells.Contains(besideSource))
-                        { isolated = false; break; }
-                    }
-                    if (!isolated) continue;
-                    endpoint = node; pipeCell = pipe; sourceCell = source; outletCell = outlet;
-                    outletQuarterTurns = (directionIndex + 2) & 3; break;
+                    endpoint = node;
+                    break;
                 }
-                if (endpoint != null) break;
             }
         }
-        if (endpoint == null) throw new InvalidOperationException("落地燃料网络没有可安全邻接的普通管道接入口。");
+        if (endpoint == null)
+        {
+            bool foundCell = false;
+            foreach (ShipGroundBuildingStore.Entry member in ShipGroundBuildingStore.Collect(world))
+            {
+                if (!shipIds.Contains(member.Guid)) continue;
+                for (int distance = 1; distance <= 8 && !foundCell; distance++)
+                    foreach (Vector2Int direction in directions)
+                    {
+                        Vector2Int candidate = WorldTopologyRuntime.NormalizeCell(member.Cell + direction * distance);
+                        if (TryFindRoute(candidate, targetExists: false)) { foundCell = true; break; }
+                    }
+                if (foundCell) break;
+            }
+            if (!foundCell) throw new InvalidOperationException("落地现场没有可安全放置普通有限接收罐和管路夹具的位置。");
+            ItemData receiverData = GameRes.ExistingInstance.CreateItemData("GasTankBlock_Steel");
+            ShipGroundBuildingStore.Entry receiverEntry = ShipGroundBuildingStore.Place(receiverData, targetCell, 0, world);
+            groundFuelFixtures.Add(receiverEntry);
+            endpoint = receiverEntry.Machine ?? throw new InvalidOperationException("普通有限接收罐没有恢复为机器节点。");
+            targetIsFixture = true;
+        }
+        var receiverIds = new HashSet<int> { endpoint.Id };
         ItemData sourceData = GameRes.ExistingInstance.CreateItemData("GasTankBlock_Steel");
         FixedStructureResourceInitializer.Prepare(sourceData, new FixedStructureResources
         {
@@ -329,29 +394,41 @@ public sealed partial class GameplayTestSpaceScenario
         groundFuelFixtures.Add(sourceEntry);
         var sourceIds = new HashSet<int> { sourceEntry.Guid };
         var allIds = new HashSet<int>(shipIds) { sourceEntry.Guid };
-        JObject targetsBefore = GroundFuelSnapshot(shipIds, tanksOnly: true);
-        JObject sourceBefore = GroundFuelSnapshot(sourceIds);
+        allIds.Add(endpoint.Id);
         ShipGroundBuildingStore.Entry pipeEntry = ShipGroundBuildingStore.Place(
             GameRes.ExistingInstance.CreateItemData("FluidPipe"), pipeCell, 0, world);
         groundFuelFixtures.Add(pipeEntry); allIds.Add(pipeEntry.Guid);
         ShipGroundBuildingStore.Entry outletEntry = ShipGroundBuildingStore.Place(
             GameRes.ExistingInstance.CreateItemData("FluidPipe"), outletCell, outletQuarterTurns, world);
         groundFuelFixtures.Add(outletEntry); allIds.Add(outletEntry.Guid);
+        JObject targetsBefore = GroundFuelSnapshot(receiverIds, tanksOnly: true);
+        JObject sourceBefore = GroundFuelSnapshot(sourceIds);
         JObject totalBefore = GroundFuelSnapshot(allIds);
+        bool targetIsFiniteWritableTank;
+        using (MachineWorld.UseScope(world))
+        {
+            FluidInventory targetInventory = MachineWorld.GetFluidInventory(endpoint);
+            targetIsFiniteWritableTank = endpoint.Definition.Fluid.Kind == "tank" &&
+                (endpoint.Definition.Fluid.InfiniteGasComposition == null || endpoint.Definition.Fluid.InfiniteGasComposition.Count == 0) &&
+                targetInventory?.HasInfiniteGasSupply != true &&
+                MachineWorld.GetIndustrialFreeCapacity(endpoint, FluidPhase.Gas) > 0d;
+        }
         double beforeTime = session.State.SimulationSeconds;
         yield return WaitUntil(() => session.State.SimulationSeconds >= beforeTime + .2d,
             15d, "独立罐边界检查未推进正式固定步。");
         completed(new JObject
         {
-            ["fixtureSetup"] = "landed-independent-tanks-no-passive-transfer", ["world"] = world,
+            ["fixtureSetup"] = "landed-independent-finite-tanks-no-passive-transfer", ["world"] = world,
             ["sourceGuid"] = sourceEntry.Guid, ["pipeGuid"] = pipeEntry.Guid, ["targetGuid"] = endpoint.Id,
+            ["targetIsFixture"] = targetIsFixture, ["receiverIds"] = JArray.FromObject(receiverIds),
             ["outletGuid"] = outletEntry.Guid, ["outletQuarterTurns"] = outletQuarterTurns,
             ["sourceScope"] = sourceEntry.Machine.ScopeKey, ["pipeScope"] = pipeEntry.Machine.ScopeKey,
             ["outletScope"] = outletEntry.Machine.ScopeKey,
             ["targetScope"] = endpoint.ScopeKey,
             ["targetIsGasTank"] = endpoint.Definition.Fluid.Kind == "tank" && endpoint.Definition.Fluid.GasCapacityStandardLiters > 0d,
+            ["targetIsFiniteWritableTank"] = targetIsFiniteWritableTank,
             ["pipeMask"] = MachineWorld.GetFluidPipeConnectionMask(pipeEntry.Machine),
-            ["targetsBefore"] = targetsBefore, ["targetsAfter"] = GroundFuelSnapshot(shipIds, true),
+            ["targetsBefore"] = targetsBefore, ["targetsAfter"] = GroundFuelSnapshot(receiverIds, true),
             ["sourceBefore"] = sourceBefore, ["sourceAfter"] = GroundFuelSnapshot(sourceIds),
             ["totalBefore"] = totalBefore, ["totalAfter"] = GroundFuelSnapshot(allIds),
             ["simulationSeconds"] = session.State.SimulationSeconds - beforeTime,

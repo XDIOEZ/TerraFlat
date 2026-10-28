@@ -27,7 +27,8 @@ public static partial class MachineWorld
             var components = new List<FluidComponentState>(inventory.State.Components);
             foreach (FluidComponentState component in components)
             {
-                if (component.GasMoles > 0m && inventory.TryTakeExact(component.FluidId, FluidPhase.Gas, component.GasMoles, out FluidBatch gas))
+                if (component.GasMoles > 0m && !inventory.SuppliesInfiniteGas(component.FluidId) &&
+                    inventory.TryTakeExact(component.FluidId, FluidPhase.Gas, component.GasMoles, out FluidBatch gas))
                 {
                     try { RecordAtmosphereEmission(node, gas); }
                     catch

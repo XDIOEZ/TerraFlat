@@ -16,6 +16,7 @@
     "自然补气上限 {0:0.#}% · 动力充装可充满": "Natural refill limit {0:0.#}% · Powered filling can reach full capacity",
     "液体 {0:0.###}/{1:0.###} L": "Liquid {0:0.###}/{1:0.###} L",
     "气量 {0:0.###}/{1:0.###} 标准 L": "Gas {0:0.###}/{1:0.###} standard L",
+    "无限供气（组分样本 {0:0.###} 标准 L）": "Unlimited gas supply (composition sample: {0:0.###} standard L)",
     "气罐不可用": "Gas tank unavailable",
     "自然补气": "Natural air refill",
     "天气调试面板  [{0}] 切换": "Weather Debug Panel  [{0}] Toggle",
@@ -655,6 +656,10 @@
     "已禁用": "Disabled"
   },
   "itemDescriptions": {
+    "Creative_Ship_Engine": "Creative mode only. Delivers 600,000 N of thrust without gas or liquid propellants. Requires power and follows the normal engine rules for hull edges, rotation, nozzle clearance and operating state.",
+    "Creative_Ship_Engine_Summoner": "Creative mode only. Delivers 600,000 N of thrust without gas or liquid propellants. Requires power and follows the normal engine rules for hull edges, rotation, nozzle clearance and operating state.",
+    "Creative_Gas_Tank": "Creative mode only. Continuously supplies a 2:1 hydrogen-oxygen mix. The 100 standard L shown is a composition sample. Four output-only gas ports still follow pipe throughput, filters and receiving capacity; it does not combine with ordinary tanks.",
+    "Creative_Gas_Tank_Summoner": "Creative mode only. Continuously supplies a 2:1 hydrogen-oxygen mix. The 100 standard L shown is a composition sample. Four output-only gas ports still follow pipe throughput, filters and receiving capacity; it does not combine with ordinary tanks.",
     "AtmosphereAnalyzer": "Use while held to open the instrument screen and measure the current planet's atmospheric composition, total gas quantity and pressure in real time. Total gas is shown in standard cubic meters.",
     "Bear": "Normally peaceful. A player remaining within 8 metres for more than 60 continuous seconds provokes the bear with 120 hatred. Hatred decays by 1 per second, and each confirmed hit adds 30 hatred toward its attacker.",
     "LiquidTankBlock_Iron": "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents.",

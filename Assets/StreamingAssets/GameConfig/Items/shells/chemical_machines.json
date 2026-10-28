@@ -948,6 +948,42 @@
       }
     },
     {
+      "id": "Creative_Gas_Tank",
+      "parent": "GasTankBlock_Steel",
+      "gameName": "创造气罐-建筑",
+      "description": "创造模式专用，无限供应2:1氢氧混合气，100标准L仅为配比展示样本。四向气口只输出，仍遵守管路吞吐、过滤和目标容量限制，不与普通气罐合并。",
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"Creative_Gas_Tank\",\"SummonerPrefabId\":\"Creative_Gas_Tank_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+          }
+        },
+        "机械扭矩模块": {
+          "parameters": {
+            "DefinitionId": "Creative_Gas_Tank"
+          }
+        }
+      }
+    },
+    {
+      "id": "Creative_Gas_Tank_Summoner",
+      "parent": "GasTankBlock_Steel_Summoner",
+      "gameName": "创造气罐",
+      "description": "创造模式专用，无限供应2:1氢氧混合气，100标准L仅为配比展示样本。四向气口只输出，仍遵守管路吞吐、过滤和目标容量限制，不与普通气罐合并。",
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Creative_Gas_Tank\",\"SummonerPrefabId\":\"Creative_Gas_Tank_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+          }
+        },
+        "机械扭矩模块": {
+          "parameters": {
+            "DefinitionId": "Creative_Gas_Tank"
+          }
+        }
+      }
+    },
+    {
       "id": "LiquidTankBlock_Iron",
       "parent": "BuildingBody_Base",
       "gameName": "铁液罐方块-建筑",

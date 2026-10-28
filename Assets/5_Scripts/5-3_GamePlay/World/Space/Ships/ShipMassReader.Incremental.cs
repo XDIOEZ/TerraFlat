@@ -195,8 +195,10 @@ namespace FlatWorld.Spaceflight
                 if (machine?.Definition.Fluid != null)
                 {
                     FluidMachineState fluids = MachineWorld.GetFluidState(machine);
-                    foreach (string chamber in fluids.Chambers.Keys) mass += ReadFluidMass(MachineWorld.GetFluidInventory(machine, chamber)?.State);
-                    mass += ReadFluidMass(MachineWorld.GetFluidInventory(machine, "main")?.State);
+                    bool infiniteGas = machine.Definition.Fluid.InfiniteGasComposition?.Count > 0;
+                    foreach (string chamber in fluids.Chambers.Keys)
+                        mass += ReadFluidMass(MachineWorld.GetFluidInventory(machine, chamber)?.State, infiniteGas && chamber == "main");
+                    mass += ReadFluidMass(MachineWorld.GetFluidInventory(machine, "main")?.State, infiniteGas);
                     mass += ReadInventory(fluids.PortableTank, 0);
                 }
                 return EndSource(source, mass);

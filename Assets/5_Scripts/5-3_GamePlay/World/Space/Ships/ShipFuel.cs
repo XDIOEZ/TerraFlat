@@ -9,7 +9,17 @@ namespace FlatWorld.Spaceflight
         public const string LiquidFuelId = "core:fuel_oil";
 
         public static bool IsEligible(FluidInventory inventory, ShipPartConfiguration engine)
-            => AvailableReactionMoles(inventory, engine) > 0m;
+            => engine?.UnlimitedFuel == true || AvailableReactionMoles(inventory, engine) > 0m;
+
+        public static double GetPropellantAuthority(FluidInventory inventory, ShipPartConfiguration engine)
+        {
+            if (engine == null) return 0d;
+            if (engine.UnlimitedFuel) return 1d;
+            float rate = engine.FuelMolesPerSecond;
+            if (!float.IsFinite(rate) || rate <= 0f || (double)rate >= (double)decimal.MaxValue) return 0d;
+            decimal required = (decimal)rate;
+            return required > 0m ? (double)(Math.Min(required, AvailableReactionMoles(inventory, engine)) / required) : 0d;
+        }
 
         public static decimal AvailableReactionMoles(FluidInventory inventory, ShipPartConfiguration engine)
         {
@@ -54,9 +64,10 @@ namespace FlatWorld.Spaceflight
         public static double ConsumeStoredChemicalPropellants(FluidInventory inventory, ShipPartConfiguration engine,
             double throttle, double seconds)
         {
-            if (engine == null || !float.IsFinite(engine.FuelMolesPerSecond) || engine.FuelMolesPerSecond <= 0f ||
-                !double.IsFinite(throttle) || !double.IsFinite(seconds) || throttle <= 0d || seconds <= 0d) return 0d;
+            if (engine == null || !double.IsFinite(throttle) || !double.IsFinite(seconds) || throttle <= 0d || seconds <= 0d) return 0d;
             throttle = Math.Min(1d, throttle);
+            if (engine.UnlimitedFuel) return throttle;
+            if (!float.IsFinite(engine.FuelMolesPerSecond) || engine.FuelMolesPerSecond <= 0f) return 0d;
             decimal requested = (decimal)(engine.FuelMolesPerSecond * throttle * seconds);
             decimal available = Math.Min(requested, AvailableReactionMoles(inventory, engine));
             return available > 0m && TryBurn(inventory, engine, available, out _)

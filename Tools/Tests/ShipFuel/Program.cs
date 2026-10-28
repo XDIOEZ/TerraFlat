@@ -150,6 +150,34 @@ internal static class Program
             "liquid oxygen ratio follows engine configuration");
     }
 
+    private static void UnlimitedFuelAuthorizationAndOutput()
+    {
+        var unlimited = new ShipPartConfiguration { UnlimitedFuel = true, FuelMolesPerSecond = 0f };
+        var normal = new ShipPartConfiguration();
+        var stocked = Fuel(2m, 1m, 1m);
+        string before = JsonConvert.SerializeObject(stocked.State);
+        Check(ShipFuel.IsEligible(null, unlimited) && ShipFuel.GetPropellantAuthority(null, unlimited) == 1d,
+            "unlimited engine has full fuel authority without an inventory");
+        Check(ShipFuel.AvailableReactionMoles(null, unlimited) == 0m && ShipFuel.GetPropellantAuthority(null, normal) == 0d,
+            "unlimited fuel creates no stock and ordinary engines cannot use an empty inventory");
+        Check(Math.Abs(ShipFuel.GetPropellantAuthority(stocked, normal) - 1d / 3d) < 1e-12d,
+            "ordinary fuel authority is still proportional to real stock");
+        Check(ShipFuel.GetPropellantAuthority(stocked, new ShipPartConfiguration { FuelMolesPerSecond = float.NaN }) == 0d &&
+            ShipFuel.GetPropellantAuthority(stocked, new ShipPartConfiguration { FuelMolesPerSecond = float.MaxValue }) == 0d,
+            "invalid and out-of-range ordinary fuel rates cannot grant authority");
+        Check(ShipFuel.ConsumeStoredChemicalPropellants(null, unlimited, .5d, 1d) == .5d &&
+            ShipFuel.ConsumeStoredChemicalPropellants(null, unlimited, 5d, 1d) == 1d,
+            "unlimited engine obeys requested and clamped throttle without storage");
+        for (int i = 0; i < 1000; i++)
+            Check(ShipFuel.ConsumeStoredChemicalPropellants(stocked, unlimited, .25d, .02d) == .25d,
+                "unlimited engine sustains power without fuel consumption");
+        Check(before == JsonConvert.SerializeObject(stocked.State), "unlimited output leaves physical inventory unchanged");
+        foreach (double seconds in new[] { 0d, -1d, double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+            Check(ShipFuel.ConsumeStoredChemicalPropellants(null, unlimited, 1d, seconds) == 0d, "invalid time produces no output");
+        foreach (double throttle in new[] { 0d, -1d, double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+            Check(ShipFuel.ConsumeStoredChemicalPropellants(null, unlimited, throttle, 1d) == 0d, "invalid throttle produces no output");
+    }
+
     private static void DualPhaseRefilling()
     {
         MachineWorld.Reset();
@@ -200,7 +228,7 @@ internal static class Program
     }
     #endregion
 
-    #region GM模板的真实端口图
+    #region 测试船配置与有限引擎端口
     private static void Template()
     {
         string root = AppContext.BaseDirectory;
@@ -210,36 +238,37 @@ internal static class Program
         var definitions = catalog["Nodes"].Cast<JObject>().ToDictionary(value => (string)value["Id"]);
         var structures = JObject.Parse(File.ReadAllText(Path.Combine(root, "Assets/StreamingAssets/GameConfig/Structures/fixed-structures.json")));
         var template = structures["structures"].Single(value => (string)value["id"] == "gm:small-test-ship");
-        var nodes = new List<MachineEntity>(); int sequence = 100;
-        foreach (var stamp in template["items"])
+        var engineStamps = template["items"].Where(value => ((string)value["memberId"]).StartsWith("engine-", StringComparison.Ordinal)).ToArray();
+        Check(engineStamps.Length == 6 && engineStamps.All(value => (string)value["itemId"] == "Creative_Ship_Engine"),
+            "GM test ship uses six creative engines");
+        Check(engineStamps.Select(value => (int?)value["quarterTurns"] ?? 0).Distinct().Count() == 4,
+            "creative test ship engines cover all four thrust directions");
+        var creative = definitions["Creative_Ship_Engine"];
+        Check(creative["Fluid"] == null && (string)creative["LogicId"] == "ship-device" &&
+            (int)creative["PlacementRotationSteps"] == 4 && (float)creative["Electrical"]["PowerWatts"] == 30f,
+            "creative engine keeps four-way placement and electricity without a fuel inventory");
+        var items = JObject.Parse(File.ReadAllText(Path.Combine(root, "Assets/StreamingAssets/GameConfig/Items/shells/space_ships.json")));
+        var itemDefinitions = items["items"].Cast<JObject>().ToDictionary(value => (string)value["id"]);
+        foreach (string id in new[] { "Creative_Ship_Engine", "Creative_Ship_Engine_Summoner" })
         {
-            string id = (string)stamp["itemId"];
-            if (!definitions.TryGetValue(id, out var definition) || definition["Fluid"] == null) continue;
-            for (int y = 0; y < ((int?)stamp["height"] ?? 1); y++)
-            for (int x = 0; x < ((int?)stamp["width"] ?? 1); x++)
-                nodes.Add(new MachineEntity { Id = ++sequence, Cell = new((int)stamp["x"] + x, (int)stamp["y"] + y),
-                    RotationQuarterTurns = (int?)stamp["quarterTurns"] ?? 0, Definition = new MachineDefinition { Id = id,
-                        Layer = (int?)definition["PlacementLayer"] ?? 0,
-                        Fluid = definition["Fluid"].ToObject<FluidMachineDefinition>() } });
+            JToken configuration = itemDefinitions[id]["modules"]["ship-part"]["parameters"]["Configuration"];
+            Check((bool?)configuration["UnlimitedFuel"] == true && (float)configuration["EngineThrustNewtons"] == 600000f,
+                id + " has the explicit unlimited capability and the GM engine thrust");
         }
-        var graph = Graph(nodes.ToArray()); var engines = nodes.Where(value => value.Definition.Fluid.Kind == "receiver").ToArray();
-        Check(engines.Length == 6, "GM has six receiver engines");
-        foreach (var engine in engines)
+        foreach (string id in new[] { "ShipChemicalEngine", "ShipChemicalEngine_GM" })
         {
-            var intake = engine.Definition.Fluid.Ports.Single(port => port.Phase == "gas");
-            Check(engine.Definition.Fluid.PullFromNetwork && engine.Definition.Fluid.GasCapacityStandardLiters == 1000, "engine owns and refills actual gas buffer");
-            Check(engine.Definition.Fluid.Ports.Any(port => port.Phase == "liquid" && port.FluidId == ShipFuel.LiquidFuelId && port.Direction != intake.Direction), "engine uses independent cells for gas and liquid pipes");
-            Vector2Int cell = engine.Cell + MechanicalNetworkGraph.Directions[(intake.Direction + engine.RotationQuarterTurns) & 3];
-            Check(graph.PipeAt(cell) != null, $"engine {engine.Cell} intake has physical pipe");
-            var routes = Routes(graph, engine);
-            Check(routes.Nodes.Any(value => value.Node.Definition.Fluid.Kind == "tank"), $"engine {engine.Cell} reaches actual tank through formal gas graph");
+            FluidMachineDefinition finite = definitions[id]["Fluid"].ToObject<FluidMachineDefinition>();
+            var intake = finite.Ports.Single(port => port.Phase == "gas");
+            Check(finite.PullFromNetwork && finite.GasCapacityStandardLiters == 1000, id + " retains real gas storage");
+            Check(finite.Ports.Any(port => port.Phase == "liquid" && port.FluidId == ShipFuel.LiquidFuelId && port.Direction != intake.Direction),
+                id + " retains separate gas and liquid inlets");
         }
     }
     #endregion
 
     private static void Main()
     {
-        Connectivity(); AtomicFuelAndBudgets(); DualFuelReactions(); DualPhaseRefilling(); ExhaustionPreservesRemainingFluidTemperature(); Template();
+        Connectivity(); AtomicFuelAndBudgets(); DualFuelReactions(); UnlimitedFuelAuthorizationAndOutput(); DualPhaseRefilling(); ExhaustionPreservesRemainingFluidTemperature(); Template();
         Console.WriteLine($"SHIP_FUEL_OK assertions={assertions}");
     }
 }

@@ -23,9 +23,45 @@ internal static class GameplayTestFluidNetworks
         using var f = new GameplayFluidScope();
         var source = f.Add("GasTankBlock_Iron"); var pipe = f.Add("FluidPipe", 1);
         var valve = f.Add("FluidValve", 2); var filter = f.Add("GasSelector", 3); var filler = f.Add("GasFiller", 4);
+        var unlimited = f.Add("Creative_Gas_Tank", 10); f.Add("FluidPipe", 11);
+        var unlimitedValve = f.Add("FluidValve", 12); var unlimitedFilter = f.Add("GasSelector", 13);
+        var unlimitedFiller = f.Add("GasFiller", 14);
+        var unlimitedSources = new MachineEntity[4]; var directionalFillers = new MachineEntity[4];
+        for (int direction = 0; direction < 4; direction++)
+        {
+            var offset = MechanicalNetworkGraph.Directions[direction]; int x = 30 + direction * 10, y = 10;
+            unlimitedSources[direction] = f.Add("Creative_Gas_Tank", x, y);
+            f.Add("FluidPipe", x + offset.x, y + offset.y);
+            directionalFillers[direction] = f.Add("GasFiller", x + 2 * offset.x, y + 2 * offset.y, direction);
+        }
         AddGas(source, FluidIds.Oxygen, 21); AddGas(source, FluidIds.Nitrogen, 79);
-        GetFluidState(filter).SelectedGasId = FluidIds.Oxygen; f.Begin();
+        GetFluidState(filter).SelectedGasId = FluidIds.Oxygen;
+        GetFluidState(unlimitedFilter).SelectedGasId = FluidIds.Oxygen; f.Begin();
         var routes = new FluidNetworkGraph.SupplyWorkspace();
+        var unlimitedInventory = GetFluidInventory(unlimited);
+        double unlimitedSample = Gas(unlimited);
+        CollectFluidSupplyRoutes(unlimitedFiller, "main", FluidPhase.Gas, new[] { FluidIds.Oxygen }, routes);
+        int sourceIndex = routes.Nodes.FindIndex(n => n.Node == unlimited);
+        double budget = sourceIndex < 0 ? 0d : GetFluidSupplyStandardLiters(routes, sourceIndex, f.Seconds, true);
+        decimal available = sourceIndex < 0 ? 0m : GetFluidSupplyStock(routes, sourceIndex, FluidIds.Oxygen, FluidPhase.Gas);
+        var receiver = new FluidInventory();
+        double transferred = sourceIndex < 0 ? 0d : IndustrialFluidTransfer.Transfer(unlimitedInventory, receiver,
+            FluidPhase.Gas, budget, budget, 100d, GetFluidRouteFilter(routes, sourceIndex));
+        double routeCharge = sourceIndex < 0 ? 0d : GetFluidRouteCharge(routes, sourceIndex, unlimitedInventory.State, transferred);
+        if (sourceIndex >= 0) ConsumeFluidSupplyBudget(routes, sourceIndex, Array.Empty<FluidRequirement>(), routeCharge);
+        double remaining = sourceIndex < 0 ? 0d : GetFluidSupplyStandardLiters(routes, sourceIndex, f.Seconds, true);
+        var directions = new JArray();
+        for (int direction = 0; direction < 4; direction++)
+        {
+            CollectFluidSupplyRoutes(directionalFillers[direction], "main", FluidPhase.Gas, new[] { FluidIds.Oxygen }, routes);
+            directions.Add(routes.Nodes.Any(n => n.Node == unlimitedSources[direction]));
+        }
+        CollectFluidSupplyRoutes(unlimitedFiller, "main", FluidPhase.Gas, new[] { FluidIds.Hydrogen }, routes);
+        bool rejectedHydrogen = !routes.Nodes.Any(n => n.Node == unlimited);
+        GetFluidState(unlimitedValve).ValveOpen = false; TopologyChanged(unlimitedValve);
+        CollectFluidSupplyRoutes(unlimitedFiller, "main", FluidPhase.Gas, new[] { FluidIds.Oxygen }, routes);
+        bool unlimitedClosed = !routes.Nodes.Any(n => n.Node == unlimited);
+        GetFluidState(unlimitedValve).ValveOpen = true; TopologyChanged(unlimitedValve);
         bool Reach(string id)
         { CollectFluidSupplyRoutes(filler, "main", FluidPhase.Gas, new[] { id }, routes); return routes.Nodes.Any(n => n.Node == source); }
         bool oxygen = Reach(FluidIds.Oxygen), nitrogen = Reach(FluidIds.Nitrogen);
@@ -39,7 +75,13 @@ internal static class GameplayTestFluidNetworks
         return new JObject { ["oxygenReachable"] = oxygen, ["nitrogenReachable"] = nitrogen,
             ["closedReachable"] = closed, ["reverseReachable"] = reverse, ["liquidReachable"] = phase,
             ["beforeRemoval"] = before, ["afterRemoval"] = Gas(source), ["afterBreakReachable"] = Reach(FluidIds.Oxygen),
-            ["pipeChambers"] = pipeChambers };
+            ["pipeChambers"] = pipeChambers,
+            ["infinite"] = unlimitedInventory.HasInfiniteGasSupply, ["infiniteSample"] = unlimitedSample,
+            ["infiniteSampleAfter"] = Gas(unlimited), ["infiniteDirections"] = directions,
+            ["infiniteBudget"] = budget, ["infiniteAvailable"] = (double)FluidUnits.MolToStandardLiters(available),
+            ["infiniteDelivered"] = transferred, ["infiniteRouteCharge"] = routeCharge,
+            ["infiniteRemaining"] = remaining, ["infiniteFilterRejectsHydrogen"] = rejectedHydrogen,
+            ["infiniteValveClosed"] = unlimitedClosed };
     }
     internal static JObject CaptureOwnership(Player player, JObject args)
     {

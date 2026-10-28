@@ -770,8 +770,8 @@ do
     test.system("space", "ship_engine_placement", {}, function(data)
         assert(data.operation == "ship_engine_placement" and data.scope == "production-domain", "缺少正式引擎安装领域结果")
         local rotation = data.rotation
-        assert(type(rotation) == "table" and #rotation.engines == 2, "普通和 GM 引擎旋转采样不完整")
-        local engineIds = {ShipChemicalEngine = true, ShipChemicalEngine_GM = true}
+        assert(type(rotation) == "table" and #rotation.engines == 3, "普通、GM 和创造引擎旋转采样不完整")
+        local engineIds = {ShipChemicalEngine = true, ShipChemicalEngine_GM = true, Creative_Ship_Engine = true}
         for _, engine in ipairs(rotation.engines) do
             assert(engineIds[engine.id] and engine.rotatable and engine.steps == 4, "引擎没有声明四向旋转：" .. tostring(engine.id))
             engineIds[engine.id] = nil
@@ -843,6 +843,18 @@ do
         assert(data.impurityAdded == true and data.impureEligible == true, "无关气体应留存，不能阻止已有氢氧按比例燃烧")
         assert(data.singleGasPrepared == true and data.singleGasEligible == false, "只有氢气的库存不能作为合格燃料")
         near(data.liquidFuelOxygenRatio, 20, "燃油默认耗氧比应保持明确配置")
+        local unlimited = data.unlimitedFuel
+        assert(unlimited.stockPrepared and unlimited.inventoryUnchanged and unlimited.eligibleWithoutInventory and
+            unlimited.actualStockWithoutInventory == 0, "无限燃料不能创建或消耗真实库存")
+        near(unlimited.authorityWithoutInventory, 1, "无库存创造引擎必须保持全部推力授权")
+        near(unlimited.finiteEngineAuthority, 1/3, "普通引擎推力授权仍须按真实燃料比例")
+        assert(unlimited.invalidFiniteEngineAuthority == 0, "普通引擎非法燃料速率不能授权")
+        near(unlimited.outputWithoutInventory, .5, "无库存的创造引擎必须按油门出力")
+        near(unlimited.clampedOutput, 1, "创造引擎油门必须限制在 1 以内")
+        near(unlimited.repeatedOutput, 250, "创造引擎重复出力不能耗尽")
+        assert(unlimited.zeroThrottle == 0 and unlimited.zeroSeconds == 0 and unlimited.negativeSeconds == 0 and
+            unlimited.invalidSeconds == 0 and unlimited.infiniteSeconds == 0 and unlimited.invalidThrottle == 0 and
+            unlimited.finiteEngineWithoutInventory == 0, "空载、非法时间或普通引擎缺油时不能出力")
         local expected = {
             hydrogen_rich = {true, 2/3, 6, 0, 0, 0},
             oxygen_rich = {true, 1/3, 0, 4, 0, 0},

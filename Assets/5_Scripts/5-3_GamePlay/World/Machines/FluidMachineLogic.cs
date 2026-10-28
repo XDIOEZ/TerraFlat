@@ -215,7 +215,9 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         FluidInventory inventory = MachineWorld.GetFluidInventory(Entity, chamber);
         bool gas = Array.Exists(Definition.Ports, port => port.Phase == "gas");
         text.Append("\n").Append(gas
-            ? FlatWorldLocalizationService.GetUiFormat("气量 {0:0.###}/{1:0.###} 标准 L", FluidUnits.MolToStandardLiters(inventory.GasMoles), MachineWorld.GetFluidGasCapacityStandardLiters(Entity))
+            ? inventory.HasInfiniteGasSupply
+                ? FlatWorldLocalizationService.GetUiFormat("无限供气（组分样本 {0:0.###} 标准 L）", FluidUnits.MolToStandardLiters(inventory.GasMoles))
+                : FlatWorldLocalizationService.GetUiFormat("气量 {0:0.###}/{1:0.###} 标准 L", FluidUnits.MolToStandardLiters(inventory.GasMoles), MachineWorld.GetFluidGasCapacityStandardLiters(Entity))
             : FlatWorldLocalizationService.GetUiFormat("液体 {0:0.###}/{1:0.###} L", inventory.GetLiquidLiters(), MachineWorld.GetFluidVolumeLiters(Entity)));
         foreach (FluidComponentState component in inventory.State.Components)
         {

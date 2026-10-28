@@ -4242,6 +4242,38 @@ MonoBehaviour:
     m_Localized: "全木制的手推车，站在车斗后方推动。按 F 打开车斗库存，可装 12 格物品。"
     m_Metadata:
       m_Items: []
+  - m_Id: 28102900001000000
+    m_Localized: "创造引擎-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000001
+    m_Localized: "创造模式专用，提供600000 N推力，无需气体或液体燃料。仍需电力，遵守普通引擎的船体外缘、旋转、喷口净空和启停规则。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000002
+    m_Localized: "创造引擎"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000003
+    m_Localized: "创造模式专用，提供600000 N推力，无需气体或液体燃料。仍需电力，遵守普通引擎的船体外缘、旋转、喷口净空和启停规则。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000004
+    m_Localized: "创造气罐-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000005
+    m_Localized: "创造模式专用，无限供应2:1氢氧混合气，100标准L仅为配比展示样本。四向气口只输出，仍遵守管路吞吐、过滤和目标容量限制，不与普通气罐合并。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000006
+    m_Localized: "创造气罐"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28102900001000007
+    m_Localized: "创造模式专用，无限供应2:1氢氧混合气，100标准L仅为配比展示样本。四向气口只输出，仍遵守管路吞吐、过滤和目标容量限制，不与普通气罐合并。"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

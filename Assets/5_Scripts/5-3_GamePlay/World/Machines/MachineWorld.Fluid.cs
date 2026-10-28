@@ -73,7 +73,7 @@ public static partial class MachineWorld
         if (!fluidStepStock.TryGetValue(inventory, out FluidInventoryState stock)) return;
         FluidComponentState component = stock.Components.Find(value => value.FluidId == fluidId);
         if (component == null) return;
-        component.GasMoles = Math.Max(0, component.GasMoles - gas);
+        if (!inventory.SuppliesInfiniteGas(fluidId)) component.GasMoles = Math.Max(0, component.GasMoles - gas);
         component.LiquidMoles = Math.Max(0, component.LiquidMoles - liquid);
     }
     internal static void SetFluidMechanicalPower(MachineEntity node, double watts) => fluidMechanicalPower[node] = watts;
@@ -112,6 +112,10 @@ public static partial class MachineWorld
         if (!state.Chambers.TryGetValue(chamberId, out FluidInventoryState contents))
             state.Chambers[chamberId] = contents = new FluidInventoryState();
         var inventory = new FluidInventory(contents);
+        FluidMachineDefinition definition = node.Definition.Fluid;
+        if (chamberId == "main" && definition.InfiniteGasComposition?.Count > 0)
+            inventory.ConfigureInfiniteGasSupply(definition.InfiniteGasComposition, definition.InfiniteGasTemperatureKelvin,
+                definition.GasCapacityStandardLiters);
         fluidInventories.Add(key, inventory);
         return inventory;
     }
@@ -258,8 +262,8 @@ public static partial class MachineWorld
         ForgetFluidNodeInventoryCaches(node.Id);
         // 设备/液体更新只替换本节点；其他节点的气网快照、热量和库存不受消息到达顺序影响。
         if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && group.OwnerId == node.Id &&
-            incoming.Chambers.TryGetValue("main", out FluidInventoryState contents))
-            group.Inventory = new FluidInventory(contents);
+            incoming.Chambers.ContainsKey("main"))
+            group.Inventory = GetLocalFluidInventory(node);
     }
     #endregion
 

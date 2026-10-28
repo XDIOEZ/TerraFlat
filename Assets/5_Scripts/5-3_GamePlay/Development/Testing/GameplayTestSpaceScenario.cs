@@ -923,19 +923,27 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         ShipFlightState flight = session.GetFlight(ship.ShipId);
         decimal hydrogen = 0m, oxygen = 0m;
+        int unlimitedFuelEngineCount = 0;
         var inventories = new HashSet<FluidInventory>();
         var nodes = new List<MachineEntity>();
         var machines = new JArray();
+        var infiniteGasSources = new JArray();
         using (MachineWorld.UseScope("ship:" + ship.ShipId))
         {
             MachineWorld.CollectNodes(nodes);
             foreach (MachineEntity node in nodes)
             {
+                bool unlimitedFuel = session.GetDevice(node.Id.ToString(CultureInfo.InvariantCulture))?.Configuration?.UnlimitedFuel == true;
+                if (unlimitedFuel) unlimitedFuelEngineCount++;
+                FluidInventory inventory = node.Definition.Fluid == null ? null : MachineWorld.GetFluidInventory(node);
+                JObject infiniteSource = InfiniteGasSourceSnapshot(node, inventory);
                 machines.Add(new JObject { ["guid"] = node.Id, ["scope"] = node.ScopeKey,
-                    ["itemId"] = node.Snapshot.IDName });
+                    ["itemId"] = node.Snapshot.IDName, ["unlimitedFuel"] = unlimitedFuel,
+                    ["infiniteGasSource"] = infiniteSource != null });
+                if (infiniteSource != null)
+                    infiniteGasSources.Add(infiniteSource);
                 // 燃料可已进入引擎工作腔，总量采样必须同时覆盖船罐与消费者库存。
                 if (node.Definition.Fluid == null) continue;
-                FluidInventory inventory = MachineWorld.GetFluidInventory(node);
                 if (inventory == null || !inventories.Add(inventory)) continue;
                 hydrogen += inventory.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas);
                 oxygen += inventory.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas);
@@ -956,6 +964,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["impactSpeed"] = flight?.ImpactSpeed, ["landingResolved"] = flight?.LandingResolved,
             ["poweredDescent"] = flight?.PoweredDescent,
             ["hydrogen"] = (double)hydrogen, ["oxygen"] = (double)oxygen, ["engineOutput"] = output,
+            ["unlimitedFuelEngineCount"] = unlimitedFuelEngineCount,
+            ["infiniteGasSources"] = infiniteGasSources, ["infiniteGasSourceCount"] = infiniteGasSources.Count,
             ["spaceView"] = session.IsSpaceView, ["surfaceWorld"] = flight?.SurfaceWorldKey,
             ["pieces"] = pieces, ["machines"] = machines };
     }

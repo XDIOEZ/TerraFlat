@@ -4,6 +4,7 @@
 - 泵和消费者工作腔独立保存物质；`CombineAdjacent` 只让四邻同定义方块罐组合，共享库存和相加的固定容量，气液/铁钢不互拼。`CombinedFluidTankInventory` 按容量保存各格份额，拆回、断桥和迁移守恒；异种液体拒绝合并，排空后重新判定。气量用标准 L、液量用 L，不结算工业压差、压缩功、换热、蒸发冷凝或超压爆炸。
 - 铁/钢液罐方块为 `LiquidTankBlock_Iron/Steel`，各800L（满格1000L扣200L壳体）、四向液体口、禁止自然补气；组合容量按成员相加，沿用通用储罐和建筑快照，标志为液滴，气罐标志为气流。
 - `IndustrialFluidTransfer` 是共用原子数量转移。普通气体按真实混合比例，过滤只取指定组分原有份额，剩余留来源。单液冲突拒绝，不转换或丢料；整液网异种检查按 `(节点, 腔体)`，不误并独立副产物腔。
+- `InfiniteGasComposition` 与 `InfiniteGasTemperatureKelvin` 显式配置主腔无限气源，库存只存有限配比样本，加载按定义重建；取气不耗样本，实际输出仍受端口、过滤、流量和接收容量限制，不支持相邻合罐或气体输入。
 - 气泵把标准升换算为摩尔后，调用大气源前须先按 `AtmosphereService.MinimumMoles` 量化总请求，再拆分混合组分；否则末组分会扣出非量子余量并污染星球库存。
 - `FluidInventory` 扣料/排气按精确十进制余量与原温度重算内能，原子配方共用扣料前温度；不以浮点大数相减或清零极小尾料维持状态。回归 `Space/fuel_reaction` 与 `Tools/Tests/ShipFuel`。
 - `CollectFluidSupplyRoutes` 逆向取源，`CollectFluidDeliveryRoutes` 正向找接收设备；`GetFluidRouteFilter` 统一读取路径筛选与端口限制。`GetFluidRouteCharge` 将筛选后净量还原为输入混气流量，所有共享路径预算按该流量扣，防多目标放大过滤能力。

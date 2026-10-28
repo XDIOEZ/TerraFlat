@@ -1,4 +1,54 @@
 -- 落地专项只走正式 GM、起降和普通管路，不执行导航、惯性或跨星区夹具。
+local function verify_infinite_propellant_sources(snapshots, label)
+    local expectedEngineCount = snapshots[1].unlimitedFuelEngineCount or 0
+    local expectedSourceCount = snapshots[1].infiniteGasSourceCount or 0
+    local previous = nil
+    for _, snapshot in ipairs(snapshots) do
+        assert((snapshot.unlimitedFuelEngineCount or 0) == expectedEngineCount and
+            (snapshot.infiniteGasSourceCount or 0) == expectedSourceCount,
+            "无限燃料能力在起降阶段改变：" .. label)
+        local engineCount, sourceCount = 0, 0
+        local machineRows = snapshot.machines or snapshot.buildings or {}
+        for _, row in ipairs(machineRows) do if row.unlimitedFuel then engineCount = engineCount + 1 end end
+        local sourceRows = snapshot.machines or snapshot.fluidInventories or {}
+        for _, row in ipairs(sourceRows) do if row.infiniteGasSource then sourceCount = sourceCount + 1 end end
+        assert(engineCount == expectedEngineCount and sourceCount == expectedSourceCount,
+            "无限推进或无限气源计数没有对应到真实机器能力：" .. label)
+        local sources = snapshot.infiniteGasSources or {}
+        assert(#sources == expectedSourceCount, "无限气源资格采样数量不一致：" .. label)
+        local current = {}
+        for _, source in ipairs(sources) do
+            assert(source.infiniteGasSource and source.guid ~= 0 and not current[source.guid] and
+                source.totalMoles > 0 and source.hydrogen > 0 and source.oxygen > 0,
+                "无限气源没有真实有限配比样本：" .. label)
+            local composition = source.composition
+            local expectedHydrogen, expectedOxygen = composition["core:hydrogen"], composition["core:oxygen"]
+            assert(expectedHydrogen and expectedHydrogen > 0 and expectedOxygen and expectedOxygen > 0 and
+                math.abs(source.hydrogen / source.oxygen - expectedHydrogen / expectedOxygen) < 0.00001,
+                "无限气源有限样本与配置配比不符：" .. label)
+            current[source.guid] = source
+        end
+        if previous then
+            for guid, before in pairs(previous) do
+                local after = current[guid]
+                assert(after and math.abs(after.hydrogen - before.hydrogen) < 0.000001 and
+                    math.abs(after.oxygen - before.oxygen) < 0.000001 and
+                    math.abs(after.totalMoles - before.totalMoles) < 0.000001,
+                    "飞行或落地消耗了无限气源的有限展示样本：" .. label)
+                for fluidId, ratio in pairs(before.composition) do
+                    assert(math.abs((after.composition[fluidId] or -1) - ratio) < 0.000001,
+                        "起降改变了无限气源配比配置：" .. label)
+                end
+                for fluidId in pairs(after.composition) do
+                    assert(before.composition[fluidId] ~= nil, "起降改变了无限气源组分：" .. label)
+                end
+            end
+        end
+        previous = current
+    end
+    return expectedEngineCount > 0 or expectedSourceCount > 0
+end
+
 local function verify_visible_height_hud_layout(snapshot)
     local layout = snapshot.layout
     if not layout.visible then return false end
@@ -142,10 +192,15 @@ test.space("ship_landing", function(data)
         assert(health.accepted and health.after > 0 and health.after < health.before and restored[health.guid] and
             restored[health.guid].health > 0 and restored[health.guid].health <= health.after + 0.0001,
             "正式落地沿用了准备时的旧血量：" .. label)
+        local hasInfinitePropellant = (ship.cruising.unlimitedFuelEngineCount or 0) > 0 or
+            (ship.cruising.infiniteGasSourceCount or 0) > 0
         for _, id in ipairs({"hydrogen", "oxygen"}) do
-            assert(ship.landedAgain[id] <= preparation.latestBeforeCommit[id] + 0.0000001 and
-                preparation.latestBeforeCommit[id] < ship.cruising[id],
-                "准备或移交复制了燃料，或下降未消耗真实燃料：" .. label)
+            assert(ship.landedAgain[id] <= preparation.latestBeforeCommit[id] + 0.0000001,
+                "准备或移交复制了燃料：" .. label)
+            if not hasInfinitePropellant then
+                assert(preparation.latestBeforeCommit[id] < ship.cruising[id],
+                    "下降未消耗真实有限燃料：" .. label)
+            end
         end
     end
 
@@ -179,6 +234,8 @@ test.space("ship_landing", function(data)
     end
     for _, ship in ipairs(data.ships) do
         local label = ship.templateId
+        local hasInfinitePropellant = verify_infinite_propellant_sources({ship.filled, ship.lifting, ship.cruising,
+            ship.descending, ship.preparation.latestBeforeCommit, ship.landedAgain}, label)
         local initial, machineCount = ground(ship.landed, label .. "/GM 创建")
         local filled = ground(ship.filled, label .. "/普通地面补给")
         assert(ship.landed.activeShipCount == ship.beforeBuild.activeShipCount and
@@ -192,8 +249,10 @@ test.space("ship_landing", function(data)
         assert(ship.lifting.phase == "Lifting" and ship.cruising.phase == "Cruising" and ship.cruising.spaceView and
             ship.landingAccepted and ship.descending.phase == "SurfaceDescending" and not ship.descending.spaceView,
             "没有完整经过点火、太空和真实地表下降：" .. label)
-        assert(ship.cruising.hydrogen < ship.filled.hydrogen and ship.cruising.oxygen < ship.filled.oxygen,
-            "起飞没有消耗真实氢氧：" .. label)
+        if not hasInfinitePropellant then
+            assert(ship.cruising.hydrogen < ship.filled.hydrogen and ship.cruising.oxygen < ship.filled.oxygen,
+                "有限燃料起飞没有消耗真实氢氧：" .. label)
+        end
         for _, flight in ipairs({ship.lifting, ship.cruising, ship.descending}) do
             assert(math.abs(flight.angle) < 0.000001 and math.abs(flight.angularVelocity) < 0.000001,
                 "起降过程没有保持朝上：" .. label)
@@ -241,15 +300,25 @@ test.space("ship_landing", function(data)
         whole_view(ship.viewCache.descending, ship.landed.pieceCount, label .. "/下降")
         ground_view(ship.viewCache.returned, label .. "/落地")
         local fuel = ship.autoRefuel
-        assert(fuel.fixtureSetup == "landed-independent-tanks-no-passive-transfer" and not fuel.targetDirectRefill and
+        local function contains_inventory(snapshot, guid)
+            for _, inventory in ipairs(snapshot.inventories) do
+                if inventory.guid == guid then return inventory end
+            end
+            return nil
+        end
+        assert(fuel.fixtureSetup == "landed-independent-finite-tanks-no-passive-transfer" and not fuel.targetDirectRefill and
             fuel.world == ship.landedAgain.world and fuel.sourceScope == fuel.world and fuel.pipeScope == fuel.world and
-            fuel.outletScope == fuel.world and fuel.targetScope == fuel.world and restored[fuel.targetGuid],
-            "落地加油没有使用普通地面管路与原 Guid 燃料罐：" .. label)
+            fuel.outletScope == fuel.world and fuel.targetScope == fuel.world and
+            contains_inventory(fuel.targetsBefore, fuel.targetGuid) and contains_inventory(fuel.targetsAfter, fuel.targetGuid) and
+            (fuel.targetIsFixture or restored[fuel.targetGuid]),
+            "落地加油没有使用独立有限接收罐、普通地面管路或原有限罐：" .. label)
         assert(fuel.sourceGuid ~= fuel.targetGuid and fuel.pipeGuid ~= fuel.outletGuid and
             (fuel.pipeMask == 5 or fuel.pipeMask == 10) and fuel.simulationSeconds > 0,
             "独立罐连接管路没有正式连通，或未等待真实世界固定步：" .. label)
-        assert(fuel.targetIsGasTank and fuel.sourceBefore.hydrogen > 0 and fuel.sourceBefore.oxygen > 0,
-            "独立罐边界检查缺少真实气罐或正量氢氧来源：" .. label)
+        assert(fuel.targetIsGasTank and fuel.targetIsFiniteWritableTank and
+            contains_inventory(fuel.targetsBefore, fuel.targetGuid).infiniteGasSource == false and
+            fuel.sourceBefore.hydrogen > 0 and fuel.sourceBefore.oxygen > 0,
+            "独立罐边界检查缺少有限可写接收罐或正量氢氧来源：" .. label)
         for _, id in ipairs({"hydrogen", "oxygen"}) do
             assert(math.abs(fuel.targetsAfter[id]-fuel.targetsBefore[id])<0.000001 and
                 math.abs(fuel.sourceAfter[id]-fuel.sourceBefore[id])<0.000001,
