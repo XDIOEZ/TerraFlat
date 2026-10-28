@@ -40,6 +40,14 @@ local function check_stage(fragments, count, pieces)
             "每个整体应只有一个表现刚体与合并 CustomCollider，子部件不能增加刚体")
         assert(fragment.physicsBodies == 1 and fragment.physicsColliders == 2,
             "每个整体应只有一个原生模拟刚体及阻挡/地板两类合并形状")
+        if fragment.wreck and not fragment.retainsInteriorWorld then
+            assert(not fragment.hasShipInteriorRuntime and not fragment.hasRegisteredInteriorWorld,
+                "纯冷残骸的递归分裂不能重新创建船内世界或误注册地表世界")
+        else
+            assert(fragment.hasShipInteriorRuntime and fragment.hasRegisteredInteriorWorld and
+                fragment.interiorWorldUsesLocalCoordinates and fragment.interiorWorldMatchesRuntime,
+                "活动船体或保留居民的残骸必须持有同一真实船内局部世界")
+        end
         if fragment.wreck then
             wrecks = wrecks + 1
             assert(fragment.wreckViewCount == 1 and fragment.presentationItems == 1,
@@ -124,6 +132,10 @@ test.space("ship_damage_live", function(data)
         local cargo, owner = part(stage, data.cargoId)
         assert(owner.wreck and cargo.snapshotPresent and cargo.decodedGuid == tonumber(data.cargoId) and cargo.decodedId ~= "",
             "冷残骸未保留真实设备快照和 GUID")
+        if index >= 3 then
+            assert(not owner.retainsInteriorWorld and not owner.retainsWorldWithoutStructure,
+                "无地板冷货物不能在分离或保存后继承源船的局部世界保留资格")
+        end
         near(cargo.health, before_cargo.health - (index == 1 and 0 or 3), "冷残骸设备继续掉血或分裂后的结构耐久错误")
         near(cargo.snapshotHealth, cargo.health, "冷设备快照血量与船部位映射不一致")
         near(cargo.seeds, before_cargo.seeds, "真实种子库存在冷移交/递归分裂/保存往返中丢失")

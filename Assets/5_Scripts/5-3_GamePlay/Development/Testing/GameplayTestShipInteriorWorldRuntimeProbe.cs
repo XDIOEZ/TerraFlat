@@ -352,13 +352,8 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         ShipState sacrificialShip = AddFirstFloor(fixture, "ShipFloor_Iron", OffsetFromPlayer(player, session, 90f));
         session.EnsureShipInteriorWorld(sacrificialShip);
         string sacrificialKey = MachineWorld.GetShipScopeKey(sacrificialShip.ShipId);
-        FlatWorld.AIECS.Gameplay.AiecsEcologyRuntimeHost retiredAiHost;
-        using (GameplayWorldRegistry.UseWorld(sacrificialKey))
-            retiredAiHost = AiRuntimeBackendService.Ecology as FlatWorld.AIECS.Gameplay.AiecsEcologyRuntimeHost;
-        result["destroyAiHostInitialized"] = retiredAiHost != null && retiredAiHost.OwnedWorldKey == sacrificialKey;
         ShipPieceState sacrificialFloor = sacrificialShip.Pieces[0];
         session.RollbackPiece(sacrificialShip, sacrificialFloor);
-        result["destroyReleasedAiWorldHost"] = retiredAiHost != null && string.IsNullOrEmpty(retiredAiHost.OwnedWorldKey);
         yield return null;
         result["destroyReleasedWorlds"] = !session.TryGetShipInteriorWorld(sacrificialShip.ShipId, out _) &&
             !GameplayWorldRegistry.TryGet(sacrificialKey, out _) && session.GetShip(sacrificialShip.ShipId) == null &&

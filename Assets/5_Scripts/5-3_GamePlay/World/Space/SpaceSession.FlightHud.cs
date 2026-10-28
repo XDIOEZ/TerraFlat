@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace FlatWorld.Spaceflight
 {
@@ -47,15 +48,17 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        private void RecordShipLandingCompletion(ShipState ship, ShipFlightState flight, string world)
+        private void RecordShipLandingCompletion(ShipState ship, ShipFlightState flight, string world,
+            IReadOnlyList<SpacePassengerState> transferredPassengers)
         {
             if (ship == null || flight == null || State == null || !flight.LandingResolved || flight.HeightMeters > 0d ||
                 flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating) || flight.SurfaceWorldKey != world) return;
             var receipt = new ShipLandingReceipt(ship.ShipId, flight.LandingEventId, world,
                 flight.Phase == ShipFlightPhase.Floating, State.SimulationSeconds);
             if (!receipt.IsValid) return;
-            foreach (SpacePassengerState passenger in State.Passengers)
-                if (passenger.ShipId == ship.ShipId) passenger.LastShipLanding = receipt;
+            // 成功移交后乘员已经解绑船号，完成凭证写回本次事务确认的乘员。
+            foreach (SpacePassengerState passenger in transferredPassengers)
+                passenger.LastShipLanding = receipt;
         }
         #endregion
     }

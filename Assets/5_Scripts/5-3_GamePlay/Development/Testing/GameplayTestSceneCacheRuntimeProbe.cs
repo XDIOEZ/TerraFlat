@@ -60,6 +60,7 @@ public static class GameplayTestSceneCacheRuntimeProbe
         private bool previousSectorCaching;
         private bool cacheModeApplied;
         private object previousWorldRuntime;
+        private object previousSceneScheduler;
         private bool changedWorld;
         private bool protectionChanged;
 
@@ -104,9 +105,10 @@ public static class GameplayTestSceneCacheRuntimeProbe
                     var wall = Stopwatch.StartNew();
                     yield return EnterSpace();
                     yield return WaitSimulation(.2d);
-                    yield return WaitUntil(() => space.FindPlanetByBodyId(bodyId) != null &&
+                    yield return WaitUntil(() => space.IsSectorPresentationReady(sector) &&
+                        space.FindPlanetByBodyId(bodyId) != null &&
                         space.TryGetSectorPresentationDebugState(sector, out _, out bool retained, out bool active) &&
-                        !retained && active, 30d, "星体和星区表现未完成入场。");
+                        !retained && active, 30d, "星体和星区完整表现未完成入场。");
                     JObject inSpace = SpaceSnapshot(chunks, space);
                     double enterWallSeconds = wall.Elapsed.TotalSeconds;
 
@@ -119,7 +121,14 @@ public static class GameplayTestSceneCacheRuntimeProbe
                               retained && !active
                             : !space.TryGetSectorPresentationDebugState(sector, out _, out _, out _) &&
                               space.FindPlanetByBodyId(bodyId) == null),
-                        30d, "地表窗口或星区表现未完成回收。");
+                        30d, "地表窗口或星区表现未完成回收。", () =>
+                        {
+                            bool found = space.TryGetSectorPresentationDebugState(sector, out _, out bool retained, out bool active);
+                            return $"窗口就绪={chunks.AreRuntimeWindowPresentationsReady}，待表现={chunks.PendingRuntimeChunkPresentationCount}，" +
+                                $"后台生成={chunks.HasPendingChunkDataLoads}，星区存在={found}，完整就绪={space.IsSectorPresentationReady(sector)}，" +
+                                $"已缓存={retained}，已激活={active}，缓存星区数={space.RetainedSectorPresentationCount}，" +
+                                $"缓存区块壳数={chunks.RetainedSceneTransitionChunkViewCount}，目标星体存在={space.FindPlanetByBodyId(bodyId) != null}。";
+                        });
                     JObject onSurface = SurfaceSnapshot(chunks, space);
                     double returnWallSeconds = wall.Elapsed.TotalSeconds;
                     rounds.Add(new JObject
@@ -262,13 +271,14 @@ public static class GameplayTestSceneCacheRuntimeProbe
                 "往返期间宇宙固定时钟未推进。");
         }
 
-        private static IEnumerator WaitUntil(Func<bool> condition, double seconds, string message)
+        private static IEnumerator WaitUntil(Func<bool> condition, double seconds, string message, Func<string> details = null)
         {
             double deadline = Time.realtimeSinceStartupAsDouble + seconds;
             while (!condition())
             {
                 if (!Application.isPlaying) throw new OperationCanceledException(message);
-                if (Time.realtimeSinceStartupAsDouble >= deadline) throw new TimeoutException(message);
+                if (Time.realtimeSinceStartupAsDouble >= deadline)
+                    throw new TimeoutException(details == null ? message : message + "\n" + details());
                 yield return null;
             }
         }
@@ -327,6 +337,11 @@ public static class GameplayTestSceneCacheRuntimeProbe
             }
             bool priorRuntimeReused = ReferenceEquals(previousWorldRuntime, world);
             previousWorldRuntime = world;
+            // 会话模型持续保留，场景侧调度器在每次回程重新附着。
+            bool priorSceneSchedulerReused = ReferenceEquals(previousSceneScheduler, chunks.RuntimeChunks);
+            previousSceneScheduler = chunks.RuntimeChunks;
+            bool matchesSessionWorldModel = GameplayWorldRegistry.TryGetOwnedWorldModel(home.WorldKey, out WorldRuntime ownedWorld) &&
+                ReferenceEquals(ownedWorld, world);
             bool registeredCurrentManager = GameplayWorldRegistry.TryGet(home.WorldKey, out GameplayWorldRuntime registered) &&
                 ReferenceEquals(registered.Chunks, chunks);
             bool observerFound = session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer);
@@ -347,6 +362,9 @@ public static class GameplayTestSceneCacheRuntimeProbe
                 ["observerPositionError"] = Vector2.Distance(logicalPosition, observer.Position.LocalMeters.ToVector2()),
                 ["worldId"] = world.WorldId, ["worldEpoch"] = world.Epoch,
                 ["priorRuntimeReused"] = priorRuntimeReused,
+                ["matchesSessionWorldModel"] = matchesSessionWorldModel,
+                ["hasSceneScheduler"] = chunks.RuntimeChunks != null,
+                ["priorSceneSchedulerReused"] = priorSceneSchedulerReused,
                 ["windowReady"] = chunks.AreRuntimeWindowPresentationsReady,
                 ["boundViewCount"] = bound, ["currentModelCount"] = currentModels,
                 ["viewIds"] = views, ["footViewId"] = footFound ? foot.GetInstanceID() : 0,
@@ -385,6 +403,17 @@ public static class GameplayTestSceneCacheRuntimeProbe
                         ["terrainRegistered"] = terrainRegistered, ["terrainVisuals"] = terrainVisuals
                     });
                 }
+            // 独立船域继续模拟，地表释放计数不能把局部坐标世界算进去。
+            int registeredSurfaceWorldCount = 0;
+            var registeredWorlds = new JArray();
+            foreach (var pair in GameplayWorldRegistry.Worlds)
+            {
+                if (!pair.Value.UsesLocalCoordinates) registeredSurfaceWorldCount++;
+                registeredWorlds.Add(new JObject
+                {
+                    ["worldKey"] = pair.Key, ["usesLocalCoordinates"] = pair.Value.UsesLocalCoordinates
+                });
+            }
             return new JObject
             {
                 ["scene"] = SceneManager.GetActiveScene().name,
@@ -396,9 +425,15 @@ public static class GameplayTestSceneCacheRuntimeProbe
                 ["spaceView"] = session.IsSpaceView,
                 ["chunkManagerId"] = chunks.GetInstanceID(),
                 ["chunkManagerHasWorldRuntime"] = chunks.WorldRuntime != null,
-                ["registeredSurfaceWorldCount"] = GameplayWorldRegistry.Worlds.Count,
+                ["chunkManagerHasSceneScheduler"] = chunks.RuntimeChunks != null,
+                ["matchesSessionWorldModel"] = GameplayWorldRegistry.TryGetOwnedWorldModel(home.WorldKey, out WorldRuntime ownedWorld) &&
+                    ReferenceEquals(ownedWorld, previousWorldRuntime),
+                ["registeredSurfaceWorldCount"] = registeredSurfaceWorldCount,
+                ["homeWorldRegistered"] = GameplayWorldRegistry.Worlds.ContainsKey(home.WorldKey),
+                ["registeredWorlds"] = registeredWorlds,
                 ["sectorFound"] = sectorFound, ["sectorRetained"] = retained,
                 ["sectorActive"] = active, ["sectorRootId"] = sectorRootId,
+                ["sectorPresentationReady"] = space.IsSectorPresentationReady(sector),
                 ["planetInstanceId"] = planet == null ? 0 : planet.GetInstanceID(),
                 ["planetBodyId"] = planet?.planetData?.BodyId,
                 ["sectorHits"] = space.SectorPresentationCacheHits,

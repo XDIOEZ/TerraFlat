@@ -955,14 +955,14 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
     }
 
-    public IEnumerator LoadPresentationSceneAndInvokeWhenReady(string sceneName, Action onSceneReady = null, int extraWaitFrames = 1, int managerReadyTimeoutFrames = 300)
+    public IEnumerator LoadPresentationSceneAndInvokeWhenReady(string sceneName, Scene sourcePresentationScene,
+        Action onSceneReady = null, int extraWaitFrames = 1, int managerReadyTimeoutFrames = 300)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
             throw new ArgumentException("sceneName 不能为空", nameof(sceneName));
         }
 
-        Scene previousScene = SceneManager.GetActiveScene();
         Scene targetScene = SceneManager.GetSceneByName(sceneName);
         // 只替换外部显示场景，独立船内世界和计算物理岛继续由各自拥有者管理。
         if (!targetScene.IsValid() || !targetScene.isLoaded)
@@ -973,9 +973,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             targetScene = SceneManager.GetSceneByName(sceneName);
         }
         SceneManager.SetActiveScene(targetScene);
-        if (previousScene.IsValid() && previousScene.isLoaded && previousScene != targetScene)
+        if (sourcePresentationScene.IsValid() && sourcePresentationScene.isLoaded && sourcePresentationScene != targetScene)
         {
-            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(previousScene);
+            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(sourcePresentationScene);
             while (unloadOp != null && !unloadOp.isDone) yield return null;
         }
 
@@ -1035,7 +1035,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         Exception transferException = null;
 
-        yield return LoadPresentationSceneAndInvokeWhenReady(targetSceneName, () =>
+        yield return LoadPresentationSceneAndInvokeWhenReady(targetSceneName, SceneManager.GetActiveScene(), () =>
         {
             try
             {

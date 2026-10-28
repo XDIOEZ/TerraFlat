@@ -13,6 +13,58 @@ public static class GameplayTestSpacePresentationProbe
     {
         using var isolated = WorldPhysicsScene2D.CreateIsolated("太空测试的原生物理关闭现场");
         using var physics = new WorldPhysicsService2D("space-test:shutdown", WorldPhysicsScene2D.Borrow(isolated.Scene));
+        var restingSamples = new JArray();
+        var registrationSamples = new JArray();
+        GameItem registeredItem = null;
+        var restingRoot = new GameObject("静止姿态原生刚体采样");
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(restingRoot, isolated.Scene);
+        int staticBodyWarnings = 0;
+        Application.LogCallback countStaticBodyWarnings = (message, trace, type) =>
+        {
+            if (type == LogType.Warning && message.Contains("static body")) staticBodyWarnings++;
+        };
+        Application.logMessageReceived += countStaticBodyWarnings;
+        try
+        {
+            // 无配置入口复用真实刚体，分别检查动体、运动学体及重复静态收尾。
+            var restingBody = restingRoot.AddComponent<Rigidbody2D>();
+            restingRoot.AddComponent<BoxCollider2D>();
+            foreach (RigidbodyType2D sourceType in new[] { RigidbodyType2D.Dynamic, RigidbodyType2D.Kinematic, RigidbodyType2D.Static })
+            {
+                restingBody.bodyType = sourceType;
+                restingBody.constraints = RigidbodyConstraints2D.None;
+                restingBody.gravityScale = 1f;
+                if (sourceType != RigidbodyType2D.Static)
+                { restingBody.velocity = new Vector2(2f, -3f); restingBody.angularVelocity = 17f; }
+                float beforeSpeedSqr = restingBody.velocity.sqrMagnitude;
+                float beforeAngularVelocity = restingBody.angularVelocity;
+                WorldPhysicsService2D.ConfigureItemBodyForRestingPose(null, restingBody);
+                restingSamples.Add(new JObject { ["sourceType"] = sourceType.ToString(),
+                    ["beforeSpeedSqr"] = beforeSpeedSqr, ["beforeAngularVelocity"] = beforeAngularVelocity,
+                    ["restingType"] = restingBody.bodyType.ToString(), ["speedSqr"] = restingBody.velocity.sqrMagnitude,
+                    ["angularVelocity"] = restingBody.angularVelocity, ["gravityScale"] = restingBody.gravityScale });
+            }
+            // 正式物品数据绑定真实宿主，重复走结构变化使用的原生物理登记入口。
+            registeredItem = restingRoot.AddComponent<GameItem>();
+            registeredItem.BindData(GameRes.ExistingInstance.CreateItemData("Ore_Stone"));
+            for (int registration = 0; registration < 2; registration++)
+            {
+                physics.RegisterItem(registeredItem);
+                bool registered = physics.TryGetItemProxy(registeredItem, out WorldPhysicsEntityProxy2D proxy);
+                registrationSamples.Add(new JObject { ["legacyDefaults"] = WorldPhysicsService2D.UsesLegacyItemPhysicsDefaults(registeredItem),
+                    ["proxyRegistered"] = registered, ["proxyMode"] = registered ? proxy.Mode.ToString() : null,
+                    ["bodyType"] = restingBody.bodyType.ToString(), ["speedSqr"] = restingBody.velocity.sqrMagnitude,
+                    ["angularVelocity"] = restingBody.angularVelocity,
+                    ["nativeBodyPresent"] = !isolated.PhysicsScene.IsEmpty() && restingBody.gameObject.activeInHierarchy });
+            }
+        }
+        finally
+        {
+            WorldPhysicsService2D.ReleaseItem(registeredItem);
+            Application.logMessageReceived -= countStaticBodyWarnings;
+            restingRoot.SetActive(false);
+            UnityEngine.Object.Destroy(restingRoot);
+        }
         ItemData snapshot = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
         var definition = new ItemPhysicsDefinitionDto();
         var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
@@ -24,6 +76,8 @@ public static class GameplayTestSpacePresentationProbe
         first.Dispose();
         var result = new JObject
         {
+            ["restingPose"] = restingSamples, ["restingPoseStaticBodyWarnings"] = staticBodyWarnings,
+            ["itemRegistration"] = registrationSamples,
             ["nativeBodyCreated"] = nativeBodyCreated,
             ["lastReferenceReleaseDeactivatedRoot"] = !releasedRoot.activeSelf,
             ["emptyAfterLastReferenceRelease"] = isolated.PhysicsScene.IsEmpty()

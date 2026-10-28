@@ -275,7 +275,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Mod_Mover sourceMover = sourcePlayer.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         TransitionState state = new TransitionState
         {
-            PreserveRunState = sourceMover != null && sourceMover.RunPreference
+            PreserveRunState = sourceMover != null && sourceMover.RunPreference,
+            SourcePresentationScene = SceneManager.GetActiveScene()
         };
         sourceController?.SetGameplayInputLocked(true);
 
@@ -312,9 +313,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
                 playerProfileName,
                 sourceAddress,
                 sourcePosition,
-                state.ExitNotified,
-                state.EnterNotified,
-                state.PreserveRunState);
+                state);
             Exception recoveryFailure = null;
             yield return GameManager.RunWorldTransitionSteps(recoveryRoutine, exception => recoveryFailure = exception);
 
@@ -336,6 +335,10 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         TransitionState state)
     {
         Data_Player playerData = sourcePlayer.Data;
+        // 加载页等待期间星区租约已可能回收，源场景必须使用迁移开始时冻结的句柄。
+        Scene oldScene = state.SourcePresentationScene;
+        bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
+        state.TargetPresentationSceneName = toSpace ? "SpaceScene" : targetAddress.WorldKey;
         string playerName = sourcePlayer.ProfileName;
         if (string.IsNullOrWhiteSpace(playerName))
             throw new InvalidOperationException("跨维度切换缺少稳定玩家档案名。");
@@ -357,15 +360,14 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         yield return null;
 
         GameManager.Instance.SetDimensionTransitionLoading("正在创建目标维度…", 0.48f);
-        bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
         if (!toSpace) EnsureWorldData(targetAddress);
-        Scene oldScene = SceneManager.GetActiveScene();
         Scene targetScene = SceneManager.GetSceneByName(targetAddress.WorldKey);
         if (toSpace)
         {
-            yield return GameManager.Instance.LoadPresentationSceneAndInvokeWhenReady("SpaceScene");
+            yield return GameManager.Instance.LoadPresentationSceneAndInvokeWhenReady("SpaceScene", oldScene);
             yield return SpaceMgr.Instance.LoadPresentation();
             targetScene = SceneManager.GetActiveScene();
+            state.TargetPresentationSceneName = targetScene.name;
         }
         else if (!targetScene.IsValid() || !targetScene.isLoaded)
             targetScene = WorldPhysicsScene2D.CreateIsolatedScene(targetAddress.WorldKey);
@@ -423,6 +425,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         public bool ExitNotified;
         public bool EnterNotified;
         public bool PreserveRunState;
+        public Scene SourcePresentationScene;
+        public string TargetPresentationSceneName;
     }
 
     private sealed class PortalTransitionContext
@@ -437,39 +441,38 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         string playerProfileName,
         WorldAddress sourceAddress,
         Vector3 sourcePosition,
-        bool exitNotified,
-        bool enterNotified,
-        bool preserveRunState)
+        TransitionState state)
     {
         if (playerData == null)
             yield break;
 
         Player currentPlayer = ItemMgr.Instance?.User_Player;
-        if (!exitNotified)
+        if (!state.ExitNotified)
         {
             currentPlayer?.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
-            RestorePlayerRunState(currentPlayer, preserveRunState);
+            RestorePlayerRunState(currentPlayer, state.PreserveRunState);
             yield break;
         }
 
-        if (enterNotified)
+        // 失败恢复只卸载本次指定的目标，不能借用 Unity 自动激活的船内场景。
+        Scene previousScene = SceneManager.GetSceneByName(state.TargetPresentationSceneName);
+        if (state.EnterNotified)
         {
             using (GameplayWorldRegistry.PreserveLocalChunkManagerForSpaceTransition(
-                       SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name)))
+                       SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(state.TargetPresentationSceneName)))
                 GameManager.Instance.NotifyDimensionWorldExiting();
         }
 
         if (currentPlayer != null)
             ItemMgr.Instance.ReleasePlayerForWorldTransition(currentPlayer);
         ChunkMgr.ExistingInstance?.OnSceneChange(
-            SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name));
+            SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(state.TargetPresentationSceneName));
 
-        Scene previousScene = SceneManager.GetActiveScene();
         Scene sourceScene = SceneManager.GetSceneByName(sourceAddress.WorldKey);
         bool fromSpace = SpaceMgr.IsSpaceScene(sourceAddress.WorldKey);
         if (fromSpace)
         {
-            yield return GameManager.Instance.LoadPresentationSceneAndInvokeWhenReady("SpaceScene");
+            yield return GameManager.Instance.LoadPresentationSceneAndInvokeWhenReady("SpaceScene", previousScene);
             yield return SpaceMgr.Instance.LoadPresentation();
             sourceScene = SceneManager.GetActiveScene();
         }
@@ -501,7 +504,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         recoveredPlayer.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
         recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
-        RestorePlayerRunState(recoveredPlayer, preserveRunState);
+        RestorePlayerRunState(recoveredPlayer, state.PreserveRunState);
         ItemMgr.Instance.SavePlayer();
         SaveDataMgr.Instance.Save_And_WriteToDisk();
     }

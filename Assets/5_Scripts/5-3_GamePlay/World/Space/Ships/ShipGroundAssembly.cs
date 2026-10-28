@@ -381,6 +381,7 @@ namespace FlatWorld.Spaceflight
             public readonly List<int> MachineIds = new();
             public readonly List<ShipGroundBuildingStore.Entry> Created = new();
             public readonly List<(ShipPieceState Piece, Item Item)> TransferredItems = new();
+            public readonly List<SpacePassengerState> TransferredPassengers = new();
             public DroppedItemService.WorldTransfer TransferredDrops;
             public InteriorEntityTransfer TransferredLooseItems;
             public SaveDataMgr.WorldTerrainTransfer TransferredTerrain;
@@ -715,6 +716,7 @@ namespace FlatWorld.Spaceflight
                                 throw new InvalidOperationException("落地乘员未能安全移交目标世界：" + passenger.ProfileId);
                             if (player != null && GameplayWorldRegistry.GetItemWorldKey(player) == MachineWorld.GetShipScopeKey(ship.ShipId))
                                 throw new InvalidOperationException("落地乘员仍属于船内世界：" + passenger.ProfileId);
+                            plan.TransferredPassengers.Add(passenger);
                             passenger.SurfaceDescending = false;
                             passenger.LandingResolved = true;
                             passenger.LandingWorldKey = plan.Preparation.World;
@@ -759,7 +761,7 @@ namespace FlatWorld.Spaceflight
             State.Navigation.RemoveAll(task => task.ShipId == ship.ShipId);
             State.Docking.RemoveAll(pair => pair.ShipAId == ship.ShipId || pair.ShipBId == ship.ShipId);
             pieceIndexDirty = true; viewBindingsDirty = true;
-            CompleteGroundCleanup(() => RecordShipLandingCompletion(ship, completedFlight, world));
+            CompleteGroundCleanup(() => RecordShipLandingCompletion(ship, completedFlight, world, plan.TransferredPassengers));
         }
 
         private void FinishGroundShipPresentation(ShipState ship)

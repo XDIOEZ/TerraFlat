@@ -392,7 +392,12 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                     ReferenceEquals(currentWorld, retainedWorld) && currentWorld.Scene == retainedScene && currentWorld.Physics.IsValid,
                 ["interaction"] = interaction, ["bodies"] = bodies });
         }
-        completed(new JObject { ["scope"] = "live-presentation", ["visits"] = visits });
+        yield return ReturnHome();
+        completed(new JObject { ["scope"] = "live-presentation", ["visits"] = visits,
+            ["independentShipWorldPreservedAfterReturn"] = retainedScene.IsValid() && retainedScene.isLoaded &&
+                GameplayWorldRegistry.TryGet(retainedWorld.WorldKey, out var returnedWorld) && returnedWorld.Scene == retainedScene &&
+                session.TryGetShipInteriorWorld(retainedShip.ShipId, out var retainedAfterReturn) &&
+                ReferenceEquals(retainedAfterReturn, retainedWorld) });
     }
 
     private static bool HasAllPlanetViews(UniverseSimulation universe)
@@ -526,11 +531,13 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 90d, "飞船没有完成正式起飞和太空迁移。");
             IsMigrationExpected = false;
             ProtectCurrentPlayer();
-            yield return WaitUntil(() => ShipPresentationReady(ship), 15d, "起飞后的整船与部件表现没有完成场景绑定。");
+            yield return WaitUntil(() => ShipPresentationReady(ship), 15d, "起飞后的整船与部件表现没有完成场景绑定。",
+                () => ShipViewSnapshot(ship).ToString());
             JObject cruising = ShipSnapshot(ship);
             JObject cruisingViews = ShipViewSnapshot(ship);
             CaptureGroundOrdinaryItemStage(groundIds, MachineWorld.GetShipScopeKey(ship.ShipId), "space-flight");
-            session.ExitConsole(CurrentPlayer());
+            // 小行星专项继续真实驾驶，提前离开驾驶位会主动关闭高度尺。
+            if (!asteroidMiningOnly) session.ExitConsole(CurrentPlayer());
             controlledConsole = console;
             if (asteroidMiningOnly)
             {
@@ -576,8 +583,15 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             if (!navigationAccepted) throw new InvalidOperationException("真实导航器供电或光纤连接未就绪。");
             session.SetControl(console, Vector2.zero, 1f);
             bool turnPreservedNavigation = session.GetLatestNavigation(ship.ShipId)?.Active == true;
+            double navigationStartedSimulationSeconds = session.State.SimulationSeconds;
             yield return WaitUntil(() => session.GetLatestNavigation(ship.ShipId)?.Active == false, 45d,
-                "真实导航没有完成到点和制动。");
+                "真实导航没有完成到点和制动。", () => new JObject
+                {
+                    ["simulationElapsed"] = session.State.SimulationSeconds - navigationStartedSimulationSeconds,
+                    ["navigationActive"] = session.GetLatestNavigation(ship.ShipId)?.Active,
+                    ["targetSector"] = Sector(target.Sector), ["targetPosition"] = Vector(target.LocalMeters),
+                    ["ship"] = ShipSnapshot(ship)
+                }.ToString());
             JObject navigated = ShipSnapshot(ship);
             double distance = SpaceSectorCoordinates.Difference(
                 new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)), target).Magnitude;
@@ -636,9 +650,11 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 return false;
         foreach (JObject projection in items)
             if (!projection.Value<bool>("active") || projection.Value<string>("worldKey") != MachineWorld.GetShipScopeKey(ship.ShipId) ||
-                projection.Value<string>("scene") != scene) return false;
+                projection.Value<string>("scene") != view.Value<string>("projectionScene") ||
+                projection.Value<int>("parentId") != view.Value<int>("projectionOwnerId")) return false;
         foreach (JObject projection in chunks)
-            if (!projection.Value<bool>("active") || projection.Value<string>("scene") != scene) return false;
+            if (!projection.Value<bool>("active") || projection.Value<string>("scene") != view.Value<string>("projectionScene") ||
+                projection.Value<int>("parentId") != view.Value<int>("projectionOwnerId")) return false;
         return true;
     }
 
@@ -775,6 +791,10 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             {
                 Player traveller = CurrentPlayer();
                 SpacePassengerState passenger = session.GetPassenger(traveller);
+                // 夹具返航先走正式离船，避免落地重建后又被巡航船的乘员状态带回太空。
+                if (!string.IsNullOrEmpty(passenger.ShipId) &&
+                    !session.TryReleasePassenger(passenger, session.GetShip(passenger.ShipId)))
+                    throw new InvalidOperationException("测试返航前无法移交船内乘员。");
                 bool wasInSpace = passenger.IsInSpace;
                 passenger.IsInSpace = false;
                 if (!DimensionManager.Instance.TryBeginPlanetLanding(traveller, home, homePosition))

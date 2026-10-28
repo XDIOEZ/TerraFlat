@@ -203,6 +203,20 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         }
         finally { view.Loading = null; }
     }
+    private void SynchronizeLocalPlayerOwnershipAndActivateSectorScene(SpaceSession session, SectorView view)
+    {
+        EnsureSpaceSceneTime(view.Scene.name);
+        Player player = ItemMgr.Instance?.User_Player;
+        // 激活通知前同步自由玩家及子物品，船内玩家仍保留自己的局部世界。
+        if (player != null && !session.IsPlayerInShipInteriorWorld(player))
+        {
+            MovePresentationToSector(player.gameObject, view.Sector);
+            if (GameplayWorldRegistry.GetItemWorldKey(player) != view.Scene.name)
+                GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, view.Scene.name);
+        }
+        if (SceneManager.GetActiveScene() != view.Scene) SceneManager.SetActiveScene(view.Scene);
+    }
+
     public void UpdateSectorLeases(SpaceSession session, IReadOnlyCollection<SpaceSectorId> required)
     {
         PruneRetainedSectors(session);
@@ -218,17 +232,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         {
             SectorView current = EnsureSectorScene(session, observer.Position.Sector);
             if (!current.Unloading && current.Scene.IsValid() && current.Scene.isLoaded)
-            {
-                EnsureSpaceSceneTime(current.Scene.name);
-                if (SceneManager.GetActiveScene() != current.Scene) SceneManager.SetActiveScene(current.Scene);
-                // 船内玩家保持局部世界，空域玩家随星区更新物理和物品归属。
-                if (!session.IsPlayerInShipInteriorWorld(player))
-                {
-                    MovePresentationToSector(player.gameObject, observer.Position.Sector);
-                    if (GameplayWorldRegistry.GetItemWorldKey(player) != current.Scene.name)
-                        GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, current.Scene.name);
-                }
-            }
+                SynchronizeLocalPlayerOwnershipAndActivateSectorScene(session, current);
             EnsureBackground();
         }
         releaseScratch.Clear();
@@ -286,7 +290,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         SpaceSession session = SpaceSession.EnsureLoaded();
         SectorView view = EnsureSectorScene(session, sector);
         while (view.Unloading) { yield return null; view = EnsureSectorScene(session, sector); }
-        SceneManager.SetActiveScene(view.Scene);
+        SynchronizeLocalPlayerOwnershipAndActivateSectorScene(session, view);
         EnsureBackground(); UpdateVisibility();
         presentationLoaded = true;
     }

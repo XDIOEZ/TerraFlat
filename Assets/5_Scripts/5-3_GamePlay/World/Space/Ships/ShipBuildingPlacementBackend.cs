@@ -431,10 +431,12 @@ namespace FlatWorld.Spaceflight
                     CenterOfMassLocalX = ship.CenterOfMassLocalX, CenterOfMassLocalY = ship.CenterOfMassLocalY };
                 ShipFlightState previous = GetFlight(ship.ShipId);
                 string previousFlightSnapshot = JsonConvert.SerializeObject(previous);
+                // 冷残骸没有活动船内世界，递归分裂不能通过移交事务重新补建地表世界。
+                bool sourceHasInteriorWorld = TryGetShipInteriorWorld(ship.ShipId, out _);
                 List<ShipState> fragments = ShipStructureService.RebuildAndSplit(ship, GetOutside(ship), RecoverUnsupportedPiece);
                 foreach (ShipState fragment in fragments)
                 {
-                    EnsureShipInteriorWorld(fragment);
+                    if (sourceHasInteriorWorld || !fragment.IsWreck) EnsureShipInteriorWorld(fragment);
                     ShipFlightState flight = previous;
                     if (fragment.ShipId != ship.ShipId)
                     {
@@ -446,26 +448,29 @@ namespace FlatWorld.Spaceflight
                         foreach (ShipPieceState member in fragment.Pieces)
                             if (int.TryParse(member.PieceId, out int id)) transferMassPieceIds.Add(id);
                         MachineWorld.TransferShipNodes(ship.ShipId, fragment.ShipId, transferMassPieceIds);
-                        TransferShipInteriorItemsToFragment(ship, fragment);
-                        using var drops = DroppedItemService.TransferWorldItems(
-                            MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
-                            point => ShipGeometry.HasFloor(fragment,
-                                Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
-                                Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)),
-                            point => point, point => point);
-                        using var looseItems = new InteriorEntityTransfer(
-                            MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
-                            point => ShipGeometry.HasFloor(fragment,
-                                Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
-                                Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)), point => point, 0f);
-                        using var terrain = SaveDataMgr.Instance.TransferWorldTerrain(
-                            MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
-                            point => ShipGeometry.HasFloor(fragment,
-                                Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
-                                Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)), point => point);
-                        drops.Commit();
-                        looseItems.Commit();
-                        terrain.Commit();
+                        if (sourceHasInteriorWorld)
+                        {
+                            TransferShipInteriorItemsToFragment(ship, fragment);
+                            using var drops = DroppedItemService.TransferWorldItems(
+                                MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
+                                point => ShipGeometry.HasFloor(fragment,
+                                    Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
+                                    Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)),
+                                point => point, point => point);
+                            using var looseItems = new InteriorEntityTransfer(
+                                MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
+                                point => ShipGeometry.HasFloor(fragment,
+                                    Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
+                                    Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)), point => point, 0f);
+                            using var terrain = SaveDataMgr.Instance.TransferWorldTerrain(
+                                MachineWorld.GetShipScopeKey(ship.ShipId), MachineWorld.GetShipScopeKey(fragment.ShipId),
+                                point => ShipGeometry.HasFloor(fragment,
+                                    Mathf.FloorToInt(point.x / (float)fragment.CellSizeMeters),
+                                    Mathf.FloorToInt(point.y / (float)fragment.CellSizeMeters)), point => point);
+                            drops.Commit();
+                            looseItems.Commit();
+                            terrain.Commit();
+                        }
                     }
                     flight.Motion.Sector = fragment.Sector;
                     flight.Motion.PositionMeters = new SpaceVector2(fragment.PositionX, fragment.PositionY);

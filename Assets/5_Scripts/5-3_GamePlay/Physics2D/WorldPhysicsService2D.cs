@@ -209,12 +209,15 @@ public sealed partial class WorldPhysicsService2D : IDisposable
                     body.simulated = previousSimulated;
                 }
                 bool dynamicAuthority = authority && definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic;
-                body.velocity = dynamicAuthority
-                    ? preserveRepresentation ? previousVelocity : item.itemData.PhysicsState?.Velocity ?? Vector2.zero
-                    : Vector2.zero;
-                body.angularVelocity = dynamicAuthority && !definition.FreezeRotation
-                    ? preserveRepresentation ? previousAngularVelocity : item.itemData.PhysicsState?.AngularVelocity ?? 0f
-                    : 0f;
+                if (body.bodyType != RigidbodyType2D.Static)
+                {
+                    body.velocity = dynamicAuthority
+                        ? preserveRepresentation ? previousVelocity : item.itemData.PhysicsState?.Velocity ?? Vector2.zero
+                        : Vector2.zero;
+                    body.angularVelocity = dynamicAuthority && !definition.FreezeRotation
+                        ? preserveRepresentation ? previousAngularVelocity : item.itemData.PhysicsState?.AngularVelocity ?? 0f
+                        : 0f;
+                }
             }
         }
         else if (previousBody != null)
@@ -222,8 +225,12 @@ public sealed partial class WorldPhysicsService2D : IDisposable
             if (!defaultIndependent || !FlatWorld.Networking.GameNetwork.HasStateAuthority)
             {
                 previousBody.bodyType = defaultIndependent ? RigidbodyType2D.Kinematic : RigidbodyType2D.Static;
-                previousBody.velocity = Vector2.zero;
-                previousBody.angularVelocity = 0f;
+                // 静态切型已由原生清速，只有运动学表示需要显式清零。
+                if (previousBody.bodyType != RigidbodyType2D.Static)
+                {
+                    previousBody.velocity = Vector2.zero;
+                    previousBody.angularVelocity = 0f;
+                }
             }
         }
         var registered = ListPool<Collider2D>.Get();

@@ -83,7 +83,8 @@ test.space("ship_landing", function(data)
             return result
         end
         for _, snapshot in ipairs({preparation.ready, preparation.moved, preparation.expanded, preparation.finalReady}) do
-            assert(snapshot.worldRegistered and snapshot.presentationWorld == snapshot.world,
+            assert(snapshot.worldRegistered and snapshot.presentationWorld == snapshot.world and
+                snapshot.targetSceneCurrent and snapshot.targetSceneHandle ~= 0,
                 "地表迁移完成后没有重新绑定降落准备所需的世界运行时：" .. label)
             assert(snapshot.state == "ready" and snapshot.ready and snapshot.shipPresent and
                 snapshot.phase == "SurfaceDescending" and snapshot.height > 0 and

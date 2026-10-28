@@ -17,16 +17,18 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = false }, 
     assert(data.scope == "live-isolated-world" and not data.cacheEnabled and #data.rounds == 1,
         "关闭缓存的控制轮没有完成真实往返")
     assert(first.scene == data.initial.scene and first.footViewId ~= 0 and first.windowReady and
+        first.matchesSessionWorldModel and first.hasSceneScheduler and
         first.currentModelCount == first.boundViewCount and first.boundViewCount > 0,
         "控制轮的起始地表窗口未绑定当前数据")
     assert(space.spaceView and space.gameplayReady and space.profile == data.profile and
         space.samePlayerData and space.sameSaveData and space.sameSessionState and
-        space.sectorFound and space.sectorActive and not space.sectorRetained and
+        space.sectorFound and space.sectorActive and not space.sectorRetained and space.sectorPresentationReady and
         space.planetBodyId == data.bodyId and space.planetInstanceId ~= 0,
         "控制轮没有进入同档案的正式太空和星区")
     assert(first.chunkManagerId ~= 0 and space.chunkManagerId == first.chunkManagerId and
         surface.chunkManagerId == first.chunkManagerId, "控制轮迁移错误销毁或替换了本机区块管理器")
-    assert(not space.chunkManagerHasWorldRuntime and space.registeredSurfaceWorldCount == 0 and
+    assert(not space.chunkManagerHasWorldRuntime and not space.chunkManagerHasSceneScheduler and
+        space.matchesSessionWorldModel and space.registeredSurfaceWorldCount == 0 and not space.homeWorldRegistered and
         surface.registeredCurrentManager, "控制轮没有释放旧地表世界或重登当前管理器")
     assert(space.chunkRetained == 0 and #space.cachedViews == 0 and
         space.sectorRetainedCount == 0 and space.chunkHits == first.chunkHits and
@@ -35,7 +37,8 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = false }, 
     assert(surface.scene == first.scene and surface.profile == data.profile and
         surface.samePlayerData and surface.sameSaveData and surface.sameSessionState and
         surface.gameplayReady and surface.worldActive and surface.windowReady and
-        surface.worldId == first.worldId and not surface.priorRuntimeReused and
+        surface.worldId == first.worldId and surface.priorRuntimeReused and surface.matchesSessionWorldModel and
+        surface.hasSceneScheduler and not surface.priorSceneSchedulerReused and
         surface.boundViewCount > 0 and surface.currentModelCount == surface.boundViewCount and
         surface.footViewId ~= 0,
         "控制轮返回地表没有重绑当前世界和同档案玩家")
@@ -74,8 +77,9 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = true }, f
             label .. "没有绑定本轮同档案玩家与数据")
         assert(surface.sameSessionState and surface.gameplayReady and surface.worldActive and surface.windowReady,
             label .. "地表世界或游戏流程未恢复")
-        assert(surface.worldId == data.initial.worldId and not surface.priorRuntimeReused,
-            label .. "没有为当前地表世界建立新 WorldRuntime")
+        assert(surface.worldId == data.initial.worldId and surface.priorRuntimeReused and
+            surface.matchesSessionWorldModel and surface.hasSceneScheduler and not surface.priorSceneSchedulerReused,
+            label .. "没有恢复会话世界模型并重建场景侧调度器")
         assert(surface.boundViewCount > 0 and surface.currentModelCount == surface.boundViewCount and
             surface.footViewId ~= 0, label .. "区块壳未绑定当前 WorldRuntime 数据")
         assert(surface.chunkHits > earlier.chunkHits and overlap(surface.viewIds, earlier.viewIds) > 0,
@@ -92,9 +96,10 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = true }, f
             label .. "未进入同档案的就绪太空")
         assert(space.chunkManagerId == data.initial.chunkManagerId and space.chunkManagerId ~= 0,
             label .. "替换或销毁了本机区块管理器")
-        assert(not space.chunkManagerHasWorldRuntime and space.registeredSurfaceWorldCount == 0,
-            label .. "仍保留旧地表运行态或世界注册")
-        assert(space.sectorFound and not space.sectorRetained and space.sectorActive and
+        assert(not space.chunkManagerHasWorldRuntime and not space.chunkManagerHasSceneScheduler and
+            space.matchesSessionWorldModel and space.registeredSurfaceWorldCount == 0 and not space.homeWorldRegistered,
+            label .. "仍保留旧地表调度器或世界注册，或丢失会话模型")
+        assert(space.sectorFound and not space.sectorRetained and space.sectorActive and space.sectorPresentationReady and
             space.sectorRootId ~= 0 and space.planetBodyId == data.bodyId and space.planetInstanceId ~= 0,
             label .. "正式星区或星体表现未激活")
         assert(space.chunkRetained > 0 and space.chunkRetained <= data.chunkCapacity and
@@ -115,6 +120,7 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = true }, f
     assert(data.chunkCapacity == 9 and data.sectorCapacity == 2,
         "缓存容量与本场景的上限契约不一致")
     assert(data.initial.gameplayReady and data.initial.worldActive and
+        data.initial.matchesSessionWorldModel and data.initial.hasSceneScheduler and
         data.initial.windowReady and data.initial.footViewId ~= 0 and
         data.initial.currentModelCount == data.initial.boundViewCount and
         data.initial.boundViewCount > 0, "初始地表窗口未就绪")

@@ -2185,7 +2185,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
     private void SyncNavigationOccupancy()
     {
-        if (!isActiveAndEnabled || item == null || !IsInstalled() || FlatWorld.Spaceflight.SpaceSession.Current?.Owns(item.itemData.Guid) == true)
+        // 起降交接按物品真实所属世界判断，船件身份预留不能阻止地表占地登记。
+        if (!isActiveAndEnabled || item == null || !IsInstalled() ||
+            FlatWorld.Spaceflight.SpaceSession.Current?.TryGetShipInteriorItem(
+                item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out _) == true)
         {
             BuildingOccupancyRegistry.Unregister(this);
             return;

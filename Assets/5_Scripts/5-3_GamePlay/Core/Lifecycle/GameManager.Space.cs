@@ -334,10 +334,11 @@ public partial class GameManager
 
     private IEnumerator LoadSavedSpacePresentation(Action sceneReady)
     {
+        Scene sourcePresentationScene = SceneManager.GetActiveScene();
         IsInGameWorld = true;
         SetGameplayReady(!isWorldEntryInProgress);
         SpaceSession.EnsureLoaded();
-        yield return LoadPresentationSceneAndInvokeWhenReady("SpaceScene");
+        yield return LoadPresentationSceneAndInvokeWhenReady("SpaceScene", sourcePresentationScene);
         yield return SpaceMgr.Instance.LoadPresentation();
         NotifyDimensionWorldEntered();
         sceneReady?.Invoke();

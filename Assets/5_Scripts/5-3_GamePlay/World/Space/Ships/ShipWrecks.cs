@@ -87,6 +87,8 @@ namespace FlatWorld.Spaceflight
                     wreck.Pieces = group;
                     wreck.NotifyStructureChanged();
                     wreck.IsWreck = true; wreck.WreckGuid = 0;
+                    // 新残骸只接收部件冷载荷，不继承源船局部世界的保留资格。
+                    wreck.RetainsInteriorWorld = wreck.RetainsWorldWithoutStructure = false;
                     ShipStructureService.RecalculateMass(wreck);
                     State.Ships.Add(wreck);
                     ShipFlightState sourceFlight = GetFlight(sourceShipId);

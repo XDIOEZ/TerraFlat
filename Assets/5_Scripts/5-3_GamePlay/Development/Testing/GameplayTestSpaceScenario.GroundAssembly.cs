@@ -160,6 +160,8 @@ public sealed partial class GameplayTestSpaceScenario
         result["chunkProjections"] = chunks;
         result["worldKey"] = worldKey ?? string.Empty;
         result["scene"] = SceneManager.GetActiveScene().name;
+        result["projectionScene"] = session.gameObject.scene.name;
+        result["projectionOwnerId"] = session.gameObject.GetInstanceID();
         return result;
     }
 
@@ -205,6 +207,9 @@ public sealed partial class GameplayTestSpaceScenario
         string expectedWorld, Action<JObject> completed, bool inspectPreparation = false)
     {
         session.ClearControl(console);
+        // 高度尺与落地回执覆盖正式驾驶员流程，不能在提前离开驾驶位后采样。
+        if (inspectPreparation && !session.EnterConsole(CurrentPlayer(), console))
+            throw new InvalidOperationException("落地专项无法恢复真实驾驶位。");
         Dictionary<int, GroundMachinePreparationBaseline> machineBaselines = inspectPreparation ? CaptureGroundPreparationMachines(ship) : null;
         bool accepted = session.RequestLanding(console);
         if (!accepted) throw new InvalidOperationException("飞船已离开可降落范围，正式降落入口拒绝了请求。");
@@ -212,6 +217,7 @@ public sealed partial class GameplayTestSpaceScenario
         yield return WaitUntil(() => Ready() && session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.SurfaceDescending &&
                 TemplateShipPresentationReady(ship),
             90d, "正式降落请求没有进入地表下降阶段。");
+        if (inspectPreparation) yield return new WaitForEndOfFrame();
         JObject descending = ShipSnapshot(ship), descendingViews = ShipViewSnapshot(ship);
         descending["flightHud"] = FlightHudSnapshot();
         JObject preparation = null, latestBeforeCommit = null;

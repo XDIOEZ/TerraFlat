@@ -19,6 +19,10 @@ public partial class SpaceMgr
 
     public void ReleaseRetainedPresentationCache() => ClearRetainedSectors();
 
+    // 只读取活动星区完整装配状态，不推进加载或改变缓存。
+    public bool IsSectorPresentationReady(SpaceSectorId sector) => sectors.TryGetValue(sector, out SectorView view) &&
+        view.Root != null && view.PresentationReady && !view.Unloading;
+
     public bool TryGetSectorPresentationDebugState(SpaceSectorId sector,
         out int rootInstanceId, out bool retained, out bool active)
     {

@@ -29,6 +29,8 @@ namespace FlatWorld.Spaceflight
             public readonly ShipState Ship;
             public readonly ShipGroundRestoreGate RestoreGate = new();
             public readonly string World;
+            public readonly GameplayWorldRuntime TargetWorld;
+            public readonly Scene TargetScene;
             public readonly GameRes Resources;
             public readonly ulong DefinitionRevision, StructureRevision;
             public readonly int ResourceRevision;
@@ -44,6 +46,8 @@ namespace FlatWorld.Spaceflight
             public GroundShipPreparation(ShipState ship, string world, int invalidations = 0)
             {
                 Ship = ship; World = world; Resources = GameRes.ExistingInstance;
+                TargetWorld = GameplayWorldRegistry.GetOrCreate(world);
+                TargetScene = TargetWorld.Scene;
                 DefinitionRevision = Resources != null ? Resources.ItemDefinitionRevision : 0;
                 ResourceRevision = Resources != null ? Resources.ResourceReloadVersion : 0;
                 StructureRevision = ship.StructureRevision; Invalidations = invalidations;
@@ -52,7 +56,9 @@ namespace FlatWorld.Spaceflight
             public bool Matches(ShipState ship, string world)
             {
                 GameRes resources = GameRes.ExistingInstance;
-                if (!ReferenceEquals(Ship, ship) || World != world || !ReferenceEquals(Resources, resources) ||
+                // 同名地表重建后旧准备根已失效，按世界实例和场景重新准备。
+                if (!GameplayWorldRegistry.TryGet(world, out var current) || !ReferenceEquals(TargetWorld, current) ||
+                    TargetScene != current.Scene || !ReferenceEquals(Ship, ship) || World != world || !ReferenceEquals(Resources, resources) ||
                     StructureRevision != ship.StructureRevision ||
                     DefinitionRevision != (resources != null ? resources.ItemDefinitionRevision : 0) ||
                     ResourceRevision != (resources != null ? resources.ResourceReloadVersion : 0)) return false;
@@ -231,6 +237,9 @@ namespace FlatWorld.Spaceflight
             return new JObject
             {
                 ["state"] = state, ["shipId"] = preparation.Ship.ShipId, ["world"] = preparation.World,
+                ["targetSceneHandle"] = preparation.TargetScene.handle,
+                ["targetSceneCurrent"] = GameplayWorldRegistry.TryGet(preparation.World, out var current) &&
+                    ReferenceEquals(preparation.TargetWorld, current) && preparation.TargetScene == current.Scene,
                 ["cursor"] = preparation.Cursor, ["pieceCount"] = preparation.Ship.Pieces.Count,
                 ["activeSeconds"] = preparation.ActiveSeconds,
                 ["structureRevision"] = preparation.StructureRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),

@@ -167,10 +167,14 @@ public sealed partial class WorldPhysicsService2D
         if (body == null) return;
         ItemPhysicsDefinitionDto definition = GetConfiguredItemPhysics(item);
         body.bodyType = definition == null || definition.Mode == WorldPhysicsProxyMode2D.WorldFixed ? RigidbodyType2D.Static :
-            definition != null && GameNetwork.HasStateAuthority ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
+            GameNetwork.HasStateAuthority ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
         body.gravityScale = 0f;
-        body.velocity = Vector2.zero;
-        body.angularVelocity = 0f;
+        // 静态刚体切型后由原生清速，其余可动刚体显式清零。
+        if (body.bodyType != RigidbodyType2D.Static)
+        {
+            body.velocity = Vector2.zero;
+            body.angularVelocity = 0f;
+        }
         if (definition == null) { body.drag = 0f; body.constraints = RigidbodyConstraints2D.FreezeRotation; }
     }
 

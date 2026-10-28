@@ -235,11 +235,13 @@ public sealed partial class GameplayTestSpaceScenario
         IsMigrationExpected = true;
         yield return WaitUntil(() => Ready() && session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.SurfaceDescending,
             120d, "大型矿石小行星没有进入正式地表下降。");
+        yield return new WaitForEndOfFrame();
         JObject descending = ShipSnapshot(ship);
         descending["flightHud"] = FlightHudSnapshot();
         yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null && GroundBuildingsRestored(ids, expectedWorld),
             180d, "大型矿石小行星下降没有完成普通建筑移交。", () => ShipSnapshot(ship).ToString(Formatting.None));
         IsMigrationExpected = false;
+        yield return new WaitForEndOfFrame();
         JObject landed = GroundBuildingSnapshot(ids);
         landed["flightHud"] = FlightHudSnapshot();
         var generation = ChunkMgr.Instance.ActiveGenerationProfile;

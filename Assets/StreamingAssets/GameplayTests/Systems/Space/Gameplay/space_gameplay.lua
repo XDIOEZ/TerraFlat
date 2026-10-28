@@ -8,6 +8,25 @@ do
         assert(shutdown.nativeBodyCreated and shutdown.lastReferenceReleaseDeactivatedRoot and
             shutdown.emptyAfterLastReferenceRelease and shutdown.worldShutdownDeactivatedRoot and
             shutdown.emptyBeforeSceneUnload, "物理代理必须在最后引用释放及场景卸载前同步清空原生刚体")
+        assert(#shutdown.restingPose == 3 and shutdown.restingPoseStaticBodyWarnings == 0,
+            "静止姿态与重复物品登记不能向静态刚体赋速或产生静态刚体警告")
+        local restingSources = {"Dynamic", "Kinematic", "Static"}
+        for index, sample in ipairs(shutdown.restingPose) do
+            assert(sample.sourceType == restingSources[index] and sample.restingType == "Static",
+                "无配置物品的原生刚体没有切回静态姿态")
+            if sample.sourceType ~= "Static" then
+                assert(sample.beforeSpeedSqr > 0 and sample.beforeAngularVelocity ~= 0,
+                    "静止采样没有实际设置可动刚体的初始速度")
+            end
+            assert(sample.speedSqr == 0 and sample.angularVelocity == 0 and sample.gravityScale == 0,
+                "静止姿态仍保留真实线速度、角速度或重力")
+        end
+        assert(#shutdown.itemRegistration == 2, "缺少正式物品首次登记及重复登记采样")
+        for _, sample in ipairs(shutdown.itemRegistration) do
+            assert(sample.legacyDefaults and sample.proxyRegistered and sample.proxyMode == "WorldFixed" and
+                sample.bodyType == "Static" and sample.speedSqr == 0 and sample.angularVelocity == 0 and sample.nativeBodyPresent,
+                "无配置物品重复登记没有保留真实静态刚体和世界代理")
+        end
         assert(data.before.version == 3 and data.after.version == 3, "会话版本不正确")
         assert(data.after.seconds > data.before.seconds, "真实固定步没有推进宇宙时钟")
         assert(data.after.playerProfile == data.before.playerProfile, "观察期间测试玩家改变")
@@ -122,6 +141,7 @@ do
     -- 实际进入每个配置星区，检查全部星体的数据登记与场景表现。
     test.space("space_visit", function(data)
         assert(data.scope == "live-presentation" and #data.visits > 0, "没有进入配置星区")
+        assert(data.independentShipWorldPreservedAfterReturn, "返回地表不能把卸载期间临时激活的船内世界当旧场景销毁")
         local ids, sectors, count, uiRoot = {}, {}, 0, nil
         for _, visit in ipairs(data.visits) do
             assert(visit.independentShipWorldPreserved, "进入太空和切换星区不能卸载独立船内世界或重建其原生物理")
@@ -310,13 +330,14 @@ do
                     "整船碰撞表现缓存超过容量：" .. label)
                 for _, projection in ipairs(snapshot.itemProjections) do
                     assert(projection.active and projection.worldKey == "ship:" .. ship.cruising.id and
-                        projection.scene == snapshot.scene,
-                        "普通 Item 投影脱离船内账本或显示场景：" .. label)
+                        projection.scene == snapshot.projectionScene and projection.parentId == snapshot.projectionOwnerId,
+                        "普通 Item 投影脱离船内账本或会话显示宿主：" .. label)
                 end
                 for _, projection in ipairs(snapshot.chunkProjections) do
                     assert(projection.active and projection.id:sub(1, #("ship:" .. ship.cruising.id) + 1) ==
-                        "ship:" .. ship.cruising.id .. ":" and projection.scene == snapshot.scene,
-                        "普通区块投影脱离船内世界或显示场景：" .. label)
+                        "ship:" .. ship.cruising.id .. ":" and projection.scene == snapshot.projectionScene and
+                        projection.parentId == snapshot.projectionOwnerId,
+                        "普通区块投影脱离船内世界或会话显示宿主：" .. label)
                 end
             end
             local refuel = ship.autoRefuel

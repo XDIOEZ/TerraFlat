@@ -242,9 +242,11 @@ public sealed partial class GameplayTestSpaceScenario
                 foreach (Rigidbody2D body in bodies)
                     if (body != null && body.simulated && body.gameObject.name == "ship:" + assembly.AssemblyId)
                     { physicsBodies++; physicsColliders += body.GetComponents<CustomCollider2D>().Length; }
-            result.Add(new JObject
+            var fragmentSnapshot = new JObject
             {
                 ["id"] = ship.ShipId, ["wreck"] = ship.IsWreck,
+                ["retainsInteriorWorld"] = ship.RetainsInteriorWorld,
+                ["retainsWorldWithoutStructure"] = ship.RetainsWorldWithoutStructure,
                 ["console"] = ShipStructureService.HasOperationalConsole(ship),
                 ["engine"] = ShipStructureService.HasOperationalEngine(ship), ["pieces"] = pieces,
                 ["phase"] = flight?.Phase.ToString() ?? string.Empty, ["ignited"] = flight?.Ignited == true,
@@ -254,7 +256,18 @@ public sealed partial class GameplayTestSpaceScenario
                 ["presentationColliders"] = viewRoot == null ? 0 : viewRoot.GetComponentsInChildren<CustomCollider2D>(true).Length,
                 ["presentationItems"] = viewRoot == null ? 0 : viewRoot.GetComponentsInChildren<Item>(true).Length,
                 ["physicsBodies"] = physicsBodies, ["physicsColliders"] = physicsColliders
-            });
+            };
+            if (includeViews)
+            {
+                bool hasRuntime = session.TryGetShipInteriorWorld(ship.ShipId, out ShipInteriorWorldRuntime interior);
+                bool registered = GameplayWorldRegistry.TryGet(MachineWorld.GetShipScopeKey(ship.ShipId), out GameplayWorldRuntime world);
+                fragmentSnapshot["hasShipInteriorRuntime"] = hasRuntime;
+                fragmentSnapshot["hasRegisteredInteriorWorld"] = registered;
+                fragmentSnapshot["interiorWorldUsesLocalCoordinates"] = registered && world.UsesLocalCoordinates;
+                fragmentSnapshot["interiorWorldMatchesRuntime"] = registered && hasRuntime &&
+                    world.Scene == interior.Scene && ReferenceEquals(world.Chunks, interior.Chunks);
+            }
+            result.Add(fragmentSnapshot);
         }
         return result;
     }
