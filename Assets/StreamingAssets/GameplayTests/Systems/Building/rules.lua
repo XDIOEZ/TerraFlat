@@ -20,6 +20,14 @@ for _, sample in ipairs({
     end, "格子命中排序：" .. sample.label)
 end
 
+test.system("building", "snapshot_repacking", {}, function(data)
+    assert(data.normalized and data.sameSnapshot and data.sameIdentity,
+        "同一建筑因位置、旋转、缩放或运行 GUID 不同而生成不同拆回身份")
+    assert(data.envelope == "FWI1" and data.payloadPreserved and data.differentDamageIdentity,
+        "统一建筑封包丢失正式包头、材料或损伤，或保留了递归快照")
+    assert(data.sourcePreserved, "规范化拆回快照修改了仍在世界中的源建筑")
+end, "普通建筑与机器共用快照规范化、正式封包及状态堆叠身份")
+
 test.system("building", "portable_building_health", {}, function(data)
     local expected = { Coconut_Shell_Building = 20, ClayJar_Building = 40, StoneMortar_Building = 50, WoodenBarrel_Building = 60 }
     assert(#data.buildings == 4, "可放置容器的正式定义覆盖不完整")

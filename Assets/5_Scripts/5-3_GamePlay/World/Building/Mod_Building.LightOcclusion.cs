@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -248,5 +250,146 @@ public partial class Mod_Building
             _clippedOccluderPoints.Add(point);
     }
 
+    #endregion
+
+    #region 光照轮廓与阴影同步
+    private static readonly FieldInfo ShadowCasterShapePathHashField = ResolveShadowCasterField("m_ShapePathHash");
+    private static readonly FieldInfo ShadowCasterShapePathField = ResolveShadowCasterField("m_ShapePath");
+    /// <summary>
+    /// 动态可交互建筑不是 Tilemap 的一部分，不能复用 ChunkLightOccluderRenderer；
+    /// 落地后按主体 Sprite 的真实轮廓创建 ShadowCaster2D，使火把等 Point Light2D 能得到可见建筑阴影。
+    /// </summary>
+    private void SyncLightOccluder()
+    {
+        bool shouldOcclude = item != null &&
+                             Data?.Role == BuildingRole.PlacedBuilding &&
+                             !item.InHand &&
+                             !IsGroundFacility &&
+                             LightOcclusionMode != BuildingLightOcclusionMode.None &&
+                             item.gameObject.activeInHierarchy;
+
+        if (!shouldOcclude)
+        {
+            if (_lightOccluder != null)
+                _lightOccluder.enabled = false;
+            return;
+        }
+
+        SpriteRenderer sourceRenderer = item.Sprite;
+        if (sourceRenderer == null || sourceRenderer.sprite == null)
+            sourceRenderer = item.GetComponentsInChildren<SpriteRenderer>(true)
+                .FirstOrDefault(renderer => renderer != null && renderer.sprite != null);
+        if (sourceRenderer == null)
+        {
+            if (_lightOccluder != null)
+                _lightOccluder.enabled = false;
+            return;
+        }
+
+        GameObject host = sourceRenderer.gameObject;
+        if (_lightOccluder != null && _lightOccluder.gameObject != host)
+        {
+            _lightOccluder.enabled = false;
+            _lightOccluder = null;
+        }
+
+        // 兼容上一版在物理碰撞体节点创建的运行时遮挡器；改用视觉轮廓后必须关闭旧矩形投影。
+        ShadowCaster2D legacyColliderCaster = boxCollider2D != null
+            ? boxCollider2D.GetComponent<ShadowCaster2D>()
+            : null;
+        if (legacyColliderCaster != null && legacyColliderCaster.gameObject != host)
+            legacyColliderCaster.enabled = false;
+
+        if (_lightOccluder == null)
+            _lightOccluder = host.GetComponent<ShadowCaster2D>();
+        if (_lightOccluder == null)
+            _lightOccluder = host.AddComponent<ShadowCaster2D>();
+
+        _lightOccluder.castsShadows = true;
+        _lightOccluder.selfShadows = true;
+        _lightOccluderSource = sourceRenderer;
+        Light2DSortingLayerUtility.SetShadowLayers(_lightOccluder,
+            Light2DSortingLayerUtility.ResolveLayerIds(ShadowTargetSortingLayers));
+        RefreshLightOccluderGeometry(true);
+    }
+
+    private static void SyncShadowCasterShape(ShadowCaster2D shadowCaster, SpriteRenderer sourceRenderer)
+    {
+        Sprite sprite = sourceRenderer.sprite;
+        int shapeCount = sprite.GetPhysicsShapeCount();
+        if (shapeCount <= 0)
+            throw new InvalidOperationException($"[Mod_Building] Sprite {sprite.name} 没有可用的物理轮廓，无法生成光照遮挡形状");
+
+        var points = new List<Vector2>();
+        Vector2[] bestPath = null;
+        float bestArea = -1f;
+
+        for (int shapeIndex = 0; shapeIndex < shapeCount; shapeIndex++)
+        {
+            points.Clear();
+            sprite.GetPhysicsShape(shapeIndex, points);
+            if (points.Count < 3)
+                continue;
+
+            float area = CalculatePolygonArea(points);
+            if (area <= bestArea)
+                continue;
+
+            bestArea = area;
+            bestPath = points.ToArray();
+        }
+
+        if (bestPath == null)
+            throw new InvalidOperationException($"[Mod_Building] Sprite {sprite.name} 的物理轮廓无有效多边形");
+
+        var shapePath = new Vector3[bestPath.Length];
+        for (int i = 0; i < bestPath.Length; i++)
+        {
+            Vector2 point = bestPath[i];
+            if (sourceRenderer.flipX)
+                point.x = -point.x;
+            if (sourceRenderer.flipY)
+                point.y = -point.y;
+            shapePath[i] = point;
+        }
+
+        if (sourceRenderer.flipX ^ sourceRenderer.flipY)
+            Array.Reverse(shapePath);
+
+        ShadowCasterShapePathField.SetValue(shadowCaster, shapePath);
+        ShadowCasterShapePathHashField.SetValue(shadowCaster, CalculateShadowPathHash(shapePath));
+    }
+
+    private static float CalculatePolygonArea(IReadOnlyList<Vector2> points)
+    {
+        float area = 0f;
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vector2 current = points[i];
+            Vector2 next = points[(i + 1) % points.Count];
+            area += current.x * next.y - next.x * current.y;
+        }
+
+        return Mathf.Abs(area * 0.5f);
+    }
+
+    private static int CalculateShadowPathHash(IReadOnlyList<Vector3> shapePath)
+    {
+        unchecked
+        {
+            int hash = 17;
+            for (int i = 0; i < shapePath.Count; i++)
+            {
+                hash = hash * 31 + shapePath[i].x.GetHashCode();
+                hash = hash * 31 + shapePath[i].y.GetHashCode();
+            }
+
+            return hash;
+        }
+    }
+
+    private static FieldInfo ResolveShadowCasterField(string fieldName)
+        => typeof(ShadowCaster2D).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+           ?? throw new MissingFieldException(typeof(ShadowCaster2D).FullName, fieldName);
     #endregion
 }

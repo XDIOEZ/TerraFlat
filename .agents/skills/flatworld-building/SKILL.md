@@ -29,6 +29,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - SharedModuleIds 以唯一能力 ID 深拷贝单件载体的连续状态；返还载体在 Load 前注入。耐久品质 CraftedDurabilityMultiplier 双向转移，实际最大生命按当前定义重算；两端状态贴图各自声明。
 - RequiresPlacementRequest 由正式入口 BeginPlacement 开启，TryHandlePlacementAction 仲裁；普通无显式入口召唤器直接 Install。世界根旋转初始化 identity，手持旋转不迁移；世界朝向/镜像是已放置状态，拆回清零。
 - 拆回先捕获快照、成功生成返还物再删除原建筑。堆叠身份取规范化快照（去放置重写的 GUID/Transform）；IBuildingSnapshotRepackPolicy 可省默认快照，损伤/共享状态继续保留。
+- `BuildingSnapshotRepacking` 统一普通建筑、机器与轻量掉落载体的快照规范化、封包和共享状态装配，后端各自提交删除；`BuildingGroundPlacementRules` 提供地表承重与通行校验。Mod_Building 分为 Placement/Dismantling/Preview/Configuration 与生命周期壳；规则 `building/snapshot_repacking`。
 - SnapshotBase64 统一由 ItemNetworkStateSerialization.TrySerializeItemData 写入带 FWI1 包头的实例封包；船部件回收也复用此入口，不能直接写裸 MemoryPack。放置与 ShipMassReader 使用同一恢复契约，Tools/Tests/ShipMass 覆盖回收载体库存。
 - 主动完整拆回与受伤摧毁分开：锤类致命伤返 Summoner，其它破坏优先按实际制作材料记录随机返料，无记录才查唯一精确配方。拆平台先检查上下层、设施和对象占用，返还装配成功才撤支撑。
 - Item/机器建筑的制作材料由 `BuildingMaterialCraftingRule` 接入正式产物规则，读取真实扣料并按实际产量分摊到 `Building_Data.CraftingMaterials`；绳子/皮带等替代料保留实际 ID，零扣量工具和额外料不计。材料随 `BuildingModuleStateTransfer.Copy`、实例快照及回收载体深拷贝，不同材料用独立堆叠身份。战斗随机回收、磨损固定返料、船体/地表冲击共用记录；无制作历史及格子建筑才回退唯一精确配方，不猜替代料。规则 `building/material_provenance`。
