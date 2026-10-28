@@ -54,6 +54,7 @@ public static class ItemDefinitionRuntime
             if (current.Sprite != null && renderer.sprite == previous.Sprite) renderer.sprite = current.Sprite;
             if (current.Material != null && renderer.sharedMaterial == previous.Material) renderer.sharedMaterial = current.Material;
         }
+        item.VisualDefinition = current.Visual;
         item.MarkModuleScheduleDirty();
         item.NotifyRuntimeStructureChanged();
     }
@@ -164,6 +165,7 @@ public static class ItemDefinitionRuntime
     private static void ApplyVisual(RuntimeItemDefinition definition, Item item)
     {
         ItemVisualDefinitionDto visual = definition.Visual;
+        item.VisualDefinition = visual;
         if (visual == null)
             return;
 
@@ -217,11 +219,6 @@ public static class ItemDefinitionRuntime
                 renderer.flipX = visual.FlipX.Value;
             if (visual.FlipY.HasValue)
                 renderer.flipY = visual.FlipY.Value;
-            if (!string.IsNullOrWhiteSpace(visual.SortingLayerName))
-                renderer.sortingLayerName = visual.SortingLayerName;
-            if (visual.SortingOrder.HasValue)
-                renderer.sortingOrder = visual.SortingOrder.Value;
-
             ApplyPlayerOccluderFlag(item, renderer);
             item.Sprite = renderer;
         }

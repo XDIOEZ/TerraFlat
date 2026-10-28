@@ -46,6 +46,7 @@ internal sealed class DroppedItemVisual
         if (sorting == null)
             throw new InvalidOperationException("掉落物缺少世界排序管理器。");
         sorting.GetSortingKey(WorldSortingManager.WorldItemCategory, out int sortingLayerId, out int sortingOrder);
+        WorldSortingManager.ApplyItemVisualSortingOverrides(visual, ref sortingLayerId, ref sortingOrder);
         return new DroppedItemVisual
         {
             Sprite = sprite,

@@ -1,5 +1,9 @@
 # 渲染、光照与特效
 
+物品排序由 `visual.sortingLayerName`（一级图层）和 `sortingOrder`（同层二级顺序）决定，同层同序才按 Y 排序；普通物品继承 `Player/100`，船板与铁轨显式使用 `Default/0` 和贴地材质。`rendering_item_sorting_configuration` 独立规则覆盖正式装配、分组、上下位置、原位更新、手持/显示切换、池复用、轻量掉落物、合批资格及配置校验；不代表实际 GPU 画面验收。
+
+2026-10-28 本轮专项规则 28 项断言通过；`20261028T151214478Z_15c3e9a0` 的 29 项 EditMode 和真实渲染案例通过，两种船板跨帧保留 `Default/0`、未进动态合批，结束截图已复核角色完整显示在船板前方，控制台无错误和警告。扩大规则回归仍在暂停刚体与 `destroyed` 注册清理断言失败，未记为本轮通过项。
+
 2026-10-28 默认写实水面改为灰青水色、四组共用波光和断续岸沫，河流降低整片反射；`water_surface_palette` 已加入 `unified-manager.lua`。本轮单独执行原 Lua 水面段，70 项断言通过；三材质的两个正式 Pass 编译及湖泊/河流/海岸离屏 GPU 预览通过。完整 `rendering_unified_manager` 在既有 `destroyed` 注销清理断言失败，未覆盖真实游玩水岸、夜景及 Android 后端。
 
 2026-10-28 阴影索引整合：`shadow_quad_indices` 读取正式初始化后Mesh的首尾索引，Lua检查1/2/4096个Quad的容量、绕序与16位格式，放在独立unified-manager案例；先补断言后改生产，未运行。真实两类阴影提交和GPU画面仍待验收。

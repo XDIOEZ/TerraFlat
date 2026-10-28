@@ -1,5 +1,11 @@
 -- 正式世界石斧同帧采排序，自有手持石斧跨帧绑定真实玩家 MPB；湿润粒子来自正式 Prefab。
 test.runtime("rendering", "player_external_effects", {}, function(data)
+    assert(#data.floors == 2, "没有创建两种正式船板物品")
+    for _, floor in ipairs(data.floors) do
+        assert(floor.loaded and floor.layer == "Default" and floor.order == 0 and
+            floor.layerValue < data.playerLayerValue and not floor.projectedIntoDynamicBatch,
+            "正式船板在跨帧后被动态排序或合批覆盖：" .. floor.id)
+    end
     assert(data.scope == "live-isolated-world" and data.realItemLoaded and data.itemId == "Axe_Stone", "真实物品没有通过正式加载流程")
     assert(data.realPlayerController and data.bodyVisible and data.worldSortingMatches, "真实玩家主体或正式世界排序未建立")
     assert(data.realWorldItemLoaded and data.worldVisible and data.worldItemReleased, "正式世界石斧排序样本无效或自有世界物没有完整回收")

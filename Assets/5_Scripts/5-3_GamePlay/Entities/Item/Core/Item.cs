@@ -221,6 +221,9 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public SpriteRenderer Sprite;
 
+    // 世界渲染直接读取当前定义，避免外壳、排序组件或对象池覆盖物品配置。
+    public ItemVisualDefinitionDto VisualDefinition { get; internal set; }
+
     private bool isInitialized = false;
     private bool destructionHandled = false;
     private bool modulesLoaded = false;
@@ -625,6 +628,7 @@ public abstract class Item : MonoBehaviour
     public void PrepareForPoolReuse()
     {
         ClearPendingInitialAnimatorState();
+        VisualDefinition = null;
         PersistenceOwner = null;
         GameplayWorldRegistry.AssignItemToWorld(this, null);
         ModuleUnload();

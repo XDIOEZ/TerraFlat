@@ -80,6 +80,8 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 99,
         "spriteAddress": "Assets/6_Art/Generated/Transport/Wheelbarrow/Wheelbarrow.png",
         "collider": {
           "type": "BoxCollider2D",

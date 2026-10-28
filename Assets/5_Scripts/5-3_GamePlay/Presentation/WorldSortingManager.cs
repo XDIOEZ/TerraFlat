@@ -218,8 +218,16 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     {
         if (member == null || !member.IsWorldVisible || string.IsNullOrWhiteSpace(member.Category)) return;
         GetSortingKey(member.Category, out int sortingLayerId, out int sortingOrder);
+        ApplyItemVisualSortingOverrides(member.VisualDefinition, ref sortingLayerId, ref sortingOrder);
         member.Apply(sortingLayerId, sortingOrder,
             dynamicCategorySet.Contains(member.Category));
+    }
+
+    /// <summary>完整物品与轻量掉落物共用配置优先级，未声明的字段才使用类别默认值。</summary>
+    internal static void ApplyItemVisualSortingOverrides(ItemVisualDefinitionDto visual, ref int layerId, ref int order)
+    {
+        if (!string.IsNullOrWhiteSpace(visual?.SortingLayerName)) layerId = SortingLayer.NameToID(visual.SortingLayerName);
+        if (visual?.SortingOrder is int configuredOrder) order = configuredOrder;
     }
 
     /// <summary>从实体类型选类别并绑定主体；不修改阴影、特效或 Tilemap 的独立排序。</summary>

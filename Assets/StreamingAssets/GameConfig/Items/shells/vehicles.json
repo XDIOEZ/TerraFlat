@@ -78,6 +78,8 @@
         "combatBalanceVersion": 1
       },
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 99,
         "spriteAddress": "Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png",
         "rendererLocalScale": { "x": 2, "y": 2, "z": 1 },
         "collider": {
@@ -206,6 +208,8 @@
         "combatBalanceVersion": 1
       },
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 99,
         "spriteAddress": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png",
         "collider": {
           "type": "BoxCollider2D",

@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "rendering_item_sorting_configuration",
+      "name": "物品配置排序：图层、顺序、地板与生命周期",
+      "luaPath": "GameplayTests/Systems/Rendering/item-sorting-configuration.lua",
+      "enabled": true
+    },
+    {
       "id": "rendering_unified_manager",
       "name": "统一渲染入口：排序、阴影、描边与生命周期",
       "luaPath": "GameplayTests/Systems/Rendering/unified-manager.lua",

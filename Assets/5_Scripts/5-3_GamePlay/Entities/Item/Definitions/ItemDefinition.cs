@@ -253,11 +253,31 @@ public sealed partial class ItemVisualDefinitionDto
     [JsonProperty("flipY")]
     public bool? FlipY;
 
+    #region 世界渲染排序
+
+    /// <summary>世界主体的一级 Sorting Layer；配置优先于外壳和自动类别。</summary>
     [JsonProperty("sortingLayerName")]
     public string SortingLayerName;
 
+    /// <summary>同层内的二级顺序，数值越大越靠前；同层同序才按世界 Y 轴排序。</summary>
     [JsonProperty("sortingOrder")]
     public int? SortingOrder;
+
+    public void ValidateWorldSortingConfiguration(string itemId)
+    {
+        if (SortingLayerName != null)
+        {
+            bool exists = false;
+            foreach (SortingLayer layer in SortingLayer.layers)
+                if (layer.name == SortingLayerName) { exists = true; break; }
+            if (!exists)
+                throw new InvalidDataException($"物品 {itemId} 的 sortingLayerName 不存在：{SortingLayerName}");
+        }
+        if (SortingOrder.HasValue && (SortingOrder < short.MinValue || SortingOrder > short.MaxValue))
+            throw new InvalidDataException($"物品 {itemId} 的 sortingOrder 必须在 {short.MinValue}～{short.MaxValue} 之间。");
+    }
+
+    #endregion
 
     /// <summary>世界阴影的可选视觉配置；未声明时沿用实体默认规则。</summary>
     [JsonProperty("shadows", NullValueHandling = NullValueHandling.Ignore)]
@@ -676,6 +696,7 @@ public sealed class RuntimeItemDefinition
         ShellPrefab = shellPrefab;
         templateData = itemData;
         createInstanceData = ItemInstanceDataFactory.Compile(itemData);
+        visual?.ValidateWorldSortingConfiguration(id);
         Visual = visual;
         Physics = physics;
         Health = health;

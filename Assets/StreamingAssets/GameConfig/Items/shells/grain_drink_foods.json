@@ -209,8 +209,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -327,8 +325,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -446,8 +442,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,

@@ -69,10 +69,38 @@ public static partial class GameplayTestPresentationRuntimeProbe
     {
         var fixture = new RenderingFixture(player);
         GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        var floors = new System.Collections.Generic.List<Item>();
+        // 船板保留到案例结束截图后，再由隔离宿主统一回收。
+        IEnumerator ReleaseFloorsAfterScreenshot()
+        {
+            foreach (Item floor in floors)
+                if (floor != null && !floor.DestructionHandled) fixture.Items.DespawnItem(floor, false);
+            yield break;
+        }
+        GameplayTestRuntimeProbe.RegisterAsyncCleanup(ReleaseFloorsAfterScreenshot);
         JObject result = null;
         int beforeEffects = ActiveWetEffects(fixture.Effects);
         try
         {
+            var floorSorting = new JArray();
+            foreach (string floorId in new[] { "ShipFloor_Iron", "ShipFloor_Refractory" })
+            {
+                Item floor = fixture.Items.InstantiateItem(floorId, player.transform.position +
+                    (floorId == "ShipFloor_Iron" ? Vector3.down : Vector3.up) * .5f);
+                floors.Add(floor);
+                floor.Load();
+            }
+            yield return null;
+            yield return null;
+            foreach (Item floor in floors)
+            {
+                WorldSortingManager.ReadExternalRendererKey(floor.Sprite, out int layer, out int order);
+                floorSorting.Add(new JObject { ["id"] = floor.itemData.IDName, ["loaded"] = floor.IsInitialized,
+                    ["layer"] = SortingLayer.IDToName(layer), ["order"] = order,
+                    ["layerValue"] = SortingLayer.GetLayerValueFromID(layer),
+                    ["projectedIntoDynamicBatch"] = BuildingDepthMeshBridge.IsProjected(floor.Sprite) });
+            }
+            WorldSortingManager.ReadExternalRendererKey(player.Sprite, out int playerLayer, out _);
             fixture.WorldItem = fixture.Items.InstantiateItem("Axe_Stone", player.transform.position + Vector3.right * 6f);
             fixture.WorldItem.Load();
             SpriteRenderer worldSprite = fixture.WorldItem.GetComponentsInChildren<SpriteRenderer>(true)
@@ -171,6 +199,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["realPlayerController"] = fixture.Controller.isActiveAndEnabled,
                 ["bodyVisible"] = body.gameObject.activeInHierarchy && body.enabled && body.color.a > 0f,
                 ["worldSortingMatches"] = sortingMatches, ["category"] = category,
+                ["floors"] = floorSorting, ["playerLayerValue"] = SortingLayer.GetLayerValueFromID(playerLayer),
                 ["realWorldItemLoaded"] = realWorldItemLoaded, ["worldVisible"] = worldVisible,
                 ["worldGuid"] = worldGuid, ["worldItemReleased"] = worldItemReleased,
                 ["heldGuid"] = fixture.Item.itemData.Guid, ["heldInHand"] = fixture.Item.InHand,

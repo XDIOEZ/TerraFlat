@@ -53,8 +53,6 @@
         },
         "flipX": true,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "animatorPath": "Module_Animator_AI",
         "animatorControllerAddress": "flatworld.actor.animator.chicken",
         "collider": {
@@ -792,8 +790,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "animatorPath": "Module_Animator_AI",
         "animatorControllerAddress": "flatworld.actor.animator.wildboar",
         "collider": {
@@ -1567,8 +1563,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "animatorPath": "AI动画模块",
         "animatorControllerAddress": "flatworld.actor.animator.wolf",
         "collider": {
@@ -2311,8 +2305,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 2,
         "animatorPath": "Visual",
         "animatorControllerAddress": "flatworld.actor.animator.ghost"
       },

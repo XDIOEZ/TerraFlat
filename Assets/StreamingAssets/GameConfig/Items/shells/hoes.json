@@ -14,6 +14,8 @@
       "canBePickedUp": true,
       "tags": ["Tool", "InventoryCategory.Tool"],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "rendererPath": "Render/GameObject",
         "rendererLocalEulerAngles": {
           "x": 0,

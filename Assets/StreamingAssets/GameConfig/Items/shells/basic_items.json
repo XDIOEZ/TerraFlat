@@ -12,6 +12,8 @@
       "abstract": true,
       "shellPrefab": "Prop",
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "rendererPath": "Render",
         "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
       }
@@ -43,9 +45,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       }
     },
     {

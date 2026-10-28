@@ -1377,6 +1377,7 @@
         "environment"
       ],
       "ruleCaseIds": [
+        "rendering_item_sorting_configuration",
         "rendering_unified_manager",
         "rendering_rules",
         "rendering_building_liquid_surface",

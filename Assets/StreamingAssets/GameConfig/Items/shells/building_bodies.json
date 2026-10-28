@@ -10,6 +10,8 @@
       "abstract": true,
       "shellPrefab": "BuildingBodyShell",
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "rendererPath": "Render",
         "collider": {
           "type": "BoxCollider2D"
@@ -58,8 +60,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -246,9 +246,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       },
       "health": {
         "hasHp": true,
@@ -459,9 +457,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       },
       "health": {
         "hasHp": true,
@@ -584,9 +580,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       },
       "health": {
         "hasHp": true,
@@ -708,9 +702,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       },
       "health": {
         "hasHp": true,
@@ -832,9 +824,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       },
       "health": {
         "hasHp": true,
@@ -928,6 +918,8 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
         "spriteAddress": "Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png",
         "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "rendererLocalPosition": {
@@ -953,8 +945,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "isTrigger": true,
           "size": {
@@ -1083,8 +1073,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "offset": {
             "x": 0.01342845,
@@ -1210,9 +1198,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       },
       "health": {
         "hasHp": true,
@@ -1382,8 +1368,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "size": {
             "x": 0.99,
@@ -1506,8 +1490,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "size": {
             "x": 0.99,
@@ -1629,9 +1611,7 @@
           "a": 1.0
         },
         "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
+        "flipY": false
       },
       "health": {
         "hasHp": true,
@@ -1751,8 +1731,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "offset": {
             "x": 0.01317735,
@@ -2003,8 +1981,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "size": {
             "x": 0.99,

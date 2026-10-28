@@ -25,6 +25,8 @@ public sealed class WorldSortingMember : MonoBehaviour
     /// <summary>主体精灵。</summary>
     public SpriteRenderer TargetRenderer => targetRenderer;
 
+    internal ItemVisualDefinitionDto VisualDefinition => owner?.VisualDefinition;
+
     /// <summary>手持物使用手持链自己的排序配置。</summary>
     public bool IsWorldVisible => owner == null || !owner.InHand;
     #endregion

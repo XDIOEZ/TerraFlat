@@ -19,6 +19,9 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "spriteAddress": "Assets/6_Art/Generated/Space/ShipFloor_Iron/ShipFloor_Iron_Tile.png"
       },
       "health": {
@@ -198,6 +201,9 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "spriteAddress": "Assets/6_Art/Generated/Space/ShipFloor_Refractory/ShipFloor_Refractory_Tile.png"
       },
       "health": {

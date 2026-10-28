@@ -16,12 +16,13 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
+        "sortingLayerName": "Player",
         "spriteAddress": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
         "spriteStates": {
           "straight": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
           "curve": "Assets/6_Art/Generated/Railway/Rail_Curve.png"
         },
-        "sortingOrder": -5,
+        "sortingOrder": 100,
         "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat",
         "collider": {
           "type": "BoxCollider2D",
@@ -88,13 +89,14 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
+        "sortingLayerName": "Default",
         "spriteAddress": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
         "spriteStates": {
           "straight": "Assets/6_Art/Generated/Railway/Rail_Straight.png",
           "curve": "Assets/6_Art/Generated/Railway/Rail_Curve.png"
         },
-        "sortingOrder": -5,
-        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat",
+        "sortingOrder": 0,
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": false,
@@ -244,6 +246,8 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 99,
         "spriteAddress": "Assets/6_Art/Generated/Railway/Minecart.png",
         "collider": {
           "type": "BoxCollider2D",

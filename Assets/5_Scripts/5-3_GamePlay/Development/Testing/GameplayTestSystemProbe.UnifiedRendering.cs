@@ -11,7 +11,114 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterUnifiedRenderingOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
+        operations.Add("rendering/item_sorting_configuration", CaptureItemConfiguredWorldSorting);
         operations.Add("rendering/water_surface_palette", CaptureSharedWaterSurfaceMaterialPalette);
+    }
+
+    // 使用正式定义装配、原位更新和排序入口采样，不在夹具内重算渲染优先级。
+    private static JObject CaptureItemConfiguredWorldSorting(JObject args)
+    {
+        using var fixture = new UnifiedItemRenderingRuleFixture();
+        GameItem item = fixture.Item;
+        WorldRenderingManager rendering = fixture.Rendering;
+        GameRes resources = GameRes.ExistingInstance ?? fixture.Services.AddComponent<GameRes>();
+        var samples = new JArray();
+        RuntimeItemDefinition Definition(ItemVisualDefinitionDto visual) => new(
+            item.itemData.IDName, "", null, item.itemData, visual, null, null, null,
+            fixture.Sprite.sprite, null, null, null, null);
+        var current = Definition(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 0 });
+        void Sample(string step)
+        {
+            WorldSortingManager.ReadExternalRendererKey(fixture.Sprite, out int layer, out int order);
+            bool depthBatch = BuildingDepthMeshBridge.TryResolveConfiguredDepthSorting(fixture.Sprite, out bool groundBatch);
+            samples.Add(new JObject { ["step"] = step, ["layer"] = SortingLayer.IDToName(layer),
+                ["layerValue"] = SortingLayer.GetLayerValueFromID(layer), ["order"] = order,
+                ["y"] = item.transform.position.y, ["depthBatch"] = depthBatch, ["groundBatch"] = groundBatch });
+        }
+        void Refresh(ItemVisualDefinitionDto visual, string step)
+        {
+            RuntimeItemDefinition next = Definition(visual);
+            ItemDefinitionRuntime.RefreshLiveConfiguration(item, current, next);
+            current = next;
+            rendering.RefreshItemRendering(item);
+            Sample(step);
+        }
+
+        fixture.Root.SetActive(false);
+        ItemDefinitionRuntime.ConfigureInstance(resources, current, item, item.itemData);
+        fixture.Root.AddComponent<WorldSortingMember>().Bind(WorldSortingManager.BuildingCategory, fixture.Sprite, item);
+        fixture.Root.SetActive(true);
+        rendering.RegisterItemRendering(item);
+        bool definitionBound = ReferenceEquals(item.VisualDefinition, current.Visual);
+        item.transform.position = Vector3.up * 100f;
+        Sample("floor_north");
+        item.transform.position = Vector3.down * 100f;
+        rendering.RefreshItemRendering(item);
+        Sample("floor_south");
+
+        var group = fixture.Root.AddComponent<SortingGroup>();
+        rendering.RefreshItemRendering(item);
+        fixture.Sprite.sortingOrder = 7;
+        rendering.RefreshItemRendering(item);
+        Sample("grouped_floor");
+        bool relativeOrderPreserved = fixture.Sprite.sortingOrder == 7;
+        Refresh(new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = 147 }, "custom_order");
+        item.SetInHand(true);
+        bool heldRestored = group.sortingOrder != 147;
+        item.SetInHand(false);
+        Sample("returned_from_hand");
+        fixture.Root.SetActive(false);
+        fixture.Root.SetActive(true);
+        Sample("reenabled");
+        Refresh(new ItemVisualDefinitionDto { SortingOrder = 99 }, "order_only");
+        Refresh(new ItemVisualDefinitionDto { SortingLayerName = "Default" }, "layer_only");
+        Refresh(null, "defaults_restored");
+        bool removedConfigurationCleared = item.VisualDefinition == null;
+        Refresh(new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = short.MinValue }, "minimum_order");
+        Refresh(new ItemVisualDefinitionDto { SortingLayerName = "Player", SortingOrder = short.MaxValue }, "maximum_order");
+        rendering.UnregisterItemRendering(item);
+        fixture.Root.SetActive(false);
+        item.PrepareForPoolReuse();
+        bool pooledConfigurationCleared = item.VisualDefinition == null;
+        current = Definition(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 0 });
+        ItemDefinitionRuntime.ConfigureInstance(resources, current, item, item.itemData);
+        fixture.Root.SetActive(true);
+        rendering.RegisterItemRendering(item);
+        Sample("reused_as_floor");
+
+        bool hadDefinition = resources.ItemDefinitions.TryGetValue(current.Id, out RuntimeItemDefinition previous);
+        DroppedItemVisual dropped;
+        try
+        {
+            resources.ItemDefinitions[current.Id] = current;
+            dropped = DroppedItemVisual.Resolve(item.itemData, fixture.Sprite.sprite);
+        }
+        finally
+        {
+            if (hadDefinition) resources.ItemDefinitions[current.Id] = previous;
+            else resources.ItemDefinitions.Remove(current.Id);
+        }
+        bool Rejects(ItemVisualDefinitionDto visual)
+        {
+            try { Definition(visual); }
+            catch (System.IO.InvalidDataException) { return true; }
+            return false;
+        }
+        var catalog = new JArray();
+        foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
+            if (definition.Id is "ShipFloor_Iron" or "ShipFloor_Refractory" or "ShipFloor_Iron_Summoner" or "Stick_Wood" or "RailTrack")
+                catalog.Add(new JObject { ["id"] = definition.Id, ["layer"] = definition.Visual?.SortingLayerName,
+                    ["order"] = definition.Visual?.SortingOrder, ["material"] = definition.Visual?.MaterialAddress });
+        rendering.GetSortingKey("player", out int playerLayer, out int playerOrder);
+        return new JObject { ["samples"] = samples, ["catalog"] = catalog, ["definitionBound"] = definitionBound,
+            ["relativeOrderPreserved"] = relativeOrderPreserved, ["heldRestored"] = heldRestored,
+            ["removedConfigurationCleared"] = removedConfigurationCleared, ["pooledConfigurationCleared"] = pooledConfigurationCleared,
+            ["droppedLayer"] = SortingLayer.IDToName(dropped.Layer), ["droppedOrder"] = dropped.Order,
+            ["playerLayerValue"] = SortingLayer.GetLayerValueFromID(playerLayer), ["playerOrder"] = playerOrder,
+            ["rejectsUnknownLayer"] = Rejects(new ItemVisualDefinitionDto { SortingLayerName = "probe:missing-layer" }),
+            ["rejectsEmptyLayer"] = Rejects(new ItemVisualDefinitionDto { SortingLayerName = "" }),
+            ["rejectsOrderUnderflow"] = Rejects(new ItemVisualDefinitionDto { SortingOrder = short.MinValue - 1 }),
+            ["rejectsOrderOverflow"] = Rejects(new ItemVisualDefinitionDto { SortingOrder = short.MaxValue + 1 }) };
     }
 
     // 读取三条正式水面材质，颜色关系由 Lua 判断，不复算 Shader。

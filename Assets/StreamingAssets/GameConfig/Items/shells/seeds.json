@@ -10,6 +10,8 @@
       "shellPrefab": "Seed",
       "tags": ["Seed", "Food", "InventoryCategory.Nature"],
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "rendererPath": "Render"
       },
       "modules": {
@@ -70,8 +72,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,

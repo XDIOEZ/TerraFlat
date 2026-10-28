@@ -37,6 +37,7 @@ internal static class BuildingDepthMeshBridge
         if (building?.Data?.Role != BuildingRole.PlacedBuilding || item.Sprite == null) return;
         // 移动车辆不是静态格子建筑，继续由自己的动态表现控制。
         if (item.GetComponentInChildren<Mod_Carrier>(true) != null) return;
+        if (!TryResolveConfiguredDepthSorting(item.Sprite, out bool groundSorting)) return;
         if (!hooked)
         {
             hooked = true;
@@ -45,7 +46,19 @@ internal static class BuildingDepthMeshBridge
             ChunkDepthMeshRenderer.BeforeFlush += Present;
         }
         ChunkDepthMeshRenderer.EnsureDispatcher();
-        bindings.Add(item, new Binding(item, building));
+        bindings.Add(item, new Binding(item, building, groundSorting));
+    }
+
+    // 合批只接管能完整保留排序键的主体，其余配置继续使用原生 Renderer。
+    internal static bool TryResolveConfiguredDepthSorting(SpriteRenderer renderer, out bool groundSorting)
+    {
+        WorldSortingManager.ReadExternalRendererKey(renderer, out int layer, out int order);
+        WorldRenderingManager rendering = WorldRenderingManager.Instance;
+        rendering.GetSortingKey(WorldSortingManager.GroundBuildingCategory, out int groundLayer, out int groundOrder);
+        groundSorting = layer == groundLayer && order == groundOrder;
+        if (groundSorting) return true;
+        rendering.GetSortingKey(WorldSortingManager.BuildingCategory, out int buildingLayer, out int buildingOrder);
+        return layer == buildingLayer && order == buildingOrder;
     }
 
     private static void Unregister(Item item)
@@ -109,6 +122,7 @@ internal static class BuildingDepthMeshBridge
         private readonly MaterialPropertyBlock properties = new();
         private readonly int entityId;
         private readonly bool connectionLine;
+        private readonly bool groundSorting;
         private ChunkView view;
         private ChunkTilemapRenderer owner;
         private bool hasSubmittedSources;
@@ -117,9 +131,10 @@ internal static class BuildingDepthMeshBridge
         private bool ownsCombustionSortingGroup, combustionSortingOverridden, originalCombustionSortingEnabled;
         private int originalCombustionSortingLayer, originalCombustionSortingOrder;
 
-        internal Binding(Item item, Mod_Building building)
+        internal Binding(Item item, Mod_Building building, bool groundSorting)
         {
             Item = item; this.building = building; entityId = item.GetInstanceID();
+            this.groundSorting = groundSorting;
             combustionEffects = item.GetComponentsInChildren<CombustionVisualEffect>(true);
             connectionLine = item.GetComponentInChildren<Mod_ShipPart>(true)?.Configuration.Kind == FlatWorld.Spaceflight.ShipPieceKind.Fiber;
             var renderers = new List<SpriteRenderer>();
@@ -150,7 +165,7 @@ internal static class BuildingDepthMeshBridge
             if (owner == null || !owner.IsBatchPresentationRegistered) { Release(); return; }
             bool submerged = FlatWorld.Spaceflight.SpaceSession.Current?.Owns(Item.itemData.Guid) != true &&
                 owner.IsBuildingSubmergedAtWorldAnchor(anchor);
-            if (building.IsGroundFacility && !submerged)
+            if (groundSorting && !submerged)
             {
                 if (hasSubmittedSources) ReleaseSources();
                 return;

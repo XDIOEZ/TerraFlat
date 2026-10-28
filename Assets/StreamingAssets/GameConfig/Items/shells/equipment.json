@@ -10,6 +10,8 @@
       "abstract": true,
       "shellPrefab": "Chestplate_Iron",
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "rendererPath": "图片"
       }
     },
@@ -62,8 +64,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -199,8 +199,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -331,8 +329,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,

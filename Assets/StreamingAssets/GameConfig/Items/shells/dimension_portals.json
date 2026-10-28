@@ -10,6 +10,8 @@
       "abstract": true,
       "shellPrefab": "BuildingBodyShell",
       "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
         "rendererPath": "Render"
       }
     },
@@ -60,8 +62,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -193,8 +193,6 @@
         },
         "flipX": false,
         "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
