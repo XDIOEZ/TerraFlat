@@ -11,6 +11,12 @@
       "enabled": true
     },
     {
+      "id": "ui_layout_rules",
+      "name": "窗口拖动缩放与安全区布局",
+      "luaPath": "GameplayTests/Systems/UISettings/layout-rules.lua",
+      "enabled": true
+    },
+    {
       "id": "anvil_ui_rules",
       "name": "砧工具与制作布局规则",
       "luaPath": "GameplayTests/Systems/UISettings/anvil.lua",
@@ -20,6 +26,12 @@
       "id": "atmosphere_analyzer_ui_rules",
       "name": "大气检测仪屏幕布局与读数",
       "luaPath": "GameplayTests/Systems/UISettings/atmosphere-analyzer.lua",
+      "enabled": true
+    },
+    {
+      "id": "ui_structure_refactor_rules",
+      "name": "GM职责拆分与目录共享布局",
+      "luaPath": "GameplayTests/Systems/UISettings/structure-refactor.lua",
       "enabled": true
     }
   ]

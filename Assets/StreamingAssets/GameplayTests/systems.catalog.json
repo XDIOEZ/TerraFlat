@@ -436,7 +436,8 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_ResourceHarvest.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_ResourceTool.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/MapMaker/*",
-        "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/*"
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GenerationStages.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1065,7 +1066,8 @@
         "Assets/5_Scripts/5-1_Data/CoreData/Tag.cs",
         "Assets/5_Scripts/5-1_Data/CoreData/ItemTransform.cs",
         "Assets/5_Scripts/5-1_Data/CoreData/ListTagExtensions.cs",
-        "Assets/5_Scripts/5-1_Data/EnumData/*"
+        "Assets/5_Scripts/5-1_Data/EnumData/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.BasicItemCatalog.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1101,7 +1103,8 @@
         "Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.cs",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Cam.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldPhysicsProxyRuntimeProbe*.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldPhysics*.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldPhysics*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MapGenerationPlan.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1257,7 +1260,12 @@
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.VirtualizedInventory.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Anvil.cs",
         "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Anvil.prefab",
-        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_MakerTable.prefab"
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_MakerTable.prefab",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.UiPolish.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MultiSelectDropdown.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.InventoryBagWindowLayout.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GmHoverPropertyInspector*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole*.cs"
       ],
       "dependsOn": [
         "localization",
@@ -1265,8 +1273,10 @@
       ],
       "ruleCaseIds": [
         "ui_settings_rules",
+        "ui_layout_rules",
         "anvil_ui_rules",
-        "atmosphere_analyzer_ui_rules"
+        "atmosphere_analyzer_ui_rules",
+        "ui_structure_refactor_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/UISettings/rules-suite.json",
       "integrationSuites": [
@@ -1315,7 +1325,7 @@
       "group": "共享支撑",
       "sourcePaths": [
         "Assets/5_Scripts/5-7_Localization/*",
-          "Assets/Resources/Localization/*",
+        "Assets/Resources/Localization/*",
         "Assets/Localization/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Localization/*"
       ],
