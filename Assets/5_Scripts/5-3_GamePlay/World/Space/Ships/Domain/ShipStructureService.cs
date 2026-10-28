@@ -152,7 +152,8 @@ namespace FlatWorld.Spaceflight
             for (int i = 0; i < groups.Count; i++)
             {
                 ShipState part = CopyKinematics(ship, i == retainedIndex ? ship.ShipId : Guid.NewGuid().ToString("N"));
-                if (i == retainedIndex) part.Anchor = ship.Anchor;
+                // 原船身份锚点仍存活时随保留部分继承，不能被后加控制台替换。
+                if (i == retainedIndex) { part.Anchor = ship.Anchor; part.IdentityAnchorPieceId = anchor; }
                 // 保留缺失地板的历史资格，补回原格也不能再次免费生成舱气。
                 part.EverEnclosedCells.AddRange(oldKnown);
                 results.Add(part);

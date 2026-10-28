@@ -26,7 +26,9 @@ public partial class WeatherMgr
 
     public static WeatherMgr GetForWorld(string worldKey, bool create = true)
     {
-        if (string.IsNullOrWhiteSpace(worldKey) || SpaceMgr.IsSpaceScene(worldKey)) return null;
+        // 局部坐标世界没有星球天气源，不能借用或新建地表天气。
+        if (string.IsNullOrWhiteSpace(worldKey) || SpaceMgr.IsSpaceScene(worldKey) ||
+            GameplayWorldRegistry.UsesLocalCoordinates(worldKey)) return null;
         if (worldManagers.TryGetValue(worldKey, out WeatherMgr manager) && manager != null) return manager;
         if (!create || !Application.isPlaying || GameManager.Instance?.IsInGameWorld != true) return null;
         if (templateManager == null) templateManager = FindObjectOfType<WeatherMgr>(true);

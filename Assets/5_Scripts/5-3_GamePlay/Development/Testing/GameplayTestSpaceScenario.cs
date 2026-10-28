@@ -362,6 +362,15 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             yield return Teleport(new SpaceMotionState { Sector = sector, PositionMeters = point, RadiusMeters = .3d });
             double deadline = Time.realtimeSinceStartupAsDouble + 30d;
             while (!HasAllPlanetViews(universe) && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
+            Player player = CurrentPlayer();
+            Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
+            string previousWorld = GameplayWorldRegistry.ExecutionWorldKey;
+            bool missingInteractionRejected = sender != null && !sender.CanInteractTarget(null);
+            var interaction = new JObject
+            {
+                ["senderReady"] = sender != null, ["missingTargetRejected"] = missingInteractionRejected,
+                ["worldBefore"] = previousWorld, ["worldAfter"] = GameplayWorldRegistry.ExecutionWorldKey
+            };
             var bodies = new JArray();
             foreach (BodyState body in universe.State.Bodies)
             {
@@ -373,7 +382,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                     ["projected"] = Vector(session.ProjectPosition(new SpaceSectorPosition(body.Sector, body.PositionMeters))),
                     ["viewPosition"] = view == null ? null : Vector(view.transform.position) });
             }
-            visits.Add(new JObject { ["sector"] = Sector(sector), ["state"] = SessionSnapshot(), ["bodies"] = bodies });
+            visits.Add(new JObject { ["sector"] = Sector(sector), ["state"] = SessionSnapshot(),
+                ["interaction"] = interaction, ["bodies"] = bodies });
         }
         completed(new JObject { ["scope"] = "live-presentation", ["visits"] = visits });
     }
@@ -848,7 +858,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["sectorCount"] = session.State.Sectors.Count, ["scene"] = SceneManager.GetActiveScene().name,
             ["spaceView"] = session.IsSpaceView, ["playerProfile"] = player.ProfileName,
             ["playerInstance"] = player.GetInstanceID(), ["sector"] = Sector(position.Sector),
-            ["playerScene"] = player.gameObject.scene.name, ["supported"] = passenger.Supported,
+            ["playerScene"] = player.gameObject.scene.name, ["playerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player),
+            ["supported"] = passenger.Supported,
             ["shipId"] = passenger.ShipId, ["consoleId"] = passenger.ConsolePieceId,
             ["cameraReady"] = camera != null && camera.isActiveAndEnabled,
             ["cameraInstance"] = camera == null ? 0 : camera.GetInstanceID(),

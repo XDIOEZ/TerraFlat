@@ -1,6 +1,9 @@
 test.runtime("space", "ship_interior_world", {}, function(data)
     assert(data.scope == "live-isolated-world", "必须由隔离存档中的正式运行时探针采样")
     assert(data.shipCount == 2, "夹具必须通过正式船体部件事务创建两艘独立船")
+    assert(data.unlandedAssembliesRetained, "尚未完成降落的组装船不能被落地恢复提前移交")
+    assert(data.localWorldClocksAdvance, "船内普通农业与生物必须能读取持续推进的世界时钟")
+    assert(data.localWorldHasNoPlanetaryWeather, "船内局部世界不能创建或借用星球天气")
 
     local first, second = data.ships[1], data.ships[2]
     assert(first.shipId ~= second.shipId and first.worldKey ~= second.worldKey,
@@ -25,7 +28,7 @@ test.runtime("space", "ship_interior_world", {}, function(data)
     assert(data.firstShipCollided and data.secondShipPassed and data.nativeQueryIsolated,
         "两份原生物理场景必须分别阻挡和放行同一坐标的真实刚体")
 
-    assert(data.projectionRoundTrip and data.projectionSeparatesLocalFromDisplay,
+    assert(data.projectionRoundTrip and data.projectionSeparatesLocalFromDisplay and data.surfacePresentationRemainsVisible,
         "船内本地坐标与画面投影必须可逆且分属各自坐标系")
     assert(data.machineWorldKey == first.worldKey and data.machineInstancePreserved and data.machinePayloadPreserved,
         "普通机器及其实际载荷必须由本船世界和同一实例持有")
@@ -35,6 +38,8 @@ test.runtime("space", "ship_interior_world", {}, function(data)
     assert(data.doorFound and data.doorInteracted and data.doorStatePersisted and data.healthApplied and
         data.ordinaryDamageWindowRejectedDuplicate,
         "船内普通舱门、交互和生命模块必须走真实 Item 路径")
+    assert(data.doorVisualSurvivedImmediateReenable and data.doorHasWorldPresentationProjection,
+        "船内舱门同帧停用重启后必须保留排序和普通世界显示投影")
     assert(data.zeroGravityInteriorRetainsWorld and data.zeroGravityUsesNativeMoverVelocity and
         data.zeroGravityMovesThroughNativePhysics,
         "无人工重力舱内乘员必须留在本船世界并通过普通刚体积分移动")
@@ -51,7 +56,10 @@ test.runtime("space", "ship_interior_world", {}, function(data)
     assert(data.passengerOwnedLocalPhysics and data.passengerChildrenMoved and data.passengerMovedByNativePhysics and
         data.ordinaryMovementDelegated and data.cameraFollowsProjectedPassenger and data.pointerReturnsShipLocalPosition,
         "乘员移动、子物品世界归属、指针或相机没有接入船内本地世界")
-    assert(data.transferHadNoDuplicate and data.destroyReleasedWorlds,
-        "结构移交和销毁不能复制实体，也不能泄漏船内世界")
+    assert(data.identityAnchorPreservedAcrossStructureChanges and data.splitDamageAccepted and data.splitFloorDestroyed and
+        data.splitMovedPlayerToLocalWorld and
+        data.transferHadNoDuplicate and data.fragmentPayloadPreserved and
+        data.destroyReleasedWorlds and data.fixtureDropsRemoved,
+        "结构拆分必须移交乘员与真实载荷，销毁和收尾不能复制实体或泄漏世界")
     return "覆盖两艘船的本地坐标、真实区块与物理隔离、Item/机器归属、投影、门与武器伤害、零重力移动、土层事务、无视图模拟和销毁清理。起降接管另由 ship_landing_gameplay 覆盖。"
 end, "船内独立世界与普通物品/交互")

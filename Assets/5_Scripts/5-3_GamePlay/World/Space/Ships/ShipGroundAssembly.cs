@@ -394,7 +394,8 @@ namespace FlatWorld.Spaceflight
             {
                 if (groundRestoreHandled.Contains(ship.ShipId)) continue;
                 ShipFlightState flight = GetFlight(ship.ShipId);
-                if (ship.IsWreck || ship.RetainsWorldWithoutStructure || flight == null || !GameplayWorldRegistry.TryGet(flight.SurfaceWorldKey, out _) ||
+                if (ship.IsWreck || ship.RetainsWorldWithoutStructure || flight == null || !flight.LandingResolved ||
+                    !GameplayWorldRegistry.TryGet(flight.SurfaceWorldKey, out _) ||
                     flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating)) continue;
                 string world = flight.SurfaceWorldKey;
                 using var worldScope = GameplayWorldRegistry.UseWorld(world);
@@ -409,7 +410,7 @@ namespace FlatWorld.Spaceflight
                 {
                     groundRestoreHandled.Add(member.ShipId);
                     ShipFlightState memberFlight = GetFlight(member.ShipId);
-                    if (memberFlight == null || memberFlight.SurfaceWorldKey != world ||
+                    if (memberFlight == null || !memberFlight.LandingResolved || memberFlight.SurfaceWorldKey != world ||
                         memberFlight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating)) { ready = false; continue; }
                     GroundShipPreparation preparation = EnsureGroundPreparation(member, world);
                     if (!preparation.Failed && !preparation.Ready) ready = false;

@@ -98,7 +98,8 @@ public sealed class DoorSlideVisual : IDisposable
         if (source != null) source.enabled = sourceEnabled;
         if (group != null)
         {
-            if (ownsGroup) { group.enabled = false; Release(group); }
+            // 同帧重新启用时复用排序组，避免引用待销毁组件。
+            if (ownsGroup) group.enabled = false;
             else
             {
                 group.sortingLayerID = originalGroupLayer;

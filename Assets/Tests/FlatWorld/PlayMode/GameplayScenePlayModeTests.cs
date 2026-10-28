@@ -16,6 +16,15 @@ namespace FlatWorld.Tests.PlayMode
     public sealed class GameplayScenePlayModeTests
     {
         #region 真实场景集成测试
+        [UnityTearDown]
+        public IEnumerator ExitIsolatedGameplayWorldBeforeStoppingPlayMode()
+        {
+            GameManager manager = UnityEngine.Object.FindObjectOfType<GameManager>();
+            if (manager?.IsInGameWorld != true) yield break;
+            // 先完成正式世界退出，等待船内物理场景和隔离存档释放后再结束 PlayMode。
+            yield return manager.BackToHelloScene_Coroutine(ItemMgr.GetExistingInstance()?.User_Player);
+        }
+
         [Serializable]
         private sealed class TestReport
         {

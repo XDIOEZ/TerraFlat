@@ -16,7 +16,7 @@ public partial class GameSaveData
             GlobalTemperature = root.GlobalTemperature, WindStrength = root.WindStrength,
             RainTemperatureOffset = root.RainTemperatureOffset, CloudyTemperatureOffset = root.CloudyTemperatureOffset,
             StormTemperatureOffset = root.StormTemperatureOffset, BodyId = root.BodyId, name = root.name,
-            PrefabName = root.PrefabName, SelfRotateSpeed = root.SelfRotateSpeed,
+            SelfRotateSpeed = root.SelfRotateSpeed,
             PhysicalRadiusMeters = root.PhysicalRadiusMeters,
             SurfaceGravityMetersPerSecondSquared = root.SurfaceGravityMetersPerSecondSquared,
             AtmosphereProfileId = root.AtmosphereProfileId, Atmosphere = root.Atmosphere?.Clone()

@@ -248,7 +248,6 @@ public sealed partial class WorldPhysicsService2D
     {
         // 每次领取都清除上一租户的层过滤与接触策略。
         collider.sharedMaterial = null;
-        collider.density = 1f;
         collider.usedByComposite = false;
         collider.usedByEffector = false;
         collider.layerOverridePriority = 0;
@@ -263,7 +262,6 @@ public sealed partial class WorldPhysicsService2D
     private static void CopyColliderPhysicsSettings(Collider2D source, Collider2D target)
     {
         target.sharedMaterial = source.sharedMaterial;
-        target.density = source.density;
         target.usedByEffector = source.usedByEffector;
         target.layerOverridePriority = source.layerOverridePriority;
         target.includeLayers = source.includeLayers;

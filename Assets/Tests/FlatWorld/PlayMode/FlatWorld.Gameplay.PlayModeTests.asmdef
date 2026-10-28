@@ -3,6 +3,7 @@
     "rootNamespace": "FlatWorld.Tests.PlayMode",
     "references": [
         "GamePlay",
+        "FlatWorld.Utilities",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

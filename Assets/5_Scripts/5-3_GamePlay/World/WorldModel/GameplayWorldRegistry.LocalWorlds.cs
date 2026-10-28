@@ -18,7 +18,7 @@ public static partial class GameplayWorldRegistry
     {
         if (renderer == null || !PresentationOwners.TryGetValue(renderer, out var owner) || owner == null)
             return originalFallback;
-        string visibleWorld = ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName ?? LocalPresentationWorldKey;
+        string visibleWorld = LocalPresentationWorldKey;
         return TryResolveWorldKeyForScene(renderer.gameObject.scene, out string worldKey) && worldKey != visibleWorld ||
             owner.GetOriginalForceRenderingOff(renderer);
     }

@@ -549,7 +549,14 @@ public sealed class GameplayTestScene : MonoBehaviour
             reason = "玩家相机或主角贴图尚未显示。";
             return false;
         }
-        Vector3 viewport = camera.WorldToViewportPoint(sprite.bounds.center);
+        Vector3 displayCenter = sprite.bounds.center;
+        if (WorldPresentationTransformRegistry.TryGet(GameplayWorldRegistry.GetItemWorldKey(current),
+                out Matrix4x4 projection, out bool worldVisible))
+        {
+            if (!worldVisible) { reason = "主角所属世界的显示投影尚未就绪。"; return false; }
+            displayCenter = projection.MultiplyPoint3x4(displayCenter);
+        }
+        Vector3 viewport = camera.WorldToViewportPoint(displayCenter);
         bool visible = (camera.cullingMask & (1 << sprite.gameObject.layer)) != 0 &&
                        viewport.z >= camera.nearClipPlane && viewport.z <= camera.farClipPlane &&
                        viewport.x >= 0f && viewport.x <= 1f && viewport.y >= 0f && viewport.y <= 1f;

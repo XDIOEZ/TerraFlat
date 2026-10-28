@@ -29,7 +29,7 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 
 ## 多世界所有权
 
-- WeatherMgr.GetForWorld(WorldKey) 各持独立区域引擎、地表队列和雷击序号；Instance/ExistingInstance 仅路由 GameplayWorldRegistry.ExecutionWorldKey，太空/菜单可空，不回退其他地表。后台世界继续结算，雨雪/音效/闪电/Shader 仅输出本机世界。
+- WeatherMgr.GetForWorld(WorldKey) 各持独立区域引擎、地表队列和雷击序号；Instance/ExistingInstance 仅路由 GameplayWorldRegistry.ExecutionWorldKey，太空/菜单可空，局部坐标世界不创建星球天气，不回退其他地表。后台世界继续结算，雨雪/音效/闪电/Shader 仅输出本机世界。
 - WorldManager 预制体中的 WeatherMgr 子节点沿用父级生命周期；仅独立天气根节点自行 DontDestroyOnLoad，不拆离子节点或持久化无关父级。
 - GameplayWorldRegistry.UseWorld 只用于同步事务，禁止跨 yield 持有。时间回调、网络请求及离场清理按拥有者 WorldKey 入上下文；天气/地表快照携真实 WorldKey，请求世界由连接绑定角色确定。
 - TemperatureMgr 每世界独立场；热源按对象实际 Scene 发布，撤销按来源原绑定清理，晚回调不借当前镜头。雷击去重绑定世界/地形纪元。

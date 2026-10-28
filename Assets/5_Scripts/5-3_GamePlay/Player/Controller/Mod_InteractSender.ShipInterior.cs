@@ -6,7 +6,8 @@ public partial class Mod_InteractSender
     private System.IDisposable UseActorInteractionWorld()
     {
         string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
-        return string.IsNullOrEmpty(worldKey) ? null : GameplayWorldRegistry.UseWorld(worldKey);
+        return string.IsNullOrEmpty(worldKey) ? null : SpaceMgr.IsSpaceScene(worldKey)
+            ? GameplayWorldRegistry.UseSpaceScene(worldKey) : GameplayWorldRegistry.UseWorld(worldKey);
     }
 
     private bool IsShipInteriorInteractionOwner

@@ -343,13 +343,13 @@ do
             ids[label] = true
             local profile, surface = body.profile, body.surface
             assert(type(profile) == "table" and type(surface) == "table", label .. "缺少冻结配置")
-            assert(profile.id == surface.id and profile.texts["space.bodyId"] == label and
-                profile.texts["space.surfaceProfileId"] == surface.id, label .. "冻结 Profile 未绑定正确星体")
+            assert(body.planet.id == label and body.planet.name == body.planetId and
+                body.planet.surfaceProfileId == surface.id and profile.id == body.planet.surfaceProfileId,
+                label .. "星球身份或冻结地形预设错误")
             assert(profile.width > 0 and profile.height > 0 and type(profile.fingerprint) == "string" and
                 #profile.fingerprint > 0, label .. "冻结 Profile 尺寸或身份无效")
             near(profile.numbers["space.surfaceTemperatureCelsius"], surface.temperatureCelsius, label .. "/冻结基温")
             near(profile.numbers["space.surfacePressureKPa"], surface.pressureKPa, label .. "/冻结气压")
-            assert(body.planet.id == label and body.planet.name == body.planetId, label .. "冷生成使用了其它星球")
             assert(body.span.x > 0 and body.span.y > 0 and type(body.generationSeed) == "number", label .. "拓扑或种子缺失")
             assert(type(body.samples) == "table" and #body.samples == 3 and type(body.repeatSamples) == "table" and
                 #body.repeatSamples == #body.samples, label .. "冷地表样本不完整")

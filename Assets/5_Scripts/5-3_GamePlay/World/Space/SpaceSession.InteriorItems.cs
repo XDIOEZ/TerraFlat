@@ -243,7 +243,12 @@ namespace FlatWorld.Spaceflight
         {
             if (item?.itemData == null || !ReferenceEquals(item.PersistenceOwner, this) || releasingShipInteriorItems.Contains(item.itemData.Guid)) return;
             string pieceId = item.itemData.Guid.ToString(CultureInfo.InvariantCulture);
-            if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState piece)) return;
+            // 死亡回调时生命已归零，按实际世界查结构，不能使用只查询活部件的索引。
+            string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
+            ShipState ship = worldKey != null && worldKey.StartsWith("ship:", StringComparison.Ordinal)
+                ? GetShip(worldKey.Substring(5)) : null;
+            ShipPieceState piece = ship?.Pieces.Find(candidate => candidate.PieceId == pieceId);
+            if (piece == null) return;
             UnbindShipInteriorItemCallbacks(item);
             piece.Destroyed = true;
             piece.Health = 0d;

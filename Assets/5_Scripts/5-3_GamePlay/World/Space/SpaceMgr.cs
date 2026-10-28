@@ -221,7 +221,13 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
             {
                 EnsureSpaceSceneTime(current.Scene.name);
                 if (SceneManager.GetActiveScene() != current.Scene) SceneManager.SetActiveScene(current.Scene);
-                MovePresentationToSector(player.gameObject, observer.Position.Sector);
+                // 船内玩家保持局部世界，空域玩家随星区更新物理和物品归属。
+                if (!session.IsPlayerInShipInteriorWorld(player))
+                {
+                    MovePresentationToSector(player.gameObject, observer.Position.Sector);
+                    if (GameplayWorldRegistry.GetItemWorldKey(player) != current.Scene.name)
+                        GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, current.Scene.name);
+                }
             }
             EnsureBackground();
         }

@@ -280,6 +280,9 @@ public static class GameplayTestUniverseProbe
                     RadiusMeters = .1d, PlacementDistanceMeters = 10d, OrbitalPeriodSeconds = 100d, OrbitalEccentricity = .85d }
             }
         };
+        // 轨道夹具复用正式外观模板，统一快照不再缺少外观数据。
+        PlanetVisualConfiguration fixtureVisual = catalog.GenerateSector(Seed, default).Bodies[0].Visual;
+        foreach (BodyState body in fixture.Bodies) body.Visual = fixtureVisual.Clone();
         var fixtureSimulation = new UniverseSimulation(fixture);
         var fixtureBefore = Universe(fixture);
         fixtureSimulation.AdvanceTime(50d);

@@ -712,7 +712,7 @@ public static partial class GameplayWorldRegistry
         => renderer != null && PresentationOwners.TryGetValue(renderer, out var owner) && owner != null
             ? owner.GetOriginalForceRenderingOff(renderer) : renderer != null && renderer.forceRenderingOff;
 
-    internal static void RefreshVisibility() => RefreshVisibility(ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName ?? localSceneKey);
+    internal static void RefreshVisibility() => RefreshVisibility(LocalPresentationWorldKey);
     private static void RefreshVisibility(string localWorld)
     {
         foreach (GameplayWorldRuntime world in worlds.Values)

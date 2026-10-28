@@ -32,9 +32,10 @@ description: "FlatWorld 太空会话、星区物理、船体航行/起降、对�
 - 船、整体、自由物和星体保存所属 Sector；宇宙位置为整数星区 + 区内 double 米，显示原点不参与业务。太空坐标不交给地表 Chunk/NormalizePosition；地表镜像使用 WorldLocalPresentation。
 - 整船、对接成员和残骸固定朝上且无角速度，散物可旋转，部件安装 QuarterTurns 保留。太空平移与接触由原生物理唯一推进，`ShipCollisionSimulation` 只管地表。
 - 飞船、独立乘员和散物可穿过星球画面；进入地表只延续明确发起的起降流程。导航保留玩家真实目标，不自动改成停靠或降落。
-- 地面船件始终复用普通 Item、机器、占地、管电网与存档；控制台打开不装船，点火才装配。落地成功恢复普通建筑并撤销船记录。机器/库存移交必须保留真实载荷，不以模板补造。
+- 地面船件始终复用普通 Item、机器、占地、管电网与存档；控制台打开不装船，点火才装配。`LandingResolved` 确认落地成功后才恢复普通建筑并撤销船记录，不能提前还原新组装船。机器/库存移交必须保留真实载荷，不以模板补造。
 - 舱内由 `ShipInteriorWorldRuntime` 接通普通世界注册表、区块、独立物理和保存；普通 Item/机器/门/掉落/农业保持原后端，`ShipPieceState` 只作船体结构索引。起降/切分使用真实实例和可回滚的居民、掉落、地格移交；派生地板不重复画支撑层。联机沿用 `ChunkSaveRecord` 和普通物品原位同步；现场回归 `Systems/Space/ship-world-suite.json`，静态修改不代表运行验收。
 - 新增普通机器、生物、地板沿原定义与能力自动进入船内，不维护船用物品名单或第二份实现；普通 `GroundPlacement` 即支撑地板能力。全新能力只扩一次通用接口，后续同类内容复用；船域只承担世界归属、坐标/表现投影和推进/对接等船体专属规则。
+- 船内创建时向 DayTimeSystem 登记当前世界时钟的独立副本，释放时撤销时钟和采光；普通作物、生物继续使用统一服务，局部坐标世界不创建星球天气。
 - 客户端只提交模板/控制台身份。测试船、补给、点火及船控操作均走正式权威事务；服务器按连接绑定玩家/世界校验位置、占地与资源，客户端等待正式回执再更新 UI。
 - 点火 `ToggleIgnition(..., out reason)` 与 `RequestToggleIgnition` 传真实原因；超重含当前质量和可支撑质量。驾驶/退出/导航/降落/对接/目标气压走 `RequestShipOperation`，失败回原面板；对接区分等待双方与已连通，不能发包即成功或统一改成距离/缺电提示。
 - 结构事务调用 `NotifyStructureChanged`：支撑、舱室、对接与几何以 StructureRevision 失效。Ships/Flights/Devices 的 `SpaceStateCollection` 权威版本与 ID 索引同步维护，加入前确定身份，恢复/卸载释放索引；只读乘员查询用 `FindPassenger`，不触发补建。

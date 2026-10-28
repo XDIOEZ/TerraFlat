@@ -34,13 +34,25 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         SpaceSession session = SpaceSession.Current ?? SpaceSession.EnsureLoaded();
         var fixture = new ShipInteriorFixture(session, player);
         GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        var surfacePresentation = new GameObject("船内测试的外部世界显示登记");
+        SceneManager.MoveGameObjectToScene(surfacePresentation, player.gameObject.scene);
+        SpriteRenderer surfaceRenderer = surfacePresentation.AddComponent<SpriteRenderer>();
+        GameplayWorldRegistry.RegisterPresentation(surfacePresentation);
+        fixture.PhysicsObjects.Add(surfacePresentation);
 
         Vector2 firstOrigin = OffsetFromPlayer(player, session, 12f);
         Vector2 secondOrigin = OffsetFromPlayer(player, session, 48f);
         ShipState firstShip = AddFirstFloor(fixture, "ShipFloor_Iron", firstOrigin);
         ShipState secondShip = AddFirstFloor(fixture, "ShipFloor_Iron", secondOrigin);
+        // 正式结构服务先固定首块地板的身份，让右侧断片实际迁入新船世界。
+        ShipStructureService.RebuildAndSplit(firstShip);
+        string originalIdentityAnchor = firstShip.IdentityAnchorPieceId;
         AddFloorLine(fixture, firstShip, 1, 8);
         AddFloorLine(fixture, secondShip, 1, 8);
+        AddShipPiece(fixture, "ShipFloor_Iron", new Vector2(7.5f, 1.5f), firstShip);
+        AddShipPiece(fixture, "ShipFloor_Iron", new Vector2(8.5f, -.5f), firstShip);
+        AddShipPiece(fixture, "ShipConsole", new Vector2(7.5f, 1.5f), firstShip);
+        AddShipPiece(fixture, "ShipChemicalEngine", new Vector2(8.5f, -.5f), firstShip);
 
         ShipPieceState firstDoorPiece = AddShipPiece(fixture, "ShipDoor", new Vector2(.5f, .5f), firstShip);
         ShipPieceState secondDoorPiece = AddShipPiece(fixture, "ShipDoor", new Vector2(.5f, .5f), secondShip);
@@ -57,6 +69,15 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             ?? throw new InvalidOperationException("首艘船的普通舱门缺少门模块。");
         Mod_Door secondDoorModule = secondDoor.GetComponentInChildren<Mod_Door>(true)
             ?? throw new InvalidOperationException("第二艘船的普通舱门缺少门模块。");
+        firstDoorModule.enabled = false;
+        firstDoorModule.enabled = true;
+        DayTimeSystem time = DayTimeSystem.GetInstance();
+        bool clocksReady = time.TryGetResolvedTimeData(firstWorld.WorldKey, out _, out TimeData firstClock) &&
+            time.TryGetResolvedTimeData(secondWorld.WorldKey, out _, out TimeData secondClock) &&
+            !ReferenceEquals(firstClock, secondClock);
+        double timeBefore = firstClock?.GetTotalGameTime() ?? 0d;
+        yield return null;
+        var doorSorting = firstDoorModule.DoorRenderer.GetComponent<UnityEngine.Rendering.SortingGroup>();
 
         JObject result = new()
         {
@@ -68,11 +89,27 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         };
         result["worldsDistinct"] = firstWorld.WorldKey != secondWorld.WorldKey &&
             !ReferenceEquals(firstWorld.WorldRuntime, secondWorld.WorldRuntime);
+        result["localWorldClocksAdvance"] = clocksReady && firstClock.GetTotalGameTime() > timeBefore;
+        result["localWorldHasNoPlanetaryWeather"] = WeatherMgr.GetForWorld(firstWorld.WorldKey) == null &&
+            WeatherMgr.GetForWorld(secondWorld.WorldKey) == null;
         result["scenesDistinct"] = firstWorld.Scene.handle != secondWorld.Scene.handle;
         result["physicsScenesDistinct"] = !firstWorld.Physics.PrimarySpace.PhysicsScene.Equals(
             secondWorld.Physics.PrimarySpace.PhysicsScene);
         result["sameLocalCoordinates"] = firstDoor.transform.position == secondDoor.transform.position &&
             firstDoor.transform.position == new Vector3(.5f, .5f, 0f);
+        result["unlandedAssembliesRetained"] = ReferenceEquals(session.GetShip(firstShip.ShipId), firstShip) &&
+            ReferenceEquals(session.GetShip(secondShip.ShipId), secondShip) &&
+            session.GetFlight(firstShip.ShipId)?.LandingResolved == false &&
+            session.GetFlight(secondShip.ShipId)?.LandingResolved == false;
+        result["doorVisualSurvivedImmediateReenable"] = doorSorting != null && doorSorting.enabled &&
+            firstDoorModule.isActiveAndEnabled && !firstDoorModule.DoorRenderer.enabled;
+        bool doorProjectionFound = false;
+        if (session.ShipViewCacheSnapshot()["itemProjections"] is JArray doorProjections)
+            foreach (JObject projection in doorProjections)
+                if (projection.Value<int>("sourceId") == firstDoor.gameObject.GetInstanceID() &&
+                    projection.Value<string>("worldKey") == firstWorld.WorldKey && projection.Value<int>("instanceId") != 0)
+                { doorProjectionFound = true; break; }
+        result["doorHasWorldPresentationProjection"] = doorProjectionFound;
 
         var firstItems = new List<Item>();
         var secondItems = new List<Item>();
@@ -93,6 +130,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         result["firstShipCollided"] = physics.Value<bool>("firstShipCollided");
         result["secondShipPassed"] = physics.Value<bool>("secondShipPassed");
         result["nativeQueryIsolated"] = physics.Value<bool>("nativeQueryIsolated");
+        result["nativePhysics"] = physics;
 
         Vector2 localProjection = new(4.5f, .5f);
         Vector2 projected = session.ProjectShipInteriorPosition(firstShip, localProjection);
@@ -101,8 +139,8 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         result["projectionSeparatesLocalFromDisplay"] = Vector2.Distance(localProjection, projected) > 1f &&
             Vector2.Distance(session.ProjectShipInteriorPosition(secondShip, localProjection), projected) > 1f;
 
-        MachineFixture machines = GetMachineFixture(session, firstShip, "first");
-        MachineFixture secondMachines = GetMachineFixture(session, secondShip, "second");
+        MachineFixture machines = fixture.MachineSnapshots[firstShip.ShipId];
+        MachineFixture secondMachines = fixture.MachineSnapshots[secondShip.ShipId];
         MachineWorld.TickShip(firstShip.ShipId, .02f);
         MachineWorld.TickShip(secondShip.ShipId, .02f);
         result["machineWorldKey"] = machines.Cultivator.ScopeKey;
@@ -148,8 +186,14 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             Vector2 afterMove = mover.rb.position;
             mover.rb.velocity = Vector2.zero;
             result["passengerMovedByNativePhysics"] = Vector2.Distance(beforeMove, afterMove) > .01f;
+            session.HandlePassengerInput(player, mover, controller, Vector2.zero, 0f, Time.fixedDeltaTime);
+            yield return new WaitForFixedUpdate();
+            yield return null;
+            GameplayWorldRegistry.RefreshVisibility();
+            result["surfacePresentationRemainsVisible"] = !surfaceRenderer.forceRenderingOff &&
+                !GameplayWorldRegistry.GetPresentationRequiredForceRenderingOff(surfaceRenderer);
             result["cameraFollowsProjectedPassenger"] = CameraFollowsProjection(player,
-                session.ProjectShipInteriorPosition(firstShip, afterMove));
+                session.ProjectShipInteriorPosition(firstShip, mover.rb.position));
             result["pointerReturnsShipLocalPosition"] = PointerReturnsShipLocalPosition(
                 controller, session, firstShip, new Vector2(1.5f, .5f));
         }
@@ -236,7 +280,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         bool movedPlayerToRight = false;
         if (entered && mover?.rb != null && controller != null)
         {
-            Vector2 rightSide = new(4.5f, .5f);
+            Vector2 rightSide = new(6.5f, .5f);
             mover.rb.position = rightSide;
             player.transform.position = rightSide;
             movementDelegated &= !session.HandlePassengerInput(player, mover, controller,
@@ -245,6 +289,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         }
 
         ShipPieceState splitFloor = FindFloor(firstShip, 1);
+        result["identityAnchorPreservedAcrossStructureChanges"] = firstShip.IdentityAnchorPieceId == originalIdentityAnchor;
         bool splitDamageAccepted = session.ApplyPieceDamage(int.Parse(splitFloor.PieceId,
             CultureInfo.InvariantCulture), 100000f, "隔离船内世界结构拆分采样");
         bool splitCommitted = false;
@@ -279,6 +324,11 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             ItemGuidHasOneRuntimeInstance(rightDoor.itemData.Guid, rightDoor) &&
             migratedTankPayload == machines.TankPayload && migratedWorldKey != firstWorld.WorldKey;
         result["fragmentMachineWorldKey"] = migratedTank?.ScopeKey;
+        result["splitDamageAccepted"] = splitDamageAccepted;
+        result["splitFloorDestroyed"] = splitFloor.Destroyed;
+        result["fragmentVisible"] = migratedShip != null && session.IsVisible(migratedShip);
+        result["finalPlayerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player);
+        result["finalPlayerScene"] = player.gameObject.scene.name;
         result["fragmentPayloadPreserved"] = result.Value<bool>("transferHadNoDuplicate") &&
             migratedTankPayload > 0m && ElectricalGridContains(migratedWorldKey, migratedWire, migratedPower, migratedGravity);
 
@@ -288,7 +338,8 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         ShipPieceState sacrificialFloor = sacrificialShip.Pieces[0];
         session.RollbackPiece(sacrificialShip, sacrificialFloor);
         result["destroyReleasedWorlds"] = !session.TryGetShipInteriorWorld(sacrificialShip.ShipId, out _) &&
-            !GameplayWorldRegistry.TryGet(sacrificialKey, out _) && session.GetShip(sacrificialShip.ShipId) == null;
+            !GameplayWorldRegistry.TryGet(sacrificialKey, out _) && session.GetShip(sacrificialShip.ShipId) == null &&
+            !time.WorldTimeDict.ContainsKey(sacrificialKey) && !time.SceneLightingRateDict.ContainsKey(sacrificialKey);
 
         result["fixtureDropsRemoved"] = fixture.RemoveFixtureDrops();
         completed(result);
@@ -478,7 +529,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         ShipInteriorWorldRuntime destinationWorld, Player actor)
     {
         Vector2 cellCenter = new(1.5f, .5f);
-        if (!GameRes.ExistingInstance.TryGetTileDefinition("Tile_Soil", out RuntimeTileDefinition soil) ||
+        if (!GameRes.ExistingInstance.TryGetTileDefinition("Tile_Farmland", out RuntimeTileDefinition soil) ||
             !GameRes.ExistingInstance.TryGetItemDefinition("RadishCrop", out RuntimeItemDefinition crop) ||
             !crop.UsesResourceEntities)
             throw new InvalidOperationException("土层事务缺少正式土壤或 Entity 作物定义。");
@@ -716,10 +767,13 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
     private static JObject CreateAndSimulateNativeShipPhysics(ShipInteriorFixture fixture,
         ShipInteriorWorldRuntime first, ShipInteriorWorldRuntime second)
     {
-        GameObject wall = NewPhysicsObject(fixture, first.Scene, "ship-a-local-wall", new Vector2(1f, 0f), true);
+        // 远离夹具本身的门和机器，只比较两份空间对同一个局部坐标的碰撞。
+        Vector2 origin = new(16f, 8f);
+        GameObject wall = NewPhysicsObject(fixture, first.Scene, "ship-a-local-wall", origin + Vector2.right, true);
         wall.GetComponent<BoxCollider2D>().size = new Vector2(.25f, 5f);
-        Rigidbody2D blocked = NewPhysicsBody(fixture, first.Scene, "ship-a-local-body", new Vector2(0f, 0f));
-        Rigidbody2D free = NewPhysicsBody(fixture, second.Scene, "ship-b-local-body", new Vector2(0f, 0f));
+        Rigidbody2D blocked = NewPhysicsBody(fixture, first.Scene, "ship-a-local-body", origin);
+        Rigidbody2D free = NewPhysicsBody(fixture, second.Scene, "ship-b-local-body", origin);
+        Physics2D.SyncTransforms();
         blocked.velocity = Vector2.right * 3f;
         free.velocity = Vector2.right * 3f;
         PhysicsScene2D firstPhysics = first.Physics.PrimarySpace.PhysicsScene;
@@ -731,12 +785,12 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         }
         blocked.velocity = Vector2.zero;
         free.velocity = Vector2.zero;
-        Collider2D firstHit = firstPhysics.OverlapPoint(new Vector2(1f, 0f));
-        Collider2D secondHit = secondPhysics.OverlapPoint(new Vector2(1f, 0f));
+        Collider2D firstHit = firstPhysics.OverlapPoint(origin + Vector2.right);
+        Collider2D secondHit = secondPhysics.OverlapPoint(origin + Vector2.right);
         return new JObject
         {
-            ["firstShipCollided"] = blocked.position.x < .7f,
-            ["secondShipPassed"] = free.position.x > 1.5f,
+            ["firstShipCollided"] = blocked.position.x < origin.x + .7f,
+            ["secondShipPassed"] = free.position.x > origin.x + 1.5f,
             ["nativeQueryIsolated"] = firstHit == wall.GetComponent<Collider2D>() && secondHit == null,
             ["firstPosition"] = blocked.position.x, ["secondPosition"] = free.position.x
         };
@@ -767,9 +821,8 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
 
     private static ShipState AddFirstFloor(ShipInteriorFixture fixture, string itemId, Vector2 displayPosition)
     {
-        ShipPieceState piece = AddShipPiece(fixture, itemId, displayPosition, null, out ShipState ship);
+        AddShipPiece(fixture, itemId, displayPosition, null, out ShipState ship);
         if (ship == null) throw new InvalidOperationException("正式地板事务没有创建船体。");
-        fixture.Session.CommitPiece(ship, piece);
         return ship;
     }
 
@@ -907,6 +960,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
     private static bool MachineVisualLayerMatches(MachineEntity node)
     {
         if (node == null || !MachineStillOwned(node.ScopeKey, node)) return false;
+        using var scope = MachineWorld.UseScope(node.ScopeKey);
         MachineInteractionTarget target = MachineWorld.GetOrCreateInteractionTarget(node);
         return target != null && target.TryGetInteractionGridHit(node.Snapshot.transform.position,
             default, out GridInteractionHit hit) && hit.Layer == node.Definition.VisualLayer;

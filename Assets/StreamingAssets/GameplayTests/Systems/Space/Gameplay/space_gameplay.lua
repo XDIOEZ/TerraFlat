@@ -125,6 +125,10 @@ do
             sectors[key] = true
             assert(visit.state.spaceView and not visit.state.dimensionTransitioning, "星区入场未完成：" .. key)
             assert(visit.state.sector.x == visit.sector.x and visit.state.sector.y == visit.sector.y, "玩家归属星区错误：" .. key)
+            assert(visit.interaction.senderReady and visit.interaction.missingTargetRejected and
+                visit.state.playerWorld == visit.state.playerScene and
+                visit.interaction.worldBefore == visit.interaction.worldAfter,
+                "太空交互没有使用玩家所属星区或调用后没有恢复世界上下文：" .. key)
             assert(visit.state.uiRootReady and visit.state.uiRootPersistent, "UI 根没有归属持久管理器：" .. key)
             assert(uiRoot == nil or uiRoot == visit.state.uiRootInstance, "切换配置星区销毁了 UI 根：" .. key)
             uiRoot = visit.state.uiRootInstance
@@ -256,6 +260,10 @@ do
             assert(crossing.before.supported and crossing.crossed.supported and crossing.settled.supported and
                 crossing.before.shipId == crossing.shipId and crossing.crossed.shipId == crossing.shipId and crossing.settled.shipId == crossing.shipId,
                 "船体跨区期间乘员失去本船支撑：" .. label)
+            for _, state in ipairs({crossing.before, crossing.crossed, crossing.settled}) do
+                assert(state.playerWorld == "ship:" .. crossing.shipId and state.playerScene == state.playerWorld,
+                    "船体跨区时乘员离开了船内世界：" .. label)
+            end
             assert(same(crossing.crossed.sector, crossing.destination) and same(crossing.shipSector, crossing.destination), "乘员或船体没有进入目标星区：" .. label)
             assert(same(crossing.flightSector, crossing.shipSector), "飞行记录与船体星区不一致：" .. label)
             assert(contains(crossing.crossed.required, crossing.source) and contains(crossing.crossed.required, crossing.destination), "船体跨界没有保留双侧租约：" .. label)
@@ -362,6 +370,8 @@ for _, value in ipairs({"right"}) do
         for _, state in ipairs({data.before, data.crossed, data.settled, data.returned}) do
             assert(state.observerReady and state.observerInSpace and state.observerWorldKey == state.scene and
                 state.observerRealmRevision == state.realmRevision, "跨区网络观察者没有同步当前星区和版本")
+            assert(state.playerWorld == state.scene and state.playerScene == state.playerWorld,
+                "自由玩家跨区后物品或物理归属没有跟随星区")
         end
         local nextRevision = function(value) return (value + 1) % 4294967296 end
         assert(data.crossed.realmRevision == nextRevision(data.before.realmRevision) and

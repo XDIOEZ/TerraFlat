@@ -36,6 +36,13 @@ namespace FlatWorld.Spaceflight
             ChunkSize = PlanetData.DefaultChunkDimension;
             generator = new EmptyLocalWorldGenerator(GameRes.RequireWorldLiquidTypes());
             world = GameplayWorldRegistry.CreateLocalWorld(MachineWorld.GetShipScopeKey(shipId), generator, ChunkSize);
+            // 船内沿当前世界时间起算，普通农业与生物继续使用统一时钟服务。
+            DayTimeSystem time = DayTimeSystem.GetInstance();
+            if (time != null)
+            {
+                time.TryGetActiveTimeData(out TimeData source);
+                time.EnsureSceneTimeData(WorldKey, source);
+            }
         }
 
         internal void SynchronizeChunks(ShipState ship, bool force = false)
@@ -193,7 +200,14 @@ namespace FlatWorld.Spaceflight
             Action onChanged = retainedContentChanged;
             StopObservingRetainedWorldContents();
             foreach (ChunkLease lease in leases.Values) lease.Dispose();
-            try { GameplayWorldRegistry.ReleaseLocalWorld(WorldKey); leases.Clear(); }
+            try
+            {
+                GameplayWorldRegistry.ReleaseLocalWorld(WorldKey);
+                leases.Clear();
+                DayTimeSystem time = DayTimeSystem.GetInstance();
+                time?.WorldTimeDict.Remove(WorldKey);
+                time?.SceneLightingRateDict.Remove(WorldKey);
+            }
             catch
             {
                 if (Chunks.WorldRuntime != null)

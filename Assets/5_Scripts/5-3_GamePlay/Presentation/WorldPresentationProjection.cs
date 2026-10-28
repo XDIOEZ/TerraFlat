@@ -66,13 +66,15 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private readonly List<Renderer> removedRenderers = new();
     private readonly List<Light2D> removedLights = new();
     private readonly List<ShadowCaster2D> removedShadows = new();
-    private readonly MaterialPropertyBlock properties = new();
+    private MaterialPropertyBlock properties;
     private Transform sourceRoot;
     private Item sourceItem;
     private bool excludeNestedItems;
     private bool hierarchyDirty = true;
     private static readonly FieldInfo ShadowShape = typeof(ShadowCaster2D).GetField("m_ShapePath", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly FieldInfo ShadowShapeHash = typeof(ShadowCaster2D).GetField("m_ShapePathHash", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    private void Awake() => properties = new MaterialPropertyBlock();
 
     public static WorldPresentationProjection Create(Transform source, Transform parent = null)
     {
