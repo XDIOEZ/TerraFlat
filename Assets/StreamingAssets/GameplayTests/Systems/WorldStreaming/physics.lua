@@ -26,6 +26,21 @@ test.system("world_streaming", "world_physics_ownership", {}, function(data)
     assert(query.oldCandidateCleared and query.newCandidateHit and query.disposedSpaceRejected
         and query.disposedProjectionCount == 0,
         "战斗查询复租残留旧候选，或物理空间释放后租约仍可使用/泄漏形状")
+    local pool = data.obstaclePoolReuse
+    assert(#pool == 16, "缺少落地障碍在两个地形宿主下的反复回收重绑采样")
+    local instanceId = pool[1].instanceId
+    for index, sample in ipairs(pool) do
+        assert(sample.instanceId == instanceId and sample.parentIndex == math.floor((index - 1) / 8)
+            and sample.activeMatchesParent and sample.attachedToCurrentBody,
+            "活动或停用地形下租出的碰撞体没有复用原实例，或重绑仍引用旧刚体")
+        assert(not sample.usedByComposite and sample.queryOnlyObstacle and sample.registered,
+            "落地障碍错误并入地形 Composite，或丢失独立几何和世界归属")
+        assert(sample.terrainPointCountBefore > 0 and
+            sample.terrainPointCountAfter == sample.terrainPointCountBefore,
+            "回收重绑改变了地形 Composite 的几何")
+        assert(sample.pooledInactive and sample.pooledUnregistered,
+            "障碍回池后仍启用碰撞或保留命中登记")
+    end
 end, "世界物理原生隔离、真实接触和多区域归属生命周期")
 
 test.system("world_streaming", "world_physics_definition", {}, function(data)

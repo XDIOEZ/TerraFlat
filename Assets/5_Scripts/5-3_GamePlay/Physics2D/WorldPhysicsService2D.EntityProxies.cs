@@ -248,7 +248,7 @@ public sealed partial class WorldPhysicsService2D
     {
         // 每次领取都清除上一租户的层过滤与接触策略。
         collider.sharedMaterial = null;
-        collider.usedByComposite = false;
+        // 自有代理始终沿用不参与 Composite 的默认值，停用重绑时不写该原生开关。
         collider.usedByEffector = false;
         collider.layerOverridePriority = 0;
         collider.includeLayers = 0;

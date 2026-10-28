@@ -305,7 +305,6 @@ public sealed partial class WorldPhysicsService2D : IDisposable
             collider = root.AddComponent<BoxCollider2D>();
             ownedObstacleBoxes.Add(collider);
             collider.enabled = false;
-            collider.usedByComposite = false;
         }
         collider.transform.SetParent(parent, false);
         collider.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);

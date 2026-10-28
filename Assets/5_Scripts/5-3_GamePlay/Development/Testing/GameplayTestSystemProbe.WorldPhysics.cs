@@ -87,6 +87,7 @@ public static partial class GameplayTestSystemProbe
 
             JObject ownership = CaptureWorldPhysicsRegionOwnership(first, second, firstSpace, secondSpace, roots);
             JObject combatQueries = CaptureWorldPhysicsCombatQueries(firstSpace, secondSpace);
+            JArray obstaclePoolReuse = CaptureWorldPhysicsObstaclePoolReuse(first, firstSpace, roots);
             first.Dispose();
             bool borrowedSpacePreserved = firstSpace.IsValid && movingBody != null &&
                 !firstSpace.PhysicsScene.IsEmpty();
@@ -105,7 +106,8 @@ public static partial class GameplayTestSystemProbe
                 ["stoppedAtOwnWallX"] = stoppedAtOwnWallX, ["ownWorldContact"] = ownWorldContact,
                 ["ownership"] = ownership, ["disposedIndexCleared"] = disposedIndexCleared,
                 ["borrowedSpacePreserved"] = borrowedSpacePreserved,
-                ["otherWorldSurvived"] = otherWorldSurvived, ["combatQueries"] = combatQueries
+                ["otherWorldSurvived"] = otherWorldSurvived, ["combatQueries"] = combatQueries,
+                ["obstaclePoolReuse"] = obstaclePoolReuse
             };
         }
         finally
@@ -113,6 +115,64 @@ public static partial class GameplayTestSystemProbe
             for (int i = roots.Count - 1; i >= 0; i--)
                 if (roots[i] != null) UnityEngine.Object.DestroyImmediate(roots[i]);
         }
+    }
+
+    private static JArray CaptureWorldPhysicsObstaclePoolReuse(WorldPhysicsService2D world,
+        WorldPhysicsScene2D space, List<GameObject> roots)
+    {
+        // 重放降落后在活动或停用地形下租盒、回收、销毁旧宿主并重绑的正式路径。
+        var samples = new JArray();
+        var hits = new Collider2D[4];
+        var filter = new ContactFilter2D { useTriggers = true };
+        for (int parentIndex = 0; parentIndex < 2; parentIndex++)
+        {
+            Vector2 position = new(80f + parentIndex * 10f, 30f);
+            BoxCollider2D terrain = CreateWorldPhysicsProbeBox(space, "Pooled obstacle terrain",
+                position, Vector2.one * 2f, roots);
+            Rigidbody2D body = terrain.gameObject.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Static;
+            CompositeCollider2D composite = terrain.gameObject.AddComponent<CompositeCollider2D>();
+            composite.generationType = CompositeCollider2D.GenerationType.Manual;
+            terrain.usedByComposite = true;
+            composite.GenerateGeometry();
+            int terrainPointCount = composite.pointCount;
+            for (int leaseIndex = 0; leaseIndex < 8; leaseIndex++)
+            {
+                bool parentActive = leaseIndex % 2 != 0;
+                terrain.gameObject.SetActive(parentActive);
+                BoxCollider2D obstacle = world.RentObstacleBox(terrain.transform);
+                var sample = new JObject
+                {
+                    ["parentIndex"] = parentIndex, ["instanceId"] = obstacle.GetInstanceID(),
+                    ["activeMatchesParent"] = obstacle.gameObject.activeInHierarchy == parentActive
+                };
+                try
+                {
+                    obstacle.offset = Vector2.right * 4f;
+                    obstacle.size = Vector2.one;
+                    obstacle.enabled = true;
+                    world.RegisterCollider(obstacle);
+                    terrain.gameObject.SetActive(true);
+                    composite.GenerateGeometry();
+                    Physics2D.SyncTransforms();
+                    space.PhysicsScene.Simulate(0.02f);
+                    int hitCount = space.PhysicsScene.OverlapPoint(position + obstacle.offset, filter, hits);
+                    sample["usedByComposite"] = obstacle.usedByComposite;
+                    sample["attachedToCurrentBody"] = obstacle.attachedRigidbody == body;
+                    sample["queryOnlyObstacle"] = hitCount == 1 && hits[0] == obstacle;
+                    sample["registered"] = WorldPhysicsService2D.TryResolveCollider(obstacle, out var binding) &&
+                        ReferenceEquals(binding.World, world);
+                    sample["terrainPointCountBefore"] = terrainPointCount;
+                    sample["terrainPointCountAfter"] = composite.pointCount;
+                }
+                finally { world.ReturnObstacleBox(obstacle); }
+                sample["pooledInactive"] = !obstacle.enabled && !obstacle.gameObject.activeInHierarchy;
+                sample["pooledUnregistered"] = !WorldPhysicsService2D.TryResolveCollider(obstacle, out _);
+                samples.Add(sample);
+            }
+            UnityEngine.Object.DestroyImmediate(terrain.gameObject);
+        }
+        return samples;
     }
 
     private static JObject CaptureWorldPhysicsCombatQueries(WorldPhysicsScene2D firstSpace, WorldPhysicsScene2D secondSpace)
