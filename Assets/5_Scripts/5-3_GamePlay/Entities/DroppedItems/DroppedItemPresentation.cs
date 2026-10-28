@@ -118,7 +118,8 @@ internal sealed class DroppedItemPresentation : IDisposable
             throw new InvalidOperationException("缺少轻量掉落物共享材质 DroppedItems/DroppedItemLit。");
 
         poolRoot = new GameObject("轻量掉落物_对象池") { hideFlags = HideFlags.DontSave };
-        SceneManager.MoveGameObjectToScene(poolRoot, scene);
+        poolRoot.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            scene, RuntimeSceneObjectCategory.DroppedItems), false);
     }
 
     public void Changed(int id)

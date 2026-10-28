@@ -675,7 +675,8 @@ public static partial class GameplayTestRuntimeProbe
         GameManager manager = UnityEngine.Object.FindObjectOfType<GameManager>();
         GameRes resources = GameRes.ExistingInstance;
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
-        bool footReady = chunks != null && chunks.TryGetRuntimeChunkView(player.transform.position, out var foot) &&
+        ChunkView foot = null;
+        bool footReady = chunks != null && chunks.TryGetRuntimeChunkView(player.transform.position, out foot) &&
             foot != null && foot.gameObject.activeInHierarchy;
         RectTransform uiRoot = UIManager.ExistingInstance?.SafeAreaRoot;
         BasePanel[] runtimePanels = uiRoot != null ? uiRoot.GetComponentsInChildren<BasePanel>(true) : Array.Empty<BasePanel>();
@@ -688,6 +689,7 @@ public static partial class GameplayTestRuntimeProbe
         return new JObject
         {
             ["editorSpriteTextures"] = CaptureEditorSpriteTextureIdentifiers(resources),
+            ["sceneHierarchy"] = GameplayTestSystemProbe.CaptureRuntimeSceneHierarchy(player, foot),
             ["resourceState"] = resources?.LoadState.ToString(), ["startupReady"] = resources != null && resources.IsStartupReady,
             ["inWorld"] = manager != null && manager.IsInGameWorld, ["gameplayReady"] = manager != null && manager.IsGameplayReady,
             ["entryInProgress"] = manager != null && manager.IsWorldEntryInProgress, ["localProfile"] = player.IsLocalProfile,

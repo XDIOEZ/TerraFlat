@@ -2,6 +2,16 @@ local function near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
 end
 
+test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)
+    assert(data.available, "场景分类规则需要编辑器现场")
+    assert(data.reused and data.sharedRoot and data.oneSceneRoot, "同场景分类重复创建或没有共用根节点")
+    assert(data.sceneIsolation and data.otherSceneSurvives, "不同场景的分类互相干扰")
+    assert(data.identityTransform and data.posePreserved and data.migrationPosePreserved, "分类改变了物品位置、旋转或缩放")
+    assert(data.itemGrouped and data.explicitOwnerPreserved, "自由物品没有分类或覆盖了显式宿主")
+    assert(data.migrationGrouped and data.inactivePreserved, "跨场景归类错误或激活了准备中的物品")
+    assert(data.categoryRecreated and data.rootRecreated, "销毁分类节点后仍使用旧缓存")
+end, "运行时场景分类：复用、独立场景、显式宿主、迁移和回收")
+
 test.system("core_lifecycle", "editor_asset_loading", {}, function(data)
     if not data.available then
         assert(data.available == false, "运行包不应使用编辑器资源入口")

@@ -272,7 +272,8 @@ public partial class ItemMgr
             return _runtimeEntityRoot;
 
         var rootObject = new GameObject(RuntimeEntityRootName);
-        SceneManager.MoveGameObjectToScene(rootObject, scene);
+        rootObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            scene, RuntimeSceneObjectCategory.Entities), false);
         _runtimeEntityRoot = rootObject.transform;
         return _runtimeEntityRoot;
     }

@@ -41,6 +41,7 @@ namespace FlatWorld.Spaceflight
             {
                 player.transform.SetParent(null, true);
                 SceneManager.MoveGameObjectToScene(player.gameObject, runtime.Scene);
+                ItemWorldPlacement.AttachToSceneItemCategory(player, player.gameObject);
                 using (GameplayWorldRegistry.UseWorld(world)) player.transform.position = WorldLocalPresentation.ProjectPosition(position);
                 Rigidbody2D body = player.GetComponent<Rigidbody2D>();
                 if (body != null) { body.position = player.transform.position; body.velocity = Vector2.zero; }

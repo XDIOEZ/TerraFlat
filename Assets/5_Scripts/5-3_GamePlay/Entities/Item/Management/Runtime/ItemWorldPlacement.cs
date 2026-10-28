@@ -32,6 +32,7 @@ internal static class ItemWorldPlacement
         if (ChunkMgr.ExistingInstance != null &&
             ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive)
         {
+            AttachToSceneItemCategory(item, itemObject);
             return;
         }
 
@@ -55,8 +56,15 @@ internal static class ItemWorldPlacement
             inactiveChunk != null)
         {
             itemObject.transform.SetParent(inactiveChunk.transform, true);
+            return;
         }
+        AttachToSceneItemCategory(item, itemObject);
     }
+
+    // 未指定宿主的物品只归入当前场景分类，区块与手持物仍保留显式父级。
+    internal static void AttachToSceneItemCategory(Item item, GameObject itemObject)
+        => itemObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            itemObject.scene, item is Player ? RuntimeSceneObjectCategory.Players : RuntimeSceneObjectCategory.Items), true);
 
     /// <summary>
     /// 将一个运行时散落物绑定到新版 ChunkView 临时物品节点。

@@ -204,6 +204,8 @@ public partial class GameManager
     {
         ItemMgr manager = ItemMgr.GetExistingInstance();
         if (player == null || manager == null || string.IsNullOrWhiteSpace(worldKey)) return;
+        if (player.transform.parent == null)
+            ItemWorldPlacement.AttachToSceneItemCategory(player, player.gameObject);
         foreach (Item item in player.GetComponentsInChildren<Item>(true))
         {
             if (item == null || item.itemData == null ||

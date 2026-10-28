@@ -1213,7 +1213,8 @@ public partial class ChunkMgr
         }
 
         GameObject rootObject = new GameObject("RuntimeChunkViews");
-        SceneManager.MoveGameObjectToScene(rootObject, activeScene);
+        rootObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            activeScene, RuntimeSceneObjectCategory.Chunks), false);
         runtimeChunkViewRoot = rootObject.transform;
         return runtimeChunkViewRoot;
     }

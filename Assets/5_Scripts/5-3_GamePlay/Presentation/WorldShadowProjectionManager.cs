@@ -441,7 +441,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         if (!roots.TryGetValue(scene.handle, out Transform root) || root == null)
         {
             GameObject rootObject = new GameObject("WorldSunShadows");
-            SceneManager.MoveGameObjectToScene(rootObject, scene);
+            rootObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+                scene, RuntimeSceneObjectCategory.Rendering), false);
             root = rootObject.transform;
             roots[scene.handle] = root;
         }

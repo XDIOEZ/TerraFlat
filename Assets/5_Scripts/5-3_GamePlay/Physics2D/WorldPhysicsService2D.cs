@@ -118,6 +118,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         if (root.scene.GetPhysicsScene2D() == PrimarySpace.PhysicsScene) return;
         root.transform.SetParent(null, true);
         SceneManager.MoveGameObjectToScene(root, PrimarySpace.Scene);
+        ItemWorldPlacement.AttachToSceneItemCategory(root.GetComponent<Item>(), root);
     }
 
     internal Rigidbody2D EnsureMovableItemBody(Item target)
@@ -193,7 +194,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         {
             ValidateProxyConfiguration(definition);
             if (definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic)
-                item.transform.SetParent(null, true);
+                ItemWorldPlacement.AttachToSceneItemCategory(item, item.gameObject);
             Rigidbody2D body = item.GetComponent<Rigidbody2D>();
             if (body == null && definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic) body = item.gameObject.AddComponent<Rigidbody2D>();
             if (body != null) ConfigureProxyBody(body, item.itemData, definition, FlatWorld.Networking.GameNetwork.HasStateAuthority);

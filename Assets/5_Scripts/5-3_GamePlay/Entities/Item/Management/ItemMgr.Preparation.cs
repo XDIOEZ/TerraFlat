@@ -197,6 +197,8 @@ public partial class ItemMgr
         if (preparedItemRoot != null) return preparedItemRoot;
         GameObject root = new("ItemPreparationStaging");
         root.SetActive(false);
+        root.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            root.scene, RuntimeSceneObjectCategory.Preparation), false);
         preparedItemRoot = root.transform;
         return preparedItemRoot;
     }
