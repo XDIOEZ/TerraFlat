@@ -330,8 +330,10 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         obstaclePool.Push(collider);
     }
 
-    internal static void DestroyPhysicsObject(UnityEngine.Object target)
+    internal static void DestroyPhysicsObject(GameObject target)
     {
+        // 自有物理对象先同步释放原生刚体，再排队销毁，关闭世界前的释放也遵循此顺序。
+        target.SetActive(false);
         if (Application.isPlaying) UnityEngine.Object.Destroy(target);
         else UnityEngine.Object.DestroyImmediate(target);
     }

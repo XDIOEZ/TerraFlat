@@ -8,6 +8,35 @@ using UnityEngine;
 /// <summary>独立姿态样本只调用正式表现插值，断言由 Lua 负责。</summary>
 public static class GameplayTestSpacePresentationProbe
 {
+    #region 原生物理世界关闭采样
+    public static JObject CaptureNativePhysicsWorldShutdown()
+    {
+        using var isolated = WorldPhysicsScene2D.CreateIsolated("太空测试的原生物理关闭现场");
+        using var physics = new WorldPhysicsService2D("space-test:shutdown", WorldPhysicsScene2D.Borrow(isolated.Scene));
+        ItemData snapshot = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
+        var definition = new ItemPhysicsDefinitionDto();
+        var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
+            new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one },
+            chunkBlockingProjection: false) };
+        var first = physics.AllocateEntityProxy(new object(), snapshot, definition, regions, null);
+        GameObject releasedRoot = first.Body.gameObject;
+        bool nativeBodyCreated = !isolated.PhysicsScene.IsEmpty() && releasedRoot.activeSelf;
+        first.Dispose();
+        var result = new JObject
+        {
+            ["nativeBodyCreated"] = nativeBodyCreated,
+            ["lastReferenceReleaseDeactivatedRoot"] = !releasedRoot.activeSelf,
+            ["emptyAfterLastReferenceRelease"] = isolated.PhysicsScene.IsEmpty()
+        };
+        var second = physics.AllocateEntityProxy(new object(), snapshot, definition, regions, null);
+        GameObject closedRoot = second.Body.gameObject;
+        physics.Dispose();
+        result["worldShutdownDeactivatedRoot"] = !closedRoot.activeSelf;
+        result["emptyBeforeSceneUnload"] = isolated.PhysicsScene.IsEmpty();
+        return result;
+    }
+    #endregion
+
     #region 飞船表现插值采样
 
     public static JObject Capture()

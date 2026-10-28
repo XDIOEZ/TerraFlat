@@ -2,7 +2,7 @@
 // ===== AI 函数导航（按函数名搜索，不依赖行号） =====
 // 创建世界：CreateNewWorld() / CreateNewWorldCoroutine() / RunWorld()
 // 继续游戏：ContinueGame() / ContinueGameInternal() / LoadPlayer()
-// 场景切换：ChangeScene_By_SceneNames() / LoadSceneSingleAndInvokeWhenReady()
+// 场景切换：ChangeScene_By_SceneNames() / LoadPresentationSceneAndInvokeWhenReady()
 // 太空转移：StartSpaceTransferWithSpawn() / SpaceTransferWithSpawnCoroutine()
 // 玩家出生：PlaceNewPlayerOnLandThenEnterWorld() / BeginNewWorldSpawnSearch() / TryFindSurfaceSpawnAlongLine()
 // 出生校验：TryGetDefaultPlayerSpawnPosition() / IsValidLandSpawnPosition() / TryGetNearestLandSpawnPosition()
@@ -955,26 +955,29 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
     }
 
-    public IEnumerator LoadSceneSingleAndInvokeWhenReady(string sceneName, Action onSceneReady = null, int extraWaitFrames = 1, int managerReadyTimeoutFrames = 300)
+    public IEnumerator LoadPresentationSceneAndInvokeWhenReady(string sceneName, Action onSceneReady = null, int extraWaitFrames = 1, int managerReadyTimeoutFrames = 300)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
             throw new ArgumentException("sceneName 不能为空", nameof(sceneName));
         }
 
-        AsyncOperation loadOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
-        if (loadOp == null)
+        Scene previousScene = SceneManager.GetActiveScene();
+        Scene targetScene = SceneManager.GetSceneByName(sceneName);
+        // 只替换外部显示场景，独立船内世界和计算物理岛继续由各自拥有者管理。
+        if (!targetScene.IsValid() || !targetScene.isLoaded)
         {
-            throw new InvalidOperationException($"[GameManager] 加载场景失败：{sceneName}");
+            AsyncOperation loadOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+            if (loadOp == null) throw new InvalidOperationException($"[GameManager] 加载场景失败：{sceneName}");
+            while (!loadOp.isDone) yield return null;
+            targetScene = SceneManager.GetSceneByName(sceneName);
         }
-
-        while (!loadOp.isDone)
+        SceneManager.SetActiveScene(targetScene);
+        if (previousScene.IsValid() && previousScene.isLoaded && previousScene != targetScene)
         {
-            yield return null;
+            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(previousScene);
+            while (unloadOp != null && !unloadOp.isDone) yield return null;
         }
-
-        // Single 加载会卸载计算场景，保留权威位置与速度并在下个固定步重建物理代理。
-        FlatWorld.Spaceflight.SpaceSession.Current?.ResetSpacePhysics();
 
         int waitFrames = Mathf.Max(0, extraWaitFrames);
         for (int i = 0; i < waitFrames; i++)
@@ -1032,7 +1035,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         Exception transferException = null;
 
-        yield return LoadSceneSingleAndInvokeWhenReady(targetSceneName, () =>
+        yield return LoadPresentationSceneAndInvokeWhenReady(targetSceneName, () =>
         {
             try
             {

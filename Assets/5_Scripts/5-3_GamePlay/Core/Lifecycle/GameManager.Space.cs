@@ -337,7 +337,7 @@ public partial class GameManager
         IsInGameWorld = true;
         SetGameplayReady(!isWorldEntryInProgress);
         SpaceSession.EnsureLoaded();
-        yield return LoadSceneSingleAndInvokeWhenReady("SpaceScene");
+        yield return LoadPresentationSceneAndInvokeWhenReady("SpaceScene");
         yield return SpaceMgr.Instance.LoadPresentation();
         NotifyDimensionWorldEntered();
         sceneReady?.Invoke();

@@ -323,7 +323,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["after"] = SessionSnapshot(), ["savedVersion"] = restored.Version,
             ["savedTime"] = restored.SimulationSeconds, ["savedSectorCount"] = restored.Sectors.Count,
             ["cameraOverride"] = GameplayTestSpacePresentationProbe.CaptureCameraOverride(CurrentPlayer()),
-            ["passengerPose"] = GameplayTestSpacePresentationProbe.CapturePassengerPose(CurrentPlayer()) });
+            ["passengerPose"] = GameplayTestSpacePresentationProbe.CapturePassengerPose(CurrentPlayer()),
+            ["physicsShutdown"] = GameplayTestSpacePresentationProbe.CaptureNativePhysicsWorldShutdown() });
     }
 
     private IEnumerator ReadTemplates(Action<JObject> completed)
@@ -354,6 +355,9 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     private IEnumerator VisitConfiguredSectors(Action<JObject> completed)
     {
         ProtectPlayer();
+        ShipState retainedShip = AddContactFixture("ShipFloor_Iron", 24d);
+        ShipInteriorWorldRuntime retainedWorld = session.EnsureShipInteriorWorld(retainedShip);
+        Scene retainedScene = retainedWorld.Scene;
         var visits = new JArray();
         foreach (SpaceSectorId sector in SpaceCatalog.LoadDefault().ConfiguredSectors)
         {
@@ -383,6 +387,9 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                     ["viewPosition"] = view == null ? null : Vector(view.transform.position) });
             }
             visits.Add(new JObject { ["sector"] = Sector(sector), ["state"] = SessionSnapshot(),
+                ["independentShipWorldPreserved"] = retainedScene.IsValid() && retainedScene.isLoaded &&
+                    session.TryGetShipInteriorWorld(retainedShip.ShipId, out var currentWorld) &&
+                    ReferenceEquals(currentWorld, retainedWorld) && currentWorld.Scene == retainedScene && currentWorld.Physics.IsValid,
                 ["interaction"] = interaction, ["bodies"] = bodies });
         }
         completed(new JObject { ["scope"] = "live-presentation", ["visits"] = visits });

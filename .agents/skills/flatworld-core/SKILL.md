@@ -27,7 +27,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 - GameManager 是新建、继续、运行、退出的权威。动态维度以 WorldKey 创建 Scene 并复用 RunWorld，不入 Build Settings；离线太空恢复使用静态 SpaceScene 引导，再按 SpaceSector__X__Y 创建星区场景。
 - `SaveAndRestart → BackToHelloScene_Coroutine(requireSuccessfulSave:true)` 在撤除世界/网络前同步写盘，失败保留会话；成功清理后由等待旧 PID 退出的助手重开 Windows/Linux 运行包。MOD 菜单复用 `TryRestartApplication`；Editor/其它平台明确不支持自动重启，不能把角色死亡当重启。
-- LoadSceneSingleAndInvokeWhenReady 完成 Single 加载后调用 SpaceSession.ResetSpacePhysics，只释放已失效的计算场景与代理，保留权威位置/速度；下个固定步重建，避免失重移动继续引用已卸载场景。
+- `LoadPresentationSceneAndInvokeWhenReady` 复用或 Additive 加载外部显示场景，设为活动场景后只卸载旧活动场景；独立船内世界及计算物理岛保持原实例，不能用 Single 连带卸载，也不因显示切换重建物理。
 - 联机本机 realm 切换走 GameManager.Space 的观察者接口，只改变本机显示与动态场景归属；不全局迁移、释放地表或重锁输入。换星区保留浮动原点，退出世界清本机显示缓存；地表恢复必须对应已保留的真实 ChunkMgr 运行时，缺目标时拒绝并提示。太空玩家关闭默认 Rigidbody2D 模拟，运动和跨界接触用纯数据，回地表恢复原值。
 - IsStartupReady 只开放主菜单，完整内容仍在同会话后台加载；isLoadFinish/LoadState.Ready 才允许进入世界。加载页 Completed 等待脚下区块及完整可见窗口绑定/物理完成，生成队列清空不等于完成。
 - 新角色由 ItemMgr 在 Player.Load 前注入 GameConfig/Players 模板，已有存档/跨维度不重复注入。创建、网络提升与远程副本显式设置 ProfileContext，玩家事件一次发布。

@@ -124,7 +124,11 @@ namespace FlatWorld.Spaceflight
         private static void DestroyBody(SpacePhysicsBody body)
         {
             if (body.Rigidbody != null) body.Rigidbody.simulated = false;
-            if (body.Root != null) UnityEngine.Object.Destroy(body.Root);
+            if (body.Root != null)
+            {
+                body.Root.SetActive(false);
+                UnityEngine.Object.Destroy(body.Root);
+            }
             body.Root = null; body.Rigidbody = null; body.Colliders.Clear();
             body.AppliedShapes.Clear(); body.BlockingShapes.Clear(); body.NonBlockingShapes.Clear();
             body.ShapesApplied = false;

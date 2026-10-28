@@ -363,7 +363,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Scene targetScene = SceneManager.GetSceneByName(targetAddress.WorldKey);
         if (toSpace)
         {
-            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene");
+            yield return GameManager.Instance.LoadPresentationSceneAndInvokeWhenReady("SpaceScene");
             yield return SpaceMgr.Instance.LoadPresentation();
             targetScene = SceneManager.GetActiveScene();
         }
@@ -469,7 +469,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         bool fromSpace = SpaceMgr.IsSpaceScene(sourceAddress.WorldKey);
         if (fromSpace)
         {
-            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene");
+            yield return GameManager.Instance.LoadPresentationSceneAndInvokeWhenReady("SpaceScene");
             yield return SpaceMgr.Instance.LoadPresentation();
             sourceScene = SceneManager.GetActiveScene();
         }

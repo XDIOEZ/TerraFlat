@@ -71,6 +71,7 @@ public static partial class GameplayWorldRegistry
         using (UseWorld(worldKey))
         {
             MonsterSpawnerManager.ReleaseWorld(worldKey);
+            AiRuntimeBackendService.ReleaseWorldEcology(worldKey);
             world.Chunks?.ReleaseLocalWorldHost();
             DroppedItemService.ReleaseWorld();
             WorldLiquidFlowObstacles.ClearWorld();

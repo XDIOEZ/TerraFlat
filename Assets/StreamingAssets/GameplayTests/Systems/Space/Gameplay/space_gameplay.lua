@@ -4,6 +4,10 @@ do
     -- 检查真实会话时钟和正式快照入口，不手动推进当前宇宙。
     test.space("session", function(data)
         assert(data.scope == "live-session", "没有采样真实太空会话")
+        local shutdown = data.physicsShutdown
+        assert(shutdown.nativeBodyCreated and shutdown.lastReferenceReleaseDeactivatedRoot and
+            shutdown.emptyAfterLastReferenceRelease and shutdown.worldShutdownDeactivatedRoot and
+            shutdown.emptyBeforeSceneUnload, "物理代理必须在最后引用释放及场景卸载前同步清空原生刚体")
         assert(data.before.version == 3 and data.after.version == 3, "会话版本不正确")
         assert(data.after.seconds > data.before.seconds, "真实固定步没有推进宇宙时钟")
         assert(data.after.playerProfile == data.before.playerProfile, "观察期间测试玩家改变")
@@ -120,6 +124,7 @@ do
         assert(data.scope == "live-presentation" and #data.visits > 0, "没有进入配置星区")
         local ids, sectors, count, uiRoot = {}, {}, 0, nil
         for _, visit in ipairs(data.visits) do
+            assert(visit.independentShipWorldPreserved, "进入太空和切换星区不能卸载独立船内世界或重建其原生物理")
             local key = visit.sector.x .. ":" .. visit.sector.y
             assert(not sectors[key], "重复访问星区：" .. key)
             sectors[key] = true
