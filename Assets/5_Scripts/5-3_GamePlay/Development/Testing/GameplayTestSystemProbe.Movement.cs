@@ -114,6 +114,8 @@ public static partial class GameplayTestSystemProbe
             mover.ModuleInit(actor, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
             mover.rb = body;
             mover.Speed = new GameValue_float(10f) { FinalAdditive = (float)Number(args, "finalAdditive", 0d) };
+            // 夹具模拟启用移动消耗的角色，不沿用 AI 默认关闭的配置。
+            mover.hungerAction.enabled = true;
             Mod_Stamina stamina = root.AddComponent<Mod_Stamina>();
             stamina.ModuleInit(actor, new Ex_ModData_MemoryPackable { ID = ModText.Stamina, Enabled = true });
             stamina.Data = new Mod_Stamina.StaminaData { CurrentStamina = 100f, MaxStamina = 100f };
