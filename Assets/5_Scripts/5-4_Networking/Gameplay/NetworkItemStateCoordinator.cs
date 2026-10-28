@@ -16,13 +16,14 @@ namespace FlatWorld.Networking.Gameplay
     [DisallowMultipleComponent]
     public sealed partial class NetworkItemStateCoordinator : MonoBehaviour
     {
+        #region 物品通道状态与连接生命周期
+
         private const float ScanInterval = 0.5f;
         private const int MaxScanItemsPerFrame = 4;
         private const int MaxSpawnCandidatesPerFrame = 32;
         private const float MaxDropDistance = 12f;
         private const float PickupReservationSeconds = 6f;
         private const float MaxPickupDistance = 5f;
-        private const float BuildingRequestTimeout = 8f;
         private static readonly ProfilerMarker ScheduledScanMarker = new("FlatWorld.Network.Items.ScheduledScan");
         private static readonly ProfilerMarker CaptureMarker = new("FlatWorld.Network.Items.Capture");
         private static readonly ProfilerMarker SpawnCandidatesMarker = new("FlatWorld.Network.Items.SpawnCandidates");
@@ -70,37 +71,12 @@ namespace FlatWorld.Networking.Gameplay
             public float ExpiresAt;
         }
 
-        private sealed class ClientBuildingRequest
-        {
-            public Mod_Building Building;
-            public int SourceItemGuid;
-            public float ExpiresAt;
-        }
-
-        private sealed class ClientBuildingDismantleRequest
-        {
-            public Mod_Building Building;
-            public int BuildingGuid;
-            public float ExpiresAt;
-        }
-
         private readonly Dictionary<int, StateRecord> serverStates = new();
         private readonly Dictionary<int, StateRecord> clientStates = new();
         private readonly Dictionary<int, NetworkItemStateMessage> pendingClientStates = new();
-        private readonly Dictionary<int, float> pendingSpawnCandidates = new();
         private readonly List<int> pendingStateKeys = new();
-        private readonly List<int> spawnCandidateKeys = new(MaxSpawnCandidatesPerFrame);
-        private readonly HashSet<int> requestedClientSpawns = new();
-        private readonly HashSet<int> networkInstantiationsInProgress = new();
         private readonly Dictionary<int, ClientPickupRequest> pendingClientPickups = new();
         private readonly Dictionary<int, ServerPickupReservation> serverPickupReservations = new();
-        private readonly Dictionary<uint, ClientBuildingRequest> pendingClientBuildings = new();
-        private readonly Dictionary<uint, ClientBuildingDismantleRequest> pendingClientDismantles = new();
-        private readonly HashSet<int> dirtyMechanicalNodes = new(); // 加工进度等节点状态按既有扫描频率合并发送。
-        private readonly List<int> mechanicalFlushKeys = new();
-        private readonly List<MachineEntity> mechanicalSyncNodes = new();
-        private readonly Dictionary<int, string> dirtyMechanicalWorlds = new();
-        private float nextMechanicalScanTime;
         private float nextScanTime;
         private Item[] scheduledScanItems;
         private int scheduledScanIndex;
@@ -115,8 +91,6 @@ namespace FlatWorld.Networking.Gameplay
         private uint requestedSurfaceMechanicalRealm;
         private uint nextPickupReservationToken;
         private uint nextPickupRequestToken;
-        private uint nextBuildingRequestToken;
-        private uint nextBuildingDismantleRequestToken;
 
         public void StartServerSide()
         {
@@ -135,9 +109,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkBuildingDismantleRequest>(NetworkGameplayWorldScope.Wrap<NetworkBuildingDismantleRequest>(
                 OnServerBuildingDismantleRequest, (connection, request, reason) => connection.Send(new NetworkBuildingDismantleResponse
                 { RequestToken = request.RequestToken, BuildingGuid = request.BuildingGuid, Accepted = false, Reason = reason })), false);
-            MachineWorld.NodeStateChanged += OnMechanicalStateChanged;
-            MachineWorld.NodeRemoved += OnMechanicalRemoved;
-            MachineWorld.VisualSpeedChanged += OnMechanicalSpeedChanged;
+            machineStateReplication.StartServerSide();
             StartMachineServerBridge();
             StartTerrainServerBridge();
             serverHandlersRegistered = true;
@@ -157,7 +129,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkItemPickupReceipt>(OnClientPickupReceipt, false);
             NetworkClient.RegisterHandler<NetworkBuildingPlaceResponse>(OnClientBuildingPlaceResponse, false);
             NetworkClient.RegisterHandler<NetworkBuildingDismantleResponse>(OnClientBuildingDismantleResponse, false);
-            NetworkClient.RegisterHandler<NetworkMechanicalNodeMessage>(OnClientMechanicalNode, false);
+            NetworkClient.RegisterHandler<NetworkMechanicalNodeMessage>(machineStateReplication.ApplyServerSnapshot, false);
             StartMachineClientBridge();
             StartTerrainClientBridge();
             clientHandlersRegistered = true;
@@ -180,12 +152,9 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.UnregisterHandler<NetworkItemPickupApplied>();
             NetworkServer.UnregisterHandler<NetworkBuildingPlaceRequest>();
             NetworkServer.UnregisterHandler<NetworkBuildingDismantleRequest>();
-            MachineWorld.NodeStateChanged -= OnMechanicalStateChanged;
-            MachineWorld.NodeRemoved -= OnMechanicalRemoved;
-            MachineWorld.VisualSpeedChanged -= OnMechanicalSpeedChanged;
+            machineStateReplication.StopServerSide();
             StopMachineServerBridge();
             StopTerrainServerBridge();
-            dirtyMechanicalNodes.Clear();
             ReleaseAllPickupReservations();
             serverHandlersRegistered = false;
             serverStates.Clear();
@@ -217,8 +186,7 @@ namespace FlatWorld.Networking.Gameplay
             networkInstantiationsInProgress.Clear();
             pendingClientPickups.Clear();
             appliedClientPickupReceipts.Clear();
-            RejectAllPendingBuildings("网络连接已关闭");
-            RejectAllPendingDismantles("网络连接已关闭");
+            buildingRequests.RejectAll("网络连接已关闭");
             requestedInitialState = false;
             requestedItemWorld = null;
             ClearScheduledScan();
@@ -233,14 +201,9 @@ namespace FlatWorld.Networking.Gameplay
                 pendingQuickTransfer = null;
             TickFluidNetwork();
             ProcessPickupTimeouts();
-            ProcessBuildingTimeouts();
-            ProcessBuildingDismantleTimeouts();
+            buildingRequests.Expire(Time.unscaledTime);
             ProcessSpawnCandidates();
-            if (NetworkServer.active && Time.unscaledTime >= nextMechanicalScanTime)
-            {
-                nextMechanicalScanTime = Time.unscaledTime + ScanInterval;
-                FlushMechanicalStates();
-            }
+            machineStateReplication.Tick(Time.unscaledTime);
 
             if (clientHandlersRegistered && NetworkGameplayWorldScope.TryGetReadyLocalItemWorld(
                 out uint readyRealmRevision, out string readyItemWorld))
@@ -294,6 +257,10 @@ namespace FlatWorld.Networking.Gameplay
             ProcessScheduledScan();
         }
 
+        #endregion
+
+        #region 物品状态捕获与复制
+
         private void ScanServerItems()
         {
             if (ItemMgr.Instance == null)
@@ -302,16 +269,6 @@ namespace FlatWorld.Networking.Gameplay
             Item[] items = SnapshotRuntimeItems();
             for (int i = 0; i < items.Length; i++)
                 ProcessServerItem(items[i]);
-        }
-
-        private void ScanClientItems()
-        {
-            if (ItemMgr.Instance == null)
-                return;
-
-            Item[] items = SnapshotRuntimeItems();
-            for (int i = 0; i < items.Length; i++)
-                ProcessClientItem(items[i]);
         }
 
         private void BeginScheduledScan()
@@ -430,107 +387,12 @@ namespace FlatWorld.Networking.Gameplay
                 NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
                 if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true || observer.InSpace ||
                     !GameplayWorldRegistry.TryGet(observer.WorldKey, out _)) return;
-                using (GameplayWorldRegistry.UseWorld(observer.WorldKey)) SendSurfaceMechanicalBaseline(connection);
+                using (GameplayWorldRegistry.UseWorld(observer.WorldKey)) machineStateReplication.SendBaseline(connection);
                 return;
             }
-            SendSurfaceMechanicalBaseline(connection);
+            machineStateReplication.SendBaseline(connection);
         }
 
-        private void SendSurfaceMechanicalBaseline(NetworkConnectionToClient connection)
-        {
-            connection.Send(new NetworkMechanicalNodeMessage { Reset = true, WorldKey = GameplayWorldRegistry.ExecutionWorldKey });
-            MachineWorld.CollectNodes(mechanicalSyncNodes);
-            foreach (MachineEntity node in mechanicalSyncNodes)
-                SendMechanicalSnapshot(connection, node);
-        }
-
-        /// <summary>机械状态变化只记录身份，定时合并同一节点的进度与库存更新。</summary>
-        private void OnMechanicalStateChanged(MachineEntity node)
-        {
-            if (NetworkServer.active && node != null)
-            { dirtyMechanicalNodes.Add(node.Id); dirtyMechanicalWorlds[node.Id] = node.ScopeKey; }
-        }
-
-        /// <summary>拆除和摧毁立即广播数据格删除。</summary>
-        private void OnMechanicalRemoved(int id)
-        {
-            dirtyMechanicalNodes.Remove(id); dirtyMechanicalWorlds.Remove(id);
-            if (MachineWorld.IsShipScope) return;
-            if (NetworkServer.active)
-                SendToGroundObservers(new NetworkMechanicalNodeMessage { NodeGuid = id, Removed = true, WorldKey = MachineWorld.WorldKey }, observerWorld: true);
-        }
-
-        /// <summary>动力解算只发转速变化，不重复发送整份加工库存。</summary>
-        private void OnMechanicalSpeedChanged(MachineEntity node)
-        {
-            if (MachineWorld.IsShipScope) return;
-            if (NetworkServer.active && node != null)
-                SendToGroundObservers(new NetworkMechanicalNodeMessage
-                { NodeGuid = node.Id, WorldKey = node.ScopeKey, SpeedOnly = true, Rpm = node.Rpm,
-                    EntryDirection = node.EntryDirection }, observerWorld: true);
-        }
-
-        /// <summary>把本帧变化节点合并为每半秒一次的权威快照。</summary>
-        private void FlushMechanicalStates()
-        {
-            if (dirtyMechanicalNodes.Count == 0) return;
-            // 循环复用待同步节点快照，避免机械状态频繁变化时反复分配数组。
-            mechanicalFlushKeys.Clear();
-            mechanicalFlushKeys.AddRange(dirtyMechanicalNodes);
-            dirtyMechanicalNodes.Clear();
-            foreach (int id in mechanicalFlushKeys)
-            {
-                if (!dirtyMechanicalWorlds.Remove(id, out string worldKey)) continue;
-                using IDisposable worldScope = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : MachineWorld.UseScope(worldKey);
-                MachineEntity node = MachineWorld.GetById(id);
-                if (node != null) BroadcastMechanicalSnapshot(node);
-            }
-            mechanicalFlushKeys.Clear();
-        }
-
-        /// <summary>独立节点快照传输，不生成 NetworkItemSpawnMessage。</summary>
-        private static NetworkMechanicalNodeMessage CreateMechanicalSnapshot(MachineEntity node)
-        {
-            ItemData snapshot = MachineWorld.CaptureSnapshot(node);
-            if (snapshot == null ||
-                !ItemNetworkStateSerialization.TrySerializeItemData(snapshot, out byte[] payload))
-                throw new InvalidOperationException("机械联机快照序列化失败：" + node?.Id);
-            return new NetworkMechanicalNodeMessage
-            { NodeGuid = node.Id, Payload = payload, WorldKey = MachineWorld.WorldKey, Rpm = node.Rpm,
-                EntryDirection = node.EntryDirection };
-        }
-
-        private static void SendMechanicalSnapshot(NetworkConnectionToClient connection, MachineEntity node)
-            => connection.Send(CreateMechanicalSnapshot(node));
-
-        private static void BroadcastMechanicalSnapshot(MachineEntity node)
-        { if (!MachineWorld.IsShipScope) SendToGroundObservers(CreateMechanicalSnapshot(node), node.ScopeKey, observerWorld: true); }
-
-        /// <summary>客户端把服务器快照还原为数据节点并通知区块 BRG。</summary>
-        private void OnClientMechanicalNode(NetworkMechanicalNodeMessage message)
-        {
-            if (NetworkServer.active) return;
-            if (!string.IsNullOrEmpty(message.WorldKey) && message.WorldKey.StartsWith("ship:", StringComparison.Ordinal))
-            {
-                using (MachineWorld.UseScope(message.WorldKey)) ApplyClientMechanicalNode(message);
-                return;
-            }
-            if (!NetworkGameplayWorldScope.TryGetReadyLocalSurface(out _) ||
-                message.WorldKey != GameplayWorldRegistry.LocalPresentationWorldKey ||
-                !GameplayWorldRegistry.TryGet(message.WorldKey, out _)) return;
-            using (GameplayWorldRegistry.UseWorld(message.WorldKey)) ApplyClientMechanicalNode(message);
-        }
-        private void ApplyClientMechanicalNode(NetworkMechanicalNodeMessage message)
-        {
-            if (message.Reset) { MachineWorld.ApplyRemoteReset(); return; }
-            if (message.Removed) { MachineWorld.ApplyRemoteRemoval(message.NodeGuid); return; }
-            if (message.SpeedOnly)
-            { MachineWorld.ApplyRemoteSpeed(message.NodeGuid, message.Rpm, message.EntryDirection); return; }
-            if (!ItemNetworkStateSerialization.TryDeserializeItemData(message.Payload, out ItemData snapshot) ||
-                snapshot.Guid != message.NodeGuid)
-                throw new InvalidOperationException("机械联机节点快照损坏：" + message.NodeGuid);
-            MachineWorld.ApplyRemoteSnapshot(snapshot, message.Rpm, message.EntryDirection);
-        }
 
         private void OnServerStateSubmit(NetworkConnectionToClient connection, NetworkItemStateSubmit submit)
         {
@@ -751,829 +613,9 @@ namespace FlatWorld.Networking.Gameplay
             SendToGroundObservers(new NetworkItemDespawnMessage { ItemGuid = guid, ItemId = itemId, WorldKey = worldKey }, worldKey);
         }
 
-        private void BroadcastDespawn(Item item)
-        {
-            if (!NetworkServer.active || item?.itemData == null)
-                return;
-
-            SendItemDespawn(item.itemData.Guid, item.itemData.IDName, GameplayWorldRegistry.GetItemWorldKey(item));
-
-            serverStates.Remove(item.itemData.Guid);
-        }
-
-        private void OnRuntimeItemInstantiated(Item item)
-        {
-            if (item?.itemData == null || networkInstantiationsInProgress.Contains(item.itemData.Guid))
-                return;
-
-            pendingSpawnCandidates[item.itemData.Guid] = Time.unscaledTime;
-        }
-
-        private void OnRuntimeItemDespawning(Item item)
-        {
-            if (item?.itemData == null)
-                return;
-
-            int guid = item.itemData.Guid;
-            pendingSpawnCandidates.Remove(guid);
-            requestedClientSpawns.Remove(guid);
-            if (serverPickupReservations.Remove(guid, out ServerPickupReservation reservation))
-                FinishServerPickup(reservation, false, 0f, 0f);
-
-            if (NetworkServer.active && serverStates.TryGetValue(guid, out StateRecord state))
-            {
-                Mod_DamageReceiver receiver = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-                if (state.SpawnIfMissing || GameplayWorldRegistry.UsesLocalCoordinates(state.WorldKey) ||
-                    receiver != null && receiver.Hp <= 0f)
-                    BroadcastDespawn(item);
-            }
-        }
-
-        private void ProcessSpawnCandidates()
-        {
-            if (pendingSpawnCandidates.Count == 0 || ItemMgr.Instance == null)
-                return;
-
-            using var marker = SpawnCandidatesMarker.Auto();
-            // 只复制本帧预算内的 GUID，避免大量新实体出现时按整个队列分配数组。
-            spawnCandidateKeys.Clear();
-            foreach (int guid in pendingSpawnCandidates.Keys)
-            {
-                spawnCandidateKeys.Add(guid);
-                if (spawnCandidateKeys.Count >= MaxSpawnCandidatesPerFrame) break;
-            }
-            for (int i = 0; i < spawnCandidateKeys.Count; i++)
-            {
-                int guid = spawnCandidateKeys[i];
-                pendingSpawnCandidates.Remove(guid);
-
-                Item item = ItemMgr.Instance.GetItemByGuid(guid);
-                if (!TryGetActiveDrop(item, out Vector2 start, out Vector2 end, out float remaining))
-                    continue;
-
-                if (NetworkServer.active)
-                    PublishServerSpawn(item, start, end, remaining, true);
-                else if (NetworkClient.active)
-                    RequestServerSpawn(item, start, end, remaining);
-            }
-            spawnCandidateKeys.Clear();
-        }
-
-        private void RequestServerSpawn(Item item, Vector2 start, Vector2 end, float duration)
-        {
-            if (!CanSynchronizeWorldItem(item) || item.PersistenceOwner is SpaceSession || requestedClientSpawns.Contains(item.itemData.Guid))
-                return;
-
-            string world = GameplayWorldRegistry.GetItemWorldKey(item);
-            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
-
-            byte[] payload = CaptureSafely(item);
-            if (!ItemNetworkStateSerialization.IsValidPayload(payload))
-                return;
-
-            start = WorldTopologyRuntime.NormalizePosition(start);
-            end = WorldTopologyRuntime.NormalizePosition(end);
-            requestedClientSpawns.Add(item.itemData.Guid);
-            NetworkClient.Send(new NetworkItemSpawnRequest
-            { RealmRevision = NetworkGameplayWorldScope.LocalRevision,
-                ItemGuid = item.itemData.Guid,
-                ItemId = item.itemData.IDName,
-                Payload = payload,
-                StartPosition = start,
-                EndPosition = end,
-                Duration = Mathf.Clamp(duration, 0.05f, 3f),
-                Scale = SanitizeScale(item.transform.localScale)
-            });
-        }
-
-        private void OnServerSpawnRequest(NetworkConnectionToClient connection, NetworkItemSpawnRequest request)
-        {
-            if (!ValidateSpawnRequest(connection, request) || ItemMgr.Instance.GetItemByGuid(request.ItemGuid) != null)
-                return;
-
-            Vector2 start = WorldTopologyRuntime.NormalizePosition(request.StartPosition);
-            Vector2 end = WorldTopologyRuntime.NormalizePosition(start + Vector2.ClampMagnitude(
-                WorldTopologyRuntime.ShortestDelta(start, request.EndPosition),
-                MaxDropDistance));
-            Vector3 scale = SanitizeScale(request.Scale);
-            Item item = null;
-
-            try
-            {
-                networkInstantiationsInProgress.Add(request.ItemGuid);
-                item = ItemMgr.Instance.InstantiateNetworkItem(
-                    request.ItemId,
-                    request.ItemGuid,
-                    start,
-                    Quaternion.identity,
-                    scale);
-                item.Load();
-                if (!ItemNetworkStateSerialization.Apply(item, request.Payload, true, true))
-                    throw new InvalidOperationException("掉落物快照与物品模板不匹配");
-
-                item.SetInHand(false);
-                item.transform.localScale = scale;
-                Mod_BaseDroper.StaticDropItem_Pos(item, start, end, Mathf.Clamp(request.Duration, 0.05f, 3f));
-                PublishServerSpawn(item, start, end, Mathf.Clamp(request.Duration, 0.05f, 3f), true);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning($"[联机掉落] 服务端拒绝生成 {request.ItemId}/{request.ItemGuid}：{exception.Message}");
-                if (item != null)
-                    ItemMgr.Instance.DespawnItem(item, saveData: false);
-            }
-            finally
-            {
-                networkInstantiationsInProgress.Remove(request.ItemGuid);
-            }
-        }
-
-        private bool PublishServerSpawn(Item item, Vector2 start, Vector2 end, float duration, bool animateDrop,
-            byte[] preparedPayload = null)
-        {
-            string itemWorld = GameplayWorldRegistry.GetItemWorldKey(item);
-            using IDisposable worldScope = GameplayWorldRegistry.TryGet(itemWorld, out _)
-                ? GameplayWorldRegistry.UseWorld(itemWorld) : null;
-            if (!NetworkServer.active || !CanSynchronizeWorldItem(item) || item.PersistenceOwner is SpaceSession)
-                return false;
-
-            start = WorldTopologyRuntime.NormalizePosition(start);
-            end = WorldTopologyRuntime.NormalizePosition(end);
-            byte[] payload = preparedPayload ?? CaptureSafely(item);
-            if (!ItemNetworkStateSerialization.IsValidPayload(payload))
-                return false;
-
-            int guid = item.itemData.Guid;
-            serverStates.TryGetValue(guid, out StateRecord state);
-            state ??= new StateRecord();
-            state.ItemId = item.itemData.IDName;
-            state.WorldKey = itemWorld;
-            state.Revision++;
-            state.Hash = ItemNetworkStateSerialization.CalculateHash(payload);
-            state.Payload = payload;
-            state.SpawnIfMissing = true;
-            CapturePose(item, state);
-            serverStates[guid] = state;
-
-            SendToGroundObservers(new NetworkItemSpawnMessage
-            {
-                ItemGuid = guid,
-                ItemId = state.ItemId,
-                WorldKey = state.WorldKey,
-                Revision = state.Revision,
-                PoseRevision = state.PoseRevision,
-                PayloadHash = state.Hash,
-                Payload = state.Payload,
-                Position = state.Position,
-                Rotation = state.Rotation,
-                StartPosition = start,
-                EndPosition = end,
-                Duration = Mathf.Clamp(duration, 0.05f, 3f),
-                Scale = state.Scale,
-                AnimateDrop = animateDrop
-            }, state.WorldKey);
-            return true;
-        }
-
-        private void OnClientSpawnMessage(NetworkItemSpawnMessage message)
-        {
-            if (!AcceptLocalWorld(message.WorldKey)) return;
-            if (NetworkServer.active || !ItemNetworkStateSerialization.IsValidPayload(message.Payload))
-                return;
-            if (!GameplayWorldRegistry.TryGet(message.WorldKey, out _))
-            {
-                QueueClientSpawnState(message);
-                return;
-            }
-            using var worldScope = GameplayWorldRegistry.UseWorld(message.WorldKey);
-            if (clientStates.TryGetValue(message.ItemGuid, out StateRecord known) &&
-                (message.Revision < known.Revision ||
-                 (message.Revision == known.Revision && message.PoseRevision < known.PoseRevision))) return;
-
-            bool predictedLocally = requestedClientSpawns.Remove(message.ItemGuid);
-            Item item = ItemMgr.Instance?.GetItemByGuid(message.ItemGuid);
-            if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) != message.WorldKey)
-            {
-                QueueClientSpawnState(message);
-                return;
-            }
-            bool created = item == null;
-            if (item == null)
-            {
-                item = InstantiateClientItem(
-                    message.ItemGuid,
-                    message.ItemId,
-                    message.Payload,
-                    message.AnimateDrop ? message.StartPosition : message.Position,
-                    message.Rotation,
-                    message.Scale,
-                    message.AnimateDrop,
-                    message.StartPosition,
-                    message.EndPosition,
-                    message.Duration);
-            }
-            else if (!string.Equals(item.itemData?.IDName, message.ItemId, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            if (item == null)
-                return;
-
-            if (!created && !ItemNetworkStateSerialization.Apply(item, message.Payload, true, true)) return;
-            if (!message.AnimateDrop)
-                ApplyClientPose(item, message.Position, message.Rotation, message.Scale);
-            if (!predictedLocally)
-                item.transform.localScale = SanitizeScale(message.Scale);
-
-            StateRecord state = new StateRecord
-            {
-                ItemId = message.ItemId,
-                WorldKey = message.WorldKey,
-                Revision = message.Revision,
-                PoseRevision = message.PoseRevision,
-                Hash = message.PayloadHash,
-                Payload = message.Payload,
-                SpawnIfMissing = true,
-                Applied = true,
-                Position = GetLogicalItemPosition(item),
-                Rotation = item.transform.rotation,
-                Scale = item.transform.localScale
-            };
-            clientStates[message.ItemGuid] = state;
-            pendingClientStates.Remove(message.ItemGuid);
-        }
-
-        private void QueueClientSpawnState(NetworkItemSpawnMessage message)
-        {
-            OnClientStateMessage(new NetworkItemStateMessage { ItemGuid = message.ItemGuid, ItemId = message.ItemId,
-                WorldKey = message.WorldKey, Revision = message.Revision, PoseRevision = message.PoseRevision,
-                PayloadHash = message.PayloadHash, Payload = message.Payload, SpawnIfMissing = true,
-                Position = message.Position, Rotation = message.Rotation, Scale = message.Scale });
-        }
-
-        private Item InstantiateClientItem(
-            int guid,
-            string itemId,
-            byte[] payload,
-            Vector3 position,
-            Quaternion rotation,
-            Vector3 scale,
-            bool animateDrop,
-            Vector2 dropStart,
-            Vector2 dropEnd,
-            float dropDuration)
-        {
-            if (ItemMgr.Instance == null || string.IsNullOrWhiteSpace(itemId) || guid == 0 || !IsFinite(position))
-                return null;
-
-            Item item = null;
-            try
-            {
-                networkInstantiationsInProgress.Add(guid);
-                item = ItemMgr.Instance.InstantiateNetworkItem(
-                    itemId,
-                    guid,
-                    position,
-                    IsFinite(rotation) ? rotation : Quaternion.identity,
-                    SanitizeScale(scale));
-                item.Load();
-                if (!ItemNetworkStateSerialization.Apply(item, payload, true, true))
-                    throw new InvalidOperationException("权威快照与客户端物品模板不匹配");
-
-                item.SetInHand(false);
-                if (animateDrop)
-                {
-                    Mod_BaseDroper.StaticDropItem_Pos(
-                        item,
-                        dropStart,
-                        dropEnd,
-                        Mathf.Clamp(dropDuration, 0.05f, 3f));
-                }
-
-                return item;
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning($"[联机掉落] 客户端补建 {itemId}/{guid} 失败：{exception.Message}");
-                if (item != null)
-                    ItemMgr.Instance.DespawnItem(item, saveData: false);
-                return null;
-            }
-            finally
-            {
-                networkInstantiationsInProgress.Remove(guid);
-            }
-        }
-
-        private bool TryBeginClientBuilding(Mod_Building building, Vector3 position)
-        {
-            if (!NetworkClient.active)
-                return false;
-
-            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
-            {
-                building?.RejectNetworkPlacement("正在等待服务器确认拾取库存");
-                return true;
-            }
-
-            Item source = building?.item;
-            if (source?.itemData?.Stack == null || source.itemData.Stack.Amount < 1f ||
-                NetworkClient.connection == null || !IsFinite(position))
-            {
-                building?.RejectNetworkPlacement("网络连接或建造材料无效");
-                return true;
-            }
-
-            foreach (ClientBuildingRequest existing in pendingClientBuildings.Values)
-            {
-                if (existing.Building == building)
-                    return true;
-            }
-
-            byte[] payload = CaptureSafely(source);
-            if (!ItemNetworkStateSerialization.IsValidPayload(payload))
-            {
-                building.RejectNetworkPlacement("无法生成建造材料快照");
-                return true;
-            }
-
-            uint token = NextNonZeroToken(ref nextBuildingRequestToken);
-            pendingClientBuildings[token] = new ClientBuildingRequest
-            {
-                Building = building,
-                SourceItemGuid = source.itemData.Guid,
-                ExpiresAt = Time.unscaledTime + BuildingRequestTimeout
-            };
-
-            NetworkClient.Send(CreateBuildingPlaceRequest(building, position, token, payload));
-            return true;
-        }
-
-        #region 联机建造请求组包
-        // 所有建筑都从同一放置入口读取朝向，避免非机械建筑在组包时丢失旋转。
-        internal static NetworkBuildingPlaceRequest CreateBuildingPlaceRequest(
-            Mod_Building building, Vector3 position, uint requestToken, byte[] sourcePayload)
-            => new()
-            {
-                RealmRevision = NetworkGameplayWorldScope.LocalRevision,
-                RequestToken = requestToken,
-                SourceItemGuid = building.item.itemData.Guid,
-                ItemId = building.item.itemData.IDName,
-                SourcePayload = sourcePayload,
-                Position = NormalizeBuildingPosition(position),
-                RotationQuarterTurns = building.PlacementQuarterTurns,
-                HorizontalMirrorX = building.PlacementHorizontalMirrorX
-            };
         #endregion
 
-        private void OnServerBuildingPlaceRequest(
-            NetworkConnectionToClient connection,
-            NetworkBuildingPlaceRequest request)
-        {
-            NetworkBuildingPlaceResponse response = new NetworkBuildingPlaceResponse
-            {
-                RequestToken = request.RequestToken,
-                SourceItemGuid = request.SourceItemGuid,
-                Accepted = false,
-                RemainingAmount = 0f,
-                Reason = "建造请求无效"
-            };
-
-            int buildingGuid = 0;
-            try
-            {
-                if (!TryValidateBuildingRequest(connection, request, out ItemData sourceData,
-                        out ItemSlot sourceSlot, out Player actor, out string reason))
-                    throw new InvalidOperationException(reason);
-
-                Mod_HotBar hotBar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-                var placement = new BuildingPlacementRequest
-                {
-                    SourceData = sourceData,
-                    SourceItem = hotBar.CurentSelectItem,
-                    SourceInventory = hotBar.Data,
-                    SourceSlot = sourceSlot,
-                    Actor = actor,
-                    Position = NormalizeBuildingPosition(request.Position),
-                    AuthorityPosition = GetConnectionLogicalPosition(connection),
-                    MaximumDistance = Mod_Building.ResolveMaxPlacementDistance(actor, Mod_InteractSender.DefaultMaxInteractDistance),
-                    HorizontalMirrorX = request.HorizontalMirrorX,
-                    RotationQuarterTurns = request.RotationQuarterTurns,
-                    Extension = BuildingPlacementLifecycle.GetExtension(hotBar.CurentSelectItem),
-                    CandidatePrepared = data =>
-                    {
-                        buildingGuid = data.Guid;
-                        networkInstantiationsInProgress.Add(buildingGuid);
-                    },
-                    Publish = PublishBuildingPlacement
-                };
-                if (!BuildingPlacementService.TryPlace(placement, out BuildingPlacementResult result, out reason))
-                    throw new InvalidOperationException(reason);
-                response.RemainingAmount = result.RemainingAmount;
-                response.Accepted = true;
-                response.Reason = string.Empty;
-            }
-            catch (Exception exception)
-            {
-                response.Reason = LimitReason(exception.Message);
-                Debug.LogWarning($"[联机建造] 服务端拒绝 {request.ItemId}：{response.Reason}");
-            }
-            finally
-            {
-                if (buildingGuid != 0) networkInstantiationsInProgress.Remove(buildingGuid);
-            }
-
-            connection?.Send(response);
-        }
-
-        // 网络层只发布权威结果，生成、扣料和回滚都由领域放置事务完成。
-        private bool PublishBuildingPlacement(BuildingPlacementResult result)
-        {
-            if (result.TileCell.HasValue)
-                return PublishTerrainPlacement(result.TileCell.Value);
-            if (!string.IsNullOrWhiteSpace(result.ShipId))
-                return result.PlacedData != null && GetComponent<NetworkSpaceStateCoordinator>()?.TryPublishBuildingPlacement(
-                    result.ShipId, result.PlacedData.Guid) == true;
-            if (result.Machine != null)
-            {
-                BroadcastMechanicalSnapshot(result.Machine);
-                dirtyMechanicalNodes.Remove(result.Machine.Id);
-                return true;
-            }
-            if (result.Item != null)
-            {
-                Vector3 position = result.Item.transform.position;
-                return PublishServerSpawn(result.Item, position, position, 0.05f, false);
-            }
-            throw new InvalidOperationException("当前建筑后端尚未提供网络快照发布器");
-        }
-
-        private void OnClientBuildingPlaceResponse(NetworkBuildingPlaceResponse response)
-        {
-            if (!pendingClientBuildings.TryGetValue(response.RequestToken, out ClientBuildingRequest request))
-                return;
-
-            pendingClientBuildings.Remove(response.RequestToken);
-            if (request.SourceItemGuid != response.SourceItemGuid || request.Building == null)
-                return;
-
-            if (response.Accepted)
-                request.Building.CompleteNetworkPlacement(response.RemainingAmount);
-            else
-                request.Building.RejectNetworkPlacement(response.Reason);
-        }
-
-        private void ProcessBuildingTimeouts()
-        {
-            if (pendingClientBuildings.Count == 0)
-                return;
-
-            float now = Time.unscaledTime;
-            uint[] tokens = new uint[pendingClientBuildings.Count];
-            pendingClientBuildings.Keys.CopyTo(tokens, 0);
-            for (int i = 0; i < tokens.Length; i++)
-            {
-                uint token = tokens[i];
-                if (!pendingClientBuildings.TryGetValue(token, out ClientBuildingRequest request) ||
-                    request.ExpiresAt > now)
-                {
-                    continue;
-                }
-
-                pendingClientBuildings.Remove(token);
-                request.Building?.RejectNetworkPlacement("服务器响应超时");
-            }
-        }
-
-        private void RejectAllPendingBuildings(string reason)
-        {
-            if (pendingClientBuildings.Count == 0)
-                return;
-
-            ClientBuildingRequest[] requests = new ClientBuildingRequest[pendingClientBuildings.Count];
-            pendingClientBuildings.Values.CopyTo(requests, 0);
-            pendingClientBuildings.Clear();
-            for (int i = 0; i < requests.Length; i++)
-                requests[i].Building?.RejectNetworkPlacement(reason);
-        }
-
-        private bool TryBeginNetworkBuildingDismantle(Mod_Building building)
-        {
-            if (NetworkClient.active)
-                return TryBeginClientBuildingDismantle(building);
-
-            if (!NetworkServer.active)
-                return false;
-
-            Item buildingItem = building?.item;
-            Item summoner = null;
-            try
-            {
-                if (buildingItem?.itemData == null || !building.CanCommitDismantle)
-                    throw new InvalidOperationException("目标不是可拆除的建筑");
-
-                if (!building.TryCreateDismantledSummoner(out summoner, out string reason))
-                    throw new InvalidOperationException(reason);
-
-                Vector3 position = GetLogicalItemPosition(summoner);
-                if (!PublishServerSpawn(summoner, position, position, 0.05f, false))
-                    throw new InvalidOperationException("服务端无法发布建筑召唤器");
-
-                building.ReleasePlacementOccupancy();
-                BroadcastDespawn(buildingItem);
-                ItemMgr.Instance.DespawnItem(buildingItem, saveData: false);
-                building.CompleteNetworkDismantle();
-            }
-            catch (Exception exception)
-            {
-                if (summoner != null && ItemMgr.Instance != null)
-                    ItemMgr.Instance.DespawnItem(summoner, saveData: false);
-                building?.RejectNetworkDismantle(LimitReason(exception.Message));
-            }
-
-            return true;
-        }
-
-        /// <summary>客户端对纯数据机械发送已有建筑拆除请求，不伪造世界 Item。</summary>
-        private bool TryBeginClientMechanicalDismantle(MachineEntity node)
-        {
-            if (!NetworkClient.active || NetworkServer.active) return false;
-            if (node == null || NetworkClient.connection == null) return true;
-            uint token = NextNonZeroToken(ref nextBuildingDismantleRequestToken);
-            pendingClientDismantles[token] = new ClientBuildingDismantleRequest
-            {
-                BuildingGuid = node.Id,
-                ExpiresAt = Time.unscaledTime + BuildingRequestTimeout
-            };
-            NetworkClient.Send(new NetworkBuildingDismantleRequest
-            { RealmRevision = NetworkGameplayWorldScope.LocalRevision, RequestToken = token, BuildingGuid = node.Id });
-            return true;
-        }
-
-        private bool TryBeginClientBuildingDismantle(Mod_Building building)
-        {
-            if (!NetworkClient.active)
-                return false;
-
-            Item worldBuilding = building?.item;
-            if (worldBuilding?.itemData == null || NetworkClient.connection == null ||
-                !building.CanCommitDismantle)
-            {
-                building?.RejectNetworkDismantle("网络连接或建筑状态无效");
-                return true;
-            }
-
-            foreach (ClientBuildingDismantleRequest existing in pendingClientDismantles.Values)
-            {
-                if (existing.Building == building)
-                    return true;
-            }
-
-            uint token = NextNonZeroToken(ref nextBuildingDismantleRequestToken);
-            pendingClientDismantles[token] = new ClientBuildingDismantleRequest
-            {
-                Building = building,
-                BuildingGuid = worldBuilding.itemData.Guid,
-                ExpiresAt = Time.unscaledTime + BuildingRequestTimeout
-            };
-
-            NetworkClient.Send(new NetworkBuildingDismantleRequest
-            { RealmRevision = NetworkGameplayWorldScope.LocalRevision,
-                RequestToken = token,
-                BuildingGuid = worldBuilding.itemData.Guid
-            });
-            return true;
-        }
-
-        private void OnServerBuildingDismantleRequest(
-            NetworkConnectionToClient connection,
-            NetworkBuildingDismantleRequest request)
-        {
-            NetworkBuildingDismantleResponse response = new NetworkBuildingDismantleResponse
-            {
-                RequestToken = request.RequestToken,
-                BuildingGuid = request.BuildingGuid,
-                Accepted = false,
-                Reason = "拆除请求无效"
-            };
-
-            Item summoner = null;
-            try
-            {
-                if (connection?.identity == null || request.RequestToken == 0 || request.BuildingGuid == 0)
-                    throw new InvalidOperationException("身份或建筑标识无效");
-
-                MachineEntity mechanical = MachineWorld.GetById(request.BuildingGuid);
-                if (mechanical != null)
-                {
-                    if (WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection),
-                            WorldTopologyRuntime.NormalizePosition(mechanical.Snapshot.transform.position)) > MaxPickupDistance)
-                        throw new InvalidOperationException("机械建筑超出拆除距离");
-                    if (MachineWorld.IsShipScope)
-                    {
-                        if (!Mod_Building.TryDismantleMechanical(mechanical, out _, out string shipReason))
-                            throw new InvalidOperationException(shipReason);
-                        response.Accepted = true;
-                        response.Reason = string.Empty;
-                        connection.Send(response);
-                        return;
-                    }
-                    if (!Mod_Building.TryPrepareMechanicalDismantle(mechanical, out summoner, out string mechanicalReason))
-                        throw new InvalidOperationException(mechanicalReason);
-                    Vector3 dropPosition = GetLogicalItemPosition(summoner);
-                    if (!PublishServerSpawn(summoner, dropPosition, dropPosition, 0.05f, false))
-                        throw new InvalidOperationException("服务端无法发布机械召唤器");
-                    MachineWorld.Remove(mechanical.Id);
-                    response.Accepted = true;
-                    response.Reason = string.Empty;
-                    connection.Send(response);
-                    return;
-                }
-
-                Item buildingItem = ItemMgr.Instance?.GetItemByGuid(request.BuildingGuid);
-                Mod_Building building = buildingItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-                if (building == null || !building.CanCommitDismantle || !NetworkGameplayWorldScope.OwnsItem(connection, buildingItem))
-                    throw new InvalidOperationException("目标不是可拆除的建筑");
-
-                if (WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), GetLogicalItemPosition(buildingItem)) >
-                    MaxPickupDistance)
-                {
-                    throw new InvalidOperationException("目标超出拆除距离");
-                }
-
-                if (!building.TryCreateDismantledSummoner(out summoner, out string reason))
-                    throw new InvalidOperationException(reason);
-
-                Vector3 position = GetLogicalItemPosition(summoner);
-                if (!PublishServerSpawn(summoner, position, position, 0.05f, false))
-                    throw new InvalidOperationException("服务端无法发布建筑召唤器");
-
-                building.ReleasePlacementOccupancy();
-                BroadcastDespawn(buildingItem);
-                ItemMgr.Instance.DespawnItem(buildingItem, saveData: false);
-                response.Accepted = true;
-                response.Reason = string.Empty;
-            }
-            catch (Exception exception)
-            {
-                response.Reason = LimitReason(exception.Message);
-                if (summoner != null && ItemMgr.Instance != null)
-                    ItemMgr.Instance.DespawnItem(summoner, saveData: false);
-            }
-
-            connection?.Send(response);
-        }
-
-        private void OnClientBuildingDismantleResponse(NetworkBuildingDismantleResponse response)
-        {
-            if (!pendingClientDismantles.TryGetValue(
-                    response.RequestToken,
-                    out ClientBuildingDismantleRequest request))
-            {
-                return;
-            }
-
-            pendingClientDismantles.Remove(response.RequestToken);
-            if (request.BuildingGuid != response.BuildingGuid)
-                return;
-
-            if (response.Accepted)
-                request.Building?.CompleteNetworkDismantle();
-            else
-            {
-                if (request.Building != null) request.Building.RejectNetworkDismantle(response.Reason);
-                else Debug.LogWarning("[联机机械拆除] " + response.Reason);
-            }
-        }
-
-        private void ProcessBuildingDismantleTimeouts()
-        {
-            if (pendingClientDismantles.Count == 0)
-                return;
-
-            float now = Time.unscaledTime;
-            uint[] tokens = new uint[pendingClientDismantles.Count];
-            pendingClientDismantles.Keys.CopyTo(tokens, 0);
-            for (int i = 0; i < tokens.Length; i++)
-            {
-                uint token = tokens[i];
-                if (!pendingClientDismantles.TryGetValue(token, out ClientBuildingDismantleRequest request) ||
-                    request.ExpiresAt > now)
-                {
-                    continue;
-                }
-
-                pendingClientDismantles.Remove(token);
-                request.Building?.RejectNetworkDismantle("服务端响应超时");
-            }
-        }
-
-        private void RejectAllPendingDismantles(string reason)
-        {
-            if (pendingClientDismantles.Count == 0)
-                return;
-
-            ClientBuildingDismantleRequest[] requests =
-                new ClientBuildingDismantleRequest[pendingClientDismantles.Count];
-            pendingClientDismantles.Values.CopyTo(requests, 0);
-            pendingClientDismantles.Clear();
-            for (int i = 0; i < requests.Length; i++)
-                requests[i].Building?.RejectNetworkDismantle(reason);
-        }
-
-        #region 联机建造请求校验
-
-        private static bool TryValidateBuildingRequest(
-            NetworkConnectionToClient connection,
-            NetworkBuildingPlaceRequest request,
-            out ItemData sourceData,
-            out ItemSlot authoritativeSlot,
-            out Player authoritativePlayer,
-            out string reason)
-        {
-            sourceData = null;
-            authoritativeSlot = null;
-            authoritativePlayer = null;
-            reason = null;
-            if (connection?.identity?.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true)
-            {
-                reason = "正在确认拾取库存";
-                return false;
-            }
-            if (connection?.identity == null || request.RequestToken == 0 || request.SourceItemGuid == 0 ||
-                string.IsNullOrWhiteSpace(request.ItemId) || request.ItemId.Length > 128 ||
-                !IsFinite(request.Position))
-            {
-                reason = "身份、坐标或距离校验失败";
-                return false;
-            }
-
-            if (!ItemNetworkStateSerialization.IsValidPayload(request.SourcePayload) ||
-                !ItemNetworkStateSerialization.TryDeserializeItemData(request.SourcePayload, out sourceData) ||
-                sourceData.Guid != request.SourceItemGuid ||
-                !string.Equals(sourceData.IDName, request.ItemId, StringComparison.Ordinal) ||
-                sourceData.Stack == null || sourceData.Stack.Amount < 1f)
-            {
-                reason = "材料快照无效";
-                return false;
-            }
-
-            bool hasBuildingModule = false;
-            if (sourceData.ModuleDataDic != null)
-            {
-                foreach (ModuleData moduleData in sourceData.ModuleDataDic.Values)
-                {
-                    if (moduleData != null && string.Equals(moduleData.ID, ModText.Building, StringComparison.Ordinal))
-                    {
-                        hasBuildingModule = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasBuildingModule)
-            {
-                reason = "材料不包含建筑模块";
-                return false;
-            }
-
-            if (GameRes.Instance?.GetPrefab(request.ItemId) == null || ItemMgr.Instance == null)
-            {
-                reason = "服务器缺少建筑预制体";
-                return false;
-            }
-
-            NetworkWorldPlayer networkPlayer = connection.identity.GetComponent<NetworkWorldPlayer>();
-            authoritativePlayer = networkPlayer?.CorePlayer;
-            Mod_HotBar hotBar = authoritativePlayer?.itemMods?
-                .GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-            if (hotBar?.Data?.itemSlots == null || hotBar.CurrentIndex < 0 ||
-                hotBar.CurrentIndex >= hotBar.Data.itemSlots.Count)
-            {
-                reason = "服务器尚未收到快捷栏状态";
-                return false;
-            }
-
-            authoritativeSlot = hotBar.Data.itemSlots[hotBar.CurrentIndex];
-            ItemData authoritativeData = authoritativeSlot?.itemData;
-            if (authoritativeData?.Stack == null || authoritativeData.Stack.Amount < 1f ||
-                authoritativeData.Guid != request.SourceItemGuid ||
-                !string.Equals(authoritativeData.IDName, request.ItemId, StringComparison.Ordinal))
-            {
-                reason = "服务端快捷栏材料不匹配";
-                return false;
-            }
-
-            if (!Mod_Building.IsValidSummonerData(authoritativeData, out reason))
-                return false;
-
-            // 客户端快照只用于请求身份校验，实际建筑数据必须来自服务端快捷栏。
-            sourceData = authoritativeData;
-            return true;
-        }
-
-        #endregion
+        #region 通道公共身份与运行时桥接
 
         private static uint NextNonZeroToken(ref uint token)
         {
@@ -1592,13 +634,6 @@ namespace FlatWorld.Networking.Gameplay
             }
             while (guid == 0 || ItemMgr.Instance.GetItemByGuid(guid) != null);
             return guid;
-        }
-
-        private static Vector3 NormalizeBuildingPosition(Vector3 position)
-        {
-            Vector3 logical = WorldTopologyRuntime.NormalizePosition(position);
-            return WorldTopologyRuntime.NormalizePosition(
-                new Vector3(Mathf.Floor(logical.x) + 0.5f, Mathf.Floor(logical.y) + 0.5f, 0f));
         }
 
         private static string LimitReason(string reason)
@@ -1835,5 +870,6 @@ namespace FlatWorld.Networking.Gameplay
                 return Array.Empty<byte>();
             }
         }
+        #endregion
     }
 }

@@ -1,4 +1,24 @@
 -- 正式端点解析和网络物品字节协议无需创建 Host/Client。
+test.system("networking", "building_request_ledger", {}, function(data)
+    assert(data.placeToken ~= 0 and data.dismantleToken ~= 0 and data.placeToken ~= data.dismantleToken,
+        "建造与拆除回执没有独立非零令牌")
+    assert(not data.wrongKindAccepted and data.matched and data.acceptedGuid == 101 and not data.duplicateAccepted,
+        "不同类型或重复回执消费了错误事务")
+    assert(data.onlyDismantle and data.beforeDeadline == 0 and data.waitingAllocatedBytes == 0,
+        "拆除误阻塞材料事务、提前超时或等待帧仍分配键数组")
+    assert(data.firstExpiryCount == 1 and data.remainingAfterFirst == 1 and data.callbackNewRequestCount == 1,
+        "到期处理丢失未到期事务或吞掉回调创建的新事务")
+    assert(data.remaining == 0 and #data.rejected == 4, "断线清理残留事务或重复派发拒绝")
+    local expected = { [102] = {"Dismantle", "服务端响应超时"}, [103] = {"Place", "服务器响应超时"},
+        [104] = {"Place", "测试断线"}, [105] = {"Dismantle", "测试断线"} }
+    for _, actual in ipairs(data.rejected) do
+        local row = expected[actual.guid]
+        assert(row and actual.kind == row[1] and actual.reason == row[2],
+            "到期与断线回执的物品、操作或原因错误")
+        expected[actual.guid] = nil
+    end
+end, "建造拆除回执：统一令牌、精准到期、等待零分配、重入与断线清理")
+
 test.system("networking", "player_capture_cache", {}, function(data)
     assert(#data.fields == 24, "玩家缓存没有逐项覆盖全部专属状态")
     for _, row in ipairs(data.fields) do

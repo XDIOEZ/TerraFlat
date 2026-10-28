@@ -38,7 +38,7 @@ namespace FlatWorld.Networking.Gameplay
             // 已经放不下一份时沿用原生容量事件重试，不为满包玩家反复申请世界租约。
             if (picker.GetAcceptablePickupSourceAmount(worldItem.itemData) <= PickupAmountTolerance) return true;
             NetworkWorldPlayer actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
-            if (pendingClientBuildings.Count > 0 || pendingMachineTransfer != 0 ||
+            if (buildingRequests.HasPending(NetworkBuildingRequestKind.Place) || pendingMachineTransfer != 0 ||
                 pendingMachineInventoryOperation != 0 || pendingContainerIntent != 0 ||
                 SpaceSession.ClientGroundCombatPending || SpaceSession.ClientAttackHeld || actor?.GroundCombatPending == true)
                 return true;
