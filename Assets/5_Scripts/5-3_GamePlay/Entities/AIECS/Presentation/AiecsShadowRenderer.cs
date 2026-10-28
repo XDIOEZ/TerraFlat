@@ -21,20 +21,34 @@ namespace FlatWorld.AIECS
         private readonly List<Batch> batches = new List<Batch>();
         private readonly Scene scene;
         private readonly Material material;
+        private readonly int materialQueue;
         private readonly int sortingLayerId;
         private readonly int sortingOrder;
+        private readonly Transform parent;
+        private readonly int objectLayer;
+        private readonly bool ownsMaterial;
+        private Action<Renderer, int, int, int, float> applySortingKey;
+        private Action<Renderer> removeSortingKey;
+        private bool disposed;
         public int ShadowCount { get; private set; } // 本帧真正提交的阴影数。
         public int BatchCount { get; private set; } // 本帧阴影批次，不与主体批次混淆。
 
         /// <summary>加载构建中保留的共享材质，不实例化每物种材质。</summary>
-        public AiecsShadowRenderer(Scene scene, int sortingLayerId, int sortingOrder)
+        public AiecsShadowRenderer(Scene scene, int sortingLayerId, int sortingOrder,
+            Transform parent = null, int? renderQueue = null, int? objectLayer = null)
         {
             this.scene = scene;
             this.sortingLayerId = sortingLayerId;
             this.sortingOrder = sortingOrder;
-            material = Resources.Load<Material>("AIECS/ActorBlobShadow");
-            if (material == null || material.shader == null)
+            this.parent = parent;
+            this.objectLayer = objectLayer ?? LayerMask.NameToLayer("AIECSRuntime");
+            Material template = Resources.Load<Material>("AIECS/ActorBlobShadow");
+            if (template == null || template.shader == null)
                 throw new InvalidOperationException("缺少 AIECS/ActorBlobShadow 阴影材质。");
+            if (this.objectLayer < 0) throw new InvalidOperationException("缺少 AIECSRuntime Layer。");
+            ownsMaterial = renderQueue.HasValue;
+            material = ownsMaterial ? new Material(template) { hideFlags = HideFlags.HideAndDontSave, renderQueue = renderQueue.Value } : template;
+            materialQueue = material.renderQueue;
         }
 
         /// <summary>两类阴影共用16位四边形索引的生成与首次上传。</summary>
@@ -54,12 +68,20 @@ namespace FlatWorld.AIECS
         /// <summary>开始新帧；上一帧未再使用的批次在 End 中关闭。</summary>
         public void Begin() { ShadowCount = 0; BatchCount = 0; }
 
+        public void SetSortingKeyCallbacks(Action<Renderer, int, int, int, float> apply, Action<Renderer> remove)
+        {
+            if (ReferenceEquals(applySortingKey, apply) && ReferenceEquals(removeSortingKey, remove)) return;
+            foreach (Batch batch in batches) batch.RemoveSortingKey(removeSortingKey);
+            applySortingKey = apply;
+            removeSortingKey = remove;
+        }
+
         /// <summary>追加固定脚底椭圆；尺寸和偏移由物种共享，镜像只翻转横向偏移。</summary>
         public void Append(Vector2 position, Vector4 footprint, bool mirror, float opacity)
         {
             if (opacity <= 0.001f || footprint.z <= 0f || footprint.w <= 0f) return;
             int index = ShadowCount / MaxShadowsPerBatch;
-            if (index == batches.Count) batches.Add(new Batch(scene, material, sortingLayerId, sortingOrder));
+            if (index == batches.Count) batches.Add(new Batch(scene, material, sortingLayerId, sortingOrder, parent, objectLayer));
             Batch batch = batches[index];
             if (ShadowCount % MaxShadowsPerBatch == 0) { batch.Begin(); BatchCount++; }
             position += new Vector2(mirror ? -footprint.x : footprint.x, footprint.y);
@@ -72,8 +94,17 @@ namespace FlatWorld.AIECS
         {
             using (BuildMarker.Auto())
             {
-                for (int i = 0; i < BatchCount; i++) batches[i].Submit();
-                for (int i = BatchCount; i < batches.Count; i++) batches[i].Hide();
+                for (int i = 0; i < BatchCount; i++)
+                {
+                    Batch batch = batches[i];
+                    batch.Submit();
+                    if (applySortingKey != null) batch.SubmitSortingKey(applySortingKey, sortingLayerId, sortingOrder, materialQueue);
+                }
+                for (int i = BatchCount; i < batches.Count; i++)
+                {
+                    batches[i].Hide();
+                    batches[i].RemoveSortingKey(removeSortingKey);
+                }
             }
         }
 
@@ -83,8 +114,16 @@ namespace FlatWorld.AIECS
         /// <summary>释放本所有者创建的网格和节点，共享材质仍由资源系统管理。</summary>
         public void Dispose()
         {
+            if (disposed) return;
+            disposed = true;
+            SetSortingKeyCallbacks(null, null);
             foreach (Batch batch in batches) batch.Dispose();
             batches.Clear(); ShadowCount = 0; BatchCount = 0;
+            if (ownsMaterial && material != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(material);
+                else UnityEngine.Object.DestroyImmediate(material);
+            }
         }
         #endregion
 
@@ -136,18 +175,18 @@ namespace FlatWorld.AIECS
             private readonly GameObject root;
             private readonly Mesh mesh;
             private readonly MeshRenderer renderer;
+            private bool sortingKeyRegistered;
             private readonly Vertex[] vertices = new Vertex[MaxShadowsPerBatch * 4];
             private int count;
             private Vector2 min, max;
             private const MeshUpdateFlags UpdateFlags = MeshUpdateFlags.DontRecalculateBounds;
 
             /// <summary>一次分配顶点和固定索引；以后只上传当前使用的顶点区间。</summary>
-            public Batch(Scene scene, Material material, int sortingLayerId, int sortingOrder)
+            public Batch(Scene scene, Material material, int sortingLayerId, int sortingOrder, Transform parent, int layer)
             {
-                int layer = LayerMask.NameToLayer("AIECSRuntime");
-                if (layer < 0) throw new InvalidOperationException("缺少 AIECSRuntime Layer。");
                 root = new GameObject("AIECS 脚底阴影批次") { hideFlags = HideFlags.DontSave, layer = layer };
                 SceneManager.MoveGameObjectToScene(root, scene);
+                if (parent != null) root.transform.SetParent(parent, false);
                 mesh = new Mesh { name = "AIECS 复用脚底阴影", hideFlags = HideFlags.DontSave };
                 mesh.MarkDynamic();
                 mesh.SetVertexBufferParams(vertices.Length,
@@ -209,6 +248,20 @@ namespace FlatWorld.AIECS
 
             /// <summary>隐藏已分配但本帧不再需要的批次。</summary>
             public void Hide() { if (renderer != null) renderer.enabled = false; }
+
+            public void SubmitSortingKey(Action<Renderer, int, int, int, float> apply, int layer, int order, int queue)
+            {
+                if (apply == null || renderer == null) return;
+                apply(renderer, layer, order, queue, renderer.bounds.center.y);
+                sortingKeyRegistered = true;
+            }
+
+            public void RemoveSortingKey(Action<Renderer> remove)
+            {
+                if (!sortingKeyRegistered) return;
+                if (renderer != null) remove?.Invoke(renderer);
+                sortingKeyRegistered = false;
+            }
 
             /// <summary>兼容世界先卸载节点以及 Editor 非 Play 验证。</summary>
             public void Dispose()

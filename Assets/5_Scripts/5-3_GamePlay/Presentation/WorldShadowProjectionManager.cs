@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// 场景级太阳长投影：监听完整 Item 注册链，独立代理复用带透明外沿的 Sprite 网格，不进入实体 SortingGroup。
 /// 共用一个材质；视口外每 0.25 秒复查，最多缓存 128 个代理，投影外观从世界渲染 JSON 读取。
-/// 太阳参数在动画后的 LateUpdate 发布并同步主体；关闭设置会停用本组件并释放全部绑定。
+/// 太阳参数在 LateUpdate 发布，显示代理在渲染前同步；关闭设置会释放全部绑定。
 /// 物品视觉定义可提供与椭圆底座阴影共用的局部落地点，Prefab 的 SunShadowCaster 仍可叠加高度和脚点修正。
 /// </summary>
 [DefaultExecutionOrder(-100)]
@@ -82,6 +82,10 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         internal readonly MeshRenderer MeshRenderer;
         private readonly MeshFilter meshFilter;
         private readonly GameObject root;
+        private Transform defaultParent;
+        private WorldPresentationSortingDomain sortingDomain;
+        private Renderer sortingTarget;
+        private int rawLayer, rawOrder, rawQueue;
         private Sprite sourceSprite;
         private SpriteDrawMode sourceDrawMode;
         private Vector2 sourceSize;
@@ -94,6 +98,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         private Quaternion lastRotation;
         internal GameObject gameObject => root;
         internal Transform transform => root.transform;
+        internal WorldPresentationSortingDomain SortingDomain => sortingDomain;
         internal bool enabled
         {
             get => visible;
@@ -153,6 +158,42 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         {
             root.layer = layer;
             SpriteRenderer.gameObject.layer = layer;
+        }
+
+        /// <summary>太阳影代理按世界归属进入或离开显示排序域。</summary>
+        internal void SetSortingDomain(WorldPresentationSortingDomain domain, bool reparent = true)
+        {
+            if (ReferenceEquals(sortingDomain, domain)) return;
+            if (sortingDomain != null)
+            {
+                if (sortingTarget != null) sortingDomain.RemoveLocalSortingKey(sortingTarget);
+                sortingDomain.Disposing -= OnSortingDomainDisposing;
+            }
+            sortingTarget = null;
+            sortingDomain = domain;
+            if (sortingDomain != null) sortingDomain.Disposing += OnSortingDomainDisposing;
+            if (reparent && root != null) transform.SetParent(sortingDomain?.Root ?? defaultParent, true);
+            hasPose = false;
+        }
+
+        internal void SetDefaultParent(Transform value) => defaultParent = value;
+
+        internal void SetRawSortingKey(int layer, int order, int queue)
+        { rawLayer = layer; rawOrder = order; rawQueue = queue; }
+
+        internal void SubmitSortingKey()
+        {
+            if (sortingDomain == null || !visible) return;
+            Renderer target = sourceDrawMode == SpriteDrawMode.Simple ? MeshRenderer : SpriteRenderer;
+            if (sortingTarget != null && sortingTarget != target) sortingDomain.RemoveLocalSortingKey(sortingTarget);
+            sortingTarget = target;
+            sortingDomain.ApplyLocalRendererSortingKey(target, rawLayer, rawOrder, rawQueue, lastBounds.center.y);
+        }
+
+        private void OnSortingDomainDisposing()
+        {
+            SetSortingDomain(null);
+            enabled = false;
         }
 
         /// <summary>代理只读取主体帧和姿态，翻转作用于阴影网格而不改动本体。</summary>
@@ -275,6 +316,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         SunShadowSettings.Changed -= ApplyPreference;
         SunShadowSettings.Changed += ApplyPreference;
         if (!SunShadowSettings.Enabled) { enabled = false; return; }
+        RenderPipelineManager.beginContextRendering -= PresentSunShadows;
+        RenderPipelineManager.beginContextRendering += PresentSunShadows;
+        UpdateSunParameters();
         WorldRenderingManager.ExistingInstance?.AttachSunShadowRenderingBackend(this);
     }
 
@@ -298,9 +342,10 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     }
 
     /// <summary>动画和移动结束后更新可见代理；夜晚仅在切入隐藏状态时处理一次。</summary>
-    private void LateUpdate()
+    private void LateUpdate() => UpdateSunParameters();
+
+    private void PresentSunShadows(ScriptableRenderContext context, List<Camera> contextCameras)
     {
-        UpdateSunParameters();
         if (!CurrentParameters.IsVisible) { HideAll(); return; }
         hidden = false;
         if (Camera.allCamerasCount > cameras.Length) cameras = new Camera[Camera.allCamerasCount];
@@ -325,6 +370,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     /// <summary>禁用时释放注册、GPU 状态与代理；不会改动脚底或局部灯光阴影。</summary>
     private void OnDisable()
     {
+        RenderPipelineManager.beginContextRendering -= PresentSunShadows;
         // OnDisable 可能发生在场景/父节点停用过程中，此时不能把子代理重挂到其它父节点。
         ClearWorld(false);
     }
@@ -332,6 +378,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     /// <summary>解除常驻偏好与游戏事件，销毁归池资源。</summary>
     private void OnDestroy()
     {
+        RenderPipelineManager.beginContextRendering -= PresentSunShadows;
         SunShadowSettings.Changed -= ApplyPreference;
         SharedSpriteMeshCache.Clearing -= ReleaseSharedGeometry;
         while (pool.Count > 0)
@@ -415,12 +462,18 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         ShadowProxy proxy = binding.Proxy;
         binding.Proxy = null;
         if (proxy == null || proxy.gameObject == null) return;
+        bool ownedByDomain = proxy.SortingDomain != null;
+        proxy.SetSortingDomain(null, allowPooling);
         proxy.enabled = false;
         proxy.gameObject.SetActive(false);
         proxy.ResetSource();
         proxy.SetPropertyBlock(null);
         proxy.ResetBounds();
-        if (!allowPooling) return;
+        if (!allowPooling)
+        {
+            if (ownedByDomain) Destroy(proxy.gameObject);
+            return;
+        }
         if (pool.Count < MaxPooledRenderers)
         {
             proxy.transform.SetParent(transform, false);
@@ -454,10 +507,12 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
         if (proxy == null) proxy = new ShadowProxy();
         proxy.transform.SetParent(root, false);
+        proxy.SetDefaultParent(root);
         proxy.SetLayer(layer);
         proxy.sharedMaterial = material;
         WorldSortingManager.GetInstance().ApplyRenderer(proxy.SpriteRenderer, WorldSortingManager.GroundShadowCategory);
         WorldSortingManager.GetInstance().ApplyRenderer(proxy.MeshRenderer, WorldSortingManager.GroundShadowCategory);
+        proxy.SetRawSortingKey(proxy.SpriteRenderer.sortingLayerID, proxy.SpriteRenderer.sortingOrder, material.renderQueue);
         proxy.gameObject.SetActive(true);
         return proxy;
     }
@@ -475,6 +530,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             if (!entry.Active || !entry.Scene.IsValid() || !entry.Scene.isLoaded) continue;
             bool projectedWorld = WorldPresentationTransformRegistry.TryGet(entry.Scene.name,
                 out Matrix4x4 projection, out bool visible);
+            WorldPresentationTransformRegistry.TryGetSortingDomain(entry.Scene.name, out WorldPresentationSortingDomain sortingDomain);
             foreach (MechanicalShadowRegistry.Part part in entry.Parts)
             {
                 if (part == null || !part.Active || part.Sprite == null) continue;
@@ -484,8 +540,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
                     mechanicalBindings.Add(part, binding);
                 }
                 binding.Seen = true;
-                if (projectedWorld && !visible || Time.unscaledTime >= binding.NextCheck)
-                    using (MechanicalSyncMarker.Auto()) SynchronizeMechanicalCaster(part, binding, projectedWorld, projection, visible);
+                if (projectedWorld && !visible || binding.Proxy != null && binding.Proxy.SortingDomain != sortingDomain ||
+                    Time.unscaledTime >= binding.NextCheck)
+                    using (MechanicalSyncMarker.Auto()) SynchronizeMechanicalCaster(part, binding, projectedWorld, projection, visible, sortingDomain);
                 if (binding.Proxy != null && binding.Proxy.gameObject != null && binding.Proxy.enabled) VisibleCount++;
             }
         }
@@ -501,7 +558,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
 
     /// <summary>同一 Sprite 投影 Shader 处理机械静态主体和旋转部件，视口外不租用代理。</summary>
     private void SynchronizeMechanicalCaster(MechanicalShadowRegistry.Part part, MechanicalBinding binding,
-        bool hasProjection, Matrix4x4 projection, bool visible)
+        bool hasProjection, Matrix4x4 projection, bool visible, WorldPresentationSortingDomain sortingDomain)
     {
         if (hasProjection && !visible)
         {
@@ -538,10 +595,12 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         if (binding.Proxy == null || binding.Proxy.gameObject == null)
             binding.Proxy = AcquireProxy(part.Owner.Scene, part.Owner.Layer);
         ShadowProxy proxy = binding.Proxy;
+        proxy.SetSortingDomain(sortingDomain);
         if (!hasProjection && !part.Animated && binding.Revision == part.Revision)
         {
             proxy.bounds = projected;
             proxy.enabled = true;
+            proxy.SubmitSortingKey();
             binding.NextCheck = 0f;
             return;
         }
@@ -550,6 +609,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         proxy.UpdateProperties(properties, new Vector4(footY, 1f, height, 1f), GetSpriteUvBounds(part.Sprite));
         proxy.bounds = projected;
         proxy.enabled = true;
+        proxy.SubmitSortingKey();
         binding.Revision = part.Revision;
         binding.NextCheck = 0f;
     }
@@ -561,12 +621,18 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         binding.Proxy = null;
         binding.Revision = -1;
         if (proxy == null || proxy.gameObject == null) return;
+        bool ownedByDomain = proxy.SortingDomain != null;
+        proxy.SetSortingDomain(null, allowPooling);
         proxy.enabled = false;
         proxy.gameObject.SetActive(false);
         proxy.ResetSource();
         proxy.SetPropertyBlock(null);
         proxy.ResetBounds();
-        if (!allowPooling) return;
+        if (!allowPooling)
+        {
+            if (ownedByDomain) Destroy(proxy.gameObject);
+            return;
+        }
         if (pool.Count < MaxPooledRenderers)
         {
             proxy.transform.SetParent(transform, false);
@@ -588,8 +654,17 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
 
         SunShadowCaster authoring = binding.Authoring;
-        bool hasProjection = WorldPresentationTransformRegistry.TryGet(
-            GameplayWorldRegistry.GetItemWorldKey(owner), out Matrix4x4 projection, out bool visible);
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(owner);
+        bool hasProjection = WorldPresentationTransformRegistry.TryGet(worldKey, out Matrix4x4 projection, out bool visible);
+        WorldPresentationTransformRegistry.TryGetSortingDomain(worldKey, out WorldPresentationSortingDomain sortingDomain);
+        if (WorldPresentationProjection.TryGetItemSortingProjection(owner, out WorldPresentationSortingDomain itemDomain,
+            out Matrix4x4 itemProjection, out bool itemVisible))
+        {
+            hasProjection = true;
+            projection = itemProjection;
+            visible = itemVisible;
+            sortingDomain = itemDomain;
+        }
         if (hasProjection && !visible)
         {
             ReleaseProxy(binding);
@@ -602,7 +677,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         float heightScale = authoring != null ? Mathf.Max(0f, authoring.HeightMultiplier) : 1f;
         if (!owner.gameObject.activeInHierarchy || owner.InHand || source == null || source.sprite == null ||
             !source.enabled || (hasProjection
-                ? GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(source)
+                ? (WorldPresentationProjection.TryGetProjectedRendererOriginalForceRenderingOff(source, out bool forceOff)
+                    ? forceOff : GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(source))
                 : source.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(source)) || !source.gameObject.activeInHierarchy ||
             (authoring != null && !authoring.CastShadow) || heightScale <= 0f ||
             (binding.Building != null && (!binding.Building.IsInstalled() || binding.Building.IsGroundFacility || !binding.Building.CastSunShadow)))
@@ -647,6 +723,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
 
         if (binding.Proxy == null || binding.Proxy.gameObject == null) binding.Proxy = AcquireProxy(binding);
         ShadowProxy proxy = binding.Proxy;
+        proxy.SetSortingDomain(sortingDomain);
         proxy.SetSource(source.sprite, source.drawMode, source.size, source.flipX, source.flipY, source.color.a);
         proxy.SetPose(position, rotation, scale);
         proxy.UpdateProperties(properties, new Vector4(footY, heightScale, height, 1f),
@@ -654,6 +731,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         // Shader 顶点投影超出原始 Sprite，显式扩大世界包围盒以免相机提前裁掉长阴影。
         proxy.bounds = projected;
         proxy.enabled = true;
+        proxy.SubmitSortingKey();
         binding.NextCheck = 0f;
     }
 

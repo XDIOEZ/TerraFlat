@@ -39,7 +39,7 @@ namespace FlatWorld.Spaceflight
             RefreshPayload();
         }
 
-        public void Synchronize(ShipState ship, Vector2 position, float degrees)
+        public void Synchronize(ShipState ship, Vector2 position, float degrees, bool inSortingDomain = false)
         {
             Composition = ship;
             bool topologyChanged = geometry.Synchronize(ship);
@@ -66,7 +66,7 @@ namespace FlatWorld.Spaceflight
                 }
                 appliedVisualLift = visualLift;
             }
-            ShipSurfacePresentation.SetElevated(gameObject, ShipSurfaceState.IsElevated(flight), ShipSurfacePresentation.VehicleCategory);
+            ShipSurfacePresentation.SetElevated(gameObject, !inSortingDomain && ShipSurfaceState.IsElevated(flight), ShipSurfacePresentation.VehicleCategory);
             ShipSurfacePresentation.SetColliderState(blocker, visualLift, ShipSurfaceState.IsAirborne(flight), true);
             if (body.position != position || Mathf.Abs(Mathf.DeltaAngle(body.rotation, degrees)) > .001f ||
                 (Vector2)transform.position != position)
@@ -102,6 +102,10 @@ namespace FlatWorld.Spaceflight
                 renderer.sharedMaterial = definition.Material;
                 WorldRenderingManager.Instance.ApplyRendererSorting(renderer, piece.Kind == ShipPieceKind.Floor
                     ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory, piece.Kind == ShipPieceKind.Floor ? -2 : 0);
+                WorldSortingManager.ResolveItemVisualSortingKey(definition.Visual, renderer.sortingLayerID, renderer.sortingOrder,
+                    out int sortingLayer, out int sortingOrder);
+                renderer.sortingLayerID = sortingLayer;
+                renderer.sortingOrder = sortingOrder;
                 Sprite ??= renderer;
                 fragmentSprites.Add((piece, renderer));
             }

@@ -17,6 +17,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 ## 共用契约
 
 - 排序类别由 WorldSorting JSON 经 GamePlay 桥接 AIECS。动态实体共用 Player，地面印记/水花/预览走 Shadow，离体特效走 world-effect；SortingGroup 只设最外层键，内部保持相对序，代理继承外层有效键。贴地设施为 ground-building，Carrier 判定先于 Building。
+- 投影世界各持有 `WorldPresentationSortingDomain`，同世界区块与实体共用域。域内显式提交原层序与脚点，渲染前计算临时 Order 恢复 Y 混排；不能把整个 SortingGroup 内的相机距离当排序依据。静态键、模拟根和存档不改，退出恢复并注销。
 - 模拟与增量输入保持规范坐标，本机镜像/深度偏移只在表现层投影；实例、裁剪和 CPU 包围盒同步，Shader 位移必须外扩 CPU 边界。按实际排序键/姿态/源帧变化提交原生属性，仍保留每帧必要的状态读取。
 - 角色 Shader 参数统一经 MPB 控制器合成。静态模块设 `RequiresContinuousRendering=false`，变化时 `MarkRenderStateDirty`；换图、重绑、启停仍刷新。外部 Renderer 创建后注册、销毁前注销；描边代理标 `ActorRenderEffectExclude`，不让角色合成覆盖独立通道。
 - `RequiresSpriteBodyRange` 默认开启；仅写独立通道的模块可关闭，水线仍跟踪换图。代理同步源贴图、分离 Alpha、UV/裁剪与 MPB，Universal2D、NormalsRendering、回退 Pass 使用同一坐标/阈值；SpriteRenderer 与 MeshRenderer 分节点、共用生命周期根。

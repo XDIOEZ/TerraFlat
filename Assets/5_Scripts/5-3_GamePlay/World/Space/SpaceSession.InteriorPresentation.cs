@@ -10,6 +10,7 @@ namespace FlatWorld.Spaceflight
         private readonly Dictionary<ChunkView, WorldPresentationProjection> interiorChunkProjections = new();
         private readonly Dictionary<ChunkView, ChunkTilemapRenderer> interiorChunkRenderers = new();
         private readonly Dictionary<Item, WorldPresentationProjection> interiorItemProjections = new();
+        private readonly Dictionary<string, WorldPresentationSortingDomain> interiorSortingDomains = new(StringComparer.Ordinal);
         private readonly HashSet<ChunkView> visibleInteriorChunks = new();
         private readonly HashSet<Item> visibleInteriorItems = new();
         private readonly List<Item> interiorWorldItems = new();
@@ -21,12 +22,11 @@ namespace FlatWorld.Spaceflight
 
         private void BeginShipInteriorPresentation()
         {
-            visibleInteriorChunks.Clear(); visibleInteriorItems.Clear(); visibleInteriorEngines.Clear();
+            visibleInteriorChunks.Clear(); visibleInteriorItems.Clear(); visibleInteriorEngines.Clear(); visibleInteriorPassengers.Clear();
         }
 
-        private void SynchronizeShipInteriorPresentation(ShipState ship, bool visible)
+        private Matrix4x4 ResolveShipInteriorPresentationMatrix(ShipState ship)
         {
-            if (!TryGetShipInteriorWorld(ship.ShipId, out ShipInteriorWorldRuntime world)) return;
             Vector2 origin = ProjectShipInteriorPosition(ship, Vector2.zero);
             Vector2 axisX = ProjectShipInteriorPosition(ship, Vector2.right) - origin;
             Vector2 axisY = ProjectShipInteriorPosition(ship, Vector2.up) - origin;
@@ -34,46 +34,68 @@ namespace FlatWorld.Spaceflight
             projection.m00 = axisX.x; projection.m10 = axisX.y;
             projection.m01 = axisY.x; projection.m11 = axisY.y;
             projection.m03 = origin.x; projection.m13 = origin.y;
-            WorldPresentationTransformRegistry.Set(world.WorldKey, projection, visible);
+            return projection;
+        }
+
+        // 同一船内世界只创建一个外层域，所有投影共用这一层和船姿。
+        private WorldPresentationSortingDomain SynchronizeShipInteriorSortingDomain(
+            ShipInteriorWorldRuntime world, Matrix4x4 projection, bool visible)
+        {
+            if (!interiorSortingDomains.TryGetValue(world.WorldKey, out WorldPresentationSortingDomain domain) || domain.IsDisposed)
+                interiorSortingDomains[world.WorldKey] = domain = WorldPresentationSortingDomain.Create(
+                    transform, world.WorldKey, WorldSortingManager.ProjectedWorldCategory);
+            domain.Synchronize(projection, visible);
+            WorldPresentationTransformRegistry.Set(world.WorldKey, projection, visible, domain);
+            return domain;
+        }
+
+        private void SynchronizeShipInteriorPresentation(ShipState ship, bool visible)
+        {
+            if (!TryGetShipInteriorWorld(ship.ShipId, out ShipInteriorWorldRuntime world)) return;
+            Matrix4x4 projection = ResolveShipInteriorPresentationMatrix(ship);
+            WorldPresentationSortingDomain domain = SynchronizeShipInteriorSortingDomain(world, projection, visible);
             using var scope = GameplayWorldRegistry.UseWorld(world.WorldKey);
             foreach (var address in world.ChunkAddresses)
             {
                 if (!world.Chunks.TryGetRuntimeChunkView(address, out ChunkView view)) continue;
                 visibleInteriorChunks.Add(view);
-                if (!interiorChunkProjections.TryGetValue(view, out WorldPresentationProjection display) || display == null)
+                if (!interiorChunkProjections.TryGetValue(view, out WorldPresentationProjection display) || display == null || display.IsReleased)
                 {
                     display = WorldPresentationProjection.Create(view.transform, transform);
                     interiorChunkProjections[view] = display;
                     interiorChunkRenderers[view] = view.GetComponentInChildren<ChunkTilemapRenderer>(true);
                 }
+                display.SetSortingDomain(domain);
                 display.Synchronize(projection, visible);
                 if (interiorChunkRenderers.TryGetValue(view, out ChunkTilemapRenderer renderer) && renderer != null)
-                    ChunkBatchRendererGroupService.SetOwnerExternalProjection(renderer, projection, visible);
+                    ChunkBatchRendererGroupService.SetOwnerExternalProjection(renderer, projection, visible, domain);
             }
             GameplayWorldRegistry.CopyWorldItems(world.WorldKey, interiorWorldItems);
             foreach (Item item in interiorWorldItems)
             {
                 if (item == null || item is Player || item.InHand) continue;
                 visibleInteriorItems.Add(item);
-                if (!interiorItemProjections.TryGetValue(item, out WorldPresentationProjection display) || display == null)
+                if (!interiorItemProjections.TryGetValue(item, out WorldPresentationProjection display) || display == null || display.IsReleased)
                     interiorItemProjections[item] = display = WorldPresentationProjection.Create(item.transform, transform);
+                display.SetSortingDomain(domain);
                 display.Synchronize(projection, visible);
             }
             if (!ship.IsWreck)
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
                     if (!piece.IsAlive) continue;
-                    if (piece.Kind == ShipPieceKind.Engine) SynchronizeInteriorEngineExhaust(piece, projection, visible);
+                    if (piece.Kind == ShipPieceKind.Engine) SynchronizeInteriorEngineExhaust(piece, projection, visible, domain);
                 }
         }
 
-        private void SynchronizeInteriorEngineExhaust(ShipPieceState piece, Matrix4x4 projection, bool visible)
+        private void SynchronizeInteriorEngineExhaust(ShipPieceState piece, Matrix4x4 projection, bool visible,
+            WorldPresentationSortingDomain domain)
         {
             visibleInteriorEngines.Add(piece.PieceId);
             if (!interiorEngineExhausts.TryGetValue(piece.PieceId, out ShipEngineExhaustPresenter exhaust) || exhaust == null)
             {
                 var root = new GameObject("ShipEngineExhaustAnchor");
-                root.transform.SetParent(transform, false);
+                root.transform.SetParent(domain.Root, false);
                 SpriteRenderer source = root.AddComponent<SpriteRenderer>();
                 source.color = Color.clear;
                 if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
@@ -85,6 +107,8 @@ namespace FlatWorld.Spaceflight
                 exhaust.Bind(this, piece, source);
                 interiorEngineExhausts[piece.PieceId] = exhaust;
             }
+            if (exhaust.transform.parent != domain.Root) exhaust.transform.SetParent(domain.Root, true);
+            exhaust.SetSortingDomain(domain);
             ShipState ship = GetShipForPiece(piece);
             Vector3 position = projection.MultiplyPoint3x4(ShipInteriorPiecePosition(ship, piece));
             exhaust.transform.SetPositionAndRotation(position, projection.rotation * Quaternion.Euler(0f, 0f, piece.QuarterTurns * 90f));
@@ -106,16 +130,16 @@ namespace FlatWorld.Spaceflight
             foreach (ChunkView view in expiredInteriorChunks)
             {
                 if (interiorChunkRenderers.Remove(view, out ChunkTilemapRenderer renderer) && renderer != null)
-                    ChunkBatchRendererGroupService.SetOwnerExternalProjection(renderer, Matrix4x4.identity, false);
+                    ChunkBatchRendererGroupService.ClearOwnerExternalProjection(renderer);
                 if (interiorChunkProjections.Remove(view, out WorldPresentationProjection display) && display != null)
-                    Destroy(display.gameObject);
+                    display.Release();
             }
             expiredInteriorItems.Clear();
             foreach (Item item in interiorItemProjections.Keys)
                 if (item == null || !visibleInteriorItems.Contains(item)) expiredInteriorItems.Add(item);
             foreach (Item item in expiredInteriorItems)
                 if (interiorItemProjections.Remove(item, out WorldPresentationProjection display) && display != null)
-                    Destroy(display.gameObject);
+                    display.Release();
             expiredInteriorEngines.Clear();
             foreach (string id in interiorEngineExhausts.Keys)
                 if (!visibleInteriorEngines.Contains(id)) expiredInteriorEngines.Add(id);
@@ -126,14 +150,28 @@ namespace FlatWorld.Spaceflight
 
         private void HideShipInteriorPresentation()
         {
+            ReleaseExpiredPassengerInteriorProjections(true);
             foreach (ShipInteriorWorldRuntime world in shipInteriorWorlds.Values)
-                WorldPresentationTransformRegistry.Set(world.WorldKey, Matrix4x4.identity, false);
+            {
+                interiorSortingDomains.TryGetValue(world.WorldKey, out WorldPresentationSortingDomain domain);
+                WorldPresentationTransformRegistry.TryGet(world.WorldKey, out Matrix4x4 projection, out _);
+                domain?.Synchronize(projection, false);
+                WorldPresentationTransformRegistry.Set(world.WorldKey, projection, false, domain);
+            }
             foreach (WorldPresentationProjection display in interiorChunkProjections.Values)
-                if (display != null) display.gameObject.SetActive(false);
-            foreach (ChunkTilemapRenderer renderer in interiorChunkRenderers.Values)
-                if (renderer != null) ChunkBatchRendererGroupService.SetOwnerExternalProjection(renderer, Matrix4x4.identity, false);
+                if (display != null) display.SetVisible(false);
+            foreach (var pair in interiorChunkRenderers)
+            {
+                ChunkTilemapRenderer renderer = pair.Value;
+                if (renderer == null) continue;
+                interiorChunkProjections.TryGetValue(pair.Key, out WorldPresentationProjection display);
+                WorldPresentationSortingDomain domain = display != null && !display.IsReleased ? display.SortingDomain : null;
+                if (domain == null) ChunkBatchRendererGroupService.TryGetOwnerNativeProjectionDomain(renderer, out domain);
+                WorldPresentationTransformRegistry.TryGet(domain?.WorldKey, out Matrix4x4 projection, out _);
+                ChunkBatchRendererGroupService.SetOwnerExternalProjection(renderer, projection, false, domain);
+            }
             foreach (WorldPresentationProjection display in interiorItemProjections.Values)
-                if (display != null) display.gameObject.SetActive(false);
+                if (display != null) display.SetVisible(false);
             foreach (ShipEngineExhaustPresenter exhaust in interiorEngineExhausts.Values)
                 if (exhaust != null) exhaust.gameObject.SetActive(false);
         }
@@ -141,14 +179,65 @@ namespace FlatWorld.Spaceflight
         internal void ReleaseAllShipInteriorPresentations()
         {
             HideShipInteriorPresentation();
+            ReleaseAllLooseItemSortingProjections();
+            foreach (WorldPresentationProjection display in wreckSortingProjections.Values)
+                if (display != null) display.Release();
+            wreckSortingProjections.Clear();
             foreach (WorldPresentationProjection display in interiorChunkProjections.Values)
-                if (display != null) Destroy(display.gameObject);
+                if (display != null) display.Release();
             foreach (WorldPresentationProjection display in interiorItemProjections.Values)
-                if (display != null) Destroy(display.gameObject);
+                if (display != null) display.Release();
             foreach (ShipEngineExhaustPresenter exhaust in interiorEngineExhausts.Values)
                 if (exhaust != null) Destroy(exhaust.gameObject);
             interiorChunkProjections.Clear(); interiorChunkRenderers.Clear();
             interiorItemProjections.Clear(); interiorEngineExhausts.Clear();
+            foreach (ShipInteriorWorldRuntime world in shipInteriorWorlds.Values)
+                WorldPresentationTransformRegistry.Remove(world.WorldKey);
+            foreach (var pair in interiorSortingDomains)
+            {
+                WorldPresentationTransformRegistry.Remove(pair.Key);
+                pair.Value.Dispose();
+            }
+            interiorSortingDomains.Clear();
+        }
+
+        private void ReleaseShipInteriorSortingDomain(string worldKey)
+        {
+            if (!interiorSortingDomains.Remove(worldKey, out WorldPresentationSortingDomain domain)) return;
+            Transform root = domain.Root;
+            expiredInteriorChunks.Clear();
+            foreach (var pair in interiorChunkProjections)
+                if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) expiredInteriorChunks.Add(pair.Key);
+            foreach (ChunkView view in expiredInteriorChunks)
+            {
+                if (interiorChunkRenderers.Remove(view, out ChunkTilemapRenderer renderer) && renderer != null)
+                    ChunkBatchRendererGroupService.ClearOwnerExternalProjection(renderer);
+                if (interiorChunkProjections.Remove(view, out WorldPresentationProjection display) && display != null) display.Release();
+            }
+            expiredInteriorItems.Clear();
+            foreach (var pair in interiorItemProjections)
+                if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) expiredInteriorItems.Add(pair.Key);
+            foreach (Item item in expiredInteriorItems)
+                if (interiorItemProjections.Remove(item, out WorldPresentationProjection display) && display != null) display.Release();
+            expiredInteriorPassengers.Clear();
+            foreach (var pair in passengerProjections)
+                if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) expiredInteriorPassengers.Add(pair.Key);
+            foreach (Player player in expiredInteriorPassengers) ReleasePassengerInteriorProjection(player);
+            expiredInteriorEngines.Clear();
+            foreach (var pair in interiorEngineExhausts)
+                if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) expiredInteriorEngines.Add(pair.Key);
+            foreach (string id in expiredInteriorEngines)
+                if (interiorEngineExhausts.Remove(id, out ShipEngineExhaustPresenter exhaust) && exhaust != null) Destroy(exhaust.gameObject);
+            var loose = new List<Item>();
+            foreach (var pair in looseShipProjections)
+                if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) loose.Add(pair.Key);
+            foreach (Item item in loose) ReleaseLooseItemSortingProjection(item);
+            expiredInteriorEngines.Clear();
+            foreach (var pair in wreckSortingProjections)
+                if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) expiredInteriorEngines.Add(pair.Key);
+            foreach (string id in expiredInteriorEngines) ReleaseWreckSortingProjection(id);
+            WorldPresentationTransformRegistry.Remove(worldKey);
+            domain.Dispose();
         }
         #endregion
 
@@ -197,13 +286,17 @@ namespace FlatWorld.Spaceflight
                 Vector3 visualLiftOffset = new(Mathf.Sin(radians) * rise, Mathf.Cos(radians) * rise, 0f);
                 presenter?.SynchronizeSurfaceState(flight, visualLiftOffset);
             }
-            EndShipInteriorPresentation();
             RemoveExpiredPooledShipPresenters();
             RemoveExpiredShipColliderPresenters();
             RemoveExpiredSurfaceShadows();
             SynchronizeRemotePassengerSurfaceVisuals();
             Player player = ItemMgr.Instance?.User_Player;
-            if (player == null) return;
+            if (player == null)
+            {
+                EndShipInteriorPresentation();
+                ReleaseExpiredPassengerInteriorProjections();
+                return;
+            }
             SpacePassengerState passenger = GetPassenger(player);
             SetTerrainSuppression(player, IsSpaceView || passenger.Supported || passenger.SurfaceDescending);
             ShipState carrier = GetShip(passenger.ShipId);
@@ -219,6 +312,8 @@ namespace FlatWorld.Spaceflight
             }
             else RestorePassengerSurface(player);
             UpdateDrivingCamera(player, passenger, carrier);
+            EndShipInteriorPresentation();
+            ReleaseExpiredPassengerInteriorProjections();
         }
 
         private void RemovePieceView(string id)
@@ -226,7 +321,7 @@ namespace FlatWorld.Spaceflight
             if (int.TryParse(id, out int guid) && ItemMgr.GetExistingInstance() is ItemMgr manager &&
                 manager.WorldRunTimeItems.TryGetValue(guid, out Item item) && item != null &&
                 interiorItemProjections.Remove(item, out WorldPresentationProjection display) && display != null)
-                Destroy(display.gameObject);
+                display.Release();
             if (interiorEngineExhausts.Remove(id, out ShipEngineExhaustPresenter exhaust) && exhaust != null)
                 Destroy(exhaust.gameObject);
         }

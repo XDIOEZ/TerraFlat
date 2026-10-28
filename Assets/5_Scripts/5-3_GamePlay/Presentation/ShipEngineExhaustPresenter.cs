@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.Audio;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -24,6 +25,8 @@ namespace FlatWorld.Spaceflight
         private float appliedOutput = -1f;
         private AudioHandle engineAudio;
         private float appliedAudioVolume = -1f;
+        private WorldPresentationSortingDomain sortingDomain;
+        private int rawSortingLayer, rawSortingOrder, rawRenderQueue;
 
         public void Bind(SpaceSession owner, ShipPieceState engine, SpriteRenderer renderer)
         {
@@ -37,6 +40,43 @@ namespace FlatWorld.Spaceflight
             session = owner;
             piece = engine;
             source = renderer;
+        }
+
+        public void SetSortingDomain(WorldPresentationSortingDomain domain)
+        {
+            if (ReferenceEquals(sortingDomain, domain)) return;
+            RenderPipelineManager.beginContextRendering -= SubmitSortingKey;
+            if (sortingDomain != null)
+            {
+                if (particleRenderer != null) sortingDomain.RemoveLocalSortingKey(particleRenderer);
+                sortingDomain.Disposing -= OnSortingDomainDisposing;
+            }
+            sortingDomain = domain;
+            if (domain != null)
+            {
+                domain.Disposing += OnSortingDomainDisposing;
+                if (isActiveAndEnabled) RenderPipelineManager.beginContextRendering += SubmitSortingKey;
+            }
+        }
+
+        private void OnSortingDomainDisposing() => SetSortingDomain(null);
+
+        private void OnEnable()
+        {
+            RenderPipelineManager.beginContextRendering -= SubmitSortingKey;
+            if (sortingDomain != null) RenderPipelineManager.beginContextRendering += SubmitSortingKey;
+        }
+
+        private void SubmitSortingKey(ScriptableRenderContext context, List<Camera> cameras)
+        {
+            if (sortingDomain == null || particleRenderer == null) return;
+            if (!particleRenderer.enabled || particles == null || particles.particleCount == 0)
+            {
+                sortingDomain.RemoveLocalSortingKey(particleRenderer);
+                return;
+            }
+            sortingDomain.ApplyLocalRendererSortingKey(particleRenderer, rawSortingLayer, rawSortingOrder,
+                rawRenderQueue, particleRenderer.bounds.center.y);
         }
 
         private void LateUpdate()
@@ -73,11 +113,18 @@ namespace FlatWorld.Spaceflight
 
         private void OnDisable()
         {
+            RenderPipelineManager.beginContextRendering -= SubmitSortingKey;
+            if (sortingDomain != null && particleRenderer != null) sortingDomain.RemoveLocalSortingKey(particleRenderer);
             engineAudio.Stop(.15f); engineAudio = AudioHandle.Invalid; appliedAudioVolume = -1f;
             if (particles != null) particles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
             emitting = false;
             appliedOutput = -1f;
             syncedNozzleSprite = null;
+        }
+        private void OnDestroy()
+        {
+            RenderPipelineManager.beginContextRendering -= SubmitSortingKey;
+            SetSortingDomain(null);
         }
         private void UpdateEngineAudio(float output)
         {
@@ -162,6 +209,7 @@ namespace FlatWorld.Spaceflight
 
             particleRenderer = particles.GetComponent<ParticleSystemRenderer>();
             particleRenderer.sharedMaterial = material;
+            rawRenderQueue = material.renderQueue;
             particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             particleRenderer.alignment = ParticleSystemRenderSpace.Local;
             particleRenderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -191,6 +239,8 @@ namespace FlatWorld.Spaceflight
             if (particleRenderer.sortingLayerID != layerId)
                 particleRenderer.sortingLayerID = layerId;
             int exhaustOrder = checked(order - 5);
+            rawSortingLayer = layerId;
+            rawSortingOrder = exhaustOrder;
             if (particleRenderer.sortingOrder != exhaustOrder)
                 particleRenderer.sortingOrder = exhaustOrder;
             int gameObjectLayer = source.gameObject.layer;

@@ -102,12 +102,14 @@ namespace FlatWorld.AIECS.Gameplay
             if (replicaRenderer == null) return;
             using var scope = UseOwnedWorld();
             Player player = ItemMgr.Instance?.User_Player;
-            Camera camera = player?.Data?.CurrentSceneName == ownedWorldKey ? Camera.main : null;
+            bool projected = SynchronizeEntityWorldPresentation(replicaRenderer, true);
+            Camera camera = projected || player?.Data?.CurrentSceneName == ownedWorldKey ? Camera.main : null;
             if (camera == null) { replicaRenderer.DrawRecords(replicaRecords, null, default); return; }
             WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
             if (navigation?.IsNavigationReady != true) { replicaRenderer.DrawRecords(replicaRecords, null, default); return; }
             WorldRenderingManager shadows = WorldRenderingManager.GetInstance();
-            replicaRenderer.ShadowOpacity = shadows != null ? shadows.GetShadowOpacity(player.gameObject.scene) : .4f;
+            var shadowScene = projected ? UnityEngine.SceneManagement.SceneManager.GetActiveScene() : player.gameObject.scene;
+            replicaRenderer.ShadowOpacity = shadows != null ? shadows.GetShadowOpacity(shadowScene) : .4f;
             WorldTopologyDomain domain = navigation.GetSharedNavigation().Read().Domain;
             float elapsed = Mathf.Max(0f, Time.unscaledTime - replicaReceivedAt);
             float blend = Mathf.Clamp01(elapsed / .2f);
@@ -131,6 +133,9 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void DisposeNetworkActors()
         {
+            replicaRenderer?.SetSortingKeyCallbacks(null, null);
+            if (replicaSortingDomain != null) replicaSortingDomain.Disposing -= OnReplicaSortingDomainDisposing;
+            replicaSortingDomain = null;
             replicaRenderer?.Dispose(); replicaRenderer = null;
             if (replicaRecords.IsCreated) replicaRecords.Dispose();
             replicaDefinitions.Clear(); replicaPositions.Clear();

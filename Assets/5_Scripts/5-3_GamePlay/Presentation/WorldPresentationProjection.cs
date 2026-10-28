@@ -90,7 +90,10 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     {
         internal Transform Source, Target;
         internal SortingGroup SourceSorting, TargetSorting;
+        internal Renderer QueueSource;
+        internal bool SortingRegistered;
         internal WorldPresentationHierarchyWatcher Watcher;
+        internal readonly List<SortingGroup> AncestorSortingGroups = new();
     }
     private sealed class RenderCopy
     {
@@ -100,6 +103,8 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         internal ParticleSystem ParticleSystem;
         internal Mesh ParticleMesh;
         internal bool OriginalForceOff, LogicalForceOff;
+        internal bool SortingRegistered;
+        internal int RenderQueue;
     }
     private sealed class LightCopy
     {
@@ -115,6 +120,8 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private readonly Dictionary<Transform, NodeCopy> nodes = new();
     private readonly Dictionary<Renderer, RenderCopy> copies = new();
     private static readonly Dictionary<Renderer, int> projectedSources = new();
+    private static readonly Dictionary<Renderer, bool> projectedSourceOriginalForceOff = new();
+    private static readonly Dictionary<Renderer, bool> projectedSourceLogicalForceOff = new();
     private static readonly Dictionary<Item, HashSet<WorldPresentationProjection>> itemProjectionOwners = new();
     private readonly Dictionary<Light2D, LightCopy> lights = new();
     private readonly Dictionary<ShadowCaster2D, ShadowCopy> shadows = new();
@@ -132,11 +139,21 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private readonly List<ShadowCaster2D> removedShadows = new();
     private MaterialPropertyBlock properties;
     private Transform sourceRoot;
+    private Transform originalParent;
+    private WorldPresentationSortingDomain sortingDomain;
+    private Matrix4x4 synchronizedProjection = Matrix4x4.identity;
+    private Matrix4x4 synchronizedDisplayToSource = Matrix4x4.identity;
+    private bool synchronizedVisible;
+    private bool released;
     private Item sourceItem;
     private bool excludeNestedItems;
     private bool hierarchyDirty = true;
+    public bool IsReleased => released;
+    public WorldPresentationSortingDomain SortingDomain => sortingDomain;
     private static readonly FieldInfo ShadowShape = typeof(ShadowCaster2D).GetField("m_ShapePath", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly FieldInfo ShadowShapeHash = typeof(ShadowCaster2D).GetField("m_ShapePathHash", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly int DisplayToSourceId = Shader.PropertyToID("_WorldPresentationDisplayToSource");
+    private static readonly int ProjectionEnabledId = Shader.PropertyToID("_WorldPresentationProjectionEnabled");
 
     private void Awake() => properties = new MaterialPropertyBlock();
 
@@ -147,6 +164,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         if (parent != null) root.transform.SetParent(parent, false);
         var projection = root.AddComponent<WorldPresentationProjection>();
         projection.sourceRoot = source;
+        projection.originalParent = parent;
         projection.sourceItem = source.GetComponent<Item>();
         projection.excludeNestedItems = projection.sourceItem == null;
         if (projection.sourceItem != null)
@@ -160,10 +178,88 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         return projection;
     }
 
+    /// <summary>只移动显示副本，并让其中所有排序组留在所属世界域内。</summary>
+    public void SetSortingDomain(WorldPresentationSortingDomain domain)
+    {
+        if (released) return;
+        if (domain != null && domain.IsDisposed) throw new ObjectDisposedException(nameof(domain));
+        if (ReferenceEquals(sortingDomain, domain)) return;
+        RemoveLocalSortingUnits();
+        RestoreEscapedSortingNodes();
+        if (sortingDomain != null) { sortingDomain.DetachProjection(this); sortingDomain.Disposing -= OnSortingDomainDisposing; }
+        sortingDomain = domain;
+        if (sortingDomain != null) { sortingDomain.AttachProjection(this); sortingDomain.Disposing += OnSortingDomainDisposing; }
+        transform.SetParent(domain != null ? domain.Root : originalParent, true);
+        foreach (NodeCopy node in nodes.Values) SynchronizeSortingGroup(node);
+    }
+
+    private void OnSortingDomainDisposing() => Release();
+
+    internal void RefreshBeforeLocalSorting()
+    {
+        if (!released && sortingDomain != null && synchronizedVisible)
+            Synchronize(synchronizedProjection, true);
+    }
+
+    public void SetVisible(bool visible)
+    {
+        if (released) return;
+        synchronizedVisible = visible;
+        if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
+        Transform domainRoot = sortingDomain?.Root;
+        if (domainRoot == null) return;
+        foreach (NodeCopy node in nodes.Values)
+        {
+            if (node.Target == null || node.Target == transform || node.Target.parent != domainRoot) continue;
+            bool active = visible && node.Source != null && node.Source.gameObject.activeInHierarchy;
+            if (node.Target.gameObject.activeSelf != active) node.Target.gameObject.SetActive(active);
+        }
+    }
+
     internal void InvalidateHierarchy() => hierarchyDirty = true;
+
+    internal bool TryGetProjectedTransform(Transform source, out Transform target)
+    {
+        target = source != null && nodes.TryGetValue(source, out NodeCopy node) ? node.Target : null;
+        return target != null;
+    }
+
+    public static void NotifySourceSortingStructureChanged(Transform source)
+    {
+        if (source != null && source.TryGetComponent(out WorldPresentationHierarchyWatcher watcher))
+            watcher.Invalidate();
+    }
 
     internal static bool IsSourceProjected(Renderer source)
         => source != null && projectedSources.ContainsKey(source);
+
+    public static bool TryGetItemSortingDomain(Item item, out WorldPresentationSortingDomain domain)
+        => TryGetItemSortingProjection(item, out domain, out _, out _);
+
+    public static bool TryGetItemSortingProjection(Item item, out WorldPresentationSortingDomain domain,
+        out Matrix4x4 worldToDisplay, out bool visible)
+    {
+        domain = null;
+        worldToDisplay = Matrix4x4.identity;
+        visible = false;
+        if (item == null || !itemProjectionOwners.TryGetValue(item, out var owners)) return false;
+        foreach (WorldPresentationProjection owner in owners)
+        {
+            if (owner == null || owner.released || owner.sortingDomain == null || owner.sortingDomain.IsDisposed) continue;
+            domain = owner.sortingDomain;
+            worldToDisplay = owner.synchronizedProjection;
+            visible = owner.synchronizedVisible && owner.gameObject.activeInHierarchy;
+            return true;
+        }
+        return false;
+    }
+
+    public static bool TryGetProjectedRendererOriginalForceRenderingOff(Renderer source, out bool forceOff)
+    {
+        if (source != null && projectedSourceLogicalForceOff.TryGetValue(source, out forceOff)) return true;
+        forceOff = false;
+        return false;
+    }
 
     // 过渡画面读取现有投影，不另外创建船件视图。
     public void CollectProjectedSprites(List<SpriteRenderer> destination)
@@ -183,8 +279,14 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     // 结构变化才重新发现组件，逐帧只同步已经绑定的显示数据。
     public void Synchronize(Matrix4x4 worldToDisplay, bool visible)
     {
-        if (sourceRoot == null) { gameObject.SetActive(false); return; }
-        if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
+        if (released) return;
+        if (synchronizedProjection != worldToDisplay)
+        {
+            synchronizedProjection = worldToDisplay;
+            synchronizedDisplayToSource = worldToDisplay.inverse;
+        }
+        if (sourceRoot == null) { SetVisible(false); return; }
+        SetVisible(visible);
         if (hierarchyDirty) RebuildHierarchy();
         if (!visible)
         {
@@ -202,11 +304,25 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             if (node.Source == null || node.Target == null) { hierarchyDirty = true; continue; }
             if (node.Source != sourceRoot)
             {
-                if (node.Target.localPosition != node.Source.localPosition) node.Target.localPosition = node.Source.localPosition;
-                if (node.Target.localRotation != node.Source.localRotation) node.Target.localRotation = node.Source.localRotation;
-                if (node.Target.localScale != node.Source.localScale) node.Target.localScale = node.Source.localScale;
-                if (node.Target.gameObject.activeSelf != node.Source.gameObject.activeSelf)
-                    node.Target.gameObject.SetActive(node.Source.gameObject.activeSelf);
+                bool escape = ShouldEscapeSourceSortingGroups(node);
+                if (!escape && !nodes.TryGetValue(node.Source.parent, out _)) { hierarchyDirty = true; continue; }
+                Transform parent = escape ? sortingDomain.Root : nodes[node.Source.parent].Target;
+                if (node.Target.parent != parent) node.Target.SetParent(parent, true);
+                if (escape)
+                {
+                    Matrix4x4 matrix = parent.worldToLocalMatrix * worldToDisplay * node.Source.localToWorldMatrix;
+                    node.Target.localPosition = matrix.GetColumn(3);
+                    node.Target.localRotation = matrix.rotation;
+                    node.Target.localScale = matrix.lossyScale;
+                }
+                else
+                {
+                    if (node.Target.localPosition != node.Source.localPosition) node.Target.localPosition = node.Source.localPosition;
+                    if (node.Target.localRotation != node.Source.localRotation) node.Target.localRotation = node.Source.localRotation;
+                    if (node.Target.localScale != node.Source.localScale) node.Target.localScale = node.Source.localScale;
+                }
+                bool active = escape ? node.Source.gameObject.activeInHierarchy : node.Source.gameObject.activeSelf;
+                if (node.Target.gameObject.activeSelf != active) node.Target.gameObject.SetActive(active);
             }
             SynchronizeSortingGroup(node);
         }
@@ -216,6 +332,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             SynchronizeRenderer(copy);
             if (!copy.Source.forceRenderingOff) copy.Source.forceRenderingOff = true;
         }
+        SynchronizeLocalSortingUnits();
         foreach (LightCopy copy in lights.Values)
         {
             if (copy.Source == null || copy.Target == null) { hierarchyDirty = true; continue; }
@@ -231,6 +348,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private void RebuildHierarchy()
     {
         hierarchyDirty = false;
+        sortingDomain?.NotifyLocalSortingGroupsChanged();
         sourceNodes.Clear(); sourceRenderers.Clear(); sourceLights.Clear(); sourceShadows.Clear();
         seenNodes.Clear(); seenRenderers.Clear(); seenLights.Clear(); seenShadows.Clear();
         sourceRoot.GetComponentsInChildren(true, sourceNodes);
@@ -246,6 +364,18 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             if (node.SourceSorting != null && node.TargetSorting == null)
                 node.TargetSorting = node.Target.gameObject.AddComponent<SortingGroup>();
             if (node.SourceSorting == null && node.TargetSorting != null) node.TargetSorting.enabled = false;
+        }
+        foreach (Transform source in sourceNodes)
+        {
+            if (source == null || !nodes.TryGetValue(source, out NodeCopy node)) continue;
+            node.AncestorSortingGroups.Clear();
+            if (source == sourceRoot) continue;
+            for (Transform parent = source.parent; parent != null; parent = parent.parent)
+            {
+                if (nodes.TryGetValue(parent, out NodeCopy ancestor) && ancestor.SourceSorting != null)
+                    node.AncestorSortingGroups.Add(ancestor.SourceSorting);
+                if (parent == sourceRoot) break;
+            }
         }
         foreach (Renderer source in sourceRenderers)
         {
@@ -278,12 +408,18 @@ public sealed class WorldPresentationProjection : MonoBehaviour
                     target = mirror.gameObject.AddComponent<MeshRenderer>();
                 }
             }
+            bool logicalForceOff = projectedSourceLogicalForceOff.TryGetValue(source, out bool existingLogicalForceOff)
+                ? existingLogicalForceOff : GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(source);
+            bool originalForceOff = projectedSourceOriginalForceOff.TryGetValue(source, out bool existingOriginalForceOff)
+                ? existingOriginalForceOff : source.forceRenderingOff;
             copies.Add(source, new RenderCopy { Source = source, Target = target,
-                SourceMesh = sourceMesh, TargetMesh = targetMesh, OriginalForceOff = source.forceRenderingOff,
+                SourceMesh = sourceMesh, TargetMesh = targetMesh, OriginalForceOff = originalForceOff,
                 SourceParticles = particles, ParticleSystem = source.GetComponent<ParticleSystem>(), ParticleMesh = particleMesh,
-                LogicalForceOff = GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(source) });
+                LogicalForceOff = logicalForceOff });
             projectedSources.TryGetValue(source, out int owners);
             projectedSources[source] = owners + 1;
+            projectedSourceOriginalForceOff[source] = originalForceOff;
+            projectedSourceLogicalForceOff[source] = logicalForceOff;
         }
         foreach (Light2D source in sourceLights)
         {
@@ -315,6 +451,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         foreach (Renderer source in removedRenderers)
         {
             RenderCopy copy = copies[source];
+            if (copy.SortingRegistered) sortingDomain?.RemoveLocalSortingKey(copy.Target);
             ForgetProjectedSource(copy.Source);
             RestoreSourceRenderer(copy);
             if (copy.Target != null)
@@ -348,9 +485,19 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         foreach (Transform source in removedNodes)
         {
             NodeCopy node = nodes[source];
+            if (node.SortingRegistered) sortingDomain?.RemoveLocalSortingKey(node.TargetSorting);
             if (node.Watcher != null) node.Watcher.Remove(this);
             if (node.Target != null && node.Target != transform) Destroy(node.Target.gameObject);
             nodes.Remove(source);
+        }
+        foreach (NodeCopy node in nodes.Values) node.QueueSource = null;
+        foreach (RenderCopy copy in copies.Values)
+        {
+            if (copy.Source == null || !nodes.TryGetValue(copy.Source.transform, out NodeCopy node)) continue;
+            if (node.SourceSorting != null && node.QueueSource == null) node.QueueSource = copy.Source;
+            foreach (SortingGroup group in node.AncestorSortingGroups)
+                if (group != null && nodes.TryGetValue(group.transform, out NodeCopy ancestor) && ancestor.QueueSource == null)
+                    ancestor.QueueSource = copy.Source;
         }
     }
 
@@ -384,13 +531,20 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             draw &= camera != null && copy.ParticleSystem != null && copy.ParticleSystem.particleCount > 0;
             if (draw) copy.SourceParticles.BakeMesh(copy.ParticleMesh, camera, ParticleSystemBakeMeshOptions.Default);
         }
-        if (target.enabled != draw) target.enabled = draw;
-        if (target.sortingLayerID != source.sortingLayerID) target.sortingLayerID = source.sortingLayerID;
-        if (target.sortingOrder != source.sortingOrder) target.sortingOrder = source.sortingOrder;
-        if (target.sharedMaterial != source.sharedMaterial) target.sharedMaterial = source.sharedMaterial;
+        bool sortingChanged = false;
+        if (target.enabled != draw) { target.enabled = draw; sortingChanged = true; }
+        if (target.sortingLayerID != source.sortingLayerID) { target.sortingLayerID = source.sortingLayerID; sortingChanged = true; }
+        if (!copy.SortingRegistered && target.sortingOrder != source.sortingOrder)
+        { target.sortingOrder = source.sortingOrder; sortingChanged = true; }
+        Material sourceMaterial = source.sharedMaterial;
+        if (target.sharedMaterial != sourceMaterial) { target.sharedMaterial = sourceMaterial; sortingChanged = true; }
+        copy.RenderQueue = sourceMaterial != null ? sourceMaterial.renderQueue : 3000;
+        if (sortingChanged) sortingDomain?.NotifyLocalSortingGroupsChanged();
         if (target.shadowCastingMode != source.shadowCastingMode) target.shadowCastingMode = source.shadowCastingMode;
         if (target.receiveShadows != source.receiveShadows) target.receiveShadows = source.receiveShadows;
         source.GetPropertyBlock(properties);
+        properties.SetMatrix(DisplayToSourceId, synchronizedDisplayToSource);
+        properties.SetFloat(ProjectionEnabledId, 1f);
         target.SetPropertyBlock(properties);
         if (source is SpriteRenderer original && target is SpriteRenderer projected)
         {
@@ -411,14 +565,107 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         }
     }
 
-    private static void SynchronizeSortingGroup(NodeCopy node)
+    private void SynchronizeSortingGroup(NodeCopy node)
     {
         SortingGroup source = node.SourceSorting, target = node.TargetSorting;
         if (source == null || target == null) return;
-        if (target.enabled != source.enabled) target.enabled = source.enabled;
-        if (target.sortAtRoot != source.sortAtRoot) target.sortAtRoot = source.sortAtRoot;
-        if (target.sortingLayerID != source.sortingLayerID) target.sortingLayerID = source.sortingLayerID;
-        if (target.sortingOrder != source.sortingOrder) target.sortingOrder = source.sortingOrder;
+        bool changed = false;
+        if (target.enabled != source.enabled) { target.enabled = source.enabled; changed = true; }
+        bool sortAtRoot = sortingDomain == null && source.sortAtRoot;
+        if (target.sortAtRoot != sortAtRoot) { target.sortAtRoot = sortAtRoot; changed = true; }
+        if (target.sortingLayerID != source.sortingLayerID) { target.sortingLayerID = source.sortingLayerID; changed = true; }
+        if (!node.SortingRegistered && target.sortingOrder != source.sortingOrder)
+        { target.sortingOrder = source.sortingOrder; changed = true; }
+        if (changed) sortingDomain?.NotifyLocalSortingGroupsChanged();
+    }
+
+    private void SynchronizeLocalSortingUnits()
+    {
+        if (sortingDomain == null) return;
+        foreach (NodeCopy node in nodes.Values)
+        {
+            SortingGroup source = node.SourceSorting, target = node.TargetSorting;
+            bool top = source != null && source.enabled && target != null && node.QueueSource != null &&
+                FindSourceSortingUnit(node) == source;
+            if (!top)
+            {
+                if (node.SortingRegistered)
+                {
+                    sortingDomain.RemoveLocalSortingKey(target); node.SortingRegistered = false;
+                    if (source != null && target != null)
+                    { target.sortingLayerID = source.sortingLayerID; target.sortingOrder = source.sortingOrder; }
+                }
+                continue;
+            }
+            int queue = node.QueueSource != null && copies.TryGetValue(node.QueueSource, out RenderCopy queueCopy)
+                ? queueCopy.RenderQueue : 3000;
+            sortingDomain.ApplyLocalSortingGroupKey(target, source.sortingLayerID, source.sortingOrder,
+                queue, target.transform.position.y);
+            node.SortingRegistered = true;
+        }
+        foreach (RenderCopy copy in copies.Values)
+        {
+            if (copy.Source == null || copy.Target == null || !nodes.TryGetValue(copy.Source.transform, out NodeCopy node)) continue;
+            if (FindSourceSortingUnit(node) != null)
+            {
+                if (copy.SortingRegistered)
+                {
+                    sortingDomain.RemoveLocalSortingKey(copy.Target); copy.SortingRegistered = false;
+                    copy.Target.sortingLayerID = copy.Source.sortingLayerID;
+                    copy.Target.sortingOrder = copy.Source.sortingOrder;
+                }
+                continue;
+            }
+            float footY = copy.Target is SpriteRenderer sprite && sprite.spriteSortPoint == SpriteSortPoint.Pivot
+                ? copy.Target.transform.position.y : copy.Target.bounds.center.y;
+            sortingDomain.ApplyLocalRendererSortingKey(copy.Target, copy.Source.sortingLayerID, copy.Source.sortingOrder,
+                copy.RenderQueue, footY);
+            copy.SortingRegistered = true;
+        }
+    }
+
+    private static SortingGroup FindSourceSortingUnit(NodeCopy node)
+    {
+        SortingGroup top = node.SourceSorting;
+        if (top == null || !top.enabled) top = null;
+        else if (top.sortAtRoot) return top;
+        foreach (SortingGroup group in node.AncestorSortingGroups)
+        {
+            if (group == null || !group.enabled) continue;
+            top = group;
+            if (group.sortAtRoot) break;
+        }
+        return top;
+    }
+
+    private void RemoveLocalSortingUnits()
+    {
+        if (sortingDomain == null) return;
+        foreach (RenderCopy copy in copies.Values)
+            if (copy.SortingRegistered) { sortingDomain.RemoveLocalSortingKey(copy.Target); copy.SortingRegistered = false; }
+        foreach (NodeCopy node in nodes.Values)
+            if (node.SortingRegistered) { sortingDomain.RemoveLocalSortingKey(node.TargetSorting); node.SortingRegistered = false; }
+    }
+
+    private bool ShouldEscapeSourceSortingGroups(NodeCopy node)
+    {
+        if (sortingDomain == null || node.SourceSorting == null || !node.SourceSorting.enabled ||
+            !node.SourceSorting.sortAtRoot) return false;
+        foreach (SortingGroup group in node.AncestorSortingGroups)
+            if (group != null && group.enabled) return true;
+        return false;
+    }
+
+    private void RestoreEscapedSortingNodes()
+    {
+        if (sortingDomain?.Root == null) return;
+        foreach (NodeCopy node in nodes.Values)
+        {
+            if (node.Target == null || node.Target == transform || node.Target.parent != sortingDomain.Root) continue;
+            Transform parent = node.Source != null && node.Source.parent != null &&
+                nodes.TryGetValue(node.Source.parent, out NodeCopy sourceParent) ? sourceParent.Target : transform;
+            if (parent != null) node.Target.SetParent(parent, true);
+        }
     }
 
     private static void RestoreSourceRenderer(RenderCopy copy)
@@ -432,7 +679,12 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private static void ForgetProjectedSource(Renderer source)
     {
         if (ReferenceEquals(source, null) || !projectedSources.TryGetValue(source, out int owners)) return;
-        if (owners <= 1) projectedSources.Remove(source);
+        if (owners <= 1)
+        {
+            projectedSources.Remove(source);
+            projectedSourceOriginalForceOff.Remove(source);
+            projectedSourceLogicalForceOff.Remove(source);
+        }
         else projectedSources[source] = owners - 1;
     }
 
@@ -480,8 +732,26 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         if (target.useRendererSilhouette != source.useRendererSilhouette) target.useRendererSilhouette = source.useRendererSilhouette;
     }
 
-    private void OnDestroy()
+    /// <summary>立即恢复源表现并撤销监听，延迟销毁不会让源对象消失一帧。</summary>
+    public void Release()
     {
+        if (released) return;
+        ReleaseBindings();
+        gameObject.SetActive(false);
+        if (Application.isPlaying) Destroy(gameObject);
+        else DestroyImmediate(gameObject);
+    }
+
+    private void OnDestroy() => ReleaseBindings();
+
+    private void ReleaseBindings()
+    {
+        if (released) return;
+        RemoveLocalSortingUnits();
+        RestoreEscapedSortingNodes();
+        if (sortingDomain != null) { sortingDomain.DetachProjection(this); sortingDomain.Disposing -= OnSortingDomainDisposing; }
+        sortingDomain = null;
+        released = true;
         if (!ReferenceEquals(sourceItem, null) && itemProjectionOwners.TryGetValue(sourceItem, out var owners))
         {
             owners.Remove(this);
@@ -511,7 +781,7 @@ internal sealed class WorldPresentationHierarchyWatcher : MonoBehaviour
     private void OnTransformChildrenChanged() => Invalidate();
     private void OnDisable() => Invalidate();
     private void OnDestroy() => Invalidate();
-    private void Invalidate()
+    internal void Invalidate()
     {
         foreach (WorldPresentationProjection owner in owners)
             if (owner != null) owner.InvalidateHierarchy();

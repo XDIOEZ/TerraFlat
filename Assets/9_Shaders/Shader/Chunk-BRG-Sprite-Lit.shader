@@ -23,7 +23,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
 
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" "DisableBatching"="True" }
         Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
@@ -37,6 +37,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
             #pragma multi_compile_local _ _CHUNK_GRASS_SWAY
             #pragma multi_compile_local _ _CHUNK_MECHANICAL
             #pragma multi_compile_local _ _CHUNK_RESOURCE
@@ -54,6 +55,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 float3 positionOS : POSITION;
                 half4 color : COLOR;
                 float2 uv : TEXCOORD0;
+                CHUNK_NATIVE_ATTRIBUTES
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -65,6 +67,11 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 half4 tint : COLOR;
                 #if defined(_CHUNK_RESOURCE)
                 float resourceLocalY : TEXCOORD4;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                nointerpolation float4 nativeData0 : TEXCOORD5;
+                nointerpolation float4 nativeData1 : TEXCOORD6;
+                nointerpolation float4 nativeFlowY : TEXCOORD7;
+                #endif
                 #endif
                 #if defined(_CHUNK_MECHANICAL)
                 float4 mechanicalAnimation : TEXCOORD2;
@@ -122,7 +129,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                ChunkBRGInstanceData instanceData = LoadChunkBRGInstanceData();
+                ChunkBRGInstanceData instanceData = LOAD_CHUNK_VERTEX_DATA(input);
                 float3 positionOS = input.positionOS;
                 #if defined(_CHUNK_MECHANICAL)
                 positionOS = AnimateChunkMechanicalVertex(positionOS, instanceData);
@@ -135,16 +142,31 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 if (instanceData.data0.z > 0.5)
                 {
                     // 根部保留负高度，允许投影与主体重叠。
+                    #if defined(_CHUNK_NATIVE_BATCH)
+                    float3 logical = TransformWorldToObject(positionWS);
+                    float scale = length(TransformObjectToWorldDir(float3(0, 1, 0), false));
+                    float height = (logical.y - instanceData.flowX.y) * scale;
+                    float2 anchor = TransformObjectToWorld(float3(logical.x, instanceData.flowX.y, logical.z)).xy;
+                    float maximumHeight = instanceData.flowX.w * scale;
+                    #else
                     float height = positionWS.y - instanceData.flowX.y;
+                    float2 anchor = float2(positionWS.x, instanceData.flowX.y);
+                    float maximumHeight = instanceData.flowX.w;
+                    #endif
                     float2 displacement = _WorldSunShadow.xy * max(0, instanceData.flowX.z);
                     displacement *= min(1, _WorldSunShadow.z /
-                        max(0.0001, length(displacement) * instanceData.flowX.w));
-                    positionWS.xy = float2(positionWS.x, instanceData.flowX.y) + displacement * height;
+                        max(0.0001, length(displacement) * maximumHeight));
+                    positionWS.xy = anchor + displacement * height;
                 }
                 #endif
                 Varyings output = (Varyings)0;
                 #if defined(_CHUNK_RESOURCE)
                 output.resourceLocalY = input.positionOS.y;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                output.nativeData0 = instanceData.data0;
+                output.nativeData1 = instanceData.data1;
+                output.nativeFlowY = instanceData.flowY;
+                #endif
                 #endif
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.uv = input.uv;
@@ -169,6 +191,11 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 #endif
                 #if defined(_CHUNK_RESOURCE)
                 ChunkBRGInstanceData resource = LoadChunkBRGInstanceData();
+                #if defined(_CHUNK_NATIVE_BATCH)
+                resource.data0 = input.nativeData0;
+                resource.data1 = input.nativeData1;
+                resource.flowY = input.nativeFlowY;
+                #endif
                 if (resource.data0.z > 0.5)
                 {
                     half coverage = SampleSunShadowCoverage(uv, abs(_MainTex_TexelSize.xy),
@@ -199,11 +226,12 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
             #pragma multi_compile_local _ _CHUNK_GRASS_SWAY
             #pragma multi_compile_local _ _CHUNK_MECHANICAL
             #pragma multi_compile_local _ _CHUNK_RESOURCE
             #include "ChunkBRGInstance.hlsl"
-            struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; CHUNK_NATIVE_ATTRIBUTES UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings
             {
                 float4 positionCS:SV_POSITION;
@@ -211,6 +239,11 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 half4 tint:COLOR;
                 #if defined(_CHUNK_RESOURCE)
                 float resourceLocalY:TEXCOORD4;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                nointerpolation float4 nativeData0:TEXCOORD5;
+                nointerpolation float4 nativeData1:TEXCOORD6;
+                nointerpolation float4 nativeFlowY:TEXCOORD7;
+                #endif
                 #endif
                 #if defined(_CHUNK_MECHANICAL)
                 float4 mechanicalAnimation:TEXCOORD2;
@@ -252,7 +285,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                ChunkBRGInstanceData d = LoadChunkBRGInstanceData();
+                ChunkBRGInstanceData d = LOAD_CHUNK_VERTEX_DATA(input);
                 float3 positionOS = input.positionOS;
                 #if defined(_CHUNK_MECHANICAL)
                 positionOS = AnimateChunkMechanicalVertex(positionOS, d);
@@ -264,16 +297,31 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 #if defined(_CHUNK_RESOURCE)
                 if (d.data0.z > 0.5)
                 {
+                    #if defined(_CHUNK_NATIVE_BATCH)
+                    float3 logical = TransformWorldToObject(positionWS);
+                    float scale = length(TransformObjectToWorldDir(float3(0, 1, 0), false));
+                    float height = (logical.y - d.flowX.y) * scale;
+                    float2 anchor = TransformObjectToWorld(float3(logical.x, d.flowX.y, logical.z)).xy;
+                    float maximumHeight = d.flowX.w * scale;
+                    #else
                     float height = positionWS.y - d.flowX.y;
+                    float2 anchor = float2(positionWS.x, d.flowX.y);
+                    float maximumHeight = d.flowX.w;
+                    #endif
                     float2 displacement = _WorldSunShadow.xy * max(0, d.flowX.z);
                     displacement *= min(1, _WorldSunShadow.z /
-                        max(0.0001, length(displacement) * d.flowX.w));
-                    positionWS.xy = float2(positionWS.x, d.flowX.y) + displacement * height;
+                        max(0.0001, length(displacement) * maximumHeight));
+                    positionWS.xy = anchor + displacement * height;
                 }
                 #endif
                 Varyings o = (Varyings)0;
                 #if defined(_CHUNK_RESOURCE)
                 o.resourceLocalY = input.positionOS.y;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                o.nativeData0 = d.data0;
+                o.nativeData1 = d.data1;
+                o.nativeFlowY = d.flowY;
+                #endif
                 #endif
                 o.positionCS = TransformWorldToHClip(positionWS);
                 o.uv = input.uv;
@@ -294,6 +342,11 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 #endif
                 #if defined(_CHUNK_RESOURCE)
                 ChunkBRGInstanceData resource = LoadChunkBRGInstanceData();
+                #if defined(_CHUNK_NATIVE_BATCH)
+                resource.data0 = input.nativeData0;
+                resource.data1 = input.nativeData1;
+                resource.flowY = input.nativeFlowY;
+                #endif
                 if (resource.data0.z > 0.5)
                 {
                     half coverage = SampleSunShadowCoverage(uv, abs(_MainTex_TexelSize.xy),

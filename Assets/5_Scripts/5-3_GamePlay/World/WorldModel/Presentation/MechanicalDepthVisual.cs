@@ -23,6 +23,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     private int sortingLayerId, sortingOrder;
     private bool highlighted, disposed;
     private bool submerged, groundSorting, connectorSorting, groundConnection, sortingConfigured;
+    private bool emissionDetachedForRegroup, combustionDetachedForRegroup;
     private ItemVisualDefinitionDto configuredVisual;
     internal bool RequiresSubmergedSurfaceRefresh => owner != null && submerged != owner.IsBuildingSubmergedAtWorldAnchor(transform.position);
     private MachineEntity tankEntity;
@@ -84,6 +85,28 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         if (!facilityCombustionTouched) facilityCombustion?.SetCombustionActive(false);
         if (!facilityCombustionTouched) ReleaseFacilityAudio();
         EndLightingUpdate();
+    }
+
+    // 行重组前暂存附属表现，避免旧排序根销毁时连同粒子和发光一起销毁。
+    internal void DetachDepthSortingAttachments()
+    {
+        emissionDetachedForRegroup = poweredEmission != null && poweredEmission.transform.parent != transform;
+        combustionDetachedForRegroup = facilityCombustion != null && facilityCombustion.transform.parent != transform;
+        if (emissionDetachedForRegroup) poweredEmission.transform.SetParent(transform, true);
+        if (combustionDetachedForRegroup) facilityCombustion.transform.SetParent(transform, true);
+    }
+
+    internal void RestoreDepthSortingAttachments()
+    {
+        PartVisual body = parts[facilityBodyPart];
+        Transform sortingRoot = body?.SubmittedRenderer?.GetPartSortingRoot(
+            ChunkDepthMeshRenderer.MachineDomain, entityId, body.Id);
+        if (sortingRoot != null)
+        {
+            if (emissionDetachedForRegroup && poweredEmission != null) poweredEmission.transform.SetParent(sortingRoot, true);
+            if (combustionDetachedForRegroup && facilityCombustion != null) facilityCombustion.transform.SetParent(sortingRoot, true);
+        }
+        emissionDetachedForRegroup = combustionDetachedForRegroup = false;
     }
     internal void SetPartTint(int index, Color tint)
     {

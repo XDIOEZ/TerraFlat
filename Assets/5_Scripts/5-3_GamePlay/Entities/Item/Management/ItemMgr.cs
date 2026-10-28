@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 // AI-Context: Item 实例、运行时注册和网络玩家副本的生命周期管理器；远程视觉物不得进入本地 Tick/存档索引。
@@ -164,6 +165,12 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         // 不在 Awake 中自动加载场景物品，避免破坏游戏生命周期。手动或在合适的时机调用 LoadAllRuntimeItems()
     }
 
+    private void OnEnable()
+    {
+        RenderPipelineManager.beginContextRendering -= PresentDroppedItemsAfterWorldProjection;
+        RenderPipelineManager.beginContextRendering += PresentDroppedItemsAfterWorldProjection;
+    }
+
     [Button("加载所有Runtime物品")]
     public void LoadAllRuntimeItems()
     {
@@ -194,6 +201,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     protected override void OnDestroy()
     {
+        RenderPipelineManager.beginContextRendering -= PresentDroppedItemsAfterWorldProjection;
         ClearPreparedItems();
         Item.RuntimeStructureChanged -= TrackWorldItemMatter;
         RuntimeItemRegistered -= TrackWorldItemMatter;
@@ -218,6 +226,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     private void OnDisable()
     {
+        RenderPipelineManager.beginContextRendering -= PresentDroppedItemsAfterWorldProjection;
         ClearWorldItemMatter();
         CompletePerceptionBatch(false);
     }
@@ -277,10 +286,16 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
             return;
 
         PresentWorldItemMatter();
-        using (DroppedPresentMarker.Auto())
-            DroppedItemService.Present();
         using (NaturalPresentMarker.Auto())
             FlatWorld.NaturalEntities.NaturalEntityEcsService.Present();
+    }
+
+    // 等全部世界投影同步完再提交掉落物，避免读取上一帧船姿。
+    private void PresentDroppedItemsAfterWorldProjection(ScriptableRenderContext context, List<Camera> cameras)
+    {
+        if (!IsWorldItemRuntimeActive()) return;
+        using (DroppedPresentMarker.Auto())
+            DroppedItemService.Present();
     }
 
     /// <summary>仅在真实游戏世界中调度 Item，菜单与退出回收阶段不允许旧实体继续运行。</summary>

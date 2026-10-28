@@ -31,6 +31,28 @@ test.runtime("space", "ship_interior_world", {}, function(data)
 
     assert(data.projectionRoundTrip and data.projectionSeparatesLocalFromDisplay and data.surfacePresentationRemainsVisible,
         "船内本地坐标与画面投影必须可逆且分属各自坐标系")
+    local domains = data.sortingDomains
+    assert(domains and domains.category == "projected-world" and domains.firstDomainKeyMatchesCategory and
+        domains.secondDomainKeyMatchesCategory and domains.distinctShipDomains,
+        "独立船世界没有使用正式排序类别，或两个船域发生混用")
+    assert(domains.passengerEnteredFirstDomain and domains.passengerMatchesShipPose and
+        domains.passengerSwitchedToSecondDomain and domains.passengerReturnedToFirstDomain and
+        domains.passengerProjectionInFirstDomain and domains.passengerKeepsLocalLayerAndPose,
+        "乘员投影没有跟随船姿单次变换、保留局部键或在切船时切换排序域")
+    assert(domains.firstChunkAddressCount > 1 and domains.sameShipChunksShareDomain and
+        domains.firstChunkProjectionCount > 1 and domains.firstNativeDomainOwnerCount > 1 and
+        domains.firstNativeDomainOwnerMismatches == 0 and domains.nativeProjectedVisualsPresent,
+        "跨区块的船内地板或 BRG Owner 没有共享同一外层排序域")
+    assert(domains.differentShipsKeepSeparateDomains and domains.secondChunkAddressCount > 0 and
+        domains.secondNativeDomainOwnerMismatches == 0 and domains.firstItemParentMatchesDomain and
+        domains.secondItemParentMatchesDomain,
+        "不同船的原生区块与普通 Item 没有归属各自排序域")
+    assert(domains.ordinaryItemKeepsLocalLayerAndPose and domains.pipeKeepsLocalLayerAndPose and
+        domains.machineKeepsLocalLayerAndPose and domains.mechanicalKeepsLocalLayerAndPose and
+        domains.passengerKeepsLocalLayerAndPose,
+        "普通物品、管线、机器、传动轴或乘员进入外层域时改变了图层或船姿位置")
+    assert(domains.projectedFloorRendererCount > 0 and domains.projectedFloorBelowPassenger,
+        "同域 BRG 地板没有保持在乘员角色下方")
     assert(data.machineWorldKey == first.worldKey and data.machineInstancePreserved and data.machinePayloadPreserved,
         "普通机器及其实际载荷必须由本船世界和同一实例持有")
     assert(data.fluidPipeWorldKey == first.worldKey and data.electricalWireWorldKey == first.worldKey and
@@ -60,7 +82,9 @@ test.runtime("space", "ship_interior_world", {}, function(data)
     assert(data.identityAnchorPreservedAcrossStructureChanges and data.splitDamageAccepted and data.splitFloorDestroyed and
         data.splitMovedPlayerToLocalWorld and
         data.transferHadNoDuplicate and data.fragmentPayloadPreserved and
-        data.destroyReleasedWorlds and data.fixtureDropsRemoved,
+        data.destroyReleasedWorlds and data.fixtureDropsRemoved and
+        domains.releasedDomainsDisposed and domains.releasedDomainsUnregistered and
+        domains.nativeOwnersReleased and domains.passengerProjectionReleased and domains.sourceRendererRestored,
         "结构拆分必须移交乘员与真实载荷，销毁和收尾不能复制实体或泄漏世界")
-    return "覆盖两艘船的本地坐标、真实区块与物理隔离、Item/机器归属、投影、门与武器伤害、零重力移动、土层事务、无视图模拟和销毁清理。起降接管另由 ship_landing_gameplay 覆盖。"
+    return "覆盖两艘船的本地坐标、跨区块排序域与原生 BRG、物理隔离、Item/机器局部键、乘员船姿投影、门与武器伤害、零重力移动、土层事务、无视图模拟和域清理。账本外联机乘员与真实起降接管仍由实机/ship_landing_gameplay覆盖。"
 end, "船内独立世界与普通物品/交互")

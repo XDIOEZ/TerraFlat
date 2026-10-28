@@ -35,7 +35,11 @@ namespace FlatWorld.Spaceflight
             {
                 sortingGroup = GetComponent<SortingGroup>();
                 ownsGroup = sortingGroup == null;
-                if (ownsGroup) { sortingGroup = gameObject.AddComponent<SortingGroup>(); sortingGroup.enabled = false; }
+                if (ownsGroup)
+                {
+                    sortingGroup = gameObject.AddComponent<SortingGroup>(); sortingGroup.enabled = false;
+                    WorldPresentationProjection.NotifySourceSortingStructureChanged(transform);
+                }
             }
             if (!sortingApplied)
             {
@@ -197,6 +201,7 @@ namespace FlatWorld.Spaceflight
             surfacePassengers.Remove(player);
             ShipSurfacePresentation.ClearPassenger(player != null ? player.gameObject : null);
             if (player != null) ShipSurfacePresentation.SetElevated(player.gameObject, false, ShipSurfacePresentation.PassengerCategory);
+            ReleasePassengerInteriorProjection(player);
         }
 
         private void ReleasePassengerSurfacePresentation()
@@ -217,15 +222,16 @@ namespace FlatWorld.Spaceflight
                 (float)ShipLandingGuidance.SurfaceVisualRise(passenger.SurfaceHeight), passenger.SurfaceHeight > 0d);
         }
 
-        private void SetPassengerSurfacePose(Player player, Vector2 position, Vector2 authoritativePosition, float rise, bool elevated)
+        private void SetPassengerSurfacePose(Player player, Vector2 position, Vector2 authoritativePosition, float rise,
+            bool elevated, bool inSortingDomain = false)
         {
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
             ShipSurfacePresentation.SetPassengerPose(player.gameObject, mover?.rb, position, rise);
             Vector3 savedPosition = IsSpaceView ? authoritativePosition : WorldLocalPresentation.ToLogical(authoritativePosition);
             savedPosition.z = player.transform.position.z;
             player.itemData.transform.position = savedPosition;
-            ShipSurfacePresentation.SetElevated(player.gameObject, elevated, ShipSurfacePresentation.PassengerCategory);
-            if (rise > 0f || elevated) surfacePassengers.Add(player);
+            ShipSurfacePresentation.SetElevated(player.gameObject, elevated && !inSortingDomain, ShipSurfacePresentation.PassengerCategory);
+            if (rise > 0f || elevated || inSortingDomain) surfacePassengers.Add(player);
             else surfacePassengers.Remove(player);
             ItemMgr.Instance.NotifyRuntimeItemMoved(player);
         }

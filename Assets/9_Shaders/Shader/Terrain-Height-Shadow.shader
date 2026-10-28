@@ -14,7 +14,7 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
 
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" "DisableBatching"="True" }
         // 乘到已受光的地表颜色上，夜里不会把暗地面反而染亮。
         Blend DstColor Zero, Zero One
         Cull Off
@@ -29,6 +29,7 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
             float3 positionOS : POSITION;
             half4 color : COLOR;
             float2 uv : TEXCOORD0;
+            CHUNK_NATIVE_ATTRIBUTES
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
 
@@ -65,7 +66,7 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
         Varyings Vert(Attributes input)
         {
             UNITY_SETUP_INSTANCE_ID(input);
-            ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
+            ChunkBRGInstanceData data = LOAD_CHUNK_VERTEX_DATA(input);
             float3 positionWS = TransformChunkBRGVertex(input.positionOS, data);
             Varyings output = (Varyings)0;
             output.positionCS = TransformWorldToHClip(positionWS);
@@ -108,6 +109,7 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -125,6 +127,7 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);

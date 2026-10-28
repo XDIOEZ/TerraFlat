@@ -19,14 +19,21 @@ namespace FlatWorld.AIECS
         private readonly GameObject root;
         private readonly Mesh mesh;
         private readonly MeshRenderer renderer;
+        private readonly int renderQueue;
+        private bool sortingKeyRegistered;
         private readonly List<Vector3> positions = new();
         private readonly List<Vector2> uvs = new();
         private readonly List<Color> colors = new();
         private readonly List<Vector4> water = new();
         private readonly List<int> indices = new();
+        private static readonly int WaterSourceMatrixId = Shader.PropertyToID("_AiecsWaterWorldToSource");
+        private static readonly int WaterUsesSourceId = Shader.PropertyToID("_AiecsWaterUseSource");
+        private MaterialPropertyBlock waterProperties;
+        private Matrix4x4 lastWaterProjection;
+        private bool waterUsesSource;
 
         /// <summary>创建本原型拥有的原生 Lit Renderer，并显式关联原型所属场景。</summary>
-        internal AiecsRenderBatch(Scene scene, Material material)
+        internal AiecsRenderBatch(Scene scene, Material material, Transform parent = null)
         {
             root = new GameObject("AIECS 连续绘制批次") { hideFlags = HideFlags.DontSave };
             int runtimeLayer = LayerMask.NameToLayer(RuntimeLayerName);
@@ -34,11 +41,13 @@ namespace FlatWorld.AIECS
                 throw new InvalidOperationException($"项目缺少运行时 Layer：{RuntimeLayerName}");
             root.layer = runtimeLayer;
             SceneManager.MoveGameObjectToScene(root, scene);
+            if (parent != null) root.transform.SetParent(parent, false);
             mesh = new Mesh { name = "AIECS 复用精灵网格", indexFormat = IndexFormat.UInt32 };
             mesh.MarkDynamic();
             root.AddComponent<MeshFilter>().sharedMesh = mesh;
             renderer = root.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = material;
+            renderQueue = material.renderQueue;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             renderer.lightProbeUsage = LightProbeUsage.Off;
@@ -55,22 +64,36 @@ namespace FlatWorld.AIECS
             indices.Clear();
         }
 
+        // 船体旋转时水线仍按源世界坐标计算，普通地表不设置属性块。
+        internal void SetWaterProjection(bool projected, Matrix4x4 displayToWorld)
+        {
+            if (waterUsesSource == projected && (!projected || lastWaterProjection.Equals(displayToWorld))) return;
+            waterProperties ??= new MaterialPropertyBlock();
+            waterProperties.SetFloat(WaterUsesSourceId, projected ? 1f : 0f);
+            if (projected) waterProperties.SetMatrix(WaterSourceMatrixId, displayToWorld);
+            renderer.SetPropertyBlock(waterProperties);
+            waterUsesSource = projected;
+            lastWaterProjection = displayToWorld;
+        }
+
         /// <summary>追加一只生物的四边形，保持帧尺寸、Pivot、镜像与原始局部姿态。</summary>
         internal void Append(AiecsPrototypeActor actor, AiecsActorVisual definition,
-            AiecsAnimationFrame frame, AiecsSpriteGeometry sprite, float surface, float tint, bool mirror = false, Color? color = null)
+            AiecsAnimationFrame frame, AiecsSpriteGeometry sprite, float surface, float tint, bool mirror = false,
+            Color? color = null, Matrix4x4? worldToDisplay = null)
         {
             int offset = positions.Count;
             Rect rect = sprite.LocalRect;
             Rect uv = sprite.AtlasRect;
             float height = Mathf.Max(0.0001f, definition.BodyYRange.y - definition.BodyYRange.x);
-            var parameters = new Vector4(actor.WaterBlend,
-                actor.Position.y + definition.BodyYRange.x + height * surface, height, tint);
+            float waterY = actor.Position.y + definition.BodyYRange.x + height * surface;
+            var parameters = new Vector4(actor.WaterBlend, waterY, height, tint);
             for (int corner = 0; corner < 4; corner++)
             {
                 bool right = corner == 1 || corner == 2;
                 bool top = corner >= 2;
                 Vector3 local = new Vector3(right ? rect.xMax : rect.xMin, top ? rect.yMax : rect.yMin, 0f);
-                positions.Add(TransformPoint(local, actor, definition, frame, mirror));
+                Vector3 point = TransformPoint(local, actor, definition, frame, mirror);
+                positions.Add(worldToDisplay.HasValue ? worldToDisplay.Value.MultiplyPoint3x4(point) : point);
                 uvs.Add(new Vector2(right ? uv.xMax : uv.xMin, top ? uv.yMax : uv.yMin));
                 colors.Add(color ?? definition.Color);
                 water.Add(parameters);
@@ -114,6 +137,20 @@ namespace FlatWorld.AIECS
             renderer.sortingOrder = order;
             renderer.enabled = positions.Count != 0;
             return positions.Count * (12 + 8 + 16 + 16) + indices.Count * 4;
+        }
+
+        internal void SubmitSortingKey(Action<Renderer, int, int, int, float> apply, int layer, int order, float footY)
+        {
+            if (apply == null || renderer == null) return;
+            apply(renderer, layer, order, renderQueue, footY);
+            sortingKeyRegistered = true;
+        }
+
+        internal void RemoveSortingKey(Action<Renderer> remove)
+        {
+            if (!sortingKeyRegistered) return;
+            if (renderer != null) remove?.Invoke(renderer);
+            sortingKeyRegistered = false;
         }
 
         /// <summary>隐藏本帧没有使用的池化批次。</summary>

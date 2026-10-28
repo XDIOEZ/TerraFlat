@@ -253,14 +253,12 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         #endif
 
         // 两种批次共用外观分支，轻量档直接跳过完整波光与岸线噪声求解。
-        WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
+        WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth, ChunkBRGInstanceData data)
         {
             #if defined(FLATWORLD_WATER_LOW_SPEC)
-            ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             return CalculateLowSpecWaterSurface(positionWS, depth,
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
             #else
-            ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
             WaterSurfaceData surface = (WaterSurfaceData)0;
@@ -277,12 +275,11 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #endif
         }
 
-        half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS)
+        half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS, ChunkBRGInstanceData data)
         {
             #if defined(FLATWORLD_WATER_LOW_SPEC)
             return ApplyLowSpecWaterShore(sourceColor, recess);
             #else
-            ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
             return ApplyShore(sourceColor, recess, positionWS, motion);
@@ -292,7 +289,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
 
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" "DisableBatching"="True" }
         Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
@@ -306,6 +303,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
             #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
@@ -313,8 +311,18 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_3 __
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
 
-            struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1; half4 shore:TEXCOORD2; half4 depth:TEXCOORD3; float2 positionWS:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; CHUNK_NATIVE_ATTRIBUTES UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings
+            {
+                float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1;
+                half4 shore:TEXCOORD2; half4 depth:TEXCOORD3; float2 positionWS:TEXCOORD4; half4 tint:COLOR;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                nointerpolation float4 nativeFlowX:TEXCOORD5;
+                nointerpolation float4 nativeFlowY:TEXCOORD6;
+                nointerpolation float nativeKind:TEXCOORD7;
+                #endif
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
             #if USE_SHAPE_LIGHT_TYPE_0
             SHAPE_LIGHT(0)
             #endif
@@ -331,7 +339,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                ChunkBRGInstanceData d = LoadChunkBRGInstanceData();
+                ChunkBRGInstanceData d = LOAD_CHUNK_VERTEX_DATA(input);
                 float3 positionWS = TransformChunkBRGVertex(input.positionOS, d);
                 Varyings o = (Varyings)0;
                 o.positionCS = TransformWorldToHClip(positionWS);
@@ -339,6 +347,9 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 o.uv = input.uv;
                 o.shore = d.data0;
                 o.depth = d.data1;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                o.nativeFlowX = d.flowX; o.nativeFlowY = d.flowY; o.nativeKind = d.transform0.w;
+                #endif
                 o.tint = input.color * d.tint;
                 o.lightingUV = half2(ComputeScreenPos(o.positionCS / o.positionCS.w).xy);
                 UNITY_TRANSFER_INSTANCE_ID(input, o);
@@ -351,7 +362,11 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
+                float2 logicalPosition = input.positionWS;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                logicalPosition = TransformWorldToObject(float3(input.positionWS, 0)).xy;
+                #endif
+                half continuousDepth = SampleContinuousLiquidDepthCorners(logicalPosition, input.depth);
                 #if defined(FLATWORLD_WATER_STYLIZED)
                 half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
                 #else
@@ -359,10 +374,14 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 #endif
                 // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
                 main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
-                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth);
+                ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
+                #if defined(_CHUNK_NATIVE_BATCH)
+                data.flowX = input.nativeFlowX; data.flowY = input.nativeFlowY; data.transform0.w = input.nativeKind;
+                #endif
+                WaterSurfaceData surface = CalculateChunkWaterSurface(logicalPosition, input.lightingUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
-                half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
-                main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
+                half recess = ComputeShoreRecess(logicalPosition, DecodeWaterShoreMask(input.shore));
+                main.rgb = ApplyChunkWaterShore(main.rgb, recess, logicalPosition, data);
                 #if defined(FLATWORLD_WATER_LOW_SPEC)
                 half4 mask = half4(1, 1, 1, 1);
                 #else
@@ -387,13 +406,24 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
             #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
-            struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 shore:TEXCOORD1; half4 depth:TEXCOORD2; float2 positionWS:TEXCOORD3; float2 screenUV:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; CHUNK_NATIVE_ATTRIBUTES UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings
+            {
+                float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 shore:TEXCOORD1;
+                half4 depth:TEXCOORD2; float2 positionWS:TEXCOORD3; float2 screenUV:TEXCOORD4; half4 tint:COLOR;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                nointerpolation float4 nativeFlowX:TEXCOORD5;
+                nointerpolation float4 nativeFlowY:TEXCOORD6;
+                nointerpolation float nativeKind:TEXCOORD7;
+                #endif
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                ChunkBRGInstanceData d = LoadChunkBRGInstanceData();
+                ChunkBRGInstanceData d = LOAD_CHUNK_VERTEX_DATA(input);
                 float3 positionWS = TransformChunkBRGVertex(input.positionOS, d);
                 Varyings o = (Varyings)0;
                 o.positionCS = TransformWorldToHClip(positionWS);
@@ -401,6 +431,9 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 o.uv = input.uv;
                 o.shore = d.data0;
                 o.depth = d.data1;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                o.nativeFlowX = d.flowX; o.nativeFlowY = d.flowY; o.nativeKind = d.transform0.w;
+                #endif
                 o.tint = input.color * d.tint;
                 float4 screenPosition = ComputeScreenPos(o.positionCS);
                 o.screenUV = screenPosition.xy / max(screenPosition.w, 0.0001);
@@ -411,7 +444,11 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
+                float2 logicalPosition = input.positionWS;
+                #if defined(_CHUNK_NATIVE_BATCH)
+                logicalPosition = TransformWorldToObject(float3(input.positionWS, 0)).xy;
+                #endif
+                half continuousDepth = SampleContinuousLiquidDepthCorners(logicalPosition, input.depth);
                 #if defined(FLATWORLD_WATER_STYLIZED)
                 half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
                 #else
@@ -419,10 +456,14 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 #endif
                 // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
                 main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
-                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth);
+                ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
+                #if defined(_CHUNK_NATIVE_BATCH)
+                data.flowX = input.nativeFlowX; data.flowY = input.nativeFlowY; data.transform0.w = input.nativeKind;
+                #endif
+                WaterSurfaceData surface = CalculateChunkWaterSurface(logicalPosition, input.screenUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
-                half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
-                main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
+                half recess = ComputeShoreRecess(logicalPosition, DecodeWaterShoreMask(input.shore));
+                main.rgb = ApplyChunkWaterShore(main.rgb, recess, logicalPosition, data);
                 main.rgb = ApplyMoonReflection(main.rgb, surface.moonReflection);
                 return main;
             }

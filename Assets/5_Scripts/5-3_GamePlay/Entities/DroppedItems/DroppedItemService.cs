@@ -610,8 +610,9 @@ public static partial class DroppedItemService
         foreach (DropWorld world in worlds.Values)
         {
             bool projected = WorldPresentationTransformRegistry.TryGet(world.Key, out Matrix4x4 matrix, out bool visible);
+            WorldPresentationTransformRegistry.TryGetSortingDomain(world.Key, out WorldPresentationSortingDomain sortingDomain);
             bool show = UsesLightweightDrops && (projected ? visible : world.Key == local);
-            world.Runtime?.Present(show ? Camera.main : null, projected ? matrix : Matrix4x4.identity);
+            world.Runtime?.Present(show ? Camera.main : null, projected ? matrix : Matrix4x4.identity, sortingDomain);
         }
     }
 

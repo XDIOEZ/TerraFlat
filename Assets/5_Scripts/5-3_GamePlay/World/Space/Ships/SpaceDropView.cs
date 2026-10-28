@@ -6,11 +6,15 @@ namespace FlatWorld.Spaceflight
     {
         #region 只显示冷载荷的掉落外壳
         private bool? spaceSorting;
-        public void SynchronizeSpaceSorting(bool inSpace)
+        private bool? shipSorting;
+        private int visualLayer, visualOrder;
+        public void SynchronizeSpaceSorting(bool inSpace, bool supportedByShip = false)
         {
-            if (spaceSorting == inSpace || Sprite == null) return;
+            if (spaceSorting == inSpace && shipSorting == supportedByShip || Sprite == null) return;
             spaceSorting = inSpace;
-            WorldRenderingManager.Instance.ApplyRendererSorting(Sprite, WorldSortingManager.WorldItemCategory, inSpace ? 2 : 0);
+            shipSorting = supportedByShip;
+            if (supportedByShip) { Sprite.sortingLayerID = visualLayer; Sprite.sortingOrder = visualOrder; }
+            else WorldRenderingManager.Instance.ApplyRendererSorting(Sprite, WorldSortingManager.WorldItemCategory, inSpace ? 2 : 0);
         }
         public void Initialize(ItemData payload, object owner)
         {
@@ -28,6 +32,7 @@ namespace FlatWorld.Spaceflight
             Sprite.sharedMaterial = visual.SpriteMaterial;
             Sprite.sortingLayerID = visual.Layer;
             Sprite.sortingOrder = visual.Order;
+            visualLayer = visual.Layer; visualOrder = visual.Order;
             // 不调用 Load 或 ModuleInit，气罐、机器和建筑能力只保存在冷数据里。
         }
         #endregion

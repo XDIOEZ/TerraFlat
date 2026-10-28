@@ -50,10 +50,11 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         // 正式结构服务先固定首块地板的身份，让右侧断片实际迁入新船世界。
         ShipStructureService.RebuildAndSplit(firstShip);
         string originalIdentityAnchor = firstShip.IdentityAnchorPieceId;
-        AddFloorLine(fixture, firstShip, 1, 8);
+        AddFloorLine(fixture, firstShip, 1, PlanetData.DefaultChunkDimension + 1);
         AddFloorLine(fixture, secondShip, 1, 8);
         AddShipPiece(fixture, "ShipFloor_Iron", new Vector2(7.5f, 1.5f), firstShip);
         AddShipPiece(fixture, "ShipFloor_Iron", new Vector2(8.5f, -.5f), firstShip);
+        ShipPieceState mechanicalShaftPiece = AddShipPiece(fixture, "Shaft_Wood", new Vector2(9.5f, .5f), firstShip);
         AddShipPiece(fixture, "ShipConsole", new Vector2(7.5f, 1.5f), firstShip);
         AddShipPiece(fixture, "ShipChemicalEngine", new Vector2(8.5f, -.5f), firstShip);
 
@@ -164,6 +165,9 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         result["walkingGravityAvailable"] = session.HasArtificialGravity(firstShip, .5d, .5d) ||
             firstFlight?.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
 
+        WorldPresentationSortingDomain firstSortingDomain = null, secondSortingDomain = null;
+        bool passengerEnteredFirstDomain = false, passengerMatchesShipPose = false;
+        bool passengerSwitchedToSecondDomain = false, passengerReturnedToFirstDomain = false;
         SpacePassengerState passenger = session.GetPassenger(player);
         fixture.Passenger = passenger;
         passenger.LocalX = 1.5d;
@@ -171,6 +175,13 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         passenger.ShipId = firstShip.ShipId;
         passenger.Supported = true;
         bool entered = session.TryTransferPassengerToShipInteriorWorld(player, passenger, firstShip);
+        if (session.TryGetShipPassengerProjection(player, out WorldPresentationProjection firstPassengerProjection) &&
+            WorldPresentationTransformRegistry.TryGetSortingDomain(firstWorld.WorldKey, out firstSortingDomain))
+        {
+            passengerEnteredFirstDomain = ReferenceEquals(firstPassengerProjection.transform.parent, firstSortingDomain.Root);
+            passengerMatchesShipPose = session.TryGetShipInteriorPresentationPosition(player, out Vector2 expectedDisplayPosition) &&
+                Vector2.Distance(firstPassengerProjection.transform.position, expectedDisplayPosition) < .001f;
+        }
         Mod_Mover mover = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         Mod_GameController controller = player.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
         result["passengerOwnedLocalPhysics"] = entered && mover?.rb != null &&
@@ -251,6 +262,10 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             passenger.Supported = true;
             bool enteredUnpoweredInterior = session.TryTransferPassengerToShipInteriorWorld(
                 player, passenger, secondShip);
+            if (session.TryGetShipPassengerProjection(player, out WorldPresentationProjection secondPassengerProjection) &&
+                WorldPresentationTransformRegistry.TryGetSortingDomain(secondWorld.WorldKey, out secondSortingDomain))
+                passengerSwitchedToSecondDomain = ReferenceEquals(secondPassengerProjection.transform.parent, secondSortingDomain.Root) &&
+                    firstSortingDomain != null && firstSortingDomain.Root != secondSortingDomain.Root;
             double interiorGravity = session.GetShipInteriorWalkingGravity(secondShip, new Vector2(1.5f, .5f));
             bool delegated = !session.HandlePassengerInput(player, mover, controller,
                 Vector2.zero, 0f, Time.fixedDeltaTime);
@@ -268,6 +283,9 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             passenger.LocalY = .5d;
             passenger.Supported = true;
             session.TryTransferPassengerToShipInteriorWorld(player, passenger, firstShip);
+            if (session.TryGetShipPassengerProjection(player, out WorldPresentationProjection returnedPassengerProjection) &&
+                firstSortingDomain != null)
+                passengerReturnedToFirstDomain = ReferenceEquals(returnedPassengerProjection.transform.parent, firstSortingDomain.Root);
         }
         result["zeroGravityInteriorRetainsWorld"] = zeroGravityRetained;
         result["zeroGravityUsesNativeMoverVelocity"] = zeroGravityNativeVelocity;
@@ -276,10 +294,33 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         JObject terrainTransfer = TransferShipTerrainPayload(firstWorld, secondWorld, player);
         foreach (JProperty property in terrainTransfer.Properties()) result[property.Name] = property.Value.DeepClone();
 
+        JObject sortingDomains = CaptureShipInteriorSortingDomainSampling(session, player, firstShip, firstWorld,
+            secondWorld, firstDoor, mechanicalShaftPiece, out firstSortingDomain, out secondSortingDomain,
+            out Renderer sortingRestoreSource, out bool sortingRestoreOriginalForceOff);
+        sortingDomains["passengerEnteredFirstDomain"] = passengerEnteredFirstDomain;
+        sortingDomains["passengerMatchesShipPose"] = passengerMatchesShipPose;
+        sortingDomains["passengerSwitchedToSecondDomain"] = passengerSwitchedToSecondDomain;
+        sortingDomains["passengerReturnedToFirstDomain"] = passengerReturnedToFirstDomain;
+        result["sortingDomains"] = sortingDomains;
+
         session.ReleaseAllShipInteriorPresentations();
         JObject presentationCache = session.ShipViewCacheSnapshot();
         bool noItemProjection = (presentationCache["itemProjections"] as JArray)?.Count == 0;
         bool noChunkProjection = (presentationCache["chunkProjections"] as JArray)?.Count == 0;
+        sortingDomains["releasedDomainsDisposed"] = firstSortingDomain != null && firstSortingDomain.IsDisposed &&
+            secondSortingDomain != null && secondSortingDomain.IsDisposed;
+        sortingDomains["releasedDomainsUnregistered"] = !WorldPresentationTransformRegistry.TryGetSortingDomain(
+            firstWorld.WorldKey, out _) && !WorldPresentationTransformRegistry.TryGetSortingDomain(secondWorld.WorldKey, out _);
+        CountNativeChunkDomainOwners(firstWorld, firstSortingDomain, out int nativeOwnersAfterRelease,
+            out int nativeOwnerMismatchesAfterRelease, out _, out _);
+        CountNativeChunkDomainOwners(secondWorld, secondSortingDomain, out int secondNativeOwnersAfterRelease,
+            out int secondNativeOwnerMismatchesAfterRelease, out _, out _);
+        sortingDomains["nativeOwnersReleased"] = nativeOwnersAfterRelease == 0 && secondNativeOwnersAfterRelease == 0 &&
+            nativeOwnerMismatchesAfterRelease == 0 && secondNativeOwnerMismatchesAfterRelease == 0;
+        sortingDomains["passengerProjectionReleased"] = !session.TryGetShipPassengerProjection(player, out _);
+        sortingDomains["sourceRendererRestored"] = sortingRestoreSource != null &&
+            sortingRestoreSource.forceRenderingOff == GameplayWorldRegistry.GetPresentationRequiredForceRenderingOff(
+                sortingRestoreSource, sortingRestoreOriginalForceOff);
         JObject animalSmoke = SpawnAndSaveOrdinaryShipWorldChicken(session, firstWorld);
         foreach (JProperty property in animalSmoke.Properties()) result[property.Name] = property.Value.DeepClone();
         result["authoritySurvivedViewUnload"] = noItemProjection && noChunkProjection &&
@@ -361,6 +402,262 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
 
         result["fixtureDropsRemoved"] = fixture.RemoveFixtureDrops();
         completed(result);
+    }
+
+    private static JObject CaptureShipInteriorSortingDomainSampling(SpaceSession session, Player player,
+        ShipState firstShip, ShipInteriorWorldRuntime firstWorld, ShipInteriorWorldRuntime secondWorld,
+        Item ordinaryItem, ShipPieceState mechanicalShaftPiece,
+        out WorldPresentationSortingDomain firstDomain, out WorldPresentationSortingDomain secondDomain,
+        out Renderer sourceRendererForRelease, out bool sourceOriginalForceOff)
+    {
+        var result = new JObject();
+        WorldPresentationTransformRegistry.TryGetSortingDomain(firstWorld.WorldKey, out firstDomain);
+        WorldPresentationTransformRegistry.TryGetSortingDomain(secondWorld.WorldKey, out secondDomain);
+        firstDomain?.FlushLocalSortingKeys();
+        secondDomain?.FlushLocalSortingKeys();
+        int firstRootId = firstDomain?.Root != null ? firstDomain.Root.gameObject.GetInstanceID() : 0;
+        int secondRootId = secondDomain?.Root != null ? secondDomain.Root.gameObject.GetInstanceID() : 0;
+        WorldSortingManager.GetResourceSortingKey(WorldSortingManager.ProjectedWorldCategory,
+            out int expectedLayer, out int expectedOrder);
+        bool DomainKeyMatches(WorldPresentationSortingDomain domain)
+        {
+            UnityEngine.Rendering.SortingGroup group = domain?.Root != null
+                ? domain.Root.GetComponent<UnityEngine.Rendering.SortingGroup>() : null;
+            return group != null && group.sortingLayerID == expectedLayer && group.sortingOrder == expectedOrder;
+        }
+        bool firstDomainKeyMatches = DomainKeyMatches(firstDomain);
+        bool secondDomainKeyMatches = DomainKeyMatches(secondDomain);
+        var cache = session.ShipViewCacheSnapshot();
+        JArray itemRows = cache["itemProjections"] as JArray ?? new JArray();
+        JArray chunkRows = cache["chunkProjections"] as JArray ?? new JArray();
+        CountProjectionRows(itemRows, firstWorld.WorldKey, firstRootId, out int firstItemCount, out int firstItemMatchCount);
+        CountProjectionRows(itemRows, secondWorld.WorldKey, secondRootId, out int secondItemCount, out int secondItemMatchCount);
+        int firstChunkCount = CountProjectionRowsByParent(chunkRows, firstRootId);
+        int secondChunkCount = CountProjectionRowsByParent(chunkRows, secondRootId);
+        int firstAddressCount = CountChunkAddresses(firstWorld);
+        int secondAddressCount = CountChunkAddresses(secondWorld);
+        CountNativeChunkDomainOwners(firstWorld, firstDomain, out int firstNativeOwners, out int firstNativeOwnerMismatches,
+            out int firstNativeVisuals, out int firstNativeBatches);
+        CountNativeChunkDomainOwners(secondWorld, secondDomain, out int secondNativeOwners, out int secondNativeOwnerMismatches,
+            out int secondNativeVisuals, out int secondNativeBatches);
+
+        Item pipeItem = RequireInteriorItem(session, FindPieceByItemId(firstShip, "FluidPipe"));
+        Item cultivatorItem = RequireInteriorItem(session, FindPieceByItemId(firstShip, "SpaceCultivator"));
+        Item mechanicalItem = RequireInteriorItem(session, mechanicalShaftPiece);
+        bool ordinaryProjection = TryGetItemProjection(itemRows, ordinaryItem, firstWorld.WorldKey,
+            firstRootId, out WorldPresentationProjection ordinaryView);
+        bool pipeProjection = TryGetItemProjection(itemRows, pipeItem, firstWorld.WorldKey,
+            firstRootId, out WorldPresentationProjection pipeView);
+        bool machineProjection = TryGetItemProjection(itemRows, cultivatorItem, firstWorld.WorldKey,
+            firstRootId, out WorldPresentationProjection machineView);
+        bool mechanicalProjection = TryGetItemProjection(itemRows, mechanicalItem, firstWorld.WorldKey,
+            firstRootId, out WorldPresentationProjection mechanicalView);
+        bool ordinaryLayerAndPose = ordinaryProjection && ProjectionPreservesSourceLayerAndPose(
+            ordinaryView, ordinaryItem.transform, firstWorld.WorldKey, firstDomain,
+            out int ordinaryRendererCount) && ordinaryRendererCount > 0;
+        bool pipeLayerAndPose = pipeProjection && ProjectionPreservesSourceLayerAndPose(
+            pipeView, pipeItem.transform, firstWorld.WorldKey, firstDomain,
+            out int pipeRendererCount) && pipeRendererCount > 0;
+        bool machineLayerAndPose = machineProjection && ProjectionPreservesSourceLayerAndPose(
+            machineView, cultivatorItem.transform, firstWorld.WorldKey, firstDomain,
+            out int machineRendererCount) && machineRendererCount > 0;
+        bool mechanicalLayerAndPose = mechanicalProjection && ProjectionPreservesSourceLayerAndPose(
+            mechanicalView, mechanicalItem.transform, firstWorld.WorldKey, firstDomain,
+            out int mechanicalRendererCount) && mechanicalRendererCount > 0;
+        bool passengerProjection = session.TryGetShipPassengerProjection(player, out WorldPresentationProjection playerView) &&
+            firstDomain != null && ReferenceEquals(playerView.transform.parent, firstDomain.Root);
+        bool passengerLayerAndPose = passengerProjection && ProjectionPreservesSourceLayerAndPose(
+            playerView, player.transform, firstWorld.WorldKey, firstDomain,
+            out int passengerRendererCount) && passengerRendererCount > 0;
+        int projectedFloorRendererCount = 0;
+        bool allProjectedFloorsBelowPassenger = true;
+        Renderer playerSourceRenderer = passengerProjection ? player.GetComponentInChildren<SpriteRenderer>(true) : null;
+        Matrix4x4 playerProjection = WorldPresentationTransformRegistry.TryGet(firstWorld.WorldKey,
+            out Matrix4x4 currentPlayerProjection, out _) ? currentPlayerProjection : Matrix4x4.identity;
+        Renderer playerTargetRenderer = playerSourceRenderer != null
+            ? FindProjectedRendererForSource(playerView, player.transform, playerSourceRenderer, firstDomain, playerProjection)
+            : null;
+        if (playerTargetRenderer != null && firstDomain?.Root != null)
+        {
+            WorldVisualSortingKey playerKey = WorldVisualSortingKey.FromRenderer(playerTargetRenderer);
+            foreach (Renderer candidate in firstDomain.Root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (candidate == null || candidate.gameObject.name != "NativeChunkBatch_Ground") continue;
+                projectedFloorRendererCount++;
+                allProjectedFloorsBelowPassenger &= WorldVisualSortingKey.FromRenderer(candidate).CompareTo(playerKey) < 0;
+            }
+        }
+        sourceRendererForRelease = ordinaryItem != null ? ordinaryItem.GetComponentInChildren<SpriteRenderer>(true) : null;
+        sourceOriginalForceOff = sourceRendererForRelease != null &&
+            GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sourceRendererForRelease);
+
+        result["category"] = WorldSortingManager.ProjectedWorldCategory;
+        result["firstDomainKeyMatchesCategory"] = firstDomainKeyMatches;
+        result["secondDomainKeyMatchesCategory"] = secondDomainKeyMatches;
+        result["distinctShipDomains"] = firstDomain != null && secondDomain != null &&
+            firstDomain.WorldKey == firstWorld.WorldKey && secondDomain.WorldKey == secondWorld.WorldKey &&
+            firstDomain.Root != secondDomain.Root && firstRootId != secondRootId;
+        result["firstWorldKey"] = firstWorld.WorldKey;
+        result["secondWorldKey"] = secondWorld.WorldKey;
+        result["firstChunkAddressCount"] = firstAddressCount;
+        result["secondChunkAddressCount"] = secondAddressCount;
+        result["firstChunkProjectionCount"] = firstChunkCount;
+        result["secondChunkProjectionCount"] = secondChunkCount;
+        result["firstNativeDomainOwnerCount"] = firstNativeOwners;
+        result["secondNativeDomainOwnerCount"] = secondNativeOwners;
+        result["firstNativeDomainOwnerMismatches"] = firstNativeOwnerMismatches;
+        result["secondNativeDomainOwnerMismatches"] = secondNativeOwnerMismatches;
+        result["firstNativeProjectedVisuals"] = firstNativeVisuals;
+        result["secondNativeProjectedVisuals"] = secondNativeVisuals;
+        result["firstNativeBatchCount"] = firstNativeBatches;
+        result["secondNativeBatchCount"] = secondNativeBatches;
+        result["sameShipChunksShareDomain"] = firstAddressCount > 1 && firstChunkCount > 1 &&
+            firstNativeOwners > 1 && firstNativeOwnerMismatches == 0;
+        result["differentShipsKeepSeparateDomains"] = result.Value<bool>("distinctShipDomains") &&
+            secondNativeOwnerMismatches == 0 && (firstItemMatchCount == 0 || secondItemMatchCount == 0 || firstRootId != secondRootId);
+        result["firstItemProjectionCount"] = firstItemCount;
+        result["secondItemProjectionCount"] = secondItemCount;
+        result["firstItemParentMatchesDomain"] = firstItemCount > 0 && firstItemMatchCount == firstItemCount;
+        result["secondItemParentMatchesDomain"] = secondItemCount > 0 && secondItemMatchCount == secondItemCount;
+        result["ordinaryItemKeepsLocalLayerAndPose"] = ordinaryLayerAndPose;
+        result["pipeKeepsLocalLayerAndPose"] = pipeLayerAndPose;
+        result["machineKeepsLocalLayerAndPose"] = machineLayerAndPose;
+        result["mechanicalKeepsLocalLayerAndPose"] = mechanicalLayerAndPose;
+        result["passengerProjectionInFirstDomain"] = passengerProjection;
+        result["passengerKeepsLocalLayerAndPose"] = passengerLayerAndPose;
+        result["projectedFloorRendererCount"] = projectedFloorRendererCount;
+        result["projectedFloorBelowPassenger"] = projectedFloorRendererCount > 0 && allProjectedFloorsBelowPassenger;
+        result["nativeProjectedVisualsPresent"] = firstNativeVisuals > 0 && firstNativeBatches > 0 &&
+            secondNativeVisuals > 0 && secondNativeBatches > 0;
+        return result;
+    }
+
+    private static void CountProjectionRows(JArray rows, string worldKey, int parentId,
+        out int total, out int matchingDomain)
+    {
+        total = matchingDomain = 0;
+        foreach (JObject row in rows)
+        {
+            if (row.Value<string>("worldKey") != worldKey) continue;
+            total++;
+            if (row.Value<int>("parentId") == parentId && parentId != 0) matchingDomain++;
+        }
+    }
+
+    private static int CountProjectionRowsByParent(JArray rows, int parentId)
+    {
+        if (parentId == 0) return 0;
+        int count = 0;
+        foreach (JObject row in rows)
+            if (row.Value<int>("parentId") == parentId) count++;
+        return count;
+    }
+
+    private static int CountChunkAddresses(ShipInteriorWorldRuntime world)
+    {
+        int count = 0;
+        foreach (RuntimeWorldAddress _ in world.ChunkAddresses) count++;
+        return count;
+    }
+
+    private static void CountNativeChunkDomainOwners(ShipInteriorWorldRuntime world,
+        WorldPresentationSortingDomain expectedDomain, out int owners, out int mismatches,
+        out int visuals, out int batches)
+    {
+        owners = mismatches = visuals = batches = 0;
+        if (expectedDomain == null) return;
+        foreach (RuntimeWorldAddress address in world.ChunkAddresses)
+        {
+            if (!world.Chunks.TryGetRuntimeChunkView(address, out ChunkView view)) continue;
+            ChunkTilemapRenderer owner = view.GetComponentInChildren<ChunkTilemapRenderer>(true);
+            if (owner == null || !ChunkBatchRendererGroupService.GetOwnerNativeProjectionStats(
+                    owner, out int visualCount, out int batchCount, out _)) continue;
+            owners++;
+            visuals += visualCount;
+            batches += batchCount;
+            if (!ChunkBatchRendererGroupService.TryGetOwnerNativeProjectionDomain(owner, out WorldPresentationSortingDomain actual) ||
+                !ReferenceEquals(actual, expectedDomain) || actual.Root != expectedDomain.Root) mismatches++;
+        }
+    }
+
+    private static ShipPieceState FindPieceByItemId(ShipState ship, string itemId)
+    {
+        foreach (ShipPieceState piece in ship.Pieces)
+            if (piece.IsAlive && piece.ItemId == itemId) return piece;
+        throw new InvalidOperationException("船内排序采样缺少部件：" + itemId);
+    }
+
+    private static bool TryGetItemProjection(JArray itemRows, Item source, string worldKey,
+        int parentId, out WorldPresentationProjection projection)
+    {
+        projection = null;
+        if (source == null || parentId == 0) return false;
+        foreach (JObject row in itemRows)
+        {
+            if (row.Value<int>("sourceId") != source.gameObject.GetInstanceID() ||
+                row.Value<string>("worldKey") != worldKey || row.Value<int>("parentId") != parentId) continue;
+            int instanceId = row.Value<int>("instanceId");
+            foreach (WorldPresentationProjection candidate in Resources.FindObjectsOfTypeAll<WorldPresentationProjection>())
+                if (candidate != null && candidate.gameObject.GetInstanceID() == instanceId)
+                { projection = candidate; return true; }
+        }
+        return false;
+    }
+
+    private static bool ProjectionPreservesSourceLayerAndPose(WorldPresentationProjection projection,
+        Transform sourceRoot, string worldKey, WorldPresentationSortingDomain domain, out int matchedRendererCount)
+    {
+        matchedRendererCount = 0;
+        if (projection == null || sourceRoot == null ||
+            !WorldPresentationTransformRegistry.TryGet(worldKey, out Matrix4x4 worldToDisplay, out _)) return false;
+        bool matches = true;
+        foreach (Renderer source in sourceRoot.GetComponentsInChildren<Renderer>(true))
+        {
+            if (source is not SpriteRenderer && source is not MeshRenderer && source is not ParticleSystemRenderer) continue;
+            Renderer target = FindProjectedRendererForSource(projection, sourceRoot, source, domain,
+                worldToDisplay);
+            if (target == null) { matches = false; continue; }
+            matchedRendererCount++;
+            matches &= target.sortingLayerID == source.sortingLayerID &&
+                Vector3.Distance(target.transform.position, worldToDisplay.MultiplyPoint3x4(source.transform.position)) < .002f;
+        }
+        return matches && matchedRendererCount > 0;
+    }
+
+    private static Renderer FindProjectedRendererForSource(WorldPresentationProjection projection,
+        Transform sourceRoot, Renderer source, WorldPresentationSortingDomain domain, Matrix4x4 worldToDisplay)
+    {
+        string path = GetTransformPathFromRoot(sourceRoot, source.transform);
+        Transform node = path.Length == 0 ? projection.transform : projection.transform.Find(path);
+        bool particle = source is ParticleSystemRenderer;
+        if (particle) node = node != null ? node.Find("ProjectedParticles") : null;
+        Renderer target = particle ? node != null ? node.GetComponent<MeshRenderer>() : null
+            : node != null ? node.GetComponent(source.GetType()) as Renderer : null;
+        if (target != null) return target;
+
+        // sortAtRoot 的显示节点可能按契约重挂到域根，按正式矩阵和 Renderer 局部键关联副本。
+        Transform root = domain?.Root;
+        if (root == null) return null;
+        Vector3 expectedPosition = worldToDisplay.MultiplyPoint3x4(source.transform.position);
+        foreach (Renderer candidate in root.GetComponentsInChildren<Renderer>(true))
+        {
+            if (candidate == null || candidate.sortingLayerID != source.sortingLayerID ||
+                Vector3.Distance(candidate.transform.position, expectedPosition) >= .002f) continue;
+            if (particle ? candidate is MeshRenderer && candidate.gameObject.name == "ProjectedParticles"
+                : candidate.GetType() == source.GetType() && candidate.gameObject.name == source.gameObject.name)
+                return candidate;
+        }
+        return null;
+    }
+
+    private static string GetTransformPathFromRoot(Transform root, Transform leaf)
+    {
+        if (root == leaf) return string.Empty;
+        var parts = new List<string>();
+        for (Transform current = leaf; current != null && current != root; current = current.parent) parts.Add(current.name);
+        if (leaf == null || leaf == root || parts.Count == 0) return string.Empty;
+        parts.Reverse();
+        return string.Join("/", parts);
     }
 
     // 走普通生物入口验证船域归属、原生物理、存档与无投影模拟。

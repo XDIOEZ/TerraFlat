@@ -5,6 +5,7 @@ using FlatWorld.Navigation;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace FlatWorld.AIECS.Gameplay
 {
@@ -60,6 +61,8 @@ namespace FlatWorld.AIECS.Gameplay
 
         private AiecsGameplayBridge _bridge;
         private AiecsWorldRenderer _renderer;
+        private WorldPresentationSortingDomain rendererSortingDomain;
+        private WorldPresentationSortingDomain replicaSortingDomain;
         private Player _player;
         private Camera _camera;
         private double _simulationTime;
@@ -190,26 +193,93 @@ namespace FlatWorld.AIECS.Gameplay
         public void CompleteEntityJobs() => _bridge?.Simulation?.Complete();
         public void ReleaseEntities() => DisposeSimulation();
 
-        private void LateUpdate()
+        private void OnEnable()
+        {
+            RenderPipelineManager.beginContextRendering -= PresentEcology;
+            RenderPipelineManager.beginContextRendering += PresentEcology;
+        }
+
+        private void PresentEcology(ScriptableRenderContext context, List<Camera> cameras)
         {
             if (FlatWorld.Networking.GameNetwork.IsOnline && !FlatWorld.Networking.GameNetwork.HasStateAuthority)
             { DrawNetworkActors(); return; }
             using var worldScope = UseOwnedWorld();
-            if (_renderer != null && IsReady && ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName != ownedWorldKey)
+            bool hasProjection = SynchronizeEntityWorldPresentation(_renderer, false);
+            if (_renderer != null && IsReady && !hasProjection && ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName != ownedWorldKey)
             { _renderer.Draw(_bridge.Simulation, null, default); return; }
-            if (!AiRuntimeBackendService.UseEntities || !IsReady || _renderer == null || _player == null)
+            if (!AiRuntimeBackendService.UseEntities || !IsReady || _renderer == null || (_player == null && !hasProjection))
                 return;
 
             if (_camera == null || !_camera.isActiveAndEnabled)
                 _camera = Camera.main;
             if (_camera == null)
-                return;
+            { _renderer.Draw(_bridge.Simulation, null, default); return; }
 
             WorldRenderingManager shadowManager = WorldRenderingManager.GetInstance();
-            _renderer.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(_player.gameObject.scene) : 0.4f;
+            var shadowScene = hasProjection ? UnityEngine.SceneManagement.SceneManager.GetActiveScene() : _player.gameObject.scene;
+            _renderer.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(shadowScene) : 0.4f;
             _renderer.Draw(_bridge.Simulation, _camera, _bridge.Navigation.Read().Domain,
                 IsRuntimeEntityPresentationReady);
         }
+
+        // 宿主负责世界域生命周期，表现程序集只接收通用父节点与显示矩阵。
+        private bool SynchronizeEntityWorldPresentation(AiecsWorldRenderer renderer, bool replica)
+        {
+            if (renderer == null) return false;
+            bool projected = WorldPresentationTransformRegistry.TryGet(ownedWorldKey, out Matrix4x4 matrix, out bool visible);
+            WorldPresentationTransformRegistry.TryGetSortingDomain(ownedWorldKey, out WorldPresentationSortingDomain domain);
+            if (!projected) visible = ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName == ownedWorldKey;
+            if (replica)
+            {
+                if (!ReferenceEquals(replicaSortingDomain, domain))
+                {
+                    renderer.SetSortingKeyCallbacks(null, null);
+                    if (replicaSortingDomain != null) replicaSortingDomain.Disposing -= OnReplicaSortingDomainDisposing;
+                    replicaSortingDomain = domain;
+                    if (domain != null)
+                    {
+                        domain.Disposing += OnReplicaSortingDomainDisposing;
+                        renderer.SetSortingKeyCallbacks(ApplyReplicaSortingKey, RemoveReplicaSortingKey);
+                    }
+                }
+            }
+            else if (!ReferenceEquals(rendererSortingDomain, domain))
+            {
+                renderer.SetSortingKeyCallbacks(null, null);
+                if (rendererSortingDomain != null) rendererSortingDomain.Disposing -= OnRendererSortingDomainDisposing;
+                rendererSortingDomain = domain;
+                if (domain != null)
+                {
+                    domain.Disposing += OnRendererSortingDomainDisposing;
+                    renderer.SetSortingKeyCallbacks(ApplyRendererSortingKey, RemoveRendererSortingKey);
+                }
+            }
+            renderer.SetWorldPresentation(domain?.Root, matrix, visible);
+            return projected;
+        }
+
+        private void OnRendererSortingDomainDisposing()
+        {
+            _renderer?.SetSortingKeyCallbacks(null, null);
+            if (rendererSortingDomain != null) rendererSortingDomain.Disposing -= OnRendererSortingDomainDisposing;
+            rendererSortingDomain = null;
+            _renderer?.SetWorldPresentation(null, Matrix4x4.identity, false);
+        }
+
+        private void OnReplicaSortingDomainDisposing()
+        {
+            replicaRenderer?.SetSortingKeyCallbacks(null, null);
+            if (replicaSortingDomain != null) replicaSortingDomain.Disposing -= OnReplicaSortingDomainDisposing;
+            replicaSortingDomain = null;
+            replicaRenderer?.SetWorldPresentation(null, Matrix4x4.identity, false);
+        }
+
+        private void ApplyRendererSortingKey(Renderer target, int layer, int order, int queue, float footY)
+            => rendererSortingDomain?.ApplyLocalRendererSortingKey(target, layer, order, queue, footY);
+        private void RemoveRendererSortingKey(Renderer target) => rendererSortingDomain?.RemoveLocalSortingKey(target);
+        private void ApplyReplicaSortingKey(Renderer target, int layer, int order, int queue, float footY)
+            => replicaSortingDomain?.ApplyLocalRendererSortingKey(target, layer, order, queue, footY);
+        private void RemoveReplicaSortingKey(Renderer target) => replicaSortingDomain?.RemoveLocalSortingKey(target);
 
         /// <summary>由 Gameplay 层查询 ChunkMgr，避免 Presentation 程序集反向依赖 GamePlay。</summary>
         private static bool IsRuntimeEntityPresentationReady(Vector2 position)
@@ -219,10 +289,15 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>脚本重载不保证调用 OnDestroy，停用阶段就释放自有模拟与原生绘制资源。</summary>
-        private void OnDisable() { DisposeNetworkActors(); DisposeSimulation(); }
+        private void OnDisable()
+        {
+            RenderPipelineManager.beginContextRendering -= PresentEcology;
+            DisposeNetworkActors(); DisposeSimulation();
+        }
 
         private void OnDestroy()
         {
+            RenderPipelineManager.beginContextRendering -= PresentEcology;
             ResetWorld();
             if (ReferenceEquals(active, this))
                 active = null;
@@ -400,6 +475,9 @@ namespace FlatWorld.AIECS.Gameplay
                 // 先断开可重入引用，各资源独立清理，快照失败不能让网格和 Native 内存泄漏。
                 AiecsGameplayBridge bridge = _bridge;
                 AiecsWorldRenderer renderer = _renderer;
+                renderer?.SetSortingKeyCallbacks(null, null);
+                if (rendererSortingDomain != null) rendererSortingDomain.Disposing -= OnRendererSortingDomainDisposing;
+                rendererSortingDomain = null;
                 _bridge = null;
                 _renderer = null;
                 TryReleaseSimulationResource(() => ReleaseAllAdvanceGoals(bridge?.Navigation));

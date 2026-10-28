@@ -79,8 +79,10 @@ internal sealed class DroppedItemPresentation : IDisposable
         public Matrix4x4 LastProjection;
         public WorldItemWaterRules.DriftInterpolation WaterDrift;
         public ShaderFlameEffect CombustionFlame;
+        public int FlameRenderQueue;
         public bool LastBurning;
         public bool HasState;
+        public bool FlameKeyRegistered;
     }
 
     private const float CullingMargin = 4f;
@@ -99,7 +101,10 @@ internal sealed class DroppedItemPresentation : IDisposable
     private readonly HashSet<int> visible = new();
     private readonly List<int> releaseScratch = new();
     private readonly Material sharedMaterial;
+    private readonly int sharedRenderQueue;
     private readonly GameObject poolRoot;
+    private readonly Transform defaultPoolParent;
+    private WorldPresentationSortingDomain sortingDomain;
     private bool disposed;
 
     public int VisibleViewCount => active.Count;
@@ -117,10 +122,32 @@ internal sealed class DroppedItemPresentation : IDisposable
         sharedMaterial = Resources.Load<Material>("DroppedItems/DroppedItemLit");
         if (sharedMaterial == null)
             throw new InvalidOperationException("缺少轻量掉落物共享材质 DroppedItems/DroppedItemLit。");
+        sharedRenderQueue = sharedMaterial.renderQueue;
 
         poolRoot = new GameObject("轻量掉落物_对象池") { hideFlags = HideFlags.DontSave };
-        poolRoot.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
-            scene, RuntimeSceneObjectCategory.DroppedItems), false);
+        defaultPoolParent = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(scene, RuntimeSceneObjectCategory.DroppedItems);
+        poolRoot.transform.SetParent(defaultPoolParent, false);
+    }
+
+    /// <summary>整世界的掉落物池共享排序域，切换时不移动模拟数据。</summary>
+    public void SetSortingDomain(WorldPresentationSortingDomain domain)
+    {
+        if (disposed || ReferenceEquals(sortingDomain, domain)) return;
+        if (sortingDomain != null)
+        {
+            foreach (PooledView view in active.Values) RemoveViewSortingKeys(view, sortingDomain);
+            sortingDomain.Disposing -= OnSortingDomainDisposing;
+        }
+        sortingDomain = domain;
+        if (sortingDomain != null) sortingDomain.Disposing += OnSortingDomainDisposing;
+        if (poolRoot != null) poolRoot.transform.SetParent(sortingDomain?.Root ?? defaultPoolParent, true);
+        foreach (PooledView view in active.Values) view.HasState = false;
+    }
+
+    private void OnSortingDomainDisposing()
+    {
+        SetSortingDomain(null);
+        ReleaseAllActive();
     }
 
     public void Changed(int id)
@@ -198,6 +225,7 @@ internal sealed class DroppedItemPresentation : IDisposable
                 active.Add(id, view);
             }
             Apply(view, id, visual, body, nearest, worldToDisplay);
+            SubmitViewSortingKeys(view, visual);
         }
 
         releaseScratch.Clear();
@@ -351,7 +379,7 @@ internal sealed class DroppedItemPresentation : IDisposable
             height,
             (id & 1023) * 0.017f));
         view.Renderer.SetPropertyBlock(view.Properties);
-        SetCombustionPlaying(view, burning, visual.Layer, visual.Order + 2);
+        SetCombustionPlaying(view, burning, visual.Layer, ResolveFlameSortingOrder(visual.Order));
         view.LastBody = body;
         view.LastNearestPosition = nearest;
         view.LastProjection = worldToDisplay;
@@ -372,6 +400,37 @@ internal sealed class DroppedItemPresentation : IDisposable
 
     #region 燃烧表现
 
+    private void SubmitViewSortingKeys(PooledView view, DroppedItemVisual visual)
+    {
+        if (sortingDomain == null || view.Renderer == null) return;
+        float footY = view.Root.transform.position.y;
+        sortingDomain.ApplyLocalRendererSortingKey(view.Renderer, visual.Layer, visual.Order, sharedRenderQueue, footY);
+        if (view.CombustionFlame == null) return;
+        Renderer flame = view.CombustionFlame.Renderer;
+        if (view.LastBurning && flame != null && flame.enabled)
+        {
+            sortingDomain.ApplyLocalRendererSortingKey(flame, visual.Layer, ResolveFlameSortingOrder(visual.Order),
+                view.FlameRenderQueue, footY);
+            view.FlameKeyRegistered = true;
+        }
+        else if (view.FlameKeyRegistered)
+        {
+            sortingDomain.RemoveLocalSortingKey(flame);
+            view.FlameKeyRegistered = false;
+        }
+    }
+
+    private static void RemoveViewSortingKeys(PooledView view, WorldPresentationSortingDomain domain)
+    {
+        if (view.Renderer != null) domain.RemoveLocalSortingKey(view.Renderer);
+        if (view.FlameKeyRegistered && view.CombustionFlame != null)
+            domain.RemoveLocalSortingKey(view.CombustionFlame.Renderer);
+        view.FlameKeyRegistered = false;
+    }
+
+    private static int ResolveFlameSortingOrder(int hostOrder)
+        => (int)Math.Max(short.MinValue, Math.Min(short.MaxValue, (long)hostOrder + 2));
+
     /// <summary>轻量掉落物按需创建共享网格火焰，动画不增加逐物品 Update。</summary>
     private static void SetCombustionPlaying(PooledView view, bool burning, int sortingLayerId, int sortingOrder)
     {
@@ -383,7 +442,12 @@ internal sealed class DroppedItemPresentation : IDisposable
         }
 
         // 独立根保持世界向上与固定尺寸，掉落物翻滚或缩放时不把火焰一起倒置。
-        ShaderFlameEffect flame = view.CombustionFlame ??= WorldItemCombustionVisual.Create(view.Root.transform.parent);
+        ShaderFlameEffect flame = view.CombustionFlame;
+        if (flame == null)
+        {
+            flame = view.CombustionFlame = WorldItemCombustionVisual.Create(view.Root.transform.parent);
+            view.FlameRenderQueue = flame.Renderer.sharedMaterial.renderQueue;
+        }
         if (flame.transform.position != view.Root.transform.position)
             flame.transform.position = view.Root.transform.position;
         flame.SetSorting(sortingLayerId, sortingOrder);
@@ -396,6 +460,7 @@ internal sealed class DroppedItemPresentation : IDisposable
     private void Release(PooledView view)
     {
         if (view?.Root == null) return;
+        if (sortingDomain != null) RemoveViewSortingKeys(view, sortingDomain);
         view.Visual = null;
         view.HasState = false;
         view.WaterDrift = default;
@@ -426,6 +491,7 @@ internal sealed class DroppedItemPresentation : IDisposable
     public void Dispose()
     {
         if (disposed) return;
+        SetSortingDomain(null);
         disposed = true;
         ReleaseAllActive();
         while (pool.Count != 0)

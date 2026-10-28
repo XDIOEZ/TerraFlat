@@ -189,10 +189,11 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         previous?.Dispose();
     }
 
-    public void Present(Camera camera, Matrix4x4? worldToDisplay = null)
+    public void Present(Camera camera, Matrix4x4? worldToDisplay = null, WorldPresentationSortingDomain sortingDomain = null)
     {
         if (presentation != null && (!presentationScene.IsValid() || !presentationScene.isLoaded))
             DetachScenePresentation();
+        presentation?.SetSortingDomain(sortingDomain);
         presentation?.Present(camera, domain, spatial, SpatialCellSize, worldToDisplay ?? Matrix4x4.identity);
     }
 

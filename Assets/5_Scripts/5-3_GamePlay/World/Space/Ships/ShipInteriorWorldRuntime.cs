@@ -309,6 +309,7 @@ namespace FlatWorld.Spaceflight
                 if (GetShip(shipId) is ShipState ship) SynchronizeShipInteriorTerrain(ship, world);
                 throw;
             }
+            ReleaseShipInteriorSortingDomain(world.WorldKey);
             WorldPresentationTransformRegistry.Remove(world.WorldKey);
             ForgetNetworkLocalWorld(world.WorldKey);
             shipInteriorWorlds.Remove(shipId);

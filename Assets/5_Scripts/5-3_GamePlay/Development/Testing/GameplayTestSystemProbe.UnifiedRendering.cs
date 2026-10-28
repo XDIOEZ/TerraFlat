@@ -13,11 +13,68 @@ public static partial class GameplayTestSystemProbe
 {
     #region 统一渲染入口规则采样
 
+    private sealed class SortingDomainRankProbe
+    {
+        internal GameObject Source;
+        internal WorldPresentationProjection Projection;
+        internal SortingGroup SourceGroup;
+        internal SortingGroup DisplayGroup => Projection.GetComponent<SortingGroup>();
+        internal SpriteRenderer[] SourceParts;
+        internal SpriteRenderer[] DisplayParts => new[]
+        {
+            Projection.transform.Find("Part_0").GetComponent<SpriteRenderer>(),
+            Projection.transform.Find("Part_1").GetComponent<SpriteRenderer>()
+        };
+    }
+
     private static void RegisterUnifiedRenderingOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
         operations.Add("rendering/item_sorting_configuration", CaptureItemConfiguredWorldSorting);
+        operations.Add("rendering/presentation_sorting_domain", CapturePresentationSortingDomain);
         operations.Add("rendering/water_surface_palette", CaptureSharedWaterSurfaceMaterialPalette);
+    }
+
+    private static SortingDomainRankProbe CreateSortingDomainRankProbe(Transform sourceParent,
+        Transform projectionParent, WorldPresentationSortingDomain domain, Matrix4x4 projection,
+        string name, Vector3 position, int layerId, int rawOrder)
+    {
+        var source = new GameObject(name) { hideFlags = HideFlags.HideAndDontSave };
+        source.transform.SetParent(sourceParent, false);
+        source.transform.position = position;
+        var group = source.AddComponent<SortingGroup>();
+        group.sortAtRoot = true;
+        group.sortingLayerID = layerId;
+        group.sortingOrder = rawOrder;
+        var parts = new SpriteRenderer[2];
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var part = new GameObject("Part_" + i) { hideFlags = HideFlags.HideAndDontSave };
+            part.transform.SetParent(source.transform, false);
+            part.transform.localPosition = i == 0 ? Vector3.down * .1f : Vector3.up * .1f;
+            parts[i] = part.AddComponent<SpriteRenderer>();
+            parts[i].sortingLayerID = layerId;
+            parts[i].sortingOrder = rawOrder + (i == 0 ? -3 : 3);
+        }
+        var result = new SortingDomainRankProbe
+        {
+            Source = source,
+            SourceGroup = group,
+            SourceParts = parts,
+            Projection = WorldPresentationProjection.Create(source.transform, projectionParent)
+        };
+        result.Projection.SetSortingDomain(domain);
+        result.Projection.Synchronize(projection, true);
+        return result;
+    }
+
+    private static void ApplySortingDomainRankProbeKey(WorldPresentationSortingDomain domain,
+        SortingDomainRankProbe probe)
+    {
+        Material material = probe.SourceParts[0].sharedMaterial;
+        domain.ApplyLocalSortingGroupKey(probe.DisplayGroup, probe.SourceGroup.sortingLayerID,
+            probe.SourceGroup.sortingOrder, material != null ? material.renderQueue : 3000,
+            probe.DisplayGroup.transform.position.y);
     }
 
     // 使用正式定义装配、原位更新和排序入口采样，不在夹具内重算渲染优先级。
@@ -186,6 +243,403 @@ public static partial class GameplayTestSystemProbe
             ["rejectsOrderOverflow"] = Rejects(new ItemVisualDefinitionDto { SortingOrder = short.MaxValue + 1 }) };
     }
 
+    // 通过正式投影和排序域采样原生 Renderer 的域归属及局部键保留。
+    private static JObject CapturePresentationSortingDomain(JObject args)
+    {
+        using var fixture = new UnifiedItemRenderingRuleFixture();
+        var sourceA = new GameObject("DomainA_Source") { hideFlags = HideFlags.HideAndDontSave };
+        var sourceB = new GameObject("DomainB_Source") { hideFlags = HideFlags.HideAndDontSave };
+        var sharedSource = new GameObject("SharedDomain_Source") { hideFlags = HideFlags.HideAndDontSave };
+        var background = new GameObject("DomainBackground") { hideFlags = HideFlags.HideAndDontSave };
+        sourceA.transform.SetParent(fixture.Services.transform, false);
+        sourceB.transform.SetParent(fixture.Services.transform, false);
+        sharedSource.transform.SetParent(fixture.Services.transform, false);
+        background.transform.SetParent(fixture.Services.transform, false);
+        sourceA.transform.position = new Vector3(3f, 4f, 0f);
+        sourceB.transform.position = new Vector3(-2f, 1f, 0f);
+        sharedSource.transform.position = new Vector3(6f, -3f, 0f);
+
+        SortingGroup sourceParentGroup = sourceA.AddComponent<SortingGroup>();
+        sourceParentGroup.sortAtRoot = true;
+        sourceParentGroup.sortingLayerID = SortingLayer.NameToID("Player");
+        sourceParentGroup.sortingOrder = 31;
+        SpriteRenderer directSprite = sourceA.AddComponent<SpriteRenderer>();
+        directSprite.sortingLayerID = SortingLayer.NameToID("Default");
+        directSprite.sortingOrder = 44;
+        var nestedRoot = new GameObject("NestedRoot");
+        nestedRoot.transform.SetParent(sourceA.transform, false);
+        nestedRoot.transform.localPosition = Vector3.up * 2f;
+        SortingGroup sourceNestedGroup = nestedRoot.AddComponent<SortingGroup>();
+        sourceNestedGroup.sortAtRoot = true;
+        sourceNestedGroup.sortingLayerID = SortingLayer.NameToID("MechanicalShaft");
+        sourceNestedGroup.sortingOrder = 44;
+        var groupedNode = new GameObject("GroupedSprite");
+        groupedNode.transform.SetParent(nestedRoot.transform, false);
+        SpriteRenderer groupedSprite = groupedNode.AddComponent<SpriteRenderer>();
+        groupedSprite.sortingLayerID = SortingLayer.NameToID("Paticle");
+        groupedSprite.sortingOrder = 44;
+        groupedSprite.forceRenderingOff = true;
+        var meshNode = new GameObject("MeshSource");
+        meshNode.transform.SetParent(sourceA.transform, false);
+        meshNode.transform.localPosition = Vector3.down * 2f;
+        meshNode.AddComponent<MeshFilter>();
+        MeshRenderer sourceMesh = meshNode.AddComponent<MeshRenderer>();
+        sourceMesh.sortingLayerID = SortingLayer.NameToID("Player");
+        sourceMesh.sortingOrder = 73;
+        var particleNode = new GameObject("ParticleSource");
+        particleNode.transform.SetParent(sourceA.transform, false);
+        particleNode.AddComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ParticleSystemRenderer sourceParticles = particleNode.GetComponent<ParticleSystemRenderer>();
+        sourceParticles.sortingLayerID = SortingLayer.NameToID("HeldFood");
+        sourceParticles.sortingOrder = -11;
+        SpriteRenderer secondSprite = sourceB.AddComponent<SpriteRenderer>();
+        secondSprite.sortingLayerID = SortingLayer.NameToID("Water");
+        secondSprite.sortingOrder = -9;
+        SpriteRenderer sharedSprite = sharedSource.AddComponent<SpriteRenderer>();
+        sharedSprite.sortingLayerID = SortingLayer.NameToID("Default");
+        sharedSprite.sortingOrder = 5;
+
+        SortingGroup backgroundGroup = background.AddComponent<SortingGroup>();
+        backgroundGroup.sortAtRoot = true;
+        WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldBackgroundCategory,
+            out int backgroundLayer, out int backgroundOrder);
+        backgroundGroup.sortingLayerID = backgroundLayer;
+        backgroundGroup.sortingOrder = backgroundOrder;
+        SpriteRenderer backgroundSprite = background.AddComponent<SpriteRenderer>();
+
+        string worldA = "probe:sorting-domain:a", worldB = "probe:sorting-domain:b";
+        WorldSortingManager.GetResourceSortingKey(WorldSortingManager.ProjectedWorldCategory,
+            out int expectedDomainLayer, out int expectedDomainOrder);
+        Matrix4x4 matrixA = Matrix4x4.Translate(new Vector3(10f, 20f, 0f));
+        Matrix4x4 matrixB = Matrix4x4.TRS(new Vector3(-8f, 5f, 0f), Quaternion.Euler(0f, 0f, 31f), Vector3.one);
+        WorldPresentationSortingDomain domainA = null, domainB = null;
+        WorldPresentationProjection projectionA = null, projectionB = null, sharedProjectionA = null, sharedProjectionB = null;
+        bool keyMatchesCategory = false, backgroundBehind = false, distinctDomains = false;
+        bool allRenderersInside = false, nestedRootKeyApplied = false, localKeysPreserved = false;
+        bool rendererTypesProjected = false, yAndPositionProjectedOnce = false, hiddenSourcesSuppressed = false;
+        bool sourceRestored = false, registryReleased = false, domainsDisposed = false;
+        bool domainDisposeRestoresSources = false, domainDisposeHidesCopies = false;
+        bool sharedSourceHeldUntilLastProjection = false, sharedSourceRestoredAfterLastProjection = false;
+        bool sameRawYRankedAndSwapped = false, domainsRankIndependently = false;
+        bool fixedFloorBelowActor = false, sourceGroupRemainsAtomic = false, hideKeepsRank = false;
+        bool moveRestoresRawRank = false, destinationAndReentryRerank = false, removeRestoresRawRank = false;
+        bool releaseRestoresRawRank = false, domainDisposeRestoresRawRank = false;
+        var rankProbeSources = new List<GameObject>();
+        var rankProbeProjections = new List<WorldPresentationProjection>();
+        var detachedRankTargets = new List<GameObject>();
+        int copiedRendererCount = 0;
+        try
+        {
+            domainA = WorldPresentationSortingDomain.Create(fixture.Services.transform, worldA,
+                WorldSortingManager.ProjectedWorldCategory);
+            domainB = WorldPresentationSortingDomain.Create(fixture.Services.transform, worldB,
+                WorldSortingManager.ProjectedWorldCategory);
+            domainA.Synchronize(matrixA, true);
+            domainB.Synchronize(matrixB, true);
+            WorldPresentationTransformRegistry.Set(worldA, matrixA, true, domainA);
+            WorldPresentationTransformRegistry.Set(worldB, matrixB, true, domainB);
+            projectionA = WorldPresentationProjection.Create(sourceA.transform, fixture.Services.transform);
+            projectionB = WorldPresentationProjection.Create(sourceB.transform, fixture.Services.transform);
+            projectionA.SetSortingDomain(domainA);
+            projectionB.SetSortingDomain(domainB);
+            projectionA.Synchronize(matrixA, true);
+            // 外部乘员已经在画面坐标时使用单位矩阵，域本身仍可承载船姿变换。
+            projectionB.Synchronize(Matrix4x4.identity, true);
+            sharedProjectionA = WorldPresentationProjection.Create(sharedSource.transform, fixture.Services.transform);
+            sharedProjectionB = WorldPresentationProjection.Create(sharedSource.transform, fixture.Services.transform);
+            sharedProjectionA.SetSortingDomain(domainA);
+            sharedProjectionB.SetSortingDomain(domainB);
+            sharedProjectionA.Synchronize(matrixA, true);
+            sharedProjectionB.Synchronize(Matrix4x4.identity, true);
+
+            SortingGroup domainGroupA = domainA.Root.GetComponent<SortingGroup>();
+            SortingGroup domainGroupB = domainB.Root.GetComponent<SortingGroup>();
+            SpriteRenderer projectedSprite = projectionA.GetComponent<SpriteRenderer>();
+            Transform escapedNestedRoot = domainA.Root.Find("NestedRoot");
+            SortingGroup projectedNestedGroup = escapedNestedRoot.GetComponent<SortingGroup>();
+            SpriteRenderer projectedGroupedSprite = escapedNestedRoot.Find("GroupedSprite").GetComponent<SpriteRenderer>();
+            MeshRenderer projectedMesh = projectionA.transform.Find("MeshSource").GetComponent<MeshRenderer>();
+            MeshRenderer projectedParticles = projectionA.transform.Find("ParticleSource/ProjectedParticles").GetComponent<MeshRenderer>();
+            SpriteRenderer projectedSecondSprite = projectionB.GetComponent<SpriteRenderer>();
+            Renderer[] projectedRenderersA = projectionA.GetComponentsInChildren<Renderer>(true);
+            copiedRendererCount = projectedRenderersA.Length + (projectedGroupedSprite != null ? 1 : 0) +
+                projectionB.GetComponentsInChildren<Renderer>(true).Length;
+
+            keyMatchesCategory = domainGroupA.sortingLayerID == expectedDomainLayer &&
+                domainGroupA.sortingOrder == expectedDomainOrder && domainGroupB.sortingLayerID == expectedDomainLayer &&
+                domainGroupB.sortingOrder == expectedDomainOrder;
+            WorldVisualSortingKey projectedKey = WorldVisualSortingKey.FromRenderer(projectedSprite);
+            WorldVisualSortingKey backgroundKey = WorldVisualSortingKey.FromRenderer(backgroundSprite);
+            backgroundBehind = projectedKey.CompareTo(backgroundKey) > 0;
+            distinctDomains = domainA.Root != domainB.Root && domainA.WorldKey != domainB.WorldKey &&
+                projectionA.transform.IsChildOf(domainA.Root) && !projectionA.transform.IsChildOf(domainB.Root) &&
+                projectionB.transform.IsChildOf(domainB.Root) && !projectionB.transform.IsChildOf(domainA.Root) &&
+                WorldVisualSortingKey.FromRenderer(projectedSprite).Group == domainGroupA.GetInstanceID() &&
+                WorldVisualSortingKey.FromRenderer(projectedSecondSprite).Group == domainGroupB.GetInstanceID();
+            allRenderersInside = projectedRenderersA.Length == 3 && projectedGroupedSprite.transform.IsChildOf(domainA.Root);
+            foreach (Renderer renderer in projectedRenderersA)
+            {
+                WorldVisualSortingKey key = WorldVisualSortingKey.FromRenderer(renderer);
+                allRenderersInside &= renderer.transform.IsChildOf(domainA.Root) &&
+                    key.Layer == SortingLayer.GetLayerValueFromID(expectedDomainLayer) &&
+                    key.Order == expectedDomainOrder && key.Group == domainGroupA.GetInstanceID();
+            }
+            WorldVisualSortingKey escapedKey = WorldVisualSortingKey.FromRenderer(projectedGroupedSprite);
+            allRenderersInside &= escapedKey.Layer == SortingLayer.GetLayerValueFromID(expectedDomainLayer) &&
+                escapedKey.Order == expectedDomainOrder && escapedKey.Group == domainGroupA.GetInstanceID();
+            nestedRootKeyApplied = sourceNestedGroup.sortAtRoot && !projectedNestedGroup.sortAtRoot &&
+                sourceParentGroup.sortAtRoot && !projectionA.GetComponent<SortingGroup>().sortAtRoot &&
+                projectedNestedGroup.transform.parent == domainA.Root &&
+                projectedNestedGroup.sortingLayerID == sourceNestedGroup.sortingLayerID &&
+                projectedNestedGroup.sortingOrder == sourceNestedGroup.sortingOrder &&
+                WorldVisualSortingKey.FromRenderer(projectedGroupedSprite).Group == domainGroupA.GetInstanceID();
+            localKeysPreserved = projectionA.GetComponent<SortingGroup>().sortingLayerID == sourceParentGroup.sortingLayerID &&
+                projectionA.GetComponent<SortingGroup>().sortingOrder == sourceParentGroup.sortingOrder &&
+                projectedSprite.sortingLayerID == directSprite.sortingLayerID &&
+                projectedSprite.sortingOrder == directSprite.sortingOrder &&
+                projectedNestedGroup.sortingLayerID == sourceNestedGroup.sortingLayerID &&
+                projectedNestedGroup.sortingOrder == sourceNestedGroup.sortingOrder &&
+                projectedGroupedSprite.sortingLayerID == groupedSprite.sortingLayerID &&
+                projectedGroupedSprite.sortingOrder == groupedSprite.sortingOrder &&
+                projectedMesh.sortingLayerID == sourceMesh.sortingLayerID && projectedMesh.sortingOrder == sourceMesh.sortingOrder &&
+                projectedParticles.sortingLayerID == sourceParticles.sortingLayerID &&
+                projectedParticles.sortingOrder == sourceParticles.sortingOrder &&
+                projectedSecondSprite.sortingLayerID == secondSprite.sortingLayerID &&
+                projectedSecondSprite.sortingOrder == secondSprite.sortingOrder;
+            rendererTypesProjected = projectedSprite != null && projectedGroupedSprite != null &&
+                projectedMesh != null && projectedParticles != null;
+            yAndPositionProjectedOnce = Vector3.Distance(projectionA.transform.position,
+                    matrixA.MultiplyPoint3x4(sourceA.transform.position)) < .001f &&
+                Vector3.Distance(projectedNestedGroup.transform.position,
+                    matrixA.MultiplyPoint3x4(nestedRoot.transform.position)) < .001f &&
+                Vector3.Distance(projectedSprite.transform.position, matrixA.MultiplyPoint3x4(directSprite.transform.position)) < .001f &&
+                Vector3.Distance(projectedMesh.transform.position, matrixA.MultiplyPoint3x4(sourceMesh.transform.position)) < .001f &&
+                Vector3.Distance(projectionB.transform.position, sourceB.transform.position) < .001f &&
+                Math.Abs(projectedMesh.transform.position.y - projectedSprite.transform.position.y -
+                    (sourceMesh.transform.position.y - directSprite.transform.position.y)) < .001f;
+            hiddenSourcesSuppressed = WorldPresentationTransformRegistry.TryGetSortingDomain(worldA, out var registeredA) &&
+                ReferenceEquals(registeredA, domainA) && WorldPresentationTransformRegistry.TryGetSortingDomain(worldB, out var registeredB) &&
+                ReferenceEquals(registeredB, domainB);
+            projectionA.Synchronize(matrixA, false);
+            domainA.Synchronize(matrixA, false);
+            hiddenSourcesSuppressed &= !projectionA.gameObject.activeInHierarchy && !domainA.Root.gameObject.activeInHierarchy &&
+                directSprite.forceRenderingOff && groupedSprite.forceRenderingOff && sourceMesh.forceRenderingOff &&
+                sourceParticles.forceRenderingOff;
+            projectionA.Synchronize(matrixA, true);
+            domainA.Synchronize(matrixA, true);
+
+            int playerLayerId = SortingLayer.NameToID("Player");
+            int defaultLayerId = SortingLayer.NameToID("Default");
+            SortingDomainRankProbe rankALow = CreateSortingDomainRankProbe(fixture.Services.transform,
+                fixture.Services.transform, domainA, matrixA, "RankA_LowY", new Vector3(0f, -2f), playerLayerId, 100);
+            SortingDomainRankProbe rankAHigh = CreateSortingDomainRankProbe(fixture.Services.transform,
+                fixture.Services.transform, domainA, matrixA, "RankA_HighY", new Vector3(0f, 2f), playerLayerId, 100);
+            SortingDomainRankProbe rankBLow = CreateSortingDomainRankProbe(fixture.Services.transform,
+                fixture.Services.transform, domainB, matrixB, "RankB_LowY", new Vector3(0f, -2f), playerLayerId, 100);
+            SortingDomainRankProbe rankBHigh = CreateSortingDomainRankProbe(fixture.Services.transform,
+                fixture.Services.transform, domainB, matrixB, "RankB_HighY", new Vector3(0f, 2f), playerLayerId, 100);
+            SortingDomainRankProbe floorProbe = CreateSortingDomainRankProbe(fixture.Services.transform,
+                fixture.Services.transform, domainA, matrixA, "Rank_FixedFloor", new Vector3(1f, 0f), defaultLayerId, 0);
+            SortingDomainRankProbe actorProbe = CreateSortingDomainRankProbe(fixture.Services.transform,
+                fixture.Services.transform, domainA, matrixA, "Rank_FixedActor", new Vector3(1f, 0f), playerLayerId, 100);
+            foreach (SortingDomainRankProbe probe in new[] { rankALow, rankAHigh, rankBLow, rankBHigh, floorProbe, actorProbe })
+            {
+                rankProbeSources.Add(probe.Source);
+                rankProbeProjections.Add(probe.Projection);
+            }
+            ApplySortingDomainRankProbeKey(domainA, rankALow);
+            ApplySortingDomainRankProbeKey(domainA, rankAHigh);
+            ApplySortingDomainRankProbeKey(domainA, floorProbe);
+            ApplySortingDomainRankProbeKey(domainA, actorProbe);
+            domainA.FlushLocalSortingKeys();
+            ApplySortingDomainRankProbeKey(domainB, rankBLow);
+            ApplySortingDomainRankProbeKey(domainB, rankBHigh);
+            domainB.FlushLocalSortingKeys();
+
+            int rankAHighBeforeSwap = rankAHigh.DisplayGroup.sortingOrder;
+            int rankALowBeforeSwap = rankALow.DisplayGroup.sortingOrder;
+            int rankBHighBeforeSwap = rankBHigh.DisplayGroup.sortingOrder;
+            int rankBLowBeforeSwap = rankBLow.DisplayGroup.sortingOrder;
+            rankAHigh.Source.transform.position = new Vector3(0f, -2f, 0f);
+            rankALow.Source.transform.position = new Vector3(0f, 2f, 0f);
+            rankAHigh.Projection.Synchronize(matrixA, true);
+            rankALow.Projection.Synchronize(matrixA, true);
+            ApplySortingDomainRankProbeKey(domainA, rankALow);
+            ApplySortingDomainRankProbeKey(domainA, rankAHigh);
+            domainA.FlushLocalSortingKeys();
+            bool domainASwappedWithY = rankALow.DisplayGroup.sortingOrder < rankAHigh.DisplayGroup.sortingOrder;
+            int rankAHighAfterSwap = rankAHigh.DisplayGroup.sortingOrder;
+            int rankALowAfterSwap = rankALow.DisplayGroup.sortingOrder;
+            rankBHigh.Source.transform.position = new Vector3(0f, -2f, 0f);
+            rankBLow.Source.transform.position = new Vector3(0f, 2f, 0f);
+            rankBHigh.Projection.Synchronize(matrixB, true);
+            rankBLow.Projection.Synchronize(matrixB, true);
+            ApplySortingDomainRankProbeKey(domainB, rankBLow);
+            ApplySortingDomainRankProbeKey(domainB, rankBHigh);
+            domainB.FlushLocalSortingKeys();
+            domainA.FlushLocalSortingKeys();
+            bool domainBSwappedWithY = rankBLow.DisplayGroup.sortingOrder < rankBHigh.DisplayGroup.sortingOrder;
+            sameRawYRankedAndSwapped = rankAHigh.SourceGroup.sortingLayerID == rankALow.SourceGroup.sortingLayerID &&
+                rankAHigh.SourceGroup.sortingOrder == rankALow.SourceGroup.sortingOrder &&
+                rankALow.DisplayGroup.sortingOrder < rankAHigh.DisplayGroup.sortingOrder &&
+                rankBHigh.SourceGroup.sortingOrder == rankBLow.SourceGroup.sortingOrder &&
+                rankBLow.DisplayGroup.sortingOrder < rankBHigh.DisplayGroup.sortingOrder &&
+                rankAHighBeforeSwap < rankALowBeforeSwap && rankBHighBeforeSwap < rankBLowBeforeSwap &&
+                rankAHighBeforeSwap != rankALowBeforeSwap && rankBHighBeforeSwap != rankBLowBeforeSwap &&
+                domainASwappedWithY && domainBSwappedWithY;
+            domainsRankIndependently = rankAHigh.DisplayGroup.sortingOrder == rankAHighAfterSwap &&
+                rankALow.DisplayGroup.sortingOrder == rankALowAfterSwap &&
+                rankBHighBeforeSwap != rankBLowBeforeSwap;
+            int floorLayerValue = SortingLayer.GetLayerValueFromID(floorProbe.DisplayGroup.sortingLayerID);
+            int actorLayerValue = SortingLayer.GetLayerValueFromID(actorProbe.DisplayGroup.sortingLayerID);
+            fixedFloorBelowActor = floorLayerValue < actorLayerValue &&
+                floorProbe.DisplayGroup.sortingLayerID == defaultLayerId && actorProbe.DisplayGroup.sortingLayerID == playerLayerId;
+            SpriteRenderer[] highSourceParts = rankAHigh.SourceParts;
+            SpriteRenderer[] highDisplayParts = rankAHigh.DisplayParts;
+            sourceGroupRemainsAtomic = rankAHigh.DisplayGroup.sortingOrder != rankAHigh.SourceGroup.sortingOrder &&
+                highDisplayParts[0].sortingOrder == highSourceParts[0].sortingOrder &&
+                highDisplayParts[1].sortingOrder == highSourceParts[1].sortingOrder &&
+                highDisplayParts[0].sortingOrder < highDisplayParts[1].sortingOrder &&
+                !rankAHigh.DisplayGroup.sortAtRoot && rankAHigh.DisplayGroup.transform.parent == domainA.Root;
+
+            int hiddenRank = rankALow.DisplayGroup.sortingOrder;
+            rankALow.Projection.SetVisible(false);
+            domainA.FlushLocalSortingKeys();
+            hideKeepsRank = !rankALow.Projection.gameObject.activeInHierarchy &&
+                rankALow.DisplayGroup.sortingOrder == hiddenRank;
+            rankALow.Projection.SetVisible(true);
+            rankALow.Projection.Synchronize(matrixA, true);
+            ApplySortingDomainRankProbeKey(domainA, rankALow);
+            domainA.FlushLocalSortingKeys();
+
+            rankAHigh.Projection.SetSortingDomain(domainB);
+            moveRestoresRawRank = rankAHigh.DisplayGroup.sortingOrder == rankAHigh.SourceGroup.sortingOrder;
+            rankAHigh.Projection.Synchronize(matrixB, true);
+            ApplySortingDomainRankProbeKey(domainB, rankAHigh);
+            domainB.FlushLocalSortingKeys();
+            bool movedToDestinationRank = rankAHigh.Projection.transform.parent == domainB.Root &&
+                rankAHigh.DisplayGroup.sortingOrder != rankAHigh.SourceGroup.sortingOrder;
+            rankAHigh.Projection.SetSortingDomain(domainA);
+            bool returnedRawRank = rankAHigh.DisplayGroup.sortingOrder == rankAHigh.SourceGroup.sortingOrder;
+            rankAHigh.Projection.Synchronize(matrixA, true);
+            ApplySortingDomainRankProbeKey(domainA, rankAHigh);
+            domainA.FlushLocalSortingKeys();
+            destinationAndReentryRerank = movedToDestinationRank && returnedRawRank &&
+                rankAHigh.Projection.transform.parent == domainA.Root &&
+                rankAHigh.DisplayGroup.sortingOrder != rankAHigh.SourceGroup.sortingOrder;
+            domainA.RemoveLocalSortingKey(rankAHigh.DisplayGroup);
+            removeRestoresRawRank = rankAHigh.DisplayGroup.sortingOrder == rankAHigh.SourceGroup.sortingOrder;
+            rankAHigh.Projection.Synchronize(matrixA, true);
+            ApplySortingDomainRankProbeKey(domainA, rankAHigh);
+            domainA.FlushLocalSortingKeys();
+
+            var releaseSource = new GameObject("Rank_ReleaseSource") { hideFlags = HideFlags.HideAndDontSave };
+            releaseSource.transform.SetParent(fixture.Services.transform, false);
+            rankProbeSources.Add(releaseSource);
+            var releaseSourcePart = new GameObject("ReleasePart") { hideFlags = HideFlags.HideAndDontSave };
+            releaseSourcePart.transform.SetParent(releaseSource.transform, false);
+            SpriteRenderer releaseSourceRenderer = releaseSourcePart.AddComponent<SpriteRenderer>();
+            releaseSourceRenderer.sortingLayerID = playerLayerId;
+            releaseSourceRenderer.sortingOrder = 123;
+            WorldPresentationProjection releaseProjection = WorldPresentationProjection.Create(
+                releaseSource.transform, fixture.Services.transform);
+            rankProbeProjections.Add(releaseProjection);
+            releaseProjection.SetSortingDomain(domainA);
+            releaseProjection.Synchronize(matrixA, true);
+            SpriteRenderer releaseTargetRenderer = releaseProjection.transform.Find("ReleasePart")
+                .GetComponent<SpriteRenderer>();
+            detachedRankTargets.Add(releaseTargetRenderer.gameObject);
+            domainA.FlushLocalSortingKeys();
+            bool releaseTargetRanked = releaseTargetRenderer.sortingOrder != releaseSourceRenderer.sortingOrder;
+            releaseTargetRenderer.transform.SetParent(fixture.Services.transform, true);
+            releaseProjection.Release();
+            domainA.FlushLocalSortingKeys();
+            releaseRestoresRawRank = releaseTargetRanked && releaseTargetRenderer.sortingLayerID == playerLayerId &&
+                releaseTargetRenderer.sortingOrder == 123 && releaseSourceRenderer.sortingLayerID == playerLayerId &&
+                releaseSourceRenderer.sortingOrder == 123 && !releaseSourceRenderer.forceRenderingOff;
+            var disposeRankTarget = new GameObject("Rank_DisposeTarget") { hideFlags = HideFlags.HideAndDontSave };
+            disposeRankTarget.transform.SetParent(domainA.Root, false);
+            SortingGroup disposeRankGroup = disposeRankTarget.AddComponent<SortingGroup>();
+            disposeRankGroup.sortingLayerID = playerLayerId;
+            disposeRankGroup.sortingOrder = 321;
+            domainA.ApplyLocalSortingGroupKey(disposeRankGroup, playerLayerId, 321, 3000, disposeRankTarget.transform.position.y);
+            domainA.FlushLocalSortingKeys();
+            bool disposeTargetRanked = disposeRankGroup.sortingOrder != 321;
+            disposeRankTarget.transform.SetParent(fixture.Services.transform, true);
+            domainA.Dispose();
+            domainDisposeRestoresRawRank = disposeTargetRanked && disposeRankGroup.sortingLayerID == playerLayerId &&
+                disposeRankGroup.sortingOrder == 321;
+            UnityEngine.Object.DestroyImmediate(disposeRankTarget);
+        }
+        finally
+        {
+            WorldPresentationTransformRegistry.Remove(worldA);
+            WorldPresentationTransformRegistry.Remove(worldB);
+            registryReleased = !WorldPresentationTransformRegistry.TryGetSortingDomain(worldA, out _) &&
+                !WorldPresentationTransformRegistry.TryGetSortingDomain(worldB, out _);
+            domainA?.Dispose();
+            sharedSourceHeldUntilLastProjection = sharedSprite.forceRenderingOff;
+            domainDisposeRestoresSources = !directSprite.forceRenderingOff && groupedSprite.forceRenderingOff &&
+                !sourceMesh.forceRenderingOff && !sourceParticles.forceRenderingOff;
+            domainB?.Dispose();
+            sharedSourceRestoredAfterLastProjection = !sharedSprite.forceRenderingOff;
+            sourceRestored = !directSprite.forceRenderingOff && groupedSprite.forceRenderingOff &&
+                !sourceMesh.forceRenderingOff && !sourceParticles.forceRenderingOff && !secondSprite.forceRenderingOff &&
+                !sharedSprite.forceRenderingOff;
+            domainsDisposed = (domainA == null || domainA.IsDisposed) && (domainB == null || domainB.IsDisposed);
+            domainDisposeHidesCopies = (projectionA == null || !projectionA.gameObject.activeInHierarchy) &&
+                (projectionB == null || !projectionB.gameObject.activeInHierarchy) &&
+                (sharedProjectionA == null || !sharedProjectionA.gameObject.activeInHierarchy) &&
+                (sharedProjectionB == null || !sharedProjectionB.gameObject.activeInHierarchy);
+            if (projectionA != null) projectionA.Release();
+            if (projectionB != null) projectionB.Release();
+            if (sharedProjectionA != null) sharedProjectionA.Release();
+            if (sharedProjectionB != null) sharedProjectionB.Release();
+            foreach (WorldPresentationProjection projection in rankProbeProjections)
+                if (projection != null) projection.Release();
+            UnityEngine.Object.DestroyImmediate(sourceA);
+            UnityEngine.Object.DestroyImmediate(sourceB);
+            UnityEngine.Object.DestroyImmediate(sharedSource);
+            UnityEngine.Object.DestroyImmediate(background);
+            foreach (GameObject source in rankProbeSources)
+                if (source != null) UnityEngine.Object.DestroyImmediate(source);
+            foreach (GameObject target in detachedRankTargets)
+                if (target != null) UnityEngine.Object.DestroyImmediate(target);
+        }
+        return new JObject
+        {
+            ["category"] = WorldSortingManager.ProjectedWorldCategory,
+            ["domainOrder"] = expectedDomainOrder,
+            ["keyMatchesCategory"] = keyMatchesCategory,
+            ["backgroundBehind"] = backgroundBehind,
+            ["distinctDomains"] = distinctDomains,
+            ["allRenderersInside"] = allRenderersInside,
+            ["nestedRootKeyApplied"] = nestedRootKeyApplied,
+            ["localKeysPreserved"] = localKeysPreserved,
+            ["rendererTypesProjected"] = rendererTypesProjected,
+            ["yAndPositionProjectedOnce"] = yAndPositionProjectedOnce,
+            ["copiedRendererCount"] = copiedRendererCount,
+            ["hiddenSourcesSuppressed"] = hiddenSourcesSuppressed,
+            ["domainDisposeRestoresSources"] = domainDisposeRestoresSources,
+            ["domainDisposeHidesCopies"] = domainDisposeHidesCopies,
+            ["sharedSourceHeldUntilLastProjection"] = sharedSourceHeldUntilLastProjection,
+            ["sharedSourceRestoredAfterLastProjection"] = sharedSourceRestoredAfterLastProjection,
+            ["sourceRestored"] = sourceRestored,
+            ["registryReleased"] = registryReleased,
+            ["domainsDisposed"] = domainsDisposed,
+            ["sameRawYRankedAndSwapped"] = sameRawYRankedAndSwapped,
+            ["domainsRankIndependently"] = domainsRankIndependently,
+            ["fixedFloorBelowActor"] = fixedFloorBelowActor,
+            ["sourceGroupRemainsAtomic"] = sourceGroupRemainsAtomic,
+            ["hideKeepsRank"] = hideKeepsRank,
+            ["moveRestoresRawRank"] = moveRestoresRawRank,
+            ["destinationAndReentryRerank"] = destinationAndReentryRerank,
+            ["removeRestoresRawRank"] = removeRestoresRawRank,
+            ["releaseRestoresRawRank"] = releaseRestoresRawRank,
+            ["domainDisposeRestoresRawRank"] = domainDisposeRestoresRawRank
+        };
+    }
+
     /// <summary>真实嵌套分组先比较子组，再比较子组内精灵，并遵守独立根。</summary>
     private static JObject CaptureNestedSortingGroupPriority(int playerLayer, int playerOrder)
     {
@@ -239,8 +693,6 @@ public static partial class GameplayTestSystemProbe
             throw new InvalidOperationException("AIECS 排序采样缺少正式动画目录。");
         var cameraObject = new GameObject("[LuaAiecsSortingCamera]") { hideFlags = HideFlags.HideAndDontSave };
         var scene = cameraObject.scene;
-        var existing = new HashSet<int>();
-        foreach (GameObject previous in scene.GetRootGameObjects()) existing.Add(previous.GetInstanceID());
         Camera camera = cameraObject.AddComponent<Camera>();
         camera.orthographic = true; camera.orthographicSize = 10f; camera.aspect = 1f;
         var actorIds = new[] { "Wolf", "Chicken" };
@@ -249,6 +701,14 @@ public static partial class GameplayTestSystemProbe
         var keys = new[] { new AiecsActorSortingKey(playerLayer, playerOrder), new AiecsActorSortingKey(customLayer, customOrder) };
         WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundShadowCategory, out int shadowLayer, out int shadowOrder);
         AiecsWorldRenderer display = null;
+        WorldPresentationSortingDomain domain = null;
+        const string aiecsWorldKey = "probe:aiecs-sorting-domain";
+        bool domainParented = false, domainCategoryApplied = false, domainFootpointsProjected = false;
+        bool domainInnerKeysPreserved = false, domainProjectionHidden = false, domainBatchKeyApplied = false;
+        bool domainDifferentSourceYMerged = false, domainSameSourceYSeparated = false, domainWaterLineUsesSourceCoordinates = false;
+        bool domainRawOrdersSubmitted = false, domainRankOrdersDiffer = false, domainYRankOrderPreserved = false;
+        bool domainHiddenRanksRestored = false, domainProjectionReentered = false, domainReentryRanked = false;
+        int projectedDomainBatchCount = 0;
         var records = new NativeArray<AiecsDisplayRecord>(4, Allocator.Temp);
         try
         {
@@ -260,17 +720,14 @@ public static partial class GameplayTestSystemProbe
                     Key = new CombatIdentity { Backend = CombatBackend.Entity, Value = (ulong)(i + 1), Generation = 1 },
                     Definition = i == 3 ? 1 : 0,
                     Position = new float2(i == 0 ? -1f : i == 1 ? 1f : 0f, i == 2 ? 3f : 1f),
-                    Facing = new float2(1f, 0f), Hp = 1f, MaxHp = 1f
+                    Facing = new float2(1f, 0f), Hp = 1f, MaxHp = 1f, LiquidDepth = .35f, WaterBlend = .65f
                 };
             List<MeshRenderer> Renderers()
             {
                 var result = new List<MeshRenderer>();
-                foreach (GameObject node in scene.GetRootGameObjects())
-                    if (!existing.Contains(node.GetInstanceID()) && node.name == "AIECS 连续绘制批次")
-                    {
-                        MeshRenderer value = node.GetComponent<MeshRenderer>();
-                        if (value != null) result.Add(value);
-                    }
+                if (display?.PresentationRoot == null) return result;
+                foreach (MeshRenderer value in display.PresentationRoot.GetComponentsInChildren<MeshRenderer>(true))
+                    if (value != null && value.gameObject.name == "AIECS 连续绘制批次") result.Add(value);
                 return result;
             }
             display.DrawRecords(records, camera, default);
@@ -288,6 +745,142 @@ public static partial class GameplayTestSystemProbe
             }
             int initialBatches = display.BatchCount;
             int initialBytes = display.UploadedBytes;
+
+            domain = WorldPresentationSortingDomain.Create(cameraObject.transform, aiecsWorldKey,
+                WorldSortingManager.ProjectedWorldCategory);
+            Matrix4x4 domainMatrix = Matrix4x4.TRS(new Vector3(4f, 5f, 0f), Quaternion.Euler(0f, 0f, 90f), Vector3.one);
+            domain.Synchronize(domainMatrix, true);
+            WorldPresentationTransformRegistry.Set(aiecsWorldKey, domainMatrix, true, domain);
+            WorldSortingManager.GetResourceSortingKey(WorldSortingManager.ProjectedWorldCategory,
+                out int domainLayer, out int domainOrder);
+            var projectedKeys = new[] { keys[0], keys[0] };
+            display.SetActorSortingKeys(projectedKeys);
+            display.SetWorldPresentation(domain.Root, domainMatrix, true);
+            display.SetSortingKeyCallbacks(
+                (renderer, layer, order, queue, footY) => domain.ApplyLocalRendererSortingKey(renderer, layer, order, queue, footY),
+                domain.RemoveLocalSortingKey);
+            display.DrawRecords(records, camera, default);
+            List<MeshRenderer> domainRenderers = Renderers();
+            projectedDomainBatchCount = display.BatchCount;
+            UnityEngine.Rendering.SortingGroup domainGroup = domain.Root.GetComponent<UnityEngine.Rendering.SortingGroup>();
+            domainParented = display.PresentationRoot.parent == domain.Root && display.PresentationVisible &&
+                display.WorldToDisplay.Equals(domainMatrix) && display.PresentationRoot.position == Vector3.zero &&
+                display.PresentationRoot.rotation == Quaternion.identity;
+            domainCategoryApplied = domainGroup.sortingLayerID == domainLayer && domainGroup.sortingOrder == domainOrder;
+            domainRawOrdersSubmitted = domainRenderers.Count == projectedDomainBatchCount &&
+                domainRenderers.TrueForAll(value => value.sortingLayerID == playerLayer && value.sortingOrder == playerOrder);
+            domain.FlushLocalSortingKeys();
+            bool allFootpointsProjected = domainRenderers.Count == 3;
+            bool allInnerKeysPreserved = domainRenderers.Count == projectedDomainBatchCount;
+            bool allDomainKeysApplied = domainRenderers.Count == projectedDomainBatchCount;
+            int projectedLowYBatchCount = 0, projectedHighYBatchCount = 0, mergedMiddleYBatchCount = 0;
+            int projectedLowYOrder = 0, projectedMiddleYOrder = 0, projectedHighYOrder = 0;
+            bool foundProjectedLowY = false, foundProjectedMiddleY = false, foundProjectedHighY = false;
+            bool allWaterLinesUseSourceCoordinates = domainRenderers.Count == projectedDomainBatchCount;
+            var waterProperties = new MaterialPropertyBlock();
+            int waterUsesSourceId = Shader.PropertyToID("_AiecsWaterUseSource");
+            int waterSourceMatrixId = Shader.PropertyToID("_AiecsWaterWorldToSource");
+            Matrix4x4 expectedSourceMatrix = domainMatrix.inverse;
+            var expectedWaterSourceYs = new List<float>(records.Length);
+            var actualWaterSourceYs = new List<float>();
+            for (int i = 0; i < records.Length; i++)
+            {
+                AiecsDisplayRecord record = records[i];
+                AiecsActorVisual definition = Array.Find(catalog.Actors, value => value.Id == actorIds[record.Definition]);
+                float height = Mathf.Max(.0001f, definition.BodyYRange.y - definition.BodyYRange.x);
+                expectedWaterSourceYs.Add(record.Position.y + definition.BodyYRange.x + height * record.LiquidDepth);
+            }
+            foreach (MeshRenderer value in domainRenderers)
+            {
+                Vector3 center = value.bounds.center;
+                bool expectedFootpoint = false;
+                for (int i = 0; i < records.Length; i++)
+                {
+                    float2 local = records[i].Position;
+                    float expectedY = domainMatrix.MultiplyPoint3x4(new Vector3(local.x, local.y, 0f)).y;
+                    expectedFootpoint |= Mathf.Abs(center.y - expectedY) < .0001f;
+                }
+                int vertices = value.GetComponent<MeshFilter>().sharedMesh.vertexCount;
+                allFootpointsProjected &= expectedFootpoint;
+                allInnerKeysPreserved &= value.sortingLayerID == playerLayer;
+                if (Mathf.Abs(center.y - domainMatrix.MultiplyPoint3x4(new Vector3(-1f, 1f, 0f)).y) < .0001f)
+                {
+                    projectedLowYBatchCount += vertices == 4 ? 1 : 100;
+                    projectedLowYOrder = value.sortingOrder;
+                    foundProjectedLowY = true;
+                }
+                if (Mathf.Abs(center.y - domainMatrix.MultiplyPoint3x4(new Vector3(1f, 1f, 0f)).y) < .0001f)
+                {
+                    projectedHighYBatchCount += vertices == 4 ? 1 : 100;
+                    projectedHighYOrder = value.sortingOrder;
+                    foundProjectedHighY = true;
+                }
+                if (Mathf.Abs(center.y - domainMatrix.MultiplyPoint3x4(new Vector3(0f, 3f, 0f)).y) < .0001f)
+                {
+                    mergedMiddleYBatchCount += vertices == 8 ? 1 : 100;
+                    projectedMiddleYOrder = value.sortingOrder;
+                    foundProjectedMiddleY = true;
+                }
+                WorldVisualSortingKey key = WorldVisualSortingKey.FromRenderer(value);
+                allDomainKeysApplied &= value.transform.IsChildOf(domain.Root) &&
+                    key.Layer == SortingLayer.GetLayerValueFromID(domainLayer) && key.Order == domainOrder &&
+                    key.Group == domainGroup.GetInstanceID();
+                value.GetPropertyBlock(waterProperties);
+                allWaterLinesUseSourceCoordinates &= waterProperties.GetFloat(waterUsesSourceId) > .5f &&
+                    waterProperties.GetMatrix(waterSourceMatrixId).Equals(expectedSourceMatrix);
+                var waterValues = new List<Vector4>();
+                value.GetComponent<MeshFilter>().sharedMesh.GetUVs(1, waterValues);
+                foreach (Vector4 waterValue in waterValues) actualWaterSourceYs.Add(waterValue.y);
+            }
+            foreach (float expectedWaterY in expectedWaterSourceYs)
+            {
+                int matchingSourceVertices = 0;
+                foreach (float actualWaterY in actualWaterSourceYs)
+                {
+                    bool matchesSourceY = Mathf.Abs(actualWaterY - expectedWaterY) < .0001f;
+                    bool matchesAnySourceY = false;
+                    foreach (float candidate in expectedWaterSourceYs)
+                        matchesAnySourceY |= Mathf.Abs(actualWaterY - candidate) < .0001f;
+                    allWaterLinesUseSourceCoordinates &= matchesAnySourceY;
+                    if (matchesSourceY) matchingSourceVertices++;
+                }
+                allWaterLinesUseSourceCoordinates &= matchingSourceVertices >= 4;
+            }
+            domainFootpointsProjected = allFootpointsProjected;
+            domainInnerKeysPreserved = allInnerKeysPreserved;
+            domainBatchKeyApplied = allDomainKeysApplied;
+            domainDifferentSourceYMerged = mergedMiddleYBatchCount == 1;
+            domainSameSourceYSeparated = projectedLowYBatchCount == 1 && projectedHighYBatchCount == 1;
+            domainRankOrdersDiffer = foundProjectedLowY && foundProjectedMiddleY && foundProjectedHighY &&
+                projectedLowYOrder != projectedMiddleYOrder && projectedMiddleYOrder != projectedHighYOrder &&
+                projectedLowYOrder != projectedHighYOrder;
+            domainYRankOrderPreserved = foundProjectedLowY && foundProjectedMiddleY && foundProjectedHighY &&
+                projectedHighYOrder < projectedMiddleYOrder && projectedMiddleYOrder < projectedLowYOrder;
+            domainWaterLineUsesSourceCoordinates = allWaterLinesUseSourceCoordinates;
+            display.SetWorldPresentation(domain.Root, domainMatrix, false);
+            display.DrawRecords(records, camera, default);
+            domainRenderers = Renderers();
+            domainProjectionHidden = !display.PresentationVisible && !display.PresentationRoot.gameObject.activeSelf;
+            domainHiddenRanksRestored = true;
+            foreach (MeshRenderer value in domainRenderers)
+            {
+                domainProjectionHidden &= !value.enabled;
+                domainHiddenRanksRestored &= value.sortingOrder == playerOrder;
+            }
+            display.SetWorldPresentation(domain.Root, domainMatrix, true);
+            display.DrawRecords(records, camera, default);
+            domain.FlushLocalSortingKeys();
+            domainRenderers = Renderers();
+            domainProjectionReentered = domainRenderers.Count == 3 && display.PresentationVisible &&
+                display.PresentationRoot.parent == domain.Root;
+            domainReentryRanked = domainProjectionReentered &&
+                domainRenderers.Count == projectedDomainBatchCount &&
+                domainRenderers.TrueForAll(value => value.sortingOrder != playerOrder);
+            display.SetSortingKeyCallbacks(null, null);
+            display.SetWorldPresentation(null, Matrix4x4.identity, true);
+            display.SetActorSortingKeys(keys);
+            display.DrawRecords(records, camera, default);
+
             var firstIds = new HashSet<int>();
             foreach (MeshRenderer value in first) firstIds.Add(value.GetInstanceID());
             keys[1] = new AiecsActorSortingKey(playerLayer, 147);
@@ -312,10 +905,25 @@ public static partial class GameplayTestSystemProbe
             return new JObject { ["batches"] = initialBatches, ["uploadedBytes"] = initialBytes, ["sharedYBatch"] = sharedYBatch,
                 ["otherYBatch"] = otherYBatch, ["customBatch"] = customBatch,
                 ["updated"] = updated, ["reused"] = reused, ["culledBatches"] = culledBatches,
-                ["activeAfterCull"] = activeAfterCull, ["hidden"] = hidden };
+                ["activeAfterCull"] = activeAfterCull, ["hidden"] = hidden,
+                ["domainParented"] = domainParented, ["domainCategoryApplied"] = domainCategoryApplied,
+                ["domainFootpointsProjected"] = domainFootpointsProjected, ["domainInnerKeysPreserved"] = domainInnerKeysPreserved,
+                ["domainBatchKeyApplied"] = domainBatchKeyApplied, ["domainProjectionHidden"] = domainProjectionHidden,
+                ["domainRawOrdersSubmitted"] = domainRawOrdersSubmitted, ["domainRankOrdersDiffer"] = domainRankOrdersDiffer,
+                ["domainYRankOrderPreserved"] = domainYRankOrderPreserved,
+                ["domainHiddenRanksRestored"] = domainHiddenRanksRestored,
+                ["domainProjectionReentered"] = domainProjectionReentered, ["domainReentryRanked"] = domainReentryRanked,
+                ["domainDifferentSourceYMerged"] = domainDifferentSourceYMerged,
+                ["domainSameSourceYSeparated"] = domainSameSourceYSeparated,
+                ["domainWaterLineUsesSourceCoordinates"] = domainWaterLineUsesSourceCoordinates,
+                ["projectedDomainBatchCount"] = projectedDomainBatchCount };
         }
         finally
         {
+            display?.SetSortingKeyCallbacks(null, null);
+            if (display != null) display.SetWorldPresentation(null, Matrix4x4.identity, false);
+            WorldPresentationTransformRegistry.Remove(aiecsWorldKey);
+            domain?.Dispose();
             display?.Dispose();
             records.Dispose();
             UnityEngine.Object.DestroyImmediate(cameraObject);
@@ -381,7 +989,7 @@ public static partial class GameplayTestSystemProbe
                 .CompareTo(new WorldVisualSortingKey(playerLayerValue, 100, 0f, 1, 1)) < 0;
             Set(2, 0, 0, playerLayer, playerOrder);
             bool rekeyed = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 2, 0) == body;
-            return new JObject
+            var result = new JObject
             {
                 ["sameRoot"] = body != null && body == attachment,
                 ["separateKeys"] = separateKeys,
@@ -391,8 +999,155 @@ public static partial class GameplayTestSystemProbe
                 ["snapshots"] = snapshotBody && snapshotAttachment && snapshotOther,
                 ["snapshotOrdering"] = outerBeforeY && yBeforeInner && sameGroupInnerOrder
             };
+            JObject entitySorting = CaptureRotatedEntityDepthSorting(sprite, material, root.transform, playerLayer, playerOrder);
+            foreach (JProperty property in entitySorting.Properties()) result[property.Name] = property.Value.DeepClone();
+            return result;
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    private static JObject CaptureRotatedEntityDepthSorting(Sprite sprite, Material material, Transform originalParent,
+        int sortingLayerId, int rawOrder)
+    {
+        var source = new GameObject("[LuaEntityDepthSource]") { hideFlags = HideFlags.HideAndDontSave };
+        source.transform.SetParent(originalParent, false);
+        ChunkDepthMeshRenderer depth = null;
+        WorldPresentationSortingDomain domain = null;
+        WorldPresentationProjection projection = null;
+        bool sameSourceRow = false, entitiesSplit = false, projectedYDiffers = false, rankFollowsProjectedY = false;
+        bool projectedGroupsInDomain = false, splitPartOrderPreserved = false;
+        bool rawKeyRestoredOnExit = false, sourceRenderersRestored = false;
+        bool disabledModeRejoinedRow = false, mergedPartOrderPreserved = false;
+        int rowCountBeforeSplit = 0, rowCountAfterSplit = 0, rowCountAfterExit = 0;
+        int entityAOrder = 0, entityBOrder = 0;
+        float entityAY = 0f, entityBY = 0f;
+        try
+        {
+            depth = new ChunkDepthMeshRenderer(source.transform, sortingLayerId, rawOrder, material.renderQueue);
+            void SetEntityPart(int entity, int part, int partOrder, Vector3 anchor)
+            {
+                Matrix4x4 world = Matrix4x4.TRS(anchor, Quaternion.identity, Vector3.one);
+                depth.Set(ChunkDepthMeshRenderer.BuildingDomain, entity, part, sprite, material,
+                    world, anchor, partOrder, Color.white, sortingLayerId: sortingLayerId, sortingOrder: rawOrder);
+            }
+
+            Vector3 entityAAnchor = new(.5f, .5f, 0f);
+            Vector3 entityBAnchor = new(1.5f, .5f, 0f);
+            SetEntityPart(101, 0, 0, entityAAnchor);
+            SetEntityPart(101, 1, 1, entityAAnchor);
+            SetEntityPart(202, 0, 0, entityBAnchor);
+            depth.Flush();
+            Transform sourceEntityA = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 101, 0);
+            Transform sourceEntityB = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 202, 0);
+            rowCountBeforeSplit = depth.RowCount;
+            sameSourceRow = sourceEntityA != null && sourceEntityA == sourceEntityB && rowCountBeforeSplit == 1 &&
+                Mathf.Abs(entityAAnchor.x - entityBAnchor.x) > .5f &&
+                Mathf.Abs(entityAAnchor.y - entityBAnchor.y) < .001f;
+
+            depth.SetEntitySortingEnabled(true);
+            depth.Flush();
+            sourceEntityA = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 101, 0);
+            sourceEntityB = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 202, 0);
+            rowCountAfterSplit = depth.RowCount;
+            SortingGroup sourceGroupA = sourceEntityA != null ? sourceEntityA.GetComponent<SortingGroup>() : null;
+            SortingGroup sourceGroupB = sourceEntityB != null ? sourceEntityB.GetComponent<SortingGroup>() : null;
+            entitiesSplit = sourceEntityA != null && sourceEntityB != null && sourceEntityA != sourceEntityB &&
+                rowCountAfterSplit == 2 && sourceGroupA != null && sourceGroupB != null &&
+                sourceGroupA.sortingLayerID == sortingLayerId && sourceGroupA.sortingOrder == rawOrder &&
+                sourceGroupB.sortingLayerID == sortingLayerId && sourceGroupB.sortingOrder == rawOrder &&
+                sourceEntityA.position.x != sourceEntityB.position.x &&
+                Mathf.Abs(sourceEntityA.position.y - sourceEntityB.position.y) < .001f;
+
+            domain = WorldPresentationSortingDomain.Create(originalParent, "probe:rotated-entity-depth",
+                WorldSortingManager.ProjectedWorldCategory);
+            domain.Synchronize(Matrix4x4.identity, true);
+            projection = WorldPresentationProjection.Create(source.transform, originalParent);
+            projection.SetSortingDomain(domain);
+            Matrix4x4 rotateWorld = Matrix4x4.Rotate(Quaternion.Euler(0f, 0f, 90f));
+            projection.Synchronize(rotateWorld, true);
+            domain.FlushLocalSortingKeys();
+            bool hasProjectedA = projection.TryGetProjectedTransform(sourceEntityA, out Transform projectedEntityA);
+            bool hasProjectedB = projection.TryGetProjectedTransform(sourceEntityB, out Transform projectedEntityB);
+            SortingGroup projectedGroupA = hasProjectedA ? projectedEntityA.GetComponent<SortingGroup>() : null;
+            SortingGroup projectedGroupB = hasProjectedB ? projectedEntityB.GetComponent<SortingGroup>() : null;
+            entityAY = projectedEntityA != null ? projectedEntityA.position.y : 0f;
+            entityBY = projectedEntityB != null ? projectedEntityB.position.y : 0f;
+            entityAOrder = projectedGroupA != null ? projectedGroupA.sortingOrder : 0;
+            entityBOrder = projectedGroupB != null ? projectedGroupB.sortingOrder : 0;
+            float expectedEntityAY = sourceEntityA != null ? rotateWorld.MultiplyPoint3x4(sourceEntityA.position).y : float.NaN;
+            float expectedEntityBY = sourceEntityB != null ? rotateWorld.MultiplyPoint3x4(sourceEntityB.position).y : float.NaN;
+            projectedGroupsInDomain = projection.SortingDomain == domain && projectedEntityA != null &&
+                projectedEntityB != null && projectedEntityA.IsChildOf(domain.Root) && projectedEntityB.IsChildOf(domain.Root);
+            projectedYDiffers = projectedGroupsInDomain && entityBY > entityAY + .001f &&
+                Mathf.Abs(entityAY - expectedEntityAY) < .002f && Mathf.Abs(entityBY - expectedEntityBY) < .002f;
+            rankFollowsProjectedY = projectedYDiffers && entityBOrder < entityAOrder && entityAOrder != entityBOrder &&
+                projectedGroupA.sortingLayerID == sortingLayerId && projectedGroupB.sortingLayerID == sortingLayerId;
+            bool hasPartOrderZero = false, hasPartOrderOne = false;
+            if (projectedEntityA != null)
+                foreach (MeshRenderer part in projectedEntityA.GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    hasPartOrderZero |= part.sortingOrder == 0;
+                    hasPartOrderOne |= part.sortingOrder == 1;
+                }
+            splitPartOrderPreserved = hasPartOrderZero && hasPartOrderOne;
+
+            projection.SetSortingDomain(null);
+            domain.FlushLocalSortingKeys();
+            rawKeyRestoredOnExit = projection.SortingDomain == null && projectedGroupA != null && projectedGroupB != null &&
+                projectedGroupA.sortingLayerID == sortingLayerId && projectedGroupA.sortingOrder == rawOrder &&
+                projectedGroupB.sortingLayerID == sortingLayerId && projectedGroupB.sortingOrder == rawOrder &&
+                sourceGroupA.sortingLayerID == sortingLayerId && sourceGroupA.sortingOrder == rawOrder &&
+                sourceGroupB.sortingLayerID == sortingLayerId && sourceGroupB.sortingOrder == rawOrder;
+            projection.Release();
+            projection = null;
+            sourceRenderersRestored = true;
+            foreach (Renderer renderer in source.GetComponentsInChildren<Renderer>(true))
+                sourceRenderersRestored &= !renderer.forceRenderingOff;
+
+            depth.SetEntitySortingEnabled(false);
+            depth.Flush();
+            Transform mergedEntityA = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 101, 0);
+            Transform mergedEntityB = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.BuildingDomain, 202, 0);
+            rowCountAfterExit = depth.RowCount;
+            disabledModeRejoinedRow = rowCountAfterExit == 1 && mergedEntityA != null && mergedEntityA == mergedEntityB &&
+                mergedEntityA.GetComponent<SortingGroup>().sortingLayerID == sortingLayerId &&
+                mergedEntityA.GetComponent<SortingGroup>().sortingOrder == rawOrder;
+            bool mergedOrderZero = false, mergedOrderOne = false;
+            if (mergedEntityA != null)
+                foreach (MeshRenderer part in mergedEntityA.GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    mergedOrderZero |= part.sortingOrder == 0;
+                    mergedOrderOne |= part.sortingOrder == 1;
+                }
+            mergedPartOrderPreserved = mergedOrderZero && mergedOrderOne;
+        }
+        finally
+        {
+            projection?.Release();
+            depth?.Dispose();
+            domain?.Dispose();
+            UnityEngine.Object.DestroyImmediate(source);
+        }
+        return new JObject
+        {
+            ["sameSourceRow"] = sameSourceRow,
+            ["entityRowsSplit"] = entitiesSplit,
+            ["rotatedEntityFootpointsDiffer"] = projectedYDiffers,
+            ["projectedEntityGroupsInDomain"] = projectedGroupsInDomain,
+            ["rotatedEntityRanksFollowFootpoints"] = rankFollowsProjectedY,
+            ["splitEntityPartOrdersPreserved"] = splitPartOrderPreserved,
+            ["domainExitRestoresRawEntityKeys"] = rawKeyRestoredOnExit,
+            ["domainExitRestoresSourceRenderers"] = sourceRenderersRestored,
+            ["entityModeExitMergesRow"] = disabledModeRejoinedRow,
+            ["mergedEntityPartOrdersPreserved"] = mergedPartOrderPreserved,
+            ["rowsBeforeEntitySplit"] = rowCountBeforeSplit,
+            ["rowsAfterEntitySplit"] = rowCountAfterSplit,
+            ["rowsAfterEntityModeExit"] = rowCountAfterExit,
+            ["entityAFootY"] = entityAY,
+            ["entityBFootY"] = entityBY,
+            ["entityARankOrder"] = entityAOrder,
+            ["entityBRankOrder"] = entityBOrder
+        };
     }
 
     // 读取三条正式水面材质，颜色关系由 Lua 判断，不复算 Shader。

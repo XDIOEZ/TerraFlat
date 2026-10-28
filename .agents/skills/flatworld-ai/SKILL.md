@@ -16,7 +16,7 @@ description: "FlatWorld 动物、怪物与蜂群的生成、GameObject AI、可�
 | `AIECS/Gameplay/AiecsDefinitionCompiler.cs` | 合并 Actor/MOD 定义冷编译为纯值模板 |
 | `AIECS/Core/AiecsSimulation.cs`、`AiecsCapabilities/AiecsCapabilitySystems.cs` | 感知、决策、移动、战斗能力查询 |
 | `AIECS/Gameplay/AiecsEcologyRuntimeHost*.cs`、`AiecsGameplayBridge.cs` | 世界、蜂巢、快照、Unity 接口桥 |
-| `AIECS/Presentation/AiecsWorldRenderer.cs`、`AiecsBatchRendererGroup.cs` | 可选 ECS 表现 |
+| `AIECS/Presentation/AiecsWorldRenderer.cs`、`AiecsRenderBatch.cs` | 可选 ECS 原生排序批次 |
 
 Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则：`Assets/Resources/GameConfig/Spawners/Rules/`；ECS 图集：`Assets/6_Art/Generated/Actors/AIECS/`，Shader：`Assets/9_Shaders/Shader/AiecsSpriteLit.shader`。
 
@@ -33,7 +33,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - **追近不等于动作**：共用 `FlatWorld.Navigation.AIApproachRange`，停止内圈取配置停止距离与动作范围一半中的较小值。地面动作目标必须用 `Mod_Mover_AI.SetInteractionDestination`（可带路径代价上限），不覆写普通 `stopDistance`；巡逻、温度避险保持各自配置。鱼 `forageStopDistance=0.3`、`eatRange=0.9`，追近过程中仍按实际距离累计摄食，越界或换目标才清零。鸟啄食、行为图、鸡/野猪、狼/雪豹、蜜蜂使用同一内外圈原则；只有真正攻击前摇/伤害窗口/后摇或技能锁定才禁止移动，冷却不强制停车。狼编队、野猪左右站位及可选 ECS 站位必须把目标偏移和停止余量一同算入动作范围。禁止通过放大进食/伤害范围掩盖提前停车。离线真实鱼方法回归：`python Tools/Tests/AiApproachRanges/verify.py`；Lua 规则：`ai/approach_ranges`。
 
 - `AiRuntimeBackendService` 的 GO Actor 身份、前进与取消命令查询使用 `ListPool<MonoBehaviour>` 和 `GetComponentsInChildren(true, list)`，避免每次查询创建子组件数组；指令先按原顺序检查绑定到本 Item 的真实 Actor，再用同一份即时组件列表寻找首个接收器。列表调用结束即回池，不缓存模块结构/代际，不改变 ECS 后端回退和死亡拒绝规则。
-- ECS 宿主/后端路由按 WorldKey 独立，观察与战斗代理包含该世界所有真实玩家；距离档取最近玩家，不能只跟主机视角。联机客户端不 Tick 权威生态，`AiEcologyNetworkBridge` 将正式表现快照按连接 WorldKey/RealmRevision 分片同步，完整包才替换 BRG 列表，移动按世界最短位移插值；离开世界/断线释放副本缓存，死亡/掉落仍由服务器提交。
+- ECS 宿主/后端路由按 WorldKey 独立，观察与战斗代理包含该世界所有真实玩家；距离档取最近玩家，不能只跟主机视角。联机客户端不 Tick 权威生态，`AiEcologyNetworkBridge` 将正式表现快照按连接 WorldKey/RealmRevision 分片同步，完整包才替换表现快照，移动按世界最短位移插值；离开世界/断线释放副本缓存，死亡/掉落仍由服务器提交。
 
 - GO 自然出生通过 `SpawnCreatureInSteps` 单任务分帧：池未命中异步复制外壳，逐模块配置/依赖/Load，每帧目标 1.5ms、最多 8 步；单个模块不可抢占。候选停用且未登记，完成后复核落点/人数/预算再交付，成功才记账；退出、失效或取消释放候选。显式即时出生与居民恢复仍保留同步入口。
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
@@ -46,9 +46,9 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - `ConfigureRoutes` 冻结物种归属，未列物种默认 GO；显式 ECS 失败不自动回退。后端只通过 `IAiEcologyBackend.TryCreateActor` 接受管理器批准的实际创建，GO 专用初始化回调不能用于 ECS。快照与蜂巢老成员分别走 `TryRestoreCreature/TryRestoreResident`，恢复不消费出生计划/预算、不增加新生统计；同物种保持单一后端。
 - Actor 合并定义的移动/检测/朝向模块须启用；`ModuleData.Enabled` 决定 Load/Tick，`Data.isRunning` 是奔跑。飞行能力 ID 为 `AI_Bird`，`prefab=Mod_AI_Bird` 仅指实现；内容错误码 `FWC-ACTORJSON-004/005` 对应基础模块开关/飞行 ID。
 - 生物 `animator` 稳定槽位的能力 ID 固定为 `动画接收模块`（`ModText.AnimatorReceiver`），并须启用；`Module_Animator_AI` 等只作具体 Prefab 身份。`FWC-ACTORJSON-006` 检查最终继承配置；规则要先 `BindRuntimeIdentity` 保留显式 ID，再走 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，不能仅凭原型类型或模式判装配成功。
-- `WorldEntityRuntime` 独占共享 ECS World；AI 停用不影响树/作物。居民独立于 ChunkView，BRG 只显示已绑定 View 内居民，解绑不删除居民。
+- `WorldEntityRuntime` 独占共享 ECS World；AI 停用不影响树/作物。居民独立于 ChunkView，原生批次只显示已绑定 View 内居民，解绑不删除居民。正式、联机和 Playground 按世界可选排序域投影；域内提交原图层、序号、队列与显示脚点，临时序号只用于同域混排，离域恢复。主体按显示脚点 Y 合批，脚点各异时批次会增多，性能需现场测量。
 - GO 保存 ItemData/休眠快照；蜂巢独占所属蜜蜂 GUID/BeeState；停用 ECS 保留 EntitiesResidents 冷快照，不转换为 GO。`IsCreated` 判断 World 有效性，快照先采全再替换，失效保留冷快照，清理可重复。
-- F5 换玩家撤旧代理，无玩家暂停模拟，新玩家重绑而保留居民；开发 Playground 固定出生 WorldKey，换层只撤玩家代理并隐藏原 BRG/血条，不清居民或自动重生。同一世界的开发与正式生态互斥，暂停、掉落与清理均借所属世界，不影响其他世界。GamePlay 与 AIECS 通过独立桥/接口协作，延迟命中核对身份和绑定代际。
+- F5 换玩家撤旧代理，无玩家暂停模拟，新玩家重绑而保留居民；开发 Playground 固定出生 WorldKey，换层撤玩家代理，表现按原世界可见状态显示，不清居民或自动重生。同一世界的开发与正式生态互斥，暂停、掉落与清理均借所属世界，不影响其他世界。GamePlay 与 AIECS 通过独立桥/接口协作，延迟命中核对身份和绑定代际。
 - 资源 ECS 独立于 AI 后端，蜜蜂采蜜查 `NaturalEntityEcsService`，栖息地合并 GO/ECS 树，不恢复完整资源 Item。Lua Actor 不要求 ECS 能力声明。
 - 树木栖息地两秒候选快照复用一次 `WorldTopologyDomain` 与 `ChunkMgr.RuntimeTerrainPresenceQuery`，只读真实 BiomeId，避免逐树重新解析世界/完整 Tile；最终随机落点仍实时检查原规则。回归为 `ai/tree_habitat_batch`。
 - 树木栖息地 ECS 记录在注册、移除与定义刷新时增量维护，两秒快照只遍历存活树；Profiler `NaturalEntityRuntime.TreeHabitat` / `FlatWorld.MonsterSpawner.TreeCandidates` 观察峰值。
@@ -71,7 +71,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 - 熊 `AI_BearTerritorialRetaliation` 组合独立驻留/仇恨表：枚举同世界注册玩家，8米内连续停留超过60秒初始120（遮挡不断计时，仍受通用感知半径上限）；真实命中含零伤按冻结 Credit/Owner 向生物+30。每目标每秒-1，最高有效可见仇恨优先，归零脱战，同次驻留不补120，离开再进重计；完整身份失效清表，前摇开窗前复核仇恨/视野。Bear 为森林单只 GO、单图摇摆，不继承狼咬/叫声/食物链；规则 `ai/bear_provocation_sequence`。
 
-- ECS 生物由 `AiecsSwayAnimation` 在共享首图上合成摇摆、呼吸、定向攻击和死亡翻转，BRG 主体与太阳阴影共用结果；动作按完整身份保存，联机副本用 GUID 建立本地身份。目录每状态只留首图与定义基础姿态，参数沿用正式动画模块；鸟类保留外壳状态贴图与真实高度。导出器不再读取 Animator 时间轴；规则 `ai/ecs_sway_animation`，PlayMode 中不重导或刷新。
+- ECS 生物由 `AiecsSwayAnimation` 在共享首图上合成摇摆、呼吸、定向攻击和死亡翻转，原生主体批次与太阳阴影共用结果；动作按完整身份保存，联机副本用 GUID 建立本地身份。目录每状态只留首图与定义基础姿态，参数沿用正式动画模块；鸟类保留外壳状态贴图与真实高度。导出器不再读取 Animator 时间轴；规则 `ai/ecs_sway_animation`，PlayMode 中不重导或刷新。
 
 - 狼普通攻击距离2.1米、前摇0.25秒，真实命中盒按原尺寸放大50%；`biteAttackSkill` 组合通用撕咬。活动技能保留Attack状态并禁止普通攻击起手；继承狼外壳的Zombie/SnowLeopard显式移除该模块，由自身定义决定是否复用。
 

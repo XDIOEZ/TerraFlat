@@ -18,13 +18,14 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     private readonly int renderQueue;
     private readonly bool useParentSortingAnchor;
     private readonly Dictionary<PartKey, Entry> entries = new();
-    private readonly Dictionary<(int Index, int Layer, int Order), Row> rows = new();
+    private readonly Dictionary<(int Index, int Layer, int Order, int Domain, int Entity), Row> rows = new();
     private readonly HashSet<Group> dirtyGroups = new();
     private readonly List<PartKey> removalScratch = new();
     private static readonly HashSet<ChunkDepthMeshRenderer> active = new();
     private static readonly List<ChunkDepthMeshRenderer> flushScratch = new();
     private static readonly ProfilerMarker FlushMarker = new("FlatWorld.DepthMesh.Flush");
     private static bool hooked;
+    private bool entitySortingEnabled;
     internal bool IsDisposed { get; private set; }
     internal int PartCount => entries.Count;
     internal int RowCount => rows.Count;
@@ -82,6 +83,27 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         SharedSpriteMeshCache.Clearing += ReleaseAll;
     }
 
+    /// <summary>外部投影按实体脚点分组，退出后恢复普通地表行合批。</summary>
+    internal void SetEntitySortingEnabled(bool enabled)
+    {
+        if (IsDisposed) return;
+        enabled &= !useParentSortingAnchor;
+        if (entitySortingEnabled == enabled) return;
+        var pending = new List<RebuildSubmission>(entries.Count);
+        foreach (Entry entry in entries.Values)
+            pending.Add(new RebuildSubmission(entry.Key, entry.Visual, entry.Group.Key.Source,
+                entry.Group.Row.Root.localToWorldMatrix * entry.Visual.Matrix,
+                parent.TransformPoint(entry.LocalAnchor), entry.Group.Key.Order,
+                entry.Group.Row.Key.Layer, entry.Group.Row.Key.Order));
+        entitySortingEnabled = enabled;
+        Clear();
+        foreach (RebuildSubmission item in pending)
+            Set(item.Key.Domain, item.Key.Entity, item.Key.Part, item.Visual.Sprite, item.Material,
+                item.WorldMatrix, item.WorldAnchor, item.PartOrder, item.Visual.Tint, item.Visual.Crop,
+                item.Visual.Animation, item.Visual.Occluder, item.Visual.Highlighted, item.Visual.State,
+                item.Visual.Conveyor, item.Layer, item.Order);
+    }
+
     /// <summary>同一部件不变时不写网格；业务身份、内部图层与材质批次分别管理。</summary>
     internal void Set(int domain, int entityId, int part, Sprite sprite, Material material,
         Matrix4x4 worldMatrix, Vector3 worldAnchor, int order, Color tint,
@@ -102,12 +124,14 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             if (!Finite(crop[i]) || !Finite(animation[i]) || !Finite(state[i]) || !Finite(conveyor[i]) || !Finite(tint[i]))
                 throw new ArgumentException("行合批不能提交非有限材质或动画参数。");
         // 一格一个落地实体：所属行只取根部占格，图片偏移和内部动画不改变这一行。
-        int rowIndex = useParentSortingAnchor ? 0 : Mathf.FloorToInt(anchor.y);
-        float rowY = useParentSortingAnchor ? 0f : rowIndex + .5f;
-        local.m13 -= rowY;
+        int rowIndex = useParentSortingAnchor || entitySortingEnabled ? 0 : Mathf.FloorToInt(anchor.y);
+        Vector3 rowAnchor = useParentSortingAnchor ? Vector3.zero : entitySortingEnabled
+            ? anchor : new Vector3(0f, rowIndex + .5f, 0f);
+        local.m03 -= rowAnchor.x; local.m13 -= rowAnchor.y; local.m23 -= rowAnchor.z;
         var key = new PartKey(domain, entityId, part);
         var rowKey = (Index: rowIndex, Layer: sortingLayerId ?? defaultSortingLayerId,
-            Order: sortingLayerId.HasValue ? sortingOrder : defaultSortingOrder);
+            Order: sortingLayerId.HasValue ? sortingOrder : defaultSortingOrder,
+            Domain: entitySortingEnabled ? domain : -1, Entity: entitySortingEnabled ? entityId : 0);
         if (rowKey.Order < short.MinValue || rowKey.Order > short.MaxValue)
             throw new ArgumentOutOfRangeException(nameof(sortingOrder));
         var groupKey = new GroupKey(material, sprite.texture, sprite.associatedAlphaSplitTexture, order, renderQueue);
@@ -121,6 +145,9 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             occluder, highlighted, state, conveyor);
         if (previous != null)
         {
+            previous.LocalAnchor = anchor;
+            if (entitySortingEnabled && previous.Group.Row.Root.localPosition != rowAnchor)
+                previous.Group.Row.Root.localPosition = rowAnchor;
             if (previous.Visual.Equals(value)) return;
             if (previous.Visual.Sprite != sprite) previous.Group.TopologyDirty = true;
             previous.Visual = value;
@@ -130,8 +157,10 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             return;
         }
         if (!rows.TryGetValue(rowKey, out Row row))
-            rows.Add(rowKey, row = new Row(parent, rowKey, rowY,
+            rows.Add(rowKey, row = new Row(parent, rowKey, rowAnchor,
                 !useParentSortingAnchor));
+        else if (entitySortingEnabled && row.Root.localPosition != rowAnchor)
+            row.Root.localPosition = rowAnchor;
         if (!row.Groups.TryGetValue(groupKey, out Group group))
         {
             try { row.Groups.Add(groupKey, group = new Group(row, groupKey)); }
@@ -146,7 +175,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             }
             DrawGroupCount++;
         }
-        var entry = new Entry(key, value, group, geometry);
+        var entry = new Entry(key, value, group, geometry, anchor);
         entries.Add(key, entry);
         group.Entries.Add(entry);
         group.TopologyDirty = true;
@@ -249,16 +278,18 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
 
     private sealed class Row
     {
-        internal readonly (int Index, int Layer, int Order) Key;
+        internal readonly (int Index, int Layer, int Order, int Domain, int Entity) Key;
         internal readonly Transform Root;
         internal int Layer => Key.Layer;
         internal readonly Dictionary<GroupKey, Group> Groups = new();
-        internal Row(Transform parent, (int Index, int Layer, int Order) key, float rowY,
+        internal Row(Transform parent, (int Index, int Layer, int Order, int Domain, int Entity) key, Vector3 rowAnchor,
             bool sortAtRoot)
         {
             Key = key;
-            Root = CreateNode("DepthRow_" + key.Index, parent);
-            Root.localPosition = new Vector3(0f, rowY, 0f);
+            string name = key.Domain < 0 ? "DepthRow_" + key.Index :
+                $"DepthEntity_{key.Domain}_{key.Entity}_{key.Layer}_{key.Order}";
+            Root = CreateNode(name, parent);
+            Root.localPosition = rowAnchor;
             SortingGroup sorting = Root.gameObject.AddComponent<SortingGroup>();
             sorting.sortAtRoot = sortAtRoot;
             sorting.sortingLayerID = key.Layer;
@@ -289,6 +320,20 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     #endregion
 
     #region 部件身份与冻结输入
+    private readonly struct RebuildSubmission
+    {
+        internal readonly PartKey Key;
+        internal readonly Visual Visual;
+        internal readonly Material Material;
+        internal readonly Matrix4x4 WorldMatrix;
+        internal readonly Vector3 WorldAnchor;
+        internal readonly int PartOrder, Layer, Order;
+        internal RebuildSubmission(PartKey key, Visual visual, Material material, Matrix4x4 worldMatrix,
+            Vector3 worldAnchor, int partOrder, int layer, int order)
+        { Key = key; Visual = visual; Material = material; WorldMatrix = worldMatrix; WorldAnchor = worldAnchor;
+          PartOrder = partOrder; Layer = layer; Order = order; }
+    }
+
     private readonly struct PartKey : IEquatable<PartKey>
     {
         internal readonly int Domain, Entity, Part;
@@ -334,8 +379,9 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         internal bool Dirty = true;
         internal int VertexStart;
         internal Bounds Bounds;
-        internal Entry(PartKey key, Visual visual, Group group, SharedSpriteMeshCache.Geometry geometry)
-        { Key = key; Visual = visual; Group = group; Geometry = geometry; }
+        internal Vector3 LocalAnchor;
+        internal Entry(PartKey key, Visual visual, Group group, SharedSpriteMeshCache.Geometry geometry, Vector3 localAnchor)
+        { Key = key; Visual = visual; Group = group; Geometry = geometry; LocalAnchor = localAnchor; }
     }
     #endregion
 }

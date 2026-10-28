@@ -127,8 +127,34 @@ internal static class ChunkBatchRendererGroupService
     internal static void RefreshOwnerProjection(ChunkTilemapRenderer owner)
         => backend?.RefreshOwnerProjection(owner);
 
-    internal static void SetOwnerExternalProjection(ChunkTilemapRenderer owner, Matrix4x4 worldToDisplay, bool visible)
-        => backend?.SetOwnerExternalProjection(owner, worldToDisplay, visible);
+    internal static void SetOwnerExternalProjection(ChunkTilemapRenderer owner, Matrix4x4 worldToDisplay, bool visible,
+        WorldPresentationSortingDomain sortingDomain = null)
+    {
+        backend?.SetOwnerExternalProjection(owner, worldToDisplay, visible, sortingDomain);
+        if (owner != null) owner.SetDepthEntitySortingForProjection(sortingDomain != null);
+    }
+
+    internal static void ClearOwnerExternalProjection(ChunkTilemapRenderer owner)
+    {
+        backend?.ClearOwnerExternalProjection(owner);
+        if (owner != null) owner.SetDepthEntitySortingForProjection(false);
+    }
+
+    internal static bool GetOwnerNativeProjectionStats(ChunkTilemapRenderer owner,
+        out int visualCount, out int batchCount, out int meshRevision)
+    {
+        visualCount = batchCount = meshRevision = 0;
+        return backend != null && backend.GetOwnerNativeProjectionStats(owner, out visualCount, out batchCount, out meshRevision);
+    }
+
+    internal static bool TryGetOwnerNativeProjectionDomain(ChunkTilemapRenderer owner,
+        out WorldPresentationSortingDomain domain)
+    {
+        domain = backend?.GetOwnerNativeProjectionDomain(owner);
+        if (domain != null && !domain.IsDisposed) return true;
+        domain = null;
+        return false;
+    }
 
     /// <summary>地形 Mesh 与扩展 BRG 使用相同队列，阴影始终位于覆盖面和雪之上、墙体之下。</summary>
     internal static int GetLayerRenderQueue(VisualLayer layer)
@@ -272,6 +298,7 @@ internal static class ChunkBatchRendererGroupService
         private int bulkSubmitDepth;
         private readonly Dictionary<(int SpriteId, bool SunShadow), MeshRegistration> meshes = new();
         private readonly Dictionary<MaterialKey, MaterialRegistration> materials = new();
+        private readonly Dictionary<Material, Material> nativeMaterials = new();
         private readonly HashSet<int> warnedMissingOwnerIds = new();
         private readonly Material spriteTemplate;
         private readonly Material contactTemplate;
@@ -314,6 +341,7 @@ internal static class ChunkBatchRendererGroupService
                 RegisterOwnerCullingState(ownerId, worldBounds, owner.DepthPresentationOffset, owner.gameObject.scene.name);
                 RefreshOwnerProjection(owner);
                 OwnerCullingState state = ownerCullingById[ownerId];
+                state.SourceBounds = worldBounds;
                 state.Bounds = state.HasExternalProjection ? TransformBounds(worldBounds, state.ExternalProjection) : worldBounds;
                 warnedMissingOwnerIds.Remove(ownerId);
             }
@@ -325,6 +353,7 @@ internal static class ChunkBatchRendererGroupService
             if (ownerCullingById.TryGetValue(ownerId, out OwnerCullingState state))
             {
                 state.Bounds = worldBounds;
+                state.SourceBounds = worldBounds;
                 state.WorldKey = worldKey;
                 return;
             }
@@ -351,20 +380,23 @@ internal static class ChunkBatchRendererGroupService
                 Vector3 delta = offset - state.ProjectionOffset;
                 if (delta == Vector3.zero) return;
                 state.ProjectionOffset = offset;
-                if (state.HasExternalProjection) delta = state.ExternalProjection.MultiplyVector(delta);
-                Bounds bounds = state.Bounds;
-                bounds.center += delta;
-                state.Bounds = bounds;
+                Bounds sourceBounds = state.SourceBounds;
+                sourceBounds.center += delta;
+                state.SourceBounds = sourceBounds;
+                state.Bounds = state.HasExternalProjection ? TransformBounds(sourceBounds, state.ExternalProjection) : sourceBounds;
+                if (state.HasExternalProjection) delta = state.AppliedProjection.MultiplyVector(delta);
                 visibleInstanceListsDirty = true;
 
                 BeginBulkSubmit();
                 try
                 {
-                    foreach (InstanceHandle handle in handles.Values)
+                    foreach (KeyValuePair<int, InstanceHandle> entry in handles)
                     {
+                        InstanceHandle handle = entry.Value;
                         if (!UsesOwnerProjection(handle.Batch.Key.Layer)) continue;
                         handle.Batch.Translate(handle.Index, delta);
                         bulkSubmitBatches.Add(handle.Batch);
+                        SetNativeVisual(state, entry.Key, handle);
                     }
                 }
                 finally { EndBulkSubmit(); }
@@ -372,31 +404,100 @@ internal static class ChunkBatchRendererGroupService
         }
 
         // 外部世界只改变绘制矩阵与裁剪边界，不移动区块的物理根。
-        public void SetOwnerExternalProjection(ChunkTilemapRenderer owner, Matrix4x4 worldToDisplay, bool visible)
+        public void SetOwnerExternalProjection(ChunkTilemapRenderer owner, Matrix4x4 worldToDisplay, bool visible,
+            WorldPresentationSortingDomain sortingDomain)
         {
             lock (syncRoot)
             {
                 if (owner == null || !ownerHandles.TryGetValue(owner, out var handles) ||
                     !ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state)) return;
+                if (sortingDomain != null && (sortingDomain.IsDisposed || sortingDomain.WorldKey != state.WorldKey))
+                    throw new ArgumentException("区块投影排序域与所属世界不一致。", nameof(sortingDomain));
                 Matrix4x4 previous = state.HasExternalProjection ? state.ExternalProjection : Matrix4x4.identity;
+                bool domainChanged = !ReferenceEquals(state.SortingDomain, sortingDomain);
+                if (domainChanged && state.SortingDomain != null)
+                {
+                    state.SortingDomain.Disposing -= state.DomainDisposing;
+                    state.NativeProjection?.Dispose();
+                    state.NativeProjection = null;
+                    state.DomainDisposing = null;
+                }
+                state.SortingDomain = sortingDomain;
                 state.HasExternalProjection = true;
                 state.ExternalVisible = visible;
-                if (previous == worldToDisplay) return;
-                Matrix4x4 delta = worldToDisplay * previous.inverse;
                 state.ExternalProjection = worldToDisplay;
-                state.Bounds = TransformBounds(state.Bounds, delta);
-                visibleInstanceListsDirty = true;
-                BeginBulkSubmit();
-                try
+                if (previous != worldToDisplay)
+                    state.Bounds = TransformBounds(state.SourceBounds, worldToDisplay);
+                Matrix4x4 applied = sortingDomain == null ? worldToDisplay : Matrix4x4.identity;
+                if (state.AppliedProjection != applied)
                 {
-                    foreach (InstanceHandle handle in handles.Values)
+                    Matrix4x4 delta = applied * state.AppliedProjection.inverse;
+                    state.AppliedProjection = applied;
+                    BeginBulkSubmit();
+                    try
                     {
-                        handle.Batch.Transform(handle.Index, delta);
-                        bulkSubmitBatches.Add(handle.Batch);
+                        foreach (InstanceHandle handle in handles.Values)
+                        {
+                            handle.Batch.Transform(handle.Index, delta);
+                            bulkSubmitBatches.Add(handle.Batch);
+                        }
                     }
+                    finally { EndBulkSubmit(); }
                 }
-                finally { EndBulkSubmit(); }
+                if (domainChanged && sortingDomain != null)
+                {
+                    state.NativeProjection = new ChunkNativeSortingDomainBatches(sortingDomain, owner.name,
+                        owner.gameObject.layer, GetNativeMaterial);
+                    state.DomainDisposing = () => ChunkBatchRendererGroupService.ClearOwnerExternalProjection(owner);
+                    sortingDomain.Disposing += state.DomainDisposing;
+                    foreach (KeyValuePair<int, InstanceHandle> entry in handles)
+                        SetNativeVisual(state, entry.Key, entry.Value);
+                }
+                state.NativeProjection?.Synchronize(worldToDisplay, visible);
+                if (domainChanged || previous != worldToDisplay) visibleInstanceListsDirty = true;
             }
+        }
+
+        private static void SetNativeVisual(OwnerCullingState state, int slot, InstanceHandle handle)
+        {
+            TileBatch batch = handle.Batch;
+            state.NativeProjection?.SetVisual(slot, batch.Key.Layer, batch.Sprite, batch.Material,
+                batch.GetData(handle.Index), batch.Priority);
+        }
+
+        public void ClearOwnerExternalProjection(ChunkTilemapRenderer owner)
+        {
+            lock (syncRoot)
+            {
+                if (owner == null || !ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state)) return;
+                SetOwnerExternalProjection(owner, Matrix4x4.identity, false, null);
+                state.HasExternalProjection = false;
+                state.ExternalProjection = Matrix4x4.identity;
+                state.ExternalVisible = false;
+                visibleInstanceListsDirty = true;
+            }
+        }
+
+        public bool GetOwnerNativeProjectionStats(ChunkTilemapRenderer owner,
+            out int visualCount, out int batchCount, out int meshRevision)
+        {
+            lock (syncRoot)
+            {
+                visualCount = batchCount = meshRevision = 0;
+                if (owner == null || !ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state) ||
+                    state.NativeProjection == null) return false;
+                visualCount = state.NativeProjection.VisualCount;
+                batchCount = state.NativeProjection.BatchCount;
+                meshRevision = state.NativeProjection.MeshRevision;
+                return true;
+            }
+        }
+
+        public WorldPresentationSortingDomain GetOwnerNativeProjectionDomain(ChunkTilemapRenderer owner)
+        {
+            lock (syncRoot)
+                return owner != null && ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state)
+                    ? state.SortingDomain : null;
         }
 
         private static Bounds TransformBounds(Bounds bounds, Matrix4x4 matrix)
@@ -487,6 +588,14 @@ internal static class ChunkBatchRendererGroupService
             {
                 if (!ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
                     return;
+
+                if (ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state) && state.SortingDomain != null)
+                {
+                    state.SortingDomain.Disposing -= state.DomainDisposing;
+                    state.NativeProjection?.Dispose();
+                    state.NativeProjection = null;
+                    state.SortingDomain = null;
+                }
 
                 ownerRemovalBatches.Clear();
                 foreach (InstanceHandle handle in handles.Values)
@@ -609,8 +718,8 @@ internal static class ChunkBatchRendererGroupService
                 }
                 if (cullingState.HasExternalProjection)
                 {
-                    data = TransformInstance(data, cullingState.ExternalProjection);
-                    sortingPosition = cullingState.ExternalProjection.MultiplyPoint3x4(sortingPosition);
+                    data = TransformInstance(data, cullingState.AppliedProjection);
+                    sortingPosition = cullingState.AppliedProjection.MultiplyPoint3x4(sortingPosition);
                 }
                 VisualKey key = new(visual.Layer, visual.Sprite, visual.SourceMaterial);
                 if (handles.TryGetValue(slotKey, out InstanceHandle current))
@@ -618,6 +727,7 @@ internal static class ChunkBatchRendererGroupService
                     if (current.Batch.Key.Equals(key))
                     {
                         current.Batch.Update(current.Index, data, sortingPosition);
+                        SetNativeVisual(cullingState, slotKey, current);
                         if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(current.Batch);
                         return true;
                     }
@@ -629,6 +739,7 @@ internal static class ChunkBatchRendererGroupService
                 int index = batch.Add(owner, slotKey, cullingState, data, sortingPosition);
                 if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(batch);
                 handles[slotKey] = new InstanceHandle(batch, index);
+                SetNativeVisual(cullingState, slotKey, handles[slotKey]);
                 visibleInstanceListsDirty = true;
                 return true;
             }
@@ -649,6 +760,8 @@ internal static class ChunkBatchRendererGroupService
                     matrix.m00 = data.Transform0.x; matrix.m01 = data.Transform0.y; matrix.m03 = data.Transform0.z;
                     matrix.m10 = data.Transform1.x; matrix.m11 = data.Transform1.y; matrix.m13 = data.Transform1.z;
                     matrix.m23 = data.Transform1.w;
+                    if (ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state) && state.NativeProjection != null)
+                        matrix = state.ExternalProjection * matrix;
                     destination.Add(new WorldVisualSnapshot(handle.Batch.Sprite, matrix, (Color)data.Tint,
                         layer, handle.Batch.Priority, matrix.m13));
                 }
@@ -692,6 +805,8 @@ internal static class ChunkBatchRendererGroupService
             Dictionary<int, InstanceHandle> handles)
         {
             handles.Remove(slotKey);
+            if (owner != null && ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state))
+                state.NativeProjection?.RemoveVisual(slotKey);
             visibleInstanceListsDirty = true;
             if (handle.Batch.Remove(handle.Index, out InstanceOwner movedOwner))
             {
@@ -708,7 +823,7 @@ internal static class ChunkBatchRendererGroupService
             MeshRegistration mesh = GetOrCreateMesh(visual.Sprite, visual.Layer == VisualLayer.NaturalShadow);
             MaterialRegistration material = GetOrCreateMaterial(visual.Layer, visual.Sprite.texture,
                 visual.SourceMaterial);
-            var batch = new TileBatch(this, key, visual.Sprite, mesh.Id, material.Id, ResolvePriority(visual.Layer),
+            var batch = new TileBatch(this, key, visual.Sprite, mesh.Id, material.Id, material.Material, ResolvePriority(visual.Layer),
                 visual.DepthSorted, InitialCapacity);
             batches.Add(key, batch);
             orderedBatches.Add(batch);
@@ -786,6 +901,16 @@ internal static class ChunkBatchRendererGroupService
             return registration;
         }
 
+        private Material GetNativeMaterial(Material source)
+        {
+            if (nativeMaterials.TryGetValue(source, out Material material)) return material;
+            material = new Material(source) { name = source.name + "_NativeDomain", hideFlags = HideFlags.HideAndDontSave };
+            material.DisableKeyword("DOTS_INSTANCING_ON");
+            material.EnableKeyword("_CHUNK_NATIVE_BATCH");
+            nativeMaterials.Add(source, material);
+            return material;
+        }
+
         /// <summary>立即刷新已有地面批次，宽度调整不需要重新上传地块实例。</summary>
         private void ApplyGroundElevationPreference()
         {
@@ -794,7 +919,11 @@ internal static class ChunkBatchRendererGroupService
                 foreach (MaterialRegistration registration in materials.Values)
                 {
                     if (registration.Layer == VisualLayer.TerrainHeightShadow)
+                    {
                         ApplyGroundElevationPreference(registration.Material);
+                        if (nativeMaterials.TryGetValue(registration.Material, out Material native))
+                            ApplyGroundElevationPreference(native);
+                    }
                 }
             }
         }
@@ -975,7 +1104,7 @@ internal static class ChunkBatchRendererGroupService
             for (int i = 0; i < activeOwnerCullingStates.Count; i++)
             {
                 OwnerCullingState state = activeOwnerCullingStates[i];
-                bool visible = (state.HasExternalProjection ? state.ExternalVisible :
+                bool visible = state.NativeProjection == null && (state.HasExternalProjection ? state.ExternalVisible :
                     state.WorldKey == GameplayWorldRegistry.LocalPresentationWorldKey) &&
                     (!WorldStreamingPreferences.OwnerCullingEnabled || IsOwnerVisible(state.Bounds, planes));
                 if (state.Visible != visible)
@@ -1030,8 +1159,16 @@ internal static class ChunkBatchRendererGroupService
                 disposed = true;
                 GroundElevationShadowSettings.Changed -= ApplyGroundElevationPreference;
 
+                foreach (OwnerCullingState state in activeOwnerCullingStates)
+                {
+                    if (state.SortingDomain != null) state.SortingDomain.Disposing -= state.DomainDisposing;
+                    state.NativeProjection?.Dispose();
+                }
+
                 try
                 {
+                    foreach (Material material in nativeMaterials.Values) DestroyRuntimeObject(material);
+                    nativeMaterials.Clear();
                     for (int i = 0; i < orderedBatches.Count; i++)
                     {
                         try { orderedBatches[i].Dispose(); }
@@ -1149,13 +1286,14 @@ internal static class ChunkBatchRendererGroupService
             private readonly List<int> bulkSubmitIndices = new();
 
             public TileBatch(Backend backend, VisualKey key, Sprite sprite, BatchMeshID meshId,
-                BatchMaterialID materialId, int priority, bool depthSorted, int capacity)
+                BatchMaterialID materialId, Material material, int priority, bool depthSorted, int capacity)
             {
                 this.backend = backend;
                 Key = key;
                 Sprite = sprite;
                 MeshId = meshId;
                 MaterialId = materialId;
+                Material = material;
                 Priority = priority;
                 DepthSorted = depthSorted;
                 Resize(capacity);
@@ -1165,6 +1303,7 @@ internal static class ChunkBatchRendererGroupService
             public Sprite Sprite { get; }
             public BatchMeshID MeshId { get; }
             public BatchMaterialID MaterialId { get; }
+            public Material Material { get; }
             public int Priority { get; }
             public bool DepthSorted { get; }
             public BatchID BatchId { get; private set; }
@@ -1381,13 +1520,19 @@ internal static class ChunkBatchRendererGroupService
             public OwnerCullingState(Bounds bounds, int index)
             {
                 Bounds = bounds;
+                SourceBounds = bounds;
                 Index = index;
             }
 
             public string WorldKey { get; set; }
             public Bounds Bounds { get; set; }
+            public Bounds SourceBounds { get; set; }
             public Vector3 ProjectionOffset { get; set; }
             public Matrix4x4 ExternalProjection { get; set; } = Matrix4x4.identity;
+            public Matrix4x4 AppliedProjection { get; set; } = Matrix4x4.identity;
+            public WorldPresentationSortingDomain SortingDomain { get; set; }
+            public Action DomainDisposing { get; set; }
+            public ChunkNativeSortingDomainBatches NativeProjection { get; set; }
             public bool HasExternalProjection { get; set; }
             public bool ExternalVisible { get; set; }
             public int Index { get; set; }

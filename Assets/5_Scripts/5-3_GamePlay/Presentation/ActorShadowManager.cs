@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using FlatWorld.AIECS;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 统一管理玩家、生物、落地植物与显式配置的世界物品的接触阴影。
-/// 所有旧 Item 接触阴影共用一个 BRG 网格和材质，按可见轮廓定位脚点并绘制扁椭圆。
+/// 地表接触阴影共用 BRG，投影世界按域复用原生网格，按可见轮廓定位脚点并绘制扁椭圆。
 /// 通过完整注册和结构变化事件维护绑定；水态和昼夜光照只改变表现，不写回物品状态。
 /// </summary>
 public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
@@ -19,11 +21,58 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         new List<KeyValuePair<Item, ShadowBinding>>();
     private ContactShadowBatchRenderer shadowBatch; // 所有 Item 共用的原生绘制批次。
     private ContactShadowBatchRenderer mechanicalShadowBatch; // 机械数据节点共用的单独排序批次。
+    private readonly Dictionary<WorldPresentationSortingDomain, DomainShadowBucket> domainShadowBatches = new();
     private int lightingFrame = -1;
     private int lightingSceneHandle = int.MinValue;
     private int lightingSceneNameHandle = int.MinValue;
     private string lightingSceneName = string.Empty;
     private float cachedShadowOpacity; // 本帧光照与晨昏进度合成后的透明度。
+
+    private sealed class DomainShadowBucket
+    {
+        private readonly ActorShadowManager owner;
+        private readonly WorldPresentationSortingDomain domain;
+        private AiecsShadowRenderer actors, machines;
+
+        internal DomainShadowBucket(ActorShadowManager owner, WorldPresentationSortingDomain domain)
+        { this.owner = owner; this.domain = domain; domain.Disposing += Release; }
+
+        private void Release() => owner.ReleaseDomainShadowBucket(domain);
+        internal void Begin() { actors?.Begin(); machines?.Begin(); }
+        internal void End() { actors?.End(); machines?.End(); }
+        internal void Hide() { actors?.Hide(); machines?.Hide(); }
+
+        internal void Append(bool mechanical, Vector2 center, float width, float height, float opacity)
+        {
+            Transform root = domain.Root;
+            if (root == null) return;
+            AiecsShadowRenderer renderer = mechanical ? machines : actors;
+            if (renderer == null)
+            {
+                WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundShadowCategory, out int layer, out int order);
+                renderer = new AiecsShadowRenderer(root.gameObject.scene, layer, order, root,
+                    mechanical ? MechanicalShadowQueue : 2995, 0);
+                renderer.SetSortingKeyCallbacks(ApplySortingKey, RemoveSortingKey);
+                if (mechanical) machines = renderer; else actors = renderer;
+                renderer.Begin();
+            }
+            Vector3 local = root.InverseTransformPoint(center);
+            float localWidth = root.InverseTransformVector(Vector3.right * width).magnitude;
+            float localHeight = root.InverseTransformVector(Vector3.up * height).magnitude;
+            renderer.Append(local, new Vector4(0f, 0f, localWidth, localHeight), false, opacity);
+        }
+
+        private void ApplySortingKey(Renderer target, int layer, int order, int queue, float footY)
+            => domain.ApplyLocalRendererSortingKey(target, layer, order, queue, footY);
+        private void RemoveSortingKey(Renderer target) => domain.RemoveLocalSortingKey(target);
+
+        internal void Dispose()
+        {
+            domain.Disposing -= Release;
+            try { actors?.Dispose(); }
+            finally { machines?.Dispose(); }
+        }
+    }
 
     #endregion
 
@@ -32,17 +81,21 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>统一入口分发物品生命周期，启用时恢复接触阴影模块。</summary>
     private void OnEnable()
     {
+        RenderPipelineManager.beginContextRendering -= PresentActorShadows;
+        RenderPipelineManager.beginContextRendering += PresentActorShadows;
         SunShadowParametersProvider.PublishContactAppearance();
         WorldRenderingManager.ExistingInstance?.AttachContactShadowRenderingBackend(this);
     }
 
-    /// <summary>每帧末尾同步阴影位置、尺寸和光照透明度。</summary>
-    private void LateUpdate()
+    /// <summary>每个渲染上下文开始时同步阴影位置、尺寸和光照透明度。</summary>
+    private void PresentActorShadows(ScriptableRenderContext context, List<Camera> cameras)
     {
+        foreach (DomainShadowBucket bucket in domainShadowBatches.Values) bucket.Begin();
         if (bindings.Count == 0 && MechanicalShadowRegistry.Count == 0)
         {
             shadowBatch?.Hide();
             mechanicalShadowBatch?.Hide();
+            foreach (DomainShadowBucket bucket in domainShadowBatches.Values) bucket.End();
             return;
         }
 
@@ -63,10 +116,19 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
                     continue;
                 }
 
-                bool projected = WorldPresentationTransformRegistry.TryGet(
-                    GameplayWorldRegistry.GetItemWorldKey(item), out Matrix4x4 transform, out bool visible);
+                string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
+                bool projected = WorldPresentationTransformRegistry.TryGet(worldKey, out Matrix4x4 transform, out bool visible);
+                WorldPresentationTransformRegistry.TryGetSortingDomain(worldKey, out WorldPresentationSortingDomain domain);
+                if (WorldPresentationProjection.TryGetItemSortingProjection(item, out WorldPresentationSortingDomain itemDomain,
+                    out Matrix4x4 itemTransform, out bool itemVisible))
+                {
+                    projected = true;
+                    transform = itemTransform;
+                    visible = itemVisible;
+                    domain = itemDomain;
+                }
                 if (projected ? !visible : item.gameObject.scene.handle != localScene) continue;
-                UpdateBinding(item, binding, projected, transform);
+                UpdateBinding(item, binding, projected, transform, domain);
             }
 
             for (int i = 0; i < cleanupBindings.Count; i++)
@@ -86,11 +148,13 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             mechanicalShadowBatch.EndFrame();
         }
         else mechanicalShadowBatch?.Hide();
+        foreach (DomainShadowBucket bucket in domainShadowBatches.Values) bucket.End();
     }
 
     /// <summary>解除事件并释放 BRG 原生资源。</summary>
     protected override void OnDestroy()
     {
+        RenderPipelineManager.beginContextRendering -= PresentActorShadows;
         ClearBindings();
         ReleaseBatches();
 
@@ -100,6 +164,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>脚本重载可能不调用 OnDestroy，停用时必须释放原生 BRG 而不是只隐藏。</summary>
     private void OnDisable()
     {
+        RenderPipelineManager.beginContextRendering -= PresentActorShadows;
         ClearBindings();
         ReleaseBatches();
     }
@@ -111,7 +176,15 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         shadowBatch = null;
         mechanicalShadowBatch = null;
         try { actors?.Dispose(); }
-        finally { machines?.Dispose(); }
+        finally
+        {
+            try { machines?.Dispose(); }
+            finally
+            {
+                foreach (DomainShadowBucket bucket in domainShadowBatches.Values) bucket.Dispose();
+                domainShadowBatches.Clear();
+            }
+        }
     }
 
     #endregion
@@ -177,13 +250,15 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             if (opacity <= 0.001f) continue;
             Vector3 foot = projected ? transform.MultiplyPoint3x4(entry.Foot) : entry.Foot;
             float width = projected ? entry.ContactWidth * transform.MultiplyVector(Vector3.right).magnitude : entry.ContactWidth;
-            mechanicalShadowBatch.Append(new Vector2(foot.x, foot.y + defaults.groundOffset),
+            WorldPresentationTransformRegistry.TryGetSortingDomain(entry.Scene.name, out WorldPresentationSortingDomain domain);
+            AppendContactShadow(domain, true, new Vector2(foot.x, foot.y + defaults.groundOffset),
                 width, width * defaults.heightRatio, opacity);
         }
     }
 
     /// <summary>同步单个实体的脚底位置、贴图占地尺寸和当前光照透明度。</summary>
-    private void UpdateBinding(Item item, ShadowBinding binding, bool projected, Matrix4x4 projection)
+    private void UpdateBinding(Item item, ShadowBinding binding, bool projected, Matrix4x4 projection,
+        WorldPresentationSortingDomain sortingDomain)
     {
         // 太空玩家不画地面阴影，舱内人工重力也不改变这条表现规则。
         if (item is Player && SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
@@ -198,7 +273,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
         if (sourceRenderer == null || sourceRenderer.sprite == null ||
             !sourceRenderer.enabled || (projected
-                ? GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sourceRenderer)
+                ? (WorldPresentationProjection.TryGetProjectedRendererOriginalForceRenderingOff(sourceRenderer, out bool forceOff)
+                    ? forceOff : GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sourceRenderer))
                 : sourceRenderer.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(sourceRenderer)) ||
             !sourceRenderer.gameObject.activeInHierarchy)
             return;
@@ -248,10 +324,24 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
         if (projected) footprintAnchor = projection.MultiplyPoint3x4(footprintAnchor);
         float projectedWidth = projected ? binding.ShadowWidth * projection.MultiplyVector(Vector3.right).magnitude : binding.ShadowWidth;
-        shadowBatch.Append(new Vector2(footprintAnchor.x,
+        AppendContactShadow(sortingDomain, false, new Vector2(footprintAnchor.x,
                 footprintAnchor.y + Defaults.groundOffset),
             projectedWidth, projectedWidth * Defaults.heightRatio,
             visualOpacity);
+    }
+
+    private void AppendContactShadow(WorldPresentationSortingDomain domain, bool mechanical, Vector2 center,
+        float width, float height, float opacity)
+    {
+        if (domain == null) { (mechanical ? mechanicalShadowBatch : shadowBatch).Append(center, width, height, opacity); return; }
+        if (!domainShadowBatches.TryGetValue(domain, out DomainShadowBucket bucket))
+            domainShadowBatches.Add(domain, bucket = new DomainShadowBucket(this, domain));
+        bucket.Append(mechanical, center, width, height, opacity);
+    }
+
+    private void ReleaseDomainShadowBucket(WorldPresentationSortingDomain domain)
+    {
+        if (domainShadowBatches.Remove(domain, out DomainShadowBucket bucket)) bucket.Dispose();
     }
 
     /// <summary>植物以根部碰撞体定位，宽度同时受实际植株贴图限制。</summary>
@@ -396,6 +486,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         bindings.Clear();
         shadowBatch?.Hide();
         mechanicalShadowBatch?.Hide();
+        foreach (DomainShadowBucket bucket in domainShadowBatches.Values) bucket.Hide();
     }
 
     /// <summary>移除物品绑定；下一帧批量上传不会再包含它。</summary>

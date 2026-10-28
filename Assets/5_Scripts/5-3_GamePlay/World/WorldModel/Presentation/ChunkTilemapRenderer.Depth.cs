@@ -8,6 +8,7 @@ public sealed partial class ChunkTilemapRenderer
     private ChunkDepthMeshRenderer mechanicalConnectorDepthMesh;
     private ChunkDepthMeshRenderer groundBuildingDepthMesh;
     private ChunkDepthMeshRenderer submergedBuildingDepthMesh;
+    private bool entitySortingForProjection;
     private readonly System.Collections.Generic.Dictionary<(Material Source, int Queue), Material> buildingOverlayMaterials = new();
     internal ChunkDepthMeshRenderer DepthMesh
     {
@@ -15,7 +16,11 @@ public sealed partial class ChunkTilemapRenderer
         {
             if (boundChunk?.Terrain == null)
                 throw new System.InvalidOperationException("行合批必须先绑定区块数据。");
-            if (depthMesh == null || depthMesh.IsDisposed) depthMesh = new ChunkDepthMeshRenderer(transform);
+            if (depthMesh == null || depthMesh.IsDisposed)
+            {
+                depthMesh = new ChunkDepthMeshRenderer(transform);
+                depthMesh.SetEntitySortingEnabled(entitySortingForProjection);
+            }
             return depthMesh;
         }
     }
@@ -31,6 +36,7 @@ public sealed partial class ChunkTilemapRenderer
             {
                 WorldSortingManager.GetResourceSortingKey(WorldSortingManager.MechanicalConnectorCategory, out int layer, out int order);
                 mechanicalConnectorDepthMesh = new ChunkDepthMeshRenderer(transform, layer, order);
+                mechanicalConnectorDepthMesh.SetEntitySortingEnabled(entitySortingForProjection);
             }
             return mechanicalConnectorDepthMesh;
         }
@@ -53,6 +59,24 @@ public sealed partial class ChunkTilemapRenderer
     internal Vector3 DepthPresentationOffset => boundChunk == null ? Vector3.zero : transform.position -
         new Vector3(boundChunk.Address.ChunkOrigin.X, boundChunk.Address.ChunkOrigin.Y, 0f);
 
+    internal void SetDepthEntitySortingForProjection(bool enabled)
+    {
+        if (entitySortingForProjection == enabled) return;
+        entitySortingForProjection = enabled;
+        foreach (MechanicalDepthVisual visual in mechanicalDepthVisuals.Values) visual?.DetachDepthSortingAttachments();
+        try
+        {
+            depthMesh?.SetEntitySortingEnabled(enabled);
+            mechanicalConnectorDepthMesh?.SetEntitySortingEnabled(enabled);
+            groundBuildingDepthMesh?.SetEntitySortingEnabled(enabled);
+            submergedBuildingDepthMesh?.SetEntitySortingEnabled(enabled);
+        }
+        finally
+        {
+            foreach (MechanicalDepthVisual visual in mechanicalDepthVisuals.Values) visual?.RestoreDepthSortingAttachments();
+        }
+    }
+
     internal void RemoveBuildingConnectionDepthPart(int entityId, int part)
         => mechanicalConnectorDepthMesh?.Remove(ChunkDepthMeshRenderer.BuildingDomain, entityId, part);
 
@@ -66,6 +90,7 @@ public sealed partial class ChunkTilemapRenderer
         mechanicalConnectorDepthMesh = null;
         groundBuildingDepthMesh = null;
         submergedBuildingDepthMesh = null;
+        entitySortingForProjection = false;
         foreach (Material material in buildingOverlayMaterials.Values)
             if (Application.isPlaying) Destroy(material); else DestroyImmediate(material);
         buildingOverlayMaterials.Clear();
@@ -132,6 +157,7 @@ public sealed partial class ChunkTilemapRenderer
                 WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory, out int layer, out int order);
                 groundBuildingDepthMesh = new ChunkDepthMeshRenderer(transform, layer, order,
                     ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.Support));
+                groundBuildingDepthMesh.SetEntitySortingEnabled(entitySortingForProjection);
             }
             return groundBuildingDepthMesh;
         }
@@ -139,6 +165,7 @@ public sealed partial class ChunkTilemapRenderer
         {
             int layer = SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer);
             submergedBuildingDepthMesh = new ChunkDepthMeshRenderer(transform, layer, 0, ResolveSubmergedBuildingRenderQueue());
+            submergedBuildingDepthMesh.SetEntitySortingEnabled(entitySortingForProjection);
         }
         return submergedBuildingDepthMesh;
     }

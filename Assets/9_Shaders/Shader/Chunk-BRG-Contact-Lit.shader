@@ -12,7 +12,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
 
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" "DisableBatching"="True" }
         Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
@@ -27,6 +27,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             float3 positionOS : POSITION;
             half4 color : COLOR;
             float2 uv : TEXCOORD0;
+            CHUNK_NATIVE_ATTRIBUTES
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
 
@@ -65,7 +66,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
         Varyings Vert(Attributes input)
         {
             UNITY_SETUP_INSTANCE_ID(input);
-            ChunkBRGInstanceData d = LoadChunkBRGInstanceData();
+            ChunkBRGInstanceData d = LOAD_CHUNK_VERTEX_DATA(input);
             float3 positionWS = TransformChunkBRGVertex(input.positionOS, d);
             Varyings o = (Varyings)0;
             o.positionCS = TransformWorldToHClip(positionWS);
@@ -94,6 +95,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -135,6 +137,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #pragma multi_compile_local _ _CHUNK_NATIVE_BATCH
 
             half4 Frag(Varyings input) : SV_Target
             {

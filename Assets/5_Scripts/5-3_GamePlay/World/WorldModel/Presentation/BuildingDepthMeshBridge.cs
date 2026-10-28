@@ -316,6 +316,7 @@ internal static class BuildingDepthMeshBridge
                 {
                     combustionSortingGroup = Item.gameObject.AddComponent<SortingGroup>();
                     combustionSortingGroup.sortAtRoot = true;
+                    WorldPresentationProjection.NotifySourceSortingStructureChanged(Item.transform);
                     ownsCombustionSortingGroup = true;
                 }
                 originalCombustionSortingLayer = combustionSortingGroup.sortingLayerID;

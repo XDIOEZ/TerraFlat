@@ -63,9 +63,15 @@ namespace FlatWorld.AIECS
         private readonly Dictionary<CombatIdentity, SwayEntry> animationStates = new();
         private readonly List<CombatIdentity> expiredStates = new();
         private int drawSequence;
+        private int lastAnimationFrame = -1;
         private readonly List<AiecsRenderBatch> batches = new();
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
+        private readonly Transform presentationRoot;
+        private Matrix4x4 worldToDisplay = Matrix4x4.identity;
+        private bool presentationVisible = true;
+        private Action<Renderer, int, int, int, float> applySortingKey;
+        private Action<Renderer> removeSortingKey;
         private readonly AiecsShadowRenderer shadows;
         private readonly AiecsSunShadowRenderer sunShadows;
         private readonly AiecsActorSortingKey[] actorSortingKeys;
@@ -81,6 +87,9 @@ namespace FlatWorld.AIECS
         public int VisibleCount => visible.Count;
         public int BatchCount { get; private set; }
         public int UploadedBytes { get; private set; }
+        public Transform PresentationRoot => presentationRoot;
+        public Matrix4x4 WorldToDisplay => worldToDisplay;
+        public bool PresentationVisible => presentationVisible;
         public event Action Disposed;
         private bool disposed;
 
@@ -107,9 +116,60 @@ namespace FlatWorld.AIECS
                 var idle = animations[i].StandFrame;
                 shadowFootprints[i] = AiecsShadowRenderer.MeasureFootprint(definition, catalog.Sprites[idle.Sprite], idle);
             }
-            shadows = new AiecsShadowRenderer(scene, sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
-            sunShadows = new AiecsSunShadowRenderer(scene, catalog.Material.mainTexture,
-                sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
+            var root = new GameObject("AIECS 世界表现") { hideFlags = HideFlags.DontSave };
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+            presentationRoot = root.transform;
+            try
+            {
+                shadows = new AiecsShadowRenderer(scene, sortingKeys.ShadowLayer, sortingKeys.ShadowOrder, presentationRoot);
+                sunShadows = new AiecsSunShadowRenderer(scene, catalog.Material.mainTexture,
+                    sortingKeys.ShadowLayer, sortingKeys.ShadowOrder, presentationRoot);
+            }
+            catch
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(root);
+                else UnityEngine.Object.DestroyImmediate(root);
+                throw;
+            }
+        }
+
+        /// <summary>显示世界只改变批次的排序归属与投影，不移动 ECS 模拟坐标。</summary>
+        public void SetWorldPresentation(Transform parent, Matrix4x4 projection, bool visible)
+        {
+            if (disposed || presentationRoot == null) return;
+            worldToDisplay = projection;
+            bool wasVisible = presentationVisible;
+            presentationVisible = visible;
+            if (presentationRoot.parent != parent)
+            {
+                presentationRoot.SetParent(parent, true);
+                if (parent == null && scene.IsValid() && scene.isLoaded && presentationRoot.gameObject.scene != scene)
+                    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(presentationRoot.gameObject, scene);
+            }
+            // 域根保持世界轴对齐和单位缩放，顶点使用显示世界坐标，避免重复投影。
+            if (presentationRoot.position != Vector3.zero || presentationRoot.rotation != Quaternion.identity)
+                presentationRoot.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            if (presentationRoot.localScale != Vector3.one) presentationRoot.localScale = Vector3.one;
+            if (presentationRoot.gameObject.activeSelf != visible) presentationRoot.gameObject.SetActive(visible);
+            if (wasVisible && !visible) HideDrawnBatches();
+        }
+
+        /// <summary>由所属显示世界注入临时排序回调，表现程序集不依赖具体世界类型。</summary>
+        public void SetSortingKeyCallbacks(Action<Renderer, int, int, int, float> apply, Action<Renderer> remove)
+        {
+            if (ReferenceEquals(applySortingKey, apply) && ReferenceEquals(removeSortingKey, remove)) return;
+            foreach (AiecsRenderBatch batch in batches) batch.RemoveSortingKey(removeSortingKey);
+            applySortingKey = apply;
+            removeSortingKey = remove;
+            shadows.SetSortingKeyCallbacks(apply, remove);
+            sunShadows.SetSortingKeyCallbacks(apply, remove);
+        }
+
+        private void HideDrawnBatches()
+        {
+            visible.Clear(); BatchCount = UploadedBytes = 0; shadows.Hide(); sunShadows.Hide();
+            foreach (AiecsRenderBatch old in batches) { old.Hide(); old.RemoveSortingKey(removeSortingKey); }
+            animationStates.Clear();
         }
 
         /// <summary>资源发布时一次更新各物种排序，不在绘制循环读取定义目录。</summary>
@@ -141,32 +201,41 @@ namespace FlatWorld.AIECS
         public void DrawRecords(NativeArray<AiecsDisplayRecord> records, Camera camera, WorldTopologyDomain domain,
             Func<Vector2, bool> presentationReady = null)
         {
-            if (camera == null || !records.IsCreated)
+            if (camera == null || !records.IsCreated || !presentationVisible || presentationRoot == null)
             {
-                visible.Clear(); BatchCount = UploadedBytes = 0; shadows.Hide(); sunShadows.Hide();
-                foreach (AiecsRenderBatch old in batches) old.Hide();
-                animationStates.Clear();
+                HideDrawnBatches();
                 return;
             }
             shadows.Begin();
             sunShadows.Begin();
             visible.Clear();
-            float2 center = (Vector2)camera.transform.position;
+            SetWorldPresentation(presentationRoot.parent, worldToDisplay, presentationVisible);
+            bool projected = !worldToDisplay.Equals(Matrix4x4.identity);
+            Matrix4x4 displayToWorld = projected ? worldToDisplay.inverse : Matrix4x4.identity;
+            float projectedWidth = projected ? worldToDisplay.MultiplyVector(Vector3.right).magnitude : 1f;
+            float projectedHeight = projected ? worldToDisplay.MultiplyVector(Vector3.up).magnitude : 1f;
+            float2 center = (Vector2)displayToWorld.MultiplyPoint3x4(camera.transform.position);
             float halfHeight = camera.orthographicSize, halfWidth = halfHeight * camera.aspect;
+            float margin = 2f + sunShadows.CullingMargin;
+            Vector3 horizontal = displayToWorld.MultiplyVector(new Vector3(halfWidth + margin, 0f));
+            Vector3 vertical = displayToWorld.MultiplyVector(new Vector3(0f, halfHeight + margin));
+            float xRadius = Mathf.Abs(horizontal.x) + Mathf.Abs(vertical.x);
+            float yRadius = Mathf.Abs(horizontal.y) + Mathf.Abs(vertical.y);
             for (int i = 0; i < records.Length; i++)
             {
                 var record = records[i]; if (record.External != 0) continue;
                 float2 delta = domain.ShortestDelta(center, record.Position);
                 // 屏外主体的长投影仍可能落入视口，开启时扩展候选范围。
-                float margin = 2f + sunShadows.CullingMargin;
-                if (math.abs(delta.x) > halfWidth + margin || math.abs(delta.y) > halfHeight + margin) continue;
+                if (math.abs(delta.x) > xRadius || math.abs(delta.y) > yRadius) continue;
                 // ECS 居民可以继续在纯逻辑层存活，但 ChunkView 一旦离开本机表现窗口就停止提交主体和阴影。
                 if (presentationReady != null &&
                     !presentationReady(new Vector2(record.Position.x, record.Position.y)))
                     continue;
                 int visual = visuals[record.Definition];
                 AiecsActorSortingKey key = actorSortingKeys[record.Definition];
-                visible.Add(new DrawItem { Index = i, Visual = visual, Y = center.y + delta.y,
+                Vector3 ground = new Vector3(center.x + delta.x, center.y + delta.y, 0f);
+                float sortingY = projected ? worldToDisplay.MultiplyPoint3x4(ground).y : ground.y;
+                visible.Add(new DrawItem { Index = i, Visual = visual, Y = sortingY,
                     Layer = key.Layer, LayerValue = actorSortingLayerValues[record.Definition], Order = key.Order });
             }
             visible.Sort(DrawComparer.Instance);
@@ -175,21 +244,24 @@ namespace FlatWorld.AIECS
             int batchItems = 0, batchCount = 0;
             int uploadedBytes = 0;
             drawSequence++;
+            float animationDelta = lastAnimationFrame == Time.frameCount ? 0f : Time.deltaTime;
+            lastAnimationFrame = Time.frameCount;
             for (int i = 0; i < visible.Count; i++)
             {
                 var item = visible[i]; var record = records[item.Index]; var definition = catalog.Actors[item.Visual];
                 if (batch == null || batchItems == AiecsRenderBatch.MaxSprites || batchKey.Layer != item.Layer ||
                     batchKey.Order != item.Order || batchKey.Y != item.Y)
                 {
-                    if (batch != null) uploadedBytes += batch.Submit(batchKey.Layer, batchKey.Order, batchKey.Y);
-                    if (batchCount == batches.Count) batches.Add(new AiecsRenderBatch(scene, catalog.Material));
+                    if (batch != null) uploadedBytes += SubmitBatch(batch, batchKey);
+                    if (batchCount == batches.Count) batches.Add(new AiecsRenderBatch(scene, catalog.Material, presentationRoot));
                     batch = batches[batchCount++];
+                    batch.SetWaterProjection(projected, displayToWorld);
                     batch.Begin(); batchKey = item; batchItems = 0;
                 }
                 if (!animationStates.TryGetValue(record.Key, out SwayEntry entry))
                     animationStates.Add(record.Key, entry = new SwayEntry());
                 entry.LastDraw = drawSequence;
-                AiecsSwayPose pose = animations[record.Definition].Sample(ref entry.State, record, Time.deltaTime);
+                AiecsSwayPose pose = animations[record.Definition].Sample(ref entry.State, record, animationDelta);
                 var frame = pose.Frame;
                 float2 ground = center + domain.ShortestDelta(center, record.Position);
                 var actor = new AiecsPrototypeActor
@@ -203,14 +275,31 @@ namespace FlatWorld.AIECS
                 if (record.Dead != 0) color.a *= Mathf.Clamp01(2f - record.ActionElapsed);
                 // 复用真实水态和当前可见列表，绝不逐实体查询地形或创建阴影组件。
                 if (ShadowsEnabled)
-                    shadows.Append(new Vector2(ground.x, ground.y), shadowFootprints[record.Definition],
-                        pose.Mirror, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.LiquidDepth, record.WaterBlend));
+                {
+                    Vector4 footprint = shadowFootprints[record.Definition];
+                    Vector2 shadowPosition = new Vector2(ground.x, ground.y);
+                    bool mirror = pose.Mirror;
+                    if (projected)
+                    {
+                        shadowPosition = worldToDisplay.MultiplyPoint3x4(new Vector3(
+                            ground.x + (mirror ? -footprint.x : footprint.x), ground.y + footprint.y, 0f));
+                        footprint = new Vector4(0f, 0f, footprint.z * projectedWidth, footprint.w * projectedHeight);
+                        mirror = false;
+                    }
+                    shadows.Append(shadowPosition, footprint, mirror,
+                        AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.LiquidDepth, record.WaterBlend));
+                }
                 if (sunShadows.Active)
+                {
+                    Vector4 footprint = shadowFootprints[record.Definition];
+                    float footY = ground.y + footprint.y - 0.02f;
+                    if (projected) footY = worldToDisplay.MultiplyPoint3x4(new Vector3(
+                        ground.x + (pose.Mirror ? -footprint.x : footprint.x), footY, 0f)).y;
                     sunShadows.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], pose.Mirror,
-                        color.a, ground.y + shadowFootprints[record.Definition].y - 0.02f,
-                        sunShadowHeights[record.Definition]);
+                        color.a, footY, sunShadowHeights[record.Definition], projected ? (Matrix4x4?)worldToDisplay : null);
+                }
                 batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
-                    pose.Mirror, color);
+                    pose.Mirror, color, projected ? (Matrix4x4?)worldToDisplay : null);
                 batchItems++;
             }
             // 离开可见列表就释放实体动作，身份换槽不会继承别的生物的姿态。
@@ -218,12 +307,23 @@ namespace FlatWorld.AIECS
             foreach (var pair in animationStates)
                 if (pair.Value.LastDraw != drawSequence) expiredStates.Add(pair.Key);
             foreach (CombatIdentity key in expiredStates) animationStates.Remove(key);
-            if (batch != null) uploadedBytes += batch.Submit(batchKey.Layer, batchKey.Order, batchKey.Y);
-            for (int i = batchCount; i < batches.Count; i++) batches[i].Hide();
+            if (batch != null) uploadedBytes += SubmitBatch(batch, batchKey);
+            for (int i = batchCount; i < batches.Count; i++)
+            {
+                batches[i].Hide();
+                batches[i].RemoveSortingKey(removeSortingKey);
+            }
             BatchCount = batchCount;
             UploadedBytes = uploadedBytes;
             shadows.End();
             sunShadows.End();
+        }
+
+        private int SubmitBatch(AiecsRenderBatch batch, DrawItem key)
+        {
+            int bytes = batch.Submit(key.Layer, key.Order, key.Y);
+            batch.SubmitSortingKey(applySortingKey, key.Layer, key.Order, key.Y);
+            return bytes;
         }
 
         /// <summary>开发 HUD 最多绘制 64 个可见实体血条，不创建逐实体 UI 节点。</summary>
@@ -232,13 +332,15 @@ namespace FlatWorld.AIECS
             // 无 GUILayout 控件；布局/输入事件不重复进行坐标换算与批量血条遍历。
             if (Event.current == null || Event.current.type != EventType.Repaint) return;
             if (camera == null || !simulation.Display.IsCreated) return;
-            Color previous = GUI.color; float2 center = (Vector2)camera.transform.position;
+            Color previous = GUI.color;
+            Matrix4x4 displayToWorld = worldToDisplay.inverse;
+            float2 center = (Vector2)displayToWorld.MultiplyPoint3x4(camera.transform.position);
             for (int i = 0; i < math.min(64, visible.Count); i++)
             {
                 var actor = simulation.Display[visible[i].Index]; if (actor.Dead != 0) continue;
                 float2 position = center + domain.ShortestDelta(center, actor.Position) +
                     new float2(0, 0.8f + actor.FlightHeight);
-                Vector3 point = camera.WorldToScreenPoint(new Vector3(position.x, position.y, 0f));
+                Vector3 point = camera.WorldToScreenPoint(worldToDisplay.MultiplyPoint3x4(new Vector3(position.x, position.y, 0f)));
                 Rect rect = new Rect(point.x - 20f, Screen.height - point.y, 40f, 5f);
                 GUI.color = Color.black; GUI.DrawTexture(rect, Texture2D.whiteTexture);
                 rect.width *= math.saturate(actor.Hp / math.max(1f, actor.MaxHp));
@@ -252,6 +354,7 @@ namespace FlatWorld.AIECS
         {
             if (disposed) return;
             disposed = true;
+            SetSortingKeyCallbacks(null, null);
             // 阴影节点清理失败也必须释放主体网格与排序订阅。
             try { shadows.Dispose(); }
             finally
@@ -263,6 +366,11 @@ namespace FlatWorld.AIECS
                     finally
                     {
                         batches.Clear();
+                        if (presentationRoot != null)
+                        {
+                            if (Application.isPlaying) UnityEngine.Object.Destroy(presentationRoot.gameObject);
+                            else UnityEngine.Object.DestroyImmediate(presentationRoot.gameObject);
+                        }
                         animationStates.Clear(); expiredStates.Clear();
                         visible.Clear(); BatchCount = UploadedBytes = 0;
                         Action onDisposed = Disposed;

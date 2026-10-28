@@ -21,6 +21,27 @@ struct ChunkBRGInstanceData
     float4 flowY;
 };
 
+// 域内原生网格把同一实例的数据写入每个顶点，普通 BRG 继续读取原缓冲。
+#if defined(_CHUNK_NATIVE_BATCH)
+    #define CHUNK_NATIVE_ATTRIBUTES \
+        float4 chunkTransform0 : TEXCOORD1; float4 chunkTransform1 : TEXCOORD2; \
+        float4 chunkData0 : TEXCOORD3; float4 chunkData1 : TEXCOORD4; \
+        float4 chunkTint : TEXCOORD5; float4 chunkFlowX : TEXCOORD6; float4 chunkFlowY : TEXCOORD7;
+    #define LOAD_CHUNK_VERTEX_DATA(input) LoadChunkNativeVertexData(input.chunkTransform0, input.chunkTransform1, \
+        input.chunkData0, input.chunkData1, input.chunkTint, input.chunkFlowX, input.chunkFlowY)
+    ChunkBRGInstanceData LoadChunkNativeVertexData(float4 transform0, float4 transform1, float4 data0,
+        float4 data1, float4 tint, float4 flowX, float4 flowY)
+    {
+        ChunkBRGInstanceData data;
+        data.transform0 = transform0; data.transform1 = transform1;
+        data.data0 = data0; data.data1 = data1; data.tint = tint; data.flowX = flowX; data.flowY = flowY;
+        return data;
+    }
+#else
+    #define CHUNK_NATIVE_ATTRIBUTES
+    #define LOAD_CHUNK_VERTEX_DATA(input) LoadChunkBRGInstanceData()
+#endif
+
 ChunkBRGInstanceData LoadChunkBRGInstanceData()
 {
     ChunkBRGInstanceData data = (ChunkBRGInstanceData)0;
@@ -52,7 +73,11 @@ float3 TransformChunkBRGVertex(float3 positionOS, ChunkBRGInstanceData data)
     float2 positionWS;
     positionWS.x = dot(data.transform0.xy, positionOS.xy) + data.transform0.z;
     positionWS.y = dot(data.transform1.xy, positionOS.xy) + data.transform1.z;
-    return float3(positionWS, data.transform1.w + positionOS.z);
+    float3 result = float3(positionWS, data.transform1.w + positionOS.z);
+#if defined(_CHUNK_NATIVE_BATCH)
+    result = TransformObjectToWorld(result);
+#endif
+    return result;
 }
 
 // 机械动画只变更实例顶点或采样坐标；相位与转速由权威节点低频上传。

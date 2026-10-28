@@ -26,6 +26,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     public const string GroundPreviewCategory = "ground-preview"; // 建造与播种预览。
     public const string WorldEffectCategory = "world-effect"; // 脱离主体的世界特效。
     public const string WorldBackgroundCategory = "world-background"; // 太空等世界背景。
+    public const string ProjectedWorldCategory = "projected-world"; // 投影世界的整体排序。
     public const string MechanicalConnectorCategory = "mechanical-connector"; // 贴地机械连接件。
     public const string HeldFoodCategory = "held-food"; // 手持食物与咬痕遮罩。
     private static readonly string[] requiredCategories =
@@ -33,7 +34,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
         PlayerCategory, CreatureCategory, BuildingCategory, VehicleCategory, WorldItemCategory,
         GroundBuildingCategory, GroundShadowCategory, GroundMarkCategory, GroundSplashCategory,
         GroundPreviewCategory, WorldEffectCategory, WorldBackgroundCategory, MechanicalConnectorCategory,
-        HeldFoodCategory
+        HeldFoodCategory, ProjectedWorldCategory
     };
 
     private readonly Dictionary<string, WorldSortingProfile> profiles = new(StringComparer.Ordinal);

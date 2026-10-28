@@ -9,6 +9,7 @@ namespace FlatWorld.Spaceflight
     {
         #region 成块残骸与部件载荷
         private readonly Dictionary<string, ShipWreckView> wreckViews = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, WorldPresentationProjection> wreckSortingProjections = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (ShipState Pose, List<ShipPieceState> Pieces)> detachedWrecks = new(StringComparer.Ordinal);
 
         private void PrepareWreck(ShipState ship)
@@ -147,12 +148,30 @@ namespace FlatWorld.Spaceflight
             }
             Vector2 point = IsSpaceView ? DisplayPresentationPoint(ship, ship.CenterOfMassLocalX, ship.CenterOfMassLocalY)
                 : WorldLocalPresentation.ProjectPosition(new Vector2((float)ship.PositionX, (float)ship.PositionY));
-            view.Synchronize(ship, point, (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI));
+            ShipInteriorWorldRuntime world = null;
+            bool inSortingDomain = ship.RetainsInteriorWorld && TryGetShipInteriorWorld(ship.ShipId, out world);
+            view.Synchronize(ship, point, (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI), inSortingDomain);
             if (IsSpaceView) SpaceMgr.ExistingInstance?.MovePresentationToSector(view.gameObject, ship.Sector);
+            if (inSortingDomain)
+            {
+                WorldPresentationSortingDomain domain = SynchronizeShipInteriorSortingDomain(
+                    world, ResolveShipInteriorPresentationMatrix(ship), true);
+                if (!wreckSortingProjections.TryGetValue(ship.ShipId, out WorldPresentationProjection display) || display == null || display.IsReleased)
+                    wreckSortingProjections[ship.ShipId] = display = WorldPresentationProjection.Create(view.transform, transform);
+                display.SetSortingDomain(domain);
+                display.Synchronize(Matrix4x4.identity, true);
+            }
+            else ReleaseWreckSortingProjection(ship.ShipId);
+        }
+
+        private void ReleaseWreckSortingProjection(string shipId)
+        {
+            if (wreckSortingProjections.Remove(shipId, out WorldPresentationProjection display) && display != null) display.Release();
         }
 
         private void RemoveWreckView(string shipId)
         {
+            ReleaseWreckSortingProjection(shipId);
             if (wreckViews.Remove(shipId, out ShipWreckView view) && view != null)
             {
                 view.ReleasePhysics();

@@ -11,6 +11,7 @@ namespace FlatWorld.Spaceflight
         private readonly Dictionary<string, Item> looseViews = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ItemData> looseData = new(StringComparer.Ordinal);
         private readonly Dictionary<Item, (SpriteRenderer Renderer, Vector3 LocalPosition)> looseHeightVisuals = new(ItemReferenceComparer.Instance);
+        private readonly Dictionary<Item, WorldPresentationProjection> looseShipProjections = new(ItemReferenceComparer.Instance);
         private bool releasingLooseViews;
         private float loosePickupElapsed;
         private readonly struct ShipPieceDropHandle
@@ -133,6 +134,7 @@ namespace FlatWorld.Spaceflight
         #endregion
         private void OnLooseItemDespawning(Item item)
         {
+            ReleaseLooseItemSortingProjection(item);
             RestoreLooseItemHeightVisual(item);
             if (releasingLooseViews || State == null || !ReferenceEquals(item.PersistenceOwner, this)) return;
             string key = null;
@@ -142,6 +144,7 @@ namespace FlatWorld.Spaceflight
         }
         private void DespawnLooseView(Item item)
         {
+            ReleaseLooseItemSortingProjection(item);
             RestoreLooseItemHeightVisual(item);
             releasingLooseViews = true;
             try { if (item != null) ItemMgr.Instance?.DespawnItem(item, false); }
@@ -258,6 +261,7 @@ namespace FlatWorld.Spaceflight
                 if (looseViews.TryGetValue(state.Id, out Item existing) && existing != null &&
                     (existing.Owner != null || existing.InHand || existing.itemData.Stack.Amount <= 0f))
                 {
+                    ReleaseLooseItemSortingProjection(existing);
                     RestoreLooseItemHeightVisual(existing);
                     looseViews.Remove(state.Id); looseData.Remove(state.Id); State.LooseItems.Remove(state); continue;
                 }
@@ -295,8 +299,12 @@ namespace FlatWorld.Spaceflight
                     if (body != null) body.bodyType = RigidbodyType2D.Dynamic;
                     existing.transform.position = position;
                 }
-                ApplyLooseItemHeightVisual(existing, state.InSpace ? 0d : state.SurfaceHeight);
-                if (existing is SpaceDropView dropView) dropView.SynchronizeSpaceSorting(state.InSpace);
+                ShipState support = !string.IsNullOrEmpty(state.SupportShipId) ? GetShip(state.SupportShipId) : null;
+                bool inShipDomain = support != null && !support.IsWreck && TryGetShipInteriorWorld(support.ShipId, out _);
+                ApplyLooseItemHeightVisual(existing, state.InSpace ? 0d : state.SurfaceHeight, inShipDomain);
+                if (existing is SpaceDropView dropView) dropView.SynchronizeSpaceSorting(state.InSpace, inShipDomain);
+                if (inShipDomain) SynchronizeLooseItemSortingProjection(existing, support);
+                else ReleaseLooseItemSortingProjection(existing);
                 if (tryPickup && state.CanBePickedUpAt(State.SimulationSeconds) && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
                     DroppedItemService.TryPickupExternal(existing.itemData, position, out float remaining))
                 {
@@ -310,7 +318,7 @@ namespace FlatWorld.Spaceflight
                 }
             }
         }
-        private void ApplyLooseItemHeightVisual(Item item, double height)
+        private void ApplyLooseItemHeightVisual(Item item, double height, bool inShipDomain)
         {
             float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
             SpriteRenderer renderer = item.Sprite;
@@ -325,7 +333,36 @@ namespace FlatWorld.Spaceflight
             // 升高只叠加显示偏移，保留贴图原来的局部位置和旋转缩放关系。
             Vector3 offset = renderer.transform.parent.InverseTransformVector(Vector3.up * rise);
             renderer.transform.localPosition = visual.LocalPosition + offset;
-            ShipSurfacePresentation.SetElevated(item.gameObject, true, ShipSurfacePresentation.PassengerCategory);
+            ShipSurfacePresentation.SetElevated(item.gameObject, !inShipDomain, ShipSurfacePresentation.PassengerCategory);
+        }
+
+        // 支撑货物已在显示坐标，不再次套用船体投影。
+        private void SynchronizeLooseItemSortingProjection(Item item, ShipState ship)
+        {
+            if (item == null || ship == null || !TryGetShipInteriorWorld(ship.ShipId, out ShipInteriorWorldRuntime world)) return;
+            bool visible = IsVisible(ship);
+            WorldPresentationSortingDomain domain = SynchronizeShipInteriorSortingDomain(
+                world, ResolveShipInteriorPresentationMatrix(ship), visible);
+            if (!looseShipProjections.TryGetValue(item, out WorldPresentationProjection display) || display == null || display.IsReleased)
+                looseShipProjections[item] = display = WorldPresentationProjection.Create(item.transform, transform);
+            display.SetSortingDomain(domain);
+            display.Synchronize(Matrix4x4.identity, visible);
+        }
+
+        internal bool TryGetShipLooseItemProjection(Item item, out WorldPresentationProjection projection)
+            => looseShipProjections.TryGetValue(item, out projection) && projection != null && !projection.IsReleased;
+
+        private void ReleaseLooseItemSortingProjection(Item item)
+        {
+            if (ReferenceEquals(item, null) || !looseShipProjections.Remove(item, out WorldPresentationProjection display)) return;
+            if (display != null) display.Release();
+        }
+
+        private void ReleaseAllLooseItemSortingProjections()
+        {
+            foreach (WorldPresentationProjection display in looseShipProjections.Values)
+                if (display != null) display.Release();
+            looseShipProjections.Clear();
         }
         private void RestoreLooseItemHeightVisual(Item item)
         {
@@ -348,6 +385,7 @@ namespace FlatWorld.Spaceflight
         }
         private void ReleaseLooseViews()
         {
+            ReleaseAllLooseItemSortingProjections();
             CaptureLooseItems();
             foreach (Item item in looseViews.Values) DespawnLooseView(item);
             looseViews.Clear(); looseData.Clear(); looseHeightVisuals.Clear();

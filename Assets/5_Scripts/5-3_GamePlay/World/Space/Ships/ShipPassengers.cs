@@ -250,25 +250,47 @@ namespace FlatWorld.Spaceflight
         {
             if (player == null || ship == null || !IsPlayerInShipInteriorWorld(player, out ShipState owner, out _) || owner != ship)
                 return;
+            SynchronizePassengerSortingProjection(player, ship, ResolveShipInteriorPresentationMatrix(ship));
+        }
+
+        // 局部世界乘员投影船姿；已定位的外部乘员使用单位矩阵。
+        private void SynchronizePassengerSortingProjection(Player player, ShipState ship, Matrix4x4 worldToDisplay)
+        {
+            if (player == null || ship == null || !TryGetShipInteriorWorld(ship.ShipId, out ShipInteriorWorldRuntime world))
+            { ReleasePassengerInteriorProjection(player); return; }
+            bool visible = IsVisible(ship);
+            Matrix4x4 shipProjection = ResolveShipInteriorPresentationMatrix(ship);
+            WorldPresentationSortingDomain domain = SynchronizeShipInteriorSortingDomain(world, shipProjection, visible);
             passengerProjections.TryGetValue(player, out WorldPresentationProjection projection);
-            if (projection == null)
-                passengerProjections[player] = projection = WorldPresentationProjection.Create(player.transform);
-            SpacePresentationPose pose = GetShipPresentationPose(ship);
-            Vector2 origin = ProjectShipInteriorPosition(ship, Vector2.zero);
-            float angle = (float)(IsSpaceView ? pose.AngleRadians : ship.AngleRadians) * Mathf.Rad2Deg;
-            Matrix4x4 worldToDisplay = Matrix4x4.TRS(origin, Quaternion.Euler(0f, 0f, angle), Vector3.one);
-            projection.Synchronize(worldToDisplay, IsVisible(ship));
+            if (projection == null || projection.IsReleased)
+                passengerProjections[player] = projection = WorldPresentationProjection.Create(player.transform, transform);
+            projection.SetSortingDomain(domain);
+            projection.Synchronize(worldToDisplay, visible);
+            visibleInteriorPassengers.Add(player);
         }
 
         private readonly System.Collections.Generic.Dictionary<Player, WorldPresentationProjection> passengerProjections = new();
+        private readonly HashSet<Player> visibleInteriorPassengers = new();
+        private readonly List<Player> expiredInteriorPassengers = new();
+
+        internal bool TryGetShipPassengerProjection(Player player, out WorldPresentationProjection projection)
+            => passengerProjections.TryGetValue(player, out projection) && projection != null && !projection.IsReleased;
 
         private void ReleasePassengerInteriorProjection(Player player)
         {
-            if (player == null || !passengerProjections.Remove(player, out WorldPresentationProjection projection) || projection == null)
+            if (ReferenceEquals(player, null) || !passengerProjections.Remove(player, out WorldPresentationProjection projection) || projection == null)
                 return;
-            player.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ClearFollowOverride(projection.transform);
-            projection.Synchronize(Matrix4x4.identity, false);
-            Destroy(projection.gameObject);
+            if (player != null) player.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ClearFollowOverride(projection.transform);
+            projection.Release();
+        }
+
+        private void ReleaseExpiredPassengerInteriorProjections(bool releaseAll = false)
+        {
+            expiredInteriorPassengers.Clear();
+            foreach (Player player in passengerProjections.Keys)
+                if (releaseAll || player == null || !visibleInteriorPassengers.Contains(player)) expiredInteriorPassengers.Add(player);
+            foreach (Player player in expiredInteriorPassengers) ReleasePassengerInteriorProjection(player);
+            expiredInteriorPassengers.Clear();
         }
 
         public void MoveAllPassengersOutOfShipInteriorWorlds()
@@ -545,7 +567,11 @@ namespace FlatWorld.Spaceflight
             float rise = (float)ShipSurfaceState.VisualRise(GetFlight(ship.ShipId));
             player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
             if (mover?.rb != null) mover.rb.rotation = heading;
-            SetPassengerSurfacePose(player, position, authoritativePosition, rise, ShipSurfaceState.IsElevated(GetFlight(ship.ShipId)));
+            bool projected = TryGetShipInteriorWorld(ship.ShipId, out _);
+            SetPassengerSurfacePose(player, position, authoritativePosition, rise,
+                ShipSurfaceState.IsElevated(GetFlight(ship.ShipId)), projected);
+            if (projected) SynchronizePassengerSortingProjection(player, ship, Matrix4x4.identity);
+            else ReleasePassengerInteriorProjection(player);
         }
         private void SetTerrainSuppression(Player player, bool value)
             => player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver)?.SetEffectsSuppressed(this, value);
@@ -657,7 +683,7 @@ namespace FlatWorld.Spaceflight
                 if (string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
                 {
                     ReleaseDrivingCamera();
-                    if (interiorCamera != null && passengerProjections.TryGetValue(player, out WorldPresentationProjection projection) && projection != null)
+                    if (interiorCamera != null && passengerProjections.TryGetValue(player, out WorldPresentationProjection projection) && projection != null && !projection.IsReleased)
                         interiorCamera.SetFollowOverride(projection.transform);
                     return;
                 }

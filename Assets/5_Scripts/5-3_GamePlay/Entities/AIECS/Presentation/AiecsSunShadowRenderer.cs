@@ -22,7 +22,11 @@ namespace FlatWorld.AIECS
         private readonly Texture atlas;
         private readonly int sortingLayerId;
         private readonly int sortingOrder;
+        private readonly Transform parent;
         private Material material;
+        private int materialQueue;
+        private Action<Renderer, int, int, int, float> applySortingKey;
+        private Action<Renderer> removeSortingKey;
         private Vector4 sunlight;
         public int ShadowCount { get; private set; }
         public int BatchCount { get; private set; }
@@ -30,12 +34,13 @@ namespace FlatWorld.AIECS
         public float CullingMargin => Active ? sunlight.z : 0f;
 
         /// <summary>只保存共享资源引用；关闭功能时不创建网格或 Renderer。</summary>
-        public AiecsSunShadowRenderer(Scene scene, Texture atlas, int sortingLayerId, int sortingOrder)
+        public AiecsSunShadowRenderer(Scene scene, Texture atlas, int sortingLayerId, int sortingOrder, Transform parent = null)
         {
             this.scene = scene;
             this.atlas = atlas;
             this.sortingLayerId = sortingLayerId;
             this.sortingOrder = sortingOrder;
+            this.parent = parent;
         }
 
         /// <summary>每次 Draw 只读一次太阳全局参数，保持与普通实体同一时间和偏好。</summary>
@@ -46,29 +51,51 @@ namespace FlatWorld.AIECS
             BatchCount = 0;
         }
 
+        public void SetSortingKeyCallbacks(Action<Renderer, int, int, int, float> apply, Action<Renderer> remove)
+        {
+            if (ReferenceEquals(applySortingKey, apply) && ReferenceEquals(removeSortingKey, remove)) return;
+            foreach (Batch batch in batches) batch.RemoveSortingKey(removeSortingKey);
+            applySortingKey = apply;
+            removeSortingKey = remove;
+        }
+
         /// <summary>追加真实动画矩形和图集 UV；高度倍率为 0 时可按物种禁用。</summary>
         public void Append(AiecsPrototypeActor actor, AiecsActorVisual definition, AiecsAnimationFrame frame,
-            AiecsSpriteGeometry sprite, bool mirror, float alpha, float footY, float heightMultiplier)
+            AiecsSpriteGeometry sprite, bool mirror, float alpha, float footY, float heightMultiplier,
+            Matrix4x4? worldToDisplay = null)
         {
             if (!Active || alpha <= 0.001f || heightMultiplier <= 0f) return;
             int index = ShadowCount / MaxSprites;
             if (index == batches.Count)
             {
-                if (material == null) material = Resources.Load<Material>("SunShadows/SunShadowProjection");
+                if (material == null)
+                {
+                    material = Resources.Load<Material>("SunShadows/SunShadowProjection");
+                    if (material != null) materialQueue = material.renderQueue;
+                }
                 if (material == null) throw new MissingReferenceException("缺少 SunShadows/SunShadowProjection 材质。");
-                batches.Add(new Batch(scene, material, atlas, sortingLayerId, sortingOrder));
+                batches.Add(new Batch(scene, material, atlas, sortingLayerId, sortingOrder, parent));
             }
             Batch batch = batches[index];
             if (ShadowCount % MaxSprites == 0) { batch.Begin(); BatchCount++; }
-            batch.Append(actor, definition, frame, sprite, mirror, alpha, footY, heightMultiplier, sunlight);
+            batch.Append(actor, definition, frame, sprite, mirror, alpha, footY, heightMultiplier, sunlight, worldToDisplay);
             ShadowCount++;
         }
 
         /// <summary>只上传非空批次；关闭与空帧立即停用上一帧全部 Renderer。</summary>
         public void End()
         {
-            for (int i = 0; i < BatchCount; i++) batches[i].Submit();
-            for (int i = BatchCount; i < batches.Count; i++) batches[i].Hide();
+            for (int i = 0; i < BatchCount; i++)
+            {
+                Batch batch = batches[i];
+                batch.Submit();
+                if (applySortingKey != null) batch.SubmitSortingKey(applySortingKey, sortingLayerId, sortingOrder, materialQueue);
+            }
+            for (int i = BatchCount; i < batches.Count; i++)
+            {
+                batches[i].Hide();
+                batches[i].RemoveSortingKey(removeSortingKey);
+            }
         }
 
         /// <summary>相机失效或世界暂时不可见时清空可见状态。</summary>
@@ -77,6 +104,7 @@ namespace FlatWorld.AIECS
         /// <summary>释放本表现所有者创建的网格，不销毁共享材质及图集。</summary>
         public void Dispose()
         {
+            SetSortingKeyCallbacks(null, null);
             foreach (Batch batch in batches) batch.Dispose();
             batches.Clear(); ShadowCount = 0; BatchCount = 0;
         }
@@ -100,6 +128,7 @@ namespace FlatWorld.AIECS
             private readonly GameObject root;
             private readonly Mesh mesh;
             private readonly MeshRenderer renderer;
+            private bool sortingKeyRegistered;
             private readonly Vector2 uvPadding; // 与共享阴影网格相同的透明外沿。
             private readonly Vertex[] vertices = new Vertex[MaxSprites * 4];
             private int count;
@@ -107,12 +136,13 @@ namespace FlatWorld.AIECS
             private const MeshUpdateFlags Flags = MeshUpdateFlags.DontRecalculateBounds;
 
             /// <summary>分配固定索引和复用顶点缓冲，所有批次共用普通实体的太阳材质。</summary>
-            public Batch(Scene scene, Material material, Texture atlas, int sortingLayerId, int sortingOrder)
+            public Batch(Scene scene, Material material, Texture atlas, int sortingLayerId, int sortingOrder, Transform parent)
             {
                 int layer = LayerMask.NameToLayer("AIECSRuntime");
                 if (layer < 0) throw new InvalidOperationException("缺少 AIECSRuntime Layer。");
                 root = new GameObject("AIECS 太阳投影批次") { hideFlags = HideFlags.DontSave, layer = layer };
                 SceneManager.MoveGameObjectToScene(root, scene);
+                if (parent != null) root.transform.SetParent(parent, false);
                 mesh = new Mesh { name = "AIECS 太阳投影网格", hideFlags = HideFlags.DontSave };
                 mesh.MarkDynamic();
                 mesh.SetVertexBufferParams(vertices.Length,
@@ -151,7 +181,8 @@ namespace FlatWorld.AIECS
 
             /// <summary>复制当前帧的四角，包围盒使用与 Shader 一致的投影公式。</summary>
             public void Append(AiecsPrototypeActor actor, AiecsActorVisual definition, AiecsAnimationFrame frame,
-                AiecsSpriteGeometry sprite, bool mirror, float alpha, float footY, float scale, Vector4 sun)
+                AiecsSpriteGeometry sprite, bool mirror, float alpha, float footY, float scale, Vector4 sun,
+                Matrix4x4? worldToDisplay)
             {
                 int offset = count * 4;
                 float height = 0.01f;
@@ -167,6 +198,7 @@ namespace FlatWorld.AIECS
                     Vector3 local = new Vector3(right ? sprite.LocalRect.xMax + localPadding.x : sprite.LocalRect.xMin - localPadding.x,
                         top ? sprite.LocalRect.yMax + localPadding.y : sprite.LocalRect.yMin - localPadding.y, 0f);
                     Vector3 point = AiecsRenderBatch.TransformPoint(local, actor, definition, frame, mirror);
+                    if (worldToDisplay.HasValue) point = worldToDisplay.Value.MultiplyPoint3x4(point);
                     height = Mathf.Max(height, point.y - footY);
                     vertices[offset + corner] = new Vertex { Position = point, Color = color,
                         UV = new Vector2(right ? rect.xMax + uvPadding.x : rect.xMin - uvPadding.x,
@@ -201,6 +233,20 @@ namespace FlatWorld.AIECS
 
             /// <summary>不再上传停用批次。</summary>
             public void Hide() { if (renderer != null && renderer.enabled) renderer.enabled = false; }
+
+            public void SubmitSortingKey(Action<Renderer, int, int, int, float> apply, int layer, int order, int queue)
+            {
+                if (apply == null || renderer == null) return;
+                apply(renderer, layer, order, queue, renderer.bounds.center.y);
+                sortingKeyRegistered = true;
+            }
+
+            public void RemoveSortingKey(Action<Renderer> remove)
+            {
+                if (!sortingKeyRegistered) return;
+                if (renderer != null) remove?.Invoke(renderer);
+                sortingKeyRegistered = false;
+            }
 
             /// <summary>兼容场景已卸载的回收顺序。</summary>
             public void Dispose()

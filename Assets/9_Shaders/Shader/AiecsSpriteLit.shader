@@ -15,6 +15,7 @@ Shader "Game/2D/AIECS Sprite Lit"
         _WaterLineOffset("批次水线世界偏移", Float) = 0
         [PerRendererData] _UsePerRendererDroppedWater("轻量掉落物独立水线", Float) = 0
         [PerRendererData] _DroppedWaterParams("轻量掉落物水线参数", Vector) = (0,0,1,0)
+        [PerRendererData] _AiecsWaterUseSource("批次水线源坐标", Float) = 0
     }
     SubShader
     {
@@ -36,6 +37,8 @@ Shader "Game/2D/AIECS Sprite Lit"
             float _WaterLineOffset;
             float _UsePerRendererDroppedWater;
             float4 _DroppedWaterParams;
+            float _AiecsWaterUseSource;
+            float4x4 _AiecsWaterWorldToSource;
         CBUFFER_END
 
         #if defined(UNITY_DOTS_INSTANCING_ENABLED)
@@ -107,7 +110,9 @@ Shader "Game/2D/AIECS Sprite Lit"
                 resolvedWater = _DroppedWaterParams;
                 waterOffset = 0;
             }
-            return FlatWorldApplyActorWater(main, 0, 0, input.world,
+            float2 waterWorld = _AiecsWaterUseSource > 0.5
+                ? mul(_AiecsWaterWorldToSource, float4(input.world, 0, 1)).xy : input.world;
+            return FlatWorldApplyActorWater(main, 0, 0, waterWorld,
                 float4(resolvedWater.x, 1, resolvedWater.y + waterOffset, resolvedWater.z),
                 float4(0, _WaterFeather, _WaterLineWidth, _WaterWaveAmplitude),
                 float4(_WaterWaveFrequency, _WaterWaveSpeed, resolvedWater.w, _WaterLineStrength),

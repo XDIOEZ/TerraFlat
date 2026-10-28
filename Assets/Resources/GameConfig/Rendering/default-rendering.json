@@ -184,6 +184,7 @@
       { "category": "vehicle", "sortingLayer": "Player", "order": 99 },
       { "category": "airborne-vehicle", "sortingLayer": "Player", "order": 299 },
       { "category": "airborne-passenger", "sortingLayer": "Player", "order": 300 },
+      { "category": "projected-world", "sortingLayer": "Player", "order": 299 },
       { "category": "world-item", "sortingLayer": "Player", "order": 100 },
       { "category": "ground-building", "sortingLayer": "Default", "order": 0 },
       { "category": "ground-shadow", "sortingLayer": "Shadow", "order": 0 },

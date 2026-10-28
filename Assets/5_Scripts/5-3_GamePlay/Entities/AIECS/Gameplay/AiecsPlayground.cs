@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace FlatWorld.AIECS.Gameplay
@@ -101,19 +103,56 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>相机与显示只消费提交后的状态，单挑和两军使用同一套正式系统。</summary>
-        private void LateUpdate()
+        private void OnEnable()
+        {
+            if (active != this) return;
+            RenderPipelineManager.beginContextRendering -= PresentScenario;
+            RenderPipelineManager.beginContextRendering += PresentScenario;
+        }
+
+        private void PresentScenario(ScriptableRenderContext context, List<Camera> cameras)
         {
             if (bridge == null) return;
-            if (!bridge.IsCurrentWorld(ItemMgr.Instance?.User_Player) ||
-                GameplayWorldRegistry.LocalPresentationWorldKey != bridge.WorldKey)
+            bool projected = WorldPresentationTransformRegistry.TryGet(bridge.WorldKey, out Matrix4x4 matrix, out bool visible);
+            WorldPresentationTransformRegistry.TryGetSortingDomain(bridge.WorldKey, out WorldPresentationSortingDomain domain);
+            if (!ReferenceEquals(presentationDomain, domain))
+            {
+                display.SetSortingKeyCallbacks(null, null);
+                if (presentationDomain != null) presentationDomain.Disposing -= OnPresentationDomainDisposing;
+                presentationDomain = domain;
+                if (domain != null)
+                {
+                    domain.Disposing += OnPresentationDomainDisposing;
+                    display.SetSortingKeyCallbacks(ApplyPresentationSortingKey, RemovePresentationSortingKey);
+                }
+            }
+            bool local = bridge.IsCurrentWorld(ItemMgr.Instance?.User_Player) &&
+                GameplayWorldRegistry.LocalPresentationWorldKey == bridge.WorldKey;
+            display.SetWorldPresentation(domain?.Root, matrix, projected ? visible : local);
+            if (projected ? !visible : !local)
             { display.Draw(bridge.Simulation, null, default); targetCamera = null; return; }
             using var worldScope = GameplayWorldRegistry.UseWorld(bridge.WorldKey);
             if (targetCamera == null || !targetCamera.isActiveAndEnabled) targetCamera = Camera.main;
             WorldRenderingManager shadowManager = WorldRenderingManager.GetInstance();
-            display.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(player.gameObject.scene) : 0.4f;
+            Scene shadowScene = projected || player == null ? SceneManager.GetActiveScene() : player.gameObject.scene;
+            display.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(shadowScene) : 0.4f;
             display.ShadowsEnabled = ShowFootShadows;
             display.Draw(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain, IsScenarioPresentationReady);
         }
+
+        private WorldPresentationSortingDomain presentationDomain;
+
+        private void OnPresentationDomainDisposing()
+        {
+            display?.SetSortingKeyCallbacks(null, null);
+            if (presentationDomain != null) presentationDomain.Disposing -= OnPresentationDomainDisposing;
+            presentationDomain = null;
+            display?.SetWorldPresentation(null, Matrix4x4.identity, false);
+        }
+
+        private void ApplyPresentationSortingKey(Renderer target, int layer, int order, int queue, float footY)
+            => presentationDomain?.ApplyLocalRendererSortingKey(target, layer, order, queue, footY);
+        private void RemovePresentationSortingKey(Renderer target) => presentationDomain?.RemoveLocalSortingKey(target);
 
         /// <summary>退出世界先停止开发模拟，避免旧世界桥接命中进入新存档。</summary>
         private void OnWorldExit()
@@ -123,11 +162,16 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>程序集重载可能只有停用回调，必须在丢失托管引用前归还原生批次。</summary>
-        private void OnDisable() => StopScenario();
+        private void OnDisable()
+        {
+            RenderPipelineManager.beginContextRendering -= PresentScenario;
+            StopScenario();
+        }
 
         /// <summary>释放静态订阅、模拟和批次，兼容关闭 Domain Reload 的编辑器。</summary>
         private void OnDestroy()
         {
+            RenderPipelineManager.beginContextRendering -= PresentScenario;
             if (active != this) return;
             GameManager.Event_PlayerEnterWorld -= OnPlayerEntered;
             GameManager.Event_LocalPlayerRuntimeReloaded -= OnPlayerEntered;
@@ -240,6 +284,9 @@ namespace FlatWorld.AIECS.Gameplay
         private void StopScenario()
         {
             AiecsWorldRenderer oldDisplay = display;
+            oldDisplay?.SetSortingKeyCallbacks(null, null);
+            if (presentationDomain != null) presentationDomain.Disposing -= OnPresentationDomainDisposing;
+            presentationDomain = null;
             AiecsGameplayBridge oldBridge = bridge;
             string oldWorld = oldBridge?.WorldKey ?? suspendedWorldKey;
             bool worldRetained = !string.IsNullOrEmpty(oldWorld) && GameplayWorldRegistry.TryGet(oldWorld, out _);
