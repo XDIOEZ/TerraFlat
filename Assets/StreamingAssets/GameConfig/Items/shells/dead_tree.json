@@ -4,6 +4,7 @@
     {
       "id": "Tree_Dead",
       "parent": "Tree_Pine",
+      "tags": ["Tree", "InventoryCategory.Nature"],
       "gameName": "枯树",
       "description": "已经枯死的树木，砍伐可获得原木和木棍。",
       "weight": 160.0,

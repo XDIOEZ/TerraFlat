@@ -68,6 +68,7 @@ namespace FlatWorld.NaturalEntities
         private static readonly ProfilerMarker TreeHabitatMarker = new("NaturalEntityRuntime.TreeHabitat");
         private static readonly Stack<List<Record>> queryLists = new();
         private static ulong spatialQuerySequence { get => State.spatialQuerySequence; set => State.spatialQuerySequence = value; }
+        public static ulong SpatialRevision => State.SpatialRevision;
         public enum PhysicsBodyChangeReason : byte { Registered, Removed, VisualRevision, SnapshotRefresh }
         public static event Action<Bounds> PhysicsBodyChanged;
         public static event Action<Bounds, PhysicsBodyChangeReason, int, string> PhysicsBodyChangedWithReason;
@@ -190,6 +191,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>树木身份在注册、卸载和定义刷新时维护，查询不再遍历所有自然资源。</summary>
         private static void UpdateTreeHabitatIndex(Record record)
         {
+            State.SpatialRevision++;
             if (record.Profile?.Definition?.HasTag(Tag.Tree) == true)
                 habitatTreeRecords.Add(record);
             else
@@ -208,6 +210,36 @@ namespace FlatWorld.NaturalEntities
                         destination.Add(record.Snapshot.transform.position);
             }
         }
+
+        #region 附近自然环境声源
+
+        // 复用实际空间桶和声明标签，树、灌木等来源不需要创建音源或 Item 外壳。
+        public static int FindNearestTaggedAmbientSource(Vector2 listenerPosition, float radius, string sourceTag,
+            out Vector2 sourcePosition)
+        {
+            sourcePosition = default;
+            if (simulation == null || radius <= 0f) return 0;
+            WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+            float nearest = radius * radius;
+            int count = 0;
+            using ResourceQuery query = QueryBounds(listenerPosition, Vector2.one * radius, topology);
+            foreach (Record record in query)
+            {
+                if (!record.IsValid || !record.Profile.Definition.HasTag(sourceTag)) continue;
+                NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
+                Vector2 candidate = new(body.Position.x, body.Position.y);
+                float distance = topology.SqrDistance(new float2(listenerPosition.x, listenerPosition.y),
+                    new float2(candidate.x, candidate.y));
+                if (distance >= radius * radius) continue;
+                count++;
+                if (distance >= nearest) continue;
+                nearest = distance;
+                sourcePosition = candidate;
+            }
+            return count;
+        }
+
+        #endregion
 
         #endregion
 
@@ -289,6 +321,7 @@ namespace FlatWorld.NaturalEntities
 
         private static void RegisterSpatialCells(Record record)
         {
+            State.SpatialRevision++;
             Bounds bounds = record.HitBounds;
             bounds.Encapsulate(record.BodyBounds); bounds.Encapsulate(record.VisualBounds);
             if (record.HasConfiguredInteractionBounds) bounds.Encapsulate(record.InteractionBounds);
@@ -308,6 +341,7 @@ namespace FlatWorld.NaturalEntities
 
         private static void UnregisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Removed, bool notifyPhysics = true)
         {
+            State.SpatialRevision++;
             if (notifyPhysics && record.BlocksMovement && record.SpatialCells.Count > 0)
                 PublishPhysicsBodyChanged(record, reason, false);
             foreach (Vector2Int cell in record.SpatialCells)

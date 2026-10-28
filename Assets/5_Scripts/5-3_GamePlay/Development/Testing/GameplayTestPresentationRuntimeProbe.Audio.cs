@@ -412,6 +412,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["swimmingCues"] = swimmingCues,
                 ["animalIdleCues"] = CaptureAnimalIdleCues(service),
                 ["animalPropagationRanges"] = CaptureAnimalPropagationRanges(fixture, player),
+                ["natureAmbience"] = CaptureNatureAmbience(fixture, player),
                 ["fireCue"] = CaptureFireCue(service),
                 ["rainCue"] = CaptureRainCue(service),
                 ["inventoryUiCueCount"] = inventoryUiCueCount,

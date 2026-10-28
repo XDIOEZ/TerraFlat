@@ -22,15 +22,17 @@
 
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、propagation_ranges、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
+快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、propagation_ranges、nature_ambience_sequence、foliage_ambience_volume、nature_foliage_config、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
 
 传播配置：`Assets/Resources/Audio/PropagationRanges.json` 的 `levels` 定义 1～5 档距离（默认 4/8/16/32/64 格），`cues` 按声音 ID 选择 `level`，重新启动游戏后生效。狼、鸟、海鸥为 64 格，蜂、野猪、鸡、兔为 16 格，羊、雪豹为 32 格，小鱼为 8 格。`propagation_ranges` 直接驱动正式目录覆盖五档、修改距离、未绑定声音及移除配置后的重建；`voice_lifecycle` 读取十种动物的实际 Cue，并采样狼/鸟/蜂/野猪在距离内、边界及距离外的真实声源分配和线性衰减。听感仍需实际试听。
 
-2026-10-28 验证：音频快速 Lua 272 步及 EditMode 29 项通过；PlayMode 在资源阶段因 `InventoryInit` 标签解析失败而中止，未进入音频 Lua，也没有产生玩法截图，真实距离听感与声源边界尚未验收。
+2026-10-28 最新验证：音频快速 Lua 278 步、EditMode 29 项和 PlayMode 音频用例通过，现场零错误/警告；16/64 格边界、树叶/河流正式循环播放及回收、原生松树/枯树计数与清理均已覆盖。实际查看本轮截图，主角、HUD、光照可见，未出现黑屏或整屏遮挡。关联七系统规则为 11 份通过、2 份失败，失败在翻滚禁用清理和 SmallFish 冷外壳 Animator 用例，音频、生态、农业、世界流送及本地化规则通过。规则运行 `20261028T050116455Z_ed4fc453`，现场运行 `20261028T051119560Z_173f30a9`。随后将两段录音的循环交叠改为等功率，并补充正式导入 Clip 的百毫秒能量断言；离线重建/校验通过，最小窗口 RMS 分别为整段 RMS 的 31.636% 和 87.494%。最终音频和新增能量断言尚待 Unity 重跑，当前编辑器正在重新载入；不把此前播放接线通过当作最终版本已全部验收。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `audio/voice_lifecycle`。
+
+自然声景：`nature_ambience_sequence` 以正式稀疏河流索引覆盖真实水量/流量、湖海与非水排除、冰融、单格/批次增量、无关层不重建、距离边界和退订；`foliage_ambience_volume` 检查无风/无叶静音和风强/密度单调，`nature_foliage_config` 读取正式继承定义检查有叶树木标签及枯树排除。树叶/河流正式 Cue 为 20 秒、48kHz 单声道 Ambient 空间循环，默认传播 32 格，由本机相机持有最多两条循环，不为每树/每水格创建声源。
 
 玩法事务新增 6 种 LMMS 反馈 Cue（放置成功/失败、制作、熔炼、引火、点炉）；真实场景音频规则检查 12 个 WAV 均已导入、48kHz 单声道、配置完整空间混音及独立 SFX 冷却。事务与音效桥接在 `Presentation/Audio/GameplayFeedbackAudioBridge.cs`，监听正式进度信号，不在预览阶段发声。
 

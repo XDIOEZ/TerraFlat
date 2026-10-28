@@ -12,6 +12,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("audio/animal_idle_sequence", ServiceAnimalIdleSequence);
         operations.Add("audio/propagation_ranges", ServiceAudioPropagationRanges);
+        RegisterNatureAmbientAudioOperations(operations);
     }
 
     #region JSON 传播档位采样

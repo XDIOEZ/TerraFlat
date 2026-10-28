@@ -32,6 +32,7 @@ namespace FlatWorld.NaturalEntities
             public readonly Dictionary<Vector2Int, HashSet<int>> spatialCells = new();
             public readonly HashSet<Record> habitatTreeRecords = new();
             public ulong spatialQuerySequence;
+            public ulong SpatialRevision;
             public ContactShadowBatchRenderer contactShadows;
             public readonly Queue<int> presentationDirtyQueue = new();
             public readonly HashSet<int> flashPresentationWatch = new();

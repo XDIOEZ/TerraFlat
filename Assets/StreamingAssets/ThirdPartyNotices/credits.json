@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "project": "FlatWorld",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-28",
   "purpose": "第三方素材、软件与算法引用的鸣谢索引。status 为待确认的项目不要直接当作已核实的游戏内署名。",
   "notes": [
     "本文件是摘要索引，不替代各素材或软件随附的完整许可与 ThirdPartyNotices。",
@@ -562,6 +562,37 @@
       "status": "used",
       "evidence": [
         "SoundDesign/Animal_Idle_LMMS/CREDITS.md"
+      ]
+    },
+    {
+      "id": "audio-nature-ambience",
+      "category": "audio",
+      "authors": [
+        "Anya_Media",
+        "Fabrizio84"
+      ],
+      "works": [
+        {
+          "title": "Forest, close up of trees rustling in the wind.wav",
+          "sourceUrl": "https://freesound.org/people/Anya_Media/sounds/523389/",
+          "usedFor": "树叶与树梢风声循环 ambient.foliage.rustle.loop"
+        },
+        {
+          "title": "River Stream",
+          "sourceUrl": "https://freesound.org/people/Fabrizio84/sounds/457960/",
+          "usedFor": "河流流动循环 ambient.river.flow.loop"
+        }
+      ],
+      "license": {
+        "name": "CC0 1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "optional; project retains credit"
+      },
+      "status": "used",
+      "evidence": [
+        "Assets/StreamingAssets/ThirdPartyNotices/Nature-Ambience-CREDITS.md",
+        "SoundDesign/Nature_Ambience/sources.json",
+        "SoundDesign/Nature_Ambience/CREDITS.md"
       ]
     },
     {

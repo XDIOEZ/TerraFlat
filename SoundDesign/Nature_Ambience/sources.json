@@ -1,0 +1,82 @@
+{
+  "group": "Nature ambience",
+  "retrievedOn": "2026-10-28",
+  "license": "CC0 1.0 Universal",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "processing": {
+    "sampleRate": 48000,
+    "channels": 1,
+    "encoding": "PCM16 WAV",
+    "crossfadeSeconds": 1.0,
+    "crossfadeCurve": "qsin",
+    "peakTargetDbfs": -8.0,
+    "folderGuid": "63072da1cd63b5f43850856b16685e6c",
+    "method": "Retain real field recordings; fold stereo to mono, resample to 48 kHz, trim a continuous section, apply a one-second qsin/qsin equal-power loop crossfade, set peak with static gain, and export PCM16 WAV. No synthesized layers, music, voices, pitch shift, time stretch, or LMMS rendering."
+  },
+  "sounds": [
+    {
+      "title": "Forest, close up of trees rustling in the wind.wav",
+      "author": "Anya_Media",
+      "sourcePage": "https://freesound.org/people/Anya_Media/sounds/523389/",
+      "downloadUrl": "https://cdn.freesound.org/previews/523/523389_2010973-hq.mp3",
+      "sourceFile": "Originals/anya_media_523389_hq.mp3",
+      "sourceSha256": "80eb06d3a6b4d8e00f89d9cd20f4d0262b90714ca7bf4603238ec5e51d8e5b2c",
+      "sourceFormat": "Public HQ MP3 preview, 2:19.520, 48 kHz stereo, 181 kb/s; the author page lists the original upload as 48 kHz 16-bit stereo WAV.",
+      "sourceDescription": "Close-up branches and leaves rustling in gusts, with distant swaying treetops. Recorded with an Audio Technica BP4025 stereo microphone and Zoom F8 mixer.",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "licenseEvidenceFile": "Licenses/Anya_Media_523389.md",
+      "cueId": "ambient.foliage.rustle.loop",
+      "cueFile": "Assets/Resources/Audio/Cues/ambient.foliage.rustle.loop.asset",
+      "cueGuid": "1864e4d03da74dafa2892cd93657cc82",
+      "clipGuid": "feaf5ecbb22f415da3082c4ba9a32761",
+      "sourceStartSeconds": 25.0,
+      "loopSeconds": 20.0,
+      "outputFile": "Assets/Audio/Nature/ambient.foliage.rustle.loop.wav",
+      "previewFile": "SoundDesign/Nature_Ambience/Previews/foliage-source-excerpt.mp3",
+      "cue": {
+        "bus": "Ambient",
+        "volume": 0.55,
+        "spatialBlend": 1.0,
+        "minDistance": 2.0,
+        "maxDistance": 32.0,
+        "cooldown": 0.0,
+        "maxInstances": 4,
+        "rolloff": "Linear",
+        "loop": true
+      }
+    },
+    {
+      "title": "River Stream",
+      "author": "Fabrizio84",
+      "sourcePage": "https://freesound.org/people/Fabrizio84/sounds/457960/",
+      "downloadUrl": "https://cdn.freesound.org/previews/457/457960_2841496-hq.mp3",
+      "sourceFile": "Originals/fabrizio84_457960_hq.mp3",
+      "sourceSha256": "732cdc0fce41f7b1a1db1356031a3453abd6f4c09ca0e9cff8236f9fa0f3d1c9",
+      "sourceFormat": "Public HQ MP3 preview, 3:09.104, 44.1 kHz stereo, 182 kb/s; this is the retained source recording.",
+      "sourceDescription": "River stream in winter. The author identifies this recording as public domain.",
+      "license": "CC0 1.0 Universal (public-domain dedication by the author)",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "licenseEvidenceFile": "Licenses/Fabrizio84_457960.md",
+      "cueId": "ambient.river.flow.loop",
+      "cueFile": "Assets/Resources/Audio/Cues/ambient.river.flow.loop.asset",
+      "cueGuid": "9ec1bbc78f814c518180c8345ec517ea",
+      "clipGuid": "b82b7055d4aa4beea98b14326f7e4ad3",
+      "sourceStartSeconds": 50.0,
+      "loopSeconds": 20.0,
+      "outputFile": "Assets/Audio/Nature/ambient.river.flow.loop.wav",
+      "previewFile": "SoundDesign/Nature_Ambience/Previews/river-source-excerpt.mp3",
+      "cue": {
+        "bus": "Ambient",
+        "volume": 0.45,
+        "spatialBlend": 1.0,
+        "minDistance": 2.0,
+        "maxDistance": 32.0,
+        "cooldown": 0.0,
+        "maxInstances": 4,
+        "rolloff": "Linear",
+        "loop": true
+      }
+    }
+  ]
+}

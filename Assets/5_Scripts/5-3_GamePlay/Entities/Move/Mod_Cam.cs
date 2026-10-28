@@ -57,6 +57,7 @@ public class Mod_Cam : Module
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
+    private readonly NaturalAmbientAudioPresenter naturalAmbience = new();
     [SerializeField]
     private float povValue = DefaultPovValue;
 
@@ -141,6 +142,7 @@ public class Mod_Cam : Module
 
     private void LateUpdate()
     {
+        naturalAmbience.Advance(Player, Time.deltaTime);
         // 临时目标被外部销毁时释放租约，避免镜头继续保留驾驶更新方式。
         if (!ReferenceEquals(_followOverride, null) && _followOverride == null)
             ClearFollowOverride(_followOverride);
@@ -278,6 +280,7 @@ public class Mod_Cam : Module
 
     private void ClearWorldAudioListener()
     {
+        naturalAmbience.Dispose();
         if (Player != null && AudioService.HasInstance)
             AudioService.Instance.ClearWorldListener(Player.transform);
     }

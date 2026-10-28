@@ -1,5 +1,43 @@
 -- 已入世 AudioService 播放正式录音；Cue 只隔离测试 ID，播放、池与用户音量均走正式实现。
 test.runtime("audio", "voice_lifecycle", {}, function(data)
+    local nature = data.natureAmbience
+    assert(nature ~= nil and #nature.cues == 2, "没有采样两条正式自然环境循环")
+    local natureCueIds = {
+        ["ambient.foliage.rustle.loop"] = true,
+        ["ambient.river.flow.loop"] = true
+    }
+    for _, cue in ipairs(nature.cues) do
+        assert(natureCueIds[cue.id] and cue.accepted and cue.sourceFound and cue.sourcePlaying and cue.stopped,
+            "自然环境循环没有真实播放、采样或立即释放：" .. tostring(cue.id))
+        natureCueIds[cue.id] = nil
+        assert(cue.bus == "Ambient" and cue.loop and cue.minDistance == 2 and cue.maxDistance == 32,
+            cue.id .. " Cue 没有使用 Ambient 循环与 2/32 格距离")
+        assert(cue.spatialBlend == 1 and cue.rolloff == "Linear" and
+            cue.sourceSpatialBlend == 1 and cue.sourceRolloff == "Linear" and
+            cue.sourceMinDistance == 2 and cue.sourceMaxDistance == 32,
+            cue.id .. " 实际 AudioSource 没有使用空间线性衰减与正式距离")
+        assert(cue.clipCount == 1 and cue.clipChannels == 1 and cue.clipFrequency == 48000 and
+            cue.clipSamples > 0 and math.abs(cue.clipDuration - 20) < 0.05,
+            cue.id .. " 没有单条 20 秒 48kHz 单声道正式录音")
+        assert(cue.readable and cue.rms > 0 and cue.minimumWindowRms >= cue.rms * 0.03,
+            cue.id .. " 循环录音出现人为静音空档")
+    end
+    assert(next(natureCueIds) == nil, "自然环境循环 Cue 有重复或缺失")
+
+    local foliage = nature.foliageSources
+    assert(foliage.leafDefinitionTagged and not foliage.deadDefinitionTagged,
+        "正式 Pine/Dead 定义的 NatureAudio.Foliage 标签错误")
+    assert(foliage.afterLeafCount == foliage.beforeCount + 1 and
+        foliage.afterDeadCount == foliage.afterLeafCount and
+        foliage.afterRemoveLeafCount == foliage.beforeCount and
+        foliage.afterCleanupCount == foliage.beforeCount,
+        "正式自然实体空间索引未按树叶标签增减计数或未清除测试实体")
+    assert(foliage.afterLeafRevision > foliage.beforeRevision and
+        foliage.afterDeadRevision > foliage.afterLeafRevision and
+        foliage.afterRemoveLeafRevision > foliage.afterDeadRevision and
+        foliage.afterCleanupRevision > foliage.afterRemoveLeafRevision,
+        "原生树木注册、枯树注册或释放没有推进空间索引版本")
+
     local propagationDistances = {
         ["animal.wolf.idle"] = 64, ["animal.bird.idle"] = 64,
         ["animal.bee.idle"] = 16, ["animal.wildboar.idle"] = 16

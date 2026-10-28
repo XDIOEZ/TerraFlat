@@ -1315,6 +1315,7 @@
       "group": "共享支撑",
       "sourcePaths": [
         "Assets/5_Scripts/5-7_Localization/*",
+          "Assets/Resources/Localization/*",
         "Assets/Localization/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Localization/*"
       ],

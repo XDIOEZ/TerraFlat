@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "tags": [
+    {"id": "NatureAudio.Foliage", "labels": [{"locale": "zh-CN", "text": "风吹枝叶"}, {"locale": "en", "text": "Rustling Foliage"}]},
     {"id": "InventoryCategory.Building", "labels": [{"locale": "zh-CN", "text": "建筑装饰"}, {"locale": "en", "text": "Building & Decoration"}]},
     {"id": "InventoryCategory.Nature", "labels": [{"locale": "zh-CN", "text": "自然植物"}, {"locale": "en", "text": "Nature & Plants"}]},
     {"id": "InventoryCategory.Functional", "labels": [{"locale": "zh-CN", "text": "功能设施"}, {"locale": "en", "text": "Functional Blocks"}]},

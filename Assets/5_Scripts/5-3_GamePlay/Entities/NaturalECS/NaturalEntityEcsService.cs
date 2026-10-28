@@ -239,6 +239,7 @@ namespace FlatWorld.NaturalEntities
             soilInputRecords.Clear();
             navigationInputRecords.Clear();
             habitatTreeRecords.Clear();
+            State.SpatialRevision++;
             ClearContactDamageSources();
             pendingPublications.Clear();
             publicationBatch.Clear();

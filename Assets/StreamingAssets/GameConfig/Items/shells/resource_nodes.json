@@ -185,6 +185,7 @@
       "tags": [
         "35",
         "Tree",
+        "NatureAudio.Foliage",
         "InventoryCategory.Nature"
       ],
       "worldGridOccupancy": {
@@ -262,7 +263,7 @@
               "DestroyDelay": 0.0,
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 3,
             "hurtAudioCueId": "combat.impact.tree",
             "playHurtAudioOnBlockedHit": true,
             "enableHitSlowdown": true,
@@ -515,6 +516,7 @@
       "canBePickedUp": false,
       "tags": [
         "Tree",
+        "NatureAudio.Foliage",
         "InventoryCategory.Nature"
       ],
       "worldGridOccupancy": {
@@ -592,7 +594,7 @@
               "DestroyDelay": 0.0,
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 3,
             "hurtAudioCueId": "combat.impact.tree",
             "playHurtAudioOnBlockedHit": true,
             "enableHitSlowdown": true,
@@ -1887,6 +1889,7 @@
       "canBePickedUp": false,
       "tags": [
         "Tree",
+        "NatureAudio.Foliage",
         "InventoryCategory.Nature"
       ],
       "worldGridOccupancy": {
@@ -1964,7 +1967,7 @@
               "DestroyDelay": 0.0,
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 3,
             "hurtAudioCueId": "combat.impact.tree",
             "playHurtAudioOnBlockedHit": true,
             "enableHitSlowdown": true,

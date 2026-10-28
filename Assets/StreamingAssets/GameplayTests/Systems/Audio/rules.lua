@@ -300,6 +300,86 @@ wind_sequence("退出重置清除双路包络，新世界按当前风级重新�
     { strength = 0, volume = 0, presented = 0 }
 })
 
+-- 河流索引读取权威水量、水文和融冰层；Lua 只检查生产索引返回值与增量版本。
+test.system("audio", "nature_ambience_sequence", {}, function(data)
+    local initial = data.initial
+    assert(data.waterContactProvider == "explicit test fixture IDs; no GameRes lookup",
+        "规则探针没有显式提供 WaterContact 液体特征")
+    assert(initial.candidateCount == 2 and initial.revision > 0,
+        "初始稀疏索引未只保留两格可听河流")
+    assert(data.initialLowStrength > 0 and data.initialHighStrength > data.initialLowStrength,
+        "河水增深且流量增大时声强没有增强")
+    assert(data.lakeStrength == 0 and data.seaStrength == 0 and data.dryStrength == 0 and
+        data.nonWaterContactStrength == 0, "湖泊、海水、干格或非 WaterContact 液体误成河流声")
+    assert(initial.found and initial.x == 0.5 and initial.y == 0.5 and
+        math.abs(initial.strength - data.initialLowStrength) < 0.000001,
+        "最近河流没有返回实际格心与对应强度")
+    assert(data.radiusBoundary.found and data.radiusBoundary.x == 1.5 and data.radiusBoundary.y == 0.5,
+        "半径边界上的最近河流格被漏掉")
+    assert(not data.outsideRadius.found and not data.emptyRadius.found,
+        "半径外或周围无可听河流时仍返回候选")
+
+    assert(data.singleLiquidStrength > data.initialLowStrength and
+        data.singleEnvironmentStrength > data.singleLiquidStrength,
+        "单格水量或流量变大后声强没有单调增加")
+    assert(data.singleLiquidRevision > initial.revision and
+        data.singleEnvironmentRevision > data.singleLiquidRevision,
+        "单格液体或河流环境变化没有推进候选版本")
+    assert(data.unrelatedLayerRevisionBefore == data.unrelatedLayerRevisionAfter,
+        "无关湿度层变化误刷新河流候选")
+    assert(data.liquidBatchStrength > data.initialHighStrength and
+        data.environmentBatchStrength > data.liquidBatchStrength,
+        "液体或河流环境批次没有更新候选声强")
+    assert(data.liquidBatchRevision > data.singleEnvironmentRevision and
+        data.environmentBatchRevision > data.liquidBatchRevision,
+        "液体或河流环境批次没有推进候选版本")
+    assert(data.singleLiquidCandidateCount == initial.candidateCount and
+        data.singleEnvironmentCandidateCount == initial.candidateCount and
+        data.liquidBatchCandidateCount == initial.candidateCount and
+        data.environmentBatchCandidateCount == initial.candidateCount,
+        "仅声强变化时错误增删河流候选")
+
+    assert(data.frozenStrength == 0 and data.halfThawedStrength > data.frozenStrength and
+        data.fullyThawedStrength > data.halfThawedStrength,
+        "冰盖融化时河流声没有从静音逐渐增强")
+    assert(data.halfThawedCandidateCount == initial.candidateCount + 1 and
+        data.halfThawedRevision > data.environmentBatchRevision,
+        "融冰环境事件没有增量加入可听河流格")
+    assert(data.revisionAfterDispose == data.revisionBeforeDispose and
+        data.candidateCountAfterDispose == 0 and not data.queryAfterDispose,
+        "Dispose 后候选未清除、查询未静音或地形事件仍修改版本")
+end, "河流环境声：WaterContact、水文增量、融冰、最近格和释放")
+
+test.system("audio", "foliage_ambience_volume", { samples = {
+    { nearbySourceCount = 0, windStrength = 0.75 },
+    { nearbySourceCount = 4, windStrength = 0 },
+    { nearbySourceCount = 1, windStrength = 0.2 },
+    { nearbySourceCount = 4, windStrength = 0.2 },
+    { nearbySourceCount = 4, windStrength = 0.75 },
+    { nearbySourceCount = 8, windStrength = 0.75 },
+    { nearbySourceCount = 100, windStrength = 100 }
+} }, function(data)
+    assert(#data.samples == 7, "叶声音量探针没有返回全部输入样本")
+    for _, sample in ipairs(data.samples) do
+        assert(sample.volume >= 0 and sample.volume <= 1, "叶声音量越出零至一")
+    end
+    assert(data.samples[1].volume == 0 and data.samples[2].volume == 0,
+        "无树或无风时叶声没有静音")
+    assert(data.samples[3].volume > 0 and data.samples[4].volume >= data.samples[3].volume,
+        "附近树木密度增加时叶声没有增强")
+    assert(data.samples[5].volume > data.samples[4].volume and
+        data.samples[6].volume >= data.samples[5].volume,
+        "风力增加或附近树木增加时叶声没有单调增强")
+end, "树叶环境声：风力与附近树木密度")
+
+test.system("audio", "nature_foliage_config", {}, function(data)
+    assert(data.appleTreeFoliage and data.coconutTreeFoliage and data.pineTreeFoliage and
+        data.willowTreeFoliage and data.treesUseResourceEntities,
+        "正式树木定义缺少叶声标签，或没有通过原生 resource 实体运行")
+    assert(data.deadTreeHasTreeTag and not data.deadTreeHasFoliage,
+        "枯树继承了叶声标签")
+end, "树木正式定义：原生资源实体标签与枯树排除")
+
 -- 地表优先级：深水静音 > 浅水 > 积雪 > 人工支撑/石地 > 沙滩 > 草被 > 泥土。
 test.system("audio", "motion_audio_spatial", {}, function(data)
     assert(data.wrappedPosition and data.footstepDelta and data.swimmingDelta and data.independentBaseline,
