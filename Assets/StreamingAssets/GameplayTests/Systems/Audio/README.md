@@ -22,7 +22,11 @@
 
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
+快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、propagation_ranges、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
+
+传播配置：`Assets/Resources/Audio/PropagationRanges.json` 的 `levels` 定义 1～5 档距离（默认 4/8/16/32/64 格），`cues` 按声音 ID 选择 `level`，重新启动游戏后生效。狼、鸟、海鸥为 64 格，蜂、野猪、鸡、兔为 16 格，羊、雪豹为 32 格，小鱼为 8 格。`propagation_ranges` 直接驱动正式目录覆盖五档、修改距离、未绑定声音及移除配置后的重建；`voice_lifecycle` 读取十种动物的实际 Cue，并采样狼/鸟/蜂/野猪在距离内、边界及距离外的真实声源分配和线性衰减。听感仍需实际试听。
+
+2026-10-28 验证：音频快速 Lua 272 步及 EditMode 29 项通过；PlayMode 在资源阶段因 `InventoryInit` 标签解析失败而中止，未进入音频 Lua，也没有产生玩法截图，真实距离听感与声源边界尚未验收。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 

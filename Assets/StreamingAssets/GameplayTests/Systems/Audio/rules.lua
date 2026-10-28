@@ -1,4 +1,35 @@
 -- 检查音量数据与空间播放参数，不播放声音、不修改用户音量。
+for level, distance in ipairs({ 4, 8, 16, 32, 64 }) do
+    test.system("audio", "propagation_ranges", {
+        propagation = { levels = { 4, 8, 16, 32, 64 }, cues = { { id = "PROBE.FIRST", level = level } } }
+    }, function(data)
+        assert(data.firstMaxDistance == distance, "JSON 传播档位未实际应用：" .. level)
+        assert(data.secondMaxDistance == 20, "未配置的事件丢失自身距离")
+        assert(data.firstResetMaxDistance == 20 and data.secondResetMaxDistance == 20,
+            "移除 JSON 绑定并重建目录后残留旧距离")
+    end, "JSON 传播档位：" .. level .. " / " .. distance .. " 格")
+end
+
+test.system("audio", "propagation_ranges", {
+    propagation = { levels = { 5, 10, 24, 48, 96 }, cues = {
+        { id = "probe.first", level = 3 }, { id = "probe.second", level = 5 }
+    } }
+}, function(data)
+    assert(data.firstMaxDistance == 24 and data.secondMaxDistance == 96,
+        "修改 JSON 档位距离没有同时作用于对应声音")
+end, "传播档位距离支持直接修改")
+
+for _, row in ipairs({
+    { first = "animal.wolf.idle", second = "animal.bird.idle", expectedFirst = 64, expectedSecond = 64 },
+    { first = "animal.bee.idle", second = "animal.wildboar.idle", expectedFirst = 16, expectedSecond = 16 },
+    { first = "animal.seagull.idle", second = "animal.smallfish.idle", expectedFirst = 64, expectedSecond = 8 }
+}) do
+    test.system("audio", "propagation_ranges", row, function(data)
+        assert(data.firstMaxDistance == row.expectedFirst and data.secondMaxDistance == row.expectedSecond,
+            "正式 JSON 未正确声明动物叫声传播距离")
+    end, "正式动物传播配置：" .. row.first .. " / " .. row.second)
+end
+
 for _, row in ipairs({ { volume = -1, master = -1, expected = 0 }, { volume = 0.25, master = 0.25, expected = 0.25 }, { volume = 3, master = 3, expected = 1 } }) do
     test.system("audio", "bus_volume", row, function(data)
         assert(data.master == row.expected and #data.buses == 5, "总音量或总线数量错误")

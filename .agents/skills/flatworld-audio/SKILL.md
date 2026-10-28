@@ -46,6 +46,7 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 - 业务通过稳定 Cue ID 发声；`AudioService` 持有跨场景生命周期、声源池、并发优先级、淡入淡出及音量。循环 Cue 的句柄由调用方停止/回收；生成音效 ID 的 `.loop` 后缀表示循环，历史 `player.swim.stroke` 由 Cue 显式标记循环，`player.*` 属于世界 SFX。
 - 临时禁声用 `AudioCue.playbackEnabled=false`（默认开启），播放入口在选片、冷却与声源分配前拒播，循环覆盖也不能绕过；停用 Cue 可以保留空录音，正常启用却缺片仍警告并由 Catalog 校验报错。`ui.click` 目前明确停用，Lua `catalog_lifecycle/voice_lifecycle` 分别检查声明校验和真实点击静音。
 - 世界音效使用 `At/Attached`、完整空间混音与线性衰减：`MinDistance` 内正常，`MaxDistance` 处静音。`Mod_Cam` 绑定本机玩家和已有监听器，服务将声源投影到监听器 XY 平面，排除相机高度、前探与跟随偏移；解绑按目标身份。范围外短音不占池/冷却，循环音保留句柄待靠近恢复；角色循环音绑定角色 Transform。
+- 空间声音传播档位在 `Assets/Resources/Audio/PropagationRanges.json`：`levels` 从 1～5 默认对应 4/8/16/32/64 格，`cues` 按稳定 ID 选 `level`；狼/鸟/海鸥为五档，蜂/野猪为三档。目录预热时解析并缓存到 Cue，未声明的声音沿用自身距离；修改后重新启动游戏。Lua `audio/propagation_ranges` 检查档位、改距与移除绑定，`voice_lifecycle` 检查真实 16/64 格内外声源分配与线性衰减。
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
 - 正式 GameRes 启动在开放主菜单前等待 AudioService.PreloadAsync，以 Resources.LoadAsync 预热 Config/Catalog/Cue/Clip 强引用图，再创建服务、目录索引与声源池；重复预热复用实例，不在首个点击中同步加载整库。异步请求仍有主线程接入成本，同步入口仅保留给绕过正式启动流程的调用。
 - 玩法短音采用 48 kHz 单声道 PCM、预加载、关闭导入归一化；旧 `__01` WAV 和 Cue 保留 GUID，新变体必须写 `.meta` 并加入现有 Cue。采用外部素材时按上述来源与署名流程整理后接入；使用 LMMS 制作时，按工程分组经 LMMS MCP 渲染后再执行 `build_sfx.py finalize`，脚本仅裁切、接缝、增益和绑定，不合成替代 LMMS 声源。临时 WAV 完整写好后原子替换，避免 Unity 导入半个文件。

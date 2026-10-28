@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 98d965164a0854d4d8d69f829c87664c, type: 3}
   m_Name: AudioCatalog
   m_EditorClassIdentifier: 
+  propagationRanges: {fileID: 4900000, guid: 7fc972907c3747fc949386b2fe3d9b6a, type: 3}
   cues:
   - {fileID: 11400000, guid: 92ef6399e9af79744a35c463d1f21a11, type: 2}
   - {fileID: 11400000, guid: a7692cdecf9a41f32c886f6a887f348f, type: 2}

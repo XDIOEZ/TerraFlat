@@ -8,9 +8,47 @@ namespace FlatWorld.Audio
     public sealed class AudioCatalog : ScriptableObject
     {
         [SerializeField] private List<AudioCue> cues = new List<AudioCue>();
+        [SerializeField] private TextAsset propagationRanges;
 
         private readonly Dictionary<string, AudioCue> cueById =
             new Dictionary<string, AudioCue>(StringComparer.OrdinalIgnoreCase);
+
+        #region JSON 传播档位
+
+        [Serializable]
+        private sealed class PropagationConfiguration
+        {
+            public float[] levels;
+            public CuePropagationLevel[] cues;
+        }
+
+        [Serializable]
+        private sealed class CuePropagationLevel
+        {
+            public string id;
+            public int level;
+        }
+
+        private readonly Dictionary<string, float> propagationMaxDistanceByCueId =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        private void RebuildPropagationDistanceIndex()
+        {
+            propagationMaxDistanceByCueId.Clear();
+            if (propagationRanges == null) return;
+            PropagationConfiguration configuration = JsonUtility.FromJson<PropagationConfiguration>(propagationRanges.text);
+            // 档位从 1 开始，事件仅声明档位，距离统一由五档配置持有。
+            foreach (CuePropagationLevel cue in configuration.cues)
+                propagationMaxDistanceByCueId.Add(cue.id.Trim(), configuration.levels[cue.level - 1]);
+        }
+
+        private void ConfigureCuePropagationDistance(AudioCue cue)
+        {
+            propagationMaxDistanceByCueId.TryGetValue(cue.Id, out float distance);
+            cue.ConfigurePropagationMaxDistance(distance);
+        }
+
+        #endregion
 
         public IReadOnlyList<AudioCue> Cues => cues;
 
@@ -33,6 +71,7 @@ namespace FlatWorld.Audio
             if (cue == null)
                 return false;
 
+            ConfigureCuePropagationDistance(cue);
             cueById[normalizedId] = cue;
             return true;
         }
@@ -83,12 +122,14 @@ namespace FlatWorld.Audio
         public void RebuildIndex()
         {
             cueById.Clear();
+            RebuildPropagationDistanceIndex();
             for (int i = 0; i < cues.Count; i++)
             {
                 AudioCue cue = cues[i];
                 if (cue == null || string.IsNullOrWhiteSpace(cue.Id))
                     continue;
 
+                ConfigureCuePropagationDistance(cue);
                 if (!cueById.ContainsKey(cue.Id))
                     cueById.Add(cue.Id, cue);
             }
@@ -99,6 +140,7 @@ namespace FlatWorld.Audio
             AudioCue[] resourceCues = Resources.LoadAll<AudioCue>("Audio/Cues");
             AudioCatalog catalog = CreateInstance<AudioCatalog>();
             catalog.hideFlags = HideFlags.HideAndDontSave;
+            catalog.propagationRanges = Resources.Load<TextAsset>("Audio/PropagationRanges");
             catalog.cues.AddRange(resourceCues);
             catalog.RebuildIndex();
             return catalog;

@@ -52,13 +52,22 @@ namespace FlatWorld.Audio
         public AudioFloatRange Pitch => pitch;
         public float SpatialBlend => spatialBlend;
         public float MinDistance => minDistance;
-        public float MaxDistance => maxDistance;
+        public float MaxDistance => propagationMaxDistance > 0f ? propagationMaxDistance : maxDistance;
         public int Priority => priority;
         public float Cooldown => cooldown;
         public int MaxInstances => maxInstances;
         public AudioConcurrencyPolicy ConcurrencyPolicy => concurrencyPolicy;
         public AudioRolloffMode RolloffMode => rolloffMode;
         public AudioMixerGroup OutputOverride => outputOverride;
+
+        #region JSON 传播距离
+
+        // 目录构建时缓存档位距离，播放时直接读取，不重复解析配置。
+        [System.NonSerialized] private float propagationMaxDistance;
+
+        internal void ConfigurePropagationMaxDistance(float distance) => propagationMaxDistance = distance;
+
+        #endregion
 
         internal AudioClip SelectClip()
         {

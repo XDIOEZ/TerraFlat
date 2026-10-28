@@ -1,8 +1,26 @@
 -- 已入世 AudioService 播放正式录音；Cue 只隔离测试 ID，播放、池与用户音量均走正式实现。
 test.runtime("audio", "voice_lifecycle", {}, function(data)
+    local propagationDistances = {
+        ["animal.wolf.idle"] = 64, ["animal.bird.idle"] = 64,
+        ["animal.bee.idle"] = 16, ["animal.wildboar.idle"] = 16
+    }
+    assert(#data.animalPropagationRanges == 16, "动物传播边界没有完成全部现场采样")
+    for _, sample in ipairs(data.animalPropagationRanges) do
+        local distance = propagationDistances[sample.id]
+        assert(distance ~= nil, "传播边界采样出现未知声音")
+        if sample.distance < distance then
+            assert(sample.accepted and sample.sourceFound and sample.voicesAfter == sample.voicesBefore + 1,
+                sample.id .. " 在传播范围内仍然未播放")
+            assert(sample.minDistance == 1.5 and sample.maxDistance == distance
+                and sample.spatialBlend == 1 and sample.rolloff == "Linear", "真实声源未使用 JSON 档位衰减")
+        else
+            assert(not sample.accepted and not sample.sourceFound and sample.voicesAfter == sample.voicesBefore,
+                sample.id .. " 在静音边界或范围外仍然占用声源")
+        end
+    end
     local animalDistances = {
-        Chicken = 10, WildBoar = 12, Wolf = 18, Bird = 14, Seagull = 16,
-        Bee = 6, Sheep = 14, Rabbit = 10, SnowLeopard = 12, SmallFish = 8
+        Chicken = 16, WildBoar = 16, Wolf = 64, Bird = 64, Seagull = 64,
+        Bee = 16, Sheep = 32, Rabbit = 16, SnowLeopard = 32, SmallFish = 8
     }
     assert(#data.animalIdleCues == 10, "没有采样全部十种动物的待机声音")
     for _, cue in ipairs(data.animalIdleCues) do

@@ -65,4 +65,41 @@ public static partial class GameplayTestPresentationRuntimeProbe
     }
 
     #endregion
+
+    #region 动物声音传播边界现场采样
+
+    private static JArray CaptureAnimalPropagationRanges(AudioFixture fixture, Player player)
+    {
+        var result = new JArray();
+        foreach (string id in new[] { "animal.wolf.idle", "animal.bird.idle", "animal.bee.idle", "animal.wildboar.idle" })
+        {
+            AudioCue cue = fixture.CloneCue(id);
+            foreach (float distance in new[] { cue.MaxDistance * 0.75f, cue.MaxDistance - 0.5f, cue.MaxDistance, cue.MaxDistance + 1f })
+            {
+                // 每个距离使用独立身份，不受上一次成功播放的冷却影响。
+                cue = fixture.CloneCue(id);
+                AudioSource[] occupied = fixture.Service.GetComponentsInChildren<AudioSource>(true)
+                    .Where(source => source.isPlaying).ToArray();
+                int voicesBefore = fixture.Service.ActiveVoiceCount;
+                // 真实播放器决定是否分配声源，Lua 检查格数边界与 Unity 实际衰减参数。
+                AudioHandle handle = fixture.Play(cue, AudioPlayOptions.At(player.transform.position + Vector3.right * distance));
+                AudioSource source = fixture.Service.GetComponentsInChildren<AudioSource>(true)
+                    .SingleOrDefault(value => value.isPlaying && !occupied.Contains(value) && cue.Clips.Contains(value.clip));
+                result.Add(new JObject
+                {
+                    ["id"] = id, ["distance"] = distance, ["accepted"] = handle.IsValid,
+                    ["voicesBefore"] = voicesBefore, ["voicesAfter"] = fixture.Service.ActiveVoiceCount,
+                    ["sourceFound"] = source != null,
+                    ["minDistance"] = source != null ? source.minDistance : 0f,
+                    ["maxDistance"] = source != null ? source.maxDistance : 0f,
+                    ["spatialBlend"] = source != null ? source.spatialBlend : 0f,
+                    ["rolloff"] = source != null ? source.rolloffMode.ToString() : string.Empty
+                });
+                fixture.Service.Stop(handle);
+            }
+        }
+        return result;
+    }
+
+    #endregion
 }

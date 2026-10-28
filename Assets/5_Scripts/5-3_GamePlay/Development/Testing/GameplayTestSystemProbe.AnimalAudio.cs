@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Audio;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -9,7 +11,58 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterAnimalAudioOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("audio/animal_idle_sequence", ServiceAnimalIdleSequence);
+        operations.Add("audio/propagation_ranges", ServiceAudioPropagationRanges);
     }
+
+    #region JSON 传播档位采样
+
+    [Serializable]
+    private sealed class PropagationCatalogDocument
+    {
+        public AudioCue[] cues;
+        public TextAsset propagationRanges;
+    }
+
+    private static JObject ServiceAudioPropagationRanges(JObject args)
+    {
+        var first = ScriptableObject.CreateInstance<AudioCue>();
+        var second = ScriptableObject.CreateInstance<AudioCue>();
+        var catalog = ScriptableObject.CreateInstance<AudioCatalog>();
+        TextAsset propagation = args["propagation"] is JObject configuration
+            ? new TextAsset(configuration.ToString()) : null;
+        first.hideFlags = second.hideFlags = catalog.hideFlags = HideFlags.HideAndDontSave;
+        try
+        {
+            // 独立 Cue 通过正式目录解析 JSON，采样重建前后的实际距离，不在夹具内计算档位。
+            JsonUtility.FromJsonOverwrite(new JObject { ["id"] = Text(args, "first", "probe.first") }.ToString(), first);
+            JsonUtility.FromJsonOverwrite(new JObject { ["id"] = Text(args, "second", "probe.second") }.ToString(), second);
+            var document = new PropagationCatalogDocument
+            {
+                cues = new[] { first, second },
+                propagationRanges = propagation != null ? propagation : Resources.Load<TextAsset>("Audio/PropagationRanges")
+            };
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(document), catalog);
+            catalog.RebuildIndex();
+            float firstMaxDistance = first.MaxDistance, secondMaxDistance = second.MaxDistance;
+            document.propagationRanges = null;
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(document), catalog);
+            catalog.RebuildIndex();
+            return new JObject
+            {
+                ["firstMaxDistance"] = firstMaxDistance, ["secondMaxDistance"] = secondMaxDistance,
+                ["firstResetMaxDistance"] = first.MaxDistance, ["secondResetMaxDistance"] = second.MaxDistance
+            };
+        }
+        finally
+        {
+            if (propagation != null) UnityEngine.Object.DestroyImmediate(propagation);
+            UnityEngine.Object.DestroyImmediate(catalog);
+            UnityEngine.Object.DestroyImmediate(second);
+            UnityEngine.Object.DestroyImmediate(first);
+        }
+    }
+
+    #endregion
 
     private static JObject ServiceAnimalIdleSequence(JObject args)
     {

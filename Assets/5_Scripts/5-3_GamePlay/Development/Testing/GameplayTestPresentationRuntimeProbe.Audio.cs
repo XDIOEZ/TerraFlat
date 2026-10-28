@@ -35,7 +35,11 @@ public static partial class GameplayTestPresentationRuntimeProbe
             AudioCue cue = UnityEngine.Object.Instantiate(original);
             cue.hideFlags = HideFlags.HideAndDontSave;
             // 只隔离 Cue 身份，正式录音、总线、空间范围和池策略均保留资源原值。
-            JsonUtility.FromJsonOverwrite("{\"id\":\"lua.presentation." + Guid.NewGuid().ToString("N") + "\"}", cue);
+            JsonUtility.FromJsonOverwrite(new JObject
+            {
+                ["id"] = "lua.presentation." + Guid.NewGuid().ToString("N"),
+                ["maxDistance"] = original.MaxDistance
+            }.ToString(), cue);
             Cues.Add(cue);
             return cue;
         }
@@ -407,6 +411,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["movementCues"] = movementCues,
                 ["swimmingCues"] = swimmingCues,
                 ["animalIdleCues"] = CaptureAnimalIdleCues(service),
+                ["animalPropagationRanges"] = CaptureAnimalPropagationRanges(fixture, player),
                 ["fireCue"] = CaptureFireCue(service),
                 ["rainCue"] = CaptureRainCue(service),
                 ["inventoryUiCueCount"] = inventoryUiCueCount,
