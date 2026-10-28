@@ -119,8 +119,7 @@
             }
           }
         }
-      },
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger.prefab"
+      }
     },
     {
       "id": "Dagger_Copper",
@@ -202,8 +201,7 @@
             }
           }
         }
-      },
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Bone.prefab"
+      }
     },
     {
       "id": "Knife_Flint",
@@ -230,8 +228,7 @@
           "b": 1,
           "a": 1
         }
-      },
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab"
+      }
     },
     {
       "id": "Spear_Base",
@@ -430,7 +427,6 @@
     {
       "id": "Spear_Copper",
       "parent": "Spear_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Copper.prefab",
       "gameName": "铜矛",
       "description": "装有铜制矛头的长矛，兼顾攻击距离与耐用度。",
       "durability": 1.0,
@@ -612,7 +608,6 @@
     {
       "id": "Spear_Iron",
       "parent": "Spear_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Iron.prefab",
       "gameName": "铁矛",
       "description": "装有铁制矛头的长矛，拥有可靠的穿刺能力。",
       "durability": 1.0,
@@ -794,7 +789,6 @@
     {
       "id": "Spear_Stone_Animation",
       "parent": "Spear_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Stone_Animation.prefab",
       "gameName": "石矛",
       "description": "带有完整攻击动作的石矛变体。",
       "durability": 1.0,
@@ -1442,7 +1436,6 @@
     {
       "id": "StoneThrowingRope",
       "parent": "Bow_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Ranged/StoneThrowingRope.prefab",
       "gameName": "投石索",
       "description": "由绳索和皮革制成的投掷工具。快捷栏中的石头或适合作为投石索弹丸的坚硬矿石都可作为弹药；按住攻击键蓄力并显示抛物线，松开后投出，落地后可以拾回。",
       "durability": 100.0,

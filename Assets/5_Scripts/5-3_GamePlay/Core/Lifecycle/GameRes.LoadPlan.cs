@@ -55,7 +55,8 @@ public partial class GameRes
         plan.Add("tiles", "加载地形图块", 3, () => LoadAssetGroup<TileBase>("TileBase", tileBaseDict, tile => tile.name, true), "addressables");
         plan.Add("tile-blocks", "加载地块 JSON 定义", 3,
             () => LoadCatalog<int>((done, fail) => TileDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "tiles");
-        plan.Add("inventory", "加载初始库存", 2, () => LoadAssetGroup<Inventoryinit>("InventoryInit", InventoryInitDict, asset => asset.name, true), "addressables");
+        // 本体初始库存已由玩家 JSON 配置，内容包提供的库存模板允许为空。
+        plan.Add("inventory", "加载初始库存", 2, () => LoadAssetGroup<Inventoryinit>("InventoryInit", InventoryInitDict, asset => asset.name, false), "addressables");
         plan.Add("skills", "加载技能资源", 2, () => LoadAssetGroup<BaseSkill>("Skill", SkillDict, asset => asset.name, true), "addressables");
         plan.Add("items", "构建物品定义", 25,
             () => LoadCatalog<int>((done, fail) => ItemDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report, itemSources), _ => { }),

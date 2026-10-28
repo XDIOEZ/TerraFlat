@@ -588,12 +588,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 01e06613c3bd50842a7758269b38aead
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 02227e6017399414abaa0ef5e37adbe1
     m_Address: Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone_Bullet.prefab
     m_ReadOnly: 0
@@ -647,12 +641,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ActorShell
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 04d78b873e1da2341a6666c85506542b
-    m_Address: Assets/2_Prefabs/World/Map/MapEdge.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 04dff00073e8d61412c91281eda84d7c
     m_Address: Assets/6_Art/Generated/Farming/WillowTree/WillowTree_Idle.png
@@ -809,12 +797,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 0fa9b0096397a854fa8c73a07541d090
-    m_Address: Assets/4_ScriptObjects/Gameplay/Inventory
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - InventoryInit
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0fc8137885e212a4db27be3ec37ff185
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_Equipment.prefab
@@ -1175,12 +1157,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 2ac7438069ffb464980388cdb844aef5
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/AttackTrigger.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2b0ca2c28d93442b8a71400f4dd7d3ed
     m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_CropVisual.prefab
@@ -1754,12 +1730,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 5a96499898ce6c9439cd1b78525d7b66
-    m_Address: "Assets/2_Prefabs/World/Map/\u5BFB\u8DEF.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5b0080e215ad188439be42322d1d71a9
     m_Address: Module_CombustionVisual
     m_ReadOnly: 0
@@ -2128,18 +2098,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6f04f63db18870946977a64dc9373560
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Hoes/Hoe_Stone.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6f255a5a1b82c1b46b564cdae5f72880
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6f27a587bf720974ca9a865de93b5e99
     m_Address: Assets/2_Prefabs/Gameplay/Skills/Stone_KnifeThrowing.prefab
     m_ReadOnly: 0
@@ -2265,12 +2223,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 789943bea24026d43aff45dba8a66fc9
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7a8112e0d0f2b9747b2394b9932d5154
     m_Address: Assets/8_Animations/Character/Birds/Bird/Flying_1.png
     m_ReadOnly: 0
@@ -2337,12 +2289,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 8042e942207940647b24ee91463aa184
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Ranged/StoneThrowingRope.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 817e26a006be65341b7082d816c170d5
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InputBindingSettings.prefab
     m_ReadOnly: 0
@@ -2360,12 +2306,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 8282ac646f27954489b33bd62385edb8
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Furnace.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 834b874f2bd43a34e95f52adb0e4a211
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/HUD/UI_HotBar.prefab
@@ -2732,12 +2672,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 99e86f308e574534bae5d88a9b404146
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Movement/Mod_Mover.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9a8e8edb7c184118b4587c4e402bc3dd
     m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab
     m_ReadOnly: 0
@@ -2961,12 +2895,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ab36d19445e99a54ca06f4650472e418
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ab3ed9e88a0846a585be79e24d90800d
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Floor_Wood.asset
     m_ReadOnly: 0
@@ -3135,12 +3063,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: bb680c5a720608844a39de820c689aa6
-    m_Address: "Assets/2_Prefabs/World/Map/\u5730\u9762.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bbabd61494cb49a4cb666e18688d12d8
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Copper.asset
@@ -3700,12 +3622,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e996c081176bb7b479f0b1296fcb4175
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Food/Fertilizer.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ea09d6ba54b17364dadc9cba1433a48c
     m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ActionList.prefab
     m_ReadOnly: 0
@@ -3759,12 +3675,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ef2a888dba596134b8df58b62bae5ee6
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Needle_Bone.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f06ac029ccc14b4fa263ef65564120b6
     m_Address: Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Bronze_Tile.png
@@ -3982,12 +3892,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - TileBase
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: fc0a4fadfb68ee74483be04e91686872
-    m_Address: Assets/2_Prefabs/World/Map/GeneralWorldEdge.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fcc1fc6afdc05604d9368aa332bc00fc
     m_Address: Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png

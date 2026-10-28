@@ -1,6 +1,17 @@
 -- 物品运行、MOD Lua和网络副本共用正式资源与自有运行实例。
 test.check("world_ready", "正式隔离世界已就绪")
 test.runtime("item_runtime", "shell_final_configuration", {}, function(d)
+    assert(d.initialInventoryTemplates == 0, "旧测试库存清理后仍加载了本体库存模板")
+    local jsonOnlyShells = {
+        Apple = "Prop", Egg = "Prop", Meat = "Prop", Ore_Copper = "Prop",
+        WorkBench = "BuildingBodyShell", MineEntrance = "BuildingBodyShell",
+        CaveExit = "BuildingBodyShell", Wall_Stone_Summoner = "BuildingSummonerShell"
+    }
+    for id, shell in pairs(jsonOnlyShells) do
+        local row = d.jsonOnlyShells[id]
+        assert(row and row.itemId == id and row.shell == shell,
+            "清理旧副本后无法从 JSON 和通用壳创建物品：" .. id)
+    end
     assert(d.rawModuleCount == d.templateModuleCount and d.rawKeptTemplateIdentity,
         "冷外壳工厂提前创建了临时定义数据或装配了额外模块")
     assert(d.firstDataBound and d.configuredModuleCount == d.expectedModuleCount,

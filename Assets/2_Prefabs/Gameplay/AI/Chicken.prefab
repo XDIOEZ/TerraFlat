@@ -401,7 +401,7 @@ PrefabInstance:
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefab
       value: 
-      objectReference: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
+      objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
       value: Chicken
@@ -516,10 +516,6 @@ PrefabInstance:
       propertyPath: ProductionList.Array.data[0].ThrowItem
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
-      propertyPath: ProductionList.Array.data[0].itemPrefab
-      value: 
-      objectReference: {fileID: 2641514758235206763, guid: 4bcfc510d090cd94994daf92083d6f6b, type: 3}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].itemCountMax
       value: 3

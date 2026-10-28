@@ -21,20 +21,13 @@ public static class ItemDefinitionCatalogLoader
     public const string RelativeItemRoot = "GameConfig/Items";
     public const string ManifestFileName = "item-manifest.json";
 
-    /// <summary>已由新模块 Prefab 或 JSON 外壳取代，不再进入通用 Prefab 注册表的旧资源。</summary>
-    private static readonly string[] ObsoleteRuntimePrefabPaths =
+    /// <summary>角色与 AI 仍内嵌的模块随宿主加载，不再单独进入通用 Prefab 注册表。</summary>
+    private static readonly string[] EmbeddedModulePrefabPathsExcludedFromGenericCatalog =
     {
-        "Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Furnace.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/AI/Module_MoverAI.prefab",
-        "Assets/2_Prefabs/Gameplay/Modules/Combat/AttackTrigger.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Common/Module_FocusPoint.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Movement/Module_Move.prefab",
-        "Assets/2_Prefabs/Gameplay/Modules/Movement/Mod_Mover.prefab",
-        "Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab",
-        "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab",
-        "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab",
-        "Assets/2_Prefabs/World/Buildings/Summoners/Mod_Meatrack_Summoner.prefab"
     };
     public const string RelativeManifestPath = RelativeItemRoot + "/" + ManifestFileName;
 
@@ -489,7 +482,7 @@ public static class ItemDefinitionCatalogLoader
             if (!requiredPrefabIds.Contains(prefabId))
                 redundant.Add(path);
         }
-        redundant.UnionWith(ObsoleteRuntimePrefabPaths);
+        redundant.UnionWith(EmbeddedModulePrefabPathsExcludedFromGenericCatalog);
         return redundant;
     }
 

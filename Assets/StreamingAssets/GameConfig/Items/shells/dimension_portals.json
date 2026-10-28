@@ -151,7 +151,6 @@
     {
       "id": "CaveExit",
       "parent": "DimensionPortal_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Dimensions/CaveExit.prefab",
       "gameName": "矿洞出口",
       "description": "返回与此出口绑定的地表矿坑入口。",
       "durability": 1.0,

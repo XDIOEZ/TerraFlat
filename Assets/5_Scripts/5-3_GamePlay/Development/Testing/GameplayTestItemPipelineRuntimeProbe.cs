@@ -43,6 +43,20 @@ public static class GameplayTestItemPipelineRuntimeProbe
         var result = new JObject();
         try
         {
+            // 采样正式目录，确认旧副本清理后仍能仅用 JSON 和通用壳创建物品。
+            result["initialInventoryTemplates"] = resources.InventoryInitDict.Count;
+            var jsonOnlyShells = new JObject();
+            foreach (string definitionId in new[] { "Apple", "Egg", "Meat", "Ore_Copper", "WorkBench", "MineEntrance", "CaveExit", "Wall_Stone_Summoner" })
+            {
+                if (!resources.TryGetItemDefinition(definitionId, out RuntimeItemDefinition current))
+                    throw new InvalidOperationException($"清理旧资源后缺少物品定义：{definitionId}");
+                jsonOnlyShells[definitionId] = new JObject
+                {
+                    ["itemId"] = current.CreateItemData().IDName,
+                    ["shell"] = current.ShellPrefab.name
+                };
+            }
+            result["jsonOnlyShells"] = jsonOnlyShells;
             GameObject Create(string id)
             {
                 coldCreates++;

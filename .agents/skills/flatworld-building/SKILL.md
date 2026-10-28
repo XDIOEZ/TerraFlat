@@ -13,7 +13,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - `World/Building/`：Mod_Building、BuildingShadow、BuildingOccupancyRegistry、BuildingPlacementService、BuildingModuleStateTransfer；门使用 Mod_Door。
 - `World/Map/Structures/`：ChunkGenerator_Structures、StructureData、StructureItemAuthoring；结构资源在 `Assets/4_ScriptObjects/World/Structures/`。
 - JSON：`Assets/StreamingAssets/GameConfig/Items/shells/{building_summoners,building_bodies}.json`；通用 BuildingSummonerShell/BuildingBodyShell，玩法模块位于 `Assets/2_Prefabs/Gameplay/Modules/Building/`。
-- 迁移：`Assets/Editor/FlatWorld/ContentTools/Migrations/BuildingShellMigrationTool.cs`。
+- 旧完整建筑/召唤器 Prefab 和一次性迁移器已清理；内容直接维护 JSON 与通用壳，不重建旧副本。
 
 ## 放置与状态转移
 

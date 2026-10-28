@@ -20,7 +20,6 @@
     {
       "id": "BlastFurnace",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab",
       "gameName": "高炉-建筑",
       "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。3 个输入槽，材料升温系数 100%。输入区总容量 150 kg / 150 L。",
       "durability": 1.0,
@@ -210,7 +209,6 @@
     {
       "id": "Bonfire",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Bonfire.prefab",
       "gameName": "篝火-建筑",
       "description": "用于照明、取暖与烹饪的火堆。",
       "durability": 1.0,
@@ -424,7 +422,6 @@
     {
       "id": "Chest_Wood",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab",
       "gameName": "木箱子",
       "description": "用于存放物品的木制箱子。",
       "durability": 1.0,
@@ -550,7 +547,6 @@
     {
       "id": "Door_Stone",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Door_Stone.prefab",
       "gameName": "石门-建筑",
       "description": "可以开关的厚重石门。",
       "durability": 1.0,
@@ -675,7 +671,6 @@
     {
       "id": "Door_Wood",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Door_Wood.prefab",
       "gameName": "木门-建筑",
       "description": "可安装在建筑中的木门。",
       "durability": 1.0,
@@ -800,7 +795,6 @@
     {
       "id": "Mod_Meatrack",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Meatrack.prefab",
       "gameName": "晾肉架-建筑",
       "description": "用于晾晒和加工肉类的架子。",
       "durability": 1.0,
@@ -919,7 +913,6 @@
     {
       "id": "MineEntrance",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab",
       "gameName": "矿坑入口-建筑",
       "description": "安装后可通往地下矿洞，并在矿洞中生成对应出口。",
       "lootTableId": "MineEntrance_Default",
@@ -1052,7 +1045,6 @@
     {
       "id": "Scarecrow",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Scarecrow.prefab",
       "gameName": "稻草人-建筑",
       "description": "用于保护农田的稻草人。",
       "durability": 1.0,
@@ -1181,7 +1173,6 @@
     {
       "id": "Smelter",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Smelter.prefab",
       "gameName": "熔炉-建筑",
       "description": "用于冶炼矿石的熔炉。2 个输入槽，材料升温系数 50%。输入区总容量 50 kg / 50 L。",
       "durability": 1.0,
@@ -1353,7 +1344,6 @@
     {
       "id": "Tent",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Tent.prefab",
       "gameName": "帐篷-建筑",
       "description": "可供休息与遮蔽的帐篷。",
       "durability": 1.0,
@@ -1478,7 +1468,6 @@
     {
       "id": "WorkBench",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/WorkBench.prefab",
       "gameName": "工作台-建筑",
       "description": "用于制作物品的工作台。",
       "durability": 1.0,
@@ -1603,7 +1592,6 @@
     {
       "id": "SparkMaker",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab",
       "gameName": "钻木取火工具-建筑",
       "description": "通过摩擦产生火种的生火工具。",
       "durability": 1.0,
@@ -1725,7 +1713,6 @@
     {
       "id": "Torch_Building",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab",
       "gameName": "火把-建筑",
       "description": "可放置在地面并提供照明的火把。",
       "durability": 1,
@@ -1978,7 +1965,6 @@
     {
       "id": "CompostBin",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab",
       "gameName": "堆肥箱-建筑",
       "description": "将可腐物转化为肥料的堆肥箱。",
       "durability": 1.0,

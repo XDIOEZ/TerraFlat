@@ -8,4 +8,4 @@
 - 联机会话禁止单端调参；源 JSON 仍由网页保存，正式运行态可能存在冷缓存，需要真实游戏体验复核。
 - Unity 菜单 **FlatWorld → 物品百科 → 打开 ItemWiki** 打开网页，原有 Wiki 快捷方式仍可使用。
 
-旧 Prefab 数值表配置资产和未提交的调参数据库不会被删除；Prefab-only 内容仍以各自权威 Prefab 编辑器为准，ItemWiki 不会伪装成能修改缺少 JSON 定义的资源。
+旧 Prefab/食物数值表配置和一次性迁移器已清理；调参历史数据库继续保留，Prefab-only 内容仍通过各自权威 Prefab 编辑器维护。

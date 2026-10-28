@@ -19,6 +19,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 核心边界
 
+- 本体初始库存由玩家 JSON 模板配置；旧测试库存资产已清理，`InventoryInit` Addressables 组允许为空，仍保留内容包模板入口。
 - 所有扣量、转移、制作经正式事务；预检与提交共用容量/接收策略，多产物全部可交付才扣料。UI 槽只绑定真实库存，不拥有数据。
 - 专用容器通过 `Inventory_Data.SetItemAcceptancePolicy` 装配非序列化接收规则，数量转移、拖拽交换和整仓入库共用；临时面板用 `Inventory.RuntimeAccessGuard` 核对提交时的会话资格，过期拖拽拒绝，内部资源消费不受界面开关影响。
 - InventoryContextResolver 按 ItemData 引用/Guid 找所属库存；快捷栏按真实槽索引刷新。联机消费由服务器取真实槽，客户端 pending/ack 期间不得用旧库存覆写结果。

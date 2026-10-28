@@ -4,7 +4,6 @@
     {
       "id": "Needle_Bone",
       "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Needle_Bone.prefab",
       "gameName": "骨针",
       "description": "由骨头打磨成的缝纫工具。耐久为10，每成功缝制一件装备消耗1点耐久，耗尽后损坏。",
       "durability": 10,
@@ -335,7 +334,6 @@
     {
       "id": "Log",
       "parent": "WoodTool_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab",
       "gameName": "原木",
       "description": "砍伐树木获得的轻便小原木，可加工为木板或作为燃料，能漂浮在水面。",
       "durability": 1.0,
@@ -565,7 +563,6 @@
     {
       "id": "FireSeed",
       "parent": "WoodTool_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/FireSeed.prefab",
       "gameName": "火种",
       "description": "适合引火的火种，会在一个游戏日（1440游戏秒）后自然熄灭并消失，不留下灰烬。",
       "durability": 1.0,
@@ -1004,7 +1001,6 @@
     {
       "id": "Axe_Flint",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Flint.prefab",
       "gameName": "燧石斧",
       "description": "以燧石制成的锋利斧头，比普通石斧更耐用。",
       "durability": 1.0,
@@ -1186,7 +1182,6 @@
     {
       "id": "Axe_Copper",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Copper.prefab",
       "gameName": "铜斧",
       "description": "以铜制成的斧头，拥有稳定的砍伐效率。",
       "durability": 100.0,
@@ -1368,7 +1363,6 @@
     {
       "id": "Axe_Bronze",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Bronze.prefab",
       "gameName": "青铜斧",
       "description": "以青铜制成的斧头，强度高于铜制工具。",
       "durability": 1000.0,
@@ -1551,7 +1545,6 @@
     {
       "id": "Axe_RawIron",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_RawIron.prefab",
       "gameName": "生铁铁斧",
       "description": "以粗铁锻成的斧头，是早期金属砍伐工具。",
       "durability": 100,
@@ -1733,7 +1726,6 @@
     {
       "id": "Axe_Iron",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Iron.prefab",
       "gameName": "铁斧",
       "description": "以熟铁锻成的坚固斧头，适合持续砍伐。",
       "durability": 1000.0,
@@ -2117,7 +2109,6 @@
     {
       "id": "Pickaxe_Copper",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Copper.prefab",
       "gameName": "铜镐",
       "description": "铜制采矿工具，比石镐有更高的采集效率；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200.0,
@@ -2303,7 +2294,6 @@
     {
       "id": "Pickaxe_Bronze",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Bronze.prefab",
       "gameName": "青铜镐",
       "description": "青铜制采矿工具，采集效率较高；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200.0,
@@ -2487,7 +2477,6 @@
     {
       "id": "Pickaxe_RawIron",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
       "gameName": "生铁铁镐",
       "description": "由未经锻打除杂的粗铁制成，性能略高于铜镐、低于青铜镐，适合作为过渡工具；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200,
@@ -2673,7 +2662,6 @@
     {
       "id": "Pickaxe_Iron",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab",
       "gameName": "铁镐",
       "description": "由粗铁锻打除杂得到的熟铁制成，性能高于粗铁铁镐，可用于更稳定的中后期采矿；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200,

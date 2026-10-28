@@ -124,7 +124,6 @@
     {
       "id": "Hoe_Stone",
       "parent": "Hoe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Hoes/Hoe_Stone.prefab",
       "gameName": "石锄头",
       "description": "对准附近草地，按住右键或使用键连续挥动；从完整土地开始需要4次锄成耕地。",
       "weight": 2.125,
