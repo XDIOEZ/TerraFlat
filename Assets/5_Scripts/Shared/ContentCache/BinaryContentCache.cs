@@ -278,6 +278,7 @@ public sealed class BinaryContentCache
         string temporary = CachePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
+            // 可重建缓存关闭文件后原子替换即可，不为每份配置强制等待磁盘同步。
             using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (var writer = new BinaryWriter(stream))
             {
@@ -285,8 +286,6 @@ public sealed class BinaryContentCache
                 writer.Write(body.Length);
                 writer.Write(Hash(body));
                 writer.Write(body);
-                writer.Flush();
-                stream.Flush(true);
             }
             if (File.Exists(CachePath)) File.Replace(temporary, CachePath, null);
             else File.Move(temporary, CachePath);

@@ -28,10 +28,11 @@ public partial class GameRes
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
         }, () => IsStartupReady || preparingInPlaceReload, () => GameplayTestResourceCache.Active ? 8d : (double?)null);
         List<ItemDefinitionDto> itemSources = null;
+        // 音库独立发出异步请求，目录构建期间持续接入，最终校验前再统一等待。
+        plan.Add("audio-request", "异步预加载音库", 0.5f,
+            () => RunAction(FlatWorld.Audio.AudioService.BeginStartupResourcePreload));
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
-        // 音频强引用图在交互前异步预热，首个按钮点击不再同步读取整库。
-        plan.Add("audio", "预加载菜单与玩法音频", 2, FlatWorld.Audio.AudioService.PreloadAsync, "addressables");
-        plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables", "audio");
+        plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
         plan.Add("players", "加载玩家创建配置", 1,
             () => LoadCatalog<PlayerCreationTemplateCatalogConfig>(PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
                 PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
@@ -43,8 +44,8 @@ public partial class GameRes
         plan.Add("water-current", "加载水流推动配置", 1,
             () => LoadCatalog<WaterCurrentPushCatalog>(WaterCurrentPushConfigLoader.LoadBuiltInAsync,
                 WaterCurrentPushConfigService.ReplaceCatalog));
-        plan.Add("startup-ready", "开放主菜单", 0.5f,
-            PublishStartupReadyStage, "startup-ui", "audio", "players", "time", "water-current");
+        plan.Add("startup-ready", "准备主菜单", 0.5f,
+            PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
         plan.Add("item-manifest", "解析物品清单", 3,
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
                 GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report), value => itemSources = value), "addressables");
@@ -92,9 +93,10 @@ public partial class GameRes
         plan.Add("texts", "加载文字库", 1,
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
         plan.Add("world-authoring", "加载世界生成资源", 1, LoadWorldAuthoringResources, "texts");
+        plan.Add("audio", "等待音库与声源池就绪", 2, CompleteStartupAudioResourcePreload, "audio-request");
         plan.Add("validate-built-in", "校验本体资源引用", 3,
             ValidateBuiltInResourceCatalog,
-            "players", "time", "greenhouse", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "space", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
+            "audio", "players", "time", "greenhouse", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "space", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
             ValidateFinalResourceCatalog, "mods");

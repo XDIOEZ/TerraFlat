@@ -18,23 +18,22 @@ namespace FlatWorld.Audio
         private static AudioRuntimeConfig preloadedRuntimeConfig;
         private static AudioCatalog preloadedCatalog;
 
-        /// <summary>正式启动先等待整张音频引用图，再开放会播放声音的主菜单。</summary>
-        public static IEnumerator PreloadAsync()
+        /// <summary>先发出音库请求，让纹理、预制体和配置构建复用音频异步等待时间。</summary>
+        public static void BeginStartupResourcePreload()
         {
-            if (instance != null)
-                yield break;
+            if (instance != null || runtimeConfigPreloadRequest != null) return;
+            using var requestScope = StartupRequestMarker.Auto();
+            runtimeConfigPreloadRequest = Resources.LoadAsync<AudioRuntimeConfig>(RuntimeConfigResourcePath);
+        }
 
-            if (preloadedRuntimeConfig == null)
-            {
-                if (runtimeConfigPreloadRequest == null)
-                {
-                    using var requestScope = StartupRequestMarker.Auto();
-                    runtimeConfigPreloadRequest = Resources.LoadAsync<AudioRuntimeConfig>(RuntimeConfigResourcePath);
-                }
+        /// <summary>只查询已完成的请求；音库未就绪时继续加载其他资源，不阻塞主菜单准备。</summary>
+        public static bool TryCompleteStartupResourcePreload()
+        {
+            if (instance != null) return true;
+            BeginStartupResourcePreload();
+            if (!runtimeConfigPreloadRequest.isDone) return false;
 
-                yield return runtimeConfigPreloadRequest;
-                preloadedRuntimeConfig = runtimeConfigPreloadRequest.asset as AudioRuntimeConfig;
-            }
+            preloadedRuntimeConfig = runtimeConfigPreloadRequest.asset as AudioRuntimeConfig;
 
             if (preloadedRuntimeConfig != null)
                 preloadedCatalog = preloadedRuntimeConfig.Catalog;
@@ -47,12 +46,19 @@ namespace FlatWorld.Audio
                     catalogPreloadRequest = Resources.LoadAsync<AudioCatalog>(CatalogResourcePath);
                 }
 
-                yield return catalogPreloadRequest;
+                if (!catalogPreloadRequest.isDone) return false;
                 preloadedCatalog = catalogPreloadRequest.asset as AudioCatalog;
             }
 
             // 创建声源池和设置提供者也在启动阶段完成，首个点击只负责播放。
             _ = Instance;
+            return true;
+        }
+
+        /// <summary>主菜单和完整资源就绪仍等待真实音库与声源池完成，重复调用复用同一请求。</summary>
+        public static IEnumerator PreloadAsync()
+        {
+            while (!TryCompleteStartupResourcePreload()) yield return null;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

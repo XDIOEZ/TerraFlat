@@ -45,6 +45,11 @@ test.system("core_lifecycle", "binary_content_cache", {}, function(data)
 end, "启动实体二进制缓存、内容更新、继承、损坏与写入失败回退")
 
 test.system("core_lifecycle", "json_configuration_cache", {}, function(data)
+    assert(data.parametersSkipDiskCache, "小参数树仍逐个读写磁盘缓存或触发首次构建提示")
+    assert(data.parameterObjectsIndependent and data.parameterInteger == "9007199254740993" and
+        data.updatedParameterInteger == "9007199254740994", "参数树对象共享状态、丢失整数精度或更新未生效")
+    assert(data.parameterArray[1] == nil and data.parameterArray[2] == 1.25 and data.invalidParameterParses == 2,
+        "参数数组空值/小数改变，或无效 JSON 没有保留原解析异常")
     assert(data.coldBuildsHint and data.warmDoesNotBuildHint, "首次构建提示没有跟随真实缓存构建，或热命中仍触发首次提示")
     assert(data.libraryIgnoreCase and data.generatorIgnoreCase and data.atmosphereIgnoreCase,
         "文字库、生成器或星球大气的字典大小写规则改变")

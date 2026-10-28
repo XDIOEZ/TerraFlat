@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -686,8 +687,17 @@ public static partial class GameplayTestRuntimeProbe
             (panel.PanelName == "UI_Hand" || panel.PanelName?.StartsWith("UI_Hand_", StringComparison.Ordinal) == true));
         Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         Mod_Hand hand = player.GetComponentInChildren<Mod_Hand>(true);
+        bool audioReady = FlatWorld.Audio.AudioService.HasInstance;
+        FlatWorld.Audio.AudioService audio = audioReady ? FlatWorld.Audio.AudioService.Instance : null;
+        IEnumerator audioPreload = audioReady ? FlatWorld.Audio.AudioService.PreloadAsync() : null;
+        bool audioPreloadYielded;
+        try { audioPreloadYielded = audioPreload == null || audioPreload.MoveNext(); }
+        finally { (audioPreload as IDisposable)?.Dispose(); }
         return new JObject
         {
+            ["audioReady"] = audioReady && audio.Catalog != null,
+            ["audioPreloadYielded"] = audioPreloadYielded,
+            ["audioServiceReused"] = audioReady && ReferenceEquals(audio, FlatWorld.Audio.AudioService.Instance),
             ["editorSpriteTextures"] = CaptureEditorSpriteTextureIdentifiers(resources),
             ["sceneHierarchy"] = GameplayTestSystemProbe.CaptureRuntimeSceneHierarchy(player, foot),
             ["resourceState"] = resources?.LoadState.ToString(), ["startupReady"] = resources != null && resources.IsStartupReady,

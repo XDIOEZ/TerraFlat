@@ -49,7 +49,7 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 - 世界音效使用 `At/Attached`、完整空间混音与线性衰减：`MinDistance` 内正常，`MaxDistance` 处静音。`Mod_Cam` 绑定本机玩家和已有监听器，服务将声源投影到监听器 XY 平面，排除相机高度、前探与跟随偏移；解绑按目标身份。范围外短音不占池/冷却，循环音保留句柄待靠近恢复；角色循环音绑定角色 Transform。
 - 空间声音传播档位在 `Assets/Resources/Audio/PropagationRanges.json`：`levels` 从 1～10 默认对应 1/2/4/8/16/32/64/128/256/512 格，`cues` 按稳定 ID 选 `level`；狼/鸟/海鸥为七档，蜂/野猪为五档。目录预热时解析并缓存到 Cue，未声明的声音沿用自身距离；修改后重新启动游戏。Lua `audio/propagation_ranges` 检查十档、正式配置、改距与移除绑定，`voice_lifecycle` 检查真实 16/64 格内外声源分配与线性衰减。
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
-- 正式 GameRes 启动在开放主菜单前等待 AudioService.PreloadAsync，以 Resources.LoadAsync 预热 Config/Catalog/Cue/Clip 强引用图，再创建服务、目录索引与声源池；重复预热复用实例，不在首个点击中同步加载整库。异步请求仍有主线程接入成本，同步入口仅保留给绕过正式启动流程的调用。
+- 正式 GameRes 先用 `BeginStartupResourcePreload` 发出 Config/Catalog/Cue/Clip 强引用图请求，与其他资源并行；`TryCompleteStartupResourcePreload` 仅在请求完成后接入配置与声源池，主菜单仍等待音库就绪，最终目录通过 `PreloadAsync` 收齐。重复调用复用请求和实例，取消等待不重发请求；帧间异常走 GameRes 会话失败清理。同步入口仅保留给绕过正式启动流程的调用。
 - 玩法短音采用 48 kHz 单声道 PCM、预加载、关闭导入归一化；旧 `__01` WAV 和 Cue 保留 GUID，新变体必须写 `.meta` 并加入现有 Cue。采用外部素材时按上述来源与署名流程整理后接入；使用 LMMS 制作时，按工程分组经 LMMS MCP 渲染后再执行 `build_sfx.py finalize`，脚本仅裁切、接缝、增益和绑定，不合成替代 LMMS 声源。临时 WAV 完整写好后原子替换，避免 Unity 导入半个文件。
 - 脚步的步频和单次音量倍率集中在 `Mod_Mover.Audio`；七类脚步 Cue 关闭全局冷却，交由每个角色的真实位移步距控制频率，并将每个 Cue 的并发上限设为 16，避免群体行走时互相吞掉声音。
 - 雪地脚步读取脚下真实 `WorldSnowSystem.GetSurfaceDepth`，复用 `SnowDepthLayer` 十档量化：一层音量 0.45/pitch 1.10，十层 1.60/pitch 0.86，超十层仅声音封顶；Lua `audio/footstep_surface` 采样正式选音与两种倍率，不改积雪、水声或其他材质规则。

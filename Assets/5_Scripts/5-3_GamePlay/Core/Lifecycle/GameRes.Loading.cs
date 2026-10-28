@@ -62,6 +62,7 @@ public partial class GameRes
     /// <summary>启动阶段已经持有的 Prefab 位置，完整 Prefab 阶段不再重复申请句柄。</summary>
     private HashSet<string> startupPrefabLocationIds = new(StringComparer.Ordinal);
     private bool backgroundLoadingPolicyActive;
+    private bool startupMenuPrerequisitesReady;
     private ThreadPriority previousLoadingPriority;
     private int previousUploadTimeSlice;
 
@@ -286,6 +287,7 @@ public partial class GameRes
         Clear(() => resourceAssets.Dispose());
         LoadedCount = 0;
         IsStartupReady = false;
+        startupMenuPrerequisitesReady = false;
         startupPrefabLocationIds.Clear();
         if (errors.Count > 0) throw new AggregateException("资源会话清理失败。", errors);
     }
@@ -473,11 +475,42 @@ public partial class GameRes
         StartupResourcesReady?.Invoke(this);
     }
 
-    /// <summary>开放主菜单后至少让出一帧，避免紧接着的后台目录工作阻塞首次可交互画面。</summary>
+    /// <summary>音库尚未完成时先推进内容目录，主菜单的真实交互闸门仍等待全部必要依赖。</summary>
     private IEnumerator PublishStartupReadyStage()
     {
-        PublishStartupReady();
+        if (preparingInPlaceReload) PublishStartupReady();
+        else
+        {
+            startupMenuPrerequisitesReady = true;
+            TryPublishStartupReadyAfterAudioPreload();
+        }
         yield return null;
+    }
+
+    private IEnumerator CompleteStartupAudioResourcePreload()
+    {
+        yield return FlatWorld.Audio.AudioService.PreloadAsync();
+        TryPublishStartupReadyAfterAudioPreload();
+    }
+
+    private void TryPublishStartupReadyAfterAudioPreload()
+    {
+        if (!startupMenuPrerequisitesReady || IsStartupReady || LoadState != ResourceLoadState.Loading ||
+            !FlatWorld.Audio.AudioService.TryCompleteStartupResourcePreload()) return;
+        startupMenuPrerequisitesReady = false;
+        PublishStartupReady();
+    }
+
+    // 帧间通知与协程内阶段共享失败语义，监听器异常也必须撤销仍在推进的资源目录。
+    private void AdvanceStartupAudioReadiness()
+    {
+        try { TryPublishStartupReadyAfterAudioPreload(); }
+        catch (Exception exception)
+        {
+            if (loadCoroutine != null) StopCoroutine(loadCoroutine);
+            loadPipeline?.Dispose();
+            FailResourceSession("audio", exception);
+        }
     }
 
     /// <summary>生成稳定的位置身份，用于避免启动预载与完整 Prefab 阶段重复持有同一请求。</summary>

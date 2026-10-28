@@ -12,6 +12,8 @@ test.runtime("core_lifecycle", "live_entry", {}, function(data)
         end
     end
     assert(data.scope == "live-isolated-world" and data.resourceState == "Ready" and data.startupReady, "正式资源没有完成加载")
+    assert(data.audioReady and data.audioServiceReused and not data.audioPreloadYielded,
+        "正式就绪早于音库完成，或重复预热重新创建服务/空等一帧")
     assert(data.inWorld and data.gameplayReady and not data.entryInProgress, "正式入世闸门尚未释放")
     assert(data.localProfile and data.playerInitialized and data.playerActive and data.profile ~= nil, "本地测试角色未完成生命周期")
     assert(data.footViewReady and data.windowReady, "输入已解锁但脚下或可见区块表现未就绪")

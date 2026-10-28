@@ -193,6 +193,23 @@ public static partial class GameplayTestSystemProbe
             => JsonConfigurationCache.ReadOrBuild<T>(Cache(name), () => throw new InvalidOperationException("缓存命中不应再次调用 JSON 解析器"));
         try
         {
+            int parameterHitsBefore = JsonConfigurationCache.Hits;
+            int parameterBuildsBefore = JsonConfigurationCache.Builds;
+            int parameterRevisionBefore = BinaryContentCache.BuildRevision;
+            const string parameterJson = "{\"amount\":9007199254740993,\"nested\":{\"enabled\":true},\"values\":[null,1.25]}";
+            JObject firstParameters = JsonConfigurationCache.ParseObject(parameterJson);
+            firstParameters["nested"]["enabled"] = false;
+            JObject nextParameters = JsonConfigurationCache.ParseObject(parameterJson);
+            JObject updatedParameters = JsonConfigurationCache.ParseObject(parameterJson.Replace("9007199254740993", "9007199254740994"));
+            int invalidParameterParses = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                try { JsonConfigurationCache.ParseObject("{broken"); }
+                catch (Newtonsoft.Json.JsonReaderException) { invalidParameterParses++; }
+            }
+            bool parametersSkipDiskCache = JsonConfigurationCache.Hits == parameterHitsBefore &&
+                                           JsonConfigurationCache.Builds == parameterBuildsBefore &&
+                                           BinaryContentCache.BuildRevision == parameterRevisionBefore;
             int before = BinaryContentCache.BuildRevision;
             var texts = new TextLibraryCatalogDto { SchemaVersion = 1 };
             texts.Libraries["Names"] = new List<string> { "甲", "乙" };
@@ -204,6 +221,12 @@ public static partial class GameplayTestSystemProbe
             texts.Libraries["Names"][0] = "已修改";
             var result = new JObject
             {
+                ["parametersSkipDiskCache"] = parametersSkipDiskCache,
+                ["parameterObjectsIndependent"] = nextParameters["nested"].Value<bool>("enabled"),
+                ["parameterInteger"] = nextParameters["amount"].ToString(),
+                ["updatedParameterInteger"] = updatedParameters["amount"].ToString(),
+                ["parameterArray"] = nextParameters["values"].DeepClone(),
+                ["invalidParameterParses"] = invalidParameterParses,
                 ["coldBuildsHint"] = afterCold > before,
                 ["warmDoesNotBuildHint"] = afterWarm == afterCold,
                 ["libraryIgnoreCase"] = warm.Libraries.ContainsKey("names"),

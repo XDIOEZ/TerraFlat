@@ -57,9 +57,8 @@ public static class JsonConfigurationCache
         return ParseBytes(Encoding.UTF8.GetBytes(json), parse, parser, line);
     }
 
-    public static JObject ParseObject(string json,
-        [CallerFilePath] string parser = "", [CallerLineNumber] int line = 0)
-        => Parse(json, () => JObject.Parse(json), parser, line);
+    // 纯 JSON 树直接解析，避免小参数逐个落盘的开销。
+    public static JObject ParseObject(string json) => JObject.Parse(json);
 
     public static T FromToken<T>(JToken token, JsonSerializer serializer = null,
         [CallerFilePath] string parser = "", [CallerLineNumber] int line = 0) where T : class

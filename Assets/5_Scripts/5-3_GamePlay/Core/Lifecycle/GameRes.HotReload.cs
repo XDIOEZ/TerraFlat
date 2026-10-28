@@ -221,6 +221,7 @@ public partial class GameRes
         context.Add(() => resourceAssets, value => resourceAssets = value, assets);
         context.Add(() => LoadedCount, value => LoadedCount = value, 0);
         context.Add(() => IsStartupReady, value => IsStartupReady = value, false);
+        context.Add(() => startupMenuPrerequisitesReady, value => startupMenuPrerequisitesReady = value, false);
         context.Add(() => LoadState, value => LoadState = value, ResourceLoadState.Loading);
         context.AddDictionary(() => AllPrefabs, value => AllPrefabs = value);
         context.AddDictionary(() => ItemDefinitions, value => ItemDefinitions = value);

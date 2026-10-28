@@ -119,6 +119,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     /// <summary>刷新资源加载界面，并保留 Alt+R 全局资源重载入口。</summary>
     public void Update()
     {
+        AdvanceStartupAudioReadiness();
         RefreshResourceLoadingPresentation();
 
         // Alt+R 在主菜单重建资源会话，在世界内准备候选目录并原位发布，不触发保存或退出。
