@@ -1,0 +1,656 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "generationMode": "built-in image_gen",
+  "scope": "Four material spears, including the shared stone animation variant",
+  "integration": "Native generated PNG bytes copied unchanged; only import metadata, sprite addresses and presentation orientation changed",
+  "validationScope": "Static asset checks only; user PlayMode left untouched",
+  "assets": [
+    {
+      "id": "Spear_Stone",
+      "path": "Assets/6_Art/Generated/Combat/Spear_Stone/Spear_Stone_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a18839-b04b-7872-910b-5b3876cb0f43/exec-ca9d6ab6-6837-4804-96a4-c9c7ec7daf91.png",
+      "guid": "41c4792100be47e08e9f562be67ee93d",
+      "before": {
+        "id": "Spear_Stone",
+        "sourceRectPixels": [
+          16,
+          160,
+          16,
+          16
+        ],
+        "sourcePpu": 16,
+        "sourcePivot": [
+          0.22,
+          0.22
+        ],
+        "axisWorldLength": 1.1490485194281397,
+        "pivotAlongAxisFromButt": 0.19384615384615386
+      },
+      "after": {
+        "sourcePixels": [
+          2172,
+          724
+        ],
+        "alpha128Bounds": [
+          28,
+          246,
+          2145,
+          510
+        ],
+        "ppu": 1842.3939147962108,
+        "pivot": [
+          0.2018876611418048,
+          0.46063535911602205
+        ],
+        "gripPixelFromTopLeft": [
+          438,
+          390
+        ],
+        "worldLength": 1.1490485194281397,
+        "worldThickness": 0.14329183237082138,
+        "sha256": "a5faabe3b362085715f4614f45c56cd09eba3ba3365669876f708d5a2d9cd2ae",
+        "sourceBytesPreserved": true
+      }
+    },
+    {
+      "id": "Spear_Copper",
+      "path": "Assets/6_Art/Generated/Combat/Spear_Copper/Spear_Copper_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a18839-b04b-7872-910b-5b3876cb0f43/exec-68da12cc-dce5-468e-ab1a-787c57b57a92.png",
+      "guid": "4d5ff58aeca6469a846edaefa4d37685",
+      "before": {
+        "id": "Spear_Copper",
+        "sourceRectPixels": [
+          64,
+          160,
+          16,
+          16
+        ],
+        "sourcePpu": 16,
+        "sourcePivot": [
+          0.22,
+          0.22
+        ],
+        "axisWorldLength": 1.1932426932522988,
+        "pivotAlongAxisFromButt": 0.14962962962962967
+      },
+      "after": {
+        "sourcePixels": [
+          2172,
+          724
+        ],
+        "alpha128Bounds": [
+          31,
+          254,
+          2144,
+          489
+        ],
+        "ppu": 1770.8048932114668,
+        "pivot": [
+          0.15999079189686924,
+          0.47720994475138123
+        ],
+        "gripPixelFromTopLeft": [
+          347,
+          378
+        ],
+        "worldLength": 1.1932426932522988,
+        "worldThickness": 0.13270801368399915,
+        "sha256": "2360cb9008ef9cc1eed9675078b8d9c31eb4599fd6b2680dc8814716870a2472",
+        "sourceBytesPreserved": true
+      }
+    },
+    {
+      "id": "Spear_Iron",
+      "path": "Assets/6_Art/Generated/Combat/Spear_Iron/Spear_Iron_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a18839-b04b-7872-910b-5b3876cb0f43/exec-b1c37491-6a5b-4671-b3df-9c77ae0d2185.png",
+      "guid": "3e34218712fa45d480ad1f84edf885b5",
+      "before": {
+        "id": "Spear_Iron",
+        "sourceRectPixels": [
+          32,
+          160,
+          16,
+          16
+        ],
+        "sourcePpu": 16,
+        "sourcePivot": [
+          0.22,
+          0.22
+        ],
+        "axisWorldLength": 1.2374368670764582,
+        "pivotAlongAxisFromButt": 0.18000000000000002
+      },
+      "after": {
+        "sourcePixels": [
+          2172,
+          724
+        ],
+        "alpha128Bounds": [
+          49,
+          257,
+          2136,
+          485
+        ],
+        "ppu": 1686.5506883843711,
+        "pivot": [
+          0.195902394106814,
+          0.4882596685082873
+        ],
+        "gripPixelFromTopLeft": [
+          425,
+          370
+        ],
+        "worldLength": 1.2374368670764582,
+        "worldThickness": 0.1351871613289087,
+        "sha256": "0b3fdcdaf391aeaf86094cb8d291f9ca4d01529b5f5ba119816fbcdb266f6022",
+        "sourceBytesPreserved": true
+      }
+    },
+    {
+      "id": "Spear_Obsidian",
+      "path": "Assets/6_Art/Generated/Combat/Spear_Obsidian/Spear_Obsidian_Icon.png",
+      "source": "C:/Users/PC/.codex/generated_images/01a18839-b04b-7872-910b-5b3876cb0f43/exec-4c7da5c5-5b82-4ef1-af6f-6a6cbee17731.png",
+      "guid": "0e0e558be9404c63a75369a27f4ba696",
+      "before": {
+        "id": "Spear_Obsidian",
+        "sourcePixels": [
+          1983,
+          793
+        ],
+        "sourceAlpha128Bounds": [
+          50,
+          282,
+          1940,
+          508
+        ],
+        "sourcePpu": 1983,
+        "sourcePivot": [
+          0.65,
+          0.5
+        ],
+        "axisWorldLength": 0.9531013615733737,
+        "pivotAlongAxisFromButt": 0.3444708994708994
+      },
+      "after": {
+        "sourcePixels": [
+          2172,
+          724
+        ],
+        "alpha128Bounds": [
+          47,
+          238,
+          2129,
+          500
+        ],
+        "ppu": 2184.447619047619,
+        "pivot": [
+          0.35197974217311234,
+          0.4924033149171271
+        ],
+        "gripPixelFromTopLeft": [
+          764,
+          367
+        ],
+        "worldLength": 0.9531013615733738,
+        "worldThickness": 0.11993878805582321,
+        "sha256": "9e0fbe74f49fe343eaae4eacbb4340bf749c0b526d0dbd4f5cebc6c2e7f50fa3",
+        "sourceBytesPreserved": true
+      }
+    }
+  ],
+  "definitionsBefore": {
+    "Spear_Base": {
+      "visual": {
+        "sortingLayerName": "Player",
+        "sortingOrder": 100,
+        "rendererPath": "Render/Render_1"
+      }
+    },
+    "Spear_Stone": {
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      }
+    },
+    "Spear_Copper": {
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_69]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      }
+    },
+    "Spear_Iron": {
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_67]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 315.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      }
+    },
+    "Spear_Stone_Animation": {
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      }
+    },
+    "Spear_Obsidian": {
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Obsidian/Spear_Obsidian_Icon.png",
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "flipX": true,
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      }
+    }
+  },
+  "generation": {
+    "schemaVersion": 1,
+    "date": "2026-10-29",
+    "generationMode": "built-in image_gen",
+    "commonPrompt": "Use case: stylized-concept.\nAsset type: finished single-item sprite for the Unity 2D sandbox game FlatWorld.\nPrimary request: redraw the spear in the supplied original reference as a coherent large-cluster pixel-art game weapon.\nInput images: image 1 is the original weapon and defines material identity and functional parts ONLY; image 2, the current brown bear, defines the required CHUNKY pixel-cluster scale and low-detail art language; image 3 is the 32x48 player and defines game readability.\nComposition: ONE complete isolated spear, straight horizontal, wooden butt at LEFT and sharp spear tip pointing RIGHT (+X); centerline exactly horizontal, entire weapon fully visible with generous transparent padding on all sides. Wide landscape canvas, ideally 1536x512, weapon occupies about 90% of width. Shaft roughly three quarters of overall length; head plus fastening roughly one quarter. No perspective shortening, no diagonal pose.\nStyle: genuinely coarse retro pixel art with very large hard-edged square pixel clusters, as if authored on roughly a 96x32 logical grid and displayed large. Make each shaft about 3 logical pixels thick, head about 9 logical pixels tall. Simple natural proportions, muted colors, one broad light face and one broad shadow face, sparse chunky highlights, clean thin deep-brown outline. The full-resolution pixels must remain sharp. Do not add details just because the canvas is large.\nConstruction: a long slightly uneven warm brown wooden pole; clearly readable tan plant-fiber cord wrapping and a simple crossing tie fastening the head at the actual head-to-pole joint. The cord is load-bearing attachment, not only decoration on the grip. Simple early handmade construction; no modern standardized socket, screws or machined ferrule.\nBackdrop: real transparent alpha background, no scene, no floor, no cast shadow, no checkerboard drawn into the image.\nAvoid: antialiasing, blur, painted textures, smooth gradients, 3D, tiny scratches, dense wood grain, busy surface facets, noise, glow, black heavy outlines, extra weapons, hands, labels, logo or watermark.",
+    "assets": [
+      {
+        "id": "Spear_Stone",
+        "promptSuffix": "Subject: STONE SPEAR. A gray chipped-stone leaf-shaped head with a slightly irregular silhouette and only 2 or 3 broad matte slate-gray facets, clearly primitive flaked stone, NOT metal. Warm natural wooden shaft; beige plant-fiber ties firmly crossing around the stone head base. Keep this a long thin thrusting spear, not a short knife, paddle or axe."
+      },
+      {
+        "id": "Spear_Copper",
+        "promptSuffix": "Subject: COPPER SPEAR. A simple elongated pointed leaf-shaped rudimentary hand-forged COPPER head. Distinct muted reddish copper orange, russet shadow, one broad dull orange-lit face; slight handmade asymmetry, few planes. This is copper, NOT gold, brass or bronze, no green patina. Beige fiber cord securely lashes its tapered tang to the warm brown wooden pole."
+      },
+      {
+        "id": "Spear_Iron",
+        "promptSuffix": "Subject: WROUGHT-IRON SPEAR. A simple elongated forged iron leaf-shaped blade with a central broad ridge, dark charcoal blue-gray shadow and muted silver-gray upper facet. Simple believable hand-forged head, slight asymmetry, matte metal with one restrained broad highlight, no polished bright white outline, not chrome. Tan fiber/rough leather wraps visibly bind the tapered tang to the dark warm brown wooden pole."
+      },
+      {
+        "id": "Spear_Obsidian",
+        "promptSuffix": "Subject: OBSIDIAN SPEAR. Preserve the black-purple volcanic-glass head and brown wood plus tan-fiber lashing identity from image 1, but make much larger and simpler pixel clusters than that original. Sharp knapped leaf-shaped head, irregular flaked edges, just 3 broad near-black violet-gray facets and one sparse muted lilac edge highlight. Black glass, NOT gray stone and NOT steel. NO glow, NO magic. Use the same long wooden-pole proportions as a simple stone spear, and draw the cord firmly securing the head. IMPORTANT reverse the original leftward orientation: finished sharp tip points RIGHT, butt LEFT."
+      }
+    ]
+  },
+  "validation": {
+    "staticChecksPassed": true,
+    "sourceBytesPreserved": true,
+    "nativeTextureImportPassed": true,
+    "allFiveSpearDefinitionsCovered": true,
+    "onlyPresentationConfigurationChanged": true,
+    "addressableGuidAddressAndLabelPassed": true,
+    "worldSizeReports": [
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Stone\\Spear_Stone_Icon.png",
+        "source_pixels": [
+          2172,
+          724
+        ],
+        "sprite_rect_pixels": [
+          0,
+          0,
+          2172,
+          724
+        ],
+        "visible_bounds_pixels": [
+          28,
+          246,
+          2145,
+          510
+        ],
+        "visible_pixels_size": [
+          2117,
+          264
+        ],
+        "pixels_per_unit": 1842.3939147962,
+        "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Stone\\Spear_Stone_Icon.png.meta",
+        "effective_scale": [
+          1.0,
+          1.0
+        ],
+        "visible_world_size": [
+          1.1490485194281463,
+          0.14329183237082221
+        ],
+        "canvas_world_size": [
+          1.1789009845054008,
+          0.39296699483513364
+        ],
+        "alpha_threshold": 128,
+        "target_world_size": null,
+        "target_longest_world_size": 1.1490485194281397,
+        "relative_size_error": [
+          5.773159728050814e-15
+        ],
+        "suggested_pixels_per_unit": 1842.3939147962108,
+        "size_matches_target": true,
+        "importer_limits": [
+          {
+            "platform": "DefaultTexturePlatform",
+            "max_texture_size": 4096
+          }
+        ],
+        "warnings": [],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Copper\\Spear_Copper_Icon.png",
+        "source_pixels": [
+          2172,
+          724
+        ],
+        "sprite_rect_pixels": [
+          0,
+          0,
+          2172,
+          724
+        ],
+        "visible_bounds_pixels": [
+          31,
+          254,
+          2144,
+          489
+        ],
+        "visible_pixels_size": [
+          2113,
+          235
+        ],
+        "pixels_per_unit": 1770.8048932115,
+        "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Copper\\Spear_Copper_Icon.png.meta",
+        "effective_scale": [
+          1.0,
+          1.0
+        ],
+        "visible_world_size": [
+          1.1932426932522764,
+          0.13270801368399668
+        ],
+        "canvas_world_size": [
+          1.2265608754112374,
+          0.40885362513707907
+        ],
+        "alpha_threshold": 128,
+        "target_world_size": null,
+        "target_longest_world_size": 1.1932426932522988,
+        "relative_size_error": [
+          1.8762769116165146e-14
+        ],
+        "suggested_pixels_per_unit": 1770.8048932114668,
+        "size_matches_target": true,
+        "importer_limits": [
+          {
+            "platform": "DefaultTexturePlatform",
+            "max_texture_size": 4096
+          }
+        ],
+        "warnings": [],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Iron\\Spear_Iron_Icon.png",
+        "source_pixels": [
+          2172,
+          724
+        ],
+        "sprite_rect_pixels": [
+          0,
+          0,
+          2172,
+          724
+        ],
+        "visible_bounds_pixels": [
+          49,
+          257,
+          2136,
+          485
+        ],
+        "visible_pixels_size": [
+          2087,
+          228
+        ],
+        "pixels_per_unit": 1686.5506883844,
+        "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Iron\\Spear_Iron_Icon.png.meta",
+        "effective_scale": [
+          1.0,
+          1.0
+        ],
+        "visible_world_size": [
+          1.2374368670764369,
+          0.13518716132890637
+        ],
+        "canvas_world_size": [
+          1.287835589501687,
+          0.4292785298338957
+        ],
+        "alpha_threshold": 128,
+        "target_world_size": null,
+        "target_longest_world_size": 1.2374368670764582,
+        "relative_size_error": [
+          1.7208456881689926e-14
+        ],
+        "suggested_pixels_per_unit": 1686.550688384371,
+        "size_matches_target": true,
+        "importer_limits": [
+          {
+            "platform": "DefaultTexturePlatform",
+            "max_texture_size": 4096
+          }
+        ],
+        "warnings": [],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Obsidian\\Spear_Obsidian_Icon.png",
+        "source_pixels": [
+          2172,
+          724
+        ],
+        "sprite_rect_pixels": [
+          0,
+          0,
+          2172,
+          724
+        ],
+        "visible_bounds_pixels": [
+          47,
+          238,
+          2129,
+          500
+        ],
+        "visible_pixels_size": [
+          2082,
+          262
+        ],
+        "pixels_per_unit": 2184.4476190476,
+        "pixels_per_unit_source": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Combat\\Spear_Obsidian\\Spear_Obsidian_Icon.png.meta",
+        "effective_scale": [
+          1.0,
+          1.0
+        ],
+        "visible_world_size": [
+          0.9531013615733821,
+          0.11993878805582425
+        ],
+        "canvas_world_size": [
+          0.9943017086154591,
+          0.33143390287181973
+        ],
+        "alpha_threshold": 128,
+        "target_world_size": null,
+        "target_longest_world_size": 0.9531013615733737,
+        "relative_size_error": [
+          8.881784197001252e-15
+        ],
+        "suggested_pixels_per_unit": 2184.4476190476194,
+        "size_matches_target": true,
+        "importer_limits": [
+          {
+            "platform": "DefaultTexturePlatform",
+            "max_texture_size": 4096
+          }
+        ],
+        "warnings": [],
+        "errors": [],
+        "passed": true
+      }
+    ],
+    "luaExecuted": false,
+    "runtimeVisualAcceptance": false,
+    "reason": "Unity is in user PlayMode; no refresh, compile, resource reload or PlayMode changes requested",
+    "console": {
+      "errorCount": 0,
+      "warningCount": 0,
+      "logCount": 5,
+      "isPlaying": true,
+      "isPaused": true
+    }
+  }
+}

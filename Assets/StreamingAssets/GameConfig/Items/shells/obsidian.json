@@ -124,7 +124,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Obsidian/Spear_Obsidian_Icon.png",
         "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
-        "flipX": true,
+        "flipX": false,
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {

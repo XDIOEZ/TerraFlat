@@ -4888,6 +4888,24 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 41c4792100be47e08e9f562be67ee93d
+    m_Address: Assets/6_Art/Generated/Combat/Spear_Stone/Spear_Stone_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4d5ff58aeca6469a846edaefa4d37685
+    m_Address: Assets/6_Art/Generated/Combat/Spear_Copper/Spear_Copper_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3e34218712fa45d480ad1f84edf885b5
+    m_Address: Assets/6_Art/Generated/Combat/Spear_Iron/Spear_Iron_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

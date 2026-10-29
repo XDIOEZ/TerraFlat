@@ -266,7 +266,7 @@
         "InventoryCategory.Equipment"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Stone/Spear_Stone_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -275,7 +275,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 0.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -288,7 +288,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "collider": {
           "type": "BoxCollider2D",
@@ -445,7 +445,7 @@
         "InventoryCategory.Equipment"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_69]",
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Copper/Spear_Copper_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -454,7 +454,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 0.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -467,7 +467,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "collider": {
           "type": "BoxCollider2D",
@@ -624,7 +624,7 @@
         "InventoryCategory.Equipment"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_67]",
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Iron/Spear_Iron_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -633,7 +633,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 315.0
+          "z": 0.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -803,7 +803,7 @@
         "InventoryCategory.Equipment"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Stone/Spear_Stone_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -812,7 +812,7 @@
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
-          "z": 225.0
+          "z": 0.0
         },
         "rendererLocalScale": {
           "x": 1.0,
@@ -825,7 +825,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "collider": {
           "type": "BoxCollider2D",
