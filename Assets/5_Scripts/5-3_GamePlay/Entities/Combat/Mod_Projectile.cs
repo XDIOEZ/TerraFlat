@@ -137,7 +137,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
     #endregion
 
-    public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    public override ModuleTickMode TickMode => HasActiveWorldAttachment
+        ? ModuleTickMode.EveryFrame : ModuleTickMode.Disabled;
 
     /// <summary>确保模块数据拥有稳定 ID。</summary>
     public override void Awake()
@@ -167,6 +168,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         _damage.OnExternalDamageResolved += HandleExternalDamageResolved;
         _baseDamage = _damage.ResolveDamageValues().Scaled(1f);
         _damage.StopAttack();
+        _damage.SetIdleTickSuppressed(true, this);
         RestoreFlightCollisions();
         ConfigureBodyForRest();
         _isFlying = false;
@@ -311,6 +313,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             _damage.OnReceiverLogicalMissed -= HandleReceiverLogicalMissed;
             _damage.OnExternalDamageResolved -= HandleExternalDamageResolved;
             _damage.SetExplicitProjectileSweep(false);
+            _damage.SetIdleTickSuppressed(false, this);
         }
         _isFlying = false;
         _isPreparingFlight = false;
@@ -472,6 +475,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             _endingFlight = false;
             ResetBounceSpin();
             _isFlying = true;
+            InvalidateTickSchedule();
 
             _damage.SetExplicitProjectileSweep(true);
             bool localWorld = GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(item));
@@ -1042,6 +1046,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
         _endingFlight = true;
         _isFlying = false;
+        InvalidateTickSchedule();
         NetworkSurfaceProjectiles.Remove(this);
         LocalWorldProjectiles.Remove(this);
         float remainingHeight = Mathf.Max(0f, _virtualHeight);
@@ -1115,6 +1120,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
         _embeddedTarget = target;
         _wasEmbedded = true;
+        InvalidateTickSchedule();
         _embeddedLocalPosition = target.InverseTransformPoint(item.transform.position);
         _embeddedLocalRotation = Quaternion.Inverse(target.rotation) * item.transform.rotation;
         UpdateEmbeddedPose();
@@ -1144,10 +1150,12 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     /// <summary>清除附着关系；箭矢保持当前世界姿态，目标销毁后会自然留在最后位置。</summary>
     private void ClearEmbeddedState()
     {
+        bool wasEmbedded = _wasEmbedded;
         _embeddedTarget = null;
         _wasEmbedded = false;
         _embeddedLocalPosition = Vector3.zero;
         _embeddedLocalRotation = Quaternion.identity;
+        if (wasEmbedded) InvalidateTickSchedule();
     }
 
     /// <summary>投射物损坏时按配置概率掉落一份真实合成配方中的原材料。</summary>

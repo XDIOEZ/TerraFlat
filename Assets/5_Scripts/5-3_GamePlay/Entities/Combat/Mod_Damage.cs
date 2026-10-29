@@ -115,26 +115,26 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private bool windowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool animationDrivenDamageWindow; // 动画武器按有效窗口检测命中，不用周期伤害间隔限制采样。
-    private bool idleTickSuppressed;
+    private HashSet<Module> idleTickSuppressionSources;
 
-    public override ModuleTickMode TickMode => idleTickSuppressed && !animationDrivenDamageWindow &&
+    public override ModuleTickMode TickMode => animationDrivenDamageWindow || idleTickSuppressionSources?.Count > 0 &&
         item != null && !item.InHand && !IsDamageEnabled()
         ? ModuleTickMode.Disabled : ModuleTickMode.EveryFrame;
 
-    /// <summary>显式窗口驱动的伤害源可以休眠空闲 Tick，攻击和手持时仍保持原频率。</summary>
-    public void SetIdleTickSuppressed(bool suppressed)
+    /// <summary>各来源独立请求休眠空闲 Tick，攻击和手持时仍保持原频率。</summary>
+    public void SetIdleTickSuppressed(bool suppressed, Module source)
     {
-        if (idleTickSuppressed == suppressed) return;
-        idleTickSuppressed = suppressed;
-        if (item != null)
+        if (source == null) throw new System.ArgumentNullException(nameof(source));
+        bool wasSuppressed = idleTickSuppressionSources?.Count > 0;
+        bool changed;
+        if (suppressed)
         {
-            item.OnInHandChanged -= OnHandTickStateChanged;
-            if (suppressed) item.OnInHandChanged += OnHandTickStateChanged;
-            item.MarkModuleScheduleDirty();
+            idleTickSuppressionSources ??= new HashSet<Module>();
+            changed = idleTickSuppressionSources.Add(source);
         }
+        else changed = idleTickSuppressionSources?.Remove(source) == true;
+        if (changed && wasSuppressed != (idleTickSuppressionSources.Count > 0)) InvalidateTickSchedule();
     }
-
-    private void OnHandTickStateChanged(bool inHand) => item?.MarkModuleScheduleDirty();
 
     protected override void OnUnload()
     {
@@ -143,7 +143,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         LaunchedWeaponInventoryOwner = null;
         if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
         sourceHealth = null;
-        SetIdleTickSuppressed(false);
         base.OnUnload();
     }
     private bool tileDamageAppliedThisWindow;
@@ -370,8 +369,15 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>Animator 更新后再次同步武器命中盒，保证伤害区域始终跟随实际武器画面。</summary>
     private void LateUpdate()
     {
+        // 动画伤害窗由 Animator 直接开关，待机时无需进入世界作用域或同步碰撞盒。
+        if (animationDrivenDamageWindow && boundWeaponRenderer == null && item != null && item.InHand &&
+            item.Sprite != null && item.Sprite.sprite != null)
+            BindToWeaponRenderer(item.Sprite);
+        if (damageCollider == null || !damageCollider.enabled && (!animationDrivenDamageWindow || !lastColliderEnabled))
+            return;
+
         using var worldScope = item?.UseOwnedWorldForItemCallbacks();
-        SyncBoundWeaponHitbox();
+        if (damageCollider.enabled) SyncBoundWeaponHitbox();
         if (animationDrivenDamageWindow)
         {
             // Animator 本帧写完姿态和开关后再登记窗口，避免第一段短挥砍只查到起始位置。

@@ -17,6 +17,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/ai_entity_live_query", AiEntityLiveQuery);
         operations.Add("item_runtime/world_tick_move_query", WorldTickMoveQuery);
         operations.Add("item_runtime/logical_world_tick", LogicalWorldTick);
+        operations.Add("item_runtime/module_tick_mutations", ModuleTickMutations);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
         operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
         operations.Add("item_runtime/matter_moisture_info", MatterMoistureInfo);
@@ -222,6 +223,106 @@ public static partial class GameplayTestSystemProbe
             CloseWindShelterProbeScene(otherScene);
         }
     }));
+
+    // 在正式 Tick 内触发结构变更、嵌套调用、世界迁移和回池换代。
+    private static JObject ModuleTickMutations(JObject args) => WithEntityProbeItem(item =>
+    {
+        item.BindData(EntityProbeData("probe:tick-mutations", 1));
+        GameplayWorldRegistry.AssignItemToWorld(item, "probe:tick-mutations-a");
+        var first = AddTickCallbackProbe(item, "first", ModuleTickMode.EveryFrame);
+        var removed = AddTickCallbackProbe(item, "removed", ModuleTickMode.EveryFrame);
+        var restarted = AddTickCallbackProbe(item, "restarted", ModuleTickMode.EveryFrame);
+        var interval = AddTickCallbackProbe(item, "interval", ModuleTickMode.FixedInterval);
+        item.ResumeRuntimeAfterReplacement();
+        item.Tick(0f);
+
+        GameplayTestItemTickCallbackProbe added = null;
+        first.Callback = () =>
+        {
+            first.Callback = null;
+            item.itemMods.RemoveMod(removed);
+            removed.UnloadRuntime();
+            restarted.SetEnabled(false);
+            restarted.SetEnabled(true);
+            added = AddTickCallbackProbe(item, "added", ModuleTickMode.EveryFrame);
+            added.LoadRuntime();
+            item.GetTickTier();
+            item.Tick(0f);
+        };
+        item.Tick(.06f);
+        bool nestedSnapshot = first.TickCount == 3 && removed.TickCount == 1 &&
+            restarted.TickCount == 2 && added.TickCount == 1 && interval.TickCount == 0;
+        item.Tick(.04f);
+        bool rebuiltSnapshot = removed.TickCount == 1 && restarted.TickCount == 3 && added.TickCount == 2;
+        bool preservedInterval = interval.TickCount == 1 && Mathf.Abs(interval.LastDelta - .1f) < .001f;
+
+        int restartedBefore = restarted.TickCount, addedBefore = added.TickCount, intervalBefore = interval.TickCount;
+        first.Callback = () =>
+        {
+            first.Callback = null;
+            GameplayWorldRegistry.AssignItemToWorld(item, "probe:tick-mutations-b");
+        };
+        item.Tick(.11f);
+        bool worldTransferStoppedOldTick = restarted.TickCount == restartedBefore &&
+            added.TickCount == addedBefore && interval.TickCount == intervalBefore;
+
+        GameplayWorldRegistry.AssignItemToWorld(item, null);
+        uint previousGeneration = item.RuntimeGeneration;
+        first.Callback = () =>
+        {
+            first.Callback = null;
+            item.PrepareForPoolReuse();
+            item.BindData(EntityProbeData("probe:tick-reused", 1));
+            foreach (GameplayTestItemTickCallbackProbe module in new[] { first, restarted, added, interval })
+            {
+                module.ModuleInit(item, module._Data);
+                item.itemMods.AddMod(module);
+            }
+            item.ResumeRuntimeAfterReplacement();
+            item.GetTickTier();
+        };
+        item.Tick(.11f);
+        bool poolStoppedOldTick = item.RuntimeGeneration != previousGeneration &&
+            restarted.TickCount == restartedBefore && added.TickCount == addedBefore && interval.TickCount == intervalBefore;
+        item.Tick(0f);
+        bool poolNewGenerationTicked = restarted.TickCount == restartedBefore + 1 && added.TickCount == addedBefore + 1;
+        return new JObject
+        {
+            ["nestedSnapshot"] = nestedSnapshot, ["rebuiltSnapshot"] = rebuiltSnapshot,
+            ["preservedInterval"] = preservedInterval, ["worldTransferStoppedOldTick"] = worldTransferStoppedOldTick,
+            ["poolStoppedOldTick"] = poolStoppedOldTick, ["poolNewGenerationTicked"] = poolNewGenerationTicked,
+            ["schedulerRegistration"] = CaptureTickRegistrationReplacement()
+        };
+    });
+
+    // 新注册令牌不得沿用本帧已取出的旧条目。
+    private static bool CaptureTickRegistrationReplacement() => WithEntityProbeItem(item =>
+    {
+        Data_GeneralItem data = EntityProbeData("probe:tick-registration", 1);
+        data.inHand = true;
+        item.BindData(data);
+        GameplayWorldRegistry.AssignItemToWorld(item, "probe:tick-registration");
+        var module = AddTickCallbackProbe(item, "scheduler", ModuleTickMode.EveryFrame);
+        item.ResumeRuntimeAfterReplacement();
+        item.gameObject.SetActive(true);
+        var scheduler = new ItemTickScheduler();
+        scheduler.Register(item);
+        scheduler.Update(.1f, target => { scheduler.Remove(target); scheduler.Register(target); }, Array.Empty<Transform>(), default);
+        bool skippedOldRegistration = module.TickCount == 0;
+        scheduler.Update(.1f, null, Array.Empty<Transform>(), default);
+        bool newRegistrationTicked = module.TickCount == 1;
+        scheduler.Remove(item);
+        return new JObject { ["result"] = skippedOldRegistration && newRegistrationTicked };
+    }).Value<bool>("result");
+
+    private static GameplayTestItemTickCallbackProbe AddTickCallbackProbe(GameItem item, string name, ModuleTickMode mode)
+    {
+        var module = item.gameObject.AddComponent<GameplayTestItemTickCallbackProbe>();
+        module.Mode = mode;
+        module.ModuleInit(item, new Ex_ModData_MemoryPackable { StableName = name, ModuleId = name, Enabled = true });
+        item.itemMods.AddMod(module);
+        return module;
+    }
 
     // 独立停用宿主只读取正式资格缓存，不创建世界、拾取器或完整物品管理器。
     private static JObject WorldMatterStructure(JObject args) => WithEntityProbeItem(item =>
@@ -548,6 +649,23 @@ public static partial class GameplayTestSystemProbe
         public bool TrySampleCombustion(string worldKey, Vector2 position, out bool canBurn)
         { canBurn = Allowed; return worldKey == "probe:combustion"; }
     }
+    #endregion
+}
+
+internal sealed class GameplayTestItemTickCallbackProbe : Module
+{
+    #region Tick 回调夹具
+    private Ex_ModData_MemoryPackable data = new();
+    public override ModuleData _Data { get => data; set => data = (Ex_ModData_MemoryPackable)value; }
+    public ModuleTickMode Mode;
+    public override ModuleTickMode TickMode => Mode;
+    public override float FixedTickInterval => .1f;
+    public Action Callback;
+    public int TickCount;
+    public float LastDelta;
+    protected override void OnLoad() { }
+    protected override void OnSave() { }
+    public override void ModUpdate(float deltaTime) { TickCount++; LastDelta = deltaTime; Callback?.Invoke(); }
     #endregion
 }
 

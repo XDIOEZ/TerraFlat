@@ -2,6 +2,8 @@
 
 物品与生物静态排序由 `visual.sortingLayerName` 和 `sortingOrder` 决定，同层同序才按 Y 排序；普通物品和生物使用 `Player/100`，船板与铁轨使用 `Default/0` 和贴地材质。水生表现入水时临时使用水下类别，携带或离水后恢复定义排序。`rendering_item_sorting_configuration` 覆盖正式配置、分组、上下位置、原位更新、手持/显示切换、池复用、轻量掉落物、合批和水生切换；实际 GPU 画面需现场验收。
 
+2026-10-29 `rendering/contact_shadow_culling_indices` 直接调用生产索引收集，覆盖全可见、部分可见、相机变化、全不可见和 96 个实例；本轮未执行，真实 BRG 输出、Append 扩容与 GPU 画面仍待验收。
+
 2026-10-29 `item-sorting-configuration.lua` 新增 `presentation_sorting_domain`：域内正式 Flush 按原始图层/Order、材质队列、批次序和显示脚点 Y 写入组件临时 Order；探针读取实际 SortingGroup/Renderer 序号检查 Y 交换、跨域独立 rank、固定地板与角色顺序、顶层组原子性，以及移除、投影释放和域销毁时的 raw 键恢复。`depthRows` 另以同源行内不同 X 实体验证 90° 投影后拆组 rank、离域恢复行合批和部件顺序。仅静态补齐，本轮未执行 Lua 或 Unity。
 
 2026-10-28 本轮专项规则 28 项断言通过；`20261028T151214478Z_15c3e9a0` 的 29 项 EditMode 和真实渲染案例通过，两种船板跨帧保留 `Default/0`、未进动态合批，结束截图已复核角色完整显示在船板前方，控制台无错误和警告。扩大规则回归仍在暂停刚体与 `destroyed` 注册清理断言失败，未记为本轮通过项。

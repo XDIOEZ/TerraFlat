@@ -141,6 +141,17 @@ test.system("item_runtime", "logical_world_tick", {}, function(data)
         "物品回池后仍保留原世界，或重新绑定和注销没有正确更新调度组")
 end, "物品调度按逻辑世界分组、迁移、回池及稳态零分配")
 
+test.system("item_runtime", "module_tick_mutations", {}, function(data)
+    assert(data.nestedSnapshot and data.rebuiltSnapshot,
+        "Tick 回调增删、重启模块或嵌套重建后，旧轮次执行了错误的模块")
+    assert(data.preservedInterval, "调度重建丢失未改变固定间隔模块的累计时间")
+    assert(data.worldTransferStoppedOldTick,
+        "Tick 回调跨世界迁移后，原世界的后续模块仍继续执行")
+    assert(data.poolStoppedOldTick and data.poolNewGenerationTicked,
+        "Tick 回调内回池换代后旧轮次未停止，或新代物品无法继续更新")
+    assert(data.schedulerRegistration, "同帧注销重登后旧注册令牌继续执行或新注册未恢复")
+end, "物品 Tick 快照：增删、嵌套、时钟、跨世界、回池与注册令牌")
+
 for _, actorId in ipairs({"SmallFish", "Bird"}) do
     local expectedActorId = actorId
     test.system("item_runtime", "initial_animator_activation", {actorId = actorId}, function(data)

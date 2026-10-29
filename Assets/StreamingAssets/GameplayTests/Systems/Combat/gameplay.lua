@@ -67,8 +67,10 @@ for _, weaponCase in ipairs({
         nearWeapon(data.staminaCostPerAttack, case.stamina, case.name .. "每次基础精力消耗")
         assert(data.impactKind == case.impact, case.name .. "伤害类型错误")
         assert(data.initialWindowClosed, case.name .. "待机时伤害窗未关闭")
+        assert(data.idleDamageTickDisabled, case.name .. "待机时伤害模块仍被逐帧调度")
         assert(data.actionRequested and data.sawAttackState, case.name .. "公开动作入口没有启动攻击动画")
         assert(data.sawOpenWindow, case.name .. "攻击动画未打开真实伤害窗")
+        assert(data.sawOpenWindowWithoutDamageTick, case.name .. "停止伤害模块 Tick 后动画伤害窗没有正常打开")
         assert(data.returnedToIdle and data.finalWindowClosed, case.name .. "单次攻击后未回待机或未关闭伤害窗")
         assert(data.beforeDisableActionRequested and data.inactiveActionRejected, case.name .. "停用前未挥击或失活期间仍能攻击")
         assert(data.disabledWindowClosed and data.disabledHitStopCleared, case.name .. "停用未清理伤害窗与动画速度")
@@ -95,6 +97,17 @@ for _, weaponCase in ipairs({
         end
     end, case.name .. "正式手持装配、数值与动画伤害窗")
 end
+
+test.runtime("combat", "projectile_tick_lifecycle", {}, function(data)
+    assert(data.idleProjectile and data.idleDamage, "石头待机时投射或伤害模块仍被逐帧调度")
+    assert(data.projectileSourceRetained and data.discardSourceRetained and data.damageReloadRetainedSource,
+        "单独停用或重载模块抹掉了另一个来源的休眠请求")
+    assert(data.lastSourceReleased, "所有休眠来源撤销后伤害模块没有恢复调度")
+    assert(data.heldDamageActive and data.openDamageActive and data.closedDamageIdle,
+        "手持、伤害窗开启或关闭时的调度状态错误")
+    assert(data.flightStarted and data.landedAndIdle, "真实调度没有推进投射物飞行、落地并恢复休眠")
+    assert(data.reloadedIdle, "重新生成石头后投射或伤害模块没有恢复待机")
+end, "石头投射与丢弃伤害的休眠来源和飞行调度")
 
 test.runtime("combat", "world_health_panel_lifecycle", {}, function(data)
     assert(data.initiallyVisible, "正式动物血条未显示")

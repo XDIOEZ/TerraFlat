@@ -22,6 +22,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
         GameplayTestRuntimeProbe.Register("item_runtime", "shell_final_configuration", CaptureShellFinalConfiguration);
         GameplayTestRuntimeProbe.Register("item_runtime", "center_spatial_query", CaptureCenterSpatialQuery);
         GameplayTestRuntimeProbe.RegisterAsync("combat", "held_weapon_action", CaptureHeldWeaponAction);
+        GameplayTestRuntimeProbe.RegisterAsync("combat", "projectile_tick_lifecycle", CaptureProjectileTickLifecycle);
         GameplayTestRuntimeProbe.Register("modding", "live_lua_module", CaptureLuaModule);
         GameplayTestRuntimeProbe.Register("networking", "live_replica", CaptureReplica);
     }
@@ -360,11 +361,12 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["damageRegistered"] = damage != null;
             result["damageLoaded"] = damage != null && damage.IsRuntimeLoaded;
             result["initialWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+            result["idleDamageTickDisabled"] = damage != null && damage.TickMode == ModuleTickMode.Disabled;
 
             result["staminaBeforeAction"] = stamina != null ? stamina.CurrentValue : 0f;
             bool requested = animation is IWeaponActionAnimation action && action.TryRequestAction();
             result["staminaAfterAction"] = stamina != null ? stamina.CurrentValue : 0f;
-            bool sawAttackState = false, sawOpenWindow = false, returnedToIdle = false;
+            bool sawAttackState = false, sawOpenWindow = false, sawOpenWindowWithoutDamageTick = false, returnedToIdle = false;
             int sampledFrames = 0;
             float deadline = Time.realtimeSinceStartup + 10f;
             while (requested && Time.realtimeSinceStartup < deadline)
@@ -377,6 +379,8 @@ public static class GameplayTestItemPipelineRuntimeProbe
                     returnedToIdle = sawAttackState && state.IsName("Idle_0");
                 }
                 sawOpenWindow |= damage != null && damage.IsDamageEnabled();
+                sawOpenWindowWithoutDamageTick |= damage != null && damage.IsDamageEnabled() &&
+                                                 damage.TickMode == ModuleTickMode.Disabled;
                 sampledFrames++;
                 if (returnedToIdle && damage != null && !damage.IsDamageEnabled()) break;
                 yield return null;
@@ -384,6 +388,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["actionRequested"] = requested;
             result["sawAttackState"] = sawAttackState;
             result["sawOpenWindow"] = sawOpenWindow;
+            result["sawOpenWindowWithoutDamageTick"] = sawOpenWindowWithoutDamageTick;
             result["returnedToIdle"] = returnedToIdle;
             result["finalWindowClosed"] = damage != null && !damage.IsDamageEnabled();
             result["sampledFrames"] = sampledFrames;
@@ -432,6 +437,113 @@ public static class GameplayTestItemPipelineRuntimeProbe
             finally { if (stamina != null) stamina.CurrentValue = originalStamina; }
         }
         completed(result);
+    }
+    #endregion
+
+    #region 投射物调度与来源生命周期
+    private static IEnumerator CaptureProjectileTickLifecycle(Player player, JObject args, Action<JObject> completed)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var scope = new ProjectileTickProbeScope();
+        GameplayTestRuntimeProbe.RegisterCleanup(scope);
+        var result = new JObject();
+        try
+        {
+            // 石头同时拥有投射和丢弃伤害，隔离宿主阻止转换，并远离玩家自动拾取。
+            Vector3 stonePosition = player.transform.position + Vector3.right * 4f;
+            scope.Item = ItemMgr.Instance.InstantiateItem("Ore_Stone", stonePosition);
+            scope.Item.PersistenceOwner = scope;
+            scope.Item.Owner = player;
+            scope.Item.Load();
+            Item stone = scope.Item;
+            var projectile = stone.itemMods.GetMod_ByID<Mod_Projectile>(Mod_Projectile.PersistedModuleId);
+            var damage = stone.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage");
+            var discard = stone.itemMods.GetMod_ByID<Mod_DiscardFlightDamage>(Mod_DiscardFlightDamage.PersistedModuleId);
+            if (projectile == null || damage == null || discard == null)
+                throw new InvalidOperationException("石头缺少投射、伤害或丢弃伤害模块。");
+
+            result["idleProjectile"] = projectile.TickMode == ModuleTickMode.Disabled;
+            result["idleDamage"] = damage.TickMode == ModuleTickMode.Disabled;
+            damage.SetIdleTickSuppressed(true, discard);
+            discard.SetEnabled(false);
+            result["projectileSourceRetained"] = damage.TickMode == ModuleTickMode.Disabled;
+            discard.SetEnabled(true);
+            projectile.SetEnabled(false);
+            result["discardSourceRetained"] = damage.TickMode == ModuleTickMode.Disabled;
+            damage.SetEnabled(false);
+            damage.SetEnabled(true);
+            result["damageReloadRetainedSource"] = damage.TickMode == ModuleTickMode.Disabled;
+            discard.SetEnabled(false);
+            result["lastSourceReleased"] = damage.TickMode == ModuleTickMode.EveryFrame;
+            projectile.SetEnabled(true);
+            discard.SetEnabled(true);
+
+            stone.SetInHand(true);
+            result["heldDamageActive"] = damage.TickMode == ModuleTickMode.EveryFrame;
+            stone.SetInHand(false);
+            bool originalHandOnlyDamage = damage.OnlyDealDamageWhenInHand;
+            CombatDamage originalDamage = damage.ResolveDamageValues().Scaled(1f);
+            scope.Restore = () =>
+            {
+                if (damage == null) return;
+                damage.OnlyDealDamageWhenInHand = originalHandOnlyDamage;
+                damage.SetDamageValues(originalDamage);
+            };
+            damage.OnlyDealDamageWhenInHand = true;
+            damage.SetDamageEnabled(true);
+            result["openDamageActive"] = damage.TickMode == ModuleTickMode.EveryFrame;
+            damage.SetDamageEnabled(false);
+            result["closedDamageIdle"] = damage.TickMode == ModuleTickMode.Disabled;
+
+            // 用零速度和伤害门禁保留正式飞行时钟，同时避免影响附近目标。
+            projectile.Launch(player, Vector2.right, 0.2f, 1f, 0f);
+            result["flightStarted"] = projectile.HasActiveWorldAttachment &&
+                                      projectile.TickMode == ModuleTickMode.EveryFrame && damage.IsDamageEnabled();
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (stone != null && !stone.DestructionHandled && projectile.HasActiveWorldAttachment &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
+            result["landedAndIdle"] = stone != null && !stone.DestructionHandled &&
+                                      !projectile.HasActiveWorldAttachment && projectile.TickMode == ModuleTickMode.Disabled &&
+                                      !damage.IsDamageEnabled() && damage.TickMode == ModuleTickMode.Disabled;
+
+            int shellId = stone.GetInstanceID();
+            uint generation = stone.RuntimeGeneration;
+            scope.Dispose();
+            scope.Item = ItemMgr.Instance.InstantiateItem("Ore_Stone", stonePosition);
+            scope.Item.PersistenceOwner = scope;
+            scope.Item.Load();
+            var reloadedProjectile = scope.Item.itemMods.GetMod_ByID<Mod_Projectile>(Mod_Projectile.PersistedModuleId);
+            var reloadedDamage = scope.Item.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage");
+            bool sameShellReused = scope.Item.GetInstanceID() == shellId;
+            result["sameShellReused"] = sameShellReused;
+            result["reloadedIdle"] = scope.Item.IsInitialized && (!sameShellReused || scope.Item.RuntimeGeneration != generation) &&
+                                     reloadedProjectile != null &&
+                                     reloadedProjectile.TickMode == ModuleTickMode.Disabled && reloadedDamage != null &&
+                                     reloadedDamage.TickMode == ModuleTickMode.Disabled;
+        }
+        finally
+        {
+            scope.Dispose();
+        }
+        completed(result);
+    }
+
+    private sealed class ProjectileTickProbeScope : IDisposable
+    {
+        public Item Item;
+        public Action Restore;
+
+        public void Dispose()
+        {
+            Item owned = Item;
+            Item = null;
+            if (owned == null || owned.DestructionHandled) return;
+            Restore?.Invoke();
+            Restore = null;
+            owned.PersistenceOwner = null;
+            ItemMgr.GetExistingInstance()?.DespawnItem(owned, saveData: false);
+        }
     }
     #endregion
 

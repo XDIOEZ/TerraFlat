@@ -4,6 +4,7 @@ using FlatWorld.Diagnostics;
 using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
+using Unity.Collections;
 using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
@@ -16,6 +17,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/shadow_proxy_changes", ShadowProxyChanges);
         operations.Add("rendering/shadow_proxy_blur_scale", ShadowProxyBlurScale);
         operations.Add("rendering/shadow_footprint_matrix", ShadowFootprintMatrix);
+        operations.Add("rendering/contact_shadow_culling_indices", ContactShadowCullingIndices);
         operations.Add("rendering/building_capability_cache", BuildingCapabilityCache);
         operations.Add("rendering/ship_part_placement_state", ServiceShipPartPlacementState);
         operations.Add("rendering/ship_block_visual", ServiceShipBlockVisual);
@@ -54,6 +56,54 @@ public static partial class GameplayTestSystemProbe
     }
 
     #endregion
+
+    // 使用裁剪规则本身覆盖相机切换和初始容量以上的可见索引。
+    private static JObject ContactShadowCullingIndices(JObject args)
+    {
+        const int instanceCount = 96;
+        var instances = new ContactShadowBatchRenderer.InstanceData[instanceCount];
+        for (int i = 0; i < instanceCount; i++)
+            instances[i].Footprint = new Vector4(i - 48, 0f, 0.25f, 0.25f);
+
+        var indices = new int[instanceCount];
+        var planes = new NativeArray<Plane>(1, Allocator.Temp);
+        try
+        {
+            planes[0] = new Plane(Vector3.right, new Vector3(-100f, 0f, 0f));
+            int allVisible = ContactShadowBatchRenderer.CollectVisibleInstanceIndices(
+                instances, instanceCount, planes, indices);
+            bool allVisibleOrdered = allVisible == instanceCount;
+            for (int i = 0; allVisibleOrdered && i < allVisible; i++)
+                allVisibleOrdered = indices[i] == i;
+
+            planes[0] = new Plane(Vector3.right, Vector3.zero);
+            int partialVisible = ContactShadowBatchRenderer.CollectVisibleInstanceIndices(
+                instances, instanceCount, planes, indices);
+            bool partialOrdered = partialVisible == 48;
+            for (int i = 0; partialOrdered && i < partialVisible; i++)
+                partialOrdered = indices[i] == i + 48;
+
+            // 模拟切换到只看数组右端的相机，旧相机索引不能残留到本轮有效范围。
+            planes[0] = new Plane(Vector3.right, new Vector3(40f, 0f, 0f));
+            int changedCameraVisible = ContactShadowBatchRenderer.CollectVisibleInstanceIndices(
+                instances, instanceCount, planes, indices);
+            bool changedCameraOrdered = changedCameraVisible == 8;
+            for (int i = 0; changedCameraOrdered && i < changedCameraVisible; i++)
+                changedCameraOrdered = indices[i] == i + 88;
+
+            planes[0] = new Plane(Vector3.right, new Vector3(100f, 0f, 0f));
+            int invisible = ContactShadowBatchRenderer.CollectVisibleInstanceIndices(
+                instances, instanceCount, planes, indices);
+            return new JObject
+            {
+                ["allVisible"] = allVisibleOrdered,
+                ["partialVisible"] = partialOrdered,
+                ["changedCamera"] = changedCameraOrdered,
+                ["allInvisible"] = invisible == 0
+            };
+        }
+        finally { planes.Dispose(); }
+    }
 
     // 读取正式控制器的 MPB，覆盖偏心原点、连续翻面、换图和静态免重传。
     private static JObject SpriteSnowBounds(JObject args)

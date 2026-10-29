@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Profiling;
 
 /// <summary>按更新档分桶调度，以注册版本和运行代际保护回调中的增删与对象池复用。</summary>
 internal sealed class ItemTickScheduler
@@ -12,6 +13,9 @@ internal sealed class ItemTickScheduler
     private const float NormalSlice = 0.1f / BucketCount;
     private const float SlowSlice = 0.25f / BucketCount;
     private const float DormantPhysicsSlice = 0.25f / BucketCount;
+    private static readonly ProfilerMarker PrepareFrameMarker = new("FlatWorld.ItemScheduler.PrepareFrame");
+    private static readonly ProfilerMarker EveryFrameMarker = new("FlatWorld.ItemScheduler.EveryFrame");
+    private static readonly ProfilerMarker IntervalBucketsMarker = new("FlatWorld.ItemScheduler.IntervalBuckets");
 
     internal readonly struct ScheduledEntry
     {
@@ -176,80 +180,90 @@ internal sealed class ItemTickScheduler
         updating = true;
         try
         {
-            FlushDirty();
-            simulationRanges.BeginFrame(players, topology);
-            // 本轮调度中新增或重新注册的版本统一从下一帧生效，不能进入后续低频桶。
-            currentUpdateToken = registrationSequence;
-            ApplySimulationRangeTransitions();
-            float currentTime = Time.time;
-            simulationRanges.CollectEveryFrame(tickSnapshot, currentTime);
-            for (int i = 0; i < tickSnapshot.Count; i++)
+            float currentTime;
+            using (PrepareFrameMarker.Auto())
             {
-                ScheduledEntry entry = tickSnapshot[i];
-                try
+                FlushDirty();
+                simulationRanges.BeginFrame(players, topology);
+                // 本轮调度中新增或重新注册的版本统一从下一帧生效，不能进入后续低频桶。
+                currentUpdateToken = registrationSequence;
+                ApplySimulationRangeTransitions();
+                currentTime = Time.time;
+                simulationRanges.CollectEveryFrame(tickSnapshot, currentTime);
+            }
+            using (EveryFrameMarker.Auto())
+            {
+                for (int i = 0; i < tickSnapshot.Count; i++)
                 {
-                    if (!CanTick(entry)) continue;
-                    Item item = entry.Item;
-                    if (!item.isActiveAndEnabled)
+                    ScheduledEntry entry = tickSnapshot[i];
+                    try
                     {
-                        item.ResetScheduledTickClock(-1f);
-                        continue;
-                    }
-
-                    if (!item.ShouldUseSimulationRange())
-                    {
-                        item.SetSimulationRangePaused(false);
                         if (!CanTick(entry)) continue;
+                        Item item = entry.Item;
+                        if (!item.isActiveAndEnabled)
+                        {
+                            item.ResetScheduledTickClock(-1f);
+                            continue;
+                        }
+
+                        if (!item.ShouldUseSimulationRange())
+                        {
+                            item.SetSimulationRangePaused(false);
+                            if (!CanTick(entry)) continue;
+                            beforeEveryFrameTick?.Invoke(item);
+                            if (CanTick(entry) && item.isActiveAndEnabled)
+                            {
+                                item.TickUnthrottledAt(currentTime, deltaTime);
+                                if (CanTick(entry))
+                                {
+                                    simulationRanges.AcknowledgeTier(entry, SimulationRangeTier.Near);
+                                    simulationRanges.NotifyMoved(item);
+                                }
+                            }
+                            continue;
+                        }
+
+                        SimulationRangeTier tier = ResolveTier(item);
+                        if (!CanTick(entry)) continue;
+                        item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
+                        if (!CanTick(entry)) continue;
+                        if (tier == SimulationRangeTier.Stopped)
+                        {
+                            item.ResetScheduledTickClock(-1f);
+                            continue;
+                        }
+
+                        float interval = SimulationRangePreferences.TickInterval(tier);
+                        if (!item.IsEveryFrameTickDue(currentTime, interval))
+                        {
+                            simulationRanges.AcknowledgeTier(entry, tier);
+                            continue;
+                        }
                         beforeEveryFrameTick?.Invoke(item);
                         if (CanTick(entry) && item.isActiveAndEnabled)
                         {
-                            item.TickUnthrottledAt(currentTime, deltaTime);
+                            item.TickEveryFrameAt(currentTime, interval);
                             if (CanTick(entry))
                             {
-                                simulationRanges.AcknowledgeTier(entry, SimulationRangeTier.Near);
+                                simulationRanges.AcknowledgeTier(entry, tier);
                                 simulationRanges.NotifyMoved(item);
                             }
                         }
-                        continue;
                     }
-
-                    SimulationRangeTier tier = ResolveTier(item);
-                    if (!CanTick(entry)) continue;
-                    item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
-                    if (!CanTick(entry)) continue;
-                    if (tier == SimulationRangeTier.Stopped)
+                    finally
                     {
-                        item.ResetScheduledTickClock(-1f);
-                        continue;
+                        simulationRanges.CompleteEveryFrame(entry);
                     }
-
-                    float interval = SimulationRangePreferences.TickInterval(tier);
-                    if (!item.IsEveryFrameTickDue(currentTime, interval))
-                    {
-                        simulationRanges.AcknowledgeTier(entry, tier);
-                        continue;
-                    }
-                    beforeEveryFrameTick?.Invoke(item);
-                    if (CanTick(entry) && item.isActiveAndEnabled)
-                    {
-                        item.TickEveryFrameAt(currentTime, interval);
-                        if (CanTick(entry))
-                        {
-                            simulationRanges.AcknowledgeTier(entry, tier);
-                            simulationRanges.NotifyMoved(item);
-                        }
-                    }
-                }
-                finally
-                {
-                    simulationRanges.CompleteEveryFrame(entry);
                 }
             }
 
-            ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime);
-            ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime);
-            ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime);
-            ProcessDormantPhysics(deltaTime);
+            using (IntervalBucketsMarker.Auto())
+            {
+                ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime);
+                ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime);
+                ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime);
+                ProcessDormantPhysics(deltaTime);
+            }
         }
         finally
         {

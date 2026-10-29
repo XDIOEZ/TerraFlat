@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -18,6 +19,7 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private const int InstanceStride = 32;
     private const int ZeroPrefixBytes = 64;
     private const int ShadowRenderQueue = 2995; // 旧实体位于地形 BRG 之后。
+    private static readonly ProfilerMarker CullingMarker = new("FlatWorld.Rendering.ContactShadow.OnPerformCulling");
     private static readonly int InstanceDataId = Shader.PropertyToID("_ContactShadowData");
     private static readonly int ColorId = Shader.PropertyToID("_Color");
     private readonly object syncRoot = new();
@@ -29,6 +31,7 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private BatchMeshID meshId;
     private BatchMaterialID materialId;
     private InstanceData[] instances = new InstanceData[InitialCapacity];
+    private int[] visibleInstanceIndices = new int[InitialCapacity];
     private int count;
     private int uploadedCount;
     private bool dataChanged = true;
@@ -38,7 +41,7 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private float globalOpacity = 1f;
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct InstanceData
+    internal struct InstanceData
     {
         public Vector4 Footprint; // 中心 XY 与半宽、高。
         public Vector4 Appearance; // X 为本只阴影透明度。
@@ -84,8 +87,10 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
         {
             if (count == instances.Length)
             {
-                Array.Resize(ref instances, instances.Length * 2);
-                Resize(instances.Length);
+                int nextCapacity = instances.Length * 2;
+                Array.Resize(ref instances, nextCapacity);
+                Array.Resize(ref visibleInstanceIndices, nextCapacity);
+                Resize(nextCapacity);
             }
             InstanceData next = new InstanceData
             {
@@ -194,11 +199,11 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private unsafe JobHandle OnPerformCulling(BatchRendererGroup rendererGroup,
         BatchCullingContext context, BatchCullingOutput output, IntPtr userContext)
     {
+        using var profilerScope = CullingMarker.Auto();
         lock (syncRoot)
         {
-            int visible = 0;
-            for (int i = 0; i < count; i++)
-                if (IsVisible(instances[i].Footprint, context.cullingPlanes)) visible++;
+            int visible = CollectVisibleInstanceIndices(instances, count,
+                context.cullingPlanes, visibleInstanceIndices);
 
             BatchCullingOutputDrawCommands* commands =
                 (BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr();
@@ -244,12 +249,21 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
                 allDepthSorted = false
             };
 
-            int index = 0;
-            for (int i = 0; i < count; i++)
-                if (IsVisible(instances[i].Footprint, context.cullingPlanes))
-                    commands->visibleInstances[index++] = i;
+            for (int i = 0; i < visible; i++)
+                commands->visibleInstances[i] = visibleInstanceIndices[i];
         }
         return default;
+    }
+
+    /// <summary>按输入顺序收集可见索引，供 BRG 输出与规则回归共用。</summary>
+    internal static int CollectVisibleInstanceIndices(InstanceData[] source, int sourceCount,
+        NativeArray<Plane> planes, int[] destination)
+    {
+        int visible = 0;
+        for (int i = 0; i < sourceCount; i++)
+            if (IsVisible(source[i].Footprint, planes))
+                destination[visible++] = i;
+        return visible;
     }
 
     /// <summary>按椭圆外接矩形检测所有裁剪面。</summary>

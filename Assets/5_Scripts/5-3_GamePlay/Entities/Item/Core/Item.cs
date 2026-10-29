@@ -336,8 +336,8 @@ public abstract class Item : MonoBehaviour
         public bool HasTicked;
     }
 
-    private readonly List<ScheduledModuleTick> everyFrameModules = new List<ScheduledModuleTick>(8);
-    private readonly List<ScheduledModuleTick> scheduledModules = new List<ScheduledModuleTick>(8);
+    private ScheduledModuleTick[] everyFrameModules = Array.Empty<ScheduledModuleTick>();
+    private ScheduledModuleTick[] scheduledModules = Array.Empty<ScheduledModuleTick>();
     private readonly Dictionary<Module, ScheduledModuleTick> moduleClocks = new();
     private static readonly Dictionary<Type, bool> moduleTickImplementationCache = new Dictionary<Type, bool>();
     private bool moduleScheduleDirty = true;
@@ -532,16 +532,15 @@ public abstract class Item : MonoBehaviour
         if (!IsInitialized)
             return;
 
+        using var profilerScope = TickDispatchMarker.Auto();
         using var worldScope = UseOwnedWorldForItemCallbacks();
         EnsureModuleSchedule();
         uint generation = RuntimeGeneration;
         ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(this);
-        // 回调可以移除、启停甚至回收本 Item，本轮只执行进入时捕获的模块代际。
-        using var scope = ListPool<ScheduledModuleTick>.Get(out var snapshot);
-        using var fixedScope = ListPool<ScheduledModuleTick>.Get(out var fixedSnapshot);
-        snapshot.AddRange(everyFrameModules);
-        fixedSnapshot.AddRange(scheduledModules);
-        for (int i = 0; i < snapshot.Count; i++)
+        // 结构变更只替换数组，当前轮次始终保留进入时的模块快照。
+        ScheduledModuleTick[] snapshot = everyFrameModules;
+        ScheduledModuleTick[] fixedSnapshot = scheduledModules;
+        for (int i = 0; i < snapshot.Length; i++)
         {
             if (!IsInitialized || RuntimeGeneration != generation ||
                 GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
@@ -558,6 +557,7 @@ public abstract class Item : MonoBehaviour
         if (!IsInitialized)
             return;
 
+        using var profilerScope = TickDispatchMarker.Auto();
         using var worldScope = UseOwnedWorldForItemCallbacks();
         EnsureModuleSchedule();
 
@@ -569,9 +569,7 @@ public abstract class Item : MonoBehaviour
 
         float elapsed = Mathf.Max(0f, currentTime - lastScheduledTickTime);
         lastScheduledTickTime = currentTime;
-        using var scope = ListPool<ScheduledModuleTick>.Get(out var snapshot);
-        snapshot.AddRange(scheduledModules);
-        TickScheduledModules(elapsed, RuntimeGeneration, GameplayWorldRegistry.GetItemWorldRevision(this), snapshot);
+        TickScheduledModules(elapsed, RuntimeGeneration, GameplayWorldRegistry.GetItemWorldRevision(this), scheduledModules);
     }
 
     /// <summary>
@@ -1222,6 +1220,9 @@ public abstract class Item : MonoBehaviour
 
     #region 更新调度
 
+    private static readonly ProfilerMarker TickDispatchMarker = new("FlatWorld.Item.Tick.Dispatch");
+    private static readonly ProfilerMarker RebuildScheduleMarker = new("FlatWorld.Item.Tick.RebuildSchedule");
+
     internal ItemTickTier GetTickTier()
     {
         EnsureModuleSchedule();
@@ -1371,11 +1372,12 @@ public abstract class Item : MonoBehaviour
     private void EnsureModuleSchedule()
     {
         if (!moduleScheduleDirty) return;
+        using var profilerScope = RebuildScheduleMarker.Auto();
         using var scope = DictionaryPool<Module, ScheduledModuleTick>.Get(out var previous);
         foreach (var pair in moduleClocks) previous.Add(pair.Key, pair.Value);
         moduleClocks.Clear();
-        everyFrameModules.Clear();
-        scheduledModules.Clear();
+        using var frameScope = ListPool<ScheduledModuleTick>.Get(out var frameModules);
+        using var scheduledScope = ListPool<ScheduledModuleTick>.Get(out var intervalModules);
         float shortestInterval = float.MaxValue;
         bool useItemInterval = updateInterval > 0.1f;
 
@@ -1399,15 +1401,17 @@ public abstract class Item : MonoBehaviour
                 };
             }
             moduleClocks.Add(module, clock);
-            if (mode == ModuleTickMode.EveryFrame) everyFrameModules.Add(clock);
+            if (mode == ModuleTickMode.EveryFrame) frameModules.Add(clock);
             else
             {
-                scheduledModules.Add(clock);
+                intervalModules.Add(clock);
                 shortestInterval = Mathf.Min(shortestInterval, interval);
             }
         }
-        tickTier = everyFrameModules.Count > 0 ? ItemTickTier.EveryFrame
-            : scheduledModules.Count == 0 ? ItemTickTier.Dormant
+        everyFrameModules = frameModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : frameModules.ToArray();
+        scheduledModules = intervalModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : intervalModules.ToArray();
+        tickTier = frameModules.Count > 0 ? ItemTickTier.EveryFrame
+            : intervalModules.Count == 0 ? ItemTickTier.Dormant
             : shortestInterval <= 0.075f ? ItemTickTier.Fast
             : shortestInterval <= 0.15f ? ItemTickTier.Normal : ItemTickTier.Slow;
         moduleScheduleDirty = false;
@@ -1439,9 +1443,9 @@ public abstract class Item : MonoBehaviour
             "请覆写 TickMode，或在 ModuleTickPolicyCatalog 中声明本体迁移策略。");
     }
 
-    private void TickScheduledModules(float deltaTime, uint generation, ulong worldRevision, IReadOnlyList<ScheduledModuleTick> snapshot)
+    private void TickScheduledModules(float deltaTime, uint generation, ulong worldRevision, ScheduledModuleTick[] snapshot)
     {
-        for (int i = 0; i < snapshot.Count; i++)
+        for (int i = 0; i < snapshot.Length; i++)
         {
             if (!IsInitialized || RuntimeGeneration != generation ||
                 GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
@@ -1474,8 +1478,8 @@ public abstract class Item : MonoBehaviour
     {
         RestoreSimulationBody();
         simulationRangePaused = false;
-        everyFrameModules.Clear();
-        scheduledModules.Clear();
+        everyFrameModules = Array.Empty<ScheduledModuleTick>();
+        scheduledModules = Array.Empty<ScheduledModuleTick>();
         moduleClocks.Clear();
         tickTier = ItemTickTier.Dormant;
         lastScheduledTickTime = -1f;

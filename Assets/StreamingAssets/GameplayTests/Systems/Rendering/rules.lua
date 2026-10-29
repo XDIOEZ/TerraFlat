@@ -406,6 +406,13 @@ test.system("rendering", "shadow_footprint_matrix", {}, function(data)
         "默认贴地调整覆盖了物品显式配置的零重叠脚点")
 end, "接触与太阳阴影的四角投影数学等价：镜像、旋转、偏心与缩放")
 
+test.system("rendering", "contact_shadow_culling_indices", {}, function(data)
+    assert(data.allVisible, "接触阴影全可见时索引数量或输入顺序错误")
+    assert(data.partialVisible, "接触阴影部分可见时索引没有按裁剪平面筛选")
+    assert(data.changedCamera, "切换相机后可见索引仍保留上一相机结果")
+    assert(data.allInvisible, "接触阴影全部被裁剪时仍返回旧索引")
+end, "接触阴影单遍裁剪索引在相机切换与96实例下保持正确")
+
 for _, args in ipairs({
     { strength = 1, clear = 10, opaque = 20 },
     { strength = 0.5, clear = 20, opaque = 30 },

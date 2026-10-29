@@ -94,7 +94,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         damageModule.OnDamageApplied -= RecordFlightDamage;
         damageModule.OnDamageApplied += RecordFlightDamage;
         ResetRuntimeState();
-        damageModule.SetIdleTickSuppressed(true);
+        damageModule.SetIdleTickSuppressed(true, this);
     }
 
     protected override void OnSave()
@@ -111,7 +111,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         }
 
         StopDamage();
-        damageModule?.SetIdleTickSuppressed(false);
+        damageModule?.SetIdleTickSuppressed(false, this);
     }
 
     public override void ModUpdate(float deltaTime)

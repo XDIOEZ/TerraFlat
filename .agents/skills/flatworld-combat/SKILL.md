@@ -69,6 +69,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - Mod_Bow 从 AttackStarted/Ended 驱动 `ProjectileChargeCycle`；默认松开发射并持续耗体力，`ReleaseMode=LoadThenReleaseToFire` 满蓄力后停耗、首次松手上膛、再次按下松开发射，未满松手取消，取消/卸载清时序。来源 `flatworld.combat.bow_charge`；木弓/反曲弓基础每秒2.25，弩 `Crossbow_Wood` 继承反曲弓数值与普通箭。弹药经同库存事务，AmmoItemId 与 AmmoTag 任一匹配；箭组合 Mod_Projectile+Mod_Damage。规则回归 `combat/archery_cycle`。
 - 弓伤害倍率经 Launch 传投射物；IProjectileChargeModifier 提供额外速度/伤害，蓄力结束收状态。麦克风修饰只由本地玩家蓄力期间拥有，不存档。
+- 投射模块仅飞行或附着时逐帧运行，状态改变立即失效调度；投射和丢弃伤害按模块来源独立请求空闲休眠，开窗及手持仍唤醒。动画伤害窗口在 LateUpdate 逐帧采样，伤害碰撞体关闭后跳过世界作用域。
 - 投石索复用 Mod_Bow，以 AmmoItemId 或 AmmoTag 任一匹配选弹；石头与硬质矿石通过 SlingAmmo_Base 组合 Mod_Projectile+Mod_Damage，石头保留独立丢弃飞行伤害。不要给石头子定义统一增加 SlingAmmo 标签，以免黏土/硝石继承弹药资格；`combat/archery_cycle` 覆盖最终模块与配置边界。
 - 默认箭矢/投掷物从手持武器根位置沿瞄准方向前移生成；配置局部管口的武器使用真实管口，发射与轨迹预览共用位置。`TrajectorySettings` 从实际弹药定义/Prefab 缓存，资源变更失效；预览与 UseVisibleArc 使用同速度/时长/虚拟重力，匀速地面位移，落点是无碰撞预计终点。
 - Dynamic Rigidbody2D 驱动地面，虚拟高度只偏移视觉/攻击盒。高速飞行用实际伤害盒作前后帧 NonAlloc 扫掠，再交 Mod_Damage 结算；实体接触先判伤，正伤正常命中/回收/附着，只有有效 0 伤才反弹。
