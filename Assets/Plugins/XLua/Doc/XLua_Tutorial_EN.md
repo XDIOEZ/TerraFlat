@@ -9,7 +9,7 @@ For example:
 
        luaenv.DoString("print('hello world')")
 
-   See the full code in the XLua\Tutorial\LoadLuaScript\ByString directory.
+   See the full code in Tools\ReferenceSamples\XLua\Tutorial\LoadLuaScript\ByString.
 
    > However, this mode is not recommended. We recommend the following mode:
 
@@ -19,7 +19,7 @@ For example:
 
        DoString("require 'byfile'")
 
-   See the full code in the XLua\Tutorial\LoadLuaScript\ByFile directory.
+   See the full code in Tools\ReferenceSamples\XLua\Tutorial\LoadLuaScript\ByFile.
 
    The require actually calls the loaders one by one to load the file. The loading process stops if one loader succeeds. If all loaders fail, no file found will be reported. 
 In addition to native loaders, xLua also adds loaders loaded from the Resource. Note that because the Resource supports only  limited numbers of extensions, the Lua file under Resources must be added the txt extension (see the attached example).
@@ -37,12 +37,12 @@ In addition to native loaders, xLua also adds loaders loaded from the Resource. 
 
    With the AddLoader, you can register a callback. Its parameter is a string. When calling require in the Lua code, the parameter will be transparently transferred to the callback, which can load the specified files based on this parameter. If debugging support is required, you need to modify the filepath to a real path and transfer it. The returned value of this callback is a byte array. Null means the loader is not found. Otherwise, the content of the Lua file is returned. 
 Can IIPS IFS be loaded? Yes. Write a loader to call IIPS interface to read the content of the file. Can encrypted files be loaded? Yes, write the loader to read the file and return it after decrypting it. 
-See the complete example in the XLua\Tutorial\LoadLuaScript\Loader directory.
+See the complete example in Tools\ReferenceSamples\XLua\Tutorial\LoadLuaScript\Loader.
 
 ### C# accesses Lua.
 
 This means that C# initiates access to the Lua data structure. 
-The examples mentioned in this chapter can be found in the XLua\Tutorial\CSharpCallLua directory.
+The examples mentioned in this chapter can be found in Tools\ReferenceSamples\XLua\Tutorial\CSharpCallLua.
 
 1. Get a global basic data type
 Access LuaEnv.Global, which provides a template Get method. You can specify the type returned.
@@ -107,7 +107,7 @@ Using this is also simple. LuaFunction has a Call function with variable paramet
 
 ### Lua calls C#
 
-> The examples covered in this section are all under XLua\Tutorial\LuaCallCSharp
+> The examples covered in this section are all under Tools\ReferenceSamples\XLua\Tutorial\LuaCallCSharp
 
 #### Create a new C# object
 

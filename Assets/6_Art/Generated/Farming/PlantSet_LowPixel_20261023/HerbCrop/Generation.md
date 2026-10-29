@@ -4,7 +4,7 @@
 - 方式：内置 `image_gen`，每个物种独立生成。
 - 本次仅重绘：保留原有种类；本目录为独立的新素材，不替换旧图、不接入玩法或配置。
 - 原生 PNG 与 Alpha 原样保存；没有程序缩放、裁切或改色。
-- 风格参考：`Assets/6_Art/Generated/Farming/PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png` 与 `RadishCrop_Mature_LowPixelSample.png`。
+- 风格参考：`../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png` 与 [RadishCrop_Mature_LowPixelSample.png](../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RadishCrop_Mature_LowPixelSample.png)。
 - 物种身份参考：`Assets/6_Art/Generated/Farming/Herb/HerbCrop_Mature.png`。
 - 工具原始输出：`C:/Users/CatStudio/.codex/generated_images/01a1685c-b50a-7e82-a8e3-2f3414b6364a/exec-31131f32-2096-49da-8651-b4188f09360d.png`。
 - 项目交付：`Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/HerbCrop/HerbCrop_Mature.png`。

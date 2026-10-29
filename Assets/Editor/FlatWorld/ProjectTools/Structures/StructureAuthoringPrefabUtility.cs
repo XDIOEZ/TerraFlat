@@ -7,8 +7,9 @@ using UnityEngine.Tilemaps;
 
 public static class StructureAuthoringPrefabUtility
 {
-    private const string AuthoringFolder =
-        "Assets/Editor/FlatWorld/Structures/AuthoringAssets";
+    // Authoring 资源跟随遗迹工具归档，所有编辑入口共用同一路径。
+    public const string AuthoringAssetsFolderPath =
+        "Assets/Editor/FlatWorld/ProjectTools/Structures/AuthoringAssets";
 
     public static GameObject OpenOrCreate(StructureDefinitionSO definition)
     {
@@ -19,7 +20,7 @@ public static class StructureAuthoringPrefabUtility
         if (template == null)
             throw new InvalidOperationException($"遗迹 {definition.StructureId} 没有可编辑模板。");
 
-        StructureEditorWindow.EnsureFolder(AuthoringFolder);
+        StructureEditorWindow.EnsureFolder(AuthoringAssetsFolderPath);
         GameObject prefab = FindAuthoringPrefab(definition, template);
         if (prefab == null)
             prefab = CreateFromTemplate(definition, template);
@@ -73,7 +74,7 @@ public static class StructureAuthoringPrefabUtility
         StructureDefinitionSO definition,
         StructureTemplateSO template)
     {
-        string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { AuthoringFolder });
+        string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { AuthoringAssetsFolderPath });
         for (int i = 0; i < guids.Length; i++)
         {
             string path = AssetDatabase.GUIDToAssetPath(guids[i]);
@@ -94,7 +95,7 @@ public static class StructureAuthoringPrefabUtility
             ? definition.name
             : definition.StructureId;
         string path = AssetDatabase.GenerateUniqueAssetPath(
-            $"{AuthoringFolder}/{safeId}_Authoring.prefab");
+            $"{AuthoringAssetsFolderPath}/{safeId}_Authoring.prefab");
 
         GameObject authoring = new(safeId);
         try

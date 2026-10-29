@@ -36,9 +36,9 @@
 | game-event-manager | 事件 | GameEventManager.cs | Assets/5_Scripts/5-3_GamePlay/Core/GameEvents/GameEventManager.cs | 720 | 1000 | 全局游戏事件的运行时调度器，负责触发条件、行动、冲突与活动状态。 | save-data-mgr |
 | mod-runtime | 扩展 | ModRuntimeManager.cs | Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModRuntimeManager.cs | 1120 | 1000 | 扫描并加载 MOD 清单、依赖与扩展内容，维护统一 API 版本和运行阶段。 | game-res |
 
-| world-runtime | WorldModel | WorldRuntime.cs | Assets/5_Scripts/5-0_WorldModel/WorldRuntime.cs | 1880 | 310 | 纯 C# 世界运行时的区块总管，保存 Chunk 权威状态、租约、提交结果和快照。 | runtime-chunk-mgr |
-| runtime-chunk-mgr | WorldModel | ChunkMgr.cs | Assets/5_Scripts/5-0_WorldModel/ChunkMgr.cs | 2240 | 310 | 根据观察者窗口决定区块加载、保留和释放，并安排后台生成任务与主线程提交。 | chunk-scheduler |
-| chunk-runtime | WorldModel | ChunkRuntime.cs | Assets/5_Scripts/5-0_WorldModel/ChunkRuntime.cs | 2600 | 310 | 单个区块的权威运行时容器，承载生成结果、运行状态、版本和租约相关数据。 | world-runtime |
+| world-runtime | WorldModel | WorldRuntime.cs | Assets/5_Scripts/5-0_WorldModel/Core/WorldRuntime.cs | 1880 | 310 | 纯 C# 世界运行时的区块总管，保存 Chunk 权威状态、租约、提交结果和快照。 | runtime-chunk-mgr |
+| runtime-chunk-mgr | WorldModel | ChunkMgr.cs | Assets/5_Scripts/5-0_WorldModel/Chunks/ChunkMgr.cs | 2240 | 310 | 根据观察者窗口决定区块加载、保留和释放，并安排后台生成任务与主线程提交。 | chunk-scheduler |
+| chunk-runtime | WorldModel | ChunkRuntime.cs | Assets/5_Scripts/5-0_WorldModel/Chunks/ChunkRuntime.cs | 2600 | 310 | 单个区块的权威运行时容器，承载生成结果、运行状态、版本和租约相关数据。 | world-runtime |
 | chunk-scheduler | 生成 | ChunkGenerationScheduler.cs | Assets/5_Scripts/5-0_WorldModel/Generation/ChunkGenerationScheduler.cs | 2960 | 310 | 控制纯区块生成任务的并发、取消与完成队列，让耗时生成远离 Unity 主线程。 | runtime-chunk-mgr |
 | deterministic-generator | 生成 | DeterministicChunkGenerator.cs | Assets/5_Scripts/5-0_WorldModel/Generation/DeterministicChunkGenerator.cs | 3320 | 310 | 以世界种子和坐标确定性生成地形、气候与生态基础数据，可安全放到后台线程执行。 | chunk-runtime-bridge |
 | gameplay-chunk-mgr | 区块表现 | ChunkMgr.cs | Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/ChunkMgr.cs | 1960 | 750 | Unity 场景侧的区块管理入口，维护激活窗口并把纯 WorldModel 与场景表现连接起来。 | world-runtime-host |

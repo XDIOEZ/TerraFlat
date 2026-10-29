@@ -1,12 +1,12 @@
 # 水稻三阶段重绘
 
-成熟母版采用用户已认可的 `../../PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png`；幼苗、生长期以该母版为编辑目标，使用内置 `image_gen`、透明背景独立生成。原生 PNG/Alpha 保留，没有程序缩放或裁切。
+成熟母版采用用户已认可的 `../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png`；幼苗、生长期以该母版为编辑目标，使用内置 `image_gen`、透明背景独立生成。原生 PNG/Alpha 保留，没有程序缩放或裁切。
 
 三张均 1173×1341，统一 1341 PPU、Pivot=(0.5,0.03)、Point、无 Mipmap、无压缩、无自动物理轮廓。按旧图一世界单位画布高度换算。幼苗保留上方留白，生长期为绿叶与未熟穗，成熟期为金黄下垂穗。原模块 buriedClip=0.08 本轮不改。
 
 ## 原始源文件
 
-- 成熟：`../../PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png`。
+- 成熟：`../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png`。
 - RiceCrop_Seedling.png：`C:\Users\CatStudio\.codex\generated_images\01a16839-f982-7652-9f1b-d767112709d1\exec-71cf0c97-68b3-4f84-96e1-8daa52160f16.png`。
 - RiceCrop_Growing.png：`C:\Users\CatStudio\.codex\generated_images\01a16839-f982-7652-9f1b-d767112709d1\exec-f3a39893-01ad-474d-85bc-b4ecc3deee02.png`。
 

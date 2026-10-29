@@ -1,6 +1,6 @@
 # 狗尾草粗像素重绘
 
-本轮按已认可的 `PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png` 和 `BerryCrop_Mature_LowPixelSample.png` 统一粗颗粒、低饱和复古像素风。三阶段分别独立使用内置 `image_gen` 生成；透明背景开启。PNG 原始画布及 Alpha 原样复制，未用程序缩放、裁切、重绘或量化。
+本轮按已认可的 `../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png` 和 [BerryCrop_Mature_LowPixelSample.png](../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png) 统一粗颗粒、低饱和复古像素风。三阶段分别独立使用内置 `image_gen` 生成；透明背景开启。PNG 原始画布及 Alpha 原样复制，未用程序缩放、裁切、重绘或量化。
 
 仅提供新版素材，不修改物品定义、运行时引用、玩法或种类。该系统当前消费 `FoxtailCrop` 的 seedling/growing/mature 三张图，不扩展种子与收获物图标。
 
@@ -30,7 +30,7 @@
 
 ### 成熟初稿
 
-身份输入：`Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Mature.png`。画风输入：`Assets/6_Art/Generated/Farming/PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png`。
+身份输入：`Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Mature.png`。画风输入：`../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png`。
 
 ```text
 Use case: style-transfer.

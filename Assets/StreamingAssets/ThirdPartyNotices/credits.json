@@ -1199,7 +1199,7 @@
     {
       "area": "plugin_bundled_art_and_fonts",
       "paths": [
-        "Assets/Mirror/Examples/**",
+        "Tools/ReferenceSamples/Mirror/Examples/**",
         "Assets/Plugins/Fungus/Textures/",
         "Assets/Plugins/Fungus/Fonts/",
         "Assets/Plugins/TextMesh Pro/Sprites/",

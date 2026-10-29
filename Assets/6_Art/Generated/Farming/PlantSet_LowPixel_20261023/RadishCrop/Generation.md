@@ -1,6 +1,6 @@
 # 萝卜重绘素材
 
-采用用户已认可的低像素样例，原样复制 `../../PlantStyleSamplesV2/RadishCrop_Mature_LowPixelSample.png` 到本目录，不重复生成已认可画面。
+采用用户已认可的低像素样例，原样复制 `../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RadishCrop_Mature_LowPixelSample.png` 到本目录，不重复生成已认可画面。
 
 - 成熟图：`RadishCrop_Mature.png`，1254×1254，透明 PNG 原图。
 - 导入：Point、无 Mipmap、无压缩，PPU=1254，Pivot=(0.5,0.5)，无自动物理轮廓。

@@ -12,9 +12,9 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 | 入口 | 职责 |
 | --- | --- |
 | `5-3_GamePlay/World/Time/` | DayTimeSystem、TimeData、DayNightTimeManager |
-| `5-0_WorldModel/ChunkWeather*`、`RegionalWeather*` | 冻结区块档案与纯区域引擎 |
+| `5-0_WorldModel/Weather/ChunkWeather*`、`Weather/RegionalWeather*` | 冻结区块档案与纯区域引擎 |
 | `5-3_GamePlay/World/Environment/` | WeatherMgr、LightLayerMgr、TemperatureMgr.Field、LocalTemperatureField/Source |
-| `5-0_WorldModel/{AirHumidityKernel,WorldAirHumidityField}.cs` | 固定/动态供湿 |
+| `5-0_WorldModel/Weather/{AirHumidityKernel,WorldAirHumidityField}.cs` | 固定/动态供湿 |
 | `5-3_GamePlay/World/Chunk/Management/ChunkMgr.AirHumidity.cs` | 湿度桥 |
 | `5-3_GamePlay/World/Environment/Contamination/` | 污染定义与权威修改 |
 | `5-3_GamePlay/World/Fluids/` | Atmosphere/AtmosphereService、Core/FluidThermodynamics |

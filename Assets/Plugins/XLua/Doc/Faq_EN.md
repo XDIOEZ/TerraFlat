@@ -132,7 +132,7 @@ In short, only CSharpCallLua is necessary (a little code of this type is generat
 
 ## Is calling generic methods supported?
 
-This is partially supported. See [Example 9 for the degree of support.](../Examples/09_GenericMethod/)
+This is partially supported. See [Example 9 for the degree of support.](../../../../Tools/ReferenceSamples/XLua/Examples/09_GenericMethod/)
 
 There are other ways to call generic methods. If it is a static method, you can write a package to instantiate the generic method.
 
@@ -252,7 +252,7 @@ It is very likely that this Dispose operation is executed by Lua, which is equiv
 
 ## When the C# parameter (or field) type is object, the integer is transferred as the long type by default. How do I specify other types like int, for example?
 
-See [Example 11](../Examples/11_RawObject/RawObjectTest.cs)
+See [Example 11](../../../../Tools/ReferenceSamples/XLua/Examples/11_RawObject/RawObjectTest.cs)
 
 ## How do I execute the original C# logic before executing hotfix?
 

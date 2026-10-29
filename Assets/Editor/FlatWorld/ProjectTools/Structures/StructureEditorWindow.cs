@@ -21,7 +21,6 @@ public sealed class StructureEditorWindow : EditorWindow
 
     private const string DefinitionFolder = "Assets/4_ScriptObjects/World/Structures/Definitions";
     private const string TemplateFolder = "Assets/4_ScriptObjects/World/Structures/Templates";
-    private const string AuthoringFolder = "Assets/Editor/FlatWorld/Structures/AuthoringAssets";
 
     private string newStructureId = "new_structure";
     private string newDisplayName = "新遗迹";
@@ -1647,7 +1646,7 @@ public sealed class StructureEditorWindow : EditorWindow
 
         EnsureFolder(DefinitionFolder);
         EnsureFolder(TemplateFolder);
-        EnsureFolder(AuthoringFolder);
+        EnsureFolder(StructureAuthoringPrefabUtility.AuthoringAssetsFolderPath);
 
         StructureCatalogSO catalog = StructureProjectInstaller.EnsureDefaultCatalog();
         if (catalog == null)
@@ -1670,7 +1669,7 @@ public sealed class StructureEditorWindow : EditorWindow
 
         string definitionPath = $"{DefinitionFolder}/{id}.asset";
         string templatePath = $"{TemplateFolder}/{id}_template.asset";
-        string prefabPath = AssetDatabase.GenerateUniqueAssetPath($"{AuthoringFolder}/{id}_Authoring.prefab");
+        string prefabPath = AssetDatabase.GenerateUniqueAssetPath($"{StructureAuthoringPrefabUtility.AuthoringAssetsFolderPath}/{id}_Authoring.prefab");
         GameObject authoring = null;
         bool creationCompleted = false;
         bool definitionCreated = false;

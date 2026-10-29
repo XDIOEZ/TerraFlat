@@ -176,7 +176,7 @@ ios下的限制有两个：1、没有jit；2、代码剪裁（stripping）；
 
 ## 支持泛型方法的调用么？
 
-1、泛型约束到某个基类的支持，看例子：(../Examples/09_GenericMethod/)
+1、泛型约束到某个基类的支持，看例子：(../../../../Tools/ReferenceSamples/XLua/Examples/09_GenericMethod/)
 
 2、没有泛型约束的建议封装为非泛型使用
 如果是静态方法，可以自己写个封装来实例化泛型方法。
@@ -362,7 +362,7 @@ LUA: main.lua:13
 
 ## C#参数（或字段）类型是object时，传递整数默认是以long类型传递，如何指明其它类型？比如int
 
-看[例子11](../Examples/11_RawObject/RawObjectTest.cs)
+看[例子11](../../../../Tools/ReferenceSamples/XLua/Examples/11_RawObject/RawObjectTest.cs)
 
 
 ## 如何做到先执行原来的C#逻辑，然后再执行补丁

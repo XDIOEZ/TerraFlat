@@ -348,7 +348,7 @@ namespace FlatWorld.GameplayMCP
                          "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Definitions/ItemDefinitionCatalogLoader.cs",
                          "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Definitions/ItemDefinition.cs",
                          "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Definitions/ItemMatterReaction.cs",
-                         "Assets/5_Scripts/5-0_WorldModel/WorldGridOccupancyData.cs",
+                         "Assets/5_Scripts/5-0_WorldModel/Occupancy/WorldGridOccupancyData.cs",
                          "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestResourceCache.cs",
                          "Packages/manifest.json", "Packages/packages-lock.json"
                      })

@@ -5,8 +5,8 @@ from xml.sax.saxutils import escape
 
 
 root = Path(__file__).resolve().parents[3]
-production = root / "Assets/5_Scripts/5-0_WorldModel/WorldSceneBindingIndex.cs"
-ownership = root / "Assets/5_Scripts/5-0_WorldModel/WorldItemOwnershipIndex.cs"
+production = root / "Assets/5_Scripts/5-0_WorldModel/Core/WorldSceneBindingIndex.cs"
+ownership = root / "Assets/5_Scripts/5-0_WorldModel/Core/WorldItemOwnershipIndex.cs"
 checks = Path(__file__).with_name("Program.cs")
 
 with tempfile.TemporaryDirectory(prefix="flatworld-world-bindings-") as directory:

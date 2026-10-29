@@ -163,9 +163,9 @@
 
 | 样例 | 第二轮文件 |
 | --- | --- |
-| 旅人兜帽 | [打开手工版 PNG](Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png) |
-| 铁卫胸甲 | [打开手工版 PNG](IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png) |
-| 宇航服头盔 | [打开手工版 PNG](Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png) |
+| 旅人兜帽 | [打开手工版 PNG](../../../../开发文档文件夹/09_美术素材/参考样张/Equipment/Traveler_Hood/Traveler_Hood_Handcrafted_StyleSample_20261023.png) |
+| 铁卫胸甲 | [打开手工版 PNG](../../../../开发文档文件夹/09_美术素材/参考样张/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Handcrafted_StyleSample_20261023.png) |
+| 宇航服头盔 | [打开手工版 PNG](../../../../开发文档文件夹/09_美术素材/参考样张/Equipment/Spacesuit_Head/Spacesuit_Head_Handcrafted_StyleSample_20261023.png) |
 
 第二轮使用内置 `image_gen` 编辑三件样例，其中胸甲另做一次高光与表面简化。完整提示词见 [GenerationPrompts_Handcrafted.json](GenerationPrompts_Handcrafted.json)。上一版样例保留用于对比。
 

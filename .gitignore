@@ -14,8 +14,6 @@
 /Assets/InitTestScene*.unity.meta
 *.log
 *.log.*
-*.log
-*.log.*
 
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data

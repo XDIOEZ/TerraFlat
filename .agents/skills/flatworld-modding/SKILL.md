@@ -11,6 +11,7 @@ description: "FlatWorld MOD 清单、内容注册、Lua/C# 生命周期、资源
 - 存档：`World/Map/Data/GameSaveData.Mods.cs`；资源接入：`Core/Lifecycle/GameRes.cs`；流体注册：`World/Fluids/Catalog/FluidContentRegistry.cs`。
 - 模板工具：`Assets/Editor/FlatWorld/ProjectTools/Mods/ModTemplateCreator.cs`；清单 schema：`Tools/FlatWorldModSDK/Schemas/manifest.schema.json`；示例：`ModSDK/Examples/`。
 - 安装根为 persistentDataPath/Mods/<包目录>/manifest.json；开发示例目录不自动扫描。UI_ModManager 管启停/拖拽排序，新包默认关闭，C# 启停/排序/代码变化重启生效。
+- xLua 正式绑定配置为 `Assets/Plugins/XLua/Editor/RuntimeBindingsGenConfig.cs`；供应商示例归 `Tools/ReferenceSamples/XLua/`，不参与编译，重新导回时需重生成对应桥接。
 
 ## 加载与生命周期
 

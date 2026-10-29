@@ -1,6 +1,6 @@
 # 仙人掌粗像素重绘
 
-使用内置 `image_gen`，以旧 `Assets/6_Art/Generated/Farming/Cactus/Cactus_Idle.png` 保留直立主干及左右不等高上弯侧臂的物种轮廓，以已认可的 `PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png` 统一大像素、低饱和及左上光。
+使用内置 `image_gen`，以旧 `Assets/6_Art/Generated/Farming/Cactus/Cactus_Idle.png` 保留直立主干及左右不等高上弯侧臂的物种轮廓，以已认可的 `../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png` 统一大像素、低饱和及左上光。
 
 本轮仅提供成熟植株本体新图，不修改运行时引用、成长、接触伤害、收获规则或种类，也不扩展仙人掌块图标。当前仙人掌由同一张图配合连续缩放表现成长，因此没有新增未被消费的阶段图。
 
@@ -17,7 +17,7 @@
 
 ## 最终提示词
 
-身份输入：`Assets/6_Art/Generated/Farming/Cactus/Cactus_Idle.png`。画风输入：`Assets/6_Art/Generated/Farming/PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png`。
+身份输入：`Assets/6_Art/Generated/Farming/Cactus/Cactus_Idle.png`。画风输入：`../../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png`。
 
 ```text
 Use case: style-transfer.

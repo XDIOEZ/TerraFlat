@@ -18,6 +18,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 观察者窗口 → 后台纯生成 → 主线程校验/提交 → 差量恢复 → ChunkRuntime 租约 → ChunkView 分步绑定 → 解绑/逐出。
 
+纯模型按 `Core/Chunks/Terrain/Liquids/Weather/Occupancy/Generation/Messaging` 归类；同一类型的 partial 文件放在一起，目录职责见源码根的 `README.md`。
+
 ## 权威、所有权与坐标
 
 - `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。`GameplayWorldRegistry` 按 WorldKey 持有纯 `WorldRuntime`，一个区块管理器借用调度；飞船 `ship:<id>` 经 `CreateLocalWorld` 拥有独立 Scene/PhysicsScene2D、16×16 空区块和普通 ChunkView。`UsesLocalCoordinates` 禁止星球环绕，`SimulateWithoutObservers` 保持无人船运行；切地表/太空只撤投影，正式结束才清退世界。

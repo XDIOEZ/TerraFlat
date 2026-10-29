@@ -8,7 +8,7 @@
 | --- | --- |
 | `Mine_Iron_Grounded_Tall_Sample.png` | 铁矿脉 |
 | `Mine_Copper_Grounded_Tall_Sample.png` | 铜矿脉（孔雀石） |
-| `Mine_Coal_Grounded_Tall_Sample.png` | 煤矿脉 |
+| [Mine_Coal_Grounded_Tall_Sample.png](../../../../../开发文档文件夹/09_美术素材/参考样张/Environment/MineralStyleSamples_20261023/Mine_Coal_Grounded_Tall_Sample.png) | 煤矿脉 |
 
 使用内置 image_gen 编辑 V2 样稿，先增高铁矿，再以新铁矿的高度和轮廓作为另两种矿物的结构参考。继续保留工具输出 PNG 和 Alpha；这是风格样稿，尚未替换游戏素材，也未做游戏内验收。
 

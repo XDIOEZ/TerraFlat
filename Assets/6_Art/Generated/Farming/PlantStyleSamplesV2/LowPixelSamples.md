@@ -4,9 +4,9 @@
 
 ## 图片
 
-- [萝卜](RadishCrop_Mature_LowPixelSample.png)
-- [水稻](RiceCrop_Mature_LowPixelSample.png)
-- [浆果丛](BerryCrop_Mature_LowPixelSample.png)
+- [萝卜](../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RadishCrop_Mature_LowPixelSample.png)
+- [水稻](../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/RiceCrop_Mature_LowPixelSample.png)
+- [浆果丛](../../../../../开发文档文件夹/09_美术素材/参考样张/Farming/PlantStyleSamplesV2/BerryCrop_Mature_LowPixelSample.png)
 
 旧版 `*_Mature_Sample.png` 保留作对比。浆果丛本体继续不烘入果实，游戏内素材引用仍指向原正式资源。这三张仅供画风评审，整套阶段图另行统一真实像素网格、画布、基线与运行时尺寸。
 

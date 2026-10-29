@@ -12,6 +12,6 @@
 - `PrefabBuilders/Building/`：建筑相关 Prefab 生成。
 - `Productivity/Todo/`：项目待办窗口与数据。
 - `Productivity/`：编译通知等通用编辑器效率工具。
-- `Structures/`：结构编辑器的 Authoring 资源。
+- `ProjectTools/Structures/`：遗迹编辑器；临时 Authoring Prefab 按需生成到其 `AuthoringAssets/`，不再另建顶层 `Structures/`。
 
 `Assets/Editor` 根部的 DOTween DLL、XML 与 `Imgs/` 属于第三方编辑器资源，保持供应商布局，不并入 FlatWorld 自研工具目录。
