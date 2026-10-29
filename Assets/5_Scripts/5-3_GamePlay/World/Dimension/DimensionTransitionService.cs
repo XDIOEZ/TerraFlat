@@ -183,9 +183,10 @@ public static class DimensionTransitionService
         {
             session.ResetPassengerForRespawn(actor);
             death.CompleteNetworkRespawn();
+            // 模块保存必须先于归属提交，不能让尚未呈现的旧 Transform 覆盖权威落点。
+            actor.ModuleSave();
             if (!session.CompleteNetworkWorldTransfer(actor, target.WorldKey, position))
             { completed(false, "重生世界归属提交失败。"); yield break; }
-            actor.ModuleSave();
         }
         completed(true, null);
     }

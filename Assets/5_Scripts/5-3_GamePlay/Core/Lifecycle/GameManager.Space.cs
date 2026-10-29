@@ -48,13 +48,7 @@ public partial class GameManager
                 networkLocalRealmRoutine = StartCoroutine(ApplyNetworkLocalRealm());
             return;
         }
-        if (!observer.InSpace && !localSpacePresentationActive && key == networkLocalWorldKey &&
-            SceneManager.GetActiveScene().name == key)
-        {
-            if (networkLocalRealmRevision != observer.RealmRevision && networkLocalRealmRoutine == null)
-                ApplyNetworkLocalSurface(player, observer, key);
-            return;
-        }
+        // 同世界重生也必须完成正式呈现事务，不能仅因 Scene 相同就提前确认新落点。
         if ((networkLocalWorldKey != key || networkLocalRealmRevision != observer.RealmRevision) && networkLocalRealmRoutine == null)
             networkLocalRealmRoutine = StartCoroutine(ApplyNetworkLocalRealm());
         if (LocalSpacePresentationActive && Time.unscaledTime >= nextSurfaceVisibilityRefresh)
@@ -104,7 +98,7 @@ public partial class GameManager
                         break;
                     }
                     localSpacePresentationActive = false;
-                    ApplyNetworkLocalSurface(player, observer, key);
+                    CompleteNetworkLocalSurface(observer, key);
                     continue;
                 }
                 Scene target = SceneManager.GetSceneByName(key);
@@ -118,15 +112,6 @@ public partial class GameManager
                         player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(true);
                         // 换星区沿用原投影，只有首次离开地表才重新建立太空镜头原点。
                         if (enteringSpace) SpaceSession.Current?.RestorePassengerPose(player);
-                    }
-                    else
-                    {
-                        Vector3 point = new((float)observer.Position.LocalMeters.X, (float)observer.Position.LocalMeters.Y);
-                        player.Data.transform.position = point;
-                        player.transform.position = WorldLocalPresentation.ProjectPosition(point);
-                        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-                        if (body != null) { body.position = player.transform.position; body.velocity = Vector2.zero; }
-                        SpaceSession.Current?.RestorePassengerPose(player);
                     }
                     AssignRegisteredPlayerAndChildItemsToWorld(player, key);
                 }
@@ -166,37 +151,12 @@ public partial class GameManager
         NetworkDimensionBridge.NotifyPresentationReady(player, key);
     }
 
-    private void ApplyNetworkLocalSurface(Player player, SpaceNetworkObserver observer, string key)
+    private void CompleteNetworkLocalSurface(SpaceNetworkObserver observer, string key)
     {
-        if (!GameplayWorldRegistry.TryGet(key, out GameplayWorldRuntime world))
-        {
-            if (Time.unscaledTime >= nextSurfaceTransferWarning)
-            {
-                nextSurfaceTransferWarning = Time.unscaledTime + 5f;
-                Debug.LogWarning("[联机维度] 目标世界尚未完成本机准备。", this);
-            }
-            return;
-        }
-        // 先把真实玩家移出星区资源根，资源租约释放不能销毁仍在使用的角色。
-        Scene target = world.Scene;
-        Vector3 before = player.transform.position;
-        player.transform.SetParent(null, true);
-        SceneManager.MoveGameObjectToScene(player.gameObject, target);
-        SceneManager.SetActiveScene(target);
-        GameplayWorldRegistry.SelectLocalWorld(key);
+        // 落点、相机、窗口与 ready 回执已由 DimensionManager 完成，这里只确认观察代际。
         localSpacePresentationActive = false;
         SetNetworkSurfaceVisibility(true);
-        player.Data.CurrentSceneName = key;
-        Vector3 point = new((float)observer.Position.LocalMeters.X, (float)observer.Position.LocalMeters.Y);
-        player.Data.transform.position = point;
-        player.transform.position = WorldLocalPresentation.ProjectPosition(point);
-        SpaceSession.Current?.RestorePassengerPose(player);
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-        if (body != null) { body.position = player.transform.position; body.velocity = Vector2.zero; }
-        player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ShiftSpacePresentation(player.transform.position - before);
-        AssignRegisteredPlayerAndChildItemsToWorld(player, key);
         networkLocalWorldKey = key; networkLocalRealmRevision = observer.RealmRevision;
-        NetworkDimensionBridge.NotifyPresentationReady(player, key);
     }
 
     // 玩家及已登记的手持物一起交给目标世界，位置变化仍刷新现有空间索引。

@@ -107,7 +107,7 @@ namespace FlatWorld.Networking.Gameplay
                 yield return DimensionTransitionService.ExecuteExact(actor, target, position,
                     (accepted, message) => { committed = accepted; reason = message; },
                     () => actor != null && networkActor.CorePlayer == actor && NetworkServer.active);
-                if (committed) { networkActor.RefreshSpaceAuthority(); AcknowledgePresentedLocalTransfer(networkActor); }
+                if (committed) networkActor.RefreshSpaceAuthority();
                 completed?.Invoke(committed, reason);
             }
             finally { networkActor.FinishWorldTransfer(committed); }
@@ -136,20 +136,11 @@ namespace FlatWorld.Networking.Gameplay
                 if (committed)
                 {
                     networkActor.RefreshSpaceAuthority();
-                    if (connection == null) AcknowledgePresentedLocalTransfer(networkActor);
                     if (connection != null) SendSnapshot(connection, actor.ProfileName);
                 }
                 ReplyRespawn(connection, sequence, committed, reason, completed);
             }
             finally { networkActor.FinishWorldTransfer(committed); }
-        }
-        private static void AcknowledgePresentedLocalTransfer(NetworkWorldPlayer player)
-        {
-            Player actor = player.CorePlayer;
-            if (actor == null || actor != ItemMgr.Instance?.User_Player || player.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true ||
-                observer.InSpace || actor.gameObject.scene.name != observer.WorldKey || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != observer.WorldKey ||
-                !GameplayWorldRegistry.TryGet(observer.WorldKey, out GameplayWorldRuntime world) || !world.Chunks.AreRuntimeWindowPresentationsReady) return;
-            player.AcknowledgeWorldTransfer(observer.WorldKey, player.RealmRevision);
         }
         private static void ReplyRespawn(NetworkConnectionToClient connection, uint sequence, bool accepted, string reason, Action<bool, string> completed)
         {

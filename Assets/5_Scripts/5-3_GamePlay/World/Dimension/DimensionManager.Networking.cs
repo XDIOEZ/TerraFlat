@@ -153,31 +153,23 @@ public sealed partial class DimensionManager
         if (!world.Scene.IsValid() || !world.Scene.isLoaded)
             throw new InvalidOperationException("目标维度缺少正式运行场景。");
         // 只选择本机的视窗和场景，原世界继续由自己的运行时服务其他玩家。
-        Vector3 before = actor.transform.position;
         GameplayWorldRegistry.SelectLocalWorld(target.WorldKey);
         SceneManager.SetActiveScene(world.Scene);
         ActivateWorld(target);
         actor.transform.SetParent(null, true);
         SceneManager.MoveGameObjectToScene(actor.gameObject, world.Scene);
         actor.Data.CurrentSceneName = target.WorldKey;
-        actor.Data.transform.position = position;
-        actor.transform.position = WorldLocalPresentation.ProjectPosition(position);
-        ResetNetworkActorPose(actor);
-        actor.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ShiftSpacePresentation(actor.transform.position - before);
+        SpaceSession.Current?.RestorePassengerPose(actor);
+        actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
+        PlayerTeleportService.ApplySurfacePose(actor, position);
         GameManager.AssignRegisteredPlayerAndChildItemsToWorld(actor, target.WorldKey);
         GameManager.Instance.ReportNetworkDimensionLoading("正在绘制目标区域…", .75f);
-        yield return WaitForRuntimeChunkPresentation(target, position, actor);
+        yield return PlayerTeleportService.WaitForSurfaceArrival(actor, position,
+            progress => GameManager.Instance.ReportNetworkDimensionLoading("正在绘制目标区域…", .75f + progress * .25f), stillValid);
         if (!stillValid() || actor == null)
             throw new InvalidOperationException("维度呈现期间连接已断开。");
         GameManager.Instance.ReportNetworkDimensionLoading("目标区域已准备完成。", 1f);
     }
 
-    private static void ResetNetworkActorPose(Player actor)
-    {
-        actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
-        SpaceSession.Current?.RestorePassengerPose(actor);
-        Rigidbody2D body = actor.GetComponent<Rigidbody2D>();
-        if (body != null) { body.position = actor.transform.position; body.velocity = Vector2.zero; }
-    }
     #endregion
 }

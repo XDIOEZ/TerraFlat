@@ -1,6 +1,19 @@
 -- 在隔离测试世界用正式控制与快捷栏入口完成关键玩家流程。
 test.check("world_ready", "世界已进入")
 test.check("terrain_ready", "玩家脚下地形就绪")
+test.runtime("player", "surface_arrival", {}, function(data)
+    assert(data.poseMatches and data.cameraShiftError < .001, "落点、刚体、存档或相机没有同步")
+    assert(data.velocity < .001 and math.abs(data.angularVelocity) < .001 and data.motionResets == 1,
+        "地表落点未统一清除旧速度或重复重置动作")
+    assert(data.disabledMoverPreserved and data.requestedAfterPose, "停用移动模块时没有主动请求目标窗口")
+    assert(data.invalidRejected == 3 and data.invalidKeptPose, "非法落点污染了玩家位置")
+    assert(data.oldWindowRejected and data.undersizedWindowRejected, "旧窗口或临时小窗口被当作完整视野")
+    assert(data.emptyQueueWasReady and data.emptyWindowRejected, "空显示窗口错误放行了重生")
+    assert(data.recoveredWithoutMovement, "丢失窗口后仍需玩家走动才能恢复加载")
+    assert(data.lockedBeforePresentation and data.readySignals == 1 and data.readyAtSignal,
+        "同世界迁移没有冻结角色、提前发送 ready 或重复确认")
+    assert(data.readyAfterPresentation and data.physicsRestored, "迁移结束后视野或物理未恢复")
+end, "地表到达同步、空窗口拒绝、漏刷新恢复与同世界呈现门禁")
 test.runtime("player", "interaction_input_reenable", {}, function(data)
     assert(data.initialStarts == 1 and data.initialEnds == 1, "首次 F 按下或松开没有走正式交互")
     assert(data.disabledStarts == data.initialStarts, "交互模块停用后仍然接收 F")

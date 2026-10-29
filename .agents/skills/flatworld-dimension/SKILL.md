@@ -20,6 +20,7 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 - 单人和联机复用 `DimensionTransitionService` 的权威解析/准备/提交；网络桥只负责远端请求、身份与回执。玩家可独立进出维度，`GameplayWorldRegistry` 按 WorldKey 保留 Scene、ChunkMgr、独立物理和运行态，同步 `UseWorld` 租约不能跨 yield。
 - 个人最后位置保存在 `ItemSpecialData.flatworld.dimensions`；手工锚点、入口状态和天然出口索引属于 `GameSaveData.DimensionStateJson`，多人共享，不扫描其他玩家存档建立配对。权威解析只读预览，准备成功才提交锚点。
 - `ApplyNetworkPresentation` 保留同一个 Player/NetworkIdentity，只锁本机输入；目标完整窗口、出口/地块效果、物理同步就绪后发送 presentation-ready，服务器再放行新 realm 的移动/库存。不能全局 WorldExit、ReleasePlayer、暂停全服或创建空 Scene 冒充就绪；失败不发送 ready，允许后续快照重试呈现。
+- 同世界重生和传送的 RealmRevision 变化也走该事务，不允许 Scene 相同或旧窗口 Ready 就快速确认；落点用 `PlayerTeleportService.ApplySurfacePose`，等待用 `WaitForSurfaceArrival`。空窗口、旧中心或准备阶段的小窗口均不能放行，权威重生在提交新世界坐标前保存模块，避免旧 Transform 回写落点。
 - 入口请求发出前由 `DimensionManager.LocalPresentation` 取得同一份加载页/owner 输入锁/运动冻结租约；目标呈现复用原始物理与奔跑状态，加载幕完全退场才发 ready 并释放。未提交的拒绝立即收尾，在线已提交而呈现失败保留冻结供重试；断线、退出、管理器停用及 F5 换主角清租约。往返 Lua 同时采样请求当帧和迁移全程门禁。
 - `TryBeginPlanetLanding` 在线仅允许权威本机的内部精确恢复，走 `ExecuteExact` 的世界准备、源 realm 复核和正式归属提交；客户端不能指定任意恢复目标，不能回落旧全局卸载事务。离线太空迁移包装仍走原入口。
 - 离线切换的 WorldExit 会释放世界注册；目标进入和失败回程在重建主角前调用 `GameplayWorldRegistry.SelectLocalWorld` 绑定已加载地表，避免降落准备因目标未注册而停住。回归 `ship_landing_gameplay`。

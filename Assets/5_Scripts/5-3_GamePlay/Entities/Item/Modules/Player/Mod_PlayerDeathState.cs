@@ -70,7 +70,6 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
     private Mod_Temperature _temperature; // 体温模块
     private Mod_GameController _gameController; // 输入控制器
     private Mod_Mover _mover; // 移动模块
-    private Mod_ChunkLoader _chunkLoader; // 区块加载模块
     private Rigidbody2D _rb; // 刚体缓存
     private Mod_PlayerAdminController _adminController; // 管理员无敌状态
 
@@ -129,7 +128,6 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         _buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         _temperature = item.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
         _mover = item.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-        _chunkLoader = item.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
         _rb = item.GetComponent<Rigidbody2D>();
         _adminController = _player.GetComponentInChildren<Mod_PlayerAdminController>(true);
 
@@ -510,7 +508,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         }
 
         if (restartChunkStreaming)
-            RestartChunkStreamingForRespawn();
+            PlayerTeleportService.RequestSurfaceStreaming(_player);
 
         _isInDyingState = false;
         _respawnInProgress = false;
@@ -532,63 +530,19 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         _dyingPanel?.Close();
         Vector3 logicalRespawnPosition = WorldTopologyRuntime.NormalizePosition(
             new Vector3(respawnPosition.x, respawnPosition.y, 0f));
-        Vector3 presentationRespawnPosition = WorldLocalPresentation.ProjectPosition(logicalRespawnPosition);
-        item.transform.position = presentationRespawnPosition;
-        if (_rb != null)
-            _rb.position = presentationRespawnPosition;
-        _player.Data.transform.position = logicalRespawnPosition;
-        RestartChunkStreamingForRespawn();
-
-        yield return null;
-
-        ChunkMgr chunkManager = ChunkMgr.Instance;
-        float displayedProgress = 0.18f;
-        while (chunkManager == null)
+        bool wasSimulated = _rb != null && _rb.simulated;
+        try
         {
-            gameManager?.ReportRespawnLoadingProgress("正在连接区块管理器…", displayedProgress);
-            yield return null;
-            chunkManager = ChunkMgr.Instance;
+            // 等待窗口期间不让碰撞或环境推力把尚未落地的角色再次推离目标。
+            if (_rb != null) _rb.simulated = false;
+            PlayerTeleportService.ApplySurfacePose(_player, logicalRespawnPosition);
+            yield return PlayerTeleportService.WaitForSurfaceArrival(_player, logicalRespawnPosition,
+                progress => gameManager?.ReportRespawnLoadingProgress("正在绘制重生区域…", progress),
+                () => IsRuntimeLoaded && _respawnInProgress);
         }
-
-        bool centerWarningLogged = false;
-        float warningAt = Time.realtimeSinceStartup + 12f;
-        while (!chunkManager.IsRuntimeEntityPresentationReady(item.transform.position))
+        finally
         {
-            displayedProgress = Mathf.MoveTowards(
-                displayedProgress,
-                0.76f,
-                Mathf.Max(0.002f, Time.unscaledDeltaTime * 0.08f));
-            gameManager?.ReportRespawnLoadingProgress("正在生成玩家所在区块…", displayedProgress);
-
-            if (!centerWarningLogged && Time.realtimeSinceStartup >= warningAt)
-            {
-                centerWarningLogged = true;
-                Debug.LogWarning("[Mod_PlayerDeathState] 玩家所在区块加载超过 12 秒，继续等待。", chunkManager);
-            }
-
-            yield return null;
-        }
-
-        bool windowWarningLogged = false;
-        warningAt = Time.realtimeSinceStartup + 12f;
-        while (!chunkManager.AreRuntimeWindowPresentationsReady)
-        {
-            displayedProgress = Mathf.MoveTowards(
-                displayedProgress,
-                0.98f,
-                Mathf.Max(0.002f, Time.unscaledDeltaTime * 0.08f));
-            gameManager?.ReportRespawnLoadingProgress("正在绘制周围区块…", displayedProgress);
-
-            if (!windowWarningLogged && Time.realtimeSinceStartup >= warningAt)
-            {
-                windowWarningLogged = true;
-                Debug.LogWarning(
-                    $"[Mod_PlayerDeathState] 重生周围区块表现超过 12 秒，继续等待：" +
-                    $"待表现 {chunkManager.PendingRuntimeChunkPresentationCount}",
-                    chunkManager);
-            }
-
-            yield return null;
+            if (_rb != null) _rb.simulated = wasSimulated;
         }
 
         Physics2D.SyncTransforms();
@@ -656,28 +610,6 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         _temperature?.RestoreOnRespawn();
         item.itemMods.GetMod_ByID<Mod_Oxygen>(Mod_Oxygen.ModuleId)?.ResetForNewLife();
         item.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId)?.ResetForNewLife();
-    }
-
-    private void RestartChunkStreamingForRespawn()
-    {
-        if (ChunkMgr.Instance == null)
-        {
-            Debug.LogWarning("[Mod_PlayerDeathState] ChunkMgr.Instance 为空，跳过重生区块刷新");
-            return;
-        }
-
-        if (_chunkLoader != null)
-        {
-            _chunkLoader.RefreshChunksAroundPlayer();
-            return;
-        }
-
-        if (GameNetwork.IsOnline)
-        {
-            FlatWorld.Spaceflight.SpaceNetworkBridge.RequestGroundStreamingRefresh();
-            return;
-        }
-        ChunkMgr.Instance.RefreshRuntimeWindow(transform.position, 1, 1, includeLocalPresentation: true);
     }
 
 #endregion

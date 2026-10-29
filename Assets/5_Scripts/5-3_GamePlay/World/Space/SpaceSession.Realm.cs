@@ -42,9 +42,7 @@ namespace FlatWorld.Spaceflight
                 player.transform.SetParent(null, true);
                 SceneManager.MoveGameObjectToScene(player.gameObject, runtime.Scene);
                 ItemWorldPlacement.AttachToSceneItemCategory(player, player.gameObject);
-                using (GameplayWorldRegistry.UseWorld(world)) player.transform.position = WorldLocalPresentation.ProjectPosition(position);
-                Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-                if (body != null) { body.position = player.transform.position; body.velocity = Vector2.zero; }
+                using (GameplayWorldRegistry.UseWorld(world)) PlayerTeleportService.ApplySurfacePose(player, position);
                 foreach (Item child in player.GetComponentsInChildren<Item>(true)) ItemMgr.Instance.NotifyRuntimeItemMoved(child);
             }
             if (owner?.PlayerData_Dict != null) owner.PlayerData_Dict[player.ProfileName] = player.Data;
