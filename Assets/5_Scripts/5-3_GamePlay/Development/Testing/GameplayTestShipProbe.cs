@@ -857,7 +857,12 @@ public static class GameplayTestShipProbe
             catch (ArgumentException error) { exception = error.GetType().Name; }
             rejected.Add(new JObject { ["steps"] = steps, ["exception"] = exception });
         }
+        var plainConsumer = new MachineDefinition { Kind = "consumer", Ports = "none" };
+        var declaredConsumer = new MachineDefinition { Kind = "consumer", Ports = "none", PlacementRotationSteps = 2 };
         return new JObject { ["engines"] = engines, ["previews"] = previews, ["rejected"] = rejected,
+            ["plainConsumerRotatable"] = plainConsumer.Rotatable,
+            ["declaredConsumerRotatable"] = declaredConsumer.Rotatable,
+            ["declaredConsumerCycle"] = CaptureRotationCycle(declaredConsumer),
             ["shaftCycle"] = CaptureRotationCycle(new MachineDefinition { Kind = "shaft" }),
             ["gearCycle"] = CaptureRotationCycle(new MachineDefinition { Kind = "gear" }) };
     }

@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Gameplay.Building;
 using FlatWorld.NaturalEntities;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -250,7 +251,8 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
                 throw new InvalidOperationException("普通 Item 从动态快照恢复后没有领取固定代理。");
             result["ordinaryFixedRestoredMode"] = restoredOrdinaryProxy.Mode.ToString();
             result["ordinaryFixedRestoredType"] = restoredOrdinaryProxy.Body.bodyType.ToString();
-            result["ordinaryFixedRestoredPositionError"] = Vector2.Distance(restoredOrdinaryProxy.Body.position, ordinarySavedPosition);
+            result["ordinaryFixedRestoredPositionError"] = Vector2.Distance(restoredOrdinaryProxy.CapturePose().Position,
+                WorldLocalPresentation.ProjectPosition(ordinarySavedPosition));
             result["ordinaryFixedIdentityUnique"] = restoredOrdinary.itemData.Guid == ordinaryGuid &&
                 ReferenceEquals(ItemMgr.Instance.GetItemByGuid(ordinaryGuid), restoredOrdinary);
 
@@ -258,7 +260,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             CaptureNativeEntityContactPushes(own, service, fixedProxy, restoredProxy, result);
             CaptureRotatingEntityRestore(own, service, near + new Vector2(-3f, 4f), result);
             CaptureFixedMachinePhysicsConstraint(own, near + new Vector2(5f, 4f), result);
-            CaptureMovingItemBuildingOccupancy(own, service, near + new Vector2(-3f, -5f), result);
+            CaptureMovingItemBuildingOccupancy(own, service, player, near + new Vector2(-3f, -2f), result);
         }
         yield return null;
         completed(result);
@@ -370,7 +372,8 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         result["fixedMachineMode"] = MachineWorld.ResolveRequiredWorldFixedMachineProxyMode(id).ToString();
     }
 
-    private static void CaptureMovingItemBuildingOccupancy(Fixture own, WorldPhysicsService2D service, Vector2 point, JObject result)
+    private static void CaptureMovingItemBuildingOccupancy(Fixture own, WorldPhysicsService2D service,
+        Player player, Vector2 point, JObject result)
     {
         JObject physics = PhysicsJson("IndependentDynamic");
         physics["freezeRotation"] = false;
@@ -382,7 +385,28 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             state["FootprintHeight"] = 1;
             module.Data["BitData"] = state.ToString(Newtonsoft.Json.Formatting.None);
         });
-        Item buildingItem = own.SpawnItem("Crucible_Building", point);
+
+        ItemData source = GameRes.ExistingInstance.CreateItemData("Crucible");
+        source.Guid = ItemMgr.Instance.GenerateGuid();
+        var slot = new ItemSlot(0) { itemData = source };
+        var inventory = new Inventory_Data(new List<ItemSlot> { slot }, "物理代理建筑测试材料");
+        Vector2 authorityPosition = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
+        var request = new BuildingPlacementRequest
+        {
+            SourceData = source,
+            SourceInventory = inventory,
+            SourceSlot = slot,
+            Actor = player,
+            Position = new Vector3(point.x, point.y, player.transform.position.z),
+            AuthorityPosition = authorityPosition,
+            MaximumDistance = Mod_Building.ResolveMaxPlacementDistance(player, Mod_InteractSender.DefaultMaxInteractDistance)
+        };
+        if (!BuildingPlacementService.TryPlace(request, out BuildingPlacementResult placement, out string reason) ||
+            placement?.Item == null)
+            throw new InvalidOperationException("完整 Item 建筑正式放置失败：" + reason);
+
+        Item buildingItem = placement.Item;
+        own.Items.Add(buildingItem);
         Mod_Building building = buildingItem.GetComponentInChildren<Mod_Building>(true);
         if (building == null || !building.IsInstalled() || !service.TryGetItemProxy(buildingItem, out WorldPhysicsEntityProxy2D proxy))
             throw new InvalidOperationException("完整Item建筑没有经正式链路安装并领取代理。");
@@ -402,6 +426,23 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         result["buildingRotatedFootprintOccupied"] = (quarterTurns & 1) != 0 &&
             BuildingOccupancyRegistry.IsOccupied(currentCell + Vector2Int.up) &&
             !BuildingOccupancyRegistry.IsOccupied(currentCell + Vector2Int.right);
+
+        bool rollbackSucceeded = placement.Rollback();
+        Vector2Int rotatedOtherCell = currentCell + ((quarterTurns & 1) != 0 ? Vector2Int.up : Vector2Int.right);
+        bool rollbackItemRemoved = buildingItem == null || buildingItem.DestructionHandled;
+        bool rollbackProxyReleased = !service.TryGetItemProxy(buildingItem, out _);
+        bool rollbackOccupancyReleased = !BuildingOccupancyRegistry.IsOccupied(oldCell) &&
+            !BuildingOccupancyRegistry.IsOccupied(oldCell + Vector2Int.right) &&
+            !BuildingOccupancyRegistry.IsOccupied(currentCell) &&
+            !BuildingOccupancyRegistry.IsOccupied(rotatedOtherCell);
+        result["buildingRollbackSucceeded"] = rollbackSucceeded;
+        result["buildingRollbackItemRemoved"] = rollbackItemRemoved;
+        result["buildingRollbackProxyReleased"] = rollbackProxyReleased;
+        result["buildingRollbackOccupancyReleased"] = rollbackOccupancyReleased;
+        if (rollbackSucceeded && rollbackItemRemoved && rollbackProxyReleased && rollbackOccupancyReleased)
+            own.Items.Remove(buildingItem);
+        else
+            throw new InvalidOperationException("完整 Item 建筑正式回滚未释放实体、物理代理或占地。");
     }
     #endregion
 

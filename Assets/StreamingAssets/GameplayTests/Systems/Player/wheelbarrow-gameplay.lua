@@ -12,7 +12,7 @@ local function prepare(side)
         assert(data.ready and not data.rider and not data.carrierSource, "车体或角色状态不适合本轮推动")
     end, "准备独轮车" .. side .. "方向接触")
 end
-local function sample(label, shouldMove)
+local function sample(label, shouldMove, shouldCrossCell)
     test.runtime("player", "wheelbarrow_sample", {}, function(data)
         assert(data.frames > 0 and not data.rider and not data.carrierSource, "没有实际物理步或玩家误被当成乘员")
         if shouldMove then
@@ -20,6 +20,8 @@ local function sample(label, shouldMove)
                 "已接收推动意图，但车体没有解除位置锁或提交实际驱动速度")
             assert(data.everPushed and data.distance > .05 and data.peakSpeed > .05, "车尾真实碰撞没有推动独轮车")
             assert(data.ratio > .64 and data.ratio < .66, "实际推动速度不是玩家意图速度的 65%")
+            assert(data.positionTraversable and not data.cartCellOccupied, "独轮车重新登记占地并挡住自己")
+            if shouldCrossCell then assert(data.crossedCell, "独轮车没有跨过格子边界") end
         else
             assert(not data.everPushed and data.distance < .05, "不符合条件的碰撞仍推动了车体")
         end
@@ -28,8 +30,28 @@ local function sample(label, shouldMove)
 end
 
 prepare("rear")
+test.profiler_start(10, "采集独轮车车尾推动")
+test.move(0, -1, 1.0)
+test.profiler_stop("FlatWorld.Wheelbarrow.StepCarrierMotion", function(data)
+    assert(data.selectedTreeNodeCount > 0 and data.selectedMarkerCalls > 0 and data.settingsRestored,
+        "推动阶段没有导出实际调用树，或性能采集设置未恢复")
+    local captured = data.screenshotStatus == "captured" and data.screenshotCaptured and
+        data.screenshotWidth > 0 and data.screenshotHeight > 0
+    local minimized = data.screenshotStatus == "failed" and not data.screenshotCaptured and
+        data.screenshotWidth == 0 and data.screenshotHeight == 0 and type(data.screenshotError) == "string" and
+        string.find(data.screenshotError, "Unity 主窗口已最小化", 1, true)
+    assert(captured or minimized, "性能 JSON 的 Unity 窗口截图缺失且没有明确的最小化原因")
+end, "导出车尾推动阶段性能 JSON")
+sample("车尾真实碰撞跨格推动并在松手后停止", true, true)
+test.runtime("player", "wheelbarrow_carrier_occupancy_lifecycle", {}, function(data)
+    assert(not data.occupiedBefore and data.unloaded and data.occupiedWhileUnloaded and not data.occupiedByOther,
+        "单独卸载载具模块没有恢复车体的建筑占地")
+    assert(data.reloaded and not data.occupiedAfterReload and data.traversableAfterReload,
+        "重载载具并经过物理步后没有持续释放车体占地")
+end, "载具模块停用与重载的占地恢复")
+prepare("rear")
 test.move(0, -1, .7)
-sample("车尾真实碰撞推动并在松手后停止", true)
+sample("载具重载后仍能从车尾推动", true)
 prepare("front")
 test.move(0, 1, .6)
 sample("持续正面碰撞不能推车", false)
@@ -43,6 +65,16 @@ test.runtime("player", "wheelbarrow_sample", {}, function(data)
         "车尾推动遇到固定障碍时没有停在障碍前")
     assert(data.stopped and not data.pushAfterRelease, "障碍前松开输入仍残留车速或推源")
 end, "车尾推动遇到固定障碍不能穿越")
+prepare("building_obstacle")
+test.move(0, -1, 1.2)
+test.runtime("player", "wheelbarrow_sample", {}, function(data)
+    assert(data.buildingPlaced and data.buildingOccupied and data.buildingBlocksTraversal,
+        "正式帐篷没有提供建筑占地阻挡")
+    assert(data.everPushed and data.distance > .05 and data.buildingBlockedWhilePushing and data.buildingNotCrossed,
+        "车尾推动没有在正式建筑前停下")
+    assert(not data.cartCellOccupied and data.stopped and not data.pushAfterRelease,
+        "建筑前停推后车体重新占地或残留推速")
+end, "车尾推动遇到正式建筑不能穿越")
 prepare("turn")
 test.move(-.5, -1, .7)
 test.runtime("player", "wheelbarrow_sample", {}, function(data)

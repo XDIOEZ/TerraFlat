@@ -227,9 +227,10 @@ public sealed partial class GameplayTestSpaceScenario
         BodyState body = universe.State.Bodies.First(value => value.TemplateBodyId == "asteroid_iron");
         ShipFlightState flight = session.GetFlight(ship.ShipId) ?? throw new InvalidOperationException("测试船没有正式飞行状态。");
         string expectedWorld = body.SurfaceAddress.WorldKey;
-        // 只预置本用例刚起飞的船到目标旁，正式降落、燃料结算和建筑移交全部保持真实流程。
+        // 固定目标经度超出地表规范域，正式降落仍须正确选择附近环绕镜像。
+        double entryAngle = universe.GetRotationRadians(body.BodyId) - 2d;
         SetOwnedShipPose(ship, flight, body.Sector,
-            body.PositionMeters + new SpaceVector2(body.RadiusMeters + 25d, 0d), body.VelocityMetersPerSecond);
+            body.PositionMeters + SpaceVector2.FromAngle(entryAngle) * (body.RadiusMeters + 25d), body.VelocityMetersPerSecond);
         yield return Wait(.04d);
         if (!session.RequestLanding(console)) throw new InvalidOperationException("正式船控拒绝大型矿石小行星降落。");
         IsMigrationExpected = true;
@@ -238,8 +239,21 @@ public sealed partial class GameplayTestSpaceScenario
         yield return new WaitForEndOfFrame();
         JObject descending = ShipSnapshot(ship);
         descending["flightHud"] = FlightHudSnapshot();
-        yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null && GroundBuildingsRestored(ids, expectedWorld),
+        descending["cameraPresentation"] = CaptureAsteroidDescentCameraPresentation(ship);
+        JObject midpointCamera = null, lastMidpointCamera = null;
+        yield return WaitUntil(() =>
+        {
+            ShipFlightState current = session.GetFlight(ship.ShipId);
+            if (midpointCamera == null && current?.Phase == ShipFlightPhase.SurfaceDescending && current.HeightMeters <= 40d)
+            {
+                JObject sample = CaptureAsteroidDescentCameraPresentation(ship);
+                lastMidpointCamera = sample;
+                if (sample.Value<bool>("cloudRendered")) midpointCamera = sample;
+            }
+            return Ready() && session.GetShip(ship.ShipId) == null && GroundBuildingsRestored(ids, expectedWorld);
+        },
             180d, "大型矿石小行星下降没有完成普通建筑移交。", () => ShipSnapshot(ship).ToString(Formatting.None));
+        descending["midpointCameraPresentation"] = midpointCamera ?? lastMidpointCamera;
         IsMigrationExpected = false;
         yield return new WaitForEndOfFrame();
         JObject landed = GroundBuildingSnapshot(ids);
@@ -331,6 +345,63 @@ public sealed partial class GameplayTestSpaceScenario
             ["oreInventoryGain"] = CountCurrentPickerInventoryItem("Ore_Iron") - beforeOre,
             ["limitations"] = "正式测试船起飞、降落及普通建筑移交，正式矿山受击与掉矿入包；不覆盖手动飞行导航、镐子动画和真实联机。"
         });
+    }
+
+    // 在真实下降过程中同时采样乘员投影、跟随目标和星球环绕坐标。
+    private JObject CaptureAsteroidDescentCameraPresentation(ShipState ship)
+    {
+        Player player = CurrentPlayer();
+        Mod_Cam module = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+        Camera camera = module?.ControllerCamera;
+        SpriteRenderer sprite = player.Sprite;
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(player);
+        bool hasProjection = WorldPresentationTransformRegistry.TryGet(worldKey, out Matrix4x4 matrix, out bool visible);
+        Vector3 source = sprite != null ? sprite.bounds.center : player.transform.position;
+        Vector3 display = hasProjection ? matrix.MultiplyPoint3x4(source) : source;
+        Vector3 viewport = camera != null ? camera.WorldToViewportPoint(display) : default;
+        Transform follow = module?.vcam != null ? module.vcam.Follow : null;
+        bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
+        bool passengerProjected = session.TryGetShipPassengerProjection(player, out WorldPresentationProjection passenger);
+        Vector2 surfaceOrigin = session.ProjectShipInteriorPosition(ship, Vector2.zero);
+        Vector2 shipScopeOrigin = surfaceOrigin;
+        if (GameplayWorldRegistry.UsesLocalCoordinates(worldKey))
+            using (GameplayWorldRegistry.UseWorld(worldKey))
+                shipScopeOrigin = session.ProjectShipInteriorPosition(ship, Vector2.zero);
+        string presentationWorldKey = GameplayWorldRegistry.LocalPresentationWorldKey;
+        int cloudFrame = -1;
+        float starfieldWeight = 0f;
+        bool cloudRendered = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        foreach (ZoomCloudRendererFeature feature in Resources.FindObjectsOfTypeAll<ZoomCloudRendererFeature>())
+            if (feature.TryGetLastRenderedStarfieldForGameplayTest(camera, presentationWorldKey,
+                    player.gameObject.scene.handle, out cloudFrame, out starfieldWeight))
+            {
+                cloudRendered = true;
+                break;
+            }
+#endif
+        return new JObject
+        {
+            ["worldKey"] = worldKey, ["executionWorldKey"] = GameplayWorldRegistry.ExecutionWorldKey,
+            ["presentationWorldKey"] = presentationWorldKey,
+            ["cloudRendered"] = cloudRendered, ["cloudRenderedFrame"] = cloudFrame,
+            ["starfieldWeight"] = starfieldWeight,
+            ["projectionRegistered"] = hasProjection, ["projectionVisible"] = visible,
+            ["source"] = Vector((Vector2)source), ["display"] = Vector((Vector2)display),
+            ["passengerProjection"] = passengerProjected ? Vector((Vector2)passenger.transform.position) : null,
+            ["shipPosition"] = new JObject { ["x"] = ship.PositionX, ["y"] = ship.PositionY },
+            ["shipOrigin"] = Vector(surfaceOrigin), ["shipScopeOrigin"] = Vector(shipScopeOrigin),
+            ["scopeInvariant"] = Vector2.Distance(surfaceOrigin, shipScopeOrigin) < .01f,
+            ["anchor"] = Vector(WorldLocalPresentation.AnchorPosition),
+            ["wrapped"] = hasBounds, ["worldSpan"] = hasBounds ? Vector((Vector2)bounds.Span) : null,
+            ["camera"] = camera != null ? Vector((Vector2)camera.transform.position) : null,
+            ["follow"] = follow != null ? Vector((Vector2)follow.position) : null,
+            ["followName"] = follow != null ? follow.name : string.Empty,
+            ["viewport"] = new JObject { ["x"] = viewport.x, ["y"] = viewport.y, ["z"] = viewport.z },
+            ["playerInViewport"] = camera != null && sprite != null && hasProjection && visible &&
+                viewport.z >= camera.nearClipPlane && viewport.z <= camera.farClipPlane &&
+                viewport.x >= 0f && viewport.x <= 1f && viewport.y >= 0f && viewport.y <= 1f
+        };
     }
     private IEnumerator LocateAndActivateGeneratedAsteroidIronMine(Action<JObject> completed)
     {

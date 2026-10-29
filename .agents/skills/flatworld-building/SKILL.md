@@ -38,7 +38,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 
 - `TileBuildingHitCandidate.HasHigherHitPriorityThan` 是格子命中的排序真源；TileBuildingSystem 与 TilemapDamageReceiver 共用前向/横向/攻击距离及坐标排序，误差保持0.0001。
 - 占地来自 FootprintWidth/Height，吸附格为左下锚点；逐格按拓扑归一化并登记/注销。visual.collider 是实体物理范围，health.collider 是独立受击范围，均不决定建造/导航格。
-- BuildingOccupancyRegistry 是放置、通行、移速和动态 LOS 来源；Revision/CellChanged 驱动脏区，视线刷新不只看最终可走值。相邻格 Collider 接触不互斥，同格按层拒绝。
+- BuildingOccupancyRegistry 是放置、通行、移速和动态 LOS 来源；Revision/CellChanged 驱动脏区，视线刷新不只看最终可走值。载具接管运动时持续暂停自身离散占地，单独停用后恢复；一次性 `ReleasePlacementOccupancy` 的移交/拆除语义不变。相邻格 Collider 接触不互斥，同格按层拒绝。
 - 完整建筑用 `Mod_Building.BlocksWindWhenPlaced` 显式声明挡风（默认关闭，木门/石门目录已开启），机器定义投影同配置；地板、可通行状态不挡风。占地增删和门 `SetPassable` 维护按世界隔离的挡风格，同格各来源合并，不借视线位把普通设施也当风墙；实际背风区由 `WorldMotionSystem/WindShelterRules` 统一采样。
 - `BuildingTraversalRules` 统一普通建筑与数据机器的通行声明，地面/船地板层保持非实体；普通建筑优先读 `IBuildingTraversalPolicy`，无扩展时读 `BlocksMovementWhenPlaced`，数据化必须投影该配置及 PlacementLayer。机器运行期统一读 `BlocksTraversal`，原 `BlocksMovement` 仅作目录声明；碰撞表现、导航和动态LOS不再各自按0/1层特判。
 - `BuildingOccupancyRegistry` 的导航和动态LOS共用建筑阻挡查询；机械图按全部已用层合并实体格，开门 `SetPassable` 只撤自身阻挡，不撤放置占格。同格可通行设施不能抹掉另一实体或地形墙；GO/ECS读同一遮挡位。`ai/passable_building_sight/unified_building_obstruction` 覆盖全目录、0～15层、数据投影和增删；机器表现/交互/受击扫描使用实际最高已用层，空世界不扫描。

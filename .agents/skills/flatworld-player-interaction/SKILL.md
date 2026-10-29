@@ -67,7 +67,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
 - `Mod_Mover` 的逐帧水流推动先查询当前格真实流向，有有效水流后才解析 Actor 推动配置；`WorldMotionSystem.CalculateWaterCurrentVelocity` 与数值速度入口共用原流量曲线，不跨帧缓存水态。回归 `environment/water_current_reuse`。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：等效质量=当前堆叠总质量×星球重力/9.81；目录最轻 B 到轻重中点 C=(A+B)/2 均分三档，分别需 8/9/10 级风，达到 C 不推动。达到起吹级/高一级/高两级分别为 0.06/0.2/0.5 单位/s，同风级内不随风强连续变化，邻风区保留空间过渡。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具含乘员质量，乘员不重复受风；太空与禁用天气维度返回零。
-- `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。
+- `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。载具运动接管期间持续暂停建筑离散占地，单独停用载具后恢复；物理碰撞仍负责实体阻挡。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。
 - 水陆载具复用 `Mod_Carrier` 的 `LandSpeedMultiplier/WaterSpeedMultiplier` 和独立推动倍率；自行车定义在 `Items/shells/vehicles.json`，陆地6、水中0.6、加速18、制动24。侧视车架关闭转向旋转/尾流，`CarrierWheelPresentation` 按真实位移转轮和翻面，静止不空转；规则与现场回归为 `player/bicycle_carrier`、`player/bicycle_lifecycle`。
 - 木质独轮车由 `Mod_Wheelbarrow` 组合载具运动，只接受玩家在车尾的实体推动，不取得乘坐租约；`ICarrierPushEligibilityPolicy` 在接收推源和施加阻力前统一准入。F 复用箱子面板，货仓用 `Mod_WheelbarrowInventory` 经建筑共享模块快照保留，开仓、松手、死亡、卸载或离开时停推。
 - 载具可组合唯一 `ICarrierMotionDriver` 替换运动与交互，单座上下车仍用 `Mod_Carrier.ToggleRider`；`ICarrierBoostPolicy` 声明是否消费玩家加速体力。矿车在 `World/Railways/` 沿正式轨长编组和移动，只调用通用 `EnginePowerService`，不会识别具体引擎或燃料；按下选择沿轨方向，长按保持方向并以输入幅度控制油门，松键/锁定/换乘/重新编组清理，不能逐帧用切线投影衰减过弯油门。

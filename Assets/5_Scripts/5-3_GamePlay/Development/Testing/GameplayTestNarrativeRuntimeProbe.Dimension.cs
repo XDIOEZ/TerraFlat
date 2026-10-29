@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using FlatWorld.Gameplay.Progress;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -192,7 +193,13 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             if (manager != null && !manager.IsTransitioning)
             {
                 if (manager.ActiveAddress != expected)
-                    throw new InvalidOperationException("正式维度事务结束，但实际目标地址不匹配。");
+                {
+                    var observer = default(FlatWorld.Spaceflight.SpaceNetworkObserver);
+                    bool observerPresent = FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(profile, out observer) == true;
+                    throw new InvalidOperationException($"正式维度事务结束，但实际目标地址不匹配：期望={expected.WorldKey}，" +
+                        $"实际={manager.ActiveAddress.WorldKey}，玩家归属={GameplayWorldRegistry.GetItemWorldKey(player)}，" +
+                        $"权威归属={(observerPresent ? observer.WorldKey : "未登记")}。");
+                }
                 if (player != null && player.ProfileName == profile && player.IsInitialized &&
                     GameManager.Instance?.IsGameplayReady == true &&
                     ChunkMgr.ExistingInstance?.AreRuntimeWindowPresentationsReady == true)
@@ -219,9 +226,18 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         PlanetData currentData = SaveDataMgr.Instance.GetCurrentPlanetData();
         FlatWorld.WorldModel.WorldRuntime currentRuntime = ChunkMgr.ExistingInstance?.WorldRuntime;
+        var observer = default(FlatWorld.Spaceflight.SpaceNetworkObserver);
+        bool observerPresent = FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName, out observer) == true;
+        Vector3 logicalPosition = WorldLocalPresentation.ToLogical(player.transform.position);
+        double observerDistance = observerPresent && !observer.InSpace && observer.WorldKey == expected.WorldKey
+            ? WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), logicalPosition) : -1d;
         return new JObject
         {
             ["address"] = manager.ActiveAddress.WorldKey, ["expected"] = expected.WorldKey,
+            ["playerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player),
+            ["observerPresent"] = observerPresent, ["observerWorld"] = observerPresent ? observer.WorldKey : null,
+            ["observerInSpace"] = observerPresent && observer.InSpace, ["observerDistance"] = observerDistance,
+            ["logicalX"] = logicalPosition.x, ["logicalY"] = logicalPosition.y,
             ["modelWorldKey"] = currentRuntime?.WorldId,
             ["generationMode"] = ChunkMgr.ExistingInstance?.ActiveGenerationProfile?.Settings.Mode.ToString(),
             ["originalRuntime"] = controls != null && ReferenceEquals(currentRuntime, controls.SurfaceRuntime),
@@ -288,6 +304,9 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         var scope = new DimensionScope(player);
         GameplayTestRuntimeProbe.RegisterCleanup(scope);
         GameplayTestRuntimeProbe.RegisterAsyncCleanup(scope.Restore);
+        var terrainRoundtrip = args.Value<bool?>("generationPresetAudit") == true
+            ? new DimensionTerrainSaveRoundtrip(scope.Cave) : null;
+        if (terrainRoundtrip != null) GameplayTestRuntimeProbe.RegisterCleanup(terrainRoundtrip);
         var result = new JObject
         {
             ["profile"] = scope.Profile, ["originalGuid"] = scope.OriginalPlayerGuid,
@@ -300,6 +319,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         IEnumerator Journey()
         {
             Item entrance = scope.PrepareEntrance(player);
+            result["entrance"] = DimensionPortalOwnershipSample(entrance);
             result["ecsResidentsBefore"] = GameplayTestRuntimeProbe.Capture(player, "dimension", "ecs_residents_begin", new JObject());
             using (GameplayTestSpaceScenario.BeginExpectedMigration(player))
             {
@@ -319,16 +339,17 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             if (args.Value<bool?>("generationPresetAudit") == true)
             {
                 result["presetAudit"] = CaptureLiveGenerationPresetOwnership(cavePlayer, scope);
-                // 完整就绪后留出一次自动截图窗口，不用于掩盖迁移或地形等待。
-                yield return new WaitForSecondsRealtime(11f);
+                result["terrainSnapshot"] = terrainRoundtrip.CaptureSavedWorldAndChunk(cavePlayer, scope.Anchor.CaveExitPosition);
             }
             result["sameDataInCave"] = ReferenceEquals(cavePlayer.Data, scope.Data);
             result["ecsResidentsCave"] = GameplayTestRuntimeProbe.Capture(cavePlayer, "dimension", "ecs_residents_sample", new JObject());
             Item exit = ItemMgr.Instance.GetItemByGuid(scope.Anchor.CaveExitGuid);
+            result["exit"] = DimensionPortalOwnershipSample(exit);
             result["exitCreated"] = exit != null && exit.IsInitialized && exit.itemData.IDName == "CaveExit";
             result["anchorFound"] = DimensionTravelProgressStore.TryGetAnchorByCaveExit(SaveDataMgr.Instance.SaveData, scope.Cave, exit, out var paired);
             result["anchorSurface"] = paired?.SurfaceWorldKey;
             result["exitModulePresent"] = exit?.GetComponentInChildren<Mod_DimensionPortal>(true) != null;
+            result["exitApproach"] = PrepareDimensionPortalInteraction(cavePlayer, exit);
             using (GameplayTestSpaceScenario.BeginExpectedMigration(cavePlayer))
             {
                 result["returnAccepted"] = DimensionManager.ExistingInstance.TryBeginTransition(cavePlayer, WorldAddress.SurfaceDimensionId, exit);
@@ -347,8 +368,37 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["ecsResidentsSurface"] = GameplayTestRuntimeProbe.Capture(returned, "dimension", "ecs_residents_sample", new JObject());
             result["returnNearEntrance"] = WorldTopologyRuntime.ShortestDelta(returned.transform.position, scope.Anchor.SurfaceEntrancePosition).magnitude;
             result["originalSurface"] = scope.Surface.WorldKey;
+            if (terrainRoundtrip != null)
+            {
+                using (GameplayTestSpaceScenario.BeginExpectedMigration(returned))
+                {
+                    Item repeatEntrance = ItemMgr.Instance.GetItemByGuid(scope.Anchor.SurfaceEntranceGuid);
+                    result["terrainReenterApproach"] = PrepareDimensionPortalInteraction(returned, repeatEntrance);
+                    result["terrainReenterAccepted"] = DimensionManager.ExistingInstance.TryBeginTransition(
+                        returned, WorldAddress.CaveDimensionId, repeatEntrance);
+                    if (!result.Value<bool>("terrainReenterAccepted"))
+                        throw new InvalidOperationException("检查地下地形时正式入口拒绝再次进入。");
+                    yield return WaitForDimension(scope.Cave, scope.Profile, scope);
+                }
+                cavePlayer = ItemMgr.Instance.User_Player;
+                result["terrainAfterReturn"] = terrainRoundtrip.CaptureCurrentWorldCell(cavePlayer);
+                terrainRoundtrip.Dispose();
+                result["terrainAfterCleanup"] = terrainRoundtrip.CaptureCurrentWorldCell(cavePlayer);
+                using (GameplayTestSpaceScenario.BeginExpectedMigration(cavePlayer))
+                {
+                    Item repeatExit = ItemMgr.Instance.GetItemByGuid(scope.Anchor.CaveExitGuid);
+                    result["terrainReturnApproach"] = PrepareDimensionPortalInteraction(cavePlayer, repeatExit);
+                    result["terrainReturnAccepted"] = DimensionManager.ExistingInstance.TryBeginTransition(
+                        cavePlayer, WorldAddress.SurfaceDimensionId, repeatExit);
+                    if (!result.Value<bool>("terrainReturnAccepted"))
+                        throw new InvalidOperationException("检查地下地形后正式出口拒绝返回。");
+                    yield return WaitForDimension(scope.Surface, scope.Profile, scope);
+                }
+            }
         }
         yield return GameManager.RunWorldTransitionSteps(Journey(), error => failure = error);
+        try { terrainRoundtrip?.Dispose(); }
+        catch (Exception error) { failure = failure == null ? error : new AggregateException("迁移与地形恢复都失败。", failure, error); }
         Exception recoveryFailure = null;
         yield return GameManager.RunWorldTransitionSteps(scope.Restore(), error => recoveryFailure = error);
         if (recoveryFailure != null)
@@ -361,6 +411,201 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         result["migrationReleased"] = !GameplayTestSpaceScenario.IsMigrationExpected;
         completed(result);
     }
+
+    private sealed class DimensionTerrainSaveRoundtrip : IDisposable
+    {
+        private readonly WorldAddress world;
+        private Vector2 markerPosition;
+        private int markerTileId;
+        private string markerBlockId;
+        private bool modified;
+
+        public DimensionTerrainSaveRoundtrip(WorldAddress world) => this.world = world;
+
+        public JObject CaptureSavedWorldAndChunk(Player player, Vector2 exitPosition)
+        {
+            GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+            string playerWorld = GameplayWorldRegistry.GetItemWorldKey(player);
+            if (playerWorld != world.WorldKey ||
+                !GameplayWorldRegistry.TryGet(world.WorldKey, out GameplayWorldRuntime runtime) ||
+                runtime.Chunks == null || runtime.Chunks.WorldRuntime?.WorldId != world.WorldKey)
+                throw new InvalidOperationException($"地下地形采样世界不一致：期望={world.WorldKey}，玩家={playerWorld}，" +
+                    $"本地管理器={ChunkMgr.LocalInstance?.OwnedWorldKey}，场景={SceneManager.GetActiveScene().name}。");
+
+            using var context = GameplayWorldRegistry.UseWorld(world.WorldKey);
+            ChunkMgr chunks = runtime.Chunks;
+            Vector2Int center = Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(player.transform.position));
+            Vector2Int exit = Vector2Int.FloorToInt(exitPosition);
+            RuntimeTerrainTileSample sample = default;
+            TileBuildingCell placed = default;
+            int unloaded = 0, nearExit = 0, rejected = 0;
+            string lastRejection = null;
+            bool found = false;
+            for (int radius = 2; radius <= 12 && !found; ++radius)
+            for (int dy = -radius; dy <= radius && !found; ++dy)
+            for (int dx = -radius; dx <= radius; ++dx)
+            {
+                if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != radius) continue;
+                Vector2Int cell = WorldTopologyRuntime.NormalizeCell(center + new Vector2Int(dx, dy));
+                Vector2Int fromExit = WorldTopologyRuntime.ShortestDelta(exit, cell);
+                if (Math.Abs(fromExit.x) <= 1 && Math.Abs(fromExit.y) <= 1) { ++nearExit; continue; }
+                Vector2 position = (Vector2)cell + Vector2.one * .5f;
+                if (!chunks.TryGetRuntimeTerrainTile(position, out sample)) { ++unloaded; continue; }
+                string block = sample.Terrain.GetLiquidLevel(sample.LocalCell.x, sample.LocalCell.y) > 0
+                    ? "Tile_WaterPlatform" : "Tile_Floor_Wood";
+                bool accepted;
+                string reason;
+                try { accepted = TileBuildingSystem.TryPlace(position, block, out placed, out reason); }
+                finally
+                {
+                    if (placed.ReplacedGroundCell.HasValue)
+                    {
+                        markerPosition = (Vector2)placed.Position + Vector2.one * .5f;
+                        markerTileId = placed.RuntimeTileId;
+                        markerBlockId = block;
+                        modified = true;
+                    }
+                }
+                if (!accepted)
+                {
+                    ++rejected;
+                    lastRejection = $"格={sample.WorldCell}，区块维度={sample.Address.DimensionId}，原因={reason}";
+                    continue;
+                }
+                found = true;
+                break;
+            }
+            if (!found)
+                throw new InvalidOperationException($"地下地形没有可铺设的已加载格：世界={world.WorldKey}，" +
+                    $"玩家={center}，出口={exit}，未加载={unloaded}，出口范围={nearExit}，铺设拒绝={rejected}，最后拒绝={lastRejection}。");
+            int expectedCost = sample.Terrain.TryGetEnvironmentValue(FlatWorld.WorldModel.TerrainSupportLayer.CostLayer,
+                sample.LocalCell.x, sample.LocalCell.y, out float supportCost) ? (int)supportCost : 0;
+            SaveDataMgr saves = SaveDataMgr.Instance;
+            saves.Save_And_WriteToDisk();
+            byte[] archive = File.ReadAllBytes(saves.GetFullSavePath(saves.SaveData.saveName));
+            var shell = new GameObject("[LuaDimensionSaveReadProbe]");
+            shell.SetActive(false);
+            shell.hideFlags = HideFlags.HideAndDontSave;
+            try
+            {
+                SaveDataMgr reader = shell.AddComponent<SaveDataMgr>();
+                GameSaveData restored = reader.ReadTestArchiveWithoutPublishing(archive, out var records);
+                PlanetData restoredWorld = restored.PlanetData_Dict[world.WorldKey];
+                var origin = new Vector2Int(sample.Address.ChunkOrigin.X, sample.Address.ChunkOrigin.Y);
+                ChunkSaveRecord chunk = null;
+                int worldChunkCount = 0;
+                foreach (ChunkSaveRecord record in records.Values)
+                {
+                    if (record.PlanetName != world.WorldKey) continue;
+                    ++worldChunkCount;
+                    if (record.ChunkPosition == origin) chunk = record;
+                }
+                SupportCellSaveData support = chunk?.SupportCells?.Find(value => value.LocalPosition == sample.LocalCell);
+                return new JObject
+                {
+                    ["world"] = restoredWorld.Name, ["bodyId"] = restoredWorld.BodyId,
+                    ["presetId"] = restoredWorld.GenerationPresetId,
+                    ["frozenProfile"] = restoredWorld.Ecology.Generation.ProfileId,
+                    ["chunkCount"] = worldChunkCount, ["chunkWorld"] = chunk?.PlanetName,
+                    ["playerWorld"] = playerWorld, ["managerWorld"] = chunks.OwnedWorldKey,
+                    ["modelWorld"] = chunks.WorldRuntime.WorldId, ["chunkDimension"] = sample.Address.DimensionId,
+                    ["cellX"] = sample.WorldCell.x, ["cellY"] = sample.WorldCell.y,
+                    ["blockId"] = markerBlockId,
+                    ["savedTile"] = support?.TileId ?? 0, ["savedCost"] = support?.NavigationCost ?? 0,
+                    ["expectedTile"] = markerTileId, ["expectedCost"] = expectedCost,
+                    ["underlyingGround"] = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y).GroundTileId
+                };
+            }
+            finally { UnityEngine.Object.DestroyImmediate(shell); }
+        }
+
+        public JObject CaptureCurrentWorldCell(Player player)
+        {
+            using var context = GameplayWorldRegistry.UseWorld(world.WorldKey);
+            if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(markerPosition,
+                    out RuntimeTerrainTileSample sample))
+                throw new InvalidOperationException("回到地下后无法读取地形现场。");
+            bool hasCost = sample.Terrain.TryGetEnvironmentValue(FlatWorld.WorldModel.TerrainSupportLayer.CostLayer,
+                sample.LocalCell.x, sample.LocalCell.y, out float cost);
+            return new JObject
+            {
+                ["world"] = GameplayWorldRegistry.GetItemWorldKey(player),
+                ["chunkDimension"] = sample.Address.DimensionId,
+                ["tile"] = FlatWorld.WorldModel.TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y),
+                ["cost"] = hasCost ? (int)cost : 0,
+                ["underlyingGround"] = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y).GroundTileId
+            };
+        }
+
+        public void Dispose()
+        {
+            if (!modified || !GameplayWorldRegistry.TryGet(world.WorldKey, out GameplayWorldRuntime runtime)) return;
+            using (GameplayWorldRegistry.UseWorld(world.WorldKey))
+            {
+                if (!runtime.Chunks.TryGetRuntimeTerrainTile(markerPosition, out RuntimeTerrainTileSample sample) ||
+                    !runtime.Chunks.TryGetChunkRuntime(sample.Address, out var chunk))
+                    throw new InvalidOperationException("地下地形恢复时区块已卸载。");
+                var placed = new TileBuildingCell(chunk, sample.WorldCell, sample.LocalCell, markerTileId, markerBlockId,
+                    sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y));
+                if (!TileBuildingSystem.TryRemove(placed, false, out string reason))
+                    throw new InvalidOperationException("无法恢复地下测试地形：" + reason);
+                modified = false;
+            }
+        }
+    }
+
+    private static JObject PrepareDimensionPortalInteraction(Player player, Item portal)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        string world = GameplayWorldRegistry.GetItemWorldKey(player);
+        string portalWorld = portal != null ? GameplayWorldRegistry.GetItemWorldKey(portal) : null;
+        var session = FlatWorld.Spaceflight.SpaceSession.Current;
+        if (world == null || world != portalWorld || session == null ||
+            !session.TryGetNetworkObserver(player.ProfileName, out var observer) || observer.InSpace || observer.WorldKey != world)
+            throw new InvalidOperationException("准备入口交互时玩家、观察者或入口世界不一致。");
+
+        using var context = GameplayWorldRegistry.UseWorld(world);
+        Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
+        float reach = sender != null ? sender.maxInteractDistance : Mod_InteractSender.DefaultMaxInteractDistance;
+        Vector2 portalPosition = WorldLocalPresentation.ToLogical(portal.transform.position);
+        Vector2 playerPosition = WorldLocalPresentation.ToLogical(player.transform.position);
+        float actorDistance = WorldTopologyRuntime.Distance(playerPosition, portalPosition);
+        float observerDistance = WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), portalPosition);
+        float before = observerDistance;
+        bool teleported = false;
+        if (Mathf.Max(actorDistance, observerDistance) > reach * .75f)
+        {
+            // 正式传送为隔离玩家准备入口附近的合法交互位置，不改变生产距离规则。
+            Vector2 direction = WorldTopologyRuntime.ShortestDelta(portalPosition, playerPosition).normalized;
+            if (direction == Vector2.zero) direction = Vector2.right;
+            bool completed = false, succeeded = false;
+            bool sent = PlayerTeleportService.TryTeleportToSurface(player, portalPosition + direction * (reach * .45f),
+                value => { completed = true; succeeded = value; });
+            if (!sent || !completed || !succeeded)
+                throw new InvalidOperationException("正式传送无法将测试玩家带回入口附近。");
+            teleported = true;
+        }
+        if (!session.TryGetNetworkObserver(player.ProfileName, out observer))
+            throw new InvalidOperationException("准备入口交互后缺少玩家权威观察者。");
+        return new JObject
+        {
+            ["world"] = world, ["portalWorld"] = portalWorld, ["observerWorld"] = observer.WorldKey,
+            ["inSpace"] = observer.InSpace, ["reach"] = reach, ["before"] = before, ["teleported"] = teleported,
+            ["actorDistance"] = WorldTopologyRuntime.Distance(WorldLocalPresentation.ToLogical(player.transform.position), portalPosition),
+            ["observerDistance"] = WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), portalPosition)
+        };
+    }
+
+    private static JObject DimensionPortalOwnershipSample(Item portal)
+    {
+        return new JObject
+        {
+            ["registered"] = portal != null && portal.itemData != null &&
+                ReferenceEquals(ItemMgr.Instance.GetItemByGuid(portal.itemData.Guid), portal),
+            ["world"] = portal != null ? GameplayWorldRegistry.GetItemWorldKey(portal) : null,
+            ["scene"] = portal != null ? portal.gameObject.scene.name : null
+        };
+    }
     #endregion
 
     #region 火星地下引用共享地表预设的真实往返
@@ -372,9 +617,13 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsyncCleanup(home.Restore);
         if (!GameplayTestGm.TryExecute(player, "enable_invincibility", null, out string message))
             throw new InvalidOperationException("火星环境现场无法开启正式管理员保护：" + message);
-        var catalog = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault();
-        var marsAddress = WorldAddress.FromWorldKey(catalog.GetBodyDefinition("mars").PlanetId);
-        var result = new JObject { ["homeWorld"] = home.Surface.WorldKey, ["marsWorld"] = marsAddress.WorldKey };
+        var session = FlatWorld.Spaceflight.SpaceSession.EnsureLoaded();
+        var marsBody = session.Universe.GetBody("mars");
+        WorldAddress marsAddress = marsBody.SurfaceAddress;
+        var result = new JObject { ["homeWorld"] = home.Surface.WorldKey, ["marsWorld"] = marsAddress.WorldKey,
+            ["expectedMarsBody"] = marsBody.BodyId, ["marsTemplateBody"] = marsBody.TemplateBodyId };
+        session.EnsureNetworkPassenger(player);
+        result["beforeLanding"] = DimensionSample(player, home.Surface, home);
         var exitSaves = new JArray();
         void CapturePlayerUnregisteredAfterWorldExitSave(Item item)
         {
@@ -400,6 +649,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             }
             Player marsPlayer = ItemMgr.Instance.User_Player;
             result["landing"] = DimensionSample(marsPlayer, marsAddress, home);
+            result["landingSavedPassenger"] = CaptureSavedSurfacePassenger(home.Profile);
             PlanetData mars = SaveDataMgr.Instance.GetCurrentPlanetData();
             result["marsBodyBefore"] = mars.BodyId;
             result["marsPresetBefore"] = mars.GenerationPresetId;
@@ -427,8 +677,6 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["savedText"] = loaded.GenerationTextOverrides["testing.presetLabel"];
             result["savedFrozenProfile"] = loaded.Ecology.Generation.ProfileId;
             result["savedFrozenConfiguration"] = loaded.Ecology.HasGenerationConfiguration;
-            result["savedMapCount"] = loaded.MapData_Dict.Count;
-            result["undergroundMapCount"] = underground.MapData_Dict.Count;
         }
         Exception recoveryFailure = null;
         ItemMgr.RuntimeItemUnregistered += CapturePlayerUnregisteredAfterWorldExitSave;
@@ -443,9 +691,23 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         if (failure != null) throw failure;
         result["restoredHome"] = DimensionManager.ExistingInstance.ActiveAddress == home.Surface;
         result["home"] = DimensionSample(ItemMgr.Instance.User_Player, home.Surface, home);
+        result["homeSavedPassenger"] = CaptureSavedSurfacePassenger(home.Profile);
         result["sameHomePlayerData"] = ReferenceEquals(ItemMgr.Instance.User_Player.Data, home.Data);
         result["exitSaves"] = exitSaves;
         completed(result);
+    }
+
+    private static JObject CaptureSavedSurfacePassenger(string profile)
+    {
+        var saved = SaveDataMgr.DeserializeSpaceState(SaveDataMgr.Instance.SaveData.SpaceStateJson)
+            .Passengers.Find(passenger => passenger.ProfileId == profile);
+        return new JObject
+        {
+            ["present"] = saved != null, ["world"] = saved?.LandingWorldKey,
+            ["inSpace"] = saved?.IsInSpace == true,
+            ["x"] = saved?.FreeMotion.PositionMeters.X ?? 0d,
+            ["y"] = saved?.FreeMotion.PositionMeters.Y ?? 0d
+        };
     }
 
     private static JObject CaptureLiveGenerationPresetOwnership(Player player, DimensionScope scope)

@@ -1,6 +1,7 @@
 using System;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>独轮车只接受玩家从车尾的真实碰撞推动，货仓复用普通箱子面板。</summary>
@@ -27,6 +28,7 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     private bool loaded;
     private Vector2 forwardDirection = Vector2.down;
     private readonly RaycastHit2D[] obstructionHits = new RaycastHit2D[24];
+    private static readonly ProfilerMarker CarrierMotionMarker = new("FlatWorld.Wheelbarrow.StepCarrierMotion");
 
     [Serializable] private sealed class WheelbarrowState
     {
@@ -182,6 +184,7 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     public void StepCarrierMotion(Mod_Carrier carrier, Vector2 input, bool controlsLocked, float deltaTime)
     {
         if (!loaded || !isActiveAndEnabled) return;
+        using var motionSample = CarrierMotionMarker.Auto();
         Mod_Mover source = carrier.PushSource;
         Vector2 pushing = carrier.PushedVelocity;
         if (source == null || !CanReceiveCarrierPush(source) || pushing.sqrMagnitude < .0001f || !(deltaTime > 0f))

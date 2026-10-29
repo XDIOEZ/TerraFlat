@@ -137,6 +137,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         SpatialInteractionRegistry.Unregister(this);
         waterWake?.Clear();
         activated = false;
+        building?.SetPlacementOccupancySuspended(false);
     }
 
     private void BindRuntimeSources()
@@ -192,7 +193,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
         motionDriver?.ActivateCarrier(this, body);
         lastPhysicsPosition = body.position;
-        building.ReleasePlacementOccupancy();
+        building.SetPlacementOccupancySuspended(true);
         activated = true;
     }
     #endregion

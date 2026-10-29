@@ -396,6 +396,14 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Player targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
         targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(targetPosition);
         targetPlayer.Data.transform.position = targetPosition;
+        // 地表间的离线迁移也要提交乘员归属，后续入口校验使用同一权威世界。
+        if (!toSpace && !SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) &&
+            FlatWorld.Spaceflight.SpaceSession.Current is { } surfaceSession)
+        {
+            state.SurfaceRealmCommitted = true;
+            if (!surfaceSession.CompleteNetworkWorldTransfer(targetPlayer, targetAddress.WorldKey, targetPosition))
+                throw new InvalidOperationException("离线地表迁移无法提交乘员世界归属。");
+        }
         FlatWorld.Spaceflight.SpaceSession.Current?.RestorePassengerPose(targetPlayer);
         targetPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(targetPlayer);
@@ -423,6 +431,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         public bool ExitNotified;
         public bool EnterNotified;
         public bool PreserveRunState;
+        public bool SurfaceRealmCommitted;
         public Scene SourcePresentationScene;
         public string TargetPresentationSceneName;
     }
@@ -493,6 +502,9 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
         recoveredPlayer.transform.position = WorldLocalPresentation.ProjectPosition(sourcePosition);
         recoveredPlayer.Data.transform.position = sourcePosition;
+        if (state.SurfaceRealmCommitted && FlatWorld.Spaceflight.SpaceSession.Current is { } surfaceSession &&
+            !surfaceSession.CompleteNetworkWorldTransfer(recoveredPlayer, sourceAddress.WorldKey, sourcePosition))
+            throw new InvalidOperationException("离线迁移失败后无法恢复乘员世界归属。");
         recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(recoveredPlayer);
         if (fromSpace) yield return SpaceMgr.Instance.PreparePresentationForCamera();

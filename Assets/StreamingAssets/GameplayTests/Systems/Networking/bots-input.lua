@@ -80,6 +80,8 @@ test.runtime("networking", "bots_teleport", {}, function(data)
     assert(near(data.witnessBefore.x, data.witnessAfter.x) and near(data.witnessBefore.y, data.witnessAfter.y),
         "传送影响了另一名玩家")
     assert_position(data.afterMove, data.nextX, data.nextY, "传送后的普通移动")
+    assert(data.afterMove.revision == data.afterFresh.revision and data.afterMove.velocity == 0,
+        "普通移动改变了世界代际，或物理步后没有保持停止位置")
     local visual = data.visualOwnership
     assert(visual.ownedMoving > .1 and visual.ownedIdle < .001,
         "传送的远端快照接管了本机动画，导致走路不摇摆或站立仍摇摆")

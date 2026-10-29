@@ -652,7 +652,9 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         var presenters = (JArray)view["presenters"];
         var items = (JArray)view["itemProjections"];
         var chunks = (JArray)view["chunkProjections"];
-        if (presenters.Count != 1 || items.Count == 0 || chunks.Count == 0) return false;
+        if (presenters.Count != 1 || items.Count == 0 || chunks.Count == 0 ||
+            !view.Value<bool>("projectionDomainReady") || view.Value<int>("projectionOwnerId") == 0 ||
+            view.Value<string>("projectionOwnerWorldKey") != MachineWorld.GetShipScopeKey(ship.ShipId)) return false;
         string scene = SceneManager.GetActiveScene().name;
         foreach (JObject presenter in presenters)
             if (presenter.Value<bool>("pooled") || !presenter.Value<bool>("active") ||

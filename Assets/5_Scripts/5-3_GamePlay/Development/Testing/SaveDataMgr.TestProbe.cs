@@ -47,6 +47,10 @@ public partial class SaveDataMgr
     }
 
     internal GameSaveData ReadTestArchiveWithoutPublishing(byte[] payload)
+        => ReadTestArchiveWithoutPublishing(payload, out _);
+
+    internal GameSaveData ReadTestArchiveWithoutPublishing(byte[] payload,
+        out Dictionary<string, ChunkSaveRecord> restoredChunks)
     {
         // 仅停用测试外壳可使用，正式管理器的差量和 MOD 状态不得被恢复测试替换。
         if (ReferenceEquals(this, instance) || gameObject.activeInHierarchy || !string.IsNullOrEmpty(UserSavePath))
@@ -60,7 +64,8 @@ public partial class SaveDataMgr
             if (mods == null || !mods.IsReady || !mods.ValidateSaveMetadata(metadata, out error))
                 throw new InvalidDataException(error ?? "测试存档的 MOD 环境不兼容。");
         }
-        return DeserializeCoreSavePayload(envelope.CoreSavePayload, new Dictionary<string, ChunkSaveRecord>());
+        restoredChunks = new Dictionary<string, ChunkSaveRecord>();
+        return DeserializeCoreSavePayload(envelope.CoreSavePayload, restoredChunks);
     }
 
     internal JObject CaptureTestLoadFailureState()

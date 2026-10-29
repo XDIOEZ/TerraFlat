@@ -703,7 +703,7 @@ namespace FlatWorld.Spaceflight
             ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
             SpaceVector2 center = assembly != null ? new SpaceVector2(assembly.PositionX, assembly.PositionY)
                 : new SpaceVector2(ship.PositionX, ship.PositionY);
-            Vector2 position = IsSpaceView ? ProjectPosition(new SpaceSectorPosition(assembly?.Sector ?? ship.Sector, center)) : WorldLocalPresentation.ProjectPosition(center.ToVector2());
+            Vector2 position = IsSpaceView ? ProjectPosition(new SpaceSectorPosition(assembly?.Sector ?? ship.Sector, center)) : ProjectSurfacePresentationPosition(center.ToVector2());
             if (IsSpaceView)
             {
                 SpaceVector2 relative = SpaceSectorCoordinates.Relative(assembly?.Sector ?? ship.Sector, center, ship.Sector);

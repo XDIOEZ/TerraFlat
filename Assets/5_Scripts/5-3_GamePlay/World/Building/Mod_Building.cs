@@ -443,6 +443,22 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         }
     }
 
+    private bool placementOccupancySuspended;
+
+    // 运动接管期间持续释放离散占地，接管结束后恢复登记。
+    internal void SetPlacementOccupancySuspended(bool suspended)
+    {
+        if (placementOccupancySuspended == suspended) return;
+        placementOccupancySuspended = suspended;
+        if (suspended)
+            ReleasePlacementOccupancy();
+        else if (IsRuntimeLoaded && item != null && item.IsInitialized)
+        {
+            using var worldScope = item.UseOwnedWorldForItemCallbacks();
+            SyncNavigationOccupancy();
+        }
+    }
+
     public void ReleasePlacementOccupancy()
     {
         BuildingOccupancyRegistry.Unregister(this);
@@ -683,7 +699,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     private void SyncNavigationOccupancy()
     {
         // 起降交接按物品真实所属世界判断，船件身份预留不能阻止地表占地登记。
-        if (!isActiveAndEnabled || item == null || !IsInstalled() ||
+        if (placementOccupancySuspended || !isActiveAndEnabled || item == null || !IsInstalled() ||
             FlatWorld.Spaceflight.SpaceSession.Current?.TryGetShipInteriorItem(
                 item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out _) == true)
         {

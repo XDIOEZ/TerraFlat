@@ -114,6 +114,19 @@ test.space("ship_landing", function(data)
         assert(body.wholeShipBody and body.activeBodies == 1 and body.activeBlockers == 1 and
             body.active and not body.pooled and body.scene == snapshot.scene,
             "飞行或下降没有使用当前场景的整体碰撞：" .. label)
+        assert(snapshot.projectionDomainReady and snapshot.projectionOwnerId ~= 0 and
+            snapshot.projectionOwnerWorldKey == snapshot.worldKey,
+            "船内排序域未绑定正确世界、会话场景和船姿：" .. label)
+        for _, projection in ipairs(snapshot.itemProjections) do
+            assert(projection.active and projection.worldKey == snapshot.worldKey and
+                projection.scene == snapshot.projectionScene and projection.parentId == snapshot.projectionOwnerId,
+                "飞行或下降的物品投影脱离所属船内世界或排序域：" .. label)
+        end
+        for _, projection in ipairs(snapshot.chunkProjections) do
+            assert(projection.active and projection.id:sub(1, #snapshot.worldKey + 1) == snapshot.worldKey .. ":" and
+                projection.scene == snapshot.projectionScene and projection.parentId == snapshot.projectionOwnerId,
+                "飞行或下降的区块投影脱离所属船内世界或排序域：" .. label)
+        end
     end
     local function ground_preparation(ship, restored, machineCount, label)
         local preparation = ship.preparation
@@ -344,6 +357,16 @@ test.space("ore_asteroid_landing", function(data)
         ship.world == ship.expectedWorld and ship.landed.world == ship.expectedWorld and
         ship.shipRemoved and ship.flightRemoved and ship.landed.pieceCount > 0,
         "大型矿石小行星降落目标错误，或船体没有移交普通地表建筑")
+    local descentCamera = ship.descending.midpointCameraPresentation
+    assert(descentCamera and descentCamera.wrapped and descentCamera.worldSpan and
+        math.abs(descentCamera.shipPosition.x) > descentCamera.worldSpan.x * 0.5,
+        "小行星下降没有覆盖真实跨周坐标")
+    assert(descentCamera.playerInViewport and descentCamera.projectionVisible and descentCamera.scopeInvariant,
+        "跨周下降时船舱投影随世界上下文变化，或驾驶中的主角没有保持在相机画面内")
+    assert(string.sub(descentCamera.worldKey, 1, 5) == "ship:" and
+        descentCamera.presentationWorldKey == ship.expectedWorld and descentCamera.cloudRendered and
+        descentCamera.starfieldWeight > 0.5,
+        "小行星真空下降时，船舱乘员的云层渲染器没有绘制当前显示星球的星空")
     local beforeHud, landedHud = ship.descending.flightHud, ship.landed.flightHud
     local beforeVisible, afterVisible = verify_visible_height_hud_layout(beforeHud), verify_visible_height_hud_layout(landedHud)
     assert(beforeVisible or afterVisible,

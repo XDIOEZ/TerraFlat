@@ -780,6 +780,11 @@ do
                 assert(engine.cycle[index] == expected, "按 R 未依次到达四个方向：" .. engine.id)
             end
         end
+        assert(not rotation.plainConsumerRotatable and rotation.declaredConsumerRotatable,
+            "无朝向能力的机器应保持不可旋转，显式声明旋转档数后必须可旋转")
+        for index, expected in ipairs({0, 1, 0, 1, 0}) do
+            assert(rotation.declaredConsumerCycle[index] == expected, "显式两向机器旋转档数错误")
+        end
         for name, expected in pairs({shaftCycle = {0, 1, 0, 1, 0}, gearCycle = {0, 1, 2, 3, 0}}) do
             assert(#rotation[name] == #expected, "轴或齿轮的原有旋转档数采样缺失")
             for index, value in ipairs(expected) do assert(rotation[name][index] == value, "改变了轴或齿轮的旋转规则") end
@@ -816,7 +821,7 @@ do
         assert(data.pipeAllowed == true, "管道不应被当作阻挡喷口的结构层")
         assert(data.unsupportedAllowed == false and type(data.unsupportedReason) == "string" and #data.unsupportedReason > 0,
             "缺少地板支撑的引擎必须被拒绝")
-        return "覆盖两款引擎四向轮换、预览角度单次叠加、默认档数和非法配置，以及边缘安装、净空和支撑。"
+        return "覆盖三款引擎四向轮换、显式与默认旋转能力、预览角度和非法配置，以及边缘安装、净空和支撑。"
     end, "引擎安装与喷口净空")
 end
 

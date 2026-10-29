@@ -52,8 +52,10 @@ test.runtime("world_streaming", "configured_entity_proxies", {}, function(data)
         and string.find(data.dynamicMachineReason, "约束") and data.fixedMachineMode == "WorldFixed",
         "固定格数据机器的独立可动配置被静默回退，或拒绝后留下节点")
     assert(data.buildingInitiallyOccupied and data.buildingMovedCell and data.buildingOldCellsFreed
-        and data.buildingCurrentCellOccupied and data.buildingRotatedFootprintOccupied,
-        "完整Item建筑运动或跨90度旋转后，占地仍留在旧格或使用旧朝向")
+        and data.buildingCurrentCellOccupied and data.buildingRotatedFootprintOccupied
+        and data.buildingRollbackSucceeded and data.buildingRollbackItemRemoved
+        and data.buildingRollbackProxyReleased and data.buildingRollbackOccupancyReleased,
+        "完整Item建筑运动、旋转占地或正式回滚清理失败")
 end, "同定义树及普通Item配置生成、原生推动、显示回写、保存和物理池恢复")
 
 test.runtime("world_streaming", "resource_proxy_regions", {}, function(data)

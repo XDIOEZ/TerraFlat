@@ -24,6 +24,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
     private bool useStarfield;
     private int sampledFrame = -1;
     private int worldSceneHandle;
+    private string presentationWorldKey;
     private Vector2 driftVelocity;
     private Vector2 cloudOffset;
     private Vector2 cloudWorldCenter;
@@ -37,6 +38,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         hasSample = false;
         useStarfield = false;
         sampledFrame = -1;
+        presentationWorldKey = null;
         driftVelocity = cloudOffset = cloudWorldCenter = lastLogicalPlayerPosition = Vector2.zero;
     }
 
@@ -74,11 +76,14 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             return;
         }
 
-        if (player != localPlayer || player.gameObject.scene.handle != worldSceneHandle)
+        string currentPresentationWorldKey = GameplayWorldRegistry.LocalPresentationWorldKey;
+        if (player != localPlayer || player.gameObject.scene.handle != worldSceneHandle ||
+            currentPresentationWorldKey != presentationWorldKey)
         {
             ResetPresentation();
             localPlayer = player;
             worldSceneHandle = player.gameObject.scene.handle;
+            presentationWorldKey = currentPresentationWorldKey;
         }
         Camera sourceCamera = WeatherScreenRenderingContext.GetPlayerCamera(player, ref cameraModule);
         if (chunkLoader == null)
@@ -95,8 +100,8 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         float universeOpacity = SurfaceZoomTransition.Sample(cameraModule);
         if (sampledFrame != Time.frameCount)
         {
-            // 读取当前星球的真实大气，无气压时把加载边界外的云替换为星空。
-            useStarfield = AtmosphereService.TryGetForWorld(player.gameObject.scene.name, out var atmosphere) &&
+            // 地表背景读取实际显示星球的大气，不使用乘员所在船舱的场景。
+            useStarfield = AtmosphereService.TryGetForWorld(currentPresentationWorldKey, out var atmosphere) &&
                            ZoomCloudMaterialParameters.UsesStarfield(atmosphere);
             Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             weather.TryGetWeatherAt(logicalPlayer, out var sample);
@@ -131,8 +136,23 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
 
         pass.Setup(material, sourceCamera, player.transform.position, cloudWorldCenter,
             cloudOffset, activeBounds, presentationBounds, config, useStarfield);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        pass.SetGameplayTestPresentationIdentity(currentPresentationWorldKey, worldSceneHandle);
+#endif
         renderer.EnqueuePass(pass);
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // 测试只读实际执行过的云层材质，避免把大气规则当成画面已绘制。
+    internal bool TryGetLastRenderedStarfieldForGameplayTest(Camera camera, string worldKey, int playerSceneHandle,
+        out int renderedFrame, out float starfieldWeight)
+    {
+        renderedFrame = -1;
+        starfieldWeight = 0f;
+        return pass != null && pass.TryGetLastRenderedStarfieldForGameplayTest(camera, worldKey, playerSceneHandle,
+            out renderedFrame, out starfieldWeight);
+    }
+#endif
 
     protected override void Dispose(bool disposing)
     {
@@ -159,6 +179,14 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         private Rect presentationBounds;
         private WorldRenderingConfig.RenderingZoomClouds settings;
         private bool useStarfield;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private string presentationWorldKey;
+        private int playerSceneHandle;
+        private int lastRenderedFrame = -1;
+        private int lastRenderedPlayerSceneHandle;
+        private string lastRenderedWorldKey;
+        private Camera lastRenderedCamera;
+#endif
 
         public CloudPass()
         {
@@ -181,6 +209,24 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             useStarfield = starfield;
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public void SetGameplayTestPresentationIdentity(string worldKey, int sceneHandle)
+        {
+            presentationWorldKey = worldKey;
+            playerSceneHandle = sceneHandle;
+        }
+
+        public bool TryGetLastRenderedStarfieldForGameplayTest(Camera camera, string worldKey, int sceneHandle,
+            out int renderedFrame, out float starfieldWeight)
+        {
+            renderedFrame = lastRenderedFrame;
+            starfieldWeight = passMaterial != null ? passMaterial.GetVector("_CloudShape").z : 0f;
+            return camera != null && passMaterial != null && lastRenderedFrame >= 0 &&
+                   lastRenderedFrame >= Time.frameCount - 1 && lastRenderedCamera == camera &&
+                   lastRenderedWorldKey == worldKey && lastRenderedPlayerSceneHandle == sceneHandle;
+        }
+#endif
+
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             if (passMaterial == null || sourceCamera == null)
@@ -200,6 +246,12 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             }
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            lastRenderedFrame = Time.frameCount;
+            lastRenderedCamera = sourceCamera;
+            lastRenderedWorldKey = presentationWorldKey;
+            lastRenderedPlayerSceneHandle = playerSceneHandle;
+#endif
         }
     }
 

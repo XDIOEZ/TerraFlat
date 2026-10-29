@@ -392,6 +392,9 @@ do
                 assert(view.wholeShipBody and view.activeBodies == 1 and view.activeBlockers == 1 and
                     view.active and not view.pooled and view.scene == snapshot.scene,
                     "空中没有使用唯一启用的整船刚体与阻挡：" .. label)
+                assert(snapshot.projectionDomainReady and snapshot.projectionOwnerId ~= 0 and
+                    snapshot.projectionOwnerWorldKey == "ship:" .. ship.cruising.id,
+                    "船内排序域未绑定正确世界、会话场景和船姿：" .. label)
             end
             for _, snapshot in ipairs({cache.surface, cache.space, cache.returned}) do
                 assert(snapshot.presenterPoolCount <= snapshot.presenterLimit,
@@ -399,13 +402,13 @@ do
                 for _, projection in ipairs(snapshot.itemProjections) do
                     assert(projection.active and projection.worldKey == "ship:" .. ship.cruising.id and
                         projection.scene == snapshot.projectionScene and projection.parentId == snapshot.projectionOwnerId,
-                        "普通 Item 投影脱离船内账本或会话显示宿主：" .. label)
+                        "普通 Item 投影脱离船内账本或所属排序域：" .. label)
                 end
                 for _, projection in ipairs(snapshot.chunkProjections) do
                     assert(projection.active and projection.id:sub(1, #("ship:" .. ship.cruising.id) + 1) ==
                         "ship:" .. ship.cruising.id .. ":" and projection.scene == snapshot.projectionScene and
                         projection.parentId == snapshot.projectionOwnerId,
-                        "普通区块投影脱离船内世界或会话显示宿主：" .. label)
+                        "普通区块投影脱离船内世界或所属排序域：" .. label)
                 end
             end
             local refuel = ship.autoRefuel

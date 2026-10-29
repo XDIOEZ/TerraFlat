@@ -7,7 +7,6 @@ using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
@@ -72,8 +71,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         }
     }
 
-    private static IEnumerator BindPhysicsTestTransferPresentation(string worldKey, Vector2 point,
-        Fixture own, Action<PhysicsTestTransferPresentation> completed)
+    private static PhysicsTestTransferPresentation BindPhysicsTestTransferPresentation(string worldKey, Vector2 point)
     {
         GameplayWorldRuntime world = GameplayWorldRegistry.GetOrCreate(worldKey);
         ChunkMgr manager = world.Chunks;
@@ -89,21 +87,12 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         if (!DimensionManager.Instance.TryGetDefinitionForWorldKey(worldKey, out DimensionDefinition dimension) ||
             dimension.ChunkViewPrefab == null)
             throw new InvalidOperationException("跨世界迁移目标维度没有真实ChunkView Prefab。");
-        ChunkView view = UnityEngine.Object.Instantiate(dimension.ChunkViewPrefab);
-        SceneManager.MoveGameObjectToScene(view.gameObject, world.Scene);
-        view.gameObject.SetActive(true);
-        own.CleanupActions.Add(() =>
+        ChunkView view;
+        using (GameplayWorldRegistry.UseWorld(worldKey))
         {
-            if (view == null) return;
-            view.Unbind();
-            UnityEngine.Object.Destroy(view.gameObject);
-        });
-        IEnumerator binding = view.BindIncremental(manager.WorldRuntime, chunk, includeNavigation: false, renderersPerFrame: 1);
-        try
-        {
-            while (binding.MoveNext()) yield return binding.Current;
+            // 复用正式管理器唯一绑定，避免与目标世界自己的流送视图重复注册自然资源身份。
+            view = manager.EnsureRuntimeChunkViewBoundForStateTransfer(address);
         }
-        finally { (binding as IDisposable)?.Dispose(); }
         var presentation = new PhysicsTestTransferPresentation
         {
             World = world,
@@ -116,7 +105,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         if (presentation.Tilemap == null || presentation.Collision == null ||
             presentation.Collision.BoundChunk != chunk)
             throw new InvalidOperationException("迁移目标表现没有绑定真实地形与ChunkCollisionRenderer。");
-        completed(presentation);
+        return presentation;
     }
 
     #region 正式区块资源领取与迁移
@@ -239,8 +228,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     {
         Vector2 targetPosition = sourcePosition;
         yield return GameplayWorldRegistry.PrepareWorld(targetWorldKey, targetPosition);
-        PhysicsTestTransferPresentation destination = null;
-        yield return BindPhysicsTestTransferPresentation(targetWorldKey, targetPosition, own, value => destination = value);
+        PhysicsTestTransferPresentation destination = BindPhysicsTestTransferPresentation(targetWorldKey, targetPosition);
         if (destination == null || destination.Collision?.BoundChunk != destination.Chunk)
             throw new InvalidOperationException("迁移目标没有真实ChunkView和ChunkCollisionRenderer表现租约。");
         ChunkNaturalItemRenderer sourceRenderer = sourceView.GetComponentInChildren<ChunkNaturalItemRenderer>(true);

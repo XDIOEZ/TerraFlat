@@ -41,18 +41,25 @@ test.runtime("space", "ship_interior_world", {}, function(data)
         "乘员投影没有跟随船姿单次变换、保留局部键或在切船时切换排序域")
     assert(domains.firstChunkAddressCount > 1 and domains.sameShipChunksShareDomain and
         domains.firstChunkProjectionCount > 1 and domains.firstNativeDomainOwnerCount > 1 and
-        domains.firstNativeDomainOwnerMismatches == 0 and domains.nativeProjectedVisualsPresent,
+        domains.firstNativeDomainOwnerMismatches == 0 and domains.firstNativeOwnersWithVisuals > 1 and
+        domains.secondNativeOwnersWithVisuals > 0 and domains.nativeProjectedVisualsPresent,
         "跨区块的船内地板或 BRG Owner 没有共享同一外层排序域")
     assert(domains.differentShipsKeepSeparateDomains and domains.secondChunkAddressCount > 0 and
         domains.secondNativeDomainOwnerMismatches == 0 and domains.firstItemParentMatchesDomain and
         domains.secondItemParentMatchesDomain,
         "不同船的原生区块与普通 Item 没有归属各自排序域")
-    assert(domains.ordinaryItemKeepsLocalLayerAndPose and domains.pipeKeepsLocalLayerAndPose and
-        domains.machineKeepsLocalLayerAndPose and domains.mechanicalKeepsLocalLayerAndPose and
-        domains.passengerKeepsLocalLayerAndPose,
-        "普通物品、管线、机器、传动轴或乘员进入外层域时改变了图层或船姿位置")
-    assert(domains.projectedFloorRendererCount > 0 and domains.projectedFloorBelowPassenger,
-        "同域 BRG 地板没有保持在乘员角色下方")
+    assert(domains.ordinaryItemKeepsLocalLayerAndPose and domains.passengerKeepsLocalLayerAndPose,
+        "普通物品或乘员进入外层域时改变了图层或船姿位置")
+    for _, entry in ipairs({{name = "管道", sample = domains.pipeVisual},
+        {name = "种植机", sample = domains.cultivatorVisual}, {name = "传动轴", sample = domains.shaftVisual}}) do
+        local sample = entry.sample
+        assert(sample and sample.worldKey == first.worldKey and sample.owned and sample.interactionLayerMatches and
+            sample.partCount > 0 and sample.allPartsProjected and sample.sameMeshLayerAndPose,
+            entry.name .. "的数据机器、交互或行网格投影没有保持世界归属、图层和船姿")
+    end
+    assert(domains.projectedFloorRendererCount > 1 and domains.secondProjectedFloorRendererCount > 0 and
+        domains.supportFloorPositionsMatch and domains.projectedFloorBelowPassenger,
+        "跨区块支撑地板没有显示在各船的真实位置，或没有保持在乘员下方")
     assert(data.machineWorldKey == first.worldKey and data.machineInstancePreserved and data.machinePayloadPreserved,
         "普通机器及其实际载荷必须由本船世界和同一实例持有")
     assert(data.fluidPipeWorldKey == first.worldKey and data.electricalWireWorldKey == first.worldKey and

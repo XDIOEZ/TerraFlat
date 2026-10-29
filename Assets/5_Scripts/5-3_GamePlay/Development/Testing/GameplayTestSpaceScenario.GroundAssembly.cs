@@ -169,7 +169,21 @@ public sealed partial class GameplayTestSpaceScenario
         result["worldKey"] = worldKey ?? string.Empty;
         result["scene"] = SceneManager.GetActiveScene().name;
         result["projectionScene"] = session.gameObject.scene.name;
-        result["projectionOwnerId"] = session.gameObject.GetInstanceID();
+        WorldPresentationTransformRegistry.TryGetSortingDomain(worldKey, out WorldPresentationSortingDomain domain);
+        Transform root = domain?.Root;
+        ShipState ship = string.IsNullOrEmpty(shipId) ? null : session.GetShip(shipId);
+        bool hasProjection = WorldPresentationTransformRegistry.TryGet(worldKey, out Matrix4x4 projection, out bool visible);
+        Vector3 origin = hasProjection ? projection.MultiplyPoint3x4(Vector3.zero) : Vector3.zero;
+        Vector2 shipOrigin = ship != null ? session.ProjectShipInteriorPosition(ship, Vector2.zero) : Vector2.zero;
+        WorldSortingManager.GetResourceSortingKey(WorldSortingManager.ProjectedWorldCategory, out int layer, out int order);
+        var sorting = root != null ? root.GetComponent<UnityEngine.Rendering.SortingGroup>() : null;
+        result["projectionOwnerId"] = root != null ? root.gameObject.GetInstanceID() : 0;
+        result["projectionOwnerWorldKey"] = domain?.WorldKey ?? string.Empty;
+        result["projectionDomainReady"] = root != null && root.gameObject.activeInHierarchy && visible &&
+            domain.WorldKey == worldKey && root.gameObject.scene == session.gameObject.scene &&
+            sorting != null && sorting.enabled && sorting.sortAtRoot && sorting.sortingLayerID == layer &&
+            sorting.sortingOrder == order && hasProjection && ship != null &&
+            Vector3.Distance(root.position, origin) < .002f && Vector2.Distance(origin, shipOrigin) < .002f;
         return result;
     }
 

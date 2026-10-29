@@ -52,6 +52,10 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         string originalIdentityAnchor = firstShip.IdentityAnchorPieceId;
         AddFloorLine(fixture, firstShip, 1, PlanetData.DefaultChunkDimension + 1);
         AddFloorLine(fixture, secondShip, 1, 8);
+        // 普通木地板由支撑层批绘，覆盖跨区块与跨船的真实排序域。
+        AddShipPiece(fixture, "Floor_Wood_Summoner", new Vector2(3.5f, 1.5f), firstShip);
+        AddShipPiece(fixture, "Floor_Wood_Summoner", new Vector2(PlanetData.DefaultChunkDimension + .5f, 1.5f), firstShip);
+        AddShipPiece(fixture, "Floor_Wood_Summoner", new Vector2(3.5f, 1.5f), secondShip);
         AddShipPiece(fixture, "ShipFloor_Iron", new Vector2(7.5f, 1.5f), firstShip);
         AddShipPiece(fixture, "ShipFloor_Iron", new Vector2(8.5f, -.5f), firstShip);
         ShipPieceState mechanicalShaftPiece = AddShipPiece(fixture, "Shaft_Wood", new Vector2(9.5f, .5f), firstShip);
@@ -294,9 +298,34 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         JObject terrainTransfer = TransferShipTerrainPayload(firstWorld, secondWorld, player);
         foreach (JProperty property in terrainTransfer.Properties()) result[property.Name] = property.Value.DeepClone();
 
-        JObject sortingDomains = CaptureShipInteriorSortingDomainSampling(session, player, firstShip, firstWorld,
-            secondWorld, firstDoor, mechanicalShaftPiece, out firstSortingDomain, out secondSortingDomain,
-            out Renderer sortingRestoreSource, out bool sortingRestoreOriginalForceOff);
+        Renderer sortingRestoreSource = null;
+        bool sortingRestoreOriginalForceOff = false;
+        JObject sortingDomains;
+        double presentationDeadline = Time.realtimeSinceStartupAsDouble + 10d;
+        // 区块视图和原生批绘会分帧绑定，采样前等待两艘船的真实表现提交。
+        while (true)
+        {
+            sortingDomains = CaptureShipInteriorSortingDomainSampling(session, player, firstShip, firstWorld,
+                secondWorld, firstDoor, machines, FindMachine(firstShip, mechanicalShaftPiece),
+                out firstSortingDomain, out secondSortingDomain,
+                out sortingRestoreSource, out sortingRestoreOriginalForceOff);
+            if (sortingDomains.Value<int>("firstChunkProjectionCount") > 1 &&
+                sortingDomains.Value<int>("secondChunkProjectionCount") > 0 &&
+                sortingDomains.Value<int>("firstNativeDomainOwnerCount") > 1 &&
+                sortingDomains.Value<int>("secondNativeDomainOwnerCount") > 0 &&
+                sortingDomains.Value<int>("firstNativeOwnersWithVisuals") > 1 &&
+                sortingDomains.Value<int>("secondNativeOwnersWithVisuals") > 0 &&
+                sortingDomains.Value<bool>("nativeProjectedVisualsPresent") &&
+                sortingDomains.Value<int>("projectedFloorRendererCount") > 1 &&
+                sortingDomains.Value<int>("secondProjectedFloorRendererCount") > 0 &&
+                sortingDomains["pipeVisual"]?.Value<bool>("allPartsProjected") == true &&
+                sortingDomains["cultivatorVisual"]?.Value<bool>("allPartsProjected") == true &&
+                sortingDomains["shaftVisual"]?.Value<bool>("allPartsProjected") == true)
+                break;
+            if (Time.realtimeSinceStartupAsDouble >= presentationDeadline)
+                throw new TimeoutException("船内区块和机器表现未完成真实绑定：" + sortingDomains.ToString(Formatting.None));
+            yield return null;
+        }
         sortingDomains["passengerEnteredFirstDomain"] = passengerEnteredFirstDomain;
         sortingDomains["passengerMatchesShipPose"] = passengerMatchesShipPose;
         sortingDomains["passengerSwitchedToSecondDomain"] = passengerSwitchedToSecondDomain;
@@ -312,9 +341,9 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         sortingDomains["releasedDomainsUnregistered"] = !WorldPresentationTransformRegistry.TryGetSortingDomain(
             firstWorld.WorldKey, out _) && !WorldPresentationTransformRegistry.TryGetSortingDomain(secondWorld.WorldKey, out _);
         CountNativeChunkDomainOwners(firstWorld, firstSortingDomain, out int nativeOwnersAfterRelease,
-            out int nativeOwnerMismatchesAfterRelease, out _, out _);
+            out int nativeOwnerMismatchesAfterRelease, out _, out _, out _);
         CountNativeChunkDomainOwners(secondWorld, secondSortingDomain, out int secondNativeOwnersAfterRelease,
-            out int secondNativeOwnerMismatchesAfterRelease, out _, out _);
+            out int secondNativeOwnerMismatchesAfterRelease, out _, out _, out _);
         sortingDomains["nativeOwnersReleased"] = nativeOwnersAfterRelease == 0 && secondNativeOwnersAfterRelease == 0 &&
             nativeOwnerMismatchesAfterRelease == 0 && secondNativeOwnerMismatchesAfterRelease == 0;
         sortingDomains["passengerProjectionReleased"] = !session.TryGetShipPassengerProjection(player, out _);
@@ -406,7 +435,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
 
     private static JObject CaptureShipInteriorSortingDomainSampling(SpaceSession session, Player player,
         ShipState firstShip, ShipInteriorWorldRuntime firstWorld, ShipInteriorWorldRuntime secondWorld,
-        Item ordinaryItem, ShipPieceState mechanicalShaftPiece,
+        Item ordinaryItem, MachineFixture machines, MachineEntity mechanicalShaft,
         out WorldPresentationSortingDomain firstDomain, out WorldPresentationSortingDomain secondDomain,
         out Renderer sourceRendererForRelease, out bool sourceOriginalForceOff)
     {
@@ -437,40 +466,27 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         int firstAddressCount = CountChunkAddresses(firstWorld);
         int secondAddressCount = CountChunkAddresses(secondWorld);
         CountNativeChunkDomainOwners(firstWorld, firstDomain, out int firstNativeOwners, out int firstNativeOwnerMismatches,
-            out int firstNativeVisuals, out int firstNativeBatches);
+            out int firstNativeVisuals, out int firstNativeBatches, out int firstOwnersWithVisuals);
         CountNativeChunkDomainOwners(secondWorld, secondDomain, out int secondNativeOwners, out int secondNativeOwnerMismatches,
-            out int secondNativeVisuals, out int secondNativeBatches);
+            out int secondNativeVisuals, out int secondNativeBatches, out int secondOwnersWithVisuals);
 
-        Item pipeItem = RequireInteriorItem(session, FindPieceByItemId(firstShip, "FluidPipe"));
-        Item cultivatorItem = RequireInteriorItem(session, FindPieceByItemId(firstShip, "SpaceCultivator"));
-        Item mechanicalItem = RequireInteriorItem(session, mechanicalShaftPiece);
         bool ordinaryProjection = TryGetItemProjection(itemRows, ordinaryItem, firstWorld.WorldKey,
             firstRootId, out WorldPresentationProjection ordinaryView);
-        bool pipeProjection = TryGetItemProjection(itemRows, pipeItem, firstWorld.WorldKey,
-            firstRootId, out WorldPresentationProjection pipeView);
-        bool machineProjection = TryGetItemProjection(itemRows, cultivatorItem, firstWorld.WorldKey,
-            firstRootId, out WorldPresentationProjection machineView);
-        bool mechanicalProjection = TryGetItemProjection(itemRows, mechanicalItem, firstWorld.WorldKey,
-            firstRootId, out WorldPresentationProjection mechanicalView);
         bool ordinaryLayerAndPose = ordinaryProjection && ProjectionPreservesSourceLayerAndPose(
             ordinaryView, ordinaryItem.transform, firstWorld.WorldKey, firstDomain,
             out int ordinaryRendererCount) && ordinaryRendererCount > 0;
-        bool pipeLayerAndPose = pipeProjection && ProjectionPreservesSourceLayerAndPose(
-            pipeView, pipeItem.transform, firstWorld.WorldKey, firstDomain,
-            out int pipeRendererCount) && pipeRendererCount > 0;
-        bool machineLayerAndPose = machineProjection && ProjectionPreservesSourceLayerAndPose(
-            machineView, cultivatorItem.transform, firstWorld.WorldKey, firstDomain,
-            out int machineRendererCount) && machineRendererCount > 0;
-        bool mechanicalLayerAndPose = mechanicalProjection && ProjectionPreservesSourceLayerAndPose(
-            mechanicalView, mechanicalItem.transform, firstWorld.WorldKey, firstDomain,
-            out int mechanicalRendererCount) && mechanicalRendererCount > 0;
+        JObject pipeVisual = CaptureDataMachineProjection(firstWorld, machines.Pipe, firstDomain, chunkRows);
+        JObject cultivatorVisual = CaptureDataMachineProjection(firstWorld, machines.Cultivator, firstDomain, chunkRows);
+        JObject shaftVisual = CaptureDataMachineProjection(firstWorld, mechanicalShaft, firstDomain, chunkRows);
         bool passengerProjection = session.TryGetShipPassengerProjection(player, out WorldPresentationProjection playerView) &&
             firstDomain != null && ReferenceEquals(playerView.transform.parent, firstDomain.Root);
         bool passengerLayerAndPose = passengerProjection && ProjectionPreservesSourceLayerAndPose(
             playerView, player.transform, firstWorld.WorldKey, firstDomain,
             out int passengerRendererCount) && passengerRendererCount > 0;
         int projectedFloorRendererCount = 0;
+        int secondProjectedFloorRendererCount = 0;
         bool allProjectedFloorsBelowPassenger = true;
+        bool firstNearFloorPosition = false, firstFarFloorPosition = false, secondFloorPosition = false;
         Renderer playerSourceRenderer = passengerProjection ? player.GetComponentInChildren<SpriteRenderer>(true) : null;
         Matrix4x4 playerProjection = WorldPresentationTransformRegistry.TryGet(firstWorld.WorldKey,
             out Matrix4x4 currentPlayerProjection, out _) ? currentPlayerProjection : Matrix4x4.identity;
@@ -482,11 +498,27 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             WorldVisualSortingKey playerKey = WorldVisualSortingKey.FromRenderer(playerTargetRenderer);
             foreach (Renderer candidate in firstDomain.Root.GetComponentsInChildren<Renderer>(true))
             {
-                if (candidate == null || candidate.gameObject.name != "NativeChunkBatch_Ground") continue;
+                if (candidate == null || candidate.gameObject.name != "NativeChunkBatch_Support") continue;
+                MeshFilter mesh = candidate.GetComponent<MeshFilter>();
+                if (!candidate.enabled || !candidate.gameObject.activeInHierarchy || mesh?.sharedMesh == null ||
+                    mesh.sharedMesh.vertexCount == 0) continue;
                 projectedFloorRendererCount++;
                 allProjectedFloorsBelowPassenger &= WorldVisualSortingKey.FromRenderer(candidate).CompareTo(playerKey) < 0;
+                firstNearFloorPosition |= BoundsContainProjectedPoint(candidate.bounds, firstDomain.Root.TransformPoint(3.5f, 1.5f, 0f));
+                firstFarFloorPosition |= BoundsContainProjectedPoint(candidate.bounds,
+                    firstDomain.Root.TransformPoint(PlanetData.DefaultChunkDimension + .5f, 1.5f, 0f));
             }
         }
+        if (secondDomain?.Root != null)
+            foreach (Renderer candidate in secondDomain.Root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (candidate == null || candidate.gameObject.name != "NativeChunkBatch_Support") continue;
+                MeshFilter mesh = candidate.GetComponent<MeshFilter>();
+                if (!candidate.enabled || !candidate.gameObject.activeInHierarchy || mesh?.sharedMesh == null ||
+                    mesh.sharedMesh.vertexCount == 0) continue;
+                secondProjectedFloorRendererCount++;
+                secondFloorPosition |= BoundsContainProjectedPoint(candidate.bounds, secondDomain.Root.TransformPoint(3.5f, 1.5f, 0f));
+            }
         sourceRendererForRelease = ordinaryItem != null ? ordinaryItem.GetComponentInChildren<SpriteRenderer>(true) : null;
         sourceOriginalForceOff = sourceRendererForRelease != null &&
             GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sourceRendererForRelease);
@@ -505,6 +537,8 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         result["secondChunkProjectionCount"] = secondChunkCount;
         result["firstNativeDomainOwnerCount"] = firstNativeOwners;
         result["secondNativeDomainOwnerCount"] = secondNativeOwners;
+        result["firstNativeOwnersWithVisuals"] = firstOwnersWithVisuals;
+        result["secondNativeOwnersWithVisuals"] = secondOwnersWithVisuals;
         result["firstNativeDomainOwnerMismatches"] = firstNativeOwnerMismatches;
         result["secondNativeDomainOwnerMismatches"] = secondNativeOwnerMismatches;
         result["firstNativeProjectedVisuals"] = firstNativeVisuals;
@@ -520,17 +554,23 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         result["firstItemParentMatchesDomain"] = firstItemCount > 0 && firstItemMatchCount == firstItemCount;
         result["secondItemParentMatchesDomain"] = secondItemCount > 0 && secondItemMatchCount == secondItemCount;
         result["ordinaryItemKeepsLocalLayerAndPose"] = ordinaryLayerAndPose;
-        result["pipeKeepsLocalLayerAndPose"] = pipeLayerAndPose;
-        result["machineKeepsLocalLayerAndPose"] = machineLayerAndPose;
-        result["mechanicalKeepsLocalLayerAndPose"] = mechanicalLayerAndPose;
+        result["pipeVisual"] = pipeVisual;
+        result["cultivatorVisual"] = cultivatorVisual;
+        result["shaftVisual"] = shaftVisual;
         result["passengerProjectionInFirstDomain"] = passengerProjection;
         result["passengerKeepsLocalLayerAndPose"] = passengerLayerAndPose;
         result["projectedFloorRendererCount"] = projectedFloorRendererCount;
+        result["secondProjectedFloorRendererCount"] = secondProjectedFloorRendererCount;
+        result["supportFloorPositionsMatch"] = firstNearFloorPosition && firstFarFloorPosition && secondFloorPosition;
         result["projectedFloorBelowPassenger"] = projectedFloorRendererCount > 0 && allProjectedFloorsBelowPassenger;
         result["nativeProjectedVisualsPresent"] = firstNativeVisuals > 0 && firstNativeBatches > 0 &&
             secondNativeVisuals > 0 && secondNativeBatches > 0;
         return result;
     }
+
+    private static bool BoundsContainProjectedPoint(Bounds bounds, Vector3 point) =>
+        point.x >= bounds.min.x - .001f && point.x <= bounds.max.x + .001f &&
+        point.y >= bounds.min.y - .001f && point.y <= bounds.max.y + .001f;
 
     private static void CountProjectionRows(JArray rows, string worldKey, int parentId,
         out int total, out int matchingDomain)
@@ -562,9 +602,9 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
 
     private static void CountNativeChunkDomainOwners(ShipInteriorWorldRuntime world,
         WorldPresentationSortingDomain expectedDomain, out int owners, out int mismatches,
-        out int visuals, out int batches)
+        out int visuals, out int batches, out int ownersWithVisuals)
     {
-        owners = mismatches = visuals = batches = 0;
+        owners = mismatches = visuals = batches = ownersWithVisuals = 0;
         if (expectedDomain == null) return;
         foreach (RuntimeWorldAddress address in world.ChunkAddresses)
         {
@@ -575,16 +615,67 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             owners++;
             visuals += visualCount;
             batches += batchCount;
+            if (visualCount > 0 && batchCount > 0) ownersWithVisuals++;
             if (!ChunkBatchRendererGroupService.TryGetOwnerNativeProjectionDomain(owner, out WorldPresentationSortingDomain actual) ||
                 !ReferenceEquals(actual, expectedDomain) || actual.Root != expectedDomain.Root) mismatches++;
         }
     }
 
-    private static ShipPieceState FindPieceByItemId(ShipState ship, string itemId)
+    // 机器由正式区块行网格绘制，逐部件核对权威节点、源网格和投影矩阵。
+    private static JObject CaptureDataMachineProjection(ShipInteriorWorldRuntime world, MachineEntity node,
+        WorldPresentationSortingDomain domain, JArray chunkRows)
     {
-        foreach (ShipPieceState piece in ship.Pieces)
-            if (piece.IsAlive && piece.ItemId == itemId) return piece;
-        throw new InvalidOperationException("船内排序采样缺少部件：" + itemId);
+        bool owned = MachineStillOwned(world.WorldKey, node);
+        bool hasMatrix = WorldPresentationTransformRegistry.TryGet(world.WorldKey, out Matrix4x4 matrix, out bool visible);
+        var result = new JObject { ["worldKey"] = node?.ScopeKey ?? string.Empty, ["owned"] = owned,
+            ["interactionLayerMatches"] = MachineVisualLayerMatches(node), ["partCount"] = 0,
+            ["allPartsProjected"] = false, ["sameMeshLayerAndPose"] = false };
+        if (!owned || !hasMatrix || !visible || domain?.Root == null) return result;
+        using var scope = MachineWorld.UseScope(world.WorldKey);
+        foreach (RuntimeWorldAddress address in world.ChunkAddresses)
+        {
+            if (!world.Chunks.TryGetRuntimeChunkView(address, out ChunkView view)) continue;
+            foreach (MechanicalDepthVisual bridge in view.GetComponentsInChildren<MechanicalDepthVisual>(true))
+            {
+                var parts = new List<GameplayTestMachineVisualPart>();
+                if (bridge.gameObject.scene != world.Scene ||
+                    !bridge.CollectSubmittedGameplayTestMachineParts(node, parts)) continue;
+                WorldPresentationProjection projection = null;
+                foreach (JObject row in chunkRows)
+                {
+                    if (row.Value<int>("sourceId") != view.gameObject.GetInstanceID() ||
+                        row.Value<int>("parentId") != domain.Root.gameObject.GetInstanceID()) continue;
+                    int id = row.Value<int>("instanceId");
+                    foreach (WorldPresentationProjection candidate in Resources.FindObjectsOfTypeAll<WorldPresentationProjection>())
+                        if (candidate != null && candidate.gameObject.GetInstanceID() == id &&
+                            ReferenceEquals(candidate.SortingDomain, domain)) { projection = candidate; break; }
+                    if (projection != null) break;
+                }
+                bool matches = projection != null && projection.gameObject.activeInHierarchy &&
+                    Vector2.Distance(bridge.transform.position, new Vector2(node.Cell.x + .5f, node.Cell.y + .5f)) < .002f;
+                int projected = 0;
+                foreach (GameplayTestMachineVisualPart part in parts)
+                {
+                    Renderer target = projection != null ? FindProjectedRendererForSource(projection, view.transform,
+                        part.Source, domain, matrix) : null;
+                    if (target == null || !target.enabled || !target.gameObject.activeInHierarchy) { matches = false; continue; }
+                    projected++;
+                    MeshFilter sourceMesh = part.Source.GetComponent<MeshFilter>();
+                    MeshFilter targetMesh = target.GetComponent<MeshFilter>();
+                    matches &= part.Source.enabled && sourceMesh != null && targetMesh != null &&
+                        sourceMesh.sharedMesh != null && sourceMesh.sharedMesh == targetMesh.sharedMesh &&
+                        target.sortingLayerID == part.Source.sortingLayerID &&
+                        GameplayTestMachineVisualPart.MatrixMatches(part.ExpectedSourceMatrix, part.SourceMatrix) &&
+                        GameplayTestMachineVisualPart.MatrixMatches(matrix * part.SourceMatrix,
+                            target.transform.localToWorldMatrix * part.LocalMatrix);
+                }
+                result["partCount"] = parts.Count;
+                result["allPartsProjected"] = parts.Count > 0 && projected == parts.Count;
+                result["sameMeshLayerAndPose"] = matches && projected == parts.Count && parts.Count > 0;
+                return result;
+            }
+        }
+        return result;
     }
 
     private static bool TryGetItemProjection(JArray itemRows, Item source, string worldKey,
@@ -1448,6 +1539,70 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             if (hadPassenger && originalPassengerJson != null)
                 Session.State.Passengers.Add(JsonConvert.DeserializeObject<SpacePassengerState>(originalPassengerJson));
         }
+    }
+    #endregion
+}
+
+internal readonly struct GameplayTestMachineVisualPart
+{
+    #region 机器行网格只读采样
+    internal readonly Renderer Source;
+    internal readonly Matrix4x4 LocalMatrix, SourceMatrix, ExpectedSourceMatrix;
+    internal GameplayTestMachineVisualPart(Renderer source, Matrix4x4 localMatrix, Matrix4x4 expectedSourceMatrix)
+    {
+        Source = source;
+        LocalMatrix = localMatrix;
+        SourceMatrix = source.transform.localToWorldMatrix * localMatrix;
+        ExpectedSourceMatrix = expectedSourceMatrix;
+    }
+
+    internal static bool MatrixMatches(Matrix4x4 left, Matrix4x4 right)
+    {
+        for (int i = 0; i < 16; i++) if (Mathf.Abs(left[i] - right[i]) > .002f) return false;
+        return true;
+    }
+    #endregion
+}
+
+public sealed partial class MechanicalDepthVisual
+{
+    #region 船内数据机器的已提交部件采样
+    internal bool CollectSubmittedGameplayTestMachineParts(MachineEntity node, List<GameplayTestMachineVisualPart> result)
+    {
+        if (!HasSubmittedVisiblePartsForGameplayTestMachine(node)) return false;
+        bool Add(PartVisual part)
+        {
+            if (part == null || !part.Visible) return true;
+            if (part.Sprite == null || part.SubmittedRenderer == null ||
+                !part.SubmittedRenderer.TryGetGameplayTestMachinePart(entityId, part.Id, part.Sprite,
+                    out Renderer source, out Matrix4x4 localMatrix)) return false;
+            Matrix4x4 expected = Matrix4x4.TRS(transform.position + part.Offset, part.Rotation, part.Scale);
+            result.Add(new GameplayTestMachineVisualPart(source, localMatrix, expected));
+            return true;
+        }
+        foreach (PartVisual part in parts) if (!Add(part)) return false;
+        foreach (PartVisual part in facilityParts) if (!Add(part)) return false;
+        return result.Count > 0;
+    }
+    #endregion
+}
+
+internal sealed partial class ChunkDepthMeshRenderer
+{
+    #region 船内数据机器的真实行网格采样
+    internal bool TryGetGameplayTestMachinePart(int entity, int part, Sprite sprite,
+        out Renderer source, out Matrix4x4 localMatrix)
+    {
+        source = null;
+        localMatrix = Matrix4x4.identity;
+        if (IsDisposed || !entries.TryGetValue(new PartKey(MachineDomain, entity, part), out Entry entry) ||
+            entry.Visual.Sprite != sprite || entry.Group.Row.Root == null || entry.Group.Key.Texture == null) return false;
+        string name = "DepthMesh_" + entry.Group.Key.Order + "_" + entry.Group.Key.Texture.name;
+        foreach (Transform child in entry.Group.Row.Root)
+            if (child.name == name && child.TryGetComponent(out MeshRenderer candidate))
+            { source = candidate; break; }
+        localMatrix = entry.Visual.Matrix;
+        return source != null;
     }
     #endregion
 }

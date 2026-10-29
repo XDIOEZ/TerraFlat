@@ -108,7 +108,21 @@ namespace FlatWorld.Spaceflight
         }
 
         private Vector2 DisplayPresentationPoint(ShipState ship, double localX, double localY)
-            => IsSpaceView ? ProjectPosition(GetShipPresentationPose(ship).TransformPoint(localX, localY)) : DisplayPoint(ship, localX, localY);
+        {
+            if (IsSpaceView) return ProjectPosition(GetShipPresentationPose(ship).TransformPoint(localX, localY));
+            ShipGeometry.LocalToWorld(ship, localX, localY, out double x, out double y);
+            Vector2 center = new((float)ship.PositionX, (float)ship.PositionY);
+            // 整船选同一个地表镜像，不能让相邻船内点跨缝时各自跳到不同周。
+            return ProjectSurfacePresentationPosition(center) +
+                new Vector2((float)(x - ship.PositionX), (float)(y - ship.PositionY));
+        }
+
+        private static Vector2 ProjectSurfacePresentationPosition(Vector2 position)
+        {
+            if (!WorldTopologyRuntime.TryGetLocalPresentationBounds(out WorldTopologyBounds bounds)) return position;
+            position = bounds.NormalizePosition(position);
+            return WorldLocalPresentation.HasAnchor ? bounds.NearestImagePosition(WorldLocalPresentation.AnchorPosition, position) : position;
+        }
 
         private void PresentationWorldToLocal(ShipState ship, SpaceSectorPosition point, out double x, out double y)
         {

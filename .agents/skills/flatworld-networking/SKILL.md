@@ -33,7 +33,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 断线清理须核对连接对象身份：复用相同 connectionId 后，旧连接的延迟回调不得删除新连接握手、出生预约或太空输入/攻击状态。
 - 协议、存档和权威判定使用规范逻辑坐标。`NetworkWorldPlayer.AuthoritativeLogicalPosition` 是服务端玩家位置；Host 中远端 Transform 可能已是本机镜像。`WorldLocalPresentation` 在各客户端选择 owned 玩家附近的表现镜像，远端插值先保存逻辑目标。区块流送消费 `ObserverLogicalPosition`，按观察者并集加载。
 - GM 地表 TP 经 `PlayerTeleportService → NetworkWorldPlayer.Teleport` 的连接所属命令与回执；服务器同时重定位角色、乘员和权威坐标，本机等回执期间停发旧位置，确认后重置速度采样/插值并立即刷新观察窗口。普通移动保留单步限幅，不按显示名识别 GM；太空传送仍沿用原限制。
-- 本机动画只读自身移动状态，`ApplyRemoteVisualState` 拒绝 owned 角色；迁移就绪先刷新正式观察者再核对世界与代际，防止 Host 同帧重生确认被旧代际吞掉。回归并入 `networking/bots_teleport`。
+- 本机动画只读自身移动状态，`ApplyRemoteVisualState` 拒绝 owned 角色；远端最终显示坐标同时写角色 Transform 和刚体，物理步后核对本体、保存和观察者。迁移就绪先刷新正式观察者再核对世界与代际，防止 Host 同帧重生确认被旧代际吞掉。回归并入 `networking/bots_teleport`。
 - GM 地表 TP 与翻滚 Command 均携带玩家 `RealmRevision` 并在服务端处理前拒绝旧代际/迁移中请求；拒绝时回执释放客户端待确认动作，不消耗该请求序号。远端 TP 的坐标归一化、模块位置及观察者更新必须处于连接所属 `NetworkGameplayWorldScope`，Mirror 假人命令签名同步更新。
 - 建造消息校验连接与真实快捷栏材料，`BuildingPlacementService` 处理放置、扣料和回滚；缺少网络发布器时事务回滚。Host 确认回调不重复发布建造进度。
 - 放置结果显式携带 Item、Machine、TileCell 或 ShipId；平台/地板/格子墙走 `NetworkItemStateCoordinator.Terrain`，船上部件交正式船体快照，不能把无 Item 的成功结果误判为缺发布器。`SaveDataMgr` 的核心地形和支撑记录只通知脏格，事务结束后捕获最终状态，失败回滚不广播幽灵候选。

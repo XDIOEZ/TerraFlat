@@ -237,6 +237,17 @@ public static class WorldTopologyRuntime
     }
 
     private static readonly ActiveBoundsCache activeBounds = new();
+    private static readonly ActiveBoundsCache presentationBounds = new();
+
+    // 显示坐标始终读取本机地表，即使调用方正在执行船内世界逻辑。
+    public static bool TryGetLocalPresentationBounds(out WorldTopologyBounds bounds)
+    {
+        GameSaveData save = SaveDataMgr.Instance?.SaveData;
+        string world = GameplayWorldRegistry.LocalPresentationWorldKey;
+        PlanetData planet = save?.PlanetData_Dict != null &&
+            save.PlanetData_Dict.TryGetValue(world ?? string.Empty, out PlanetData current) ? current : null;
+        return presentationBounds.TryGet(planet, out bounds);
+    }
 
     #endregion
 
@@ -247,6 +258,7 @@ public static class WorldTopologyRuntime
         LocalPlayerPositionWrapped = null;
         PositionWrapped = null;
         activeBounds.Clear();
+        presentationBounds.Clear();
     }
 
     public static bool TryGetActiveBounds(out WorldTopologyBounds bounds)

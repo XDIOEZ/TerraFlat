@@ -168,6 +168,8 @@ namespace FlatWorld.GameplayMCP
                 bool screenshotCaptured = screenshot?["status"]?.Value<string>() == "captured" &&
                     File.Exists(Path.Combine(directory, "screen.png"));
                 sample["screenshotCaptured"] = screenshotCaptured;
+                sample["screenshotStatus"] = screenshot?["status"]?.Value<string>();
+                sample["screenshotError"] = screenshot?["error"]?.Value<string>();
                 sample["screenshotWidth"] = screenshotCaptured ? screenshot["width"]?.Value<int>() ?? 0 : 0;
                 sample["screenshotHeight"] = screenshotCaptured ? screenshot["height"]?.Value<int>() ?? 0 : 0;
                 sample["settingsRestored"] = ProfilerDriver.enabled == job.RecordingBefore &&

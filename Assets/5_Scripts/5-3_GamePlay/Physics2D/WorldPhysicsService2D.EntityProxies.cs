@@ -89,9 +89,9 @@ public sealed partial class WorldPhysicsService2D
         {
             if (!shell.SharedFixedBody) ConfigureProxyBody(shell.Body, snapshot, definition, stateAuthority);
             shell.Root.localScale = snapshot.transform?.scale ?? Vector3.one;
-            proxy.SetPose(new WorldPhysicsEntityPose2D(presentationPosition,
+            WorldPhysicsEntityPose2D initialPose = new(presentationPosition,
                 snapshot.transform?.rotation.eulerAngles.z ?? 0f, snapshot.PhysicsState?.Velocity ?? Vector2.zero,
-                snapshot.PhysicsState?.AngularVelocity ?? 0f));
+                snapshot.PhysicsState?.AngularVelocity ?? 0f);
             if (regions != null)
                 for (int i = 0; i < regions.Count; i++)
                 {
@@ -116,6 +116,8 @@ public sealed partial class WorldPhysicsService2D
             entityProxies.Add(entity, proxy);
             if (definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic) movingEntityProxies.Add(proxy);
             shell.Root.gameObject.SetActive(true);
+            // 池化节点激活后再提交姿态，避免激活过程恢复回收时的位置和速度。
+            proxy.SetPose(initialPose);
             return proxy;
         }
         catch { ReleaseEntityProxy(proxy); throw; }

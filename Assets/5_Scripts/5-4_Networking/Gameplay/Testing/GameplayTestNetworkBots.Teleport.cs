@@ -134,14 +134,19 @@ namespace FlatWorld.Networking.Gameplay
             result["afterFresh"] = TeleportSample(actor);
 
             Vector3 next = WorldTopologyRuntime.NormalizePosition(other + Vector3.right * .25f);
-            SendBotMotion(world, 92, actor, next, Vector2.zero);
+            bool movementSent = SendBotMotion(world, 92, actor, next, Vector2.zero);
+            string movementImmediately = TeleportSample(actor).ToString(Newtonsoft.Json.Formatting.None);
             // 真正的物理同步完成后再比较角色位置，避免把同帧 Transform 延迟误判为移动失败。
             yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, next).sqrMagnitude < .00001f &&
                 SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver moved) &&
                 WorldTopologyRuntime.ShortestDelta(moved.Position.LocalMeters.ToVector2(), next).sqrMagnitude < .00001f &&
                 WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(actor.CorePlayer.transform.position), next).sqrMagnitude < .00001f &&
                 WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(actor.CorePlayer.GetComponent<Rigidbody2D>().position), next).sqrMagnitude < .00001f,
-                "传送后的普通移动沿新落点继续");
+                "传送后的普通移动沿新落点继续", 12d, () => $"已发包={movementSent}，目标={next}，发送后={movementImmediately}，" +
+                    $"当前={TeleportSample(actor).ToString(Newtonsoft.Json.Formatting.None)}；" +
+                    DescribeBotCommandAuthority(world, 92, actor, MotionCommandName, "lastServerTeleportRequest"));
+            yield return new WaitForFixedUpdate();
+            yield return null;
             result["nextX"] = next.x;
             result["nextY"] = next.y;
             result["afterMove"] = TeleportSample(actor);

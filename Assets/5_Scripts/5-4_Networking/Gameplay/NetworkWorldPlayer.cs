@@ -945,9 +945,8 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (coreBody != null)
                 {
-                    // 远端服务端假人使用不参与物理模拟的刚体，必须同步 Transform 才能真正移动实体。
-                    if (!coreBody.simulated)
-                        corePlayer.transform.position = position;
+                    // 网络已确定最终显示位置，同时同步实体与刚体以免物理步保留旧姿态。
+                    corePlayer.transform.position = position;
                     coreBody.position = position;
                     coreBody.velocity = isServer ? Vector2.zero : remoteVelocity;
                 }

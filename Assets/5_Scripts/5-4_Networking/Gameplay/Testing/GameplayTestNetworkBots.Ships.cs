@@ -20,11 +20,17 @@ namespace FlatWorld.Networking.Gameplay
         [UnityEditor.InitializeOnLoadMethod]
         private static void RegisterShipsEditor() => RegisterShips();
 #endif
-        private static void RegisterShips() => GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_ship_requests", CaptureShipRequests);
+        private static void RegisterShips()
+        {
+            GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_ship_requests", CaptureShipRequests);
+            GameplayTestRuntimeProbe.Register("networking", "ship_streaming_boundary_prepare", PrepareShipStreamingBoundary);
+            GameplayTestRuntimeProbe.RegisterAsync("networking", "ship_streaming_boundary_sample", CaptureShipStreamingBoundary);
+        }
 
         // 假人发送真实 Mirror 消息，只采回复与权威世界；Lua 持有拒绝断言。
         private static IEnumerator CaptureShipRequests(Player local, JObject args, Action<JObject> completed)
         {
+            var streamingWindows = new JArray { CaptureLocalStreamingWindow("before", local) };
             IReadOnlyList<FixedStructureDefinition> templates = null;
             Exception error = null;
             yield return FixedStructureCatalog.LoadAsync(value => templates = value, value => error = value);
@@ -33,9 +39,11 @@ namespace FlatWorld.Networking.Gameplay
             if (template == null) throw new InvalidOperationException("服务器没有测试飞船目录。");
             using var site = new GameplayTestSpaceScenario();
             yield return site.PrepareTemplateSite(template);
+            streamingWindows.Add(CaptureLocalStreamingWindow("site-prepared", local));
             using var world = new BotWorld(local);
             yield return world.Join(94, world.Prefix + "飞船甲");
             yield return world.Join(95, world.Prefix + "飞船乙");
+            streamingWindows.Add(CaptureLocalStreamingWindow("bots-joined", local));
             NetworkWorldPlayer actor = world.Core(94), witness = world.Core(95);
             actor.TryGetSpaceObserver(out SpaceNetworkObserver observer);
             uint netId = actor.netId;
@@ -93,6 +101,7 @@ namespace FlatWorld.Networking.Gameplay
                     $"已发包={consoleTeleportSent}，控制台={console.Data.transform.position}，电力比例={console.Machine.ElectricalPowerRatio}，" +
                     $"发送时：{consoleTeleportImmediately}；当前：" +
                     DescribeBotCommandAuthority(world, 94, actor, TeleportCommandName, "lastServerTeleportRequest"));
+            streamingWindows.Add(CaptureLocalStreamingWindow("bot-at-console", local));
             actor.TryGetSpaceObserver(out observer);
             request.Token = 5; request.Refill = true; request.TemplateId = string.Empty;
             request.RealmRevision = observer.RealmRevision; request.WorldKey = observer.WorldKey;
@@ -112,10 +121,13 @@ namespace FlatWorld.Networking.Gameplay
             result["flightIgnited"] = launched != null && world.Session.GetFlight(launched.ShipId)?.Ignited == true;
             result["groundOwnershipTransferred"] = !ShipGroundBuildingStore.Collect(observer.WorldKey).Any(value => entries.Any(own => own.Guid == value.Guid));
             result["identityAfterLaunch"] = actor.netId == netId && ReferenceEquals(actor.CorePlayer, originalCore) && ReferenceEquals(actor.CorePlayer.Data, originalData);
+            streamingWindows.Add(CaptureLocalStreamingWindow("ship-launched", local));
             shipFixture.Dispose();
             world.Dispose();
             yield return null;
             result["cleanup"] = world.CleanupSample();
+            streamingWindows.Add(CaptureLocalStreamingWindow("after-cleanup", local));
+            result["streamingWindows"] = streamingWindows;
             completed(result);
 
             void AddReply(string kind, uint token)
@@ -124,6 +136,165 @@ namespace FlatWorld.Networking.Gameplay
                 samples.Add(new JObject { ["kind"] = kind, ["accepted"] = reply.Accepted, ["reason"] = reply.Reason });
             }
         }
+
+        // 比较本地玩家流送目标与云雾采用的实际交接窗口，定位测试前后的画面残留。
+        private static JObject CaptureLocalStreamingWindow(string stage, Player local)
+        {
+            Mod_ChunkLoader loader = local.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
+            Mod_Cam cameraModule = local.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+            Camera camera = cameraModule?.ControllerCamera;
+            ChunkMgr manager = ChunkMgr.ExistingInstance;
+            Rect active = default, presentation = default, targetActive = default, targetPresentation = default;
+            bool presented = loader != null && loader.TryGetLoadingWindowBounds(out active, out presentation);
+            bool target = manager != null && manager.TryGetRuntimeWindowBounds(local.transform.position,
+                out targetActive, out targetPresentation);
+            Vector2 position = local.transform.position;
+            return new JObject
+            {
+                ["stage"] = stage, ["scene"] = local.gameObject.scene.name,
+                ["worldKey"] = GameplayWorldRegistry.GetItemWorldKey(local),
+                ["executionWorldKey"] = GameplayWorldRegistry.ExecutionWorldKey,
+                ["position"] = new JObject { ["x"] = position.x, ["y"] = position.y },
+                ["anchor"] = new JObject { ["x"] = WorldLocalPresentation.AnchorPosition.x, ["y"] = WorldLocalPresentation.AnchorPosition.y },
+                ["camera"] = camera != null ? new JObject { ["x"] = camera.transform.position.x,
+                    ["y"] = camera.transform.position.y, ["size"] = camera.orthographicSize } : null,
+                ["loadDistance"] = loader != null ? new JObject { ["x"] = loader.CurrentLoadChunkDistanceXY.x,
+                    ["y"] = loader.CurrentLoadChunkDistanceXY.y } : null,
+                ["presentationDistance"] = loader != null ? new JObject { ["x"] = loader.CurrentPresentationChunkDistanceXY.x,
+                    ["y"] = loader.CurrentPresentationChunkDistanceXY.y } : null,
+                ["hasPresentedBounds"] = presented, ["active"] = presented ? WindowRect(active) : null,
+                ["presentation"] = presented ? WindowRect(presentation) : null,
+                ["hasTargetBounds"] = target, ["targetActive"] = target ? WindowRect(targetActive) : null,
+                ["targetPresentation"] = target ? WindowRect(targetPresentation) : null,
+                ["playerInActive"] = presented && active.Contains(position),
+                ["cameraInActive"] = presented && camera != null && active.Contains(camera.transform.position)
+            };
+        }
+
+        private static JObject WindowRect(Rect value) => new()
+        { ["xMin"] = value.xMin, ["yMin"] = value.yMin, ["xMax"] = value.xMax, ["yMax"] = value.yMax };
+
+        private static ShipStreamingBoundaryFixture streamingBoundary;
+
+        // 使用正式传送与 Lua 自带移动输入复现玩家跨区块后的窗口交接。
+        private static JObject PrepareShipStreamingBoundary(Player player, JObject args)
+        {
+            if (streamingBoundary != null) throw new InvalidOperationException("区块边界现场尚未释放。");
+            var fixture = new ShipStreamingBoundaryFixture(player);
+            streamingBoundary = fixture;
+            GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+            fixture.Prepare();
+            return new JObject { ["prepared"] = true, ["boundaryX"] = ShipStreamingBoundaryFixture.BoundaryX };
+        }
+
+        private static IEnumerator CaptureShipStreamingBoundary(Player player, JObject args, Action<JObject> completed)
+        {
+            ShipStreamingBoundaryFixture fixture = streamingBoundary ??
+                throw new InvalidOperationException("区块边界现场未准备。");
+            string stage = args.Value<string>("stage");
+            if (stage != "before" && stage != "after") throw new ArgumentException("区块边界阶段无效。");
+            yield return new WaitForFixedUpdate();
+            yield return Wait(() => fixture.TargetAndPresentedWindowsMatchPlayer(), "本地玩家跨块后真实流送窗口交接", 8d,
+                () => fixture.Sample(stage).ToString(Newtonsoft.Json.Formatting.None));
+            JObject result = fixture.Sample(stage);
+            if (stage == "after")
+            {
+                fixture.Dispose();
+                result["restored"] = fixture.Restored;
+            }
+            completed(result);
+        }
+
+        private sealed class ShipStreamingBoundaryFixture : IDisposable
+        {
+            internal const float BoundaryX = 176f;
+            private readonly Player player;
+            private readonly Mod_PlayerTraits traits;
+            private readonly Mod_Mover mover;
+            private readonly Vector3 originalPosition;
+            private readonly IDisposable windSuppression;
+            private bool disposed;
+            internal bool Restored { get; private set; }
+
+            internal ShipStreamingBoundaryFixture(Player player)
+            {
+                this.player = player;
+                traits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId)
+                    ?? throw new InvalidOperationException("区块边界现场缺少正式传送入口。");
+                mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)
+                    ?? throw new InvalidOperationException("区块边界现场缺少正式移动模块。");
+                originalPosition = player.transform.position;
+                windSuppression = mover.SuppressWindMotion();
+            }
+
+            internal void Prepare()
+            {
+                ChunkMgr manager = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("区块管理器未就绪。");
+                Vector2 left = new(BoundaryX - .5f, 48.5f), right = new(BoundaryX + .5f, 48.5f);
+                if (manager.ResolveRuntimeChunkOrigin(left) == manager.ResolveRuntimeChunkOrigin(right) ||
+                    !traits.TryTeleportToWorldPosition(right))
+                    throw new InvalidOperationException("无法通过正式地表传送准备区块边界。");
+            }
+
+            private bool TryWindowBounds(out Rect expected, out Rect target, out Rect presented)
+            {
+                expected = target = presented = default;
+                ChunkMgr manager = ChunkMgr.ExistingInstance;
+                Mod_ChunkLoader loader = player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
+                if (manager?.ActiveGenerationProfile == null || loader == null || mover.rb == null ||
+                    !manager.TryGetRuntimeWindowBounds(mover.rb.position, out target, out _) ||
+                    !loader.TryGetLoadingWindowBounds(out presented, out _)) return false;
+                var profile = manager.ActiveGenerationProfile;
+                Vector2Int origin = manager.ResolveRuntimeChunkOrigin(mover.rb.position);
+                expected = ChunkMgr.ProjectRuntimeWindowBounds(ChunkMgr.CalculateRuntimeWindowBounds(origin,
+                    new Vector2Int(profile.Width, profile.Height), loader.CurrentLoadChunkDistanceXY), mover.rb.position);
+                return true;
+            }
+
+            private static bool SameRect(Rect left, Rect right) =>
+                Vector2.Distance(left.min, right.min) < .01f && Vector2.Distance(left.max, right.max) < .01f;
+
+            internal bool TargetAndPresentedWindowsMatchPlayer() =>
+                TryWindowBounds(out Rect expected, out Rect target, out Rect presented) &&
+                SameRect(expected, target) && SameRect(target, presented);
+
+            internal JObject Sample(string stage)
+            {
+                bool hasBounds = TryWindowBounds(out Rect expected, out Rect target, out Rect presented);
+                Vector2 position = mover.rb.position;
+                return new JObject
+                {
+                    ["stage"] = stage, ["boundaryX"] = BoundaryX,
+                    ["position"] = new JObject { ["x"] = position.x, ["y"] = position.y },
+                    ["crossed"] = stage == "before" ? position.x < BoundaryX : position.x > BoundaryX,
+                    ["targetMatchesPlayerChunk"] = hasBounds && SameRect(expected, target),
+                    ["presentedMatchesTarget"] = hasBounds && SameRect(target, presented),
+                    ["playerInActive"] = hasBounds && presented.Contains(position),
+                    ["expected"] = hasBounds ? WindowRect(expected) : null,
+                    ["target"] = hasBounds ? WindowRect(target) : null,
+                    ["presented"] = hasBounds ? WindowRect(presented) : null,
+                    ["window"] = CaptureLocalStreamingWindow(stage, player)
+                };
+            }
+
+            public void Dispose()
+            {
+                if (disposed) return;
+                disposed = true;
+                try
+                {
+                    Restored = player != null && traits != null && traits.TryTeleportToWorldPosition(originalPosition) &&
+                        Vector2.Distance(player.transform.position, originalPosition) < .01f;
+                    if (!Restored) throw new InvalidOperationException("区块边界现场未能恢复原位置。");
+                }
+                finally
+                {
+                    windSuppression.Dispose();
+                    if (ReferenceEquals(streamingBoundary, this)) streamingBoundary = null;
+                }
+            }
+        }
+
         private sealed class NetworkShipFixture : IDisposable
         {
             private readonly string world, template;

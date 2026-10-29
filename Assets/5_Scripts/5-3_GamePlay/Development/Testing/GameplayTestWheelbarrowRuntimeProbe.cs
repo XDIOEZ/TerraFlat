@@ -29,6 +29,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_setup", Setup);
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_prepare", Prepare);
         GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_sample", Sample);
+        GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_carrier_occupancy_lifecycle", CarrierOccupancyLifecycle);
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_open_cargo", OpenCargo);
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_open_player_bag", OpenPlayerBag);
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_roundtrip", Roundtrip);
@@ -93,8 +94,15 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         };
         PlayerTeleportService.ApplySurfacePosition(player, WorldTopologyRuntime.NormalizePosition(fixture.Site + offset));
         if (side == "obstacle") fixture.CreateObstacle();
+        if (side == "building_obstacle")
+        {
+            PlayerTeleportService.ApplySurfacePosition(player,
+                WorldTopologyRuntime.NormalizePosition(fixture.Site + new Vector2(1.5f, -1.5f)));
+            fixture.CreateBuildingObstacle();
+            PlayerTeleportService.ApplySurfacePosition(player, WorldTopologyRuntime.NormalizePosition(fixture.Site + offset));
+        }
         Physics2D.SyncTransforms();
-        fixture.Recorder.Begin(fixture.Carrier, fixture.Driver, fixture.Mover, fixture.Obstacle);
+        fixture.Recorder.Begin(fixture.Carrier, fixture.Driver, fixture.Mover, fixture.Obstacle, fixture.BuildingObstacle);
         return new JObject { ["ready"] = fixture.Driver.IsAvailable && fixture.Carrier.Body.simulated,
             ["rider"] = fixture.Carrier.Rider != null, ["carrierSource"] = fixture.Mover.CarrierSource != null };
     }
@@ -104,6 +112,25 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         Fixture fixture = Require(player);
         for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
         completed(fixture.Recorder.Capture());
+    }
+
+    private static IEnumerator CarrierOccupancyLifecycle(Player player, JObject args, Action<JObject> completed)
+    {
+        Fixture fixture = Require(player);
+        Mod_Building building = fixture.Car.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
+        Vector2Int cell = WorldTopologyRuntime.NormalizeCell(
+            Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(fixture.Carrier.Body.position)));
+        bool occupiedBefore = BuildingOccupancyRegistry.IsOccupied(cell);
+        fixture.Carrier.Unload();
+        bool unloaded = !fixture.Carrier.IsRuntimeLoaded;
+        bool occupiedWhileUnloaded = BuildingOccupancyRegistry.IsOccupied(cell);
+        bool occupiedByOther = BuildingOccupancyRegistry.IsOccupied(cell, building);
+        fixture.Carrier.Load();
+        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+        completed(new JObject { ["occupiedBefore"] = occupiedBefore, ["unloaded"] = unloaded,
+            ["occupiedWhileUnloaded"] = occupiedWhileUnloaded, ["occupiedByOther"] = occupiedByOther,
+            ["reloaded"] = fixture.Carrier.IsRuntimeLoaded, ["occupiedAfterReload"] = BuildingOccupancyRegistry.IsOccupied(cell),
+            ["traversableAfterReload"] = fixture.Carrier.CanTraversePosition(fixture.Carrier.Body.position) });
     }
 
     private static JObject CleanupCheck(Player player, JObject args)
@@ -260,6 +287,8 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         public Mod_Carrier Carrier { get; private set; }
         public GameplayTestWheelbarrowMotionRecorder Recorder { get; private set; }
         public BoxCollider2D Obstacle { get; private set; }
+        private BuildingPlacementResult buildingObstaclePlacement;
+        public Item BuildingObstacle => buildingObstaclePlacement?.Item;
         public bool Disposed { get; private set; }
         public bool Removed { get; private set; }
         public bool PlayerRestored { get; private set; }
@@ -346,10 +375,31 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             Obstacle.size = new Vector2(3f, .2f);
         }
 
+        public void CreateBuildingObstacle()
+        {
+            ItemData source = GameRes.ExistingInstance.CreateItemData("Tent_Summoner");
+            source.Guid = ItemMgr.Instance.GenerateGuid();
+            var slot = new ItemSlot(0) { itemData = source };
+            var inventory = new Inventory_Data(new List<ItemSlot> { slot }, "独轮车障碍测试材料");
+            Vector2 position = WorldTopologyRuntime.NormalizePosition(Site + Vector2.down * 2f);
+            var request = new BuildingPlacementRequest { SourceData = source, SourceInventory = inventory,
+                SourceSlot = slot, Actor = Player, Position = position,
+                AuthorityPosition = WorldLocalPresentation.ToLogical(Player.transform.position), MaximumDistance = 3f };
+            if (!BuildingPlacementService.TryPlace(request, out BuildingPlacementResult placed, out string reason))
+                throw new InvalidOperationException("独轮车障碍帐篷正式放置失败：" + reason);
+            buildingObstaclePlacement = placed;
+            if (BuildingObstacle == null) throw new InvalidOperationException("独轮车障碍帐篷没有生成实体建筑。");
+        }
+
         public void RemoveObstacle()
         {
             if (Obstacle != null) UnityEngine.Object.DestroyImmediate(Obstacle.gameObject);
             Obstacle = null;
+            if (buildingObstaclePlacement != null)
+            {
+                if (!buildingObstaclePlacement.Rollback()) throw new InvalidOperationException("独轮车障碍建筑清理失败。");
+                buildingObstaclePlacement = null;
+            }
         }
 
         public void Dispose()
@@ -399,16 +449,18 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
     private Mod_Wheelbarrow driver;
     private Mod_Mover mover;
     private BoxCollider2D obstacle;
+    private Item buildingObstacle;
     private Vector2 start;
     private int frames;
     private float peakSpeed, ratio, peakDrivenSpeed;
-    private bool unlockedWhilePushing;
+    private bool unlockedWhilePushing, buildingBlockedWhilePushing;
     public bool EverPushed { get; private set; }
 
-    public void Begin(Mod_Carrier source, Mod_Wheelbarrow motion, Mod_Mover player, BoxCollider2D wall)
+    public void Begin(Mod_Carrier source, Mod_Wheelbarrow motion, Mod_Mover player, BoxCollider2D wall, Item building)
     {
-        carrier = source; driver = motion; mover = player; obstacle = wall; start = source.Body.position;
-        frames = 0; peakSpeed = ratio = peakDrivenSpeed = 0f; EverPushed = unlockedWhilePushing = false;
+        carrier = source; driver = motion; mover = player; obstacle = wall; buildingObstacle = building; start = source.Body.position;
+        frames = 0; peakSpeed = ratio = peakDrivenSpeed = 0f;
+        EverPushed = unlockedWhilePushing = buildingBlockedWhilePushing = false;
     }
 
     private void FixedUpdate()
@@ -424,17 +476,37 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
         peakDrivenSpeed = Mathf.Max(peakDrivenSpeed, carrier.DrivenVelocity.magnitude);
         unlockedWhilePushing |= (carrier.Body.constraints &
             (RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezePositionY)) == 0;
+        if (buildingObstacle != null)
+            buildingBlockedWhilePushing |= !carrier.CanTraversePosition(carrier.Body.position + carrier.PushedVelocity * Time.fixedDeltaTime);
     }
 
-    public JObject Capture() => new()
+    public JObject Capture()
     {
-        ["frames"] = frames, ["everPushed"] = EverPushed,
-        ["distance"] = WorldTopologyRuntime.Distance(start, carrier.Body.position), ["peakSpeed"] = peakSpeed,
-        ["ratio"] = ratio, ["forwardX"] = driver.ForwardDirection.x, ["forwardY"] = driver.ForwardDirection.y,
-        ["peakDrivenSpeed"] = peakDrivenSpeed, ["unlockedWhilePushing"] = unlockedWhilePushing,
-        ["wallBlocked"] = obstacle != null && carrier.Body.GetComponent<BoxCollider2D>().bounds.min.y >= obstacle.bounds.max.y - .02f,
-        ["stopped"] = carrier.Body.velocity.sqrMagnitude < .0001f, ["pushAfterRelease"] = carrier.PushSource != null,
-        ["rider"] = carrier.Rider != null, ["carrierSource"] = mover.CarrierSource != null
-    };
+        Vector2Int cell = WorldTopologyRuntime.NormalizeCell(Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(carrier.Body.position)));
+        Vector2Int startCell = WorldTopologyRuntime.NormalizeCell(Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(start)));
+        Mod_Building building = carrier.item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
+        BoxCollider2D buildingCollider = buildingObstacle != null ? buildingObstacle.GetComponent<BoxCollider2D>() : null;
+        Vector2Int buildingCell = buildingObstacle != null
+            ? WorldTopologyRuntime.NormalizeCell(Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(buildingObstacle.transform.position))) : default;
+        return new JObject
+        {
+            ["frames"] = frames, ["everPushed"] = EverPushed, ["crossedCell"] = cell != startCell,
+            ["distance"] = WorldTopologyRuntime.Distance(start, carrier.Body.position), ["peakSpeed"] = peakSpeed,
+            ["ratio"] = ratio, ["forwardX"] = driver.ForwardDirection.x, ["forwardY"] = driver.ForwardDirection.y,
+            ["peakDrivenSpeed"] = peakDrivenSpeed, ["unlockedWhilePushing"] = unlockedWhilePushing,
+            ["positionTraversable"] = carrier.CanTraversePosition(carrier.Body.position),
+            ["cartCellOccupied"] = BuildingOccupancyRegistry.IsOccupied(cell),
+            ["cartCellOccupiedIgnoringSelf"] = BuildingOccupancyRegistry.IsOccupied(cell, building),
+            ["wallBlocked"] = obstacle != null && carrier.Body.GetComponent<BoxCollider2D>().bounds.min.y >= obstacle.bounds.max.y - .02f,
+            ["buildingPlaced"] = buildingObstacle != null && buildingObstacle.itemData.IDName == "Tent",
+            ["buildingOccupied"] = buildingObstacle != null && BuildingOccupancyRegistry.IsOccupied(buildingCell),
+            ["buildingBlocksTraversal"] = buildingObstacle != null && !BuildingOccupancyRegistry.GetEffectiveWalkable(buildingCell, true),
+            ["buildingBlockedWhilePushing"] = buildingBlockedWhilePushing,
+            ["buildingNotCrossed"] = buildingCollider != null &&
+                carrier.Body.GetComponent<BoxCollider2D>().bounds.min.y >= buildingCollider.bounds.max.y - .02f,
+            ["stopped"] = carrier.Body.velocity.sqrMagnitude < .0001f, ["pushAfterRelease"] = carrier.PushSource != null,
+            ["rider"] = carrier.Rider != null, ["carrierSource"] = mover.CarrierSource != null
+        };
+    }
     #endregion
 }
