@@ -73,30 +73,10 @@ namespace FlatWorld.NaturalEntities
         public static event Action<Bounds> PhysicsBodyChanged;
         public static event Action<Bounds, PhysicsBodyChangeReason, int, string> PhysicsBodyChangedWithReason;
         public static event Action PhysicsBodiesReset;
-        // 原生静态阻挡的投影通知，与公开玩法通知分离，使用当前 World 的运行时身份。
-        internal static event Action<BlockingBodySnapshot, bool, PhysicsBodyChangeReason> BlockingBodyChanged;
-
-        internal readonly struct BlockingBodySnapshot
-        {
-            public readonly int RuntimeId, Guid;
-            public readonly string DefinitionId;
-            public readonly string WorldKey;
-            public readonly Bounds Bounds;
-            public readonly object Entity;
-            public BlockingBodySnapshot(int runtimeId, int guid, string definitionId, Bounds bounds, string worldKey = null,
-                object entity = null)
-            { RuntimeId = runtimeId; Guid = guid; DefinitionId = definitionId; Bounds = bounds; WorldKey = worldKey; Entity = entity; }
-        }
-
-        private static BlockingBodySnapshot CaptureBlockingBody(Record record)
-            => new(record.Handle.Id, record.Snapshot.Guid, record.Profile.Definition.Id, record.BodyBounds, record.WorldKey, record);
-
         private static void PublishPhysicsBodyChanged(Record record, PhysicsBodyChangeReason reason, bool exists)
         {
             PhysicsBodyChanged?.Invoke(record.BodyBounds);
             PhysicsBodyChangedWithReason?.Invoke(record.BodyBounds, reason, record.Snapshot.Guid, record.Profile.Definition.Id);
-            if (UsesChunkBlockingProjection(record))
-                BlockingBodyChanged?.Invoke(CaptureBlockingBody(record), exists, reason);
         }
 
         private readonly struct ResourceQuery : IDisposable
@@ -308,13 +288,11 @@ namespace FlatWorld.NaturalEntities
             UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
             RegisterSpatialCells(record);
             if (previousBlocking == record.BlocksMovement && previousBody.Equals(record.BodyBounds)) return;
-            if (previousBlocking && UsesChunkBlockingProjection(record))
+            if (previousBlocking)
             {
                 PhysicsBodyChanged?.Invoke(previousBody);
                 PhysicsBodyChangedWithReason?.Invoke(previousBody, PhysicsBodyChangeReason.VisualRevision,
                     record.Snapshot.Guid, record.Profile.Definition.Id);
-                BlockingBodyChanged?.Invoke(new BlockingBodySnapshot(record.Handle.Id, record.Snapshot.Guid,
-                    record.Profile.Definition.Id, previousBody, record.WorldKey, record), false, PhysicsBodyChangeReason.VisualRevision);
             }
             if (record.BlocksMovement) PublishPhysicsBodyChanged(record, PhysicsBodyChangeReason.VisualRevision, true);
         }
@@ -365,19 +343,6 @@ namespace FlatWorld.NaturalEntities
             foreach (Record record in query)
                 if (record.BlocksMovement && record.IsValid)
                     output.Add(record.BodyBounds);
-        }
-
-        /// <summary>仅首次绑定枚举阻挡实体，后续碰撞更新直接消费单实体通知。</summary>
-        internal static void CollectBlockingBodies(BoundsInt area, List<BlockingBodySnapshot> output)
-        {
-            output.Clear();
-            if (simulation == null) return;
-            Vector2 center = new(area.xMin + area.size.x * 0.5f, area.yMin + area.size.y * 0.5f);
-            Vector2 extents = new(area.size.x * 0.5f, area.size.y * 0.5f);
-            using ResourceQuery query = QueryBounds(center, extents);
-            foreach (Record record in query)
-                if (record.BlocksMovement && record.IsValid && UsesChunkBlockingProjection(record))
-                    output.Add(CaptureBlockingBody(record));
         }
 
         private static ResourceQuery QueryBounds(Vector2 center, Vector2 extents)

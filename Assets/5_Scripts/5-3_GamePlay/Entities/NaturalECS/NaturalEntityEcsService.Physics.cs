@@ -28,7 +28,6 @@ namespace FlatWorld.NaturalEntities
         private sealed partial class Record : IWorldPhysicsEntityRegionTriggerReceiver2D
         {
             public WorldPhysicsEntityProxy2D PhysicsProxy;
-            public bool ChunkBlockingProjection;
             public WorldPhysicsProxyMode2D? RetainedPhysicsModeUntilNextSpawn;
             public Vector3 PhysicsScale;
             public bool HasGeneratedNaturalSource;
@@ -77,19 +76,7 @@ namespace FlatWorld.NaturalEntities
                     LinearDamping = configuration.LinearDamping, AngularDamping = configuration.AngularDamping,
                     Regions = configuration.Regions
                 };
-            NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
-            var regions = new List<WorldPhysicsEntityRegion2D>(record.Profile.PhysicsRegions);
-            record.ChunkBlockingProjection = configuration.Mode == WorldPhysicsProxyMode2D.WorldFixed &&
-                !configuration.HasRegions && Mathf.Abs(Mathf.DeltaAngle(0f, body.Rotation)) < .001f &&
-                (record.Profile.Definition.Visual?.Collider?.Type is null or nameof(BoxCollider2D));
-            if (!record.ChunkBlockingProjection)
-                for (int i = 0; i < regions.Count; i++)
-                {
-                    WorldPhysicsEntityRegion2D region = regions[i];
-                    regions[i] = new WorldPhysicsEntityRegion2D(region.Id, region.Purpose, region.Collider,
-                        region.ReceiverModule, region.LocalPosition, region.LocalRotation, region.LocalScale,
-                        chunkBlockingProjection: false);
-                }
+            var regions = record.Profile.PhysicsRegions;
             WriteHotState(record, record.Snapshot);
             record.PhysicsProxy = GameplayWorldRegistry.CurrentPhysics.AllocateEntityProxy(record, record.Snapshot,
                 configuration, regions, pose => CommitNaturalEntityPhysicsPose(record.Handle, pose), record,
@@ -101,7 +88,6 @@ namespace FlatWorld.NaturalEntities
         {
             record.PhysicsProxy?.Dispose();
             record.PhysicsProxy = null;
-            record.ChunkBlockingProjection = false;
         }
 
         private static void CommitNaturalEntityPhysicsPose(NaturalEntityHandle handle, WorldPhysicsEntityPose2D pose,
@@ -134,9 +120,6 @@ namespace FlatWorld.NaturalEntities
             MarkPresentationDirty(record);
             PhysicsPoseCommitted?.Invoke(handle, previous, position, pose);
         }
-
-        private static bool UsesChunkBlockingProjection(Record record)
-            => record.ChunkBlockingProjection;
 
         internal static ItemData CloneNaturalEntitySnapshotPreservingMotion(ItemData source)
             => source == null ? null : ItemInstanceDataFactory.CloneRuntime(source);
@@ -336,7 +319,7 @@ namespace FlatWorld.NaturalEntities
                     record.HasConfiguredInteractionBounds = true;
                 }
             }
-            record.BlocksMovement = hasBody || record.ChunkBlockingProjection && record.Profile.SpatialGeometry.BlocksMovement;
+            record.BlocksMovement = hasBody;
             record.HitColliderEnabled = hasDamage;
         }
 
@@ -465,20 +448,19 @@ namespace FlatWorld.NaturalEntities
                         foreach (RuntimeItemModuleDefinition module in definition.ModuleDefinitions)
                             if (module.StableName == region.Module)
                             { parameters = string.IsNullOrEmpty(module.ParametersJson) ? null : JObject.Parse(module.ParametersJson); break; }
-                    AddRegion(result, region.Id, region.Purposes, region.Collider, region.Module, parameters,
-                        chunkBlockingProjection: false);
+                    AddRegion(result, region.Id, region.Purposes, region.Collider, region.Module, parameters);
                 }
                 return result;
             }
             ItemColliderDefinitionDto root = definition.Visual?.Collider;
             if (root?.Enabled != false && root?.IsTrigger == false)
-                AddRegion(result, "body", WorldPhysicsPurpose2D.Blocking, root, null, null, true);
+                AddRegion(result, "body", WorldPhysicsPurpose2D.Blocking, root, null, null);
             if (profile.HealthModuleName != null)
             {
                 ItemColliderDefinitionDto hit = profile.HealthParameters?["$collider2D"]?.ToObject<ItemColliderDefinitionDto>() ?? root;
                 if (hit?.Enabled != false)
                     AddRegion(result, "damage", WorldPhysicsPurpose2D.Damage, hit ?? new ItemColliderDefinitionDto
-                        { Type = nameof(BoxCollider2D), Size = Vector2.one }, profile.HealthModuleName, profile.HealthParameters, false);
+                        { Type = nameof(BoxCollider2D), Size = Vector2.one }, profile.HealthModuleName, profile.HealthParameters);
             }
             // 点选区域复用现有可见范围，不给物种增加额外配置真源。
             Bounds visual = definition.Sprite != null ? definition.Sprite.bounds : new Bounds(Vector3.zero, Vector3.one);
@@ -488,13 +470,12 @@ namespace FlatWorld.NaturalEntities
             result.Add(new WorldPhysicsEntityRegion2D("interaction", WorldPhysicsPurpose2D.Interaction, interaction,
                 localPosition: definition.Visual?.RendererLocalPosition ?? Vector3.zero,
                 localRotation: Quaternion.Euler(definition.Visual?.RendererLocalEulerAngles ?? Vector3.zero),
-                localScale: definition.Visual?.RendererLocalScale ?? Vector3.one, chunkBlockingProjection: false));
+                localScale: definition.Visual?.RendererLocalScale ?? Vector3.one));
             return result;
         }
 
         private static void AddRegion(List<WorldPhysicsEntityRegion2D> result, string id,
-            WorldPhysicsPurpose2D purposes, ItemColliderDefinitionDto collider, string module, JObject parameters,
-            bool chunkBlockingProjection)
+            WorldPhysicsPurpose2D purposes, ItemColliderDefinitionDto collider, string module, JObject parameters)
         {
             if (collider == null || collider.Enabled == false) return;
             ItemColliderDefinitionDto shape = FastCloner.FastCloner.DeepClone(collider);
@@ -504,7 +485,7 @@ namespace FlatWorld.NaturalEntities
             result.Add(new WorldPhysicsEntityRegion2D(id, purposes, shape, module,
                 transform?["localPosition"]?.ToObject<Vector3>() ?? Vector3.zero,
                 Quaternion.Euler(transform?["localEulerAngles"]?.ToObject<Vector3>() ?? Vector3.zero),
-                transform?["localScale"]?.ToObject<Vector3>() ?? Vector3.one, chunkBlockingProjection));
+                transform?["localScale"]?.ToObject<Vector3>() ?? Vector3.one));
         }
 
         #endregion

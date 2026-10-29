@@ -103,12 +103,9 @@ internal sealed class IndependentNaturalEntityRegistry : IDisposable
     // 迁移的目标表现和原生阻挡必须绑定同一世界及区块。
     private bool HasBoundChunkPhysicsBackend(PresentationBinding binding)
     {
-        if (!GameplayWorldRegistry.TryGetPhysics(worldKey, out WorldPhysicsService2D physics) ||
-            !physics.TryGetChunkPhysics(binding.Chunk.Address, out var collision)) return false;
-        Collider2D source = collision.SourceCollider;
-        return ReferenceEquals(collision.BoundChunk, binding.Chunk) &&
-            source != null && source.enabled && source.gameObject.activeInHierarchy &&
-            WorldPhysicsService2D.TryResolveCollider(source, out var ownership) && ownership.World == physics;
+        return binding.Chunk != null && GameplayWorldRegistry.TryGetPhysics(worldKey, out var physics) &&
+            physics.IsValid && GameplayWorldRegistry.TryGetTerrainPhysicsSource(worldKey, out var terrain) &&
+            terrain.IsBound(binding.Chunk);
     }
 
     internal bool AcquireGeneratedEntity(NaturalItemPlacement placement, RuntimeItemDefinition definition,
@@ -395,9 +392,9 @@ internal sealed class IndependentNaturalEntityRegistry : IDisposable
         string sourceWorldKey, int sourceX, int sourceY, int guid, Vector2 sourcePosition)
     {
         // 两边独立冲刷合批阻挡，单侧异常不能阻断另一侧及网络通知。
-        try { using (EnterWorld()) WorldChunkPhysicsProjection2D.FlushDirtyDataObstacles(worldKey); }
+        try { using (EnterWorld()) if (GameplayWorldRegistry.TryGetPhysics(worldKey, out var physics)) physics.FlushPendingGeometry(); }
         catch (Exception exception) { Debug.LogException(exception); }
-        try { using (target.EnterWorld()) WorldChunkPhysicsProjection2D.FlushDirtyDataObstacles(target.worldKey); }
+        try { using (target.EnterWorld()) if (GameplayWorldRegistry.TryGetPhysics(target.worldKey, out var physics)) physics.FlushPendingGeometry(); }
         catch (Exception exception) { Debug.LogException(exception); }
         try { Physics2D.SyncTransforms(); }
         catch (Exception exception) { Debug.LogException(exception); }

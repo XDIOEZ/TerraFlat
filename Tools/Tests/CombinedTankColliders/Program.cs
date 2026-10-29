@@ -14,9 +14,9 @@ internal static class CombinedTankColliderGeometryRegression
         if (!condition) throw new InvalidOperationException(message);
     }
 
-    private static ChunkMergedObstacleRectangles BuildUnitGrid(bool[,] occupied)
+    private static WorldPhysicsRectangleMerger2D BuildUnitGrid(bool[,] occupied)
     {
-        var merged = new ChunkMergedObstacleRectangles();
+        var merged = new WorldPhysicsRectangleMerger2D();
         for (int y = 0; y < occupied.GetLength(1); y++)
         for (int x = 0; x < occupied.GetLength(0); x++)
             if (occupied[x, y]) merged.SetSourceRectangle(y * occupied.GetLength(0) + x + 1,
@@ -26,7 +26,7 @@ internal static class CombinedTankColliderGeometryRegression
     }
 
     // 每个格中心和外缘采样直接对照输入占格，防止合并填洞或扩大范围。
-    private static void VerifyOriginalGridCoverage(ChunkMergedObstacleRectangles merged, bool[,] occupied)
+    private static void VerifyOriginalGridCoverage(WorldPhysicsRectangleMerger2D merged, bool[,] occupied)
     {
         Require(merged.Rectangles.Count <= merged.SourceCount, "合并反而增加碰撞盒数量。");
         int width = occupied.GetLength(0), height = occupied.GetLength(1);
@@ -85,13 +85,13 @@ internal static class CombinedTankColliderGeometryRegression
         VerifyOriginalGridCoverage(leftChunk, screenshotLeft);
         VerifyOriginalGridCoverage(rightChunk, screenshotRight);
 
-        var spaced = new ChunkMergedObstacleRectangles();
+        var spaced = new WorldPhysicsRectangleMerger2D();
         spaced.SetSourceRectangle(1, new Vector2(.45f, .5f), new Vector2(.9f, 1));
         spaced.SetSourceRectangle(2, new Vector2(1.45f, .5f), new Vector2(.9f, 1));
         spaced.RebuildMergedRectangles();
         Require(spaced.Rectangles.Count == 2, "合并跨过真实间隙。");
         foreach (var box in spaced.Rectangles) Require(!box.Bounds.Contains(new Vector2(.95f, .5f)), "间隙被填成实心。");
-        var tinyGap = new ChunkMergedObstacleRectangles();
+        var tinyGap = new WorldPhysicsRectangleMerger2D();
         float gap = 1f / 262144f;
         tinyGap.SetSourceRectangle(1, new Vector2(.5f, .5f), Vector2.one);
         tinyGap.SetSourceRectangle(2, new Vector2(1.5f + gap, .5f), Vector2.one);
@@ -99,13 +99,13 @@ internal static class CombinedTankColliderGeometryRegression
         Require(tinyGap.Rectangles.Count == 2, "极小正间隙被容差吞并。");
         foreach (var box in tinyGap.Rectangles)
             Require(!box.Bounds.Contains(new Vector2(1 + gap * .5f, .5f)), "极小正间隙被填成实心。");
-        var unequalHeights = new ChunkMergedObstacleRectangles();
+        var unequalHeights = new WorldPhysicsRectangleMerger2D();
         unequalHeights.SetSourceRectangle(1, new Vector2(.5f, 1), new Vector2(1, 2));
         unequalHeights.SetSourceRectangle(2, new Vector2(1.5f, .5f), Vector2.one);
         unequalHeights.RebuildMergedRectangles();
         Require(unequalHeights.Rectangles.Count == 2, "不等高相邻矩形被扩大为整块。");
 
-        var split = new ChunkMergedObstacleRectangles();
+        var split = new WorldPhysicsRectangleMerger2D();
         for (int i = 0; i < 3; i++) split.SetSourceRectangle(i + 1, new Vector2(i + .5f, .5f), Vector2.one);
         Require(split.RebuildMergedRectangles() && split.Rectangles.Count == 1, "初始三格没合并。");
         Require(split.RemoveSourceRectangle(2) && split.RebuildMergedRectangles() && split.Rectangles.Count == 2,
@@ -146,7 +146,7 @@ internal static class CombinedTankColliderGeometryRegression
             boundary = "正式纯托管合并器；未运行Unity原生碰撞、镜像或Lua" }));
     }
 
-    private static bool VerifyUnchangedGridDoesNotRebuild(ChunkMergedObstacleRectangles merged, int width, int height)
+    private static bool VerifyUnchangedGridDoesNotRebuild(WorldPhysicsRectangleMerger2D merged, int width, int height)
     {
         bool stable = true;
         for (int y = 0; y < height; y++) for (int x = 0; x < width; x++)

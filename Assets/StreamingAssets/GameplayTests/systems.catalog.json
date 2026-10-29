@@ -1108,6 +1108,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Cam.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldPhysicsProxyRuntimeProbe*.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldPhysics*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.FixedPhysicsGeometry.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MapGenerationPlan.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GenerationProfileCache.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/WorldGenerationRuntimeHooks.cs"

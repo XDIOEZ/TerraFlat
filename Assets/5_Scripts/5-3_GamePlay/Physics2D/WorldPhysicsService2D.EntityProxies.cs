@@ -15,6 +15,7 @@ public sealed partial class WorldPhysicsService2D
         public Transform Root;
         public readonly List<Collider2D> AllColliders = new();
         public readonly List<Collider2D> ActiveColliders = new();
+        public readonly List<Collider2D> ImageColliders = new();
         public readonly List<BoxCollider2D> FixedProjectionColliders = new();
         public readonly List<Collider2D> DisabledSourceColliders = new();
         public bool OwnsRoot;
@@ -25,9 +26,9 @@ public sealed partial class WorldPhysicsService2D
     private readonly HashSet<WorldPhysicsEntityProxy2D> movingEntityProxies = new();
     private readonly Stack<EntityProxyShell> entityProxyPool = new();
     private readonly Stack<EntityProxyShell> fixedEntityProxyPool = new();
-    private readonly Dictionary<Vector2Int, Rigidbody2D> fixedChunkBodies = new();
-    private readonly Dictionary<Rigidbody2D, int> fixedChunkBodyReferences = new();
-    private readonly Dictionary<Rigidbody2D, Vector2Int> fixedChunkBodyAddresses = new();
+    private readonly Dictionary<Vector2Int, Rigidbody2D> fixedBatchBodies = new();
+    private readonly Dictionary<Rigidbody2D, int> fixedBatchBodyReferences = new();
+    private readonly Dictionary<Rigidbody2D, Vector2Int> fixedBatchBodyAddresses = new();
 
     public static ItemPhysicsDefinitionDto ResolveEntityPhysicsDefinition(ItemPhysicsDefinitionDto configured,
         bool defaultIndependentMovement = false)
@@ -73,32 +74,32 @@ public sealed partial class WorldPhysicsService2D
     internal WorldPhysicsEntityProxy2D AllocateEntityProxy(object entity, ItemData snapshot,
         ItemPhysicsDefinitionDto definition, IReadOnlyList<WorldPhysicsEntityRegion2D> regions,
         Action<WorldPhysicsEntityPose2D> applyPose, IGameplayPhysicsDamageTarget damageTarget = null,
-        bool stateAuthority = true)
+        bool stateAuthority = true, Vector2? logicalPosition = null)
     {
         if (disposed) throw new ObjectDisposedException(nameof(WorldPhysicsService2D));
-        if (entity == null || snapshot == null) throw new ArgumentNullException(nameof(entity));
+        if (entity == null) throw new ArgumentNullException(nameof(entity));
         definition ??= new ItemPhysicsDefinitionDto();
         ValidateProxyConfiguration(definition);
+        if (snapshot == null && definition.Mode != WorldPhysicsProxyMode2D.WorldFixed)
+            throw new ArgumentNullException(nameof(snapshot));
         ValidateEntityPhysicsRegions(regions);
         if (entityProxies.TryGetValue(entity, out var existing))
             throw new InvalidOperationException($"实体已在世界 {WorldKey} 领取物理代理。");
-        Vector3 presentationPosition = WorldLocalPresentation.ProjectPosition(snapshot.transform?.position ?? Vector3.zero);
+        Vector2 origin = logicalPosition ?? (Vector2)(snapshot?.transform?.position ?? Vector3.zero);
+        Vector3 presentationPosition = WorldLocalPresentation.ProjectPosition(origin);
         EntityProxyShell shell = RentEntityProxyShell(definition.Mode, presentationPosition);
-        var proxy = new WorldPhysicsEntityProxy2D(this, entity, snapshot, definition, shell, applyPose, stateAuthority);
+        var proxy = new WorldPhysicsEntityProxy2D(this, entity, snapshot, definition, shell, applyPose, stateAuthority, logicalPosition: origin);
         try
         {
             if (!shell.SharedFixedBody) ConfigureProxyBody(shell.Body, snapshot, definition, stateAuthority);
-            shell.Root.localScale = snapshot.transform?.scale ?? Vector3.one;
+            shell.Root.localScale = snapshot?.transform?.scale ?? Vector3.one;
             WorldPhysicsEntityPose2D initialPose = new(presentationPosition,
-                snapshot.transform?.rotation.eulerAngles.z ?? 0f, snapshot.PhysicsState?.Velocity ?? Vector2.zero,
-                snapshot.PhysicsState?.AngularVelocity ?? 0f);
+                snapshot?.transform?.rotation.eulerAngles.z ?? 0f, snapshot?.PhysicsState?.Velocity ?? Vector2.zero,
+                snapshot?.PhysicsState?.AngularVelocity ?? 0f);
             if (regions != null)
                 for (int i = 0; i < regions.Count; i++)
                 {
                     WorldPhysicsEntityRegion2D region = regions[i];
-                    // 固定阻挡继续由区块系统裁剪与合批，受击和事件区域保留逐实体身份。
-                    if (definition.Mode == WorldPhysicsProxyMode2D.WorldFixed &&
-                        region.ChunkBlockingProjection && (region.Purpose & WorldPhysicsPurpose2D.Blocking) != 0) continue;
                     if (region.Collider?.Enabled == false) continue;
                     Collider2D shape = RentEntityRegionCollider(shell, region);
                     RegisterCollider(shape, regionId: region.Id, purpose: region.Purpose, entity: entity,
@@ -164,13 +165,13 @@ public sealed partial class WorldPhysicsService2D
                 Rigidbody2D body = null;
                 try
                 {
-                    body = GetWorldFixedChunkBody(presentationPosition);
+                    body = GetWorldFixedBatchBody(presentationPosition);
                     pooled.Root.SetParent(body.transform, false);
                     pooled.Body = body;
                 }
                 catch
                 {
-                    if (body != null) ReleaseWorldFixedChunkBody(body);
+                    if (body != null) ReleaseWorldFixedBatchBody(body);
                     pool.Push(pooled);
                     throw;
                 }
@@ -184,13 +185,13 @@ public sealed partial class WorldPhysicsService2D
         try
         {
             SceneManager.MoveGameObjectToScene(root, PrimarySpace.Scene);
-            newBody = fixedMode ? GetWorldFixedChunkBody(presentationPosition) : root.AddComponent<Rigidbody2D>();
+            newBody = fixedMode ? GetWorldFixedBatchBody(presentationPosition) : root.AddComponent<Rigidbody2D>();
             root.transform.SetParent(fixedMode ? newBody.transform : GetPhysicsProxyHierarchyRoot(), false);
             return new EntityProxyShell { Body = newBody, Root = root.transform, OwnsRoot = true, SharedFixedBody = fixedMode };
         }
         catch
         {
-            if (fixedMode && newBody != null) ReleaseWorldFixedChunkBody(newBody);
+            if (fixedMode && newBody != null) ReleaseWorldFixedBatchBody(newBody);
             DestroyPhysicsObject(root);
             throw;
         }
@@ -203,7 +204,7 @@ public sealed partial class WorldPhysicsService2D
         Type type = ItemPhysicsDefinitionRuntime.ResolveColliderType(region.Collider.Type);
         Collider2D collider = null;
         foreach (Collider2D available in shell.AllColliders)
-            if (available != null && available.GetType() == type && !shell.ActiveColliders.Contains(available))
+            if (available != null && available.GetType() == type && !shell.ActiveColliders.Contains(available) && !shell.ImageColliders.Contains(available))
             { collider = available; break; }
         if (collider == null)
         {
@@ -221,6 +222,7 @@ public sealed partial class WorldPhysicsService2D
         collider.transform.localScale = region.LocalScale;
         collider.gameObject.layer = (region.Purpose & WorldPhysicsPurpose2D.Damage) != 0
             ? CombatPhysicsChannels.DamageReceiverLayer : 0;
+        collider.GetComponent<ColliderSource2D>()?.ClearBinding();
         ResetColliderPhysicsSettings(collider);
         collider.offset = Vector2.zero;
         collider.enabled = true;
@@ -312,6 +314,7 @@ public sealed partial class WorldPhysicsService2D
         if (entityProxies.TryGetValue(proxy.Entity, out var current) && ReferenceEquals(current, proxy))
             entityProxies.Remove(proxy.Entity);
         EntityProxyShell shell = proxy.Shell;
+        ReleaseProxyBoundaryImages(shell);
         foreach (Collider2D collider in shell.ActiveColliders)
         {
             UnregisterCollider(collider);
@@ -332,7 +335,7 @@ public sealed partial class WorldPhysicsService2D
         }
         if (shell.Root == null)
         {
-            if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
+            if (shell.SharedFixedBody) ReleaseWorldFixedBatchBody(shell.Body);
             return;
         }
         if (!shell.SharedFixedBody && shell.Body.bodyType != RigidbodyType2D.Static)
@@ -342,7 +345,7 @@ public sealed partial class WorldPhysicsService2D
         }
         if (!shell.OwnsRoot)
         {
-            if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
+            if (shell.SharedFixedBody) ReleaseWorldFixedBatchBody(shell.Body);
             return;
         }
         if (!shell.SharedFixedBody) shell.Body.simulated = false;
@@ -351,11 +354,11 @@ public sealed partial class WorldPhysicsService2D
         if (disposed)
         {
             DestroyPhysicsObject(shell.Root.gameObject);
-            if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
+            if (shell.SharedFixedBody) ReleaseWorldFixedBatchBody(shell.Body);
             return;
         }
         shell.Root.SetParent(GetPhysicsPoolRoot(), false);
-        if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
+        if (shell.SharedFixedBody) ReleaseWorldFixedBatchBody(shell.Body);
         shell.Root.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
         shell.Root.localScale = Vector3.one;
         (shell.SharedFixedBody ? fixedEntityProxyPool : entityProxyPool).Push(shell);
@@ -390,16 +393,16 @@ public sealed partial class WorldPhysicsService2D
             EntityProxyShell shell = fixedEntityProxyPool.Pop();
             if (shell.Root != null) DestroyPhysicsObject(shell.Root.gameObject);
         }
-        foreach (Rigidbody2D body in fixedChunkBodies.Values)
+        foreach (Rigidbody2D body in fixedBatchBodies.Values)
             if (body != null) DestroyPhysicsObject(body.gameObject);
-        fixedChunkBodies.Clear();
-        fixedChunkBodyReferences.Clear(); fixedChunkBodyAddresses.Clear();
+        fixedBatchBodies.Clear();
+        fixedBatchBodyReferences.Clear(); fixedBatchBodyAddresses.Clear();
     }
 
     private void RegisterConfiguredItemProxy(Item item, ItemPhysicsDefinitionDto definition, List<Collider2D> colliders)
     {
         bool fixedMode = definition.Mode == WorldPhysicsProxyMode2D.WorldFixed;
-        var shell = new EntityProxyShell { Body = fixedMode ? GetWorldFixedChunkBody(item.transform.position) : item.GetComponent<Rigidbody2D>(), Root = item.transform,
+        var shell = new EntityProxyShell { Body = fixedMode ? GetWorldFixedBatchBody(item.transform.position) : item.GetComponent<Rigidbody2D>(), Root = item.transform,
             OwnsRoot = false, SharedFixedBody = fixedMode };
         shell.ActiveColliders.AddRange(colliders);
         WorldPhysicsEntityProxy2D proxy = null;
@@ -445,48 +448,45 @@ public sealed partial class WorldPhysicsService2D
                 foreach (BoxCollider2D projected in shell.FixedProjectionColliders) ReturnObstacleBox(projected);
                 foreach (Collider2D source in shell.DisabledSourceColliders)
                     if (source != null) source.enabled = true;
-                if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
+                if (shell.SharedFixedBody) ReleaseWorldFixedBatchBody(shell.Body);
             }
             throw;
         }
     }
 
-    private Rigidbody2D GetWorldFixedChunkBody(Vector2 presentationPosition)
+    private Rigidbody2D GetWorldFixedBatchBody(Vector2 presentationPosition)
     {
-        Vector2 chunkSize = default;
-        if (GameplayWorldRegistry.TryGet(WorldKey, out var world) && world.Chunks?.ActiveGenerationProfile is { } profile)
-            chunkSize = new Vector2(profile.Width, profile.Height);
-        Vector2Int chunk = Chunk.GetChunkPosition(WorldLocalPresentation.ToLogical(presentationPosition), chunkSize);
-        if (fixedChunkBodies.TryGetValue(chunk, out var body) && body != null)
+        Vector2Int chunk = ResolveFixedBatchAddress(WorldLocalPresentation.ToLogical(presentationPosition));
+        if (fixedBatchBodies.TryGetValue(chunk, out var body) && body != null)
         {
-            fixedChunkBodyReferences[body]++;
+            fixedBatchBodyReferences[body]++;
             return body;
         }
-        var root = new GameObject($"World Fixed Physics Chunk {chunk.x},{chunk.y}") { hideFlags = HideFlags.DontSave };
+        var root = new GameObject($"World Fixed Physics Batch {chunk.x},{chunk.y}") { hideFlags = HideFlags.DontSave };
         try
         {
             SceneManager.MoveGameObjectToScene(root, PrimarySpace.Scene);
             root.transform.SetParent(GetPhysicsProxyHierarchyRoot(), false);
             body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Static;
-            fixedChunkBodies[chunk] = body;
-            fixedChunkBodyReferences[body] = 1; fixedChunkBodyAddresses[body] = chunk;
+            fixedBatchBodies[chunk] = body;
+            fixedBatchBodyReferences[body] = 1; fixedBatchBodyAddresses[body] = chunk;
             return body;
         }
         catch
         {
-            if (body != null) { fixedChunkBodyReferences.Remove(body); fixedChunkBodyAddresses.Remove(body); }
-            fixedChunkBodies.Remove(chunk);
+            if (body != null) { fixedBatchBodyReferences.Remove(body); fixedBatchBodyAddresses.Remove(body); }
+            fixedBatchBodies.Remove(chunk);
             DestroyPhysicsObject(root);
             throw;
         }
     }
 
-    private void ReleaseWorldFixedChunkBody(Rigidbody2D body)
+    private void ReleaseWorldFixedBatchBody(Rigidbody2D body)
     {
-        if (body == null || !fixedChunkBodyReferences.TryGetValue(body, out int count)) return;
-        if (count > 1) { fixedChunkBodyReferences[body] = count - 1; return; }
-        fixedChunkBodyReferences.Remove(body);
-        if (fixedChunkBodyAddresses.Remove(body, out Vector2Int chunk)) fixedChunkBodies.Remove(chunk);
+        if (body == null || !fixedBatchBodyReferences.TryGetValue(body, out int count)) return;
+        if (count > 1) { fixedBatchBodyReferences[body] = count - 1; return; }
+        fixedBatchBodyReferences.Remove(body);
+        if (fixedBatchBodyAddresses.Remove(body, out Vector2Int chunk)) fixedBatchBodies.Remove(chunk);
         DestroyPhysicsObject(body.gameObject);
     }
 
@@ -508,7 +508,7 @@ public sealed partial class WorldPhysicsService2D
         if (disposed || WorldKey != GameplayWorldRegistry.ExecutionWorldKey) return;
         foreach (WorldPhysicsEntityProxy2D proxy in entityProxies.Values)
         {
-            if (!proxy.IsValid || proxy.Snapshot.transform == null) continue;
+            if (!proxy.IsValid) continue;
             if (proxy.Item != null)
             {
                 for (int i = 0; i < proxy.Shell.FixedProjectionColliders.Count; i++)
@@ -520,9 +520,9 @@ public sealed partial class WorldPhysicsService2D
                 }
                 continue;
             }
-            Vector2 projected = WorldLocalPresentation.ProjectPosition(proxy.Snapshot.transform.position);
-            proxy.SetPose(new WorldPhysicsEntityPose2D(projected, proxy.Snapshot.transform.rotation.eulerAngles.z,
-                proxy.Snapshot.PhysicsState?.Velocity ?? Vector2.zero, proxy.Snapshot.PhysicsState?.AngularVelocity ?? 0f));
+            Vector2 projected = WorldLocalPresentation.ProjectPosition(proxy.Snapshot?.transform?.position ?? (Vector3)proxy.LogicalOrigin);
+            proxy.SetPose(new WorldPhysicsEntityPose2D(projected, proxy.Snapshot?.transform?.rotation.eulerAngles.z ?? 0f,
+                proxy.Snapshot?.PhysicsState?.Velocity ?? Vector2.zero, proxy.Snapshot?.PhysicsState?.AngularVelocity ?? 0f));
         }
     }
     #endregion

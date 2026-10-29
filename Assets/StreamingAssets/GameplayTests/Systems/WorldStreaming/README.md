@@ -1,6 +1,14 @@
 # 世界模型与区块流送
 
-区块物理独立化：`ChunkView` 已移除 Blocking、Grid、刚体和碰撞组件；`WorldPhysicsService2D` 根据模拟租约与权威地形持有独立投影及镜像。新增 `chunk_physics_lifecycle` 实测无视图原生碰撞、显示解绑、改格/重生成、休眠/复用、世界隔离及释放；现场 `live_window` 增加真实视图无物理组件和独立物理归属断言。
+2026-10-30 续修：通用几何提交现在同时取消本轮已取出的回调和下一轮排队，异常不会复活已取消来源，递归刷新延后到下一物理步。位置、尺寸比较使用精确值，未变化来源不重复提交。
+
+本次实际回归 `20261029T171644882Z_64b9fe85` 为 2/3 组通过：地形通用代理、世界隔离、取消/重登记、异常取消、递归延后均已采样通过，队列预热后 1024 轮为零分配。剩余失败是微小尺寸/偏移断言：请求 1.000004/0.500004，原生组件仍读到 1/0.5；不能据此直接认定是引擎还是接入层的问题。最新夹具已增加独立原生 Setter 对照、普通尺寸正对照和真实提交检查，因其他 PlayMode 测试占用编辑器尚未重跑，不记为通过。储罐合并离线 42,089 项检查通过。现场集成仍未完成。
+
+最新源码及原生对照夹具已通过隔离 `GamePlay` 静态编译：0 错误、31 警告，产物仅位于 `Temp/UnifiedPhysicsValidation/`，未替换 Unity 正在使用的程序集。
+
+通用物理统一化：已删除独立区块碰撞组件、Tilemap/Composite 后端和区块障碍池。地形/机器仅保留数据接入器，地形、自然实体和机器统一复用 `WorldPhysicsService2D` 的实体代理、固定空间批次、形状池及镜像；`ChunkView` 仍不含物理组件。
+
+本轮增强 `terrain_physics_source`（地形与普通实体共享代理登记/原生刚体、无 Tilemap、空地形、租约、重生成、回收及世界隔离）和 `physics_geometry_queue`（去重、取消、重入、失败重试及世界释放）；储罐专项改为真正使用通用几何来源，覆盖拆中间、原生孔洞、镜像复用和跨批次完整形状。用户正在 PlayMode，本轮不触发 Unity 编译或 Lua 运行；以下旧报告不代表本轮运行验收。
 
 本轮验证：世界流送/物理 3 组规则通过（`20261029T160857792Z_a7d4d4c4`），储罐合并器 42,089 项检查通过，29 项 EditMode 前置通过。现场尝试 `20261029T161427047Z_fca0a11d` 在角色目录加载阶段被 `ActorPerceptionShapeCompiler` 找不到作者 `BoxCollider2D` 阻塞，未执行到区块现场断言；没有将其记为通过。扩展导航水深和工业气液恢复规则也有失败，本轮未改动这些生产逻辑。
 
@@ -20,7 +28,7 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows、collision_dirty_queue`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
+快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot、observer_windows、terrain_physics_source、physics_geometry_queue`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
 
 物理契约共用 `physics.lua` 的同一组断言：编辑态案例 `world_physics_rules` 使用独立 Preview PhysicsScene2D；PlayMode 案例 `world_physics_gameplay` 使用正式创建的独立原生场景。两者都覆盖以下物理归属、JSON 区域和临时查询，不复制断言。
 

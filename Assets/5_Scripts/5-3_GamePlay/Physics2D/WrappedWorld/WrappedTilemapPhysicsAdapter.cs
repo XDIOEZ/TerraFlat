@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Map / 世界区块物理的边界 Tilemap 物理适配；触边即镜像，不使用 Item 的 32 单位接缝带。
+/// 旧 Map的边界 Tilemap 物理适配；触边即镜像，不使用 Item 的 32 单位接缝带。
 /// 镜像不渲染、不保存；旧 Map 受击保留镜像坐标绑定，新 WorldModel 继续走权威格子查询。
 /// </summary>
 [DisallowMultipleComponent]
@@ -13,7 +13,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
 {
     private readonly List<ProxyRecord> records = new();
     private Map map;
-    private WorldChunkPhysicsProjection2D chunkPhysics;
     private bool dirty = true;
     private int refreshGeneration;
     private WorldTopologyDomain lastDomain;
@@ -21,10 +20,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
     public int ActiveProxyCount { get; private set; }
     public int EligibleSourceColliderCount { get; private set; }
 
-    private bool IsSourceReady => map != null
-        ? map.isActiveAndEnabled && map.Data != null && map.IsTilemapVisualReady
-        : chunkPhysics != null && chunkPhysics.isActiveAndEnabled && chunkPhysics.BoundChunk?.Terrain != null &&
-          GameplayWorldRegistry.TryGet(chunkPhysics.WorldKey, out _);
+    private bool IsSourceReady => map != null && map.isActiveAndEnabled && map.Data != null && map.IsTilemapVisualReady;
 
     public static void Ensure(Map target)
     {
@@ -35,20 +31,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         if (proxy == null)
             proxy = target.gameObject.AddComponent<WrappedTilemapPhysicsAdapter>();
         proxy.map = target;
-        proxy.chunkPhysics = null;
-        proxy.dirty = true;
-        proxy.enabled = true;
-    }
-
-    public static void Ensure(WorldChunkPhysicsProjection2D target)
-    {
-        if (target == null || target.SourceTilemapCollider == null)
-            return;
-        WrappedTilemapPhysicsAdapter proxy = target.GetComponent<WrappedTilemapPhysicsAdapter>();
-        if (proxy == null)
-            proxy = target.gameObject.AddComponent<WrappedTilemapPhysicsAdapter>();
-        proxy.map = null;
-        proxy.chunkPhysics = target;
         proxy.dirty = true;
         proxy.enabled = true;
     }
@@ -60,18 +42,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         enabled = false;
     }
 
-    // 环绕查询始终借所属物理世界，不使用当前可见世界的坐标域。
-    private System.IDisposable EnterChunkPhysicsWorld() => chunkPhysics != null &&
-        GameplayWorldRegistry.TryGet(chunkPhysics.WorldKey, out _)
-        ? GameplayWorldRegistry.UseWorld(chunkPhysics.WorldKey) : null;
-
-    internal void ReleaseChunkPhysicsProxies()
-    {
-        ClearProxies();
-        dirty = true;
-        enabled = false;
-    }
-
     private void Awake()
     {
         map = GetComponent<Map>();
@@ -79,7 +49,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
 
     private void LateUpdate()
     {
-        using var scope = EnterChunkPhysicsWorld();
         WorldTopologyDomain domain = WorldTopologyRuntime.GetActiveDomain();
         if (domain.IsWrapped != lastDomain.IsWrapped ||
             math.any(domain.Min != lastDomain.Min) || math.any(domain.Span != lastDomain.Span))
@@ -119,7 +88,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         SetAllActive(false);
         for (int i = 0; i < records.Count; i++)
         {
-            records[i].ObstacleColliders?.Dispose();
             if (records[i].Root != null)
                 WorldPhysicsService2D.DestroyPhysicsObject(records[i].Root);
         }
@@ -128,7 +96,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
 
     public void RefreshNow()
     {
-        using var scope = EnterChunkPhysicsWorld();
         dirty = false;
         refreshGeneration++;
         ActiveProxyCount = 0;
@@ -142,19 +109,8 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         }
 
         lastDomain = bounds.ToDomain();
-        float2 areaMin;
-        float2 areaMax;
-        if (map != null)
-        {
-            areaMin = new float2(map.Data.position.x, map.Data.position.y);
-            areaMax = areaMin + new float2(map.Data.Width, map.Data.Height);
-        }
-        else
-        {
-            var chunk = chunkPhysics.BoundChunk;
-            areaMin = new float2(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
-            areaMax = areaMin + new float2(chunk.Terrain.Width, chunk.Terrain.Height);
-        }
+        float2 areaMin = new(map.Data.position.x, map.Data.position.y);
+        float2 areaMax = areaMin + new float2(map.Data.Width, map.Data.Height);
         WorldTopologyImageOffsets requiredOffsets = lastDomain.GetRequiredImageOffsets(
             areaMin, areaMax, includeBoundary: true);
         if (requiredOffsets.Count == 0)
@@ -163,16 +119,9 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             return;
         }
 
-        if (map != null)
-        {
-            RefreshSource(map.tileMap, requiredOffsets);
-            BlockingTilemapLayer blockingLayer = map.GetComponent<BlockingTilemapLayer>();
-            RefreshSource(blockingLayer != null ? blockingLayer.BlockingTilemap : null, requiredOffsets);
-        }
-        else if (chunkPhysics.SourceTilemapCollider != null)
-        {
-            RefreshSource(chunkPhysics.SourceTilemapCollider.GetComponent<Tilemap>(), requiredOffsets);
-        }
+        RefreshSource(map.tileMap, requiredOffsets);
+        BlockingTilemapLayer blockingLayer = map.GetComponent<BlockingTilemapLayer>();
+        RefreshSource(blockingLayer != null ? blockingLayer.BlockingTilemap : null, requiredOffsets);
         RemoveStaleProxies();
         SyncSourceState();
     }
@@ -187,7 +136,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         CompositeCollider2D sourceComposite = sourceCollider.usedByComposite
             ? source.GetComponent<CompositeCollider2D>()
             : null;
-        PolygonCollider2D sourceDataCollider = sourceComposite != null && chunkPhysics == null
+        PolygonCollider2D sourceDataCollider = sourceComposite != null
             ? source.GetComponent<PolygonCollider2D>()
             : null;
         EligibleSourceColliderCount++;
@@ -201,7 +150,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
                 continue;
             CopyTiles(source, record.Tilemap);
             CopyDataPaths(sourceDataCollider, record.DataCollider);
-            if (record.ObstacleColliders != null) chunkPhysics.CopyObstacleCollidersTo(record.ObstacleColliders, offset);
             UpdateTransform(record, source, offset);
             record.Generation = refreshGeneration;
             record.Root.SetActive(source.gameObject.activeInHierarchy && sourceCollider.enabled);
@@ -215,19 +163,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         }
     }
 
-    /// <summary>由实体障碍事件同步已有镜像；初始化或拓扑失效仍由完整刷新一次完成。</summary>
-    internal void RefreshObstaclesNow()
-    {
-        using var scope = EnterChunkPhysicsWorld();
-        if (dirty || chunkPhysics == null || !IsSourceReady) return;
-        for (int i = 0; i < records.Count; i++)
-        {
-            ProxyRecord record = records[i];
-            if (record.ObstacleColliders != null)
-                chunkPhysics.CopyObstacleCollidersTo(record.ObstacleColliders, record.Offset);
-        }
-    }
-
     /// <summary>只同步缓存源的启停与物理属性；复制地块仍由表现变更通知驱动。</summary>
     private void SyncSourceState()
     {
@@ -237,7 +172,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             ProxyRecord record = records[i];
             if (record.Source == null || record.SourceCollider == null)
             {
-                record.ObstacleColliders?.Dispose();
                 record.Root.SetActive(false);
                 WorldPhysicsService2D.DestroyPhysicsObject(record.Root);
                 records.RemoveAt(i);
@@ -273,7 +207,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             if (record.Generation == refreshGeneration && record.Source != null && record.SourceCollider != null)
                 continue;
             record.Root.SetActive(false);
-            record.ObstacleColliders?.Dispose();
             WorldPhysicsService2D.DestroyPhysicsObject(record.Root);
             records.RemoveAt(i);
         }
@@ -300,7 +233,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         SceneManager.MoveGameObjectToScene(root, source.gameObject.scene);
         root.hideFlags = HideFlags.DontSave;
         root.layer = source.gameObject.layer;
-        if (chunkPhysics != null) root.transform.SetParent(chunkPhysics.transform.parent, false);
 
         Grid sourceGrid = source.layoutGrid as Grid;
         Grid proxyGrid = root.AddComponent<Grid>();
@@ -367,7 +299,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             Collider = proxyCollider,
             Composite = proxyComposite,
             DataCollider = proxyDataCollider,
-            ObstacleColliders = chunkPhysics != null ? new ChunkObstacleColliderSet(tileObject.transform) : null,
             Offset = offset
         };
         records.Add(record);
@@ -434,7 +365,6 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         public TilemapCollider2D Collider;
         public CompositeCollider2D Composite;
         public PolygonCollider2D DataCollider;
-        public ChunkObstacleColliderSet ObstacleColliders;
         public Vector2 Offset;
         public int Generation;
     }

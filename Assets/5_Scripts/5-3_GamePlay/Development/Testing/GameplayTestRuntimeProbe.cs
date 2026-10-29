@@ -762,10 +762,7 @@ public static partial class GameplayTestRuntimeProbe
             view.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
             view.GetComponentsInChildren<Rigidbody2D>(true).Length == 0;
         result["footIndependentPhysics"] = view != null && GameplayWorldRegistry.TryGetPhysics(manager.WorldRuntime.WorldId, out var physics) &&
-            physics.TryGetChunkPhysics(address, out var projection) && ReferenceEquals(projection.BoundChunk, chunk) &&
-            projection.SourceCollider != null && projection.SourceCollider.enabled &&
-            projection.gameObject.activeInHierarchy && !projection.transform.IsChildOf(view.transform) &&
-            WorldPhysicsService2D.TryResolveCollider(projection.SourceCollider, out var ownership) && ownership.World == physics;
+            physics.IsValid && GameplayWorldRegistry.TryGetTerrainPhysicsSource(manager.WorldRuntime.WorldId, out var terrain) && terrain.IsBound(chunk);
         return result;
     }
 

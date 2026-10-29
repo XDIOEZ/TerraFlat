@@ -33,15 +33,13 @@ public readonly struct WorldPhysicsEntityRegion2D
     public readonly Vector3 LocalPosition;
     public readonly Quaternion LocalRotation;
     public readonly Vector3 LocalScale;
-    public readonly bool ChunkBlockingProjection;
     public WorldPhysicsEntityRegion2D(string id, WorldPhysicsPurpose2D purpose, ItemColliderDefinitionDto collider,
         string receiverModule = null, Vector3? localPosition = null, Quaternion? localRotation = null,
-        Vector3? localScale = null, bool chunkBlockingProjection = true)
+        Vector3? localScale = null)
     {
         Id = id; Purpose = purpose; Collider = collider; ReceiverModule = receiverModule;
         LocalPosition = localPosition ?? Vector3.zero; LocalRotation = localRotation ?? Quaternion.identity;
         LocalScale = localScale ?? Vector3.one;
-        ChunkBlockingProjection = chunkBlockingProjection;
     }
     #endregion
 }
@@ -58,6 +56,7 @@ public sealed class WorldPhysicsEntityProxy2D : IDisposable
     internal readonly bool StateAuthority;
     internal bool Released;
     internal bool MassDirty = true;
+    internal Vector2 LogicalOrigin;
     private bool hasPublishedPose;
     private WorldPhysicsEntityPose2D publishedPose;
     private WorldPhysicsEntityPose2D suspendedPose;
@@ -72,13 +71,14 @@ public sealed class WorldPhysicsEntityProxy2D : IDisposable
 
     internal WorldPhysicsEntityProxy2D(WorldPhysicsService2D owner, object entity, ItemData snapshot,
         ItemPhysicsDefinitionDto definition, WorldPhysicsService2D.EntityProxyShell shell,
-        Action<WorldPhysicsEntityPose2D> poseReceiver, bool stateAuthority, Item item = null)
+        Action<WorldPhysicsEntityPose2D> poseReceiver, bool stateAuthority, Item item = null, Vector2? logicalPosition = null)
     {
         Owner = owner; Entity = entity; Snapshot = snapshot;
         Definition = new ItemPhysicsDefinitionDto { Mode = definition.Mode, MassSource = definition.MassSource,
             FreezeRotation = definition.FreezeRotation, LinearDamping = definition.LinearDamping,
             AngularDamping = definition.AngularDamping };
         Shell = shell;
+        LogicalOrigin = logicalPosition ?? (Vector2)(snapshot?.transform?.position ?? Vector3.zero);
         PoseReceiver = poseReceiver; StateAuthority = stateAuthority; Item = item;
         if (Definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic)
             Snapshot.MassChanged += MarkEntityMassDirty;
@@ -101,9 +101,11 @@ public sealed class WorldPhysicsEntityProxy2D : IDisposable
         if (!isParticipatingInWorldPhysics) { suspendedPose = pose; return; }
         if (Shell.SharedFixedBody)
         {
-            if (!Shell.OwnsRoot) throw new InvalidOperationException("固定区块代理通过实体恢复重新申请，不能独立移动共享主体。");
+            if (!Shell.OwnsRoot) throw new InvalidOperationException("固定合批代理通过实体恢复重新申请，不能独立移动共享主体。");
             Shell.Root.SetPositionAndRotation(new Vector3(pose.Position.x, pose.Position.y, Shell.Root.position.z),
                 Quaternion.Euler(0f, 0f, pose.RotationDegrees));
+            LogicalOrigin = WorldLocalPresentation.ToLogical(pose.Position);
+            Owner.RefreshFixedProxyBoundaryImages(this);
             return;
         }
         Shell.Body.position = pose.Position;
@@ -137,6 +139,7 @@ public sealed class WorldPhysicsEntityProxy2D : IDisposable
     {
         if (!IsValid) throw new ObjectDisposedException(nameof(WorldPhysicsEntityProxy2D));
         Shell.Root.localScale = scale;
+        Owner.RefreshFixedProxyBoundaryImages(this);
     }
 
     internal void PublishSimulationResult()

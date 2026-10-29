@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>仅在源矩形变化时精确拼接同物理规则的障碍，不填充凹口、空洞或真实间距。</summary>
-internal sealed class ChunkMergedObstacleRectangles
+internal sealed class WorldPhysicsRectangleMerger2D
 {
     #region 源矩形与增量失效
 

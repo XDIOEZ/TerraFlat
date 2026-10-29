@@ -62,7 +62,7 @@ public static partial class MachineWorld
         ResetFluidRuntime();
         CellChanged = null; NodeCellChanged = null;
         ResetSurfaceChangeBatch();
-        NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null;
+        NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null; PhysicsSourcesReset = null;
     }
 
     /// <summary>MOD 扭矩条件返回 0..1 可用比例，条件必须独立于 GameObject 与 ChunkView。</summary>
@@ -106,6 +106,7 @@ public static partial class MachineWorld
         dirty = true;
         if (!IsShipScope && key == SceneManager.GetActiveScene().name)
             BuildingOccupancyRegistry.RebuildSightBlockingIndex(nodes.Values, topology);
+        PhysicsSourcesReset?.Invoke(key);
     }
 
     private static void RestoreDescriptor(ItemData snapshot)
@@ -1116,6 +1117,7 @@ public static partial class MachineWorld
         foreach (var node in nodes.Values) DisposeProcessor(node);
         processorOwners.Clear();
         nodes.Clear(); elapsed = 0;
+        PhysicsSourcesReset?.Invoke(worldKey);
         ResetFluidRuntime();
         ClearFacilityEnvironment();
     }

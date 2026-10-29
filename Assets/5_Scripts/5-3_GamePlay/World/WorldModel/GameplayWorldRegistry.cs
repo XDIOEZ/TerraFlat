@@ -116,7 +116,7 @@ public static partial class GameplayWorldRegistry
         if (string.IsNullOrWhiteSpace(worldKey)) throw new ArgumentException("世界身份为空。", nameof(worldKey));
         if (!ownedWorldModels.TryGetValue(worldKey, out WorldRuntime world))
             ownedWorldModels.Add(worldKey, world = new WorldRuntime(worldKey, epoch));
-        if (TryGetPhysics(worldKey, out var physics)) physics.BindChunkWorld(world);
+        if (TryGetPhysics(worldKey, out var physics)) BindWorldPhysicsSources(world, physics);
         return world;
     }
 
@@ -153,7 +153,7 @@ public static partial class GameplayWorldRegistry
             ownedWorldModelManagers.ContainsKey(worldKey))
             return false;
         ownedWorldModels.Remove(worldKey);
-        if (TryGetPhysics(worldKey, out var physics)) physics.UnbindChunkWorld(current);
+        if (TryGetPhysics(worldKey, out var physics)) UnbindWorldPhysicsSources(current);
         current.Dispose();
         return true;
     }
@@ -164,7 +164,7 @@ public static partial class GameplayWorldRegistry
             throw new InvalidOperationException("仍有区块管理器附着，不能释放会话世界模型。");
         foreach (WorldRuntime world in ownedWorldModels.Values)
         {
-            if (TryGetPhysics(world.WorldId, out var physics)) physics.UnbindChunkWorld(world);
+            if (TryGetPhysics(world.WorldId, out var physics)) UnbindWorldPhysicsSources(world);
             world.Dispose();
         }
         ownedWorldModels.Clear();

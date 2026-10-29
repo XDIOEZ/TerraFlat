@@ -292,8 +292,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         var definition = new ItemPhysicsDefinitionDto
         { Mode = WorldPhysicsProxyMode2D.IndependentDynamic, MassSource = WorldPhysicsMassSource2D.ItemStack, FreezeRotation = false };
         var region = new WorldPhysicsEntityRegion2D("probe:client-blocking", WorldPhysicsPurpose2D.Blocking,
-            new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one },
-            chunkBlockingProjection: false);
+            new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one });
         var entity = new object();
         WorldPhysicsEntityProxy2D proxy = null;
         try

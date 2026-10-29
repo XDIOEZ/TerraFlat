@@ -41,7 +41,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `DeterministicChunkGenerator` 主文件只组织流水线；`SurfaceTerrain/TerrainStages` 管地表、洞穴与结构，`HydrologySampling` 管纯采样，`HydrologyRegions` 独占区域缓存/纪元取消/预热与定位借用。热缓存命中不创建 Lazy；结构先于地形扩展，扩展后再编译生态，规则 `terrain/generation_stage_ownership`。
 
 - 多格静态资源通过 `EcologySpawnRuleSnapshot.SharedRadius/FootprintWidth/FootprintHeight` 声明：`EcologyGeneration.Shared` 用稀疏周期网格和负 GUID 独立复算所有覆盖区块，`DeterministicChunkGenerator.SharedResources` 验证完整占地及入口安全区并过滤内部普通生态。`SharedAnchor` 始终是规范坐标，代理 `LocalX/Y` 可以在当前区块之外，禁止直接拿它索引地形。
-- `ChunkMgr.SharedNaturalEntities` 的会话注册表只创建一个 Resource Entity；各 `ChunkNaturalItemRenderer.Shared` 持有引用，唯一表现宿主可交接，最后引用释放才捕获/移除。状态和删除标记只写锚点所属区块，死亡不再捕获，退出世界清理注册表。区块碰撞继续复用 `WorldChunkPhysicsProjection2D` 按范围裁剪同一 runtimeId，寻路使用完整 `worldGridOccupancy`，不得为每块重建独立生命。
+- `ChunkMgr.SharedNaturalEntities` 的会话注册表只创建一个 Resource Entity；各 `ChunkNaturalItemRenderer.Shared` 持有引用，唯一表现宿主可交接，最后引用释放才捕获/移除。状态和删除标记只写锚点所属区块，死亡不再捕获，退出世界清理注册表。每个资源只向 `WorldPhysicsService2D` 领取一个完整物理代理，不再按区块裁剪复制阻挡，寻路使用完整 `worldGridOccupancy`，不得为每块重建独立生命。
 - 大矿山示例为 `Mine_Stone_Large`，覆盖半径包含贴图和受击范围而非仅阻挡框；资源目录校验器验证三者一致。纯规则 `ecology/shared_resources`；编辑器外回归 `python Tools/Tests/SharedNaturalResources/verify.py`，只在 Temp 中移除原生 Profiler 初始化，不能替代真实 Unity 碰撞/保存回归。
 
 - 单人和联机多观察者共用 `ChunkMgr.RefreshRuntimeWindows`，观察者请求经纯模型 `RefreshWindows` 合并模拟/表现/保留需求；本机蒙版、就绪等待与导航仍只跟随本机角色。
@@ -74,12 +74,12 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 墙裂读权威 `flatworld.tileBuilding.damage`；自身与邻块共享边/角变化增量刷新，Bind 重建、Unbind 退订。水面顶点含高度、四角水深与 Flow；河流为下游速度、海洋为当地风向，湖面 Flow 为零。
 - `TerrainSurfaceHeightLayer` 从原 `height` 档位、`terrain.surface.excavatedLevels/coverLevels` 推导表面高低；非 Surface 忽略生成海拔，支撑面回到基准面，液面低一档，Blocking 顶部高一档。`TerrainHeightShadowManager` 统一查询/提交低侧阴影，只借用已有维度服务，不为只读查询创建管理器；四向直边与斜邻圆角共用 BRG，未知邻格不制造边或角。订阅八邻区 Commit/Evict，变化按3×3邻域裁剪合并脏格，随 Owner 镜像、重建和解绑维护表现。
 - 高低阴影在单次刷新内复用一格 halo 表面采样，下一轮重新读取地形/液体/配置；脏格与邻区集合随壳复用。规则 `rendering/terrain_shadow_surface_cache`，离线 `Tools/Tests/TerrainHeightShadows/`。
-- `GameplayWorldRuntime.Physics` 持有 `WorldPhysicsService2D`；原生空间由 `WorldPhysicsScene2D` 创建/借用，世界身份不再直接充当查询场景。物理代理公共模式为 `WorldFixed`（相对所属世界固定）和 `IndependentDynamic`（在所属世界内独立运动）；Unity 刚体类型、唯一原生模拟入口和生命周期由世界服务管理，区块合批是固定模式的内部实现。不同世界使用独立原生场景，物品只在登记、结构变化、迁移、卸载时更新物理归属，不逐帧扫描。规则 `world_streaming/world_physics_ownership`、`world_physics_definition` 覆盖原生接触隔离、精确区域、临时查询池和回收。
+- `GameplayWorldRuntime.Physics` 持有 `WorldPhysicsService2D`；原生空间由 `WorldPhysicsScene2D` 创建/借用，世界身份不再直接充当查询场景。物理代理公共模式为 `WorldFixed`（相对所属世界固定）和 `IndependentDynamic`（在所属世界内独立运动）；Unity 刚体类型、唯一原生模拟入口和生命周期由世界服务管理，空间合批是固定模式的内部实现，批次大小不读取数据区块尺寸。不同世界使用独立原生场景，物品只在登记、结构变化、迁移、卸载时更新物理归属，不逐帧扫描。规则 `world_streaming/world_physics_ownership`、`world_physics_definition` 覆盖原生接触隔离、精确区域、临时查询池和回收。
 - `TerrainSupportLayer` 分开标记结构所有权与外部显示：`ExternalOwnershipLayer` 防止结构地板随普通土层事务再移交，`ExternalVisualLayer` 只防重画；普通 Tile 地板仍由 ChunkView 显示。支撑上的玩家填土通过 `GetExposedTileId/GetSurfaceCell` 进入普通农业与采挖，迁移作物使用 `IPlantableCrop` 的活体/冷状态坐标接口，不按具体作物 ID 分支。
-- `ChunkView` 不持有 Blocking、Grid、Collider 或 Rigidbody；世界物理服务订阅权威地形提交和模拟租约，以 Ready + Active 驱动 `WorldChunkPhysicsProjection2D`，不依赖显示租约或视图回池。物理节点及镜像独立归属 `World Physics Chunks`，重绑/关闭撤事件、归还碰撞池；规则 `world_streaming/chunk_physics_lifecycle`。
-- 地形独占 Static Rigidbody2D + Manual Composite；树/机器 `ChunkObstacleColliderSet` 从世界服务借 BoxCollider，非 Composite，相关实现集中在 `Physics2D/`。正式 Item Collider 出现撤数据代理，卸载后恢复；中央脏队列按所属世界分桶，在 Simulate 前提交，物理投影直接刷新本世界镜像，不经过视觉通知；规则 `world_streaming/collision_dirty_queue`。
+- `ChunkView` 不持有 Blocking、Grid、Collider 或 Rigidbody。`WorldTerrainPhysicsSource2D` 只订阅 Ready + Active 地形并提交矩形数据，`WorldMachinePhysicsSource2D` 只提交实际模拟机器；二者不创建组件或私有物理池，原生形状统一进入 `WorldPhysicsService2D` 的实体代理、空间批次和回收链。空地形不创建原生组件；规则 `world_streaming/terrain_physics_source`。
+- 地形与机器通过 `WorldPhysicsFixedRectangleSource2D` 复用通用固定代理；自然实体的所有区域直接由普通代理装配，不再跳过固定阻挡或广播另一套区块碰撞快照。`FlushPendingGeometry` 在原生模拟前合并实际形状变化，取消同时撤销已取出的本轮批次与下一轮排队，嵌套刷新延后，失败只重试仍有效的来源；规则 `world_streaming/physics_geometry_queue`。固定镜像同样借实体壳池并保留 `ColliderSource2D` 来源。
 - 自有代理与障碍盒沿用 `usedByComposite=false` 默认值，停用重绑不重复写此原生开关；池化实体先激活节点再提交初始位姿和速度，`world_physics_proxy_gameplay` 检查恢复数据与刚体一致。`world_physics_ownership` 覆盖回池、销毁旧宿主和 Composite 下复用。
-- `CombineAdjacent` 且有储存能力的机器共用 `ChunkMergedObstacleRectangles`：先逐源沿区块裁剪，再精确拼接同模板实体矩形，保留空洞/间距；只在源几何变化重建，镜像复用合并盒。库存、交互、战斗和导航仍逐格；回归 `industrial_fluids/combined_tank_collision_*`，离线 `Tools/Tests/CombinedTankColliders/verify.py`。
+- `CombineAdjacent` 且有储存能力的机器按通用物理批次和同模板分组；与地形共用 `WorldPhysicsRectangleMerger2D` 精确矩形拼接，保留空洞/间距，不再按数据区块裁断跨界形状。库存、交互、战斗和导航身份不合并；回归 `industrial_fluids/combined_tank_collision_*`，离线 `Tools/Tests/CombinedTankColliders/verify.py`。
 - `SharedSpriteMeshCache` 属于资源会话；Ready 前预热最终目录，普通流送不清 Mesh，Backend 重建重新注册 BatchMeshID。清理先 BRG 解绑再毁 Mesh，会话结束先禁止 Owner 重登记，逐项释放异常不阻断其余资源。
 - BRG Shader 全 Pass 使用一致 `UnityPerMaterial` 布局；AoS 寻址在 `UNITY_SETUP_INSTANCE_ID` 后用 `GetDOTSInstanceIndex()`。Owner 丢失先全量重建，单格 SetVisual 不隐式登记；卸载交换删除后修正句柄并合并上传。
 - `OwnerCullingEnabled` 默认关；开时按 Owner 可见集合重建索引，关时仍发布可见实例/绘制命令。后端在普通流送 Owner 暂空时保留，仅完整窗口关闭后释放。

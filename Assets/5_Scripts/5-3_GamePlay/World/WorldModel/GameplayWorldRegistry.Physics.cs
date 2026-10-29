@@ -14,6 +14,31 @@ public static partial class GameplayWorldRegistry
 {
     #region 世界物理服务生命周期
     private static readonly Dictionary<string, WorldPhysicsService2D> worldPhysics = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, WorldTerrainPhysicsSource2D> terrainPhysicsSources = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, WorldMachinePhysicsSource2D> machinePhysicsSources = new(StringComparer.Ordinal);
+
+    internal static bool TryGetTerrainPhysicsSource(string key, out WorldTerrainPhysicsSource2D source)
+        => terrainPhysicsSources.TryGetValue(key ?? string.Empty, out source);
+
+    internal static void BindWorldPhysicsSources(FlatWorld.WorldModel.WorldRuntime model, WorldPhysicsService2D physics)
+    {
+        if (!terrainPhysicsSources.TryGetValue(model.WorldId, out var terrain))
+            terrainPhysicsSources.Add(model.WorldId, terrain = new WorldTerrainPhysicsSource2D(physics));
+        terrain.Bind(model);
+        if (machinePhysicsSources.TryGetValue(model.WorldId, out var machines)) machines.Bind(model);
+    }
+
+    internal static void UnbindWorldPhysicsSources(FlatWorld.WorldModel.WorldRuntime model)
+    {
+        if (terrainPhysicsSources.TryGetValue(model.WorldId, out var terrain)) terrain.Unbind(model);
+        if (machinePhysicsSources.TryGetValue(model.WorldId, out var machines)) machines.Unbind(model);
+    }
+
+    private static void ReleaseWorldPhysicsSources(string key)
+    {
+        if (terrainPhysicsSources.Remove(key, out var terrain)) terrain.Dispose();
+        if (machinePhysicsSources.Remove(key, out var machines)) machines.Dispose();
+    }
 
     public static WorldPhysicsService2D CurrentPhysics
     {
@@ -31,15 +56,17 @@ public static partial class GameplayWorldRegistry
         if (worldPhysics.TryGetValue(worldKey, out var service))
         {
             if (service.IsValid && service.PrimarySpace.Scene == scene) return service;
+            ReleaseWorldPhysicsSources(worldKey);
             service.Dispose();
         }
         var next = new WorldPhysicsService2D(worldKey, WorldPhysicsScene2D.Borrow(scene));
         worldPhysics[worldKey] = next;
         try
         {
-            if (TryGetOwnedWorldModel(worldKey, out var model)) next.BindChunkWorld(model);
+            machinePhysicsSources.Add(worldKey, new WorldMachinePhysicsSource2D(next));
+            if (TryGetOwnedWorldModel(worldKey, out var model)) BindWorldPhysicsSources(model, next);
         }
-        catch { worldPhysics.Remove(worldKey); next.Dispose(); throw; }
+        catch { ReleaseWorldPhysicsSources(worldKey); worldPhysics.Remove(worldKey); next.Dispose(); throw; }
         if (host == null && Application.isPlaying && !releasing)
         {
             var root = new GameObject("GameplayWorldRegistry");
@@ -80,11 +107,15 @@ public static partial class GameplayWorldRegistry
 
     private static void ReleaseWorldPhysics(string worldKey)
     {
+        ReleaseWorldPhysicsSources(worldKey);
         if (worldPhysics.Remove(worldKey, out var service)) service.Dispose();
     }
 
     internal static void ReleaseAllWorldPhysics()
     {
+        foreach (var terrain in terrainPhysicsSources.Values) terrain.Dispose();
+        foreach (var machines in machinePhysicsSources.Values) machines.Dispose();
+        terrainPhysicsSources.Clear(); machinePhysicsSources.Clear();
         foreach (var service in worldPhysics.Values) service.Dispose();
         worldPhysics.Clear();
     }

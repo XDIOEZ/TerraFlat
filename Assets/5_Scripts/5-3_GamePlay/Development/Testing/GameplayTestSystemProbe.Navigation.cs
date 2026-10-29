@@ -750,21 +750,21 @@ public static partial class GameplayTestSystemProbe
         };
         var live = new HashSet<int> { 10, 11 };
         var stale = new List<int>();
-        WorldChunkPhysicsProjection2D.CollectStaleMachineIds(anchors, first, live, stale);
+        WorldMachinePhysicsSource2D.CollectStaleMachineIds(anchors, first, live, stale);
         bool unchanged = stale.Count == 0;
         live.Remove(11);
-        WorldChunkPhysicsProjection2D.CollectStaleMachineIds(anchors, first, live, stale);
+        WorldMachinePhysicsSource2D.CollectStaleMachineIds(anchors, first, live, stale);
         bool removedOnlyOne = stale.Count == 1 && stale[0] == 11;
         anchors.Remove(11);
         anchors[10] = second;
-        WorldChunkPhysicsProjection2D.CollectStaleMachineIds(anchors, first, live, stale);
+        WorldMachinePhysicsSource2D.CollectStaleMachineIds(anchors, first, live, stale);
         bool movedNotRemoved = stale.Count == 0;
         live.Clear();
         live.Add(10);
-        WorldChunkPhysicsProjection2D.CollectStaleMachineIds(anchors, second, live, stale);
+        WorldMachinePhysicsSource2D.CollectStaleMachineIds(anchors, second, live, stale);
         bool neighborRemoved = stale.Count == 1 && stale[0] == 12;
         live.Clear();
-        WorldChunkPhysicsProjection2D.CollectStaleMachineIds(anchors, second, live, stale);
+        WorldMachinePhysicsSource2D.CollectStaleMachineIds(anchors, second, live, stale);
         bool allRemoved = stale.Count == 2 && stale.Contains(10) && stale.Contains(12);
         return new JObject
         {

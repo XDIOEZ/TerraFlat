@@ -1,8 +1,17 @@
 using System;
+using System.Collections.Generic;
 
 public static partial class MachineWorld
 {
     #region 固定格机器的通用物理接入
+    internal static event Action<string> PhysicsSourcesReset;
+
+    internal static void CollectExistingPhysicsNodes(string key, List<MachineEntity> result)
+    {
+        result.Clear();
+        if (scopes.TryGetValue(key, out var existing)) result.AddRange(existing.Nodes.Values);
+    }
+
     // 固定占格与管电网暂不支持自由运动，模式资格由世界物理服务统一判断。
     internal static WorldPhysicsProxyMode2D ResolveRequiredWorldFixedMachineProxyMode(string itemId, GameRes resources = null)
     {

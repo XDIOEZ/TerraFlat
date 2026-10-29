@@ -56,8 +56,9 @@ public sealed partial class WorldPhysicsService2D : IDisposable
     public int ColliderCount => colliders.Count;
     public bool IsValid => !disposed && PrimarySpace.IsValid;
     public bool IsSimulating { get; private set; }
+    public int FixedBatchCellSize { get; }
 
-    public WorldPhysicsService2D(string worldKey, WorldPhysicsScene2D primarySpace)
+    public WorldPhysicsService2D(string worldKey, WorldPhysicsScene2D primarySpace, int fixedBatchCellSize = 32)
     {
         if (string.IsNullOrWhiteSpace(worldKey)) throw new ArgumentException("必须指定世界身份。", nameof(worldKey));
         PrimarySpace = primarySpace ?? throw new ArgumentNullException(nameof(primarySpace));
@@ -65,6 +66,8 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         // 不同世界在创建时就隔离原生模拟，不能等接触事件发生后再过滤。
         if (simulationOwners.TryGetValue(primarySpace.PhysicsScene, out var owner) && owner.WorldKey != worldKey)
             throw new InvalidOperationException($"世界 {worldKey} 与 {owner.WorldKey} 需要独立的 PhysicsScene2D。");
+        if (fixedBatchCellSize <= 0) throw new ArgumentOutOfRangeException(nameof(fixedBatchCellSize));
+        FixedBatchCellSize = fixedBatchCellSize;
         WorldKey = worldKey;
         simulationOwners[primarySpace.PhysicsScene] = this;
         WorldTopologyRuntime.LocalPlayerWrapped += ReprojectEntityPhysicsToLocalAnchor;
@@ -343,7 +346,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
     internal void Simulate(float seconds)
     {
         // 脏碰撞在本世界原生模拟前统一提交，物品和区块不再各自选择模拟空间。
-        WorldChunkPhysicsProjection2D.FlushDirtyDataObstacles(WorldKey);
+        FlushPendingGeometry();
         PrepareEntityProxySimulation();
         IsSimulating = true;
         try { PrimarySpace.Simulate(seconds); }
@@ -356,7 +359,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         if (disposed) return;
         disposed = true;
         WorldTopologyRuntime.LocalPlayerWrapped -= ReprojectEntityPhysicsToLocalAnchor;
-        DisposeChunkPhysics();
+        DisposeGeometrySources();
         DisposeTransientBodies();
         DisposeEntityProxies();
         foreach (var pair in itemColliders)

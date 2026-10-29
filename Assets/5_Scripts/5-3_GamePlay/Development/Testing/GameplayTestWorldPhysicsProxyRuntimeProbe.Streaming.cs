@@ -18,7 +18,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         internal ChunkRuntime Chunk;
         internal ChunkView View;
         internal ChunkTilemapRenderer Tilemap;
-        internal WorldChunkPhysicsProjection2D Collision;
+        internal WorldTerrainPhysicsSource2D TerrainSource;
     }
 
     private sealed class TransferBusyReentrancyProbe
@@ -100,11 +100,11 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             Chunk = chunk,
             View = view,
             Tilemap = view.GetComponentInChildren<ChunkTilemapRenderer>(true),
-            Collision = world.Physics.TryGetChunkPhysics(address, out var collision) ? collision : null
+            TerrainSource = GameplayWorldRegistry.TryGetTerrainPhysicsSource(worldKey, out var terrainSource) ? terrainSource : null
         };
-        if (presentation.Tilemap == null || presentation.Collision == null ||
-            presentation.Collision.BoundChunk != chunk)
-            throw new InvalidOperationException("迁移目标表现没有绑定真实地形与WorldChunkPhysicsProjection2D。");
+        if (presentation.Tilemap == null || presentation.TerrainSource == null ||
+            !presentation.TerrainSource.IsBound(chunk))
+            throw new InvalidOperationException("迁移目标表现没有绑定真实地形与通用物理的地形数据来源。");
         return presentation;
     }
 
@@ -231,8 +231,8 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         Vector2 targetPosition = sourcePosition;
         yield return GameplayWorldRegistry.PrepareWorld(targetWorldKey, targetPosition);
         PhysicsTestTransferPresentation destination = BindPhysicsTestTransferPresentation(targetWorldKey, targetPosition);
-        if (destination == null || destination.Collision?.BoundChunk != destination.Chunk)
-            throw new InvalidOperationException("迁移目标没有真实ChunkView和WorldChunkPhysicsProjection2D表现租约。");
+        if (destination == null || destination.TerrainSource?.IsBound(destination.Chunk) != true)
+            throw new InvalidOperationException("迁移目标没有真实ChunkView和通用物理的地形数据来源表现租约。");
         ChunkNaturalItemRenderer sourceRenderer = sourceView.GetComponentInChildren<ChunkNaturalItemRenderer>(true);
         if (sourceRenderer == null) throw new InvalidOperationException("迁移源ChunkView缺少自然资源生成器。");
         var busyProbe = new TransferBusyReentrancyProbe();
@@ -345,7 +345,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
                     destination.Chunk.Terrain.Height - 1), 0f, 0f, "test:target-local-natural-source");
             result[prefix + "TargetMode"] = targetProxy.Mode.ToString();
             result[prefix + "TargetNativeScene"] = targetProxy.Owner.PrimarySpace.PhysicsScene != sourcePhysics.PrimarySpace.PhysicsScene;
-            result[prefix + "TargetCollisionRendererBound"] = destination.Collision.BoundChunk == destination.Chunk &&
+            result[prefix + "TargetCollisionRendererBound"] = destination.TerrainSource.IsBound(destination.Chunk) &&
                 ReferenceEquals(destination.World.Physics, targetProxy.Owner);
             result[prefix + "TargetGuidPreserved"] = targetSnapshot?.Guid == guid && targetSnapshot.IDName == definition.Id;
             result[prefix + "TargetSourceWorldPreserved"] = destination.Manager.IndependentNaturalEntities

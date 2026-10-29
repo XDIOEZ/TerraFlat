@@ -1,6 +1,9 @@
-test.system("world_streaming", "chunk_physics_lifecycle", {}, function(data)
+test.system("world_streaming", "terrain_physics_source", {}, function(data)
     assert(data.unreadyHasNoPhysics and data.noViewNativeCollision and data.worldOwnsCollider,
         "物理必须等待权威地形就绪，并在没有ChunkView时仍可被所属世界原生查询命中")
+    assert(data.genericProxyRegistry and data.noNativeTilemap and data.fixedEntityWithoutChunkBackend
+        and data.sharedGeneralBody and data.batchSizeIndependent,
+        "地形与普通固定实体没有共享通用代理、形状池和独立配置的物理批次")
     assert(data.notViewRenderer and data.visualPrefabHasNoPhysics,
         "ChunkView仍残留Blocking、刚体或碰撞组件，或物理投影仍实现视觉绑定接口")
     assert(data.presentationReleaseKeepsPhysics and data.otherSimulationKeepsPhysics,
@@ -39,13 +42,22 @@ test.system("world_streaming", "world_scene_binding", {}, function(data)
 end, "逻辑世界与场景绑定、歧义拒绝和会话身份")
 
 -- 独立 WorldRuntime 不生成地形，只测运行、表现和寻路租约的所有权。
-test.system("world_streaming", "collision_dirty_queue", {}, function(data)
+test.system("world_streaming", "physics_geometry_queue", {}, function(data)
     assert(data.emptyInitially and data.bothPending and data.deduplicated and data.isolated,
         "碰撞空世界仍有工作，或同一块重复入队/首个世界消费了另一世界的脏批次")
     assert(data.requeued and data.nextBatch and data.rebound,
         "碰撞回调中新通知丢失，或解绑重绑把新世界的障碍交给旧世界处理")
     assert(data.destroyedReleased and data.cleared,
         "已销毁碰撞对象或世界重置后仍残留脏队列")
+    assert(data.failedSubmissionRetried and data.geometryFailureRetried,
+        "通用提交或原生代理申请失败后丢失了待重试几何")
+    assert(data.cancelledInFlightSkipped and data.cancelledAndRequeuedDeferred,
+        "已取出的几何批次仍执行被取消的来源，或取消后重登记没有留到下一物理步")
+    assert(data.failureDoesNotReviveCancelled and data.failedCancelledCallbackNotRetried and data.recursiveFlushDeferred,
+        "失败重试复活了已取消来源，或嵌套提交提前消费了下一步几何")
+    assert(data.subToleranceGeometrySubmitted and data.nativeGeometryContractPreserved and data.changedGeometryPreserved
+        and data.subToleranceOriginPreserved and data.unchangedGeometryNotScheduled,
+        "真实形状变化未提交、偏离原生Setter契约、微小位置变化丢失，或未变化几何重复入队")
     assert(data.stable and data.iterations == 1024 and data.allocatedBytes == 0,
         "预热后的空队列查询/脏批次循环仍产生GC或漏掉实际待处理项")
 end, "碰撞脏队列空转零分配、多世界隔离与回调重入")

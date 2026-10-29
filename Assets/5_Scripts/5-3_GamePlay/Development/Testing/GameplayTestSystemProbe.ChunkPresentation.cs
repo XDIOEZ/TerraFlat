@@ -12,8 +12,8 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterChunkPresentationOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("world_streaming/base_presentation_steps", ServiceBasePresentationSteps);
-        operations.Add("world_streaming/collision_dirty_queue", ServiceCollisionDirtyQueue);
-        operations.Add("world_streaming/chunk_physics_lifecycle", ServiceChunkPhysicsLifecycle);
+        operations.Add("world_streaming/physics_geometry_queue", ServicePhysicsGeometryQueue);
+        operations.Add("world_streaming/terrain_physics_source", ServiceTerrainPhysicsSource);
         operations.Add("rendering/building_liquid_surface", ServiceBuildingLiquidSurface);
     }
 

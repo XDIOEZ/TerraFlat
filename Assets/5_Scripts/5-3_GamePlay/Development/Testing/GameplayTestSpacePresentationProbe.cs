@@ -60,8 +60,7 @@ public static class GameplayTestSpacePresentationProbe
             WorldPhysicsService2D physics;
             WorldPhysicsEntityProxy2D fixedProxy, movingProxy;
             var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
-                new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one },
-                chunkBlockingProjection: false) };
+                new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one }) };
             using (IDisposable scope = GameplayWorldRegistry.UseSpaceScene(key) ??
                 throw new InvalidOperationException("独立星区场景未能登记物理上下文。"))
             {
@@ -114,8 +113,7 @@ public static class GameplayTestSpacePresentationProbe
         ItemData snapshot = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
         var definition = new ItemPhysicsDefinitionDto();
         var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
-            new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one },
-            chunkBlockingProjection: false) };
+            new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one }) };
         bool staticIndependentProxyReleased = false;
         int staticBodyWarnings = 0;
         Application.LogCallback countStaticBodyWarnings = (message, trace, type) =>

@@ -324,13 +324,9 @@ test.system("industrial_fluids", "combined_tank_collision_geometry", {boxes=scre
 end, "截图同形26格组合罐合并到5个矩形并保留台阶凹口")
 
 test.system("industrial_fluids", "combined_tank_collision_geometry",
-    {boxes=screenshot_tank_boxes, clip={originX=-27,originY=-17,width=32,height=32}}, function(data)
-    check_merged_obstacle_boxes(data, 2, 12, {{27.5,17.5},{31.5,22.5}}, {{30.5,19.5},{32.5,17.5}})
-end, "截图左区块裁剪后12格储罐保留2个矩形")
-test.system("industrial_fluids", "combined_tank_collision_geometry",
-    {boxes=screenshot_tank_boxes, clip={originX=5,originY=-17,width=32,height=32}}, function(data)
-    check_merged_obstacle_boxes(data, 3, 14, {{.5,17.5},{2.5,19.5},{.5,22.5}}, {{2.5,20.5},{1.5,22.5}})
-end, "截图右区块裁剪后14格储罐保留3个矩形")
+    {boxes={{x=-1,y=0,width=3,height=1},{x=31,y=0,width=2,height=1}}}, function(data)
+    check_merged_obstacle_boxes(data, 2, 5, {{-.75,.5},{1.75,.5},{31.25,.5},{32.75,.5}}, {{2.25,.5},{33.25,.5}})
+end, "通用矩形保持负坐标和跨批次完整形状，不再按数据区块裁断")
 
 test.system("industrial_fluids", "combined_tank_collision_capabilities", {}, function(data)
     assert(#data.builtInTanks == 4, "没有覆盖铁钢水罐和气罐")
@@ -350,11 +346,9 @@ test.system("industrial_fluids", "combined_tank_collision_lifecycle", {}, functi
         "环绕镜像没有复用、拆分、追踪真实来源或清空旧合并碰撞")
     assert(data.independentRetained and data.emptyMergedCount == 0 and data.clearedCount == 0,
         "合并池清理误删普通机器/自然物，或保留旧罐体碰撞")
-    assert(data.clippedCount == 1 and data.clippedArea == 2 and not data.outsideAccepted,
-        "跨区块裁剪漏边、扩大矩形或保留区块外碰撞")
-    assert(data.removedByRetain == 1 and data.retainedSource and not data.removedSource,
-        "全量重扫未撤销已卸载的罐体来源")
-end, "组合罐拆中间、原生形状复用、独立障碍保留、跨块裁剪与镜像收尾")
+    assert(data.genericProxyRegistry and data.batchBoundaryKeepsWholeShape and data.crossingArea == 2,
+        "矩形未登记到通用实体代理，或跨物理批次时被错误裁断")
+end, "组合罐拆中间、原生形状复用、独立来源保留、跨批次完整形状与镜像收尾")
 
 
 test.system("industrial_fluids", "fuel_oil_engine_definition", {}, function(d)
