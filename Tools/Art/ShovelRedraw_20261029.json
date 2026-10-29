@@ -1,0 +1,694 @@
+{
+  "schemaVersion": 1,
+  "task": "2026-10-29：重绘游戏使用的全部六把铲子，遵循 flatworld-art 的大色块像素与手工绑扎规范。",
+  "generationMode": "Built-in image_gen; one generation per material; all original output PNG bytes and alpha preserved.",
+  "styleReferences": [
+    ".agents/skills/flatworld-art/SKILL.md",
+    ".agents/skills/flatworld-art/references/art-direction.md",
+    ".agents/skills/flatworld-art/references/runtime-sprites.md"
+  ],
+  "ironPrompt": "Use case: style-transfer. Asset type: final production Unity 2D top-down survival-game held shovel and inventory sprite. Redraw the IRON SHOVEL in image 1. Input image 1 is the existing shovel's identity and lower-left handle to upper-right blade orientation. Image 2 (bear) is ONLY the authority for large, chunky, readable pixel clusters, broad restrained shading and muted natural colors; DO NOT draw the bear. Image 3 (32x48 person) is ONLY a pixel-density/scale guide; DO NOT draw a character. Image 4 is ONLY an iron shovel structural/material reference, NOT its shiny rim or fine texture. Output one whole isolated handmade wrought-iron digging spade on an actually transparent square 1024x1024 canvas. A long slightly crooked, uneven hand-peeled warm brown branch handle, no handle loop, ending at lower left; its upper end is split around the iron tang. At the ACTUAL head-to-wood connection, 3 or 4 very obvious thick tan rope or rawhide lashings and a crossing knot visibly fasten BOTH wood and iron together. The broad spade blade is in line with the shaft, at upper right. It is a practical flat broad rounded trapezoid with a short rounded pointed digging edge, slight handmade asymmetry and a tapering tang, clearly a SHOVEL rather than a spear, axe or trowel. Medium cool gray wrought iron with just two large flat gray facets and one restrained muted edge light, matte hand-forged metal; no shiny continuous perimeter, rust spots, ornament, industrial tubular ferrule or stamped ridge. Broad shovel head is about one third of the tool's overall length; shaft is thick enough to read in an inventory slot, around 3 logical pixels. Same coarse pixel language as the bear, roughly a 48x48 LOGICAL grid represented using LARGE hard-edged 16 to 24 pixel square clusters on the full-size canvas. This is deliberately chunky low-detail pixel art, NOT a detailed high-resolution illustration with tiny pixels. 2-3 broad tones per material, very few contiguous large color shapes. Hard crisp square stair-step edges; no gradients, no antialiasing, no noise, no scratches, no texture grain, no blurry painting. Keep the full silhouette between about 10 and 90 percent of the image on both axes, whole tool centered, blade pointed diagonally up-right at 45 degrees; grip near lower-left around (22%, 78%). Lighting a restrained upper-left shade step. Preserve real transparency, no checkerboard drawn into image, no ground, shadow, border, scene, hands, duplicate views, labels, text or watermark. Keep this entire rendered source resolution: it is a final game asset.",
+  "variantPromptBase": "Use case: style-transfer. Asset: one final production shovel sprite for the FlatWorld Unity 2D survival game. Image 1 is the OLD shovel, only its material identity and diagonal lower-left grip to upper-right head orientation. Image 2 is the NEW IRON SHOVEL from this same set: match its exact large pixel-cluster scale, overall length, chunky handle thickness, large broad spade-head size, 45-degree diagonal direction, composition, transparent margin and restrained palette style, but use this shovel's OWN material and handmade construction below. Image 3 is ONLY the bear's coarse-pixel style anchor, and image 4 is ONLY the tiny player's pixel-density guide; do not draw any bear or character. One full tool, no duplicates, lower-left wooden grip and upper-right broad functional shovel head IN LINE with the shaft; no axe blade or spear point. Large broad digging blade around one third of tool length, slightly crooked thick wooden branch shaft about two thirds, with plain rounded butt and NO D-handle. At the ACTUAL head-to-handle connection make 3-4 thick tan rope/rawhide bands and a crossed tie clearly fasten both the split wooden neck and head tang together; lashing is structural. Muted earthy colors, about 2-3 broad contiguous flat tones per material; chunky retro pixel art around a 48x48 logical grid, crisp large square stair steps as in image 2, NEVER micro-detail, soft gradients, smooth painted edges, tiny scratches, speckle or grain. Subtle upper-left shading. Keep all original output pixels in a full-resolution square canvas, preferably 1280x1280, no low-resolution downsample. Entire silhouette inset approximately 10%, whole centered item; same grip placement as image 2. Genuinely transparent alpha background. NO ground, cast shadow, scene, hands, frame, labels, text, checkerboard or watermark. ",
+  "variantSubjects": {
+    "Wood": "One primitive WOODEN digging shovel, no metal or stone anywhere. Broad flat hand-carved wooden paddle/spade head with softly squared shoulders and a wide slightly rounded digging edge, subtly asymmetric. Light muted honey-tan cut wood on blade, mid-brown central plane, dark warm wood side plane; large color patches only and one broad wood grain shape at most. Blade is a carved wooden plate secured by a split dark-brown branch neck and obvious coarse tan plant-fiber cross lashings at blade base. Slightly uneven shaft but strong reliable construction. It must read as a wide digging shovel, not a spoon or a narrow pointed spear.",
+    "Stone": "One primitive STONE digging shovel. Broad FLAT slate-gray flaked stone spade with a wide slightly irregular rounded triangular digging edge, visibly chipped stone with ONLY three large dull gray facets, no shiny metallic rim or smooth industrial form. Warm brown split wooden branch visibly cradles the narrowed stone blade base. 3-4 chunky pale-tan plant-fiber turns and a crossed knot clamp the stone and wood TOGETHER at their junction. Wide practical shovel silhouette, a stone plate rather than a stone axe or spear.",
+    "Copper": "One early handmade COPPER digging shovel. Broad rounded-trapezoid spade blade with a short rounded triangular digging edge, muted REDDISH copper orange/salmon with broad burnt-sienna shadow plane and one dull apricot highlight facet; clearly RED copper, not bronze yellow. Slightly asymmetric hand-cast/hammered copper plate, clear wide shovel shape, simple tang held in split wooden shaft with thick TAN structural lashings and crossed binding. Long slightly crooked warm brown branch. Just 2-3 big flat tones on metal, no modern rolled socket, stamped ridge, shiny border, ornament or patina noise.",
+    "RawIron": "One primitive RAW BLOOMERY IRON digging shovel, earlier and cruder than refined iron. Broad dark CHARCOAL-BROWN GRAY spade plate, flattened wide digging edge and slightly lopsided thick shoulders, one large uneven dark brown-black forge-scale patch and one subdued dark slate facet; unmistakably dark roughly hammered METAL, not a stone slab. Keep blade readable against light and dark gameplay backgrounds using a muted medium-gray rim section, not a bright polished outline. Iron tang trapped inside split end of uneven brown wood shaft and clearly bound by 3-4 thick tan rawhide/rope turns plus crossed knot. No factory ferrule or stamped central ridge, no tiny hammer marks, rust speckles or shiny edge.",
+    "Bronze": "One early handmade BRONZE digging shovel. Broad flat rounded-trapezoid spade blade with wide shoulders tapering to short rounded digging point, muted OCHRE/OLIVE golden-brown bronze, one broad muted olive-brown shadow facet and restrained pale ochre edge plane; distinctly dull bronze, not red copper or shiny gold. Slightly asymmetric cast shape. A simple tang and split brown branch neck held firmly together with 3-4 chunky TAN fiber/rawhide turns and crossing knot at actual head joint. Long gently bent warm brown wooden shaft. Early crafted bronze stage, no modern tube socket, industrial folded center ridge, screws, polished perimeter or tiny patina speckles."
+  },
+  "references": {
+    "iron": [
+      "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Iron/Shovel_Iron_Icon.png",
+      "Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png",
+      "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png",
+      "Assets/6_Art/Generated/Tools/StyleSamples_20261023/Shovel_Iron_StyleSample.png"
+    ],
+    "variants": [
+      "Existing matching-material shovel sprite",
+      "C:/Users/PC/.codex/generated_images/01a18837-e6e5-7c32-9283-2aabb787d6ab/exec-27fed8fa-dca3-4e78-8fec-1214159cbaaa.png",
+      "Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png",
+      "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Male.png"
+    ]
+  },
+  "integrationPolicy": {
+    "alphaThresholdForVisibleSize": 128,
+    "worldSize": "Preserve each shovel's previous visible longest world-space dimension; no resampling.",
+    "grip": "Map the old pivot relative to its visible bounds onto the new visible bounds and place it at a solid wood pixel center.",
+    "spriteIdentity": "Preserve existing PNG asset GUID, Sprite identity, Addressables address and item JSON.",
+    "import": "Point, no mipmaps, no compression, sRGB, alpha transparency, maxTextureSize 2048 on every platform; preserve original 1254x1254 source resolution."
+  },
+  "assets": [
+    {
+      "id": "Shovel_Iron",
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Iron/Shovel_Iron_Icon.png",
+      "sourcePath": "C:/Users/PC/.codex/generated_images/01a18837-e6e5-7c32-9283-2aabb787d6ab/exec-27fed8fa-dca3-4e78-8fec-1214159cbaaa.png",
+      "guid": "5d3ae22d259a471faa23c4752de35a3f",
+      "spriteId": "1799edbc440443209e62c2ca022aacf2",
+      "backupPath": "C:\\Users\\PC\\.codex\\visualizations\\2026\\10\\29\\01a18837-e6e5-7c32-9283-2aabb787d6ab\\ShovelRedraw_20261029\\before\\Shovel_Iron_Icon.png",
+      "before": {
+        "sha256": "f185524c6b6bf287e7acdf2cfe9bebb1ff3eef7d9b6b6d4c10709683a56acc92",
+        "metaSha256": "5929a97daff04f088bf185431c62640eb2eb876529c2169d7578430123bd5188",
+        "size": [
+          32,
+          32
+        ],
+        "visibleBounds": [
+          5,
+          2,
+          31,
+          31
+        ],
+        "ppu": 32.0496046955,
+        "pivot": [
+          0.2443222,
+          0.1579745
+        ],
+        "worldVisibleSize": [
+          0.8112424551573515,
+          0.9048473538293536
+        ]
+      },
+      "after": {
+        "sha256": "1635b909cc085dea6eda8178d3d0459710e5ea0fede8c94d29349bd23b1f3725",
+        "size": [
+          1254,
+          1254
+        ],
+        "visibleBounds": [
+          172,
+          114,
+          1217,
+          1196
+        ],
+        "ppu": 1195.781802776931,
+        "pivot": [
+          0.22767145135566189,
+          0.166267942583732
+        ],
+        "gripPixel": [
+          285,
+          1045
+        ],
+        "gripRgba": [
+          195,
+          140,
+          98,
+          253
+        ],
+        "worldVisibleSize": [
+          0.8739052539294588,
+          0.9048473538293536
+        ],
+        "alphaUnmodified": true,
+        "alphaNonZeroBelow128": 11036,
+        "alphaBelow128Policy": "Original generated alpha retained; visible-size comparison uses the existing art-validator threshold 128."
+      }
+    },
+    {
+      "id": "Shovel_Wood",
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Wood/Shovel_Wood_Icon.png",
+      "sourcePath": "C:/Users/PC/.codex/generated_images/01a18837-e6e5-7c32-9283-2aabb787d6ab/exec-260e4385-4362-4429-9560-ae1bec5c0f89.png",
+      "guid": "4ae7b460a7ae499e9e47062f5f90659d",
+      "spriteId": "f8c2a5ca10744614b15ba238ed5337c8",
+      "backupPath": "C:\\Users\\PC\\.codex\\visualizations\\2026\\10\\29\\01a18837-e6e5-7c32-9283-2aabb787d6ab\\ShovelRedraw_20261029\\before\\Shovel_Wood_Icon.png",
+      "before": {
+        "sha256": "4ce2e3e040e1aae35c6799e672d0116672a76098f235b5cb0c4e47aa77d0fd06",
+        "metaSha256": "b1194fd597b42ab02f4c39e7f3c69d102e84c2d57c77ef91b67479beec185bde",
+        "size": [
+          32,
+          32
+        ],
+        "visibleBounds": [
+          4,
+          2,
+          32,
+          31
+        ],
+        "ppu": 32.034316861,
+        "pivot": [
+          0.2420255,
+          0.1638756
+        ],
+        "worldVisibleSize": [
+          0.8740626535441572,
+          0.90527917688502
+        ]
+      },
+      "after": {
+        "sha256": "30636cc068fc48ee9965294d9f3f7a3c68c7f39dda0282b05cb75298771eb159",
+        "size": [
+          1254,
+          1254
+        ],
+        "visibleBounds": [
+          155,
+          108,
+          1201,
+          1172
+        ],
+        "ppu": 1175.3280393139312,
+        "pivot": [
+          0.23564593301435408,
+          0.18939393939393945
+        ],
+        "gripPixel": [
+          295,
+          1016
+        ],
+        "gripRgba": [
+          187,
+          125,
+          79,
+          253
+        ],
+        "worldVisibleSize": [
+          0.8899643035918523,
+          0.9052791768850199
+        ],
+        "alphaUnmodified": true,
+        "alphaNonZeroBelow128": 11192,
+        "alphaBelow128Policy": "Original generated alpha retained; visible-size comparison uses the existing art-validator threshold 128."
+      }
+    },
+    {
+      "id": "Shovel_Stone",
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Stone/Shovel_Stone_Icon.png",
+      "sourcePath": "C:/Users/PC/.codex/generated_images/01a18837-e6e5-7c32-9283-2aabb787d6ab/exec-c0ca1744-66a8-40e0-8c64-490f62b44fa8.png",
+      "guid": "8f6d7ad2162c4b7aad8a6cddd5c111a0",
+      "spriteId": "31d2290bcefd4b1ca4b509c7db417fbe",
+      "backupPath": "C:\\Users\\PC\\.codex\\visualizations\\2026\\10\\29\\01a18837-e6e5-7c32-9283-2aabb787d6ab\\ShovelRedraw_20261029\\before\\Shovel_Stone_Icon.png",
+      "before": {
+        "sha256": "7c6b7a0419a0e8d1e709a42f832b2a797dddc093d3a783e64a213f1dc5754932",
+        "metaSha256": "c5e0845303e16b0e42363374ac34a6c183207d5e96a2ce2540cedbcaf6ee3952",
+        "size": [
+          32,
+          32
+        ],
+        "visibleBounds": [
+          4,
+          2,
+          31,
+          30
+        ],
+        "ppu": 31.2546380095,
+        "pivot": [
+          0.2364753,
+          0.177193
+        ],
+        "worldVisibleSize": [
+          0.8638717873421928,
+          0.895867038725237
+        ]
+      },
+      "after": {
+        "sha256": "49684c2c0336f2f892b53ac02db1583d9d62067c346ed1100b873d1725d30f80",
+        "size": [
+          1254,
+          1254
+        ],
+        "visibleBounds": [
+          176,
+          87,
+          1229,
+          1209
+        ],
+        "ppu": 1252.4179945235358,
+        "pivot": [
+          0.2515948963317384,
+          0.15271132376395535
+        ],
+        "gripPixel": [
+          315,
+          1062
+        ],
+        "gripRgba": [
+          158,
+          97,
+          62,
+          253
+        ],
+        "worldVisibleSize": [
+          0.8407736112100486,
+          0.895867038725237
+        ],
+        "alphaUnmodified": true,
+        "alphaNonZeroBelow128": 11590,
+        "alphaBelow128Policy": "Original generated alpha retained; visible-size comparison uses the existing art-validator threshold 128."
+      }
+    },
+    {
+      "id": "Shovel_Copper",
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
+      "sourcePath": "C:/Users/PC/.codex/generated_images/01a18837-e6e5-7c32-9283-2aabb787d6ab/exec-cc9ed98e-9af1-4302-8006-24d7dc8acf04.png",
+      "guid": "ea3ecc24900e417f99f9d6a5edaca108",
+      "spriteId": "7caf58290e3c4ab19dd4003f8349f633",
+      "backupPath": "C:\\Users\\PC\\.codex\\visualizations\\2026\\10\\29\\01a18837-e6e5-7c32-9283-2aabb787d6ab\\ShovelRedraw_20261029\\before\\Shovel_Copper_Icon.png",
+      "before": {
+        "sha256": "3882d44ba3adc059ca81608d4c5341d8d71e52330de63a40be2c27037ad6ea61",
+        "metaSha256": "62e6320d4baf54efe3fc54a2d962919fde45879c57d197c2223b181266d1d99c",
+        "size": [
+          32,
+          32
+        ],
+        "visibleBounds": [
+          4,
+          3,
+          32,
+          31
+        ],
+        "ppu": 31.912014316,
+        "pivot": [
+          0.2575758,
+          0.1751994
+        ],
+        "worldVisibleSize": [
+          0.8774124918200917,
+          0.8774124918200917
+        ]
+      },
+      "after": {
+        "sha256": "170b8cc36e8ff1a85eb99776cf8ff0134ced42adca8123b22dd9311b975868b5",
+        "size": [
+          1254,
+          1254
+        ],
+        "visibleBounds": [
+          171,
+          113,
+          1217,
+          1197
+        ],
+        "ppu": 1235.450839948,
+        "pivot": [
+          0.26275917065390747,
+          0.18700159489633172
+        ],
+        "gripPixel": [
+          329,
+          1019
+        ],
+        "gripRgba": [
+          193,
+          130,
+          84,
+          254
+        ],
+        "worldVisibleSize": [
+          0.8466544893393135,
+          0.8774124918200916
+        ],
+        "alphaUnmodified": true,
+        "alphaNonZeroBelow128": 10176,
+        "alphaBelow128Policy": "Original generated alpha retained; visible-size comparison uses the existing art-validator threshold 128."
+      }
+    },
+    {
+      "id": "Shovel_RawIron",
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_RawIron/Shovel_RawIron_Icon.png",
+      "sourcePath": "C:/Users/PC/.codex/generated_images/01a18837-e6e5-7c32-9283-2aabb787d6ab/exec-6755669d-726a-4ff1-9ef5-62890a29e96c.png",
+      "guid": "2abf93390def4fbdaa92c759bcb45230",
+      "spriteId": "4889ebe1ac4b4861beb3c221e9019261",
+      "backupPath": "C:\\Users\\PC\\.codex\\visualizations\\2026\\10\\29\\01a18837-e6e5-7c32-9283-2aabb787d6ab\\ShovelRedraw_20261029\\before\\Shovel_RawIron_Icon.png",
+      "before": {
+        "sha256": "6e7f027e704c21b70319471e8c6b1f726e19770e1d18e1d4a722e8f9ae75b00c",
+        "metaSha256": "458c4e7f0b40a03614f5cd503eea9d3193078a17c7bb83fe88256e96455848c2",
+        "size": [
+          32,
+          32
+        ],
+        "visibleBounds": [
+          5,
+          2,
+          31,
+          31
+        ],
+        "ppu": 31.713272625,
+        "pivot": [
+          0.2449123,
+          0.1708612
+        ],
+        "worldVisibleSize": [
+          0.8198460091912385,
+          0.9144436256363814
+        ]
+      },
+      "after": {
+        "sha256": "33f0be649bdfa71f2dec0908b80b92907bc3b13ff5869a52aedc27d39c369c91",
+        "size": [
+          1254,
+          1254
+        ],
+        "visibleBounds": [
+          170,
+          112,
+          1227,
+          1186
+        ],
+        "ppu": 1174.48464825,
+        "pivot": [
+          0.22767145135566189,
+          0.18540669856459335
+        ],
+        "gripPixel": [
+          285,
+          1021
+        ],
+        "gripRgba": [
+          178,
+          116,
+          71,
+          253
+        ],
+        "worldVisibleSize": [
+          0.8999691920834777,
+          0.9144436256363814
+        ],
+        "alphaUnmodified": true,
+        "alphaNonZeroBelow128": 10639,
+        "alphaBelow128Policy": "Original generated alpha retained; visible-size comparison uses the existing art-validator threshold 128."
+      }
+    },
+    {
+      "id": "Shovel_Bronze",
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Bronze/Shovel_Bronze_Icon.png",
+      "sourcePath": "C:/Users/PC/.codex/generated_images/01a18837-e6e5-7c32-9283-2aabb787d6ab/exec-b9c47a2d-f726-47a3-8799-d70f559c24bc.png",
+      "guid": "4433633a11a14807bb218131d803dd36",
+      "spriteId": "1dfbb65ea3664e57aac30da27128ed4f",
+      "backupPath": "C:\\Users\\PC\\.codex\\visualizations\\2026\\10\\29\\01a18837-e6e5-7c32-9283-2aabb787d6ab\\ShovelRedraw_20261029\\before\\Shovel_Bronze_Icon.png",
+      "before": {
+        "sha256": "beb59914f623de827e82d1725608cbf9b168b1211209879f6cce7966a3ba2601",
+        "metaSha256": "9ade88b98a3e3cda78d82dea846d26786c6a96fc278c422a4538fbe2836e0b49",
+        "size": [
+          32,
+          32
+        ],
+        "visibleBounds": [
+          5,
+          2,
+          31,
+          31
+        ],
+        "ppu": 31.2699258435,
+        "pivot": [
+          0.2433493,
+          0.1637161
+        ],
+        "worldVisibleSize": [
+          0.8314698323918333,
+          0.9274086592062755
+        ]
+      },
+      "after": {
+        "sha256": "57a1d27648f096e7646024ac19e7c7f6f1e480b43f977aa90047167ea5204522",
+        "size": [
+          1254,
+          1254
+        ],
+        "visibleBounds": [
+          174,
+          116,
+          1219,
+          1196
+        ],
+        "ppu": 1164.535169344138,
+        "pivot": [
+          0.2284688995215311,
+          0.1718500797448166
+        ],
+        "gripPixel": [
+          286,
+          1038
+        ],
+        "gripRgba": [
+          196,
+          135,
+          82,
+          253
+        ],
+        "worldVisibleSize": [
+          0.8973537489542203,
+          0.9274086592062755
+        ],
+        "alphaUnmodified": true,
+        "alphaNonZeroBelow128": 10682,
+        "alphaBelow128Policy": "Original generated alpha retained; visible-size comparison uses the existing art-validator threshold 128."
+      }
+    }
+  ],
+  "validation": {
+    "unityStateBefore": {
+      "projectRoot": "D:/_Unity/_UnityProject/FlatWorld",
+      "isPlaying": true,
+      "isPaused": true,
+      "consoleEntryCount": 5
+    },
+    "lua": "Not run: artwork and import metadata only; user's active PlayMode left untouched.",
+    "runtime": "Not verified: no refresh/import, restart, resume or PlayMode change requested.",
+    "editorLogByteOffsetBeforeIntegration": 2627658,
+    "sourceBytesMatch": true,
+    "preservedAllSixAssetGuids": true,
+    "allGripPixelsOnOpaqueWood": true,
+    "allTransparentCorners": true,
+    "allImportLimitsPreserveSourceResolution": true,
+    "staticWorldSizeChecks": [
+      {
+        "id": "Shovel_Iron",
+        "passed": true,
+        "scope": "source_asset_prediction",
+        "targetLongest": 0.9048473538293536,
+        "measuredVisibleWorldSize": [
+          0.8739052539294588,
+          0.9048473538293536
+        ],
+        "relativeSizeError": [
+          0.0
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "id": "Shovel_Wood",
+        "passed": true,
+        "scope": "source_asset_prediction",
+        "targetLongest": 0.90527917688502,
+        "measuredVisibleWorldSize": [
+          0.8899643035918525,
+          0.9052791768850201
+        ],
+        "relativeSizeError": [
+          2.220446049250313e-16
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "id": "Shovel_Stone",
+        "passed": true,
+        "scope": "source_asset_prediction",
+        "targetLongest": 0.895867038725237,
+        "measuredVisibleWorldSize": [
+          0.8407736112100485,
+          0.8958670387252368
+        ],
+        "relativeSizeError": [
+          2.220446049250313e-16
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "id": "Shovel_Copper",
+        "passed": true,
+        "scope": "source_asset_prediction",
+        "targetLongest": 0.8774124918200917,
+        "measuredVisibleWorldSize": [
+          0.8466544893393135,
+          0.8774124918200916
+        ],
+        "relativeSizeError": [
+          1.1102230246251565e-16
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "id": "Shovel_RawIron",
+        "passed": true,
+        "scope": "source_asset_prediction",
+        "targetLongest": 0.9144436256363814,
+        "measuredVisibleWorldSize": [
+          0.8999691920834777,
+          0.9144436256363814
+        ],
+        "relativeSizeError": [
+          0.0
+        ],
+        "warnings": [],
+        "errors": []
+      },
+      {
+        "id": "Shovel_Bronze",
+        "passed": true,
+        "scope": "source_asset_prediction",
+        "targetLongest": 0.9274086592062755,
+        "measuredVisibleWorldSize": [
+          0.8973537489542203,
+          0.9274086592062755
+        ],
+        "relativeSizeError": [
+          0.0
+        ],
+        "warnings": [],
+        "errors": []
+      }
+    ],
+    "itemAndAddressableReferencesMatch": true,
+    "unityStateAfterAndConsoleCounts": {
+      "errors": 0,
+      "warnings": 0,
+      "logs": 5,
+      "isPlaying": true,
+      "isPaused": true,
+      "consoleFlags": 6019,
+      "filter": ""
+    },
+    "skillUpdate": "Not required: existing flatworld-art instructions already cover this redraw and import policy.",
+    "preview": "C:/Users/PC/.codex/visualizations/2026/10/29/01a18837-e6e5-7c32-9283-2aabb787d6ab/ShovelRedraw_20261029/Shovels_Before_After.png",
+    "pixelAssetChecks": [
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Shovel_Iron\\Shovel_Iron_Icon.png",
+        "size": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "has_alpha": true,
+        "visible_pixels": 237922,
+        "transparent_pixels": 1334594,
+        "partial_alpha_pixels": 236008,
+        "visible_colors": 21507,
+        "coverage": 0.1513,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Shovel_Wood\\Shovel_Wood_Icon.png",
+        "size": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "has_alpha": true,
+        "visible_pixels": 261919,
+        "transparent_pixels": 1310597,
+        "partial_alpha_pixels": 260035,
+        "visible_colors": 19958,
+        "coverage": 0.1666,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Shovel_Stone\\Shovel_Stone_Icon.png",
+        "size": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "has_alpha": true,
+        "visible_pixels": 278683,
+        "transparent_pixels": 1293833,
+        "partial_alpha_pixels": 277059,
+        "visible_colors": 24102,
+        "coverage": 0.1772,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Shovel_Copper\\Shovel_Copper_Icon.png",
+        "size": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "has_alpha": true,
+        "visible_pixels": 239655,
+        "transparent_pixels": 1332861,
+        "partial_alpha_pixels": 237641,
+        "visible_colors": 24086,
+        "coverage": 0.1524,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Shovel_RawIron\\Shovel_RawIron_Icon.png",
+        "size": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "has_alpha": true,
+        "visible_pixels": 259680,
+        "transparent_pixels": 1312836,
+        "partial_alpha_pixels": 258079,
+        "visible_colors": 22131,
+        "coverage": 0.1651,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "errors": [],
+        "passed": true
+      },
+      {
+        "path": "D:\\_Unity\\_UnityProject\\FlatWorld\\Assets\\6_Art\\Generated\\Tools\\PrimitiveSet_20261023\\Shovel_Bronze\\Shovel_Bronze_Icon.png",
+        "size": [
+          1254,
+          1254
+        ],
+        "mode": "RGBA",
+        "has_alpha": true,
+        "visible_pixels": 242054,
+        "transparent_pixels": 1330462,
+        "partial_alpha_pixels": 240179,
+        "visible_colors": 27524,
+        "coverage": 0.1539,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "errors": [],
+        "passed": true
+      }
+    ],
+    "visualReview": "Viewed all six full-resolution generated images and the final old/new/96px comparison; all material identities, full silhouettes, shaft-to-head lashings and diagonal orientation are readable.",
+    "worldSizeCommand": "python Tools/Art/validate_sprite_world_size.py <asset> --alpha-threshold 128 --target-longest <previous visible longest world dimension> --tolerance 0.001 --json"
+  }
+}
