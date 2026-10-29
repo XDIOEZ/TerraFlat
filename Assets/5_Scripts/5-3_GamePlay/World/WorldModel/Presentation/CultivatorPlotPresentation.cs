@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>培育仓共用的只读图层布局，地面网格和船上 Sprite 使用同一套槽位坐标。</summary>
@@ -13,12 +14,17 @@ internal sealed class CultivatorPlotPresentation
     internal void Refresh(MachineEntity node)
     {
         entity = node;
-        if (node == null) { state = null; definition = null; return; }
-        if (!ReferenceEquals(definition, node.Definition))
+        if (node == null) { state = null; definition = null; configuration = null; return; }
+        MachineDefinition current = node.Definition ??
+            throw new InvalidOperationException("培育仓表现缺少机器定义。");
+        if (!ReferenceEquals(definition, current))
         {
-            definition = node.Definition;
-            var module = definition.Content.Find<Mod_Cultivator>();
-            configuration = module.Value(nameof(Mod_Cultivator.Visual), ((Mod_Cultivator)module.Authoring).Visual);
+            var module = MachineContent.GetOrCreateDefinitionContent(current).Find<Mod_Cultivator>() ??
+                throw new InvalidOperationException("培育仓缺少植株显示模块配置：" + current.Id);
+            configuration = module.Value(nameof(Mod_Cultivator.Visual), ((Mod_Cultivator)module.Authoring).Visual) ??
+                throw new InvalidOperationException("培育仓缺少植株布局：" + current.Id);
+            // 成功读取后才记住定义，失败重试不能沿用未完成的配置。
+            definition = current;
         }
         state = (node.Logic as CultivatorLogic)?.State ??
             MachineModuleState.Read<CultivatorState>(node.Snapshot, Mod_Cultivator.ModuleId);

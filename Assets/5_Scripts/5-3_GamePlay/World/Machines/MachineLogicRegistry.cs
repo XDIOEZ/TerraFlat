@@ -154,7 +154,7 @@ public static class MachineLogicRegistry
         if (string.IsNullOrWhiteSpace(entity.Definition.LogicId)) return null;
         if (!registrations.TryGetValue(entity.Definition.LogicId, out Registration entry))
             throw new InvalidOperationException("机器领域工厂缺失：" + entity.Definition.LogicId);
-        entity.Definition.Content ??= new MachineContent(GameRes.ExistingInstance.ItemDefinitions[entity.Definition.Id]);
+        MachineContent.GetOrCreateDefinitionContent(entity.Definition);
         return entry.Factory(entity) ?? throw new InvalidOperationException("机器领域工厂返回空对象：" + entry.Id);
     }
 

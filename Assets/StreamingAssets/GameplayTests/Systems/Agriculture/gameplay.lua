@@ -1,5 +1,23 @@
 -- 采样使用附近合格空格执行正式耕作与灌溉，返回前恢复现场，因此只做数据断言。
 test.check("player_ready", "农业现场测试玩家就绪")
+test.runtime("agriculture", "cultivator_cold_presentation", {}, function(data)
+    assert(data.initiallyCold and data.contentResolved and data.plotCount == 4,
+        "未激活培育仓在区块初绑时没有独立解析配置和读取四个真实种植槽")
+    assert(data.radishVisible and data.radishSprite == data.expectedRadishSprite
+        and data.scaleX > 0 and data.scaleY > 0 and data.scaleX == data.scaleY,
+        "冷快照的连续缩放作物没有使用正式贴图和有效等比缩放")
+    assert(data.seedlingVisible and data.seedlingMatches and data.matureVisible and data.matureMatches,
+        "同一定义下刷新快照未从幼苗切换到正式成熟贴图")
+    assert(data.emptyHidden and data.invalidHidden and data.missingBodyHidden and data.removedHidden,
+        "空槽、无效槽、缺机身或已移除植物仍留下图层")
+    assert(data.contentReused and data.snapshotUnchanged and data.stillCold and data.sharedDefinitionUnchanged,
+        "只读刷新重复解析内容、写入快照、激活机器或污染共享定义")
+    assert(data.unboundEmpty and data.reboundVisible,
+        "解绑没有清理植物，或冷节点重新绑定未恢复当前快照")
+    assert(data.missingDefinitionRejected and data.sameDefinitionRetryVisible,
+        "缺配置未明确拒绝，或失败重试被半初始化的定义缓存阻断")
+end, "培育仓先显示后激活：冷配置、真实植株、快照刷新与失败重试")
+
 test.runtime("agriculture", "crop_visual_reenable", {}, function(data)
     local function same(a, b, label)
         assert(math.abs(a.scaleX - b.scaleX) < .00001 and math.abs(a.scaleY - b.scaleY) < .00001

@@ -14,8 +14,11 @@ public static class GameplayTestCropVisualRuntimeProbe
     private static void RegisterEditor() => Register();
 #endif
 
-    private static void Register() => GameplayTestRuntimeProbe.Register(
-        "agriculture", "crop_visual_reenable", Capture);
+    private static void Register()
+    {
+        GameplayTestRuntimeProbe.Register("agriculture", "crop_visual_reenable", Capture);
+        GameplayTestRuntimeProbe.Register("agriculture", "cultivator_cold_presentation", CaptureCultivatorColdPresentation);
+    }
 
     // 两种正式作物分别覆盖连续缩放和阶段图片，不替表现模块重算成长规则。
     private static JObject Capture(Player player, JObject args)
@@ -94,5 +97,77 @@ public static class GameplayTestCropVisualRuntimeProbe
         };
     }
 
+    #endregion
+
+    #region 培育仓冷节点只读表现回归
+    // 独立定义和快照复现先显示后激活，不登记机器或触碰玩家现场。
+    private static JObject CaptureCultivatorColdPresentation(Player player, JObject args)
+    {
+        const string id = "SpaceCultivator";
+        GameRes resources = GameRes.ExistingInstance;
+        MachineDefinition sharedDefinition = MachineCatalog.Get(id);
+        MachineContent sharedContent = sharedDefinition.Content;
+        MachineDefinition definition = MachinePersistence.Clone(sharedDefinition);
+        var node = new MachineEntity { Definition = definition, Snapshot = resources.CreateItemData(id) };
+        var state = new CultivatorState();
+        state.Plots.Add(new CultivatorPlotState { CropId = "RadishCrop", Growth = .25f });
+        state.Plots.Add(new CultivatorPlotState { CropId = "RiceCrop", Growth = 0f });
+        state.Plots.Add(new CultivatorPlotState());
+        state.Plots.Add(new CultivatorPlotState());
+        MachineModuleState.Write(node.Snapshot, Mod_Cultivator.ModuleId, state);
+        byte[] before = (byte[])MachineModuleState.Binary(node.Snapshot, Mod_Cultivator.ModuleId).BitData.Clone();
+        Sprite body = resources.ItemDefinitions[id].Sprite;
+        if (body == null) throw new InvalidOperationException("培育仓回归缺少正式机身图片。");
+        var presentation = new CultivatorPlotPresentation();
+        var result = new JObject { ["initiallyCold"] = !node.Active && node.Logic == null && definition.Content == null };
+        presentation.Refresh(node);
+        result["plotCount"] = presentation.PlotCount;
+        result["contentResolved"] = definition.Content != null;
+        MachineContent resolved = definition.Content;
+        result["radishVisible"] = presentation.TryGetPlot(0, body, out Sprite radish, out _, out Vector3 scale);
+        result["radishSprite"] = radish != null ? radish.GetInstanceID() : 0;
+        result["expectedRadishSprite"] = resources.ItemDefinitions["RadishCrop"].Sprite.GetInstanceID();
+        result["scaleX"] = scale.x;
+        result["scaleY"] = scale.y;
+        result["seedlingVisible"] = presentation.TryGetPlot(1, body, out Sprite seedling, out _, out _);
+        resources.ItemDefinitions["RiceCrop"].TryGetVisualStateSprite("seedling", out Sprite expectedSeedling);
+        result["seedlingMatches"] = seedling != null && seedling == expectedSeedling;
+        result["emptyHidden"] = !presentation.TryGetPlot(2, body, out _, out _, out _);
+        result["invalidHidden"] = !presentation.TryGetPlot(-1, body, out _, out _, out _) &&
+            !presentation.TryGetPlot(presentation.PlotCount, body, out _, out _, out _);
+        result["missingBodyHidden"] = !presentation.TryGetPlot(0, null, out _, out _, out _);
+        presentation.Refresh(node);
+        result["contentReused"] = ReferenceEquals(resolved, definition.Content) &&
+            ReferenceEquals(resolved, MachineContent.GetOrCreateDefinitionContent(definition));
+        result["snapshotUnchanged"] = Convert.ToBase64String(before) == Convert.ToBase64String(
+            MachineModuleState.Binary(node.Snapshot, Mod_Cultivator.ModuleId).BitData);
+
+        state.Plots[0].CropId = null;
+        state.Plots[1].Growth = 1f;
+        MachineModuleState.Write(node.Snapshot, Mod_Cultivator.ModuleId, state);
+        presentation.Refresh(node);
+        result["removedHidden"] = !presentation.TryGetPlot(0, body, out _, out _, out _);
+        result["matureVisible"] = presentation.TryGetPlot(1, body, out Sprite mature, out _, out _);
+        resources.ItemDefinitions["RiceCrop"].TryGetVisualStateSprite("mature", out Sprite expectedMature);
+        result["matureMatches"] = mature != null && mature == expectedMature && mature != seedling;
+        presentation.Refresh(null);
+        result["unboundEmpty"] = presentation.PlotCount == 0 && !presentation.TryGetPlot(1, body, out _, out _, out _);
+        presentation.Refresh(node);
+        result["reboundVisible"] = presentation.PlotCount == state.Plots.Count &&
+            presentation.TryGetPlot(1, body, out Sprite rebound, out _, out _) && rebound == mature;
+
+        var retryDefinition = new MachineDefinition { Id = "__missing_cultivator_presentation_test__", LogicId = "cultivator" };
+        var retryNode = new MachineEntity { Definition = retryDefinition, Snapshot = node.Snapshot };
+        try { presentation.Refresh(retryNode); result["missingDefinitionRejected"] = false; }
+        catch (InvalidOperationException error) { result["missingDefinitionRejected"] = error.Message.Contains(retryDefinition.Id); }
+        retryDefinition.Id = id;
+        presentation.Refresh(retryNode);
+        result["sameDefinitionRetryVisible"] = retryDefinition.Content != null &&
+            presentation.TryGetPlot(1, body, out Sprite retried, out _, out _) && retried == mature;
+        result["stillCold"] = !node.Active && node.Logic == null && node.Processor == null &&
+            !retryNode.Active && retryNode.Logic == null && retryNode.Processor == null;
+        result["sharedDefinitionUnchanged"] = ReferenceEquals(sharedContent, sharedDefinition.Content);
+        return result;
+    }
     #endregion
 }
