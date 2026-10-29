@@ -214,7 +214,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void Awake()
     {
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Debug);
         worldLayerOverlay = gameObject.AddComponent<GMWorldLayerOverlay>();
         EnsureEventSystem();
         BuildWindow();

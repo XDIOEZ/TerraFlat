@@ -130,7 +130,7 @@ public sealed class TemperatureScreenRendererFeature : ScriptableRendererFeature
             lifecycleResourceOwner = resources;
             // 只在资源管理器换代时查询所属WorldManager子树，不创建单例或逐帧扫描场景。
             worldLifecycle = resources != null
-                ? resources.transform.root.GetComponentInChildren<GameManager>(true) : null;
+                ? PersistentRuntimeObjectHierarchy.GetBusinessOwnerRoot(resources.gameObject).GetComponentInChildren<GameManager>(true) : null;
         }
         if (resources == null || !resources.isLoadFinish ||
             worldLifecycle == null || !worldLifecycle.IsInGameWorld)

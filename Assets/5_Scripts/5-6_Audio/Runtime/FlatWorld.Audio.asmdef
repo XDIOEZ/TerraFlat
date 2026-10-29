@@ -2,7 +2,8 @@
     "name": "FlatWorld.Audio",
     "rootNamespace": "FlatWorld.Audio",
     "references": [
-        "Data"
+        "Data",
+        "FlatWorld.Utilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -36,7 +36,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     protected override void Awake()
     {
         base.Awake();
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.World);
         LoadCatalog();
     }
 

@@ -123,7 +123,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     private void Start()
     {
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Core);
         WorldRenderingManager.EnsureForOwner(this);
         InitializeWorldEntryPresentation();
         AutoSaveController.Ensure(this);
@@ -785,7 +785,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         {
             SunAndMoonObj = Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
             // 确保天体对象在场景切换时不会被销毁
-            DontDestroyOnLoad(SunAndMoonObj);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(SunAndMoonObj, PersistentRuntimeObjectCategory.World);
         }
 
         string OldSceneName = SceneManager.GetActiveScene().name;

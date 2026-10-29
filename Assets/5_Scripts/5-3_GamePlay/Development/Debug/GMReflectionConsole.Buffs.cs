@@ -730,7 +730,7 @@ public sealed partial class GMReflectionConsole
         if (item != null && !string.IsNullOrWhiteSpace(item.name))
             return item.name;
 
-        return manager.transform.root != null ? manager.transform.root.name : manager.name;
+        return PersistentRuntimeObjectHierarchy.GetBusinessOwnerRoot(manager.gameObject).name;
     }
 
     private void RefreshBuffTargetingControls()

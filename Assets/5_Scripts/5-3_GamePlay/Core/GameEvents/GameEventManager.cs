@@ -48,7 +48,7 @@ namespace FlatWorld.Gameplay.Events
             base.Awake();
             if (instance != this) return;
 
-            DontDestroyOnLoad(gameObject);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Core);
             GameEventExtensionRegistry.EnsureBuiltInsRegistered();
             ReloadConfiguration();
             BindGameManager();

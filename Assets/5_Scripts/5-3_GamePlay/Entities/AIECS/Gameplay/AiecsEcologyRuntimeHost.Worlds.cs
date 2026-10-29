@@ -26,7 +26,7 @@ namespace FlatWorld.AIECS.Gameplay
                 {
                     creatingWorld = world;
                     var root = new GameObject("AIECS / " + world);
-                    DontDestroyOnLoad(root);
+                    PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.World);
                     owner = root.AddComponent<AiecsEcologyRuntimeHost>();
                     owner._catalog = _catalog;
                     owner.ownsWorldObject = true;

@@ -15,7 +15,7 @@ public partial class GameRes
             throw new InvalidDataException("通用星体公模缺少 Planet 或圆形 SpriteRenderer。");
         var templateRoot = resourceAssets.OwnRuntimeTemplate(new GameObject("JSON 星球模板"));
         templateRoot.SetActive(false);
-        DontDestroyOnLoad(templateRoot);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(templateRoot, PersistentRuntimeObjectCategory.Resources);
         foreach (SpaceSectorId sector in catalog.ConfiguredSectors)
             foreach (BodyState body in catalog.GetBodyTemplates(sector))
             {

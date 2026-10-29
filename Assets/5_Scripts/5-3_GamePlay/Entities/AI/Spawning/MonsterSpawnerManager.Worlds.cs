@@ -24,7 +24,7 @@ public partial class MonsterSpawnerManager
         if (manager == null)
         {
             var root = new GameObject("MonsterWorld / " + world);
-            DontDestroyOnLoad(root);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.World);
             manager = root.AddComponent<MonsterSpawnerManager>();
         }
         manager._ownedWorld = world;

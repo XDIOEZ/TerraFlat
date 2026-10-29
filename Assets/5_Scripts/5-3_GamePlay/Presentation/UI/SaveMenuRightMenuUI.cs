@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>复用存档右键菜单输入框编辑显示名，并由存档服务负责持久化。</summary>
+[PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.UI)]
 public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
 {
     #region 引用与初始化

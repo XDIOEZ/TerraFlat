@@ -82,7 +82,7 @@ namespace FlatWorld.Networking.Gameplay
 
             GameObject coordinatorObject = new GameObject("NetworkChunkStreamingCoordinator");
             instance = coordinatorObject.AddComponent<NetworkChunkStreamingCoordinator>();
-            DontDestroyOnLoad(coordinatorObject);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(coordinatorObject, PersistentRuntimeObjectCategory.Networking);
         }
 
         private void Update()

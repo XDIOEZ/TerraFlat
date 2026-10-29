@@ -48,7 +48,7 @@ namespace FlatWorld.Spaceflight
             {
                 var root = new GameObject("SpaceSession");
                 Current = root.AddComponent<SpaceSession>();
-                DontDestroyOnLoad(root);
+                PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.World);
             }
             Current.Load(SaveDataMgr.Instance?.SaveData);
             return Current;

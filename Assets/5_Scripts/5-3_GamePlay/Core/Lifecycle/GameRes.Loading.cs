@@ -228,6 +228,7 @@ public partial class GameRes
             FailResourceSession(loadPipeline.CurrentStage, loadPipeline.Failure);
             yield break;
         }
+        PersistentRuntimeObjectHierarchy.OrganizeUnregisteredPersistentRoots();
         LoadState = ResourceLoadState.Ready;
         GameplayTestResourceCache.Complete(true);
         RestoreBackgroundLoadingPolicy();

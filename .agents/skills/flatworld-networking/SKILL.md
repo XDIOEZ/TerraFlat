@@ -67,6 +67,8 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 ## UI 生命周期
 
+联机启动宿主归 `Persistent Runtime/Networking`，网络玩家归 `Players`，镜头归 `Rendering`；`NetworkGameBootstrap` 持有子管理器生命周期并设置 `manager.dontDestroyOnLoad=false`，避免 Mirror 每次启动会话重新拆走子管理器。分类不改变 NetworkIdentity 或世界归属。
+
 玩家头顶名字由 `NetworkWorldPlayer.ApplyDisplayName` 按 `isLocalPlayer` 控制，仅显示其他玩家；本地玩家启动回调再次刷新，改名和角色重建沿用同一规则。
 
 菜单新游戏与读档均在世界/角色Ready后自动建立私有Host；工具隔离测试用 `NetworkGameBootstrap.SuppressAutomaticSession()` 显式租约阻止自动启动，不能停止用户现有会话。主菜单只加入，游戏内设置经 `GameNetwork.SettingsRequested` 打开同一个常驻面板。`PrepareHostWorld` 只接管已就绪世界与稳定 ProfileId；Host 不回放自身快照或重发玩家进入事件，关闭公开保留同一本机角色和正式联机流送。客户端经 `EnterWorldWithExternalPlayer` 复用正式进入流程；退出使进入代次失效并停网络，客户端不落盘主机存档。

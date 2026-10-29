@@ -101,7 +101,7 @@ public static class AI_DebugOverlay
 		if (allowCreation && renderer == null && needsRenderer)
 		{
 			GameObject host = new GameObject("[AI Debug Overlay]");
-			UnityEngine.Object.DontDestroyOnLoad(host);
+			PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(host, PersistentRuntimeObjectCategory.Debug);
 			renderer = host.AddComponent<AI_DebugOverlayRenderer>();
 		}
 		if (renderer != null)

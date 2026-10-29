@@ -67,7 +67,7 @@ public class SceneMgr : SingletonAutoMono<SceneMgr>
     protected override void Awake()
     {
         base.Awake(); // 调用父类 Awake，防止多个实例
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Core);
         _currentActiveSceneName = SceneManager.GetActiveScene().name;
         _loadedScenes.Add(_currentActiveSceneName);
         Debug.Log($"[SceneMgr] 初始化完成，当前场景: {_currentActiveSceneName}");

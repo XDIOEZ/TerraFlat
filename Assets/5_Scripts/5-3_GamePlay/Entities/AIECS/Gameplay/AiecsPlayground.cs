@@ -46,7 +46,7 @@ namespace FlatWorld.AIECS.Gameplay
         private void Awake()
         {
             if (active != null && active != this) { Destroy(gameObject); return; }
-            active = this; DontDestroyOnLoad(gameObject);
+            active = this; PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Debug);
             mode = InitialMode;
             GameManager.Event_PlayerEnterWorld += OnPlayerEntered;
             GameManager.Event_LocalPlayerRuntimeReloaded += OnPlayerEntered;

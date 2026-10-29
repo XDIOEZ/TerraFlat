@@ -22,7 +22,7 @@ public partial class GameRes
         // 无场景业务的模块模板只归当前资源目录所有，候选加载失败会一起释放。
         var template = new GameObject(key);
         template.SetActive(false);
-        Object.DontDestroyOnLoad(template);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(template, PersistentRuntimeObjectCategory.Resources);
         T module = template.AddComponent<T>();
         resourceAssets.OwnRuntimeTemplate(template);
         RegisterPrefabAlias(key, template);

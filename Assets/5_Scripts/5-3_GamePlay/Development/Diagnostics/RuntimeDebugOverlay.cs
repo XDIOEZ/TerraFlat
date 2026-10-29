@@ -128,7 +128,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         }
 
         instance = this;
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Debug);
         // 独立 Canvas 不经过 UIManager 面板动画，由自身建立可见缩放不变量。
         transform.localScale = Vector3.one;
 

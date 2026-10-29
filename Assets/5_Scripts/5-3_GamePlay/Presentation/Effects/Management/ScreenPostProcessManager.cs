@@ -127,7 +127,7 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         if (instance != this)
             return;
 
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Rendering);
         TraumaBlurRendererFeature.SetStrength(0f);
         LowHealthRedEdgeRendererFeature.SetState(Defaults.defaultVignetteColor, 0f,
             Defaults.defaultVignetteSmoothness);

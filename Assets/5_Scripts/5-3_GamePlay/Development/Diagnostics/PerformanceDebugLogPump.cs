@@ -19,7 +19,7 @@ public sealed class PerformanceDebugLogPump : MonoBehaviour
             if (instance == null)
             {
                 var host = new GameObject("PerformanceDebugLogPump");
-                DontDestroyOnLoad(host);
+                PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(host, PersistentRuntimeObjectCategory.Debug);
                 instance = host.AddComponent<PerformanceDebugLogPump>();
             }
         }

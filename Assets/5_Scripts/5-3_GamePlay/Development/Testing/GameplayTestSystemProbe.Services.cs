@@ -30,6 +30,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("quests/catalog_package_path", ServiceCatalogPackagePath);
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
         operations.Add("core_lifecycle/scene_object_hierarchy", ServiceSceneObjectHierarchy);
+        operations.Add("core_lifecycle/persistent_object_hierarchy", ServicePersistentObjectHierarchy);
         operations.Add("core_lifecycle/resource_queue", ServiceResourceQueue);
         operations.Add("core_lifecycle/editor_asset_loading", ServiceEditorAssetLoading);
         operations.Add("core_lifecycle/resource_loading_priority", ServiceStartupResourceLoadingPriority);

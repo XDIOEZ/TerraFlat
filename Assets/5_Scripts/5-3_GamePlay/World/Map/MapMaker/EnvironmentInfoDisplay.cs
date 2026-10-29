@@ -26,7 +26,6 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
         var go = new GameObject("EnvironmentInfoDisplaySingleton");
         var display = go.AddComponent<EnvironmentInfoDisplay>();
-        DontDestroyOnLoad(go);
         return display;
     }
 
@@ -89,7 +88,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
 
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Debug);
         isVisible = false;
     }
 

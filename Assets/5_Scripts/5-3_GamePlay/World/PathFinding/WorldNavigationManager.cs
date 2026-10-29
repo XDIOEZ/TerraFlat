@@ -53,6 +53,7 @@ public readonly struct WorldNavigationPathResult
 /// absolute coordinates. Path searches are time-sliced and agents sharing a goal share one
 /// reverse flow-field search.
 /// </summary>
+[PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.World)]
 public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavigationManager>
 {
     private const int MaxPooledMapCellSets = 32;

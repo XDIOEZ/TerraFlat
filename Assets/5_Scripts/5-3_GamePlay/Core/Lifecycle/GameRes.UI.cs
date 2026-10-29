@@ -190,7 +190,7 @@ public partial class GameRes
             return false;
         }
 
-        DontDestroyOnLoad(resourceLoadingView);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(resourceLoadingView, PersistentRuntimeObjectCategory.UI);
         resourceLoadingLanguageDirty = true;
         resourceLoadingConfigurationErrorLogged = false;
         return true;

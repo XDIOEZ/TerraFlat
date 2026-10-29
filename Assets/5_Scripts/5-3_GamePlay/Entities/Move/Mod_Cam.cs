@@ -170,7 +170,7 @@ public class Mod_Cam : Module
         {
             instantiatedCamera = Instantiate(CamPrefab);
             // 相机由玩家模块释放，跨星区卸载源场景时保留同一实例。
-            DontDestroyOnLoad(instantiatedCamera);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(instantiatedCamera, PersistentRuntimeObjectCategory.Rendering);
             Debug.Log("相机预制体已实例化");
         }
         else

@@ -38,7 +38,7 @@ public sealed partial class WorldNavigationManager
             {
                 instance = null;
                 var root = new GameObject("WorldNavigation / " + worldKey);
-                DontDestroyOnLoad(root);
+                PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.World);
                 manager = root.AddComponent<WorldNavigationManager>();
                 manager.ownsWorldObject = true;
                 if (local != null) JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(local), manager);

@@ -6,7 +6,7 @@ public class GameTimeManager : SingletonMono<GameTimeManager>
 {/*
     protected override void Awake()
     {
-        DontDestroyOnLoad(gameObject); // 跨场景保持存在
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.World); // 跨场景保持存在
     }
     #region 时间管理属性
     [Header("时间设置")]

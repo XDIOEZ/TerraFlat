@@ -21,6 +21,8 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 ## 世界生命周期
 
+- 常驻对象统一走共享 `PersistentRuntimeObjectHierarchy.MoveToPersistentCategory`，在 `DontDestroyOnLoad/Persistent Runtime` 下按职责收纳；自动创建单例可用 `PersistentRuntimeObjectCategoryAttribute` 声明类别。保留显式业务父子关系、激活状态和世界姿态，不能把场景对象或物理代理为整理而提升为常驻。需要原业务根时用 `GetBusinessOwnerRoot`，不要再把 `transform.root` 当业务所有者。第三方已常驻裸根仅在场景加载、资源就绪及入世完成时归入 `Infrastructure`，无逐帧扫描；退出后不补建根。回归 `core_lifecycle/persistent_object_hierarchy`（规则与现场）。
+
 - `RuntimeSceneObjectHierarchy` 为每个 Scene 按需建立 `Runtime Objects` 分类根；只在创建或迁移时挂接，保留显式宿主和原场景生命周期。世界自有物理代理与回收池统一挂 `Physics` 分类，固定代理仍挂共享区块刚体。分类节点保持单位 Transform，不能用作世界身份、持久池或业务所有权。
 
 - 业务只读 `GameRuleConfiguration.Current` 或订阅 `Changed`，不查询难度；外部通过 `SetModifier(source, callback, priority)` / `RemoveModifier` 修改候选。每次从独立基础值重建，来源按优先级和首次注册顺序执行；失败不替换来源或快照，通知期不允许重入写入。难度为优先级 -1000 的来源，机制可由后续外部来源或业务自身公开开关覆盖。难度定义复用分域只读 RuleSet 复制倍率，草稿、规则候选和最终发布各自独立。`SaveDataMgr.SaveData` 换根时由 `GameWorldRuleSession` 一次装配，退出设空档撤销会话来源；新建难度写入完成后再发布。

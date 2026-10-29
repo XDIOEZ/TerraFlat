@@ -113,7 +113,7 @@ namespace FlatWorld.Audio
             }
 
             instance = this;
-            DontDestroyOnLoad(gameObject);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Audio);
             LoadConfiguration();
             LoadUserSettings();
             InitializeSettingsProvider();

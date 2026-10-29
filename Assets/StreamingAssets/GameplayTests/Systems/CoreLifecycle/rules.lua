@@ -1,3 +1,17 @@
+test.system("core_lifecycle", "persistent_object_hierarchy", {}, function(data)
+    assert(data.available, "常驻分类规则需要编辑器预览场景")
+    assert(data.grouped and data.idempotent and data.unitCategory, "常驻分类没有复用唯一的单位变换节点")
+    assert(data.posePreserved and data.inactivePreserved and data.recategorizedWithoutCloning,
+        "分类改变了对象姿态、激活状态或对象身份")
+    assert(data.ownerTreePreserved and data.childCategoryResolved and data.childCannotBeStolen,
+        "分类拆散了业务宿主和子对象")
+    assert(data.structuralNodesRejected and data.foreignSceneRejected and data.invalidCategoryRejected,
+        "分类未拒绝结构节点、其它场景对象或非法类别")
+    assert(data.editModeCannotPromoteScene, "编辑态分类意外提升了场景对象生命周期")
+    assert(data.destroyedCategoryRecreated and data.ownerReleaseDoesNotDestroyHierarchy and data.otherSceneUnaffected,
+        "销毁业务对象或分类节点影响了其它所有者")
+end, "常驻层级分类、所有权隔离与重复挂接")
+
 local function near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
 end

@@ -70,7 +70,6 @@ namespace FlatWorld.Networking.Gameplay
 
             GameObject bootstrapObject = new GameObject("FlatWorld联机系统");
             instance = bootstrapObject.AddComponent<NetworkGameBootstrap>();
-            DontDestroyOnLoad(bootstrapObject);
         }
 
         private void Awake()
@@ -82,7 +81,7 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             instance = this;
-            DontDestroyOnLoad(gameObject);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Networking);
 
             GameObject playerPrefab = Resources.Load<GameObject>(PlayerResourcePath);
             if (playerPrefab == null)
@@ -101,7 +100,8 @@ namespace FlatWorld.Networking.Gameplay
             manager.maxConnections = 2;
             manager.sendRate = 30;
             manager.networkAddress = "127.0.0.1";
-            manager.dontDestroyOnLoad = true;
+            // 常驻由启动宿主负责，避免 Mirror 每次启动会话都把管理器拆回场景根。
+            manager.dontDestroyOnLoad = false;
             transport.Port = 7777;
 
             NetworkModeUIController uiController = gameObject.AddComponent<NetworkModeUIController>();

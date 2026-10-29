@@ -45,7 +45,7 @@ namespace FlatWorld.Gameplay.Quests
         protected override void Awake()
         {
             base.Awake();
-            DontDestroyOnLoad(gameObject);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Core);
             BindStaticEvents();
         }
 

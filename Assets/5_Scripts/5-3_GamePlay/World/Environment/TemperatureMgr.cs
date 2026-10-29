@@ -3,6 +3,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>统一逐格环境温度查询与角色体表温度结算；局部冷热源由空间缓存独立维护，角色每 0.25 秒采样一次。</summary>
+[PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.World)]
 public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 {
 #region 字段

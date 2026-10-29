@@ -465,7 +465,7 @@ public partial class GameManager
             return false;
         }
 
-        DontDestroyOnLoad(dimensionLoadingView);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(dimensionLoadingView, PersistentRuntimeObjectCategory.UI);
         return true;
     }
 
@@ -587,7 +587,7 @@ public partial class GameManager
             return false;
         }
 
-        DontDestroyOnLoad(worldLoadingView);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(worldLoadingView, PersistentRuntimeObjectCategory.UI);
         worldLoadingView.SetActive(false);
         return true;
     }

@@ -7,6 +7,7 @@ using UnityEngine;
 /// 普通特效使用名称池，伤害数字/切割特效使用 GameEffect 池；回收时统一停止粒子、重置动画、清理拖尾和 CanvasGroup，
 /// 延迟回收由单个 Update 调度，避免连续战斗为每个特效创建协程和 WaitForSeconds。
 /// </summary>
+[PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.Rendering)]
 public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
 {
     #region Pool State

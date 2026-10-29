@@ -10,6 +10,12 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
 {
     protected static T instance;
 
+    #region 自动创建对象的常驻分类
+    private static readonly PersistentRuntimeObjectCategory persistentCategory =
+        (System.Attribute.GetCustomAttribute(typeof(T), typeof(PersistentRuntimeObjectCategoryAttribute))
+            as PersistentRuntimeObjectCategoryAttribute)?.Category ?? PersistentRuntimeObjectCategory.Core;
+    #endregion
+
     /// <summary>
     /// 单例全局访问
     /// </summary>
@@ -32,7 +38,7 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
                 {
                     // 场景不存在就自动创建
                     GameObject obj = new GameObject(typeof(T).Name);
-                    DontDestroyOnLoad(obj);
+                    PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(obj, persistentCategory);
                     instance = obj.AddComponent<T>();
                 }
             }

@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 
 /// <summary>游戏资源目录门面；加载计划、句柄所有权与启动校验由独立组件负责，Ready 前禁止进入世界。</summary>
+[PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.Resources)]
 public partial class GameRes : SingletonAutoMono<GameRes>
 {
     #region 字段

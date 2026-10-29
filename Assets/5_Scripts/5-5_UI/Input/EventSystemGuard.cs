@@ -99,7 +99,7 @@ public static class EventSystemGuard
                 CanonicalName,
                 typeof(EventSystem),
                 typeof(InputSystemUIInputModule));
-            UnityEngine.Object.DontDestroyOnLoad(eventSystemObject);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(eventSystemObject, PersistentRuntimeObjectCategory.UI);
             primary = eventSystemObject.GetComponent<EventSystem>();
             systems = new[] { primary };
         }

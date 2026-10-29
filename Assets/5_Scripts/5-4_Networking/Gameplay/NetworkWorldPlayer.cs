@@ -132,7 +132,7 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnStartClient()
         {
             base.OnStartClient();
-            DontDestroyOnLoad(gameObject);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Players);
             remoteTargetPosition = IsInSpace ? AuthoritativeLogicalPosition : WorldLocalPresentation.ProjectPosition(authoritativePosition);
             remoteSnapshotStartPosition = transform.position;
             remoteVelocity = authoritativeVelocity;
@@ -1109,7 +1109,7 @@ namespace FlatWorld.Networking.Gameplay
                 cameraObject.tag = "MainCamera";
                 followCamera = cameraObject.AddComponent<Camera>();
                 cameraObject.AddComponent<AudioListener>();
-                DontDestroyOnLoad(cameraObject);
+                PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(cameraObject, PersistentRuntimeObjectCategory.Rendering);
             }
 
             manualCameraFollow = true;

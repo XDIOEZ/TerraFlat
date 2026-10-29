@@ -74,7 +74,7 @@ public sealed class WorldNavigationPathDebugOverlay : MonoBehaviour
         GameObject root = new("[World Navigation Path Debug]");
         root.hideFlags = HideFlags.DontSave;
         instance = root.AddComponent<WorldNavigationPathDebugOverlay>();
-        DontDestroyOnLoad(root);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.Debug);
     }
 
     private void Awake()

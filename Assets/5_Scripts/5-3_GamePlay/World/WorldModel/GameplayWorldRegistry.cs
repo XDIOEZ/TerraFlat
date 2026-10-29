@@ -371,7 +371,7 @@ public static partial class GameplayWorldRegistry
         if (host == null)
         {
             var root = new GameObject("GameplayWorldRegistry");
-            UnityEngine.Object.DontDestroyOnLoad(root);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.World);
             host = root.AddComponent<GameplayWorldRegistryHost>();
         }
         Scene scene = SceneManager.GetSceneByName(worldKey);

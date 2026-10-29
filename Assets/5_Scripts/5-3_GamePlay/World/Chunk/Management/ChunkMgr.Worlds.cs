@@ -54,7 +54,7 @@ public partial class ChunkMgr
             // 每个世界独立持有全部窗口、生成器和区块索引，创建阶段不触发重复单例销毁。
             instance = null;
             var root = new GameObject("ChunkMgr / " + worldKey);
-            DontDestroyOnLoad(root);
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.World);
             ChunkMgr manager = root.AddComponent<ChunkMgr>();
             manager.OwnedWorldKey = worldKey;
             return manager;

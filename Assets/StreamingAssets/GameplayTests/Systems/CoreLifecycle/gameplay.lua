@@ -21,3 +21,16 @@ test.runtime("core_lifecycle", "live_entry", {}, function(data)
         and data.currentHotbarRegistered and data.currentHandRegistered,
         "旧世界的快捷栏/手持面板残留，或当前玩家 HUD 未正确注册")
 end, "正式入世、玩家生命周期和表现就绪")
+
+test.runtime("core_lifecycle", "persistent_object_hierarchy", {}, function(data)
+    assert(data.persistentScene and data.idempotent and data.ownedChildPreserved and data.inactiveAndPosePreserved,
+        "常驻挂接改变了所有权、激活状态或姿态，或重复创建了分类")
+    assert(data.sourceSceneUnloaded and data.transientDestroyed and data.persistentTreeSurvived,
+        "源场景卸载后常驻对象丢失，或普通场景对象被错误保留")
+    assert(data.activeSceneUnchanged and data.playerWorldNotPromoted,
+        "整理常驻层级改变了活动场景或玩家世界归属")
+    assert(data.ownerReleasedIndependently, "释放一个业务宿主销毁了其它常驻对象")
+    assert(data.ungroupedPersistentRootCollected and data.oneVisiblePersistentRoot,
+        "未分类常驻根没有收纳到统一层级")
+    assert(data.gameManagerGrouped and data.uiGrouped and data.audioGrouped, "正式管理器未进入对应分类")
+end, "常驻对象跨场景保留、第三方收纳与独立释放")

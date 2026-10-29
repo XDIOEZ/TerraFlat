@@ -7,6 +7,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+[PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.World)]
 public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
 {
     #region 星区场景资源租约
@@ -41,7 +42,8 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     {
         base.Awake();
         if (instance != this) return;
-        if (!GameNetwork.IsOnline) DontDestroyOnLoad(transform.root.gameObject);
+        if (!GameNetwork.IsOnline) PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(
+            PersistentRuntimeObjectHierarchy.GetBusinessOwnerRoot(gameObject), PersistentRuntimeObjectCategory.World);
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
     private void Start()
@@ -247,7 +249,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         if (ItemMgr.Instance != null)
             foreach (Player player in ItemMgr.Instance.Player_DIC.Values)
                 if (player != null && player.gameObject.scene == view.Scene)
-                { player.transform.SetParent(null, true); DontDestroyOnLoad(player.gameObject); }
+                { player.transform.SetParent(null, true); PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(player.gameObject, PersistentRuntimeObjectCategory.Players); }
         if (view.Loading != null) StopCoroutine(view.Loading);
         bool retain = allowRetention && TryRetainSector(view);
         view.Loading = null;

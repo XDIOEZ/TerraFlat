@@ -15,7 +15,7 @@ public class MonoController : MonoBehaviour {
 
 	// Click this for initialization
 	void Start () {
-        DontDestroyOnLoad(this.gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(this.gameObject, PersistentRuntimeObjectCategory.Core);
 	}
 	
 	// Update is called once per frame

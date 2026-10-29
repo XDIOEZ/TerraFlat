@@ -357,6 +357,7 @@ public partial class GameManager
 
         isWorldEntryInProgress = false;
         Debug.Log($"[GameManager] 世界进入总耗时 {Time.realtimeSinceStartup - worldEntryStartedAt:0.00} 秒。");
+        PersistentRuntimeObjectHierarchy.OrganizeUnregisteredPersistentRoots();
         PublishCurrentWorldEntryProgress(title, status, 1f, WorldEntryProgressState.Completed);
         ResetCurrentWorldEntryContext();
     }

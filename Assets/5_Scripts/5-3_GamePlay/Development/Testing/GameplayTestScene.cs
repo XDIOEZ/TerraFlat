@@ -81,7 +81,7 @@ public sealed class GameplayTestScene : MonoBehaviour
             return;
         }
         activeRunner = this;
-        DontDestroyOnLoad(gameObject);
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Testing);
         clock.Start();
         string runId = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ") + "_" + Guid.NewGuid().ToString("N").Substring(0, 8);
         runId = GameplayTestSelection.ResolveRunId(runId);

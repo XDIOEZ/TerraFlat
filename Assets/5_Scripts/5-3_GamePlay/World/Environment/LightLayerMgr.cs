@@ -10,6 +10,7 @@ using UnityEngine.Serialization;
 /// 维护已加载区块的逐格光照层。
 /// 光照值范围为 0~1，来源为全局光与 Point Light2D 的近似叠加。
 /// </summary>
+[PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.Rendering)]
 public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
 {
     #region 光源输入与回退缓存
