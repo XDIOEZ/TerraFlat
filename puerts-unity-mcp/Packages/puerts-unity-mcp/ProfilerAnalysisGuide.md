@@ -5,7 +5,7 @@
 ## 选对报告
 
 - 用户指定文件夹时只分析该目录；只说“最新”时，在 `Logs/ProfileData/` 中选时间最新且同时有两个 JSON 的正式目录，忽略 `.pending-*`。不要混用不同目录的文件；缺少截图时说明缺口，不擅自换成另一帧。
-- `profiler-analysis.json` 是性能证据，`console-logs.json` 是日志，`screen.png` 是导出时的整个桌面；FlatWorld 顶栏/菜单还导出 `world-scene.json`（已加载世界物品现场），文件名登记在性能文件的 `additionalFiles`。本文件是阅读说明。
+- `profiler-analysis.json` 是性能证据，`console-logs.json` 是日志，`screen.png` 是导出时本项目 Unity 编辑器主窗口。截图失败时没有 `screen.png`，原因见性能文件的 `screenshot.status/error`；不会截取桌面。FlatWorld 顶栏/菜单还导出 `world-scene.json`（已加载世界物品现场），文件名登记在性能文件的 `additionalFiles`。本文件是阅读说明。
 - 两个 JSON 的 `snapshotId`、`selectedDisplayFrame` 应相同。`schemaVersion` 分别描述各自格式，不要求两个版本号相等。先检查性能文件 `warnings`、`selectedFrameAnalysis.success/frameCount/skippedFrameCount`，缺数据时明确说明。
 
 ## 按需读取，控制上下文大小
@@ -41,7 +41,7 @@
 | `performanceDebugAtExport.capturedAtUtc/source/timeScope/status` | 导出时本地进程累计统计的时间、来源和可用状态；不是 Profiler 帧内数据，不含远程 Player Registry |
 | `performanceDebugAtExport.statisticsEnabled/slowSummaryEnabled/slowThresholdMilliseconds/hasPendingSlowEvents` | 读取时性能统计、慢摘要、慢阈值和未消费慢事件状态；导出不改变开关，不清空统计，不消费慢摘要 |
 | `performanceDebugAtExport.points[].name/calls/work/gauge/peakGauge/hasGauge/totalMilliseconds/maximumMilliseconds` | 自上次清空/会话重置以来、开启收集期间的累计调用/工作量、最近和峰值规模、包含式总耗时和单次最大值；工作量单位按点位说明，不能混加 |
-| `screenshot.file/capturedAtUtc/width/height` | 图片文件名、截图时间与像素尺寸 |
+| `screenshot.status/error/file/capturedAtUtc/width/height` | 主窗口截图状态、失败原因、文件名、截图时间与像素尺寸 |
 | `additionalFiles` | 格式 4 的项目附加文件名；FlatWorld 导出入口附带 `world-scene.json` |
 | 现场 `status/capturedAtUtc/captureCompletedAtUtc/unityFrameAtExport` | 本地导出现场的可用性、采集时间范围和 Unity 当前帧；`not-in-play-mode` 不是空世界证据 |
 | 现场 `summary/chunks/items/itemData` | 分类数量、已加载区块状态、按 GUID 合并的世界实体和含库存内容的物品数据；实体和物品数据数量含义不同 |

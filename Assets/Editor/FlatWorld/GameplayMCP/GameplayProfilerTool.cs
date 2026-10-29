@@ -14,7 +14,7 @@ namespace FlatWorld.GameplayMCP
 {
     [InitializeOnLoad]
     [McpForUnityTool("gameplay_profiler", Description =
-        "Profiler capture and full performance evidence export. status reads job/result and recording state; start begins a non-blocking 1-120 second capture (default 10), then automatically exports the slowest retained frame; keep using gameplay while recording. stop finishes early and exports; cancel restores switches without exporting. export reads existing latest/selected/slowest buffered frame or a 1-based displayFrame. Does not open windows, pause, change target/deep profiling, clear history or reset statistics. Reports include profiler, Console, local world and desktop screenshot; these current local attachments do not reconstruct historical/remote frames. Poll status until state=completed/failed/cancelled; success of start only means recording began.",
+        "Profiler capture and full performance evidence export. status reads job/result and recording state; start begins a non-blocking 1-120 second capture (default 10), then automatically exports the slowest retained frame; keep using gameplay while recording. stop finishes early and exports; cancel restores switches without exporting. export reads existing latest/selected/slowest buffered frame or a 1-based displayFrame. Does not open windows, pause, change target/deep profiling, clear history or reset statistics. Reports include profiler, Console, local world and Unity main-window screenshot when available; these current local attachments do not reconstruct historical/remote frames. Poll status until state=completed/failed/cancelled; success of start only means recording began.",
         Group = "core", Discoverable = false)]
     public static class GameplayProfilerTool
     {
@@ -164,6 +164,12 @@ namespace FlatWorld.GameplayMCP
                 sample["selectedTreeNodeCount"] = nodes;
                 sample["selectedMarkerCalls"] = markerCalls;
                 sample["callTreeScope"] = "selected-frame-only";
+                var screenshot = analysis["screenshot"];
+                bool screenshotCaptured = screenshot?["status"]?.Value<string>() == "captured" &&
+                    File.Exists(Path.Combine(directory, "screen.png"));
+                sample["screenshotCaptured"] = screenshotCaptured;
+                sample["screenshotWidth"] = screenshotCaptured ? screenshot["width"]?.Value<int>() ?? 0 : 0;
+                sample["screenshotHeight"] = screenshotCaptured ? screenshot["height"]?.Value<int>() ?? 0 : 0;
                 sample["settingsRestored"] = ProfilerDriver.enabled == job.RecordingBefore &&
                     PerformanceDebugRegistry.StatisticsEnabled == job.StatisticsBefore &&
                     ProfilerDriver.deepProfiling == job.DeepProfiling && ProfilerDriver.profileEditor == job.ProfileEditor && Target == job.Target;
@@ -234,8 +240,8 @@ namespace FlatWorld.GameplayMCP
         private static string CheckCapture(Capture job)
         {
             if (!EditorApplication.isPlaying || EditorApplication.isPaused || EditorApplication.isCompiling ||
-                EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode != EditorApplication.isPlaying)
-                return "profiler_interrupted: 运行被暂停、退出或编辑器开始编译/导入。";
+                EditorApplication.isPlayingOrWillChangePlaymode != EditorApplication.isPlaying)
+                return "profiler_interrupted: 运行被暂停、退出或编辑器开始编译。";
             if (!ProfilerDriver.enabled || Target != job.Target || ProfilerDriver.deepProfiling != job.DeepProfiling ||
                 ProfilerDriver.profileEditor != job.ProfileEditor || PerformanceDebugRegistry.StatisticsEnabled != job.StatisticsExpected)
                 return "profiler_settings_changed: 录制目标或采集设置被外部改变。";
@@ -420,9 +426,9 @@ namespace FlatWorld.GameplayMCP
 
         private static void EnsureEditorReady()
         {
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating ||
+            if (EditorApplication.isCompiling ||
                 EditorApplication.isPlayingOrWillChangePlaymode != EditorApplication.isPlaying)
-                throw new InvalidOperationException("editor_busy: Unity 正在编译、导入或切换运行状态。");
+                throw new InvalidOperationException("editor_busy: Unity 正在编译或切换运行状态。");
         }
 
         #endregion

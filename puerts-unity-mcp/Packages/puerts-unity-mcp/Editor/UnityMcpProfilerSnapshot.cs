@@ -30,8 +30,8 @@ namespace PuertsUnityMcp.Editor
         internal static string ExportProfilerSnapshot(int frameIndex, string outputRoot, int contextFrameRadius,
             Func<string, string, int, string[]> exportAdditionalFiles = null)
         {
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode != EditorApplication.isPlaying)
-                throw new InvalidOperationException("Unity 正在编译、导入或切换运行状态，请稍后再导出。");
+            if (EditorApplication.isCompiling || EditorApplication.isPlayingOrWillChangePlaymode != EditorApplication.isPlaying)
+                throw new InvalidOperationException("Unity 正在编译或切换运行状态，请稍后再导出。");
             int first = ProfilerDriver.firstFrameIndex;
             int last = ProfilerDriver.lastFrameIndex;
             if (first < 0 || frameIndex < first || frameIndex > last)
@@ -45,7 +45,15 @@ namespace PuertsUnityMcp.Editor
             var warnings = new List<string>();
             var errors = new List<string>();
             string analysisGuide = File.ReadAllText(Path.Combine(ResolvePackageRoot(), "ProfilerAnalysisGuide.md"));
-            byte[] screenshotPng = UnityMcpDesktopScreenshot.Capture(out var screenshotInfo);
+            byte[] screenshotPng = null;
+            UnityMcpEditorMainWindowScreenshot.ScreenshotInfo screenshotInfo;
+            try { screenshotPng = UnityMcpEditorMainWindowScreenshot.Capture(out screenshotInfo); }
+            catch (Exception exception)
+            {
+                screenshotInfo = new UnityMcpEditorMainWindowScreenshot.ScreenshotInfo
+                    { status = "failed", error = exception.GetBaseException().Message };
+                warnings.Add("Unity 主窗口截图失败：" + screenshotInfo.error);
+            }
             // 先取日志，避免导出过程产生的日志混入用户的现场。
             var console = UnityMcpConsoleSnapshot.Read(snapshotId, capturedAt, frameIndex + 1);
             var analysis = AnalyzeEditorProfilerFrames(new EditorProfilerRequest
@@ -114,8 +122,8 @@ namespace PuertsUnityMcp.Editor
                 ?? Array.Empty<string>();
             AtomicFile.WriteJson(Path.Combine(pending, "profiler-analysis.json"), snapshot);
             AtomicFile.WriteJson(Path.Combine(pending, "console-logs.json"), console);
-            File.WriteAllBytes(Path.Combine(pending, screenshotInfo.file), screenshotPng);
-            // 共享说明放在根目录，报告保留 JSON、整屏截图和项目附加现场。
+            if (screenshotPng != null) File.WriteAllBytes(Path.Combine(pending, screenshotInfo.file), screenshotPng);
+            // 共享说明放在根目录，报告保留 JSON、主窗口截图和项目附加现场。
             Directory.Move(pending, destination);
             return destination;
         }
@@ -315,7 +323,7 @@ namespace PuertsUnityMcp.Editor
             public string consoleFile = "console-logs.json";
             public string instructionsFile = "../00-READ-ME-FIRST.md";
             public string[] additionalFiles;
-            public UnityMcpDesktopScreenshot.ScreenshotInfo screenshot;
+            public UnityMcpEditorMainWindowScreenshot.ScreenshotInfo screenshot;
             public int selectedFrameIndex, selectedDisplayFrame;
             public bool editorPlayingAtExport, editorPausedAtExport, deepProfilingAtExport;
             public EditorProfilerTargetListResult profilerTargetAtExport;
@@ -337,7 +345,7 @@ namespace PuertsUnityMcp.Editor
                 "nearbyFrames contain frame time only. Additional details include full CPU call trees and availability; missing or omitted frames have no inferred cause. CPU trees are not GPU timing or a full event timeline.",
                 "performanceDebugAtExport is a read-only cumulative snapshot of this Editor process at export time, not selected-frame or remote Player statistics. Disabled statistics are not evidence of zero cost; counts may remain from an earlier enabled period.",
                 "Console logs are an export-time snapshot, not proven logs from the selected frame. Cleared logs cannot be recovered.",
-                "screenshot.file is the full Windows desktop at export time; it does not reconstruct the screen from the recorded Profiler frame.",
+                "screenshot is the Unity Editor main window at export time, not the recorded Profiler frame. If capture fails, status and error explain the missing image.",
                 "Target, deep profiling and editor state describe export time; loaded historical captures may have different recording settings. Editor/wait markers are not proof of gameplay cost."
             };
         }

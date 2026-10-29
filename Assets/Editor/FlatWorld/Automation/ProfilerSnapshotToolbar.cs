@@ -56,7 +56,7 @@ namespace FlatWorld.Automation
                     {
                         name = ButtonName,
                         text = "性能 JSON",
-                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和整屏截图到 Logs/ProfileData；成功后自动复制报告文件夹完整路径，可直接粘贴给 Agent；右键打开目录。"
+                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和 Unity 主窗口截图到 Logs/ProfileData；成功后自动复制报告文件夹完整路径，可直接粘贴给 Agent；右键打开目录。"
                     };
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
@@ -127,7 +127,7 @@ namespace FlatWorld.Automation
                 // 导出成功后复制报告目录，并在当前窗口提示，方便直接粘贴给 Agent。
                 EditorGUIUtility.systemCopyBuffer = directory;
                 (notificationWindow ?? profiler)?.ShowNotification(new GUIContent("性能报告已导出，文件夹完整路径已复制到剪贴板"), 5d);
-                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n文件夹完整路径已复制到剪贴板，可直接粘贴给 Agent。包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 Logs/ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
+                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n文件夹完整路径已复制到剪贴板，可直接粘贴给 Agent。包含性能、日志和 world-scene.json；主窗口截图状态见 profiler-analysis.json。可以继续游戏，让 AI 先读 Logs/ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
             }
             catch (Exception exception)
             {
