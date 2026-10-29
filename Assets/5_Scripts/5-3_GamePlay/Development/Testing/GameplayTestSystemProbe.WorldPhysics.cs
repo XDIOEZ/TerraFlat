@@ -168,6 +168,10 @@ public static partial class GameplayTestSystemProbe
                 finally { world.ReturnObstacleBox(obstacle); }
                 sample["pooledInactive"] = !obstacle.enabled && !obstacle.gameObject.activeInHierarchy;
                 sample["pooledUnregistered"] = !WorldPhysicsService2D.TryResolveCollider(obstacle, out _);
+                sample["pooledInScenePhysicsRoot"] = obstacle.transform.parent != null &&
+                    obstacle.transform.parent.name == "World Physics Pool" &&
+                    obstacle.transform.parent.parent?.name == "Physics" &&
+                    obstacle.GetComponentInParent<RuntimeSceneObjectHierarchy>()?.gameObject.scene == space.Scene;
                 samples.Add(sample);
             }
             UnityEngine.Object.DestroyImmediate(terrain.gameObject);

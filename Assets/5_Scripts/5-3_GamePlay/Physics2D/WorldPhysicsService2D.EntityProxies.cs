@@ -175,6 +175,7 @@ public sealed partial class WorldPhysicsService2D
                     throw;
                 }
             }
+            else pooled.Root.SetParent(GetPhysicsProxyHierarchyRoot(), false);
             return pooled;
         }
         var root = new GameObject("World Entity Physics Proxy") { hideFlags = HideFlags.DontSave };
@@ -184,7 +185,7 @@ public sealed partial class WorldPhysicsService2D
         {
             SceneManager.MoveGameObjectToScene(root, PrimarySpace.Scene);
             newBody = fixedMode ? GetWorldFixedChunkBody(presentationPosition) : root.AddComponent<Rigidbody2D>();
-            if (fixedMode) root.transform.SetParent(newBody.transform, false);
+            root.transform.SetParent(fixedMode ? newBody.transform : GetPhysicsProxyHierarchyRoot(), false);
             return new EntityProxyShell { Body = newBody, Root = root.transform, OwnsRoot = true, SharedFixedBody = fixedMode };
         }
         catch
@@ -346,22 +347,18 @@ public sealed partial class WorldPhysicsService2D
         }
         if (!shell.SharedFixedBody) shell.Body.simulated = false;
         shell.Root.gameObject.SetActive(false);
-        if (shell.SharedFixedBody)
+        // 世界关闭时直接释放代理，不能在卸载中的场景重建回收池。
+        if (disposed)
         {
-            // 世界关闭时直接释放代理，不能在卸载中的场景重建回收池。
-            if (disposed)
-            {
-                DestroyPhysicsObject(shell.Root.gameObject);
-                ReleaseWorldFixedChunkBody(shell.Body);
-                return;
-            }
-            shell.Root.SetParent(GetPhysicsPoolRoot(), false);
-            ReleaseWorldFixedChunkBody(shell.Body);
+            DestroyPhysicsObject(shell.Root.gameObject);
+            if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
+            return;
         }
+        shell.Root.SetParent(GetPhysicsPoolRoot(), false);
+        if (shell.SharedFixedBody) ReleaseWorldFixedChunkBody(shell.Body);
         shell.Root.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
         shell.Root.localScale = Vector3.one;
-        if (disposed) DestroyPhysicsObject(shell.Root.gameObject);
-        else (shell.SharedFixedBody ? fixedEntityProxyPool : entityProxyPool).Push(shell);
+        (shell.SharedFixedBody ? fixedEntityProxyPool : entityProxyPool).Push(shell);
     }
 
     private void PrepareEntityProxySimulation()
@@ -469,6 +466,7 @@ public sealed partial class WorldPhysicsService2D
         try
         {
             SceneManager.MoveGameObjectToScene(root, PrimarySpace.Scene);
+            root.transform.SetParent(GetPhysicsProxyHierarchyRoot(), false);
             body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Static;
             fixedChunkBodies[chunk] = body;
             fixedChunkBodyReferences[body] = 1; fixedChunkBodyAddresses[body] = chunk;
@@ -492,11 +490,16 @@ public sealed partial class WorldPhysicsService2D
         DestroyPhysicsObject(body.gameObject);
     }
 
+    // 自有物理代理统一归入所属场景分类，具体物品与地形仍保留自己的宿主。
+    private Transform GetPhysicsProxyHierarchyRoot()
+        => RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(PrimarySpace.Scene, RuntimeSceneObjectCategory.Physics);
+
     private Transform GetPhysicsPoolRoot()
     {
         if (poolRoot != null) return poolRoot;
         var root = new GameObject("World Physics Pool") { hideFlags = HideFlags.DontSave };
         SceneManager.MoveGameObjectToScene(root, PrimarySpace.Scene);
+        root.transform.SetParent(GetPhysicsProxyHierarchyRoot(), false);
         return poolRoot = root.transform;
     }
 

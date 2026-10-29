@@ -38,8 +38,8 @@ test.system("world_streaming", "world_physics_ownership", {}, function(data)
         assert(sample.terrainPointCountBefore > 0 and
             sample.terrainPointCountAfter == sample.terrainPointCountBefore,
             "回收重绑改变了地形 Composite 的几何")
-        assert(sample.pooledInactive and sample.pooledUnregistered,
-            "障碍回池后仍启用碰撞或保留命中登记")
+        assert(sample.pooledInactive and sample.pooledUnregistered and sample.pooledInScenePhysicsRoot,
+            "障碍回池后仍启用碰撞、保留命中登记，或未归入所属场景Physics分类")
     end
 end, "世界物理原生隔离、真实接触和多区域归属生命周期")
 

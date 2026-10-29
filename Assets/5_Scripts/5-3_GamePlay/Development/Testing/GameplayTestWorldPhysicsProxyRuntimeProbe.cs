@@ -151,6 +151,13 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             result["movingMode"] = movingProxy.Mode.ToString();
             result["fixedType"] = fixedProxy.Body.bodyType.ToString();
             result["movingType"] = movingProxy.Body.bodyType.ToString();
+            Transform physicsRoot = fixedProxy.Body.transform.parent;
+            result["proxiesShareScenePhysicsRoot"] = physicsRoot != null &&
+                physicsRoot.name == "Physics" && movingProxy.Body.transform.parent == physicsRoot &&
+                physicsRoot.parent?.GetComponent<RuntimeSceneObjectHierarchy>() != null &&
+                physicsRoot.gameObject.scene == fixedProxy.Owner.PrimarySpace.Scene;
+            result["physicsRootPreservesWorldCoordinates"] = physicsRoot != null &&
+                physicsRoot.localToWorldMatrix == Matrix4x4.identity;
             result["mass"] = movingProxy.Body.mass;
             result["expectedMass"] = movingDefinition.CreateItemData().Stack.CurrentWeight;
             result["noFullTreeItem"] = ItemMgr.Instance.GetItemByGuid(PoseSample(movingTree, movingProxy).Value<int>("guid")) == null;
@@ -187,12 +194,17 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             if (owner != null) result["renderAfter"] = owner.DepthMesh.CaptureNaturalEntityPhysicsTestVisual(movingTree.Id);
             WorldPhysicsEntityPose2D beforeSave = movingProxy.CapturePose();
             int oldBody = movingProxy.Body.GetInstanceID();
+            Transform oldBodyTransform = movingProxy.Body.transform;
+            Transform physicsRoot = oldBodyTransform.parent;
             Collider2D[] oldRegions = movingProxy.Colliders.ToArray();
             bool captured = NaturalEntityEcsService.TryTakeSnapshotAndRemove(movingTree, out ItemData snapshot);
             result["snapshotTaken"] = captured;
             result["oldHandleRemoved"] = !NaturalEntityEcsService.Contains(movingTree);
             result["oldLeaseReleased"] = !movingProxy.IsValid;
             result["oldRegionsUnregistered"] = oldRegions.All(value => !WorldPhysicsService2D.TryResolveCollider(value, out _));
+            result["releasedProxyGroupedInPool"] = oldBodyTransform.parent != null &&
+                oldBodyTransform.parent.name == "World Physics Pool" && oldBodyTransform.parent.parent == physicsRoot &&
+                !oldBodyTransform.gameObject.activeInHierarchy;
             RuntimeItemDefinition current = GameRes.ExistingInstance.ItemDefinitions["Tree_Pine"];
             NaturalEntityHandle restored = own.SpawnResource(current, beforeSave.Position, snapshot);
             WorldPhysicsEntityProxy2D restoredProxy = RequireProxy(restored);
@@ -200,6 +212,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             result["restoredPoseError"] = Vector2.Distance(restoredProxy.Body.position, beforeSave.Position);
             result["restoredVelocityError"] = Vector2.Distance(restoredProxy.Body.velocity, beforeSave.Velocity);
             result["pooledBodyReused"] = restoredProxy.Body.GetInstanceID() == oldBody;
+            result["restoredProxyGroupedInPhysicsRoot"] = restoredProxy.Body.transform.parent == physicsRoot;
             result["newHandle"] = restored != movingTree;
             result["newEntityBinding"] = restoredProxy.Colliders.All(value =>
                 WorldPhysicsService2D.TryResolveCollider(value, out var binding) && ReferenceEquals(binding.Entity, restoredProxy.Entity));

@@ -11,7 +11,8 @@ public enum RuntimeSceneObjectCategory
     Players,
     DroppedItems,
     Rendering,
-    Preparation
+    Preparation,
+    Physics
 }
 
 /// <summary>每个场景按需建立公共分类节点，只整理层级，不接管对象生命周期。</summary>

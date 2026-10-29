@@ -4,6 +4,8 @@ test.runtime("world_streaming", "configured_entity_proxies", {}, function(data)
     assert(data.fixedMode == "WorldFixed" and data.movingMode == "IndependentDynamic"
         and data.fixedType == "Static" and data.movingType == "Dynamic",
         "正式生成未按配置领取不同游戏物理代理")
+    assert(data.proxiesShareScenePhysicsRoot and data.physicsRootPreservesWorldCoordinates,
+        "固定与动态物理代理未统一归入所属场景Physics分类，或父级改变了世界坐标")
     assert(math.abs(data.mass - data.expectedMass) < 0.001,
         "物理质量没有读取原ItemStack的总重")
     assert(data.fixedDisplacement < 0.001 and data.movingDisplacement > 0.5,
@@ -20,6 +22,8 @@ test.runtime("world_streaming", "configured_entity_proxies", {}, function(data)
         "已提交的树行网格部件没有跟随原生运动")
     assert(data.snapshotTaken and data.oldHandleRemoved and data.oldLeaseReleased and data.oldRegionsUnregistered,
         "保存回收没有注销旧实体、代理租约或区域绑定")
+    assert(data.releasedProxyGroupedInPool and data.restoredProxyGroupedInPhysicsRoot,
+        "物理代理回收后散落在场景根级，或复用后没有回到Physics分类")
     assert(data.pooledBodyReused and data.newHandle and data.newEntityBinding
         and data.restoredPoseError < 0.001 and data.restoredVelocityError < 0.001
         and data.restored.guid == pose.guid and data.restored.id == pose.id,

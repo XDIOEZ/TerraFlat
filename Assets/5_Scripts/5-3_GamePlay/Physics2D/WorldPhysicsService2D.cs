@@ -325,13 +325,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
             DestroyPhysicsObject(collider.gameObject);
             return;
         }
-        if (poolRoot == null)
-        {
-            var root = new GameObject("World Physics Pool") { hideFlags = HideFlags.DontSave };
-            SceneManager.MoveGameObjectToScene(root, PrimarySpace.Scene);
-            poolRoot = root.transform;
-        }
-        collider.transform.SetParent(poolRoot, false);
+        collider.transform.SetParent(GetPhysicsPoolRoot(), false);
         if (collider.TryGetComponent<ColliderSource2D>(out var source)) source.ClearBinding();
         obstaclePool.Push(collider);
     }
