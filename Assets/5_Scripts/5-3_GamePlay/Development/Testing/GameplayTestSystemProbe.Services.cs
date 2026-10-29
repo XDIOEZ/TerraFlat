@@ -42,10 +42,12 @@ public static partial class GameplayTestSystemProbe
         operations.Add("core_lifecycle/rule_pipeline", GameRuleConfiguration.ProbeRulePipeline);
         operations.Add("item_runtime/module_structure", ServiceModuleStructure);
         operations.Add("item_runtime/clone_runtime", ServiceCloneRuntime);
+        operations.Add("ecology/natural_snapshot_copy", ServiceCloneRuntime);
         operations.Add("item_runtime/cleanup_lookup", ServiceItemCleanupLookup);
         operations.Add("world_streaming/world_scene_binding", ServiceWorldSceneBinding);
         operations.Add("world_streaming/chunk_leases", ServiceChunkLeases);
         operations.Add("world_streaming/generation_lifecycle", ServiceGenerationLifecycle);
+        operations.Add("world_streaming/generation_profile_cache", ServiceGenerationProfileCache);
         operations.Add("world_streaming/commit_snapshot", ServiceCommitSnapshot);
         operations.Add("world_streaming/observer_windows", ServiceObserverWindows);
         operations.Add("save/snapshot_memory", ServiceSnapshotMemory);
@@ -435,6 +437,18 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceCloneRuntime(JObject args)
     {
         Data_GeneralItem source = ServiceItem(args);
+        bool natural = Flag(args, "natural", false);
+        if (natural)
+        {
+            source = (Data_GeneralItem)ItemInstanceDataFactory.Create(source);
+            source.Tags.Add("runtime.natural");
+            source.transform.position = new Vector3(12f, -4f, 0f);
+            source.MatterState.TemperatureCelsius = 37f;
+            source.PhysicsState = new ItemPhysicsRuntimeState
+            { Velocity = new Vector2(3f, -2f), AngularVelocity = 7f, PersistentWorldResident = true };
+            source.ModuleDataDic["state"] = new Ex_ModData_MemoryPackable
+            { StableName = "state", ModuleId = "probe.state", BitData = new byte[] { 2, 4, 8 } };
+        }
         ItemData clone = ItemInstanceDataFactory.CloneRuntime(source);
         bool independentModules = !ReferenceEquals(source.ModuleDataDic, clone.ModuleDataDic) &&
             !ReferenceEquals(source.ModuleDataDic["stock"], clone.ModuleDataDic["stock"]);
@@ -443,7 +457,7 @@ public static partial class GameplayTestSystemProbe
         clone.Stack.Amount += 1;
         clone.Tags.Add("probe.added");
         ((CollectableModuleData)clone.ModuleDataDic["stock"]).CurrentStock += 1;
-        return new JObject
+        var result = new JObject
         {
             ["guid"] = clone.Guid, ["sourceGuid"] = source.Guid, ["independentStack"] = !ReferenceEquals(source.Stack, clone.Stack),
             ["independentModules"] = independentModules, ["initialAmount"] = clonedAmount, ["initialStock"] = clonedStock,
@@ -451,6 +465,34 @@ public static partial class GameplayTestSystemProbe
             ["sourceHasAddedTag"] = source.Tags.Contains("probe.added"), ["sourceWeight"] = source.Stack.CurrentWeight,
             ["sourceVolume"] = source.Stack.CurrentVolume
         };
+        if (natural)
+        {
+            result["sharedConfiguration"] = ReferenceEquals(source.SharedConfiguration, clone.SharedConfiguration);
+            result["motionPreserved"] = clone.PhysicsState.Velocity == new Vector2(3f, -2f) &&
+                clone.PhysicsState.AngularVelocity == 7f && clone.PhysicsState.PersistentWorldResident;
+            result["independentMutableState"] = !ReferenceEquals(source.PhysicsState, clone.PhysicsState) &&
+                !ReferenceEquals(source.transform, clone.transform) && !ReferenceEquals(source.MatterState, clone.MatterState);
+            source.transform.position = Vector3.zero;
+            source.MatterState.TemperatureCelsius = -10f;
+            source.PhysicsState.Velocity = Vector2.zero;
+            ((Ex_ModData_MemoryPackable)source.ModuleDataDic["state"]).BitData[0] = 99;
+            result["poolReuseIsolated"] = clone.transform.position.x == 12f &&
+                clone.MatterState.TemperatureCelsius == 37f && clone.PhysicsState.Velocity.x == 3f &&
+                ((Ex_ModData_MemoryPackable)clone.ModuleDataDic["state"]).BitData[0] == 2;
+            ItemData restored = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(
+                ItemSnapshotSerialization.SerializePayload(ItemInstanceSnapshot.Capture(clone))).CreateColdData();
+            result["persistedMotion"] = restored.Guid == clone.Guid && restored.Tags.Contains("runtime.natural") &&
+                restored.PhysicsState.Velocity == clone.PhysicsState.Velocity &&
+                restored.PhysicsState.AngularVelocity == 7f && restored.PhysicsState.PersistentWorldResident;
+            Data_GeneralItem definition = ServiceItem(args);
+            definition.Stack.Weight = 9f;
+            definition.MaxDurability = 200f;
+            ItemInstanceDataFactory.ApplyCurrentDefinition(clone, ItemInstanceDataFactory.Create(definition));
+            result["currentDefinitionRestored"] = clone.Stack.Weight == 9f && clone.MaxDurability == 200f &&
+                clone.Durability == 50f && clone.Guid == source.Guid && clone.Tags.Contains("runtime.natural") &&
+                clone.PhysicsState.Velocity.x == 3f;
+        }
+        return result;
     }
 
     #endregion

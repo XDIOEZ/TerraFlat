@@ -27,6 +27,7 @@
 - 网络采集与生成资源状态回包携带出生身份；缺少身份且 UID/位置匹配多个实体时必须拒绝歧义请求。F5 只延迟当前实例的模式切换，其他有效配置仍刷新。
 - 产物目录首次注册校验，同配置复用，失败不缓存；资源重载清编译缓存，新配置/能力版本重编后重验。
 - 独立导航/空间交互/接触几何，命中 GameplayCombatBridge；植物仅 EntityPlantModuleSystem 推。区块解绑保存释放、死亡/一次收获才删来源；终端解绑移快照所有权，仍运行才克隆，句柄带World代际。客户端不推进权威植物Job，采集/增量独立接入；旧 DroppedItems/Core ECS 仅Editor参考。
+- 普通、分帧与 ECS 自然物快照统一用 `ItemInstanceDataFactory.CloneRuntime`，共享只读配置并独立复制模块/物质/姿态/运动；内存快照重入也合并当前定义与嵌套库存，避免 F5 后沿用旧配置。规则 `ecology/natural_snapshot_copy`，离线 `Tools/Tests/NaturalSnapshots/`。
 - NaturalEntityEcsService 的天气/耐候、已种土壤、导航占地索引随注册/卸载/恢复/刷新增量维护。FreezeEnvironment 同批只冻服务引用/PointSamplingContext，邻热源每目标块一次，天气/温度逐件实时、缺样本沿正式回退，同步结束释放，保原0.25秒/距离规则。
 - FreezeEnvironment 摘要 work 是输入数、gauge最近批规模；Profiler .Weather/.Temperature/.WriteInputs 分段；Environment.WeatherSamples/TemperatureSamples/MissingWeather/MissingTemperature/InputWrites 区分尝试/缺失/写入，计数仅GM“性能DEBUG”开时，慢摘要独立，Profiler始终可见。
 - 土壤九宫格顺序/水量事务不变，先筛真实表层水，干格/遮水不建完整Tile；SoilSamplingBatch 只复用本轮寻址/容器，TrySample/TryReadSampled 共采样，光/灌溉/水肥逐件实时算/同步提交。

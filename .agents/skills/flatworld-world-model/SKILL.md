@@ -57,6 +57,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `WorldManager.prefab` 序列化提交/基础/后续预算覆盖源码默认值。GM 可调数量与毫秒上限；`StreamingDiagnostics` 分开记录排队、生成、提交、恢复、renderer 步骤与等待，读取诊断不推进世界。
 - 水文缓存键包含 Epoch、维度、种子、配置和稳定 Region。同组只算一次；单 Chunk 取消不终止仍有需求的共享河网，全部需求消失/世界结束才取消。Region/Halo 只扩大采样，结果只提交核心区域；世界退出清水文/海洋距离降水/海洋水源区块/火山缓存。
 - 出生搜索、正式流送和联机生态冻结共用 `ChunkMgr.PrepareActiveGenerationSnapshot`，统一尺寸、空间倍率、运行时覆盖和保存配置；出生只检查可走地形/液深，不生成完整生态。`WorldAirHumidityField` 只读差量恢复后的 Ready 区块，依 Terrain/LiquidRevision/Epoch 失效，缺影响邻区返回 false，不触发生成。
+- 最终生成配置由 `WorldGenerationProfileCache` 复用，世界/种子/资源代际、实例覆盖与冻结规则变化失效；有 Profile Hook 时绕过。洞穴配对与冷地表共用失效条件，性能分看 `FreezeProfile/RefreshWindows`；离线回归 `Tools/Tests/WorldGenerationProfileCaching/`。
 - `WorldGenerationRuntimeHooks` 的 Profile Hook 在主线程冻结参数；`WorldModelTerrainDecorator` 在生成器创建时捕获委托，正式流送与出生查询共用。地形回调只能读请求中的冻结值并修改纯地形缓冲，不访问 Unity 对象或当前单例；测试平地等临时规则由订阅者退出时撤销。
 - Tile 外观查询优先 JSON 的 `runtimeTileId/tileAsset`，再回退 Palette；地形身份按冻结 Profile → 当前 Profile → JSON 目录解析，玩家新建筑用当前目录，稳定数字 ID 与冻结映射不冲突。
 - 流送计时是单调墙钟，父子阶段重叠不能相加；暂停跨越请求单独记录。宏观 Lazy 执行时间归实际执行者，get 包含等待，local_refine 只计本块。
@@ -72,6 +73,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `ChunkNaturalItemRenderer` 从所属 View 找 Owner，GUID/部件号标主体，太阳阴影用独立负槽；共用 `WorldEntityRuntime`。解绑先保存并撤表现/导航，最后释放世界。
 - 墙裂读权威 `flatworld.tileBuilding.damage`；自身与邻块共享边/角变化增量刷新，Bind 重建、Unbind 退订。水面顶点含高度、四角水深与 Flow；河流为下游速度、海洋为当地风向，湖面 Flow 为零。
 - `TerrainSurfaceHeightLayer` 从原 `height` 档位、`terrain.surface.excavatedLevels/coverLevels` 推导表面高低；非 Surface 忽略生成海拔，支撑面回到基准面，液面低一档，Blocking 顶部高一档。`TerrainHeightShadowManager` 统一查询/提交低侧阴影，只借用已有维度服务，不为只读查询创建管理器；四向直边与斜邻圆角共用 BRG，未知邻格不制造边或角。订阅八邻区 Commit/Evict，变化按3×3邻域裁剪合并脏格，随 Owner 镜像、重建和解绑维护表现。
+- 高低阴影在单次刷新内复用一格 halo 表面采样，下一轮重新读取地形/液体/配置；脏格与邻区集合随壳复用。规则 `rendering/terrain_shadow_surface_cache`，离线 `Tools/Tests/TerrainHeightShadows/`。
 - `GameplayWorldRuntime.Physics` 持有 `WorldPhysicsService2D`；原生空间由 `WorldPhysicsScene2D` 创建/借用，世界身份不再直接充当查询场景。物理代理公共模式为 `WorldFixed`（相对所属世界固定）和 `IndependentDynamic`（在所属世界内独立运动）；Unity 刚体类型、唯一原生模拟入口和生命周期由世界服务管理，区块合批是固定模式的内部实现。不同世界使用独立原生场景，物品只在登记、结构变化、迁移、卸载时更新物理归属，不逐帧扫描。规则 `world_streaming/world_physics_ownership`、`world_physics_definition` 覆盖原生接触隔离、精确区域、临时查询池和回收。
 - `TerrainSupportLayer` 分开标记结构所有权与外部显示：`ExternalOwnershipLayer` 防止结构地板随普通土层事务再移交，`ExternalVisualLayer` 只防重画；普通 Tile 地板仍由 ChunkView 显示。支撑上的玩家填土通过 `GetExposedTileId/GetSurfaceCell` 进入普通农业与采挖，迁移作物使用 `IPlantableCrop` 的活体/冷状态坐标接口，不按具体作物 ID 分支。
 - 地形独占 Static Rigidbody2D + Manual Composite；树/机器 `ChunkObstacleColliderSet` 从世界服务借 BoxCollider，非 Composite。正式 Item Collider 出现撤数据代理，卸载后恢复；中央脏队列按 Bind 时的真实世界分桶，由世界物理服务在 Simulate 前提交；解绑/重绑撤旧桶，回调重新入队保留到下一 Tick。地形与障碍通知分开，`FlatWorld.ChunkPhysics.{FlushObstacles,RebuildObstacles,PublishObstacles}` 区分重建和镜像通知；规则 `world_streaming/collision_dirty_queue`。

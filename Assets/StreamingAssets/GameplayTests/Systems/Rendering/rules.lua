@@ -196,6 +196,18 @@ test.system("rendering", "terrain_shadow_dirty_queue", {}, function(data)
     end
 end, "地形阴影增量脏格队列、提交重入与异常重试")
 
+test.system("rendering", "terrain_shadow_surface_cache", {}, function(data)
+    assert(data.baselineReads == 9216 and data.cachedReads == 1156,
+        "32x32 全格阴影查询未把表面采样压到 34x34 halo 上界")
+    assert(data.unknownCached, "同轮刷新的缺失邻区样本没有复用")
+    assert(data.configurationReloaded and data.changeInvalidated,
+        "重新刷新或刷新中地形变化仍复用了旧表面样本")
+    assert(data.cachedMasksMatch and data.missingBoundaryMatches and data.supportCovered and
+        data.liquidBoundaryCovered, "随机地形、缺失邻区、支撑或边界液体的缓存遮影与原结果不一致")
+    assert(data.wrappedHaloDistinct and data.outsideHaloRejected,
+        "环绕边界或一格 halo 坐标处理错误")
+end, "地形阴影每轮复用表面样本并保持邻区边界")
+
 do
     local function has(mask, index) return math.floor(mask / (2 ^ (index - 1))) % 2 == 1 end
     local adjacent = { { 1, 3 }, { 2, 3 }, { 1, 4 }, { 2, 4 } }

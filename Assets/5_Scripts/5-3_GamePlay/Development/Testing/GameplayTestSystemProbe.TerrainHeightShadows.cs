@@ -16,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/terrain_height_neighbours", ServiceTerrainHeightNeighbours);
         operations.Add("rendering/terrain_shadow_masks", ServiceTerrainShadowMasks);
         operations.Add("rendering/terrain_shadow_dirty_queue", ServiceTerrainShadowDirtyQueue);
+        operations.Add("rendering/terrain_shadow_surface_cache", ServiceTerrainShadowSurfaceCache);
         operations.Add("terrain/natural_waterbed", ServiceNaturalWaterbed);
         operations.Add("terrain/ocean_shelf_bathymetry", ServiceOceanShelfBathymetry);
     }
@@ -62,6 +63,148 @@ public static partial class GameplayTestSystemProbe
     }
 
     // 直接推进阴影正式脏格队列，比较稀疏变更与全格重建的实际遍历数量。
+    private static JObject ServiceTerrainShadowSurfaceCache(JObject args)
+    {
+        const int width = 32, height = 32;
+        var cache = new TerrainShadowSurfaceSampleCache<int>();
+        cache.ConfigureForChunkWithOneCellHalo(width, height);
+        cache.BeginFlushPass();
+        int reads = 0;
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int sampleX = x + dx, sampleY = y + dy;
+            if (cache.TryGetCachedSurfaceSample(sampleX, sampleY, out _, out _)) continue;
+            reads++;
+            cache.StoreSurfaceSample(sampleX, sampleY, true, sampleY * width + sampleX);
+        }
+
+        cache.BeginFlushPass();
+        int missingReads = 0;
+        for (int i = 0; i < 2; i++)
+        {
+            if (cache.TryGetCachedSurfaceSample(-1, -1, out _, out _)) continue;
+            missingReads++;
+            cache.StoreSurfaceSample(-1, -1, false, 0);
+        }
+        bool unknownCached = missingReads == 1 &&
+            cache.TryGetCachedSurfaceSample(-1, -1, out bool available, out _) && !available;
+
+        int minimumDepth = 3;
+        cache.BeginFlushPass();
+        int firstMinimumDepth = ReadCurrentMinimumDepth();
+        minimumDepth = 8;
+        cache.BeginFlushPass();
+        int nextMinimumDepth = ReadCurrentMinimumDepth();
+
+        int terrainValue = 2;
+        cache.BeginFlushPass();
+        int beforeTerrainChange = ReadTerrainValue();
+        terrainValue = 7;
+        cache.InvalidateCurrentFlushPass();
+        int afterTerrainChange = ReadTerrainValue();
+
+        cache.BeginFlushPass();
+        int left = ReadWrappedCell(-1), right = ReadWrappedCell(width);
+        bool cachedMasksMatch = CompareCachedAndUncachedShadowMasks(out bool missingBoundaryMatches,
+            out bool supportCovered, out bool liquidBoundaryCovered);
+        return new JObject
+        {
+            ["baselineReads"] = width * height * 9,
+            ["cachedReads"] = reads,
+            ["unknownCached"] = unknownCached,
+            ["configurationReloaded"] = firstMinimumDepth == 3 && nextMinimumDepth == 8,
+            ["changeInvalidated"] = beforeTerrainChange == 2 && afterTerrainChange == 7,
+            ["wrappedHaloDistinct"] = left == width - 1 && right == 0 && left != right,
+            ["outsideHaloRejected"] = !cache.TryGetCachedSurfaceSample(-2, 0, out _, out _),
+            ["cachedMasksMatch"] = cachedMasksMatch,
+            ["missingBoundaryMatches"] = missingBoundaryMatches,
+            ["supportCovered"] = supportCovered,
+            ["liquidBoundaryCovered"] = liquidBoundaryCovered
+        };
+
+        int ReadWrappedCell(int x)
+        {
+            if (cache.TryGetCachedSurfaceSample(x, 0, out _, out int value)) return value;
+            value = (x % width + width) % width;
+            cache.StoreSurfaceSample(x, 0, true, value);
+            return value;
+        }
+
+        int ReadCurrentMinimumDepth()
+        {
+            if (cache.TryGetCachedSurfaceSample(0, 0, out bool sampleAvailable, out int value))
+                return sampleAvailable ? value : -1;
+            cache.StoreSurfaceSample(0, 0, true, minimumDepth);
+            return minimumDepth;
+        }
+
+        int ReadTerrainValue()
+        {
+            if (cache.TryGetCachedSurfaceSample(1, 1, out bool sampleAvailable, out int value))
+                return sampleAvailable ? value : -1;
+            cache.StoreSurfaceSample(1, 1, true, terrainValue);
+            return terrainValue;
+        }
+    }
+
+    private static bool CompareCachedAndUncachedShadowMasks(out bool boundaryMatches,
+        out bool supportCovered, out bool liquidBoundaryCovered)
+    {
+        const int size = 16;
+        using var buffer = new ChunkTerrainBuffer(size, size, LiquidTypeCatalog.BuiltIn);
+        using ChunkTerrainData terrain = buffer.Seal();
+        var random = new System.Random(7219);
+        int waterType = LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            int kind = random.Next(5);
+            if (kind != 0)
+            {
+                bool blocking = kind == 1;
+                terrain.SetCell(x, y, new TerrainCell(1, 0, blocking ? 2 : 0, 0, 1,
+                    blocking ? TerrainCellFlags.Blocking : TerrainCellFlags.Walkable));
+                TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, x, y, random.Next(4));
+                TerrainSurfaceHeightLayer.SetCoverLevels(terrain, x, y, random.Next(4));
+            }
+            if (random.Next(6) == 0)
+                terrain.SetLiquid(x, y, waterType, random.Next(1, 11));
+        }
+
+        var ground = new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable);
+        terrain.SetCell(0, 0, ground);
+        TerrainSupportLayer.Set(terrain, 0, 0, 23, 1);
+        terrain.SetCell(0, 8, ground);
+        terrain.SetLiquid(0, 8, waterType, 5);
+        terrain.SetCell(1, 8, ground);
+        supportCovered = TerrainSupportLayer.GetExposedTileId(terrain, 0, 0) == 23;
+        liquidBoundaryCovered = terrain.GetLiquidLevel(0, 8) == 5;
+
+        var address = new FlatWorld.WorldModel.WorldAddress("probe:terrain_shadow_cache", default);
+        var samples = new TerrainShadowSurfaceSampleCache<TerrainSurfaceHeight>();
+        samples.ConfigureForChunkWithOneCellHalo(size, size);
+        samples.BeginFlushPass();
+        boundaryMatches = true;
+        bool allMatches = true;
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            bool uncachedVisible = TerrainHeightShadowManager.TryGetShadowMasks(null, address, terrain,
+                x, y, false, out Vector4 uncachedEdges, out Vector4 uncachedCorners);
+            bool cachedVisible = TerrainHeightShadowManager.TryGetShadowMasks(null, address, terrain,
+                x, y, false, out Vector4 cachedEdges, out Vector4 cachedCorners, samples);
+            bool matches = uncachedVisible == cachedVisible && uncachedEdges.Equals(cachedEdges) &&
+                           uncachedCorners.Equals(cachedCorners);
+            allMatches &= matches;
+            if (x == 0 || y == 0 || x == size - 1 || y == size - 1)
+                boundaryMatches &= matches;
+        }
+        return allMatches;
+    }
+
     private static JObject ServiceTerrainShadowDirtyQueue(JObject args)
     {
         var queue = new TerrainShadowDirtyQueue();

@@ -158,7 +158,7 @@ namespace FlatWorld.Spaceflight
         private const int MaximumCachedChunksPerPlanet = 32;
         private static GameSaveData owner;
         private static readonly Dictionary<string, SurfaceCache> caches = new(StringComparer.Ordinal);
-        private static readonly Dictionary<PlanetData, (int Key, ChunkGenerationProfileSnapshot Profile)> frozenProfiles = new();
+        private static readonly Dictionary<PlanetData, WorldGenerationProfileCache> frozenProfiles = new();
         private static GameRes resourceOwner;
         private static DimensionCatalogSO generationCatalog;
         private static readonly Dictionary<(ChunkGenerationProfileSnapshot Profile, int Seed, int X, int Y,
@@ -434,18 +434,11 @@ namespace FlatWorld.Spaceflight
 
         private static ChunkGenerationProfileSnapshot GetFrozenProfile(PlanetData planet)
         {
-            // 只比较世界配置，未修改时复用快照，选择预设或实例覆盖后立即失效。
-            int key = HashCode.Combine(planet.GenerationPresetId, planet.ChunkSize, planet.SpatialDistanceScale);
-            if (planet.GenerationNumericOverrides != null)
-                foreach (var pair in planet.GenerationNumericOverrides) key = HashCode.Combine(key, pair.Key, pair.Value);
-            if (planet.GenerationTextOverrides != null)
-                foreach (var pair in planet.GenerationTextOverrides) key = HashCode.Combine(key, pair.Key, pair.Value);
-            if (!frozenProfiles.TryGetValue(planet, out var cached) || cached.Key != key)
-            {
-                cached = (key, ChunkMgr.CreateFrozenWorldGenerationProfile(planet));
-                frozenProfiles[planet] = cached;
-            }
-            return cached.Profile;
+            // 冷采样与活动流送共用同一组完整失效条件。
+            if (!frozenProfiles.TryGetValue(planet, out var cache))
+                frozenProfiles.Add(planet, cache = new WorldGenerationProfileCache());
+            int seed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+            return ChunkMgr.GetCachedWorldGenerationProfile(cache, planet, seed == 0 ? 1 : seed, out _);
         }
 
         // 只采样冻结地理规则，不为放置预览生成区块或加载场景。

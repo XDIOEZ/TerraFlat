@@ -1,5 +1,7 @@
 # 自然生态纯规则回归
 
+`natural_snapshot_copy` 核对正式运行态工厂的身份、共享配置、独立可变状态、回池隔离和运动保存往返。离线 `python Tools/Tests/NaturalSnapshots/verify.py` 另比较旧深拷贝与工厂分配；不代表真实模块保存/卸载、画面或帧率验收。
+
 2026-10-26 `spatial_geometry` 补充阻挡体中心排序：检查偏移、缩放、旋转、镜像与冷编译冻结/重编译；触发器、禁用或缺失碰撞体仍回退根点。巨矿正式配置另由 `item_runtime/giant_mines` 覆盖；用户正在 PlayMode，本轮未执行新增 Lua 或真实遮挡验收。
 
 `shared_resources` 新增 `giant_generation/giant_clearance`：覆盖十一矿种选择、十七条规则合计 0.13 预算、同候选互斥、不同间距拒绝、概率零/一与倍率饱和、规则反序、岸带锚点与完整净空分工、洞穴出生安全区及缩短阻挡后的导航包含关系。本轮仅静态补充，未在用户运行中的 PlayMode 执行。

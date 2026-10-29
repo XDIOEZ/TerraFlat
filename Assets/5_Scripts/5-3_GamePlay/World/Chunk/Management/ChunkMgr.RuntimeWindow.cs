@@ -15,6 +15,8 @@ public partial class ChunkMgr
     // 只包本帧的启动和续步批次，不把协程等待时间计入绑定耗时。
     private static readonly PerformanceDebugPoint PresentationStartMarker = new("FlatWorld.ChunkStreaming.PresentationStartBatch");
     private static readonly PerformanceDebugPoint PresentationStepMarker = new("FlatWorld.ChunkStreaming.PresentationStepBatch");
+    private static readonly PerformanceDebugPoint FreezeProfileMarker = new("FlatWorld.ChunkStreaming.FreezeProfile");
+    private static readonly PerformanceDebugPoint RefreshWindowsMarker = new("FlatWorld.ChunkStreaming.RefreshWindows");
     #endregion
 
     private sealed class RuntimeChunkBinding
@@ -540,7 +542,7 @@ public partial class ChunkMgr
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
             RetireRuntimeBinding(runtimeWindowRemovalBuffer[i]);
 
-        runtimeChunkManager.RefreshWindows(windows);
+        using (RefreshWindowsMarker.Measure()) runtimeChunkManager.RefreshWindows(windows);
         ReconcileRuntimeWindowBindings();
         ReprojectRuntimeChunkViewsToLocalAnchor();
         // 只在流送窗口发生变化时校验一次现有表现，不做定时轮询。
@@ -618,16 +620,21 @@ public partial class ChunkMgr
     internal ChunkGenerationProfileSnapshot PrepareActiveGenerationSnapshot(out int baseSeed)
     {
         EnsureWorldRuntime();
-        // 玩家可建造 Tile 属于当前内容目录，不应被旧存档冻结的世界生成参数锁死。
-        runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
-        PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
-        ChunkGenerationProfileSnapshot profile = planet != null
-            ? CreateFrozenWorldGenerationProfile(planet, out runtimeTileCatalogSnapshot) : defaultGenerationSnapshot;
         baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         if (baseSeed == 0)
             baseSeed = 1;
-        // 地表入口与矿洞出口共享门户随机种子；矿洞还需配对冻结后的地表 Profile。
-        profile = AttachCavePortalPairing(profile, baseSeed);
+        // 玩家可建造 Tile 属于当前内容目录，不应被旧存档冻结的世界生成参数锁死。
+        runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
+        PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
+        ChunkGenerationProfileSnapshot profile;
+        using (FreezeProfileMarker.Measure())
+        {
+            profile = planet != null
+                ? GetCachedWorldGenerationProfile(activeWorldGenerationCache, planet, baseSeed,
+                    out runtimeTileCatalogSnapshot) : defaultGenerationSnapshot;
+            // 地表入口与矿洞出口共享门户随机种子；矿洞还需配对冻结后的地表 Profile。
+            profile = AttachCavePortalPairing(profile, baseSeed);
+        }
         activeGenerationSnapshot = profile;
         return profile;
     }

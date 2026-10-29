@@ -564,6 +564,10 @@ public partial class ChunkMgr
             activeGenerationSnapshot = null;
             runtimeTileCatalogSnapshot = null;
             defaultGenerationSnapshot = null;
+            activeWorldGenerationCache.Clear();
+            portalSourceGenerationCache.Clear();
+            pairedCaveSource = pairedSurfaceSource = pairedGenerationProfile = null;
+            pairedGenerator = null;
             if (manager != null)
             {
                 WorldRuntime world = manager.World;

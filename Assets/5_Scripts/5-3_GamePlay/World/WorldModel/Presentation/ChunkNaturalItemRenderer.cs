@@ -368,7 +368,7 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
             try
             {
                 item.Save();
-                ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
+                ItemData snapshot = ItemInstanceDataFactory.CloneRuntime(item.itemData);
                 if (snapshots != null) snapshots.Add(snapshot);
                 else chunkManager.CaptureNaturalItemState(address, snapshot);
             }
@@ -442,7 +442,7 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
                 try
                 {
                     item.Save();
-                    ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
+                    ItemData snapshot = ItemInstanceDataFactory.CloneRuntime(item.itemData);
                     chunkManager.CaptureNaturalItemState(address, snapshot);
                 }
                 catch (Exception exception)
@@ -620,6 +620,9 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         Item item = null;
         try
         {
+            // 内存快照保留只读定义，重新入世仍须合并当前资源与嵌套库存配置。
+            if (changedData?.SharedConfiguration != null)
+                changedData = ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, changedData);
             // 设施基线只生成一次机器数据，视觉卸载不得销毁权威设施或重置库存。
             if (!placement.IsDimensionPortal && MachineCatalog.Get(changedData?.IDName ?? runtimeItemId) != null)
             {

@@ -139,14 +139,7 @@ namespace FlatWorld.NaturalEntities
             => record.ChunkBlockingProjection;
 
         internal static ItemData CloneNaturalEntitySnapshotPreservingMotion(ItemData source)
-        {
-            ItemData copy = FastCloner.FastCloner.DeepClone(source);
-            if (copy != null && source.PhysicsState != null)
-                copy.PhysicsState = new ItemPhysicsRuntimeState
-                { Velocity = source.PhysicsState.Velocity, AngularVelocity = source.PhysicsState.AngularVelocity,
-                    PersistentWorldResident = source.PhysicsState.PersistentWorldResident };
-            return copy;
-        }
+            => source == null ? null : ItemInstanceDataFactory.CloneRuntime(source);
 
         internal static void SetGeneratedNaturalEntitySourceIdentity(NaturalEntityHandle handle,
             string sourceWorldKey, int sourceX, int sourceY)

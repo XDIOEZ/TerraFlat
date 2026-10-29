@@ -466,7 +466,9 @@
         "Assets/5_Scripts/5-0_WorldModel/Ecology/*",
         "Assets/StreamingAssets/GameConfig/Actors/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Ecology/*",
-        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EcologyWorldSaveData.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EcologyWorldSaveData.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkNaturalItemRenderer.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Services.cs"
       ],
       "dependsOn": [
         "terrain",
@@ -1106,7 +1108,9 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Cam.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldPhysicsProxyRuntimeProbe*.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldPhysics*.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MapGenerationPlan.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MapGenerationPlan.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GenerationProfileCache.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/WorldGenerationRuntimeHooks.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1372,6 +1376,8 @@
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkLightOccluderRenderer.cs",
         "Assets/5_Scripts/5-0_WorldModel/Terrain/TerrainSurfaceHeightLayer.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/TerrainHeightShadowManager.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/TerrainShadowSurfaceSampleCache.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.TerrainHeightShadows.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkLightOccluderVisibilityScheduler.cs"
       ],
       "dependsOn": [

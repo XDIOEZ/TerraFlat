@@ -17,6 +17,49 @@ public partial class ChunkMgr
 
     #region 世界生成配置冻结
 
+    private readonly WorldGenerationProfileCache activeWorldGenerationCache = new();
+    private readonly WorldGenerationProfileCache portalSourceGenerationCache = new();
+    private ChunkGenerationProfileSnapshot pairedCaveSource, pairedSurfaceSource, pairedGenerationProfile;
+    private DeterministicChunkGenerator pairedGenerator;
+    private ChunkGenerationTopologySnapshot pairedTopology;
+    private string pairedDimension;
+    private int pairedSeed;
+
+    // 订阅者可以依赖外部可变状态，有 Hook 时直接走正式构建链。
+    internal static ChunkGenerationProfileSnapshot GetCachedWorldGenerationProfile(
+        WorldGenerationProfileCache cache, PlanetData planet, int seed,
+        out ChunkGenerationProfileSnapshot currentTileCatalog)
+    {
+        if (WorldGenerationRuntimeHooks.HasProfileSubscribers)
+        {
+            cache.Clear();
+            return CreateFrozenWorldGenerationProfile(planet, out currentTileCatalog);
+        }
+
+        var save = SaveDataMgr.Instance?.SaveData;
+        var resources = GameRes.ExistingInstance;
+        DimensionManager.Instance.TryGetDefinitionForWorldKey(planet.Name, out DimensionDefinition definition);
+        var inputs = new WorldGenerationProfileCache.Inputs(planet, save,
+            FlatWorld.Spaceflight.SpaceCatalog.LoadDefault(), resources, resources?.ResourceReloadVersion ?? 0,
+            NaturalGenerationRuleCatalogService.Catalog, definition, seed,
+            save?.UsesFrozenWorldGenerationConfiguration != false, GameNetwork.HasStateAuthority);
+        if (cache.TryGet(inputs, out var profile, out currentTileCatalog)) return profile;
+
+        EcologyWorldSaveData before = planet.Ecology;
+        int beforeVersion = before?.DataVersion ?? 0;
+        string beforeProfile = before?.ProfileId;
+        bool beforeHasConfiguration = before?.HasConfiguration ?? false;
+        profile = CreateFrozenWorldGenerationProfile(planet, out currentTileCatalog);
+        // 首次冻结后的下一次调用需先恢复存档配置，再保存可复用的结果。
+        if (ReferenceEquals(before, planet.Ecology) && beforeVersion == (planet.Ecology?.DataVersion ?? 0) &&
+            beforeProfile == planet.Ecology?.ProfileId &&
+            beforeHasConfiguration == (planet.Ecology?.HasConfiguration ?? false))
+            cache.Store(inputs, profile, currentTileCatalog);
+        else
+            cache.Clear();
+        return profile;
+    }
+
     // 冷采样、出生查询与正式流送共用世界实例的最终生成配置。
     public static ChunkGenerationProfileSnapshot CreateFrozenWorldGenerationProfile(PlanetData planet) =>
         CreateFrozenWorldGenerationProfile(planet, out _);
@@ -90,8 +133,17 @@ public partial class ChunkMgr
         string sourceDimensionId = definition.PortalTargetDimensionId;
         PlanetData sourcePlanet = GetPortalSourcePlanetData(dimensionManager, sourceDimensionId);
         if (sourcePlanet == null) return profile;
-        ChunkGenerationProfileSnapshot sourceProfile = CreateFrozenWorldGenerationProfile(sourcePlanet);
+        ChunkGenerationProfileSnapshot sourceProfile = GetCachedWorldGenerationProfile(
+            portalSourceGenerationCache, sourcePlanet, baseSeed, out _);
+        int sourceSeed = dimensionManager.GetGenerationSeedForDimension(baseSeed, sourceDimensionId);
+        ChunkGenerationTopologySnapshot topology = ResolveGenerationTopology(sourcePlanet);
+        if (ReferenceEquals(profile, pairedCaveSource) && ReferenceEquals(sourceProfile, pairedSurfaceSource) &&
+            ReferenceEquals(runtimeGenerator, pairedGenerator) && sourceSeed == pairedSeed &&
+            sourceDimensionId == pairedDimension && topology.IsWrapped == pairedTopology.IsWrapped &&
+            topology.Min.Equals(pairedTopology.Min) && topology.Span.Equals(pairedTopology.Span))
+            return pairedGenerationProfile;
 
+        ChunkGenerationProfileSnapshot caveSourceProfile = profile;
         ChunkGenerationSettingsSnapshot sourceSettings = sourceProfile.Settings;
         // 两端共享门户候选格，地形和空间倍率仍由各自世界配置决定。
         var numbers = new Dictionary<string, double>(profile.NumericParameters, StringComparer.Ordinal)
@@ -106,15 +158,14 @@ public partial class ChunkMgr
         };
         profile = profile.WithGenerationConfiguration(numbers, null, null);
 
-        int sourceSeed = dimensionManager != null
-            ? dimensionManager.GetGenerationSeedForDimension(baseSeed, sourceDimensionId)
-            : baseSeed;
         var pairing = new CavePortalPairingSnapshot(
             sourceDimensionId,
             sourceSeed,
             sourceProfile,
-            ResolveGenerationTopology(sourcePlanet), runtimeGenerator);
-        return profile.WithCavePortalPairing(pairing);
+            topology, runtimeGenerator);
+        pairedCaveSource = caveSourceProfile; pairedSurfaceSource = sourceProfile; pairedGenerator = runtimeGenerator;
+        pairedSeed = sourceSeed; pairedDimension = sourceDimensionId; pairedTopology = topology;
+        return pairedGenerationProfile = profile.WithCavePortalPairing(pairing);
     }
 
     /// <summary>从当前星球根取目标维度数据；缺失时让 Profile 按默认无限世界配置生成。</summary>

@@ -1,4 +1,17 @@
 -- 独立四乘四草稿调用正式生态生成器。
+test.system("ecology", "natural_snapshot_copy", {natural = true}, function(data)
+    assert(data.guid == data.sourceGuid and data.independentStack and data.independentModules,
+        "自然物快照改变身份或共享可变库存、模块")
+    assert(data.sharedConfiguration and data.independentMutableState,
+        "自然物快照重复复制只读配置，或共享可变姿态、物质、物理状态")
+    assert(data.motionPreserved and data.persistedMotion,
+        "自然物快照或保存往返丢失速度、角速度、常驻资格或运行态标签")
+    assert(data.poolReuseIsolated and not data.sourceHasAddedTag,
+        "回池后再次使用原数据污染了已保存的自然物快照")
+    assert(data.currentDefinitionRestored,
+        "自然物内存快照重新挂接定义时丢失运行状态或继续使用旧配置")
+end, "自然物运行态快照共享只读配置、隔离回池数据并保留运动")
+
 test.system("ecology", "shared_resources", {}, function(data)
     assert(data.stable and data.sameIdentity and data.sharedCopies > 0,
         "跨区块资源因加载顺序或观察区块变化而重复生成或改变身份")

@@ -15,6 +15,7 @@ public static class WorldGenerationRuntimeHooks
         BeforeWorldModelGeneration;
     public static event Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken>
         WorldModelTerrainDecorator;
+    internal static bool HasProfileSubscribers => BeforeWorldModelGeneration != null;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset()

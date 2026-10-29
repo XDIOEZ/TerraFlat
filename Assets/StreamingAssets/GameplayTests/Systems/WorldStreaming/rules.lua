@@ -64,6 +64,18 @@ test.system("world_streaming", "commit_snapshot", { tile = 23, level = 3, change
     assert(not data.oldEpochAccepted and data.epochDisposed, "旧世界结果被发布或丢弃后未释放")
 end, "生成结果提交、快照冻结和唯一所有权释放")
 
+test.system("world_streaming", "generation_profile_cache", {}, function(data)
+    assert(data.hit and data.stable and data.allocatedBytes == 0,
+        "生成配置没有复用原快照和当前地块目录，或稳定命中仍产生托管分配")
+    assert(data.numberChanged and data.textChanged and data.presetChanged and data.sizeChanged and data.scaleChanged
+        and data.ruleChanged and data.ruleScalarChanged and data.frozenNumberChanged and data.frozenTextChanged
+        and data.mineralChanged and data.definitionChanged,
+        "原位修改实例覆盖、冻结生态/生成规则或维度定义后仍命中旧配置")
+    assert(data.worldChanged and data.seedChanged and data.resourceChanged and data.saveChanged and data.modeChanged,
+        "世界或存档替换、种子、资源代际或冻结模式变化后仍复用旧配置")
+    assert(data.hookDetected and data.hookRestored, "临时 Profile Hook 未被识别或测试后未恢复")
+end, "世界生成配置缓存命中、失效与零分配")
+
 test.system("world_streaming", "observer_windows", {}, function(data)
     assert(data.plan[1].x == 0 and data.plan[1].y == 0 and data.plan[2].x == 8 and data.plan[2].y == 0,
         "联机窗口计划没有按实际矩形区块尺寸定位每个观察者")
