@@ -238,10 +238,15 @@ public static partial class RuntimeUIPrefabBuilder
         label.transform.localPosition = new Vector3(0f, 1.35f, 0f);
         label.transform.localRotation = Quaternion.identity;
         label.transform.localScale = Vector3.one;
+        // 头顶名称使用紧凑单行框，长名字省略，避免选框盖住大块场景。
+        label.rectTransform.sizeDelta = new Vector2(4f, 0.7f);
         label.text = "玩家";
         label.font = font;
         label.alignment = TextAlignmentOptions.Center;
-        label.fontSize = 2.4f;
+        label.fontSize = 4f;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.raycastTarget = false;
         label.color = Color.white;
         label.sortingOrder = 100;
     }
