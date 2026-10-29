@@ -8,7 +8,7 @@ using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// Ground / Water / Back / Blocking 共用 Chunk Mesh，扩展表现仍借用 BRG Owner。
-/// 碰撞由 ChunkCollisionRenderer 独立映射；Ground 单格变更只上传 GPU Cell 数据。
+/// 碰撞由世界物理服务独立管理；Ground 单格变更只上传 GPU Cell 数据。
 /// </summary>
 public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalChunkViewRenderer, IWorldAwareChunkViewRenderer
 {

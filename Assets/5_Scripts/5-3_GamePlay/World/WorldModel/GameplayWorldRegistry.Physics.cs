@@ -35,6 +35,11 @@ public static partial class GameplayWorldRegistry
         }
         var next = new WorldPhysicsService2D(worldKey, WorldPhysicsScene2D.Borrow(scene));
         worldPhysics[worldKey] = next;
+        try
+        {
+            if (TryGetOwnedWorldModel(worldKey, out var model)) next.BindChunkWorld(model);
+        }
+        catch { worldPhysics.Remove(worldKey); next.Dispose(); throw; }
         if (host == null && Application.isPlaying && !releasing)
         {
             var root = new GameObject("GameplayWorldRegistry");

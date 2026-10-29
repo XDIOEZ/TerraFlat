@@ -33,7 +33,7 @@ public sealed class ChunkView : MonoBehaviour
     public ChunkRuntime Model => chunk;
     public bool IsBound => chunk != null && presentationComplete;
     public bool IsBinding => chunk != null && !presentationComplete;
-    /// <summary>基础地形网格已提交，后续草地、碰撞和自然物可以继续分帧绑定。</summary>
+    /// <summary>基础地形网格已提交，后续草地和自然物可以继续分帧绑定。</summary>
     public bool IsBaseTerrainPresented =>
         chunk != null && terrainRenderer != null && terrainRenderer.IsBatchPresentationComplete;
 
@@ -361,7 +361,7 @@ public sealed class ChunkView : MonoBehaviour
                 $"{renderer.GetType().Name} 绑定前无法恢复基础地形 BRG Owner。");
     }
 
-    /// <summary>ChunkRuntime 地址保持规范坐标；ChunkView 只选择离本地玩家最近的显示/碰撞镜像。</summary>
+    /// <summary>ChunkRuntime 地址保持规范坐标；ChunkView 只选择离本地玩家最近的显示镜像。</summary>
     public void RefreshLocalPresentationPosition()
     {
         if (chunk == null)
@@ -375,15 +375,13 @@ public sealed class ChunkView : MonoBehaviour
         terrainRenderer?.RefreshDepthProjection();
     }
 
-    /// <summary>先让地面可见，再补环境、碰撞、草地和导航。</summary>
+    /// <summary>先让地面可见，再补环境、草地和导航。</summary>
     private static int ResolveRendererPriority(IChunkViewRenderer renderer)
     {
         if (renderer is ChunkTilemapRenderer)
             return 0;
         if (renderer is ChunkEnvironmentRenderer)
             return 1;
-        if (renderer is ChunkCollisionRenderer)
-            return 2;
         if (renderer is ChunkLightOccluderRenderer)
             return 3;
         if (renderer is ChunkGrassRenderer)

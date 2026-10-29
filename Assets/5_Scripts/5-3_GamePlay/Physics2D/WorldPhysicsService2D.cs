@@ -343,7 +343,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
     internal void Simulate(float seconds)
     {
         // 脏碰撞在本世界原生模拟前统一提交，物品和区块不再各自选择模拟空间。
-        ChunkCollisionRenderer.FlushDirtyDataObstacles(WorldKey);
+        WorldChunkPhysicsProjection2D.FlushDirtyDataObstacles(WorldKey);
         PrepareEntityProxySimulation();
         IsSimulating = true;
         try { PrimarySpace.Simulate(seconds); }
@@ -356,6 +356,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         if (disposed) return;
         disposed = true;
         WorldTopologyRuntime.LocalPlayerWrapped -= ReprojectEntityPhysicsToLocalAnchor;
+        DisposeChunkPhysics();
         DisposeTransientBodies();
         DisposeEntityProxies();
         foreach (var pair in itemColliders)

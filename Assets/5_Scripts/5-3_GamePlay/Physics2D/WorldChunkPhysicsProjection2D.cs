@@ -9,17 +9,17 @@ using Stopwatch = System.Diagnostics.Stopwatch;
 
 /// <summary>
 /// 地形使用静态 Composite，组合储罐按精确矩形合并，资源与独立建筑使用按身份复用的 BoxCollider2D。
-/// 矩形沿 Chunk 边界裁剪，共用 Blocking 的静态刚体；实体事件集中到一个物理 Tick，物理表现不持有玩法权威。
+/// 矩形沿 Chunk 边界裁剪，共用世界物理节点的静态刚体；实体事件集中到一个物理 Tick，物理表现不持有玩法权威。
 /// </summary>
-public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
+public sealed class WorldChunkPhysicsProjection2D : MonoBehaviour
 {
     #region 碰撞映射
 
     private enum DirtyReason : byte { Machine, NaturalRegistered, NaturalRemoved, NaturalVisualRevision, NaturalSnapshot, NaturalReset, Count }
     private enum GeometryReason : byte { Bind, Unbind, Terrain }
 
-    [SerializeField] private TilemapCollider2D tilemapCollider;
-    [SerializeField] private CompositeCollider2D compositeCollider;
+    private TilemapCollider2D tilemapCollider;
+    private CompositeCollider2D compositeCollider;
     private Tilemap collisionTilemap;
     private ChunkObstacleColliderSet obstacleColliders;
     private static Tile collisionTile;
@@ -37,12 +37,13 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     private bool machineObstaclesDirty;
     private bool naturalResetPending;
     private readonly List<Collider2D> colliderScratch = new();
-    private static readonly ObstacleDirtyQueue dirtyRenderers = new();
+    private static readonly ObstacleDirtyQueue dirtyProjections = new();
     private static readonly ProfilerMarker FlushObstacleMarker = new("FlatWorld.ChunkPhysics.FlushObstacles");
     private static readonly ProfilerMarker RebuildObstacleMarker = new("FlatWorld.ChunkPhysics.RebuildObstacles");
     private static readonly ProfilerMarker PublishObstacleMarker = new("FlatWorld.ChunkPhysics.PublishObstacles");
     private string boundWorldKey;
-    private WorldRuntime ownerWorld;
+    private ChunkTerrainData boundTerrain;
+    private WrappedTilemapPhysicsAdapter wrappedPhysics;
     private WorldPhysicsService2D physics;
     private bool dataObstaclesDirty;
     private int obstacleColliderCount;
@@ -65,16 +66,13 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     public ChunkRuntime BoundChunk { get; private set; }
     public TilemapCollider2D SourceTilemapCollider => tilemapCollider;
     public Collider2D SourceCollider => compositeCollider != null ? compositeCollider : tilemapCollider;
-    internal static event System.Action<ChunkCollisionRenderer> PresentationChanged;
-    // 障碍变化独立通知，树木变化不能触发地形 Tilemap 镜像全量重建。
-    internal static event System.Action<ChunkCollisionRenderer> ObstaclePresentationChanged;
+    public string WorldKey => boundWorldKey;
+    internal ChunkTerrainData BoundTerrain => boundTerrain;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetPresentationEvents()
+    private static void ResetPhysicsQueue()
     {
-        PresentationChanged = null;
-        ObstaclePresentationChanged = null;
-        dirtyRenderers.Clear();
+        dirtyProjections.Clear();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         directPhysicsRebuildLogCount = 0;
         dataPhysicsRebuildLogCount = 0;
@@ -82,18 +80,46 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
 #endif
     }
 
-    private void Awake()
+    // 世界物理服务独占装配，任何物理对象都不挂在 ChunkView 下。
+    internal static WorldChunkPhysicsProjection2D Create(WorldPhysicsService2D owner, Transform parent)
     {
-        collisionTilemap = tilemapCollider != null ? tilemapCollider.GetComponent<Tilemap>() : null;
-        if (collisionTilemap == null || compositeCollider == null ||
-            tilemapCollider.attachedRigidbody == null ||
-            tilemapCollider.attachedRigidbody.bodyType != RigidbodyType2D.Static ||
-            !tilemapCollider.usedByComposite)
+        var root = new GameObject("World Chunk Physics") { hideFlags = HideFlags.DontSave };
+        root.SetActive(false);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, owner.PrimarySpace.Scene);
+        root.transform.SetParent(parent, false);
+        try
         {
-            throw new System.InvalidOperationException("Chunk Collision Tilemap 必须装配静态 Rigidbody2D、TilemapCollider2D 和 CompositeCollider2D。");
+            root.AddComponent<Grid>();
+            var terrain = new GameObject("Terrain Collision") { hideFlags = HideFlags.DontSave };
+            terrain.transform.SetParent(root.transform, false);
+            Tilemap tilemap = terrain.AddComponent<Tilemap>();
+            Rigidbody2D body = terrain.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Static;
+            body.gravityScale = 0f;
+            TilemapCollider2D tiles = terrain.AddComponent<TilemapCollider2D>();
+            CompositeCollider2D composite = terrain.AddComponent<CompositeCollider2D>();
+            composite.generationType = CompositeCollider2D.GenerationType.Manual;
+            composite.geometryType = CompositeCollider2D.GeometryType.Outlines;
+            composite.vertexDistance = .0005f;
+            composite.offsetDistance = .00005f;
+            tiles.usedByComposite = true;
+            var projection = root.AddComponent<WorldChunkPhysicsProjection2D>();
+            projection.collisionTilemap = tilemap;
+            projection.tilemapCollider = tiles;
+            projection.compositeCollider = composite;
+            projection.obstacleColliders = new ChunkObstacleColliderSet(terrain.transform);
+            return projection;
         }
-        compositeCollider.generationType = CompositeCollider2D.GenerationType.Manual;
-        obstacleColliders = new ChunkObstacleColliderSet(collisionTilemap.transform);
+        catch { WorldPhysicsService2D.DestroyPhysicsObject(root); throw; }
+    }
+
+    internal void RefreshLocalPhysicsPosition()
+    {
+        if (BoundChunk == null) return;
+        Vector2 origin = new(BoundChunk.Address.ChunkOrigin.X, BoundChunk.Address.ChunkOrigin.Y);
+        transform.position = GameplayWorldRegistry.TryGet(boundWorldKey, out _)
+            ? WorldLocalPresentation.ProjectPosition(origin) : origin;
+        wrappedPhysics?.RefreshNow();
     }
 
     private static Tile CollisionTile
@@ -109,34 +135,42 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         }
     }
 
-    public void Bind(ChunkRuntime chunk)
+    internal void Bind(WorldPhysicsService2D owner, ChunkRuntime chunk)
     {
         if (chunk == null)
             throw new System.ArgumentNullException(nameof(chunk));
         Unbind();
         BoundChunk = chunk;
-        boundWorldKey = ownerWorld?.WorldId ?? GameplayWorldRegistry.ExecutionWorldKey;
-        physics = GameplayWorldRegistry.TryGetPhysics(boundWorldKey, out var registeredPhysics)
-            ? registeredPhysics : GameplayWorldRegistry.GetOrCreatePhysics(boundWorldKey, gameObject.scene);
+        physics = owner ?? throw new System.ArgumentNullException(nameof(owner));
+        boundWorldKey = owner.WorldKey;
+        boundTerrain = chunk.Terrain;
+        name = $"Chunk Physics ({chunk.Address.ChunkOrigin.X}, {chunk.Address.ChunkOrigin.Y})";
+        RefreshLocalPhysicsPosition();
         obstacleColliders.BindWorldPhysics(physics);
         physics.RegisterCollider(SourceCollider, regionId: null, entity: chunk);
-        if (chunk.Terrain != null)
-            chunk.Terrain.Changed += HandleTerrainChanged;
+        if (boundTerrain != null)
+            boundTerrain.Changed += HandleTerrainChanged;
         MachineWorld.WorldPresentationCellChanged += HandleWorldMachineCellChanged;
         MachineWorld.WorldPresentationCellsChanged += HandleWorldMachineCellsChanged;
         NaturalEntityEcsService.BlockingBodyChanged += HandleNaturalBodyChanged;
         NaturalEntityEcsService.PhysicsBodiesReset += HandlePhysicsBodiesReset;
         tilemapCollider.enabled = true;
         SyncAll(chunk.Terrain);
-        RebuildDataObstacles(initialBind: true);
-        PresentationChanged?.Invoke(this);
+        // 没有注册实体世界的纯地形服务不能借用当前游戏世界的机器或自然物。
+        if (GameplayWorldRegistry.TryGet(boundWorldKey, out _)) RebuildDataObstacles(initialBind: true);
+        WrappedTilemapPhysicsAdapter.Ensure(this);
+        wrappedPhysics = GetComponent<WrappedTilemapPhysicsAdapter>();
+        wrappedPhysics.RefreshNow();
     }
 
-    public void Unbind()
+    internal void Unbind()
     {
+        if (BoundChunk == null && physics == null) return;
+        wrappedPhysics?.ReleaseChunkPhysicsProxies();
         physics?.UnregisterCollider(SourceCollider);
-        if (BoundChunk?.Terrain != null)
-            BoundChunk.Terrain.Changed -= HandleTerrainChanged;
+        if (boundTerrain != null)
+            boundTerrain.Changed -= HandleTerrainChanged;
+        boundTerrain = null;
         MachineWorld.WorldPresentationCellChanged -= HandleWorldMachineCellChanged;
         MachineWorld.WorldPresentationCellsChanged -= HandleWorldMachineCellsChanged;
         NaturalEntityEcsService.BlockingBodyChanged -= HandleNaturalBodyChanged;
@@ -155,7 +189,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         obstacleColliders?.Clear();
         physics = null;
         obstacleColliderCount = 0;
-        dirtyRenderers.Remove(boundWorldKey, this);
+        dirtyProjections.Remove(boundWorldKey, this);
         boundWorldKey = null;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         System.Array.Clear(dirtyReasonCounts, 0, dirtyReasonCounts.Length);
@@ -169,7 +203,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         }
         if (tilemapCollider != null)
             tilemapCollider.enabled = false;
-        PresentationChanged?.Invoke(this);
+        wrappedPhysics?.RefreshNow();
     }
 
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
@@ -186,7 +220,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         if (collisionTilemap.GetTile(position) == tile) return;
         collisionTilemap.SetTile(position, tile);
         FlushGeometry(GeometryReason.Terrain);
-        PresentationChanged?.Invoke(this);
+        wrappedPhysics?.RefreshNow();
     }
 
     private void SyncAll(ChunkTerrainData terrain)
@@ -225,8 +259,6 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     #endregion
 
     #region 纯数据实体投影
-
-    public void SetWorld(WorldRuntime worldRuntime) => ownerWorld = worldRuntime;
 
     private void HandleWorldMachineCellChanged(string worldKey, Vector2Int cell)
     {
@@ -300,13 +332,13 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         dirtyReasonCounts[(int)reason]++;
 #endif
         dataObstaclesDirty = true;
-        dirtyRenderers.Add(boundWorldKey, this);
+        dirtyProjections.Add(boundWorldKey, this);
     }
 
     /// <summary>由世界物理服务在原生模拟前处理脏区块，同一 Chunk 在一次刷新前只入队一次。</summary>
     internal static void FlushDirtyDataObstacles(string worldKey)
     {
-        if (!dirtyRenderers.HasPending(worldKey)) return;
+        if (!dirtyProjections.HasPending(worldKey)) return;
         using var marker = FlushObstacleMarker.Auto();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         long flushStarted = Stopwatch.GetTimestamp();
@@ -323,53 +355,53 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         flushReasonCounts.Clear();
 #endif
         // 嵌套迁移可重入刷新，每次独占遍历缓冲。
-        using var scratchScope = ListPool<ChunkCollisionRenderer>.Get(out var dirtyRendererScratch);
-        dirtyRenderers.Take(worldKey, dirtyRendererScratch);
-        for (int i = 0; i < dirtyRendererScratch.Count; i++)
+        using var scratchScope = ListPool<WorldChunkPhysicsProjection2D>.Get(out var dirtyProjectionScratch);
+        dirtyProjections.Take(worldKey, dirtyProjectionScratch);
+        for (int i = 0; i < dirtyProjectionScratch.Count; i++)
         {
-            ChunkCollisionRenderer renderer = dirtyRendererScratch[i];
-            if (renderer == null || renderer.boundWorldKey != worldKey ||
-                !renderer.dataObstaclesDirty || renderer.BoundChunk?.Terrain == null)
+            WorldChunkPhysicsProjection2D projection = dirtyProjectionScratch[i];
+            if (projection == null || projection.boundWorldKey != worldKey ||
+                !projection.dataObstaclesDirty || projection.BoundChunk?.Terrain == null)
                 continue;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (!hasMachineSample && renderer.dirtyReasonCounts[(int)DirtyReason.Machine] > 0)
+            if (!hasMachineSample && projection.dirtyReasonCounts[(int)DirtyReason.Machine] > 0)
             {
-                machineSample = renderer.machineCellSample;
+                machineSample = projection.machineCellSample;
                 hasMachineSample = true;
             }
             for (int reason = 0; reason < flushReasonCounts.Length; reason++)
             {
-                flushReasonCounts[reason] += renderer.dirtyReasonCounts[reason];
-                renderer.dirtyReasonCounts[reason] = 0;
+                flushReasonCounts[reason] += projection.dirtyReasonCounts[reason];
+                projection.dirtyReasonCounts[reason] = 0;
             }
-            if (visualDefinitionSample == null && renderer.visualRevisionDefinitionSample != null)
+            if (visualDefinitionSample == null && projection.visualRevisionDefinitionSample != null)
             {
-                visualGuidSample = renderer.visualRevisionGuidSample;
-                visualDefinitionSample = renderer.visualRevisionDefinitionSample;
+                visualGuidSample = projection.visualRevisionGuidSample;
+                visualDefinitionSample = projection.visualRevisionDefinitionSample;
             }
-            renderer.visualRevisionDefinitionSample = null;
-            renderer.visualRevisionGuidSample = 0;
+            projection.visualRevisionDefinitionSample = null;
+            projection.visualRevisionGuidSample = 0;
             long rebuildStarted = Stopwatch.GetTimestamp();
 #endif
             int changedBoxes;
-            using (RebuildObstacleMarker.Auto()) changedBoxes = renderer.RebuildDataObstacles();
+            using (RebuildObstacleMarker.Auto()) changedBoxes = projection.RebuildDataObstacles();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             long rebuildFinished = Stopwatch.GetTimestamp();
             long chunkTicks = rebuildFinished - rebuildStarted;
             rebuildTicks += chunkTicks;
             rebuilt++;
-            totalBoxes += renderer.obstacleColliderCount;
+            totalBoxes += projection.obstacleColliderCount;
             updatedBoxes += changedBoxes;
             if (chunkTicks > slowestTicks)
             {
                 slowestTicks = chunkTicks;
-                slowestX = renderer.BoundChunk.Address.ChunkOrigin.X;
-                slowestY = renderer.BoundChunk.Address.ChunkOrigin.Y;
-                slowestBoxes = renderer.obstacleColliderCount;
+                slowestX = projection.BoundChunk.Address.ChunkOrigin.X;
+                slowestY = projection.BoundChunk.Address.ChunkOrigin.Y;
+                slowestBoxes = projection.obstacleColliderCount;
             }
 #endif
             if (changedBoxes > 0)
-                using (PublishObstacleMarker.Auto()) ObstaclePresentationChanged?.Invoke(renderer);
+                using (PublishObstacleMarker.Auto()) projection.wrappedPhysics?.RefreshObstaclesNow();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             presentationTicks += Stopwatch.GetTimestamp() - rebuildFinished;
 #endif
@@ -619,8 +651,6 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
         return false;
     }
 
-    private void OnEnable() => PresentationChanged?.Invoke(this);
-    private void OnDisable() => PresentationChanged?.Invoke(this);
     private void OnDestroy()
     {
         Unbind();
@@ -634,40 +664,40 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer, 
     /// <summary>按绑定世界隔离脏批次，空世界只查字典，取批次后再次入队不会丢通知。</summary>
     internal sealed class ObstacleDirtyQueue
     {
-        private readonly Dictionary<string, HashSet<ChunkCollisionRenderer>> worlds = new(System.StringComparer.Ordinal);
-        private readonly Stack<HashSet<ChunkCollisionRenderer>> pool = new();
+        private readonly Dictionary<string, HashSet<WorldChunkPhysicsProjection2D>> worlds = new(System.StringComparer.Ordinal);
+        private readonly Stack<HashSet<WorldChunkPhysicsProjection2D>> pool = new();
 
         internal bool HasPending(string worldKey) => worldKey != null &&
-            worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries) && entries.Count > 0;
+            worlds.TryGetValue(worldKey, out HashSet<WorldChunkPhysicsProjection2D> entries) && entries.Count > 0;
 
-        internal void Add(string worldKey, ChunkCollisionRenderer renderer)
+        internal void Add(string worldKey, WorldChunkPhysicsProjection2D projection)
         {
-            if (worldKey == null || renderer == null) return;
-            if (!worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries))
+            if (worldKey == null || projection == null) return;
+            if (!worlds.TryGetValue(worldKey, out HashSet<WorldChunkPhysicsProjection2D> entries))
             {
-                entries = pool.Count > 0 ? pool.Pop() : new HashSet<ChunkCollisionRenderer>();
+                entries = pool.Count > 0 ? pool.Pop() : new HashSet<WorldChunkPhysicsProjection2D>();
                 worlds.Add(worldKey, entries);
             }
-            entries.Add(renderer);
+            entries.Add(projection);
         }
 
-        internal void Remove(string worldKey, ChunkCollisionRenderer renderer)
+        internal void Remove(string worldKey, WorldChunkPhysicsProjection2D projection)
         {
-            if (worldKey == null || !worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries)) return;
-            entries.Remove(renderer);
+            if (worldKey == null || !worlds.TryGetValue(worldKey, out HashSet<WorldChunkPhysicsProjection2D> entries)) return;
+            entries.Remove(projection);
             if (entries.Count == 0) Release(worldKey, entries);
         }
 
-        internal void Take(string worldKey, List<ChunkCollisionRenderer> output)
+        internal void Take(string worldKey, List<WorldChunkPhysicsProjection2D> output)
         {
             output.Clear();
-            if (worldKey == null || !worlds.TryGetValue(worldKey, out HashSet<ChunkCollisionRenderer> entries)) return;
-            foreach (ChunkCollisionRenderer renderer in entries)
-                if (renderer != null) output.Add(renderer);
+            if (worldKey == null || !worlds.TryGetValue(worldKey, out HashSet<WorldChunkPhysicsProjection2D> entries)) return;
+            foreach (WorldChunkPhysicsProjection2D projection in entries)
+                if (projection != null) output.Add(projection);
             Release(worldKey, entries);
         }
 
-        private void Release(string worldKey, HashSet<ChunkCollisionRenderer> entries)
+        private void Release(string worldKey, HashSet<WorldChunkPhysicsProjection2D> entries)
         {
             worlds.Remove(worldKey);
             entries.Clear();

@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Map / ChunkView 的边界 Tilemap 物理适配；触边即镜像，不使用 Item 的 32 单位接缝带。
+/// Map / 世界区块物理的边界 Tilemap 物理适配；触边即镜像，不使用 Item 的 32 单位接缝带。
 /// 镜像不渲染、不保存；旧 Map 受击保留镜像坐标绑定，新 WorldModel 继续走权威格子查询。
 /// </summary>
 [DisallowMultipleComponent]
@@ -13,7 +13,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
 {
     private readonly List<ProxyRecord> records = new();
     private Map map;
-    private ChunkCollisionRenderer chunkRenderer;
+    private WorldChunkPhysicsProjection2D chunkPhysics;
     private bool dirty = true;
     private int refreshGeneration;
     private WorldTopologyDomain lastDomain;
@@ -23,7 +23,8 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
 
     private bool IsSourceReady => map != null
         ? map.isActiveAndEnabled && map.Data != null && map.IsTilemapVisualReady
-        : chunkRenderer != null && chunkRenderer.isActiveAndEnabled && chunkRenderer.BoundChunk?.Terrain != null;
+        : chunkPhysics != null && chunkPhysics.isActiveAndEnabled && chunkPhysics.BoundChunk?.Terrain != null &&
+          GameplayWorldRegistry.TryGet(chunkPhysics.WorldKey, out _);
 
     public static void Ensure(Map target)
     {
@@ -34,12 +35,12 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         if (proxy == null)
             proxy = target.gameObject.AddComponent<WrappedTilemapPhysicsAdapter>();
         proxy.map = target;
-        proxy.chunkRenderer = null;
+        proxy.chunkPhysics = null;
         proxy.dirty = true;
         proxy.enabled = true;
     }
 
-    public static void Ensure(ChunkCollisionRenderer target)
+    public static void Ensure(WorldChunkPhysicsProjection2D target)
     {
         if (target == null || target.SourceTilemapCollider == null)
             return;
@@ -47,7 +48,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         if (proxy == null)
             proxy = target.gameObject.AddComponent<WrappedTilemapPhysicsAdapter>();
         proxy.map = null;
-        proxy.chunkRenderer = target;
+        proxy.chunkPhysics = target;
         proxy.dirty = true;
         proxy.enabled = true;
     }
@@ -59,6 +60,18 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         enabled = false;
     }
 
+    // 环绕查询始终借所属物理世界，不使用当前可见世界的坐标域。
+    private System.IDisposable EnterChunkPhysicsWorld() => chunkPhysics != null &&
+        GameplayWorldRegistry.TryGet(chunkPhysics.WorldKey, out _)
+        ? GameplayWorldRegistry.UseWorld(chunkPhysics.WorldKey) : null;
+
+    internal void ReleaseChunkPhysicsProxies()
+    {
+        ClearProxies();
+        dirty = true;
+        enabled = false;
+    }
+
     private void Awake()
     {
         map = GetComponent<Map>();
@@ -66,6 +79,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
 
     private void LateUpdate()
     {
+        using var scope = EnterChunkPhysicsWorld();
         WorldTopologyDomain domain = WorldTopologyRuntime.GetActiveDomain();
         if (domain.IsWrapped != lastDomain.IsWrapped ||
             math.any(domain.Min != lastDomain.Min) || math.any(domain.Span != lastDomain.Span))
@@ -107,13 +121,14 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         {
             records[i].ObstacleColliders?.Dispose();
             if (records[i].Root != null)
-                Destroy(records[i].Root);
+                WorldPhysicsService2D.DestroyPhysicsObject(records[i].Root);
         }
         records.Clear();
     }
 
     public void RefreshNow()
     {
+        using var scope = EnterChunkPhysicsWorld();
         dirty = false;
         refreshGeneration++;
         ActiveProxyCount = 0;
@@ -136,7 +151,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         }
         else
         {
-            var chunk = chunkRenderer.BoundChunk;
+            var chunk = chunkPhysics.BoundChunk;
             areaMin = new float2(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
             areaMax = areaMin + new float2(chunk.Terrain.Width, chunk.Terrain.Height);
         }
@@ -154,9 +169,9 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             BlockingTilemapLayer blockingLayer = map.GetComponent<BlockingTilemapLayer>();
             RefreshSource(blockingLayer != null ? blockingLayer.BlockingTilemap : null, requiredOffsets);
         }
-        else if (chunkRenderer.SourceTilemapCollider != null)
+        else if (chunkPhysics.SourceTilemapCollider != null)
         {
-            RefreshSource(chunkRenderer.SourceTilemapCollider.GetComponent<Tilemap>(), requiredOffsets);
+            RefreshSource(chunkPhysics.SourceTilemapCollider.GetComponent<Tilemap>(), requiredOffsets);
         }
         RemoveStaleProxies();
         SyncSourceState();
@@ -172,7 +187,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         CompositeCollider2D sourceComposite = sourceCollider.usedByComposite
             ? source.GetComponent<CompositeCollider2D>()
             : null;
-        PolygonCollider2D sourceDataCollider = sourceComposite != null && chunkRenderer == null
+        PolygonCollider2D sourceDataCollider = sourceComposite != null && chunkPhysics == null
             ? source.GetComponent<PolygonCollider2D>()
             : null;
         EligibleSourceColliderCount++;
@@ -186,7 +201,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
                 continue;
             CopyTiles(source, record.Tilemap);
             CopyDataPaths(sourceDataCollider, record.DataCollider);
-            if (record.ObstacleColliders != null) chunkRenderer.CopyObstacleCollidersTo(record.ObstacleColliders, offset);
+            if (record.ObstacleColliders != null) chunkPhysics.CopyObstacleCollidersTo(record.ObstacleColliders, offset);
             UpdateTransform(record, source, offset);
             record.Generation = refreshGeneration;
             record.Root.SetActive(source.gameObject.activeInHierarchy && sourceCollider.enabled);
@@ -203,12 +218,13 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
     /// <summary>由实体障碍事件同步已有镜像；初始化或拓扑失效仍由完整刷新一次完成。</summary>
     internal void RefreshObstaclesNow()
     {
-        if (dirty || chunkRenderer == null || !IsSourceReady) return;
+        using var scope = EnterChunkPhysicsWorld();
+        if (dirty || chunkPhysics == null || !IsSourceReady) return;
         for (int i = 0; i < records.Count; i++)
         {
             ProxyRecord record = records[i];
             if (record.ObstacleColliders != null)
-                chunkRenderer.CopyObstacleCollidersTo(record.ObstacleColliders, record.Offset);
+                chunkPhysics.CopyObstacleCollidersTo(record.ObstacleColliders, record.Offset);
         }
     }
 
@@ -223,7 +239,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             {
                 record.ObstacleColliders?.Dispose();
                 record.Root.SetActive(false);
-                Destroy(record.Root);
+                WorldPhysicsService2D.DestroyPhysicsObject(record.Root);
                 records.RemoveAt(i);
                 dirty = true;
                 continue;
@@ -258,7 +274,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
                 continue;
             record.Root.SetActive(false);
             record.ObstacleColliders?.Dispose();
-            Destroy(record.Root);
+            WorldPhysicsService2D.DestroyPhysicsObject(record.Root);
             records.RemoveAt(i);
         }
     }
@@ -284,6 +300,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         SceneManager.MoveGameObjectToScene(root, source.gameObject.scene);
         root.hideFlags = HideFlags.DontSave;
         root.layer = source.gameObject.layer;
+        if (chunkPhysics != null) root.transform.SetParent(chunkPhysics.transform.parent, false);
 
         Grid sourceGrid = source.layoutGrid as Grid;
         Grid proxyGrid = root.AddComponent<Grid>();
@@ -350,7 +367,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             Collider = proxyCollider,
             Composite = proxyComposite,
             DataCollider = proxyDataCollider,
-            ObstacleColliders = chunkRenderer != null ? new ChunkObstacleColliderSet(tileObject.transform) : null,
+            ObstacleColliders = chunkPhysics != null ? new ChunkObstacleColliderSet(tileObject.transform) : null,
             Offset = offset
         };
         records.Add(record);

@@ -103,12 +103,11 @@ internal sealed class IndependentNaturalEntityRegistry : IDisposable
     // 迁移的目标表现和原生阻挡必须绑定同一世界及区块。
     private bool HasBoundChunkPhysicsBackend(PresentationBinding binding)
     {
-        ChunkCollisionRenderer collision = binding.Owner != null
-            ? binding.Owner.GetComponentInParent<ChunkView>()?.GetComponentInChildren<ChunkCollisionRenderer>(true) : null;
-        Collider2D source = collision != null ? collision.SourceCollider : null;
-        return collision != null && ReferenceEquals(collision.BoundChunk, binding.Chunk) &&
+        if (!GameplayWorldRegistry.TryGetPhysics(worldKey, out WorldPhysicsService2D physics) ||
+            !physics.TryGetChunkPhysics(binding.Chunk.Address, out var collision)) return false;
+        Collider2D source = collision.SourceCollider;
+        return ReferenceEquals(collision.BoundChunk, binding.Chunk) &&
             source != null && source.enabled && source.gameObject.activeInHierarchy &&
-            GameplayWorldRegistry.TryGetPhysics(worldKey, out WorldPhysicsService2D physics) &&
             WorldPhysicsService2D.TryResolveCollider(source, out var ownership) && ownership.World == physics;
     }
 
@@ -396,9 +395,9 @@ internal sealed class IndependentNaturalEntityRegistry : IDisposable
         string sourceWorldKey, int sourceX, int sourceY, int guid, Vector2 sourcePosition)
     {
         // 两边独立冲刷合批阻挡，单侧异常不能阻断另一侧及网络通知。
-        try { using (EnterWorld()) ChunkCollisionRenderer.FlushDirtyDataObstacles(worldKey); }
+        try { using (EnterWorld()) WorldChunkPhysicsProjection2D.FlushDirtyDataObstacles(worldKey); }
         catch (Exception exception) { Debug.LogException(exception); }
-        try { using (target.EnterWorld()) ChunkCollisionRenderer.FlushDirtyDataObstacles(target.worldKey); }
+        try { using (target.EnterWorld()) WorldChunkPhysicsProjection2D.FlushDirtyDataObstacles(target.worldKey); }
         catch (Exception exception) { Debug.LogException(exception); }
         try { Physics2D.SyncTransforms(); }
         catch (Exception exception) { Debug.LogException(exception); }

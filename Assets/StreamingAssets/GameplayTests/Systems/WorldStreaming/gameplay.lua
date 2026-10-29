@@ -4,6 +4,8 @@ test.runtime("world_streaming", "live_window", {}, function(data)
     assert(data.windowReady and data.retainedChunks > 0, "可见窗口没有完成表现绑定")
     assert(data.footFound and data.footData == "Ready" and data.footPresentation == "Bound" and data.footView, "脚下权威数据或真实表现缺失")
     assert(data.footSimulationLeases > 0 and data.footPresentationLeases > 0, "当前窗口区块没有正式使用租约")
+    assert(data.footViewVisualOnly and data.footIndependentPhysics,
+        "真实ChunkView仍挂有物理组件，或脚下碰撞没有独立交给所属世界物理服务")
 end, "真实流送窗口、脚下数据和表现租约")
 
 test.runtime("world_streaming", "incremental_world_scope", {}, function(data)

@@ -18,7 +18,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         internal ChunkRuntime Chunk;
         internal ChunkView View;
         internal ChunkTilemapRenderer Tilemap;
-        internal ChunkCollisionRenderer Collision;
+        internal WorldChunkPhysicsProjection2D Collision;
     }
 
     private sealed class TransferBusyReentrancyProbe
@@ -100,11 +100,11 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             Chunk = chunk,
             View = view,
             Tilemap = view.GetComponentInChildren<ChunkTilemapRenderer>(true),
-            Collision = view.GetComponentInChildren<ChunkCollisionRenderer>(true)
+            Collision = world.Physics.TryGetChunkPhysics(address, out var collision) ? collision : null
         };
         if (presentation.Tilemap == null || presentation.Collision == null ||
             presentation.Collision.BoundChunk != chunk)
-            throw new InvalidOperationException("迁移目标表现没有绑定真实地形与ChunkCollisionRenderer。");
+            throw new InvalidOperationException("迁移目标表现没有绑定真实地形与WorldChunkPhysicsProjection2D。");
         return presentation;
     }
 
@@ -232,7 +232,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         yield return GameplayWorldRegistry.PrepareWorld(targetWorldKey, targetPosition);
         PhysicsTestTransferPresentation destination = BindPhysicsTestTransferPresentation(targetWorldKey, targetPosition);
         if (destination == null || destination.Collision?.BoundChunk != destination.Chunk)
-            throw new InvalidOperationException("迁移目标没有真实ChunkView和ChunkCollisionRenderer表现租约。");
+            throw new InvalidOperationException("迁移目标没有真实ChunkView和WorldChunkPhysicsProjection2D表现租约。");
         ChunkNaturalItemRenderer sourceRenderer = sourceView.GetComponentInChildren<ChunkNaturalItemRenderer>(true);
         if (sourceRenderer == null) throw new InvalidOperationException("迁移源ChunkView缺少自然资源生成器。");
         var busyProbe = new TransferBusyReentrancyProbe();

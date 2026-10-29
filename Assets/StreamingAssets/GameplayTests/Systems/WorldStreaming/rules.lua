@@ -1,3 +1,22 @@
+test.system("world_streaming", "chunk_physics_lifecycle", {}, function(data)
+    assert(data.unreadyHasNoPhysics and data.noViewNativeCollision and data.worldOwnsCollider,
+        "物理必须等待权威地形就绪，并在没有ChunkView时仍可被所属世界原生查询命中")
+    assert(data.notViewRenderer and data.visualPrefabHasNoPhysics,
+        "ChunkView仍残留Blocking、刚体或碰撞组件，或物理投影仍实现视觉绑定接口")
+    assert(data.presentationReleaseKeepsPhysics and data.otherSimulationKeepsPhysics,
+        "视觉解绑或一个模拟租约释放错误地删除了仍需模拟的碰撞")
+    assert(data.terrainRemovalUpdatesPhysics and data.terrainRestoreUpdatesPhysics
+        and data.recommitRebindsTerrain and data.replacementTerrainUpdatesPhysics,
+        "地形改格、删除或重新生成后，物理几何没有跟随当前权威地形")
+    assert(data.dormantPresentationHasNoPhysics and data.pooledPhysicsReused,
+        "仅显示的休眠区块仍持有碰撞，或重新模拟时没有正确复用独立物理池")
+    assert(data.lateBindAndWorldIsolation and data.foreignModelRejected,
+        "补绑已就绪世界失败，或不同世界同坐标的区块碰撞发生串用")
+    assert(data.oldWorldEventsDetached and data.staleOwnerCannotUnbind
+        and data.detachedWorldCannotRecreate and data.worldDisposeReleasesPhysics,
+        "旧模型回调、过期解绑或世界关闭遗留了物理对象与登记")
+end, "区块物理脱离ChunkView：原生碰撞、模拟租约、地形重绑和世界回收")
+
 test.system("world_streaming", "world_scene_binding", {}, function(data)
     assert(not data.unknownResolved and data.firstAdded and data.singleWorld == "probe:world-a",
         "独立世界没有按绑定读取 WorldKey，或未绑定场景返回了世界")

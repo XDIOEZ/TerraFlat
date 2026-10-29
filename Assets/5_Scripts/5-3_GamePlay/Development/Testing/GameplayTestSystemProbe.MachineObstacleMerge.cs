@@ -41,7 +41,7 @@ public static partial class GameplayTestSystemProbe
             if (clip != null)
             {
                 center -= new Vector2((float)Number(clip, "originX", 0), (float)Number(clip, "originY", 0));
-                if (!ChunkCollisionRenderer.TryClipLocalObstacleRectangle(center, size * .5f,
+                if (!WorldChunkPhysicsProjection2D.TryClipLocalObstacleRectangle(center, size * .5f,
                     new Vector2((float)Number(clip, "width", 32), (float)Number(clip, "height", 32)),
                     out Vector2 clippedCenter, out Vector2 clippedSize)) continue;
                 center = clippedCenter; size = clippedSize;
@@ -72,25 +72,25 @@ public static partial class GameplayTestSystemProbe
             MachineDefinition definition = catalog.Nodes.Find(value => value.Id == id)
                 ?? throw new InvalidOperationException("缺少组合储罐定义：" + id);
             tanks.Add(new JObject { ["id"] = id,
-                ["eligible"] = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(new MachineEntity { Definition = definition }) });
+                ["eligible"] = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(new MachineEntity { Definition = definition }) });
         }
         MachineEntity Storage(string id, string kind = "tank", bool combine = true, bool blocking = true)
             => new() { Definition = new MachineDefinition { Id = id, PlacementLayer = 0, BlocksMovement = blocking,
                 Fluid = new FluidMachineDefinition { Kind = kind, CombineAdjacent = combine } } };
         bool futureStorageStrategy;
         using (MachineLogicRegistry.RegisterFluidDevice("probe:combined-collision-storage", new FluidStorageBehavior()))
-            futureStorageStrategy = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(
+            futureStorageStrategy = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(
                 Storage("FutureChemicalReservoir", "probe:combined-collision-storage"));
         return new JObject
         {
-            ["builtInTanks"] = tanks, ["futureTank"] = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(Storage("FutureFluidReservoir")),
+            ["builtInTanks"] = tanks, ["futureTank"] = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(Storage("FutureFluidReservoir")),
             ["futureStorageStrategy"] = futureStorageStrategy,
-            ["disabledCombination"] = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(Storage("disabled", combine: false)),
-            ["nonBlocking"] = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(Storage("passable", blocking: false)),
-            ["pipe"] = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(Storage("pipe", "pipe")),
-            ["ordinaryMachine"] = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(
+            ["disabledCombination"] = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(Storage("disabled", combine: false)),
+            ["nonBlocking"] = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(Storage("passable", blocking: false)),
+            ["pipe"] = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(Storage("pipe", "pipe")),
+            ["ordinaryMachine"] = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(
                 new MachineEntity { Definition = new MachineDefinition { Id = "ordinary", PlacementLayer = 0 } }),
-            ["missingNode"] = ChunkCollisionRenderer.CanMergeAdjacentStorageCollision(null)
+            ["missingNode"] = WorldChunkPhysicsProjection2D.CanMergeAdjacentStorageCollision(null)
         };
     }
 
@@ -190,10 +190,10 @@ public static partial class GameplayTestSystemProbe
             int clearedCount = source.Count;
 
             var clipped = new ChunkMergedObstacleRectangles();
-            if (ChunkCollisionRenderer.TryClipLocalObstacleRectangle(new Vector2(-.25f, .5f), new Vector2(.75f, .5f),
+            if (WorldChunkPhysicsProjection2D.TryClipLocalObstacleRectangle(new Vector2(-.25f, .5f), new Vector2(.75f, .5f),
                 new Vector2(2, 2), out Vector2 firstCenter, out Vector2 firstSize))
                 clipped.SetSourceRectangle(10, firstCenter, firstSize);
-            if (ChunkCollisionRenderer.TryClipLocalObstacleRectangle(new Vector2(1.25f, .5f), new Vector2(.75f, .5f),
+            if (WorldChunkPhysicsProjection2D.TryClipLocalObstacleRectangle(new Vector2(1.25f, .5f), new Vector2(.75f, .5f),
                 new Vector2(2, 2), out Vector2 secondCenter, out Vector2 secondSize))
                 clipped.SetSourceRectangle(11, secondCenter, secondSize);
             clipped.RebuildMergedRectangles();
@@ -201,7 +201,7 @@ public static partial class GameplayTestSystemProbe
             foreach (ChunkMergedObstacleRectangles.MergedObstacleRectangle box in clipped.Rectangles)
                 clippedArea += box.Size.x * box.Size.y;
             int clippedCount = clipped.Rectangles.Count;
-            bool outsideAccepted = ChunkCollisionRenderer.TryClipLocalObstacleRectangle(new Vector2(4, .5f), Vector2.one * .5f,
+            bool outsideAccepted = WorldChunkPhysicsProjection2D.TryClipLocalObstacleRectangle(new Vector2(4, .5f), Vector2.one * .5f,
                 new Vector2(2, 2), out _, out _);
             int removedByRetain = clipped.RemoveSourcesExcept(new HashSet<int> { 10 });
             return new JObject

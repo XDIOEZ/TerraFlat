@@ -27,7 +27,7 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 
 - 权威链：Tile 栈顶/有效支撑面的可走性与代价 + 离散动态占地 → 脏格/区 → `WorldNavigationGrid`。Collider/Physics2D 不是网格真源，建筑不修改 TileData。
 - `worldGridOccupancy.cells` 是物品占格真源，纯 `WorldGridOccupancyData/GridCellOffset` 可供非 Unity 消费；生命周期桥只读格锚点并登记增删移动。实心资源的碰撞与占格分别配置，矿点继承一格占地，可拾取小石头不继承。
-- 机器数据 Box 属于 `ChunkCollisionRenderer` 的物理表现，不改导航权威；初绑全量收集，普通 `MachineWorld.CellChanged` 按锚点增量更新、去除失效 Box，跨锚点占地回退全量扫描。校验 `navigation/machine_obstacle_dirty`。
+- 机器数据 Box 属于 世界物理服务 `WorldChunkPhysicsProjection2D` 的独立投影，不改导航权威；初绑全量收集，普通 `MachineWorld.CellChanged` 按锚点增量更新、去除失效 Box，跨锚点占地回退全量扫描。校验 `navigation/machine_obstacle_dirty`。
 - 来源 ID 为 long：Unity 有符号 InstanceID 保留低域，数据来源占高 32 位域；后端交接先撤旧再登新。失败/未表现完成的块不注册，View 入池前 Unbind。
 - Ground 基础成本与 Liquid 成本独立；`WorldLiquidSystem.GetNavigationCost` 合成有限高成本，液体仍可走，抽干回到底材成本。平台 `TerrainSupportLayer.GetSurfaceCell` 遮断液体成本并使有效液深为 0。
 - 导航块注册、地块局部变更及已加载格只读共用 `ResolveRuntimeLiquidNavigation`，每格只调用一次 `GetSurfaceLevel`，同一结果派生水深和实际路径代价；规则 `navigation/liquid_cell_snapshot` 核验平台遮水、移除平台和抽干水体。

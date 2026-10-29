@@ -758,6 +758,14 @@ public static partial class GameplayTestRuntimeProbe
         result["footSimulationLeases"] = chunk?.SimulationLeaseCount;
         result["footPresentationLeases"] = chunk?.PresentationLeaseCount;
         result["footView"] = manager.TryGetRuntimeChunkView(address, out var view) && view != null && view.gameObject.activeInHierarchy;
+        result["footViewVisualOnly"] = view != null && view.transform.Find("Blocking") == null &&
+            view.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
+            view.GetComponentsInChildren<Rigidbody2D>(true).Length == 0;
+        result["footIndependentPhysics"] = view != null && GameplayWorldRegistry.TryGetPhysics(manager.WorldRuntime.WorldId, out var physics) &&
+            physics.TryGetChunkPhysics(address, out var projection) && ReferenceEquals(projection.BoundChunk, chunk) &&
+            projection.SourceCollider != null && projection.SourceCollider.enabled &&
+            projection.gameObject.activeInHierarchy && !projection.transform.IsChildOf(view.transform) &&
+            WorldPhysicsService2D.TryResolveCollider(projection.SourceCollider, out var ownership) && ownership.World == physics;
         return result;
     }
 

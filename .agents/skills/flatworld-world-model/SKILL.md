@@ -41,7 +41,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `DeterministicChunkGenerator` 主文件只组织流水线；`SurfaceTerrain/TerrainStages` 管地表、洞穴与结构，`HydrologySampling` 管纯采样，`HydrologyRegions` 独占区域缓存/纪元取消/预热与定位借用。热缓存命中不创建 Lazy；结构先于地形扩展，扩展后再编译生态，规则 `terrain/generation_stage_ownership`。
 
 - 多格静态资源通过 `EcologySpawnRuleSnapshot.SharedRadius/FootprintWidth/FootprintHeight` 声明：`EcologyGeneration.Shared` 用稀疏周期网格和负 GUID 独立复算所有覆盖区块，`DeterministicChunkGenerator.SharedResources` 验证完整占地及入口安全区并过滤内部普通生态。`SharedAnchor` 始终是规范坐标，代理 `LocalX/Y` 可以在当前区块之外，禁止直接拿它索引地形。
-- `ChunkMgr.SharedNaturalEntities` 的会话注册表只创建一个 Resource Entity；各 `ChunkNaturalItemRenderer.Shared` 持有引用，唯一表现宿主可交接，最后引用释放才捕获/移除。状态和删除标记只写锚点所属区块，死亡不再捕获，退出世界清理注册表。区块碰撞继续复用 `ChunkCollisionRenderer` 按范围裁剪同一 runtimeId，寻路使用完整 `worldGridOccupancy`，不得为每块重建独立生命。
+- `ChunkMgr.SharedNaturalEntities` 的会话注册表只创建一个 Resource Entity；各 `ChunkNaturalItemRenderer.Shared` 持有引用，唯一表现宿主可交接，最后引用释放才捕获/移除。状态和删除标记只写锚点所属区块，死亡不再捕获，退出世界清理注册表。区块碰撞继续复用 `WorldChunkPhysicsProjection2D` 按范围裁剪同一 runtimeId，寻路使用完整 `worldGridOccupancy`，不得为每块重建独立生命。
 - 大矿山示例为 `Mine_Stone_Large`，覆盖半径包含贴图和受击范围而非仅阻挡框；资源目录校验器验证三者一致。纯规则 `ecology/shared_resources`；编辑器外回归 `python Tools/Tests/SharedNaturalResources/verify.py`，只在 Temp 中移除原生 Profiler 初始化，不能替代真实 Unity 碰撞/保存回归。
 
 - 单人和联机多观察者共用 `ChunkMgr.RefreshRuntimeWindows`，观察者请求经纯模型 `RefreshWindows` 合并模拟/表现/保留需求；本机蒙版、就绪等待与导航仍只跟随本机角色。
@@ -49,7 +49,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 模拟圈、完整表现预加载圈、数据保留圈分别维护；就绪只检查活动圈，关闭释放全部表现需求。Mod_ChunkLoader 按玩家持久化加载距离提交窗口，相机缩放不改距离；距离 d 包含中心块，窗口边长是 (2d-1) 个区块。
 - ChunkMgr.TryGetRuntimeWindowBounds 默认读取已提交窗口，usePresentedBounds 选择 ChunkWindowPresentationTransition 的平滑表现窗；正式目标不延迟，云雾和旧 View 回收共用同一状态。边界按实际 Profile 宽高，队列 retarget 不提前移动目标；Mod_ChunkLoader 对外整体投影本地镜像，表现消费者不得反向改流送。
 - 离开窗口的 pending/后台请求取消，已有地面的旧 View/表现租约保留到平滑雾窗外才解绑；重入目标复用，换维度/关闭窗口清理。折返、连续跨块不重置到旧边界，规则见 Rendering/zoom_cloud_transition。保留请求按玩家现位置重排，同区块移动只改优先级；Mod_ChunkLoader 与 RetargetRuntimePresentationQueue 共用预加载距离。
-- 基础地形跨 Chunk 优先，草/碰撞/导航/自然物后续轮转；续步骤先取基础未完成块，再按当前距离选择，单块每帧最多一步。`ChunkTilemapRenderer` 初绑每步最多64格，网格批写跨步、每层上传分别让帧，全部完成才发布基础就绪/重建事件；绑定间的地形/邻区脏格合并重扫，资源变化重启扫描，取消按绑定版本释放。`IIncrementalChunkViewRenderer` 扫描跳过项也计预算，自然物先宿主后伴生；宿主扫描时同时缓存伴生候选，第二阶段只扫候选，保持相对顺序和原每步预算并在解绑/取消时清理。规则 `ecology/companion_bind_candidates`。完成初绑后再季节补位。单项装配仍可能超时。
+- 基础地形跨 Chunk 优先，草/导航/自然物后续轮转；续步骤先取基础未完成块，再按当前距离选择，单块每帧最多一步。`ChunkTilemapRenderer` 初绑每步最多64格，网格批写跨步、每层上传分别让帧，全部完成才发布基础就绪/重建事件；绑定间的地形/邻区脏格合并重扫，资源变化重启扫描，取消按绑定版本释放。`IIncrementalChunkViewRenderer` 扫描跳过项也计预算，自然物先宿主后伴生；宿主扫描时同时缓存伴生候选，第二阶段只扫候选，保持相对顺序和原每步预算并在解绑/取消时清理。规则 `ecology/companion_bind_candidates`。完成初绑后再季节补位。单项装配仍可能超时。
 - `ChunkMgr.ProcessRuntimePresentationFrame` 每帧借用管理器实际所属世界，返回后才让帧；取消、解绑与天气收尾同样按归属执行。已注销或被替代的管理器不推进、不补建世界；已解绑池壳可直接销毁。
 - `ChunkMgr.OnDestroy` 先终止再借现有 owner 释放上下文；记录缺失/已换 owner 时只清自身 View、协程、池及调度器，不按世界地址清新世界，也不销毁会话世界模型。意外卸载已销毁且未快照的活体无法补回；无场景时当前居民休眠，不能视为持续模拟。
 - 正常注销和 OnDestroy 共用已核对的释放上下文；建筑收尾的坐标换算只读尚未释放的 Profile，不调用 EnsureWorldRuntime。释放结束后仍拒绝重新访问已终止管理器；回归真实起降后再离开地表。
@@ -65,7 +65,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 表现与资源会话
 
-- Ground/Water/Back/Blocking 由 `ChunkGroundMeshRenderer` 批绘，Blocking Tilemap 仅留碰撞；安全单格 Sprite 用 Quad/GPU Cell，外扩 Sprite 保留顶点。树/资源/建筑/机械主体经 `ChunkDepthMeshRenderer` 按本地 Y 整行排序。
+- Ground/Water/Back/Blocking 由 `ChunkGroundMeshRenderer` 批绘，视觉层不保留物理 Tilemap；安全单格 Sprite 用 Quad/GPU Cell，外扩 Sprite 保留顶点。树/资源/建筑/机械主体经 `ChunkDepthMeshRenderer` 按本地 Y 整行排序。
 - `ChunkGroundMeshRenderer` 的 Vertex/GPU Cell 托管数组按纹理批次从 ArrayPool 借用并在 Dispose 归还；每次租借清空本次有效范围。**索引格式、GPU 上传和包围盒扫描必须使用真实 `vertexCount/cellCount`，不得使用池数组的 `Length`**。构造或字典登记失败要释放已创建 Mesh/Buffer/材质和数组，单组释放异常不得阻断其它组回收；复测对比 `FlatWorld.ChunkStreaming.Bind.MeshGroup.Create.{CellArray,VertexArray}` 的耗时与 GC。
 - 玩家/GO AI 用 SpriteRenderer 与行网格同 Player Layer/Order；行中心排序有半格近似，真实脚点仍用于几何/遮挡。草/花/阴影 BRG 只能在自身排序域排序。
 - 草/花共用 ChunkTilemapRenderer Owner，以 VisualLayer/单格槽隔离；提交确认后登记缓存，解绑清自身整个图层并合并删除。`IRecoverableChunkViewRenderer` 在窗口刷新核对权威数据和真实实例，Owner 重建从权威数据恢复，不用旧可见缓存。`sorting.batchProfiles` 是排序配置真源，草图集 Sprite 跨 Chunk 共享。花初绑一次扫 Placements，避免逐点全表查询。
@@ -76,7 +76,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 高低阴影在单次刷新内复用一格 halo 表面采样，下一轮重新读取地形/液体/配置；脏格与邻区集合随壳复用。规则 `rendering/terrain_shadow_surface_cache`，离线 `Tools/Tests/TerrainHeightShadows/`。
 - `GameplayWorldRuntime.Physics` 持有 `WorldPhysicsService2D`；原生空间由 `WorldPhysicsScene2D` 创建/借用，世界身份不再直接充当查询场景。物理代理公共模式为 `WorldFixed`（相对所属世界固定）和 `IndependentDynamic`（在所属世界内独立运动）；Unity 刚体类型、唯一原生模拟入口和生命周期由世界服务管理，区块合批是固定模式的内部实现。不同世界使用独立原生场景，物品只在登记、结构变化、迁移、卸载时更新物理归属，不逐帧扫描。规则 `world_streaming/world_physics_ownership`、`world_physics_definition` 覆盖原生接触隔离、精确区域、临时查询池和回收。
 - `TerrainSupportLayer` 分开标记结构所有权与外部显示：`ExternalOwnershipLayer` 防止结构地板随普通土层事务再移交，`ExternalVisualLayer` 只防重画；普通 Tile 地板仍由 ChunkView 显示。支撑上的玩家填土通过 `GetExposedTileId/GetSurfaceCell` 进入普通农业与采挖，迁移作物使用 `IPlantableCrop` 的活体/冷状态坐标接口，不按具体作物 ID 分支。
-- 地形独占 Static Rigidbody2D + Manual Composite；树/机器 `ChunkObstacleColliderSet` 从世界服务借 BoxCollider，非 Composite。正式 Item Collider 出现撤数据代理，卸载后恢复；中央脏队列按 Bind 时的真实世界分桶，由世界物理服务在 Simulate 前提交；解绑/重绑撤旧桶，回调重新入队保留到下一 Tick。地形与障碍通知分开，`FlatWorld.ChunkPhysics.{FlushObstacles,RebuildObstacles,PublishObstacles}` 区分重建和镜像通知；规则 `world_streaming/collision_dirty_queue`。
+- `ChunkView` 不持有 Blocking、Grid、Collider 或 Rigidbody；世界物理服务订阅权威地形提交和模拟租约，以 Ready + Active 驱动 `WorldChunkPhysicsProjection2D`，不依赖显示租约或视图回池。物理节点及镜像独立归属 `World Physics Chunks`，重绑/关闭撤事件、归还碰撞池；规则 `world_streaming/chunk_physics_lifecycle`。
+- 地形独占 Static Rigidbody2D + Manual Composite；树/机器 `ChunkObstacleColliderSet` 从世界服务借 BoxCollider，非 Composite，相关实现集中在 `Physics2D/`。正式 Item Collider 出现撤数据代理，卸载后恢复；中央脏队列按所属世界分桶，在 Simulate 前提交，物理投影直接刷新本世界镜像，不经过视觉通知；规则 `world_streaming/collision_dirty_queue`。
 - 自有代理与障碍盒沿用 `usedByComposite=false` 默认值，停用重绑不重复写此原生开关；池化实体先激活节点再提交初始位姿和速度，`world_physics_proxy_gameplay` 检查恢复数据与刚体一致。`world_physics_ownership` 覆盖回池、销毁旧宿主和 Composite 下复用。
 - `CombineAdjacent` 且有储存能力的机器共用 `ChunkMergedObstacleRectangles`：先逐源沿区块裁剪，再精确拼接同模板实体矩形，保留空洞/间距；只在源几何变化重建，镜像复用合并盒。库存、交互、战斗和导航仍逐格；回归 `industrial_fluids/combined_tank_collision_*`，离线 `Tools/Tests/CombinedTankColliders/verify.py`。
 - `SharedSpriteMeshCache` 属于资源会话；Ready 前预热最终目录，普通流送不清 Mesh，Backend 重建重新注册 BatchMeshID。清理先 BRG 解绑再毁 Mesh，会话结束先禁止 Owner 重登记，逐项释放异常不阻断其余资源。
