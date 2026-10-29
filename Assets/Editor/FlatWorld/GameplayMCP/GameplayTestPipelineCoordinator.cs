@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -27,6 +28,8 @@ namespace FlatWorld.GameplayMCP
         private static TestRunnerApi api;
         private static Callbacks callbacks;
         private static double nextRequestPoll;
+        private static readonly Func<bool> IsUnityTestRunActive = (Func<bool>)Delegate.CreateDelegate(
+            typeof(Func<bool>), typeof(TestRunnerApi).GetMethod("IsRunActive", BindingFlags.Static | BindingFlags.NonPublic));
 
         [Serializable]
         private sealed class CaseResult
@@ -78,12 +81,14 @@ namespace FlatWorld.GameplayMCP
         {
             EditorApplication.update += PollLocalRequests;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorSceneManager.sceneClosed += _ => ScheduleBootstrapSceneCleanupWhenIdle();
             // PlayMode 域重载后补登记同一个监听器，避免丢失最终报告。
             EditorApplication.delayCall += () =>
             {
+                EnsureCallbacks();
+                ScheduleBootstrapSceneCleanupWhenIdle();
                 if (!string.IsNullOrEmpty(SessionState.GetString(SessionRunKey, string.Empty)))
                 {
-                    EnsureCallbacks();
                     ResumeQueuedPhase();
                 }
             };
@@ -200,6 +205,8 @@ namespace FlatWorld.GameplayMCP
 
         private static void OnPlayModeStateChanged(PlayModeStateChange change)
         {
+            if (change is PlayModeStateChange.ExitingEditMode or PlayModeStateChange.EnteredEditMode)
+                ScheduleBootstrapSceneCleanupWhenIdle();
             PipelineReport report = LoadCurrent();
             if (report?.Status != "running" || report.Phase != "playmode") return;
             if (change == PlayModeStateChange.EnteredPlayMode)
@@ -418,19 +425,51 @@ namespace FlatWorld.GameplayMCP
                 return false;
             }
             EditorSceneManager.OpenScene(stableScene, OpenSceneMode.Single);
-            Debug.Log("[GameplayTestPipeline] 清理上轮遗留的临时 InitTestScene，改用正式测试场景作为恢复入口。");
+            Debug.Log("[GameplayTestPipeline] 离开上轮遗留的临时 InitTestScene，改用正式测试场景作为恢复入口。");
             return true;
         }
 
-        private static bool IsTestRunnerBootstrapScene(string path)
+        internal static bool IsTestRunnerBootstrapScene(string path)
         {
             const string prefix = "Assets/InitTestScene";
             const string suffix = ".unity";
-            return !string.IsNullOrEmpty(path) &&
+            return path != null && path.Length == prefix.Length + 36 + suffix.Length &&
                    path.StartsWith(prefix, StringComparison.Ordinal) &&
                    path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
                    Guid.TryParseExact(path.Substring(prefix.Length, path.Length - prefix.Length - suffix.Length),
                        "D", out _);
+        }
+
+        private static void ScheduleBootstrapSceneCleanupWhenIdle()
+        {
+            EditorApplication.update -= CleanupBootstrapScenesWhenIdle;
+            if (!EditorApplication.isPlayingOrWillChangePlaymode)
+                EditorApplication.update += CleanupBootstrapScenesWhenIdle;
+        }
+
+        private static void CleanupBootstrapScenesWhenIdle()
+        {
+            if (TryCleanupUnopenedTestRunnerBootstrapScenes(out _))
+                EditorApplication.update -= CleanupBootstrapScenesWhenIdle;
+        }
+
+        internal static bool TryCleanupUnopenedTestRunnerBootstrapScenes(out int deletedCount)
+        {
+            deletedCount = 0;
+            // 测试器完成恢复和删除前保留其引导场景；只在事件触发后的首次空闲时扫描。
+            if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling ||
+                EditorApplication.isUpdating || IsUnityTestRunActive()) return false;
+            var openScenePaths = new HashSet<string>(StringComparer.Ordinal);
+            foreach (SceneSetup scene in EditorSceneManager.GetSceneManagerSetup()) openScenePaths.Add(scene.path);
+            foreach (string file in Directory.EnumerateFiles(Application.dataPath, "InitTestScene*.unity"))
+            {
+                string path = "Assets/" + Path.GetFileName(file);
+                if (!IsTestRunnerBootstrapScene(path) || openScenePaths.Contains(path)) continue;
+                if (AssetDatabase.DeleteAsset(path)) deletedCount++;
+                else Debug.LogWarning("[GameplayTestPipeline] 未能删除遗留的临时测试场景：" + path);
+            }
+            if (deletedCount > 0) Debug.Log($"[GameplayTestPipeline] 已清理 {deletedCount} 个遗留的临时测试场景及 meta。");
+            return true;
         }
 
         private static void RunPhase(string runId, TestMode mode)
@@ -454,6 +493,7 @@ namespace FlatWorld.GameplayMCP
                     Finish(report, "interrupted", sceneError);
                     return;
                 }
+                TryCleanupUnopenedTestRunnerBootstrapScenes(out _);
                 EnsureCallbacks();
                 report.Phase = mode == TestMode.EditMode ? "editmode" : "playmode";
                 if (mode == TestMode.EditMode) report.EditMode.Status = "running";
@@ -487,6 +527,7 @@ namespace FlatWorld.GameplayMCP
             SessionState.SetString(PlayModeExitKey, string.Empty);
             SessionState.SetString(PlayModeLostKey, string.Empty);
             CurrentRunId = string.Empty;
+            ScheduleBootstrapSceneCleanupWhenIdle();
             Debug.Log($"[GameplayTestPipeline] {report.Status}：{report.Reason}，报告：{report.ReportPath}，测试包：{report.PackagePath}");
         }
 
@@ -714,6 +755,7 @@ namespace FlatWorld.GameplayMCP
 
             public void RunFinished(ITestResultAdaptor result)
             {
+                ScheduleBootstrapSceneCleanupWhenIdle();
                 PipelineReport report = LoadCurrent();
                 if (report == null || report.Status != "running" || result == null) return;
                 bool edit = report.Phase == "editmode";

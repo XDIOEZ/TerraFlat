@@ -29,6 +29,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 | `GameplayTestMechanicalPlant.cs` / `GameplayTestFluid*.cs` | 机械与管道气液夹具 |
 
 - 场景：`Assets/3_Scenes/Development/GameplayTestScene.unity`。
+- 根目录 `Assets/InitTestScene<GUID>.unity` 是 Unity Test Framework 的临时引导场景；流水线在启动/域重载及测试收尾后空闲时清理未打开的残留和 meta，不清理正在运行的测试或已打开场景；不要提交这些临时资源。
 - Editor：`Assets/Editor/FlatWorld/GameplayMCP/GameplayTestPipelineCoordinator.cs` 串联 Test Framework；`GameplayTestDashboardWindow.cs` 是测试中心，`GameplayTestPipelineTool.cs` 提供 MCP 入口。
 - CLI：`Tools/GameplayTesting/run_suite.py`；安全前置与集成测试分别在 `Assets/Tests/FlatWorld/{EditMode,PlayMode}/`。
 - Lua 专用资源缓存：`GameplayTestResourceCache.cs` + Editor `GameplayTestResourceCacheStore.cs`，仅测试入口启用，保存源资产与解析 DTO 到 `Library/FlatWorldGameplayTests/GameResCache/`；普通玩法 C# 编译可复用，资源/解析契约/平台变化失效。菜单 `FlatWorld/测试/清理Lua测试GameRes缓存` 可冷建；`testing/resource_cache` 报告实际命中和完整资源阶段耗时，工厂、模块绑定及最终校验仍按当前 C# 重建。

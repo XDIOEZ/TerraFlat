@@ -330,7 +330,7 @@ namespace FlatWorld.GameplayMCP
             int ignoredTestScenes = 0;
             foreach (string path in AssetDatabase.GetAllAssetPaths())
             {
-                if (IsTestRunnerBootstrapScene(path)) { ignoredTestScenes++; continue; }
+                if (GameplayTestPipelineCoordinator.IsTestRunnerBootstrapScene(path)) { ignoredTestScenes++; continue; }
                 if (!IsResourcePath(path)) continue;
                 var file = new FileInfo(Path.Combine(sourceRoot, path));
                 if (!file.Exists) continue;
@@ -503,19 +503,11 @@ namespace FlatWorld.GameplayMCP
                 path.StartsWith("Assets/Screenshots/", StringComparison.Ordinal) ||
                 path.StartsWith("Assets/Tests/", StringComparison.Ordinal) ||
                 path.StartsWith("Assets/GameTest/", StringComparison.Ordinal) ||
-                path.StartsWith("Assets/Editor/", StringComparison.Ordinal) || IsTestRunnerBootstrapScene(path)) return false;
+                path.StartsWith("Assets/Editor/", StringComparison.Ordinal) || GameplayTestPipelineCoordinator.IsTestRunnerBootstrapScene(path)) return false;
             string extension = Path.GetExtension(path).ToLowerInvariant();
             return extension != ".cs" && extension != ".dll" && extension != ".asmdef" &&
                    extension != ".asmref" && extension != ".pdb" && extension != ".mdb" &&
                    extension != ".rsp" && extension != ".md" && extension != ".meta";
-        }
-
-        private static bool IsTestRunnerBootstrapScene(string path)
-        {
-            const string prefix = "Assets/InitTestScene";
-            const string suffix = ".unity";
-            return path.StartsWith(prefix, StringComparison.Ordinal) && path.EndsWith(suffix, StringComparison.Ordinal) &&
-                   Guid.TryParseExact(path.Substring(prefix.Length, path.Length - prefix.Length - suffix.Length), "D", out _);
         }
 
         private static string HashFile(string path)

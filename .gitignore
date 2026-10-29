@@ -9,6 +9,9 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
+# Unity Test Framework 临时引导场景由测试结束或编辑器空闲清理，不入版本库。
+/Assets/InitTestScene*.unity
+/Assets/InitTestScene*.unity.meta
 *.log
 *.log.*
 *.log

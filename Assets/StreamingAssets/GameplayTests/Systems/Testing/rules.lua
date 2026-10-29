@@ -12,6 +12,16 @@ for _, mode in ipairs({"no_assert", "failed_assert", "callback_enqueue", "no_cs"
         assert(not data.succeeded and data.failed > 0, "没有断言、错误断言或越界操作被误记通过")
     end, "Lua 沙箱与通过判定：" .. mode)
 end
+test.system("testing", "bootstrap_scene_cleanup", {}, function(data)
+    assert(data.saved and data.hadMeta and data.cleaned and data.deleted >= 1,
+        "临时场景夹具未落盘，或空闲清理没有执行")
+    assert(data.orphanDeleted and data.orphanMetaDeleted, "临时测试场景或 meta 没有清理")
+    assert(data.openedPreserved and data.activeScenePreserved, "清理影响了已打开场景或活动场景")
+    assert(data.lookalikePreserved and data.nestedPreserved and data.recognized and data.invalidRejected,
+        "临时场景识别越界，误清理了近似命名或非根目录场景")
+    assert(data.repeatedNoChange, "重复清理产生了额外删除")
+end, "测试引导场景残留、meta 清理及打开场景保留")
+
 test.system("testing", "selection", {}, function(data)
     assert(not data.firstEnabled and data.secondEnabled, "用例选择未按请求执行")
     assert(data.unknownRejected and data.emptyRejected, "无效选择误退回全量测试")
