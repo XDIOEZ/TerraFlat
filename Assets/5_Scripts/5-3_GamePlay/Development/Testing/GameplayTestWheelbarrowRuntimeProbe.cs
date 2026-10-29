@@ -401,13 +401,14 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
     private BoxCollider2D obstacle;
     private Vector2 start;
     private int frames;
-    private float peakSpeed, ratio;
+    private float peakSpeed, ratio, peakDrivenSpeed;
+    private bool unlockedWhilePushing;
     public bool EverPushed { get; private set; }
 
     public void Begin(Mod_Carrier source, Mod_Wheelbarrow motion, Mod_Mover player, BoxCollider2D wall)
     {
         carrier = source; driver = motion; mover = player; obstacle = wall; start = source.Body.position;
-        frames = 0; peakSpeed = ratio = 0f; EverPushed = false;
+        frames = 0; peakSpeed = ratio = peakDrivenSpeed = 0f; EverPushed = unlockedWhilePushing = false;
     }
 
     private void FixedUpdate()
@@ -419,6 +420,10 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
             mover.CarrierPushIntentVelocity.sqrMagnitude < .0001f) return;
         EverPushed = true;
         ratio = carrier.PushedVelocity.magnitude / mover.CarrierPushIntentVelocity.magnitude;
+        // 区分已接收推力但未解除锁定，与已提交速度但原生物理没有移动。
+        peakDrivenSpeed = Mathf.Max(peakDrivenSpeed, carrier.DrivenVelocity.magnitude);
+        unlockedWhilePushing |= (carrier.Body.constraints &
+            (RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezePositionY)) == 0;
     }
 
     public JObject Capture() => new()
@@ -426,6 +431,7 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
         ["frames"] = frames, ["everPushed"] = EverPushed,
         ["distance"] = WorldTopologyRuntime.Distance(start, carrier.Body.position), ["peakSpeed"] = peakSpeed,
         ["ratio"] = ratio, ["forwardX"] = driver.ForwardDirection.x, ["forwardY"] = driver.ForwardDirection.y,
+        ["peakDrivenSpeed"] = peakDrivenSpeed, ["unlockedWhilePushing"] = unlockedWhilePushing,
         ["wallBlocked"] = obstacle != null && carrier.Body.GetComponent<BoxCollider2D>().bounds.min.y >= obstacle.bounds.max.y - .02f,
         ["stopped"] = carrier.Body.velocity.sqrMagnitude < .0001f, ["pushAfterRelease"] = carrier.PushSource != null,
         ["rider"] = carrier.Rider != null, ["carrierSource"] = mover.CarrierSource != null

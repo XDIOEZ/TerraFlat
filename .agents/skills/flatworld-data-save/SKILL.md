@@ -38,6 +38,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - 生态存档 ItemData 是生产者移交的独立快照；分帧先缓存每个快照的冻结字节，最终玩家联合采集点重读当前生态成员、删除 GUID/恢复年份，仅补冻新增/替换快照，避免期间采收导致重生。缓存不得用于活跃可变 ItemData；新增原位修改存档快照的生产者时须同步调整冻结契约。
 - 已有角色实例化前必须从 `Data_Player.transform` 取得保存位置，并同步刚体初始位置；不能先以世界原点创建玩家再期望异步物理/模块加载纠正。
 - 保存退出先在世界退出事件/输入解绑之前执行 `ItemMgr.SavePlayer`，世界事件结算后再写盘；`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 返回实际成功状态，退出回到菜单不能代替写盘成功。
+- 世界退出后写盘只借用已有 `ChunkMgr`；不得通过自动单例捡回待销毁或其他世界的管理器。
 
 ## 区块与世界数据
 

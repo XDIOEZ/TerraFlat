@@ -16,6 +16,8 @@ local function sample(label, shouldMove)
     test.runtime("player", "wheelbarrow_sample", {}, function(data)
         assert(data.frames > 0 and not data.rider and not data.carrierSource, "没有实际物理步或玩家误被当成乘员")
         if shouldMove then
+            assert(data.unlockedWhilePushing and data.peakDrivenSpeed > .05,
+                "已接收推动意图，但车体没有解除位置锁或提交实际驱动速度")
             assert(data.everPushed and data.distance > .05 and data.peakSpeed > .05, "车尾真实碰撞没有推动独轮车")
             assert(data.ratio > .64 and data.ratio < .66, "实际推动速度不是玩家意图速度的 65%")
         else

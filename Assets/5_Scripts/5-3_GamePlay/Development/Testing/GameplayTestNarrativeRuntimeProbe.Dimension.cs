@@ -375,6 +375,19 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         var catalog = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault();
         var marsAddress = WorldAddress.FromWorldKey(catalog.GetBodyDefinition("mars").PlanetId);
         var result = new JObject { ["homeWorld"] = home.Surface.WorldKey, ["marsWorld"] = marsAddress.WorldKey };
+        var exitSaves = new JArray();
+        void CapturePlayerUnregisteredAfterWorldExitSave(Item item)
+        {
+            if (item is not Player leaving || leaving.ProfileName != home.Profile || !ReferenceEquals(leaving.Data, home.Data)) return;
+            ChunkMgr selected = ChunkMgr.LocalInstance;
+            exitSaves.Add(new JObject
+            {
+                ["world"] = GameplayWorldRegistry.GetItemWorldKey(leaving),
+                ["selectedManager"] = selected != null,
+                ["selectedWorld"] = selected != null ? selected.OwnedWorldKey : null,
+                ["runtimeWorld"] = selected != null ? selected.WorldRuntime?.WorldId : null
+            });
+        }
         Exception failure = null;
         IEnumerator Journey()
         {
@@ -386,6 +399,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
                 yield return WaitForDimension(marsAddress, home.Profile, home);
             }
             Player marsPlayer = ItemMgr.Instance.User_Player;
+            result["landing"] = DimensionSample(marsPlayer, marsAddress, home);
             PlanetData mars = SaveDataMgr.Instance.GetCurrentPlanetData();
             result["marsBodyBefore"] = mars.BodyId;
             result["marsPresetBefore"] = mars.GenerationPresetId;
@@ -416,13 +430,21 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["savedMapCount"] = loaded.MapData_Dict.Count;
             result["undergroundMapCount"] = underground.MapData_Dict.Count;
         }
-        yield return GameManager.RunWorldTransitionSteps(Journey(), error => failure = error);
         Exception recoveryFailure = null;
-        yield return GameManager.RunWorldTransitionSteps(home.Restore(), error => recoveryFailure = error);
+        ItemMgr.RuntimeItemUnregistered += CapturePlayerUnregisteredAfterWorldExitSave;
+        try
+        {
+            yield return GameManager.RunWorldTransitionSteps(Journey(), error => failure = error);
+            yield return GameManager.RunWorldTransitionSteps(home.Restore(), error => recoveryFailure = error);
+        }
+        finally { ItemMgr.RuntimeItemUnregistered -= CapturePlayerUnregisteredAfterWorldExitSave; }
         if (recoveryFailure != null)
             throw failure == null ? recoveryFailure : new AggregateException("火星现场及原世界恢复都失败。", failure, recoveryFailure);
         if (failure != null) throw failure;
         result["restoredHome"] = DimensionManager.ExistingInstance.ActiveAddress == home.Surface;
+        result["home"] = DimensionSample(ItemMgr.Instance.User_Player, home.Surface, home);
+        result["sameHomePlayerData"] = ReferenceEquals(ItemMgr.Instance.User_Player.Data, home.Data);
+        result["exitSaves"] = exitSaves;
         completed(result);
     }
 

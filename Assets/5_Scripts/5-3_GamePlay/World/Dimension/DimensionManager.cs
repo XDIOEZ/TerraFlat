@@ -355,8 +355,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         SaveDataMgr.Instance.Save_And_WriteToDisk();
 
         ItemMgr.Instance.ReleasePlayerForWorldTransition(sourcePlayer);
-        ChunkMgr.ExistingInstance?.OnSceneChange(
-            SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(targetAddress.WorldKey));
         yield return null;
 
         GameManager.Instance.SetDimensionTransitionLoading("正在创建目标维度…", 0.48f);
@@ -390,8 +388,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerName] = playerData;
 
         GameManager.Instance.SetDimensionTransitionLoading("正在加载目标维度…", 0.68f);
-        GameManager.Instance.NotifyDimensionWorldEntered();
         state.EnterNotified = true;
+        GameManager.Instance.NotifyDimensionWorldEntered();
         // 离线切换也要重新注册已加载地表，让落地准备继续使用目标世界的运行时。
         if (!toSpace) GameplayWorldRegistry.SelectLocalWorld(targetAddress.WorldKey);
 
@@ -465,8 +463,6 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         if (currentPlayer != null)
             ItemMgr.Instance.ReleasePlayerForWorldTransition(currentPlayer);
-        ChunkMgr.ExistingInstance?.OnSceneChange(
-            SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(state.TargetPresentationSceneName));
 
         Scene sourceScene = SceneManager.GetSceneByName(sourceAddress.WorldKey);
         bool fromSpace = SpaceMgr.IsSpaceScene(sourceAddress.WorldKey);

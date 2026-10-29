@@ -342,18 +342,22 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         DroppedItemService.PrepareForSave();
         if (!CaptureRuntimeTerrainStates())
             throw new InvalidOperationException("当前世界的地形快照采集失败，无法安全保存。");
-        // 新 WorldModel 的自然物挂在 ChunkView，不属于旧 Chunk.RunTimeItems；先捕获其状态。
-        ChunkMgr.Instance?.CaptureRuntimeNaturalItemStates();
-        if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
+        // 退出事件可能已经解绑世界，保存不能重新查找或创建区块管理器。
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        if (chunks != null)
         {
-            List<Chunk> chunks = new List<Chunk>(ChunkMgr.Instance.Chunk_Dic_ByPos.Values);
-            for (int i = 0; i < chunks.Count; i++)
+            chunks.CaptureRuntimeNaturalItemStates();
+            if (chunks.Chunk_Dic_ByPos != null)
             {
-                Chunk chunk = chunks[i];
-                if (chunk != null)
+                List<Chunk> loadedChunks = new List<Chunk>(chunks.Chunk_Dic_ByPos.Values);
+                for (int i = 0; i < loadedChunks.Count; i++)
                 {
-                    chunk.SaveChunk();
-                    SaveCapturePoint.AddWork(1);
+                    Chunk chunk = loadedChunks[i];
+                    if (chunk != null)
+                    {
+                        chunk.SaveChunk();
+                        SaveCapturePoint.AddWork(1);
+                    }
                 }
             }
         }

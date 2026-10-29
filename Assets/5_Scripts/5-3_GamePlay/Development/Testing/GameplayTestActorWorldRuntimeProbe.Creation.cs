@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public static partial class GameplayTestActorWorldRuntimeProbe
 {
@@ -126,6 +127,10 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         int firstFrame = Time.frameCount;
         int steps = 0;
         bool prematureDelivery = false;
+        int chickenCountAtSpawnCell = CountRegisteredChickensAt(position);
+        bool unpublishedWhileYielding = true;
+        bool sceneValid = false, sceneLoaded = false, sceneMatchesOwner = false;
+        bool physicsSceneValid = false, physicsSceneMatchesOwner = false;
         double deadline = Time.realtimeSinceStartupAsDouble + 30d;
         var result = new JObject();
         try
@@ -136,11 +141,24 @@ public static partial class GameplayTestActorWorldRuntimeProbe
                        guid = candidate.itemData.Guid;
                        callbackInitialized = candidate.IsInitialized && candidate.gameObject.activeInHierarchy &&
                            ReferenceEquals(ItemMgr.Instance.GetItemByGuid(guid), candidate);
+                       Scene candidateScene = candidate.gameObject.scene;
+                       Scene ownerScene = GameplayWorldRegistry.CurrentScene;
+                       sceneValid = candidateScene.IsValid();
+                       sceneLoaded = sceneValid && candidateScene.isLoaded;
+                       sceneMatchesOwner = sceneValid && candidateScene == ownerScene;
+                       if (sceneValid)
+                       {
+                           PhysicsScene2D candidatePhysicsScene = candidateScene.GetPhysicsScene2D();
+                           PhysicsScene2D ownerPhysicsScene = GameplayWorldRegistry.CurrentPhysics.PrimarySpace.PhysicsScene;
+                           physicsSceneValid = candidatePhysicsScene.IsValid();
+                           physicsSceneMatchesOwner = physicsSceneValid && candidatePhysicsScene == ownerPhysicsScene;
+                       }
                    }))
                 while (creation.MoveNext())
                 {
                     steps++;
                     prematureDelivery |= created != null;
+                    unpublishedWhileYielding &= CountRegisteredChickensAt(position) == chickenCountAtSpawnCell;
                     if (Time.realtimeSinceStartupAsDouble >= deadline) throw new TimeoutException("分帧生物创建超时。");
                     yield return null;
                 }
@@ -148,6 +166,12 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             result["frames"] = Time.frameCount - firstFrame;
             result["created"] = guid != 0 && callbackInitialized;
             result["prematureDelivery"] = prematureDelivery;
+            result["unpublishedWhileYielding"] = unpublishedWhileYielding;
+            result["sceneValid"] = sceneValid;
+            result["sceneLoaded"] = sceneLoaded;
+            result["sceneMatchesOwner"] = sceneMatchesOwner;
+            result["physicsSceneValid"] = physicsSceneValid;
+            result["physicsSceneMatchesOwner"] = physicsSceneMatchesOwner;
             ActorBuffLightController light = created?.GetComponentInChildren<ActorBuffLightController>(true);
             result["hasLightController"] = light != null;
             result["noUnusedLight"] = light != null && light.RuntimeLight == null;
@@ -206,6 +230,21 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         }
         result["cleanupComplete"] = guid != 0 && ItemMgr.Instance.GetItemByGuid(guid) == null;
         completed(result);
+    }
+
+    // 只统计测试落点的已注册鸡，验证分帧让帧期间候选尚未进入正式索引。
+    private static int CountRegisteredChickensAt(Vector3 position)
+    {
+        IReadOnlyList<Item> chickens = ItemMgr.GetInstance()?.GetItemsByNameID("Chicken");
+        if (chickens == null) return 0;
+        int count = 0;
+        for (int i = 0; i < chickens.Count; i++)
+        {
+            Item chicken = chickens[i];
+            if (chicken != null && (chicken.transform.position - position).sqrMagnitude < 0.0001f)
+                count++;
+        }
+        return count;
     }
 
     #endregion

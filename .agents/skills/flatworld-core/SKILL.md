@@ -34,6 +34,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - 新角色由 ItemMgr 在 Player.Load 前注入 GameConfig/Players 模板，已有存档/跨维度不重复注入。创建、网络提升与远程副本显式设置 ProfileContext，玩家事件一次发布。
 - GameManager 从种子锚点沿固定右上斜线逐格找新角色出生点，首个无水可走格即停，不扩圈/铺二维网格；只受采样预算限制，环绕回起点结束。后台与同步回退共用正式单格规则，预搜索使用冻结纯数据并共享生成器/水文缓存，退出/失败取消。
 - 跨场景单例保留有效实例，重复 GameRes 不开启资源协程。停止/退出通过已绑定引用清理，不重新查单例创建对象；终止流送直接销毁 View、取消后台任务，正常流送才回池。
+- 世界退出事件由注册表按归属保存并解绑区块；退出写盘和后续收尾不重新查找或重复解绑管理器。
 - 销毁回调借 `GameplayWorldRegistry.TryUseExistingWorldForOwnerRelease` 只用现有且 owner 引用相符的记录，允许卸载中释放，不调用 GetOrCreate；正常查询仍要求场景加载。回归 `GameplayWorldOwnerReleaseEditModeTests`。
 
 ## 资源会话

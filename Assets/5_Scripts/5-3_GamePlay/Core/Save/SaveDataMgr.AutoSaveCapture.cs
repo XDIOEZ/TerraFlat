@@ -45,12 +45,13 @@ public partial class SaveDataMgr
         while (terrainRoutine.MoveNext())
             yield return terrainRoutine.Current;
         yield return budget.WaitForNextSlice();
-        if (ChunkMgr.Instance != null)
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        if (chunks != null)
         {
             // 自然物也要分帧克隆，避免表现窗口内大量 Item 在同一帧序列化。
             Exception naturalFailure = null;
             IEnumerator naturalRoutine = ForwardAutoSaveRoutine(
-                ChunkMgr.Instance.CaptureRuntimeNaturalItemStatesCoroutine(budget),
+                chunks.CaptureRuntimeNaturalItemStatesCoroutine(budget),
                 exception => naturalFailure = exception);
             while (naturalRoutine.MoveNext())
                 yield return naturalRoutine.Current;
@@ -61,12 +62,12 @@ public partial class SaveDataMgr
             }
         }
 
-        if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
+        if (chunks != null && chunks.Chunk_Dic_ByPos != null)
         {
-            List<Chunk> chunks = new List<Chunk>(ChunkMgr.Instance.Chunk_Dic_ByPos.Values);
-            for (int i = 0; i < chunks.Count; i++)
+            List<Chunk> loadedChunks = new List<Chunk>(chunks.Chunk_Dic_ByPos.Values);
+            for (int i = 0; i < loadedChunks.Count; i++)
             {
-                Chunk chunk = chunks[i];
+                Chunk chunk = loadedChunks[i];
                 if (chunk != null)
                 {
                     Exception chunkSaveFailure = null;

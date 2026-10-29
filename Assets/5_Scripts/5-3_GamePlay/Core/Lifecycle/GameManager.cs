@@ -166,7 +166,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         saveCurrentGame &= FlatWorld.Networking.GameNetwork.HasStateAuthority;
 
         // 先检查依赖并采集玩家状态；世界退出事件可能撤除载具、输入与 MOD 会话。
-        if (ItemMgr.Instance == null || ChunkMgr.Instance == null || SaveDataMgr.Instance == null)
+        if (ItemMgr.Instance == null || SaveDataMgr.Instance == null)
         {
             Debug.LogError("[ExitGame] 核心管理器未初始化，退出失败！");
             if (!requireSuccessfulSave) onComplete?.Invoke();
@@ -229,9 +229,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 阶段 2：数据保存阶段
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // 先执行基础清理
+        // 先执行基础清理；区块已由世界退出事件按归属释放。
         ItemMgr.Instance.CleanupNullItems();
-        ChunkMgr.Instance.CleanEmptyDicValues();
 
         if (saveCurrentGame)
         {
@@ -289,10 +288,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             Debug.Log("[ExitGame] 已销毁 SunAndMoon 对象");
         }
 
-        // 清理所有区块，同时停止新版 WorldModel 的后台生成、表现队列和 ChunkView。
-        // 只调用 ClearAllChunk 会遗漏运行时区块，退出后迟到的回调可能再次激活已销毁对象。
-        Debug.Log("[ExitGame] 开始清理区块...");
-        ChunkMgr.Instance.OnSceneChange();
+        // 世界退出和太空会话收尾已解绑区块，最后释放会话持有的世界模型。
         GameplayWorldRegistry.ReleaseAllOwnedWorldModels();
 
         // Chunk 对象池会在帧末销毁旧 Item，确认完成后再重建索引，

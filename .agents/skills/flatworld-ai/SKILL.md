@@ -35,7 +35,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - `AiRuntimeBackendService` 的 GO Actor 身份、前进与取消命令查询使用 `ListPool<MonoBehaviour>` 和 `GetComponentsInChildren(true, list)`，避免每次查询创建子组件数组；指令先按原顺序检查绑定到本 Item 的真实 Actor，再用同一份即时组件列表寻找首个接收器。列表调用结束即回池，不缓存模块结构/代际，不改变 ECS 后端回退和死亡拒绝规则。
 - ECS 宿主/后端路由按 WorldKey 独立，观察与战斗代理包含该世界所有真实玩家；距离档取最近玩家，不能只跟主机视角。联机客户端不 Tick 权威生态，`AiEcologyNetworkBridge` 将正式表现快照按连接 WorldKey/RealmRevision 分片同步，完整包才替换表现快照，移动按世界最短位移插值；离开世界/断线释放副本缓存，死亡/掉落仍由服务器提交。
 
-- GO 自然出生通过 `SpawnCreatureInSteps` 单任务分帧：池未命中异步复制外壳，逐模块配置/依赖/Load，每帧目标 1.5ms、最多 8 步；单个模块不可抢占。候选停用且未登记，完成后复核落点/人数/预算再交付，成功才记账；退出、失效或取消释放候选。显式即时出生与居民恢复仍保留同步入口。
+- GO 自然出生通过 `SpawnCreatureInSteps` 单任务分帧：池未命中异步复制外壳，逐模块配置/依赖/Load，每帧目标 1.5ms、最多 8 步；单个模块不可抢占。候选停用且未登记，加载模块前先脱离准备根并进入所属世界 Scene；完成后复核落点/人数/预算再交付，成功才记账；退出、失效或取消释放候选。显式即时出生与居民恢复仍保留同步入口。
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
 - 单图首帧必须配置 `visual.spriteAddress`，使用已注册 Addressables 的 `Assets/...png[切片名]`；摇摆初始化直接读取定义 Sprite，不启动旧 Animator、不依赖 Idle/Stand 状态。共享狼外壳的 Zombie 必须覆盖首帧。内容校验 `FWC-ACTORJSON-007/008` 检查模式与首帧；静态入口 `python Tools/Tests/ActorSway/verify.py`，正式规则 `ai/single_sprite_catalog`。
 - 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。

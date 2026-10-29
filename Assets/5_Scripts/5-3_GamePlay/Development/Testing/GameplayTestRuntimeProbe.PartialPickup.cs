@@ -50,16 +50,22 @@ public static partial class GameplayTestRuntimeProbe
         var originalSceneRoots = new HashSet<GameObject>(root.scene.GetRootGameObjects());
         DroppedItemRuntime runtime = null;
         Mod_ItemPicker picker = null;
+        GameItem owner = null;
+        ulong ownerWorldRevision = 0;
         try
         {
             Vector2 position = FindPartialPickupSite(player);
             root.transform.position = WorldLocalPresentation.ProjectPosition(position);
-            var owner = root.AddComponent<GameItem>();
+            owner = root.AddComponent<GameItem>();
             owner.BindData(new Data_GeneralItem
             {
                 IDName = "test:partial_pickup_owner",
                 Stack = new ItemStack { CanBePickedUp = false }
             });
+            if (!GameplayWorldRegistry.TryResolveWorldKeyForScene(root.scene, out string ownerWorldKey))
+                throw new InvalidOperationException("部分拾取采样场景没有已登记的隔离世界。");
+            GameplayWorldRegistry.AssignItemToWorld(owner, ownerWorldKey);
+            ownerWorldRevision = GameplayWorldRegistry.GetItemWorldRevision(owner);
             var collider = root.AddComponent<BoxCollider2D>();
             collider.isTrigger = true;
             collider.size = Vector2.one * 8f;
@@ -115,7 +121,12 @@ public static partial class GameplayTestRuntimeProbe
             }
 
             runtime.Tick(.11f, pickers);
-            var result = new JObject { ["first"] = Snapshot() };
+            var result = new JObject
+            {
+                ["pickerWorldMatchesScene"] = string.Equals(
+                    GameplayWorldRegistry.GetItemWorldKey(owner), ownerWorldKey, StringComparison.Ordinal),
+                ["first"] = Snapshot()
+            };
             runtime.Tick(1.1f, pickers);
             result["afterMatter"] = Snapshot();
             if (GameplayTestSystemProbe.Flag(args, "retry", false))
@@ -142,6 +153,8 @@ public static partial class GameplayTestRuntimeProbe
                 try { runtime?.Dispose(); }
                 finally
                 {
+                    if (owner != null)
+                        GameplayWorldRegistry.DetachItemFromWorld(owner, ownerWorldRevision);
                     // 同步夹具结束会停掉自有协程，只清理本次新建的反馈根，保留原场景已有对象。
                     foreach (GameObject candidate in root.scene.GetRootGameObjects())
                         if (candidate != null && !originalSceneRoots.Contains(candidate) && candidate.name == "轻量掉落物_拾取反馈")

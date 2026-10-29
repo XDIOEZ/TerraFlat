@@ -17,6 +17,7 @@ for _, case in ipairs({
     {name = "零容量保留完整原堆", args = {maxVolume = 0}, amount = 0, remaining = 10}
 }) do
     test.runtime("inventory", "dropped_partial_pickup", case.args, function(data)
+        assert(data.pickerWorldMatchesScene, "真实拾取器没有登记到掉落物所属世界")
         for _, sample in ipairs({data.first, data.afterMatter}) do
             assert(sample.inventoryAmount == case.amount and sample.remaining == case.remaining
                 and sample.inventoryAmount + sample.remaining == 10, "真实地面余量被物态推进复活或丢失")

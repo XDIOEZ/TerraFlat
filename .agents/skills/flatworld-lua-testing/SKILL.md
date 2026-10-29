@@ -51,7 +51,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同档案、同 Data_Player 的隔离角色。
 - 新主题更新本系统清单和README后运行 `python Tools/GameplayTesting/sync_catalog.py` 同步总清单与映射；新系统登记sourcePaths/dependsOn。Lua组合无需编译，新增C#操作仍需编译。
 - `--systems` 精确选择；`--changed` 根据源码归属包含使用它的系统，未登记路径报错，测试框架改动选全部规则。影响实际链路再加 `--integration`，现场子集一次建世界。没有现场入口返回4；已有入口也须检查README中的缺口。
-- 交互注册表与掉落回滚句柄会核对世界场景；临时现场夹具须将 GameObject 根移入隔离玩家的 `player.gameObject.scene`，不要默认使用 Editor 活动场景。
+- 交互注册表与掉落回滚句柄会核对世界场景；临时现场夹具须将 GameObject 根移入隔离玩家的 `player.gameObject.scene`，临时 Item 还须登记世界归属并在收尾解除，不能只搬 Scene 或默认使用 Editor 活动场景。
 - 用户明确不需要验证时仅静态修改，未编译/未运行写清楚；其他任务在Unity未处于PlayMode时执行对应范围并读取真实报告，不能用静态检查冒充通过。
 
 ## 编写与截图

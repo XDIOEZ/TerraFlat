@@ -244,6 +244,10 @@ public partial class ItemMgr
             data.transform.position = WorldLocalPresentation.ToLogical(position);
             data.transform.rotation = Quaternion.identity;
             data.transform.scale = Vector3.one;
+            // 停用候选先进入所属场景，再加载会登记物理空间的模块。
+            candidate.transform.SetParent(null, true);
+            Scene targetScene = GameplayWorldRegistry.CurrentScene;
+            if (candidateObject.scene != targetScene) SceneManager.MoveGameObjectToScene(candidateObject, targetScene);
             yield return 0;
             ItemDefinitionRuntime.ConfigureInstance(resources, definition, candidate, data);
             candidate.PoolMarker.CaptureBaseline();
@@ -267,9 +271,6 @@ public partial class ItemMgr
             if (canCommit?.Invoke() == false) yield break;
             beforeCommit?.Invoke(candidate);
             // 准备阶段不进世界索引，自动保存和玩家感知只会看到完整生物。
-            candidate.transform.SetParent(null, true);
-            Scene targetScene = GameplayWorldRegistry.CurrentScene;
-            if (candidateObject.scene != targetScene) SceneManager.MoveGameObjectToScene(candidateObject, targetScene);
             RegisterRuntimeItem(candidate, data.IDName, out token);
             ItemWorldPlacement.Attach(candidate, candidateObject, data.transform.position, null);
             EnsureSpawnRegistrationCurrent(candidate, data, token);
