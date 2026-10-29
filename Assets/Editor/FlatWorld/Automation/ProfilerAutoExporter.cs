@@ -362,8 +362,8 @@ namespace FlatWorld.Automation
                         throw new InvalidOperationException("选中的最慢帧已失效或被替换，未导出其他帧。");
                 }
                 trigger.editorPausedBeforeExport = true;
-                string directory = ProfilerSnapshotToolbar.ExportFrame(frame, 30,
-                    (pendingDirectory, snapshotId, displayFrame) =>
+                string directory = ProfilerSnapshotToolbar.ExportFrame(frame,
+                    exportAdditionalFiles: (pendingDirectory, snapshotId, displayFrame) =>
                     {
                         trigger.snapshotId = snapshotId;
                         trigger.selectedDisplayFrame = displayFrame;

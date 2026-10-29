@@ -12,7 +12,7 @@
 
 1. 用 JSON 解析器读取文件，先输出元信息、`selectedFrameAnalysis.frameSummary`、`warnings`，以及 `topSelfTimeMarkers`、`topGcMarkers` 各前 10 项；不要直接打印完整 JSON 或整个 `callTrees`。
 2. 有 `screen.png` 时看一次，确认可见的场景和 Profiler 状态。截图与日志都是导出时的现场，不能证明它们发生在所选录制帧。
-3. 对比 `nearbyFrames` 中选中帧与邻帧耗时，区分尖峰和附近持续慢帧。格式 3 会额外读取附近超过 50ms 的最慢 3 帧，排除选中帧；查看 `additionalFrameDetails` 的帧号、`available/status/error`，有完整调用树时再展开。附近没有超过阈值的帧时不额外导出树，旧格式也可能只有邻帧耗时。
+3. 对比 `selectedFrameAnalysis` 与 `nearbyFrames` 的邻帧耗时，区分尖峰和附近持续慢帧。格式 5 默认只导出前后各 30 帧摘要，另从前后各 150 帧中选最慢 3 帧的详情，不限制最低耗时，排除选中帧；三个数量可分别配置，实际规则见 `additionalFramePolicy`。查看 `additionalFrameDetails` 的帧号、`available/status/error`，有完整调用树时再展开。
 4. 从排行挑最有影响的 1～3 个方法，再按线程查 `callTrees` 中同名节点，沿 `parentId` 向上还原调用链，并查看直接子节点。每次只输出相关链及最耗时的几个子节点。
 5. 日志先按 `entries[].severity` 计数，按正文/堆栈合并重复项；优先读 Error/Exception/Assert 和与热点同名的模块日志，再按需展开完整堆栈。不要只读错误，普通 Debug 日志可能包含分阶段计时和业务计数。
 6. 有项目源码时，按方法名、Marker 名或日志 `file/line` 定位正式实现和调用方；不要为了分析已有文件重新采集、暂停或切换用户的 Unity。
@@ -35,9 +35,9 @@
 | `nodes[].id/parentId/name` | id 只在当前线程内有效；`parentId=-1` 为根；同父节点下的同名调用已经合并 |
 | `nodes[].totalMs/selfMs/maxCallMs/calls` | 包含子调用的累计耗时、自身累计耗时、最长单次调用耗时、调用次数 |
 | `nodes[].gcBytesWithChildren/gcAllocationsWithChildren` | 包含子调用的分配字节与次数，依赖录制中实际存在的 GC.Alloc 元数据 |
-| `nearbyFrames[].displayFrame/available/timeMs` | 默认前后各 30 帧的耗时，显式请求半径最多 300；`available=false` 表示该项不可用于比较 |
-| `additionalFramePolicy` | 附加帧选择规则：附近有效帧中严格超过 50ms、按耗时降序取最多 3 帧；相同时按帧号升序；排除已选中帧 |
-| `additionalFrameDetails[].displayFrame/timeMs/available/status/error/callTrees` | 每个附加尖峰独立的帧号、先前观察耗时与完整线程树；缓冲滚动导致失效或读取失败时保留状态，不猜原因。不复制主报告的选中帧排行 |
+| `nearbyFrames[].displayFrame/available/timeMs` | 仅配置的摘要邻帧，不含目标帧；默认总共 60、前后各 30。`available=false` 表示该项不可用于比较 |
+| `additionalFramePolicy` | `summaryNeighborFrameCount` 为摘要总数，`selectionNeighborFrameCount` 为独立筛选邻帧总数（默认 300），`maximumAdditionalFrames` 为额外详情上限（默认 3）。按耗时降序、同耗时按帧号升序，无 50ms 门槛，排除目标帧。`firstSearchDisplayFrame/lastSearchDisplayFrame` 为缓存裁剪后的范围边界 |
+| `additionalFrameDetails[].displayFrame/timeMs/available/status/error/callTrees` | 每个额外慢帧的帧号、先前观察耗时与完整线程树，可能位于摘要范围之外；筛选范围内其他帧不写入报告。失效或读取失败时保留状态，不复制主报告的选中帧排行 |
 | `performanceDebugAtExport.capturedAtUtc/source/timeScope/status` | 导出时本地进程累计统计的时间、来源和可用状态；不是 Profiler 帧内数据，不含远程 Player Registry |
 | `performanceDebugAtExport.statisticsEnabled/slowSummaryEnabled/slowThresholdMilliseconds/hasPendingSlowEvents` | 读取时性能统计、慢摘要、慢阈值和未消费慢事件状态；导出不改变开关，不清空统计，不消费慢摘要 |
 | `performanceDebugAtExport.points[].name/calls/work/gauge/peakGauge/hasGauge/totalMilliseconds/maximumMilliseconds` | 自上次清空/会话重置以来、开启收集期间的累计调用/工作量、最近和峰值规模、包含式总耗时和单次最大值；工作量单位按点位说明，不能混加 |
@@ -55,7 +55,7 @@
 - `EditorLoop`、`Profiler.ParseThreadData`、`Gfx.Wait*`、VSync 等编辑器/等待标记要与游戏业务分开；等待时间大不能直接证明 GPU 或某个脚本就是根因。CPU 调用树不提供 GPU 时间线。
 - `deepProfilingAtExport`、`profilerTargetAtExport`、运行/暂停状态描述导出时设置；加载的历史录制可能不同。深度分析会影响采样成本，不能把一次 Editor 录制当成正式 Player 基准。
 - Console 没有逐条日志对应的 Profiler 帧号或原生时间戳；`selectedDisplayFrame` 是这次导出的关联标识，不是每条日志的发生帧。已清空日志不能恢复。
-- 附加帧在读取时可能已被正在录制的环形缓冲淘汰，主报告选中帧与附近耗时都只能说明导出时读到了什么。未附带的帧可能低于阈值、超出数量/半径/缓冲，并非已经排除性能问题；完整聚合树仍不是原始时间线。
+- 邻帧总数不含目标帧，前后平分，奇数时前方多一帧；一侧不足只取已有帧，不向另一侧补齐。附加帧在读取时可能已被正在录制的环形缓冲淘汰；未附带的帧可能超出数量、筛选范围或缓冲，并非已经排除性能问题，完整聚合树仍不是原始时间线。
 - 性能统计默认关闭，关闭后可能保留此前开启时的累计数字。统计开关、快照和 Console/截图分别在导出过程中读取，后台任务仍可能推进；不能当作同一时刻的原子快照，也不能与历史所选帧作逐条时间关联。
 - 世界现场也是导出时本地 Editor 的数据，不还原历史帧，不代表远程 Player，不是可直接加载的完整存档。只读已加载区块，不包含未加载存档区域；普通 Item 的持久模块状态可能落后于即时值，优先对照 `runtimeModules[].runtimeScalars/liveInventories`，未通用解码的模块状态保留 Base64。自然 ECS 的内置热状态写入独立副本，扩展模块保存回调不执行；不能把最近已有的扩展状态认定为即时值。
 - 证据文件只支持定位和提出方案，不能单独证明修改后的性能改善；实际效果由用户在相同场景下验收。

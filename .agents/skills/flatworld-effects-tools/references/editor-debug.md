@@ -4,7 +4,7 @@
 
 - 一级菜单仅「测试」「性能分析」「其他工具」；其余归 `FlatWorld/其他工具/` 并同步验证函数/ExecuteMenuItem 路径。
 - 顶栏「性能 JSON」/`FlatWorld/性能分析/导出选中或最新帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调 PuerTS `UnityMcpProfilerSnapshot`，复用 editor.profiler.analyze。输出到已忽略的 `Logs/ProfileData/<时间_frame-帧号_编号>/`，包含 profiler-analysis.json、console-logs.json、world-scene.json，以及成功时的 Unity 主窗口 screen.png；截图用 Windows Graphics Capture，后台遮挡可采集，最小化或工具失败时只记录 screenshot.status/error，不截桌面。工具首次使用需要 .NET 8 SDK，构建产物放 Library；附加回调全部写 pending 后原子发布，忽略 `.pending-*`。手动导出成功后复制本次报告文件夹的完整路径，在当前编辑器窗口和 Console 提示；共用 `ExportFrame` 不操作剪贴板。
-- 先读根共享说明（instructionsFile 用 `../`；模板在 PuerTS 包根 ProfilerAnalysisGuide.md）。schema 4 additionalFiles 关联现场，保留 Top100、完整线程树、附近帧耗时、>50ms最慢3帧树与 Registry 累计快照。改导出结构同步模板。
+- 先读根共享说明（instructionsFile 用 `../`；模板在 PuerTS 包根 ProfilerAnalysisGuide.md）。schema 5 保留 Top100、目标帧完整树、邻帧摘要及独立范围内最慢帧树、Registry 累计快照与 additionalFiles 现场。设置窗口可填摘要邻帧总数/筛选邻帧总数/额外详情数，默认60/300/3，均不含目标帧；前后平分，奇数前多1，一侧不足不补齐，无50ms门槛。摘要>300、筛选>1000或详情>10显示黄色警告；手动/自动/MCP共用设置，MCP显式半径只覆盖摘要。改导出结构同步模板，离线回归见 `Tools/Tests/ProfilerAutoExport/`。
 - `WorldSceneSnapshotExporter` 只读已加载 GO/自然ECS/掉落/机器/可选ECS居民与剩余生成基线，以 GUID 合并实体、dataRef 索引库存；不触发保存/扩展回调，二进制模块保留 Base64。现场/累计/日志/截图属于本地导出时刻，不能当作历史选中帧或远程 Player；非PlayMode明确不可用，不改Play/Pause/录制或主动刷新资源。
 - 性能点用 Utilities 的 `PerformanceDebugPoint/Registry`，GM「设备数据」按需开统计/慢摘要/阈值。固定 Marker、struct 不跨 yield；后台只记有界数字，主线程合并日志。单位与 Total/Self 见 [点位说明](../../../../开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md)。
 - PlayMode Lua 可用 `test.profiler_start` 与 `test.profiler_stop` 在动作前后复用同一采集和导出；按需指定 Marker 选择最近命中帧，报告步骤记录 JSON 路径。选中帧不代表完整时段，普通采样也不覆盖所有 C# 方法。

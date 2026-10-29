@@ -19,12 +19,39 @@ namespace FlatWorld.Automation
         private const string ButtonName = "FlatWorldProfilerSnapshot";
         private const string ExportMenu = "FlatWorld/性能分析/导出选中或最新帧与控制台 JSON";
         private static readonly Type ToolbarType = typeof(Editor).Assembly.GetType("UnityEditor.Toolbar");
+        private static readonly string ExportPreferenceKey = "FlatWorld.ProfilerExport." + Application.dataPath + ".";
         private static bool exporting;
         private static ToolbarToggle autoToggle;
         private static ToolbarButton autoSettings;
 
         public static string ReportsRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "ProfileData"));
         internal static bool IsExporting => exporting;
+
+        internal static int SummaryNeighborFrameCount
+        {
+            get => Math.Max(0, EditorPrefs.GetInt(ExportPreferenceKey + "SummaryNeighborFrameCount", 60));
+            set => SetNonNegativeExportPreference("SummaryNeighborFrameCount", value);
+        }
+
+        internal static int DetailSelectionNeighborFrameCount
+        {
+            get => Math.Max(0, EditorPrefs.GetInt(ExportPreferenceKey + "DetailSelectionNeighborFrameCount", 300));
+            set => SetNonNegativeExportPreference("DetailSelectionNeighborFrameCount", value);
+        }
+
+        internal static int MaximumAdditionalDetailedFrames
+        {
+            get => Math.Max(0, EditorPrefs.GetInt(ExportPreferenceKey + "MaximumAdditionalDetailedFrames", 3));
+            set => SetNonNegativeExportPreference("MaximumAdditionalDetailedFrames", value);
+        }
+
+        // 导出设置与低帧率检测独立，窗口重绘或调整采样量都不重置检测进度。
+        private static void SetNonNegativeExportPreference(string name, int value)
+        {
+            value = Math.Max(0, value);
+            string key = ExportPreferenceKey + name;
+            if (EditorPrefs.GetInt(key, -1) != value) EditorPrefs.SetInt(key, value);
+        }
 
         static ProfilerSnapshotToolbar()
         {
@@ -56,13 +83,13 @@ namespace FlatWorld.Automation
                     {
                         name = ButtonName,
                         text = "性能 JSON",
-                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和 Unity 主窗口截图到 Logs/ProfileData；成功后自动复制报告文件夹完整路径，可直接粘贴给 Agent；右键打开目录。"
+                        tooltip = "导出 Profiler 选中或最新帧，按设置保存邻帧摘要并从独立范围挑选最慢帧详情；同时保存 Console、世界现场和 Unity 主窗口截图到 Logs/ProfileData；成功后复制报告文件夹完整路径；右键可调整采样设置或打开目录。"
                     };
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
                     button.AddManipulator(new ContextualMenuManipulator(menu =>
                     {
-                        menu.menu.AppendAction("自动导出设置", _ => ProfilerAutoExportWindow.Open());
+                        menu.menu.AppendAction("性能导出设置", _ => ProfilerAutoExportWindow.Open());
                         menu.menu.AppendAction("低帧率自动导出", _ => ProfilerAutoExporter.Enabled = !ProfilerAutoExporter.Enabled,
                             _ => ProfilerAutoExporter.Enabled ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
                         menu.menu.AppendAction("打开性能报告目录", _ => OpenReportsFolder());
@@ -70,7 +97,7 @@ namespace FlatWorld.Automation
                     zone.Insert(0, button);
                     autoToggle = new ToolbarToggle { text = "自动", tooltip = "设定时间内，低于目标 FPS 的累计时间达到 80% 时，暂停并导出窗口内最慢帧的性能 JSON，完成后自动继续游戏。" };
                     autoToggle.RegisterValueChangedCallback(evt => ProfilerAutoExporter.Enabled = evt.newValue);
-                    autoSettings = new ToolbarButton(ProfilerAutoExportWindow.Open) { tooltip = "设置自动导出的 FPS 阈值、持续时间和启动缓冲时间。" };
+                    autoSettings = new ToolbarButton(ProfilerAutoExportWindow.Open) { tooltip = "设置摘要帧数、慢帧筛选范围、额外详细帧数，以及自动导出的 FPS 阈值和时间。" };
                     autoToggle.style.flexShrink = autoSettings.style.flexShrink = 0;
                     zone.Insert(1, autoToggle);
                     zone.Insert(2, autoSettings);
@@ -137,21 +164,22 @@ namespace FlatWorld.Automation
         }
 
         // 菜单与 MCP 共用无弹窗导出入口，现场和采集说明一起发布到正式目录。
-        public static string ExportFrame(int frameIndex, int contextFrameRadius = 30,
+        public static string ExportFrame(int frameIndex, int contextFrameRadius = -1,
             Func<string, string, int, string[]> exportAdditionalFiles = null)
         {
             if (exporting) throw new InvalidOperationException("profiler_export_busy: 正在导出性能报告。");
             exporting = true;
             try
             {
-                return UnityMcpProfilerSnapshot.ExportSelectedFrame(frameIndex, ReportsRoot, contextFrameRadius,
+                int summaryNeighborFrames = contextFrameRadius < 0 ? SummaryNeighborFrameCount : contextFrameRadius * 2;
+                return UnityMcpProfilerSnapshot.ExportSelectedFrame(frameIndex, ReportsRoot, summaryNeighborFrames,
                     (directory, snapshotId, displayFrame) =>
                     {
                         var files = new List<string>(WorldSceneSnapshotExporter.Export(directory, snapshotId, displayFrame));
                         if (exportAdditionalFiles != null)
                             files.AddRange(exportAdditionalFiles(directory, snapshotId, displayFrame));
                         return files.ToArray();
-                    });
+                    }, DetailSelectionNeighborFrameCount, MaximumAdditionalDetailedFrames);
             }
             finally { exporting = false; }
         }

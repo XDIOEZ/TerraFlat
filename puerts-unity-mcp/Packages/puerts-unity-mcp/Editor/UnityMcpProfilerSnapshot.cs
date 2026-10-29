@@ -14,10 +14,12 @@ namespace PuertsUnityMcp.Editor
         #region 手动导出入口
 
         // 只读取已有帧和 Console，不切换录制目标或改变游戏暂停状态。
-        public static string ExportSelectedFrame(int frameIndex, string outputRoot, int contextFrameRadius = 30,
-            Func<string, string, int, string[]> exportAdditionalFiles = null)
+        public static string ExportSelectedFrame(int frameIndex, string outputRoot, int summaryNeighborFrameCount = 60,
+            Func<string, string, int, string[]> exportAdditionalFiles = null,
+            int detailSelectionNeighborFrameCount = 300, int maximumAdditionalFrames = 3)
         {
-            return UnityMcpEditorEndpoint.ExportProfilerSnapshot(frameIndex, outputRoot, contextFrameRadius, exportAdditionalFiles);
+            return UnityMcpEditorEndpoint.ExportProfilerSnapshot(frameIndex, outputRoot, summaryNeighborFrameCount,
+                exportAdditionalFiles, detailSelectionNeighborFrameCount, maximumAdditionalFrames);
         }
 
         #endregion
@@ -27,8 +29,9 @@ namespace PuertsUnityMcp.Editor
     {
         #region Profiler 离线快照
 
-        internal static string ExportProfilerSnapshot(int frameIndex, string outputRoot, int contextFrameRadius,
-            Func<string, string, int, string[]> exportAdditionalFiles = null)
+        internal static string ExportProfilerSnapshot(int frameIndex, string outputRoot, int summaryNeighborFrameCount,
+            Func<string, string, int, string[]> exportAdditionalFiles,
+            int detailSelectionNeighborFrameCount, int maximumAdditionalFrames)
         {
             if (EditorApplication.isCompiling || EditorApplication.isPlayingOrWillChangePlaymode != EditorApplication.isPlaying)
                 throw new InvalidOperationException("Unity 正在编译或切换运行状态，请稍后再导出。");
@@ -69,10 +72,21 @@ namespace PuertsUnityMcp.Editor
             var threads = CaptureProfilerSnapshotTrees(frameIndex, warnings);
             if (threads.Length == 0)
                 throw new InvalidOperationException("选中帧调用树已不可用，请重新选择仍在 Profiler 缓冲中的帧。");
-            int radius = Mathf.Clamp(contextFrameRadius, 0, 300);
+            summaryNeighborFrameCount = Math.Max(0, summaryNeighborFrameCount);
+            detailSelectionNeighborFrameCount = Math.Max(0, detailSelectionNeighborFrameCount);
+            maximumAdditionalFrames = Math.Max(0, maximumAdditionalFrames);
+            CalculateClippedNeighborFrameRange(frameIndex, summaryNeighborFrameCount, first, last,
+                out int summaryFirst, out int summaryLast);
+            CalculateClippedNeighborFrameRange(frameIndex, detailSelectionNeighborFrameCount, first, last,
+                out int selectionFirst, out int selectionLast);
             var context = new List<ProfilerSnapshotFrame>();
-            for (int index = Math.Max(first, frameIndex - radius); index <= Math.Min(last, frameIndex + radius); index++)
+            var candidates = new List<ProfilerSnapshotFrame>();
+            int scanFirst = maximumAdditionalFrames > 0 ? Math.Min(summaryFirst, selectionFirst) : summaryFirst;
+            int scanLast = maximumAdditionalFrames > 0 ? Math.Max(summaryLast, selectionLast) : summaryLast;
+            // 摘要与慢帧筛选共用一次耗时读取，筛选范围内其余帧不写入报告。
+            for (int index = scanFirst; index <= scanLast; index++)
             {
+                if (index == frameIndex) continue;
                 var frame = new ProfilerSnapshotFrame { displayFrame = index + 1 };
                 try
                 {
@@ -86,9 +100,11 @@ namespace PuertsUnityMcp.Editor
                     frame.error = exception.Message;
                     warnings.Add("附近帧 " + frame.displayFrame + " 耗时读取失败：" + frame.error);
                 }
-                context.Add(frame);
+                if (index >= summaryFirst && index <= summaryLast) context.Add(frame);
+                if (maximumAdditionalFrames > 0 && index >= selectionFirst && index <= selectionLast && frame.available)
+                    candidates.Add(frame);
             }
-            var additionalFrames = CaptureNearbyHitchTrees(context, frameIndex, warnings);
+            var additionalFrames = CaptureSlowestCandidateFrameTrees(candidates, maximumAdditionalFrames, warnings);
             var snapshot = new ProfilerSnapshotReport
             {
                 snapshotId = snapshotId,
@@ -107,6 +123,14 @@ namespace PuertsUnityMcp.Editor
                 nearbyFrames = context.ToArray(),
                 callTrees = threads,
                 additionalFrameDetails = additionalFrames,
+                additionalFramePolicy = new ProfilerSnapshotAdditionalFramePolicy
+                {
+                    summaryNeighborFrameCount = summaryNeighborFrameCount,
+                    selectionNeighborFrameCount = detailSelectionNeighborFrameCount,
+                    maximumAdditionalFrames = maximumAdditionalFrames,
+                    firstSearchDisplayFrame = selectionFirst + 1,
+                    lastSearchDisplayFrame = selectionLast + 1
+                },
                 performanceDebugAtExport = CapturePerformanceDebugAtExport(),
                 warnings = warnings.ToArray()
             };
@@ -128,7 +152,15 @@ namespace PuertsUnityMcp.Editor
             return destination;
         }
 
-        // 选中帧和附带尖峰共用聚合规则，保留完整线程树而不截断节点。
+        // 邻帧不足时只裁剪当前一侧，奇数配置多取一帧前文，不向另一侧补齐。
+        private static void CalculateClippedNeighborFrameRange(int frameIndex, int neighborFrameCount, int first, int last,
+            out int rangeFirst, out int rangeLast)
+        {
+            rangeFirst = (int)Math.Max(first, (long)frameIndex - neighborFrameCount / 2 - neighborFrameCount % 2);
+            rangeLast = (int)Math.Min(last, (long)frameIndex + neighborFrameCount / 2);
+        }
+
+        // 选中帧和附带慢帧共用聚合规则，保留完整线程树而不截断节点。
         private static ProfilerSnapshotThread[] CaptureProfilerSnapshotTrees(int frameIndex, List<string> warnings)
         {
             var threads = new List<ProfilerSnapshotThread>();
@@ -180,20 +212,19 @@ namespace PuertsUnityMcp.Editor
 
         #endregion
 
-        #region 附近尖峰与导出时累计统计
+        #region 最慢邻帧与导出时累计统计
 
-        private static ProfilerSnapshotFrameDetail[] CaptureNearbyHitchTrees(List<ProfilerSnapshotFrame> context,
-            int selectedFrameIndex, List<string> warnings)
+        private static ProfilerSnapshotFrameDetail[] CaptureSlowestCandidateFrameTrees(List<ProfilerSnapshotFrame> candidates,
+            int maximumAdditionalFrames, List<string> warnings)
         {
-            var candidates = context.FindAll(frame => frame.available && frame.displayFrame != selectedFrameIndex + 1 &&
-                frame.timeMs > 50d && !double.IsInfinity(frame.timeMs));
             candidates.Sort((left, right) =>
             {
                 int order = right.timeMs.CompareTo(left.timeMs);
                 return order != 0 ? order : left.displayFrame.CompareTo(right.displayFrame);
             });
-            var details = new List<ProfilerSnapshotFrameDetail>(Math.Min(3, candidates.Count));
-            for (int index = 0; index < Math.Min(3, candidates.Count); index++)
+            int count = Math.Min(maximumAdditionalFrames, candidates.Count);
+            var details = new List<ProfilerSnapshotFrameDetail>(count);
+            for (int index = 0; index < count; index++)
             {
                 ProfilerSnapshotFrame frame = candidates[index];
                 var detail = new ProfilerSnapshotFrameDetail
@@ -214,7 +245,7 @@ namespace PuertsUnityMcp.Editor
                     detail.callTrees = Array.Empty<ProfilerSnapshotThread>();
                 }
                 if (!detail.available)
-                    warnings.Add("附近尖峰帧 " + detail.displayFrame + " 无完整调用树：" + detail.status + " " + detail.error);
+                    warnings.Add("附近慢帧 " + detail.displayFrame + " 无完整调用树：" + detail.status + " " + detail.error);
                 details.Add(detail);
             }
             return details.ToArray();
@@ -274,10 +305,10 @@ namespace PuertsUnityMcp.Editor
         [Serializable]
         private sealed class ProfilerSnapshotAdditionalFramePolicy
         {
-            public int maximumAdditionalFrames = 3;
-            public double exclusiveThresholdMs = 50d;
-            public string selection = "nearbyFrames above threshold, descending timeMs then ascending displayFrame; selectedDisplayFrame excluded";
-            public string omission = "Frames below threshold, outside context/buffer, or beyond the maximum have no extra tree; read failures remain explicit entries.";
+            public int summaryNeighborFrameCount, selectionNeighborFrameCount, maximumAdditionalFrames;
+            public int firstSearchDisplayFrame, lastSearchDisplayFrame;
+            public string selection = "Independent search window, descending timeMs then ascending displayFrame; no duration threshold; selectedDisplayFrame excluded";
+            public string omission = "Neighbor counts exclude the selected frame, split evenly before/after (odd extra before); buffer edges are clipped without filling. Search-only frames are not exported; read failures remain explicit entries.";
         }
 
         [Serializable]
@@ -318,7 +349,7 @@ namespace PuertsUnityMcp.Editor
         [Serializable]
         private sealed class ProfilerSnapshotReport
         {
-            public int schemaVersion = 4;
+            public int schemaVersion = 5;
             public string snapshotId, capturedAtLocal, capturedAtUtc, projectPath, unityVersion;
             public string consoleFile = "console-logs.json";
             public string instructionsFile = "../00-READ-ME-FIRST.md";
@@ -331,7 +362,7 @@ namespace PuertsUnityMcp.Editor
             public ProfilerSnapshotFrame[] nearbyFrames;
             public ProfilerSnapshotThread[] callTrees;
             public ProfilerSnapshotFrameDetail[] additionalFrameDetails;
-            public ProfilerSnapshotAdditionalFramePolicy additionalFramePolicy = new();
+            public ProfilerSnapshotAdditionalFramePolicy additionalFramePolicy;
             public ProfilerSnapshotDebugState performanceDebugAtExport;
             public string[] warnings;
             public string[] readingGuide =
@@ -341,8 +372,8 @@ namespace PuertsUnityMcp.Editor
                 "callTrees merge repeated calls with the same parent and name within each thread; parentId=-1 means a root. Node ids are local to each thread.",
                 "totalMs includes children; selfMs excludes direct children. Never add parent and child inclusive time, or thread totals, to estimate frame wall time.",
                 "gcBytesWithChildren includes descendants; do not sum allocations across ancestors. GC bytes require captured GC.Alloc metadata.",
-                "callTrees always belong only to selectedDisplayFrame. additionalFrameDetails separately contain up to 3 nearby frames above 50 ms, slowest first, excluding selectedDisplayFrame.",
-                "nearbyFrames contain frame time only. Additional details include full CPU call trees and availability; missing or omitted frames have no inferred cause. CPU trees are not GPU timing or a full event timeline.",
+                "callTrees always belong only to selectedDisplayFrame. additionalFrameDetails contain the configured number of slowest valid neighbors from an independent search window, without a duration threshold; selectedDisplayFrame is excluded.",
+                "nearbyFrames contain only the configured summary neighbors, excluding selectedDisplayFrame. Search-only frame times are not exported. Missing or omitted frames have no inferred cause. CPU trees are not GPU timing or a full event timeline.",
                 "performanceDebugAtExport is a read-only cumulative snapshot of this Editor process at export time, not selected-frame or remote Player statistics. Disabled statistics are not evidence of zero cost; counts may remain from an earlier enabled period.",
                 "Console logs are an export-time snapshot, not proven logs from the selected frame. Cleared logs cannot be recovered.",
                 "screenshot is the Unity Editor main window at export time, not the recorded Profiler frame. If capture fails, status and error explain the missing image.",

@@ -32,7 +32,7 @@ namespace FlatWorld.GameplayMCP
             public string frame { get; set; }
             [ToolParameter("export: explicit 1-based Profiler display frame, overrides frame", Required = false)]
             public int? displayFrame { get; set; }
-            [ToolParameter("start/export: nearby-frame radius, 0-300", Required = false, DefaultValue = "30")]
+            [ToolParameter("start/export: optional summary radius, 0-300; omitted uses performance export settings", Required = false)]
             public int contextFrameRadius { get; set; }
         }
 
@@ -129,7 +129,7 @@ namespace FlatWorld.GameplayMCP
         {
             public JObject StartCapture(double seconds)
             {
-                object response = Start(new JObject { ["seconds"] = seconds, ["contextFrameRadius"] = 30 });
+                object response = Start(new JObject { ["seconds"] = seconds });
                 if (response is ErrorResponse error) throw new InvalidOperationException(error.Error);
                 return Status();
             }
@@ -421,7 +421,8 @@ namespace FlatWorld.GameplayMCP
 
         private static int ReadRadius(JObject args)
         {
-            int radius = args?["contextFrameRadius"]?.Value<int>() ?? 30;
+            if (args?["contextFrameRadius"] == null) return -1;
+            int radius = args["contextFrameRadius"].Value<int>();
             if (radius < 0 || radius > 300) throw new ArgumentOutOfRangeException("contextFrameRadius", "半径必须在 0～300 之间。");
             return radius;
         }

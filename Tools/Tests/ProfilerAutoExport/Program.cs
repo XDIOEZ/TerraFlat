@@ -406,7 +406,8 @@ internal static class Program
             Start(); AssemblyReloadEvents.Reload(); Frame(0, 100, 1); EditorApplication.FlushDelay();
             Check(!ProfilerDriver.enabled && !EditorApplication.isPaused && ProfilerSnapshotToolbar.Exports == 0);
         });
-        Console.WriteLine($"PASS: {passed} tests. Production controller compiled directly; Unity APIs/exporter replaced by test doubles.");
+        ProfilerSnapshotExportTests.Run((name, test) => Test(name, test));
+        Console.WriteLine($"PASS: {passed} tests. Production controller and snapshot exporter compiled directly; Unity APIs/attachments replaced by test doubles.");
     }
 
     private static void Test(string name, Action test)

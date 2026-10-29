@@ -91,7 +91,7 @@ test.system("testing", "gameplay_gateway", {}, function(data)
         and properties.enableStatistics.type == "boolean" and properties.enableStatistics.default == true
         and properties.frame.type == "string" and properties.frame.default == "latest"
         and properties.displayFrame.type == "integer" and properties.contextFrameRadius.type == "integer"
-        and properties.contextFrameRadius.default == 30,
+        and properties.contextFrameRadius.default == nil,
         "性能采集契约遗漏时长、统计开关、选帧或上下文半径参数")
     assert(data.unknownRejected and data.malformedRejected and data.unknownDomainRejected,
         "网关没有在执行前拒绝未知操作、错误参数或未知能力域")

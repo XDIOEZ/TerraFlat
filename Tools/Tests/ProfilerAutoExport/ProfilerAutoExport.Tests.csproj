@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../../Assets/Editor/FlatWorld/Automation/ProfilerAutoExporter.cs" />
+    <Compile Include="../../../puerts-unity-mcp/Packages/puerts-unity-mcp/Editor/UnityMcpProfilerSnapshot.cs" />
   </ItemGroup>
 </Project>
