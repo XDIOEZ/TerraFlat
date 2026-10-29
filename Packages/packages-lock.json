@@ -480,6 +480,12 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "nuget-packages": {
+      "version": "file:nuget-packages",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "puerts-unity-mcp": {
       "version": "file:../puerts-unity-mcp/Packages/puerts-unity-mcp",
       "depth": 0,

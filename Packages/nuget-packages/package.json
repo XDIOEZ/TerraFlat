@@ -1,0 +1,7 @@
+{
+  "name": "nuget-packages",
+  "version": "1.0.0",
+  "displayName": "NuGetPackages",
+  "description": "NuGetForUnity configuration. Package assemblies remain in Assets/Packages.",
+  "dependencies": {}
+}

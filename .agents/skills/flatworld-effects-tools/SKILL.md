@@ -7,7 +7,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 
 ## 入口与职责
 
-- 渲染资源：`Assets/9_Shaders/{Shader,Material,Volume,Resources}/`；保留 Resources 逻辑路径和移动资产的 GUID，第三方资源独立存放。
+- 渲染资源：`Assets/9_Shaders/{Shader,Material,Volume,Resources}/`；URP 管线、全局设置和默认 Volume Profile 位于 `Assets/URP/`。保留 Resources 逻辑路径和移动资产的 GUID，第三方资源独立存放。
 - 表现代码：`Assets/5_Scripts/5-3_GamePlay/Presentation/`。物品统一调用 `WorldRenderingManager`，内部按 Sorting/Shadows/Outlines/Effects 拆分；现有后端继续负责具体实现。`Effects/Management/VisualEffectManager` 管池，`Effects/Runtime/` 为独立 Effect.asmdef；`ActorRenderEffectController` 合成角色 MPB；`WorldSortingManager/WorldSortingMember` 管排序；`ActorShadowManager/WorldShadowProjectionManager` 管接触/太阳阴影。
 - 默认值：`Assets/Resources/GameConfig/Rendering/default-rendering.json`；Prefab 持有资源与逐物体外观，PlayerPrefs 持有本机偏好。表现只消费权威状态，不结算伤害、液量、引擎耗油或角色迁移。
 - AIECS：`Entities/AIECS/Presentation/`；开发工具：`Assets/5_Scripts/5-3_GamePlay/Development/{Debug,Diagnostics}/`；编辑器：`Assets/Editor/FlatWorld/`，内容工坊在 `ContentTools/ContentWorkshop/`。
