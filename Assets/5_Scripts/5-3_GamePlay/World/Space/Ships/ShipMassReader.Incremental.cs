@@ -22,7 +22,8 @@ namespace FlatWorld.Spaceflight
                 public Inventory_Data Portable, Input, Output;
                 public readonly List<Inventory_Data> MachineInventories = new();
                 public readonly Dictionary<string, FluidInventoryState> Chambers = new(StringComparer.Ordinal);
-                public readonly Dictionary<string, (Module Module, bool Enabled, bool Loaded)> LiveModules = new(StringComparer.Ordinal);
+                public readonly List<(Module Module, bool Enabled, bool Loaded)> LiveModules = new();
+                public uint LiveModuleStructureVersion;
                 public readonly HashSet<object> Dependencies = new();
                 public readonly List<Action> Unsubscribe = new();
                 public readonly List<Inventory_Data> Inventories = new();
@@ -109,15 +110,17 @@ namespace FlatWorld.Spaceflight
                 if (!cachedSources.TryGetValue(key, out MassSource source)) cachedSources.Add(key, source = new MassSource());
                 source.Used = true;
                 string coldPayload = machine == null ? data?.ItemSpecialData : null;
-                if (!ReferenceEquals(source.Data, data) || !ReferenceEquals(source.Live, live) || !ReferenceEquals(source.Machine, machine) || source.ColdPayload != coldPayload)
+                bool liveChanged = !ReferenceEquals(source.Live, live);
+                if (!ReferenceEquals(source.Data, data) || liveChanged || !ReferenceEquals(source.Machine, machine) || source.ColdPayload != coldPayload)
                 { source.Dirty = true; source.Data = data; source.Live = live; source.Machine = machine; source.ColdPayload = coldPayload; }
                 if (machine != null && !MachineContextMatches(source, machine))
                 { source.Dirty = true; CaptureMachineContext(source, machine); }
-                if (!LiveContextMatches(source, live))
+                if (liveChanged || !LiveContextMatches(source, live))
                 {
                     source.Dirty = true; source.LiveModules.Clear();
-                    if (live != null) foreach (var entry in live.Mods)
-                        source.LiveModules.Add(entry.Key, (entry.Value, entry.Value?.Enabled == true, entry.Value?.IsRuntimeLoaded == true));
+                    source.LiveModuleStructureVersion = live != null ? live.itemMods.StructureVersion : 0;
+                    if (live != null) foreach (Module module in live.Mods.Values)
+                        source.LiveModules.Add((module, module?.Enabled == true, module?.IsRuntimeLoaded == true));
                 }
                 if (source.Dirty)
                 { ReleaseOwnership(source); source.Unbind(); ResetVisited(); activeSource = source; }
@@ -126,10 +129,10 @@ namespace FlatWorld.Spaceflight
             private static bool LiveContextMatches(MassSource source, Item live)
             {
                 if (live == null) return source.LiveModules.Count == 0;
-                if (source.LiveModules.Count != live.Mods.Count) return false;
-                foreach (var entry in live.Mods)
-                    if (!source.LiveModules.TryGetValue(entry.Key, out var previous) || !ReferenceEquals(previous.Module, entry.Value) ||
-                        previous.Enabled != (entry.Value?.Enabled == true) || previous.Loaded != (entry.Value?.IsRuntimeLoaded == true)) return false;
+                if (source.LiveModuleStructureVersion != live.itemMods.StructureVersion) return false;
+                // 结构不变时复用模块引用，仍检查每步可能改变的启用和载入状态。
+                foreach (var previous in source.LiveModules)
+                    if (previous.Enabled != (previous.Module?.Enabled == true) || previous.Loaded != (previous.Module?.IsRuntimeLoaded == true)) return false;
                 return true;
             }
             private static bool MachineContextMatches(MassSource source, MachineEntity machine)

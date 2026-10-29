@@ -200,6 +200,7 @@ namespace FlatWorld.Spaceflight
             Current.State = null;
             Current.Universe = null;
             Current.sectorDirectory.Clear();
+            Current.bodyIdentityIndex.Clear();
             Current.passengerInputs.Clear();
             ClientAttackHeld = false;
             Current.sectorStreaming.Clear();

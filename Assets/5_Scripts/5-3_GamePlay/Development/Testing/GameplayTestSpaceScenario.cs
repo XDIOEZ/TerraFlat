@@ -384,6 +384,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 Planet view = SpaceMgr.ExistingInstance?.FindPlanetByBodyId(body.BodyId);
                 bool registered = SaveDataMgr.Instance.SaveData.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet);
                 bodies.Add(new JObject { ["id"] = body.BodyId, ["planetId"] = body.PlanetId,
+                    ["sessionIdentityMatches"] = session.TryGetBody(body.BodyId, out BodyState indexed) && ReferenceEquals(indexed, body),
                     ["planetRegistered"] = registered, ["registeredBodyId"] = registered ? planet.BodyId : null,
                     ["viewReady"] = view != null, ["viewBodyId"] = view?.planetData?.BodyId,
                     ["projected"] = Vector(session.ProjectPosition(new SpaceSectorPosition(body.Sector, body.PositionMeters))),

@@ -11,10 +11,10 @@
 - 普通 Item 持有当前 `VisualDefinition`，世界注册/结构刷新/重新显示时以 `visual.sortingLayerName` 和 `sortingOrder` 覆盖类别默认键；一级图层优先、同层比较顺序、同层同序才按 Y 排序。行合批按脚点行与实际一级排序键分组，部件顺序留在组内；地面建筑保留原材质队列，水下使用水面前的环境覆盖。自然资源主体和附属果实共用物品键，草花固定地形层/0 并在定义编译时校验。手持使用手持链，F5 更新定义引用，池复用清空。回归 `rendering/item_sorting_configuration`。
 - 陆地复杂嵌套 SortingGroup 的完整建筑保留原生绘制；水下沿用既有行合批，嵌套组内排序尚未做视觉验收。
 - 飞船世界由 `WorldPresentationTransformRegistry` 关联显示矩阵与 `WorldPresentationSortingDomain`，域外键取 `projected-world`。只投影显示节点，域内提交 raw 层/order/queue/脚点并压缩为临时 Order；源嵌套组保持原子性，层名保留供光照使用。投影区块地表扩展用原生合并网格参加域排序，普通地表保留 BRG。域 Dispose 必须注销映射、恢复源渲染并释放显示批次。
-- 投影区块的深度行在入域时改按实体真实三轴脚点分组，旋转/移动只投影，不按帧重建网格；离域恢复行合批。重组前后保护机器的火焰/发光附属物，不能随旧行销毁。域临时序号改变后在裁剪前统一调用一次 `SortingGroup.UpdateAllSortingGroups()`。
-- 纯表现消费者在 URP `beginContextRendering` 读取本帧船姿，域在首相机前补镜像再定序；不调整宿主模拟执行顺序。水面源坐标采样与显示屏幕光照分开，AIECS 水态 MPB 同步显示逆矩阵。规则沿 `rendering/item_sorting_configuration` 与 `space/ship_world`，实际遮挡/旋转/多船性能仍需现场验收。
+- 投影区块按实体三轴脚点分组，排序脚点从规范坐标只投影一次，同脚点以源部件层序打破平局；移动不重建网格，离域恢复行合批。重组前后保护机器火焰/发光，不能随旧行销毁。临时序号改变后在裁剪前统一调用一次 `SortingGroup.UpdateAllSortingGroups()`。
+- 船内投影先更新根姿态供镜头读取，首相机前统一同步 Renderer/灯影并定序，避免 LateUpdate 重复整套同步；区块仍在 URP `beginContextRendering` 提交最终网格。水面源坐标采样与显示屏幕光照分开，AIECS 水态 MPB 同步显示逆矩阵。规则沿 `rendering/item_sorting_configuration` 与 `space/ship_world`，实际遮挡/旋转/多船性能仍需现场验收。
 
-- 地形 BRG 的队列统一读取 `default-rendering.json` 的 `batchRenderQueueBase/batchProfiles`；贴地设施使用支撑面对应队列，位于墙下，不投接触/太阳阴影、不遮局部光。树与立体自然资源按当前物品键接入原生行网格，果实仅组内偏移；ECS 阴影使用 Shadow。
+- 地形 BRG 的队列统一读取 `default-rendering.json` 的 `batchRenderQueueBase/batchProfiles`；贴地机器用 `GroundFacility`，普通线路用 `Ground-Connection-Lit`，均在支撑地板上、墙下，不投接触/太阳阴影、不遮局部光。树与立体自然资源按当前物品键接入原生行网格，果实仅组内偏移；ECS 阴影使用 Shadow。
 - 自然资源行合批的排序点由 `NaturalEntitySpatialGeometry.ResolveMovementBlockingSortingAnchor` 取真实阻挡体中心；触发器、禁用/缺失阻挡仍用实体根点，主体与附属果实共用，贴图偏移和受击摇摆不改排序。巨矿底部碰撞偏移必须同步此脚点，回归 `item_runtime/giant_mines`、`ecology/spatial_geometry`。
 - 草花 `DepthPresentationOffset` 投影本机镜像，镜像改变同步实例/裁剪；自然物阴影已为表现坐标。BRG 提交以返回成功为准，`IRecoverableChunkViewRenderer` 核验权威格/生态与真实实例；恢复全量读取权威数据，清 Owner 整层并合并 GPU 操作，不依赖可丢失的可见索引。
 - 输送带用 FullRect Sprite，格心/尺寸读 rect、pivot、PPU；预览/合批共用 `ConveyorPresentation`。主体/侧轴在 MechanicalShaft、玩家下方，侧铁环只用于直带；视觉端口与供能端口独立。

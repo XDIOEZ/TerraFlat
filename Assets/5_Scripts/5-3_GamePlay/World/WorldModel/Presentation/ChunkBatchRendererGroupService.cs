@@ -43,7 +43,8 @@ internal static class ChunkBatchRendererGroupService
         MechanicalUpperMotionB,
         MechanicalUpperFront,
         NaturalStatic,
-        NaturalShadow
+        NaturalShadow,
+        GroundFacility
     }
 
     [StructLayout(LayoutKind.Sequential)]

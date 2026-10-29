@@ -4,6 +4,7 @@
 
 - `SpaceSectorId(long X/Y)` + 所属区内 double 米；边长 256000 米，局部范围 [-128000,128000)。Normalize/Relative 先算整数星区差再转距离；成员、重心、点速度与接触快照显式带 Sector、成对转到参考区，不合成巨大绝对 double 或借静态上下文。
 - SpaceSessionState 保存 Sectors/SimulationSeconds；Universe 只是主区别名。BodyId/PlanetId 为全局实例身份，TemplateBodyId 查所属区模板；主地球 PlanetId 沿用存档主世界名，其他区不得复用 earth/moon。
+- 会话按完整 BodyId 建立星体索引，星区生成、快照重建和退出同步登记或清理；短模板名仍只查主星区，热路径不反复解析身份和扫描星区。
 - 全目录共用固定游戏秒轴。Kepler 椭圆按半长轴、偏心率、近日点方向和恒星周期推进，默认天文倍率 720；先父后子，复用步前后位置/速度，自转读权威时钟。载入用 SpaceCatalog.RebindUniverse 应用新目录，保留身份、种子、初相和时钟，不挪船坐标。
 - SpaceMgr 登记星区时间/采光，统一引用 SpaceScene 时钟；跨区不重置昼夜、不依赖 WorldEnter。激活星区前同步自由玩家及子物品的世界归属，船内玩家保持独立世界，不能等 LateUpdate 再补一次。每区动态表现 Scene 的身份用 SpaceSectorCoordinates.SceneKey，太空判断用 SpaceMgr.IsSpaceScene。
 - SpaceSectorStreaming 只预取前进目标区，越界后到离开目标侧过渡带才释放源区，允许折返；多人共享场景/租约，边界仍可见、攻击、碰撞、交互。美术未就绪不阻挡飞行，无玩家区只推进计算场景。

@@ -213,7 +213,7 @@ public static partial class GameplayTestSystemProbe
         }
         var catalog = new JArray();
         foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
-            if (definition.Id is "ShipFloor_Iron" or "ShipFloor_Refractory" or "ShipFloor_Iron_Summoner" or "Stick_Wood" or "RailTrack")
+            if (definition.Id is "ShipFloor_Iron" or "ShipFloor_Refractory" or "ShipFloor_Iron_Summoner" or "Stick_Wood" or "RailTrack" or "ShipFiber")
                 catalog.Add(new JObject { ["id"] = definition.Id, ["layer"] = definition.Visual?.SortingLayerName,
                     ["order"] = definition.Visual?.SortingOrder, ["material"] = definition.Visual?.MaterialAddress });
         var actors = new JArray();
@@ -224,6 +224,7 @@ public static partial class GameplayTestSystemProbe
         rendering.GetSortingKey("player", out int playerLayer, out int playerOrder);
         return new JObject { ["samples"] = samples, ["catalog"] = catalog, ["actors"] = actors, ["definitionBound"] = definitionBound,
             ["depthRows"] = CaptureDepthBatchConfiguredSorting(fixture.Sprite.sprite, playerLayer, playerOrder),
+            ["groundFacilityOverlay"] = CaptureProjectedGroundFacilityOverlayOrdering(fixture.Sprite.sprite, fixture.Services.transform),
             ["nestedSorting"] = CaptureNestedSortingGroupPriority(playerLayer, playerOrder),
             ["aiecs"] = CaptureAiecsConfiguredSorting(playerLayer, playerOrder),
             ["groundCoverDefault"] = GroundCoverAccepts(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 0 }),
@@ -317,6 +318,7 @@ public static partial class GameplayTestSystemProbe
         bool keyMatchesCategory = false, backgroundBehind = false, distinctDomains = false;
         bool allRenderersInside = false, nestedRootKeyApplied = false, localKeysPreserved = false;
         bool rendererTypesProjected = false, yAndPositionProjectedOnce = false, hiddenSourcesSuppressed = false;
+        bool scheduledPoseImmediate = false, scheduledRendererDeferred = false, scheduledLatestRenderData = false;
         bool sourceRestored = false, registryReleased = false, domainsDisposed = false;
         bool domainDisposeRestoresSources = false, domainDisposeHidesCopies = false;
         bool sharedSourceHeldUntilLastProjection = false, sharedSourceRestoredAfterLastProjection = false;
@@ -417,11 +419,28 @@ public static partial class GameplayTestSystemProbe
                 Vector3.Distance(projectionB.transform.position, sourceB.transform.position) < .001f &&
                 Math.Abs(projectedMesh.transform.position.y - projectedSprite.transform.position.y -
                     (sourceMesh.transform.position.y - directSprite.transform.position.y)) < .001f;
+            Color originalColor = directSprite.color;
+            directSprite.color = Color.red;
+            Matrix4x4 scheduledMatrix = Matrix4x4.Translate(Vector3.right * 7f) * matrixA;
+            projectionA.ScheduleSynchronizationBeforeRendering(scheduledMatrix, true);
+            scheduledPoseImmediate = Vector3.Distance(projectionA.transform.position,
+                scheduledMatrix.MultiplyPoint3x4(sourceA.transform.position)) < .001f;
+            scheduledRendererDeferred = projectedSprite.color == originalColor;
+            directSprite.color = Color.green;
+            projectionA.ScheduleSynchronizationBeforeRendering(scheduledMatrix, true);
+            scheduledRendererDeferred &= projectedSprite.color == originalColor;
+            domainA.FlushLocalSortingKeys();
+            scheduledLatestRenderData = projectedSprite.color == Color.green;
+            directSprite.color = originalColor;
+            projectionA.Synchronize(matrixA, true);
+
             hiddenSourcesSuppressed = WorldPresentationTransformRegistry.TryGetSortingDomain(worldA, out var registeredA) &&
                 ReferenceEquals(registeredA, domainA) && WorldPresentationTransformRegistry.TryGetSortingDomain(worldB, out var registeredB) &&
                 ReferenceEquals(registeredB, domainB);
             projectionA.Synchronize(matrixA, false);
             domainA.Synchronize(matrixA, false);
+            directSprite.forceRenderingOff = false;
+            projectionA.ScheduleSynchronizationBeforeRendering(matrixA, false);
             hiddenSourcesSuppressed &= !projectionA.gameObject.activeInHierarchy && !domainA.Root.gameObject.activeInHierarchy &&
                 directSprite.forceRenderingOff && groupedSprite.forceRenderingOff && sourceMesh.forceRenderingOff &&
                 sourceParticles.forceRenderingOff;
@@ -618,6 +637,9 @@ public static partial class GameplayTestSystemProbe
             ["localKeysPreserved"] = localKeysPreserved,
             ["rendererTypesProjected"] = rendererTypesProjected,
             ["yAndPositionProjectedOnce"] = yAndPositionProjectedOnce,
+            ["scheduledPoseImmediate"] = scheduledPoseImmediate,
+            ["scheduledRendererDeferred"] = scheduledRendererDeferred,
+            ["scheduledLatestRenderData"] = scheduledLatestRenderData,
             ["copiedRendererCount"] = copiedRendererCount,
             ["hiddenSourcesSuppressed"] = hiddenSourcesSuppressed,
             ["domainDisposeRestoresSources"] = domainDisposeRestoresSources,
@@ -1004,6 +1026,105 @@ public static partial class GameplayTestSystemProbe
             return result;
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 使用正式地板、线路材质与机器行网格，验证任意脚点下线路始终夹在地板和墙体之间。
+    private static JObject CaptureProjectedGroundFacilityOverlayOrdering(Sprite sprite, Transform parent)
+    {
+#if UNITY_EDITOR
+        sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Food/Tea.png") ??
+            throw new InvalidOperationException("贴地线路排序采样缺少正式 Sprite。");
+        Material floorMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/9_Shaders/Material/Ground-Facility-Lit.mat");
+        Material fiberMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/9_Shaders/Material/Ground-Connection-Lit.mat");
+        Material machineMaterial = Resources.Load<Material>("Config/WorldModel/BRG/ChunkMesh-Water-Lit");
+        if (floorMaterial == null || fiberMaterial == null || machineMaterial == null)
+            throw new InvalidOperationException("贴地线路排序采样缺少正式材质。");
+        using var domain = WorldPresentationSortingDomain.Create(parent, "probe:ground-facility-overlay",
+            WorldSortingManager.ProjectedWorldCategory);
+        var source = new GameObject("[LuaGroundFacilitySource]") { hideFlags = HideFlags.HideAndDontSave };
+        source.transform.SetParent(parent, false);
+        source.transform.localPosition = Vector3.down * 32f;
+        Matrix4x4 projection = Matrix4x4.TRS(new Vector3(13.123456f, 14.58542f, 0f),
+            Quaternion.Euler(0f, 0f, 31f), Vector3.one);
+        domain.Synchronize(projection, true);
+        int layer = SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer);
+        int supportQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.Support);
+        int facilityQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.GroundFacility);
+        int wallQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.Blocking);
+        var probes = new List<SortingDomainRankProbe>();
+        WorldPresentationProjection machineProjection = null;
+        Material wallMaterial = null;
+        try
+        {
+            using var depth = new ChunkDepthMeshRenderer(source.transform, layer, 0, facilityQueue);
+            SortingDomainRankProbe AddProbe(string name, Vector3 position, Material material)
+            {
+                SortingDomainRankProbe probe = CreateSortingDomainRankProbe(parent, parent, domain,
+                    projection, name, position, layer, 0);
+                probes.Add(probe);
+                foreach (SpriteRenderer part in probe.SourceParts)
+                {
+                    part.sprite = sprite;
+                    part.sharedMaterial = material;
+                }
+                probe.Projection.Synchronize(projection, true);
+                return probe;
+            }
+            SortingDomainRankProbe floor = AddProbe("OverlayFloor", Vector3.down * 100f, floorMaterial);
+            SortingDomainRankProbe fiber = AddProbe("OverlayFiber", Vector3.up * 20f, fiberMaterial);
+            wallMaterial = new Material(floorMaterial) { renderQueue = wallQueue };
+            SortingDomainRankProbe wall = AddProbe("OverlayWall", Vector3.up * 200f, wallMaterial);
+            depth.SetEntitySortingEnabled(true);
+            foreach (int entity in new[] { 2, 1 })
+            {
+                Vector3 anchor = Vector3.up * 20f;
+                depth.Set(ChunkDepthMeshRenderer.MachineDomain, entity, 0, sprite, machineMaterial,
+                    Matrix4x4.Translate(anchor), anchor, entity == 1 ? -64 : -32, Color.white);
+            }
+            depth.Flush();
+            machineProjection = WorldPresentationProjection.Create(source.transform, parent);
+            machineProjection.SetSortingDomain(domain);
+            machineProjection.Synchronize(projection, true);
+            domain.FlushLocalSortingKeys();
+            bool machinesAboveFloor = true, machinesBelowWall = true, machineQueuesMatch = true;
+            int pipeOrder = 0, wireOrder = 0;
+            foreach (int entity in new[] { 1, 2 })
+            {
+                Transform raw = depth.GetPartSortingRoot(ChunkDepthMeshRenderer.MachineDomain, entity, 0);
+                bool found = machineProjection.TryGetProjectedTransform(raw, out Transform projected);
+                SortingGroup group = found ? projected.GetComponent<SortingGroup>() : null;
+                MeshRenderer renderer = found ? projected.GetComponentInChildren<MeshRenderer>() : null;
+                machinesAboveFloor &= group != null && group.sortingOrder > floor.DisplayGroup.sortingOrder;
+                machinesBelowWall &= group != null && group.sortingOrder < wall.DisplayGroup.sortingOrder;
+                machineQueuesMatch &= renderer != null && renderer.sharedMaterial.renderQueue == facilityQueue;
+                if (group != null) { if (entity == 1) pipeOrder = group.sortingOrder; else wireOrder = group.sortingOrder; }
+            }
+            return new JObject
+            {
+                ["supportQueue"] = supportQueue, ["facilityQueue"] = facilityQueue, ["wallQueue"] = wallQueue,
+                ["floorMaterialMatchesSupport"] = floorMaterial.renderQueue == supportQueue,
+                ["fiberMaterialMatchesFacility"] = fiberMaterial.renderQueue == facilityQueue,
+                ["machineQueuesMatch"] = machineQueuesMatch,
+                ["machinesAboveFloor"] = machinesAboveFloor, ["machinesBelowWall"] = machinesBelowWall,
+                ["connectionsKeepLayerOrder"] = pipeOrder < wireOrder && wireOrder < fiber.DisplayGroup.sortingOrder,
+                ["fiberAboveFloor"] = fiber.DisplayGroup.sortingOrder > floor.DisplayGroup.sortingOrder,
+                ["fiberBelowWall"] = fiber.DisplayGroup.sortingOrder < wall.DisplayGroup.sortingOrder
+            };
+        }
+        finally
+        {
+            machineProjection?.Release();
+            foreach (SortingDomainRankProbe probe in probes)
+            {
+                probe.Projection.Release();
+                UnityEngine.Object.DestroyImmediate(probe.Source);
+            }
+            UnityEngine.Object.DestroyImmediate(source);
+            if (wallMaterial != null) UnityEngine.Object.DestroyImmediate(wallMaterial);
+        }
+#else
+        throw new InvalidOperationException("贴地线路排序采样需要 Unity Editor。");
+#endif
     }
 
     private static JObject CaptureRotatedEntityDepthSorting(Sprite sprite, Material material, Transform originalParent,

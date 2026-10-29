@@ -83,7 +83,7 @@ internal static partial class Program
         machine.FluidState = new FluidMachineState { Chambers = new() }; Read(8d);
         var live = new Item();
         var storage = new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = Inventory(Cargo(5, 4d)) } } };
-        live.Mods["runtime-storage"] = storage;
+        live.SetModule("runtime-storage", storage);
         void ReadLive(double expected)
         {
             for (int pass = 0; pass < 2; pass++)
@@ -95,16 +95,34 @@ internal static partial class Program
         ReadLive(4d); storage.IsRuntimeLoaded = false; ReadLive(0d);
         storage.IsRuntimeLoaded = true; ReadLive(4d);
         storage.Enabled = false; ReadLive(0d); storage.Enabled = true; ReadLive(4d);
-        live.Mods["runtime-storage"] = new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = Inventory(Cargo(6, 9d)) } } }; ReadLive(9d);
+        ItemData liveCargo = storage.InventoryInstances[0].Data.itemSlots[0].itemData;
+        liveCargo.Stack.Amount = 2f; liveCargo.NotifyMassChanged(); ReadLive(8d);
+        liveCargo.Stack.Amount = 1f; liveCargo.NotifyMassChanged(); ReadLive(4d);
+        live.SetModule("runtime-storage", new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = Inventory(Cargo(6, 9d)) } } }); ReadLive(9d);
+        live.RemoveModule("runtime-storage"); ReadLive(0d);
+        live.SetModule("runtime-storage", storage); ReadLive(4d);
+        var first = new Item(); first.SetModule("runtime-storage", storage);
+        live = first; ReadLive(4d);
+        var replacement = new Item();
+        replacement.SetModule("runtime-storage", new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = Inventory(Cargo(7, 12d)) } } });
+        live = replacement; ReadLive(12d);
+        live = null; ReadLive(0d);
+        live = replacement; ReadLive(12d);
     }
     private static void IncrementalAllocations()
     {
         var reader = new Reader(); ItemData[] pieces = Enumerable.Range(1, 165).Select(i => Cargo(i, 5d)).ToArray();
-        foreach (ItemData piece in pieces) Building(piece);
+        Item[] liveItems = new Item[pieces.Length];
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            Building(pieces[i]);
+            liveItems[i] = new Item();
+            liveItems[i].SetModule("test", new Module());
+        }
         void Read()
         {
             reader.BeginIncremental();
-            foreach (ItemData piece in pieces) reader.CachedContents(piece, piece);
+            for (int i = 0; i < pieces.Length; i++) reader.CachedContents(pieces[i], pieces[i], liveItems[i]);
             reader.EndIncremental();
         }
         for (int i = 0; i < 20; i++) Read();

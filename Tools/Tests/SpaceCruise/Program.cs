@@ -9,6 +9,7 @@ internal static partial class Program
     private static void Main()
     {
         Run("会话身份索引增删、替换与保存恢复", QueryIndexMutations);
+        Run("星体完整身份索引注册、重建和无分配查询", BodyIdentityIndexLifecycle);
         Run("星区负向、多区、高位整数与空域惯性", SectorCoordinates);
         Run("边界预加载、自由穿越、折返及多人资源租约", SectorStreaming);
         Run("跨区星体扫掠与巨大编号局部坐标", SectorSurfaceContacts);

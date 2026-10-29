@@ -204,6 +204,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     public void SetVisible(bool visible)
     {
         if (released) return;
+        if (synchronizedVisible == visible && gameObject.activeSelf == visible) return;
         synchronizedVisible = visible;
         if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
         Transform domainRoot = sortingDomain?.Root;
@@ -276,10 +277,16 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             if (owner != null) owner.hierarchyDirty = true;
     }
 
-    // 结构变化才重新发现组件，逐帧只同步已经绑定的显示数据。
-    public void Synchronize(Matrix4x4 worldToDisplay, bool visible)
+    // 先更新镜头可读取的根姿态，全部绘制数据留到渲染前统一读取一次。
+    public void ScheduleSynchronizationBeforeRendering(Matrix4x4 worldToDisplay, bool visible)
     {
         if (released) return;
+        if (sortingDomain == null || hierarchyDirty || !visible) Synchronize(worldToDisplay, visible);
+        else SynchronizeProjectionRootPose(worldToDisplay, visible);
+    }
+
+    private void SynchronizeProjectionRootPose(Matrix4x4 worldToDisplay, bool visible)
+    {
         if (synchronizedProjection != worldToDisplay)
         {
             synchronizedProjection = worldToDisplay;
@@ -287,6 +294,23 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         }
         if (sourceRoot == null) { SetVisible(false); return; }
         SetVisible(visible);
+        if (!visible) return;
+        Matrix4x4 world = worldToDisplay * sourceRoot.localToWorldMatrix;
+        Matrix4x4 local = transform.parent != null ? transform.parent.worldToLocalMatrix * world : world;
+        Vector3 position = local.GetColumn(3);
+        Quaternion rotation = local.rotation;
+        Vector3 scale = local.lossyScale;
+        if (transform.localPosition != position) transform.localPosition = position;
+        if (transform.localRotation != rotation) transform.localRotation = rotation;
+        if (transform.localScale != scale) transform.localScale = scale;
+    }
+
+    // 结构变化才重新发现组件，逐帧只同步已经绑定的显示数据。
+    public void Synchronize(Matrix4x4 worldToDisplay, bool visible)
+    {
+        if (released) return;
+        SynchronizeProjectionRootPose(worldToDisplay, visible);
+        if (sourceRoot == null) return;
         if (hierarchyDirty) RebuildHierarchy();
         if (!visible)
         {
@@ -294,11 +318,6 @@ public sealed class WorldPresentationProjection : MonoBehaviour
                 if (copy.Source != null) copy.Source.forceRenderingOff = true;
             return;
         }
-        Matrix4x4 world = worldToDisplay * sourceRoot.localToWorldMatrix;
-        Matrix4x4 local = transform.parent != null ? transform.parent.worldToLocalMatrix * world : world;
-        transform.localPosition = local.GetColumn(3);
-        transform.localRotation = local.rotation;
-        transform.localScale = local.lossyScale;
         foreach (NodeCopy node in nodes.Values)
         {
             if (node.Source == null || node.Target == null) { hierarchyDirty = true; continue; }
@@ -599,8 +618,10 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             }
             int queue = node.QueueSource != null && copies.TryGetValue(node.QueueSource, out RenderCopy queueCopy)
                 ? queueCopy.RenderQueue : 3000;
+            // 从规范脚点只投影一次，避免不同显示层级的浮点误差拆开同格线路。
+            float footY = synchronizedProjection.MultiplyPoint3x4(source.transform.position).y;
             sortingDomain.ApplyLocalSortingGroupKey(target, source.sortingLayerID, source.sortingOrder,
-                queue, target.transform.position.y);
+                queue, footY, sameFootOrder: node.QueueSource.sortingOrder);
             node.SortingRegistered = true;
         }
         foreach (RenderCopy copy in copies.Values)
@@ -616,8 +637,9 @@ public sealed class WorldPresentationProjection : MonoBehaviour
                 }
                 continue;
             }
-            float footY = copy.Target is SpriteRenderer sprite && sprite.spriteSortPoint == SpriteSortPoint.Pivot
-                ? copy.Target.transform.position.y : copy.Target.bounds.center.y;
+            Vector3 sourceFoot = copy.Source is SpriteRenderer sprite && sprite.spriteSortPoint == SpriteSortPoint.Pivot
+                ? copy.Source.transform.position : copy.Source.bounds.center;
+            float footY = synchronizedProjection.MultiplyPoint3x4(sourceFoot).y;
             sortingDomain.ApplyLocalRendererSortingKey(copy.Target, copy.Source.sortingLayerID, copy.Source.sortingOrder,
                 copy.RenderQueue, footY);
             copy.SortingRegistered = true;

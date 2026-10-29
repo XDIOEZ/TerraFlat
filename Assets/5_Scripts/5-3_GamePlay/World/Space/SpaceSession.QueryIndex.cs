@@ -9,6 +9,7 @@ namespace FlatWorld.Spaceflight
         private readonly StateQueryIndex<ShipState> shipQueryIndex = new(value => value.ShipId);
         private readonly StateQueryIndex<ShipFlightState> flightQueryIndex = new(value => value.ShipId);
         private readonly StateQueryIndex<ShipDeviceState> deviceQueryIndex = new(value => value.PieceId);
+        private readonly SpaceBodyIdentityIndex bodyIdentityIndex = new();
 
         private void ClearQueryIndexes()
         { shipQueryIndex.Clear(); flightQueryIndex.Clear(); deviceQueryIndex.Clear(); }
@@ -39,6 +40,31 @@ namespace FlatWorld.Spaceflight
             public void Clear()
             { source = null; revision = 0; entries.Clear(); }
         }
+        #endregion
+    }
+
+    internal sealed class SpaceBodyIdentityIndex
+    {
+        #region 星区星体身份索引
+        private readonly Dictionary<string, BodyState> bodies = new(StringComparer.Ordinal);
+
+        // 按星区登记原始对象，完整身份只在目录变更时解析。
+        public void Register(UniverseSimulation simulation)
+        {
+            foreach (BodyState body in simulation.State.Bodies)
+                if (SpaceSectorCoordinates.TryParseIdentity(body.BodyId, out _, out _)) bodies.TryAdd(body.BodyId, body);
+            foreach (BodyState body in simulation.State.Bodies)
+                if (SpaceSectorCoordinates.TryParseIdentity(body.TemplateBodyId, out _, out _)) bodies.TryAdd(body.TemplateBodyId, body);
+        }
+
+        public bool TryGetBody(string bodyId, UniverseSimulation mainUniverse, out BodyState body)
+        {
+            body = null;
+            return !string.IsNullOrWhiteSpace(bodyId) &&
+                (bodies.TryGetValue(bodyId, out body) || mainUniverse != null && mainUniverse.TryGetBody(bodyId, out body));
+        }
+
+        public void Clear() => bodies.Clear();
         #endregion
     }
 }

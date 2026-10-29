@@ -116,15 +116,15 @@ public sealed class WorldPresentationSortingDomain : IDisposable
     internal void NotifyLocalSortingGroupsChanged() => localGroupsDirty = true;
 
     public void ApplyLocalRendererSortingKey(Renderer renderer, int layerId, int rawOrder,
-        int renderQueue, float footY, int batchOrder = 0)
-        => ApplyLocalSortingKey(renderer, layerId, rawOrder, renderQueue, footY, batchOrder);
+        int renderQueue, float footY, int batchOrder = 0, int sameFootOrder = 0)
+        => ApplyLocalSortingKey(renderer, layerId, rawOrder, renderQueue, footY, batchOrder, sameFootOrder);
 
     public void ApplyLocalSortingGroupKey(SortingGroup group, int layerId, int rawOrder,
-        int renderQueue, float footY, int batchOrder = 0)
-        => ApplyLocalSortingKey(group, layerId, rawOrder, renderQueue, footY, batchOrder);
+        int renderQueue, float footY, int batchOrder = 0, int sameFootOrder = 0)
+        => ApplyLocalSortingKey(group, layerId, rawOrder, renderQueue, footY, batchOrder, sameFootOrder);
 
     private void ApplyLocalSortingKey(Component target, int layerId, int rawOrder,
-        int renderQueue, float footY, int batchOrder)
+        int renderQueue, float footY, int batchOrder, int sameFootOrder)
     {
         if (IsDisposed || disposing) throw new ObjectDisposedException(nameof(WorldPresentationSortingDomain));
         if (target == null) throw new ArgumentNullException(nameof(target));
@@ -141,7 +141,7 @@ public sealed class WorldPresentationSortingDomain : IDisposable
             localSortingDirty = true;
             localGroupsDirty = true;
         }
-        if (entry.SetRawKey(layerId, rawOrder, renderQueue, footY, batchOrder)) localSortingDirty = true;
+        if (entry.SetRawKey(layerId, rawOrder, renderQueue, footY, batchOrder, sameFootOrder)) localSortingDirty = true;
         else if (!localSortingDirty && entry.RepairAppliedRank()) localGroupsDirty = true;
     }
 
@@ -228,7 +228,7 @@ public sealed class WorldPresentationSortingDomain : IDisposable
         private readonly int stableId;
         private int appliedRank = int.MinValue;
         internal readonly Component Target;
-        internal int LayerId, RawOrder, RenderQueue, BatchOrder;
+        internal int LayerId, RawOrder, RenderQueue, BatchOrder, SameFootOrder;
         internal float FootY;
 
         internal LocalSortingEntry(Component target)
@@ -240,11 +240,11 @@ public sealed class WorldPresentationSortingDomain : IDisposable
             stableId = target.GetInstanceID();
         }
 
-        internal bool SetRawKey(int layerId, int rawOrder, int renderQueue, float footY, int batchOrder)
+        internal bool SetRawKey(int layerId, int rawOrder, int renderQueue, float footY, int batchOrder, int sameFootOrder)
         {
             bool changed = LayerId != layerId || RawOrder != rawOrder || RenderQueue != renderQueue ||
-                           !FootY.Equals(footY) || BatchOrder != batchOrder || appliedRank == int.MinValue;
-            LayerId = layerId; RawOrder = rawOrder; RenderQueue = renderQueue; FootY = footY; BatchOrder = batchOrder;
+                           !FootY.Equals(footY) || BatchOrder != batchOrder || SameFootOrder != sameFootOrder || appliedRank == int.MinValue;
+            LayerId = layerId; RawOrder = rawOrder; RenderQueue = renderQueue; FootY = footY; BatchOrder = batchOrder; SameFootOrder = sameFootOrder;
             return changed;
         }
 
@@ -259,6 +259,9 @@ public sealed class WorldPresentationSortingDomain : IDisposable
             result = left.BatchOrder.CompareTo(right.BatchOrder);
             if (result != 0) return result;
             result = right.FootY.CompareTo(left.FootY);
+            if (result != 0) return result;
+            // 同格独立组沿用源部件层序，不依赖对象创建时的实例编号。
+            result = left.SameFootOrder.CompareTo(right.SameFootOrder);
             return result != 0 ? result : left.stableId.CompareTo(right.stableId);
         }
 

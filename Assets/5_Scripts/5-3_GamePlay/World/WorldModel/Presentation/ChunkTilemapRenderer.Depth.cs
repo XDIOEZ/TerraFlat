@@ -156,7 +156,7 @@ public sealed partial class ChunkTilemapRenderer
             {
                 WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory, out int layer, out int order);
                 groundBuildingDepthMesh = new ChunkDepthMeshRenderer(transform, layer, order,
-                    ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.Support));
+                    ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.GroundFacility));
                 groundBuildingDepthMesh.SetEntitySortingEnabled(entitySortingForProjection);
             }
             return groundBuildingDepthMesh;
@@ -183,7 +183,7 @@ public sealed partial class ChunkTilemapRenderer
     {
         if ((!submerged && !groundSorting) || source == null) return source;
         int queue = submerged ? ResolveSubmergedBuildingRenderQueue() :
-            ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.Support);
+            ChunkBatchRendererGroupService.GetLayerRenderQueue(ChunkBatchRendererGroupService.VisualLayer.GroundFacility);
         var key = (source, queue);
         if (!buildingOverlayMaterials.TryGetValue(key, out Material material))
         {

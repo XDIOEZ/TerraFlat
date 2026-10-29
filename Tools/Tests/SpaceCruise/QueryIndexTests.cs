@@ -67,6 +67,58 @@ internal static partial class Program
         bytes = GC.GetAllocatedBytesForCurrentThread() - before;
         Check(visited == 100000 && bytes == 0, $"direct state collection enumeration allocated {bytes} bytes");
     }
+
+    private static void BodyIdentityIndexLifecycle()
+    {
+        SpaceSectorId remoteSector = new(long.MaxValue - 1, long.MinValue + 1);
+        string primaryAlias = SpaceSectorCoordinates.BodyId(default, "alias");
+        string remoteId = SpaceSectorCoordinates.BodyId(remoteSector, "remote");
+        BodyState primary = new() { BodyId = SpaceSectorCoordinates.BodyId(default, "main"),
+            TemplateBodyId = remoteId, PlanetId = "primary", RadiusMeters = 1d };
+        BodyState aliasTarget = new() { BodyId = primaryAlias, TemplateBodyId = "local", PlanetId = "alias", RadiusMeters = 1d };
+        BodyState localAlias = new() { BodyId = SpaceSectorCoordinates.BodyId(default, "third"),
+            TemplateBodyId = primaryAlias, PlanetId = "third", RadiusMeters = 1d };
+        BodyState remote = new() { BodyId = remoteId, TemplateBodyId = "remote", PlanetId = "remote", RadiusMeters = 1d };
+        BodyState remoteOnly = new() { BodyId = SpaceSectorCoordinates.BodyId(remoteSector, "only"),
+            TemplateBodyId = "only", PlanetId = "remote-only", RadiusMeters = 1d };
+        UniverseSimulation main = new(new UniverseState { Bodies = new() { primary, aliasTarget, localAlias } });
+        UniverseSimulation distant = new(new UniverseState { Sector = remoteSector, Bodies = new() { remote, remoteOnly } });
+        var index = new SpaceBodyIdentityIndex();
+        index.Register(main);
+        Check(!index.TryGetBody(remoteOnly.BodyId, main, out _), "unregistered sector cannot resolve");
+        index.Register(distant);
+        string[] queries = { primary.BodyId, primaryAlias, remoteId, remoteOnly.BodyId, "local", "remote", "only",
+            "sector:x:0/body:main", "sector:5:6/body:missing", "", null };
+        foreach (string query in queries)
+        {
+            BodyState expected = null;
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                if (!SpaceSectorCoordinates.TryParseIdentity(query, out _, out _)) main.TryGetBody(query, out expected);
+                else if (!main.TryGetBody(query, out expected)) distant.TryGetBody(query, out expected);
+            }
+            bool actualResult = index.TryGetBody(query, main, out BodyState actual);
+            Check(actualResult == (expected != null) && ReferenceEquals(actual, expected), "indexed result matches sector lookup precedence");
+        }
+        Check(index.TryGetBody(remoteId, main, out BodyState conflict) && ReferenceEquals(conflict, primary),
+            "first sector qualified template retains precedence over later body identity");
+        Check(index.TryGetBody(primaryAlias, main, out conflict) && ReferenceEquals(conflict, aliasTarget),
+            "within a sector exact body identity precedes a template alias");
+        for (int i = 0; i < 1000; i++) index.TryGetBody(remoteOnly.BodyId, main, out _);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 100000; i++)
+            if (!index.TryGetBody(remoteOnly.BodyId, main, out _)) throw new InvalidOperationException("warm body lookup changed");
+        long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
+        Check(bytes == 0, $"stable body identity lookup allocated {bytes} bytes");
+        index.Clear();
+        Check(!index.TryGetBody(remoteOnly.BodyId, main, out _), "cleared index cannot return prior sector object");
+        BodyState restored = JsonConvert.DeserializeObject<BodyState>(JsonConvert.SerializeObject(remoteOnly));
+        UniverseSimulation restoredSector = new(new UniverseState { Sector = remoteSector, Bodies = new() { restored } });
+        index.Register(restoredSector);
+        Check(index.TryGetBody(restored.BodyId, main, out BodyState found) && ReferenceEquals(restored, found) &&
+            !ReferenceEquals(remoteOnly, found), "rebuilt index resolves the restored object");
+        Console.WriteLine($"Body identity query: 100000 warm queries, {bytes} B");
+    }
     #endregion
 }
 

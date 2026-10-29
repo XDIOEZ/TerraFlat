@@ -163,11 +163,11 @@ internal static partial class Program
         Binary(anvil, Mod_ManualProcessor.ModuleId, state);
         reader.Reset(); Near(16d, reader.ReadItem(anvil), "cold anvil includes tool and materials");
         var live = new Item();
-        live.Mods[Mod_ManualProcessor.ModuleId] = new Mod_ManualProcessor
+        live.SetModule(Mod_ManualProcessor.ModuleId, new Mod_ManualProcessor
         {
             Processor = new MachineProcessor { Input = new Inventory { Data = state.Processing.Input }, Output = new Inventory { Data = state.Processing.Output } },
             ToolInventory = new Inventory { Data = state.Tool }
-        };
+        });
         reader.Reset(); Near(16d, reader.ReadItem(anvil, live), "live inventory replaces the same module's cold payload");
     }
     private static void ResourceChanges()
@@ -187,7 +187,7 @@ internal static partial class Program
         var reader = new Reader(); ItemData owner = Cargo(1, 1d), cargo = Cargo(2, 2d);
         var liveBag = Inventory(cargo); var live = new Item();
         owner.ModuleDataDic["bag"] = new Inventory_ModuleData { Data = new() { ["old"] = Inventory(Cargo(3, 8d)) } };
-        live.Mods["bag"] = new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = liveBag } } };
+        live.SetModule("bag", new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = liveBag } } });
         reader.Reset(); Near(3d, reader.ReadItem(owner, live), "live store replaces old module store");
         cargo.Stack.Amount = 3f;
         reader.Reset(); Near(7d, reader.ReadItem(owner, live), "stack changes are never cached as mass");
@@ -244,7 +244,7 @@ internal static partial class Program
         a.PortableTank = new FluidInventory { State = gas }; b.PortableTank = a.PortableTank;
         reader.Reset(); Near(4d, reader.ReadItem(a) + reader.ReadItem(b), "shared tank state is counted once across items");
         var liquid = new LiquidContainerState { Composition = new() { ["test-liquid"] = 4d } };
-        var live = new Item(); live.Mods["water-a"] = new Mod_WaterVessel { Data = liquid }; live.Mods["water-b"] = new Mod_WaterVessel { Data = liquid };
+        var live = new Item(); live.SetModule("water-a", new Mod_WaterVessel { Data = liquid }); live.SetModule("water-b", new Mod_WaterVessel { Data = liquid });
         reader.Reset(); Near(9d, reader.ReadItem(Cargo(3, 1d), live), "shared liquid state is counted once");
         liquid.Composition["test-liquid"] = 2d;
         reader.Reset(); Near(5d, reader.ReadItem(Cargo(3, 1d), live), "live liquid changes update mass");
@@ -297,11 +297,11 @@ internal static partial class Program
         Binary(bagItem, ModText.Equipment_Store, new List<EquipmentInstance>
         { new EquipmentInstance_Bag { BagData = Inventory(Cargo(99, 99d)) } });
         var live = new Item();
-        live.Mods[ModText.Equipment_Module] = new Mod_Equipment
+        live.SetModule(ModText.Equipment_Module, new Mod_Equipment
         {
             EquipmentInventory = new Inventory { Data = Inventory(bagItem) },
             Instances = new() { new EquipmentInstance_Bag { EquippedItem = bagItem, BagData = Inventory(Cargo(3, 3d)) } }
-        };
+        });
         reader.Reset(); Near(6d, reader.ReadItem(owner, live), "equipped live bag skips stale binary store");
         Check(DecodeCounters.Binary == 0, "stale equipped payload should not even decode");
     }
@@ -310,7 +310,7 @@ internal static partial class Program
         var reader = new Reader(); var owner = Cargo(1, 1d); var child = Cargo(2, 2d);
         child.ModuleDataDic["bag"] = new Inventory_ModuleData { Data = new() { ["child"] = Inventory(Cargo(3, 3d)) } };
         owner.ModuleDataDic["bag"] = new Inventory_ModuleData { Data = new() { ["stale"] = Inventory(Cargo(4, 40d)) } };
-        var live = new Item(); live.Mods["bag"] = new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = Inventory(child) } } };
+        var live = new Item(); live.SetModule("bag", new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = Inventory(child) } } });
         for (int i = 0; i < 100; i++) { reader.Reset(); Near(6d, reader.ReadItem(owner, live), "recursive child must not overwrite outer live module exclusion"); }
     }
     #endregion

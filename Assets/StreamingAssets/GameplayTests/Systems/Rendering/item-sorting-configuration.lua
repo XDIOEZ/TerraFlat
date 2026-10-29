@@ -79,6 +79,15 @@ test.system("rendering", "item_sorting_configuration", {}, function(data)
     for _, id in ipairs({"ShipFloor_Iron_Summoner", "Stick_Wood"}) do
         assert(catalog[id].layer == "Player" and catalog[id].order == 100, "普通物品未继承动态默认图层：" .. id)
     end
+    assert(catalog.ShipFiber.material == "Assets/9_Shaders/Material/Ground-Connection-Lit.mat",
+        "光纤仍然与支撑地板共用同一绘制队列")
+    local overlay = data.groundFacilityOverlay
+    assert(overlay.supportQueue < overlay.facilityQueue and overlay.facilityQueue < overlay.wallQueue and
+        overlay.floorMaterialMatchesSupport and overlay.fiberMaterialMatchesFacility and overlay.machineQueuesMatch,
+        "贴地设施没有读取位于支撑地板和墙体之间的正式绘制队列")
+    assert(overlay.machinesAboveFloor and overlay.machinesBelowWall and overlay.fiberAboveFloor and overlay.fiberBelowWall,
+        "投影后电线、水管或光纤被地板遮住，或越过墙体；排序不能依赖实体创建顺序和脚点 Y")
+    assert(overlay.connectionsKeepLayerOrder, "同格管道、电线、光纤没有保留由下到上的部件层序")
     assert(#data.actors >= 13, "没有读取完整生物目录")
     for _, actor in ipairs(data.actors) do
         assert(actor.layer == "Player" and actor.order == 100, "生物未继承正式动态排序：" .. actor.id)
@@ -98,6 +107,8 @@ test.system("rendering", "presentation_sorting_domain", {}, function(data)
         "不同世界混用了排序域，或 SortingGroup.sortAtRoot 绕过了外层域")
     assert(data.localKeysPreserved and data.rendererTypesProjected and data.yAndPositionProjectedOnce,
         "域投影没有保留 Sprite/Mesh/粒子的局部键、Y 顺序或单次位置变换")
+    assert(data.scheduledPoseImmediate and data.scheduledRendererDeferred and data.scheduledLatestRenderData,
+        "投影没有立即更新镜头根姿态、没有合并绘制同步，或渲染前漏读最终源状态")
     assert(data.copiedRendererCount >= 5 and data.hiddenSourcesSuppressed and data.sourceRestored,
         "投影缺少原生 Renderer，或隐藏/释放没有抑制与恢复源 Renderer")
     assert(data.domainDisposeRestoresSources and data.domainDisposeHidesCopies and

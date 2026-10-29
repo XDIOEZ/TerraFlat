@@ -113,7 +113,22 @@ public class Ex_ModData_MemoryPackable : ModuleData
 }
 public sealed class Inventory_ModuleData : ModuleData
 { public Dictionary<string, Inventory_Data> Data = new(); }
-public sealed class Item { public Dictionary<string, Module> Mods = new(StringComparer.Ordinal); }
+public sealed class Item
+{
+    public ItemMods itemMods { get; } = new();
+    public IReadOnlyDictionary<string, Module> Mods => itemMods.Mods;
+    public void SetModule(string name, Module module) => itemMods.SetModule(name, module);
+    public void RemoveModule(string name) => itemMods.RemoveModule(name);
+}
+public sealed class ItemMods
+{
+    private readonly Dictionary<string, Module> modules = new(StringComparer.Ordinal);
+    public uint StructureVersion { get; private set; }
+    public IReadOnlyDictionary<string, Module> Mods { get; }
+    public ItemMods() => Mods = new System.Collections.ObjectModel.ReadOnlyDictionary<string, Module>(modules);
+    public void SetModule(string name, Module module) { modules[name] = module; StructureVersion++; }
+    public void RemoveModule(string name) { if (modules.Remove(name)) StructureVersion++; }
+}
 public class Module { public bool Enabled = true, IsRuntimeLoaded = true; }
 public sealed class Mod_Inventory : Module
 {
@@ -178,6 +193,8 @@ public partial class Mod_Building
         module = null; state = null; return false;
     }
     private static int GenerateUniqueRuntimeGuid() => 100000;
+    // 载荷测试不模拟建造材料复制。
+    private static void CopyCraftingMaterials(ItemData source, ItemData target) { }
     private static string CreateStatefulSummonerIdentity(string snapshot) => "building-snapshot:" + snapshot;
     private static bool WriteBuildingData(ItemData data, Action<Building_Data> mutate)
     {

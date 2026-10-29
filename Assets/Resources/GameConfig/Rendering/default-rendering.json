@@ -158,6 +158,7 @@
       { "visualLayer": "Water", "batchOrder": 1, "renderQueueOffset": 2 },
       { "visualLayer": "TerrainHeightShadow", "batchOrder": 4, "renderQueueOffset": 5 },
       { "visualLayer": "Support", "batchOrder": 2, "renderQueueOffset": 3 },
+      { "visualLayer": "GroundFacility", "batchOrder": 2, "renderQueueOffset": 4 },
       { "visualLayer": "Environment", "batchOrder": 2, "renderQueueOffset": 3 },
       { "visualLayer": "Grass", "batchOrder": 2, "renderQueueOffset": 2 },
       { "visualLayer": "Snow", "batchOrder": 3, "renderQueueOffset": 4 },

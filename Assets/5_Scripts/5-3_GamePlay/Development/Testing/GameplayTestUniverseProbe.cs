@@ -322,6 +322,40 @@ public static class GameplayTestUniverseProbe
         ["output"] = Position(SpaceSectorCoordinates.Normalize(sector, new SpaceVector2(x, y)))
     };
 
+    private static JObject CaptureBodyIdentityIndex()
+    {
+        SpaceSectorId remoteSector = new(long.MaxValue - 1, long.MinValue + 1);
+        BodyState mainBody = new() { BodyId = SpaceSectorCoordinates.BodyId(default, "fixture"),
+            TemplateBodyId = "fixture", PlanetId = "main", RadiusMeters = 1d };
+        BodyState remoteBody = new() { BodyId = SpaceSectorCoordinates.BodyId(remoteSector, "fixture"),
+            TemplateBodyId = "fixture", PlanetId = "remote", RadiusMeters = 1d };
+        var main = new UniverseSimulation(new UniverseState { Bodies = new List<BodyState> { mainBody } });
+        var remote = new UniverseSimulation(new UniverseState { Sector = remoteSector, Bodies = new List<BodyState> { remoteBody } });
+        var index = new SpaceBodyIdentityIndex();
+        index.Register(main);
+        bool absentBeforeRegistration = !index.TryGetBody(remoteBody.BodyId, main, out _);
+        index.Register(remote);
+        bool mainFull = index.TryGetBody(mainBody.BodyId, main, out BodyState found) && ReferenceEquals(found, mainBody);
+        bool remoteFull = index.TryGetBody(remoteBody.BodyId, main, out found) && ReferenceEquals(found, remoteBody);
+        bool mainAlias = index.TryGetBody("fixture", main, out found) && ReferenceEquals(found, mainBody);
+        bool missing = !index.TryGetBody("sector:5:6/body:missing", main, out _) &&
+            !index.TryGetBody(null, main, out _) && !index.TryGetBody("sector:x:0/body:fixture", main, out _);
+        for (int i = 0; i < 32; i++) index.TryGetBody(remoteBody.BodyId, main, out _);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++) index.TryGetBody(remoteBody.BodyId, main, out _);
+        long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+        index.Clear();
+        bool cleared = !index.TryGetBody(remoteBody.BodyId, main, out _);
+        BodyState restored = Clone(remoteBody);
+        var restoredUniverse = new UniverseSimulation(new UniverseState { Sector = remoteSector, Bodies = new List<BodyState> { restored } });
+        index.Register(restoredUniverse);
+        bool rebound = index.TryGetBody(restored.BodyId, main, out found) && ReferenceEquals(found, restored) &&
+            !ReferenceEquals(found, remoteBody);
+        return new JObject { ["mainFull"] = mainFull, ["remoteFull"] = remoteFull, ["mainAlias"] = mainAlias,
+            ["absentBeforeRegistration"] = absentBeforeRegistration, ["missing"] = missing, ["cleared"] = cleared,
+            ["rebound"] = rebound, ["queryCount"] = 1000, ["allocatedBytes"] = allocatedBytes };
+    }
+
     private static JObject CaptureCoordinates()
     {
         SpaceSectorId huge = new(long.MaxValue - 1, long.MinValue + 1);
@@ -372,6 +406,7 @@ public static class GameplayTestUniverseProbe
         {
             ["size"] = SpaceSectorCoordinates.SizeMeters, ["halfSize"] = SpaceSectorCoordinates.HalfSizeMeters,
             ["normalizations"] = normalizations, ["sceneKeys"] = scenes, ["identities"] = identities,
+            ["bodyIdentityIndex"] = CaptureBodyIdentityIndex(),
             ["invalid"] = invalid, ["guards"] = guards,
             ["relative"] = Vector(relative), ["roundTrip"] = new JObject { ["before"] = Position(point), ["after"] = Position(restoredPoint) },
             ["contacts"] = CaptureContactSamples(huge)

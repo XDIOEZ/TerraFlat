@@ -546,6 +546,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 75fd2b0b4a35447f884857b8f005335e
+    m_Address: Assets/9_Shaders/Material/Ground-Connection-Lit.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemMaterial
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: eb8d3e53cbaa4497aa5644c2be743045
     m_Address: Assets/9_Shaders/Material/Ground-Facility-Lit.mat
     m_ReadOnly: 0

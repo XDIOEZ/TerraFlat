@@ -14,6 +14,7 @@ namespace FlatWorld.Spaceflight
         private void RebuildSectorDirectory()
         {
             sectorDirectory.Clear();
+            bodyIdentityIndex.Clear();
             gravitySources.Clear();
             foreach (UniverseState sector in State.Sectors)
             {
@@ -22,6 +23,7 @@ namespace FlatWorld.Spaceflight
                 sector.SimulationSeconds = State.SimulationSeconds;
                 var simulation = new UniverseSimulation(sector);
                 sectorDirectory.Add(sector.Sector, simulation);
+                bodyIdentityIndex.Register(simulation);
                 RegisterGravitySources(simulation);
                 EnsureSectorOreAsteroidsGenerated(sector);
             }
@@ -37,6 +39,7 @@ namespace FlatWorld.Spaceflight
             data.SimulationSeconds = State.SimulationSeconds;
             var simulation = new UniverseSimulation(data);
             State.Sectors.Add(data); sectorDirectory.Add(sector, simulation);
+            bodyIdentityIndex.Register(simulation);
             RegisterGravitySources(simulation);
             RegisterSectorPlanets(data, null);
             EnsureSectorOreAsteroidsGenerated(data);
@@ -54,15 +57,7 @@ namespace FlatWorld.Spaceflight
             }
         }
         public bool TryGetBody(string bodyId, out BodyState body)
-        {
-            body = null;
-            if (string.IsNullOrWhiteSpace(bodyId)) return false;
-            if (!SpaceSectorCoordinates.TryParseIdentity(bodyId, out _, out _))
-                return Universe != null && Universe.TryGetBody(bodyId, out body);
-            foreach (UniverseSimulation simulation in sectorDirectory.Values)
-                if (simulation.TryGetBody(bodyId, out body)) return true;
-            return false;
-        }
+            => bodyIdentityIndex.TryGetBody(bodyId, Universe, out body);
         public BodyState GetBody(string bodyId) => TryGetBody(bodyId, out BodyState body) ? body :
             throw new KeyNotFoundException("星体不存在：" + bodyId);
         private void AdvanceSectorTime(double seconds)

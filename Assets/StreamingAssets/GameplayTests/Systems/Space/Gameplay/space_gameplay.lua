@@ -229,6 +229,7 @@ do
             for _, body in ipairs(visit.bodies) do
                 assert(not ids[body.id], "星体实例身份重复：" .. body.id)
                 ids[body.id] = true
+                assert(body.sessionIdentityMatches, "正式会话没有按完整身份找到当前星区中的星体：" .. body.id)
                 assert(body.planetRegistered and body.registeredBodyId == body.id, "星球数据登记缺失：" .. body.id)
                 assert(body.viewReady and body.viewBodyId == body.id, "真实星体场景对象缺失：" .. body.id)
                 local dx, dy = body.projected.x - body.viewPosition.x, body.projected.y - body.viewPosition.y

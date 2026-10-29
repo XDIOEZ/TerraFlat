@@ -66,7 +66,7 @@ namespace FlatWorld.Spaceflight
                     interiorChunkRenderers[view] = view.GetComponentInChildren<ChunkTilemapRenderer>(true);
                 }
                 display.SetSortingDomain(domain);
-                display.Synchronize(projection, visible);
+                display.ScheduleSynchronizationBeforeRendering(projection, visible);
                 if (interiorChunkRenderers.TryGetValue(view, out ChunkTilemapRenderer renderer) && renderer != null)
                     ChunkBatchRendererGroupService.SetOwnerExternalProjection(renderer, projection, visible, domain);
             }
@@ -78,7 +78,7 @@ namespace FlatWorld.Spaceflight
                 if (!interiorItemProjections.TryGetValue(item, out WorldPresentationProjection display) || display == null || display.IsReleased)
                     interiorItemProjections[item] = display = WorldPresentationProjection.Create(item.transform, transform);
                 display.SetSortingDomain(domain);
-                display.Synchronize(projection, visible);
+                display.ScheduleSynchronizationBeforeRendering(projection, visible);
             }
             if (!ship.IsWreck)
                 foreach (ShipPieceState piece in ship.Pieces)

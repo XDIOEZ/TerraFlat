@@ -955,6 +955,12 @@ do
             assert(sample.parsed == true and sample.restored.x == sample.sector.x and sample.restored.y == sample.sector.y and
                 type(sample["local"]) == "string" and #sample["local"] > 0, "全局身份往返失败:" .. sample.identity)
         end
+        local index = data.bodyIdentityIndex
+        assert(type(index) == "table" and index.mainFull and index.remoteFull and index.mainAlias,
+            "星体完整身份或主星区模板查询错误")
+        assert(index.absentBeforeRegistration and index.missing and index.cleared and index.rebound,
+            "星区登记、无效查询、清理或重建后仍引用旧星体")
+        assert(index.queryCount == 1000 and index.allocatedBytes == 0, "稳定星体身份查询产生临时分配")
         assert(type(data.invalid) == "table" and #data.invalid >= 5, "非法身份样本不足")
         for _, sample in ipairs(data.invalid) do
             assert(sample.sceneParsed == false and sample.identityParsed == false, "非法身份被接受:" .. sample.input)
