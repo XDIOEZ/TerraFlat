@@ -12,14 +12,14 @@ public sealed class MachineContent
     private readonly List<MachineModuleConfiguration> modules = new();
 
     // 只读表现可先于机器激活，配置解析不能依赖创建业务逻辑或库存。
-    public static MachineContent GetOrCreateDefinitionContent(MachineDefinition definition)
+    public static MachineContent GetOrCreateDefinitionContent(MachineDefinition definition, GameRes resources = null)
     {
         if (definition == null) throw new ArgumentNullException(nameof(definition));
-        if (definition.Content != null) return definition.Content;
-        GameRes resources = GameRes.ExistingInstance;
+        if (definition.CachedContent != null) return definition.CachedContent;
+        resources = resources != null ? resources : GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetItemDefinition(definition.Id, out RuntimeItemDefinition source))
             throw new InvalidOperationException("机器内容配置未加载：" + definition.Id);
-        return definition.Content = new MachineContent(source, resources);
+        return definition.CachedContent = new MachineContent(source, resources);
     }
 
     public MachineContent(RuntimeItemDefinition definition, GameRes resources = null)

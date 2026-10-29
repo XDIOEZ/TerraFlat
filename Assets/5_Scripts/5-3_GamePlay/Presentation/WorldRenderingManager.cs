@@ -119,6 +119,9 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         itemRenderingRegistrations.Add(item, registration);
         try
         {
+            // 由实际登记者接收销毁通知，不依赖销毁时全局单例仍指向本管理器。
+            item.OnItemDestroy -= UnregisterItemRendering;
+            item.OnItemDestroy += UnregisterItemRendering;
             RegisterItemSorting(item);
             ApplyItemShadowRegistration(item, registration, false);
             return true;
@@ -144,6 +147,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
     {
         if (ReferenceEquals(item, null)) return;
         itemRenderingRegistrations.Remove(item);
+        item.OnItemDestroy -= UnregisterItemRendering;
         try { UnregisterItemShadows(item); }
         finally
         {

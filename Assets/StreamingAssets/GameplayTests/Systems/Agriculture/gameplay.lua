@@ -14,7 +14,8 @@ test.runtime("agriculture", "cultivator_cold_presentation", {}, function(data)
         "只读刷新重复解析内容、写入快照、激活机器或污染共享定义")
     assert(data.unboundEmpty and data.reboundVisible,
         "解绑没有清理植物，或冷节点重新绑定未恢复当前快照")
-    assert(data.missingDefinitionRejected and data.sameDefinitionRetryVisible,
+    assert(data.missingDefinitionRejected and data.failedBindingCleared and data.sameDefinitionRetryVisible
+        and data.missingSnapshotRejected and data.failedSnapshotCleared and data.sameDefinitionContentRebound,
         "缺配置未明确拒绝，或失败重试被半初始化的定义缓存阻断")
 end, "培育仓先显示后激活：冷配置、真实植株、快照刷新与失败重试")
 

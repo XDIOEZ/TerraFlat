@@ -50,7 +50,7 @@ public partial class GameRes
                 if (ShouldYieldResourceWork()) yield return null;
                 continue;
             }
-            definition.Content ??= new MachineContent(source, this);
+            MachineContent.GetOrCreateDefinitionContent(definition, this);
             yield return null;
             ItemData instance = source.CreateItemData();
             yield return null;

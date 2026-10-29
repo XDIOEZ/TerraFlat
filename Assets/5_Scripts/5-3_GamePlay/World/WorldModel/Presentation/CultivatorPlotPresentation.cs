@@ -6,29 +6,39 @@ internal sealed class CultivatorPlotPresentation
 {
     #region 当前植株与机身坐标
     private MachineEntity entity;
-    private MachineDefinition definition;
+    private MachineContent content;
     private CultivatorState state;
     private CultivatorVisualConfiguration configuration;
     internal int PlotCount => state?.Plots?.Count ?? 0;
 
     internal void Refresh(MachineEntity node)
     {
-        entity = node;
-        if (node == null) { state = null; definition = null; configuration = null; return; }
-        MachineDefinition current = node.Definition ??
-            throw new InvalidOperationException("培育仓表现缺少机器定义。");
-        if (!ReferenceEquals(definition, current))
+        if (node == null) { Clear(); return; }
+        try
         {
-            var module = MachineContent.GetOrCreateDefinitionContent(current).Find<Mod_Cultivator>() ??
-                throw new InvalidOperationException("培育仓缺少植株显示模块配置：" + current.Id);
-            configuration = module.Value(nameof(Mod_Cultivator.Visual), ((Mod_Cultivator)module.Authoring).Visual) ??
-                throw new InvalidOperationException("培育仓缺少植株布局：" + current.Id);
-            // 成功读取后才记住定义，失败重试不能沿用未完成的配置。
-            definition = current;
+            MachineDefinition definition = node.Definition ??
+                throw new InvalidOperationException("培育仓表现缺少机器定义。");
+            MachineContent current = definition.Content;
+            CultivatorVisualConfiguration layout = configuration;
+            if (!ReferenceEquals(content, current))
+            {
+                var module = current.Find<Mod_Cultivator>() ??
+                    throw new InvalidOperationException("培育仓缺少植株显示模块配置：" + definition.Id);
+                layout = module.Value(nameof(Mod_Cultivator.Visual), ((Mod_Cultivator)module.Authoring).Visual) ??
+                    throw new InvalidOperationException("培育仓缺少植株布局：" + definition.Id);
+            }
+            CultivatorState currentState = (node.Logic as CultivatorLogic)?.State ??
+                MachineModuleState.Read<CultivatorState>(node.Snapshot, Mod_Cultivator.ModuleId);
+            // 配置和快照全部成功后再提交，失败不能把新实体与上次植株混在一起。
+            entity = node;
+            content = current;
+            configuration = layout;
+            state = currentState;
         }
-        state = (node.Logic as CultivatorLogic)?.State ??
-            MachineModuleState.Read<CultivatorState>(node.Snapshot, Mod_Cultivator.ModuleId);
+        catch { Clear(); throw; }
     }
+
+    private void Clear() { entity = null; state = null; content = null; configuration = null; }
 
     internal bool TryGetPlot(int index, Sprite body, out Sprite sprite, out Vector3 offset, out Vector3 scale)
     {

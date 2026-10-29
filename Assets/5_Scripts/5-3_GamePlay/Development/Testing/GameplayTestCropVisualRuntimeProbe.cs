@@ -106,7 +106,7 @@ public static class GameplayTestCropVisualRuntimeProbe
         const string id = "SpaceCultivator";
         GameRes resources = GameRes.ExistingInstance;
         MachineDefinition sharedDefinition = MachineCatalog.Get(id);
-        MachineContent sharedContent = sharedDefinition.Content;
+        MachineContent sharedContent = sharedDefinition.CachedContent;
         MachineDefinition definition = MachinePersistence.Clone(sharedDefinition);
         var node = new MachineEntity { Definition = definition, Snapshot = resources.CreateItemData(id) };
         var state = new CultivatorState();
@@ -119,10 +119,10 @@ public static class GameplayTestCropVisualRuntimeProbe
         Sprite body = resources.ItemDefinitions[id].Sprite;
         if (body == null) throw new InvalidOperationException("培育仓回归缺少正式机身图片。");
         var presentation = new CultivatorPlotPresentation();
-        var result = new JObject { ["initiallyCold"] = !node.Active && node.Logic == null && definition.Content == null };
+        var result = new JObject { ["initiallyCold"] = !node.Active && node.Logic == null && definition.CachedContent == null };
         presentation.Refresh(node);
         result["plotCount"] = presentation.PlotCount;
-        result["contentResolved"] = definition.Content != null;
+        result["contentResolved"] = definition.CachedContent != null;
         MachineContent resolved = definition.Content;
         result["radishVisible"] = presentation.TryGetPlot(0, body, out Sprite radish, out _, out Vector3 scale);
         result["radishSprite"] = radish != null ? radish.GetInstanceID() : 0;
@@ -160,13 +160,27 @@ public static class GameplayTestCropVisualRuntimeProbe
         var retryNode = new MachineEntity { Definition = retryDefinition, Snapshot = node.Snapshot };
         try { presentation.Refresh(retryNode); result["missingDefinitionRejected"] = false; }
         catch (InvalidOperationException error) { result["missingDefinitionRejected"] = error.Message.Contains(retryDefinition.Id); }
+        result["failedBindingCleared"] = presentation.PlotCount == 0 &&
+            !presentation.TryGetPlot(1, body, out _, out _, out _);
         retryDefinition.Id = id;
         presentation.Refresh(retryNode);
-        result["sameDefinitionRetryVisible"] = retryDefinition.Content != null &&
+        result["sameDefinitionRetryVisible"] = retryDefinition.CachedContent != null &&
             presentation.TryGetPlot(1, body, out Sprite retried, out _, out _) && retried == mature;
+        retryNode.Snapshot = null;
+        try { presentation.Refresh(retryNode); result["missingSnapshotRejected"] = false; }
+        catch (InvalidOperationException) { result["missingSnapshotRejected"] = true; }
+        result["failedSnapshotCleared"] = presentation.PlotCount == 0 &&
+            !presentation.TryGetPlot(1, body, out _, out _, out _);
+        retryNode.Snapshot = node.Snapshot;
+        presentation.Refresh(retryNode);
+        MachineContent previousContent = retryDefinition.Content;
+        retryDefinition.Content = null;
+        presentation.Refresh(retryNode);
+        result["sameDefinitionContentRebound"] = !ReferenceEquals(previousContent, retryDefinition.Content) &&
+            presentation.TryGetPlot(1, body, out Sprite refreshed, out _, out _) && refreshed == mature;
         result["stillCold"] = !node.Active && node.Logic == null && node.Processor == null &&
             !retryNode.Active && retryNode.Logic == null && retryNode.Processor == null;
-        result["sharedDefinitionUnchanged"] = ReferenceEquals(sharedContent, sharedDefinition.Content);
+        result["sharedDefinitionUnchanged"] = ReferenceEquals(sharedContent, sharedDefinition.CachedContent);
         return result;
     }
     #endregion

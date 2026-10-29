@@ -1,6 +1,6 @@
 # 表现、面板与 C# MOD
 
-- 冷节点表现可能早于机器激活；通过 `MachineContent.GetOrCreateDefinitionContent` 解析并复用只读配置，不依赖 `MachineLogicRegistry.Create`，也不为显示创建逻辑或库存。培育仓配置读取成功后才缓存定义，解绑清空布局；现场回归 `agriculture/cultivator_cold_presentation`。
+- 冷节点表现可能早于机器激活；`MachineDefinition.Content` 统一按需解析完整只读配置，显示、面板和逻辑构造都不依赖唤醒顺序，`CachedContent` 仅供装配/诊断，不能用其空值判断模块不存在。预热向 `GetOrCreateDefinitionContent` 传所属资源实例；失败不发布半成品，不创建逻辑或库存。培育仓以内容实例缓存布局，配置和快照全部成功后提交，失败/解绑清空；电池图层提交完才记录档位。现场 `rendering/cold_machine_content` 扫全部正式机器并预备停用表现，农业 `cultivator_cold_presentation` 覆盖植株；离线 `Tools/Tests/ColdMachinePresentation/verify.py` 使用 Unity/资源边界替身，不代替真实绑定或画面验收。
 
 - 主体/运动件按脚点Y行和物品一级排序键合批；MechanicalDepthVisual 仅交互/灯光，不持有HP/库存。独立轴端用 mechanical-connector 类别，轴及传送带主体读取自身配置；地面管线使用 Default/0 和支撑面队列，水下继续压在设施主体下面。
 - Pivot/Renderer 局部变换共供预览、落地、阴影，逻辑占地不随贴图偏移；运动件同画布/PPU/Pivot，变速先积旧相位再改角速度。太阳/接触阴影独立BRG，SpatialInteractionRegistry 注册同一数据目标。

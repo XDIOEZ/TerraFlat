@@ -31,7 +31,7 @@ public sealed partial class MechanicalDepthVisual
         UpdatePoweredLight(entity);
         bool burning = IsFacilityBurning(entity);
         UpdateFacilityAudio(entity);
-        if (entity.Definition.Lighting == null && entity.Definition.Content?.Find<Mod_Fuel>() != null)
+        if (entity.Definition.Lighting == null && entity.Definition.Content.Find<Mod_Fuel>() != null)
             UpdateCombustionLight(entity, burning);
         UpdateCombustionVisual(entity, burning);
         if (entity.Definition.LogicId == "drying") UpdateDryingSprites(entity);
@@ -50,8 +50,8 @@ public sealed partial class MechanicalDepthVisual
     {
         if (!burning) return;
 
-        var fuel = entity.Definition.Content?.Find<Mod_Fuel>();
-        var lighting = entity.Definition.Content?.Find<Mod_LightSource>();
+        var fuel = entity.Definition.Content.Find<Mod_Fuel>();
+        var lighting = entity.Definition.Content.Find<Mod_LightSource>();
         var fuelAuthoring = fuel?.Authoring as Mod_Fuel;
         var lightingAuthoring = lighting?.Authoring as Mod_LightSource;
         Light2D template = fuelAuthoring?.fuelLight ??
@@ -93,7 +93,7 @@ public sealed partial class MechanicalDepthVisual
     private void UpdateCombustionVisual(MachineEntity entity, bool burning)
     {
         facilityCombustionTouched = true;
-        MachineModuleConfiguration config = entity.Definition.Content?.Find<Mod_CombustionVisual>();
+        MachineModuleConfiguration config = entity.Definition.Content.Find<Mod_CombustionVisual>();
         if (config?.Authoring is not Mod_CombustionVisual source || parts[facilityBodyPart] == null)
         {
             facilityCombustion?.SetCombustionActive(false);
@@ -180,13 +180,12 @@ public sealed partial class MechanicalDepthVisual
 
     private void UpdateDryingSprites(MachineEntity entity)
     {
-        var config = entity.Definition.Content?.Find<Mod_Meatrack>();
+        var config = entity.Definition.Content.Find<Mod_Meatrack>();
         if (config?.Authoring is not Mod_Meatrack source) return;
         var runtime = entity.Logic as DryingRackLogic;
         SlotProcessingState state = runtime?.State ?? MachinePersistence.Read<SlotProcessingState>(entity.Snapshot, "drying");
         if (state?.Inventory?.itemSlots == null) return;
         int count = state.Inventory.itemSlots.Count;
-        state.EnsureSlots(count);
         for (int i = 0; i < count; i++)
         {
             ItemData item = state.Inventory.itemSlots[i].itemData;

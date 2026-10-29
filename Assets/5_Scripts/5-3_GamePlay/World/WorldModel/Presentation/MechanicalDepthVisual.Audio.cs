@@ -13,7 +13,7 @@ public sealed partial class MechanicalDepthVisual
     private void UpdateFacilityAudio(MachineEntity entity)
     {
         burningAudioEntity = entity;
-        MachineModuleConfiguration config = entity.Definition.Content?.Find<Mod_Furnace>();
+        MachineModuleConfiguration config = entity.Definition.Content.Find<Mod_Furnace>();
         string cue = config?.Authoring is Mod_Furnace source
             ? config.Value("burningLoopCueId", source.burningLoopCueId) : null;
         if (!isActiveAndEnabled || !IsFacilityBurning(entity) || string.IsNullOrWhiteSpace(cue))

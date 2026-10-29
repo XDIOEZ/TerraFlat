@@ -1,4 +1,10 @@
 -- 采样正式装配与最终排序键，画面仍需现场复核。
+test.system("rendering", "cold_projection_initialization", {}, function(data)
+    assert(data.initiallyInactive and data.before == 37 and data.after == 37 and data.projected == 1,
+        "停用父节点下的首次投影没有准备材质参数，或随后 Awake 覆盖已同步的数据")
+    assert(data.released and data.sourceRestored, "冷创建投影释放后未恢复源 Renderer")
+end, "世界投影冷初始化：Awake 前同步、激活复用与释放恢复")
+
 test.system("rendering", "item_sorting_configuration", {}, function(data)
     assert(data.definitionBound and data.relativeOrderPreserved, "物品未持有当前视觉配置，或修改了分组内部排序")
     assert(data.heldRestored and data.removedConfigurationCleared and data.pooledConfigurationCleared and data.aquaticDespawnReleased,
@@ -6,6 +12,11 @@ test.system("rendering", "item_sorting_configuration", {}, function(data)
     assert(data.rejectsUnknownLayer and data.rejectsEmptyLayer and data.rejectsOrderUnderflow and data.rejectsOrderOverflow,
         "无效图层或越界排序值未在定义编译时拒绝")
     assert(data.droppedLayer == "Default" and data.droppedOrder == 0, "轻量掉落物忽略了物品排序配置")
+    assert(data.droppedNullDataRejected and data.droppedNullSpriteRejected and data.droppedNullSpriteDataRejected,
+        "掉落物冷表现接受空载荷/贴图，或资源未就绪时抛出无上下文空引用")
+    if data.droppedMissingResourcesChecked then
+        assert(data.droppedMissingResourcesRejected, "资源目录未就绪时没有返回带物品身份的错误")
+    end
     assert(data.groundCoverDefault and data.groundCoverFallback and data.groundCoverWrongLayerRejected and data.groundCoverWrongOrderRejected,
         "地表植被未按实际固定图层和顺序校验")
     assert(data.naturalCustom and data.naturalFallback, "自然资源实体没有消费当前定义的排序或类别回退")

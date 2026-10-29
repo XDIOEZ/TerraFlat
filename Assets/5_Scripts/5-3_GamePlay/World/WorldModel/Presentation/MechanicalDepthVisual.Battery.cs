@@ -30,7 +30,6 @@ public sealed partial class MechanicalDepthVisual
     {
         int count = BatteryChargePresentation.GetLitCount(batteryEntity);
         if (!force && count == batteryLitCount) return;
-        batteryLitCount = count;
         PartVisual body = parts[0];
         for (int i = 0; i < BatteryChargePresentation.CellCount; i++)
         {
@@ -49,6 +48,7 @@ public sealed partial class MechanicalDepthVisual
                 owner?.RemoveMachineDepthPart(entityId, part.Id);
             }
         }
+        batteryLitCount = count;
     }
 
     private void SubscribeBattery()

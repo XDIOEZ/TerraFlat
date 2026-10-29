@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 /// <summary>轻量掉落物共享视觉定义；只读取 Sprite 与外观参数，不实例化完整 Item。</summary>
 internal sealed class DroppedItemVisual
 {
+    #region 只读掉落物表现配置
     public Sprite Sprite;
     public Material SpriteMaterial;
     public Color Color;
@@ -18,17 +19,18 @@ internal sealed class DroppedItemVisual
     public Quaternion LocalRotation;
     public Vector3 LocalScale;
 
-    public static Sprite ResolveSprite(ItemData data)
+    public static Sprite ResolveSprite(ItemData data, GameRes resources = null)
     {
-        GameRes resources = GameRes.ExistingInstance;
-        if (resources == null || !resources.TryGetItemPresentation(data, out _, out Sprite sprite) || sprite == null)
+        resources = RequirePresentationResources(data, resources);
+        if (!resources.TryGetItemPresentation(data, out _, out Sprite sprite) || sprite == null)
             throw new InvalidOperationException($"掉落物缺少显示贴图：{data.IDName}");
         return sprite;
     }
 
-    public static DroppedItemVisual Resolve(ItemData data, Sprite sprite)
+    public static DroppedItemVisual Resolve(ItemData data, Sprite sprite, GameRes resources = null)
     {
-        GameRes resources = GameRes.ExistingInstance;
+        resources = RequirePresentationResources(data, resources);
+        if (sprite == null) throw new ArgumentNullException(nameof(sprite));
         resources.TryGetItemDefinition(data.IDName, out RuntimeItemDefinition definition);
         ItemVisualDefinitionDto visual = definition?.Visual;
         Transform shellRenderer = definition?.ShellPrefab != null && !string.IsNullOrEmpty(visual?.RendererPath)
@@ -60,6 +62,17 @@ internal sealed class DroppedItemVisual
             LocalScale = scale
         };
     }
+
+    // 显式资源上下文优先，缺失时拒绝显示而不创建单例或返回半成品配置。
+    private static GameRes RequirePresentationResources(ItemData data, GameRes resources)
+    {
+        if (data == null) throw new ArgumentNullException(nameof(data));
+        resources = resources != null ? resources : GameRes.ExistingInstance;
+        if (resources == null)
+            throw new InvalidOperationException("掉落物表现资源尚未就绪：" + data.IDName);
+        return resources;
+    }
+    #endregion
 }
 
 /// <summary>

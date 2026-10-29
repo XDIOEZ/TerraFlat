@@ -29,6 +29,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsync("audio", "voice_lifecycle", CaptureAudio);
         GameplayTestRuntimeProbe.RegisterAsync("rendering", "player_external_effects", CaptureRendering);
         GameplayTestRuntimeProbe.Register("rendering", "combat_effect_prewarm", CaptureCombatEffectPrewarm);
+        GameplayTestRuntimeProbe.Register("rendering", "cold_machine_content", CaptureColdMachineContentAndPreparedVisuals);
     }
     #endregion
 

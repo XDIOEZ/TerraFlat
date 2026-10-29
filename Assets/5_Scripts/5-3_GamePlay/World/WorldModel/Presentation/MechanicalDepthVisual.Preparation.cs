@@ -16,7 +16,7 @@ public sealed partial class MechanicalDepthVisual
             int facilityCount = definition.BatteryIndicator != null ? BatteryPartStart + BatteryChargePresentation.CellCount :
                 definition.LogicId == "cultivator" ? CultivatorPartStart + 16 : definition.LogicId == "drying" ? 16 : 0;
             for (int i = 0; i < facilityCount; i++) visual.facilityParts.Add(new PartVisual { Id = 4 + i });
-            if (definition.Lighting != null || definition.Content?.Find<Mod_Fuel>() != null)
+            if (definition.Lighting != null || definition.Content.Find<Mod_Fuel>() != null)
             {
                 var child = new GameObject("MachineLight");
                 child.transform.SetParent(root.transform, false);

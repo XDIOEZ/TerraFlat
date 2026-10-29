@@ -234,7 +234,14 @@ public sealed partial class MachineDefinition
     public string LogicId = ""; // 可注册的粗粒度玩法；留空表示原机械网络设备。
     public bool ProvidesWorkbenchInput; // 单格储物设施可把真实库存借给相邻工作台。
     [MemoryPack.MemoryPackIgnore]
-    [JsonIgnore] public MachineContent Content;
+    [JsonIgnore] public MachineContent Content
+    {
+        get => MachineContent.GetOrCreateDefinitionContent(this);
+        internal set => CachedContent = value;
+    }
+    // 缓存状态仅供资源装配和诊断读取，业务访问 Content 始终取得完整只读配置。
+    [MemoryPack.MemoryPackIgnore]
+    [JsonIgnore] internal MachineContent CachedContent;
     public string Kind = "shaft"; // shaft/gear/gearbox/clutch/bridge/source/consumer/bellows
     public string Ports = "axis"; // axis 为朝向两端，all 为四向
     public string PortMode = "auto"; // auto/input/output/relay；MOD 可显式覆盖默认端口流向。

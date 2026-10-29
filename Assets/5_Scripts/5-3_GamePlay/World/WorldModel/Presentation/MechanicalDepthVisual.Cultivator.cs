@@ -26,7 +26,7 @@ public sealed partial class MechanicalDepthVisual
     }
     private void SubscribeCultivator()
     {
-        if (cultivatorEntity == null) return;
+        if (cultivatorEntity == null || !isActiveAndEnabled) return;
         MachineWorld.NodeStateChanged -= HandleCultivatorChanged;
         MachineWorld.NodeStateChanged += HandleCultivatorChanged;
     }

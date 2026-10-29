@@ -2,6 +2,9 @@
 
 ## 掉落与物质推进
 
+- 掉落显示的 `Resolve/ResolveSprite` 支持显式 `GameRes`，未提供才借现有资源；空载荷/贴图与资源未就绪明确拒绝，不创建单例或留下半成品。世界渲染登记者直接订阅物品销毁，注销/回池撤订阅，不依赖清理时的全局单例身份；规则 `rendering/item_sorting_configuration`、`unified_manager`。
+- `WorldPresentationProjection.Synchronize` 与 Awake 共用幂等材质参数块初始化，停用父节点下可先同步、激活不覆盖数据；规则 `rendering/cold_projection_initialization`。编辑态物品销毁夹具必须实际接收 Unity 生命周期回调，不能把普通 MonoBehaviour 不执行回调误判为运行时回收失败。
+
 - `Mod_BaseDroper.StaticDropItem_Pos` 是旧入口的唯一装配流程，先交 `DroppedItemService.ScheduleLegacyDrop`，拒绝后才用完整 Item 轨迹；`Mod_Droping` 共用入口及曲线/本机投影计算，归属、旋转和落水生命周期仍由各调用方维护。
 - 单机 DroppedItemService.Spawn/SpawnLoot：passive 为纯C#载荷+近镜头池Sprite，interactive 为完整 Item，需飞行模块效果用后者+IDroppedItemSpawnContextReceiver。两者复制独立载荷/新GUID，完整Item注册前清载荷GUID，不改来源身份。普通掉落缩放0.5、destination定精确点；联机仍Item权威链。
 - 太空 SpaceSession 接管，SpaceDropView 仅冷载荷/Sprite，不 Load/ModuleInit 或实例化原建筑设备。ShipWreck 一个无设备模块Item存组成，回收后才释载荷；拾取走正式库存事务。

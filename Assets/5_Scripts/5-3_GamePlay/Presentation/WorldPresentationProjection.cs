@@ -155,7 +155,10 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private static readonly int DisplayToSourceId = Shader.PropertyToID("_WorldPresentationDisplayToSource");
     private static readonly int ProjectionEnabledId = Shader.PropertyToID("_WorldPresentationProjectionEnabled");
 
-    private void Awake() => properties = new MaterialPropertyBlock();
+    private void Awake() => EnsureProjectionPropertyBlock();
+
+    // 停用父节点和编辑态可先调用同步，不能把材质参数初始化只交给 Awake。
+    private void EnsureProjectionPropertyBlock() => properties ??= new MaterialPropertyBlock();
 
     public static WorldPresentationProjection Create(Transform source, Transform parent = null)
     {
@@ -309,6 +312,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     public void Synchronize(Matrix4x4 worldToDisplay, bool visible)
     {
         if (released) return;
+        EnsureProjectionPropertyBlock();
         SynchronizeProjectionRootPose(worldToDisplay, visible);
         if (sourceRoot == null) return;
         if (hierarchyDirty) RebuildHierarchy();

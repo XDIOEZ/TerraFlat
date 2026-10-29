@@ -1,3 +1,28 @@
+-- 全目录从未激活机器直接预备表现，覆盖配置获取而非依赖业务先唤醒。
+test.runtime("rendering", "cold_machine_content", {}, function(data)
+    assert(#data.samples > 0, "未检查任何正式机器定义")
+    local coverage = {furnace = false, drying = false, cultivator = false, combustion = false, lighting = false}
+    for _, row in ipairs(data.samples) do
+        assert(row.initiallyCold and row.contentResolved and row.contentReused,
+            row.id .. "冷机器不能直接读取或复用完整配置")
+        assert(row.allDeclaredModulesAvailable, row.id .. "冷读取漏掉了正式声明的模块")
+        assert(row.preparedLight == (row.hasFuel or row.hasLighting) and row.preparedInactive,
+            row.id .. "落地预备遗漏光源或提前启用了表现")
+        assert(row.stillCold and row.snapshotUnchanged and row.sharedDefinitionUnchanged,
+            row.id .. "读取表现配置意外激活机器或修改共享/权威状态")
+        coverage.furnace = coverage.furnace or row.hasFurnace
+        coverage.drying = coverage.drying or row.hasDrying
+        coverage.cultivator = coverage.cultivator or row.hasCultivator
+        coverage.combustion = coverage.combustion or row.hasCombustion
+        coverage.lighting = coverage.lighting or row.hasLighting
+    end
+    for name, present in pairs(coverage) do assert(present, "冷机器回归缺少类别：" .. name) end
+    assert(data.missingDefinitionRejected and data.failedCacheEmpty and data.retrySucceeded,
+        "配置失败被吞掉、发布了半成品缓存或阻止重试")
+    assert(data.serializedCacheEmpty and data.restoredContentAvailable and data.invalidatedContentRebuilt,
+        "配置缓存被序列化、反序列化后无法恢复或失效后未重建")
+end, "全目录冷机器：直接读取、落地预备、只读状态、失败重试与缓存重建")
+
 -- 正式世界石斧同帧采排序，自有手持石斧跨帧绑定真实玩家 MPB；湿润粒子来自正式 Prefab。
 test.runtime("rendering", "player_external_effects", {}, function(data)
     assert(#data.floors == 2, "没有创建两种正式船板物品")

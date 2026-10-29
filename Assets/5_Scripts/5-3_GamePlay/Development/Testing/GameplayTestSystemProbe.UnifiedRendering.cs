@@ -32,6 +32,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
         operations.Add("rendering/item_sorting_configuration", CaptureItemConfiguredWorldSorting);
         operations.Add("rendering/presentation_sorting_domain", CapturePresentationSortingDomain);
+        operations.Add("rendering/cold_projection_initialization", CaptureColdProjectionResourceInitialization);
         operations.Add("rendering/water_surface_palette", CaptureSharedWaterSurfaceMaterialPalette);
     }
 
@@ -180,10 +181,24 @@ public static partial class GameplayTestSystemProbe
 
         bool hadDefinition = resources.ItemDefinitions.TryGetValue(current.Id, out RuntimeItemDefinition previous);
         DroppedItemVisual dropped;
+        bool droppedNullDataRejected = false, droppedNullSpriteRejected = false, droppedNullSpriteDataRejected = false;
+        bool droppedMissingResourcesChecked = GameRes.ExistingInstance == null, droppedMissingResourcesRejected = false;
         try
         {
             resources.ItemDefinitions[current.Id] = current;
-            dropped = DroppedItemVisual.Resolve(item.itemData, fixture.Sprite.sprite);
+            dropped = DroppedItemVisual.Resolve(item.itemData, fixture.Sprite.sprite, resources);
+            try { DroppedItemVisual.Resolve(null, fixture.Sprite.sprite, resources); }
+            catch (ArgumentNullException) { droppedNullDataRejected = true; }
+            try { DroppedItemVisual.Resolve(item.itemData, null, resources); }
+            catch (ArgumentNullException) { droppedNullSpriteRejected = true; }
+            try { DroppedItemVisual.ResolveSprite(null, resources); }
+            catch (ArgumentNullException) { droppedNullSpriteDataRejected = true; }
+            if (droppedMissingResourcesChecked)
+            {
+                try { DroppedItemVisual.Resolve(item.itemData, fixture.Sprite.sprite); }
+                catch (InvalidOperationException error)
+                { droppedMissingResourcesRejected = error.Message.Contains(item.itemData.IDName); }
+            }
         }
         finally
         {
@@ -237,11 +252,53 @@ public static partial class GameplayTestSystemProbe
             ["aquaticDespawnReleased"] = aquaticDespawnReleased,
             ["removedConfigurationCleared"] = removedConfigurationCleared, ["pooledConfigurationCleared"] = pooledConfigurationCleared,
             ["droppedLayer"] = SortingLayer.IDToName(dropped.Layer), ["droppedOrder"] = dropped.Order,
+            ["droppedNullDataRejected"] = droppedNullDataRejected, ["droppedNullSpriteRejected"] = droppedNullSpriteRejected,
+            ["droppedNullSpriteDataRejected"] = droppedNullSpriteDataRejected,
+            ["droppedMissingResourcesChecked"] = droppedMissingResourcesChecked,
+            ["droppedMissingResourcesRejected"] = droppedMissingResourcesRejected,
             ["playerLayerValue"] = SortingLayer.GetLayerValueFromID(playerLayer), ["playerOrder"] = playerOrder,
             ["rejectsUnknownLayer"] = Rejects(new ItemVisualDefinitionDto { SortingLayerName = "probe:missing-layer" }),
             ["rejectsEmptyLayer"] = Rejects(new ItemVisualDefinitionDto { SortingLayerName = "" }),
             ["rejectsOrderUnderflow"] = Rejects(new ItemVisualDefinitionDto { SortingOrder = short.MinValue - 1 }),
             ["rejectsOrderOverflow"] = Rejects(new ItemVisualDefinitionDto { SortingOrder = short.MaxValue + 1 }) };
+    }
+
+    // 停用父节点下先投影再激活，检查真实材质参数不依赖 Awake 的执行顺序。
+    private static JObject CaptureColdProjectionResourceInitialization(JObject args)
+    {
+        var source = new GameObject("ColdProjectionSource") { hideFlags = HideFlags.HideAndDontSave };
+        var parent = new GameObject("ColdProjectionParent") { hideFlags = HideFlags.HideAndDontSave };
+        parent.SetActive(false);
+        WorldPresentationProjection projection = null;
+        try
+        {
+            SpriteRenderer renderer = source.AddComponent<SpriteRenderer>();
+            int marker = Shader.PropertyToID("_ColdProjectionProbe");
+            var block = new MaterialPropertyBlock();
+            block.SetFloat(marker, 37f);
+            renderer.SetPropertyBlock(block);
+            projection = WorldPresentationProjection.Create(source.transform, parent.transform);
+            projection.Synchronize(Matrix4x4.identity, true);
+            SpriteRenderer target = projection.GetComponent<SpriteRenderer>();
+            target.GetPropertyBlock(block);
+            float before = block.GetFloat(marker);
+            bool initiallyInactive = !projection.gameObject.activeInHierarchy;
+            parent.SetActive(true);
+            projection.Synchronize(Matrix4x4.Translate(Vector3.right), true);
+            target.GetPropertyBlock(block);
+            float after = block.GetFloat(marker);
+            float projected = block.GetFloat(Shader.PropertyToID("_WorldPresentationProjectionEnabled"));
+            projection.Release();
+            return new JObject { ["initiallyInactive"] = initiallyInactive, ["before"] = before,
+                ["after"] = after, ["projected"] = projected, ["released"] = projection.IsReleased,
+                ["sourceRestored"] = !renderer.forceRenderingOff };
+        }
+        finally
+        {
+            if (projection != null) projection.Release();
+            UnityEngine.Object.DestroyImmediate(source);
+            UnityEngine.Object.DestroyImmediate(parent);
+        }
     }
 
     // 通过正式投影和排序域采样原生 Renderer 的域归属及局部键保留。
@@ -1447,7 +1504,7 @@ public static partial class GameplayTestSystemProbe
                 Rendering.AttachSunShadowRenderingBackend(sunShadows);
                 Root = new GameObject("[LuaUnifiedRenderingItem]") { hideFlags = HideFlags.HideAndDontSave };
                 Root.SetActive(false);
-                Item = Root.AddComponent<GameItem>();
+                Item = Root.AddComponent<GameplayTestRenderingLifecycleItem>();
                 Item.BindData(new Data_GeneralItem
                 {
                     IDName = "probe:unified_rendering", Tags = new List<string> { Tag.Plant },
@@ -1515,5 +1572,13 @@ public static partial class GameplayTestSystemProbe
         }
     }
 
+    #endregion
+}
+
+// 编辑态夹具也接收 Unity 的真实销毁回调，不用普通 MonoBehaviour 缺失回调制造伪失败。
+[ExecuteAlways, AddComponentMenu("")]
+internal sealed class GameplayTestRenderingLifecycleItem : GameItem
+{
+    #region 编辑态物品生命周期
     #endregion
 }
