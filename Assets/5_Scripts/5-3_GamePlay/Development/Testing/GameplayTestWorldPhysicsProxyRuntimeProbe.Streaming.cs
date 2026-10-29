@@ -211,6 +211,8 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             result["changedModePositionError"] = Vector2.Distance(fixedProxy.CapturePose().Position, beforeSleep.Position);
             registry.BindChunk(destination.Model, destinationOwner);
             result["repeatBindOneEntity"] = registry.TryGetGeneratedEntityHandle(sourceAddress, guid, out NaturalEntityHandle repeated) && repeated == fixedHandle;
+            // 后续迁移夹具在出生区块生成动态资源，恢复刚才主动解绑的正式表现。
+            registry.BindChunk(source.Model, sourceOwner);
         }
         global::WorldAddress transferWorldAddress = global::WorldAddress.FromWorldKey(world);
         string transferTargetWorld = transferWorldAddress.WithDimension(transferWorldAddress.IsSurface

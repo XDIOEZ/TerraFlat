@@ -51,7 +51,8 @@ test.runtime("world_streaming", "configured_entity_proxies", {}, function(data)
     assert(data.dynamicMachineRejected and data.rejectedMachineAbsent
         and string.find(data.dynamicMachineReason, "约束") and data.fixedMachineMode == "WorldFixed",
         "固定格数据机器的独立可动配置被静默回退，或拒绝后留下节点")
-    assert(data.buildingInitiallyOccupied and data.buildingMovedCell and data.buildingOldCellsFreed
+    assert(data.buildingInitiallyOccupied and data.buildingMovedCell and data.buildingOldExclusiveCellsFreed
+        and data.buildingOverlapCellsRemainOccupied
         and data.buildingCurrentCellOccupied and data.buildingRotatedFootprintOccupied
         and data.buildingRollbackSucceeded and data.buildingRollbackItemRemoved
         and data.buildingRollbackProxyReleased and data.buildingRollbackOccupancyReleased,

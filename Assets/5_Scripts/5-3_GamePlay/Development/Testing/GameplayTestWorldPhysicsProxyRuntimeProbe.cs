@@ -417,11 +417,28 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         proxy.Body.angularVelocity = 180f;
         for (int step = 0; step < 35; step++) service.Simulate(.02f);
         Vector2Int currentCell = Vector2Int.FloorToInt(buildingItem.itemData.transform.position);
+        Vector2Int oldSecondCell = oldCell + Vector2Int.right;
         result["buildingMovedCell"] = currentCell != oldCell;
-        result["buildingOldCellsFreed"] = !BuildingOccupancyRegistry.IsOccupied(oldCell) &&
-            !BuildingOccupancyRegistry.IsOccupied(oldCell + Vector2Int.right);
-        result["buildingCurrentCellOccupied"] = BuildingOccupancyRegistry.IsOccupied(currentCell);
         int quarterTurns = Mathf.RoundToInt(buildingItem.itemData.transform.rotation.eulerAngles.z / 90f) & 3;
+        Vector2Int currentSecondCell = currentCell + ((quarterTurns & 1) != 0
+            ? Vector2Int.up : Vector2Int.right);
+        bool oldAnchorShared = oldCell == currentCell || oldCell == currentSecondCell;
+        bool oldSecondShared = oldSecondCell == currentCell || oldSecondCell == currentSecondCell;
+        int footprintOverlapCount = (oldAnchorShared ? 1 : 0) + (oldSecondShared ? 1 : 0);
+        var footprintOverlap = new JArray();
+        if (oldAnchorShared) footprintOverlap.Add($"{oldCell.x},{oldCell.y}");
+        if (oldSecondShared) footprintOverlap.Add($"{oldSecondCell.x},{oldSecondCell.y}");
+        result["buildingOldFootprint"] = new JArray($"{oldCell.x},{oldCell.y}", $"{oldSecondCell.x},{oldSecondCell.y}");
+        result["buildingCurrentFootprint"] = new JArray($"{currentCell.x},{currentCell.y}", $"{currentSecondCell.x},{currentSecondCell.y}");
+        result["buildingFootprintOverlap"] = footprintOverlap;
+        result["buildingFootprintOverlapCount"] = footprintOverlapCount;
+        result["buildingOldExclusiveCellsFreed"] =
+            (oldAnchorShared || !BuildingOccupancyRegistry.IsOccupied(oldCell)) &&
+            (oldSecondShared || !BuildingOccupancyRegistry.IsOccupied(oldSecondCell));
+        result["buildingOverlapCellsRemainOccupied"] =
+            (!oldAnchorShared || BuildingOccupancyRegistry.IsOccupied(oldCell)) &&
+            (!oldSecondShared || BuildingOccupancyRegistry.IsOccupied(oldSecondCell));
+        result["buildingCurrentCellOccupied"] = BuildingOccupancyRegistry.IsOccupied(currentCell);
         result["buildingQuarterTurns"] = quarterTurns;
         result["buildingRotatedFootprintOccupied"] = (quarterTurns & 1) != 0 &&
             BuildingOccupancyRegistry.IsOccupied(currentCell + Vector2Int.up) &&
