@@ -23,7 +23,10 @@ function loadRealCatalog() {
         kind: "actor", final, displayName: final.gameName,
         package: packages.get(final.id.toLowerCase())
     }));
-    return { entries, library: read(path.join(root, manifest.behaviorSubtrees)) };
+    const library = read(path.join(root, manifest.behaviorSubtrees));
+    library.subtreePaths = library.subtrees;
+    library.subtrees = Object.fromEntries(Object.entries(library.subtreePaths).map(([name, file]) => [name, read(path.join(root, file))]));
+    return { entries, library };
 }
 
 function actorEntry(id, root, subtrees = {}, capabilities = {}) {

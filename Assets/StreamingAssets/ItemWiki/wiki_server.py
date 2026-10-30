@@ -613,8 +613,6 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                         relative = normalize_package_path(relative)
                         if lower == prefix + relative.lower():
                             return True
-                if directory == "Actors" and lower == prefix + str(manifest.get("behaviorSubtrees", "behavior-subtrees.json")).lower():
-                    return True
                 for package in manifest.get("packages", []):
                     if package.get("enabled", True) is False:
                         continue
