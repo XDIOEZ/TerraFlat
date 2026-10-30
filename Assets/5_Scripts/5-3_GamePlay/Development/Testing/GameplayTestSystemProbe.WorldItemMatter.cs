@@ -60,6 +60,16 @@ public static partial class GameplayTestSystemProbe
                 { hideFlags = HideFlags.HideAndDontSave };
             root.SetActive(false);
             var renderer = root.AddComponent<ChunkNaturalItemRenderer>();
+            // 编辑态持久监听不会自动接收事件参数，夹具补上该物品的真实销毁参数。
+            void BindEditorNaturalItemDestroyArgument(Item item)
+            {
+#if UNITY_EDITOR
+                if (UnityEditor.EditorApplication.isPlaying || item.OnItemDestroy.PersistentCallsList == null)
+                    return;
+                foreach (var call in item.OnItemDestroy.PersistentCallsList)
+                    if (ReferenceEquals(call.Target, renderer)) call.SetArguments(item);
+#endif
+            }
             try
             {
                 original.BindData(EntityProbeData("probe:natural-original", 1));
@@ -72,6 +82,7 @@ public static partial class GameplayTestSystemProbe
                 invalid.ResumeRuntimeAfterReplacement();
                 renderer.RegisterNaturalItem(original);
                 renderer.RegisterNaturalItem(original);
+                BindEditorNaturalItemDestroyArgument(original);
                 var result = new JObject
                 {
                     ["singleRegistration"] = renderer.SpawnedItemCount == 1
@@ -88,6 +99,7 @@ public static partial class GameplayTestSystemProbe
                     ReferenceEquals(current, original) && renderer.SpawnedItemCount == 1;
 
                 renderer.ReplaceNaturalItem(original, replacement);
+                BindEditorNaturalItemDestroyArgument(replacement);
                 result["replacementOwned"] = renderer.TryGetSpawnedItem(guid, out current) &&
                     ReferenceEquals(current, replacement) && renderer.SpawnedItemCount == 1;
                 original.PrepareForDespawn(saveData: false);

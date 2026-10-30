@@ -299,6 +299,12 @@
       "enabled": true
     },
     {
+      "id": "item_runtime_module_data_rules",
+      "name": "模块纯数据计算、寿命快照与燃料需求",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/module-data.lua",
+      "enabled": true
+    },
+    {
       "id": "item_runtime_rules",
       "name": "物品实体与模块运行规则与边界",
       "luaPath": "GameplayTests/Systems/ItemRuntime/rules.lua",

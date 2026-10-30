@@ -1082,6 +1082,7 @@
       "dependsOn": [],
       "ruleCaseIds": [
         "item_runtime_drop_motion_rules",
+        "item_runtime_module_data_rules",
         "item_runtime_rules",
         "mineral_property_rules"
       ],
