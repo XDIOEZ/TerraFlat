@@ -303,7 +303,8 @@ namespace FlatWorld.Tests.EditMode
             try
             {
                 Assert.That(MachineScopes.Count, Is.EqualTo(count));
-                Assert.That(lease != null, Is.EqualTo(existingScope));
+                Assert.That(typeof(MachineWorld).GetField("scopeOverride", PrivateStatic).GetValue(null),
+                    Is.EqualTo(existingScope ? key : previousMachineOverride));
                 Assert.That(typeof(MachineWorld).GetField("scope", PrivateStatic).GetValue(null),
                     Is.SameAs(existingScope ? existing : previousMachineScope));
                 if (existingScope)
@@ -313,7 +314,7 @@ namespace FlatWorld.Tests.EditMode
                     Assert.That(stateType.GetField("Fluid").GetValue(existing), Is.Null);
                 }
             }
-            finally { lease?.Dispose(); }
+            finally { lease.Dispose(); }
             Assert.That(typeof(MachineWorld).GetField("scope", PrivateStatic).GetValue(null), Is.SameAs(previousMachineScope));
             Assert.That(typeof(MachineWorld).GetField("scopeOverride", PrivateStatic).GetValue(null), Is.EqualTo(previousMachineOverride));
         }

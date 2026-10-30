@@ -291,13 +291,18 @@ test.system("core_lifecycle", "resource_plan", { mode = "throw" }, function(data
     assert(#data.order == 2 and data.finished == 2, "异常阶段没有执行 finally 清理")
 end, "资源阶段异常与清理")
 
-for _, mode in ipairs({ "complete", "failed", "cancel", "nested_throw", "nested_cancel", "consume_twice" }) do
+for _, mode in ipairs({ "complete", "busy", "busy_interactive", "failed", "cancel", "nested_throw", "nested_cancel", "consume_twice" }) do
     test.system("core_lifecycle", "resource_prefetch", { mode = mode }, function(data)
-        assert(data.startedBeforeStartupFinished, "配置预取没有与启动阶段重叠")
+        if mode ~= "busy_interactive" then
+            assert(data.startedBeforeStartupFinished, "配置预取没有与启动阶段重叠")
+        end
         assert(data.disposed == 1, "预取结束、失败或取消后没有释放迭代器")
-        if mode == "complete" then
+        if mode == "complete" or mode == "busy" then
             assert(data.value == 42 and data.failure == nil and data.prefetchFinishedBeforeContent,
                 "完成的预取没有被依赖阶段正确接收")
+        elseif mode == "busy_interactive" then
+            assert(not data.startedBeforeStartupFinished and data.value == 42 and data.failure == nil,
+                "交互期间的预取超过后台预算或未正确完成")
         elseif mode == "failed" or mode == "nested_throw" then
             assert(data.failure == "InvalidOperationException" and data.stage == "content" and data.value == 0,
                 "预取失败没有在依赖阶段终止资源会话")

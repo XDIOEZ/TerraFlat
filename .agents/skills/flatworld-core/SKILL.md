@@ -44,7 +44,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 ## 资源会话
 
 - LoadPlan 声明阶段和依赖，嵌套 IEnumerator 受 ResourceLoadPipeline 统一异常/超时/取消管理。正式启动默认每帧4ms，菜单交互时后台1ms；等待进入世界的加载页恢复前台预算与原资源接入/上传设置，取消进入再回后台。原位更新仍用交互预算，Lua缓存测试保留8ms覆盖；规则 `core_lifecycle/resource_loading_priority`。PureDataAsync 仅处理私有字符串/DTO/ID，Unity 对象和目录发布仍在主线程。
-- 本地 Item、Actor、Recipes、Buff 的私有输入由资源计划利用前台剩余预算轮流预取；目录发布、Actor 行为树及 Buff 处理器仍在各自阶段执行。预取失败由消费阶段报告，取消逆序释放，完成后清除结果和阶段闭包；Android/WebGL 继续走原逐包 UnityWebRequest。
+- 本地 Item、Actor、Recipes、Buff 的私有输入由资源计划轮流预取；首屏预算耗尽时最多额外推进一个预取步骤，菜单与原位更新仍遵守后台预算。目录发布、Actor 行为树及 Buff 处理器仍在各自阶段执行。预取失败由消费阶段报告，取消逆序释放，完成后清除结果和阶段闭包；Android/WebGL 继续走原逐包 UnityWebRequest。
 - 本地 Items/Actor/Recipes/Buff 分包先校验路径，再批量后台读取；Actor 直接合并已解析的 JSON 树。配方/Buff 整包缓存内直接解析分包，不为相同数据重复生成文档缓存；独立解析入口保留文档缓存。
 - `audio-request` 先发出音库请求，与 UI/内容目录重叠加载；主菜单依赖就绪后由 Update 非阻塞接入音库并只发布一次，`audio` 阶段在最终校验前收齐。通用资源、物品视觉和世界液体外观共用四槽队列，液体按资源类型和地址去重，句柄归会话。编辑器 Sprite 冷加载异步预读主纹理，普通 Sprite 由真实句柄校验，具名子图继续严格检查；ProfilerMarker 不跨 yield，阶段日志分别记录前台与预取工作。
 - 本体先校验、MOD 合并后再 validate-final；领域引用通过 IResourceCatalogValidator/增量版本扩展。正式世界生成资源用 worldAuthoringResourcePaths，完整会话在 Ready 前预热最终 BRG Sprite Mesh。

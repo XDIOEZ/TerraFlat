@@ -99,13 +99,30 @@ internal sealed class ResourceLoadPipeline : IDisposable
         if (prefetched.Count == 0 || prefetchFrame == frame) return;
         prefetchFrame = frame;
         int first = nextPrefetch;
-        nextPrefetch = (nextPrefetch + 1) % prefetched.Count;
-        for (int i = 0; i < prefetched.Count && !ShouldYield(); i++)
-            prefetched[(first + i) % prefetched.Count].Advance(frame, ShouldYield);
+        bool advanced = false;
+        for (int i = 0; i < prefetched.Count; i++)
+        {
+            int index = (first + i) % prefetched.Count;
+            IPrefetchedResourceData item = prefetched[index];
+            if (item.IsFinished) continue;
+            if (ShouldYield() && (advanced || isInteractive?.Invoke() == true)) break;
+            // 首屏预算耗尽时轮流启动一步，菜单与原位更新仍保持后台预算。
+            item.Advance(frame, ShouldYield);
+            nextPrefetch = (index + 1) % prefetched.Count;
+            advanced = true;
+        }
+    }
+
+    private long AdvanceAndMeasurePrefetchedResourceData()
+    {
+        long started = Stopwatch.GetTimestamp();
+        using (PrefetchMarker.Auto()) AdvancePrefetchedResourceData();
+        return Stopwatch.GetTimestamp() - started;
     }
 
     internal interface IPrefetchedResourceData : IDisposable
     {
+        bool IsFinished { get; }
         void Advance(int frame, Func<bool> shouldYield);
     }
 
@@ -120,6 +137,8 @@ internal sealed class ResourceLoadPipeline : IDisposable
 
         internal PrefetchedResourceData(Func<Action<T>, Action<Exception>, IEnumerator> load)
             => this.load = load ?? throw new ArgumentNullException(nameof(load));
+
+        bool IPrefetchedResourceData.IsFinished => disposed || finished;
 
         void IPrefetchedResourceData.Advance(int frame, Func<bool> shouldYield)
         {
@@ -140,7 +159,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
                     {
                         pending.Pop();
                         (routine as IDisposable)?.Dispose();
-                        if (shouldYield()) return;
+                        if (pending.Count > 0 && shouldYield()) return;
                         continue;
                     }
                     if (routine.Current is IEnumerator nested) pending.Push(nested);
@@ -218,7 +237,16 @@ internal sealed class ResourceLoadPipeline : IDisposable
                 catch (Exception exception) { Failure = exception; yield break; }
                 while (!disposed && routines.Count > 0)
                 {
-                    if (ShouldYield()) yield return null;
+                    if (ShouldYield())
+                    {
+                        if (timer.Elapsed.TotalSeconds > StageTimeoutSeconds)
+                        {
+                            Failure = new TimeoutException($"资源阶段 {step.Id} 超过 {StageTimeoutSeconds} 秒仍未完成。");
+                            yield break;
+                        }
+                        prefetchWorkTicks += AdvanceAndMeasurePrefetchedResourceData();
+                        yield return null;
+                    }
                     if (timer.Elapsed.TotalSeconds > StageTimeoutSeconds)
                     {
                         Failure = new TimeoutException($"资源阶段 {step.Id} 超过 {StageTimeoutSeconds} 秒仍未完成。");
@@ -238,6 +266,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
                         {
                             routines.Pop();
                             (routine as IDisposable)?.Dispose();
+                            prefetchWorkTicks += AdvanceAndMeasurePrefetchedResourceData();
                             continue;
                         }
                         yielded = routine.Current;
@@ -248,9 +277,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
                         }
                     }
                     catch (Exception exception) { Failure = exception; yield break; }
-                    long prefetchStarted = Stopwatch.GetTimestamp();
-                    using (PrefetchMarker.Auto()) AdvancePrefetchedResourceData();
-                    prefetchWorkTicks += Stopwatch.GetTimestamp() - prefetchStarted;
+                    prefetchWorkTicks += AdvanceAndMeasurePrefetchedResourceData();
                     yield return yielded;
                 }
                 if (disposed) yield break;

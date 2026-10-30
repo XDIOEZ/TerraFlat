@@ -18,10 +18,11 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceResourcePrefetch(JObject args)
     {
         string mode = Text(args, "mode", "complete");
-        int frame = 0, disposed = 0, nestedDisposed = 0, value = 0;
+        int frame = 0, blockedFrame = -1, disposed = 0, nestedDisposed = 0, value = 0;
         bool prefetchStarted = false, startupFinished = false, startedBeforeStartupFinished = false;
         bool prefetchFinished = false, prefetchFinishedBeforeContent = false, published = false;
-        using var pipeline = new ResourceLoadPipeline((_, _) => { }, () => false, () => double.MaxValue, () => frame);
+        using var pipeline = new ResourceLoadPipeline((_, _) => { }, () => mode == "busy_interactive",
+            () => blockedFrame == frame ? 0d : double.MaxValue, () => frame);
 
         IEnumerator Prefetch(Action<int> completed, Action<Exception> failed)
         {
@@ -50,8 +51,11 @@ public static partial class GameplayTestSystemProbe
         var prefetch = pipeline.Prefetch<int>(Prefetch);
         IEnumerator Startup()
         {
-            yield return null;
-            yield return null;
+            for (int i = 0; i < (mode == "busy" || mode == "busy_interactive" ? 5 : 2); i++)
+            {
+                if (mode == "busy" || mode == "busy_interactive") blockedFrame = frame;
+                yield return null;
+            }
             startupFinished = true;
         }
         IEnumerator Content()
@@ -276,7 +280,7 @@ public static partial class GameplayTestSystemProbe
         RecipeCatalogDto recipes = RecipeRuntimeFactory.DeserializeWithoutDocumentCache(
             "{\"schemaVersion\":1,\"recipes\":[{\"id\":\"recipe:test\"}]}");
         BuffCatalogDto buffs = BuffDefinitionFactory.DeserializeWithoutDocumentCache(
-            "{\"schemaVersion\":1,\"buffs\":[{\"id\":\"buff:test\"}]}");
+            "{\"schemaVersion\":1,\"buffs\":[{\"id\":\"buff:test\",\"effects\":[]}]}");
         bool strictBuffRejected = false;
         try { BuffDefinitionFactory.DeserializeWithoutDocumentCache("{\"schemaVersion\":1,\"buffs\":[],\"unknown\":true}"); }
         catch (Newtonsoft.Json.JsonSerializationException) { strictBuffRejected = true; }
